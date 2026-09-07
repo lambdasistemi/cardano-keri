@@ -1,0 +1,11 @@
+{
+  "compiled_theorem_constants": 749,
+  "explicit_source_theorems": 210,
+  "receipt_count": 749,
+  "unapproved_axioms": 0,
+  "allowlist": [
+    "propext",
+    "Quot.sound"
+  ],
+  "scope": "import CardanoKeri including generated theorem constants; excludes standalone trace drivers and mutant witness files"
+}

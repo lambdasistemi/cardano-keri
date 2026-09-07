@@ -1,0 +1,749 @@
+'CardanoKeri.Cage.AuthMode.delegated.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Cage.AuthMode.ofNat_ctorIdx' does not depend on any axioms
+'CardanoKeri.Cage.AuthMode.ownerAndHook.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Cage.AuthMode.ownerKeyed.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Cage.Plugin.mk.inj' does not depend on any axioms
+'CardanoKeri.Cage.Plugin.mk.injEq' depends on axioms: [propext]
+'CardanoKeri.Cage.Plugin.mk.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Cage.Plugin.registry.eq_1' does not depend on any axioms
+'CardanoKeri.Cage.TxAuth.mk.inj' does not depend on any axioms
+'CardanoKeri.Cage.TxAuth.mk.injEq' depends on axioms: [propext]
+'CardanoKeri.Cage.TxAuth.mk.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Cage.ValueMode.delegatedRouting.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Cage.ValueMode.ofNat_ctorIdx' does not depend on any axioms
+'CardanoKeri.Cage.ValueMode.refundAll.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Cage.applyBatch.eq_1' does not depend on any axioms
+'CardanoKeri.Cage.applyBatch.eq_2' does not depend on any axioms
+'CardanoKeri.Cage.applyBatch_delegated_eq' depends on axioms: [propext]
+'CardanoKeri.Cage.applyBatch_delegated_eq._simp_1_13' depends on axioms: [propext]
+'CardanoKeri.Cage.authorized.eq_1' does not depend on any axioms
+'CardanoKeri.Cage.authorized.eq_2' does not depend on any axioms
+'CardanoKeri.Cage.authorized.eq_3' does not depend on any axioms
+'CardanoKeri.Cage.bypassed.eq_1' does not depend on any axioms
+'CardanoKeri.Cage.bypassed_breaks_inv' depends on axioms: [propext]
+'CardanoKeri.Cage.delegated_is_registry' depends on axioms: [propext]
+'CardanoKeri.Cage.delegated_permissionless' depends on axioms: [propext]
+'CardanoKeri.Cage.delegated_pins_plugin' depends on axioms: [propext]
+'CardanoKeri.Cage.instDecidableEqAuthMode._proof_1' does not depend on any axioms
+'CardanoKeri.Cage.instDecidableEqAuthMode._proof_2' does not depend on any axioms
+'CardanoKeri.Cage.instDecidableEqTxAuth.decEq._proof_1' does not depend on any axioms
+'CardanoKeri.Cage.instDecidableEqTxAuth.decEq._proof_2' does not depend on any axioms
+'CardanoKeri.Cage.instDecidableEqTxAuth.decEq._proof_3' does not depend on any axioms
+'CardanoKeri.Cage.instDecidableEqValueMode._proof_1' does not depend on any axioms
+'CardanoKeri.Cage.instDecidableEqValueMode._proof_2' does not depend on any axioms
+'CardanoKeri.Cage.ownerAndHook_needs_owner' depends on axioms: [propext]
+'CardanoKeri.Cage.ownerAndHook_trivial_breaks_inv' depends on axioms: [propext]
+'CardanoKeri.Cage.ownerKeyed_needs_owner' depends on axioms: [propext]
+'CardanoKeri.Cage.owner_bypass_breaks_inv' depends on axioms: [propext]
+'CardanoKeri.Cage.owner_swaps_plugin' does not depend on any axioms
+'CardanoKeri.Cage.refundAll_fold_locks_nothing' depends on axioms: [propext]
+'CardanoKeri.Cage.refundAll_never_locks' depends on axioms: [propext]
+'CardanoKeri.Cage.rejectAllowed.eq_1' does not depend on any axioms
+'CardanoKeri.Cage.routeValue.eq_1' does not depend on any axioms
+'CardanoKeri.Cage.routeValue.eq_2' does not depend on any axioms
+'CardanoKeri.Cage.runBody.eq_1' does not depend on any axioms
+'CardanoKeri.Cage.stepFn.eq_1' does not depend on any axioms
+'CardanoKeri.Cage.stepFn.eq_2' does not depend on any axioms
+'CardanoKeri.Cage.wp._proof_1' does not depend on any axioms
+'CardanoKeri.Cage.wp._proof_2' does not depend on any axioms
+'CardanoKeri.Cage.wp._proof_3' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.actor.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.actor.eq_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.actor.eq_3' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.actor.eq_4' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.actor.eq_5' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.actor.eq_6' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.actor.eq_7' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.actor.eq_8' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.close.inj' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.close.injEq' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.Action.close.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.convict.inj' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.convict.injEq' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.Action.convict.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.freeze.inj' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.freeze.injEq' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.Action.freeze.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.poison.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.register.inj' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.register.injEq' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.Action.register.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.reopen.inj' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.reopen.injEq' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.Action.reopen.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.rotate.inj' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.rotate.injEq' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.Action.rotate.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.topUp.inj' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.topUp.injEq' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.Action.topUp.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.touchesLeaf.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.touchesLeaf.eq_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.touchesLeaf.eq_3' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.touchesLeaf.eq_4' does not depend on any axioms
+'CardanoKeri.Checkpoint.Action.touchesLeaf.eq_5' does not depend on any axioms
+'CardanoKeri.Checkpoint.Actor.anyone.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Actor.currentQuorum.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Actor.nextKeys.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Actor.ofNat_ctorIdx' does not depend on any axioms
+'CardanoKeri.Checkpoint.Actor.proof.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.BondOp.deposit.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.BondOp.intent.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.BondOp.intent.eq_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.BondOp.keep.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.BondOp.ofNat_ctorIdx' does not depend on any axioms
+'CardanoKeri.Checkpoint.Env.intentOk.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.Env.intentOk.eq_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.Env.mk.inj' does not depend on any axioms
+'CardanoKeri.Checkpoint.Env.mk.injEq' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.Env.mk.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Flow.mk.inj' does not depend on any axioms
+'CardanoKeri.Checkpoint.Flow.mk.injEq' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.Flow.mk.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Intent.close.inj' does not depend on any axioms
+'CardanoKeri.Checkpoint.Intent.close.injEq' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.Intent.close.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Intent.deposit.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Intent.keep.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.KeyState.mk.inj' does not depend on any axioms
+'CardanoKeri.Checkpoint.KeyState.mk.injEq' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.KeyState.mk.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Leaf.absent.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Leaf.active.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Leaf.convicted.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Leaf.parked.inj' does not depend on any axioms
+'CardanoKeri.Checkpoint.Leaf.parked.injEq' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.Leaf.parked.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Live.bHeld.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.Live.mk.inj' does not depend on any axioms
+'CardanoKeri.Checkpoint.Live.mk.injEq' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.Live.mk.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Live.rotated.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.Params.hB' does not depend on any axioms
+'CardanoKeri.Checkpoint.Params.hD' does not depend on any axioms
+'CardanoKeri.Checkpoint.Params.mk.inj' does not depend on any axioms
+'CardanoKeri.Checkpoint.Params.mk.injEq' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.Params.mk.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Params.premium.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.Payment.mk.inj' does not depend on any axioms
+'CardanoKeri.Checkpoint.Payment.mk.injEq' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.Payment.mk.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Payment?.b.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.Payment?.b.eq_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.Payment?.dreg.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.Payment?.dreg.eq_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.Payment?.pool.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.Payment?.pool.eq_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.State.absent.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.State.bHeld.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.State.bHeld.eq_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.State.convicted.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.State.dregHeld.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.State.dregHeld.eq_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.State.leaf.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.State.leaf.eq_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.State.leaf.eq_3' does not depend on any axioms
+'CardanoKeri.Checkpoint.State.leaf.eq_4' does not depend on any axioms
+'CardanoKeri.Checkpoint.State.parked.inj' does not depend on any axioms
+'CardanoKeri.Checkpoint.State.parked.injEq' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.State.parked.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.State.poolHeld.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.State.poolHeld.eq_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.State.present.inj' does not depend on any axioms
+'CardanoKeri.Checkpoint.State.present.injEq' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.State.present.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.State.sn?.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.State.sn?.eq_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.State.sn?.eq_3' does not depend on any axioms
+'CardanoKeri.Checkpoint.State.sn?.eq_4' does not depend on any axioms
+'CardanoKeri.Checkpoint.Step.closePaid_iff' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.Step.closeUnpaid_iff' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.Step.convictParked_iff' does not depend on any axioms
+'CardanoKeri.Checkpoint.Step.convict_iff' does not depend on any axioms
+'CardanoKeri.Checkpoint.Step.freeze_iff' does not depend on any axioms
+'CardanoKeri.Checkpoint.Step.poison_iff' does not depend on any axioms
+'CardanoKeri.Checkpoint.Step.register_iff' does not depend on any axioms
+'CardanoKeri.Checkpoint.Step.reopen_iff' does not depend on any axioms
+'CardanoKeri.Checkpoint.Step.rotateDepositPaid_iff' does not depend on any axioms
+'CardanoKeri.Checkpoint.Step.rotateDepositUnpaid_iff' does not depend on any axioms
+'CardanoKeri.Checkpoint.Step.rotateKeepPaid_iff' does not depend on any axioms
+'CardanoKeri.Checkpoint.Step.rotateKeepUnpaid_iff' does not depend on any axioms
+'CardanoKeri.Checkpoint.Step.topUp_iff' does not depend on any axioms
+'CardanoKeri.Checkpoint.Sys.mk.inj' does not depend on any axioms
+'CardanoKeri.Checkpoint.Sys.mk.injEq' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.Sys.mk.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Checkpoint.Sys.set.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.SysReach.brecOn' does not depend on any axioms
+'CardanoKeri.Checkpoint.T10_bonds_are_observable' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T10_bonds_are_observable._proof_1_4' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T10_bonds_are_observable._proof_1_8' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T10_current_quorum_never_restores' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T10_inert_without_next_keys' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T10_only_deposit_restores' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T10_parked_holds_nothing' does not depend on any axioms
+'CardanoKeri.Checkpoint.T10_reopen_is_juvenile' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T10_reopen_is_juvenile._proof_1_4' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T12_convict_exact' does not depend on any axioms
+'CardanoKeri.Checkpoint.T12_convict_parked_exact' does not depend on any axioms
+'CardanoKeri.Checkpoint.T12_convicted_terminal' does not depend on any axioms
+'CardanoKeri.Checkpoint.T14_pool_decreases_only_by_premium' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T14_pool_decreases_only_by_premium._proof_1_13' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T14_pool_increases_only_by_topup' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T14_pool_increases_only_by_topup._proof_1_1' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T14_pool_increases_only_by_topup._proof_1_2' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T14_pool_increases_only_by_topup._proof_1_3' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T15_b_leaves_only_by_freeze' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T15_b_returns_only_by_deposit' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T15_freeze_makes_inert' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T16_close_destination' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T16_close_destination._proof_1_6' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T16_close_needs_rotation' does not depend on any axioms
+'CardanoKeri.Checkpoint.T16_copied_reap_refused' does not depend on any axioms
+'CardanoKeri.Checkpoint.T16_parked_hash_is_the_closed_checkpoints' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T16_parked_hash_is_the_closed_checkpoints._proof_1_7' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T16_payments_are_named' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T1_close_rotation_cannot_revive' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T1_reopen_strict' does not depend on any axioms
+'CardanoKeri.Checkpoint.T1_rotate_strict' does not depend on any axioms
+'CardanoKeri.Checkpoint.T1_sn_monotone' does not depend on any axioms
+'CardanoKeri.Checkpoint.T1_sn_monotone_all' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T1_sn_monotone_all._proof_1_6' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T1_sn_monotone_all._proof_1_7' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T1_trace_sn_monotone' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T2_close_and_reopen_open_epochs' does not depend on any axioms
+'CardanoKeri.Checkpoint.T2_epoch_only_by_rotation' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T3_epoch_local' does not depend on any axioms
+'CardanoKeri.Checkpoint.T3_only_poison_sets' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T3_only_rotation_clears' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T3_rotation_clears' does not depend on any axioms
+'CardanoKeri.Checkpoint.T4_current_key_thief_cannot_park' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T4_current_key_thief_cannot_revive' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T4_current_quorum_only_poisons' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T4_poisoned_blocks_quorum_and_freeze' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T4_poisoned_nonrotation_inert' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T5_close_enabled' does not depend on any axioms
+'CardanoKeri.Checkpoint.T5_convict_enabled' does not depend on any axioms
+'CardanoKeri.Checkpoint.T5_convict_parked_enabled' does not depend on any axioms
+'CardanoKeri.Checkpoint.T5_deposit_on_full_is_keep' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T5_deposit_on_full_is_keep._proof_1_4' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T5_every_bond_option' does not depend on any axioms
+'CardanoKeri.Checkpoint.T5_freeze_enabled' does not depend on any axioms
+'CardanoKeri.Checkpoint.T5_keep_is_rotated' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T5_keep_needs_no_intent' does not depend on any axioms
+'CardanoKeri.Checkpoint.T5_poison_enabled' does not depend on any axioms
+'CardanoKeri.Checkpoint.T5_reopen_enabled' does not depend on any axioms
+'CardanoKeri.Checkpoint.T6_component_conservation' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T6_dreg_enters_only_at_birth' does not depend on any axioms
+'CardanoKeri.Checkpoint.T6_dreg_never_a_fee' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T6_dreg_never_moves_between_present_states' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T6_frozen_flips_only_by_rotation_or_freeze' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T6_intent_requires_new_keys' does not depend on any axioms
+'CardanoKeri.Checkpoint.T6_refund_change_requires_new_keys' does not depend on any axioms
+'CardanoKeri.Checkpoint.T6_relayer_cannot_park_age_or_close' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T7_step_iff_stepFn' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T7_trace_iff_replay' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T8_absent_only_registers' does not depend on any axioms
+'CardanoKeri.Checkpoint.T8_edges_leave_the_leaf' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T8_leaf_agrees_with_state' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T8_leaf_never_absent_again' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T8_leaf_states' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T8_mint_once' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T8_only_convicted_is_terminal' does not depend on any axioms
+'CardanoKeri.Checkpoint.T8_parked_only_revives_or_convicts' does not depend on any axioms
+'CardanoKeri.Checkpoint.T8_parked_returns_only_by_revival' does not depend on any axioms
+'CardanoKeri.Checkpoint.T8_present_implies_registered' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.T8_reopen_actor_is_proof' does not depend on any axioms
+'CardanoKeri.Checkpoint.T8_sysstep_partition' does not depend on any axioms
+'CardanoKeri.Checkpoint.T8_utxo_iff_active' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Checkpoint.T9_juvenility_is_consumer_only' does not depend on any axioms
+'CardanoKeri.Checkpoint.Trace.brecOn' does not depend on any axioms
+'CardanoKeri.Checkpoint.consumableState.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.consumableState.eq_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.consumableStateB.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.consumableStateB.eq_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.consumableStateB_iff' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.consumableStateB_iff._simp_1_6' depends on axioms: [propext]
+'CardanoKeri.Checkpoint.instDecidableEqActor._proof_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqActor._proof_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqBondOp._proof_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqBondOp._proof_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqFlow.decEq._proof_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqFlow.decEq._proof_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqFlow.decEq._proof_3' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqFlow.decEq._proof_4' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqFlow.decEq._proof_5' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqFlow.decEq._proof_6' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqFlow.decEq._proof_7' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqIntent.decEq._proof_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqIntent.decEq._proof_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqIntent.decEq._proof_3' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqIntent.decEq._proof_4' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqIntent.decEq._proof_5' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqIntent.decEq._proof_6' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqIntent.decEq._proof_7' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqIntent.decEq._proof_8' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqKeyState.decEq._proof_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqKeyState.decEq._proof_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqKeyState.decEq._proof_3' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_10' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_11' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_12' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_13' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_14' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_3' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_4' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_5' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_6' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_7' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_8' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLeaf.decEq._proof_9' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLive.decEq._proof_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLive.decEq._proof_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLive.decEq._proof_3' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLive.decEq._proof_4' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLive.decEq._proof_5' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLive.decEq._proof_6' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLive.decEq._proof_7' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqLive.decEq._proof_8' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqPayment.decEq._proof_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqPayment.decEq._proof_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqPayment.decEq._proof_3' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqPayment.decEq._proof_4' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqPayment.decEq._proof_5' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_10' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_11' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_12' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_13' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_14' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_15' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_16' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_3' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_4' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_5' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_6' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_7' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_8' does not depend on any axioms
+'CardanoKeri.Checkpoint.instDecidableEqState.decEq._proof_9' does not depend on any axioms
+'CardanoKeri.Checkpoint.poisonAfter.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.poisonAfter.eq_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.poisonAfter.eq_3' does not depend on any axioms
+'CardanoKeri.Checkpoint.poisonAfter.eq_4' does not depend on any axioms
+'CardanoKeri.Checkpoint.poisonAfter.eq_5' does not depend on any axioms
+'CardanoKeri.Checkpoint.poisonAfter.eq_6' does not depend on any axioms
+'CardanoKeri.Checkpoint.poisonSinceLastRotation.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.replay.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.replay.eq_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.stepFn.eq_1' does not depend on any axioms
+'CardanoKeri.Checkpoint.stepFn.eq_10' does not depend on any axioms
+'CardanoKeri.Checkpoint.stepFn.eq_2' does not depend on any axioms
+'CardanoKeri.Checkpoint.stepFn.eq_3' does not depend on any axioms
+'CardanoKeri.Checkpoint.stepFn.eq_4' does not depend on any axioms
+'CardanoKeri.Checkpoint.stepFn.eq_5' does not depend on any axioms
+'CardanoKeri.Checkpoint.stepFn.eq_6' does not depend on any axioms
+'CardanoKeri.Checkpoint.stepFn.eq_7' does not depend on any axioms
+'CardanoKeri.Checkpoint.stepFn.eq_8' does not depend on any axioms
+'CardanoKeri.Checkpoint.stepFn.eq_9' does not depend on any axioms
+'CardanoKeri.Checkpoint.trace_from_convicted' does not depend on any axioms
+'CardanoKeri.Checkpoint.trace_poison_fold' does not depend on any axioms
+'CardanoKeri.Checkpoint.trace_sn_monotone_all' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.Acc.mk.inj' does not depend on any axioms
+'CardanoKeri.Registry.Acc.mk.injEq' depends on axioms: [propext]
+'CardanoKeri.Registry.Acc.mk.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.AccInv.activeCkpt' does not depend on any axioms
+'CardanoKeri.Registry.AccInv.ckptActive' does not depend on any axioms
+'CardanoKeri.Registry.AccInv.ckptNodup' does not depend on any axioms
+'CardanoKeri.Registry.AccInv.goActive' does not depend on any axioms
+'CardanoKeri.Registry.AccInv.goFar' does not depend on any axioms
+'CardanoKeri.Registry.AccInv.goNoCkpt' does not depend on any axioms
+'CardanoKeri.Registry.AccInv.goUnique' does not depend on any axioms
+'CardanoKeri.Registry.AccInv.leafNodup' does not depend on any axioms
+'CardanoKeri.Registry.AccInv.reqBelowNext' does not depend on any axioms
+'CardanoKeri.Registry.AccInv.reqNodup' does not depend on any axioms
+'CardanoKeri.Registry.Action.contribute.inj' does not depend on any axioms
+'CardanoKeri.Registry.Action.contribute.injEq' depends on axioms: [propext]
+'CardanoKeri.Registry.Action.contribute.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Action.convictCkpt.inj' does not depend on any axioms
+'CardanoKeri.Registry.Action.convictCkpt.injEq' depends on axioms: [propext]
+'CardanoKeri.Registry.Action.convictCkpt.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Action.fold.inj' does not depend on any axioms
+'CardanoKeri.Registry.Action.fold.injEq' depends on axioms: [propext]
+'CardanoKeri.Registry.Action.fold.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Action.pause.inj' does not depend on any axioms
+'CardanoKeri.Registry.Action.pause.injEq' depends on axioms: [propext]
+'CardanoKeri.Registry.Action.pause.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Action.reap.inj' does not depend on any axioms
+'CardanoKeri.Registry.Action.reap.injEq' depends on axioms: [propext]
+'CardanoKeri.Registry.Action.reap.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Action.resume.inj' does not depend on any axioms
+'CardanoKeri.Registry.Action.resume.injEq' depends on axioms: [propext]
+'CardanoKeri.Registry.Action.resume.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Action.retract.inj' does not depend on any axioms
+'CardanoKeri.Registry.Action.retract.injEq' depends on axioms: [propext]
+'CardanoKeri.Registry.Action.retract.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Actor.anyone.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Actor.nextKeys.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Actor.ofNat_ctorIdx' does not depend on any axioms
+'CardanoKeri.Registry.Actor.owner.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Actor.proof.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.CkState.live.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.CkState.parked.inj' does not depend on any axioms
+'CardanoKeri.Registry.CkState.parked.injEq' depends on axioms: [propext]
+'CardanoKeri.Registry.CkState.parked.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.CkState.tomb.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Ckpt.mk.inj' does not depend on any axioms
+'CardanoKeri.Registry.Ckpt.mk.injEq' depends on axioms: [propext]
+'CardanoKeri.Registry.Ckpt.mk.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Env.mk.inj' does not depend on any axioms
+'CardanoKeri.Registry.Env.mk.injEq' depends on axioms: [propext]
+'CardanoKeri.Registry.Env.mk.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Flow.mk.inj' does not depend on any axioms
+'CardanoKeri.Registry.Flow.mk.injEq' depends on axioms: [propext]
+'CardanoKeri.Registry.Flow.mk.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.FoldAction.ofNat_ctorIdx' does not depend on any axioms
+'CardanoKeri.Registry.FoldAction.process.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.FoldAction.reject.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Inv.activeCkpt' does not depend on any axioms
+'CardanoKeri.Registry.Inv.ckptActive' does not depend on any axioms
+'CardanoKeri.Registry.Inv.ckptNodup' does not depend on any axioms
+'CardanoKeri.Registry.Inv.goActive' does not depend on any axioms
+'CardanoKeri.Registry.Inv.goFar' does not depend on any axioms
+'CardanoKeri.Registry.Inv.goNoCkpt' does not depend on any axioms
+'CardanoKeri.Registry.Inv.goUnique' does not depend on any axioms
+'CardanoKeri.Registry.Inv.leafNodup' does not depend on any axioms
+'CardanoKeri.Registry.Inv.reqBelowNext' does not depend on any axioms
+'CardanoKeri.Registry.Inv.reqNodup' does not depend on any axioms
+'CardanoKeri.Registry.Op.convict.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Op.goConvicted.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Op.goDormant.inj' does not depend on any axioms
+'CardanoKeri.Registry.Op.goDormant.injEq' depends on axioms: [propext]
+'CardanoKeri.Registry.Op.goDormant.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Op.register.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Op.revive.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Op.userPostable.eq_1' does not depend on any axioms
+'CardanoKeri.Registry.Op.userPostable.eq_2' does not depend on any axioms
+'CardanoKeri.Registry.Op.userPostable.eq_3' does not depend on any axioms
+'CardanoKeri.Registry.Op.userPostable.eq_4' does not depend on any axioms
+'CardanoKeri.Registry.Params.hD' does not depend on any axioms
+'CardanoKeri.Registry.Params.hFund' does not depend on any axioms
+'CardanoKeri.Registry.Params.hProcess' does not depend on any axioms
+'CardanoKeri.Registry.Params.hRetract' does not depend on any axioms
+'CardanoKeri.Registry.Params.mk.inj' does not depend on any axioms
+'CardanoKeri.Registry.Params.mk.injEq' depends on axioms: [propext]
+'CardanoKeri.Registry.Params.mk.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.R10_honest_phase1_reject_exclusive' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R10_honest_phase1_reject_exclusive._proof_1_1' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R10_phase1_phase2_exclusive' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R10_phase1_phase2_exclusive._proof_1_1' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R10_phase2_reject_exclusive' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R10_phase2_reject_exclusive._proof_1_1' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R11_ckpt_edges_move_no_value' does not depend on any axioms
+'CardanoKeri.Registry.R11_contribute_value' does not depend on any axioms
+'CardanoKeri.Registry.R11_go_refunds_reaper' depends on axioms: [propext]
+'CardanoKeri.Registry.R11_reap_flow' depends on axioms: [propext]
+'CardanoKeri.Registry.R11_reap_is_samaritan' depends on axioms: [propext]
+'CardanoKeri.Registry.R11_retract_value' depends on axioms: [propext]
+'CardanoKeri.Registry.R11_samaritan_never_loses' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R12_leaf_changes_only_by_fold' does not depend on any axioms
+'CardanoKeri.Registry.R12_leaf_enters_only_by_fold' does not depend on any axioms
+'CardanoKeri.Registry.R13_live_never_reaped' depends on axioms: [propext]
+'CardanoKeri.Registry.R13_owner_reaps_early' depends on axioms: [propext]
+'CardanoKeri.Registry.R13_parked_after_grace' depends on axioms: [propext]
+'CardanoKeri.Registry.R13_parked_needs_grace' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R13_parked_needs_grace._proof_1_2' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R13_tomb_reaped' depends on axioms: [propext]
+'CardanoKeri.Registry.R14_convictCkpt_needs_proof' depends on axioms: [propext]
+'CardanoKeri.Registry.R14_convict_at_position' depends on axioms: [propext]
+'CardanoKeri.Registry.R14_convict_dormant_needs_proof' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R14_convict_in_batch_needs_proof' depends on axioms: [propext]
+'CardanoKeri.Registry.R1_active_ckpt_or_go' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R1_ckpt_implies_active' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R1_not_active_no_ckpt' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R1_registered_refused' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R2_one_ckpt_per_aid' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R2_one_go_per_aid' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R2_one_leaf_per_aid' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R3_convicted_never_registered' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R3_convicted_permanent' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R4_leaf_permanent' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R5_plugin_pinned' does not depend on any axioms
+'CardanoKeri.Registry.R6_fold_advances' depends on axioms: [propext]
+'CardanoKeri.Registry.R6_gen_step' does not depend on any axioms
+'CardanoKeri.Registry.R6_registry_untouched' does not depend on any axioms
+'CardanoKeri.Registry.R7_one_fold_per_generation' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R7_one_fold_per_generation._proof_1_10' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R7_stale_fold_refused' depends on axioms: [propext]
+'CardanoKeri.Registry.R8_empty_fold_refused' depends on axioms: [propext]
+'CardanoKeri.Registry.R8_plugin_swap_refused' depends on axioms: [propext]
+'CardanoKeri.Registry.R9_go_never_rejected' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R9_go_never_retracted' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.R9_reject_enabled' depends on axioms: [propext]
+'CardanoKeri.Registry.R9_reject_needs_rejectable' depends on axioms: [propext]
+'CardanoKeri.Registry.R9_retract_enabled' depends on axioms: [propext]
+'CardanoKeri.Registry.R9_retract_needs_phase2' depends on axioms: [propext]
+'CardanoKeri.Registry.Reach.brecOn' does not depend on any axioms
+'CardanoKeri.Registry.ReachFar.brecOn' does not depend on any axioms
+'CardanoKeri.Registry.Request.mk.inj' does not depend on any axioms
+'CardanoKeri.Registry.Request.mk.injEq' depends on axioms: [propext]
+'CardanoKeri.Registry.Request.mk.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Status.active.inj' does not depend on any axioms
+'CardanoKeri.Registry.Status.active.injEq' depends on axioms: [propext]
+'CardanoKeri.Registry.Status.active.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Status.convicted.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Status.dormant.inj' does not depend on any axioms
+'CardanoKeri.Registry.Status.dormant.injEq' depends on axioms: [propext]
+'CardanoKeri.Registry.Status.dormant.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.Sys.init.eq_1' does not depend on any axioms
+'CardanoKeri.Registry.Sys.mk.inj' does not depend on any axioms
+'CardanoKeri.Registry.Sys.mk.injEq' depends on axioms: [propext]
+'CardanoKeri.Registry.Sys.mk.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Registry.accInv_of_inv' does not depend on any axioms
+'CardanoKeri.Registry.accInv_remove_postable' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.applyBatch.eq_1' does not depend on any axioms
+'CardanoKeri.Registry.applyBatch.eq_2' does not depend on any axioms
+'CardanoKeri.Registry.applyBatch_append' depends on axioms: [propext]
+'CardanoKeri.Registry.applyBatch_inv' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.applyBatch_leaf_mono' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.applyBatch_register_registered' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.applyBatch_reject_go' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.applyBatch_unknown' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.eq_of_mem_of_fst_eq' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.fst_ne_of_mem_remove' depends on axioms: [propext]
+'CardanoKeri.Registry.goIn_cons_go' depends on axioms: [propext]
+'CardanoKeri.Registry.goIn_cons_postable' depends on axioms: [propext]
+'CardanoKeri.Registry.goIn_remove_other' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.goIn_remove_postable' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.goInv_after_go' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.goOp.eq_1' does not depend on any axioms
+'CardanoKeri.Registry.goOp_not_postable' does not depend on any axioms
+'CardanoKeri.Registry.goPending_iff' does not depend on any axioms
+'CardanoKeri.Registry.go_not_phase2' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.go_not_phase2._proof_1_1' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.instDecidableEqAcc.decEq._proof_1' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAcc.decEq._proof_2' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAcc.decEq._proof_3' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAcc.decEq._proof_4' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAcc.decEq._proof_5' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAcc.decEq._proof_6' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAcc.decEq._proof_7' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_1' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_10' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_11' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_12' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_13' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_14' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_15' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_16' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_17' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_18' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_19' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_2' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_20' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_21' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_22' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_23' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_24' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_25' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_26' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_27' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_28' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_29' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_3' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_30' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_31' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_32' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_33' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_34' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_35' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_36' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_37' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_38' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_39' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_4' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_40' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_41' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_42' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_43' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_44' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_45' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_46' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_47' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_48' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_49' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_5' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_50' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_51' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_52' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_53' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_54' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_55' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_56' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_57' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_58' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_59' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_6' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_60' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_61' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_62' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_63' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_7' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_8' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqAction.decEq._proof_9' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqActor._proof_1' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqActor._proof_2' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqCkState.decEq._proof_1' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqCkState.decEq._proof_2' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqCkState.decEq._proof_3' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqCkState.decEq._proof_4' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqCkState.decEq._proof_5' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqCkState.decEq._proof_6' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqCkState.decEq._proof_7' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqCkState.decEq._proof_8' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqCkpt.decEq._proof_1' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqCkpt.decEq._proof_2' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqCkpt.decEq._proof_3' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqCkpt.decEq._proof_4' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqFlow.decEq._proof_1' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqFlow.decEq._proof_2' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqFlow.decEq._proof_3' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqFlow.decEq._proof_4' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqFlow.decEq._proof_5' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqFlow.decEq._proof_6' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqFlow.decEq._proof_7' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqFoldAction._proof_1' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqFoldAction._proof_2' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_1' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_10' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_11' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_12' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_13' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_14' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_15' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_16' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_17' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_18' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_19' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_2' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_20' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_21' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_22' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_3' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_4' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_5' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_6' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_7' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_8' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqOp.decEq._proof_9' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqRequest.decEq._proof_1' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqRequest.decEq._proof_2' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqRequest.decEq._proof_3' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqRequest.decEq._proof_4' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqRequest.decEq._proof_5' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqStatus.decEq._proof_1' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqStatus.decEq._proof_10' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqStatus.decEq._proof_2' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqStatus.decEq._proof_3' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqStatus.decEq._proof_4' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqStatus.decEq._proof_5' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqStatus.decEq._proof_6' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqStatus.decEq._proof_7' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqStatus.decEq._proof_8' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqStatus.decEq._proof_9' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqSys.decEq._proof_1' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqSys.decEq._proof_2' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqSys.decEq._proof_3' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqSys.decEq._proof_4' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqSys.decEq._proof_5' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqSys.decEq._proof_6' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqSys.decEq._proof_7' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableEqSys.decEq._proof_8' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableReapable._proof_1' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableReapable._proof_2' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableReapable._proof_3' does not depend on any axioms
+'CardanoKeri.Registry.instDecidableReapable._proof_4' does not depend on any axioms
+'CardanoKeri.Registry.inv_init' depends on axioms: [propext]
+'CardanoKeri.Registry.inv_of_accInv' does not depend on any axioms
+'CardanoKeri.Registry.inv_replace_ckpt' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.inv_step' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.inv_step._proof_1_9' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.key_not_mem_map_fst_remove_self' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.key_not_mem_of_lookup_none' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.lookup.eq_1' does not depend on any axioms
+'CardanoKeri.Registry.lookup.eq_2' does not depend on any axioms
+'CardanoKeri.Registry.lookup_cons_ne' depends on axioms: [propext]
+'CardanoKeri.Registry.lookup_cons_self' depends on axioms: [propext]
+'CardanoKeri.Registry.lookup_none_of_not_mem' depends on axioms: [propext]
+'CardanoKeri.Registry.lookup_remove_ne' depends on axioms: [propext]
+'CardanoKeri.Registry.lookup_remove_self' depends on axioms: [propext]
+'CardanoKeri.Registry.lookup_setLeaf_ne' does not depend on any axioms
+'CardanoKeri.Registry.lookup_setLeaf_self' depends on axioms: [propext]
+'CardanoKeri.Registry.lookup_some_mem' depends on axioms: [propext]
+'CardanoKeri.Registry.lookup_some_of_mem' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.mem_remove' depends on axioms: [propext]
+'CardanoKeri.Registry.mem_remove_of_mem' depends on axioms: [propext]
+'CardanoKeri.Registry.no_ckpt_of_no_leaf' does not depend on any axioms
+'CardanoKeri.Registry.no_ckpt_of_not_active' does not depend on any axioms
+'CardanoKeri.Registry.nodup_map_remove' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.not_mem_of_lookup_none' depends on axioms: [propext]
+'CardanoKeri.Registry.processBody.eq_1' does not depend on any axioms
+'CardanoKeri.Registry.processBody_convict_iff' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.processBody_goConvicted_iff' depends on axioms: [propext]
+'CardanoKeri.Registry.processBody_goDormant_iff' depends on axioms: [propext]
+'CardanoKeri.Registry.processBody_register_iff' depends on axioms: [propext]
+'CardanoKeri.Registry.processBody_revive_iff' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.processOne.eq_1' does not depend on any axioms
+'CardanoKeri.Registry.processOne_inv' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.processOne_leaf_mono' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.processOne_register_registered' does not depend on any axioms
+'CardanoKeri.Registry.processOne_requests' depends on axioms: [Quot.sound]
+'CardanoKeri.Registry.reach_inv' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.reapable.eq_1' does not depend on any axioms
+'CardanoKeri.Registry.rejectOne.eq_1' does not depend on any axioms
+'CardanoKeri.Registry.rejectOne_go' does not depend on any axioms
+'CardanoKeri.Registry.rejectOne_inv' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Registry.rejectOne_leaves' depends on axioms: [propext]
+'CardanoKeri.Registry.remove.eq_1' does not depend on any axioms
+'CardanoKeri.Registry.remove.eq_2' does not depend on any axioms
+'CardanoKeri.Registry.setLeaf.eq_1' does not depend on any axioms
+'CardanoKeri.Registry.setLeaf.eq_2' does not depend on any axioms
+'CardanoKeri.Registry.setLeaf_map_fst' depends on axioms: [propext]
+'CardanoKeri.Registry.stepFn.eq_1' does not depend on any axioms
+'CardanoKeri.Registry.stepFn.eq_2' does not depend on any axioms
+'CardanoKeri.Registry.stepFn.eq_3' does not depend on any axioms
+'CardanoKeri.Registry.stepFn.eq_4' does not depend on any axioms
+'CardanoKeri.Registry.stepFn.eq_5' does not depend on any axioms
+'CardanoKeri.Registry.stepFn.eq_6' does not depend on any axioms
+'CardanoKeri.Registry.stepFn.eq_7' does not depend on any axioms
+'CardanoKeri.Registry.stepFn_contribute_iff' depends on axioms: [propext]
+'CardanoKeri.Registry.stepFn_convictCkpt_iff' depends on axioms: [propext]
+'CardanoKeri.Registry.stepFn_fold_iff' depends on axioms: [propext]
+'CardanoKeri.Registry.stepFn_pause_iff' depends on axioms: [propext]
+'CardanoKeri.Registry.stepFn_reap_iff' depends on axioms: [propext]
+'CardanoKeri.Registry.stepFn_resume_iff' depends on axioms: [propext]
+'CardanoKeri.Registry.stepFn_retract_iff' depends on axioms: [propext]
+'CardanoKeri.Samaritan.FoldFlow.mk.inj' does not depend on any axioms
+'CardanoKeri.Samaritan.FoldFlow.mk.injEq' depends on axioms: [propext]
+'CardanoKeri.Samaritan.FoldFlow.mk.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Samaritan.Reap.hFund' does not depend on any axioms
+'CardanoKeri.Samaritan.Reap.mk.inj' does not depend on any axioms
+'CardanoKeri.Samaritan.Reap.mk.injEq' depends on axioms: [propext]
+'CardanoKeri.Samaritan.Reap.mk.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Samaritan.ReapFlow.mk.inj' does not depend on any axioms
+'CardanoKeri.Samaritan.ReapFlow.mk.injEq' depends on axioms: [propext]
+'CardanoKeri.Samaritan.ReapFlow.mk.sizeOf_spec' does not depend on any axioms
+'CardanoKeri.Samaritan.fold.eq_1' does not depend on any axioms
+'CardanoKeri.Samaritan.fold_conserves' depends on axioms: [propext]
+'CardanoKeri.Samaritan.reap.eq_1' does not depend on any axioms
+'CardanoKeri.Samaritan.reap_conserves' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Samaritan.reap_conserves._proof_1_2' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Samaritan.reaper_recovers' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Samaritan.reaper_recovers._proof_1_3' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Samaritan.samaritan_never_loses' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Samaritan.samaritan_never_loses._proof_1_3' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Samaritan.self_folding_reaper_never_loses' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Samaritan.self_folding_reaper_never_loses._proof_1_3' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Samaritan.unprofitable_when_tip_too_high' depends on axioms: [propext, Quot.sound]
+'CardanoKeri.Samaritan.unprofitable_when_tip_too_high._proof_1_3' depends on axioms: [propext, Quot.sound]

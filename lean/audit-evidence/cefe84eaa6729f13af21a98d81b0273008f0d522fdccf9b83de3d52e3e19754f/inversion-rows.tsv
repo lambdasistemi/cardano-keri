@@ -1,0 +1,26 @@
+compiled_inductive	constructor	inversion	proof_status	evidence	limit
+CardanoKeri.Checkpoint.Step	CardanoKeri.Checkpoint.Step.closePaid	CardanoKeri.Checkpoint.Step.closePaid_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Checkpoint.Step	CardanoKeri.Checkpoint.Step.closeUnpaid	CardanoKeri.Checkpoint.Step.closeUnpaid_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Checkpoint.Step	CardanoKeri.Checkpoint.Step.convict	CardanoKeri.Checkpoint.Step.convict_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Checkpoint.Step	CardanoKeri.Checkpoint.Step.convictParked	CardanoKeri.Checkpoint.Step.convictParked_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Checkpoint.Step	CardanoKeri.Checkpoint.Step.freeze	CardanoKeri.Checkpoint.Step.freeze_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Checkpoint.Step	CardanoKeri.Checkpoint.Step.poison	CardanoKeri.Checkpoint.Step.poison_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Checkpoint.Step	CardanoKeri.Checkpoint.Step.register	CardanoKeri.Checkpoint.Step.register_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Checkpoint.Step	CardanoKeri.Checkpoint.Step.reopen	CardanoKeri.Checkpoint.Step.reopen_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Checkpoint.Step	CardanoKeri.Checkpoint.Step.rotateDepositPaid	CardanoKeri.Checkpoint.Step.rotateDepositPaid_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Checkpoint.Step	CardanoKeri.Checkpoint.Step.rotateDepositUnpaid	CardanoKeri.Checkpoint.Step.rotateDepositUnpaid_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Checkpoint.Step	CardanoKeri.Checkpoint.Step.rotateKeepPaid	CardanoKeri.Checkpoint.Step.rotateKeepPaid_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Checkpoint.Step	CardanoKeri.Checkpoint.Step.rotateKeepUnpaid	CardanoKeri.Checkpoint.Step.rotateKeepUnpaid_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Checkpoint.Step	CardanoKeri.Checkpoint.Step.topUp	CardanoKeri.Checkpoint.Step.topUp_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Registry.Action	CardanoKeri.Registry.Action.contribute	CardanoKeri.Registry.stepFn_contribute_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Registry.Action	CardanoKeri.Registry.Action.convictCkpt	CardanoKeri.Registry.stepFn_convictCkpt_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Registry.Action	CardanoKeri.Registry.Action.fold	CardanoKeri.Registry.stepFn_fold_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Registry.Action	CardanoKeri.Registry.Action.pause	CardanoKeri.Registry.stepFn_pause_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Registry.Action	CardanoKeri.Registry.Action.reap	CardanoKeri.Registry.stepFn_reap_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Registry.Action	CardanoKeri.Registry.Action.resume	CardanoKeri.Registry.stepFn_resume_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Registry.Action	CardanoKeri.Registry.Action.retract	CardanoKeri.Registry.stepFn_retract_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Registry.Op	CardanoKeri.Registry.Op.convict	CardanoKeri.Registry.processBody_convict_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Registry.Op	CardanoKeri.Registry.Op.goConvicted	CardanoKeri.Registry.processBody_goConvicted_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Registry.Op	CardanoKeri.Registry.Op.goDormant	CardanoKeri.Registry.processBody_goDormant_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Registry.Op	CardanoKeri.Registry.Op.register	CardanoKeri.Registry.processBody_register_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun
+CardanoKeri.Registry.Op	CardanoKeri.Registry.Op.revive	CardanoKeri.Registry.processBody_revive_iff	PROVED	axioms.log	inherited exact-premise/control evidence; not freshly rerun

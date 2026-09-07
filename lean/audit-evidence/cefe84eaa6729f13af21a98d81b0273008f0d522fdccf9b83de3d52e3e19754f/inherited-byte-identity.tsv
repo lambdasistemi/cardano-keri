@@ -1,0 +1,4 @@
+ticket	audited_candidate	path	byte_equal_to_release
+363	4a99ea42ccba83e0cb32692cb9cac75babdc5f20	lean/CardanoKeri/CheckpointGoals.lean	true
+364	55e932f8912392a3dbcdc201bb870996ff44b140	lean/CardanoKeri/RegistryGoals.lean	true
+365	127f2e8794d65987f3405610be30385992d4dd09	lean/mutants/run.sh	true

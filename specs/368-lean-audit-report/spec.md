@@ -10,6 +10,15 @@ The planning artifact ceiling is 180 lines. The report and evidence are not
 filled or verified until the epic owner publishes the final audit-tree commit
 through this ticket's durable control channel.
 
+## Released finish amendment (NOTE-008)
+
+Final release: `a67e3ed16d4f406fa99dd8b746a65e0c2c0b8359`; #372 and
+#373 are merged. The pure-report finish in plan.md supersedes the earlier
+OWNER/auditor topology. Historical planning boundaries below are retained as
+history only. Non-pass delivery may complete with explicitly OPEN assessment
+rows; a passing verdict still requires every substantive invariant closed.
+No independent FULL acceptance is inferred from report-author checks.
+
 ## Authority and frozen input
 
 - **REQ-368-AUTH:** The only admissible release is the commit named by the
@@ -96,7 +105,6 @@ not accept its own report.
 ## Non-goals
 
 - Fixing a discovered defect or adding a missing guarantee.
-- Choosing whether PR #372 supplies the Lifecycle disposition in the audited
-  repository tree; that open decision belongs to the project desk.
+- Reopening the settled #372 Lifecycle deletion disposition.
 - Changing ratified Lean statements, adding axioms, or changing product code.
 - Claiming exhaustive mutation coverage beyond the frozen finite ledgers.

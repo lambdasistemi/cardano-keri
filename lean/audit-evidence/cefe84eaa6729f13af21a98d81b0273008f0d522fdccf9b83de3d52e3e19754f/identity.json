@@ -1,0 +1,8 @@
+{
+  "release": "a67e3ed16d4f406fa99dd8b746a65e0c2c0b8359",
+  "release_tree": "4166d3eba78f6270e286921c6b71fbd6c4e6382b",
+  "release_lean_tree": "7c4fff56d0bc95d99130505b3ac0301a65d0596f",
+  "rebased_head": "93fe3e6ff4c7c421c65d2a9a3db4ec349ed56f77",
+  "manifest_sha256": "cefe84eaa6729f13af21a98d81b0273008f0d522fdccf9b83de3d52e3e19754f",
+  "mode": "pure-report finish; no auditor seated"
+}

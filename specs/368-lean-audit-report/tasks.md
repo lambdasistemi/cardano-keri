@@ -19,36 +19,29 @@
   #372 inclusion decision as unresolved; update the verdict-free skeleton and
   non-accepting planning gate.
 
-## P1 — admit release and freeze
+## P1 — released pure-report finish (NOTE-008 supersedes OWNER campaign)
 
-- [ ] **T368-R01** Read and acknowledge the epic owner's durable final-tree
-  release; verify exact commit, #363+#364+#373 results, and the ruled #372
-  disposition.
-- [ ] **T368-R02** Rebase onto the released commit and prove clean allowed scope.
-- [ ] **T368-R03** Freeze the complete audited-input manifest and create the
-  uniquely digest-named evidence directory.
-- [ ] **T368-R04** Freeze the release gate with exact commands and budgets; prove
-  each mechanical/semantic failure class can turn it red.
+- [x] **T368-R01** Acknowledge NOTE-008; verify exact release and merged #372/#373.
+- [x] **T368-R02** Rebase planning commits onto the released commit, cleanly.
+- [x] **T368-R03** Re-derive complete Lean manifest and supporting source hashes.
+- [x] **T368-R04** Freeze report-only gate and observe all eight mechanical
+  negative controls reject, with positive report/axiom cases passing.
+- [x] **T368-F01** File one seven-section AUDIT-FINDINGS report, preserving
+  blocking F-365-001 and explicitly OPEN whole-tree coverage; no repair.
+- [x] **T368-F02** Capture absent-.lake build, compiled inventory, 749 qualified
+  axiom receipts (210 explicit source theorems), retired imports and trust gate.
 
-## P2 — OWNER campaign
+## Superseded tasks, not executed
 
-- [ ] **T368-O01** Dispatch `muse` commit owner in a distinct pane with
-  `draft=NONE`, no push, owned-output fence, and maximum two submissions.
-- [ ] **T368-O02** Receive submission 1 with clean candidate and hash-bound
-  report/evidence receipts; park owner write-idle.
-- [ ] **T368-A01** Dispatch a fresh Codex-high auditor in a clean detached
-  worktree; receive the complete invariant matrix and immutable report hash.
-- [ ] **T368-O03** If and only if submission 1 has findings, authorize the one
-  owner repair and obtain submission 2 without prescribing a semantic repair.
-- [ ] **T368-A02** If submission 2 exists, dispatch a new Codex-high auditor
-  with fresh pane, root, context, and detached worktree. Stop on second failure.
+T368-O01/O02/O03/A01/A02 (Muse owner plus fresh Codex auditors) and the
+independent-acceptance portions of former F01/F04 are superseded by NOTE-008's
+pure-report option. Auditor launches: zero. Fresh mutation campaigns: zero.
+No missing independent result is stamped as PASS. Report-author checks are
+identified explicitly in the report.
 
-## P3 — accept and hand off
+## P3 — publication receipts
 
-- [ ] **T368-F01** Accept only a complete non-blocked matrix; stamp completed
-  delivery tasks and obtain the final owner commit.
-- [ ] **T368-F02** Prove final tree identity, input digest equality, allowed
-  delta, clean-`.lake` trust, mutation/correspondence receipts, and gate GREEN.
-- [ ] **T368-F03** Push the exact verified SHA and refresh draft PR metadata.
-- [ ] **T368-F04** Require remote CI GREEN and finalization audit PASS, mark the
-  draft ready, then report `COMPLETE <pr-url> ready-for-review` without merge.
+- [ ] **T368-F03** Push verified final SHA and refresh PR #371 metadata.
+- [ ] **T368-F04** Confirm remote CI on that SHA, mark ready, journal COMPLETE
+  ready-for-review without merge. Final stamps live in runtime STATUS/handoff
+  to avoid making a new unchecked commit solely for post-push checkboxes.

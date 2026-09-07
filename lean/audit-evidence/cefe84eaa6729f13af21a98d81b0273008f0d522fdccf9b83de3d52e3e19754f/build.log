@@ -1,0 +1,159 @@
+evaluation warning: 'system' has been renamed to/replaced by 'stdenv.hostPlatform.system'
+✔ [2/9] Built CardanoKeri.Samaritan (592ms)
+✔ [3/9] Built CardanoKeri.Checkpoint (1.7s)
+✔ [4/9] Built CardanoKeri.Registry (2.0s)
+✔ [5/9] Built CardanoKeri.RegistryGoals (3.1s)
+⚠ [6/9] Built CardanoKeri.CheckpointGoals (4.1s)
+warning: CardanoKeri/CheckpointGoals.lean:354:12: This simp argument is unused:
+  Live.bHeld
+
+Hint: Omit it from the simp argument list.
+  simp [L̵i̵v̵e̵.̵b̵H̵e̵l̵d̵,̵ ̵hfull]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: CardanoKeri/CheckpointGoals.lean:354:24: This simp argument is unused:
+  hfull
+
+Hint: Omit it from the simp argument list.
+  simp [Live.bHeld,̵ ̵h̵f̵u̵l̵l̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: CardanoKeri/CheckpointGoals.lean:361:12: This simp argument is unused:
+  Live.bHeld
+
+Hint: Omit it from the simp argument list.
+  simp [L̵i̵v̵e̵.̵b̵H̵e̵l̵d̵,̵ ̵hfull]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: CardanoKeri/CheckpointGoals.lean:361:24: This simp argument is unused:
+  hfull
+
+Hint: Omit it from the simp argument list.
+  simp [Live.bHeld,̵ ̵h̵f̵u̵l̵l̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+info: CardanoKeri/CheckpointGoals.lean:1313:0: checkpoint-inversion-row constructor=CardanoKeri.Checkpoint.Step.register inversion=CardanoKeri.Checkpoint.Step.register_iff
+info: CardanoKeri/CheckpointGoals.lean:1313:0: checkpoint-inversion-row constructor=CardanoKeri.Checkpoint.Step.rotateKeepPaid inversion=CardanoKeri.Checkpoint.Step.rotateKeepPaid_iff
+info: CardanoKeri/CheckpointGoals.lean:1313:0: checkpoint-inversion-row constructor=CardanoKeri.Checkpoint.Step.rotateKeepUnpaid inversion=CardanoKeri.Checkpoint.Step.rotateKeepUnpaid_iff
+info: CardanoKeri/CheckpointGoals.lean:1313:0: checkpoint-inversion-row constructor=CardanoKeri.Checkpoint.Step.rotateDepositPaid inversion=CardanoKeri.Checkpoint.Step.rotateDepositPaid_iff
+info: CardanoKeri/CheckpointGoals.lean:1313:0: checkpoint-inversion-row constructor=CardanoKeri.Checkpoint.Step.rotateDepositUnpaid inversion=CardanoKeri.Checkpoint.Step.rotateDepositUnpaid_iff
+info: CardanoKeri/CheckpointGoals.lean:1313:0: checkpoint-inversion-row constructor=CardanoKeri.Checkpoint.Step.poison inversion=CardanoKeri.Checkpoint.Step.poison_iff
+info: CardanoKeri/CheckpointGoals.lean:1313:0: checkpoint-inversion-row constructor=CardanoKeri.Checkpoint.Step.freeze inversion=CardanoKeri.Checkpoint.Step.freeze_iff
+info: CardanoKeri/CheckpointGoals.lean:1313:0: checkpoint-inversion-row constructor=CardanoKeri.Checkpoint.Step.topUp inversion=CardanoKeri.Checkpoint.Step.topUp_iff
+info: CardanoKeri/CheckpointGoals.lean:1313:0: checkpoint-inversion-row constructor=CardanoKeri.Checkpoint.Step.convict inversion=CardanoKeri.Checkpoint.Step.convict_iff
+info: CardanoKeri/CheckpointGoals.lean:1313:0: checkpoint-inversion-row constructor=CardanoKeri.Checkpoint.Step.convictParked inversion=CardanoKeri.Checkpoint.Step.convictParked_iff
+info: CardanoKeri/CheckpointGoals.lean:1313:0: checkpoint-inversion-row constructor=CardanoKeri.Checkpoint.Step.closePaid inversion=CardanoKeri.Checkpoint.Step.closePaid_iff
+info: CardanoKeri/CheckpointGoals.lean:1313:0: checkpoint-inversion-row constructor=CardanoKeri.Checkpoint.Step.closeUnpaid inversion=CardanoKeri.Checkpoint.Step.closeUnpaid_iff
+info: CardanoKeri/CheckpointGoals.lean:1313:0: checkpoint-inversion-row constructor=CardanoKeri.Checkpoint.Step.reopen inversion=CardanoKeri.Checkpoint.Step.reopen_iff
+info: CardanoKeri/CheckpointGoals.lean:1313:0: checkpoint-inversions: coverage=13/13
+info: CardanoKeri/CheckpointGoals.lean:1339:0: Step.register_iff : ∀ (now : Slot) (refund : Addr) (pool0 : Value),
+  Step p env (Action.register refund pool0) now State.absent { dregIn := p.D, bIn := p.B, poolIn := pool0 }
+      (State.present
+        { sn := 0, epoch := 0, poisoned := false, frozen := false, bornAt := now, refundTo := refund, pool := pool0 }) ↔
+    True
+info: CardanoKeri/CheckpointGoals.lean:1344:0: Step.rotateKeepPaid_iff : ∀ (l : Live) (now : Slot) (sn' : CardanoKeri.Checkpoint.Seq) (payee : Addr)
+  (refund' : Option Addr),
+  Step p env (Action.rotate sn' BondOp.keep payee refund') now (State.present l)
+      { hunter := some { addr := payee, pool := p.P } }
+      (State.present
+        { sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := l.frozen, bornAt := l.bornAt,
+          refundTo := refund'.getD l.refundTo, pool := l.pool - p.P }) ↔
+    env.rotationTo l.epoch l.sn sn' = true ∧
+      l.sn < sn' ∧ env.intentOk (l.epoch + 1) Intent.keep refund' = true ∧ p.P ≤ l.pool
+info: CardanoKeri/CheckpointGoals.lean:1353:0: Step.rotateKeepUnpaid_iff : ∀ (l : Live) (now : Slot) (sn' : CardanoKeri.Checkpoint.Seq) (payee : Addr)
+  (refund' : Option Addr),
+  Step p env (Action.rotate sn' BondOp.keep payee refund') now (State.present l) { }
+      (State.present
+        { sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := l.frozen, bornAt := l.bornAt,
+          refundTo := refund'.getD l.refundTo, pool := l.pool }) ↔
+    env.rotationTo l.epoch l.sn sn' = true ∧
+      l.sn < sn' ∧ env.intentOk (l.epoch + 1) Intent.keep refund' = true ∧ l.pool < p.P
+info: CardanoKeri/CheckpointGoals.lean:1361:0: Step.rotateDepositPaid_iff : ∀ (l : Live) (now : Slot) (sn' : CardanoKeri.Checkpoint.Seq) (payee : Addr)
+  (refund' : Option Addr),
+  Step p env (Action.rotate sn' BondOp.deposit payee refund') now (State.present l)
+      { bIn := p.B - Live.bHeld p l, hunter := some { addr := payee, pool := p.P } }
+      (State.present
+        { sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false, bornAt := l.bornAt,
+          refundTo := refund'.getD l.refundTo, pool := l.pool - p.P }) ↔
+    env.rotationTo l.epoch l.sn sn' = true ∧
+      l.sn < sn' ∧ env.intentOk (l.epoch + 1) Intent.deposit refund' = true ∧ p.P ≤ l.pool
+info: CardanoKeri/CheckpointGoals.lean:1371:0: Step.rotateDepositUnpaid_iff : ∀ (l : Live) (now : Slot) (sn' : CardanoKeri.Checkpoint.Seq) (payee : Addr)
+  (refund' : Option Addr),
+  Step p env (Action.rotate sn' BondOp.deposit payee refund') now (State.present l) { bIn := p.B - Live.bHeld p l }
+      (State.present
+        { sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false, bornAt := l.bornAt,
+          refundTo := refund'.getD l.refundTo, pool := l.pool }) ↔
+    env.rotationTo l.epoch l.sn sn' = true ∧
+      l.sn < sn' ∧ env.intentOk (l.epoch + 1) Intent.deposit refund' = true ∧ l.pool < p.P
+info: CardanoKeri/CheckpointGoals.lean:1380:0: Step.poison_iff : ∀ (l : Live) (now : Slot),
+  Step p env Action.poison now (State.present l) { }
+      (State.present
+        { sn := l.sn, epoch := l.epoch, poisoned := true, frozen := l.frozen, bornAt := l.bornAt,
+          refundTo := l.refundTo, pool := l.pool }) ↔
+    env.quorum l.epoch = true ∧ l.poisoned = false
+info: CardanoKeri/CheckpointGoals.lean:1384:0: Step.freeze_iff : ∀ (l : Live) (now : Slot) (sn' : CardanoKeri.Checkpoint.Seq) (payee : Addr),
+  Step p env (Action.freeze sn' payee) now (State.present l) { hunter := some { addr := payee, b := p.B } }
+      (State.present
+        { sn := l.sn, epoch := l.epoch, poisoned := l.poisoned, frozen := true, bornAt := l.bornAt,
+          refundTo := l.refundTo, pool := l.pool }) ↔
+    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ l.pool < p.P ∧ l.frozen = false ∧ l.poisoned = false
+info: CardanoKeri/CheckpointGoals.lean:1391:0: Step.topUp_iff : ∀ (l : Live) (now : Slot) (x : Value),
+  Step p env (Action.topUp x) now (State.present l) { poolIn := x }
+      (State.present
+        { sn := l.sn, epoch := l.epoch, poisoned := l.poisoned, frozen := l.frozen, bornAt := l.bornAt,
+          refundTo := l.refundTo, pool := l.pool + x }) ↔
+    True
+info: CardanoKeri/CheckpointGoals.lean:1395:0: Step.convict_iff : ∀ (l : Live) (now : Slot) (payee : Addr),
+  Step p env (Action.convict payee) now (State.present l)
+      { refund := some { addr := l.refundTo, b := Live.bHeld p l, pool := l.pool },
+        convictor := some { addr := payee, dreg := p.D } }
+      State.convicted ↔
+    env.duplicityAt l.epoch l.sn = true
+info: CardanoKeri/CheckpointGoals.lean:1401:0: Step.convictParked_iff : ∀ (h : Hash) (now : Slot) (payee : Addr),
+  Step p env (Action.convict payee) now (State.parked h) { } State.convicted ↔ env.duplicityAt h.epoch h.sn = true
+info: CardanoKeri/CheckpointGoals.lean:1405:0: Step.closePaid_iff : ∀ (l : Live) (now : Slot) (sn' : CardanoKeri.Checkpoint.Seq) (payee : Addr)
+  (refund' : Option Addr),
+  Step p env (Action.close sn' payee refund') now (State.present l)
+      { refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := Live.bHeld p l, pool := l.pool - p.P },
+        hunter := some { addr := payee, pool := p.P } }
+      (State.parked { epoch := l.epoch + 1, sn := sn' }) ↔
+    env.rotationTo l.epoch l.sn sn' = true ∧
+      l.sn < sn' ∧ env.intentOk (l.epoch + 1) (Intent.close payee) refund' = true ∧ p.P ≤ l.pool
+info: CardanoKeri/CheckpointGoals.lean:1415:0: Step.closeUnpaid_iff : ∀ (l : Live) (now : Slot) (sn' : CardanoKeri.Checkpoint.Seq) (payee : Addr)
+  (refund' : Option Addr),
+  Step p env (Action.close sn' payee refund') now (State.present l)
+      { refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := Live.bHeld p l, pool := l.pool } }
+      (State.parked { epoch := l.epoch + 1, sn := sn' }) ↔
+    env.rotationTo l.epoch l.sn sn' = true ∧
+      l.sn < sn' ∧ env.intentOk (l.epoch + 1) (Intent.close payee) refund' = true ∧ l.pool < p.P
+info: CardanoKeri/CheckpointGoals.lean:1424:0: Step.reopen_iff : ∀ (h : Hash) (now : Slot) (sn' : CardanoKeri.Checkpoint.Seq) (refund : Addr) (pool0 : Value),
+  Step p env (Action.reopen sn' refund pool0) now (State.parked h) { dregIn := p.D, bIn := p.B, poolIn := pool0 }
+      (State.present
+        { sn := sn', epoch := h.epoch + 1, poisoned := false, frozen := false, bornAt := now, refundTo := refund,
+          pool := pool0 }) ↔
+    env.rotationTo h.epoch h.sn sn' = true ∧ h.sn < sn'
+⚠ [7/9] Built CardanoKeri.Cage (945ms)
+warning: CardanoKeri/Cage.lean:204:24: This simp argument is unused:
+  true_implies
+
+Hint: Omit it from the simp argument list.
+  simp only [applyBatch, CardanoKeri.Registry.applyBatch, hl, rejectOne, rejectAllowed,
+  ̲  ̲ ̲ ̲ ̲ ̲ ̲ ̲ ̲ ̲Plugin.registry, f̵o̵r̵a̵l̵l̵_̵c̵o̵n̵s̵t̵,̵ ̵t̵r̵u̵e̵_̵i̵m̵p̵l̵i̵e̵s̵]̵f̲o̲r̲a̲l̲l̲_̲c̲o̲n̲s̲t̲]̲
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: CardanoKeri/Cage.lean:206:25: This simp argument is unused:
+  ite_true
+
+Hint: Omit it from the simp argument list.
+  simp only [hc,̵ ̵i̵t̵e̵_̵t̵r̵u̵e̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: CardanoKeri/Cage.lean:326:41: This simp argument is unused:
+  ite_true
+
+Hint: Omit it from the simp argument list.
+  simp only [applyBatch, hl, hc,̵ ̵i̵t̵e̵_̵t̵r̵u̵e̵] at h
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+✔ [8/9] Built CardanoKeri (473ms)
+Build completed successfully (9 jobs).

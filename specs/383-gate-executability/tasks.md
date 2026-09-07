@@ -13,8 +13,10 @@ Artifact ceiling: 2,500 bytes / 70 lines.
 
 - [ ] **T383-03** Execute and retain the complete per-leg RED control ledger,
   including the zero-build proof that v6 reaches and identifies line 66.
-- [ ] **T383-04** Run exactly one complete v6 campaign and retain its raw and
-  compact GREEN evidence for all R383-05 outcomes.
+- [ ] **T383-04** Retain campaign-031 as GREEN-body/gate-failed evidence, repair
+  the path-dependent digest under A-002, regenerate both receipts, prove
+  relocation acceptance plus content-mutation rejection, then run exactly one
+  additional complete v6 campaign to a full GREEN gate result.
 - [ ] **T383-05** Prove campaign-030 retained bytes remain unchanged and label
   them historical supporting evidence only.
 

@@ -1,0 +1,5 @@
+{
+  "registrations-premint-fact-token": [
+    {"text": "In the shipped version, an earlier transaction proves the BLAKE3 hash relationship and issues a fact token. Registration consumes and burns it, then checks event projection, signatures and witness receipts using the full evidence. The proposed milestone one architecture would instead attest inception admission earlier. That broader attestation remains to be implemented.", "pause": 500}
+  ]
+}

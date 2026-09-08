@@ -1,0 +1,5 @@
+{
+  "why-a-cage-and-why-the-leaf-carries-state": [
+    {"text": "The registry records identity lifecycle state. Active identifies a checkpoint incarnation; dormant preserves the key state needed for revival; convicted is terminal. Active does not mean consumable. During a reap and fold handoff, a pending request can temporarily stand in for the checkpoint. Token and key-state integers in this model do not specify their concrete encoding.", "pause": 500}
+  ]
+}

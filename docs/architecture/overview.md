@@ -5,11 +5,17 @@ rotate. KERI is Key Event Receipt Infrastructure; its **AID** (Autonomic
 Identifier) names an identity, and its **KEL** (Key Event Log) is the signed
 history of that identity's key events.
 
+Start with [Follow one identity](follow-one-identity.md) to play registration,
+rotation, consumer refusal and registry uniqueness before reading the mechanisms
+below.
+
 !!! abstract "Where this page stands"
     The transaction architecture — thin checkpoint, reference observers,
-    zero-lovelace withdrawal, BLAKE3 premint — is **shipped on `main` today**
-    and survives the M1 return unchanged. How lifecycle state is *represented*
-    changes: today it is role addresses, in the
+    zero-lovelace withdrawal, BLAKE3 premint — is **shipped on `main` today**.
+    The proposed M1 registration flow below moves full inception admission
+    into an earlier, repeatable attestation. That evidence boundary is not
+    implemented; the existing BLAKE3 token proves a narrower fact.
+    How lifecycle state is *represented* also changes: today it is role addresses, in the
     [accepted design](../index.md#the-accepted-design-the-m1-return) it is one
     bit plus the checkpoint's own value. Both are described below, marked.
 
@@ -17,14 +23,66 @@ history of that identity's key events.
 
 Every registered AID owns a sovereign **checkpoint UTxO** (unspent transaction
 output) carrying one AID-derived token and an inline datum with its current key
-state.
+state. Registration must establish both valid initial state and uniqueness;
+these are separate guarantees.
+
+### Proposed M1 registration flow
 
 ```mermaid
-flowchart LR
-    KEL["KERI KEL<br/>inception · rotations · witness receipts"]
+---
+config:
+  htmlLabels: false
+---
+flowchart TD
+    ICP["KERI inception<br/>signatures + receipts"]
+    AT["Validate inception<br/>bind AID + initial keys"]
+    FACT["Repeatable attestation<br/>valid inception hash"]
+    REQ["Registration request<br/>AID + state binding<br/>funding"]
+    ROOT["Registry absence proof<br/>no leaf for this AID"]
+    FOLD["Atomic registration fold<br/>check evidence + funding<br/>insert leaf + mint checkpoint"]
+    LEAF["Registry entry<br/>AID → active token"]
+    CK["Unique checkpoint<br/>initial key state + bonds"]
+    APP["Consumer validator<br/>checkpoint eligibility<br/>application authorization"]
+
+    ICP --> AT --> FACT
+    FACT -->|"carrier to be specified"| REQ
+    REQ --> FOLD
+    ROOT --> FOLD
+    FOLD --> LEAF
+    FOLD --> CK
+    CK -->|"reference input"| APP
+```
+
+| Boundary | Guarantee | Enforcement responsibility |
+|---|---|---|
+| Inception attestation | This hash identifies a valid inception and authenticates its initial key state. Multiple attestations of the same inception are allowed. | The designated attestation policy establishes the inception checks, including signatures and witness receipts. |
+| First registration | If the AID has never been registered, create its registry entry and checkpoint together. Another attestation cannot authorize a second registration. | MPFS verifies absence and insertion; KERI admission and mint validation bind that insertion to the authenticated checkpoint and required funding in the same transaction. |
+| Consumer use | Only an eligible checkpoint may supply keys to the application. | The consumer validates the checkpoint and applies its own authorization rules. Attestation possession and an active registry leaf alone do not authorize use. |
+
+The request need not carry the raw inception if the attestation authenticates
+the initial key-state projection as well as the AID. The concrete evidence
+carrier, reference or consumption rules, and transaction budgets remain to be
+specified and measured. **Attestation is repeatable; checkpoint uniqueness is
+enforced by registry admission.** Revival remains a separate guarded operation.
+The [registration guarantees](follow-one-identity.md#what-registration-guarantees)
+explain the model boundaries and link the playable duplicate-registration case.
+
+### Shipped V1 evidence flow
+
+The existing implementation splits out the hash check only. Registration still
+receives the full inception evidence and performs the remaining admission
+checks; it has no registry absence check.
+
+```mermaid
+---
+config:
+  htmlLabels: false
+---
+flowchart TD
+    KEL["KERI KEL<br/>inception + rotations<br/>witness receipts"]
     PRE["BLAKE3 premint<br/>one-use fact token"]
     TX["Cardano operation tx"]
-    CK["Sovereign checkpoint UTxO<br/>AID token · inline key state · value"]
+    CK["Checkpoint UTxO<br/>AID token + key state<br/>value"]
     OBS["Reference observers"]
     APP["Consumer validator"]
 
@@ -36,7 +94,7 @@ flowchart LR
     CK -->|"CIP-31 reference input"| APP
 ```
 
-The parts have deliberately narrow jobs:
+In this shipped flow, the parts have deliberately narrow jobs:
 
 - **KERI** produces the identity events, controller signatures, and witness
   receipts.
@@ -123,8 +181,10 @@ otherwise.
 The M1 return adds exactly one shared structure, and confines it to the
 narrowest possible job: a **registry** mapping each AID to a leaf — absent,
 live, parked with the hash, or convicted. A registration must prove absence
-before inserting, which makes the token mint-once by construction. Register,
-reopen, close and convict change the leaf; rotate, poison, freeze and top-up
+before inserting, preventing a second first-registration of that AID. This is
+distinct from the concrete token's mint/burn rules across revival; see
+[the registration guarantee](follow-one-identity.md#what-registration-guarantees).
+Register, reopen, close and convict change the leaf; rotate, poison, freeze and top-up
 never touch it, and consumers never read it.
 
 It is a registry of 32-byte keys, not a record of events — the record tree and
@@ -135,14 +195,20 @@ forges nothing.
 
 ## Transaction architecture
 
-The checkpoint is intentionally small. Heavy KERI verification runs in
-operation-specific observer reference scripts:
+The checkpoint is intentionally small. In the shipped operation flow, heavy
+KERI verification runs in operation-specific observer reference scripts:
 
 ```mermaid
+---
+config:
+  sequence:
+    wrap: true
+    width: 180
+---
 sequenceDiagram
     participant R as Relayer
     participant C as Thin checkpoint
-    participant O as Observer reference script
+    participant O as Observer<br/>reference script
     participant L as Cardano ledger
 
     R->>L: transaction + checkpoint input/output
@@ -166,6 +232,12 @@ exceed the transaction-size limit. See
 [Observer architecture](observer-architecture.md) for the wire shape, the
 BLAKE3 fact token, sizes and costs — including the three bytes of headroom on
 `observer_advance` that make every datum decision a measured one.
+
+For the proposed registration flow, the heavy inception admission moves to the
+earlier attestation transaction. The fold must still authenticate that result
+and couple registry insertion, checkpoint mint and output validation. This
+changes where registration evidence is checked; it does not remove those checks
+or change rotation evidence into inception attestations.
 
 ## Permissionless does not mean unauthenticated
 

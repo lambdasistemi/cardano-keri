@@ -36,8 +36,8 @@ falsifier reconciliation. A same-size but different identity set is rejected.
   this ticket's repair fence.
 - **R387-06 Historical explanation (ADVISORY).** Retain evidence that the gate
   is green at `9b2e6b8`, red from `dc2e7a5`, and current `main` has exactly 42
-  problems: 13 missing checker rows, 13 zero-lamp rows, 3 aggregate theorem-row
-  problems, and 13 missing-falsifier rows.
+  problems: 1 duplicate-inventory diagnostic, 13 missing checker rows, 13
+  zero-lamp rows, 2 unclaimed guard hypotheses, and 13 missing-falsifier rows.
 
 All six requirements are acceptance-blocking despite their mutation-campaign
 severity: this tool does not directly write chain state, money or signatures.

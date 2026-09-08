@@ -34,10 +34,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check architecture scenarios and negative controls
+        run: nix shell nixpkgs#nodejs -c node scripts/check-architecture-scenarios.mjs --selftest
+
       - name: Build docs
         run: |
           nix develop github:paolino/dev-assets?dir=mkdocs --quiet \
             -c mkdocs build --strict --site-dir site
+
+      - name: Verify rendered copy text and downloadable scenarios
+        run: nix shell nixpkgs#nodejs -c node scripts/check-architecture-scenarios.mjs --site site
 
       - name: Upload site artifact
         uses: actions/upload-artifact@v4

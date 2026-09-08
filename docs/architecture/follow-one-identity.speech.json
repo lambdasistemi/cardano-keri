@@ -1,0 +1,29 @@
+{
+  "follow-one-identity": [
+    {"text": "Alice wants a treasury to recognize her identity after she replaces her keys. Her KERI identifier stays the same. Cardano holds a checkpoint of her key state.", "pause": 500},
+    {"text": "These examples simulate the accepted milestone one design. They are not commands against deployed contracts and do not verify real signatures or execute Cardano transactions.", "pause": 600}
+  ],
+  "the-parts-alice-depends-on": [
+    {"text": "The diagram follows Alice's signed events through a relayer to a Cardano checkpoint. The registry enforces one entry per identity. A treasury reads the checkpoint and applies its own authorization rules.", "pause": 500},
+    {"text": "The two simulators show separate views. One follows a checkpoint's lifecycle and money. The other follows registry requests and uniqueness. They do not share a running state.", "pause": 500}
+  ],
+  "how-to-play-an-example": [
+    {"text": "Copy the whole example, open its linked simulator, paste beside Load DSL, then press Load DSL. Step forward with the arrow or press play. Playback pauses at the main result; press again for remaining steps. Branch chips let you try alternatives.", "pause": 500},
+    {"text": "Every example includes its own setup. The numbers are model values, not deployment settings.", "pause": 500}
+  ],
+  "1-alice-registers-existence-comes-before-trust": [
+    {"text": "First, Alice registers. The treasury initially sees no identity. Registration brings two bonds and a pool of ten. The checkpoint remains juvenile at slot nine and becomes consumable at slot ten. Registering it again is refused.", "pause": 600}
+  ],
+  "2-alice-rotates-evidence-must-reach-cardano": [
+    {"text": "Alice rotates her keys. Evidence alone leaves the Cardano checkpoint unchanged. Hal lands the rotation, advances sequence and epoch to one, and receives two from the pool. Replaying the same evidence fails against the new epoch.", "pause": 600}
+  ],
+  "3-the-treasury-reads-current-keys-can-become-unusable": [
+    {"text": "The treasury sees a consumable checkpoint at slot thirteen. Alice's current quorum authorizes poison at slot fourteen. The treasury must refuse, and still refuses at slot twenty-four. Waiting does not clear poison. Consumable status alone never authorizes a treasury payment.", "pause": 600}
+  ],
+  "4-the-registry-refuses-a-duplicate-follow-the-money": [
+    {"text": "In the registry, Alice's request deposits a thousand plus a tip of two. Hal processes it. Mallory submits the same identity, but processing her duplicate is refused. Later, Sam rejects the pending request: the thousand returns to Mallory and the tip goes to Sam. Trying this too early is refused. Only Alice's original entry remains.", "pause": 600}
+  ],
+  "from-the-model-to-a-running-system": [
+    {"text": "The linked references explain deployment versions, validator responsibilities, off-chain discovery, consumer checks, and the registry proof boundary. The examples establish model outcomes; they do not test submission, rollback recovery or witness availability.", "pause": 500}
+  ]
+}

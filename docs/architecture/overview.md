@@ -5,6 +5,10 @@ rotate. KERI is Key Event Receipt Infrastructure; its **AID** (Autonomic
 Identifier) names an identity, and its **KEL** (Key Event Log) is the signed
 history of that identity's key events.
 
+Start with [Follow one identity](follow-one-identity.md) to play registration,
+rotation, consumer refusal and registry uniqueness before reading the mechanisms
+below.
+
 !!! abstract "Where this page stands"
     The transaction architecture — thin checkpoint, reference observers,
     zero-lovelace withdrawal, BLAKE3 premint — is **shipped on `main` today**

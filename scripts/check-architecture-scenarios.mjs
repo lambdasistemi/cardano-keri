@@ -15,27 +15,29 @@ const read = path => readFileSync(path, 'utf8');
 const outcomes = {
   register: { story: 3881, steps: [
     { expect: { verdict: 'not-present' } },
-    { expect: { ok: true, live: { sn: 0, refundTo: 1, pool: 10 }, verdict: 'juvenile' } },
+    { slot: 0, expect: { ok: true, live: { sn: 0, refundTo: 1, pool: 10 }, flow: { dregIn: 1000, bIn: 5, poolIn: 10 }, verdict: 'juvenile' } },
     { slot: 9, expect: { verdict: 'juvenile' } },
     { slot: 10, expect: { verdict: 'consumable' } },
-  ], forks: [{ id: 'twice', steps: [{ expect: { ok: false, reason: 'already-present' } }] }] },
+  ], forks: [{ id: 'twice', steps: [{ expect: { ok: false, reason: 'already-present', live: { sn: 0, epoch: 0, refundTo: 1, pool: 10 }, verdict: 'consumable' } }] }] },
   rotate: { story: 3882, steps: [
-    { expect: { ok: true } }, { expect: { verdict: 'consumable' } },
-    { expect: { ok: true, live: { sn: 1, epoch: 1, pool: 8 }, flow: { hunter: { addr: 2, pool: 2 } }, verdict: 'consumable' } },
-  ], forks: [{ id: 'twice', steps: [{ expect: { ok: false, reason: 'no-witnessed-rotation' } }] }] },
+    { expect: { ok: true } }, { expect: { live: { sn: 0, epoch: 0, pool: 10 }, verdict: 'consumable' } },
+    { expect: { ok: true, live: { sn: 1, epoch: 1, refundTo: 1, bornAt: 0, pool: 8 }, flow: { hunter: { addr: 2, pool: 2 } }, verdict: 'consumable' } },
+  ], forks: [{ id: 'twice', steps: [{ expect: { ok: false, reason: 'no-witnessed-rotation', live: { sn: 1, epoch: 1, pool: 8 }, verdict: 'consumable' } }] }] },
   consume: { story: 3883, steps: [
     { expect: { ok: true } }, { expect: { verdict: 'consumable' } },
     { expect: { ok: true, live: { sn: 1, pool: 8 } } },
-    { slot: 13, expect: { verdict: 'consumable' } },
-    { slot: 14, expect: { ok: true, live: { epoch: 1, poisoned: true }, verdict: 'poisoned' } },
-    { slot: 24, expect: { verdict: 'poisoned' } },
-  ] },
+    { slot: 13, expect: { live: { sn: 1, pool: 8 }, verdict: 'consumable' } },
+    { slot: 14, expect: { ok: true, live: { epoch: 1, poisoned: true, pool: 8 }, verdict: 'poisoned' } },
+    { slot: 24, expect: { live: { poisoned: true, pool: 8 }, verdict: 'poisoned' } },
+  ], forks: [] },
   duplicate: { id: 3884, slug: 'architecture-duplicate', steps: [
     { expect: { ok: true, flow: { deposited: 1002 } } },
     { expect: { ok: true, flow: { locked: [{ aid: 11, value: 1000 }], tips: { addr: 3, value: 2 } } } },
-    { expect: { ok: true } }, { expect: { ok: false, reason: 'already-registered' } },
+    { expect: { ok: true, flow: { deposited: 1002 } } }, { expect: { ok: false, reason: 'already-registered' } },
     { expect: { ok: true, flow: { refunds: [{ addr: 4, value: 1000 }], tips: { addr: 6, value: 2 } } } },
-  ], forks: [{ id: 'sam-too-early', steps: [{ expect: { ok: false, reason: 'not-rejectable' } }] }],
+  ], forks: [{ id: 'sam-too-early', steps: [{ expect: { ok: false, reason: 'not-rejectable' } }],
+    expectFinal: { leaves: [{ aid: 11, status: { active: 0 } }], ckpts: [{ aid: 11, ckpt: { token: 0, k: 0, st: 'live' } }],
+      requests: [{ id: 1, aid: 11, owner: 4, submittedAt: 5, op: 'register' }], nextToken: 1 } }],
   expectFinal: { leaves: [{ aid: 11, status: { active: 0 } }], ckpts: [{ aid: 11, ckpt: { token: 0, k: 0, st: 'live' } }], requests: [], nextToken: 1 } },
 };
 
@@ -49,9 +51,17 @@ function includes(actual, expected, path) {
 function verifyScenario(name, text) {
   const { family, scenario } = parseScenarioDsl(text, `${name}.dsl`);
   assert.equal(family, name === 'duplicate' ? 'registry' : 'checkpoint', `${name}: simulator family`);
+  scenario.forks ??= [];
   includes(scenario, outcomes[name], name);
   const result = (family === 'checkpoint' ? checkpoint : registry).checkScenario(scenario, name);
   assert.deepEqual(result.problems, [], `${name}: replay`);
+  // The core checks live expectations only on accepted actions. The chapter
+  // also promises state after evidence, time and refusal steps; observe those.
+  if (family === 'checkpoint') {
+    for (const { step, session } of [...result.timeline, ...result.forks.flatMap(fork => fork.timeline)]) {
+      if (step.expect?.live) includes(checkpoint.liveOf(session.state), step.expect.live, `${name}: observed live state`);
+    }
+  }
   return result.timeline.length + (family === 'checkpoint'
     ? result.forks.reduce((count, fork) => count + fork.timeline.length, 0)
     : Object.values(result.forkTimelines).reduce((count, timeline) => count + timeline.length, 0));
@@ -59,7 +69,9 @@ function verifyScenario(name, text) {
 
 function verifySources(sources) {
   assert.deepEqual(Object.keys(sources).sort(), [...names].sort(), 'exact scenario set');
-  return names.reduce((count, name) => count + verifyScenario(name, sources[name]), 0);
+  const steps = names.reduce((count, name) => count + verifyScenario(name, sources[name]), 0);
+  assert.equal(steps, 21, 'documented story step extent');
+  return steps;
 }
 
 function decodeHtml(text) {
@@ -93,6 +105,21 @@ function selftest(sources) {
   const stripped = parseScenarioDsl(sources.consume).scenario;
   delete stripped.steps[5].expect;
   rejects('removed consumer assertion', () => verifyScenario('consume', scenarioToDsl('checkpoint', stripped)), /documented outcome/);
+  for (const [name, label, remove] of [
+    ['register', 'bond-flow assertion', sc => { delete sc.steps[1].expect.flow; }],
+    ['consume', 'poison-pool assertion', sc => { delete sc.steps[4].expect.live.pool; }],
+    ['register', 'refusal-verdict assertion', sc => { delete sc.forks[0].steps[0].expect.verdict; }],
+  ]) {
+    const sc = parseScenarioDsl(sources[name]).scenario;
+    remove(sc);
+    rejects(`removed ${label}`, () => verifyScenario(name, scenarioToDsl('checkpoint', sc)), /documented outcome/);
+  }
+  const extra = parseScenarioDsl(sources.consume).scenario;
+  extra.forks = [{ id: 'extra', at: 5, title: 'Undocumented branch', steps: [structuredClone(extra.steps[5])] }];
+  rejects('undeclared branch', () => verifyScenario('consume', scenarioToDsl('checkpoint', extra)), /forks: extent/);
+  const badLive = parseScenarioDsl(sources.rotate).scenario;
+  badLive.steps[1].expect.live.bornAt = 99;
+  rejects('false state at evidence-only step', () => verifyScenario('rotate', scenarioToDsl('checkpoint', badLive)), /observed live state/);
   const wrongFork = parseScenarioDsl(sources.duplicate).scenario;
   wrongFork.forks[0].steps[0].now = 25;
   rejects('early rejection branch now succeeds', () => verifyScenario('duplicate', scenarioToDsl('registry', wrongFork)), /replay/);

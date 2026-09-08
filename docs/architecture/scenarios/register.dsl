@@ -67,3 +67,8 @@ fork:
       ok: false
       reason: already-present
       verdict: consumable
+      live:
+        sn: 0
+        epoch: 0
+        refundTo: 1
+        pool: 10

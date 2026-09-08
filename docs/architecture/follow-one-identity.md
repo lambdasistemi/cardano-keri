@@ -56,9 +56,9 @@ example, manual evidence or edited parameter is needed. The download and display
 block come from the same file. `expect` fields describe results checked by the
 documentation build; they do not grant permission to an action.
 
-The checkpoint examples use model units: `D = 1000` is the registration bond,
-`B = 5` the conviction bond, `P = 2` the relayer premium and `W = 10` the
-juvenility window in slots. Addresses `1` and `2` stand for Alice and Hal. These
+The checkpoint examples use model units: `D = 1000` is the conviction bond
+(stake against duplicity), `B = 5` the freeze bond, `P = 2` the relayer premium
+and `W = 10` the juvenility window in slots. Addresses `1` and `2` stand for Alice and Hal. These
 small integers are simulator values, not real addresses or deployment settings.
 
 ## 1. Alice registers: existence comes before trust

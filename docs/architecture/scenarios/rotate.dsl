@@ -29,6 +29,10 @@ step:
     add: [{"rotationTo":[0,0,1]}]
   expect:
     verdict: consumable
+    live:
+      sn: 0
+      epoch: 0
+      pool: 10
 step:
   slot: 12
   who: hal
@@ -74,3 +78,7 @@ fork:
       ok: false
       reason: no-witnessed-rotation
       verdict: consumable
+      live:
+        sn: 1
+        epoch: 1
+        pool: 8

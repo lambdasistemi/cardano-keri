@@ -62,6 +62,9 @@ step:
   say: "The checkpoint is eligible. The application must separately check its own authorization and signature."
   expect:
     verdict: consumable
+    live:
+      sn: 1
+      pool: 8
 step:
   slot: 14
   who: alice
@@ -84,3 +87,6 @@ step:
   say: "Waiting does not clear poison. The treasury still refuses the checkpoint."
   expect:
     verdict: poisoned
+    live:
+      poisoned: true
+      pool: 8

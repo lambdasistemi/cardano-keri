@@ -138,7 +138,7 @@ try {
   const sources = Object.fromEntries(files.map(file => [file.slice(0, -4), read(join(directory, file))]));
   const steps = verifySources(sources);
   const markdown = read(join(root, 'docs/architecture/follow-one-identity.md'));
-  const snippets = [...markdown.matchAll(/^--8<-- "docs\/architecture\/scenarios\/(\w+)\.dsl"$/gm)].map(match => match[1]);
+  const snippets = [...markdown.matchAll(/^[ \t]*--8<-- "docs\/architecture\/scenarios\/(\w+)\.dsl"$/gm)].map(match => match[1]);
   assert.deepEqual(snippets, names, 'exact chapter snippet bindings');
   for (const name of names) assert.ok(markdown.includes(`](scenarios/${name}.dsl)`), `${name}: download link missing`);
   if (self) selftest(sources);

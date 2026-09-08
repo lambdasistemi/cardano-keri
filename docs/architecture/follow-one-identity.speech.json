@@ -8,7 +8,7 @@
     {"text": "The two simulators show separate views. One follows a checkpoint's lifecycle and money. The other follows registry requests and uniqueness. They do not share a running state.", "pause": 500}
   ],
   "how-to-play-an-example": [
-    {"text": "Copy the whole example, open its linked simulator, paste beside Load DSL, then press Load DSL. Step forward with the arrow or press play. Playback pauses at the main result; press again for remaining steps. Branch chips let you try alternatives.", "pause": 500},
+    {"text": "Expand an example to show its scenario, then copy the whole block. Open its linked simulator, paste beside Load DSL, then press Load DSL. Step forward with the arrow or press play. Playback pauses at the main result; press again for remaining steps. Branch chips let you try alternatives.", "pause": 500},
     {"text": "Every example includes its own setup. The numbers are model values, not deployment settings.", "pause": 500}
   ],
   "1-alice-registers-existence-comes-before-trust": [

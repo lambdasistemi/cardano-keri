@@ -43,7 +43,8 @@ to the other.
 
 ## How to play an example
 
-1. Copy the **whole code block** using its copy button, or open its `.dsl` link.
+1. Expand **Show … .dsl — copy and play**, then copy the **whole code block**
+   using its copy button. You can also open its `.dsl` link.
 2. Open the simulator linked immediately above that block.
 3. Paste into the text area next to **Load DSL**, then select **Load DSL**.
 4. Use **›** to step forward, or **▶** to play. Playback pauses at the main
@@ -70,9 +71,11 @@ the juvenility window before a consumer can accept it.
 [Open the checkpoint simulator](../simulator/index.html) ·
 [Open register.dsl](scenarios/register.dsl)
 
-```text
---8<-- "docs/architecture/scenarios/register.dsl"
-```
+??? example "Show register.dsl — copy and play"
+
+    ```text
+    --8<-- "docs/architecture/scenarios/register.dsl"
+    ```
 
 **What to observe:** before registration the verdict is `not-present`.
 Registration at slot 0 locks the two bonds and pool 10, with Alice at refund
@@ -94,9 +97,11 @@ transaction. His payment comes from the separate pool.
 [Open the checkpoint simulator](../simulator/index.html) ·
 [Open rotate.dsl](scenarios/rotate.dsl)
 
-```text
---8<-- "docs/architecture/scenarios/rotate.dsl"
-```
+??? example "Show rotate.dsl — copy and play"
+
+    ```text
+    --8<-- "docs/architecture/scenarios/rotate.dsl"
+    ```
 
 **What to observe:** the evidence step at slot 12 leaves the checkpoint at
 sequence 0. Hal's `rotate` advances sequence and epoch to 1, keeps Alice's refund
@@ -122,9 +127,11 @@ does not repair it.
 [Open the checkpoint simulator](../simulator/index.html) ·
 [Open consume.dsl](scenarios/consume.dsl)
 
-```text
---8<-- "docs/architecture/scenarios/consume.dsl"
-```
+??? example "Show consume.dsl — copy and play"
+
+    ```text
+    --8<-- "docs/architecture/scenarios/consume.dsl"
+    ```
 
 **What to observe:** this example registers and rotates Alice from scratch. At
 slot 13 the treasury sees `consumable`. At slot 14 a current-epoch quorum fact
@@ -149,9 +156,11 @@ cannot turn it into a second registered identity.
 [Open the registry simulator](../simulator/registry/index.html) ·
 [Open duplicate.dsl](scenarios/duplicate.dsl)
 
-```text
---8<-- "docs/architecture/scenarios/duplicate.dsl"
-```
+??? example "Show duplicate.dsl — copy and play"
+
+    ```text
+    --8<-- "docs/architecture/scenarios/duplicate.dsl"
+    ```
 
 **What to observe:** Alice contributes 1002: bond 1000 plus tip 2. Hal processes
 her request, locking 1000 and receiving the tip. Mallory then contributes the

@@ -127,8 +127,10 @@ otherwise.
 The M1 return adds exactly one shared structure, and confines it to the
 narrowest possible job: a **registry** mapping each AID to a leaf — absent,
 live, parked with the hash, or convicted. A registration must prove absence
-before inserting, which makes the token mint-once by construction. Register,
-reopen, close and convict change the leaf; rotate, poison, freeze and top-up
+before inserting, preventing a second first-registration of that AID. This is
+distinct from the concrete token's mint/burn rules across revival; see
+[the registration guarantee](follow-one-identity.md#what-registration-guarantees).
+Register, reopen, close and convict change the leaf; rotate, poison, freeze and top-up
 never touch it, and consumers never read it.
 
 It is a registry of 32-byte keys, not a record of events — the record tree and

@@ -44,6 +44,14 @@ interprets a leaf; the value is the protocol's:
 | `dormant k` | the checkpoint has left the chain; `k` is the key state a revival must rotate from |
 | `convicted` | for ever |
 
+The guarantee is one leaf and at most one checkpoint per AID in the model;
+`active` does not establish consumer eligibility. During the reap/fold handoff
+it can refer to a pending go-request instead of an existing checkpoint.
+`token` and `k` are abstract values, not specified asset-name or key-state
+encodings. For when minting occurs, what the plugin must establish and which
+parts remain abstract, read
+[What registration guarantees](../architecture/follow-one-identity.md#what-registration-guarantees).
+
 The mpfs changes this needs are the plugin-cage epic
 [cardano-foundation/cardano-mpfs-onchain#99](https://github.com/cardano-foundation/cardano-mpfs-onchain/issues/99):
 replace semantics for the `stake_script` hook (#79), the hook and the owner

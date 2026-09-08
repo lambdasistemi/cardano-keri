@@ -1,0 +1,6 @@
+{
+  "after-the-m1-return": [
+    {"text": "Registration becomes a funded registry request. The proposed earlier attestation would certify a valid inception and its initial key state without requiring the full inception in the request. Several attestations may certify the same inception. Registry absence, insertion and checkpoint creation supply uniqueness together. The attestation format remains to be implemented.", "pause": 500},
+    {"text": "A persistent registry entry prevents a second first-registration. Revival is a separate guarded operation. The new checkpoint must wait through juvenility before consumers may use it.", "pause": 500}
+  ]
+}

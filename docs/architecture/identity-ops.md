@@ -42,7 +42,7 @@ epic [#322](https://github.com/lambdasistemi/cardano-keri/issues/322) decides.
 
 | Operation | Shipped today | After the M1 return |
 |---|---|---|
-| Register | Creates a bonded checkpoint at sequence zero. No uniqueness rule | A registry request: absence proof, insert, mint — once ever per AID |
+| Register | Creates a bonded checkpoint at sequence zero. No uniqueness rule | A registry request: absence proof, insert and checkpoint mint together; no second first-registration |
 | Advance | Applies one genuine witnessed rotation | The same, plus a bond option, an optional new refund address, and the premium `P` to whoever landed it |
 | Close | Current controllers burn the token and take the refund | The **reap**: a witnessed rotation by the **next** keys naming payee and refund; the leaf is parked with the hash |
 | Freeze | Moves a lagging checkpoint to ARMED for the response window | A hunter's payment when the pool is short. The datum is untouched; `B` leaves |
@@ -92,12 +92,22 @@ their epoch.
 
 ### After the M1 return
 
-Registration becomes a **request** against the registry: it carries the
-inception, the bonds and a refund address chosen by whoever pays, and it is
-applied in a batch by anyone. Application checks that the AID has **no leaf**,
-inserts one, and mints the checkpoint in the same transaction. That is the only
-way the token can ever be minted, so an AID has at most one incarnation ever
-(rulings D-024, D-037).
+Registration becomes a **request** against the registry: it identifies the AID,
+binds the inception evidence, and carries the bonds and a refund address chosen
+by whoever pays. It is applied in a batch by anyone. This does not require the
+raw inception to be stored in the request: the proposed
+[earlier attestation](follow-one-identity.md#proposed-attest-inception-before-requesting-registration)
+would authenticate inception validity and its initial key state. Such an
+attestation may be issued more than once; registry admission supplies checkpoint
+uniqueness. Its concrete format and validation are still to be implemented.
+Application checks that the AID has **no leaf**,
+inserts one, and creates the checkpoint in the same transaction. The persistent
+leaf prevents a second first-registration of the AID. Revival is a separate,
+guarded operation: the registry model permits it from `dormant k` and allocates
+a fresh abstract token. This does not specify a concrete asset-name encoding or
+prove that token bytes are minted only once across every revival. See
+[the registration guarantee](follow-one-identity.md#what-registration-guarantees)
+for the atomic mint/insertion obligation and the model's evidence limits.
 
 The new checkpoint is **juvenile**: unconsumable for `W` slots. That window is
 what bounds the stale-key registration above — anyone can advance the

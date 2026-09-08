@@ -1,0 +1,5 @@
+{
+  "uniqueness-the-one-shared-object": [
+    {"text": "The shipped registration path has no shared registry, so a consumer cannot prove checkpoint uniqueness. The milestone one design adds a registry. First registration must prove the identifier has no leaf, then insert its entry and create the checkpoint together. A persistent leaf prevents another first-registration. Revival has separate guards and token rules.", "pause": 500}
+  ]
+}

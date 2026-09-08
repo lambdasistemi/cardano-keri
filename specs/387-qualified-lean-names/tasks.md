@@ -4,11 +4,14 @@ Artifact ceiling: 2,500 bytes / 70 lines.
 
 - [x] **T387-01** Bind issue, lane, baseline, historical green/red commits and
   the current 42-problem signature.
-- [x] **T387-02** Freeze the compact requirements, models, scope and gates.
+- [x] **T387-02** Freeze the compact requirements and models; version them to
+  R387-v2 under A-001's two-derived-class ruling.
 - [ ] **T387-03** Commit and execute the RED controls for dotted discovery,
-  same-count substitution and retained removed-thing behavior.
-- [ ] **T387-04** Repair the scenario gate's shared declaration inventory and
-  exact identity reconciliation without changing forbidden artifacts.
+  observable/inversion substitution, inversion removal, invalid proof-only
+  entry and retained removed-thing behavior.
+- [ ] **T387-04** Repair the shared declaration inventory, derive the proof-only
+  inversion class, and enforce exact agreement within both classes without
+  changing forbidden artifacts.
 - [ ] **T387-05** Complete and hand off the repository-wide extraction and
   cardinality sweep with every hit classified.
 - [ ] **T387-06** Obtain fresh independent audit acceptance of the exact local

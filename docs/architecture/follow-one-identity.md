@@ -94,7 +94,9 @@ of the same inception are allowed. The registry supplies uniqueness when it
 admits registration and creates the checkpoint.
 
 This is the proposed evidence boundary for M1; it is not yet implemented or
-represented as a separate action in the simulators.
+represented as a separate action in the simulators. The
+[architecture diagram](overview.md#proposed-m1-registration-flow) shows the
+attestation, request, atomic fold and consumer boundaries together.
 
 | Stage | Guarantee | What it does not establish |
 |---|---|---|

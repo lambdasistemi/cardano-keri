@@ -97,6 +97,12 @@ against the named old state and unique successor.
 
 ## Registration's premint fact token
 
+This section describes the **shipped V1 flow**. The
+[proposed M1 architecture](overview.md#proposed-m1-registration-flow) moves
+inception admission into a repeatable attestation, leaving registry absence and
+checkpoint creation at the registration fold. The existing hash-proof token
+below is not that full inception attestation.
+
 KERI AIDs use BLAKE3, while Plutus does not provide a native BLAKE3 builtin.
 The project has an Aiken implementation, but running it together with all of
 Register made the transaction needlessly expensive and difficult to fit.

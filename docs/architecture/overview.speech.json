@@ -1,4 +1,11 @@
 {
+  "proposed-m1-registration-flow": [
+    {"text": "The proposed architecture separates validity from uniqueness. An earlier transaction validates the inception and attests its identifier and initial key state. Several attestations may certify the same inception. A funded registration request brings authenticated evidence to the registry fold.", "pause": 500},
+    {"text": "The fold proves the identifier has no registry entry, authenticates the initial state, and creates the entry and checkpoint atomically. Consumers then validate the checkpoint and their own application authorization. The evidence carrier and transaction budgets remain to be specified and measured.", "pause": 500}
+  ],
+  "shipped-v1-evidence-flow": [
+    {"text": "The shipped version separates only the BLAKE3 hash check. Its registration transaction still checks the full inception evidence, including signatures and witness receipts. It has no registry absence check. This differs from the proposed earlier inception attestation.", "pause": 500}
+  ],
   "uniqueness-the-one-shared-object": [
     {"text": "The shipped registration path has no shared registry, so a consumer cannot prove checkpoint uniqueness. The milestone one design adds a registry. First registration must prove the identifier has no leaf, then insert its entry and create the checkpoint together. A persistent leaf prevents another first-registration. Revival has separate guards and token rules.", "pause": 500}
   ]

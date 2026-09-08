@@ -23,12 +23,16 @@ beside the claim they qualify.
 ## The parts Alice depends on
 
 ```mermaid
-flowchart LR
+---
+config:
+  htmlLabels: false
+---
+flowchart TD
     Alice["Alice and her KERI keys"] --> Events["Signed key events<br/>and witness receipts"]
-    Events --> Relayer["Relayer builds a Cardano transaction"]
-    Relayer --> Checkpoint["Checkpoint<br/>stable identity, changing key state"]
+    Events --> Relayer["Relayer<br/>builds the transaction"]
+    Relayer --> Checkpoint["Checkpoint<br/>stable identity<br/>changing key state"]
     Registry["Registry<br/>one entry per AID"] --> Checkpoint
-    Checkpoint --> Treasury["Treasury checks identity state<br/>and its own authorization"]
+    Checkpoint --> Treasury["Treasury validator<br/>checks identity state<br/>and authorization"]
 ```
 
 KERI supplies the evidence; a relayer carries it to Cardano. The checkpoint

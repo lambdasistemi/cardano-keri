@@ -48,12 +48,16 @@ A reference script is stored once on the ledger and referred to by later
 transactions, so its bytes do not have to be copied inline every time.
 
 ```mermaid
-flowchart LR
-    TX["One Cardano transaction"] --> CK["Thin checkpoint<br/>token · value · role · state shape"]
-    TX --> WD["Zero-lovelace withdrawal<br/>ObserverEnvelope redeemer"]
+---
+config:
+  htmlLabels: false
+---
+flowchart TD
+    TX["One Cardano transaction"] --> CK["Thin checkpoint<br/>token + value<br/>role + state shape"]
+    TX --> WD["Zero-lovelace withdrawal<br/>observer envelope"]
     REF["Reference-script UTxO"] --> OBS["Heavy observer<br/>KERI evidence predicate"]
     WD --> OBS
-    CK -->|"requires exact observer claim"| OBS
+    CK -->|"exact observer claim"| OBS
     OBS -->|"checks the same tx and input/output"| CK
 ```
 
@@ -110,11 +114,17 @@ Register made the transaction needlessly expensive and difficult to fit.
 Registration is therefore two transactions:
 
 ```mermaid
+---
+config:
+  sequence:
+    wrap: true
+    width: 180
+---
 sequenceDiagram
     participant R as Registrant
-    participant H as BLAKE3 hash-proof policy
-    participant C as Thin checkpoint policy
-    participant O as Registration observer
+    participant H as BLAKE3<br/>hash-proof policy
+    participant C as Thin<br/>checkpoint policy
+    participant O as Registration<br/>observer
 
     R->>H: Premint: inception bytes + claimed AID
     H-->>R: Mint deterministic proof token

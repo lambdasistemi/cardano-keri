@@ -29,19 +29,23 @@ these are separate guarantees.
 ### Proposed M1 registration flow
 
 ```mermaid
+---
+config:
+  htmlLabels: false
+---
 flowchart TD
-    ICP["KERI inception<br/>controller signatures · witness receipts"]
-    AT["Earlier attestation transaction<br/>validate inception and bind initial key state"]
-    FACT["Repeatable attestation<br/>this hash identifies a valid inception"]
-    REQ["Registration request<br/>AID · authenticated state binding · funding"]
-    ROOT["Current registry root<br/>prove AID has no leaf"]
-    FOLD["One atomic registration fold<br/>authenticate attestation · check funding<br/>insert leaf + mint checkpoint"]
+    ICP["KERI inception<br/>signatures + receipts"]
+    AT["Validate inception<br/>bind AID + initial keys"]
+    FACT["Repeatable attestation<br/>valid inception hash"]
+    REQ["Registration request<br/>AID + state binding<br/>funding"]
+    ROOT["Registry absence proof<br/>no leaf for this AID"]
+    FOLD["Atomic registration fold<br/>check evidence + funding<br/>insert leaf + mint checkpoint"]
     LEAF["Registry entry<br/>AID → active token"]
-    CK["Unique checkpoint for the AID<br/>authenticated initial key state · bonds"]
-    APP["Consumer validator<br/>checkpoint eligibility + application authorization"]
+    CK["Unique checkpoint<br/>initial key state + bonds"]
+    APP["Consumer validator<br/>checkpoint eligibility<br/>application authorization"]
 
     ICP --> AT --> FACT
-    FACT -->|"evidence carrier to be specified"| REQ
+    FACT -->|"carrier to be specified"| REQ
     REQ --> FOLD
     ROOT --> FOLD
     FOLD --> LEAF
@@ -70,11 +74,15 @@ receives the full inception evidence and performs the remaining admission
 checks; it has no registry absence check.
 
 ```mermaid
-flowchart LR
-    KEL["KERI KEL<br/>inception · rotations · witness receipts"]
+---
+config:
+  htmlLabels: false
+---
+flowchart TD
+    KEL["KERI KEL<br/>inception + rotations<br/>witness receipts"]
     PRE["BLAKE3 premint<br/>one-use fact token"]
     TX["Cardano operation tx"]
-    CK["Sovereign checkpoint UTxO<br/>AID token · inline key state · value"]
+    CK["Checkpoint UTxO<br/>AID token + key state<br/>value"]
     OBS["Reference observers"]
     APP["Consumer validator"]
 
@@ -191,10 +199,16 @@ The checkpoint is intentionally small. In the shipped operation flow, heavy
 KERI verification runs in operation-specific observer reference scripts:
 
 ```mermaid
+---
+config:
+  sequence:
+    wrap: true
+    width: 180
+---
 sequenceDiagram
     participant R as Relayer
     participant C as Thin checkpoint
-    participant O as Observer reference script
+    participant O as Observer<br/>reference script
     participant L as Cardano ledger
 
     R->>L: transaction + checkpoint input/output

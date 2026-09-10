@@ -192,7 +192,9 @@ repeated at every hop back to the trust root:
    SAID**, and **separately** anchors a **KEL-anchored issuance-proof seal** at
    the key state in force when it was issued (its *historical* key state),
    confirmed via the issuer's KEL (KERI key state); the seal stays valid through
-   later rotations.
+   later rotations. On Cardano this is the
+   [seal walk](design/credential-verification.md#the-seal-walk) against the
+   issuer checkpoint's key-state history.
 4. **Non-revocation** — no revocation event for this credential's SAID in the
    issuer's TEL, and the same holds for every credential above it (cascade).
 
@@ -210,10 +212,10 @@ the hole cardano-keri fills.
 
 | ACDC verification step | Off-chain world | With cardano-keri |
 |---|---|---|
-| SAID / content integrity | CESR tooling | Aiken verifier: `blake2b_256` recompute of the content-addressed SAID — content integrity only, **not** issuer commitment |
+| SAID / content integrity | CESR tooling | Aiken verifier: blake3 recompute of the content-addressed SAID through the hash-proof token — content integrity only, **not** issuer commitment |
 | Issuer commitment | issuer signature/seal on the SAID | issuer **signature or seal on the SAID** (MUST on the most-compact form; SHOULD on the other variants' SAIDs/SADs). A **direct signature** is verified with the **SAID as the signed message** (`verify_ed25519_signature` at the issuer's key state); a **seal** is a digest/reference — **followed to the KEL event** (or via **TEL state** to its **KEL anchoring seal**), with the **KEL event signatures verified at the historical key state** — not an Ed25519 signature over the seal (TEL events need not be signed) |
-| Historical state/key binding (*issued then*) | KEL replay via witnesses | a **KEL-anchored issuance-proof digest seal** — anchored directly, or indirectly via the TEL — binding the issuance to the issuer's **historical** key state, via historical KEL / R-ACDC / admission evidence; **not** the signature itself and **not** the current Layer-1 checkpoint |
-| Current non-revocation (*unrevoked now*) | Query issuer's TEL | Layer-2 TEL registry proof (all-TELs cascade) |
+| Historical state/key binding (*issued then*) | KEL replay via witnesses | a **KEL-anchored issuance-proof digest seal** — anchored directly, or indirectly via the TEL — binding the issuance to the issuer's **historical** key state, proven from the [key-state history](design/credential-verification.md#the-checkpoint-remembers-its-past-key-states) the issuer's checkpoint carries; the sealing interaction event is presented as evidence, never ingested; **not** the signature itself and **not** the current keys |
+| Current non-revocation (*unrevoked now*) | Query issuer's TEL | absence proof against the issuer's [revocation mirror](design/credential-verification.md#the-revocation-mirror), one per link of the chain (all-TELs cascade) |
 | Current dApp actor authorization (*authorizes now*) | KEL current key state | Layer-1 sovereign per-AID checkpoint (CIP-31 ref input) — current weighted keys/threshold; proves current control, **not** historical issuance |
 | Assemble the evidence | verifier server | Layer-4 proof builder (CESR decode → redeemer) |
 
@@ -242,9 +244,14 @@ not_after}` — so later actions gate on a cheap lookup with a freshness bound
 ACDC is the whole of **M2 — Verification + authorization core**, on top of the
 M1 identity registry, per the [Roadmap](roadmap.md):
 
-- **On-chain TEL revocation registry** — per-issuer credential status
-  (M1, [#30](https://github.com/lambdasistemi/cardano-keri/issues/30)); the
-  revocation state machine the cascade check reads.
+- **Key-state history in the checkpoint** — the trie of past establishment
+  states that lets a validator check a seal against the keys in force when it
+  was made ([#391](https://github.com/lambdasistemi/cardano-keri/issues/391));
+  see [Verifying credentials against the checkpoint](design/credential-verification.md).
+- **Revocation mirror** — one set of revoked SAIDs per issuer registry, filled
+  by anyone with the issuer's own sealed `rev`; the absence proof the cascade
+  check reads ([#392](https://github.com/lambdasistemi/cardano-keri/issues/392),
+  superseding the earlier issued/revoked cage of [#30](https://github.com/lambdasistemi/cardano-keri/issues/30)).
 - **ACDC chain verifier** — hop bound 4, parameterized, with all-TELs cascade
   non-revocation and a stated freshness floor
   (M2, [#31](https://github.com/lambdasistemi/cardano-keri/issues/31)).

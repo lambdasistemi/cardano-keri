@@ -1,5 +1,6 @@
 import CardanoKeri.Statements.Mirror
 import CardanoKeri.Statements.HistoryHelpers
+import CardanoKeri.Statements.HistoryGoals
 
 /-!
 # Inversion helpers and reachability invariants for the mirror
@@ -198,5 +199,54 @@ theorem walkOn_none_of_cover_none {p : Params} {env : Env} {c : Checkpoint} {sl 
 
 theorem sealWalk_setCur (p : Params) (env : TelEnv) (c : Checkpoint) (x : Epoch) (rid : RegistryId)
     (w : Walk) : sealWalk p env { c with cur := x } rid w = sealWalk p env c rid w := rfl
+
+end CardanoKeri.Mirror
+
+namespace CardanoKeri.Mirror
+
+open CardanoKeri.History
+
+theorem wf_hstep {c c' : Checkpoint} (hwf : WF c) {a : HAction} (hs : hstep c a = some c') : WF c' := by
+  cases a with
+  | advance n t appr =>
+    obtain ⟨hlt, rfl⟩ := advance_some hs
+    exact WF_advanced hwf hlt t appr
+  | supersede n t appr =>
+    obtain ⟨par, l, a, hpar, hl, ha, rfl, hb, rfl⟩ := supersede_some hs
+    exact WF_superseded hwf hl t appr
+
+/-- Every reachable checkpoint is well-formed. -/
+theorem reach_wf {p : Params} {env : TelEnv} {s : Sys} (h : Reach p env s) :
+    ∀ a c, s.ckpt a = some c → WF c := by
+  refine reach_ind (P := fun s => ∀ a c, s.ckpt a = some c → WF c) (fun _ _ h => by simp [Sys.init] at h)
+    (fun s s' a _ hP hs => ?_) h
+  cases a with
+  | register aid ep t par =>
+    obtain ⟨_, rfl⟩ := register_some hs
+    intro b c hc; simp only [Sys.setCkpt] at hc; split at hc
+    · cases Option.some.inj hc; exact WF_inception _ _ _ _ _
+    · exact hP b c hc
+  | history aid ha =>
+    obtain ⟨c, c', hc, hh, rfl⟩ := history_some hs
+    intro b x hx; simp only [Sys.setCkpt] at hx; split at hx
+    · cases Option.some.inj hx; exact wf_hstep (hP aid c hc) hh
+    · exact hP b x hx
+  | «open» issuer w =>
+    obtain ⟨c, v, a, _, _, _, _, _, rfl⟩ := open_some hs
+    exact hP
+  | push w =>
+    obtain ⟨r₀, c, hr₀, _, _, _, _, rfl⟩ := push_some hs
+    exact hP
+  | reanchor w =>
+    obtain ⟨r₀, c, v, a, hr₀, _, _, _, _, rfl⟩ := reanchor_some hs
+    exact hP
+
+theorem anchorOf_setCur (c : Checkpoint) (x : Epoch) (w : WalkCore) (v : Verdict) :
+    anchorOf { c with cur := x } w v = anchorOf c w v := rfl
+
+/-- Extending the reachable prefix of a witness by one step. -/
+theorem reachFrom_step_right {p : Params} {env : TelEnv} {s₁ s s' : Sys} {a : Action}
+    (h : ReachFrom p env s₁ s) (hs : stepFn p env s a = some s') : ReachFrom p env s₁ s' :=
+  reachFrom_snoc h hs
 
 end CardanoKeri.Mirror

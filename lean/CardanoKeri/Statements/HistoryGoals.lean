@@ -485,7 +485,28 @@ theorem H11_final_anchor_stands {c c' : Checkpoint} (hwf : WF c) {a : HAction} (
     {an : Anchor} (hfin : an.verdict = .final) {proof : Option Seq} (h : an.stands c proof = true)
     (hp : proof ≠ none) :
     an.stands c' proof = true := by
-  sorry
+  cases proof with
+  | none => exact absurd rfl hp
+  | some e' =>
+    simp only [Anchor.stands, Bool.and_eq_true] at h ⊢
+    obtain ⟨hep, hcov⟩ := h
+    cases hcov' : cover c an.e an.k (some e') with
+    | none => rw [hcov'] at hcov; simp at hcov
+    | some v =>
+      obtain ⟨⟨l, hl⟩, l', hl', hprev, hek, hke, rfl⟩ := cover_some_succ hcov'
+      have hfin := H5_final_is_stable hwf hs hcov'
+      refine ⟨?_, by rw [hfin]; rfl⟩
+      have hee' := (hwf.prev_exists e' l' an.e hl' hprev).1
+      have hb := hwf.bounded e' l' hl'
+      have hne : an.e ≠ c.latest := by omega'
+      rw [hl] at hep
+      cases a with
+      | advance n t appr =>
+        obtain ⟨hlt, rfl⟩ := advance_some hs
+        simp only [advanced]; rw [if_neg (by omega'), hl]; exact hep
+      | supersede n t appr =>
+        obtain ⟨_, _, _, _, _, _, rfl, _, rfl⟩ := supersede_some hs
+        simp only [superseded]; rw [if_neg hne, hl]; exact hep
 
 /-- **H12. Moved evidence refutes every proof of standing.** If the evictor
 can show the anchor moved — the covering leaf's key state changed, or a
@@ -494,6 +515,23 @@ evicts a cached admission is exactly what refuses a fresh use of the same
 walk. Mutant: `Anchor.moved` accepting a leaf above `k`. -/
 theorem H12_moved_refutes_stands {c : Checkpoint} (hwf : WF c) {an : Anchor} {m : Option Seq}
     (h : an.moved c m = true) : ∀ proof, an.stands c proof = false := by
-  sorry
+  intro proof
+  simp only [Anchor.moved, Bool.or_eq_true] at h
+  simp only [Anchor.stands]
+  rcases h with h | h
+  · cases hl : c.hist an.e with
+    | none => simp
+    | some l => rw [hl] at h; simp at h ⊢; exact fun hx => absurd hx h
+  · cases m with
+    | none => simp at h
+    | some m' =>
+      simp only [Bool.and_eq_true, decide_eq_true_eq] at h
+      obtain ⟨⟨hlt, hle⟩, hsome⟩ := h
+      cases hcov : cover c an.e an.k proof with
+      | none => simp
+      | some v =>
+        have hg := H2_cover_sound hwf hcov
+        have := hg.2.2 m' hlt hle
+        rw [this] at hsome; simp at hsome
 
 end CardanoKeri.History

@@ -1,0 +1,72 @@
+{
+  "status": "checkpoint-model-v1",
+  "source": "CardanoKeri.Checkpoint.stepFn and SysStep",
+  "precedence": "state mismatch alone; otherwise all failed applicable guards, unique and sorted by ASCII name",
+  "refusals": [
+    {
+      "name": "checkpoint-state-mismatch",
+      "condition": "Action has no constructor for the supplied State",
+      "layer": "stepFn"
+    },
+    {
+      "name": "rotation-evidence-invalid",
+      "condition": "rotationTo at the recorded epoch and sequence returns false",
+      "layer": "stepFn"
+    },
+    {
+      "name": "sequence-not-later",
+      "condition": "Requested sequence is less than or equal to the recorded sequence",
+      "layer": "stepFn"
+    },
+    {
+      "name": "intent-unauthorized",
+      "condition": "intentOk returns false for the next epoch, action intent and refund option",
+      "layer": "stepFn"
+    },
+    {
+      "name": "quorum-missing",
+      "condition": "poison quorum at the current epoch returns false",
+      "layer": "stepFn"
+    },
+    {
+      "name": "already-poisoned",
+      "condition": "poison requires a clear poison flag",
+      "layer": "stepFn"
+    },
+    {
+      "name": "freeze-pool-covers-premium",
+      "condition": "freeze pool is greater than or equal to P",
+      "layer": "stepFn"
+    },
+    {
+      "name": "already-frozen",
+      "condition": "freeze requires a clear freeze flag",
+      "layer": "stepFn"
+    },
+    {
+      "name": "freeze-poisoned",
+      "condition": "freeze requires a clear poison flag",
+      "layer": "stepFn"
+    },
+    {
+      "name": "duplicity-evidence-invalid",
+      "condition": "duplicityAt at the recorded epoch and sequence returns false",
+      "layer": "stepFn"
+    },
+    {
+      "name": "registry-leaf-not-absent",
+      "condition": "System register requires an absent leaf",
+      "layer": "SysStep"
+    },
+    {
+      "name": "registry-leaf-not-parked",
+      "condition": "System reopen requires a parked leaf",
+      "layer": "SysStep"
+    },
+    {
+      "name": "deployment-operation-unsupported",
+      "condition": "The bound deployment profile has no implementation of the selected Checkpoint transition semantics",
+      "layer": "preparation"
+    }
+  ]
+}

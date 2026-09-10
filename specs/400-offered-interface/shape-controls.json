@@ -1,0 +1,92 @@
+[
+  {
+    "name": "zero-top-up",
+    "valid": true,
+    "value": {
+      "action": "topUp",
+      "amount": 0
+    }
+  },
+  {
+    "name": "unknown-operation",
+    "valid": false,
+    "value": {
+      "action": "withdraw"
+    }
+  },
+  {
+    "name": "missing-payee",
+    "valid": false,
+    "value": {
+      "action": "freeze",
+      "sn": 2
+    }
+  },
+  {
+    "name": "negative-amount",
+    "valid": false,
+    "value": {
+      "action": "topUp",
+      "amount": -1
+    }
+  },
+  {
+    "name": "fractional-amount",
+    "valid": false,
+    "value": {
+      "action": "topUp",
+      "amount": 1.5
+    }
+  },
+  {
+    "name": "extra-key",
+    "valid": false,
+    "value": {
+      "action": "poison",
+      "secretKey": "not-an-input"
+    }
+  },
+  {
+    "name": "zero-conviction-bond",
+    "valid": false,
+    "value": {
+      "D": 0,
+      "B": 5,
+      "P": 2,
+      "W": 10
+    }
+  },
+  {
+    "name": "empty-refusal-set",
+    "valid": false,
+    "value": {
+      "status": "refused",
+      "refusals": []
+    }
+  },
+  {
+    "name": "unstable-refusal-name",
+    "valid": false,
+    "value": {
+      "status": "refused",
+      "refusals": [
+        "bad-stuff"
+      ]
+    }
+  },
+  {
+    "name": "zero-freeze-bond",
+    "valid": false,
+    "value": {
+      "D": 1000,
+      "B": 0,
+      "P": 2,
+      "W": 10
+    }
+  },
+  {
+    "name": "large-positive-bond",
+    "valid": true,
+    "cborHex": "a46142056144c24b010000000000000000000061500261570a"
+  }
+]

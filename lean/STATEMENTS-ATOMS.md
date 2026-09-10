@@ -1,4 +1,4 @@
-# Statement and semantic-atom ledgers — ACDC, TEL mirror, delegation
+# Statement and semantic-atom ledgers — ACDC, TEL mirror, delegation (proved)
 
 STATEMENTS mode, authored 2026-09-10 against `main@88e9309`. Authority:
 `docs/design/credential-verification.md` (decision recorded 2026-09-10),
@@ -13,10 +13,11 @@ The rows below are **creator claims** for an independent statement audit
 reachable witness of its antecedent and the single-atom mutant expected to
 falsify it. Statement hashes are frozen only after that audit returns ready.
 
-Build: `cd lean && lake build CardanoKeriStatements`. Surface: 70 statements;
-17 proved (the history and seal-walk rows marked `proved`, standard axioms
-only), 53 with an intentional `sorry`; 39 executable probes in
-`Statements/Probes.lean` that build only if every scenario holds.
+Build: `cd lean && lake build CardanoKeriStatements`. Surface: 71 statements,
+all proved — `#print axioms` reports at most `propext`, `Quot.sound` and
+`Classical.choice`, never `sorryAx` — and 39 executable probes in
+`Statements/Probes.lean` that build only if every scenario holds. Proofs
+live beside the statements; proof-side lemmas in `Statements/*Helpers.lean`.
 The default target `lake build` does not include this library, so the
 zero-`sorry` gate of `scripts/check-lean-traceability.sh` is unaffected.
 
@@ -33,9 +34,12 @@ zero-`sorry` gate of `scripts/check-lean-traceability.sh` is unaffected.
   its id makes them false; reachable systems store every registry under its
   id (`MirrorHelpers.Ok`).
 - **Repair 3** (2026-09-10, invariant review, six findings and four
-  boundaries): see the dispositions below. The proof work on the mirror,
-  credential and delegation modules is paused at a safe boundary per the
-  operator's instruction; the history and seal-walk statements stay proved.
+  boundaries): see the dispositions below.
+- **Repair 4** (2026-09-10, proof work): D4 takes collision resistance of
+  the event digest as a hypothesis, as S6 does for the TEL digest; without
+  it a certificate named by one event's digest installs another event with
+  the same digest and the toad binding is refutable. All 71 statements are
+  then proved.
 
 ### Dispositions of the invariant review (2026-09-10)
 
@@ -72,7 +76,7 @@ commits to; a proof is a lookup); no bonds, fees or attestation-token cuts
 Columns: theorem; the ruling or design sentence it answers to; a reachable
 witness that makes the antecedent true; the single-atom mutant expected to
 falsify it; kind (`G` guarantee, `I` public inversion, `W` witness of a
-stated limit — an existential, not a guarantee); status.
+stated limit — an existential, not a guarantee); status (all `proved`).
 
 ### History and seal walk — `HistoryGoals.lean`
 
@@ -88,8 +92,8 @@ stated limit — an existential, not a guarantee); status.
 | `H8_non_delegated_insert_only` | rule A1 | well-formed non-delegated, any step | `supersede` without `parent` guard | G | proved |
 | `H9_supersede_only_latest` | rules B1–B3, #391 "MPF `update` of the latest leaf" | delegated at latest 12 installed by (3, ixn, 0), `supersede 12` with (4, ixn, 0) | accept `sn' ≠ latest` | G | proved |
 | `H10_older_approval_cannot_supersede` | rules B1–B3, A2 | leaf installed by (3, ixn, 0), certificate at (2, ixn, 0) | drop `a.before appr` | G | proved |
-| `H11_final_anchor_stands` | design "its admission is final" | final anchor of leaf 12 with successor 40, then advance to 50 | `supersede` touching a non-latest leaf | G | sorry |
-| `H12_moved_refutes_stands` | design "evicts a provisional admission when …" | anchor (12, 17) provisional, leaf inserted at 15 | `moved` accepting a leaf above `k` | G | sorry |
+| `H11_final_anchor_stands` | design "its admission is final" | final anchor of leaf 12 with successor 40, then advance to 50 | `supersede` touching a non-latest leaf | G | proved |
+| `H12_moved_refutes_stands` | design "evicts a provisional admission when …" | anchor (12, 17) provisional, leaf inserted at 15 | `moved` accepting a leaf above `k` | G | proved |
 | `S1_walk_needs_leaf_signature_and_receipts` | #392 step 3, #391 "receipt gate" | walk with `signed`/`receipted` true at leaf 12 | drop `receipted` | G | proved |
 | `S2_walk_binds_seal_at_index` | #391 "without every link", #392 step 1 | seal at index 0 of an `ixn` at 17 | compare `seal.i` only | G | proved |
 | `S3_walk_ignores_current_keys` | design "never mixed" | any walk | check `env.signed c.cur` | G | proved |
@@ -103,67 +107,67 @@ stated limit — an existential, not a guarantee); status.
 
 | Theorem | Ruling | Witness of antecedent | Falsifying mutant | Kind | Status |
 |---|---|---|---|---|---|
-| `M1_only_the_issuer_revokes` | #392 "the issuer's own cryptography is the permission" | register, open, push one `rev` | `push` without `sealWalk` | G | sorry |
-| `M2_revocation_is_permanent` | design "over-revokes and fails closed" | reachable registry with one SAID, any step | a delete action | G | sorry |
-| `M3_duplicate_push_refused` | #392 "duplicate pushes fail on `insert`" | push the same `rev` twice | re-insert resets set | G | sorry |
-| `M4_pushes_commute` | #392 "converges however it is filled" | two `rev`s, distinct SAIDs, reachable | position-recording accumulator | G | sorry |
-| `M5_registry_bound_to_issuer` | #392 registry row: "registry id bound to issuer AID" | open from a `vcp` | trust the `issuer` argument | G | sorry |
-| `M6_push_iff` | #392 "no owner authorization, no current-key check" | as M1 | guard on `cur` | I | sorry |
-| `M7_open_iff` | #392 `vcp` row; inception anchor | as M5 | accept `iss` as inception | I | sorry |
-| `M8_mirror_ignores_current_keys` | #392 "current keys cannot vouch for past events" | open/push/reanchor after `setCur` | require `signed c.cur` | G | sorry |
-| `M9_superseded_push_over_revokes` | design "revocations pushed under them stay in the set" | provisional push, then advance at or below `k` | evict revocations on superseding | G | sorry |
-| `M10_freshness_unenforced` | #392 "absence in the mirror is not absence in the KEL" | constructed: sealed `rev`, never pushed | none (stated limit, #398) | W | sorry |
-| `M11_miss_fails_closed` | design "each against its own registry" | unopened registry | `true` on `none` | G | sorry |
-| `M12_reanchor_iff` | review finding 6 | registry opened at leaf 0, issuer at 1, same `vcp` sealed at 3 | `reanchor` resetting the set | I | sorry |
-| `M13_inception_is_a_walk_anchor` | review finding 6 | as M12 | `reanchor` storing a supplied anchor | G | sorry |
+| `M1_only_the_issuer_revokes` | #392 "the issuer's own cryptography is the permission" | register, open, push one `rev` | `push` without `sealWalk` | G | proved |
+| `M2_revocation_is_permanent` | design "over-revokes and fails closed" | reachable registry with one SAID, any step | a delete action | G | proved |
+| `M3_duplicate_push_refused` | #392 "duplicate pushes fail on `insert`" | push the same `rev` twice | re-insert resets set | G | proved |
+| `M4_pushes_commute` | #392 "converges however it is filled" | two `rev`s, distinct SAIDs, reachable | position-recording accumulator | G | proved |
+| `M5_registry_bound_to_issuer` | #392 registry row: "registry id bound to issuer AID" | open from a `vcp` | trust the `issuer` argument | G | proved |
+| `M6_push_iff` | #392 "no owner authorization, no current-key check" | as M1 | guard on `cur` | I | proved |
+| `M7_open_iff` | #392 `vcp` row; inception anchor | as M5 | accept `iss` as inception | I | proved |
+| `M8_mirror_ignores_current_keys` | #392 "current keys cannot vouch for past events" | open/push/reanchor after `setCur` | require `signed c.cur` | G | proved |
+| `M9_superseded_push_over_revokes` | design "revocations pushed under them stay in the set" | provisional push, then advance at or below `k` | evict revocations on superseding | G | proved |
+| `M10_freshness_unenforced` | #392 "absence in the mirror is not absence in the KEL" | constructed: sealed `rev`, never pushed | none (stated limit, #398) | W | proved |
+| `M11_miss_fails_closed` | design "each against its own registry" | unopened registry | `true` on `none` | G | proved |
+| `M12_reanchor_iff` | review finding 6 | registry opened at leaf 0, issuer at 1, same `vcp` sealed at 3 | `reanchor` resetting the set | I | proved |
+| `M13_inception_is_a_walk_anchor` | review finding 6 | as M12 | `reanchor` storing a supplied anchor | G | proved |
 
 ### Credential — `CredentialGoals.lean`
 
 | Theorem | Ruling | Witness of antecedent | Falsifying mutant | Kind | Status |
 |---|---|---|---|---|---|
-| `C1_admitted_chain_is_pinned` | primer Q4 pin 2, verifier bound 4 | 2-hop chain to the root | drop root check on last hop | G | sorry |
-| `C2_every_hop_sealed_by_its_issuer` | primer Q4 pin 3, #31 amended | as C1 | walk against presenter's checkpoint | G | sorry |
-| `C3_integrity_and_edges` | primer Q4 pin 1, "swap parent breaks edge SAIDs" | as C1 | ignore `edge` | G | sorry |
-| `C4_revoked_link_refuses` | primer pin 4 "cascade" | chain with parent SAID pushed | mirror check on leaf only | G | sorry |
-| `C5_unopened_registry_refuses` | design "one absence proof per link" | hop whose registry is unopened | missing registry = clean | G | sorry |
-| `C6_provisional_iff_some_hop` | design "provisional when e is the latest leaf" | one hop on its issuer's latest leaf | `meet` final on any final | G | sorry |
-| `C7_admission_ignores_current_keys` | design "never mixed" | any chain, `setCur` | `hopVerdict` checking `cur` | G | sorry |
-| `C8_final_never_evicted` | design "evicts a provisional admission" | final admission, any evidence | `moved` ignoring the verdict | G | sorry |
-| `C9_evict_iff` | design "inserts a leaf at or below that sequence number" | provisional admission, issuer advance ≤ `k`, evidence of that leaf | evict on a leaf above `k` | I | sorry |
-| `C10_cascade_at_gate` | design "a revoked QVI credential fails every chain below it" | admitted chain, push of a parent SAID | gate on leaf registry only | G | sorry |
-| `C11_gate_iff` | defi-gate "cheap lookup + freshness bound" | fresh admission, all links absent | drop freshness bound | I | sorry |
-| `C12_gate_reads_no_checkpoint` | design "with no signature checks" | any gate | re-walk a seal | G | sorry |
-| `C13_admission_binds_actor` | defi-gate: admission under the acting entity | leaf issued to 7, admitted under 7; refused under 999 | drop the issuee guard | G | sorry |
-| `C14_admit_iff` | design cage; renewal | as C13; expired key | cache empty dependencies | I | sorry |
-| `C15_provisional_admission_evictable_after_superseding` | design "evicts a provisional admission when …" | provisional hop on leaf 12 sealing at 17, issuer advances to 15, evidence 15 | cache empty dependencies; `anchorOf` dropping `k` | G | sorry |
-| `C16_links_enforced` | review finding 1; vLEI accreditation | vLEI policy, issuer 20 referencing a root credential issued to 30 | `chainFrom` ignoring `lk` | G | sorry |
-| `C17_registry_inception_must_stand` | review finding 6 | registry from a `vcp` at leaf 0 sealed at 1; issuer advances to 1 | skip `inception.stands` | G | sorry |
-| `C18_renewal_after_expiry` | review finding 5 | final admission at 10, bound 5, renew at 16 | `admit` refusing every occupied key | G | sorry |
-| `C19_live_admission_not_replaced` | review finding 5 | as C18 at 15 | `admit` overwriting unconditionally | G | sorry |
-| `C20_provisional_gate_window_witness` | review finding 2 (open decision) | constructed: provisional admission, issuer advance ≤ `k`, gate open | none (stated residual) | W | sorry |
+| `C1_admitted_chain_is_pinned` | primer Q4 pin 2, verifier bound 4 | 2-hop chain to the root | drop root check on last hop | G | proved |
+| `C2_every_hop_sealed_by_its_issuer` | primer Q4 pin 3, #31 amended | as C1 | walk against presenter's checkpoint | G | proved |
+| `C3_integrity_and_edges` | primer Q4 pin 1, "swap parent breaks edge SAIDs" | as C1 | ignore `edge` | G | proved |
+| `C4_revoked_link_refuses` | primer pin 4 "cascade" | chain with parent SAID pushed | mirror check on leaf only | G | proved |
+| `C5_unopened_registry_refuses` | design "one absence proof per link" | hop whose registry is unopened | missing registry = clean | G | proved |
+| `C6_provisional_iff_some_hop` | design "provisional when e is the latest leaf" | one hop on its issuer's latest leaf | `meet` final on any final | G | proved |
+| `C7_admission_ignores_current_keys` | design "never mixed" | any chain, `setCur` | `hopVerdict` checking `cur` | G | proved |
+| `C8_final_never_evicted` | design "evicts a provisional admission" | final admission, any evidence | `moved` ignoring the verdict | G | proved |
+| `C9_evict_iff` | design "inserts a leaf at or below that sequence number" | provisional admission, issuer advance ≤ `k`, evidence of that leaf | evict on a leaf above `k` | I | proved |
+| `C10_cascade_at_gate` | design "a revoked QVI credential fails every chain below it" | admitted chain, push of a parent SAID | gate on leaf registry only | G | proved |
+| `C11_gate_iff` | defi-gate "cheap lookup + freshness bound" | fresh admission, all links absent | drop freshness bound | I | proved |
+| `C12_gate_reads_no_checkpoint` | design "with no signature checks" | any gate | re-walk a seal | G | proved |
+| `C13_admission_binds_actor` | defi-gate: admission under the acting entity | leaf issued to 7, admitted under 7; refused under 999 | drop the issuee guard | G | proved |
+| `C14_admit_iff` | design cage; renewal | as C13; expired key | cache empty dependencies | I | proved |
+| `C15_provisional_admission_evictable_after_superseding` | design "evicts a provisional admission when …" | provisional hop on leaf 12 sealing at 17, issuer advances to 15, evidence 15 | cache empty dependencies; `anchorOf` dropping `k` | G | proved |
+| `C16_links_enforced` | review finding 1; vLEI accreditation | vLEI policy, issuer 20 referencing a root credential issued to 30 | `chainFrom` ignoring `lk` | G | proved |
+| `C17_registry_inception_must_stand` | review finding 6 | registry from a `vcp` at leaf 0 sealed at 1; issuer advances to 1 | skip `inception.stands` | G | proved |
+| `C18_renewal_after_expiry` | review finding 5 | final admission at 10, bound 5, renew at 16 | `admit` refusing every occupied key | G | proved |
+| `C19_live_admission_not_replaced` | review finding 5 | as C18 at 15 | `admit` overwriting unconditionally | G | proved |
+| `C20_provisional_gate_window_witness` | review finding 2 (open decision) | constructed: provisional admission, issuer advance ≤ `k`, gate open | none (stated residual) | W | proved |
 
 ### Delegation — `DelegationGoals.lean`
 
 | Theorem | Ruling | Witness of antecedent | Falsifying mutant | Kind | Status |
 |---|---|---|---|---|---|
-| `D1_no_cycles` | #292 "loops cannot happen" | root → external → QVI | `registerDelegated` ignoring `known` | G | sorry |
-| `D2_mint_iff` | #292 "who may mint one", "fail on the seal, never on the chain"; anchor | approval seal at index 0 of the parent's `ixn` | require the child's checkpoint | I | sorry |
-| `D3_mint_spends_nothing` | #292 "parent checkpoint as a reference input" | as D2 | mint advances parent | G | sorry |
-| `D4_delegated_leaf_needs_approval` | design "recursion becomes induction" | delegated register, then delegated advance | `advanceDelegated` without `takeCert` | G | sorry |
-| `D5_certificate_consumed_once` | #292 "the child's registration then consumes it" | as D4 | `takeCert` leaves token | G | sorry |
-| `D6_ancestry_reads_parents_only` | design "walks the parent fields … no signature checks" | two systems, same parents | consult `certs` | G | sorry |
-| `D7_depth_is_the_consumers` | #292 "depth is bounded by the consumer" | 2-generation chain, `n = 2` | refuse at exactly `n` | G | sorry |
-| `D8_seal_position_binds` | rules B1–B3 "`parent_seal_index` is not decoration" | seal at index 1 of a rotation | search the seal list | G | sorry |
-| `D9_absent_parent` | #292 "parent frozen or convicted after the fact" | parent `leave`, child present | `leave` cascading to children | G | sorry |
-| `D10_delegation_does_not_touch_the_tel` | design "Delegation does not touch the TEL" | parent `leave`, child's `iss` walk | `issuerWalk` requiring parent | G | sorry |
-| `D11_supersede_iff` | #391 "delegated … `update` of the latest leaf"; anchor | standing cert at latest sequence, later approval | supersede a non-delegated child | I | sorry |
-| `D12_plain_insert_only` | rule A1 at system level | reachable non-delegated checkpoint, any step | `supersedeDelegated` on `parent = none` | G | sorry |
-| `D13_overturned_approval_witness` | #292 "approvals can be overturned" (open item) | constructed: provisional mint, register, parent advance ≤ approving `sn` | none (explicit omission) | W | sorry |
-| `D14_supersede_needs_later_approval` | rules B1–B3 | leaf installed at parent (3, ixn, 0); certificate at (4, ixn, 0) supersedes, one at (2, ixn, 0) is refused | pass a fixed position | G | sorry |
-| `D15_installation_binds_event` | review: exact provenance | delegated advance with standing certificate | install a toad other than the event's | G | sorry |
-| `D16_reminted_approval_cannot_reinstall` | review: single use | consumed `old`, re-minted `old` on the live child | `before` reflexive | G | sorry |
-| `D17_stale_provisional_certificate_refused` | review finding 3 | `old` minted at parent's `ixn` 2, parent rotates at 2 before consumption | consumption skipping `certStands` | G | sorry |
-| `D18_rotation_supersedes_interaction` | rules B3, A2 | leaf from parent `ixn` 2 index 0; certificate from parent `rot` 2 index 0 | `before` comparing indices only | G | sorry |
+| `D1_no_cycles` | #292 "loops cannot happen" | root → external → QVI | `registerDelegated` ignoring `known` | G | proved |
+| `D2_mint_iff` | #292 "who may mint one", "fail on the seal, never on the chain"; anchor | approval seal at index 0 of the parent's `ixn` | require the child's checkpoint | I | proved |
+| `D3_mint_spends_nothing` | #292 "parent checkpoint as a reference input" | as D2 | mint advances parent | G | proved |
+| `D4_delegated_leaf_needs_approval` | design "recursion becomes induction" | delegated register, then delegated advance | `advanceDelegated` without `takeCert` | G | proved |
+| `D5_certificate_consumed_once` | #292 "the child's registration then consumes it" | as D4 | `takeCert` leaves token | G | proved |
+| `D6_ancestry_reads_parents_only` | design "walks the parent fields … no signature checks" | two systems, same parents | consult `certs` | G | proved |
+| `D7_depth_is_the_consumers` | #292 "depth is bounded by the consumer" | 2-generation chain, `n = 2` | refuse at exactly `n` | G | proved |
+| `D8_seal_position_binds` | rules B1–B3 "`parent_seal_index` is not decoration" | seal at index 1 of a rotation | search the seal list | G | proved |
+| `D9_absent_parent` | #292 "parent frozen or convicted after the fact" | parent `leave`, child present | `leave` cascading to children | G | proved |
+| `D10_delegation_does_not_touch_the_tel` | design "Delegation does not touch the TEL" | parent `leave`, child's `iss` walk | `issuerWalk` requiring parent | G | proved |
+| `D11_supersede_iff` | #391 "delegated … `update` of the latest leaf"; anchor | standing cert at latest sequence, later approval | supersede a non-delegated child | I | proved |
+| `D12_plain_insert_only` | rule A1 at system level | reachable non-delegated checkpoint, any step | `supersedeDelegated` on `parent = none` | G | proved |
+| `D13_overturned_approval_witness` | #292 "approvals can be overturned" (open item) | constructed: provisional mint, register, parent advance ≤ approving `sn` | none (explicit omission) | W | proved |
+| `D14_supersede_needs_later_approval` | rules B1–B3 | leaf installed at parent (3, ixn, 0); certificate at (4, ixn, 0) supersedes, one at (2, ixn, 0) is refused | pass a fixed position | G | proved |
+| `D15_installation_binds_event` | review: exact provenance | delegated advance with standing certificate | install a toad other than the event's | G | proved |
+| `D16_reminted_approval_cannot_reinstall` | review: single use | consumed `old`, re-minted `old` on the live child | `before` reflexive | G | proved |
+| `D17_stale_provisional_certificate_refused` | review finding 3 | `old` minted at parent's `ixn` 2, parent rotates at 2 before consumption | consumption skipping `certStands` | G | proved |
+| `D18_rotation_supersedes_interaction` | rules B3, A2 | leaf from parent `ixn` 2 index 0; certificate from parent `rot` 2 index 0 | `before` comparing indices only | G | proved |
 
 ## Semantic-atom ledger
 

@@ -286,9 +286,9 @@ whether a cut is needed.
 
 The mirror's freshness is the push latency, stated and not enforced. An issuer
 without witnesses has no branch binding, and the verifier applies a toad floor.
-A QVI that registers its checkpoint after earlier rotations has no leaves for
-the states before registration unless registration replays them, one rotation
-each. Blinded TEL state, which the ACDC specification allows, is out of scope;
+A QVI with earlier rotations registers by replaying them through the ordinary
+register-then-advance flow, one advance per rotation, once; coverage begins at
+inception. Blinded TEL state, which the ACDC specification allows, is out of scope;
 the vLEI ecosystem publishes issuance and revocation unblinded. The costs of
 one seal walk on a QVI-shaped and a GLEIF-shaped issuer are unmeasured, and
 the measurement decides where the attestation cuts fall.

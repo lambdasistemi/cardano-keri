@@ -1,0 +1,35 @@
+{
+  "sourceCommit": "88e930945d8b757913d653defe6f2ed3b2b06ffb",
+  "sourceHashes": {
+    "lean/CardanoKeri/Checkpoint.lean": "f5dea750f9de2e5737d288eef73371cefd1b4217c5609468ddcdff4967ae001f",
+    "lean/CardanoKeri/Registry.lean": "78f63ada92e5099fc504e7e1e92adfbac1785d7d2d20946d78d9ffb68d41a0b5",
+    "lean/CheckpointTraceDriver.lean": "81336c34000345ff5cbb1e3dd2b6ab44ce712cb1c6f64bf4ad3132ea070d2ca2",
+    "lean/RegistryTraceDriver.lean": "a7fdd0314bb41a5e9f036f24c7bbadd199fd317c21e833f52d12dd158b2a9d62",
+    "lean/lean-toolchain": "d55ca0039a5479db5b38919d005b2c427b89b3be4f0184a20f2f4eae931f5bdb",
+    "offchain/flake.lock": "e170ae65f97ac0ad28f1289efb1bf7032b4f5d73f91861b8dca532eabdf2fc6e"
+  },
+  "toolchain": {
+    "build": "nix build --impure --no-link --print-out-paths --file specs/400-offered-interface/model-toolchain.nix",
+    "observed": "Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
+    "declared": "leanprover/lean4:v4.27.0",
+    "note": "Isolated Checkpoint and Registry build and trace runs; complete outputs byte-identical to initial flake Lean 4.24.0 runs. No full theorem audit."
+  },
+  "outputs": {
+    "checkpoint": {
+      "sha256": "72e85bf0ed1141f092dcda4bec61dd1b69a8fcaa636d58fff5726cf999868f6e",
+      "schema": "cardano-keri.checkpoint-trace",
+      "version": 1,
+      "gridCells": 1380,
+      "traces": 8,
+      "stories": 15
+    },
+    "registry": {
+      "sha256": "9579c627da2fd8ba122dd3cb429b3d2dec16d7dc2ef17882b4be1d0996c78f9a",
+      "schema": "cardano-keri.registry.trace",
+      "version": 2,
+      "gridCells": 3000,
+      "traces": 6,
+      "stories": 15
+    }
+  }
+}

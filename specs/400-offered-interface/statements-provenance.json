@@ -1,0 +1,337 @@
+{
+  "sourceBranch": "docs/lean-acdc-tel-delegation-statements",
+  "sourceCommit": "4906cfaed34e43405b04d3cc8746bd6388fc8452",
+  "baseCommit": "88e930945d8b757913d653defe6f2ed3b2b06ffb",
+  "sourceHashes": {
+    "lean/CardanoKeri/Statements.lean": "dee9e2d855835f5026a3a8231aeac7af315ed7576a48db5d781010255f167211",
+    "lean/CardanoKeri/Statements/History.lean": "f21d5fbba6abf2bcedd349014c99e7a59e15b3927c1bd67a5fbcdf4e0ef09f4e",
+    "lean/CardanoKeri/Statements/HistoryGoals.lean": "aadf82b1bf49d94e58f46b4a0b750df6edea250d6e2995be82e1528444819a2f",
+    "lean/CardanoKeri/Statements/Mirror.lean": "5a0e9916561008d9b025913c05d9bed906e865dadbb6195eab6116a9eb97f297",
+    "lean/CardanoKeri/Statements/MirrorGoals.lean": "4b76da9e0fae657b5873345d717dc474bb80365ea02b5681cdb9260d36f43879",
+    "lean/CardanoKeri/Statements/Credential.lean": "7e9025df205aac4d6702783b8f9711e1e33991cb1734b8bb99daef641c2be0ff",
+    "lean/CardanoKeri/Statements/CredentialGoals.lean": "ce85f216540d901eaec99e092a48b4f893587b9db27ea7a5a617d7ba4e58bcf1",
+    "lean/CardanoKeri/Statements/Delegation.lean": "f907f8ecac23aa3561b441d120388c050221d71585b90e0161dc2743eee8530c",
+    "lean/CardanoKeri/Statements/DelegationGoals.lean": "19ba996a712a4f59beec96a0c930d709efd6871dc250ff06ca87f4bce6ce71f9",
+    "lean/STATEMENTS-ATOMS.md": "46614c5ebdc77774e08992629b01c2c1f990a1a3acc517eb31e3742247b96988",
+    "lean/lean-toolchain": "d55ca0039a5479db5b38919d005b2c427b89b3be4f0184a20f2f4eae931f5bdb",
+    "lean/lakefile.lean": "07ba318488790a383e1bb5d291ee2965a74d2a047ae62820164420af9608d6aa"
+  },
+  "toolchain": {
+    "declared": "leanprover/lean4:v4.27.0",
+    "observed": "Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
+    "target": "CardanoKeriStatements"
+  },
+  "proofStatus": "stated-not-proved",
+  "compiledConstructors": {
+    "CardanoKeri.Credential.Action": [
+      "CardanoKeri.Credential.Action.mirror",
+      "CardanoKeri.Credential.Action.admit",
+      "CardanoKeri.Credential.Action.evict"
+    ],
+    "CardanoKeri.Delegation.Action": [
+      "CardanoKeri.Delegation.Action.mint",
+      "CardanoKeri.Delegation.Action.registerPlain",
+      "CardanoKeri.Delegation.Action.registerDelegated",
+      "CardanoKeri.Delegation.Action.advancePlain",
+      "CardanoKeri.Delegation.Action.advanceDelegated",
+      "CardanoKeri.Delegation.Action.supersedeDelegated",
+      "CardanoKeri.Delegation.Action.leave"
+    ],
+    "CardanoKeri.History.HAction": [
+      "CardanoKeri.History.HAction.advance",
+      "CardanoKeri.History.HAction.supersede"
+    ],
+    "CardanoKeri.Mirror.Action": [
+      "CardanoKeri.Mirror.Action.register",
+      "CardanoKeri.Mirror.Action.history",
+      "CardanoKeri.Mirror.Action.open",
+      "CardanoKeri.Mirror.Action.push"
+    ]
+  },
+  "theoremAxioms": {
+    "CardanoKeri.Credential.C10_cascade_at_gate": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Credential.C11_gate_iff": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Credential.C12_gate_reads_no_checkpoint": [
+      "sorryAx"
+    ],
+    "CardanoKeri.Credential.C1_admitted_chain_is_pinned": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Credential.C2_every_hop_sealed_by_its_issuer": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Credential.C3_integrity_and_edges": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Credential.C4_revoked_link_refuses": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Credential.C5_unopened_registry_refuses": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Credential.C6_provisional_iff_some_hop": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Credential.C7_admission_ignores_current_keys": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Credential.C8_final_never_evicted": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Credential.C9_evict_iff": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Delegation.D10_delegation_does_not_touch_the_tel": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Delegation.D11_supersede_iff": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Delegation.D12_plain_insert_only": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Delegation.D13_overturned_approval_witness": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Delegation.D1_no_cycles": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Delegation.D2_mint_iff": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Delegation.D3_mint_spends_nothing": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Delegation.D4_delegated_leaf_needs_approval": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Delegation.D5_certificate_consumed_once": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Delegation.D6_ancestry_reads_parents_only": [
+      "sorryAx"
+    ],
+    "CardanoKeri.Delegation.D7_depth_is_the_consumers": [
+      "sorryAx"
+    ],
+    "CardanoKeri.Delegation.D8_seal_position_binds": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Delegation.D9_absent_parent": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.History.H1_wf_reachable": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.History.H2_cover_sound": [
+      "sorryAx"
+    ],
+    "CardanoKeri.History.H3_cover_complete": [
+      "sorryAx"
+    ],
+    "CardanoKeri.History.H4_provisional_iff_latest": [
+      "sorryAx"
+    ],
+    "CardanoKeri.History.H5_final_is_stable": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.History.H6_superseding_excludes": [
+      "sorryAx"
+    ],
+    "CardanoKeri.History.H7_provisional_becomes_final": [
+      "sorryAx"
+    ],
+    "CardanoKeri.History.H8_non_delegated_insert_only": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.History.H9_supersede_only_latest": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.History.S1_walk_needs_leaf_signature_and_receipts": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.History.S2_walk_binds_seal_at_index": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.History.S3_walk_ignores_current_keys": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.History.S4_current_key_thief_only_provisional": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.History.S5_walk_verdict_is_cover_verdict": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.History.S6_seal_names_one_event": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.History.S7_establishment_seal_is_own_leaf": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Mirror.M10_freshness_unenforced": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Mirror.M11_miss_fails_closed": [
+      "sorryAx"
+    ],
+    "CardanoKeri.Mirror.M1_only_the_issuer_revokes": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Mirror.M2_revocation_is_permanent": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Mirror.M3_duplicate_push_refused": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Mirror.M4_pushes_commute": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Mirror.M5_registry_bound_to_issuer": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Mirror.M6_push_iff": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Mirror.M7_open_iff": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Mirror.M8_mirror_ignores_current_keys": [
+      "propext",
+      "sorryAx"
+    ],
+    "CardanoKeri.Mirror.M9_superseded_push_over_revokes": [
+      "propext",
+      "sorryAx"
+    ]
+  },
+  "fixture": {
+    "driverSha256": "0414454ef0a8a8cd1d145c04488b5eec73a52415fde2977bb02c12baa1ff0758",
+    "surfaceDriverSha256": "58c70cd94a465e58bba2286ae0ff6af752b21559dd15d186d7498c140e4bd595",
+    "rawSha256": "7c69912adca5445a7c2d67bb0e0803c65a20ac459f53eea75b288c9bf98bbb29",
+    "surfaceSha256": "a5a1ee12654b3669e81ea52b4b00e59b9209baa5ec29ebc66ca38e318158e139",
+    "cases": 66,
+    "actionConstructors": 16,
+    "queries": 8,
+    "refusalNames": 21,
+    "observationDomain": {
+      "aids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "registries": [
+        10,
+        20,
+        30
+      ],
+      "saids": [
+        1010,
+        1020,
+        1030
+      ],
+      "sequences": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40
+      ]
+    },
+    "oracles": {
+      "signed": "oracle.signed and optional signatureEpoch equals historical epoch",
+      "receipted": "oracle.receipted",
+      "telDigest": "tel.i + 10000",
+      "saidOf": "body.registry + 1000",
+      "eventDigest": "childEvent.nonce + 20000"
+    },
+    "limits": "Bounded semantic fixtures only; synthetic oracles are not cryptographic evidence. No proof, concrete codec, deployment or lifecycle-composition claim."
+  }
+}

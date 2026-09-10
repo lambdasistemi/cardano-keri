@@ -1,0 +1,109 @@
+; Abstract projection of docs/lean-acdc-tel-delegation-statements at 4906cfa.
+; Executable statements, not proved guarantees or concrete KERI/Cardano codecs.
+statements-document = statements-corpus / statement-call / statement-result / evidence-assessment
+nat = unsigned
+history-verdict = "final" / "provisional"
+history-params = { toadFloor: nat }
+history-leaf = { prev: nat / null, epoch: nat, toad: nat }
+history-checkpoint = {
+  aid: nat, latest: nat, cur: nat, parent: nat / null,
+  hist: [* { sn: nat, leaf: history-leaf }]
+}
+checkpoint-table = [* { aid: nat, checkpoint: history-checkpoint }]
+seal = { i: nat, s: nat, d: nat }
+kel-event = { sn: nat, establishment: bool, seals: [* seal] }
+walk-core = { kel: kel-event, e: nat, succ: nat / null, idx: nat }
+tel-event = { kind: "vcp" / "iss" / "rev", i: nat, ri: nat, s: nat }
+tel-walk = { tel: tel-event, core: walk-core }
+
+history-action = { action: "history.advance" / "history.supersede", sn: nat, toad: nat }
+history-call = { action: history-action, state: history-checkpoint }
+
+mirror-registry = { issuer: nat, rid: nat, revoked: [* nat] }
+registry-table = [* { rid: nat, registry: mirror-registry }]
+mirror-system = { ckpt: checkpoint-table, reg: registry-table }
+mirror-action =
+  { action: "mirror.register", aid: nat, epoch: nat, toad: nat, parent: nat / null } /
+  { action: "mirror.history", aid: nat, historyAction: history-action } /
+  { action: "mirror.open", issuer: nat, w: tel-walk } /
+  { action: "mirror.push", w: tel-walk }
+mirror-call = { action: mirror-action, state: mirror-system }
+
+acdc-body = { issuer: nat, schema: nat, registry: nat, issuee: nat, edge: nat / null }
+acdc = { body: acdc-body, said: nat }
+credential-hop = { acdc: acdc, walk: tel-walk }
+credential-policy = { root: nat, schemas: [* nat], maxDepth: nat, notAfter: nat }
+admission-dependency = { issuer: nat, e: nat, epoch: nat, k: nat, verdict: history-verdict }
+admission = {
+  saids: [* nat], registries: [* nat], verdict: history-verdict,
+  deps: [* admission-dependency], admittedAt: nat
+}
+credential-system = {
+  ckpt: checkpoint-table, reg: registry-table,
+  cage: [* { key: nat, admission: admission }]
+}
+credential-action =
+  { action: "credential.mirror", mirrorAction: mirror-action } /
+  { action: "credential.admit", key: nat, hops: [* credential-hop], now: nat } /
+  { action: "credential.evict", key: nat }
+credential-call = { action: credential-action, state: credential-system, policy: credential-policy }
+
+child-event = { sn: nat, toad: nat, nonce: nat }
+approval-certificate = {
+  parent: nat, child: nat, childSn: nat, childSaid: nat,
+  parentSn: nat, sealIdx: nat, verdict: history-verdict
+}
+; Preserve Option (Option AID): absent entry = never registered; plain differs from parent zero.
+known-parent = { kind: "plain" } / { kind: "delegated", parent: nat }
+delegation-system = {
+  ckpt: checkpoint-table, certs: [* approval-certificate],
+  known: [* { aid: nat, value: known-parent }]
+}
+delegation-action =
+  { action: "delegation.mint", parent: nat, child: nat, ev: child-event, w: walk-core } /
+  { action: "delegation.registerPlain", aid: nat, epoch: nat, toad: nat } /
+  { action: "delegation.registerDelegated", child: nat, parent: nat, ev: child-event } /
+  { action: "delegation.advancePlain", aid: nat, sn: nat, toad: nat } /
+  { action: "delegation.advanceDelegated" / "delegation.supersedeDelegated", child: nat, ev: child-event } /
+  { action: "delegation.leave", aid: nat }
+delegation-call = { action: delegation-action, state: delegation-system }
+
+query-call =
+  { action: { action: "history.cover", e: nat, k: nat, succ: nat / null }, state: history-checkpoint } /
+  { action: { action: "history.walkOn", seal: seal, w: walk-core }, state: history-checkpoint } /
+  { action: { action: "history.sealWalk", rid: nat, w: tel-walk }, state: history-checkpoint } /
+  { action: { action: "mirror.miss", rid: nat, said: nat }, state: mirror-system } /
+  { action: { action: "credential.admitChain", hops: [* credential-hop] }, state: mirror-system, policy: credential-policy } /
+  { action: { action: "credential.gate", key: nat, now: nat }, state: credential-system, policy: credential-policy } /
+  { action: { action: "delegation.ancestorWithin", depth: nat, child: nat, root: nat }, state: delegation-system } /
+  { action: { action: "delegation.issuerWalk", aid: nat, rid: nat, w: tel-walk }, state: delegation-system }
+statement-call = history-call / mirror-call / credential-call / delegation-call / query-call
+
+statement-value = history-checkpoint / mirror-system / credential-system / delegation-system / history-verdict / bool
+statement-result =
+  { status: "accepted", value: statement-value } /
+  { status: "refused", refusal: statement-refusal }
+; One compound admission guard per source Option-returning operation. False query values are not errors.
+statement-refusal =
+  "history.advance-refused" / "history.supersede-refused" /
+  "mirror.register-refused" / "mirror.history-refused" / "mirror.open-refused" / "mirror.push-refused" /
+  "credential.mirror-refused" / "credential.admit-refused" / "credential.evict-refused" /
+  "delegation.mint-refused" / "delegation.registerPlain-refused" / "delegation.registerDelegated-refused" /
+  "delegation.advancePlain-refused" / "delegation.advanceDelegated-refused" /
+  "delegation.supersedeDelegated-refused" / "delegation.leave-refused" /
+  "history.cover-refused" / "history.walkOn-refused" / "history.sealWalk-refused" /
+  "credential.admitChain-refused" / "delegation.issuerWalk-refused"
+
+; API completeness envelope, distinct from the model's final/provisional verdict.
+; Supplied evidence bytes and concrete proof codecs are a separate profile.
+evidence-assessment =
+  { status: "unknown", missing: [+ { object: "kel" / "tel" / "credential" / "checkpoint" / "mirror" / "approval", subject: tstr }] } /
+  { status: "assessed", result: statement-result }
+
+; These are fixture oracles and bounded state observations, not production evidence.
+fixture-oracle = { signed: bool, receipted: bool, signatureEpoch: nat / null }
+statements-corpus = {
+  profile: "statements-model-v1", source: tstr, params: history-params,
+  domain: { aids: [* nat], sequences: [* nat], registries: [* nat], saids: [* nat] },
+  cases: [+ { name: tstr, oracle: fixture-oracle, call: statement-call, result: statement-result }]
+}

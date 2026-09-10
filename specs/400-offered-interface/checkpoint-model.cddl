@@ -1,0 +1,45 @@
+; Draft abstract Checkpoint profile, not signed KERI or Cardano wire data.
+; Field names are named maps; source: CardanoKeri.Checkpoint.Action/State/Flow.
+; unsigned includes positive CBOR bignums; see encoding.md for canonical forms.
+checkpoint-document = checkpoint-action / checkpoint-state / step-result / parameters / checkpoint-corpus
+checkpoint-action = register / rotate / poison / freeze / top-up / convict / close / reopen
+register = { action: "register", refund: model-nat, pool0: model-nat }
+rotate = { action: "rotate", sn: model-nat, bond: "keep" / "deposit", payee: model-nat, refund: model-nat / null }
+poison = { action: "poison" }
+freeze = { action: "freeze", sn: model-nat, payee: model-nat }
+top-up = { action: "topUp", amount: model-nat }
+convict = { action: "convict", payee: model-nat }
+close = { action: "close", sn: model-nat, payee: model-nat, refund: model-nat / null }
+reopen = { action: "reopen", sn: model-nat, refund: model-nat, pool0: model-nat }
+
+checkpoint-state = absent / present / parked / convicted
+absent = { state: "absent" }
+present = { state: "present", sn: model-nat, epoch: model-nat, poisoned: bool, frozen: bool, bornAt: model-nat, refundTo: model-nat, pool: model-nat }
+parked = { state: "parked", epoch: model-nat, sn: model-nat }
+convicted = { state: "convicted" }
+
+payment = { addr: model-nat, dreg: model-nat, b: model-nat, pool: model-nat }
+flow = { dregIn: model-nat, bIn: model-nat, poolIn: model-nat, refund: payment / null, hunter: payment / null, convictor: payment / null }
+; Refused results name every failed applicable guard; see spec.md.
+step-result = accepted-result / refused-result
+accepted-result = { status: "accepted", flow: flow, state: checkpoint-state }
+refused-result = { status: "refused", refusals: [+ refusal-name] }
+refusal-name = "checkpoint-state-mismatch" / "rotation-evidence-invalid" / "sequence-not-later" / "intent-unauthorized" / "quorum-missing" / "already-poisoned" / "freeze-pool-covers-premium" / "already-frozen" / "freeze-poisoned" / "duplicity-evidence-invalid"
+parameters = { D: positive-nat, B: positive-nat, P: model-nat, W: model-nat }
+
+; Finite oracle tables are conformance inputs only, never production evidence.
+model-env = {
+  rotations: [* { epoch: model-nat, from: model-nat, to: model-nat }],
+  intents: [* { epoch: model-nat, intent: model-intent, refund: model-nat / null }],
+  quorums: [* { epoch: model-nat }],
+  duplicities: [* { epoch: model-nat, sn: model-nat }]
+}
+model-intent = { kind: "keep" / "deposit" } / { kind: "close", payee: model-nat }
+checkpoint-corpus = {
+  profile: "checkpoint-model-v1", params: parameters, now: model-nat,
+  states: [+ checkpoint-state], actions: [+ checkpoint-action], envs: [+ model-env],
+  cells: [+ { s: model-nat, a: model-nat, e: model-nat, result: step-result }]
+}
+
+model-nat = unsigned
+positive-nat = unsigned .gt 0

@@ -1,7 +1,7 @@
 import CardanoKeri.Statements.Credential
 
 /-!
-# Credential statements C1 … C12 — unproven
+# Credential statements C1 … C15 — unproven
 
 STATEMENTS mode: every theorem ends in `sorry`. Rulings: #31 as amended by
 #391/#392, `docs/acdc-primer.md` ("how we verify an ACDC is not forged"),
@@ -133,6 +133,47 @@ Mutant: `gate` re-walking a seal. -/
 theorem C12_gate_reads_no_checkpoint (pol : Policy) (s : Sys) (f : AID → Option Checkpoint)
     (key : AID) (now : Slot) :
     gate pol { s with ckpt := f } key now = gate pol s key now := by
+  sorry
+
+/-- **C13. Admission binds the actor to the credential.** An admission is
+cached under a key only when the leaf credential names that key as its
+issuee, and a chain whose leaf names someone else is refused for that key.
+The actor's own signatures, checked by the checkpoint machine, cannot
+establish this relationship. Mutant: drop the issuee guard on `admit`. -/
+theorem C13_admission_binds_actor (p : Params) (env : CEnv) (pol : Policy) (s : Sys) (key : AID)
+    (hops : List Hop) (now : Slot) :
+    (∀ s', stepFn p env pol s (.admit key hops now) = some s' →
+      ∃ h, hops.head? = some h ∧ h.acdc.body.issuee = key) ∧
+    (∀ h, hops.head? = some h → h.acdc.body.issuee ≠ key →
+      stepFn p env pol s (.admit key hops now) = none) := by
+  sorry
+
+/-- **C14. Admit, exactly** (public inversion). An admission lands iff the
+key is free, the leaf names the key, the chain admits with verdict `v`, every
+hop yields a dependency, and what is cached is exactly the chain's SAIDs,
+registries, verdict, dependencies and time. Mutant: `admit` caching empty
+dependencies. -/
+theorem C14_admit_iff (p : Params) (env : CEnv) (pol : Policy) (s : Sys) (key : AID) (hops : List Hop)
+    (now : Slot) (s' : Sys) :
+    stepFn p env pol s (.admit key hops now) = some s' ↔
+      ∃ h v deps, hops.head? = some h ∧ h.acdc.body.issuee = key ∧ s.cage key = none ∧
+        admitChain p env s.toSys pol hops = some v ∧ hops.mapM (Hop.dep s.toSys) = some deps ∧
+        s' = s.setCage key (some ⟨hops.map (·.acdc.said), hops.map (·.acdc.body.registry), v, deps, now⟩) := by
+  sorry
+
+/-- **C15. A provisional admission is evictable once its issuer supersedes.**
+An admission whose hop rests on its issuer's latest leaf records that
+dependency, and after the issuer advances at or below the sealing sequence
+the eviction is enabled: superseding recovery reaches the cage. Mutant:
+`admit` caching empty dependencies, or `Hop.dep` dropping `k`. -/
+theorem C15_provisional_admission_evictable_after_superseding (p : Params) (env : CEnv) (pol : Policy)
+    {s s₁ s₂ : Sys} {key : AID} {hops : List Hop} {now : Slot}
+    (h₁ : stepFn p env pol s (.admit key hops now) = some s₁)
+    {hop : Hop} (hin : hop ∈ hops) {c : Checkpoint} (hc : s.ckpt hop.acdc.body.issuer = some c)
+    (hlatest : hop.walk.core.e = c.latest) {e' : Seq} {t : Nat} {appr : Option Approval}
+    (h₂ : stepFn p env pol s₁ (.mirror (.history hop.acdc.body.issuer (.advance e' t appr))) = some s₂)
+    (hgt : c.latest < e') (hle : e' ≤ hop.walk.core.kel.sn) :
+    ∃ s₃, stepFn p env pol s₂ (.evict key) = some s₃ := by
   sorry
 
 end CardanoKeri.Credential

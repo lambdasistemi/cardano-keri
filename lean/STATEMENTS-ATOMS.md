@@ -15,9 +15,16 @@ reachable witness of its antecedent and the single-atom mutant expected to
 falsify it. Statement hashes are frozen only after that audit returns ready;
 proof work (`PROOFS`) starts after the freeze.
 
-Build: `cd lean && lake build CardanoKeriStatements` (warnings: 52 `sorry`).
+Build: `cd lean && lake build CardanoKeriStatements` (warnings: 57 `sorry`).
 The default target `lake build` does not include this library, so the
 zero-`sorry` gate of `scripts/check-lean-traceability.sh` is unaffected.
+
+Repair 1 (2026-09-10, four audit findings): admission binds the actor to
+the leaf credential's issuee (C13, C14); rule-B superseding compares the
+approval's position in the parent's log and refuses an older approval (H9,
+H10, D11, D14; `Checkpoint.approval`); the insert-only statements take a
+well-formedness or reachability premise (H8, D12); stored dependencies are
+tied to eviction after superseding (C14, C15).
 
 ## Model surface
 
@@ -54,8 +61,9 @@ stated limit — an existential, not a guarantee).
 | `H5_final_is_stable` | design "its admission is final" | `cover 12 17 (some 40) = final`, then advance to 50 | `supersede` touching non-latest leaf | G |
 | `H6_superseding_excludes` | rule A0, design "superseding recovery" | `cover 12 17 none = provisional`, advance to 15 | `k ≤ e'` in `cover` | G |
 | `H7_provisional_becomes_final` | #391 step 2 | `cover 12 17 none = provisional`, advance to 40 | wrong back-pointer on advance | G |
-| `H8_non_delegated_insert_only` | rule A1 | non-delegated, any step | `supersede` without `parent` guard | G |
-| `H9_supersede_only_latest` | rule B, #391 "MPF `update` of the latest leaf" | delegated at latest 12, `supersede 12` | accept `sn' ≠ latest` | G |
+| `H8_non_delegated_insert_only` | rule A1 | well-formed non-delegated, any step | `supersede` without `parent` guard | G |
+| `H9_supersede_only_latest` | rules B, B2, #391 "MPF `update` of the latest leaf" | delegated at latest 12 installed by approval (3, 0), `supersede 12` with (4, 0) | accept `sn' ≠ latest` | G |
+| `H10_older_approval_cannot_supersede` | rule B2, feasibility report §3 | leaf installed by (3, 0), certificate at (2, 0) | drop `a.before appr` | G |
 | `S1_walk_needs_leaf_signature_and_receipts` | #392 step 3, #391 "receipt gate" | walk with `signed`/`receipted` true at leaf 12 | drop `receipted` | G |
 | `S2_walk_binds_seal_at_index` | #391 "without every link", #392 step 1 | seal at index 0 of an `ixn` at 17 | compare `seal.i` only | G |
 | `S3_walk_ignores_current_keys` | design "never mixed" | any walk | check `env.signed c.cur` | G |
@@ -96,6 +104,9 @@ stated limit — an existential, not a guarantee).
 | `C10_cascade_at_gate` | design "a revoked QVI credential fails every chain below it" | admitted chain, push of a parent SAID | gate on leaf registry only | G |
 | `C11_gate_iff` | defi-gate "cheap lookup + freshness bound" | fresh admission, all links absent | drop freshness bound | I |
 | `C12_gate_reads_no_checkpoint` | design "with no signature checks" | any gate | re-walk a seal | G |
+| `C13_admission_binds_actor` | defi-gate: admission cached under the acting entity | leaf issued to 7, admitted under 7; refused under 999 | drop the issuee guard | G |
+| `C14_admit_iff` | design cage | as C13 | cache empty dependencies | I |
+| `C15_provisional_admission_evictable_after_superseding` | design "evicts a provisional admission when the issuer's checkpoint later inserts a leaf at or below" | provisional hop on leaf 12 sealing at 17, issuer advances to 15 | cache empty dependencies; `Hop.dep` dropping `k` | G |
 
 ### Delegation — `DelegationGoals.lean`
 
@@ -111,9 +122,10 @@ stated limit — an existential, not a guarantee).
 | `D8_seal_position_binds` | #292 rule B2 "`parent_seal_index` is not decoration" | seal at index 1 | search the seal list | G |
 | `D9_absent_parent` | #292 "parent frozen or convicted after the fact" | parent `leave`, child present | `leave` cascading to children | G |
 | `D10_delegation_does_not_touch_the_tel` | design "Delegation does not touch the TEL" | parent `leave`, child's `iss` walk | `issuerWalk` requiring parent | G |
-| `D11_supersede_iff` | #391 "delegated … `update` of the latest leaf" | cert at latest sequence | supersede a non-delegated child | I |
-| `D12_plain_insert_only` | rule A1 at system level | non-delegated checkpoint, any step | `supersedeDelegated` on `parent = none` | G |
+| `D11_supersede_iff` | #391 "delegated … `update` of the latest leaf" | cert at latest sequence, later approval | supersede a non-delegated child | I |
+| `D12_plain_insert_only` | rule A1 at system level | reachable non-delegated checkpoint, any step | `supersedeDelegated` on `parent = none` | G |
 | `D13_overturned_approval_witness` | #292 "approvals can be overturned" (open item) | constructed: provisional mint, then parent advance ≤ approving `sn` | none (explicit omission) | W |
+| `D14_supersede_needs_later_approval` | rule B2, feasibility report §3 | leaf installed at parent (3, 0); certificate at (4, 0) supersedes, one at (2, 0) is refused | pass a fixed position instead of the certificate's | G |
 
 ## Semantic-atom ledger
 
@@ -146,6 +158,8 @@ or a delegated key state.
 | HS-17 | design | `walkOn` verdict is `cover`'s / constant | `S5_walk_verdict_is_cover_verdict`, `C6_provisional_iff_some_hop` |
 | HS-18 | #392 step 1 | `sealWalk`: `tel.ri = rid` / drop | `S2_walk_binds_seal_at_index` |
 | HS-19 | #392 step 1 | `sealOf` carries the digest / omit | `S6_seal_names_one_event` |
+| HS-20 | rule B2 | `supersede` requires a strictly later approval / drop `a.before appr` | `H10_older_approval_cannot_supersede`, `H9_supersede_only_latest` |
+| HS-21 | rule B2 | `advance` and `supersede` record the installing approval / keep the old one | `H9_supersede_only_latest`, `D14_supersede_needs_later_approval` |
 
 ### Mirror — `Statements/Mirror.lean`
 
@@ -180,7 +194,7 @@ or a delegated key state.
 | CR-09 | primer pin 2 | schema pinned by position / ignore | `C1_admitted_chain_is_pinned` |
 | CR-10 | verifier bound | depth bound / drop | `C1_admitted_chain_is_pinned` |
 | CR-11 | design | `meet` final only when all final / any | `C6_provisional_iff_some_hop` |
-| CR-12 | design cage | `admit` records deps from `Hop.dep` / empty deps | `C8_final_never_evicted`, `C9_evict_iff` |
+| CR-12 | design cage | `admit` records deps from `Hop.dep` / empty deps | `C14_admit_iff`, `C15_provisional_admission_evictable_after_superseding` |
 | CR-13 | design eviction | `evict` requires a moved dep / unconditional | `C8_final_never_evicted`, `C9_evict_iff` |
 | CR-14 | rule B | `Dep.moved`: epoch changed at `e` / drop | `C9_evict_iff` |
 | CR-15 | rule A0 | `Dep.moved`: leaf in `(e, k]` / `(e, ∞)` | `C9_evict_iff`, `C8_final_never_evicted` |
@@ -188,6 +202,7 @@ or a delegated key state.
 | CR-17 | design cascade | `gate`: `miss` per link / leaf only | `C10_cascade_at_gate`, `C11_gate_iff` |
 | CR-18 | design "cheap lookup" | `gate` reads no checkpoint / re-walk | `C12_gate_reads_no_checkpoint` |
 | CR-19 | design "never mixed" | admission ignores `cur` / check `cur` | `C7_admission_ignores_current_keys` |
+| CR-20 | defi-gate admission under the acting entity | `admit` requires the leaf's issuee to be the key / drop | `C13_admission_binds_actor`, `C14_admit_iff` |
 
 ### Delegation — `Statements/Delegation.lean`
 
@@ -209,6 +224,7 @@ or a delegated key state.
 | DL-14 | #292 "where it stops" | `ancestorWithin` stops at an absent checkpoint / skip over | `D9_absent_parent` |
 | DL-15 | #292 "depth bounded by the consumer" | `ancestorWithin` monotone in the bound / refuse at `n` | `D7_depth_is_the_consumers` |
 | DL-16 | design "does not touch the TEL" | `issuerWalk` reads the issuer's own checkpoint / require parent | `D10_delegation_does_not_touch_the_tel` |
+| DL-17 | rule B2 | delegated steps pass the certificate's `(parentSn, sealIdx)` to the history / pass a constant | `D14_supersede_needs_later_approval`, `D11_supersede_iff` |
 
 ## Explicit omissions (creator claims needing a ruling)
 

@@ -83,7 +83,7 @@ def Registry.insert (r : Registry) (said : Said) : Registry :=
 def stepFn (p : Params) (env : TelEnv) (s : Sys) : Action → Option Sys
   | .register aid ep t par =>
       match s.ckpt aid with
-      | none => some (s.setCkpt aid (some (inception aid ep t par)))
+      | none => some (s.setCkpt aid (some (inception aid ep t par none)))
       | some _ => none
   | .history aid a =>
       match s.ckpt aid with

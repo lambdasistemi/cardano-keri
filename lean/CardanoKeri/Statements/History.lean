@@ -85,17 +85,31 @@ structure Leaf where
 /-- The history root as the finite map it commits to. Exact lookups only. -/
 abbrev History := Seq → Option Leaf
 
+/-- An approval's position in the parent's log: event sequence, seal index. -/
+abbrev Approval := Seq × Nat
+
+/-- Strictly earlier in the parent's log, lexicographically (rule B2). -/
+def Approval.before (a b : Approval) : Prop := a.1 < b.1 ∨ (a.1 = b.1 ∧ a.2 < b.2)
+
+instance (a b : Approval) : Decidable (a.before b) := by unfold Approval.before; infer_instance
+
 /-- What a checkpoint reference input yields to a verifier: the AID, the
 sequence of the latest accepted establishment event, the current key
-state, the history, and the parent the identity was delegated by (`none`
+state, the history, the parent the identity was delegated by (`none`
 for a non-delegated identity; from state, because a delegated rotation
-carries no parent field of its own). -/
+carries no parent field of its own), and the position of the approval
+that installed the latest leaf. -/
 structure Checkpoint where
   aid : AID
   latest : Seq
   cur : Epoch
   hist : History
   parent : Option AID
+  /-- Where in the parent's log the approval that installed the latest leaf
+  sits: the parent's event sequence and the seal's position (`none` for a
+  non-delegated identity). KERI rule B2 orders competing delegated rotations
+  by this position, so superseding compares it. -/
+  approval : Option Approval
 
 /-- Well-formedness of a history: what registration and advances produce.
 The inception leaf sits at 0 with no back-pointer; every other leaf points
@@ -111,51 +125,57 @@ structure WF (c : Checkpoint) : Prop where
   epoch_monotone : ∀ sn sn' l l', c.hist sn = some l → c.hist sn' = some l' → sn < sn' → l.epoch < l'.epoch
 
 /-- The history a registration creates: the inception leaf alone. -/
-def inception (aid : AID) (epoch : Epoch) (toad : Nat) (parent : Option AID) : Checkpoint :=
+def inception (aid : AID) (epoch : Epoch) (toad : Nat) (parent : Option AID) (appr : Option Approval) :
+    Checkpoint :=
   { aid := aid, latest := 0, cur := epoch,
     hist := fun sn => if sn = 0 then some ⟨none, epoch, toad⟩ else none,
-    parent := parent }
+    parent := parent, approval := appr }
 
 /-- What the history does on an accepted advance to `sn'` (whose evidence
 the checkpoint machine has already checked): insert the new leaf pointing
-back at the previous latest. Refused unless `sn'` is strictly later. -/
-def advance (c : Checkpoint) (sn' : Seq) (toad' : Nat) : Option Checkpoint :=
+back at the previous latest, and record the approval that installed it
+(`none` for a non-delegated identity). Refused unless `sn'` is strictly
+later. -/
+def advance (c : Checkpoint) (sn' : Seq) (toad' : Nat) (appr : Option Approval) : Option Checkpoint :=
   let epoch' := c.cur + 1
   if c.latest < sn' then
-    some { c with latest := sn', cur := epoch',
+    some { c with latest := sn', cur := epoch', approval := appr,
                   hist := fun sn => if sn = sn' then some ⟨some c.latest, epoch', toad'⟩ else c.hist sn }
   else none
 
 /-- KERI superseding rule B: a delegated identity's latest leaf is replaced
-by the parent-approved rotation at the same sequence number. The
-back-pointer is kept; the key state changes. Refused for a non-delegated
-identity (rule A1: insert-only) and at any other sequence. The approval
-itself is the delegation module's business. -/
-def supersede (c : Checkpoint) (sn' : Seq) (toad' : Nat) : Option Checkpoint :=
+by a parent-approved rotation at the same sequence number whose approval
+sits **strictly later** in the parent's log than the one that installed the
+leaf (rule B2: the position decides). The back-pointer is kept; the key
+state and the recorded approval change. Refused for a non-delegated
+identity (rule A1: insert-only), at any other sequence, and for an
+approval that is not later. The approval's authenticity is the delegation
+module's business. -/
+def supersede (c : Checkpoint) (sn' : Seq) (toad' : Nat) (appr : Approval) : Option Checkpoint :=
   let epoch' := c.cur + 1
-  match c.parent, c.hist c.latest with
-  | some _, some l =>
-      if sn' = c.latest then
-        some { c with cur := epoch',
+  match c.parent, c.hist c.latest, c.approval with
+  | some _, some l, some a =>
+      if sn' = c.latest ∧ a.before appr then
+        some { c with cur := epoch', approval := some appr,
                       hist := fun sn => if sn = sn' then some ⟨l.prev, epoch', toad'⟩ else c.hist sn }
       else none
-  | _, _ => none
+  | _, _, _ => none
 
 /-- The two things that happen to a history after registration. -/
 inductive HAction where
-  | advance (sn' : Seq) (toad' : Nat)
-  | supersede (sn' : Seq) (toad' : Nat)
+  | advance (sn' : Seq) (toad' : Nat) (appr : Option Approval)
+  | supersede (sn' : Seq) (toad' : Nat) (appr : Approval)
   deriving Repr
 
 /-- The executable history step. -/
 def hstep (c : Checkpoint) : HAction → Option Checkpoint
-  | .advance sn' t => advance c sn' t
-  | .supersede sn' t => supersede c sn' t
+  | .advance sn' t a => advance c sn' t a
+  | .supersede sn' t a => supersede c sn' t a
 
 /-- Histories reachable from a registration by history steps alone. -/
 inductive HReach : Checkpoint → Prop
-  | init (aid : AID) (epoch : Epoch) (toad : Nat) (parent : Option AID) :
-      HReach (inception aid epoch toad parent)
+  | init (aid : AID) (epoch : Epoch) (toad : Nat) (parent : Option AID) (appr : Option Approval) :
+      HReach (inception aid epoch toad parent appr)
   | step {c c' : Checkpoint} {a : HAction} (h : HReach c) (hs : hstep c a = some c') : HReach c'
 
 /-! ## Coverage: which key state governs the event at `k` -/

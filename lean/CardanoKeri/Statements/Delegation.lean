@@ -133,8 +133,8 @@ def stepFn (p : Params) (env : DEnv) (s : Sys) : Action → Option Sys
           some { s with certs := ⟨parent, child, ev.sn, env.eventDigest ev, w.kel.sn, w.idx, v⟩ :: s.certs }
   | .registerPlain aid ep t =>
       match s.ckpt aid, s.known aid with
-      | none, none => some ((s.setCkpt aid (some (inception aid ep t none))).setKnown aid none)
-      | none, some none => some (s.setCkpt aid (some (inception aid ep t none)))
+      | none, none => some ((s.setCkpt aid (some (inception aid ep t none none))).setKnown aid none)
+      | none, some none => some (s.setCkpt aid (some (inception aid ep t none none)))
       | _, _ => none
   | .registerDelegated child parent ev =>
       match s.ckpt child with
@@ -144,14 +144,14 @@ def stepFn (p : Params) (env : DEnv) (s : Sys) : Action → Option Sys
         if s.known child ≠ none ∧ s.known child ≠ some (some parent) then none else
         match s.takeCert parent child 0 (env.eventDigest ev) with
         | none => none
-        | some (_, s') =>
-            some ((s'.setCkpt child (some (inception child 0 ev.toad (some parent)))).setKnown child (some parent))
+        | some (cert, s') =>
+            some ((s'.setCkpt child (some (inception child 0 ev.toad (some parent) (some (cert.parentSn, cert.sealIdx))))).setKnown child (some parent))
   | .advancePlain aid sn' t =>
       match s.ckpt aid with
       | none => none
       | some c =>
         if c.parent ≠ none then none else
-        (advance c sn' t).map fun c' => s.setCkpt aid (some c')
+        (advance c sn' t none).map fun c' => s.setCkpt aid (some c')
   | .advanceDelegated child ev =>
       match s.ckpt child with
       | none => none
@@ -161,7 +161,7 @@ def stepFn (p : Params) (env : DEnv) (s : Sys) : Action → Option Sys
         | some par =>
           match s.takeCert par child ev.sn (env.eventDigest ev) with
           | none => none
-          | some (_, s') => (advance c ev.sn ev.toad).map fun c' => s'.setCkpt child (some c')
+          | some (cert, s') => (advance c ev.sn ev.toad (some (cert.parentSn, cert.sealIdx))).map fun c' => s'.setCkpt child (some c')
   | .supersedeDelegated child ev =>
       match s.ckpt child with
       | none => none
@@ -171,7 +171,7 @@ def stepFn (p : Params) (env : DEnv) (s : Sys) : Action → Option Sys
         | some par =>
           match s.takeCert par child ev.sn (env.eventDigest ev) with
           | none => none
-          | some (_, s') => (supersede c ev.sn ev.toad).map fun c' => s'.setCkpt child (some c')
+          | some (cert, s') => (supersede c ev.sn ev.toad (cert.parentSn, cert.sealIdx)).map fun c' => s'.setCkpt child (some c')
   | .leave aid =>
       match s.ckpt aid with
       | none => none

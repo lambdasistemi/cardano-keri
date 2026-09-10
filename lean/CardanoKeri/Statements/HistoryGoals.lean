@@ -1,7 +1,7 @@
 import CardanoKeri.Statements.History
 
 /-!
-# History and seal-walk statements H1 … H9, S1 … S7 — unproven
+# History and seal-walk statements H1 … H10, S1 … S7 — unproven
 
 STATEMENTS mode. Every theorem ends in `sorry`; the intended guarantee is
 stated, not the easiest provable variant. Each carries, in its docstring,
@@ -64,8 +64,8 @@ advance to `e'` with `e' ≤ k` (KERI rule A0: the superseded interaction
 and its successors sit on the disputed branch). Mutant: `cover` with
 `k ≤ e'` instead of `k < e'`. -/
 theorem H6_superseding_excludes {c c' : Checkpoint} (hwf : WF c) {e k e' : Seq} {t : Nat}
-    (h : cover c e k none = some .provisional)
-    (hs : advance c e' t = some c') (hle : e' ≤ k) :
+    {appr : Option Approval} (h : cover c e k none = some .provisional)
+    (hs : advance c e' t appr = some c') (hle : e' ≤ k) :
     ∀ succ, cover c' e k succ = none := by
   sorry
 
@@ -74,28 +74,41 @@ to `e' > k` closes the range and the same leaf now governs `k` finally,
 with the new leaf as the successor proof. Mutant: `advance` that inserts
 the new leaf with the wrong back-pointer. -/
 theorem H7_provisional_becomes_final {c c' : Checkpoint} (hwf : WF c) {e k e' : Seq} {t : Nat}
-    (h : cover c e k none = some .provisional)
-    (hs : advance c e' t = some c') (hlt : k < e') :
+    {appr : Option Approval} (h : cover c e k none = some .provisional)
+    (hs : advance c e' t appr = some c') (hlt : k < e') :
     cover c' e k (some e') = some .final := by
   sorry
 
 /-- **H8. A non-delegated history is insert-only** (KERI rule A1): no step
-of a non-delegated checkpoint changes or removes an existing leaf. Mutant:
-`supersede` without the `parent` guard. -/
-theorem H8_non_delegated_insert_only {c c' : Checkpoint} (hnd : c.parent = none) {a : HAction}
-    (hs : hstep c a = some c') {sn : Seq} {l : Leaf} (h : c.hist sn = some l) :
+of a well-formed non-delegated checkpoint changes or removes an existing
+leaf. Well-formedness is needed: with `latest = 0` and a stray leaf at 1,
+`advance 1` would overwrite it. Mutant: `supersede` without the `parent`
+guard. -/
+theorem H8_non_delegated_insert_only {c c' : Checkpoint} (hwf : WF c) (hnd : c.parent = none)
+    {a : HAction} (hs : hstep c a = some c') {sn : Seq} {l : Leaf} (h : c.hist sn = some l) :
     c'.hist sn = some l := by
   sorry
 
 /-- **H9. Superseding touches only the latest leaf of a delegated identity,
-keeps its back-pointer and changes nothing else** (KERI rule B; #391's
-"one case that uses a trie update"). Mutant: `supersede` accepting
-`sn' ≠ latest`. -/
-theorem H9_supersede_only_latest {c c' : Checkpoint} {sn' : Seq} {t : Nat}
-    (hs : supersede c sn' t = some c') :
+keeps its back-pointer, installs a strictly later approval and changes
+nothing else** (KERI rules B and B2; #391's "one case that uses a trie
+update"). Mutant: `supersede` accepting `sn' ≠ latest`. -/
+theorem H9_supersede_only_latest {c c' : Checkpoint} {sn' : Seq} {t : Nat} {appr : Approval}
+    (hs : supersede c sn' t appr = some c') :
     (∃ par, c.parent = some par) ∧ sn' = c.latest ∧ c'.latest = c.latest ∧ c'.parent = c.parent ∧
       (∀ sn, sn ≠ c.latest → c'.hist sn = c.hist sn) ∧
-      (∃ l l', c.hist c.latest = some l ∧ c'.hist c.latest = some l' ∧ l'.prev = l.prev ∧ l'.epoch = c.cur + 1) := by
+      (∃ l l', c.hist c.latest = some l ∧ c'.hist c.latest = some l' ∧ l'.prev = l.prev ∧ l'.epoch = c.cur + 1) ∧
+      (∃ a, c.approval = some a ∧ a.before appr) ∧ c'.approval = some appr := by
+  sorry
+
+/-- **H10. An older approval cannot supersede** (KERI rule B2: the position
+of the seal decides which of two competing delegated rotations wins). A
+rotation whose approval sits at or before the one that installed the
+latest leaf is refused, whatever else it presents. Mutant: drop
+`a.before appr` from `supersede`. -/
+theorem H10_older_approval_cannot_supersede {c : Checkpoint} {a : Approval} (ha : c.approval = some a)
+    {appr : Approval} (hnot : ¬ a.before appr) (sn' : Seq) (t : Nat) :
+    supersede c sn' t appr = none := by
   sorry
 
 /-! ## The seal walk -/

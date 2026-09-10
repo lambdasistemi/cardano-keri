@@ -100,11 +100,11 @@ provisional walk whose issuer then rotates at or below the sealing
 sequence stays in the set, while the same walk now fails: the mirror fails
 closed. Mutant: an eviction of revocations on superseding. -/
 theorem M9_superseded_push_over_revokes (p : Params) (env : TelEnv) {s s₁ s₂ : Sys} {w : Walk}
-    {r : Registry} {c c' : Checkpoint} {e' : Seq} {t : Nat}
+    {r : Registry} {c c' : Checkpoint} {e' : Seq} {t : Nat} {appr : Option Approval}
     (hr : s.reg w.tel.ri = some r) (hc : s.ckpt r.issuer = some c)
     (hprov : sealWalk p env c r.rid w = some .provisional)
     (h₁ : stepFn p env s (.push w) = some s₁)
-    (h₂ : stepFn p env s₁ (.history r.issuer (.advance e' t)) = some s₂)
+    (h₂ : stepFn p env s₁ (.history r.issuer (.advance e' t appr)) = some s₂)
     (hle : e' ≤ w.core.kel.sn) (hc' : s₂.ckpt r.issuer = some c') :
     (∃ r', s₂.reg w.tel.ri = some r' ∧ r'.revoked w.tel.i = true) ∧
       sealWalk p env c' r.rid w = none := by

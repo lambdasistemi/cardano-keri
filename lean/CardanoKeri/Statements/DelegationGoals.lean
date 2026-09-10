@@ -1,7 +1,7 @@
 import CardanoKeri.Statements.Delegation
 
 /-!
-# Delegation statements D1 … D13 — unproven
+# Delegation statements D1 … D14 — unproven
 
 STATEMENTS mode: every theorem ends in `sorry`. Rulings: #292,
 `docs/design/credential-verification.md` ("Delegation: recursion becomes
@@ -126,14 +126,36 @@ theorem D11_supersede_iff (p : Params) (env : DEnv) (s : Sys) (child : AID) (ev 
     stepFn p env s (.supersedeDelegated child ev) = some s' ↔
       ∃ c par cert s₁ c', s.ckpt child = some c ∧ c.parent = some par ∧
         s.takeCert par child ev.sn (env.eventDigest ev) = some (cert, s₁) ∧
-        supersede c ev.sn ev.toad = some c' ∧ s' = s₁.setCkpt child (some c') := by
+        supersede c ev.sn ev.toad (cert.parentSn, cert.sealIdx) = some c' ∧
+        s' = s₁.setCkpt child (some c') := by
+  sorry
+
+/-- **D14. Superseding needs a strictly later approval** (KERI rule B2, the
+feasibility report §3: the position of the seal decides). The installed
+leaf remembers the position of the approval that installed it; a delegated
+rotation at the same sequence replaces it only with a certificate whose
+approval sits later in the parent's log, and installs that position. A
+certificate approved earlier — at parent sequence 2 against a leaf
+installed at 3 — is refused. Mutant: `supersedeDelegated` passing a fixed
+position instead of the certificate's. -/
+theorem D14_supersede_needs_later_approval (p : Params) (env : DEnv) (s : Sys) (child : AID)
+    (ev : ChildEvent) :
+    (∀ s', stepFn p env s (.supersedeDelegated child ev) = some s' →
+      ∃ c par cert a c', s.ckpt child = some c ∧ c.parent = some par ∧ c.approval = some a ∧
+        cert ∈ s.certs ∧ cert.named par child ev.sn (env.eventDigest ev) = true ∧
+        a.before (cert.parentSn, cert.sealIdx) ∧
+        s'.ckpt child = some c' ∧ c'.approval = some (cert.parentSn, cert.sealIdx)) ∧
+    (∀ c par cert a, s.ckpt child = some c → c.parent = some par → c.approval = some a →
+      s.certs.find? (fun x => x.named par child ev.sn (env.eventDigest ev)) = some cert →
+      ¬ a.before (cert.parentSn, cert.sealIdx) →
+      stepFn p env s (.supersedeDelegated child ev) = none) := by
   sorry
 
 /-- **D12. A non-delegated history is insert-only at the system level**
-(H8 lifted): no action changes an existing leaf of a checkpoint with no
+(H8 lifted): in a reachable system no action changes an existing leaf of a checkpoint with no
 parent. Mutant: `advancePlain` without the `parent = none` guard would
 not falsify this; `supersedeDelegated` accepting `parent = none` does. -/
-theorem D12_plain_insert_only (p : Params) (env : DEnv) {s s' : Sys} {a : Action}
+theorem D12_plain_insert_only (p : Params) (env : DEnv) {s s' : Sys} (h : Reach p env s) {a : Action}
     (hs : stepFn p env s a = some s') {aid : AID} {c c' : Checkpoint}
     (hc : s.ckpt aid = some c) (hnd : c.parent = none) (hc' : s'.ckpt aid = some c')
     {sn : Seq} {l : Leaf} (hl : c.hist sn = some l) :

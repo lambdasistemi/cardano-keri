@@ -72,14 +72,14 @@ and four statement files whose every theorem ends in an intentional
 
 | Module | Model | Statements |
 |---|---|---|
-| `Statements/History.lean` | key-state history with back-pointers, `cover`, the seal walk | `HistoryGoals.lean` H1–H9, S1–S7 |
+| `Statements/History.lean` | key-state history with back-pointers and approval position, `cover`, the seal walk | `HistoryGoals.lean` H1–H10, S1–S7 |
 | `Statements/Mirror.lean` | per-registry revoked set, `open`, permissionless `push`, `miss` | `MirrorGoals.lean` M1–M11 |
-| `Statements/Credential.lean` | ACDC chain admission, the cage, `evict`, `gate` | `CredentialGoals.lean` C1–C12 |
-| `Statements/Delegation.lean` | approval certificates, delegated `dip`/`drt`, rule-B superseding, ancestry | `DelegationGoals.lean` D1–D13 |
+| `Statements/Credential.lean` | ACDC chain admission bound to the actor, the cage, `evict`, `gate` | `CredentialGoals.lean` C1–C15 |
+| `Statements/Delegation.lean` | approval certificates, delegated `dip`/`drt`, rule-B superseding, ancestry | `DelegationGoals.lean` D1–D14 |
 
 ```
 cd lean
-lake build CardanoKeriStatements   # 52 "declaration uses 'sorry'" warnings, by design
+lake build CardanoKeriStatements   # 57 "declaration uses 'sorry'" warnings, by design
 ```
 
 `STATEMENTS-ATOMS.md` is the theorem ledger (ruling, witness of the

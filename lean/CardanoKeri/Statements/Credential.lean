@@ -177,6 +177,10 @@ inductive Action where
 def stepFn (p : Params) (env : CEnv) (pol : Policy) (s : Sys) : Action → Option Sys
   | .mirror a => (Mirror.stepFn p env.toTelEnv s.toSys a).map fun m => { s with toSys := m }
   | .admit key hops now =>
+      -- The actor is bound to the credential: the leaf credential's issuee is
+      -- the key the admission is cached under. The actor's own signatures
+      -- (the checkpoint machine's threshold) cannot establish this.
+      if hops.head?.map (·.acdc.body.issuee) ≠ some key then none else
       match s.cage key, admitChain p env s.toSys pol hops, hops.mapM (Hop.dep s.toSys) with
       | none, some v, some deps =>
           some (s.setCage key (some ⟨hops.map (·.acdc.said), hops.map (·.acdc.body.registry), v, deps, now⟩))

@@ -17,14 +17,16 @@ flowchart LR
 | Decision | Alternative | Reason |
 | --- | --- | --- |
 | Extract the existing models first | Add presumed behavior from the CLI | The operator selected Lean as the API source. |
-| Schedule missing delegation and credential models separately | Invent evidence or lifecycle semantics | Credentials, delegation and several query contracts are outside the executable model. |
+| Pin the supplied statement branch in a separate profile | Merge different lifecycle assumptions silently | Its executable credential and delegation surface is available; its guarantees remain unproved and its Checkpoint composition incomplete. |
 | Unsigned preparation with caller-supplied evidence | Invoke a signer or KERI resolver | The operator selected unsigned and no KERI networking. |
 
 The current artifacts define the Checkpoint lifecycle with unsigned output
 and caller-supplied evidence. Its model conformance corpus has stable guard
 refusal sets and validated CDDL. Registry adaptation is separate implementation
-work; its legacy lifecycle is excluded. The next work is to bind each concrete
-operation to its KERI/Cardano encodings and deployed scripts.
+work; its legacy lifecycle is excluded. The [statement refinement](statements.md)
+adds historical walks, TEL mirrors, credential chains and approval certificates.
+The next work is to bind each concrete operation to its KERI/Cardano encodings
+and deployed scripts, and reconcile the models' distinct revival rules.
 
 Validation must distinguish source discovery, compiled model observations,
 CDDL parsing, concrete cryptographic vectors, deployed expressibility and

@@ -4,7 +4,11 @@ site_url: !ENV [MKDOCS_SITE_URL, "https://lambdasistemi.github.io/cardano-keri/"
 repo_url: https://github.com/lambdasistemi/cardano-keri
 docs_dir: docs
 
+hooks:
+  - scripts/offered_reference_hook.py
+
 plugins:
+  - search
   - asciinema-player
 
 theme:
@@ -46,6 +50,18 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Offered API:
+      - Caller stories: offered-api/index.md
+      - Checkpoint lifecycle: offered-api/checkpoint.md
+      - Historical evidence: offered-api/history.md
+      - Revocation mirrors: offered-api/mirror.md
+      - Credential chains: offered-api/credential.md
+      - Delegated approvals: offered-api/delegation.md
+      - CDDL shapes: offered-api/schemas.md
+      - Operation catalogue: offered-api/spec.md
+      - Statement semantics: offered-api/statements.md
+      - Encoding: offered-api/encoding.md
+      - Implementation gaps: offered-api/gaps.md
   - Why Cardano: why-cardano.md
   - Story Ladder: story-ladder.md
   - Simulations:

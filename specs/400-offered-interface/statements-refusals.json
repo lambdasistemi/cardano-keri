@@ -1,0 +1,112 @@
+{
+  "profile": "statements-model-v1",
+  "sourceCommit": "4906cfaed34e43405b04d3cc8746bd6388fc8452",
+  "naming": "Each Option-returning operation is one compound guard. Boolean false is a value, not a refusal.",
+  "refusals": [
+    {
+      "name": "credential.admit-refused",
+      "operation": "credential.admit",
+      "condition": "The named executable source operation returns none"
+    },
+    {
+      "name": "credential.admitChain-refused",
+      "operation": "credential.admitChain",
+      "condition": "The named executable source operation returns none"
+    },
+    {
+      "name": "credential.evict-refused",
+      "operation": "credential.evict",
+      "condition": "The named executable source operation returns none"
+    },
+    {
+      "name": "credential.mirror-refused",
+      "operation": "credential.mirror",
+      "condition": "The named executable source operation returns none"
+    },
+    {
+      "name": "delegation.advanceDelegated-refused",
+      "operation": "delegation.advanceDelegated",
+      "condition": "The named executable source operation returns none"
+    },
+    {
+      "name": "delegation.advancePlain-refused",
+      "operation": "delegation.advancePlain",
+      "condition": "The named executable source operation returns none"
+    },
+    {
+      "name": "delegation.issuerWalk-refused",
+      "operation": "delegation.issuerWalk",
+      "condition": "The named executable source operation returns none"
+    },
+    {
+      "name": "delegation.leave-refused",
+      "operation": "delegation.leave",
+      "condition": "The named executable source operation returns none"
+    },
+    {
+      "name": "delegation.mint-refused",
+      "operation": "delegation.mint",
+      "condition": "The named executable source operation returns none"
+    },
+    {
+      "name": "delegation.registerDelegated-refused",
+      "operation": "delegation.registerDelegated",
+      "condition": "The named executable source operation returns none"
+    },
+    {
+      "name": "delegation.registerPlain-refused",
+      "operation": "delegation.registerPlain",
+      "condition": "The named executable source operation returns none"
+    },
+    {
+      "name": "delegation.supersedeDelegated-refused",
+      "operation": "delegation.supersedeDelegated",
+      "condition": "The named executable source operation returns none"
+    },
+    {
+      "name": "history.advance-refused",
+      "operation": "history.advance",
+      "condition": "The named executable source operation returns none"
+    },
+    {
+      "name": "history.cover-refused",
+      "operation": "history.cover",
+      "condition": "The named executable source operation returns none"
+    },
+    {
+      "name": "history.sealWalk-refused",
+      "operation": "history.sealWalk",
+      "condition": "The named executable source operation returns none"
+    },
+    {
+      "name": "history.supersede-refused",
+      "operation": "history.supersede",
+      "condition": "The named executable source operation returns none"
+    },
+    {
+      "name": "history.walkOn-refused",
+      "operation": "history.walkOn",
+      "condition": "The named executable source operation returns none"
+    },
+    {
+      "name": "mirror.history-refused",
+      "operation": "mirror.history",
+      "condition": "The named executable source operation returns none"
+    },
+    {
+      "name": "mirror.open-refused",
+      "operation": "mirror.open",
+      "condition": "The named executable source operation returns none"
+    },
+    {
+      "name": "mirror.push-refused",
+      "operation": "mirror.push",
+      "condition": "The named executable source operation returns none"
+    },
+    {
+      "name": "mirror.register-refused",
+      "operation": "mirror.register",
+      "condition": "The named executable source operation returns none"
+    }
+  ]
+}

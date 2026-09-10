@@ -37,6 +37,9 @@ jobs:
       - name: Check architecture scenarios and negative controls
         run: nix shell nixpkgs#nodejs -c node scripts/check-architecture-scenarios.mjs --selftest
 
+      - name: Check offered-interface conformance and presentation
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#just --command just check-offered-interface
+
       - name: Build docs
         run: |
           nix develop github:paolino/dev-assets?dir=mkdocs --quiet \

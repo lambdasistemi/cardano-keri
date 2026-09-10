@@ -744,7 +744,11 @@ check-flake-lock-guard:
 # --self-test) exercises the exact code this recipe runs, not a copy of it;
 # the guard's own INV-259-ASSERT caller-presence check requires this exact
 # invocation to remain in this recipe.
-ci: check-flake-lock-guard ci-release-scripts ci-onchain ci-blake3 mpf-proof-check ci-offchain
+ci: check-flake-lock-guard ci-release-scripts ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
+
+# Validate the offered-interface schemas and generate its MkDocs reference.
+check-offered-interface:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#cddl github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#python3 --command bash scripts/check-offered-interface.sh
     ./scripts/check-flake-lock-guard.sh --assert-lock-unchanged
 
 # Release script fixture suites — changelog generation, planner control flow,

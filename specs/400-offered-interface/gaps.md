@@ -47,9 +47,15 @@ and wire evidence must be reconciled before marking an operation expressible.
 | Gate a consumer transaction | consumableStateB is only the state conjunct | Caller signatures, validity interval and concrete registry binding are outside this Lean predicate. |
 | Follow from a chain point | No corresponding API model | Existing backend/indexer facilities need a language-neutral subscription and rollback contract. |
 | Historical AID query | No corresponding API model | Chain-point identity, historical evidence completeness and verdict semantics are unspecified in Lean. |
-| Delegated register/rotate/read (later slice) | No corresponding API model | Inception/rotation oracle does not define delegator KEL seals or dip/drt verification. |
-| Verify credential / project TEL (later slice) | No corresponding API model | ACDC and vcp/iss/bis/rev/brv projection, historical issuer state and unknown verdict need a model. |
-| Verify credential chain (later slice) | No corresponding API model | Edge traversal and unresolved/revoked dependency behavior need a model. |
+| Delegated register/rotate/read | Statement branch Delegation and History | Exact approval seal and certificate consumption now modeled; concrete dip/drt evidence, token layout and Checkpoint revival composition remain unbound. |
+| Verify credential / project TEL | Statement branch Mirror, Credential and History | vcp/iss/rev and historical issuer walks now modeled; bis/brv, concrete evidence, mirror freshness and deployed encoding remain gaps. |
+| Verify credential chain | Statement branch Credential | Ordered edges, schemas, cache dependencies and revocation membership now modeled; issuee adjacency, actor binding and concrete policy enforcement remain gaps. |
+
+The statement-branch rows use the [pinned refinement](statements.md) at
+`4906cfaed34e43405b04d3cc8746bd6388fc8452`. These are executable models
+with unproved statements, not evidence of a deployed credential or delegation
+implementation. All other source and manifest observations retain the base
+revision above.
 
 These rows are findings and work items, not a count of independently verified
 on-chain blockers. A final per-operation expressibility verdict still needs

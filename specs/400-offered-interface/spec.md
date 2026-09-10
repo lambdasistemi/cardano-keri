@@ -11,10 +11,16 @@ fold and retract requests under the model's admission and timing rules.
 
 This is a **specification candidate**, following the operator's instruction to take
 the API from the Lean specifications. It does not yet define a complete SDK
-contract. The source revision is
-`88e930945d8b757913d653defe6f2ed3b2b06ffb`. The issue supplies coverage
+contract. The checkpoint source revision is
+`88e930945d8b757913d653defe6f2ed3b2b06ffb`. The separate
+[credential, TEL and delegation profile](statements.md) uses the named
+statement branch at `4906cfaed34e43405b04d3cc8746bd6388fc8452`.
+The issue supplies coverage
 requirements; existing library code supplies implementation evidence. Neither
 silently adds operations or guards to the Lean model.
+
+The [HTML presentation contract](presentation.md) explains how the reference
+is generated from these sources, including operation examples and schema downloads.
 
 ## Model boundary
 
@@ -168,20 +174,21 @@ It does not check the consumer transaction's signatures, validity interval
 or concrete registry proof. Returning that Boolean as complete transaction
 authorization would overstate the model.
 
-The Lean files do not specify complete key-state queries, chain-point
-subscriptions, historical key lookup, delegated `dip`/`drt` validation, ACDC
-verification, TEL projection or credential-chain traversal. Those remain
-catalogue coverage with **missing-model** status. The operator confirmed that
-delegation and credentials are coming in later work; they do not block this
-checkpoint contract. In particular,
-epoch counters cannot return concrete current keys, next-key digests,
-thresholds, witnesses or toad.
+The pinned statement branch now supplies historical seal walks, `vcp`/`iss`/`rev`
+projection, credential-chain admission and delegated approval certificates.
+[Its model profile](statements.md) preserves those executable definitions
+and their limits, including unproved theorem statements and an unresolved
+composition with the funded Checkpoint lifecycle. Complete key-state queries,
+chain-point subscriptions and concrete key lookup remain missing models.
+Epoch counters cannot return concrete current keys, next-key digests,
+thresholds or witnesses.
 
 The ticket requires credential verdicts to distinguish issued, revoked and
 unknown. Missing TEL/KEL evidence must never imply validity. No operation may
 require external KERI parties to publish, sign or maintain additional material
-for this projection. These are requirements awaiting a Lean contract, not
-implemented or proved behavior in the current models.
+for this projection. The new profile separates the model's final/provisional
+historical verdict from an API `unknown` assessment for incomplete supplied
+evidence. It does not prove live KERI revocation freshness.
 
 ## Unsigned preparation and supplied evidence
 
@@ -284,6 +291,8 @@ new hunter bond is excluded.
 
 Registry adaptation, concrete cryptographic evidence profiles and missing
 query models remain implementation/model work recorded in
-[the gap inventory](gaps.md). Delegation and credentials will arrive in a
-later slice. This document specifies a caller boundary; it does not claim
+[the gap inventory](gaps.md). Delegation, TEL and credential shapes and
+source-executed examples are now specified in [their refinement](statements.md);
+concrete implementation and lifecycle composition remain follow-up work.
+This document specifies a caller boundary; it does not claim
 that every modeled operation is already deployed.

@@ -7,6 +7,9 @@ offchain/dist-newstyle/
 onchain/build/
 onchain/plutus.json
 site/
+# Generated automatically by the offered-interface MkDocs hook.
+/docs/offered-api/
+/scripts/__pycache__/
 
 # Nix build result symlinks
 result

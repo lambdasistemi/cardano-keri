@@ -21,7 +21,8 @@ flowchart LR
 
 ## Semantic conformance encoding
 
-`checkpoint-model-v1` is the abstract model profile. Its natural numbers use
+`checkpoint-model-v1` and `statements-model-v1` are separate abstract model
+profiles. Their natural numbers use
 CDDL's `unsigned` prelude type, which includes both ordinary unsigned CBOR
 integers and positive bignums. This is a shape for abstract addresses, epochs
 and values; it does not turn numeric model addresses into Cardano addresses.
@@ -49,8 +50,15 @@ larger JSON integers must use an exact integer parser; passing them through
 a binary floating-point number is not a portable codec. CBOR remains the
 binary representation for bignum fixtures.
 
+The statement profile uses finite tables for function-valued state. Reject
+duplicate identities before converting a table to a map; reject duplicate
+revoked SAIDs before constructing a set. Preserve ordered seals, certificates
+and credential hops. In the known-parent table, an absent row means never
+registered, `{kind: "plain"}` means previously plain, and a delegated row
+can name parent zero. These cases must not collapse to one null or zero value.
+
 CDDL validates shapes. Deterministic encoding, duplicate-key rejection,
-sorted unique refusal sets, index bounds and guard semantics are additional
+table identity uniqueness, sorted unique checkpoint refusal sets, index bounds and guard semantics are additional
 checks. A schema validator alone cannot certify them.
 
 The specification's executable check validates the whole model corpus,
@@ -78,6 +86,24 @@ nix build --impure --no-link --print-out-paths \
 
 CDDL validation here uses the pinned Ruby `cddl` tool. It does not claim a
 successful `cuddle` run or alter the repository's existing `cuddle` dependency.
+
+The [statement profile](statements.md) has its own driver and
+[source provenance](statements-provenance.json). Extract the pinned Git
+commit into an isolated directory, build `CardanoKeriStatements` with the
+declared toolchain, then run `StatementsTraceDriver.lean` from that directory
+with `lake env lean`. Pass its JSON output to the corresponding check:
+
+```sh
+nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#cddl \
+  --command node specs/400-offered-interface/check-statements.mjs \
+  /path/to/fresh-statements-trace.json
+```
+
+This checks sixty-six examples, all sixteen compiled action constructors,
+eight queries, twenty-one refusal names and seventeen CDDL validations.
+`StatementsSurface.lean`, run against the same build, enumerates the compiled
+constructors and axioms of the fifty-two numbered theorem statements. Every
+one depends on `sorryAx`; their compilation is not proof completion.
 
 ## The KERI and Cardano boundary
 

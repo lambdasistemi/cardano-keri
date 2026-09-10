@@ -85,11 +85,26 @@ structure Leaf where
 /-- The history root as the finite map it commits to. Exact lookups only. -/
 abbrev History := Seq → Option Leaf
 
-/-- An approval's position in the parent's log: event sequence, seal index. -/
-abbrev Approval := Seq × Nat
+/-- An approval's position in the parent's log: the approving event's
+sequence, whether that event is an establishment event (a rotation) or an
+interaction, and the seal's index in it. All three decide precedence
+between competing delegated rotations (KERI rules B1, B2, B3). -/
+structure Approval where
+  sn : Seq
+  establishment : Bool
+  idx : Nat
+  deriving DecidableEq, Repr
 
-/-- Strictly earlier in the parent's log, lexicographically (rule B2). -/
-def Approval.before (a b : Approval) : Prop := a.1 < b.1 ∨ (a.1 = b.1 ∧ a.2 < b.2)
+/-- Strictly earlier in the parent's log, in the order the superseding
+rules impose: an earlier parent event (B1); the same event and an earlier
+seal (B2); the same sequence, where an interaction yields to the rotation
+that superseded it (B3). An interaction never supersedes a rotation (A2),
+and C/C1 — precedence decided only further up the delegation chain — is
+not represented: such a rotation is refused, fail closed. -/
+def Approval.before (a b : Approval) : Prop :=
+  a.sn < b.sn ∨
+    (a.sn = b.sn ∧ ((a.establishment = false ∧ b.establishment = true) ∨
+      (a.establishment = b.establishment ∧ a.idx < b.idx)))
 
 instance (a b : Approval) : Decidable (a.before b) := by unfold Approval.before; infer_instance
 
@@ -290,6 +305,16 @@ structure TelEvent where
 def TelEvent.sealOf (digest : TelEvent → Digest) (t : TelEvent) : Seal :=
   ⟨t.i, t.s, digest t⟩
 
+/-- The admissible event domain (#392): a `vcp` sits at TEL sequence 0 and
+names itself as its registry, an `iss` at 0, a `rev` at 1. A sealed event
+of another shape is refused by every walk: a hash and a signature do not
+establish event-shape validity. -/
+def TelEvent.wellFormed (t : TelEvent) : Bool :=
+  match t.kind with
+  | .vcp => t.s == 0 && t.i == t.ri
+  | .iss => t.s == 0
+  | .rev => t.s == 1
+
 /-- The TEL side of the environment: the SAID the hash-proof token recomputes. -/
 structure TelEnv extends Env where
   digest : TelEvent → Digest
@@ -303,7 +328,47 @@ structure Walk where
 /-- The seal walk of a TEL event against an issuer's checkpoint, for the
 registry `rid`: the event names the registry, and its seal walks. -/
 def sealWalk (p : Params) (env : TelEnv) (c : Checkpoint) (rid : RegistryId) (w : Walk) : Option Verdict :=
-  if w.tel.ri ≠ rid then none else
+  if w.tel.ri ≠ rid ∨ w.tel.wellFormed = false then none else
   walkOn p env.toEnv c (w.tel.sealOf env.digest) w.core
+
+/-! ## Anchors: what a successful walk leaves behind, and how it is rechecked -/
+
+/-- What a successful walk depends on: the covering leaf, its key state, the
+sealing sequence and the verdict. A final anchor can never move (H5); a
+provisional one moves when the issuer supersedes at or below `k` or
+replaces the covering leaf. Every consumer of a walk's result that
+outlives the walk (a cached admission, a registry's inception, a
+certificate) records its anchor. -/
+structure Anchor where
+  e : Seq
+  epoch : Epoch
+  k : Seq
+  verdict : Verdict
+  deriving DecidableEq, Repr
+
+/-- The anchor of a walk against `c`, when the walk succeeded. -/
+def anchorOf (c : Checkpoint) (w : WalkCore) (v : Verdict) : Option Anchor :=
+  (c.hist w.e).map fun l => ⟨w.e, l.epoch, w.kel.sn, v⟩
+
+/-- The anchor still stands: the covering leaf holds the same key state and
+a range proof (the same successor leaf, or nothing while the leaf is still
+the latest) still covers `k`. Two lookups and two comparisons, bounded by
+the supplied evidence — never a scan of the history. -/
+def Anchor.stands (c : Checkpoint) (a : Anchor) (proof : Option Seq) : Bool :=
+  (match c.hist a.e with
+   | some l => l.epoch == a.epoch
+   | none => false) &&
+  (cover c a.e a.k proof).isSome
+
+/-- The anchor has moved, by evidence: the covering leaf's key state changed
+(or the leaf is gone), or a leaf `m` with `e < m ≤ k` exists — the evictor
+presents `m` and the validator does one lookup. -/
+def Anchor.moved (c : Checkpoint) (a : Anchor) (m : Option Seq) : Bool :=
+  (match c.hist a.e with
+   | some l => l.epoch != a.epoch
+   | none => true) ||
+  (match m with
+   | some m' => decide (a.e < m' ∧ m' ≤ a.k) && (c.hist m').isSome
+   | none => false)
 
 end CardanoKeri.History

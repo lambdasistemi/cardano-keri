@@ -60,29 +60,32 @@ mutation campaign is `REGISTRY-MUTANTS.md`; the design note is
 `docs/design/registry-as-mpfs.md`. `RegistryTraceDriver.lean` is the corpus
 producer for `simulator/registry-simulator.html`.
 
-## Unproven statements: ACDC admission, the revocation mirror, delegation
+## Statements: ACDC admission, the revocation mirror, delegation
 
 `CardanoKeri/Statements/` is a **separate Lake library**,
 `CardanoKeriStatements`, that is *not* a default target: `lake build`
 never touches it, so the zero-`sorry` gate above is unaffected. It holds
-the STATEMENTS-mode specification of the 2026-09-10 design
-(`docs/design/credential-verification.md`; #391, #392, #292): four models
-and four statement files whose every theorem ends in an intentional
-`sorry`.
+the specification of the 2026-09-10 design
+(`docs/design/credential-verification.md`; #391, #392, #292) as repaired
+by the statement audit and the invariant review of the same day: four
+models, four statement files, two proof-side helper files and one probe
+file.
 
 | Module | Model | Statements |
 |---|---|---|
-| `Statements/History.lean` | key-state history with back-pointers and approval position, `cover`, the seal walk | `HistoryGoals.lean` H1–H10, S1–S7 |
-| `Statements/Mirror.lean` | per-registry revoked set, `open`, permissionless `push`, `miss` | `MirrorGoals.lean` M1–M11 |
-| `Statements/Credential.lean` | ACDC chain admission bound to the actor, the cage, `evict`, `gate` | `CredentialGoals.lean` C1–C15 |
-| `Statements/Delegation.lean` | approval certificates, delegated `dip`/`drt`, rule-B superseding, ancestry | `DelegationGoals.lean` D1–D14 |
+| `Statements/History.lean` | key-state history with back-pointers, approval position (KERI rules B1–B3), `cover`, the seal walk over well-formed TEL events, anchors | `HistoryGoals.lean` H1–H12, S1–S8 (17 proved, 2 `sorry`) |
+| `Statements/Mirror.lean` | per-registry revoked set with its inception anchor, `open`, permissionless `push`, `reanchor`, `miss` | `MirrorGoals.lean` M1–M13 (`sorry`) |
+| `Statements/Credential.lean` | ACDC chain admission with policy links and registry anchors, bound to the actor; the cage, `evict` on evidence, `expire`, `gate` | `CredentialGoals.lean` C1–C20 (`sorry`) |
+| `Statements/Delegation.lean` | approval certificates with position and anchor, delegated `dip`/`drt` with re-validation, rule-B superseding, ancestry | `DelegationGoals.lean` D1–D18 (`sorry`) |
+| `Statements/Probes.lean` | 39 executable `#guard` scenarios from the invariant review, with controls; the build fails if any scenario changes outcome | — |
 
 ```
 cd lean
-lake build CardanoKeriStatements   # 57 "declaration uses 'sorry'" warnings, by design
+lake build CardanoKeriStatements   # 53 "declaration uses 'sorry'" warnings, by design; probes run at build
 ```
 
 `STATEMENTS-ATOMS.md` is the theorem ledger (ruling, witness of the
-antecedent, falsifying mutant, kind) and the semantic-atom ledger for the
-independent statement audit. Statement hashes are frozen only after that
-audit; proofs come after the freeze.
+antecedent, falsifying mutant, kind, status), the semantic-atom ledger,
+the dispositions of the invariant review and the explicit residuals.
+Proof work beyond the history module is paused; intentional `sorry`
+remains allowed in this library.

@@ -293,6 +293,21 @@ the vLEI ecosystem publishes issuance and revocation unblinded. The costs of
 one seal walk on a QVI-shaped and a GLEIF-shaped issuer are unmeasured, and
 the measurement decides where the attestation cuts fall.
 
+The formal statements under `lean/CardanoKeri/Statements/` (2026-09-10) add,
+after an invariant review, four mechanisms this page did not spell out: a
+policy pins the relationship each credential edge must satisfy (for vLEI,
+the issuer below is the issuee above); a registry records the anchor of its
+inception walk, every admission requires that anchor to stand, and anyone
+may re-anchor the same registry inception on the issuer's accepted branch; a
+provisional delegation certificate is re-checked against the parent's
+checkpoint when consumed, so a superseded approval installs nothing; and an
+expired admission may be renewed or removed. One decision stays open: a
+provisional admission still gates between the issuer's superseding rotation
+and its permissionless eviction. Closing that interval at the gate would
+mean reading the issuer checkpoint of every provisional dependency as a
+reference input. The ledger `lean/STATEMENTS-ATOMS.md` records the
+dispositions.
+
 ---
 
 *Next: [The Regulated DeFi Gate](defi-gate.md) | [vLEI Bridge](vlei.md) | [ACDC Primer](../acdc-primer.md)*

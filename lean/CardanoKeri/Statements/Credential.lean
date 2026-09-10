@@ -4,35 +4,52 @@ import CardanoKeri.Statements.Mirror
 # Credential admission: the ACDC chain and the cage
 
 STATEMENTS mode — an unproven specification; theorems in
-`CredentialGoals.lean`, all `sorry`.
+`CredentialGoals.lean`.
 
 Abstract model of how a chain of ACDCs is admitted against the checkpoints
 and mirrors of its issuers, per `docs/acdc-primer.md`,
 `docs/design/credential-verification.md`, `docs/design/defi-gate.md` and
 [#31](https://github.com/lambdasistemi/cardano-keri/issues/31) as amended
-by #391 and #392. Four checks per hop, from the leaf to a pinned root:
+by #391 and #392. Per hop, from the leaf to a pinned root:
 
 1. **integrity** — the SAID is the digest of the body (the hash-proof
    token recomputes it);
-2. **chaining** — the hop's edge names the next hop's SAID, and the last
-   hop has no edge and is issued by the pinned root; the schema of each
-   hop is pinned by position; depth is bounded by the verifier;
+2. **chaining** — the hop's edge names the next hop's SAID, and the policy's
+   **link** for that edge holds between the two bodies (for vLEI: the
+   issuer of a credential is the issuee of the credential above it); the
+   last hop has no edge and is issued by the pinned root; the schema of
+   each hop is pinned by position; depth is bounded by the verifier;
 3. **issued then** — the seal walk of the hop's `iss` against the issuer's
    checkpoint history, for the registry the credential names;
-4. **unrevoked now** — the SAID is absent from that registry's mirror.
+4. **unrevoked now** — the SAID is absent from that registry's mirror, and
+   the registry's inception anchor still stands on the issuer's history
+   (a presenter supplies the range proof; two lookups).
 
 The chain's verdict is final when every hop is final, provisional when any
 hop rests on its issuer's latest leaf. The **cage** caches an admission
-under the actor's key with the dependencies of every provisional hop, and
-anyone may **evict** an admission once a dependency's issuer inserts a
-leaf at or below the sealing sequence, or replaces the covering leaf. The
-**gate** is a lookup, a freshness bound and one absence per link; the
-actor's own threshold is the checkpoint machine's `consumableState` and
-is outside this module.
+under the actor's key — the leaf credential's issuee — with the anchor of
+every hop, and anyone may **evict** an admission by presenting evidence
+that a provisional anchor moved: the issuer replaced the covering leaf or
+inserted a leaf at or below the sealing sequence. An admission **expires**
+after the policy's freshness bound; an expired admission may be removed by
+anyone and is the only kind a fresh admission may replace. The **gate** is
+a lookup, the freshness bound and one absence per link; the actor's own
+threshold is the checkpoint machine's `consumableState` and is outside this
+module.
 
-Not modelled: the issuer/issuee relation between hops (schema-specific,
-a policy hook); IPEX; the proof builder; attestation-token cuts (#397);
-the actor's threshold check.
+**Stated residual (open decision).** Between an issuer's superseding
+rotation and the permissionless eviction, a *provisional* admission still
+gates. The design authority (`credential-verification.md`: "the cage …
+evicts a provisional admission") specifies cache-then-evict, so the gate
+reads no checkpoint (C12) and the interval is bounded only by the
+freshness bound and by whoever evicts. Closing the interval at the use
+boundary would mean the gate reads the issuer checkpoint of every
+provisional dependency as a reference input and runs `Anchor.stands`; that
+is a design decision, recorded as open, not taken here (C20 is the
+witness).
+
+Not modelled: IPEX; the proof builder; attestation-token cuts (#397); the
+actor's threshold check.
 -/
 
 namespace CardanoKeri.Credential
@@ -64,17 +81,29 @@ recomputes over the most-compact form. -/
 structure CEnv extends TelEnv where
   saidOf : Body → Said
 
-/-- One hop of the redeemer: the credential and the seal walk of its `iss`. -/
+/-- One hop of the redeemer: the credential, the seal walk of its `iss`, and
+the range proof that the registry's inception anchor still stands. -/
 structure Hop where
   acdc : Acdc
   walk : Walk
+  regProof : Option Seq
   deriving Repr
 
+/-- The relationship a policy demands between a credential and the one its
+edge names: `link child parent`. -/
+abbrev Link := Body → Body → Bool
+
+/-- The vLEI rule: a credential's issuer is the issuee of the credential
+above it (a QVI credential accredits the QVI that issues below it). -/
+def issuerIsIssuee : Link := fun child parent => child.issuer == parent.issuee
+
 /-- The verifier's policy: the pinned root issuer, the schema per hop from
-the leaf up, the depth bound, and the freshness bound of an admission. -/
+the leaf up, the link per edge, the depth bound, and the freshness bound of
+an admission. -/
 structure Policy where
   root : AID
   schemas : List Schema
+  links : List Link
   maxDepth : Nat
   notAfter : Nat
 
@@ -93,34 +122,32 @@ def hopVerdict (p : Params) (env : CEnv) (s : Mirror.Sys) (parent : Option Said)
   | some c, some r =>
       if r.issuer ≠ a.body.issuer then none else
       if r.revoked a.said then none else
+      if r.inception.stands c h.regProof = false then none else
       sealWalk p env.toTelEnv c a.body.registry h.walk
   | _, _ => none
 
-/-- The chain, leaf first: each hop's edge names the next hop; the last hop
-has no edge and is issued by the root; schemas are pinned by position. -/
+/-- The chain, leaf first: each hop's edge names the next hop and the
+policy's link for that edge holds; the last hop has no edge and is issued
+by the root; schemas are pinned by position. -/
 def chainFrom (p : Params) (env : CEnv) (s : Mirror.Sys) (pol : Policy) :
-    List Hop → List Schema → Option Verdict
-  | [h], [sc] =>
+    List Hop → List Schema → List Link → Option Verdict
+  | [h], [sc], [] =>
       if h.acdc.body.schema = sc ∧ h.acdc.body.issuer = pol.root then hopVerdict p env s none h else none
-  | h :: h₂ :: hs, sc :: scs =>
-      if h.acdc.body.schema = sc then
+  | h :: h₂ :: hs, sc :: scs, lk :: lks =>
+      if h.acdc.body.schema = sc ∧ lk h.acdc.body h₂.acdc.body = true then
         (hopVerdict p env s (some h₂.acdc.said) h).bind fun v =>
-          (chainFrom p env s pol (h₂ :: hs) scs).map v.meet
+          (chainFrom p env s pol (h₂ :: hs) scs lks).map v.meet
       else none
-  | _, _ => none
+  | _, _, _ => none
 
 /-- Admission of a chain under a policy: depth-bounded, then the chain. -/
 def admitChain (p : Params) (env : CEnv) (s : Mirror.Sys) (pol : Policy) (hops : List Hop) : Option Verdict :=
-  if hops.length ≤ pol.maxDepth then chainFrom p env s pol hops pol.schemas else none
+  if hops.length ≤ pol.maxDepth then chainFrom p env s pol hops pol.schemas pol.links else none
 
-/-- A dependency of an admission: the issuer, the covering leaf and its key
-state, and the sealing sequence, of one hop. -/
+/-- A dependency of an admission: the issuer and the anchor of one hop. -/
 structure Dep where
   issuer : AID
-  e : Seq
-  epoch : Epoch
-  k : Seq
-  verdict : Verdict
+  anchor : Anchor
   deriving DecidableEq, Repr
 
 /-- The dependency a hop leaves, read off the issuer's checkpoint. -/
@@ -128,9 +155,9 @@ def Hop.dep (s : Mirror.Sys) (h : Hop) : Option Dep :=
   match s.ckpt h.acdc.body.issuer with
   | none => none
   | some c =>
-    match c.hist h.walk.core.e, cover c h.walk.core.e h.walk.core.kel.sn h.walk.core.succ with
-    | some l, some v => some ⟨h.acdc.body.issuer, h.walk.core.e, l.epoch, h.walk.core.kel.sn, v⟩
-    | _, _ => none
+    match cover c h.walk.core.e h.walk.core.kel.sn h.walk.core.succ with
+    | none => none
+    | some v => (anchorOf c h.walk.core v).map fun a => ⟨h.acdc.body.issuer, a⟩
 
 /-- What the cage caches: the SAIDs and registries of the chain, the
 verdict, the dependencies, and when. -/
@@ -141,6 +168,10 @@ structure Admission where
   deps : List Dep
   admittedAt : Slot
 
+/-- Past the freshness bound. -/
+def Admission.expired (pol : Policy) (ad : Admission) (now : Slot) : Bool :=
+  decide (ad.admittedAt + pol.notAfter < now)
+
 /-- The credential system: the mirror system plus the cage, keyed by the
 actor (the trie key of the defi gate). -/
 structure Sys extends Mirror.Sys where
@@ -149,29 +180,21 @@ structure Sys extends Mirror.Sys where
 def Sys.setCage (s : Sys) (key : AID) (ad : Option Admission) : Sys :=
   { s with cage := fun a => if a = key then ad else s.cage a }
 
-/-- Is there a leaf strictly above `lo` and at or below `hi`? -/
-def leafBetween (h : History) (lo : Nat) : Nat → Bool
-  | 0 => false
-  | n + 1 => (decide (lo < n + 1) && (h (n + 1)).isSome) || leafBetween h lo n
-
-/-- A dependency has moved: the issuer replaced the covering leaf's key
-state, or inserted a leaf at or below the sealing sequence, after it. Only
-a provisional dependency can move (H5). -/
-def Dep.moved (s : Mirror.Sys) (d : Dep) : Bool :=
+/-- A dependency has moved, by the evidence `m` (H12: moved evidence
+refutes every proof of standing). -/
+def Dep.moved (s : Mirror.Sys) (d : Dep) (m : Option Seq) : Bool :=
   match s.ckpt d.issuer with
   | none => false
-  | some c =>
-    (match c.hist d.e with
-     | some l => l.epoch != d.epoch
-     | none => true) ||
-    leafBetween c.hist d.e d.k
+  | some c => d.anchor.moved c m
 
 inductive Action where
   | mirror (a : Mirror.Action)
-  /-- Admit a chain under `key`, now. -/
+  /-- Admit a chain under `key`, now: the key is free or holds an expired admission. -/
   | admit (key : AID) (hops : List Hop) (now : Slot)
-  /-- Evict `key`'s admission: permissionless, on a moved dependency. -/
-  | evict (key : AID)
+  /-- Evict `key`'s admission: permissionless, on evidence `m` that a dependency moved. -/
+  | evict (key : AID) (m : Option Seq)
+  /-- Remove `key`'s expired admission: permissionless. -/
+  | expire (key : AID) (now : Slot)
   deriving Repr
 
 def stepFn (p : Params) (env : CEnv) (pol : Policy) (s : Sys) : Action → Option Sys
@@ -181,13 +204,19 @@ def stepFn (p : Params) (env : CEnv) (pol : Policy) (s : Sys) : Action → Optio
       -- the key the admission is cached under. The actor's own signatures
       -- (the checkpoint machine's threshold) cannot establish this.
       if hops.head?.map (·.acdc.body.issuee) ≠ some key then none else
-      match s.cage key, admitChain p env s.toSys pol hops, hops.mapM (Hop.dep s.toSys) with
-      | none, some v, some deps =>
+      -- A live admission is never replaced; an expired one may be.
+      if (s.cage key).any (fun ad => !ad.expired pol now) then none else
+      match admitChain p env s.toSys pol hops, hops.mapM (Hop.dep s.toSys) with
+      | some v, some deps =>
           some (s.setCage key (some ⟨hops.map (·.acdc.said), hops.map (·.acdc.body.registry), v, deps, now⟩))
-      | _, _, _ => none
-  | .evict key =>
+      | _, _ => none
+  | .evict key m =>
       match s.cage key with
-      | some ad => if ad.deps.any (Dep.moved s.toSys) then some (s.setCage key none) else none
+      | some ad => if ad.deps.any (fun d => d.moved s.toSys m) then some (s.setCage key none) else none
+      | none => none
+  | .expire key now =>
+      match s.cage key with
+      | some ad => if ad.expired pol now then some (s.setCage key none) else none
       | none => none
 
 inductive ReachFrom (p : Params) (env : CEnv) (pol : Policy) : Sys → Sys → Prop

@@ -6,3 +6,4 @@ import CardanoKeri.Statements.Credential
 import CardanoKeri.Statements.CredentialGoals
 import CardanoKeri.Statements.Delegation
 import CardanoKeri.Statements.DelegationGoals
+import CardanoKeri.Statements.Probes

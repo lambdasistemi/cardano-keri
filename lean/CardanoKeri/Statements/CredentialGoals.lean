@@ -1,12 +1,17 @@
 import CardanoKeri.Statements.Credential
 
 /-!
-# Credential statements C1 … C15 — unproven
+# Credential statements C1 … C20 — unproven
 
 STATEMENTS mode: every theorem ends in `sorry`. Rulings: #31 as amended by
 #391/#392, `docs/acdc-primer.md` ("how we verify an ACDC is not forged"),
 `docs/design/credential-verification.md`, `docs/design/defi-gate.md`.
 Mutants named per theorem; the ledger is `STATEMENTS-ATOMS.md`.
+
+Repair 3 (invariant review, 2026-09-10): policy edge links (C16), the
+registry inception anchor (C17), renewal after expiry (C18, C19),
+evidence-based eviction (C9, C15), and the provisional-gate window stated
+as a witness (C20).
 -/
 
 namespace CardanoKeri.Credential
@@ -15,12 +20,14 @@ open CardanoKeri.History
 open CardanoKeri.Mirror
 
 /-- **C1. An admitted chain is pinned.** It is non-empty, within the depth
-bound, its schemas are the policy's by position, its last hop has no edge
-and is issued by the pinned root. Mallory's chain that does not lead to the
-root is refused. Mutant: drop the root check on the last hop. -/
+bound, its schemas are the policy's by position with one link per edge,
+its last hop has no edge and is issued by the pinned root. Mallory's chain
+that does not lead to the root is refused. Mutant: drop the root check on
+the last hop. -/
 theorem C1_admitted_chain_is_pinned (p : Params) (env : CEnv) (s : Mirror.Sys) (pol : Policy)
     {hops : List Hop} {v : Verdict} (h : admitChain p env s pol hops = some v) :
     hops ≠ [] ∧ hops.length ≤ pol.maxDepth ∧ hops.map (·.acdc.body.schema) = pol.schemas ∧
+      pol.links.length + 1 = hops.length ∧
       ∃ last, hops.getLast? = some last ∧ last.acdc.body.edge = none ∧
         last.acdc.body.issuer = pol.root := by
   sorry
@@ -86,23 +93,26 @@ theorem C7_admission_ignores_current_keys (p : Params) (env : CEnv) (s : Mirror.
   sorry
 
 /-- **C8. A final admission is never evicted.** Eviction needs a moved
-dependency, and a final dependency cannot move (H5). Mutant: `Dep.moved`
-ignoring the verdict, or `evict` without the `moved` guard. -/
+dependency, and a final dependency cannot move (H5, H11), whatever
+evidence is presented. Mutant: `Anchor.moved` ignoring the verdict, or
+`evict` without the `moved` guard. -/
 theorem C8_final_never_evicted (p : Params) (env : CEnv) (pol : Policy) {s : Sys} (h : Reach p env pol s)
-    {key : AID} {ad : Admission} (hc : s.cage key = some ad) (hfin : ad.verdict = .final) :
-    stepFn p env pol s (.evict key) = none := by
+    {key : AID} {ad : Admission} (hc : s.cage key = some ad) (hfin : ad.verdict = .final) (m : Option Seq) :
+    stepFn p env pol s (.evict key m) = none := by
   sorry
 
 /-- **C9. Evict, exactly** (public inversion). An eviction is enabled iff an
-admission exists and one of its dependencies moved: the covering leaf's key
-state changed, or a leaf appeared at or below the sealing sequence. Anyone
-may do it. Mutant: eviction on a leaf *above* the sealing sequence. -/
-theorem C9_evict_iff (p : Params) (env : CEnv) (pol : Policy) (s : Sys) (key : AID) (s' : Sys) :
-    stepFn p env pol s (.evict key) = some s' ↔
+admission exists and the presented evidence shows one of its dependencies
+moved: the covering leaf's key state changed (or the leaf is gone), or the
+presented leaf `m` sits at or below the sealing sequence and above the
+covering leaf. Anyone may do it; the work is two lookups. Mutant: eviction
+on a leaf *above* the sealing sequence. -/
+theorem C9_evict_iff (p : Params) (env : CEnv) (pol : Policy) (s : Sys) (key : AID) (m : Option Seq) (s' : Sys) :
+    stepFn p env pol s (.evict key m) = some s' ↔
       ∃ ad, s.cage key = some ad ∧ s' = s.setCage key none ∧
         ∃ d ∈ ad.deps, ∃ c, s.ckpt d.issuer = some c ∧
-          ((∀ l, c.hist d.e = some l → l.epoch ≠ d.epoch) ∨
-            ∃ m, d.e < m ∧ m ≤ d.k ∧ (c.hist m).isSome) := by
+          ((∀ l, c.hist d.anchor.e = some l → l.epoch ≠ d.anchor.epoch) ∨
+            ∃ m', m = some m' ∧ d.anchor.e < m' ∧ m' ≤ d.anchor.k ∧ (c.hist m').isSome) := by
   sorry
 
 /-- **C10. A pushed revocation closes every gate below it.** After any
@@ -128,8 +138,9 @@ theorem C11_gate_iff (pol : Policy) (s : Sys) (key : AID) (now : Slot) :
   sorry
 
 /-- **C12. The gate reads no history and checks no signature.** It is
-invariant under every checkpoint: a cheap lookup plus absence proofs.
-Mutant: `gate` re-walking a seal. -/
+invariant under every checkpoint: a cheap lookup plus absence proofs. This
+is the design's cache-then-evict shape; its consequence for provisional
+admissions is C20. Mutant: `gate` re-walking a seal. -/
 theorem C12_gate_reads_no_checkpoint (pol : Policy) (s : Sys) (f : AID → Option Checkpoint)
     (key : AID) (now : Slot) :
     gate pol { s with ckpt := f } key now = gate pol s key now := by
@@ -149,14 +160,15 @@ theorem C13_admission_binds_actor (p : Params) (env : CEnv) (pol : Policy) (s : 
   sorry
 
 /-- **C14. Admit, exactly** (public inversion). An admission lands iff the
-key is free, the leaf names the key, the chain admits with verdict `v`, every
-hop yields a dependency, and what is cached is exactly the chain's SAIDs,
-registries, verdict, dependencies and time. Mutant: `admit` caching empty
-dependencies. -/
+leaf names the key, the key is free or holds an expired admission, the
+chain admits with verdict `v`, every hop yields a dependency, and what is
+cached is exactly the chain's SAIDs, registries, verdict, dependencies and
+time. Mutant: `admit` caching empty dependencies. -/
 theorem C14_admit_iff (p : Params) (env : CEnv) (pol : Policy) (s : Sys) (key : AID) (hops : List Hop)
     (now : Slot) (s' : Sys) :
     stepFn p env pol s (.admit key hops now) = some s' ↔
-      ∃ h v deps, hops.head? = some h ∧ h.acdc.body.issuee = key ∧ s.cage key = none ∧
+      ∃ h v deps, hops.head? = some h ∧ h.acdc.body.issuee = key ∧
+        (∀ ad, s.cage key = some ad → ad.expired pol now = true) ∧
         admitChain p env s.toSys pol hops = some v ∧ hops.mapM (Hop.dep s.toSys) = some deps ∧
         s' = s.setCage key (some ⟨hops.map (·.acdc.said), hops.map (·.acdc.body.registry), v, deps, now⟩) := by
   sorry
@@ -164,8 +176,9 @@ theorem C14_admit_iff (p : Params) (env : CEnv) (pol : Policy) (s : Sys) (key : 
 /-- **C15. A provisional admission is evictable once its issuer supersedes.**
 An admission whose hop rests on its issuer's latest leaf records that
 dependency, and after the issuer advances at or below the sealing sequence
-the eviction is enabled: superseding recovery reaches the cage. Mutant:
-`admit` caching empty dependencies, or `Hop.dep` dropping `k`. -/
+the eviction is enabled on the evidence of that new leaf: superseding
+recovery reaches the cage. Mutant: `admit` caching empty dependencies, or
+`anchorOf` dropping `k`. -/
 theorem C15_provisional_admission_evictable_after_superseding (p : Params) (env : CEnv) (pol : Policy)
     {s s₁ s₂ : Sys} {key : AID} {hops : List Hop} {now : Slot}
     (h₁ : stepFn p env pol s (.admit key hops now) = some s₁)
@@ -173,7 +186,72 @@ theorem C15_provisional_admission_evictable_after_superseding (p : Params) (env 
     (hlatest : hop.walk.core.e = c.latest) {e' : Seq} {t : Nat} {appr : Option Approval}
     (h₂ : stepFn p env pol s₁ (.mirror (.history hop.acdc.body.issuer (.advance e' t appr))) = some s₂)
     (hgt : c.latest < e') (hle : e' ≤ hop.walk.core.kel.sn) :
-    ∃ s₃, stepFn p env pol s₂ (.evict key) = some s₃ := by
+    ∃ s₃, stepFn p env pol s₂ (.evict key (some e')) = some s₃ := by
+  sorry
+
+/-- **C16. Every edge carries the policy's authority.** In an admitted chain
+each adjacent pair satisfies the link the policy pins for that edge (for
+vLEI, the issuer below is the issuee above), and a chain with one failing
+link is refused: merely referencing a genuine root credential authorizes
+no unrelated issuer. Mutant: `chainFrom` that ignores `lk`. -/
+theorem C16_links_enforced (p : Params) (env : CEnv) (s : Mirror.Sys) (pol : Policy) (hops : List Hop) :
+    (∀ v, admitChain p env s pol hops = some v →
+      ∀ i h₁ h₂ lk, hops[i]? = some h₁ → hops[i + 1]? = some h₂ → pol.links[i]? = some lk →
+        lk h₁.acdc.body h₂.acdc.body = true) ∧
+    (∀ i h₁ h₂ lk, hops[i]? = some h₁ → hops[i + 1]? = some h₂ → pol.links[i]? = some lk →
+      lk h₁.acdc.body h₂.acdc.body = false → admitChain p env s pol hops = none) := by
+  sorry
+
+/-- **C17. The registry's inception must stand.** A hop whose registry was
+opened from a `vcp` seal that the issuer has since superseded — the
+inception anchor no longer stands on the issuer's history under the
+presented proof — is refused, whatever the credential's own walk says.
+Continued existence of the registry UTxO is not authority. Mutant:
+`hopVerdict` that skips `inception.stands`. -/
+theorem C17_registry_inception_must_stand (p : Params) (env : CEnv) (s : Mirror.Sys) (pol : Policy)
+    {hops : List Hop} {hop : Hop} (hin : hop ∈ hops) {c : Checkpoint} {r : Registry}
+    (hc : s.ckpt hop.acdc.body.issuer = some c) (hr : s.reg hop.acdc.body.registry = some r)
+    (hstand : r.inception.stands c hop.regProof = false) :
+    admitChain p env s pol hops = none := by
+  sorry
+
+/-- **C18. An expired admission can be renewed.** When the cached admission
+is past the freshness bound, a chain that admits for the same key lands and
+replaces it; an expired admission can also be removed by anyone. A
+still-valid actor is never locked out of its own key. Mutant: `admit`
+refusing every occupied key. -/
+theorem C18_renewal_after_expiry (p : Params) (env : CEnv) (pol : Policy) (s : Sys) {key : AID}
+    {ad : Admission} (hc : s.cage key = some ad) {now : Slot} (hexp : ad.expired pol now = true) :
+    (∀ hops h v deps, hops.head? = some h → h.acdc.body.issuee = key →
+      admitChain p env s.toSys pol hops = some v → hops.mapM (Hop.dep s.toSys) = some deps →
+      ∃ s', stepFn p env pol s (.admit key hops now) = some s') ∧
+    ∃ s', stepFn p env pol s (.expire key now) = some s' := by
+  sorry
+
+/-- **C19. A live admission is never replaced.** While the cached admission
+is within the freshness bound, no admission lands on that key and the
+expiry action is refused; eviction on evidence (C9) is the only way out.
+Mutant: `admit` overwriting unconditionally. -/
+theorem C19_live_admission_not_replaced (p : Params) (env : CEnv) (pol : Policy) (s : Sys) {key : AID}
+    {ad : Admission} (hc : s.cage key = some ad) {now : Slot} (hlive : ad.expired pol now = false) :
+    (∀ hops, stepFn p env pol s (.admit key hops now) = none) ∧
+    stepFn p env pol s (.expire key now) = none := by
+  sorry
+
+/-- **C20. The provisional-gate window** (a witness of a stated residual,
+not a guarantee). There is a reachable system holding a provisional
+admission whose dependency has moved — the eviction is enabled — while the
+gate is still open. The design authority specifies cache-then-evict, so
+the interval between an issuer's superseding rotation and the
+permissionless eviction is bounded only by the freshness bound and by
+whoever evicts. Closing it at the use boundary (the gate reading the
+issuer checkpoint of every provisional dependency) is a recorded open
+decision. Mutant: none — this documents the residual. -/
+theorem C20_provisional_gate_window_witness :
+    ∃ (p : Params) (env : CEnv) (pol : Policy) (s : Sys) (key : AID) (ad : Admission) (now : Slot)
+      (m : Option Seq),
+      Reach p env pol s ∧ s.cage key = some ad ∧ ad.verdict = .provisional ∧
+      (∃ s', stepFn p env pol s (.evict key m) = some s') ∧ gate pol s key now = true := by
   sorry
 
 end CardanoKeri.Credential

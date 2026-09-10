@@ -112,9 +112,9 @@ provide the Aiken verifier that walks the chain. The steps span two planes:
 | vLEI verification step | Off-chain world | With cardano-keri |
 |---|---|---|
 | Historical issuance authority (*issued then*) | KERI KEL replay via witnesses | Issuer's **signature or seal on the SAID** (MUST on the most-compact form; SHOULD on other variants) + a **KEL-anchored issuance-proof seal at the issuer's historical key state** — **rotation does not invalidate it** |
-| Current non-revocation (*unrevoked now*) | Query issuer's TEL | **Layer 2** TEL registry proof |
+| Current non-revocation (*unrevoked now*) | Query issuer's TEL | **Layer 2** [revocation mirror](credential-verification.md#the-revocation-mirror): a per-registry set of revoked SAIDs anyone may fill with the issuer's own sealed `rev`; the gate proves absence, one proof per link |
 | Current dApp actor authorization (*authorizes now*) | — | The **acting entity's sovereign per-AID checkpoint** — current weighted keys/threshold read via CIP-31 reference input (#92) |
-| Content / signature integrity | CESR tooling | **Layer 3** Aiken verifier: `blake2b_256` recompute proves **content integrity** (SAID) only; a **direct signature** is verified with the SAID as the signed message, a **seal** is followed to its KEL event (or via TEL state to its KEL anchoring seal) and the KEL signatures verified **at the historical key state** |
+| Content / signature integrity | CESR tooling | **Layer 3** Aiken verifier: blake3 recompute through the hash-proof token proves **content integrity** (SAID) only; a **direct signature** is verified with the SAID as the signed message, a **seal** is followed to its KEL event by the [seal walk](credential-verification.md#the-seal-walk), with the KEL signatures and witness receipts verified **at the historical key state** read from the issuer checkpoint's key-state history |
 | Assemble the evidence | verifier server | **Layer 4** proof builder (WASM SDK in the holder's flow) |
 
 !!! warning "Two planes: historical credential admission vs current-actor authority (#92)"
@@ -159,15 +159,15 @@ sequenceDiagram
     Note over LE,Chk: Admission — once per entity (historical credential plane)
     LE->>PB: vLEI credential chain (full ACDC chain)
     PB->>Cage: admission tx: raw credentials + KEL/TEL proofs
-    Cage->>Cred: each ACDC's historical issuance commitment (signature/seal on SAID) + KEL-anchored issuance-proof seal at the issuer's historical key state?
-    Cage->>Cred: chain unrevoked (issuer TELs)?
+    Cage->>Cred: each ACDC's seal walk: sealing ixn signed and receipted under the issuer's historical key state (issuer checkpoint history, ref input)?
+    Cage->>Cred: chain unrevoked (absence proof per link against each issuer's revocation mirror)?
     Cage->>Cage: SAIDs recompute — content integrity (L3)
     Cage-->>LE: admitted — credential chain cached (trie_key → AdmissionLeaf)
 
     Note over LE,Chk: Gated action (direct-signing venues) —<br/>every swap / borrow / transfer
     LE->>Cage: action tx, signed with the acting AID's current key(s)
     Cage->>Chk: exactly one sovereign per-AID checkpoint (ref input): current, accepted lineage, ACTIVE role, signer(s) meet current weighted threshold?
-    Cage->>Cred: still unrevoked (all issuer TELs in chain)?
+    Cage->>Cred: still unrevoked (absence proofs against the revocation mirrors)?
     Cage-->>LE: trade executes — identity check atomic with it
 ```
 

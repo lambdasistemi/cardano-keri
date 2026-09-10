@@ -52,7 +52,10 @@ victim's identifier. That harm lands in the credential graph, not on Cardano.
 This is a stated scope decision, not an oversight — see
 [#115](https://github.com/lambdasistemi/cardano-keri/issues/115): *an advance
 is a rotation by definition; non-establishment events never touch the
-checkpoint.*
+checkpoint.* When a credential sealed in an `ixn` is verified on Cardano, the
+`ixn` is presented as evidence in that transaction and checked against the
+checkpoint's [key-state history](credential-verification.md#the-seal-walk); it
+is never stored.
 
 Two consequences follow, and they point in opposite directions:
 

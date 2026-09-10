@@ -121,6 +121,15 @@ This layer answers "what role has an issuer granted to this AID?" The
 checkpoint already answers the separate question "which keys currently control
 this AID?"
 
+The design is
+[Verifying credentials against the checkpoint](design/credential-verification.md):
+the checkpoint keeps a history of past key states, an issuer's sealing
+interaction event is presented as evidence and checked against that history
+with the issuer's witness receipts, revocations are mirrored as a per-registry
+set anyone may fill, and delegation is proven once per rotation rather than per
+credential. No interaction event is ever ingested, and work per credential is
+bounded by the issuer's key and witness counts.
+
 ### Application authorization
 
 Applications then consume the checkpoint and credential evidence: a detached,

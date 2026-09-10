@@ -234,6 +234,20 @@ minted against the parent's checkpoint as a reference input and consumed by the
 child's advance, removes contention on the parent and moves the expensive step
 out of the advance transaction.
 
+### Delegation does not touch the TEL
+
+Only establishment events of a delegated identity need the parent's approval.
+A QVI's interaction events, and therefore every seal it places on a registry
+inception, an issuance or a revocation, are signed by the QVI's own keys from
+its latest establishment event and receipted by the QVI's own witnesses. The
+parent is not consulted. The seal walk on a delegated issuer is the same seal
+walk, against the QVI's checkpoint, whose leaf already embodies the parent's
+approval from the time of the advance. The one place delegation reaches the
+TEL is through superseding: when a parent-approved rotation replaces the
+latest leaf, seals made under the replaced keys lose their covering leaf.
+Admissions that relied on them were provisional and are evicted; revocations
+pushed under them stay in the set, which over-revokes and fails closed.
+
 ## Transaction layout: attestations, not single transactions
 
 Fitting one transaction is not a goal. Any step may be split across

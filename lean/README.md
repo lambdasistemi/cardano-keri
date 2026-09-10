@@ -59,3 +59,30 @@ proves the reaper never loses. No `sorry`, standard axioms only. The
 mutation campaign is `REGISTRY-MUTANTS.md`; the design note is
 `docs/design/registry-as-mpfs.md`. `RegistryTraceDriver.lean` is the corpus
 producer for `simulator/registry-simulator.html`.
+
+## Unproven statements: ACDC admission, the revocation mirror, delegation
+
+`CardanoKeri/Statements/` is a **separate Lake library**,
+`CardanoKeriStatements`, that is *not* a default target: `lake build`
+never touches it, so the zero-`sorry` gate above is unaffected. It holds
+the STATEMENTS-mode specification of the 2026-09-10 design
+(`docs/design/credential-verification.md`; #391, #392, #292): four models
+and four statement files whose every theorem ends in an intentional
+`sorry`.
+
+| Module | Model | Statements |
+|---|---|---|
+| `Statements/History.lean` | key-state history with back-pointers, `cover`, the seal walk | `HistoryGoals.lean` H1–H9, S1–S7 |
+| `Statements/Mirror.lean` | per-registry revoked set, `open`, permissionless `push`, `miss` | `MirrorGoals.lean` M1–M11 |
+| `Statements/Credential.lean` | ACDC chain admission, the cage, `evict`, `gate` | `CredentialGoals.lean` C1–C12 |
+| `Statements/Delegation.lean` | approval certificates, delegated `dip`/`drt`, rule-B superseding, ancestry | `DelegationGoals.lean` D1–D13 |
+
+```
+cd lean
+lake build CardanoKeriStatements   # 52 "declaration uses 'sorry'" warnings, by design
+```
+
+`STATEMENTS-ATOMS.md` is the theorem ledger (ruling, witness of the
+antecedent, falsifying mutant, kind) and the semantic-atom ledger for the
+independent statement audit. Statement hashes are frozen only after that
+audit; proofs come after the freeze.

@@ -30,14 +30,17 @@ engineering, plus the measurements that size the numbers still open.
 
 ## The epics
 
-The registry is upstream work in the MPFS repositories that M1 implies; the
-same milestone governs it.
+The registry is upstream work that M1 implies, built in
+[singular](https://github.com/lambdasistemi/singular) rather than in the MPFS
+repositories the three upstream rows were first filed against; the same
+milestone governs it. What singular already delivers and what remains is on
+[where the registry is built](design/registry-as-mpfs.md#where-the-registry-is-built).
 
 | # | Epic | Repo | Depends on | Acceptance |
 |---|---|---|---|---|
-| U1 | [MPFS permissionless batching](https://github.com/lambdasistemi/cardano-keri/issues/329) — `Modify` without the owner signature; `End` and ownership transfer removed; objective rejection only; the tip paid to whoever applies; the cage's Lean proofs re-proved for the ownerless variant | cardano-mpfs | — | two independent appliers race on a devnet; a request one of them ignores lands through the other; retract still refunds; every cage proof green |
-| U2 | [MPFS gating plugin](https://github.com/lambdasistemi/cardano-keri/issues/330) — a per-store validator the cage calls per request; the keri store's plugin parses the inception, checks the absence proof and mints the checkpoint in the same transaction; the leaf map is the interface `cardano-keri` consumes | cardano-mpfs | U1 | the registry simulator's scenarios replayed on a devnet against the plugin; a second registration of one AID refused; a reopen at or below the tombstone refused |
-| U3 | **Registry model and simulator** — the Lean model of the leaf map and batching, its theorems, the registry simulation | cardano-mpfs | — | statements audited for completeness, proved, mutants; the page follows the Lean by replay |
+| U1 | [MPFS permissionless batching](https://github.com/lambdasistemi/cardano-keri/issues/329) — `Modify` without the owner signature; `End` and ownership transfer removed; objective rejection only; the tip paid to whoever applies; the cage's Lean proofs re-proved for the ownerless variant | singular | — | partly met by singular v0.3.0: the permissionless fold and the refused occupied insert run on a devnet; still to show: two independent appliers race on a devnet; a request one of them ignores lands through the other; retract still refunds; every cage proof green |
+| U2 | [MPFS gating plugin](https://github.com/lambdasistemi/cardano-keri/issues/330) — a per-store validator the cage calls per request; the keri store's plugin parses the inception, checks the absence proof and mints the checkpoint in the same transaction; the leaf map is the interface `cardano-keri` consumes. In singular's shape the application's own minting policy certifies the request and the fold mints the representative into the certified output; the keri policy that parses the inception and checks the receipts is cardano-keri's to write, and the mapping of the dormant leaf is open | singular, cardano-keri | U1 | the registry simulator's scenarios replayed on a devnet against the plugin; a second registration of one AID refused; a reopen at or below the tombstone refused |
+| U3 | **Registry model and simulator** — the Lean model of the leaf map and batching, its theorems, the registry simulation | cardano-keri, merged | — | statements audited for completeness, proved, mutants; the page follows the Lean by replay |
 | #318 | [The record](https://github.com/lambdasistemi/cardano-keri/issues/318) — the design note written from the plan; both Lean slices merged; the clarity record folded into the Lean's doc comments | cardano-keri | — | the note, the Lean and the simulator name the same rulings |
 | #319 | [Slim `main`](https://github.com/lambdasistemi/cardano-keri/issues/319) — delete the enforcement economy and the M1.2 skeleton in one presented pull request; `convict_predicate` and its decoder lifted before the file goes; the docs survey executed; a size table of the surviving scripts | cardano-keri | #318 | `just ci`, `mkdocs --strict` and lychee green; the size table published |
 | #320 | [INV-BIND on the slimmed tree](https://github.com/lambdasistemi/cardano-keri/issues/320) — rebase and merge the proven repair; add the advance-versus-`keripy` parity oracle for which witness set a rotation with cuts and adds tallies | cardano-keri | #319 | 16/16 adversarial cases green; the parity oracle red under a mutant that flips the set |
@@ -73,7 +76,9 @@ flowchart LR
     E327 --> E328
 ```
 
-Three workstreams run at once: the upstream workstream (U1, U3, then U2),
+Three workstreams run at once: the upstream workstream (U1, U3, then U2;
+U1's fold and U3 are delivered, U2's keri policy and the leaf-map mapping
+are open),
 the on-chain workstream (#319, #320, #321, then #322, #323), and the
 record workstream (#318, #327). The critical path is
 U1 → U2 → #324 → #325 → #326 → #328 on one side and

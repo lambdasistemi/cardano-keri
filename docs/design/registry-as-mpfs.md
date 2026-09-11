@@ -10,9 +10,12 @@
 
 
 The AID registry ruled by D-024 — one UTxO holding the MPF root over every
-AID ever registered — built as a cage of
-[cardano-mpfs-onchain](https://github.com/cardano-foundation/cardano-mpfs-onchain)
-on its plugin path, after the rulings of 2026-09-02/03. This page names the
+AID ever registered — built as a cage of the Merkle
+Patricia Forestry store
+([cardano-mpfs-onchain](https://github.com/cardano-foundation/cardano-mpfs-onchain))
+on its plugin path, after the rulings of 2026-09-02/03, and built today in
+[singular](https://github.com/lambdasistemi/singular); see
+[Where the registry is built](#where-the-registry-is-built). This page names the
 Lean declaration behind every claim. The machine is
 `lean/CardanoKeri/Registry.lean`; the theorems are
 `lean/CardanoKeri/RegistryGoals.lean`; the generic cage and the divergence
@@ -52,12 +55,75 @@ encodings. For when minting occurs, what the plugin must establish and which
 parts remain abstract, read
 [What registration guarantees](../architecture/follow-one-identity.md#what-registration-guarantees).
 
-The mpfs changes this needs are the plugin-cage epic
-[cardano-foundation/cardano-mpfs-onchain#99](https://github.com/cardano-foundation/cardano-mpfs-onchain/issues/99):
-replace semantics for the `stake_script` hook (#79), the hook and the owner
-pinned and empty folds refused (#100), processed-request value routed by the
-plugin (#101), and the plugin contract with a mint-coupled reference plugin
-(#102).
+
+## Where the registry is built
+
+Read on 2026-09-11. The registry line moved from the Cardano Foundation's
+MPFS repository to [singular](https://github.com/lambdasistemi/singular), and
+the two repositories are in different states.
+
+**Singular** is the cage above made permissionless, and it runs on a
+development network. Its release
+[v0.3.0](https://github.com/lambdasistemi/singular/releases/tag/v0.3.0) of
+2026-09-11 carries: a registration is a request UTxO certified by the
+application's own minting policy; anyone folds requests into the registry
+with absence and existence proofs; the fold mints exactly one representative
+token into the output the certified request names; an insert on an occupied
+key is refused by the node; a folded delete makes the key available again.
+Its key states are absent, active, and a terminal retired state. Its
+consumer-conformance suite is bound by commit to this page and to the
+[consumer checklist](../user/consumer-checklist.md): 41 rows, of which the
+bonds, the poison, the juvenility window and the signature threshold are
+left to the checkpoint machine and never claimed by singular. Recovery
+through a committed next controller has run on a ledger; retirement has not.
+Measured on its ship run, a fold is about 11.4 KB of a 16,384-byte
+transaction and under 3 % of the execution-unit maxima. Its own model has 41
+proved statements under standard axioms.
+
+One result every consumer of this registry must absorb: **a permissionless
+ledger cannot prohibit a rival registry.** A consistent initialization from a
+second seed passes every check and the node accepts it. Canonical identity is
+therefore a derivation the consumer authenticates, not a refusal the chain
+performs: the canonical registry token's name is the hash of the seed output
+it was booted from, and that seed can be spent only once. The "present" and
+"the token" steps of the consumer checklist are where that authentication
+belongs.
+
+| Singular page | What it settles |
+|---|---|
+| [README](https://github.com/lambdasistemi/singular/blob/main/README.md) | who it is for, the request, fold and resolve flow, the three registry transitions |
+| [Requests, folding and NFT custody](https://github.com/lambdasistemi/singular/blob/main/docs/lifecycle.md) | where the representative is at every moment; the exact effect of insert, update and delete |
+| [Consumer conformance](https://github.com/lambdasistemi/singular/blob/main/docs/consumer-conformance.md) | the rows bound to this page, the executed generic and canonical-identity rows with their controls, the measurements |
+| [Recover control on a real ledger](https://github.com/lambdasistemi/singular/blob/main/docs/recovery-retirement.md) | the recovery rows; the statement that retirement is not yet runnable |
+| [Theorem manifest](https://github.com/lambdasistemi/singular/blob/main/docs/theorems.md) | the 41 proved statements and the axiom gate |
+
+**The MPFS repository** has not moved: its last code commit is 2026-07-08,
+and the four changes this page first asked of it are open there — replace
+semantics for the `stake_script` hook
+([#79](https://github.com/cardano-foundation/cardano-mpfs-onchain/issues/79)),
+the hook and the owner pinned and empty folds refused
+([#100](https://github.com/cardano-foundation/cardano-mpfs-onchain/issues/100)),
+processed-request value routed by the plugin
+([#101](https://github.com/cardano-foundation/cardano-mpfs-onchain/issues/101)),
+and the plugin contract with a mint-coupled reference plugin
+([#102](https://github.com/cardano-foundation/cardano-mpfs-onchain/issues/102)).
+Singular imported that cage's source unchanged, so the divergences audited
+under [Pluggability and the permissioning divergence](#pluggability-and-the-permissioning-divergence-cagelean)
+hold of singular's cage partition too; singular's conformance plan records
+four of them as expected gaps, to be observed with the transaction that
+proves each rather than asserted.
+
+**What is not settled between the two models.** The leaf maps differ. This
+page's leaf is absent, `active`, `dormant k` holding the key state a revival
+must rotate from, or `convicted` for ever. Singular's leaf is absent, active,
+or retired for ever, and its delete returns the key to absent and keeps no
+hash. How `dormant k` and "revive from exactly `k`" are expressed on singular,
+in the registry leaf or in a parked application output that keeps the
+representative, is a design decision not yet taken; it belongs to
+[registry integration](https://github.com/lambdasistemi/cardano-keri/issues/324).
+Cardano-keri's own side is unstarted: the minting policy that parses the
+inception, checks the receipts and certifies the registration request, and
+the consumer's authentication of the canonical registry.
 
 ## The rulings, verbatim (2026-09-02/03)
 
@@ -217,7 +283,8 @@ with no evidence and no checkpoint), and `ValueMode` (`refundAll`, an
 idealised reading of today's `validModify`; `delegatedRouting`, #101).
 
 Where the cage model is an idealisation of `validators/state.ak` on
-cardano-mpfs-onchain main, and not the code (audit of 2026-09-03):
+cardano-mpfs-onchain main, and not the code (audit of 2026-09-03; singular
+imported that code unchanged, so the same holds of its cage partition):
 
 - **Refunds.** `refundAll` returns each processed request's exact bond to its
   owner and pays the tip to the folder. `validModify` checks an aggregate
@@ -257,7 +324,9 @@ cardano-mpfs-onchain main, and not the code (audit of 2026-09-03):
 
 The generic cage is written to be lifted into `cardano-mpfs-onchain/lean`;
 today that repository is on Lean 4.16 and has no cage machine, so the reuse
-runs upstream from here, not downstream.
+runs upstream from here, not downstream. Singular carries its own Lean model of
+its registry rather than this cage machine; reconciling the two is part of the
+leaf-map question under [Where the registry is built](#where-the-registry-is-built).
 
 ## The plugin's contract, derived
 

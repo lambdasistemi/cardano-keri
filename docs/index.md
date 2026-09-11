@@ -150,7 +150,10 @@ theft and rotating.
 parked with the hash, or convicted — so an AID has at most one incarnation
 ever. Only **convicted** is terminal; a parked identity returns by a
 witnessed rotation later than the parked key state, with fresh bonds. The
-registry is upstream work: MPFS made permissionless (D-037).
+registry is the MPFS cage made permissionless (D-037), built today in
+[singular](https://github.com/lambdasistemi/singular), where it runs on a
+development network; see
+[where the registry is built](design/registry-as-mpfs.md#where-the-registry-is-built).
 
 **Leaving** is the reap: a witnessed rotation by the *next* keys whose
 signed message names the payee of the premium and the refund address. The

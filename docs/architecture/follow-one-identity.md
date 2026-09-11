@@ -69,7 +69,10 @@ abstracts that entire registration boundary into one `register` step.
 
 The intended implementation must couple the **MPFS Add/Insert and checkpoint
 NFT mint in the same fold transaction**. Validators check that transaction;
-the plugin does not mint an NFT through a later side effect.
+the plugin does not mint an NFT through a later side effect. Singular's fold does
+exactly this coupling: it checks absence and mints the representative into the
+output the certified request names, in the folding transaction
+([requests, folding and NFT custody](https://github.com/lambdasistemi/singular/blob/main/docs/lifecycle.md)).
 
 | Responsibility | Required check |
 |---|---|

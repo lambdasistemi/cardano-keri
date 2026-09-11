@@ -32,6 +32,7 @@ const argPath = flag => {
 };
 const HTML = argPath('--html') || join(HERE, 'checkpoint-simulator.html');
 const CORE = argPath('--core') || join(HERE, 'checkpoint-simulator-core.mjs');
+const BACKEND = argPath('--backend') || join(HERE, 'checkpoint-simulator-backend.mjs');
 const SCENARIOS = join(HERE, 'checkpoint-simulator-scenarios');
 const CORPUS = join(HERE, 'checkpoint-simulator-corpus.json');
 const DSL_SRC = join(HERE, 'scenario-dsl.mjs');
@@ -75,16 +76,23 @@ const dslSrc = readFileSync(DSL_SRC, 'utf8');
 const dslMsrc = dslSrc.match(/\/\* @@DSL@@ \*\/\n([\s\S]*?)\/\* @@DSL:END@@ \*\//);
 if (!dslMsrc) problems.push('scenario-dsl.mjs has no @@DSL@@ block');
 const dslBlock = dslMsrc ? dslMsrc[1] : '';
+const backendSrc = readFileSync(BACKEND, 'utf8');
+const backendMsrc = backendSrc.match(blockRe('BACKEND'));
+if (!backendMsrc) problems.push('checkpoint-simulator-backend.mjs has no @@BACKEND@@ block');
+const backendBlock = backendMsrc ? backendMsrc[1] : '';
 
 const scM = html.match(blockRe('SCENARIOS'));
 const coM = html.match(blockRe('CORPUS'));
 const dslM = html.match(blockRe('DSL'));
+const beM = html.match(blockRe('BACKEND'));
 if (!scM) problems.push('page has no @@SCENARIOS@@ block');
 if (!coM) problems.push('page has no @@CORPUS@@ block');
 if (!dslM) problems.push('page has no @@DSL@@ block');
+if (!beM) problems.push('page has no @@BACKEND@@ block');
 const scenariosStale = scM && scM[1] !== scenarioBlock;
 const corpusStale = coM && coM[1] !== corpusBlock;
 const dslStale = dslM && dslM[1] !== dslBlock;
+const backendStale = beM && beM[1] !== backendBlock;
 
 if (problems.length) {
   console.error('RED: ' + problems.join('; '));
@@ -97,6 +105,7 @@ for (const id of stale)
 if (scenariosStale) out = out.replace(blockRe('SCENARIOS'), () => `/* @@SCENARIOS@@ */\n${scenarioBlock}/* @@SCENARIOS:END@@ */`);
 if (corpusStale) out = out.replace(blockRe('CORPUS'), () => `/* @@CORPUS@@ */\n${corpusBlock}/* @@CORPUS:END@@ */`);
 if (dslStale) out = out.replace(blockRe('DSL'), () => `/* @@DSL@@ */\n${dslBlock}/* @@DSL:END@@ */`);
+if (backendStale) out = out.replace(blockRe('BACKEND'), () => `/* @@BACKEND@@ */\n${backendBlock}/* @@BACKEND:END@@ */`);
 
 const docsCurrent = existsSync(DOCS) ? readFileSync(DOCS, 'utf8') : null;
 const docsStale = docsCurrent !== out;
@@ -105,6 +114,7 @@ const changes = [
   ...(scenariosStale ? ['scenarios'] : []),
   ...(corpusStale ? ['corpus'] : []),
   ...(dslStale ? ['scenario-dsl'] : []),
+  ...(backendStale ? ['backend'] : []),
   ...(docsStale ? ['docs/simulator/index.html'] : []),
 ];
 

@@ -499,15 +499,312 @@
 /* @@DSL@@ */
 /* @@DSL:END@@ */
 assertGrammarVersion('1');
+/* @@BACKEND@@ */
+const DEFAULT_PARAMS = { D: 1000, B: 5, P: 2, W: 10 };
+const WHO = { alice: 'Alice', hal: 'Hal', cora: 'Cora', mallory: 'Mallory', treasury: 'The treasury', friend: 'A sponsor', rival: 'A rival hunter', anyone: 'A sponsor', time: 'Time', you: 'You' };
+const CHALLENGE_SPECS = {
+  steal: { title: 'Steal the 1000', actor: 'mallory',
+    env: [{ rotationTo: [0, 0, 1] }, { rotationTo: [1, 1, 2] }, { rotationTo: [2, 2, 3] }] },
+};
+function copyTree(tree) {
+  return {
+    family: tree.family, story: tree.story, challenge: tree.challenge, actor: tree.actor,
+    cursor: tree.cursor, punch: tree.punch,
+    nodes: tree.nodes.map(n => ({ ...n, children: n.children.slice(), branch: n.branch ? { ...n.branch } : n.branch })),
+  };
+}
+function originTree(session, say, extra) {
+  const node0 = { id: 0, parent: null, children: [], last: null, session, record: null, who: '', say, kind: 'origin', branch: null };
+  return { family: 'checkpoint', story: null, challenge: null, actor: 'alice', cursor: 0, punch: null, nodes: [node0], ...extra };
+}
+function treeAddChild(tree, parentId, entry) {
+  const nodes = tree.nodes.map(n => ({ ...n, children: n.children.slice(), branch: n.branch ? { ...n.branch } : n.branch }));
+  const parent = nodes[parentId];
+  if (!parent) throw new Error('unknown node ' + parentId);
+  const id = nodes.length;
+  const n = { id, parent: parentId, children: [], last: null, branch: null, ...entry };
+  nodes.push(n);
+  parent.children.push(id);
+  parent.last = id;
+  return { ...tree, nodes, cursor: id };
+}
+function sessionAt(tree, nodeId) {
+  const id = nodeId === undefined || nodeId === null ? tree.cursor : nodeId;
+  const n = tree.nodes[id];
+  if (!n || !n.session) throw new Error('unknown node ' + id);
+  return n.session;
+}
+function storyIdOf(sc) { return sc.id !== undefined && sc.id !== null ? sc.id : sc.story; }
+function findScenario(storyId) {
+  const want = String(storyId);
+  return SCENARIOS.find(s => String(storyIdOf(s)) === want) || null;
+}
+function buildStoryTree(sc) {
+  const r = checkScenario(sc, 'story ' + storyIdOf(sc), LEAN_CORPUS);
+  let tree = originTree(newSession(sc.params, { corpus: LEAN_CORPUS }),
+    'Nothing on chain for this AID. Step through the story with › ; ⋔ chips switch branch.',
+    { story: storyIdOf(sc), actor: 'alice' });
+  const entry = (t, extra) => ({ session: t.session, record: t.record, who: WHO[t.step.who] || t.step.who,
+    say: t.step.say + (t.step.slot !== undefined ? ` (slot ${t.step.slot})` : ''),
+    kind: t.record ? 'story' : (t.step.evidence ? 'evidence' : 'time'),
+    step: t.step, evRow: t.step.evidence && t.step.evidence.add ? t.step.evidence.add[0] : null, ...extra });
+  const trunkIds = [0];
+  let pid = 0;
+  for (const t of r.timeline) {
+    if (t.step.hidden) { trunkIds.push(pid); continue; }
+    tree = treeAddChild(tree, pid, entry(t));
+    pid = tree.cursor;
+    trunkIds.push(pid);
+  }
+  let punch = Number.isInteger(sc.punchline) && trunkIds[sc.punchline + 1] !== undefined ? trunkIds[sc.punchline + 1] : null;
+  if (punch === null) for (const id of trunkIds) { const n = tree.nodes[id]; if (n.record && n.record.ok) punch = id; }
+  for (const fk of r.forks) {
+    let fid = trunkIds[fk.at + 1];
+    fk.timeline.forEach((t, i) => {
+      tree = treeAddChild(tree, fid, entry(t, i === 0 ? { branch: { id: fk.id, title: fk.title } } : {}));
+      fid = tree.cursor;
+    });
+  }
+  for (let i = 0; i + 1 < trunkIds.length; i++) tree.nodes[trunkIds[i]].last = trunkIds[i + 1];
+  const end = tree.nodes[trunkIds[trunkIds.length - 1]];
+  end.trunkEnd = true;
+  end.last = null;
+  if (r.problems.length) tree.nodes[0].say = 'This story does not play as written: ' + r.problems.join(' · ');
+  tree.cursor = 0;
+  tree.punch = punch;
+  tree.storySc = sc;
+  return tree;
+}
+function playLoadedScenario(sc) { return buildStoryTree(sc); }
+function playStory(storyId) {
+  const sc = findScenario(storyId);
+  if (!sc) throw new Error('unknown story ' + storyId);
+  return buildStoryTree(sc);
+}
+function playChallenge(challengeId) {
+  const c = CHALLENGE_SPECS[challengeId];
+  if (!c) throw new Error('unknown challenge ' + challengeId);
+  let sess = newSession(DEFAULT_PARAMS, { corpus: LEAN_CORPUS });
+  for (const r of c.env) sess = addEvidence(sess, r);
+  return originTree(sess, 'Nothing on chain for this AID. ★ ' + c.title + ': every move below is yours to try.',
+    { challenge: challengeId, actor: c.actor });
+}
+function reopenSn(sess) {
+  const c = hashOf(sess.state); if (!c) return 1;
+  const cands = sess.env.rotationTo.filter(r => r[0] === c.epoch && r[1] === c.sn && r[2] > c.sn).map(r => r[2]).sort((a, b) => a - b);
+  return cands.length ? cands[0] : c.sn + 1;
+}
+function nextSn(sn0) {
+  const l = liveOf(sn0.state);
+  if (!l) return 1;
+  const cands = sn0.env.rotationTo.filter(r => r[0] === l.epoch && r[1] === l.sn && r[2] > l.sn).map(r => r[2]).sort((a, b) => a - b);
+  return cands.length ? cands[0] : l.sn + 1;
+}
+function offersFor(actorId, tree, nodeId) {
+  const sess = sessionAt(tree, nodeId);
+  const l = liveOf(sess.state);
+  const e = l ? l.epoch : 0, sn = l ? l.sn : 0, sn2 = nextSn(sess);
+  const keri = [], chain = [];
+  const ev = (label, row, hint) => keri.push({ label, row, hint });
+  const act = (kind, label, action) => chain.push({ kind, label, action });
+  const hs = hashOf(sess.state);
+  const ke = hs ? hs.epoch : e, ksn = hs ? hs.sn : sn;
+  switch (actorId) {
+    case 'alice':
+      if (hs) ev('kli rotate from the parked key state: sn ' + hs.sn + ' → ' + (hs.sn + 1) + ', receipted by the witnesses', { rotationTo: [hs.epoch, hs.sn, hs.sn + 1] }, 'a witnessed rotation from exactly the key state the leaf holds, later than its sequence');
+      else ev('kli rotate: sn ' + sn + ' → ' + (sn + 1) + ', receipted by the witnesses', { rotationTo: [e, sn, sn + 1] }, 'a valid witnessed rotation from the current keys');
+      ev('my next keys sign: keep the bonds, refund address → 1 (Alice)', { intentAuthorized: [e + 1, 'keep', 1] }, 'the keys the rotation reveals sign the intent and the address (D-038)');
+      ev('my next keys sign: deposit (unfreeze)', { intentAuthorized: [e + 1, 'deposit', null] }, 'the keys the rotation reveals sign the deposit (D-038)');
+      ev('my next keys sign: leave, premium to me', { intentAuthorized: [e + 1, closeIntent(1), null] }, 'the keys the rotation reveals sign the close, its payee and the address (D-036, D-038, D-039)');
+      ev('my next keys sign: leave, premium to Hal', { intentAuthorized: [e + 1, closeIntent(2), null] }, 'the reap can be landed by a hunter: the message names who is paid');
+      ev('key holders sign at threshold (quorum, epoch ' + e + ')', { quorum: [e] }, 'the current quorum signs a Cardano-side preimage');
+      act('rotate', 'land my rotation, keep the bonds', { rotate: { "sn'": sn2, op: 'keep', payee: 1, "refund'": null } });
+      act('rotate', 'land my rotation, deposit (unfreeze; on full bonds a keep)', { rotate: { "sn'": sn2, op: 'deposit', payee: 1, "refund'": null } });
+      act('poison', 'poison this epoch', 'poison');
+      act('close', 'leave: my rotation as the reap — the premium to me, everything else to my refund address, the token burned, the leaf parked with the hash', { close: { "sn'": sn2, payee: 1, "refund'": null } });
+      act('topUp', 'add to my pool', { topUp: { x: 5 } });
+      act('register', 'register my inception (refund to me)', { register: { refund: 1, pool0: 10 } });
+      act('reopen', 'revive my parked identity with a rotation from its key state (refund to me)', { reopen: { "sn'": reopenSn(sess), refund: 1, pool0: 10 } });
+      break;
+    case 'hal':
+      act('rotate', 'land Alice’s rotation, paid P to Hal', { rotate: { "sn'": sn2, op: 'keep', payee: 2, "refund'": null } });
+      act('close', 'land her reap, paid P to Hal (needs her signed message naming me)', { close: { "sn'": sn2, payee: 2, "refund'": null } });
+      act('freeze', 'freeze her on the old keys, take B', { freeze: { "sn'": sn2, payee: 2 } });
+      act('reopen', 'revive her from the registry with her later public rotation (refund to Alice)', { reopen: { "sn'": reopenSn(sess), refund: 1, pool0: 10 } });
+      break;
+    case 'cora':
+      ev('obtain a second receipted rotation at sequence ' + ksn + (hs ? ' (the parked key state)' : ''), { duplicityAt: [ke, ksn] }, 'two rotations at the key state’s sequence, both receipted');
+      act('convict', hs ? 'convict the parked identity: the mark, nothing to seize' : 'convict, D to Cora', { convict: { payee: 3 } });
+      break;
+    case 'mallory':
+      ev('steal the current keys (sign as quorum, epoch ' + ke + ')', { quorum: [ke] }, 'with the current keys she signs at threshold');
+      ev('steal the next keys too (rotate ' + ksn + ' → ' + (ksn + 1) + ')', { rotationTo: [ke, ksn, ksn + 1] }, 'control by KERI’s own rule');
+      act('poison', 'poison with the stolen keys', 'poison');
+      act('close', 'reap with the stolen keys, premium to Mallory: the bonds still go to Alice’s refund address', { close: { "sn'": sn2, payee: 4, "refund'": null } });
+      act('close', 'copy Hal’s reap with myself as payee', { close: { "sn'": sn2, payee: 4, "refund'": null } });
+      ev('forge the close message with the stolen next keys (payee Mallory)', { intentAuthorized: [ke + 1, closeIntent(4), null] }, 'with the next keys she can sign the message too');
+      act('rotate', 'rotate with the stolen next keys, paid to Mallory', { rotate: { "sn'": sn2, op: 'keep', payee: 4, "refund'": null } });
+      act('register', 'register Alice’s inception myself, at an epoch whose keys I hold (refund to Mallory)', { register: { refund: 4, pool0: 10 } });
+      act('reopen', 'revive her parked identity to myself (needs a rotation from the parked key state)', { reopen: { "sn'": reopenSn(sess), refund: 4, pool0: 10 } });
+      break;
+    case 'anyone':
+      act('register', 'register her inception for her (refund to Alice)', { register: { refund: 1, pool0: 10 } });
+      act('register', 'register her inception, refund to myself (a donation at her first rotation)', { register: { refund: 6, pool0: 10 } });
+      act('topUp', 'top up her pool', { topUp: { x: 5 } });
+      act('reopen', 'revive her parked identity for her (refund to Alice)', { reopen: { "sn'": reopenSn(sess), refund: 1, pool0: 10 } });
+      break;
+  }
+  return { keri, chain };
+}
+function dryRun(tree, action, nodeId) {
+  const sess = sessionAt(tree, nodeId);
+  const r = step(sess.params, sess.env, action, sess.now, sess.state);
+  if (r.ok) return { ok: true, res: r };
+  const rec = { ok: false, reason: r.reason, field: r.field, kind: actionKind(action), action, pre: sess.state, slot: sess.now, now: sess.now };
+  return { ok: false, res: r, why: explain(rec, sess) };
+}
+function opResult(tree, ok, extra) {
+  return { tree, ok, cursor: tree.cursor, ...extra };
+}
+function submit(tree, actorId, action, nodeId) {
+  const t = copyTree(tree);
+  const at = nodeId === undefined || nodeId === null ? t.cursor : nodeId;
+  if (!t.nodes[at]) throw new Error('unknown node ' + at);
+  t.cursor = at;
+  const sess = t.nodes[at].session;
+  const out = attempt(sess, action, sess.now);
+  const who = (typeof CAST !== 'undefined' && CAST[actorId] && CAST[actorId].name) || WHO[actorId] || actorId;
+  const next = treeAddChild(t, at, {
+    session: out.session, record: out.record, who, actorId,
+    say: (actionKind(action) || 'action') + ' at slot ' + sess.now + '.', kind: 'free',
+  });
+  next.actor = actorId || t.actor;
+  return opResult(next, !!out.record.ok, { record: out.record, node: next.nodes[next.cursor] });
+}
+function moveSlot(tree, targetSlot, nodeId) {
+  const t = copyTree(tree);
+  const at = nodeId === undefined || nodeId === null ? t.cursor : nodeId;
+  if (!t.nodes[at]) throw new Error('unknown node ' + at);
+  const sess = t.nodes[at].session;
+  const mv = setSlot(sess, targetSlot);
+  if (!mv.ok) return opResult(t, false, { reason: mv.reason });
+  if (targetSlot === sess.now) return opResult(t, true);
+  const next = treeAddChild(t, at, { session: mv.session, record: null, who: 'Time', say: `Slot ${targetSlot}.`, kind: 'time' });
+  return opResult(next, true);
+}
+function treeAddEvidence(tree, evidenceRow, nodeId) {
+  const t = copyTree(tree);
+  const at = nodeId === undefined || nodeId === null ? t.cursor : nodeId;
+  if (!t.nodes[at]) throw new Error('unknown node ' + at);
+  const sess = t.nodes[at].session;
+  let nextSess;
+  try { nextSess = addEvidence(sess, evidenceRow); }
+  catch (e) { return opResult(t, false, { reason: 'invalid-evidence' }); }
+  const next = treeAddChild(t, at, {
+    session: nextSess, record: null, who: 'You',
+    say: 'Evidence added: ' + JSON.stringify(evidenceRow) + '.', kind: 'evidence', evRow: evidenceRow,
+  });
+  return opResult(next, true);
+}
+function treeRemoveEvidence(tree, evidenceRow, nodeId) {
+  const t = copyTree(tree);
+  const at = nodeId === undefined || nodeId === null ? t.cursor : nodeId;
+  if (!t.nodes[at]) throw new Error('unknown node ' + at);
+  const sess = t.nodes[at].session;
+  let nextSess;
+  try { nextSess = removeEvidence(sess, evidenceRow); }
+  catch (e) { return opResult(t, false, { reason: 'invalid-evidence' }); }
+  const next = treeAddChild(t, at, {
+    session: nextSess, record: null, who: 'You',
+    say: 'Evidence removed: ' + JSON.stringify(evidenceRow) + '.', kind: 'evidence', evRow: evidenceRow, removed: true,
+  });
+  return opResult(next, true);
+}
+function selectPath(tree, forkId, toEnd) {
+  const t = copyTree(tree);
+  if (forkId !== undefined && forkId !== null && forkId !== '') {
+    const start = t.nodes.find(n => n.branch && String(n.branch.id) === String(forkId));
+    if (!start) throw new Error('unknown fork ' + forkId);
+    let id = start.id;
+    if (toEnd) {
+      while (t.nodes[id].children.length) {
+        const n = t.nodes[id];
+        const nx = n.last !== null ? n.last : n.children[0];
+        n.last = nx;
+        id = nx;
+      }
+    }
+    for (let n = id; t.nodes[n].parent !== null; n = t.nodes[n].parent) t.nodes[t.nodes[n].parent].last = n;
+    t.cursor = id;
+    return t;
+  }
+  let id = 0;
+  if (toEnd) {
+    for (;;) {
+      const n = t.nodes[id];
+      if (!n.children.length || n.trunkEnd) break;
+      const nx = n.last !== null ? n.last : n.children[0];
+      if (nx === null || nx === undefined) break;
+      id = nx;
+    }
+  }
+  t.cursor = id;
+  return t;
+}
+function selectedFork(tree) {
+  for (let id = tree.cursor; id !== null && tree.nodes[id]; id = tree.nodes[id].parent) {
+    if (tree.nodes[id].branch && tree.nodes[id].branch.id) return tree.nodes[id].branch.id;
+  }
+  return null;
+}
+function branchAt(tree, id) {
+  for (let n = id; n !== null && tree.nodes[n]; n = tree.nodes[n].parent) {
+    if (tree.nodes[n].branch) return tree.nodes[n].branch;
+  }
+  return null;
+}
+function compactLamps(rec) {
+  if (!rec) return null;
+  const src = rec.lamps || rec.theorems;
+  if (!src) return null;
+  const out = {};
+  for (const id of Object.keys(src)) {
+    const x = src[id];
+    if (!x) continue;
+    if (x.exhibited) out[id] = { exhibited: true, holds: !!x.holds };
+    else if (x.v === 'holds' || x.v === 'fails') out[id] = { exhibited: true, holds: x.v === 'holds' };
+  }
+  return Object.keys(out).length ? out : null;
+}
+function projectJson(tree) {
+  const t = copyTree(tree);
+  const ids = [];
+  for (let n = t.cursor; n !== null && t.nodes[n]; n = t.nodes[n].parent) ids.unshift(n);
+  const path = ids.map(id => {
+    const n = t.nodes[id], rec = n.record, sess = n.session;
+    let verdict = null;
+    try { if (sess) verdict = consumable(sess.params, sess.now, sess.state).verdict; } catch (e) { verdict = null; }
+    return {
+      id: n.id, parent: n.parent, kind: n.kind, branch: branchAt(t, n.id), slot: sess ? sess.now : null,
+      who: n.who, say: n.say, action: rec ? rec.action : undefined, ok: rec ? rec.ok : null,
+      reason: rec && rec.reason ? rec.reason : undefined,
+      flow: rec && rec.flow, state: sess ? sess.state : null, verdict,
+      lamps: compactLamps(rec),
+    };
+  });
+  return {
+    family: t.family, story: t.story, challenge: t.challenge, fork: selectedFork(t),
+    cursor: t.cursor, path,
+  };
+}
+/* @@BACKEND:END@@ */
 
 /* ============================================================================
    The page: a tree of plays over the core's immutable sessions, drawn as one
    scene whose entities move when a step plays — forward or in reverse.
    ============================================================================ */
-const DEFAULT_PARAMS = { D: 1000, B: 5, P: 2, W: 10 };
 const NAMES = { 1: 'Alice', 2: 'Hal', 3: 'Cora', 4: 'Mallory', 5: 'the treasury', 6: 'the sponsor', 7: 'the rival' };
 const nameOf = addr => NAMES[addr] || ('address ' + addr);
-const WHO = { alice: 'Alice', hal: 'Hal', cora: 'Cora', mallory: 'Mallory', treasury: 'The treasury', friend: 'A sponsor', rival: 'A rival hunter', anyone: 'A sponsor', time: 'Time', you: 'You' };
 const ACTOR_ORDER = ['alice', 'hal', 'treasury', 'cora', 'mallory', 'anyone'];
 const RUNGS = [['absent', 'Absent'], ['live', 'Live'], ['poisoned', 'Poisoned'], ['frozen', 'Frozen'], ['parked', 'Parked'], ['convicted', 'Convicted']];
 const SVGNS = 'http://www.w3.org/2000/svg';
@@ -597,77 +894,20 @@ function goTo(id, opts) {
   if (!opts.silent) playEdges(edges);
 }
 function pushNode(entry) { const id = addChild(app.cursor, entry); goTo(id); }
+function currentTree() {
+  return { family: 'checkpoint', story: app.story ? app.story.story : null,
+    challenge: app.challenge ? Object.keys(CHALLENGES).find(k => CHALLENGES[k] === app.challenge) || null : null,
+    nodes: app.nodes, cursor: app.cursor, actor: app.actor, punch: app.punch };
+}
+function adoptTree(tree, animate) {
+  const dest = tree.cursor, from = app.nodes.length ? app.cursor : 0;
+  app.nodes = tree.nodes; app.actor = tree.actor; app.punch = tree.punch; app.pending = null;
+  if (tree.storySc) app.story = tree.storySc;
+  if (animate && dest !== from && app.nodes[from]) { app.cursor = from; goTo(dest); }
+  else { app.cursor = dest; stopPlay(); }
+}
 
-/* ---- free play: what each actor can do now, dry-run through the core ------- */
-// a revival presents a rotation from the parked key state, later than its sequence
-function reopenSn(sess) { const c = hashOf(sess.state); if (!c) return 1; const cands = sess.env.rotationTo.filter(r => r[0] === c.epoch && r[1] === c.sn && r[2] > c.sn).map(r => r[2]).sort((a, b) => a - b); return cands.length ? cands[0] : c.sn + 1; }
-function nextSn(sn0) {
-  const l = liveOf(sn0.state);
-  if (!l) return 1;
-  const cands = sn0.env.rotationTo.filter(r => r[0] === l.epoch && r[1] === l.sn && r[2] > l.sn).map(r => r[2]).sort((a, b) => a - b);
-  return cands.length ? cands[0] : l.sn + 1;
-}
-function offersFor(actor, sess) {
-  const l = liveOf(sess.state);
-  const e = l ? l.epoch : 0, sn = l ? l.sn : 0, sn2 = nextSn(sess);
-  const keri = [], chain = [];
-  const ev = (label, row, hint) => keri.push({ label, row, hint });
-  const act = (kind, label, action) => chain.push({ kind, label, action });
-  const hs = hashOf(sess.state);           // the parked key state, when parked
-  const ke = hs ? hs.epoch : e, ksn = hs ? hs.sn : sn;   // the key state a rotation or a proof is about
-  switch (actor) {
-    case 'alice':
-      if (hs) ev('kli rotate from the parked key state: sn ' + hs.sn + ' → ' + (hs.sn + 1) + ', receipted by the witnesses', { rotationTo: [hs.epoch, hs.sn, hs.sn + 1] }, 'a witnessed rotation from exactly the key state the leaf holds, later than its sequence');
-      else ev('kli rotate: sn ' + sn + ' → ' + (sn + 1) + ', receipted by the witnesses', { rotationTo: [e, sn, sn + 1] }, 'a valid witnessed rotation from the current keys');
-      ev('my next keys sign: keep the bonds, refund address → 1 (Alice)', { intentAuthorized: [e + 1, 'keep', 1] }, 'the keys the rotation reveals sign the intent and the address (D-038)');
-      ev('my next keys sign: deposit (unfreeze)', { intentAuthorized: [e + 1, 'deposit', null] }, 'the keys the rotation reveals sign the deposit (D-038)');
-      ev('my next keys sign: leave, premium to me', { intentAuthorized: [e + 1, closeIntent(1), null] }, 'the keys the rotation reveals sign the close, its payee and the address (D-036, D-038, D-039)');
-      ev('my next keys sign: leave, premium to Hal', { intentAuthorized: [e + 1, closeIntent(2), null] }, 'the reap can be landed by a hunter: the message names who is paid');
-      ev('key holders sign at threshold (quorum, epoch ' + e + ')', { quorum: [e] }, 'the current quorum signs a Cardano-side preimage');
-      act('rotate', 'land my rotation, keep the bonds', { rotate: { "sn'": sn2, op: 'keep', payee: 1, "refund'": null } });
-      act('rotate', 'land my rotation, deposit (unfreeze; on full bonds a keep)', { rotate: { "sn'": sn2, op: 'deposit', payee: 1, "refund'": null } });
-      act('poison', 'poison this epoch', 'poison');
-      act('close', 'leave: my rotation as the reap — the premium to me, everything else to my refund address, the token burned, the leaf parked with the hash', { close: { "sn'": sn2, payee: 1, "refund'": null } });
-      act('topUp', 'add to my pool', { topUp: { x: 5 } });
-      act('register', 'register my inception (refund to me)', { register: { refund: 1, pool0: 10 } });
-      act('reopen', 'revive my parked identity with a rotation from its key state (refund to me)', { reopen: { "sn'": reopenSn(sess), refund: 1, pool0: 10 } });
-      break;
-    case 'hal':
-      act('rotate', 'land Alice’s rotation, paid P to Hal', { rotate: { "sn'": sn2, op: 'keep', payee: 2, "refund'": null } });
-      act('close', 'land her reap, paid P to Hal (needs her signed message naming me)', { close: { "sn'": sn2, payee: 2, "refund'": null } });
-      act('freeze', 'freeze her on the old keys, take B', { freeze: { "sn'": sn2, payee: 2 } });
-      act('reopen', 'revive her from the registry with her later public rotation (refund to Alice)', { reopen: { "sn'": reopenSn(sess), refund: 1, pool0: 10 } });
-      break;
-    case 'cora':
-      ev('obtain a second receipted rotation at sequence ' + ksn + (hs ? ' (the parked key state)' : ''), { duplicityAt: [ke, ksn] }, 'two rotations at the key state’s sequence, both receipted');
-      act('convict', hs ? 'convict the parked identity: the mark, nothing to seize' : 'convict, D to Cora', { convict: { payee: 3 } });
-      break;
-    case 'mallory':
-      ev('steal the current keys (sign as quorum, epoch ' + ke + ')', { quorum: [ke] }, 'with the current keys she signs at threshold');
-      ev('steal the next keys too (rotate ' + ksn + ' → ' + (ksn + 1) + ')', { rotationTo: [ke, ksn, ksn + 1] }, 'control by KERI’s own rule');
-      act('poison', 'poison with the stolen keys', 'poison');
-      act('close', 'reap with the stolen keys, premium to Mallory: the bonds still go to Alice’s refund address', { close: { "sn'": sn2, payee: 4, "refund'": null } });
-      act('close', 'copy Hal’s reap with myself as payee', { close: { "sn'": sn2, payee: 4, "refund'": null } });
-      ev('forge the close message with the stolen next keys (payee Mallory)', { intentAuthorized: [ke + 1, closeIntent(4), null] }, 'with the next keys she can sign the message too');
-      act('rotate', 'rotate with the stolen next keys, paid to Mallory', { rotate: { "sn'": sn2, op: 'keep', payee: 4, "refund'": null } });
-      act('register', 'register Alice’s inception myself, at an epoch whose keys I hold (refund to Mallory)', { register: { refund: 4, pool0: 10 } });
-      act('reopen', 'revive her parked identity to myself (needs a rotation from the parked key state)', { reopen: { "sn'": reopenSn(sess), refund: 4, pool0: 10 } });
-      break;
-    case 'anyone':
-      act('register', 'register her inception for her (refund to Alice)', { register: { refund: 1, pool0: 10 } });
-      act('register', 'register her inception, refund to myself (a donation at her first rotation)', { register: { refund: 6, pool0: 10 } });
-      act('topUp', 'top up her pool', { topUp: { x: 5 } });
-      act('reopen', 'revive her parked identity for her (refund to Alice)', { reopen: { "sn'": reopenSn(sess), refund: 1, pool0: 10 } });
-      break;
-  }
-  return { keri, chain };
-}
-function dryRun(sess, action) {
-  const r = step(sess.params, sess.env, action, sess.now, sess.state);
-  if (r.ok) return { ok: true, res: r };
-  const rec = { ok: false, reason: r.reason, field: r.field, kind: actionKind(action), action, pre: sess.state, slot: sess.now, now: sess.now };
-  return { ok: false, res: r, why: explain(rec, sess) };
-}
+/* ---- free play: offers and dry-run come from the generated backend slice ---- */
 // the data record of an action; {} for an action that is not a Lean action
 const dataOf = a => { const k = actionKind(a); return (a && typeof a === 'object' && a[k] && typeof a[k] === 'object') ? a[k] : {}; };
 function describeAction(a) {
@@ -1164,7 +1404,7 @@ function renderNext() {
   let folded = 0;
   for (const id of ACTOR_ORDER) {
     const c = CAST[id];
-    const off = offersFor(id, sess);
+    const off = offersFor(id, currentTree());
     const isSpot = spotActor === id;
     const fold = !!spotActor && !isSpot && !app.unfold;
     if (fold) folded++;
@@ -1173,7 +1413,7 @@ function renderNext() {
     card.append(h('div', { class: 'interest' }, INTEREST[id]));
     const acts = h('div', { class: 'acts' });
     for (const o of off.chain) {
-      const d = dryRun(sess, o.action);
+      const d = dryRun(currentTree(), o.action);
       const needs = needsOf(o.action);
       const glow = isSpot && d.ok && o.kind === spotKind && (spotOp === null || (o.action.rotate && o.action.rotate.op === spotOp));
       const btn = h('button', { type: 'button', class: 'act' + (app.pending && app.pending.offer === o ? ' on' : '') + (glow ? ' glow' : ''), dataset: { kind: o.kind, actor: id }, disabled: !d.ok,
@@ -1188,7 +1428,7 @@ function renderNext() {
       if (!invLabelled) { acts.append(h('span', { class: 'inv-lbl' }, 'inventory · off-chain, not a transaction: what ' + c.name + ' can bring')); invLabelled = true; }
       const glowEv = isSpot && spotEv !== null && canon(k.row) === spotEv;
       acts.append(h('button', { type: 'button', class: 'ev-quick' + (glowEv ? ' glow' : ''), dataset: { actor: id }, title: k.hint,
-        onclick: () => { app.actor = id; pushNode({ session: addEvidence(sess, k.row), record: null, who: WHO[id] || id, say: k.label + '.', kind: 'evidence', evRow: k.row }); } }, '+ ' + k.label));
+        onclick: () => { app.actor = id; adoptTree(treeAddEvidence(currentTree(), k.row).tree, true); render(); } }, '+ ' + k.label));
     }
     if (id === 'treasury') acts.append(h('span', { class: 'none' }, 'reads, never spends: its verdict is the lamp above'));
     else if (!acts.children.length) acts.append(h('span', { class: 'none' }, 'nothing the machine accepts from here'));
@@ -1270,13 +1510,13 @@ function renderCast() {
     act.append(h('button', { type: 'button', class: 'actor' + (id === app.actor ? ' on' : ''), dataset: { actor: id }, onclick: () => { app.actor = id; app.pending = null; render(); } }, c.name + ' · ' + c.role));
   }
   $('actor-blurb').textContent = CAST[app.actor].blurb + (CAST[app.actor].addr ? ` Address ${CAST[app.actor].addr}.` : '');
-  const off = offersFor(app.actor, sess);
+  const off = offersFor(app.actor, currentTree());
   const ka = clear($('keri-acts'));
   $('keri-lbl').hidden = !off.keri.length;
   for (const k of off.keri) {
     const have = envHas(sess.env, Object.keys(k.row)[0], k.row[Object.keys(k.row)[0]]);
     ka.append(h('button', { type: 'button', class: 'ev-quick', title: k.hint, disabled: have || stateKind(sess.state) === 'convicted',
-      onclick: () => pushNode({ session: addEvidence(sess, k.row), record: null, who: WHO[app.actor] || app.actor, say: k.label + '.', kind: 'evidence', evRow: k.row }) }, (have ? '✓ ' : '+ ') + k.label));
+      onclick: () => { adoptTree(treeAddEvidence(currentTree(), k.row).tree, true); render(); } }, (have ? '✓ ' : '+ ') + k.label));
   }
 }
 const FIELDS = {
@@ -1301,18 +1541,17 @@ function renderActForm() {
       onchange: e => { const v = e.target.value.trim(); const n = parseNat(v); d[f] = v === '' ? (f === "refund'" ? null : '') : (n === null ? v : n); renderActForm(); } });
     fields.append(h('label', {}, label, input));
   }
-  const dr = dryRun(sess, a);
+  const dr = dryRun(currentTree(), a);
   const why = $('act-why'); why.className = dr.ok ? 'ok' : 'no';
   why.textContent = dr.ok ? ('Accepted now: ' + describeFlow(dr.res.flow) + '.') : dr.why;
   $('act-submit').disabled = !dr.ok;
 }
 function submitPending() {
   if (!app.pending) return;
-  const sess = cur();
-  const out = attempt(sess, app.pending.action, sess.now);
   const action = app.pending.action;
   app.pending = null;
-  pushNode({ session: out.session, record: out.record, who: WHO[app.actor] || app.actor, say: describeAction(action) + ' at slot ' + sess.now + '.', kind: 'free' });
+  adoptTree(submit(currentTree(), app.actor, action).tree, true);
+  render();
 }
 const EV_LABELS = { rotationTo: ['epoch', 'from sn', "to sn'"], intentAuthorized: ['epoch', null, 'refund address (blank = unchanged)'], quorum: ['epoch', null, null], duplicityAt: ['epoch', 'sn', null] };
 function renderEvidence() {
@@ -1328,7 +1567,7 @@ function renderEvidence() {
   for (const k of EV_KINDS) for (const r of sess.env[k]) {
     n++;
     rows.append(h('div', { class: 'ev-row' }, h('span', { class: 'k' }, k), h('span', {}, words[k](r)),
-      h('button', { type: 'button', class: 'ev-rm', title: 'remove this evidence', onclick: () => pushNode({ session: removeEvidence(sess, { [k]: r }), record: null, who: 'You', say: 'Evidence removed: ' + words[k](r) + '.', kind: 'evidence', evRow: { [k]: r }, removed: true }) }, '✕')));
+      h('button', { type: 'button', class: 'ev-rm', title: 'remove this evidence', onclick: () => { adoptTree(treeRemoveEvidence(currentTree(), { [k]: r }).tree, true); render(); } }, '✕')));
   }
   if (!n) rows.append(h('div', { class: 'empty' }, 'No evidence presented. Rotations, quorum signatures and duplicity proofs are rows here; the machine is enabled exactly when its row is present.'));
 }
@@ -1347,17 +1586,19 @@ function addEvidenceFromForm() {
     args = vals.slice(0, n);
     if (!args.every(isNat)) { $('slot-msg').textContent = 'evidence fields must be whole numbers from 0 to 2^53 − 1'; return; }
   }
-  const sess = cur();
-  pushNode({ session: addEvidence(sess, { [kind]: args }), record: null, who: 'You', say: `Evidence added: ${kind} ${JSON.stringify(args)}.`, kind: 'evidence', evRow: { [kind]: args } });
+  adoptTree(treeAddEvidence(currentTree(), { [kind]: args }).tree, true);
+  render();
 }
-function moveSlot(target) {
+const _moveSlot = moveSlot;
+moveSlot = function(target) {
   const sess = cur();
-  const mv = setSlot(sess, target);
+  const mv = _moveSlot(currentTree(), target);
   if (!mv.ok) { $('slot-msg').textContent = mv.reason === 'slot-regression' ? `slot ${target} is before ${sess.now}: the chain does not go backwards` : 'slot must be a non-negative integer'; $('slot-input').value = fmt(sess.now); return; }
   $('slot-msg').textContent = '';
-  if (target === sess.now) return;
-  pushNode({ session: mv.session, record: null, who: 'Time', say: `Slot ${target}.`, kind: 'time' });
-}
+  if (mv.tree.nodes.length === app.nodes.length) return;
+  adoptTree(mv.tree, true);
+  render();
+};
 
 /* ---- the chart: three lanes over the current branch --------------------------- */
 function renderChart() {
@@ -1480,15 +1721,14 @@ const CHALLENGES = {
     env: [{ rotationTo: [0, 0, 1] }, { rotationTo: [1, 1, 2] }, { rotationTo: [2, 2, 3] }],
     won: () => { const b = balancesAlong(pathTo(app.cursor).map(node))[CAST.mallory.addr]; return !!(b && b.dreg > 0); },
     why: 'D leaves the checkpoint only whole: to the refund address at the reap — which the keys the rotation reveals must sign, naming the payee of the premium and the address, so a copied reap gets you the 2 at most, and only if Alice named you — or to a convictor holding a duplicity proof: two rotations Alice’s own keys signed at one sequence. Without her keys there is no road to the 1000. With her current keys the one road is to make her duplicitous — and that seals the identity for good (T6b, T12, T16).' } };
-function playChallenge(id) {
+const _playChallenge = playChallenge;
+playChallenge = function(id) {
   const c = CHALLENGES[id]; if (!c) { startFresh(); render(); return; }
-  let sess = newSession(DEFAULT_PARAMS, { corpus: LEAN_CORPUS });
-  for (const r of c.env) sess = addEvidence(sess, r);
-  newTree(sess, 'Nothing on chain for this AID. ★ ' + c.title + ': every move below is yours to try.');
-  app.story = null; app.punch = null; app.challenge = c; app.pastPunch = false; app.actor = c.actor; app.wonShown = false;
+  adoptTree(_playChallenge(id));
+  app.story = null; app.challenge = c; app.pastPunch = false; app.actor = c.actor; app.wonShown = false;
   if ($('pots')) $('pots').open = false;
   render();
-}
+};
 function renderChallenge() {
   const box = $('challenge'); if (!box) return;
   const c = app.challenge; box.hidden = !c; if (!c) return;
@@ -1499,37 +1739,22 @@ function renderChallenge() {
   box.append(h('details', { open: won || undefined }, h('summary', {}, won ? 'how it was possible' : 'give up: why the 1000 will not move'), h('div', {}, c.why)));
   if (won && !app.wonShown) { app.wonShown = true; toast('★ The 1000 is in Mallory’s wallet — read how, and what it cost.', 5000); }
 }
-function playStory(n) {
-  const sc = SCENARIOS.find(x => String(x.story) === String(n));
-  if (!sc) { startFresh(); render(); return; }
-  playLoadedScenario(sc);
-}
-function playLoadedScenario(sc) {
-  const r = checkScenario(sc, 'story ' + sc.story, LEAN_CORPUS);
-  app.story = sc;
-  newTree(newSession(sc.params, { corpus: LEAN_CORPUS }), 'Nothing on chain for this AID. Step through the story with › ; ⋔ chips switch branch.');
-  const entry = (t, extra) => ({ session: t.session, record: t.record, who: WHO[t.step.who] || t.step.who, say: t.step.say + (t.step.slot !== undefined ? ` (slot ${t.step.slot})` : ''),
-    kind: t.record ? 'story' : (t.step.evidence ? 'evidence' : 'time'), step: t.step, evRow: t.step.evidence && t.step.evidence.add ? t.step.evidence.add[0] : null, ...extra });
-  const trunkIds = [0];
-  let pid = 0;
-  for (const t of r.timeline) { if (t.step.hidden) { trunkIds.push(pid); continue; } pid = addChild(pid, entry(t)); trunkIds.push(pid); }
-  // the punchline: the story's own choice, else the last accepted move of the trunk
-  app.punch = Number.isInteger(sc.punchline) && trunkIds[sc.punchline + 1] !== undefined ? trunkIds[sc.punchline + 1] : null;
-  if (app.punch === null) for (const id of trunkIds) if (node(id).record && node(id).record.ok) app.punch = id;
+const _playStory = playStory;
+const _playLoadedScenario = playLoadedScenario;
+playStory = function(n) {
+  adoptTree(_playStory(n));
+  app.story = SCENARIOS.find(x => String(x.story) === String(n)) || app.story;
   app.challenge = null; app.pastPunch = false;
   if ($('pots')) $('pots').open = false;
-  for (const fk of r.forks) {
-    let fid = trunkIds[fk.at + 1];
-    fk.timeline.forEach((t, i) => { fid = addChild(fid, entry(t, i === 0 ? { branch: { id: fk.id, title: fk.title } } : {})); });
-  }
-  // the trunk is the branch taken by default; its end is an ending (NOTE-003):
-  // › and ⇥ stop there, and a fork off the end is entered through its chip
-  for (let i = 0; i + 1 < trunkIds.length; i++) node(trunkIds[i]).last = trunkIds[i + 1];
-  { const end = node(trunkIds[trunkIds.length - 1]); end.trunkEnd = true; end.last = null; }
-  app.cursor = 0; app.pending = null;
-  if (r.problems.length) node(0).say = 'This story does not play as written: ' + r.problems.join(' · ');
   render();
-}
+};
+playLoadedScenario = function(sc) {
+  adoptTree(_playLoadedScenario(sc));
+  app.story = sc; app.challenge = null; app.pastPunch = false;
+  if ($('pots')) $('pots').open = false;
+  render();
+};
+window.playLoadedScenario = playLoadedScenario;
 function stopPlay() { if (app.playing) { clearInterval(app.playing); app.playing = null; } }
 function togglePlay() {
   if (app.playing) { stopPlay(); renderPlaybar(); return; }

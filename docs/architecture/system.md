@@ -16,7 +16,7 @@ later work.
 |---|---|---|
 | Identity checkpoint | Project a KERI AID's current keys, thresholds, witnesses and sequence into a sovereign Cardano UTxO | Register, close and advance settled on preprod; the enforcement economy settled on a devnet only |
 | The M1 return machine | Poison, three value components, the hunter's premium and freeze, terminal conviction, close by the next keys, reopen | Proved in Lean, playable in the simulator, no on-chain code — epics #322–#323 |
-| Registry | One incarnation per AID, ever | Designed; upstream MPFS work — epics U1, U2, #324 |
+| Registry | One incarnation per AID, ever | Designed; the permissionless cage runs on a development network in [singular](https://github.com/lambdasistemi/singular) (release v0.3.0); the keri leaf map and the registration policy are epic #324 |
 | Credential verification | Verify ACDC credential chains and TEL revocation state | Designed and prototyped; no settled vertical story |
 | Value authorization | Let an application gate a state change on a consumable checkpoint and credentials | Designed; not a shipped service |
 | Wallet bridge | Let KERI/Veridian software authorize Cardano actions | Planned; nobody's deliverable yet |

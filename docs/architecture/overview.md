@@ -188,9 +188,12 @@ Register, reopen, close and convict change the leaf; rotate, poison, freeze and 
 never touch it, and consumers never read it.
 
 It is a registry of 32-byte keys, not a record of events — the record tree and
-its cursor are retired. Its mechanics are upstream work: MPFS made
-permissionless, so requests are independent UTxOs anyone submits and anyone
-applies in batches (ruling D-037). A stalled registry delays registrations and
+its cursor are retired. Its mechanics are the MPFS cage made permissionless:
+requests are independent UTxOs anyone submits and anyone applies in batches
+(ruling D-037). It is built today in
+[singular](https://github.com/lambdasistemi/singular) and runs on a
+development network; what is delivered and what remains is on
+[where the registry is built](../design/registry-as-mpfs.md#where-the-registry-is-built). A stalled registry delays registrations and
 forges nothing.
 
 ## Transaction architecture

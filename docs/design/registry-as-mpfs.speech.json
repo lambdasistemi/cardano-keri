@@ -1,5 +1,34 @@
 {
   "why-a-cage-and-why-the-leaf-carries-state": [
-    {"text": "The registry records identity lifecycle state. Active identifies a checkpoint incarnation; dormant preserves the key state needed for revival; convicted is terminal. Active does not mean consumable. During a reap and fold handoff, a pending request can temporarily stand in for the checkpoint. Token and key-state integers in this model do not specify their concrete encoding.", "pause": 500}
+    {
+      "text": "The registry records identity lifecycle state. Active identifies a checkpoint incarnation; dormant preserves the key state needed for revival; convicted is terminal. Active does not mean consumable. During a reap and fold handoff, a pending request can temporarily stand in for the checkpoint. Token and key-state integers in this model do not specify their concrete encoding.",
+      "pause": 500
+    }
+  ],
+  "where-the-registry-is-built": [
+    {
+      "text": "The registry line moved from the Cardano Foundation MPFS repository to singular, and the two are in different states.",
+      "pause": 400
+    },
+    {
+      "text": "Singular is this cage made permissionless, running on a development network since release 0.3.0 of the eleventh of September 2026. A registration is a request certified by the application own minting policy. Anyone folds requests with absence and existence proofs. The fold mints exactly one representative token into the certified output. An insert on an occupied key is refused by the node. Its key states are absent, active, and a terminal retired state. Its consumer conformance suite is bound to this page and to the consumer checklist, forty one rows, leaving bonds, poison, the juvenility window and the signature threshold to the checkpoint machine.",
+      "pause": 500
+    },
+    {
+      "text": "One result every consumer must absorb: a permissionless ledger cannot prohibit a rival registry. Canonical identity is a derivation the consumer authenticates, the token name being the hash of the seed output it was booted from, not a refusal the chain performs.",
+      "pause": 500
+    },
+    {
+      "text": "A table lists the singular pages: the read me, the lifecycle page, the consumer conformance page, the recovery page, and the theorem manifest.",
+      "pause": 400
+    },
+    {
+      "text": "The MPFS repository has not moved since July. The four changes this page first asked of it are still open there. Singular imported that cage unchanged, so the divergences audited below hold of its cage partition too, and its conformance plan records four of them as expected gaps.",
+      "pause": 500
+    },
+    {
+      "text": "What is not settled: the leaf maps differ. This page has a dormant leaf holding the key state a revival must rotate from. Singular has absent, active, and retired, and its delete keeps no hash. How dormant and revive are expressed on singular is a design decision not yet taken. Cardano keri own side, the minting policy that certifies a registration and the consumer authentication of the canonical registry, is unstarted.",
+      "pause": 500
+    }
   ]
 }

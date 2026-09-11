@@ -13,13 +13,19 @@ checkpoint. It consumes the ACTIVE output, preserves its complete
 1,007-tADA value and singleton AID token, and writes the rotated keys and
 witness state at sequence plus one.
 
+The rotation is KERI's [rotation using pre-rotation](https://trustoverip.github.io/kswg-keri-specification/#rotation-using-pre-rotation):
+it reveals the keys committed at the previous event
+([rotation event body](https://trustoverip.github.io/kswg-keri-specification/#rotation-event-message-body)) and carries the
+witnesses' [receipts](https://trustoverip.github.io/kswg-keri-specification/#receipt-messages) up to `toad`.
+
 Start with a registered identity from
 [Register your identity](register-preprod-identity.md). The M1 reference
 journey uses five current and next KERI keys, threshold two, three witnesses,
 and witness threshold two.
 
 !!! tip "When in doubt, rotate — never interact"
-    A rotation supersedes an interaction event at the same sequence, because it
+    A rotation supersedes an interaction event at the same sequence
+    ([superseding recovery](https://trustoverip.github.io/kswg-keri-specification/#superseding-recovery)), because it
     proves possession of pre-committed keys. An interaction event only contests
     one. A controller who responds to any suspicion by rotating can never
     create an unresolvable conflict on their own history. See

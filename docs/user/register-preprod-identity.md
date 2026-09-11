@@ -14,6 +14,13 @@ checkpoint on Cardano preprod. It does not create, rotate, or store KERI keys:
 the controller remains sovereign and `ckeri` consumes only the CESR bytes from
 `kli export`.
 
+The export is KERI's [inception event body](https://trustoverip.github.io/kswg-keri-specification/#inception-event-message-body)
+and the AID it yields is a
+[self-certifying identifier](https://trustoverip.github.io/kswg-keri-specification/#self-certifying-identifier-scid). `--toad`
+below is the witness threshold ([witness designation](https://trustoverip.github.io/kswg-keri-specification/#witness-designation));
+an identity with `--toad 0` carries no receipts and is served at the
+consumer's risk.
+
 This M1 flow needs:
 
 - keripy 1.3.5 `kli`;

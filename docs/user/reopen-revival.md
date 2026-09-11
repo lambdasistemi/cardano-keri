@@ -21,7 +21,7 @@ state.
 A relayer with the public rotation cannot reap: the payee and the
 address are one message the new keys sign. Mallory holding only the
 stolen current keys cannot reap. Mallory holding the next keys *can*:
-that is control.
+that is control ([pre-rotation](https://trustoverip.github.io/kswg-keri-specification/#pre-rotation)).
 
 Parked is not gone. Nothing on chain but the leaf. Top-up, poison,
 freeze, rotate, register-again are all refused. Two ways out:
@@ -29,7 +29,7 @@ freeze, rotate, register-again are all refused. Two ways out:
 - **Revival.** A witnessed rotation later than the parked key state,
   with fresh bonds, a first pool, a refund address chosen by whoever
   pays, born juvenile. Replaying the close's own rotation is refused.
-- **Conviction.** A duplicity proof against the parked key state.
+- **Conviction.** A [duplicity](https://trustoverip.github.io/kswg-keri-specification/#duplicity) proof against the parked key state.
   Terminal. No value flows: there is no UTxO to seize.
 
 Coming back, the checkpoint is consumable only after the juvenility

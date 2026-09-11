@@ -10,7 +10,10 @@
 
 The treasury is a Cardano validator that authorizes a payment against
 Alice's current keys by reading her checkpoint as a CIP-31 reference
-input. It never writes the checkpoint. It never reads the registry.
+input. It never writes the checkpoint. It never reads the registry. What
+it reads is Alice's current key state as a KERI
+[validator](https://trustoverip.github.io/kswg-keri-specification/#validator) would establish it; the conditions below add
+Cardano-side rules on top and take none of KERI's away.
 
 Authorize **iff** all of these hold. Anything else fails closed.
 

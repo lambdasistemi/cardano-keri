@@ -422,44 +422,44 @@ observation record, and payment identified. Completing more theorems over an
 abstract duplicity predicate cannot substitute for that contract.
 
 [published]: https://trustoverip.github.io/kswg-keri-specification/
-[general-rotation]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md#L1483-L1497
-[advance-register]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/onchain/validators/checkpoint_register.ak#L625-L672
+[general-rotation]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md "lines 1483-1497"
+[advance-register]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/onchain/validators/checkpoint_register.ak "lines 625-672"
 [ledger-order]: https://cardano-ledger.cardano.intersectmbo.org/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#ledgersTransition
 [gist]: https://gist.github.com/paolino/23b7afb8a3eebecbf5d39d8e2c0dbbbb/9e7edd8b6afe7d237f77cb41a6659052f5933afd
 [whitepaper]: https://github.com/SmithSamuelM/Papers/blob/b47f2159779fa7dda19c40c509eb2fa0eea38ea5/whitepapers/KERI_WP_2.x.web.pdf
 [ietf]: https://datatracker.ietf.org/doc/html/draft-ssmith-keri-00#section-2
-[priority]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md#L1886-L1888
-[registry-context]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/lean/CardanoKeri/Registry.lean#L73-L113
-[advance-receipts]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/onchain/lib/cardano_keri/checkpoint/advance.ak#L217-L263
+[priority]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md "lines 1886-1888"
+[registry-context]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/lean/CardanoKeri/Registry.lean "lines 73-113"
+[advance-receipts]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/onchain/lib/cardano_keri/checkpoint/advance.ak "lines 217-263"
 [spec]: https://github.com/trustoverip/kswg-keri-specification/tree/fbdd4a6155e48248873cccd5cf6f79b6b631a021
 [copyright]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/COPYRIGHT_POLICY.md
-[overview]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md#L39-L53
-[validation]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md#L1733-L1744
-[roles]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md#L1768-L1782
-[first-seen]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md#L1784-L1799
-[recovery]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md#L1802-L1827
-[choice]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md#L1838-L1844
-[witness-policy]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md#L1852-L1858
-[availability]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md#L1864-L1874
-[dead-exploit]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md#L1876-L1882
+[overview]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md "lines 39-53"
+[validation]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md "lines 1733-1744"
+[roles]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md "lines 1768-1782"
+[first-seen]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md "lines 1784-1799"
+[recovery]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md "lines 1802-1827"
+[choice]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md "lines 1838-1844"
+[witness-policy]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md "lines 1852-1858"
+[availability]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md "lines 1864-1874"
+[dead-exploit]: https://github.com/trustoverip/kswg-keri-specification/blob/fbdd4a6155e48248873cccd5cf6f79b6b631a021/spec/spec-body.md "lines 1876-1882"
 [candidate]: https://github.com/lambdasistemi/cardano-keri/tree/811843b313d9005923ba205e86d7a3afa6fb3d0d
-[predicate]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/onchain/lib/cardano_keri/checkpoint/enforcement.ak#L217-L266
-[observer]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/onchain/lib/cardano_keri/checkpoint/enforcement_observer.ak#L100-L128
-[datum]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/onchain/lib/cardano_keri/checkpoint/datum.ak#L35-L47
-[environment]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/lean/CardanoKeri/Checkpoint.lean#L130-L150
-[settlement]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/lean/CardanoKeri/Checkpoint.lean#L525-L534
-[history]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/lean/CardanoKeri/Statements/History.lean#L76-L177
-[gate]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/lean/CardanoKeri/Statements/Credential.lean#L230-L239
-[mirror]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/lean/CardanoKeri/Statements/Mirror.lean#L87-L150
-[firstseen-prose]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/docs/design/key-compromise.md#L72-L108
-[terminal-prose]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/docs/design/trust-model.md#L16-L32
-[conviction-prose]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/docs/design/key-compromise.md#L191-L202
-[branch-binding]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/docs/design/credential-verification.md#L133-L161
+[predicate]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/onchain/lib/cardano_keri/checkpoint/enforcement.ak "lines 217-266"
+[observer]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/onchain/lib/cardano_keri/checkpoint/enforcement_observer.ak "lines 100-128"
+[datum]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/onchain/lib/cardano_keri/checkpoint/datum.ak "lines 35-47"
+[environment]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/lean/CardanoKeri/Checkpoint.lean "lines 130-150"
+[settlement]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/lean/CardanoKeri/Checkpoint.lean "lines 525-534"
+[history]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/lean/CardanoKeri/Statements/History.lean "lines 76-177"
+[gate]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/lean/CardanoKeri/Statements/Credential.lean "lines 230-239"
+[mirror]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/lean/CardanoKeri/Statements/Mirror.lean "lines 87-150"
+[firstseen-prose]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/docs/design/key-compromise.md "lines 72-108"
+[terminal-prose]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/docs/design/trust-model.md "lines 16-32"
+[conviction-prose]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/docs/design/key-compromise.md "lines 191-202"
+[branch-binding]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/docs/design/credential-verification.md "lines 133-161"
 [hunter]: https://github.com/lambdasistemi/cardano-keri/blob/811843b313d9005923ba205e86d7a3afa6fb3d0d/docs/design/super-watcher.md
 [keripy]: https://github.com/WebOfTrust/keripy/tree/1a7d68a1fcf487f8c40d8d57031e2ac3d6b3b738
-[keripy-events]: https://github.com/WebOfTrust/keripy/blob/1a7d68a1fcf487f8c40d8d57031e2ac3d6b3b738/src/keri/core/eventing.py#L4325-L4441
-[keripy-escrow]: https://github.com/WebOfTrust/keripy/blob/1a7d68a1fcf487f8c40d8d57031e2ac3d6b3b738/src/keri/core/eventing.py#L5791-L5839
-[keripy-retry]: https://github.com/WebOfTrust/keripy/blob/1a7d68a1fcf487f8c40d8d57031e2ac3d6b3b738/src/keri/core/eventing.py#L7366-L7490
-[keripy-placeholder]: https://github.com/WebOfTrust/keripy/blob/1a7d68a1fcf487f8c40d8d57031e2ac3d6b3b738/src/keri/core/eventing.py#L7491-L7503
-[keripy-db]: https://github.com/WebOfTrust/keripy/blob/1a7d68a1fcf487f8c40d8d57031e2ac3d6b3b738/src/keri/db/basing.py#L184-L363
-[keripy-watch]: https://github.com/WebOfTrust/keripy/blob/1a7d68a1fcf487f8c40d8d57031e2ac3d6b3b738/src/keri/app/watching.py#L80-L160
+[keripy-events]: https://github.com/WebOfTrust/keripy/blob/1a7d68a1fcf487f8c40d8d57031e2ac3d6b3b738/src/keri/core/eventing.py "lines 4325-4441"
+[keripy-escrow]: https://github.com/WebOfTrust/keripy/blob/1a7d68a1fcf487f8c40d8d57031e2ac3d6b3b738/src/keri/core/eventing.py "lines 5791-5839"
+[keripy-retry]: https://github.com/WebOfTrust/keripy/blob/1a7d68a1fcf487f8c40d8d57031e2ac3d6b3b738/src/keri/core/eventing.py "lines 7366-7490"
+[keripy-placeholder]: https://github.com/WebOfTrust/keripy/blob/1a7d68a1fcf487f8c40d8d57031e2ac3d6b3b738/src/keri/core/eventing.py "lines 7491-7503"
+[keripy-db]: https://github.com/WebOfTrust/keripy/blob/1a7d68a1fcf487f8c40d8d57031e2ac3d6b3b738/src/keri/db/basing.py "lines 184-363"
+[keripy-watch]: https://github.com/WebOfTrust/keripy/blob/1a7d68a1fcf487f8c40d8d57031e2ac3d6b3b738/src/keri/app/watching.py "lines 80-160"

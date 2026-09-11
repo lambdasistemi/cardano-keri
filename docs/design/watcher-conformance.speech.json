@@ -1,6 +1,7 @@
 {
   "_source": {
-    "sha256": "c3cd8970ab35f3073d5368544cb4bf7fd8679f613d8cb9b5fa997dc05c40d5af"
+    "file": "watcher-conformance.md",
+    "sha256": "0ce77c11807a3ece1d6bfbfe05ca7c317e0099b5a904cfdbf96eddd15b2c813a"
   },
   "the-consumer-story": [
     {
@@ -44,7 +45,7 @@
   ],
   "verification-and-limits": [
     {
-      "text": "The original thirty-one enforcement tests passed and a receipt-guard mutation caused two intended failures. Eight later model checks examined the gist\u2019s payoff and dormant-conviction claims. Twelve further checks exercised rapid rotation and close escape. No new theorem proofs or full same-block attack transaction were supplied, and proposed cooldown or bounded-retention designs remain unimplemented."
+      "text": "The original thirty-one enforcement tests passed and a receipt-guard mutation caused two intended failures. Eight later model checks examined the gist’s payoff and dormant-conviction claims. Twelve further checks exercised rapid rotation and close escape. No new theorem proofs or full same-block attack transaction were supplied, and proposed cooldown or bounded-retention designs remain unimplemented."
     }
   ],
   "documentation-corrections-to-carry-forward": [
@@ -59,12 +60,12 @@
   ],
   "agreements-and-corrections": [
     {
-      "text": "Dormant conviction has no policy expiry in the model. Low witness thresholds can admit disjoint honest quorums. But checking one witness set is not always stricter than checking another. A losing attacker may earn a conviction bounty without the next keys required for close. Sponsorship also defeats the assumption that self-conviction merely returns the issuer\u2019s own funds. Concrete dormant commitment encoding remains a refinement obligation, not an established deployed exploit."
+      "text": "Dormant conviction has no policy expiry in the model. Low witness thresholds can admit disjoint honest quorums. But checking one witness set is not always stricter than checking another. A losing attacker may earn a conviction bounty without the next keys required for close. Sponsorship also defeats the assumption that self-conviction merely returns the issuer’s own funds. Concrete dormant commitment encoding remains a refinement obligation, not an established deployed exploit."
     }
   ],
   "pin-the-specification-profile": [
     {
-      "text": "The gist mixes an expired Internet Draft, the whitepaper, and the current specification. Their event-location terminology must remain versioned. Receipt checks need to distinguish the previous set, the accepted branch\u2019s set, and the rival branch\u2019s set. Quorum intersection depends on an assumed bound on faulty witnesses; observing a threshold does not establish that bound."
+      "text": "The gist mixes an expired Internet Draft, the whitepaper, and the current specification. Their event-location terminology must remain versioned. Receipt checks need to distinguish the previous set, the accepted branch’s set, and the rival branch’s set. Quorum intersection depends on an assumed bound on faulty witnesses; observing a threshold does not establish that bound."
     }
   ],
   "executed-cross-checks-and-remaining-obligations": [

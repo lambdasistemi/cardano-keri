@@ -1,0 +1,12 @@
+{"case":"pool_0_rival_convicts_before_advance","pass":true,"result":[{"bIn":0,"convictor":{"addr":11,"b":0,"dreg":1000,"pool":0},"dregIn":0,"hunter":null,"poolIn":0,"refund":{"addr":11,"b":5,"dreg":0,"pool":0}},"convicted"]}
+{"case":"pool_0_second_rotation_same_time","pass":true,"result":[{"bIn":0,"convictor":null,"dregIn":0,"hunter":null,"poolIn":0,"refund":null},{"present":{"l":{"bornAt":0,"epoch":2,"frozen":false,"poisoned":false,"pool":0,"refundTo":11,"sn":2}}}]}
+{"case":"pool_0_old_rival_refused_after_second_rotation","pass":true,"result":null}
+{"case":"pool_0_close_same_time","pass":true,"result":[{"bIn":0,"convictor":null,"dregIn":0,"hunter":null,"poolIn":0,"refund":{"addr":99,"b":5,"dreg":1000,"pool":0}},{"parked":{"h":{"epoch":2,"sn":2}}}]}
+{"case":"pool_0_old_rival_refused_after_close","pass":true,"result":null}
+{"case":"pool_0_rotation_keeps_mature_checkpoint_consumable","pass":true}
+{"case":"pool_4_rival_convicts_before_advance","pass":true,"result":[{"bIn":0,"convictor":{"addr":11,"b":0,"dreg":1000,"pool":0},"dregIn":0,"hunter":null,"poolIn":0,"refund":{"addr":11,"b":5,"dreg":0,"pool":2}},"convicted"]}
+{"case":"pool_4_second_rotation_same_time","pass":true,"result":[{"bIn":0,"convictor":null,"dregIn":0,"hunter":{"addr":99,"b":0,"dreg":0,"pool":2},"poolIn":0,"refund":null},{"present":{"l":{"bornAt":0,"epoch":2,"frozen":false,"poisoned":false,"pool":0,"refundTo":11,"sn":2}}}]}
+{"case":"pool_4_old_rival_refused_after_second_rotation","pass":true,"result":null}
+{"case":"pool_4_close_same_time","pass":true,"result":[{"bIn":0,"convictor":null,"dregIn":0,"hunter":{"addr":99,"b":0,"dreg":0,"pool":2},"poolIn":0,"refund":{"addr":99,"b":5,"dreg":1000,"pool":0}},{"parked":{"h":{"epoch":2,"sn":2}}}]}
+{"case":"pool_4_old_rival_refused_after_close","pass":true,"result":null}
+{"case":"pool_4_rotation_keeps_mature_checkpoint_consumable","pass":true}

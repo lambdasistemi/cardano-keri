@@ -1,0 +1,34 @@
+{
+  "date": "2026-09-11",
+  "candidate": "811843b313d9005923ba205e86d7a3afa6fb3d0d",
+  "scope": "Reachable rapid-rotation and close escape in the current lifecycle model",
+  "lean_version": "4.27.0",
+  "module_source_sha256": "f5dea750f9de2e5737d288eef73371cefd1b4217c5609468ddcdff4967ae001f",
+  "command": "LEAN_PATH=<compiled-module-directory> lean --run EscapeProbe.lean",
+  "module_build_provenance": "gist-crosscheck-manifest.json",
+  "exit_code": 0,
+  "checks": 12,
+  "passed": 12,
+  "artifacts_sha256": {
+    "EscapeProbe.lean": "f5617e0d7726c777d2ef1e55ecdfb0450cf9cf75c33802a758acc789cde05a0b",
+    "escape-probes.jsonl": "e9b0e2b02a784bab669cb82753e533bef04a66c59af37c9c37717bf9141a0fc4"
+  },
+  "source_files_sha256": {
+    "onchain/validators/checkpoint_register.ak": "9a3b526c2039cd18b9d961841ec8c07e42e7737294b2b0c31058a5d102037e83",
+    "onchain/lib/cardano_keri/checkpoint/enforcement.ak": "6fd6a2315b5d368e0ae70262a9754c55da0117c792888cddef14154aa3b4d605",
+    "lean/CardanoKeri/Checkpoint.lean": "f5dea750f9de2e5737d288eef73371cefd1b4217c5609468ddcdff4967ae001f"
+  },
+  "observations": [
+    "Two successive rotations at identical model time are admitted with empty and funded pools",
+    "A close at the same time as the preceding rotation also advances the target",
+    "Evidence for the earlier tip is refused after either path",
+    "A mature checkpoint remains consumable after rotation"
+  ],
+  "limits": [
+    "Evidence predicates assume cryptographic capabilities",
+    "No complete same-block transaction bundle executed",
+    "No cooldown implemented or tested",
+    "No bounded challenge-retention design implemented or tested",
+    "No signing ceremony duration established"
+  ]
+}

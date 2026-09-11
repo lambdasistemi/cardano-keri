@@ -1,0 +1,13 @@
+diff --git a/onchain/lib/cardano_keri/checkpoint/enforcement.ak b/onchain/lib/cardano_keri/checkpoint/enforcement.ak
+index 6604b85..7b487ab 100644
+--- a/onchain/lib/cardano_keri/checkpoint/enforcement.ak
++++ b/onchain/lib/cardano_keri/checkpoint/enforcement.ak
+@@ -244,7 +244,7 @@ pub fn convict_predicate(
+     tip.witnesses,
+     evidence.event_bytes,
+     evidence.wit_sigs,
+-  ) < tip.toad {
++  ) < 0 {
+     // step 4: witnessed anti-fork gate — the conflicting event must carry at
+     // least `toad` verifying witness receipts (toad=0 is the vacuous
+     // witnessless tier). Reuses the freeze predicate's receipt count.

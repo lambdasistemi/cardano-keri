@@ -69,7 +69,8 @@ family on 2026-08-11. Where a corollary and the accepted Lean model disagree,
 the Lean governs (principle VII) and the disagreement is an escalation under
 principle VIII, never a silent edit of either. The first such escalation, the
 convicted registry leaf against "no tombstones, ever", is entry 1 of the
-[Lean correspondence register](https://github.com/lambdasistemi/cardano-keri/issues/435).
+[Lean correspondence register](https://github.com/lambdasistemi/cardano-keri/issues/435);
+it was ruled on 2026-09-11 and produced the amended corollary below.
 
 The chain projects the KEL; it never originates identity state. Every
 identity-state fact written on chain must have a key-event preimage:

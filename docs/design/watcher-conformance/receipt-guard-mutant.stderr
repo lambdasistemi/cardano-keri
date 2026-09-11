@@ -1,0 +1,6 @@
+    Compiling lambdasistemi/cardano-keri 0.0.0 (.)
+    Compiling aiken-lang/stdlib v2.2.0 (./build/packages/aiken-lang-stdlib)
+    Compiling cardano-foundation/cardano-mpfs-onchain v0.1.0 (./build/packages/cardano-foundation-cardano-mpfs-onchain)
+    Compiling aiken-lang/merkle-patricia-forestry v2.1.0 (./build/packages/aiken-lang-merkle-patricia-forestry)
+   Collecting all tests scenarios within module(s): *cardano_keri/checkpoint/enforcement_tests*
+      Testing ...

@@ -1,0 +1,58 @@
+{
+  "date": "2026-09-11",
+  "candidate": "811843b313d9005923ba205e86d7a3afa6fb3d0d",
+  "gist": {
+    "url": "https://gist.github.com/paolino/23b7afb8a3eebecbf5d39d8e2c0dbbbb",
+    "revision": "9e7edd8b6afe7d237f77cb41a6659052f5933afd",
+    "updated_at": "2026-09-11T07:38:22Z",
+    "filename": "duplicity-spec-vs-incentives-2026-09-11.md",
+    "raw_url": "https://gist.githubusercontent.com/paolino/23b7afb8a3eebecbf5d39d8e2c0dbbbb/raw/dd3cc55cfe40d7f98c2404d0bffd428af04655c5/duplicity-spec-vs-incentives-2026-09-11.md",
+    "size_bytes": 17002,
+    "sha256": "f9bd05ea2a4ee7176ab399c111b4f753063bb802df60c59244d8f88f2787fcd6",
+    "truncated": false
+  },
+  "whitepaper": {
+    "url": "https://github.com/SmithSamuelM/Papers/blob/b47f2159779fa7dda19c40c509eb2fa0eea38ea5/whitepapers/KERI_WP_2.x.web.pdf",
+    "repository_commit": "b47f2159779fa7dda19c40c509eb2fa0eea38ea5",
+    "cover_version": "v2.63 2025/09/14",
+    "sha256": "4a7d9845106c7a8a622732c37405f078558eeb71ad6a4efece7396688376bc83",
+    "clauses": [
+      "11.2",
+      "11.4.2 equation 11.16",
+      "11.5",
+      "11.5.1",
+      "11.5.2"
+    ],
+    "text_extractor": "poppler-utils 26.06.0"
+  },
+  "specification_commit": "fbdd4a6155e48248873cccd5cf6f79b6b631a021",
+  "ietf_reference": "https://datatracker.ietf.org/doc/html/draft-ssmith-keri-00",
+  "lean": {
+    "version": "4.27.0",
+    "binary": "/nix/store/bk4lkjfp9z9xciwa99y0gjk99sjz7j83-lean4-4.27.0/bin/lean",
+    "compiled_module": "lean/CardanoKeri/Checkpoint.lean",
+    "module_source_sha256": "f5dea750f9de2e5737d288eef73371cefd1b4217c5609468ddcdff4967ae001f",
+    "compile_exit_code": 0,
+    "probe_exit_code": 0,
+    "checks": 8,
+    "passed": 8,
+    "source_changed": false,
+    "scratch_directory": "/tmp/keri-gist-crosscheck-20260911-5khns11u",
+    "compile_command": "cd lean && lean -o <scratch>/CardanoKeri/Checkpoint.olean CardanoKeri/Checkpoint.lean",
+    "probe_command": "LEAN_PATH=<scratch> lean --run <scratch>/GistProbe.lean",
+    "limit": "Env capabilities are explicit assumptions; no cryptographic evidence construction or Cardano transaction execution"
+  },
+  "arithmetic": {
+    "command": "python3 quorum_cases.py",
+    "exit_code": 0,
+    "configurations": 28,
+    "receipt_set_pairs": 4699,
+    "limit": "finite set arithmetic; not an executed signed-event exploit"
+  },
+  "artifacts_sha256": {
+    "GistProbe.lean": "b8ad53d631de46d07985912c8cb25b6b851715e6917fc695d335c49ad82db8da",
+    "gist-probes.jsonl": "20a82aabded31de176b7c8e11286d3ec8a0b32bee90d3e9638e22e2e0e3fbe0a",
+    "quorum_cases.py": "c07d9c8551cce88203fc086bd1c26a7d43c6d90a826189f8042b1f163a316681",
+    "quorum-cases.json": "610b732dfca310d1f0eb155725404fa5f8517e0e83464937c47f7a55aad1283c"
+  }
+}

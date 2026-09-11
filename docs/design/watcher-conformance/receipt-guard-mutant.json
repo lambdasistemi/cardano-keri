@@ -1,0 +1,309 @@
+{
+  "seed": 3659856044,
+  "summary": {
+    "total": 31,
+    "passed": 29,
+    "failed": 2,
+    "kind": {
+      "unit": 31,
+      "property": 0
+    }
+  },
+  "modules": [
+    {
+      "name": "cardano_keri/checkpoint/enforcement_tests",
+      "summary": {
+        "total": 31,
+        "passed": 29,
+        "failed": 2,
+        "kind": {
+          "unit": 31,
+          "property": 0
+        }
+      },
+      "tests": [
+        {
+          "title": "wire_binding_accepts_offset_bearing_fixtures",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 2621735,
+            "cpu": 1054154545
+          }
+        },
+        {
+          "title": "ee0_rejects_empty_and_over_1024_event_bytes",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 29346,
+            "cpu": 9608010
+          }
+        },
+        {
+          "title": "ee1_to_ee9_reject_every_misdirected_offset_axis",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 4427946,
+            "cpu": 1757176071
+          }
+        },
+        {
+          "title": "malformed_spans_counts_and_d_reject_at_their_binding_axis",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 1931613,
+            "cpu": 773474221
+          }
+        },
+        {
+          "title": "fork_convicts",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 104086,
+            "cpu": 92096799
+          }
+        },
+        {
+          "title": "honest2_convict_is_no_conflict",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 153961,
+            "cpu": 164380593
+          }
+        },
+        {
+          "title": "honest2_freezes",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 1726816,
+            "cpu": 1001824273
+          }
+        },
+        {
+          "title": "lag_freezes",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 913661,
+            "cpu": 571455945
+          }
+        },
+        {
+          "title": "honest7_freezes",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 2754509,
+            "cpu": 1552549744
+          }
+        },
+        {
+          "title": "f4_convict_seq_mismatch",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 30376,
+            "cpu": 10120251
+          }
+        },
+        {
+          "title": "f5_convict_aid_mismatch",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 22767,
+            "cpu": 7141110
+          }
+        },
+        {
+          "title": "f7_convict_reveal_mismatch",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 36525,
+            "cpu": 13560501
+          }
+        },
+        {
+          "title": "f1_convict_quorum_unsatisfied",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 67212,
+            "cpu": 23873196
+          }
+        },
+        {
+          "title": "f10_freeze_not_ahead",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 31802,
+            "cpu": 10673935
+          }
+        },
+        {
+          "title": "f9_freeze_uncommitted_reveal",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 866076,
+            "cpu": 556425696
+          }
+        },
+        {
+          "title": "f8_freeze_insufficient_receipts",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 907306,
+            "cpu": 516277574
+          }
+        },
+        {
+          "title": "f2_convict_quorum_below_threshold",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 107723,
+            "cpu": 90578700
+          }
+        },
+        {
+          "title": "tombstone_cbor_golden",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 200,
+            "cpu": 16100
+          }
+        },
+        {
+          "title": "convict_output_valid",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 29915,
+            "cpu": 14214234
+          }
+        },
+        {
+          "title": "f13_convict_output_missing_token",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 19288,
+            "cpu": 8470061
+          }
+        },
+        {
+          "title": "f13_convict_output_wrong_record",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 18322,
+            "cpu": 10249168
+          }
+        },
+        {
+          "title": "f13_convict_output_wrong_role",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 16293,
+            "cpu": 7319754
+          }
+        },
+        {
+          "title": "freeze_output_valid",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 15015,
+            "cpu": 9677092
+          }
+        },
+        {
+          "title": "f12_freeze_output_wrong_role",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 8593,
+            "cpu": 4247371
+          }
+        },
+        {
+          "title": "f12_freeze_output_mutated_datum",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 28597,
+            "cpu": 14871323
+          }
+        },
+        {
+          "title": "fork_witnessed_convicts",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 126289,
+            "cpu": 152745816
+          }
+        },
+        {
+          "title": "f3b_witnessed_honest_recorded_is_no_conflict",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 138136,
+            "cpu": 159133945
+          }
+        },
+        {
+          "title": "f1b_witnessed_fork_insufficient_receipts",
+          "status": "fail",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 119434,
+            "cpu": 97378329
+          },
+          "assertion": "× expected\n│ ConvictValid\n× to equal\n│ ConvictInvalid(CvInsufficientReceipts)"
+        },
+        {
+          "title": "duplicate_receipt_cannot_fake_convict_toad_two",
+          "status": "fail",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 183433,
+            "cpu": 226006333
+          },
+          "assertion": "× expected\n│ ConvictValid\n× to equal\n│ ConvictInvalid(CvInsufficientReceipts)"
+        },
+        {
+          "title": "duplicate_receipt_cannot_fake_freeze_toad_two",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 970305,
+            "cpu": 644745578
+          }
+        },
+        {
+          "title": "kt_only_divergence_convicts_after_tip_threshold_attribution",
+          "status": "pass",
+          "on_failure": "fail_immediately",
+          "execution_units": {
+            "mem": 147064,
+            "cpu": 157977241
+          }
+        }
+      ]
+    }
+  ]
+}

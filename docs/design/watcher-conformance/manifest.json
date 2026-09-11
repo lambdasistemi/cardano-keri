@@ -1,0 +1,113 @@
+{
+  "review_date": "2026-09-11",
+  "scope": "KERI watcher invariants and Cardano projection conformance analysis; no proof completion",
+  "candidate": {
+    "repository": "lambdasistemi/cardano-keri",
+    "commit": "811843b313d9005923ba205e86d7a3afa6fb3d0d",
+    "worktree": "/tmp/keri-watcher-conformance-20260911-44y40_dc/candidate",
+    "tracked_diff_after_mutant_restore": "empty"
+  },
+  "specification": {
+    "repo": "trustoverip/kswg-keri-specification",
+    "branch": "main",
+    "sha": "fbdd4a6155e48248873cccd5cf6f79b6b631a021",
+    "committed": "2026-08-28T09:32:13Z",
+    "tree_truncated": false,
+    "title": "Key Event Receipt Infrastructure (KERI)",
+    "version": "1.1",
+    "doi": "10.5281/zenodo.18887102",
+    "files_sha256": {
+      "spec-body.md": "98305c5a2f1a39630fb9a755cbdb78439b545e713e581cc0e9c9e47dcce07303",
+      "spec-head.md": "2a3e9eba88a0576c81c9592eb2f7c32f6c70969132d77be232d55da974d32f8e",
+      "LICENSE.md": "7db9741610e0b529cd7d3773dfa0a8935e34409816460eb74f67adce3523a2af",
+      "COPYRIGHT_POLICY.md": "0391e92ae883f1b8942102eefa130796d2e72c51aa9db02907a01c293bad1099"
+    }
+  },
+  "implementation_comparison": {
+    "repo": "WebOfTrust/keripy",
+    "branch": "main",
+    "sha": "1a7d68a1fcf487f8c40d8d57031e2ac3d6b3b738",
+    "date": "2026-09-10T20:54:04Z",
+    "tree_truncated": false,
+    "method": "source inspection only; no upstream runtime or deployment test",
+    "files_sha256": {
+      "eventing.py": "809d4de80c057555d0bd5685e12a89006c601387e0aaa24ccaeef0e23cfad40c",
+      "basing.py": "e28b8e1a1ba66f6f83b655c9804dc74733547f9df7d14e9880874ca7fde070f3",
+      "watching.py": "b0b71426f89d96ab0720257e902a7d686922821178503f490b61330a5af38189"
+    }
+  },
+  "toolchain": {
+    "aiken": "1.1.23",
+    "binary": "/nix/store/zk3s76mjwcb5fz099d6dq02c684bg8wn-aiken-1.1.23/bin/aiken",
+    "nixpkgs": "753cc8a3a87467296ddd1fa93f0cc3e81120ee46"
+  },
+  "command": {
+    "working_directory_relative_to_candidate": "onchain",
+    "argv": [
+      "aiken",
+      "check",
+      "-m",
+      "cardano_keri/checkpoint/enforcement_tests"
+    ]
+  },
+  "baseline": {
+    "exit_code": 0,
+    "summary": {
+      "total": 31,
+      "passed": 31,
+      "failed": 0,
+      "kind": {
+        "unit": 31,
+        "property": 0
+      }
+    },
+    "seed": 2348139929
+  },
+  "mutant": {
+    "change": "Only conviction receipt comparison changed from count < tip.toad to count < 0",
+    "exit_code": 1,
+    "summary": {
+      "total": 31,
+      "passed": 29,
+      "failed": 2,
+      "kind": {
+        "unit": 31,
+        "property": 0
+      }
+    },
+    "seed": 3659856044,
+    "failed_tests": [
+      "f1b_witnessed_fork_insufficient_receipts",
+      "duplicate_receipt_cannot_fake_convict_toad_two"
+    ],
+    "restored": true
+  },
+  "source_files_sha256": {
+    "onchain/lib/cardano_keri/checkpoint/enforcement.ak": "6fd6a2315b5d368e0ae70262a9754c55da0117c792888cddef14154aa3b4d605",
+    "onchain/lib/cardano_keri/checkpoint/enforcement_tests.ak": "cffd0ed6af1e95e4fbb6203bb64e682ef0ca53282a5b387b85e42105dbc9b56f",
+    "onchain/lib/cardano_keri/checkpoint/enforcement_vectors.ak": "65d14d2a3705f8321434b09c3e13e2ae203eed74bc2b3bd0052a21b2fe1cb8a8",
+    "onchain/lib/cardano_keri/checkpoint/enforcement_observer.ak": "8c870efb769e308cdbceafe018b119193796000bfa8f47886f2f3d9604795299",
+    "onchain/lib/cardano_keri/checkpoint/datum.ak": "2c5289a112d8b8eef708db0cab38e9f9e0bcb6fa24e8eab658523404c1acf029",
+    "lean/CardanoKeri/Checkpoint.lean": "f5dea750f9de2e5737d288eef73371cefd1b4217c5609468ddcdff4967ae001f",
+    "lean/CardanoKeri/Statements/History.lean": "dc3964b264cecc77440419f0ab4ab886afdf235a8e79ba423aab8657734c9257",
+    "lean/CardanoKeri/Statements/Delegation.lean": "dd2e23cc0020f8737102a01e99d107312ac707e10e81503c1f61043bec2db6ea",
+    "lean/CardanoKeri/Statements/Mirror.lean": "737f159763a4e507674f1b2ab9151cebae4aca5daabcdc9a88f61dc4182a9ec4",
+    "lean/CardanoKeri/Statements/Credential.lean": "d1717fb89c6c6616c7bb9f6bb79efa6eb4967ec5a63c350976e60980550566db",
+    "onchain/aiken.toml": "caebab0435b04353b265f8d06bf69a454ef917adde31126ec7381fdca29b3667",
+    "onchain/aiken.lock": "eccd039683616c86c1ac3dd792dac3196631b092c3e90c21c7fb14abac05e1fd"
+  },
+  "artifacts_sha256": {
+    "enforcement-tests.json": "ca53fca49a3c742759ee73e393e7ca5e37ed80fc8954fab75b3379dae9df5771",
+    "enforcement-tests.stderr": "dbdec4010dfd91fb153e4875d162ff112d9acc53273a757faef2e72ea3e1fcd7",
+    "receipt-guard-mutant.patch": "fb0c51a64ffe7eae15781c3ca4ce43b324b0bf19cd7ef60b19279e12d2327f20",
+    "receipt-guard-mutant.json": "2d217d81b12eeb704af0c337dce890eb40013065c2d9731c91ff11ef7f75e0ab",
+    "receipt-guard-mutant.stderr": "74c7fd281203ce9957ed860855395c3353732753da91f5d1f917f30da1ebfbce"
+  },
+  "limits": [
+    "No complete watcher acceptance or replay interface exercised",
+    "No KERIpy runtime or production network exercised",
+    "No full transaction settlement suite exercised",
+    "No Lean proofs built or completed",
+    "No global absence, delivery delay, sponsorship safety or broad mutation adequacy claim"
+  ]
+}

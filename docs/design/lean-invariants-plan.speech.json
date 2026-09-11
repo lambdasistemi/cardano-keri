@@ -1,0 +1,71 @@
+{
+  "_source": {
+    "file": "lean-invariants-plan.md",
+    "sha256": "fb1a1cb8d18c6c7903c82dde07b2705061770f351fe8399705fcc4c61a9c2cac"
+  },
+  "the-stories-this-plan-must-cover": [
+    {
+      "text": "The plan turns the entire discussion into executable Lean behavior, invariant statements and adversarial scenarios. Ordinary KEL work belongs to milestone one, TEL and credentials to milestone two, and delegation remains in milestone seven. New proof completion is deferred."
+    }
+  ],
+  "authority-and-starting-point": [
+    {
+      "text": "The plan pins the repository, specification and updated gist. Existing terminal conviction and payout rulings remain the baseline until explicitly amended. The earlier review supplies model counterexamples, not production certification. The Claude artifact itself remains unread; the two gist files have been incorporated."
+    }
+  ],
+  "milestone-ownership": [
+    {
+      "text": "Milestone one owns ordinary KEL observation, history, challenges, sponsorship, recovery and checkpoint consumption. Milestone two adapts those contracts to TEL mirrors and credentials. Milestone seven owns delegated approval and recovery. Mixed tickets need their acceptance criteria split across those boundaries; this plan has not changed their GitHub assignments."
+    }
+  ],
+  "model-architecture-and-boundaries": [
+    {
+      "text": "The diagram follows delivered evidence through validation and local acceptance. Accepted history feeds checkpoints and downstream verifiers; conflicts separately feed trust policy and authorized financial settlement. Shared modules model evidence, watchers, challenges and sponsorship. Composition reuses the checkpoint lifecycle instead of creating a competing authority."
+    }
+  ],
+  "complete-invariant-scope": [
+    {
+      "text": "Every scope row must become named Lean declarations with a source, milestone, policy status, reachable trace and effective mutation. An assumption is recorded as an assumption. A counterexample is retained rather than hidden by a stronger premise."
+    }
+  ],
+  "evidence-observation-and-recovery": [
+    {
+      "text": "Validation binds events to historical signing and witness authority before acceptance. First acceptance is local, and retained history survives permitted recovery. Model partial rotations, witness changes, quorum assumptions and withheld evidence. Delegated approval identity and recursive precedence are assigned to the later delegation extension."
+    }
+  ],
+  "challenge-time-and-checkpoint-lifecycle": [
+    {
+      "text": "A promised challenge opportunity must survive every lifecycle route. Minimum rotation spacing does not expire evidence against a stationary tip. Time bounds, liability retention, bootstrap, revival and consumer readiness need separate rules. Remaining keys, receipts, notice and transaction inclusion are explicit conditions on any victim response."
+    }
+  ],
+  "sponsorship-freeze-and-reward-economics": [
+    {
+      "text": "Separate conviction funds, freeze funds, recovery reserves and premiums, and record who owns and authorizes each payment. Prepaid recovery must work without a fresh unfreeze bond contribution, including after intervening unpaid progress. Test valid-event farming by a colluding issuer and relayer, refund capture, finite budgets, renewal and passive issuers."
+    }
+  ],
+  "tel-credentials-and-composition": [
+    {
+      "text": "Authenticate revocations through issuer-bound KEL evidence before inserting them. Mirror absence says only what is absent from that committed mirror state. Model retention, funding exhaustion, provisional recovery, credential dependency checks and the interfaces that prevent a simpler submodel from bypassing lifecycle rules."
+    }
+  ],
+  "the-ten-conviction-stories-as-lean-scenarios": [
+    {
+      "text": "All ten proposal stories become scenarios, including double rotation, cooldown, reserve keys, witness replacement, symmetric conviction, early close, forbidden rollback, initial rotation and dormant conviction. Their stronger claims receive explicit prerequisites. Public evidence can be relayed without next keys, and every payment must follow from the actual trace."
+    }
+  ],
+  "decisions-the-models-must-make-reviewable": [
+    {
+      "text": "Compare cooldown with bounded retained challenge targets, and keep expiry distinct from both. Compare rival validation, settlement ownership, freeze eligibility, consumer trust and registration policies against the existing baseline. The model supplies concrete tradeoffs for an operator ruling; it does not silently choose policy."
+    }
+  ],
+  "delivery-order-and-acceptance": [
+    {
+      "text": "Begin with coverage and baseline attacks, then ordinary KEL evidence and watcher behavior. Challenge and sponsorship work converge into milestone one composition, completeness review and simulation. TEL and credential work consume those interfaces in milestone two; delegation extends them in milestone seven. Each lane has its own acceptance receipt."
+    }
+  ],
+  "verification-contract-for-implementation": [
+    {
+      "text": "Build every relevant Lean library explicitly and preserve existing proof gates. New executable design predicates must not depend on unproved theorems. Acceptance needs reachable controls, effective mutants, complete inventories, composition traces and reproducible receipts. Production signatures, ledger timing, storage and network behavior remain separate refinement checks."
+    }
+  ]
+}

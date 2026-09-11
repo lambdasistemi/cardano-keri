@@ -106,6 +106,8 @@ nav:
       - User Experience: design/user-experience.md
       - Blake2b-256 Requirement: design/blake2b256-requirement.md
       - Super Watcher: design/super-watcher.md
+      - Watcher Conformance Review: design/watcher-conformance.md
+      - Lean Invariant Plan: design/lean-invariants-plan.md
       - vLEI Bridge: design/vlei.md
       - Verifying Credentials Against the Checkpoint: design/credential-verification.md
       - Regulated DeFi Gate: design/defi-gate.md

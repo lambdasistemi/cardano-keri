@@ -1,0 +1,8 @@
+{"case":"close_by_next_keys_redirects_all_held_funds","pass":true,"result":[{"bIn":0,"convictor":null,"dregIn":0,"hunter":{"addr":99,"b":0,"dreg":0,"pool":2},"poolIn":0,"refund":{"addr":99,"b":5,"dreg":1000,"pool":18}},{"parked":{"h":{"epoch":2,"sn":8}}}]}
+{"case":"same_close_without_next_rotation_is_refused","pass":true,"result":null}
+{"case":"loser_with_duplicity_evidence_gets_bounty","pass":true,"result":[{"bIn":0,"convictor":{"addr":99,"b":0,"dreg":1000,"pool":0},"dregIn":0,"hunter":null,"poolIn":0,"refund":{"addr":11,"b":5,"dreg":0,"pool":20}},"convicted"]}
+{"case":"frozen_close_returns_only_held_bond_and_pool","pass":true,"result":[{"bIn":0,"convictor":null,"dregIn":0,"hunter":null,"poolIn":0,"refund":{"addr":99,"b":0,"dreg":1000,"pool":1}},{"parked":{"h":{"epoch":2,"sn":8}}}]}
+{"case":"parked_without_duplicity_evidence_refused","pass":true,"result":null}
+{"case":"parked_conviction_at_20","pass":true,"result":[{"bIn":0,"convictor":null,"dregIn":0,"hunter":null,"poolIn":0,"refund":null},"convicted"]}
+{"case":"parked_conviction_at_1000000000000","pass":true,"result":[{"bIn":0,"convictor":null,"dregIn":0,"hunter":null,"poolIn":0,"refund":null},"convicted"]}
+{"case":"convicted_cannot_reopen","pass":true,"result":null}

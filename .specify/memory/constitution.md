@@ -11,7 +11,9 @@ Added principles: VII Lean is the behavioral authority; VIII model errors and
 ambiguity require user stories; IX verify the whole claimed behavior;
 X acceptance preserves evidence and gaps; XI apply the rule to previous work.
 Amended: principle VI gains the precedence note (where a corollary and the
-accepted Lean disagree, the Lean governs and the disagreement is escalated);
+accepted Lean disagree, the Lean governs and the disagreement is escalated),
+and its "no tombstones, ever" corollary becomes "tombstones are allowed under
+conformance" by the operator's ruling of 2026-09-11 on register entry 1;
 Development Workflow corrects "linear history via rebase merge" to merge
 commits, which is the standing rule; Governance names the register.
 Synchronized: AGENTS.md (new), CLAUDE.md (link), .github/pull_request_template.md
@@ -77,14 +79,16 @@ may not pronounce. A proposed output asserting something about an
 identity which no key event expresses is a wrong design, not an
 unfinished one.
 
-**Corollary — no tombstones, ever.** Terminality of conviction means
-the chain stops projecting: the AID token is burned and no
-checkpoint-role successor is created, so the identity simply ceases to
-resolve on Cardano. It does not mean the chain records a verdict about
-the identity; KERI has no "this AID is dead" event for a validator to
-project. Writing terminal identity state on chain is a
-constitutional violation, not a feature request, and the convict
-transaction in ledger history is the record.
+**Corollary — tombstones are allowed under conformance** (amended
+2026-09-11; until then this corollary read "no tombstones, ever").
+Terminality of conviction may be recorded as the registry's own lifecycle
+state, a convicted leaf or a retired key, on one condition: the validator's
+conviction predicate conforms to KERI's definition of duplicity as the
+pinned specification states it (the Lean correspondence register, entry 3).
+What is recorded is the projection's refusal to serve the identifier again,
+not a verdict KERI would not pronounce, and the convict transaction in ledger
+history remains the evidence. A terminal record written by a predicate that
+does not conform is still a violation.
 
 **Corollary — duplicate projections are not forgeries.** A second UTxO
 projecting the same genuine, controller-signed event is a true

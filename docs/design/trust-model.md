@@ -27,10 +27,16 @@ Two consequences that shape the whole trust boundary:
 - **Possession of the next keys is control** ([pre-rotation](https://trustoverip.github.io/kswg-keri-specification/#pre-rotation)). If a thief holds them, her
   witnessed rotation is legitimate under KERI's own rule and the chain follows
   it. Nothing the chain does may outlive that rotation.
-- **Proven [duplicity](https://trustoverip.github.io/kswg-keri-specification/#duplicity) is permanent**, because KERI has no event that
-  un-duplicates an identifier. So conviction is terminal — not because the
-  chain is severe, but because inventing a recovery KERI lacks would be the
-  chain originating identity state.
+- **Proven [duplicity](https://trustoverip.github.io/kswg-keri-specification/#duplicity) cannot be unseen**: two receipted
+  rotations at one sequence are a fact of the record for ever, and KERI has no
+  event that un-duplicates an identifier. What KERI leaves to each validator is
+  the trust decision, which it may take either way (the
+  [review's reading of the specification's own text](watcher-conformance.md#the-specification-has-a-trust-text-tension)).
+  **This project's selected policy is that conviction is terminal**: the
+  convicted leaf never reopens and the conviction bond is seized. The reasons
+  are ours, not KERI's: a bond that could be recovered would not deter, and
+  inventing a recovery event KERI lacks would be the chain originating identity
+  state.
 
 ## What the current validators guarantee — shipped today
 

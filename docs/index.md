@@ -41,9 +41,10 @@ Nothing here that is only designed is described as if it were deployed.
 
 ## Shipped on `main` today
 
-Five applied programs are published as reference scripts on Cardano preprod
-(`deploy/preprod/m1-manifest.json`, published 2026-07-28 from commit
-`50a5820`):
+Six applied programs are published as reference scripts on Cardano preprod:
+five from `deploy/preprod/m1-manifest.json` (published 2026-07-28 from commit
+`50a5820`) and the endpoint board from `deploy/preprod/board-manifest.json`
+(published 2026-07-29 from commit `95b554f`):
 
 | Program | Role | Size |
 |---|---|---|
@@ -52,6 +53,7 @@ Five applied programs are published as reference scripts on Cardano preprod
 | `observer-advance` | withdrawal observer | 16,130 B |
 | `observer-enforcement` | withdrawal observer | 14,417 B |
 | `checkpoint-register` | validator and minting policy | 11,512 B |
+| `endpoint-board` | the witness endpoint board | 3,158 B |
 
 Deployment parameters: registration bond 1,000 tADA, freeze bond 5 tADA,
 freeze window 10,000 slots.

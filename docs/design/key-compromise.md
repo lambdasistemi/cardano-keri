@@ -77,16 +77,20 @@ the witness threshold before the owner's honest `ixn` at the same sequence, the
 thief's event *is* the event. A served KEL is one linear branch, and the
 conflict is not in it. The victim's evidence may never reach a watcher at all.
 
-First-seen is a **witness-local observation**. It is not in the events, not in
-any proof, and not on Cardano. The chain does not reconstruct it and does not
-substitute for it. Two rules follow, and they hold in both the shipped design
-and the M1 return:
+First-seen is **each observer's own acceptance order**
+([first-seen policy](https://trustoverip.github.io/kswg-keri-specification/#first-seen-policy)): a witness keeps the first version
+it receipted, and so does every watcher, including ours. It is not in the
+events, not in any proof, and not on Cardano. What the chain cannot do is
+reconstruct *another* observer's private order or substitute for it. What our
+own observation service still owes, whatever the chain does, is a defined
+acceptance order and a retained history of what it accepted first. Two rules
+follow, and they hold in both the shipped design and the M1 return:
 
 - For rules **derivable from event content** — superseding, next-key commitment
   validity, prior-digest chaining, thresholds — the projection must match
   `keripy` exactly.
-- Where KERI could only settle a contest by witness-local observation, the
-  chain **abstains**. Cardano's settlement slot is evidence, never a verdict.
+- Where KERI could only settle a contest by one observer's first-seen order,
+  the chain **abstains**. Cardano's settlement slot is evidence, never a verdict.
   Resolving by slot would make the chain the authority, and would diverge from
   KERI exactly whenever the thief reached the witnesses first and the victim
   reached the chain first.
@@ -100,8 +104,10 @@ publication path** for what witnesses would otherwise suppress.
     cursor over it and a permanent `ever_duplicitous` fact. That design is
     **gone**, and its removal is the point of the M1 return: a record you
     cannot prove complete needs someone to assert completeness, and that
-    someone is an oracle. The checkpoint has no evidence set, so there is
-    nothing to be complete about.
+    someone is an oracle. The checkpoint has no evidence set, so there is no
+    on-chain record to prove complete. That removes a data structure, not the
+    observation, availability and freshness assumptions: those live with the
+    observer, not the datum.
 
     What replaces it here is narrower and buildable: the **poison**, below, for
     what the owner can declare, and the **conviction**, for what anyone can

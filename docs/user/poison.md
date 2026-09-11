@@ -22,8 +22,10 @@ it. A second poison in the same epoch is refused. Freeze is refused
 while poisoned. Top-up still lands: money does not need the quorum.
 
 The one case this does not cover: if the thief also holds the **next**
-keys, her rotation *is* control by KERI's own rule. The poison lasts
-until that rotation and no longer. Close answers to the next keys, so
+keys, her rotation *is* control by KERI's own rule
+([security properties of pre-rotation](https://trustoverip.github.io/kswg-keri-specification/#security-properties-of-pre-rotation)).
+The poison lasts until that rotation and no longer. The stolen-current-keys
+case it does cover is KERI's [establishment live attack](https://trustoverip.github.io/kswg-keri-specification/#establishment-live-attack). Close answers to the next keys, so
 that thief can reap.
 
 Play the forks: Mallory and Hal try everything on the poisoned

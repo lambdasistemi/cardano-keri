@@ -2,7 +2,9 @@
 
 A **hunter** is an off-chain service that watches KERI and Cardano and lands
 the transactions that keep an identity's checkpoint current. It is a role any
-party may perform, not a trusted oracle or an identity administrator. Earlier
+party may perform, not a trusted oracle or an identity administrator. In
+KERI's vocabulary it is a
+[watcher](https://trustoverip.github.io/kswg-keri-specification/#indirect-exchange-via-witnesses-and-watchers) that also submits. Earlier
 pages called this role the *super watcher*; the M1 return gives it a wage and a
 name.
 
@@ -91,8 +93,8 @@ first freeze takes `B` and the second finds nothing to take.
 **No bounty.** There is no payment for detecting misbehaviour, because a flow
 whose profitability depends on another party's misbehaviour invites staged
 misbehaviour. The single exception is the conviction, and it is an exception
-on principled ground: two witnessed rotations at one sequence are a KERI
-verdict, not a judgement the chain invents.
+on principled ground: two witnessed rotations at one sequence are a KERI verdict
+([duplicity](https://trustoverip.github.io/kswg-keri-specification/#duplicity)), not a judgement the chain invents.
 
 ## What a hunter is not
 
@@ -122,7 +124,7 @@ The hunter must collect:
 
 - the exact next KERI rotation bytes;
 - controller signatures satisfying both thresholds;
-- the required witness receipts; and
+- the required witness [receipts](https://trustoverip.github.io/kswg-keri-specification/#receipt-messages); and
 - the current checkpoint outref.
 
 The advance observer reconstructs and validates the transition. The hunter

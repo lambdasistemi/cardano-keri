@@ -8,9 +8,13 @@
     Freeze as an ARMED role-address for lag, with a response window —
     a different machine, retired by the M1 return.
 
-Hal watches Alice's witnesses. When they receipt a rotation, he lands
-it and the chain pays him the premium `P` from her pool. That is story
-2 on the [checkpoint simulation](../simulator/index.html).
+Hal watches Alice's witnesses. When they [receipt](https://trustoverip.github.io/kswg-keri-specification/#receipt-messages) a
+rotation, he lands it and the chain pays him the premium `P` from her pool.
+That is story 2 on the [checkpoint simulation](../simulator/index.html). In
+KERI's vocabulary Hal is a
+[watcher](https://trustoverip.github.io/kswg-keri-specification/#indirect-exchange-via-witnesses-and-watchers) with a wage; the
+receipts he waits for are the ones KERI's
+[witnessing policy](https://trustoverip.github.io/kswg-keri-specification/#witnessing-policy) requires.
 
 When the pool cannot cover `P`, he freezes her instead. He presents the
 later rotation as evidence, takes the freeze bond `B`, and leaves the

@@ -19,14 +19,15 @@ One rule sits above everything else on this page: **the chain projects the
 KEL and never originates identity state.** Every arrow points one way. The
 design is built only against what a controller and its witnesses already
 publish; the chain never asks KERI for anything, and never pronounces a
-verdict KERI itself would not.
+verdict KERI itself would not. Where KERI says a verdict is formed is
+[validator roles and event locality](https://trustoverip.github.io/kswg-keri-specification/#validator-roles-and-event-locality).
 
 Two consequences that shape the whole trust boundary:
 
-- **Possession of the next keys is control.** If a thief holds them, her
+- **Possession of the next keys is control** ([pre-rotation](https://trustoverip.github.io/kswg-keri-specification/#pre-rotation)). If a thief holds them, her
   witnessed rotation is legitimate under KERI's own rule and the chain follows
   it. Nothing the chain does may outlive that rotation.
-- **Proven duplicity is permanent**, because KERI has no event that
+- **Proven [duplicity](https://trustoverip.github.io/kswg-keri-specification/#duplicity) is permanent**, because KERI has no event that
   un-duplicates an identifier. So conviction is terminal — not because the
   chain is severe, but because inventing a recovery KERI lacks would be the
   chain originating identity state.
@@ -133,8 +134,8 @@ full.
 ### Next-key theft
 
 Theft of the committed successor private keys, or total loss of all current and
-reserve keys, is not solved here and cannot be. Those are KERI key-management
-and recovery problems, and by the projection law the chain follows KERI's
+reserve keys, is not solved here and cannot be. Those are KERI key-management and
+[recovery](https://trustoverip.github.io/kswg-keri-specification/#superseding-recovery-and-reconciliation) problems, and by the projection law the chain follows KERI's
 verdict rather than overruling it.
 
 ### Discovery lag
@@ -196,7 +197,10 @@ and no hunter has landed it yet. That is what the pool is for.
 
 For an identity with `toad > 0`, the system assumes the configured KERI
 witness threshold provides meaningful public acceptance. The validator checks
-the receipts; it cannot make a colluding witness quorum honest.
+the receipts; it cannot make a colluding witness quorum honest. The
+threshold's assumptions are KERI's
+[witness agreement algorithm](https://trustoverip.github.io/kswg-keri-specification/#keris-algorithm-for-witness-agreement-kawa)
+and [witnessing policy](https://trustoverip.github.io/kswg-keri-specification/#witnessing-policy).
 
 An identity may choose `toad = 0`. That weaker mode carries no witness
 receipts at all, so the checkpoint accepts signature-only advances for it. It

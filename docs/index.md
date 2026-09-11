@@ -197,6 +197,10 @@ replay the fifteen stories as the acceptance suite (#326), and cut over preprod
 - [Roadmap](roadmap.md) — the M1 plan and its thirteen epics.
 - [KERI primer](keri-primer.md) — AIDs, key events, pre-rotation, witnesses,
   and Veridian.
+- [The KERI specification](https://trustoverip.github.io/kswg-keri-specification/) — KERI 1.1 as published by the Trust over IP
+  working group; every story page links the clause it relies on, at the
+  version the [watcher conformance review](design/watcher-conformance.md)
+  pins.
 - [Identity operations](architecture/identity-ops.md) — the operations, one by
   one, shipped and designed.
 - [Observer architecture](architecture/observer-architecture.md) — thin

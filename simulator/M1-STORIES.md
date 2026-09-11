@@ -26,6 +26,18 @@ it says so. Nothing here is built yet.
 
 ## The words
 
+KERI's words keep KERI's meaning, and each links its clause in the
+[specification](https://trustoverip.github.io/kswg-keri-specification/) (KERI 1.1, the version the watcher conformance review
+pins):
+
+- **AID**, **KEL**, **inception**, **rotation**: [autonomic identifier](https://trustoverip.github.io/kswg-keri-specification/#autonomic-identifier-aid), [labelling key events in a KEL](https://trustoverip.github.io/kswg-keri-specification/#labelling-key-events-in-a-kel), the [inception](https://trustoverip.github.io/kswg-keri-specification/#inception-event-message-body) and [rotation](https://trustoverip.github.io/kswg-keri-specification/#rotation-event-message-body) event bodies.
+- **Current keys**, **next keys**: [pre-rotation](https://trustoverip.github.io/kswg-keri-specification/#pre-rotation) and [rotation using pre-rotation](https://trustoverip.github.io/kswg-keri-specification/#rotation-using-pre-rotation). Whoever reveals the committed next keys rotates; that is control.
+- **Witnesses**, **toad**, **receipts**: [witness designation](https://trustoverip.github.io/kswg-keri-specification/#witness-designation), [witnessing policy](https://trustoverip.github.io/kswg-keri-specification/#witnessing-policy), [receipt messages](https://trustoverip.github.io/kswg-keri-specification/#receipt-messages), [KERI's algorithm for witness agreement](https://trustoverip.github.io/kswg-keri-specification/#keris-algorithm-for-witness-agreement-kawa).
+- **Duplicity**: [duplicity](https://trustoverip.github.io/kswg-keri-specification/#duplicity), two differing events at one sequence number. What Cora proves.
+- **First-seen**: [first-seen policy](https://trustoverip.github.io/kswg-keri-specification/#first-seen-policy), a witness-local observation the chain never reconstructs.
+
+The words below are ours:
+
 - **Checkpoint**: one UTxO per identity holding Alice's current key state,
   a token that is minted once and never again, and three separate sums of
   money.

@@ -71,7 +71,7 @@ Cardano in V1.
 
 ## Why we do not replicate first-seen
 
-A KERI witness applies **first-seen**: it accepts the first event it sees at a
+A KERI witness applies **first-seen** ([first-seen policy](https://trustoverip.github.io/kswg-keri-specification/#first-seen-policy)): it accepts the first event it sees at a
 sequence number and refuses conflicting ones. So if the thief's `ixn` reaches
 the witness threshold before the owner's honest `ixn` at the same sequence, the
 thief's event *is* the event. A served KEL is one linear branch, and the
@@ -115,8 +115,10 @@ Neither system detects a thief who is alone on the history.
 
 ## Rotation is the remedy
 
-A rotation **supersedes** an interaction event at the same sequence, because
-it proves possession of pre-committed keys — strictly stronger evidence than
+A rotation **supersedes** an interaction event at the same sequence
+([superseding recovery](https://trustoverip.github.io/kswg-keri-specification/#superseding-recovery) and its
+[rules at a given sequence number](https://trustoverip.github.io/kswg-keri-specification/#superseding-rules-for-recovery-at-a-given-location-sn-sequence-number)),
+because it proves possession of pre-committed keys — strictly stronger evidence than
 signing with current keys. Descendants of the superseded event die with it.
 The attacker cannot answer: revealing next keys reveals **public** halves, which
 permits verification, not production.

@@ -2,19 +2,31 @@
 
 This is the recommended starting point for understanding `cardano-keri`. It covers what KERI is, how it works, what Veridian is, and what Cardano brings to the picture.
 
+!!! note "The specification these pages link"
+    KERI 1.1, as published by the Trust over IP KERI working group at
+    [trustoverip.github.io/kswg-keri-specification](https://trustoverip.github.io/kswg-keri-specification/). The
+    [watcher conformance review](design/watcher-conformance.md) pins it at
+    source commit `fbdd4a6` of 28 August 2026 (DOI 10.5281/zenodo.18887102);
+    the links on this page and on every story page point at the published
+    rendering's sections. cardano-keri is a projection of KERI, so where a
+    page and the specification disagree, the specification wins and the page
+    is wrong. The preprod witnesses run KERIpy 1.3.5.
+
 ---
 
 ## The problem KERI solves
 
 Digital identity today relies on trusted intermediaries: certificate authorities issue your TLS certificate, domain registrars control your domain, platforms control your username. If any of them revoke your credentials — or get hacked — your identity is gone or compromised.
 
-[KERI](https://github.com/WebOfTrust/ietf-keri) (Key Event Receipt Infrastructure) removes the intermediary. Your identity is derived directly from your cryptographic key material. No issuer, no registrar, no permission required.
+[KERI](https://trustoverip.github.io/kswg-keri-specification/#key-event-receipt-infrastructure-keri) (Key Event Receipt Infrastructure) removes the intermediary. Your identity is derived directly from your cryptographic key material. No issuer, no registrar, no permission required.
 
 But there is a harder problem underneath: **what happens when your key is compromised?** In traditional PKI you call the CA and get a new certificate. In a self-certifying system there is no CA to call. KERI's answer is pre-rotation.
 
 ---
 
 ## Pre-rotation: the core mechanism
+
+Specification: [pre-rotation](https://trustoverip.github.io/kswg-keri-specification/#pre-rotation), [inception event pre-rotation](https://trustoverip.github.io/kswg-keri-specification/#inception-event-pre-rotation), [rotation using pre-rotation](https://trustoverip.github.io/kswg-keri-specification/#rotation-using-pre-rotation), [security properties of pre-rotation](https://trustoverip.github.io/kswg-keri-specification/#security-properties-of-pre-rotation).
 
 At inception you commit to two things simultaneously:
 
@@ -41,6 +53,8 @@ This means key theft is recoverable: you rotate before the attacker can, revokin
 
 ## The Key Event Log (KEL)
 
+Specification: [labelling key events in a KEL](https://trustoverip.github.io/kswg-keri-specification/#labelling-key-events-in-a-kel); the [inception](https://trustoverip.github.io/kswg-keri-specification/#inception-event-message-body), [rotation](https://trustoverip.github.io/kswg-keri-specification/#rotation-event-message-body) and [interaction](https://trustoverip.github.io/kswg-keri-specification/#interaction-event-message-body) event bodies.
+
 Every key event — inception, rotation, interaction — is appended to the Key Event Log. It is an append-only, hash-chained log of everything that has ever happened to a KERI identity.
 
 ```
@@ -56,6 +70,8 @@ Each event references the hash of the previous event. The log is tamper-evident:
 ---
 
 ## The AID: a self-certifying identifier
+
+Specification: [self-certifying identifier](https://trustoverip.github.io/kswg-keri-specification/#self-certifying-identifier-scid), [autonomic identifier](https://trustoverip.github.io/kswg-keri-specification/#autonomic-identifier-aid).
 
 The AID (Autonomic Identifier) is derived as:
 
@@ -73,6 +89,8 @@ In Veridian and KERI generally, AIDs are encoded in [CESR](https://github.com/We
 ---
 
 ## Witnesses: solving duplicity
+
+Specification: [duplicity](https://trustoverip.github.io/kswg-keri-specification/#duplicity), [witness designation](https://trustoverip.github.io/kswg-keri-specification/#witness-designation), [witnessing policy](https://trustoverip.github.io/kswg-keri-specification/#witnessing-policy), [receipt messages](https://trustoverip.github.io/kswg-keri-specification/#receipt-messages), [KERI's algorithm for witness agreement](https://trustoverip.github.io/kswg-keri-specification/#keris-algorithm-for-witness-agreement-kawa).
 
 The KEL alone has one remaining vulnerability: you could broadcast two conflicting events at the same sequence number to different parties — "I rotated to key A" to Alice, "I rotated to key B" to Bob. This is called **duplicity**.
 
@@ -96,6 +114,8 @@ As long as fewer than the threshold collude, duplicity is impossible — no witn
 ---
 
 ## Watchers: independent verification
+
+Specification: [indirect exchange via witnesses and watchers](https://trustoverip.github.io/kswg-keri-specification/#indirect-exchange-via-witnesses-and-watchers), [validator](https://trustoverip.github.io/kswg-keri-specification/#validator), [validator roles and event locality](https://trustoverip.github.io/kswg-keri-specification/#validator-roles-and-event-locality), [first-seen policy](https://trustoverip.github.io/kswg-keri-specification/#first-seen-policy).
 
 Verifiers (parties relying on your identity) run **watchers** — independent monitors that observe the witness pool and look for duplicity across your entire KEL history. If your witnesses collude and try to show different KELs to different parties, watchers detect it.
 
@@ -131,10 +151,11 @@ This makes Veridian suitable for real-world identity use cases — [GLEIF vLEI](
 
 **Portable verifiable history.** Present your KEL to anyone; they verify your complete key history without trusting any intermediary. Self-contained proof.
 
-**Threshold multi-signature.** N-of-M keys required for any event. Natural for organisations, DAOs, legal entities.
+**Threshold multi-signature.** N-of-M keys required for any event ([fractionally weighted threshold](https://trustoverip.github.io/kswg-keri-specification/#fractionally-weighted-threshold)). Natural for organisations, DAOs, legal entities.
 
 **Delegation.** A KERI delegated AID lets a parent retain establishment control
-over a child through cooperative anchoring. In vLEI this is used in the issuer
+over a child through [cooperative delegation](https://trustoverip.github.io/kswg-keri-specification/#cooperative-delegation): the
+delegator anchors a [seal](https://trustoverip.github.io/kswg-keri-specification/#seals) of the child's event in its own log. In vLEI this is used in the issuer
 infrastructure (GLEIF Root → GLEIF External → QVI). The QVI → Legal Entity →
 officer authority hierarchy is primarily an **ACDC credential chain**; those
 holder AIDs need not be KERI-delegated.

@@ -203,6 +203,10 @@ replay the fifteen stories as the acceptance suite (#326), and cut over preprod
   working group; every story page links the clause it relies on, at the
   version the [watcher conformance review](design/watcher-conformance.md)
   pins.
+- [The constitution](https://github.com/lambdasistemi/cardano-keri/blob/main/.specify/memory/constitution.md)
+  — the rules every contributor works under; since 2026-09-11 the accepted
+  Lean model is the behavioral authority, and a model error is escalated as a
+  user story and fixed in the Lean before any code moves.
 - [Identity operations](architecture/identity-ops.md) — the operations, one by
   one, shipped and designed.
 - [Observer architecture](architecture/observer-architecture.md) — thin

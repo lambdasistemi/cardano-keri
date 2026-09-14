@@ -221,9 +221,7 @@ theorem delegated_is_registry (signed : Bool) (p : Params) (env : Env) (a : Acti
     · simp only [hc, ite_false]
   | contribute _ _ _ _ => rfl
   | retract _ => rfl
-  | reap _ _ => rfl
-  | pause _ => rfl
-  | resume _ => rfl
+  | reap _ _ _ => rfl
   | convictCkpt _ => rfl
 
 theorem delegated_permissionless (p : Params) (env : Env) (a : Action) (now : Slot) (s : Sys) :
@@ -244,14 +242,14 @@ theorem ownerKeyed_needs_owner (pl : Plugin) (vm : ValueMode) (ran : Bool) (p : 
   simp [stepFn, authorized]
 
 /-- The deployment of the witnesses below. -/
-def wp : Params := { D := 1000, tip := 2, Mc := 4, Mr := 1, process := 10, retract := 10, W := 5,
+def wp : Params := { D := 1000, tip := 2, Mc := 4, Mr := 1, process := 10, retract := 10,
                      far := 1000000000, hD := by decide, hProcess := by decide, hRetract := by decide,
                      hFund := by decide }
 
 /-- Evidence that verifies nothing. -/
 def noEvidence : Env :=
   { inception := fun _ => false, rotationFrom := fun _ _ => false, duplicity := fun _ _ => false,
-    quorum := fun _ => false }
+    closeAuth := fun _ _ => false }
 
 /-- A registry with one pending registration for AID 11 whose inception does
 not verify. -/

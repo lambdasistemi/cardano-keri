@@ -21,13 +21,23 @@ rulings of 2026-09-02/03:
   operation each request declares and the plugin admits it and mints or
   couples what the transition needs; a stale generation is refused with no
   state change; the plugin is pinned;
-* **rotations, pauses, resumes and convictions of a live checkpoint never
-  write the registry**: the indirection is the token, which survives every
-  rotation; the checkpoint carries live, parked (bonds withdrawn) and
-  tombstone;
-* a **reap** (anyone) spends a parked checkpoint after the grace window, or
-  earlier with the owner's keys, or a tombstone at once: it burns the token,
-  keeps the min-ADA less the go-request as premium, and posts the go-request.
+* **rotations and convictions of a live checkpoint never write the
+  registry**: the indirection is the token, which survives every rotation;
+  the checkpoint carries live and tombstone transport states only (INV408-01:
+  pause, resume, the on-chain parked checkpoint and the registry grace window
+  are gone; a retained parked *registry hash* is the leaf's `dormant k`, not
+  an on-chain parked *checkpoint*);
+* a **close** (the reap of a live checkpoint) requires the plainly named,
+  undischarged, 358-owned abstract close-authorization premise `env.closeAuth`,
+  which supplies the opaque `recipient` the live bond is returned to: the
+  token burns, the bond `D` returns to the recipient, the reaper keeps the
+  min-ADA less the go-request as premium, and the posted go-request carries
+  the *closing rotation's reached key state* `k + 1` for a later revival
+  (INV408-02/03/06). Nothing here identifies the recipient, excludes the
+  reaper, or proves authorization safety: that is 358's;
+* a **reap** of a tombstone is permissionless and immediate: it burns the
+  token, keeps the premium, posts `goConvicted`, and never refunds a live
+  bond again.
 
 There is no close: a leaf, once inserted, is permanent.
 
@@ -41,13 +51,15 @@ the trace driver runs it.
 
 DEC-364-STEPFN (frozen): `stepFn` and `processBody` are the sole executable
 transition semantics; no inductive `Step` is added. The public
-admission/refusal inversion surface is the twelve bidirectional `*_iff`
+admission/refusal inversion surface is the ten bidirectional `*_iff`
 theorems (`stepFn_contribute_iff`, `stepFn_fold_iff`, `stepFn_retract_iff`,
-`stepFn_reap_iff`, `stepFn_pause_iff`, `stepFn_resume_iff`,
-`stepFn_convictCkpt_iff`, `processBody_register_iff`,
+`stepFn_reap_iff`, `stepFn_convictCkpt_iff`, `processBody_register_iff`,
 `processBody_revive_iff`, `processBody_goDormant_iff`,
-`processBody_goConvicted_iff`, `processBody_convict_iff`). `ReachFar`
-(stated over `stepFn` in `CardanoKeri.RegistryGoals`) is unchanged.
+`processBody_goConvicted_iff`, `processBody_convict_iff`): the former
+`stepFn_pause_iff` and `stepFn_resume_iff` are retired with pause and resume
+(INV408-01) and `stepFn_reap_iff` now carries the close-authorization
+recipient. `ReachFar` (stated over `stepFn` in `CardanoKeri.RegistryGoals`)
+is unchanged.
 -/
 
 namespace CardanoKeri.Registry
@@ -79,7 +91,7 @@ structure Params where
   D : Value
   /-- The tip a request carries and a fold pays to the folder per request. -/
   tip : Value
-  /-- A checkpoint's min-ADA: all a parked or convicted checkpoint holds. -/
+  /-- A checkpoint's min-ADA: all a convicted checkpoint holds. -/
   Mc : Value
   /-- A request's min-ADA. -/
   Mr : Value
@@ -87,9 +99,6 @@ structure Params where
   process : Nat
   /-- `retract_time`: the length of phase 2 in slots. -/
   retract : Nat
-  /-- The grace window: a parked checkpoint is reapable by a stranger only
-  this many slots after it was parked. -/
-  W : Nat
   /-- The end of time: the `submitted_at` a reap writes into a go-request, so
   that phase 2 never comes. -/
   far : Slot
@@ -106,14 +115,24 @@ structure Env where
   with signatures and receipts at the inception's own thresholds (#114). -/
   inception : AID → Bool
   /-- `rotationFrom aid k`: a witnessed rotation from key state `k` was
-  presented (the advance predicate). Used by pause, resume and revive. -/
+  presented (the advance predicate). Used by revive. -/
   rotationFrom : AID → KeyState → Bool
   /-- `duplicity aid k`: a verified duplicity proof against key state `k`
   (D-030). -/
   duplicity : AID → KeyState → Bool
-  /-- `quorum aid`: the checkpoint's current keys signed (the owner reaping
-  their own parked checkpoint before the grace window). -/
-  quorum : AID → Bool
+  /-- `closeAuth aid recipient`: the plainly named, undischarged,
+  358-owned abstract close-authorization premise for closing the live
+  checkpoint of `aid`, naming the opaque `recipient` its live bond returns
+  to (INV408-02). It is abstract evidence only: 408 identifies it with no
+  signer, no intent and no policy, does not exclude the reaper from the
+  recipient, and proves no authorization safety — ticket 358 owns the
+  witnessed-rotation/signature/intent checks and discharges this premise.
+  The former `quorum` oracle (current keys reaping one's own parked
+  checkpoint) is retired: 358 itself identifies current-key theft and
+  copied-payee attacks, so current-key quorum is *known wrong* as adopted
+  close authority and is not modelled (see
+  `lean/REGISTRY-408-OBLIGATIONS.md`). -/
+  closeAuth : AID → Addr → Bool
 
 /-- A leaf value. -/
 inductive Status where
@@ -122,12 +141,13 @@ inductive Status where
   | convicted
   deriving Repr, DecidableEq
 
-/-- What a checkpoint UTxO is, for the registry's purposes. -/
+/-- What a checkpoint UTxO is, for the registry's purposes. INV408-01: the
+on-chain parked state is gone; only the live and tombstone transport states
+remain. -/
 inductive CkState where
-  /-- Bonded (live or frozen): not reapable. -/
+  /-- Bonded (live or frozen): reapable only through the 358-owned
+  close-authorization premise. -/
   | live
-  /-- Bonds withdrawn at `since`: reapable after the grace window, or by the owner. -/
-  | parked (since : Slot)
   /-- Convicted: reapable at once. -/
   | tomb
   deriving Repr, DecidableEq
@@ -145,7 +165,8 @@ inductive Op where
   | register
   /-- `Update dormant k → active _`: revival. Posted by anyone. -/
   | revive
-  /-- `Update active _ → dormant k`: created by a reap of a parked checkpoint. -/
+  /-- `Update active _ → dormant k`: created by a close (the reap of a live
+  checkpoint); `k` is the closing rotation's reached key state. -/
   | goDormant (k : KeyState)
   /-- `Update active _ → convicted`: created by a reap of a tombstone. -/
   | goConvicted
@@ -215,13 +236,11 @@ inductive Action where
   | fold (folder : Addr) (gen : Gen) (plugin : Script) (batch : List (ReqId × FoldAction))
   /-- The owner takes a request back in phase 2. -/
   | retract (req : ReqId)
-  /-- Anyone spends a bondless checkpoint, burns its token, posts the go-request. -/
-  | reap (reaper : Addr) (aid : AID)
-  /-- A withdrawing rotation: bonds leave, the checkpoint stays parked. -/
-  | pause (aid : AID)
-  /-- A depositing rotation on a parked checkpoint: live again, no registry write. -/
-  | resume (aid : AID)
-  /-- A duplicity proof against a live or parked checkpoint: tombstone. -/
+  /-- Anyone spends a checkpoint, burns its token, posts the go-request:
+  a live checkpoint only through the 358-owned close-authorization premise
+  naming the opaque bond-return `recipient`; a tombstone at once. -/
+  | reap (reaper : Addr) (aid : AID) (recipient : Addr)
+  /-- A duplicity proof against a live checkpoint: tombstone. -/
   | convictCkpt (aid : AID)
   deriving Repr, DecidableEq
 
@@ -230,8 +249,6 @@ def Action.actor : Action → Actor
   | .fold .. => .anyone
   | .retract .. => .owner
   | .reap .. => .anyone
-  | .pause .. => .nextKeys
-  | .resume .. => .nextKeys
   | .convictCkpt .. => .proof
 
 /-- Value movements of one transition. -/
@@ -248,6 +265,9 @@ structure Flow where
   premium : Option (Addr × Value) := none
   /-- A reap: what goes into the go-request (`Mr + tip`). -/
   intoRequest : Value := 0
+  /-- A close: the live bond `D` returned to the premise's opaque recipient
+  (INV408-03). A tombstone reap refunds no live bond: this stays `none`.-/
+  bondReturn : Option (Addr × Value) := none
   deriving Repr, DecidableEq
 
 /-! ## Phases (the cage's `in_phase1`, `in_phase2`, `is_rejectable`, at a point) -/
@@ -364,23 +384,34 @@ def applyBatch (p : Params) (env : Env) (now : Slot) :
 
 /-! ## The functional step: the one executable source -/
 
-/-- A stranger may reap a parked checkpoint after the grace window; the owner
-at any time; a tombstone at once. -/
-def reapable (p : Params) (env : Env) (now : Slot) (aid : AID) (c : Ckpt) : Prop :=
+/-- A live checkpoint is closable only through the 358-owned
+close-authorization premise, which names the opaque bond-return `recipient`
+(INV408-02); a tombstone is reapable at once by anyone (INV408-03). There is
+no grace window and no owner bypass (INV408-01). -/
+def reapable (p : Params) (env : Env) (recipient : Addr) (now : Slot) (aid : AID) (c : Ckpt) : Prop :=
   match c.st with
-  | .live => False
-  | .parked since => since + p.W ≤ now ∨ env.quorum aid = true
+  | .live => env.closeAuth aid recipient = true
   | .tomb => True
 
-instance (p : Params) (env : Env) (now : Slot) (aid : AID) (c : Ckpt) :
-    Decidable (reapable p env now aid c) := by
+instance (p : Params) (env : Env) (recipient : Addr) (now : Slot) (aid : AID) (c : Ckpt) :
+    Decidable (reapable p env recipient now aid c) := by
   unfold reapable; cases c.st <;> infer_instance
 
-/-- The go-request a reap posts. -/
+/-- The go-request a reap posts. A live close retains the *closing rotation's
+reached key state* `k + 1` (INV408-03/06): the closing rotation itself cannot
+also revive — revival must rotate from exactly that reached state. A
+tombstone reaps to conviction. -/
 def goOp (c : Ckpt) : Op :=
   match c.st with
   | .tomb => .goConvicted
-  | _ => .goDormant c.k
+  | .live => .goDormant (c.k + 1)
+
+/-- A close returns the live bond `D` to the premise's opaque recipient; a
+tombstone reap refunds no live bond again (INV408-03). -/
+def bondReturnOf (p : Params) (recipient : Addr) (c : Ckpt) : Option (Addr × Value) :=
+  match c.st with
+  | .live => some (recipient, p.D)
+  | .tomb => none
 
 def stepFn (p : Params) (env : Env) (a : Action) (now : Slot) (s : Sys) : Option (Flow × Sys) :=
   match a with
@@ -407,30 +438,17 @@ def stepFn (p : Params) (env : Env) (a : Action) (now : Slot) (s : Sys) : Option
                 { s with gen := s.gen + 1, leaves := acc.leaves, ckpts := acc.ckpts,
                          requests := acc.requests, nextToken := acc.nextToken })
       else none
-  | .reap reaper aid =>
+  | .reap reaper aid recipient =>
       match lookup s.ckpts aid with
       | none => none
       | some c =>
-        if reapable p env now aid c then
-          some ({ premium := some (reaper, p.Mc - p.Mr - p.tip), intoRequest := p.Mr + p.tip },
+        if reapable p env recipient now aid c then
+          some ({ premium := some (reaper, p.Mc - p.Mr - p.tip), intoRequest := p.Mr + p.tip,
+                  bondReturn := bondReturnOf p recipient c },
                 { s with ckpts := remove s.ckpts aid,
                          requests := (s.nextReq, ⟨aid, reaper, p.far, goOp c⟩) :: s.requests,
                          nextReq := s.nextReq + 1 })
         else none
-  | .pause aid =>
-      match lookup s.ckpts aid with
-      | some ⟨tok, k, .live⟩ =>
-        if env.rotationFrom aid k = true then
-          some ({}, { s with ckpts := (aid, ⟨tok, k + 1, .parked now⟩) :: remove s.ckpts aid })
-        else none
-      | _ => none
-  | .resume aid =>
-      match lookup s.ckpts aid with
-      | some ⟨tok, k, .parked _⟩ =>
-        if env.rotationFrom aid k = true then
-          some ({}, { s with ckpts := (aid, ⟨tok, k + 1, .live⟩) :: remove s.ckpts aid })
-        else none
-      | _ => none
   | .convictCkpt aid =>
       match lookup s.ckpts aid with
       | some ⟨tok, k, st⟩ =>

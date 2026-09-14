@@ -121,3 +121,45 @@ one token. `W3` and `W5` each observed a state their trace had already run
 past. The earlier seat was right that a failed `rfl` establishes neither truth
 nor falsity; what settled it was **evaluating** the terms rather than trying to
 prove them.
+git add lean/CardanoKeri/REGISTRY-408-OBLIGATIONS.md
+git -c user.name=paolino -c user.email=paolo.veronelli@gmail.com commit -q -m "docs(408): the mutation campaign, executed — five mutants, all red at target
+
+Each applied to the clean tree, built, located, restored. All five turn the
+build RED at the theorem they target rather than at an upstream elaboration
+failure, so the six proofs are shown to bind their definitions.
+
+Records a harness defect found in the same pass: the first run reported two
+mutants failing at a shared upstream line, which is the wrong-reason-RED
+signature. That was the error extraction matching a context line, not the
+mutants. A harness that misreports where a mutant failed is as dangerous as one
+that misreports whether it failed."
+git push -q origin HEAD:fix/408-registry-lifecycle && echo "  pushed: $(git rev-parse HEAD | cut -c1-12)"
+
+## Mutation campaign — executed 2026-09-14
+
+Each mutant applied to the clean tree, `lake build CardanoKeri` run, the error
+located, the tree restored. All five turned the build RED **at the theorem they
+target**, not at an upstream elaboration failure.
+
+| mutant | result | failed at |
+|---|---|---|
+| `pendingGo` ignores `userPostable` | RED | `RegistryAgreement.lean:96` — `custody_of_pending` |
+| `W4` points at the environment that *admits* recipient 4 | RED | `RegistryLifecycleExamples.lean:124` |
+| `W5` drops the fold that lands the conviction | RED | `RegistryLifecycleExamples.lean:138` |
+| `W3` observes the close that already folded | RED | `RegistryLifecycleExamples.lean:119` — `rfl` failed |
+| `project` reads a parked leaf as `present` | RED | `RegistryAgreement.lean:78` — unsolved goals |
+
+Tree restored: zero dirty files, build green, 11 jobs.
+
+**A reporting defect worth recording.** The campaign's first pass reported two
+mutants failing at the same upstream line, `Registry.lean:391` — the
+wrong-reason-RED signature this document warns about. That was the harness's
+error extraction matching a context line instead of the error. The real
+failures are at the targeted theorems, confirmed by re-running each and reading
+the `error:` lines directly. A mutation harness that misreports *where* a
+mutant failed is as dangerous as one that misreports *whether* it failed.
+
+Not yet done: these five are theorem-level mutants against the model. The
+**gate**-level falsification against the actual interface, and independent
+completeness and inversion inspection by a seat that did not author any of
+this, both remain owed.

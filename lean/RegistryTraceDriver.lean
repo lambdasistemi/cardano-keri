@@ -147,7 +147,7 @@ def paramsOfJson (j : Json) : Except String Params := do
     if hP : 0 < process then
       if hR : 0 < retract then
         if hF : Mr + tip ≤ Mc then
-          pure { D, tip, Mc, Mr, process, retract, W, far, hD, hProcess := hP, hRetract := hR, hFund := hF }
+          pure { D, tip, Mc, Mr, process, retract, far, hD, hProcess := hP, hRetract := hR, hFund := hF }
         else throw "Mr + tip must not exceed Mc"
       else throw "retract must be positive"
     else throw "process must be positive"

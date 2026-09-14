@@ -336,11 +336,11 @@ function checkSystem(core, corpus) {
 // comments are not part of a span: an anchor must be code.
 const TOP = /^(theorem|def|inductive|structure|abbrev|instance)\s+([^\s(:{]+)/;
 const TOP_END = /^(theorem|def|inductive|structure|abbrev|instance|namespace|end|open|section|\/-|#)/;
-function leanSpans(files) {
-  const spans = new Map();
+function leanSpanList(files) {
+  const list = [];
   for (const [file, text] of Object.entries(files)) {
     const lines = text.split('\n');
-    const put = (name, from, to) => spans.set(name, { file, from: from + 1, to: to + 1, text: lines.slice(from, to + 1).join('\n') });
+    const put = (name, from, to) => list.push({ name, file, from: from + 1, to: to + 1, text: lines.slice(from, to + 1).join('\n') });
     for (let i = 0; i < lines.length; i++) {
       const m = lines[i].match(TOP);
       if (!m) continue;
@@ -360,6 +360,11 @@ function leanSpans(files) {
       i = j - 1;
     }
   }
+  return list;
+}
+function leanSpans(files) {
+  const spans = new Map();
+  for (const s of leanSpanList(files)) spans.set(s.name, s);
   return spans;
 }
 // binders(span) → {name: typeText} for every `(name : type)` binder in a span
@@ -409,6 +414,45 @@ function constructorParts(span) {
 const squash = s => String(s).replace(/\s+/g, ' ');
 const within = (hay, needle) => squash(hay).includes(squash(needle));
 const where = span => `${span.file}:${span.from}-${span.to}`;
+function leanFile(leanRoot, rel) {
+  try { return { text: readFileSync(join(leanRoot, rel), 'utf8') }; }
+  catch (e) { return { error: `cannot read ${rel}: ${e.message}` }; }
+}
+function theoremInventory(goalsText) {
+  return leanSpanList({ g: goalsText }).filter(s => /^theorem\s/.test(s.text)).map(s => s.name);
+}
+function stepCtorNames(checkpointText) {
+  return leanSpanList({ c: checkpointText }).filter(s => s.name.startsWith('Step.') && /^  \| /.test(s.text)).map(s => s.name);
+}
+function duplicateIdentityProblems(names, label) {
+  const n = new Map();
+  for (const id of names) n.set(id, (n.get(id) || 0) + 1);
+  const problems = [];
+  for (const [id, k] of n) if (k > 1) problems.push(`duplicate ${label} identity ${id}`);
+  return problems;
+}
+function goalsClasses(leanRoot) {
+  const problems = [];
+  const goals = leanFile(leanRoot, 'lean/CardanoKeri/CheckpointGoals.lean');
+  const chk = leanFile(leanRoot, 'lean/CardanoKeri/Checkpoint.lean');
+  if (goals.error) problems.push(goals.error);
+  if (chk.error) problems.push(chk.error);
+  if (problems.length) return { problems, declared: [], observable: [], proofOnly: [], inversion: [] };
+  const declared = theoremInventory(goals.text);
+  if (!declared.length) problems.push('theorem inventory is empty');
+  problems.push(...duplicateIdentityProblems(declared, 'theorem'));
+  if (!declared.some(n => n.includes('.'))) problems.push('theorem inventory has no dotted identity');
+  const ctors = stepCtorNames(chk.text);
+  if (!ctors.length) problems.push('Step inductive has no constructors');
+  problems.push(...duplicateIdentityProblems(ctors, 'Step constructor'));
+  const inversion = [...new Set(ctors)].map(n => `${n}_iff`);
+  const uniqueDeclared = [...new Set(declared)];
+  const proofOnly = uniqueDeclared.filter(n => inversion.includes(n));
+  const observable = uniqueDeclared.filter(n => !inversion.includes(n));
+  for (const n of inversion) if (!uniqueDeclared.includes(n)) problems.push(`proof-only identity missing ${n}`);
+  for (const n of uniqueDeclared) if (/^Step\..+_iff$/.test(n) && !inversion.includes(n)) problems.push(`proof-only: ${n} does not meet the Step.<constructor>_iff join criterion`);
+  return { problems, declared: uniqueDeclared, observable, proofOnly, inversion };
+}
 
 /* --- story reconciliation ---------------------------------------------- */
 
@@ -509,7 +553,7 @@ function checkGuardTable(core, spans) {
   // every guard hypothesis of every Step constructor is claimed
   let hyps = 0;
   for (const [name, span] of spans) {
-    if (!name.startsWith('Step.')) continue;
+    if (!name.startsWith('Step.') || !/^  \| /.test(span.text)) continue;
     for (const h of Object.keys(binders(span))) {
       if (!/^h/.test(h)) continue;
       hyps++;
@@ -527,10 +571,9 @@ function checkGuardTable(core, spans) {
 // declaration, a name missing from the lamps or listed twice: red.
 function checkTheoremRows(core, leanRoot) {
   const problems = [];
-  let goals = '';
-  try { goals = readFileSync(join(leanRoot, 'lean/CardanoKeri/CheckpointGoals.lean'), 'utf8'); } catch (e) { return { problems: ['cannot read CheckpointGoals.lean: ' + e.message], rows: 0 }; }
-  const declared = [...goals.matchAll(/^theorem\s+([A-Za-z0-9_']+)/gm)].map(m => m[1]);
-  if (new Set(declared).size !== declared.length) problems.push('CheckpointGoals.lean declares a theorem twice');
+  const inv = goalsClasses(leanRoot);
+  problems.push(...inv.problems);
+  if (!inv.declared.length) return { problems, rows: 0, observable: 0, proofOnly: 0 };
   const P = { D: 10, B: 5, P: 2, W: 3 };
   const samples = [
     core.attempt(core.newSession(P), { register: { refund: 7, pool0: 4 } }, 1).record,
@@ -538,16 +581,16 @@ function checkTheoremRows(core, leanRoot) {
   ];
   const rowNames = [...new Set(samples.flatMap(r => Object.keys(r.theorems)))];
   const listed = core.THEOREMS.flatMap(g => g.lean);
-  for (const n of declared) if (!rowNames.includes(n)) problems.push(`theorem ${n} is declared in the Lean but has no checker row in the step record`);
-  for (const n of rowNames) if (!declared.includes(n)) problems.push(`checker row ${n} names no theorem of CheckpointGoals.lean`);
-  for (const n of declared) { const k = listed.filter(x => x === n).length; if (k !== 1) problems.push(`theorem ${n} is listed by ${k} lamps, expected exactly one`); }
-  for (const n of listed) if (!declared.includes(n)) problems.push(`lamp lists ${n}, which is not a theorem of CheckpointGoals.lean`);
+  for (const n of inv.observable) if (!rowNames.includes(n)) problems.push(`theorem ${n} is declared in the Lean but has no checker row in the step record`);
+  for (const n of rowNames) if (!inv.observable.includes(n)) problems.push(`checker row ${n} names no theorem of CheckpointGoals.lean`);
+  for (const n of inv.observable) { const k = listed.filter(x => x === n).length; if (k !== 1) problems.push(`theorem ${n} is listed by ${k} lamps, expected exactly one`); }
+  for (const n of listed) if (!inv.observable.includes(n)) problems.push(`lamp lists ${n}, which is not an observable theorem of CheckpointGoals.lean`);
   for (const r of samples) for (const n of Object.keys(r.theorems)) {
     const x = r.theorems[n];
     if (!x || typeof x.exhibited !== 'boolean' || typeof x.holds !== 'boolean' || !Array.isArray(x.notes) || !Array.isArray(x.by) || x.by[0] !== n) problems.push(`checker row ${n} is not a row {exhibited, holds, notes, by: [${n}]}`);
     if (!r.lamps || !Object.keys(r.lamps).length) problems.push('a record carries no lamps');
   }
-  return { problems, rows: declared.length };
+  return { problems, rows: inv.declared.length, observable: inv.observable.length, proofOnly: inv.proofOnly.length };
 }
 function checkClauses(core, clausesDoc, storiesMd, scenarioTimelines, leanRoot) {
   const problems = [];
@@ -989,15 +1032,15 @@ function fabricatedViolations(core) {
 // either a fabricated-violation row that its exact checker reds on, or a structural row naming its falsifier
 function checkFabricated(core, leanRoot, skip) {
   const problems = [];
-  let goals = '';
-  try { goals = readFileSync(join(leanRoot, 'lean/CardanoKeri/CheckpointGoals.lean'), 'utf8'); } catch (e) { return { problems: ['cannot read CheckpointGoals.lean: ' + e.message], rows: 0, structural: 0 }; }
-  const declared = [...goals.matchAll(/^theorem\s+([A-Za-z0-9_']+)/gm)].map(m => m[1]);
+  const inv = goalsClasses(leanRoot);
+  problems.push(...inv.problems);
+  if (!inv.declared.length) return { problems, rows: 0, structural: 0 };
   const fab = fabricatedViolations(core).filter(f => f.name !== skip);   // `skip`: the removed-thing control
   const have = new Set(fab.map(f => f.name));
-  for (const n of declared) if (!have.has(n) && !STRUCTURAL_ROWS[n]) problems.push(`declaration ${n} has neither a fabricated violation nor a structural falsifier: its checker can go vacuous unnoticed`);
-  for (const n of Object.keys(STRUCTURAL_ROWS)) { if (!declared.includes(n)) problems.push(`structural row ${n} is not a declaration`); if (have.has(n)) problems.push(`${n} is listed both as structural and as fabricated`); }
+  for (const n of inv.observable) if (!have.has(n) && !STRUCTURAL_ROWS[n]) problems.push(`declaration ${n} has neither a fabricated violation nor a structural falsifier: its checker can go vacuous unnoticed`);
+  for (const n of Object.keys(STRUCTURAL_ROWS)) { if (!inv.declared.includes(n)) problems.push(`structural row ${n} is not a declaration`); if (have.has(n)) problems.push(`${n} is listed both as structural and as fabricated`); }
   for (const f of fab) {
-    if (!declared.includes(f.name)) { problems.push(`fabricated violation ${f.name} names no declaration`); continue; }
+    if (!inv.observable.includes(f.name)) { problems.push(`fabricated violation ${f.name} names no declaration`); continue; }
     let row;
     try { const { before, after, rec } = f.make(); row = core.theoremReport(before, after, rec)[f.name]; }
     catch (e) { problems.push(`fabricated violation ${f.name}: the checker threw (${e && e.message})`); continue; }
@@ -1082,7 +1125,7 @@ async function runSuite(opts) {
   if (clausesDoc) {
     const tr = checkTheoremRows(core, opts.leanRoot || LEAN_ROOT);
     problems.push(...tr.problems);
-    rows.push({ item: `theorem rows: one checker per Lean declaration (${tr.rows} declarations of CheckpointGoals.lean, each a row of every step record, each listed by exactly one lamp)`, ok: !tr.problems.length });
+    rows.push({ item: `theorem rows: ${tr.observable} observable / ${tr.proofOnly} proof-only of ${tr.rows} CheckpointGoals.lean declarations; observable identities match checker rows and lamps exactly`, ok: !tr.problems.length });
     const cl = checkClauses(core, clausesDoc, readFileSync(STORIES, 'utf8'), timelines, opts.leanRoot || LEAN_ROOT);
     rows.push({ item: `story reconciliation: ${cl.clauses} clauses, ${cl.anchored} atomic claims anchored in the part of a Lean declaration their kind names, with a semantic tie, ${cl.fragments} story fragments classified; ${cl.hyps} Step guard hypotheses all claimed by a refusal name; ${cl.matrix.length} distinctive clauses exercised`, ok: !cl.problems.length });
     problems.push(...cl.problems);
@@ -1137,7 +1180,61 @@ async function selftest(work) {
   const scenariosCopy = (edit) => { const d = join(work, 'sc-' + Math.random().toString(36).slice(2)); mkdirSync(d, { recursive: true }); cpSync(SCENARIOS, d, { recursive: true }); edit(d); return d; };
   const topUp = "const pool2 = natAdd(l.pool, a.topUp.x); if (pool2 === null) return refuse('invalid-nat', 'pool');";
   const withClauses = (name, edit) => { const j = JSON.parse(readFileSync(CLAUSES, 'utf8')); edit(j); const p = join(work, name); writeFileSync(p, JSON.stringify(j)); return { clauses: p, skipBuild: true }; };
+  const leanScratch = (name, file, needle, repl) => {
+    const root = join(work, name);
+    mkdirSync(join(root, 'lean', 'CardanoKeri'), { recursive: true });
+    for (const f of ['Checkpoint.lean', 'CheckpointGoals.lean']) {
+      let s = readFileSync(join(LEAN_ROOT, 'lean', 'CardanoKeri', f), 'utf8');
+      if (f === file) {
+        if (!s.includes(needle)) throw new Error(`selftest ${name}: needle not found: ${needle.slice(0, 80)}`);
+        const n = s.split(needle).length - 1;
+        if (n !== 1) throw new Error(`selftest ${name}: needle hits ${n}, expected 1`);
+        s = s.replace(needle, repl);
+        if (s.includes(needle)) throw new Error(`selftest ${name}: mutation did not apply`);
+      }
+      writeFileSync(join(root, 'lean', 'CardanoKeri', f), s);
+    }
+    return { leanRoot: root, skipBuild: true, skipTemplate: true };
+  };
+  const leanDups = (name, edits) => {
+    const root = join(work, name);
+    mkdirSync(join(root, 'lean', 'CardanoKeri'), { recursive: true });
+    for (const f of ['Checkpoint.lean', 'CheckpointGoals.lean']) {
+      let s = readFileSync(join(LEAN_ROOT, 'lean', 'CardanoKeri', f), 'utf8');
+      const e = edits.find(x => x.file === f);
+      if (e) {
+        if (!s.includes(e.needle)) throw new Error(`selftest ${name}: needle not found: ${e.needle.slice(0, 80)}`);
+        const before = s.split(e.needle).length - 1;
+        if (before !== 1) throw new Error(`selftest ${name}: needle hits ${before}, expected 1`);
+        s = s.replace(e.needle, e.repl);
+        const after = s.split(e.needle).length - 1;
+        if (after !== 2) throw new Error(`selftest ${name}: mutation did not yield 2 occurrences (got ${after})`);
+      }
+      writeFileSync(join(root, 'lean', 'CardanoKeri', f), s);
+    }
+    return { leanRoot: root, skipBuild: true, skipTemplate: true };
+  };
+  const dupTh = { file: 'CheckpointGoals.lean', needle: 'theorem T1_sn_monotone (p : Params)', repl: 'theorem T1_sn_monotone (p : Params)\ntheorem T1_sn_monotone (p : Params)' };
+  const dupCtor = { file: 'Checkpoint.lean', needle: '| register (now : Slot)', repl: '| register (now : Slot)\n  | register (now : Slot)' };
   const controls = [
+    { name: 'duplicate theorem and Step constructor identities both applied', expect: /duplicate theorem identity T1_sn_monotone[\s\S]*duplicate Step constructor identity Step\.register/,
+      make: () => leanDups('m-dup-both', [dupTh, dupCtor]) },
+    { name: 'duplicate theorem identity: T1_sn_monotone occurs twice', expect: /duplicate theorem identity T1_sn_monotone/,
+      make: () => leanDups('m-dup-th', [dupTh]) },
+    { name: 'duplicate Step constructor identity: Step.register occurs twice', expect: /duplicate Step constructor identity Step\.register/,
+      make: () => leanDups('m-dup-ctor', [dupCtor]) },
+    { name: 'dotted discovery: T1_sn_monotone becomes T1.sn_monotone', expect: /theorem T1\.sn_monotone is declared in the Lean but has no checker row/,
+      make: () => leanScratch('m-dotted', 'CheckpointGoals.lean', 'theorem T1_sn_monotone (p : Params)', 'theorem T1.sn_monotone (p : Params)') },
+    { name: 'same-count observable substitution: T1_sn_monotone → T1_sn_monotonex', expect: /theorem T1_sn_monotonex is declared in the Lean but has no checker row/,
+      make: () => leanScratch('m-obs-sub', 'CheckpointGoals.lean', 'theorem T1_sn_monotone (p : Params)', 'theorem T1_sn_monotonex (p : Params)') },
+    { name: 'inversion substitution: Step.register_iff → Step.registerx_iff', expect: /proof-only identity missing Step\.register_iff/,
+      make: () => leanScratch('m-inv-sub', 'CheckpointGoals.lean', 'theorem Step.register_iff', 'theorem Step.registerx_iff') },
+    { name: 'inversion removal: Step.register_iff is no longer a theorem', expect: /proof-only identity missing Step\.register_iff/,
+      make: () => leanScratch('m-inv-del', 'CheckpointGoals.lean', 'theorem Step.register_iff', 'def Step.register_iff') },
+    { name: 'invalid proof-only entry: T1_sn_monotone renamed Step.fake_iff', expect: /proof-only: Step\.fake_iff does not meet the Step\.<constructor>_iff join criterion/,
+      make: () => leanScratch('m-inv-fake', 'CheckpointGoals.lean', 'theorem T1_sn_monotone (p : Params)', 'theorem Step.fake_iff (p : Params)') },
+    { name: 'class boundary: Step.register constructor renamed, join breaks', expect: /proof-only identity missing Step\.registerx_iff|proof-only: Step\.register_iff does not meet the Step\.<constructor>_iff join criterion/,
+      make: () => leanScratch('m-ctor-renamed', 'Checkpoint.lean', '| register (now : Slot)', '| registerx (now : Slot)') },
     { name: 'scenario with a flipped expectation', expect: /expected ok=false, got ok=true/,
       make: () => ({ scenarios: scenariosCopy(d => { const f = join(d, '02-hal-lands-and-is-paid.json'); const sc = JSON.parse(readFileSync(f, 'utf8')); sc.steps[2].expect.ok = false; sc.steps[2].expect.reason = 'no-quorum'; writeFileSync(f, JSON.stringify(sc)); }), skipBuild: true }) },
     { name: 'core guard flipped: close without the new keys’ signed intent (D-038)', expect: /expected ok=false, got ok=true|theorem VIOLATED: .*T(16|6|7)/,
@@ -1246,7 +1343,8 @@ async function selftest(work) {
     if (!r.problems.length) { console.error(`SELFTEST RED: control «${c.name}» ACCEPTED by the gate`); return 1; }
     const text = r.problems.join('\n');
     if (!c.expect.test(text)) { console.error(`SELFTEST RED: «${c.name}» failed for the wrong reason:\n${text.slice(0, 900)}`); return 1; }
-    console.log(`negative control «${c.name}»: RED as expected — ${text.split('\n').find(l => c.expect.test(l)).slice(0, 160)}`);
+    const hit = text.split('\n').find(l => c.expect.test(l));
+    console.log(`negative control «${c.name}»: RED as expected — ${(hit || text).slice(0, 160)}`);
   }
   // the vacuity pass: every non-structural row made unconditionally true, one at a time, is caught by its fabricated violation
   const vac = await vacuityPass(coreText, work, LEAN_ROOT);

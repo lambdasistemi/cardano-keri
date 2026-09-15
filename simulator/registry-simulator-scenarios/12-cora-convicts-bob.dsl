@@ -109,6 +109,7 @@ step:
     reap:
       reaper: 6
       aid: 12
+      recipient: 4
   expect:
     ok: true
     flow:

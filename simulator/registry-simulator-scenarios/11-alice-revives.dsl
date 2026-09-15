@@ -4,7 +4,7 @@ family: registry
 id: 11
 slug: alice-revives
 story: "Alice comes back from dormant"
-narrative: "Her leaf says dormant(1). She posts a revive request with the bond and a witnessed rotation from key state 1; Hal folds it: a new token is minted (token 2 — Bob took token 1), a live checkpoint at key state 2 is funded from her bond, the leaf is active(2). A revive of an AID that is not dormant is refused; a revive without the rotation is refused on the branch where Mallory tries it. On a branch the block producer copies her early reap with itself as the reaper: admitted today, and it costs her the checkpoint’s min-ADA."
+narrative: "Her checkpoint closes through the premise, which names Alice herself the opaque recipient of the live bond; Hal folds the go-request and her leaf says dormant(1) — the closing rotation's reached key state, kept with no checkpoint at all. She posts a revive request with the bond and a witnessed rotation from key state 1; Hal folds it: a new token is minted (token 2 — Bob took token 1), a live checkpoint at key state 2 is funded from her bond, the leaf is active(2). A revive of an AID that is not dormant is refused; a revive without the rotation is refused on the branch where the environment witnesses none. On a branch the block producer copies her close with himself as the reaper: admitted today, and it costs her the checkpoint's premium split — the premise still sends the bond where it names it, and whether the reaper may be the recipient is #358's to settle."
 params:
   D: 1000
   tip: 2
@@ -27,7 +27,8 @@ env:
   rotationFrom:
     - [11, 0]
     - [11, 1]
-  quorum: [11]
+  closeAuth:
+    - [11, 1]
 step:
   now: 0
   actor: anyone
@@ -47,6 +48,7 @@ step:
       tips: null
       premium: null
       intoRequest: 0
+      bondReturn: null
 step:
   now: 0
   actor: anyone
@@ -66,6 +68,7 @@ step:
       tips: null
       premium: null
       intoRequest: 0
+      bondReturn: null
 step:
   now: 1
   actor: anyone
@@ -87,30 +90,16 @@ step:
         value: 4
       premium: null
       intoRequest: 0
+      bondReturn: null
 step:
   now: 5
-  actor: next-keys
-  as: Alice
-  action:
-    pause:
-      aid: 11
-  expect:
-    ok: true
-    flow:
-      deposited: 0
-      locked: []
-      refunds: []
-      tips: null
-      premium: null
-      intoRequest: 0
-step:
-  now: 6
   actor: anyone
-  as: "Alice — reaping her own checkpoint early"
+  as: "Alice — closing her own checkpoint through the premise that names her"
   action:
     reap:
       reaper: 1
       aid: 11
+      recipient: 1
   expect:
     ok: true
     flow:
@@ -122,11 +111,14 @@ step:
         addr: 1
         value: 1
       intoRequest: 3
-  exhibits: [R13]
+      bondReturn:
+        addr: 1
+        value: 1000
+  exhibits: [R13, R11]
 step:
-  now: 7
+  now: 6
   actor: anyone
-  as: Hal
+  as: "Hal — the close fold lands: dormant(1), no checkpoint"
   action:
     fold:
       folder: 3
@@ -138,12 +130,16 @@ step:
     flow:
       deposited: 0
       locked: []
-      refunds: [{"addr":1,"value":1}]
+      refunds:
+        - addr: 1
+          value: 1
       tips:
         addr: 3
         value: 2
       premium: null
       intoRequest: 0
+      bondReturn: null
+  exhibits: [R12, R1]
 step:
   now: 8
   actor: anyone
@@ -163,6 +159,7 @@ step:
       tips: null
       premium: null
       intoRequest: 0
+      bondReturn: null
 step:
   now: 9
   actor: anyone
@@ -177,25 +174,6 @@ step:
     ok: false
     reason: not-dormant
 step:
-  now: 9
-  actor: anyone
-  as: "Mallory — reviving Alice without a rotation from k=1"
-  action:
-    contribute:
-      aid: 11
-      owner: 4
-      submittedAt: 9
-      op: revive
-  expect:
-    ok: true
-    flow:
-      deposited: 1002
-      locked: []
-      refunds: []
-      tips: null
-      premium: null
-      intoRequest: 0
-step:
   now: 10
   actor: anyone
   as: Alice
@@ -209,26 +187,59 @@ step:
     ok: true
     flow:
       deposited: 1002
+      locked: []
+      refunds: []
+      tips: null
+      premium: null
+      intoRequest: 0
+      bondReturn: null
 step:
   now: 11
   actor: anyone
-  as: Hal
+  as: "Hal — Alice's revival from the retained key state 1"
   action:
     fold:
       folder: 3
       gen: 2
       plugin: 7
-      batch: [{"id":5,"do":"process"}]
+      batch: [{"id":4,"do":"process"}]
   expect:
     ok: true
     flow:
-      locked: [{"aid":11,"value":1000}]
+      deposited: 0
+      locked:
+        - aid: 11
+          value: 1000
+      refunds: []
       tips:
         addr: 3
         value: 2
+      premium: null
+      intoRequest: 0
+      bondReturn: null
   exhibits: [R1, R2, R11, R12]
 step:
   now: 12
+  actor: anyone
+  as: "Mallory — posting a revive of Alice, who is active again: posting is permissionless"
+  action:
+    contribute:
+      aid: 11
+      owner: 4
+      submittedAt: 12
+      op: revive
+  expect:
+    ok: true
+    flow:
+      deposited: 1002
+      locked: []
+      refunds: []
+      tips: null
+      premium: null
+      intoRequest: 0
+      bondReturn: null
+step:
+  now: 13
   actor: anyone
   as: "Hal — Mallory's revive, now that Alice is active again"
   action:
@@ -236,27 +247,45 @@ step:
       folder: 3
       gen: 3
       plugin: 7
-      batch: [{"id":4,"do":"process"}]
+      batch: [{"id":5,"do":"process"}]
   expect:
     ok: false
     reason: not-dormant
+step:
+  now: 32
+  actor: anyone
+  as: "Sam — Mallory's posted request leaves by rejection once rejectable"
+  action:
+    fold:
+      folder: 6
+      gen: 3
+      plugin: 7
+      batch: [{"id":5,"do":"reject"}]
+  expect:
+    ok: true
+    flow:
+      deposited: 0
+      locked: []
+      refunds:
+        - addr: 4
+          value: 1000
+      tips:
+        addr: 6
+        value: 2
+      premium: null
+      intoRequest: 0
+      bondReturn: null
+  exhibits: [R9, R11]
 fork:
   id: mallory-without-rotation
-  at: 6
-  title: "Mallory's revive carries no rotation from key state 1"
+  at: 5
+  title: "A revive with no witnessed rotation from key state 1"
   env:
     inception: [11, 12]
     rotationFrom:
       - [11, 0]
-    quorum: [11]
-  expectFinal:
-    gen: 2
-    plugin: 7
-    leaves: [{"aid":12,"status":{"active":1}},{"aid":11,"status":{"dormant":1}}]
-    ckpts: [{"aid":12,"ckpt":{"token":1,"k":0,"st":"live"}}]
-    requests: [{"id":3,"aid":11,"owner":4,"submittedAt":8,"op":"revive"}]
-    nextReq: 4
-    nextToken: 2
+    closeAuth:
+      - [11, 1]
   step:
     now: 8
     actor: anyone
@@ -271,6 +300,12 @@ fork:
       ok: true
       flow:
         deposited: 1002
+        locked: []
+        refunds: []
+        tips: null
+        premium: null
+        intoRequest: 0
+        bondReturn: null
     exhibits: [R11]
   step:
     now: 9
@@ -285,30 +320,38 @@ fork:
     expect:
       ok: false
       reason: no-rotation
-    note: "The plugin wants a witnessed rotation from the recorded key state; Mallory has none."
+    note: "The plugin wants a witnessed rotation from the recorded key state; this environment witnesses none."
 fork:
-  id: leader-copies-the-reap
-  at: 4
-  title: "The block producer copies Alice’s early reap"
+  id: leader-copies-the-close
+  at: 3
+  title: "The block producer copies Alice's close with himself as the reaper"
   step:
-    now: 6
+    now: 5
     actor: anyone
-    as: "Mallory — the block producer, copying Alice’s reap with herself as the reaper"
+    as: "Mallory — the copied close, reaper rewritten"
     action:
       reap:
         reaper: 4
         aid: 11
+        recipient: 1
     expect:
       ok: true
       flow:
+        deposited: 0
+        locked: []
+        refunds: []
+        tips: null
         premium:
           addr: 4
           value: 1
         intoRequest: 3
+        bondReturn:
+          addr: 1
+          value: 1000
     exhibits: [R13, R11]
-    note: "The Lean allows this today: the owner’s quorum evidence names the AID, not the payee, so a copy of her early reap with the reaper rewritten is admitted inside the grace window. Escalated as Q-R6, ruling pending."
+    note: "The reaper keeps the premium split; the bond return follows the premise, which still names Alice. Whether the reaper may be the recipient is #358's, not settled here."
   step:
-    now: 7
+    now: 6
     actor: anyone
     as: Hal
     action:
@@ -320,17 +363,24 @@ fork:
     expect:
       ok: true
       flow:
-        refunds: [{"addr":4,"value":1}]
+        deposited: 0
+        locked: []
+        refunds:
+          - addr: 4
+            value: 1
         tips:
           addr: 3
           value: 2
+        premium: null
+        intoRequest: 0
+        bondReturn: null
     exhibits: [R11, R12]
-    note: "The go-request’s min-ADA returns to the copier, not to Alice: her exposure is the checkpoint’s min-ADA, Mc."
+    note: "The go-request's min-ADA returns to the copier: her exposure beyond the premise-named bond is the checkpoint's premium split."
 expectFinal:
-  gen: 3
+  gen: 4
   plugin: 7
   leaves: [{"aid":12,"status":{"active":1}},{"aid":11,"status":{"active":2}}]
   ckpts: [{"aid":11,"ckpt":{"token":2,"k":2,"st":"live"}},{"aid":12,"ckpt":{"token":1,"k":0,"st":"live"}}]
-  requests: [{"id":4,"aid":11,"owner":4,"submittedAt":9,"op":"revive"},{"id":3,"aid":12,"owner":2,"submittedAt":8,"op":"revive"}]
+  requests: [{"id":3,"aid":12,"owner":2,"submittedAt":8,"op":"revive"}]
   nextReq: 6
   nextToken: 3

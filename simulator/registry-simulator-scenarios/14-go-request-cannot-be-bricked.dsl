@@ -4,7 +4,7 @@ family: registry
 id: 14
 slug: go-request-cannot-be-bricked
 story: "A go-request can neither be retracted nor rejected"
-narrative: "Mallory reaps Alice's parked checkpoint and then tries to make the key state disappear: retracting her own go-request is refused, because it is dated at the end of time and phase 2 never comes; rejecting it is refused by the plugin, wherever it sits in a batch. The only way out of the inbox is to be processed, and anyone can do that."
+narrative: "Alice's checkpoint closes through the premise, which names Mallory — an adversary — the recipient of the live bond; her go-request carries the closing rotation's reached key state 1. Mallory then tries to make the key state disappear: retracting is refused, because the request is dated at the end of time and phase 2 never comes; rejecting it is refused by the plugin, wherever it sits in a batch. The only way out of the inbox is to be processed, and anyone can do that: Hal's fold lands it and the leaf keeps key state 1 with no checkpoint, so there is nothing left to reap."
 params:
   D: 1000
   tip: 2
@@ -26,6 +26,8 @@ env:
   inception: [11]
   rotationFrom:
     - [11, 0]
+  closeAuth:
+    - [11, 4]
 step:
   now: 0
   actor: anyone
@@ -45,6 +47,7 @@ step:
       tips: null
       premium: null
       intoRequest: 0
+      bondReturn: null
 step:
   now: 1
   actor: anyone
@@ -66,30 +69,16 @@ step:
         value: 2
       premium: null
       intoRequest: 0
+      bondReturn: null
 step:
   now: 2
-  actor: next-keys
-  as: Alice
-  action:
-    pause:
-      aid: 11
-  expect:
-    ok: true
-    flow:
-      deposited: 0
-      locked: []
-      refunds: []
-      tips: null
-      premium: null
-      intoRequest: 0
-step:
-  now: 7
   actor: anyone
-  as: Mallory
+  as: "Mallory — the premise names her the recipient, so her close succeeds"
   action:
     reap:
       reaper: 4
       aid: 11
+      recipient: 4
   expect:
     ok: true
     flow:
@@ -101,6 +90,10 @@ step:
         addr: 4
         value: 1
       intoRequest: 3
+      bondReturn:
+        addr: 4
+        value: 1000
+  exhibits: [R13, R11]
 step:
   now: 8
   actor: owner
@@ -131,10 +124,11 @@ step:
       tips: null
       premium: null
       intoRequest: 0
+      bondReturn: null
 step:
   now: 30
   actor: anyone
-  as: "Mallory — rejecting it inside a batch"
+  as: "Mallory — rejecting it inside a batch, behind a rejectable request"
   action:
     fold:
       folder: 4
@@ -148,7 +142,7 @@ step:
 step:
   now: 31
   actor: anyone
-  as: Hal
+  as: "Hal — the only exit is to be processed"
   action:
     fold:
       folder: 3
@@ -158,11 +152,33 @@ step:
   expect:
     ok: true
     flow:
-      refunds: [{"addr":4,"value":1},{"addr":2,"value":1000}]
+      deposited: 0
+      locked: []
+      refunds:
+        - addr: 4
+          value: 1
+        - addr: 2
+          value: 1000
       tips:
         addr: 3
         value: 4
+      premium: null
+      intoRequest: 0
+      bondReturn: null
   exhibits: [R11, R1, R12]
+step:
+  now: 32
+  actor: anyone
+  as: "Mallory — nothing left to reap: the leaf is dormant and holds no UTxO"
+  action:
+    reap:
+      reaper: 4
+      aid: 11
+      recipient: 4
+  expect:
+    ok: false
+    reason: no-checkpoint
+  exhibits: [R13, R1]
 expectFinal:
   gen: 2
   plugin: 7

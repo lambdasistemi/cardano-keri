@@ -31,7 +31,7 @@ namespace CardanoKeri.Registry.TraceDriver
 
 instance : ToJson Params where
   toJson p := Json.mkObj [("D", toJson p.D), ("tip", toJson p.tip), ("Mc", toJson p.Mc), ("Mr", toJson p.Mr),
-    ("process", toJson p.process), ("retract", toJson p.retract), ("W", toJson p.W), ("far", toJson p.far)]
+    ("process", toJson p.process), ("retract", toJson p.retract), ("far", toJson p.far)]
 
 instance : ToJson Status where
   toJson
@@ -42,7 +42,6 @@ instance : ToJson Status where
 instance : ToJson CkState where
   toJson
     | .live => Json.str "live"
-    | .parked since => Json.mkObj [("parked", toJson since)]
     | .tomb => Json.str "tomb"
 
 instance : ToJson Ckpt where
@@ -80,9 +79,8 @@ instance : ToJson Action where
          ("batch", Json.arr (batch.map fun (id, fa) =>
             Json.mkObj [("id", toJson id), ("do", foldActionJson fa)]).toArray)])]
     | .retract id => Json.mkObj [("retract", Json.mkObj [("req", toJson id)])]
-    | .reap reaper aid => Json.mkObj [("reap", Json.mkObj [("reaper", toJson reaper), ("aid", toJson aid)])]
-    | .pause aid => Json.mkObj [("pause", Json.mkObj [("aid", toJson aid)])]
-    | .resume aid => Json.mkObj [("resume", Json.mkObj [("aid", toJson aid)])]
+    | .reap reaper aid recipient => Json.mkObj [("reap", Json.mkObj
+        [("reaper", toJson reaper), ("aid", toJson aid), ("recipient", toJson recipient)])]
     | .convictCkpt aid => Json.mkObj [("convictCkpt", Json.mkObj [("aid", toJson aid)])]
 
 private def pairJson (a v : Nat) (ka kv : String) : Json := Json.mkObj [(ka, toJson a), (kv, toJson v)]
@@ -93,26 +91,29 @@ instance : ToJson Flow where
     ("refunds", Json.arr (f.refunds.map fun (a, v) => pairJson a v "addr" "value").toArray),
     ("tips", match f.tips with | some (a, v) => pairJson a v "addr" "value" | none => Json.null),
     ("premium", match f.premium with | some (a, v) => pairJson a v "addr" "value" | none => Json.null),
-    ("intoRequest", toJson f.intoRequest)]
+    ("intoRequest", toJson f.intoRequest),
+    ("bondReturn", match f.bondReturn with | some (a, v) => pairJson a v "addr" "value" | none => Json.null)]
 
 /-- An evidence table. -/
 structure EnvTable where
   inception : List AID
   rotationFrom : List (AID × KeyState)
   duplicity : List (AID × KeyState)
-  quorum : List AID
+  /-- The 358-owned close-authorization premise as (aid, recipient) rows:
+  the opaque bond-return recipient is part of the premise (INV408-02). -/
+  closeAuth : List (AID × Addr)
 
 def EnvTable.toEnv (t : EnvTable) : Env :=
   { inception := fun a => t.inception.contains a,
     rotationFrom := fun a k => t.rotationFrom.contains (a, k),
     duplicity := fun a k => t.duplicity.contains (a, k),
-    quorum := fun a => t.quorum.contains a }
+    closeAuth := fun a r => t.closeAuth.contains (a, r) }
 
 instance : ToJson EnvTable where
   toJson t := Json.mkObj [("inception", toJson t.inception),
     ("rotationFrom", toJson (t.rotationFrom.map fun (a, k) => [a, k])),
     ("duplicity", toJson (t.duplicity.map fun (a, k) => [a, k])),
-    ("quorum", toJson t.quorum)]
+    ("closeAuth", toJson (t.closeAuth.map fun (a, r) => [a, r]))]
 
 /-! ## Parsing the scenario files -/
 
@@ -132,7 +133,7 @@ def envOfJson (j : Json) : Except String EnvTable := do
   let get2 (k : String) : Except String (List (Nat × Nat)) := match j.getObjVal? k with
     | .ok v => pairList v
     | .error _ => pure []
-  pure ⟨← get1 "inception", ← get2 "rotationFrom", ← get2 "duplicity", ← get1 "quorum"⟩
+  pure ⟨← get1 "inception", ← get2 "rotationFrom", ← get2 "duplicity", ← get2 "closeAuth"⟩
 
 def paramsOfJson (j : Json) : Except String Params := do
   let D ← j.getObjValAs? Nat "D"
@@ -141,13 +142,12 @@ def paramsOfJson (j : Json) : Except String Params := do
   let Mr ← j.getObjValAs? Nat "Mr"
   let process ← j.getObjValAs? Nat "process"
   let retract ← j.getObjValAs? Nat "retract"
-  let W ← j.getObjValAs? Nat "W"
   let far ← j.getObjValAs? Nat "far"
   if hD : 0 < D then
     if hP : 0 < process then
       if hR : 0 < retract then
         if hF : Mr + tip ≤ Mc then
-          pure { D, tip, Mc, Mr, process, retract, W, far, hD, hProcess := hP, hRetract := hR, hFund := hF }
+          pure { D, tip, Mc, Mr, process, retract, far, hD, hProcess := hP, hRetract := hR, hFund := hF }
         else throw "Mr + tip must not exceed Mc"
       else throw "retract must be positive"
     else throw "process must be positive"
@@ -187,13 +187,8 @@ def actionOfJson (j : Json) : Except String Action := do
   | .ok r => pure (.retract (← r.getObjValAs? Nat "req"))
   | .error _ =>
   match j.getObjVal? "reap" with
-  | .ok r => pure (.reap (← r.getObjValAs? Nat "reaper") (← r.getObjValAs? Nat "aid"))
-  | .error _ =>
-  match j.getObjVal? "pause" with
-  | .ok r => pure (.pause (← r.getObjValAs? Nat "aid"))
-  | .error _ =>
-  match j.getObjVal? "resume" with
-  | .ok r => pure (.resume (← r.getObjValAs? Nat "aid"))
+  | .ok r => pure (.reap (← r.getObjValAs? Nat "reaper") (← r.getObjValAs? Nat "aid")
+                    (← r.getObjValAs? Nat "recipient"))
   | .error _ =>
   match j.getObjVal? "convictCkpt" with
   | .ok r => pure (.convictCkpt (← r.getObjValAs? Nat "aid"))
@@ -201,7 +196,7 @@ def actionOfJson (j : Json) : Except String Action := do
 
 /-! ## Cells -/
 
-def params : Params := { D := 1000, tip := 2, Mc := 4, Mr := 1, process := 10, retract := 10, W := 5,
+def params : Params := { D := 1000, tip := 2, Mc := 4, Mr := 1, process := 10, retract := 10,
                          far := 1000000000, hD := by decide, hProcess := by decide, hRetract := by decide,
                          hFund := by decide }
 
@@ -239,22 +234,22 @@ def seeds : List Seed := [
     env := ⟨[11], [], [], []⟩,
     steps := [(0, .contribute 11 1 0 .register), (3, .retract 0), (12, .retract 0), (12, .retract 0),
               (12, .contribute 11 1 12 .register), (25, .fold 6 0 7 [(1, .reject)]), (33, .fold 6 0 7 [(1, .reject)])] },
-  { name := "pause-reap-revive",
-    env := ⟨[11], [(11, 0), (11, 1)], [], []⟩,
-    steps := [(0, .contribute 11 1 0 .register), (1, .fold 3 0 7 [(0, .process)]), (5, .pause 11), (6, .reap 6 11),
-              (10, .reap 6 11), (10, .retract 1), (10, .fold 3 1 7 [(1, .reject)]), (11, .fold 3 1 7 [(1, .process)]),
+  { name := "close-reap-revive",
+    env := ⟨[11], [(11, 0), (11, 1)], [], [(11, 6)]⟩,
+    steps := [(0, .contribute 11 1 0 .register), (1, .fold 3 0 7 [(0, .process)]), (5, .reap 6 11 6),
+              (6, .reap 6 11 6), (10, .retract 1), (10, .fold 3 1 7 [(1, .reject)]), (11, .fold 3 1 7 [(1, .process)]),
               (12, .contribute 11 1 12 .revive), (13, .fold 3 2 7 [(2, .process)])] },
   { name := "convict-and-reap",
     env := ⟨[12], [], [(12, 0)], []⟩,
     steps := [(0, .contribute 12 2 0 .register), (1, .fold 3 0 7 [(0, .process)]), (5, .convictCkpt 12),
-              (5, .convictCkpt 12), (5, .reap 6 12), (6, .fold 3 1 7 [(1, .process)]),
+              (5, .convictCkpt 12), (5, .reap 6 12 4), (6, .fold 3 1 7 [(1, .process)]),
               (7, .contribute 12 2 7 .register), (8, .fold 3 2 7 [(2, .process)]), (26, .fold 6 2 7 [(2, .reject)])] },
   { name := "owner-and-phases",
-    env := ⟨[11], [(11, 0), (11, 1)], [], [11]⟩,
+    env := ⟨[11], [(11, 0), (11, 1)], [], [(11, 1)]⟩,
     steps := [(0, .contribute 11 1 0 .register), (5, .fold 6 0 7 [(0, .reject)]), (12, .fold 3 0 7 [(0, .process)]),
               (12, .contribute 11 4 100 .register), (12, .fold 6 0 7 [(1, .reject)]), (12, .contribute 11 4 0 .goConvicted),
               (12, .fold 3 1 7 [(0, .reject)]), (13, .contribute 11 1 13 .register), (14, .fold 3 2 7 [(2, .process)]),
-              (15, .pause 11), (16, .reap 1 11), (16, .resume 11)] }
+              (15, .reap 1 11 1), (16, .reap 1 11 1)] }
 ]
 
 def traceJson (p : Params) (sd : Seed) : Json :=
@@ -267,23 +262,24 @@ def enumL (l : List α) : List (Nat × α) := (List.range l.length).zip l
 /-! ## The boundary grid, at slots 19, 20 and 21
 
 Every guarded comparison of the machine at −1 / = / +1: request 10 (submitted
-at 10) ends phase 1 at 20, request 2 (submitted at 0) ends phase 2 at 20, the
-checkpoint of 13 (parked at 15) leaves its grace window at 20; the fold names
+at 10) ends phase 1 at 20, request 2 (submitted at 0) ends phase 2 at 20; the
+fold names
 generations 0…4 against a registry at 0 and at 3; every action from every
-state, under two evidence tables. -/
+state, under two evidence tables. INV408-01: there is no parked checkpoint
+and no grace window any more; 12 and 13 hold live checkpoints. -/
 
 /-- Genesis, and a system with a leaf of every status, a checkpoint of every
 state, and a request of every op in every phase. AIDs: 11 active with a live
-checkpoint; 12 active with a parked checkpoint since 12 (grace ends at 17);
-13 active with a parked checkpoint since 15 (grace ends at 20); 14 active
-with a tombstone; 15 active with a pending go-request; 16 dormant; 17
+checkpoint; 12 active with a live checkpoint (key state 1); 13 active with a
+live checkpoint (key state 1); 14 active with a tombstone; 15 active with a
+pending go-request; 16 dormant; 17
 convicted. -/
 def gridStates : List Sys :=
   [Sys.init 7,
    { gen := 3, plugin := 7,
      leaves := [(11, .active 0), (12, .active 1), (13, .active 2), (14, .active 3), (15, .active 4),
                 (16, .dormant 5), (17, .convicted)],
-     ckpts := [(11, ⟨0, 0, .live⟩), (12, ⟨1, 1, .parked 12⟩), (13, ⟨2, 1, .parked 15⟩), (14, ⟨3, 0, .tomb⟩)],
+     ckpts := [(11, ⟨0, 0, .live⟩), (12, ⟨1, 1, .live⟩), (13, ⟨2, 1, .live⟩), (14, ⟨3, 0, .tomb⟩)],
      requests := [(0, ⟨18, 1, 15, .register⟩), (1, ⟨18, 1, 5, .register⟩), (2, ⟨18, 1, 0, .register⟩),
                   (3, ⟨18, 4, 100, .register⟩), (4, ⟨11, 2, 15, .register⟩), (5, ⟨16, 1, 15, .revive⟩),
                   (6, ⟨16, 5, 15, .convict⟩), (7, ⟨15, 6, 1000000000, .goDormant 3⟩), (8, ⟨17, 1, 15, .revive⟩),
@@ -299,14 +295,12 @@ def gridActions : List Action :=
   ([Op.register, .revive, .convict, .goConvicted, .goDormant 1].map fun op => Action.contribute 18 1 20 op) ++
   ([0, 1, 2, 3, 7, 10, 11].map fun i => Action.retract i) ++
   ([0, 1, 2, 3, 4].flatMap fun g => [7, 8].flatMap fun pl => gridBatches.map fun b => Action.fold 3 g pl b) ++
-  ([11, 12, 13, 14, 15, 16].map fun a => Action.reap 6 a) ++
-  ([11, 12, 14, 16].map fun a => Action.pause a) ++
-  ([11, 12, 14, 16].map fun a => Action.resume a) ++
+  ([11, 12, 13, 14, 15, 16].map fun a => Action.reap 6 a 6) ++
   ([11, 12, 14, 16].map fun a => Action.convictCkpt a)
 
 def gridEnvs : List EnvTable :=
   [⟨[11, 12, 13, 14, 15, 16, 17, 18], [(11, 0), (12, 1), (13, 1), (16, 5)], [(11, 0), (12, 1), (16, 5)],
-    [11, 12, 13, 14]⟩,
+    [(11, 6), (12, 6), (13, 6), (14, 6)]⟩,
    ⟨[], [], [], []⟩]
 
 def gridNows : List Slot := [19, 20, 21]

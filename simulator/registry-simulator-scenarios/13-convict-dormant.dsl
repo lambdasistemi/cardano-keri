@@ -4,7 +4,7 @@ family: registry
 id: 13
 slug: convict-dormant
 story: "A dormant AID is convicted by a proof against its recorded key state"
-narrative: "Bob parked and was reaped: dormant(1). Cora posts a conviction request with a duplicity proof against key state 1; Hal folds it and the leaf is convicted. A conviction request for an active AID is refused: a live checkpoint is convicted through its own edge. On the branches the go-request and the conviction share one fold, with and without the proof."
+narrative: "Bob's checkpoint closes through the premise, which names Bob the recipient of his own live bond; Hal folds the go-request and the leaf says dormant(1) with no checkpoint at all. Cora posts a conviction request with a duplicity proof against key state 1; Hal folds it and the leaf is convicted. A conviction request for an active AID is refused: a live checkpoint is convicted through its own edge. On the branches the go-request and the conviction share one fold, with and without the proof."
 params:
   D: 1000
   tip: 2
@@ -28,7 +28,8 @@ env:
     - [12, 0]
   duplicity:
     - [12, 1]
-  quorum: [12]
+  closeAuth:
+    - [12, 2]
 step:
   now: 0
   actor: anyone
@@ -48,6 +49,7 @@ step:
       tips: null
       premium: null
       intoRequest: 0
+      bondReturn: null
 step:
   now: 0
   actor: anyone
@@ -67,6 +69,7 @@ step:
       tips: null
       premium: null
       intoRequest: 0
+      bondReturn: null
 step:
   now: 1
   actor: anyone
@@ -88,30 +91,16 @@ step:
         value: 4
       premium: null
       intoRequest: 0
+      bondReturn: null
 step:
   now: 2
-  actor: next-keys
-  as: Bob
-  action:
-    pause:
-      aid: 12
-  expect:
-    ok: true
-    flow:
-      deposited: 0
-      locked: []
-      refunds: []
-      tips: null
-      premium: null
-      intoRequest: 0
-step:
-  now: 3
   actor: anyone
-  as: "Bob — reaping his own checkpoint"
+  as: "Bob — closing through the premise that names him the recipient"
   action:
     reap:
       reaper: 2
       aid: 12
+      recipient: 2
   expect:
     ok: true
     flow:
@@ -123,10 +112,14 @@ step:
         addr: 2
         value: 1
       intoRequest: 3
+      bondReturn:
+        addr: 2
+        value: 1000
+  exhibits: [R13, R11]
 step:
-  now: 4
+  now: 3
   actor: anyone
-  as: Hal
+  as: "Hal — the close fold lands: dormant(1), no checkpoint"
   action:
     fold:
       folder: 3
@@ -138,12 +131,16 @@ step:
     flow:
       deposited: 0
       locked: []
-      refunds: [{"addr":2,"value":1}]
+      refunds:
+        - addr: 2
+          value: 1
       tips:
         addr: 3
         value: 2
       premium: null
       intoRequest: 0
+      bondReturn: null
+  exhibits: [R12, R1]
 step:
   now: 5
   actor: anyone
@@ -163,10 +160,11 @@ step:
       tips: null
       premium: null
       intoRequest: 0
+      bondReturn: null
 step:
   now: 5
   actor: anyone
-  as: Cora
+  as: "Cora — convicting dormant Bob, with a proof against key state 1"
   action:
     contribute:
       aid: 12
@@ -177,10 +175,16 @@ step:
     ok: true
     flow:
       deposited: 3
+      locked: []
+      refunds: []
+      tips: null
+      premium: null
+      intoRequest: 0
+      bondReturn: null
 step:
   now: 6
   actor: anyone
-  as: "Hal — Alice's"
+  as: "Hal — Alice's, refused while she is active"
   action:
     fold:
       folder: 3
@@ -203,15 +207,22 @@ step:
   expect:
     ok: true
     flow:
-      refunds: [{"addr":5,"value":1}]
+      deposited: 0
+      locked: []
+      refunds:
+        - addr: 5
+          value: 1
       tips:
         addr: 3
         value: 2
-  exhibits: [R11, R12]
+      premium: null
+      intoRequest: 0
+      bondReturn: null
+  exhibits: [R11, R12, R14]
 step:
   now: 26
   actor: anyone
-  as: Sam
+  as: "Sam — Cora's refused conviction request leaves by rejection"
   action:
     fold:
       folder: 6
@@ -221,23 +232,35 @@ step:
   expect:
     ok: true
     flow:
-      refunds: [{"addr":5,"value":1}]
+      deposited: 0
+      locked: []
+      refunds:
+        - addr: 5
+          value: 1
       tips:
         addr: 6
         value: 2
-  exhibits: [R9]
+      premium: null
+      intoRequest: 0
+      bondReturn: null
+  exhibits: [R9, R11]
+step:
+  now: 27
+  actor: anyone
+  as: "Sam — reaping a convicted AID: convicted holds no UTxO"
+  action:
+    reap:
+      reaper: 6
+      aid: 12
+      recipient: 4
+  expect:
+    ok: false
+    reason: no-checkpoint
+  exhibits: [R13, R1]
 fork:
   id: convict-in-the-same-fold
-  at: 5
+  at: 4
   title: "The go-request and the conviction in one fold"
-  expectFinal:
-    gen: 2
-    plugin: 7
-    leaves: [{"aid":11,"status":{"active":1}},{"aid":12,"status":"convicted"}]
-    ckpts: [{"aid":11,"ckpt":{"token":1,"k":0,"st":"live"}}]
-    requests: []
-    nextReq: 4
-    nextToken: 2
   step:
     now: 4
     actor: anyone
@@ -257,10 +280,11 @@ fork:
         tips: null
         premium: null
         intoRequest: 0
+        bondReturn: null
   step:
     now: 4
     actor: anyone
-    as: "Hal — dormant at position 0, convicted at position 1"
+    as: "Hal — the go-request lands dormant at position 0, convicted at position 1"
     action:
       fold:
         folder: 3
@@ -270,29 +294,31 @@ fork:
     expect:
       ok: true
       flow:
-        refunds: [{"addr":2,"value":1},{"addr":5,"value":1}]
+        deposited: 0
+        locked: []
+        refunds:
+          - addr: 2
+            value: 1
+          - addr: 5
+            value: 1
         tips:
           addr: 3
           value: 4
-    exhibits: [R11, R12, R1]
+        premium: null
+        intoRequest: 0
+        bondReturn: null
     note: "The conviction sees the leaf the go-request just wrote: the proof is checked against key state 1, not against the registry as it was."
+    exhibits: [R11, R12, R1, R14]
 fork:
   id: convict-without-proof
-  at: 5
+  at: 4
   title: "The same fold without the proof"
   env:
     inception: [11, 12]
     rotationFrom:
       - [12, 0]
-    quorum: [12]
-  expectFinal:
-    gen: 1
-    plugin: 7
-    leaves: [{"aid":11,"status":{"active":1}},{"aid":12,"status":{"active":0}}]
-    ckpts: [{"aid":11,"ckpt":{"token":1,"k":0,"st":"live"}}]
-    requests: [{"id":3,"aid":12,"owner":5,"submittedAt":4,"op":"convict"},{"id":2,"aid":12,"owner":2,"submittedAt":1000000000,"op":{"goDormant":1}}]
-    nextReq: 4
-    nextToken: 2
+    closeAuth:
+      - [12, 2]
   step:
     now: 4
     actor: anyone
@@ -312,6 +338,7 @@ fork:
         tips: null
         premium: null
         intoRequest: 0
+        bondReturn: null
   step:
     now: 4
     actor: anyone

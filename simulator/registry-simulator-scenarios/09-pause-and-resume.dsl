@@ -2,9 +2,9 @@ grammar: 1
 family: registry
 
 id: 9
-slug: pause-and-resume
-story: "Alice pauses and resumes without touching the registry"
-narrative: "Alice's next keys withdraw her bonds: the checkpoint stays on chain, parked, at min-ADA, with the key state a revival must rotate from. Later a depositing rotation makes it live again. The registry leaf never changed; the indirection is the token, which survives every rotation. A pause without the next keys, and a resume of a live checkpoint, are refused."
+slug: close-and-revive
+story: "Alice closes under the premise and revives from the retained key state"
+narrative: "Alice's checkpoint is live at key state 0. Sam closes it through the close-authorization premise, which names him the opaque recipient of the live bond: the closing rotation's reached key state 1 rides out in a go-request dated at the end of time. The go-request cannot be retracted; Hal's fold lands it and the leaf keeps key state 1 with no checkpoint at all — dormant holds no UTxO, so reaping it is refused. Alice then revives from exactly that retained state: a fresh token mints and the checkpoint returns live at key state 2. On the branch Cora convicts the live checkpoint with a duplicity proof; the tombstone then reaps at once, permissionlessly, refunding no live bond a second time, and the fold lands the conviction."
 params:
   D: 1000
   tip: 2
@@ -27,6 +27,8 @@ env:
   rotationFrom:
     - [11, 0]
     - [11, 1]
+  closeAuth:
+    - [11, 6]
 step:
   now: 0
   actor: anyone
@@ -46,6 +48,7 @@ step:
       tips: null
       premium: null
       intoRequest: 0
+      bondReturn: null
 step:
   now: 1
   actor: anyone
@@ -67,112 +70,142 @@ step:
         value: 2
       premium: null
       intoRequest: 0
-step:
-  now: 4
-  actor: next-keys
-  as: "Alice — resuming a live checkpoint"
-  action:
-    resume:
-      aid: 11
-  expect:
-    ok: false
-    reason: not-parked
+      bondReturn: null
 step:
   now: 5
-  actor: next-keys
-  as: Alice
+  actor: anyone
+  as: "Sam — closing through the premise that names him the recipient"
   action:
-    pause:
+    reap:
+      reaper: 6
       aid: 11
+      recipient: 6
   expect:
     ok: true
-    state:
-      gen: 1
-      plugin: 7
-      leaves: [{"aid":11,"status":{"active":0}}]
-      ckpts: [{"aid":11,"ckpt":{"token":0,"k":1,"st":{"parked":5}}}]
-      requests: []
-      nextReq: 1
-      nextToken: 1
     flow:
       deposited: 0
       locked: []
       refunds: []
       tips: null
-      premium: null
-      intoRequest: 0
-  exhibits: [R6, R11, R1]
+      premium:
+        addr: 6
+        value: 1
+      intoRequest: 3
+      bondReturn:
+        addr: 6
+        value: 1000
+  exhibits: [R13, R11]
 step:
   now: 6
-  actor: next-keys
-  as: "Alice — pausing a parked checkpoint"
+  actor: owner
+  as: "Sam — retracting the go-request dated at the end of time"
   action:
-    pause:
-      aid: 11
+    retract:
+      req: 1
   expect:
     ok: false
-    reason: not-live
+    reason: not-in-phase-2
+  exhibits: [R9]
 step:
   now: 7
-  actor: next-keys
-  as: Alice
+  actor: anyone
+  as: "Hal — the close fold lands: the leaf keeps the reached key state 1"
   action:
-    resume:
-      aid: 11
+    fold:
+      folder: 3
+      gen: 1
+      plugin: 7
+      batch: [{"id":1,"do":"process"}]
   expect:
     ok: true
     flow:
       deposited: 0
       locked: []
+      refunds:
+        - addr: 6
+          value: 1
+      tips:
+        addr: 3
+        value: 2
+      premium: null
+      intoRequest: 0
+      bondReturn: null
+  exhibits: [R12, R1]
+step:
+  now: 8
+  actor: anyone
+  as: "Sam — reaping a dormant AID: dormant holds no UTxO"
+  action:
+    reap:
+      reaper: 6
+      aid: 11
+      recipient: 6
+  expect:
+    ok: false
+    reason: no-checkpoint
+  exhibits: [R13, R1]
+step:
+  now: 9
+  actor: anyone
+  as: "Alice — reviving from exactly the retained key state 1"
+  action:
+    contribute:
+      aid: 11
+      owner: 1
+      submittedAt: 9
+      op: revive
+  expect:
+    ok: true
+    flow:
+      deposited: 1002
+      locked: []
       refunds: []
       tips: null
       premium: null
       intoRequest: 0
-  exhibits: [R6, R1]
+      bondReturn: null
 step:
-  now: 8
-  actor: next-keys
-  as: "Alice — pausing again without a rotation from k=2"
+  now: 10
+  actor: anyone
+  as: "Hal — the revival fold: a fresh token, live again at key state 2"
   action:
-    pause:
-      aid: 11
+    fold:
+      folder: 3
+      gen: 2
+      plugin: 7
+      batch: [{"id":2,"do":"process"}]
   expect:
-    ok: false
-    reason: no-rotation
-step:
-  now: 8
-  actor: proof
-  as: "Cora — convicting Alice without a proof"
-  action:
-    convictCkpt:
-      aid: 11
-  expect:
-    ok: false
-    reason: no-duplicity-proof
-  exhibits: [R14]
+    ok: true
+    flow:
+      deposited: 0
+      locked:
+        - aid: 11
+          value: 1000
+      refunds: []
+      tips:
+        addr: 3
+        value: 2
+      premium: null
+      intoRequest: 0
+      bondReturn: null
+  exhibits: [R1, R2, R11, R12]
 fork:
-  id: convicted-while-parked
-  at: 4
-  title: "Cora convicts the parked checkpoint"
+  id: convicted-while-live
+  at: 2
+  title: "Cora convicts the live checkpoint before the close"
   env:
     inception: [11]
     rotationFrom:
       - [11, 0]
       - [11, 1]
     duplicity:
-      - [11, 1]
-  expectFinal:
-    gen: 1
-    plugin: 7
-    leaves: [{"aid":11,"status":{"active":0}}]
-    ckpts: []
-    requests: [{"id":1,"aid":11,"owner":6,"submittedAt":1000000000,"op":"goConvicted"}]
-    nextReq: 2
-    nextToken: 1
+      - [11, 0]
+    closeAuth:
+      - [11, 6]
   step:
     now: 6
     actor: proof
-    as: "Cora — a proof against key state 1"
+    as: "Cora — a duplicity proof against key state 0"
     action:
       convictCkpt:
         aid: 11
@@ -185,38 +218,60 @@ fork:
         tips: null
         premium: null
         intoRequest: 0
-    exhibits: [R6, R11]
-  step:
-    now: 7
-    actor: next-keys
-    as: "Alice — resuming a tombstone"
-    action:
-      resume:
-        aid: 11
-    expect:
-      ok: false
-      reason: not-parked
+        bondReturn: null
+    exhibits: [R6, R14]
   step:
     now: 7
     actor: anyone
-    as: "Sam — a tombstone is reaped at once"
+    as: "Sam — a tombstone is reaped at once, no premise, recipient 4 un-named and irrelevant"
     action:
       reap:
         reaper: 6
         aid: 11
+        recipient: 4
     expect:
       ok: true
       flow:
+        deposited: 0
+        locked: []
+        refunds: []
+        tips: null
         premium:
           addr: 6
           value: 1
         intoRequest: 3
+        bondReturn: null
     exhibits: [R13, R11]
+  step:
+    now: 8
+    actor: anyone
+    as: Hal
+    action:
+      fold:
+        folder: 3
+        gen: 1
+        plugin: 7
+        batch: [{"id":1,"do":"process"}]
+    expect:
+      ok: true
+      flow:
+        deposited: 0
+        locked: []
+        refunds:
+          - addr: 6
+            value: 1
+        tips:
+          addr: 3
+          value: 2
+        premium: null
+        intoRequest: 0
+        bondReturn: null
+    exhibits: [R11, R12]
 expectFinal:
-  gen: 1
+  gen: 3
   plugin: 7
-  leaves: [{"aid":11,"status":{"active":0}}]
-  ckpts: [{"aid":11,"ckpt":{"token":0,"k":2,"st":"live"}}]
+  leaves: [{"aid":11,"status":{"active":1}}]
+  ckpts: [{"aid":11,"ckpt":{"token":1,"k":2,"st":"live"}}]
   requests: []
-  nextReq: 1
-  nextToken: 1
+  nextReq: 3
+  nextToken: 2

@@ -16,8 +16,8 @@ of 2026-09-02/03, the mpfs plugin-cage epic and the stories, not by
 * R3 — conviction is permanent: a convicted leaf never changes.
 * R4 — leaves are permanent: a leaf never leaves the root.
 * R5 — the plugin is pinned.
-* R6 — the generation moves exactly on the fold; contribute, retract, reap,
-  pause, resume and a checkpoint conviction never write the registry.
+* R6 — the generation moves exactly on the fold; contribute, retract, reap
+  and a checkpoint conviction never write the registry.
 * R7 — a stale fold is refused with no state change; one fold per generation.
 * R8 — an empty fold and a plugin swap are refused.
 * R9 — requester exit and no bricking: a posted request is retractable in
@@ -29,8 +29,10 @@ of 2026-09-02/03, the mpfs plugin-cage epic and the stories, not by
   min-ADA to the reaper; the reap's premium and request add up to the
   checkpoint's min-ADA, so the good samaritan theorems apply.
 * R12 — a leaf enters and changes only by a fold.
-* R13 — the reap: never a bonded checkpoint; a tombstone at once; a parked
-  checkpoint by a stranger only after the grace window.
+* R13 — the reap: a live checkpoint only through the 358-owned abstract
+  close-authorization premise, which names the opaque bond-return recipient
+  and posts the closing rotation's reached key state; a tombstone at once;
+  no grace window and no owner bypass (INV408-01/02/03).
 -/
 
 namespace CardanoKeri.Registry
@@ -801,7 +803,7 @@ theorem inv_step (p : Params) (env : Env) {a : Action} {now : Slot} (hnow : now 
         obtain ⟨_, rfl⟩ := hs
         exact inv_of_accInv (applyBatch_inv p env now (accInv_of_inv hi) hacc) (s.gen + 1) s.plugin
     · cases hs
-  | reap reaper aid =>
+  | reap reaper aid recipient =>
     simp only [stepFn] at hs
     split at hs
     · cases hs
@@ -866,26 +868,6 @@ theorem inv_step (p : Params) (env : Env) {a : Action} {now : Slot} (hnow : now 
             · subst hx; exact Nat.lt_succ_self _
             · exact Nat.lt_succ_of_lt (hi.reqBelowNext x hx) }
       · cases hs
-  | pause aid =>
-    simp only [stepFn] at hs
-    split at hs
-    · rename_i hc
-      split at hs
-      · simp only [Option.some.injEq, Prod.mk.injEq] at hs
-        obtain ⟨_, rfl⟩ := hs
-        exact inv_replace_ckpt hi hc rfl
-      · cases hs
-    · cases hs
-  | resume aid =>
-    simp only [stepFn] at hs
-    split at hs
-    · rename_i hc
-      split at hs
-      · simp only [Option.some.injEq, Prod.mk.injEq] at hs
-        obtain ⟨_, rfl⟩ := hs
-        exact inv_replace_ckpt hi hc rfl
-      · cases hs
-    · cases hs
   | convictCkpt aid =>
     simp only [stepFn] at hs
     split at hs
@@ -1273,9 +1255,7 @@ theorem R4_leaf_permanent (p : Params) (env : Env) {a : Action} {now : Slot} {s 
     · cases hs
   | contribute _ _ _ _ => unstep hs; exact hin
   | retract _ => unstep hs; exact hin
-  | reap _ _ => unstep hs; exact hin
-  | pause _ => unstep hs; exact hin
-  | resume _ => unstep hs; exact hin
+  | reap _ _ _ => unstep hs; exact hin
   | convictCkpt _ => unstep hs; exact hin
 
 /-- **R3.** A convicted leaf stays convicted. -/
@@ -1294,9 +1274,7 @@ theorem R3_convicted_permanent (p : Params) (env : Env) {a : Action} {now : Slot
     · cases hs
   | contribute _ _ _ _ => unstep hs; exact hc
   | retract _ => unstep hs; exact hc
-  | reap _ _ => unstep hs; exact hc
-  | pause _ => unstep hs; exact hc
-  | resume _ => unstep hs; exact hc
+  | reap _ _ _ => unstep hs; exact hc
   | convictCkpt _ => unstep hs; exact hc
 
 /-- **R3b.** A convicted AID can never be registered again. -/
@@ -1320,7 +1298,7 @@ theorem R6_gen_step (p : Params) (env : Env) {a : Action} {now : Slot} {s : Sys}
   cases a <;> unstep hs <;> first | exact Or.inl rfl | exact Or.inr rfl
 
 /-- **R6b.** Nothing but a fold writes the registry: contribute, retract,
-reap, pause, resume and a checkpoint conviction leave the generation, the
+reap and a checkpoint conviction leave the generation, the
 plugin and every leaf untouched. -/
 theorem R6_registry_untouched (p : Params) (env : Env) {a : Action} {now : Slot} {s : Sys} {f : Flow}
     {s' : Sys} (hs : stepFn p env a now s = some (f, s'))
@@ -1330,9 +1308,7 @@ theorem R6_registry_untouched (p : Params) (env : Env) {a : Action} {now : Slot}
   | fold folder g pl batch => exact absurd rfl (hnf folder g pl batch)
   | contribute _ _ _ _ => unstep hs; exact ⟨rfl, rfl, rfl⟩
   | retract _ => unstep hs; exact ⟨rfl, rfl, rfl⟩
-  | reap _ _ => unstep hs; exact ⟨rfl, rfl, rfl⟩
-  | pause _ => unstep hs; exact ⟨rfl, rfl, rfl⟩
-  | resume _ => unstep hs; exact ⟨rfl, rfl, rfl⟩
+  | reap _ _ _ => unstep hs; exact ⟨rfl, rfl, rfl⟩
   | convictCkpt _ => unstep hs; exact ⟨rfl, rfl, rfl⟩
 
 /-- **R6c.** A fold advances the generation by exactly one. -/
@@ -1464,7 +1440,7 @@ theorem R11_go_refunds_reaper (p : Params) (env : Env) (now : Slot) {acc : Acc} 
 /-- **R11b.** A reap moves exactly the checkpoint's min-ADA: `Mr + tip` into
 the go-request, the rest to the reaper. -/
 theorem R11_reap_flow (p : Params) (env : Env) {now : Slot} {s : Sys} {f : Flow} {s' : Sys}
-    {reaper : Addr} {aid : AID} (hs : stepFn p env (.reap reaper aid) now s = some (f, s')) :
+    {reaper : Addr} {recipient : Addr} {aid : AID} (hs : stepFn p env (.reap reaper aid recipient) now s = some (f, s')) :
     f.premium = some (reaper, p.Mc - p.Mr - p.tip) ∧ f.intoRequest = p.Mr + p.tip ∧
       f.locked = [] ∧ f.refunds = [] ∧ f.tips = none ∧ f.deposited = 0 := by
   simp only [stepFn] at hs
@@ -1483,7 +1459,7 @@ def samaritan (p : Params) (fReap : Nat) : Samaritan.Reap :=
   { Mc := p.Mc, Mr := p.Mr, tip := p.tip, fReap := fReap, hFund := p.hFund }
 
 theorem R11_reap_is_samaritan (p : Params) (env : Env) {now : Slot} {s : Sys} {f : Flow} {s' : Sys}
-    {reaper : Addr} {aid : AID} (hs : stepFn p env (.reap reaper aid) now s = some (f, s')) (fReap : Nat) :
+    {reaper : Addr} {recipient : Addr} {aid : AID} (hs : stepFn p env (.reap reaper aid recipient) now s = some (f, s')) (fReap : Nat) :
     f.premium = some (reaper, (Samaritan.reap (samaritan p fReap)).premium) ∧
     f.intoRequest = (Samaritan.reap (samaritan p fReap)).intoRequest := by
   obtain ⟨h1, h2, _⟩ := R11_reap_flow p env hs
@@ -1515,8 +1491,8 @@ theorem R11_retract_value (p : Params) (env : Env) {now : Slot} {s : Sys} {f : F
 /-- **R11e.** The checkpoint edges move no request value. -/
 theorem R11_ckpt_edges_move_no_value (p : Params) (env : Env) {now : Slot} {s : Sys} {f : Flow}
     {s' : Sys} {a : Action} (hs : stepFn p env a now s = some (f, s'))
-    (ha : (∃ aid, a = .pause aid) ∨ (∃ aid, a = .resume aid) ∨ ∃ aid, a = .convictCkpt aid) : f = {} := by
-  rcases ha with ⟨aid, rfl⟩ | ⟨aid, rfl⟩ | ⟨aid, rfl⟩ <;> unstep hs <;> rfl
+    (ha : ∃ aid, a = .convictCkpt aid) : f = {} := by
+  rcases ha with ⟨aid, rfl⟩ <;> unstep hs <;> rfl
 
 /-! ## R12 — a leaf enters and changes only by a fold -/
 
@@ -1542,61 +1518,69 @@ theorem R12_leaf_changes_only_by_fold (p : Params) (env : Env) {a : Action} {now
 
 /-! ## R13 — the reap -/
 
-/-- **R13a.** A bonded checkpoint is never reaped. -/
-theorem R13_live_never_reaped (p : Params) (env : Env) (now : Slot) (s : Sys) (reaper : Addr) (aid : AID)
-    {tok : Token} {k : KeyState} (hc : lookup s.ckpts aid = some ⟨tok, k, .live⟩) :
-    stepFn p env (.reap reaper aid) now s = none := by
-  simp [stepFn, hc, reapable]
+/-- **R13a.** A live checkpoint is closed only through the 358-owned abstract
+close-authorization premise naming the opaque bond-return `recipient`
+(INV408-02): without it the reap is refused. -/
+theorem R13_live_needs_close_auth (p : Params) (env : Env) (now : Slot) (s : Sys)
+    (reaper recipient : Addr) (aid : AID)
+    {tok : Token} {k : KeyState} (hc : lookup s.ckpts aid = some ⟨tok, k, .live⟩)
+    (hno : env.closeAuth aid recipient = false) :
+    stepFn p env (.reap reaper aid recipient) now s = none := by
+  simp [stepFn, hc, reapable, hno]
 
-/-- **R13b.** A tombstone is reapable at once, by anyone. -/
-theorem R13_tomb_reaped (p : Params) (env : Env) (now : Slot) (s : Sys) (reaper : Addr) (aid : AID)
+/-- **R13b.** A tombstone is reapable at once, by anyone, refunding no live
+bond again (INV408-03). -/
+theorem R13_tomb_reaped (p : Params) (env : Env) (now : Slot) (s : Sys)
+    (reaper recipient : Addr) (aid : AID)
     {tok : Token} {k : KeyState} (hc : lookup s.ckpts aid = some ⟨tok, k, .tomb⟩) :
-    stepFn p env (.reap reaper aid) now s =
-      some ({ premium := some (reaper, p.Mc - p.Mr - p.tip), intoRequest := p.Mr + p.tip },
+    stepFn p env (.reap reaper aid recipient) now s =
+      some ({ premium := some (reaper, p.Mc - p.Mr - p.tip), intoRequest := p.Mr + p.tip,
+              bondReturn := none },
             { s with ckpts := remove s.ckpts aid,
                      requests := (s.nextReq, ⟨aid, reaper, p.far, .goConvicted⟩) :: s.requests,
                      nextReq := s.nextReq + 1 }) := by
-  simp [stepFn, hc, reapable, goOp]
+  simp [stepFn, hc, reapable, goOp, bondReturnOf]
 
-/-- **R13c.** A parked checkpoint is reapable by a stranger only after the
-grace window. -/
-theorem R13_parked_needs_grace (p : Params) (env : Env) (now : Slot) (s : Sys) (reaper : Addr) (aid : AID)
-    {tok : Token} {k : KeyState} {since : Slot} (hc : lookup s.ckpts aid = some ⟨tok, k, .parked since⟩)
-    (hearly : now < since + p.W) (hq : env.quorum aid = false) :
-    stepFn p env (.reap reaper aid) now s = none := by
-  have : ¬ reapable p env now aid ⟨tok, k, .parked since⟩ := by
-    simp only [reapable, hq, Bool.false_eq_true, or_false]; omega'
-  simp [stepFn, hc, this]
-
-/-- **R13d.** After the grace window anyone reaps a parked checkpoint; the
-go-request carries the key state a revival must rotate from. -/
-theorem R13_parked_after_grace (p : Params) (env : Env) (now : Slot) (s : Sys) (reaper : Addr) (aid : AID)
-    {tok : Token} {k : KeyState} {since : Slot} (hc : lookup s.ckpts aid = some ⟨tok, k, .parked since⟩)
-    (hlate : since + p.W ≤ now) :
-    stepFn p env (.reap reaper aid) now s =
-      some ({ premium := some (reaper, p.Mc - p.Mr - p.tip), intoRequest := p.Mr + p.tip },
+/-- **R13c.** A live close through the premise: exact success. The posted
+go-request retains the *closing rotation's reached key state* `k + 1` (a
+later revival must rotate from exactly that state — the closing rotation
+itself cannot also revive, INV408-06) and the live bond `D` returns to the
+premise's opaque `recipient` (INV408-02/03). -/
+theorem R13_live_close (p : Params) (env : Env) (now : Slot) (s : Sys)
+    (reaper recipient : Addr) (aid : AID)
+    {tok : Token} {k : KeyState} (hc : lookup s.ckpts aid = some ⟨tok, k, .live⟩)
+    (hauth : env.closeAuth aid recipient = true) :
+    stepFn p env (.reap reaper aid recipient) now s =
+      some ({ premium := some (reaper, p.Mc - p.Mr - p.tip), intoRequest := p.Mr + p.tip,
+              bondReturn := some (recipient, p.D) },
             { s with ckpts := remove s.ckpts aid,
-                     requests := (s.nextReq, ⟨aid, reaper, p.far, .goDormant k⟩) :: s.requests,
+                     requests := (s.nextReq, ⟨aid, reaper, p.far, .goDormant (k + 1)⟩) :: s.requests,
                      nextReq := s.nextReq + 1 }) := by
-  have : reapable p env now aid ⟨tok, k, .parked since⟩ := by simp only [reapable]; exact Or.inl hlate
-  simp [stepFn, hc, this, goOp]
+  have hr : reapable p env recipient now aid ⟨tok, k, .live⟩ := by
+    simp only [reapable, hauth]
+  simp [stepFn, hc, hr, goOp, bondReturnOf]
 
-/-- **R13e.** The owner reaps their own parked checkpoint at any time. -/
-theorem R13_owner_reaps_early (p : Params) (env : Env) (now : Slot) (s : Sys) (reaper : Addr) (aid : AID)
-    {tok : Token} {k : KeyState} {since : Slot} (hc : lookup s.ckpts aid = some ⟨tok, k, .parked since⟩)
-    (hq : env.quorum aid = true) :
-    stepFn p env (.reap reaper aid) now s =
-      some ({ premium := some (reaper, p.Mc - p.Mr - p.tip), intoRequest := p.Mr + p.tip },
-            { s with ckpts := remove s.ckpts aid,
-                     requests := (s.nextReq, ⟨aid, reaper, p.far, .goDormant k⟩) :: s.requests,
-                     nextReq := s.nextReq + 1 }) := by
-  have : reapable p env now aid ⟨tok, k, .parked since⟩ := by simp only [reapable]; exact Or.inr hq
-  simp [stepFn, hc, this, goOp]
+/-- **R13d.** Close value conservation with exact addressed flows: the live
+bond `D` returns to the opaque `recipient` and the checkpoint's min-ADA
+splits exactly into the go-request and the reaper's premium (INV408-03;
+authorization safety itself is *not* claimed here — that is 358's). -/
+theorem R13_close_conserves (p : Params) (env : Env) {now : Slot} {s : Sys} {f : Flow} {s' : Sys}
+    {reaper recipient : Addr} {aid : AID} {tok : Token} {k : KeyState}
+    (hs : stepFn p env (.reap reaper aid recipient) now s = some (f, s'))
+    (hc : lookup s.ckpts aid = some ⟨tok, k, .live⟩)
+    (hauth : env.closeAuth aid recipient = true) :
+    f.bondReturn = some (recipient, p.D) ∧
+    f.premium = some (reaper, p.Mc - p.Mr - p.tip) ∧ f.intoRequest = p.Mr + p.tip := by
+  have h := R13_live_close p env now s reaper recipient aid hc hauth
+  rw [hs] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, _⟩ := h
+  exact ⟨rfl, rfl, rfl⟩
 
 /-! ## R14 — every conviction needs a proof -/
 
-/-- **R14a.** A live or parked checkpoint is convicted only by a duplicity
-proof against its key state. -/
+/-- **R14a.** A live checkpoint is convicted only by a duplicity proof
+against its key state. -/
 theorem R14_convictCkpt_needs_proof (p : Params) (env : Env) (now : Slot) (s : Sys) (aid : AID)
     {tok : Token} {k : KeyState} {st : CkState} (hc : lookup s.ckpts aid = some ⟨tok, k, st⟩)
     (hd : env.duplicity aid k = false) : stepFn p env (.convictCkpt aid) now s = none := by
@@ -1698,8 +1682,8 @@ theorem R14_convict_at_position (p : Params) (env : Env) (now : Slot) {acc acc' 
 
 /-! ## S364-INV — Registry transition inversions (DEC-364-STEPFN)
 
-The twelve bidirectional `*_iff` theorems below are the complete public
-backward interface over the seven `Action` branches of `stepFn` and the five
+The ten bidirectional `*_iff` theorems below are the complete public
+backward interface over the five `Action` branches of `stepFn` and the five
 `Op` branches of `processBody` (see DEC-364-STEPFN in `CardanoKeri.Registry`).
 Each left side is successful evaluation of one live branch to explicit result
 arguments; each right side is the exact input bindings, every executable
@@ -1785,11 +1769,12 @@ theorem stepFn_retract_iff (p : Params) (env : Env) (id : ReqId) (now : Slot) (s
   · rintro ⟨r, hlookup, hg, rfl, rfl⟩
     simp [stepFn, hlookup, hg]
 
-theorem stepFn_reap_iff (p : Params) (env : Env) (reaper : Addr) (aid : AID) (now : Slot)
+theorem stepFn_reap_iff (p : Params) (env : Env) (reaper recipient : Addr) (aid : AID) (now : Slot)
     (s : Sys) (f : Flow) (s' : Sys) :
-    stepFn p env (.reap reaper aid) now s = some (f, s') ↔
-      ∃ c, lookup s.ckpts aid = some c ∧ reapable p env now aid c ∧
-        f = { premium := some (reaper, p.Mc - p.Mr - p.tip), intoRequest := p.Mr + p.tip } ∧
+    stepFn p env (.reap reaper aid recipient) now s = some (f, s') ↔
+      ∃ c, lookup s.ckpts aid = some c ∧ reapable p env recipient now aid c ∧
+        f = { premium := some (reaper, p.Mc - p.Mr - p.tip), intoRequest := p.Mr + p.tip,
+              bondReturn := bondReturnOf p recipient c } ∧
         s' = { s with ckpts := remove s.ckpts aid,
                       requests := (s.nextReq, ⟨aid, reaper, p.far, goOp c⟩) :: s.requests,
                       nextReq := s.nextReq + 1 } := by
@@ -1804,7 +1789,7 @@ theorem stepFn_reap_iff (p : Params) (env : Env) (reaper : Addr) (aid : AID) (no
       cases h
     | some c =>
       dsimp only at h
-      by_cases hg : reapable p env now aid c
+      by_cases hg : reapable p env recipient now aid c
       · rw [if_pos hg] at h
         simp only [Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
@@ -1812,78 +1797,6 @@ theorem stepFn_reap_iff (p : Params) (env : Env) (reaper : Addr) (aid : AID) (no
       · rw [if_neg hg] at h
         cases h
   · rintro ⟨c, hck, hg, rfl, rfl⟩
-    simp [stepFn, hck, hg]
-
-theorem stepFn_pause_iff (p : Params) (env : Env) (aid : AID) (now : Slot) (s : Sys)
-    (f : Flow) (s' : Sys) :
-    stepFn p env (.pause aid) now s = some (f, s') ↔
-      ∃ tok k, lookup s.ckpts aid = some ⟨tok, k, .live⟩ ∧
-        env.rotationFrom aid k = true ∧ f = {} ∧
-        s' = { s with ckpts := (aid, ⟨tok, k + 1, .parked now⟩) :: remove s.ckpts aid } := by
-  constructor
-  · intro h
-    simp only [stepFn] at h
-    obtain ⟨x, hL⟩ : ∃ x, (lookup s.ckpts aid) = x := ⟨_, rfl⟩
-    rw [hL] at h
-    cases x with
-    | none =>
-      dsimp only at h
-      cases h
-    | some c =>
-      obtain ⟨tok, k, st⟩ := c
-      cases st with
-      | live =>
-        dsimp only at h
-        by_cases hg : env.rotationFrom aid k = true
-        · rw [if_pos hg] at h
-          simp only [Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          exact ⟨tok, k, hL, hg, rfl, rfl⟩
-        · rw [if_neg hg] at h
-          cases h
-      | parked since =>
-        dsimp only at h
-        cases h
-      | tomb =>
-        dsimp only at h
-        cases h
-  · rintro ⟨tok, k, hck, hg, rfl, rfl⟩
-    simp [stepFn, hck, hg]
-
-theorem stepFn_resume_iff (p : Params) (env : Env) (aid : AID) (now : Slot) (s : Sys)
-    (f : Flow) (s' : Sys) :
-    stepFn p env (.resume aid) now s = some (f, s') ↔
-      ∃ tok k since, lookup s.ckpts aid = some ⟨tok, k, .parked since⟩ ∧
-        env.rotationFrom aid k = true ∧ f = {} ∧
-        s' = { s with ckpts := (aid, ⟨tok, k + 1, .live⟩) :: remove s.ckpts aid } := by
-  constructor
-  · intro h
-    simp only [stepFn] at h
-    obtain ⟨x, hL⟩ : ∃ x, (lookup s.ckpts aid) = x := ⟨_, rfl⟩
-    rw [hL] at h
-    cases x with
-    | none =>
-      dsimp only at h
-      cases h
-    | some c =>
-      obtain ⟨tok, k, st⟩ := c
-      cases st with
-      | live =>
-        dsimp only at h
-        cases h
-      | parked since =>
-        dsimp only at h
-        by_cases hg : env.rotationFrom aid k = true
-        · rw [if_pos hg] at h
-          simp only [Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          exact ⟨tok, k, since, hL, hg, rfl, rfl⟩
-        · rw [if_neg hg] at h
-          cases h
-      | tomb =>
-        dsimp only at h
-        cases h
-  · rintro ⟨tok, k, since, hck, hg, rfl, rfl⟩
     simp [stepFn, hck, hg]
 
 theorem stepFn_convictCkpt_iff (p : Params) (env : Env) (aid : AID) (now : Slot) (s : Sys)

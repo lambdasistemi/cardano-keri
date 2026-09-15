@@ -2,5 +2,7 @@ import CardanoKeri.Checkpoint
 import CardanoKeri.CheckpointGoals
 import CardanoKeri.Registry
 import CardanoKeri.RegistryGoals
+import CardanoKeri.RegistryAgreement
+import CardanoKeri.RegistryLifecycleExamples
 import CardanoKeri.Cage
 import CardanoKeri.Samaritan

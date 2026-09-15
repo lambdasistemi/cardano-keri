@@ -3,8 +3,8 @@ family: registry
 
 id: 10
 slug: sam-reaps
-story: "Alice leaves; after the grace window Sam reaps her parked checkpoint"
-narrative: "Alice parks and never comes back. Inside the grace window a stranger cannot reap. After it Sam spends the parked checkpoint, burns the token, keeps min-ADA less the go-request as premium, and posts the go-request dated at the end of time. Hal folds it: the leaf becomes dormant(1), the key state a revival must rotate from; Sam gets the request's min-ADA back."
+story: "Sam closes what the premise names; the dormant leaf keeps its key state"
+narrative: "Alice leaves for good. Closing her live checkpoint is refused against a recipient the premise does not name; through the premise that names Sam the close succeeds, the live bond returns to the named recipient, and the closing rotation's reached key state 1 rides out in a go-request dated at the end of time. Mallory cannot retract it, and a fold cannot reject it: the only exit is to be processed. Hal's fold lands it — the leaf keeps key state 1 with no checkpoint at all, so reaping again is refused. On the branch Alice comes back: her revival from the retained state is folded, and even then a further close still needs the premise naming its recipient."
 params:
   D: 1000
   tip: 2
@@ -26,6 +26,9 @@ env:
   inception: [11]
   rotationFrom:
     - [11, 0]
+    - [11, 1]
+  closeAuth:
+    - [11, 6]
 step:
   now: 0
   actor: anyone
@@ -45,6 +48,7 @@ step:
       tips: null
       premium: null
       intoRequest: 0
+      bondReturn: null
 step:
   now: 1
   actor: anyone
@@ -66,25 +70,29 @@ step:
         value: 2
       premium: null
       intoRequest: 0
+      bondReturn: null
 step:
   now: 4
   actor: anyone
-  as: "Sam — reaping a live checkpoint"
+  as: "Sam — closing against recipient 4, whom the premise does not name"
   action:
     reap:
       reaper: 6
       aid: 11
+      recipient: 4
   expect:
     ok: false
     reason: not-reapable
   exhibits: [R13]
 step:
   now: 5
-  actor: next-keys
-  as: Alice
+  actor: anyone
+  as: "Sam — the premise names him; the bond returns to the named recipient"
   action:
-    pause:
+    reap:
+      reaper: 6
       aid: 11
+      recipient: 6
   expect:
     ok: true
     flow:
@@ -92,48 +100,43 @@ step:
       locked: []
       refunds: []
       tips: null
-      premium: null
-      intoRequest: 0
-step:
-  now: 8
-  actor: anyone
-  as: "Sam — inside the grace window"
-  action:
-    reap:
-      reaper: 6
-      aid: 11
-  expect:
-    ok: false
-    reason: not-reapable
-  exhibits: [R13]
-step:
-  now: 10
-  actor: anyone
-  as: Sam
-  action:
-    reap:
-      reaper: 6
-      aid: 11
-  expect:
-    ok: true
-    flow:
       premium:
         addr: 6
         value: 1
       intoRequest: 3
-    state:
+      bondReturn:
+        addr: 6
+        value: 1000
+  exhibits: [R13, R11]
+step:
+  now: 8
+  actor: owner
+  as: "Mallory — retracting the go-request"
+  action:
+    retract:
+      req: 1
+  expect:
+    ok: false
+    reason: not-in-phase-2
+  exhibits: [R9]
+step:
+  now: 10
+  actor: anyone
+  as: "Mallory — rejecting it inside a batch"
+  action:
+    fold:
+      folder: 4
       gen: 1
       plugin: 7
-      leaves: [{"aid":11,"status":{"active":0}}]
-      ckpts: []
-      requests: [{"id":1,"aid":11,"owner":6,"submittedAt":1000000000,"op":{"goDormant":1}}]
-      nextReq: 2
-      nextToken: 1
-  exhibits: [R13, R11, R1, R4, R6]
+      batch: [{"id":1,"do":"reject"}]
+  expect:
+    ok: false
+    reason: go-not-rejectable
+  exhibits: [R9]
 step:
   now: 11
   actor: anyone
-  as: Hal
+  as: "Hal — the fold lands: the leaf keeps key state 1"
   action:
     fold:
       folder: 3
@@ -143,68 +146,88 @@ step:
   expect:
     ok: true
     flow:
-      refunds: [{"addr":6,"value":1}]
+      deposited: 0
+      locked: []
+      refunds:
+        - addr: 6
+          value: 1
       tips:
         addr: 3
         value: 2
+      premium: null
+      intoRequest: 0
+      bondReturn: null
   exhibits: [R11, R12, R1]
 step:
   now: 12
   actor: anyone
-  as: "Sam — reaping nothing"
+  as: "Sam — reaping nothing: dormant holds no UTxO"
   action:
     reap:
       reaper: 6
       aid: 11
+      recipient: 6
   expect:
     ok: false
     reason: no-checkpoint
+  exhibits: [R13, R1, R4]
 fork:
   id: alice-comes-back
-  at: 4
-  title: "Alice resumes inside the grace window"
+  at: 7
+  title: "Alice revives from the retained state"
   env:
     inception: [11]
     rotationFrom:
       - [11, 0]
       - [11, 1]
-  expectFinal:
-    gen: 1
-    plugin: 7
-    leaves: [{"aid":11,"status":{"active":0}}]
-    ckpts: [{"aid":11,"ckpt":{"token":0,"k":2,"st":"live"}}]
-    requests: []
-    nextReq: 1
-    nextToken: 1
+    closeAuth:
+      - [11, 6]
   step:
-    now: 7
-    actor: next-keys
-    as: "Alice — a depositing rotation from key state 1"
+    now: 12
+    actor: anyone
+    as: "Alice — a witnessed rotation from key state 1"
     action:
-      resume:
+      contribute:
         aid: 11
+        owner: 1
+        submittedAt: 12
+        op: revive
     expect:
       ok: true
       flow:
-        deposited: 0
+        deposited: 1002
         locked: []
         refunds: []
         tips: null
         premium: null
         intoRequest: 0
-    exhibits: [R6, R1]
+        bondReturn: null
+    exhibits: [R11]
   step:
-    now: 10
+    now: 13
     actor: anyone
-    as: "Sam — reaping a live checkpoint"
+    as: "Hal — live again at key state 2"
     action:
-      reap:
-        reaper: 6
-        aid: 11
+      fold:
+        folder: 3
+        gen: 2
+        plugin: 7
+        batch: [{"id":2,"do":"process"}]
     expect:
-      ok: false
-      reason: not-reapable
-    exhibits: [R13]
+      ok: true
+      flow:
+        deposited: 0
+        locked:
+          - aid: 11
+            value: 1000
+        refunds: []
+        tips:
+          addr: 3
+          value: 2
+        premium: null
+        intoRequest: 0
+        bondReturn: null
+    exhibits: [R6, R1, R12]
 expectFinal:
   gen: 2
   plugin: 7

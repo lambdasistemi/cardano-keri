@@ -17,11 +17,9 @@ Singular release and observe an executable binding to the real
 
 ## Re-cut provenance
 
-This campaign supersedes #444, which stopped before implementation after its
-single gate repair remained incomplete. The terminal report is SHA256
+This supersedes #444, stopped before implementation after its gate repair. Report:
 `4570d5cdd700aefae2463689a0d433210d71a026f577ab0934a429fb7d143668`.
-Historical slice spend remains charged: 28/60 cheap and 0/4 expensive, leaving
-32 cheap and 4 expensive executions for this successor.
+Charged spend is 28/60 cheap and 0/4 expensive, leaving 32 cheap and 4 expensive.
 
 ## Requirements
 
@@ -44,6 +42,8 @@ Historical slice spend remains charged: 28/60 cheap and 0/4 expensive, leaving
 - **R-446-CI-INSTRUMENT:** The existing Lean traceability script preserves its
   current four-module theorem scope and rejects failure from any per-module
   theorem-name producer before it counts or checks the resulting inventory.
+- **R-446-BUDGET:** One complete gate uses at most nine cheap and one expensive
+  charged commands, permitting owner, auditor, and final executions.
 
 ## Invariants
 
@@ -71,11 +71,12 @@ Historical slice spend remains charged: 28/60 cheap and 0/4 expensive, leaving
 - A gate runner checked only once before several invocations is rejected.
 - A traceability inventory that silently drops a failed source producer is
   rejected.
+- More than one expensive command per gate is rejected.
 
 ## Non-goals
 
 - Migrating Cardano KERI registry semantics or proofs onto Singular.
-- Choosing the Cardano KERI leaf-to-Singular representation.
+- Choosing the leaf-to-Singular representation.
 - Changing Singular's model, release, or naming lifecycle.
 - Repairing Cardano KERI's release planner or stale release PR.
 - Expanding the traceability script's existing theorem-module inventory.

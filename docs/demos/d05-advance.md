@@ -23,7 +23,7 @@ The intended positive observation is: A connected D-04 registration is followed 
 
 ## Play the model rehearsal
 
-The shared D-04 to D-06 cast runs [checkpoint simulator story 2](https://github.com/lambdasistemi/cardano-keri/blob/0e638fadc987f0cd98f839edd3e3ecd5a09a1b91/simulator/checkpoint-simulator-cli.mjs): the synthetic checkpoint advances to sequence `1` and its model pool moves from `10` to `8`. The script asserts both observations. Its registration is a simulator setup, not the connected D-04 registry transaction required by this card; no stale or unauthorized chain refusal is claimed.
+The shared D-04 to D-06 cast runs [checkpoint simulator story 2](https://github.com/lambdasistemi/cardano-keri/blob/0e638fadc987f0cd98f839edd3e3ecd5a09a1b91/simulator/checkpoint-simulator-cli.mjs) against the accepted [Checkpoint `Action` and `stepFn`](https://github.com/lambdasistemi/cardano-keri/blob/0e638fadc987f0cd98f839edd3e3ecd5a09a1b91/lean/CardanoKeri/Checkpoint.lean): the synthetic checkpoint advances to sequence `1` and its model pool moves from `10` to `8`. The script asserts both observations. Pool units and AID numbers are model fixtures, not real lovelace, Cardano assets or ledger signatures. Its registration is a simulator setup, not the connected D-04 registry transaction required by this card; no stale or unauthorized chain refusal is claimed.
 
 <div id="identity-model-cast" aria-label="Cardano KERI identity model rehearsal"></div>
 <script>

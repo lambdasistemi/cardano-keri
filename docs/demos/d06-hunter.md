@@ -25,7 +25,7 @@ The card also asks, as an identity controller with a short hunter pool, to see t
 
 ## Play the model rehearsal
 
-The shared D-04 to D-06 cast executes [checkpoint simulator stories 3 and 4](https://github.com/lambdasistemi/cardano-keri/blob/0e638fadc987f0cd98f839edd3e3ecd5a09a1b91/simulator/checkpoint-simulator-cli.mjs). The asserted short-pool branch first freezes with pool `1`; a later model step advances unpaid to sequence `1` while that pool remains `1`. The cast does not show a ledger payout, bond transfer or stale transaction refusal.
+The shared D-04 to D-06 cast executes [checkpoint simulator stories 3 and 4](https://github.com/lambdasistemi/cardano-keri/blob/0e638fadc987f0cd98f839edd3e3ecd5a09a1b91/simulator/checkpoint-simulator-cli.mjs) against the accepted [Checkpoint `Action` and `stepFn`](https://github.com/lambdasistemi/cardano-keri/blob/0e638fadc987f0cd98f839edd3e3ecd5a09a1b91/lean/CardanoKeri/Checkpoint.lean). The asserted short-pool branch first freezes with pool `1`; a later model step advances unpaid to sequence `1` while that pool remains `1`. These pool units are synthetic model values, not a real Cardano payout. The cast does not show a ledger payout, bond transfer or stale transaction refusal.
 
 <div id="identity-model-cast" aria-label="Cardano KERI identity model rehearsal"></div>
 <script>

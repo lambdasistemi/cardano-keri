@@ -23,7 +23,7 @@ The intended positive observation is: A registry fold and checkpoint mint share 
 
 ## Play the model rehearsal
 
-The shared D-04 to D-06 recording executes the shipped [registry simulator CLI](https://github.com/lambdasistemi/cardano-keri/blob/0e638fadc987f0cd98f839edd3e3ecd5a09a1b91/simulator/registry-simulator-cli.mjs) and [checkpoint simulator CLI](https://github.com/lambdasistemi/cardano-keri/blob/0e638fadc987f0cd98f839edd3e3ecd5a09a1b91/simulator/checkpoint-simulator-cli.mjs). Here, registry story 4 folds a first registration for fictional AID `11`, then refuses the second with `already-registered`. The script asserts the model state is unchanged on refusal. This is one Cardano KERI simulator side; the D-02 CK-to-Singular mapping and on-chain duplicate refusal remain open.
+The shared D-04 to D-06 recording executes the shipped [registry simulator CLI](https://github.com/lambdasistemi/cardano-keri/blob/0e638fadc987f0cd98f839edd3e3ecd5a09a1b91/simulator/registry-simulator-cli.mjs) against the accepted [Registry `Status`, `Op` and `processBody`](https://github.com/lambdasistemi/cardano-keri/blob/0e638fadc987f0cd98f839edd3e3ecd5a09a1b91/lean/CardanoKeri/Registry.lean). Registry story 4 folds a first registration for fictional AID `11`, then refuses the second with `already-registered`. The script asserts the model state is unchanged on refusal. Numeric AID `11` and token `0` are model fixtures, not Cardano assets or a witnessed inception submitted to a node. This is one Cardano KERI simulator side; the D-02 CK-to-Singular mapping and on-chain duplicate refusal remain open.
 
 <div id="identity-model-cast" aria-label="Cardano KERI identity model rehearsal"></div>
 <script>

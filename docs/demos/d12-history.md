@@ -21,6 +21,10 @@ sequenceDiagram
 
 The intended positive observation is: A verifier checks a credential under the issuer keys valid at its historical sequence after two later rotations. The relevant refusal is: A never accepted key, wrong sequence or intervening successor leaf refuses. These are acceptance criteria, not observed results.
 
+## Preprod recording path
+
+Rotate the issuer twice with keripy `kli` and export the genuine KEL and credential evidence. Submit or read the corresponding Cardano preprod issuer history through the released `ckeri` interface, then present the older credential and the three named bad histories to the connected verifier. The historical-key command and cast remain pending the accepted producer/consumer mapping and release.
+
 ## Presenter path: 10–15 minutes when runnable
 
 | Time | Presenter action | Evidence to inspect |

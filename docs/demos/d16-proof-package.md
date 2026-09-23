@@ -21,6 +21,10 @@ sequenceDiagram
 
 The intended positive observation is: A builder turns synthetic raw four-link CESR credentials into the exact redeemer and issuer/revocation proofs. The relevant refusal is: A corrupted SAID is rejected before submission. These are acceptance criteria, not observed results.
 
+## Preprod recording path
+
+Export raw four-link CESR from keripy `kli`; pass those bytes to the released `ckeri` proof builder and use its exact package in a Cardano preprod gate transaction. Record the package identity, confirmed consumer readback and a corrupted-SAID refusal. The builder interface and matching gate are not yet released, so this page has no cast.
+
 ## Presenter path: 10–15 minutes when runnable
 
 | Time | Presenter action | Evidence to inspect |

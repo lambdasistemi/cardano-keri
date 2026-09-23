@@ -21,6 +21,10 @@ sequenceDiagram
 
 The intended positive observation is: A stranger installs the public release and runs a connected identity lifecycle and fifteen story suite on preprod. The relevant refusal is: Required refusals remain visible; any missing story remains missing. These are acceptance criteria, not observed results.
 
+## Preprod recording path
+
+The stranger uses keripy `kli` for fresh inception, rotation and signed close evidence, then the downloaded `ckeri` release for each Cardano preprod transaction and fresh status read. The [V1 baseline cast](preprod-v1-baseline.md) demonstrates a smaller register/close path. This card additionally requires the accepted registry and fifteen-story release; its own cast waits for those connected results.
+
 ## Presenter path: 10–15 minutes when runnable
 
 | Time | Presenter action | Evidence to inspect |

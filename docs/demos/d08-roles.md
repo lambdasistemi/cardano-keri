@@ -21,6 +21,10 @@ sequenceDiagram
 
 The intended positive observation is: Owner, hunter and consumer use installed ckeri commands for the accepted identity edges and fresh status reads. The relevant refusal is: At least one unauthorized role command refuses at the chain boundary. These are acceptance criteria, not observed results.
 
+## Preprod recording path
+
+Create the controller's event and signed export with keripy `kli`. Use the released `ckeri` role commands to submit owner and hunter actions on Cardano preprod, then read each checkpoint from the node as a consumer. The role command names and refusal boundary must come from that release; no cast is attached before the connected commands and readbacks exist.
+
 ## Presenter path: 10–15 minutes when runnable
 
 | Time | Presenter action | Evidence to inspect |

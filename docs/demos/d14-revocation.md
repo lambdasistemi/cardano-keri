@@ -21,6 +21,10 @@ sequenceDiagram
 
 The intended positive observation is: A third party opens an issuer registry, then records a sealed revocation for one credential SAID. The relevant refusal is: A duplicate or wrong-issuer event refuses. These are acceptance criteria, not observed results.
 
+## Preprod recording path
+
+Use keripy `kli` to export the issuer's public KEL and sealed revocation event. A separate operator uses the released `ckeri` path to open the registry and record the revocation on Cardano preprod, then reads its root and SAID entry from the node. A local TEL assertion is insufficient; the cast waits for both confirmed transactions and the duplicate and wrong-issuer refusals.
+
 ## Presenter path: 10–15 minutes when runnable
 
 | Time | Presenter action | Evidence to inspect |

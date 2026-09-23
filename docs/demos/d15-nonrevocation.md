@@ -21,6 +21,10 @@ sequenceDiagram
 
 The intended positive observation is: The gate checks a miss proof at each of four issuer registries, then sees a recorded QVI revocation. The relevant refusal is: The same action fails at the QVI hop after recording; wrong registry or issuer proofs refuse. These are acceptance criteria, not observed results.
 
+## Preprod recording path
+
+Build the four issuer and credential histories with keripy `kli`. Use the released `ckeri` builder and gate against Cardano preprod to show four current registry miss proofs, then record the QVI revocation through D-14 and retry the identical action. The proof command and cast wait for the connected registry roots and a chain-attributed refusal.
+
 ## Presenter path: 10–15 minutes when runnable
 
 | Time | Presenter action | Evidence to inspect |

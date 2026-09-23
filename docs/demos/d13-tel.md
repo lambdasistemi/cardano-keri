@@ -21,6 +21,10 @@ sequenceDiagram
 
 The intended positive observation is: A keripy-generated issuance or revocation event is checked through its issuer seal, historical keys and witness receipts. The relevant refusal is: Wrong seal, issuer, historical state and missing quorum each refuse. These are acceptance criteria, not observed results.
 
+## Preprod recording path
+
+Generate the issuer KEL and TEL event with keripy `kli`, retaining its seal and witness receipts. Feed those exact bytes to the released `ckeri` verifier and submit the resulting preprod action. Read back the accepted transaction and show each malformed seal or missing receipt refusing at the actual boundary. The TEL interface and cast are still pending.
+
 ## Presenter path: 10–15 minutes when runnable
 
 | Time | Presenter action | Evidence to inspect |

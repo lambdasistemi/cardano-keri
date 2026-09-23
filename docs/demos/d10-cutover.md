@@ -21,6 +21,10 @@ sequenceDiagram
 
 The intended positive observation is: The operator compares the candidate archive, old and new manifests, parameters and each existing identity disposition. The relevant refusal is: An ARMED, FROZEN or unaccounted identity blocks cutover. These are acceptance criteria, not observed results.
 
+## Preprod recording path
+
+Use keripy `kli` to export the event history for the identities in the cutover inventory. Use the release-bound `ckeri` to query their current preprod checkpoints and verify the candidate manifest against deployed references. Only a permitted disposition may proceed to a connected candidate action. Record the block reason for every ARMED, FROZEN or unaccounted identity; no cutover cast is attached yet.
+
 ## Presenter path: 10–15 minutes when runnable
 
 | Time | Presenter action | Evidence to inspect |

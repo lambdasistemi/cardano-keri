@@ -21,6 +21,10 @@ sequenceDiagram
 
 The intended positive observation is: The full synthetic four-link chain reaches the Cardano gate under historical issuer keys and non-revocation proofs. The relevant refusal is: A forged, broken or recorded-revoked link refuses. These are acceptance criteria, not observed results.
 
+## Preprod recording path
+
+Generate and export the four linked credentials with keripy `kli`. Use the released `ckeri` package and verifier to submit the gated action on Cardano preprod, then read back the accepted transaction and measured execution units. Replay forged, broken and recorded-revoked links against the same gate. The connected verifier and cast remain pending.
+
 ## Presenter path: 10–15 minutes when runnable
 
 | Time | Presenter action | Evidence to inspect |

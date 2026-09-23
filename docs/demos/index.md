@@ -1,12 +1,16 @@
 # Dated demo plays
 
-As an integrator, I want each dated identity demo to show its exact model and evidence boundary, so that I can tell a rehearsal from a confirmed Cardano action.
+As an integrator, I want each dated identity demo to show a real preprod result from keripy `kli` and `ckeri`, so that I can inspect the KERI event, Cardano transaction and fresh readback together.
+
+Every dated play targets **Cardano preprod**. Keripy owns the identity and exports CESR; `ckeri` consumes that export, submits the corresponding Cardano transaction and reads its settled state. A cast is attached only after that exact preprod journey has run. An executable Lean row or a Node simulator remains design evidence and is not a demo cast for this path.
+
+The [deployed M1 V1 checkpoint](../user/m1-preprod-deployment.md) supports a smaller preprod lifecycle. The [recorded keripy and ckeri baseline](preprod-v1-baseline.md) shows a confirmed registration and signed close. It has no Singular registry mapping or ACDC gate. A V1 transaction therefore cannot close a later card whose story requires those features.
 
 | Target | Play | Current boundary |
 | --- | --- | --- |
 | 23 October 2026 | [Map the Singular registry to Cardano KERI](d02-registry-mapping.md) | Cross-model mapping under review; not yet playable as a connected integration. |
 
-The [Singular naming rehearsal](https://github.com/lambdasistemi/singular/issues/174) is a parallel story. Cardano KERI's identity path does not depend on naming or escrow.
+The [Singular naming story](https://github.com/lambdasistemi/singular/issues/174) is a parallel preprod target. Cardano KERI's identity path does not depend on naming or escrow.
 
 ## Later targets
 

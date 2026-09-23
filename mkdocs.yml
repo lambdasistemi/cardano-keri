@@ -52,6 +52,7 @@ nav:
   - Home: index.md
   - Dated demos:
       - Index: demos/index.md
+      - Preprod V1 baseline: demos/preprod-v1-baseline.md
       - 23 October — Registry consumer mapping: demos/d02-registry-mapping.md
       - 2026-12-07 — Registry backed registration: demos/d04-registration.md
       - 2026-12-22 — Register then advance: demos/d05-advance.md

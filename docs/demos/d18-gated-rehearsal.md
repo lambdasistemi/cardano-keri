@@ -1,12 +1,12 @@
 # Credential gated rehearsal — 2027-07-05 target
 
-**D-18 story.** As a credential holder, I want a local-devnet Cardano transaction to pass with my synthetic credential chain and fail after a relevant revocation is recorded, so that the team can rehearse the first ACDC-gated action end to end.
+**D-18 story.** As a credential holder, I want a Cardano preprod transaction to pass with my synthetic credential chain and fail after a relevant revocation is recorded, so that the team can rehearse the first ACDC-gated action end to end.
 
 This is a dated review target from the [live project card](https://github.com/orgs/lambdasistemi/projects/4/views/5). **Not yet playable as the connected target.** No confirmed ledger outcome or release acceptance is claimed by this page.
 
 ## Planned play and evidence
 
-Given the verified four-link package, connected issuer and TEL state, and a gated spending or minting action on a local devnet; when the holder submits the valid action, a QVI revocation is recorded through the D-14 path, and the action is retried; then the first transaction is confirmed and the retry is refused by the on-chain gate for the recorded revocation.
+Given the verified four-link package, connected issuer and TEL state, and a gated spending or minting action on preprod; when the holder submits the valid action, a QVI revocation is recorded through the D-14 path, and the action is retried; then the first transaction is confirmed and the retry is refused by the on-chain gate for the recorded revocation.
 
 ```mermaid
 sequenceDiagram
@@ -19,7 +19,7 @@ sequenceDiagram
     C-->>A: Read back the actual result or refusal
 ```
 
-The intended positive observation is: A local devnet action passes with the valid synthetic chain, a QVI revocation is recorded, then the same action is retried. The relevant refusal is: The retry is refused by the on-chain gate for the recorded revocation. These are acceptance criteria, not observed results.
+The intended positive observation is: A preprod action passes with the valid synthetic chain, a QVI revocation is recorded, then the same action is retried. The relevant refusal is: The retry is refused by the on-chain gate for the recorded revocation. These are acceptance criteria, not observed results.
 
 ## Presenter path: 10–15 minutes when runnable
 
@@ -33,7 +33,7 @@ The intended positive observation is: A local devnet action passes with the vali
 
 ## Missing interface or receipt
 
-Connected local-devnet setup, accepted action hash and readback, D-14 revocation-push hash, refused retry trace, script identities and execution units.
+Connected preprod setup through keripy and `ckeri`, accepted action hash and readback, D-14 revocation-push hash, refused retry trace, script identities and execution units.
 
 The model base visible in this checkout is Cardano KERI commit `0e638fadc987f0cd98f839edd3e3ecd5a09a1b91`. It is a source identity for planning, **not a claim that the later card is already modeled or accepted**. Each claim must bind the accepted model revision for that behavior before promotion. The [Lean correspondence register](https://github.com/lambdasistemi/cardano-keri/issues/435) holds affected conflicts. A simulator or source fact cannot replace a confirmed transaction, and no cast of an accepted connected result is available here.
 

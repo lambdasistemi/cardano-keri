@@ -6,7 +6,7 @@ This is a dated review target from the [live project card](https://github.com/or
 
 ## Planned play and evidence
 
-Given a fresh local devnet, the documented release artifact and synthetic four-link credential fixtures; when an independent operator runs the connected setup, submits the valid action, records a QVI revocation and submits the same action again; then the first ledger action succeeds and is readable back, while the second is refused by the on-chain gate; every result is tied to the exact model, scripts, transaction IDs and evidence package.
+Given Cardano preprod, the documented release artifact and synthetic four-link credential fixtures; when an independent operator uses keripy and `ckeri` to run the connected setup, submits the valid action, records a QVI revocation and submits the same action again; then the first ledger action succeeds and is readable back, while the second is refused by the on-chain gate; every result is tied to the exact model, scripts, transaction IDs and evidence package.
 
 ```mermaid
 sequenceDiagram
@@ -19,7 +19,7 @@ sequenceDiagram
     C-->>A: Read back the actual result or refusal
 ```
 
-The intended positive observation is: An independent operator uses a documented release and fresh local devnet to run the connected valid action, recorded QVI revocation and retry. The relevant refusal is: The on-chain gate refuses the retry after the revocation. These are acceptance criteria, not observed results.
+The intended positive observation is: An independent operator uses a documented release and Cardano preprod to run the connected valid action, recorded QVI revocation and retry. The relevant refusal is: The on-chain gate refuses the retry after the revocation. These are acceptance criteria, not observed results.
 
 ## Presenter path: 10–15 minutes when runnable
 

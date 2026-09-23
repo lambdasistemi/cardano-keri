@@ -23,21 +23,9 @@ The intended positive observation is: A hunter lands a witnessed rotation and th
 
 The card also asks, as an identity controller with a short hunter pool, to see the model's actual unpaid or freeze route with its bond effects. It does not specify blanket refusal.
 
-## Play the model rehearsal
+## Preprod operator play
 
-The shared D-04 to D-06 cast executes [checkpoint simulator stories 3 and 4](https://github.com/lambdasistemi/cardano-keri/blob/0e638fadc987f0cd98f839edd3e3ecd5a09a1b91/simulator/checkpoint-simulator-cli.mjs) against the accepted [Checkpoint `Action` and `stepFn`](https://github.com/lambdasistemi/cardano-keri/blob/0e638fadc987f0cd98f839edd3e3ecd5a09a1b91/lean/CardanoKeri/Checkpoint.lean). The asserted short-pool branch first freezes with pool `1`; a later model step advances unpaid to sequence `1` while that pool remains `1`. These pool units are synthetic model values, not a real Cardano payout. The cast does not show a ledger payout, bond transfer or stale transaction refusal.
-
-<div id="identity-model-cast" aria-label="Cardano KERI identity model rehearsal"></div>
-<script>
-window.addEventListener("load", function () {
-  AsciinemaPlayer.create("../assets/video/d04-d06-identity-model.cast",
-    document.getElementById("identity-model-cast"), {
-      cols: 80, rows: 24, autoPlay: false, preload: true, controls: true
-    });
-});
-</script>
-
-[Download the 80-column cast](assets/video/d04-d06-identity-model.cast). Run `node demo/identity-model-rehearsal.mjs --fast` to check its observations. Cast SHA-256: `e72e55bfa66ae599a6d829cf88aa5563b15d7a10649845b160cc35b1e106403b`.
+The controller creates and witnesses a KERI rotation with keripy, then gives the CESR stream to a separate hunter. The hunter submits `ckeri advance` against the connected preprod checkpoint and reads back the checkpoint, pool, bond and payout. Repeat from a deliberately short pool to show the accepted freeze or unpaid branch and its actual transaction effects. The deployed V1 preprod release does not implement this full hunter and registry story. No cast is attached until both preprod branches and their refusal receipts have been observed.
 
 ## Presenter path: 10–15 minutes when runnable
 

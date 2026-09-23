@@ -21,21 +21,9 @@ sequenceDiagram
 
 The intended positive observation is: A registry fold and checkpoint mint share one inception proof. The relevant refusal is: A duplicate registration refuses after the first live AID. These are acceptance criteria, not observed results.
 
-## Play the model rehearsal
+## Preprod operator play
 
-The shared D-04 to D-06 recording executes the shipped [registry simulator CLI](https://github.com/lambdasistemi/cardano-keri/blob/0e638fadc987f0cd98f839edd3e3ecd5a09a1b91/simulator/registry-simulator-cli.mjs) against the accepted [Registry `Status`, `Op` and `processBody`](https://github.com/lambdasistemi/cardano-keri/blob/0e638fadc987f0cd98f839edd3e3ecd5a09a1b91/lean/CardanoKeri/Registry.lean). Registry story 4 folds a first registration for fictional AID `11`, then refuses the second with `already-registered`. The script asserts the model state is unchanged on refusal. Numeric AID `11` and token `0` are model fixtures, not Cardano assets or a witnessed inception submitted to a node. This is one Cardano KERI simulator side; the D-02 CK-to-Singular mapping and on-chain duplicate refusal remain open.
-
-<div id="identity-model-cast" aria-label="Cardano KERI identity model rehearsal"></div>
-<script>
-window.addEventListener("load", function () {
-  AsciinemaPlayer.create("../assets/video/d04-d06-identity-model.cast",
-    document.getElementById("identity-model-cast"), {
-      cols: 80, rows: 24, autoPlay: false, preload: true, controls: true
-    });
-});
-</script>
-
-[Download the 80-column cast](assets/video/d04-d06-identity-model.cast). Run `node demo/identity-model-rehearsal.mjs --fast` to recheck the observations, or `bash demo/record-identity-model-rehearsal.sh` to rerecord and validate. Cast SHA-256: `e72e55bfa66ae599a6d829cf88aa5563b15d7a10649845b160cc35b1e106403b`.
+Use keripy `kli incept` and `kli export` to create a fresh AID and CESR stream. Use a released `ckeri register --network preprod --kel inception.cesr` with its matching manifest, then `ckeri status --aid` to read the settled checkpoint. The [recorded V1 baseline](preprod-v1-baseline.md) shows that smaller deployed journey. It has no Singular registry or on-chain duplicate-incarnation rule, so its transaction cannot satisfy this D-04 story. The D-04 cast will be recorded only after a preprod release couples the registry fold and checkpoint mint and the duplicate attempt reaches the intended script boundary.
 
 ## Presenter path: 10–15 minutes when runnable
 

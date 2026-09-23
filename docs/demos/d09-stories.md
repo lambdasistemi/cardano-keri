@@ -1,74 +1,38 @@
-# Fifteen identity stories — 2027-02-20 target
+# Fifteen identity stories — 2027-02-20 preprod target
 
-**D-09 story.** As a new integrator, I want the fifteen identity scenarios and their forks to run as connected transactions, so that I can see both promised behavior and named refusals before a preprod cutover.
+**D-09 story.** As a preprod integrator, I want the identity lifecycle and its forks to run through released keripy and `ckeri` commands, so that I can inspect the real chain effects and refusals before relying on the interface.
 
-This is a dated review target from the [live project card](https://github.com/orgs/lambdasistemi/projects/4/views/5). **Not yet playable as the connected target.** No confirmed ledger outcome or release acceptance is claimed by this page.
+This is a dated review target from the [project card](https://github.com/orgs/lambdasistemi/projects/4/views/5). The existing checkpoint simulator contains fifteen scenario fixtures, but running them through Node does not submit a Cardano transaction. A model-only recording is not the D-09 demo.
 
-## Playable fixture replay, with an open gate
+## Planned preprod play
 
-The accepted [checkpoint Lean model](https://github.com/lambdasistemi/cardano-keri/blob/0e638fadc987f0cd98f839edd3e3ecd5a09a1b91/lean/CardanoKeri/Checkpoint.lean) is pinned to `0e638fadc987f0cd98f839edd3e3ecd5a09a1b91` (file SHA-256 `f5dea750f9de2e5737d288eef73371cefd1b4217c5609468ddcdff4967ae001f`). The [Lean corpus](https://github.com/lambdasistemi/cardano-keri/blob/0e638fadc987f0cd98f839edd3e3ecd5a09a1b91/simulator/checkpoint-simulator-corpus.json) has SHA-256 `72e85bf0ed1141f092dcda4bec61dd1b69a8fcaa636d58fff5726cf999868f6e`. The shipped [fifteen JSON scenarios](https://github.com/lambdasistemi/cardano-keri/tree/0e638fadc987f0cd98f839edd3e3ecd5a09a1b91/simulator/checkpoint-simulator-scenarios) and their forks are replayed by `checkScenario` in the [checkpoint core](https://github.com/lambdasistemi/cardano-keri/blob/0e638fadc987f0cd98f839edd3e3ecd5a09a1b91/simulator/checkpoint-simulator-core.mjs). The rehearsal asserts all 15 fixture results have no reported problem, story numbers are exactly 1–15, and 104 action steps ran. It also invokes the full scenario gate and asserts its current RED status so the cast cannot silently portray that gate as green.
-
-```sh
-node demo/later-model-rehearsal.mjs d09 --fast
-node simulator/checkpoint-simulator-cli.mjs --story 1 --to-end --json
-node simulator/checkpoint-simulator-cli.mjs --story 9 --fork noproof --to-end --json
-node simulator/checkpoint-simulator-scenario-gate.mjs
-```
-
-<div id="d09-model-cast" aria-label="D-09 fifteen checkpoint model scenarios"></div>
-<script>
-window.addEventListener("load", function () {
-  AsciinemaPlayer.create("../assets/video/d09-checkpoint-model.cast",
-    document.getElementById("d09-model-cast"), {
-      cols: 80, rows: 24, autoPlay: false, preload: true, controls: true
-    });
-});
-</script>
-
-[Download the 80-column cast](assets/video/d09-checkpoint-model.cast). Rerecord and validate with `bash demo/record-later-model-rehearsal.sh`.
-
-**Gate limit:** On this source revision, the full checkpoint scenario gate replays the 15 stories but exits RED with 42 problems, including theorem-row, story-reconciliation and fabricated-violation checks. Individual fixture replay passing does not close those defects. There is no connected devnet runner, transaction receipt or chain-level refusal evidence for any of the fifteen stories.
-
-## Presenter path for today's model cast: 10–15 minutes
-
-| Time | Cast frame and presenter action | Observation to point out |
-| --- | --- | --- |
-| 0–2 min | Open **fifteen checkpoint model scenarios** and identify the accepted model and corpus revision above. | The recording runs fixture assertions, not a devnet runner. |
-| 2–9 min | Pause at **Model stories 1 to 5**, **6 to 10** and **11 to 15**; select one source fixture and its fork in the linked directory. | Each printed row has passed `checkScenario` expectations; the 15 files execute 104 action steps across trunks and forks. |
-| 9–12 min | Run the replay commands above, including the story 9 `noproof` fork. | The refusal is a simulator result. It is not a refused Cardano transaction. |
-| 12–15 min | Finish at **limits of the model replay** and inspect the scenario gate result. | The full gate is RED on theorem-row/reconciliation controls; connected transactions, readbacks and chain-level negative controls remain missing. |
-
-## Planned play and evidence
-
-Given the accepted model stories, their generated corpus and a booted devnet with the installed operator commands; when the suite replays each trunk and relevant fork from legitimate prior operations; then the ledger observations match the bound model outcomes and every claimed refusal is reached by a refused transaction.
+Each story must start from a reachable preprod output produced by the previous keripy and `ckeri` commands. The presenter uses `kli` to generate the KERI event, exports its CESR stream, submits the corresponding `ckeri` command, then reads the exact transaction and state back from preprod. Forks that promise a refusal must send their evidence to the intended client or validator boundary and show the observed error. The run records release identity, manifest, AID, script and policy IDs, transaction IDs, values and uncovered rows.
 
 ```mermaid
 sequenceDiagram
-    participant A as Story actor
-    participant M as Accepted model
-    participant C as Cardano boundary
-    A->>M: Prepare the stated evidence
-    M-->>A: Check expected transition and refusal
-    A->>C: Submit the connected action when implemented
-    C-->>A: Read back the actual result or refusal
+    participant Actor
+    participant KLI as keripy kli
+    participant CKERI as ckeri
+    participant Chain as Cardano preprod
+    Actor->>KLI: Create the next KERI event
+    KLI-->>CKERI: CESR and receipts
+    CKERI->>Chain: Submit the story action
+    Chain-->>CKERI: Transaction or script refusal
+    CKERI-->>Actor: Fresh status and evidence row
 ```
 
-The intended positive observation is: All fifteen accepted scenarios and relevant forks run from legitimate prior transactions on devnet. The relevant refusal is: Each relevant invalid fork reaches an actual refused transaction. These are acceptance criteria, not observed results.
+The local fixture replay does not establish this journey. The full checkpoint scenario gate at the current source revision is also RED on theorem-row, story-reconciliation and fabricated-violation checks. A preprod cast will be attached only after the connected story runner and its named controls execute. Until then, this page is a play plan.
 
-## Future connected presenter path: 10–15 minutes when runnable
+## Presenter path: 10–15 minutes when connected
 
-| Time | Presenter action | Evidence to inspect |
+| Time | Action | Required observation |
 | --- | --- | --- |
-| 0–2 min | State the actor's goal and identify all synthetic inputs. | Pin the exact accepted model and release revisions. |
-| 2–5 min | Establish the card's given state through its connected prior operations. | Inspect the actual starting outputs and required evidence. |
-| 5–8 min | Run the planned positive action. | Compare fresh readback with the bound model transition. |
-| 8–11 min | Run the planned negative control. | Attribute the refusal to the actual boundary. |
-| 11–15 min | Review receipts and gaps. | Identify transactions, scripts, witnesses, values and uncovered behavior. |
+| 0–2 min | Show the release, manifest, keripy version and funded preprod starting state. | Exact artifact and model identities. |
+| 2–6 min | Run representative controller and hunter stories. | CESR events, confirmed `ckeri` transactions and state readbacks. |
+| 6–10 min | Run close, return and conviction forks. | Actual registry and checkpoint effects with values. |
+| 10–13 min | Run named negative controls. | Client or script attribution for each observed refusal. |
+| 13–15 min | Review the fifteen-row receipt table. | All exercised rows, unresolved rows and gate failures stay visible. |
 
-## Missing interface or receipt
+## Missing interface and evidence
 
-A complete connected devnet runner, generated corpus revision, exact scenario/fork inventory, transaction receipts, negative controls and uncovered-row report.
-
-The [Lean correspondence register](https://github.com/lambdasistemi/cardano-keri/issues/435) holds affected conflicts. A simulator or source fact cannot replace a confirmed transaction; this cast is a model rehearsal, not an accepted connected result.
-
-**Tracking:** [KERI story-suite epic #326](https://github.com/lambdasistemi/cardano-keri/issues/326).
+A released connected D-04 through D-08 command path, preprod funding and manifests, a fifteen-story runner, transaction receipts, negative controls and an uncovered-row report remain required. The [Lean correspondence register #435](https://github.com/lambdasistemi/cardano-keri/issues/435) controls affected semantics. No preprod suite acceptance is claimed.

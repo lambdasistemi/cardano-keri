@@ -50,6 +50,25 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Dated demos:
+      - Index: demos/index.md
+      - 23 October — Registry consumer mapping: demos/d02-registry-mapping.md
+      - 2026-12-07 — Registry backed registration: demos/d04-registration.md
+      - 2026-12-22 — Register then advance: demos/d05-advance.md
+      - 2027-01-06 — Hunter advance and short pool: demos/d06-hunter.md
+      - 2027-01-21 — Close and conviction: demos/d07-close-convict.md
+      - 2027-02-05 — Commands for identity roles: demos/d08-roles.md
+      - 2027-02-20 — Fifteen identity stories: demos/d09-stories.md
+      - 2027-03-07 — Preprod cutover rehearsal: demos/d10-cutover.md
+      - 2027-03-22 — Preprod release journey: demos/d11-preprod.md
+      - 2027-04-06 — Historical issuer keys: demos/d12-history.md
+      - 2027-04-21 — TEL seal walk: demos/d13-tel.md
+      - 2027-05-06 — Record a revocation: demos/d14-revocation.md
+      - 2027-05-21 — Non-revocation at the gate: demos/d15-nonrevocation.md
+      - 2027-06-05 — ACDC proof package: demos/d16-proof-package.md
+      - 2027-06-20 — Four-link chain and budget: demos/d17-four-link.md
+      - 2027-07-05 — Credential gated rehearsal: demos/d18-gated-rehearsal.md
+      - 2027-07-20 — Credential gated transaction target: demos/d19-gated-target.md
   - Offered API:
       - Caller stories: offered-api/index.md
       - Checkpoint lifecycle: offered-api/checkpoint.md

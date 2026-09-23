@@ -2,6 +2,8 @@
 
 **D-06 story.** As a hunter, I want to land another controller’s witnessed rotation and receive the model-defined reward, so that checkpoints can stay current without an appointed operator.
 
+**Planned release tag:** Cardano KERI `v1.0.0` (identity-core M1). This names the milestone target; intermediate plays use release candidates, and the tag waits for the D-11 release gate and its preprod evidence.
+
 This is a dated review target from the [live project card](https://github.com/orgs/lambdasistemi/projects/4/views/5). **Not yet playable as the connected target.** No confirmed ledger outcome or release acceptance is claimed by this page.
 
 ## Planned play and evidence

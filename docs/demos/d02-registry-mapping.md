@@ -2,6 +2,8 @@
 
 As a Cardano KERI integrator, I want to bind the registry observations our identity model consumes to the accepted Singular model, so I can implement without treating similarly named leaves or tokens as identical by guesswork. The [dated project card](https://github.com/orgs/lambdasistemi/projects/4/views/5) remains a mapping review target. **This cross-model integration is not yet playable or accepted.**
 
+**Planned release tags:** Cardano KERI `v1.0.0` (identity-core M1) and Singular `v2.0.0` (parallel naming M2). This is a mapping review; neither tag is created by this plan, and the mapping does not itself pass a release gate.
+
 The [recorded preprod V1 baseline](preprod-v1-baseline.md) can open the review: keripy `kli` supplies a real inception, and `ckeri` registers and closes its checkpoint. That cast proves only the deployed V1 boundary. The Singular registry fold and the correspondence rows below still need connected preprod transactions before D-02 can be presented as an integration demo.
 
 ## Model revisions and source

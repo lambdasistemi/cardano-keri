@@ -2,6 +2,8 @@
 
 **D-15 story.** As a gated application, I want a non-revocation check for every credential in a four-link chain, so that a recorded QVI revocation stops every downstream action.
 
+**Planned release tag:** Cardano KERI `v2.0.0` (credential-gate M2). This names the milestone target; intermediate plays use release candidates, and the tag waits for the D-19 release gate and its preprod evidence.
+
 This is a dated review target from the [live project card](https://github.com/orgs/lambdasistemi/projects/4/views/5). **Not yet playable as the connected target.** No confirmed ledger outcome or release acceptance is claimed by this page.
 
 ## Planned play and evidence

@@ -2,6 +2,8 @@
 
 **D-07 story.** As an identity controller, I want a valid closing rotation to end my checkpoint and record where the registry stopped, so that a later return must prove the right continuation.
 
+**Planned release tag:** Cardano KERI `v1.0.0` (identity-core M1). This names the milestone target; intermediate plays use release candidates, and the tag waits for the D-11 release gate and its preprod evidence.
+
 This is a dated preprod review target from the [project card](https://github.com/orgs/lambdasistemi/projects/4/views/5). A keripy and `ckeri` cast must show a connected preprod journey. The existing M1 V1 release can close a checkpoint, but it has no Singular registry fold or KERI-conformant conviction path; a V1 close cannot satisfy the full D-07 story.
 
 ## Planned preprod play

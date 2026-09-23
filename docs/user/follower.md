@@ -123,12 +123,14 @@ join the follower's interest set the same way the checkpoint address does —
 operators may configure more than one — and `payerUtxos` returns the raw
 `(TxIn, TxOut)` pairs a coin selector needs.
 
-The packaged transaction commands use this model without a subprocess. They
-enumerate exact funding out-refs through Koios, resolve only those out-refs
-through N2C, aggregate enough value deterministically while reserving the
-smallest suitable input for collateral, build and sign in process, and submit
+The current packaged write commands require a local follower store through
+`--store` or `CKERI_STORE`. They use the indexed checkpoint and payer UTxOs to
+select inputs, reserve collateral, build and sign in process, and submit
 through local transaction submission. The payment key must derive the payment
-credential in `--funding-address`; a mismatch fails before construction.
+credential in `--funding-address`; a mismatch fails before construction. The
+older V1 operator path used Koios for funding discovery; it is preserved in
+the [historical preprod cast](../demos/preprod-v1-baseline.md), not the
+requirement for the current write path.
 
 ## What it deliberately does not do
 

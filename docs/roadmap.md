@@ -14,6 +14,14 @@ redeployed once, at the end.
 **M1 — Identity core: witnessed checkpoints on Cardano, with poison, bonds and
 a unique registry.**
 
+The [dated demo plan](demos/index.md#planned-major-release-tags) now names
+`v1.0.0` for the identity-core milestone and `v2.0.0` for the credential-gate
+milestone. The delivery epic [#328](https://github.com/lambdasistemi/cardano-keri/issues/328)
+and release child [#357](https://github.com/lambdasistemi/cardano-keri/issues/357)
+still specify `0.5.0`; [#450](https://github.com/lambdasistemi/cardano-keri/issues/450)
+tracks the release-policy reconciliation before a major tag is cut. The
+planned tag does not change the evidence required below.
+
 Done means, on preprod: an identity registered once through the registry;
 rotations landed by hunters for a premium; a freeze when the pool is short;
 poison by the current quorum, cleared by rotation; close by the next keys and

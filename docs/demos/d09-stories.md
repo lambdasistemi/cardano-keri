@@ -2,6 +2,8 @@
 
 **D-09 story.** As a preprod integrator, I want the identity lifecycle and its forks to run through released keripy and `ckeri` commands, so that I can inspect the real chain effects and refusals before relying on the interface.
 
+**Planned release tag:** Cardano KERI `v1.0.0` (identity-core M1). This names the milestone target; intermediate plays use release candidates, and the tag waits for the D-11 release gate and its preprod evidence.
+
 This is a dated review target from the [project card](https://github.com/orgs/lambdasistemi/projects/4/views/5). The existing checkpoint simulator contains fifteen scenario fixtures, but running them through Node does not submit a Cardano transaction. A model-only recording is not the D-09 demo.
 
 ## Planned preprod play

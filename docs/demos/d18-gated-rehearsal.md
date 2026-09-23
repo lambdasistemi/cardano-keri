@@ -2,6 +2,8 @@
 
 **D-18 story.** As a credential holder, I want a Cardano preprod transaction to pass with my synthetic credential chain and fail after a relevant revocation is recorded, so that the team can rehearse the first ACDC-gated action end to end.
 
+**Planned release tag:** Cardano KERI `v2.0.0` (credential-gate M2). This names the milestone target; intermediate plays use release candidates, and the tag waits for the D-19 release gate and its preprod evidence.
+
 This is a dated review target from the [live project card](https://github.com/orgs/lambdasistemi/projects/4/views/5). **Not yet playable as the connected target.** No confirmed ledger outcome or release acceptance is claimed by this page.
 
 ## Planned play and evidence

@@ -2,6 +2,8 @@
 
 **D-12 story.** As a credential verifier, I want to check the issuer keys that were valid when a credential was issued, so that a later key rotation does not invalidate an authentic older credential.
 
+**Planned release tag:** Cardano KERI `v2.0.0` (credential-gate M2). This names the milestone target; intermediate plays use release candidates, and the tag waits for the D-19 release gate and its preprod evidence.
+
 This is a dated review target from the [live project card](https://github.com/orgs/lambdasistemi/projects/4/views/5). **Not yet playable as the connected target.** No confirmed ledger outcome or release acceptance is claimed by this page.
 
 ## Planned play and evidence

@@ -2,6 +2,8 @@
 
 **D-05 story.** As an identity controller, I want a witnessed KERI rotation reflected by my existing Cardano checkpoint, so that consumers can use the newly established keys without losing the identity.
 
+**Planned release tag:** Cardano KERI `v1.0.0` (identity-core M1). This names the milestone target; intermediate plays use release candidates, and the tag waits for the D-11 release gate and its preprod evidence.
+
 This is a dated review target from the [live project card](https://github.com/orgs/lambdasistemi/projects/4/views/5). **Not yet playable as the connected target.** No confirmed ledger outcome or release acceptance is claimed by this page.
 
 ## Planned play and evidence
@@ -23,7 +25,7 @@ The intended positive observation is: A connected D-04 registration is followed 
 
 ## Preprod operator play
 
-Start from the same AID registered through D-04's connected preprod transaction. Rotate it with keripy `kli rotate`, export the new CESR stream, submit `ckeri advance --network preprod --aid ... --kel rotation.cesr`, and read the next key state with `ckeri status`. Submit stale and unauthorized evidence as named negative controls. The [deployed V1 advance guide](../user/rotate-preprod-identity.md) shows an earlier, narrower preprod journey; that release predates the registry coupling required here. No D-05 cast is attached until the connected D-04 prerequisite and refusal receipts exist.
+Start from the same AID registered through D-04's connected preprod transaction. Rotate it with keripy `kli rotate`, export the new CESR stream, submit `ckeri advance --network preprod --aid ... --kel rotation.cesr --store /path/to/follower-store`, and read the next key state with `ckeri status --aid AID --backend local --store /path/to/follower-store`. Submit stale and unauthorized evidence as named negative controls. The [deployed V1 advance guide](../user/rotate-preprod-identity.md) shows an earlier, narrower preprod journey; that release predates the registry coupling required here. No D-05 cast is attached until the connected D-04 prerequisite and refusal receipts exist.
 
 ## Presenter path: 10–15 minutes when runnable
 

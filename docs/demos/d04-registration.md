@@ -2,6 +2,8 @@
 
 **D-04 story.** As an identity controller, I want my witnessed inception to establish one on-chain checkpoint, so that another party cannot register the same identity as a second live incarnation.
 
+**Planned release tag:** Cardano KERI `v1.0.0` (identity-core M1). This names the milestone target; intermediate plays use release candidates, and the tag waits for the D-11 release gate and its preprod evidence.
+
 This is a dated review target from the [live project card](https://github.com/orgs/lambdasistemi/projects/4/views/5). **Not yet playable as the connected target.** No confirmed ledger outcome or release acceptance is claimed by this page.
 
 ## Planned play and evidence
@@ -23,7 +25,7 @@ The intended positive observation is: A registry fold and checkpoint mint share 
 
 ## Preprod operator play
 
-Use keripy `kli incept` and `kli export` to create a fresh AID and CESR stream. Use a released `ckeri register --network preprod --kel inception.cesr` with its matching manifest, then `ckeri status --aid` to read the settled checkpoint. The [recorded V1 baseline](preprod-v1-baseline.md) shows that smaller deployed journey. It has no Singular registry or on-chain duplicate-incarnation rule, so its transaction cannot satisfy this D-04 story. The D-04 cast will be recorded only after a preprod release couples the registry fold and checkpoint mint and the duplicate attempt reaches the intended script boundary.
+Use keripy `kli incept` and `kli export` to create a fresh AID and CESR stream. Use a released `ckeri register --network preprod --kel inception.cesr --store /path/to/follower-store` with its matching manifest, then `ckeri status --aid AID --backend local --store /path/to/follower-store` to read the settled checkpoint. The [recorded V1 baseline](preprod-v1-baseline.md) shows that smaller deployed journey. It has no Singular registry or on-chain duplicate-incarnation rule, so its transaction cannot satisfy this D-04 story. The D-04 cast will be recorded only after a preprod release couples the registry fold and checkpoint mint and the duplicate attempt reaches the intended script boundary.
 
 ## Presenter path: 10–15 minutes when runnable
 

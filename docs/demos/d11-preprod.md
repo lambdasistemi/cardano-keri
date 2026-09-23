@@ -2,6 +2,8 @@
 
 **D-11 story.** As a stranger using only the public release and documentation, I want to register, maintain and end an identity on preprod, so that I can rely on the released Cardano KERI interface rather than the team’s local checkout.
 
+**Planned release tag:** Cardano KERI `v1.0.0` (identity-core M1). This names the milestone target; intermediate plays use release candidates, and the tag waits for the D-11 release gate and its preprod evidence.
+
 This is a dated review target from the [live project card](https://github.com/orgs/lambdasistemi/projects/4/views/5). **Not yet playable as the connected target.** No confirmed ledger outcome or release acceptance is claimed by this page.
 
 ## Planned play and evidence

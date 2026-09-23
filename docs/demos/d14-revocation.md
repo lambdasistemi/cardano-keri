@@ -2,6 +2,8 @@
 
 **D-14 story.** As a third party holding only public issuer logs, I want to open the issuer’s revocation registry and record its sealed revocation, so that the on-chain gate can see the issuer’s decision without trusting me.
 
+**Planned release tag:** Cardano KERI `v2.0.0` (credential-gate M2). This names the milestone target; intermediate plays use release candidates, and the tag waits for the D-19 release gate and its preprod evidence.
+
 This is a dated review target from the [live project card](https://github.com/orgs/lambdasistemi/projects/4/views/5). **Not yet playable as the connected target.** No confirmed ledger outcome or release acceptance is claimed by this page.
 
 ## Planned play and evidence

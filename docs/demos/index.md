@@ -4,6 +4,25 @@ As an integrator, I want each dated identity demo to show a real preprod result 
 
 Every dated play targets **Cardano preprod**. Keripy owns the identity and exports CESR; `ckeri` consumes that export, submits the corresponding Cardano transaction and reads its settled state. A cast is attached only after that exact preprod journey has run. An executable Lean row or a Node simulator remains design evidence and is not a demo cast for this path.
 
+## Indexer contract for the dated plays
+
+The planned operator stack is the Cardano KERI follower and its indexed RocksDB store. The current `ckeri` write commands require `--store PATH` (or `CKERI_STORE`); readbacks must select `--backend local --store PATH` explicitly, or the indexer-backed query endpoint where that route is supported. Record the follower's chain point and freshness beside every transaction ID. A missing or stale store blocks the connected claim. The [status backend guide](../user/status-backends.md) gives the exact query syntax; its implicit default is still Koios, so a bare `ckeri status` is insufficient evidence for this plan.
+
+The [V1 baseline cast](preprod-v1-baseline.md) used the older `ckeri` 0.4.0 Koios path and remains an accurate historical recording. Its Koios-backed manifest verification does not certify an indexer-only future play. The current `ckeri manifest verify` still uses Koios for live references; [#449](https://github.com/lambdasistemi/cardano-keri/issues/449) tracks the indexed verification and board read path. Singular's persistent registry follower is [Singular #107](https://github.com/lambdasistemi/singular/issues/107).
+
+## Planned major release tags
+
+| Milestone | Plays | Planned tag | Tag gate |
+| --- | --- | --- | --- |
+| Singular registry handoff M1 | D-01 | Singular `v1.0.0` | Connected registry replay and released archive. |
+| Singular naming and escrow M2 | D-02 and D-03 in parallel | Singular `v2.0.0` | Connected D-03 acceptance. |
+| Cardano KERI identity core M1 | D-02 mapping, D-04–D-11 | Cardano KERI `v1.0.0` | D-11 cutover, story suite and release artifact. |
+| Cardano KERI credential gate M2 | D-12–D-19 | Cardano KERI `v2.0.0` | D-19 valid and revoked preprod transactions. |
+
+These are **planned identities**, not existing git tags or releases. Intermediate plays use named candidates and exact artifact hashes; the milestone tag is cut only at its release gate. The current public tags are still below `v1.0.0`, and the Cardano KERI release planner requires a deliberate Cabal major-version change before the first major tag.
+
+The existing [M1 release epic #328](https://github.com/lambdasistemi/cardano-keri/issues/328) and [release child #357](https://github.com/lambdasistemi/cardano-keri/issues/357) still say `0.5.0`. [#450](https://github.com/lambdasistemi/cardano-keri/issues/450) tracks the reviewed version-policy reconciliation before any major tag is cut.
+
 The [deployed M1 V1 checkpoint](../user/m1-preprod-deployment.md) supports a smaller preprod lifecycle. The [recorded keripy and ckeri baseline](preprod-v1-baseline.md) shows a confirmed registration and signed close. It has no Singular registry mapping or ACDC gate. A V1 transaction therefore cannot close a later card whose story requires those features.
 
 | Target | Play | Current boundary |

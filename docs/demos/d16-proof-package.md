@@ -2,6 +2,8 @@
 
 **D-16 story.** As a transaction builder, I want raw four-link CESR credentials turned into the exact proof data the validator consumes, so that a holder can present evidence without hand-building Plutus data.
 
+**Planned release tag:** Cardano KERI `v2.0.0` (credential-gate M2). This names the milestone target; intermediate plays use release candidates, and the tag waits for the D-19 release gate and its preprod evidence.
+
 This is a dated review target from the [live project card](https://github.com/orgs/lambdasistemi/projects/4/views/5). **Not yet playable as the connected target.** No confirmed ledger outcome or release acceptance is claimed by this page.
 
 ## Planned play and evidence

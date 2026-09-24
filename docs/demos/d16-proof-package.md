@@ -1,0 +1,46 @@
+# ACDC proof package — 2027-06-05 target
+
+**D-16 story.** As a transaction builder, I want raw four-link CESR credentials turned into the exact proof data the validator consumes, so that a holder can present evidence without hand-building Plutus data.
+
+**Planned release tag:** Cardano KERI `v2.0.0` (credential-gate M2). This names the milestone target; intermediate plays use release candidates, and the tag waits for the D-19 release gate and its preprod evidence.
+
+This is a dated review target from the [live project card](https://github.com/orgs/lambdasistemi/projects/4/views/5). **Not yet playable as the connected target.** No confirmed ledger outcome or release acceptance is claimed by this page.
+
+## Planned play and evidence
+
+Given synthetic CESR credentials, issuer history and the on-chain identity and revocation roots; when the builder decodes each credential, recomputes its SAID and builds the issuer and revocation proofs; then it produces the validator’s redeemer for authentic inputs and rejects a corrupted SAID before submission.
+
+```mermaid
+sequenceDiagram
+    participant A as Story actor
+    participant M as Accepted model
+    participant C as Cardano boundary
+    A->>M: Prepare the stated evidence
+    M-->>A: Check expected transition and refusal
+    A->>C: Submit the connected action when implemented
+    C-->>A: Read back the actual result or refusal
+```
+
+The intended positive observation is: A builder turns synthetic raw four-link CESR credentials into the exact redeemer and issuer/revocation proofs. The relevant refusal is: A corrupted SAID is rejected before submission. These are acceptance criteria, not observed results.
+
+## Preprod recording path
+
+Export raw four-link CESR from keripy `kli`; pass those bytes to the released `ckeri` proof builder and use its exact package in a Cardano preprod gate transaction. Record the package identity, confirmed consumer readback and a corrupted-SAID refusal. The builder interface and matching gate are not yet released, so this page has no cast.
+
+## Presenter path: 10–15 minutes when runnable
+
+| Time | Presenter action | Evidence to inspect |
+| --- | --- | --- |
+| 0–2 min | State the actor's goal and identify all synthetic inputs. | Pin the exact accepted model and release revisions. |
+| 2–5 min | Establish the card's given state through its connected prior operations. | Inspect the actual starting outputs and required evidence. |
+| 5–8 min | Run the planned positive action. | Compare fresh readback with the bound model transition. |
+| 8–11 min | Run the planned negative control. | Attribute the refusal to the actual boundary. |
+| 11–15 min | Review receipts and gaps. | Identify transactions, scripts, witnesses, values and uncovered behavior. |
+
+## Missing interface or receipt
+
+The #32 builder, authentic CESR fixtures, generated redeemer bytes, root/proof identities, wrong-SAID control and a validator consumption check. WASM and purity require separate evidence if claimed.
+
+The model base visible in this checkout is Cardano KERI commit `0e638fadc987f0cd98f839edd3e3ecd5a09a1b91`. It is a source identity for planning, **not a claim that the later card is already modeled or accepted**. Each claim must bind the accepted model revision for that behavior before promotion. The [Lean correspondence register](https://github.com/lambdasistemi/cardano-keri/issues/435) holds affected conflicts. A simulator or source fact cannot replace a confirmed transaction, and no cast of an accepted connected result is available here.
+
+**Tracking:** [KERI proof builder #32](https://github.com/lambdasistemi/cardano-keri/issues/32), [historical keys #391](https://github.com/lambdasistemi/cardano-keri/issues/391), [revocation mirror #392](https://github.com/lambdasistemi/cardano-keri/issues/392).

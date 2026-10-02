@@ -119,6 +119,7 @@ nav:
       - Veridian Bridge: architecture/veridian-bridge.md
       - Amaru Integration Analysis: architecture/amaru-integration.md
   - Design:
+      - The project's words: design/words.md
       - AID Model: design/aid-model.md
       - Trust Model: design/trust-model.md
       - Compromise of the Current Keys: design/key-compromise.md

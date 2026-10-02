@@ -17,15 +17,18 @@ Cardano-side rules on top and take none of KERI's away.
 
 Authorize **iff** all of these hold. Anything else fails closed.
 
-1. **Present.** There is a checkpoint UTxO. Parked and convicted have
-   none — no candidate.
+1. **Present.** There is a checkpoint UTxO. Parked (closed by its owner; the
+   registry leaf keeps the hash) and convicted (terminal after a duplicity
+   proof) have none — no candidate.
 2. **The token.** Exact policy, quantity one, the AID-derived asset.
-3. **Both bonds full.** `D_reg` is there; `B` is there. Frozen is `B`
-   absent.
-4. **Not poisoned.** The current quorum's declaration makes the
-   checkpoint unconsumable until a rotation clears it.
-5. **Older than `W`.** Juvenility is consumer policy. The machine does
-   not wait; the treasury does.
+3. **Both bonds full.** `D_reg`, the conviction bond, is there; `B`, the
+   freeze bond, is there. Frozen is `B` absent.
+4. **Not poisoned.** The poison is the owner's own lock: the current
+   quorum's declaration makes the checkpoint unconsumable until a rotation
+   clears it.
+5. **Older than `W`.** `W` is the juvenility window, the age a checkpoint
+   must reach before a consumer trusts it. Juvenility is consumer policy.
+   The machine does not wait; the treasury does.
 6. **The payment's own signature** satisfies the current threshold.
    That check is the consumer's, outside the checkpoint machine.
 

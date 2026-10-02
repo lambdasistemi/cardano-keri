@@ -30,7 +30,7 @@ The local fixture replay does not establish this journey. The full checkpoint sc
 | Time | Action | Required observation |
 | --- | --- | --- |
 | 0–2 min | Show the release, manifest, keripy version and funded preprod starting state. | Exact artifact and model identities. |
-| 2–6 min | Run representative controller and hunter stories. | CESR events, confirmed `ckeri` transactions and state readbacks. |
+| 2–6 min | Run representative controller and hunter (the paid relayers of rotations) stories. | CESR events, confirmed `ckeri` transactions and state readbacks. |
 | 6–10 min | Run close, return and conviction forks. | Actual registry and checkpoint effects with values. |
 | 10–13 min | Run named negative controls. | Client or script attribution for each observed refusal. |
 | 13–15 min | Review the fifteen-row receipt table. | All exercised rows, unresolved rows and gate failures stay visible. |

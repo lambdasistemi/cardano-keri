@@ -2,9 +2,13 @@
 
 !!! note "What ships, and the accepted design"
     Unless a paragraph below is marked as preprod or `main` today, it
-    describes the accepted design (D-036 to D-040): active, parked holding
-    the hash, or convicted; no withdraw; the reap by the next keys; deposit
-    is the unfreeze; poison epoch-local and cleared by rotation. Play the
+    describes the accepted design (D-036 to D-040). In that design an
+    identity is **active**, **parked** (no checkpoint on chain; the registry
+    leaf keeps the hash of its last key state) or **convicted** (terminal,
+    after a duplicity proof); there is no withdraw; the only close is **the
+    reap**, a rotation by the next keys; a `deposit` rotation is the
+    unfreeze; and the **poison**, the owner's own lock on the checkpoint,
+    lasts one epoch and is cleared by rotation. Play the
     [checkpoint simulation](../simulator/index.html).
     What ships today is the V1 checkpoint with role addresses.
 
@@ -132,7 +136,8 @@ checkpoint minimum ADA + D_reg + B
 ```
 
 Close refunds the complete checkpoint value to the signed address. A future
-timeout Claim pays exactly `B` to the recorded hunter and leaves
+timeout Claim pays exactly `B` to the recorded hunter (in the shipped V1, the
+challenger of a lagging checkpoint) and leaves
 `minimum + D_reg` in FROZEN. A thaw must add a new `B`.
 
 Anyone may fund permissionless Register or thaw, but funding does not create a

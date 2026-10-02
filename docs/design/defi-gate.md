@@ -2,9 +2,13 @@
 
 !!! note "What ships, and the accepted design"
     Unless a paragraph below is marked as preprod or `main` today, it
-    describes the accepted design (D-036 to D-040): active, parked holding
-    the hash, or convicted; no withdraw; the reap by the next keys; deposit
-    is the unfreeze; poison epoch-local and cleared by rotation. Play the
+    describes the accepted design (D-036 to D-040). In that design an
+    identity is **active**, **parked** (no checkpoint on chain; the registry
+    leaf keeps the hash of its last key state) or **convicted** (terminal,
+    after a duplicity proof); there is no withdraw; the only close is **the
+    reap**, a rotation by the next keys; a `deposit` rotation is the
+    unfreeze; and the **poison**, the owner's own lock on the checkpoint,
+    lasts one epoch and is cleared by rotation. Play the
     [checkpoint simulation](../simulator/index.html).
     What ships today is the V1 checkpoint with role addresses.
 
@@ -222,7 +226,8 @@ not by a separate shared registry.
 - **No allowlist operator.** Admission is script-verified. The residual
   trusted parties are GLEIF/QVIs — already the regulator-accepted roots — and,
   for liveness only, the MPFS oracles of the L2 TEL registries and the
-  admission cage (the issuers and the venue), who cannot forge an identity,
+  admission cage (an MPFS store behind one validator, run by the issuers and
+  the venue), who cannot forge an identity,
   only fail to update one (see [Trust Model](trust-model.md)).
 - **Portable admission.** The same credentials admit the entity to any
   protocol that imports the Layer-3 verifier. KYC once, at the QVI, not per

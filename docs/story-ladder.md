@@ -2,15 +2,16 @@
 
 !!! note "What ships, and the accepted design"
     This page is the ledger of settled V1 transactions. The accepted design
-    is on the [home page](index.md#the-accepted-design-the-m1-return) and in
+    is on the [home page](index.md#the-accepted-design) and in
     the [checkpoint simulation](simulator/index.html). The ARMED/FROZEN
     stories below are what shipped; they are not the hunter freeze of the
-    M1 return.
+    accepted design (a hunter being anyone paid to land rotations, or to
+    freeze a checkpoint that cannot pay for one).
 
 
 This page is **history**. It records the transactions that reached a real
 ledger, with their dates, and nothing else. What is designed but not built is
-on the [home page](index.md#the-accepted-design-the-m1-return); what is
+on the [home page](index.md#the-accepted-design); what is
 scheduled is on the [roadmap](roadmap.md).
 
 **KERI** is Key Event Receipt Infrastructure, the off-chain protocol that
@@ -31,8 +32,9 @@ current keys, thresholds, witnesses, and sequence number.
 !!! warning "The machine these stories exercised is being replaced"
     The devnet ladder below settled the ACTIVE/ARMED/FROZEN enforcement
     economy — freeze for lag, the claimed delay bond, the burn-only
-    conviction. The M1 return removes that economy: the freeze becomes a
-    hunter's payment when the owner's pool has run dry, and conviction becomes
+    conviction. The accepted design removes that economy: the freeze becomes
+    a hunter's payment (a hunter is anyone paid to land rotations) when the
+    owner's pool of advance funds has run dry, and conviction becomes
     a terminal state reached only by a proven duplicity. These rungs are kept
     as the record of what the vertical path proved, not as a description of
     where the design is going. Epic
@@ -139,7 +141,7 @@ sequence then opened and resolved a second challenge normally.
 Both responses preserved the checkpoint's complete value, including the delay
 bond. The old evidence failed because it no longer described a rotation ahead
 of the new tip. That binding — evidence to the exact state it challenges — is
-the part of the drill that survives the M1 return: the freeze of the new design
+the part of the drill that survives into the accepted design: the freeze of the new design
 also runs the advance predicate on the rotation it presents.
 
 The transaction IDs for the seize and convict rungs are in the merged records
@@ -162,8 +164,8 @@ of [PR #154](https://github.com/lambdasistemi/cardano-keri/pull/154) and
   development network only, and never through `ckeri`.
 - **Uniqueness.** Nothing in the ladder prevents two checkpoints for one AID.
   The ledger has no AID-unicity rule today; `ckeri register` refuses an
-  already-live AID as a convenience, not as a guarantee. The registry of the M1
-  return is what turns that into a rule.
+  already-live AID as a convenience, not as a guarantee. The registry of the
+  accepted design is what turns that into a rule.
 
 ## Where to read next
 

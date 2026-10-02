@@ -30,7 +30,7 @@ This M1 flow needs:
 - at least 1,007 tADA plus transaction fees and a separate collateral UTxO.
 
 The ACTIVE output carries 2 tADA minimum value, the 1,000 tADA registration
-deposit, and the 5 tADA freeze bond.
+deposit, and the 5 tADA freeze bond (in V1, the bond a freeze for lag claims).
 
 ## Export a KLI identity
 

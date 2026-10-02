@@ -8,7 +8,7 @@ This is a dated review target from the [live project card](https://github.com/or
 
 ## Planned play and evidence
 
-Given the connected registry, owner and hunter operations from earlier reviews; when a person uses the installed ckeri commands for registration, advance, poison, close, reopen, top-up, freeze, conviction and status as applicable to the role; then each named command constructs the intended transaction or refusal, reports its result honestly and a fresh status read agrees with the ledger.
+Given the connected registry, owner and hunter operations from earlier reviews; when a person uses the installed ckeri commands for registration, advance, poison (the owner's own lock on the checkpoint), close, reopen, top-up, freeze, conviction and status as applicable to the role; then each named command constructs the intended transaction or refusal, reports its result honestly and a fresh status read agrees with the ledger.
 
 ```mermaid
 sequenceDiagram

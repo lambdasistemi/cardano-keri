@@ -8,15 +8,15 @@ later work.
 !!! abstract "Where this page stands"
     The layer table below is the honest status of each layer. The flows marked
     **shipped** settle on a real ledger; the flows marked **designed** are the
-    Lean machine of the M1 return, proved and playable, not built.
+    Lean machine of the accepted design, proved and playable, not built.
 
 ## Layer status
 
 | Layer | Purpose | Status |
 |---|---|---|
 | Identity checkpoint | Project a KERI AID's current keys, thresholds, witnesses and sequence into a sovereign Cardano UTxO | Register, close and advance settled on preprod; the enforcement economy settled on a devnet only |
-| The M1 return machine | Poison, three value components, the hunter's premium and freeze, terminal conviction, close by the next keys, reopen | Proved in Lean, playable in the simulator, no on-chain code — epics #322–#323 |
-| Registry | One incarnation per AID, ever | Designed; the permissionless cage runs on a development network in [singular](https://github.com/lambdasistemi/singular) (release v0.3.0); the keri leaf map and the registration policy are epic #324 |
+| The accepted design's machine | Poison (the owner's own lock on the checkpoint), three value components, the premium (the fee the pool pays whoever lands a rotation) and freeze of the hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one), terminal conviction, close by the next keys, reopen | Proved in Lean, playable in the simulator, no on-chain code — epics #322–#323 |
+| Registry | One incarnation per AID, ever | Designed; the permissionless cage (an MPFS store, a Merkle Patricia Forestry map behind one validator) runs on a development network in [singular](https://github.com/lambdasistemi/singular) (release v0.3.0); the keri leaf map and the registration policy are epic #324 |
 | Credential verification | Verify ACDC credential chains and TEL revocation state | Designed and prototyped; no settled vertical story |
 | Value authorization | Let an application gate a state change on a consumable checkpoint and credentials | Designed; not a shipped service |
 | Wallet bridge | Let KERI/Veridian software authorize Cardano actions | Planned; nobody's deliverable yet |
@@ -89,7 +89,7 @@ unique: nothing today prevents a second checkpoint for the same AID.
 
 ## Registration through the registry — designed
 
-The M1 return puts registration behind the registry, and that is the only place
+The accepted design puts registration behind the registry, and that is the only place
 the checkpoint token can ever be minted:
 
 ```mermaid
@@ -136,7 +136,7 @@ flowchart LR
 
 Evidence is bound to the exact KERI tip, so a later round needs fresh evidence.
 
-## The same plane after the M1 return — designed
+## The same plane under the accepted design — designed
 
 The enforcement observer goes. `observer_advance` verifies one thing — a later
 witnessed rotation with its receipts — and the register validator dispatches
@@ -169,9 +169,9 @@ The application must:
 
 1. resolve the candidate checkpoint for the AID;
 2. validate the quantity-one token, script lineage, version, AID and datum;
-3. apply the consumer predicate — today, the bare ACTIVE role address; after
-   the M1 return, both bonds full, not poisoned, and past the juvenility
-   window;
+3. apply the consumer predicate — today, the bare ACTIVE role address; under
+   the accepted design, both bonds full, not poisoned, and past the juvenility
+   window (the age a checkpoint must reach before a consumer trusts it);
 4. verify its operation-specific controller authorization; and
 5. when credentials matter, verify the required ACDC/TEL evidence.
 

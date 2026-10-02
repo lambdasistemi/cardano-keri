@@ -40,13 +40,14 @@ Every other case fails closed: no checkpoint; multiple ACTIVE candidates; a
 stale or already spent outref; a wrong policy or asset; a malformed or
 mismatched datum; ARMED; or FROZEN.
 
-A convicted identity is not a further role to reject. Conviction burns the AID
+A convicted identity (the terminal state after a duplicity proof) is not a
+further role to reject. Conviction burns the AID
 token, so it leaves nothing to resolve and the application meets the
 no-checkpoint case. There is no identity-root inclusion proof and no separate
 Freeze-registry absence proof: Freeze changes the sovereign checkpoint's own
 role address.
 
-### After the M1 return — accepted design
+### Under the accepted design
 
 Steps 1 to 5 are unchanged. Steps 6 and 7 become the consumer predicate, which
 reads only the datum and the checkpoint's value:
@@ -60,7 +61,9 @@ authorize iff  present
 ```
 
 and, once the validity edge ships, `now ≤ valid_until`. Everything else fails
-closed: absent, frozen, poisoned, juvenile, convicted, parked.
+closed: absent, frozen (the freeze bond taken), poisoned (locked by the
+owner's own declaration), juvenile (younger than the window `W`), convicted,
+parked (no checkpoint on chain; the registry leaf keeps the hash).
 
 Three consequences an integrator should plan for:
 
@@ -148,8 +151,9 @@ security requirement, not a claim that the SDK is published.
 
 ## Value-cage oracle
 
-Some MPFS value-cage designs have an operator or oracle that serializes writes
-to their own cage UTxO. That authority is separate from AID authority.
+Some MPFS value-cage designs — a cage is an MPFS store, a Merkle Patricia
+Forestry map behind one validator — have an operator or oracle that serializes
+writes to their own cage UTxO. That authority is separate from AID authority.
 
 If a cage keeps an oracle, a mutation should require both:
 
@@ -179,7 +183,7 @@ response Advance creates a new ACTIVE checkpoint at the next sequence, so the
 application must obtain fresh authorization against that input. Conviction
 produces no output to resolve at all.
 
-**After the M1 return.** Every refusal is a spend of the checkpoint that
+**Under the accepted design.** Every refusal is a spend of the checkpoint that
 changes what the datum or the value says, so the mechanics are the same: the
 referring transaction is stale and a rebuild against the successor applies the
 predicate afresh. The refusals differ in who caused them and in how they clear:
@@ -187,10 +191,10 @@ predicate afresh. The refusals differ in who caused them and in how they clear:
 | Refusal | Caused by | Clears when |
 |---|---|---|
 | Poisoned | the owner's current quorum | any witnessed rotation |
-| Frozen | a hunter, because the pool was short | a rotation with `deposit` (the unfreeze) |
+| Frozen | a hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one), because the pool of advance funds was short | a rotation with `deposit` (the unfreeze) |
 | Juvenile | time, after a register, reopen or resurrecting rotation | `W` slots elapse |
 | Convicted | anyone, with a duplicity proof | never |
-| Closed | the owner, by a rotation that burns | a reopen |
+| Parked | the owner, by the reap: a rotation by the next keys that burns the token and leaves the hash in the registry leaf | a reopen |
 
 An application should not treat any of these as an error condition to retry.
 Each is a statement that the identity is currently unfit to authorize, and each
@@ -213,7 +217,7 @@ consequences an integrator must plan for:
 - **Freshness policy is load-bearing.** The narrower the accepted checkpoint
   age, the smaller the window a stolen key can be used in.
 
-Under the M1 return the owner gains one instrument here, and the application
+Under the accepted design the owner gains one instrument here, and the application
 must honour it: the **poison**. A quorum of the current keys can declare their
 own epoch compromised, and a consumer that checks `¬poisoned` shuts the stolen
 keys out immediately, before the owner has assembled a rotation. An application

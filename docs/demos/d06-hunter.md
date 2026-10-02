@@ -1,6 +1,6 @@
 # Hunter advance and short pool — 2027-01-06 target
 
-**D-06 story.** As a hunter, I want to land another controller’s witnessed rotation and receive the model-defined reward, so that checkpoints can stay current without an appointed operator.
+**D-06 story.** As a hunter (anyone paid to land an owner's rotation), I want to land another controller’s witnessed rotation and receive the model-defined reward, so that checkpoints can stay current without an appointed operator.
 
 **Planned release tag:** Cardano KERI `v1.0.0` (identity-core M1). This names the milestone target; intermediate plays use release candidates, and the tag waits for the D-11 release gate and its preprod evidence.
 
@@ -8,7 +8,7 @@ This is a dated review target from the [live project card](https://github.com/or
 
 ## Planned play and evidence
 
-Given a registered checkpoint, a valid later KERI event and a pool with enough funds for the paid branch; when a hunter submits the advance; then the checkpoint advances and the hunter receives the specified premium; an invalid or stale competing advance is refused.
+Given a registered checkpoint, a valid later KERI event and a pool with enough funds for the paid branch; when a hunter submits the advance; then the checkpoint advances and the hunter receives the specified premium (the fee the pool pays for landing a rotation); an invalid or stale competing advance is refused.
 
 ```mermaid
 sequenceDiagram

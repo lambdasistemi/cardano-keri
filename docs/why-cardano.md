@@ -12,8 +12,8 @@ one of them needs a blockchain at all.
 !!! abstract "Where this page stands"
     The comparison with anchoring is about **what ships on `main` today**: the
     validators verify KERI cryptography now. The list of what a checkpoint
-    buys under **leg 1** describes the [accepted design](index.md#the-accepted-design-the-m1-return)
-    — the Lean machine of the M1 return — and says so item by item.
+    buys under **leg 1** describes the [accepted design](index.md#the-accepted-design)
+    — the Lean machine proved in September 2026 — and says so item by item.
 
 ## What rooting does
 
@@ -73,14 +73,15 @@ Every move in the lifecycle may be submitted by anyone, and the submitter has
 **no discretion whatsoever**. "Anyone" does not mean "anyone may choose the
 next state"; it means anyone may pay the fee to relay public evidence whose
 result is **already determined**. Registration, rotation, the poison
-declaration, the freeze, the top-up, the conviction, the close and the reopen
+declaration (the owner's own lock on the checkpoint), the freeze, the top-up,
+the conviction, the close and the reopen
 are each open to any submitter, and in each case the evidence decides the
 outcome — not the relayer, and not any operator. If one relayer refuses,
 anyone else may.
 
 ### What that is worth, item by item
 
-Each line below is a property of the [accepted design](index.md#the-accepted-design-the-m1-return),
+Each line below is a property of the [accepted design](index.md#the-accepted-design),
 proved in `lean/CardanoKeri/Checkpoint.lean`. None of them is shipped on
 `main` yet; the epics that build them are on the [roadmap](roadmap.md).
 
@@ -92,7 +93,8 @@ proved in `lean/CardanoKeri/Checkpoint.lean`. None of them is shipped on
   no rotation will ever come.
 - **Proven duplicity is permanent.** Two witnessed rotations at one sequence
   are a KERI verdict, not an opinion, so the chain makes it terminal: the
-  identity is `convicted`, has no way out, and its conviction bond goes to
+  identity is `convicted`, the terminal state, has no way out, and its
+  conviction bond — the stake posted against exactly this proof — goes to
   whoever proved it. KERI has no event that un-duplicates an identifier, so
   the chain invents no recovery.
 - **One incarnation, ever.** The registry holds one leaf per AID and a
@@ -100,9 +102,12 @@ proved in `lean/CardanoKeri/Checkpoint.lean`. None of them is shipped on
   candidate checkpoint for a consumer to disambiguate, and no stale-key holder
   can mint a rival one.
 - **Freshness is visible.** The checkpoint says when it was last bonded and
-  what its pool holds; a consumer refuses anything younger than the juvenility
-  window `W`, and an identity whose pool has run dry gets frozen by a hunter
-  rather than quietly drifting behind its KEL.
+  what its pool (the owner's advance funds) holds; a consumer refuses
+  anything younger than the juvenility window `W`, the age a checkpoint must
+  reach before a consumer trusts it; and an identity whose pool has run dry
+  gets frozen by a hunter (anyone paid to land rotations, or to freeze a
+  checkpoint that can no longer pay for one) rather than quietly drifting
+  behind its KEL.
 - **It is consumable without an oracle.** The key state is in an inline datum.
   A validator reads it as a reference input and decides for itself. There is
   no service to be up, no writer to be honest, and no completeness claim for
@@ -123,7 +128,7 @@ proved in `lean/CardanoKeri/Checkpoint.lean`. None of them is shipped on
     key economically live — *"'cannot forge' holds; 'cannot keep alive' does
     not"* ([finding F7](vetting/canonical-model-findings.md)).
 
-    That shared-registry model is retired, and the M1 return keeps it retired
+    That shared-registry model is retired, and the accepted design keeps it retired
     for a structural reason rather than an economic one: the checkpoint carries
     no evidence set, so there is nothing for anyone to be complete about, and
     the oracle has no job to return to. See

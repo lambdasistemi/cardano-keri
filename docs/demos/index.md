@@ -33,6 +33,9 @@ The [Singular naming story](https://github.com/lambdasistemi/singular/issues/174
 
 ## Later targets
 
+A hunter below is anyone paid to land an owner's rotation, or to freeze a
+checkpoint whose pool of advance funds cannot pay for one.
+
 - 2026-12-07: [Registry backed registration](d04-registration.md) — connected target not yet playable.
 - 2026-12-22: [Register then advance](d05-advance.md) — connected target not yet playable.
 - 2027-01-06: [Hunter advance and short pool](d06-hunter.md) — connected target not yet playable.

@@ -4,12 +4,14 @@ cardano-keri projects a rotating KERI identity into a stable Cardano
 checkpoint.
 
 !!! tip "Play the design before you read it"
-    The M1 design is a proved Lean machine, and the two simulations below are
+    The accepted design is a proved Lean machine, and the two simulations below are
     transcriptions of it, checked against the Lean by replay on every step.
     Pick a story and play it; every refusal names the rule that refused.
 
     - **[The checkpoint simulator](simulator/index.html)** — one identity, its
-      keys, its three sums of money, the hunters, the treasury: fifteen
+      keys, its three sums of money, the hunters (anyone paid to land a
+      rotation, or to freeze a checkpoint whose pool cannot pay), the
+      treasury: fifteen
       stories with their forks, the theorems lighting up as you play.
     - **[The registry simulator](simulator/registry/index.html)** — one incarnation per
       identity: requests, batches, the gating plugin, the leaf every
@@ -23,11 +25,14 @@ token instead of permanently binding themselves to one key.
 
 ## How to read these pages
 
-The project is mid-way through the **M1 return**: a design settled in
-September 2026 that keeps the checkpoint, adds a poison and a registry, and
-removes the enforcement economy that `main` still carries. So every claim in
-these docs is in one of three states, and each page says which one it is
-making:
+The project is mid-way through adopting the **accepted design**: a design
+settled in September 2026 that keeps the checkpoint, adds a poison (the
+owner's own lock on the checkpoint) and a registry (one leaf per identity),
+and removes the enforcement economy that `main` still carries. Older issues
+and the wiki call this design *the M1 return*: the return, inside the first
+milestone, from an abandoned enforcement economy to a checkpoint that only
+projects key state. So every claim in these docs is in one of three states,
+and each page says which one it is making:
 
 | State | What it means | Where it lives |
 |---|---|---|
@@ -97,7 +102,7 @@ transactions exist only in the end-to-end harness.
 
 ---
 
-## The accepted design: the M1 return
+## The accepted design
 
 The design settled between 2026-09-02 and 2026-09-03 (project rulings D-022 to
 D-040). It is proved in `lean/CardanoKeri/Checkpoint.lean` — 87 theorems in
@@ -111,8 +116,8 @@ and never again, and three sums of money that never mix:
   a fee source.
 - `B`, the **freeze bond** — what a hunter takes when the pool cannot pay for a
   rotation.
-- the **pool** — advance funds; pays the premium `P` to whoever lands a
-  rotation.
+- the **pool** — advance funds; pays the **premium** `P`, the fee for landing
+  a rotation, to whoever lands it.
 
 **Three states, no withdraw.** An identity is **active** (the checkpoint UTxO
 exists: live, poisoned or frozen), **parked** (no UTxO; the registry leaf
@@ -152,26 +157,30 @@ theft and rotating.
 parked with the hash, or convicted — so an AID has at most one incarnation
 ever. Only **convicted** is terminal; a parked identity returns by a
 witnessed rotation later than the parked key state, with fresh bonds. The
-registry is the MPFS cage made permissionless (D-037), built today in
+registry is the MPFS cage — a Merkle Patricia Forestry store whose every
+update passes through one validator — made permissionless (D-037), built today in
 [singular](https://github.com/lambdasistemi/singular), where it runs on a
 development network; see
 [where the registry is built](design/registry-as-mpfs.md#where-the-registry-is-built).
 
-**Leaving** is the reap: a witnessed rotation by the *next* keys whose
+**Leaving** is the reap, the only close there is: a witnessed rotation by the *next* keys whose
 signed message names the payee of the premium and the refund address. The
 current keys keep exactly one Cardano power, the poison. Close answers to
 the next keys, never the current ones.
 
 **The consumer's rule**, and the only thing outside the machine: authorize iff
 the checkpoint is present, both bonds are full, it is not poisoned, it is
-older than the juvenility window `W`, and the payment's own signature
+older than the juvenility window `W` (the age a checkpoint must reach before
+a consumer trusts it), and the payment's own signature
 satisfies the current threshold. Everything else fails closed.
 
-### What the return removes
+### What the accepted design removes
 
 The record tree and its cursor, occupancy maps, the MPF fork and its upstream
 proposal, `ever_duplicitous`, and the whole ARMED/FROZEN enforcement economy —
-freeze-for-lag, the bounty, the entitlement, the reap. Interaction events
+freeze-for-lag, the bounty, the entitlement, and the reaping of a paused
+checkpoint after a grace period (the word *reap* now names only the owner's
+close above). Interaction events
 (`ixn`) never touch the chain. Delegated identities are a later milestone.
 
 The freeze that survives is a different thing: it is what a hunter takes when
@@ -181,7 +190,7 @@ the owner's pool has run dry, not a punishment for lag.
 
 ## What is planned
 
-The M1 return is one milestone across two repositories, thirteen epics. The
+The accepted design is one milestone across two repositories, thirteen epics. The
 [roadmap](roadmap.md) carries the ordering, the dependencies and the
 measurements that size the numbers still open. The short version: slim `main`
 (#319), measure it (#321), build the owner's edges (#322) and the hunter's (#323),
@@ -196,7 +205,7 @@ replay the fifteen stories as the acceptance suite (#326), and cut over preprod
 - [Why Cardano](why-cardano.md) — how this differs from anchoring a KEL on a
   ledger, and what non-oracular trust buys.
 - [Story ladder](story-ladder.md) — what has actually settled, dated.
-- [Roadmap](roadmap.md) — the M1 plan and its thirteen epics.
+- [Roadmap](roadmap.md) — the plan for the accepted design and its thirteen epics.
 - [KERI primer](keri-primer.md) — AIDs, key events, pre-rotation, witnesses,
   and Veridian.
 - [The KERI specification](https://trustoverip.github.io/kswg-keri-specification/) — KERI 1.1 as published by the Trust over IP
@@ -229,7 +238,7 @@ the [Finance primer](finance-primer.md).
 ## The engineering constraint
 
 `observer-advance` measures 16,130 bytes against a 16,133-byte applied-script
-limit — three bytes of headroom. The M1 return's datum change lands on exactly
+limit — three bytes of headroom. The accepted design's datum change lands on exactly
 that script, which is why epic #319 ends with a size table and epic #322's datum
 decisions are taken from it rather than from taste. Two things move in the
 plan's favour: the advance observer's ARMED-response branch goes, and the

@@ -11,9 +11,10 @@ stops them from using it *now*.
 !!! abstract "Where this page stands"
     The exposure described here is **what ships on `main` today**. The M1
     return changes the answer in two specific places, each marked below: close
-    stops answering to the current keys, and the **poison** becomes the owner's
+    stops answering to the current keys, and the **poison** — the owner's own
+    lock on the checkpoint — becomes the owner's
     on-chain instrument. Both are
-    [accepted design](../index.md#the-accepted-design-the-m1-return) — proved
+    [accepted design](../index.md#the-accepted-design) — proved
     in the Lean, not built.
 
 ## What the stolen current keys authorize
@@ -24,8 +25,8 @@ stops them from using it *now*.
 | Cardano checkpoint | Authorize `Close`: burn the token and send the whole escrow to an address of their choice | Advance the checkpoint — an Advance is a rotation, and the dual threshold rejects them |
 | A consuming application | Satisfy any authorization the application resolves against the ACTIVE checkpoint's current weighted key state | Change which keys the checkpoint publishes |
 
-!!! success "After the M1 return, the `Close` row goes empty"
-    Close becomes the **reap**: a witnessed rotation by the next keys
+!!! success "Under the accepted design, the `Close` row goes empty"
+    Close becomes the **reap**, the only close there is: a witnessed rotation by the next keys
     whose signed message names the payee and the refund address
     (ruling D-036), so it needs the next keys exactly like any other
     rotation. An identity is active, parked holding the hash, or
@@ -84,7 +85,7 @@ events, not in any proof, and not on Cardano. What the chain cannot do is
 reconstruct *another* observer's private order or substitute for it. What our
 own observation service still owes, whatever the chain does, is a defined
 acceptance order and a retained history of what it accepted first. Two rules
-follow, and they hold in both the shipped design and the M1 return:
+follow, and they hold in both the shipped design and the accepted design:
 
 - For rules **derivable from event content** — superseding, next-key commitment
   validity, prior-digest chaining, thresholds — the projection must match
@@ -102,7 +103,7 @@ publication path** for what witnesses would otherwise suppress.
     An earlier design answered this with a record tree that kept every event by
     location plus SAID, so rival events at one sequence coexisted, plus a
     cursor over it and a permanent `ever_duplicitous` fact. That design is
-    **gone**, and its removal is the point of the M1 return: a record you
+    **gone**, and its removal is the point of the accepted design: a record you
     cannot prove complete needs someone to assert completeness, and that
     someone is an oracle. The checkpoint has no evidence set, so there is no
     on-chain record to prove complete. That removes a data structure, not the
@@ -155,7 +156,7 @@ unresolvable case themselves.
 ## The poison: what the owner does before, and instead of, rotating
 
 Rotation is the remedy, but it takes time to assemble, and sometimes it is not
-available at all. The M1 return gives the current keys one power for exactly
+available at all. The accepted design gives the current keys one power for exactly
 those two cases — and only those two.
 
 **What it is.** The owner's key holders sign, at their own `cur_threshold`, a
@@ -193,7 +194,8 @@ KERI-legitimate controller.
 | Next keys stolen too | **No** — the thief's rotation *is* control, and the chain follows KERI. The poison lasts until that rotation and no longer |
 
 The price of the second row is stated rather than hidden: a poisoned identity
-whose next keys are lost is frozen forever, its conviction bond included. The
+whose next keys are lost is frozen forever, its conviction bond (the stake a
+duplicity proof would seize) included. The
 size of that bond is a deployment parameter and an economic call.
 
 ### When the fork is real, not merely suspected

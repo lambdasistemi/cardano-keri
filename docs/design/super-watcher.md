@@ -5,13 +5,14 @@ the transactions that keep an identity's checkpoint current. It is a role any
 party may perform, not a trusted oracle or an identity administrator. In
 KERI's vocabulary it is a
 [watcher](https://trustoverip.github.io/kswg-keri-specification/#indirect-exchange-via-witnesses-and-watchers) that also submits. Earlier
-pages called this role the *super watcher*; the M1 return gives it a wage and a
+pages called this role the *super watcher*; the accepted design gives it a wage and a
 name.
 
 !!! abstract "Where this page stands"
     The cross-plane problem, the evidence rules for advance, and what the role
     is *not* are **shipped on `main` today** — those transactions settle. The
-    hunter's economics (the premium, the freeze, the conviction payout) are the
+    hunter's economics (the premium paid for landing a rotation, the freeze,
+    the conviction payout) are the
     **accepted design**, proved in the Lean and playable in the checkpoint
     simulator. No hunter daemon is shipped; it is epic
     [#325](https://github.com/lambdasistemi/cardano-keri/issues/325).
@@ -60,7 +61,7 @@ Against the programs shipped on `main`, a hunter may:
 
 There is no payment for any of it. Routine event relay has no on-chain fee
 today, so a commercial relayer needs an off-chain payment model. That is the
-gap the M1 return closes.
+gap the accepted design closes.
 
 ## The hunter's wage — accepted design
 
@@ -69,8 +70,8 @@ can ever reach a hunter:
 
 | Component | What it is for | Reaches a hunter when |
 |---|---|---|
-| the **pool** | advance funds | a landed rotation pays the premium `P` |
-| `B`, the **freeze bond** | forcing the owner's engagement | a freeze, and only while `pool < P` |
+| the **pool** | the owner's advance funds | a landed rotation pays the premium `P`, the fee for landing it |
+| `B`, the **freeze bond** | forcing the owner's engagement: what a hunter takes when the pool cannot pay | a freeze, and only while `pool < P` |
 | `D_reg`, the **conviction bond** | the stake a duplicity proof seizes | a conviction, never a fee |
 
 **The loop.** The hunter sees the owner's rotation on KERI. It looks at
@@ -113,6 +114,7 @@ It can submit only evidence the validators accept. When cryptographic evidence
 is absent, it may alert users but cannot manufacture an on-chain truth. It
 cannot forge controller signatures or witness receipts, activate uncommitted
 keys, move the owner's refund address, park the owner, reset her juvenility
+(the age her checkpoint must reach before a consumer trusts it)
 window, or close her: every bond option other than `keep`, and every new refund
 address, is signed by the keys of the epoch the rotation opens.
 
@@ -145,7 +147,8 @@ moves forward — the checkpoint cannot roll back (ruling D-022).
 The hunter presents the same evidence it would use to advance: a later
 witnessed rotation with its receipts. The freeze runs the advance predicate and
 differs only in effect. It additionally requires that the pool is below `P`,
-and it is not enabled from a poisoned checkpoint, which is already
+and it is not enabled from a poisoned checkpoint (one locked by the owner's own
+declaration), which is already
 unconsumable.
 
 ### Poison relay — accepted design

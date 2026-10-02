@@ -10,7 +10,7 @@ Cardano address:
 
 - 2 tADA minimum value;
 - 1,000 tADA registration deposit; and
-- 5 tADA freeze bond.
+- 5 tADA freeze bond (in V1, the bond a freeze for lag claims).
 
 There is no successor checkpoint datum or token. Closing one checkpoint does
 not revoke the sovereign KERI identifier and does not prevent its controller

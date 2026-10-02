@@ -1322,33 +1322,19 @@
               # live `e2eWiring.blueprint` is correctly fresh after #219 A4
               # and will never equal this frozen value again. Give ms8's
               # check its own STABLE input instead of coupling it to the
-              # live blueprint: the exact same fixed-output derivation the
-              # live blueprint used to be, scoped only to this baseline, so
-              # ms8's pin stays exactly what they pinned regardless of any
-              # future onchain/ change. Never route checks.e2e/ckeriRunner/
+              # live blueprint, scoped only to this baseline, so ms8's pin
+              # stays exactly what they pinned regardless of any future
+              # onchain/ change. Never route checks.e2e/ckeriRunner/
               # packages.ckeri through this — those need the live blueprint,
               # which is the whole point of A4.
-              frozenM8Blueprint = pkgs.stdenvNoCC.mkDerivation {
-                name = "keri-plutus-blueprint-m8-baseline";
-                dontUnpack = true;
-                nativeBuildInputs = [ pkgs.aiken pkgs.cacert ];
-                outputHashMode = "flat";
-                outputHashAlgo = "sha256";
-                outputHash =
-                  "sha256-iW0sRkJ0CiYkjcRs3uy84YcwBheF54z77cKhOlycV3w=";
-                buildPhase = ''
-                  export HOME="$TMPDIR"
-                  export SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
-                  cp -rL ${e2eWiring.onchainSrc}/. ./work
-                  chmod -R +w ./work
-                  cd ./work
-                  rm -rf build plutus.json
-                  aiken build -t silent
-                '';
-                installPhase = ''
-                  cp plutus.json "$out"
-                '';
-              };
+              # The deployed bytes themselves, committed once. They were
+              # rebuilt from source at ce086db (the last commit whose live
+              # blueprint carried this pin) and match
+              # `expectedBlueprintSha256`; every consumer below re-checks
+              # that hash. A fixed-output derivation that recompiles today's
+              # onchain/ could only ever pass by substitution from a cache,
+              # and failed once the cache evicted it (#471).
+              frozenM8Blueprint = ./blaster/m8-baseline-plutus.json;
               sourceIdentity =
                 if self ? rev then self.rev else (self.dirtyRev or "dirty");
               lockSha256 = builtins.hashFile "sha256" ./flake.lock;

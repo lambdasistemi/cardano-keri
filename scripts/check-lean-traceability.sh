@@ -22,6 +22,12 @@ done
 tmp_root=$(mktemp -d)
 trap 'rm -rf -- "$tmp_root"' EXIT
 
+# CI checks out one commit; the frozen base is older. Fetch exactly that
+# commit when the clone does not carry it, so the denominator never depends
+# on whatever history a runner happens to hold.
+git -C "$repo_root" cat-file -e "$base_sha:lean/CardanoKeri/Goals.lean" 2>/dev/null ||
+  git -C "$repo_root" fetch --quiet --depth=1 origin "$base_sha"
+
 git -C "$repo_root" show "$base_sha:lean/CardanoKeri/Goals.lean" \
   | awk '/^theorem[[:space:]]+/ { print $2 }' >"$tmp_root/historical-theorems"
 historical_count=$(wc -l <"$tmp_root/historical-theorems")

@@ -141,11 +141,12 @@ The registry stores an AID's lifecycle and indirection:
 | Registry-model leaf | Meaning |
 |---|---|
 | `active token` | Identifies the checkpoint incarnation. Consumers resolve and validate the checkpoint output; the leaf does not certify consumability. |
-| `dormant k` | Preserves the key state from which a witnessed revival must rotate. The checkpoint model represents its parked state with a hash. |
+| `dormant k` | Preserves the key state from which a witnessed revival must rotate. The checkpoint model represents its parked state (no checkpoint on chain; the leaf keeps the hash of the last key state) with that hash. |
 | `convicted` | Permanent terminal marker. The identity cannot register or revive. |
 
-A never-registered AID has no leaf. Live, poisoned and frozen are checkpoint
-conditions, not additional registry leaf variants. In the registry model's
+A never-registered AID has no leaf. Live, poisoned (locked by the owner's own
+declaration) and frozen (the freeze bond taken) are checkpoint conditions, not
+additional registry leaf variants. In the registry model's
 reap/fold handoff, an active leaf can temporarily have a pending go-request
 instead of a checkpoint; the leaf alone never authorizes consumer use.
 
@@ -178,8 +179,10 @@ block come from the same file. `expect` fields describe results checked by the
 documentation build; they do not grant permission to an action.
 
 The checkpoint examples use model units: `D = 1000` is the conviction bond
-(stake against duplicity), `B = 5` the freeze bond, `P = 2` the relayer premium
-and `W = 10` the juvenility window in slots. Addresses `1` and `2` stand for Alice and Hal. These
+(stake against duplicity), `B = 5` the freeze bond (what a hunter takes when the
+pool cannot pay for a rotation), `P = 2` the premium (the fee the pool pays
+whoever lands a rotation) and `W = 10` the juvenility window (the age a
+checkpoint must reach before a consumer trusts it) in slots. Addresses `1` and `2` stand for Alice and Hal. These
 small integers are simulator values, not real addresses or deployment settings.
 
 ## 1. Alice registers: existence comes before trust

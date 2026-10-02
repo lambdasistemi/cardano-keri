@@ -6,15 +6,17 @@ future Veridian integration must make visible.
 !!! abstract "Where this page stands"
     The register, rotate and close journeys are **shipped on `main` today** and
     exercised on preprod. The states a UI must distinguish, the three sums of
-    money, and the poison journey are the **accepted design** of the M1 return.
+    money, and the poison journey are the **accepted design**.
     The interface itself is neither: the repository has settled transactions
     and a test harness, not an end-user product.
 
 ## The design principle: the owner is dumb on Cardano
 
-The M1 return assumes the identity owner rotates her keys with `kli` and never
+The accepted design assumes the identity owner rotates her keys with `kli` and never
 touches Cardano except to put money in. Everything on the Cardano side is done
-by [hunters](super-watcher.md), paid from value she parks in her checkpoint.
+by [hunters](super-watcher.md) — anyone paid to land her rotations, or to
+freeze her checkpoint when it cannot pay for one — paid from value she parks
+in her checkpoint.
 
 A user interface that forgets this will be wrong in a specific way: it will
 present Cardano operations as things the owner must perform on a schedule. The
@@ -44,8 +46,8 @@ a checkpoint or an old key:
 |---|---|---|
 | Consumable checkpoint | Current key state is available and answerable | designed |
 | Poisoned | The controller has declared this epoch compromised; do not authorize | designed |
-| Juvenile | Registered or resurrected less than `W` slots ago; too fresh to trust | designed |
-| Frozen | A hunter took the freeze bond because the pool ran dry | designed |
+| Juvenile | Registered or resurrected less than `W` slots ago, the juvenility window; too fresh to trust | designed |
+| Frozen | A hunter took the freeze bond `B` because the pool of advance funds ran dry | designed |
 | Convicted | Proven duplicity; terminal, and it will never come back | designed |
 | Parked | The owner left. The leaf holds the hash; it can return by a later witnessed rotation | designed |
 | No candidate | Nothing on chain for this AID | shipped |
@@ -73,7 +75,7 @@ to her keys.
 
 The UI should show the AID; the controller threshold; the witness threshold;
 the expected checkpoint policy and asset; each of the three sums; the premint
-and Register transaction IDs; and the confirmation depth. Under the M1 return
+and Register transaction IDs; and the confirmation depth. Under the accepted design
 it should also show that the checkpoint is **juvenile** and for how long.
 
 ## Rotate
@@ -87,7 +89,7 @@ change; the checkpoint input and expected successor; and the settlement state.
 
 The application must not report the rotation complete merely because KERI has
 moved. Until the advance settles, Cardano still has the old key state — and
-under the M1 return, whether it settles promptly depends on whether Alice's
+under the accepted design, whether it settles promptly depends on whether Alice's
 pool can pay a hunter.
 
 A rotation is also where Alice exercises every other choice she has: the bond
@@ -119,7 +121,8 @@ There is no pause and no withdraw. An identity is active, parked, or
 convicted.
 
 - **Close** is the reap: a witnessed rotation by the *next* keys whose
-  signed message names the payee of the premium and the refund address.
+  signed message names the payee of the premium (the fee for landing a
+  rotation) and the refund address.
   The token burns, the leaf is parked with the hash of that key state.
   The current keys cannot close.
 - **Reopen** is the revival: a witnessed rotation later than the parked

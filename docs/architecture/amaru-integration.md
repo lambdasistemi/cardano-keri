@@ -2,9 +2,13 @@
 
 !!! note "What ships, and the accepted design"
     Unless a paragraph below is marked as preprod or `main` today, it
-    describes the accepted design (D-036 to D-040): active, parked holding
-    the hash, or convicted; no withdraw; the reap by the next keys; deposit
-    is the unfreeze; poison epoch-local and cleared by rotation. Play the
+    describes the accepted design (D-036 to D-040). In that design an
+    identity is **active**, **parked** (no checkpoint on chain; the registry
+    leaf keeps the hash of its last key state) or **convicted** (terminal,
+    after a duplicity proof); there is no withdraw; the only close is **the
+    reap**, a rotation by the next keys; a `deposit` rotation is the
+    unfreeze; and the **poison**, the owner's own lock on the checkpoint,
+    lasts one epoch and is cleared by rotation. Play the
     [checkpoint simulation](../simulator/index.html).
     What ships today is the V1 checkpoint with role addresses.
 
@@ -15,7 +19,8 @@
     [Identity Operations](identity-ops.md). Where it says the identity
     registry has a "single trusted oracle writer" or "oracle controls entry",
     it describes the superseded draft — identity operations are now
-    permissionless and deposit-bonded; only the *value-cage* plane keeps an
+    permissionless and deposit-bonded; only the *value-cage* plane (an MPFS
+    store, a Merkle Patricia Forestry map behind one validator) keeps an
     oracle (necessary-not-sufficient). The comparative conclusions about
     node-level attribution are unaffected, but read the registry-shape
     comparisons with that correction in mind. **Further (2026-07-09):** the

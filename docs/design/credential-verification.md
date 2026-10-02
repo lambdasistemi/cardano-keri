@@ -153,7 +153,8 @@ check excludes all of them, because they sit at or after the sequence number
 of the superseding rotation's leaf. An interaction event before a later
 rotation can no longer be superseded, so its admission is final. An
 interaction event after the latest rotation is receipted but provisional. The
-cage that caches an admission records that distinction and evicts a provisional
+cage (an MPFS store behind one validator) that caches an admission records that
+distinction and evicts a provisional
 admission when the issuer's checkpoint later inserts a leaf at or below that
 sequence number.
 

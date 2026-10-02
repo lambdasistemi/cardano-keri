@@ -16,7 +16,7 @@ below.
     into an earlier, repeatable attestation. That evidence boundary is not
     implemented; the existing BLAKE3 token proves a narrower fact.
     How lifecycle state is *represented* also changes: today it is role addresses, in the
-    [accepted design](../index.md#the-accepted-design-the-m1-return) it is one
+    [accepted design](../index.md#the-accepted-design) it is one
     bit plus the checkpoint's own value. Both are described below, marked.
 
 ## The identity plane
@@ -153,15 +153,15 @@ successor, so a consumer meets the no-candidate case. That follows from the
 projection law — the chain never originates identity state, and no key event
 says "this AID is dead" for a validator to project.
 
-### After the M1 return: one bit and the value
+### Under the accepted design: one bit and the value
 
 The three roles go. What replaces them is smaller and reads directly off the
 checkpoint a consumer already resolves:
 
 | Condition | How it is represented | Consumer result |
 |---|---|---|
-| poisoned | one bit in the datum, set by the current quorum | reject |
-| frozen | `B` absent — a hunter took it | reject |
+| poisoned | one bit in the datum, set by the current quorum: the owner's own lock on the checkpoint | reject |
+| frozen | `B` absent — a hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one) took it | reject |
 | juvenile | `now − born_at < W` | reject |
 | parked | no UTxO; the registry leaf holds the hash of the last checkpoint | no candidate |
 | convicted | the mark, terminal | no candidate |
@@ -178,7 +178,7 @@ Today there is none. Registration uses no absence proof, so more than one
 candidate checkpoint can exist for an AID and a consumer cannot prove
 otherwise.
 
-The M1 return adds exactly one shared structure, and confines it to the
+The accepted design adds exactly one shared structure, and confines it to the
 narrowest possible job: a **registry** mapping each AID to a leaf — absent,
 live, parked with the hash, or convicted. A registration must prove absence
 before inserting, preventing a second first-registration of that AID. This is
@@ -188,7 +188,9 @@ Register, reopen, close and convict change the leaf; rotate, poison, freeze and 
 never touch it, and consumers never read it.
 
 It is a registry of 32-byte keys, not a record of events — the record tree and
-its cursor are retired. Its mechanics are the MPFS cage made permissionless:
+its cursor are retired. Its mechanics are the MPFS cage — a Merkle Patricia
+Forestry store whose every update passes through one validator — made
+permissionless:
 requests are independent UTxOs anyone submits and anyone applies in batches
 (ruling D-037). It is built today in
 [singular](https://github.com/lambdasistemi/singular) and runs on a
@@ -225,7 +227,7 @@ sequenceDiagram
 
 The observer families shipped today are the lifecycle observer for Register,
 the advance observer for rotations and ARMED responses, and the enforcement
-observer for Freeze. The M1 return removes the third: `observer_advance`
+observer for Freeze. The accepted design removes the third: `observer_advance`
 verifies the evidence for both an advance and a freeze — they present the same
 rotation and differ only in effect — and `checkpoint_register` dispatches that
 effect.
@@ -258,7 +260,8 @@ controllers sign.
     `lean/CardanoKeri/Checkpoint.lean`, the play is the
     [checkpoint simulation](../simulator/index.html)) leaving is the
     reap: a witnessed rotation by the *next* keys whose signed message
-    names the payee of the premium and the refund address. The current
+    names the payee of the premium (the fee the pool pays for landing a
+    rotation) and the refund address. The current
     keys keep exactly one Cardano power, the poison. An identity is
     active (one UTxO), parked (no UTxO; the registry leaf holds the hash
     of the last checkpoint) or convicted; a parked identity is revived
@@ -271,7 +274,7 @@ controllers sign.
 ## Current boundary and future planes
 
 The repository proves the identity-plane rungs on a protocol-11 development
-network and on preprod. It does **not** provide the M1 return's machine on
+network and on preprod. It does **not** provide the accepted design's machine on
 chain at all, real three-of-seven GLEIF-scale settlement, a production
 deployment or mainnet service, a vLEI credential-chain verifier, a credential
 revocation mirror, or a wallet-to-Cardano authorization product.

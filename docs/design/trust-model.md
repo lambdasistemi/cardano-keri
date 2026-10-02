@@ -8,7 +8,7 @@ itself. It verifies the event evidence supplied in a transaction.
 !!! abstract "Where this page stands"
     Two sections describe **what ships on `main` today**: what the current
     validators guarantee, and the residuals that follow from it. The rest
-    describes the **accepted design** of the M1 return — the Lean machine of
+    describes the **accepted design** — the Lean machine of
     `lean/CardanoKeri/Checkpoint.lean` — and each such section says so. For
     settled transaction IDs and dates, see the
     [story ladder](../story-ladder.md).
@@ -33,7 +33,8 @@ Two consequences that shape the whole trust boundary:
   the trust decision, which it may take either way (the
   [review's reading of the specification's own text](watcher-conformance.md#the-specification-has-a-trust-text-tension)).
   **This project's selected policy is that conviction is terminal**: the
-  convicted leaf never reopens and the conviction bond is seized. The reasons
+  convicted (terminal after a duplicity proof) leaf never reopens and the
+  conviction bond, the stake posted against that proof, is seized. The reasons
   are ours, not KERI's: a bond that could be recovered would not deter, and
   inventing a recovery event KERI lacks would be the chain originating identity
   state.
@@ -84,7 +85,7 @@ advance requires the type span to read `rot` and registration requires `icp`.
 
 The successor must satisfy `new.seq == spent.seq + 1` and
 `new.native_sn > spent.native_sn`. No superseding recovery exists on chain, and
-the M1 return does not add one (ruling D-022). KERI's superseding rule applies
+the accepted design does not add one (ruling D-022). KERI's superseding rule applies
 to a rotation over an interaction, and interactions never reach the chain, so
 every recovery the checkpoint can express is a forward advance. The one
 scenario that would need a rollback is a thief who declined the winning move;
@@ -97,7 +98,7 @@ binds the network, checkpoint policy, exact input reference, AID, sequence, and
 refund address. The transaction burns the checkpoint token and refunds the
 complete checkpoint value only to that address.
 
-!!! warning "Close changes in the M1 return"
+!!! warning "Close changes in the accepted design"
     Under ruling D-036, close is the **reap**: a witnessed rotation by
     the *next* keys whose signed message names the payee and the refund
     address; the leaf is parked with the hash. That is what stops a
@@ -117,7 +118,7 @@ checkpoint — and it cannot prove that no other candidate exists, which is why
 this is a residual rather than an inconvenience. A holder of some past epoch's
 keys can mint a second checkpoint and advance it exactly to their epoch.
 
-The registry of the M1 return removes this: one leaf per AID, an absence proof
+The registry of the accepted design removes this: one leaf per AID, an absence proof
 required to insert, and the token mint-once by construction (rulings D-024,
 D-037).
 
@@ -133,7 +134,7 @@ them from the owner. Worse, on `main` today `Close` is a current-controller
 operation, so a thief can burn the checkpoint and send the escrow to an address
 the signed message names.
 
-The M1 return closes both halves of that, and
+The accepted design closes both halves of that, and
 [Compromise of the current keys](key-compromise.md) works the case through in
 full.
 
@@ -149,8 +150,9 @@ verdict rather than overruling it.
 Cardano cannot react to a KERI event nobody has submitted. Between KERI
 publication and a settled advance, an application may still see the old
 checkpoint. High-value applications must state how they monitor KERI and how
-fresh a checkpoint must be. The M1 return turns that from advice into two
-mechanisms: the pool that pays a hunter to be prompt, and the juvenility window
+fresh a checkpoint must be. The accepted design turns that from advice into two
+mechanisms: the pool of advance funds that pays a hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one) to be prompt, and the
+juvenility window (the age a checkpoint must reach before a consumer trusts it)
 `W` that a consumer enforces.
 
 ### Scale
@@ -163,14 +165,14 @@ gap; it is not assumed away.
 
 ---
 
-## What the M1 return guarantees — accepted design
+## What the accepted design guarantees
 
 Each item below is a theorem in `lean/CardanoKeri/Checkpoint.lean`, playable in
 the checkpoint simulator, and unbuilt on chain.
 
 | Guarantee | Why it holds |
 |---|---|
-| The keys move only by a rotation; the poison never moves them | a poison touches the poison bit and nothing else |
+| The keys move only by a rotation; the poison (the owner's own lock on the checkpoint) never moves them | a poison touches the poison bit and nothing else |
 | The poison is epoch-local | any witnessed rotation clears it, and only a poison sets it |
 | A poisoned checkpoint answers only to a rotation | no close, no second poison, no consumer authorization |
 | No present state is absorbing | the next-key holder can always rotate, with any bond option |
@@ -281,9 +283,9 @@ The **Result** column marks whether the response ships today or is designed.
 | Roll the checkpoint back to an earlier sequence | Reject: the sequence is strictly increasing | shipped |
 | Authorize a value operation with stolen current keys | **No rejection is available** — those keys are the current authority | shipped |
 | Close the checkpoint with stolen current keys | **No rejection is available today** — close is a current-controller operation | shipped |
-| Same, after the M1 return | Reject: close is a rotation and needs the next keys (D-036) | designed |
+| Same, under the accepted design | Reject: close is a rotation and needs the next keys (D-036) | designed |
 | Register a second checkpoint for one AID | **No rejection is available today** | shipped |
-| Same, after the M1 return | Reject: the registry insert needs an absence proof | designed |
+| Same, under the accepted design | Reject: the registry insert needs an absence proof | designed |
 | A relayer parks, ages, or closes the owner using her public rotation | Reject: the intent is unsigned by the new keys (D-038) | designed |
 | One stolen member key of a multisig poisons the identity | Reject: the poison is evaluated at the current threshold (D-023) | designed |
 | Poison an already-poisoned epoch, or close from one | Reject: only a rotation leaves a poisoned state | designed |

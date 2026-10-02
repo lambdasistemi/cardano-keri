@@ -2,15 +2,20 @@
 
 !!! note "What ships, and the accepted design"
     Unless a paragraph below is marked as preprod or `main` today, it
-    describes the accepted design (D-036 to D-040): active, parked holding
-    the hash, or convicted; no withdraw; the reap by the next keys; deposit
-    is the unfreeze; poison epoch-local and cleared by rotation. Play the
+    describes the accepted design (D-036 to D-040). In that design an
+    identity is **active**, **parked** (no checkpoint on chain; the registry
+    leaf keeps the hash of its last key state) or **convicted** (terminal,
+    after a duplicity proof); there is no withdraw; the only close is **the
+    reap**, a rotation by the next keys; a `deposit` rotation is the
+    unfreeze; and the **poison**, the owner's own lock on the checkpoint,
+    lasts one epoch and is cleared by rotation. Play the
     [checkpoint simulation](../simulator/index.html).
     What ships today is the V1 checkpoint with role addresses.
 
 
 The AID registry ruled by D-024 — one UTxO holding the MPF root over every
-AID ever registered — built as a cage of the Merkle
+AID ever registered — built as a cage (an MPFS store, a Merkle Patricia
+Forestry map behind one validator) of the Merkle
 Patricia Forestry store
 ([cardano-mpfs-onchain](https://github.com/cardano-foundation/cardano-mpfs-onchain))
 on its plugin path, after the rulings of 2026-09-02/03, and built today in
@@ -20,7 +25,9 @@ Lean declaration behind every claim. The machine is
 `lean/CardanoKeri/Registry.lean`; the theorems are
 `lean/CardanoKeri/RegistryGoals.lean`; the generic cage and the divergence
 from mpfs as shipped are `lean/CardanoKeri/Cage.lean`; the reaper's
-economics are `lean/CardanoKeri/Samaritan.lean`; the simulator is
+economics — the samaritan is whoever performs a reap or a fold on another
+identity's behalf, and the module proves they never lose money doing it — are
+`lean/CardanoKeri/Samaritan.lean`; the simulator is
 [Registry Simulator](../simulator/registry/index.html).
 
 ## Why a cage, and why the leaf carries state
@@ -73,7 +80,8 @@ key is refused by the node; a folded delete makes the key available again.
 Its key states are absent, active, and a terminal retired state. Its
 consumer-conformance suite is bound by commit to this page and to the
 [consumer checklist](../user/consumer-checklist.md): 41 rows, of which the
-bonds, the poison, the juvenility window and the signature threshold are
+bonds, the poison, the juvenility window (the age a checkpoint must reach
+before a consumer trusts it) and the signature threshold are
 left to the checkpoint machine and never claimed by singular. Recovery
 through a committed next controller has run on a ledger; retirement has not.
 Measured on its ship run, a fold is about 11.4 KB of a 16,384-byte

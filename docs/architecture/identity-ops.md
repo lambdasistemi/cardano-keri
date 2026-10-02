@@ -5,8 +5,8 @@ return replaces it with.
 
 !!! abstract "Where this page stands"
     The **Shipped today** sections describe programs published on preprod and
-    exercised by settled transactions. The **After the M1 return** sections
-    describe the [accepted design](../index.md#the-accepted-design-the-m1-return),
+    exercised by settled transactions. The **Under the accepted design** sections
+    describe the [accepted design](../index.md#the-accepted-design),
     proved in `lean/CardanoKeri/Checkpoint.lean` and playable in the
     checkpoint simulator. Nothing designed is built. For evidence and
     transaction IDs, start with the [story ladder](../story-ladder.md).
@@ -30,22 +30,24 @@ lifecycle flag (`onchain/lib/cardano_keri/checkpoint/datum.ak`):
 
 Lifecycle state lives outside it, in the script role address the token sits at.
 
-Datum V2, in the M1 return, adds what the new machine needs: `poisoned`,
-`born_at` (juvenility), `refund_to`, and `alive_at` and `valid_until`
-reserved for a future validity edge. The three sums of money — `D_reg`, `B`
-and the pool — are value, not fields. That change lands on `observer_advance`,
+Datum V2, in the accepted design, adds what the new machine needs: `poisoned`
+(the owner's own lock on the checkpoint), `born_at` (for juvenility: the age a
+checkpoint must reach before a consumer trusts it), `refund_to`, and `alive_at`
+and `valid_until` reserved for a future validity edge. The three sums of money
+— `D_reg` the conviction bond, `B` the freeze bond and the pool of advance
+funds — are value, not fields. That change lands on `observer_advance`,
 which has three bytes of headroom, so epic
 [#319](https://github.com/lambdasistemi/cardano-keri/issues/319) measures before
 epic [#322](https://github.com/lambdasistemi/cardano-keri/issues/322) decides.
 
 ## Operation status
 
-| Operation | Shipped today | After the M1 return |
+| Operation | Shipped today | Under the accepted design |
 |---|---|---|
 | Register | Creates a bonded checkpoint at sequence zero. No uniqueness rule | A registry request: absence proof, insert and checkpoint mint together; no second first-registration |
-| Advance | Applies one genuine witnessed rotation | The same, plus a bond option, an optional new refund address, and the premium `P` to whoever landed it |
+| Advance | Applies one genuine witnessed rotation | The same, plus a bond option, an optional new refund address, and the premium `P` (the fee the pool pays for landing a rotation) to whoever landed it |
 | Close | Current controllers burn the token and take the refund | The **reap**: a witnessed rotation by the **next** keys naming payee and refund; the leaf is parked with the hash |
-| Freeze | Moves a lagging checkpoint to ARMED for the response window | A hunter's payment when the pool is short. The datum is untouched; `B` leaves |
+| Freeze | Moves a lagging checkpoint to ARMED for the response window | Payment to a hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one) when the pool is short. The datum is untouched; `B` leaves |
 | ClaimFreeze / thaw | Pays the recorded hunter after the deadline; thaw re-posts `B` | **Gone.** No deadline, no claim, no timeout economy |
 | Convict | Burns the token on a witnessed irreconcilable fork | A terminal `Convicted` state on a duplicity proof; `D_reg` in full to the convictor |
 | Poison | — | New: the current quorum declares the epoch compromised |
@@ -90,7 +92,7 @@ or several — and it cannot prove no other exists. A holder of some retired
 epoch's keys can therefore mint a rival checkpoint and advance it exactly to
 their epoch.
 
-### After the M1 return
+### Under the accepted design
 
 Registration becomes a **request** against the registry: it identifies the AID,
 binds the inception evidence, and carries the bonds and a refund address chosen
@@ -152,7 +154,7 @@ afterwards.
     oracle that settles it. The two rules disagree exactly on rotations that
     cut or add witnesses — that is, on witness replacement after a compromise.
 
-### After the M1 return
+### Under the accepted design
 
 The predicate is unchanged. What is added is everything around it:
 
@@ -187,7 +189,7 @@ refund address prevents a transaction builder from redirecting the escrow.
 steals them can burn the identity and take the escrow. The signed refund
 address limits where the money goes but not whether the identity dies.
 
-### After the M1 return
+### Under the accepted design
 
 Close is the **reap**: a witnessed rotation by the next keys whose signed
 message names the payee of the premium and the refund address (ruling
@@ -217,7 +219,7 @@ applied before the deadline. Evidence is bound to the challenged tip, so after
 a response the old proof is stale and a new round needs fresh evidence at the
 new sequence.
 
-### After the M1 return
+### Under the accepted design
 
 Freeze survives, with a different job. It is not a punishment for lag — the
 party who can prove a later witnessed rotation can simply **land** it, which
@@ -233,7 +235,7 @@ a rotation with `deposit`, which restores both bonds.
 There is no ARMED, no FROZEN role address, no recorded hunter in the datum, and
 no timeout.
 
-## Poison — new in the M1 return
+## Poison — new in the accepted design
 
 A poison is the current quorum's declaration that this epoch is compromised.
 The key holders sign, at `cur_threshold`, a short preimage bound to the
@@ -260,7 +262,7 @@ Two properties are worth stating precisely:
   ever come. It does not serve next-key theft, where the thief's rotation *is*
   control.
 
-## Convict — new shape in the M1 return
+## Convict — new shape in the accepted design
 
 ### Shipped today
 
@@ -271,7 +273,7 @@ needs no history, because the revealed keys *are* the current keys. On the
 shipped machine this burns the token and leaves no successor, and the CLI
 exposes no command for it.
 
-### After the M1 return
+### Under the accepted design
 
 The same proof, a different effect. The convictor names a payee and takes
 `D_reg` in full; `B` and the pool go to the refund address; the checkpoint
@@ -291,7 +293,7 @@ next-key thief with `toad` colluding witnesses can convict the identity she
 already controls under KERI and take `D_reg` on the way out. Exposure is
 `D_reg` and the witness set the controller chose.
 
-## Top-up and reopen — new in the M1 return
+## Top-up and reopen — new in the accepted design
 
 **Top-up** adds value to the pool. No signature, no datum change, anyone. It is
 how a friend, an employer or a consortium pays for an identity's maintenance.

@@ -2,7 +2,8 @@
 
 !!! note "What ships, and the accepted design"
     This page is the V1 `ckeri advance` that ships on preprod. The
-    accepted design pays a hunter the premium `P` from the pool, and
+    accepted design pays a hunter (anyone paid to land rotations) the premium
+    `P`, the fee for landing one, from the owner's pool of advance funds, and
     a rotation carries `keep` or `deposit` (the unfreeze), signed by
     the next keys. Play
     [Alice rotates, Hal lands it, Hal is paid](../simulator/index.html).

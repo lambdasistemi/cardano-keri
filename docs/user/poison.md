@@ -8,8 +8,8 @@
     no `sorry`). What ships today is the V1 checkpoint with no poison bit:
     stolen current keys can still close.
 
-Alice's current keys are stolen. Before she can assemble a rotation, her
-key holders sign a short declaration — over a preimage bound to the
+Alice's current keys are stolen. The poison is her own lock on her checkpoint:
+before she can assemble a rotation, her key holders sign a short declaration — over a preimage bound to the
 policy, her AID and her current sequence — and anyone lands it.
 
 The checkpoint is immediately unconsumable. The thief can do nothing
@@ -26,7 +26,7 @@ keys, her rotation *is* control by KERI's own rule
 ([security properties of pre-rotation](https://trustoverip.github.io/kswg-keri-specification/#security-properties-of-pre-rotation)).
 The poison lasts until that rotation and no longer. The stolen-current-keys
 case it does cover is KERI's [establishment live attack](https://trustoverip.github.io/kswg-keri-specification/#establishment-live-attack). Close answers to the next keys, so
-that thief can reap.
+that thief can reap (close by a rotation of the next keys).
 
 Play the forks: Mallory and Hal try everything on the poisoned
 checkpoint; Mallory tries the reap with the retired keys and is

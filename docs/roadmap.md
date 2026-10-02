@@ -1,13 +1,16 @@
 # Roadmap
 
-The current plan is the **M1 return**: one milestone across two repositories,
-fourteen epics, ordered so every epic shrinks the next one's risk. Preprod is
-redeployed once, at the end.
+The current plan delivers the **accepted design**: one milestone across two
+repositories, fourteen epics, ordered so every epic shrinks the next one's
+risk. Preprod is redeployed once, at the end. Issues and the wiki from
+September 2026 call this plan *the M1 return*: the return, inside the first
+milestone, from an abandoned enforcement economy to a checkpoint that only
+projects key state.
 
 !!! abstract "Where this page stands"
     Everything below is **planned**. What has settled is on the
     [story ladder](story-ladder.md); what is designed and proved is the Lean
-    machine described on the [home page](index.md#the-accepted-design-the-m1-return).
+    machine described on the [home page](index.md#the-accepted-design).
 
 ## The milestone
 
@@ -23,9 +26,11 @@ tracks the release-policy reconciliation before a major tag is cut. The
 planned tag does not change the evidence required below.
 
 Done means, on preprod: an identity registered once through the registry;
-rotations landed by hunters for a premium; a freeze when the pool is short;
-poison by the current quorum, cleared by rotation; close by the next keys and
-reopen by a later rotation; conviction on a duplicity proof, terminal; a
+rotations landed by hunters (anyone paid to land an owner's rotation) for a
+premium (the fee the pool pays for landing one); a freeze when the pool (the
+owner's advance funds) is short; poison (the owner's own lock on the
+checkpoint) by the current quorum, cleared by rotation; close by the next keys
+and reopen by a later rotation; conviction on a duplicity proof, terminal; a
 consumer contract reading the checkpoint with the fail-closed verdict; `ckeri`
 and a hunter daemon doing all of it; the fifteen stories replayed on preprod
 as the acceptance suite; release 0.5.0.
@@ -46,8 +51,8 @@ milestone governs it. What singular already delivers and what remains is on
 
 | # | Epic | Repo | Depends on | Acceptance |
 |---|---|---|---|---|
-| U1 | [MPFS permissionless batching](https://github.com/lambdasistemi/cardano-keri/issues/329) — `Modify` without the owner signature; `End` and ownership transfer removed; objective rejection only; the tip paid to whoever applies; the cage's Lean proofs re-proved for the ownerless variant | singular | — | partly met by singular v0.3.0: the permissionless fold and the refused occupied insert run on a devnet; still to show: two independent appliers race on a devnet; a request one of them ignores lands through the other; retract still refunds; every cage proof green |
-| U2 | [MPFS gating plugin](https://github.com/lambdasistemi/cardano-keri/issues/330) — a per-store validator the cage calls per request; the keri store's plugin parses the inception, checks the absence proof and mints the checkpoint in the same transaction; the leaf map is the interface `cardano-keri` consumes. In singular's shape the application's own minting policy certifies the request and the fold mints the representative into the certified output; the keri policy that parses the inception and checks the receipts is cardano-keri's to write, and the mapping of the dormant leaf is open | singular, cardano-keri | U1 | the registry simulator's scenarios replayed on a devnet against the plugin; a second registration of one AID refused; a reopen at or below the tombstone refused |
+| U1 | [MPFS permissionless batching](https://github.com/lambdasistemi/cardano-keri/issues/329) — `Modify` without the owner signature; `End` and ownership transfer removed; objective rejection only; the tip paid to whoever applies; the Lean proofs of the cage (the MPFS store whose every update passes through one validator) re-proved for the ownerless variant | singular | — | partly met by singular v0.3.0: the permissionless fold and the refused occupied insert run on a devnet; still to show: two independent appliers race on a devnet; a request one of them ignores lands through the other; retract still refunds; every cage proof green |
+| U2 | [MPFS gating plugin](https://github.com/lambdasistemi/cardano-keri/issues/330) — a per-store validator the cage calls per request; the keri store's plugin parses the inception, checks the absence proof and mints the checkpoint in the same transaction; the leaf map is the interface `cardano-keri` consumes. In singular's shape the application's own minting policy certifies the request and the fold mints the representative into the certified output; the keri policy that parses the inception and checks the receipts is cardano-keri's to write, and the mapping of the dormant leaf is open | singular, cardano-keri | U1 | the registry simulator's scenarios replayed on a devnet against the plugin; a second registration of one AID refused; a reopen from a key state at or below the parked one refused |
 | U3 | **Registry model and simulator** — the Lean model of the leaf map and batching, its theorems, the registry simulation | cardano-keri, merged | — | statements audited for completeness, proved, mutants; the page follows the Lean by replay |
 | #318 | [The record](https://github.com/lambdasistemi/cardano-keri/issues/318) — the design note written from the plan; both Lean slices merged; the clarity record folded into the Lean's doc comments | cardano-keri | — | the note, the Lean and the simulator name the same rulings |
 | #319 | [Slim `main`](https://github.com/lambdasistemi/cardano-keri/issues/319) — delete the enforcement economy and the M1.2 skeleton in one presented pull request; `convict_predicate` and its decoder lifted before the file goes; the docs survey executed; a size table of the surviving scripts | cardano-keri | #318 | `just ci`, `mkdocs --strict` and lychee green; the size table published |
@@ -103,11 +108,11 @@ measurement:
 | script sizes after the deletion | #319 | whether the poison lives in the datum, and the budget for the signed intent |
 | advance verification cost by witness and signer count | #321 | whether M1 serves GLEIF-scale receipt counts or is scoped to what the limit admits |
 | requests per batch under the plugin | U2 | the onboarding burst the registry can absorb |
-| relayer latency from receipt to landed rotation on a devnet | #325 | `W`, the juvenility window |
-| transaction cost of an advance and of a freeze | #323 | floors for `P`, the premium, and `B`, the freeze bond |
+| relayer latency from receipt to landed rotation on a devnet | #325 | `W`, the juvenility window: the age a checkpoint must reach before a consumer trusts it |
+| transaction cost of an advance and of a freeze | #323 | floors for `P`, the premium, and `B`, the freeze bond a hunter takes when the pool cannot pay |
 | replay time of the fifteen stories on preprod | #328 | the release gate's duration |
 
-`D_reg`, the conviction bond, is an economic call rather than a measurement: it
+`D_reg`, the conviction bond that a duplicity proof seizes, is an economic call rather than a measurement: it
 must exceed what duplicity buys, and it is refundable.
 
 ## Decisions still open

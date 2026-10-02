@@ -35,7 +35,7 @@ deployment or a production service-level commitment.
 | Checkpoint address | `addr_test1wqxpdsfvar9xppev4h25t5fg9uraeya46g4pxnjyy564wdqhr6822` |
 
 The release applies checkpoint version `0`, network discriminator `0`, a
-registration bond of `1,000,000,000` lovelace, a freeze bond of `5,000,000`
+registration bond of `1,000,000,000` lovelace, a freeze bond (in V1, the bond a freeze for lag claims) of `5,000,000`
 lovelace, and a freeze window of `10,000` slots.
 
 ## Live reference scripts

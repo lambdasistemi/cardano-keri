@@ -147,7 +147,8 @@ moves forward — the checkpoint cannot roll back (ruling D-022).
 The hunter presents the same evidence it would use to advance: a later
 witnessed rotation with its receipts. The freeze runs the advance predicate and
 differs only in effect. It additionally requires that the pool is below `P`,
-and it is not enabled from a poisoned checkpoint, which is already
+and it is not enabled from a poisoned checkpoint (one locked by the owner's own
+declaration), which is already
 unconsumable.
 
 ### Poison relay — accepted design

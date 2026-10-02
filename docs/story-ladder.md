@@ -5,7 +5,8 @@
     is on the [home page](index.md#the-accepted-design) and in
     the [checkpoint simulation](simulator/index.html). The ARMED/FROZEN
     stories below are what shipped; they are not the hunter freeze of the
-    accepted design.
+    accepted design (a hunter being anyone paid to land rotations, or to
+    freeze a checkpoint that cannot pay for one).
 
 
 This page is **history**. It records the transactions that reached a real

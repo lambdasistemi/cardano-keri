@@ -116,7 +116,7 @@ A history leaf must expose or authenticate the verification context it is
 used to establish. A digest commitment plus a checked opening may suffice;
 this plan does not require every full event or key list to live in the datum.
 State on-chain commitments, off-chain retention and retrieval obligations
-separately. The general MPFS cage remains a transport mechanism; KERI rules
+separately. The general MPFS cage (a store whose every update passes through one validator) remains a transport mechanism; KERI rules
 belong in its application model.
 
 ## Complete invariant scope
@@ -147,7 +147,7 @@ mutation and evidence receipt. Unresolved rows stay visible.
 
 | Required invariant or explicit limitation | Required executable controls |
 |---|---|
-| An admissible challenge target and its protected liability cannot be erased before the promised deadline by another lifecycle action. | Second rotation, close, freeze, poison, top-up, revival, migration and registry batching; exercise chained transactions without an intervening victim turn. |
+| An admissible challenge target and its protected liability cannot be erased before the promised deadline by another lifecycle action. | Second rotation, close, freeze, poison (the owner's own lock), top-up, revival, migration and registry batching; exercise chained transactions without an intervening victim turn. |
 | A minimum rotation spacing and an evidence expiry are independent rules. | Keep the tip stationary past `C`; test whether conviction remains possible. Test just before, at and just after each deadline, including `C = 0` if allowed. Never infer expiry from a rotation guard. |
 | Challenge time is derived from authenticated ledger-visible bounds and is not freely chosen by the submitter. | Backdated or missing bounds, excessively wide validity intervals, non-monotone time and boundary inclusion. Model a conservative validity-range construction before treating an abstract `now` as an exact inclusion slot. |
 | Retained challenge targets authenticate all context required by their chosen predicate. | Wrong AID/incarnation, sequence, event digest, prior establishment, key commitments, thresholds, witness set or acceptance-time commitment. Arbitrary supplied openings fail. |
@@ -162,7 +162,7 @@ mutation and evidence receipt. Unresolved rows stay visible.
 
 | Required invariant or explicit limitation | Required executable controls |
 |---|---|
-| The conviction bond, freeze bond, locked recovery reserve, premium pool and ledger minimum-value costs have distinct purposes and authorized flows. | Exact conservation by asset and account; insufficient funds; no premium drawn from a protected bond; no reserve double use. Money units in fixtures are explicit. |
+| The conviction bond (the stake a duplicity proof seizes), freeze bond, locked recovery reserve, premium pool and ledger minimum-value costs have distinct purposes and authorized flows. | Exact conservation by asset and account; insufficient funds; no premium drawn from a protected bond; no reserve double use. Money units in fixtures are explicit. |
 | Sponsor spending rights are separate from KERI identity authority. Distinguish donations from recoverable contributions at funding time. | Issuer changes refund address, rotates or closes; sponsor exits or is replaced; several sponsors contribute. Neither side gains the other's signing, censorship or financial authority implicitly. |
 | Covered unfreezing restores the freeze bond from locked funds with no fresh external bond contribution and no extra Cardano-specific issuer signature. | Passive issuer publishes an ordinary valid event; freeze and recovery use it. Exercise both enough and exhausted reserve. Specify transaction fees and premium funding separately from the no-extra-unfreeze-bond promise. |
 | Freeze proves a particular omitted valid progress event and applicable funding failure, not inactivity. | Idle issuer, unavailable event, invalid event, sufficient pool, stale state proof and already seized bond. Cooldown-ineligible progress must not automatically qualify as culpably omitted progress. |
@@ -184,7 +184,7 @@ mutation and evidence receipt. Unresolved rows stay visible.
 | The TEL mirror has its own specified freeze bond, premium and recovery funding lifecycle, sharing the sponsorship contract where applicable. | Funded/unpaid/duplicate push; evidence-backed omission freeze; reserve recovery after someone else inserted the revocation; pool and reserve exhaustion. This is per mirror, not a bond attached to each TEL event. |
 | Credential validity preserves actor binding, issuer-to-issuee links, schema/root/depth policy, anchors and time bounds. | Wrong actor, broken chain link, revoked ancestor, untrusted root/schema, depth exhaustion, expired admission and premature renewal. Retain the existing repaired probes. |
 | Recovery consequences reach credential use and delegated installation. | Provisional anchor changes between admission and use, before eviction and after expiry; consumed certificate re-minted; stale unconsumed certificate; child installed before parent recovery. Preserve stated installed-child policy unless amended. |
-| The composed model cannot bypass lifecycle or evidence rules through a simpler submodel. | Delegation `leave` cannot treat convicted as freely registrable; history cannot advance independently of accepted checkpoint evidence; registry folds use the current accumulator; a consumer cannot ignore required frozen/stale/contested status. |
+| The composed model cannot bypass lifecycle or evidence rules through a simpler submodel. | Delegation `leave` cannot treat convicted (the terminal state after a duplicity proof) as freely registrable; history cannot advance independently of accepted checkpoint evidence; registry folds use the current accumulator; a consumer cannot ignore required frozen/stale/contested status. |
 | Consumer freshness is conditional on named observation, funding and scheduler assumptions. | Frozen mirror, unresolved conflict, missing dependencies and delayed eviction. Compare existing cache-then-evict with immediate dependency checks; retain a witness to any accepted exposure interval. |
 
 ## The ten conviction stories as Lean scenarios
@@ -220,7 +220,8 @@ The proposal's conformance commentary also becomes testable obligations:
   boundary. Late discovery remains possible. Expiring a financial claim need
   not end observation or consumer alerts.
 - A permissionless submission path still needs available evidence, a paying
-  submitter and inclusion. A consumer waiting for juvenility does not obtain
+  submitter and inclusion. A consumer waiting out the juvenility window (the age a checkpoint must reach
+before it trusts it) does not obtain
   an independent observation merely by waiting.
 
 ## Decisions the models must make reviewable

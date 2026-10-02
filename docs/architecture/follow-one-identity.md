@@ -147,7 +147,8 @@ The registry stores an AID's lifecycle and indirection:
 A never-registered AID has no leaf. Live, poisoned (locked by the owner's own
 declaration) and frozen (the freeze bond taken) are checkpoint conditions, not
 additional registry leaf variants. In the registry model's
-reap/fold handoff, an active leaf can temporarily have a pending go-request
+reap/fold handoff (the reap being the owner's close, a rotation by the next
+keys), an active leaf can temporarily have a pending go-request
 instead of a checkpoint; the leaf alone never authorizes consumer use.
 
 The registry simulator's `token` and `k` are abstract integers. It allocates

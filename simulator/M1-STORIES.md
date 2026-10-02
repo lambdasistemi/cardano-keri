@@ -1,6 +1,6 @@
 # The checkpoint, as it will ship — user stories
 
-The M1 return, written for the people who will use it and for the simulator
+The accepted design, written for the people who will use it and for the simulator
 that will let them try it. Everything here follows the rulings of 2026-09-02
 and 2026-09-03 (D-022 to D-040) and the plan `AUDIT-M1-RETURN`: an identity is
 active (one UTxO: live, poisoned or frozen), parked (no UTxO; the registry leaf
@@ -44,8 +44,15 @@ The words below are ours:
 - **Conviction bond** `D_reg`: Alice's stake against duplicity. Seized only
   by a proof. Never a fee.
 - **Freeze bond** `B`: what a hunter takes when Alice's pool cannot pay for a
-  rotation.
-- **Pool**: advance funds; pays the premium `P` to whoever lands a rotation.
+  rotation; a `deposit` rotation refills it.
+- **Pool**: Alice's advance funds; pays the premium `P` to whoever lands a
+  rotation. Anyone may top it up.
+- **Premium** `P`: the fee the pool pays whoever lands a rotation.
+- **Hunter**: anyone paid to land Alice's rotation on chain, or to freeze her
+  checkpoint when the pool cannot pay for one. Hal.
+- **Poison**: Alice's own lock on her checkpoint: a declaration signed by the
+  current keys at their threshold that makes the checkpoint unconsumable
+  until a witnessed rotation clears it.
 - **Refund address**: where the money goes when Alice leaves. Set when the
   checkpoint is registered, moved only at a rotation and only by the new
   keys.
@@ -57,6 +64,10 @@ The words below are ours:
   witnessed rotation from exactly that key state, with fresh bonds, born now.
 - **Consumable**: what the treasury accepts — bonded (the freeze bond held),
   not poisoned, older than the juvenility window `W`.
+- **Juvenility window** `W`: the age a checkpoint must reach, counted from its
+  last registration or reopening, before a consumer trusts it.
+- **Convicted**: the terminal state a duplicity proof puts an identity in,
+  active or parked; `D_reg` goes to whoever proved it, and nothing reopens it.
 - **Epoch**: the life of one set of current keys, from one rotation to the
   next.
 

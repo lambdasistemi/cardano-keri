@@ -2,3 +2,4 @@
 deploy/preprod/m1-acceptance.txt whitespace=-blank-at-eol
 deploy/preprod/m1-advance-acceptance.txt whitespace=-blank-at-eol
 deploy/preprod/m1-advance-package/*.cbor binary
+offchain/blaster/m8-baseline-plutus.json -diff linguist-generated

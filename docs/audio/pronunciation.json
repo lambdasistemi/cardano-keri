@@ -1,0 +1,49 @@
+{
+  "rules": [
+    {
+      "term": "KERI",
+      "phonemes": "kˈɛɹi"
+    },
+    {
+      "term": "KELs",
+      "phonemes": "kˈɛlz"
+    },
+    {
+      "term": "keripy",
+      "phonemes": "kˈɛɹipˈI",
+      "ignore_case": true
+    },
+    {
+      "term": "MiCA",
+      "phonemes": "mˈIkə"
+    },
+    {
+      "term": "MiFID",
+      "phonemes": "mˈɪfɪd"
+    },
+    {
+      "term": "SAID",
+      "phonemes": "sˈi ˈA ˈI dˈi"
+    },
+    {
+      "term": "SAIDs",
+      "phonemes": "sˈi ˈA ˈI dˈi ˈɛs"
+    },
+    {
+      "term": "eIDAS",
+      "phonemes": "ˈi ˈI dˈi ˈæz"
+    },
+    {
+      "term": "tADA",
+      "spoken": "tee ADA"
+    },
+    {
+      "term": "BLAKE3",
+      "spoken": "blake three"
+    },
+    {
+      "term": "GLEIF",
+      "spoken": "glife"
+    }
+  ]
+}

@@ -1,0 +1,352 @@
+{
+  "trust-model": [
+    {
+      "text": "Trust model.",
+      "pause": 500
+    },
+    {
+      "text": "cardano-keri projects public KERI events into a Cardano checkpoint. KERI is Key Event Receipt Infrastructure; a KERI AID (Autonomic Identifier) has a signed KEL (Key Event Log). The chain does not discover KEL events by itself. It verifies the event evidence supplied in a transaction.",
+      "pause": 400
+    },
+    {
+      "text": "Where this page stands",
+      "pause": 400
+    },
+    {
+      "text": "Two sections describe what ships on main today: what the current validators guarantee, and the residuals that follow from it. The rest describes the accepted design — the Lean machine of lean/CardanoKeri/Checkpoint.lean — and each such section says so. For settled transaction IDs and dates, see the story ladder.",
+      "pause": 400
+    }
+  ],
+  "the-projection-law": [
+    {
+      "text": "The projection law.",
+      "pause": 500
+    },
+    {
+      "text": "One rule sits above everything else on this page: the chain projects the KEL and never originates identity state. Every arrow points one way. The design is built only against what a controller and its witnesses already publish; the chain never asks KERI for anything, and never pronounces a verdict KERI itself would not. Where KERI says a verdict is formed is validator roles and event locality.",
+      "pause": 400
+    },
+    {
+      "text": "Two consequences that shape the whole trust boundary:",
+      "pause": 400
+    },
+    {
+      "text": "Possession of the next keys is control (pre-rotation). If a thief holds them, her witnessed rotation is legitimate under KERI's own rule and the chain follows it. Nothing the chain does may outlive that rotation.",
+      "pause": 300
+    },
+    {
+      "text": "Proven duplicity cannot be unseen: two receipted rotations at one sequence are a fact of the record for ever, and KERI has no event that un-duplicates an identifier. What KERI leaves to each validator is the trust decision, which it may take either way (the review's reading of the specification's own text). This project's selected policy is that conviction is terminal: the convicted (terminal after a duplicity proof) leaf never reopens and the conviction bond, the stake posted against that proof, is seized. The reasons are ours, not KERI's: a bond that could be recovered would not deter, and inventing a recovery event KERI lacks would be the chain originating identity state.",
+      "pause": 300
+    }
+  ],
+  "what-the-current-validators-guarantee-shipped-today": [
+    {
+      "text": "What the current validators guarantee — shipped today.",
+      "pause": 500
+    }
+  ],
+  "inception-bytes-bind-to-the-aid": [
+    {
+      "text": "Inception bytes bind to the AID.",
+      "pause": 500
+    },
+    {
+      "text": "Registration first runs the project's Aiken BLAKE3 implementation in a premint transaction. The resulting proof token has a deterministic name bound to the inception bytes and claimed AID.",
+      "pause": 400
+    },
+    {
+      "text": "The Register transaction consumes and burns that token. Its registration observer then verifies:",
+      "pause": 400
+    },
+    {
+      "text": "the event fields project to the checkpoint datum;",
+      "pause": 300
+    },
+    {
+      "text": "indexed controller signatures satisfy the event's weighted threshold;",
+      "pause": 300
+    },
+    {
+      "text": "indexed witness receipts satisfy toad, the event's witness threshold; and",
+      "pause": 300
+    },
+    {
+      "text": "the thin checkpoint creates exactly one correctly named token in one output with the required escrow.",
+      "pause": 300
+    },
+    {
+      "text": "The registrant cannot copy a victim's public inception and substitute attacker keys. The event, signatures, receipts, AID, and projected checkpoint must agree.",
+      "pause": 400
+    }
+  ],
+  "rotation-cannot-choose-an-arbitrary-successor": [
+    {
+      "text": "Rotation cannot choose an arbitrary successor.",
+      "pause": 500
+    },
+    {
+      "text": "Advance verifies one genuine KERI rotation against the exact checkpoint input:",
+      "pause": 400
+    },
+    {
+      "text": "the event continues from the recorded prior KERI event;",
+      "pause": 300
+    },
+    {
+      "text": "revealed controller keys match the stored next-key commitments;",
+      "pause": 300
+    },
+    {
+      "text": "the event's own controller threshold passes;",
+      "pause": 300
+    },
+    {
+      "text": "the previously committed next threshold also passes;",
+      "pause": 300
+    },
+    {
+      "text": "witness receipts cover the exact event bytes and satisfy the incoming witness threshold; and",
+      "pause": 300
+    },
+    {
+      "text": "the output is the unique sequence-plus-one successor with the same token and complete value.",
+      "pause": 300
+    },
+    {
+      "text": "A relayer may submit the public event but cannot alter its result. A stolen set of current keys is insufficient to replace the pre-committed successor. A controller-signed event without the required witness receipts is also insufficient.",
+      "pause": 400
+    },
+    {
+      "text": "ixn, dip and drt events are rejected, not merely unrepresentable: advance requires the type span to read rot and registration requires icp.",
+      "pause": 400
+    }
+  ],
+  "the-sequence-never-moves-backward": [
+    {
+      "text": "The sequence never moves backward.",
+      "pause": 500
+    },
+    {
+      "text": "The successor must satisfy new.seq == spent.seq + 1 and new.native_sn > spent.native_sn. No superseding recovery exists on chain, and the accepted design does not add one (ruling D-022). KERI's superseding rule applies to a rotation over an interaction, and interactions never reach the chain, so every recovery the checkpoint can express is a forward advance. The one scenario that would need a rollback is a thief who declined the winning move; it is an accepted, stated limit.",
+      "pause": 400
+    }
+  ],
+  "close-cannot-redirect-the-refund": [
+    {
+      "text": "Close cannot redirect the refund.",
+      "pause": 500
+    },
+    {
+      "text": "Close requires the current controller threshold today. Its signed evidence binds the network, checkpoint policy, exact input reference, AID, sequence, and refund address. The transaction burns the checkpoint token and refunds the complete checkpoint value only to that address.",
+      "pause": 400
+    },
+    {
+      "text": "Close changes in the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Under ruling D-036, close is the reap: a witnessed rotation by the next keys whose signed message names the payee and the refund address; the leaf is parked with the hash. That is what stops a thief holding only the current keys from erasing the owner's Cardano presence. See Compromise of the current keys.",
+      "pause": 400
+    }
+  ],
+  "residuals-of-what-ships-today": [
+    {
+      "text": "Residuals of what ships today.",
+      "pause": 500
+    }
+  ],
+  "duplicate-live-registration": [
+    {
+      "text": "Duplicate live registration.",
+      "pause": 500
+    },
+    {
+      "text": "There is no shared global AID registry or absence proof. Independent transactions may create more than one candidate for the same AID.",
+      "pause": 400
+    },
+    {
+      "text": "A consumer must fail closed unless it resolves exactly one accepted checkpoint — and it cannot prove that no other candidate exists, which is why this is a residual rather than an inconvenience. A holder of some past epoch's keys can mint a second checkpoint and advance it exactly to their epoch.",
+      "pause": 400
+    },
+    {
+      "text": "The registry of the accepted design removes this: one leaf per AID, an absence proof required to insert, and the token mint-once by construction (rulings D-024, D-037).",
+      "pause": 400
+    }
+  ],
+  "current-key-theft": [
+    {
+      "text": "Current-key theft.",
+      "pause": 500
+    },
+    {
+      "text": "Pre-rotation stops an attacker holding only the current keys from taking the identity forward: they cannot rotate, so they cannot advance the checkpoint or replace the committed successor.",
+      "pause": 400
+    },
+    {
+      "text": "It does not stop them from using the identity now. Until a rotation settles, the stolen keys are the current authority, and no validator can tell them from the owner. Worse, on main today Close is a current-controller operation, so a thief can burn the checkpoint and send the escrow to an address the signed message names.",
+      "pause": 400
+    },
+    {
+      "text": "The accepted design closes both halves of that, and Compromise of the current keys works the case through in full.",
+      "pause": 400
+    }
+  ],
+  "next-key-theft": [
+    {
+      "text": "Next-key theft.",
+      "pause": 500
+    },
+    {
+      "text": "Theft of the committed successor private keys, or total loss of all current and reserve keys, is not solved here and cannot be. Those are KERI key-management and recovery problems, and by the projection law the chain follows KERI's verdict rather than overruling it.",
+      "pause": 400
+    }
+  ],
+  "discovery-lag": [
+    {
+      "text": "Discovery lag.",
+      "pause": 500
+    },
+    {
+      "text": "Cardano cannot react to a KERI event nobody has submitted. Between KERI publication and a settled advance, an application may still see the old checkpoint. High-value applications must state how they monitor KERI and how fresh a checkpoint must be. The accepted design turns that from advice into two mechanisms: the pool of advance funds that pays a hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one) to be prompt, and the juvenility window (the age a checkpoint must reach before a consumer trusts it) W that a consumer enforces.",
+      "pause": 400
+    }
+  ],
+  "scale": [
+    {
+      "text": "Scale.",
+      "pause": 500
+    },
+    {
+      "text": "The two-key fixture fits production protocol limits. The real three-of-seven GLEIF shape has not completed the vertical ladder and is expected to exceed current mainnet execution limits in later operations. Epic #321 measures that gap; it is not assumed away.",
+      "pause": 400
+    }
+  ],
+  "what-the-accepted-design-guarantees": [
+    {
+      "text": "What the accepted design guarantees.",
+      "pause": 500
+    },
+    {
+      "text": "Each item below is a theorem in lean/CardanoKeri/Checkpoint.lean, playable in the checkpoint simulator, and unbuilt on chain.",
+      "pause": 400
+    }
+  ],
+  "the-consumers-predicate": [
+    {
+      "text": "The consumer's predicate.",
+      "pause": 500
+    },
+    {
+      "text": "The one thing outside the machine. A consumer authorizes iff:",
+      "pause": 400
+    },
+    {
+      "text": "and, once validity ships, now ≤ valid_until. It fails closed on absent, frozen, poisoned, juvenile, convicted and parked. Frozen is a value-level fact, not a flag: a frozen checkpoint is missing B.",
+      "pause": 400
+    },
+    {
+      "text": "What the predicate cannot know is whether the owner rotated on KERI an hour ago and no hunter has landed it yet. That is what the pool is for.",
+      "pause": 400
+    }
+  ],
+  "trust-and-responsibility-boundaries": [
+    {
+      "text": "Trust and responsibility boundaries.",
+      "pause": 500
+    }
+  ],
+  "keri-witnesses": [
+    {
+      "text": "KERI witnesses.",
+      "pause": 500
+    },
+    {
+      "text": "For an identity with toad > 0, the system assumes the configured KERI witness threshold provides meaningful public acceptance. The validator checks the receipts; it cannot make a colluding witness quorum honest. The threshold's assumptions are KERI's witness agreement algorithm and witnessing policy.",
+      "pause": 400
+    },
+    {
+      "text": "An identity may choose toad = 0. That weaker mode carries no witness receipts at all, so the checkpoint accepts signature-only advances for it. It is served at the consumer's risk: toad is on the consumer surface precisely so an application requiring public KERI acceptance can reject such identities by policy.",
+      "pause": 400
+    },
+    {
+      "text": "A colluding quorum at or above toad can do one thing worse than lying about liveness: it can receipt two rotations at one sequence. That is exactly the duplicity a conviction proves, and it is why the conviction's exposure is bounded by D_reg and by the witness set the controller chose.",
+      "pause": 400
+    }
+  ],
+  "relayers-and-hunters": [
+    {
+      "text": "Relayers and hunters.",
+      "pause": 500
+    },
+    {
+      "text": "Relayers and hunters are untrusted submitters. They may censor their own service, delay submission, or pay fees strategically. They cannot fabricate valid signatures, receipts, preimages, or conflicts, and they cannot choose a different valid successor. See the hunter.",
+      "pause": 400
+    },
+    {
+      "text": "Permissionless submission gives other parties the ability to relay the same public truth. It does not guarantee inclusion against block-level censorship.",
+      "pause": 400
+    },
+    {
+      "text": "Permissionlessness has one price, and it is stated rather than hidden: because the chain cannot tell the controller from a relayer, the first registration of an AID, or a resurrection using a public rotation whose keys have leaked, can be made by a stale-key holder who advances only to their own epoch. The window is bounded by juvenility, closed by any advance to the tip, and the attacker's bonds are then the controller's — a stale registration is a donation. Removing the residual would mean removing the relayer.",
+      "pause": 400
+    }
+  ],
+  "indexers": [
+    {
+      "text": "Indexers.",
+      "pause": 500
+    },
+    {
+      "text": "An indexer maps the AID-derived policy and asset name to a candidate UTxO reference. The consuming transaction revalidates the token, script, datum, AID, sequence, and state against the ledger.",
+      "pause": 400
+    },
+    {
+      "text": "A stale reference points to a spent output and rejects. A false reference does not match. An unavailable indexer affects liveness only.",
+      "pause": 400
+    }
+  ],
+  "the-registry": [
+    {
+      "text": "The registry.",
+      "pause": 500
+    },
+    {
+      "text": "Registrations, reopens, closes and convictions are requests that anyone may apply in batches; a stalled registry delays them and forges nothing. Rotations, poisons, freezes and top-ups never touch it, so an identity's ordinary life does not depend on it at all. Consumers never touch it.",
+      "pause": 400
+    }
+  ],
+  "full-kel-history": [
+    {
+      "text": "Full KEL history.",
+      "pause": 500
+    },
+    {
+      "text": "The checkpoint stores current state, not the complete KEL. Off-chain software discovers and preserves the history, detects conflicts, and constructs evidence. The on-chain observer validates the specific event and proof used by the transition.",
+      "pause": 400
+    }
+  ],
+  "cardano-settlement": [
+    {
+      "text": "Cardano settlement.",
+      "pause": 500
+    },
+    {
+      "text": "The poison and the conviction are prospective containment. They cannot reverse a Cardano transaction that already settled under an older key state. This is why witness receipts are checked during advance before new keys become active, and why each application still needs a freshness policy for unseen off-chain events.",
+      "pause": 400
+    }
+  ],
+  "threat-summary": [
+    {
+      "text": "Threat summary.",
+      "pause": 500
+    },
+    {
+      "text": "The Result column marks whether the response ships today or is designed.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "trust-model.md",
+    "sha256": "3b62c0faea8d0235b9c753793195c989fdf22013c712d77c6ab231cd4f85eb30"
+  }
+}

@@ -1,0 +1,386 @@
+{
+  "identity-on-cardano-narrative-slide-deck-brief": [
+    {
+      "text": "Identity on Cardano — narrative slide-deck brief.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "pause": 400
+    },
+    {
+      "text": "Create a 13-slide, 16:9 (1920×1080) presentation titled “Keep the identity you already trust.” It explains what cardano-keri's first milestone—the identity core—enables by following one composite pilot organization through a complete story. This is not a feature catalogue and not a roadmap presentation.",
+      "pause": 400
+    },
+    {
+      "text": "The project plan calls this Milestone 1 (M1) internally. Never use a bare milestone code such as M1, M2, or M3 as audience-facing copy. Name the capability instead: “identity core,” “credential-chain verification,” or “wallet signing.” Milestone codes may appear in speaker notes after the capability has been named.",
+      "pause": 400
+    },
+    {
+      "text": "The audience includes technical peers and prospective pilot counterparties. They may understand keys and signatures but should not need prior KERI knowledge. The tone is welcoming, concrete, and deliberately unhyped. Write as if explaining the project to a capable new collaborator: lead with the human outcome, then introduce the protocol term that makes it possible.",
+      "pause": 400
+    }
+  ],
+  "the-editorial-rule": [
+    {
+      "text": "The editorial rule.",
+      "pause": 500
+    },
+    {
+      "text": "Use one protagonist throughout:",
+      "pause": 400
+    },
+    {
+      "text": "Northstar (clearly labelled “composite pilot”) already operates a standard E-prefix Blake3 KERI AID in a Veridian-compatible environment. A 2-of-3 board controls its current keys, successor material is held separately, and a configured KERI witness threshold receipts accepted events. Northstar wants one Cardano record controlled by that identity. It refuses to re-issue the identity, pin a fixed hot key, or introduce a custodian into the operating path.",
+      "pause": 400
+    },
+    {
+      "text": "Every capability must advance Northstar’s journey:",
+      "pause": 400
+    },
+    {
+      "text": "need → register → use → rotate → recover → trust",
+      "pause": 400
+    },
+    {
+      "text": "Do not introduce a “cast of six personas” slide. Watchers, auditors, issuers, and dApp authors appear only when Northstar’s story creates a concrete job for them.",
+      "pause": 400
+    },
+    {
+      "text": "Every story slide contains:",
+      "pause": 400
+    },
+    {
+      "text": "a persona/time kicker;",
+      "pause": 300
+    },
+    {
+      "text": "a plain-language outcome title;",
+      "pause": 300
+    },
+    {
+      "text": "one or two complete, conversational sentences explaining why the outcome matters to that person or team;",
+      "pause": 300
+    },
+    {
+      "text": "one diagram or one three-column strip;",
+      "pause": 300
+    },
+    {
+      "text": "at most three factual proof points;",
+      "pause": 300
+    },
+    {
+      "text": "the journey line with the current stage highlighted;",
+      "pause": 300
+    },
+    {
+      "text": "speaker notes that state the accuracy boundary.",
+      "pause": 300
+    }
+  ],
+  "status-language": [
+    {
+      "text": "Status language.",
+      "pause": 500
+    },
+    {
+      "text": "Never blur delivered contract work with the remaining identity-core build.",
+      "pause": 400
+    },
+    {
+      "text": "MERGED + BYTE-TESTED: the frozen E-native wire contract and its independent Haskell/Aiken vectors and checks.",
+      "pause": 300
+    },
+    {
+      "text": "SHIPS WITH THE IDENTITY-CORE MILESTONE: the validator state machine, registration/advance wiring, mandatory witness-receipt checks (witness-set changes validated against the incoming set), freeze/narrow-conviction paths, and runnable devnet acceptance demo.",
+      "pause": 300
+    },
+    {
+      "text": "BUILT IN LATER MILESTONES: credential-chain verification, general authorization envelopes, KERI-wallet signing UX, delegated AIDs, and superseding recovery.",
+      "pause": 300
+    },
+    {
+      "text": "Do not use “implemented” as a blanket deck-level adjective.",
+      "pause": 400
+    }
+  ],
+  "language-system": [
+    {
+      "text": "Language system.",
+      "pause": 500
+    },
+    {
+      "text": "Use complete sentences. Avoid stacks of slogan fragments such as “Compare. Prove. Get paid.”",
+      "pause": 300
+    },
+    {
+      "text": "Prefer everyday verbs: “bring,” “find,” “read,” “update,” “pause,” “recover,” and “retire.” Put exact protocol verbs such as mint, freeze, convict, reap, and close in the supporting explanation.",
+      "pause": 300
+    },
+    {
+      "text": "Define an acronym the first time it appears. For example: “the public KERI event log (KEL).”",
+      "pause": 300
+    },
+    {
+      "text": "Do not assume the audience knows AID, KEL, TEL, CIP-31, n, nt, or kt. Explain the job first; show the identifier second.",
+      "pause": 300
+    },
+    {
+      "text": "Security slides should reassure the audience by showing the protection and recovery path. Avoid theatrical language such as “identity death” or “lying is fatal.”",
+      "pause": 300
+    },
+    {
+      "text": "Proof points are short supporting sentences, not isolated technical nouns.",
+      "pause": 300
+    }
+  ],
+  "visual-system": [
+    {
+      "text": "Visual system.",
+      "pause": 500
+    },
+    {
+      "text": "Warm-white background #f7f6f1; alternate background #eef4f2.",
+      "pause": 300
+    },
+    {
+      "text": "Panels #ffffff or soft teal #e7f2ef; 1px borders #ccd9d5; 14px radius; subtle low-contrast shadows.",
+      "pause": 300
+    },
+    {
+      "text": "Text #21343a; muted #53666b; dim #718187.",
+      "pause": 300
+    },
+    {
+      "text": "Teal #207f7a / #126a66; amber #a86b16; danger #b44d43.",
+      "pause": 300
+    },
+    {
+      "text": "IBM Plex Sans for prose; IBM Plex Mono for labels, code, status, and proof points.",
+      "pause": 300
+    },
+    {
+      "text": "Titles 56–60px, weight 600, tight tracking. Body 27–30px. Labels 18–22px.",
+      "pause": 300
+    },
+    {
+      "text": "Generous whitespace. No stock photos, decorative illustrations, gradients pretending to be content, or walls of cards.",
+      "pause": 300
+    },
+    {
+      "text": "Use teal for valid/current paths, amber for boundaries or lag, and pale red only for an actual rejected action or permanent conviction. The overall deck should feel open and calm, not like a security incident dashboard.",
+      "pause": 300
+    },
+    {
+      "text": "The checkpoint asset should be the recurring visual anchor: its identity is stable while its key-state datum changes.",
+      "pause": 300
+    }
+  ],
+  "accuracy-rules": [
+    {
+      "text": "Accuracy rules.",
+      "pause": 500
+    },
+    {
+      "text": "The following claims are fixed:",
+      "pause": 400
+    },
+    {
+      "text": "M1 is E-native. Standard Blake3 E-prefix AIDs register without re-issuance or a Cardano-specific identity flavor.",
+      "pause": 300
+    },
+    {
+      "text": "One AID corresponds to one quantity-one checkpoint token. The asset name is deterministically derived from the AID and is stable across rotations.",
+      "pause": 300
+    },
+    {
+      "text": "The datum carries raw current keys, current threshold, exact KERI n/nt next commitment, witnesses/threshold, Cardano sequence, and native KERI event sequence. Raw current keys make normal authorization zero-hash.",
+      "pause": 300
+    },
+    {
+      "text": "Integer and fractionally weighted multi-clause thresholds are represented; zero weights are valid where KERI permits them. Production GLEIF/QVI shapes round-trip.",
+      "pause": 300
+    },
+    {
+      "text": "Rotation enforces the KERI dual-threshold rule and supports partial reserve revelation. The live GLEIF Root shape reveals 3 of 7 committed keys and carries reserves forward.",
+      "pause": 300
+    },
+    {
+      "text": "Each revealed successor key costs one Blake3 block, measured at 3.6% CPU and 4.5% memory of a transaction budget. Plain authorization performs no hash.",
+      "pause": 300
+    },
+    {
+      "text": "A holder of every current key still cannot rotate without the pre-committed successor material. This negative case exists in both implementations.",
+      "pause": 300
+    },
+    {
+      "text": "For a checkpoint with toad > 0, every V1 advance additionally requires the configured KERI witness threshold's receipts over the anchoring event. Valid controller signatures and elapsed time never replace those receipts. A witness-set change is validated against the incoming set (KERI's br/ba/bt delta, no outgoing endorsement); an already witnessless (toad = 0) checkpoint is an explicit weaker mode.",
+      "pause": 300
+    },
+    {
+      "text": "For inception events up to 1024 bytes, the hash-proof path verifies blake3(inception_event) == AID on-chain. This covers observed registering production shapes below GLEIF-Root scale.",
+      "pause": 300
+    },
+    {
+      "text": "Do not overclaim genesis trust. The hash proof trustlessly binds the event bytes to the AID, and the signed registration package proves key possession; semantic projection of CESR fields into the datum remains the explicit attested registration boundary with challenge/freeze.",
+      "pause": 300
+    },
+    {
+      "text": "A dApp resolves the checkpoint by (policy_id, aid_asset_name), includes it as a CIP-31 reference input, and revalidates asset, quantity, datum, version, lineage, and active/freeze rules against the ledger. An indexer affects liveness only.",
+      "pause": 300
+    },
+    {
+      "text": "The third attack is prevented at advance time: without the configured witness receipts, proposed Cardano keys never become active and therefore cannot authorize an action that a later burn would be unable to roll back.",
+      "pause": 300
+    },
+    {
+      "text": "A witnessed later KERI event can freeze a lagging checkpoint until it advances; freeze is permissionless and is not paid from the identity deposit by default.",
+      "pause": 300
+    },
+    {
+      "text": "Permanent conviction is restricted to a V1-independent-AID conflict proved irreconcilable under supported KERI rules. The conflicting establishment rotation must satisfy both the pre-committed controller threshold and the applicable witness-receipt threshold. The existing quantity-one token is burned — the conviction is recorded in the convict transaction, in history, not in a tombstone UTxO. Recoverable or ambiguous evidence freezes instead. Only successful conviction pays the prover from the deposit.",
+      "pause": 300
+    },
+    {
+      "text": "M1 also includes KEL replay/dual-root reconstruction, lifecycle with conviction/retirement records discoverable in transaction history, and a per-issuer TEL revocation-status registry.",
+      "pause": 300
+    },
+    {
+      "text": "The wire contract is frozen and byte-tested across Haskell (195 tests) and Aiken (157 checks).",
+      "pause": 300
+    },
+    {
+      "text": "The M1 acceptance demo is a runnable local-devnet terminal cast: incept a witnessed 2-of-3 identity, write an owned leaf, collect threshold receipts and rotate, then reject both a controller-signed receipt-free Cardano-first advance and a stolen-current-quorum rotation attempt.",
+      "pause": 300
+    }
+  ],
+  "slide-sequence": [
+    {
+      "text": "Slide sequence.",
+      "pause": 500
+    },
+    {
+      "text": "Keep the identity you already trust. Establish that this is one pilot story. Define the first milestone as the identity core. Show the two status chips: wire merged/byte-tested; the first milestone adds the validator and enforcement.",
+      "pause": 300
+    },
+    {
+      "text": "Meet Northstar: a team with an identity already in use. Introduce Northstar’s existing AID, governance, concrete need, and non-negotiables.",
+      "pause": 300
+    },
+    {
+      "text": "Bring your existing identity—no conversion required. Show existing inception event → ≤1024-byte hash proof → sovereign quantity-one checkpoint. Include the honest semantic-projection boundary in amber.",
+      "pause": 300
+    },
+    {
+      "text": "Give apps one stable name for your organization. Make the checkpoint asset the fixed visual object and show the datum fields that advance.",
+      "pause": 300
+    },
+    {
+      "text": "Keep the approval rules your team already uses. Show Northstar’s 2-of-3 rule, then the wider weighted/multi-clause/zero-weight compatibility.",
+      "pause": 300
+    },
+    {
+      "text": "Your records stay under the right control. Show a real Cardano record authorized against the current checkpoint and unchanged after rotation. Keep the concrete MPFS value-cage implementation in the speaker notes, not in audience-facing copy: it is one consumer of the identity core, not part of the identity itself.",
+      "pause": 300
+    },
+    {
+      "text": "Update keys directly—with public KERI confirmation. Explain the KERI dual-threshold rule, mandatory witness receipts, no signature-only timeout fallback, partial reserve rotation, and measured per-reveal cost.",
+      "pause": 300
+    },
+    {
+      "text": "Losing today’s keys does not mean losing the identity. This is the climax. Show “intruder has every current key → cannot choose tomorrow’s keys” versus “owner reveals committed successor keys → recovers the same identity.” State the next-material loss boundary.",
+      "pause": 300
+    },
+    {
+      "text": "Apps always read the keys that are valid now. Show asset lookup → CIP-31 reference → ledger revalidation. State that stale indexers delay but cannot forge, and frozen state fails closed.",
+      "pause": 300
+    },
+    {
+      "text": "Public checks keep Cardano and KERI in sync. Three columns: Cardano tries to move first without receipts → reject before activation; KERI moved first → pause without a conviction bounty; irreconcilable, controller-threshold-signed and witness-threshold-receipted V1 rotations → burn the same token and pay the conviction prover. State that recoverable or ambiguous evidence freezes rather than destroys the AID.",
+      "pause": 300
+    },
+    {
+      "text": "The same public evidence supports useful services. Watcher: keep the two histories aligned. Auditor: build reports from replayable facts. Issuer: publish per-issuer credential status. Explicitly scope full credential-chain verification to the next verification milestone; map it to M2 only in the notes.",
+      "pause": 300
+    },
+    {
+      "text": "The end-to-end demo shows the complete journey. Register → create a record → collect receipts and update keys → reject both Cardano-first and stolen-key attempts. Show 195 Haskell tests / 157 Aiken checks as contract evidence, not as a substitute for the devnet demo.",
+      "pause": 300
+    },
+    {
+      "text": "What this foundation proves—and what comes next. Two columns: delivered by the identity core versus built on top later. Keep M2/M3/M5 mappings in speaker notes. Close with a specific pilot invitation: “Bring an existing KERI identity, one Cardano record it should control, and a clear freshness policy.” Link to the official long-form engineering article for readers who want the design reversals, measurements, and threat model.",
+      "pause": 300
+    }
+  ],
+  "final-quality-gate": [
+    {
+      "text": "Final quality gate.",
+      "pause": 500
+    },
+    {
+      "text": "Reject the output and revise if any of these are true:",
+      "pause": 400
+    },
+    {
+      "text": "the slides can be reordered without breaking the narrative;",
+      "pause": 300
+    },
+    {
+      "text": "Northstar disappears for more than two consecutive slides;",
+      "pause": 300
+    },
+    {
+      "text": "a slide is primarily a list of features rather than a decision, action, failure, or consequence;",
+      "pause": 300
+    },
+    {
+      "text": "“trustless registration” is used without separating byte binding from semantic projection;",
+      "pause": 300
+    },
+    {
+      "text": "a bare milestone code appears in visible audience-facing copy;",
+      "pause": 300
+    },
+    {
+      "text": "M1 validator work is presented as already merged;",
+      "pause": 300
+    },
+    {
+      "text": "a witnessed advance is shown succeeding with controller signatures alone or through a timeout fallback;",
+      "pause": 300
+    },
+    {
+      "text": "conviction is shown without both controller-threshold signatures and threshold witness receipts, or as rollback of an already-settled Cardano action;",
+      "pause": 300
+    },
+    {
+      "text": "a technical term appears before the user need that makes it relevant;",
+      "pause": 300
+    },
+    {
+      "text": "any slide contains more than one main visual or more than three proof points;",
+      "pause": 300
+    },
+    {
+      "text": "the 2-of-3 attack/recovery sequence is not the visual climax;",
+      "pause": 300
+    },
+    {
+      "text": "the final slide is a generic “thank you” instead of an honest scope and pilot invitation.",
+      "pause": 300
+    },
+    {
+      "text": "the final slide and the engineering article do not link to one another.",
+      "pause": 300
+    }
+  ],
+  "_source": {
+    "file": "PROMPT.md",
+    "sha256": "f5d82626835eec56ca36d018d7c3b8131173a6d012ed2c565d5418d3c1883c9d"
+  }
+}

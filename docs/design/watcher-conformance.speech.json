@@ -1,86 +1,294 @@
 {
-  "_source": {
-    "file": "watcher-conformance.md",
-    "sha256": "580c7a5db9bd5b6d7d0be949ae8d1902f6224bdef5bbf2c096c88a340d9f3590"
-  },
   "the-consumer-story": [
     {
-      "text": "A consumer needs to preserve accepted history, follow valid recovery, and see limits in observation. The review identifies the contract between checkpoints, observers, consumers, and financial actions. It also shows that tip-only conviction has no guaranteed intervention interval: another rotation or close can immediately make earlier evidence unusable."
+      "text": "The consumer story.",
+      "pause": 500
+    },
+    {
+      "text": "A Cardano application uses a checkpoint to recognize an external identity. It needs to keep its accepted history when someone later acquires old keys, accept permitted KERI recovery, and learn about conflicts that affect its decisions. When evidence is missing, the application needs to see that limitation rather than mistake a quiet checkpoint for a globally uncontested or current KEL.",
+      "pause": 400
+    },
+    {
+      "text": "Review result, 11 September 2026: KERI specifies first-seen processing, validation, and recovery. Our current predicates cover a narrower checkpoint service. The missing work is an explicit contract connecting observation, retained history, conflict reporting, consumer policy, and financial actions. The checkpoint predicate alone does not establish watcher conformance.",
+      "pause": 400
+    },
+    {
+      "text": "The subsequent double-rotation review also identifies an economic gap: evidence can be admissible at one tip and become unusable before an observer can act. The model provides no guaranteed challenge interval; both another rotation and close can move the target immediately. See Rapid rotation and the challenge interval.",
+      "pause": 400
+    },
+    {
+      "text": "This is a design review and proposed acceptance criteria, not a replacement product ruling or a claim that a deployed watcher has been certified. It reviews invariants and executable behavior; it does not complete Lean proofs.",
+      "pause": 400
     }
   ],
   "sources-and-scope": [
     {
-      "text": "The review fixes a Cardano KERI commit and a source snapshot of KERI version one point one. KERIpy is an implementation comparison, not the specification authority. No production watcher or GLEIF deployment was tested."
+      "text": "Sources and scope.",
+      "pause": 500
+    },
+    {
+      "text": "The specification is attributed above under its copyright terms. Clause references below point to the fixed source, including its validation and recovery material in Annex A. TEL observations below concern this repository's mirror and credential models; this is not a complete TEL or vLEI conformance review. No production network or GLEIF deployment was tested.",
+      "pause": 400
     }
   ],
   "the-boundary-we-need-to-specify": [
     {
-      "text": "Events enter validation before they can affect accepted history. First seen and recovery determine that history; conflicting evidence has a separate path to consumers and financial predicates. The diagram shows responsibilities to assign, not a completed deployment. Our acceptance order cannot establish the private order of another observer."
+      "text": "The boundary we need to specify.",
+      "pause": 500
+    },
+    {
+      "text": "The diagram describes responsibilities the design must assign. It does not assert that every box is implemented or requires its own service.",
+      "pause": 400
+    },
+    {
+      "text": "First-seen means first accepted under the validation rules, not the first unverified packet. It belongs to the observing KEL copy. Different observers can have different acceptance ordinals. An observer cannot replace its accepted rotation with a later conflicting rotation merely because the later submitter has valid old keys. The specified recovery exceptions still apply. See First Seen Policy and Superseding Recovery.",
+      "pause": 400
+    },
+    {
+      "text": "Cardano can record the order in which its own projection accepts observations. That cannot recover a witness's private arrival order or establish the globally earliest version. Nor is the current checkpoint advance counter automatically the KERI first-seen ordinal: it does not enumerate every accepted event.",
+      "pause": 400
     }
   ],
   "specification-to-implementation-map": [
     {
-      "text": "The table maps twelve boundaries. Current code checks a narrow same-tip financial conflict, including witness receipts. It does not alone establish full event comparison, retained observation history, recovery replay, peer coverage, or credential freshness. Historical evidence retention is distinct from historical automatic conviction. Parent approval comparisons also need exact event identity at their interface."
+      "text": "Specification to implementation map.",
+      "pause": 500
+    },
+    {
+      "text": "“Source gap” below means the inspected representation or contract does not establish the invariant. It is not an executed exploit or a claim that no other component could provide it. Only the explicitly named test boundaries have execution evidence in this review.",
+      "pause": 400
+    },
+    {
+      "text": "Tip-only conviction is not by itself a conformance defect. Broadening it to every historical fork would create a new denial-of-service and funding policy, and would not by itself implement a watcher. Conversely, retaining a valid historical conflict for inspection need not overwrite history or seize a bond.",
+      "pause": 400
+    },
+    {
+      "text": "The distinction matters for a late compromise: when the witness requirement applies, historical controller keys alone do not establish the required receipt quorum. Even a subsequently forged, sufficiently witnessed alternate history does not erase a retained proper history. KERI discusses this explicitly under dead exploits. Handling the resulting trust decision remains separate from changing the accepted event.",
+      "pause": 400
     }
   ],
   "the-specification-has-a-trust-text-tension": [
     {
-      "text": "The overview requires withholding trust until duplicity is reconciled, while later text gives a validator discretion to continue trusting its original copy. A profile must state its interpretation. Neither passage specifies Cardano bond confiscation. Validation, preservation of accepted history, and recovery still give us concrete rules to implement."
+      "text": "The specification has a trust-text tension.",
+      "pause": 500
+    },
+    {
+      "text": "The overview uses MUST language for trusting when no duplicity is known and withholding trust until duplicity is reconciled. The Duplicity section uses SHOULD for withholding trust. KAWA Advantages then explicitly gives the validator discretion to retain its original copy as authoritative and continue trusting it, or stop trusting the identifier.",
+      "pause": 400
+    },
+    {
+      "text": "These passages cannot support our current blanket assertion that KERI requires every proven establishment conflict to produce permanent loss of trust. They also do not justify silently interpreting first-seen as unconditional continued trust. A conformance profile must state the applicable scope and interpretation; upstream clarification of these passages remains an open question.",
+      "pause": 400
+    },
+    {
+      "text": "The unambiguous obligations remain useful now: validate before acceptance, preserve first-seen history, apply specified recovery, and distinguish the accepted copy from a later conflict. None of the cited clauses specifies a Cardano bond recipient, sponsor liability, or an irreversible payout.",
+      "pause": 400
     }
   ],
   "what-keripy-shows-in-practice": [
     {
-      "text": "The inspected KERIpy code separates recorded events, likely conflict escrow, first-seen records, and watcher mismatch cues. One duplicity function is a placeholder. That observation cannot support a claim about every production deployment. We still need an explicit service for obtaining and exposing evidence."
+      "text": "What KERIpy shows in practice.",
+      "pause": 500
+    },
+    {
+      "text": "The pinned implementation provides concrete examples of some of these boundaries:",
+      "pause": 400
+    },
+    {
+      "text": "Event processing distinguishes an already recorded event, permitted progression or recovery, and a likely conflicting version.",
+      "pause": 300
+    },
+    {
+      "text": "Likely-duplicitous escrow stores event material for further processing. Retry processing can retain or expire the escrow entry; expiration of that index is not evidence that all raw event bytes disappear.",
+      "pause": 300
+    },
+    {
+      "text": "Database definitions distinguish event storage, first-seen ordinals, and likely or confirmed duplicity indexes. Merely possessing event bytes is not the same as having accepted that event as first-seen.",
+      "pause": 300
+    },
+    {
+      "text": "Watcher adjudication emits mismatch cues from compared watcher key states. Such a cue is not, by itself, the complete signed conflicting history needed by our financial predicate.",
+      "pause": 300
+    },
+    {
+      "text": "There is also a duplicity() placeholder in this snapshot. That prevents treating that particular function as evidence of a completed adjudication path. It does not establish that every watcher implementation or production deployment lacks duplicity handling. No KERIpy runtime or deployed watcher was exercised in this review.",
+      "pause": 400
+    },
+    {
+      "text": "KERI describes retaining and serving conflicting evidence as the optional juror role, and allows witness dissemination policies to vary. We must specify the evidence retrieval and notification service on which our consumers rely; there is no basis here for assuming every witness broadcasts every conflict. See the watcher overview and witnessing policy.",
+      "pause": 400
     }
   ],
   "decisions-and-unresolved-alternatives": [
     {
-      "text": "Preserve our first-seen history and permitted recovery. History storage placement, trust after conflict, and financial consequences need explicit decisions. Keep the requirement for sponsor-funded freeze and prepaid recovery, while defining ownership and protection against farming. Existing design tickets cover the economic follow-up."
+      "text": "Decisions and unresolved alternatives.",
+      "pause": 500
+    },
+    {
+      "text": "Existing design tickets provide the economic follow-up: shared-root sponsorship, locked unfreeze funding, sponsor protection against farming and closure, and TEL incentives and freshness. The watcher contract belongs with the off-chain commands and hunter work and its consumers. These are proposed mappings to existing work, not claims that those tickets already implement the criteria in this review.",
+      "pause": 400
     }
   ],
   "required-behavioral-scenarios": [
     {
-      "text": "Eleven scenarios cover old-key attacks, conflicting rotations, recovery, parent approval identity, bootstrap, missing evidence, dormant conviction, and economic capabilities. The table distinguishes source gaps, model execution, and the complete observer scenarios that remain unverified."
-    }
-  ],
-  "verification-and-limits": [
+      "text": "Required behavioral scenarios.",
+      "pause": 500
+    },
     {
-      "text": "The original thirty-one enforcement tests passed and a receipt-guard mutation caused two intended failures. Eight later model checks examined the gist’s payoff and dormant-conviction claims. Twelve further checks exercised rapid rotation and close escape. No new theorem proofs or full same-block attack transaction were supplied, and proposed cooldown or bounded-retention designs remain unimplemented."
-    }
-  ],
-  "documentation-corrections-to-carry-forward": [
-    {
-      "text": "Correct claims that first seen belongs only to witnesses, that a smaller datum removes observation assumptions, or that KERI mandates terminal bond confiscation. Document the actual narrow conviction predicate and assumptions behind receipt-based branch binding. The next acceptance point is an observer profile with executable event traces and named providers of evidence and payments."
+      "text": "Each scenario needs the real observer input and output interface once that interface is specified. A Boolean evidence oracle or a unit test of the financial predicate cannot close the whole scenario.",
+      "pause": 400
     }
   ],
   "cross-check-against-the-incentive-gist": [
     {
-      "text": "The gist adds useful dormant-conviction and quorum-intersection findings. Its broad claim of faithful juror implementation is not established, and several financial arguments compare actors with different keys or funding ownership."
+      "text": "Cross-check against the incentive gist.",
+      "pause": 500
+    },
+    {
+      "text": "The gist strengthens the review with dormant-conviction and quorum intersection analysis. Its broad verdict that the incentive machine faithfully implements the juror role is not established. Several financial conclusions depend on ownership and key capabilities that it does not hold fixed.",
+      "pause": 400
     }
   ],
   "agreements-and-corrections": [
     {
-      "text": "Dormant conviction has no policy expiry in the model. Low witness thresholds can admit disjoint honest quorums. But checking one witness set is not always stricter than checking another. A losing attacker may earn a conviction bounty without the next keys required for close. Sponsorship also defeats the assumption that self-conviction merely returns the issuer’s own funds. Concrete dormant commitment encoding remains a refinement obligation, not an established deployed exploit."
+      "text": "Agreements and corrections.",
+      "pause": 500
     }
   ],
   "pin-the-specification-profile": [
     {
-      "text": "The gist mixes an expired Internet Draft, the whitepaper, and the current specification. Their event-location terminology must remain versioned. Receipt checks need to distinguish the previous set, the accepted branch’s set, and the rival branch’s set. Quorum intersection depends on an assumed bound on faulty witnesses; observing a threshold does not establish that bound."
+      "text": "Pin the specification profile.",
+      "pause": 500
+    },
+    {
+      "text": "The gist combines sources with different terminology. In the reviewed KERI version, event location is native sequence number within the AID's KEL. The whitepaper, section 11.2, includes prior digest when discussing location and distinguishes event classes. These should be recorded as versioned definitions, not merged into one unqualified definition or used to weaken event comparison silently. The gist's IETF terminology comes from an expired informational Internet-Draft, not an adopted RFC.",
+      "pause": 400
+    },
+    {
+      "text": "The whitepaper's section 11.5 requires sufficient receipts from the new set and also discusses additional confirmation from the previous set. Our advance code counts against the derived incoming set; conviction counts against the accepted tip. The three contexts—previous, accepted sibling, and candidate sibling—must not be collapsed into “old versus new.” A profile must identify its chosen witness-rotation rules and bind every receipt index to the correct set.",
+      "pause": 400
+    },
+    {
+      "text": "For a common fixed witness set, requiring 2*M > N + F forces any two sufficient quorums to share more than F witnesses. With at most F faulty witnesses, that prevents two incompatible quorums under the assumed honest first-seen behavior. The whitepaper's equation 11.16 also supplies the availability constraint M <= N - F. A consumer can inspect N and M; it cannot infer the actual number of faulty witnesses from those two values. These assumptions are not a global absence certificate.",
+      "pause": 400
     }
   ],
   "executed-cross-checks-and-remaining-obligations": [
     {
-      "text": "Eight checks passed against the unchanged checkpoint model, covering reachable close, freeze, conviction, and dormant states with explicit evidence capabilities. A separate arithmetic check examined four thousand six hundred ninety-nine receipt-set pairs across twenty-eight configurations. Neither constructs cryptographic attack evidence. The remaining work is to authenticate dormant context, decide late-evidence policy, analyze rewards under fixed actor capabilities, and exercise witness changes through the real transaction path."
+      "text": "Executed cross-checks and remaining obligations.",
+      "pause": 500
+    },
+    {
+      "text": "Eight checks in GistProbe.lean import the unchanged production CardanoKeri.Checkpoint module. They build states through registration, advance, close, and freeze. All eight checks passed:",
+      "pause": 400
+    },
+    {
+      "text": "With registration bond 1000, held freeze bond 5, and remaining pool 20, an authorized close directs 1025 total to the same chosen refund and premium recipient. Without the next rotation evidence, close is refused.",
+      "pause": 300
+    },
+    {
+      "text": "In that latter capability state, conviction evidence still pays 1000 to the convictor, with 25 returned to the existing refund address.",
+      "pause": 300
+    },
+    {
+      "text": "A frozen close returns the registration bond and remaining pool, without returning the freeze bond already paid out.",
+      "pause": 300
+    },
+    {
+      "text": "A reachable parked state refuses conviction without evidence, accepts it with evidence at times 20 and 1,000,000,000,000, and cannot reopen after conviction.",
+      "pause": 300
+    },
+    {
+      "text": "These execute model policy with explicit environmental capabilities. They do not construct attacker signatures, prove that a dormant commitment is malformed, or run a Cardano transaction. The distant-time example illustrates the absence of a policy age guard; it does not measure the practical cost of compromising keys or obtaining receipts.",
+      "pause": 400
+    },
+    {
+      "text": "The set-arithmetic check enumerated 4,699 pairs of receipt sets across 28 configurations, with one through seven witnesses, confirming the overlap bound and its fault-threshold condition. Its results also exhibit both directions of non-implication between tip and rival receipt checks. These are arithmetic counterexamples to the claimed “stricter” relation, not signed end-to-end conviction vectors.",
+      "pause": 400
+    },
+    {
+      "text": "The added invariant work is therefore concrete: authenticate dormant verification context; decide the effect of late evidence on revival; compare rewards over the same actor capabilities and sponsor ownership; and test conflicting witness configurations through the actual wire and transaction path. Source pins, commands, outcomes, and hashes are in the cross-check manifest.",
+      "pause": 400
     }
   ],
   "rapid-rotation-and-the-challenge-interval": [
     {
-      "text": "A bounty can be enabled at one tip without an observer ever getting an opportunity to claim it. Twelve model checks confirm that another rotation or close at the same time can move beyond the challenged epoch, even with an empty pool. The sequence diagram shows the victim arriving after that move. These are model executions, not a complete same-block transaction test."
+      "text": "Rapid rotation and the challenge interval.",
+      "pause": 500
+    },
+    {
+      "text": "A victim or independent observer may possess a valid conflicting event and still have no scheduling opportunity to submit it. The prior payoff example showed that conviction can be enabled while the loser's close is unavailable. It did not establish a usable intervention window. This distinction changes what the bounty can credibly promise.",
+      "pause": 400
+    },
+    {
+      "text": "Twelve additional model checks, using EscapeProbe.lean, passed against the unchanged checkpoint module. Starting from registration, they exercise two rotations at the same model time, and alternatively rotation followed by close at that same time. The old rival convicts before those steps and is refused afterward. Both paths work with an empty pool and with a paying pool.",
+      "pause": 400
+    },
+    {
+      "text": "The inspected current register advance path has no general per-rotation cooldown. Its armed-state deadline is a different rule. The model also leaves an already mature checkpoint consumable after rotation: bornAt does not reset. These observations do not constitute execution of a full transaction bundle. Cardano's ledger transition processes transactions against the state updated by earlier transactions, so dependent transactions in one block must be included in the adversarial scheduling cases. That possibility defeats a guaranteed opportunity between them. It does not mean an ordinary submitter can guarantee atomic inclusion of both transactions, or that transaction fees and evidence preparation have zero cost.",
+      "pause": 400
     }
   ],
   "what-a-cooldown-would-and-would-not-establish": [
     {
-      "text": "A cooldown can hold the on-chain target, but it is symmetric and can delay honest recovery. It cannot supply evidence or guarantee transaction inclusion. Valid rivals may also have different key lists, so changing witness checks alone is insufficient. Consumers and funds need an explicit pending policy. An alternative is to allow key updates while retaining authenticated challenge targets and financial liability for a bounded interval. Neither design has been adopted here."
+      "text": "What a cooldown would and would not establish.",
+      "pause": 500
+    },
+    {
+      "text": "Refusing another on-chain establishment transition for a period can preserve a tip-only challenge target. It is an application policy over the Cardano projection. It cannot prevent the external KEL from rotating, and may delay projection of a legitimate emergency recovery. No cooldown is implemented by this review.",
+      "pause": 400
+    },
+    {
+      "text": "The invariant to decide is: while evidence remains admissible under the chosen challenge policy, advancing or closing must not erase its authenticated target or release the funds subject to that challenge. The admissibility policy must also preserve accepted first-seen history, account for legitimate recovery, and avoid an unlimited terminal penalty for every later compromise of historical keys. A clock alone does not provide that distinction; authenticated observation and an explicit late-evidence policy are needed.",
+      "pause": 400
+    },
+    {
+      "text": "Two designs deserve comparison before choosing the cooldown:",
+      "pause": 400
+    },
+    {
+      "text": "These are alternatives for design, not adopted changes. Neither supplies a victim's signatures or receipts, distinguishes the victim from a shared-key attacker, or guarantees timely inclusion. The existing economic tickets still need sponsor ownership and payout rules whichever direction is chosen.",
+      "pause": 400
+    },
+    {
+      "text": "Source identities, the model command, and artifact hashes are recorded in the escape-check manifest. The checks establish model reachability conditional on the declared evidence predicates; no full same-block attack or proposed cooldown has been executed.",
+      "pause": 400
     }
-  ]
+  ],
+  "verification-and-limits": [
+    {
+      "text": "Verification and limits.",
+      "pause": 500
+    },
+    {
+      "text": "The existing Aiken enforcement test module was run in a fresh detached worktree at the reviewed commit using the repository's compiler version, Aiken 1.1.23:",
+      "pause": 400
+    },
+    {
+      "text": "The baseline result is 31 passed, zero failed, all unit tests. Relevant controls include valid and honest witnessed events, insufficient receipts, duplicate receipt indexes, controller quorum, sequence mismatch, and wire-field binding. Some predicate tests alter decoded evidence directly; they are not all signed wire-to-settlement scenarios.",
+      "pause": 400
+    },
+    {
+      "text": "A scratch mutation disabled only the conviction receipt threshold comparison. The mutated run exited with failure: 29 passed, two failed. Both failures were the intended receipt controls: f1b_witnessed_fork_insufficient_receipts and duplicate_receipt_cannot_fake_convict_toad_two. The mutated predicate returned ConvictValid where each expected insufficient receipts. The scratch source was then restored and its tracked diff checked empty.",
+      "pause": 400
+    },
+    {
+      "text": "This establishes that those tests detect removal of that guard. It does not establish broad mutation adequacy, full transaction settlement, a maximum relay delay, evidence availability, or watcher conformance. The original review inspected Lean definitions; the gist cross-check additionally compiled the unchanged checkpoint module and executed the eight checks described above. The rapid-rotation follow-up executed twelve further model checks. No new theorem proofs were supplied and the full test suite was not rerun. Source identities, commands, test summaries, and artifact hashes are in the evidence manifest.",
+      "pause": 400
+    }
+  ],
+  "documentation-corrections-to-carry-forward": [
+    {
+      "text": "Documentation corrections to carry forward.",
+      "pause": 500
+    },
+    {
+      "text": "The next acceptance point is a written observer profile plus executable traces for the unverified scenarios above, with the provider of every event, attachment, observation record, and payment identified. Completing more theorems over an abstract duplicity predicate cannot substitute for that contract.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "watcher-conformance.md",
+    "sha256": "580c7a5db9bd5b6d7d0be949ae8d1902f6224bdef5bbf2c096c88a340d9f3590"
+  }
 }

@@ -1,0 +1,130 @@
+{
+  "dated-demo-plays": [
+    {
+      "text": "Dated demo plays.",
+      "pause": 500
+    },
+    {
+      "text": "As an integrator, I want each dated identity demo to show a real preprod result from keripy kli and ckeri, so that I can inspect the KERI event, Cardano transaction and fresh readback together.",
+      "pause": 400
+    },
+    {
+      "text": "Every dated play targets Cardano preprod. Keripy owns the identity and exports CESR; ckeri consumes that export, submits the corresponding Cardano transaction and reads its settled state. A cast is attached only after that exact preprod journey has run. An executable Lean row or a Node simulator remains design evidence and is not a demo cast for this path.",
+      "pause": 400
+    }
+  ],
+  "indexer-contract-for-the-dated-plays": [
+    {
+      "text": "Indexer contract for the dated plays.",
+      "pause": 500
+    },
+    {
+      "text": "The planned operator stack is the Cardano KERI follower and its indexed RocksDB store. The current ckeri write commands require --store PATH (or CKERI_STORE); readbacks must select --backend local --store PATH explicitly, or the indexer-backed query endpoint where that route is supported. Record the follower's chain point and freshness beside every transaction ID. A missing or stale store blocks the connected claim. The status backend guide gives the exact query syntax; its implicit default is still Koios, so a bare ckeri status is insufficient evidence for this plan.",
+      "pause": 400
+    },
+    {
+      "text": "The V1 baseline cast used the older ckeri 0.4.0 Koios path and remains an accurate historical recording. Its Koios-backed manifest verification does not certify an indexer-only future play. The current ckeri manifest verify still uses Koios for live references; #449 tracks the indexed verification and board read path. Singular's persistent registry follower is Singular #107.",
+      "pause": 400
+    }
+  ],
+  "planned-major-release-tags": [
+    {
+      "text": "Planned major release tags.",
+      "pause": 500
+    },
+    {
+      "text": "These are planned identities, not existing git tags or releases. Intermediate plays use named candidates and exact artifact hashes; the milestone tag is cut only at its release gate. The current public tags are still below v1.0.0, and the Cardano KERI release planner requires a deliberate Cabal major-version change before the first major tag.",
+      "pause": 400
+    },
+    {
+      "text": "The existing M1 release epic #328 and release child #357 still say 0.5.0. #450 tracks the reviewed version-policy reconciliation before any major tag is cut.",
+      "pause": 400
+    },
+    {
+      "text": "The deployed M1 V1 checkpoint supports a smaller preprod lifecycle. The recorded keripy and ckeri baseline shows a confirmed registration and signed close. It has no Singular registry mapping or ACDC gate. A V1 transaction therefore cannot close a later card whose story requires those features.",
+      "pause": 400
+    },
+    {
+      "text": "The Singular naming story is a parallel preprod target. Cardano KERI's identity path does not depend on naming or escrow.",
+      "pause": 400
+    }
+  ],
+  "later-targets": [
+    {
+      "text": "Later targets.",
+      "pause": 500
+    },
+    {
+      "text": "A hunter below is anyone paid to land an owner's rotation, or to freeze a checkpoint whose pool of advance funds cannot pay for one.",
+      "pause": 400
+    },
+    {
+      "text": "2026-12-07: Registry backed registration — connected target not yet playable.",
+      "pause": 300
+    },
+    {
+      "text": "2026-12-22: Register then advance — connected target not yet playable.",
+      "pause": 300
+    },
+    {
+      "text": "2027-01-06: Hunter advance and short pool — connected target not yet playable.",
+      "pause": 300
+    },
+    {
+      "text": "2027-01-21: Close and conviction — connected target not yet playable.",
+      "pause": 300
+    },
+    {
+      "text": "2027-02-05: Commands for identity roles — connected target not yet playable.",
+      "pause": 300
+    },
+    {
+      "text": "2027-02-20: Fifteen identity stories — connected target not yet playable.",
+      "pause": 300
+    },
+    {
+      "text": "2027-03-07: Preprod cutover rehearsal — connected target not yet playable.",
+      "pause": 300
+    },
+    {
+      "text": "2027-03-22: Preprod release journey — connected target not yet playable.",
+      "pause": 300
+    },
+    {
+      "text": "2027-04-06: Historical issuer keys — connected target not yet playable.",
+      "pause": 300
+    },
+    {
+      "text": "2027-04-21: TEL seal walk — connected target not yet playable.",
+      "pause": 300
+    },
+    {
+      "text": "2027-05-06: Record a revocation — connected target not yet playable.",
+      "pause": 300
+    },
+    {
+      "text": "2027-05-21: Non-revocation at the gate — connected target not yet playable.",
+      "pause": 300
+    },
+    {
+      "text": "2027-06-05: ACDC proof package — connected target not yet playable.",
+      "pause": 300
+    },
+    {
+      "text": "2027-06-20: Four-link chain and budget — connected target not yet playable.",
+      "pause": 300
+    },
+    {
+      "text": "2027-07-05: Credential gated rehearsal — connected target not yet playable.",
+      "pause": 300
+    },
+    {
+      "text": "2027-07-20: Credential gated transaction target — connected target not yet playable.",
+      "pause": 300
+    }
+  ],
+  "_source": {
+    "file": "index.md",
+    "sha256": "44fc3a6dcc671e251a0a65807796545e3b976401d5f8fd025f535eecd3e664e6"
+  }
+}

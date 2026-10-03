@@ -1,0 +1,658 @@
+{
+  "mpfs-keri-aid-owned-leaves-design-analysis": [
+    {
+      "text": "MPFS KERI-AID-owned leaves design analysis.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Historical vetting of an archived specification. Nothing here ships. The current machine is the Lean checkpoint and the simulations on the home page.",
+      "pause": 400
+    }
+  ],
+  "executive-summary": [
+    {
+      "text": "Executive summary.",
+      "pause": 500
+    },
+    {
+      "text": "The current validator authorizes Modify with only the cage State.owner Cardano key hash; per-leaf ownership is not represented in the datum, request datum, or redeemer.",
+      "pause": 300
+    },
+    {
+      "text": "Aiken/Plutus V3 gives usable hashes plus single-signature checks such as verify_ed25519_signature, but the validator cannot replay a KERI KEL or enforce KERI threshold/recovery semantics.",
+      "pause": 300
+    },
+    {
+      "text": "Design A can protect existing leaves if the owner key-state is embedded in each proven leaf value, but it couples value encoding to authorization and makes rotation, migration, and global-key semantics brittle.",
+      "pause": 300
+    },
+    {
+      "text": "Design B, a parallel owners MPF committed by a second state root, gives the contract a clean local proof: key -> current owner key-state, then one owner signature over the requested mutation.",
+      "pause": 300
+    },
+    {
+      "text": "Recommendation: implement B, with an optional owner digest copied into the value for reader convenience only. Prototype one-request Update/Delete first, then Insert/first-claim, then rotation.",
+      "pause": 300
+    }
+  ],
+  "1-on-chain-enforcement": [
+    {
+      "text": "1. On-chain enforcement.",
+      "pause": 500
+    },
+    {
+      "text": "Current source shape:",
+      "pause": 400
+    },
+    {
+      "text": "/code/cardano-mpfs-onchain/validators/types.ak defines State { owner, root, tip, process_time, retract_time }.",
+      "pause": 300
+    },
+    {
+      "text": "Request contains requestToken, requestOwner, requestKey, requestValue, tip, and submitted_at.",
+      "pause": 300
+    },
+    {
+      "text": "UpdateRedeemer.Modify(List<RequestAction>) contains per-request UpdateAction(Proof) or Rejected.",
+      "pause": 300
+    },
+    {
+      "text": "/code/cardano-mpfs-onchain/validators/cage.ak calls validateOwnership(state, tx) before validModify; this only checks that the cage owner key hash is in tx.extra_signatories.",
+      "pause": 300
+    },
+    {
+      "text": "validModify folds request inputs and calls mpf.insert, mpf.delete, or mpf.update against the single state root.",
+      "pause": 300
+    },
+    {
+      "text": "No current check binds a leaf mutation to the requester or to a leaf owner. The oracle/cage owner can process any request whose MPF proof validates.",
+      "pause": 300
+    },
+    {
+      "text": "The hard constraint is confirmed in the local Aiken stdlib: aiken/crypto.ak exposes verify_ed25519_signature, verify_ecdsa_signature, verify_schnorr_signature, and hashes. There is no practical substrate here for KERI CESR parsing, KEL replay, key-event threshold logic, or recovery semantics. The on-chain check must be a single current-key signature over a deterministic MPFS mutation message, with the current key-state itself committed on-chain.",
+      "pause": 400
+    }
+  ],
+  "design-a-owner-embedded-in-the-leaf": [
+    {
+      "text": "Design A: owner embedded in the leaf.",
+      "pause": 500
+    },
+    {
+      "text": "The only viable A variant is \"owner embedded in value\", not \"owner embedded in key\", if MPFS keys are meant to remain global. If the owner is part of the MPF key, then two owners can create two different physical keys for the same logical key, and the contract no longer protects a unique global key.",
+      "pause": 400
+    },
+    {
+      "text": "For owner-in-value, the operation must stop treating the value as an opaque ByteArray. The validator has to reconstruct the exact old and new leaf bytes from structured fields so it can both inspect the owner and feed the same bytes into mpf.update/delete/insert.",
+      "pause": 400
+    },
+    {
+      "text": "Sketch:",
+      "pause": 400
+    },
+    {
+      "text": "For existing-key Update/Delete, the validator checks:",
+      "pause": 400
+    },
+    {
+      "text": "The value proof is valid against the current value root using encode_owned_leaf(old_leaf).",
+      "pause": 300
+    },
+    {
+      "text": "The signature verifies against old_leaf.owner.current_ed25519_vk.",
+      "pause": 300
+    },
+    {
+      "text": "The signed message binds at least: domain separator, validator version, policy id, token id, request key, operation tag, old leaf digest, new leaf digest or tombstone, old owner digest, optional new owner digest, valid_before, and nonce.",
+      "pause": 300
+    },
+    {
+      "text": "The transaction validity interval is before valid_before.",
+      "pause": 300
+    },
+    {
+      "text": "The computed new root equals the output datum root.",
+      "pause": 300
+    },
+    {
+      "text": "For Insert, there is no old owner. The validator can only enforce the chosen unowned-key policy: first-claim, oracle-assigned, bonded/challenge, or reserved namespace. With first-claim, any party with any valid current key-state can claim an absent key; that stops forgery of somebody else's existing leaf but does not stop squatting unowned keys.",
+      "pause": 400
+    },
+    {
+      "text": "A's weak point is that the owner key-state is anchored only by being in the value root. That is sufficient by induction for existing leaves, provided the initial state is sound, but it forces every value parser and every reader to understand the owned-leaf envelope.",
+      "pause": 400
+    }
+  ],
+  "design-b-parallel-owners-mpf": [
+    {
+      "text": "Design B: parallel owners MPF.",
+      "pause": 500
+    },
+    {
+      "text": "The state datum gets a second root:",
+      "pause": 400
+    },
+    {
+      "text": "For an existing value Update/Delete, the validator checks:",
+      "pause": 400
+    },
+    {
+      "text": "The request targets this token and is in the correct time phase, as today.",
+      "pause": 300
+    },
+    {
+      "text": "The owner proof proves requestKey -> encode_owner_cell(owner_cell) under the current owners_root.",
+      "pause": 300
+    },
+    {
+      "text": "verify_ed25519_signature(owner_cell.current_ed25519_vk, mutation_message, signature) is true.",
+      "pause": 300
+    },
+    {
+      "text": "The value proof applies the requested Insert/Delete/Update against the current value_root.",
+      "pause": 300
+    },
+    {
+      "text": "The owners root is unchanged for ordinary value mutation, or changes exactly according to a rotation/transfer operation.",
+      "pause": 300
+    },
+    {
+      "text": "The output datum roots equal the folded value_root and owners_root accumulators.",
+      "pause": 300
+    },
+    {
+      "text": "The cage owner signature is still required to sequence requests, pay refunds, collect tips, and preserve the state UTxO.",
+      "pause": 300
+    },
+    {
+      "text": "The signed mutation message should be a fixed, canonical byte encoding, not ad hoc concatenation without lengths. It should bind:",
+      "pause": 400
+    },
+    {
+      "text": "Do not bind the current MPF root unless request creation and proof generation are made atomic. In the current architecture, requests are created before the oracle chooses a later update batch and proof. Binding roots would make ordinary pending requests fragile. The consumed request UTxO plus old-value proof already prevents normal duplicate application; valid_before and nonce limit copied signatures.",
+      "pause": 400
+    },
+    {
+      "text": "The current validModify ignores leftover RequestActions after the input fold. A v2 validator should tighten this while adding owner auth: either assert no actions remain, or replace input scanning with an explicit list of request refs/actions so the action count is exact and auditable.",
+      "pause": 400
+    }
+  ],
+  "2-data-structures-and-proofs": [
+    {
+      "text": "2. Data structures and proofs.",
+      "pause": 500
+    },
+    {
+      "text": "B's datum layout is the cleanest local invariant:",
+      "pause": 400
+    },
+    {
+      "text": "The owners MPF maps the exact value key bytes to an OwnerCell encoding:",
+      "pause": 400
+    },
+    {
+      "text": "The value MPF remains unchanged:",
+      "pause": 400
+    },
+    {
+      "text": "Proof composition for one existing-key update:",
+      "pause": 400
+    },
+    {
+      "text": "Proof composition for first insert:",
+      "pause": 400
+    },
+    {
+      "text": "Proof composition for delete has a policy choice:",
+      "pause": 400
+    },
+    {
+      "text": "Keep owner cell after deleting the value. This preserves the reservation and allows the owner to reinsert later.",
+      "pause": 300
+    },
+    {
+      "text": "Delete both value and owner cell. This releases the key for first-claim again.",
+      "pause": 300
+    },
+    {
+      "text": "Write an owner tombstone. This gives readers a durable deletion/ownership history marker.",
+      "pause": 300
+    },
+    {
+      "text": "For a global namespace, I recommend keeping the owner cell or writing a tombstone. Deleting the owner mapping makes key theft-by-delete possible if the owner later signs a delete and the oracle or another party first-claims the now-unowned key.",
+      "pause": 400
+    },
+    {
+      "text": "New-key ownership is not solved by cryptography alone. The choices are:",
+      "pause": 400
+    },
+    {
+      "text": "First-claim: simplest and fully permissionless, but allows squatting by anyone, including the oracle.",
+      "pause": 300
+    },
+    {
+      "text": "Oracle-assigned reservation: good for curated namespaces, but residual trust remains at allocation time.",
+      "pause": 300
+    },
+    {
+      "text": "Bonded first-claim plus challenge: more complex; useful if key conflicts are expected.",
+      "pause": 300
+    },
+    {
+      "text": "Self-certifying keys: require leaf_key = hash(aid || logical_key) or similar. This avoids squatting but changes semantics from global keys to owner namespaces.",
+      "pause": 300
+    },
+    {
+      "text": "For the stated goal, B plus first-claim is enough to say \"the oracle cannot forge or alter a leaf it does not own\" once a key is owned. It is not enough to say \"the oracle cannot claim an unowned global key\".",
+      "pause": 400
+    }
+  ],
+  "3-operation-model": [
+    {
+      "text": "3. Operation model.",
+      "pause": 500
+    },
+    {
+      "text": "Boot:",
+      "pause": 400
+    },
+    {
+      "text": "Current boot initializes one empty root. V2 boot must initialize both value_root = root(empty) and owners_root = root(empty).",
+      "pause": 300
+    },
+    {
+      "text": "The cage owner remains the oracle/operator key that signs state transitions. It is not the leaf owner.",
+      "pause": 300
+    },
+    {
+      "text": "Request Insert:",
+      "pause": 400
+    },
+    {
+      "text": "Request datum gains OwnerAuth or a compact LeafAuthBody + signature.",
+      "pause": 300
+    },
+    {
+      "text": "Proofs should stay in the Modify redeemer because proofs depend on the update batch's current/intermediate roots.",
+      "pause": 300
+    },
+    {
+      "text": "For first-claim insert, the owner proof is an absence proof in the owners MPF and the value proof is an absence proof in the value MPF.",
+      "pause": 300
+    },
+    {
+      "text": "Request Update/Delete:",
+      "pause": 400
+    },
+    {
+      "text": "The leaf owner signs the operation body. The request UTxO stores the auth body/signature.",
+      "pause": 300
+    },
+    {
+      "text": "The oracle later includes the request in a Modify transaction with both value proof and owner proof.",
+      "pause": 300
+    },
+    {
+      "text": "The contract requires both: oracle/cage owner signature for the state transition and leaf-owner Ed25519 signature for the leaf mutation.",
+      "pause": 300
+    },
+    {
+      "text": "Reject:",
+      "pause": 400
+    },
+    {
+      "text": "Reject remains an oracle/cage-owner action over pending request UTxOs.",
+      "pause": 300
+    },
+    {
+      "text": "It must not require a leaf-owner signature because it does not mutate roots.",
+      "pause": 300
+    },
+    {
+      "text": "The current phase checks can remain: reject only when request is rejectable, with refunds preserved.",
+      "pause": 300
+    },
+    {
+      "text": "Retract:",
+      "pause": 400
+    },
+    {
+      "text": "Retract remains request-owner controlled, currently by Cardano payment key hash.",
+      "pause": 300
+    },
+    {
+      "text": "This is separate from KERI leaf ownership. If those identities should align, the request datum can bind the KERI auth body to requestOwner, but Cardano refund control and KERI data control are different concepts.",
+      "pause": 300
+    },
+    {
+      "text": "End:",
+      "pause": 400
+    },
+    {
+      "text": "Current End lets the cage owner burn the token. That remains a residual operator power over the entire cage.",
+      "pause": 300
+    },
+    {
+      "text": "If the product promise is that leaf owners retain data availability, V2 should restrict End to value_root == root(empty) or require an explicit governance/migration path. Otherwise the oracle cannot forge leaves, but it can still destroy the cage.",
+      "pause": 300
+    },
+    {
+      "text": "Garbage collection:",
+      "pause": 400
+    },
+    {
+      "text": "The oracle can GC/reject stale request UTxOs.",
+      "pause": 300
+    },
+    {
+      "text": "The oracle must not be able to GC owned value leaves unless the owner signed a delete, the owner cell has an explicit expiry policy that the validator can check locally, or the system accepts curator-delete trust.",
+      "pause": 300
+    }
+  ],
+  "4-forgery-resistance": [
+    {
+      "text": "4. Forgery resistance.",
+      "pause": 500
+    },
+    {
+      "text": "Current system:",
+      "pause": 400
+    },
+    {
+      "text": "The oracle can set any leaf to any value if it can produce a valid MPF proof for the requested operation and sign as cage owner.",
+      "pause": 300
+    },
+    {
+      "text": "Requesters pay and can retract, but requester identity does not authorize the leaf content.",
+      "pause": 300
+    },
+    {
+      "text": "Design A, owner in value:",
+      "pause": 400
+    },
+    {
+      "text": "The oracle cannot update/delete an existing well-formed owned leaf unless it has a signature from the old embedded owner key.",
+      "pause": 300
+    },
+    {
+      "text": "The oracle cannot transfer ownership of an existing leaf unless the old owner signs a value transition to a new owner cell.",
+      "pause": 300
+    },
+    {
+      "text": "The oracle can still claim unowned keys under first-claim.",
+      "pause": 300
+    },
+    {
+      "text": "The oracle can exploit malformed or legacy values unless V2 rejects all non-owned leaf encodings after migration.",
+      "pause": 300
+    },
+    {
+      "text": "If owner is embedded in the key instead of value, the oracle can create alternate physical keys for the same logical key under a different owner; that is not a robust global-key ownership model.",
+      "pause": 300
+    },
+    {
+      "text": "Design B, owners MPF:",
+      "pause": 400
+    },
+    {
+      "text": "The oracle cannot update/delete an owned value leaf without proving the owner cell from owners_root and verifying the owner's signature.",
+      "pause": 300
+    },
+    {
+      "text": "The oracle cannot change the owner mapping unless the operation explicitly updates owners_root under a signed rotation/transfer/claim rule.",
+      "pause": 300
+    },
+    {
+      "text": "The oracle cannot make the output roots arbitrary because both roots are locally recomputed from input roots and proofs.",
+      "pause": 300
+    },
+    {
+      "text": "The oracle can still censor requests, choose batch order, collect allowed tips, reject rejectable requests, and possibly end the cage if End remains unrestricted.",
+      "pause": 300
+    },
+    {
+      "text": "The oracle can still allocate or squat unowned keys if the chosen new-key policy permits first-claim.",
+      "pause": 300
+    },
+    {
+      "text": "The oracle or a bad anchor publisher can still lie about key-state evolution unless readers verify the off-chain KEL and anchor history.",
+      "pause": 300
+    },
+    {
+      "text": "Residual trust is therefore narrowed from \"oracle can forge data\" to \"oracle controls liveness, ordering, allocation policy for unowned keys, and whole-cage lifecycle\".",
+      "pause": 400
+    }
+  ],
+  "5-key-rotation-and-compromise": [
+    {
+      "text": "5. Key rotation and compromise.",
+      "pause": 500
+    },
+    {
+      "text": "On-chain, rotation must be reduced to a local owner-cell update:",
+      "pause": 400
+    },
+    {
+      "text": "If the old owner cell carries next_key_digest, the validator can optionally require hash(new_owner_cell.current_ed25519_vk) == old_owner_cell.next_key_digest. This gives a cheap one-step pre-rotation check if the digest function is available on-chain. It is not a KEL replay.",
+      "pause": 400
+    },
+    {
+      "text": "The off-chain KERI verifier must do the real work:",
+      "pause": 400
+    },
+    {
+      "text": "Replay the AID's KEL from inception to the claimed key-state.",
+      "pause": 300
+    },
+    {
+      "text": "Verify event signatures, thresholds, next-key commitments, recovery, and duplicity rules.",
+      "pause": 300
+    },
+    {
+      "text": "Check that the key_state_digest and current_ed25519_vk in the owner cell match the replayed current state.",
+      "pause": 300
+    },
+    {
+      "text": "Check that the owner-cell update is anchored in the transaction history at the point the owners root changes.",
+      "pause": 300
+    },
+    {
+      "text": "Compromise is the hard case. If the current key is compromised, the attacker can produce the single signature the chain accepts until a later rotation/recovery is anchored. KERI recovery can let off-chain readers decide a later state supersedes the compromised one, but the chain cannot retroactively know that while validating a single mutation. If the design needs threshold KERI control on-chain, one Ed25519 verify is not enough unless the KERI state is reduced off-chain to a single aggregate or delegated signing key.",
+      "pause": 400
+    }
+  ],
+  "6-off-chain-pure-verifier": [
+    {
+      "text": "6. Off-chain pure verifier.",
+      "pause": 500
+    },
+    {
+      "text": "The existing verifier architecture is a good fit. cardano-mpfs-verify already has pure verification modules, proof-bearing bundles, MPF proof replay, and a cross-target plan for native/WASM/JS byte-identical verdicts. It anchors state UTxOs to a trusted UTxO-CSMT root and replays MPF facts against the state root.",
+      "pause": 400
+    },
+    {
+      "text": "B requires extending the pure verifier to check two independent commitments:",
+      "pause": 400
+    },
+    {
+      "text": "The state UTxO is anchored to the trusted UTxO root.",
+      "pause": 300
+    },
+    {
+      "text": "The value facts reconstruct to value_root.",
+      "pause": 300
+    },
+    {
+      "text": "The owner facts reconstruct to owners_root.",
+      "pause": 300
+    },
+    {
+      "text": "Every value fact has a matching owner fact for the same key, unless it is a tombstone or explicitly unowned under policy.",
+      "pause": 300
+    },
+    {
+      "text": "Each owner cell's aid, key_state_digest, and current_ed25519_vk are consistent with an off-chain KEL replay.",
+      "pause": 300
+    },
+    {
+      "text": "Each observed mutation transaction that changes a value leaf has the owner proof and signature that the on-chain validator would accept.",
+      "pause": 300
+    },
+    {
+      "text": "The KERI verifier should remain pure and cross-target:",
+      "pause": 400
+    },
+    {
+      "text": "No networking, filesystem, wall-clock time, or mutable global state in verifier paths.",
+      "pause": 300
+    },
+    {
+      "text": "Inputs should include the KEL/event bundle and the on-chain anchor trail needed for replay.",
+      "pause": 300
+    },
+    {
+      "text": "Errors should be deterministic and serializable, matching the existing Either VerifyError a style.",
+      "pause": 300
+    },
+    {
+      "text": "Any crypto dependency for CESR/KERI replay must be WASM/JS-buildable, or isolated behind a target-compatible implementation.",
+      "pause": 300
+    },
+    {
+      "text": "The chain enforces local authorization at mutation time. The reader verifies historical and semantic truth: that the owner key-state was really reached by the KEL and that the two MPFs are complete and mutually consistent.",
+      "pause": 400
+    }
+  ],
+  "7-migration-and-compatibility": [
+    {
+      "text": "7. Migration and compatibility.",
+      "pause": 500
+    },
+    {
+      "text": "This is a breaking validator and wire-format change.",
+      "pause": 400
+    },
+    {
+      "text": "State changes from five fields to at least six fields.",
+      "pause": 300
+    },
+    {
+      "text": "OnChainTokenState in cardano-mpfs-cage and both cage transaction clients must change.",
+      "pause": 300
+    },
+    {
+      "text": "RequestAction.UpdateAction(Proof) becomes a larger structure carrying value proof plus owner auth/proof.",
+      "pause": 300
+    },
+    {
+      "text": "Request datums gain owner auth payloads.",
+      "pause": 300
+    },
+    {
+      "text": "Existing verifyStateRootBinding logic expects the old datum shape and must be versioned.",
+      "pause": 300
+    },
+    {
+      "text": "Existing cages cannot be made trustlessly owned after the fact unless ownership was already encoded in their values and every leaf can be checked. A migration that carries over a non-empty value_root and invents an owners_root cannot be fully verified on-chain without enumerating the entire trie, which is infeasible. Practical options:",
+      "pause": 400
+    },
+    {
+      "text": "New cages only: cleanest and safest.",
+      "pause": 300
+    },
+    {
+      "text": "Trusted migration manifest: off-chain enumerates all old leaves and builds an owners root; readers accept it only if they trust or independently verify the manifest.",
+      "pause": 300
+    },
+    {
+      "text": "Legacy freeze: migrate old value root with empty owners root and allow only owner-claim operations before future mutation. Existing leaves are not fully protected until claimed.",
+      "pause": 300
+    },
+    {
+      "text": "A-hybrid migration: if old values already contain owner data, build owners root off-chain from those values and let readers verify consistency. The chain still cannot check the whole map in one transaction.",
+      "pause": 300
+    },
+    {
+      "text": "Execution budget and size:",
+      "pause": 400
+    },
+    {
+      "text": "The MPF library's own documentation shows proof size and ex-units are the limiting factor; insert/delete can require two proof checks, and proof size grows with trie size.",
+      "pause": 300
+    },
+    {
+      "text": "B roughly adds one owners-MPF proof per touched leaf plus one Ed25519 verification. For owner rotation/insert it also updates the owners root.",
+      "pause": 300
+    },
+    {
+      "text": "Request UTxOs grow by owner cell and signature bytes. Redeemers grow by owner proof bytes.",
+      "pause": 300
+    },
+    {
+      "text": "Batch sizes will likely need to shrink. The current builder already budgets update redeemers aggressively; V2 should benchmark one request, then small batches, before designing broad workflows.",
+      "pause": 300
+    },
+    {
+      "text": "Script size increases, but B avoids writing an on-chain parser for owner envelopes inside arbitrary value bytes, which keeps it simpler than A.",
+      "pause": 300
+    }
+  ],
+  "8-recommendation": [
+    {
+      "text": "8. Recommendation.",
+      "pause": 500
+    },
+    {
+      "text": "Choose B: parallel owners MPF. It is the only design that cleanly separates user payload bytes from authorization state while preserving MPFS's current proof model. It gives the validator a local, bounded check:",
+      "pause": 400
+    },
+    {
+      "text": "A is useful as a hybrid only for reader ergonomics: store owner_cell_hash or aid inside the value payload so a fact is self-describing. The validator should not depend on parsing arbitrary value bytes for ownership if a parallel owners root is available.",
+      "pause": 400
+    },
+    {
+      "text": "Biggest risk: key-state anchoring semantics, not MPF mechanics. The chain can verify only the current signing key in an owner cell. It cannot know that this key is the legitimate current KERI key without the off-chain verifier and an accepted anchor trail. Compromise/recovery semantics remain off-chain unless reduced to a single delegated key or simple on-chain hash commitment.",
+      "pause": 400
+    },
+    {
+      "text": "Prototype order:",
+      "pause": 400
+    },
+    {
+      "text": "Add a V2 validator with value_root and owners_root, no migration, one request per Modify.",
+      "pause": 300
+    },
+    {
+      "text": "Implement existing-key Update/Delete with owner inclusion proof plus Ed25519 signature; keep owners root unchanged.",
+      "pause": 300
+    },
+    {
+      "text": "Measure ex-units and redeemer sizes for one request and small batches.",
+      "pause": 300
+    },
+    {
+      "text": "Add first-claim Insert with owners absence proof and value absence proof.",
+      "pause": 300
+    },
+    {
+      "text": "Add owner rotation/transfer as an owners-root update.",
+      "pause": 300
+    },
+    {
+      "text": "Extend the pure verifier to reconstruct both roots and check owner-cell/KEL consistency.",
+      "pause": 300
+    },
+    {
+      "text": "Do not start with full KERI rotation semantics on-chain. Start with the bounded signature and owners-root invariant, then let the pure verifier carry KEL replay where it belongs.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "analysis-codex.md",
+    "sha256": "b2f0493b9cc20d142ff68b26990e3d7101d755df8467748be188733fe413a5b5"
+  }
+}

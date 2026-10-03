@@ -1,0 +1,72 @@
+{
+  "four-link-chain-and-budget-2027-06-20-target": [
+    {
+      "text": "Four-link chain and budget — 2027-06-20 target.",
+      "pause": 500
+    },
+    {
+      "text": "D-17 story. As a verifier of an organizational role, I want the full four-link synthetic credential chain checked by Cardano scripts, so that a forged, broken or recorded-revoked link cannot authorize the final action.",
+      "pause": 400
+    },
+    {
+      "text": "Planned release tag: Cardano KERI v2.0.0 (credential-gate M2). This names the milestone target; intermediate plays use release candidates, and the tag waits for the D-19 release gate and its preprod evidence.",
+      "pause": 400
+    },
+    {
+      "text": "This is a dated review target from the live project card. Not yet playable as the connected target. No confirmed ledger outcome or release acceptance is claimed by this page.",
+      "pause": 400
+    }
+  ],
+  "planned-play-and-evidence": [
+    {
+      "text": "Planned play and evidence.",
+      "pause": 500
+    },
+    {
+      "text": "Given a connected identity and TEL substrate, D-16 proof package, and the chosen transaction or attestation layout from measured issuer shapes; when the full chain is checked under the historical issuer state and every hop’s non-revocation proof; then valid evidence reaches the gate verdict and each deliberate bad link refuses; every transaction in the chosen layout stays within its measured execution budget.",
+      "pause": 400
+    },
+    {
+      "text": "The intended positive observation is: The full synthetic four-link chain reaches the Cardano gate under historical issuer keys and non-revocation proofs. The relevant refusal is: A forged, broken or recorded-revoked link refuses. These are acceptance criteria, not observed results.",
+      "pause": 400
+    }
+  ],
+  "preprod-recording-path": [
+    {
+      "text": "Preprod recording path.",
+      "pause": 500
+    },
+    {
+      "text": "Generate and export the four linked credentials with keripy kli. Use the released ckeri package and verifier to submit the gated action on Cardano preprod, then read back the accepted transaction and measured execution units. Replay forged, broken and recorded-revoked links against the same gate. The connected verifier and cast remain pending.",
+      "pause": 400
+    }
+  ],
+  "presenter-path-1015-minutes-when-runnable": [
+    {
+      "text": "Presenter path: 10–15 minutes when runnable.",
+      "pause": 500
+    }
+  ],
+  "missing-interface-or-receipt": [
+    {
+      "text": "Missing interface or receipt.",
+      "pause": 500
+    },
+    {
+      "text": "A connected TEL and identity substrate, D-16 package, measured QVI-like and GLEIF-like CPU/memory, chosen split/attestation layout and accepted/refused script executions.",
+      "pause": 400
+    },
+    {
+      "text": "The model base visible in this checkout is Cardano KERI commit 0e638fadc987f0cd98f839edd3e3ecd5a09a1b91. It is a source identity for planning, not a claim that the later card is already modeled or accepted. Each claim must bind the accepted model revision for that behavior before promotion. The Lean correspondence register holds affected conflicts. A simulator or source fact cannot replace a confirmed transaction, and no cast of an accepted connected result is available here.",
+      "pause": 400
+    },
+    {
+      "text": "Tracking: KERI verifier #31, cost measurement #397, historical keys #391, revocation mirror #392.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "d17-four-link.md",
+    "sha256": "c8846c801923fb6f583d0ea234089db6dc8e5aa3594d0724a49ab51f7d50376a"
+  }
+}

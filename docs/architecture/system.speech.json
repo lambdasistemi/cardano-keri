@@ -1,0 +1,182 @@
+{
+  "system-architecture": [
+    {
+      "text": "System architecture.",
+      "pause": 500
+    },
+    {
+      "text": "cardano-keri is being built in layers. The only layer with settled vertical transactions today is the KERI identity checkpoint. Everything above it — credential verification, value authorization, wallet integration — remains later work.",
+      "pause": 400
+    },
+    {
+      "text": "Where this page stands",
+      "pause": 400
+    },
+    {
+      "text": "The layer table below is the honest status of each layer. The flows marked shipped settle on a real ledger; the flows marked designed are the Lean machine of the accepted design, proved and playable, not built.",
+      "pause": 400
+    }
+  ],
+  "layer-status": [
+    {
+      "text": "Layer status.",
+      "pause": 500
+    },
+    {
+      "text": "An ACDC is an Authentic Chained Data Container, KERI's signed credential format. A TEL is a Transaction Event Log, which records credential issuance and revocation events.",
+      "pause": 400
+    }
+  ],
+  "the-identity-checkpoint-shipped": [
+    {
+      "text": "The identity checkpoint — shipped.",
+      "pause": 500
+    },
+    {
+      "text": "The KERI network provides public event evidence. A Cardano relayer builds a transaction around that evidence. The ledger executes both a thin checkpoint program that protects state, token and value, and a heavy observer reference program that verifies the KERI evidence. The result is atomic: both validators accept the same transaction or nothing changes.",
+      "pause": 400
+    }
+  ],
+  "registration-flow-shipped": [
+    {
+      "text": "Registration flow — shipped.",
+      "pause": 500
+    },
+    {
+      "text": "Registration adds one preliminary step because KERI uses BLAKE3 and Plutus has no native BLAKE3 builtin:",
+      "pause": 400
+    },
+    {
+      "text": "The proof token only separates expensive hash work from state creation. It adds no oracle and no privileged registrar. It also does not make registration unique: nothing today prevents a second checkpoint for the same AID.",
+      "pause": 400
+    }
+  ],
+  "registration-through-the-registry-designed": [
+    {
+      "text": "Registration through the registry — designed.",
+      "pause": 500
+    },
+    {
+      "text": "The accepted design puts registration behind the registry, and that is the only place the checkpoint token can ever be minted:",
+      "pause": 400
+    },
+    {
+      "text": "Appliers race on one shared object; the loser wastes work, never safety. A request nobody applies within its window is retractable with a refund. Close, reopen and conviction travel the same way as leaf updates. Rotations, poisons, freezes and top-ups never touch the registry.",
+      "pause": 400
+    }
+  ],
+  "advance-and-enforcement-shipped": [
+    {
+      "text": "Advance and enforcement — shipped.",
+      "pause": 500
+    },
+    {
+      "text": "An ordinary advance consumes the current checkpoint and creates its exact successor; the advance observer verifies the next KERI rotation, both controller thresholds, and witness receipts.",
+      "pause": 400
+    },
+    {
+      "text": "Freeze consumes ACTIVE and creates ARMED when the enforcement observer accepts a witnessed conflicting rotation still ahead of the checkpoint. A timely response reuses ordinary advance and returns ACTIVE.",
+      "pause": 400
+    },
+    {
+      "text": "Evidence is bound to the exact KERI tip, so a later round needs fresh evidence.",
+      "pause": 400
+    }
+  ],
+  "the-same-plane-under-the-accepted-design-designed": [
+    {
+      "text": "The same plane under the accepted design — designed.",
+      "pause": 500
+    },
+    {
+      "text": "The enforcement observer goes. observer_advance verifies one thing — a later witnessed rotation with its receipts — and the register validator dispatches the effect, which is where advance and freeze part company:",
+      "pause": 400
+    },
+    {
+      "text": "Two edges move the identity — a rotation and a poison — and four boundary transitions cross its edges: register, close, reopen and convict. Nothing has a deadline; the freeze has no window to expire, because the owner returns by rotating with a deposit whenever she likes.",
+      "pause": 400
+    }
+  ],
+  "how-applications-consume-identity": [
+    {
+      "text": "How applications consume identity.",
+      "pause": 500
+    },
+    {
+      "text": "A protected application resolves the expected AID-derived asset and includes the checkpoint as a CIP-31 reference input. CIP-31 lets a transaction read a UTxO without spending it.",
+      "pause": 400
+    },
+    {
+      "text": "The application must:",
+      "pause": 400
+    },
+    {
+      "text": "resolve the candidate checkpoint for the AID;",
+      "pause": 300
+    },
+    {
+      "text": "validate the quantity-one token, script lineage, version, AID and datum;",
+      "pause": 300
+    },
+    {
+      "text": "apply the consumer predicate — today, the bare ACTIVE role address; under the accepted design, both bonds full, not poisoned, and past the juvenility window (the age a checkpoint must reach before a consumer trusts it);",
+      "pause": 300
+    },
+    {
+      "text": "verify its operation-specific controller authorization; and",
+      "pause": 300
+    },
+    {
+      "text": "when credentials matter, verify the required ACDC/TEL evidence.",
+      "pause": 300
+    },
+    {
+      "text": "An indexer only helps locate the candidate. The ledger checks establish authority. A missing or stale lookup fails; it never authorizes a substitute.",
+      "pause": 400
+    }
+  ],
+  "planned-credential-plane": [
+    {
+      "text": "Planned credential plane.",
+      "pause": 500
+    },
+    {
+      "text": "The longer-term vLEI path adds credential verification around the identity checkpoint:",
+      "pause": 400
+    },
+    {
+      "text": "The identity and credential questions stay separate:",
+      "pause": 400
+    },
+    {
+      "text": "the checkpoint answers which keys currently control this AID?",
+      "pause": 300
+    },
+    {
+      "text": "the credential chain answers what real-world role or authority has an issuer granted to this AID?",
+      "pause": 300
+    },
+    {
+      "text": "Registering an AID does not prove that it is GLEIF, a Qualified vLEI Issuer, or a legal entity. Those are credential claims.",
+      "pause": 400
+    }
+  ],
+  "deployment-boundary": [
+    {
+      "text": "Deployment boundary.",
+      "pause": 500
+    },
+    {
+      "text": "The settled evidence runs on a private protocol-11 development network with production transaction limits, and on preprod. The repository does not currently operate a public checkpoint service, a production KERI watcher or hunter service, a Cardano mainnet deployment, a full vLEI credential mirror, or an application that treats these checkpoints as production authority.",
+      "pause": 400
+    },
+    {
+      "text": "See the story ladder for exact settled transactions and the roadmap for the ordered work beyond them.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "system.md",
+    "sha256": "a9265678c2ddc8ecd28c0620188ff56c26bfca2f59c052f591c7ee6fc5342d26"
+  }
+}

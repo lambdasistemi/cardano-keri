@@ -1,0 +1,44 @@
+{
+  "hunters": [
+    {
+      "text": "Hunters.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "The hunter's freeze, the premium, and top-up are accepted design, not shipped. Play The pool runs dry, so Hal freezes her instead and Two hunters race. What ships today is Freeze as an ARMED role-address for lag, with a response window — a different machine, retired by the accepted design.",
+      "pause": 400
+    },
+    {
+      "text": "Hal is a hunter: anyone paid to land an owner's rotation on chain, or to freeze a checkpoint whose pool cannot pay for one. He watches Alice's witnesses. When they receipt a rotation, he lands it and the chain pays him the premium P (the fee for landing a rotation) from her pool of advance funds. That is story 2 on the checkpoint simulation. In KERI's vocabulary Hal is a watcher with a wage; the receipts he waits for are the ones KERI's witnessing policy requires.",
+      "pause": 400
+    },
+    {
+      "text": "When the pool cannot cover P, he freezes her instead. He presents the later rotation as evidence, takes the freeze bond B (what a hunter takes when the pool cannot pay), and leaves the datum untouched. The checkpoint is inert to everyone but the next keys: consumers reject it; a second freeze is refused; the poison (the owner's own lock on the checkpoint) still belongs to the current quorum. Alice unfreezes with a deposit rotation — the new keys refill B. Deposit is a no-op on full bonds.",
+      "pause": 400
+    },
+    {
+      "text": "Anyone may top up the pool. No signature, no datum change. A freeze is refused while the pool covers the premium.",
+      "pause": 400
+    },
+    {
+      "text": "Two hunters can race the same rotation. One winner, one refusal. The closer chooses when the reap (the owner's close, a rotation by the next keys) happens, never who is paid: a copied reap with the payee rewritten is refused.",
+      "pause": 400
+    },
+    {
+      "text": "The freeze that ships on preprod today is not this. It is freeze-for-lag: ACTIVE to ARMED, a deadline, a claim. That economy goes. The freeze that survives is what a hunter takes when the owner's pool has run dry.",
+      "pause": 400
+    },
+    {
+      "text": "See Rotate, Poison, and the consumer checklist.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "hunters.md",
+    "sha256": "8b657aae0a162fe46353a85b71fc57c83e666bc758ffe93d0edc75d2777d5c50"
+  }
+}

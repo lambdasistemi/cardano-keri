@@ -1,0 +1,228 @@
+{
+  "compromise-of-the-current-keys": [
+    {
+      "text": "Compromise of the current keys.",
+      "pause": 500
+    },
+    {
+      "text": "This page answers one question: an attacker holds the identity's current KERI signing keys — not the pre-rotated successor keys — what can they do, on Cardano and off it, and what does the owner do about it?",
+      "pause": 400
+    },
+    {
+      "text": "It is the counterpart to Pre-rotation. Pre-rotation is what stops the attacker from taking the identity forward. It is not what stops them from using it now.",
+      "pause": 400
+    },
+    {
+      "text": "Where this page stands",
+      "pause": 400
+    },
+    {
+      "text": "The exposure described here is what ships on main today. The M1 return changes the answer in two specific places, each marked below: close stops answering to the current keys, and the poison — the owner's own lock on the checkpoint — becomes the owner's on-chain instrument. Both are accepted design — proved in the Lean, not built.",
+      "pause": 400
+    }
+  ],
+  "what-the-stolen-current-keys-authorize": [
+    {
+      "text": "What the stolen current keys authorize.",
+      "pause": 500
+    },
+    {
+      "text": "Under the accepted design, the Close row goes empty",
+      "pause": 400
+    },
+    {
+      "text": "Close becomes the reap, the only close there is: a witnessed rotation by the next keys whose signed message names the payee and the refund address (ruling D-036), so it needs the next keys exactly like any other rotation. An identity is active, parked holding the hash, or convicted. Deposit is the unfreeze. That intent is signed by the keys of the epoch the rotation opens (ruling D-038). A thief holding only the current keys is left with exactly one Cardano move — the poison — and that is the owner's instrument, not hers.",
+      "pause": 400
+    },
+    {
+      "text": "The last row is the one that matters most and is easiest to miss. An application built on Value authorization asks \"do the current controllers of this AID authorize this operation?\". Stolen current keys answer that question correctly. No KERI event is involved, and none is needed.",
+      "pause": 400
+    }
+  ],
+  "an-interaction-event-is-an-off-chain-instrument": [
+    {
+      "text": "An interaction event is an off-chain instrument.",
+      "pause": 500
+    },
+    {
+      "text": "An ixn changes no key state. Its entire power is what it anchors — seals pointing at TEL events (ACDC issuance and revocation), delegation approvals. A thief who publishes an ixn is issuing or revoking credentials under the victim's identifier. That harm lands in the credential graph, not on Cardano.",
+      "pause": 400
+    },
+    {
+      "text": "V1 cardano-keri does not project ixn events at all. Register admits only icp; Advance admits only rot; the event decoder rejects every other type. This is a stated scope decision, not an oversight — see #115: an advance is a rotation by definition; non-establishment events never touch the checkpoint. When a credential sealed in an ixn is verified on Cardano, the ixn is presented as evidence in that transaction and checked against the checkpoint's key-state history; it is never stored.",
+      "pause": 400
+    },
+    {
+      "text": "Two consequences follow, and they point in opposite directions:",
+      "pause": 400
+    },
+    {
+      "text": "A thief's ixn cannot advance, arm, freeze, or convict a checkpoint. It is invisible to the chain.",
+      "pause": 300
+    },
+    {
+      "text": "Publishing an ixn is therefore neither necessary nor helpful for on-chain theft. On-chain exposure comes from key-state authority, above. The ixn is the off-chain instrument and the stolen keys are the on-chain one.",
+      "pause": 300
+    },
+    {
+      "text": "An identity whose Cardano checkpoint is perfectly current can still be having credentials issued under it by a thief, because that traffic never reaches Cardano in V1.",
+      "pause": 400
+    }
+  ],
+  "why-we-do-not-replicate-first-seen": [
+    {
+      "text": "Why we do not replicate first-seen.",
+      "pause": 500
+    },
+    {
+      "text": "A KERI witness applies first-seen (first-seen policy): it accepts the first event it sees at a sequence number and refuses conflicting ones. So if the thief's ixn reaches the witness threshold before the owner's honest ixn at the same sequence, the thief's event is the event. A served KEL is one linear branch, and the conflict is not in it. The victim's evidence may never reach a watcher at all.",
+      "pause": 400
+    },
+    {
+      "text": "First-seen is each observer's own acceptance order (first-seen policy): a witness keeps the first version it receipted, and so does every watcher, including ours. It is not in the events, not in any proof, and not on Cardano. What the chain cannot do is reconstruct another observer's private order or substitute for it. What our own observation service still owes, whatever the chain does, is a defined acceptance order and a retained history of what it accepted first. Two rules follow, and they hold in both the shipped design and the accepted design:",
+      "pause": 400
+    },
+    {
+      "text": "For rules derivable from event content — superseding, next-key commitment validity, prior-digest chaining, thresholds — the projection must match keripy exactly.",
+      "pause": 300
+    },
+    {
+      "text": "Where KERI could only settle a contest by one observer's first-seen order, the chain abstains. Cardano's settlement slot is evidence, never a verdict. Resolving by slot would make the chain the authority, and would diverge from KERI exactly whenever the thief reached the witnesses first and the victim reached the chain first.",
+      "pause": 300
+    },
+    {
+      "text": "What the chain adds is not a better tie-break. It is a censorship-resistant publication path for what witnesses would otherwise suppress.",
+      "pause": 400
+    },
+    {
+      "text": "The multi-branch record is retired",
+      "pause": 400
+    },
+    {
+      "text": "An earlier design answered this with a record tree that kept every event by location plus SAID, so rival events at one sequence coexisted, plus a cursor over it and a permanent ever_duplicitous fact. That design is gone, and its removal is the point of the accepted design: a record you cannot prove complete needs someone to assert completeness, and that someone is an oracle. The checkpoint has no evidence set, so there is no on-chain record to prove complete. That removes a data structure, not the observation, availability and freshness assumptions: those live with the observer, not the datum.",
+      "pause": 400
+    },
+    {
+      "text": "What replaces it here is narrower and buildable: the poison, below, for what the owner can declare, and the conviction, for what anyone can prove. The reasoning behind the retired shape is preserved as evidence in the record/cursor design note.",
+      "pause": 400
+    },
+    {
+      "text": "One honest limit applies to both KERI and Cardano: the victim's own event is what makes the fork visible. Until the owner publishes a competing event, the thief's branch is cryptographically indistinguishable from the controller's. Neither system detects a thief who is alone on the history.",
+      "pause": 400
+    }
+  ],
+  "rotation-is-the-remedy": [
+    {
+      "text": "Rotation is the remedy.",
+      "pause": 500
+    },
+    {
+      "text": "A rotation supersedes an interaction event at the same sequence (superseding recovery and its rules at a given sequence number), because it proves possession of pre-committed keys — strictly stronger evidence than signing with current keys. Descendants of the superseded event die with it. The attacker cannot answer: revealing next keys reveals public halves, which permits verification, not production.",
+      "pause": 400
+    },
+    {
+      "text": "The asymmetry is exact and worth stating: a rotation supersedes an interaction, but a non-delegated rotation cannot supersede another rotation. Rotation beats ixn; nothing beats a first-seen rotation.",
+      "pause": 400
+    },
+    {
+      "text": "On Cardano the rotation is an ordinary Advance. It installs the new keys, and any authorization the thief had bound to the previous checkpoint input becomes invalid — pending authorization does not silently survive a rotation.",
+      "pause": 400
+    },
+    {
+      "text": "Rotation is not retroactive:",
+      "pause": 400
+    },
+    {
+      "text": "a Cardano transaction that already settled under the older ACTIVE checkpoint is not reversed;",
+      "pause": 300
+    },
+    {
+      "text": "a relying party that already accepted a credential anchored by the superseded ixn loses it when recovery discards that branch; and",
+      "pause": 300
+    },
+    {
+      "text": "a poison the owner declared for the stolen epoch is cleared by the rotation, because it belonged to the keys the rotation retires. Every poison transaction stays on the ledger forever, so the history is the indexer's; the chain simply stops asserting a live fact about keys nobody controls any more.",
+      "pause": 300
+    },
+    {
+      "text": "Operator rule: when in doubt, rotate — never interact. Rotation supersedes; interaction contests. A controller who always rotates can never create the unresolvable case themselves.",
+      "pause": 400
+    }
+  ],
+  "the-poison-what-the-owner-does-before-and-instead-of-rotating": [
+    {
+      "text": "The poison: what the owner does before, and instead of, rotating.",
+      "pause": 500
+    },
+    {
+      "text": "Rotation is the remedy, but it takes time to assemble, and sometimes it is not available at all. The accepted design gives the current keys one power for exactly those two cases — and only those two.",
+      "pause": 400
+    },
+    {
+      "text": "What it is. The owner's key holders sign, at their own cur_threshold, a short declaration over a preimage bound to the register policy, the AID and the current sequence. Stock kli sign produces it, per member; no KERI-side change is needed, and no BLAKE3 is computed on chain. Anyone may relay it. It is never witnessed, because it is a Cardano-side declaration and not a projected KERI event.",
+      "pause": 400
+    },
+    {
+      "text": "What it does. One bit in the datum. The checkpoint becomes unconsumable immediately, and from a poisoned state the only enabled edge is a rotation: no close, no second poison, no consumer authorization. So the two moves a current-key thief would otherwise have — using the identity, and cashing it out — are both gone for every epoch the owner has poisoned.",
+      "pause": 400
+    },
+    {
+      "text": "Why it needs the threshold. One stolen member key of a k-of-n group cannot poison. In KERI an event signed below threshold is invalid, not duplicitous, and a single compromised member is not compromise of the identity. A single-key poison would assert more than KERI does, and would hand any one stolen member key the power to stain the identity and force a rotation (ruling D-023).",
+      "pause": 400
+    },
+    {
+      "text": "Why it is epoch-local. Any witnessed rotation clears it. That is not a weakness of the mechanism; it is the projection law. Possession of the next keys is control by KERI's own rule, and a chain that let a current-key signature outlive a witnessed rotation would be a second authority over a KERI-legitimate controller.",
+      "pause": 400
+    }
+  ],
+  "the-two-cases-it-serves-and-the-one-it-does-not": [
+    {
+      "text": "The two cases it serves, and the one it does not.",
+      "pause": 500
+    },
+    {
+      "text": "The price of the second row is stated rather than hidden: a poisoned identity whose next keys are lost is frozen forever, its conviction bond (the stake a duplicity proof would seize) included. The size of that bond is a deployment parameter and an economic call.",
+      "pause": 400
+    }
+  ],
+  "when-the-fork-is-real-not-merely-suspected": [
+    {
+      "text": "When the fork is real, not merely suspected.",
+      "pause": 500
+    },
+    {
+      "text": "If two witnessed rotations exist at one sequence — the same current keys revealed, each with receipts from at least toad of the witnesses — that is not a suspicion, it is duplicity, and anyone holding both can prove it on chain. The identity becomes Convicted, terminally, and the convictor takes D_reg. See Identity operations.",
+      "pause": 400
+    },
+    {
+      "text": "The distinction from the poison is exact and worth keeping: a controller declaration is epoch-local, because the controller can be superseded; a proof of establishment-level duplicity is a KERI verdict, and KERI makes that permanent.",
+      "pause": 400
+    }
+  ],
+  "related-pages": [
+    {
+      "text": "Related pages.",
+      "pause": 500
+    },
+    {
+      "text": "AID cryptographic model — pre-rotation and event binding",
+      "pause": 300
+    },
+    {
+      "text": "Trust model — residuals, including current-key theft",
+      "pause": 300
+    },
+    {
+      "text": "Value authorization — what an application must check",
+      "pause": 300
+    },
+    {
+      "text": "Identity operations — close, poison and conviction, shipped and designed",
+      "pause": 300
+    }
+  ],
+  "_source": {
+    "file": "key-compromise.md",
+    "sha256": "6532879a8a9a520b796bc96674c7936ed3e710b2e111cff9a327a2af782f1caf"
+  }
+}

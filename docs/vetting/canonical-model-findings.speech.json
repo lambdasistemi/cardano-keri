@@ -1,0 +1,100 @@
+{
+  "canonical-permissionless-model-vetting-round-2": [
+    {
+      "text": "Canonical Permissionless Model — Vetting Round 2.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Historical vetting (2026-07 permissionless model). Nothing here ships. The current machine is the Lean checkpoint and the simulations on the home page.",
+      "pause": 400
+    },
+    {
+      "text": "Independent re-vet of the current canonical permissionless model (2026-07), replacing the archived aid-ops.md vetting. Two independent cold passes over the normative docs (architecture/, design/, design/business-cases/, roadmap.md), different primary lenses, then cross-examination and deduplication.",
+      "pause": 400
+    },
+    {
+      "text": "Pass A — soundness / permissionless attack surface: analysis-2-soundness.md",
+      "pause": 300
+    },
+    {
+      "text": "Pass B — consistency / completeness: analysis-2-consistency.md",
+      "pause": 300
+    },
+    {
+      "text": "Findings that both passes reached independently are marked ⋈ cross-confirmed and carry the highest confidence. Two Criticals (F1, F2) were additionally verified by the commissioning reviewer directly against the doc text.",
+      "pause": 400
+    },
+    {
+      "text": "Gates M1 implementation",
+      "pause": 400
+    },
+    {
+      "text": "Findings tagged blocks #24 touch the trie_key / KeyState shape that #24 freezes irreversibly at inception. They must be resolved before the identity key-state validator is written.",
+      "pause": 400
+    }
+  ],
+  "merged-findings": [
+    {
+      "text": "Merged findings.",
+      "pause": 500
+    }
+  ],
+  "issues-filed": [
+    {
+      "text": "Issues filed.",
+      "pause": 500
+    },
+    {
+      "text": "Critical + High findings are tracked as issues (KERI / Work on the planner):",
+      "pause": 400
+    },
+    {
+      "text": "#24 is now marked blocked-by #68, #77, #79, #81. F18 and F30 also gate #24 but are folded into F1/#68 (they are facets of defining the list-shaped preimage). Medium/Low findings (F15–F32) are tracked in the table above pending triage, not yet filed.",
+      "pause": 400
+    }
+  ],
+  "the-two-structural-themes": [
+    {
+      "text": "The two structural themes.",
+      "pause": 500
+    },
+    {
+      "text": "Nearly every High rolls up into two root causes:",
+      "pause": 400
+    },
+    {
+      "text": "The singleton↔list-shape split (F1). The design ratified a list-shaped, threshold-capable, delegator-reserving KeyState and froze it into trie_key, but every derivation, message, redeemer, security argument, WASM signature, and IntentTranscript is still written for a single key. F10, F12, F14, F18, F30 and the whole \"1-of-1 degenerate case\" overclaim are facets of this. This is the #24 gate.",
+      "pause": 400
+    },
+    {
+      "text": "The freeze/convergence channel (F2–F9, F11, F20). Emergency-freeze, duplicity-freeze, and super-watcher burn are three overlapping mechanisms whose authorization, atomicity, replay-binding, tombstone-vs-remove semantics, and deposit disposition mutually contradict — and several are presented as guarantees while conceding they are unsound pre-Blake3. The recovery channel meant to save a compromised identity can worsen the compromise (F3), be replayed (F5), be bypassed by a stale root (F6), or permanently brick an innocent identity (F9).",
+      "pause": 400
+    }
+  ],
+  "method-notes": [
+    {
+      "text": "Method notes.",
+      "pause": 500
+    },
+    {
+      "text": "Both passes ran cold, without prior design intent, and were forbidden from reading the historical aid-ops.md vetting to avoid anchoring.",
+      "pause": 300
+    },
+    {
+      "text": "The two lenses were assigned to reduce correlation; overlap (⋈) therefore indicates genuine independent rediscovery, not shared priors.",
+      "pause": 300
+    },
+    {
+      "text": "No design docs were modified by this vetting — findings are recorded here and filed as issues; fixes are follow-up tickets.",
+      "pause": 300
+    }
+  ],
+  "_source": {
+    "file": "canonical-model-findings.md",
+    "sha256": "1eb0ea68564149954253fc43cab30a63e9f4db64dd15f0473dda637abb1c8966"
+  }
+}

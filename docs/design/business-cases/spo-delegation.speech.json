@@ -1,0 +1,204 @@
+{
+  "case-b-identified-spo-delegation": [
+    {
+      "text": "Case B — Identified SPO Delegation.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "pause": 400
+    },
+    {
+      "text": "\"Only delegate to legally identified pools\" — an institution's stake may only ever back operators with a valid Legal Entity vLEI.",
+      "pause": 400
+    },
+    {
+      "text": "Current-actor resolution is the sovereign per-AID checkpoint (#92)",
+      "pause": 400
+    },
+    {
+      "text": "Per specs/92-checkpoint-contention/DECISION.md, wherever this case resolves the SPO Legal Entity's current authority — \"PoolBinding.trie_key Active in the L1 AID registry\" (§2), the mermaid \"trie_key Active?\" step, and the LE cur_key owner-signature on pool-side registration — the live surface is that LE AID's own sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO: asset id (checkpoint_policy_id, aid_asset_name), current weighted keys/threshold in the inline CheckpointDatum, read as a CIP-31 reference input and discovered by a generic exact-asset (policy_id, asset_name) lookup (candidate outref for liveness only, re-validated against the ledger). \"Active\" means exactly one current checkpoint at the ACTIVE role address. ARMED, FROZEN, missing, duplicated, and stale candidates fail closed; there is no separate shared freeze registry. A delta = 0 rotation (seq + 1) consumes the checkpoint UTxO, so an owner signature made under the prior sequence is stale and must be re-signed by the current weighted keys over the fully bound message + current sequence, never merely re-pointed at the fresh checkpoint. Preserved as written: the separate identified-pools registry (pool_id → PoolBinding, its own key space and cold-key-rotation lifecycle), the GLEIF → QVI → LE hierarchy, and L2 TEL non-revocation — the pool-binding and credential planes, which gate eligibility but never select the LE's current checkpoint identity.",
+      "pause": 400
+    }
+  ],
+  "1-actors-credential-level": [
+    {
+      "text": "1. Actors & credential level.",
+      "pause": 500
+    },
+    {
+      "text": "The SPO is a legal entity holding a vLEI Legal Entity credential (QVI-issued). Its identity anchor is its pool cold key: the binding object is {pool_id, cold_vkey, aid, trie_key} where pool_id = blake2b_224(cold_vkey) — the same hash the ledger uses in delegation and registration certificates (Aiken stdlib: StakePoolId = Hash<Blake2b_224, VerificationKey>) — carrying the LE's stable qualified aid (from which the sovereign checkpoint asset id is derived) alongside cold_vkey and the historical trie_key (admission-cache key only). Binding to pool_id rather than to a wallet key matters: it survives relay changes, reward-address changes, and pledge moves; it dies only with cold-key rotation (a pool re-registration event, which is the correct time to re-attest).",
+      "pause": 300
+    },
+    {
+      "text": "The delegator is the buyer: an institution (fund, treasury, exchange under compliance constraints) that must demonstrate its stake only ever backs identified operators.",
+      "pause": 300
+    },
+    {
+      "text": "The verifier is the delegator's own stake credential script — not the pool, not an oracle. cardano-keri supplies the registries and the verifier library it imports.",
+      "pause": 300
+    },
+    {
+      "text": "What is an 'institution under compliance constraints'?",
+      "pause": 400
+    },
+    {
+      "text": "A fund, desk, or treasury manages money under written rules — set by a board, by client mandate, or by regulation — and must be able to show an auditor that every action followed those rules. \"Compliant staking yield\" simply means earning staking rewards without stepping outside those rules: e.g. a treasury policy saying company funds may only back service providers whose legal identity is verified. An exchange is \"under compliance constraints\" because it is itself a regulated business with AML duties — it cannot route customer assets to anonymous operators. Today such policies live in documents and are checked by hand after the fact; this design turns one into a rule the chain itself enforces at the moment of delegation.",
+      "pause": 400
+    }
+  ],
+  "2-gated-action-enforcement-point": [
+    {
+      "text": "2. Gated action & enforcement point.",
+      "pause": 500
+    },
+    {
+      "text": "Verified against the Aiken validator and certificate documentation:",
+      "pause": 400
+    },
+    {
+      "text": "A stake credential can be a Plutus script. Publishing a delegation certificate for a script credential invokes the script's publish handler, whose target is the full Certificate value.",
+      "pause": 300
+    },
+    {
+      "text": "The handler sees: DelegateCredential { credential, delegate: DelegateBlockProduction { stake_pool } } — i.e. the exact target pool_id — plus the whole transaction, so the distinct CIP-31 reference inputs are visible: the identified-pools registry (pool binding), the bound LE's sovereign per-AID checkpoint (current authority), and the L2 TELs (credential non-revocation) — plus an admission cache where a venue uses one (this case does not; see §4). Same for DelegateVote/DelegateBoth (DRep analog) and RegisterAndDelegateCredential.",
+      "pause": 300
+    },
+    {
+      "text": "The handler cannot see: the current delegation of the credential (certificates carry no prior state), epoch boundaries, or anything after the certificate lands. Enforcement exists only at certificate-publication time.",
+      "pause": 300
+    },
+    {
+      "text": "So the design is: the institution's stake credential is a script that witnesses a delegation certificate only if the redeemer proves stake_pool is bound to an Active, unrevoked vLEI entity. The script checks: membership proof of pool_id → PoolBinding in the identified-pools registry, and — since the binding carries the LE's stable qualified AID — resolves the bound LE AID's current authority live in its sovereign per-AID checkpoint — asset id (checkpoint_policy_id, aid_asset_name) derived from that qualified AID, read as a CIP-31 reference input, with exactly one current checkpoint in the ACTIVE role — and TEL non-revocation (L2), all against reference inputs.",
+      "pause": 400
+    },
+    {
+      "text": "Pool-side registration is mutual attestation: the SPO submits PoolBinding { pool_id, cold_vkey, aid, trie_key } — carrying the LE's stable qualified AID aid (from which the checkpoint asset id (checkpoint_policy_id, aid_asset_name) is derived) alongside the historical trie_key (admission-cache key only; it cannot by itself select the current checkpoint) — with (a) an Ed25519 signature by cold_vkey over a domain-separated {pool_id, cold_vkey, aid, trie_key, network_id} message, verified on-chain (blake2b_224(cold_vkey) == pool_id — blake2b_224 is a PlutusV3 builtin), and (b) the LE AID's witness set meeting its current weighted threshold — read from its sovereign per-AID checkpoint — over the same full payload ({pool_id, cold_vkey, aid, trie_key, network_id}) plus the current sequence (not a single cur_key signature). Both signatures bind the identical full payload — including both aid and trie_key and network_id — so neither party can bind the other unilaterally, no field can be swapped after attestation, and the binding cannot be replayed onto another network.",
+      "pause": 400
+    },
+    {
+      "text": "The two flows side by side — binding happens once per cold key; the gate fires at every delegation certificate:",
+      "pause": 400
+    }
+  ],
+  "3-design-sketch": [
+    {
+      "text": "3. Design sketch.",
+      "pause": 500
+    },
+    {
+      "text": "New components on top of L1–L4:",
+      "pause": 400
+    },
+    {
+      "text": "Identified-pools registry: an MPF cage pool_id → PoolBinding, owner-signed leaves (the LE owns its binding), oracle co-signed. Not leaves inside the AID registry — different key space, different lifecycle (cold-key rotation ≠ AID rotation).",
+      "pause": 300
+    },
+    {
+      "text": "Delegator stake script (publish + withdraw handlers), parameterized by the registries it trusts and the owner's authorization rule (institution multisig).",
+      "pause": 300
+    },
+    {
+      "text": "Delegation-state UTxO (optional but load-bearing): because the script is stateless, an \"evict on revocation\" path needs a companion UTxO recording the current pool_id. With it, a permissionless keeper can publish a re-delegation to a fallback identified pool by proving the recorded pool's credential is now revoked. Without it, revocation response is purely an off-chain operational duty of the institution.",
+      "pause": 300
+    },
+    {
+      "text": "DRep analog falls out for free: the same handler pattern on DelegateVote against an identified-DReps registry.",
+      "pause": 300
+    },
+    {
+      "text": "Honest limit — delegation is sticky",
+      "pause": 400
+    },
+    {
+      "text": "The ledger re-invokes no script at epoch boundaries. If the pool's vLEI is revoked after delegation, stake keeps flowing to it until someone publishes a new certificate. In everyday terms: a delegation certificate is like a standing order at a bank — it keeps acting until you replace it, and nobody re-checks it each period. The gate guarantees \"was identified at delegation time,\" and only with the keeper/eviction extension \"re-delegated promptly after revocation.\" It can never guarantee \"never staked to a revoked pool.\"",
+      "pause": 400
+    }
+  ],
+  "4-pressure-on-the-open-decisions": [
+    {
+      "text": "4. Pressure on the open decisions.",
+      "pause": 500
+    },
+    {
+      "text": "Admission vs per-tx: delegation certificates are rare (per institution: a few per year). Full per-certificate verification is affordable — this case exerts no pressure toward the admission cache; it is the natural home for full per-transaction verification.",
+      "pause": 300
+    },
+    {
+      "text": "KeyState parity: SPO legal entities and institutional delegators are both organizations — thresholds needed on both sides (LE AID multisig; the institution's owner-rule is native script/multisig). Reinforces list-shaped KeyState.",
+      "pause": 300
+    },
+    {
+      "text": "Revocation freshness: strong at the gate, structurally weak after it (stickiness). Cascade depth matters at certificate time (revoked QVI ⇒ pool not delegatable).",
+      "pause": 300
+    },
+    {
+      "text": "Throughput: negligible. Current-AID rotation has no shared registry ceiling — the SPO LE rotates on its own sovereign per-AID checkpoint UTxO (#92). The shared identified-pools registry and admission plane retain their own serialization as separate contended objects; the per-AID lifecycle adds no shared freeze UTxO. At this case's certificate frequency (a few per year), the remaining serialization is immaterial, not absent.",
+      "pause": 300
+    },
+    {
+      "text": "Privacy: pool identity is meant to be public (differentiation); the delegator's identity need not be on-chain at all — only its policy is. Mildest privacy profile of the four cases.",
+      "pause": 300
+    }
+  ],
+  "5-demand-side": [
+    {
+      "text": "5. Demand side.",
+      "pause": 500
+    },
+    {
+      "text": "Buyers: (i) institutions that want compliant staking yield — the certificate-time guarantee maps directly to an auditable policy; (ii) SPOs buying differentiation (\"legally identified pool\") to attract that stake; (iii) the Veridian/Amaru channel: identified SPOs are the same population pitched as KERI witness hosts (witnesses are the always-on servers that receipt KERI key events — see the KERI primer) — one vLEI onboarding sells both (\"witness hosting under a verifiable legal identity\"), and Amaru bundling is the distribution vector. Smallest pilot: one QVI-credentialed SPO + one institutional delegator + the pools registry on preprod; no DeFi protocol needed, no per-trade throughput, exercises L1+L2+L3 end-to-end.",
+      "pause": 400
+    },
+    {
+      "text": "Why 'auditable policy' is the selling point",
+      "pause": 400
+    },
+    {
+      "text": "Today, \"we only stake with reputable operators\" is a sentence in a policy document, checked by hand after the fact. With the stake script, the policy is enforced by the chain at the moment of delegation, and every past delegation carries on-chain proof that the check ran. An auditor can verify years of policy compliance from public data, without trusting anyone's spreadsheet — that verifiability, not the yield itself, is what the institution is buying.",
+      "pause": 400
+    }
+  ],
+  "6-case-specific-risks-limitations": [
+    {
+      "text": "6. Case-specific risks & limitations.",
+      "pause": 500
+    },
+    {
+      "text": "Gates the delegator, not the pool: an unidentified world continues delegating to anyone; value exists only if identified stake is commercially meaningful to SPOs.",
+      "pause": 300
+    },
+    {
+      "text": "Address migration: the institution must move funds to base addresses with the script stake credential — operational cost, custody-integration friction.",
+      "pause": 400
+    },
+    {
+      "text": "Custody-integration friction, in plain terms",
+      "pause": 400
+    },
+    {
+      "text": "Institutions usually do not hold keys themselves — a custodian does, under contract and regulation. Moving funds to addresses whose staking rights are controlled by a script means the custodian's systems must know how to build and sign transactions for that script. If the custodian does not support it, the institution cannot adopt the design at all — a sales-and-integration hurdle, not a cryptographic one.",
+      "pause": 400
+    },
+    {
+      "text": "Rewards custody: rewards accrue to the script's reward account; the withdraw handler must gate withdrawals (owner multisig) — more scope, and a bug here strands rewards.",
+      "pause": 300
+    },
+    {
+      "text": "Cold-key rotation invalidates the binding; needs a re-attestation flow tied to pool re-registration.",
+      "pause": 300
+    },
+    {
+      "text": "Stickiness (above) is the headline caveat for any compliance claim stronger than certificate-time.",
+      "pause": 300
+    }
+  ],
+  "_source": {
+    "file": "spo-delegation.md",
+    "sha256": "8eae48bff318e428b1fed5c0ee38524abfbec8024b10dde060cbbfad7cf49984"
+  }
+}

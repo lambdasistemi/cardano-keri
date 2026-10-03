@@ -1,0 +1,142 @@
+{
+  "close-your-preprod-identity-checkpoint": [
+    {
+      "text": "Close your preprod identity checkpoint.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "This page describes the M1 code as deployed on preprod. The accepted design of 2026-09-02/03 (decisions D-036 to D-040, modelled in lean/CardanoKeri/Checkpoint.lean and playable in the checkpoint simulation) changes the lifecycle it describes: an identity is active (one checkpoint UTxO: live, poisoned or frozen), parked (no UTxO; the registry leaf holds the hash of the last checkpoint, its key state) or convicted (the mark, terminal). There is no pause, no withdraw and no unbonded checkpoint on chain. Leaving is the reap: a witnessed rotation by the next keys whose signed message names the payee of the premium and the refund address; the premium goes to that payee, everything else to the refund address, the token burns, and the leaf is parked with the hash. Coming back is a revival: a witnessed rotation from exactly the parked key state, with fresh bonds, born juvenile. A close authorized by the current keys alone, as below, is what ships today, not the accepted design.",
+      "pause": 400
+    },
+    {
+      "text": "ckeri close lets the current KERI controller retire one ACTIVE V1 checkpoint. The transaction spends that exact checkpoint, burns its singleton AID token, and sends the complete 1,007 tADA escrow to the controller's chosen Cardano address:",
+      "pause": 400
+    },
+    {
+      "text": "2 tADA minimum value;",
+      "pause": 300
+    },
+    {
+      "text": "1,000 tADA registration deposit; and",
+      "pause": 300
+    },
+    {
+      "text": "5 tADA freeze bond (in V1, the bond a freeze for lag claims).",
+      "pause": 300
+    },
+    {
+      "text": "There is no successor checkpoint datum or token. Closing one checkpoint does not revoke the sovereign KERI identifier and does not prevent its controller from registering again later.",
+      "pause": 400
+    },
+    {
+      "text": "Start with the exported KLI KEL and an ACTIVE checkpoint created as described in Register your identity.",
+      "pause": 400
+    }
+  ],
+  "prepare-the-controller-message": [
+    {
+      "text": "Prepare the controller message.",
+      "pause": 500
+    },
+    {
+      "text": "The validator requires the current KERI controller keys to authorize a binary, canonical-CBOR CloseMessage. It binds the exact live checkpoint outref, full refund address, and full refund amount. KERI event signatures do not authorize that Cardano operation.",
+      "pause": 400
+    },
+    {
+      "text": "Prepare the signing package without access to a Cardano payment key:",
+      "pause": 400
+    },
+    {
+      "text": "The package files are mode 0644 because they are intended to cross into an isolated or offline KLI signer. They contain no private key. Treat the preimage hash, AID, spent reference, target address, and amount as the signing review surface.",
+      "pause": 400
+    }
+  ],
+  "sign-with-the-current-kli-controller": [
+    {
+      "text": "Sign with the current KLI controller.",
+      "pause": 500
+    },
+    {
+      "text": "Keripy 1.3.5's text-signing command cannot preserve arbitrary binary CBOR. The repository helper loads the existing KLI habitat and signs the exact package bytes without exporting the controller's private key:",
+      "pause": 400
+    },
+    {
+      "text": "Run the helper in the same Python or container environment as KLI. Supply a protected keystore's passcode through KERI_PASSCODE, never in a command that will be captured or committed. Prepare a new package if the bound checkpoint outref changes.",
+      "pause": 400
+    }
+  ],
+  "submit-and-verify-the-refund": [
+    {
+      "text": "Submit and verify the refund.",
+      "pause": 500
+    },
+    {
+      "text": "Fee funding, collateral, and fee change are separate from the escrow refund. Use a change address controlled by the payment key; it must differ from the refund target so the 1,007-tADA output is unambiguous:",
+      "pause": 400
+    },
+    {
+      "text": "The command returns only after Koios proves the exact Close burn, spend, and asset-free full-value refund output. status uses the latest mint/burn history before any temporarily stale ACTIVE UTxO row, so a proved close is not misreported during index convergence.",
+      "pause": 400
+    },
+    {
+      "text": "All ckeri configuration is parsed by opt-env-conf. Options, environment variables such as CKERI_TO, CKERI_KEL, and CKERI_CHANGE_ADDRESS, and YAML are equivalent; optparse-applicative is not used. KOIOS_TOKEN is an optional bearer token with anonymous fallback and is never printed.",
+      "pause": 400
+    }
+  ],
+  "validator-boundary-negative": [
+    {
+      "text": "Validator-boundary negative.",
+      "pause": 500
+    },
+    {
+      "text": "An unrelated KLI identity cannot close the checkpoint. Normal operation rejects a non-controller signature locally. The explicit --validator-test-non-controller switch exists only for funded acceptance testing: it bypasses that local proof and sends the malformed evidence through local transaction submission, where the deployed Plutus V3 spending validator rejects it.",
+      "pause": 400
+    },
+    {
+      "text": "Do not use that switch in ordinary operation.",
+      "pause": 400
+    }
+  ],
+  "captured-preprod-result": [
+    {
+      "text": "Captured preprod result.",
+      "pause": 500
+    },
+    {
+      "text": "The mechanical artifact is deploy/preprod/m1-close-acceptance.txt. It records the complete ACTIVE status → close prepare → controller sign → in-process close → closed status journey:",
+      "pause": 400
+    },
+    {
+      "text": "AID EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P;",
+      "pause": 300
+    },
+    {
+      "text": "predecessor advance f0f3a18ff994f5865b638dab33e166b8baa9996eb58d1691f0d26c8b218bfe4a;",
+      "pause": 300
+    },
+    {
+      "text": "exact 1,007-tADA refund to the configured payment-credential base address; and",
+      "pause": 300
+    },
+    {
+      "text": "close transaction 8bb6d5e61b1ffaf69d1a7c8f4ffe53182aa4963a4d5c360c6356bbe14439abd5.",
+      "pause": 300
+    },
+    {
+      "text": "The checker verifies chronology, package/signature digest agreement, exact refund amount and address, and terminal NOT REGISTERED status. With a live binary configured it also re-queries settlement through Koios.",
+      "pause": 400
+    },
+    {
+      "text": "The controller happy path is intentionally separate from deploy/preprod/m1-close-historical-negative-acceptance.txt, where an unrelated KLI identity signs the close package and the deployed spending validator rejects it. The checker requires that failure before the later controller-signed close.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "close.md",
+    "sha256": "8dacddb2a345a9d674df61850d75de30bd5daa53d3fef667481bf86be5c6e78a"
+  }
+}

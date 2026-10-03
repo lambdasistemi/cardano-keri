@@ -1,0 +1,246 @@
+{
+  "the-regulated-defi-gate": [
+    {
+      "text": "The Regulated DeFi Gate.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "pause": 400
+    },
+    {
+      "text": "A primer on the flagship use case: what a compliance gate is, why the current industry pattern is weak, and precisely which part of the problem cardano-keri solves. Companion to the vLEI Bridge use-case analysis.",
+      "pause": 400
+    },
+    {
+      "text": "The gate is a target consumer",
+      "pause": 400
+    },
+    {
+      "text": "The settled small-identity stories prove checkpoint registration and lifecycle moves. They do not yet ship this DeFi application. The boundary below follows the current sovereign checkpoint model: only an ACTIVE checkpoint may authorize a gated action. See Value authorization for the complete fail-closed consumer checklist.",
+      "pause": 400
+    },
+    {
+      "text": "No finance background needed",
+      "pause": 400
+    },
+    {
+      "text": "Every financial and institutional concept used here (securities, KYC/AML, custody, allowlists, batchers, MEV…) is explained from zero in the Finance Primer; identity concepts (AID, KEL, ACDC) are in the KERI Primer.",
+      "pause": 400
+    }
+  ],
+  "the-problem-the-gate-solves": [
+    {
+      "text": "The problem the gate solves.",
+      "pause": 500
+    },
+    {
+      "text": "DeFi protocols are permissionless: any address can supply liquidity, borrow, or trade. That is precisely why regulated institutions — banks, funds, corporate treasuries — largely cannot use them. Their obligations (KYC/AML, counterparty risk rules, transaction reporting) attach to them, not to the pool: an institution that trades against anonymous counterparties cannot demonstrate to its supervisor who it transacted with. For tokenized securities the constraint is harder still — securities law imposes transfer restrictions, so the asset itself must refuse to move to a non-eligible holder.",
+      "pause": 400
+    },
+    {
+      "text": "A gate is the mechanical answer: a check, enforced at execution time, that every counterparty in a transaction is an identified, currently-valid legal entity. \"Regulated DeFi\" is the same AMM/lending/settlement machinery, with every state transition passing the gate.",
+      "pause": 400
+    }
+  ],
+  "the-incumbent-pattern-and-its-three-weaknesses": [
+    {
+      "text": "The incumbent pattern and its three weaknesses.",
+      "pause": 500
+    },
+    {
+      "text": "The existing pattern is the permissioned pool with an operator-run allowlist: a company verifies documents off-chain and writes approved addresses to a list the contract checks. Aave Arc — a whitelisted pool with Fireblocks as the permissioning agent — is the canonical precedent; it saw little uptake.",
+      "pause": 400
+    },
+    {
+      "text": "The allowlist operator is a new trusted intermediary — exactly what the chain was supposed to remove. It can censor, err, or disappear.",
+      "pause": 300
+    },
+    {
+      "text": "Identity is not portable. KYC done for pool A means nothing to pool B; every venue re-verifies the same entity.",
+      "pause": 300
+    },
+    {
+      "text": "Revocation is operational, not cryptographic. When an entity loses its standing, someone must remember to update every list it appears on.",
+      "pause": 300
+    }
+  ],
+  "vlei-identity-as-a-credential-chain-not-a-database-row": [
+    {
+      "text": "vLEI: identity as a credential chain, not a database row.",
+      "pause": 500
+    },
+    {
+      "text": "The GLEIF vLEI ecosystem replaces the operator's database with a chain of signed credentials:",
+      "pause": 400
+    },
+    {
+      "text": "(The last level is simplified: OOR credentials are issued by the QVI under an LE-signed authorization credential, so a full role chain is four ACDCs — see the factored core.)",
+      "pause": 400
+    },
+    {
+      "text": "Each link is an ACDC — a content-addressed (SAID) credential naming its issuer's AID and its subject's AID, whose issuer commitment is a signature or a seal on the SAID (issuance is anchored — sealed — into the issuer's KEL at the issuer's key-state at the time of issuance). A verifier can check the whole chain offline: hash the content (SAID), verify the issuer's commitment against the issuer's historical key-state at issuance (not the issuer's current key — the binding survives later rotations), confirm nothing in the chain is revoked. The LEI is the identifier regulators already accept for entity identification. The crucial import: the trust root is not cardano-keri and not the DeFi protocol — it is the existing regulatory identification infrastructure, made cryptographic.",
+      "pause": 400
+    },
+    {
+      "text": "What is missing from that picture: a blockchain cannot run it. Verification requires walking KERI KELs (to establish each issuer's historical key state and its issuance commitment at issuance) and TELs (is the credential currently revoked?) — live, off-chain data structures. Today, \"verify a vLEI\" is something a server does. Any smart contract that gates on it is back to trusting whoever runs that server. That is the hole cardano-keri fills.",
+      "pause": 400
+    }
+  ],
+  "what-cardano-keri-contributes-the-chain-runs-the-gate-itself": [
+    {
+      "text": "What cardano-keri contributes: the chain runs the gate itself.",
+      "pause": 500
+    },
+    {
+      "text": "The layers of the on-chain architecture (tracked in #21, internal) put the moving parts of vLEI verification on-chain — the acting entity's current authority as its sovereign per-AID checkpoint (read via a CIP-31 reference input), and the credential chain's issuance evidence and revocation status as KEL-anchored seals and MPF-rooted TEL registries — and provide the Aiken verifier that walks the chain. The steps span two planes:",
+      "pause": 400
+    },
+    {
+      "text": "Two planes: historical credential admission vs current-actor authority (#92)",
+      "pause": 400
+    },
+    {
+      "text": "Per specs/92-checkpoint-contention/DECISION.md the rows above span two distinct planes, and the sovereign per-AID checkpoint answers only the current-actor one:",
+      "pause": 400
+    },
+    {
+      "text": "Admission / credential plane (historical, per ACDC). Each credential is verified by the issuer's historical issuance commitment (signature or seal on the SAID) + its KEL-anchored issuance-proof seal at the issuer's historical key state + the issuer's TEL non-revocation. This uses KEL / TEL evidence — the admission-cache credential plane — and does not consult each issuer's current checkpoint. Rotation does not invalidate prior issuance. The GLEIF → QVI → Legal Entity hierarchy is the trust root, preserved unchanged.",
+      "pause": 300
+    },
+    {
+      "text": "Current-actor plane (the acting entity, now). The entity submitting the new action is authorized by its own sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO — asset id (checkpoint_policy_id, aid_asset_name), current weighted keys/threshold in the inline CheckpointDatum, read as a CIP-31 reference input and discovered by a generic (policy_id, asset_name) asset lookup (candidate outref for liveness only, revalidated by the consuming tx).",
+      "pause": 300
+    },
+    {
+      "text": "Lifecycle / freeze are not caller-supplied flags. The CheckpointDatum carries the AID/sequence binding and current weighted key state. The token's role address carries the lifecycle. A consumer accepts only the current ACTIVE checkpoint; ARMED, FROZEN, missing, duplicated, or stale candidates all reject. There is no separate shared freeze registry.",
+      "pause": 400
+    }
+  ],
+  "gate-flow": [
+    {
+      "text": "Gate flow.",
+      "pause": 500
+    },
+    {
+      "text": "The flow below shows the direct-signing case — the entity itself signs the gated action. On batcher-based DEXes the gated-action leg differs; see the correction box after the diagram.",
+      "pause": 400
+    },
+    {
+      "text": "An entity is admitted by one transaction carrying its full credential chain plus proofs — verified entirely by the script against the historical credential plane (issuance commitments + KEL-anchored issuance proofs at each issuer's historical key state + TEL status), permissionless, with no admission committee, and without consulting any issuer's current checkpoint. Every subsequent gated action then checks, atomically with the trade: the acting entity's signature(s) meeting the weighted threshold of the current keys in its sovereign per-AID checkpoint (read as a CIP-31 reference input); that exactly one referenced checkpoint is the current ACTIVE UTxO in the accepted lineage; and non-revocation across the credential chain's issuer TELs. ARMED, FROZEN, missing, duplicated, or stale candidates fail closed. Lifecycle is enforced by the checkpoint's role address and lineage, not by a separate shared registry.",
+      "pause": 400
+    },
+    {
+      "text": "Correction from the case analysis",
+      "pause": 400
+    },
+    {
+      "text": "The flow above shows the entity signing the gated action directly. On most Cardano DEXes it does not — an off-chain batcher signs the executing transaction (the batch), so the gate must instead verify a detached signature carried in the order datum, checked when the batcher spends the order. See the deeper Regulated DeFi case analysis for the corrected enforcement points (order validator, withdraw-zero pattern, LP-token minting policy).",
+      "pause": 400
+    },
+    {
+      "text": "Open design decisions",
+      "pause": 400
+    },
+    {
+      "text": "Two parameters of this flow are proposed, not settled:",
+      "pause": 400
+    },
+    {
+      "text": "Admission-cached vs full per-transaction verification. The flow above is the hybrid: pay the full credential-chain walk once at admission, then per action check only the acting entity's current checkpoint + revocation. The alternative — re-running all the credential-chain hops inside every gated spend — is purer but ex-unit-heavy: each trade must re-walk the full chain against the latest TEL / revocation-root evidence. (This is not about issuer key rotation — the historical issuance proof is anchored at the issuer's historical key state and survives later issuer rotations; only revocation status changes over time.)",
+      "pause": 300
+    },
+    {
+      "text": "Revocation cascade depth. If GLEIF revokes a QVI, do entities credentialed by that QVI lose access? Checking all three TELs per action (three MPF proofs) makes revocation bite anywhere in the chain within one root update. The cascade semantics should be cited from the GLEIF ecosystem governance framework, not invented here.",
+      "pause": 300
+    }
+  ],
+  "properties-the-allowlist-pattern-cannot-offer": [
+    {
+      "text": "Properties the allowlist pattern cannot offer.",
+      "pause": 500
+    },
+    {
+      "text": "Atomicity. The identity check and the trade are one transaction. There is no window where a revoked entity's trade is in flight against a stale list.",
+      "pause": 300
+    },
+    {
+      "text": "No allowlist operator. Admission is script-verified. The residual trusted parties are GLEIF/QVIs — already the regulator-accepted roots — and, for liveness only, the MPFS oracles of the L2 TEL registries and the admission cage (an MPFS store behind one validator, run by the issuers and the venue), who cannot forge an identity, only fail to update one (see Trust Model).",
+      "pause": 300
+    },
+    {
+      "text": "Portable admission. The same credentials admit the entity to any protocol that imports the Layer-3 verifier. KYC once, at the QVI, not per venue.",
+      "pause": 300
+    },
+    {
+      "text": "Rotation-proof references, with universal re-authorization. The protocol references the AID's stable identity — its sovereign per-AID checkpoint (checkpoint_policy_id, aid_asset_name) — so the entity rotates keys without re-onboarding. But rotation is not transparent to pending actions: a delta = 0 rotation (seq + 1) consumes the referenced checkpoint UTxO, so the spent checkpoint is no longer available as a CIP-31 reference input and any in-flight authorization made under the prior key state is stale by construction — changing the reference input alone cannot revive an old signature. The action must be re-signed by the AID's current weighted keys at the new sequence over a fully bound action. Long-lived protocol state follows the cross-protocol lifecycle (Execute / Refresh-Re-sign / Cancel-Reclaim by the current keys / Expire-Cleanup); value-bearing stale UTxOs need a current-AID reclaim path. This does not touch historical credential evidence — ACDC issuance / TEL seals remain historical evidence through issuer rotation until revoked, and are not pending dApp actions.",
+      "pause": 300
+    },
+    {
+      "text": "Cryptographic revocation. The QVI flips one TEL entry; every gate on the chain sees it at the next root update, with no per-protocol operational step.",
+      "pause": 300
+    }
+  ],
+  "cardano-keris-role-precisely-bounded": [
+    {
+      "text": "cardano-keri's role, precisely bounded.",
+      "pause": 500
+    },
+    {
+      "text": "cardano-keri is the verification rails, not any of the actors:",
+      "pause": 400
+    },
+    {
+      "text": "The former single external gate — Veridian issuing F-prefix (Blake2b-256) SAIDs — is dissolved by the E-native contract (2026-07-16): standard Blake3 identities and SAIDs are consumed as-is, so nothing on the on-chain stack waits on a wallet vendor. See Blake2b-256 Requirement for the archived rationale.",
+      "pause": 400
+    }
+  ],
+  "what-the-gate-is-not": [
+    {
+      "text": "What the gate is not.",
+      "pause": 500
+    },
+    {
+      "text": "Honest limits",
+      "pause": 400
+    },
+    {
+      "text": "A gate is not a compliance program. It proves who transacted, not that the activity was monitored, reported, or sanctions-screened. Protocols and institutions still own their AML processes; the gate shrinks the identity problem, not the whole obligation.",
+      "pause": 300
+    },
+    {
+      "text": "\"Regulation requires DeFi gating\" is not a claim this project makes. MiFID II, Basel III, and eIDAS 2.0 — surveyed in vLEI Bridge — establish machine-verifiable entity identification. The demand for gates comes from institutions' own obligations and from tokenized-securities transfer restrictions — not from a rule that says \"DeFi must gate.\" The MiCA treatment of DeFi specifically has not been cited here at article level and must be before this document makes any regulatory-obligation claim.",
+      "pause": 300
+    },
+    {
+      "text": "Privacy is structural. Gating binds a legal entity's entire activity in a gated venue to its public LEI. For legal entities — unlike individuals — this may be acceptable; it is a property to state, not hide.",
+      "pause": 300
+    },
+    {
+      "text": "Demand is unvalidated. The sharpest open question remains: who is the first user, and which transaction are they trying to gate? The precedent (Aave Arc) failed on demand, not mechanism. A better mechanism is an argument, not evidence.",
+      "pause": 300
+    },
+    {
+      "text": "Freshness has a floor. Revocation bites at the next TEL root update, and Cardano settlement bounds how fast any status change reaches the gate (see Trust Model — discovery lag).",
+      "pause": 300
+    }
+  ],
+  "one-line-summary": [
+    {
+      "text": "One-line summary.",
+      "pause": 500
+    },
+    {
+      "text": "cardano-keri makes \"verify a vLEI\" something a Plutus validator can do, so identity gating inherits the trust profile of the chain plus GLEIF — instead of the trust profile of whoever runs the allowlist.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "defi-gate.md",
+    "sha256": "0b011bb5f563a0b4de767254dc3349338fd2fb044c4ab9d2e17ef84f5798bdb5"
+  }
+}

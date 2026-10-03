@@ -1,34 +1,266 @@
 {
+  "the-registry-as-an-mpfs-instance": [
+    {
+      "text": "The registry as an MPFS instance.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "pause": 400
+    },
+    {
+      "text": "The AID registry ruled by D-024 — one UTxO holding the MPF root over every AID ever registered — built as a cage (an MPFS store, a Merkle Patricia Forestry map behind one validator) of the Merkle Patricia Forestry store (cardano-mpfs-onchain) on its plugin path, after the rulings of 2026-09-02/03, and built today in singular; see Where the registry is built. This page names the Lean declaration behind every claim. The machine is lean/CardanoKeri/Registry.lean; the theorems are lean/CardanoKeri/RegistryGoals.lean; the generic cage and the divergence from mpfs as shipped are lean/CardanoKeri/Cage.lean; the reaper's economics — the samaritan is whoever performs a reap or a fold on another identity's behalf, and the module proves they never lose money doing it — are lean/CardanoKeri/Samaritan.lean; the simulator is Registry Simulator.",
+      "pause": 400
+    }
+  ],
   "why-a-cage-and-why-the-leaf-carries-state": [
     {
-      "text": "The registry records identity lifecycle state. Active identifies a checkpoint incarnation; dormant preserves the key state needed for revival; convicted is terminal. Active does not mean consumable. During a reap and fold handoff, a pending request can temporarily stand in for the checkpoint. Token and key-state integers in this model do not specify their concrete encoding.",
+      "text": "Why a cage, and why the leaf carries state.",
       "pause": 500
+    },
+    {
+      "text": "D-024 as first stated has every registration spend the registry UTxO directly: \"inceptions queue on the registry UTxO.\" Cardano has no queue for conflicting spends: each node keeps the first spend it hears and never switches (the consensus layer's linear consistency, IOG technical report §13.1), the slot leader includes its own first arrival, losers fail phase 1 at no cost but must rebuild against the new root. A burst of N registrants clears in about N blocks with O(N²) rebuilds. The cage shape moves the race away from the users: a registration is a request, an inbox UTxO that contends with nothing, and a fold spends the registry with many at once. Folders race; requesters are served by whichever fold lands, or fold their own request.",
+      "pause": 400
+    },
+    {
+      "text": "Checkpoints come and go — an owner parks, a thief is convicted, a min-ADA is worth reclaiming — so the registry tracks their \"go\" state. The cage never interprets a leaf; the value is the protocol's:",
+      "pause": 400
+    },
+    {
+      "text": "The guarantee is one leaf and at most one checkpoint per AID in the model; active does not establish consumer eligibility. During the reap/fold handoff it can refer to a pending go-request instead of an existing checkpoint. token and k are abstract values, not specified asset-name or key-state encodings. For when minting occurs, what the plugin must establish and which parts remain abstract, read What registration guarantees.",
+      "pause": 400
     }
   ],
   "where-the-registry-is-built": [
     {
-      "text": "The registry line moved from the Cardano Foundation MPFS repository to singular, and the two are in different states.",
+      "text": "Where the registry is built.",
+      "pause": 500
+    },
+    {
+      "text": "Read on 2026-09-11. The registry line moved from the Cardano Foundation's MPFS repository to singular, and the two repositories are in different states.",
       "pause": 400
     },
     {
-      "text": "Singular is this cage made permissionless, running on a development network since release 0.3.0 of the eleventh of September 2026. A registration is a request certified by the application own minting policy. Anyone folds requests with absence and existence proofs. The fold mints exactly one representative token into the certified output. An insert on an occupied key is refused by the node. Its key states are absent, active, and a terminal retired state. Its consumer conformance suite is bound to this page and to the consumer checklist, forty one rows, leaving bonds, poison, the juvenility window and the signature threshold to the checkpoint machine.",
-      "pause": 500
-    },
-    {
-      "text": "One result every consumer must absorb: a permissionless ledger cannot prohibit a rival registry. Canonical identity is a derivation the consumer authenticates, the token name being the hash of the seed output it was booted from, not a refusal the chain performs.",
-      "pause": 500
-    },
-    {
-      "text": "A table lists the singular pages: the read me, the lifecycle page, the consumer conformance page, the recovery page, and the theorem manifest.",
+      "text": "Singular is the cage above made permissionless, and it runs on a development network. Its release v0.3.0 of 2026-09-11 carries: a registration is a request UTxO certified by the application's own minting policy; anyone folds requests into the registry with absence and existence proofs; the fold mints exactly one representative token into the output the certified request names; an insert on an occupied key is refused by the node; a folded delete makes the key available again. Its key states are absent, active, and a terminal retired state. Its consumer-conformance suite is bound by commit to this page and to the consumer checklist: 41 rows, of which the bonds, the poison, the juvenility window (the age a checkpoint must reach before a consumer trusts it) and the signature threshold are left to the checkpoint machine and never claimed by singular. Recovery through a committed next controller has run on a ledger; retirement has not. Measured on its ship run, a fold is about 11.4 KB of a 16,384-byte transaction and under 3 % of the execution-unit maxima. Its own model has 41 proved statements under standard axioms.",
       "pause": 400
     },
     {
-      "text": "The MPFS repository has not moved since July. The four changes this page first asked of it are still open there. Singular imported that cage unchanged, so the divergences audited below hold of its cage partition too, and its conformance plan records four of them as expected gaps.",
-      "pause": 500
+      "text": "One result every consumer of this registry must absorb: a permissionless ledger cannot prohibit a rival registry. A consistent initialization from a second seed passes every check and the node accepts it. Canonical identity is therefore a derivation the consumer authenticates, not a refusal the chain performs: the canonical registry token's name is the hash of the seed output it was booted from, and that seed can be spent only once. The \"present\" and \"the token\" steps of the consumer checklist are where that authentication belongs.",
+      "pause": 400
     },
     {
-      "text": "What is not settled: the leaf maps differ. This page has a dormant leaf holding the key state a revival must rotate from. Singular has absent, active, and retired, and its delete keeps no hash. How dormant and revive are expressed on singular is a design decision not yet taken. Cardano keri own side, the minting policy that certifies a registration and the consumer authentication of the canonical registry, is unstarted.",
-      "pause": 500
+      "text": "The MPFS repository has not moved: its last code commit is 2026-07-08, and the four changes this page first asked of it are open there — replace semantics for the stake_script hook (#79), the hook and the owner pinned and empty folds refused (#100), processed-request value routed by the plugin (#101), and the plugin contract with a mint-coupled reference plugin (#102). Singular imported that cage's source unchanged, so the divergences audited under Pluggability and the permissioning divergence hold of singular's cage partition too; singular's conformance plan records four of them as expected gaps, to be observed with the transaction that proves each rather than asserted.",
+      "pause": 400
+    },
+    {
+      "text": "What is not settled between the two models. The leaf maps differ. This page's leaf is absent, active, dormant k holding the key state a revival must rotate from, or convicted for ever. Singular's leaf is absent, active, or retired for ever, and its delete returns the key to absent and keeps no hash. How dormant k and \"revive from exactly k\" are expressed on singular, in the registry leaf or in a parked application output that keeps the representative, is a design decision not yet taken; it belongs to registry integration. Cardano-keri's own side is unstarted: the minting policy that parses the inception, checks the receipts and certifies the registration request, and the consumer's authentication of the canonical registry.",
+      "pause": 400
     }
-  ]
+  ],
+  "the-rulings-verbatim-2026-09-0203": [
+    {
+      "text": "The rulings, verbatim (2026-09-02/03).",
+      "pause": 500
+    },
+    {
+      "text": "The operator's words in the design conversation, in order, with the precision added when asked. The machine's doc comments and the theorems cite them; a ruling that lived only in the transcript would not exist.",
+      "pause": 400
+    },
+    {
+      "text": "\"no 69 is wrong, I just want permissionless to remove censorship in cardano-keri aid registry (inception registration and aid convition or sunsetting)\" — the purpose: permissionless registration, conviction and sunsetting, against censorship by an oracle.",
+      "pause": 300
+    },
+    {
+      "text": "\"normal operation consume the leaves indirection (a UTxO). The problem is registry snapshotting\" — the leaf is an indirection; readers consume the UTxO it points at.",
+      "pause": 300
+    },
+    {
+      "text": "\"the registry provide aid utxo uniqueness. Can we prove that a checkpoint for an id is unique ? Can a mint policy depend on the registry and mint only unique assetName based on that ?\" — uniqueness is the registry's job; the mint couples to the absence proof (R1d, R2).",
+      "pause": 300
+    },
+    {
+      "text": "\"Yes permissionless version can't be closed\" — no close edge in the registry; a checkpoint leaves only by reap (and the checkpoint machine must follow: clarity Q-R1).",
+      "pause": 300
+    },
+    {
+      "text": "\"Now we nned to model the pluggability in lean or we cannot reuse the mpfs theorems. What about the permissioning divergence ? Is lean accounting for that ?\" and \"convicting an aid needs special code on-chain, so aiken contract has to admit staking withdrawals based plugins\" — Cage.lean: AuthMode, Plugin, ValueMode, the divergence theorems.",
+      "pause": 300
+    },
+    {
+      "text": "\"checkpoints come and go, the registry should track their \"go\" state. When an aid is active the registry store it's indirection (UTxO), when the aid is inactive the registry tell us what it's checkpoint can be if revived: to be rotated or convicted for ever\" — the leaf active token | dormant k | convicted; the indirection is the checkpoint token (asked and answered); a dormant AID is revived by a witnessed rotation from the recorded key state, or convicted forever (asked and answered).",
+      "pause": 300
+    },
+    {
+      "text": "\"this is why the cage update is pluggable\" — the leaf operation is the cage's; its admission and its coupling are the plugin's (processBody).",
+      "pause": 300
+    },
+    {
+      "text": "\"there is a problem with incentives, who pays to move a \"go\" in the registry , when the bond was already taken ?\" then \"So the premium is the min-ada recovered from the checkpoint ? I want to be sure that there is a permissionless incentive to burn checkpoints closed and convicted\" and \"but checkpoints also have freeze bond and advance premium, I bet those are returned to the return addrss\" — the reap: the go-request is funded from the checkpoint's min-ADA, the rest is the reaper's premium; bonds and pool went back to the refund address before (the parked checkpoint holds only Mc).",
+      "pause": 300
+    },
+    {
+      "text": "\"can you prove the good samaritan recovering abandoned checkpoints will not lose ada in requesting their un-referencing ?\" — Samaritan.lean, R11_reap_is_samaritan, with the condition the theorem carries (tip + fee ≤ Mc, after the go-request is folded).",
+      "pause": 300
+    },
+    {
+      "text": "\"for the rest we are good togo\" — the slice's scope closed there.",
+      "pause": 300
+    },
+    {
+      "text": "(2026-09-03, evening) \"aren't SPOs the only obvious beneficiaries of paid permissionless liveness systems ? MPFS permissionless version style i.e. and in particular the current block producer\", \"it's even worse, as the block producer can just observe the mempool and steal the value\", and the ruling: \"whenever a user needs a reaper, it should try to be one obliging the leader to steal or lose the premium\" — the tip and the premium are the block producer's when it wants them; the requester and the owner post their own folds and reaps, and the leader serves them either way. See \"Who is paid\" below and Q-R6.",
+      "pause": 300
+    }
+  ],
+  "the-machine-registrylean": [
+    {
+      "text": "The machine (Registry.lean).",
+      "pause": 500
+    },
+    {
+      "text": "Sys is the registry UTxO (gen, plugin, leaves), the checkpoint UTxOs (ckpts: live, parked since, tomb, each with its token and key state), and the inbox (requests, nextReq), plus the next token the checkpoint policy mints. Action is the cage's redeemers, the reap, and the checkpoint edges the registry must never see:",
+      "pause": 400
+    },
+    {
+      "text": "Per request in a fold, after the cage's inPhase1 (processOne), the plugin's body processBody:",
+      "pause": 400
+    },
+    {
+      "text": "rejectOne needs rejectable and op.userPostable: the plugin refuses Rejected on a go-request. The phases are the cage's at a point: inPhase1 := now < submittedAt + process, inPhase2 the next retract slots, rejectable := submittedAt + process + retract ≤ now ∨ now < submittedAt.",
+      "pause": 400
+    },
+    {
+      "text": "The evidence Env is four predicates the plugin, the checkpoint policy and the observers verify: inception (#114), rotationFrom (the advance predicate: pause, resume, revive), duplicity (D-030), quorum (the owner reaping early).",
+      "pause": 400
+    }
+  ],
+  "the-invariant-and-the-theorems": [
+    {
+      "text": "The invariant and the theorems.",
+      "pause": 500
+    },
+    {
+      "text": "Inv (Registry.lean), proved reachable-preserved before the end of time (inv_init, inv_step, reach_inv over ReachFar): a checkpoint exists only for an active leaf; an active leaf has the checkpoint carrying its token, or a pending go-request (the token is the indirection: activeCkpt names it); while a go-request is pending there is no checkpoint and the leaf is active; at most one go-request per AID; a go-request is dated far; one checkpoint, one leaf per AID; unique request identifiers.",
+      "pause": 400
+    },
+    {
+      "text": "All theorems build with no sorry on propext and Quot.sound only. The mutation campaign is lean/REGISTRY-MUTANTS.md.",
+      "pause": 400
+    }
+  ],
+  "the-good-samaritan-samaritanlean": [
+    {
+      "text": "The good samaritan (Samaritan.lean).",
+      "pause": 500
+    },
+    {
+      "text": "A parked or convicted checkpoint holds only its min-ADA Mc. The reap splits it into the go-request (Mr + tip) and the reaper's premium; the fold returns Mr to the reaper and the tip to the folder. reap_conserves, reaper_recovers, samaritan_never_loses (tip + fReap ≤ Mc suffices), self_folding_reaper_never_loses, fold_conserves, and the converse unprofitable_when_tip_too_high. R11_reap_is_samaritan binds the machine's reap to that model — its two numeric outputs, the premium and what goes into the go-request. What the theorems say, exactly: the reaper's position is whole after the go-request is folded (samaritan_never_loses counts (fold r).toOwner), under tip + fReap ≤ Mc; it is an eventual, conditional accounting, not a per-transaction guarantee. With the story values (Mc 4, Mr 1, tip 2, a reap fee of 2) the reaper receives 1 at the reap and is down 1 until the fold returns Mr. Fee funding, the receipt token that carries the reap's evidence into the go-request, and the identity of the reaper across the two transactions are outside both theorems. Consequence for deployment, as a design statement rather than a theorem: the registry cage's tip must sit below a checkpoint's min-ADA minus the reap fee, or the reap is unprofitable and parked checkpoints stay.",
+      "pause": 400
+    }
+  ],
+  "pluggability-and-the-permissioning-divergence-cagelean": [
+    {
+      "text": "Pluggability and the permissioning divergence (Cage.lean).",
+      "pause": 500
+    },
+    {
+      "text": "The cage as mpfs ships it is parameterised by what the epic changes: AuthMode (owner-keyed; owner and hook, #79 as shipped; delegated, the hook alone), Plugin (Plugin.registry with body processBody; Plugin.trivial, the shipped staking.ak that applies the leaf operation with no evidence and no checkpoint), and ValueMode (refundAll, an idealised reading of today's validModify; delegatedRouting, #101).",
+      "pause": 400
+    },
+    {
+      "text": "Where the cage model is an idealisation of validators/state.ak on cardano-mpfs-onchain main, and not the code (audit of 2026-09-03; singular imported that code unchanged, so the same holds of its cage partition):",
+      "pause": 400
+    },
+    {
+      "text": "Refunds. refundAll returns each processed request's exact bond to its owner and pays the tip to the folder. validModify checks an aggregate refund range, less the transaction fee and n × tip; sumRefunds does not read each owner's input amount, and no check names the folder as the tip's recipient. refundAll_never_locks is therefore true of the model's routeValue, not a statement about validModify.",
+      "pause": 300
+    },
+    {
+      "text": "Batch cardinality. The model consumes an exact non-empty batch of named request identifiers. validModify discards the tail of its action list (let (expectedNewRoot, _, …)) and returns true when no request input matched, so an empty Modify and surplus actions validate today; the rejection of the empty fold is #100.",
+      "pause": 300
+    },
+    {
+      "text": "The owner pin. Sys carries the plugin and nothing else the cage is parameterised by; R5 proves the plugin pinned. Today's types.ak lets a Modify change the owner; #100 pins owner and hook together, and the model will carry both fields when it lands.",
+      "pause": 300
+    },
+    {
+      "text": "Rejection of a go-request. rejectable holds for a request dated in the future — a go-request dated far is rejectable by the cage; what saves its key state is the plugin veto in rejectOne (r.op.userPostable = true). On main, Rejected has no plugin veto (state.ak 113–121): the go-request is safe only once #102 gives the plugin a say on Rejected. R9_go_never_rejected is a theorem of the model with that veto.",
+      "pause": 400
+    },
+    {
+      "text": "delegated_is_registry: under replace semantics with the keri plugin and delegated routing, the cage is Registry.stepFn for every transaction that ran the plugin, whoever signed it, so every theorem above holds of it; delegated_permissionless.",
+      "pause": 400
+    },
+    {
+      "text": "ownerKeyed_needs_owner, ownerAndHook_needs_owner: on the shipped paths nobody but the owner folds.",
+      "pause": 300
+    },
+    {
+      "text": "owner_bypass_breaks_inv, ownerAndHook_trivial_breaks_inv: the owner registers an AID with no inception evidence and no checkpoint, and Inv fails in the result — the argument for replace semantics.",
+      "pause": 300
+    },
+    {
+      "text": "owner_swaps_plugin / delegated_pins_plugin: #100.",
+      "pause": 300
+    },
+    {
+      "text": "refundAll_never_locks: under validModify as shipped no checkpoint is ever funded — #101.",
+      "pause": 300
+    },
+    {
+      "text": "The generic cage is written to be lifted into cardano-mpfs-onchain/lean; today that repository is on Lean 4.16 and has no cage machine, so the reuse runs upstream from here, not downstream. Singular carries its own Lean model of its registry rather than this cage machine; reconciling the two is part of the leaf-map question under Where the registry is built.",
+      "pause": 400
+    }
+  ],
+  "the-plugins-contract-derived": [
+    {
+      "text": "The plugin's contract, derived.",
+      "pause": 500
+    },
+    {
+      "text": "For each action of a fold the keri plugin requires, in the same transaction: a mint of {aid: +1} under the checkpoint policy and a bonded checkpoint output for a registration or a revival (the policy verifies the inception; the advance observer's withdrawal bound to k verifies the rotation); the receipt token minted by the checkpoint's reap for a go-request, burned here; the enforcement observer's withdrawal bound to k for a conviction of a dormant AID. It refuses Delete, Rejected on a receipt-carrying request, End, and any mint or burn under the checkpoint or receipt policies no action accounts for. Pinning the plugin and refusing empty batches are cage-level (#100); the grace window and the min-ADA split are the checkpoint validator's reap edge.",
+      "pause": 400
+    }
+  ],
+  "what-the-model-decides-that-the-lean-did-not-and-what-it-does-not-say": [
+    {
+      "text": "What the model decides that the Lean did not, and what it does not say.",
+      "pause": 500
+    },
+    {
+      "text": "The end of time. A go-request is dated far; the theorems about it hold for steps at now < far (ReachFar). On chain far is a submitted_at far beyond any slot the chain will reach.",
+      "pause": 300
+    },
+    {
+      "text": "The receipt token that carries the reap's evidence into the go-request is not modelled: in the model the reap creates the request itself.",
+      "pause": 300
+    },
+    {
+      "text": "Fees are outside the machine; Samaritan.lean carries them as parameters.",
+      "pause": 300
+    },
+    {
+      "text": "Two guards are defence in depth and unreachable from genesis by Inv: a revive while a checkpoint exists (checkpoint-exists), a go-request on a leaf that is not active (not-active). The scenario gate exempts them by name.",
+      "pause": 300
+    },
+    {
+      "text": "The checkpoint machine's close. Checkpoint.lean on the base branch (PR 315) still lets the quorum close a present checkpoint to gone; this registry has no edge for it, so under the pair of machines an owner who closes leaves an active leaf with neither checkpoint nor go-request, and Inv.activeCkpt does not hold of the pair. The ruling of 2026-09-03 is that the permissionless registry cannot be closed: close leaves the checkpoint machine and becomes park + reap. That change belongs to the checkpoint's own slice; until it lands the two models are not composable on that edge (clarity record Q-R1).",
+      "pause": 300
+    },
+    {
+      "text": "The retract's signer. stepFn checks a retract by request id and phase only; request.ak on mpfs main requires the owner's signature. In the model a stranger can cancel a request in phase 2 — the refund still goes to the recorded owner (Q-R3, a ruling pending: the machine has no signer anywhere else).",
+      "pause": 300
+    },
+    {
+      "text": "Cryptography: evidence is a table. The checkpoint's rotations that keep it live, its bonds beyond one abstract D, poison: the checkpoint machine. Ordering among folders, and who is paid (ruling 11): the slot leader chooses the block's contents; Praos guarantees nothing about transaction order, and every fold and reap is public in the mempool with a free payee field (folder, reaper carry no signature). A producer copies the transaction, rewrites the payee, includes its copy; the original is stale at no cost. What it can take is exactly the tip and the reap's split of Mc — never a bond, which goes where R11 says, position by position. So the requester folds their own request and the owner reaps their own checkpoint: the leader then serves them and takes the fee, or lets them through and takes nothing. Liveness never depends on a third party; the exposure per action is tip for a fold and Mc for a reap. The model says a stale fold is refused, not who wins; no CIP or CPS addresses the copy (CIP-0183 makes the race a fee auction the producer still wins for free; CPS-0031 records that SPOs are not committed to any order). Starving the queue (the operator, same evening: \"the bad part is that now the leader can starve the queue, but that will favor next leader economically\"): a leader that folds nothing in its block forfeits every tip in the inbox to the next leader, who folds the accumulated batch and is paid n × tip for it (R11); starvation buys one block of censorship at the price of the whole batch's tips, and repeating it only enriches whoever comes next. What it can achieve is pushing a request past phase 1 into the phases where it can only be retracted or rejected — so process_time is the censorship budget and must span many blocks, not the ten slots the stories play (a mainnet block is about twenty slots): a request survives phase 1 as long as one of the leaders in that window is not the censor. Open (Q-R6): the owner's quorum evidence is env.quorum aid, bound to the AID and not to the reaper, so a copy of her early reap inside the grace window is admitted with another payee (story 11's branch \"the block producer copies Alice's early reap\"); binding the payee into the signed quorum message would close it, as D-038 did for the refund address. Censorship: a folder may omit a request; the remedy is folding it oneself.",
+      "pause": 300
+    }
+  ],
+  "_source": {
+    "file": "registry-as-mpfs.md",
+    "sha256": "71046f79eed88734c5f27c46e301336c0b174e95d002ba5c14ded8d21aee3f70"
+  }
 }

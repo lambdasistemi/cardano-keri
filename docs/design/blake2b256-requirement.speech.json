@@ -1,0 +1,84 @@
+{
+  "blake2b-256-aid-requirement": [
+    {
+      "text": "Blake2b-256 AID Requirement.",
+      "pause": 500
+    },
+    {
+      "text": "Retired — superseded by the E-native contract (2026-07-16)",
+      "pause": 400
+    },
+    {
+      "text": "cardano-keri is now E-native: standard Blake3 (E-prefix) AIDs are supported as-is, with in-script blake3 (spike #88 lane-packed core) on the rare genesis/rotation paths and raw-key verification on the authorization hot path. This document is kept as the archived rationale for the earlier F-prefix decision and as the cost record that motivated it.",
+      "pause": 400
+    },
+    {
+      "text": "cardano-keri required Blake2b-256 (CESR F prefix) AID derivation; Blake3 AIDs were not supported.",
+      "pause": 400
+    }
+  ],
+  "why-blake2b-256": [
+    {
+      "text": "Why Blake2b-256.",
+      "pause": 500
+    },
+    {
+      "text": "blake2b_256 is a native Plutus builtin. With F-prefix AIDs, the full derivation chain is on-chain verifiable today, with no Plutus changes:",
+      "pause": 400
+    },
+    {
+      "text": "All three steps use the same builtin. An on-chain script can verify the full chain. This was demonstrated with a working CLI: https://github.com/lambdasistemi/cardano-keri-verify.",
+      "pause": 400
+    }
+  ],
+  "cesr-f-prefix": [
+    {
+      "text": "CESR F prefix.",
+      "pause": 500
+    },
+    {
+      "text": "CESR (Composable Event Streaming Representation) encodes the hash algorithm alongside the value as a derivation code prefix. The F prefix denotes Blake2b-256 (RFC 7693). The qualified base64url value is 44 characters.",
+      "pause": 400
+    },
+    {
+      "text": "Example:",
+      "pause": 400
+    },
+    {
+      "text": "The KERI inception event's n (next-key digest) field carries this CESR-qualified value. Cardano stores only the raw 32 bytes after decoding.",
+      "pause": 400
+    }
+  ],
+  "the-veridian-fix": [
+    {
+      "text": "The Veridian fix.",
+      "pause": 500
+    },
+    {
+      "text": "Veridian's prefixer.ts does not yet implement the F prefix. The fix is approximately 40 lines. Fix branch: https://github.com/lambdasistemi/signify-ts/tree/feat/blake2b-256-prefix-derivation.",
+      "pause": 400
+    },
+    {
+      "text": "Until this merges upstream, the cardano-keri SDK bridge must apply the patch when generating KERI inception events.",
+      "pause": 400
+    }
+  ],
+  "existing-blake3-aids": [
+    {
+      "text": "Existing Blake3 AIDs.",
+      "pause": 500
+    },
+    {
+      "text": "Veridian users with existing Blake3 (E prefix) AIDs cannot use cardano-keri with those identities. They must create a new identity using F-prefix derivation.",
+      "pause": 400
+    },
+    {
+      "text": "Blake3 as a Plutus builtin is not planned and not needed. cardano-keri is fully functional with Blake2b-256.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "blake2b256-requirement.md",
+    "sha256": "b8276dac439088fb0c71680ed60921ef8a4a440dfae3772aa878cc78cb43309b"
+  }
+}

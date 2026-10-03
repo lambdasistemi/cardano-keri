@@ -1,0 +1,54 @@
+{
+  "close-and-conviction-2027-01-21-preprod-target": [
+    {
+      "text": "Close and conviction — 2027-01-21 preprod target.",
+      "pause": 500
+    },
+    {
+      "text": "D-07 story. As an identity controller, I want a valid closing rotation to end my checkpoint and record where the registry stopped, so that a later return must prove the right continuation.",
+      "pause": 400
+    },
+    {
+      "text": "Planned release tag: Cardano KERI v1.0.0 (identity-core M1). This names the milestone target; intermediate plays use release candidates, and the tag waits for the D-11 release gate and its preprod evidence.",
+      "pause": 400
+    },
+    {
+      "text": "This is a dated preprod review target from the project card. A keripy and ckeri cast must show a connected preprod journey. The existing M1 V1 release can close a checkpoint, but it has no Singular registry fold or KERI-conformant conviction path; a V1 close cannot satisfy the full D-07 story.",
+      "pause": 400
+    }
+  ],
+  "planned-preprod-play": [
+    {
+      "text": "Planned preprod play.",
+      "pause": 500
+    },
+    {
+      "text": "Given the D-04 and D-05 connected preprod outputs, the controller uses keripy kli to produce the authorized closing KERI event and exports its CESR bytes. ckeri close submits the close against the live checkpoint and reads back the refund and registry state. In a separate trace, a party submits a genuine KERI duplicity proof through the conviction command; a missing or malformed proof refuses at the intended script. A later witnessed rotation must be required for return from the recorded closed state, while conviction remains terminal.",
+      "pause": 400
+    },
+    {
+      "text": "The V1 close guide documents a narrower deployed preprod transaction. It supplies a useful kli and ckeri baseline, but it does not prove registry close, reopened custody or conviction. No full D-07 preprod cast is attached yet.",
+      "pause": 400
+    }
+  ],
+  "presenter-path-1015-minutes-when-connected": [
+    {
+      "text": "Presenter path: 10–15 minutes when connected.",
+      "pause": 500
+    }
+  ],
+  "missing-interface-and-evidence": [
+    {
+      "text": "Missing interface and evidence.",
+      "pause": 500
+    },
+    {
+      "text": "The registry integration #324, close authority #358, KERI-conformant duplicity predicate, preprod release, connected event and proof inputs, leaf/token readbacks and bond refunds remain required. The Lean correspondence register #435 holds the affected model conflicts. Model scenario playback cannot replace those preprod transactions.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "d07-close-convict.md",
+    "sha256": "b8491e6ecc1fcfa3df6779e0cf0a21d8dd388b63537466b1f43d27012a65bb55"
+  }
+}

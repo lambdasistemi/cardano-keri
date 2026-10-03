@@ -1,0 +1,102 @@
+{
+  "identity-on-cardano-presentation": [
+    {
+      "text": "Identity on Cardano — presentation.",
+      "pause": 500
+    },
+    {
+      "text": "Browser-native preview of the 13-slide deck. These images avoid GitHub's embedded PDF renderer entirely.",
+      "pause": 400
+    },
+    {
+      "text": "Open the presentation · Open the PDF · Read the reusable design prompt",
+      "pause": 400
+    },
+    {
+      "text": "The slides are the approachable overview. For the engineering decisions, measurements, limitations, and implementation status, read the deep technical companion article. The documentation also preserves the notes for the future vLEI verification installment.",
+      "pause": 400
+    }
+  ],
+  "01-keep-the-identity-you-already-trust": [
+    {
+      "text": "01 — Keep the identity you already trust.",
+      "pause": 500
+    }
+  ],
+  "02-meet-northstar": [
+    {
+      "text": "02 — Meet Northstar.",
+      "pause": 500
+    }
+  ],
+  "03-bring-your-existing-identity-no-conversion-required": [
+    {
+      "text": "03 — Bring your existing identity — no conversion required.",
+      "pause": 500
+    }
+  ],
+  "04-give-apps-one-stable-name-for-your-organization": [
+    {
+      "text": "04 — Give apps one stable name for your organization.",
+      "pause": 500
+    }
+  ],
+  "05-keep-the-approval-rules-your-team-already-uses": [
+    {
+      "text": "05 — Keep the approval rules your team already uses.",
+      "pause": 500
+    }
+  ],
+  "06-your-records-stay-under-the-right-control": [
+    {
+      "text": "06 — Your records stay under the right control.",
+      "pause": 500
+    }
+  ],
+  "07-update-keys-directly-whenever-your-team-needs-to": [
+    {
+      "text": "07 — Update keys directly, whenever your team needs to.",
+      "pause": 500
+    }
+  ],
+  "08-losing-todays-keys-does-not-mean-losing-the-identity": [
+    {
+      "text": "08 — Losing today's keys does not mean losing the identity.",
+      "pause": 500
+    }
+  ],
+  "09-apps-always-read-the-keys-that-are-valid-now": [
+    {
+      "text": "09 — Apps always read the keys that are valid now.",
+      "pause": 500
+    }
+  ],
+  "10-public-checks-keep-cardano-and-keri-in-sync": [
+    {
+      "text": "10 — Public checks keep Cardano and KERI in sync.",
+      "pause": 500
+    }
+  ],
+  "11-the-same-public-evidence-supports-useful-services": [
+    {
+      "text": "11 — The same public evidence supports useful services.",
+      "pause": 500
+    }
+  ],
+  "12-the-end-to-end-demo-shows-the-complete-journey": [
+    {
+      "text": "12 — The end-to-end demo shows the complete journey.",
+      "pause": 500
+    }
+  ],
+  "13-what-this-foundation-proves-and-what-comes-next": [
+    {
+      "text": "13 — What this foundation proves — and what comes next.",
+      "pause": 500
+    }
+  ],
+  "_source": {
+    "file": "preview.md",
+    "sha256": "8ac1cf1ae16481966396fd0bd5a7927cef71ef7f1822fbbe6c68f2ba220ccd36"
+  }
+}

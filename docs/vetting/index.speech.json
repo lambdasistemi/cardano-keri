@@ -1,0 +1,148 @@
+{
+  "vetting-summary": [
+    {
+      "text": "Vetting Summary.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Nothing under Vetting ships. The pages are a design-history record of an archived specification. The current machine is lean/CardanoKeri/Checkpoint.lean and the two simulations on the home page.",
+      "pause": 400
+    },
+    {
+      "text": "Current vetting — round 2 (canonical permissionless model)",
+      "pause": 400
+    },
+    {
+      "text": "The independent re-vet of the current design lives in Canonical Permissionless Model — Vetting Round 2, with the two cold passes in analysis-2-soundness.md and analysis-2-consistency.md. Findings tagged blocks #24 must be resolved before the identity key-state validator is written. Everything below this box is the older, archived-spec vetting.",
+      "pause": 400
+    },
+    {
+      "text": "Historical material — do not implement from this section",
+      "pause": 400
+    },
+    {
+      "text": "Everything under Vetting (including the analyses and cross-agent transcripts linked below) is a design-history record of an archived specification. It preserves superseded assumptions next to the findings that killed them. The normative model lives in the Architecture and Design sections — start from Architecture Overview and Identity Operations.",
+      "pause": 400
+    },
+    {
+      "text": "Two agents independently vetted the docs/aid-ops.md specification (now archived as aid-ops-historical.md):",
+      "pause": 400
+    },
+    {
+      "text": "Codex gpt-5.5 — full report in analysis-codex.md",
+      "pause": 300
+    },
+    {
+      "text": "Claude Opus 4.8 — full report in analysis-claude.md",
+      "pause": 300
+    },
+    {
+      "text": "Cross-agent discussion — codex-to-claude.md and claude-to-codex.md",
+      "pause": 300
+    },
+    {
+      "text": "Both agents were given the specification cold, with no prior context about the design intent. Findings were compared and deduplicated. The table below reflects the merged result.",
+      "pause": 400
+    }
+  ],
+  "findings-by-severity": [
+    {
+      "text": "Findings by severity.",
+      "pause": 500
+    }
+  ],
+  "still-open-implementation-requirements": [
+    {
+      "text": "Still-open implementation requirements.",
+      "pause": 500
+    }
+  ],
+  "critical-findings-closed": [
+    {
+      "text": "Critical findings (closed).",
+      "pause": 500
+    }
+  ],
+  "vk_from_tx_signatories-hash-width-mismatch": [
+    {
+      "text": "vk_from_tx_signatories hash-width mismatch.",
+      "pause": 500
+    },
+    {
+      "text": "Both agents independently flagged this. The original spec derived the public key from tx_signatories, but Cardano transaction signatories are 28-byte blake2b_224 key hashes — not public keys. The original cur_digest was defined as blake2b_256(cur_key) (32 bytes). These types can never match.",
+      "pause": 400
+    },
+    {
+      "text": "Resolution: the design decision (Option A vs Option B) closes this: - Option A: carry vk in the redeemer; cur_digest remains 32-byte blake2b_256; do not use tx_signatories for key recovery. - Option B: redefine cur_digest as blake2b_224(PubKey); use extra_signatories for authorization; the 28-byte match works by design.",
+      "pause": 400
+    }
+  ],
+  "value-write-auth_msg-insufficient-anti-replay": [
+    {
+      "text": "Value-write auth_msg insufficient anti-replay.",
+      "pause": 500
+    },
+    {
+      "text": "The original auth_msg lacked a binding to the value cage's current state, making it possible to replay a valid authorization against a different cage state. The fully-bound auth_msg specified in Value Authorization includes value_input_root, value_output_root, op_hash, counter, valid_from, and valid_until. Option B eliminates the replay problem through UTxO-model uniqueness.",
+      "pause": 400
+    }
+  ],
+  "high-severity-findings-now-resolved": [
+    {
+      "text": "High-severity findings (now resolved).",
+      "pause": 500
+    }
+  ],
+  "inception-self-auth": [
+    {
+      "text": "Inception self-auth.",
+      "pause": 500
+    },
+    {
+      "text": "The original spec did not require event-own controller authentication at inception. Resolution: current registration verifies the inception event's indexed controller signatures and witness receipts over the exact event bytes. See Identity Operations — Register.",
+      "pause": 400
+    }
+  ],
+  "canonical-cbor": [
+    {
+      "text": "Canonical CBOR.",
+      "pause": 500
+    },
+    {
+      "text": "The spec did not require canonical CBOR encoding for InceptionEvent, rot_msg, or auth_msg. Resolution: canonical CBOR is now mandated for all hashed and signed objects. See AID Model — CBOR determinism.",
+      "pause": 400
+    }
+  ],
+  "domain-separation": [
+    {
+      "text": "Domain separation.",
+      "pause": 500
+    },
+    {
+      "text": "The original spec did not specify domain tags for the signed/hashed objects. Resolution: domain tags are now required fields in all messages. See AID Model — Domain separation.",
+      "pause": 400
+    }
+  ],
+  "convergence-and-disagreement": [
+    {
+      "text": "Convergence and disagreement.",
+      "pause": 500
+    },
+    {
+      "text": "Points of convergence: both agents agreed on the hash-width mismatch (independently derived), the MPF domain separation requirement, the canonical CBOR requirement, the CIP-31 MEV risk, and the tombstone-does-not-revoke gap.",
+      "pause": 400
+    },
+    {
+      "text": "One open disagreement: Option A vs Option B for value-write authorization. Codex preferred Option A (separates AID key from Cardano wallet key, preserving key isolation). Claude preferred Option B (eliminates hash-width mismatch class of bugs, simpler script, ledger-proven replay protection). The recommendation in Value Authorization reflects Option B, but Option A is fully specified for teams with hardware isolation requirements.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "index.md",
+    "sha256": "884bb7288772b8c95fefeabfb5e7c4d8ac603cdc416ada744d7970f94b86840f"
+  }
+}

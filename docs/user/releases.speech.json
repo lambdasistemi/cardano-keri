@@ -1,0 +1,94 @@
+{
+  "releases": [
+    {
+      "text": "Releases.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "pause": 400
+    },
+    {
+      "text": "ckeri ships self-contained Linux binaries for every tagged release.",
+      "pause": 400
+    }
+  ],
+  "channels": [
+    {
+      "text": "Channels.",
+      "pause": 500
+    },
+    {
+      "text": "The active channel is declared in .release-channel.json at the repository root.",
+      "pause": 400
+    }
+  ],
+  "artifacts": [
+    {
+      "text": "Artifacts.",
+      "pause": 500
+    },
+    {
+      "text": "Each release produces three packages from the same Nix build:",
+      "pause": 400
+    },
+    {
+      "text": "All artifacts bundle the ckeri witness-node runner together with its complete runtime closure, including the CA certificate bundle used for TLS verification.",
+      "pause": 400
+    }
+  ],
+  "verifying-a-release": [
+    {
+      "text": "Verifying a release.",
+      "pause": 500
+    }
+  ],
+  "release-process": [
+    {
+      "text": "Release process.",
+      "pause": 500
+    },
+    {
+      "text": "Releases are driven by the Cabal version in offchain/cardano-keri.cabal (the single source of truth) and automated by two GitHub Actions workflows:",
+      "pause": 400
+    },
+    {
+      "text": "Release Planner (release-plan.yml) — runs on every push to main. It computes the next version via scripts/release/next-version, writes it into the Cabal file, adds a CHANGELOG.md section, and opens a release preparation PR on the release/cabal-release branch. When the Cabal version already has a matching CHANGELOG.md section but no git tag (i.e. the PR was merged), it creates and pushes v<version>.",
+      "pause": 400
+    },
+    {
+      "text": "Linux Release (release.yml) — triggered by v* tag pushes, pull requests, and manual dispatch. Tag pushes build release artifacts and publish them to the GitHub release. PRs and manual dispatches build dev artifacts and smoke-test them without publishing.",
+      "pause": 400
+    },
+    {
+      "text": "Merging a release PR does not publish. The next planner run on main creates the tag, and the tag-push workflow publishes.",
+      "pause": 400
+    }
+  ],
+  "version-selection-seed-vs-computed": [
+    {
+      "text": "Version selection: seed vs. computed.",
+      "pause": 500
+    },
+    {
+      "text": "The first release (0.1.0) was a deliberate choice, not derived from scanning commit history. The repository had 367 commits before any release rule existed; scanning them for conventional-commit prefixes would produce a number that looks derived but means nothing. When scripts/release/next-version detects that no v* tag exists anywhere in the repository, it seeds the version 0.1.0 directly.",
+      "pause": 400
+    },
+    {
+      "text": "Every version after the first is computed from the commits since the previous v* tag, using conventional-commit classification:",
+      "pause": 400
+    },
+    {
+      "text": "Breaking changes in 0.x bump the minor component, not major. This guarantees 1.0.0 is never reachable by accident — a major bump requires an explicit non-zero major already present in the Cabal file. Once the major component is ≥ 1, breaking changes bump major per ordinary SemVer (1.2.3 → 2.0.0).",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "releases.md",
+    "sha256": "a204a386919251b91f45696e7153fa1f87b01ba96b6931bbf162b83594220c7d"
+  }
+}

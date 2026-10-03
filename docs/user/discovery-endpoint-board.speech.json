@@ -1,0 +1,194 @@
+{
+  "discovery-the-endpoint-board": [
+    {
+      "text": "Discovery — the endpoint board.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "pause": 400
+    },
+    {
+      "text": "The endpoint board is a public, current OOBI catalog on Cardano preprod. A witness publishes its own KERI-signed /loc/scheme reply. Anyone can then find the record from the chain, verify its KERI SAID and Ed25519 signature, and dial the advertised endpoint without receiving a private witnesses.json file.",
+      "pause": 400
+    },
+    {
+      "text": "The chain contributes availability and currency, not trust. The witness signs the endpoint record; ckeri board list verifies that signature and the KERI record semantics. The current catalog is exactly the unspent set at the frozen board address.",
+      "pause": 400
+    }
+  ],
+  "public-release-facts": [
+    {
+      "text": "Public release facts.",
+      "pause": 500
+    },
+    {
+      "text": "The M1 board contract is:",
+      "pause": 400
+    },
+    {
+      "text": "policy id 54494f8a1b2930241b7b9fa010f61f2cf6307daabfab69efbf91210c;",
+      "pause": 300
+    },
+    {
+      "text": "preprod address addr_test1wp2yjnu2rv5nqfqm0w06qy8kruk0vvra42l6k600h7gjzrqpd4hm4;",
+      "pause": 300
+    },
+    {
+      "text": "datum schema specs/165-endpoint-board/datum-schema.md; and",
+      "pause": 300
+    },
+    {
+      "text": "deployment locator deploy/preprod/board-manifest.json.",
+      "pause": 300
+    },
+    {
+      "text": "The manifest freezes the policy, address, exact source commit, blueprint digest, and unspent reference-script output. Consumers reject drift from the policy and address above.",
+      "pause": 400
+    }
+  ],
+  "stranger-journey-find-verify-and-dial": [
+    {
+      "text": "Stranger journey: find, verify, and dial.",
+      "pause": 500
+    },
+    {
+      "text": "Start in a clean directory on any Nix machine. The repository and Cardano chain are the only inputs:",
+      "pause": 400
+    },
+    {
+      "text": "Use main for a released story. During public PR acceptance, set CKERI_REF to the exact public commit or branch named by that PR; no private artifact is required.",
+      "pause": 400
+    },
+    {
+      "text": "The outer nix shell supplies a current Nix client. This keeps the clean-client journey portable on hosts whose installed Nix predates support for the repository's locked sibling onchain source. On Nix 2.31 or newer, you may run the inner nix run command directly. --accept-flake-config enables the public IOG cache declared by the project.",
+      "pause": 400
+    },
+    {
+      "text": "verified is not a server claim. It means the client:",
+      "pause": 400
+    },
+    {
+      "text": "queried the exact current UTxO set at the frozen address;",
+      "pause": 300
+    },
+    {
+      "text": "required exactly one amount-1 marker under the frozen policy;",
+      "pause": 300
+    },
+    {
+      "text": "bound its raw 32-byte asset name to the datum's witness key;",
+      "pause": 300
+    },
+    {
+      "text": "decoded the frozen datum including its Cardano lifecycle owner;",
+      "pause": 300
+    },
+    {
+      "text": "verified the KERI 1.0 JSON size, /loc/scheme route, SAID, scheme and URL; and",
+      "pause": 300
+    },
+    {
+      "text": "verified the witness's Ed25519 signature over the exact endpoint bytes.",
+      "pause": 300
+    },
+    {
+      "text": "An invalid output fails the complete catalog read and names its out-ref; the client never returns a partial trusted-looking list. An optional KOIOS_TOKEN environment variable supplies Koios bearer authorization. Anonymous reads remain supported.",
+      "pause": 400
+    },
+    {
+      "text": "Dial the witness through its public KERI OOBI route. The catalog gives both the witness AID and base URL, so no private path is needed:",
+      "pause": 400
+    },
+    {
+      "text": "The base URL is a KERI service endpoint, not a web home page; a generic GET / may correctly return method-not-allowed. The OOBI route above is the protocol-level dial.",
+      "pause": 400
+    }
+  ],
+  "witness-operator-journey-post": [
+    {
+      "text": "Witness operator journey: post.",
+      "pause": 500
+    },
+    {
+      "text": "Fetch the witness's live controller OOBI response as binary data. Do not copy and paste CESR through a text editor:",
+      "pause": 400
+    },
+    {
+      "text": "The marker asset name is the witness's raw Ed25519 key. The inline datum wraps the exact endpoint reply, its signature, and the 28-byte Cardano payment-key hash that controls its lifecycle. Posting mints exactly one marker, and the policy verifies the witness signature before minting.",
+      "pause": 400
+    },
+    {
+      "text": "All configuration uses opt-env-conf: command options, environment variables, and YAML are equivalent. optparse-applicative is not used. Secrets are read from environment-selected files and are never placed in the manifest or printed.",
+      "pause": 400
+    },
+    {
+      "text": "The payer key must derive the payment credential in the funding address. Board mutations enumerate exact candidate out-refs through Koios, resolve those inputs through N2C, construct and sign in process, and use local transaction submission. Funding may span several spend inputs; collateral is kept separate.",
+      "pause": 400
+    }
+  ],
+  "update": [
+    {
+      "text": "Update.",
+      "pause": 500
+    },
+    {
+      "text": "An update spends and recreates the selected record with the same marker and complete deposit. The recorded Cardano owner must sign:",
+      "pause": 400
+    },
+    {
+      "text": "Global uniqueness is intentionally not an on-chain rule. If the same witness has multiple live records, all remain visible and update refuses ambiguity. Pass --board-out-ref TXID#INDEX to select one explicitly.",
+      "pause": 400
+    }
+  ],
+  "retire-and-refund": [
+    {
+      "text": "Retire and refund.",
+      "pause": 500
+    },
+    {
+      "text": "Retirement spends the selected board output, burns exactly one marker, and refunds the complete deposit to --to. Fee change must use a different address when the funding address is also the refund target:",
+      "pause": 400
+    },
+    {
+      "text": "After settlement, the spent predecessor is stale and disappears from board list. There is no TTL or wall-clock rule: current means unspent.",
+      "pause": 400
+    }
+  ],
+  "checkpoint-watchability": [
+    {
+      "text": "Checkpoint watchability.",
+      "pause": 500
+    },
+    {
+      "text": "Checkpoint datums say who the controller chose; the endpoint board says where those witnesses currently advertise service. ckeri status joins the two verified sets:",
+      "pause": 400
+    },
+    {
+      "text": "Duplicates never increase the numerator. Witnessed registration refuses missing board entries by default; --allow-unlisted-witnesses is an explicit acknowledgement of reduced public watchability.",
+      "pause": 400
+    }
+  ],
+  "captured-preprod-lifecycle": [
+    {
+      "text": "Captured preprod lifecycle.",
+      "pause": 500
+    },
+    {
+      "text": "The four m1-board-*-acceptance.txt files under deploy/preprod/ form one ordered mechanical journey. It starts from the released three-record board, posts transaction 21050c77383153f740734881e05c369ae989018b5ad6ddacc9bfcd8f72e7edd0, proves a stranger can fetch the 1,239-byte OOBI with HTTP 200, updates through 8d1885773e0e865a5d2e931f2564927a669e25bce16dd837c2f05d6ef7d8d556, and retires through bac4cbcb8dd4c27509a677791ebcdd6ae98a517c5fb03ecfd22130d3be34638c. The final list is the original three records and the full 4-tADA deposit is refunded to the configured address.",
+      "pause": 400
+    },
+    {
+      "text": "The refreshed stranger capture observes that temporary live record with the repaired local package. The independent clean-client property remains in deploy/preprod/m1-board-clean-client-historical-acceptance.txt: a fresh Nix host first proves the checkout absent, clones the public GitHub repository, runs ./offchain#ckeri -- board list, and fetches the advertised OOBI with HTTP 200. The board checker requires both evidence seats rather than treating a local-path build as a clean client.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "discovery-endpoint-board.md",
+    "sha256": "9f98db346f3d5fe05485ebf202aa2a4eb41125bf4cf6c13262240d10a9aa9470"
+  }
+}

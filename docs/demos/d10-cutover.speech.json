@@ -1,0 +1,72 @@
+{
+  "preprod-cutover-rehearsal-2027-03-07-target": [
+    {
+      "text": "Preprod cutover rehearsal — 2027-03-07 target.",
+      "pause": 500
+    },
+    {
+      "text": "D-10 story. As the deployment operator, I want to rehearse the new registry and validator cutover against an inventory of existing identities, so that I can identify unsafe state before touching preprod.",
+      "pause": 400
+    },
+    {
+      "text": "Planned release tag: Cardano KERI v1.0.0 (identity-core M1). This names the milestone target; intermediate plays use release candidates, and the tag waits for the D-11 release gate and its preprod evidence.",
+      "pause": 400
+    },
+    {
+      "text": "This is a dated review target from the live project card. Not yet playable as the connected target. No confirmed ledger outcome or release acceptance is claimed by this page.",
+      "pause": 400
+    }
+  ],
+  "planned-play-and-evidence": [
+    {
+      "text": "Planned play and evidence.",
+      "pause": 500
+    },
+    {
+      "text": "Given the exact candidate release, the old preprod manifest and the inventory required by #279; when the team checks deployed script identities, proposed new manifests, parameters and each existing identity’s cutover disposition; then the rehearsal names every mismatch and blocks cutover for an ARMED or FROZEN checkpoint or an unaccounted identity.",
+      "pause": 400
+    },
+    {
+      "text": "The intended positive observation is: The operator compares the candidate archive, old and new manifests, parameters and each existing identity disposition. The relevant refusal is: An ARMED, FROZEN or unaccounted identity blocks cutover. These are acceptance criteria, not observed results.",
+      "pause": 400
+    }
+  ],
+  "preprod-recording-path": [
+    {
+      "text": "Preprod recording path.",
+      "pause": 500
+    },
+    {
+      "text": "Use keripy kli to export the event history for the identities in the cutover inventory. Use the release-bound ckeri to query their current preprod checkpoints and verify the candidate manifest against deployed references. Only a permitted disposition may proceed to a connected candidate action. Record the block reason for every ARMED, FROZEN or unaccounted identity; no cutover cast is attached yet.",
+      "pause": 400
+    }
+  ],
+  "presenter-path-1015-minutes-when-runnable": [
+    {
+      "text": "Presenter path: 10–15 minutes when runnable.",
+      "pause": 500
+    }
+  ],
+  "missing-interface-or-receipt": [
+    {
+      "text": "Missing interface or receipt.",
+      "pause": 500
+    },
+    {
+      "text": "The #279 identity inventory, old/new manifest diff, candidate archive hash, deployed script verification and disposition for every identity.",
+      "pause": 400
+    },
+    {
+      "text": "The model base visible in this checkout is Cardano KERI commit 0e638fadc987f0cd98f839edd3e3ecd5a09a1b91. It is a source identity for planning, not a claim that the later card is already modeled or accepted. Each claim must bind the accepted model revision for that behavior before promotion. The Lean correspondence register holds affected conflicts. A simulator or source fact cannot replace a confirmed transaction, and no cast of an accepted connected result is available here.",
+      "pause": 400
+    },
+    {
+      "text": "Tracking: KERI preprod cutover #328, inventory #279.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "d10-cutover.md",
+    "sha256": "cb33b78891e06f3877e31281d7dc1b9132946d8d5129216c3b8e707bdb3f4ed3"
+  }
+}

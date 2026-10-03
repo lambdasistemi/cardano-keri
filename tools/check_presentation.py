@@ -24,6 +24,7 @@ from pathlib import Path
 LABEL = re.compile(r"(?<![\w/#.-])(?:R|S|D|N|M|INV)-?\d{1,3}[a-z]?(?![\w.-])")
 FENCE = re.compile(r"^```")
 MERMAID = re.compile(r"^```mermaid\b")
+DIAGRAM_ASSET = re.compile(r"^<!-- diagram: [\w-]+ -->$")
 HEADING = re.compile(r"^(#{1,6})\s+(.*)$")
 STORY = re.compile(r"\b(stor(y|ies)|who (this|it) is for|what you can do)\b", re.I)
 STRUCTURAL = re.compile(r"(architecture|design|lifecycle|flow|protocol|overview|spec)", re.I)
@@ -69,8 +70,10 @@ def check_speech(md, headings):
     keys = {k for k in data if not k.startswith("_")}
     # Speech covers the sections a reader can play: h2 and h3, as the reader and the generator do.
     ids = {slugify(text) for level, text in headings if level in (2, 3)}
-    if keys != ids:
-        out.append({"file": str(speech), "rule": "speech-headings-mismatch", "missing": sorted(ids - keys), "extra": sorted(keys - ids)})
+    # The lead under the page title is spoken under the h1's own key, when it has one.
+    lead = {slugify(text) for level, text in headings if level == 1}
+    if ids - keys or keys - ids - lead:
+        out.append({"file": str(speech), "rule": "speech-headings-mismatch", "missing": sorted(ids - keys), "extra": sorted(keys - ids - lead)})
     for k in keys:
         segs = data[k]
         if not (isinstance(segs, list) and segs and all(isinstance(s, dict) and isinstance(s.get("text"), str) and s["text"].strip() for s in segs)):
@@ -93,6 +96,9 @@ def scan(path):
             continue
         if in_fence:
             continue
+        if DIAGRAM_ASSET.match(line):
+            # Source/image freshness is checked by render_diagrams.py.
+            mermaid += 1
         h = HEADING.match(line)
         if h:
             headings.append((len(h.group(1)), h.group(2).strip()))

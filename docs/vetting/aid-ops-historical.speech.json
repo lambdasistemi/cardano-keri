@@ -1,0 +1,174 @@
+{
+  "aid-operations-cryptographic-specification": [
+    {
+      "text": "Historical document. This was the original cryptographic spec used as vetting input. It has been superseded by docs/architecture/identity-ops.md, docs/architecture/value-auth.md, and docs/design/aid-model.md. It contains known inconsistencies with the current design.",
+      "pause": 400
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Historical vetting input. Nothing here ships. The current machine is the Lean checkpoint and the simulations on the home page.",
+      "pause": 400
+    },
+    {
+      "text": "AID Operations — Cryptographic Specification.",
+      "pause": 500
+    },
+    {
+      "text": "This document describes the three on-chain AID operations and their cryptographic bindings. It is the primary input for correctness vetting.",
+      "pause": 400
+    }
+  ],
+  "primitives-available-on-chain-aiken-plutusv3": [
+    {
+      "text": "Primitives available on-chain (Aiken / PlutusV3).",
+      "pause": 500
+    },
+    {
+      "text": "NOT available on-chain (unbounded / missing): SHA-3, secp256k1 schnorr (available but not used here), CESR parsing, list recursion over unbounded KEL.",
+      "pause": 400
+    }
+  ],
+  "core-types": [
+    {
+      "text": "Core types.",
+      "pause": 500
+    }
+  ],
+  "aid-self-certification": [
+    {
+      "text": "AID self-certification.",
+      "pause": 500
+    },
+    {
+      "text": "The AID value IS the hash of the inception event. Anyone can verify the binding offline without trusting any authority.",
+      "pause": 400
+    }
+  ],
+  "operation-1-inception": [
+    {
+      "text": "Operation 1 — Inception.",
+      "pause": 500
+    },
+    {
+      "text": "Purpose: Register a new AID and its initial key-state.",
+      "pause": 400
+    },
+    {
+      "text": "Redeemer input:",
+      "pause": 400
+    },
+    {
+      "text": "On-chain checks (script): 1. blake2b_256( cbor(inception) ) == aid_from_datum — self-cert binding 2. MPF absence proof: aid not yet in the identity trie (no double-registration) 3. Resulting key-state: KeyState{ cur_digest = blake2b_256(cur_key), next_digest, seq = 0 }",
+      "pause": 400
+    },
+    {
+      "text": "No signature required: the AID value itself is the proof of pre-image knowledge.",
+      "pause": 400
+    },
+    {
+      "text": "Security claim: An adversary who does not know cur_key cannot produce a valid InceptionEvent whose hash matches a chosen AID. Pre-image resistance of blake2b_256.",
+      "pause": 400
+    }
+  ],
+  "operation-2-rotation": [
+    {
+      "text": "Operation 2 — Rotation.",
+      "pause": 500
+    },
+    {
+      "text": "Purpose: Rotate to the pre-committed next key.",
+      "pause": 400
+    },
+    {
+      "text": "Redeemer input:",
+      "pause": 400
+    },
+    {
+      "text": "rot_msg (the signed message):",
+      "pause": 400
+    },
+    {
+      "text": "On-chain checks (script): 1. blake2b_256(reveal_key) == current_state.next_digest — pre-rotation binding 2. verify_ed25519_signature(reveal_key, rot_msg, sig) — key possession 3. MPF inclusion proof: current KeyState is in the identity trie at aid 4. MPF update: replace KeyState with KeyState{ cur_digest = blake2b_256(reveal_key), next_digest = new_next, seq = seq + 1 }",
+      "pause": 400
+    },
+    {
+      "text": "Security claim: An adversary who stole cur_key cannot rotate forward because reveal_key (the next key) was never revealed and its digest was committed at inception. Stealing cur_key only lets the adversary transact with the current key-state; it cannot advance the sequence.",
+      "pause": 400
+    }
+  ],
+  "operation-3-value-write-mpfs-cage-op": [
+    {
+      "text": "Operation 3 — Value-write (MPFS cage op).",
+      "pause": 500
+    },
+    {
+      "text": "Purpose: Authorize an MPFS operation (insert/delete/update a leaf) using the AID key-state as authorization.",
+      "pause": 400
+    },
+    {
+      "text": "This is NOT an identity-registry operation. It happens in the MPFS value cage script, which reads the identity UTxO as a CIP-31 reference input.",
+      "pause": 400
+    },
+    {
+      "text": "Redeemer input (MPFS cage redeemer, augmented):",
+      "pause": 400
+    },
+    {
+      "text": "auth_msg: where identity_root is the MPF root of the identity UTxO (taken from the reference input datum).",
+      "pause": 400
+    },
+    {
+      "text": "On-chain checks (MPFS value cage script): 1. Reference input has identity UTxO thread token (fixed policyId + assetName) 2. MPF inclusion proof: id_proof proves aid → keyState against identity_root 3. blake2b_256(vk_from_tx_signatories) == keyState.cur_digest — resolve signer 4. verify_ed25519_signature(vk_from_tx_signatories, auth_msg, sig) — key possession 5. auth_msg binds to current identity_root — anti-replay binding",
+      "pause": 400
+    },
+    {
+      "text": "Security claim: The identity_root in auth_msg ties the authorization to the exact key-state snapshot used. A replayed signature from a previous rotation cannot be re-used because identity_root would have changed.",
+      "pause": 400
+    }
+  ],
+  "questions-for-cryptographic-vetting": [
+    {
+      "text": "Questions for cryptographic vetting.",
+      "pause": 500
+    },
+    {
+      "text": "Inception replay: Can an adversary register the same AID twice (before the first registration is confirmed on-chain, e.g. front-running)?",
+      "pause": 400
+    },
+    {
+      "text": "Rotation replay: Is rot_msg = cbor({ aid, seq: seq+1, new_next }) a sufficient anti-replay binding? What if new_next collides?",
+      "pause": 400
+    },
+    {
+      "text": "Value-write replay: Does binding auth_msg to identity_root fully prevent replaying a signature across rotations? What if an MPF root collides or is predictable?",
+      "pause": 400
+    },
+    {
+      "text": "Rotation after key compromise: If cur_key is stolen, the attacker can sign with it but cannot advance the sequence. Can the attacker do anything else harmful (e.g. spam value-write ops, block legitimate rotation)?",
+      "pause": 400
+    },
+    {
+      "text": "Inception event malleability: Is cbor(InceptionEvent) deterministic across CBOR encoders? Should canonical CBOR be mandated?",
+      "pause": 400
+    },
+    {
+      "text": "next_digest grinding: Can an adversary grind new_next in a rotation redeemer to claim a useful AID as the \"next\" AID? (Is the AID namespace polluted by this?)",
+      "pause": 400
+    },
+    {
+      "text": "Missing: inception self-auth: Inception requires no signature. Is absence proof + hash pre-image sufficient, or should the registrant also sign the inception event to prove liveness?",
+      "pause": 400
+    },
+    {
+      "text": "On-chain vs off-chain boundary: What properties are guaranteed purely by on-chain checks, and what requires off-chain KEL replay? Is the boundary drawn correctly for the MPFS use case?",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "aid-ops-historical.md",
+    "sha256": "f84ace14f98b9de0cbbc2cbaa8944df16d054396f5f86ccce48264a0e70f1b11"
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "blaster-tractability-boundary": [
+    {
+      "text": "Blaster tractability boundary.",
+      "pause": 500
+    },
+    {
+      "text": "This slice establishes a reproducible input boundary for later Blaster properties. It does not add a solver theorem or a kernel proof.",
+      "pause": 400
+    }
+  ],
+  "production-uplc-source": [
+    {
+      "text": "Production UPLC source.",
+      "pause": 500
+    },
+    {
+      "text": "The only production input is the plutus-blueprint derivation wired by offchain/flake.nix. The blaster app accepts no blueprint path and does not search the current directory, environment variables, or ambient files. It selects exactly one validator titled checkpoint.checkpoint.spend, requires a non-empty string compiledCode, and rejects missing, renamed, malformed, or duplicate matches.",
+      "pause": 400
+    },
+    {
+      "text": "The current audited identities are:",
+      "pause": 400
+    },
+    {
+      "text": "blueprint SHA-256: 896d2c4642740a26248dc46cdeecbce18730061785e78cfbedc2a13a5c9c577c",
+      "pause": 300
+    },
+    {
+      "text": "selected program SHA-256: 713c747bc83226c71fdcf6b6c174832fd4f69d738439842990d68e163ac26a9a",
+      "pause": 300
+    },
+    {
+      "text": "validator title and cardinality: checkpoint.checkpoint.spend, exactly one",
+      "pause": 300
+    },
+    {
+      "text": "nix build ./offchain#blaster builds the runnable package and its Lean/artifact closure; building the package does not execute its shell audit. nix run ./offchain#blaster and just blaster execute the app. nix build ./offchain#checks.x86_64-linux.blaster executes that exact app through the flake's runCommand check. The closure also compiles the minimal KeriBlaster root importing Blaster, PlutusCore UPLC, and Cardano Ledger API V3.",
+      "pause": 400
+    }
+  ],
+  "pinned-trust-base": [
+    {
+      "text": "Pinned trust base.",
+      "pause": 500
+    },
+    {
+      "text": "The checked lock file records immutable revisions and NAR hashes for the full remote closure. The principal identities audited at runtime are:",
+      "pause": 400
+    },
+    {
+      "text": "Warnings emitted while compiling this pinned upstream graph remain visible. In particular, the current PlutusCore dependency emits an upstream sorry warning; the local KeriBlaster root is separately rejected if it contains sorry or axiom. A future successful SMT query must be labelled exactly SMT-VALID (no proof term), never KERNEL-PROVED.",
+      "pause": 400
+    }
+  ],
+  "bump-ownership": [
+    {
+      "text": "Bump ownership.",
+      "pause": 500
+    },
+    {
+      "text": "The Cardano-KERI maintainer changing the Blaster boundary owns the coordinated revision bump, lock refresh, warning review, and re-audit. First edit the exact revision URLs for the three principal inputs in offchain/flake.nix. Update the coordinated Lean toolchain and Z3 version/source hash pins too when the selected dependency graph requires it. Then refresh those lock entries:",
+      "pause": 400
+    },
+    {
+      "text": "Review every transitive lock change, then verify from the same directory:",
+      "pause": 400
+    },
+    {
+      "text": "A green build is required before the new identities replace this table.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "blaster-tractability.md",
+    "sha256": "0472e5454937ceea93a71ff6c987316a9658dbbeb3368f19b6eab7912fddffa5"
+  }
+}

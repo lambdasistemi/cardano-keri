@@ -2,7 +2,7 @@
 {% block extrahead %}
 <meta name="narration-page" content="{{ page.file.src_uri if page else '' }}">
 <link id="keri-dark-palette" href="{{ 'css/palettes/dark.css' | url }}" rel="stylesheet" media="(prefers-color-scheme: dark)">
-<script src="{{ 'javascripts/palette.js' | url }}"></script>
+<script src="{{ 'javascripts/palette.js' | url }}?v={{ config.extra.asset_versions['javascripts/palette.js'] }}"></script>
 {% endblock %}
 {% block side_panel %}
 <aside id="terminal-mkdocs-side-panel">

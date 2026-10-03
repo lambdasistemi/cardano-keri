@@ -6,6 +6,7 @@ docs_dir: docs
 
 hooks:
   - scripts/offered_reference_hook.py
+  - docs/hooks/asset_versions.py
 
 plugins:
   - search
@@ -132,3 +133,5 @@ nav:
       - KYC Security Tokens: design/business-cases/security-tokens.md
       - Institutional Contracts: design/business-cases/institutional-contracts.md
   - Vetting: vetting/index.md
+
+extra: {}

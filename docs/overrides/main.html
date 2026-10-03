@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block extrahead %}
+<meta name="narration-page" content="{{ page.file.src_uri if page else '' }}">
+<link id="keri-dark-palette" href="{{ 'css/palettes/dark.css' | url }}" rel="stylesheet" media="(prefers-color-scheme: dark)">
+<script src="{{ 'javascripts/palette.js' | url }}"></script>
+{% endblock %}
+{% block side_panel %}
+<aside id="terminal-mkdocs-side-panel">
+  <details id="keri-navigation">
+    <summary>Explore cardano-keri</summary>
+    {% include "partials/side-nav/side-nav.html" %}
+    {% include "partials/side-panel/side-toc.html" %}
+  </details>
+</aside>
+{% endblock %}

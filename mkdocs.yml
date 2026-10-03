@@ -12,26 +12,12 @@ plugins:
   - asciinema-player
 
 theme:
-  name: material
-  palette:
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/brightness-7
-        name: Switch to dark mode
-    - media: "(prefers-color-scheme: dark)"
-      scheme: slate
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/brightness-4
-        name: Switch to light mode
+  name: terminal
+  custom_dir: docs/overrides
+  palette: default
   features:
-    - content.code.copy
-    - navigation.sections
-    - navigation.top
+    - footer.prev_next
+    - navigation.top.cursor_animation.hide
 
 markdown_extensions:
   - admonition
@@ -47,6 +33,12 @@ markdown_extensions:
   - pymdownx.tabbed:
       alternate_style: true
   - tables
+
+extra_javascript:
+  - javascripts/mermaid-init.js
+  - javascripts/narration.js
+extra_css:
+  - stylesheets/terminal.css
 
 nav:
   - Home: index.md

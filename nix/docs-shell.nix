@@ -1,5 +1,5 @@
 let
-  shared = builtins.getFlake "github:paolino/dev-assets/0328b73b71788bb83848fe407dd04136a52c3697?dir=mkdocs";
+  shared = builtins.getFlake "github:paolino/dev-assets/a9d7371c1118de4026ba6ee3a9c3b54614924b82?dir=mkdocs";
   pkgs = shared.inputs.nixpkgs.legacyPackages.${builtins.currentSystem};
   terminal = pkgs.python3Packages.buildPythonPackage {
     pname = "mkdocs-terminal";

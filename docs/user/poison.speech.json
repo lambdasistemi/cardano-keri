@@ -1,0 +1,44 @@
+{
+  "poison": [
+    {
+      "text": "Poison.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Poison is accepted design, not shipped. Play Mallory steals the current keys; Alice poisons, then rotates in the checkpoint simulation. The model is lean/CardanoKeri/Checkpoint.lean (87 theorems in CheckpointGoals.lean, no sorry). What ships today is the V1 checkpoint with no poison bit: stolen current keys can still close.",
+      "pause": 400
+    },
+    {
+      "text": "Alice's current keys are stolen. The poison is her own lock on her checkpoint: before she can assemble a rotation, her key holders sign a short declaration — over a preimage bound to the policy, her AID and her current sequence — and anyone lands it.",
+      "pause": 400
+    },
+    {
+      "text": "The checkpoint is immediately unconsumable. The thief can do nothing with it: no close, no second poison, no consumer authorization. The only way out is a witnessed rotation, which clears the poison because the poison belonged to the keys the rotation retires.",
+      "pause": 400
+    },
+    {
+      "text": "The poison is epoch-local. It is never witnessed. Anyone may relay it. A second poison in the same epoch is refused. Freeze is refused while poisoned. Top-up still lands: money does not need the quorum.",
+      "pause": 400
+    },
+    {
+      "text": "The one case this does not cover: if the thief also holds the next keys, her rotation is control by KERI's own rule (security properties of pre-rotation). The poison lasts until that rotation and no longer. The stolen-current-keys case it does cover is KERI's establishment live attack. Close answers to the next keys, so that thief can reap (close by a rotation of the next keys).",
+      "pause": 400
+    },
+    {
+      "text": "Play the forks: Mallory and Hal try everything on the poisoned checkpoint; Mallory tries the reap with the retired keys and is refused.",
+      "pause": 400
+    },
+    {
+      "text": "See also Hunters and Close, reopen, revival.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "poison.md",
+    "sha256": "1e7622f4d0e6857a1adbb0c77b801366ebb73f01e315dd9df4288aa717e76ba8"
+  }
+}

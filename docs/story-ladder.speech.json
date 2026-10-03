@@ -1,0 +1,168 @@
+{
+  "story-ladder-what-has-actually-settled": [
+    {
+      "text": "Story ladder: what has actually settled.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "This page is the ledger of settled V1 transactions. The accepted design is on the home page and in the checkpoint simulation. The ARMED/FROZEN stories below are what shipped; they are not the hunter freeze of the accepted design (a hunter being anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one).",
+      "pause": 400
+    },
+    {
+      "text": "This page is history. It records the transactions that reached a real ledger, with their dates, and nothing else. What is designed but not built is on the home page; what is scheduled is on the roadmap.",
+      "pause": 400
+    },
+    {
+      "text": "KERI is Key Event Receipt Infrastructure, the off-chain protocol that maintains an identity's signed key history. A KERI AID (Autonomic Identifier) names the identity, and its KEL (Key Event Log) contains the inception and rotation events for that AID. cardano-keri projects the current KERI key state into a Cardano checkpoint UTxO: an unspent transaction output that carries one identity-specific token and an inline datum with the current keys, thresholds, witnesses, and sequence number.",
+      "pause": 400
+    },
+    {
+      "text": "What “settled” means",
+      "pause": 400
+    },
+    {
+      "text": "The transaction reached a real ledger — either a private protocol-11 development network configured with Cardano's production transaction limits, or Cardano preprod. This is stronger evidence than an emulator or a unit test. It is not a mainnet deployment or a production-readiness claim.",
+      "pause": 400
+    },
+    {
+      "text": "The machine these stories exercised is being replaced",
+      "pause": 400
+    },
+    {
+      "text": "The devnet ladder below settled the ACTIVE/ARMED/FROZEN enforcement economy — freeze for lag, the claimed delay bond, the burn-only conviction. The accepted design removes that economy: the freeze becomes a hunter's payment (a hunter is anyone paid to land rotations) when the owner's pool of advance funds has run dry, and conviction becomes a terminal state reached only by a proven duplicity. These rungs are kept as the record of what the vertical path proved, not as a description of where the design is going. Epic #319 removes the code they exercised.",
+      "pause": 400
+    }
+  ],
+  "on-preprod-2026-08-06": [
+    {
+      "text": "On preprod — 2026-08-06.",
+      "pause": 500
+    },
+    {
+      "text": "The M1 V1 programs were published on preprod on 2026-07-28 from source commit 50a5820 (five reference scripts, registration bond 1,000 tADA, freeze bond 5 tADA, freeze window 10,000 slots). See the M1 preprod deployment.",
+      "pause": 400
+    },
+    {
+      "text": "A genuine KLI identity then completed the register → advance → close journey through the packaged ckeri, in process, on 2026-08-06:",
+      "pause": 400
+    },
+    {
+      "text": "Separate historical-negative captures record the failures that must also hold against the deployed programs: an already-registered AID, an ambiguous checkpoint set, an unlisted witness, and — for advance — under-signed, under-witnessed and stale attempts, each reaching the deployed Plutus evaluator and failing there.",
+      "pause": 400
+    },
+    {
+      "text": "No enforcement transaction has ever settled on preprod. ckeri exposes no freeze, claim or convict command; those paths exist only in the end-to-end harness.",
+      "pause": 400
+    }
+  ],
+  "on-the-protocol-11-development-network-2026-07-27-and-2026-07-28": [
+    {
+      "text": "On the protocol-11 development network — 2026-07-27 and 2026-07-28.",
+      "pause": 500
+    },
+    {
+      "text": "The fixture has two controller keys and genuine keripy-produced events and witness receipts. keripy is the reference KERI implementation used to produce and verify the test history.",
+      "pause": 400
+    },
+    {
+      "text": "Together these establish a vertical path through the production validators, the transaction builder, node submission, and the settlement boundary.",
+      "pause": 400
+    }
+  ],
+  "register-pr-146": [
+    {
+      "text": "Register — PR #146.",
+      "pause": 500
+    },
+    {
+      "text": "The expensive BLAKE3 calculation ran first and minted a short-lived proof token. Registration then consumed that fact, created the checkpoint, and locked the two bonds.",
+      "pause": 400
+    }
+  ],
+  "close-pr-147": [
+    {
+      "text": "Close — PR #147.",
+      "pause": 500
+    },
+    {
+      "text": "The story registered the same small identity, then its current controllers authorized a refund to output zero.",
+      "pause": 400
+    }
+  ],
+  "rotate-pr-148": [
+    {
+      "text": "Rotate — PR #148.",
+      "pause": 500
+    },
+    {
+      "text": "The Advance transaction consumed the registered checkpoint and created its single successor. The same live run also settled a Close regression.",
+      "pause": 400
+    }
+  ],
+  "freeze-response-and-replay-rejection-pr-150": [
+    {
+      "text": "Freeze, response, and replay rejection — PR #150.",
+      "pause": 500
+    },
+    {
+      "text": "This is a two-round security drill, not two copies of a unit test. After the first response advanced the checkpoint, the runner replayed the exact old Freeze evidence. The applied checkpoint and enforcement observer rejected it before submission. A fresh pair of conflicting rotations at the next KERI sequence then opened and resolved a second challenge normally.",
+      "pause": 400
+    },
+    {
+      "text": "Both responses preserved the checkpoint's complete value, including the delay bond. The old evidence failed because it no longer described a rotation ahead of the new tip. That binding — evidence to the exact state it challenges — is the part of the drill that survives into the accepted design: the freeze of the new design also runs the advance predicate on the rotation it presents.",
+      "pause": 400
+    },
+    {
+      "text": "The transaction IDs for the seize and convict rungs are in the merged records of PR #154 and PR #155.",
+      "pause": 400
+    }
+  ],
+  "what-the-ladder-did-not-reach": [
+    {
+      "text": "What the ladder did not reach.",
+      "pause": 500
+    },
+    {
+      "text": "GLEIF scale. The settled fixtures are two-key and 1-of-1. The genuine three-of-seven shape with a real witness set has never completed the vertical ladder, and the cost of doing so is what epic #321 exists to measure.",
+      "pause": 300
+    },
+    {
+      "text": "The engineering ceiling. observer-advance measures 16,130 bytes against a 16,133-byte limit. Every rung above was settled inside three bytes of headroom.",
+      "pause": 300
+    },
+    {
+      "text": "Enforcement on a public network. Freeze, claim and convict settled on the development network only, and never through ckeri.",
+      "pause": 300
+    },
+    {
+      "text": "Uniqueness. Nothing in the ladder prevents two checkpoints for one AID. The ledger has no AID-unicity rule today; ckeri register refuses an already-live AID as a convenience, not as a guarantee. The registry of the accepted design is what turns that into a rule.",
+      "pause": 300
+    }
+  ],
+  "where-to-read-next": [
+    {
+      "text": "Where to read next.",
+      "pause": 500
+    },
+    {
+      "text": "The M1 preprod deployment — the published release, its manifest, and how to verify it.",
+      "pause": 300
+    },
+    {
+      "text": "Observer architecture — the thin checkpoint, reference scripts, zero-lovelace withdrawal, and BLAKE3 fact token, with measured sizes and costs.",
+      "pause": 300
+    },
+    {
+      "text": "Identity operations — the operation-by- operation view of what ships and what replaces it.",
+      "pause": 300
+    }
+  ],
+  "_source": {
+    "file": "story-ladder.md",
+    "sha256": "5622ee1fae6c63d6480d499c2bef3e8a6d112bde5ae295d49a3cc694d9e8d9aa"
+  }
+}

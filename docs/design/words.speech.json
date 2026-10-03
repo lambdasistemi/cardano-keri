@@ -1,65 +1,59 @@
 {
-  "where-the-words-sit": [
+  "the-projects-words": [
     {
-      "text": "A state diagram places the words on the identity's lifecycle.",
-      "pause": 300
-    },
-    {
-      "text": "Registering posts the conviction bond, the freeze bond and the pool. A rotation landed by a hunter pays the premium from the pool.",
-      "pause": 400
-    },
-    {
-      "text": "The poison is the owner's lock, cleared by any witnessed rotation. A freeze lets a hunter take the freeze bond when the pool cannot pay, and a deposit rotation refills it.",
-      "pause": 400
-    },
-    {
-      "text": "The reap is the close: a rotation by the next keys parks the identity, and the registry leaf keeps the hash. A later rotation reopens it. A duplicity proof convicts an active or parked identity and takes the conviction bond.",
+      "text": "The project's words.",
       "pause": 500
     },
     {
-      "text": "A consumer trusts an active checkpoint only once it is older than the juvenility window.",
-      "pause": 300
+      "text": "You are reading these pages for the first time, and every page uses the same dozen words: poison, hunter, pool, premium, the reap, parked. This page is where each of them is decided: what it means, why it was kept when readers objected to it, and what it was kept over. Every other page repeats the meaning in one clause the first time it uses the word, so you never need to come back here; this page exists so that the clause is the same everywhere.",
+      "pause": 400
+    },
+    {
+      "text": "The words below are the project's own. KERI's words — AID, KEL, inception, rotation, witness, toad, receipt, duplicity — keep KERI's meaning; the KERI primer introduces them and the simulator's story file links each to its clause of the specification.",
+      "pause": 400
+    }
+  ],
+  "where-the-words-sit": [
+    {
+      "text": "Where the words sit.",
+      "pause": 500
+    },
+    {
+      "text": "A consumer trusts an active checkpoint only once it is older than the juvenility window W.",
+      "pause": 400
     }
   ],
   "the-decision-record": [
     {
-      "text": "Two independent readers met these words before any page defined them, and objected to some of the names themselves.",
-      "pause": 400
-    },
-    {
-      "text": "A table with twelve rows records, for each word, the clause every page uses, the readers' objection, the alternatives weighed, and the outcome.",
-      "pause": 400
-    },
-    {
-      "text": "The outcome for every word is keep and define. A rename would also rename a Lean definition, a simulator transition or a planned command, and that cost is recorded rather than paid here.",
+      "text": "The decision record.",
       "pause": 500
     },
     {
-      "text": "Poison is kept over lock, hold and seal. Hunter is kept over relayer, keeper and operator. Juvenility window is kept over maturity, settling and aging window.",
+      "text": "Two independent readers of the onboarding material, in September 2026, met these words on every page before any page defined them, and objected to some of the names themselves. The table records each objection, the alternatives weighed, and the outcome. The outcome for every word is keep and define: a rename would also rename a Lean definition, a simulator transition or a planned ckeri command, and that cost is recorded in the last column rather than paid here.",
       "pause": 400
-    },
-    {
-      "text": "The reap is kept as the name of the only close; its older meaning, a hunter consuming a paused checkpoint, is retired. The cage is the MPFS project's own word for a store behind one validator.",
-      "pause": 400
-    },
-    {
-      "text": "Parked and convicted are kept over dormant, closed and tombstoned. The freeze bond and the conviction bond replace the older delay bond, divergence bond and registration bond. The pool and the premium are kept, with the witness pool and the stake pool always qualified.",
-      "pause": 500
     }
   ],
   "the-name-of-the-design": [
     {
-      "text": "Issues and the wiki from September 2026 call the design the M1 return: the return, inside the first milestone, from an abandoned enforcement economy to a checkpoint that only projects key state.",
-      "pause": 400
+      "text": "The name of the design.",
+      "pause": 500
     },
     {
-      "text": "Reader-facing pages say the accepted design instead. The home page and the roadmap each explain the old name once, so the older record stays readable.",
+      "text": "Issues, pull requests and the wiki from September 2026 call the design the M1 return: the return, inside the first milestone, from an abandoned enforcement economy to a checkpoint that only projects key state. The name tells a newcomer nothing, so reader-facing pages say the accepted design instead, and the home page and the roadmap each carry one sentence explaining the old name so that the older record stays readable.",
       "pause": 400
     }
   ],
   "where-else-the-words-are-fixed": [
     {
-      "text": "The simulator's story file carries a glossary with the same clauses, and the consumer checklist is the shortest page that uses most of them.",
+      "text": "Where else the words are fixed.",
+      "pause": 500
+    },
+    {
+      "text": "The simulator's story file, simulator/M1-STORIES.md, carries a glossary with the same clauses.",
+      "pause": 300
+    },
+    {
+      "text": "The consumer checklist is the shortest page that uses most of them, and a good place to see the clauses in use.",
       "pause": 300
     }
   ],

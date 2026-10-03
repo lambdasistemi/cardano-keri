@@ -1,0 +1,162 @@
+{
+  "rotate-your-preprod-identity": [
+    {
+      "text": "Rotate your preprod identity.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "This page is the V1 ckeri advance that ships on preprod. The accepted design pays a hunter (anyone paid to land rotations) the premium P, the fee for landing one, from the owner's pool of advance funds, and a rotation carries keep or deposit (the unfreeze), signed by the next keys. Play Alice rotates, Hal lands it, Hal is paid. There is no withdraw.",
+      "pause": 400
+    },
+    {
+      "text": "ckeri advance projects a witnessed KLI rotation into an existing V1 checkpoint. It consumes the ACTIVE output, preserves its complete 1,007-tADA value and singleton AID token, and writes the rotated keys and witness state at sequence plus one.",
+      "pause": 400
+    },
+    {
+      "text": "The rotation is KERI's rotation using pre-rotation: it reveals the keys committed at the previous event (rotation event body) and carries the witnesses' receipts up to toad.",
+      "pause": 400
+    },
+    {
+      "text": "Start with a registered identity from Register your identity. The M1 reference journey uses five current and next KERI keys, threshold two, three witnesses, and witness threshold two.",
+      "pause": 400
+    },
+    {
+      "text": "When in doubt, rotate — never interact",
+      "pause": 400
+    },
+    {
+      "text": "A rotation supersedes an interaction event at the same sequence (superseding recovery), because it proves possession of pre-committed keys. An interaction event only contests one. A controller who responds to any suspicion by rotating can never create an unresolvable conflict on their own history. See Compromise of the current keys.",
+      "pause": 400
+    }
+  ],
+  "rotate-and-export-with-kli": [
+    {
+      "text": "Rotate and export with KLI.",
+      "pause": 500
+    },
+    {
+      "text": "Rotate in the controller's ordinary KLI environment and wait for the witness receipts:",
+      "pause": 400
+    },
+    {
+      "text": "ckeri verifies the full inception-plus-rotation stream: event framing, lineage, native sequence, old next-key commitments, KERI event signatures, witness delta, incoming witness set, and receipt threshold.",
+      "pause": 400
+    }
+  ],
+  "authorization-and-the-immutable-m1-release": [
+    {
+      "text": "Authorization and the immutable M1 release.",
+      "pause": 500
+    },
+    {
+      "text": "Newer source implements permissionless advance using the native KERI rot event signatures. The immutable M1 preprod reference script predates that change: it still verifies the legacy Cardano-domain AdvanceMessage. This is release skew, not a different transaction-submission path. Never infer the deployed validator contract solely from a newer checkout.",
+      "pause": 400
+    },
+    {
+      "text": "For this frozen release, prepare and sign that legacy package:",
+      "pause": 400
+    },
+    {
+      "text": "Run the helper in the same Python/container environment as KLI. If the keystore is passcode-protected, supply it through KERI_PASSCODE; do not put the passcode in a captured command or committed file. The helper checks the package schema, AID, filename, and SHA-256 before signing the binary bytes.",
+      "pause": 400
+    },
+    {
+      "text": "The package is bound to one live checkpoint outref. Prepare it again if that outref changes.",
+      "pause": 400
+    }
+  ],
+  "settle-the-advance": [
+    {
+      "text": "Settle the advance.",
+      "pause": 500
+    },
+    {
+      "text": "All ckeri settings use opt-env-conf; options, environment variables, and YAML are equivalent. optparse-applicative is not used.",
+      "pause": 400
+    },
+    {
+      "text": "The CLI requires --controller-signatures FILE for submission (or --signing-package DIR to prepare the package). For the immutable M1 release, the file is produced by scripts/kli-sign-advance.py over advance-message.cbor.",
+      "pause": 400
+    },
+    {
+      "text": "Set KOIOS_TOKEN for authenticated Koios requests. It is optional, has an anonymous fallback, and is never printed.",
+      "pause": 400
+    },
+    {
+      "text": "The --validator-test-under-signed spelling is acceptance-only. In this exact 1-of-1 M1 compatibility journey it bypasses the newer local native-event rule; the immutable on-chain observer still evaluates and accepts the legacy signature. Do not generalize this escape hatch to a newer deployment.",
+      "pause": 400
+    },
+    {
+      "text": "The first advance through a deployment also checks whether the observer-advance reward credential is registered. If absent, ckeri submits and settles a one-time registration certificate through the same immutable observer reference, then prints its transaction ID before building the advance. Later controllers reuse that registered credential.",
+      "pause": 400
+    },
+    {
+      "text": "The transaction spends the named ACTIVE checkpoint through the thin checkpoint-register arm and invokes the heavy predicate through a zero-lovelace observer-advance withdrawal. It recreates the complete state value at the same role address, mints nothing, and uses distinct plain funding and collateral inputs. Exact candidate out-refs come from Koios, are resolved through N2C, and the signed transaction is submitted through local transaction submission without a subprocess.",
+      "pause": 400
+    }
+  ],
+  "validator-boundary-evidence": [
+    {
+      "text": "Validator-boundary evidence.",
+      "pause": 500
+    },
+    {
+      "text": "The switches below deliberately bypass client-side completeness checks. They exist only for funded acceptance testing and still send the transaction to real deployed-script evaluation through the node:",
+      "pause": 400
+    },
+    {
+      "text": "--validator-test-under-signed sends one rotated-key signature;",
+      "pause": 300
+    },
+    {
+      "text": "--validator-test-under-witnessed sends one receipt where toad is two;",
+      "pause": 300
+    },
+    {
+      "text": "--validator-test-stale replays the already-settled rotation against the new live checkpoint.",
+      "pause": 300
+    },
+    {
+      "text": "All three fail at the Plutus V3 observer-advance reward script. Without an explicit test switch, malformed, incomplete, or outref-stale evidence is rejected locally.",
+      "pause": 400
+    }
+  ],
+  "captured-preprod-result": [
+    {
+      "text": "Captured preprod result.",
+      "pause": 500
+    },
+    {
+      "text": "The mechanical artifact is deploy/preprod/m1-advance-acceptance.txt. It records the complete rotate → prepare → legacy-sign → in-process advance → status journey for the registration documented above, including:",
+      "pause": 400
+    },
+    {
+      "text": "AID EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P;",
+      "pause": 300
+    },
+    {
+      "text": "predecessor registration 6ecc2e0729347f5008a4f07ba18c2ce6ad745ace4911818b838037dfc83241e2;",
+      "pause": 300
+    },
+    {
+      "text": "advance transaction f0f3a18ff994f5865b638dab33e166b8baa9996eb58d1691f0d26c8b218bfe4a; and",
+      "pause": 300
+    },
+    {
+      "text": "the exact package digest and matching controller signature.",
+      "pause": 300
+    },
+    {
+      "text": "That primary AID is 1-of-1. Its acceptance-only --validator-test-under-signed invocation is the successful immutable-M1 compatibility override described above, not an under-signed negative control. The separate deploy/preprod/m1-advance-historical-negative-acceptance.txt capture uses a 2-of-5 controller with three witnesses and threshold two. Its under-signed, under-witnessed, and stale attempts each reach the deployed Plutus evaluator and fail. The transcript checker requires all three failures independently.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "rotate-preprod-identity.md",
+    "sha256": "39c3245fcf0ba6afa13e2b3c41cbbc50319995213069bd65b8f371b9d0bf2ddd"
+  }
+}

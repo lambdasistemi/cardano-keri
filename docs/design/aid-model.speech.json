@@ -1,0 +1,294 @@
+{
+  "aid-cryptographic-model": [
+    {
+      "text": "AID cryptographic model.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "pause": 400
+    },
+    {
+      "text": "A KERI AID is an Autonomic Identifier from the Key Event Receipt Infrastructure. Standard transferable AIDs use an E-code BLAKE3 digest of their inception event.",
+      "pause": 400
+    },
+    {
+      "text": "cardano-keri uses that qualified AID in two different but connected places:",
+      "pause": 400
+    },
+    {
+      "text": "The asset name is not a second identity. It is a domain-separated blake2b_256 hash of the qualified AID bytes, chosen because Blake2b is a native Plutus builtin:",
+      "pause": 400
+    },
+    {
+      "text": "The checkpoint policy ID plus this asset name identifies the sovereign checkpoint UTxO.",
+      "pause": 400
+    }
+  ],
+  "genesis-byte-binding": [
+    {
+      "text": "Genesis byte binding.",
+      "pause": 500
+    },
+    {
+      "text": "Registration must prove:",
+      "pause": 400
+    },
+    {
+      "text": "Plutus has no native BLAKE3 builtin, so a dedicated Aiken policy performs this work in a premint transaction and creates a deterministic fact token. Register then consumes and burns the token while the registration observer checks the event's semantic projection.",
+      "pause": 400
+    },
+    {
+      "text": "The observer requires the new datum to match the event's:",
+      "pause": 400
+    },
+    {
+      "text": "AID;",
+      "pause": 300
+    },
+    {
+      "text": "current controller keys and weighted threshold;",
+      "pause": 300
+    },
+    {
+      "text": "next-key commitments and next threshold;",
+      "pause": 300
+    },
+    {
+      "text": "witnesses and toad; and",
+      "pause": 300
+    },
+    {
+      "text": "native sequence and event digest.",
+      "pause": 300
+    },
+    {
+      "text": "It also verifies controller signatures and witness receipts over the exact inception bytes. Copying a public inception cannot give a registrant different keys, because the signed event fixes those keys.",
+      "pause": 400
+    }
+  ],
+  "checkpoint-datum": [
+    {
+      "text": "Checkpoint datum.",
+      "pause": 500
+    },
+    {
+      "text": "The V1 checkpoint is list-shaped so a single key is only the smallest threshold case:",
+      "pause": 400
+    },
+    {
+      "text": "Thresholds may be integer or weighted KERI clauses. The datum well-formedness rules reject empty or malformed key sets, invalid weight encodings, unsatisfiable clauses, duplicate material where prohibited, and inconsistent sequence fields.",
+      "pause": 400
+    }
+  ],
+  "pre-rotation": [
+    {
+      "text": "Pre-rotation.",
+      "pause": 500
+    },
+    {
+      "text": "KERI commits to successor keys before they become current. The checkpoint stores the standard KERI next-key digests:",
+      "pause": 400
+    },
+    {
+      "text": "Advance reveals the next keys and checks them against those stored commitments. It also applies KERI's dual-threshold rule:",
+      "pause": 400
+    },
+    {
+      "text": "signatures satisfy the new event's current threshold; and",
+      "pause": 300
+    },
+    {
+      "text": "the revealed keys satisfy the previous checkpoint's committed next threshold.",
+      "pause": 300
+    },
+    {
+      "text": "A thief with only the old current keys cannot pick an unrelated successor.",
+      "pause": 400
+    }
+  ],
+  "witness-binding": [
+    {
+      "text": "Witness binding.",
+      "pause": 500
+    },
+    {
+      "text": "Controller authority and public KERI acceptance are separate.",
+      "pause": 400
+    },
+    {
+      "text": "For incoming toad > 0, Advance requires enough Ed25519 witness receipts over the exact rotation bytes from the incoming witness set. A witness-set change is validated against that incoming set, matching the event being activated.",
+      "pause": 400
+    },
+    {
+      "text": "A checkpoint with toad = 0 is explicitly witnessless. Applications that require public witness acceptance must reject it by policy.",
+      "pause": 400
+    }
+  ],
+  "sequence-and-event-binding": [
+    {
+      "text": "Sequence and event binding.",
+      "pause": 500
+    },
+    {
+      "text": "Every ordinary Advance:",
+      "pause": 400
+    },
+    {
+      "text": "consumes the exact current checkpoint outref;",
+      "pause": 300
+    },
+    {
+      "text": "requires Cardano seq + 1;",
+      "pause": 300
+    },
+    {
+      "text": "binds to the stored native KERI prior event;",
+      "pause": 300
+    },
+    {
+      "text": "accepts one next KERI event rather than skipping a history segment; and",
+      "pause": 300
+    },
+    {
+      "text": "creates one unique ACTIVE successor.",
+      "pause": 300
+    },
+    {
+      "text": "Signed Cardano message fields bind the deployment, policy, AID-derived asset, exact spent outref, prior state, created state, and event evidence. A signature from one deployment or input cannot authorize another.",
+      "pause": 400
+    }
+  ],
+  "cbor-determinism": [
+    {
+      "text": "CBOR determinism.",
+      "pause": 500
+    },
+    {
+      "text": "Cardano-side signed messages use canonical Plutus Data CBOR. Constructor indices, field order, integer encoding, and list order are protocol surface. The validator reconstructs each message from trusted transaction context and the small set of supplied evidence before serializing it for signature verification. It never asks a prover which bytes should be signed.",
+      "pause": 400
+    },
+    {
+      "text": "KERI events follow a different rule: proofs carry the exact native KERI event bytes. The checkpoint logic verifies those bytes and their semantic projection; it does not translate an event into a new CBOR representation and then claim that the new bytes are the KERI event.",
+      "pause": 400
+    }
+  ],
+  "domain-separation": [
+    {
+      "text": "Domain separation.",
+      "pause": 500
+    },
+    {
+      "text": "Independent uses have independent, versioned domains:",
+      "pause": 400
+    },
+    {
+      "text": "The asset derivation also includes the 0x45 E-code byte before the raw AID. Changing a domain, constructor index, or field order requires a new protocol version. The old shared Merkle Patricia Forest domains discussed in the historical vetting record are not part of the sovereign checkpoint wire.",
+      "pause": 400
+    }
+  ],
+  "duplicate-registration-residual": [
+    {
+      "text": "Duplicate-registration residual.",
+      "pause": 500
+    },
+    {
+      "text": "There is no global AID registry or mint-once absence proof. Two independent transactions may create candidates with the same policy and asset name.",
+      "pause": 400
+    },
+    {
+      "text": "This is handled by an explicit consumer rule:",
+      "pause": 400
+    },
+    {
+      "text": "A third-party registrant cannot take over the AID, because the public inception fixes the controller keys. They can only fund another candidate controlled by the same event, creating ambiguity and donating the escrow.",
+      "pause": 400
+    }
+  ],
+  "role-and-identity": [
+    {
+      "text": "Role and identity.",
+      "pause": 500
+    },
+    {
+      "text": "The datum does not carry a caller-selectable lifecycle status. ACTIVE, ARMED, and FROZEN are distinguished by script role addresses around the same AID-derived token. Conviction has no role address: it burns the token, so a consumer meets an absent checkpoint rather than a terminal status.",
+      "pause": 400
+    },
+    {
+      "text": "The token identifies the checkpoint lineage. The role determines whether a consumer may use it. Only ACTIVE is acceptable.",
+      "pause": 400
+    }
+  ],
+  "v1-boundaries": [
+    {
+      "text": "V1 boundaries.",
+      "pause": 500
+    },
+    {
+      "text": "The current V1 story covers independent, nondelegated AIDs. It does not yet cover:",
+      "pause": 400
+    },
+    {
+      "text": "delegated inception and delegated rotation;",
+      "pause": 300
+    },
+    {
+      "text": "KERI recovery and superseding events;",
+      "pause": 300
+    },
+    {
+      "text": "non-establishment events: interaction (ixn) events are not projected, so anything they anchor — credential issuance and revocation in particular — is invisible to the checkpoint (see Compromise of the current keys);",
+      "pause": 300
+    },
+    {
+      "text": "a production-size inception beyond the current single-proof boundary;",
+      "pause": 300
+    },
+    {
+      "text": "post-quantum controller keys; or",
+      "pause": 300
+    },
+    {
+      "text": "automatic discovery of unseen KERI events.",
+      "pause": 300
+    },
+    {
+      "text": "The real three-of-seven registration story #139 adds a multi-transaction BLAKE3 proof for its 1083-byte-class inception. Delegation and recovery require a versioned proof protocol, not unchecked fields added to V1.",
+      "pause": 400
+    }
+  ],
+  "related-pages": [
+    {
+      "text": "Related pages.",
+      "pause": 500
+    },
+    {
+      "text": "Identity operations",
+      "pause": 300
+    },
+    {
+      "text": "Observer architecture",
+      "pause": 300
+    },
+    {
+      "text": "Trust model",
+      "pause": 300
+    },
+    {
+      "text": "Compromise of the current keys",
+      "pause": 300
+    },
+    {
+      "text": "Story ladder",
+      "pause": 300
+    }
+  ],
+  "_source": {
+    "file": "aid-model.md",
+    "sha256": "9be7ddfc7496c15b7f46a918742916782c6be895e4fc9326b5d2b8b97336089e"
+  }
+}

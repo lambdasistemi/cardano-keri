@@ -1,0 +1,72 @@
+{
+  "tel-seal-walk-2027-04-21-target": [
+    {
+      "text": "TEL seal walk — 2027-04-21 target.",
+      "pause": 500
+    },
+    {
+      "text": "D-13 story. As a credential verifier, I want to know that an issuance or revocation event was sealed by its actual issuer under valid keys and witness receipts, so that a forged TEL event cannot influence the on-chain gate.",
+      "pause": 400
+    },
+    {
+      "text": "Planned release tag: Cardano KERI v2.0.0 (credential-gate M2). This names the milestone target; intermediate plays use release candidates, and the tag waits for the D-19 release gate and its preprod evidence.",
+      "pause": 400
+    },
+    {
+      "text": "This is a dated review target from the live project card. Not yet playable as the connected target. No confirmed ledger outcome or release acceptance is claimed by this page.",
+      "pause": 400
+    }
+  ],
+  "planned-play-and-evidence": [
+    {
+      "text": "Planned play and evidence.",
+      "pause": 500
+    },
+    {
+      "text": "Given a keripy-generated TEL event, its sealing issuer event, the issuer’s accepted historical key state and witness evidence; when the seal walk checks the event digest, issuer and sequence, key-state range, controller threshold and witness quorum; then the genuine event receives the specified final or provisional verdict, while a wrong seal, wrong issuer, wrong historical state or missing quorum is refused.",
+      "pause": 400
+    },
+    {
+      "text": "The intended positive observation is: A keripy-generated issuance or revocation event is checked through its issuer seal, historical keys and witness receipts. The relevant refusal is: Wrong seal, issuer, historical state and missing quorum each refuse. These are acceptance criteria, not observed results.",
+      "pause": 400
+    }
+  ],
+  "preprod-recording-path": [
+    {
+      "text": "Preprod recording path.",
+      "pause": 500
+    },
+    {
+      "text": "Generate the issuer KEL and TEL event with keripy kli, retaining its seal and witness receipts. Feed those exact bytes to the released ckeri verifier and submit the resulting preprod action. Read back the accepted transaction and show each malformed seal or missing receipt refusing at the actual boundary. The TEL interface and cast are still pending.",
+      "pause": 400
+    }
+  ],
+  "presenter-path-1015-minutes-when-runnable": [
+    {
+      "text": "Presenter path: 10–15 minutes when runnable.",
+      "pause": 500
+    }
+  ],
+  "missing-interface-or-receipt": [
+    {
+      "text": "Missing interface or receipt.",
+      "pause": 500
+    },
+    {
+      "text": "A pinned seal-walk model/interface, genuine iss/rev/vcp vectors, one-defect mutants, observed script verdicts and execution-unit measurements.",
+      "pause": 400
+    },
+    {
+      "text": "The model base visible in this checkout is Cardano KERI commit 0e638fadc987f0cd98f839edd3e3ecd5a09a1b91. It is a source identity for planning, not a claim that the later card is already modeled or accepted. Each claim must bind the accepted model revision for that behavior before promotion. The Lean correspondence register holds affected conflicts. A simulator or source fact cannot replace a confirmed transaction, and no cast of an accepted connected result is available here.",
+      "pause": 400
+    },
+    {
+      "text": "Tracking: KERI seal walk #393, history #391, cost #397.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "d13-tel.md",
+    "sha256": "685efeb383da423e0786b60865578880ba395180df5b8ad669ff3fcfa867f098"
+  }
+}

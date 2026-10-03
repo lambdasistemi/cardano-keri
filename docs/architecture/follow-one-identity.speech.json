@@ -1,94 +1,290 @@
 {
   "follow-one-identity": [
     {
-      "text": "Alice wants a treasury to recognize her identity after she replaces her keys. Her KERI identifier stays the same. Cardano holds a checkpoint of her key state.",
+      "text": "Follow one identity.",
       "pause": 500
     },
     {
-      "text": "These examples simulate the accepted milestone one design. They are not commands against deployed contracts and do not verify real signatures or execute Cardano transactions.",
-      "pause": 600
+      "text": "Alice wants a treasury to recognize her identity after she replaces her keys. Her KERI AID (Autonomic Identifier) stays the same; her signed key event log records which keys may act for it. Cardano holds a checkpoint of that key state. The treasury reads the checkpoint when deciding whether to accept Alice's authorization.",
+      "pause": 400
+    },
+    {
+      "text": "This chapter follows that one identity through four runnable examples. Each starts with a guarantee, states its conditions, then shows the successful and refused outcomes. The implementation responsibilities and evidence limits sit beside the claim they qualify.",
+      "pause": 400
+    },
+    {
+      "text": "What you are playing",
+      "pause": 400
+    },
+    {
+      "text": "These are simulations of the accepted M1 design, not commands against the deployed V1 contracts. The checkpoint model represents evidence as facts; it does not check real signatures, CESR encodings or witness receipts. The registry model abstracts requests, folds and uniqueness; it does not execute an MPFS proof or a Cardano transaction. See the architecture overview for the explicit V1/M1 distinction and the deployment guide for deployed behavior.",
+      "pause": 400
     }
   ],
   "the-parts-alice-depends-on": [
     {
-      "text": "The diagram follows Alice's signed events through a relayer to a Cardano checkpoint. The registry enforces one entry per identity. A treasury reads the checkpoint and applies its own authorization rules.",
+      "text": "The parts Alice depends on.",
       "pause": 500
     },
     {
-      "text": "The two simulators show separate views. One follows a checkpoint's lifecycle and money. The other follows registry requests and uniqueness. They do not share a running state.",
-      "pause": 500
+      "text": "KERI supplies the evidence; a relayer carries it to Cardano. The checkpoint validator and reference observers enforce the transaction rules. An off-chain follower helps locate the current output. The treasury's validator checks that output and its own authorization rule; finding an output through an indexer does not make it authoritative.",
+      "pause": 400
+    },
+    {
+      "text": "The two simulators give separate views of this architecture. The checkpoint simulator focuses on one identity's lifecycle and money. The registry simulator focuses on the shared registration boundary. Loading one does not transfer state to the other.",
+      "pause": 400
     }
   ],
   "what-registration-guarantees": [
     {
-      "text": "A successful first registration creates a registry entry and its matching checkpoint together. This requires valid inception evidence, an absent registry key and a successful fold. Submitting a request alone establishes none of those outcomes.",
+      "text": "What registration guarantees.",
       "pause": 500
+    },
+    {
+      "text": "In the registry model, a successful first registration creates one registry entry and its matching checkpoint together. A second registration of the same AID is refused. This guarantee depends on valid inception evidence, an absent registry key and a successful fold. Merely submitting a request establishes none of those outcomes.",
+      "pause": 400
+    },
+    {
+      "text": "The duplicate-registration example exposes both sides: Alice's fold creates the checkpoint; Mallory can submit a request but cannot process a second registration. The checkpoint example below abstracts that entire registration boundary into one register step.",
+      "pause": 400
     }
   ],
   "what-must-enforce-the-guarantee-on-cardano": [
     {
-      "text": "The intended Cardano transaction couples registry insertion and checkpoint mint. Generic MPFS checks insertion. KERI admission authenticates the initial key state. Mint authorization binds the checkpoint to that same registration. The model assumes the cryptographic checks; concrete script interfaces need separate verification.",
+      "text": "What must enforce the guarantee on Cardano?.",
       "pause": 500
     },
     {
-      "text": "Singular fold does exactly this coupling: it checks absence and mints the representative into the output the certified request names, in the folding transaction.",
+      "text": "The intended implementation must couple the MPFS Add/Insert and checkpoint NFT mint in the same fold transaction. Validators check that transaction; the plugin does not mint an NFT through a later side effect. Singular's fold does exactly this coupling: it checks absence and mints the representative into the output the certified request names, in the folding transaction (requests, folding and NFT custody).",
+      "pause": 400
+    },
+    {
+      "text": "These are required implementation obligations. The registry's processBody models their combined result; its Env.inception predicate assumes the cryptographic answer. It does not specify the exact division of checks between the KERI plugin, checkpoint minting policy and registration observers. The concrete script interfaces and asset-name encoding must be verified separately before this becomes an implementation guarantee.",
+      "pause": 400
+    },
+    {
+      "text": "The existing V1 registration path has an earlier BLAKE3 proof token that certifies an inception-to-AID hash relationship. That token is distinct from the checkpoint NFT and grants no identity authority. KERI witnesses receipt the inception event, not the Cardano NFT. See Identity Operations for the V1 transaction path.",
       "pause": 400
     }
   ],
   "proposed-attest-inception-before-requesting-registration": [
     {
-      "text": "The proposed attestation says this hash identifies a valid inception. It does not say the identity has never been registered. Several attestations may certify the same inception. The registry absence check supplies uniqueness when registration creates the checkpoint.",
+      "text": "Proposed: attest inception before requesting registration.",
       "pause": 500
     },
     {
-      "text": "To omit the raw inception from the request, the earlier validation must authenticate the initial checkpoint keys as well as the identifier. The existing BLAKE3 proof token certifies only the hash relationship. This expanded attestation is proposed, not implemented, and its transaction budget still needs measurement.",
-      "pause": 500
+      "text": "The attestation says: “This hash identifies a valid KERI inception.” It does not say: “This AID has never been registered.” Multiple attestations of the same inception are allowed. The registry supplies uniqueness when it admits registration and creates the checkpoint.",
+      "pause": 400
+    },
+    {
+      "text": "This is the proposed evidence boundary for M1; it is not yet implemented or represented as a separate action in the simulators. The architecture diagram shows the attestation, request, atomic fold and consumer boundaries together.",
+      "pause": 400
+    },
+    {
+      "text": "To remove the full inception from the request and fold, the earlier validation must establish the required inception admission checks, including signatures and witness receipts. The attestation must authenticate both the AID and the initial key-state projection, under a pinned validation policy. Otherwise a request could pair a valid inception hash with unrelated checkpoint keys. An unauthenticated datum placed beside an attestation token is not enough. Registration-time fields such as the refund address, birth slot and bonds are still checked at the fold.",
+      "pause": 400
+    },
+    {
+      "text": "The existing V1 BLAKE3 proof token supplies only the hash relationship; it does not by itself certify inception admission. Extending that boundary requires a concrete attestation format and validation rules. Whether a fold references or consumes the attestation is still to be specified; single-use attestation is not the source of checkpoint uniqueness. Even with two valid attestations and two pending requests, only the first successful registration can satisfy the registry absence check.",
+      "pause": 400
+    },
+    {
+      "text": "The duplicate scenario already demonstrates that registration boundary using an assumed inception fact. It does not execute the proposed attestation validation. Moving this work earlier can keep the raw inception out of the shared fold, but transaction size and execution-budget feasibility still need measurement.",
+      "pause": 400
     }
   ],
   "what-does-active-token-promise": [
     {
-      "text": "An active leaf identifies a checkpoint incarnation. It does not certify that consumers may use it. Dormant preserves the key state needed for revival; convicted is terminal. Token numbers in the simulator are abstract, not concrete asset names. The model prevents a second first-registration and permits a separately guarded revival.",
+      "text": "What does active token promise?.",
       "pause": 500
+    },
+    {
+      "text": "The registry stores an AID's lifecycle and indirection:",
+      "pause": 400
+    },
+    {
+      "text": "A never-registered AID has no leaf. Live, poisoned (locked by the owner's own declaration) and frozen (the freeze bond taken) are checkpoint conditions, not additional registry leaf variants. In the registry model's reap/fold handoff (the reap being the owner's close, a rotation by the next keys), an active leaf can temporarily have a pending go-request instead of a checkpoint; the leaf alone never authorizes consumer use.",
+      "pause": 400
+    },
+    {
+      "text": "The registry simulator's token and k are abstract integers. It allocates nextToken during registration, and a fresh one during permitted revival; those integers do not define serialized Cardano asset names. A concrete asset is identified by policy ID plus asset name. Knowing an AID-derived name before Cardano registration does not establish that its mint is unique.",
+      "pause": 400
+    },
+    {
+      "text": "The bounded guarantee is no second first-registration and at most one checkpoint per AID in the registry model, with revival as a separate guarded operation. It is not a proof that concrete token bytes are minted only once across every future revival. See the registry model reference.",
+      "pause": 400
     }
   ],
   "how-to-play-an-example": [
     {
-      "text": "Expand an example to show its scenario, then copy the whole block. Open its linked simulator, paste beside Load DSL, then press Load DSL. Step forward with the arrow or press play. Playback pauses at the main result; press again for remaining steps. Branch chips let you try alternatives.",
+      "text": "How to play an example.",
       "pause": 500
     },
     {
-      "text": "Every example includes its own setup. The numbers are model values, not deployment settings.",
-      "pause": 500
+      "text": "Expand Show … .dsl — copy and play, then copy the whole code block using its copy button. You can also open its .dsl link.",
+      "pause": 300
+    },
+    {
+      "text": "Open the simulator linked immediately above that block.",
+      "pause": 300
+    },
+    {
+      "text": "Paste into the text area next to Load DSL, then select Load DSL.",
+      "pause": 300
+    },
+    {
+      "text": "Use › to step forward, or ▶ to play. Playback pauses at the main result; press it again for the remaining steps. Select a ⋔ branch chip to try an alternative; compare the results with What to observe below the block.",
+      "pause": 300
+    },
+    {
+      "text": "Every block includes its own setup. Loading it starts a fresh story: no previous example, manual evidence or edited parameter is needed. The download and displayed block come from the same file. expect fields describe results checked by the documentation build; they do not grant permission to an action.",
+      "pause": 400
+    },
+    {
+      "text": "The checkpoint examples use model units: D = 1000 is the conviction bond (stake against duplicity), B = 5 the freeze bond (what a hunter takes when the pool cannot pay for a rotation), P = 2 the premium (the fee the pool pays whoever lands a rotation) and W = 10 the juvenility window (the age a checkpoint must reach before a consumer trusts it) in slots. Addresses 1 and 2 stand for Alice and Hal. These small integers are simulator values, not real addresses or deployment settings.",
+      "pause": 400
     }
   ],
   "1-alice-registers-existence-comes-before-trust": [
     {
-      "text": "First, Alice registers. The treasury initially sees no identity. Registration brings two bonds and a pool of ten. The checkpoint remains juvenile at slot nine and becomes consumable at slot ten. Registering it again is refused.",
-      "pause": 600
+      "text": "1. Alice registers: existence comes before trust.",
+      "pause": 500
+    },
+    {
+      "text": "The treasury cannot use an absent identity. Registration creates its checkpoint with both bonds and a pool for relayer payments. A new checkpoint then waits out the juvenility window before a consumer can accept it.",
+      "pause": 400
+    },
+    {
+      "text": "Guarantee and conditions: in this model, the consumer refuses a fresh registration until its age reaches W, even when both bonds are full and the checkpoint is neither frozen nor poisoned. Registration itself remains allowed.",
+      "pause": 400
+    },
+    {
+      "text": "Open the checkpoint simulator · Open register.dsl",
+      "pause": 400
+    },
+    {
+      "text": "Show register.dsl — copy and play",
+      "pause": 400
+    },
+    {
+      "text": "What to observe: before registration the verdict is not-present. Registration at slot 0 locks the two bonds and pool 10, with Alice at refund address 1. The verdict remains juvenile at slot 9 and becomes consumable at slot 10. The alternative Registering the same AID again refuses the action with already-present and preserves the existing checkpoint.",
+      "pause": 400
+    },
+    {
+      "text": "Existence and consumability answer different questions. A juvenile checkpoint exists and can participate in lifecycle operations; the waiting window gates consumer use. For the transaction structure behind registration, continue to Identity Operations.",
+      "pause": 400
     }
   ],
   "2-alice-rotates-evidence-must-reach-cardano": [
     {
-      "text": "Alice rotates her keys. Evidence alone leaves the Cardano checkpoint unchanged. Hal lands the rotation, advances sequence and epoch to one, and receives two from the pool. Replaying the same evidence fails against the new epoch.",
-      "pause": 600
+      "text": "2. Alice rotates: evidence must reach Cardano.",
+      "pause": 500
+    },
+    {
+      "text": "Alice replaces her keys without changing her AID. Witnessed rotation evidence alone does not advance the Cardano checkpoint: Hal must submit the corresponding transaction. His payment comes from the separate pool.",
+      "pause": 400
+    },
+    {
+      "text": "Guarantee and conditions: with matching witnessed rotation evidence and enough pool to pay P, an accepted keep rotation advances the checkpoint and pays the named relayer. Replaying the old evidence against the new epoch is refused. Real witness and signature verification is assumed by this simulation.",
+      "pause": 400
+    },
+    {
+      "text": "Open the checkpoint simulator · Open rotate.dsl",
+      "pause": 400
+    },
+    {
+      "text": "Show rotate.dsl — copy and play",
+      "pause": 400
+    },
+    {
+      "text": "What to observe: the evidence step at slot 12 leaves the checkpoint at sequence 0. Hal's rotate advances sequence and epoch to 1, keeps Alice's refund address, reduces the pool from 10 to 8 and pays 2 to Hal at address 2. The checkpoint remains consumable: this rotation does not restart juvenility. The alternative Hal tries to land the same rotation again refuses with no-witnessed-rotation. The old evidence names epoch 0 and sequence 0; it cannot be reused against epoch 1.",
+      "pause": 400
+    },
+    {
+      "text": "rotationTo: [0, 0, 1] is an assumed verified fact in this model. In the implementation, parsing, signatures, next-key commitments and witness thresholds need their real checks. This is the boundary explained by reference observers. The simulation demonstrates the state transition and payment, not cryptographic verification.",
+      "pause": 400
     }
   ],
   "3-the-treasury-reads-current-keys-can-become-unusable": [
     {
-      "text": "The treasury sees a consumable checkpoint at slot thirteen. Alice's current quorum authorizes poison at slot fourteen. The treasury must refuse, and still refuses at slot twenty-four. Waiting does not clear poison. Consumable status alone never authorizes a treasury payment.",
-      "pause": 600
+      "text": "3. The treasury reads: current keys can become unusable.",
+      "pause": 500
+    },
+    {
+      "text": "The treasury must check the checkpoint at each use. A key that was acceptable yesterday may belong to a poisoned epoch today. Alice can use the current key quorum to declare that epoch untrustworthy; once that declaration lands, waiting does not repair it.",
+      "pause": 400
+    },
+    {
+      "text": "Guarantee and conditions: once a current-quorum poison declaration lands, the model's consumer predicate refuses that epoch. Advancing time does not clear poison. This guarantee covers checkpoint eligibility, not the treasury's own signature verification or payment authorization.",
+      "pause": 400
+    },
+    {
+      "text": "Open the checkpoint simulator · Open consume.dsl",
+      "pause": 400
+    },
+    {
+      "text": "Show consume.dsl — copy and play",
+      "pause": 400
+    },
+    {
+      "text": "What to observe: this example registers and rotates Alice from scratch. At slot 13 the treasury sees consumable. At slot 14 a current-epoch quorum fact allows poison to land; the verdict becomes poisoned. At slot 24 it is still poisoned, even though the original waiting window has long elapsed. The pool stays at 8. Neither time nor the consumer's previous decision clears poison.",
+      "pause": 400
+    },
+    {
+      "text": "consumable means eligible under the model's checkpoint rules. It does not mean the treasury has verified a spending signature or authorized a payment. The application must also validate the checkpoint's identity, token, script and datum, then apply its own authorization rule. The consumer checklist explains those responsibilities; Value Authorization expands the model's refusal conditions.",
+      "pause": 400
     }
   ],
   "4-the-registry-refuses-a-duplicate-follow-the-money": [
     {
-      "text": "In the registry, Alice's request deposits a thousand plus a tip of two. Hal processes it. Mallory submits the same identity, but processing her duplicate is refused. Later, Sam rejects the pending request: the thousand returns to Mallory and the tip goes to Sam. Trying this too early is refused. Only Alice's original entry remains.",
-      "pause": 600
+      "text": "4. The registry refuses a duplicate: follow the money.",
+      "pause": 500
+    },
+    {
+      "text": "Now look at Alice through the registry simulator. Here AID 11 is Alice's abstract identifier. A contributed request is pending work; only a successful fold updates the registry. Mallory can pay to submit a duplicate request, but cannot turn it into a second registered identity.",
+      "pause": 400
+    },
+    {
+      "text": "Guarantee and conditions: processing a registration requires an absent AID leaf. With Alice already registered, a duplicate request cannot create another checkpoint. Refunding that pending request is a separate operation with its own rejection-window condition.",
+      "pause": 400
+    },
+    {
+      "text": "Open the registry simulator · Open duplicate.dsl",
+      "pause": 400
+    },
+    {
+      "text": "Show duplicate.dsl — copy and play",
+      "pause": 400
+    },
+    {
+      "text": "What to observe: Alice contributes 1002: bond 1000 plus tip 2. Hal processes her request, locking 1000 and receiving the tip. Mallory then contributes the same amount for AID 11. Processing her request refuses with already-registered. At slot 25 Sam rejects that pending request: 1000 returns to Mallory at address 4, and tip 2 goes to Sam at address 6. The final state has one leaf, one checkpoint and no pending requests.",
+      "pause": 400
+    },
+    {
+      "text": "Try Sam rejects Mallory's request in phase 1. At slot 6 it refuses with not-rejectable; the pending request remains. Refusing a duplicate registration does not make early rejection legal. This example supplies its own registry parameters and actor map: Hal is address 3 here, and the registry's W = 5 serves its own model rather than importing the checkpoint example's settings.",
+      "pause": 400
+    },
+    {
+      "text": "The uniqueness boundary belongs to the registry. The checkpoint can then evolve without storing all identities in its datum. See The Registry as an MPFS Instance for the request/fold architecture and proof boundary.",
+      "pause": 400
     }
   ],
   "from-the-model-to-a-running-system": [
     {
-      "text": "The linked references explain deployment versions, validator responsibilities, off-chain discovery, consumer checks, and the registry proof boundary. The examples establish model outcomes; they do not test submission, rollback recovery or witness availability.",
+      "text": "From the model to a running system.",
       "pause": 500
+    },
+    {
+      "text": "The examples establish modeled lifecycle outcomes. They do not test transaction submission, rollback recovery, witness availability or deployment configuration. Use these references when crossing those boundaries:",
+      "pause": 400
+    },
+    {
+      "text": "To check the examples locally, run node scripts/check-architecture-scenarios.mjs --selftest, build the docs, then run node scripts/check-architecture-scenarios.mjs --site site. CI replays every source and checks the actual rendered code blocks and published downloads against it.",
+      "pause": 400
     }
-  ]
+  ],
+  "_source": {
+    "file": "follow-one-identity.md",
+    "sha256": "d02e2ee4441006606cfad124a812c3fa8e5d868e00357b9412db75f20d76bf74"
+  }
 }

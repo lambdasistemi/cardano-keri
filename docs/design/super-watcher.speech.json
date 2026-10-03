@@ -1,0 +1,322 @@
+{
+  "the-hunter-relayer-evidence-submitter-and-paid-maintainer": [
+    {
+      "text": "The hunter: relayer, evidence submitter, and paid maintainer.",
+      "pause": 500
+    },
+    {
+      "text": "A hunter is an off-chain service that watches KERI and Cardano and lands the transactions that keep an identity's checkpoint current. It is a role any party may perform, not a trusted oracle or an identity administrator. In KERI's vocabulary it is a watcher that also submits. Earlier pages called this role the super watcher; the accepted design gives it a wage and a name.",
+      "pause": 400
+    },
+    {
+      "text": "Where this page stands",
+      "pause": 400
+    },
+    {
+      "text": "The cross-plane problem, the evidence rules for advance, and what the role is not are shipped on main today — those transactions settle. The hunter's economics (the premium paid for landing a rotation, the freeze, the conviction payout) are the accepted design, proved in the Lean and playable in the checkpoint simulator. No hunter daemon is shipped; it is epic #325.",
+      "pause": 400
+    }
+  ],
+  "the-cross-plane-problem": [
+    {
+      "text": "The cross-plane problem.",
+      "pause": 500
+    },
+    {
+      "text": "KERI events happen off chain. Cardano checkpoints move only when a transaction reveals and validates an event. Therefore either side can temporarily be ahead:",
+      "pause": 400
+    },
+    {
+      "text": "KERI may have a new witnessed rotation while Cardano still shows the old key state.",
+      "pause": 300
+    },
+    {
+      "text": "Cardano may have settled an advance while a particular off-chain client has not refreshed its KEL or ledger view.",
+      "pause": 300
+    },
+    {
+      "text": "The hunter observes both and closes that gap. The owner does not: in the M1 return the owner rotates with kli and never touches Cardano except to put money in. That asymmetry is deliberate.",
+      "pause": 400
+    },
+    {
+      "text": "The hunter seeds its own watcher from the witness OOBIs published on the endpoint board, so discovery itself does not require asking anybody.",
+      "pause": 400
+    }
+  ],
+  "what-a-hunter-may-do-today": [
+    {
+      "text": "What a hunter may do today.",
+      "pause": 500
+    },
+    {
+      "text": "Against the programs shipped on main, a hunter may:",
+      "pause": 400
+    },
+    {
+      "text": "relay a public inception through premint and register;",
+      "pause": 300
+    },
+    {
+      "text": "relay a genuine witnessed rotation through advance;",
+      "pause": 300
+    },
+    {
+      "text": "monitor transaction settlement and the new unspent checkpoint.",
+      "pause": 300
+    },
+    {
+      "text": "There is no payment for any of it. Routine event relay has no on-chain fee today, so a commercial relayer needs an off-chain payment model. That is the gap the accepted design closes.",
+      "pause": 400
+    }
+  ],
+  "the-hunters-wage-accepted-design": [
+    {
+      "text": "The hunter's wage — accepted design.",
+      "pause": 500
+    },
+    {
+      "text": "The owner parks three separate sums in the checkpoint, and only two of them can ever reach a hunter:",
+      "pause": 400
+    },
+    {
+      "text": "The loop. The hunter sees the owner's rotation on KERI. It looks at Cardano:",
+      "pause": 400
+    },
+    {
+      "text": "if the pool covers the premium, it lands the rotation and takes P;",
+      "pause": 300
+    },
+    {
+      "text": "if it does not, it takes B and freezes the checkpoint on its old keys — the same evidence, applied to nothing. The datum is unchanged, B leaves, and the checkpoint is unconsumable until the owner rotates with a deposit that restores it.",
+      "pause": 300
+    },
+    {
+      "text": "The freeze is therefore not a punishment for lag. It is what makes a non-paying owner come back, and it is bounded by two things the owner controls: fund the pool, or do not rotate.",
+      "pause": 400
+    },
+    {
+      "text": "Two hunters racing produce one winner. If the pool covers P the first advance wins and the second fails on the spent input; if it does not, the first freeze takes B and the second finds nothing to take.",
+      "pause": 400
+    },
+    {
+      "text": "No bounty. There is no payment for detecting misbehaviour, because a flow whose profitability depends on another party's misbehaviour invites staged misbehaviour. The single exception is the conviction, and it is an exception on principled ground: two witnessed rotations at one sequence are a KERI verdict (duplicity), not a judgement the chain invents.",
+      "pause": 400
+    }
+  ],
+  "what-a-hunter-is-not": [
+    {
+      "text": "What a hunter is not.",
+      "pause": 500
+    },
+    {
+      "text": "A hunter is not:",
+      "pause": 400
+    },
+    {
+      "text": "a KERI witness;",
+      "pause": 300
+    },
+    {
+      "text": "a controller key custodian;",
+      "pause": 300
+    },
+    {
+      "text": "a recovery service;",
+      "pause": 300
+    },
+    {
+      "text": "a source of legal identity;",
+      "pause": 300
+    },
+    {
+      "text": "an authoritative indexer;",
+      "pause": 300
+    },
+    {
+      "text": "a checkpoint owner;",
+      "pause": 300
+    },
+    {
+      "text": "a branch-selection oracle; or",
+      "pause": 300
+    },
+    {
+      "text": "a service capable of rolling back settled Cardano actions.",
+      "pause": 300
+    },
+    {
+      "text": "It can submit only evidence the validators accept. When cryptographic evidence is absent, it may alert users but cannot manufacture an on-chain truth. It cannot forge controller signatures or witness receipts, activate uncommitted keys, move the owner's refund address, park the owner, reset her juvenility (the age her checkpoint must reach before a consumer trusts it) window, or close her: every bond option other than keep, and every new refund address, is signed by the keys of the epoch the rotation opens.",
+      "pause": 400
+    }
+  ],
+  "evidence-rules": [
+    {
+      "text": "Evidence rules.",
+      "pause": 500
+    }
+  ],
+  "advance": [
+    {
+      "text": "Advance.",
+      "pause": 500
+    },
+    {
+      "text": "The hunter must collect:",
+      "pause": 400
+    },
+    {
+      "text": "the exact next KERI rotation bytes;",
+      "pause": 300
+    },
+    {
+      "text": "controller signatures satisfying both thresholds;",
+      "pause": 300
+    },
+    {
+      "text": "the required witness receipts; and",
+      "pause": 300
+    },
+    {
+      "text": "the current checkpoint outref.",
+      "pause": 300
+    },
+    {
+      "text": "The advance observer reconstructs and validates the transition. The hunter cannot choose alternate keys or skip a sequence, and the sequence only ever moves forward — the checkpoint cannot roll back (ruling D-022).",
+      "pause": 400
+    },
+    {
+      "text": "One unsettled question inside advance",
+      "pause": 400
+    },
+    {
+      "text": "For a rotation that cuts or adds witnesses, the shipped validator counts receipts against the new witness set and the new toad. Whether keripy applies the same rule, or tallies against the parent's set, is not yet established. Epic #320 builds the parity oracle that settles it. It matters most on exactly the rotations that matter: witness replacement after a compromise.",
+      "pause": 400
+    }
+  ],
+  "freeze-accepted-design": [
+    {
+      "text": "Freeze — accepted design.",
+      "pause": 500
+    },
+    {
+      "text": "The hunter presents the same evidence it would use to advance: a later witnessed rotation with its receipts. The freeze runs the advance predicate and differs only in effect. It additionally requires that the pool is below P, and it is not enabled from a poisoned checkpoint (one locked by the owner's own declaration), which is already unconsumable.",
+      "pause": 400
+    }
+  ],
+  "poison-relay-accepted-design": [
+    {
+      "text": "Poison relay — accepted design.",
+      "pause": 500
+    },
+    {
+      "text": "The poison is a declaration the owner's current keys sign at their own threshold, over a short preimage bound to the policy, the AID and the sequence. It is never witnessed, and anyone may land it. A hunter that carries poisons promptly is doing the most valuable thing in the system: the poison's whole purpose is to be fast.",
+      "pause": 400
+    }
+  ],
+  "convict-accepted-design": [
+    {
+      "text": "Convict — accepted design.",
+      "pause": 500
+    },
+    {
+      "text": "The conviction proof is narrower than any lag evidence. It requires a second rotation at the tip's own sequence that reveals exactly the tip's current keys, is signed at the current threshold, and carries receipts from at least toad of the tip's witnesses — and differs in content from the accepted one. No history is needed, because the revealed keys are the current keys.",
+      "pause": 400
+    },
+    {
+      "text": "A stranger cannot manufacture this. Only a holder of the pre-committed keys could have signed the second rotation, and only colluding witnesses could have receipted both. The convictor names a payee and takes D_reg in full; the identity becomes convicted, which is terminal.",
+      "pause": 400
+    }
+  ],
+  "operational-loop": [
+    {
+      "text": "Operational loop.",
+      "pause": 500
+    },
+    {
+      "text": "A robust hunter would:",
+      "pause": 400
+    },
+    {
+      "text": "maintain verified KEL state for watched AIDs, seeded from the endpoint board;",
+      "pause": 300
+    },
+    {
+      "text": "collect and verify witness receipts;",
+      "pause": 300
+    },
+    {
+      "text": "resolve each AID's current Cardano checkpoint and read its pool;",
+      "pause": 300
+    },
+    {
+      "text": "compare the native KERI sequence with the checkpoint's;",
+      "pause": 300
+    },
+    {
+      "text": "choose the permitted public projection — advance when the pool pays, freeze when it does not, a poison relay when one exists, a conviction when the proof is in hand, and no transaction when evidence is incomplete;",
+      "pause": 300
+    },
+    {
+      "text": "construct the thin-checkpoint and observer envelope;",
+      "pause": 300
+    },
+    {
+      "text": "evaluate and budget every script purpose;",
+      "pause": 300
+    },
+    {
+      "text": "submit and wait for settlement;",
+      "pause": 300
+    },
+    {
+      "text": "handle contention and rollback; and",
+      "pause": 300
+    },
+    {
+      "text": "record transaction IDs and evidence provenance.",
+      "pause": 300
+    },
+    {
+      "text": "The service must never treat mempool acceptance as settlement.",
+      "pause": 400
+    }
+  ],
+  "freshness-and-availability": [
+    {
+      "text": "Freshness and availability.",
+      "pause": 500
+    },
+    {
+      "text": "A hunter improves discovery latency but cannot eliminate KERI witness outages, network partitions, Cardano inclusion delay, chain rollbacks, block-level censorship, or a colluding witness threshold.",
+      "pause": 400
+    },
+    {
+      "text": "Applications should not silently outsource all freshness policy to one hunter. The juvenility window W exists for that reason: a consumer refuses a checkpoint younger than W slots after a registration, a reopen or a resurrecting rotation, and W is calibrated above measured relayer latency rather than guessed. Its value is set from the measurement taken in epic #325.",
+      "pause": 400
+    }
+  ],
+  "credential-plane-extension": [
+    {
+      "text": "Credential-plane extension.",
+      "pause": 500
+    },
+    {
+      "text": "Later, a hunter may also follow ACDC credential chains and TEL revocation events. That duty is separate from identity checkpoint authority: identity relay answers which keys currently control the AID; credential monitoring answers which issued roles remain valid. Only the first plane is in M1.",
+      "pause": 400
+    }
+  ],
+  "security-principle": [
+    {
+      "text": "Security principle.",
+      "pause": 500
+    },
+    {
+      "text": "The hunter is safe to make permissionless because it pays to submit public proofs whose on-chain result is deterministic, and it is paid from value the owner chose to park. A hostile hunter can withhold its own service or waste fees on invalid transactions. It cannot choose a different valid successor, take D_reg without a duplicity proof, take B while the pool pays, or move one lovelace to an address the owner's keys did not authorize.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "super-watcher.md",
+    "sha256": "ed3f6f9851cd64a29687436110c9469e6ef1c36fa4babd021aebc684b7add518"
+  }
+}

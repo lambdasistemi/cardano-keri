@@ -1,0 +1,254 @@
+{
+  "user-experience-a-keri-identity-on-cardano": [
+    {
+      "text": "User experience: a KERI identity on Cardano.",
+      "pause": 500
+    },
+    {
+      "text": "This is the user journey the architecture supports, and the boundaries a future Veridian integration must make visible.",
+      "pause": 400
+    },
+    {
+      "text": "Where this page stands",
+      "pause": 400
+    },
+    {
+      "text": "The register, rotate and close journeys are shipped on main today and exercised on preprod. The states a UI must distinguish, the three sums of money, and the poison journey are the accepted design. The interface itself is neither: the repository has settled transactions and a test harness, not an end-user product.",
+      "pause": 400
+    }
+  ],
+  "the-design-principle-the-owner-is-dumb-on-cardano": [
+    {
+      "text": "The design principle: the owner is dumb on Cardano.",
+      "pause": 500
+    },
+    {
+      "text": "The accepted design assumes the identity owner rotates her keys with kli and never touches Cardano except to put money in. Everything on the Cardano side is done by hunters — anyone paid to land her rotations, or to freeze her checkpoint when it cannot pay for one — paid from value she parks in her checkpoint.",
+      "pause": 400
+    },
+    {
+      "text": "A user interface that forgets this will be wrong in a specific way: it will present Cardano operations as things the owner must perform on a schedule. The two things she actually does are fund and, if her keys are stolen, poison.",
+      "pause": 400
+    }
+  ],
+  "first-know-the-aid": [
+    {
+      "text": "First, know the AID.",
+      "pause": 500
+    },
+    {
+      "text": "Alice learns Bob's KERI AID through a trusted KERI channel such as an OOBI (out-of-band introduction), QR code, or direct exchange. The AID identifies Bob's KERI key history. Cardano does not decide who Bob is in the legal world; credentials do that later.",
+      "pause": 400
+    }
+  ],
+  "find-the-checkpoint": [
+    {
+      "text": "Find the checkpoint.",
+      "pause": 500
+    },
+    {
+      "text": "The application:",
+      "pause": 400
+    },
+    {
+      "text": "derives the Cardano asset name from Bob's AID;",
+      "pause": 300
+    },
+    {
+      "text": "asks an indexer or node for candidate UTxOs;",
+      "pause": 300
+    },
+    {
+      "text": "validates the candidate against the ledger; and",
+      "pause": 300
+    },
+    {
+      "text": "accepts it only if the consumer's predicate holds.",
+      "pause": 300
+    },
+    {
+      "text": "The UI should distinguish, and say why it refuses rather than silently choosing a checkpoint or an old key:",
+      "pause": 400
+    },
+    {
+      "text": "\"Fail closed\" should be visible. Note that frozen is not a flag: it is what the checkpoint's value shows (B absent). A UI should read it from the bonds rather than looking for a status field that does not exist.",
+      "pause": 400
+    }
+  ],
+  "register": [
+    {
+      "text": "Register.",
+      "pause": 500
+    },
+    {
+      "text": "A relayer can register Alice's public KERI inception without holding her private keys:",
+      "pause": 400
+    },
+    {
+      "text": "prove the inception/AID BLAKE3 binding;",
+      "pause": 300
+    },
+    {
+      "text": "submit the Register transaction with observer evidence;",
+      "pause": 300
+    },
+    {
+      "text": "fund the bonds; and",
+      "pause": 300
+    },
+    {
+      "text": "wait for settlement.",
+      "pause": 300
+    },
+    {
+      "text": "The resulting checkpoint is controlled by the keys in Alice's inception, not by the relayer. If somebody else pays, they are donating: the refund address is theirs only until Alice's first rotation moves it, and the money then answers to her keys.",
+      "pause": 400
+    },
+    {
+      "text": "The UI should show the AID; the controller threshold; the witness threshold; the expected checkpoint policy and asset; each of the three sums; the premint and Register transaction IDs; and the confirmation depth. Under the accepted design it should also show that the checkpoint is juvenile and for how long.",
+      "pause": 400
+    }
+  ],
+  "rotate": [
+    {
+      "text": "Rotate.",
+      "pause": 500
+    },
+    {
+      "text": "Alice rotates in KERI first. Her KERI software creates the event and collects the configured witness receipts. Any hunter may then land the advance.",
+      "pause": 400
+    },
+    {
+      "text": "The UI should show the old and new KERI sequence; the controller-threshold result; the witness receipt count and the required toad; any witness-set change; the checkpoint input and expected successor; and the settlement state.",
+      "pause": 400
+    },
+    {
+      "text": "The application must not report the rotation complete merely because KERI has moved. Until the advance settles, Cardano still has the old key state — and under the accepted design, whether it settles promptly depends on whether Alice's pool can pay a hunter.",
+      "pause": 400
+    },
+    {
+      "text": "A rotation is also where Alice exercises every other choice she has: the bond option (keep, or deposit to unfreeze) and a new refund address. All of them travel in one message her new keys sign, so a UI must display the intent and the address together, before signing, exactly as the chain will read them.",
+      "pause": 400
+    }
+  ],
+  "poison": [
+    {
+      "text": "Poison.",
+      "pause": 500
+    },
+    {
+      "text": "This is the journey that is new, and the one worth designing carefully because it happens on the worst day.",
+      "pause": 400
+    },
+    {
+      "text": "Alice's current keys are stolen. Before she can assemble a rotation, her key holders sign a short declaration — with stock kli sign, over a preimage bound to the policy, her AID and her current sequence — and anyone lands it. The checkpoint is immediately unconsumable, and the thief can do nothing with it: no close, no second poison, no consumer authorization. The only way out is a rotation, which clears the poison because the poison belonged to the keys the rotation retires.",
+      "pause": 400
+    },
+    {
+      "text": "The UI must be honest about the one case this does not cover: if the thief also holds the next keys, her rotation is control by KERI's own rule, and the poison lasts until that rotation and no longer.",
+      "pause": 400
+    }
+  ],
+  "leaving-and-coming-back": [
+    {
+      "text": "Leaving and coming back.",
+      "pause": 500
+    },
+    {
+      "text": "There is no pause and no withdraw. An identity is active, parked, or convicted.",
+      "pause": 400
+    },
+    {
+      "text": "Close is the reap: a witnessed rotation by the next keys whose signed message names the payee of the premium (the fee for landing a rotation) and the refund address. The token burns, the leaf is parked with the hash of that key state. The current keys cannot close.",
+      "pause": 300
+    },
+    {
+      "text": "Reopen is the revival: a witnessed rotation later than the parked key state, with fresh bonds, born juvenile. A parked identity is not terminal; only conviction is.",
+      "pause": 300
+    },
+    {
+      "text": "Deposit is the unfreeze: a rotation that refills B after a hunter took it. It is a no-op on full bonds, still signed by the new keys.",
+      "pause": 300
+    },
+    {
+      "text": "Before signing any of these the UI must display the exact checkpoint input, the AID and sequence, the destination address, the amounts of all three components, and the network and policy — because that is precisely the set of facts the signed intent binds.",
+      "pause": 400
+    }
+  ],
+  "three-balances-three-explanations": [
+    {
+      "text": "Three balances, three explanations.",
+      "pause": 500
+    },
+    {
+      "text": "The UI should never present the checkpoint's value as one generic deposit:",
+      "pause": 400
+    },
+    {
+      "text": "The pool is a wage fund. It pays the premium P to whoever lands a rotation. Anyone may top it up, and its depletion is what invites a freeze.",
+      "pause": 300
+    },
+    {
+      "text": "The freeze bond B is what a hunter takes when the pool cannot pay. Its absence is the frozen state, and only a depositing rotation restores it.",
+      "pause": 300
+    },
+    {
+      "text": "The conviction bond D_reg is the stake a duplicity proof seizes. It is never a fee. A responsive, honest identity never loses any of the three.",
+      "pause": 300
+    },
+    {
+      "text": "All three are deployment parameters, and the numbers are not yet set — they wait on the measurements in the roadmap.",
+      "pause": 400
+    }
+  ],
+  "current-product-boundary": [
+    {
+      "text": "Current product boundary.",
+      "pause": 500
+    },
+    {
+      "text": "The repository has settled development-network and preprod stories and a test harness, not an end-user product. A production experience still needs:",
+      "pause": 400
+    },
+    {
+      "text": "a published Veridian/Signify integration;",
+      "pause": 300
+    },
+    {
+      "text": "redundant checkpoint discovery;",
+      "pause": 300
+    },
+    {
+      "text": "transaction fee and funding UX;",
+      "pause": 300
+    },
+    {
+      "text": "Cardano settlement and rollback monitoring;",
+      "pause": 300
+    },
+    {
+      "text": "KERI freshness monitoring;",
+      "pause": 300
+    },
+    {
+      "text": "the poison, bond and registry paths built at all (epics #322–#325 on the roadmap);",
+      "pause": 300
+    },
+    {
+      "text": "real-scale measurements; and",
+      "pause": 300
+    },
+    {
+      "text": "credential display and revocation checks.",
+      "pause": 300
+    },
+    {
+      "text": "The story ladder is the current evidence ledger, and the checkpoint simulator on the home page is where the journeys above can be played before any of them exists.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "user-experience.md",
+    "sha256": "d11069f8407d817978a5768fa9f0498ee84653844c7ad28e1b49c295b7bd9beb"
+  }
+}

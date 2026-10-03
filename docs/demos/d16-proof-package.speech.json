@@ -1,0 +1,72 @@
+{
+  "acdc-proof-package-2027-06-05-target": [
+    {
+      "text": "ACDC proof package — 2027-06-05 target.",
+      "pause": 500
+    },
+    {
+      "text": "D-16 story. As a transaction builder, I want raw four-link CESR credentials turned into the exact proof data the validator consumes, so that a holder can present evidence without hand-building Plutus data.",
+      "pause": 400
+    },
+    {
+      "text": "Planned release tag: Cardano KERI v2.0.0 (credential-gate M2). This names the milestone target; intermediate plays use release candidates, and the tag waits for the D-19 release gate and its preprod evidence.",
+      "pause": 400
+    },
+    {
+      "text": "This is a dated review target from the live project card. Not yet playable as the connected target. No confirmed ledger outcome or release acceptance is claimed by this page.",
+      "pause": 400
+    }
+  ],
+  "planned-play-and-evidence": [
+    {
+      "text": "Planned play and evidence.",
+      "pause": 500
+    },
+    {
+      "text": "Given synthetic CESR credentials, issuer history and the on-chain identity and revocation roots; when the builder decodes each credential, recomputes its SAID and builds the issuer and revocation proofs; then it produces the validator’s redeemer for authentic inputs and rejects a corrupted SAID before submission.",
+      "pause": 400
+    },
+    {
+      "text": "The intended positive observation is: A builder turns synthetic raw four-link CESR credentials into the exact redeemer and issuer/revocation proofs. The relevant refusal is: A corrupted SAID is rejected before submission. These are acceptance criteria, not observed results.",
+      "pause": 400
+    }
+  ],
+  "preprod-recording-path": [
+    {
+      "text": "Preprod recording path.",
+      "pause": 500
+    },
+    {
+      "text": "Export raw four-link CESR from keripy kli; pass those bytes to the released ckeri proof builder and use its exact package in a Cardano preprod gate transaction. Record the package identity, confirmed consumer readback and a corrupted-SAID refusal. The builder interface and matching gate are not yet released, so this page has no cast.",
+      "pause": 400
+    }
+  ],
+  "presenter-path-1015-minutes-when-runnable": [
+    {
+      "text": "Presenter path: 10–15 minutes when runnable.",
+      "pause": 500
+    }
+  ],
+  "missing-interface-or-receipt": [
+    {
+      "text": "Missing interface or receipt.",
+      "pause": 500
+    },
+    {
+      "text": "The #32 builder, authentic CESR fixtures, generated redeemer bytes, root/proof identities, wrong-SAID control and a validator consumption check. WASM and purity require separate evidence if claimed.",
+      "pause": 400
+    },
+    {
+      "text": "The model base visible in this checkout is Cardano KERI commit 0e638fadc987f0cd98f839edd3e3ecd5a09a1b91. It is a source identity for planning, not a claim that the later card is already modeled or accepted. Each claim must bind the accepted model revision for that behavior before promotion. The Lean correspondence register holds affected conflicts. A simulator or source fact cannot replace a confirmed transaction, and no cast of an accepted connected result is available here.",
+      "pause": 400
+    },
+    {
+      "text": "Tracking: KERI proof builder #32, historical keys #391, revocation mirror #392.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "d16-proof-package.md",
+    "sha256": "3e6eef0f35bfe7d39bda2e15fe8a2459cca4dfb1b651a5a43a7d355d19867329"
+  }
+}

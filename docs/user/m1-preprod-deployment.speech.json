@@ -1,0 +1,136 @@
+{
+  "the-m1-preprod-deployment": [
+    {
+      "text": "The M1 preprod deployment.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "pause": 400
+    },
+    {
+      "text": "The M1 V1 checkpoint programs are published as reference scripts on Cardano preprod. The committed release manifest binds the exact applied programs to source commit 50a582064ddfde15ebfa3649c6b6fea8d39fc697, the immutable blueprint, the deployment parameters, and five settled txid#index references.",
+      "pause": 400
+    },
+    {
+      "text": "This is a testnet release for integration and acceptance. It is not a mainnet deployment or a production service-level commitment.",
+      "pause": 400
+    }
+  ],
+  "release-identity": [
+    {
+      "text": "Release identity.",
+      "pause": 500
+    },
+    {
+      "text": "The release applies checkpoint version 0, network discriminator 0, a registration bond of 1,000,000,000 lovelace, a freeze bond (in V1, the bond a freeze for lag claims) of 5,000,000 lovelace, and a freeze window of 10,000 slots.",
+      "pause": 400
+    }
+  ],
+  "live-reference-scripts": [
+    {
+      "text": "Live reference scripts.",
+      "pause": 500
+    },
+    {
+      "text": "Each reference was observed unspent through the public Koios preprod index before the manifest was written.",
+      "pause": 400
+    },
+    {
+      "text": "The machine-readable facts are in deploy/preprod/m1-manifest.json. The original publication capture is preserved in deploy/preprod/m1-acceptance.txt. The current transaction-path acceptance capture, deploy/preprod/m1-board-deploy-verify-acceptance.txt, performs a verify-only pass: it compares all five manifest script hashes and references with live Koios results and confirms the endpoint-board reference and current catalog without publishing replacement scripts.",
+      "pause": 400
+    }
+  ],
+  "acceptance-evidence-boundary": [
+    {
+      "text": "Acceptance evidence boundary.",
+      "pause": 500
+    },
+    {
+      "text": "The August 2026 transaction-path journey was captured through the packaged Nix runner before its closure was repaired. Although every transaction was built, witnessed, and submitted by the in-process Cardano API path, that runner's runtimeInputs still shipped cardano-cli. The settled transaction IDs therefore prove the in-process journey and its on-chain effects; they do not, by themselves, prove that the installed closure was free of the retired tool.",
+      "pause": 400
+    },
+    {
+      "text": "The subsequent audit repair removed cardano-cli from the packaged runner and added scripts/check-ckeri-closure-no-cli.sh, which inspects the complete built closure. Acceptance includes both the clean-artifact result and a controlled build with the dependency reintroduced that makes the same check fail. The live journey and this closure-level, demonstrated-able-to-fail control are the combined proof for the installed transaction path. No primary journey transaction was resubmitted for that packaging repair.",
+      "pause": 400
+    }
+  ],
+  "verify-from-a-checkout": [
+    {
+      "text": "Verify from a checkout.",
+      "pause": 500
+    },
+    {
+      "text": "From the repository root at the manifest's source commit, build the flake-owned binary and verify the release:",
+      "pause": 400
+    },
+    {
+      "text": "ckeri hashes the immutable blueprint, rebuilds the five applied scripts, checks that the checkout's tracked onchain/ tree matches the manifest source commit, and queries the independent public chain index. Success ends with:",
+      "pause": 400
+    },
+    {
+      "text": "A changed source tree, blueprint, parameter, hash, byte length, transaction ID, output index, spent reference, or unavailable verification boundary makes the command fail non-zero.",
+      "pause": 400
+    },
+    {
+      "text": "The checkout must be at source commit 50a582064ddfde15ebfa3649c6b6fea8d39fc697. Later on-chain development deliberately changes the current blueprint, so the standing CI tripwire uses scripts/check-m1-manifest-live.sh to create a detached checkout at that immutable commit before rebuilding and querying preprod.",
+      "pause": 400
+    }
+  ],
+  "configuration": [
+    {
+      "text": "Configuration.",
+      "pause": 500
+    },
+    {
+      "text": "ckeri uses opt-env-conf exclusively. Every operational setting has a command-line option, a CKERI_* environment variable, and a YAML key. The YAML file itself is selected with --config-file or CKERI_CONFIG_FILE. For example:",
+      "pause": 400
+    },
+    {
+      "text": "Set KOIOS_TOKEN to send an Authorization: Bearer header for either deploy settlement polling or manifest verify. The token also has --koios-token and koios-token YAML surfaces, but the environment variable is preferred so the value does not enter shell history or a committed file. When the setting is absent, ckeri deliberately uses anonymous Koios requests so third parties can verify the release without project secrets. The repository CI reads KOIOS_TOKEN from its encrypted Actions secret.",
+      "pause": 400
+    },
+    {
+      "text": "Run ckeri deploy --help or ckeri manifest verify --help for the complete option, environment, and YAML documentation. The payment key is an operator-side secret; it is read only by deploy and never belongs in a configuration file committed to this repository.",
+      "pause": 400
+    },
+    {
+      "text": "Every mutating command derives the payment address from the signing-key envelope and requires its payment credential to match the configured funding address. It enumerates candidate out-refs through Koios, resolves those exact inputs against the node socket, builds and signs with the Cardano API, submits through local transaction submission, then waits for the exact effect through Koios. No external transaction CLI is required. Fragmented funding is valid: the selector may aggregate several spend inputs while reserving a separate collateral input.",
+      "pause": 400
+    }
+  ],
+  "trust-and-availability-boundary": [
+    {
+      "text": "Trust and availability boundary.",
+      "pause": 500
+    },
+    {
+      "text": "The source commit and blueprint digest make the release reproducible; they do not make later source changes part of this release.",
+      "pause": 300
+    },
+    {
+      "text": "The deployment submits through a synced preprod node. Verification uses Koios as an independent read boundary and fails closed if that boundary is unavailable or inconsistent. A Koios token changes API authorization and rate limits, not the hashes or chain facts being checked.",
+      "pause": 300
+    },
+    {
+      "text": "Reference scripts are immutable while their UTxOs remain unspent. Spending one makes this manifest fail verification and requires an explicit new release.",
+      "pause": 300
+    },
+    {
+      "text": "The deployment payment key controls only its remaining test ada. It does not upgrade or administer the published programs.",
+      "pause": 300
+    },
+    {
+      "text": "Preprod settlement proves integration behavior, not mainnet economics, durability, governance, or decentralization.",
+      "pause": 300
+    }
+  ],
+  "_source": {
+    "file": "m1-preprod-deployment.md",
+    "sha256": "1be940156ee162705b65df120e0b3c3b0556490736d8e52d56b55976a36c09d0"
+  }
+}

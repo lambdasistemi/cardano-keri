@@ -1,0 +1,252 @@
+{
+  "why-cardano-and-how-this-differs-from-kel-rooting": [
+    {
+      "text": "Why Cardano — and how this differs from KEL rooting.",
+      "pause": 500
+    },
+    {
+      "text": "Publishing KERI key events on Cardano is not new. A backer — a KERI witness that also writes to a ledger — has been doing it for some time, and it works. So the first question anyone familiar with the space asks is a fair one:",
+      "pause": 400
+    },
+    {
+      "text": "Isn't rooting KELs on Cardano already done? What is this?",
+      "pause": 400
+    },
+    {
+      "text": "Both things put KERI data on Cardano. They answer different questions, and only one of them needs a blockchain at all.",
+      "pause": 400
+    },
+    {
+      "text": "Where this page stands",
+      "pause": 400
+    },
+    {
+      "text": "The comparison with anchoring is about what ships on main today: the validators verify KERI cryptography now. The list of what a checkpoint buys under leg 1 describes the accepted design — the Lean machine proved in September 2026 — and says so item by item.",
+      "pause": 400
+    }
+  ],
+  "what-rooting-does": [
+    {
+      "text": "What rooting does.",
+      "pause": 500
+    },
+    {
+      "text": "A backer takes a key event, verifies it off-chain in its own process, and submits a Cardano transaction carrying the full serialized event as transaction metadata (metadatum label 13456). The transaction is an ordinary self-payment signed by the backer's own payment key.",
+      "pause": 400
+    },
+    {
+      "text": "What the chain contributes is real and worth having:",
+      "pause": 400
+    },
+    {
+      "text": "availability — the complete log is recoverable from public chain data;",
+      "pause": 300
+    },
+    {
+      "text": "immutability — nobody can retract a published event; and",
+      "pause": 300
+    },
+    {
+      "text": "global ordering — every event carries a settled position in time.",
+      "pause": 300
+    },
+    {
+      "text": "What the chain does not do is check any of it. It never replays the controller's signatures, the witness receipts, or the pre-rotation commitment. To the ledger the event is opaque bytes. Two consequences follow, and they are structural rather than fixable:",
+      "pause": 400
+    },
+    {
+      "text": "What an anchor cannot express",
+      "pause": 400
+    },
+    {
+      "text": "A script cannot read it. Metadata is unreachable from a Plutus validator, so no Cardano transaction can be made to succeed or fail based on an AID's current keys.",
+      "pause": 400
+    },
+    {
+      "text": "There is no wrong anchor. Metadata cannot be rejected. Two contradictory events can both be anchored and the ledger holds no opinion about the conflict. Nor can it show that a backer should have published something and did not — omission is invisible on-chain.",
+      "pause": 400
+    },
+    {
+      "text": "And the writer is chosen, not open: a backer only serves AIDs whose key log designates it. So the anchor means \"a party the controller picked asserts this event is valid.\" Its honesty and its liveness are assumptions you carry.",
+      "pause": 400
+    },
+    {
+      "text": "The detailed comparison, with source references, is in Anchor versus verify.",
+      "pause": 400
+    }
+  ],
+  "what-the-checkpoint-does": [
+    {
+      "text": "What the checkpoint does.",
+      "pause": 500
+    },
+    {
+      "text": "cardano-keri does the KERI cryptography inside the validator. Aiken code replays the controller signatures against both thresholds, checks the required witness receipts, and checks the pre-rotation binding — and only if all of that holds may the identity's checkpoint UTxO advance to its successor. The resulting key state lives in an inline datum that any contract can read as a CIP-31 reference input.",
+      "pause": 400
+    },
+    {
+      "text": "That buys two distinct properties, with very different maturities. They are worth separating, because the first is available today and the second is not.",
+      "pause": 400
+    }
+  ],
+  "leg-1-trust-without-an-intermediary": [
+    {
+      "text": "Leg 1 — trust without an intermediary.",
+      "pause": 500
+    },
+    {
+      "text": "This is the property most people miss, and it does not require anyone to build a credential layer or a wallet bridge first.",
+      "pause": 400
+    },
+    {
+      "text": "Every move in the lifecycle may be submitted by anyone, and the submitter has no discretion whatsoever. \"Anyone\" does not mean \"anyone may choose the next state\"; it means anyone may pay the fee to relay public evidence whose result is already determined. Registration, rotation, the poison declaration (the owner's own lock on the checkpoint), the freeze, the top-up, the conviction, the close and the reopen are each open to any submitter, and in each case the evidence decides the outcome — not the relayer, and not any operator. If one relayer refuses, anyone else may.",
+      "pause": 400
+    }
+  ],
+  "what-that-is-worth-item-by-item": [
+    {
+      "text": "What that is worth, item by item.",
+      "pause": 500
+    },
+    {
+      "text": "Each line below is a property of the accepted design, proved in lean/CardanoKeri/Checkpoint.lean. None of them is shipped on main yet; the epics that build them are on the roadmap.",
+      "pause": 400
+    },
+    {
+      "text": "A key compromise is visible. The owner's current keys can sign one short declaration — the poison — and every consumer stops trusting the epoch immediately, before the rotation is ready. There is nobody to ask and nobody to convince. It covers the two cases KERI itself cannot signal: the window between noticing a theft and rotating, and the loss of the next keys, where no rotation will ever come.",
+      "pause": 300
+    },
+    {
+      "text": "Proven duplicity is permanent. Two witnessed rotations at one sequence are a KERI verdict, not an opinion, so the chain makes it terminal: the identity is convicted, the terminal state, has no way out, and its conviction bond — the stake posted against exactly this proof — goes to whoever proved it. KERI has no event that un-duplicates an identifier, so the chain invents no recovery.",
+      "pause": 300
+    },
+    {
+      "text": "One incarnation, ever. The registry holds one leaf per AID and a registration must prove absence before it inserts. There is no second candidate checkpoint for a consumer to disambiguate, and no stale-key holder can mint a rival one.",
+      "pause": 300
+    },
+    {
+      "text": "Freshness is visible. The checkpoint says when it was last bonded and what its pool (the owner's advance funds) holds; a consumer refuses anything younger than the juvenility window W, the age a checkpoint must reach before a consumer trusts it; and an identity whose pool has run dry gets frozen by a hunter (anyone paid to land rotations, or to freeze a checkpoint that can no longer pay for one) rather than quietly drifting behind its KEL.",
+      "pause": 300
+    },
+    {
+      "text": "It is consumable without an oracle. The key state is in an inline datum. A validator reads it as a reference input and decides for itself. There is no service to be up, no writer to be honest, and no completeness claim for anyone to assert.",
+      "pause": 300
+    },
+    {
+      "text": "Every move of value answers to the owner. The bonds and the pool leave only to the refund address the owner controls, and that address moves only when the keys of the epoch a rotation opens sign for it. A relayer landing the owner's public rotation cannot park her, age her, or close her.",
+      "pause": 300
+    },
+    {
+      "text": "Exit and return are the owner's. Close needs the next keys, exactly like any rotation, so a thief holding only the current keys cannot erase the identity and take the money. And close is not the end: a witnessed rotation later than the tombstone reopens it.",
+      "pause": 300
+    },
+    {
+      "text": "This was not the first design",
+      "pause": 400
+    },
+    {
+      "text": "An earlier design put a privileged oracle writer in front of a shared registry. Adversarial vetting found that such an oracle could censor rotations and freezes, and that colluding with a stolen key could keep that key economically live — \"'cannot forge' holds; 'cannot keep alive' does not\" (finding F7).",
+      "pause": 400
+    },
+    {
+      "text": "That shared-registry model is retired, and the accepted design keeps it retired for a structural reason rather than an economic one: the checkpoint carries no evidence set, so there is nothing for anyone to be complete about, and the oracle has no job to return to. See value authorization.",
+      "pause": 400
+    },
+    {
+      "text": "Why this matters even with no on-chain value at stake. A credential meant to outlive the organisation that issued it cannot rest on that organisation still running a service. An anchor is exactly as neutral as the backer that wrote it; a checkpoint's validity was established by consensus and remains checkable when every party that created it is gone. That is a different kind of artifact, and it is available without any further layer.",
+      "pause": 400
+    }
+  ],
+  "leg-2-value-that-depends-on-identity": [
+    {
+      "text": "Leg 2 — value that depends on identity.",
+      "pause": 500
+    },
+    {
+      "text": "The second property is composability: because the key state is script-readable, a validator can require that a spend be authorized by whoever controls a given AID right now, and reject it after a rotation, a poison, or a revocation. That is the thing an anchor structurally cannot do.",
+      "pause": 400
+    },
+    {
+      "text": "Not available yet",
+      "pause": 400
+    },
+    {
+      "text": "Leg 2 needs two layers that are not delivered. The credential verification layer is a later milestone (see the roadmap), and the KERI-wallet ↔ Cardano signing bridge — which lets keys held in a KERI wallet authorize a Cardano transaction at all — is on the critical path of every application design and is currently nobody's deliverable.",
+      "pause": 400
+    },
+    {
+      "text": "Until that bridge exists, a KERI credential holder cannot spend on Cardano even if they want to. Absence of such usage today is a statement about missing plumbing, not about missing demand.",
+      "pause": 400
+    }
+  ],
+  "the-two-legs-side-by-side": [
+    {
+      "text": "The two legs side by side.",
+      "pause": 500
+    }
+  ],
+  "what-this-page-does-not-claim": [
+    {
+      "text": "What this page does not claim.",
+      "pause": 500
+    },
+    {
+      "text": "The permissionless projection removes an intermediary. It does not remove every assumption, and the trust model is explicit about which remain:",
+      "pause": 400
+    },
+    {
+      "text": "Witness quorum. For an identity with toad > 0 the system assumes the configured witness threshold provides meaningful public acceptance. The validator checks the receipts; it cannot make a colluding quorum honest.",
+      "pause": 300
+    },
+    {
+      "text": "toad = 0 identities carry no witness receipts at all, and any application requiring public KERI acceptance must reject them by policy.",
+      "pause": 300
+    },
+    {
+      "text": "Service-level censorship. A relayer can still refuse to serve you. The guarantee is that anyone else may relay instead, not that any particular party will.",
+      "pause": 300
+    },
+    {
+      "text": "Next-key theft is control. If a thief holds the next keys, her rotation is legitimate by KERI's own rule and the chain follows KERI. The poison lasts until that rotation and no longer.",
+      "pause": 300
+    },
+    {
+      "text": "The tip never moves backward. The checkpoint cannot roll back, so KERI's superseding-recovery rule is not projected in the one scenario that would need it. Stated as a limit, not hidden (ruling D-022).",
+      "pause": 300
+    },
+    {
+      "text": "Settlement evidence is not mainnet. \"Settled\" means a transaction reached a development network running production transaction limits, or preprod. Neither is a mainnet deployment or a production service-level commitment. The exact transaction IDs and dates are on the story ladder.",
+      "pause": 300
+    }
+  ],
+  "where-to-read-next": [
+    {
+      "text": "Where to read next.",
+      "pause": 500
+    },
+    {
+      "text": "Anchor versus verify — the detailed comparison, with references into the backer's source.",
+      "pause": 300
+    },
+    {
+      "text": "Identity operations — who may submit what, and what determines each result.",
+      "pause": 300
+    },
+    {
+      "text": "Trust model — the full boundary list.",
+      "pause": 300
+    },
+    {
+      "text": "Story ladder — what has actually settled.",
+      "pause": 300
+    },
+    {
+      "text": "KERI primer — AIDs, pre-rotation, witnesses and backers.",
+      "pause": 300
+    }
+  ],
+  "_source": {
+    "file": "why-cardano.md",
+    "sha256": "f64b2ce2afe3c0427f80f69ef0decd0d59d238856041554108a6fa2c83c93cbf"
+  }
+}

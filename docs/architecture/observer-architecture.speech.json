@@ -1,5 +1,228 @@
 {
+  "observer-architecture": [
+    {
+      "text": "Observer architecture.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "pause": 400
+    },
+    {
+      "text": "The production transaction shape separates small state-machine checks from large KERI evidence checks. The checkpoint script stays thin; a separate reference script, called an observer, performs the expensive validation in the same transaction.",
+      "pause": 400
+    },
+    {
+      "text": "This split is required by Cardano's size limits, not by a trust boundary. On the protocol-11 development network used by the settled stories:",
+      "pause": 400
+    },
+    {
+      "text": "the full transaction-size limit is 16,384 bytes; and",
+      "pause": 300
+    },
+    {
+      "text": "an applied reference script has a 16,133-byte budget after its transaction wrapper.",
+      "pause": 300
+    },
+    {
+      "text": "Putting every operation and every KERI parser into one checkpoint program did not fit. The observer split keeps each deployed program under the limit while making both halves agree on the same transaction.",
+      "pause": 400
+    }
+  ],
+  "thin-checkpoint-heavy-observers": [
+    {
+      "text": "Thin checkpoint, heavy observers.",
+      "pause": 500
+    },
+    {
+      "text": "The thin checkpoint owns the rules that protect the state UTxO:",
+      "pause": 400
+    },
+    {
+      "text": "resolve the exact input being spent;",
+      "pause": 300
+    },
+    {
+      "text": "require the expected ACTIVE or ARMED role;",
+      "pause": 300
+    },
+    {
+      "text": "preserve or burn the quantity-one AID token as the operation requires;",
+      "pause": 300
+    },
+    {
+      "text": "enforce the escrow and successor-output shape;",
+      "pause": 300
+    },
+    {
+      "text": "require the correct observer to run; and",
+      "pause": 300
+    },
+    {
+      "text": "bind the observer claim to this checkpoint policy and, for a spend, this exact input reference.",
+      "pause": 300
+    },
+    {
+      "text": "The observers own the heavy evidence predicates:",
+      "pause": 400
+    },
+    {
+      "text": "observer_lifecycle validates registration evidence;",
+      "pause": 300
+    },
+    {
+      "text": "observer_advance validates ordinary rotations and ARMED responses; and",
+      "pause": 300
+    },
+    {
+      "text": "observer_enforcement validates Freeze evidence.",
+      "pause": 300
+    },
+    {
+      "text": "They are Plutus stake scripts delivered through reference-script UTxOs. A reference script is stored once on the ledger and referred to by later transactions, so its bytes do not have to be copied inline every time.",
+      "pause": 400
+    },
+    {
+      "text": "Neither half is optional. A correct observer envelope cannot bypass a bad checkpoint state transition, and a well-shaped checkpoint transition cannot bypass the KERI proof.",
+      "pause": 400
+    }
+  ],
+  "why-a-zero-lovelace-withdrawal-runs-code": [
+    {
+      "text": "Why a zero-lovelace withdrawal runs code.",
+      "pause": 500
+    },
+    {
+      "text": "Cardano executes a stake validator when a transaction withdraws rewards for that script credential. The transaction uses a withdrawal amount of zero, so no reward value moves, but the ledger still evaluates the validator.",
+      "pause": 400
+    },
+    {
+      "text": "The withdrawal redeemer is an ObserverEnvelope:",
+      "pause": 400
+    },
+    {
+      "text": "Registration has no checkpoint input yet, so own_ref is None. Advance, Freeze, and response Advance bind own_ref to the exact checkpoint UTxO they consume. Stable action tags keep the wire unambiguous.",
+      "pause": 400
+    },
+    {
+      "text": "The checkpoint verifies that:",
+      "pause": 400
+    },
+    {
+      "text": "the configured observer credential appears in the withdrawals;",
+      "pause": 300
+    },
+    {
+      "text": "its withdrawal amount is exactly zero;",
+      "pause": 300
+    },
+    {
+      "text": "its redeemer decodes as the expected envelope;",
+      "pause": 300
+    },
+    {
+      "text": "the action tag matches the checkpoint operation; and",
+      "pause": 300
+    },
+    {
+      "text": "the policy and input reference match this transition.",
+      "pause": 300
+    },
+    {
+      "text": "The observer then reads that same transaction and validates the heavy payload against the named old state and unique successor.",
+      "pause": 400
+    }
+  ],
   "registrations-premint-fact-token": [
-    {"text": "In the shipped version, an earlier transaction proves the BLAKE3 hash relationship and issues a fact token. Registration consumes and burns it, then checks event projection, signatures and witness receipts using the full evidence. The proposed milestone one architecture would instead attest inception admission earlier. That broader attestation remains to be implemented.", "pause": 500}
-  ]
+    {
+      "text": "Registration's premint fact token.",
+      "pause": 500
+    },
+    {
+      "text": "This section describes the shipped V1 flow. The proposed M1 architecture moves inception admission into a repeatable attestation, leaving registry absence and checkpoint creation at the registration fold. The existing hash-proof token below is not that full inception attestation.",
+      "pause": 400
+    },
+    {
+      "text": "KERI AIDs use BLAKE3, while Plutus does not provide a native BLAKE3 builtin. The project has an Aiken implementation, but running it together with all of Register made the transaction needlessly expensive and difficult to fit.",
+      "pause": 400
+    },
+    {
+      "text": "Registration is therefore two transactions:",
+      "pause": 400
+    },
+    {
+      "text": "The premint token is a fact token: its deterministic asset name binds the inception bytes to the claimed AID. It carries no controller authority and does not choose the checkpoint keys. Register consumes an input containing the token and burns exactly that token while the lifecycle observer checks the same event bytes.",
+      "pause": 400
+    },
+    {
+      "text": "The checkpoint mint redeemer is deliberately the bare constructor:",
+      "pause": 400
+    },
+    {
+      "text": "The large RegistrationEvidence no longer rides inside that mint redeemer. It rides once in the observer envelope. This is the current wire shape from PR #146.",
+      "pause": 400
+    }
+  ],
+  "reference-delivery": [
+    {
+      "text": "Reference delivery.",
+      "pause": 500
+    },
+    {
+      "text": "The live builder first publishes the required scripts in separate reference-script outputs, then spends those references from the operation transaction. Registration needs the checkpoint, lifecycle observer, and BLAKE3 proof policy; later stories also publish the Advance and enforcement observers.",
+      "pause": 400
+    },
+    {
+      "text": "This matters because three inline validators already exceed the 16,384-byte transaction cap. Reference delivery keeps the operation transaction small while still executing the exact deployed programs. The builder also uses a two-pass budget calculation: evaluate once, derive declared execution units from observed use, rebuild, and submit with the aggregate limit checked.",
+      "pause": 400
+    }
+  ],
+  "measured-sizes-and-costs": [
+    {
+      "text": "Measured sizes and costs.",
+      "pause": 500
+    },
+    {
+      "text": "These are applied-program sizes and observed execution units from the merged story pull requests, not estimates.",
+      "pause": 400
+    },
+    {
+      "text": "The Advance observer has only 3 bytes of measured applied-script headroom. Issue #149 is a required size-reduction chore before the real seven-key rotation story. A passing current transaction does not make that margin maintainable.",
+      "pause": 400
+    }
+  ],
+  "security-properties-of-the-split": [
+    {
+      "text": "Security properties of the split.",
+      "pause": 500
+    },
+    {
+      "text": "The split preserves four important properties:",
+      "pause": 400
+    },
+    {
+      "text": "Same-transaction coupling. The observer validates the exact input and successor protected by the thin checkpoint.",
+      "pause": 300
+    },
+    {
+      "text": "No evidence duplication. Large KERI evidence appears in one envelope, not in both mint and withdrawal redeemers.",
+      "pause": 300
+    },
+    {
+      "text": "No trusted observer. “Observer” names a validator role, not an off-chain person or oracle. Its code is a reference script and its result is enforced by the ledger.",
+      "pause": 300
+    },
+    {
+      "text": "Fail-closed extension. A new lifecycle verb is unavailable until the thin checkpoint admits its action tag and the matching observer path is deployed. Unknown constructors, roles, tags, or datum shapes reject.",
+      "pause": 300
+    }
+  ],
+  "_source": {
+    "file": "observer-architecture.md",
+    "sha256": "1803ea5c6f3f8a915992480399b1a1af071e82e968cd954718c0668385d44f15"
+  }
 }

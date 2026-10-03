@@ -1,0 +1,58 @@
+{
+  "map-the-singular-registry-to-cardano-keri-23-october-target": [
+    {
+      "text": "Map the Singular registry to Cardano KERI — 23 October target.",
+      "pause": 500
+    },
+    {
+      "text": "As a Cardano KERI integrator, I want to bind the registry observations our identity model consumes to the accepted Singular model, so I can implement without treating similarly named leaves or tokens as identical by guesswork. The dated project card remains a mapping review target. This cross-model integration is not yet playable or accepted.",
+      "pause": 400
+    },
+    {
+      "text": "Planned release tags: Cardano KERI v1.0.0 (identity-core M1) and Singular v2.0.0 (parallel naming M2). This is a mapping review; neither tag is created by this plan, and the mapping does not itself pass a release gate.",
+      "pause": 400
+    },
+    {
+      "text": "The recorded preprod V1 baseline can open the review: keripy kli supplies a real inception, and ckeri registers and closes its checkpoint. That cast proves only the deployed V1 boundary. The Singular registry fold and the correspondence rows below still need connected preprod transactions before D-02 can be presented as an integration demo.",
+      "pause": 400
+    }
+  ],
+  "model-revisions-and-source": [
+    {
+      "text": "Model revisions and source.",
+      "pause": 500
+    },
+    {
+      "text": "Cardano KERI's accepted base is commit 0e638fadc987f0cd98f839edd3e3ecd5a09a1b91: Registry.lean, SHA-256 bfa17a6b02ab5270e37f224af62109dfb8202c3b49e121804fa0560a0936216a, and Checkpoint.lean, SHA-256 f5dea750f9de2e5737d288eef73371cefd1b4217c5609468ddcdff4967ae001f. Singular's registry model is the first demo's base commit a6e5edbc2dafa82eb34116a1de2b6503f87c6692, Singular.Model. KERI #446 proposes a pinned Lean dependency on an earlier Singular release; its stated scope does not migrate registry behavior.",
+      "pause": 400
+    },
+    {
+      "text": "The figures below are candidate comparison rows, not a representation choice. The Lean correspondence register #435 records prior rulings and required model work. A row that needs a ruling or a changed Lean statement cannot be promoted by this document.",
+      "pause": 400
+    },
+    {
+      "text": "Status, Op and processBody in Cardano KERI Registry.lean own the CK column. The Singular column comes from Edge, step, approval and token laws in Singular.Model. Similar names alone prove no correspondence. The models use abstract numeric keys and values in their simulator fixtures; those are not Cardano AIDs, policy IDs, signatures or ledger assets.",
+      "pause": 400
+    }
+  ],
+  "presenter-path-1015-minutes": [
+    {
+      "text": "Presenter path: 10–15 minutes.",
+      "pause": 500
+    }
+  ],
+  "what-is-missing-before-this-becomes-a-play": [
+    {
+      "text": "What is missing before this becomes a play.",
+      "pause": 500
+    },
+    {
+      "text": "The registry integration ticket #324 needs a versioned, executable cross-model transition mapping for registration, reopen, close and conviction, with token and custody effects, positive and negative controls, and the exact release interface. The parking conflict and duplicity obligations are tracked in #435. The card additionally requires a released Singular interface and connected implementation evidence. No cast of a mapped result, transaction ID, policy ID or fresh node readback exists on this page. A model simulator can illustrate one side, but cannot close a cross-model row.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "d02-registry-mapping.md",
+    "sha256": "b2c626ee82e70e2a592a74358de0fc1da67f94be49572abfb887417853ad4708"
+  }
+}

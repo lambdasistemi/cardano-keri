@@ -1,0 +1,166 @@
+{
+  "the-query-endpoint-checkpoint-answers-without-a-node": [
+    {
+      "text": "The query endpoint — checkpoint answers without a node.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "pause": 400
+    },
+    {
+      "text": "ckeri-query is a hosted, read-only HTTP service that answers checkpoint, board, and watchability questions about M1 identities directly from the indexed chain state. A person with only curl — no Cardano node, no local RocksDB store, no Koios key — can ask the public endpoint whether an AID's checkpoint is current and get back an answer that says exactly which indexed chain slot it came from and how stale that slot is.",
+      "pause": 400
+    },
+    {
+      "text": "The production instance is:",
+      "pause": 400
+    }
+  ],
+  "routes": [
+    {
+      "text": "Routes.",
+      "pause": 500
+    },
+    {
+      "text": "{aid} is a self-addressing CESR E-code identifier. {witness_key} is a non-transferable Ed25519 CESR B-code key. Both are the qualified-base64 (qb64) form ckeri itself prints — the same strings you already see from ckeri status or a registration transcript.",
+      "pause": 400
+    }
+  ],
+  "get-ready": [
+    {
+      "text": "GET /ready.",
+      "pause": 500
+    },
+    {
+      "text": "Always returns HTTP 200 with this exact shape:",
+      "pause": 400
+    },
+    {
+      "text": "ready is true only when all of the following hold at once: the store has a transactional watermark, the upstream node connection is up, a chain tip is known, and tip_lag_slots <= 60. reason explains why the service is not ready when it isn't (for example \"upstream disconnected\" or \"tip lag exceeds the 60-slot freshness threshold\"); it is null when ready.",
+      "pause": 400
+    }
+  ],
+  "get-checkpointaid": [
+    {
+      "text": "GET /checkpoint/{aid}.",
+      "pause": 500
+    },
+    {
+      "text": "Substitute the AID you want to look up for E.... An unknown but well-formed AID returns HTTP 200 with \"checkpoint\": null — a null payload is a real answer (\"no current checkpoint exists for this identity\"), not an error. A malformed CESR identifier (wrong code, wrong length, invalid base64) returns HTTP 400:",
+      "pause": 400
+    },
+    {
+      "text": "tx_id and owner_key_hash (board only) render as lowercase hex; every other CESR value renders in canonical qualified-base64 form. A threshold preserves its actual weighted or unweighted shape: an unweighted threshold is {\"type\":\"unweighted\",\"value\":N}; a weighted threshold is {\"type\":\"weighted\",\"clauses\":[[{\"numerator\":1,\"denominator\":2}, ...]]}.",
+      "pause": 400
+    }
+  ],
+  "get-boardwitness_key": [
+    {
+      "text": "GET /board/{witness_key}.",
+      "pause": 500
+    },
+    {
+      "text": "An unknown witness key returns HTTP 200 with \"board\": null. The board record is only served after the endpoint independently validates the frozen board marker, datum, KERI event, and signature — a forged or malformed output fails the entire lookup closed rather than returning a partial or untrusted catalog. Koios is not part of this serving path.",
+      "pause": 400
+    }
+  ],
+  "get-board": [
+    {
+      "text": "GET /board.",
+      "pause": 500
+    },
+    {
+      "text": "The array contains every current authenticated record in deterministic output-reference order; an empty catalog is \"board\": []. The complete catalog and as_of_slot come from one store transaction. As with the single-record route, one forged or malformed output fails the whole response closed with HTTP 500 rather than returning a partial catalog.",
+      "pause": 400
+    }
+  ],
+  "get-watchabilityaid": [
+    {
+      "text": "GET /watchability/{aid}.",
+      "pause": 500
+    },
+    {
+      "text": "This compares the checkpoint's declared witness set against the current authenticated endpoint board and reports how many declared witnesses are actually discoverable. Unlike /checkpoint and /board, watchability is never null: with no current checkpoint it reports \"checkpoint_present\": false, zero counts, and an empty missing_witnesses list rather than omitting the field.",
+      "pause": 400
+    }
+  ],
+  "freshness-and-provenance-what-as_of_slot-actually-promises": [
+    {
+      "text": "Freshness and provenance — what as_of_slot actually promises.",
+      "pause": 500
+    },
+    {
+      "text": "Every data response carries as_of_slot and tip_lag_slots beside its payload, and /ready carries the same pair at top level. This is not decoration — it is a provenance claim about the chain state behind the answer, and it means something specific:",
+      "pause": 400
+    },
+    {
+      "text": "as_of_slot is the latest rollback-log slot observed inside the same store transaction that read the checkpoint, board, or watchability data. It is deliberately not the follower's internally tracked \"last processed slot\": that counter advances after each commit and is retained across a disconnect, so it can read as fresher than the store actually is right after a rollback. Sourcing freshness from the transactional watermark instead means a rollback invalidates the freshness claim by the same mechanism that invalidates the data — there is no window where a stale answer carries an optimistic slot number.",
+      "pause": 400
+    },
+    {
+      "text": "tip_lag_slots is computed by sampling the observed chain tip after that transaction commits, purely to measure lag; it never gates which data was read. When the store watermark is momentarily ahead of the sampled tip, or no tip has been observed yet, or the upstream node is disconnected, or the lag exceeds 60 slots, the service reports itself not ready rather than publish a freshness number it cannot stand behind.",
+      "pause": 400
+    }
+  ],
+  "fail-closed-semantics": [
+    {
+      "text": "Fail-closed semantics.",
+      "pause": 500
+    },
+    {
+      "text": "When /ready would report ready: false, every data route (/checkpoint, both /board forms, /watchability) fails closed with HTTP 503 and the same readiness fields, plus an explicit error tag — never a stale or partial payload:",
+      "pause": 400
+    },
+    {
+      "text": "The 503 body never includes checkpoint, board, or watchability — not even as null — so a client cannot mistake a service-unavailable envelope for a data response with an empty payload. An unexpected internal failure (never an expected fail-closed condition) returns HTTP 500 with {\"error\":\"internal_error\"} and no other detail.",
+      "pause": 400
+    }
+  ],
+  "configuration": [
+    {
+      "text": "Configuration.",
+      "pause": 500
+    },
+    {
+      "text": "ckeri-query is an opt-env-conf binary: every setting has a command-line flag and a CKERI_* environment variable.",
+      "pause": 400
+    },
+    {
+      "text": "--board-address/CKERI_BOARD_ADDRESS is optional in the general follower configuration, but ckeri-query refuses to start without it: /board and /watchability have nothing to authenticate against otherwise, and the binary fails fast with a concise message rather than silently serving an endpoint that can never answer those routes.",
+      "pause": 400
+    }
+  ],
+  "one-process-no-derived-state": [
+    {
+      "text": "One process, no derived state.",
+      "pause": 500
+    },
+    {
+      "text": "ckeri-query is a single OS process. It opens exactly one RocksDB store through withRocksDBIndexerRunner, hands the resulting handle and transaction runner to both withChainSyncFollower (the chain-sync consumer) and the HTTP application, and links the follower's async before it starts serving — a follower failure takes the whole process down rather than leaving a server answering from a store nothing is updating any more. There is no second follower, no separate query database, and no replication lag between \"what was indexed\" and \"what the endpoint can see\".",
+      "pause": 400
+    },
+    {
+      "text": "The HTTP layer itself owns no cache: no memo table, no secondary index, no IORef, MVar, or TVar holding decoded data. Every response is a pure decode of a fresh read inside one kv-transactions transaction — for /checkpoint and /board that is one transaction; for /watchability the same transaction reads both the checkpoint and the board catalog. There is no rollback-invalidation logic to get wrong, because there is no derived state to invalidate: a rollback simply changes what the next transaction reads.",
+      "pause": 400
+    }
+  ],
+  "what-this-endpoint-does-not-do": [
+    {
+      "text": "What this endpoint does not do.",
+      "pause": 500
+    },
+    {
+      "text": "ckeri status --aid E... --endpoint https://ckeri.dev.plutimus.com now consumes this contract through the production CLI, delivered by #177. It validates the checkpoint and watchability responses, including their echoed identity and shared freshness envelope, and fails closed without falling back to a local store or Koios.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "query-endpoint.md",
+    "sha256": "c8b91e8ba02284b2aac27d1903bc1dabc84c0d2d09353f4dca12fdc43632c899"
+  }
+}

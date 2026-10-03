@@ -1,0 +1,206 @@
+{
+  "roadmap": [
+    {
+      "text": "Roadmap.",
+      "pause": 500
+    },
+    {
+      "text": "The current plan delivers the accepted design: one milestone across two repositories, fourteen epics, ordered so every epic shrinks the next one's risk. Preprod is redeployed once, at the end. Issues and the wiki from September 2026 call this plan the M1 return: the return, inside the first milestone, from an abandoned enforcement economy to a checkpoint that only projects key state.",
+      "pause": 400
+    },
+    {
+      "text": "Where this page stands",
+      "pause": 400
+    },
+    {
+      "text": "Everything below is planned. What has settled is on the story ladder; what is designed and proved is the Lean machine described on the home page.",
+      "pause": 400
+    }
+  ],
+  "the-milestone": [
+    {
+      "text": "The milestone.",
+      "pause": 500
+    },
+    {
+      "text": "M1 — Identity core: witnessed checkpoints on Cardano, with poison, bonds and a unique registry.",
+      "pause": 400
+    },
+    {
+      "text": "The dated demo plan now names v1.0.0 for the identity-core milestone and v2.0.0 for the credential-gate milestone. The delivery epic #328 and release child #357 still specify 0.5.0; #450 tracks the release-policy reconciliation before a major tag is cut. The planned tag does not change the evidence required below.",
+      "pause": 400
+    },
+    {
+      "text": "Done means, on preprod: an identity registered once through the registry; rotations landed by hunters (anyone paid to land an owner's rotation) for a premium (the fee the pool pays for landing one); a freeze when the pool (the owner's advance funds) is short; poison (the owner's own lock on the checkpoint) by the current quorum, cleared by rotation; close by the next keys and reopen by a later rotation; conviction on a duplicity proof, terminal; a consumer contract reading the checkpoint with the fail-closed verdict; ckeri and a hunter daemon doing all of it; the fifteen stories replayed on preprod as the acceptance suite; release 0.5.0.",
+      "pause": 400
+    },
+    {
+      "text": "The design itself is settled — 87 theorems in lean/CardanoKeri/CheckpointGoals.lean over the checkpoint machine, 105 in RegistryGoals.lean over the registry, no sorry — and two simulations the design is reviewed by playing. What follows is engineering, plus the measurements that size the numbers still open.",
+      "pause": 400
+    }
+  ],
+  "the-epics": [
+    {
+      "text": "The epics.",
+      "pause": 500
+    },
+    {
+      "text": "The registry is upstream work that M1 implies, built in singular rather than in the MPFS repositories the three upstream rows were first filed against; the same milestone governs it. What singular already delivers and what remains is on where the registry is built.",
+      "pause": 400
+    }
+  ],
+  "order-and-workstreams": [
+    {
+      "text": "Order and workstreams.",
+      "pause": 500
+    },
+    {
+      "text": "Three workstreams run at once: the upstream workstream (U1, U3, then U2; U1's fold and U3 are delivered, U2's keri policy and the leaf-map mapping are open), the on-chain workstream (#319, #320, #321, then #322, #323), and the record workstream (#318, #327). The critical path is U1 → U2 → #324 → #325 → #326 → #328 on one side and",
+      "pause": 400
+    }
+  ],
+  "319-322-323-325-on-the-other": [
+    {
+      "text": "319 → #322 → #323 → #325 on the other..",
+      "pause": 500
+    },
+    {
+      "text": "The registry is the long pole, which is why it starts now.",
+      "pause": 400
+    }
+  ],
+  "measurements-that-size-the-open-numbers": [
+    {
+      "text": "Measurements that size the open numbers.",
+      "pause": 500
+    },
+    {
+      "text": "Four deployment parameters are deliberately not guessed. Each waits on a measurement:",
+      "pause": 400
+    },
+    {
+      "text": "D_reg, the conviction bond that a duplicity proof seizes, is an economic call rather than a measurement: it must exceed what duplicity buys, and it is refundable.",
+      "pause": 400
+    }
+  ],
+  "decisions-still-open": [
+    {
+      "text": "Decisions still open.",
+      "pause": 500
+    }
+  ],
+  "later-milestones": [
+    {
+      "text": "Later milestones.",
+      "pause": 500
+    }
+  ],
+  "credential-verification-and-revocation": [
+    {
+      "text": "Credential verification and revocation.",
+      "pause": 500
+    },
+    {
+      "text": "The next common layer verifies KERI credentials rather than just identity: bounded ACDC chain verification; explicit issuer trust roots; TEL issuance and revocation proofs for every credential in the chain; proof-building and canonical CESR decoding; and an optional admission cache for applications that cannot afford full verification on every action.",
+      "pause": 400
+    },
+    {
+      "text": "ACDC means Authentic Chained Data Container. TEL means Transaction Event Log. This layer answers \"what role has an issuer granted to this AID?\" The checkpoint already answers the separate question \"which keys currently control this AID?\"",
+      "pause": 400
+    },
+    {
+      "text": "The design is Verifying credentials against the checkpoint: the checkpoint keeps a history of past key states, an issuer's sealing interaction event is presented as evidence and checked against that history with the issuer's witness receipts, revocations are mirrored as a per-registry set anyone may fill, and delegation is proven once per rotation rather than per credential. No interaction event is ever ingested, and work per credential is bounded by the issuer's key and witness counts.",
+      "pause": 400
+    }
+  ],
+  "application-authorization": [
+    {
+      "text": "Application authorization.",
+      "pause": 500
+    },
+    {
+      "text": "Applications then consume the checkpoint and credential evidence: a detached, domain-separated authorization envelope; replay protection and validity bounds; current checkpoint resolution through a CIP-31 reference input; and application-specific policy.",
+      "pause": 400
+    },
+    {
+      "text": "The first vertical demo should perform one credential-gated Cardano action, reject it after revocation, and show that a poisoned, frozen or juvenile identity also fails closed.",
+      "pause": 400
+    }
+  ],
+  "keri-wallet-bridge": [
+    {
+      "text": "KERI wallet bridge.",
+      "pause": 500
+    },
+    {
+      "text": "The wallet bridge lets Veridian or Signify-controlled KERI keys authorize Cardano actions without requiring the identity owner to manage an unrelated CIP-30 wallet key. Its vertical demo must include intent display before signing, threshold signing through the KERI wallet, third-party transaction submission, replay and expiry rejection, and rejection after a rotation.",
+      "pause": 400
+    },
+    {
+      "text": "This bridge is on the critical path of every application design and is currently nobody's deliverable. See business cases.",
+      "pause": 400
+    }
+  ],
+  "pilots": [
+    {
+      "text": "Pilots.",
+      "pause": 500
+    },
+    {
+      "text": "Two pilots remain the lowest-cost application candidates: identified stake-pool delegation, and institutional treasury contracts. Both need real counterparties and vLEI credentials, so credential issuance lead time may dominate implementation time.",
+      "pause": 400
+    }
+  ],
+  "hardening-and-extensions": [
+    {
+      "text": "Hardening and extensions.",
+      "pause": 500
+    },
+    {
+      "text": "Demand-driven work includes delegated KERI AIDs and recovery events; a native Plutus BLAKE3 builtin to remove the workaround cost; privacy for attributed order flow and credential proofs; the maintenance escrow and premium beyond the pool; package publication; and production deployment, monitoring and incident procedures.",
+      "pause": 400
+    }
+  ],
+  "explicit-non-claims": [
+    {
+      "text": "Explicit non-claims.",
+      "pause": 500
+    },
+    {
+      "text": "The roadmap does not claim that:",
+      "pause": 400
+    },
+    {
+      "text": "development-network or preprod settlement is mainnet deployment;",
+      "pause": 300
+    },
+    {
+      "text": "a two-key fixture proves the three-of-seven cost profile;",
+      "pause": 300
+    },
+    {
+      "text": "registration alone proves a legal identity or credential;",
+      "pause": 300
+    },
+    {
+      "text": "a private relayer guarantees prompt KERI-to-Cardano synchronization;",
+      "pause": 300
+    },
+    {
+      "text": "conviction rolls back already-settled Cardano actions; or",
+      "pause": 300
+    },
+    {
+      "text": "Lean theorems and simulations substitute for a settled vertical transaction.",
+      "pause": 300
+    },
+    {
+      "text": "The last one is the point of the ordering above: the design is proved, and the epics are what make it true on chain.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "roadmap.md",
+    "sha256": "be913ccc1bb0ebd2bf400e864476b4978932d4075e4a5a5423f38a126a4950fb"
+  }
+}

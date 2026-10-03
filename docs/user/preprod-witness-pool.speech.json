@@ -1,0 +1,146 @@
+{
+  "the-preprod-witness-pool": [
+    {
+      "text": "The preprod witness pool.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "pause": 400
+    },
+    {
+      "text": "The project operates three public KERI witnesses for preprod integration. A controller can resolve their out-of-band introductions (OOBIs), use the three witness AIDs in an inception event, and collect receipts at a threshold of two.",
+      "pause": 400
+    },
+    {
+      "text": "This pool is integration infrastructure. It is not a production trust service or a substitute for independently operated witnesses.",
+      "pause": 400
+    }
+  ],
+  "public-witnesses": [
+    {
+      "text": "Public witnesses.",
+      "pause": 500
+    },
+    {
+      "text": "The repository-owned source of truth is deploy/preprod/witnesses.json. Its stable raw URL after this page lands on main is:",
+      "pause": 400
+    },
+    {
+      "text": "An OOBI is discovery data: it gives a KERI client the witness identity, controller role authorization, and signed HTTPS location record. The client still validates the KERI material it receives.",
+      "pause": 400
+    }
+  ],
+  "reproduce-the-clean-client-proof": [
+    {
+      "text": "Reproduce the clean-client proof.",
+      "pause": 500
+    },
+    {
+      "text": "The checked-in verifier builds no KERI behavior of its own. It drives standard keripy 1.3.5 kli init, kli oobi resolve, kli incept, and kli status commands inside a uniquely named empty Docker volume:",
+      "pause": 400
+    },
+    {
+      "text": "The script also checks the manifest shape, the resolved Compose model, the locked keripy version, and all three public OOBIs. It deletes only the temporary client volume it created.",
+      "pause": 400
+    },
+    {
+      "text": "This transcript was captured from a clean client on 28 July 2026:",
+      "pause": 400
+    },
+    {
+      "text": "The generated controller AID and keys differ on every clean run. The stable acceptance facts are the three configured witnesses, three receipts, and threshold two.",
+      "pause": 400
+    }
+  ],
+  "deployment-shape": [
+    {
+      "text": "Deployment shape.",
+      "pause": 500
+    },
+    {
+      "text": "deploy/preprod/docker-compose.yaml defines three isolated keripy processes. They share the same dependency-locked image but have separate containers and named data volumes. The public hosts terminate TLS through Traefik; no witness port is published directly on the Docker host.",
+      "pause": 400
+    },
+    {
+      "text": "Each service has:",
+      "pause": 400
+    },
+    {
+      "text": "restart: unless-stopped;",
+      "pause": 300
+    },
+    {
+      "text": "a local HTTP health check;",
+      "pause": 300
+    },
+    {
+      "text": "a distinct persistent .keri volume;",
+      "pause": 300
+    },
+    {
+      "text": "bounded Docker JSON logs;",
+      "pause": 300
+    },
+    {
+      "text": "a read-only root filesystem, dropped Linux capabilities, and no-new-privileges; and",
+      "pause": 300
+    },
+    {
+      "text": "an unprivileged numeric user.",
+      "pause": 300
+    },
+    {
+      "text": "The endpoint JSON contains no secret. At startup it is copied from its read-only image input to keripy's writable configuration path in the persistent volume, then kli witness start takes over. The witness keys and databases remain only in that service's volume.",
+      "pause": 400
+    },
+    {
+      "text": "The production capture used NixOS 26.05 on x86_64, Docker 29.2.1, Docker Compose 5.0.2, and keripy 1.3.5. All three containers reported healthy after a simultaneous service restart, and the three AIDs above remained byte-for-byte unchanged.",
+      "pause": 400
+    }
+  ],
+  "operator-checks": [
+    {
+      "text": "Operator checks.",
+      "pause": 500
+    },
+    {
+      "text": "From deploy/preprod, resolve and inspect the deployment:",
+      "pause": 400
+    },
+    {
+      "text": "To prove persistence without disturbing unrelated workloads, record the manifest, restart only these services, wait for all health checks, and rerun the verifier:",
+      "pause": 400
+    },
+    {
+      "text": "Do not delete or replace a witness data volume after publishing its AID. Starting the service with an empty replacement volume creates a different witness identity, which requires a coordinated manifest and consumer update.",
+      "pause": 400
+    }
+  ],
+  "trust-and-availability-boundary": [
+    {
+      "text": "Trust and availability boundary.",
+      "pause": 500
+    },
+    {
+      "text": "One administrative and failure domain",
+      "pause": 400
+    },
+    {
+      "text": "All three witnesses currently run on one host under one operator. A two-of-three receipt threshold therefore proves KERI protocol behavior and integration reachability, but it does not provide two independent operators. One host outage can make the entire pool unavailable, and a compromised host administrator can compromise all three witnesses.",
+      "pause": 400
+    },
+    {
+      "text": "The endpoints are public and unauthenticated so preprod clients can resolve OOBIs and request receipts. They carry no production service-level objective, durability promise, DDoS guarantee, or mainnet endorsement. Consumers should expect maintenance interruptions and must not treat the pool as an independently governed trust quorum.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "preprod-witness-pool.md",
+    "sha256": "183e4ee265f0465aa9a28e7bd9bce39e8affc6037c54066bcb17d2cc1c627dc5"
+  }
+}

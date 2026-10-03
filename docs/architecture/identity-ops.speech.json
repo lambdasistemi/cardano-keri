@@ -1,12 +1,432 @@
 {
-  "under-the-accepted-design": [
+  "identity-operations": [
     {
-      "text": "Registration becomes a funded registry request. The proposed earlier attestation would certify a valid inception and its initial key state without requiring the full inception in the request. Several attestations may certify the same inception. Registry absence, insertion and checkpoint creation supply uniqueness together. The attestation format remains to be implemented.",
+      "text": "Identity operations.",
       "pause": 500
     },
     {
-      "text": "A persistent registry entry prevents a second first-registration. Revival is a separate guarded operation. The new checkpoint must wait through juvenility before consumers may use it.",
+      "text": "Every operation, one by one: what the shipped validators do, and what the M1 return replaces it with.",
+      "pause": 400
+    },
+    {
+      "text": "Where this page stands",
+      "pause": 400
+    },
+    {
+      "text": "The Shipped today sections describe programs published on preprod and exercised by settled transactions. The Under the accepted design sections describe the accepted design, proved in lean/CardanoKeri/Checkpoint.lean and playable in the checkpoint simulator. Nothing designed is built. For evidence and transaction IDs, start with the story ladder.",
+      "pause": 400
+    },
+    {
+      "text": "A KERI AID (Key Event Receipt Infrastructure Autonomic Identifier) has a signed KEL (Key Event Log). cardano-keri does not put the whole KEL on Cardano. It stores one current checkpoint in a sovereign UTxO (unspent transaction output) identified by a quantity-one token derived from the AID.",
+      "pause": 400
+    }
+  ],
+  "the-datum": [
+    {
+      "text": "The datum.",
+      "pause": 500
+    },
+    {
+      "text": "Shipped today, CheckpointDatumV1 is pure key state — nine fields, no lifecycle flag (onchain/lib/cardano_keri/checkpoint/datum.ak):",
+      "pause": 400
+    },
+    {
+      "text": "the AID;",
+      "pause": 300
+    },
+    {
+      "text": "current controller public keys and their weighted threshold;",
+      "pause": 300
+    },
+    {
+      "text": "commitments to the next controller keys and their next threshold;",
+      "pause": 300
+    },
+    {
+      "text": "the current KERI witness set and its threshold, called toad;",
+      "pause": 300
+    },
+    {
+      "text": "a Cardano checkpoint sequence; and",
+      "pause": 300
+    },
+    {
+      "text": "the native KERI sequence.",
+      "pause": 300
+    },
+    {
+      "text": "Lifecycle state lives outside it, in the script role address the token sits at.",
+      "pause": 400
+    },
+    {
+      "text": "Datum V2, in the accepted design, adds what the new machine needs: poisoned (the owner's own lock on the checkpoint), born_at (for juvenility: the age a checkpoint must reach before a consumer trusts it), refund_to, and alive_at and valid_until reserved for a future validity edge. The three sums of money — D_reg the conviction bond, B the freeze bond and the pool of advance funds — are value, not fields. That change lands on observer_advance, which has three bytes of headroom, so epic #319 measures before epic #322 decides.",
+      "pause": 400
+    }
+  ],
+  "operation-status": [
+    {
+      "text": "Operation status.",
       "pause": 500
     }
-  ]
+  ],
+  "register": [
+    {
+      "text": "Register.",
+      "pause": 500
+    }
+  ],
+  "shipped-today": [
+    {
+      "text": "Shipped today.",
+      "pause": 500
+    },
+    {
+      "text": "Registration is permissionless: anyone may relay a public KERI inception and fund the escrow. The inception itself determines the keys; the relayer cannot substitute different controller authority. It has two transactions.",
+      "pause": 400
+    },
+    {
+      "text": "1. BLAKE3 premint. The KERI AID is a BLAKE3 digest of the inception bytes in KERI's saidification form. Plutus has no native BLAKE3 builtin, so a dedicated Aiken policy performs that expensive check and mints a deterministic proof token. The token records one fact — the supplied inception bytes have the supplied KERI AID — and grants no identity authority.",
+      "pause": 400
+    },
+    {
+      "text": "2. Checkpoint mint. The checkpoint transaction:",
+      "pause": 400
+    },
+    {
+      "text": "uses the bare mint redeemer Register;",
+      "pause": 300
+    },
+    {
+      "text": "includes a zero-lovelace withdrawal from the registration observer;",
+      "pause": 300
+    },
+    {
+      "text": "puts the complete RegistrationEvidence in that observer's envelope;",
+      "pause": 300
+    },
+    {
+      "text": "consumes an input carrying the matching proof token and burns it;",
+      "pause": 300
+    },
+    {
+      "text": "verifies the inception's controller signatures and witness receipts over the exact event bytes;",
+      "pause": 300
+    },
+    {
+      "text": "verifies that the new datum projects the event's AID, keys, thresholds, next commitments, witnesses, and toad;",
+      "pause": 300
+    },
+    {
+      "text": "mints exactly one AID-derived checkpoint token; and",
+      "pause": 300
+    },
+    {
+      "text": "creates exactly one output holding the token and the required escrow.",
+      "pause": 300
+    },
+    {
+      "text": "The checkpoint and observer programs are delivered by reference; the evidence is not duplicated in the mint redeemer. See Observer architecture.",
+      "pause": 400
+    },
+    {
+      "text": "The duplicate-registration residual. Registration uses no shared registry and no absence proof, so two independent transactions can mint live candidates for the same AID. A consumer must resolve exactly one and fail closed on zero or several — and it cannot prove no other exists. A holder of some retired epoch's keys can therefore mint a rival checkpoint and advance it exactly to their epoch.",
+      "pause": 400
+    }
+  ],
+  "under-the-accepted-design": [
+    {
+      "text": "Under the accepted design.",
+      "pause": 500
+    },
+    {
+      "text": "Registration becomes a request against the registry: it identifies the AID, binds the inception evidence, and carries the bonds and a refund address chosen by whoever pays. It is applied in a batch by anyone. This does not require the raw inception to be stored in the request: the proposed earlier attestation would authenticate inception validity and its initial key state. Such an attestation may be issued more than once; registry admission supplies checkpoint uniqueness. Its concrete format and validation are still to be implemented. Application checks that the AID has no leaf, inserts one, and creates the checkpoint in the same transaction. The persistent leaf prevents a second first-registration of the AID. Revival is a separate, guarded operation: the registry model permits it from dormant k and allocates a fresh abstract token. This does not specify a concrete asset-name encoding or prove that token bytes are minted only once across every revival. See the registration guarantee for the atomic mint/insertion obligation and the model's evidence limits.",
+      "pause": 400
+    },
+    {
+      "text": "The new checkpoint is juvenile: unconsumable for W slots. That window is what bounds the stale-key registration above — anyone can advance the checkpoint onward with the controller's later public rotations, and the moment that happens the registrant's bonds answer to the controller's keys.",
+      "pause": 400
+    }
+  ],
+  "advance": [
+    {
+      "text": "Advance.",
+      "pause": 500
+    }
+  ],
+  "shipped-today_1": [
+    {
+      "text": "Shipped today.",
+      "pause": 500
+    },
+    {
+      "text": "Advance moves one KERI rotation into the checkpoint. Anyone may relay it because the public event and its receipts determine the only valid successor.",
+      "pause": 400
+    },
+    {
+      "text": "The transaction consumes exactly one current checkpoint and creates exactly one successor with the same quantity-one token, the same complete value, the Cardano sequence increased by one, and the event's keys, thresholds, next commitments, witnesses and toad.",
+      "pause": 400
+    },
+    {
+      "text": "The heavy checks run in observer_advance. They require:",
+      "pause": 400
+    },
+    {
+      "text": "the event to continue from the stored prior event;",
+      "pause": 300
+    },
+    {
+      "text": "revealed keys to match the stored next-key commitments;",
+      "pause": 300
+    },
+    {
+      "text": "both KERI controller thresholds to pass — the event's own and the previously committed next threshold;",
+      "pause": 300
+    },
+    {
+      "text": "signatures to cover the exact rotation bytes;",
+      "pause": 300
+    },
+    {
+      "text": "witness receipts to cover the exact event bytes; and",
+      "pause": 300
+    },
+    {
+      "text": "witness-set changes to satisfy the incoming witness threshold.",
+      "pause": 300
+    },
+    {
+      "text": "When incoming toad is greater than zero, elapsed time and controller signatures never replace the required receipts. This prevents a controller from activating an unpublished Cardano-first branch and repairing the KERI history afterwards.",
+      "pause": 400
+    },
+    {
+      "text": "ixn, dip and drt are rejected: advance requires the type span to read rot.",
+      "pause": 400
+    },
+    {
+      "text": "An unsettled parity question",
+      "pause": 400
+    },
+    {
+      "text": "The validator tallies receipts against the new witness set and the new toad. Whether keripy does the same, or tallies against the parent's set, is not established. Epic #320 builds the oracle that settles it. The two rules disagree exactly on rotations that cut or add witnesses — that is, on witness replacement after a compromise.",
+      "pause": 400
+    }
+  ],
+  "under-the-accepted-design_1": [
+    {
+      "text": "Under the accepted design.",
+      "pause": 500
+    },
+    {
+      "text": "The predicate is unchanged. What is added is everything around it:",
+      "pause": 400
+    },
+    {
+      "text": "a bond option — keep, or deposit (the unfreeze: refill B when a hunter has taken it). There is no withdraw;",
+      "pause": 300
+    },
+    {
+      "text": "an optional new refund address;",
+      "pause": 300
+    },
+    {
+      "text": "the premium P paid from the pool to the payee the transaction names, when the pool covers it. An unpaid rotation is still a valid rotation: no transition ever requires the pool;",
+      "pause": 300
+    },
+    {
+      "text": "the poison cleared, unconditionally.",
+      "pause": 300
+    },
+    {
+      "text": "Every option other than keep, and every new address, travels in one message signed by the keys of the epoch the rotation opens (ruling D-038). A relayer landing the owner's public rotation therefore cannot park her, reset her juvenility, or move her money. Absent means keep and unchanged.",
+      "pause": 400
+    }
+  ],
+  "close": [
+    {
+      "text": "Close.",
+      "pause": 500
+    }
+  ],
+  "shipped-today_2": [
+    {
+      "text": "Shipped today.",
+      "pause": 500
+    },
+    {
+      "text": "Close is the controller-authorized retirement path. Its signed evidence binds the network, checkpoint policy, exact checkpoint input reference, AID and current sequence, refund address, and current controller threshold. The transaction consumes the exact checkpoint, satisfies the current weighted threshold, burns the quantity-one token, creates no successor, and refunds the complete remaining value to the signed address.",
+      "pause": 400
+    },
+    {
+      "text": "Binding the input reference makes the authorization single-use. Binding the refund address prevents a transaction builder from redirecting the escrow.",
+      "pause": 400
+    },
+    {
+      "text": "The exposure it leaves. Close answers to the current keys, so a thief who steals them can burn the identity and take the escrow. The signed refund address limits where the money goes but not whether the identity dies.",
+      "pause": 400
+    }
+  ],
+  "under-the-accepted-design_2": [
+    {
+      "text": "Under the accepted design.",
+      "pause": 500
+    },
+    {
+      "text": "Close is the reap: a witnessed rotation by the next keys whose signed message names the payee of the premium and the refund address (ruling D-036). The token burns; the registry leaf is parked with the hash of that key state. It needs the next keys exactly like any other rotation, so the current-key thief loses this move entirely — the only Cardano power the current keys retain is the poison, and a rotation clears that.",
+      "pause": 400
+    },
+    {
+      "text": "There is no pause. Close is not terminal: a parked identity returns on a witnessed rotation later than the parked key state, with fresh bonds and a fresh juvenility window. Only a conviction is final.",
+      "pause": 400
+    }
+  ],
+  "freeze": [
+    {
+      "text": "Freeze.",
+      "pause": 500
+    }
+  ],
+  "shipped-today_3": [
+    {
+      "text": "Shipped today.",
+      "pause": 500
+    },
+    {
+      "text": "Freeze is a public challenge to a checkpoint that KERI evidence shows is behind. The thin checkpoint requires an observer_enforcement withdrawal, which proves the contested rotation belongs to the same AID, continues from the recorded event, is strictly ahead of the tip, reveals committed keys, satisfies its controller threshold, and carries enough receipts. The checkpoint moves to ARMED — a different role address, so consumers fail closed — with the hunter and a deadline recorded, and the complete escrow preserved.",
+      "pause": 400
+    },
+    {
+      "text": "A response is not an owner-only command: it is the same ordinary advance, applied before the deadline. Evidence is bound to the challenged tip, so after a response the old proof is stale and a new round needs fresh evidence at the new sequence.",
+      "pause": 400
+    }
+  ],
+  "under-the-accepted-design_3": [
+    {
+      "text": "Under the accepted design.",
+      "pause": 500
+    },
+    {
+      "text": "Freeze survives, with a different job. It is not a punishment for lag — the party who can prove a later witnessed rotation can simply land it, which costs the owner nothing and leaves the checkpoint fresh, so paying for the freeze instead would pay for the harmful move.",
+      "pause": 400
+    },
+    {
+      "text": "Instead a hunter freezes only when the owner's pool is short: it presents exactly the advance evidence, takes B, and leaves the datum untouched — the old keys stay. Frozen is the absence of B, a value-level fact, not a role or a flag. There is no deadline, no claim, no thaw window: the owner comes back by a rotation with deposit, which restores both bonds.",
+      "pause": 400
+    },
+    {
+      "text": "There is no ARMED, no FROZEN role address, no recorded hunter in the datum, and no timeout.",
+      "pause": 400
+    }
+  ],
+  "poison-new-in-the-accepted-design": [
+    {
+      "text": "Poison — new in the accepted design.",
+      "pause": 500
+    },
+    {
+      "text": "A poison is the current quorum's declaration that this epoch is compromised. The key holders sign, at cur_threshold, a short preimage bound to the register policy, the AID and the current sequence — producible with stock kli sign, no KERI-side change, no BLAKE3 — and anyone lands it. It is never witnessed, because it is a Cardano-side declaration and not a projected KERI event.",
+      "pause": 400
+    },
+    {
+      "text": "Its effect is one bit. The checkpoint becomes unconsumable. From a poisoned present checkpoint the machine still enables rotation, top-up, conviction, and close (the reap by the next keys). Only a second poison and a freeze are refused — those two require the epoch still clean. Consumer authorization fails because the checkpoint is unconsumable. A rotation clears the poison.",
+      "pause": 400
+    },
+    {
+      "text": "Two properties are worth stating precisely:",
+      "pause": 400
+    },
+    {
+      "text": "The threshold matters. One stolen member key of a k-of-n group cannot poison. In KERI an event signed below threshold is invalid rather than duplicitous, so a single-key poison would assert more than KERI does.",
+      "pause": 300
+    },
+    {
+      "text": "It is epoch-local. Any witnessed rotation clears it, because possession of the next keys is control by KERI's own rule. It serves the window between detection and rotation, and the case of lost next keys where no rotation will ever come. It does not serve next-key theft, where the thief's rotation is control.",
+      "pause": 300
+    }
+  ],
+  "convict-new-shape-in-the-accepted-design": [
+    {
+      "text": "Convict — new shape in the accepted design.",
+      "pause": 500
+    }
+  ],
+  "shipped-today_4": [
+    {
+      "text": "Shipped today.",
+      "pause": 500
+    },
+    {
+      "text": "convict_predicate accepts a second rotation at the tip's native_sn that reveals exactly the tip's current keys, is signed at cur_threshold, carries receipts from at least toad of the tip's witnesses, and differs in content. It needs no history, because the revealed keys are the current keys. On the shipped machine this burns the token and leaves no successor, and the CLI exposes no command for it.",
+      "pause": 400
+    }
+  ],
+  "under-the-accepted-design_4": [
+    {
+      "text": "Under the accepted design.",
+      "pause": 500
+    },
+    {
+      "text": "The same proof, a different effect. The convictor names a payee and takes D_reg in full; B and the pool go to the refund address; the checkpoint becomes Convicted, terminal; the token stays, and there is no transition out — no rotate, no poison, no close (rulings D-030, D-031).",
+      "pause": 400
+    },
+    {
+      "text": "Terminality is not severity. KERI has no event that un-duplicates an identifier: superseding recovery is a rotation over an interaction, by rule and not by duplicity, while two establishment events at one sequence is duplicity and KERI's only answer is permanent distrust. A clearable conviction would be the chain inventing a recovery KERI lacks.",
+      "pause": 400
+    },
+    {
+      "text": "Who can trigger it is narrow. A stranger cannot: only a holder of the pre-committed keys could have signed the second rotation, and only colluding witnesses could have receipted both. The residual is real and bounded: a next-key thief with toad colluding witnesses can convict the identity she already controls under KERI and take D_reg on the way out. Exposure is D_reg and the witness set the controller chose.",
+      "pause": 400
+    }
+  ],
+  "top-up-and-reopen-new-in-the-accepted-design": [
+    {
+      "text": "Top-up and reopen — new in the accepted design.",
+      "pause": 500
+    },
+    {
+      "text": "Top-up adds value to the pool. No signature, no datum change, anyone. It is how a friend, an employer or a consortium pays for an identity's maintenance.",
+      "pause": 400
+    },
+    {
+      "text": "Reopen brings a parked identity back: a witnessed rotation later than the parked key state, fresh bonds, a first pool, and a refund address chosen by whoever pays. A rotation at or below the parked sequence cannot reopen — that is what stops a stale resurrection.",
+      "pause": 400
+    }
+  ],
+  "what-is-off-chain": [
+    {
+      "text": "What is off chain.",
+      "pause": 500
+    },
+    {
+      "text": "The ledger validates the event presented for a transition. It does not:",
+      "pause": 400
+    },
+    {
+      "text": "discover new KERI events by itself;",
+      "pause": 300
+    },
+    {
+      "text": "store or replay the entire KEL;",
+      "pause": 300
+    },
+    {
+      "text": "operate KERI witnesses;",
+      "pause": 300
+    },
+    {
+      "text": "decide whether an unseen event exists; or",
+      "pause": 300
+    },
+    {
+      "text": "submit transactions.",
+      "pause": 300
+    },
+    {
+      "text": "Hunters, controllers and ordinary relayers discover evidence off chain. They do not become trusted authorities: the on-chain validators accept or reject the supplied bytes.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "identity-ops.md",
+    "sha256": "8b204753aa198015321cef71172a72b76b48a0c1fd134a620a2ff1cde6415007"
+  }
 }

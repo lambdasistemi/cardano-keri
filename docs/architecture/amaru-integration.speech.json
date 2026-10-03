@@ -1,0 +1,398 @@
+{
+  "amaru-integration-analysis": [
+    {
+      "text": "Amaru Integration Analysis.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "pause": 400
+    },
+    {
+      "text": "Written against the earlier oracle-mediated identity model",
+      "pause": 400
+    },
+    {
+      "text": "This analysis predates the permissionless identity plane now specified in Architecture Overview and Identity Operations. Where it says the identity registry has a \"single trusted oracle writer\" or \"oracle controls entry\", it describes the superseded draft — identity operations are now permissionless and deposit-bonded; only the value-cage plane (an MPFS store, a Merkle Patricia Forestry map behind one validator) keeps an oracle (necessary-not-sufficient). The comparative conclusions about node-level attribution are unaffected, but read the registry-shape comparisons with that correction in mind. Further (2026-07-09): the \"two independent state machines\" framing is also superseded — identity is a single state machine (the witnessed KEL) with an on-chain checkpoint advanced by witness-receipted seals; see specs/68-keystate-shape/identity-model.md (PR #87).",
+      "pause": 400
+    },
+    {
+      "text": "This document analyses the proposed Veridian × Amaru node-level attribution integration and positions cardano-keri within it. It is an architecture analysis, not a commitment: its purpose is to establish where cardano-keri addresses the integration's open questions, what is genuinely missing, and — critically — whether any part of the design actually needs to live inside the Amaru node.",
+      "pause": 400
+    },
+    {
+      "text": "The source is Veridian's Node-Level KERI/ACDC Attribution — Discovery & Planning working document (July 2026). Its stated goal: attach KERI/ACDC verifiable attribution alongside the Amaru node, without touching consensus or block production, and find the right seam to do it.",
+      "pause": 400
+    }
+  ],
+  "the-dream-stated-plainly": [
+    {
+      "text": "The dream, stated plainly.",
+      "pause": 500
+    },
+    {
+      "text": "The discovery framing (\"identity at the base layer\", \"a new operator revenue model\") is reaching for one specific outcome:",
+      "pause": 400
+    },
+    {
+      "text": "Every Amaru operator is also a KERI backer. KERI gains a decentralized, always-on backer fleet — many stake pool operators anchoring KELs, schemas and credential registries — instead of a handful of foundation-run backer instances. \"Node-level attribution\" becomes literal: the backer function lives in the node layer, and operators sell anchoring/witnessing as a paid trust service on top of block production.",
+      "pause": 400
+    },
+    {
+      "text": "This is coherent as a distribution goal. It is not, on its own, a technical requirement — KERI and ACDC are ledger-independent and verify off-chain without Cardano at all. The rest of this document separates the parts that are real from the parts that are narrative.",
+      "pause": 400
+    }
+  ],
+  "the-keri-role-landscape": [
+    {
+      "text": "The KERI role landscape.",
+      "pause": 500
+    },
+    {
+      "text": "Three KERI roles are routinely conflated in the discovery document. Keeping them apart dissolves most of its \"biggest fork\" questions.",
+      "pause": 400
+    },
+    {
+      "text": "The Cardano Foundation already ships a ledger backer: cardano-foundation/cardano-backer — \"a tertiary root of trust KERI witness/backer that anchors KELs and schemas on Cardano, reliably.\" Today it is a Python service that submits anchoring transactions to a Cardano node via Ogmios + the submit API, queuing events to wait for confirmations. That existing artifact is the clearest statement of what \"integrate identity with the node\" actually means: make the ledger backer a native, widely-deployed node capability rather than an external service.",
+      "pause": 400
+    }
+  ],
+  "what-a-ledger-gives-keri-that-witnesses-cannot": [
+    {
+      "text": "What a ledger gives KERI that witnesses cannot.",
+      "pause": 500
+    },
+    {
+      "text": "A witness quorum provides first-seen ordering that is local and subjective. A ledger provides global total order and public availability. This is the one genuinely valuable thing Cardano contributes to the KERI trust model: it makes duplicity resolution objective (which of two conflicting events came first is no longer a matter of whom you asked). The super watcher is a permissionless cross-plane relayer and evidence submitter whose duplicity / correspondence fraud proofs rely directly on this property — it relays witnessed transitions and submits objective evidence, it does not enforce convergence by burning forks.",
+      "pause": 400
+    }
+  ],
+  "where-cardano-keri-fits": [
+    {
+      "text": "Where cardano-keri fits.",
+      "pause": 500
+    },
+    {
+      "text": "Nothing in cardano-keri is shipped runtime infrastructure today. The concrete shipped substrate to build on is MPFS plugin support: MPFS can host domain-specific authorization logic at the cage/plugin layer without changing the Cardano node.",
+      "pause": 400
+    },
+    {
+      "text": "cardano-keri is the research/design layer for what such a plugin could enforce:",
+      "pause": 400
+    },
+    {
+      "text": "an MPFS-backed identity/key-state registry;",
+      "pause": 300
+    },
+    {
+      "text": "Aiken-side checks for key-state derivation, Ed25519 possession, and pre-rotation;",
+      "pause": 300
+    },
+    {
+      "text": "node-adjacent off-chain agents such as a KERI watcher or super watcher.",
+      "pause": 300
+    },
+    {
+      "text": "That maps onto the discovery document's \"co-located sidecar / external service\" integration pattern, and it satisfies the document's hardest constraint — never touch consensus or block production — by construction, because the only shipped integration point is outside the node process.",
+      "pause": 400
+    }
+  ],
+  "two-different-models-are-on-the-table": [
+    {
+      "text": "Two different models are on the table.",
+      "pause": 500
+    },
+    {
+      "text": "The discovery conversation silently conflates two architectures. They are not the same system.",
+      "pause": 400
+    },
+    {
+      "text": "cardano-keri is the proposed answer to the controller key-state problem. It is not a general backer, and it is not shipped infrastructure. If the integration's goal is the general backer fleet, then cardano-keri is a design for one MPFS plugin component (key-state anchoring + the super watcher's cross-plane relay / evidence-submission role), not the whole answer.",
+      "pause": 400
+    }
+  ],
+  "anchor-versus-verify-the-decisive-difference": [
+    {
+      "text": "Anchor versus verify: the decisive difference.",
+      "pause": 500
+    },
+    {
+      "text": "The two models differ on the one property that matters for smart contracts: does the chain verify the KERI cryptography, and can a downstream contract consume the current key?",
+      "pause": 400
+    },
+    {
+      "text": "A ledger backer anchors. It writes the full serialized KEL event into a transaction as metadata: metadatum label 13456 for KELs and 13457 for schemas, chunked into 64-byte strings and carried as auxiliary data on an ordinary self-payment signed by the backer's own payment key (src/backer/cardaning.py). The chain records those bytes — data availability of the complete log, immutability, global ordering — and verifies only the backer's own Cardano payment signature. It does not replay the controller's Ed25519 signatures or the pre-rotation chain; the KEL event is opaque bytes to the ledger. The cryptographic verification stays off-chain, in the backer before it submits and in watchers afterward. And because the anchor is metadata, it is not script-consumable — a Plutus validator cannot read cur_key out of it. The anchor is a timestamped receipt you trust the backer to have earned honestly (\"tertiary root of trust\").",
+      "pause": 400
+    },
+    {
+      "text": "The writer is also designated, not open. The backer refuses any event for an AID whose KEL does not list it as a witness (src/backer/backering.py), so what reaches the chain is selected by a party the controller chose. Two consequences follow. No on-chain evidence can establish that a backer should have anchored something and did not — omission is invisible to the ledger. And there is no notion of a wrong anchor: metadata cannot be rejected, so two contradictory events can both be anchored and the ledger holds no opinion about the conflict.",
+      "pause": 400
+    },
+    {
+      "text": "The proposed cardano-keri MPFS plugin would verify. Its Aiken validators would check the derivation (trie_key == blake2b_256(cbor{cur_pubkey, next_digest})), the Ed25519 self-auth / possession signatures, and the pre-rotation binding (now blake3_256(qb64(reveal_key)) ∈ next_keys under the E-native contract, with in-script blake3 on the rare rotation path — the historical Blake2b-256 / F-prefix requirement is retired). cur_pubkey would live in on-chain KeyState, and a downstream MPFS cage/plugin would consume it via a CIP-31 reference input + inclusion proof, requiring the spend to be signed by blake2b_224(cur_pubkey). That is the target shape for a contract consuming the live cur_key in on-chain verification, trust-minimized.",
+      "pause": 400
+    },
+    {
+      "text": "The two are complementary, not competing: the backer gives KERI a ledger receipt; the proposed cardano-keri plugin would give Cardano contracts a verified, usable key-state. This is why cardano-keri is not \"cardano-backer on Amaru\" — it is a design for making anchored identity actionable in smart contracts, which the backer structurally cannot do.",
+      "pause": 400
+    }
+  ],
+  "what-is-actually-missing-for-acdc": [
+    {
+      "text": "What is actually missing for ACDC.",
+      "pause": 500
+    },
+    {
+      "text": "Key-state anchoring — cur_key plus pre-rotation for the controller's AID — is the proposed cardano-keri plugin scope. A full ACDC / vLEI trust chain needs three further things anchored, and cardano-keri models none of them as first-class:",
+      "pause": 400
+    },
+    {
+      "text": "The crux is the TEL — revocation. A credential's \"is it still valid right now?\" lives in a Transaction Event Log: a monotonic issuance/revocation registry. That is exactly the state that benefits from ledger anchoring (public availability + global order), and it is the single most valuable thing a credential system provides. The cardano-keri design can place a credential hash in an MPFS value cage (vLEI use case 4), but it has no revocation registry. Designing the on-chain TEL is the real new work, and nobody has done it yet.",
+      "pause": 400
+    }
+  ],
+  "what-would-amaru-actually-index": [
+    {
+      "text": "What would Amaru actually index?.",
+      "pause": 500
+    },
+    {
+      "text": "\"What should Amaru index?\" is the crux of the seam question. There are two scopes.",
+      "pause": 400
+    },
+    {
+      "text": "Scope A — Amaru indexes nothing special. All attribution indexing lives in an off-chain sidecar. Amaru only serves generic chain access: blocks, the UTxO set, reference-input resolution (so MPFS cages/plugins can read whatever registry exists), and tx submission. Any future AID → key-state + proof resolver would be built by the sidecar by replaying the registry UTxO's trie. This is the minimal, isolation-safe reading.",
+      "pause": 400
+    },
+    {
+      "text": "Cage UTxO snapshotting is the Scope A contention workaround. MPFS value writes contend on the cage UTxO they spend and recreate. The sidecar/plugin builder should snapshot the cage UTxO datum/value root at a concrete chain point, construct the proof and transaction against that stable pre-state, and rebuild from a newer snapshot if another write advances the cage before submission. That handles contention in the MPFS transaction-building layer; it does not require Amaru to serialize attribution work or maintain a cardano-keri-specific index inside the node.",
+      "pause": 400
+    },
+    {
+      "text": "Scope B — Amaru hosts the attribution resolver index. The node maintains and serves a resolver over the identity registry — identity handle → KeyState + inclusion/absence proof + freeze status at the chain tip — emits attribution metrics through the existing OpenTelemetry pipeline, and packages via the node's distribution. This is what would make the word \"node-level\" literal, and it is where the resource-budget and consensus-isolation questions actually bite.",
+      "pause": 400
+    },
+    {
+      "text": "The cardano-keri plugin design assumes A. Veridian's language (\"identity at the base layer\", \"operator trust service\") reaches for B. Forcing that choice into the open is the single most clarifying outcome the discovery session can produce.",
+      "pause": 400
+    }
+  ],
+  "does-anything-need-to-live-in-the-node": [
+    {
+      "text": "Does anything need to live in the node?.",
+      "pause": 500
+    },
+    {
+      "text": "Each candidate for \"must be in Amaru\" resolves, on inspection, to a sidecar, an on-chain validator, a public read, or an offline signature. The pattern is consistent enough to state as a finding.",
+      "pause": 400
+    }
+  ],
+  "hosting-a-backer-is-not-by-itself-a-business": [
+    {
+      "text": "Hosting a backer is not, by itself, a business.",
+      "pause": 500
+    },
+    {
+      "text": "cardano-backer is already permissionless and nearly free to run — a container, a funded address, an Ogmios connection. Almost no operator runs one, because running it earns nothing:",
+      "pause": 400
+    },
+    {
+      "text": "Selection, not supply. In KERI a controller designates backers in their KEL; verifiers trust only the designated ones. A backer nobody has listed earns nothing. There is no discovery or reputation layer that makes an arbitrary operator selectable over the foundation's official backer.",
+      "pause": 300
+    },
+    {
+      "text": "Backers pay, they do not collect. cardano-backer spends ADA on anchoring fees. No protocol rail exists where the backed party pays the backer. Running one is a cost centre.",
+      "pause": 300
+    },
+    {
+      "text": "No differentiation. The container runs on any VPS. Being a stake pool operator confers no advantage — the node's stake, VRF and block-production record are irrelevant to a service that submits anchor transactions.",
+      "pause": 300
+    },
+    {
+      "text": "No demand. The KERI/ACDC users touching Cardano today are pilots; GLEIF/QVIs run their own witness infrastructure.",
+      "pause": 300
+    },
+    {
+      "text": "Bundling the backer into Amaru addresses only supply, which was never the hard part. Selection, payment, differentiation and demand — the primitives that make a market — are untouched by bundling.",
+      "pause": 400
+    }
+  ],
+  "stake-weighted-selection-does-not-need-a-node-plugin": [
+    {
+      "text": "Stake-weighted selection does not need a node plugin.",
+      "pause": 500
+    },
+    {
+      "text": "The one genuinely node-flavoured idea is stake-weighted backer selection: bind backer trustworthiness to the operator's on-chain stake, giving KERI an objective, Sybil-resistant selection metric that pure witnesses lack. It is tempting to assume this needs a node plugin because \"the node has the SPO's key\". The key hierarchy says the opposite.",
+      "pause": 400
+    },
+    {
+      "text": "To assert \"backer prefix B is operated by pool P\" you need a signature from the cold key — which is offline by design. The keys that are on the node prove block-signing, not pool ownership, and reusing them for identity attestations is the key-reuse / blast-radius anti-pattern the discovery document itself warns against. So the node holding a key does not help: the authoritative key is deliberately absent, and the present keys must not be repurposed.",
+      "pause": 400
+    },
+    {
+      "text": "What stake-weighted selection actually requires:",
+      "pause": 400
+    },
+    {
+      "text": "Bind backer → pool: one offline cold-key signature. Produced air-gapped, once, the same way pool registration is. No node, no plugin, no online key.",
+      "pause": 300
+    },
+    {
+      "text": "Read the stake weight: a public ledger lookup. \"Pool P controls stake S\" is public chain data any verifier, watcher or the super watcher reads without keys.",
+      "pause": 300
+    },
+    {
+      "text": "(Optional) liveness: op-cert / block-production checks — also fully public on-chain.",
+      "pause": 300
+    },
+    {
+      "text": "Every input is an offline signature or a public read. Better still, the \"pool → backer\" attestation is an ACDC / a cardano-keri registry entry: the pool identity is just another AID, the binding is anchored on-chain, and stake-weighted trust becomes \"read the binding, read the stake\". The entire mechanism is buildable with cardano-keri + public stake reads + zero Amaru changes.",
+      "pause": 400
+    }
+  ],
+  "finding": [
+    {
+      "text": "Finding.",
+      "pause": 500
+    },
+    {
+      "text": "No operation in the design demonstrably requires being inside Amaru. Every candidate — anchoring, backing, watching, stake-weighted selection, key custody — is public-read, off-chain-signed, or an on-chain validator. The one thing an in-process plugin could uniquely offer is proximity to the node's keys, which is precisely the thing to avoid. \"Node-level attribution\" is best read as anchored on the chain the node serves, with node-adjacent agents — not as code inside the consensus process.",
+      "pause": 400
+    }
+  ],
+  "proposed-discussion-order-for-the-session": [
+    {
+      "text": "Proposed discussion order for the session.",
+      "pause": 500
+    },
+    {
+      "text": "The discovery document's draft agenda (§5) runs: goal → Amaru architecture walkthrough & extension points → KERI/ACDC integration points → security & isolation → performance → contribution model → phase-1. That ordering front-loads how to extend the node before anyone has established whether the node needs extending at all — so three of its blocks (architecture walkthrough, isolation, performance/resources) presuppose Scope B and become largely moot if the answer is Scope A.",
+      "pause": 400
+    },
+    {
+      "text": "Reorder around the gating decisions. Each item below, if resolved, shrinks or deletes the ones after it.",
+      "pause": 400
+    },
+    {
+      "text": "The single most valuable outcome is settling 1 and 2. Everything the document treats as parallel open questions is in fact a dependency chain hanging off those two.",
+      "pause": 400
+    }
+  ],
+  "open-questions-for-the-discovery-session": [
+    {
+      "text": "Open questions for the discovery session.",
+      "pause": 500
+    },
+    {
+      "text": "Posed from the node-developer side, seeded by the analysis above. Grouped to match the discussion order above.",
+      "pause": 400
+    },
+    {
+      "text": "Scope and framing",
+      "pause": 400
+    },
+    {
+      "text": "Does \"at the node layer\" mean in the node process, or on the chain the node serves, via node-adjacent agents? cardano-keri assumes the latter.",
+      "pause": 300
+    },
+    {
+      "text": "Is phase-1 attribution MPFS plugin support plus an identity/key-state plugin design, the ACDC credential anchoring (schema + TEL/revocation), or both?",
+      "pause": 300
+    },
+    {
+      "text": "Is the ask that Amaru become a KERI backer (anchor arbitrary KELs, schemas and TEL revocation registries for any prefix), rather than serve chain data to MPFS plugins and a per-company oracle? If so, is \"node-level attribution\" simply = fold cardano-backer into the Amaru operator fleet?",
+      "pause": 300
+    },
+    {
+      "text": "Indexing seam",
+      "pause": 400
+    },
+    {
+      "text": "Scope A (node indexes nothing attribution-specific; sidecar does) or Scope B (node hosts an AID → key-state + proof resolver)? Everything else cascades from this.",
+      "pause": 300
+    },
+    {
+      "text": "In Scope A, is cage UTxO snapshotting the agreed contention workaround for MPFS value-write builders, with stale snapshots rebuilt off-chain?",
+      "pause": 300
+    },
+    {
+      "text": "Is a relay-capable node sufficient for phase 1, or is block production ever on the path? (The design never needs the producer.)",
+      "pause": 300
+    },
+    {
+      "text": "KERI roles",
+      "pause": 400
+    },
+    {
+      "text": "Our oracle already includes a KERI watcher (KEL → Cardano mirroring + duplicity detection). Is being a KERI witness in scope for phase 1, or explicitly out?",
+      "pause": 300
+    },
+    {
+      "text": "Does the watcher run as a sidecar beside Amaru, or does Veridian expect it inside the node?",
+      "pause": 300
+    },
+    {
+      "text": "Business model",
+      "pause": 400
+    },
+    {
+      "text": "Hosting cardano-backer is already permissionless and nearly free, and it is not a business, because a backer is not selected, not paid, and gains nothing from being an SPO. What does the integration add — stake-weighted selection, a payment rail, a discovery/reputation layer? None of these require touching consensus, and none are cardano-backer as it exists today.",
+      "pause": 300
+    },
+    {
+      "text": "The node boundary",
+      "pause": 400
+    },
+    {
+      "text": "What operation, concretely, must live inside Amaru as opposed to in a sidecar, in cardano-keri, or on-chain? If the answer involves the SPO's signing key, that is a reason to keep it out of the node, not in a plugin.",
+      "pause": 300
+    },
+    {
+      "text": "Dependencies",
+      "pause": 400
+    },
+    {
+      "text": "~~Blake2b-256 / F-prefix digest agility in Veridian~~ — dissolved by the E-native contract (2026-07-16): the seq-0 binding holds for unmodified Blake3 Veridian identities — see Veridian Bridge.",
+      "pause": 300
+    },
+    {
+      "text": "Without on-chain Blake3 + CESR parsing builtins, trustless burn/duplicity checks are weakened. Is that a protocol ask, or do we accept the challenge- period mitigation?",
+      "pause": 300
+    }
+  ],
+  "references": [
+    {
+      "text": "References.",
+      "pause": 500
+    },
+    {
+      "text": "Veridian × Amaru — Node-Level KERI/ACDC Attribution, Discovery & Planning (working document, July 2026)",
+      "pause": 300
+    },
+    {
+      "text": "cardano-foundation/cardano-backer — KERI witness/backer anchoring KELs + schemas on Cardano",
+      "pause": 300
+    },
+    {
+      "text": "cardano-foundation/veridian-wallet — CF's KERI/ACDC wallet with an optional Cardano trust layer",
+      "pause": 300
+    },
+    {
+      "text": "KERI specification — witnesses & ledger registrar backers",
+      "pause": 300
+    },
+    {
+      "text": "Veridian Bridge · Super Watcher · vLEI Bridge",
+      "pause": 300
+    }
+  ],
+  "_source": {
+    "file": "amaru-integration.md",
+    "sha256": "7d0e6694877e37f131a3aa3e72669d4c1ec614b3d956b611fc342eee204de60e"
+  }
+}

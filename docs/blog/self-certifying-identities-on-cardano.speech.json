@@ -1,0 +1,410 @@
+{
+  "self-certifying-identities-on-cardano-from-design-to-settled-stories": [
+    {
+      "text": "Self-certifying identities on Cardano: from design to settled stories.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "pause": 400
+    },
+    {
+      "text": "Category: Engineering & Research · updated after PR #150",
+      "pause": 400
+    },
+    {
+      "text": "cardano-keri is trying to make one practical promise: a Cardano application can keep referring to the same organization while that organization's keys change safely.",
+      "pause": 400
+    },
+    {
+      "text": "The identity comes from KERI, the Key Event Receipt Infrastructure. KERI calls an identity an AID, or Autonomic Identifier. Its KEL, the Key Event Log, records signed inception and rotation events. KERI witnesses issue receipts when they accept an event, giving other systems evidence that the event was publicly seen.",
+      "pause": 400
+    },
+    {
+      "text": "Cardano does not store the whole KEL. It stores a checkpoint: one sovereign UTxO carrying an AID-derived token, the current keys and thresholds, the next key commitments, the witnesses, and an escrow.",
+      "pause": 400
+    },
+    {
+      "text": "The design is no longer only a diagram. A genuine two-key identity has registered, closed, rotated, and completed two Freeze/response rounds on a protocol-11 development network with production transaction limits. This article explains what those stories proved and what remains closed.",
+      "pause": 400
+    }
+  ],
+  "one-stable-token-rotating-keys": [
+    {
+      "text": "One stable token, rotating keys.",
+      "pause": 500
+    },
+    {
+      "text": "The checkpoint token is the stable Cardano handle. Its asset name derives from the KERI AID. A rotation spends the current checkpoint UTxO and creates the next one with the same token and updated inline datum.",
+      "pause": 400
+    },
+    {
+      "text": "An application integrates with the stable asset, not a public key that must remain unchanged forever.",
+      "pause": 400
+    },
+    {
+      "text": "There is no shared key-state registry in the current design. Each identity has its own UTxO, so Alice's rotation does not contend with Bob's. An indexer may locate the asset, but the consuming transaction must validate the actual ledger output. Location is not authority.",
+      "pause": 400
+    }
+  ],
+  "why-registration-is-two-transactions": [
+    {
+      "text": "Why registration is two transactions.",
+      "pause": 500
+    },
+    {
+      "text": "Standard KERI AIDs use BLAKE3. Plutus does not have a native BLAKE3 builtin, so the project implements the hash in Aiken. It fits, but putting that work beside every other Register check makes the transaction unnecessarily large and expensive.",
+      "pause": 400
+    },
+    {
+      "text": "Registration separates the work:",
+      "pause": 400
+    },
+    {
+      "text": "A BLAKE3 premint transaction proves that the inception bytes bind to the claimed AID and mints a deterministic fact token.",
+      "pause": 300
+    },
+    {
+      "text": "Register consumes and burns that fact token while creating the bonded checkpoint.",
+      "pause": 300
+    },
+    {
+      "text": "The fact token is not a key, credential, or permission. It is a one-use claim about bytes.",
+      "pause": 400
+    },
+    {
+      "text": "Register itself uses a bare Register mint redeemer. The large inception bytes, offsets, controller signatures, and witness receipts ride in an ObserverEnvelope attached to a zero-lovelace withdrawal. The withdrawal executes a reference stake script—the registration observer—without moving reward value.",
+      "pause": 400
+    },
+    {
+      "text": "That observer verifies the KERI evidence. The thin checkpoint policy verifies the token, ACTIVE output, datum, and escrow. Both scripts evaluate the same transaction, so neither can be bypassed.",
+      "pause": 400
+    },
+    {
+      "text": "This transaction shape settled in PR #146. Register used about 1.9 million memory units, roughly 11% of the 16.5 million production limit.",
+      "pause": 400
+    }
+  ],
+  "why-advance-requires-witnesses": [
+    {
+      "text": "Why Advance requires witnesses.",
+      "pause": 500
+    },
+    {
+      "text": "Pre-rotation is KERI's answer to current-key theft. The current checkpoint already commits to the keys that may become current next. A thief who steals only today's keys cannot freely choose tomorrow's keys.",
+      "pause": 400
+    },
+    {
+      "text": "Advance checks more than that commitment:",
+      "pause": 400
+    },
+    {
+      "text": "the rotation continues from the stored KERI event;",
+      "pause": 300
+    },
+    {
+      "text": "revealed keys match the stored next-key commitments;",
+      "pause": 300
+    },
+    {
+      "text": "both controller thresholds pass;",
+      "pause": 300
+    },
+    {
+      "text": "the output is exactly sequence plus one; and",
+      "pause": 300
+    },
+    {
+      "text": "receipts from the incoming witness set satisfy the event's toad.",
+      "pause": 300
+    },
+    {
+      "text": "toad is KERI's witness threshold. When it is greater than zero, controller signatures and elapsed time never replace the required receipts.",
+      "pause": 400
+    },
+    {
+      "text": "This closes a Cardano-first attack. Without the witness gate, a controller could activate one key state on Cardano, use it for an irreversible action, and only then publish a different KERI history. Punishment afterward cannot roll back the Cardano action, so the receipt check belongs before activation.",
+      "pause": 400
+    },
+    {
+      "text": "PR #148 settled a genuine witnessed two-key Advance. It also rejected stolen-current, below-successor-threshold, and under-witnessed attempts. The heavy Advance observer used 4,110,025 memory units.",
+      "pause": 400
+    }
+  ],
+  "thin-state-machine-heavy-observers": [
+    {
+      "text": "Thin state machine, heavy observers.",
+      "pause": 500
+    },
+    {
+      "text": "The deployed checkpoint program protects state mechanics. Operation-specific reference scripts perform the large KERI predicates:",
+      "pause": 400
+    },
+    {
+      "text": "a lifecycle observer for Register;",
+      "pause": 300
+    },
+    {
+      "text": "an Advance observer for rotation and ARMED response; and",
+      "pause": 300
+    },
+    {
+      "text": "an enforcement observer for Freeze.",
+      "pause": 300
+    },
+    {
+      "text": "The latest settled sizes are:",
+      "pause": 400
+    },
+    {
+      "text": "The applied-script limit is 16,133 bytes. The Advance observer therefore has only 3 bytes of headroom. It works today but is not maintainable; #149 must create space before the seven-key rotation.",
+      "pause": 400
+    },
+    {
+      "text": "Reference delivery matters too. Copying the checkpoint and observers inline would exceed the 16,384-byte transaction-size limit. The builder publishes the scripts once in reference outputs and later transactions refer to them.",
+      "pause": 400
+    }
+  ],
+  "lag-and-dishonesty-are-different-failures": [
+    {
+      "text": "Lag and dishonesty are different failures.",
+      "pause": 500
+    },
+    {
+      "text": "A KERI event can move before its Cardano checkpoint. That is lag, not necessarily dishonesty. A different problem occurs when an identity publishes two fully witnessed histories that cannot both be true.",
+      "pause": 400
+    },
+    {
+      "text": "The escrow separates the two:",
+      "pause": 400
+    },
+    {
+      "text": "The delay bond B, about 5 ADA in the reference deployment, polices liveness.",
+      "pause": 300
+    },
+    {
+      "text": "The divergence bond D_reg, about 1000 ADA in the reference deployment, polices truth.",
+      "pause": 300
+    },
+    {
+      "text": "Both are deployment parameters. Their different sizes and payout conditions are part of the security model.",
+      "pause": 400
+    }
+  ],
+  "freeze-is-a-response-window": [
+    {
+      "text": "Freeze is a response window.",
+      "pause": 500
+    },
+    {
+      "text": "A hunter — in this V1 design, the challenger of a lagging checkpoint — with a witnessed conflicting rotation ahead of the ACTIVE tip may submit Freeze. The transaction:",
+      "pause": 400
+    },
+    {
+      "text": "preserves the whole checkpoint value;",
+      "pause": 300
+    },
+    {
+      "text": "records the hunter and a hard deadline;",
+      "pause": 300
+    },
+    {
+      "text": "moves the token to ARMED; and",
+      "pause": 300
+    },
+    {
+      "text": "makes consumers fail closed immediately.",
+      "pause": 300
+    },
+    {
+      "text": "Before the deadline, the honest side answers with an ordinary Advance. It returns to ACTIVE and keeps B. No special current-key signature is needed beyond the genuine KERI event evidence.",
+      "pause": 400
+    },
+    {
+      "text": "Only the first four transitions in that diagram have settled small-identity stories. Claim/thaw is issue #138, and Convict is issue #151. Convict burns the token and leaves no successor output at all — there is no tombstone state to observe, and the same AID may later register again.",
+      "pause": 400
+    }
+  ],
+  "one-old-proof-cannot-freeze-forever": [
+    {
+      "text": "One old proof cannot freeze forever.",
+      "pause": 500
+    },
+    {
+      "text": "The Freeze proof is relative to the exact checkpoint tip. A response changes that tip, so the previous conflict is stale.",
+      "pause": 400
+    },
+    {
+      "text": "The runner for PR #150 performed a full drill:",
+      "pause": 400
+    },
+    {
+      "text": "register;",
+      "pause": 300
+    },
+    {
+      "text": "record a rotation;",
+      "pause": 300
+    },
+    {
+      "text": "Freeze with first-round evidence;",
+      "pause": 300
+    },
+    {
+      "text": "respond by advancing;",
+      "pause": 300
+    },
+    {
+      "text": "replay the exact first-round Freeze evidence and observe rejection;",
+      "pause": 300
+    },
+    {
+      "text": "produce fresh sibling rotations at the next sequence;",
+      "pause": 300
+    },
+    {
+      "text": "Freeze again; and",
+      "pause": 300
+    },
+    {
+      "text": "respond again.",
+      "pause": 300
+    },
+    {
+      "text": "Both response transactions preserved the complete bond. This demonstrates multi-round safety at the applied transaction boundary, not just in a pure predicate test.",
+      "pause": 400
+    }
+  ],
+  "advance-totality": [
+    {
+      "text": "Advance-totality.",
+      "pause": 500
+    },
+    {
+      "text": "A sovereign UTxO is safe only if an attacker cannot trap it in a busy state. The target rule is advance-totality: a genuine next KERI event can always make progress back toward ACTIVE.",
+      "pause": 400
+    },
+    {
+      "text": "ACTIVE advances directly.",
+      "pause": 300
+    },
+    {
+      "text": "ARMED advances directly before the deadline.",
+      "pause": 300
+    },
+    {
+      "text": "After the deadline, ClaimFreeze protects the hunter's earned payment, then the same ordinary Advance thaws FROZEN while re-posting B.",
+      "pause": 300
+    },
+    {
+      "text": "The last case takes two transitions. That is intentional: liveness must not erase a reward that became valid after a complete unanswered window.",
+      "pause": 400
+    }
+  ],
+  "close-is-already-real": [
+    {
+      "text": "Close is already real.",
+      "pause": 500
+    },
+    {
+      "text": "Close is the voluntary retirement path. Current controller signatures bind the exact checkpoint input and refund address. The transaction burns the AID-derived token and refunds the complete checkpoint value.",
+      "pause": 400
+    },
+    {
+      "text": "PR #147 settled Register followed by Close and covered unauthorized attempts in the on-chain test suite.",
+      "pause": 400
+    }
+  ],
+  "what-remains-honest-to-say": [
+    {
+      "text": "What remains honest to say.",
+      "pause": 500
+    },
+    {
+      "text": "The current evidence supports a precise claim:",
+      "pause": 400
+    },
+    {
+      "text": "A genuine two-key identity can register, close, rotate, be armed by fresh witnessed conflict evidence, and answer twice under production Cardano transaction limits on a protocol-11 development network.",
+      "pause": 400
+    },
+    {
+      "text": "It does not support these stronger claims:",
+      "pause": 400
+    },
+    {
+      "text": "ClaimFreeze and thaw are not open yet.",
+      "pause": 300
+    },
+    {
+      "text": "Conviction has not settled through the small production-story checkpoint.",
+      "pause": 300
+    },
+    {
+      "text": "A two-key result does not prove the real three-of-seven GLEIF cost profile.",
+      "pause": 300
+    },
+    {
+      "text": "Development-network settlement is not mainnet deployment.",
+      "pause": 300
+    },
+    {
+      "text": "Registering an AID does not prove that it represents a legal entity; that requires the later ACDC credential layer.",
+      "pause": 300
+    },
+    {
+      "text": "Freeze or conviction cannot reverse a Cardano action that already settled.",
+      "pause": 300
+    },
+    {
+      "text": "Cardano cannot react to an off-chain KERI event until somebody reveals it in a transaction.",
+      "pause": 300
+    }
+  ],
+  "the-next-ladder": [
+    {
+      "text": "The next ladder.",
+      "pause": 500
+    },
+    {
+      "text": "The immediate order is:",
+      "pause": 400
+    },
+    {
+      "text": "seize and thaw the small identity in #138;",
+      "pause": 300
+    },
+    {
+      "text": "convict the small identity in #151;",
+      "pause": 300
+    },
+    {
+      "text": "register the genuine GLEIF-scale identity in #139;",
+      "pause": 300
+    },
+    {
+      "text": "close it in #145;",
+      "pause": 300
+    },
+    {
+      "text": "shrink the Advance observer in #149;",
+      "pause": 300
+    },
+    {
+      "text": "rotate, freeze, seize, and convict it through #144, #140, #141, and #152.",
+      "pause": 300
+    },
+    {
+      "text": "The story ladder records the exact evidence and the roadmap explains what follows after the identity core: credential verification, application authorization, a KERI wallet bridge, and real pilots.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "self-certifying-identities-on-cardano.md",
+    "sha256": "95723d278b1b43cee01804c6e1417aa116a27e46b65916ef6756848ca146358e"
+  }
+}

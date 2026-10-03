@@ -1,0 +1,310 @@
+{
+  "operational-constraints": [
+    {
+      "text": "Operational constraints.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "pause": 400
+    },
+    {
+      "text": "This page describes the sovereign per-AID checkpoint that has settled in the small-identity stories. It does not describe the retired shared-registry design.",
+      "pause": 400
+    }
+  ],
+  "per-identity-serialization": [
+    {
+      "text": "Per-identity serialization.",
+      "pause": 500
+    },
+    {
+      "text": "Each KERI AID has its own checkpoint UTxO. An operation spends that UTxO and, unless it closes or eventually becomes terminal, creates its successor.",
+      "pause": 400
+    },
+    {
+      "text": "Consequences:",
+      "pause": 400
+    },
+    {
+      "text": "operations for different AIDs do not contend on one global state input;",
+      "pause": 300
+    },
+    {
+      "text": "two transactions for the same AID still race for the same current UTxO;",
+      "pause": 300
+    },
+    {
+      "text": "a losing transaction must resolve the new tip, rebuild, and re-evaluate; and",
+      "pause": 300
+    },
+    {
+      "text": "no transaction builder can reserve the checkpoint ahead of settlement.",
+      "pause": 300
+    },
+    {
+      "text": "This is ordinary Cardano UTxO contention. It scales by identity rather than globally.",
+      "pause": 400
+    }
+  ],
+  "transaction-and-script-size": [
+    {
+      "text": "Transaction and script size.",
+      "pause": 500
+    },
+    {
+      "text": "The protocol-11 development network uses:",
+      "pause": 400
+    },
+    {
+      "text": "16,384 bytes as the transaction-size limit; and",
+      "pause": 300
+    },
+    {
+      "text": "16,133 bytes as the applied reference-script budget.",
+      "pause": 300
+    },
+    {
+      "text": "The current architecture stores the checkpoint and observer programs in reference-script UTxOs. Operation transactions refer to those outputs instead of copying several validators inline.",
+      "pause": 400
+    },
+    {
+      "text": "Latest settled sizes:",
+      "pause": 400
+    },
+    {
+      "text": "The Advance observer's 3-byte margin is a release blocker for further feature work. #149 must create at least 1 KB of headroom before the real seven-key rotation.",
+      "pause": 400
+    }
+  ],
+  "execution-budgeting": [
+    {
+      "text": "Execution budgeting.",
+      "pause": 500
+    },
+    {
+      "text": "The transaction builder uses a two-pass process:",
+      "pause": 400
+    },
+    {
+      "text": "construct and evaluate the transaction;",
+      "pause": 300
+    },
+    {
+      "text": "measure every script purpose;",
+      "pause": 300
+    },
+    {
+      "text": "derive declared execution units with the configured margin;",
+      "pause": 300
+    },
+    {
+      "text": "prove the aggregate fits the protocol limit; and",
+      "pause": 300
+    },
+    {
+      "text": "rebuild and submit the exact transaction with those budgets.",
+      "pause": 300
+    },
+    {
+      "text": "Observed use and declared limits must be reported separately. A script fitting alone is not enough if all scripts in the same transaction exceed the aggregate.",
+      "pause": 400
+    }
+  ],
+  "reference-script-lifecycle": [
+    {
+      "text": "Reference-script lifecycle.",
+      "pause": 500
+    },
+    {
+      "text": "Observers are Plutus stake scripts. A deployment must:",
+      "pause": 400
+    },
+    {
+      "text": "publish each exact script in a reference output;",
+      "pause": 300
+    },
+    {
+      "text": "register its stake credential;",
+      "pause": 300
+    },
+    {
+      "text": "preserve the output reference and script hash;",
+      "pause": 300
+    },
+    {
+      "text": "verify the reference transaction settled before building dependent operations; and",
+      "pause": 300
+    },
+    {
+      "text": "prevent the observer credential from being deregistered through an unsupported path.",
+      "pause": 300
+    },
+    {
+      "text": "Register, Advance, and Freeze use a zero-lovelace withdrawal to force the configured observer to execute. See Observer architecture.",
+      "pause": 400
+    }
+  ],
+  "validity-intervals": [
+    {
+      "text": "Validity intervals.",
+      "pause": 500
+    },
+    {
+      "text": "Freeze derives its deadline from the transaction's finite upper validity bound plus the configured response window. An ARMED response must itself have a finite upper bound strictly before that deadline.",
+      "pause": 400
+    },
+    {
+      "text": "Builders must query the current era history and choose a horizon-aware interval. Accelerated development networks can have a much shorter forecast horizon than a production network; fixed wall-clock offsets caused real PastHorizon failures during the story work.",
+      "pause": 400
+    }
+  ],
+  "indexer-and-discovery-behavior": [
+    {
+      "text": "Indexer and discovery behavior.",
+      "pause": 500
+    },
+    {
+      "text": "The AID-derived policy and asset name let any node or indexer locate candidate checkpoint UTxOs. The result is a convenience for liveness, not authority.",
+      "pause": 400
+    },
+    {
+      "text": "Operational clients should:",
+      "pause": 400
+    },
+    {
+      "text": "query more than one source when practical;",
+      "pause": 300
+    },
+    {
+      "text": "revalidate the token, script, datum, AID, and role against the ledger;",
+      "pause": 300
+    },
+    {
+      "text": "refresh immediately when the outref is already spent;",
+      "pause": 300
+    },
+    {
+      "text": "fail closed on zero or multiple ACTIVE candidates; and",
+      "pause": 300
+    },
+    {
+      "text": "never pick a candidate by indexer ordering.",
+      "pause": 300
+    },
+    {
+      "text": "An indexer outage blocks construction. It does not permit fallback to stale or unverified authority.",
+      "pause": 400
+    }
+  ],
+  "settlement-and-monitoring": [
+    {
+      "text": "Settlement and monitoring.",
+      "pause": 500
+    },
+    {
+      "text": "Submitting a transaction is not settlement. A production operator must track:",
+      "pause": 400
+    },
+    {
+      "text": "mempool acceptance;",
+      "pause": 300
+    },
+    {
+      "text": "inclusion in a block;",
+      "pause": 300
+    },
+    {
+      "text": "the chosen confirmation depth;",
+      "pause": 300
+    },
+    {
+      "text": "rollback and resubmission;",
+      "pause": 300
+    },
+    {
+      "text": "the current unspent checkpoint output;",
+      "pause": 300
+    },
+    {
+      "text": "reference-script availability; and",
+      "pause": 300
+    },
+    {
+      "text": "KERI events that have not yet reached the checkpoint.",
+      "pause": 300
+    },
+    {
+      "text": "High-value applications must define both Cardano settlement depth and a KERI freshness policy. Neither is universal.",
+      "pause": 400
+    }
+  ],
+  "funding": [
+    {
+      "text": "Funding.",
+      "pause": 500
+    },
+    {
+      "text": "ACTIVE and ARMED require:",
+      "pause": 400
+    },
+    {
+      "text": "Close refunds the complete checkpoint value to the signed address. A future timeout Claim pays exactly B to the recorded hunter (in the shipped V1, the challenger of a lagging checkpoint) and leaves minimum + D_reg in FROZEN. A thaw must add a new B.",
+      "pause": 400
+    },
+    {
+      "text": "Anyone may fund permissionless Register or thaw, but funding does not create a refund right. Commercial relayers need an off-chain payment arrangement.",
+      "pause": 400
+    }
+  ],
+  "current-deployment-boundary": [
+    {
+      "text": "Current deployment boundary.",
+      "pause": 500
+    },
+    {
+      "text": "The settled stories run on an ephemeral private development network. A production deployment still needs:",
+      "pause": 400
+    },
+    {
+      "text": "final validator parameters and economic analysis;",
+      "pause": 300
+    },
+    {
+      "text": "durable reference-script publication;",
+      "pause": 300
+    },
+    {
+      "text": "public network addresses and policy IDs;",
+      "pause": 300
+    },
+    {
+      "text": "redundant KERI event discovery;",
+      "pause": 300
+    },
+    {
+      "text": "checkpoint/indexer monitoring;",
+      "pause": 300
+    },
+    {
+      "text": "incident procedures;",
+      "pause": 300
+    },
+    {
+      "text": "mainnet execution and fee measurements; and",
+      "pause": 300
+    },
+    {
+      "text": "completion of Claim/thaw, Convict, and the real-scale ladder.",
+      "pause": 300
+    }
+  ],
+  "_source": {
+    "file": "operational.md",
+    "sha256": "468a7de716ad98890d86eff9a300179ec84c6d39847e41c5c3c6a6be9f2dc68f"
+  }
+}

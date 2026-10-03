@@ -1,0 +1,10 @@
+{
+  "provider": "DeepInfra",
+  "model": "hexgrad/Kokoro-82M",
+  "endpoint": "https://api.deepinfra.com/v1/inference/hexgrad/Kokoro-82M",
+  "voice": { "name": "Puck", "preset_voice": ["am_puck"] },
+  "output_format": "mp3",
+  "speed": 0.95,
+  "service_tier": "default",
+  "return_timestamps": true
+}

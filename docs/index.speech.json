@@ -1,0 +1,276 @@
+{
+  "cardano-keri": [
+    {
+      "text": "cardano-keri.",
+      "pause": 500
+    },
+    {
+      "text": "cardano-keri projects a rotating KERI identity into a stable Cardano checkpoint.",
+      "pause": 400
+    },
+    {
+      "text": "Play the design before you read it",
+      "pause": 400
+    },
+    {
+      "text": "The accepted design is a proved Lean machine, and the two simulations below are transcriptions of it, checked against the Lean by replay on every step. Pick a story and play it; every refusal names the rule that refused.",
+      "pause": 400
+    },
+    {
+      "text": "The checkpoint simulator — one identity, its keys, its three sums of money, the hunters (anyone paid to land a rotation, or to freeze a checkpoint whose pool cannot pay), the treasury: fifteen stories with their forks, the theorems lighting up as you play.",
+      "pause": 300
+    },
+    {
+      "text": "The registry simulator — one incarnation per identity: requests, batches, the gating plugin, the leaf every identity has.",
+      "pause": 300
+    },
+    {
+      "text": "KERI is Key Event Receipt Infrastructure, the identity protocol used by the Global Legal Entity Identifier Foundation's verifiable LEI ecosystem. A KERI AID (Autonomic Identifier) keeps its identity while its controller keys rotate. Cardano applications can refer to the AID-derived checkpoint token instead of permanently binding themselves to one key.",
+      "pause": 400
+    }
+  ],
+  "how-to-read-these-pages": [
+    {
+      "text": "How to read these pages.",
+      "pause": 500
+    },
+    {
+      "text": "The project is mid-way through adopting the accepted design: a design settled in September 2026 that keeps the checkpoint, adds a poison (the owner's own lock on the checkpoint) and a registry (one leaf per identity), and removes the enforcement economy that main still carries. Older issues and the wiki call this design the M1 return: the return, inside the first milestone, from an abandoned enforcement economy to a checkpoint that only projects key state. So every claim in these docs is in one of three states, and each page says which one it is making:",
+      "pause": 400
+    },
+    {
+      "text": "Nothing here that is only designed is described as if it were deployed.",
+      "pause": 400
+    }
+  ],
+  "shipped-on-main-today": [
+    {
+      "text": "Shipped on main today.",
+      "pause": 500
+    },
+    {
+      "text": "Six applied programs are published as reference scripts on Cardano preprod: five from deploy/preprod/m1-manifest.json (published 2026-07-28 from commit 50a5820) and the endpoint board from deploy/preprod/board-manifest.json (published 2026-07-29 from commit 95b554f):",
+      "pause": 400
+    },
+    {
+      "text": "Deployment parameters: registration bond 1,000 tADA, freeze bond 5 tADA, freeze window 10,000 slots.",
+      "pause": 400
+    },
+    {
+      "text": "The checkpoint datum is pure key state — nine fields, no lifecycle flag: the AID, current keys and threshold, next-key commitments and next threshold, witnesses and toad, the Cardano sequence, and the native KERI sequence (onchain/lib/cardano_keri/checkpoint/datum.ak). Enforcement state is carried by role addresses around the same token.",
+      "pause": 400
+    },
+    {
+      "text": "The packaged ckeri exposes deploy, manifest verify, register, advance, close, status, list, checkpoint, payer, and the five board verbs. It does not expose freeze, claim, or convict: those transactions exist only in the end-to-end harness.",
+      "pause": 400
+    },
+    {
+      "text": "The transaction path does not require cardano-cli",
+      "pause": 400
+    },
+    {
+      "text": "The packaged ckeri can deploy the reference scripts, register an identity, advance a rotation, post/update/retire endpoint-board records, and close a checkpoint on a machine with no cardano-cli installed at all. Its runtime closure does not include cardano-cli; a closure check enforces that boundary and has been demonstrated to fail when the retired dependency is reintroduced.",
+      "pause": 400
+    },
+    {
+      "text": "Current evidence",
+      "pause": 400
+    },
+    {
+      "text": "Settled on preprod on 2026-08-06 with a genuine KLI identity: registration 6ecc2e07…, advance f0f3a18f…, close 446f0d83…. Earlier, on a protocol-11 development network running production transaction limits, a two-key identity settled Register, Close, Advance, and two Freeze/response rounds. Dates, transaction IDs and their sources are on the story ladder. Separately, a witnessed 2-of-5 KLI identity has registered and advanced its live V1 checkpoint on preprod; see Rotate your identity.",
+      "pause": 400
+    },
+    {
+      "text": "Not a production deployment",
+      "pause": 400
+    },
+    {
+      "text": "Settled development-network and preprod transactions prove the vertical path through the production validators and the node boundary. They do not make this a mainnet service. Claim/thaw, conviction, real three-of-seven scale, full vLEI credentials, and wallet integration still have open stories.",
+      "pause": 400
+    }
+  ],
+  "the-accepted-design": [
+    {
+      "text": "The accepted design.",
+      "pause": 500
+    },
+    {
+      "text": "The design settled between 2026-09-02 and 2026-09-03 (project rulings D-022 to D-040). It is proved in lean/CardanoKeri/Checkpoint.lean — 87 theorems in CheckpointGoals.lean, no sorry, standard axioms only — and the simulator above is a transcription of that Lean, checked by replay.",
+      "pause": 400
+    },
+    {
+      "text": "One UTxO per identity, holding the current key state, a token minted once and never again, and three sums of money that never mix:",
+      "pause": 400
+    },
+    {
+      "text": "D_reg, the conviction bond — the stake a duplicity proof seizes. Never a fee source.",
+      "pause": 300
+    },
+    {
+      "text": "B, the freeze bond — what a hunter takes when the pool cannot pay for a rotation.",
+      "pause": 300
+    },
+    {
+      "text": "the pool — advance funds; pays the premium P, the fee for landing a rotation, to whoever lands it.",
+      "pause": 300
+    },
+    {
+      "text": "Three states, no withdraw. An identity is active (the checkpoint UTxO exists: live, poisoned or frozen), parked (no UTxO; the registry leaf holds the hash of the last checkpoint) or convicted (terminal). A rotation is the only thing that moves the keys; it carries a bond option (keep or deposit) and optionally a new refund address. deposit is the unfreeze: it refills B when a hunter has taken it. Every option other than keep, and every new refund address, is signed by the keys of the epoch the rotation opens (D-038) — so a relayer landing a public rotation can never park, age, or close the owner.",
+      "pause": 400
+    },
+    {
+      "text": "The poison is the piece that is genuinely new: a declaration signed by the current keys at their own threshold, over a short preimage bound to the policy, the AID and the sequence. Anyone may relay it; it is never witnessed. It makes the checkpoint unconsumable, and any witnessed rotation clears it — it belongs to the epoch of the keys that signed it, because in KERI possession of the next keys is control. It buys the owner the window between noticing a theft and rotating.",
+      "pause": 400
+    },
+    {
+      "text": "The registry is one leaf per AID — absent, live (the token is on chain), parked with the hash, or convicted — so an AID has at most one incarnation ever. Only convicted is terminal; a parked identity returns by a witnessed rotation later than the parked key state, with fresh bonds. The registry is the MPFS cage — a Merkle Patricia Forestry store whose every update passes through one validator — made permissionless (D-037), built today in singular, where it runs on a development network; see where the registry is built.",
+      "pause": 400
+    },
+    {
+      "text": "Leaving is the reap, the only close there is: a witnessed rotation by the next keys whose signed message names the payee of the premium and the refund address. The current keys keep exactly one Cardano power, the poison. Close answers to the next keys, never the current ones.",
+      "pause": 400
+    },
+    {
+      "text": "The consumer's rule, and the only thing outside the machine: authorize iff the checkpoint is present, both bonds are full, it is not poisoned, it is older than the juvenility window W (the age a checkpoint must reach before a consumer trusts it), and the payment's own signature satisfies the current threshold. Everything else fails closed.",
+      "pause": 400
+    }
+  ],
+  "what-the-accepted-design-removes": [
+    {
+      "text": "What the accepted design removes.",
+      "pause": 500
+    },
+    {
+      "text": "The record tree and its cursor, occupancy maps, the MPF fork and its upstream proposal, ever_duplicitous, and the whole ARMED/FROZEN enforcement economy — freeze-for-lag, the bounty, the entitlement, and the reaping of a paused checkpoint after a grace period (the word reap now names only the owner's close above). Interaction events (ixn) never touch the chain. Delegated identities are a later milestone.",
+      "pause": 400
+    },
+    {
+      "text": "The freeze that survives is a different thing: it is what a hunter takes when the owner's pool has run dry, not a punishment for lag.",
+      "pause": 400
+    }
+  ],
+  "what-is-planned": [
+    {
+      "text": "What is planned.",
+      "pause": 500
+    },
+    {
+      "text": "The accepted design is one milestone across two repositories, thirteen epics. The roadmap carries the ordering, the dependencies and the measurements that size the numbers still open. The short version: slim main (#319), measure it (#321), build the owner's edges (#322) and the hunter's (#323), integrate the registry (#324), put every role behind a ckeri command (#325), replay the fifteen stories as the acceptance suite (#326), and cut over preprod (#328).",
+      "pause": 400
+    }
+  ],
+  "start-here": [
+    {
+      "text": "Start here.",
+      "pause": 500
+    },
+    {
+      "text": "Why Cardano — how this differs from anchoring a KEL on a ledger, and what non-oracular trust buys.",
+      "pause": 300
+    },
+    {
+      "text": "Story ladder — what has actually settled, dated.",
+      "pause": 300
+    },
+    {
+      "text": "Roadmap — the plan for the accepted design and its thirteen epics.",
+      "pause": 300
+    },
+    {
+      "text": "KERI primer — AIDs, key events, pre-rotation, witnesses, and Veridian.",
+      "pause": 300
+    },
+    {
+      "text": "The KERI specification — KERI 1.1 as published by the Trust over IP working group; every story page links the clause it relies on, at the version the watcher conformance review pins.",
+      "pause": 300
+    },
+    {
+      "text": "The constitution — the rules every contributor works under; since 2026-09-11 the accepted Lean model is the behavioral authority, and a model error is escalated as a user story and fixed in the Lean before any code moves.",
+      "pause": 300
+    },
+    {
+      "text": "Identity operations — the operations, one by one, shipped and designed.",
+      "pause": 300
+    },
+    {
+      "text": "Observer architecture — thin checkpoints, reference scripts, zero-lovelace withdrawals, and the BLAKE3 premint fact token.",
+      "pause": 300
+    },
+    {
+      "text": "Register — Alice's identity appears on Cardano.",
+      "pause": 300
+    },
+    {
+      "text": "Rotate — Alice rotates, Hal lands it.",
+      "pause": 300
+    },
+    {
+      "text": "Poison — Mallory steals the current keys.",
+      "pause": 300
+    },
+    {
+      "text": "Close, reopen, revival — Alice leaves and comes back.",
+      "pause": 300
+    },
+    {
+      "text": "Hunters — the pool, the freeze, two hunters racing.",
+      "pause": 300
+    },
+    {
+      "text": "Consumer checklist — the treasury reads the checkpoint.",
+      "pause": 300
+    },
+    {
+      "text": "ACDC primer — the separate credential layer.",
+      "pause": 300
+    },
+    {
+      "text": "For the financial and institutional concepts behind the later use cases, see the Finance primer.",
+      "pause": 400
+    }
+  ],
+  "the-engineering-constraint": [
+    {
+      "text": "The engineering constraint.",
+      "pause": 500
+    },
+    {
+      "text": "observer-advance measures 16,130 bytes against a 16,133-byte applied-script limit — three bytes of headroom. The accepted design's datum change lands on exactly that script, which is why epic #319 ends with a size table and epic #322's datum decisions are taken from it rather than from taste. Two things move in the plan's favour: the advance observer's ARMED-response branch goes, and the three enforcement role addresses go from checkpoint_register. The net effect is unmeasured until #319.",
+      "pause": 400
+    },
+    {
+      "text": "Full measurements are in Observer architecture.",
+      "pause": 400
+    }
+  ],
+  "real-world-direction-vlei": [
+    {
+      "text": "Real-world direction: vLEI.",
+      "pause": 500
+    },
+    {
+      "text": "The longer-term goal is to let Cardano applications combine:",
+      "pause": 400
+    },
+    {
+      "text": "a current, consumable AID checkpoint;",
+      "pause": 300
+    },
+    {
+      "text": "an ACDC credential chain proving a legal or organizational role; and",
+      "pause": 300
+    },
+    {
+      "text": "current TEL non-revocation evidence.",
+      "pause": 300
+    },
+    {
+      "text": "Registering an AID answers \"which keys control this identifier?\" It does not answer \"which legal entity is this?\" The latter is a credential claim and remains a later roadmap layer. See the vLEI design and the roadmap.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "index.md",
+    "sha256": "3f769c036e0472ab96a504cf3349c49cccc12e6c4af32660d2e7bf4cf2179f2b"
+  }
+}

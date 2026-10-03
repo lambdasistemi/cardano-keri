@@ -1,0 +1,114 @@
+{
+  "register-your-identity-on-preprod": [
+    {
+      "text": "Register your identity on preprod.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "This page is the V1 ckeri register that ships on preprod: no uniqueness rule, no registry. The accepted design registers once through the registry (absence proof, insert, mint). Play Alice's identity appears on Cardano and the registry simulation. An identity is active, parked with the hash, or convicted. There is no withdraw.",
+      "pause": 400
+    },
+    {
+      "text": "ckeri register turns a standard keripy inception export into a funded V1 checkpoint on Cardano preprod. It does not create, rotate, or store KERI keys: the controller remains sovereign and ckeri consumes only the CESR bytes from kli export.",
+      "pause": 400
+    },
+    {
+      "text": "The export is KERI's inception event body and the AID it yields is a self-certifying identifier. --toad below is the witness threshold (witness designation); an identity with --toad 0 carries no receipts and is served at the consumer's risk.",
+      "pause": 400
+    },
+    {
+      "text": "This M1 flow needs:",
+      "pause": 400
+    },
+    {
+      "text": "keripy 1.3.5 kli;",
+      "pause": 300
+    },
+    {
+      "text": "the packaged ckeri binary and the committed deploy/preprod/m1-manifest.json;",
+      "pause": 300
+    },
+    {
+      "text": "a synced preprod node socket and payment signing key; and",
+      "pause": 300
+    },
+    {
+      "text": "at least 1,007 tADA plus transaction fees and a separate collateral UTxO.",
+      "pause": 300
+    },
+    {
+      "text": "The ACTIVE output carries 2 tADA minimum value, the 1,000 tADA registration deposit, and the 5 tADA freeze bond (in V1, the bond a freeze for lag claims).",
+      "pause": 400
+    }
+  ],
+  "export-a-kli-identity": [
+    {
+      "text": "Export a KLI identity.",
+      "pause": 500
+    },
+    {
+      "text": "Create and export the identity with KLI. An unwitnessed 1-of-1 example is:",
+      "pause": 400
+    },
+    {
+      "text": "For a witnessed 2-of-5 organization, resolve the selected witness OOBIs before cutting keys, then use five current and next keys with signing threshold two:",
+      "pause": 400
+    },
+    {
+      "text": "ckeri register checks declared witnesses against the released endpoint board. Pass --allow-unlisted-witnesses only after accepting reduced public watchability. Witness selection remains an off-chain controller policy; the validator does not impose a witness board.",
+      "pause": 400
+    }
+  ],
+  "register-and-inspect": [
+    {
+      "text": "Register and inspect.",
+      "pause": 500
+    },
+    {
+      "text": "All configuration is parsed by opt-env-conf. Command-line options, environment variables, and YAML are equivalent surfaces; the implementation does not use optparse-applicative. This environment-based invocation keeps the operational paths explicit:",
+      "pause": 400
+    },
+    {
+      "text": "Set KOIOS_TOKEN when authenticated Koios access is available. It is optional: anonymous status and settlement polling remain available to third parties. The token is read through opt-env-conf and is never printed in diagnostics.",
+      "pause": 400
+    },
+    {
+      "text": "register first mints a one-shot hash proof, waits for that exact asset and transaction, then burns it while minting the AID checkpoint token. status queries that exact token and fails closed unless the address, singleton quantity, inline V1 datum, AID, and 1,007 tADA escrow all agree.",
+      "pause": 400
+    },
+    {
+      "text": "Before selecting inputs, register verifies that the payment key derives the payment credential in CKERI_FUNDING_ADDRESS. Candidate out-refs are enumerated through Koios and individually resolved through N2C. Several funding inputs may be aggregated; the smallest suitable input is kept separate for collateral. Construction, key witnessing, and local submission all happen inside ckeri.",
+      "pause": 400
+    }
+  ],
+  "failure-and-repeat-semantics": [
+    {
+      "text": "Failure and repeat semantics.",
+      "pause": 500
+    },
+    {
+      "text": "An address with insufficient available value fails before submission with RegistrationFundingSelectionFailed (InsufficientFundingValue ...) (or EmptyIndexedSnapshot when it has no indexed UTxOs). The error names the required and greatest available values. The acceptance evidence asserts that this path prints no premint, register, or submission transaction ID.",
+      "pause": 400
+    },
+    {
+      "text": "The ledger deliberately has no global AID-unicity rule. Every controller is free to register another fully funded checkpoint copy, including after a conviction. ckeri register nevertheless refuses an already-live AID by default to prevent accidental duplicate escrows. The explicit --allow-existing-checkpoint override submits another valid copy and prints the residual warning. Once two copies exist, ckeri status reports an ambiguous checkpoint set instead of pretending there is one canonical output.",
+      "pause": 400
+    },
+    {
+      "text": "The mechanical capture is committed at deploy/preprod/m1-register-acceptance.txt. It records a fresh 1-of-1 KLI inception, a named underfunded failure with no submission, settled premint 167220b32479b2ae91eb4e754460b71bf51d44b331660ab31cf4e2264fb30b68, settled registration 6ecc2e0729347f5008a4f07ba18c2ce6ad745ace4911818b838037dfc83241e2, and the resulting live sequence-zero status for AID EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P.",
+      "pause": 400
+    },
+    {
+      "text": "The independent deploy/preprod/m1-register-historical-negative-acceptance.txt capture keeps the deployed-boundary already-registered, ambiguous-checkpoint, and unlisted-witness failures. The checker requires those actual failures in addition to the newer primary journey; it never treats a successful repeat or an override as negative evidence.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "register-preprod-identity.md",
+    "sha256": "824d4c096e18d5ed00a6d7236afffd12ca9242f355d8c0919ff3c4fa7d9b0d5a"
+  }
+}

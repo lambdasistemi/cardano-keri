@@ -1,0 +1,404 @@
+{
+  "veridian-bridge": [
+    {
+      "text": "Veridian bridge.",
+      "pause": 500
+    },
+    {
+      "text": "What ships, and the accepted design",
+      "pause": 400
+    },
+    {
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "pause": 400
+    }
+  ],
+  "what-veridian-is": [
+    {
+      "text": "What Veridian is.",
+      "pause": 500
+    },
+    {
+      "text": "Veridian is a TypeScript wallet built on Signify for KERI, the Key Event Receipt Infrastructure. It manages controller keys, creates KERI inception and rotation events, and collects receipts from KERI witnesses.",
+      "pause": 400
+    },
+    {
+      "text": "The current cardano-keri vertical stories use genuine keripy artifacts rather than a shipped Veridian SDK, but the integration boundary is the same: the wallet or relayer supplies exact KERI event bytes, indexed controller signatures, and indexed witness receipts. Cardano validates those artifacts before changing the checkpoint.",
+      "pause": 400
+    },
+    {
+      "text": "Integration status",
+      "pause": 400
+    },
+    {
+      "text": "The Register, Close, Advance, Freeze, and response transactions are implemented and settled for the small fixture. A production cardano-keri-sdk, WASM package, and Veridian user flow are future work. Types below describe the current ledger wire or an explicitly labelled future interface; they are not claims that a published SDK exists.",
+      "pause": 400
+    }
+  ],
+  "one-identity-one-checkpoint": [
+    {
+      "text": "One identity, one checkpoint.",
+      "pause": 500
+    },
+    {
+      "text": "Veridian names an identity with a KERI AID (Autonomic Identifier) and maintains its KEL (Key Event Log). cardano-keri derives a Cardano asset name from that AID. A quantity-one token and inline datum form the sovereign checkpoint UTxO.",
+      "pause": 400
+    },
+    {
+      "text": "There is no shared identity root, trie_key, or global key-state registry in the current transaction path.",
+      "pause": 400
+    },
+    {
+      "text": "The relayer does not need the controller's private keys for public projection operations. It receives already signed KERI evidence and may pay to submit it. The on-chain result is fixed by that evidence.",
+      "pause": 400
+    }
+  ],
+  "digest-boundary": [
+    {
+      "text": "Digest boundary.",
+      "pause": 500
+    },
+    {
+      "text": "Standard KERI AIDs and next-key commitments use BLAKE3. Plutus currently has no native BLAKE3 builtin, so cardano-keri uses its own Aiken implementation.",
+      "pause": 400
+    },
+    {
+      "text": "At registration:",
+      "pause": 400
+    },
+    {
+      "text": "the premint policy proves the inception-byte/AID binding and mints a fact token;",
+      "pause": 300
+    },
+    {
+      "text": "Register consumes and burns that token; and",
+      "pause": 300
+    },
+    {
+      "text": "the registration observer checks that the checkpoint datum faithfully projects the event.",
+      "pause": 300
+    },
+    {
+      "text": "At rotation:",
+      "pause": 400
+    },
+    {
+      "text": "the checkpoint stores KERI's next-key commitments byte-for-byte; and",
+      "pause": 300
+    },
+    {
+      "text": "the Advance observer checks the revealed keys against those commitments.",
+      "pause": 300
+    },
+    {
+      "text": "No Cardano-specific AID flavor or Blake2 replacement is required.",
+      "pause": 400
+    }
+  ],
+  "current-transaction-specifications": [
+    {
+      "text": "Current transaction specifications.",
+      "pause": 500
+    }
+  ],
+  "register": [
+    {
+      "text": "Register.",
+      "pause": 500
+    },
+    {
+      "text": "Registration is permissionless and uses two transactions.",
+      "pause": 400
+    },
+    {
+      "text": "RegistrationEvidence contains:",
+      "pause": 400
+    },
+    {
+      "text": "exact inception event bytes;",
+      "pause": 300
+    },
+    {
+      "text": "offsets locating the KERI fields used by the on-chain projection;",
+      "pause": 300
+    },
+    {
+      "text": "indexed controller signatures over those exact bytes; and",
+      "pause": 300
+    },
+    {
+      "text": "indexed witness receipts over those exact bytes.",
+      "pause": 300
+    },
+    {
+      "text": "The lifecycle observer checks:",
+      "pause": 400
+    },
+    {
+      "text": "the matching fact token is present in an input and burned;",
+      "pause": 300
+    },
+    {
+      "text": "the event binds to the AID;",
+      "pause": 300
+    },
+    {
+      "text": "the datum matches the event's keys, thresholds, next commitments, witnesses, and toad;",
+      "pause": 300
+    },
+    {
+      "text": "controller signatures satisfy the weighted threshold; and",
+      "pause": 300
+    },
+    {
+      "text": "witness receipts satisfy toad.",
+      "pause": 300
+    },
+    {
+      "text": "The thin checkpoint policy separately checks:",
+      "pause": 400
+    },
+    {
+      "text": "exactly one derived AID token is minted;",
+      "pause": 300
+    },
+    {
+      "text": "exactly one ACTIVE output holds it;",
+      "pause": 300
+    },
+    {
+      "text": "the inline datum is well formed; and",
+      "pause": 300
+    },
+    {
+      "text": "the value is at least checkpoint minimum + D_reg + B.",
+      "pause": 300
+    },
+    {
+      "text": "The mint redeemer is deliberately the bare Register constructor. The large evidence appears once, in the observer envelope. The checkpoint, lifecycle observer, and BLAKE3 policy are delivered through reference-script UTxOs because copying all three inline exceeds the transaction-size limit.",
+      "pause": 400
+    },
+    {
+      "text": "This is the settled wire from PR #146. See Observer architecture for the composition and measurements.",
+      "pause": 400
+    }
+  ],
+  "advance": [
+    {
+      "text": "Advance.",
+      "pause": 500
+    },
+    {
+      "text": "Advance spends the sovereign checkpoint and creates its exact sequence-plus-one successor.",
+      "pause": 400
+    },
+    {
+      "text": "The Advance observer binds the KERI rotation to the prior event and validates:",
+      "pause": 400
+    },
+    {
+      "text": "revealed keys against stored next-key commitments;",
+      "pause": 300
+    },
+    {
+      "text": "both required controller thresholds;",
+      "pause": 300
+    },
+    {
+      "text": "signatures over the exact KERI event and reconstructed Cardano message;",
+      "pause": 300
+    },
+    {
+      "text": "the incoming witness set and toad; and",
+      "pause": 300
+    },
+    {
+      "text": "the unique new checkpoint datum.",
+      "pause": 300
+    },
+    {
+      "text": "The thin checkpoint requires the same token and complete value in the unique ACTIVE successor. An ARMED input is accepted only as a response before its deadline.",
+      "pause": 400
+    },
+    {
+      "text": "Ordinary Advance settled in PR #148; ARMED response Advances settled in PR #150.",
+      "pause": 400
+    }
+  ],
+  "freeze": [
+    {
+      "text": "Freeze.",
+      "pause": 500
+    },
+    {
+      "text": "Freeze is a permissionless challenge submitted by a hunter — in the shipped V1, the challenger of a lagging checkpoint; in the accepted design, anyone paid to land rotations or to freeze a checkpoint that cannot pay for one — holding witnessed conflict evidence.",
+      "pause": 400
+    },
+    {
+      "text": "The enforcement observer checks that the contested rotation belongs to the same AID, continues from the recorded KERI event, is still ahead of the tip, reveals committed keys, and satisfies controller and witness thresholds.",
+      "pause": 400
+    },
+    {
+      "text": "The thin checkpoint preserves the complete value and token while creating an ARMED datum with the hunter payment-key hash and deadline. ARMED is a fail-closed role for consumers.",
+      "pause": 400
+    },
+    {
+      "text": "ClaimFreeze and thaw remain unavailable until #138.",
+      "pause": 400
+    }
+  ],
+  "close": [
+    {
+      "text": "Close.",
+      "pause": 500
+    },
+    {
+      "text": "Close is controller-authorized, not a public projection. Its signatures bind:",
+      "pause": 400
+    },
+    {
+      "text": "network and checkpoint policy;",
+      "pause": 300
+    },
+    {
+      "text": "exact checkpoint input;",
+      "pause": 300
+    },
+    {
+      "text": "AID and sequence; and",
+      "pause": 300
+    },
+    {
+      "text": "refund address.",
+      "pause": 300
+    },
+    {
+      "text": "The transaction consumes ACTIVE, burns the token, creates no successor, and refunds the checkpoint's complete value to the signed address. It settled in PR #147.",
+      "pause": 400
+    }
+  ],
+  "future-wallet-interface": [
+    {
+      "text": "Future wallet interface.",
+      "pause": 500
+    },
+    {
+      "text": "A Veridian integration needs to distinguish two responsibilities:",
+      "pause": 400
+    },
+    {
+      "text": "KERI event production. Signify creates inception and rotation events, manages threshold signing, and collects witness receipts.",
+      "pause": 300
+    },
+    {
+      "text": "Cardano transaction construction. A cardano-keri SDK packages those public artifacts into the current observer envelopes, resolves reference scripts and checkpoint UTxOs, calculates budgets, and submits or returns an unsigned transaction to a relayer.",
+      "pause": 300
+    },
+    {
+      "text": "The future SDK should return a human-readable intent transcript before any wallet-specific Cardano authorization:",
+      "pause": 400
+    },
+    {
+      "text": "For public Register, Advance, and Freeze projections, this transcript is still useful to the party paying fees even though no extra controller signature is needed. For Close and future protected application actions, it is essential: the user must see the exact input, action, and destination before signing.",
+      "pause": 400
+    }
+  ],
+  "synchronization-lag": [
+    {
+      "text": "Synchronization lag.",
+      "pause": 500
+    },
+    {
+      "text": "KERI and Cardano do not settle simultaneously. After a KERI rotation is published, Cardano still shows the old ACTIVE checkpoint until an Advance or valid Freeze transaction settles.",
+      "pause": 400
+    },
+    {
+      "text": "During that interval, a Cardano-only consumer can see stale authority. The current mitigations are:",
+      "pause": 400
+    },
+    {
+      "text": "anyone can relay the genuine next Advance;",
+      "pause": 300
+    },
+    {
+      "text": "anyone with witnessed later-event evidence can Freeze the stale checkpoint;",
+      "pause": 300
+    },
+    {
+      "text": "Freeze immediately moves it to ARMED, which consumers reject; and",
+      "pause": 300
+    },
+    {
+      "text": "high-value applications must define how fresh their KERI monitoring and checkpoint resolution must be.",
+      "pause": 300
+    },
+    {
+      "text": "No validator can react to an off-chain event that no transaction reveals. Freeze shortens the lag after evidence is available; it does not eliminate network discovery and inclusion time.",
+      "pause": 400
+    }
+  ],
+  "checkpoint-resolution": [
+    {
+      "text": "Checkpoint resolution.",
+      "pause": 500
+    },
+    {
+      "text": "Given a KERI AID:",
+      "pause": 400
+    },
+    {
+      "text": "derive its expected asset name under the accepted checkpoint policy;",
+      "pause": 300
+    },
+    {
+      "text": "ask any indexer or node interface for candidate UTxOs;",
+      "pause": 300
+    },
+    {
+      "text": "require exactly one candidate at an accepted ACTIVE checkpoint script;",
+      "pause": 300
+    },
+    {
+      "text": "validate the quantity-one token, inline datum, AID, and sequence against the ledger; and",
+      "pause": 300
+    },
+    {
+      "text": "fail closed on absent, stale, malformed, non-ACTIVE, or ambiguous results.",
+      "pause": 300
+    },
+    {
+      "text": "The indexer supplies location, not truth. A stale result refers to a spent output and rejects.",
+      "pause": 400
+    }
+  ],
+  "current-limits": [
+    {
+      "text": "Current limits.",
+      "pause": 500
+    },
+    {
+      "text": "The settled fixture has two controller keys, not GLEIF's real three-of-seven shape.",
+      "pause": 300
+    },
+    {
+      "text": "The current single-proof registration path does not cover the 1083-byte-class real inception; #139 adds the multi-transaction proof.",
+      "pause": 300
+    },
+    {
+      "text": "observer_advance has only 3 bytes of applied-script headroom; #149 must shrink it before the real rotation.",
+      "pause": 300
+    },
+    {
+      "text": "Claim/thaw and Convict remain unexposed in the small production-story checkpoint.",
+      "pause": 300
+    },
+    {
+      "text": "A production Veridian SDK, public service, and mainnet deployment do not yet exist.",
+      "pause": 300
+    }
+  ],
+  "_source": {
+    "file": "veridian-bridge.md",
+    "sha256": "5e0acd3efafd32b624ab4c7da1e73c760586a873a47551ea5fdf6f862f3a3441"
+  }
+}

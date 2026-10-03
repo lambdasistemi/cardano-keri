@@ -1,71 +1,216 @@
 {
-  "_source": {
-    "file": "lean-invariants-plan.md",
-    "sha256": "34294ddaa4b975a04192613f7b00dfdceb0e280df7fd2c1b9d723fc04c227e87"
-  },
   "the-stories-this-plan-must-cover": [
     {
-      "text": "The plan turns the entire discussion into executable Lean behavior, invariant statements and adversarial scenarios. Ordinary KEL work belongs to milestone one, TEL and credentials to milestone two, and delegation remains in milestone seven. New proof completion is deferred."
+      "text": "The stories this plan must cover.",
+      "pause": 500
+    },
+    {
+      "text": "An identity owner needs to see what happens when current or next keys are stolen, including when the thief rotates again before anyone responds. A sponsor needs to know which funds can be spent, seized, recovered or returned when the issuer is passive or hostile. A consumer needs to distinguish an accepted KERI history from incomplete observation, and a mirror's absence proof from evidence that a credential has never been revoked.",
+      "pause": 400
+    },
+    {
+      "text": "Plan, 11 September 2026: model all these behaviors in executable Lean, state their invariants and limitations, and exercise reachable attacks before doing new proof work. Include all ten stories in the conviction proposal. The proposal is an input to design, not an already accepted replacement for the checkpoint rules.",
+      "pause": 400
+    },
+    {
+      "text": "Milestone boundary: all KEL work discussed here belongs to Milestone 1, excluding delegation. TEL and ACDC work belongs to Milestone 2. Delegation remains in its existing Milestone 7 lane; it is neither an identity-core acceptance requirement nor a reason to postpone the ordinary KEL model.",
+      "pause": 400
+    },
+    {
+      "text": "“Everything goes into Lean” means every discussed guarantee, refusal, assumption and counterexample has a named declaration and an executable scenario where applicable. It does not mean asserting every claim in the discussion as a theorem. Contradictory claims become competing profiles or counterexamples; unavailable evidence remains unavailable in the model.",
+      "pause": 400
+    },
+    {
+      "text": "The deliverable of this phase is a reviewed executable design and its coverage record. New theorem proofs remain deferred. Existing proof guarantees and the retired-lifecycle boundary remain intact until an explicit integration change.",
+      "pause": 400
     }
   ],
   "authority-and-starting-point": [
     {
-      "text": "The plan pins the repository, specification and updated gist. Existing terminal conviction and payout rulings remain the baseline until explicitly amended. The earlier review supplies model counterexamples, not production certification. The Claude artifact itself remains unread; the two gist files have been incorporated."
+      "text": "Authority and starting point.",
+      "pause": 500
+    },
+    {
+      "text": "The previous review already executed eight checkpoint payoff/dormancy checks, twelve rapid-rotation checks and a finite quorum calculation. Those are useful baseline regressions, with their recorded abstract evidence assumptions. They are not a signed same-block Cardano attack or a complete watcher implementation. The current statement ledger describes 71 proved statements and 39 probes; neither count establishes coverage of this expanded design.",
+      "pause": 400
     }
   ],
   "milestone-ownership": [
     {
-      "text": "Milestone one owns ordinary KEL observation, history, challenges, sponsorship, recovery and checkpoint consumption. Milestone two adapts those contracts to TEL mirrors and credentials. Milestone seven owns delegated approval and recovery. Mixed tickets need their acceptance criteria split across those boundaries; this plan has not changed their GitHub assignments."
+      "text": "Milestone ownership.",
+      "pause": 500
+    },
+    {
+      "text": "The earlier economic tickets were all filed under verification. The ticket alignment required by the operator's new boundary is:",
+      "pause": 400
+    },
+    {
+      "text": "These are the assignments for the planned work; this document does not claim the GitHub issue milestones have already been changed. Separate milestone completion receipts prevent a later TEL or delegation decision from hiding an unfinished ordinary KEL invariant.",
+      "pause": 400
     }
   ],
   "model-architecture-and-boundaries": [
     {
-      "text": "The diagram follows delivered evidence through validation and local acceptance. Accepted history feeds checkpoints and downstream verifiers; conflicts separately feed trust policy and authorized financial settlement. Shared modules model evidence, watchers, challenges and sponsorship. Composition reuses the checkpoint lifecycle instead of creating a competing authority."
+      "text": "Model architecture and boundaries.",
+      "pause": 500
+    },
+    {
+      "text": "Use these conceptual modules; final file boundaries should follow shared definitions rather than duplicate state machines:",
+      "pause": 400
+    },
+    {
+      "text": "Cryptographic verification can remain a declared primitive with explicit soundness assumptions. However, duplicityAt : Epoch → Seq → Bool cannot be the entire definition of the conflict we are investigating. Model the event, authority, threshold, witness and recovery conditions that make the primitive results meaningful. Distinguish public keys from private signing capability, and creating a signature from relaying an already available signed event.",
+      "pause": 400
+    },
+    {
+      "text": "A history leaf must expose or authenticate the verification context it is used to establish. A digest commitment plus a checked opening may suffice; this plan does not require every full event or key list to live in the datum. State on-chain commitments, off-chain retention and retrieval obligations separately. The general MPFS cage (a store whose every update passes through one validator) remains a transport mechanism; KERI rules belong in its application model.",
+      "pause": 400
     }
   ],
   "complete-invariant-scope": [
     {
-      "text": "Every scope row must become named Lean declarations with a source, milestone, policy status, reachable trace and effective mutation. An assumption is recorded as an assumption. A counterexample is retained rather than hidden by a stronger premise."
+      "text": "Complete invariant scope.",
+      "pause": 500
+    },
+    {
+      "text": "Each row below expands into named declarations and controls in the first implementation slice. A coverage register will bind the conversation item, source or ticket, declaration, policy status, reachable trace, falsifying mutation and evidence receipt. Unresolved rows stay visible.",
+      "pause": 400
     }
   ],
   "evidence-observation-and-recovery": [
     {
-      "text": "Validation binds events to historical signing and witness authority before acceptance. First acceptance is local, and retained history survives permitted recovery. Model partial rotations, witness changes, quorum assumptions and withheld evidence. Delegated approval identity and recursive precedence are assigned to the later delegation extension."
+      "text": "Evidence, observation and recovery.",
+      "pause": 500
     }
   ],
   "challenge-time-and-checkpoint-lifecycle": [
     {
-      "text": "A promised challenge opportunity must survive every lifecycle route. Minimum rotation spacing does not expire evidence against a stationary tip. Time bounds, liability retention, bootstrap, revival and consumer readiness need separate rules. Remaining keys, receipts, notice and transaction inclusion are explicit conditions on any victim response."
+      "text": "Challenge time and checkpoint lifecycle.",
+      "pause": 500
     }
   ],
   "sponsorship-freeze-and-reward-economics": [
     {
-      "text": "Separate conviction funds, freeze funds, recovery reserves and premiums, and record who owns and authorizes each payment. Prepaid recovery must work without a fresh unfreeze bond contribution, including after intervening unpaid progress. Test valid-event farming by a colluding issuer and relayer, refund capture, finite budgets, renewal and passive issuers."
+      "text": "Sponsorship, freeze and reward economics.",
+      "pause": 500
     }
   ],
   "tel-credentials-and-composition": [
     {
-      "text": "Authenticate revocations through issuer-bound KEL evidence before inserting them. Mirror absence says only what is absent from that committed mirror state. Model retention, funding exhaustion, provisional recovery, credential dependency checks and the interfaces that prevent a simpler submodel from bypassing lifecycle rules."
+      "text": "TEL, credentials and composition.",
+      "pause": 500
     }
   ],
   "the-ten-conviction-stories-as-lean-scenarios": [
     {
-      "text": "All ten proposal stories become scenarios, including double rotation, cooldown, reserve keys, witness replacement, symmetric conviction, early close, forbidden rollback, initial rotation and dormant conviction. Their stronger claims receive explicit prerequisites. Public evidence can be relayed without next keys, and every payment must follow from the actual trace."
+      "text": "The ten conviction stories as Lean scenarios.",
+      "pause": 500
+    },
+    {
+      "text": "Keep the proposal's story identities in the machine-facing register and its names in the readable plan. Run the published fixture values as examples; the statements quantify over admissible parameters. The proposal's C = 20 and W = 10 are simulator choices, not measured production response times.",
+      "pause": 400
+    },
+    {
+      "text": "The proposal's conformance commentary also becomes testable obligations:",
+      "pause": 400
+    },
+    {
+      "text": "KERI 1.1 defines event location by native sequence within the AID. A common prior digest is useful for a narrower sibling-conflict predicate, but must not erase higher-branch conflicts from the observer. Keep this separate from the older source's location terminology.",
+      "pause": 300
+    },
+    {
+      "text": "The specification's trust passages and first-seen rules do not themselves choose a Cardano payout, cooldown or dormant penalty. Preserve existing ruled policy, and name each proposed amendment and its scope.",
+      "pause": 300
+    },
+    {
+      "text": "A cooldown is an application timing policy, not a measured KERI propagation boundary. Late discovery remains possible. Expiring a financial claim need not end observation or consumer alerts.",
+      "pause": 300
+    },
+    {
+      "text": "A permissionless submission path still needs available evidence, a paying submitter and inclusion. A consumer waiting out the juvenility window (the age a checkpoint must reach before it trusts it) does not obtain an independent observation merely by waiting.",
+      "pause": 300
     }
   ],
   "decisions-the-models-must-make-reviewable": [
     {
-      "text": "Compare cooldown with bounded retained challenge targets, and keep expiry distinct from both. Compare rival validation, settlement ownership, freeze eligibility, consumer trust and registration policies against the existing baseline. The model supplies concrete tradeoffs for an operator ruling; it does not silently choose policy."
+      "text": "Decisions the models must make reviewable.",
+      "pause": 500
+    },
+    {
+      "text": "Within each milestone, implementation first preserves a baseline and constructs alternatives. It must not select a new production policy merely because that alternative is easiest to encode or prove.",
+      "pause": 400
+    },
+    {
+      "text": "The next operator decisions should be based on the resulting counterexamples and exact value flows. Do not choose a numerical challenge interval until notice, signing, receipt collection and inclusion assumptions have been named and measured. No GLEIF or QVI funding commitment is asserted by this plan.",
+      "pause": 400
     }
   ],
   "delivery-order-and-acceptance": [
     {
-      "text": "Begin with coverage and baseline attacks, then ordinary KEL evidence and watcher behavior. Challenge and sponsorship work converge into milestone one composition, completeness review and simulation. TEL and credential work consume those interfaces in milestone two; delegation extends them in milestone seven. Each lane has its own acceptance receipt."
+      "text": "Delivery order and acceptance.",
+      "pause": 500
+    },
+    {
+      "text": "Evidence and ownership work may progress independently once their shared interfaces are fixed. Challenge payout and sponsorship cannot be finalized independently. Each slice has a frozen candidate and a fresh completeness review; a later fix reopens the affected rows rather than inheriting approval.",
+      "pause": 400
     }
   ],
   "verification-contract-for-implementation": [
     {
-      "text": "Build every relevant Lean library explicitly and preserve existing proof gates. New executable design predicates must not depend on unproved theorems. Acceptance needs reachable controls, effective mutants, complete inventories, composition traces and reproducible receipts. Production signatures, ledger timing, storage and network behavior remain separate refinement checks."
+      "text": "Verification contract for implementation.",
+      "pause": 500
+    },
+    {
+      "text": "Use executable definitions and proposition statements as separate surfaces. For every public transition, record the exact success conditions and refusal reasons, an executable counterpart and a reachable witness. For every claimed invariant, include a control that falsifies it when its semantic guard is removed. A mutant that merely breaks elaboration, or a fixture rejected by an earlier unrelated guard, does not establish coverage of that invariant.",
+      "pause": 400
+    },
+    {
+      "text": "Start candidate definitions in a separately named design library so new statement work does not silently replace the sole compiled lifecycle or weaken its existing zero-sorry gate. Reuse and refine existing definitions; any temporary candidate alternative has a named profile and integration disposition. Keep proof-free executable predicates independent of unproved theorems. A stated proposition can remain unproved in this phase; execution must never depend on a placeholder proof.",
+      "pause": 400
+    },
+    {
+      "text": "The build contract must explicitly cover both existing libraries; the current default build does not cover the statement library. The existing Nix entry point is used below, from lean/; bind its locked toolchain when commissioning the slice:",
+      "pause": 400
+    },
+    {
+      "text": "Add the proposed design library and executable scenario runner to that gate when introduced. Preserve the existing scripts/check-lean-traceability.sh checks. Update the CI job intentionally: a green default-library build is not design coverage, and the statement-mode receipt is not proof acceptance.",
+      "pause": 400
+    },
+    {
+      "text": "The completion receipt must include:",
+      "pause": 400
+    },
+    {
+      "text": "Every discussed item mapped to a declaration and disposition, with all ten proposal stories present. Derive the public action/declaration inventory from the compiled model and reconcile it with the register; reject empty, truncated or orphaned inventories.",
+      "pause": 300
+    },
+    {
+      "text": "Named reachable good and adversarial traces, exact refusals, value flows and assumption sets. Include scheduler and evidence-withholding traces, rather than granting the victim an implicit turn between attacker actions.",
+      "pause": 300
+    },
+    {
+      "text": "Effective mutations for every guarantee and each important premise; exercise the test-runner failure path and a missing-coverage control.",
+      "pause": 300
+    },
+    {
+      "text": "Composition checks across checkpoint/registry/history/TEL/credential boundaries, including all lifecycle entry and exit paths.",
+      "pause": 300
+    },
+    {
+      "text": "Candidate and source hashes, reproducible commands, actual outputs and counts. Finite exploration remains finite evidence; unbounded claims remain named statements with visible proof status.",
+      "pause": 300
+    },
+    {
+      "text": "A separate refinement list for real event bytes, signature verification, datum openings, transaction validity intervals, ordered transaction batches, retention and network interfaces. Lean model acceptance does not certify the production watcher or validator; those boundaries need their own tests before implementation acceptance.",
+      "pause": 300
+    },
+    {
+      "text": "This plan is complete as a work breakdown over the readable discussion and gist. The design itself is not settled: the competing policies and remaining source input must retain their visible status throughout implementation.",
+      "pause": 400
     }
-  ]
+  ],
+  "_source": {
+    "file": "lean-invariants-plan.md",
+    "sha256": "34294ddaa4b975a04192613f7b00dfdceb0e280df7fd2c1b9d723fc04c227e87"
+  }
 }

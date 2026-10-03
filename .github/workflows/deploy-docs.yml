@@ -42,7 +42,7 @@ jobs:
 
       - name: Build docs
         run: |
-          nix develop github:paolino/dev-assets?dir=mkdocs --quiet \
+          nix develop --impure --expr 'import ./nix/docs-shell.nix' --quiet \
             -c mkdocs build --strict --site-dir site
 
       - name: Verify rendered copy text and downloadable scenarios

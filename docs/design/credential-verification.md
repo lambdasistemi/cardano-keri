@@ -118,7 +118,7 @@ sequenceDiagram
     PB->>PB: fetch witness receipts, fetch history leaves and trie proofs
     PB->>V: redeemer: bytes, offsets, signatures, receipts, leaf e, successor leaf
     V->>CK: token and AID match the credential's issuer?
-    V->>V: leaf e and successor verify against the history root; e ≤ k < e'
+    V->>V: leaf e and successor verify against the history root#59; e ≤ k < e'
     V->>V: seal d = blake3(iss), seal i = credential SAID, iss.ri = registry
     V->>V: controller signatures over ixn bytes meet threshold of leaf e
     V->>V: witness receipts over ixn bytes meet toad of leaf e

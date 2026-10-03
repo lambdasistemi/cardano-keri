@@ -97,7 +97,7 @@ node simulator/checkpoint-simulator-scenario-gate.mjs
 node simulator/checkpoint-simulator-trace-gate.mjs      # builds and runs Lean via nix shell nixpkgs#lean4 (see the prerequisite below)
 node simulator/checkpoint-simulator-scenario-gate.mjs --vacuity   # every checker row made unconditionally true in turn, each caught by its fabricated violation
 node simulator/page-template.mjs check simulator/checkpoint-simulator.html simulator/page-template/   # also a step of the scenario gate
-nix develop 'github:paolino/dev-assets?dir=mkdocs' --quiet -c mkdocs build --strict --site-dir /tmp/sim-site
+nix develop --impure --expr 'import ./nix/docs-shell.nix' --quiet -c mkdocs build --strict --site-dir /tmp/sim-site
 ```
 
 After editing the core, a scenario or the driver:

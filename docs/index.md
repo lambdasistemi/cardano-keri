@@ -130,19 +130,13 @@ the epoch the rotation opens (D-038) — so a relayer landing a public
 rotation can never park, age, or close the owner.
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Absent
-    Absent --> Active : register — registry insert, once ever
-    Active --> Active : rotate — next keys + toad receipts, clears the poison
-    Active --> Active : poison — current quorum, once per epoch
-    Active --> Active : freeze — anyone, when the pool is short
-    Active --> Active : deposit — next keys refill B (the unfreeze)
-    Active --> Active : top-up — anyone
-    Active --> Convicted : convict — a duplicity proof; D_reg to the convictor
-    Active --> Parked : close — reap by the next keys; leaf holds the hash
-    Parked --> Active : reopen — witnessed rotation from that key state
-    Parked --> Convicted : convict parked — a duplicity proof against the hash
-    Convicted --> [*]
+flowchart TB
+    start(( )) --> Absent["<b>Absent</b><br/>register — registry insert, once ever"]
+    Absent -->|register| Active["<b>Active</b><br/>rotate — next keys + toad receipts, clears the poison<br/>poison — current quorum, once per epoch<br/>freeze — anyone, when the pool is short<br/>deposit — next keys refill B (the unfreeze)<br/>top-up — anyone"]
+    Active -->|close| Parked["<b>Parked</b><br/>close — reap by the next keys#59; leaf holds the hash<br/>reopen — witnessed rotation from that key state"]
+    Parked -->|reopen| Active
+    Active -->|convict| Convicted["<b>Convicted</b><br/>convict — a duplicity proof#59; D_reg to the convictor<br/>convict parked — a duplicity proof against the hash"]
+    Parked -->|convict parked| Convicted
 ```
 
 **The poison** is the piece that is genuinely new: a declaration signed by the

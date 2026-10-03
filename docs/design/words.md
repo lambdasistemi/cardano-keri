@@ -15,18 +15,13 @@ links each to its clause of the specification.
 ## Where the words sit
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Absent
-    Absent --> Active : register — the conviction bond D_reg, the freeze bond B and the pool are posted
-    Active --> Active : rotate — a hunter lands it and is paid the premium P from the pool
-    Active --> Active : poison — the owner's lock; any witnessed rotation clears it
-    Active --> Active : freeze — a hunter takes B when the pool cannot pay
-    Active --> Active : deposit — a rotation that refills B
-    Active --> Parked : the reap — a rotation by the next keys closes the checkpoint; the registry leaf keeps the hash
-    Parked --> Active : reopen — a later witnessed rotation from the parked key state
-    Active --> Convicted : convict — a duplicity proof takes D_reg
-    Parked --> Convicted : convict — the same proof against the parked hash
-    Convicted --> [*]
+flowchart TB
+    start(( )) --> Absent["<b>Absent</b><br/>register — the conviction bond D_reg, the freeze bond B and the pool are posted"]
+    Absent -->|register| Active["<b>Active</b><br/>rotate — a hunter lands it and is paid the premium P from the pool<br/>poison — the owner's lock#59; any witnessed rotation clears it<br/>freeze — a hunter takes B when the pool cannot pay<br/>deposit — a rotation that refills B"]
+    Active -->|the reap| Parked["<b>Parked</b><br/>the reap — a rotation by the next keys closes the checkpoint#59; the registry leaf keeps the hash<br/>reopen — a later witnessed rotation from the parked key state"]
+    Parked -->|reopen| Active
+    Active -->|convict| Convicted["<b>Convicted</b><br/>convict — a duplicity proof takes D_reg<br/>convict parked — the same proof against the parked hash"]
+    Parked -->|convict parked| Convicted
 ```
 
 A consumer trusts an active checkpoint only once it is older than the

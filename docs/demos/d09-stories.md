@@ -12,15 +12,15 @@ Each story must start from a reachable preprod output produced by the previous k
 
 ```mermaid
 sequenceDiagram
-    participant Actor
+    participant Caller as Actor
     participant KLI as keripy kli
     participant CKERI as ckeri
     participant Chain as Cardano preprod
-    Actor->>KLI: Create the next KERI event
+    Caller->>KLI: Create the next KERI event
     KLI-->>CKERI: CESR and receipts
     CKERI->>Chain: Submit the story action
     Chain-->>CKERI: Transaction or script refusal
-    CKERI-->>Actor: Fresh status and evidence row
+    CKERI-->>Caller: Fresh status and evidence row
 ```
 
 The local fixture replay does not establish this journey. The full checkpoint scenario gate at the current source revision is also RED on theorem-row, story-reconciliation and fabricated-violation checks. A preprod cast will be attached only after the connected story runner and its named controls execute. Until then, this page is a play plan.

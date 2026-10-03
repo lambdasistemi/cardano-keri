@@ -23,3 +23,5 @@ WIP.md
 
 # keripy fixture regeneration venv (network-installed, not committed)
 /tmp/keri-venv*
+__pycache__/
+*.pyc

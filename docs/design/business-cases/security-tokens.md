@@ -206,7 +206,14 @@ flowchart TB
         RU["Receiver UTxO at shared script address<br/>owner = receiver stake credential"]
         SU --> TXA --> SV --> RU
     end
+    REFS["<b>Reference inputs</b><br/>Admission cache + L2 TELs (historical credential plane):<br/>sender and receiver admitted? unrevoked? (historical)<br/><br/>Per-AID sovereign checkpoints (sender + receiver, #92):<br/>sender (acting): witness set meets<br/>current weighted threshold#59;<br/>both: checkpoint live in lineage, not frozen"]
+    VA --> REFS
 
+    style REFS fill:#3a2f1e,stroke:#d9a04a,color:#e0e0e0
+```
+
+```mermaid
+flowchart TB
     subgraph VB["Variant (b) — register-as-cage: nothing moves, the register is rewritten"]
         direction TB
         TXB["Transfer transaction<br/>one authorized cage write"]
@@ -214,16 +221,11 @@ flowchart TB
         CG["Register cage UTxO<br/>MPF trie: trie_key → position"]
         TXB --> W --> CG
     end
-
-    REGS["Admission cache + L2 TELs<br/>(historical credential plane, ref inputs)"]
-    CHK["Per-AID sovereign checkpoints<br/>(sender + receiver, ref inputs, #92)"]
-    SV -->|"sender + receiver eligibility:<br/>admitted? unrevoked? (historical)"| REGS
-    SV -->|"sender (acting): witness set meets current weighted threshold;<br/>both: checkpoint live in lineage, not frozen"| CHK
-    TXB -->|"sender + receiver eligibility:<br/>admitted? unrevoked? (historical)"| REGS
-    TXB -->|"sender (acting): witness set meets current weighted threshold;<br/>both: checkpoint live in lineage, not frozen"| CHK
+    REFS["<b>Reference inputs</b><br/>Admission cache + L2 TELs (historical credential plane):<br/>sender and receiver admitted? unrevoked? (historical)<br/><br/>Per-AID sovereign checkpoints (sender + receiver, #92):<br/>sender (acting): witness set meets<br/>current weighted threshold#59;<br/>both: checkpoint live in lineage, not frozen"]
+    VB --> REFS
 
     style CG fill:#1e3a5f,stroke:#4a90d9,color:#e0e0e0
-    style REGS fill:#3a2f1e,stroke:#d9a04a,color:#e0e0e0
+    style REFS fill:#3a2f1e,stroke:#d9a04a,color:#e0e0e0
 ```
 
 The variants are not exclusive: (b) as pilot register, (a) as the

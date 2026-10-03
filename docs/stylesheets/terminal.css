@@ -1,6 +1,6 @@
 /* Keep the reading column and navigation usable on phones as well as desktops. */
 body { padding-top: 1.5rem; }
-.container { max-width: 80rem; }
+.container { max-width: 90rem; }
 .terminal-mkdocs-main-grid > * { min-width: 0; }
 #terminal-mkdocs-main-content { overflow-wrap: anywhere; }
 #terminal-mkdocs-main-content table { display: block; overflow-x: auto; }
@@ -16,7 +16,7 @@ body { padding-top: 1.5rem; }
 .terminal-menu ul { gap: 1rem; }
 .terminal-menu a { display: inline-block; padding: 0.5rem 0; }
 @media (min-width: 70em) {
-  .terminal-mkdocs-main-grid { grid-template-columns: minmax(14rem, 1fr) minmax(0, 3fr); }
+  .terminal-mkdocs-main-grid { grid-template-columns: minmax(13rem, 1fr) minmax(0, 4.5fr); }
 }
 @media (max-width: 30em) {
   .terminal-nav { align-items: flex-start; }

@@ -69,17 +69,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     any = true;
   }
   if (!any) return;
-  const select = document.createElement('select');
-  select.className = 'narration-speed';
-  select.setAttribute('aria-label', 'Narration speed');
-  const speed = stored();
-  for (const v of [0.75, 1, 1.25, 1.5, 2]) {
-    const o = document.createElement('option');
-    o.value = v; o.textContent = v + '×'; o.selected = v === speed; select.append(o);
-  }
-  select.addEventListener('change', () => {
-    audio.playbackRate = Number(select.value);
-    try { localStorage.setItem('keri-narration-speed', select.value); } catch (_) { /* optional */ }
+  const item = document.getElementById('keri-speed-item');
+  const button = document.getElementById('keri-speed');
+  if (!item || !button) return;
+  const rates = [0.75, 1, 1.25, 1.5, 2];
+  const showRate = () => {
+    const rate = stored();
+    document.getElementById('keri-speed-rate').textContent = rate + '×';
+    button.setAttribute('aria-label', 'Narration speed ' + rate + '×');
+    button.title = 'Narration speed ' + rate + '× (click to change)';
+  };
+  button.addEventListener('click', () => {
+    const next = rates[(rates.indexOf(stored()) + 1) % rates.length];
+    audio.playbackRate = next;
+    try { localStorage.setItem('keri-narration-speed', String(next)); } catch (_) { /* optional */ }
+    showRate();
   });
-  document.getElementById('terminal-mkdocs-main-content')?.prepend(select);
+  showRate();
+  item.hidden = false;
 });

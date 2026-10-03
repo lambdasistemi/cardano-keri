@@ -163,7 +163,6 @@ def build_index(manifest):
                 "name": name,
                 "pause_ms": clip["pause_ms"],
                 "v": clip["audio_sha256"][:12],
-                "text": clip["text"],
             }
         )
     for sections in index.values():

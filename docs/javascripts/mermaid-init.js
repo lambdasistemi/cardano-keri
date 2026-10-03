@@ -1,7 +1,7 @@
 /* Render Mermaid fences client side, one diagram at a time, following the chosen palette. */
 (() => {
   const s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js';
+  s.src = 'https://cdn.jsdelivr.net/npm/mermaid@10.9.3/dist/mermaid.min.js';
   s.onload = () => {
     const nodes = [...document.querySelectorAll('pre.mermaid')];
     if (!nodes.length) return;

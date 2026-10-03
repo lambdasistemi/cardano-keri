@@ -14,7 +14,7 @@ plugins:
 
 theme:
   name: terminal
-  custom_dir: docs/overrides
+  custom_dir: overrides
   palette: default
   features:
     - footer.prev_next

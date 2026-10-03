@@ -11,8 +11,9 @@
     document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
     const button = document.getElementById('keri-palette-toggle');
     if (button) {
-      button.textContent = dark ? 'Light mode' : 'Dark mode';
-      button.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+      const label = dark ? 'Switch to light mode' : 'Switch to dark mode';
+      button.setAttribute('aria-label', label);
+      button.title = label;
       button.hidden = false;
     }
   };

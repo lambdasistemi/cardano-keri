@@ -6,13 +6,17 @@ body { padding-top: 1.5rem; }
 #terminal-mkdocs-main-content table { display: block; overflow-x: auto; }
 #keri-navigation { margin-bottom: 1.5rem; }
 #keri-navigation summary { cursor: pointer; padding: 0.75rem 0; }
-#keri-palette-toggle {
-  color: var(--font-color);
-  background: transparent;
-  border: 1px solid var(--secondary-color);
-  padding: 0.5rem;
-  cursor: pointer;
+/* Top-bar controls are icons with no border; the words live in the label and the tooltip. */
+.top-icon {
+  color: var(--font-color); background: transparent; border: 0; padding: 0.4rem; margin: 0;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; font: inherit; line-height: 1;
 }
+.top-icon:hover { color: var(--primary-color); }
+.top-icon:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+.top-icon[hidden], #keri-speed-item[hidden] { display: none; }
+#keri-palette-toggle .icon-sun { display: none; }
+[data-keri-palette="dark"] #keri-palette-toggle .icon-sun { display: inline; }
+[data-keri-palette="dark"] #keri-palette-toggle .icon-moon { display: none; }
 .terminal-menu ul { gap: 1rem; }
 .terminal-menu a { display: inline-block; padding: 0.5rem 0; }
 @media (min-width: 70em) {
@@ -32,7 +36,4 @@ pre.mermaid svg { max-width: none !important; height: auto; }
   cursor: pointer; vertical-align: middle; line-height: 1;
 }
 .narration-play:hover, .narration-play:focus-visible { color: var(--primary-color); }
-.narration-speed {
-  color: var(--font-color); background: var(--background-color); border: 1px solid var(--secondary-color);
-  padding: 0.25rem; width: auto; display: block; margin-bottom: 1rem;
-}
+

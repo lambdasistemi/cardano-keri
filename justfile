@@ -749,7 +749,7 @@ ci: check-flake-lock-guard ci-release-scripts check-singular-lean ci-onchain ci-
 
 # #478: clean exact-compiler build and public proposition controls, identical to CI.
 check-singular-lean:
-    nix build --no-write-lock-file --no-link -L ./lean#checks.x86_64-linux.singular-dependency
+    cd lean && nix build --no-write-lock-file --no-link -L .#checks.x86_64-linux.singular-dependency
 
 # Validate the offered-interface schemas and generate its MkDocs reference.
 check-offered-interface:

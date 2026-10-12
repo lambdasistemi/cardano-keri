@@ -189,11 +189,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Build both KERI libraries and the full pinned Singular root
+        working-directory: lean
         run: |
           set -o pipefail
           nix build --no-write-lock-file -L \
-            ./lean#checks.x86_64-linux.singular-dependency \
-            --out-link singular-dependency-receipts 2>&1 | tee singular-dependency-build.log
+            .#checks.x86_64-linux.singular-dependency \
+            --out-link ../singular-dependency-receipts 2>&1 | tee ../singular-dependency-build.log
       - name: Retain compiler, lock, source, proof and negative-control receipts
         if: always()
         uses: actions/upload-artifact@v4

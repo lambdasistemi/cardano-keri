@@ -1,7 +1,7 @@
 # Lean model of the M1 checkpoint lifecycle — Checkpoint is the sole spec (#366)
 
-A standalone Lake project (Lean 4, `v4.27.0`, **zero dependencies** — Lean
-core only) that models the M1 checkpoint lifecycle as **the on-chain
+A Lake project (Lean 4, `v4.27.0`, one pinned Singular dependency) that
+models the M1 checkpoint lifecycle as **the on-chain
 validator's transition system** and proves the M1 invariants. Per
 [DISP-366-DELETE](https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547),
 `CardanoKeri.Checkpoint` is the sole compiled lifecycle specification.
@@ -34,7 +34,7 @@ absence, and live proof trust.
 cd lean
 lake build          # with elan: picks up lean-toolchain (v4.27.0)
 # without elan:
-nix shell nixpkgs#lean4 -c lake build
+nix shell --no-write-lock-file .#lean --command lake build
 ```
 
 The build passes with **zero `sorry`**. No `axiom` declarations anywhere:
@@ -90,3 +90,66 @@ the dispositions of the invariant review and the explicit residuals.
 All 71 statements are proved: `#print axioms` reports at most `propext`,
 `Quot.sound` and `Classical.choice`, never `sorryAx`. Proof-side lemmas
 live in `Statements/*Helpers.lean`.
+
+## Pinned Singular dependency (#478)
+
+KERI consumes Singular at merged commit
+`f844a8f423eaf65009c587b9d7dd9ad3e00d21af` (Singular PR #589),
+Git tree `bcb491dfc2c47f061509d1bcf165a5d4841de4e7`. Both projects declare
+`leanprover/lean4:v4.27.0`. `lakefile.lean` and `lake-manifest.json` pin the
+Git dependency; `flake.nix` and `flake.lock` pin its source and compiler.
+The compiler comes from nixpkgs `7f4e8517083e42a1b38907598dadc02c7235b30e`.
+The GitHub source NAR is
+`sha256-I4iiu48sK0YUJ4DYyYBqmhCqbvouKQ15mzg77DCuzG8=`; the fixed-output
+Git checkout retaining Lake's required metadata is
+`sha256-uJbve3dHhMLihL6Ew5aAAWrHqyas5wkm6W8ZkIGvsDc=`.
+
+From a clean checkout, in order:
+
+```sh
+# At repository root: sandboxed, cache-free build and controls, also in just ci.
+just check-singular-lean
+# To retain readable receipts in a chosen directory:
+nix run --no-write-lock-file ./lean#singular-dependency -- "$PWD/lean-receipts"
+# Interactive Lake use (Git access is required for the first resolution):
+cd lean
+nix shell --no-write-lock-file .#lean --command lake update singular
+nix shell --no-write-lock-file .#lean --command lake build CardanoKeri CardanoKeriStatements Singular
+nix shell --no-write-lock-file .#lean --command lake env lean SingularDependencyProbe.lean
+```
+
+The Nix check starts without build products, re-resolves Lake against a
+fixed-output Git checkout without network, requires byte-identical locks and
+clean source at the pin, and builds all three library targets. Receipts retain
+the compiler version, consumer identity, source/lock hashes, build output,
+axiom report and rejected controls. The dedicated hosted CI job retains these
+receipts for 14 days, including its build log on failure. Missing dependency
+source and an invalid lock are errors, with executable refusal controls.
+The existing required Lean CI status explicitly checks this dependency job's
+result with `if: always()`: failure, cancellation or skip cannot become a
+successful skipped required status. Repository branch protection is unchanged.
+
+`CardanoKeri.singular_step_binding` states: **Given** any
+`Singular.RegistryState`, **when** `Singular.step` executes
+`Singular.canonicalRequest .updateActive`, **then** it returns
+`.error "edge-inadmissible"`. This is the pinned model's excluded-edge
+boundary (`allowed`, `canonicalRequest`, `refusal`, `step` in
+[`Singular/Model.lean`](https://github.com/lambdasistemi/singular/blob/f844a8f423eaf65009c587b9d7dd9ad3e00d21af/lean/Singular/Model.lean)).
+The proof uses `rfl`; its axiom closure is exactly `propext` and `Quot.sound`,
+already used by upstream `step` and allowed by KERI's trust policy.
+`SingularDependencyProbe.lean` executes that request on an empty fixture and
+checks that `insertActive` without approval instead returns `no-approval`.
+The check rejects a changed expected error and a substituted action by
+executing the guards; this is a finite API check, not a lifecycle journey.
+It also injects an unproved binding in a disposable control and requires the
+same axiom policy to reject its `sorryAx` dependency.
+
+This dependency-only technical slice preserves KERI's definitions and theorem
+propositions at base `99bc98c085d6968da501e0cc86595759bf74450c`. It introduces
+no state translation, validator or builder behavior, lifecycle migration, or
+behavioral correspondence. Compilation does not discharge #437, #438, #439
+or #468. The separate statement library and existing theorem trust/retirement
+gate remain distinct evidence. #446 and draft #447 retain their frozen
+v0.6.1 evidence; their owner must record disposition before successor acceptance.
+The earlier five `Except.noConfusion` failures at Singular `6cb27c70…` are
+historical diagnostic evidence, not a result for this pin.

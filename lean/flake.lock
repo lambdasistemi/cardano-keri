@@ -1,0 +1,45 @@
+{
+  "nodes": {
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1769249507,
+        "narHash": "sha256-khi9kKYB1MQA2nQjHP1T6QMZTW6oozL6bW4LB8INZBM=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "7f4e8517083e42a1b38907598dadc02c7235b30e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "7f4e8517083e42a1b38907598dadc02c7235b30e",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "nixpkgs": "nixpkgs",
+        "singular": "singular"
+      }
+    },
+    "singular": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791811960,
+        "narHash": "sha256-I4iiu48sK0YUJ4DYyYBqmhCqbvouKQ15mzg77DCuzG8=",
+        "owner": "lambdasistemi",
+        "repo": "singular",
+        "rev": "f844a8f423eaf65009c587b9d7dd9ad3e00d21af",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lambdasistemi",
+        "repo": "singular",
+        "rev": "f844a8f423eaf65009c587b9d7dd9ad3e00d21af",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

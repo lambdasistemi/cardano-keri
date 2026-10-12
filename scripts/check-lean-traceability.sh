@@ -68,8 +68,8 @@ test -z "$(sort "$tmp_root/retired-theorems" | uniq -d)" || {
 diff -u "$tmp_root/historical-theorems" "$tmp_root/retired-theorems"
 
 cd "$lean_root"
-nix shell --no-write-lock-file ../offchain#lean --command lake clean
-nix shell --no-write-lock-file ../offchain#lean --command lake build \
+nix shell --no-write-lock-file .#lean --command lake clean
+nix shell --no-write-lock-file .#lean --command lake build \
   >"$tmp_root/build.log" 2>&1
 if rg -n "uses 'sorry'" "$tmp_root/build.log"; then
   echo 'retirement: clean build contains a sorry proof' >&2
@@ -78,7 +78,7 @@ fi
 
 for module in "${retired_modules[@]}"; do
   printf 'import CardanoKeri.%s\n' "$module" >"$tmp_root/RetiredImport.lean"
-  if nix shell --no-write-lock-file ../offchain#lean --command lake env lean \
+  if nix shell --no-write-lock-file .#lean --command lake env lean \
       "$tmp_root/RetiredImport.lean" >"$tmp_root/retired-import.log" 2>&1; then
     echo "retirement: retired module remains importable: CardanoKeri.$module" >&2
     exit 1
@@ -98,10 +98,14 @@ import CardanoKeri.Samaritan
 EOF
 theorem_count=0
 while IFS=: read -r source prefix; do
+  # A process substitution hides a failed producer from set -e. Materialize
+  # each inventory first so an unreadable source cannot silently lose theorems.
+  awk '/^theorem[[:space:]]+/ { print $2 }' "$lean_root/CardanoKeri/$source.lean" \
+    >"$tmp_root/current-theorems"
   while read -r theorem_name; do
     printf '#print axioms %s.%s\n' "$prefix" "$theorem_name" >>"$tmp_root/Axioms.lean"
     theorem_count=$((theorem_count + 1))
-  done < <(awk '/^theorem[[:space:]]+/ { print $2 }' "$lean_root/CardanoKeri/$source.lean")
+  done <"$tmp_root/current-theorems"
 done <<'EOF'
 CheckpointGoals:CardanoKeri.Checkpoint
 RegistryGoals:CardanoKeri.Registry
@@ -112,7 +116,7 @@ test "$theorem_count" -gt 0 || {
   echo 'retirement: empty live theorem inventory' >&2
   exit 1
 }
-nix shell --no-write-lock-file ../offchain#lean --command lake env lean \
+nix shell --no-write-lock-file .#lean --command lake env lean \
   "$tmp_root/Axioms.lean" >"$tmp_root/axioms.log" 2>&1
 test "$(rg -c "depends on axioms|does not depend on any axioms" "$tmp_root/axioms.log")" \
   -eq "$theorem_count" || {

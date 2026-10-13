@@ -6,3 +6,4 @@ import CardanoKeri.RegistryAgreement
 import CardanoKeri.RegistryLifecycleExamples
 import CardanoKeri.Cage
 import CardanoKeri.Samaritan
+import CardanoKeri.SingularBinding

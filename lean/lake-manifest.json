@@ -1,5 +1,15 @@
 {"version": "1.1.0",
  "packagesDir": ".lake/packages",
- "packages": [],
+ "packages":
+ [{"url": "https://github.com/lambdasistemi/singular.git",
+   "type": "git",
+   "subDir": null,
+   "scope": "",
+   "rev": "f844a8f423eaf65009c587b9d7dd9ad3e00d21af",
+   "name": "singular",
+   "manifestFile": "lake-manifest.json",
+   "inputRev": "f844a8f423eaf65009c587b9d7dd9ad3e00d21af",
+   "inherited": false,
+   "configFile": "lakefile.toml"}],
  "name": "«cardano-keri-lean»",
  "lakeDir": ".lake"}

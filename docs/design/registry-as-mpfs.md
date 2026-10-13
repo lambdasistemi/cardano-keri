@@ -336,6 +336,26 @@ runs upstream from here, not downstream. Singular carries its own Lean model of
 its registry rather than this cage machine; reconciling the two is part of the
 leaf-map question under [Where the registry is built](#where-the-registry-is-built).
 
+### Building against the public Singular Lean library
+
+The KERI Lean project pins Singular commit
+`f844a8f423eaf65009c587b9d7dd9ad3e00d21af` under Lean 4.27.0 (#478).
+At repository root, `just check-singular-lean` builds `CardanoKeri`,
+`CardanoKeriStatements` and the full `Singular` root in a clean Nix sandbox.
+The dedicated CI job retains the source, lock, compiler, proof and control
+receipts. The contributor commands and bound Given/When/Then proposition are
+in [the Lean build guide](https://github.com/lambdasistemi/cardano-keri/blob/main/lean/README.md).
+
+Dependency resolution and compiler packaging are the declared technical scope
+of this slice; no new lifecycle meaning is assigned by that tooling.
+The binding proves the upstream `step` refusal of the canonical `updateActive`
+request for any upstream registry state and executes finite API controls.
+It supplies no translation from KERI's registry states to Singular's, no
+validator or builder correspondence, and no connected lifecycle evidence.
+The model acceptance obligations #437, #438, #439 and #468 remain open.
+The frozen v0.6.1 lane #446 and draft #447 retain their historical evidence;
+owner disposition is required before accepting the successor dependency slice.
+
 ## The plugin's contract, derived
 
 For each action of a fold the keri plugin requires, in the same transaction:

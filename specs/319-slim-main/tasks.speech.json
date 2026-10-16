@@ -1,0 +1,24 @@
+{
+  "_source": {
+    "file": "tasks.md",
+    "sha256": "7afd191cddb63aff406dee5957f87f23eadeae91b3bc37141c83fe0f26ea3059"
+  },
+  "enforcement-deletion": [
+    {
+      "text": "First preserve the conviction checks and legacy migration compatibility, then remove the retired economy. Update candidate generation while keeping historical deployment evidence truthful. The slice needs independent acceptance.",
+      "pause": 400
+    }
+  ],
+  "skeleton-deletion": [
+    {
+      "text": "After the first slice is accepted, preserve and exercise Merkle Patricia Forestry verification, including rejected proofs, and remove the unused record skeleton.",
+      "pause": 400
+    }
+  ],
+  "measurements-and-readiness": [
+    {
+      "text": "Measure every surviving shipped script with real parameters and verify transaction fit. Integrate the released design-page changes, check the final documentation, and obtain independent coverage of the exact pushed implementation.",
+      "pause": 500
+    }
+  ]
+}

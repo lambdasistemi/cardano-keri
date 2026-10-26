@@ -101,8 +101,9 @@ Git dependency; `flake.nix` and `flake.lock` pin its source and compiler.
 The compiler comes from nixpkgs `7f4e8517083e42a1b38907598dadc02c7235b30e`.
 The GitHub source NAR is
 `sha256-I4iiu48sK0YUJ4DYyYBqmhCqbvouKQ15mzg77DCuzG8=`; the fixed-output
-Git checkout retaining Lake's required metadata is
-`sha256-uJbve3dHhMLihL6Ew5aAAWrHqyas5wkm6W8ZkIGvsDc=`.
+Git checkout retains Lake's required commit and tree metadata as deterministic
+loose Git objects, independent of the fetched pack layout. Its NAR hash is
+`sha256-ryr4YWYNCG1zahf+qSFVpwHddP6pKQyB43PBkiv8Afs=`.
 
 From a clean checkout, in order:
 

@@ -1,58 +1,98 @@
 {
-  "map-the-singular-registry-to-cardano-keri-23-october-target": [
+  "map-the-redesigned-singular-registry-to-cardano-keri": [
     {
-      "text": "Map the Singular registry to Cardano KERI — 23 October target.",
+      "text": "Map the redesigned Singular registry to Cardano KERI.",
       "pause": 500
     },
     {
-      "text": "As a Cardano KERI integrator, I want to bind the registry observations our identity model consumes to the accepted Singular model, so I can implement without treating similarly named leaves or tokens as identical by guesswork. The dated project card remains a mapping review target. This cross-model integration is not yet playable or accepted.",
+      "text": "As a Cardano KERI integrator, compare what the upstream registry will provide with the identity behavior KERI still needs to model and implement. A second registration must fail, a parked identity must retain its recovery state, and proven duplicity must retire the identity permanently within its registry. This page is a migration map, not a claim that KERI integration ships.",
       "pause": 400
     },
     {
-      "text": "Planned release tags: Cardano KERI v1.0.0 (identity-core M1) and Singular v2.0.0 (parallel naming M2). This is a mapping review; neither tag is created by this plan, and the mapping does not itself pass a release gate.",
-      "pause": 400
-    },
-    {
-      "text": "The recorded preprod V1 baseline can open the review: keripy kli supplies a real inception, and ckeri registers and closes its checkpoint. That cast proves only the deployed V1 boundary. The Singular registry fold and the correspondence rows below still need connected preprod transactions before D-02 can be presented as an integration demo.",
+      "text": "The preprod V1 baseline demonstrates the older checkpoint family. It does not demonstrate the Singular integration below.",
       "pause": 400
     }
   ],
-  "model-revisions-and-source": [
+  "bound-sources-and-acceptance-boundary": [
     {
-      "text": "Model revisions and source.",
+      "text": "Bound sources and acceptance boundary.",
       "pause": 500
     },
     {
-      "text": "Cardano KERI's accepted base is commit 0e638fadc987f0cd98f839edd3e3ecd5a09a1b91: Registry.lean, SHA-256 bfa17a6b02ab5270e37f224af62109dfb8202c3b49e121804fa0560a0936216a, and Checkpoint.lean, SHA-256 f5dea750f9de2e5737d288eef73371cefd1b4217c5609468ddcdff4967ae001f. Singular's registry model is the first demo's base commit a6e5edbc2dafa82eb34116a1de2b6503f87c6692, Singular.Model. KERI #446 proposes a pinned Lean dependency on an earlier Singular release; its stated scope does not migrate registry behavior.",
+      "text": "This comparison reads Cardano KERI at 7cb4e716107d8ca7cc53dcdb0cd26549315ee256: Registry.lean, Checkpoint.lean and SingularBinding.lean. Its Singular dependency is still f844a8f423eaf65009c587b9d7dd9ad3e00d21af. The binding proves one excluded-edge refusal through the older step interface; it proves no translation between the two state machines.",
       "pause": 400
     },
     {
-      "text": "The figures below are candidate comparison rows, not a representation choice. The Lean correspondence register #435 records prior rulings and required model work. A row that needs a ruling or a changed Lean statement cannot be promoted by this document.",
+      "text": "The upstream target is the public Singular redesign, with registration, termination and reading described in its child issues. These are delivery requirements, not release receipts. The epic retains earlier proposal text; this comparison uses the later registration and termination descriptions. Integration and release remain tracked by Singular's integration issue.",
       "pause": 400
     },
     {
-      "text": "Status, Op and processBody in Cardano KERI Registry.lean own the CK column. The Singular column comes from Edge, step, approval and token laws in Singular.Model. Similar names alone prove no correspondence. The models use abstract numeric keys and values in their simulator fixtures; those are not Cardano AIDs, policy IDs, signatures or ledger assets.",
+      "text": "The Lean correspondence register owns the KERI-side conflicts. Its parking ruling requires a retained application output, but the checked-in model still has Status.dormant k. The model must change before affected implementation is accepted.",
       "pause": 400
     }
   ],
-  "presenter-path-1015-minutes": [
+  "registration-and-termination-boundary": [
     {
-      "text": "Presenter path: 10–15 minutes.",
-      "pause": 500
-    }
-  ],
-  "what-is-missing-before-this-becomes-a-play": [
-    {
-      "text": "What is missing before this becomes a play.",
+      "text": "Registration and termination boundary.",
       "pause": 500
     },
     {
-      "text": "The registry integration ticket #324 needs a versioned, executable cross-model transition mapping for registration, reopen, close and conviction, with token and custody effects, positive and negative controls, and the exact release interface. The parking conflict and duplicity obligations are tracked in #435. The card additionally requires a released Singular interface and connected implementation evidence. No cast of a mapped result, transaction ID, policy ID or fresh node readback exists on this page. A model simulator can illustrate one side, but cannot close a cross-model row.",
+      "text": "The redesigned registry has one state script per application policy, S = state(A). After genesis, it acts only at folds, and its datum holds the registry's trie root. Requests sit at the application's address with an application approval. Singular has no request script, request tag, rejection operation, booking checks, configured tip or treasury routing. The application owns booking, request protection, reclaim, refunds and cleanup.",
+      "pause": 400
+    },
+    {
+      "text": "The planned KERI policy checks the inception before issuing approval. Singular then consumes the matching approval and a proof that the key is absent, and mints exactly one active token into the committed holding with at least the committed deposit. The initial datum is fixed at booking. KERI must therefore model its birth slot at booking, rather than assigning it when a fold lands.",
+      "pause": 400
+    },
+    {
+      "text": "Termination moves the registry leaf from active to terminal and burns the active token. KERI must authorize conviction using its own duplicity evidence before issuing termination approval. Open datum's controller and treasury rules are its own application rules; they do not define KERI conviction or refunds.",
+      "pause": 400
+    }
+  ],
+  "what-changes-for-a-keri-integrator": [
+    {
+      "text": "What changes for a KERI integrator.",
+      "pause": 500
+    },
+    {
+      "text": "The comparison covers preserved requirements, changed responsibilities and behavior the redesigned registry does not offer. Every KERI consequence in the final column remains pending model alignment and implementation evidence.",
+      "pause": 400
+    }
+  ],
+  "registry-identity-and-lookup": [
+    {
+      "text": "Registry identity and lookup.",
+      "pause": 500
+    },
+    {
+      "text": "The registry address is a bech32 spelling of state policy and registry name, with the network in its prefix. Write the identity as (S, R). Conceptually, R hashes a State{seed} Plutus Data preimage, and the active token name hashes an Active{(S, R), key} preimage, using blake2b_256 over serialiseData. These are descriptions of the committed fields, not byte-layout specifications. The exact preimage bytes and termination approval vectors are not settled upstream. Whether registration approval commits the holding's payment credential or its full address is also not settled upstream.",
+      "pause": 400
+    },
+    {
+      "text": "A future KERI reader will decode the address, authenticate the network and expected S = state(A_keri), derive the active name from the registry and AID key, and query that one asset. It must classify the output holding the token: an active checkpoint can authorize; a parked output or pending termination cannot. A missing token needs registry history replay or a proof against the on-chain root to distinguish terminal from never registered. Provider failure must remain unavailable, not become absence.",
+      "pause": 400
+    },
+    {
+      "text": "“One incarnation per AID, ever” is scoped to one registry. A new application policy or an additional registry edge requires a new state policy and new registries. A consumer must choose its canonical registry explicitly.",
+      "pause": 400
+    }
+  ],
+  "decisions-and-work-still-required": [
+    {
+      "text": "Decisions and work still required.",
+      "pause": 500
+    },
+    {
+      "text": "Rotations, witness changes, delegation and bond changes remain KERI operations, preserving the Singular token in the successor output. The checkpoint datum needs the registry identity and active asset to carry that obligation. The AID's exact key bytes, booking-time age semantics, request recovery rules and revised conviction custody need model-first alignment in registry integration, request lifecycle and consumer authentication.",
+      "pause": 400
+    },
+    {
+      "text": "For each invariant, acceptance needs a bound Given/When/Then story and both implementation-level tests and connected boundary tests, including refusals. No transaction receipts, new Lean proofs or implementation conformance are established by this documentation comparison.",
       "pause": 400
     }
   ],
   "_source": {
     "file": "d02-registry-mapping.md",
-    "sha256": "b2c626ee82e70e2a592a74358de0fc1da67f94be49572abfb887417853ad4708"
+    "sha256": "1f7ebdc9489c420c13c8799bc1da1ce06b7b2bb09ad712d84c6d09d85d4d00fe"
   }
 }

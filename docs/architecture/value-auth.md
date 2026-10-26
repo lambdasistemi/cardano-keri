@@ -16,7 +16,8 @@ validators do not reintroduce the retired shared-registry model.
 
 ## Resolve current authority
 
-Given a KERI AID, an application derives the expected checkpoint asset:
+For the deployed V1 checkpoint family, given a KERI AID an application
+derives the expected checkpoint asset:
 
 ```text
 (checkpoint_policy_id, deriveAidAssetName(cesr_aid))
@@ -49,7 +50,9 @@ role address.
 
 ### Under the accepted design
 
-Steps 1 to 5 are unchanged. Steps 6 and 7 become the consumer predicate, which
+The older checkpoint design retains steps 1 to 5. The pending Singular
+integration also changes token and registry authentication as described below.
+Steps 6 and 7 become the consumer predicate, which
 reads only the datum and the checkpoint's value:
 
 ```text
@@ -70,8 +73,8 @@ Three consequences an integrator should plan for:
 - **Frozen is not a flag.** A frozen checkpoint is missing `B`. An
   application that looks for a status field will find none, and must
   compare against the deployment's `D_reg` and `B`.
-- **Step 1 becomes a guarantee rather than a hope.** The registry admits one
-  incarnation per AID, ever, so "exactly one candidate" is enforced on chain
+- **Step 1 becomes a guarantee rather than a hope.** The redesigned registry admits one
+  incarnation per AID, ever within that registry, so "exactly one candidate" is enforced on chain
   instead of being a residual the consumer carries.
 - **Conviction becomes terminal, and a parked identity can come back.** The
   chain follows KERI: no key event un-duplicates an identifier, so
@@ -79,6 +82,53 @@ Three consequences an integrator should plan for:
   rotation later than the parked key state. An application must not cache
   "absent forever" for a parked AID, and must not expect a convicted one
   to return.
+
+## Pending Singular registry integration
+
+As a contract author adopting the redesigned registry, require a token bound
+to the intended registry as well as the AID. The V1 formula above is not the
+new registry token formula. Under the public
+[Singular reader design](https://github.com/lambdasistemi/singular/issues/744),
+the [registry address](https://github.com/lambdasistemi/singular/issues/728)
+carries the state policy `S` and registry name `R`, with the network in the
+bech32 prefix. The expected policy is `S = state(A_keri)` for the chosen
+application release. The name `R` commits a State preimage containing the
+seed; the active token name commits an Active preimage containing `(S, R)`
+and the AID key. Both names use `blake2b_256` over serialized Plutus Data.
+
+Those are conceptual commitments, not byte formats. The exact preimage
+bytes and termination approval vectors are **not settled upstream**. Whether
+registration approval commits the holding's payment credential or its full
+address is also **not settled upstream**. The KERI AID key encoding still
+needs an explicit binding.
+
+```mermaid
+flowchart TB
+    R[Registry and AID] -->|derive| T[Exact asset]
+    T -->|found| H[Check holding]
+    H -->|eligible| C[Authorize]
+    T -->|missing| P[Check history]
+```
+
+A future consumer queries that exact asset under `S`, requires quantity one,
+authenticates the canonical registry and checks the holding's KERI datum
+and eligibility. A token in a parked output or pending termination is not
+an eligible checkpoint. A missing token alone does not distinguish terminal
+from never registered; that requires registry history or a proof against the
+on-chain root. Provider failure must be reported as unavailable.
+
+Cardano KERI's model at `7cb4e716107d8ca7cc53dcdb0cd26549315ee256`
+still has the earlier registry and dependency binding. The parked-state
+and consumer changes remain pending under the
+[Lean correspondence register](https://github.com/lambdasistemi/cardano-keri/issues/435),
+[parking](https://github.com/lambdasistemi/cardano-keri/issues/437) and
+[consumer predicate](https://github.com/lambdasistemi/cardano-keri/issues/439)
+work. In particular, the earlier parked description on this page is not the
+upstream target: parking must retain the token and key state in a KERI
+output, while the registry remains active. No model or runtime behavior is
+changed by this documentation. See the
+[complete mapping](../demos/d02-registry-mapping.md) for the remaining stories
+and evidence.
 
 ## Indexer boundary
 

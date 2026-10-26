@@ -65,7 +65,7 @@
       "pause": 500
     },
     {
-      "text": "The registry address is a bech32 spelling of state policy and registry name, with the network in its prefix. Write the identity as (S, R). Conceptually, R hashes a State{seed} Plutus Data preimage, and the active token name hashes an Active{(S, R), key} preimage, using blake2b_256 over serialiseData. These are descriptions of the committed fields, not byte-layout specifications. The exact preimage bytes and termination approval vectors are not settled upstream. Whether registration approval commits the holding's payment credential or its full address is also not settled upstream.",
+      "text": "The registry address is a bech32 spelling of state policy and registry name, with the network in its prefix. Write the identity as (S, R). Conceptually, R hashes a State{seed} Plutus Data preimage, and the active token name hashes an Active{(S, R), key} preimage, using blake2b_256 over serialiseData. These are descriptions of the committed fields, not byte-layout specifications. The exact preimage bytes and termination approval vectors are not settled upstream. Registration approval binds the full holding address, including both its payment and stake parts.",
       "pause": 400
     },
     {
@@ -93,6 +93,6 @@
   ],
   "_source": {
     "file": "d02-registry-mapping.md",
-    "sha256": "1f7ebdc9489c420c13c8799bc1da1ce06b7b2bb09ad712d84c6d09d85d4d00fe"
+    "sha256": "b037e9689d0e807acffd7f6d4de70ef4e8bc3858f492446501fd264d7264e76d"
   }
 }

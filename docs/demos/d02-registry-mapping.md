@@ -99,8 +99,8 @@ its prefix. Write the identity as `(S, R)`. Conceptually, `R` hashes a
 `Active{(S, R), key}` preimage, using `blake2b_256` over `serialiseData`.
 These are descriptions of the committed fields, **not byte-layout specifications**.
 The exact preimage bytes and termination approval vectors are **not settled
-upstream**. Whether registration approval commits the holding's payment
-credential or its full address is also **not settled upstream**.
+upstream**. Registration approval binds the full holding address, including
+both its payment and stake parts.
 
 A future KERI reader will decode the address, authenticate the network and
 expected `S = state(A_keri)`, derive the active name from the registry and AID

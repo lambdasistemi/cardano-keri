@@ -88916,17 +88916,17 @@
    ]
   },
   "docs-architecture-value-auth/pending-singular-registry-integration-02": {
-   "audio_sha256": "0ede59909b069ebff6f975fb44fe87baf282f365cfd8f1abea25cc512b3b7ca3",
-   "characters": 326,
-   "cost": 0.00032273999999999996,
-   "duration": 21.35,
+   "audio_sha256": "06eca5d3a0935c3842dfb55d9f25006d3d10dd51d177da390d84002482d7f883",
+   "characters": 298,
+   "cost": 0.00029501999999999995,
+   "duration": 19.6,
    "index": 2,
-   "key": "195bba36f406f0c4335e2fd60eb3e359c9a3a1af80d6b16012a2807ddad2d17f",
+   "key": "8b75294ca1de90de66e2a9703379629af63777e7afd7134e5e0930fa74e43914",
    "page": "docs/architecture/value-auth.md",
    "pause_ms": 400,
    "section": "pending-singular-registry-integration",
-   "sent_text": "Those are conceptual commitments, not byte formats. The exact preimage bytes and termination approval vectors are not settled upstream. Whether registration approval commits the holding's payment credential or its full address is also not settled upstream. The [KERI](/kˈɛɹi/) AID key encoding still needs an explicit binding.",
-   "text": "Those are conceptual commitments, not byte formats. The exact preimage bytes and termination approval vectors are not settled upstream. Whether registration approval commits the holding's payment credential or its full address is also not settled upstream. The KERI AID key encoding still needs an explicit binding.",
+   "sent_text": "Those are conceptual commitments, not byte formats. The exact preimage bytes and termination approval vectors are not settled upstream. Registration approval binds the full holding address, including its payment and stake parts. The [KERI](/kˈɛɹi/) AID key encoding still needs an explicit binding.",
+   "text": "Those are conceptual commitments, not byte formats. The exact preimage bytes and termination approval vectors are not settled upstream. Registration approval binds the full holding address, including its payment and stake parts. The KERI AID key encoding still needs an explicit binding.",
    "words": [
     {
      "end": 0.363,
@@ -89039,148 +89039,133 @@
      "text": "."
     },
     {
-     "end": 9.8,
-     "start": 9.5,
-     "text": "Whether"
+     "end": 10.225,
+     "start": 9.475,
+     "text": "Registration"
     },
     {
-     "end": 10.525,
-     "start": 9.8,
-     "text": "registration"
-    },
-    {
-     "end": 11.062,
-     "start": 10.525,
+     "end": 10.738,
+     "start": 10.225,
      "text": "approval"
     },
     {
-     "end": 11.45,
-     "start": 11.062,
-     "text": "commits"
+     "end": 11.175,
+     "start": 10.738,
+     "text": "binds"
     },
     {
-     "end": 11.55,
-     "start": 11.45,
+     "end": 11.325,
+     "start": 11.175,
      "text": "the"
     },
     {
-     "end": 12.012,
-     "start": 11.55,
-     "text": "holding's"
+     "end": 11.625,
+     "start": 11.325,
+     "text": "full"
     },
     {
-     "end": 12.375,
-     "start": 12.012,
-     "text": "payment"
+     "end": 11.975,
+     "start": 11.625,
+     "text": "holding"
+    },
+    {
+     "end": 12.525,
+     "start": 11.975,
+     "text": "address"
+    },
+    {
+     "end": 12.6,
+     "start": 12.525,
+     "text": ","
     },
     {
      "end": 13.075,
-     "start": 12.375,
-     "text": "credential"
+     "start": 12.6,
+     "text": "including"
     },
     {
-     "end": 13.3,
+     "end": 13.288,
      "start": 13.075,
-     "text": "or"
-    },
-    {
-     "end": 13.512,
-     "start": 13.3,
      "text": "its"
     },
     {
      "end": 13.75,
-     "start": 13.512,
-     "text": "full"
+     "start": 13.288,
+     "text": "payment"
     },
     {
-     "end": 14.363,
+     "end": 13.875,
      "start": 13.75,
-     "text": "address"
+     "text": "and"
     },
     {
-     "end": 14.525,
-     "start": 14.363,
-     "text": "is"
+     "end": 14.175,
+     "start": 13.875,
+     "text": "stake"
     },
     {
-     "end": 14.9,
-     "start": 14.525,
-     "text": "also"
+     "end": 15.175,
+     "start": 14.175,
+     "text": "parts"
     },
     {
-     "end": 15.163,
-     "start": 14.9,
-     "text": "not"
-    },
-    {
-     "end": 15.575,
-     "start": 15.163,
-     "text": "settled"
-    },
-    {
-     "end": 16.925,
-     "start": 15.575,
-     "text": "upstream"
-    },
-    {
-     "end": 17.125,
-     "start": 16.925,
+     "end": 15.375,
+     "start": 15.175,
      "text": "."
     },
     {
-     "end": 17.375,
-     "start": 17.3,
+     "end": 15.625,
+     "start": 15.55,
      "text": "The"
     },
     {
-     "end": 17.7,
-     "start": 17.375,
+     "end": 15.95,
+     "start": 15.625,
      "text": "KERI"
     },
     {
-     "end": 18.212,
-     "start": 17.7,
+     "end": 16.462,
+     "start": 15.95,
      "text": "AID"
     },
     {
-     "end": 18.475,
-     "start": 18.212,
+     "end": 16.725,
+     "start": 16.462,
      "text": "key"
     },
     {
-     "end": 19.013,
-     "start": 18.475,
+     "end": 17.263,
+     "start": 16.725,
      "text": "encoding"
     },
     {
-     "end": 19.325,
-     "start": 19.013,
+     "end": 17.575,
+     "start": 17.263,
      "text": "still"
     },
     {
-     "end": 19.562,
-     "start": 19.325,
+     "end": 17.812,
+     "start": 17.575,
      "text": "needs"
     },
     {
-     "end": 19.65,
-     "start": 19.562,
+     "end": 17.9,
+     "start": 17.812,
      "text": "an"
     },
     {
-     "end": 20.2,
-     "start": 19.65,
+     "end": 18.45,
+     "start": 17.9,
      "text": "explicit"
     },
     {
-     "end": 21.15,
-     "start": 20.2,
+     "end": 19.4,
+     "start": 18.45,
      "text": "binding"
     },
     {
-     "end": 21.35,
-     "start": 21.15,
+     "end": 19.6,
+     "start": 19.4,
      "text": "."
     }
    ]
@@ -118531,17 +118516,17 @@
    ]
   },
   "docs-demos-d02-registry-mapping/registry-identity-and-lookup-01": {
-   "audio_sha256": "47ce876af5f2b71533ed59ebf5409d18d7f4dc5843f47c7da5ca531c63608b56",
-   "characters": 586,
-   "cost": 0.0005801399999999999,
-   "duration": 41.975,
+   "audio_sha256": "9f4b897b7b4b190f3d30393891236fb7703d28b7a18a103831eef7b14a5f47f6",
+   "characters": 563,
+   "cost": 0.00055737,
+   "duration": 40.625,
    "index": 1,
-   "key": "ec17e5db24184b41ed0ed08e05d85d45112c828b754d3290ade83e7a5319c81b",
+   "key": "63b4fb2e9a140a5c7517ed98535e6d7b266ab1ab706105f03bfd792a65560175",
    "page": "docs/demos/d02-registry-mapping.md",
    "pause_ms": 400,
    "section": "registry-identity-and-lookup",
-   "sent_text": "The registry address is a bech32 spelling of state policy and registry name, with the network in its prefix. Write the identity as (S, R). Conceptually, R hashes a State{seed} Plutus Data preimage, and the active token name hashes an Active{(S, R), key} preimage, using blake2b_256 over serialiseData. These are descriptions of the committed fields, not byte-layout specifications. The exact preimage bytes and termination approval vectors are not settled upstream. Whether registration approval commits the holding's payment credential or its full address is also not settled upstream.",
-   "text": "The registry address is a bech32 spelling of state policy and registry name, with the network in its prefix. Write the identity as (S, R). Conceptually, R hashes a State{seed} Plutus Data preimage, and the active token name hashes an Active{(S, R), key} preimage, using blake2b_256 over serialiseData. These are descriptions of the committed fields, not byte-layout specifications. The exact preimage bytes and termination approval vectors are not settled upstream. Whether registration approval commits the holding's payment credential or its full address is also not settled upstream.",
+   "sent_text": "The registry address is a bech32 spelling of state policy and registry name, with the network in its prefix. Write the identity as (S, R). Conceptually, R hashes a State{seed} Plutus Data preimage, and the active token name hashes an Active{(S, R), key} preimage, using blake2b_256 over serialiseData. These are descriptions of the committed fields, not byte-layout specifications. The exact preimage bytes and termination approval vectors are not settled upstream. Registration approval binds the full holding address, including both its payment and stake parts.",
+   "text": "The registry address is a bech32 spelling of state policy and registry name, with the network in its prefix. Write the identity as (S, R). Conceptually, R hashes a State{seed} Plutus Data preimage, and the active token name hashes an Active{(S, R), key} preimage, using blake2b_256 over serialiseData. These are descriptions of the committed fields, not byte-layout specifications. The exact preimage bytes and termination approval vectors are not settled upstream. Registration approval binds the full holding address, including both its payment and stake parts.",
    "words": [
     {
      "end": 0.3,
@@ -118984,93 +118969,83 @@
      "text": "."
     },
     {
-     "end": 34.65,
-     "start": 34.35,
-     "text": "Whether"
+     "end": 35.075,
+     "start": 34.325,
+     "text": "Registration"
     },
     {
-     "end": 35.375,
-     "start": 34.65,
-     "text": "registration"
-    },
-    {
-     "end": 35.912,
-     "start": 35.375,
+     "end": 35.588,
+     "start": 35.075,
      "text": "approval"
     },
     {
-     "end": 36.3,
-     "start": 35.912,
-     "text": "commits"
+     "end": 36.025,
+     "start": 35.588,
+     "text": "binds"
     },
     {
-     "end": 36.4,
-     "start": 36.3,
+     "end": 36.175,
+     "start": 36.025,
      "text": "the"
     },
     {
-     "end": 36.862,
-     "start": 36.4,
-     "text": "holding's"
-    },
-    {
-     "end": 37.225,
-     "start": 36.862,
-     "text": "payment"
-    },
-    {
-     "end": 37.925,
-     "start": 37.225,
-     "text": "credential"
-    },
-    {
-     "end": 38.15,
-     "start": 37.925,
-     "text": "or"
-    },
-    {
-     "end": 38.362,
-     "start": 38.15,
-     "text": "its"
-    },
-    {
-     "end": 38.6,
-     "start": 38.362,
+     "end": 36.475,
+     "start": 36.175,
      "text": "full"
     },
     {
-     "end": 39.213,
-     "start": 38.6,
+     "end": 36.825,
+     "start": 36.475,
+     "text": "holding"
+    },
+    {
+     "end": 37.35,
+     "start": 36.825,
      "text": "address"
     },
     {
-     "end": 39.375,
-     "start": 39.213,
-     "text": "is"
+     "end": 37.425,
+     "start": 37.35,
+     "text": ","
     },
     {
-     "end": 39.75,
-     "start": 39.375,
-     "text": "also"
+     "end": 37.925,
+     "start": 37.425,
+     "text": "including"
     },
     {
-     "end": 40.013,
-     "start": 39.75,
-     "text": "not"
+     "end": 38.213,
+     "start": 37.925,
+     "text": "both"
+    },
+    {
+     "end": 38.412,
+     "start": 38.213,
+     "text": "its"
+    },
+    {
+     "end": 38.925,
+     "start": 38.412,
+     "text": "payment"
+    },
+    {
+     "end": 39.1,
+     "start": 38.925,
+     "text": "and"
+    },
+    {
+     "end": 39.425,
+     "start": 39.1,
+     "text": "stake"
     },
     {
      "end": 40.425,
-     "start": 40.013,
-     "text": "settled"
+     "start": 39.425,
+     "text": "parts"
     },
     {
-     "end": 41.775,
+     "end": 40.625,
      "start": 40.425,
-     "text": "upstream"
-    },
-    {
-     "end": 41.975,
-     "start": 41.775,
      "text": "."
     }
    ]
@@ -298191,17 +298166,17 @@
    ]
   },
   "docs-design-registry-as-mpfs/canonical-identity-and-exact-token-02": {
-   "audio_sha256": "d168bda35efeb564fa70e09bc81ee8c2ad6f3fc5aebe73eb5b8801572372973d",
-   "characters": 595,
-   "cost": 0.00058905,
-   "duration": 39.912,
+   "audio_sha256": "4e52f4fd0cc7b236d3ddd59b8e9a552836831b667f291223af52403dd461983b",
+   "characters": 567,
+   "cost": 0.00056133,
+   "duration": 38.162,
    "index": 2,
-   "key": "58fc9332ec291f10ef01e8efde29c093d58dfa01c48cec020734c30d5670c546",
+   "key": "e83b31a8a457057e9382edc13c54f94943be1c79ad42f765e88e7f4fad7d7b36",
    "page": "docs/design/registry-as-mpfs.md",
    "pause_ms": 400,
    "section": "canonical-identity-and-exact-token",
-   "sent_text": "The redesigned names use blake2b_256 over serialized Plutus Data: the registry name commits a State{seed} preimage; the active name commits an Active{(S, R), key} preimage. The latter is a hash bound to the full registry identity, not the raw key. These expressions name the committed fields, not an implementable encoding. The exact preimage byte specification and termination approval vectors are not settled upstream. Whether registration approval commits the holding's payment credential or its full address is also not settled upstream. No encoder should infer those choices from this page.",
-   "text": "The redesigned names use blake2b_256 over serialized Plutus Data: the registry name commits a State{seed} preimage; the active name commits an Active{(S, R), key} preimage. The latter is a hash bound to the full registry identity, not the raw key. These expressions name the committed fields, not an implementable encoding. The exact preimage byte specification and termination approval vectors are not settled upstream. Whether registration approval commits the holding's payment credential or its full address is also not settled upstream. No encoder should infer those choices from this page.",
+   "sent_text": "The redesigned names use blake2b_256 over serialized Plutus Data: the registry name commits a State{seed} preimage; the active name commits an Active{(S, R), key} preimage. The latter is a hash bound to the full registry identity, not the raw key. These expressions name the committed fields, not an implementable encoding. The exact preimage byte specification and termination approval vectors are not settled upstream. Registration approval binds the full holding address, including its payment and stake parts. No encoder should infer those choices from this page.",
+   "text": "The redesigned names use blake2b_256 over serialized Plutus Data: the registry name commits a State{seed} preimage; the active name commits an Active{(S, R), key} preimage. The latter is a hash bound to the full registry identity, not the raw key. These expressions name the committed fields, not an implementable encoding. The exact preimage byte specification and termination approval vectors are not settled upstream. Registration approval binds the full holding address, including its payment and stake parts. No encoder should infer those choices from this page.",
    "words": [
     {
      "end": 0.275,
@@ -298584,143 +298559,128 @@
      "text": "."
     },
     {
-     "end": 29.188,
-     "start": 28.888,
-     "text": "Whether"
+     "end": 29.612,
+     "start": 28.862,
+     "text": "Registration"
     },
     {
-     "end": 29.913,
-     "start": 29.188,
-     "text": "registration"
-    },
-    {
-     "end": 30.45,
-     "start": 29.913,
+     "end": 30.125,
+     "start": 29.612,
      "text": "approval"
     },
     {
-     "end": 30.837,
-     "start": 30.45,
-     "text": "commits"
+     "end": 30.562,
+     "start": 30.125,
+     "text": "binds"
     },
     {
-     "end": 30.938,
-     "start": 30.837,
+     "end": 30.712,
+     "start": 30.562,
      "text": "the"
     },
     {
-     "end": 31.4,
-     "start": 30.938,
-     "text": "holding's"
+     "end": 31.013,
+     "start": 30.712,
+     "text": "full"
     },
     {
-     "end": 31.763,
-     "start": 31.4,
-     "text": "payment"
+     "end": 31.362,
+     "start": 31.013,
+     "text": "holding"
+    },
+    {
+     "end": 31.913,
+     "start": 31.362,
+     "text": "address"
+    },
+    {
+     "end": 31.987,
+     "start": 31.913,
+     "text": ","
     },
     {
      "end": 32.463,
-     "start": 31.763,
-     "text": "credential"
+     "start": 31.987,
+     "text": "including"
     },
     {
-     "end": 32.688,
+     "end": 32.675,
      "start": 32.463,
-     "text": "or"
-    },
-    {
-     "end": 32.9,
-     "start": 32.688,
      "text": "its"
     },
     {
      "end": 33.138,
-     "start": 32.9,
-     "text": "full"
+     "start": 32.675,
+     "text": "payment"
     },
     {
-     "end": 33.75,
+     "end": 33.263,
      "start": 33.138,
-     "text": "address"
+     "text": "and"
     },
     {
-     "end": 33.912,
-     "start": 33.75,
-     "text": "is"
+     "end": 33.562,
+     "start": 33.263,
+     "text": "stake"
     },
     {
-     "end": 34.287,
-     "start": 33.912,
-     "text": "also"
+     "end": 34.562,
+     "start": 33.562,
+     "text": "parts"
     },
     {
-     "end": 34.55,
-     "start": 34.287,
-     "text": "not"
-    },
-    {
-     "end": 34.963,
-     "start": 34.55,
-     "text": "settled"
-    },
-    {
-     "end": 36.312,
-     "start": 34.963,
-     "text": "upstream"
-    },
-    {
-     "end": 36.513,
-     "start": 36.312,
+     "end": 34.763,
+     "start": 34.562,
      "text": "."
     },
     {
-     "end": 36.912,
-     "start": 36.713,
+     "end": 35.162,
+     "start": 34.963,
      "text": "No"
     },
     {
-     "end": 37.412,
-     "start": 36.912,
+     "end": 35.662,
+     "start": 35.162,
      "text": "encoder"
     },
     {
-     "end": 37.55,
-     "start": 37.412,
+     "end": 35.8,
+     "start": 35.662,
      "text": "should"
     },
     {
-     "end": 37.912,
-     "start": 37.55,
+     "end": 36.162,
+     "start": 35.8,
      "text": "infer"
     },
     {
-     "end": 38.138,
-     "start": 37.912,
+     "end": 36.388,
+     "start": 36.162,
      "text": "those"
     },
     {
-     "end": 38.562,
-     "start": 38.138,
+     "end": 36.812,
+     "start": 36.388,
      "text": "choices"
     },
     {
-     "end": 38.7,
-     "start": 38.562,
+     "end": 36.95,
+     "start": 36.812,
      "text": "from"
     },
     {
-     "end": 38.888,
-     "start": 38.7,
+     "end": 37.138,
+     "start": 36.95,
      "text": "this"
     },
     {
-     "end": 39.713,
-     "start": 38.888,
+     "end": 37.963,
+     "start": 37.138,
      "text": "page"
     },
     {
-     "end": 39.912,
-     "start": 39.713,
+     "end": 38.162,
+     "start": 37.963,
      "text": "."
     }
    ]

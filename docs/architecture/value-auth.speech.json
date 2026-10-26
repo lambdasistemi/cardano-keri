@@ -115,7 +115,7 @@
       "pause": 400
     },
     {
-      "text": "Those are conceptual commitments, not byte formats. The exact preimage bytes and termination approval vectors are not settled upstream. Whether registration approval commits the holding's payment credential or its full address is also not settled upstream. The KERI AID key encoding still needs an explicit binding.",
+      "text": "Those are conceptual commitments, not byte formats. The exact preimage bytes and termination approval vectors are not settled upstream. Registration approval binds the full holding address, including its payment and stake parts. The KERI AID key encoding still needs an explicit binding.",
       "pause": 400
     },
     {
@@ -385,6 +385,6 @@
   ],
   "_source": {
     "file": "value-auth.md",
-    "sha256": "df658d1ae7d1a3a7b39b46047c449998f8a0b4f680f9fce181a99932962611f3"
+    "sha256": "94cc485b0f4cb485020becce42fcd99c63605da87d2085db55dcf0a62bbcc7ac"
   }
 }

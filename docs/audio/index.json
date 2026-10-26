@@ -3485,7 +3485,7 @@
     "index": 2,
     "name": "docs-architecture-value-auth/pending-singular-registry-integration-02",
     "pause_ms": 400,
-    "v": "0ede59909b06"
+    "v": "06eca5d3a093"
    },
    {
     "index": 3,
@@ -5073,7 +5073,7 @@
     "index": 1,
     "name": "docs-demos-d02-registry-mapping/registry-identity-and-lookup-01",
     "pause_ms": 400,
-    "v": "47ce876af5f2"
+    "v": "9f4b897b7b4b"
    },
    {
     "index": 2,
@@ -11029,7 +11029,7 @@
     "index": 2,
     "name": "docs-design-registry-as-mpfs/canonical-identity-and-exact-token-02",
     "pause_ms": 400,
-    "v": "d168bda35efe"
+    "v": "4e52f4fd0cc7"
    },
    {
     "index": 3,

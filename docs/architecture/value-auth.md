@@ -97,9 +97,9 @@ seed; the active token name commits an Active preimage containing `(S, R)`
 and the AID key. Both names use `blake2b_256` over serialized Plutus Data.
 
 Those are conceptual commitments, not byte formats. The exact preimage
-bytes and termination approval vectors are **not settled upstream**. Whether
-registration approval commits the holding's payment credential or its full
-address is also **not settled upstream**. The KERI AID key encoding still
+bytes and termination approval vectors are **not settled upstream**.
+Registration approval binds the full holding address, including its payment
+and stake parts. The KERI AID key encoding still
 needs an explicit binding.
 
 ```mermaid

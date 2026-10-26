@@ -119,9 +119,8 @@ registry name commits a `State{seed}` preimage; the active name commits an
 `Active{(S, R), key}` preimage. The latter is a hash bound to the full registry
 identity, not the raw key. These expressions name the committed fields,
 not an implementable encoding. **The exact preimage byte specification and
-termination approval vectors are not settled upstream.** Whether registration
-approval commits the holding's payment credential or its full address is
-also **not settled upstream**. No encoder should infer those choices from
+termination approval vectors are not settled upstream.** Registration
+approval binds the full holding address, including its payment and stake parts. No encoder should infer those choices from
 this page.
 
 The reader derives the active asset and queries it under `S`. Finding it

@@ -1,5 +1,12 @@
 # The registry as an MPFS instance
 
+For KERI integrators, the [current upstream comparison](#where-the-registry-is-built)
+explains the registry KERI is preparing to bind to. The earlier model record
+on this page is historical context. Its dormant leaf, burn-on-reap and
+request-rejection descriptions require the model-first alignment recorded in
+the [Lean correspondence register](https://github.com/lambdasistemi/cardano-keri/issues/435).
+
+
 !!! note "What ships, and the accepted design"
     Unless a paragraph below is marked as preprod or `main` today, it
     describes the accepted design (D-036 to D-040). In that design an
@@ -65,73 +72,117 @@ parts remain abstract, read
 
 ## Where the registry is built
 
-Read on 2026-09-11. The registry line moved from the Cardano Foundation's
-MPFS repository to [singular](https://github.com/lambdasistemi/singular), and
-the two repositories are in different states.
+As a KERI integrator, use the redesigned Singular registry to obtain one
+active token per key in a chosen registry, while keeping KERI admission and
+recovery rules in the KERI application. The public target is
+[Singular's redesign](https://github.com/lambdasistemi/singular/issues/731),
+particularly [registration](https://github.com/lambdasistemi/singular/issues/742),
+[termination](https://github.com/lambdasistemi/singular/issues/743) and
+[reading](https://github.com/lambdasistemi/singular/issues/744).
+This section describes that upstream target as read on 26 October 2026,
+not behavior already implemented by Cardano KERI.
 
-**Singular** is the cage above made permissionless, and it runs on a
-development network. Its release
-[v0.3.0](https://github.com/lambdasistemi/singular/releases/tag/v0.3.0) of
-2026-09-11 carries: a registration is a request UTxO certified by the
-application's own minting policy; anyone folds requests into the registry
-with absence and existence proofs; the fold mints exactly one representative
-token into the output the certified request names; an insert on an occupied
-key is refused by the node; a folded delete makes the key available again.
-Its key states are absent, active, and a terminal retired state. Its
-consumer-conformance suite is bound by commit to this page and to the
-[consumer checklist](../user/consumer-checklist.md): 41 rows, of which the
-bonds, the poison, the juvenility window (the age a checkpoint must reach
-before a consumer trusts it) and the signature threshold are
-left to the checkpoint machine and never claimed by singular. Recovery
-through a committed next controller has run on a ledger; retirement has not.
-Measured on its ship run, a fold is about 11.4 KB of a 16,384-byte
-transaction and under 3 % of the execution-unit maxima. Its own model has 41
-proved statements under standard axioms.
+The state policy is `S = state(A)`, the state contract applied to the
+application policy. Its datum holds the registry's trie root. After genesis,
+it acts only at a fold. There is no Singular request script, request tag,
+rejection operation, booking check, configured tip or treasury routing.
+Requests sit at the application's address with one application approval;
+the application owns request protection, reclaim, cleanup and refunds.
 
-One result every consumer of this registry must absorb: **a permissionless
-ledger cannot prohibit a rival registry.** A consistent initialization from a
-second seed passes every check and the node accepts it. Canonical identity is
-therefore a derivation the consumer authenticates, not a refusal the chain
-performs: the canonical registry token's name is the hash of the seed output
-it was booted from, and that seed can be spent only once. The "present" and
-"the token" steps of the consumer checklist are where that authentication
-belongs.
+```mermaid
+stateDiagram-v2
+    direction TB
+    [*] --> Unknown: create registry
+    Unknown --> Active: register key
+    Active --> Terminal: terminate and burn
+```
 
-| Singular page | What it settles |
-|---|---|
-| [README](https://github.com/lambdasistemi/singular/blob/main/README.md) | who it is for, the request, fold and resolve flow, the three registry transitions |
-| [Requests, folding and NFT custody](https://github.com/lambdasistemi/singular/blob/main/docs/lifecycle.md) | where the representative is at every moment; the exact effect of insert, update and delete |
-| [Consumer conformance](https://github.com/lambdasistemi/singular/blob/main/docs/consumer-conformance.md) | the rows bound to this page, the executed generic and canonical-identity rows with their controls, the measurements |
-| [Recover control on a real ledger](https://github.com/lambdasistemi/singular/blob/main/docs/recovery-retirement.md) | the recovery rows; the statement that retirement is not yet runnable |
-| [Theorem manifest](https://github.com/lambdasistemi/singular/blob/main/docs/theorems.md) | the 41 proved statements and the axiom gate |
+Registration requires a proof that the key is absent and the matching
+application approval. The same fold inserts the active leaf and mints one
+active token into a holding with the committed destination, initial datum
+and minimum deposit. Termination consumes its approval, burns the active
+token and leaves a permanent terminal leaf. There is no delete or registry
+revival edge. Rotation and application payload changes carry the token to a
+successor holding without changing the registry.
 
-**The MPFS repository** has not moved: its last code commit is 2026-07-08,
-and the four changes this page first asked of it are open there — replace
-semantics for the `stake_script` hook
-([#79](https://github.com/cardano-foundation/cardano-mpfs-onchain/issues/79)),
-the hook and the owner pinned and empty folds refused
-([#100](https://github.com/cardano-foundation/cardano-mpfs-onchain/issues/100)),
-processed-request value routed by the plugin
-([#101](https://github.com/cardano-foundation/cardano-mpfs-onchain/issues/101)),
-and the plugin contract with a mint-coupled reference plugin
-([#102](https://github.com/cardano-foundation/cardano-mpfs-onchain/issues/102)).
-Singular imported that cage's source unchanged, so the divergences audited
-under [Pluggability and the permissioning divergence](#pluggability-and-the-permissioning-divergence-cagelean)
-hold of singular's cage partition too; singular's conformance plan records
-four of them as expected gaps, to be observed with the transaction that
-proves each rather than asserted.
+### Canonical identity and exact token
 
-**What is not settled between the two models.** The leaf maps differ. This
-page's leaf is absent, `active`, `dormant k` holding the key state a revival
-must rotate from, or `convicted` for ever. Singular's leaf is absent, active,
-or retired for ever, and its delete returns the key to absent and keeps no
-hash. How `dormant k` and "revive from exactly `k`" are expressed on singular,
-in the registry leaf or in a parked application output that keeps the
-representative, is a design decision not yet taken; it belongs to
-[registry integration](https://github.com/lambdasistemi/cardano-keri/issues/324).
-Cardano-keri's own side is unstarted: the minting policy that parses the
-inception, checks the receipts and certifies the registration request, and
-the consumer's authentication of the canonical registry.
+A permissionless registry does not prohibit another registry created from
+another seed. Consumers authenticate the canonical registry they intend to
+use. Its identity is `(S, R)`: the state policy and the registry token name.
+The [registry address](https://github.com/lambdasistemi/singular/issues/728)
+encodes that pair in bech32, with the network in its prefix. The expected
+state policy is derived from the Singular and KERI application releases.
+
+The redesigned names use `blake2b_256` over serialized Plutus Data: the
+registry name commits a `State{seed}` preimage; the active name commits an
+`Active{(S, R), key}` preimage. The latter is a hash bound to the full registry
+identity, not the raw key. These expressions name the committed fields,
+not an implementable encoding. **The exact preimage byte specification and
+termination approval vectors are not settled upstream.** Registration
+approval binds the full holding address, including its payment and stake parts. No encoder should infer those choices from
+this page.
+
+The reader derives the active asset and queries it under `S`. Finding it
+is not yet KERI authorization: its holding may be a checkpoint, a parked
+output or a pending termination. A missing token cannot distinguish never
+registered from terminal; use history replay or a proof against the on-chain
+root. Wrong network, an unknown application release or provider failure must
+not become a successful negative lookup.
+
+### KERI changes remain pending
+
+At Cardano KERI `7cb4e716107d8ca7cc53dcdb0cd26549315ee256`,
+`Registry.lean` still carries `Status.dormant k`, `Op.revive`, `rejectOne`
+and a reap that burns before a later fold. `SingularBinding.lean` still
+imports the old interface from dependency
+`f844a8f423eaf65009c587b9d7dd9ad3e00d21af`; its one refusal theorem does not
+establish correspondence with the redesign. The
+[full comparison](../demos/d02-registry-mapping.md) records the affected
+requirements against those revisions.
+
+For an identity owner to park and later revive, the
+[recorded parking ruling](https://github.com/lambdasistemi/cardano-keri/issues/437)
+requires a KERI output retaining the token and last key state, with the
+registry leaf staying active. The retained output also retains its minimum
+ADA. For a relying party to refuse proven duplicity permanently, KERI must
+validate the duplicity evidence before issuing termination approval. Both
+stories require the model changes tracked in the
+[Lean correspondence register](https://github.com/lambdasistemi/cardano-keri/issues/435).
+They are not delivered by this page or by the existing model simulator.
+
+For a registrant to receive the checkpoint approved at booking, KERI's
+approval policy must check inception evidence and receipts, the refund
+address, bonds and initial datum before minting approval. The initial datum
+is committed then, so the birth slot must be modeled at booking, not at the
+fold. The checkpoint datum must carry registry identity and the active
+asset, and the AID's exact key encoding must be bound. Checkpoint and fact
+tokens need a separate policy from approvals: each request carries exactly
+one application-policy token and no other fold input may carry one.
+
+For a requester to recover funds safely, KERI must model its own processing,
+reclaim and cleanup rules. The folder takes the request ADA above what the
+application requires to remain; a termination request can release all its
+ADA to the folder. KERI must bind its refunds and conviction economics,
+not inherit open datum's controller or treasury choices. Singular supplies
+no early rejection for an unprocessable registration.
+
+| Choice in the upstream target | Alternative it replaces | Consequence for KERI |
+| --- | --- | --- |
+| Application policy fixed in the state script | Application pin supplied in a datum | Derive the expected state policy for each release. |
+| Approval commits registration delivery | KERI admission performed during the fold | Validate admission at booking and preserve the committed datum and deposit. |
+| Application-held parking | Dormant registry leaf and revival by reminting | Align the KERI model first; retain the active token. |
+| Registration and permanent termination only | Additional registry lifecycle edges | A further edge needs a new state policy and new registries. |
+
+Uniqueness is per registry, not across all releases and all registries.
+[Registry integration](https://github.com/lambdasistemi/cardano-keri/issues/324),
+[request recovery](https://github.com/lambdasistemi/cardano-keri/issues/468)
+and [consumer authentication](https://github.com/lambdasistemi/cardano-keri/issues/439)
+remain pending. The public
+[integration and release ticket](https://github.com/lambdasistemi/singular/issues/747)
+is not a receipt for KERI behavior. The sections below retain the earlier
+model rationale and theorem record; they do not describe the redesigned
+upstream contract or establish its implementation acceptance.
 
 ## The rulings, verbatim (2026-09-02/03)
 

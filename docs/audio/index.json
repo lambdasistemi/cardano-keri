@@ -3468,6 +3468,38 @@
     "v": "6384b206f49a"
    }
   ],
+  "pending-singular-registry-integration": [
+   {
+    "index": 0,
+    "name": "docs-architecture-value-auth/pending-singular-registry-integration-00",
+    "pause_ms": 500,
+    "v": "c52cdfbb868a"
+   },
+   {
+    "index": 1,
+    "name": "docs-architecture-value-auth/pending-singular-registry-integration-01",
+    "pause_ms": 400,
+    "v": "3c3013c0bb8e"
+   },
+   {
+    "index": 2,
+    "name": "docs-architecture-value-auth/pending-singular-registry-integration-02",
+    "pause_ms": 400,
+    "v": "06eca5d3a093"
+   },
+   {
+    "index": 3,
+    "name": "docs-architecture-value-auth/pending-singular-registry-integration-03",
+    "pause_ms": 400,
+    "v": "2309a880ee4d"
+   },
+   {
+    "index": 4,
+    "name": "docs-architecture-value-auth/pending-singular-registry-integration-04",
+    "pause_ms": 400,
+    "v": "aac2847ee57d"
+   }
+  ],
   "refusal-behavior": [
    {
     "index": 0,
@@ -3505,7 +3537,7 @@
     "index": 1,
     "name": "docs-architecture-value-auth/resolve-current-authority-01",
     "pause_ms": 400,
-    "v": "8411c1b9e7f1"
+    "v": "653eb514646d"
    },
    {
     "index": 2,
@@ -3605,7 +3637,7 @@
     "index": 1,
     "name": "docs-architecture-value-auth/under-the-accepted-design-01",
     "pause_ms": 400,
-    "v": "3e8726d145bc"
+    "v": "0ec178e0942d"
    },
    {
     "index": 2,
@@ -3629,7 +3661,7 @@
     "index": 5,
     "name": "docs-architecture-value-auth/under-the-accepted-design-05",
     "pause_ms": 300,
-    "v": "91fa7eea87cb"
+    "v": "0973a7739d77"
    },
    {
     "index": 6,
@@ -4938,78 +4970,136 @@
   ]
  },
  "docs/demos/d02-registry-mapping.md": {
-  "map-the-singular-registry-to-cardano-keri-23-october-target": [
+  "bound-sources-and-acceptance-boundary": [
    {
     "index": 0,
-    "name": "docs-demos-d02-registry-mapping/map-the-singular-registry-to-cardano-keri-23-october-target-00",
+    "name": "docs-demos-d02-registry-mapping/bound-sources-and-acceptance-boundary-00",
     "pause_ms": 500,
-    "v": "b63702e2910d"
+    "v": "6f6ee1280ccc"
    },
    {
     "index": 1,
-    "name": "docs-demos-d02-registry-mapping/map-the-singular-registry-to-cardano-keri-23-october-target-01",
+    "name": "docs-demos-d02-registry-mapping/bound-sources-and-acceptance-boundary-01",
     "pause_ms": 400,
-    "v": "e84246dd629d"
+    "v": "ca3deabeab6c"
    },
    {
     "index": 2,
-    "name": "docs-demos-d02-registry-mapping/map-the-singular-registry-to-cardano-keri-23-october-target-02",
+    "name": "docs-demos-d02-registry-mapping/bound-sources-and-acceptance-boundary-02",
     "pause_ms": 400,
-    "v": "be74e3703e41"
+    "v": "f8bc3596b4ea"
    },
    {
     "index": 3,
-    "name": "docs-demos-d02-registry-mapping/map-the-singular-registry-to-cardano-keri-23-october-target-03",
+    "name": "docs-demos-d02-registry-mapping/bound-sources-and-acceptance-boundary-03",
     "pause_ms": 400,
-    "v": "88e83f59f479"
+    "v": "91c1660884f1"
    }
   ],
-  "model-revisions-and-source": [
+  "decisions-and-work-still-required": [
    {
     "index": 0,
-    "name": "docs-demos-d02-registry-mapping/model-revisions-and-source-00",
+    "name": "docs-demos-d02-registry-mapping/decisions-and-work-still-required-00",
     "pause_ms": 500,
-    "v": "a6a59357185e"
+    "v": "e6460e15070a"
    },
    {
     "index": 1,
-    "name": "docs-demos-d02-registry-mapping/model-revisions-and-source-01",
+    "name": "docs-demos-d02-registry-mapping/decisions-and-work-still-required-01",
     "pause_ms": 400,
-    "v": "cef4de8435d0"
+    "v": "0892de94068b"
    },
    {
     "index": 2,
-    "name": "docs-demos-d02-registry-mapping/model-revisions-and-source-02",
+    "name": "docs-demos-d02-registry-mapping/decisions-and-work-still-required-02",
     "pause_ms": 400,
-    "v": "609c11963dc8"
-   },
-   {
-    "index": 3,
-    "name": "docs-demos-d02-registry-mapping/model-revisions-and-source-03",
-    "pause_ms": 400,
-    "v": "039c18a4658e"
+    "v": "107e32912f4a"
    }
   ],
-  "presenter-path-1015-minutes": [
+  "map-the-redesigned-singular-registry-to-cardano-keri": [
    {
     "index": 0,
-    "name": "docs-demos-d02-registry-mapping/presenter-path-1015-minutes-00",
+    "name": "docs-demos-d02-registry-mapping/map-the-redesigned-singular-registry-to-cardano-keri-00",
     "pause_ms": 500,
-    "v": "5d1eb188fc02"
-   }
-  ],
-  "what-is-missing-before-this-becomes-a-play": [
-   {
-    "index": 0,
-    "name": "docs-demos-d02-registry-mapping/what-is-missing-before-this-becomes-a-play-00",
-    "pause_ms": 500,
-    "v": "c6c44e3dabe0"
+    "v": "11161d1f0012"
    },
    {
     "index": 1,
-    "name": "docs-demos-d02-registry-mapping/what-is-missing-before-this-becomes-a-play-01",
+    "name": "docs-demos-d02-registry-mapping/map-the-redesigned-singular-registry-to-cardano-keri-01",
     "pause_ms": 400,
-    "v": "f9b4e38fddf9"
+    "v": "ec34bd36c34a"
+   },
+   {
+    "index": 2,
+    "name": "docs-demos-d02-registry-mapping/map-the-redesigned-singular-registry-to-cardano-keri-02",
+    "pause_ms": 400,
+    "v": "7e257db61f47"
+   }
+  ],
+  "registration-and-termination-boundary": [
+   {
+    "index": 0,
+    "name": "docs-demos-d02-registry-mapping/registration-and-termination-boundary-00",
+    "pause_ms": 500,
+    "v": "a4d7da5a8ea3"
+   },
+   {
+    "index": 1,
+    "name": "docs-demos-d02-registry-mapping/registration-and-termination-boundary-01",
+    "pause_ms": 400,
+    "v": "a864c6885313"
+   },
+   {
+    "index": 2,
+    "name": "docs-demos-d02-registry-mapping/registration-and-termination-boundary-02",
+    "pause_ms": 400,
+    "v": "b4c70c2b5f87"
+   },
+   {
+    "index": 3,
+    "name": "docs-demos-d02-registry-mapping/registration-and-termination-boundary-03",
+    "pause_ms": 400,
+    "v": "dfa58d3b801c"
+   }
+  ],
+  "registry-identity-and-lookup": [
+   {
+    "index": 0,
+    "name": "docs-demos-d02-registry-mapping/registry-identity-and-lookup-00",
+    "pause_ms": 500,
+    "v": "67374c0e9c4c"
+   },
+   {
+    "index": 1,
+    "name": "docs-demos-d02-registry-mapping/registry-identity-and-lookup-01",
+    "pause_ms": 400,
+    "v": "9f4b897b7b4b"
+   },
+   {
+    "index": 2,
+    "name": "docs-demos-d02-registry-mapping/registry-identity-and-lookup-02",
+    "pause_ms": 400,
+    "v": "a7ee65064e07"
+   },
+   {
+    "index": 3,
+    "name": "docs-demos-d02-registry-mapping/registry-identity-and-lookup-03",
+    "pause_ms": 400,
+    "v": "b5d3cb3e1264"
+   }
+  ],
+  "what-changes-for-a-keri-integrator": [
+   {
+    "index": 0,
+    "name": "docs-demos-d02-registry-mapping/what-changes-for-a-keri-integrator-00",
+    "pause_ms": 500,
+    "v": "31821827a530"
+   },
+   {
+    "index": 1,
+    "name": "docs-demos-d02-registry-mapping/what-changes-for-a-keri-integrator-01",
+    "pause_ms": 400,
+    "v": "190fe5dc9a56"
    }
   ]
  },
@@ -10902,6 +10992,90 @@
   ]
  },
  "docs/design/registry-as-mpfs.md": {
+  "building-against-the-public-singular-lean-library": [
+   {
+    "index": 0,
+    "name": "docs-design-registry-as-mpfs/building-against-the-public-singular-lean-library-00",
+    "pause_ms": 500,
+    "v": "a4635822e499"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-registry-as-mpfs/building-against-the-public-singular-lean-library-01",
+    "pause_ms": 400,
+    "v": "40fc2b7419c4"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-registry-as-mpfs/building-against-the-public-singular-lean-library-02",
+    "pause_ms": 400,
+    "v": "77335d7c7b6e"
+   }
+  ],
+  "canonical-identity-and-exact-token": [
+   {
+    "index": 0,
+    "name": "docs-design-registry-as-mpfs/canonical-identity-and-exact-token-00",
+    "pause_ms": 500,
+    "v": "a01e1ac553d3"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-registry-as-mpfs/canonical-identity-and-exact-token-01",
+    "pause_ms": 400,
+    "v": "eb817bb0efbd"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-registry-as-mpfs/canonical-identity-and-exact-token-02",
+    "pause_ms": 400,
+    "v": "4e52f4fd0cc7"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-registry-as-mpfs/canonical-identity-and-exact-token-03",
+    "pause_ms": 400,
+    "v": "798d4258b11c"
+   }
+  ],
+  "keri-changes-remain-pending": [
+   {
+    "index": 0,
+    "name": "docs-design-registry-as-mpfs/keri-changes-remain-pending-00",
+    "pause_ms": 500,
+    "v": "d4e673c76fda"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-registry-as-mpfs/keri-changes-remain-pending-01",
+    "pause_ms": 400,
+    "v": "c52e906ee4c8"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-registry-as-mpfs/keri-changes-remain-pending-02",
+    "pause_ms": 400,
+    "v": "ede78c84a5d2"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-registry-as-mpfs/keri-changes-remain-pending-03",
+    "pause_ms": 400,
+    "v": "a188f6899a71"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-registry-as-mpfs/keri-changes-remain-pending-04",
+    "pause_ms": 400,
+    "v": "66ac905f065b"
+   },
+   {
+    "index": 5,
+    "name": "docs-design-registry-as-mpfs/keri-changes-remain-pending-05",
+    "pause_ms": 400,
+    "v": "fd59bb7d92a7"
+   }
+  ],
   "pluggability-and-the-permissioning-divergence-cagelean": [
    {
     "index": 0,
@@ -11073,19 +11247,25 @@
     "index": 1,
     "name": "docs-design-registry-as-mpfs/the-registry-as-an-mpfs-instance-01",
     "pause_ms": 400,
-    "v": "40f4dc032cf6"
+    "v": "610bf6511a0c"
    },
    {
     "index": 2,
     "name": "docs-design-registry-as-mpfs/the-registry-as-an-mpfs-instance-02",
     "pause_ms": 400,
-    "v": "2626498d57b9"
+    "v": "429efc815e35"
    },
    {
     "index": 3,
     "name": "docs-design-registry-as-mpfs/the-registry-as-an-mpfs-instance-03",
     "pause_ms": 400,
-    "v": "9f25d3617d13"
+    "v": "3f95eb014d64"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-registry-as-mpfs/the-registry-as-an-mpfs-instance-04",
+    "pause_ms": 400,
+    "v": "c8963fd43871"
    }
   ],
   "the-rulings-verbatim-2026-09-0203": [
@@ -11229,31 +11409,19 @@
     "index": 1,
     "name": "docs-design-registry-as-mpfs/where-the-registry-is-built-01",
     "pause_ms": 400,
-    "v": "4e80614f5739"
+    "v": "876d4bc8a31d"
    },
    {
     "index": 2,
     "name": "docs-design-registry-as-mpfs/where-the-registry-is-built-02",
     "pause_ms": 400,
-    "v": "42e39ee53a0d"
+    "v": "c4cb9e8e1adb"
    },
    {
     "index": 3,
     "name": "docs-design-registry-as-mpfs/where-the-registry-is-built-03",
     "pause_ms": 400,
-    "v": "04a1c2298263"
-   },
-   {
-    "index": 4,
-    "name": "docs-design-registry-as-mpfs/where-the-registry-is-built-04",
-    "pause_ms": 400,
-    "v": "96865bc48fe8"
-   },
-   {
-    "index": 5,
-    "name": "docs-design-registry-as-mpfs/where-the-registry-is-built-05",
-    "pause_ms": 400,
-    "v": "8b1eeb724ef0"
+    "v": "6862b2093c63"
    }
   ],
   "why-a-cage-and-why-the-leaf-carries-state": [

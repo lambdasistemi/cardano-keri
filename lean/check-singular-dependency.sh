@@ -36,8 +36,8 @@ jq -e --arg rev "$expected" '
 ' "$source_root/lake-manifest.json" >/dev/null || fail 'invalid or missing dependency lock'
 cp "$source_root/lake-manifest.json" "$receipt_dir/lake-manifest.json"
 cp "$source_root/flake.lock" "$receipt_dir/flake.lock"
-printf 'consumer=%s\nsingular.commit=%s\nsingular.github.narHash=%s\nsingular.git.tree=bcb491dfc2c47f061509d1bcf165a5d4841de4e7\nsingular.checkout.hash=sha256-uJbve3dHhMLihL6Ew5aAAWrHqyas5wkm6W8ZkIGvsDc=\n' \
-  "$consumer_revision" "$singular_revision" "$singular_nar_hash" > "$receipt_dir/identities.txt"
+printf 'consumer=%s\nsingular.commit=%s\nsingular.github.narHash=%s\nsingular.git.tree=bcb491dfc2c47f061509d1bcf165a5d4841de4e7\nsingular.checkout.hash=%s\n' \
+  "$consumer_revision" "$singular_revision" "$singular_nar_hash" "$SINGULAR_CHECKOUT_HASH" > "$receipt_dir/identities.txt"
 {
   jq -r '.nodes.nixpkgs.locked | "compiler.nixpkgs.commit=\(.rev)\ncompiler.nixpkgs.narHash=\(.narHash)"' \
     "$source_root/flake.lock"

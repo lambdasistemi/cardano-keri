@@ -29,12 +29,24 @@
           ]);
       };
       # Lake verifies its Git manifest against the package's Git metadata.
-      # Keep the shallow, fixed-output checkout so sandbox builds need no network.
+      # Keep real commit/tree objects, but not the variable pack layout.
       singularCheckout = pkgs.fetchgit {
         url = "https://github.com/lambdasistemi/singular.git";
         rev = singular.rev;
-        hash = "sha256-uJbve3dHhMLihL6Ew5aAAWrHqyas5wkm6W8ZkIGvsDc=";
+        hash = "sha256-ryr4YWYNCG1zahf+qSFVpwHddP6pKQyB43PBkiv8Afs=";
         leaveDotGit = true;
+        postFetch = ''
+          # Hide packs while unpacking so Git writes every object as a loose object.
+          pack_dir=$(mktemp -d)
+          mv "$out"/.git/objects/pack/* "$pack_dir"/
+          for pack in "$pack_dir"/*.pack; do
+            git -C "$out" -c core.compression=9 unpack-objects < "$pack"
+          done
+          rm -rf "$pack_dir"
+          # Remove the advertisement for the packs that no longer exist.
+          rm -f "$out/.git/objects/info/packs"
+          git -C "$out" fsck --strict
+        '';
       };
       checker = pkgs.writeShellApplication {
         name = "singular-dependency-check";
@@ -49,6 +61,7 @@
           pkgs.git
         ];
         text = ''
+          export SINGULAR_CHECKOUT_HASH=${pkgs.lib.escapeShellArg singularCheckout.outputHash}
           exec bash ${./check-singular-dependency.sh} \
             ${source} ${singularCheckout} \
             ${self.rev or self.dirtyRev or "uncommitted"} \

@@ -9,9 +9,11 @@
 #   lean/mutants/run.sh --hash-file-set
 #     emits the portable witness+sensor digest (no Lean build)
 #   lean/mutants/run.sh --axiom-identities
-#     emits the 210 qualified theorem names (no Lean build)
+#     emits the qualified theorem names (no Lean build)
 #   lean/mutants/run.sh --check-axiom-identities <axioms.log>
 #     require exact unique requested/observed identity agreement
+#   lean/mutants/run.sh --selftest-axiom-identities
+#     reject same-count substituted and truncated synthetic identities
 #
 # Inventory is derived from the frozen ledger `lean/SEMANTIC-ATOMS.md` and
 # dynamically from compiled Cage/Samaritan theorem declarations. Refuses
@@ -60,10 +62,10 @@ ledger_theorems() {
 
 discovered_theorems() {
   {
-    grep -h '^theorem ' "$LEAN/CardanoKeri/Cage.lean" | sed -E 's/^theorem ([A-Za-z0-9_]+).*/THEOREM\tCage.\1/'
-    grep -h '^theorem ' "$LEAN/CardanoKeri/Samaritan.lean" | sed -E 's/^theorem ([A-Za-z0-9_]+).*/THEOREM\tSamaritan.\1/'
-    grep -h '^theorem ' "$WITDIR/TH-19.lean" | sed -E 's/^theorem ([A-Za-z0-9_]+).*/THEOREM\tMutants.\1/'
-    grep -h '^theorem ' "$WITDIR/TH-20.lean" | sed -E 's/^theorem ([A-Za-z0-9_]+).*/THEOREM\tMutants.\1/'
+    grep -h '^theorem ' "$LEAN/CardanoKeri/Cage.lean" | sed -E 's/^theorem ([A-Za-z0-9_.]+).*/THEOREM\tCage.\1/'
+    grep -h '^theorem ' "$LEAN/CardanoKeri/Samaritan.lean" | sed -E 's/^theorem ([A-Za-z0-9_.]+).*/THEOREM\tSamaritan.\1/'
+    grep -h '^theorem ' "$WITDIR/TH-19.lean" | sed -E 's/^theorem ([A-Za-z0-9_.]+).*/THEOREM\tMutants.\1/'
+    grep -h '^theorem ' "$WITDIR/TH-20.lean" | sed -E 's/^theorem ([A-Za-z0-9_.]+).*/THEOREM\tMutants.\1/'
   } | sort
 }
 
@@ -179,8 +181,8 @@ verify_axiom_identities() {
     echo "AXIOM-IDENTITY-DUPLICATE observed unique=$obs_u n=$obs_n" >&2
     rm -f "$obs"; return 1
   fi
-  if [ "$req_n" -ne 210 ] || [ "$obs_n" -ne 210 ]; then
-    echo "AXIOM-IDENTITY-COUNT requested=$req_n observed=$obs_n (requires 210 unique identities)" >&2
+  if [ "$req_n" -eq 0 ] || [ "$obs_n" -ne "$req_n" ]; then
+    echo "AXIOM-IDENTITY-COUNT requested=$req_n observed=$obs_n (requires the nonempty exact source inventory)" >&2
     rm -f "$obs"; return 1
   fi
   step=$(grep -c '\.Step\.' "$requested" || true)
@@ -211,6 +213,34 @@ cmd_check_axiom_identities() {
   fi
   rm -f "$req"
   return 1
+}
+
+# Synthetic controls exercise the identity comparator, not the Lean proofs.
+# The real account below separately checks the compiler's output.
+cmd_selftest_axiom_identities() {
+  local control_dir name
+  control_dir=$(mktemp -d)
+  theorem_qualified_names > "$control_dir/requested"
+  awk '{printf "\047%s\047 does not depend on any axioms\n", $0}' \
+    "$control_dir/requested" > "$control_dir/valid.log"
+  verify_axiom_identities "$control_dir/requested" "$control_dir/valid.log" || return 1
+  sed 's/CardanoKeri.Checkpoint.Step.register_iff/CardanoKeri.Checkpoint.Step.registerx_iff/' \
+    "$control_dir/valid.log" > "$control_dir/substituted.log"
+  sed -E 's/CardanoKeri.Checkpoint.Step\.[A-Za-z0-9_]+/CardanoKeri.Checkpoint.Step/g' \
+    "$control_dir/valid.log" > "$control_dir/truncated.log"
+  for name in substituted truncated; do
+    if verify_axiom_identities "$control_dir/requested" "$control_dir/$name.log" > "$control_dir/$name.diagnostic" 2>&1; then
+      echo "AXIOM-IDENTITY-CONTROL accepted $name names" >&2
+      rm -rf "$control_dir"; return 1
+    fi
+    if ! grep -Eq 'AXIOM-IDENTITY-(MISMATCH|DUPLICATE)' "$control_dir/$name.diagnostic"; then
+      cat "$control_dir/$name.diagnostic" >&2
+      rm -rf "$control_dir"; return 1
+    fi
+    echo "AXIOM-IDENTITY-CONTROL $name refused"
+  done
+  echo "AXIOM-IDENTITY-CONTROL exact names accepted ($(wc -l < "$control_dir/requested") identities)"
+  rm -rf "$control_dir"
 }
 
 count_needle() { # needle-file target-file -> count
@@ -451,8 +481,8 @@ cmd_run() {
   thmlines_for "$LEAN/CardanoKeri/CheckpointGoals.lean" "$campaign/thmlines-checkpoint.txt"
   thmlines_for "$LEAN/CardanoKeri/RegistryGoals.lean" "$campaign/thmlines-registry.txt"
   # Cage/Samaritan theorems live in their own files; attribute by file+line.
-  grep -n '^theorem ' "$LEAN/CardanoKeri/Cage.lean" | sed -E 's/^([0-9]+):theorem ([A-Za-z0-9_]+).*/\1 \2/' > "$campaign/thmlines-cage.txt"
-  grep -n '^theorem ' "$LEAN/CardanoKeri/Samaritan.lean" | sed -E 's/^([0-9]+):theorem ([A-Za-z0-9_]+).*/\1 \2/' > "$campaign/thmlines-samaritan.txt"
+  grep -n '^theorem ' "$LEAN/CardanoKeri/Cage.lean" | sed -E 's/^([0-9]+):theorem ([A-Za-z0-9_.]+).*/\1 \2/' > "$campaign/thmlines-cage.txt"
+  grep -n '^theorem ' "$LEAN/CardanoKeri/Samaritan.lean" | sed -E 's/^([0-9]+):theorem ([A-Za-z0-9_.]+).*/\1 \2/' > "$campaign/thmlines-samaritan.txt"
 
   restore_all() {
     cp "$LEAN/CardanoKeri/Checkpoint.lean" "$wlean/CardanoKeri/Checkpoint.lean"
@@ -959,7 +989,7 @@ EOF
       blocked=$((blocked+1))
     elif ax_diag=$(verify_axiom_identities "$campaign/axiom-requested.txt" "$campaign/axioms.log" 2>&1); then
       axioms_ok=1
-      say "AXIOMS IDENTITY 210 unique qualified names including 13 Step.*_iff"
+      say "AXIOMS IDENTITY $ax_count unique qualified names including 13 Step.*_iff"
     else
       ax_rc=$?
       say "AXIOMS REJECTED identity rc=$ax_rc sorryAx=$sorry_count [$ax_diag]"
@@ -1185,7 +1215,7 @@ HDR
 }
 
 usage() {
-  echo "usage: run.sh --list | --run <campaign-dir> | --check-witness <ledger-name> <file> | --check-axioms <expected> <observed> <sorry> | --hash-file-set | --axiom-identities | --check-axiom-identities <axioms.log>" >&2
+  echo "usage: run.sh --list | --run <campaign-dir> | --check-witness <ledger-name> <file> | --check-axioms <expected> <observed> <sorry> | --hash-file-set | --axiom-identities | --check-axiom-identities <axioms.log> | --selftest-axiom-identities" >&2
   exit 2
 }
 
@@ -1214,6 +1244,10 @@ case "${1:-}" in
   --check-axiom-identities)
     test $# -eq 2 || usage
     cmd_check_axiom_identities "$2"
+    ;;
+  --selftest-axiom-identities)
+    test $# -eq 1 || usage
+    cmd_selftest_axiom_identities
     ;;
   *) usage ;;
 esac

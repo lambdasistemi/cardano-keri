@@ -13,6 +13,10 @@
       "pause": 400
     },
     {
+      "text": "The later concrete rotation refinement implements ordinary rotation comparison with each branch's signing thresholds and derived witnesses. It replaces the checkpoint's free duplicity flag with event evidence. This closes that model abstraction only; the historical plan's broader observer, challenge-interval and financial-policy requirements remain separate. Cryptography, wire decoding and authenticated predecessor retrieval remain declared technical boundaries.",
+      "pause": 400
+    },
+    {
       "text": "Milestone boundary: all KEL work discussed here belongs to Milestone 1, excluding delegation. TEL and ACDC work belongs to Milestone 2. Delegation remains in its existing Milestone 7 lane; it is neither an identity-core acceptance requirement nor a reason to postpone the ordinary KEL model.",
       "pause": 400
     },
@@ -211,6 +215,6 @@
   ],
   "_source": {
     "file": "lean-invariants-plan.md",
-    "sha256": "34294ddaa4b975a04192613f7b00dfdceb0e280df7fd2c1b9d723fc04c227e87"
+    "sha256": "9ea8616e89ea398a873f08f0c1e571b19233c71c8c3fd96c604c5fbe9d14e3a6"
   }
 }

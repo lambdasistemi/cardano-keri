@@ -15,6 +15,14 @@ doing new proof work. Include all ten stories in the [conviction proposal][stori
 The proposal is an input to design, not an already accepted replacement for
 the checkpoint rules.
 
+The later [concrete rotation refinement](watcher-conformance.md#concrete-rotation-refinement)
+implements ordinary rotation comparison with each branch's signing thresholds
+and derived witnesses. It replaces the checkpoint's free duplicity flag with
+event evidence. This closes that model abstraction only; the historical plan's
+broader observer, challenge-interval and financial-policy requirements remain
+separate. Cryptography, wire decoding and authenticated predecessor retrieval
+remain declared technical boundaries.
+
 **Milestone boundary:** all KEL work discussed here belongs to **Milestone 1**,
 excluding delegation. TEL and ACDC work belongs to **Milestone 2**. Delegation
 remains in its existing **Milestone 7** lane; it is neither an identity-core

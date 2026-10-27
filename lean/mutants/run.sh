@@ -153,6 +153,10 @@ theorem_qualified_names() {
   {
     awk '/^theorem /{n=$2; sub(/[(:].*/,"",n); print "CardanoKeri.Checkpoint." n}' \
       "$LEAN/CardanoKeri/CheckpointGoals.lean"
+    awk '/^theorem /{n=$2; sub(/[(:].*/,"",n); print "CardanoKeri.Checkpoint." n}' \
+      "$LEAN/CardanoKeri/ConcreteConvictionGoals.lean"
+    awk '/^theorem /{n=$2; sub(/[(:].*/,"",n); print "CardanoKeri.Duplicity." n}' \
+      "$LEAN/CardanoKeri/Duplicity.lean" "$LEAN/CardanoKeri/DuplicityExamples.lean"
     awk '/^theorem /{n=$2; sub(/[(:].*/,"",n); print "CardanoKeri.Registry." n}' \
       "$LEAN/CardanoKeri/RegistryGoals.lean"
     awk '/^theorem /{n=$2; sub(/[(:].*/,"",n); print "CardanoKeri.Cage." n}' \
@@ -975,11 +979,13 @@ EOF
   {
     echo "import CardanoKeri.CheckpointGoals"
     echo "import CardanoKeri.RegistryGoals"
+    echo "import CardanoKeri.ConcreteConvictionGoals"
+    echo "import CardanoKeri.DuplicityExamples"
     echo "import CardanoKeri.Cage"
     echo "import CardanoKeri.Samaritan"
     awk '{print "#print axioms " $0}' "$campaign/axiom-requested.txt"
   } > "$campaign/Axioms.lean"
-  if lean_run "$clean" "$campaign/clean-build.log" build CardanoKeri.CheckpointGoals CardanoKeri.RegistryGoals CardanoKeri.Cage CardanoKeri.Samaritan; then
+  if lean_run "$clean" "$campaign/clean-build.log" build CardanoKeri.CheckpointGoals CardanoKeri.RegistryGoals CardanoKeri.Cage CardanoKeri.Samaritan CardanoKeri.ConcreteConvictionGoals CardanoKeri.DuplicityExamples; then
     if lean_run "$clean" "$campaign/axioms.log" env lean "$campaign/Axioms.lean"; then
     ax_count=$(grep -c "depends on axioms\|does not depend" "$campaign/axioms.log" || true)
     sorry_count=$(grep -c sorryAx "$campaign/axioms.log" || true)

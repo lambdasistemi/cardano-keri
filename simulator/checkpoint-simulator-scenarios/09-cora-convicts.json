@@ -8,6 +8,14 @@
     "P": 2,
     "W": 10
   },
+  "atoms": [
+    "9.the-second-rotation-is-at",
+    "9.satisfies-the-common-prior-next",
+    "9.satisfies-its-own-current",
+    "9.carries-own-derived-receipts",
+    "9.and-differs-in-complete-content",
+    "9.both-validate-authenticated-context"
+  ],
   "steps": [
     {
       "slot": 0,
@@ -16,7 +24,7 @@
       "action": {
         "register": {
           "refund": 1,
-          "pool0": 10
+          "pool0": 12
         }
       },
       "expect": {
@@ -44,6 +52,46 @@
       }
     },
     {
+      "slot": 1,
+      "who": "alice",
+      "say": "Alice lands her first rotation. Its prior-next commitment anchors both branches of the later duplicity proof.",
+      "evidence": {
+        "add": [
+          {
+            "rotationTo": [
+              0,
+              0,
+              1
+            ]
+          },
+          {
+            "intentAuthorized": [
+              1,
+              "keep",
+              null
+            ]
+          }
+        ]
+      },
+      "action": {
+        "rotate": {
+          "sn'": 1,
+          "op": "keep",
+          "payee": 2,
+          "refund'": null
+        }
+      },
+      "expect": {
+        "ok": true,
+        "live": {
+          "sn": 1,
+          "epoch": 1,
+          "pool": 10
+        },
+        "verdict": "juvenile"
+      }
+    },
+    {
       "slot": 12,
       "who": "alice",
       "say": "Alice has poisoned the epoch (Mallory has the keys). A conviction does not care which state the checkpoint is in.",
@@ -51,7 +99,7 @@
         "add": [
           {
             "quorum": [
-              0
+              1
             ]
           }
         ]
@@ -97,13 +145,13 @@
     {
       "slot": 12,
       "who": "cora",
-      "say": "Cora presents the second rotation at sequence 0, revealing the epoch-0 keys, receipted by Alice’s witnesses. Convicted from a poisoned state: terminal. The conviction bond goes to Cora; the freeze bond and the pool return to the refund address (the story called that open; the Lean fixes it).",
+      "say": "Cora presents a different rotation at sequence 1. Both branches satisfy the common prior-next commitment and their own signing and derived-witness thresholds. Convicted from a poisoned state: terminal. The conviction bond goes to Cora; the freeze bond and the pool return to the refund address.",
       "evidence": {
         "add": [
           {
             "duplicityAt": [
-              0,
-              0
+              1,
+              1
             ]
           }
         ]
@@ -161,7 +209,7 @@
   "forks": [
     {
       "id": "noproof",
-      "at": 1,
+      "at": 2,
       "title": "Cora without the second rotation",
       "steps": [
         {
@@ -196,7 +244,7 @@
     },
     {
       "id": "terminal",
-      "at": 2,
+      "at": 3,
       "title": "Nothing leaves Convicted",
       "steps": [
         {
@@ -245,6 +293,9 @@
           "slot": 12,
           "who": "alice",
           "say": "No close, ever.",
+          "evidence": {
+            "add": []
+          },
           "action": {
             "close": {
               "sn'": 1,
@@ -269,9 +320,6 @@
               "consumableStateB_iff",
               "trace_from_convicted"
             ]
-          },
-          "evidence": {
-            "add": []
           }
         },
         {
@@ -303,14 +351,38 @@
           }
         }
       ]
+    },
+    {
+      "id": "sequence-zero",
+      "at": 0,
+      "title": "Inception is not an ordinary rotation",
+      "steps": [
+        {
+          "slot": 0,
+          "who": "cora",
+          "say": "A sequence-zero sibling cannot be later than its prior establishment. The concrete rotation predicate refuses this evidence.",
+          "evidence": {
+            "add": [
+              {
+                "duplicityAt": [
+                  0,
+                  0
+                ]
+              }
+            ]
+          },
+          "action": {
+            "convict": {
+              "payee": 3
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "no-duplicity-proof",
+            "verdict": "juvenile"
+          }
+        }
+      ]
     }
-  ],
-  "atoms": [
-    "9.the-second-rotation-is-at",
-    "9.reveals-the-same-keys-the",
-    "9.is-signed-at-the-current",
-    "9.carries-receipts-from-at-least",
-    "9.and-differs-from-the-accepted",
-    "9.no-history-needed-the-revealed"
   ]
 }

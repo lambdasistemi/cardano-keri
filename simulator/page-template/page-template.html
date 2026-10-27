@@ -633,7 +633,7 @@ function offersFor(actorId, tree, nodeId) {
       act('reopen', 'revive her from the registry with her later public rotation (refund to Alice)', { reopen: { "sn'": reopenSn(sess), refund: 1, pool0: 10 } });
       break;
     case 'cora':
-      ev('obtain a second receipted rotation at sequence ' + ksn + (hs ? ' (the parked key state)' : ''), { duplicityAt: [ke, ksn] }, 'two rotations at the key state’s sequence, both receipted');
+      if (ksn > 0) ev('try a second receipted rotation at sequence ' + ksn + (hs ? ' (the parked key state)' : ''), { duplicityAt: [ke, ksn] }, 'example branches with partial and augmented keys, each checked against its own threshold and derived witnesses');
       act('convict', hs ? 'convict the parked identity: the mark, nothing to seize' : 'convict, D to Cora', { convict: { payee: 3 } });
       break;
     case 'mallory':

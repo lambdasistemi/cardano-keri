@@ -1,3 +1,5 @@
+import CardanoKeri.Duplicity
+
 /-!
 # The M1 return: the checkpoint machine
 
@@ -45,8 +47,10 @@ constructors, actions carrying their parameters, addressed component-wise
 flows, the functional `stepFn` mirroring the relation, positive bonds, the
 signed intent, the leaf map as the registry's interface.
 
-No cryptography. Keys are abstracted to an epoch counter: a rotation opens
-the next epoch. Two details of D-034 stay fixed here as modelling
+No cryptography. Lifecycle keys are abstracted to an epoch counter: a rotation opens
+the next epoch. Conviction additionally checks concrete abstract-key events via
+`Duplicity`; its module declares the signature, digest and context-authentication
+boundary. Two details of D-034 stay fixed here as modelling
 assumptions, documented on the constructor: a freeze is not enabled from a
 poisoned state, and conviction sends the freeze bond and the pool to the
 refund address while the conviction bond goes to the convictor. Validity
@@ -141,10 +145,20 @@ structure Env where
   /-- `quorum e`: the current keys of epoch `e` signed the Cardano-side
   preimage at their threshold (poison; D-023). -/
   quorum : Epoch → Bool
-  /-- `duplicityAt e sn`: a second rotation at sequence `sn`, revealing the
-  keys of epoch `e`, signed at the current threshold and receipted at `toad`
-  by the tip's witnesses, differing from the accepted one (D-030). -/
-  duplicityAt : Epoch → Seq → Bool
+  /-- Authenticated predecessor authority and first accepted event at the
+  checkpoint target. Supplying its cryptographic opening is a technical
+  boundary; a rival cannot replace this context. -/
+  convictionContext : Epoch → Seq → Option CardanoKeri.Duplicity.Context
+  /-- The rival and its event-bound signatures and receipts. -/
+  convictionRival : Epoch → Seq → Option CardanoKeri.Duplicity.SignedEvent
+
+/-- Concrete ordinary rotation duplicity; no independent Boolean oracle.
+Both events validate against the same prior-next authority, each with its
+own thresholds and derived witnesses. The first accepted event is not replaced. -/
+def Env.duplicityAt (env : Env) (epoch : Epoch) (sn : Seq) : Bool :=
+  match env.convictionContext epoch sn, env.convictionRival epoch sn with
+  | some context, some rival => CardanoKeri.Duplicity.duplicityAt epoch sn context rival
+  | _, _ => false
 
 /-- The intent guard: `keep` with no new address needs nothing; every other
 intent, and every new address, needs the signed message (D-038). -/

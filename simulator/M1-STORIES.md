@@ -224,18 +224,18 @@ registered my checkpoint.*
 
 ## 9. Cora convicts
 
-*As Cora, holding two of Alice's rotations at the same sequence, each
-receipted by at least `toad` of her witnesses, I want to end this identity
+*As Cora, holding two of Alice's ordinary rotations at the same sequence, each
+receipted by its own witness threshold, I want to end this identity
 on chain and take its conviction bond.*
 
 - **Before**: `Present`, any bonded or poisoned state.
 - **Action**: a transaction carrying the second rotation with its receipts,
   naming Cora as payee.
 - **The chain checks**: the second rotation is at the tip's sequence,
-  reveals the same keys the tip holds, is signed at the current threshold,
-  carries receipts from at least `toad` of the tip's witnesses, and differs
-  from the accepted one. No history needed: the revealed keys are the
-  current keys.
+  satisfies the common prior-next threshold, satisfies its own current threshold,
+  carries receipts from its own derived witness threshold, and differs
+  in complete content from the accepted rotation. Both ordinary rotations
+  validate against authenticated predecessor context.
 - **After**: `Convicted` — terminal. No rotation, no poison, no reap, no
   revival, ever. `D_reg` to Cora. A parked identity is convicted the same
   way, by a proof against the parked key state; nothing is held, so nothing

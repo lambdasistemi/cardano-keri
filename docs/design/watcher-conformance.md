@@ -22,7 +22,61 @@ interval](#rapid-rotation-and-the-challenge-interval).
 
 This is a design review and proposed acceptance criteria, not a replacement
 product ruling or a claim that a deployed watcher has been certified. It reviews
-invariants and executable behavior; it does not complete Lean proofs.
+invariants and executable behavior; it does not complete Lean proofs. The
+September findings below remain bound to their recorded revision. The later
+[concrete rotation refinement](#concrete-rotation-refinement) describes the
+current model separately.
+
+## Concrete rotation refinement
+
+A proof submitter needs a valid competing rotation to be recognized even when
+it exposes a different subset of committed keys or adds new keys and witnesses.
+The checkpoint now evaluates both ordinary, non-delegated rotations against a
+common authenticated predecessor. Each branch must satisfy the prior-next
+threshold and its own current threshold using signatures bound to that branch.
+Each derives its own witness list by removing cuts before adding witnesses and
+must carry enough distinct, verified receipts from that resulting list.
+
+Weighted signing thresholds use exact rational arithmetic, conjunctive clauses
+and nested groups. Both rotations must occupy the checkpoint's native sequence
+and differ in complete content, including seals and other content that the
+checkpoint projection does not retain. The first accepted event stays the
+reference; presenting a rival does not roll the tip back. Sequence zero,
+delegated identities and interaction conflicts are refused by this profile.
+
+| Choice | Rejected alternative and reason |
+|---|---|
+| Grade each branch with its own threshold and derived witnesses | Reusing the tip's keys, threshold or witnesses rejects valid partial and augmented rotations and can accept inadequately signed rivals. |
+| Require complete content inequality | Comparing only projected fields misses conflicts that differ in seals; accepting identical content invents duplicity. |
+| Authenticate the common prior-next context | Allowing a rival to choose its own predecessor or witness context would make the proof self-authorizing. |
+
+The executable definitions are `Duplicity.duplicityAt` and the computed
+`Checkpoint.Env.duplicityAt` in the [Lean sources][lean-current].
+`convict_requires_concrete_pair` and `parked_convict_requires_concrete_pair`
+connect successful transitions to that evidence. The existing terminality,
+payout and monotonicity theorems remain in force. The simulator replays the
+model's concrete corpus through both its module and the code embedded in its
+page. Its compact evidence selector chooses a documented example pair; it does
+not verify real signatures.
+
+**Declared technical boundary:** keys and their committed digests share an
+abstract identity after a verified opening. Signature verification, wire
+structure, self-addressing identifiers and prior-link validation are primitive
+results bound to complete event content. The decoder must represent all
+remaining bytes injectively in the event's extension field. The environment
+must authenticate the predecessor and recorded accepted event, including for a
+parked commitment. Byte encoding, cryptographic soundness and that context
+authentication are not proved here. No Aiken conviction path is accepted by
+this model change.
+
+The [concrete replay adapter](watcher-conformance/replay-concrete.mjs) runs
+scratch adaptations of the original twelve rapid-rotation probes and eight
+incentive probes, comparing their outcomes with the preserved receipts. These
+checks leave the challenge-interval gap visible: an old pair can stop matching
+after another rotation or close. They introduce no cooldown, payout change or
+observer-delivery guarantee.
+
+[lean-current]: https://github.com/lambdasistemi/cardano-keri/tree/main/lean/CardanoKeri
 
 ## Sources and scope
 

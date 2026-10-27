@@ -1,5 +1,6 @@
 import Lean
 import CardanoKeri.Checkpoint
+import CardanoKeri.DuplicityExamples
 
 /-!
 # Checkpoint trace driver
@@ -23,8 +24,10 @@ Lean is a gate and not a reading. The seeded traces continue past a refusal
 (the state is unchanged); the grid is one step per cell.
 
 `Env` is a record of functions; the driver builds it from finite decision
-tables and emits the tables, so the JavaScript core evaluates the same
-oracle. `consumableStateB`, the model's own decidable mirror of
+tables and emits the tables. A `duplicityAt` row selects the concrete
+partial/augmented fixture in `DuplicityExamples`; it is not a Boolean
+oracle. The separate `duplicity` cases emit complete evidence and verdicts.
+`consumableStateB`, the model's own decidable mirror of
 `consumableState` (tied to it by `consumableStateB_iff`), is emitted for
 the grid states at `bornAt + W − 1 / = / + 1` so the JavaScript consumer
 agrees with the model's by hash.
@@ -68,7 +71,8 @@ def paramsOfJson (j : Json) : Except String Params := do
     else throw "B must be positive"
   else throw "D must be positive"
 
-/-- Finite decision tables standing for the four evidence predicates. -/
+/-- Three primitive decision tables and selectors for concrete duplicity
+fixtures. A selector is a model scenario, not proof of real cryptography. -/
 structure EnvTable where
   rotationTo : List (Nat × Nat × Nat)
   /-- `(e, intent, refund address or none)`: the keys of epoch `e` signed that intent message (D-038, D-039). -/
@@ -80,7 +84,10 @@ def EnvTable.toEnv (t : EnvTable) : Env where
   rotationTo := fun e sn sn' => t.rotationTo.contains (e, sn, sn')
   intentAuthorized := fun e i r => t.intentAuthorized.contains (e, i, r)
   quorum := fun e => t.quorum.contains e
-  duplicityAt := fun e sn => t.duplicityAt.contains (e, sn)
+  convictionContext := fun e sn =>
+    if t.duplicityAt.contains (e, sn) then some (CardanoKeri.Duplicity.fixture e sn).1 else none
+  convictionRival := fun e sn =>
+    if t.duplicityAt.contains (e, sn) then some (CardanoKeri.Duplicity.fixture e sn).2 else none
 
 instance : ToJson EnvTable where
   toJson t := Json.mkObj [
@@ -170,8 +177,8 @@ def seeds : List Seed := [
               (12, .close 1 2 none), (12, .topUp 1), (12, .rotate 2 .keep 2 none), (12, .reopen 1 1 5), (30, .reopen 2 1 5),
               (30, .topUp 1)] },
   { name := "convict",
-    env := { rotationTo := [(0, 0, 1)], intentAuthorized := [], quorum := [0], duplicityAt := [(0, 0)] },
-    steps := [(0, .register 1 10), (12, .convict 3), (12, .rotate 1 .deposit 1 none), (12, .close 1 1 none),
+    env := { rotationTo := [(0, 0, 1)], intentAuthorized := [], quorum := [1], duplicityAt := [(1, 1)] },
+    steps := [(0, .register 1 12), (12, .rotate 1 .keep 2 none), (12, .convict 3), (12, .rotate 1 .deposit 1 none), (12, .close 1 1 none),
               (12, .topUp 1), (12, .register 1 10), (12, .reopen 1 1 10)] },
   { name := "convict-parked",
     env := { rotationTo := [(0, 0, 1), (1, 1, 2)], intentAuthorized := [(1, .close 1, none)], quorum := [], duplicityAt := [(1, 1)] },
@@ -348,4 +355,5 @@ def readScenarios : IO (List Json) := do
     ("schema", "cardano-keri.checkpoint-trace"), ("version", (1 : Nat)), ("params", toJson params),
     ("traces", Json.arr (seeds.map (traceJson params)).toArray),
     ("grid", gridJson params),
+    ("duplicity", Lean.toJson (CardanoKeri.Duplicity.scenarios.map CardanoKeri.Duplicity.scenarioJson)),
     ("stories", Json.arr stories.toArray)]).compress

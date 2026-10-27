@@ -1,5 +1,7 @@
 import CardanoKeri.Checkpoint
 import CardanoKeri.CheckpointGoals
+import CardanoKeri.DuplicityExamples
+import CardanoKeri.ConcreteConvictionGoals
 import CardanoKeri.Registry
 import CardanoKeri.RegistryGoals
 import CardanoKeri.RegistryAgreement

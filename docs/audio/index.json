@@ -9873,19 +9873,25 @@
     "index": 3,
     "name": "docs-design-lean-invariants-plan/the-stories-this-plan-must-cover-03",
     "pause_ms": 400,
-    "v": "88390618eba1"
+    "v": "ba4b00fa6df4"
    },
    {
     "index": 4,
     "name": "docs-design-lean-invariants-plan/the-stories-this-plan-must-cover-04",
     "pause_ms": 400,
-    "v": "2e4f7d21a8a4"
+    "v": "54fb1a8b1b27"
    },
    {
     "index": 5,
     "name": "docs-design-lean-invariants-plan/the-stories-this-plan-must-cover-05",
     "pause_ms": 400,
-    "v": "cd4950662462"
+    "v": "a5757ee6b8ce"
+   },
+   {
+    "index": 6,
+    "name": "docs-design-lean-invariants-plan/the-stories-this-plan-must-cover-06",
+    "pause_ms": 400,
+    "v": "cdc2610ec864"
    }
   ],
   "the-ten-conviction-stories-as-lean-scenarios": [
@@ -13068,6 +13074,44 @@
     "v": "64655a44b56f"
    }
   ],
+  "concrete-rotation-refinement": [
+   {
+    "index": 0,
+    "name": "docs-design-watcher-conformance/concrete-rotation-refinement-00",
+    "pause_ms": 500,
+    "v": "446e5d80a2a6"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-watcher-conformance/concrete-rotation-refinement-01",
+    "pause_ms": 400,
+    "v": "f8cb970cf8d4"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-watcher-conformance/concrete-rotation-refinement-02",
+    "pause_ms": 400,
+    "v": "bd0ff627cf5d"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-watcher-conformance/concrete-rotation-refinement-03",
+    "pause_ms": 400,
+    "v": "3348a05fe747"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-watcher-conformance/concrete-rotation-refinement-04",
+    "pause_ms": 400,
+    "v": "05ebfc9862d4"
+   },
+   {
+    "index": 5,
+    "name": "docs-design-watcher-conformance/concrete-rotation-refinement-05",
+    "pause_ms": 400,
+    "v": "81267759f31c"
+   }
+  ],
   "cross-check-against-the-incentive-gist": [
    {
     "index": 0,
@@ -13327,7 +13371,7 @@
     "index": 4,
     "name": "docs-design-watcher-conformance/the-consumer-story-04",
     "pause_ms": 400,
-    "v": "590d2be19b30"
+    "v": "afcbb78747f6"
    }
   ],
   "the-specification-has-a-trust-text-tension": [

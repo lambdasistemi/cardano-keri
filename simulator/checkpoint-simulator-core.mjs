@@ -17,8 +17,9 @@
  * with the hash. The reopen is the revival from the parked key state.
  *
  * No DOM, no storage, no clock. Evidence (the Lean `Env`) is a table of
- * decisions supplied by the scenario or by the person playing; the core
- * never decides evidence. Every Nat-typed field is a non-negative integer
+ * primitive decisions supplied by the scenario or by the person playing.
+ * Duplicity rows select concrete example pairs checked by the core. They
+ * do not verify wire bytes or cryptography. Every Nat-typed field is a non-negative integer
  * or the action is refused by name.
  *
  * JSON shapes follow Lean's derived `ToJson` exactly, so the corpus the
@@ -293,7 +294,84 @@ const envHas = (env, kind, args) => (env[kind] || []).some(r => canon(r) === can
 const envRotationTo = (env, e, sn, sn2) => envHas(env, 'rotationTo', [e, sn, sn2]);
 const envIntentAuthorized = (env, e, intent, r) => envHas(env, 'intentAuthorized', [e, intent, r === undefined ? null : r]);
 const envQuorum = (env, e) => envHas(env, 'quorum', [e]);
-const envDuplicityAt = (env, e, sn) => envHas(env, 'duplicityAt', [e, sn]);
+// Concrete transcription of CardanoKeri.Duplicity. The public scenario table
+// selects a documented example pair; it does not assert a duplicity verdict.
+const unique = xs => [...new Set(xs)];
+const distinct = xs => unique(xs).length === xs.length;
+const fractionAdd = (a, b) => [a[0] * b[1] + b[0] * a[1], a[1] * b[1]];
+const fraction = w => [BigInt(w.numerator), BigInt(w.denominator)];
+const atLeastOne = w => w[1] > 0n && w[0] >= w[1];
+function thresholdSatisfied(threshold, keys, signers) {
+  const signed = keys.map(k => signers.includes(k));
+  if (threshold.count) return threshold.count.required <= keys.length && threshold.count.required <= signed.filter(Boolean).length;
+  const clauses = threshold.weighted.clauses;
+  let offset = 0;
+  const valid = clauses.length > 0 && clauses.every(clause => {
+    let sum = [0n, 1n];
+    if (!clause.length) return false;
+    for (const w of clause) {
+      const term = w.key || w.group;
+      if (!term.weight.denominator) return false;
+      if (w.key) {
+        if (signed[offset]) sum = fractionAdd(sum, fraction(term.weight));
+        offset++;
+      } else {
+        if (!term.members.length || term.members.some(m => !m.denominator)) return false;
+        let inner = [0n, 1n];
+        for (const member of term.members) {
+          if (signed[offset]) inner = fractionAdd(inner, fraction(member));
+          offset++;
+        }
+        if (atLeastOne(inner)) sum = fractionAdd(sum, fraction(term.weight));
+      }
+    }
+    return atLeastOne(sum);
+  });
+  return valid && offset === keys.length;
+}
+function verifiedSigners(event, signatures) {
+  return unique(signatures.filter(s => s.verified && canon(s.event) === canon(event)).map(s => s.signer));
+}
+function derivedWitnesses(prior, event) {
+  return unique([...prior.witnesses.filter(w => !event.cuts.includes(w)), ...event.adds]);
+}
+function signingValid(prior, signed) {
+  const event = signed.event, signers = verifiedSigners(event, signed.signatures);
+  const exposed = prior.nextKeys.filter(k => event.keys.includes(k));
+  return prior.nextKeys.length > 0 && distinct(prior.nextKeys) && distinct(event.keys) && event.keys.length > 0 &&
+    thresholdSatisfied(prior.nextThreshold, prior.nextKeys, signers.filter(k => exposed.includes(k))) &&
+    thresholdSatisfied(event.threshold, event.keys, signers);
+}
+function receiptsValid(prior, signed) {
+  const event = signed.event, witnesses = derivedWitnesses(prior, event), receipts = verifiedSigners(event, signed.receipts);
+  return distinct(prior.witnesses) && distinct(event.cuts) && distinct(event.adds) && event.witnessThreshold <= witnesses.length &&
+    event.witnessThreshold <= witnesses.filter(w => receipts.includes(w)).length;
+}
+function rotationValid(prior, signed) {
+  return !prior.delegated && signed.event.kind === 'rotation' && signed.structureVerified &&
+    signed.event.aid === prior.aid && prior.sn < signed.event.sn && signingValid(prior, signed) && receiptsValid(prior, signed);
+}
+function concreteDuplicityAt(epoch, sn, context, rival) {
+  return context.epoch === epoch && context.accepted.event.sn === sn &&
+    rotationValid(context.prior, context.accepted) && rotationValid(context.prior, rival) &&
+    context.accepted.event.sn === rival.event.sn && canon(context.accepted.event) !== canon(rival.event);
+}
+function duplicityFixture(epoch, sn) {
+  const count = required => ({ count: { required } });
+  const signed = (event, keys, witnesses) => ({ event, structureVerified: true,
+    signatures: keys.map(signer => ({ signer, event, verified: true })),
+    receipts: witnesses.map(signer => ({ signer, event, verified: true })) });
+  const prior = { aid: 1, sn: Math.max(0, sn - 1), delegated: false, nextKeys: [1, 2], nextThreshold: count(1), witnesses: [10] };
+  const event = { aid: 1, sn, kind: 'rotation', priorDigest: 50, keys: [1], threshold: count(1),
+    nextKeys: [4], nextThreshold: count(1), cuts: [], adds: [], witnessThreshold: 1, extension: [] };
+  return { context: { epoch, prior, accepted: signed(event, [1], [10]) },
+    rival: signed({ ...event, keys: [2, 3], threshold: count(2), cuts: [10], adds: [11], extension: [99] }, [2, 3], [11]) };
+}
+const envDuplicityAt = (env, e, sn) => {
+  if (!envHas(env, 'duplicityAt', [e, sn])) return false;
+  const { context, rival } = duplicityFixture(e, sn);
+  return concreteDuplicityAt(e, sn, context, rival);
+};
 // Env.intentOk: keep with no new address is the empty message and needs nothing;
 // every other intent, and every new address, needs the signed message (D-038)
 const intentOk = (env, e, intent, r) => ((intent === 'keep' && (r === null || r === undefined)) ? true : envIntentAuthorized(env, e, intent, r));
@@ -1119,6 +1197,13 @@ function checkScenario(sc, label, corpus) {
 // applied step must satisfy every theorem
 function checkCorpus(corpus) {
   const reasons = [];
+  if (!Array.isArray(corpus.duplicity) || !corpus.duplicity.length) reasons.push('concrete duplicity cases missing or empty');
+  for (const row of corpus.duplicity || []) {
+    try {
+      const { epoch, sn, context, rival, name } = row.input;
+      if (concreteDuplicityAt(epoch, sn, context, rival) !== row.accepted) reasons.push('duplicity ' + name + ': verdict differs from Lean');
+    } catch (e) { reasons.push('invalid concrete duplicity case: ' + e.message); }
+  }
   let applied = 0, refused = 0, theoremChecks = 0, cons = 0;
   const p = corpus.params;
   const pv = validateParams(p); if (pv) reasons.push('corpus params invalid: ' + pv);
@@ -1203,6 +1288,7 @@ function checkCorpus(corpus) {
 /* @@CORE:suite:END@@ */
 
 export {
+  thresholdSatisfied, derivedWitnesses, verifiedSigners, signingValid, receiptsValid, rotationValid, concreteDuplicityAt, duplicityFixture,
   canon, isNat, REASONS, VERDICTS, LEAN_GUARDS, LEAN_SPLITS, VERDICT_CONJUNCTS, constructorOf,
   validateParams, ACTION_KINDS, BOND_OPS, INTENT_KINDS, intentKind, closeIntent, actionKind, normalizeAction, actorOf,
   EV_KINDS, EV_ARITY, EV_SHAPE, emptyEnv, envHas, envAdd, envRemove, envUnion, validateEnv, intentOk, stateKind, liveOf, hashOf, present, parked, payment, flow, held, paid, snOf, leafOf, leafKind, rotated, premium, bHeldOf,

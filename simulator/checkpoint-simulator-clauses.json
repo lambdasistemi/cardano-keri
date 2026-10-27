@@ -485,56 +485,64 @@
       "reason": "no-duplicity-proof"
     },
     {
-      "id": "9.reveals-the-same-keys-the",
+      "id": "9.satisfies-the-common-prior-next",
       "story": 9,
-      "clause": "reveals the same keys the tip holds",
+      "clause": "satisfies the common prior-next threshold",
       "class": "guard",
       "kind": "guard",
       "decl": "Step.convict",
       "hyp": "hdup",
       "text": "env.duplicityAt l.epoch l.sn = true",
       "reason": "no-duplicity-proof",
-      "note": "one predicate stands for the whole duplicity check (Env.duplicityAt doc)."
+      "note": "Duplicity.signingValid checks actual verified signers against the authenticated prior commitment; partial_augmented_siblings_accepted admits different key lists."
     },
     {
-      "id": "9.is-signed-at-the-current",
+      "id": "9.satisfies-its-own-current",
       "story": 9,
-      "clause": "is signed at the current threshold",
+      "clause": "satisfies its own current threshold",
       "class": "guard",
       "kind": "guard",
       "decl": "Step.convict",
       "hyp": "hdup",
       "text": "env.duplicityAt l.epoch l.sn = true",
-      "reason": "no-duplicity-proof"
+      "reason": "no-duplicity-proof",
+      "note": "Duplicity.signingValid grades the rival threshold; exact_key_mutant_refused and weighted_threshold_mutant_refused reject stale or unsatisfiable grading."
     },
     {
-      "id": "9.carries-receipts-from-at-least",
+      "id": "9.carries-own-derived-receipts",
       "story": 9,
-      "clause": "carries receipts from at least `toad` of the tip's witnesses",
+      "clause": "carries receipts from its own derived witness threshold",
       "class": "guard",
       "kind": "guard",
       "decl": "Step.convict",
       "hyp": "hdup",
       "text": "env.duplicityAt l.epoch l.sn = true",
-      "reason": "no-duplicity-proof"
+      "reason": "no-duplicity-proof",
+      "note": "Duplicity.receiptsValid applies cuts then adds; tip_witness_mutant_refused and missing_receipts_mutant_refused bind the refusal controls."
     },
     {
-      "id": "9.and-differs-from-the-accepted",
+      "id": "9.and-differs-in-complete-content",
       "story": 9,
-      "clause": "and differs from the accepted one",
+      "clause": "and differs in complete content from the accepted rotation",
       "class": "guard",
       "kind": "guard",
       "decl": "Step.convict",
       "hyp": "hdup",
       "text": "env.duplicityAt l.epoch l.sn = true",
-      "reason": "no-duplicity-proof"
+      "reason": "no-duplicity-proof",
+      "note": "Duplicity.duplicity_iff and identical_content_mutant_refused require full Content inequality."
     },
     {
-      "id": "9.no-history-needed-the-revealed",
+      "id": "9.both-validate-authenticated-context",
       "story": 9,
-      "clause": "No history needed: the revealed keys are the current keys",
-      "class": "omission",
-      "note": "the model has no key material; the epoch counter stands for the current keys, and duplicityAt is asked at (epoch, sn) only."
+      "clause": "Both ordinary rotations validate against authenticated predecessor context",
+      "class": "guard",
+      "note": "Duplicity.duplicity_iff requires both rotationValid premises. Context authentication, digest opening and cryptographic verification remain declared technical boundaries.",
+      "kind": "guard",
+      "decl": "Step.convict",
+      "hyp": "hdup",
+      "text": "env.duplicityAt l.epoch l.sn = true",
+      "reason": "no-duplicity-proof"
     },
     {
       "id": "10.a-witnessed-rotation-by-the",

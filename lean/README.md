@@ -93,11 +93,10 @@ live in `Statements/*Helpers.lean`.
 
 ## Pinned Singular dependency (#381; successor to #478)
 
-KERI pins public Singular branch commit
-`a84b253730003c9b0a8961b80e2e5449ba480a62`,
-Git tree `2979dcfc58b092313b0ce7fa0493722539b9ea65`. This pin is local
-compatibility preparation; it does not claim that the commit is merged into
-public main. Both projects declare
+KERI pins public Singular main commit
+`d69ab005c3b710aeebf033d3c5cd08c56feb5643`,
+Git tree `2979dcfc58b092313b0ce7fa0493722539b9ea65`. This merged commit has
+the same source tree as the previously pinned branch commit. Both projects declare
 `leanprover/lean4:v4.27.0`. `lakefile.lean` and `lake-manifest.json` pin the
 Git dependency; `flake.nix` and `flake.lock` pin its source and compiler.
 The compiler comes from nixpkgs `7f4e8517083e42a1b38907598dadc02c7235b30e`.
@@ -105,7 +104,7 @@ The GitHub source NAR is
 `sha256-vV5/4mW4O4NwAsr8rAyTZUhH3pvqlBmsAJQIHUqTVfA=`; the fixed-output
 Git checkout retains Lake's required commit and tree metadata as deterministic
 loose Git objects, independent of the fetched pack layout. Its NAR hash is
-`sha256-TzS++WqijK9U1WNYtbxO/MAamVhohTiC2uUDTEqAn0M=`.
+`sha256-Pv45FlCcNHxp97iddexrEcNA0bjAcmSoY+wkw3ZlvTU=`.
 
 From a clean checkout, in order:
 
@@ -137,7 +136,7 @@ successful skipped required status. Repository branch protection is unchanged.
 `Singular.canonicalRequest .updateActive`, **then** it returns
 `.error "edge-inadmissible"`. This is the pinned model's excluded-edge
 boundary (`allowed`, `canonicalRequest`, `refusal`, `step` in
-[`Singular/Model/Fold.lean`](https://github.com/lambdasistemi/singular/blob/a84b253730003c9b0a8961b80e2e5449ba480a62/lean/Singular/Model/Fold.lean)).
+[`Singular/Model/Fold.lean`](https://github.com/lambdasistemi/singular/blob/d69ab005c3b710aeebf033d3c5cd08c56feb5643/lean/Singular/Model/Fold.lean)).
 The proof uses `rfl`; its axiom closure is exactly `propext` and `Quot.sound`,
 already used by upstream `step` and allowed by KERI's trust policy.
 `SingularDependencyProbe.lean` executes that request on an empty fixture and

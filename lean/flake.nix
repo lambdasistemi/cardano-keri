@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/7f4e8517083e42a1b38907598dadc02c7235b30e";
     singular = {
-      url = "github:lambdasistemi/singular/a84b253730003c9b0a8961b80e2e5449ba480a62";
+      url = "github:lambdasistemi/singular/d69ab005c3b710aeebf033d3c5cd08c56feb5643";
       flake = false;
     };
   };
@@ -33,7 +33,7 @@
       singularCheckout = pkgs.fetchgit {
         url = "https://github.com/lambdasistemi/singular.git";
         rev = singular.rev;
-        hash = "sha256-TzS++WqijK9U1WNYtbxO/MAamVhohTiC2uUDTEqAn0M=";
+        hash = "sha256-Pv45FlCcNHxp97iddexrEcNA0bjAcmSoY+wkw3ZlvTU=";
         leaveDotGit = true;
         postFetch = ''
           # Hide packs while unpacking so Git writes every object as a loose object.

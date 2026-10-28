@@ -19,7 +19,7 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 binding_axioms_ok() {
   grep -Fxq "'CardanoKeri.singular_step_binding' depends on axioms: [propext, Quot.sound]" "$1"
 }
-expected=a84b253730003c9b0a8961b80e2e5449ba480a62
+expected=d69ab005c3b710aeebf033d3c5cd08c56feb5643
 [[ "$singular_revision" == "$expected" ]] || fail 'wrong dependency revision'
 [[ -f "$singular_source/lakefile.toml" ]] || fail 'missing dependency source'
 [[ "$(git -c safe.directory="$singular_source" -C "$singular_source" rev-parse HEAD)" == "$expected" ]] || fail 'checkout differs from dependency pin'

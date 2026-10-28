@@ -91,19 +91,21 @@ All 71 statements are proved: `#print axioms` reports at most `propext`,
 `Quot.sound` and `Classical.choice`, never `sorryAx`. Proof-side lemmas
 live in `Statements/*Helpers.lean`.
 
-## Pinned Singular dependency (#478)
+## Pinned Singular dependency (#381; successor to #478)
 
-KERI consumes Singular at merged commit
-`f844a8f423eaf65009c587b9d7dd9ad3e00d21af` (Singular PR #589),
-Git tree `bcb491dfc2c47f061509d1bcf165a5d4841de4e7`. Both projects declare
+KERI pins public Singular branch commit
+`a84b253730003c9b0a8961b80e2e5449ba480a62`,
+Git tree `2979dcfc58b092313b0ce7fa0493722539b9ea65`. This pin is local
+compatibility preparation; it does not claim that the commit is merged into
+public main. Both projects declare
 `leanprover/lean4:v4.27.0`. `lakefile.lean` and `lake-manifest.json` pin the
 Git dependency; `flake.nix` and `flake.lock` pin its source and compiler.
 The compiler comes from nixpkgs `7f4e8517083e42a1b38907598dadc02c7235b30e`.
 The GitHub source NAR is
-`sha256-I4iiu48sK0YUJ4DYyYBqmhCqbvouKQ15mzg77DCuzG8=`; the fixed-output
+`sha256-vV5/4mW4O4NwAsr8rAyTZUhH3pvqlBmsAJQIHUqTVfA=`; the fixed-output
 Git checkout retains Lake's required commit and tree metadata as deterministic
 loose Git objects, independent of the fetched pack layout. Its NAR hash is
-`sha256-ryr4YWYNCG1zahf+qSFVpwHddP6pKQyB43PBkiv8Afs=`.
+`sha256-TzS++WqijK9U1WNYtbxO/MAamVhohTiC2uUDTEqAn0M=`.
 
 From a clean checkout, in order:
 
@@ -135,7 +137,7 @@ successful skipped required status. Repository branch protection is unchanged.
 `Singular.canonicalRequest .updateActive`, **then** it returns
 `.error "edge-inadmissible"`. This is the pinned model's excluded-edge
 boundary (`allowed`, `canonicalRequest`, `refusal`, `step` in
-[`Singular/Model.lean`](https://github.com/lambdasistemi/singular/blob/f844a8f423eaf65009c587b9d7dd9ad3e00d21af/lean/Singular/Model.lean)).
+[`Singular/Model/Fold.lean`](https://github.com/lambdasistemi/singular/blob/a84b253730003c9b0a8961b80e2e5449ba480a62/lean/Singular/Model/Fold.lean)).
 The proof uses `rfl`; its axiom closure is exactly `propext` and `Quot.sound`,
 already used by upstream `step` and allowed by KERI's trust policy.
 `SingularDependencyProbe.lean` executes that request on an empty fixture and
@@ -146,7 +148,7 @@ It also injects an unproved binding in a disposable control and requires the
 same axiom policy to reject its `sorryAx` dependency.
 
 This dependency-only technical slice preserves KERI's definitions and theorem
-propositions at base `99bc98c085d6968da501e0cc86595759bf74450c`. It introduces
+propositions at base `a4c103726c41c5f3d2ab4788bec92ff28efbb0aa`. It introduces
 no state translation, validator or builder behavior, lifecycle migration, or
 behavioral correspondence. Compilation does not discharge #437, #438, #439
 or #468. The separate statement library and existing theorem trust/retirement

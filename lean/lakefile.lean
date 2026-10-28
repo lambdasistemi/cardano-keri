@@ -5,7 +5,7 @@ package «cardano-keri-lean»
 
 require singular from git
   "https://github.com/lambdasistemi/singular.git" @
-  "f844a8f423eaf65009c587b9d7dd9ad3e00d21af"
+  "a84b253730003c9b0a8961b80e2e5449ba480a62"
 
 @[default_target]
 lean_lib CardanoKeri

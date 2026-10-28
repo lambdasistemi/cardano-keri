@@ -25,17 +25,17 @@
     "singular": {
       "flake": false,
       "locked": {
-        "lastModified": 1791811960,
-        "narHash": "sha256-I4iiu48sK0YUJ4DYyYBqmhCqbvouKQ15mzg77DCuzG8=",
+        "lastModified": 1793190526,
+        "narHash": "sha256-vV5/4mW4O4NwAsr8rAyTZUhH3pvqlBmsAJQIHUqTVfA=",
         "owner": "lambdasistemi",
         "repo": "singular",
-        "rev": "f844a8f423eaf65009c587b9d7dd9ad3e00d21af",
+        "rev": "d69ab005c3b710aeebf033d3c5cd08c56feb5643",
         "type": "github"
       },
       "original": {
         "owner": "lambdasistemi",
         "repo": "singular",
-        "rev": "f844a8f423eaf65009c587b9d7dd9ad3e00d21af",
+        "rev": "d69ab005c3b710aeebf033d3c5cd08c56feb5643",
         "type": "github"
       }
     }

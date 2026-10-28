@@ -19,11 +19,11 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 binding_axioms_ok() {
   grep -Fxq "'CardanoKeri.singular_step_binding' depends on axioms: [propext, Quot.sound]" "$1"
 }
-expected=f844a8f423eaf65009c587b9d7dd9ad3e00d21af
+expected=d69ab005c3b710aeebf033d3c5cd08c56feb5643
 [[ "$singular_revision" == "$expected" ]] || fail 'wrong dependency revision'
 [[ -f "$singular_source/lakefile.toml" ]] || fail 'missing dependency source'
 [[ "$(git -c safe.directory="$singular_source" -C "$singular_source" rev-parse HEAD)" == "$expected" ]] || fail 'checkout differs from dependency pin'
-[[ "$(git -c safe.directory="$singular_source" -C "$singular_source" rev-parse 'HEAD^{tree}')" == bcb491dfc2c47f061509d1bcf165a5d4841de4e7 ]] || fail 'wrong dependency tree'
+[[ "$(git -c safe.directory="$singular_source" -C "$singular_source" rev-parse 'HEAD^{tree}')" == 2979dcfc58b092313b0ce7fa0493722539b9ea65 ]] || fail 'wrong dependency tree'
 [[ "$(cat "$source_root/lean-toolchain")" == leanprover/lean4:v4.27.0 ]] || fail 'wrong consumer toolchain'
 [[ "$(cat "$singular_source/lean-toolchain")" == leanprover/lean4:v4.27.0 ]] || fail 'wrong dependency toolchain'
 lean --version | tee "$receipt_dir/compiler.txt"
@@ -36,7 +36,7 @@ jq -e --arg rev "$expected" '
 ' "$source_root/lake-manifest.json" >/dev/null || fail 'invalid or missing dependency lock'
 cp "$source_root/lake-manifest.json" "$receipt_dir/lake-manifest.json"
 cp "$source_root/flake.lock" "$receipt_dir/flake.lock"
-printf 'consumer=%s\nsingular.commit=%s\nsingular.github.narHash=%s\nsingular.git.tree=bcb491dfc2c47f061509d1bcf165a5d4841de4e7\nsingular.checkout.hash=%s\n' \
+printf 'consumer=%s\nsingular.commit=%s\nsingular.github.narHash=%s\nsingular.git.tree=2979dcfc58b092313b0ce7fa0493722539b9ea65\nsingular.checkout.hash=%s\n' \
   "$consumer_revision" "$singular_revision" "$singular_nar_hash" "$SINGULAR_CHECKOUT_HASH" > "$receipt_dir/identities.txt"
 {
   jq -r '.nodes.nixpkgs.locked | "compiler.nixpkgs.commit=\(.rev)\ncompiler.nixpkgs.narHash=\(.narHash)"' \

@@ -3,10 +3,10 @@ import CardanoKeri.Statements
 
 -- A finite execution of the actual upstream function; not a KERI lifecycle.
 private def state : Singular.RegistryState :=
-  { config := { root := Singular.rootOf [], maxFee := 0,
+  { config := { root := Singular.rootOf [], minimumTip := 0,
                 processTime := 0, retractTime := 0, applicationPolicy := 1,
-                activePolicy := 2, absentPolicy := 3, terminalPolicy := 4 },
-    trie := [], custody := [], held := [] }
+                activePolicy := 2 },
+    trie := [], held := [] }
 
 #guard match Singular.step state (Singular.canonicalRequest .updateActive) with
   | .error reason => reason == "edge-inadmissible"

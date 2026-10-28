@@ -4,6 +4,11 @@
   const s = document.createElement('script');
   s.src = 'https://cdn.jsdelivr.net/npm/mermaid@10.9.3/dist/mermaid.min.js';
   s.onload = () => {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', renderPage, { once: true });
+    } else renderPage();
+  };
+  function renderPage() {
     mermaid.initialize({ startOnLoad: false });
     const nodes = [...document.querySelectorAll('pre.mermaid')];
     if (!nodes.length) return;
@@ -56,6 +61,6 @@
     };
     render();
     document.getElementById('keri-palette-toggle')?.addEventListener('click', () => setTimeout(render, 0));
-  };
+  }
   document.head.append(s);
 })();

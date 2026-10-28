@@ -119,9 +119,10 @@ and never again, and three sums of money that never mix:
 - the **pool** — advance funds; pays the **premium** `P`, the fee for landing
   a rotation, to whoever lands it.
 
-**Three states, no withdraw.** An identity is **active** (the checkpoint UTxO
-exists: live, poisoned or frozen), **parked** (no UTxO; the registry leaf
-holds the hash of the last checkpoint) or **convicted** (terminal). A
+**Retained parking, no withdraw.** An identity is **active** (live, poisoned
+or frozen), **parked** (an output retains its token, minimum ADA and last key
+state), in **pending conviction** custody, or **convicted** (terminal after
+the associated Registry fold). Parking and revival keep the registry key active. A
 rotation is the only thing that moves the keys; it carries a bond option
 (`keep` or `deposit`) and optionally a new refund address. `deposit` is
 the unfreeze: it refills `B` when a hunter has taken it. Every option
@@ -133,10 +134,11 @@ rotation can never park, age, or close the owner.
 flowchart TB
     start(( )) --> Absent["<b>Absent</b><br/>register — registry insert, once ever"]
     Absent -->|register| Active["<b>Active</b><br/>rotate — next keys + toad receipts, clears the poison<br/>poison — current quorum, once per epoch<br/>freeze — anyone, when the pool is short<br/>deposit — next keys refill B (the unfreeze)<br/>top-up — anyone"]
-    Active -->|close| Parked["<b>Parked</b><br/>close — reap by the next keys#59; leaf holds the hash<br/>reopen — witnessed rotation from that key state"]
+    Active -->|close| Parked["<b>Parked</b><br/>close — reap by the next keys#59; output retains the token and key state<br/>reopen — witnessed rotation from that key state"]
     Parked -->|reopen| Active
-    Active -->|convict| Convicted["<b>Convicted</b><br/>convict — a duplicity proof#59; D_reg to the convictor<br/>convict parked — a duplicity proof against the hash"]
-    Parked -->|convict parked| Convicted
+    Active -->|duplicity proof| Pending["<b>Pending conviction</b><br/>retained custody#59; no local exit"]
+    Parked -->|duplicity proof| Pending
+    Pending -->|associated consuming Registry fold| Convicted["<b>Convicted</b><br/>token burned#59; registry key permanently retired"]
 ```
 
 **The poison** is the piece that is genuinely new: a declaration signed by the
@@ -147,12 +149,11 @@ it belongs to the epoch of the keys that signed it, because in KERI possession
 of the next keys *is* control. It buys the owner the window between noticing a
 theft and rotating.
 
-**The registry** is one leaf per AID — absent, live (the token is on chain),
-parked with the hash, or convicted — so an AID has at most one incarnation
-ever. Only **convicted** is terminal; a parked identity returns by a
+**The registry** maps each AID to absent, active or permanently retired.
+Parking, revival and pending conviction custody keep the key active. Only
+the associated consuming fold retires it. A parked identity returns by a
 witnessed rotation later than the parked key state, with fresh bonds. The
-registry is the MPFS cage — a Merkle Patricia Forestry store whose every
-update passes through one validator — made permissionless (D-037), built today in
+registry uses the public model from
 [singular](https://github.com/lambdasistemi/singular), where it runs on a
 development network; see
 [where the registry is built](design/registry-as-mpfs.md#where-the-registry-is-built).

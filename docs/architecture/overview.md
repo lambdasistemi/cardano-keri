@@ -163,7 +163,8 @@ checkpoint a consumer already resolves:
 | poisoned | one bit in the datum, set by the current quorum: the owner's own lock on the checkpoint | reject |
 | frozen | `B` absent — a hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one) took it | reject |
 | juvenile | `now − born_at < W` | reject |
-| parked | no UTxO; the registry leaf holds the hash of the last checkpoint | no candidate |
+| parked | retained output with token, minimum ADA and last key state; registry key active | reject |
+| pending conviction | retained custody awaiting its associated Registry fold | reject |
 | convicted | the mark, terminal | no candidate |
 
 Nothing there is a flag a caller can set. The poison is signed at the current
@@ -179,13 +180,14 @@ candidate checkpoint can exist for an AID and a consumer cannot prove
 otherwise.
 
 The accepted design adds exactly one shared structure, and confines it to the
-narrowest possible job: a **registry** mapping each AID to a leaf — absent,
-live, parked with the hash, or convicted. A registration must prove absence
-before inserting, preventing a second first-registration of that AID. This is
-distinct from the concrete token's mint/burn rules across revival; see
+narrowest possible job: a **registry** mapping each AID to absent, active
+or permanently retired. A registration must prove absence before inserting,
+preventing a second first-registration of that AID. Parking and revival retain
+the token and active key. Conviction first enters pending custody; only its
+associated consuming Registry fold burns the token and retires the key. See
 [the registration guarantee](follow-one-identity.md#what-registration-guarantees).
-Register, reopen, close and convict change the leaf; rotate, poison, freeze and top-up
-never touch it, and consumers never read it.
+Rotate, poison, freeze and top-up leave the key active, and consumers do not
+use an active key alone as authority.
 
 It is a registry of 32-byte keys, not a record of events — the record tree and
 its cursor are retired. Its mechanics are the MPFS cage — a Merkle Patricia
@@ -263,8 +265,9 @@ controllers sign.
     names the payee of the premium (the fee the pool pays for landing a
     rotation) and the refund address. The current
     keys keep exactly one Cardano power, the poison. An identity is
-    active (one UTxO), parked (no UTxO; the registry leaf holds the hash
-    of the last checkpoint) or convicted; a parked identity is revived
+    active, parked (the output retains its token, minimum ADA and last
+    key state), pending conviction, or convicted after the associated
+    Registry fold. Parking and revival keep the registry key active; a parked identity is revived
     by a witnessed rotation from exactly that key state, with fresh
     bonds. What ships today is the close described above. Every bond
     option other than `keep`, and every new refund address, is signed

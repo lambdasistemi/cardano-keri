@@ -1,140 +1,62 @@
 #!/usr/bin/env node
-/*
- * registry-simulator-build.mjs — deterministic inliner of the ONE machine
- * core, the fifteen stories and the Lean corpus into the publishable
- * zero-external-request single-file page, and its published copy.
- *
- * simulator/registry-simulator-core.mjs is the single source of the machine
- * core; simulator/registry-simulator.html embeds its slices verbatim between
- * paired markers `/* @@CORE:<id>@@ *​/ … /* @@CORE:<id>:END@@ *​/`, the
- * stories between `/* @@SCENARIOS@@ *​/ … /* @@SCENARIOS:END@@ *​/`, and the
- * corpus (with its sha256) between `/* @@CORPUS@@ *​/ … /* @@CORPUS:END@@ *​/`.
- *
- *   default:  regenerate the page in place and write the byte-identical
- *             published copy docs/simulator/registry/index.html;
- *   --check:  compare without writing; exit 1 listing every stale or forked
- *             slice, drifted story block, drifted corpus block or drifted
- *             published copy.
- *
- * The slice set is discovered from the core file; a slice present in one
- * file and missing in the other is an error, so neither side can silently
- * grow a second transcription. --html/--core/--scenarios/--corpus/--docs
- * overrides exist for negative controls; production callers use the defaults.
- */
-
-import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 'node:fs';
-import { createHash } from 'node:crypto';
+/* Deterministic, dependency-free inlining of the shared modules and the existing
+ * page template. The first stylesheet, player tree and element IDs remain the
+ * common simulator contract. Fresh Lean generation is a separate trace gate. */
+import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
+import { createHash } from 'node:crypto';
+import { checkCorpus, checkScenario } from './registry-simulator-core.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
-const argPath = flag => { const i = process.argv.indexOf(flag); return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : null; };
-const HTML = argPath('--html') || join(HERE, 'registry-simulator.html');
-const CORE = argPath('--core') || join(HERE, 'registry-simulator-core.mjs');
-const BACKEND = argPath('--backend') || join(HERE, 'registry-simulator-backend.mjs');
-const SCEN_DIR = argPath('--scenarios') || join(HERE, 'registry-simulator-scenarios');
-const CORPUS = argPath('--corpus') || join(HERE, 'registry-simulator-corpus.json');
-const DSL_SRC = join(HERE, 'scenario-dsl.mjs');
-const DOCS = argPath('--docs') || join(HERE, '..', 'docs', 'simulator', 'registry', 'index.html');
-const N_STORIES = 15;
-
-const sliceRe = id => new RegExp(`/\\* @@CORE:${id}@@ \\*/\\n([\\s\\S]*?)/\\* @@CORE:${id}:END@@ \\*/`);
-const scenRe = /\/\* @@SCENARIOS@@ \*\/\n([\s\S]*?)\/\* @@SCENARIOS:END@@ \*\//;
-const corpusRe = /\/\* @@CORPUS@@ \*\/\n([\s\S]*?)\/\* @@CORPUS:END@@ \*\//;
-const dslRe = /\/\* @@DSL@@ \*\/\n([\s\S]*?)\/\* @@DSL:END@@ \*\//;
-const backendRe = /\/\* @@BACKEND@@ \*\/\n([\s\S]*?)\/\* @@BACKEND:END@@ \*\//;
-const sha256 = b => createHash('sha256').update(b).digest('hex');
-
-function slicesOf(text, what) {
-  const ids = [...text.matchAll(/\/\* @@CORE:([a-z0-9-]+)@@ \*\//g)].map(m => m[1]);
-  if (!ids.length) throw new Error(`no @@CORE@@ slice in ${what}`);
-  const out = {};
-  for (const id of ids) {
-    const m = text.match(sliceRe(id));
-    if (!m) throw new Error(`slice ${id} without a closing marker in ${what}`);
-    out[id] = m[1];
-  }
-  return out;
+const option = (flag, fallback) => { const i = process.argv.indexOf(flag); return i < 0 ? join(HERE, fallback) : process.argv[i + 1]; };
+const HTML = option('--html', 'registry-simulator.html'), DOCS = option('--docs', '../docs/simulator/registry/index.html');
+const read = path => readFileSync(path, 'utf8');
+const hash = value => createHash('sha256').update(value).digest('hex');
+const sources = {};
+function moduleBody(file, variable, dependencies, exports, override = null) {
+  const path = override || join(HERE, file), raw = read(path);
+  sources[file] = hash(raw);
+  const body = raw.replace(/^import (.*?) from ['"]([^'"]+)['"];\n/gm, (_, names, specifier) => {
+    const ref = dependencies[specifier]; if (!ref) throw Error('unknown inline dependency ' + specifier);
+    return names.startsWith('* as ') ? (names.slice(5) === ref ? '' : `const ${names.slice(5)} = ${ref};\n`) : `const ${names} = ${ref};\n`;
+  }).replace(/^export (?=(?:const|function|class)\b)/gm, '').replace(/^export \{[^}]+\};?\s*$/gm, '');
+  if (/^import |^export /m.test(body)) throw Error('unsupported inline module syntax ' + file);
+  return `/* @@MODULE:${variable}@@ sha256=${sources[file]} */\nconst ${variable} = (() => {\n${body}\nreturn { ${exports.join(', ')} };\n})();\n/* @@MODULE:${variable}:END@@ */\n`;
 }
-
-function scenariosBlock(dir) {
-  const files = readdirSync(dir).filter(f => f.endsWith('.json')).sort();
-  if (!files.length) throw new Error(`no scenario JSON in ${dir}`);
-  const scenarios = files.map(f => JSON.parse(readFileSync(join(dir, f), 'utf8')));
-  scenarios.sort((a, b) => a.id - b.id);
-  const ids = scenarios.map(s => s.id);
-  for (let i = 1; i <= N_STORIES; i++) if (!ids.includes(i)) throw new Error(`story ${i} missing from ${dir}`);
-  if (scenarios.length !== N_STORIES) throw new Error(`${scenarios.length} stories in ${dir}, expected ${N_STORIES}`);
-  return `const SCENARIOS = ${JSON.stringify(scenarios)};\n`;
+const modules = [
+  ['registry-economic-core.mjs', 'E', {}, ['toInternal','toWire','canonical','equal','ModelRefusal','known','trieGet','fnv1a','rootOf','applicationName','readyTag','singularTag','ordinary','foldMembers','balanced','bookRegistration','bookTermination','foldAccepted','retractionAccepted','rejectionAccepted']],
+  ['registry-wire.mjs', 'Wire', {'./registry-economic-core.mjs':'E'}, ['decodeInput','validateState','validateConfig','validateEnv','validateResult']],
+  ['registry-simulator-core.mjs', 'Core', {'./registry-economic-core.mjs':'E','./registry-wire.mjs':'Wire'}, ['SCHEMA','VERSION','canonical','equal','stepFn','init','validateState','checkCell','checkCorpus','replayScenario','checkScenario','newSession','attempt','setEvidence'], option('--core','registry-simulator-core.mjs')],
+  ['registry-fixtures.mjs', 'B', {'./registry-economic-core.mjs':'E','./registry-wire.mjs':'Wire'}, ['registrationAction','terminationAction','foldAction','retractionAction','rejectionAction']],
+  ['registry-offers.mjs', 'Offers', {'./registry-fixtures.mjs':'B','./registry-economic-core.mjs':'E','./registry-wire.mjs':'Wire'}, ['NAMES','nameOf','CAST','ACTOR_ORDER','actionTag','dataOf','describeAction','offersFor']],
+  ['registry-properties.mjs', 'Properties', {'./registry-economic-core.mjs':'E'}, ['THEOREMS','properties','corpusCells','oracleIndex','oracleResult']],
+];
+let script = "'use strict';\n" + modules.map(args => moduleBody(...args)).join('\n');
+const dir = option('--scenarios','registry-simulator-scenarios');
+const scenarios = readdirSync(dir).filter(f=>f.endsWith('.json')).sort().map(f=>JSON.parse(read(join(dir,f))));
+if (scenarios.length !== 15 || scenarios.some((s,i)=>s.id!==i+1)) throw Error('incomplete story roster');
+for (const sc of scenarios) { const r=checkScenario(sc); if(!r.ok) throw Error(r.problems.join('; ')); }
+const rawCorpus = read(option('--corpus','registry-simulator-corpus.json')).trim(), corpus = JSON.parse(rawCorpus);
+const report=checkCorpus(corpus);if(!report.ok)throw Error(report.reasons.join('; '));
+script += `const SCENARIOS = ${JSON.stringify(scenarios)};\nconst REGISTRY_LEAN_TRACES_V3 = ${rawCorpus};\nconst REGISTRY_LEAN_TRACES_SHA256 = '${hash(rawCorpus)}';\n`;
+const backend=read(option('--backend','registry-simulator-backend.mjs'));
+const backendBody=backend.match(/\/\* @@BACKEND@@ \*\/\n([\s\S]*?)\/\* @@BACKEND:END@@ \*\//)?.[1];
+if(!backendBody)throw Error('backend markers missing');
+sources['registry-simulator-backend.mjs']=hash(backend);
+script += `const Backend = (()=>{ const {newSession,attempt,setEvidence,checkScenario}=Core; const {equal,toInternal,toWire}=E;\n${backendBody}\nreturn { playStory,playLoadedScenario,treeAddChild,dryRun,submit,replaceEvidence,moveSlot,editEvidence,selectPath,projectJson };})();\n`;
+const dsl=read(join(HERE,'scenario-dsl.mjs'));sources['scenario-dsl.mjs']=hash(dsl);
+script += '/* @@DSL@@ */\n' + dsl.match(/\/\* @@DSL@@ \*\/\n([\s\S]*?)\/\* @@DSL:END@@ \*\//)[1] + '/* @@DSL:END@@ */\n';
+script += '\nconst {canonical,equal,stepFn,attempt,newSession,checkScenario,checkCorpus}=Core;\nconst {NAMES,nameOf,CAST,ACTOR_ORDER,actionTag,dataOf,describeAction,offersFor}=Offers;\nconst {THEOREMS,properties,oracleIndex,oracleResult}=Properties;\nlet {playStory,playLoadedScenario,moveSlot}=Backend;\nconst {dryRun,submit,replaceEvidence,editEvidence}=Backend;\n';
+const page=read(join(HERE,'registry-page.mjs'));sources['registry-page.mjs']=hash(page);script += page;
+const template=read(option('--template','registry-page-template.html'));
+sources['registry-page-template.html']=hash(template);
+if(template.split('<!-- @@REGISTRY_SCRIPT@@ -->').length!==2)throw Error('template marker missing or repeated');
+// Uploaded story text cannot close a script element in the generated page.
+const rendered=template.replace('<!-- @@REGISTRY_SCRIPT@@ -->',`<script>\n/* Source bindings: ${JSON.stringify(sources)} */\n${script.replace(/<\/script/gi,'<\\/script')}\n</script>`);
+if(process.argv.includes('--check')) {
+  for(const target of [HTML,DOCS])if(!existsSync(target)||read(target)!==rendered)throw Error('stale generated page: '+target);
+  console.log(`PASS: ${Object.keys(sources).length} bound sources; 15 stories; ${report.cells} complete corpus cells; byte-identical published page.`);
+} else {
+  for(const target of [HTML,DOCS]){mkdirSync(dirname(target),{recursive:true});writeFileSync(target,rendered);}
+  console.log(`Generated Registry wire v3 page: ${report.cells} corpus cells.`);
 }
-
-function corpusBlock(path) {
-  const raw = readFileSync(path, 'utf8').trim();
-  JSON.parse(raw); // must be JSON
-  return `const REGISTRY_LEAN_TRACES_V1 = ${raw};\nconst REGISTRY_LEAN_TRACES_SHA256 = '${sha256(raw)}';\n`;
-}
-
-const core = readFileSync(CORE, 'utf8');
-const html = readFileSync(HTML, 'utf8');
-const coreSlices = slicesOf(core, 'registry-simulator-core.mjs');
-const htmlSlices = slicesOf(html, 'registry-simulator.html');
-const coreIds = Object.keys(coreSlices).sort(), htmlIds = Object.keys(htmlSlices).sort();
-if (JSON.stringify(coreIds) !== JSON.stringify(htmlIds)) {
-  console.error(`RED: diverging slice sets — core=[${coreIds}] page=[${htmlIds}]`);
-  process.exit(1);
-}
-const stale = coreIds.filter(id => coreSlices[id] !== htmlSlices[id]);
-const wantScen = scenariosBlock(SCEN_DIR);
-const scenBlock = html.match(scenRe);
-if (!scenBlock) { console.error('RED: no @@SCENARIOS@@ block in the page'); process.exit(1); }
-const scenStale = scenBlock[1] !== wantScen;
-const wantCorpus = corpusBlock(CORPUS);
-const corpBlock = html.match(corpusRe);
-if (!corpBlock) { console.error('RED: no @@CORPUS@@ block in the page'); process.exit(1); }
-const corpusStale = corpBlock[1] !== wantCorpus;
-const dslSrc = readFileSync(DSL_SRC, 'utf8');
-const dslMsrc = dslSrc.match(dslRe);
-if (!dslMsrc) { console.error('RED: scenario-dsl.mjs has no @@DSL@@ block'); process.exit(1); }
-const wantDsl = dslMsrc[1];
-const dslBlock = html.match(dslRe);
-if (!dslBlock) { console.error('RED: no @@DSL@@ block in the page'); process.exit(1); }
-const dslStale = dslBlock[1] !== wantDsl;
-const backendSrc = readFileSync(BACKEND, 'utf8');
-const backendMsrc = backendSrc.match(backendRe);
-if (!backendMsrc) { console.error('RED: registry-simulator-backend.mjs has no @@BACKEND@@ block'); process.exit(1); }
-const wantBackend = backendMsrc[1];
-const backendBlock = html.match(backendRe);
-if (!backendBlock) { console.error('RED: no @@BACKEND@@ block in the page'); process.exit(1); }
-const backendStale = backendBlock[1] !== wantBackend;
-
-let out = html;
-for (const id of stale) out = out.replace(sliceRe(id), `/* @@CORE:${id}@@ */\n${coreSlices[id]}/* @@CORE:${id}:END@@ */`);
-if (scenStale) out = out.replace(scenRe, `/* @@SCENARIOS@@ */\n${wantScen}/* @@SCENARIOS:END@@ */`);
-if (corpusStale) out = out.replace(corpusRe, `/* @@CORPUS@@ */\n${wantCorpus}/* @@CORPUS:END@@ */`);
-if (dslStale) out = out.replace(dslRe, `/* @@DSL@@ */\n${wantDsl}/* @@DSL:END@@ */`);
-if (backendStale) out = out.replace(backendRe, `/* @@BACKEND@@ */\n${wantBackend}/* @@BACKEND:END@@ */`);
-const docsStale = !existsSync(DOCS) || readFileSync(DOCS, 'utf8') !== out;
-
-if (process.argv.includes('--check')) {
-  const why = [];
-  if (stale.length) why.push(`${stale.length} core slice(s) stale or forked: ${stale.join(', ')}`);
-  if (scenStale) why.push('the embedded stories have drifted from registry-simulator-scenarios/');
-  if (corpusStale) why.push('the embedded corpus has drifted from registry-simulator-corpus.json');
-  if (dslStale) why.push('the embedded DSL grammar has drifted from scenario-dsl.mjs');
-  if (backendStale) why.push('backend slice stale or forked');
-  if (docsStale) why.push('docs/simulator/registry/index.html is not the byte-identical page');
-  if (why.length) { console.error('RED: generated artifact stale or forked — ' + why.join('; ')); process.exit(1); }
-  console.log(`GREEN: ${coreIds.length} core slices identical byte-per-byte, ${N_STORIES} stories and the corpus (sha256 ${sha256(readFileSync(CORPUS, 'utf8').trim()).slice(0, 12)}…) embedded, published copy identical`);
-  process.exit(0);
-}
-
-if (stale.length || scenStale || corpusStale || dslStale || backendStale) writeFileSync(HTML, out);
-if (docsStale) { mkdirSync(dirname(DOCS), { recursive: true }); writeFileSync(DOCS, out); }
-const changed = [];
-if (stale.length) changed.push(`core slices: ${stale.join(', ')}`);
-if (scenStale) changed.push('stories');
-if (corpusStale) changed.push('corpus');
-if (dslStale) changed.push('scenario-dsl');
-if (backendStale) changed.push('backend');
-if (docsStale) changed.push('published copy');
-console.log(changed.length ? `page regenerated: updated ${changed.join(', ')}` : 'page already up to date');

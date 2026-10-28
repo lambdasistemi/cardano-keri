@@ -1,35 +1,48 @@
 {
-  "sourceCommit": "88e930945d8b757913d653defe6f2ed3b2b06ffb",
+  "sourceBaseCommit": "70f3fc800fb3e49f9eb55584b62a2c87a82eb08d",
+  "sourceRevision": "sha256:1cb3d766621446748f2dfb5b400a525be3077106e82c4fec79d29cd998990c64",
   "sourceHashes": {
-    "lean/CardanoKeri/Checkpoint.lean": "f5dea750f9de2e5737d288eef73371cefd1b4217c5609468ddcdff4967ae001f",
-    "lean/CardanoKeri/Registry.lean": "78f63ada92e5099fc504e7e1e92adfbac1785d7d2d20946d78d9ffb68d41a0b5",
-    "lean/CheckpointTraceDriver.lean": "81336c34000345ff5cbb1e3dd2b6ab44ce712cb1c6f64bf4ad3132ea070d2ca2",
-    "lean/RegistryTraceDriver.lean": "a7fdd0314bb41a5e9f036f24c7bbadd199fd317c21e833f52d12dd158b2a9d62",
+    "lean/CardanoKeri/Checkpoint.lean": "3042e4de66c0ce150597c208c1109c47dd8dff14957343480c11bd99f203df82",
+    "lean/CardanoKeri/Registry.lean": "670e1385d1626dc10c599c8296a020c4bd20775a411ede494b3f2a84f5385947",
+    "lean/CardanoKeri/CheckpointTraceWire.lean": "49e86f002cbbbcb9a0090e06649fe0a3f35f29ba22ed0669980ec942fce276f3",
+    "lean/CardanoKeri/RegistryTraceWire.lean": "128505f035d190eaa84149b455463b2173044e5551b1e31fb768c12dd78438ff",
+    "lean/CardanoKeri/CheckpointCertificate.lean": "2c81360632141dd197d5a423312cb572af4eaf5df6f677daaaebdf5f9cbce137",
+    "lean/CardanoKeri/CheckpointSystemWire.lean": "4bce5a0c36722efff3c5166e1f27ccc51a3151e30b5faeee7997bd036758a72c",
+    "lean/CardanoKeri/CheckpointSystemFixtures.lean": "7feded28861564a5b50e856a7f3aa6fec86ea06ccf1d4587d92eff6b376460f2",
+    "lean/CheckpointTraceDriver.lean": "78484d3184d197528b0efb7d98fa9e27e0c443ea78b8d198800079ce15c0b29f",
+    "lean/RegistryTraceDriver.lean": "c491f5a2d8421a13c5b381aba2a9a953adc5aa4145078a18ca140130f20b4739",
+    "lean/RegistryStoryDriver.lean": "1cd2052bc2bf265b7c6f5753e0653f944cff0ea15c17266a6bb3f0316d635ac3",
+    "lean/RegistryBoundaryDriver.lean": "777ec29f0ebe7afccde9c5a3c0d1db2addf197a02472b37524812322131fc070",
+    "lean/CheckpointSystemDriver.lean": "bb36d30454c672f07ce7057cc1e7dd6341cda4160aab4acd89a1e1f144e1f186",
     "lean/lean-toolchain": "d55ca0039a5479db5b38919d005b2c427b89b3be4f0184a20f2f4eae931f5bdb",
-    "offchain/flake.lock": "e170ae65f97ac0ad28f1289efb1bf7032b4f5d73f91861b8dca532eabdf2fc6e"
+    "lean/lake-manifest.json": "ef13f1c22115496b001a180312413f19cb8324750104a49fe249d7e470a10590"
   },
+  "publicSingularCommit": "d69ab005c3b710aeebf033d3c5cd08c56feb5643",
   "toolchain": {
-    "build": "nix build --impure --no-link --print-out-paths --file specs/400-offered-interface/model-toolchain.nix",
-    "observed": "Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
     "declared": "leanprover/lean4:v4.27.0",
-    "note": "Isolated Checkpoint and Registry build and trace runs; complete outputs byte-identical to initial flake Lean 4.24.0 runs. No full theorem audit."
+    "note": "Complete local and associated-system results are regenerated and replayed by the simulator trace gates. No production correspondence is claimed."
   },
   "outputs": {
     "checkpoint": {
-      "sha256": "72e85bf0ed1141f092dcda4bec61dd1b69a8fcaa636d58fff5726cf999868f6e",
+      "sha256": "14b89ba62453b4ad03fa8e2083477855be1578cdaf2a34785af24eb9212078c9",
       "schema": "cardano-keri.checkpoint-trace",
-      "version": 1,
-      "gridCells": 1380,
+      "version": 2,
+      "gridCells": 1472,
       "traces": 8,
       "stories": 15
     },
     "registry": {
-      "sha256": "9579c627da2fd8ba122dd3cb429b3d2dec16d7dc2ef17882b4be1d0996c78f9a",
+      "sha256": "a4104f8a6123fffa9c1ded4c287ee95bfbec41eb9026539a2c55a866e5055a81",
       "schema": "cardano-keri.registry.trace",
-      "version": 2,
-      "gridCells": 3000,
+      "version": 3,
+      "gridCells": 56,
       "traces": 6,
       "stories": 15
+    },
+    "system": {
+      "sha256": "41a38084fd992521287bd29ef17062f7bfa0af4905ec5e0d3eb66ad61a440d6d",
+      "traces": 4,
+      "cells": 34
     }
   }
 }

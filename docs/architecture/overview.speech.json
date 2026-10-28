@@ -137,7 +137,7 @@
       "pause": 400
     },
     {
-      "text": "The accepted design adds exactly one shared structure, and confines it to the narrowest possible job: a registry mapping each AID to a leaf — absent, live, parked with the hash, or convicted. A registration must prove absence before inserting, preventing a second first-registration of that AID. This is distinct from the concrete token's mint/burn rules across revival; see the registration guarantee. Register, reopen, close and convict change the leaf; rotate, poison, freeze and top-up never touch it, and consumers never read it.",
+      "text": "The accepted design adds exactly one shared structure, and confines it to the narrowest possible job: a registry mapping each AID to absent, active or permanently retired. A registration must prove absence before inserting, preventing a second first-registration of that AID. Parking and revival retain the token and active key. Conviction first enters pending custody; only its associated consuming Registry fold burns the token and retires the key. See the registration guarantee. Rotate, poison, freeze and top-up leave the key active, and consumers do not use an active key alone as authority.",
       "pause": 400
     },
     {
@@ -185,7 +185,7 @@
       "pause": 400
     },
     {
-      "text": "Under the design ruled on 2026-09-02/03 (D-036 to D-040; the model is lean/CardanoKeri/Checkpoint.lean, the play is the checkpoint simulation) leaving is the reap: a witnessed rotation by the next keys whose signed message names the payee of the premium (the fee the pool pays for landing a rotation) and the refund address. The current keys keep exactly one Cardano power, the poison. An identity is active (one UTxO), parked (no UTxO; the registry leaf holds the hash of the last checkpoint) or convicted; a parked identity is revived by a witnessed rotation from exactly that key state, with fresh bonds. What ships today is the close described above. Every bond option other than keep, and every new refund address, is signed by the keys of the epoch the rotation opens — so a relayer landing a public rotation can never park, age, or close the owner.",
+      "text": "Under the design ruled on 2026-09-02/03 (D-036 to D-040; the model is lean/CardanoKeri/Checkpoint.lean, the play is the checkpoint simulation) leaving is the reap: a witnessed rotation by the next keys whose signed message names the payee of the premium (the fee the pool pays for landing a rotation) and the refund address. The current keys keep exactly one Cardano power, the poison. An identity is active, parked (the output retains its token, minimum ADA and last key state), pending conviction, or convicted after the associated Registry fold. Parking and revival keep the registry key active; a parked identity is revived by a witnessed rotation from exactly that key state, with fresh bonds. What ships today is the close described above. Every bond option other than keep, and every new refund address, is signed by the keys of the epoch the rotation opens — so a relayer landing a public rotation can never park, age, or close the owner.",
       "pause": 400
     }
   ],
@@ -231,6 +231,6 @@
   ],
   "_source": {
     "file": "overview.md",
-    "sha256": "04c1e4d792a5d36b22a2c8de51fc968992009dfaa8c5f58c548fe94ebffc3f63"
+    "sha256": "7f96371481d67b75a8bb6cb51f4777a0308016135ad5825b4cc2f8ddf454b45c"
   }
 }

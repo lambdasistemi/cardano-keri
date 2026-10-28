@@ -85,7 +85,7 @@
       "pause": 400
     },
     {
-      "text": "and, once the validity edge ships, now ≤ valid_until. Everything else fails closed: absent, frozen (the freeze bond taken), poisoned (locked by the owner's own declaration), juvenile (younger than the window W), convicted, parked (no checkpoint on chain; the registry leaf keeps the hash).",
+      "text": "and, once the validity edge ships, now ≤ valid_until. Everything else fails closed: absent, frozen (the freeze bond taken), poisoned (locked by the owner's own declaration), juvenile (younger than the window W), convicted, parked (an output retains its token, minimum ADA and last key state), and pending conviction custody.",
       "pause": 400
     },
     {
@@ -385,6 +385,6 @@
   ],
   "_source": {
     "file": "value-auth.md",
-    "sha256": "94cc485b0f4cb485020becce42fcd99c63605da87d2085db55dcf0a62bbcc7ac"
+    "sha256": "03e6b5638b6a8993766e2905c489e23919388cb2fe1a7c6eb84a98bc5063b8f5"
   }
 }

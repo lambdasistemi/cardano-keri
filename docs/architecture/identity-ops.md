@@ -46,7 +46,7 @@ epic [#322](https://github.com/lambdasistemi/cardano-keri/issues/322) decides.
 |---|---|---|
 | Register | Creates a bonded checkpoint at sequence zero. No uniqueness rule | A registry request: absence proof, insert and checkpoint mint together; no second first-registration |
 | Advance | Applies one genuine witnessed rotation | The same, plus a bond option, an optional new refund address, and the premium `P` (the fee the pool pays for landing a rotation) to whoever landed it |
-| Close | Current controllers burn the token and take the refund | The **reap**: a witnessed rotation by the **next** keys naming payee and refund; the leaf is parked with the hash |
+| Close | Current controllers burn the token and take the refund | The **reap**: a witnessed rotation by the **next** keys naming payee and refund; the output retains its token, minimum ADA and key state; the registry key stays active |
 | Freeze | Moves a lagging checkpoint to ARMED for the response window | Payment to a hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one) when the pool is short. The datum is untouched; `B` leaves |
 | ClaimFreeze / thaw | Pays the recorded hunter after the deadline; thaw re-posts `B` | **Gone.** No deadline, no claim, no timeout economy |
 | Convict | Burns the token on a witnessed irreconcilable fork | A terminal `Convicted` state on a duplicity proof; `D_reg` in full to the convictor |
@@ -193,8 +193,8 @@ address limits where the money goes but not whether the identity dies.
 
 Close is the **reap**: a witnessed rotation by the next keys whose signed
 message names the payee of the premium and the refund address (ruling
-D-036). The token burns; the registry leaf is parked with the hash of
-that key state. It needs the next keys exactly like any other rotation,
+D-036). The parked output retains its token, minimum ADA and
+that key state; the registry key stays active. It needs the next keys exactly like any other rotation,
 so the current-key thief loses this move entirely — the only Cardano
 power the current keys retain is the poison, and a rotation clears that.
 

@@ -145,7 +145,7 @@
       "pause": 400
     },
     {
-      "text": "Under ruling D-036, close is the reap: a witnessed rotation by the next keys whose signed message names the payee and the refund address; the leaf is parked with the hash. That is what stops a thief holding only the current keys from erasing the owner's Cardano presence. See Compromise of the current keys.",
+      "text": "Under ruling D-036, close is the reap: a witnessed rotation by the next keys whose signed message names the payee and the refund address; the parked output retains the token, minimum ADA and key state, and the registry key stays active. That is what stops a thief holding only the current keys from erasing the owner's Cardano presence. See Compromise of the current keys.",
       "pause": 400
     }
   ],
@@ -347,6 +347,6 @@
   ],
   "_source": {
     "file": "trust-model.md",
-    "sha256": "3b62c0faea8d0235b9c753793195c989fdf22013c712d77c6ab231cd4f85eb30"
+    "sha256": "c34c90643c693af66820c1c96c55fb8a3356ae359a276218e9818c48a37e8821"
   }
 }

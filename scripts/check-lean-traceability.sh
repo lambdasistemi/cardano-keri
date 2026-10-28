@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Retirement ledger + sole-spec + proof-trust enforcement for DISP-366-DELETE.
+# Historical retirement ledger and complete compiled proof-trust inventory.
 # Usage: check-lean-traceability.sh [repo_root] [base_sha]
 # Defaults cover CI/just callers (no args). The compiler remains the authority
 # for dependency closure; source-text scans locate references but never close
@@ -68,9 +68,15 @@ test -z "$(sort "$tmp_root/retired-theorems" | uniq -d)" || {
 diff -u "$tmp_root/historical-theorems" "$tmp_root/retired-theorems"
 
 cd "$lean_root"
-nix shell --no-write-lock-file .#lean --command lake clean
-nix shell --no-write-lock-file .#lean --command lake build \
-  >"$tmp_root/build.log" 2>&1
+lake_run() {
+  if [[ -n "${LAKE_BIN:-}" ]]; then "$LAKE_BIN" "$@"
+  else nix shell --no-write-lock-file .#lean --command lake "$@"
+  fi
+}
+lake_run clean
+lake_run build CardanoKeri CardanoKeriStatements CardanoKeri.RegistryTraceWire \
+  >"$tmp_root/build.log" 2>&1 || { cat "$tmp_root/build.log"; exit 1; }
+cat "$tmp_root/build.log"
 if rg -n "uses 'sorry'" "$tmp_root/build.log"; then
   echo 'retirement: clean build contains a sorry proof' >&2
   exit 1
@@ -78,7 +84,7 @@ fi
 
 for module in "${retired_modules[@]}"; do
   printf 'import CardanoKeri.%s\n' "$module" >"$tmp_root/RetiredImport.lean"
-  if nix shell --no-write-lock-file .#lean --command lake env lean \
+  if lake_run env lean \
       "$tmp_root/RetiredImport.lean" >"$tmp_root/retired-import.log" 2>&1; then
     echo "retirement: retired module remains importable: CardanoKeri.$module" >&2
     exit 1
@@ -90,48 +96,30 @@ for module in "${retired_modules[@]}"; do
   }
 done
 
-cat >"$tmp_root/Axioms.lean" <<'EOF'
-import CardanoKeri.CheckpointGoals
-import CardanoKeri.RegistryGoals
-import CardanoKeri.Cage
-import CardanoKeri.Samaritan
-EOF
-theorem_count=0
-while IFS=: read -r source prefix; do
-  # A process substitution hides a failed producer from set -e. Materialize
-  # each inventory first so an unreadable source cannot silently lose theorems.
-  awk '/^theorem[[:space:]]+/ { print $2 }' "$lean_root/CardanoKeri/$source.lean" \
-    >"$tmp_root/current-theorems"
-  while read -r theorem_name; do
-    printf '#print axioms %s.%s\n' "$prefix" "$theorem_name" >>"$tmp_root/Axioms.lean"
-    theorem_count=$((theorem_count + 1))
-  done <"$tmp_root/current-theorems"
-done <<'EOF'
-CheckpointGoals:CardanoKeri.Checkpoint
-RegistryGoals:CardanoKeri.Registry
-Cage:CardanoKeri.Cage
-Samaritan:CardanoKeri.Samaritan
-EOF
-test "$theorem_count" -gt 0 || {
-  echo 'retirement: empty live theorem inventory' >&2
-  exit 1
+# The compiler enumerates every declaration owned by every current module,
+# including generated/private names, and checks its transitive axiom closure.
+# Standard Lean axioms are propext, Quot.sound and Classical.choice.
+lake_run env lean AxiomInventory.lean >"$tmp_root/axioms.log" 2>&1 || { cat "$tmp_root/axioms.log"; exit 1; }
+cat "$tmp_root/axioms.log"
+sed -n 's/^MODULE //p' "$tmp_root/axioms.log" | sort >"$tmp_root/imported-modules"
+{ printf 'CardanoKeri\n'; rg --files CardanoKeri -g '*.lean' | sed -e 's/\.lean$//' -e 's|/|.|g'; } \
+  | sort >"$tmp_root/source-modules"
+diff -u "$tmp_root/source-modules" "$tmp_root/imported-modules"
+declaration_count=$(sed -n 's/^INVENTORY //p' "$tmp_root/axioms.log")
+[[ "$declaration_count" =~ ^[1-9][0-9]*$ ]] || { echo 'inventory: missing positive denominator' >&2; exit 1; }
+test "$(rg -c '^AXIOMS ' "$tmp_root/axioms.log")" -eq "$declaration_count" || {
+  echo 'inventory: truncated declaration receipts' >&2; exit 1;
 }
-nix shell --no-write-lock-file .#lean --command lake env lean \
-  "$tmp_root/Axioms.lean" >"$tmp_root/axioms.log" 2>&1
-test "$(rg -c "depends on axioms|does not depend on any axioms" "$tmp_root/axioms.log")" \
-  -eq "$theorem_count" || {
-  echo 'retirement: truncated axiom inventory (receipt count differs from theorem count)' >&2
-  exit 1
-}
-if rg -n 'sorryAx|Classical.choice' "$tmp_root/axioms.log"; then
-  echo 'retirement: live proof surface contains an unapproved axiom' >&2
-  exit 1
-fi
-if rg 'depends on axioms:' "$tmp_root/axioms.log" \
-    | rg -v 'depends on axioms: \[propext\]$|depends on axioms: \[Quot.sound\]$|depends on axioms: \[propext, Quot.sound\]$'; then
-  echo 'retirement: live proof surface contains an unknown axiom set' >&2
-  exit 1
-fi
+sed -n 's/^AXIOMS \([^:]*\):.*/\1/p' "$tmp_root/axioms.log" | sort | uniq -d >"$tmp_root/duplicates"
+test ! -s "$tmp_root/duplicates" || { echo 'inventory: duplicate declaration' >&2; exit 1; }
+for pair in ReviewedContracts:106 PreservedContracts:74; do
+  source_name=${pair%:*}
+  expected_count=${pair#*:}
+  test "$(rg -c '^#check ' "retained-parking/$source_name.lean")" -eq "$expected_count"
+  lake_run env lean "retained-parking/$source_name.lean" >"$tmp_root/$source_name.log" 2>&1 || { cat "$tmp_root/$source_name.log"; exit 1; }
+  cat "$tmp_root/$source_name.log"
+done
 
-git -C "$repo_root" diff --check
-echo "retirement: retired=3 ledger=$historical_count live-theorems=$theorem_count build=pass axioms=pass"
+git -C "$repo_root" diff HEAD --check
+node "$lean_root/retained-parking/story-bindings.mjs"
+echo "retirement: retired=${#retired_modules[@]} ledger=$historical_count compiled-declarations=$declaration_count reviewed-types=106 preserved-types=74 build=pass axioms=pass"

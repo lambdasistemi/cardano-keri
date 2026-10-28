@@ -1,0 +1,38 @@
+[
+  {
+    "id": "SM-01",
+    "before": "hFund : Mr + tip ≤ Mc",
+    "after": "hFund : Mr ≤ Mc",
+    "owner": "CardanoKeri.Samaritan.reap_conserves",
+    "failure": "SM-01:underfunded-constructor-refused",
+    "test": "SamaritanMutationChecks",
+    "kind": "definition-prefix-runtime"
+  },
+  {
+    "id": "SM-02",
+    "before": "intoRequest := r.Mr + r.tip",
+    "after": "intoRequest := r.Mr",
+    "owner": "CardanoKeri.Samaritan.reap_conserves",
+    "failure": "SM-02:request-includes-tip",
+    "test": "SamaritanMutationChecks",
+    "kind": "definition-prefix-runtime"
+  },
+  {
+    "id": "SM-03",
+    "before": "premium := r.Mc - r.Mr - r.tip",
+    "after": "premium := r.Mc - r.Mr",
+    "owner": "CardanoKeri.Samaritan.booking_premium_exact",
+    "failure": "SM-03:premium-deducts-tip",
+    "test": "SamaritanMutationChecks",
+    "kind": "definition-prefix-runtime"
+  },
+  {
+    "id": "SM-04",
+    "before": "reaperPays := r.fReap",
+    "after": "reaperPays := 0",
+    "owner": "CardanoKeri.Samaritan.booker_nonloss_iff",
+    "failure": "SM-04:fee-is-external",
+    "test": "SamaritanMutationChecks",
+    "kind": "definition-prefix-runtime"
+  }
+]

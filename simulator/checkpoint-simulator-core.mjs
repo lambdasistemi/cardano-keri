@@ -7,14 +7,12 @@
  * over steps and traces — one checker row per Lean declaration, keyed by its
  * name, folded into fourteen lamps for the page.
  *
- * Third slice (D-039, D-040): an identity is active (the UTxO: live, poisoned
- * or frozen), parked (no UTxO; the leaf holds the hash of the last checkpoint
- * — its key state) or convicted (the mark). No withdraw, no unbonded state:
- * a present checkpoint always holds the conviction bond; the freeze bond is
- * held unless frozen. The close is the reap: a witnessed rotation whose new
- * keys sign the close intent naming the payee of the premium and the refund
- * address; everything else goes to the refund address, the leaf is parked
- * with the hash. The reopen is the revival from the parked key state.
+ * Parking retains an output, representative token and last key state. Its
+ * registry leaf remains active. Revival rotates from that retained key state
+ * with fresh bonds. Conviction enters terminationPending; only an associated
+ * consuming Registry fold completes retirement in CheckpointSystem.
+ * This module executes the local Step facet. checkpoint-system-core.mjs
+ * executes registration, booking and completion with their actual receipts.
  *
  * No DOM, no storage, no clock. Evidence (the Lean `Env`) is a table of
  * primitive decisions supplied by the scenario or by the person playing.
@@ -25,7 +23,7 @@
  * JSON shapes follow Lean's derived `ToJson` exactly, so the corpus the
  * Lean driver emits is compared byte-for-byte after key sorting:
  *   state   'absent' | {present:{l:{sn,epoch,poisoned,frozen,bornAt,refundTo,pool}}}
- *           | {parked:{h:{epoch,sn}}} | 'convicted'
+ *           | {parked:{h:{epoch,sn}}} | {terminationPending:{h:{epoch,sn}}} | 'convicted'
  *   action  {register:{refund,pool0}} | {rotate:{"sn'",op,payee,"refund'"}} | 'poison'
  *           | {freeze:{"sn'",payee}} | {topUp:{x}} | {convict:{payee}} | {close:{"sn'",payee,"refund'"}} | {reopen:{"sn'",refund,pool0}}
  *   intent  'keep' | 'deposit' | {close:{payee}}
@@ -94,10 +92,10 @@ function parseJsonExact(text) {
 // (the Lean returns `none` without a name; the naming is the simulator's)
 const REASONS = [
   'invalid-params', 'invalid-nat', 'invalid-action', 'invalid-state', 'invalid-evidence',
-  'convicted-terminal', 'parked-inert', 'reopen-needs-parked', 'absent-needs-register', 'already-present',
+  'convicted-terminal', 'termination-pending', 'parked-inert', 'reopen-needs-parked', 'absent-needs-register', 'already-present',
   'no-witnessed-rotation', 'sequence-not-later', 'intent-not-authorized',
   'no-quorum', 'already-poisoned', 'poisoned', 'pool-covers-premium', 'freeze-bond-missing',
-  'no-duplicity-proof', 'slot-regression', 'aid-already-registered', 'leaf-not-parked',
+  'no-duplicity-proof', 'slot-regression',
 ];
 // the consumer's verdicts; the last three are boundary refusals (a consumer
 // reading a non-state or under non-params decides nothing)
@@ -123,10 +121,9 @@ const LEAN_GUARDS = {
   'pool-covers-premium': { decls: ['Step.freeze'], hyp: 'hpool', text: 'l.pool < p.P' },
   'freeze-bond-missing': { decls: ['Step.freeze'], hyp: 'hb', text: 'l.frozen = false' },
   'no-duplicity-proof': { decls: ['Step.convict', 'Step.convictParked'], hyp: 'hdup', text: 'env.duplicityAt' },
-  'aid-already-registered': { decls: ['SysStep.register'], hyp: 'habs', text: 's.leaves aid = .absent' },
-  'leaf-not-parked': { decls: ['SysStep.reopen'], hyp: 'hparked', text: 's.leaves aid = .parked h' },
   'slot-regression': { decls: ['Trace.cons'], hyp: 'hle', text: "t ≤ t'" },
   // no constructor has the (action, state): stepFn's fall-through, the theorem names it
+  'termination-pending': { decls: ['stepFn'], text: '| _, _ => none', theorem: 'pending_has_no_local_exit' },
   'convicted-terminal': { decls: ['stepFn'], text: '| _, _ => none', theorem: 'T12_convicted_terminal' },
   'parked-inert': { decls: ['stepFn'], text: '| _, _ => none', theorem: 'T8_parked_only_revives_or_convicts' },
   'reopen-needs-parked': { decls: ['stepFn'], text: '| _, _ => none', theorem: 'T8_absent_only_registers' },
@@ -148,7 +145,7 @@ const LEAN_SPLITS = [
 ];
 // the conjunct of consumableState each verdict names
 const VERDICT_CONJUNCTS = {
-  'not-present': ['| .present l =>', '| _ => False'], frozen: ['l.frozen = false'],
+  'not-present': ['| .present l =>', '| .parked _ | .terminationPending _ => False', '| .absent | .convicted => False'], frozen: ['l.frozen = false'],
   poisoned: ['l.poisoned = false'], juvenile: ['l.bornAt + p.W ≤ now'],
 };
 // the Step constructor an accepted record went through (the paid/unpaid split is
@@ -248,7 +245,7 @@ function normalizeAction(a) {
 }
 
 // Action.touchesLeaf: the partition of D-037
-const TOUCHES_LEAF = new Set(['register', 'reopen', 'close', 'convict']);
+const TOUCHES_LEAF = new Set(['register']);
 // Action.actor
 function actorOf(a) {
   switch (actionKind(a)) {
@@ -393,37 +390,41 @@ function envUnion(a, b) {
 }
 
 // ---- States, flows ---------------------------------------------------------
-const stateKind = s => (s === 'absent' || s === 'convicted') ? s : (s && s.present ? 'present' : (s && s.parked ? 'parked' : null));
+const stateKind = s => (s === 'absent' || s === 'convicted') ? s : (s && s.present ? 'present' : (s && s.parked ? 'parked' : (s && s.terminationPending ? 'terminationPending' : null)));
 const liveOf = s => (s && s.present ? s.present.l : null);
-// the parked key state (the hash the leaf holds), or null
+// the key state retained in the parked output, or null
 const hashOf = s => (s && s.parked ? s.parked.h : null);
 const present = l => ({ present: { l } });
 const parked = h => ({ parked: { h: { epoch: h.epoch, sn: h.sn } } });
+const terminationPending = h => ({ terminationPending: { h: { epoch: h.epoch, sn: h.sn } } });
+const hasOutput = s => ['present', 'parked', 'terminationPending'].includes(stateKind(s));
+const representativeHeld = s => hasOutput(s) ? 1 : 0;
 const payment = (addr, dreg, b, pool) => ({ addr, dreg, b, pool });
 const flow = f => Object.assign({ dregIn: 0, bIn: 0, poolIn: 0, refund: null, hunter: null, convictor: null }, f);
 // Live.bHeld: B unless frozen
 const bHeldOf = (p, l) => (l.frozen ? 0 : p.B);
 // State.dregHeld / bHeld / poolHeld: a present checkpoint holds D always and B
-// unless frozen; a parked or convicted state holds nothing (D-040)
+// unless frozen; parked and convicted states hold no bonds or pool.
+// Retained output min-ADA and its representative are separate observations.
 const held = (p, s) => { const l = liveOf(s); return l ? { dreg: p.D, b: bHeldOf(p, l), pool: l.pool } : { dreg: 0, b: 0, pool: 0 }; };
 // Payment?.dreg etc.
 const paid = q => (q ? { dreg: q.dreg, b: q.b, pool: q.pool } : { dreg: 0, b: 0, pool: 0 });
 // State.sn?: the sequence a state records, or null
-const snOf = s => { const k = stateKind(s); const l = liveOf(s); return k === 'present' ? (l && typeof l === 'object' ? l.sn : null) : k === 'parked' ? (s.parked.h && s.parked.h.sn) : null; };
+const snOf = s => { const k = stateKind(s); const l = liveOf(s); return k === 'present' ? (l && typeof l === 'object' ? l.sn : null) : (k === 'parked' || k === 'terminationPending') ? (s[k].h && s[k].h.sn) : null; };
 // Live.hash: the key state a present checkpoint records
 const hashOfLive = l => ({ epoch: l.epoch, sn: l.sn });
 // Live.rotated: the datum a rotation to sn' leaves before its bond option
 const rotated = (p, l, sn2, r) => ({ ...l, sn: sn2, epoch: l.epoch + 1, poisoned: false, refundTo: r === null || r === undefined ? l.refundTo : r, pool: p.P <= l.pool ? l.pool - p.P : l.pool });
 // Params.premium: P to the payee when the pool covers it, nothing otherwise
 const premium = (p, l, payee) => (p.P <= l.pool ? payment(payee, 0, 0, p.P) : null);
-// State.leaf: the registry leaf a state projects to (D-037, D-040): absent | active | {parked:{h}} | convicted
-const leafOf = s => { const k = stateKind(s); return k === 'present' ? 'active' : k === 'parked' ? { parked: { h: { epoch: s.parked.h.epoch, sn: s.parked.h.sn } } } : k === 'convicted' ? 'convicted' : 'absent'; };
-const leafKind = lf => (lf === 'absent' || lf === 'active' || lf === 'convicted') ? lf : (lf && lf.parked ? 'parked' : null);
+// State.leaf: absent | active (including parked and pending custody) | retired
+const leafOf = s => hasOutput(s) ? 'active' : stateKind(s) === 'convicted' ? 'retired' : 'absent';
+const leafKind = lf => ['absent', 'active', 'retired'].includes(lf) ? lf : null;
 
 const LIVE_NATS = ['sn', 'epoch', 'bornAt', 'refundTo', 'pool'];
 const LIVE_BOOLS = ['poisoned', 'frozen'];
 const LIVE_FIELDS = [...LIVE_NATS, ...LIVE_BOOLS];
-const STATE_CTORS = ['present', 'parked'];
+const STATE_CTORS = ['present', 'parked', 'terminationPending'];
 // validateState(s) → null | {reason, field, message}: the complete state — one
 // of the four Lean shapes, exactly one constructor with nothing beside it,
 // every Nat field a Nat, the two bits booleans, no field the Lean does not
@@ -448,7 +449,7 @@ function validateState(s) {
     for (const f of Object.keys(l)) if (!LIVE_FIELDS.includes(f)) return bad('invalid-state', f, `${f} is not a field of the datum`);
     return null;
   }
-  const w = s.parked;
+  const w = s[k];
   if (!w || typeof w !== 'object' || Array.isArray(w)) return bad('invalid-state', 'parked', 'parked without its hash');
   for (const f of Object.keys(w)) if (f !== 'h') return bad('invalid-state', 'parked.' + f, `parked.${f} is not a field of parked (only h)`);
   const hh = w.h;
@@ -493,11 +494,12 @@ function step(p, env, action, now, state) {
   const some = (f, s) => ({ ok: true, kind, flow: flow(f), state: s });
   const sk = stateKind(state);
   if (sk === 'convicted') return refuse('convicted-terminal');
+  if (sk === 'terminationPending') return refuse('termination-pending');
   if (sk === 'parked') {
     const hh = state.parked.h;
     if (kind === 'convict') {
       if (!envDuplicityAt(env, hh.epoch, hh.sn)) return refuse('no-duplicity-proof');
-      return some({}, 'convicted');
+      return some({}, terminationPending(hh));
     }
     if (kind !== 'reopen') return refuse('parked-inert');
     const { "sn'": sn2, refund, pool0 } = a.reopen;
@@ -549,7 +551,7 @@ function step(p, env, action, now, state) {
     }
     case 'convict': {
       if (!envDuplicityAt(env, l.epoch, l.sn)) return refuse('no-duplicity-proof');
-      return some({ refund: payment(l.refundTo, 0, bHeldOf(p, l), l.pool), convictor: payment(a.convict.payee, p.D, 0, 0) }, 'convicted');
+      return some({ refund: payment(l.refundTo, 0, bHeldOf(p, l), l.pool), convictor: payment(a.convict.payee, p.D, 0, 0) }, terminationPending(hashOfLive(l)));
     }
     case 'close': {
       const { "sn'": sn2, payee, "refund'": r } = a.close;
@@ -669,12 +671,8 @@ function setSlot(s, slot) {
   if (slot < s.now) return { ok: false, reason: 'slot-regression' };
   return { ok: true, session: { ...s, now: slot } };
 }
-// attempt(session, action, slot, aid?) → {session, record}: one SysStep for
-// `aid` (default: the played AID). Registration needs the AID's leaf absent
-// (SysStep.register's habs), a reopen needs it parked (SysStep.reopen's
-// hparked); for a consistent system the state guard refuses first, so those
-// two reasons only fire on leaves that disagree with the state. The leaf
-// follows the state after every accepted step (Sys.set).
+// Local Step session with a cached State.leaf projection. Registration origins
+// and associated system events are executed by checkpoint-system-core.mjs.
 function attempt(s, action, slot, aid) {
   if (aid === undefined) aid = s.aid;
   const kind = actionKind(action);
@@ -685,13 +683,11 @@ function attempt(s, action, slot, aid) {
   else if (slot < s.now) res = { ok: false, reason: 'slot-regression' };
   else {
     res = step(s.params, s.env, action, slot, pre);
-    if (res.ok && kind === 'register' && leafOfAid(s, aid) !== 'absent') res = { ok: false, reason: 'aid-already-registered' };
-    if (res.ok && kind === 'reopen' && leafKind(leafOfAid(s, aid)) !== 'parked') res = { ok: false, reason: 'leaf-not-parked' };
   }
   record.ok = res.ok;
   if (res.ok) { record.flow = res.flow; record.state = res.state; }
   else { record.reason = res.reason; if (res.field) record.field = res.field; record.state = pre; }
-  record.stepped = res.reason !== 'slot-regression' && res.reason !== 'aid-already-registered' && res.reason !== 'leaf-not-parked' && !(res.reason === 'invalid-nat' && res.field === 'slot');
+  record.stepped = res.reason !== 'slot-regression' && !(res.reason === 'invalid-nat' && res.field === 'slot');
   const now = record.stepped ? Math.max(s.now, slot) : s.now;
   const mine = aid === s.aid;
   const history = res.ok && mine ? [...s.history, [slot, action]] : s.history;
@@ -725,11 +721,11 @@ const CAST = {
   treasury: { name: 'The treasury', role: 'a consumer', addr: 5, blurb: 'A Cardano validator that authorizes payments against Alice’s current keys by reading her checkpoint as a reference input.' },
   cora: { name: 'Cora', role: 'a convictor', addr: 3, blurb: 'She holds two of Alice’s rotations at the same sequence, both receipted by Alice’s witnesses.' },
   mallory: { name: 'Mallory', role: 'a thief', addr: 4, blurb: 'Sometimes she has Alice’s current keys; sometimes the next ones too.' },
-  anyone: { name: 'A sponsor', role: 'pays for her presence', addr: 6, blurb: 'Someone who wants Alice served on Cardano — a service, a friend, a DAO. Registers her public inception, revives it from the registry after she left, tops up her pool; the machine asks no signature of him. If he names his own refund address, his bonds go back to Alice at her first rotation: a stale registration is a donation.' },
+  anyone: { name: 'A sponsor', role: 'pays for her presence', addr: 6, blurb: 'Someone who wants Alice served on Cardano — a service, a friend, a DAO. Registers her public inception, revives its retained parked output, tops up her pool; the machine asks no signature of him. If he names his own refund address, his bonds go back to Alice at her first rotation: a stale registration is a donation.' },
 };
 const whoAddr = addr => Object.values(CAST).find(c => c.addr === addr) || { name: 'address ' + addr };
 const STATE_WORDS = {
-  absent: 'Absent', live: 'Live', poisoned: 'Poisoned', frozen: 'Frozen', parked: 'Parked', convicted: 'Convicted',
+  absent: 'Absent', live: 'Live', poisoned: 'Poisoned', frozen: 'Frozen', parked: 'Parked', terminationPending: 'Pending custody', convicted: 'Convicted',
 };
 // the story's state table, read off the datum: the three registry states of
 // D-040 (active = live / poisoned / frozen, parked, convicted) and absent
@@ -746,7 +742,7 @@ const INTENT_WORDS = { keep: 'keep the bonds', deposit: 'deposit (unfreeze)', cl
 const intentWord = i => { const k = intentKind(i); return k === 'close' ? INTENT_WORDS.close + ', payee → ' + whoAddr(i.close.payee).name : (INTENT_WORDS[k] || String(i)); };
 const VERDICT_WORDS = {
   consumable: 'Consumable: bonded, not frozen, not poisoned, past the juvenility window.',
-  'not-present': 'Not consumable: there is no checkpoint to read (absent, parked or convicted).',
+  'not-present': 'Not consumable: only a live checkpoint can qualify; absent, parked, pending and retired states are refused.',
   frozen: 'Not consumable: the freeze bond is missing (frozen).',
   poisoned: 'Not consumable: the current keys are declared poisoned.',
   juvenile: 'Not consumable yet: juvenile, born too recently.',
@@ -766,14 +762,13 @@ function explain(rec, s) {
     case 'invalid-nat': return (rec.field === 'pool' || rec.field === 'epoch')
       ? `The resulting ${rec.field} would exceed 2^53 − 1, the largest whole number this simulator represents exactly; the Lean's Nat is unbounded, so the step is refused rather than rounded.`
       : `"${rec.field}" must be a non-negative whole number at most 2^53 − 1: lovelace, slots and sequence numbers do not go negative, fractional or beyond what is represented exactly.`;
-    case 'aid-already-registered': return 'This AID has a registry leaf already: a registration needs the absence proof, and the leaf never goes back to absent.';
-    case 'leaf-not-parked': return 'This AID’s registry leaf is not parked: a revival needs the presence proof of a parked leaf with its hash.';
     case 'invalid-action': return 'The validator does not know this redeemer; only register, rotate, poison, freeze, top-up, convict, close and reopen exist.';
-    case 'invalid-state': return `"${rec.field}" is not part of a checkpoint state: a state is Absent, Present with its seven datum fields, Parked with the hash (its key state), or Convicted. Nothing is evaluated on a non-state.`;
+    case 'invalid-state': return `"${rec.field}" is not part of a checkpoint state: a state is Absent, Present with its seven datum fields, Parked or Pending with its key state, or Convicted. Nothing is evaluated on a non-state.`;
     case 'invalid-evidence': return `"${rec.field}" is not part of an evidence table: the four predicates (witnessed rotation, signed intent, quorum, duplicity) as rows of 3, 3, 1 and 2 entries. Nothing is evaluated under a non-table.`;
+    case 'termination-pending': return 'Conviction is pending: only completion of the associated imported fold can retire this identity.';
     case 'convicted-terminal': return 'Convicted is terminal: no rotation, no poison, no close, no revival, ever. No KERI event un-duplicates an identifier.';
-    case 'parked-inert': return `Parked: the UTxO is burned and the registry leaf holds the hash of the last checkpoint (key state: epoch ${c ? c.epoch : '?'}, sequence ${c ? c.sn : '?'}). Nothing is held, so nothing moves it but a revival — a witnessed rotation from exactly that key state, later than sequence ${c ? c.sn : '?'}, bringing fresh bonds — or a duplicity proof against it.`;
-    case 'reopen-needs-parked': return 'A revival needs a parked leaf; this checkpoint is on chain.';
+    case 'parked-inert': return `Parked: the output retains the representative and the last checkpoint key state (key state: epoch ${c ? c.epoch : '?'}, sequence ${c ? c.sn : '?'}). No bonds or pool remain; the output moves only through a revival — a witnessed rotation from exactly that key state, later than sequence ${c ? c.sn : '?'}, bringing fresh bonds — or a duplicity proof against it.`;
+    case 'reopen-needs-parked': return 'A revival needs a parked output retaining its key state.';
     case 'absent-needs-register': return 'Nothing is on chain for this AID. The only thing that can happen first is a registration.';
     case 'already-present': return 'This AID already has its checkpoint. The token is minted once, ever.';
     case 'no-witnessed-rotation': return c
@@ -821,18 +816,18 @@ const THEOREMS = [
   { id: 'T7', title: 'The state is the fold of the accepted actions',
     lean: ['T7_step_iff_stepFn', 'T7_trace_iff_replay'],
     plain: 'The transition relation and the functional step agree exactly, and a trace is exactly a successful replay: replaying every accepted action from the origin reproduces the current state.' },
-  { id: 'T8', title: 'One incarnation per AID: the registry leaf over its three states',
-    lean: ['T8_absent_only_registers', 'T8_parked_only_revives_or_convicts', 'T8_parked_returns_only_by_revival', 'T8_only_convicted_is_terminal', 'T8_leaf_agrees_with_state', 'T8_edges_leave_the_leaf', 'T8_present_implies_registered', 'T8_leaf_states', 'T8_utxo_iff_active', 'T8_leaf_never_absent_again', 'T8_mint_once', 'T8_reopen_actor_is_proof', 'T8_sysstep_partition'],
-    plain: 'Registration is the only step from Absent and needs an absent leaf; from Parked only a revival or a conviction moves, and only the revival comes back; conviction is the only terminal state. The registry leaf (absent, active, parked with the hash, convicted) always agrees with the state — a UTxO exists exactly when the leaf is active — never returns to absent, and rotate, poison, freeze and top-up never touch it.' },
+  { id: 'T8', title: 'One incarnation per AID: local custody and the connected registry',
+    lean: ['T8_absent_only_registers', 'T8_parked_only_revives_or_convicts', 'T8_parked_returns_only_by_revival', 'local_progress_unless_pending_or_retired', 'T8_reopen_actor_is_proof'],
+    plain: 'Local registration is the only step from Absent. Parked outputs only revive or enter pending conviction. Pending custody has no local exit. Registration origins and final retirement are checked in the connected system player.' },
   { id: 'T9', title: 'Juvenility is consumer policy',
     lean: ['consumableStateB_iff', 'T9_juvenility_is_consumer_only'],
     plain: 'No transition depends on the window W: the same action from the same state is accepted or refused identically under any W. The registry’s grace window is not this machine’s.' },
-  { id: 'T10', title: 'A frozen checkpoint is inert to everyone but the next keys; a parked one holds nothing',
-    lean: ['T10_inert_without_next_keys', 'T10_only_deposit_restores', 'T10_current_quorum_never_restores', 'T10_reopen_is_juvenile', 'T10_bonds_are_observable', 'T10_parked_holds_nothing'],
-    plain: 'If the freeze bond is missing, no step by anyone but the next keys yields a consumable state; only a depositing rotation restores consumability, and it does not restart juvenility; the current quorum never produces a consumable state; a revival brings both bonds and is juvenile for W slots; the bonds are positive, so a frozen checkpoint and a parked identity are observably different in value; a parked identity holds nothing.' },
+  { id: 'T10', title: 'A frozen checkpoint is inert to everyone but the next keys; a parked one holds no bonds or pool',
+    lean: ['T10_inert_without_next_keys', 'T10_only_deposit_restores', 'T10_current_quorum_never_restores', 'T10_reopen_is_juvenile', 'T10_bonds_are_observable', 'parked_and_convicted_hold_no_bonds_or_pool'],
+    plain: 'If the freeze bond is missing, no step by anyone but the next keys yields a consumable state; only a depositing rotation restores consumability, and it does not restart juvenility; the current quorum never produces a consumable state; a revival brings both bonds and is juvenile for W slots; the bonds are positive, so a frozen checkpoint and a parked identity are observably different in value; a parked identity holds no bonds or pool and retains its token and minimum ADA.' },
   { id: 'T12', title: 'Conviction needs a proof and is exact',
-    lean: ['T12_convicted_terminal', 'trace_from_convicted', 'T12_convict_exact', 'T12_convict_parked_exact'],
-    plain: 'No step leaves Convicted. Only a conviction reaches it, only with a duplicity proof against the checkpoint’s key state; from a present checkpoint the flow is exactly the conviction bond to the convictor and the rest to the refund address; from a parked identity nothing moves.' },
+    lean: ['T12_convicted_terminal', 'trace_from_convicted', 'T12_convict_exact', 'T12_convict_parked_exact', 'pending_step_impossible', 'trace_from_pending', 'pending_has_no_local_exit', 'pending_consumer_refused', 'pending_custody_observations'],
+    plain: 'No local step leaves pending custody or Convicted. Concrete duplicity enters pending custody with the retained representative. A live conviction pays D to the convictor and the remaining bonds and pool to the refund address; a parked conviction moves no bonds or pool. Only an associated Registry fold completes retirement.' },
   { id: 'T14', title: 'The pool moves only by premium or top-up',
     lean: ['T14_pool_decreases_only_by_premium', 'T14_pool_increases_only_by_topup'],
     plain: 'Between live states the pool decreases only by the premium under a paid rotation, and increases only by a top-up that changes nothing else.' },
@@ -841,7 +836,7 @@ const THEOREMS = [
     plain: 'Between live states the freeze bond leaves only by a freeze (a later rotation presented, pool short, exactly B to the hunter, datum otherwise untouched); it returns only by a depositing rotation, in full; a freeze makes the checkpoint unconsumable.' },
   { id: 'T16', title: 'The closer chooses when, never where nor who is paid; the parked hash is the closed checkpoint’s',
     lean: ['T16_close_destination', 'T16_close_needs_rotation', 'T16_parked_hash_is_the_closed_checkpoints', 'T16_copied_reap_refused', 'T16_payments_are_named'],
-    plain: 'A close is a witnessed rotation by the next keys, poisoned or frozen or not: it pays the premium to the signed payee when the pool covers it and everything else to the refund address it results in, parks the epoch it opened with its sequence — the hash of the checkpoint the rotation reached — and burns the token; when the keys signed exactly one close message, a copied reap with another payee or address is refused; a hunter is paid only the premium or the freeze bond, a convictor only the conviction bond.' },
+    plain: 'A close is a witnessed rotation by the next keys, poisoned or frozen or not: it pays the premium to the signed payee when the pool covers it and everything else to the refund address it results in, parks the epoch it opened with its sequence — the hash of the checkpoint the rotation reached — and retains the token and minimum ADA in the parked output; when the keys signed exactly one close message, a copied reap with another payee or address is refused; a hunter is paid only the premium or the freeze bond, a convictor only the conviction bond.' },
 ];
 
 // ---- the Lean oracle: cells of the embedded corpus, keyed by what stepFn reads
@@ -959,7 +954,7 @@ function theoremReport(before, after, rec) {
   row('T4_current_key_thief_cannot_park', ok && !!lp && noRotFrom(lp.epoch, lp.sn), () => [
     [actor !== 'nextKeys', 'with no rotation from the key state, a next-keys step landed'], [kind !== 'freeze', 'with no rotation from the key state, a freeze landed'], [postK !== 'parked', 'with no rotation from the key state, the checkpoint was parked']]);
   row('T4_current_key_thief_cannot_revive', ok && !!hPre && noRotFrom(hPre.epoch, hPre.sn), () => [
-    [kind === 'convict' && postK === 'convicted', 'with no rotation from the parked key state, something other than a conviction moved it'], [postK !== 'present', 'with no rotation from the parked key state, the identity was revived']]);
+    [kind === 'convict' && postK === 'terminationPending', 'with no rotation from the parked key state, something other than a conviction moved it'], [postK !== 'present', 'with no rotation from the parked key state, the identity was revived']]);
   // ---- T5: totality — the evidence antecedent held ⇒ the step is accepted
   const anteRot = rot && rotEv && intentOk(env, e1, op, r2);
   row('T5_every_bond_option', anteRot, () => [[ok, 'the rotation’s evidence and signed intent held but it was refused: ' + rec.reason]]);
@@ -969,7 +964,7 @@ function theoremReport(before, after, rec) {
   row('T5_poison_enabled', kind === 'poison' && stepped && !!lp && envQuorum(env, lp.epoch) && !lp.poisoned, () => [[ok, 'the quorum signed on a clean state but the poison was refused: ' + rec.reason]]);
   row('T5_freeze_enabled', kind === 'freeze' && rotEv && lp.pool < p.P && !lp.frozen && !lp.poisoned, () => [[ok, 'the freeze’s evidence held but it was refused: ' + rec.reason]]);
   row('T5_convict_enabled', kind === 'convict' && stepped && !!lp && envDuplicityAt(env, lp.epoch, lp.sn), () => [[ok, 'a duplicity proof was presented but the conviction was refused: ' + rec.reason]]);
-  row('T5_convict_parked_enabled', kind === 'convict' && stepped && !!hPre && envDuplicityAt(env, hPre.epoch, hPre.sn), () => [[ok && postK === 'convicted' && eq(f, flow({})), 'a duplicity proof against the parked key state was presented but the conviction was refused or moved value: ' + (ok ? '' : rec.reason)]]);
+  row('T5_convict_parked_enabled', kind === 'convict' && stepped && !!hPre && envDuplicityAt(env, hPre.epoch, hPre.sn), () => [[ok && postK === 'terminationPending' && eq(post.terminationPending.h, hPre) && eq(f, flow({})), 'a duplicity proof against the parked key state was presented but the conviction was refused or moved value: ' + (ok ? '' : rec.reason)]]);
   row('T5_close_enabled', kind === 'close' && rotEv && intentOk(env, e1, closeMsg, r2), () => [[ok && !!hPost && hPost.epoch === lp.epoch + 1 && hPost.sn === d["sn'"], 'the close’s rotation and signed intent held but it was refused or parked another hash: ' + (ok ? '' : rec.reason)]]);
   row('T5_reopen_enabled', kind === 'reopen' && stepped && !!hPre && envRotationTo(env, hPre.epoch, hPre.sn, d["sn'"]) && hPre.sn < d["sn'"], () => [[ok, 'a later witnessed rotation was presented but the revival was refused: ' + rec.reason]]);
   // ---- T6: value, and the intent signatures
@@ -980,7 +975,7 @@ function theoremReport(before, after, rec) {
   row('T6_dreg_never_a_fee', ok, () => [
     [ph.dreg === 0, 'a hunter was paid from the conviction bond'],
     [pr.dreg === 0 || (pr.dreg === p.D && hi.dreg === p.D && ho.dreg === 0), 'the conviction bond left partially, or not from a checkpoint holding it, to the refund address'],
-    [pc.dreg === 0 || (pc.dreg === p.D && hi.dreg === p.D && postK === 'convicted'), 'the conviction bond went to a convictor without a conviction, or partially']]);
+    [pc.dreg === 0 || (pc.dreg === p.D && hi.dreg === p.D && postK === 'terminationPending' && !!lp && eq(post.terminationPending.h, hashOfLive(lp))), 'the conviction bond went to a convictor without a conviction, or partially']]);
   row('T6_dreg_never_moves_between_present_states', ok && pp, () => [[f.dregIn === 0 && pr.dreg === 0 && ph.dreg === 0 && pc.dreg === 0, 'the conviction bond moved between two present states']]);
   row('T6_dreg_enters_only_at_birth', ok && f.dregIn !== 0, () => [
     [(kind === 'register' && preK === 'absent') || (kind === 'reopen' && preK === 'parked'), 'the conviction bond entered other than at a registration or a revival'],
@@ -1007,30 +1002,14 @@ function theoremReport(before, after, rec) {
     [(() => { const rp = replay(p, after.envAll, after.originSlot, after.origin, after.history); return rp.ok && eq(rp.state, post); })(), 'replay of the accepted actions does not reproduce the state']]);
   // ---- T8: one incarnation per AID — the registry leaf over its three states
   const leafPre = leafOfAid(before, rec.aid), leafPost = leafOfAid(after, rec.aid);
-  row('T8_absent_only_registers', stepped && preK === 'absent', () => [[ok === (kind === 'register' && leafPre === 'absent'), 'from absent, something other than a registration happened, or a registration was refused without cause']]);
+  row('T8_absent_only_registers', stepped && preK === 'absent', () => [[ok === (kind === 'register'), 'from absent, something other than a registration happened, or a registration was refused without cause']]);
   row('T8_parked_only_revives_or_convicts', stepped && preK === 'parked', () => [
     [!ok || (kind === 'reopen' && !!lq && lq.frozen === false && lq.bornAt === rec.slot && lq.epoch === hPre.epoch + 1 && lq.sn === d["sn'"] && hPre.sn < d["sn'"] && lq.poisoned === false && lq.refundTo === d.refund && lq.pool === d.pool0 && eq(f, flow({ dregIn: p.D, bIn: p.B, poolIn: d.pool0 })))
-      || (kind === 'convict' && postK === 'convicted' && eq(f, flow({}))), 'something other than a revival or a conviction left Parked, or the revival did not bring fresh bonds, clean, born now, at the next epoch, or the conviction moved value']]);
+      || (kind === 'convict' && postK === 'terminationPending' && eq(f, flow({}))), 'something other than a revival or a conviction left Parked, or the revival did not bring fresh bonds, clean, born now, at the next epoch, or the conviction moved value']]);
   row('T8_parked_returns_only_by_revival', ok && preK === 'parked' && postK === 'present', () => [[kind === 'reopen' && envRotationTo(env, hPre.epoch, hPre.sn, d["sn'"]) && hPre.sn < d["sn'"], 'the identity came back other than by a witnessed rotation later than the parked key state']]);
   const enabledFrom = st => { const k = stateKind(st); if (k === 'absent') return step(p, env, { register: { refund: 0, pool0: 0 } }, rec.slot, st).ok; if (k === 'present') return step(p, env, { topUp: { x: 0 } }, rec.slot, st).ok; if (k === 'parked') return step(p, env, { reopen: { "sn'": st.parked.h.sn + 1, refund: 0, pool0: 0 } }, rec.slot, st).ok; return false; };
-  row('T8_only_convicted_is_terminal', ok && mine && postK !== 'convicted' && (postK !== 'parked' || envRotationTo(env, hPost.epoch, hPost.sn, hPost.sn + 1)), () => [[enabledFrom(post), 'no step is enabled from a state that is not Convicted']]);
-  row('T8_leaf_agrees_with_state', boundaryOk, () => [[allAids(after).every(x => eq(leafOfAid(after, x), leafOf(stateOfAid(after, x)))), 'a leaf disagrees with its state']]);
-  row('T8_edges_leave_the_leaf', ok, () => [[eq(leafPost, leafPre) === !TOUCHES_LEAF.has(kind), 'the leaf changed exactly when the action is not a register, reopen, close or conviction — violated']]);
-  row('T8_present_implies_registered', boundaryOk, () => [[allAids(after).every(x => stateKind(stateOfAid(after, x)) === 'absent' || leafOfAid(after, x) !== 'absent'), 'an AID with a state has no leaf']]);
-  row('T8_leaf_states', boundaryOk, () => [[allAids(after).every(x => { const lf = leafOfAid(after, x), st = stateOfAid(after, x), k = leafKind(lf); return (k !== 'parked' || eq(st, { parked: { h: lf.parked.h } })) && (lf !== 'active' || stateKind(st) === 'present') && (lf !== 'convicted' || st === 'convicted'); }), 'a leaf does not carry what its state holds']]);
-  row('T8_utxo_iff_active', boundaryOk, () => [[allAids(after).every(x => (stateKind(stateOfAid(after, x)) === 'present') === (leafOfAid(after, x) === 'active')), 'an AID has a UTxO without an active leaf, or an active leaf without a UTxO']]);
-  row('T8_leaf_never_absent_again', boundaryOk && leafPre !== 'absent', () => [
-    [leafPre === 'absent' || leafPost !== 'absent', 'a leaf returned to absent'],
-    [leafKind(leafPre) !== 'convicted' || leafKind(leafPost) === 'convicted', 'a convicted leaf changed'],
-    [allAids(after).filter(x => x !== rec.aid).every(x => eq(leafOfAid(after, x), leafOfAid(before, x))), 'another AID’s leaf changed']]);
-  row('T8_mint_once', ok && (kind === 'register' || kind === 'reopen'), () => [
-    [kind !== 'register' || (preK === 'absent' && leafPre === 'absent'), 'a registration landed on a non-absent state or leaf'],
-    [kind !== 'reopen' || (preK === 'parked' && leafKind(leafPre) === 'parked'), 'a revival landed on a state or leaf that is not parked']]);
+  row('local_progress_unless_pending_or_retired', ok && mine && postK !== 'convicted' && postK !== 'terminationPending' && (postK !== 'parked' || envRotationTo(env, hPost.epoch, hPost.sn, hPost.sn + 1)), () => [[enabledFrom(post), 'no step is enabled from a state that is not Convicted']]);
   row('T8_reopen_actor_is_proof', boundaryOk && (kind === 'reopen' || kind === 'freeze' || kind === 'convict'), () => [[actorOf(a) === 'proof', 'a proof-bearing action is not classed as one']]);
-  row('T8_sysstep_partition', ok && rec.stepped, () => [
-    [kind !== 'register' || (leafPre === 'absent' && preK === 'absent'), 'a registration landed under a leaf that is not absent'],
-    [kind !== 'reopen' || leafKind(leafPre) === 'parked', 'a revival landed under a leaf that is not parked'],
-    [eq(leafPost, leafOf(post)), 'the leaf did not follow the state of the AID that stepped']]);
   // ---- T9: juvenility is consumer policy; the consumer's program is its predicate
   row('consumableStateB_iff', stepped, () => [[consumable(p, rec.slot, post).ok === consumableB(p, rec.slot, post), 'the consumer’s Bool mirror disagrees with the conjuncts']]);
   const r0 = rec.stepped ? step(p, env, a, rec.slot, pre) : null;
@@ -1042,7 +1021,7 @@ function theoremReport(before, after, rec) {
     differing = samples.filter(w => !eq(r0, step({ ...p, W: w }, env, a, rec.slot, pre)));
   }
   row('T9_juvenility_is_consumer_only', rec.stepped, () => [[untouched && eq(r0, rT), 'the transition read W'], [!differing.length, 'the step differs under W = ' + differing.slice(0, 3).join(', ')]]);
-  // ---- T10: a frozen checkpoint is inert to everyone but the next keys; a parked one holds nothing
+  // ---- T10: a frozen checkpoint is inert to everyone but the next keys; a parked one holds no bonds or pool
   const frozenPre = boundaryOk && !!lp && lp.frozen;
   row('T10_inert_without_next_keys', ok && frozenPre && actor !== 'nextKeys', () => [[!consumableEver(p, post), 'someone but the next keys made a frozen checkpoint consumable']]);
   row('T10_only_deposit_restores', ok && frozenPre && consumableEver(p, post), () => [[rot && op === 'deposit' && !!lq && lq.frozen === false && lq.bornAt === lp.bornAt && f.bIn === p.B, 'consumability restored other than by a depositing rotation bringing B, juvenility untouched']]);
@@ -1051,20 +1030,25 @@ function theoremReport(before, after, rec) {
   row('T10_bonds_are_observable', boundaryOk && !!lp, () => [
     [hi.dreg !== 0, 'a present checkpoint holds no conviction bond: it cannot be told from a parked identity in value'],
     [!lp.frozen || hi.b !== p.B, 'a frozen checkpoint holds the full freeze bond: freezing is not observable in value']]);
-  row('T10_parked_holds_nothing', boundaryOk && (preK === 'parked' || preK === 'convicted' || (ok && (postK === 'parked' || postK === 'convicted'))), () => [
-    [(preK !== 'parked' && preK !== 'convicted') || heldZero(hi), 'a parked or convicted identity holds value'],
-    [!ok || (postK !== 'parked' && postK !== 'convicted') || heldZero(ho), 'a step left value on a parked or convicted identity']]);
+  row('parked_and_convicted_hold_no_bonds_or_pool', boundaryOk && (preK === 'parked' || preK === 'convicted' || (ok && (postK === 'parked' || postK === 'convicted'))), () => [
+    [(preK !== 'parked' && preK !== 'convicted') || heldZero(hi), 'a parked or convicted identity holds bonds or pool'],
+    [!ok || (postK !== 'parked' && postK !== 'convicted') || heldZero(ho), 'a step left bonds or pool on a parked or convicted identity']]);
   // ---- T12: conviction needs a proof and is exact; convicted is terminal
   row('T12_convicted_terminal', stepped && preK === 'convicted', () => [[!ok, 'a step left Convicted']]);
+  row('pending_step_impossible', stepped && preK === 'terminationPending', () => [[!ok, 'a local step left pending custody']]);
+  row('pending_has_no_local_exit', stepped && preK === 'terminationPending', () => [[!ok, 'the local function accepted a pending action']]);
+  row('trace_from_pending', stepped && preK === 'terminationPending', () => [[eq(pre, post), 'a local play changed pending custody']]);
+  row('pending_consumer_refused', boundaryOk && postK === 'terminationPending', () => [[!consumable(p, rec.slot, post).ok && !consumableB(p, rec.slot, post), 'pending custody became consumable']]);
+  row('pending_custody_observations', boundaryOk && postK === 'terminationPending', () => [[hasOutput(post) && representativeHeld(post) === 1 && leafOf(post) === 'active' && snOf(post) === post.terminationPending.h.sn && eq(held(p, post), { dreg: 0, b: 0, pool: 0 }), 'pending output, representative, active key, sequence or bond observations differ']]);
   const wasConvicted = mine && (stateKind(origin) === 'convicted' || before.records.some(r => r.ok && r.aid === rec.aid && stateKind(r.state) === 'convicted'));
   row('trace_from_convicted', wasConvicted, () => [[stateKind(post) === 'convicted' && eq(post, pre), 'a play that reached Convicted moved on']]);
   row('T12_convict_exact', kind === 'convict' && stepped && preK === 'present', () => [
     [ok === envDuplicityAt(env, lp.epoch, lp.sn), 'conviction accepted without a proof against the checkpoint’s key state, or refused with one'],
-    [!ok || post === 'convicted', 'a conviction did not reach Convicted'],
+    [!ok || (postK === 'terminationPending' && eq(post.terminationPending.h, hashOfLive(lp))), 'a conviction did not reach Convicted'],
     [!ok || eq(f, flow({ refund: payment(lp.refundTo, 0, bHeldOf(p, lp), lp.pool), convictor: payment(d.payee, p.D, 0, 0) })), 'the conviction flow is not exactly D to the convictor and the rest to the refund address']]);
   row('T12_convict_parked_exact', kind === 'convict' && stepped && preK === 'parked', () => [
     [ok === envDuplicityAt(env, hPre.epoch, hPre.sn), 'conviction of a parked identity accepted without a proof against the parked key state, or refused with one'],
-    [!ok || (post === 'convicted' && eq(f, flow({}))), 'a conviction of a parked identity moved value or did not reach Convicted']]);
+    [!ok || (postK === 'terminationPending' && eq(post.terminationPending.h, hPre) && eq(f, flow({}))), 'a conviction of a parked identity moved value or did not reach Convicted']]);
   // ---- T14: the pool
   row('T14_pool_decreases_only_by_premium', ok && pp && lq.pool < lp.pool, () => [
     [actor === 'nextKeys' && big(lq.pool) + big(p.P) === big(lp.pool) && ph.pool === p.P, 'the pool decreased other than by the premium under a rotation']]);
@@ -1084,7 +1068,7 @@ function theoremReport(before, after, rec) {
   row('T16_parked_hash_is_the_closed_checkpoints', ok && kind === 'close' && !!lp, () => [
     [!!hPost && eq(hPost, hashOfLive(rotated(p, lp, d["sn'"], r2))) && hPost.epoch === lp.epoch + 1 && hPost.sn === d["sn'"], 'the parked hash is not the key state the closing rotation reached'],
     [pr.dreg === hi.dreg && pr.b === hi.b && big(pr.pool) + big(ph.pool) === big(hi.pool), 'the close did not pay out exactly what the checkpoint held'],
-    [heldZero(ho), 'the parked identity holds value']]);
+    [heldZero(ho), 'the parked identity holds bonds or pool']]);
   const closeMsgs = boundaryOk && e1 !== null ? env.intentAuthorized.filter(rw => rw[0] === e1 && intentKind(rw[1]) === 'close') : [];
   row('T16_copied_reap_refused', kind === 'close' && stepped && !!lp && closeMsgs.length === 1, () => [
     [!ok || (d.payee === closeMsgs[0][1].close.payee && eq(r2, closeMsgs[0][2])), 'a close landed naming a payee or an address the keys did not sign (the copied reap)'],
@@ -1151,6 +1135,7 @@ function checkScenario(sc, label, corpus) {
       if (ex.ok !== undefined && record.ok !== ex.ok)
         problems.push(where + ': expected ok=' + ex.ok + ', got ok=' + record.ok + (record.ok ? '' : ' (' + record.reason + ')'));
       if (ex.reason !== undefined) { asserted.push(ex.reason); if (record.reason !== ex.reason) problems.push(where + ': expected reason «' + ex.reason + '», got «' + record.reason + '»'); }
+      if (Object.hasOwn(ex, 'modelResult') && canon(record.ok ? {flow:record.flow,state:record.state} : null) !== canon(ex.modelResult)) problems.push(where + ': complete Lean result mismatch');
       if (record.ok && ex.live !== undefined) {
         const l = liveOf(record.state);
         if (!l || !matchesPartial(l, ex.live)) problems.push(where + ': live datum mismatch — expected ⊇ ' + JSON.stringify(ex.live) + ' got ' + JSON.stringify(l));
@@ -1288,6 +1273,7 @@ function checkCorpus(corpus) {
 /* @@CORE:suite:END@@ */
 
 export {
+  hasOutput, representativeHeld,
   thresholdSatisfied, derivedWitnesses, verifiedSigners, signingValid, receiptsValid, rotationValid, concreteDuplicityAt, duplicityFixture,
   canon, isNat, REASONS, VERDICTS, LEAN_GUARDS, LEAN_SPLITS, VERDICT_CONJUNCTS, constructorOf,
   validateParams, ACTION_KINDS, BOND_OPS, INTENT_KINDS, intentKind, closeIntent, actionKind, normalizeAction, actorOf,

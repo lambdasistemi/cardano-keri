@@ -14,10 +14,15 @@
       "clause": "the AID is absent from the registry",
       "class": "guard",
       "kind": "guard",
-      "decl": "SysStep.register",
-      "hyp": "habs",
-      "text": "s.leaves aid = .absent",
-      "reason": "aid-already-registered"
+      "decl": "RegistrationEvent",
+      "text": "s.leaves aid = .absent ∧ s.origins aid = none",
+      "scope": "system",
+      "system": {
+        "trace": "retained-associated-completion",
+        "cell": "register",
+        "property": "T8_mint_once"
+      },
+      "note": "Actual registration consumes an imported fold receipt and installs its fixed origin. The system-premises trace refuses a duplicate; the completed journey refuses registration after retirement."
     },
     {
       "id": "1.and-is-inserted",
@@ -25,13 +30,15 @@
       "clause": "and is inserted",
       "class": "guard",
       "kind": "post-state",
-      "decl": "SysStep.register",
-      "text": "s.set aid st'",
-      "match": {
-        "ok": true,
-        "kind": "register"
-      },
-      "note": "Sys.set moves the leaf with the state (State.leaf); SysStep.other leaves the registry alone for rotate, poison, freeze and top-up (T8_edges_leave_the_leaf)."
+      "decl": "RegistrationEvent",
+      "text": "s' = s.installOrigin aid st origin",
+      "note": "Actual registration consumes an imported fold receipt and installs its fixed origin. The system-premises trace refuses a duplicate; the completed journey refuses registration after retirement.",
+      "scope": "system",
+      "system": {
+        "trace": "retained-associated-completion",
+        "cell": "register",
+        "property": "T8_mint_once"
+      }
     },
     {
       "id": "1.this-is-the-only-way",
@@ -39,11 +46,15 @@
       "clause": "this is the only way the token can ever be minted",
       "class": "guard",
       "kind": "guard",
-      "decl": "SysStep.register",
-      "hyp": "habs",
-      "text": "s.leaves aid = .absent",
-      "reason": "aid-already-registered",
-      "note": "registration is the only SysStep that touches the registry, and it needs the AID absent from it; every non-absent AID is registered (T8_present_implies_registered), so a second minting is refused for the rest of the AID's life."
+      "decl": "RegistrationEvent",
+      "text": "s.leaves aid = .absent ∧ s.origins aid = none",
+      "note": "Actual registration consumes an imported fold receipt and installs its fixed origin. The system-premises trace refuses a duplicate; the completed journey refuses registration after retirement.",
+      "scope": "system",
+      "system": {
+        "trace": "retained-associated-completion",
+        "cell": "register",
+        "property": "T8_mint_once"
+      }
     },
     {
       "id": "1.both-bonds-are-present",
@@ -332,7 +343,7 @@
     {
       "id": "5.burns-the-token",
       "story": 5,
-      "clause": "burns the token",
+      "clause": "retains the representative token in the parked output",
       "class": "guard",
       "kind": "post-state",
       "decl": "Step.closePaid",
@@ -342,12 +353,12 @@
         "kind": "close",
         "preWord": "live"
       },
-      "note": "the post-state is not a present checkpoint: no UTxO (T8_utxo_iff_active)."
+      "note": "The parked constructor has an output and representativeHeld = 1; State.leaf remains active. This is not a burn."
     },
     {
       "id": "5.and-parks-the-leaf-with",
       "story": 5,
-      "clause": "and parks the leaf with the hash of the checkpoint the rotation reached",
+      "clause": "and stores the key state the closing rotation reached in that output",
       "class": "guard",
       "kind": "post-state",
       "decl": "Step.closePaid",
@@ -362,14 +373,18 @@
     {
       "id": "6.the-leaf-is-parked",
       "story": 6,
-      "clause": "the leaf is parked",
+      "clause": "the output is parked and its registry key remains active",
       "class": "guard",
       "kind": "guard",
-      "decl": "SysStep.reopen",
-      "hyp": "hparked",
-      "text": "s.leaves aid = .parked h",
-      "reason": "leaf-not-parked",
-      "note": "the registry's presence proof; for one AID the state guard refuses first (reopen-needs-parked), the leaf guard is the system-level reason the gate's generator exercises."
+      "decl": "LocalEvent",
+      "text": "s.leaves aid = .active",
+      "note": "The system reopens the retained parked output under the existing active key; no dormant key or revival request.",
+      "scope": "system",
+      "system": {
+        "trace": "retained-associated-completion",
+        "cell": "revive",
+        "property": "T8_mint_once"
+      }
     },
     {
       "id": "6.a-witnessed-rotation-from-exactly",
@@ -664,7 +679,7 @@
       "story": 11,
       "clause": "Later, when validity ships: within `valid_until`",
       "class": "omission",
-      "note": "validity (D-027, A11) is reserved in the datum and not modelled (Checkpoint.lean module doc)."
+      "note": "Validity is outside the present consumer predicate and not claimed by this simulator."
     },
     {
       "id": "11.on-absent",
@@ -673,7 +688,7 @@
       "class": "guard",
       "kind": "verdict",
       "decl": "consumableState",
-      "text": "| _ => False",
+      "text": "| .absent | .convicted => False",
       "verdict": "not-present",
       "note": "every non-present state is False; each present failure names its conjunct (story 11's scenario walks all six)."
     },
@@ -714,9 +729,9 @@
       "class": "guard",
       "kind": "verdict",
       "decl": "consumableState",
-      "text": "| _ => False",
+      "text": "| .parked _ | .terminationPending _ => False",
       "verdict": "not-present",
-      "note": "no UTxO to read: the leaf holds the hash and nothing else (D-040)."
+      "note": "The retained parked output is explicitly refused by the consumer."
     },
     {
       "id": "11.convicted",
@@ -725,7 +740,7 @@
       "class": "guard",
       "kind": "verdict",
       "decl": "consumableState",
-      "text": "| _ => False",
+      "text": "| .absent | .convicted => False",
       "verdict": "not-present"
     },
     {
@@ -767,11 +782,15 @@
       "clause": "It can happen once per AID, ever",
       "class": "guard",
       "kind": "guard",
-      "decl": "SysStep.register",
-      "hyp": "habs",
-      "text": "s.leaves aid = .absent",
-      "reason": "aid-already-registered",
-      "note": "for one AID the state guard (present / parked / convicted) refuses first (already-present, as scenario 12 plays it); the leaf guard is the system-level reason, exercised by the gate's multi-AID generator."
+      "decl": "RegistrationEvent",
+      "text": "s.leaves aid = .absent ∧ s.origins aid = none",
+      "note": "Actual registration consumes an imported fold receipt and installs its fixed origin. The system-premises trace refuses a duplicate; the completed journey refuses registration after retirement.",
+      "scope": "system",
+      "system": {
+        "trace": "retained-associated-completion",
+        "cell": "register",
+        "property": "T8_mint_once"
+      }
     },
     {
       "id": "13.add-value-to-the-pool",
@@ -854,7 +873,7 @@
         "op": "keep",
         "hunterPool": true
       },
-      "note": "no UTxO in the model: 'first' is whichever rotation the machine sees first; it lands paid."
+      "note": "The local model does not represent spent-reference conflicts: 'first' is the rotation applied first, which lands paid."
     },
     {
       "id": "14.the-second-fails-on-the",
@@ -866,7 +885,7 @@
       "hyp": "hev",
       "text": "env.rotationTo l.epoch l.sn sn' = true",
       "reason": "no-witnessed-rotation",
-      "note": "no UTxO in the model: the second advance fails because the state moved and its evidence no longer matches (no-witnessed-rotation)."
+      "note": "The local model does not represent spent-reference conflicts: the second advance fails because its evidence no longer matches the advanced state (no-witnessed-rotation)."
     },
     {
       "id": "14.if-it-does-not",
@@ -944,9 +963,9 @@
     {
       "id": "15.the-fields-are-reserved-in",
       "story": 15,
-      "clause": "The fields are reserved in the datum now",
+      "clause": "This extension is not implemented or claimed here",
       "class": "omission",
-      "note": "reserved fields are not in Live."
+      "note": "No expiry rule or reserved-field contract is claimed by these model observations."
     },
     {
       "id": "15.consumable-present",
@@ -968,6 +987,16 @@
       "decl": "consumableState",
       "text": "l.frozen = false",
       "verdict": "frozen"
+    },
+    {
+      "id": "11.pending-custody",
+      "story": 11,
+      "clause": "pending custody",
+      "class": "guard",
+      "kind": "verdict",
+      "decl": "consumableState",
+      "text": "| .parked _ | .terminationPending _ => False",
+      "verdict": "not-present"
     }
   ],
   "distinctive": [
@@ -1114,12 +1143,12 @@
       }
     },
     {
-      "id": "convicted-terminal",
+      "id": "pending-no-local-exit",
       "story": 9,
-      "clause": "nothing leaves Convicted",
+      "clause": "pending custody has no local exit",
       "match": {
         "ok": false,
-        "reason": "convicted-terminal"
+        "reason": "termination-pending"
       }
     },
     {
@@ -1300,7 +1329,7 @@
     {
       "id": "parked-inert-freeze",
       "story": 5,
-      "clause": "a parked identity cannot be frozen: no bond, no UTxO",
+      "clause": "a parked identity cannot be frozen: no freeze bond, retained output",
       "match": {
         "ok": false,
         "kind": "freeze",
@@ -1311,7 +1340,7 @@
     {
       "id": "parked-inert-register",
       "story": 5,
-      "clause": "a parked identity cannot be registered again: the leaf is not absent",
+      "clause": "a parked identity cannot be registered again: its retained state is not absent",
       "match": {
         "ok": false,
         "kind": "register",
@@ -1385,7 +1414,7 @@
     {
       "id": "convict-parked",
       "story": 6,
-      "clause": "a duplicity proof against the parked key state convicts a parked identity, moving nothing",
+      "clause": "a duplicity proof against the parked key state convicts a parked identity, moving no bonds or pool",
       "match": {
         "ok": true,
         "kind": "convict",

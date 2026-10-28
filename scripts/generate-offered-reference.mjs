@@ -42,6 +42,7 @@ const families = {
 };
 mkdirSync(join(out, 'sources'), { recursive: true });
 const hashes = {};
+const modelSourceHashes = {};
 for (const name of readdirSync(source).sort()) {
   const bytes = readFileSync(join(source, name));
   hashes[name] = sha(bytes);
@@ -83,12 +84,22 @@ page('schemas', `# Inspect the data shapes\n\nAs an SDK implementer, I want exac
 for (const name of ['spec', 'statements', 'encoding', 'gaps']) {
   const body = read(name + '.md').replace(/\]\(([^)]+)\)/g, (whole, target) => {
     if (/^(https?:|#)/.test(target)) return whole;
+    if (target.startsWith('../../lean/')) {
+      const relative = target.slice(6);
+      const bytes = readFileSync(join(repo, relative));
+      const download = join(out, 'sources/model', relative);
+      mkdirSync(dirname(download), { recursive: true });
+      writeFileSync(download, bytes);
+      modelSourceHashes[relative] = sha(bytes);
+      return `](sources/model/${relative})`;
+    }
     if (target.startsWith('../../')) return `](${gh}${target.slice(6)})`;
     return `](${['spec.md','statements.md','encoding.md','gaps.md'].includes(target) ? target : 'sources/' + target + (target.endsWith('.md') ? '.txt' : '')})`;
   });
   page(name, body);
 }
-writeFileSync(join(out, 'provenance.json'), JSON.stringify({ specificationCommit: head,
-  checkpointSource: cpProv.sourceCommit, statementSource: stProv.sourceCommit, operations,
-  sourceHashes: hashes, generatorSha256: sha(readFileSync(fileURLToPath(import.meta.url))) }, null, 2) + '\n');
+writeFileSync(join(out, 'provenance.json'), JSON.stringify({ specificationBaseCommit: head,
+  checkpointSource: cpProv.sourceRevision, statementSource: stProv.sourceCommit, operations,
+  sourceHashes: hashes, modelSourceHashes,
+  generatorSha256: sha(readFileSync(fileURLToPath(import.meta.url))) }, null, 2) + '\n');
 console.log(JSON.stringify({ output: out, operations: operations.length, checkpointCells: cp.cells.length, statementCases: st.cases.length, pages: 11 }));

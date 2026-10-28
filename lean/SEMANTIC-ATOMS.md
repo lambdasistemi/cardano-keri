@@ -1,3 +1,5 @@
+> Historical evidence at the revision recorded below. The retained-output revision uses the [current mutation manifests and evidence boundaries](retained-parking/README.md); the historical denominator is not a current pass.
+
 # Frozen semantic-atom ledger — issue 365
 
 Frozen against `main@9b2e6b88937707cc2c571ae1e9e5f112dc248a30` on

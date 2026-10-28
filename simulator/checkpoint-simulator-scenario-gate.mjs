@@ -20,7 +20,7 @@
  *      JSON, UI parsing) refuses by name anything that is not a safe
  *      non-negative integer, and arithmetic at and beyond 2^53 is refused
  *      rather than rounded — a core that rounds must redden T6/T14;
- *   5. the system level: a seeded generator drives several AIDs through
+ *   5. local session frames: a seeded generator drives several AIDs through
  *      random actions and evidence; every theorem holds on every transition
  *      and T8 (registry inclusion, no duplicates, state membership) is
  *      exhibited on every accepted transition;
@@ -57,6 +57,7 @@ import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { tmpdir } from 'node:os';
+import { SYSTEM_THEOREMS, systemProperties } from './checkpoint-system-properties.mjs';
 import { createWindow } from './checkpoint-simulator-minidom.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -261,7 +262,7 @@ function checkExactNat(core, corpus) {
 
 function prng(seed) { let x = seed >>> 0 || 1; return () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; }; }
 
-function checkSystem(core, corpus) {
+function checkLocalSessions(core, corpus) {
   const problems = [];
   const P = { D: 1000, B: 5, P: 2, W: 10 };
   const asserted = new Set();
@@ -289,6 +290,7 @@ function checkSystem(core, corpus) {
         { register: { refund: 6, pool0: 1 } },
       ]);
       slot += Math.floor(rnd() * 4);
+      const before = s;
       const out = core.attempt(s, action, slot, aid);
       s = out.session;
       const rec = out.record;
@@ -298,8 +300,8 @@ function checkSystem(core, corpus) {
       const failing = Object.keys(th).filter(id => !th[id].holds);
       if (failing.length) problems.push(`system run ${run} step ${i} (aid ${aid}, ${core.canon(action)}): theorem VIOLATED: ` + failing.map(id => id + ' (' + th[id].notes.join('; ') + ')').join(' · '));
       if (rec.ok) {
-        if (!th.T8.exhibited) problems.push(`system run ${run} step ${i}: accepted transition does not exhibit T8`);
-        else { t8Shown++; if (rec.kind !== 'register') nonRegisterShown++; }
+        t8Shown++; if (rec.kind !== 'register') nonRegisterShown++;
+        for (const other of Object.keys(before.leaves)) if (Number(other) !== aid && core.canon(before.leaves[other]) !== core.canon(s.leaves[other])) problems.push('local session frame: another AID leaf changed');
       }
       if (problems.length > 12) return { problems, transitions };
     }
@@ -309,16 +311,7 @@ function checkSystem(core, corpus) {
     if (leafed.length !== everRegistered.size || ![...everRegistered].every(a => leafed.includes(a))) problems.push(`system run ${run}: leaves ${JSON.stringify(leafed)} ≠ AIDs registered ${JSON.stringify([...everRegistered])}`);
     for (const a of leafed) if (core.canon(s.leaves[a]) !== core.canon(core.leafOf(core.stateOfAid(s, a)))) problems.push(`system run ${run}: leaf of AID ${a} disagrees with its state`);
     distinctRegistered += everRegistered.size;
-    // a corrupted registry (an active leaf on an absent AID) refuses that AID's registration by name; a leaf that is not parked refuses a revival
-    const corrupted = { ...s, leaves: { ...s.leaves, 9: 'active' } };
-    const cr = core.attempt(corrupted, { register: { refund: 1, pool0: 1 } }, slot, 9).record;
-    if (cr.ok || cr.reason !== 'aid-already-registered') problems.push(`system run ${run}: registration of an AID with an active leaf but no state not refused aid-already-registered (got ${cr.ok ? 'ok' : cr.reason})`);
-    asserted.add('aid-already-registered');
-    if (!cr.lamps.T8.exhibited || !cr.lamps.T8.notes.some(n => /disagrees/.test(n))) problems.push(`system run ${run}: the refused re-registration does not exhibit T8 seeing the leaf that disagrees with its state`);
-    const corrupted2 = { ...s, others: { ...s.others, 9: { parked: { h: { epoch: 1, sn: 1 } } } }, leaves: { ...s.leaves, 9: 'active' }, env: core.addEvidence(s, { rotationTo: [1, 1, 2] }).env };
-    const cr2 = core.attempt(corrupted2, { reopen: { "sn'": 2, refund: 1, pool0: 1 } }, slot, 9).record;
-    if (cr2.ok || cr2.reason !== 'leaf-not-parked') problems.push(`system run ${run}: revival of a parked state under an active leaf not refused leaf-not-parked (got ${cr2.ok ? 'ok' : cr2.reason})`);
-    asserted.add('leaf-not-parked');
+
   }
   if (accepted < 180) problems.push(`system generator accepted only ${accepted} transitions`);
   if (nonRegisterShown < 100) problems.push(`system generator exhibited T8 on only ${nonRegisterShown} non-registration transitions`);
@@ -448,7 +441,8 @@ function goalsClasses(leanRoot) {
   const inversion = [...new Set(ctors)].map(n => `${n}_iff`);
   const uniqueDeclared = [...new Set(declared)];
   const proofOnly = uniqueDeclared.filter(n => inversion.includes(n));
-  const observable = uniqueDeclared.filter(n => !inversion.includes(n));
+  const observable = uniqueDeclared.filter(n => !inversion.includes(n) && !SYSTEM_THEOREMS.includes(n));
+  for (const n of SYSTEM_THEOREMS) if (!uniqueDeclared.includes(n)) problems.push('system theorem missing ' + n);
   for (const n of inversion) if (!uniqueDeclared.includes(n)) problems.push(`proof-only identity missing ${n}`);
   for (const n of uniqueDeclared) if (/^Step\..+_iff$/.test(n) && !inversion.includes(n)) problems.push(`proof-only: ${n} does not meet the Step.<constructor>_iff join criterion`);
   return { problems, declared: uniqueDeclared, observable, proofOnly, inversion };
@@ -471,10 +465,10 @@ function inversionClaim(core, name, p, env, now, pre, action) {
     claim(bits[0] && h.sn < d["sn'"], { dregIn: p.D, bIn: p.B, poolIn: d.pool0 },
       core.present({ sn: d["sn'"], epoch: h.epoch + 1, poisoned: false, frozen: false,
         bornAt: now, refundTo: d.refund, pool: d.pool0 })) : null;
-  if (ctor === 'convictParked') return kind === 'convict' && h ? claim(bits[0], {}, 'convicted') : null;
+  if (ctor === 'convictParked') return kind === 'convict' && h ? claim(bits[0], {}, { terminationPending: { h } }) : null;
   if (!l) return null;
   if (ctor === 'convict') return kind === 'convict' ? claim(bits[0],
-    { refund: pay(l.refundTo, 0, core.bHeldOf(p, l), l.pool), convictor: pay(d.payee, p.D) }, 'convicted') : null;
+    { refund: pay(l.refundTo, 0, core.bHeldOf(p, l), l.pool), convictor: pay(d.payee, p.D) }, { terminationPending: { h: { epoch: l.epoch, sn: l.sn } } }) : null;
   if (ctor === 'poison') return kind === 'poison' ? claim(bits[0] && !l.poisoned, {}, core.present({ ...l, poisoned: true })) : null;
   if (ctor === 'topUp') return kind === 'topUp' ? claim(true, { poolIn: d.x }, core.present({ ...l, pool: l.pool + d.x })) : null;
   if (ctor === 'freeze') return kind === 'freeze' ? claim(bits[0] && l.sn < d["sn'"] && l.pool < p.P && !l.frozen && !l.poisoned,
@@ -692,6 +686,17 @@ function checkClauses(core, clausesDoc, storiesMd, scenarioTimelines, leanRoot) 
   for (const c of clauses) {
     const tag = `story ${c.story} clause «${c.clause}»`;
     const fail = msg => problems.push(`${tag}: ${msg}`);
+    if(c.scope==='system') {
+      const span=spans.get(c.decl);
+      if(!span||!span.text.includes(c.text))fail('system event source binding missing');
+      const data=JSON.parse(readFileSync(join(HERE,'checkpoint-system-corpus.json'),'utf8'));
+      const cell=data.traces.find(t=>t.name===c.system?.trace)?.cells.find(x=>x.name===c.system?.cell);
+      if(!cell||!cell.result.ok)fail('actual accepted system cell missing');
+      else {const row=systemProperties(cell)[c.system.property];if(!row?.exhibited||!row.holds)fail('system property premise/conclusion missing');}
+      if(!['RegistrationEvent','LocalEvent'].includes(c.decl))fail('unmapped system event');
+      if(cell && (c.decl==='RegistrationEvent'? !cell.command.register : !cell.command.local?.action?.reopen))fail('system command does not instantiate this event');
+      anchored++; continue;
+    }
     if (!['guard', 'omission', 'overrule'].includes(c.class)) { fail(`unknown class ${c.class}`); continue; }
     if (c.class === 'omission') { if (!c.note) fail('an omission needs a note'); if (c.decl || c.reason || c.verdict || c.match || c.kind) fail('an omission anchors nothing'); continue; }
     if (c.ref || c.token) fail('file:line anchors are gone; name a declaration (decl) and its text');
@@ -962,11 +967,11 @@ function pageSmoke(core, html) {
     next.dispatchEvent(win.makeEvent('click'));
     if (!/parked/i.test(($('#state-name') || {}).textContent || '')) problems.push('› after ‹ does not follow the branch last taken');
   }
-  // the parked page state shows the hash the leaf holds, and offers no move that needs a UTxO and no withdraw
+  // the parked page state shows the key state retained by the parked output, and offers only moves supported by that parked state
   const datumText = (($('#datum') || {}).textContent || '') + ' ' + (($('#where') || {}).textContent || '');
-  if (!/hash/i.test(datumText) || !/epoch 1/i.test(datumText) || !/sn 1/i.test(datumText)) problems.push('the parked page state does not show the hash the leaf holds (key state epoch 1, sn 1): ' + datumText.slice(0, 200));
+  if (!/retained output holds key state/i.test(datumText) || !/representative \+ min-ADA retained/i.test(datumText) || !/registry key\s*active/i.test(datumText) || !/epoch 1/i.test(datumText) || !/sn 1/i.test(datumText)) problems.push('the parked page state does not show the key state retained by the parked output (key state epoch 1, sn 1): ' + datumText.slice(0, 200));
   const offered = doc.querySelectorAll('#next-moves .act[data-kind]').map(b => b.dataset.kind);
-  if (offered.some(k => k === 'rotate' || k === 'freeze' || k === 'poison' || k === 'topUp')) problems.push('a parked identity offers a move that needs a UTxO: ' + offered.join(','));
+  if (offered.some(k => k === 'rotate' || k === 'freeze' || k === 'poison' || k === 'topUp')) problems.push('a parked identity offers a move that requires an active checkpoint: ' + offered.join(','));
   if (/withdraw/i.test(html)) problems.push('the page still names a withdraw');
   const theme = $('#btn-theme');
   if (!theme) problems.push('no #btn-theme');
@@ -996,10 +1001,12 @@ function pageSmoke(core, html) {
 // same state, or a projection that cannot be fabricated): no record can make
 // them red; each names the --selftest control that mutates the core and reds it.
 const STRUCTURAL_ROWS = {
+  pending_consumer_refused: 'pending state admitted by consumableB (m-pending-consumer)',
+  pending_custody_observations: 'pending representative observation drops the token (m-pending-token)',
   consumableStateB_iff: 'the consumer’s Bool mirror drops the freeze bit (m-consumableB)',
   T9_juvenility_is_consumer_only: 'transition that reads W (m-t9)',
   T10_bonds_are_observable: 'held() returns no conviction bond for a present checkpoint (m-held-dreg)',
-  T10_parked_holds_nothing: 'held() returns a pool for a parked identity (m-held-parked)',
+  parked_and_convicted_hold_no_bonds_or_pool: 'held() returns a pool for a parked identity (m-held-parked)',
 };
 // fabricatedViolations(core) → [{name, make: () => {before, after, rec}}]: one record per
 // non-structural declaration on which that exact row must report a violation
@@ -1073,20 +1080,15 @@ function fabricatedViolations(core) {
     T8_absent_only_registers: () => mk({ pre: 'absent', post: live, action: TOP, flow: { poolIn: 1 } }),
     T8_parked_only_revives_or_convicts: () => mk({ pre: parked, post: parked, action: TOP, flow: { poolIn: 1 } }),
     T8_parked_returns_only_by_revival: () => mk({ pre: parked, post: live, action: TOP, flow: { poolIn: 1 } }),
-    T8_only_convicted_is_terminal: () => mk({ pre: live, post: pr(L({ pool: 2 ** 53 })), action: TOP, flow: { poolIn: 1 } }),
-    T8_leaf_agrees_with_state: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, leavesAfter: { 1: 'convicted' } }),
-    T8_edges_leave_the_leaf: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, leavesAfter: { 1: 'convicted' } }),
-    T8_present_implies_registered: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, leavesAfter: {} }),
-    T8_leaf_states: () => mk({ pre: parked, action: TOP, ok: false, reason: 'parked-inert', leavesBefore: { 1: 'active' }, leavesAfter: { 1: 'active' } }),
-    T8_utxo_iff_active: () => mk({ pre: parked, action: TOP, ok: false, reason: 'parked-inert', leavesBefore: { 1: 'active' }, leavesAfter: { 1: 'active' } }),
-    T8_leaf_never_absent_again: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, leavesBefore: { 1: 'active' }, leavesAfter: {} }),
-    T8_mint_once: () => mk({ pre: live, post: live, action: { register: { refund: 1, pool0: 10 } }, flow: { dregIn: 1000, bIn: 5, poolIn: 10 } }),
+    local_progress_unless_pending_or_retired: () => mk({ pre: live, post: pr(L({ pool: 2 ** 53 })), action: TOP, flow: { poolIn: 1 } }),
     T8_reopen_actor_is_proof: () => mk({ pre: live, action: 'poison', kind: 'reopen', ok: false, reason: 'no-quorum' }),
-    T8_sysstep_partition: () => mk({ pre: parked, post: pr(L({ sn: 2, epoch: 2, bornAt: 12 })), action: REOPEN(), env: rotEnv, flow: { dregIn: 1000, bIn: 5, poolIn: 10 }, leavesBefore: { 1: 'active' } }),
     T10_inert_without_next_keys: () => mk({ pre: frozen, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 } }),
     T10_only_deposit_restores: () => mk({ pre: frozen, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 } }),
     T10_current_quorum_never_restores: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, actor: 'currentQuorum', flow: { poolIn: 1 } }),
     T10_reopen_is_juvenile: () => mk({ pre: parked, post: pr(L({ sn: 2, epoch: 2, bornAt: 0 })), action: REOPEN(), env: rotEnv, flow: { dregIn: 1000, bIn: 5, poolIn: 10 } }),
+    pending_step_impossible: () => mk({ pre: { terminationPending: { h: { epoch: 1, sn: 1 } } }, post: live, action: TOP }),
+    pending_has_no_local_exit: () => mk({ pre: { terminationPending: { h: { epoch: 1, sn: 1 } } }, post: live, action: TOP }),
+    trace_from_pending: () => mk({ pre: { terminationPending: { h: { epoch: 1, sn: 1 } } }, post: live, action: TOP }),
     T12_convicted_terminal: () => mk({ pre: 'convicted', post: live, action: TOP, flow: { poolIn: 1 } }),
     trace_from_convicted: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, origin: 'convicted' }),
     T12_convict_exact: () => mk({ pre: live, post: 'convicted', action: { convict: { payee: 3 } }, env: dupEnv, flow: {} }),
@@ -1179,10 +1181,16 @@ async function runSuite(opts) {
   rows.push({ item: `exact Nat: ${nat.boundaries} non-Nat values refused by name at every real entry point (step, replay, attempt, consumable, checkCorpus); 2^53 arithmetic refused, never rounded`, ok: !nat.problems.length });
   problems.push(...nat.problems);
   // the system level
-  const sys = checkSystem(core, corpus);
+  const sys = checkLocalSessions(core, corpus);
   (sys.asserted || new Set()).forEach(x => asserted.add(x));
-  rows.push({ item: `system: ${sys.transitions} multi-AID transitions (${sys.accepted || 0} accepted, T8 shown on ${sys.t8Shown || 0}, ${sys.nonRegisterShown || 0} non-registration)`, ok: !sys.problems.length });
+  rows.push({ item: `local sessions: ${sys.transitions} multi-AID transitions (${sys.accepted || 0} accepted, ${sys.nonRegisterShown || 0} non-registration); frame checks, no SysStep claim`, ok: !sys.problems.length });
   problems.push(...sys.problems);
+  // The actual system has proof-carrying registration and associated receipts.
+  try { execFileSync(process.execPath, [join(HERE, 'checkpoint-system-checks.mjs')], {stdio:'pipe'}); rows.push({item:'associated SysStep replay: 34 cells; all eight system rows and their checker controls',ok:true}); } catch(e) { problems.push('associated system checks RED: '+String(e.stderr)); }
+  // Local terminal refusal is checked on the exact model grid; the actual
+  // system journey independently reaches retirement through its receipt.
+  const terminal=core.step(corpus.params,core.emptyEnv(),{topUp:{x:0}},0,'convicted');
+  if(terminal.ok||terminal.reason!=='convicted-terminal')problems.push('terminal local state admitted an action');else asserted.add(terminal.reason);
   // reason coverage
   const missing = core.REASONS.filter(r => !asserted.has(r));
   rows.push({ item: `refusal reasons asserted ${asserted.size}/${core.REASONS.length}`, ok: !missing.length });
@@ -1335,15 +1343,11 @@ async function selftest(work) {
     { name: 'core guard flipped: a revival at the parked sequence (stale resurrection; the close’s own rotation)', expect: /expected ok=false, got ok=true|theorem VIOLATED: .*T(1|7|8)/,
       make: () => ({ core: mutant('m-reopen', [["    if (!(hh.sn < sn2)) return refuse('sequence-not-later');\n    const epoch2 = natAdd(hh.epoch, 1);", "    const epoch2 = natAdd(hh.epoch, 1);"]]), skipBuild: true }) },
     { name: 'core guard flipped: a parked identity is convicted without a proof against its key state', expect: /expected ok=false, got ok=true|theorem VIOLATED: .*T(12|5|7|8)/,
-      make: () => ({ core: mutant('m-convict-parked', [["      if (!envDuplicityAt(env, hh.epoch, hh.sn)) return refuse('no-duplicity-proof');\n      return some({}, 'convicted');", "      return some({}, 'convicted');"]]), skipBuild: true }) },
+      make: () => ({ core: mutant('m-convict-parked', [["      if (!envDuplicityAt(env, hh.epoch, hh.sn)) return refuse('no-duplicity-proof');\n      return some({}, terminationPending(hh));", "      return some({}, terminationPending(hh));"]]), skipBuild: true }) },
     { name: 'core effect changed: a deposit restarts juvenility (D-040 says it does not)', expect: /live datum mismatch|theorem VIOLATED: .*T(5|10|7)/,
       make: () => ({ core: mutant('m-deposit-ages', [["      if (op === 'deposit') next.frozen = false;", "      if (op === 'deposit') { next.frozen = false; next.bornAt = now; }"]]), skipBuild: true }) },
-    { name: 'system guard dropped: a revival lands under a leaf that is not parked (SysStep.reopen’s hparked)', expect: /not refused leaf-not-parked|theorem VIOLATED: .*T8/,
-      make: () => ({ core: mutant('m-hparked', [["    if (res.ok && kind === 'reopen' && leafKind(leafOfAid(s, aid)) !== 'parked') res = { ok: false, reason: 'leaf-not-parked' };\n", ""]]), skipBuild: true }) },
     { name: 'core guard weakened: any signed intent authorizes a new refund address (T6_refund_change_requires_new_keys)', expect: /expected ok=false, got ok=true|theorem VIOLATED: .*T(6|7)/,
       make: () => ({ core: mutant('m-t6d', [["      if (!intentOk(env, epoch2, op, r)) return refuse('intent-not-authorized');", "      if (!intentOk(env, epoch2, op, r) && !['keep', 'deposit'].some(i => intentOk(env, epoch2, i, r) || intentOk(env, epoch2, i, null))) return refuse('intent-not-authorized');"]]), skipBuild: true }) },
-    { name: 'core effect dropped: a close leaves the leaf live (T8_edges_leave_the_leaf is a partition)', expect: /theorem VIOLATED: .*T8/,
-      make: () => ({ core: mutant('m-t8b', [["  const leaves = res.ok ? { ...s.leaves, [aid]: leafOf(record.state) } : s.leaves;", "  const leaves = res.ok && kind !== 'close' ? { ...s.leaves, [aid]: leafOf(record.state) } : s.leaves;"]]), skipBuild: true }) },
     { name: 'a theorem row deleted from the core (T1_rotate_strict has no checker)', expect: /theorem T1_rotate_strict is declared in the Lean but has no checker row/,
       make: () => ({ core: mutant('m-row-deleted', [["  row('T1_rotate_strict', ok && pp && rot, () => [[lp.sn < lq.sn, 'a rotation did not increase the sequence']]);\n", ""]]), skipBuild: true }) },
     { name: 'a theorem row renamed in the core (T1_rotate_strict → T1_rotate_strictly)', expect: /theorem T1_rotate_strict is declared in the Lean but has no checker row|checker row T1_rotate_strictly names no theorem/,
@@ -1364,9 +1368,13 @@ async function selftest(work) {
       make: () => ({ fabricatedSkip: 'T14_pool_decreases_only_by_premium', skipBuild: true, skipTemplate: true }) },
     { name: 'structural row m-consumableB: the consumer’s Bool mirror drops the freeze bit (consumableStateB_iff must red)', expect: /theorem VIOLATED: .*consumableStateB_iff/,
       make: () => ({ core: mutant('m-consumableB', [["const consumableB = (p, now, s) => { const l = liveOf(s); return !!l && l.frozen === false && l.poisoned === false", "const consumableB = (p, now, s) => { const l = liveOf(s); return !!l && l.poisoned === false"]]), skipBuild: true, skipTemplate: true }) },
+    { name: 'pending consumer observation admits custody', expect: /theorem VIOLATED: .*pending_consumer_refused/,
+      make: () => ({ core: mutant('m-pending-consumer', [["const consumableB = (p, now, s) => {", "const consumableB = (p, now, s) => { if (stateKind(s) === 'terminationPending') return true;"]]), skipBuild: true, skipTemplate: true }) },
+    { name: 'pending custody observation drops its representative', expect: /theorem VIOLATED: .*pending_custody_observations/,
+      make: () => ({ core: mutant('m-pending-token', [["const representativeHeld = s => hasOutput(s) ? 1 : 0;", "const representativeHeld = s => stateKind(s) === 'terminationPending' ? 0 : hasOutput(s) ? 1 : 0;"]]), skipBuild: true, skipTemplate: true }) },
     { name: 'structural row m-held-dreg: held() returns no conviction bond for a present checkpoint (T10_bonds_are_observable must red)', expect: /theorem VIOLATED: .*T10_bonds_are_observable/,
       make: () => ({ core: mutant('m-held-dreg', [["return l ? { dreg: p.D, b: bHeldOf(p, l), pool: l.pool }", "return l ? { dreg: 0, b: bHeldOf(p, l), pool: l.pool }"]]), skipBuild: true, skipTemplate: true }) },
-    { name: 'structural row m-held-parked: held() returns a pool for a parked identity (T10_parked_holds_nothing must red)', expect: /theorem VIOLATED: .*T10_parked_holds_nothing/,
+    { name: 'structural row m-held-parked: held() returns a pool for a parked identity (parked_and_convicted_hold_no_bonds_or_pool must red)', expect: /theorem VIOLATED: .*parked_and_convicted_hold_no_bonds_or_pool/,
       make: () => ({ core: mutant('m-held-parked', [["pool: l.pool } : { dreg: 0, b: 0, pool: 0 }; };", "pool: l.pool } : { dreg: 0, b: 0, pool: 1 }; };"]]), skipBuild: true, skipTemplate: true }) },
     { name: 'the stored template drifts from the page (page.css with one rule changed)', expect: /page template check RED: .*DRIFT/,
       make: () => { const d = join(work, 'tpl-' + Math.random().toString(36).slice(2)); cpSync(TEMPLATE_DIR, d, { recursive: true }); const css = join(d, 'page.css'); writeFileSync(css, readFileSync(css, 'utf8').replace('#scene .utxo.parked', '#scene .utxo.closed')); return { templateDir: d, skipBuild: true }; } },
@@ -1393,7 +1401,7 @@ async function selftest(work) {
       make: () => ({ core: mutant('m-corpus-boundary', [["  if (reasons.length) return { applied, refused, cons, theoremChecks, storyCells: 0, reasons };\n", "  reasons.length = 0;\n"]]), skipBuild: true }) },
     { name: 'wrong transition: top-up adds one more (T7 must red against the Lean cell)', expect: /theorem VIOLATED: .*T7\w* \(.*differs from Lean/,
       make: () => ({ core: mutant('m-t7', [[topUp, "const pool2 = natAdd(l.pool, a.topUp.x + 1); if (pool2 === null) return refuse('invalid-nat', 'pool');"]]), skipBuild: true }) },
-    { name: 'the leaf map drops another AID’s leaf (T8 must red on the system generator)', expect: /theorem VIOLATED: .*T8\w* \(.*(another AID’s leaf changed|leaf disagrees|leaf returned to absent)/,
+    { name: 'the local session cache drops another AID leaf', expect: /local session frame: another AID leaf changed/,
       make: () => ({ core: mutant('m-t8', [["const leaves = res.ok ? { ...s.leaves, [aid]: leafOf(record.state) } : s.leaves;", "const leaves = res.ok ? { [aid]: leafOf(record.state) } : s.leaves;"]]), skipBuild: true }) },
     { name: 'transition that reads W (differs at W = 2; T9 must red)', expect: /theorem VIOLATED: .*T9\w* \(the transition read W/,
       make: () => ({ core: mutant('m-t9', [[topUp, "const pool2 = natAdd(l.pool, a.topUp.x + (p.W === 2 ? 1 : 0)); if (pool2 === null) return refuse('invalid-nat', 'pool');"]]), skipBuild: true }) },
@@ -1426,8 +1434,14 @@ async function selftest(work) {
     { name: 'a distinctive scenario step dropped (conviction from a poisoned state)', expect: /distinctive clause «convict-from-poisoned».*not exercised/,
       make: () => ({ scenarios: scenariosCopy(d => { const f = join(d, '09-cora-convicts.json'); const sc = JSON.parse(readFileSync(f, 'utf8')); const i = sc.steps.findIndex(s => s.action === 'poison'); if (i < 0) throw new Error('poison control missing'); sc.steps.splice(i, 1); sc.steps.forEach(s => { delete s.expect.exhibits; delete s.expect.verdict; }); writeFileSync(f, JSON.stringify(sc)); }), skipBuild: true }) },
   ];
-  for (const c of controls) {
-    const opts = c.make();
+  const prepared=[];let setupFailures=0;
+  for(const control of controls) {
+    try {const opts=control.make();if(opts.core)execFileSync(process.execPath,['--check',opts.core],{stdio:'pipe'});prepared.push({control,opts});}
+    catch(error){console.error('CONTROL SETUP FAILED: '+control.name+': '+error.message);setupFailures++;}
+  }
+  if(setupFailures)return 1;
+  if(process.argv.includes('--preflight')){console.log('PASS control setup: '+prepared.length);return 0;}
+  for (const {control:c,opts} of prepared) {
     const r = await runSuite(opts);
     if (!r.problems.length) { console.error(`SELFTEST RED: control «${c.name}» ACCEPTED by the gate`); return 1; }
     const text = r.problems.join('\n');
@@ -1456,7 +1470,7 @@ try {
     vac.problems.forEach(p => console.error(' - ' + p));
     console.log(`${vac.problems.length ? 'RED' : 'GREEN'}: vacuity pass over ${vac.rows} checker rows` + (vac.problems.length ? `, ${vac.problems.length} problems` : ''));
     code = vac.problems.length ? 1 : 0;
-  } else if (process.argv.includes('--selftest')) code = await selftest(work);
+  } else if ((process.argv.includes('--selftest') || process.argv.includes('--preflight'))) code = await selftest(work);
   else {
     const r = await runSuite({ core: argPath('--core'), html: argPath('--html'), scenarios: argPath('--scenarios'), clauses: argPath('--clauses'),
       skipBuild: process.argv.includes('--skip-build'), printMatrix: process.argv.includes('--matrix') });
@@ -1464,6 +1478,6 @@ try {
     code = r.problems.length ? 1 : 0;
   }
 } finally {
-  rmSync(work, { recursive: true, force: true });
+  console.log('Control artifacts: '+work);
 }
 process.exit(code);

@@ -53,7 +53,7 @@ const sha256 = b => createHash('sha256').update(b).digest('hex');
 const SCHEMA = 'cardano-keri.checkpoint-trace';
 
 const DRIVER = 'CheckpointTraceDriver.lean';
-const lake = (args, cwd) => execFileSync('nix', ['shell', 'nixpkgs#lean4', '-c', 'lake', ...args],
+const lake = (args, cwd) => execFileSync(process.env.LAKE_BIN || 'lake', args,
   { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024 });
 // the repository modules the driver imports (its `import` lines minus Lean's
 // own): `lake env lean` resolves them only from built .olean files
@@ -99,11 +99,12 @@ async function runGate(opts) {
     catch (e) { return { ok: false, reasons: ['the committed Lean driver fails: ' + (String(e.stdout || '') + String(e.stderr || '')).slice(-600)] }; }
   }
   const freshSha = sha256(freshRaw);
+  if(readFileSync(join(HERE,'checkpoint-simulator-corpus.json'),'utf8')!==freshRaw)reasons.push('fresh/committed local corpus mismatch');
   let fresh;
   const lossy = (await import(pathToFileURL(opts.core || CORE).href + '?l=' + Date.now())).lossyJsonNumbers(freshRaw);
   if (lossy.length) return { ok: false, reasons: ['driver output has number literals beyond 2^53 − 1: ' + lossy.slice(0, 3).join(', ')] };
   try { fresh = JSON.parse(freshRaw); } catch (e) { return { ok: false, reasons: ['driver output is not valid JSON'] }; }
-  if (fresh.schema !== SCHEMA || fresh.version !== 1) reasons.push('driver output has the wrong schema/version');
+  if (fresh.schema !== SCHEMA || fresh.version !== 2) reasons.push('driver output has the wrong schema/version');
   if (!Array.isArray(fresh.traces) || !fresh.traces.length || fresh.traces.some(t => !t.steps || !t.steps.length))
     reasons.push('fresh corpus has no traces or a trace without steps');
   if (!Array.isArray(fresh.stories) || fresh.stories.length !== 15 || fresh.stories.some(s => !s.steps || !s.steps.length))
@@ -172,6 +173,8 @@ async function selftest(work) {
   const coreText = readFileSync(CORE, 'utf8');
   const freshRaw = runDriver();
   const emb = extractEmbedded(doc);
+  const baseline=await runGate({freshRaw});
+  if(!baseline.ok)throw Error('positive baseline: '+baseline.reasons.join('; '));
   const controls = [
     { name: 'post-state mutated in the embedded corpus', expect: /structural difference|stated sha|grid: fresh and embedded differ/,
       make: () => ({ html: writeTmp('m1.html', doc.replace(emb.fixtureText, emb.fixtureText.replace('"pool":8', '"pool":9'))), freshRaw }) },
@@ -192,7 +195,7 @@ async function selftest(work) {
     if (r.ok) { console.error(`SELFTEST RED: control «${c.name}» ACCEPTED by the gate`); return 1; }
     const text = r.reasons.join('\n');
     if (!c.expect.test(text)) { console.error(`SELFTEST RED: «${c.name}» failed for the wrong reason:\n${text.slice(0, 600)}`); return 1; }
-    console.log(`negative control «${c.name}»: RED as expected — ${text.split('\n')[0].slice(0, 140)}`);
+    console.log(`negative control «${c.name}»: RED as expected — ${text.split('\n').find(line=>c.expect.test(line)).slice(0,140)}`);
   }
   // the cold control: a scratch copy of lean/ without .lake — with the build step
   // removed the driver cannot resolve its imports; with it, the output is
@@ -205,7 +208,7 @@ async function selftest(work) {
   let coldFail = null;
   try { runDriver({ leanDir: cold, build: false }); } catch (e) { coldFail = String(e.stdout || '') + String(e.stderr || '') + String(e.message || ''); }
   if (coldFail === null) { console.error('SELFTEST RED: the cold copy ran the driver with the build step removed (is .lake really absent from the copy?)'); return 1; }
-  if (!/unknown module prefix|No directory 'CardanoKeri'|CardanoKeri\.olean/.test(coldFail)) { console.error('SELFTEST RED: the cold copy failed for the wrong reason:\n' + coldFail.slice(0, 600)); return 1; }
+  if (!/unknown module prefix|No directory 'CardanoKeri'|\.olean|does not exist|unknown package/.test(coldFail)) { console.error('SELFTEST RED: the cold copy failed for the wrong reason:\n' + coldFail.slice(0, 600)); return 1; }
   console.log(`negative control «cold copy of lean/ without .lake, build step removed»: RED as expected — ${coldFail.split('\n')[0].slice(0, 140)}`);
   const coldRaw = runDriver({ leanDir: cold });
   if (sha256(coldRaw) !== sha256(freshRaw)) { console.error('SELFTEST RED: the cold copy built and ran, but its output differs from the warm run'); return 1; }
@@ -226,6 +229,6 @@ try {
     else { console.error(`RED: ${r.reasons.length} problems`); r.reasons.forEach(x => console.error(' - ' + x)); code = 1; }
   }
 } finally {
-  rmSync(work, { recursive: true, force: true });
+  console.log('Control artifacts: '+work);
 }
 process.exit(code);

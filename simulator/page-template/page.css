@@ -278,6 +278,11 @@
   .branch .txt { flex: 1; min-width: 0; color: var(--ink); }
   .branch .res { font-family: var(--mono); font-size: .78rem; white-space: nowrap; }
   .branch .res.ok { color: var(--ok); } .branch .res.no { color: var(--bad); }
+  @media (max-width: 640px) {
+    .branch { flex-wrap: wrap; min-width: 0; max-width: 100%; }
+    .branch .txt { flex-basis: 100%; }
+    .branch .fork-t, .branch .res { white-space: normal; overflow-wrap: anywhere; }
+  }
   #next-moves { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
   .mover { border: 1px solid var(--line-2); border-radius: 10px; padding: 8px 10px; background: var(--card); }
   .mover .actor { margin-bottom: 6px; }

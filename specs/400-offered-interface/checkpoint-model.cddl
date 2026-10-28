@@ -12,10 +12,11 @@ convict = { action: "convict", payee: model-nat }
 close = { action: "close", sn: model-nat, payee: model-nat, refund: model-nat / null }
 reopen = { action: "reopen", sn: model-nat, refund: model-nat, pool0: model-nat }
 
-checkpoint-state = absent / present / parked / convicted
+checkpoint-state = absent / present / parked / pending / convicted
 absent = { state: "absent" }
 present = { state: "present", sn: model-nat, epoch: model-nat, poisoned: bool, frozen: bool, bornAt: model-nat, refundTo: model-nat, pool: model-nat }
 parked = { state: "parked", epoch: model-nat, sn: model-nat }
+pending = { state: "terminationPending", epoch: model-nat, sn: model-nat }
 convicted = { state: "convicted" }
 
 payment = { addr: model-nat, dreg: model-nat, b: model-nat, pool: model-nat }
@@ -36,7 +37,7 @@ model-env = {
 }
 model-intent = { kind: "keep" / "deposit" } / { kind: "close", payee: model-nat }
 checkpoint-corpus = {
-  profile: "checkpoint-model-v1", params: parameters, now: model-nat,
+  profile: "checkpoint-model-v2", params: parameters, now: model-nat,
   states: [+ checkpoint-state], actions: [+ checkpoint-action], envs: [+ model-env],
   cells: [+ { s: model-nat, a: model-nat, e: model-nat, result: step-result }]
 }

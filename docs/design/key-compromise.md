@@ -29,8 +29,9 @@ stops them from using it *now*.
     Close becomes the **reap**, the only close there is: a witnessed rotation by the next keys
     whose signed message names the payee and the refund address
     (ruling D-036), so it needs the next keys exactly like any other
-    rotation. An identity is active, parked holding the hash, or
-    convicted. Deposit is the unfreeze. That intent is signed by the
+    rotation. Parking retains the token, minimum ADA and key state in an
+    output while the registry key stays active. A duplicity proof enters
+    pending custody; its associated Registry fold completes conviction. Deposit is the unfreeze. That intent is signed by the
     keys of the epoch the rotation opens (ruling D-038). A thief
     holding only the current keys is left with exactly one Cardano
     move — the poison — and that is the owner's instrument, not hers.

@@ -1,11 +1,12 @@
 # The checkpoint, as it will ship — user stories
 
-The accepted design, written for the people who will use it and for the simulator
-that will let them try it. Everything here follows the rulings of 2026-09-02
-and 2026-09-03 (D-022 to D-040) and the plan `AUDIT-M1-RETURN`: an identity is
-active (one UTxO: live, poisoned or frozen), parked (no UTxO; the registry leaf
-holds the hash of the last checkpoint) or convicted (the mark). Where a detail is still open
-it says so. Nothing here is built yet.
+This is the canonical M1 reader story register. The executable authority is
+[Checkpoint](../lean/CardanoKeri/Checkpoint.lean), its goals and the associated
+Registry model. Retained parking keeps an output, representative token and key
+state. Its registry key stays active. Conviction enters pending custody; an
+associated consuming Registry fold alone completes retirement. The local player
+and connected system traces implement these model observations; production
+validators, builders, deployment and consumer identity extension #439 are separate.
 
 ## The cast
 
@@ -56,23 +57,25 @@ The words below are ours:
 - **Refund address**: where the money goes when Alice leaves. Set when the
   checkpoint is registered, moved only at a rotation and only by the new
   keys.
-- **The reap**: how Alice leaves — a rotation whose new keys sign the close,
-  naming who is paid the premium and where the bonds go. Everything else
-  goes home, the token burns, and the registry leaf is parked with the hash
-  of the checkpoint the rotation reached: its key state.
-- **Parked**: no UTxO; the leaf holds the hash. The only way back is a
-  witnessed rotation from exactly that key state, with fresh bonds, born now.
+- **The close**: a witnessed rotation whose new keys sign the close, its
+  premium payee and optional refund address. Bonds and remaining pool return
+  to the refund address. The output retains its representative token, min-ADA
+  and the key state reached by that rotation; the registry key stays active.
+- **Parked**: an extant, unconsumable output retaining that key state. A
+  witnessed later rotation from precisely that state revives it with fresh bonds.
+- **Pending conviction**: the retained representative remains in custody while
+  its associated termination request awaits a consuming Registry fold.
 - **Consumable**: what the treasury accepts — bonded (the freeze bond held),
   not poisoned, older than the juvenility window `W`.
 - **Juvenility window** `W`: the age a checkpoint must reach, counted from its
   last registration or reopening, before a consumer trusts it.
-- **Convicted**: the terminal state a duplicity proof puts an identity in,
-  active or parked; `D_reg` goes to whoever proved it, and nothing reopens it.
+- **Convicted**: the terminal Checkpoint state after its associated consuming
+  fold burns the representative and permanently retires the registry key.
 - **Epoch**: the life of one set of current keys, from one rotation to the
   next.
 
-Parameters `D_reg`, `B`, `P` and `W` belong to the deployment. On preprod
-today `D_reg` is 1,000 tADA and `B` is 5 tADA; `P` and `W` are new.
+Parameters `D_reg`, `B`, `P` and `W` belong to the model configuration.
+The player uses illustrative values, not a deployment configuration.
 
 ---
 
@@ -161,30 +164,30 @@ consumes my identity while I am gone and nobody but me can bring it back.*
 - **The chain checks**: the advance predicate; the new keys' signature on
   the close naming the payee and the refund address; a copied reap with
   another payee or address is refused; then it pays the premium to the
-  payee; and everything else to the refund address; burns the token; and
-  parks the leaf with the hash of the checkpoint the rotation reached.
-- **After**: parked. No UTxO; the registry leaf holds the hash — the key
-  state the closing rotation reached. Unconsumable.
+  payee; and everything else to the refund address; retains the representative token in the parked output; and stores the key state the closing rotation reached in that output.
+- **After**: parked. The output retains its representative, min-ADA and the
+  key state reached by the closing rotation. The registry key remains active.
+  The consumer explicitly refuses this output.
 - **Mallory, holding Alice's current keys, sees** nothing she can do: a
   reap needs the next keys, and a parked identity answers to nothing but a
   rotation from its key state or a duplicity proof.
 
-## 6. Alice comes back through the registry
+## 6. Alice revives her parked identity
 
 *As Alice, I want my parked identity live again, and I want nobody else to
 be able to do it in my place.*
 
-- **Before**: parked; the leaf holds the hash of key state `(e, sn)`.
+- **Before**: parked; the retained output holds key state `(e, sn)`.
 - **Action**: a revival — anyone presents a witnessed rotation from that key
   state to a later sequence, brings fresh bonds and a first pool, and names
   a refund address.
-- **The chain checks**: the leaf is parked; a witnessed rotation from exactly
+- **The chain checks**: the output is parked and its registry key remains active; a witnessed rotation from exactly
   the parked key state; strictly later than the parked sequence; fresh bonds
   and a first pool come in; the checkpoint is born now at the next epoch.
 - **After**: active, juvenile for `W` slots, then consumable. The close's own
   rotation cannot revive it; the current keys of the parked key state cannot
   either. A duplicity proof against the parked key state convicts it instead:
-  the mark, forever.
+  pending custody first, then permanent retirement at its associated fold.
 
 ## 7. Mallory steals the current keys; Alice poisons, then rotates
 
@@ -236,15 +239,17 @@ on chain and take its conviction bond.*
   carries receipts from its own derived witness threshold, and differs
   in complete content from the accepted rotation. Both ordinary rotations
   validate against authenticated predecessor context.
-- **After**: `Convicted` — terminal. No rotation, no poison, no reap, no
-  revival, ever. `D_reg` to Cora. A parked identity is convicted the same
-  way, by a proof against the parked key state; nothing is held, so nothing
-  moves: the mark is the whole conviction.
+- **After**: `terminationPending`, retaining the representative and key state.
+  From a live checkpoint, `D_reg` goes to Cora and `B` plus pool to the refund
+  address. A parked conviction consumes the parked output and transfers no
+  bonds or pool. The whole booked request remains pending until its associated
+  consuming Registry fold burns the representative and marks the key retired.
 - **Why final**: no KERI event un-duplicates an identifier, so the chain
   invents no recovery. Only a holder of the pre-committed keys could have
   signed the second rotation, and only colluding witnesses could have
   receipted both.
-- **Open**: `B` and the pool — recommended back to the refund address.
+- **Local limit**: no local action leaves pending custody. The connected
+  system player shows booking and actual fold completion.
 
 ## 10. Alice leaves under attack
 
@@ -258,7 +263,7 @@ the thief to gain nothing by leaving in my place.*
   not; the signed close naming the payee; then it pays the premium to the
   payee; and everything else to the refund address; the closer never chooses
   where the bonds go.
-- **After**: parked; the registry leaf holds the hash. Not terminal: a
+- **After**: parked; the output retains its token and key state. A
   witnessed rotation from the parked key state brings the identity back.
 - **Mallory, with stolen current keys, sees** that she cannot reap at all;
   with the next keys too she could, and would take the premium — but every
@@ -274,7 +279,7 @@ keys really are current, so I read her checkpoint as a reference input.*
   least `W` slots ago; the signature on the payment satisfies the current
   threshold. Later, when validity ships: within `valid_until`.
 - **Fails closed** on: absent, frozen, poisoned, juvenile, parked,
-  convicted.
+  pending custody, convicted.
 - **What it cannot know**: whether Alice rotated on KERI an hour ago and no
   hunter has landed it yet. That is why the pool exists.
 
@@ -314,7 +319,7 @@ myself and stop advancing at my epoch.*
   rotation is missing. Nothing on chain says she is gone.
 - Direction (D-027, not yet ruled): a validity Alice renews by re-signing
   with her current keys, no next-key reveal; if it lapses, only a rotation
-  brings the checkpoint back. The fields are reserved in the datum now.
+  brings the checkpoint back. This extension is not implemented or claimed here.
 
 ---
 
@@ -326,12 +331,12 @@ myself and stop advancing at my epoch.*
 | Live (active) | `D_reg`, `B` held | no | next keys: rotate (keep / deposit), leave (the reap, with the signed payee and address); current quorum: poison; anyone: top-up; proof: freeze if pool < `P`, convict | after `W` slots |
 | Poisoned (active) | held | yes | next keys: rotate, leave; anyone: top-up; proof: convict | no |
 | Frozen (active) | `B` missing | no | next keys: rotate with deposit (unfreeze), leave; current quorum: poison; anyone: top-up; proof: convict | no |
-| Parked | nothing; the leaf holds the hash of the last checkpoint | — | proof: revive with a witnessed rotation from the parked key state, fresh bonds; proof: convict | no |
-| Convicted | `D_reg` seized (nothing, from parked) | — | nobody | never |
+| Parked | no bonds or pool; output retains token, min-ADA and key state | — | proof: revive with a witnessed rotation from the parked key state, fresh bonds; proof: convict | no |
+| Pending custody | no bonds or pool; representative retained | — | associated booking and consuming fold only | no |
+| Convicted | representative burned at fold; key retired | — | nobody | never |
 
 ## What is deliberately not here
 
 No record tree, no cursor, no occupancy maps; no interactions (`ixn`) on
-chain; no freeze for lag; no hunter bounty; no conviction that clears; no
-oracle anywhere. No pause, no withdraw, no unbonded checkpoint on chain
-(D-040); no grace window — the registry's is not the checkpoint's. Delegated identities are a later milestone.
+chain; no freeze for lag; no hunter bounty; no conviction that clears; no external freshness oracle. No pause or withdraw; retained parking is
+an unbonded output, explicitly refused by the consumer; no grace window — the registry's is not the checkpoint's. Delegated identities are a later milestone.

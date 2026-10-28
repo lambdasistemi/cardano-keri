@@ -138,7 +138,7 @@ function offersFor(actorId, tree, nodeId) {
   const ke = hs ? hs.epoch : e, ksn = hs ? hs.sn : sn;
   switch (actorId) {
     case 'alice':
-      if (hs) ev('kli rotate from the parked key state: sn ' + hs.sn + ' → ' + (hs.sn + 1) + ', receipted by the witnesses', { rotationTo: [hs.epoch, hs.sn, hs.sn + 1] }, 'a witnessed rotation from exactly the key state the leaf holds, later than its sequence');
+      if (hs) ev('kli rotate from the parked key state: sn ' + hs.sn + ' → ' + (hs.sn + 1) + ', receipted by the witnesses', { rotationTo: [hs.epoch, hs.sn, hs.sn + 1] }, 'a witnessed rotation from exactly the key state the output holds, later than its sequence');
       else ev('kli rotate: sn ' + sn + ' → ' + (sn + 1) + ', receipted by the witnesses', { rotationTo: [e, sn, sn + 1] }, 'a valid witnessed rotation from the current keys');
       ev('my next keys sign: keep the bonds, refund address → 1 (Alice)', { intentAuthorized: [e + 1, 'keep', 1] }, 'the keys the rotation reveals sign the intent and the address (D-038)');
       ev('my next keys sign: deposit (unfreeze)', { intentAuthorized: [e + 1, 'deposit', null] }, 'the keys the rotation reveals sign the deposit (D-038)');
@@ -148,7 +148,7 @@ function offersFor(actorId, tree, nodeId) {
       act('rotate', 'land my rotation, keep the bonds', { rotate: { "sn'": sn2, op: 'keep', payee: 1, "refund'": null } });
       act('rotate', 'land my rotation, deposit (unfreeze; on full bonds a keep)', { rotate: { "sn'": sn2, op: 'deposit', payee: 1, "refund'": null } });
       act('poison', 'poison this epoch', 'poison');
-      act('close', 'leave: my rotation as the reap — the premium to me, everything else to my refund address, the token burned, the leaf parked with the hash', { close: { "sn'": sn2, payee: 1, "refund'": null } });
+      act('close', 'leave: my rotation as the reap — the premium to me, everything else to my refund address, the output and token retained with its key state', { close: { "sn'": sn2, payee: 1, "refund'": null } });
       act('topUp', 'add to my pool', { topUp: { x: 5 } });
       act('register', 'register my inception (refund to me)', { register: { refund: 1, pool0: 10 } });
       act('reopen', 'revive my parked identity with a rotation from its key state (refund to me)', { reopen: { "sn'": reopenSn(sess), refund: 1, pool0: 10 } });
@@ -157,11 +157,11 @@ function offersFor(actorId, tree, nodeId) {
       act('rotate', 'land Alice’s rotation, paid P to Hal', { rotate: { "sn'": sn2, op: 'keep', payee: 2, "refund'": null } });
       act('close', 'land her reap, paid P to Hal (needs her signed message naming me)', { close: { "sn'": sn2, payee: 2, "refund'": null } });
       act('freeze', 'freeze her on the old keys, take B', { freeze: { "sn'": sn2, payee: 2 } });
-      act('reopen', 'revive her from the registry with her later public rotation (refund to Alice)', { reopen: { "sn'": reopenSn(sess), refund: 1, pool0: 10 } });
+      act('reopen', 'revive her parked output with her later public rotation (refund to Alice)', { reopen: { "sn'": reopenSn(sess), refund: 1, pool0: 10 } });
       break;
     case 'cora':
       if (ksn > 0) ev('try a second receipted rotation at sequence ' + ksn + (hs ? ' (the parked key state)' : ''), { duplicityAt: [ke, ksn] }, 'example branches with partial and augmented keys, each checked against its own threshold and derived witnesses');
-      act('convict', hs ? 'convict the parked identity: the mark, nothing to seize' : 'convict, D to Cora', { convict: { payee: 3 } });
+      act('convict', hs ? 'convict the parked output: pending custody, no bonds to seize' : 'convict, D to Cora', { convict: { payee: 3 } });
       break;
     case 'mallory':
       ev('steal the current keys (sign as quorum, epoch ' + ke + ')', { quorum: [ke] }, 'with the current keys she signs at threshold');

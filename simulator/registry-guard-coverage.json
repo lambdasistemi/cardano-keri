@@ -1,0 +1,3640 @@
+{
+  "version": 1,
+  "extent": "Distinct refusal reasons, with every source occurrence inventoried. A result witness is not per-site branch coverage. Exclusions concern construction by this adapter, not arbitrary direct calls to imported helpers.",
+  "facts": {
+    "path": "lean/CardanoKeri/RegistryAdapterFacts.lean",
+    "sha256": "b81fb1834dfddb948d2ecf2d85ad8df59024f7f725c8ae13adc0f2b5591439fc"
+  },
+  "surfaceSha256": "35f659d53a5ab3649c4c6e80a6e06632dc9de883c03d1b482f988ddf301c6bf1",
+  "corpusSha256": "cdf466fa23034e2e783162f12e4fcf74af40c5878c319c0af13ae8d6cedc0043",
+  "rows": [
+    {
+      "reason": "approval-mismatch",
+      "sites": [
+        {
+          "declaration": "Singular.refusal",
+          "occurrence": 3,
+          "reason": "approval-mismatch"
+        }
+      ],
+      "evidence": "construction-proof",
+      "declaration": "CardanoKeri.Registry.projected_request_admitted",
+      "explanation": "The constructed structural approval admitsFor the same configuration and request."
+    },
+    {
+      "reason": "backdated-booking",
+      "sites": [
+        {
+          "declaration": "Singular.registrationBookingRefusal",
+          "occurrence": 5,
+          "reason": "backdated-booking"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 316,
+          "name": "registration-backdated",
+          "sha256": "292c66230dabec88cec54ee2cb1a5ac9a2a6807aa1ce49e84083157f5877f304"
+        },
+        {
+          "index": 533,
+          "name": "Try a booking timestamp outside its exact interval",
+          "sha256": "f177ccd4988c898c855b3dd7f788aebec49e499adf107e535078a1b8c140ff43"
+        }
+      ]
+    },
+    {
+      "reason": "booking-too-wide",
+      "sites": [
+        {
+          "declaration": "Singular.registrationBookingRefusal",
+          "occurrence": 6,
+          "reason": "booking-too-wide"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 317,
+          "name": "registration-too-wide",
+          "sha256": "fecd31743c6b94cc8afc6cec2fcf0566db43102d2ec3604b5407e3f14ff309e4"
+        }
+      ]
+    },
+    {
+      "reason": "destination-carrier-mismatch",
+      "sites": [
+        {
+          "declaration": "Singular.foldCarrierRefusal",
+          "occurrence": 2,
+          "reason": "destination-carrier-mismatch"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 343,
+          "name": "fold-carrier-value",
+          "sha256": "8e0d1834855bc390828e82bca32e1d765391acf86744a477a4147e4a6dcf638c"
+        }
+      ]
+    },
+    {
+      "reason": "dirty-request",
+      "sites": [
+        {
+          "declaration": "Singular.registrationBookingRefusal",
+          "occurrence": 0,
+          "reason": "dirty-request"
+        },
+        {
+          "declaration": "Singular.registrationBookingRefusal",
+          "occurrence": 3,
+          "reason": "dirty-request"
+        },
+        {
+          "declaration": "Singular.terminationBookingRefusal",
+          "occurrence": 0,
+          "reason": "dirty-request"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 305,
+          "name": "registration-cost",
+          "sha256": "603eb3df845ba2b71bc61084b6cc4894a3c8276b01c407a68ed2d0ce99d27f80"
+        },
+        {
+          "index": 306,
+          "name": "registration-value-low",
+          "sha256": "a7cad99e5fc55e2abf75c00e8df1b51a74c9588ff11410d809161926cb95ed01"
+        },
+        {
+          "index": 308,
+          "name": "registration-wrong-registry",
+          "sha256": "f7662c2ef21ade5342b47a7c9e3e11dcd64e69736eb1c1eab49117f622bf6aaf"
+        },
+        {
+          "index": 309,
+          "name": "registration-application-policy",
+          "sha256": "1a80847bc2fb05aea4a1f6f40b88976449fd2711d4e952257a5c8de86173da1e"
+        },
+        {
+          "index": 310,
+          "name": "registration-application-name",
+          "sha256": "41bda74687415df6da7f1f501f6f9f03637b4b7feb5ab21f18741d909f5a7e1b"
+        },
+        {
+          "index": 311,
+          "name": "registration-application-missing",
+          "sha256": "0c00575af22d5cc63240ff68b2b89de89012cb5581ce33539c0942a254385168"
+        },
+        {
+          "index": 314,
+          "name": "registration-application-mint",
+          "sha256": "3107ce69399dac14e724e77d09e3c232887105bf92a2c9577f934c95fc521ce6"
+        },
+        {
+          "index": 397,
+          "name": "termination-refund",
+          "sha256": "32969eb2adcd2ffa71061099ef3303893efd7dbf091f316f512e5cbf51769ffd"
+        },
+        {
+          "index": 398,
+          "name": "termination-clock",
+          "sha256": "6d00fa6d9652821554c2cd3a2e0b1dee596b0df62985f954b31e6f7215a9befb"
+        }
+      ]
+    },
+    {
+      "reason": "edge-inadmissible",
+      "sites": [
+        {
+          "declaration": "Singular.refusal",
+          "occurrence": 0,
+          "reason": "edge-inadmissible"
+        },
+        {
+          "declaration": "Singular.refusal",
+          "occurrence": 9,
+          "reason": "edge-inadmissible"
+        }
+      ],
+      "evidence": "construction-proof",
+      "declaration": "CardanoKeri.Registry.projected_request_admitted",
+      "explanation": "foldLegacyRequest constructs only insertActive or updateTerminal."
+    },
+    {
+      "reason": "empty-fold",
+      "sites": [
+        {
+          "declaration": "Singular.foldPrerequisite",
+          "occurrence": 2,
+          "reason": "empty-fold"
+        },
+        {
+          "declaration": "Singular.foldBatch",
+          "occurrence": 0,
+          "reason": "empty-fold"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 323,
+          "name": "fold-empty",
+          "sha256": "7fb866a617a5294f2d7d3c622d82fb51f87047c62b3d1fca667807724480b20d"
+        },
+        {
+          "index": 358,
+          "name": "fold-empty",
+          "sha256": "eabf790bf8d26479e0e964a64d493428a711d15d652dfa49c7b1a205af075146"
+        },
+        {
+          "index": 471,
+          "name": "Try processing an empty batch",
+          "sha256": "ee7dab210c9e9d30f2a716fe7bfeeb64cc548850e688199405030d9bdc05099c"
+        },
+        {
+          "index": 488,
+          "name": "Try processing an empty batch",
+          "sha256": "ee7dab210c9e9d30f2a716fe7bfeeb64cc548850e688199405030d9bdc05099c"
+        }
+      ]
+    },
+    {
+      "reason": "fold-destination-mismatch",
+      "sites": [
+        {
+          "declaration": "Singular.foldCarrierRefusal",
+          "occurrence": 0,
+          "reason": "fold-destination-mismatch"
+        },
+        {
+          "declaration": "Singular.foldCarrierRefusal",
+          "occurrence": 1,
+          "reason": "fold-destination-mismatch"
+        },
+        {
+          "declaration": "Singular.foldCarrierRefusal",
+          "occurrence": 3,
+          "reason": "fold-destination-mismatch"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 344,
+          "name": "fold-carrier-destination",
+          "sha256": "8dda4cdeea42febbdcf1d4d524006989260b8e20955deb41155ad3967f39a316"
+        },
+        {
+          "index": 345,
+          "name": "fold-carrier-datum",
+          "sha256": "641c8c54d7f10dabd77cacb3550e76037658c7ac46fecdb75e1b7e8786e7dc1e"
+        },
+        {
+          "index": 346,
+          "name": "fold-carrier-tag",
+          "sha256": "3e2b8ef4e6d3e678b60effe1e6575738d0b6028fc1216bffdfcf7a4d09e1d68e"
+        }
+      ]
+    },
+    {
+      "reason": "fold-donation-mismatch",
+      "sites": [
+        {
+          "declaration": "Singular.foldRoutingRefusal",
+          "occurrence": 8,
+          "reason": "fold-donation-mismatch"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 22,
+          "name": "wrong-donation",
+          "sha256": "c1206df8007fb346a8b0e80a370c169a1fb172207b35bbc0c427a78b5926e27a"
+        },
+        {
+          "index": 336,
+          "name": "fold-donation",
+          "sha256": "1d44caee246c0e3ff789f3a7bdfcbeb44b3311097bf5d56ac1998c65f2a99b51"
+        },
+        {
+          "index": 371,
+          "name": "fold-donation",
+          "sha256": "a7bcc710b0f253ec49766d0ae0a93944f374c45e5f5f5c454d2f62fc561f034e"
+        }
+      ]
+    },
+    {
+      "reason": "fold-duplicate-input",
+      "sites": [
+        {
+          "declaration": "Singular.foldPrerequisite",
+          "occurrence": 0,
+          "reason": "fold-duplicate-input"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 320,
+          "name": "fold-duplicate-input",
+          "sha256": "7fdf2f80e9061dc5ea2ca0ec4ae906e21aae37cda1a4bdb067396288189b68ef"
+        },
+        {
+          "index": 355,
+          "name": "fold-duplicate-input",
+          "sha256": "f476f47e1ecfc470469a858721e952f8b83a115ebead9c3362f0d48e2e829e02"
+        },
+        {
+          "index": 534,
+          "name": "Try spending a request reference twice",
+          "sha256": "bea63478d91b356566ffa1d92113fa8bf3f554ed2e9dcdf6fbbb9442e731f51a"
+        }
+      ]
+    },
+    {
+      "reason": "fold-fee-funding-short",
+      "sites": [
+        {
+          "declaration": "Singular.foldRoutingRefusal",
+          "occurrence": 9,
+          "reason": "fold-fee-funding-short"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 337,
+          "name": "fold-fee-funding",
+          "sha256": "520b91b6a8057d5cddd6b2a7b886687680a90adc1f0ed692cb6572408f346d96"
+        },
+        {
+          "index": 372,
+          "name": "fold-fee-funding",
+          "sha256": "cf225d85ec15d75d59fb56aef3b99c66fbd04e2e9efc782224166853daaf9d1f"
+        }
+      ]
+    },
+    {
+      "reason": "fold-foreign-asset",
+      "sites": [
+        {
+          "declaration": "Singular.foldRoutingRefusal",
+          "occurrence": 7,
+          "reason": "fold-foreign-asset"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 334,
+          "name": "fold-state-mint",
+          "sha256": "c1266238bdb4a42088bbcb4145f67bb6395fbb5da9be225e4bc3d018588c2ae5"
+        },
+        {
+          "index": 335,
+          "name": "fold-foreign-asset",
+          "sha256": "4a4e8981dc7857373193979495d6700a0fe4c9ce19554f3688040cf7fca38d62"
+        },
+        {
+          "index": 369,
+          "name": "fold-state-mint",
+          "sha256": "fe6ed2216e2c99570f32560bf4e2ce19da1a237ee74226c9d27c98d1c4a3bc6e"
+        },
+        {
+          "index": 370,
+          "name": "fold-foreign-asset",
+          "sha256": "55b26b1bc3d336cfa668d1df796f1a18547260cdb9b2f77c387cb88eea554cca"
+        }
+      ]
+    },
+    {
+      "reason": "fold-input-overlap",
+      "sites": [
+        {
+          "declaration": "Singular.foldPrerequisite",
+          "occurrence": 1,
+          "reason": "fold-input-overlap"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 321,
+          "name": "fold-overlap",
+          "sha256": "92a799767b5e9b6a00b91616fe954d6062059a64a675d2a1e9cb4e919fc21037"
+        },
+        {
+          "index": 356,
+          "name": "fold-overlap",
+          "sha256": "fff1c1989e6cb58dfb230459b8d1ab81644985b261eeabdeb8b10d51db4b4aa7"
+        }
+      ]
+    },
+    {
+      "reason": "fold-interval-empty",
+      "sites": [
+        {
+          "declaration": "Singular.foldPrerequisite",
+          "occurrence": 4,
+          "reason": "fold-interval-empty"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 326,
+          "name": "fold-interval-empty",
+          "sha256": "6d967222363f4e6b2b0b33e761a2be984ef9951eac99b11f400f8014c0118c41"
+        },
+        {
+          "index": 361,
+          "name": "fold-interval-empty",
+          "sha256": "c79fe29edf9b25cba1594dfcc12e637baf1dc0fce07512e5d35e9bf8759acc9f"
+        }
+      ]
+    },
+    {
+      "reason": "fold-interval-missing",
+      "sites": [
+        {
+          "declaration": "Singular.foldPrerequisite",
+          "occurrence": 3,
+          "reason": "fold-interval-missing"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 325,
+          "name": "fold-interval-missing",
+          "sha256": "513c4b6a7eb61164185b5679d10b195cd3f8a8df7a1a40d2d82a16ef42b9a6ca"
+        },
+        {
+          "index": 360,
+          "name": "fold-interval-missing",
+          "sha256": "c69b9a3899fc0b922b901cd6bbed529f7675e19ab73c3ad9a8dac5b897b733ab"
+        }
+      ]
+    },
+    {
+      "reason": "fold-singular-mismatch",
+      "sites": [
+        {
+          "declaration": "Singular.foldRoutingRefusal",
+          "occurrence": 6,
+          "reason": "fold-singular-mismatch"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 333,
+          "name": "fold-singular-mint",
+          "sha256": "fb6d3778cccc9ce3cdbb17c45a899917a791460cf4cd7eda26f2a863379e0a9d"
+        },
+        {
+          "index": 368,
+          "name": "fold-singular-mint",
+          "sha256": "45a65852d6db5bb3feae141030e280a37a43beda60ef8df6fc1ef86ca491faf0"
+        }
+      ]
+    },
+    {
+      "reason": "fold-state-mismatch",
+      "sites": [
+        {
+          "declaration": "Singular.foldRoutingRefusal",
+          "occurrence": 1,
+          "reason": "fold-state-mismatch"
+        },
+        {
+          "declaration": "Singular.foldRoutingRefusal",
+          "occurrence": 2,
+          "reason": "fold-state-mismatch"
+        },
+        {
+          "declaration": "Singular.foldRoutingRefusal",
+          "occurrence": 3,
+          "reason": "fold-state-mismatch"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 339,
+          "name": "fold-state-token",
+          "sha256": "c279bf0ed2f9fcbf7251515a717fc4f14d1b7fcd04c26396e309b7b48c93df21"
+        },
+        {
+          "index": 340,
+          "name": "fold-state-root",
+          "sha256": "6f4da8d3c4cf90e2a74b49343e78f32015893965b80543bec85e4d18e55e77c8"
+        },
+        {
+          "index": 341,
+          "name": "fold-state-config",
+          "sha256": "7b59e29ecfcf1c95c436773db239427fb121f34c78ccce5a8716fe7caf7aacd2"
+        },
+        {
+          "index": 352,
+          "name": "fold-wrong-input-state",
+          "sha256": "78e978989a6a3b04c3590673278625c07f459dbac130f98cc8aa9221fb1c30dd"
+        },
+        {
+          "index": 374,
+          "name": "fold-state-token",
+          "sha256": "a01b2090a15825173f93059826762fd54d4b67f7ad1423790bb87eae88926827"
+        },
+        {
+          "index": 375,
+          "name": "fold-state-root",
+          "sha256": "9c5cb949e3b963efae021f881ef9bafd884fc789c383210d9ed8be9aa014ea8c"
+        },
+        {
+          "index": 376,
+          "name": "fold-state-config",
+          "sha256": "827017c6944332015b53325caced946ff894ad5b63e668ac8c7445ab78c8e6c1"
+        },
+        {
+          "index": 387,
+          "name": "fold-wrong-input-state",
+          "sha256": "372863dcc92dcea61b369e7101bfec1a4967fd324ad7a61a9646506e847f9e71"
+        }
+      ]
+    },
+    {
+      "reason": "fold-state-missing",
+      "sites": [
+        {
+          "declaration": "Singular.foldRoutingRefusal",
+          "occurrence": 0,
+          "reason": "fold-state-missing"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 324,
+          "name": "fold-state-missing",
+          "sha256": "3d7fcc4bdecc9cd6871b03b6c0b0583c69228212a228faf8cec76b361235eaab"
+        },
+        {
+          "index": 359,
+          "name": "fold-state-missing",
+          "sha256": "fd6130508a85054003126c864a4647a6a5f3ac083cc5e718d3cee187597db40d"
+        }
+      ]
+    },
+    {
+      "reason": "fold-state-value-mismatch",
+      "sites": [
+        {
+          "declaration": "Singular.foldRoutingRefusal",
+          "occurrence": 4,
+          "reason": "fold-state-value-mismatch"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 342,
+          "name": "fold-state-value",
+          "sha256": "bec6a04e0af4a4b4941a506af615668c305ed6ad4261e907ae47801b6ff906fe"
+        },
+        {
+          "index": 377,
+          "name": "fold-state-value",
+          "sha256": "936f42150d0ef3ad5c7e1429a4c6657c2dbcc9311c3bfd5acf665feedd0343fa"
+        }
+      ]
+    },
+    {
+      "reason": "fold-tag-not-burned",
+      "sites": [
+        {
+          "declaration": "Singular.foldRoutingRefusal",
+          "occurrence": 5,
+          "reason": "fold-tag-not-burned"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 331,
+          "name": "fold-ready-burn",
+          "sha256": "78b2d2b512c1e2f22b408e96490abc5159a115712d03a7618d9565c9a226ce65"
+        },
+        {
+          "index": 332,
+          "name": "fold-application-burn",
+          "sha256": "05eae3725d9bde5b6e9aa9f72d6814d8af664e9ec3a7603f02e6315305b05c65"
+        },
+        {
+          "index": 366,
+          "name": "fold-ready-burn",
+          "sha256": "764629989bacce02a089033845c50c86ec963fe097887630df89497dca3e907d"
+        }
+      ]
+    },
+    {
+      "reason": "fold-unbalanced",
+      "sites": [
+        {
+          "declaration": "Singular.foldRoutingRefusal",
+          "occurrence": 10,
+          "reason": "fold-unbalanced"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 338,
+          "name": "fold-unbalanced",
+          "sha256": "6f312b712161958c4380aada4b1675df8342008aaec34ad28a337bb4b99ec84c"
+        },
+        {
+          "index": 373,
+          "name": "fold-unbalanced",
+          "sha256": "0de7d1b6d84775cdada84ba2712c521a80debf872a954e93974a13200256ce29"
+        }
+      ]
+    },
+    {
+      "reason": "fold-unrecognized-input",
+      "sites": [
+        {
+          "declaration": "Singular.foldPrerequisite",
+          "occurrence": 5,
+          "reason": "fold-unrecognized-input"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 348,
+          "name": "fold-unrecognized-funding",
+          "sha256": "4b7ad56203f05342032a0e3f210777a60004f50175887eb29f619a5a582869ef"
+        },
+        {
+          "index": 383,
+          "name": "fold-unrecognized-funding",
+          "sha256": "a365ab0a311af8e53864f11efd0ce09c03856986191026896627e1cb55c12b84"
+        }
+      ]
+    },
+    {
+      "reason": "forged-singular-tag",
+      "sites": [
+        {
+          "declaration": "Singular.terminationBookingRefusal",
+          "occurrence": 2,
+          "reason": "forged-singular-tag"
+        },
+        {
+          "declaration": "Singular.terminationBookingRefusal",
+          "occurrence": 5,
+          "reason": "forged-singular-tag"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 394,
+          "name": "termination-wrong-registry",
+          "sha256": "690522f6fea9e9d99f8d3c862ec5a8e7960c02f3883d94cc6e2ec762439fc76a"
+        },
+        {
+          "index": 395,
+          "name": "termination-singular-tag",
+          "sha256": "8bc7212c1992ea884a34e999ed325b4f97ce405c0c47fbb4c85af8a1c03b62b2"
+        }
+      ]
+    },
+    {
+      "reason": "forged-trie-ready-tag",
+      "sites": [
+        {
+          "declaration": "Singular.registrationBookingRefusal",
+          "occurrence": 2,
+          "reason": "forged-trie-ready-tag"
+        },
+        {
+          "declaration": "Singular.terminationBookingRefusal",
+          "occurrence": 3,
+          "reason": "forged-trie-ready-tag"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 312,
+          "name": "registration-tag-missing",
+          "sha256": "8acee90fb2cf0c7eb89a0357d88008677290c90eefe788965dc69c47c4a1d09e"
+        },
+        {
+          "index": 313,
+          "name": "registration-tag-mint",
+          "sha256": "b848b9c01ad68baac12d60473dd4cf8785d4f02ef9bf47c5b071a679b6d01299"
+        },
+        {
+          "index": 396,
+          "name": "termination-ready-tag",
+          "sha256": "8e06fed0d504f0b35023db934883a2cea615fdbbadadd88a0e8b7c4aec7c9e5e"
+        }
+      ]
+    },
+    {
+      "reason": "hidden-surplus",
+      "sites": [
+        {
+          "declaration": "Singular.registrationBookingRefusal",
+          "occurrence": 1,
+          "reason": "hidden-surplus"
+        },
+        {
+          "declaration": "Singular.terminationBookingRefusal",
+          "occurrence": 1,
+          "reason": "hidden-surplus"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 307,
+          "name": "registration-surplus",
+          "sha256": "ba8280205e4eac422d88dd32496ba8f5101b8666229d3866991f5ec9e6026fa8"
+        }
+      ]
+    },
+    {
+      "reason": "invalid-booking-interval",
+      "sites": [
+        {
+          "declaration": "Singular.registrationBookingRefusal",
+          "occurrence": 4,
+          "reason": "invalid-booking-interval"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 315,
+          "name": "registration-empty-interval",
+          "sha256": "3424171d49db3d11f8fe097f05a727c49fc44048a8136d66e0cc814340a3d725"
+        }
+      ]
+    },
+    {
+      "reason": "keri-carrier-missing",
+      "sites": [
+        {
+          "declaration": "CardanoKeri.Registry.park",
+          "occurrence": 0,
+          "reason": "keri-carrier-missing"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.revive",
+          "occurrence": 0,
+          "reason": "keri-carrier-missing"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.convictCkpt",
+          "occurrence": 0,
+          "reason": "keri-carrier-missing"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.bookTermination",
+          "occurrence": 0,
+          "reason": "keri-carrier-missing"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 41,
+          "name": "seed-437-step-0",
+          "sha256": "0a6386c9c77336b2fe6e800f40bbaede788e13964b62a91a6a2e3b28a0197d9f"
+        },
+        {
+          "index": 43,
+          "name": "seed-437-step-2",
+          "sha256": "2c74ea33b6e8b679e9f0af286eac201cae44c5e9a1af3bfe188bfe6b8ac1462c"
+        },
+        {
+          "index": 44,
+          "name": "seed-437-step-3",
+          "sha256": "e16fa4d2ab93ba9d724860db6417e5b15a7cb2530b7354679a3ecbd5c87fd50f"
+        },
+        {
+          "index": 47,
+          "name": "seed-437-step-6",
+          "sha256": "5bc8a539f75a88095e3963d5e9607bc65c48a51593345ca6be9711c1544e4d12"
+        },
+        {
+          "index": 53,
+          "name": "seed-437-step-12",
+          "sha256": "999edec075022f74612babc32e9bfb24e07f4129f1b3c3a724a380f18074279d"
+        },
+        {
+          "index": 57,
+          "name": "seed-437-step-16",
+          "sha256": "5edcff015578fe8f7d84a221ec5dc5e0a5835d51849ab045d686098320478415"
+        },
+        {
+          "index": 60,
+          "name": "seed-437-step-19",
+          "sha256": "843ec5b8435060e535f11226c084ab307a635bb7a0f42f4ca424845eafd45605"
+        },
+        {
+          "index": 63,
+          "name": "seed-437-step-22",
+          "sha256": "fba27668f9649bb26d13e5b7a76eb9d5414d4870218fc4fe40247b68aa5fb780"
+        },
+        {
+          "index": 64,
+          "name": "seed-437-step-23",
+          "sha256": "06dbb604699bfd43a3259647a64035b990d82d13363fb4ee90ae92a99a0dfcc4"
+        },
+        {
+          "index": 65,
+          "name": "seed-437-step-24",
+          "sha256": "906a2267b2c2a318eb966e8f2b1688cf3fba31ee197eb6f672c2aa686dabe80d"
+        },
+        {
+          "index": 66,
+          "name": "seed-437-step-25",
+          "sha256": "b864c9b93c4958ab99494a60d191e7fbbe065fbbb5bc5d85a66a5e58b8ad4304"
+        },
+        {
+          "index": 67,
+          "name": "seed-437-step-26",
+          "sha256": "cf81df41b1e070cbd6865fcca96e114f412f46f9be78763864c04b42aedaff52"
+        },
+        {
+          "index": 70,
+          "name": "seed-437-step-29",
+          "sha256": "c19c1d44ed1159bff843a7b97a91e884ed2c06a82767fafdee6e6070f01ce018"
+        },
+        {
+          "index": 72,
+          "name": "seed-437-step-31",
+          "sha256": "7a9a0c216bdea0a272ec53b0cb65a4228ad18c91f455685a7b83c632b821de4f"
+        },
+        {
+          "index": 79,
+          "name": "seed-437-step-38",
+          "sha256": "4647fbb4758f5cb623cb6b0fb6ca8d5ee22b0f611378f8c155a0d4dd1bf0c1f2"
+        },
+        {
+          "index": 80,
+          "name": "seed-437-step-39",
+          "sha256": "344d9c600cd146e1521850e2d98b13b5c71ba3eb4863a94c9448806283b444cd"
+        },
+        {
+          "index": 82,
+          "name": "seed-437-step-41",
+          "sha256": "a5fa345a2ee86e42f46ffbff64e50033a0ea3e79e069cbd3d75b84851da8b552"
+        },
+        {
+          "index": 88,
+          "name": "seed-437-step-47",
+          "sha256": "11f101ae918bcc024f04e48a69f352479568133aaeab18aa9c2737a6f09df185"
+        },
+        {
+          "index": 94,
+          "name": "seed-437-step-53",
+          "sha256": "5f19007f93821382b9f1cb570d0b2035f476415d676057c14ca838a39f5d36ce"
+        },
+        {
+          "index": 95,
+          "name": "seed-437-step-54",
+          "sha256": "8d3c682381dc171ec69abb2197b42533829b0eb1e2089c950d2a375f13617435"
+        },
+        {
+          "index": 100,
+          "name": "seed-437-step-59",
+          "sha256": "4c064d7d085f5905c483f89e33a44b0975643ffe865b2f75decb35ddada3f5cf"
+        },
+        {
+          "index": 103,
+          "name": "seed-437-step-62",
+          "sha256": "4a33895cc737a5d3c5bf5e3ba07cd76e606887fb8e357b3be6d95c16cbe67758"
+        },
+        {
+          "index": 104,
+          "name": "seed-437-step-63",
+          "sha256": "abdce54fbe68e06cfd3c06788d3d1d2dcb169c5dec4a4b6509ebe449107504d0"
+        },
+        {
+          "index": 105,
+          "name": "seed-437-step-64",
+          "sha256": "c1d49aae325028807c417a17189f7de98669826b077afde6048047002f492305"
+        },
+        {
+          "index": 106,
+          "name": "seed-437-step-65",
+          "sha256": "1eb604669042b6f3d6d8d0814dc250370c727179513b76f8d39021c8ff4d65c5"
+        },
+        {
+          "index": 107,
+          "name": "seed-437-step-66",
+          "sha256": "4fffe7147fabe60a08abe672c0b4f5d6661191b242a9169b9befbd30eec5823f"
+        },
+        {
+          "index": 109,
+          "name": "seed-437-step-68",
+          "sha256": "fe47a593c0c14705c17173f435b973cb3579038703b755b08a736bf511de81fd"
+        },
+        {
+          "index": 112,
+          "name": "seed-437-step-71",
+          "sha256": "0ae0486016630807f1097377aa52e5231c7e6305835a39b9f4036e88574ffd7a"
+        },
+        {
+          "index": 114,
+          "name": "seed-437-step-73",
+          "sha256": "115f959380b32571e640c967b6804fcc22d3333ba27f05d1c78b33b44fa8338f"
+        },
+        {
+          "index": 117,
+          "name": "seed-437-step-76",
+          "sha256": "88b371b6e5a69a14af0f02497e44afc24861aab93327bf198951949e83c1c42d"
+        },
+        {
+          "index": 118,
+          "name": "seed-437-step-77",
+          "sha256": "134ee8c3e1383dd1bf1e3ffb256d68145a2c0bf66243aed2e9148cbf3a86a36b"
+        },
+        {
+          "index": 119,
+          "name": "seed-437-step-78",
+          "sha256": "a71f4dcb77dc36ea3a5c74f181b0d81a098be12dfc5ca2c6f0652fb9dfe24755"
+        },
+        {
+          "index": 120,
+          "name": "seed-437-step-79",
+          "sha256": "a32c83b07428b3a42ffb55d4ac1b9fbf98d482b6109c13b4dfaa0f81f498c9a4"
+        },
+        {
+          "index": 121,
+          "name": "seed-437-step-80",
+          "sha256": "eddd28d4bf01410b96cb7bb50afaeec9fa14b217966d59775a2f85d279ecd3bd"
+        },
+        {
+          "index": 122,
+          "name": "seed-437-step-81",
+          "sha256": "e6e3a271e6bb0e37dbe9ffb04e776bdcdb9f7695c9a9de233f206e24c9212996"
+        },
+        {
+          "index": 132,
+          "name": "seed-437-step-91",
+          "sha256": "2bcddd5721d616697416d5e1cb158939ed31ad253d436b0682197047e1440a2b"
+        },
+        {
+          "index": 133,
+          "name": "seed-437-step-92",
+          "sha256": "e7c1e8a4f4bdf393f55f3e9e3a55fbd7a68d5401d504298ad705c1a1238d3c00"
+        },
+        {
+          "index": 135,
+          "name": "seed-437-step-94",
+          "sha256": "48e49eb8b56ee6e32c3ed50d7a15053b7b40b3c5758b978e48246e2d14e4822a"
+        },
+        {
+          "index": 137,
+          "name": "seed-437-step-96",
+          "sha256": "b9d893f86a4af6ef863096147db7c4b6aa8a1bf70b6d8b70c69e89afaa8cabe2"
+        },
+        {
+          "index": 148,
+          "name": "seed-9001-step-2",
+          "sha256": "3522f0586b84cf95bf7d42b747fe874b961393f128101136b35aaa3421f5180a"
+        },
+        {
+          "index": 152,
+          "name": "seed-9001-step-6",
+          "sha256": "a6a20900456b0a7017a8d0689bd29916e001a76d0a09d908c4ce59052e1784bf"
+        },
+        {
+          "index": 156,
+          "name": "seed-9001-step-10",
+          "sha256": "a2284d4ee9c8771b4e76f6596891e5f0af799ba613f56542c29ac7fb84f737f5"
+        },
+        {
+          "index": 157,
+          "name": "seed-9001-step-11",
+          "sha256": "4db4ffd66dc13ec520a25aa6132d85ebce12af85b3735b7ef692a3516048955e"
+        },
+        {
+          "index": 159,
+          "name": "seed-9001-step-13",
+          "sha256": "98cbddee054f5528cf2c02058c0ea86d87664742a6678d9893f6a1f1b93cc709"
+        },
+        {
+          "index": 163,
+          "name": "seed-9001-step-17",
+          "sha256": "76c0d91ebabd5fa9773bef0e3f6b0c6b117113a5d1dd8917267e9d79b9ff47af"
+        },
+        {
+          "index": 165,
+          "name": "seed-9001-step-19",
+          "sha256": "d4e410f166db489227e8dfafd167cf16b98e78564c22f3d0c2eb5a28cb654d0d"
+        },
+        {
+          "index": 166,
+          "name": "seed-9001-step-20",
+          "sha256": "31a3397dadba4d1d24f8a77394549cd747dfb221ca80f8093abf33d2afef6db7"
+        },
+        {
+          "index": 167,
+          "name": "seed-9001-step-21",
+          "sha256": "c6a484e44df4b01046e72796d6aa2a30228ad51c077703bc49d83f09a65e6006"
+        },
+        {
+          "index": 168,
+          "name": "seed-9001-step-22",
+          "sha256": "e99e1e7d4fa07924fe8b8e19f69b762c051e2d253d1d020774fd4dd026d3f417"
+        },
+        {
+          "index": 169,
+          "name": "seed-9001-step-23",
+          "sha256": "e8f7c4721aaca847fbd2e0b4bfff670df46899e5b9da59e69d336a5f2727c07b"
+        },
+        {
+          "index": 171,
+          "name": "seed-9001-step-25",
+          "sha256": "ff59c95886a51c060ffa3790c442de2cecce49352b24124cbed62ebb4af070d4"
+        },
+        {
+          "index": 173,
+          "name": "seed-9001-step-27",
+          "sha256": "1f8687a12ab6628a0c617456ed3d99841a31bd240ace2892bbd97fa2c27a3d6f"
+        },
+        {
+          "index": 174,
+          "name": "seed-9001-step-28",
+          "sha256": "222af8f6777d6a0dea935bdd10b3d2bb53bb69966648b096f1a7806f3a37764b"
+        },
+        {
+          "index": 181,
+          "name": "seed-9001-step-35",
+          "sha256": "e0ca0bfb9464c7c31cc9b5367c1c822bb5c0b2e60f78330a7980c22c87dc639e"
+        },
+        {
+          "index": 183,
+          "name": "seed-9001-step-37",
+          "sha256": "ba6a68fc9a888daa16aa24b006efb5cabe2b7ae2455d255da20ec56727092682"
+        },
+        {
+          "index": 185,
+          "name": "seed-9001-step-39",
+          "sha256": "f27d56a06916d8af88dbc32d0611319c948c75ef67ac2481ca417aef399d3430"
+        },
+        {
+          "index": 186,
+          "name": "seed-9001-step-40",
+          "sha256": "3778e55a9ce4d2847a0dea353fed98d8b31e1dc23bb4b49c034b2638bf452333"
+        },
+        {
+          "index": 187,
+          "name": "seed-9001-step-41",
+          "sha256": "1ee6b76a984c3e410639d5ec140bfe9d39c88daf794e59f0f743c71b1360c737"
+        },
+        {
+          "index": 188,
+          "name": "seed-9001-step-42",
+          "sha256": "60ea7109118ea14de161e3e326396669e8f385ec59c3b86aa10b0732aaae2eb7"
+        },
+        {
+          "index": 190,
+          "name": "seed-9001-step-44",
+          "sha256": "42d0cbb0d83ad0bae957abcd9ba490602483f6f66aec829b0ac78056b32d7284"
+        },
+        {
+          "index": 191,
+          "name": "seed-9001-step-45",
+          "sha256": "fbb2b2e0689aa1f35c9330eba69b87661a6ad43bf6be2ef3bad5c7dca7a69d40"
+        },
+        {
+          "index": 195,
+          "name": "seed-9001-step-49",
+          "sha256": "8460ac3305a08951ff686111951f2cbcee593fea861777e9d8c3af6b44244a19"
+        },
+        {
+          "index": 197,
+          "name": "seed-9001-step-51",
+          "sha256": "3ff443d991d0928d268eb8a834dfa2d7489c751612e0df519ca46fd0aed84fd7"
+        },
+        {
+          "index": 202,
+          "name": "seed-9001-step-56",
+          "sha256": "123bee908bbd85763c2ed1f40198bfc470ed8300e748c2101bc19d7c4f4b9c23"
+        },
+        {
+          "index": 203,
+          "name": "seed-9001-step-57",
+          "sha256": "04f814782583a96261b31bb6f0a2431fe0a7e218154b075302dfd9cb4b1e83fc"
+        },
+        {
+          "index": 205,
+          "name": "seed-9001-step-59",
+          "sha256": "89482f1d8bba1d26d509d7c55297e1872e8de09f7cdca3fc5cde76861a7aa31d"
+        },
+        {
+          "index": 206,
+          "name": "seed-9001-step-60",
+          "sha256": "7e4c18dbc0a9b7a200626e28fb612997b85d9da7d112ef6eb3d3a43fe6c57c89"
+        },
+        {
+          "index": 207,
+          "name": "seed-9001-step-61",
+          "sha256": "bebfa85669f75d7b6a988ec5467d71cdfcec359c63d4c5c90707edabe7653481"
+        },
+        {
+          "index": 212,
+          "name": "seed-9001-step-66",
+          "sha256": "b76f44df30620619a14cc24d820fde182b8b7115207e5950508579a1bb4151b3"
+        },
+        {
+          "index": 213,
+          "name": "seed-9001-step-67",
+          "sha256": "af68a085262aee4872fb8f56c3da1f5d401806d6ae6c74bc62bad79d5796ea3d"
+        },
+        {
+          "index": 215,
+          "name": "seed-9001-step-69",
+          "sha256": "335725566ec16174907a31202910c3695120c3447c210f250e8277a067324d47"
+        },
+        {
+          "index": 222,
+          "name": "seed-9001-step-76",
+          "sha256": "b75b67c78d4327cf00415bcb6bce0eb97fdf678ee6146ce9321a61f88aefe0ad"
+        },
+        {
+          "index": 225,
+          "name": "seed-9001-step-79",
+          "sha256": "a403d20183b40bc1cb91c1f7689409dab4db4ecec122c6526294f52f1aa4a3ac"
+        },
+        {
+          "index": 226,
+          "name": "seed-9001-step-80",
+          "sha256": "96b8d0ecbfb75131bd01e21882a6e4bc2ad83ec4b0f7131a563169c563da2028"
+        },
+        {
+          "index": 238,
+          "name": "seed-9001-step-92",
+          "sha256": "4e65a7ef55343fb6a96980f09f7b6c805bb54a7d230fadef233f4cc82e64761f"
+        },
+        {
+          "index": 239,
+          "name": "seed-9001-step-93",
+          "sha256": "522a871baedf98a6a4eccd68997dfe787a668f465ffbe4f825c3b69b7615b246"
+        },
+        {
+          "index": 241,
+          "name": "seed-9001-step-95",
+          "sha256": "f90e52a9426d1528ceae0d41844f904fa3657efba6a96b5086a77e9ba36e99f9"
+        },
+        {
+          "index": 246,
+          "name": "local-boundary",
+          "sha256": "eb4142f5b78f560f6cca0b35f0c877fabf563dcc16832e09feae7413dc38e751"
+        },
+        {
+          "index": 247,
+          "name": "local-boundary",
+          "sha256": "b8498ff504f460be9bb8b3208f09bfbd126b73d4aa80cf0ba4a0a90faf535c26"
+        },
+        {
+          "index": 248,
+          "name": "local-boundary",
+          "sha256": "36e95dafe80aab4a0f7b1fdb09382fb9d292650aa26d91920f603c2f190b6a18"
+        },
+        {
+          "index": 249,
+          "name": "local-boundary",
+          "sha256": "099dace2dfa2ba282f8d85d8fda91785dae27029d64152f7cbb158f6133ecbf0"
+        },
+        {
+          "index": 250,
+          "name": "local-boundary",
+          "sha256": "81944793bc7099341860e8d2d6c40fab4dea066fffcd7669a55ddc7644046075"
+        },
+        {
+          "index": 251,
+          "name": "local-boundary",
+          "sha256": "e5622b21060ade9c4c336407549b5854f2394cd9817bb303078b5ac227932ffc"
+        },
+        {
+          "index": 252,
+          "name": "local-boundary",
+          "sha256": "35f71266c4945306ba325def33123806976006a1d273d36cf67c679bf4582e8a"
+        },
+        {
+          "index": 253,
+          "name": "local-boundary",
+          "sha256": "fce589977369a8527e8f4ab2d8d3538c54184049a686b5ee19526fe2d774cb87"
+        },
+        {
+          "index": 254,
+          "name": "local-boundary",
+          "sha256": "fe8aea9213e427a4e2ec9d2fea347f79d0af5e51748a0e237f02f5765a778158"
+        },
+        {
+          "index": 255,
+          "name": "local-boundary",
+          "sha256": "dec5a1c85441be8ab84461319ac401ad4341e11c3964c50cb5823cf61846b5c6"
+        },
+        {
+          "index": 256,
+          "name": "local-boundary",
+          "sha256": "06f52cc0e915197a337285ef7d358795f3caf159321ab2b2cff581cbdf1ddc53"
+        },
+        {
+          "index": 257,
+          "name": "local-boundary",
+          "sha256": "16f3396af0a29a4704b2cf1b5fa723e8463f36bf1485a1b10c989431a18031d6"
+        },
+        {
+          "index": 258,
+          "name": "local-boundary",
+          "sha256": "c779b2fb73d75ee2377cae43b4479117414dfd3318d73bf6f0b31eb951224883"
+        },
+        {
+          "index": 259,
+          "name": "local-boundary",
+          "sha256": "86117ee4a560565950a3ad100311f931de6d514a5633b72bfe16a55c3f3a5e35"
+        },
+        {
+          "index": 264,
+          "name": "local-boundary",
+          "sha256": "713a7efe24611ccf3f24616eb098b0be1c21ff90ac938e75b3f3e78a01c8dacc"
+        },
+        {
+          "index": 265,
+          "name": "local-boundary",
+          "sha256": "ac7dcc74fe3f580f887285617001d1d1e0004cf50a9bf2036d73b3963d641d95"
+        },
+        {
+          "index": 266,
+          "name": "local-boundary",
+          "sha256": "f04d1c34858d50156784d94f8512d52b6466db262c807b090c6daaa9d0f843b5"
+        },
+        {
+          "index": 271,
+          "name": "local-boundary",
+          "sha256": "662b0a02681662a05652e954c3fdb746c68c036d068144eec9f36cf01d79e1c6"
+        },
+        {
+          "index": 272,
+          "name": "local-boundary",
+          "sha256": "84581c20998fde71bec3bb3cb1b437ec944df13930e8f1b2f66e215d4d127cbc"
+        },
+        {
+          "index": 273,
+          "name": "local-boundary",
+          "sha256": "a1acebe0010864fa45e379ff370de535deca212471d27e385fd36655aeb87dcc"
+        },
+        {
+          "index": 278,
+          "name": "local-boundary",
+          "sha256": "574d9c5cdf5c7c2abd0435e4c0d75299db8dfde39d301ac10afc25e1810c480e"
+        },
+        {
+          "index": 279,
+          "name": "local-boundary",
+          "sha256": "35dd6ae139b542d7caab076aadbf10f9e7466483dcf664b54ed0cee82dfdb19f"
+        },
+        {
+          "index": 280,
+          "name": "local-boundary",
+          "sha256": "5f68360f9a76b36b6b92d8709f6508450bd7aa213882f6e6ed1cfb66da7f7e0f"
+        },
+        {
+          "index": 285,
+          "name": "local-boundary",
+          "sha256": "e50c38513effdf861aa11eaca082eb56c10694d874be1770d0483b382fdcfda2"
+        },
+        {
+          "index": 286,
+          "name": "local-boundary",
+          "sha256": "3f07085591ac56a4ffbe3dc672fbbb657a1588b82fc49994f3bbb245f0a421d9"
+        },
+        {
+          "index": 287,
+          "name": "local-boundary",
+          "sha256": "a757b2b418f7c1112744bf9ce9b11006cebdb26137d6bf989a9ef75567f8ad04"
+        },
+        {
+          "index": 292,
+          "name": "local-boundary",
+          "sha256": "177355a7bb0d8f262568f7ebd0e69e7416b76a76e7767886f5b6ab60997f901d"
+        },
+        {
+          "index": 293,
+          "name": "local-boundary",
+          "sha256": "b3726c2a04b2bdf84ec1626cfd2e3dce78d90370ff52e123f4dbe6dd8ced60d0"
+        },
+        {
+          "index": 294,
+          "name": "local-boundary",
+          "sha256": "c0e59d55e84487957bf3940ac85da0199a339ec9ebedb319cfdece429e17756f"
+        },
+        {
+          "index": 299,
+          "name": "local-boundary",
+          "sha256": "57d87abfb3936409f84459de62a08db5f3af45915882144416cca38a07464b06"
+        },
+        {
+          "index": 300,
+          "name": "local-boundary",
+          "sha256": "1d34fa78544a5b2404ab0529ba6bc88d642351001bf850935248ffa874a325c1"
+        },
+        {
+          "index": 301,
+          "name": "local-boundary",
+          "sha256": "090a3e0abc41ef6bbd22dd3efd1d39becff0b33d0dd2b00b07bd60ca299d23d8"
+        },
+        {
+          "index": 462,
+          "name": "termination-missing-carrier",
+          "sha256": "423ba195e45a991f4aa07aa5043c58c18a0afdda02a50837c2fac1fc25c86cf0"
+        }
+      ]
+    },
+    {
+      "reason": "keri-close-refused",
+      "sites": [
+        {
+          "declaration": "CardanoKeri.Registry.park",
+          "occurrence": 1,
+          "reason": "keri-close-refused"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 2,
+          "name": "wrong-close-recipient",
+          "sha256": "efa753d40ac76c9098968c345fa6c814ce377bf0e31a65d1e8538267bc5db482"
+        },
+        {
+          "index": 48,
+          "name": "seed-437-step-7",
+          "sha256": "ea01d84f79c18526d9b33c0f1e4625e92c1ba3e57b70dfc3a19834f19fc8b7ba"
+        },
+        {
+          "index": 49,
+          "name": "seed-437-step-8",
+          "sha256": "f9af1b7f87e823f84e8a8d5da011bd6a2554d3ffd6faaf595475c25fcc3b276d"
+        },
+        {
+          "index": 52,
+          "name": "seed-437-step-11",
+          "sha256": "be6e9b64c37c300ab9edfe27c2e655127b2a8fcc29c66ae20cfc2ac208ecbde7"
+        },
+        {
+          "index": 55,
+          "name": "seed-437-step-14",
+          "sha256": "2408806fc2b7a5d7245d154291bde537274faa21fcf0f45bc5920691eec12705"
+        },
+        {
+          "index": 56,
+          "name": "seed-437-step-15",
+          "sha256": "b179a8c2ac8575bc39082cdeff6b51d26f1792c0bea7353a40010e3e9f479e62"
+        },
+        {
+          "index": 59,
+          "name": "seed-437-step-18",
+          "sha256": "2580bc397c752cf0a0de287e898ca1f55b6f76fdbfa9e4a29b3b09723ea37468"
+        },
+        {
+          "index": 61,
+          "name": "seed-437-step-20",
+          "sha256": "a8191f48d195c0b73b1dc110af0200cc776f69c8c877d62f0712f02190f13afa"
+        },
+        {
+          "index": 68,
+          "name": "seed-437-step-27",
+          "sha256": "0178b7d0a06d96086b30d106eb5dddbe3e43bd6bdd690da576479999f1f39b76"
+        },
+        {
+          "index": 69,
+          "name": "seed-437-step-28",
+          "sha256": "83612a918d3f26fd0202719ae07abb58ec0ab2a9b7178ff08244876988355f6e"
+        },
+        {
+          "index": 76,
+          "name": "seed-437-step-35",
+          "sha256": "9dc9cba32155549415667d09cc47864ac9d3dc310b320d55aba375c17c1d9391"
+        },
+        {
+          "index": 77,
+          "name": "seed-437-step-36",
+          "sha256": "6c83e1884ae2446173e5644a6973001f67f80dac2cbe5a63176d6f4343f5f38d"
+        },
+        {
+          "index": 84,
+          "name": "seed-437-step-43",
+          "sha256": "04f8630d263e7bdeb0965fab46109730e96b05f8578af4f738004b40ed462a51"
+        },
+        {
+          "index": 85,
+          "name": "seed-437-step-44",
+          "sha256": "4d6c6967426c864d3ded8e029f673488216c003faec28a33c93cb06d8b599258"
+        },
+        {
+          "index": 89,
+          "name": "seed-437-step-48",
+          "sha256": "3264a92b60b9ef6f76465a2f1882ff0778ccf180528d8cd891e172a5e8640589"
+        },
+        {
+          "index": 92,
+          "name": "seed-437-step-51",
+          "sha256": "e021d646f5925436228fda6de7b976707bfeb0aad5ddb861175854b2b5815578"
+        },
+        {
+          "index": 93,
+          "name": "seed-437-step-52",
+          "sha256": "8d735f10d3e9728e36ca4be80a11dfb1bd69c6781adb0520be3e7f40408f19d0"
+        },
+        {
+          "index": 96,
+          "name": "seed-437-step-55",
+          "sha256": "28af970cd13d2e42781a5414c6ae5f39f7f305d58483d4620d520a8e04f6c3b4"
+        },
+        {
+          "index": 101,
+          "name": "seed-437-step-60",
+          "sha256": "0570d278a0e7ac3834e333cfe8539e2d940d9ca34c2be12ae2dbdf18d62a37fd"
+        },
+        {
+          "index": 108,
+          "name": "seed-437-step-67",
+          "sha256": "6118c68683399b49e74a5d62e667f6ebe92c4902d3d3baf2e19582af8e5a3049"
+        },
+        {
+          "index": 116,
+          "name": "seed-437-step-75",
+          "sha256": "e131432e002b0477784b3eb27b3669d29e3e1019fa5890f91a0d40315674874d"
+        },
+        {
+          "index": 124,
+          "name": "seed-437-step-83",
+          "sha256": "ad9b82fd95bb9623e82741b1c37be7b6a75fe229aab9520e3920b9ba7d5e33da"
+        },
+        {
+          "index": 127,
+          "name": "seed-437-step-86",
+          "sha256": "4d719bedc7e3b4f509cb380363be36bb9137faf6356110aacf3c4db4397394b5"
+        },
+        {
+          "index": 128,
+          "name": "seed-437-step-87",
+          "sha256": "a8ae20976471443f29f5e4401bcb4d41349739bec4af47afbee3cb548b7c41e0"
+        },
+        {
+          "index": 131,
+          "name": "seed-437-step-90",
+          "sha256": "6d8e3650d196d6c43d7168243577eb152c959344f63804a4cd1cd05f243ebb5c"
+        },
+        {
+          "index": 136,
+          "name": "seed-437-step-95",
+          "sha256": "609f22dd9ed32089fa5eb0e4918ed60f6c7771e42eb12880297a725808328037"
+        },
+        {
+          "index": 139,
+          "name": "seed-437-step-98",
+          "sha256": "4273fe4776d0d74500ed83da5b3ec740ba93717ad0c6fc494b33db21080f2f36"
+        },
+        {
+          "index": 140,
+          "name": "seed-437-step-99",
+          "sha256": "8bf36366ab52bb6fdab905ec8093dc6784a0a28c8f241f14026b74a290ab053a"
+        },
+        {
+          "index": 150,
+          "name": "seed-9001-step-4",
+          "sha256": "fb22daa75a62d4153be7786b15d9d330532c0352639bd73e63fd765e14b491dc"
+        },
+        {
+          "index": 153,
+          "name": "seed-9001-step-7",
+          "sha256": "76e513cf7c375106f8496555abff1ed65223ea655fa1a1850dd26eab4ab26e02"
+        },
+        {
+          "index": 154,
+          "name": "seed-9001-step-8",
+          "sha256": "7c897d8fbc36f09770ad60489817619c5cd9bd16884363531aac7eb2a627a7d7"
+        },
+        {
+          "index": 158,
+          "name": "seed-9001-step-12",
+          "sha256": "0d13a0186ddf6603e40923dee2656576cd75020a8e1ed508cf8a20888183935f"
+        },
+        {
+          "index": 160,
+          "name": "seed-9001-step-14",
+          "sha256": "ece80feff19cf0da4f8fc6e3e20ebe9138dcf59d1565251bef352821df1329ce"
+        },
+        {
+          "index": 161,
+          "name": "seed-9001-step-15",
+          "sha256": "a2d4aac94833559cb448515e18941d2519028cc7f1055a03a38baf148384c859"
+        },
+        {
+          "index": 164,
+          "name": "seed-9001-step-18",
+          "sha256": "9b8e31331495be83dcf2086311282211452b1d25c0a4099ebfe64952fb74daa6"
+        },
+        {
+          "index": 172,
+          "name": "seed-9001-step-26",
+          "sha256": "fff64feb8625f533fa5e186dfc1a8e556d4744cd1ce4469e4b88ada3f36c4eb7"
+        },
+        {
+          "index": 176,
+          "name": "seed-9001-step-30",
+          "sha256": "6be45afcb7c91b80ad97ba911550c5ea8656e32ed6a6541fa7a36894b3fe31af"
+        },
+        {
+          "index": 177,
+          "name": "seed-9001-step-31",
+          "sha256": "b037b5be58bee73aef0be083211777d0c2b35001f4663c6071bace6198019daf"
+        },
+        {
+          "index": 178,
+          "name": "seed-9001-step-32",
+          "sha256": "adbdc2fcfac7acec89a17557744d6dac3f1166884cdb8e3c36b900d2f471b927"
+        },
+        {
+          "index": 180,
+          "name": "seed-9001-step-34",
+          "sha256": "9fc65f43095f01a3e9fd9f7420e63623785e6497010f1d5da64f869623831851"
+        },
+        {
+          "index": 184,
+          "name": "seed-9001-step-38",
+          "sha256": "c7b6e2ebdd238fca2fc8ee8929399a8e66a492de1123d54c42ab7b6543d1bd15"
+        },
+        {
+          "index": 189,
+          "name": "seed-9001-step-43",
+          "sha256": "e3130511973ed322f459abbf4dad6d605db45a68efe3d724e66c5644796894c7"
+        },
+        {
+          "index": 193,
+          "name": "seed-9001-step-47",
+          "sha256": "d84946e4a20a24be88c06805085b38b61280c5fc0d3d6e5c06243081fcdcfbca"
+        },
+        {
+          "index": 194,
+          "name": "seed-9001-step-48",
+          "sha256": "7150f90e4868199a8d11a56157e99ee65a1d8691b0031863ac47f887176a9ef8"
+        },
+        {
+          "index": 201,
+          "name": "seed-9001-step-55",
+          "sha256": "14fcc8d13ca119df1529e141f7e6a300415996f6690554b974f820463261971d"
+        },
+        {
+          "index": 209,
+          "name": "seed-9001-step-63",
+          "sha256": "06ecf8d826f2e1be666964621fcd8d9ce3151e52aa2984e65c9b786663f276e3"
+        },
+        {
+          "index": 210,
+          "name": "seed-9001-step-64",
+          "sha256": "c57b50550dcc00af3692ed9eb970cbf7e6829edfa412d4037c560a881bbecc43"
+        },
+        {
+          "index": 217,
+          "name": "seed-9001-step-71",
+          "sha256": "5d2ac5848d09c408d11a04088ead4ae2b56fc7432a645dfe73038c5d978db840"
+        },
+        {
+          "index": 220,
+          "name": "seed-9001-step-74",
+          "sha256": "69fb9132e5a639f815fe1587fd2ecc043213a27f9c0114494b77059e258db2c4"
+        },
+        {
+          "index": 221,
+          "name": "seed-9001-step-75",
+          "sha256": "229d4163dae3441e798238c09ae5c962fac43b4d87436163cb3693348b97b1e2"
+        },
+        {
+          "index": 229,
+          "name": "seed-9001-step-83",
+          "sha256": "7a124684de3d47726c273984405ca678d1275c03b0216bbdb919dbd76196b813"
+        },
+        {
+          "index": 230,
+          "name": "seed-9001-step-84",
+          "sha256": "f34404fb9821d199ea3518c70f2e4a82f3f00990842fcd111ef26308fb41f473"
+        },
+        {
+          "index": 232,
+          "name": "seed-9001-step-86",
+          "sha256": "4563a172ad4067782fd3bc5195c39ca5344487f9226124b125d0321fbcad03dd"
+        },
+        {
+          "index": 233,
+          "name": "seed-9001-step-87",
+          "sha256": "65fa74ac07149742229953bd039afebdaaababb5a729a42ac619394ef742149f"
+        },
+        {
+          "index": 234,
+          "name": "seed-9001-step-88",
+          "sha256": "95d09c592f5932bee20dddc730f1326a1f58e98332b5dc42c2811a54da710ba6"
+        },
+        {
+          "index": 236,
+          "name": "seed-9001-step-90",
+          "sha256": "08cef94b79a58ec9e088dd64c341c28592e407b6aa62c24f5ff232e689acdb6e"
+        },
+        {
+          "index": 237,
+          "name": "seed-9001-step-91",
+          "sha256": "71a57ff953997342428fa55beea49e3f20bff81b1627640945dc325295cf2962"
+        },
+        {
+          "index": 240,
+          "name": "seed-9001-step-94",
+          "sha256": "6dd5319a9bcf076cef444ae60d51dd0972d55583fa7a9258b0095465343c83d6"
+        },
+        {
+          "index": 245,
+          "name": "seed-9001-step-99",
+          "sha256": "b4a53716a1f02bc18da84036baeb8da90ed33b7881e865aef1ade0d8fdcda9bf"
+        },
+        {
+          "index": 261,
+          "name": "local-boundary",
+          "sha256": "153b8dc310ae04b398138a3f2d41a67be9dc6e064a8731ce8965691a4eff17d9"
+        },
+        {
+          "index": 267,
+          "name": "local-boundary",
+          "sha256": "f8194fff0b5ec540a806008687123ebcd3e175396821163be18ee530325d89e0"
+        },
+        {
+          "index": 268,
+          "name": "local-boundary",
+          "sha256": "1d562e8c9912f0b7eeb43bc2c826be3e5dd2ea62cb51294fd6a695ec2c00ca1b"
+        },
+        {
+          "index": 274,
+          "name": "local-boundary",
+          "sha256": "e15d7b0c8da28ab8a28e5bd4224cd7135f1aa90e1da835f1e826139c6963a84d"
+        },
+        {
+          "index": 275,
+          "name": "local-boundary",
+          "sha256": "085d9684c41860dfe6620b31feec63d861ec0ad8bdd1aada5e28c0a93f2e5474"
+        },
+        {
+          "index": 281,
+          "name": "local-boundary",
+          "sha256": "a42268284761118714955b76a6335a37e64de4f0cf9a424b02c342e9307e0df1"
+        },
+        {
+          "index": 282,
+          "name": "local-boundary",
+          "sha256": "4ddbd6f66af1f5aa08c8a5c2e93fbc60120a4dedf24213d1d60fd80c13096a78"
+        },
+        {
+          "index": 288,
+          "name": "local-boundary",
+          "sha256": "a06818efcdddf897d62e7dfdb29cb381d3d030853ed2ab884aed537bb8c847da"
+        },
+        {
+          "index": 289,
+          "name": "local-boundary",
+          "sha256": "28c6562f15bce9abc0c8a31abc4960d99f338c7e1bd922c08be315fccedcb162"
+        },
+        {
+          "index": 295,
+          "name": "local-boundary",
+          "sha256": "3757309f66a7177e5b4d190c9c03298ff9cb2da32a547a5f94c6da39d3e55ff5"
+        },
+        {
+          "index": 296,
+          "name": "local-boundary",
+          "sha256": "bc8b073cf7f9776bd20a76515534fce9c09c9053f9fe07f6373b3cf9ddada253"
+        },
+        {
+          "index": 499,
+          "name": "Try returning the bond to an unauthorized recipient",
+          "sha256": "c9dac6a1545b538737c2c959549fe1c7663b1846e8ae047b37bdec8dea78164a"
+        },
+        {
+          "index": 505,
+          "name": "Try returning the bond to an unauthorized recipient",
+          "sha256": "c9dac6a1545b538737c2c959549fe1c7663b1846e8ae047b37bdec8dea78164a"
+        }
+      ]
+    },
+    {
+      "reason": "keri-conviction-refused",
+      "sites": [
+        {
+          "declaration": "CardanoKeri.Registry.convictCkpt",
+          "occurrence": 1,
+          "reason": "keri-conviction-refused"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 46,
+          "name": "seed-437-step-5",
+          "sha256": "9fe97b861333fc60c7b5dee7d1311f5c26f6f526935182c1b66c3fb607103915"
+        },
+        {
+          "index": 51,
+          "name": "seed-437-step-10",
+          "sha256": "2a51486862834e2f45a55adb8ffbdc66b8f57155a78dedc618559a57b766c8df"
+        },
+        {
+          "index": 71,
+          "name": "seed-437-step-30",
+          "sha256": "bc0a4776c82306ef8b1eb2769840d733af5d3fb032db924f0dc44c133c2605c5"
+        },
+        {
+          "index": 74,
+          "name": "seed-437-step-33",
+          "sha256": "24f0dc24754c87fcd3078af282ad0fcb446e053e82c89fd51e1a911c8eca3c1b"
+        },
+        {
+          "index": 75,
+          "name": "seed-437-step-34",
+          "sha256": "441a96703beed97f3f9f08521a638738d386f3301bfd87dfe81a63de9a29c440"
+        },
+        {
+          "index": 78,
+          "name": "seed-437-step-37",
+          "sha256": "d060f5f82e74fa156deb1e3c3cd640af3c43c09b799a1fa09b71c09830832c57"
+        },
+        {
+          "index": 83,
+          "name": "seed-437-step-42",
+          "sha256": "a670ec23c5bfed27fb7722761503b55fd0f81cb165428411562681eaab84f7a3"
+        },
+        {
+          "index": 86,
+          "name": "seed-437-step-45",
+          "sha256": "6e7a3f215eeb7d78bcf47cd9653baf68e69c473b1adefb3e4e9d0f8a992cc27f"
+        },
+        {
+          "index": 87,
+          "name": "seed-437-step-46",
+          "sha256": "f85d23de39e73737f706e1fb6e0c3a07f921a80b7a0731067890525cbfdd2031"
+        },
+        {
+          "index": 91,
+          "name": "seed-437-step-50",
+          "sha256": "0bab869cd9aa761e670504f269f23a73ed08b082652521a661403355efbe8057"
+        },
+        {
+          "index": 98,
+          "name": "seed-437-step-57",
+          "sha256": "fa951c300ba51e53f295fc785fd976073bbc32040250ac8d4a5e80a6e64f249e"
+        },
+        {
+          "index": 99,
+          "name": "seed-437-step-58",
+          "sha256": "0e05d5efa14d8aa7acf1c879cf4bbba243060edb2326b6bfc4df03cc10c2d310"
+        },
+        {
+          "index": 102,
+          "name": "seed-437-step-61",
+          "sha256": "85ec48ce4b01c83cc991b3c4a34dd4b0f7f3dec9383be9f26d98e82b73900c9c"
+        },
+        {
+          "index": 110,
+          "name": "seed-437-step-69",
+          "sha256": "8c3a7519f9bbd9e70b5c8cd64f160ae2596e01ca0a0846e813150934ab5cac23"
+        },
+        {
+          "index": 111,
+          "name": "seed-437-step-70",
+          "sha256": "9bdd095632d38129e899d355cd01eb6c45125cdf21d07f90b68a09c406c41927"
+        },
+        {
+          "index": 115,
+          "name": "seed-437-step-74",
+          "sha256": "72bab759f744f3a3c794e78cb974e0243b39d47c966a638d01fce7114a34603f"
+        },
+        {
+          "index": 123,
+          "name": "seed-437-step-82",
+          "sha256": "328adb4ad4858bea2cb0c71a1142eb1fb6996cf4faee74f2024ea770ea63fb8c"
+        },
+        {
+          "index": 126,
+          "name": "seed-437-step-85",
+          "sha256": "c0ee09043aa9205283024caeeeab163595727188e92a535b35729f0907008f2b"
+        },
+        {
+          "index": 134,
+          "name": "seed-437-step-93",
+          "sha256": "737d94173a9a5674ad6b26639a70e187b406c8e55b6970009aca099f2242e2f7"
+        },
+        {
+          "index": 179,
+          "name": "seed-9001-step-33",
+          "sha256": "86dfd29762c46bd0e4c8b345dc13ec9b20fe138797e51ec7f4ec72266b50d299"
+        },
+        {
+          "index": 192,
+          "name": "seed-9001-step-46",
+          "sha256": "e391d3211bc24372eba2f1725ccb0fd29ecf8843bf45a8a5a9c6e25e9b4bcd18"
+        },
+        {
+          "index": 196,
+          "name": "seed-9001-step-50",
+          "sha256": "2c554497d49b99580a7d91f15697e0e9549921e76cdb051294cb68bb0b749146"
+        },
+        {
+          "index": 200,
+          "name": "seed-9001-step-54",
+          "sha256": "1146ce7803e6b43c3ce8d8f26dde6b6bbe93e62839d65f4e63aa9e84fbc740d7"
+        },
+        {
+          "index": 204,
+          "name": "seed-9001-step-58",
+          "sha256": "559c95bb2f886ea8e17438b75a89973cb44351ca3dbe814eefb0aa732277f9fa"
+        },
+        {
+          "index": 208,
+          "name": "seed-9001-step-62",
+          "sha256": "200974fd04fb5b854b5ebe39c2c059967bbd4d48346b82598d71e55c55fae094"
+        },
+        {
+          "index": 216,
+          "name": "seed-9001-step-70",
+          "sha256": "a1763ea57931fa672ff458f821f432af6f3452c3f0e20033ea5d04130d4ca6d6"
+        },
+        {
+          "index": 224,
+          "name": "seed-9001-step-78",
+          "sha256": "26dc868e5bd70f523e7cb318e67a2b4f18df9e5209249f4280a85b73b19953c7"
+        },
+        {
+          "index": 228,
+          "name": "seed-9001-step-82",
+          "sha256": "1e6e0491979b1a5651f103a575e4f4ce36243ea00e030c602c707069c2bef4e5"
+        },
+        {
+          "index": 231,
+          "name": "seed-9001-step-85",
+          "sha256": "700c083ae888be4f30b59f914473bda0ee4869b3a16990e6b2abf6e345e65c64"
+        },
+        {
+          "index": 235,
+          "name": "seed-9001-step-89",
+          "sha256": "e75232cd6f783f74b1b09c576e4ed364642f0932c336b135b8330804a353e83b"
+        },
+        {
+          "index": 243,
+          "name": "seed-9001-step-97",
+          "sha256": "7946f1e1de2d6981c40228481ca1b686c1a1eb76276894fc74e35555b643d449"
+        },
+        {
+          "index": 244,
+          "name": "seed-9001-step-98",
+          "sha256": "57c50b2d68e3c779b465f154dd4b00c24f39569b81bf3d7abaaae6f100d84b38"
+        },
+        {
+          "index": 270,
+          "name": "local-boundary",
+          "sha256": "360e481ca4a4d1dc6fa8fc1acfcace7abfd2b74c66c60201ae074269c0358caf"
+        },
+        {
+          "index": 284,
+          "name": "local-boundary",
+          "sha256": "56457539dac94d2b6361652bb517635625dec9f62d8158f8df9a99c9891d1d00"
+        },
+        {
+          "index": 291,
+          "name": "local-boundary",
+          "sha256": "f007da33900d75fb4a537cd719e552892d163107c843c898c06387dc357fe4c9"
+        },
+        {
+          "index": 298,
+          "name": "local-boundary",
+          "sha256": "0481d7741ab0fc5e4d28447b5d4784648af41693a71401cbefcde974b26058a6"
+        }
+      ]
+    },
+    {
+      "reason": "keri-conviction-required",
+      "sites": [
+        {
+          "declaration": "CardanoKeri.Registry.bookTermination",
+          "occurrence": 1,
+          "reason": "keri-conviction-required"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 461,
+          "name": "termination-requires-conviction",
+          "sha256": "9a7f539228de00665529950b8faeb6fdfc507ed40c224f0fd3003ee0831cba7b"
+        },
+        {
+          "index": 504,
+          "name": "Try booking a parked, unconvicted carrier for termination",
+          "sha256": "0a7919416cdf3b3008e430882cc27a60235aaa95f50d3c6acd7789d8e3ee67ac"
+        }
+      ]
+    },
+    {
+      "reason": "keri-fold-reconstruction-mismatch",
+      "sites": [
+        {
+          "declaration": "CardanoKeri.Registry.foldResult",
+          "occurrence": 0,
+          "reason": "keri-fold-reconstruction-mismatch"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 457,
+          "name": "fold-carrier-reconstruction",
+          "sha256": "c6d6e9c3597017a185f46d067a76aff0c9dd8fa65038da2534b7d899c7e30ec5"
+        }
+      ]
+    },
+    {
+      "reason": "keri-generation-mismatch",
+      "sites": [
+        {
+          "declaration": "CardanoKeri.Registry.fold",
+          "occurrence": 0,
+          "reason": "keri-generation-mismatch"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 20,
+          "name": "stale-generation",
+          "sha256": "5a2de7a6ca4f6a3b3efd7716036d485c93a4eabc9eb15cc810f8061c1b4aadda"
+        },
+        {
+          "index": 470,
+          "name": "Try spending the previous registry generation",
+          "sha256": "b9698c234138a19ae8ae02456ac83a085e782f2d45e6551da4b08b6d8902e9a8"
+        }
+      ]
+    },
+    {
+      "reason": "keri-inception-refused",
+      "sites": [
+        {
+          "declaration": "CardanoKeri.Registry.fold",
+          "occurrence": 2,
+          "reason": "keri-inception-refused"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 353,
+          "name": "fold-missing-inception",
+          "sha256": "68b35d3e00c6b0f3ad55d834e3fd2b8f8c86152654d1ea833fdf2b335a87a567"
+        },
+        {
+          "index": 467,
+          "name": "Try processing without inception evidence",
+          "sha256": "d403cf7356bd11e00dc2b3708b4643d45ddf7a560ff6a0b8d8eb312e929c07fe"
+        },
+        {
+          "index": 492,
+          "name": "Try processing without inception evidence",
+          "sha256": "d403cf7356bd11e00dc2b3708b4643d45ddf7a560ff6a0b8d8eb312e929c07fe"
+        }
+      ]
+    },
+    {
+      "reason": "keri-plugin-mismatch",
+      "sites": [
+        {
+          "declaration": "CardanoKeri.Registry.fold",
+          "occurrence": 1,
+          "reason": "keri-plugin-mismatch"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 21,
+          "name": "wrong-plugin",
+          "sha256": "fcde8aba8fda30ea21136f9db9e5d400d4ced92709f1a9b0a1d41d72a2c10f01"
+        },
+        {
+          "index": 493,
+          "name": "Try a different application policy",
+          "sha256": "8212c0c7aba491bc5e2e82220b40239d29fa02fcc4717c53b400fd88d22dfb17"
+        }
+      ]
+    },
+    {
+      "reason": "keri-recovery-reconstruction-mismatch",
+      "sites": [
+        {
+          "declaration": "CardanoKeri.Registry.recoverRegistrations",
+          "occurrence": 0,
+          "reason": "keri-recovery-reconstruction-mismatch"
+        }
+      ],
+      "evidence": "construction-proof",
+      "declaration": "CardanoKeri.Registry.recovery_reconstruction",
+      "explanation": "Both imported recovery effects filter only registrations; filtering the original pool by membership in that result is exact."
+    },
+    {
+      "reason": "keri-registration-metadata-missing",
+      "sites": [
+        {
+          "declaration": "CardanoKeri.Registry.installMember",
+          "occurrence": 2,
+          "reason": "keri-registration-metadata-missing"
+        }
+      ],
+      "evidence": "construction-proof",
+      "declaration": "CardanoKeri.Registry.selected_member_available",
+      "explanation": "Selected registration members belong to the same registration pool."
+    },
+    {
+      "reason": "keri-registration-reconstruction-mismatch",
+      "sites": [
+        {
+          "declaration": "CardanoKeri.Registry.bookRegistration",
+          "occurrence": 1,
+          "reason": "keri-registration-reconstruction-mismatch"
+        }
+      ],
+      "evidence": "construction-proof",
+      "declaration": "CardanoKeri.Registry.registration_reconstruction",
+      "explanation": "Imported registration prepends the same whole booking to the projected pool."
+    },
+    {
+      "reason": "keri-registration-value-mismatch",
+      "sites": [
+        {
+          "declaration": "CardanoKeri.Registry.bookRegistration",
+          "occurrence": 0,
+          "reason": "keri-registration-value-mismatch"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 303,
+          "name": "registration-carrier",
+          "sha256": "9ffd60c98b2f7784878493851d37051fe86ea13d0e9e5e0fada8eca1d290b4c6"
+        },
+        {
+          "index": 304,
+          "name": "registration-tip",
+          "sha256": "7f3da0b6858d012d4cc7708598707a8d0bd2548c80d4dd950ef416fe70384ac3"
+        },
+        {
+          "index": 464,
+          "name": "Try a request with the wrong carrier allocation",
+          "sha256": "92bf415b651089effcdee7e15d8ba2ac158b4f8ac1922aa394577813486742ed"
+        }
+      ]
+    },
+    {
+      "reason": "keri-revival-refused",
+      "sites": [
+        {
+          "declaration": "CardanoKeri.Registry.revive",
+          "occurrence": 1,
+          "reason": "keri-revival-refused"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 4,
+          "name": "missing-rotation",
+          "sha256": "de770731ffdef33150f89c89e7acfc5e1c73c03b993cacb91d99fc4cf35c4333"
+        },
+        {
+          "index": 7,
+          "name": "pending-revival-refused",
+          "sha256": "ab446f54f3a79a577108edc2451baa5d695dc549cefc9179e605618ed956884a"
+        },
+        {
+          "index": 50,
+          "name": "seed-437-step-9",
+          "sha256": "aed7dc21b3d188feecb532a0d621648d90e368a7aec462449b4a90aa7466773b"
+        },
+        {
+          "index": 54,
+          "name": "seed-437-step-13",
+          "sha256": "d96e5fc3e1c667d1dd07e7ff1e5955ff42f080cd77cb3811a61fa82109684800"
+        },
+        {
+          "index": 58,
+          "name": "seed-437-step-17",
+          "sha256": "59db2907fbd135f701e9ac5929d23aa4392e2d357e44516963dc4d9d6ba1616e"
+        },
+        {
+          "index": 62,
+          "name": "seed-437-step-21",
+          "sha256": "b7ba1f57354ea2b681ba23f63ca9ef84d2639d2c93faf2827bda1828a6a09b12"
+        },
+        {
+          "index": 73,
+          "name": "seed-437-step-32",
+          "sha256": "192caca9829476d409f43f63ab6027bf4d1e99d4e224120376f9b85500c8524d"
+        },
+        {
+          "index": 81,
+          "name": "seed-437-step-40",
+          "sha256": "97225e6f679f85d2b8e5e4e9e51ae1b426d473622b2e1933afb13268999d893f"
+        },
+        {
+          "index": 90,
+          "name": "seed-437-step-49",
+          "sha256": "6f4bf063e87e75d927da02d6a25edc48ee4dc0fb6b9c2065f40899b73d096a61"
+        },
+        {
+          "index": 97,
+          "name": "seed-437-step-56",
+          "sha256": "48d8395fa86e72ea62dfa118658908e2a09864c6f7df776f97828bfaa5d1e030"
+        },
+        {
+          "index": 113,
+          "name": "seed-437-step-72",
+          "sha256": "d3220e0e303385d1f35023ed234c67dd1ecdbd7e25678319b8bcf7c3419dbb79"
+        },
+        {
+          "index": 125,
+          "name": "seed-437-step-84",
+          "sha256": "b3268a5b9d8fec5becedb803f7e192beb7a89d35463bd9b0902c713b53e0e6ab"
+        },
+        {
+          "index": 129,
+          "name": "seed-437-step-88",
+          "sha256": "378ef7d7de05c66afd54b5d23f1aafb8fb6d66aea234736050be7ba073a88b29"
+        },
+        {
+          "index": 130,
+          "name": "seed-437-step-89",
+          "sha256": "70b0a95571806f2e829776f26151cda247ebac116b74099d681b79cc40475cc1"
+        },
+        {
+          "index": 138,
+          "name": "seed-437-step-97",
+          "sha256": "5893d880a14cbaab2fab241d939257f72e53515ec5296355a7c9f7fe7ccd565d"
+        },
+        {
+          "index": 147,
+          "name": "seed-9001-step-1",
+          "sha256": "79ea47e6150bb4470322c7db67eadd727d53e0823c938cb1173892376eaeef8b"
+        },
+        {
+          "index": 155,
+          "name": "seed-9001-step-9",
+          "sha256": "c2af617648c1a9458bc2c7bee9107d0ea49ef13aaed5204402cd665ae2fcf8e6"
+        },
+        {
+          "index": 162,
+          "name": "seed-9001-step-16",
+          "sha256": "02429fc1581cf764172e4f18281a286b8526f7d70d2f2172799ea83ff5c4a77f"
+        },
+        {
+          "index": 170,
+          "name": "seed-9001-step-24",
+          "sha256": "7aad98062a65d4edac0041fe971106f8a9cd27175d554c70dcbb8d5808306978"
+        },
+        {
+          "index": 175,
+          "name": "seed-9001-step-29",
+          "sha256": "f933beac5a778a652bd98561f95aea5d227f0183b8c6755641603f0fb60a7ae7"
+        },
+        {
+          "index": 182,
+          "name": "seed-9001-step-36",
+          "sha256": "82e6b3ac8bd81cb92182207fb8e59266e6ffaf196def7f640b6f52df73bdb83a"
+        },
+        {
+          "index": 198,
+          "name": "seed-9001-step-52",
+          "sha256": "3cde7931792e977dfde13b98e5566bb33aa58c16eee704841fe4c50820382840"
+        },
+        {
+          "index": 199,
+          "name": "seed-9001-step-53",
+          "sha256": "83bb9bd83abf7b733ca96c3b1491530cab39c2efaacf3eb2d79c4bc636e878b9"
+        },
+        {
+          "index": 211,
+          "name": "seed-9001-step-65",
+          "sha256": "1f6ab01f8740ed067b29064298af4d716f9ac39badbec9496d1fc541fbc227a4"
+        },
+        {
+          "index": 214,
+          "name": "seed-9001-step-68",
+          "sha256": "7927195daa713a11e7637d80657d7f862020c72ec2f26c4935d140ae405598ac"
+        },
+        {
+          "index": 218,
+          "name": "seed-9001-step-72",
+          "sha256": "7cd9454728afa4ad9cab89fbf7bd396b295e6185ab990909a5b1ba3a65ac5b1b"
+        },
+        {
+          "index": 219,
+          "name": "seed-9001-step-73",
+          "sha256": "ba4f4cb0df02f2ac90aad00a97a6c74def789cfdc6c66fd925df2852d0b1c125"
+        },
+        {
+          "index": 223,
+          "name": "seed-9001-step-77",
+          "sha256": "a33f8e62d529e4a167f420f45169d1c2d076c3961b70ed775d83765e3520d79d"
+        },
+        {
+          "index": 227,
+          "name": "seed-9001-step-81",
+          "sha256": "e4c088e5a5ce83c818d71c913f7f171d3025d3729221892c36111b328b878af3"
+        },
+        {
+          "index": 242,
+          "name": "seed-9001-step-96",
+          "sha256": "7445556d1ecc1b0fb5a2deda1ed1b8ce4083a43047db8fe8ffbd7fc9138446e4"
+        },
+        {
+          "index": 262,
+          "name": "local-boundary",
+          "sha256": "2d52ee35a136364f78f99adf36b51ec7c992bfa61433352ebb2abcda8ff8e6d6"
+        },
+        {
+          "index": 269,
+          "name": "local-boundary",
+          "sha256": "2efb8638b6792d30134dc0f70f4f54b07a3f0ee4a103de17558d62ba2c9560d5"
+        },
+        {
+          "index": 283,
+          "name": "local-boundary",
+          "sha256": "9076a462868e87559b7153c2346702ddd53a18770282bd7bbb96d11807776921"
+        },
+        {
+          "index": 290,
+          "name": "local-boundary",
+          "sha256": "714b25721e73910fb79a632c2e3c0d44b72fb25941a085a22da34818791a44d0"
+        },
+        {
+          "index": 297,
+          "name": "local-boundary",
+          "sha256": "6d9559fd06e8e4a626aa5b0b0fb5fa471d103f530b7d4c245a2435206eb98335"
+        },
+        {
+          "index": 500,
+          "name": "Try revival without a rotation from the retained key",
+          "sha256": "c7d00888b43898dae43bb546ba6351fd66e61eb5cdbf7a200c951edb6ef2b7f2"
+        },
+        {
+          "index": 510,
+          "name": "Try revival without a rotation from the retained key",
+          "sha256": "c7d00888b43898dae43bb546ba6351fd66e61eb5cdbf7a200c951edb6ef2b7f2"
+        }
+      ]
+    },
+    {
+      "reason": "keri-termination-binding-mismatch",
+      "sites": [
+        {
+          "declaration": "CardanoKeri.Registry.bookTermination",
+          "occurrence": 2,
+          "reason": "keri-termination-binding-mismatch"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 390,
+          "name": "termination-carrier",
+          "sha256": "fca949cad267e0db49ec81fbe46d6dfca07b7d659ef8013de24feaddbc3417aa"
+        },
+        {
+          "index": 391,
+          "name": "termination-destination",
+          "sha256": "0e90cfeaa302f5a8acf45fad81b17fe09220fff4edc2e9c7cbb7aa36cae135c5"
+        },
+        {
+          "index": 392,
+          "name": "termination-original-datum",
+          "sha256": "3c087614b532d8777820c2cca056afd66d12aff8543606d578c3cda70262eac4"
+        },
+        {
+          "index": 393,
+          "name": "termination-value",
+          "sha256": "17ba22a9c63b5309d63a653e8458508b91ac86588a02fda05c236929ffa9114c"
+        }
+      ]
+    },
+    {
+      "reason": "keri-termination-metadata-mismatch",
+      "sites": [
+        {
+          "declaration": "CardanoKeri.Registry.installMember",
+          "occurrence": 1,
+          "reason": "keri-termination-metadata-mismatch"
+        }
+      ],
+      "evidence": "construction-proof",
+      "declaration": "CardanoKeri.Registry.selected_member_available",
+      "explanation": "Selection and metadata lookup return the same whole booking, even without a Reach premise."
+    },
+    {
+      "reason": "keri-termination-metadata-missing",
+      "sites": [
+        {
+          "declaration": "CardanoKeri.Registry.installMember",
+          "occurrence": 0,
+          "reason": "keri-termination-metadata-missing"
+        }
+      ],
+      "evidence": "construction-proof",
+      "declaration": "CardanoKeri.Registry.selected_member_available",
+      "explanation": "Selected members come from the same pending lookup; installMember_exists supplies the successful installer."
+    },
+    {
+      "reason": "keri-termination-reconstruction-mismatch",
+      "sites": [
+        {
+          "declaration": "CardanoKeri.Registry.bookTermination",
+          "occurrence": 3,
+          "reason": "keri-termination-reconstruction-mismatch"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 456,
+          "name": "termination-carrier-reconstruction",
+          "sha256": "e2dd4e396e23b00a519309d1c562e2c787eab29dd6c791f66ba604ffa7662fcf"
+        }
+      ]
+    },
+    {
+      "reason": "key-exists",
+      "sites": [
+        {
+          "declaration": "Singular.refusal",
+          "occurrence": 4,
+          "reason": "key-exists"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 11,
+          "name": "retired-fold-refused",
+          "sha256": "72ce85c7314ac02695a55075f0b51f0eaa37ef4971537a0b37af2231e4abf95b"
+        },
+        {
+          "index": 476,
+          "name": "Try processing another registration of this AID",
+          "sha256": "68b2f16f986d924d64a2d2c31685af706ed4feec9f9210721faecc85f1130fb7"
+        },
+        {
+          "index": 517,
+          "name": "Try processing another registration of this AID",
+          "sha256": "4a7a38fbe7ea9dc15af222fc02f7fff98b844e810e5a9cee827f957d4665ea08"
+        }
+      ]
+    },
+    {
+      "reason": "key-unknown",
+      "sites": [
+        {
+          "declaration": "Singular.refusal",
+          "occurrence": 6,
+          "reason": "key-unknown"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 451,
+          "name": "termination-key-unknown",
+          "sha256": "4ddc252bde2e33515c683632e21f88d9374a3050685a5b82ea9f9e8539350abe"
+        }
+      ]
+    },
+    {
+      "reason": "net-mint-mismatch",
+      "sites": [
+        {
+          "declaration": "Singular.foldBatch",
+          "occurrence": 1,
+          "reason": "net-mint-mismatch"
+        }
+      ],
+      "evidence": "construction-proof",
+      "declaration": "CardanoKeri.Registry.projected_batch_claim",
+      "explanation": "The synthetic structural claims equal their aggregate edge deltas. Actual economic transaction mint is separately observed and checked."
+    },
+    {
+      "reason": "no-approval",
+      "sites": [
+        {
+          "declaration": "Singular.refusal",
+          "occurrence": 1,
+          "reason": "no-approval"
+        },
+        {
+          "declaration": "Singular.refusal",
+          "occurrence": 2,
+          "reason": "no-approval"
+        }
+      ],
+      "evidence": "construction-proof",
+      "declaration": "CardanoKeri.Registry.projected_request_admitted",
+      "explanation": "The structural adapter supplies the exact configuration policy and approval tuple. Economic authorization remains separately checked."
+    },
+    {
+      "reason": "not-booked",
+      "sites": [
+        {
+          "declaration": "Singular.refusal",
+          "occurrence": 7,
+          "reason": "not-booked"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 452,
+          "name": "termination-key-absent",
+          "sha256": "d1b792a037f73213454fa3aa69edc3334fa21ea2fad897fa136903f34bb6604d"
+        }
+      ]
+    },
+    {
+      "reason": "not-phase1",
+      "sites": [
+        {
+          "declaration": "Singular.foldMemberRefusal",
+          "occurrence": 0,
+          "reason": "not-phase1"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 327,
+          "name": "fold-before-submission",
+          "sha256": "4fa11e51369b72b3d9a866ba5424d0b86b5841a7b2b8d2bf997d745e9e539dd6"
+        },
+        {
+          "index": 329,
+          "name": "fold-past-deadline",
+          "sha256": "16c8ecbb9100489091d3e107de1ca39cf652afc16f41184672c8a33c7f540dc8"
+        },
+        {
+          "index": 489,
+          "name": "Try processing past the registration deadline",
+          "sha256": "4a55602a82ea7a1fa3505a631099c253ddb199bebf55f406f1ff75f6465192e6"
+        }
+      ]
+    },
+    {
+      "reason": "output-observation-mismatch",
+      "sites": [
+        {
+          "declaration": "Singular.economicObservationRefusal",
+          "occurrence": 3,
+          "reason": "output-observation-mismatch"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 330,
+          "name": "fold-output-observation",
+          "sha256": "c909fffd8dd92207aa36d3e69921f0a8103a1640c86844281c421a01d5c16a62"
+        },
+        {
+          "index": 365,
+          "name": "fold-output-observation",
+          "sha256": "44389b4c953f13e939dfa085655baaffe143aa41a3424b2345dfde1cc1407526"
+        }
+      ]
+    },
+    {
+      "reason": "reference-input-missing",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionStateRefusal",
+          "occurrence": 1,
+          "reason": "reference-input-missing"
+        },
+        {
+          "declaration": "Singular.inputPresenceRefusal",
+          "occurrence": 1,
+          "reason": "reference-input-missing"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 425,
+          "name": "reject-no-state-utxo",
+          "sha256": "f73e005219f2fc42070279095c0e65e160bc731602d2f636aed656006f2e7458"
+        }
+      ]
+    },
+    {
+      "reason": "reject-compatible",
+      "sites": [
+        {
+          "declaration": "Singular.registrationRejectionGround",
+          "occurrence": 1,
+          "reason": "reject-compatible"
+        },
+        {
+          "declaration": "Singular.terminationRejectionGround",
+          "occurrence": 1,
+          "reason": "reject-compatible"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 436,
+          "name": "reject-compatible",
+          "sha256": "8262e442cfae4c9efbf9c099196feebeb1b516b039f2a2beaa2a309b09377c9b"
+        }
+      ]
+    },
+    {
+      "reason": "reject-duplicate-input",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionInputsRefusal",
+          "occurrence": 2,
+          "reason": "reject-duplicate-input"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 428,
+          "name": "reject-duplicate-input",
+          "sha256": "d69f4fb7a292f8d2213e3af61b23a80609658ead0b77dda967ef0e7a99ec1696"
+        }
+      ]
+    },
+    {
+      "reason": "reject-empty-batch",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionRefusal",
+          "occurrence": 2,
+          "reason": "reject-empty-batch"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 432,
+          "name": "reject-empty",
+          "sha256": "8a2fcc999701a070620bc0ee320ed1e19de77ffbca5ca991397d5c13c70fb7ab"
+        }
+      ]
+    },
+    {
+      "reason": "reject-evidence-mismatch",
+      "sites": [
+        {
+          "declaration": "Singular.registrationRejectionGround",
+          "occurrence": 0,
+          "reason": "reject-evidence-mismatch"
+        },
+        {
+          "declaration": "Singular.terminationRejectionGround",
+          "occurrence": 0,
+          "reason": "reject-evidence-mismatch"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 435,
+          "name": "reject-wrong-evidence",
+          "sha256": "4f6c871c0962a6a0414733eb1c87564f5b5a01dd48a1b2465c5d73f30ea7fb24"
+        }
+      ]
+    },
+    {
+      "reason": "reject-foreign-state",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionStateRefusal",
+          "occurrence": 4,
+          "reason": "reject-foreign-state"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 445,
+          "name": "reject-state-policy",
+          "sha256": "1ed487bbaaa07176720ccbf9865f1043374a08011ad0c62facbaf570d145f5a5"
+        }
+      ]
+    },
+    {
+      "reason": "reject-input-members",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionRefusal",
+          "occurrence": 3,
+          "reason": "reject-input-members"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 433,
+          "name": "reject-wrong-member",
+          "sha256": "9b2ac6d221976584fadca76a8378e53c6e613627fd2934ab95669231d2ae38bc"
+        }
+      ]
+    },
+    {
+      "reason": "reject-input-overlap",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionInputsRefusal",
+          "occurrence": 3,
+          "reason": "reject-input-overlap"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 429,
+          "name": "reject-input-overlap",
+          "sha256": "41c5122ecd3af88ac7f00f4b10b7b9bacf3753226e9ff196aac355ef9c237e0e"
+        }
+      ]
+    },
+    {
+      "reason": "reject-interval-empty",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionRefusal",
+          "occurrence": 1,
+          "reason": "reject-interval-empty"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 431,
+          "name": "reject-interval-empty",
+          "sha256": "c5dbb0487f4bc6004bfe85258c0671558a0a694cdbf4e733b372533ea911c6d6"
+        }
+      ]
+    },
+    {
+      "reason": "reject-interval-missing",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionRefusal",
+          "occurrence": 0,
+          "reason": "reject-interval-missing"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 430,
+          "name": "reject-interval-missing",
+          "sha256": "fa8651816aa928b8bf99aece0c1c58263344f3430beb41ada0d2a34a0cb66817"
+        }
+      ]
+    },
+    {
+      "reason": "reject-not-expired",
+      "sites": [
+        {
+          "declaration": "Singular.registrationRejectionGround",
+          "occurrence": 2,
+          "reason": "reject-not-expired"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 29,
+          "name": "rejection-too-early",
+          "sha256": "53854c9b56d42283fc663ff8557cc0d48e5d18066137aa54a5d359ace680325f"
+        },
+        {
+          "index": 477,
+          "name": "Try expiry rejection before both windows end",
+          "sha256": "c1536a5b3d1e8ee30f277a87fa94bf95792dfe2a876a0d1e58718eb639c6c41d"
+        },
+        {
+          "index": 485,
+          "name": "Try expiry rejection before both windows end",
+          "sha256": "21f91bfc429265d8b7c49f2b90201fd8a14e1d334f9b41f23f953824aacb2871"
+        }
+      ]
+    },
+    {
+      "reason": "reject-refund-short",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionRefusal",
+          "occurrence": 6,
+          "reason": "reject-refund-short"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 441,
+          "name": "reject-short-refund",
+          "sha256": "b54f26bfd0cf1957ab2500d8dd3ff3eb42309d63a285de227b1dd657e78faff4"
+        },
+        {
+          "index": 442,
+          "name": "reject-wrong-refund",
+          "sha256": "7ec52156643f248d51f5b07329fd488ba4813aedb3763d687d4971d4382c6821"
+        }
+      ]
+    },
+    {
+      "reason": "reject-registry-supply",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionRefusal",
+          "occurrence": 5,
+          "reason": "reject-registry-supply"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 439,
+          "name": "reject-state-mint",
+          "sha256": "dc84fa000014d83b2d3d221672ad7cfa9eb60aeb673c94808abf03090ce366c9"
+        },
+        {
+          "index": 440,
+          "name": "reject-singular-mint",
+          "sha256": "dd02b281055c29f72b525847af1623336e1475771cb5c1a732d5c8b20beadcfc"
+        }
+      ]
+    },
+    {
+      "reason": "reject-request-not-pending",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionMemberRefusal",
+          "occurrence": 1,
+          "reason": "reject-request-not-pending"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 434,
+          "name": "reject-nonpending-input",
+          "sha256": "63a5d0d43066ff36fa37bb61fe7c175a2dad601112871681dbacd6f916c1ea75"
+        }
+      ]
+    },
+    {
+      "reason": "reject-stale-state",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionStateRefusal",
+          "occurrence": 8,
+          "reason": "reject-stale-state"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 449,
+          "name": "reject-stale-state",
+          "sha256": "2aab24618a0ad345e7ed5d9da2f7a4442fb0309a4e00a32937055f2f8cf2daa3"
+        }
+      ]
+    },
+    {
+      "reason": "reject-state-configuration",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionStateRefusal",
+          "occurrence": 9,
+          "reason": "reject-state-configuration"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 450,
+          "name": "reject-state-configuration",
+          "sha256": "7bd340c4db12877a35af3e5058764e4ce089d1a6b9b925197a21aadf34d80ecb"
+        }
+      ]
+    },
+    {
+      "reason": "reject-state-datum",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionStateRefusal",
+          "occurrence": 6,
+          "reason": "reject-state-datum"
+        },
+        {
+          "declaration": "Singular.rejectionStateRefusal",
+          "occurrence": 7,
+          "reason": "reject-state-datum"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 447,
+          "name": "reject-state-datum-form",
+          "sha256": "9a97d460c1127bc6985d1dba1ec0d24dcfcc798dad936d0ddc5cba5dad1eb093"
+        },
+        {
+          "index": 448,
+          "name": "reject-state-config-none",
+          "sha256": "c7cdf484092d0eff2c84decb53a5d78077e34f06ff000d49fbee3a0af00dd547"
+        }
+      ]
+    },
+    {
+      "reason": "reject-state-overlap",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionInputsRefusal",
+          "occurrence": 0,
+          "reason": "reject-state-overlap"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 426,
+          "name": "reject-spent-state-overlap",
+          "sha256": "fe3db10a7a58b281873b2d56467557641f93166a9ec15cf6b54bca8624e7d86c"
+        }
+      ]
+    },
+    {
+      "reason": "reject-state-reference-missing",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionStateRefusal",
+          "occurrence": 0,
+          "reason": "reject-state-reference-missing"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 424,
+          "name": "reject-no-state-read",
+          "sha256": "e767bfdefe4c3b12d2f96ce4fca497e63882473f78d27b2fa82e973cfec9b192"
+        }
+      ]
+    },
+    {
+      "reason": "reject-state-spent",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionInputsRefusal",
+          "occurrence": 1,
+          "reason": "reject-state-spent"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 427,
+          "name": "reject-spent-state",
+          "sha256": "03e08db9305811cfab1854c32460c70b6aaa5788101a56fc2de42abdd2818a1a"
+        }
+      ]
+    },
+    {
+      "reason": "reject-state-token-missing",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionStateRefusal",
+          "occurrence": 2,
+          "reason": "reject-state-token-missing"
+        },
+        {
+          "declaration": "Singular.rejectionStateRefusal",
+          "occurrence": 3,
+          "reason": "reject-state-token-missing"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 443,
+          "name": "reject-state-token-count",
+          "sha256": "6d0028b9d1ab17e42b1d1bd099de88fae2ecf9cfb994c76d92b5f8adec463ccb"
+        },
+        {
+          "index": 444,
+          "name": "reject-state-token-none",
+          "sha256": "bccab7153ba8910451bf6d22708e6e3309d69c80beeab80851031eb0a293e6fe"
+        }
+      ]
+    },
+    {
+      "reason": "reject-state-token-name",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionStateRefusal",
+          "occurrence": 5,
+          "reason": "reject-state-token-name"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 446,
+          "name": "reject-state-name",
+          "sha256": "d3894ab541eb68bc7bb6b3abb8d3ae518286d0f9fdb771cd778fc68e2314bc93"
+        }
+      ]
+    },
+    {
+      "reason": "reject-tag-not-burned",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionRefusal",
+          "occurrence": 4,
+          "reason": "reject-tag-not-burned"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 437,
+          "name": "reject-ready-burn",
+          "sha256": "e47d399389eac77071d973d55e01ec854aa5d3bace38244b63f83a22e5af357a"
+        },
+        {
+          "index": 438,
+          "name": "reject-application-burn",
+          "sha256": "338bbfaf8ecdd747762e33cad09300f1d231512a9ffcbebcec91025da9e0005a"
+        }
+      ]
+    },
+    {
+      "reason": "reject-termination",
+      "sites": [
+        {
+          "declaration": "Singular.rejectionMemberRefusal",
+          "occurrence": 0,
+          "reason": "reject-termination"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 455,
+          "name": "termination-mismatch-not-recoverable",
+          "sha256": "522fb5b235ab87e7b86ff176758e85db7730cf442eebdd58bd122e6accf5d3e1"
+        }
+      ]
+    },
+    {
+      "reason": "reject-termination-no-expiry",
+      "sites": [
+        {
+          "declaration": "Singular.terminationRejectionGround",
+          "occurrence": 2,
+          "reason": "reject-termination-no-expiry"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 530,
+          "name": "Try expiring the pending termination",
+          "sha256": "8112391a9447908f2db81131abead8bd30312a71f4506e7eb9fbff967e054738"
+        }
+      ]
+    },
+    {
+      "reason": "request-already-pending",
+      "sites": [
+        {
+          "declaration": "Singular.book",
+          "occurrence": 0,
+          "reason": "request-already-pending"
+        },
+        {
+          "declaration": "Singular.bookTermination",
+          "occurrence": 0,
+          "reason": "request-already-pending"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 460,
+          "name": "duplicate-registration-reference",
+          "sha256": "b1bc607712922f1cc08c0135da23b55ad7e3d430d21f40c51c5238a84322c080"
+        }
+      ]
+    },
+    {
+      "reason": "request-observation-mismatch",
+      "sites": [
+        {
+          "declaration": "Singular.economicObservationRefusal",
+          "occurrence": 2,
+          "reason": "request-observation-mismatch"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 351,
+          "name": "fold-wrong-request-observation",
+          "sha256": "eab8cee5750d9fb21f2631ce0e43d9cb238313733cc8e9f73783379593dcbcc3"
+        },
+        {
+          "index": 386,
+          "name": "fold-wrong-request-observation",
+          "sha256": "69e268cf70113854b2f00e8271eed38fd6ea4b9c8b11a1c7c1a57712d92dc501"
+        }
+      ]
+    },
+    {
+      "reason": "retract-donation",
+      "sites": [
+        {
+          "declaration": "Singular.retractionRefusal",
+          "occurrence": 8,
+          "reason": "retract-donation"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 407,
+          "name": "retract-donation",
+          "sha256": "b3e599d8c1c687121be20d63995011a604f5e287428f01065be38bd7d040bfb4"
+        }
+      ]
+    },
+    {
+      "reason": "retract-duplicate-input",
+      "sites": [
+        {
+          "declaration": "Singular.retractionInputsRefusal",
+          "occurrence": 2,
+          "reason": "retract-duplicate-input"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 414,
+          "name": "retract-duplicate-input",
+          "sha256": "bdde17398326506d7a8ff6af7e2dfe5f9403009f4d4fc93b22c39b370092ea79"
+        }
+      ]
+    },
+    {
+      "reason": "retract-fee-funding-short",
+      "sites": [
+        {
+          "declaration": "Singular.retractionRefusal",
+          "occurrence": 9,
+          "reason": "retract-fee-funding-short"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 408,
+          "name": "retract-fee-short",
+          "sha256": "e65c4123bce66ef8d75d5a3933d31db343c7c9bdeac516fe80e2e8d73cf1e3ac"
+        }
+      ]
+    },
+    {
+      "reason": "retract-foreign-asset",
+      "sites": [
+        {
+          "declaration": "Singular.retractionRefusal",
+          "occurrence": 5,
+          "reason": "retract-foreign-asset"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 422,
+          "name": "retract-funding-assets",
+          "sha256": "efcc8a9fda30712b712874f40c1f3b6257ffa9e62864bd676bd2e3e462c927d3"
+        }
+      ]
+    },
+    {
+      "reason": "retract-funding-application-tag",
+      "sites": [
+        {
+          "declaration": "Singular.retractionFundingRefusal",
+          "occurrence": 2,
+          "reason": "retract-funding-application-tag"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 418,
+          "name": "retract-funding-application",
+          "sha256": "58d093ebaae78731f1968d0ddf0ea8a235477655bbada7ec657a12eb601c8d3d"
+        }
+      ]
+    },
+    {
+      "reason": "retract-funding-request",
+      "sites": [
+        {
+          "declaration": "Singular.retractionFundingRefusal",
+          "occurrence": 5,
+          "reason": "retract-funding-request"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 421,
+          "name": "retract-funding-request",
+          "sha256": "077943052690e5285c8e2013cd9462f7f97c8a97912b54a1555bdfddbf81b010"
+        }
+      ]
+    },
+    {
+      "reason": "retract-funding-request-address",
+      "sites": [
+        {
+          "declaration": "Singular.retractionFundingRefusal",
+          "occurrence": 4,
+          "reason": "retract-funding-request-address"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 420,
+          "name": "retract-funding-role",
+          "sha256": "4d32320363fafe3f94ae3048ba63d09f343ec90a13525c1e3e533a75909dbccf"
+        }
+      ]
+    },
+    {
+      "reason": "retract-funding-singular-tag",
+      "sites": [
+        {
+          "declaration": "Singular.retractionFundingRefusal",
+          "occurrence": 3,
+          "reason": "retract-funding-singular-tag"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 419,
+          "name": "retract-funding-singular",
+          "sha256": "987156a9975d56ad9b892f40176b7ad09a26e94111038b7ef7b9213c26dc9a21"
+        }
+      ]
+    },
+    {
+      "reason": "retract-funding-trie-ready-tag",
+      "sites": [
+        {
+          "declaration": "Singular.retractionFundingRefusal",
+          "occurrence": 1,
+          "reason": "retract-funding-trie-ready-tag"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 417,
+          "name": "retract-funding-ready",
+          "sha256": "c1abe493dbdb6761eff87244244eb3450ab9315379a69f8422a082eb57b71425"
+        }
+      ]
+    },
+    {
+      "reason": "retract-input-overlap",
+      "sites": [
+        {
+          "declaration": "Singular.retractionInputsRefusal",
+          "occurrence": 3,
+          "reason": "retract-input-overlap"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 415,
+          "name": "retract-overlap",
+          "sha256": "284bbb9569595f3daeb3cee1337d06b36797e0e5c53272f040f3f8fa0af8db62"
+        }
+      ]
+    },
+    {
+      "reason": "retract-interval-empty",
+      "sites": [
+        {
+          "declaration": "Singular.retractionRefusal",
+          "occurrence": 2,
+          "reason": "retract-interval-empty"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 401,
+          "name": "retract-interval-empty",
+          "sha256": "007ac9cc488742fada403cec0ca73fce18b43c9ff6cbd85fa205c60215935926"
+        }
+      ]
+    },
+    {
+      "reason": "retract-interval-missing",
+      "sites": [
+        {
+          "declaration": "Singular.retractionRefusal",
+          "occurrence": 1,
+          "reason": "retract-interval-missing"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 400,
+          "name": "retract-interval-missing",
+          "sha256": "c1573acf6d26f30d9259b8916c56367be618951784170df35a6072702c0e1a6b"
+        }
+      ]
+    },
+    {
+      "reason": "retract-owner",
+      "sites": [
+        {
+          "declaration": "Singular.retractionRefusal",
+          "occurrence": 0,
+          "reason": "retract-owner"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 25,
+          "name": "missing-recovery-signer",
+          "sha256": "fd2da5887dfcc3b812766f9f5ff168ad5f8fbed6c1b2642833a00fbfedde220f"
+        },
+        {
+          "index": 33,
+          "name": "missing-retraction-signer",
+          "sha256": "b183121584f83669c05ee95ca6195f72e49bd116c13262488ffebf9eeab9ff56"
+        },
+        {
+          "index": 480,
+          "name": "Try reclaiming without the refund owner signature",
+          "sha256": "f82fd3d6e33b224146c03209f24d7b55f744f9628eb0f1c27a08b5e46fa62c5e"
+        }
+      ]
+    },
+    {
+      "reason": "retract-refund-short",
+      "sites": [
+        {
+          "declaration": "Singular.retractionRefusal",
+          "occurrence": 7,
+          "reason": "retract-refund-short"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 410,
+          "name": "retract-short-refund",
+          "sha256": "1c48648fd01664925e45606cce34307ba2258cf22712a86c6433b39cdc2e3ece"
+        },
+        {
+          "index": 411,
+          "name": "retract-wrong-refund",
+          "sha256": "5e285d8a04278f0e96849fc7ceca80a03a91de06512cca34effdcc8c6c233c0d"
+        }
+      ]
+    },
+    {
+      "reason": "retract-registration-only",
+      "sites": [
+        {
+          "declaration": "Singular.retractionRequest",
+          "occurrence": 0,
+          "reason": "retract-registration-only"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 529,
+          "name": "Try retracting the pending termination",
+          "sha256": "036ac375b4f829563ada2c46e4b9ecd4d6dc848e8aa95cd8dc00b3f3f6dd3478"
+        }
+      ]
+    },
+    {
+      "reason": "retract-registry-supply",
+      "sites": [
+        {
+          "declaration": "Singular.retractionRefusal",
+          "occurrence": 6,
+          "reason": "retract-registry-supply"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 404,
+          "name": "retract-state-mint",
+          "sha256": "0de1d63ad7ea021f48908112ba3566559de3b1683045ef2cb53245fe93e4a196"
+        },
+        {
+          "index": 405,
+          "name": "retract-singular-mint",
+          "sha256": "76caaa213b78e2f78b59f803e98b028cfc772e8b4c7b8577eabed4acc1d218d4"
+        },
+        {
+          "index": 406,
+          "name": "retract-foreign-mint",
+          "sha256": "7bb9ab1b70a917924111cea5d880dc4adaa93d51166cf4e61a8c123f59a29da4"
+        }
+      ]
+    },
+    {
+      "reason": "retract-request-not-pending",
+      "sites": [
+        {
+          "declaration": "Singular.retractionRequest",
+          "occurrence": 1,
+          "reason": "retract-request-not-pending"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 416,
+          "name": "retract-no-request",
+          "sha256": "8ea3c59d7bce51faffec102062df43694cf179b621b950c9717bcdccfc87f4df"
+        }
+      ]
+    },
+    {
+      "reason": "retract-single-request",
+      "sites": [
+        {
+          "declaration": "Singular.retractionRequest",
+          "occurrence": 2,
+          "reason": "retract-single-request"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 458,
+          "name": "retract-multiple-requests",
+          "sha256": "3230130506e40db9cf89fff50f53b9a4e29313821a07b481eada22a23b90e5af"
+        }
+      ]
+    },
+    {
+      "reason": "retract-state-read",
+      "sites": [
+        {
+          "declaration": "Singular.retractionInputsRefusal",
+          "occurrence": 1,
+          "reason": "retract-state-read"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 413,
+          "name": "retract-state-read",
+          "sha256": "74573baacfcb3ceb66bfe90121691423f20689d0dfe135a09eb9a6100731a0ba"
+        }
+      ]
+    },
+    {
+      "reason": "retract-state-spent",
+      "sites": [
+        {
+          "declaration": "Singular.retractionInputsRefusal",
+          "occurrence": 0,
+          "reason": "retract-state-spent"
+        },
+        {
+          "declaration": "Singular.retractionFundingRefusal",
+          "occurrence": 0,
+          "reason": "retract-state-spent"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 412,
+          "name": "retract-state-spent",
+          "sha256": "b6be10e2b7cadae41ae87d8a918617b0c2df413dbb997eae009c0fd4ca8705aa"
+        }
+      ]
+    },
+    {
+      "reason": "retract-tag-not-burned",
+      "sites": [
+        {
+          "declaration": "Singular.retractionRefusal",
+          "occurrence": 4,
+          "reason": "retract-tag-not-burned"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 402,
+          "name": "retract-ready-burn",
+          "sha256": "822a786e14ad4bdda65582fd10016b32ebcbd25a9931334e6e377e91a14bb059"
+        },
+        {
+          "index": 403,
+          "name": "retract-application-burn",
+          "sha256": "cda8d9ff0d6e34afe5d1f95a708cdb33b1dbad964227e078438eddc47c222021"
+        }
+      ]
+    },
+    {
+      "reason": "retract-unbalanced",
+      "sites": [
+        {
+          "declaration": "Singular.retractionRefusal",
+          "occurrence": 10,
+          "reason": "retract-unbalanced"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 409,
+          "name": "retract-unbalanced",
+          "sha256": "f4d0b2a65e4988a4be811d7f51636f6c751c3492a330b0f206f0b25f7c637348"
+        }
+      ]
+    },
+    {
+      "reason": "retract-window",
+      "sites": [
+        {
+          "declaration": "Singular.retractionRefusal",
+          "occurrence": 3,
+          "reason": "retract-window"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 32,
+          "name": "early-retraction",
+          "sha256": "4840f89109f1956d78344241e137ee9e6667429c8ff27e5b4246aa2828f98b73"
+        },
+        {
+          "index": 34,
+          "name": "late-retraction",
+          "sha256": "efef0adea6930798121c428e266453fc2b0ceb3416265cbdffab209641cf0e6e"
+        },
+        {
+          "index": 481,
+          "name": "Try reclaiming outside the recovery window",
+          "sha256": "0f388d5565e407ba7f84b43b94d292813ddd1318ae3e44c6e13a9d976177b102"
+        },
+        {
+          "index": 482,
+          "name": "Try reclaiming outside the recovery window",
+          "sha256": "14a61869d47bbd1b4236a469cdb5045a26659c1f164b29356d4f63ff1c699a7b"
+        }
+      ]
+    },
+    {
+      "reason": "singular-tag-not-in-custody",
+      "sites": [
+        {
+          "declaration": "Singular.terminationBookingRefusal",
+          "occurrence": 4,
+          "reason": "singular-tag-not-in-custody"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 459,
+          "name": "termination-without-active-leaf",
+          "sha256": "5bcc15ef74bd1cf18812bf18d04b8f14eded937759ea5129a8cfefb0878cba34"
+        }
+      ]
+    },
+    {
+      "reason": "spent-input-missing",
+      "sites": [
+        {
+          "declaration": "Singular.inputPresenceRefusal",
+          "occurrence": 0,
+          "reason": "spent-input-missing"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 322,
+          "name": "fold-missing-input",
+          "sha256": "268ce401164551a1b7a8d8bec6a73580acabd09ad05e276109ea9538bb0d9bd0"
+        },
+        {
+          "index": 350,
+          "name": "fold-missing-request-observation",
+          "sha256": "cb0904d42773e95588409534bf9201a6e3b5caf246a2190c6c7d3825b34cf9c3"
+        },
+        {
+          "index": 357,
+          "name": "fold-missing-input",
+          "sha256": "e3d77317e57e5891fe7b9b0945d9792ab1a85c6b8da2afb5a7aa20a5bd82356c"
+        },
+        {
+          "index": 385,
+          "name": "fold-missing-request-observation",
+          "sha256": "7b6c0bd1d7806f07aa08e2694ba6eaee39a017ae9c633e8e48e685a5ceac5d32"
+        }
+      ]
+    },
+    {
+      "reason": "terminal-immutable",
+      "sites": [
+        {
+          "declaration": "Singular.refusal",
+          "occurrence": 8,
+          "reason": "terminal-immutable"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 453,
+          "name": "termination-key-retired",
+          "sha256": "b19632752d22f9f046e2c0ee8e516d0d239cc366c73af3f82df7c03c6af0571b"
+        }
+      ]
+    },
+    {
+      "reason": "token-missing",
+      "sites": [
+        {
+          "declaration": "Singular.refusal",
+          "occurrence": 5,
+          "reason": "token-missing"
+        },
+        {
+          "declaration": "Singular.batchConsumesCreated",
+          "occurrence": 0,
+          "reason": "token-missing"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 454,
+          "name": "termination-missing-custody",
+          "sha256": "54654a25b8280cd9f9729c4aef6c8abe0d54e5264f38fc2c17198ee43aff13f8"
+        }
+      ]
+    },
+    {
+      "reason": "transaction-identity-not-fresh",
+      "sites": [
+        {
+          "declaration": "Singular.economicObservationRefusal",
+          "occurrence": 1,
+          "reason": "transaction-identity-not-fresh"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 349,
+          "name": "fold-stale-transaction-id",
+          "sha256": "27242307ecea74ca42295086b8f11cd49e30172603108f309b2cd7f201fd0d3b"
+        },
+        {
+          "index": 384,
+          "name": "fold-stale-transaction-id",
+          "sha256": "4ad902d246eb9bc1d5e965e9dda125f080d784c67e93138e8f738f3c0df158fa"
+        }
+      ]
+    },
+    {
+      "reason": "unspent-reference-duplicate",
+      "sites": [
+        {
+          "declaration": "Singular.economicObservationRefusal",
+          "occurrence": 0,
+          "reason": "unspent-reference-duplicate"
+        }
+      ],
+      "evidence": "complete-result-witness",
+      "witnesses": [
+        {
+          "index": 347,
+          "name": "fold-duplicate-utxo",
+          "sha256": "4c54bc651da571708b240816332b52c658ade369b12679e2d1e2f046e13f2042"
+        },
+        {
+          "index": 382,
+          "name": "fold-duplicate-utxo",
+          "sha256": "4d528a121aa21ec1cb777d2508a496d23700921cf719c62fba021dfc8055f793"
+        }
+      ]
+    }
+  ]
+}

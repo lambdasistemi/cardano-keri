@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 
 const source = JSON.parse(readFileSync(process.argv[2], 'utf8'));
 assert.equal(source.schema, 'cardano-keri.checkpoint-trace');
-assert.equal(source.version, 1);
+assert.equal(source.version, 2);
 const { grid, params } = source;
 const actionName = a => typeof a === 'string' ? a : Object.keys(a)[0];
 const has = (rows, wanted) => rows.some(row => JSON.stringify(row) === JSON.stringify(wanted));
@@ -13,8 +13,9 @@ const has = (rows, wanted) => rows.some(row => JSON.stringify(row) === JSON.stri
 function state(s) {
   if (typeof s === 'string') return { state: s };
   if (s.present) return { state: 'present', ...s.present.l };
-  assert.ok(s.parked);
-  return { state: 'parked', ...s.parked.h };
+  const kind=s.parked?'parked':'terminationPending';
+  assert.ok(s[kind]);
+  return { state:kind,...s[kind].h };
 }
 
 function action(a) {
@@ -75,7 +76,7 @@ const cells = grid.cells.map(c => {
 const registry = JSON.parse(readFileSync(new URL('./refusals.json', import.meta.url), 'utf8'));
 assert.deepEqual([...coverage.keys()].sort(), registry.refusals.filter(r => r.layer === 'stepFn').map(r => r.name).sort());
 assert.equal(new Set(grid.actions.map(actionName)).size, 8);
-assert.equal(cells.length, 1380);
+assert.equal(cells.length, 1472);
 
 const envs = grid.envs.map(e => ({
   rotations: e.rotationTo.map(([epoch, from, to]) => ({ epoch, from, to })),
@@ -86,5 +87,5 @@ const envs = grid.envs.map(e => ({
 }));
 console.error(JSON.stringify({ cells: cells.length, accepted: cells.filter(c => c.result.status === 'accepted').length,
   refused: cells.filter(c => c.result.status === 'refused').length, guardCoverage: Object.fromEntries([...coverage].sort()) }));
-console.log(JSON.stringify({ profile: 'checkpoint-model-v1', params, now: grid.now,
+console.log(JSON.stringify({ profile: 'checkpoint-model-v2', params, now: grid.now,
   states: grid.states.map(state), actions: grid.actions.map(action), envs, cells }));

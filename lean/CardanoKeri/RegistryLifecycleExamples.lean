@@ -1,291 +1,571 @@
-import CardanoKeri.RegistryAgreement
-
-/- Interface repair (continuation seat, MODEL/STATEMENTS stage): the agreement
-   projection vocabulary lives in `CardanoKeri.Registry.Agreement`; this file's
-   namespace `CardanoKeri.Registry.Examples` does not resolve it by the
-   namespace-lookup chain. Pure interface repair, no semantic change. -/
-open CardanoKeri.Registry.Agreement
-
-/-!
-# Registry lifecycle stories (INV408-08): reachable witnesses
-
-Concrete reachable antecedents for the changed branches, each an executable
-`stepFn` computation over the authoritative machine in `CardanoKeri.Registry`.
-These are author-proposed evidence, never an acceptance oracle.
-
-* `W1` — registration → close under the 358-owned premise (opaque recipient
-  6 receives bond `D`) → fold lands the go-request: the leaf retains the
-  *closing rotation's reached key state* `k + 1` (INV408-02/03/05/06);
-* `W2` — revival from exactly the retained key state succeeds with fresh
-  bonds (strict advancement; one new incarnation);
-* `W3a_contribution_keeps_pending` — the close request carrying the reached
-  key state stays pending across a competing contribution, before the close
-  fold (INV408-05);
-* `W3b_revival_fold_refused` / `W3b_refused_revival_keeps_leaf` — the
-  connected close/fold/post/refused-revival journey: with only the pre-close
-  rotation witnessed, the posted revival fold is refused and the leaf keeps
-  the dormant key state with no checkpoint, instantiating
-  `refused_revival_keeps_leaf` (INV408-05/06);
-* `W4` — live reap refused against a recipient the premise does not name
-  (INV408-02);
-* `W5` — conviction of a live checkpoint by duplicity, then the tombstone
-  reaps immediately, permissionlessly, refunding no live bond (INV408-01/03);
-* `W6` — INV408-01 is type-level: no pause, resume, parked transport state,
-  grace window or quorum bypass exists in the interface any more.
--/
-
+import CardanoKeri.Registry
+/-! Connected economic registration, retained parking and termination witnesses.
+W1-W5 cover the connected lifecycle; N1 excludes phantom alias bindings. -/
 namespace CardanoKeri.Registry.Examples
+set_option maxRecDepth 10000
+set_option maxHeartbeats 2000000
+def p : Params := {
+  D := 10, tip := 1, Mc := 4, Mr := 2,
+  hD := by decide, hFund := by decide }
+def cfg : Singular.Config := {
+  root := Singular.rootOf [], minimumTip := 1,
+  processTime := 5, retractTime := 5, applicationPolicy := 7, activePolicy := 8,
+  registryId := 9, registrationCost := 2, bookingWidth := 1 }
+def env : Env := {
+  inception := fun _ => true,
+  closeAuth := fun aid recipient => aid == 11 && recipient == 6,
+  rotationFrom := fun aid k => aid == 11 && k == 1,
+  duplicity := fun _ _ => true }
+def parkedCarrier : Carrier := {
+  aid := 11, token := 0,
+  original := ⟨11, .active, 111, some 777⟩, k := 1, st := .parked, minAda := 4 }
+def ParkingJourney (registered parked : Sys) : Prop :=
+  ∃ (b : Singular.RegistrationBooking) (booked : Sys)
+    (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction)
+    (f0 f1 f2 : Flow),
+    b.request.key = 11 ∧ b.request.destination = 111 ∧ b.request.datum = some 777 ∧
+    b.request.reference = ⟨100, 0⟩ ∧ b.request.contents.lovelace = 17 ∧
+    bookRegistration p (Sys.init cfg) b = .ok (f0, booked) ∧
+    fold p env booked 0 cfg.applicationPolicy u tx = .ok (f1, registered) ∧
+    park p env registered 11 6 = .ok (f2, parked)
+def registrationTag : Singular.Approval :=
+  { policy := cfg.applicationPolicy, edge := .insertActive, key := 11,
+    owner := 42, destination := 111,
+    assetName := Singular.applicationTagAssetName 11 42 111 0 }
+def registrationRequest : Singular.RegistrationRequest :=
+  let bare : Singular.RegistrationRequest := {
+    reference := ⟨100, 0⟩, registryId := cfg.registryId, key := 11,
+    refundAddress := 42, destination := 111, submittedAt := 1,
+    registrationCost := 2, declaredTip := 1, carrierAda := 14, datum := some 777,
+    contents := { lovelace := 17, applicationTags := [registrationTag], trieReadyTags := [] } }
+  { bare with contents := { bare.contents with trieReadyTags := [bare.trieReadyTag cfg] } }
+def registration : Singular.RegistrationBooking := {
+  request := registrationRequest, interval := ⟨0, 1⟩,
+  trieReadyTagsMinted := registrationRequest.contents.trieReadyTags,
+  applicationTagsMinted := [registrationTag] }
+def registrationBooked : Sys := { Sys.init cfg with registrations := [registration] }
+def liveCarrier : Carrier := { parkedCarrier with k := 0, st := .live }
+def registered : Sys := {
+  Sys.init cfg with
+  gen := 1,
+  config := { cfg with root := Singular.rootOf [(11, .known .active)] },
+  trie := [(11, .known .active)], carriers := [liveCarrier],
+  bindings := [(11, 0)], nextToken := 1, treasury := 2 }
+def parked : Sys := { registered with carriers := [parkedCarrier] }
+def revived : Sys := { parked with carriers := [{ parkedCarrier with k := 2, st := .live }] }
+def pending : Sys := { parked with carriers := [{ parkedCarrier with st := .terminationPending }] }
+def registrationUnspent : Singular.EconomicUtxo :=
+  [(registrationRequest.reference, Singular.registrationWitnessOutput registration),
+   (⟨101, 0⟩, Singular.foldWitnessState cfg),
+   (⟨101, 1⟩, Singular.foldWitnessOrdinary 1)]
+def carrierOutput : Singular.EconomicOutput := {
+  Singular.foldWitnessOrdinary 14 with
+  output := { (Singular.foldWitnessOrdinary 14).output with
+    address := some 111, datum := .inline, datumValue := some 777 },
+  singularTags := [cfg.singularTag 11] }
+def registrationTransaction : Singular.EconomicTransaction :=
+  let outputs := [Singular.foldWitnessState registered.config,
+    carrierOutput, Singular.foldWitnessOrdinary 1]
+  { identity := 102, outputs := outputs,
+    transaction := {
+      inputs := [Singular.foldWitnessInput ⟨100, 0⟩,
+        Singular.foldWitnessInput ⟨101, 0⟩, Singular.foldWitnessInput ⟨101, 1⟩],
+      outputs := outputs.map (·.output), mint := [], signers := [], refunds := [],
+      validity := some ⟨2, 3⟩, fee := 1, donation := 2 },
+    trieReadyMint := registrationRequest.contents.trieReadyTags.map (fun tag => (tag, -1)),
+    applicationMint := [(⟨registrationTag.policy, registrationTag.assetName⟩, -1)],
+    singularMint := [(cfg.singularTag 11, 1)] }
+def terminationRequest : Singular.TerminationRequest :=
+  let bare : Singular.TerminationRequest := {
+    reference := ⟨200, 0⟩, registryId := cfg.registryId, key := 11, destination := 111,
+    declaredTip := 1, carrierAda := 2, singularTags := [cfg.singularTag 11],
+    contents := { lovelace := 3, trieReadyTags := [], applicationTags := [] } }
+  { bare with contents := { bare.contents with trieReadyTags := [bare.trieReadyTag cfg] } }
+def termination : Singular.TerminationBooking := {
+  request := terminationRequest, custodyInputs := [parkedCarrier.original],
+  trieReadyTagsMinted := terminationRequest.contents.trieReadyTags }
+def terminationEntry : TerminationEntry := {
+  booking := termination, payload := {
+    aid := 11, token := 0, keyState := 1, original := parkedCarrier.original,
+    booker := 7, bookingFee := 1 } }
+def terminationBooked : Sys := {
+  pending with carriers := [], terminations := [terminationEntry] }
+def terminationUnspent : Singular.EconomicUtxo :=
+  Singular.terminationWitnessUnspent terminationBooked.toWorld 1
+def terminationTransaction : Singular.EconomicTransaction :=
+  Singular.terminationWitnessTransaction terminationBooked.toWorld termination 20 1 1
+def retired : Sys := {
+  terminationBooked with
+  gen := 2,
+  config := { cfg with root := Singular.rootOf [(11, .known .terminal)] },
+  trie := [(11, .known .terminal)], terminations := [], treasury := 4 }
+/-- Given the complete parameters and hypotheses:
 
-/-- Witness parameters: `hFund` keeps `Mr + tip ≤ Mc`. There is no `W` field
-in `Params` to set — INV408-01 at the type level. -/
-def p408 : Params :=
-  { D := 10, tip := 1, Mc := 4, Mr := 2, process := 5, retract := 5, far := 1000,
-    hD := by decide, hProcess := by decide, hRetract := by decide, hFund := by decide }
+No additional local parameters; use the definitions in this module.
 
-/-- Witness evidence: inception for AID 11; rotations witnessed from states
-0, 1 and 2; duplicity proven against state 0; the 358-owned close premise
-admits closing AID 11 *only* with opaque recipient 6. -/
-def auth6 : Env :=
-  { inception := fun a => a = 11
-    rotationFrom := fun a k => a = 11 ∧ (k = 0 ∨ k = 1 ∨ k = 2)
-    duplicity := fun a k => a = 11 ∧ k = 0
-    closeAuth := fun a r => a = 11 ∧ r = 6 }
+When observe the Registry transition, projection or custody relation named by this theorem.
+Then the complete conclusion is:
 
-/-- The premise naming a *different* opaque recipient: closing to recipient 4
-is refused — the premise, not the reaper, supplies the payee. -/
-def auth4 : Env := { auth6 with closeAuth := fun a r => a = 11 ∧ r = 4 }
+bookRegistration p (Sys.init cfg) registration =
+      .ok ({ deposited := 17 }, registrationBooked)
+-/
+theorem registration_booked :
+    bookRegistration p (Sys.init cfg) registration =
+      .ok ({ deposited := 17 }, registrationBooked) := by
+  simp [bookRegistration, registrationShape, Singular.book,
+    Singular.registrationBookingRefusal, Singular.registrationContentsShape,
+    Singular.registrationApplicationTagValid, Singular.registrationDeclaredLovelace,
+    registration, registrationRequest, registrationTag, cfg, p, Sys.init, Sys.toWorld,
+    registrationBooked, Singular.Interval.valid, Singular.Interval.width,
+    Singular.RegistrationRequest.trieReadyTag, Singular.RegistrationRequest.operation,
+    bind, Except.bind, pure, Except.pure]
+/-- Given the complete parameters and hypotheses:
 
-/-- Only the pre-close rotation (from state 0) is witnessed: the closing
-rotation's reached state 1 cannot rotate again from itself. -/
-def preOnly : Env := { auth6 with rotationFrom := fun a k => a = 11 ∧ k = 0 }
+No additional local parameters; use the definitions in this module.
 
-/-- The registration. -/
-def traceRegister : List (Slot × Action) :=
-  [(0, .contribute 11 1 0 .register), (1, .fold 3 0 7 [(0, .process)])]
+When observe the Registry transition, projection or custody relation named by this theorem.
+Then the complete conclusion is:
 
-/-- The close: reap the live checkpoint under the premise, then fold the
-go-request carrying the reached key state. -/
-def traceClose : List (Slot × Action) :=
-  [(2, .reap 6 11 6), (3, .fold 3 1 7 [(1, .process)])]
+fold p env registrationBooked 0 cfg.applicationPolicy registrationUnspent registrationTransaction =
+      .ok ({ locked := [(11, 10)] }, registered)
+-/
+theorem registration_folded :
+    fold p env registrationBooked 0 cfg.applicationPolicy registrationUnspent registrationTransaction =
+      .ok ({ locked := [(11, 10)] }, registered) := by
+  simp +decide [
+    Singular.foldMemberRefusal,
+    Singular.foldPrerequisite,
+    Singular.foldEffect,
+    Singular.foldAccepted,
+    Singular.foldMemberAt,
+    Singular.foldMembers,
+    Singular.foldLegacyRequest,
+    Singular.foldProjectedRegistry,
+    Singular.foldRemainingTerminations,
+    Singular.foldRegistryEffect,
+    Singular.foldBareValue,
+    Singular.foldStateShape,
+    Singular.foldCarrierRefusal,
+    Singular.foldRoutingRefusal,
+    Singular.economicLookup,
+    Singular.economicSpent,
+    Singular.observesRegistration,
+    Singular.observesTermination,
+    Singular.observesWorld,
+    Singular.economicObservationRefusal,
+    Singular.exactBurns,
+    Singular.applicationTagIdentity,
+    Singular.requestTagsBurned,
+    Singular.inputsContainReference,
+    Singular.inputPresenceRefusal,
+    Singular.delta,
+    Singular.assetDelta,
+    Singular.refusal,
+    Singular.emptyResult,
+    Singular.combineResults,
+    Singular.applyEdge,
+    Singular.step,
+    Singular.foldActions,
+    Singular.batchConsumesCreated,
+    Singular.batchConsumesCreated.go,
+    Singular.foldBatch,
+    registrationBooked,
+    registration,
+    registrationRequest,
+    registrationTag,
+    registrationTransaction,
+    registrationUnspent,
+    registered,
+    liveCarrier,
+    parkedCarrier,
+    carrierOutput,
+    cfg,
+    p,
+    Sys.init,
+    Sys.toWorld,
+    fold,
+    foldResult,
+    installMember,
+    Singular.foldWitnessInput,
+    Singular.foldWitnessState,
+    Singular.foldWitnessOrdinary,
+    Singular.registrationWitnessOutput,
+    Singular.Config.stateToken,
+    Singular.Config.singularTag,
+    Singular.trieGet,
+    Singular.trieSet,
+    BEq.beq,
+    bind,
+    Except.bind,
+    pure,
+    Except.pure]
+/-- Given the complete parameters and hypotheses:
 
-/-- The revival with fresh bonds. -/
-def traceRevive : List (Slot × Action) :=
-  [(4, .contribute 11 2 4 .revive), (5, .fold 3 2 7 [(2, .process)])]
+No additional local parameters; use the definitions in this module.
 
-/-- Run a trace, returning the last successful state. -/
-def run (env : Env) : List (Slot × Action) → Sys → Sys
-  | [], s => s
-  | (t, a) :: rest, s =>
-    match stepFn p408 env a t s with
-    | some (_, s') => run env rest s'
-    | none => s
+When observe the Registry transition, projection or custody relation named by this theorem.
+Then the complete conclusion is:
 
-/-- W1: after register → close → fold, the leaf is `dormant 1` — the closing
-rotation's reached key state `k + 1 = 1` — with no checkpoint (INV408-05). -/
-theorem W1_leaf_dormant :
-    lookup (run auth6 traceClose (run auth6 traceRegister (Sys.init 7))).leaves 11 = some (.dormant 1) := by rfl
+park p env registered 11 6 = .ok ({ bondReturn := some (6, 10) }, parked)
+-/
+theorem parking_success :
+    park p env registered 11 6 = .ok ({ bondReturn := some (6, 10) }, parked) := by rfl
+/-- Given the complete parameters and hypotheses:
 
-theorem W1_no_ckpt :
-    lookup (run auth6 traceClose (run auth6 traceRegister (Sys.init 7))).ckpts 11 = none := by rfl
+No additional local parameters; use the definitions in this module.
 
-/-- W1 (flow): the live bond `D = 10` returned to the opaque recipient 6, and
-the go-request funded `Mr + tip = 3` (INV408-03). -/
-theorem W1_bond_returned :
-    (match stepFn p408 auth6 (.reap 6 11 6) 2 (run auth6 traceRegister (Sys.init 7)) with
-      | some (f, _) => f.bondReturn
-      | none => none) = some (6, 10) := by rfl
+When observe the Registry transition, projection or custody relation named by this theorem.
+Then the complete conclusion is:
 
-theorem W1_into_request :
-    (match stepFn p408 auth6 (.reap 6 11 6) 2 (run auth6 traceRegister (Sys.init 7)) with
-      | some (f, _) => f.intoRequest
-      | none => 0) = 3 := by rfl
+revive p env parked 11 = .ok ({ deposited := 10, locked := [(11, 10)] }, revived)
+-/
+theorem revival_success :
+    revive p env parked 11 = .ok ({ deposited := 10, locked := [(11, 10)] }, revived) := by rfl
+/-- Given the complete parameters and hypotheses:
 
-/-- W2: revival from exactly the retained state succeeds (fresh bonds, new
-incarnation token 1, strict advancement to key state 2, INV408-06). -/
-theorem W2_leaf_active :
-    lookup (run auth6 traceRevive (run auth6 traceClose (run auth6 traceRegister (Sys.init 7)))).leaves 11
-      = some (.active 1) := by rfl
+No additional local parameters; use the definitions in this module.
 
-theorem W2_ckpt_key :
-    lookup (run auth6 traceRevive (run auth6 traceClose (run auth6 traceRegister (Sys.init 7)))).ckpts 11
-      = some ⟨1, 2, .live⟩ := by rfl
+When observe the Registry transition, projection or custody relation named by this theorem.
+Then the complete conclusion is:
 
-/-- W3a: the close request remains pending across a competing contribution,
-BEFORE the close fold. Journey: register, fold, close under the premise, then
-a competing revive contribution — the go-request carrying the reached key
-state 1 is still pending. Boundary: posting only; no fold is attempted here. -/
-def traceClosePosted : List (Slot × Action) :=
-  traceRegister ++ [(2, .reap 6 11 6), (4, .contribute 11 4 4 .revive)]
+convictCkpt env parked 11 = .ok ({}, pending)
+-/
+theorem conviction_success :
+    convictCkpt env parked 11 = .ok ({}, pending) := by rfl
+/-- Given the complete parameters and hypotheses:
 
-theorem W3a_contribution_keeps_pending :
-    pendingGo (run auth6 traceClosePosted (Sys.init 7)) 11 = some (.goDormant 1) := by rfl
+No additional local parameters; use the definitions in this module.
 
-/-- W3b, the connected journey: register, fold, close, the close fold landing
-dormant 1, the posted revival request, the attempted revival fold. Its first
-FIVE steps are exactly `preRefusedRevival`'s; the sixth is the refused action
-below. -/
-def traceRefusedRevival : List (Slot × Action) :=
-  traceRegister ++ [(2, .reap 6 11 6), (3, .fold 3 1 7 [(1, .process)]),
-                    (4, .contribute 11 1 4 .revive), (5, .fold 3 2 7 [(2, .process)])]
+When observe the Registry transition, projection or custody relation named by this theorem.
+Then the complete conclusion is:
 
-/-- W3b, the exact prestate: the connected close/fold/post prefix — register,
-fold, close under the premise, the close fold landing dormant 1, then the
-posted revival request — under the environment witnessing only the pre-close
-rotation. Both W3b statements below are bound to THIS state, so the refusal
-cannot be stale-metadata (wrong generation) or a missing request. -/
-def preRefusedRevival : Sys :=
-  run preOnly
-    (traceRegister ++ [(2, .reap 6 11 6), (3, .fold 3 1 7 [(1, .process)]),
-                       (4, .contribute 11 1 4 .revive)])
-    (Sys.init 7)
+bookTermination p pending 11 7 1 termination =
+      .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, terminationBooked)
+-/
+theorem termination_booked :
+    bookTermination p pending 11 7 1 termination =
+      .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, terminationBooked) := by
+  simp [bookTermination, carrierAt, pending, parked, registered, liveCarrier, parkedCarrier,
+    termination, terminationRequest, terminationEntry, terminationBooked, p, cfg,
+    Singular.bookTermination, Singular.terminationBookingRefusal, Singular.terminationContentsShape,
+    Singular.terminationDeclaredLovelace, Singular.terminationCustody, Sys.toWorld, Sys.init,
+    Singular.TerminationRequest.trieReadyTag, Singular.TerminationRequest.operation,
+    Singular.Config.singularTag, Singular.Config.trieReadyTag,
+    instBEqCkState, Singular.trieGet, bind, Except.bind, pure, Except.pure]
+  rfl
+/-- Given the complete parameters and hypotheses:
 
-/-- The prefix is `ReachFar` (every step succeeds, all slots strictly before
-the horizon) — the generic refused-revival theorem's assumed domain is
-inhabited by this exact prestate. -/
-theorem preRefusedRevival_reachFar : ReachFar p408 preOnly preRefusedRevival := by
-  have h0 : ReachFar p408 preOnly (Sys.init 7) := .init 7
-  have h1 := h0.step (a := .contribute 11 1 0 .register) (now := 0) (by decide) (by rfl)
-  have h2 := h1.step (a := .fold 3 0 7 [(0, .process)]) (now := 1) (by decide) (by rfl)
-  have h3 := h2.step (a := .reap 6 11 6) (now := 2) (by decide) (by rfl)
-  have h4 := h3.step (a := .fold 3 1 7 [(1, .process)]) (now := 3) (by decide) (by rfl)
-  exact h4.step (a := .contribute 11 1 4 .revive) (now := 4) (by decide) (by rfl)
+No additional local parameters; use the definitions in this module.
 
-/-- W3b, the refused action: the final fold of the journey — processing the
-posted revival of dormant 1 at generation 2, exactly the prestate above — is
-refused: the environment witnesses no rotation from the retained key state. -/
-theorem W3b_revival_fold_refused :
-    stepFn p408 preOnly (.fold 3 2 7 [(2, .process)]) 5 preRefusedRevival = none := by rfl
+When observe the Registry transition, projection or custody relation named by this theorem.
+Then the complete conclusion is:
 
-/-- W3b, the retained state: applying exactly that refused action from exactly
-that prestate (definitional with the full journey `run preOnly
-traceRefusedRevival (Sys.init 7)`) leaves the leaf at dormant 1 with no
-checkpoint. The generic theorem `refused_revival_keeps_leaf`
-(CardanoKeri.Registry.Agreement) states this boundary in general; these
-witnesses compute the concrete journey directly and do not formally bind its
-preconditions — its current type concludes facts about the retained input
-state, its proof using only the retained-leaf hypothesis and R1c. -/
-theorem W3b_refused_revival_keeps_leaf :
-    lookup (run preOnly [(5, .fold 3 2 7 [(2, .process)])] preRefusedRevival).leaves 11 = some (.dormant 1) ∧
-    lookup (run preOnly [(5, .fold 3 2 7 [(2, .process)])] preRefusedRevival).ckpts 11 = none :=
-  ⟨rfl, rfl⟩
+fold p env terminationBooked 1 cfg.applicationPolicy terminationUnspent terminationTransaction =
+      .ok ({}, retired)
+-/
+theorem termination_folded :
+    fold p env terminationBooked 1 cfg.applicationPolicy terminationUnspent terminationTransaction =
+      .ok ({}, retired) := by
+  simp +decide [
+    Singular.foldMemberRefusal,
+    Singular.foldPrerequisite,
+    Singular.foldEffect,
+    Singular.foldAccepted,
+    Singular.foldMemberAt,
+    Singular.foldMembers,
+    Singular.foldLegacyRequest,
+    Singular.foldProjectedRegistry,
+    Singular.foldRemainingTerminations,
+    Singular.foldRegistryEffect,
+    Singular.foldBareValue,
+    Singular.foldStateShape,
+    Singular.foldCarrierRefusal,
+    Singular.foldRoutingRefusal,
+    Singular.economicLookup,
+    Singular.economicSpent,
+    Singular.observesRegistration,
+    Singular.observesTermination,
+    Singular.observesWorld,
+    Singular.economicObservationRefusal,
+    Singular.exactBurns,
+    Singular.requestTagsBurned,
+    Singular.inputsContainReference,
+    Singular.inputPresenceRefusal,
+    Singular.delta,
+    Singular.assetDelta,
+    Singular.refusal,
+    Singular.emptyResult,
+    Singular.combineResults,
+    Singular.applyEdge,
+    Singular.step,
+    Singular.foldActions,
+    Singular.batchConsumesCreated,
+    Singular.batchConsumesCreated.go,
+    Singular.foldBatch,
+    terminationBooked,
+    terminationEntry,
+    termination,
+    terminationRequest,
+    terminationTransaction,
+    terminationUnspent,
+    retired,
+    pending,
+    parked,
+    pendingAt,
+    Singular.terminationWitnessTransaction,
+    Singular.terminationWitnessUnspent,
+    Singular.terminationWitnessInputs,
+    Singular.terminationWitnessFresh,
+    Singular.worldRequestReferences,
+    Singular.terminationWitnessResult,
+    Singular.terminationWitnessOutput,
+    registered,
+    liveCarrier,
+    parkedCarrier,
+    cfg,
+    p,
+    Sys.init,
+    Sys.toWorld,
+    fold,
+    foldResult,
+    installMember,
+    Singular.foldWitnessInput,
+    Singular.foldWitnessState,
+    Singular.foldWitnessOrdinary,
+    Singular.registrationWitnessOutput,
+    Singular.Config.stateToken,
+    Singular.Config.singularTag,
+    Singular.trieGet,
+    Singular.trieSet,
+    BEq.beq,
+    bind,
+    Except.bind,
+    pure,
+    Except.pure]
+/-- Given the complete parameters and hypotheses:
 
-/-- W3b, positive fixture control (not a production semantic mutation kill):
-from the SAME `preRefusedRevival` with the SAME action, rotation evidence
-from the retained key state 1 (env `auth6`) lets the fold succeed — leaf
-active 1, live checkpoint at key state 2 — so the refusal is attributable to
-the missing witness, not to stale generation or a missing request.
-Supplementary: the full auth6 journey computes the same post-state
-(`W3b_positive_rotation_revives_journey`). -/
-theorem W3b_positive_rotation_revives :
-    ∃ f s', stepFn p408 auth6 (.fold 3 2 7 [(2, .process)]) 5 preRefusedRevival = some (f, s') ∧
-      lookup s'.leaves 11 = some (.active 1) ∧ lookup s'.ckpts 11 = some ⟨1, 2, .live⟩ :=
-  ⟨_, _, rfl, rfl, rfl⟩
+No additional local parameters; use the definitions in this module.
 
-/-- Supplementary: the full auth6 journey through `run` reaches the same
-successful revival. -/
-theorem W3b_positive_rotation_revives_journey :
-    lookup (run auth6 traceRefusedRevival (Sys.init 7)).leaves 11 = some (.active 1) ∧
-    lookup (run auth6 traceRefusedRevival (Sys.init 7)).ckpts 11 = some ⟨1, 2, .live⟩ :=
-  ⟨rfl, rfl⟩
+When observe the Registry transition, projection or custody relation named by this theorem.
+Then the complete conclusion is:
 
-/-- W4: a live reap against a recipient the premise does not name is refused;
-so is a live reap with no premise at all (INV408-02). -/
-theorem W4_wrong_recipient_refused :
-    stepFn p408 auth6 (.reap 6 11 4) 2 (run auth6 traceRegister (Sys.init 7)) = none := by rfl
+ParkingJourney registered parked
+-/
+theorem parking_journey : ParkingJourney registered parked := by
+  exact ⟨registration, registrationBooked, registrationUnspent, registrationTransaction,
+    { deposited := 17 }, { locked := [(11, 10)] }, { bondReturn := some (6, 10) },
+    rfl, rfl, rfl, rfl, rfl, registration_booked, registration_folded, parking_success⟩
+/-- Given the complete parameters and hypotheses:
 
-theorem W4_no_premise_refused :
-    stepFn p408 auth4 (.reap 6 11 6) 2 (run auth6 traceRegister (Sys.init 7)) = none := by rfl
+No additional local parameters; use the definitions in this module.
 
-/-- W5: duplicity convicts the live checkpoint; the tombstone then reaps
-immediately and permissionlessly — no premise, no bond refund again
-(INV408-01/03). -/
-def traceConvict : List (Slot × Action) :=
-  [(2, .convictCkpt 11), (3, .reap 6 11 4), (4, .fold 3 1 7 [(1, .process)])]
+When observe the Registry transition, projection or custody relation named by this theorem.
+Then the complete conclusion is:
 
-theorem W5_tomb_leaf :
-    lookup (run auth6 traceConvict (run auth6 traceRegister (Sys.init 7))).leaves 11
-      = some .convicted :=
-   by rfl
+Reach p env cfg registrationBooked
+-/
+theorem registration_booked_reachable : Reach p env cfg registrationBooked :=
+  Reach.next Reach.init (action := .bookRegistration registration) registration_booked
+/-- Given the complete parameters and hypotheses:
 
-theorem W5_no_bond_return :
-    (match stepFn p408 auth6 (.reap 6 11 4) 3
-            (run auth6 [(2, .convictCkpt 11)] (run auth6 traceRegister (Sys.init 7))) with
-      | some (f, _) => f.bondReturn
-      | none => none) = none := by rfl
+No additional local parameters; use the definitions in this module.
 
-/-- W1: the close story is *reached* — a formal `Reach` derivation: every
-step of `traceRegister` and `traceClose` succeeds and each `step` links the
-`run`-computed post-states, from `Reach.init`. -/
-theorem W1_reach :
-    Reach p408 auth6 (run auth6 traceClose (run auth6 traceRegister (Sys.init 7))) := by
-  have h1 := (Reach.init (p := p408) (env := auth6) 7).step
-    (a := .contribute 11 1 0 .register) (now := 0) (by rfl)
-  have h2 := h1.step (a := .fold 3 0 7 [(0, .process)]) (now := 1) (by rfl)
-  have h3 := h2.step (a := .reap 6 11 6) (now := 2) (by rfl)
-  have h4 := h3.step (a := .fold 3 1 7 [(1, .process)]) (now := 3) (by rfl)
-  exact h4
+When observe the Registry transition, projection or custody relation named by this theorem.
+Then the complete conclusion is:
 
-/-! ## A-003 antecedent control: pending custody needs the reachable domain
+Reach p env cfg registered
+-/
+theorem registered_reachable : Reach p env cfg registered :=
+  Reach.next registration_booked_reachable
+    (action := .fold 0 cfg.applicationPolicy registrationUnspent registrationTransaction) registration_folded
+/-- Given the complete parameters and hypotheses:
 
-The universal pending-custody theorem (A-002(a), ruled by A-003) assumes
-`ReachFar p env s` **and** `now < p.far`. This control shows the
-reachable-domain hypothesis is load-bearing: in an arbitrary system whose
-inbox holds the same `goDormant` request with an early `submittedAt`, the
-retract **succeeds** and the successor's `pendingGo` is `none` — the key
-state is lost without any consuming fold. Throughout the control `now <
-p.far` holds (`ant408_now_before_far` pins this), so the control alone
-demonstrates nothing about the horizon hypothesis, and no separate
-horizon-negative control is asserted here. Classification: **antecedent control** for
-the theorem's statement domain. It is not a production mutation kill and not
-a reachable counterexample: the control system has a go-request pending while
-its leaf is absent, so `Inv.goActive` fails there and no `ReachFar`
-derivation exists (`ant408_not_reachable` proves this, closing the route back
-to the reachable theorem). -/
+No additional local parameters; use the definitions in this module.
 
-/-- Control parameters: phase 1 is 10 slots, phase 2 is 10, the end of time
-is far away. No premise of any kind is used. -/
-def pc408 : Params :=
-  { D := 10, tip := 2, Mc := 4, Mr := 1, process := 10, retract := 10,
-    far := 1000000000,
-    hD := by decide, hProcess := by decide, hRetract := by decide, hFund := by decide }
+When observe the Registry transition, projection or custody relation named by this theorem.
+Then the complete conclusion is:
 
-/-- Empty evidence: the control runs against no premise at all. -/
-def ec408 : Env :=
-  { inception := fun _ => false, rotationFrom := fun _ _ => false,
-    duplicity := fun _ _ => false, closeAuth := fun _ _ => false }
+Reach p env cfg parked
+-/
+theorem parked_reachable : Reach p env cfg parked :=
+  Reach.next registered_reachable (action := .park 11 6) parking_success
+/-- Given the complete parameters and hypotheses:
 
-/-- The arbitrary system: one early-dated go-request, nothing else.
-Deliberately unreachable — `ant408_not_reachable`. -/
-def sc408 : Sys :=
-  { gen := 0, plugin := 7, leaves := [], ckpts := [],
-    requests := [(0, ⟨11, 1, 0, .goDormant 1⟩)], nextReq := 1, nextToken := 0 }
+No additional local parameters; use the definitions in this module.
 
-/-- Antecedent: `pendingGo` sees the request. -/
-theorem ant408_pending_before :
-    pendingGo sc408 11 = some (.goDormant 1) := by rfl
+When observe the Registry transition, projection or custody relation named by this theorem.
+Then the complete conclusion is:
 
-/-- Antecedent: the clock is inside the horizon. -/
-theorem ant408_now_before_far : (10 : Slot) < pc408.far := by decide
+Reach p env cfg pending
+-/
+theorem pending_reachable : Reach p env cfg pending :=
+  Reach.next parked_reachable (action := .convictCkpt 11) conviction_success
+/-- Given the complete parameters and hypotheses:
 
-/-- The control: the retract succeeds at `now = 10` — phase 2 of the
-early-dated request — and the successor's `pendingGo` is `none`. Without the
-reachable domain the universal custody statement would be false at `now <
-p.far` and with no fold anywhere. -/
-theorem ant408_retract_loses_pending :
-    ∃ f s', stepFn pc408 ec408 (.retract 0) 10 sc408 = some (f, s') ∧
-      pendingGo s' 11 = none :=
-  ⟨_, _, rfl, rfl⟩
+No additional local parameters; use the definitions in this module.
 
-/-- The domain witness: the control system is not reachable, so this is not a
-counterexample to the reachable theorem — it fixes the theorem's statement
-domain instead. -/
-theorem ant408_not_reachable :
-    ¬ ReachFar pc408 ec408 sc408 := by
+When observe the Registry transition, projection or custody relation named by this theorem.
+Then the complete conclusion is:
+
+Reach p env cfg terminationBooked
+-/
+theorem termination_booked_reachable : Reach p env cfg terminationBooked :=
+  Reach.next pending_reachable (action := .bookTermination 11 7 1 termination) termination_booked
+/-- Given the complete parameters and hypotheses:
+
+No additional local parameters; use the definitions in this module.
+
+When observe the Registry transition, projection or custody relation named by this theorem.
+Then the complete conclusion is:
+
+Reach p env cfg retired
+-/
+theorem retired_reachable : Reach p env cfg retired :=
+  Reach.next termination_booked_reachable
+    (action := .fold 1 cfg.applicationPolicy terminationUnspent terminationTransaction) termination_folded
+/-- Given the complete parameters and hypotheses:
+
+No additional local parameters; use the definitions in this module.
+
+When observe the Registry transition, projection or custody relation named by this theorem.
+Then the complete conclusion is:
+
+∃ registered parked, ParkingJourney registered parked ∧
+      Reach p env cfg registered ∧ Reach p env cfg parked ∧
+      carrierAt parked 11 = some parkedCarrier ∧ minAdaAt parked 11 = 4 ∧
+      Singular.trieGet parked.trie 11 = .known .active ∧
+      parked.toWorld = registered.toWorld ∧
+      parked.terminations = [] ∧
+      park p env registered 11 6 = .ok ({ bondReturn := some (6, 10) }, parked)
+-/
+theorem W1_connected_parking :
+    ∃ registered parked, ParkingJourney registered parked ∧
+      Reach p env cfg registered ∧ Reach p env cfg parked ∧
+      carrierAt parked 11 = some parkedCarrier ∧ minAdaAt parked 11 = 4 ∧
+      Singular.trieGet parked.trie 11 = .known .active ∧
+      parked.toWorld = registered.toWorld ∧
+      parked.terminations = [] ∧
+      park p env registered 11 6 = .ok ({ bondReturn := some (6, 10) }, parked) := by
+  refine ⟨registered, parked, parking_journey, registered_reachable, parked_reachable, ?_⟩
+  exact ⟨rfl, rfl, rfl, rfl, rfl, parking_success⟩
+/-- Given the complete parameters and hypotheses:
+
+No additional local parameters; use the definitions in this module.
+
+When observe the Registry transition, projection or custody relation named by this theorem.
+Then the complete conclusion is:
+
+∃ registered parked revived, ParkingJourney registered parked ∧
+      revive p env parked 11 = .ok ({ deposited := 10, locked := [(11, 10)] }, revived) ∧
+      carrierAt revived 11 = some { parkedCarrier with k := 2, st := .live } ∧
+      minAdaAt revived 11 = 4 ∧ revived.toWorld = parked.toWorld ∧
+      revived.bindings = parked.bindings ∧ revived.nextToken = parked.nextToken
+-/
+theorem W2_connected_revival :
+    ∃ registered parked revived, ParkingJourney registered parked ∧
+      revive p env parked 11 = .ok ({ deposited := 10, locked := [(11, 10)] }, revived) ∧
+      carrierAt revived 11 = some { parkedCarrier with k := 2, st := .live } ∧
+      minAdaAt revived 11 = 4 ∧ revived.toWorld = parked.toWorld ∧
+      revived.bindings = parked.bindings ∧ revived.nextToken = parked.nextToken := by
+  refine ⟨registered, parked, revived, parking_journey, revival_success, ?_⟩
+  exact ⟨rfl, rfl, rfl, rfl, rfl⟩
+/-- Given the complete parameters and hypotheses:
+
+No additional local parameters; use the definitions in this module.
+
+When observe the Registry transition, projection or custody relation named by this theorem.
+Then the complete conclusion is:
+
+∃ registered parked, ParkingJourney registered parked ∧
+      revive p { env with rotationFrom := fun _ _ => false } parked 11 =
+        .error "keri-revival-refused" ∧
+      carrierAt parked 11 = some parkedCarrier ∧ minAdaAt parked 11 = 4 ∧
+      Singular.trieGet parked.trie 11 = .known .active
+-/
+theorem W3_refused_revival_keeps_output :
+    ∃ registered parked, ParkingJourney registered parked ∧
+      revive p { env with rotationFrom := fun _ _ => false } parked 11 =
+        .error "keri-revival-refused" ∧
+      carrierAt parked 11 = some parkedCarrier ∧ minAdaAt parked 11 = 4 ∧
+      Singular.trieGet parked.trie 11 = .known .active := by
+  refine ⟨registered, parked, parking_journey, ?_⟩
+  exact ⟨rfl, rfl, rfl, rfl⟩
+/-- Given the complete parameters and hypotheses:
+
+No additional local parameters; use the definitions in this module.
+
+When observe the Registry transition, projection or custody relation named by this theorem.
+Then the complete conclusion is:
+
+∃ registered parked, ParkingJourney registered parked ∧
+      park p env registered 11 7 = .error "keri-close-refused" ∧
+      park p { env with closeAuth := fun _ _ => false } registered 11 6 =
+        .error "keri-close-refused"
+-/
+theorem W4_wrong_recipient_and_missing_premise :
+    ∃ registered parked, ParkingJourney registered parked ∧
+      park p env registered 11 7 = .error "keri-close-refused" ∧
+      park p { env with closeAuth := fun _ _ => false } registered 11 6 =
+        .error "keri-close-refused" := by
+  refine ⟨registered, parked, parking_journey, ?_⟩
+  exact ⟨rfl, rfl⟩
+/-- Given the complete parameters and hypotheses:
+
+No additional local parameters; use the definitions in this module.
+
+When observe the Registry transition, projection or custody relation named by this theorem.
+Then the complete conclusion is:
+
+∃ registered parked pending booked retired,
+      ∃ (b : Singular.TerminationBooking) (u : Singular.EconomicUtxo)
+        (tx : Singular.EconomicTransaction) (f : Flow),
+      ParkingJourney registered parked ∧
+      convictCkpt env parked 11 = .ok ({}, pending) ∧
+      carrierAt pending 11 = some { parkedCarrier with st := .terminationPending } ∧
+      Singular.trieGet pending.trie 11 = .known .active ∧
+      b.request.reference = ⟨200, 0⟩ ∧
+      bookTermination p pending 11 7 1 b =
+        .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, booked) ∧
+      Singular.worldSingularSupply booked.toWorld 11 = 1 ∧
+      fold p env booked booked.gen cfg.applicationPolicy u tx = .ok (f, retired) ∧
+      Singular.trieGet retired.trie 11 = .known .terminal ∧
+      Singular.worldSingularSupply retired.toWorld 11 = 0 ∧
+      tx.transaction.donation = 2 ∧ Singular.foldCarrierLovelace tx.outputs = 0 ∧
+      pendingAt retired ⟨200, 0⟩ = none
+-/
+theorem W5_connected_termination :
+    ∃ registered parked pending booked retired,
+      ∃ (b : Singular.TerminationBooking) (u : Singular.EconomicUtxo)
+        (tx : Singular.EconomicTransaction) (f : Flow),
+      ParkingJourney registered parked ∧
+      convictCkpt env parked 11 = .ok ({}, pending) ∧
+      carrierAt pending 11 = some { parkedCarrier with st := .terminationPending } ∧
+      Singular.trieGet pending.trie 11 = .known .active ∧
+      b.request.reference = ⟨200, 0⟩ ∧
+      bookTermination p pending 11 7 1 b =
+        .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, booked) ∧
+      Singular.worldSingularSupply booked.toWorld 11 = 1 ∧
+      fold p env booked booked.gen cfg.applicationPolicy u tx = .ok (f, retired) ∧
+      Singular.trieGet retired.trie 11 = .known .terminal ∧
+      Singular.worldSingularSupply retired.toWorld 11 = 0 ∧
+      tx.transaction.donation = 2 ∧ Singular.foldCarrierLovelace tx.outputs = 0 ∧
+      pendingAt retired ⟨200, 0⟩ = none := by
+  refine ⟨registered, parked, pending, terminationBooked, retired, termination,
+    terminationUnspent, terminationTransaction, {}, parking_journey, conviction_success, ?_⟩
+  exact ⟨by decide, by decide, rfl, termination_booked, by decide,
+    termination_folded, by decide, by decide, by decide, by decide, by decide⟩
+/-- Given the complete parameters and hypotheses:
+
+No additional local parameters; use the definitions in this module.
+
+When observe the Registry transition, projection or custody relation named by this theorem.
+Then the complete conclusion is:
+
+¬ WellFormed p { Sys.init cfg with bindings := [(11, 0)], nextToken := 1 }
+-/
+theorem phantom_binding_not_wellFormed :
+    ¬ WellFormed p { Sys.init cfg with bindings := [(11, 0)], nextToken := 1 } := by
   intro h
-  have hi := reach_inv pc408 ec408 h
-  have hgo : goIn sc408.requests 11 :=
-    ⟨(0, ⟨11, 1, 0, .goDormant 1⟩), List.mem_cons.2 (Or.inl rfl), rfl, rfl⟩
-  obtain ⟨tok, ht⟩ := hi.goActive 11 hgo
-  simp [sc408, lookup] at ht
-
+  have leaf := (h.bindingDomain 11).mp ⟨0, rfl⟩
+  simp [Sys.init, Singular.trieGet] at leaf
 end CardanoKeri.Registry.Examples

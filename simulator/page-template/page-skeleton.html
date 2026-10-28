@@ -15,6 +15,18 @@
 <div id="hud" aria-live="polite"></div>
 <div id="toast" role="status"></div>
 <main>
+  <details class="card" id="system-player">
+    <summary>Connected system journeys <small>Registration receipt → retained output → pending request → consuming fold</small></summary>
+    <p>Play the actual system events with their fixed registration origin and complete transaction observations. The local stories below show the Checkpoint Step facet. These finite examples do not establish production conformance.</p>
+    <div class="stagebar"><select id="system-picker" aria-label="connected system journey"></select>
+      <button id="system-reset" type="button">Start</button><button id="system-prev" type="button">Previous</button><button id="system-next" type="button">Next</button><span id="system-position"></span></div>
+    <pre id="system-state" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
+    <p id="system-result" role="status"></p>
+    <details><summary>System properties exhibited by this event</summary><pre id="system-properties" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre></details>
+    <details><summary>Full state, stored origin, pending entry and both flows</summary><pre id="system-observation" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:28rem;overflow:auto"></pre></details>
+    <details><summary>Inspect or try the next command</summary><p>Edited commands start from the displayed state. Start or a replay control returns to the recorded journey. Unsupported input is reported separately from a model refusal.</p><textarea id="system-command" aria-label="system command JSON" style="width:100%;min-height:14rem;box-sizing:border-box"></textarea><button id="system-try" type="button">Try command</button></details>
+  </details>
+
   <section class="card" id="stage">
     <div class="stagebar">
       <select id="story-picker" aria-label="pick a story"></select>

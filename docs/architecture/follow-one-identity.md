@@ -12,12 +12,12 @@ refused outcomes. The implementation responsibilities and evidence limits sit
 beside the claim they qualify.
 
 !!! info "What you are playing"
-    These are simulations of the **accepted M1 design**, not commands against
+    These are simulations of the **accepted current design**, not commands against
     the deployed V1 contracts. The checkpoint model represents evidence as facts;
     it does not check real signatures, CESR encodings or witness receipts. The
-    registry model abstracts requests, folds and uniqueness; it does not execute
-    an MPFS proof or a Cardano transaction. See the
-    [architecture overview](overview.md) for the explicit V1/M1 distinction and
+    registry model executes the pinned generic economic booking, fold and recovery
+    judgments on complete model transactions. It does not submit Cardano transactions. See the
+    [architecture overview](overview.md) for the explicit V1/current-design distinction and
     the [deployment guide](../user/m1-preprod-deployment.md) for deployed behavior.
 
 ## The parts Alice depends on
@@ -80,8 +80,8 @@ output the certified request names, in the folding transaction
 | KERI admission and checkpoint validation | The inception evidence authorizes the projected key state, and the inserted leaf identifies the matching checkpoint output and its required value. |
 | Mint authorization | The quantity-one checkpoint mint is bound to that same admitted registration and inserted leaf; minting cannot bypass that registration boundary. |
 
-These are **required implementation obligations**. The registry's
-`processBody` models their combined result; its `Env.inception` predicate
+These are **required implementation obligations**. The Registry's
+`fold` invokes the imported economic judgment and installs the resulting carriers; its `Env.inception` predicate
 assumes the cryptographic answer. It does not specify the exact division of
 checks between the KERI plugin, checkpoint minting policy and registration
 observers. The concrete script interfaces and asset-name encoding must be
@@ -100,7 +100,7 @@ does not say: “This AID has never been registered.”** Multiple attestations
 of the same inception are allowed. The registry supplies uniqueness when it
 admits registration and creates the checkpoint.
 
-This is the proposed evidence boundary for M1; it is not yet implemented or
+This is the proposed evidence boundary for the current design; it is not yet implemented or
 represented as a separate action in the simulators. The
 [architecture diagram](overview.md#proposed-m1-registration-flow) shows the
 attestation, request, atomic fold and consumer boundaries together.
@@ -136,31 +136,24 @@ and execution-budget feasibility still need measurement.
 
 ### What does `active token` promise?
 
-The registry stores an AID's lifecycle and indirection:
+The registry records an AID as absent, active or permanently retired. An active
+key identifies an existing incarnation; it does not certify that its checkpoint
+is consumable. Live, poisoned, frozen, parked and pending termination are
+application conditions.
 
-| Registry-model leaf | Meaning |
-|---|---|
-| `active token` | Identifies the checkpoint incarnation. Consumers resolve and validate the checkpoint output; the leaf does not certify consumability. |
-| `dormant k` | Preserves the key state from which a witnessed revival must rotate. The checkpoint model represents its parked state (no checkpoint on chain; the leaf keeps the hash of the last key state) with that hash. |
-| `convicted` | Permanent terminal marker. The identity cannot register or revive. |
+Parking retains the representative token, minimum ADA and last key state in an
+output. Revival consumes that retained output and rotates from exactly its key
+state with fresh bonds. Neither operation changes the active registry key or
+allocates a fresh token. Conviction first leaves a pending carrier. Booking
+transfers its custody into a complete pending termination entry; only the
+accepted fold consuming that exact request burns the token and retires the key.
 
-A never-registered AID has no leaf. Live, poisoned (locked by the owner's own
-declaration) and frozen (the freeze bond taken) are checkpoint conditions, not
-additional registry leaf variants. In the registry model's
-reap/fold handoff (the reap being the owner's close, a rotation by the next
-keys), an active leaf can temporarily have a pending go-request
-instead of a checkpoint; the leaf alone never authorizes consumer use.
-
-The registry simulator's `token` and `k` are abstract integers. It allocates
-`nextToken` during registration, and a fresh one during permitted revival;
-those integers do not define serialized Cardano asset names. A concrete asset
-is identified by **policy ID plus asset name**. Knowing an AID-derived name
-before Cardano registration does not establish that its mint is unique.
-
-The bounded guarantee is **no second first-registration and at most one
-checkpoint per AID in the registry model**, with revival as a separate guarded
-operation. It is not a proof that concrete token bytes are minted only once
-across every future revival. See the
+The Registry simulator's token and key counters are abstract integers. Its
+permanent AID/token bindings are distinct from concrete Cardano asset names.
+Exact registry identity, token bytes and consumer transaction authentication
+remain separate obligations. The Checkpoint page's associated-system panel
+plays actual registration origins, pending requests and completion receipts;
+its local stories alone do not prove those system premises. See the
 [registry model reference](../design/registry-as-mpfs.md#the-machine-registrylean).
 
 ## How to play an example
@@ -294,7 +287,7 @@ cannot turn it into a second registered identity.
 **Guarantee and conditions:** processing a registration requires an absent AID
 leaf. With Alice already registered, a duplicate request cannot create another
 checkpoint. Refunding that pending request is a separate operation with its own
-rejection-window condition.
+authenticated rejection ground and transaction conditions.
 
 [Open the registry simulator](../simulator/registry/index.html) ·
 [Open duplicate.dsl](scenarios/duplicate.dsl)
@@ -305,18 +298,21 @@ rejection-window condition.
     --8<-- "docs/architecture/scenarios/duplicate.dsl"
     ```
 
-**What to observe:** Alice contributes 1002: bond 1000 plus tip 2. Hal processes
-her request, locking 1000 and receiving the tip. Mallory then contributes the
-same amount for AID 11. Processing her request refuses with `already-registered`.
-At slot 25 Sam rejects that pending request: 1000 returns to Mallory at address
-4, and tip 2 goes to Sam at address 6. The final state has one leaf, one
-checkpoint and no pending requests.
+**What to observe:** a registration booking holds 17 model units: carrier value
+14 (bond 10 plus minimum ADA 4), registration cost 2 and tip 1. Its fold creates
+the active carrier and records the permanent binding. A second booking for AID
+11 remains pending. The **Try processing another registration of this AID**
+branch refuses with `key-exists`. The trunk instead presents the authenticated
+active-key mismatch: generic rejection returns 16 to refund address 42. The
+final state retains the original carrier/token, treasury 2 and no pending
+registration. The full transaction, rather than the application flow summary,
+contains that refund.
 
-Try **Sam rejects Mallory's request in phase 1**. At slot 6 it refuses with
-`not-rejectable`; the pending request remains. Refusing a duplicate registration
-does not make early rejection legal. This example supplies its own registry
-parameters and actor map: Hal is address 3 here, and the registry's `W = 5`
-serves its own model rather than importing the checkpoint example's settings.
+Try **Try expiry rejection before both windows end**. The same early validity
+interval cannot establish expiry and refuses with `reject-not-expired`. An
+authenticated mismatch and expiry are different rejection grounds. These
+parameters and addresses belong to this complete Registry fixture; they do not
+inherit the Checkpoint examples' settings.
 
 The uniqueness boundary belongs to the registry. The checkpoint can then evolve
 without storing all identities in its datum. See
@@ -331,7 +327,7 @@ Use these references when crossing those boundaries:
 
 | Question | Next page |
 |---|---|
-| Which behavior is deployed V1, and which belongs to M1? | [Architecture overview](overview.md) |
+| Which behavior is deployed V1, and which belongs to the current model? | [Architecture overview](overview.md) |
 | Which validator or observer owns each transaction check? | [Identity Operations](identity-ops.md) and [Observer Architecture](observer-architecture.md) |
 | How does a service find and follow checkpoint outputs? | [The follower](../user/follower.md) |
 | What must the consuming application verify? | [Consumer checklist](../user/consumer-checklist.md) |

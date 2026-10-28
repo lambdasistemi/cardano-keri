@@ -489,7 +489,7 @@ export function createWindow(html, opts = {}) {
     makeEvent: (t, init) => new Event(t, init),
     console, URLSearchParams, JSON, Math, Date, Number, String, Array, Object, Map, Set, Promise, Error, TypeError,
     RangeError, parseInt, parseFloat, isFinite, isNaN, Symbol, Reflect, Proxy, structuredClone,
-    Uint8ClampedArray, Uint8Array, Float64Array, Intl, encodeURIComponent, decodeURIComponent,
+    Uint8ClampedArray, Uint8Array, Float64Array, TextEncoder, TextDecoder, Intl, encodeURIComponent, decodeURIComponent,
   });
   win.window = win; win.self = win; win.globalThis = win;
   vm.createContext(win);

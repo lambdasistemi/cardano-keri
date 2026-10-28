@@ -48,8 +48,9 @@ a checkpoint or an old key:
 | Poisoned | The controller has declared this epoch compromised; do not authorize | designed |
 | Juvenile | Registered or resurrected less than `W` slots ago, the juvenility window; too fresh to trust | designed |
 | Frozen | A hunter took the freeze bond `B` because the pool of advance funds ran dry | designed |
+| Pending conviction | Duplicity proved; retained custody awaits its associated Registry fold | designed |
 | Convicted | Proven duplicity; terminal, and it will never come back | designed |
-| Parked | The owner left. The leaf holds the hash; it can return by a later witnessed rotation | designed |
+| Parked | The retained output holds the token, minimum ADA and key state; a later witnessed rotation revives it | designed |
 | No candidate | Nothing on chain for this AID | shipped |
 | Multiple candidates | Ambiguous registration; fail closed | shipped — the registry removes it |
 | Stale outref | The checkpoint changed; refresh and rebuild | shipped |
@@ -117,13 +118,13 @@ poison lasts until that rotation and no longer.
 
 ## Leaving and coming back
 
-There is no pause and no withdraw. An identity is active, parked, or
-convicted.
+There is no pause and no withdraw. An identity is active, parked, in pending conviction custody, or
+convicted after the associated Registry fold.
 
 - **Close** is the reap: a witnessed rotation by the *next* keys whose
   signed message names the payee of the premium (the fee for landing a
   rotation) and the refund address.
-  The token burns, the leaf is parked with the hash of that key state.
+  The output retains the token, minimum ADA and that key state; the registry key stays active.
   The current keys cannot close.
 - **Reopen** is the revival: a witnessed rotation later than the parked
   key state, with fresh bonds, born juvenile. A parked identity is not
@@ -145,7 +146,9 @@ The UI should never present the checkpoint's value as one generic deposit:
 - **The freeze bond `B`** is what a hunter takes when the pool cannot pay. Its
   absence *is* the frozen state, and only a depositing rotation restores it.
 - **The conviction bond `D_reg`** is the stake a duplicity proof seizes. It is
-  never a fee. A responsive, honest identity never loses any of the three.
+  never a fee. The pool pays rotation premiums; it is not a loss-free reserve.
+  An authorized close returns the remaining bonds and pool to the signed
+  destinations while retaining the output’s token and minimum ADA.
 
 All three are deployment parameters, and the numbers are not yet set — they
 wait on the measurements in the [roadmap](../roadmap.md).

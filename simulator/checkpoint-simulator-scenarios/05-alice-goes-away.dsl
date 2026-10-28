@@ -3,7 +3,7 @@ family: checkpoint
 
 story: 5
 title: "Alice leaves"
-goal: "As Alice, I want to leave Cardano with my money back, so that nobody consumes my identity while I am gone and nobody but me can bring it back."
+goal: "As Alice, I want to park with my token and last key state retained, receive my bonds and pool, and prevent consumers from using the parked checkpoint."
 params:
   D: 1000
   B: 5
@@ -21,11 +21,46 @@ step:
   expect:
     ok: true
     verdict: juvenile
-    exhibits: [T3_epoch_local, T6_component_conservation, T6_dreg_enters_only_at_birth, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_absent_only_registers, T8_edges_leave_the_leaf, T8_leaf_agrees_with_state, T8_leaf_states, T8_mint_once, T8_only_convicted_is_terminal, T8_present_implies_registered, T8_sysstep_partition, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+    modelResult:
+      flow:
+        bIn: 5
+        convictor: null
+        dregIn: 1000
+        hunter: null
+        poolIn: 10
+        refund: null
+      state:
+        present:
+          l:
+            bornAt: 0
+            epoch: 0
+            frozen: false
+            poisoned: false
+            pool: 10
+            refundTo: 1
+            sn: 0
+    state:
+      present:
+        l:
+          bornAt: 0
+          epoch: 0
+          frozen: false
+          poisoned: false
+          pool: 10
+          refundTo: 1
+          sn: 0
+    flow:
+      bIn: 5
+      convictor: null
+      dregIn: 1000
+      hunter: null
+      poolIn: 10
+      refund: null
+    exhibits: [T3_epoch_local, T6_component_conservation, T6_dreg_enters_only_at_birth, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_absent_only_registers, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired]
 step:
   slot: 12
   who: alice
-  say: "Alice rotates on KERI with her next keys; her witnesses receipt it. Leaving is a rotation like any other: the reap."
+  say: "Alice rotates on KERI with her next keys; her witnesses receipt the rotation used to park her checkpoint."
   evidence:
     add: [{"rotationTo":[0,0,1]}]
   expect:
@@ -41,7 +76,7 @@ step:
 step:
   slot: 12
   who: hal
-  say: "Hal lands the reap as signed. The chain pays the premium to Hal, the conviction bond, the freeze bond and the rest of the pool to Alice’s refund address, burns the token, and parks the registry leaf with the hash of the checkpoint the rotation reached: key state epoch 1, sequence 1. Nothing is left on chain. Alice is gone with her money: parked."
+  say: "Hal lands the signed close. His premium is 2; Alice receives the conviction bond, freeze bond and remaining pool. The retained output keeps the representative token and key state (epoch 1, sequence 1), with min-ADA still locked. The registry key stays active, but consumers refuse the parked output."
   action:
     close:
       sn': 1
@@ -55,18 +90,43 @@ step:
           epoch: 1
           sn: 1
     flow:
-      refund:
-        addr: 1
-        dreg: 1000
-        b: 5
-        pool: 8
+      bIn: 0
+      convictor: null
+      dregIn: 0
       hunter:
         addr: 2
-        dreg: 0
         b: 0
+        dreg: 0
         pool: 2
+      poolIn: 0
+      refund:
+        addr: 1
+        b: 5
+        dreg: 1000
+        pool: 8
     verdict: not-present
-    exhibits: [T10_bonds_are_observable, T10_parked_holds_nothing, T16_close_destination, T16_close_needs_rotation, T16_copied_reap_refused, T16_parked_hash_is_the_closed_checkpoints, T16_payments_are_named, T1_sn_monotone_all, T2_close_and_reopen_open_epochs, T5_close_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_intent_requires_new_keys, T7_step_iff_stepFn, T7_trace_iff_replay, T8_edges_leave_the_leaf, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_present_implies_registered, T8_sysstep_partition, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff, trace_sn_monotone_all]
+    modelResult:
+      flow:
+        bIn: 0
+        convictor: null
+        dregIn: 0
+        hunter:
+          addr: 2
+          b: 0
+          dreg: 0
+          pool: 2
+        poolIn: 0
+        refund:
+          addr: 1
+          b: 5
+          dreg: 1000
+          pool: 8
+      state:
+        parked:
+          h:
+            epoch: 1
+            sn: 1
+    exhibits: [T10_bonds_are_observable, T16_close_destination, T16_close_needs_rotation, T16_copied_reap_refused, T16_parked_hash_is_the_closed_checkpoints, T16_payments_are_named, T1_sn_monotone_all, T2_close_and_reopen_open_epochs, T5_close_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_intent_requires_new_keys, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, parked_and_convicted_hold_no_bonds_or_pool, trace_sn_monotone_all]
 fork:
   id: relayer
   at: 1
@@ -74,7 +134,7 @@ fork:
   step:
     slot: 12
     who: hal
-    say: "Hal holds her public rotation and tries to land it as the reap, naming himself payee. Public data lands a rotation that keeps the bonds; leaving needs her new keys’ signature on the close, the payee and the refund address. Refused."
+    say: "Hal holds her public rotation and tries to land it as the close, naming himself payee. Public data lands a rotation that keeps the bonds; leaving needs her new keys’ signature on the close, the payee and the refund address. Refused."
     action:
       close:
         sn': 1
@@ -84,7 +144,8 @@ fork:
       ok: false
       reason: intent-not-authorized
       verdict: consumable
-      exhibits: [T10_bonds_are_observable, T16_close_needs_rotation, T7_step_iff_stepFn, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_present_implies_registered, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+      modelResult: null
+      exhibits: [T10_bonds_are_observable, T16_close_needs_rotation, T7_step_iff_stepFn, T9_juvenility_is_consumer_only, consumableStateB_iff]
 fork:
   id: copied-reap
   at: 2
@@ -102,7 +163,8 @@ fork:
       ok: false
       reason: intent-not-authorized
       verdict: consumable
-      exhibits: [T10_bonds_are_observable, T16_close_needs_rotation, T16_copied_reap_refused, T7_step_iff_stepFn, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_present_implies_registered, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+      modelResult: null
+      exhibits: [T10_bonds_are_observable, T16_close_needs_rotation, T16_copied_reap_refused, T7_step_iff_stepFn, T9_juvenility_is_consumer_only, consumableStateB_iff]
   step:
     slot: 12
     who: mallory
@@ -116,7 +178,8 @@ fork:
       ok: false
       reason: intent-not-authorized
       verdict: consumable
-      exhibits: [T10_bonds_are_observable, T16_close_needs_rotation, T16_copied_reap_refused, T7_step_iff_stepFn, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_present_implies_registered, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+      modelResult: null
+      exhibits: [T10_bonds_are_observable, T16_close_needs_rotation, T16_copied_reap_refused, T7_step_iff_stepFn, T9_juvenility_is_consumer_only, consumableStateB_iff]
 fork:
   id: poisoned
   at: 1
@@ -133,11 +196,46 @@ fork:
       live:
         poisoned: true
       verdict: poisoned
-      exhibits: [T10_bonds_are_observable, T10_current_quorum_never_restores, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T3_only_poison_sets, T4_current_quorum_only_poisons, T5_poison_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T7_step_iff_stepFn, T7_trace_iff_replay, T8_edges_leave_the_leaf, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_only_convicted_is_terminal, T8_present_implies_registered, T8_sysstep_partition, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff, trace_poison_fold, trace_sn_monotone_all]
+      modelResult:
+        flow:
+          bIn: 0
+          convictor: null
+          dregIn: 0
+          hunter: null
+          poolIn: 0
+          refund: null
+        state:
+          present:
+            l:
+              bornAt: 0
+              epoch: 0
+              frozen: false
+              poisoned: true
+              pool: 10
+              refundTo: 1
+              sn: 0
+      state:
+        present:
+          l:
+            bornAt: 0
+            epoch: 0
+            frozen: false
+            poisoned: true
+            pool: 10
+            refundTo: 1
+            sn: 0
+      flow:
+        bIn: 0
+        convictor: null
+        dregIn: 0
+        hunter: null
+        poolIn: 0
+        refund: null
+      exhibits: [T10_bonds_are_observable, T10_current_quorum_never_restores, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T3_only_poison_sets, T4_current_quorum_only_poisons, T5_poison_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, trace_poison_fold, trace_sn_monotone_all]
   step:
     slot: 12
     who: alice
-    say: "The reap lands from the poisoned state: a close is a rotation, and poisoned keys can be rotated. She lands it herself, naming herself payee. Everything goes home."
+    say: "The authorized close also works from a poisoned checkpoint. Alice names herself as premium payee and refund recipient. The token, retained key state and min-ADA stay in the parked output."
     evidence:
       add: [{"intentAuthorized":[1,{"close":{"payee":1}},null]}]
     action:
@@ -153,18 +251,43 @@ fork:
             epoch: 1
             sn: 1
       flow:
-        refund:
-          addr: 1
-          dreg: 1000
-          b: 5
-          pool: 8
+        bIn: 0
+        convictor: null
+        dregIn: 0
         hunter:
           addr: 1
-          dreg: 0
           b: 0
+          dreg: 0
           pool: 2
+        poolIn: 0
+        refund:
+          addr: 1
+          b: 5
+          dreg: 1000
+          pool: 8
       verdict: not-present
-      exhibits: [T10_bonds_are_observable, T10_parked_holds_nothing, T16_close_destination, T16_close_needs_rotation, T16_copied_reap_refused, T16_parked_hash_is_the_closed_checkpoints, T16_payments_are_named, T1_sn_monotone_all, T2_close_and_reopen_open_epochs, T4_poisoned_blocks_quorum_and_freeze, T5_close_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_intent_requires_new_keys, T7_step_iff_stepFn, T7_trace_iff_replay, T8_edges_leave_the_leaf, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_present_implies_registered, T8_sysstep_partition, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff, trace_sn_monotone_all]
+      modelResult:
+        flow:
+          bIn: 0
+          convictor: null
+          dregIn: 0
+          hunter:
+            addr: 1
+            b: 0
+            dreg: 0
+            pool: 2
+          poolIn: 0
+          refund:
+            addr: 1
+            b: 5
+            dreg: 1000
+            pool: 8
+        state:
+          parked:
+            h:
+              epoch: 1
+              sn: 1
+      exhibits: [T10_bonds_are_observable, T16_close_destination, T16_close_needs_rotation, T16_copied_reap_refused, T16_parked_hash_is_the_closed_checkpoints, T16_payments_are_named, T1_sn_monotone_all, T2_close_and_reopen_open_epochs, T4_poisoned_blocks_quorum_and_freeze, T5_close_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_intent_requires_new_keys, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, parked_and_convicted_hold_no_bonds_or_pool, trace_sn_monotone_all]
 fork:
   id: parked
   at: 3
@@ -172,7 +295,7 @@ fork:
   step:
     slot: 12
     who: mallory
-    say: "Mallory holds the keys Alice just retired (epoch 0). A parked identity holds nothing and answers to nothing she can sign: her poison is refused."
+    say: "Mallory holds retired epoch-0 keys. The parked output retains its token and key state but offers no poison action; her attempt is refused."
     evidence:
       add: [{"quorum":[0]}]
     action: poison
@@ -180,11 +303,12 @@ fork:
       ok: false
       reason: parked-inert
       verdict: not-present
-      exhibits: [T10_parked_holds_nothing, T7_step_iff_stepFn, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_parked_only_revives_or_convicts, T8_present_implies_registered, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+      modelResult: null
+      exhibits: [T7_step_iff_stepFn, T8_parked_only_revives_or_convicts, T9_juvenility_is_consumer_only, consumableStateB_iff, parked_and_convicted_hold_no_bonds_or_pool]
   step:
     slot: 12
     who: friend
-    say: "There is no pool to top up: the UTxO is gone."
+    say: "A parked output has no active reward pool to top up. Its token and min-ADA remain retained."
     action:
       topUp:
         x: 3
@@ -192,11 +316,12 @@ fork:
       ok: false
       reason: parked-inert
       verdict: not-present
-      exhibits: [T10_parked_holds_nothing, T7_step_iff_stepFn, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_parked_only_revives_or_convicts, T8_present_implies_registered, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+      modelResult: null
+      exhibits: [T7_step_iff_stepFn, T8_parked_only_revives_or_convicts, T9_juvenility_is_consumer_only, consumableStateB_iff, parked_and_convicted_hold_no_bonds_or_pool]
   step:
     slot: 12
     who: hal
-    say: "Nothing to freeze either: no freeze bond, no UTxO."
+    say: "There is no freeze bond to claim from this parked output; freezing is refused."
     action:
       freeze:
         sn': 2
@@ -205,11 +330,12 @@ fork:
       ok: false
       reason: parked-inert
       verdict: not-present
-      exhibits: [T10_parked_holds_nothing, T7_step_iff_stepFn, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_parked_only_revives_or_convicts, T8_present_implies_registered, T8_reopen_actor_is_proof, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+      modelResult: null
+      exhibits: [T7_step_iff_stepFn, T8_parked_only_revives_or_convicts, T8_reopen_actor_is_proof, T9_juvenility_is_consumer_only, consumableStateB_iff, parked_and_convicted_hold_no_bonds_or_pool]
   step:
     slot: 12
     who: friend
-    say: "A registration is refused: the leaf is parked, not absent. The only way back is a witnessed rotation from exactly the parked key state (story 6)."
+    say: "Another registration is refused. The registry key stays active while the output is parked. Revival needs a later witnessed rotation from exactly the retained key state."
     action:
       register:
         refund: 1
@@ -218,7 +344,8 @@ fork:
       ok: false
       reason: parked-inert
       verdict: not-present
-      exhibits: [T10_parked_holds_nothing, T7_step_iff_stepFn, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_parked_only_revives_or_convicts, T8_present_implies_registered, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+      modelResult: null
+      exhibits: [T7_step_iff_stepFn, T8_parked_only_revives_or_convicts, T9_juvenility_is_consumer_only, consumableStateB_iff, parked_and_convicted_hold_no_bonds_or_pool]
   step:
     slot: 12
     who: cora
@@ -230,7 +357,8 @@ fork:
       ok: false
       reason: no-duplicity-proof
       verdict: not-present
-      exhibits: [T10_parked_holds_nothing, T12_convict_parked_exact, T7_step_iff_stepFn, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_parked_only_revives_or_convicts, T8_present_implies_registered, T8_reopen_actor_is_proof, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+      modelResult: null
+      exhibits: [T12_convict_parked_exact, T7_step_iff_stepFn, T8_parked_only_revives_or_convicts, T8_reopen_actor_is_proof, T9_juvenility_is_consumer_only, consumableStateB_iff, parked_and_convicted_hold_no_bonds_or_pool]
 fork:
   id: newkeys
   at: 3
@@ -246,7 +374,8 @@ fork:
       ok: false
       reason: parked-inert
       verdict: not-present
-      exhibits: [T10_parked_holds_nothing, T7_step_iff_stepFn, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_parked_only_revives_or_convicts, T8_present_implies_registered, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+      modelResult: null
+      exhibits: [T7_step_iff_stepFn, T8_parked_only_revives_or_convicts, T9_juvenility_is_consumer_only, consumableStateB_iff, parked_and_convicted_hold_no_bonds_or_pool]
   step:
     slot: 12
     who: mallory
@@ -260,4 +389,5 @@ fork:
       ok: false
       reason: no-witnessed-rotation
       verdict: not-present
-      exhibits: [T10_parked_holds_nothing, T7_step_iff_stepFn, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_parked_only_revives_or_convicts, T8_present_implies_registered, T8_reopen_actor_is_proof, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+      modelResult: null
+      exhibits: [T7_step_iff_stepFn, T8_parked_only_revives_or_convicts, T8_reopen_actor_is_proof, T9_juvenility_is_consumer_only, consumableStateB_iff, parked_and_convicted_hold_no_bonds_or_pool]

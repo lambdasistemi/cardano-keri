@@ -115,7 +115,7 @@
       "pause": 300
     },
     {
-      "text": "Three states, no withdraw. An identity is active (the checkpoint UTxO exists: live, poisoned or frozen), parked (no UTxO; the registry leaf holds the hash of the last checkpoint) or convicted (terminal). A rotation is the only thing that moves the keys; it carries a bond option (keep or deposit) and optionally a new refund address. deposit is the unfreeze: it refills B when a hunter has taken it. Every option other than keep, and every new refund address, is signed by the keys of the epoch the rotation opens (D-038) — so a relayer landing a public rotation can never park, age, or close the owner.",
+      "text": "Retained parking, no withdraw. An identity is active (live, poisoned or frozen), parked (an output retains its token, minimum ADA and last key state), in pending conviction custody, or convicted (terminal after the associated Registry fold). Parking and revival keep the registry key active. A rotation is the only thing that moves the keys; it carries a bond option (keep or deposit) and optionally a new refund address. deposit is the unfreeze: it refills B when a hunter has taken it. Every option other than keep, and every new refund address, is signed by the keys of the epoch the rotation opens (D-038) — so a relayer landing a public rotation can never park, age, or close the owner.",
       "pause": 400
     },
     {
@@ -123,7 +123,7 @@
       "pause": 400
     },
     {
-      "text": "The registry is one leaf per AID — absent, live (the token is on chain), parked with the hash, or convicted — so an AID has at most one incarnation ever. Only convicted is terminal; a parked identity returns by a witnessed rotation later than the parked key state, with fresh bonds. The registry is the MPFS cage — a Merkle Patricia Forestry store whose every update passes through one validator — made permissionless (D-037), built today in singular, where it runs on a development network; see where the registry is built.",
+      "text": "The registry maps each AID to absent, active or permanently retired. Parking, revival and pending conviction custody keep the key active. Only the associated consuming fold retires it. A parked identity returns by a witnessed rotation later than the parked key state, with fresh bonds. The registry uses the public model from singular, where it runs on a development network; see where the registry is built.",
       "pause": 400
     },
     {
@@ -271,6 +271,6 @@
   ],
   "_source": {
     "file": "index.md",
-    "sha256": "d0f9e70439a866235e74ac7e153a8903965a07e135019350a2ff42b2e93f2c35"
+    "sha256": "09264c91c07375f375c2229d6a76219d085e2256a31a8d32ab4d0762af15a696"
   }
 }

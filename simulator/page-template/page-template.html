@@ -286,6 +286,11 @@
   .branch .txt { flex: 1; min-width: 0; color: var(--ink); }
   .branch .res { font-family: var(--mono); font-size: .78rem; white-space: nowrap; }
   .branch .res.ok { color: var(--ok); } .branch .res.no { color: var(--bad); }
+  @media (max-width: 640px) {
+    .branch { flex-wrap: wrap; min-width: 0; max-width: 100%; }
+    .branch .txt { flex-basis: 100%; }
+    .branch .fork-t, .branch .res { white-space: normal; overflow-wrap: anywhere; }
+  }
   #next-moves { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
   .mover { border: 1px solid var(--line-2); border-radius: 10px; padding: 8px 10px; background: var(--card); }
   .mover .actor { margin-bottom: 6px; }
@@ -370,6 +375,18 @@
 <div id="hud" aria-live="polite"></div>
 <div id="toast" role="status"></div>
 <main>
+  <details class="card" id="system-player">
+    <summary>Connected system journeys <small>Registration receipt → retained output → pending request → consuming fold</small></summary>
+    <p>Play the actual system events with their fixed registration origin and complete transaction observations. The local stories below show the Checkpoint Step facet. These finite examples do not establish production conformance.</p>
+    <div class="stagebar"><select id="system-picker" aria-label="connected system journey"></select>
+      <button id="system-reset" type="button">Start</button><button id="system-prev" type="button">Previous</button><button id="system-next" type="button">Next</button><span id="system-position"></span></div>
+    <pre id="system-state" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
+    <p id="system-result" role="status"></p>
+    <details><summary>System properties exhibited by this event</summary><pre id="system-properties" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre></details>
+    <details><summary>Full state, stored origin, pending entry and both flows</summary><pre id="system-observation" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:28rem;overflow:auto"></pre></details>
+    <details><summary>Inspect or try the next command</summary><p>Edited commands start from the displayed state. Start or a replay control returns to the recorded journey. Unsupported input is reported separately from a model refusal.</p><textarea id="system-command" aria-label="system command JSON" style="width:100%;min-height:14rem;box-sizing:border-box"></textarea><button id="system-try" type="button">Try command</button></details>
+  </details>
+
   <section class="card" id="stage">
     <div class="stagebar">
       <select id="story-picker" aria-label="pick a story"></select>
@@ -611,7 +628,7 @@ function offersFor(actorId, tree, nodeId) {
   const ke = hs ? hs.epoch : e, ksn = hs ? hs.sn : sn;
   switch (actorId) {
     case 'alice':
-      if (hs) ev('kli rotate from the parked key state: sn ' + hs.sn + ' → ' + (hs.sn + 1) + ', receipted by the witnesses', { rotationTo: [hs.epoch, hs.sn, hs.sn + 1] }, 'a witnessed rotation from exactly the key state the leaf holds, later than its sequence');
+      if (hs) ev('kli rotate from the parked key state: sn ' + hs.sn + ' → ' + (hs.sn + 1) + ', receipted by the witnesses', { rotationTo: [hs.epoch, hs.sn, hs.sn + 1] }, 'a witnessed rotation from exactly the key state the output holds, later than its sequence');
       else ev('kli rotate: sn ' + sn + ' → ' + (sn + 1) + ', receipted by the witnesses', { rotationTo: [e, sn, sn + 1] }, 'a valid witnessed rotation from the current keys');
       ev('my next keys sign: keep the bonds, refund address → 1 (Alice)', { intentAuthorized: [e + 1, 'keep', 1] }, 'the keys the rotation reveals sign the intent and the address (D-038)');
       ev('my next keys sign: deposit (unfreeze)', { intentAuthorized: [e + 1, 'deposit', null] }, 'the keys the rotation reveals sign the deposit (D-038)');
@@ -621,7 +638,7 @@ function offersFor(actorId, tree, nodeId) {
       act('rotate', 'land my rotation, keep the bonds', { rotate: { "sn'": sn2, op: 'keep', payee: 1, "refund'": null } });
       act('rotate', 'land my rotation, deposit (unfreeze; on full bonds a keep)', { rotate: { "sn'": sn2, op: 'deposit', payee: 1, "refund'": null } });
       act('poison', 'poison this epoch', 'poison');
-      act('close', 'leave: my rotation as the reap — the premium to me, everything else to my refund address, the token burned, the leaf parked with the hash', { close: { "sn'": sn2, payee: 1, "refund'": null } });
+      act('close', 'leave: my rotation as the reap — the premium to me, everything else to my refund address, the output and token retained with its key state', { close: { "sn'": sn2, payee: 1, "refund'": null } });
       act('topUp', 'add to my pool', { topUp: { x: 5 } });
       act('register', 'register my inception (refund to me)', { register: { refund: 1, pool0: 10 } });
       act('reopen', 'revive my parked identity with a rotation from its key state (refund to me)', { reopen: { "sn'": reopenSn(sess), refund: 1, pool0: 10 } });
@@ -630,11 +647,11 @@ function offersFor(actorId, tree, nodeId) {
       act('rotate', 'land Alice’s rotation, paid P to Hal', { rotate: { "sn'": sn2, op: 'keep', payee: 2, "refund'": null } });
       act('close', 'land her reap, paid P to Hal (needs her signed message naming me)', { close: { "sn'": sn2, payee: 2, "refund'": null } });
       act('freeze', 'freeze her on the old keys, take B', { freeze: { "sn'": sn2, payee: 2 } });
-      act('reopen', 'revive her from the registry with her later public rotation (refund to Alice)', { reopen: { "sn'": reopenSn(sess), refund: 1, pool0: 10 } });
+      act('reopen', 'revive her parked output with her later public rotation (refund to Alice)', { reopen: { "sn'": reopenSn(sess), refund: 1, pool0: 10 } });
       break;
     case 'cora':
       if (ksn > 0) ev('try a second receipted rotation at sequence ' + ksn + (hs ? ' (the parked key state)' : ''), { duplicityAt: [ke, ksn] }, 'example branches with partial and augmented keys, each checked against its own threshold and derived witnesses');
-      act('convict', hs ? 'convict the parked identity: the mark, nothing to seize' : 'convict, D to Cora', { convict: { payee: 3 } });
+      act('convict', hs ? 'convict the parked output: pending custody, no bonds to seize' : 'convict, D to Cora', { convict: { payee: 3 } });
       break;
     case 'mallory':
       ev('steal the current keys (sign as quorum, epoch ' + ke + ')', { quorum: [ke] }, 'with the current keys she signs at threshold');
@@ -806,7 +823,7 @@ function projectJson(tree) {
 const NAMES = { 1: 'Alice', 2: 'Hal', 3: 'Cora', 4: 'Mallory', 5: 'the treasury', 6: 'the sponsor', 7: 'the rival' };
 const nameOf = addr => NAMES[addr] || ('address ' + addr);
 const ACTOR_ORDER = ['alice', 'hal', 'treasury', 'cora', 'mallory', 'anyone'];
-const RUNGS = [['absent', 'Absent'], ['live', 'Live'], ['poisoned', 'Poisoned'], ['frozen', 'Frozen'], ['parked', 'Parked'], ['convicted', 'Convicted']];
+const RUNGS = [['absent', 'Absent'], ['live', 'Live'], ['poisoned', 'Poisoned'], ['frozen', 'Frozen'], ['parked', 'Parked'], ['terminationPending', 'Pending custody'], ['convicted', 'Convicted']];
 const SVGNS = 'http://www.w3.org/2000/svg';
 
 // tiny DOM helpers: h(tag, attrs, ...children) and its SVG twin
@@ -973,8 +990,9 @@ function drawScene() {
     if (badge) g.append(s('text', { class: 'badge', y: id === 'rival' ? 48 : 57 }, badge));
     return g;
   };
-  const e = l ? l.epoch : 0, sn = l ? l.sn : 0;
-  parts.push(actor('actor:alice', 'alice', 'Alice', 'the owner', l ? `keys of epoch ${e} · sn ${sn}` : 'keys, no checkpoint'));
+  const retainedKey = l || ((k === 'parked' || k === 'terminationPending') ? st[k].h : null);
+  const e = retainedKey ? retainedKey.epoch : 0, sn = retainedKey ? retainedKey.sn : 0;
+  parts.push(actor('actor:alice', 'alice', 'Alice', 'the owner', retainedKey ? `keys of epoch ${e} · sn ${sn}` : 'keys, no checkpoint'));
   // witnesses
   const wg = s('g', { dataset: { obj: 'witnesses', key: 'witnesses' }, transform: `translate(${layout.witnesses.x},${layout.witnesses.y})` });
   [-56, 0, 56].forEach((dx, i) => { wg.append(s('circle', { class: 'wit', cx: dx, cy: 0, r: 13 }), s('text', { class: 'witlbl', x: dx, y: 4 }, 'W' + (i + 1))); });
@@ -989,8 +1007,8 @@ function drawScene() {
   const t = layout.token;
   const tg = s('g', { dataset: { obj: 'token', key: 'token' } });
   if (k === 'convicted') tg.append(s('rect', { class: 'token convicted', x: t.x - 26, y: t.y - 34, width: 52, height: 62, rx: 20 }), s('text', { class: 'tk', x: t.x, y: t.y - 4 }, '✝'), s('text', { class: 'tk', x: t.x, y: t.y + 14 }, 'AID ' + sess.aid));
-  else tg.append(s('polygon', { class: 'token ' + (k === 'absent' ? 'absent' : k === 'parked' ? 'parked' : ''), points: hexagon(t.x, t.y, 34) }), s('text', { class: 'tk', x: t.x, y: t.y + 4 }, k === 'absent' ? 'no token' : k === 'parked' ? 'burned' : 'AID ' + sess.aid));
-  tg.append(s('text', { class: 'hint', x: t.x, y: t.y + 52, 'text-anchor': 'middle' }, k === 'absent' ? 'minted once' : k === 'parked' ? 'revives from the parked key state' : k === 'convicted' ? 'terminal: the mark' : 'the token'));
+  else tg.append(s('polygon', { class: 'token ' + (k === 'absent' ? 'absent' : k === 'parked' ? 'parked' : ''), points: hexagon(t.x, t.y, 34) }), s('text', { class: 'tk', x: t.x, y: t.y + 4 }, k === 'absent' ? 'no token' : k === 'parked' || k === 'terminationPending' ? 'retained' : 'AID ' + sess.aid));
+  tg.append(s('text', { class: 'hint', x: t.x, y: t.y + 52, 'text-anchor': 'middle' }, k === 'absent' ? 'minted once' : k === 'parked' ? 'output retained' : k === 'terminationPending' ? 'awaits consuming fold' : k === 'convicted' ? 'terminal: the mark' : 'the token'));
   parts.push(tg);
   // datum card
   const dg = s('g', { dataset: { obj: 'datum', key: 'datum' } });
@@ -1008,7 +1026,13 @@ function drawScene() {
   } else if (k === 'convicted') {
     dg.append(s('text', { class: 'hint', x: 430, y: 140 }, 'the leaf holds nothing but the mark: convicted'));
     dg.append(s('text', { class: 'hint', x: 430, y: 156 }, 'no rotation, no poison, no reap, no revival, ever'));
-  } else if (k === 'parked') { const c = st.parked.h; kv(430, 128, 'the leaf holds the hash of', 'key state'); kv(560, 128, 'epoch', c.epoch); kv(620, 128, 'sn', c.sn); dg.append(s('text', { class: 'hint', x: 430, y: 165 }, 'no UTxO: everything paid out, the token burned; not terminal'), s('text', { class: 'hint', x: 430, y: 180 }, `a witnessed rotation from epoch ${c.epoch}, sn ${c.sn} to a later sn revives it with fresh bonds`)); }
+  } else if (k === 'parked' || k === 'terminationPending') {
+    const c = st[k].h;
+    kv(430, 128, 'the output retains', 'key state'); kv(560, 128, 'epoch', c.epoch); kv(620, 128, 'sn', c.sn);
+    const hints = ['representative + min-ADA retained', 'registry key remains active',
+      ...(k === 'terminationPending' ? ['complete with the matching', 'consuming fold'] : [`rotate from epoch ${c.epoch}, sn ${c.sn}`, 'with fresh bonds'])];
+    hints.forEach((hint, i) => dg.append(s('text', { class: 'hint', x: 430, y: 165 + i * 15 }, hint)));
+  }
   else dg.append(s('text', { class: 'hint', x: 430, y: 140 }, 'nothing on chain for this AID: only a registration can happen'));
   parts.push(dg);
   // piles
@@ -1171,8 +1195,8 @@ function edgeFx(n, dir, dur) {
     if (kind === 'rotate') { pulse('datum'); floatText('datum', rewind ? 'keys back to epoch ' + (pre ? pre.epoch : '') : 'keys of epoch ' + (post ? post.epoch : ''), '', 0); if (pre && pre.poisoned && post && !post.poisoned) floatText('datum', rewind ? '☠ poison back' : 'poison cleared', 'ok', 300); }
     if (kind === 'poison') { pulse('datum', true); const layer = fxLayer(); if (layer) { const q = layout.datum; const sk = s('text', { class: 'fx-skull', x: q.x, y: q.y + 8 }, rewind ? '☠ ⟲' : '☠'); layer.append(sk); animate(1200, u => sk.setAttribute('opacity', String(1 - u)), () => sk.remove()); } }
     if (kind === 'freeze') { pulse('datum'); floatText('datum', rewind ? 'unfrozen ⟲' : 'frozen on the old keys', 'no', 0); }
-    if (kind === 'convict') { pulse('token', true); floatText('token', rewind ? 'tombstone ⟲' : 'convicted · terminal', 'no', 0); }
-    if (kind === 'close') { pulse('token', true); pulse('registry'); floatText('token', rewind ? 'token back ⟲' : 'burned · parked with the hash', 'no', 0); }
+    if (kind === 'convict') { pulse('token', true); floatText('token', rewind ? 'tombstone ⟲' : 'pending custody', 'no', 0); }
+    if (kind === 'close') { pulse('token', true); pulse('registry'); floatText('token', rewind ? 'token back ⟲' : 'parked · token retained', 'no', 0); }
     if (kind === 'reopen') { pulse('token'); pulse('registry'); floatText('token', rewind ? 'parked again ⟲' : 'revived · born again', 'ok', 0); }
     if (kind === 'topUp') pulse('pile:pool');
     if (kind === 'rotate' && d.op === 'deposit' && pre && pre.frozen) floatText('datum', rewind ? 'frozen ⟲' : 'unfrozen: the freeze bond is back', 'ok', 300);
@@ -1339,7 +1363,7 @@ function renderWhere() {
   w.append(h('span', { class: 'state' + (word === 'poisoned' ? ' poisoned' : '') }, STATE_WORDS[word]));
   if (l) w.append(h('span', { class: 'tiny' }, `keys of epoch ${l.epoch} · sn ${l.sn} · refund → ${nameOf(l.refundTo)}`));
   const hs = hashOf(st);
-  if (hs) w.append(h('span', { class: 'tiny' }, `the leaf holds the hash of key state epoch ${hs.epoch} · sn ${hs.sn}`));
+  if (hs) w.append(h('span', { class: 'tiny' }, `the retained output holds key state epoch ${hs.epoch} · sn ${hs.sn}`));
   w.append(h('span', {}, h('span', { class: 'lamp ' + (v.ok ? 'ok' : 'no') }), v.ok ? 'consumable' : VERDICT_WORDS[v.verdict].replace(/^Not consumable( yet)?: /, 'not consumable: ')));
   w.append(h('span', { class: 'sum dreg' }, `D ${hd.dreg}/${p.D}`), h('span', { class: 'sum b' }, `B ${hd.b}/${p.B}`), h('span', { class: 'sum pool' }, `pool ${hd.pool}`));
   w.append(h('span', { class: 'step' }, `slot ${sess.now} · step ${pathTo(app.cursor).length - 1}`));
@@ -1355,7 +1379,7 @@ function renderPots() {
   row('pool', 'the premium fund: whoever lands a rotation is paid P (' + p.P + ') from it. Anyone can top it up; it never mixes with D or B.');
   row('W · juvenility (' + p.W + ' slots)', 'a freshly bonded checkpoint — registered, or revived from the registry — is not consumable for W slots, so a stolen registration cannot be spent at once. A deposit (the unfreeze) does not restart it. The treasury alone reads W; no transition does. The registry’s grace window, if any, is not this W.');
   row('who set the numbers', 'the deployment’s parameters, not the machine; the stories play D ' + p.D + ', B ' + p.B + ', P ' + p.P + ', W ' + p.W + '.');
-  row('the states', 'Three registry states, one UTxO. Active is the room with the UTxO: Live (consumable once adult, the freeze bond held, no poison), Poisoned (the current keys are compromised; a rotation clears it) and Frozen (B taken, stale keys; a deposit restores), each with a door back. Parked is outside the chain: no UTxO, the leaf holds the hash of the last checkpoint — its key state — and only a witnessed rotation from exactly that key state, with fresh bonds, brings it back. Convicted is sealed: no KERI event un-duplicates an identifier.');
+  row('the states', 'Present checkpoints can be live, poisoned or frozen. Parked and pending states retain an output, representative and key state under an active registry key. Parked outputs revive through a later witnessed rotation with fresh bonds. Pending custody needs an associated consuming Registry fold; Convicted is the terminal state after that completion.');
 }
 function renderNarration() {
   const n = clear($('narration'));
@@ -1450,9 +1474,9 @@ function renderNext() {
 }
 
 // the states as rooms, not a path: Live in the middle, three side-rooms you can leave, a grave with a way out, a sealed grave
-const HUB = { absent: [56, 116], live: [236, 116], poisoned: [236, 30], frozen: [236, 200], parked: [426, 116], convicted: [576, 116] };
+const HUB = { absent: [56, 116], live: [236, 116], poisoned: [236, 30], frozen: [236, 200], parked: [420, 70], terminationPending: [420, 175], convicted: [600, 175] };
 const HUB_EDGES = [['absent', 'live', 'register'], ['live', 'poisoned', 'poison'], ['poisoned', 'live', 'rotate'], ['live', 'frozen', 'freeze'], ['frozen', 'live', 'deposit'],
-  ['live', 'parked', 'leave (the reap)'], ['parked', 'live', 'revive'], ['live', 'convicted', 'convict'], ['parked', 'convicted', 'convict']];
+  ['live', 'parked', 'leave (the reap)'], ['parked', 'live', 'revive'], ['live', 'terminationPending', 'convict'], ['parked', 'terminationPending', 'convict']];
 function renderHub(word) {
   const svg = $('hub'); if (!svg) return;
   clear(svg); svg.setAttribute('viewBox', '0 0 640 236');
@@ -1473,9 +1497,9 @@ function renderHub(word) {
   for (const k of Object.keys(HUB)) {
     const { x, y } = pt(k), on = k === word;
     svg.append(s('rect', { class: 'room' + (on ? ' on' : '') + (k === 'parked' ? ' grave' : '') + (k === 'convicted' ? ' sealed' : ''), x: x - W / 2, y: y - Hh / 2, width: W, height: Hh, rx: 9, dataset: { state: k } }));
-    svg.append(s('text', { class: on ? 'on' : '', x, y: y + 4 }, STATE_WORDS[k] + (k === 'convicted' ? ' · sealed' : k === 'parked' ? ' · no UTxO' : '')));
+    svg.append(s('text', { class: on ? 'on' : '', x, y: y + 4 }, STATE_WORDS[k] + (k === 'convicted' ? ' · sealed' : k === 'parked' ? ' · retained' : '')));
   }
-  svg.append(s('text', { class: 'hub-hint', x: 10, y: 228 }, 'Live, Poisoned, Frozen: the active room (one UTxO), each with a door back; leaving is possible from any of them · Parked: no UTxO, the leaf holds the hash; a rotation from that key state revives · Convicted: sealed.'));
+  svg.append(s('text', { class: 'hub-hint', x: 10, y: 228 }, 'Live, Poisoned, Frozen: the active room (one UTxO), each with a door back; leaving is possible from any of them · Parked: output, token and key state retained; later rotation revives · Pending: awaiting its consuming Registry fold · Convicted: sealed.'));
 }
 function renderCheckpoint() {
   const sess = cur(), p = sess.params, l = liveOf(sess.state);
@@ -1486,7 +1510,7 @@ function renderCheckpoint() {
   const cell = (k, v) => h('div', {}, h('div', { class: 'lbl' }, k), h('div', { class: 'v' }, v));
   if (l) dat.append(cell('sequence', l.sn), cell('epoch', l.epoch), cell('poisoned', l.poisoned ? 'yes' : 'no'), cell('born at', l.bornAt), cell('refund to', nameOf(l.refundTo) + ' (' + l.refundTo + ')'));
   else if (stateKind(sess.state) === 'convicted') dat.append(cell('the mark', 'convicted, forever'), cell('held', 'nothing'));
-  else if (stateKind(sess.state) === 'parked') { const c = sess.state.parked.h; dat.append(cell('the leaf holds', 'the hash of the last checkpoint'), cell('key state epoch', c.epoch), cell('sn', c.sn), cell('revives by', 'a witnessed rotation from epoch ' + c.epoch + ', sn ' + c.sn + ', to a later sn')); }
+  else if (['parked','terminationPending'].includes(stateKind(sess.state))) { const c = sess.state[stateKind(sess.state)].h; dat.append(cell('output', 'representative + min-ADA retained'), cell('registry key', 'active'), cell('key state epoch', c.epoch), cell('sn', c.sn), cell('next', stateKind(sess.state)==='parked' ? 'rotate from epoch ' + c.epoch + ', sn ' + c.sn + ', to a later sn' : 'associated consuming Registry fold')); }
   else dat.append(cell('datum', 'none'));
   const bars = clear($('bars'));
   const bar = (cls, label, v, full) => bars.append(h('div', { class: 'bar ' + cls },
@@ -1499,7 +1523,7 @@ function renderCheckpoint() {
   const vd = $('verdict'); vd.className = v.ok ? 'ok' : 'no';
   vd.textContent = 'The treasury reads: ' + VERDICT_WORDS[v.verdict] + (v.verdict === 'juvenile' && l ? ` Consumable from slot ${l.bornAt + p.W}.` : '');
   const cj = clear($('conjuncts'));
-  const names = { present: 'present (a UTxO)', b: 'B held (not frozen)', unpoisoned: 'not poisoned', mature: 'born ≥ W slots ago' };
+  const names = { present: 'present (eligible state)', b: 'B held (not frozen)', unpoisoned: 'not poisoned', mature: 'born ≥ W slots ago' };
   for (const k of Object.keys(v.conjuncts)) cj.append(h('span', { class: v.conjuncts[k] ? 'yes' : 'nope' }, (v.conjuncts[k] ? '✓ ' : '✗ ') + names[k]));
 }
 function renderCast() {
@@ -1659,7 +1683,7 @@ function arrow(ctx, x, yFrom, yTo, color) {
 }
 
 /* ---- the theorem lamps ----------------------------------------------------- */
-const MUTANTS = {"T1":["M15 reopen stale","M22 close wrong hash"],"T2":["M17 reopen same epoch","M21 close old epoch","M22 close wrong hash"],"T3":["M40 poisonAfter reopen keeps"],"T4":["M3 second poison allowed","M16 reopen wrong key state","M28 close without rotation","M39 thief parks"],"T5":["M1 freeze without short pool","M2 second freeze","M3 second poison allowed","M5 convict without proof","M6 convictParked without proof","M7 convictParked pays","M9 deposit no refill","M10 deposit resets juvenility","M11 deposit brings B always","M12 deposit unsigned","M13 new address unsigned paid","M15 reopen stale","M16 reopen wrong key state","M21 close old epoch","M22 close wrong hash","M23 close payee bypass","M24 close intent weakened","M28 close without rotation","M29 close drops unpaid","M30 rotated ages","M31 premium always","M36 bHeld inverted","M39 thief parks"],"T6":["M2 second freeze","M7 convictParked pays","M8 convict drops freeze bond","M9 deposit no refill","M11 deposit brings B always","M12 deposit unsigned","M13 new address unsigned paid","M14 intentOk any none free","M18 reopen not juvenile","M19 reopen frozen","M20 reopen without bond","M23 close payee bypass","M24 close intent weakened","M27 close premium not deducted","M28 close without rotation","M36 bHeld inverted","M38 parked holds dreg","M39 thief parks"],"T8":["M6 convictParked without proof","M7 convictParked pays","M15 reopen stale","M16 reopen wrong key state","M17 reopen same epoch","M18 reopen not juvenile","M19 reopen frozen","M20 reopen without bond","M32 leaf parked reads active","M33 leaf convicted reads parked","M34 sysstep reopen without parked leaf","M35 close does not touch leaf"],"T9":["M37 consumableB drops frozen"],"T10":["M10 deposit resets juvenility","M18 reopen not juvenile","M19 reopen frozen","M20 reopen without bond","M36 bHeld inverted","M38 parked holds dreg"],"T12":["M5 convict without proof","M6 convictParked without proof","M7 convictParked pays","M8 convict drops freeze bond"],"T14":["M4 topup resets juvenility"],"T15":["M1 freeze without short pool","M36 bHeld inverted"],"T16":["M7 convictParked pays","M14 intentOk any none free","M21 close old epoch","M22 close wrong hash","M23 close payee bypass","M24 close intent weakened","M25 close premium to refund address","M26 close pays old address","M27 close premium not deducted","M28 close without rotation","M31 premium always","M38 parked holds dreg","M39 thief parks"]};
+const MUTANTS = {"T15":["CP-01 freeze without short pool","CP-36 preserved helper fault, current observation"],"T5":["CP-01 freeze without short pool","CP-02 freeze twice","CP-03 poison twice","CP-05 live conviction without proof","CP-06 parked conviction without proof","CP-09 deposit fails to refill","CP-10 unpaid deposit changes age","CP-11 deposit brings full bond","CP-12 deposit uses keep intent","CP-13 rotation ignores signed address","CP-15 stale revival","CP-16 wrong retained key context","CP-29 unpaid close disabled","CP-30 preserved helper fault, current observation","CP-31 preserved helper fault, current observation"],"T6":["CP-02 freeze twice","CP-08 live conviction drops freeze bond","CP-09 deposit fails to refill","CP-11 deposit brings full bond","CP-12 deposit uses keep intent","CP-13 rotation ignores signed address","CP-14 preserved helper fault, current observation","CP-19 revival frozen","CP-20 revival no conviction bond","CP-24 close treated as keep","CP-27 close overpays pool","CP-38 preserved helper fault, current observation"],"T4":["CP-03 poison twice","CP-16 wrong retained key context","CP-28 close without rotation","CP-39 current quorum parks without next keys"],"T14":["CP-04 topup changes age"],"T12":["CP-05 live conviction without proof","CP-06 parked conviction without proof","CP-07 parked conviction invents bond","CP-08 live conviction drops freeze bond"],"T16":["CP-07 parked conviction invents bond","CP-14 preserved helper fault, current observation","CP-21 close old epoch","CP-22 close old sequence","CP-23 close copied payee","CP-24 close treated as keep","CP-25 close pays refund recipient as premium","CP-26 close ignores new refund recipient","CP-27 close overpays pool","CP-28 close without rotation","CP-31 preserved helper fault, current observation","CP-39 current quorum parks without next keys"],"T10":["CP-10 unpaid deposit changes age","CP-18 revival old age","CP-19 revival frozen","CP-20 revival no conviction bond","CP-36 preserved helper fault, current observation"],"T1":["CP-15 stale revival"],"T2":["CP-17 revival same epoch","CP-21 close old epoch"],"T8":["CP-32 replacement fault: parked key prematurely retired; old active-leaf fault is required behavior now","CP-33 replacement fault: completed conviction active instead of permanently retired","CP-35 replacement fault: parking changes key; former leave-key-unchanged fault is required behavior now"]};
 function renderLedger() {
   const sess = cur();
   // the latest transition at or before the cursor: its theorems stay lit while the slot moves
@@ -1671,7 +1695,8 @@ function renderLedger() {
     led.append(h('details', { class: 'thm', dataset: { id: th.id } },
       h('summary', {}, h('span', { class: 'id' }, th.id), h('span', { class: 'ttl' }, th.title), h('span', { class: 'st' })),
       h('div', { class: 'body' }, th.plain),
-      h('div', { class: 'lean' }, 'Lean: ' + th.lean.join(', ') + (MUTANTS[th.id] ? ' · killed: ' + MUTANTS[th.id].join(', ') : '')),
+      h('div', { class: 'lean' }, 'Lean: ' + th.lean.join(', ') + (MUTANTS[th.id] ? ' · current compiled finite-mirror/observation controls: ' + MUTANTS[th.id].join(', ') : '')),
+      th.id === 'T8' ? h('div', { class: 'lean' }, 'Historical M34 (parked-leaf revival) is retired. Connected-system origin and exact-request certificate controls are separate JavaScript implementation mutants; they are not Lean mutation evidence.') : null,
       th.id === 'T7' ? h('div', { class: 'lean t7note' }) : null));
   }
   const found = THEOREMS.filter(th => counts[th.id].exhibited > 0).length;
@@ -1961,6 +1986,8 @@ wire();
 { const m = /[?&]story=(\d+)/.exec(location.search); if (!/[?&]selftest=1/.test(location.search)) playStory(m ? m[1] : 1); }
 render();
 if (/[?&]selftest=1/.test(location.search)) runSelftest();
+/* @@SYSTEM@@ */
+/* @@SYSTEM:END@@ */
 </script>
 </body>
 </html>

@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "baseline": "70f3fc800fb3e49f9eb55584b62a2c87a82eb08d",
+  "stories": [
+    {
+      "story": 1,
+      "path": "simulator/checkpoint-simulator-scenarios/01-alice-appears.json",
+      "baselineSha256": "5be349a03672832f95fa5f7964334ee1110af3b4d4458d0a3bc42f009d79723b",
+      "disposition": "Unchanged local behavior; current complete Lean results and checker observations rebound."
+    },
+    {
+      "story": 2,
+      "path": "simulator/checkpoint-simulator-scenarios/02-hal-lands-and-is-paid.json",
+      "baselineSha256": "3198e6da12954daf7881d3a9beff88ea67b2943c3360f370d21a4a81c70234e1",
+      "disposition": "Unchanged local behavior; current complete Lean results and checker observations rebound."
+    },
+    {
+      "story": 3,
+      "path": "simulator/checkpoint-simulator-scenarios/03-pool-dry-hal-freezes.json",
+      "baselineSha256": "46b9eb29571d5c8b96dcb078a2675f1e3d84432fa9b66b086ed564a0b82d88ce",
+      "disposition": "Unchanged local behavior; current complete Lean results and checker observations rebound."
+    },
+    {
+      "story": 4,
+      "path": "simulator/checkpoint-simulator-scenarios/04-alice-unfreezes.json",
+      "baselineSha256": "6b28535223d7ab6213aa3961b90bece1fb3fc07b681b17c1d104b38610cd0ab8",
+      "disposition": "Unchanged local behavior; current complete Lean results and checker observations rebound."
+    },
+    {
+      "story": 5,
+      "path": "simulator/checkpoint-simulator-scenarios/05-alice-goes-away.json",
+      "baselineSha256": "ca7b3e0f55fd9f6aff5191bc53f1c0093135add08b4f61c521e32ffff1431e5b",
+      "disposition": "Retained-output and pending-custody prose and exact results replace off-fold burn and retirement claims. Stable branch IDs remain."
+    },
+    {
+      "story": 6,
+      "path": "simulator/checkpoint-simulator-scenarios/06-alice-comes-back.json",
+      "baselineSha256": "8ea9a8f06a171c936e8ba39567246977d8b419c82550637383d405313188afad",
+      "disposition": "Retained-output and pending-custody prose and exact results replace off-fold burn and retirement claims. Stable branch IDs remain."
+    },
+    {
+      "story": 7,
+      "path": "simulator/checkpoint-simulator-scenarios/07-mallory-steals-alice-poisons.json",
+      "baselineSha256": "67eb2b4ec6b421658d8963fcbade84cf424dcbe28b2ccebce2fc42cd5ca14446",
+      "disposition": "Unchanged local behavior; current complete Lean results and checker observations rebound."
+    },
+    {
+      "story": 8,
+      "path": "simulator/checkpoint-simulator-scenarios/08-alice-moves-refund-address.json",
+      "baselineSha256": "55061191b63faa4286ac6a838c043147a1e5e2bcf5ce270c3a71bfa6fb845ea9",
+      "disposition": "Unchanged local behavior; current complete Lean results and checker observations rebound."
+    },
+    {
+      "story": 9,
+      "path": "simulator/checkpoint-simulator-scenarios/09-cora-convicts.json",
+      "baselineSha256": "bda9a94b05aa69af62ea38ff54d06b4c8c1f6989bec7f22274f49f699909a3b3",
+      "disposition": "Retained-output and pending-custody prose and exact results replace off-fold burn and retirement claims. Stable branch IDs remain."
+    },
+    {
+      "story": 10,
+      "path": "simulator/checkpoint-simulator-scenarios/10-alice-leaves-for-good.json",
+      "baselineSha256": "d5643c5b5232ab76c70d087026ea8a201e932b3ac983b23e00a373eba79b96e0",
+      "disposition": "Retained-output and pending-custody prose and exact results replace off-fold burn and retirement claims. Stable branch IDs remain."
+    },
+    {
+      "story": 11,
+      "path": "simulator/checkpoint-simulator-scenarios/11-treasury-reads.json",
+      "baselineSha256": "8b193101d18e12730dd47d1487c44d0d001288d84094e30d2694a937d85f6666",
+      "disposition": "Unchanged local behavior; current complete Lean results and checker observations rebound."
+    },
+    {
+      "story": 12,
+      "path": "simulator/checkpoint-simulator-scenarios/12-stranger-registers-stale.json",
+      "baselineSha256": "b84d0b8acabd30fcd23c0eb86978a03c0f5d16a8e13910379d7dc2c84faffeff",
+      "disposition": "Local Step extent and separate origin or validity obligations are explicit; established actions remain."
+    },
+    {
+      "story": 13,
+      "path": "simulator/checkpoint-simulator-scenarios/13-anyone-tops-up.json",
+      "baselineSha256": "25143e26214cb96b4580a9eaf1653bc474411ae9c53943c36c9c056e242d9f44",
+      "disposition": "Unchanged local behavior; current complete Lean results and checker observations rebound."
+    },
+    {
+      "story": 14,
+      "path": "simulator/checkpoint-simulator-scenarios/14-two-hunters-race.json",
+      "baselineSha256": "19f0fdcc83ffc6c76ebdbbbaa4f21bdc0f72b9639b51b5a193469de2b2773a75",
+      "disposition": "Unchanged local behavior; current complete Lean results and checker observations rebound."
+    },
+    {
+      "story": 15,
+      "path": "simulator/checkpoint-simulator-scenarios/15-alice-forgets.json",
+      "baselineSha256": "d223b0ff5f4f1a911099a886164a04cc4869eb7e94ae5213f31e0c6cfef67b63",
+      "disposition": "Local Step extent and separate origin or validity obligations are explicit; established actions remain."
+    }
+  ]
+}

@@ -1,0 +1,141 @@
+{
+  "fromWireVersion": 2,
+  "toWireVersion": 3,
+  "stories": [
+    {
+      "id": 1,
+      "slug": "alice-requests",
+      "previousTitle": "Alice posts a registration request",
+      "previousSourceSha256": "663534a4d79e16d4a2f77194379b1d88a173acce8081438da210ca3dce6ae80b",
+      "title": "Alice books a registration",
+      "disposition": "Preserve user purpose; align transaction and custody observations",
+      "authority": "#437 retained-output model revision"
+    },
+    {
+      "id": 2,
+      "slug": "hal-folds",
+      "previousTitle": "Hal folds it: a leaf, a checkpoint, a tip",
+      "previousSourceSha256": "3a1d5705d55802163d949799d45ab43a92757b190316173b4d32b38edb3c56f5",
+      "title": "Hal delivers the first checkpoint",
+      "disposition": "Preserve user purpose; align transaction and custody observations",
+      "authority": "#437 retained-output model revision"
+    },
+    {
+      "id": 3,
+      "slug": "folders-race",
+      "previousTitle": "Two folders race",
+      "previousSourceSha256": "8340b4269125233eacbdee8a50aca26f98db2da6cd62a5781b2a82f6f6282d7c",
+      "title": "Two folders race for one generation",
+      "disposition": "Preserve user purpose; align transaction and custody observations",
+      "authority": "#437 retained-output model revision"
+    },
+    {
+      "id": 4,
+      "slug": "duplicate-registration",
+      "previousTitle": "Mallory registers Alice's AID again",
+      "previousSourceSha256": "26b6c819bd1057ddd85b28efb66237064b709bf9e6c271560f29dca70254a38d",
+      "title": "A duplicate registration is refused and refunded",
+      "disposition": "Preserve user purpose; align transaction and custody observations",
+      "authority": "#437 retained-output model revision"
+    },
+    {
+      "id": 5,
+      "slug": "alice-retracts",
+      "previousTitle": "Nobody folds; Alice retracts in phase 2",
+      "previousSourceSha256": "682a49751fa6d11b53fe35bcb1fc641cc2bf0cdf02e27535c49cbfc820b28841",
+      "title": "Alice retracts in the recovery window",
+      "disposition": "Preserve user purpose; align transaction and custody observations",
+      "authority": "#437 retained-output model revision"
+    },
+    {
+      "id": 6,
+      "slug": "permissionless-sweep",
+      "previousTitle": "Alice missed phase 2; Sam sweeps",
+      "previousSourceSha256": "16645ea9fabf61d78af17be06d703bd121ae1a32620159eef950c7a6196e8b5c",
+      "title": "Sam rejects an expired registration",
+      "disposition": "Preserve user purpose; align transaction and custody observations",
+      "authority": "#437 retained-output model revision"
+    },
+    {
+      "id": 7,
+      "slug": "empty-fold",
+      "previousTitle": "An empty fold is refused",
+      "previousSourceSha256": "5d420dcad0a19c325f889ad07265eeefe290934f272c459966aded3e21c05fdc",
+      "title": "Empty and late folds are refused",
+      "disposition": "Preserve user purpose; align transaction and custody observations",
+      "authority": "#437 retained-output model revision"
+    },
+    {
+      "id": 8,
+      "slug": "plugin-swap",
+      "previousTitle": "A fold that swaps the plugin is refused",
+      "previousSourceSha256": "f3df9ebbd2b8b39d7f2de76d81d006452f3eea3a8301b00899f205dc260d7c68",
+      "title": "A fold preserves the pinned application",
+      "disposition": "Preserve user purpose; align transaction and custody observations",
+      "authority": "#437 retained-output model revision"
+    },
+    {
+      "id": 9,
+      "slug": "close-and-revive",
+      "previousTitle": "Alice closes under the premise and revives from the retained key state",
+      "previousSourceSha256": "fd52d2de961db3aee174e78d72611edc476ffdb81b2d31fa0a6da7409139987f",
+      "title": "Alice parks and revives her retained output",
+      "disposition": "Preserve user purpose; align transaction and custody observations",
+      "authority": "#437 retained-output model revision"
+    },
+    {
+      "id": 10,
+      "slug": "sam-reaps",
+      "previousTitle": "Sam closes what the premise names; the dormant leaf keeps its key state",
+      "previousSourceSha256": "17c8ea42b4f50df6c423562229ecf845163293ebe7e33188a74cfe42c490b842",
+      "title": "Parking cannot be swept into a termination",
+      "disposition": "Replace retired transport with retained-output successor",
+      "authority": "#437 retained-output model revision"
+    },
+    {
+      "id": 11,
+      "slug": "alice-revives",
+      "previousTitle": "Alice comes back from dormant",
+      "previousSourceSha256": "292cafd528dc7e4e360d9a6e8741998e8f775e48e55aa55d5d0588a1a515c504",
+      "title": "Alice returns with the same token binding",
+      "disposition": "Replace retired transport with retained-output successor",
+      "authority": "#437 retained-output model revision"
+    },
+    {
+      "id": 12,
+      "slug": "cora-convicts-bob",
+      "previousTitle": "Cora convicts Bob; the tombstone is reaped; Bob never returns",
+      "previousSourceSha256": "4064fd12b2f75a7f9155863be1624279b9bd1ea9889528baee00eb39ce8675c7",
+      "title": "Conviction becomes permanent through the consuming fold",
+      "disposition": "Preserve user purpose; align transaction and custody observations",
+      "authority": "#437 retained-output model revision"
+    },
+    {
+      "id": 13,
+      "slug": "convict-dormant",
+      "previousTitle": "A dormant AID is convicted by a proof against its recorded key state",
+      "previousSourceSha256": "19b1ef937dbae1877f6482081599a13233cbfd73c158e879697c345e539a1633",
+      "title": "Cora convicts the parked output",
+      "disposition": "Replace retired transport with retained-output successor",
+      "authority": "#437 retained-output model revision"
+    },
+    {
+      "id": 14,
+      "slug": "go-request-cannot-be-bricked",
+      "previousTitle": "A go-request can neither be retracted nor rejected",
+      "previousSourceSha256": "83b7cbc5429c73abc8cb36e9e9ba753b553f03889ac15e9fadcf59356dbe01f5",
+      "title": "A pending termination has only the consuming fold exit",
+      "disposition": "Replace retired transport with retained-output successor",
+      "authority": "#437 retained-output model revision"
+    },
+    {
+      "id": 15,
+      "slug": "batch-and-timestamps",
+      "previousTitle": "A batch that names a request twice, and a request dated in the future",
+      "previousSourceSha256": "3f9116b9f25a4b0e76e585a0cc3530be885688fbb398e83ba65aedd88424304e",
+      "title": "Batch inputs, timestamps and independent custody",
+      "disposition": "Preserve user purpose; align transaction and custody observations",
+      "authority": "#437 retained-output model revision"
+    }
+  ]
+}

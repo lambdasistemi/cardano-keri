@@ -6,8 +6,9 @@ As an SDK author, I want to know which Lean-derived operations have a concrete
 implementation and which still need a model or an on-chain edge. As a CLI
 maintainer, I want an explicit list of commands left outside that contract.
 
-This is a source-based draft at
-`88e930945d8b757913d653defe6f2ed3b2b06ffb`. The checked-in
+This is a source-based draft. The current model is hash-bound in
+[model provenance](model-provenance.json); the implementation inventory below
+retains its historical inspection at `88e930945d8b757913d653defe6f2ed3b2b06ffb`. The checked-in
 [checkpoint manifest](../../deploy/preprod/m1-manifest.json) and
 [board manifest](../../deploy/preprod/board-manifest.json) record published
 deployments. They do not prove that their reference UTxOs remain unspent or
@@ -33,16 +34,16 @@ and wire evidence must be reconciled before marking an operation expressible.
 
 | Required operation | Lean source | Current implementation / remaining gap |
 | --- | --- | --- |
-| Register | Checkpoint register, SysStep; Registry processBody register | CLI register exists. Complete leaf-absence admission and new checkpoint state need reconciliation with the deployed generation. |
+| Register | Checkpoint register and SysStep.register; Registry booking/fold | CLI register exists. Complete leaf-absence admission and new checkpoint state need reconciliation with the deployed generation. |
 | Rotate, paid or unpaid; deposit/unfreeze | Checkpoint rotate | CLI advance exists; exact intent, pool payment, deposit and state mapping remain unbuilt or unbound in this draft. Paid/unpaid are model outcomes, not separate actions. |
 | Poison | Checkpoint poison | No top-level CLI command; concrete new-state and declaration mapping unresolved. |
 | Freeze | Checkpoint freeze | Current Checkpoint freeze is the offered semantics; historical freeze/seize code is not an implementation of it. |
 | Top up | Checkpoint topUp | No top-level CLI command; model pool mapping unresolved. |
-| Convict live/parked | Checkpoint convict | Deployed enforcement code is not evidence of the new terminal leaf and addressed flows; requires exact mapping. |
-| Close/reap | Checkpoint close; distinct Registry reap | CLI close exists. Checkpoint immediate burn/parked commitment governs the API; older Registry reap is excluded, and concrete integration needs adaptation. |
-| Reopen | Checkpoint reopen; Registry revive request | No top-level CLI command; parked commitment proof and fresh registration mechanics unresolved. |
-| Registry contribute/fold/retract | Registry actions | Designed model; no corresponding top-level CLI commands or registry deployment identified in these manifests. |
-| Registry pause/resume/convictCkpt | Registry actions | Excluded from the offered lifecycle; older coupling must be adapted to Checkpoint before reuse. |
+| Convict live/parked | Checkpoint convict and associated completion | Deployed enforcement code is not evidence of pending custody, consuming fold retirement or addressed flows; requires exact mapping. |
+| Close/reap | Checkpoint close; Registry park | CLI close exists. The retained token/output/minimum ADA, signed close and refund mapping require concrete implementation. |
+| Reopen | Checkpoint reopen; local Registry revive | No top-level CLI command; retained-output consumption, rotation and fresh bonds need a concrete mapping. |
+| Registry booking/fold/recovery | Registry actions and imported economic judgments | Executable model; concrete request/transaction codec and deployment correspondence remain unbound. |
+| Registry park/revive/convictCkpt | Registry local carrier adapter | Coarse local predicates are not a proof of concrete Checkpoint authorization; use the associated receipt contract for completion. |
 | Read concrete key state | consumableStateB covers only state usability | CLI checkpoint exposes a concrete checkpoint view; abstract epochs cannot supply the required keys, thresholds, witnesses and toad. |
 | Gate a consumer transaction | consumableStateB is only the state conjunct | Caller signatures, validity interval and concrete registry binding are outside this Lean predicate. |
 | Follow from a chain point | No corresponding API model | Existing backend/indexer facilities need a language-neutral subscription and rollback contract. |

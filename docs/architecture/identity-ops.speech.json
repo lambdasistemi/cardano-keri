@@ -271,7 +271,7 @@
       "pause": 500
     },
     {
-      "text": "Close is the reap: a witnessed rotation by the next keys whose signed message names the payee of the premium and the refund address (ruling D-036). The token burns; the registry leaf is parked with the hash of that key state. It needs the next keys exactly like any other rotation, so the current-key thief loses this move entirely — the only Cardano power the current keys retain is the poison, and a rotation clears that.",
+      "text": "Close is the reap: a witnessed rotation by the next keys whose signed message names the payee of the premium and the refund address (ruling D-036). The parked output retains its token, minimum ADA and that key state; the registry key stays active. It needs the next keys exactly like any other rotation, so the current-key thief loses this move entirely — the only Cardano power the current keys retain is the poison, and a rotation clears that.",
       "pause": 400
     },
     {
@@ -427,6 +427,6 @@
   ],
   "_source": {
     "file": "identity-ops.md",
-    "sha256": "8b204753aa198015321cef71172a72b76b48a0c1fd134a620a2ff1cde6415007"
+    "sha256": "b6ea319a0ce393bb7356431465c232914c0867b3da0ac37463993158904eba5a"
   }
 }

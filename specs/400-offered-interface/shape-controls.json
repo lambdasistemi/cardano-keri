@@ -88,5 +88,21 @@
     "name": "large-positive-bond",
     "valid": true,
     "cborHex": "a46142056144c24b010000000000000000000061500261570a"
+  },
+  {
+    "name": "pending-state",
+    "valid": true,
+    "value": {
+      "state": "terminationPending",
+      "epoch": 1,
+      "sn": 2
+    }
+  },
+  {
+    "name": "pending-without-key",
+    "valid": false,
+    "value": {
+      "state": "terminationPending"
+    }
   }
 ]

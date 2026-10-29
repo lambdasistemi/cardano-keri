@@ -9,7 +9,7 @@
       "pause": 400
     },
     {
-      "text": "This page is the V1 ckeri register that ships on preprod: no uniqueness rule, no registry. The accepted design registers once through the registry (absence proof, insert, mint). Play Alice's identity appears on Cardano and the registry simulation. An identity is active, parked with the hash, or convicted. There is no withdraw.",
+      "text": "This page is the V1 ckeri register that ships on preprod: no uniqueness rule, no registry. The accepted design registers once through the registry (absence proof, insert, mint). Play Alice's identity appears on Cardano and the registry simulation. An identity may be active, parked with its token and key state retained, in pending conviction custody, or permanently convicted after its associated Registry fold. Parking and revival leave the registry key active. There is no withdraw.",
       "pause": 400
     },
     {
@@ -109,6 +109,6 @@
   ],
   "_source": {
     "file": "register-preprod-identity.md",
-    "sha256": "824d4c096e18d5ed00a6d7236afffd12ca9242f355d8c0919ff3c4fa7d9b0d5a"
+    "sha256": "501c5dc7216f217114f5c7853f0514f77f2c2957f71a665460a7f508d5fa78dd"
   }
 }

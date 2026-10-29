@@ -155,11 +155,11 @@
       "pause": 500
     },
     {
-      "text": "There is no pause and no withdraw. An identity is active, parked, or convicted.",
+      "text": "There is no pause and no withdraw. An identity is active, parked, in pending conviction custody, or convicted after the associated Registry fold.",
       "pause": 400
     },
     {
-      "text": "Close is the reap: a witnessed rotation by the next keys whose signed message names the payee of the premium (the fee for landing a rotation) and the refund address. The token burns, the leaf is parked with the hash of that key state. The current keys cannot close.",
+      "text": "Close is the reap: a witnessed rotation by the next keys whose signed message names the payee of the premium (the fee for landing a rotation) and the refund address. The output retains the token, minimum ADA and that key state; the registry key stays active. The current keys cannot close.",
       "pause": 300
     },
     {
@@ -193,7 +193,7 @@
       "pause": 300
     },
     {
-      "text": "The conviction bond D_reg is the stake a duplicity proof seizes. It is never a fee. A responsive, honest identity never loses any of the three.",
+      "text": "The conviction bond D_reg is the stake a duplicity proof seizes. It is never a fee. The pool pays rotation premiums; it is not a loss-free reserve. An authorized close returns the remaining bonds and pool to the signed destinations while retaining the output’s token and minimum ADA.",
       "pause": 300
     },
     {
@@ -249,6 +249,6 @@
   ],
   "_source": {
     "file": "user-experience.md",
-    "sha256": "d11069f8407d817978a5768fa9f0498ee84653844c7ad28e1b49c295b7bd9beb"
+    "sha256": "d77418ad00ecd8425a7957f45b1900b42bdc651014d952417ed8d64a7cd7461d"
   }
 }

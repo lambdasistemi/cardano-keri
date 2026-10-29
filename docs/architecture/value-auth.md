@@ -66,7 +66,8 @@ authorize iff  present
 and, once the validity edge ships, `now ≤ valid_until`. Everything else fails
 closed: absent, frozen (the freeze bond taken), poisoned (locked by the
 owner's own declaration), juvenile (younger than the window `W`), convicted,
-parked (no checkpoint on chain; the registry leaf keeps the hash).
+parked (an output retains its token, minimum ADA and last key state),
+and pending conviction custody.
 
 Three consequences an integrator should plan for:
 
@@ -243,8 +244,9 @@ predicate afresh. The refusals differ in who caused them and in how they clear:
 | Poisoned | the owner's current quorum | any witnessed rotation |
 | Frozen | a hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one), because the pool of advance funds was short | a rotation with `deposit` (the unfreeze) |
 | Juvenile | time, after a register, reopen or resurrecting rotation | `W` slots elapse |
-| Convicted | anyone, with a duplicity proof | never |
-| Parked | the owner, by the reap: a rotation by the next keys that burns the token and leaves the hash in the registry leaf | a reopen |
+| Pending conviction | anyone, with a duplicity proof | its associated consuming Registry fold completes retirement |
+| Convicted | the associated fold after a duplicity proof | never |
+| Parked | the owner, by the reap: a rotation by the next keys that retains the token, minimum ADA and key state in a parked output | a reopen |
 
 An application should not treat any of these as an error condition to retry.
 Each is a statement that the identity is currently unfit to authorize, and each

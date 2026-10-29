@@ -1,0 +1,157 @@
+[
+  {
+    "id": "park-token",
+    "before": "if old.aid == aid then { old with k := old.k + 1, st := .parked } else old",
+    "after": "if old.aid == aid then { old with k := old.k + 1, st := .parked, token := old.token + 1 } else old",
+    "failure": "parked-entire-carrier",
+    "owner": "CardanoKeri.Registry.park_retains",
+    "test": "RegistryRetentionChecks"
+  },
+  {
+    "id": "park-min-ada",
+    "before": "if old.aid == aid then { old with k := old.k + 1, st := .parked } else old",
+    "after": "if old.aid == aid then { old with k := old.k + 1, st := .parked, minAda := 0 } else old",
+    "failure": "parked-entire-carrier",
+    "owner": "CardanoKeri.Registry.park_retains",
+    "test": "RegistryRetentionChecks"
+  },
+  {
+    "id": "park-output",
+    "before": "pure ({ bondReturn := some (recipient, p.D) }, { s with carriers := carriers })",
+    "after": "pure ({ bondReturn := some (recipient, p.D) }, { s with carriers := [] })",
+    "failure": "parked-entire-carrier",
+    "owner": "CardanoKeri.Registry.park_retains",
+    "test": "RegistryRetentionChecks"
+  },
+  {
+    "id": "park-recipient",
+    "before": "bondReturn := some (recipient, p.D)",
+    "after": "bondReturn := some (recipient + 1, p.D)",
+    "failure": "parked-world-and-flow",
+    "owner": "CardanoKeri.Registry.park_retains",
+    "test": "RegistryRetentionChecks"
+  },
+  {
+    "id": "revive-wrong-key",
+    "before": "env.rotationFrom aid c.k != true",
+    "after": "env.rotationFrom aid (c.k + 1) != true",
+    "failure": "wrong-retained-key",
+    "owner": "CardanoKeri.Registry.revive_iff",
+    "test": "RegistryRetentionChecks"
+  },
+  {
+    "id": "revive-no-fresh-bond",
+    "before": "pure ({ deposited := p.D, locked := [(aid, p.D)] }, { s with carriers := carriers })",
+    "after": "pure ({ locked := [(aid, p.D)] }, { s with carriers := carriers })",
+    "failure": "revived-world-fresh-bond",
+    "owner": "CardanoKeri.Registry.revive_retains",
+    "test": "RegistryRetentionChecks"
+  },
+  {
+    "id": "convict-premature-retirement",
+    "before": "pure ({}, { s with carriers := carriers })",
+    "after": "pure ({}, { s with carriers := carriers, trie := Singular.trieSet s.trie aid (.known .terminal) })",
+    "failure": "conviction-still-active",
+    "owner": "CardanoKeri.Registry.local_conviction_retains",
+    "test": "RegistryRetentionChecks"
+  },
+  {
+    "id": "convict-wrong-key",
+    "before": "if old.aid == aid then { old with st := .terminationPending } else old",
+    "after": "if old.aid == aid then { old with st := .terminationPending, k := old.k + 1 } else old",
+    "failure": "conviction-still-active",
+    "owner": "CardanoKeri.Registry.local_conviction_retains",
+    "test": "RegistryRetentionChecks"
+  },
+  {
+    "id": "convict-no-evidence",
+    "before": "c.st == .terminationPending || env.duplicity aid c.k != true",
+    "after": "c.st == .terminationPending || (env.duplicity aid c.k && false)",
+    "failure": "missing-duplicity",
+    "owner": "CardanoKeri.Registry.pending_has_keri_authorization",
+    "test": "RegistryRetentionChecks"
+  },
+  {
+    "id": "registration-no-inception",
+    "before": "if !registrationsAuthorized env members then",
+    "after": "if !registrationsAuthorized env members && false then",
+    "failure": "missing-inception",
+    "owner": "CardanoKeri.Registry.fold_iff",
+    "test": "RegistryRetentionChecks"
+  },
+  {
+    "id": "booking-pending-tail",
+    "before": "terminations := e :: s.terminations",
+    "after": "terminations := [e]",
+    "failure": "keri-termination-reconstruction-mismatch",
+    "owner": "CardanoKeri.Registry.booking_keeps_prior_pending",
+    "test": "RegistryJourneyChecks"
+  },
+  {
+    "id": "fold-pending-tail",
+    "before": "terminations := s.terminations.filter (fun e =>\n      !Singular.inputsContainReference tx.transaction.inputs e.booking.request.reference)",
+    "after": "terminations := []",
+    "failure": "keri-fold-reconstruction-mismatch",
+    "owner": "CardanoKeri.Registry.fold_complete",
+    "test": "RegistryJourneyChecks"
+  },
+  {
+    "id": "fold-generation",
+    "before": "if expectedGen != s.gen then",
+    "after": "if expectedGen != s.gen && false then",
+    "failure": "wrong-generation-refused",
+    "owner": "CardanoKeri.Registry.fold_stale_refused",
+    "test": "RegistryJourneyChecks"
+  },
+  {
+    "id": "fold-plugin",
+    "before": "if expectedPlugin != s.config.applicationPolicy then",
+    "after": "if expectedPlugin != s.config.applicationPolicy && false then",
+    "failure": "wrong-plugin-refused",
+    "owner": "CardanoKeri.Registry.fold_plugin_swap_refused",
+    "test": "RegistryJourneyChecks"
+  },
+  {
+    "id": "booking-fee",
+    "before": "bookingFee := fee, intoRequest := p.Mr + p.tip",
+    "after": "bookingFee := 0, intoRequest := p.Mr + p.tip",
+    "failure": "booking-flow",
+    "owner": "CardanoKeri.Registry.bookTermination_iff",
+    "test": "RegistryJourneyChecks"
+  },
+  {
+    "id": "phantom-binding",
+    "before": "bindings := (c.aid, c.token) :: acc.bindings, nextToken := acc.nextToken + 1",
+    "after": "bindings := (c.aid, c.token) :: (999, acc.nextToken) :: acc.bindings, nextToken := acc.nextToken + 1",
+    "failure": "binding-domain-no-phantom",
+    "owner": "CardanoKeri.Registry.reachable_binding_domain",
+    "test": "RegistryJourneyChecks"
+  },
+  {
+    "id": "fold-generation-stalled",
+    "before": "gen := s.gen + 1,",
+    "after": "gen := s.gen,",
+    "owner": "CardanoKeri.Registry.config_and_generation_frame",
+    "failure": "fold-generation-advances",
+    "test": "RegistryRetentionChecks",
+    "kind": "semantic-runtime"
+  },
+  {
+    "id": "registration-token-shift",
+    "before": "aid := b.request.key, token := acc.nextToken,",
+    "after": "aid := b.request.key, token := acc.nextToken + 1,",
+    "owner": "CardanoKeri.Registry.reachable_wellFormed",
+    "failure": "registration-carrier-binding",
+    "test": "RegistryRetentionChecks",
+    "kind": "semantic-runtime"
+  },
+  {
+    "id": "live-booking-allowed",
+    "before": "if c.st != .terminationPending then throw \"keri-conviction-required\"",
+    "after": "if false then throw \"keri-conviction-required\"",
+    "owner": "CardanoKeri.Registry.bookTermination_iff",
+    "failure": "live-booking-refused",
+    "test": "RegistryRetentionChecks",
+    "kind": "semantic-runtime"
+  }
+]

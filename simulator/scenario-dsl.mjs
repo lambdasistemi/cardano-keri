@@ -24,9 +24,9 @@ const CK_STEP = ['slot', 'who', 'say', 'hidden', 'params', 'evidence', 'action',
 const CK_STEP_SET = new Set(CK_STEP);
 const CK_FORK = ['id', 'at', 'title', 'steps'];
 const CK_FORK_SET = new Set(CK_FORK);
-const RG_TOP = ['id', 'slug', 'story', 'narrative', 'params', 'plugin', 'actors', 'env', 'steps', 'forks', 'expectFinal'];
+const RG_TOP = ['wireVersion', 'config', 'id', 'slug', 'story', 'narrative', 'params', 'plugin', 'actors', 'env', 'steps', 'forks', 'expectFinal'];
 const RG_TOP_SET = new Set(RG_TOP);
-const RG_STEP = ['now', 'actor', 'as', 'action', 'expect', 'exhibits', 'note'];
+const RG_STEP = ['env', 'now', 'actor', 'as', 'action', 'expect', 'exhibits', 'note'];
 const RG_STEP_SET = new Set(RG_STEP);
 const RG_FORK = ['id', 'at', 'title', 'env', 'expectFinal', 'steps'];
 const RG_FORK_SET = new Set(RG_FORK);
@@ -456,6 +456,7 @@ function emitLines(x, indent, keyOrder, asRepeat) {
     const v = x[k];
     if (v === undefined) continue;
     if (asRepeat && REPEAT_INV[k] && Array.isArray(v)) {
+      if (!v.length && x.wireVersion === 3) lines.push(pad + emitKey(k) + ": []");
       const itemOrder = k === 'steps' ? (x.now !== undefined || (v[0] && 'now' in (v[0] || {})) ? RG_STEP : CK_STEP) : (Object.prototype.hasOwnProperty.call(v[0] || {}, 'env') || Object.prototype.hasOwnProperty.call(v[0] || {}, 'expectFinal') ? RG_FORK : CK_FORK);
       for (const item of v) {
         const nested = emitLines(item, indent + 2, itemOrder, true);

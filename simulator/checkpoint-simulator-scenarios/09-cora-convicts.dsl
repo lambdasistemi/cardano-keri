@@ -3,7 +3,7 @@ family: checkpoint
 
 story: 9
 title: "Cora convicts"
-goal: "As Cora, holding two of Alice’s rotations at the same sequence, each receipted by a threshold of her witnesses (KERI’s toad), I want to end this identity on chain and take its conviction bond."
+goal: "As Cora, I want concrete duplicity to place the checkpoint into pending termination custody, receive the conviction bond, and enable a later consuming fold to retire the registry key."
 params:
   D: 1000
   B: 5
@@ -21,13 +21,48 @@ step:
   expect:
     ok: true
     verdict: juvenile
-    exhibits: [T3_epoch_local, T6_component_conservation, T6_dreg_enters_only_at_birth, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_absent_only_registers, T8_edges_leave_the_leaf, T8_leaf_agrees_with_state, T8_leaf_states, T8_mint_once, T8_only_convicted_is_terminal, T8_present_implies_registered, T8_sysstep_partition, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+    modelResult:
+      flow:
+        bIn: 5
+        convictor: null
+        dregIn: 1000
+        hunter: null
+        poolIn: 12
+        refund: null
+      state:
+        present:
+          l:
+            bornAt: 0
+            epoch: 0
+            frozen: false
+            poisoned: false
+            pool: 12
+            refundTo: 1
+            sn: 0
+    state:
+      present:
+        l:
+          bornAt: 0
+          epoch: 0
+          frozen: false
+          poisoned: false
+          pool: 12
+          refundTo: 1
+          sn: 0
+    flow:
+      bIn: 5
+      convictor: null
+      dregIn: 1000
+      hunter: null
+      poolIn: 12
+      refund: null
+    exhibits: [T3_epoch_local, T6_component_conservation, T6_dreg_enters_only_at_birth, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_absent_only_registers, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired]
 step:
   slot: 1
   who: alice
   say: "Alice lands her first rotation. Its prior-next commitment anchors both branches of the later duplicity proof."
   evidence:
-    add: [{"rotationTo":[0,0,1]}, {"intentAuthorized":[1,"keep",null]}]
+    add: [{"rotationTo":[0,0,1]},{"intentAuthorized":[1,"keep",null]}]
   action:
     rotate:
       sn': 1
@@ -41,6 +76,50 @@ step:
       epoch: 1
       pool: 10
     verdict: juvenile
+    modelResult:
+      flow:
+        bIn: 0
+        convictor: null
+        dregIn: 0
+        hunter:
+          addr: 2
+          b: 0
+          dreg: 0
+          pool: 2
+        poolIn: 0
+        refund: null
+      state:
+        present:
+          l:
+            bornAt: 0
+            epoch: 1
+            frozen: false
+            poisoned: false
+            pool: 10
+            refundTo: 1
+            sn: 1
+    state:
+      present:
+        l:
+          bornAt: 0
+          epoch: 1
+          frozen: false
+          poisoned: false
+          pool: 10
+          refundTo: 1
+          sn: 1
+    flow:
+      bIn: 0
+      convictor: null
+      dregIn: 0
+      hunter:
+        addr: 2
+        b: 0
+        dreg: 0
+        pool: 2
+      poolIn: 0
+      refund: null
+    exhibits: [T10_bonds_are_observable, T14_pool_decreases_only_by_premium, T16_payments_are_named, T1_rotate_strict, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T2_epoch_only_by_rotation, T3_epoch_local, T3_rotation_clears, T5_every_bond_option, T5_keep_is_rotated, T5_keep_needs_no_intent, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 12
   who: alice
@@ -53,11 +132,46 @@ step:
     live:
       poisoned: true
     verdict: poisoned
-    exhibits: [T10_bonds_are_observable, T10_current_quorum_never_restores, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T3_only_poison_sets, T4_current_key_thief_cannot_park, T4_current_quorum_only_poisons, T5_poison_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T7_step_iff_stepFn, T7_trace_iff_replay, T8_edges_leave_the_leaf, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_only_convicted_is_terminal, T8_present_implies_registered, T8_sysstep_partition, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff, trace_poison_fold, trace_sn_monotone_all]
+    modelResult:
+      flow:
+        bIn: 0
+        convictor: null
+        dregIn: 0
+        hunter: null
+        poolIn: 0
+        refund: null
+      state:
+        present:
+          l:
+            bornAt: 0
+            epoch: 1
+            frozen: false
+            poisoned: true
+            pool: 10
+            refundTo: 1
+            sn: 1
+    state:
+      present:
+        l:
+          bornAt: 0
+          epoch: 1
+          frozen: false
+          poisoned: true
+          pool: 10
+          refundTo: 1
+          sn: 1
+    flow:
+      bIn: 0
+      convictor: null
+      dregIn: 0
+      hunter: null
+      poolIn: 0
+      refund: null
+    exhibits: [T10_bonds_are_observable, T10_current_quorum_never_restores, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T3_only_poison_sets, T4_current_key_thief_cannot_park, T4_current_quorum_only_poisons, T5_poison_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 12
   who: cora
-  say: "Cora presents a different rotation at sequence 1. Both branches satisfy the common prior-next commitment and their own signing and derived-witness thresholds. Convicted from a poisoned state: terminal. The conviction bond goes to Cora; the freeze bond and the pool return to the refund address."
+  say: "Cora supplies a conflicting rotation at sequence 1. Both branches satisfy the common prior-next commitment and their signing and derived-witness thresholds. The checkpoint enters termination-pending custody, keeping its token and key state. D goes to Cora; B and the pool return to the refund address. The registry key remains active until the later consuming fold."
   evidence:
     add: [{"duplicityAt":[1,1]}]
   action:
@@ -65,20 +179,49 @@ step:
       payee: 3
   expect:
     ok: true
-    state: convicted
+    state:
+      terminationPending:
+        h:
+          epoch: 1
+          sn: 1
     flow:
-      refund:
-        addr: 1
-        dreg: 0
-        b: 5
-        pool: 10
+      bIn: 0
       convictor:
         addr: 3
-        dreg: 1000
         b: 0
+        dreg: 1000
         pool: 0
+      dregIn: 0
+      hunter: null
+      poolIn: 0
+      refund:
+        addr: 1
+        b: 5
+        dreg: 0
+        pool: 10
     verdict: not-present
-    exhibits: [T10_bonds_are_observable, T10_parked_holds_nothing, T12_convict_exact, T16_payments_are_named, T4_current_key_thief_cannot_park, T4_poisoned_blocks_quorum_and_freeze, T4_poisoned_nonrotation_inert, T5_convict_enabled, T6_component_conservation, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_edges_leave_the_leaf, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_present_implies_registered, T8_reopen_actor_is_proof, T8_sysstep_partition, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+    modelResult:
+      flow:
+        bIn: 0
+        convictor:
+          addr: 3
+          b: 0
+          dreg: 1000
+          pool: 0
+        dregIn: 0
+        hunter: null
+        poolIn: 0
+        refund:
+          addr: 1
+          b: 5
+          dreg: 0
+          pool: 10
+      state:
+        terminationPending:
+          h:
+            epoch: 1
+            sn: 1
+    exhibits: [T10_bonds_are_observable, T12_convict_exact, T16_payments_are_named, T1_sn_monotone_all, T4_current_key_thief_cannot_park, T4_poisoned_blocks_quorum_and_freeze, T4_poisoned_nonrotation_inert, T5_convict_enabled, T6_component_conservation, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_reopen_actor_is_proof, T9_juvenility_is_consumer_only, consumableStateB_iff, pending_consumer_refused, pending_custody_observations, trace_sn_monotone_all]
 fork:
   id: noproof
   at: 2
@@ -94,15 +237,16 @@ fork:
       ok: false
       reason: no-duplicity-proof
       verdict: poisoned
-      exhibits: [T10_bonds_are_observable, T12_convict_exact, T7_step_iff_stepFn, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_present_implies_registered, T8_reopen_actor_is_proof, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+      modelResult: null
+      exhibits: [T10_bonds_are_observable, T12_convict_exact, T7_step_iff_stepFn, T8_reopen_actor_is_proof, T9_juvenility_is_consumer_only, consumableStateB_iff]
 fork:
   id: terminal
   at: 3
-  title: "Nothing leaves Convicted"
+  title: "Pending custody refuses local actions"
   step:
     slot: 12
     who: alice
-    say: "No rotation, ever."
+    say: "Pending termination custody refuses a local rotation."
     evidence:
       add: [{"rotationTo":[0,0,1]}]
     action:
@@ -113,13 +257,14 @@ fork:
         refund': null
     expect:
       ok: false
-      reason: convicted-terminal
+      reason: termination-pending
       verdict: not-present
-      exhibits: [T10_parked_holds_nothing, T12_convicted_terminal, T7_step_iff_stepFn, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_present_implies_registered, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff, trace_from_convicted]
+      modelResult: null
+      exhibits: [T7_step_iff_stepFn, T9_juvenility_is_consumer_only, consumableStateB_iff, pending_consumer_refused, pending_custody_observations, pending_has_no_local_exit, pending_step_impossible, trace_from_pending]
   step:
     slot: 12
     who: alice
-    say: "No close, ever."
+    say: "Pending termination custody refuses another close."
     evidence:
       add: []
     action:
@@ -129,21 +274,23 @@ fork:
         refund': null
     expect:
       ok: false
-      reason: convicted-terminal
+      reason: termination-pending
       verdict: not-present
-      exhibits: [T10_parked_holds_nothing, T12_convicted_terminal, T7_step_iff_stepFn, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_present_implies_registered, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff, trace_from_convicted]
+      modelResult: null
+      exhibits: [T7_step_iff_stepFn, T9_juvenility_is_consumer_only, consumableStateB_iff, pending_consumer_refused, pending_custody_observations, pending_has_no_local_exit, pending_step_impossible, trace_from_pending]
   step:
     slot: 12
     who: friend
-    say: "Not even a top-up."
+    say: "Pending termination custody refuses a top-up."
     action:
       topUp:
         x: 1
     expect:
       ok: false
-      reason: convicted-terminal
+      reason: termination-pending
       verdict: not-present
-      exhibits: [T10_parked_holds_nothing, T12_convicted_terminal, T7_step_iff_stepFn, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_present_implies_registered, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff, trace_from_convicted]
+      modelResult: null
+      exhibits: [T7_step_iff_stepFn, T9_juvenility_is_consumer_only, consumableStateB_iff, pending_consumer_refused, pending_custody_observations, pending_has_no_local_exit, pending_step_impossible, trace_from_pending]
 fork:
   id: sequence-zero
   at: 0
@@ -161,3 +308,5 @@ fork:
       ok: false
       reason: no-duplicity-proof
       verdict: juvenile
+      modelResult: null
+      exhibits: [T10_bonds_are_observable, T12_convict_exact, T7_step_iff_stepFn, T8_reopen_actor_is_proof, T9_juvenility_is_consumer_only, consumableStateB_iff]

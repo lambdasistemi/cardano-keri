@@ -31,14 +31,17 @@ const outcomes = {
     { slot: 24, expect: { live: { poisoned: true, pool: 8 }, verdict: 'poisoned' } },
   ], forks: [] },
   duplicate: { id: 3884, slug: 'architecture-duplicate', steps: [
-    { expect: { ok: true, flow: { deposited: 1002 } } },
-    { expect: { ok: true, flow: { locked: [{ aid: 11, value: 1000 }], tips: { addr: 3, value: 2 } } } },
-    { expect: { ok: true, flow: { deposited: 1002 } } }, { expect: { ok: false, reason: 'already-registered' } },
-    { expect: { ok: true, flow: { refunds: [{ addr: 4, value: 1000 }], tips: { addr: 6, value: 2 } } } },
-  ], forks: [{ id: 'sam-too-early', steps: [{ expect: { ok: false, reason: 'not-rejectable' } }],
-    expectFinal: { leaves: [{ aid: 11, status: { active: 0 } }], ckpts: [{ aid: 11, ckpt: { token: 0, k: 0, st: 'live' } }],
-      requests: [{ id: 1, aid: 11, owner: 4, submittedAt: 5, op: 'register' }], nextToken: 1 } }],
-  expectFinal: { leaves: [{ aid: 11, status: { active: 0 } }], ckpts: [{ aid: 11, ckpt: { token: 0, k: 0, st: 'live' } }], requests: [], nextToken: 1 } },
+    { expect: { ok: true, result: { ok: { flow: { deposited: 17 } } } } },
+    { expect: { ok: true, result: { ok: { flow: { locked: [[11, 10]] } } } } },
+    { expect: { ok: true, result: { ok: { flow: { deposited: 17 } } } } },
+    { action: { genericRejection: { transaction: { transaction: { outputs: [
+      { output: { address: 42, lovelace: 16 }, contents: { lovelace: 16 } }
+    ] } } } }, expect: { ok: true } },
+  ], forks: [
+    { id: 'control-3-key-exists', steps: [{ expect: { ok: false, result: { error: 'key-exists' } } }] },
+    { id: 'control-4-reject-not-expired', steps: [{ expect: { ok: false, result: { error: 'reject-not-expired' } } }] },
+  ], expectFinal: { bindings: [[11,0]], carriers: [{ aid:11, token:0, k:0, st:'live', minAda:4 }],
+    registrations: [], nextToken:1, treasury:2 } },
 };
 
 function includes(actual, expected, path) {
@@ -121,7 +124,7 @@ function selftest(sources) {
   badLive.steps[1].expect.live.bornAt = 99;
   rejects('false state at evidence-only step', () => verifyScenario('rotate', scenarioToDsl('checkpoint', badLive)), /observed live state/);
   const wrongFork = parseScenarioDsl(sources.duplicate).scenario;
-  wrongFork.forks[0].steps[0].now = 25;
+  wrongFork.forks[1].steps[0].action.genericRejection.transaction.transaction.transaction.validity = { lower: 11, upper: 12 };
   rejects('early rejection branch now succeeds', () => verifyScenario('duplicate', scenarioToDsl('registry', wrongFork)), /replay/);
   const html = names.map(name => `<pre><code>${sources[name].replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</code></pre>`).join('');
   verifyRendered(html, sources);

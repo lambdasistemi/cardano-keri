@@ -1,32 +1,57 @@
 {
+  "wireVersion": 3,
   "id": 10,
   "slug": "sam-reaps",
-  "story": "Sam closes what the premise names; the dormant leaf keeps its key state",
-  "narrative": "Alice leaves for good. Closing her live checkpoint is refused against a recipient the premise does not name; through the premise that names Sam the close succeeds, the live bond returns to the named recipient, and the closing rotation's reached key state 1 rides out in a go-request dated at the end of time. Mallory cannot retract it, and a fold cannot reject it: the only exit is to be processed. Hal's fold lands it — the leaf keeps key state 1 with no checkpoint at all, so reaping again is refused. On the branch Alice comes back: her revival from the retained state is folded, and even then a further close still needs the premise naming its recipient.",
+  "story": "Parking cannot be swept into a termination",
+  "narrative": "The parked output remains in custody. A termination booking requires prior conviction; elapsed time grants no parking sweep.",
   "params": {
-    "D": 1000,
-    "tip": 2,
+    "D": 10,
     "Mc": 4,
-    "Mr": 1,
-    "process": 10,
-    "retract": 10,
-    "W": 5,
-    "far": 1000000000
+    "Mr": 2,
+    "tip": 1
+  },
+  "config": {
+    "activePolicy": 8,
+    "applicationPolicy": 7,
+    "bookingWidth": 1,
+    "maxFee": 1,
+    "processTime": 5,
+    "registrationCost": 2,
+    "registryId": 9,
+    "retractTime": 5,
+    "root": [
+      203,
+      242,
+      156,
+      228,
+      132,
+      34,
+      35,
+      37
+    ]
   },
   "plugin": 7,
   "actors": {
-    "1": "Alice",
-    "2": "Bob",
-    "3": "Hal (folder)",
-    "4": "Mallory",
-    "5": "Cora (convictor)",
-    "6": "Sam (reaper)"
+    "6": "authorized bond recipient",
+    "7": "termination booker",
+    "42": "Alice, request refund address"
   },
   "env": {
-    "inception": [
-      11
+    "closeAuth": [
+      [
+        11,
+        6
+      ],
+      [
+        12,
+        6
+      ],
+      [
+        13,
+        6
+      ]
     ],
-    "rotationFrom": [
+    "duplicity": [
       [
         11,
         0
@@ -34,354 +59,1069 @@
       [
         11,
         1
-      ]
-    ],
-    "closeAuth": [
+      ],
       [
         11,
-        6
+        2
+      ],
+      [
+        12,
+        0
+      ],
+      [
+        12,
+        1
+      ],
+      [
+        12,
+        2
+      ],
+      [
+        13,
+        0
+      ],
+      [
+        13,
+        1
+      ],
+      [
+        13,
+        2
+      ]
+    ],
+    "inception": [
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "rotationFrom": [
+      [
+        11,
+        1
+      ],
+      [
+        12,
+        1
+      ],
+      [
+        13,
+        1
       ]
     ]
   },
   "steps": [
     {
       "now": 0,
-      "actor": "anyone",
+      "actor": "anyone presenting the required evidence",
       "as": "Alice",
       "action": {
-        "contribute": {
-          "aid": 11,
-          "owner": 1,
-          "submittedAt": 0,
-          "op": "register"
-        }
-      },
-      "expect": {
-        "ok": true,
-        "flow": {
-          "deposited": 1002,
-          "locked": [],
-          "refunds": [],
-          "tips": null,
-          "premium": null,
-          "intoRequest": 0,
-          "bondReturn": null
-        }
-      }
-    },
-    {
-      "now": 1,
-      "actor": "anyone",
-      "as": "Hal",
-      "action": {
-        "fold": {
-          "folder": 3,
-          "gen": 0,
-          "plugin": 7,
-          "batch": [
-            {
-              "id": 0,
-              "do": "process"
-            }
-          ]
-        }
-      },
-      "expect": {
-        "ok": true,
-        "flow": {
-          "deposited": 0,
-          "locked": [
-            {
-              "aid": 11,
-              "value": 1000
-            }
-          ],
-          "refunds": [],
-          "tips": {
-            "addr": 3,
-            "value": 2
-          },
-          "premium": null,
-          "intoRequest": 0,
-          "bondReturn": null
-        }
-      }
-    },
-    {
-      "now": 4,
-      "actor": "anyone",
-      "as": "Sam — closing against recipient 4, whom the premise does not name",
-      "action": {
-        "reap": {
-          "reaper": 6,
-          "aid": 11,
-          "recipient": 4
-        }
-      },
-      "expect": {
-        "ok": false,
-        "reason": "not-reapable"
-      },
-      "exhibits": [
-        "R13"
-      ]
-    },
-    {
-      "now": 5,
-      "actor": "anyone",
-      "as": "Sam — the premise names him; the bond returns to the named recipient",
-      "action": {
-        "reap": {
-          "reaper": 6,
-          "aid": 11,
-          "recipient": 6
-        }
-      },
-      "expect": {
-        "ok": true,
-        "flow": {
-          "deposited": 0,
-          "locked": [],
-          "refunds": [],
-          "tips": null,
-          "premium": {
-            "addr": 6,
-            "value": 1
-          },
-          "intoRequest": 3,
-          "bondReturn": {
-            "addr": 6,
-            "value": 1000
+        "bookRegistration": {
+          "booking": {
+            "applicationTagsMinted": [
+              {
+                "assetName": "5369963716140239679",
+                "destination": 111,
+                "edge": "insertActive",
+                "key": 11,
+                "owner": 42,
+                "policy": 7,
+                "signatures": []
+              }
+            ],
+            "interval": {
+              "lower": 0,
+              "upper": 1
+            },
+            "request": {
+              "carrierAda": 14,
+              "contents": {
+                "applicationTags": [
+                  {
+                    "assetName": "5369963716140239679",
+                    "destination": 111,
+                    "edge": "insertActive",
+                    "key": 11,
+                    "owner": 42,
+                    "policy": 7,
+                    "signatures": []
+                  }
+                ],
+                "lovelace": 17,
+                "otherAssets": [],
+                "trieReadyTags": [
+                  {
+                    "name": "14272158603032493918",
+                    "policy": 9
+                  }
+                ]
+              },
+              "datum": 711,
+              "declaredTip": 1,
+              "destination": 111,
+              "key": 11,
+              "reference": {
+                "index": 0,
+                "tx": 100
+              },
+              "refundAddress": 42,
+              "registrationCost": 2,
+              "registryId": 9,
+              "submittedAt": 1
+            },
+            "trieReadyTagsMinted": [
+              {
+                "name": "14272158603032493918",
+                "policy": 9
+              }
+            ]
           }
         }
       },
-      "exhibits": [
-        "R13",
-        "R11"
-      ]
-    },
-    {
-      "now": 8,
-      "actor": "owner",
-      "as": "Mallory — retracting the go-request",
-      "action": {
-        "retract": {
-          "req": 1
+      "expect": {
+        "ok": true,
+        "result": {
+          "ok": {
+            "flow": {
+              "bondReturn": null,
+              "bookingFee": 0,
+              "deposited": 17,
+              "intoRequest": 0,
+              "locked": [],
+              "premium": null
+            },
+            "observations": [],
+            "state": {
+              "bindings": [],
+              "carriers": [],
+              "config": {
+                "activePolicy": 8,
+                "applicationPolicy": 7,
+                "bookingWidth": 1,
+                "maxFee": 1,
+                "processTime": 5,
+                "registrationCost": 2,
+                "registryId": 9,
+                "retractTime": 5,
+                "root": [
+                  203,
+                  242,
+                  156,
+                  228,
+                  132,
+                  34,
+                  35,
+                  37
+                ]
+              },
+              "gen": 0,
+              "nextToken": 0,
+              "registrations": [
+                {
+                  "applicationTagsMinted": [
+                    {
+                      "assetName": "5369963716140239679",
+                      "destination": 111,
+                      "edge": "insertActive",
+                      "key": 11,
+                      "owner": 42,
+                      "policy": 7,
+                      "signatures": []
+                    }
+                  ],
+                  "interval": {
+                    "lower": 0,
+                    "upper": 1
+                  },
+                  "request": {
+                    "carrierAda": 14,
+                    "contents": {
+                      "applicationTags": [
+                        {
+                          "assetName": "5369963716140239679",
+                          "destination": 111,
+                          "edge": "insertActive",
+                          "key": 11,
+                          "owner": 42,
+                          "policy": 7,
+                          "signatures": []
+                        }
+                      ],
+                      "lovelace": 17,
+                      "otherAssets": [],
+                      "trieReadyTags": [
+                        {
+                          "name": "14272158603032493918",
+                          "policy": 9
+                        }
+                      ]
+                    },
+                    "datum": 711,
+                    "declaredTip": 1,
+                    "destination": 111,
+                    "key": 11,
+                    "reference": {
+                      "index": 0,
+                      "tx": 100
+                    },
+                    "refundAddress": 42,
+                    "registrationCost": 2,
+                    "registryId": 9,
+                    "submittedAt": 1
+                  },
+                  "trieReadyTagsMinted": [
+                    {
+                      "name": "14272158603032493918",
+                      "policy": 9
+                    }
+                  ]
+                }
+              ],
+              "terminations": [],
+              "treasury": 0,
+              "trie": []
+            }
+          }
         }
       },
-      "expect": {
-        "ok": false,
-        "reason": "not-in-phase-2"
-      },
-      "exhibits": [
-        "R9"
-      ]
+      "note": "Book the registration request"
     },
     {
-      "now": 10,
-      "actor": "anyone",
-      "as": "Mallory — rejecting it inside a batch",
+      "now": 0,
+      "actor": "anyone presenting the required evidence",
+      "as": "Hal",
       "action": {
         "fold": {
-          "folder": 4,
-          "gen": 1,
-          "plugin": 7,
-          "batch": [
-            {
-              "id": 1,
-              "do": "reject"
-            }
-          ]
-        }
-      },
-      "expect": {
-        "ok": false,
-        "reason": "go-not-rejectable"
-      },
-      "exhibits": [
-        "R9"
-      ]
-    },
-    {
-      "now": 11,
-      "actor": "anyone",
-      "as": "Hal — the fold lands: the leaf keeps key state 1",
-      "action": {
-        "fold": {
-          "folder": 3,
-          "gen": 1,
-          "plugin": 7,
-          "batch": [
-            {
-              "id": 1,
-              "do": "process"
-            }
+          "expectedGen": 0,
+          "expectedPlugin": 7,
+          "transaction": {
+            "applicationMint": [
+              [
+                {
+                  "name": "5369963716140239679",
+                  "policy": 7
+                },
+                -1
+              ]
+            ],
+            "identity": 102,
+            "outputs": [
+              {
+                "contents": {
+                  "applicationTags": [],
+                  "lovelace": 0,
+                  "otherAssets": [],
+                  "trieReadyTags": []
+                },
+                "output": {
+                  "address": null,
+                  "assets": [],
+                  "commitment": null,
+                  "config": {
+                    "activePolicy": 8,
+                    "applicationPolicy": 7,
+                    "bookingWidth": 1,
+                    "maxFee": 1,
+                    "processTime": 5,
+                    "registrationCost": 2,
+                    "registryId": 9,
+                    "retractTime": 5,
+                    "root": [
+                      187,
+                      43,
+                      111,
+                      81,
+                      131,
+                      142,
+                      177,
+                      246
+                    ]
+                  },
+                  "datum": "inline",
+                  "datumValue": null,
+                  "lovelace": 0,
+                  "reference": null,
+                  "role": "state",
+                  "stateToken": {
+                    "name": 0,
+                    "policy": 9
+                  },
+                  "stateTokens": 1
+                },
+                "request": null,
+                "singularTags": []
+              },
+              {
+                "contents": {
+                  "applicationTags": [],
+                  "lovelace": 14,
+                  "otherAssets": [],
+                  "trieReadyTags": []
+                },
+                "output": {
+                  "address": 111,
+                  "assets": [],
+                  "commitment": null,
+                  "config": null,
+                  "datum": "inline",
+                  "datumValue": 711,
+                  "lovelace": 14,
+                  "reference": null,
+                  "role": "owner",
+                  "stateToken": null,
+                  "stateTokens": 0
+                },
+                "request": null,
+                "singularTags": [
+                  {
+                    "registryId": 9,
+                    "token": {
+                      "name": 11,
+                      "policy": 8
+                    }
+                  }
+                ]
+              },
+              {
+                "contents": {
+                  "applicationTags": [],
+                  "lovelace": 1,
+                  "otherAssets": [],
+                  "trieReadyTags": []
+                },
+                "output": {
+                  "address": 0,
+                  "assets": [],
+                  "commitment": null,
+                  "config": null,
+                  "datum": "none",
+                  "datumValue": null,
+                  "lovelace": 1,
+                  "reference": null,
+                  "role": "owner",
+                  "stateToken": null,
+                  "stateTokens": 0
+                },
+                "request": null,
+                "singularTags": []
+              }
+            ],
+            "singularMint": [
+              [
+                {
+                  "registryId": 9,
+                  "token": {
+                    "name": 11,
+                    "policy": 8
+                  }
+                },
+                1
+              ]
+            ],
+            "stateMint": [],
+            "transaction": {
+              "donation": 2,
+              "fee": 1,
+              "inputs": [
+                {
+                  "approvals": 0,
+                  "assets": [],
+                  "datum": "inline",
+                  "datumValue": null,
+                  "lovelace": 0,
+                  "ref": {
+                    "index": 0,
+                    "tx": 100
+                  },
+                  "role": "request",
+                  "stateToken": null,
+                  "stateTokens": 0
+                },
+                {
+                  "approvals": 0,
+                  "assets": [],
+                  "datum": "inline",
+                  "datumValue": null,
+                  "lovelace": 0,
+                  "ref": {
+                    "index": 0,
+                    "tx": 101
+                  },
+                  "role": "request",
+                  "stateToken": null,
+                  "stateTokens": 0
+                },
+                {
+                  "approvals": 0,
+                  "assets": [],
+                  "datum": "inline",
+                  "datumValue": null,
+                  "lovelace": 0,
+                  "ref": {
+                    "index": 1,
+                    "tx": 101
+                  },
+                  "role": "request",
+                  "stateToken": null,
+                  "stateTokens": 0
+                }
+              ],
+              "mint": [],
+              "outputs": [
+                {
+                  "address": null,
+                  "assets": [],
+                  "commitment": null,
+                  "config": {
+                    "activePolicy": 8,
+                    "applicationPolicy": 7,
+                    "bookingWidth": 1,
+                    "maxFee": 1,
+                    "processTime": 5,
+                    "registrationCost": 2,
+                    "registryId": 9,
+                    "retractTime": 5,
+                    "root": [
+                      187,
+                      43,
+                      111,
+                      81,
+                      131,
+                      142,
+                      177,
+                      246
+                    ]
+                  },
+                  "datum": "inline",
+                  "datumValue": null,
+                  "lovelace": 0,
+                  "reference": null,
+                  "role": "state",
+                  "stateToken": {
+                    "name": 0,
+                    "policy": 9
+                  },
+                  "stateTokens": 1
+                },
+                {
+                  "address": 111,
+                  "assets": [],
+                  "commitment": null,
+                  "config": null,
+                  "datum": "inline",
+                  "datumValue": 711,
+                  "lovelace": 14,
+                  "reference": null,
+                  "role": "owner",
+                  "stateToken": null,
+                  "stateTokens": 0
+                },
+                {
+                  "address": 0,
+                  "assets": [],
+                  "commitment": null,
+                  "config": null,
+                  "datum": "none",
+                  "datumValue": null,
+                  "lovelace": 1,
+                  "reference": null,
+                  "role": "owner",
+                  "stateToken": null,
+                  "stateTokens": 0
+                }
+              ],
+              "referenceInputs": [],
+              "refunds": [],
+              "signers": [],
+              "validity": {
+                "lower": 2,
+                "upper": 3
+              }
+            },
+            "trieReadyMint": [
+              [
+                {
+                  "name": "14272158603032493918",
+                  "policy": 9
+                },
+                -1
+              ]
+            ]
+          },
+          "unspent": [
+            [
+              {
+                "index": 0,
+                "tx": 100
+              },
+              {
+                "contents": {
+                  "applicationTags": [
+                    {
+                      "assetName": "5369963716140239679",
+                      "destination": 111,
+                      "edge": "insertActive",
+                      "key": 11,
+                      "owner": 42,
+                      "policy": 7,
+                      "signatures": []
+                    }
+                  ],
+                  "lovelace": 17,
+                  "otherAssets": [],
+                  "trieReadyTags": [
+                    {
+                      "name": "14272158603032493918",
+                      "policy": 9
+                    }
+                  ]
+                },
+                "output": {
+                  "address": 0,
+                  "assets": [],
+                  "commitment": null,
+                  "config": null,
+                  "datum": "inline",
+                  "datumValue": null,
+                  "lovelace": 17,
+                  "reference": null,
+                  "role": "request",
+                  "stateToken": null,
+                  "stateTokens": 0
+                },
+                "request": {
+                  "registration": {
+                    "request": {
+                      "carrierAda": 14,
+                      "contents": {
+                        "applicationTags": [
+                          {
+                            "assetName": "5369963716140239679",
+                            "destination": 111,
+                            "edge": "insertActive",
+                            "key": 11,
+                            "owner": 42,
+                            "policy": 7,
+                            "signatures": []
+                          }
+                        ],
+                        "lovelace": 17,
+                        "otherAssets": [],
+                        "trieReadyTags": [
+                          {
+                            "name": "14272158603032493918",
+                            "policy": 9
+                          }
+                        ]
+                      },
+                      "datum": 711,
+                      "declaredTip": 1,
+                      "destination": 111,
+                      "key": 11,
+                      "reference": {
+                        "index": 0,
+                        "tx": 100
+                      },
+                      "refundAddress": 42,
+                      "registrationCost": 2,
+                      "registryId": 9,
+                      "submittedAt": 1
+                    }
+                  }
+                },
+                "singularTags": []
+              }
+            ],
+            [
+              {
+                "index": 0,
+                "tx": 101
+              },
+              {
+                "contents": {
+                  "applicationTags": [],
+                  "lovelace": 0,
+                  "otherAssets": [],
+                  "trieReadyTags": []
+                },
+                "output": {
+                  "address": null,
+                  "assets": [],
+                  "commitment": null,
+                  "config": {
+                    "activePolicy": 8,
+                    "applicationPolicy": 7,
+                    "bookingWidth": 1,
+                    "maxFee": 1,
+                    "processTime": 5,
+                    "registrationCost": 2,
+                    "registryId": 9,
+                    "retractTime": 5,
+                    "root": [
+                      203,
+                      242,
+                      156,
+                      228,
+                      132,
+                      34,
+                      35,
+                      37
+                    ]
+                  },
+                  "datum": "inline",
+                  "datumValue": null,
+                  "lovelace": 0,
+                  "reference": null,
+                  "role": "state",
+                  "stateToken": {
+                    "name": 0,
+                    "policy": 9
+                  },
+                  "stateTokens": 1
+                },
+                "request": null,
+                "singularTags": []
+              }
+            ],
+            [
+              {
+                "index": 1,
+                "tx": 101
+              },
+              {
+                "contents": {
+                  "applicationTags": [],
+                  "lovelace": 1,
+                  "otherAssets": [],
+                  "trieReadyTags": []
+                },
+                "output": {
+                  "address": 0,
+                  "assets": [],
+                  "commitment": null,
+                  "config": null,
+                  "datum": "none",
+                  "datumValue": null,
+                  "lovelace": 1,
+                  "reference": null,
+                  "role": "owner",
+                  "stateToken": null,
+                  "stateTokens": 0
+                },
+                "request": null,
+                "singularTags": []
+              }
+            ]
           ]
         }
       },
       "expect": {
         "ok": true,
-        "flow": {
-          "deposited": 0,
-          "locked": [],
-          "refunds": [
-            {
-              "addr": 6,
-              "value": 1
+        "result": {
+          "ok": {
+            "flow": {
+              "bondReturn": null,
+              "bookingFee": 0,
+              "deposited": 0,
+              "intoRequest": 0,
+              "locked": [
+                [
+                  11,
+                  10
+                ]
+              ],
+              "premium": null
+            },
+            "observations": [
+              {
+                "aid": 11,
+                "binding": 0,
+                "leaf": {
+                  "known": {
+                    "s": "active"
+                  }
+                },
+                "minAda": 4,
+                "supply": 1
+              }
+            ],
+            "state": {
+              "bindings": [
+                [
+                  11,
+                  0
+                ]
+              ],
+              "carriers": [
+                {
+                  "aid": 11,
+                  "k": 0,
+                  "minAda": 4,
+                  "original": {
+                    "datum": 711,
+                    "key": 11,
+                    "kind": "active",
+                    "output": 111
+                  },
+                  "st": "live",
+                  "token": 0
+                }
+              ],
+              "config": {
+                "activePolicy": 8,
+                "applicationPolicy": 7,
+                "bookingWidth": 1,
+                "maxFee": 1,
+                "processTime": 5,
+                "registrationCost": 2,
+                "registryId": 9,
+                "retractTime": 5,
+                "root": [
+                  187,
+                  43,
+                  111,
+                  81,
+                  131,
+                  142,
+                  177,
+                  246
+                ]
+              },
+              "gen": 1,
+              "nextToken": 1,
+              "registrations": [],
+              "terminations": [],
+              "treasury": 2,
+              "trie": [
+                [
+                  11,
+                  {
+                    "known": {
+                      "s": "active"
+                    }
+                  }
+                ]
+              ]
             }
-          ],
-          "tips": {
-            "addr": 3,
-            "value": 2
-          },
-          "premium": null,
-          "intoRequest": 0,
-          "bondReturn": null
+          }
         }
       },
-      "exhibits": [
-        "R11",
-        "R12",
-        "R1"
-      ]
+      "note": "Process the selected requests"
     },
     {
-      "now": 12,
-      "actor": "anyone",
-      "as": "Sam — reaping nothing: dormant holds no UTxO",
+      "now": 0,
+      "actor": "anyone presenting the required evidence",
+      "as": "Alice",
       "action": {
-        "reap": {
-          "reaper": 6,
+        "park": {
           "aid": 11,
           "recipient": 6
         }
       },
       "expect": {
-        "ok": false,
-        "reason": "no-checkpoint"
+        "ok": true,
+        "result": {
+          "ok": {
+            "flow": {
+              "bondReturn": [
+                6,
+                10
+              ],
+              "bookingFee": 0,
+              "deposited": 0,
+              "intoRequest": 0,
+              "locked": [],
+              "premium": null
+            },
+            "observations": [
+              {
+                "aid": 11,
+                "binding": 0,
+                "leaf": {
+                  "known": {
+                    "s": "active"
+                  }
+                },
+                "minAda": 4,
+                "supply": 1
+              }
+            ],
+            "state": {
+              "bindings": [
+                [
+                  11,
+                  0
+                ]
+              ],
+              "carriers": [
+                {
+                  "aid": 11,
+                  "k": 1,
+                  "minAda": 4,
+                  "original": {
+                    "datum": 711,
+                    "key": 11,
+                    "kind": "active",
+                    "output": 111
+                  },
+                  "st": "parked",
+                  "token": 0
+                }
+              ],
+              "config": {
+                "activePolicy": 8,
+                "applicationPolicy": 7,
+                "bookingWidth": 1,
+                "maxFee": 1,
+                "processTime": 5,
+                "registrationCost": 2,
+                "registryId": 9,
+                "retractTime": 5,
+                "root": [
+                  187,
+                  43,
+                  111,
+                  81,
+                  131,
+                  142,
+                  177,
+                  246
+                ]
+              },
+              "gen": 1,
+              "nextToken": 1,
+              "registrations": [],
+              "terminations": [],
+              "treasury": 2,
+              "trie": [
+                [
+                  11,
+                  {
+                    "known": {
+                      "s": "active"
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        }
       },
-      "exhibits": [
-        "R13",
-        "R1",
-        "R4"
-      ]
+      "note": "Park and return the bond to its authorized recipient"
+    },
+    {
+      "now": 0,
+      "actor": "anyone presenting the required evidence",
+      "as": "Sam",
+      "action": {
+        "bookTermination": {
+          "aid": 11,
+          "booker": 7,
+          "booking": {
+            "custodyInputs": [
+              {
+                "datum": 711,
+                "key": 11,
+                "kind": "active",
+                "output": 111
+              }
+            ],
+            "request": {
+              "carrierAda": 2,
+              "contents": {
+                "applicationTags": [],
+                "lovelace": 3,
+                "otherAssets": [],
+                "trieReadyTags": [
+                  {
+                    "name": "5600603241348410377",
+                    "policy": 9
+                  }
+                ]
+              },
+              "declaredTip": 1,
+              "destination": 111,
+              "key": 11,
+              "reference": {
+                "index": 0,
+                "tx": 200
+              },
+              "refundAddress": null,
+              "registryId": 9,
+              "singularTags": [
+                {
+                  "registryId": 9,
+                  "token": {
+                    "name": 11,
+                    "policy": 8
+                  }
+                }
+              ],
+              "submittedAt": null
+            },
+            "trieReadyTagsMinted": [
+              {
+                "name": "5600603241348410377",
+                "policy": 9
+              }
+            ]
+          },
+          "fee": 1
+        }
+      },
+      "expect": {
+        "ok": false,
+        "reason": "keri-conviction-required",
+        "result": {
+          "error": "keri-conviction-required"
+        }
+      },
+      "note": "Try booking a parked, unconvicted carrier for termination"
     }
   ],
   "forks": [
     {
-      "id": "alice-comes-back",
-      "at": 7,
-      "title": "Alice revives from the retained state",
-      "env": {
-        "inception": [
-          11
-        ],
-        "rotationFrom": [
+      "id": "wrong-recipient",
+      "at": 2,
+      "title": "Try returning the bond to an unauthorized recipient",
+      "steps": [
+        {
+          "now": 0,
+          "actor": "anyone presenting the required evidence",
+          "as": "Alice",
+          "action": {
+            "park": {
+              "aid": 11,
+              "recipient": 9
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "keri-close-refused",
+            "result": {
+              "error": "keri-close-refused"
+            }
+          },
+          "note": "Try returning the bond to an unauthorized recipient"
+        }
+      ],
+      "expectFinal": {
+        "bindings": [
           [
             11,
             0
-          ],
-          [
-            11,
-            1
           ]
         ],
-        "closeAuth": [
-          [
-            11,
-            6
-          ]
-        ]
-      },
-      "steps": [
-        {
-          "now": 12,
-          "actor": "anyone",
-          "as": "Alice — a witnessed rotation from key state 1",
-          "action": {
-            "contribute": {
-              "aid": 11,
-              "owner": 1,
-              "submittedAt": 12,
-              "op": "revive"
-            }
-          },
-          "expect": {
-            "ok": true,
-            "flow": {
-              "deposited": 1002,
-              "locked": [],
-              "refunds": [],
-              "tips": null,
-              "premium": null,
-              "intoRequest": 0,
-              "bondReturn": null
-            }
-          },
-          "exhibits": [
-            "R11"
+        "carriers": [
+          {
+            "aid": 11,
+            "k": 0,
+            "minAda": 4,
+            "original": {
+              "datum": 711,
+              "key": 11,
+              "kind": "active",
+              "output": 111
+            },
+            "st": "live",
+            "token": 0
+          }
+        ],
+        "config": {
+          "activePolicy": 8,
+          "applicationPolicy": 7,
+          "bookingWidth": 1,
+          "maxFee": 1,
+          "processTime": 5,
+          "registrationCost": 2,
+          "registryId": 9,
+          "retractTime": 5,
+          "root": [
+            187,
+            43,
+            111,
+            81,
+            131,
+            142,
+            177,
+            246
           ]
         },
-        {
-          "now": 13,
-          "actor": "anyone",
-          "as": "Hal — live again at key state 2",
-          "action": {
-            "fold": {
-              "folder": 3,
-              "gen": 2,
-              "plugin": 7,
-              "batch": [
-                {
-                  "id": 2,
-                  "do": "process"
-                }
-              ]
+        "gen": 1,
+        "nextToken": 1,
+        "registrations": [],
+        "terminations": [],
+        "treasury": 2,
+        "trie": [
+          [
+            11,
+            {
+              "known": {
+                "s": "active"
+              }
             }
-          },
-          "expect": {
-            "ok": true,
-            "flow": {
-              "deposited": 0,
-              "locked": [
-                {
-                  "aid": 11,
-                  "value": 1000
-                }
-              ],
-              "refunds": [],
-              "tips": {
-                "addr": 3,
-                "value": 2
-              },
-              "premium": null,
-              "intoRequest": 0,
-              "bondReturn": null
-            }
-          },
-          "exhibits": [
-            "R6",
-            "R1",
-            "R12"
           ]
-        }
-      ]
+        ]
+      }
     }
   ],
   "expectFinal": {
-    "gen": 2,
-    "plugin": 7,
-    "leaves": [
+    "bindings": [
+      [
+        11,
+        0
+      ]
+    ],
+    "carriers": [
       {
         "aid": 11,
-        "status": {
-          "dormant": 1
-        }
+        "k": 1,
+        "minAda": 4,
+        "original": {
+          "datum": 711,
+          "key": 11,
+          "kind": "active",
+          "output": 111
+        },
+        "st": "parked",
+        "token": 0
       }
     ],
-    "ckpts": [],
-    "requests": [],
-    "nextReq": 2,
-    "nextToken": 1
+    "config": {
+      "activePolicy": 8,
+      "applicationPolicy": 7,
+      "bookingWidth": 1,
+      "maxFee": 1,
+      "processTime": 5,
+      "registrationCost": 2,
+      "registryId": 9,
+      "retractTime": 5,
+      "root": [
+        187,
+        43,
+        111,
+        81,
+        131,
+        142,
+        177,
+        246
+      ]
+    },
+    "gen": 1,
+    "nextToken": 1,
+    "registrations": [],
+    "terminations": [],
+    "treasury": 2,
+    "trie": [
+      [
+        11,
+        {
+          "known": {
+            "s": "active"
+          }
+        }
+      ]
+    ]
   }
 }

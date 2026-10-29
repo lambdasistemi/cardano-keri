@@ -1,108 +1,873 @@
 {
-  "about": "Every clause of every labelled bullet (The chain checks, Money, Refused) of every story in REGISTRY-STORIES.md, reconciled with the Lean. class: guard (the Lean decides it), omission (the Lean does not model it; the note says what the chain does instead), overrule (the Lean decides differently; the simulator follows the Lean). A guard row names a Lean declaration (decl) — stepFn, processBody, processOne, rejectOne, applyBatch, replay, a decider (reapable, rejectable, inPhase1, inPhase2) or a theorem — the arm it sits in when the declaration matches on the action or the op (arm), the exact text that entails the clause (text: inside that declaration's span, inside the arm), its kind (guard / refusal: the text is a condition — an if-conjunct or a match pattern; payment / post-state: the text is in the arm's result; no-guard: the text is the arm's pattern, which carries no signer; verdict: the declaration is a theorem), and exactly one tie: reason (a refusal name, which the core's LEAN_GUARDS table binds to the sites that refuse it — the text must be one of them) or match (a step of the story's scenario — {step} on the trunk, {branch, step} on a fork — whose action goes through that arm, or whose fold processes that op, or which exhibits that theorem's lamp). updates on a post-state row is the list of fields the arm's `with` sets, which must equal what the step changed. The scenario gate extracts the clauses from REGISTRY-STORIES.md and fails on an unclassified fragment, a clause absent from its story, a text outside its declaration or arm or part, a tie the declaration does not decide, and a decision site of the Lean no refusal name claims.",
+  "version": 3,
+  "model": "CardanoKeri.Registry.stepFn",
+  "surfaceSha256": "34e785e42619f58b177e0985004a0e8362c9b8c48bca5190659be8c2d600517d",
+  "storiesMarkdownSha256": "5d04172f941548e867e4b2ca0fdb007c947fe96a4202561952b6733ff3f3f56f",
   "clauses": [
-    {"story":1,"clause":"a request may be posted for register, revive and convict","class":"guard","kind":"guard","decl":"stepFn","arm":".contribute","text":"op.userPostable = true","match":{"step":0,"ok":true}},
-    {"story":1,"clause":"the registry is not spent","class":"guard","kind":"post-state","decl":"stepFn","arm":".contribute","text":"nextReq := s.nextReq + 1","updates":["requests","nextReq"],"match":{"step":0}},
-    {"story":1,"clause":"the bond and the tip go into the request","class":"guard","kind":"payment","decl":"stepFn","arm":".contribute","text":"deposited := op.bond p + p.tip","match":{"step":0}},
-    {"story":1,"clause":"a go-request posted by hand is refused","class":"guard","kind":"refusal","decl":"stepFn","arm":".contribute","text":"op.userPostable = true","reason":"not-postable"},
-    {"story":2,"clause":"the fold names the current generation","class":"guard","kind":"guard","decl":"stepFn","arm":".fold","text":"g = s.gen","match":{"step":1}},
-    {"story":2,"clause":"the plugin is pinned","class":"guard","kind":"guard","decl":"stepFn","arm":".fold","text":"pl = s.plugin","match":{"step":1}},
-    {"story":2,"clause":"the request is in phase 1","class":"guard","kind":"guard","decl":"processOne","text":"inPhase1 p r now","match":{"step":1}},
-    {"story":2,"clause":"the inception verifies","class":"guard","kind":"guard","decl":"processBody","arm":".register","text":"env.inception r.aid = true","match":{"step":1}},
-    {"story":2,"clause":"the AID has no leaf","class":"guard","kind":"guard","decl":"processBody","arm":".register","text":"lookup acc.leaves r.aid = none","match":{"step":1}},
-    {"story":2,"clause":"the leaf is inserted active with the minted token","class":"guard","kind":"post-state","decl":"processBody","arm":".register","text":"leaves := (r.aid, .active acc.nextToken) :: acc.leaves","match":{"step":1}},
-    {"story":2,"clause":"the generation moves by one","class":"guard","kind":"post-state","decl":"stepFn","arm":".fold","text":"gen := s.gen + 1","match":{"step":1}},
-    {"story":2,"clause":"the bond is locked into the checkpoint","class":"guard","kind":"payment","decl":"processBody","arm":".register","text":"locked := acc.locked ++ [(r.aid, p.D)]","match":{"step":1}},
-    {"story":2,"clause":"the tip per request goes to the folder","class":"guard","kind":"payment","decl":"stepFn","arm":".fold","text":"tips := some (folder, batch.length * p.tip)","match":{"step":1}},
-    {"story":3,"clause":"the fold names the current generation","class":"guard","kind":"guard","decl":"stepFn","arm":".fold","text":"g = s.gen","match":{"step":2}},
-    {"story":3,"clause":"a fold carries no signature","class":"guard","kind":"no-guard","decl":"stepFn","arm":".fold","text":".fold folder g pl batch","match":{"branch":"mallory-first","step":0,"ok":true}},
-    {"story":3,"clause":"a fold at a spent generation is refused","class":"guard","kind":"refusal","decl":"stepFn","arm":".fold","text":"g = s.gen","reason":"stale-generation"},
-    {"story":3,"clause":"an empty batch is refused","class":"guard","kind":"refusal","decl":"stepFn","arm":".fold","text":"batch ≠ []","reason":"empty-fold"},
-    {"story":4,"clause":"after phase 2 anyone rejects","class":"guard","kind":"guard","decl":"rejectOne","text":"rejectable p r now","match":{"step":4}},
-    {"story":4,"clause":"the rejected request leaves the inbox","class":"guard","kind":"post-state","decl":"applyBatch","text":"requests := remove acc.requests id","match":{"step":4}},
-    {"story":4,"clause":"the bond returns to the request owner","class":"guard","kind":"payment","decl":"rejectOne","text":"refunds := acc.refunds ++ [(r.owner, r.op.bond p)]","match":{"step":4}},
-    {"story":4,"clause":"the tip goes to the folder","class":"guard","kind":"payment","decl":"stepFn","arm":".fold","text":"tips := some (folder, batch.length * p.tip)","match":{"step":4}},
-    {"story":4,"clause":"registering an AID that has a leaf is refused","class":"guard","kind":"refusal","decl":"processBody","arm":".register","text":"lookup acc.leaves r.aid = none","reason":"already-registered"},
-    {"story":4,"clause":"rejecting in phase 1 is refused","class":"guard","kind":"refusal","decl":"rejectOne","text":"rejectable p r now","reason":"not-rejectable"},
-    {"story":5,"clause":"only in phase 2 may a request be retracted","class":"guard","kind":"guard","decl":"stepFn","arm":".retract","text":"inPhase2 p r now","match":{"step":2}},
-    {"story":5,"clause":"the owner signs the retract","class":"omission","note":"stepFn checks only the request id and the phase: the Lean has no signer on retract, while validators/request.ak on cardano-mpfs-onchain main requires the owner among extra_signatories. The refund goes to the recorded owner either way, so a stranger can cancel a request, not steal it. Clarity Q-R3."},
-    {"story":5,"clause":"the request leaves the inbox","class":"guard","kind":"post-state","decl":"stepFn","arm":".retract","text":"requests := remove s.requests id","updates":["requests"],"match":{"step":2}},
-    {"story":5,"clause":"bond and tip return to the owner","class":"guard","kind":"payment","decl":"stepFn","arm":".retract","text":"refunds := [(r.owner, r.op.bond p + p.tip)]","match":{"step":2}},
-    {"story":5,"clause":"a retract before phase 2 is refused","class":"guard","kind":"refusal","decl":"stepFn","arm":".retract","text":"inPhase2 p r now","reason":"not-in-phase-2"},
-    {"story":5,"clause":"a retract of a request that is gone is refused","class":"guard","kind":"refusal","decl":"stepFn","arm":".retract","text":"some r","reason":"unknown-request"},
-    {"story":5,"clause":"a reject in phase 2 is refused","class":"guard","kind":"refusal","decl":"rejectOne","text":"rejectable p r now","reason":"not-rejectable"},
-    {"story":6,"clause":"after phase 2 anyone rejects","class":"guard","kind":"guard","decl":"rejectOne","text":"rejectable p r now","match":{"step":3}},
-    {"story":6,"clause":"a fold carries no signature","class":"guard","kind":"no-guard","decl":"stepFn","arm":".fold","text":".fold folder g pl batch","match":{"step":3,"ok":true}},
-    {"story":6,"clause":"the bond returns to the request owner","class":"guard","kind":"payment","decl":"rejectOne","text":"refunds := acc.refunds ++ [(r.owner, r.op.bond p)]","match":{"step":3}},
-    {"story":6,"clause":"the tip goes to the folder","class":"guard","kind":"payment","decl":"stepFn","arm":".fold","text":"tips := some (folder, batch.length * p.tip)","match":{"step":3}},
-    {"story":6,"clause":"rejecting in phase 1 is refused","class":"guard","kind":"refusal","decl":"rejectOne","text":"rejectable p r now","reason":"not-rejectable"},
-    {"story":6,"clause":"a retract after phase 2 is refused","class":"guard","kind":"refusal","decl":"stepFn","arm":".retract","text":"inPhase2 p r now","reason":"not-in-phase-2"},
-    {"story":7,"clause":"a retract in phase 2 applies","class":"guard","kind":"guard","decl":"stepFn","arm":".retract","text":"inPhase2 p r now","match":{"step":3}},
-    {"story":7,"clause":"an empty batch is refused","class":"guard","kind":"refusal","decl":"stepFn","arm":".fold","text":"batch ≠ []","reason":"empty-fold"},
-    {"story":7,"clause":"a process outside phase 1 is refused","class":"guard","kind":"refusal","decl":"processOne","text":"inPhase1 p r now","reason":"not-in-phase-1"},
-    {"story":8,"clause":"a stranger's fold with the pinned plugin applies","class":"guard","kind":"guard","decl":"stepFn","arm":".fold","text":"pl = s.plugin","match":{"branch":"mallory-plays-fair","step":0,"ok":true}},
-    {"story":8,"clause":"a fold that re-creates the cage with another plugin is refused","class":"guard","kind":"refusal","decl":"stepFn","arm":".fold","text":"pl = s.plugin","reason":"plugin-not-pinned"},
-    {"story":8,"clause":"a registration whose inception does not verify is refused","class":"guard","kind":"refusal","decl":"processBody","arm":".register","text":"env.inception r.aid = true","reason":"bad-inception"},
-    {"story":9,"clause":"a pause needs a live checkpoint","class":"guard","kind":"guard","decl":"stepFn","arm":".pause","text":"some ⟨tok, k, .live⟩","match":{"step":3}},
-    {"story":9,"clause":"and a witnessed rotation from its key state","class":"guard","kind":"guard","decl":"stepFn","arm":".pause","text":"env.rotationFrom aid k = true","match":{"step":3}},
-    {"story":9,"clause":"the parked checkpoint records the next key state and the slot","class":"guard","kind":"post-state","decl":"stepFn","arm":".pause","text":"⟨tok, k + 1, .parked now⟩","match":{"step":3}},
-    {"story":9,"clause":"the registry is not spent","class":"guard","kind":"post-state","decl":"stepFn","arm":".pause","text":"ckpts := (aid, ⟨tok, k + 1, .parked now⟩) :: remove s.ckpts aid","updates":["ckpts"],"match":{"step":3}},
-    {"story":9,"clause":"a resume needs a parked checkpoint","class":"guard","kind":"guard","decl":"stepFn","arm":".resume","text":"some ⟨tok, k, .parked _⟩","match":{"step":5}},
-    {"story":9,"clause":"and a rotation from its key state","class":"guard","kind":"guard","decl":"stepFn","arm":".resume","text":"env.rotationFrom aid k = true","match":{"step":5}},
-    {"story":9,"clause":"no value moves on a pause or a resume","class":"guard","kind":"verdict","decl":"R11_ckpt_edges_move_no_value","text":"f = {}","match":{"step":3}},
-    {"story":9,"clause":"resuming a live checkpoint is refused","class":"guard","kind":"refusal","decl":"stepFn","arm":".resume","text":"some ⟨tok, k, .parked _⟩","reason":"not-parked"},
-    {"story":9,"clause":"pausing a parked one is refused","class":"guard","kind":"refusal","decl":"stepFn","arm":".pause","text":"some ⟨tok, k, .live⟩","reason":"not-live"},
-    {"story":9,"clause":"pausing without the rotation is refused","class":"guard","kind":"refusal","decl":"stepFn","arm":".pause","text":"env.rotationFrom aid k = true","reason":"no-rotation"},
-    {"story":9,"clause":"convicting without a proof is refused","class":"guard","kind":"refusal","decl":"stepFn","arm":".convictCkpt","text":"env.duplicity aid k = true","reason":"no-duplicity-proof"},
-    {"story":10,"clause":"a live checkpoint is never reapable","class":"guard","kind":"guard","decl":"reapable","text":"| .live => False","reason":"not-reapable"},
-    {"story":10,"clause":"a stranger reaps a parked checkpoint only after the grace window","class":"guard","kind":"guard","decl":"reapable","text":"since + p.W ≤ now","match":{"step":5}},
-    {"story":10,"clause":"the token is burned and the checkpoint leaves the chain","class":"guard","kind":"post-state","decl":"stepFn","arm":".reap","text":"ckpts := remove s.ckpts aid","match":{"step":5}},
-    {"story":10,"clause":"the go-request is dated at the end of time","class":"guard","kind":"post-state","decl":"stepFn","arm":".reap","text":"⟨aid, reaper, p.far, goOp c⟩","match":{"step":5}},
-    {"story":10,"clause":"the go-request makes the leaf dormant at the parked key state","class":"guard","kind":"post-state","decl":"processBody","arm":".goDormant","text":"leaves := setLeaf acc.leaves r.aid (.dormant k)","match":{"step":6}},
-    {"story":10,"clause":"a leaf changes only by a fold","class":"guard","kind":"verdict","decl":"R12_leaf_changes_only_by_fold","text":"∃ folder g pl batch, a = .fold folder g pl batch","match":{"step":6}},
-    {"story":10,"clause":"the reaper keeps the min-ADA less the go-request","class":"guard","kind":"payment","decl":"stepFn","arm":".reap","text":"premium := some (reaper, p.Mc - p.Mr - p.tip)","match":{"step":5}},
-    {"story":10,"clause":"the go-request is funded from the checkpoint","class":"guard","kind":"payment","decl":"stepFn","arm":".reap","text":"intoRequest := p.Mr + p.tip","match":{"step":5}},
-    {"story":10,"clause":"the fold returns the go-request's min-ADA to the reaper","class":"guard","kind":"payment","decl":"processBody","arm":".goDormant","text":"refunds := acc.refunds ++ [(r.owner, p.Mr)]","match":{"step":6}},
-    {"story":10,"clause":"reaping a live checkpoint is refused","class":"guard","kind":"refusal","decl":"stepFn","arm":".reap","text":"reapable p env now aid c","reason":"not-reapable"},
-    {"story":10,"clause":"reaping inside the grace window is refused","class":"guard","kind":"refusal","decl":"stepFn","arm":".reap","text":"reapable p env now aid c","reason":"not-reapable"},
-    {"story":10,"clause":"reaping an AID without a checkpoint is refused","class":"guard","kind":"refusal","decl":"stepFn","arm":".reap","text":"some c","reason":"no-checkpoint"},
-    {"story":11,"clause":"the owner reaps her parked checkpoint at any time","class":"guard","kind":"guard","decl":"reapable","text":"env.quorum aid = true","match":{"step":4}},
-    {"story":11,"clause":"a revive needs a dormant leaf","class":"guard","kind":"guard","decl":"processBody","arm":".revive","text":"some (.dormant k)","match":{"step":10}},
-    {"story":11,"clause":"a witnessed rotation from the recorded key state","class":"guard","kind":"guard","decl":"processBody","arm":".revive","text":"env.rotationFrom r.aid k = true","match":{"step":10}},
-    {"story":11,"clause":"and no checkpoint on chain","class":"guard","kind":"guard","decl":"processBody","arm":".revive","text":"lookup acc.ckpts r.aid = none","match":{"step":10}},
-    {"story":11,"clause":"a new token is minted into a live checkpoint at the next key state","class":"guard","kind":"post-state","decl":"processBody","arm":".revive","text":"ckpts := (r.aid, ⟨acc.nextToken, k + 1, .live⟩) :: acc.ckpts","match":{"step":10}},
-    {"story":11,"clause":"the leaf is active with the new token","class":"guard","kind":"post-state","decl":"processBody","arm":".revive","text":"leaves := setLeaf acc.leaves r.aid (.active acc.nextToken)","match":{"step":10}},
-    {"story":11,"clause":"the bond is locked into the checkpoint","class":"guard","kind":"payment","decl":"processBody","arm":".revive","text":"locked := acc.locked ++ [(r.aid, p.D)]","match":{"step":10}},
-    {"story":11,"clause":"reviving an AID that is not dormant is refused","class":"guard","kind":"refusal","decl":"processBody","arm":".revive","text":"some (.dormant k)","reason":"not-dormant"},
-    {"story":11,"clause":"reviving without the rotation is refused","class":"guard","kind":"refusal","decl":"processBody","arm":".revive","text":"env.rotationFrom r.aid k = true","reason":"no-rotation"},
-    {"story":12,"clause":"a checkpoint conviction needs a duplicity proof against its key state","class":"guard","kind":"guard","decl":"stepFn","arm":".convictCkpt","text":"env.duplicity aid k = true","match":{"step":2}},
-    {"story":12,"clause":"the checkpoint becomes a tombstone","class":"guard","kind":"post-state","decl":"stepFn","arm":".convictCkpt","text":"⟨tok, k, .tomb⟩","match":{"step":2}},
-    {"story":12,"clause":"the registry is not spent","class":"guard","kind":"post-state","decl":"stepFn","arm":".convictCkpt","text":"ckpts := (aid, ⟨tok, k, .tomb⟩) :: remove s.ckpts aid","updates":["ckpts"],"match":{"step":2}},
-    {"story":12,"clause":"a tombstone is reapable at once","class":"guard","kind":"guard","decl":"reapable","text":"| .tomb => True","match":{"step":4}},
-    {"story":12,"clause":"the go-request convicts the leaf","class":"guard","kind":"post-state","decl":"processBody","arm":".goConvicted","text":"leaves := setLeaf acc.leaves r.aid .convicted","match":{"step":5}},
-    {"story":12,"clause":"a convicted leaf never changes","class":"guard","kind":"verdict","decl":"R3_convicted_permanent","text":"lookup s'.leaves aid = some .convicted","match":{"step":10}},
-    {"story":12,"clause":"the reaper keeps the min-ADA less the go-request","class":"guard","kind":"payment","decl":"stepFn","arm":".reap","text":"premium := some (reaper, p.Mc - p.Mr - p.tip)","match":{"step":4}},
-    {"story":12,"clause":"the fold returns the go-request's min-ADA to the reaper","class":"guard","kind":"payment","decl":"processBody","arm":".goConvicted","text":"refunds := acc.refunds ++ [(r.owner, p.Mr)]","match":{"step":5}},
-    {"story":12,"clause":"convicting a tombstone is refused","class":"guard","kind":"refusal","decl":"stepFn","arm":".convictCkpt","text":"st ≠ .tomb","reason":"already-tombstone"},
-    {"story":12,"clause":"registering a convicted AID is refused","class":"guard","kind":"refusal","decl":"processBody","arm":".register","text":"lookup acc.leaves r.aid = none","reason":"already-registered"},
-    {"story":12,"clause":"reviving it is refused","class":"guard","kind":"refusal","decl":"processBody","arm":".revive","text":"some (.dormant k)","reason":"not-dormant"},
-    {"story":12,"clause":"convicting without a proof is refused","class":"guard","kind":"refusal","decl":"stepFn","arm":".convictCkpt","text":"env.duplicity aid k = true","reason":"no-duplicity-proof"},
-    {"story":13,"clause":"a conviction request needs a dormant leaf","class":"guard","kind":"guard","decl":"processBody","arm":".convict","text":"some (.dormant k)","match":{"step":9}},
-    {"story":13,"clause":"and a duplicity proof against its recorded key state","class":"guard","kind":"guard","decl":"processBody","arm":".convict","text":"env.duplicity r.aid k = true","match":{"step":9}},
-    {"story":13,"clause":"the leaf is convicted","class":"guard","kind":"post-state","decl":"processBody","arm":".convict","text":"leaves := setLeaf acc.leaves r.aid .convicted","match":{"step":9}},
-    {"story":13,"clause":"the proof is checked against the accumulator the fold reached","class":"guard","kind":"verdict","decl":"R14_convict_at_position","text":"∃ k, lookup accᵢ.leaves r.aid = some (.dormant k) ∧ env.duplicity r.aid k = true","match":{"branch":"convict-without-proof","step":1}},
-    {"story":13,"clause":"the request's min-ADA returns to the convictor","class":"guard","kind":"payment","decl":"processBody","arm":".convict","text":"refunds := acc.refunds ++ [(r.owner, p.Mr)]","match":{"step":9}},
-    {"story":13,"clause":"convicting an active AID through a request is refused","class":"guard","kind":"refusal","decl":"processBody","arm":".convict","text":"some (.dormant k)","reason":"not-dormant"},
-    {"story":13,"clause":"convicting without the proof is refused","class":"guard","kind":"refusal","decl":"processBody","arm":".convict","text":"env.duplicity r.aid k = true","reason":"no-duplicity-proof"},
-    {"story":14,"clause":"a go-request is dated at the end of time","class":"guard","kind":"post-state","decl":"stepFn","arm":".reap","text":"⟨aid, reaper, p.far, goOp c⟩","match":{"step":3}},
-    {"story":14,"clause":"phase 2 never comes for it","class":"guard","kind":"verdict","decl":"R9_go_never_retracted","text":"stepFn p env (.retract id) now s = none","match":{"step":4}},
-    {"story":14,"clause":"the plugin refuses to reject it","class":"guard","kind":"guard","decl":"rejectOne","text":"r.op.userPostable = true","reason":"go-not-rejectable"},
-    {"story":14,"clause":"it is processed by anyone","class":"guard","kind":"guard","decl":"processBody","arm":".goDormant","text":"some (.active _)","match":{"step":7}},
-    {"story":14,"clause":"the reaper's min-ADA returns when it is processed","class":"guard","kind":"payment","decl":"processBody","arm":".goDormant","text":"refunds := acc.refunds ++ [(r.owner, p.Mr)]","match":{"step":7}},
-    {"story":14,"clause":"retracting a go-request is refused","class":"guard","kind":"refusal","decl":"stepFn","arm":".retract","text":"inPhase2 p r now","reason":"not-in-phase-2"},
-    {"story":14,"clause":"rejecting it inside a batch is refused","class":"guard","kind":"refusal","decl":"rejectOne","text":"r.op.userPostable = true","reason":"go-not-rejectable"},
-    {"story":15,"clause":"a future timestamp is rejectable at once","class":"guard","kind":"guard","decl":"rejectable","text":"now < r.submittedAt","match":{"step":3}},
-    {"story":15,"clause":"the bond returns to the request owner","class":"guard","kind":"payment","decl":"rejectOne","text":"refunds := acc.refunds ++ [(r.owner, r.op.bond p)]","match":{"step":3}},
-    {"story":15,"clause":"a batch that names a request twice is refused","class":"guard","kind":"refusal","decl":"applyBatch","text":"some r","reason":"unknown-request"}
+    {
+      "story": 1,
+      "given": "An empty registry and a complete registration booking.",
+      "when": "Alice posts its observed value, application tag, ready tag and interval.",
+      "then": "The request is pending; no carrier or binding exists until a fold. A mismatched declared value is refused.",
+      "scenarioSha256": "46a07236178a60e10557a25ab6dae76cf264d48f785cb85c7fcfc0e84d0530f3",
+      "anchors": [
+        {
+          "declaration": "CardanoKeri.Registry.bookRegistration",
+          "sha256": "b0d6c3ce20533b9ff9aed3b3fe0e2721373088893a883e538f01afeff61cc089"
+        }
+      ],
+      "cells": [
+        {
+          "branch": "trunk",
+          "index": 0,
+          "action": "bookRegistration",
+          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+        },
+        {
+          "branch": "wrong-carrier-value",
+          "index": 0,
+          "action": "bookRegistration",
+          "expectationSha256": "56dd15647284b1d43bb131f7e297192f0790168710f8d793e271934f00783642"
+        }
+      ]
+    },
+    {
+      "story": 2,
+      "given": "A pending registration and valid inception evidence.",
+      "when": "Hal spends the request and registry in a complete economic fold.",
+      "then": "The destination receives the tagged carrier, the key becomes active, a token alias is allocated, and the generation advances.",
+      "scenarioSha256": "f8c9566a6233693ef4af92a9744bdcdf9ae3a2e508dc4499b2789a84d40295d6",
+      "anchors": [
+        {
+          "declaration": "CardanoKeri.Registry.bookRegistration",
+          "sha256": "b0d6c3ce20533b9ff9aed3b3fe0e2721373088893a883e538f01afeff61cc089"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.fold",
+          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+        }
+      ],
+      "cells": [
+        {
+          "branch": "trunk",
+          "index": 0,
+          "action": "bookRegistration",
+          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+        },
+        {
+          "branch": "trunk",
+          "index": 1,
+          "action": "fold",
+          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+        },
+        {
+          "branch": "missing-inception",
+          "index": 0,
+          "action": "fold",
+          "expectationSha256": "e19c8e20325c04a56709afae747746ec4ff88af2f72f488f2f0db420ed4e74cc"
+        }
+      ]
+    },
+    {
+      "story": 3,
+      "given": "Two folders have proposals for the same registry generation.",
+      "when": "One fold succeeds before the other is attempted.",
+      "then": "The first delivery remains; the stale generation is refused.",
+      "scenarioSha256": "e9cdc6a0e49d08ce6190ea87046f83bf246eceae4c175729095e254092803577",
+      "anchors": [
+        {
+          "declaration": "CardanoKeri.Registry.bookRegistration",
+          "sha256": "b0d6c3ce20533b9ff9aed3b3fe0e2721373088893a883e538f01afeff61cc089"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.fold",
+          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+        }
+      ],
+      "cells": [
+        {
+          "branch": "trunk",
+          "index": 0,
+          "action": "bookRegistration",
+          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+        },
+        {
+          "branch": "trunk",
+          "index": 1,
+          "action": "fold",
+          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+        },
+        {
+          "branch": "trunk",
+          "index": 2,
+          "action": "fold",
+          "expectationSha256": "98d81d779bef5433f2812e4ae31010e586c73cddd924b15b2df486263a4e4bed"
+        },
+        {
+          "branch": "empty-fold",
+          "index": 0,
+          "action": "fold",
+          "expectationSha256": "cf086f54b3bafc12b134d1f831c07593a453de0d31558b12e1bfcbb6d4a8e44d"
+        }
+      ]
+    },
+    {
+      "story": 4,
+      "given": "A key already has its first delivered carrier.",
+      "when": "A second registration is booked, attempted, then rejected with an authenticated lifecycle mismatch.",
+      "then": "Booking alone cannot replace the carrier. Processing fails; rejection removes the duplicate request and pays its refund floor to its recorded address.",
+      "scenarioSha256": "35ccc969e6395a2f28eda22273217cc9e3963ce6b0c3c3bf40667b6ce69cd9d4",
+      "anchors": [
+        {
+          "declaration": "CardanoKeri.Registry.bookRegistration",
+          "sha256": "b0d6c3ce20533b9ff9aed3b3fe0e2721373088893a883e538f01afeff61cc089"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.fold",
+          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.genericRejection",
+          "sha256": "17c87772cf431e6a2ba3171350e5936c5bb0246953f0841bd4f8992b454f7b54"
+        }
+      ],
+      "cells": [
+        {
+          "branch": "trunk",
+          "index": 0,
+          "action": "bookRegistration",
+          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+        },
+        {
+          "branch": "trunk",
+          "index": 1,
+          "action": "fold",
+          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+        },
+        {
+          "branch": "trunk",
+          "index": 2,
+          "action": "bookRegistration",
+          "expectationSha256": "5c4d53306826cc8370d56a1165b8152b34d67d84217afcf071e687728d71d2b3"
+        },
+        {
+          "branch": "trunk",
+          "index": 3,
+          "action": "genericRejection",
+          "expectationSha256": "b6e2e1802e93dec11473ebd6b0a7ab7257237bb9a5070e94386447ce643e0ff2"
+        },
+        {
+          "branch": "control-3-key-exists",
+          "index": 0,
+          "action": "fold",
+          "expectationSha256": "9c7e3e066cc34d1868351ce307c6113fb83f203d9bb2e89c0060d4cf7b53351c"
+        },
+        {
+          "branch": "control-4-reject-not-expired",
+          "index": 0,
+          "action": "genericRejection",
+          "expectationSha256": "5f6cb329a326ea459b68ccf2d302b883973020decdc946d37124720423f2db02"
+        }
+      ]
+    },
+    {
+      "story": 5,
+      "given": "A pending registration with a recorded refund address and submission time.",
+      "when": "The refund owner signs a complete transaction inside the retraction window.",
+      "then": "The request is removed once and its full contents are refunded; ordinary funding pays the fee. An interval outside the window or missing signer is refused.",
+      "scenarioSha256": "66380aee2fea5e429e01e70fd4711dfd66a9d47cc4c68cf7b1240819c1f4e651",
+      "anchors": [
+        {
+          "declaration": "CardanoKeri.Registry.bookRegistration",
+          "sha256": "b0d6c3ce20533b9ff9aed3b3fe0e2721373088893a883e538f01afeff61cc089"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.genericRetraction",
+          "sha256": "a98899354c0cb2c4e26ac29ce1259a6a219f8ba545a90fb10a0190470f00abe8"
+        }
+      ],
+      "cells": [
+        {
+          "branch": "trunk",
+          "index": 0,
+          "action": "bookRegistration",
+          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+        },
+        {
+          "branch": "trunk",
+          "index": 1,
+          "action": "genericRetraction",
+          "expectationSha256": "9d68c61aafaeac65b28b259668fb32a3c9767dab102f255a84efe55dc6222abd"
+        },
+        {
+          "branch": "retract-without-owner",
+          "index": 0,
+          "action": "genericRetraction",
+          "expectationSha256": "d73b0b1bf8300c859218d2b12c227e7f0267b554a89a705e08c176a1656b4c25"
+        },
+        {
+          "branch": "control-1-retract-window",
+          "index": 0,
+          "action": "genericRetraction",
+          "expectationSha256": "27fbc8924999f5fb8235d7d1df94d585c3493fa3e1eed80bc204ea557222b347"
+        },
+        {
+          "branch": "control-3-retract-window",
+          "index": 0,
+          "action": "genericRetraction",
+          "expectationSha256": "27fbc8924999f5fb8235d7d1df94d585c3493fa3e1eed80bc204ea557222b347"
+        }
+      ]
+    },
+    {
+      "story": 6,
+      "given": "A registration remains pending beyond its processing and retraction windows.",
+      "when": "Sam reads the current registry and submits its expiry rejection.",
+      "then": "The request is removed and the contents minus its tip reach the recorded refund address. The earlier expiry attempt is refused.",
+      "scenarioSha256": "825e57c3bdb832791efd75fae27efe035cf78318fdadb7e32d724051ec5657e5",
+      "anchors": [
+        {
+          "declaration": "CardanoKeri.Registry.bookRegistration",
+          "sha256": "b0d6c3ce20533b9ff9aed3b3fe0e2721373088893a883e538f01afeff61cc089"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.genericRejection",
+          "sha256": "17c87772cf431e6a2ba3171350e5936c5bb0246953f0841bd4f8992b454f7b54"
+        }
+      ],
+      "cells": [
+        {
+          "branch": "trunk",
+          "index": 0,
+          "action": "bookRegistration",
+          "expectationSha256": "cbc0997938521e144ae0365fdaffca941c89874c8158e8afb4d48549b82cc453"
+        },
+        {
+          "branch": "trunk",
+          "index": 1,
+          "action": "genericRejection",
+          "expectationSha256": "9d68c61aafaeac65b28b259668fb32a3c9767dab102f255a84efe55dc6222abd"
+        },
+        {
+          "branch": "reject-too-early",
+          "index": 0,
+          "action": "genericRejection",
+          "expectationSha256": "5f6cb329a326ea459b68ccf2d302b883973020decdc946d37124720423f2db02"
+        }
+      ]
+    },
+    {
+      "story": 7,
+      "given": "A pending registration has a bounded processing window.",
+      "when": "Hal processes a nonempty batch within that window, or tries the empty/late alternatives.",
+      "then": "The valid delivery succeeds; empty and out-of-window folds refuse without a successor state.",
+      "scenarioSha256": "a73dfd39c574ded71ff4ba55a6a97ba5ca814f681ac571e3dbbc9546a98efb3d",
+      "anchors": [
+        {
+          "declaration": "CardanoKeri.Registry.bookRegistration",
+          "sha256": "b0d6c3ce20533b9ff9aed3b3fe0e2721373088893a883e538f01afeff61cc089"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.fold",
+          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+        }
+      ],
+      "cells": [
+        {
+          "branch": "trunk",
+          "index": 0,
+          "action": "bookRegistration",
+          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+        },
+        {
+          "branch": "trunk",
+          "index": 1,
+          "action": "fold",
+          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+        },
+        {
+          "branch": "control-1-empty-fold",
+          "index": 0,
+          "action": "fold",
+          "expectationSha256": "cf086f54b3bafc12b134d1f831c07593a453de0d31558b12e1bfcbb6d4a8e44d"
+        },
+        {
+          "branch": "control-2-not-phase1",
+          "index": 0,
+          "action": "fold",
+          "expectationSha256": "abff3927e99fe6ec6853afba26a1c4b7b87493b6f903433f2936c65238913933"
+        }
+      ]
+    },
+    {
+      "story": 8,
+      "given": "The registry fixes its application policy.",
+      "when": "A folder supplies that policy and registration evidence, or substitutes a different policy.",
+      "then": "The correct fold succeeds; a substituted application policy is refused.",
+      "scenarioSha256": "6b67de9ef00e3a263d2191ad1607e56090519a2b6b45702c93d88d0e56b023b9",
+      "anchors": [
+        {
+          "declaration": "CardanoKeri.Registry.bookRegistration",
+          "sha256": "b0d6c3ce20533b9ff9aed3b3fe0e2721373088893a883e538f01afeff61cc089"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.fold",
+          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+        }
+      ],
+      "cells": [
+        {
+          "branch": "trunk",
+          "index": 0,
+          "action": "bookRegistration",
+          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+        },
+        {
+          "branch": "trunk",
+          "index": 1,
+          "action": "fold",
+          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+        },
+        {
+          "branch": "no-inception",
+          "index": 0,
+          "action": "fold",
+          "expectationSha256": "e19c8e20325c04a56709afae747746ec4ff88af2f72f488f2f0db420ed4e74cc"
+        },
+        {
+          "branch": "control-1-keri-plugin-mismatch",
+          "index": 0,
+          "action": "fold",
+          "expectationSha256": "78eb12ac1d2354fbd388ed56f4dca79f29be23e0f586308832af7475b06509c2"
+        }
+      ]
+    },
+    {
+      "story": 9,
+      "given": "Alice has a live carrier, recipient-specific close evidence and a rotation from the retained key.",
+      "when": "She parks, then revives the same retained output.",
+      "then": "Parking returns the bond, keeps the token, original holding and min-ADA, and advances the key once. Revival adds a fresh bond and advances the retained key once. The registry remains active.",
+      "scenarioSha256": "c0d3a70a4312a69654df5456b860a92d2f55f693c3484c8de303dff5155094b4",
+      "anchors": [
+        {
+          "declaration": "CardanoKeri.Registry.bookRegistration",
+          "sha256": "b0d6c3ce20533b9ff9aed3b3fe0e2721373088893a883e538f01afeff61cc089"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.fold",
+          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.park",
+          "sha256": "0f40c0a40abcefda5f016fa3eec0e5d58962c9cead92d238d1f97396390e0d8f"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.revive",
+          "sha256": "655e38faf8ab7e02b18ed69159496f1e49c1917b2758a46c2c4fe1a73be24bd0"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.convictCkpt",
+          "sha256": "e8f7d92385c38da84d8f31fce97fa931007746c69d9c2ec1a022a009549efff9"
+        }
+      ],
+      "cells": [
+        {
+          "branch": "trunk",
+          "index": 0,
+          "action": "bookRegistration",
+          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+        },
+        {
+          "branch": "trunk",
+          "index": 1,
+          "action": "fold",
+          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+        },
+        {
+          "branch": "trunk",
+          "index": 2,
+          "action": "park",
+          "expectationSha256": "67c0d52ce29a2a3db117cbdaf96f745a0bd6cdd896bab1cf80421cd862590103"
+        },
+        {
+          "branch": "trunk",
+          "index": 3,
+          "action": "revive",
+          "expectationSha256": "3e56f7f5eb80396a65c0b1eaadef9f0434a060b61a7f96452987b008b9a7c971"
+        },
+        {
+          "branch": "parked-conviction",
+          "index": 0,
+          "action": "convictCkpt",
+          "expectationSha256": "a83c4de8f7f351ef05cff5f9ed276484c9ca67355fa55718ba55c76e86c06698"
+        },
+        {
+          "branch": "control-2-keri-close-refused",
+          "index": 0,
+          "action": "park",
+          "expectationSha256": "ac5acdd415c545b10271434e4700d71979d5f73f1cee47332ef92fcfd343b76f"
+        },
+        {
+          "branch": "control-4-keri-revival-refused",
+          "index": 0,
+          "action": "revive",
+          "expectationSha256": "86f38efa0b9a9768b399d01101a6894f0b7ec0063dc7a95e46ed172cbf30be0a"
+        }
+      ]
+    },
+    {
+      "story": 10,
+      "given": "A parked carrier retains its token, key and min-ADA.",
+      "when": "Sam tries to book it as a termination.",
+      "then": "The booking is refused because conviction has not made the carrier pending. Waiting does not create a sweep entitlement.",
+      "scenarioSha256": "21531cc1faa9a6c0b972c347fb46d350e58af59216833cc681ab90c0f50b5f20",
+      "anchors": [
+        {
+          "declaration": "CardanoKeri.Registry.bookRegistration",
+          "sha256": "b0d6c3ce20533b9ff9aed3b3fe0e2721373088893a883e538f01afeff61cc089"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.fold",
+          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.park",
+          "sha256": "0f40c0a40abcefda5f016fa3eec0e5d58962c9cead92d238d1f97396390e0d8f"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.bookTermination",
+          "sha256": "d4b9cc635264ae93db7cbf3ff3e4b082d45cab781c1166a723e13fd71da38b90"
+        }
+      ],
+      "cells": [
+        {
+          "branch": "trunk",
+          "index": 0,
+          "action": "bookRegistration",
+          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+        },
+        {
+          "branch": "trunk",
+          "index": 1,
+          "action": "fold",
+          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+        },
+        {
+          "branch": "trunk",
+          "index": 2,
+          "action": "park",
+          "expectationSha256": "67c0d52ce29a2a3db117cbdaf96f745a0bd6cdd896bab1cf80421cd862590103"
+        },
+        {
+          "branch": "trunk",
+          "index": 3,
+          "action": "bookTermination",
+          "expectationSha256": "265a39e6f4a0e1495900312f6c60fe99eb00a591be161a7067ba4bef22774864"
+        },
+        {
+          "branch": "wrong-recipient",
+          "index": 0,
+          "action": "park",
+          "expectationSha256": "ac5acdd415c545b10271434e4700d71979d5f73f1cee47332ef92fcfd343b76f"
+        }
+      ]
+    },
+    {
+      "story": 11,
+      "given": "A carrier is parked at its retained key with the same permanent token binding.",
+      "when": "Alice supplies the later rotation from that key and a fresh bond.",
+      "then": "The same binding and original holding return to live custody. A rotation from another key does not suffice.",
+      "scenarioSha256": "bd19f38cea410b9873e3e7423fd010ecb61047b1569ea1af1d3a2ad07de39799",
+      "anchors": [
+        {
+          "declaration": "CardanoKeri.Registry.bookRegistration",
+          "sha256": "b0d6c3ce20533b9ff9aed3b3fe0e2721373088893a883e538f01afeff61cc089"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.fold",
+          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.park",
+          "sha256": "0f40c0a40abcefda5f016fa3eec0e5d58962c9cead92d238d1f97396390e0d8f"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.revive",
+          "sha256": "655e38faf8ab7e02b18ed69159496f1e49c1917b2758a46c2c4fe1a73be24bd0"
+        }
+      ],
+      "cells": [
+        {
+          "branch": "trunk",
+          "index": 0,
+          "action": "bookRegistration",
+          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+        },
+        {
+          "branch": "trunk",
+          "index": 1,
+          "action": "fold",
+          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+        },
+        {
+          "branch": "trunk",
+          "index": 2,
+          "action": "park",
+          "expectationSha256": "67c0d52ce29a2a3db117cbdaf96f745a0bd6cdd896bab1cf80421cd862590103"
+        },
+        {
+          "branch": "trunk",
+          "index": 3,
+          "action": "revive",
+          "expectationSha256": "3e56f7f5eb80396a65c0b1eaadef9f0434a060b61a7f96452987b008b9a7c971"
+        },
+        {
+          "branch": "wrong-retained-key",
+          "index": 0,
+          "action": "revive",
+          "expectationSha256": "86f38efa0b9a9768b399d01101a6894f0b7ec0063dc7a95e46ed172cbf30be0a"
+        }
+      ]
+    },
+    {
+      "story": 12,
+      "given": "A live carrier has duplicity evidence at its current key.",
+      "when": "Cora convicts it, Sam books its termination, and Hal processes that exact pending request.",
+      "then": "Conviction preserves pending custody; booking moves the whole entry into the request and pays the defined premium. Only the consuming fold burns the token and permanently retires the key.",
+      "scenarioSha256": "2f406641da8e0431d0f337e5d6fe8908005651f461140ce2f9c60104722508a4",
+      "anchors": [
+        {
+          "declaration": "CardanoKeri.Registry.bookRegistration",
+          "sha256": "b0d6c3ce20533b9ff9aed3b3fe0e2721373088893a883e538f01afeff61cc089"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.fold",
+          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.convictCkpt",
+          "sha256": "e8f7d92385c38da84d8f31fce97fa931007746c69d9c2ec1a022a009549efff9"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.bookTermination",
+          "sha256": "d4b9cc635264ae93db7cbf3ff3e4b082d45cab781c1166a723e13fd71da38b90"
+        }
+      ],
+      "cells": [
+        {
+          "branch": "trunk",
+          "index": 0,
+          "action": "bookRegistration",
+          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+        },
+        {
+          "branch": "trunk",
+          "index": 1,
+          "action": "fold",
+          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+        },
+        {
+          "branch": "trunk",
+          "index": 2,
+          "action": "convictCkpt",
+          "expectationSha256": "4cd85cbe02ca5ea5b532366f16f8e8e47e117c706d2594713cef623557e71946"
+        },
+        {
+          "branch": "trunk",
+          "index": 3,
+          "action": "bookTermination",
+          "expectationSha256": "ada54c6612c5269fb04e355121f3470fee11dca1e0b6b7e46aafce42fb2420bc"
+        },
+        {
+          "branch": "trunk",
+          "index": 4,
+          "action": "fold",
+          "expectationSha256": "4437e40afd302a1838c036b51e3c71eb4e85009559e01a4ab1bb45b35f9662e7"
+        },
+        {
+          "branch": "control-6-key-exists",
+          "index": 0,
+          "action": "bookRegistration",
+          "expectationSha256": "6ee074de2e0e8b28e9f600a5d08c1a81393d3bbc510c6b7a98a172c3b5bb3144"
+        },
+        {
+          "branch": "control-6-key-exists",
+          "index": 1,
+          "action": "fold",
+          "expectationSha256": "9c7e3e066cc34d1868351ce307c6113fb83f203d9bb2e89c0060d4cf7b53351c"
+        }
+      ]
+    },
+    {
+      "story": 13,
+      "given": "A parked carrier still holds its key, token and min-ADA.",
+      "when": "Cora presents duplicity at that retained key, followed by booking and consuming fold.",
+      "then": "The parked carrier follows the same pending-custody retirement path. Parking does not erase the evidence target.",
+      "scenarioSha256": "f526c6fb62f4a7dcec6ea73f24c1456637adc2ad5d7ea2b9354b63d379749870",
+      "anchors": [
+        {
+          "declaration": "CardanoKeri.Registry.bookRegistration",
+          "sha256": "b0d6c3ce20533b9ff9aed3b3fe0e2721373088893a883e538f01afeff61cc089"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.fold",
+          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.park",
+          "sha256": "0f40c0a40abcefda5f016fa3eec0e5d58962c9cead92d238d1f97396390e0d8f"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.convictCkpt",
+          "sha256": "e8f7d92385c38da84d8f31fce97fa931007746c69d9c2ec1a022a009549efff9"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.bookTermination",
+          "sha256": "d4b9cc635264ae93db7cbf3ff3e4b082d45cab781c1166a723e13fd71da38b90"
+        }
+      ],
+      "cells": [
+        {
+          "branch": "trunk",
+          "index": 0,
+          "action": "bookRegistration",
+          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+        },
+        {
+          "branch": "trunk",
+          "index": 1,
+          "action": "fold",
+          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+        },
+        {
+          "branch": "trunk",
+          "index": 2,
+          "action": "park",
+          "expectationSha256": "67c0d52ce29a2a3db117cbdaf96f745a0bd6cdd896bab1cf80421cd862590103"
+        },
+        {
+          "branch": "trunk",
+          "index": 3,
+          "action": "convictCkpt",
+          "expectationSha256": "a83c4de8f7f351ef05cff5f9ed276484c9ca67355fa55718ba55c76e86c06698"
+        },
+        {
+          "branch": "trunk",
+          "index": 4,
+          "action": "bookTermination",
+          "expectationSha256": "2df598f432909b1df150fb8a3791c4235c5df9fd2642723d3d7de164ab159437"
+        },
+        {
+          "branch": "trunk",
+          "index": 5,
+          "action": "fold",
+          "expectationSha256": "4437e40afd302a1838c036b51e3c71eb4e85009559e01a4ab1bb45b35f9662e7"
+        }
+      ]
+    },
+    {
+      "story": 14,
+      "given": "A convicted carrier has been booked into pending termination custody.",
+      "when": "Other parties try local moves or generic recovery before the actual consuming fold.",
+      "then": "The pending request remains whole until the fold consumes it. Generic registration recovery is not a termination exit.",
+      "scenarioSha256": "b0840544d04fefc1fa12a2fdf42c539d8e0b7c70fc1f76982e73fb8ce1b513d6",
+      "anchors": [
+        {
+          "declaration": "CardanoKeri.Registry.bookRegistration",
+          "sha256": "b0d6c3ce20533b9ff9aed3b3fe0e2721373088893a883e538f01afeff61cc089"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.fold",
+          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.convictCkpt",
+          "sha256": "e8f7d92385c38da84d8f31fce97fa931007746c69d9c2ec1a022a009549efff9"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.bookTermination",
+          "sha256": "d4b9cc635264ae93db7cbf3ff3e4b082d45cab781c1166a723e13fd71da38b90"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.genericRetraction",
+          "sha256": "a98899354c0cb2c4e26ac29ce1259a6a219f8ba545a90fb10a0190470f00abe8"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.genericRejection",
+          "sha256": "17c87772cf431e6a2ba3171350e5936c5bb0246953f0841bd4f8992b454f7b54"
+        }
+      ],
+      "cells": [
+        {
+          "branch": "trunk",
+          "index": 0,
+          "action": "bookRegistration",
+          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+        },
+        {
+          "branch": "trunk",
+          "index": 1,
+          "action": "fold",
+          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+        },
+        {
+          "branch": "trunk",
+          "index": 2,
+          "action": "convictCkpt",
+          "expectationSha256": "4cd85cbe02ca5ea5b532366f16f8e8e47e117c706d2594713cef623557e71946"
+        },
+        {
+          "branch": "trunk",
+          "index": 3,
+          "action": "bookTermination",
+          "expectationSha256": "ada54c6612c5269fb04e355121f3470fee11dca1e0b6b7e46aafce42fb2420bc"
+        },
+        {
+          "branch": "trunk",
+          "index": 4,
+          "action": "fold",
+          "expectationSha256": "4437e40afd302a1838c036b51e3c71eb4e85009559e01a4ab1bb45b35f9662e7"
+        },
+        {
+          "branch": "control-4-retract-registration-only",
+          "index": 0,
+          "action": "genericRetraction",
+          "expectationSha256": "a16c7fceb934197e2b6ea2e910d7b43da5e0fe7b95a68f2b2ce9f08be73692eb"
+        },
+        {
+          "branch": "control-5-reject-termination-no-expiry",
+          "index": 0,
+          "action": "genericRejection",
+          "expectationSha256": "8900d3746cef533862a301885d82aa12cc2b47bf788b8462e12814f964a7f6bb"
+        }
+      ]
+    },
+    {
+      "story": 15,
+      "given": "Complete pending requests retain their own references and custody.",
+      "when": "A folder processes selected requests, or tries duplicated inputs and inconsistent timestamps; the mixed-custody branch also interleaves another registration and refund.",
+      "then": "Duplicate inputs and backdated booking refuse. Completing one identity preserves the other pending entry through the mixed fold and registration recovery; its own later consuming fold completes it.",
+      "scenarioSha256": "92ea5d8be6a9729d021eefcf1b57e87ec44adb750b1b8fc4f3fdccb3f5b7ec6e",
+      "anchors": [
+        {
+          "declaration": "CardanoKeri.Registry.bookRegistration",
+          "sha256": "b0d6c3ce20533b9ff9aed3b3fe0e2721373088893a883e538f01afeff61cc089"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.fold",
+          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.convictCkpt",
+          "sha256": "e8f7d92385c38da84d8f31fce97fa931007746c69d9c2ec1a022a009549efff9"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.bookTermination",
+          "sha256": "d4b9cc635264ae93db7cbf3ff3e4b082d45cab781c1166a723e13fd71da38b90"
+        },
+        {
+          "declaration": "CardanoKeri.Registry.genericRetraction",
+          "sha256": "a98899354c0cb2c4e26ac29ce1259a6a219f8ba545a90fb10a0190470f00abe8"
+        }
+      ],
+      "cells": [
+        {
+          "branch": "trunk",
+          "index": 0,
+          "action": "bookRegistration",
+          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+        },
+        {
+          "branch": "trunk",
+          "index": 1,
+          "action": "fold",
+          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+        },
+        {
+          "branch": "control-1-backdated-booking",
+          "index": 0,
+          "action": "bookRegistration",
+          "expectationSha256": "51a86011af25763184958330eb410d3d5cf7d2690f15407696b2eff41e98fe32"
+        },
+        {
+          "branch": "control-2-fold-duplicate-input",
+          "index": 0,
+          "action": "fold",
+          "expectationSha256": "68461af349aeefb9d10041d38de0544c48a0d7c261940ac1a94a30969f4326d7"
+        },
+        {
+          "branch": "mixed-custody",
+          "index": 0,
+          "action": "bookRegistration",
+          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+        },
+        {
+          "branch": "mixed-custody",
+          "index": 1,
+          "action": "bookRegistration",
+          "expectationSha256": "3de597f960cb4639acdad4e99d7b051aa792f0615244cea5f04af6c58a121854"
+        },
+        {
+          "branch": "mixed-custody",
+          "index": 2,
+          "action": "fold",
+          "expectationSha256": "75f869ede4862411258f564bd15ef2564caae2faf3356e5990249609a2c6e855"
+        },
+        {
+          "branch": "mixed-custody",
+          "index": 3,
+          "action": "convictCkpt",
+          "expectationSha256": "f2dbe3ecad500f12a81bbb95fa7637b1610a000aef0de63c1260e5068e4fe8cf"
+        },
+        {
+          "branch": "mixed-custody",
+          "index": 4,
+          "action": "convictCkpt",
+          "expectationSha256": "138b9621fe1a6a0445978153841bd799461b48e21ce6c01897206857054f6b21"
+        },
+        {
+          "branch": "mixed-custody",
+          "index": 5,
+          "action": "bookTermination",
+          "expectationSha256": "ab2262f55cd2f6b77acb021ed75b01c085ab140e46fcf7f13808995e849609f5"
+        },
+        {
+          "branch": "mixed-custody",
+          "index": 6,
+          "action": "bookTermination",
+          "expectationSha256": "a287aca2c9d5fb65b5c8928301dae9510518bb2b456a8a43816cc24fc7da0203"
+        },
+        {
+          "branch": "mixed-custody",
+          "index": 7,
+          "action": "bookRegistration",
+          "expectationSha256": "a557fb522f1cdd0cca89f363093da616297e630c9273e1d93d8275352ac5fb44"
+        },
+        {
+          "branch": "mixed-custody",
+          "index": 8,
+          "action": "fold",
+          "expectationSha256": "dc3e546024be79a690410aa3144420b3cee74dda56cc5771ae308759d1972b02"
+        },
+        {
+          "branch": "mixed-custody",
+          "index": 9,
+          "action": "bookRegistration",
+          "expectationSha256": "80cce7bacd72b9ecda4954f6c11dd2ab9b8b4f38d682f4cb24abe74ed71b7dcc"
+        },
+        {
+          "branch": "mixed-custody",
+          "index": 10,
+          "action": "genericRetraction",
+          "expectationSha256": "4f76b3dec1258681c38506fc57ee424127f921980269fdbc53174047dc58708c"
+        },
+        {
+          "branch": "mixed-custody",
+          "index": 11,
+          "action": "fold",
+          "expectationSha256": "8f87aa315b1ffd824e282a1cbb573b96ed89147d6c076f59e26652804a037c81"
+        }
+      ]
+    }
   ]
 }

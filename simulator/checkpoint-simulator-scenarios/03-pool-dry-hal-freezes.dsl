@@ -21,7 +21,42 @@ step:
   expect:
     ok: true
     verdict: juvenile
-    exhibits: [T3_epoch_local, T6_component_conservation, T6_dreg_enters_only_at_birth, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_absent_only_registers, T8_edges_leave_the_leaf, T8_leaf_agrees_with_state, T8_leaf_states, T8_mint_once, T8_only_convicted_is_terminal, T8_present_implies_registered, T8_sysstep_partition, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+    modelResult:
+      flow:
+        bIn: 5
+        convictor: null
+        dregIn: 1000
+        hunter: null
+        poolIn: 1
+        refund: null
+      state:
+        present:
+          l:
+            bornAt: 0
+            epoch: 0
+            frozen: false
+            poisoned: false
+            pool: 1
+            refundTo: 1
+            sn: 0
+    state:
+      present:
+        l:
+          bornAt: 0
+          epoch: 0
+          frozen: false
+          poisoned: false
+          pool: 1
+          refundTo: 1
+          sn: 0
+    flow:
+      bIn: 5
+      convictor: null
+      dregIn: 1000
+      hunter: null
+      poolIn: 1
+      refund: null
+    exhibits: [T3_epoch_local, T6_component_conservation, T6_dreg_enters_only_at_birth, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_absent_only_registers, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired]
 step:
   slot: 12
   who: alice
@@ -49,13 +84,50 @@ step:
       pool: 1
       frozen: true
     flow:
+      bIn: 0
+      convictor: null
+      dregIn: 0
       hunter:
         addr: 2
-        dreg: 0
         b: 5
+        dreg: 0
         pool: 0
+      poolIn: 0
+      refund: null
     verdict: frozen
-    exhibits: [T10_bonds_are_observable, T15_b_leaves_only_by_freeze, T15_freeze_makes_inert, T16_payments_are_named, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T5_freeze_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_frozen_flips_only_by_rotation_or_freeze, T7_step_iff_stepFn, T7_trace_iff_replay, T8_edges_leave_the_leaf, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_only_convicted_is_terminal, T8_present_implies_registered, T8_reopen_actor_is_proof, T8_sysstep_partition, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff, trace_poison_fold, trace_sn_monotone_all]
+    modelResult:
+      flow:
+        bIn: 0
+        convictor: null
+        dregIn: 0
+        hunter:
+          addr: 2
+          b: 5
+          dreg: 0
+          pool: 0
+        poolIn: 0
+        refund: null
+      state:
+        present:
+          l:
+            bornAt: 0
+            epoch: 0
+            frozen: true
+            poisoned: false
+            pool: 1
+            refundTo: 1
+            sn: 0
+    state:
+      present:
+        l:
+          bornAt: 0
+          epoch: 0
+          frozen: true
+          poisoned: false
+          pool: 1
+          refundTo: 1
+          sn: 0
+    exhibits: [T10_bonds_are_observable, T15_b_leaves_only_by_freeze, T15_freeze_makes_inert, T16_payments_are_named, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T5_freeze_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_frozen_flips_only_by_rotation_or_freeze, T7_step_iff_stepFn, T7_trace_iff_replay, T8_reopen_actor_is_proof, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 12
   who: treasury
@@ -78,4 +150,5 @@ fork:
       ok: false
       reason: freeze-bond-missing
       verdict: frozen
-      exhibits: [T10_bonds_are_observable, T7_step_iff_stepFn, T8_leaf_agrees_with_state, T8_leaf_never_absent_again, T8_leaf_states, T8_present_implies_registered, T8_reopen_actor_is_proof, T8_utxo_iff_active, T9_juvenility_is_consumer_only, consumableStateB_iff]
+      modelResult: null
+      exhibits: [T10_bonds_are_observable, T7_step_iff_stepFn, T8_reopen_actor_is_proof, T9_juvenility_is_consumer_only, consumableStateB_iff]

@@ -9,7 +9,7 @@
       "pause": 400
     },
     {
-      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active or parked (a retained output holds its token, minimum ADA and last key state; the registry key stays active). A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
       "pause": 400
     },
     {
@@ -141,6 +141,6 @@
   ],
   "_source": {
     "file": "preprod-witness-pool.md",
-    "sha256": "183e4ee265f0465aa9a28e7bd9bce39e8affc6037c54066bcb17d2cc1c627dc5"
+    "sha256": "f81132c01e15aab5ad701f314ce7a39011c646a93427776b04e78e40ea69c1ea"
   }
 }

@@ -1,64 +1,73 @@
-# Lean model of the M1 checkpoint lifecycle — Checkpoint is the sole spec (#366)
+# The M1 identity model
 
-A Lake project (Lean 4, `v4.27.0`, one pinned Singular dependency) that
-models the M1 checkpoint lifecycle as **the on-chain
-validator's transition system** and proves the M1 invariants. Per
-[DISP-366-DELETE](https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547),
-`CardanoKeri.Checkpoint` is the sole compiled lifecycle specification.
+As an identity owner, park while retaining the output, token, minimum ADA and
+last key state, then revive through a later authorized rotation with fresh
+bonds. As a relying party, refuse parked and pending outputs. Conviction
+starts pending termination; an associated consuming fold completes retirement.
 
-Live surface (no semantic change in this disposition):
+The project uses Lean 4.27.0 and the public Singular pin below. Checkpoint owns
+the funded lifecycle; Registry is the imported economic transport adapter.
+The prose in each theorem comment states its complete Given/When/Then contract.
+The model is not a claim of production validator or builder conformance.
 
-- `CardanoKeri/Checkpoint.lean` — states, actions, guards, `stepFn`, `Trace`,
-  `replay`, `Sys` (the accepted D-036…D-040 machine).
-- `CardanoKeri/CheckpointGoals.lean` — the checkpoint theorems
-  (`step_iff_stepFn`, `trace_iff_replay`, T1–T16 family), fully proved.
-- `CardanoKeri/Registry.lean`, `RegistryGoals.lean`, `Cage.lean`,
-  `Samaritan.lean` — registry/cage/reaper surface, fully proved.
-- `CHECKPOINT-MUTANTS.md` — finite mutation campaign for the checkpoint machine.
-- `CheckpointTraceDriver.lean` — corpus producer for
-  `simulator/checkpoint-simulator.html`.
+## Build and inspect
 
-## Retirement of the pre-D-036 Lifecycle machine (#366)
-
-`CardanoKeri/Lifecycle.lean`, `CardanoKeri/Goals.lean`, and
-`CardanoKeri/Invariants.lean` (the pre-D-036 freeze/bond machine and its 21
-theorems) are retired and removed from the compiled surface. The historical
-21-theorem extent is frozen at base `9b2e6b8` and recorded one-to-one in
-`traceability.csv` as explicit `RETIRED` rows bound to the owner ruling.
-`scripts/check-lean-traceability.sh` enforces the ledger, clean-build/compiled
-absence, and live proof trust.
-
-## Build
-
-```
+```sh
 cd lean
-lake build          # with elan: picks up lean-toolchain (v4.27.0)
-# without elan:
-nix shell --no-write-lock-file .#lean --command lake build
+lake build
+lake build CardanoKeriStatements
+lake env lean --run AxiomInventory.lean
 ```
 
-The build passes with **zero `sorry`**. No `axiom` declarations anywhere:
-`#print axioms` on every live theorem reports at most `propext` and
-`Quot.sound` (both Lean core) or no axioms.
+Use the repository's pinned compiler, through elan or
+`nix shell --no-write-lock-file .#lean --command lake build`. The compiled
+axiom inventory includes module-owned public, private and generated declarations;
+the allowed trust set is exactly `propext`, `Quot.sound` and `Classical.choice`.
+The traceability gate performs a clean build and checks exact contract types.
 
-## The registry machine (#316)
+## Model and proof ownership
 
-`CardanoKeri/Registry.lean` models the AID registry of D-024 as a cage of
-cardano-mpfs-onchain on the plugin path, after the rulings of 2026-09-02/03:
-leaves active / dormant / convicted, checkpoints live / parked / tombstone,
-requests as inbox UTxOs, a permissionless fold at a named generation, the
-reap of a bondless checkpoint into a permanent go-request, revival by a
-rotation from the recorded key state; one executable `stepFn`, `replay`,
-`ReachFar` and the invariant `Inv` (an active leaf's token is the token of its
-checkpoint). `CardanoKeri/RegistryGoals.lean` proves R1–R14, R14 at any
-position of any batch against the accumulator the fold reached
-(`R14_convict_at_position`); `CardanoKeri/Cage.lean` is the generic mpfs cage (authorization mode,
-plugin, value mode) with the registry as its delegated instantiation and the
-divergence from the cage as shipped as theorems; `CardanoKeri/Samaritan.lean`
-proves the reaper never loses. No `sorry`, standard axioms only. The
-mutation campaign is `REGISTRY-MUTANTS.md`; the design note is
-`docs/design/registry-as-mpfs.md`. `RegistryTraceDriver.lean` is the corpus
-producer for `simulator/registry-simulator.html`.
+| Source | Responsibility |
+| --- | --- |
+| `Checkpoint.lean` | Local states/actions, addressed flow, concrete evidence, executable mirror, associated SysStep and SysReach |
+| `CheckpointGoals.lean` | Local and system invariants, inversions, executable equivalence and consumer refusal |
+| `CheckpointCompletionGoals.lean` | Stored origin, whole pending entry, request/key binding and completion consequences |
+| `CheckpointCertificate.lean`, `CheckpointSystemEvidence.lean` | Executable certificates and their actual SysStep proofs |
+| `Registry.lean`, `RegistryAgreement.lean` | Complete generic booking/fold/recovery execution and projection correspondence |
+| `RegistryInvariant.lean`, `RegistryReach.lean`, `RegistryCompleteness.lean` | Well-formedness, reachable preservation and complete reconstruction |
+| `RegistryCustody.lean`, `RegistryBurns.lean`, `RegistryAuthorization.lean` | Whole pending custody, fold-only retirement and application authorization |
+| `RegistryGoals.lean` | Numbered consequences and inversions |
+| `Samaritan.lean` | Booking conservation and conditional actual-fold addressed accounting |
+
+Supporting metadata/fold/termination modules prove the intermediate list and
+projection lemmas. `RegistryReplay.lean` replays a fixed context.
+`RegistryAdapterFacts.lean` proves construction exclusions used by the finite
+refusal inventory; an excluded construction is not an executed refusal.
+
+## Stories, executions and mutation evidence
+
+The canonical reader register is `simulator/M1-STORIES.md`; Registry stories
+live in `simulator/REGISTRY-STORIES.md`. Stable story IDs retain explicit
+migration records. `CheckpointTraceDriver.lean` emits local wire-v2 traces,
+grid and stories. `RegistryTraceDriver.lean` emits wire-v3 complete economic
+transactions; `CheckpointSystemDriver.lean` emits the associated system's
+connected 34-cell journeys. Local cases alone do not establish SysReach.
+
+`CheckpointLifecycleExamples.lean` and `RegistryLifecycleExamples.lean`
+provide connected witnesses. Runtime subjects in the project root check full
+successors, addressed flows and named refusals. Current mutation manifests and
+the runner live in `retained-parking/`; model/subject compilation must succeed
+before a named runtime failure counts as a kill. Fabricated JavaScript checker
+failures and implementation mutants are recorded separately.
+
+The 106 changed contracts and 74 preserved live contracts are checked under
+explicit expected types in `retained-parking/ReviewedContracts.lean` and
+`PreservedContracts.lean`. Historical identities retain their dispositions;
+retired contracts do not count as current proofs or fresh mutation passes.
+The pre-D-036 retirement ledger remains `traceability.csv`.
+
+Read [the Registry design](../docs/design/registry-as-mpfs.md) for model limits
+and [the simulator guide](../simulator/README.md) for replay commands.
 
 ## Statements: ACDC admission, the revocation mirror, delegation
 
@@ -146,12 +155,8 @@ executing the guards; this is a finite API check, not a lifecycle journey.
 It also injects an unproved binding in a disposable control and requires the
 same axiom policy to reject its `sorryAx` dependency.
 
-This dependency-only technical slice preserves KERI's definitions and theorem
-propositions at base `a4c103726c41c5f3d2ab4788bec92ff28efbb0aa`. It introduces
-no state translation, validator or builder behavior, lifecycle migration, or
-behavioral correspondence. Compilation does not discharge #437, #438, #439
-or #468. The separate statement library and existing theorem trust/retirement
-gate remain distinct evidence. #446 and draft #447 retain their frozen
-v0.6.1 evidence; their owner must record disposition before successor acceptance.
-The earlier five `Except.noConfusion` failures at Singular `6cb27c70…` are
-historical diagnostic evidence, not a result for this pin.
+The dependency check establishes the pinned import and compiler boundary. The
+retained-output model additionally executes imported booking and fold judgments
+and proves its own correspondence contracts. Neither class of evidence proves
+production Aiken/Haskell correspondence or discharges consumer authentication
+(#439) and broader application recovery (#468).

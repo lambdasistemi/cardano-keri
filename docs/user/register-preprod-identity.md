@@ -6,8 +6,10 @@
     through the registry (absence proof, insert, mint). Play
     [Alice's identity appears on Cardano](../simulator/index.html) and
     the [registry simulation](../simulator/registry/index.html). An
-    identity is active, parked with the hash, or convicted. There is
-    no withdraw.
+    identity may be active, parked with its token and key state retained,
+    in pending conviction custody, or permanently convicted after its
+    associated Registry fold. Parking and revival leave the registry key
+    active. There is no withdraw.
 
 `ckeri register` turns a standard keripy inception export into a funded V1
 checkpoint on Cardano preprod. It does not create, rotate, or store KERI keys:

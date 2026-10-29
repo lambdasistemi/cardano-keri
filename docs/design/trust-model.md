@@ -101,7 +101,8 @@ complete checkpoint value only to that address.
 !!! warning "Close changes in the accepted design"
     Under ruling D-036, close is the **reap**: a witnessed rotation by
     the *next* keys whose signed message names the payee and the refund
-    address; the leaf is parked with the hash. That is what stops a
+    address; the parked output retains the token, minimum ADA and key state,
+    and the registry key stays active. That is what stops a
     thief holding only the current keys from erasing the owner's
     Cardano presence. See
     [Compromise of the current keys](key-compromise.md).

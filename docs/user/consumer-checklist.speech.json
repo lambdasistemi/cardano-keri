@@ -21,7 +21,7 @@
       "pause": 400
     },
     {
-      "text": "Present. There is a checkpoint UTxO. Parked (closed by its owner; the registry leaf keeps the hash) and convicted (terminal after a duplicity proof) have none — no candidate.",
+      "text": "Present. There is an active checkpoint UTxO. Parked outputs retain their token, minimum ADA and key state but are explicitly refused, as is pending conviction custody. Convicted is terminal after the associated Registry fold and has no candidate.",
       "pause": 300
     },
     {
@@ -59,6 +59,6 @@
   ],
   "_source": {
     "file": "consumer-checklist.md",
-    "sha256": "cd023c145089c1765db7e8ca00a4477ff8efb3977e2e00c378f4b5ec58d56387"
+    "sha256": "b22a621b01c27b5fe7d482862c6dc561e5008cfb36b46258368451e66cee9106"
   }
 }

@@ -17,7 +17,7 @@
       "pause": 400
     },
     {
-      "text": "These are simulations of the accepted M1 design, not commands against the deployed V1 contracts. The checkpoint model represents evidence as facts; it does not check real signatures, CESR encodings or witness receipts. The registry model abstracts requests, folds and uniqueness; it does not execute an MPFS proof or a Cardano transaction. See the architecture overview for the explicit V1/M1 distinction and the deployment guide for deployed behavior.",
+      "text": "These are simulations of the accepted M1 design, not commands against the deployed V1 contracts. The checkpoint model represents evidence as facts; it does not check real signatures, CESR encodings or witness receipts. The Registry model executes complete imported economic transactions. It does not submit transactions to Cardano. See the architecture overview for the explicit V1/M1 distinction and the deployment guide for deployed behavior.",
       "pause": 400
     }
   ],
@@ -59,7 +59,7 @@
       "pause": 400
     },
     {
-      "text": "These are required implementation obligations. The registry's processBody models their combined result; its Env.inception predicate assumes the cryptographic answer. It does not specify the exact division of checks between the KERI plugin, checkpoint minting policy and registration observers. The concrete script interfaces and asset-name encoding must be verified separately before this becomes an implementation guarantee.",
+      "text": "These are required implementation obligations. The registry's fold models their combined result; its Env.inception predicate assumes the cryptographic answer. It does not specify the exact division of checks between the KERI plugin, checkpoint minting policy and registration observers. The concrete script interfaces and asset-name encoding must be verified separately before this becomes an implementation guarantee.",
       "pause": 400
     },
     {
@@ -95,24 +95,8 @@
   ],
   "what-does-active-token-promise": [
     {
-      "text": "What does active token promise?.",
+      "text": "The registry key is absent, active or permanently retired. Parking retains the output, token, minimum ADA and key state. Revival rotates that output with fresh bonds without reminting or changing the active key. Conviction leaves pending custody until an accepted fold consumes its exact booked request. Permanent integer token bindings are model identities, not serialized Cardano asset names. The associated-system player demonstrates actual origins and receipts; local stories alone do not establish those premises.",
       "pause": 500
-    },
-    {
-      "text": "The registry stores an AID's lifecycle and indirection:",
-      "pause": 400
-    },
-    {
-      "text": "A never-registered AID has no leaf. Live, poisoned (locked by the owner's own declaration) and frozen (the freeze bond taken) are checkpoint conditions, not additional registry leaf variants. In the registry model's reap/fold handoff (the reap being the owner's close, a rotation by the next keys), an active leaf can temporarily have a pending go-request instead of a checkpoint; the leaf alone never authorizes consumer use.",
-      "pause": 400
-    },
-    {
-      "text": "The registry simulator's token and k are abstract integers. It allocates nextToken during registration, and a fresh one during permitted revival; those integers do not define serialized Cardano asset names. A concrete asset is identified by policy ID plus asset name. Knowing an AID-derived name before Cardano registration does not establish that its mint is unique.",
-      "pause": 400
-    },
-    {
-      "text": "The bounded guarantee is no second first-registration and at most one checkpoint per AID in the registry model, with revival as a separate guarded operation. It is not a proof that concrete token bytes are minted only once across every future revival. See the registry model reference.",
-      "pause": 400
     }
   ],
   "how-to-play-an-example": [
@@ -237,36 +221,8 @@
   ],
   "4-the-registry-refuses-a-duplicate-follow-the-money": [
     {
-      "text": "4. The registry refuses a duplicate: follow the money.",
+      "text": "The Registry fixture books 17 units: carrier value 14, registration cost 2 and tip 1. The first fold creates the carrier and permanent binding. A second booking cannot be processed: the branch refuses with key exists. The trunk supplies an authenticated active-key mismatch and refunds 16 to address 42. The full transaction contains this refund. The original carrier and token remain, treasury holds 2, and no registration is pending. The expiry branch instead refuses reject not expired because its interval is too early. Mismatch and expiry are distinct rejection grounds.",
       "pause": 500
-    },
-    {
-      "text": "Now look at Alice through the registry simulator. Here AID 11 is Alice's abstract identifier. A contributed request is pending work; only a successful fold updates the registry. Mallory can pay to submit a duplicate request, but cannot turn it into a second registered identity.",
-      "pause": 400
-    },
-    {
-      "text": "Guarantee and conditions: processing a registration requires an absent AID leaf. With Alice already registered, a duplicate request cannot create another checkpoint. Refunding that pending request is a separate operation with its own rejection-window condition.",
-      "pause": 400
-    },
-    {
-      "text": "Open the registry simulator · Open duplicate.dsl",
-      "pause": 400
-    },
-    {
-      "text": "Show duplicate.dsl — copy and play",
-      "pause": 400
-    },
-    {
-      "text": "What to observe: Alice contributes 1002: bond 1000 plus tip 2. Hal processes her request, locking 1000 and receiving the tip. Mallory then contributes the same amount for AID 11. Processing her request refuses with already-registered. At slot 25 Sam rejects that pending request: 1000 returns to Mallory at address 4, and tip 2 goes to Sam at address 6. The final state has one leaf, one checkpoint and no pending requests.",
-      "pause": 400
-    },
-    {
-      "text": "Try Sam rejects Mallory's request in phase 1. At slot 6 it refuses with not-rejectable; the pending request remains. Refusing a duplicate registration does not make early rejection legal. This example supplies its own registry parameters and actor map: Hal is address 3 here, and the registry's W = 5 serves its own model rather than importing the checkpoint example's settings.",
-      "pause": 400
-    },
-    {
-      "text": "The uniqueness boundary belongs to the registry. The checkpoint can then evolve without storing all identities in its datum. See The Registry as an MPFS Instance for the request/fold architecture and proof boundary.",
-      "pause": 400
     }
   ],
   "from-the-model-to-a-running-system": [
@@ -285,6 +241,6 @@
   ],
   "_source": {
     "file": "follow-one-identity.md",
-    "sha256": "d02e2ee4441006606cfad124a812c3fa8e5d868e00357b9412db75f20d76bf74"
+    "sha256": "9546c8c93daf05e39615ccd8c44e8259182985edc5c56248fa538ccafea3e1d1"
   }
 }

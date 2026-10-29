@@ -1,0 +1,4307 @@
+{
+  "version": 1,
+  "root": "CardanoKeri.Registry.stepFn",
+  "compiled": [
+    {
+      "declaration": "CardanoKeri.Registry.Action.casesOn",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.bookRegistration",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.bookTermination",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Carrier.aid",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Carrier.k",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Carrier.minAda",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Carrier.original",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Carrier.st",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Carrier.token",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.carrierAt",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.CkState.casesOn",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.CkState.ctorIdx",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.convictCkpt",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Env.closeAuth",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Env.duplicity",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Env.inception",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Env.rotationFrom",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.fold",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.foldResult",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.genericRejection",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.genericRetraction",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.installMember",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.installMember.match_1",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.installMember.match_3",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.instBEqCkState",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.instBEqCkState.beq",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.instDecidableRegistrationShape",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Params.D",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Params.Mc",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Params.Mr",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Params.tip",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.park",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.park._sparseCasesOn_1",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.park.match_1",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.pendingAt",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.recoverRegistrations",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.registrationsAuthorized",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.registrationsAuthorized.match_1",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.registrationShape",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Result",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.revive",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.stepFn",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.stepFn.match_1",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Sys.bindings",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Sys.carriers",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Sys.config",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Sys.gen",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Sys.nextToken",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Sys.registrations",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Sys.terminations",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Sys.toWorld",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Sys.treasury",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Sys.trie",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.TerminationEntry.booking",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "Singular.Action",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.actualMint",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.admitsFor",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.admitsFor.match_1",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.allowed",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.applicationTagAssetName",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.applicationTagIdentity",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.applyEdge",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.Approval.assetName",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.Approval.casesOn",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.Approval.destination",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.Approval.edge",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.Approval.key",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.Approval.mk.noConfusion",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.Approval.noConfusion",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.Approval.noConfusionType",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.Approval.owner",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.Approval.policy",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.approvalAssetName",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.Asset",
+      "module": "Singular.Model.Assets"
+    },
+    {
+      "declaration": "Singular.assetDelta",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.assetKind",
+      "module": "Singular.Model.Assets"
+    },
+    {
+      "declaration": "Singular.assetPlus",
+      "module": "Singular.Model.Assets"
+    },
+    {
+      "declaration": "Singular.assetSame",
+      "module": "Singular.Model.Assets"
+    },
+    {
+      "declaration": "Singular.balanced",
+      "module": "Singular.Economics.Transaction"
+    },
+    {
+      "declaration": "Singular.batchConsumesCreated",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.batchConsumesCreated.go",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.batchConsumesCreated.go.match_1",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.book",
+      "module": "Singular.Economics.WorldState"
+    },
+    {
+      "declaration": "Singular.book.match_1",
+      "module": "Singular.Economics.WorldState"
+    },
+    {
+      "declaration": "Singular.bookingCommitment",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.BookingContents.applicationTags",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.BookingContents.casesOn",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.BookingContents.lovelace",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.BookingContents.mk.noConfusion",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.BookingContents.noConfusion",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.BookingContents.noConfusionType",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.BookingContents.otherAssets",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.BookingContents.trieReadyTags",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.BookingOperation.casesOn",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.bookTermination",
+      "module": "Singular.Economics.WorldState"
+    },
+    {
+      "declaration": "Singular.claimedMint",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.combineResults",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.Config.activePolicy",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Config.applicationPolicy",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Config.bookingWidth",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Config.casesOn",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Config.minimumTip",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Config.mk.noConfusion",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Config.noConfusion",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Config.noConfusionType",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Config.processTime",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Config.registrationCost",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Config.registryId",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Config.retractTime",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Config.root",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Config.singularTag",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.Config.stateToken",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Config.trieReadyTag",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.DatumForm.casesOn",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.DatumForm.ctorIdx",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.DatumForm.ofNat",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.DatumForm.ofNat_ctorIdx",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.datumFormOf",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.datumFormOf.match_1",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.delta",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.delta._sparseCasesOn_1",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.delta.match_1",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.disjointInputs",
+      "module": "Singular.Economics.Transaction"
+    },
+    {
+      "declaration": "Singular.disjointInputs.match_1",
+      "module": "Singular.Economics.Transaction"
+    },
+    {
+      "declaration": "Singular.economicLookup",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.economicObservationRefusal",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.EconomicOutput.contents",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.EconomicOutput.output",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.EconomicOutput.request",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.EconomicOutput.singularTags",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.EconomicRequest.casesOn",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.EconomicRequest.ctorIdx",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.EconomicRequest.noConfusion",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.EconomicRequest.noConfusionType",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.EconomicRequest.registration.noConfusion",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.EconomicRequest.termination.noConfusion",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.economicSpent",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.EconomicTransaction.applicationMint",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.EconomicTransaction.identity",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.EconomicTransaction.outputs",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.EconomicTransaction.singularMint",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.EconomicTransaction.stateMint",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.EconomicTransaction.transaction",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.EconomicTransaction.trieReadyMint",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.EconomicUtxo",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.EconomicUtxo.ledger",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.EconomicUtxo.ledger.match_1",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.Edge.casesOn",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.Edge.ctorIdx",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.Edge.ofNat",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.Edge.ofNat_ctorIdx",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.edgeOrdinal",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.edgeOrdinal.match_1",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.emptyResult",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.exactBurns",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.fnv1a",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.foldAccepted",
+      "module": "Singular.Economics.Fold"
+    },
+    {
+      "declaration": "Singular.foldAccepted.match_1",
+      "module": "Singular.Economics.Fold"
+    },
+    {
+      "declaration": "Singular.foldAccepted.match_3",
+      "module": "Singular.Economics.Fold"
+    },
+    {
+      "declaration": "Singular.foldActions",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.foldActions.match_1",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.foldBareValue",
+      "module": "Singular.Economics.FoldRouting"
+    },
+    {
+      "declaration": "Singular.foldBatch",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.foldCarrierRefusal",
+      "module": "Singular.Economics.FoldRouting"
+    },
+    {
+      "declaration": "Singular.foldCarrierRefusal._sparseCasesOn_1",
+      "module": "Singular.Economics.FoldRouting"
+    },
+    {
+      "declaration": "Singular.foldCarrierRefusal._sparseCasesOn_2",
+      "module": "Singular.Economics.FoldRouting"
+    },
+    {
+      "declaration": "Singular.foldCarrierRefusal.match_1",
+      "module": "Singular.Economics.FoldRouting"
+    },
+    {
+      "declaration": "Singular.foldCarrierRefusal.match_5",
+      "module": "Singular.Economics.FoldRouting"
+    },
+    {
+      "declaration": "Singular.foldCarrierTags",
+      "module": "Singular.Economics.FoldRouting"
+    },
+    {
+      "declaration": "Singular.foldEffect",
+      "module": "Singular.Economics.Fold"
+    },
+    {
+      "declaration": "Singular.foldLegacyRequest",
+      "module": "Singular.Economics.FoldProjection"
+    },
+    {
+      "declaration": "Singular.foldLegacyRequest.match_1",
+      "module": "Singular.Economics.FoldProjection"
+    },
+    {
+      "declaration": "Singular.FoldMember.carrier",
+      "module": "Singular.Economics.FoldProjection"
+    },
+    {
+      "declaration": "Singular.FoldMember.casesOn",
+      "module": "Singular.Economics.FoldProjection"
+    },
+    {
+      "declaration": "Singular.FoldMember.donation",
+      "module": "Singular.Economics.FoldProjection"
+    },
+    {
+      "declaration": "Singular.FoldMember.tip",
+      "module": "Singular.Economics.FoldProjection"
+    },
+    {
+      "declaration": "Singular.FoldMember.tip.match_1",
+      "module": "Singular.Economics.FoldProjection"
+    },
+    {
+      "declaration": "Singular.foldMemberAt",
+      "module": "Singular.Economics.FoldProjection"
+    },
+    {
+      "declaration": "Singular.foldMemberAt.match_1",
+      "module": "Singular.Economics.FoldProjection"
+    },
+    {
+      "declaration": "Singular.foldMemberRefusal",
+      "module": "Singular.Economics.Fold"
+    },
+    {
+      "declaration": "Singular.foldMemberRefusal.match_1",
+      "module": "Singular.Economics.Fold"
+    },
+    {
+      "declaration": "Singular.foldMembers",
+      "module": "Singular.Economics.FoldProjection"
+    },
+    {
+      "declaration": "Singular.foldMint",
+      "module": "Singular.Economics.FoldRouting"
+    },
+    {
+      "declaration": "Singular.foldMint.match_1",
+      "module": "Singular.Economics.FoldRouting"
+    },
+    {
+      "declaration": "Singular.foldObligations",
+      "module": "Singular.Economics.FoldProjection"
+    },
+    {
+      "declaration": "Singular.FoldObligations.donation",
+      "module": "Singular.Economics.FoldProjection"
+    },
+    {
+      "declaration": "Singular.foldOrdinary",
+      "module": "Singular.Economics.FoldRouting"
+    },
+    {
+      "declaration": "Singular.foldOrdinaryLovelace",
+      "module": "Singular.Economics.FoldRouting"
+    },
+    {
+      "declaration": "Singular.foldPrerequisite",
+      "module": "Singular.Economics.Fold"
+    },
+    {
+      "declaration": "Singular.foldPrerequisite._sparseCasesOn_1",
+      "module": "Singular.Economics.Fold"
+    },
+    {
+      "declaration": "Singular.foldPrerequisite.match_1",
+      "module": "Singular.Economics.Fold"
+    },
+    {
+      "declaration": "Singular.foldPrerequisite.match_4",
+      "module": "Singular.Economics.Fold"
+    },
+    {
+      "declaration": "Singular.foldProjectedRegistry",
+      "module": "Singular.Economics.FoldProjection"
+    },
+    {
+      "declaration": "Singular.foldRegistryEffect",
+      "module": "Singular.Economics.FoldProjection"
+    },
+    {
+      "declaration": "Singular.foldRemainingTerminations",
+      "module": "Singular.Economics.FoldProjection"
+    },
+    {
+      "declaration": "Singular.foldRoutingRefusal",
+      "module": "Singular.Economics.FoldRouting"
+    },
+    {
+      "declaration": "Singular.foldRoutingRefusal._sparseCasesOn_1",
+      "module": "Singular.Economics.FoldRouting"
+    },
+    {
+      "declaration": "Singular.foldRoutingRefusal.match_1",
+      "module": "Singular.Economics.FoldRouting"
+    },
+    {
+      "declaration": "Singular.foldSameQuantities",
+      "module": "Singular.Economics.FoldRouting"
+    },
+    {
+      "declaration": "Singular.foldStateShape",
+      "module": "Singular.Economics.FoldRouting"
+    },
+    {
+      "declaration": "Singular.Holding.casesOn",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Holding.key",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Holding.kind",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Holding.mk.noConfusion",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Holding.noConfusion",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Holding.noConfusionType",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Holding.output",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.inPhase1",
+      "module": "Singular.Model.Admission"
+    },
+    {
+      "declaration": "Singular.inputPresenceRefusal",
+      "module": "Singular.Economics.Transaction"
+    },
+    {
+      "declaration": "Singular.inputPresent",
+      "module": "Singular.Economics.Transaction"
+    },
+    {
+      "declaration": "Singular.inputsContainReference",
+      "module": "Singular.Economics.Transaction"
+    },
+    {
+      "declaration": "Singular.instBEqApproval",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.instBEqApproval.beq",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.instBEqApproval.beq.match_1",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.instBEqBookingContents",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instBEqBookingContents.beq",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instBEqBookingContents.beq.match_1",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instBEqConfig",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instBEqConfig.beq",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instBEqConfig.beq.match_1",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instBEqDatumForm",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instBEqDatumForm.beq",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instBEqEdge",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instBEqEdge.beq",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instBEqInterval",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instBEqInterval.beq",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instBEqInterval.beq.match_1",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instBEqLeaf",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instBEqLeaf.beq",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instBEqLeaf.beq._sparseCasesOn_1",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instBEqLeaf.beq._sparseCasesOn_2",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instBEqLeaf.beq.match_1",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instBEqOutRef",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instBEqOutRef.beq",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instBEqOutRef.beq.match_1",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instBEqRegistrationBooking",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instBEqRegistrationBooking.beq",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instBEqRegistrationBooking.beq.match_1",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instBEqRegistrationRequest",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instBEqRegistrationRequest.beq",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instBEqRegistrationRequest.beq.match_1",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instBEqSingularTag",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instBEqSingularTag.beq",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instBEqSingularTag.beq.match_1",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instBEqState",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instBEqState.beq",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instBEqTokenId",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instBEqTokenId.beq",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instBEqTokenId.beq.match_1",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instBEqTokenKind",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instBEqTokenKind.beq",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instBEqTxOutput",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.instBEqTxOutput.beq",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.instBEqTxOutput.beq.match_1",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.instBEqTxRole",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.instBEqTxRole.beq",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.instDecidableEqApproval",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.instDecidableEqApproval.decEq",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.instDecidableEqApproval.decEq._proof_1",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.instDecidableEqApproval.decEq._proof_2",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.instDecidableEqApproval.decEq._proof_3",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.instDecidableEqApproval.decEq._proof_4",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.instDecidableEqApproval.decEq._proof_5",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.instDecidableEqApproval.decEq._proof_6",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.instDecidableEqApproval.decEq._proof_7",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.instDecidableEqApproval.decEq._proof_8",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.instDecidableEqApproval.decEq.match_1",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.instDecidableEqBookingContents",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqBookingContents.decEq",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqBookingContents.decEq._proof_1",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqBookingContents.decEq._proof_2",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqBookingContents.decEq._proof_3",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqBookingContents.decEq._proof_4",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqBookingContents.decEq._proof_5",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqBookingContents.decEq.match_1",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqConfig",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqConfig.decEq",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqConfig.decEq._proof_1",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqConfig.decEq._proof_10",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqConfig.decEq._proof_2",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqConfig.decEq._proof_3",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqConfig.decEq._proof_4",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqConfig.decEq._proof_5",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqConfig.decEq._proof_6",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqConfig.decEq._proof_7",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqConfig.decEq._proof_8",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqConfig.decEq._proof_9",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqConfig.decEq.match_1",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqDatumForm",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqDatumForm._proof_1",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqDatumForm._proof_2",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqEconomicRequest",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.instDecidableEqEconomicRequest.decEq",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.instDecidableEqEconomicRequest.decEq._proof_1",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.instDecidableEqEconomicRequest.decEq._proof_2",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.instDecidableEqEconomicRequest.decEq._proof_3",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.instDecidableEqEconomicRequest.decEq._proof_4",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.instDecidableEqEconomicRequest.decEq._proof_5",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.instDecidableEqEconomicRequest.decEq._proof_6",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.instDecidableEqEconomicRequest.decEq.match_1",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.instDecidableEqEdge",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instDecidableEqEdge._proof_1",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instDecidableEqEdge._proof_2",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instDecidableEqHolding",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqHolding.decEq",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqHolding.decEq._proof_1",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqHolding.decEq._proof_2",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqHolding.decEq._proof_3",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqHolding.decEq._proof_4",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqHolding.decEq._proof_5",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqHolding.decEq.match_1",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqInterval",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqInterval.decEq",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqInterval.decEq._proof_1",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqInterval.decEq._proof_2",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqInterval.decEq._proof_3",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqInterval.decEq.match_1",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqLeaf",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instDecidableEqLeaf.decEq",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instDecidableEqLeaf.decEq._proof_1",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instDecidableEqLeaf.decEq._proof_2",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instDecidableEqLeaf.decEq._proof_3",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instDecidableEqLeaf.decEq._proof_4",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instDecidableEqLeaf.decEq.match_1",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instDecidableEqOutRef",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqOutRef.decEq",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqOutRef.decEq._proof_1",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqOutRef.decEq._proof_2",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqOutRef.decEq._proof_3",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqOutRef.decEq.match_1",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationBooking",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationBooking.decEq",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationBooking.decEq._proof_1",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationBooking.decEq._proof_2",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationBooking.decEq._proof_3",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationBooking.decEq._proof_4",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationBooking.decEq._proof_5",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationBooking.decEq.match_1",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationRequest",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationRequest.decEq",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationRequest.decEq._proof_1",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationRequest.decEq._proof_10",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationRequest.decEq._proof_11",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationRequest.decEq._proof_12",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationRequest.decEq._proof_13",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationRequest.decEq._proof_2",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationRequest.decEq._proof_3",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationRequest.decEq._proof_4",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationRequest.decEq._proof_5",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationRequest.decEq._proof_6",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationRequest.decEq._proof_7",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationRequest.decEq._proof_8",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationRequest.decEq._proof_9",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistrationRequest.decEq.match_1",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistryState",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistryState.decEq",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistryState.decEq._proof_1",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistryState.decEq._proof_2",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistryState.decEq._proof_3",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistryState.decEq._proof_4",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqRegistryState.decEq.match_1",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqSingularTag",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqSingularTag.decEq",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqSingularTag.decEq._proof_1",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqSingularTag.decEq._proof_2",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqSingularTag.decEq._proof_3",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqSingularTag.decEq.match_1",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqState",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instDecidableEqState._proof_1",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instDecidableEqState._proof_2",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationBooking",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationBooking.decEq",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationBooking.decEq._proof_1",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationBooking.decEq._proof_2",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationBooking.decEq._proof_3",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationBooking.decEq._proof_4",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationBooking.decEq.match_1",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationRequest",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationRequest.decEq",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationRequest.decEq._proof_1",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationRequest.decEq._proof_10",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationRequest.decEq._proof_11",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationRequest.decEq._proof_12",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationRequest.decEq._proof_2",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationRequest.decEq._proof_3",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationRequest.decEq._proof_4",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationRequest.decEq._proof_5",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationRequest.decEq._proof_6",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationRequest.decEq._proof_7",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationRequest.decEq._proof_8",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationRequest.decEq._proof_9",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTerminationRequest.decEq.match_1",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTokenId",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTokenId.decEq",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTokenId.decEq._proof_1",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTokenId.decEq._proof_2",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTokenId.decEq._proof_3",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTokenId.decEq.match_1",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTokenKind",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTokenKind._proof_1",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTxRole",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTxRole._proof_1",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.instDecidableEqTxRole._proof_2",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.instDecidableEqWorld",
+      "module": "Singular.Economics.WorldState"
+    },
+    {
+      "declaration": "Singular.instDecidableEqWorld.decEq",
+      "module": "Singular.Economics.WorldState"
+    },
+    {
+      "declaration": "Singular.instDecidableEqWorld.decEq._proof_1",
+      "module": "Singular.Economics.WorldState"
+    },
+    {
+      "declaration": "Singular.instDecidableEqWorld.decEq._proof_2",
+      "module": "Singular.Economics.WorldState"
+    },
+    {
+      "declaration": "Singular.instDecidableEqWorld.decEq._proof_3",
+      "module": "Singular.Economics.WorldState"
+    },
+    {
+      "declaration": "Singular.instDecidableEqWorld.decEq._proof_4",
+      "module": "Singular.Economics.WorldState"
+    },
+    {
+      "declaration": "Singular.instDecidableEqWorld.decEq._proof_5",
+      "module": "Singular.Economics.WorldState"
+    },
+    {
+      "declaration": "Singular.instDecidableEqWorld.decEq.match_1",
+      "module": "Singular.Economics.WorldState"
+    },
+    {
+      "declaration": "Singular.instDecidableValid",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.instReprBookingOperation.repr.match_1",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.instReprState.repr.match_1",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.Interval.casesOn",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Interval.lower",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Interval.mk.noConfusion",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Interval.noConfusion",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Interval.noConfusionType",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Interval.upper",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Interval.valid",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Interval.width",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Key",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.Leaf.casesOn",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.Leaf.ctorIdx",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.Leaf.known.noConfusion",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.Leaf.noConfusion",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.Leaf.noConfusionType",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.leafByte",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.leafByte.match_1",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.observesRegistration",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.observesRegistration.match_1",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.observesTermination",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.observesWorld",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.outputAssets",
+      "module": "Singular.Economics.Transaction"
+    },
+    {
+      "declaration": "Singular.outputLovelace",
+      "module": "Singular.Economics.Transaction"
+    },
+    {
+      "declaration": "Singular.OutRef.casesOn",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.OutRef.mk.noConfusion",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.OutRef.noConfusion",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.OutRef.noConfusionType",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.OutRef.tx",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.refundAmount",
+      "module": "Singular.Economics.Refunds"
+    },
+    {
+      "declaration": "Singular.refundObligations",
+      "module": "Singular.Economics.Refunds"
+    },
+    {
+      "declaration": "Singular.refundOwed",
+      "module": "Singular.Economics.Refunds"
+    },
+    {
+      "declaration": "Singular.refundPaid",
+      "module": "Singular.Economics.Refunds"
+    },
+    {
+      "declaration": "Singular.refundRefusal",
+      "module": "Singular.Economics.Refunds"
+    },
+    {
+      "declaration": "Singular.refusal",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.refusal.match_1",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.registrationApplicationTagValid",
+      "module": "Singular.Economics.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationBooking.applicationTagsMinted",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationBooking.casesOn",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationBooking.interval",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationBooking.mk.noConfusion",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationBooking.noConfusion",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationBooking.noConfusionType",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationBooking.request",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationBooking.trieReadyTagsMinted",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.registrationBookingRefusal",
+      "module": "Singular.Economics.Booking"
+    },
+    {
+      "declaration": "Singular.registrationContentsShape",
+      "module": "Singular.Economics.Booking"
+    },
+    {
+      "declaration": "Singular.registrationContentsShape._sparseCasesOn_1",
+      "module": "Singular.Economics.Booking"
+    },
+    {
+      "declaration": "Singular.registrationContentsShape._sparseCasesOn_2",
+      "module": "Singular.Economics.Booking"
+    },
+    {
+      "declaration": "Singular.registrationContentsShape.match_1",
+      "module": "Singular.Economics.Booking"
+    },
+    {
+      "declaration": "Singular.registrationDeclaredLovelace",
+      "module": "Singular.Economics.Booking"
+    },
+    {
+      "declaration": "Singular.registrationRejectionGround",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.registrationRejectionGround.match_1",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.RegistrationRequest.carrierAda",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationRequest.casesOn",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationRequest.contents",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationRequest.datum",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationRequest.declaredTip",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationRequest.destination",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationRequest.key",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationRequest.mk.noConfusion",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationRequest.noConfusion",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationRequest.noConfusionType",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationRequest.nonce",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationRequest.operation",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationRequest.reference",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationRequest.refundAddress",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationRequest.registrationCost",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationRequest.registryId",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationRequest.submittedAt",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistrationRequest.trieReadyTag",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.RegistryState.casesOn",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.RegistryState.config",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.RegistryState.held",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.RegistryState.mk.noConfusion",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.RegistryState.noConfusion",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.RegistryState.noConfusionType",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.RegistryState.trie",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.rejectedRequests",
+      "module": "Singular.Economics.Refunds"
+    },
+    {
+      "declaration": "Singular.Rejection.members",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.Rejection.stateReference",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.Rejection.transaction",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.rejectionAccepted",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.rejectionEffect",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.rejectionInputsRefusal",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.rejectionMemberRefusal",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.rejectionMemberRefusal.match_1",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.rejectionMemberRefusal.match_3",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.rejectionMemberRefusal.match_5",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.rejectionRefusal",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.rejectionRefusal._sparseCasesOn_1",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.rejectionRefusal.match_1",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.rejectionRefusal.match_4",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.rejectionStateRefusal",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.rejectionStateRefusal.match_1",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.rejectionStateRefusal.match_3",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.rejectionStateRefusal.match_5",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.rejectionSupplyUnchanged",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.RejectReason.casesOn",
+      "module": "Singular.Model.Admission"
+    },
+    {
+      "declaration": "Singular.Request.approval",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.Request.claimed",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.Request.datum",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.Request.edge",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.Request.key",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.Request.output",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.Request.owner",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.requestClaim",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.requestDestination",
+      "module": "Singular.Model.Request"
+    },
+    {
+      "declaration": "Singular.RequestPool",
+      "module": "Singular.Economics.WorldState"
+    },
+    {
+      "declaration": "Singular.requestTagsBurned",
+      "module": "Singular.Economics.Observation"
+    },
+    {
+      "declaration": "Singular.Result.mint",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.Result.paid",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.Result.state",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.retractionAccepted",
+      "module": "Singular.Economics.Retraction"
+    },
+    {
+      "declaration": "Singular.retractionAccepted.match_1",
+      "module": "Singular.Economics.Retraction"
+    },
+    {
+      "declaration": "Singular.retractionEffect",
+      "module": "Singular.Economics.Retraction"
+    },
+    {
+      "declaration": "Singular.retractionFunding",
+      "module": "Singular.Economics.RetractionFunding"
+    },
+    {
+      "declaration": "Singular.retractionFundingLovelace",
+      "module": "Singular.Economics.RetractionFunding"
+    },
+    {
+      "declaration": "Singular.retractionFundingRefusal",
+      "module": "Singular.Economics.RetractionFunding"
+    },
+    {
+      "declaration": "Singular.retractionInputsRefusal",
+      "module": "Singular.Economics.Retraction"
+    },
+    {
+      "declaration": "Singular.retractionRefusal",
+      "module": "Singular.Economics.Retraction"
+    },
+    {
+      "declaration": "Singular.retractionRefusal._sparseCasesOn_1",
+      "module": "Singular.Economics.Retraction"
+    },
+    {
+      "declaration": "Singular.retractionRefusal.match_1",
+      "module": "Singular.Economics.Retraction"
+    },
+    {
+      "declaration": "Singular.retractionRefusal.match_4",
+      "module": "Singular.Economics.Retraction"
+    },
+    {
+      "declaration": "Singular.retractionRefusal.match_6",
+      "module": "Singular.Economics.Retraction"
+    },
+    {
+      "declaration": "Singular.retractionRequest",
+      "module": "Singular.Economics.Retraction"
+    },
+    {
+      "declaration": "Singular.retractionRequest._sparseCasesOn_1",
+      "module": "Singular.Economics.Retraction"
+    },
+    {
+      "declaration": "Singular.retractionRequest.match_1",
+      "module": "Singular.Economics.Retraction"
+    },
+    {
+      "declaration": "Singular.rootOf",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.SingularTag.casesOn",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.SingularTag.mk.noConfusion",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.SingularTag.noConfusion",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.SingularTag.noConfusionType",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.spentOutputs",
+      "module": "Singular.Economics.Transaction"
+    },
+    {
+      "declaration": "Singular.State.casesOn",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.State.ctorIdx",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.State.ofNat",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.State.ofNat_ctorIdx",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.stateByte",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.stateTokenSupport",
+      "module": "Singular.Economics.Transaction"
+    },
+    {
+      "declaration": "Singular.stateTokenValue",
+      "module": "Singular.Economics.Transaction"
+    },
+    {
+      "declaration": "Singular.step",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.step.match_1",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.TerminationBooking.casesOn",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationBooking.custodyInputs",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationBooking.mk.noConfusion",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationBooking.noConfusion",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationBooking.noConfusionType",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationBooking.request",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationBooking.trieReadyTagsMinted",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.terminationBookingRefusal",
+      "module": "Singular.Economics.Termination"
+    },
+    {
+      "declaration": "Singular.terminationContentsShape",
+      "module": "Singular.Economics.Termination"
+    },
+    {
+      "declaration": "Singular.terminationCustody",
+      "module": "Singular.Economics.Termination"
+    },
+    {
+      "declaration": "Singular.terminationDeclaredLovelace",
+      "module": "Singular.Economics.Termination"
+    },
+    {
+      "declaration": "Singular.terminationRejectionGround",
+      "module": "Singular.Economics.Rejection"
+    },
+    {
+      "declaration": "Singular.TerminationRequest.carrierAda",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationRequest.casesOn",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationRequest.contents",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationRequest.declaredTip",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationRequest.destination",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationRequest.key",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationRequest.mk.noConfusion",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationRequest.noConfusion",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationRequest.noConfusionType",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationRequest.nonce",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationRequest.operation",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationRequest.reference",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationRequest.refundAddress",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationRequest.registryId",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationRequest.singularTags",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationRequest.submittedAt",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TerminationRequest.trieReadyTag",
+      "module": "Singular.Model.Termination"
+    },
+    {
+      "declaration": "Singular.TokenId.casesOn",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.TokenId.mk.noConfusion",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.TokenId.name",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.TokenId.noConfusion",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.TokenId.noConfusionType",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.TokenId.policy",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.TokenKind.ctorIdx",
+      "module": "Singular.Model.Primitives"
+    },
+    {
+      "declaration": "Singular.transition",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.transition._sparseCasesOn_1",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.transition._sparseCasesOn_2",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.transition._sparseCasesOn_3",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.transition.match_1",
+      "module": "Singular.Model.Fold"
+    },
+    {
+      "declaration": "Singular.Trie",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.trieGet",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.trieReadyTagAssetName",
+      "module": "Singular.Model.Booking"
+    },
+    {
+      "declaration": "Singular.trieSet",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Tx.donation",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.Tx.fee",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.Tx.inputs",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.Tx.mint",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.Tx.outputs",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.Tx.referenceInputs",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.Tx.signers",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.Tx.validity",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.TxInput.ref",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.TxOutput.address",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.TxOutput.assets",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.TxOutput.casesOn",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.TxOutput.config",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.TxOutput.datum",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.TxOutput.datumValue",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.TxOutput.lovelace",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.TxOutput.role",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.TxOutput.stateToken",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.TxOutput.stateTokens",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.TxRole.casesOn",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.TxRole.ctorIdx",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.TxRole.ofNat",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.TxRole.ofNat_ctorIdx",
+      "module": "Singular.Model.Transaction"
+    },
+    {
+      "declaration": "Singular.u64bytes",
+      "module": "Singular.Model.Registry"
+    },
+    {
+      "declaration": "Singular.Utxo",
+      "module": "Singular.Economics.Transaction"
+    },
+    {
+      "declaration": "Singular.World.casesOn",
+      "module": "Singular.Economics.WorldState"
+    },
+    {
+      "declaration": "Singular.World.mk.noConfusion",
+      "module": "Singular.Economics.WorldState"
+    },
+    {
+      "declaration": "Singular.World.noConfusion",
+      "module": "Singular.Economics.WorldState"
+    },
+    {
+      "declaration": "Singular.World.noConfusionType",
+      "module": "Singular.Economics.WorldState"
+    },
+    {
+      "declaration": "Singular.World.pending",
+      "module": "Singular.Economics.WorldState"
+    },
+    {
+      "declaration": "Singular.World.registry",
+      "module": "Singular.Economics.WorldState"
+    },
+    {
+      "declaration": "Singular.World.terminations",
+      "module": "Singular.Economics.WorldState"
+    },
+    {
+      "declaration": "Singular.World.treasury",
+      "module": "Singular.Economics.WorldState"
+    }
+  ],
+  "sources": [
+    {
+      "module": "CardanoKeri.Registry",
+      "path": "lean/CardanoKeri/Registry.lean",
+      "sha256": "670e1385d1626dc10c599c8296a020c4bd20775a411ede494b3f2a84f5385947"
+    },
+    {
+      "module": "Singular.Economics.Booking",
+      "path": "lean/.lake/packages/singular/lean/Singular/Economics/Booking.lean",
+      "sha256": "ac1761460a9f719d931fb92ca9133183c076f5583f9e5e2027a074920df4ca55"
+    },
+    {
+      "module": "Singular.Economics.Fold",
+      "path": "lean/.lake/packages/singular/lean/Singular/Economics/Fold.lean",
+      "sha256": "4c8a49e19bb91c62ef6a482baa485a6053ac95002a9b0c80cb1503a42523622c"
+    },
+    {
+      "module": "Singular.Economics.FoldProjection",
+      "path": "lean/.lake/packages/singular/lean/Singular/Economics/FoldProjection.lean",
+      "sha256": "fa2aeb257a0b5d7323d595ae478b9746313677d08378ec74dbd171589662808e"
+    },
+    {
+      "module": "Singular.Economics.FoldRouting",
+      "path": "lean/.lake/packages/singular/lean/Singular/Economics/FoldRouting.lean",
+      "sha256": "aa991b9c4dd1e2ae0a14861687c820eec7e06319c2a627c72dc367ee03d43989"
+    },
+    {
+      "module": "Singular.Economics.Observation",
+      "path": "lean/.lake/packages/singular/lean/Singular/Economics/Observation.lean",
+      "sha256": "f80cfe6a6b2edee02f742475fa0c388c4801dff88bc977029eeba386b74b4a43"
+    },
+    {
+      "module": "Singular.Economics.Refunds",
+      "path": "lean/.lake/packages/singular/lean/Singular/Economics/Refunds.lean",
+      "sha256": "48bfa12e6b182e34a8f27b0fc179242aa745d515eacba2c8127bcdc3c3c878a7"
+    },
+    {
+      "module": "Singular.Economics.Rejection",
+      "path": "lean/.lake/packages/singular/lean/Singular/Economics/Rejection.lean",
+      "sha256": "0f59f3266b6906493c5a6a32451738f2b3c112eeca7641bc13be84178ff9dd7d"
+    },
+    {
+      "module": "Singular.Economics.Retraction",
+      "path": "lean/.lake/packages/singular/lean/Singular/Economics/Retraction.lean",
+      "sha256": "f555302c59fba5528d023858b75dd31f7f59ee628601f745e9f4438dbc1e6914"
+    },
+    {
+      "module": "Singular.Economics.RetractionFunding",
+      "path": "lean/.lake/packages/singular/lean/Singular/Economics/RetractionFunding.lean",
+      "sha256": "008ebab7e1f11d4b955b51979c73430797b6d03b0da394b45c52637a8cceff94"
+    },
+    {
+      "module": "Singular.Economics.Termination",
+      "path": "lean/.lake/packages/singular/lean/Singular/Economics/Termination.lean",
+      "sha256": "3bafd04f3b047bc3f2565f4faedc570ce9c6a30460115f346c7157992bc1760c"
+    },
+    {
+      "module": "Singular.Economics.Transaction",
+      "path": "lean/.lake/packages/singular/lean/Singular/Economics/Transaction.lean",
+      "sha256": "7ddf97653a69775151bab72d46965134b4588deb28553f80ce18e35d41232343"
+    },
+    {
+      "module": "Singular.Economics.WorldState",
+      "path": "lean/.lake/packages/singular/lean/Singular/Economics/WorldState.lean",
+      "sha256": "9c198fb28267f081d2fe606ef32ec403d1e86e7f0e757b6dacddf4715dbefb17"
+    },
+    {
+      "module": "Singular.Model.Admission",
+      "path": "lean/.lake/packages/singular/lean/Singular/Model/Admission.lean",
+      "sha256": "8faff36834234dd96fdf1a740f64b6b469b06ad5e04d84e367e0f3f0545e8d51"
+    },
+    {
+      "module": "Singular.Model.Assets",
+      "path": "lean/.lake/packages/singular/lean/Singular/Model/Assets.lean",
+      "sha256": "ce37d142de6aac50806c440fa7136e337db2936890285ea5637c2ab50628f6b5"
+    },
+    {
+      "module": "Singular.Model.Booking",
+      "path": "lean/.lake/packages/singular/lean/Singular/Model/Booking.lean",
+      "sha256": "ae67700447beaab2169241eb1d88325d74efed312393eb510cdd5da0e2979a65"
+    },
+    {
+      "module": "Singular.Model.Fold",
+      "path": "lean/.lake/packages/singular/lean/Singular/Model/Fold.lean",
+      "sha256": "e2341ec238fb84262509f320eb688f6e3e799a88616f17f2753268b9024856ed"
+    },
+    {
+      "module": "Singular.Model.Primitives",
+      "path": "lean/.lake/packages/singular/lean/Singular/Model/Primitives.lean",
+      "sha256": "f3c95bd6d906a57b395fb79dda0719cb534d1a9ee558055847987798618f9327"
+    },
+    {
+      "module": "Singular.Model.Registry",
+      "path": "lean/.lake/packages/singular/lean/Singular/Model/Registry.lean",
+      "sha256": "e4cca2b661209b08617d59b61b708af05c689a34ba17bd3a395d664328f3e90c"
+    },
+    {
+      "module": "Singular.Model.Request",
+      "path": "lean/.lake/packages/singular/lean/Singular/Model/Request.lean",
+      "sha256": "d7fa3b9161fd0463c1a09cfcc49e7d568dc74493082c0e186f766ca7e238e500"
+    },
+    {
+      "module": "Singular.Model.Termination",
+      "path": "lean/.lake/packages/singular/lean/Singular/Model/Termination.lean",
+      "sha256": "9111b875cdfb3632b52db48c65564e01ce7320e421244348665ca036fb84561b"
+    },
+    {
+      "module": "Singular.Model.Transaction",
+      "path": "lean/.lake/packages/singular/lean/Singular/Model/Transaction.lean",
+      "sha256": "f5e83c59863faeecd561f3d6489ab8e86298e4a843be2bc37b68ae62e9caa5a1"
+    }
+  ],
+  "definitions": [
+    {
+      "declaration": "CardanoKeri.Registry.Sys.toWorld",
+      "module": "CardanoKeri.Registry",
+      "line": 62,
+      "sha256": "f7af6604af3e6235e5dce73e4532f42155106f588b6d862b9b9605461cbbe755",
+      "source": "def Sys.toWorld (s : Sys) : Singular.World :=\n  { registry := { config := s.config, trie := s.trie,\n                  held := s.carriers.map (·.original) },\n    pending := s.registrations,\n    terminations := s.terminations.map (·.booking), treasury := s.treasury }"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.carrierAt",
+      "module": "CardanoKeri.Registry",
+      "line": 73,
+      "sha256": "522b580eeb79c5c8294b5bb124d66d3809616931b6a03255d16fd9b891d48481",
+      "source": "def carrierAt (s : Sys) (aid : Nat) : Option Carrier :=\n  s.carriers.find? (fun c => c.aid == aid)"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.pendingAt",
+      "module": "CardanoKeri.Registry",
+      "line": 76,
+      "sha256": "9d6fd9eb7efa935d4cf5f0a3f6accf0133b654b7ff5990e74fbe8e9e17824d65",
+      "source": "def pendingAt (s : Sys) (ref : Singular.OutRef) : Option TerminationEntry :=\n  s.terminations.find? (fun e => e.booking.request.reference == ref)"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.Result",
+      "module": "CardanoKeri.Registry",
+      "line": 97,
+      "sha256": "0c48f2ec9d645174301593b4b596c384bc0c5a3817b7d415e44bc7fe69209199",
+      "source": "abbrev Result := Flow × Sys"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.registrationShape",
+      "module": "CardanoKeri.Registry",
+      "line": 99,
+      "sha256": "686058abd6f4da1e37a120837845534422a12081e6a35682b0653bc8ac486dc8",
+      "source": "def registrationShape (p : Params) (b : Singular.RegistrationBooking) : Prop :=\n  b.request.carrierAda = p.Mc + p.D ∧ b.request.declaredTip = p.tip"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.bookRegistration",
+      "module": "CardanoKeri.Registry",
+      "line": 106,
+      "sha256": "b0d6c3ce20533b9ff9aed3b3fe0e2721373088893a883e538f01afeff61cc089",
+      "source": "def bookRegistration (p : Params) (s : Sys)\n    (b : Singular.RegistrationBooking) : Except String Result := do\n  if ¬ registrationShape p b then throw \"keri-registration-value-mismatch\"\n  let world ← Singular.book s.toWorld b\n  let after := { s with registrations := b :: s.registrations }\n  if after.toWorld ≠ world then throw \"keri-registration-reconstruction-mismatch\"\n  pure ({ deposited := b.request.contents.lovelace }, after)\n\n-- Local parking preserves the old coarse closeAuth premise and bond recipient.\n-- The separate Checkpoint model retains its full signed intent/rotation checks."
+    },
+    {
+      "declaration": "CardanoKeri.Registry.park",
+      "module": "CardanoKeri.Registry",
+      "line": 116,
+      "sha256": "0f40c0a40abcefda5f016fa3eec0e5d58962c9cead92d238d1f97396390e0d8f",
+      "source": "def park (p : Params) (env : Env) (s : Sys) (aid recipient : Nat) :\n    Except String Result := do\n  let some c := carrierAt s aid | throw \"keri-carrier-missing\"\n  if c.st != .live || env.closeAuth aid recipient != true then throw \"keri-close-refused\"\n  let carriers := s.carriers.map (fun old =>\n    if old.aid == aid then { old with k := old.k + 1, st := .parked } else old)\n  pure ({ bondReturn := some (recipient, p.D) }, { s with carriers := carriers })"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.revive",
+      "module": "CardanoKeri.Registry",
+      "line": 124,
+      "sha256": "655e38faf8ab7e02b18ed69159496f1e49c1917b2758a46c2c4fe1a73be24bd0",
+      "source": "def revive (p : Params) (env : Env) (s : Sys) (aid : Nat) : Except String Result := do\n  let some c := carrierAt s aid | throw \"keri-carrier-missing\"\n  if c.st != .parked || env.rotationFrom aid c.k != true then throw \"keri-revival-refused\"\n  let carriers := s.carriers.map (fun old =>\n    if old.aid == aid then { old with k := old.k + 1, st := .live } else old)\n  pure ({ deposited := p.D, locked := [(aid, p.D)] }, { s with carriers := carriers })\n\n-- Rename the old tomb stage to explicit pending: it is an extant convicted\n-- carrier awaiting booking, not a retired registry key. This retains the\n-- two-stage transport boundary and does not invent atomic CP equivalence."
+    },
+    {
+      "declaration": "CardanoKeri.Registry.convictCkpt",
+      "module": "CardanoKeri.Registry",
+      "line": 134,
+      "sha256": "e8f7d92385c38da84d8f31fce97fa931007746c69d9c2ec1a022a009549efff9",
+      "source": "def convictCkpt (env : Env) (s : Sys) (aid : Nat) : Except String Result := do\n  let some c := carrierAt s aid | throw \"keri-carrier-missing\"\n  if c.st == .terminationPending || env.duplicity aid c.k != true then\n    throw \"keri-conviction-refused\"\n  let carriers := s.carriers.map (fun old =>\n    if old.aid == aid then { old with st := .terminationPending } else old)\n  pure ({}, { s with carriers := carriers })"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.bookTermination",
+      "module": "CardanoKeri.Registry",
+      "line": 142,
+      "sha256": "d4b9cc635264ae93db7cbf3ff3e4b082d45cab781c1166a723e13fd71da38b90",
+      "source": "def bookTermination (p : Params) (s : Sys)\n    (aid booker fee : Nat) (b : Singular.TerminationBooking) : Except String Result := do\n  let some c := carrierAt s aid | throw \"keri-carrier-missing\"\n  if c.st != .terminationPending then throw \"keri-conviction-required\"\n  if ¬ (b.request.key = aid ∧ b.request.destination = c.original.output ∧\n      b.custodyInputs = [c.original] ∧ c.minAda = p.Mc ∧\n      b.request.carrierAda = p.Mr ∧ b.request.declaredTip = p.tip ∧\n      b.request.contents.lovelace = p.Mr + p.tip) then\n    throw \"keri-termination-binding-mismatch\"\n  let world ← Singular.bookTermination s.toWorld b\n  let e : TerminationEntry := { booking := b, payload := {\n    aid := aid, token := c.token, keyState := c.k, original := c.original,\n    booker := booker, bookingFee := fee } }\n  let after := { s with\n    carriers := s.carriers.filter (fun old => old.aid != aid),\n    terminations := e :: s.terminations }\n  if after.toWorld ≠ world then throw \"keri-termination-reconstruction-mismatch\"\n  pure ({\n    premium := some (booker, p.Mc - p.Mr - p.tip),\n    bookingFee := fee, intoRequest := p.Mr + p.tip }, after)\n\n-- Inception stays a KERI processing guard, as in the existing coarse model.\n-- A generic application approval does not stand in for that premise."
+    },
+    {
+      "declaration": "CardanoKeri.Registry.registrationsAuthorized",
+      "module": "CardanoKeri.Registry",
+      "line": 165,
+      "sha256": "b55545a855b62b2c66d1e9910471106e2e655cd69ad1efdf0a7e7113ddaaef9f",
+      "source": "def registrationsAuthorized (env : Env) (members : List Singular.FoldMember) : Bool :=\n  members.all (fun m => match m with\n    | .registration b => env.inception b.request.key\n    | .termination _ => true)"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.installMember",
+      "module": "CardanoKeri.Registry",
+      "line": 170,
+      "sha256": "2d51996e91a28a4987a032a0d697caf517f4056366a02db309a294bfb06fcc80",
+      "source": "def installMember (p : Params) (before : Sys) (acc : Sys)\n    (member : Singular.FoldMember) : Except String Sys := do\n  letI : BEq Singular.RegistrationBooking := instBEqOfDecidableEq\n  match member with\n  | .termination b => do\n    let some e := pendingAt before b.request.reference\n      | throw \"keri-termination-metadata-missing\"\n    if e.booking ≠ b then throw \"keri-termination-metadata-mismatch\"\n    pure acc\n  | .registration b => do\n    if b ∉ before.registrations then throw \"keri-registration-metadata-missing\"\n    let c : Carrier := {\n      aid := b.request.key, token := acc.nextToken,\n      original := { key := b.request.key, kind := .active,\n                    output := b.request.destination, datum := b.request.datum },\n      k := 0, st := .live, minAda := p.Mc }\n    pure { acc with\n      carriers := c :: acc.carriers,\n      bindings := (c.aid, c.token) :: acc.bindings, nextToken := acc.nextToken + 1 }"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.foldResult",
+      "module": "CardanoKeri.Registry",
+      "line": 190,
+      "sha256": "52845b77c2f6cb35c6a1c0dbe3cdadbcb5d4ee5c46b2368772fdeea394607844",
+      "source": "def foldResult (p : Params) (s : Sys) (tx : Singular.EconomicTransaction)\n    (world : Singular.World) : Except String Result := do\n  let members := Singular.foldMembers s.toWorld tx\n  let acc ← members.foldlM (installMember p s) s\n  let after := { acc with\n    gen := s.gen + 1,\n    config := world.registry.config, trie := world.registry.trie, treasury := world.treasury,\n    registrations := s.registrations.filter (fun b =>\n      !Singular.inputsContainReference tx.transaction.inputs b.request.reference),\n    terminations := s.terminations.filter (fun e =>\n      !Singular.inputsContainReference tx.transaction.inputs e.booking.request.reference) }\n  if after.toWorld ≠ world then throw \"keri-fold-reconstruction-mismatch\"\n  let locked := members.filterMap (fun m => match m with\n    | .registration b => some (b.request.key, p.D)\n    | .termination _ => none)\n  pure ({ locked := locked }, after)"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.fold",
+      "module": "CardanoKeri.Registry",
+      "line": 207,
+      "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70",
+      "source": "def fold (p : Params) (env : Env) (s : Sys) (expectedGen expectedPlugin : Nat)\n    (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction) : Except String Result := do\n  if expectedGen != s.gen then throw \"keri-generation-mismatch\"\n  if expectedPlugin != s.config.applicationPolicy then throw \"keri-plugin-mismatch\"\n  let members := Singular.foldMembers s.toWorld tx\n  if !registrationsAuthorized env members then throw \"keri-inception-refused\"\n  let world ← Singular.foldAccepted s.toWorld u tx\n  foldResult p s tx world\n\n-- These wrappers expose only the already imported generic recovery judgment.\n-- They do not claim to discharge broader KERI application recovery in #468,\n-- nor inherit legacy Registry recovery statements by sharing a name."
+    },
+    {
+      "declaration": "CardanoKeri.Registry.recoverRegistrations",
+      "module": "CardanoKeri.Registry",
+      "line": 219,
+      "sha256": "3d34d24511c0712f02c5d27dcfd8ae7b6507978aa105241929bb1394b16a7ac6",
+      "source": "def recoverRegistrations (s : Sys) (world : Singular.World) : Except String Sys := do\n  let after := { s with registrations := s.registrations.filter (fun b =>\n    world.pending.contains b) }\n  if after.toWorld ≠ world then throw \"keri-recovery-reconstruction-mismatch\"\n  pure after"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.genericRetraction",
+      "module": "CardanoKeri.Registry",
+      "line": 225,
+      "sha256": "a98899354c0cb2c4e26ac29ce1259a6a219f8ba545a90fb10a0190470f00abe8",
+      "source": "def genericRetraction (s : Sys) (u : Singular.EconomicUtxo)\n    (tx : Singular.EconomicTransaction) : Except String Result := do\n  let world ← Singular.retractionAccepted s.toWorld u tx\n  let after ← recoverRegistrations s world\n  pure ({}, after)"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.genericRejection",
+      "module": "CardanoKeri.Registry",
+      "line": 231,
+      "sha256": "17c87772cf431e6a2ba3171350e5936c5bb0246953f0841bd4f8992b454f7b54",
+      "source": "def genericRejection (s : Sys) (u : Singular.EconomicUtxo)\n    (tx : Singular.Rejection) : Except String Result := do\n  let world ← Singular.rejectionAccepted s.toWorld u tx\n  let after ← recoverRegistrations s world\n  pure ({}, after)"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.stepFn",
+      "module": "CardanoKeri.Registry",
+      "line": 248,
+      "sha256": "634c62c405cca685e80563d454ecd7fc45125acc168689f1f73b9c7ff1aef999",
+      "source": "def stepFn (p : Params) (env : Env) (action : Action) (s : Sys) : Except String Result :=\n  match action with\n  | .bookRegistration b => bookRegistration p s b\n  | .park aid recipient => park p env s aid recipient\n  | .revive aid => revive p env s aid\n  | .convictCkpt aid => convictCkpt env s aid\n  | .bookTermination aid booker fee b => bookTermination p s aid booker fee b\n  | .fold gen plugin u tx => fold p env s gen plugin u tx\n  | .genericRetraction u tx => genericRetraction s u tx\n  | .genericRejection u tx => genericRejection s u tx"
+    },
+    {
+      "declaration": "Singular.registrationApplicationTagValid",
+      "module": "Singular.Economics.Booking",
+      "line": 11,
+      "sha256": "df1dc322e0a5d6ae14f15abf30ec830519619a087c523283c17a00f031588029",
+      "source": "def registrationApplicationTagValid (c : Config) (r : RegistrationRequest)\n    (tag : Approval) : Bool :=\n  decide (tag.policy = c.applicationPolicy ∧ tag.edge = .insertActive ∧\n    tag.key = r.key ∧ tag.owner = r.refundAddress ∧ tag.destination = r.destination ∧\n    tag.assetName = applicationTagAssetName r.key r.refundAddress r.destination r.nonce)"
+    },
+    {
+      "declaration": "Singular.registrationDeclaredLovelace",
+      "module": "Singular.Economics.Booking",
+      "line": 19,
+      "sha256": "2b5671dd94db44ee9e56d1e1db489c5b28d1df3b744e408f8e321200b6d9985a",
+      "source": "def registrationDeclaredLovelace (r : RegistrationRequest) : Nat :=\n  r.registrationCost + r.declaredTip + r.carrierAda"
+    },
+    {
+      "declaration": "Singular.registrationContentsShape",
+      "module": "Singular.Economics.Booking",
+      "line": 25,
+      "sha256": "fcd637a661fc8d87c8ce5e5c4f3b77fccc4f1f61196a18d85f7e032ef61c8cc2",
+      "source": "def registrationContentsShape (c : Config) (r : RegistrationRequest) : Bool :=\n  decide (r.registryId = c.registryId ∧ r.registrationCost = c.registrationCost ∧\n    c.minimumTip ≤ r.declaredTip ∧ r.contents.otherAssets = []) &&\n  match r.contents.applicationTags with\n  | [tag] => registrationApplicationTagValid c r tag\n  | _ => false"
+    },
+    {
+      "declaration": "Singular.registrationBookingRefusal",
+      "module": "Singular.Economics.Booking",
+      "line": 45,
+      "sha256": "7048b596715587586279828f87cab62046a60ac8de0fb43b0b46693e1240b095",
+      "source": "def registrationBookingRefusal (c : Config) (b : RegistrationBooking) : Option String :=\n  let r := b.request\n  if !registrationContentsShape c r || r.contents.lovelace < registrationDeclaredLovelace r then\n    some \"dirty-request\"\n  else if registrationDeclaredLovelace r < r.contents.lovelace then\n    some \"hidden-surplus\"\n  else if !decide (r.contents.trieReadyTags = [r.trieReadyTag c] ∧ b.trieReadyTagsMinted = [r.trieReadyTag c]) then\n    some \"forged-trie-ready-tag\"\n  else if !decide (b.applicationTagsMinted = r.contents.applicationTags) then\n    some \"dirty-request\"\n  else if !decide b.interval.valid then\n    some \"invalid-booking-interval\"\n  else if r.submittedAt != b.interval.upper then\n    some \"backdated-booking\"\n  else if c.bookingWidth < b.interval.width then\n    some \"booking-too-wide\"\n  else none"
+    },
+    {
+      "declaration": "Singular.foldMemberRefusal",
+      "module": "Singular.Economics.Fold",
+      "line": 9,
+      "sha256": "f6762086ba14408ff817586a52e6069857409b599c6a92f3e0af945ee463039b",
+      "source": "def foldMemberRefusal (c : Config) (interval : Interval) (member : FoldMember) : Option String :=\n  match member with\n  | .registration b =>\n    if interval.lower < b.request.submittedAt ||\n        !inPhase1 c b.request.submittedAt interval.upper then some \"not-phase1\"\n    else none\n  | .termination _ => none"
+    },
+    {
+      "declaration": "Singular.foldPrerequisite",
+      "module": "Singular.Economics.Fold",
+      "line": 17,
+      "sha256": "e7a47c0b43a355b5dc76edac8c1e806c024bd307064aa7ac2f3375294cb66b6a",
+      "source": "def foldPrerequisite (world : World) (u : EconomicUtxo) (tx : EconomicTransaction) : Option String := do\n  if ¬ (tx.transaction.inputs.map (·.ref)).Nodup then return \"fold-duplicate-input\"\n  if !disjointInputs tx.transaction then return \"fold-input-overlap\"\n  if let some why := inputPresenceRefusal u.ledger tx.transaction then return why\n  if let some why := economicObservationRefusal world u tx then return why\n  let members := foldMembers world tx\n  if members.isEmpty then return \"empty-fold\"\n  let some interval := tx.transaction.validity | return \"fold-interval-missing\"\n  if ¬ interval.valid then return \"fold-interval-empty\"\n  if let some why := members.findSome? (foldMemberRefusal world.registry.config interval) then return why\n  if !(u.all fun p =>\n      !inputsContainReference tx.transaction.inputs p.1 ||\n      (foldMemberAt world p.1).isSome || p.2.output.stateTokens > 0 || foldOrdinary p.2) then\n    return \"fold-unrecognized-input\"\n  none"
+    },
+    {
+      "declaration": "Singular.foldEffect",
+      "module": "Singular.Economics.Fold",
+      "line": 33,
+      "sha256": "290b77f218e5fa9fb0992ca9d7efb882763bde8da97b393154c48643a89d20f5",
+      "source": "def foldEffect (world : World) (tx : EconomicTransaction) (result : Result) : World :=\n  { registry := foldRegistryEffect world tx result,\n    pending := world.pending.filter fun b =>\n      !inputsContainReference tx.transaction.inputs b.request.reference,\n    terminations := foldRemainingTerminations world tx,\n    treasury := world.treasury + tx.transaction.donation }"
+    },
+    {
+      "declaration": "Singular.foldAccepted",
+      "module": "Singular.Economics.Fold",
+      "line": 43,
+      "sha256": "a42b6027ea8a2e1e9d4b65a175051dd7f5dca2b9cac49d3f69a8fc9403780f61",
+      "source": "def foldAccepted (world : World) (u : EconomicUtxo) (tx : EconomicTransaction) : Except String World :=\n  match foldPrerequisite world u tx with\n  | some why => .error why\n  | none =>\n    match foldBatch (foldProjectedRegistry world)\n        ((foldMembers world tx).map (foldLegacyRequest world.registry.config)) with\n    | .error why => .error why\n    | .ok result =>\n      match foldRoutingRefusal world u tx result with\n      | some why => .error why\n      | none => .ok (foldEffect world tx result)"
+    },
+    {
+      "declaration": "Singular.foldMemberAt",
+      "module": "Singular.Economics.FoldProjection",
+      "line": 15,
+      "sha256": "befbe77bebf180870f05d0051258e625906bcc78d2fe8f9dc4b0b1ba60ced11f",
+      "source": "def foldMemberAt (world : World) (reference : OutRef) : Option FoldMember :=\n  match world.pending.find? (fun b => b.request.reference == reference) with\n  | some b => some (.registration b)\n  | none => (world.terminations.find? (fun b => b.request.reference == reference)).map\n      FoldMember.termination"
+    },
+    {
+      "declaration": "Singular.foldMembers",
+      "module": "Singular.Economics.FoldProjection",
+      "line": 21,
+      "sha256": "f4315f220f62145b3cbdd041958603ee3bb387920a85693df7a5094224fb6dfb",
+      "source": "def foldMembers (world : World) (tx : EconomicTransaction) : List FoldMember :=\n  tx.transaction.inputs.filterMap fun input => input.ref.bind (foldMemberAt world)"
+    },
+    {
+      "declaration": "Singular.FoldMember.tip",
+      "module": "Singular.Economics.FoldProjection",
+      "line": 24,
+      "sha256": "ff3a81dd1cdc9614e6d1d5c90705976a59487b5c6212c1290b0b040d0bc3b3e4",
+      "source": "def FoldMember.tip : FoldMember → Nat\n  | .registration b => b.request.declaredTip\n  | .termination b => b.request.declaredTip"
+    },
+    {
+      "declaration": "Singular.FoldMember.donation",
+      "module": "Singular.Economics.FoldProjection",
+      "line": 28,
+      "sha256": "e6ef15e9b278a65e1b6f536b6fc4eef8da1c308364eaef9b4c50c43a6d39066d",
+      "source": "def FoldMember.donation : FoldMember → Nat\n  | .registration b => b.request.registrationCost\n  | .termination b => b.request.contents.lovelace - b.request.declaredTip"
+    },
+    {
+      "declaration": "Singular.FoldMember.carrier",
+      "module": "Singular.Economics.FoldProjection",
+      "line": 32,
+      "sha256": "0b7789f0af1d92a7012e62353714ea27ac3abfd87c86b806da20059d7277cf01",
+      "source": "def FoldMember.carrier : FoldMember → Nat\n  | .registration b => b.request.carrierAda\n  | .termination _ => 0"
+    },
+    {
+      "declaration": "Singular.foldLegacyRequest",
+      "module": "Singular.Economics.FoldProjection",
+      "line": 43,
+      "sha256": "b86beac4080e76b36c52b9b409b9bd62dad44c43bf69ed68c010444348b0ccec",
+      "source": "def foldLegacyRequest (c : Config) (member : FoldMember) : Request :=\n  let (edge, key, owner, destination, datum, submittedAt) := match member with\n    | .registration b => (.insertActive, b.request.key, b.request.refundAddress,\n        b.request.destination, b.request.datum, b.request.submittedAt)\n    | .termination b => (.updateTerminal, b.request.key, 0, b.request.destination, none, 0)\n  let approval : Approval :=\n    { policy := c.applicationPolicy, edge, key, owner, destination,\n      assetName := approvalAssetName edge key owner destination }\n  { edge, key, owner, output := destination, datum, submittedAt,\n    registryId := c.registryId, claimed := delta edge, approval := some approval }"
+    },
+    {
+      "declaration": "Singular.foldProjectedRegistry",
+      "module": "Singular.Economics.FoldProjection",
+      "line": 56,
+      "sha256": "ca59ecbaae84de50092c65f747bb51146f57e7a529a980c0a86232c7683fc3eb",
+      "source": "def foldProjectedRegistry (world : World) : RegistryState :=\n  { world.registry with held := world.registry.held ++ world.terminations.flatMap (·.custodyInputs) }"
+    },
+    {
+      "declaration": "Singular.foldRemainingTerminations",
+      "module": "Singular.Economics.FoldProjection",
+      "line": 59,
+      "sha256": "e5152e9e000ce853940bb90eca86f8a2108b2f4f696fe102109847df69e63a2c",
+      "source": "def foldRemainingTerminations (world : World) (tx : EconomicTransaction) : List TerminationBooking :=\n  world.terminations.filter fun b => !inputsContainReference tx.transaction.inputs b.request.reference"
+    },
+    {
+      "declaration": "Singular.foldRegistryEffect",
+      "module": "Singular.Economics.FoldProjection",
+      "line": 65,
+      "sha256": "14831340cd96493256257eb0e90a17371396eb70bec2fe8a20cd66d21d1c9379",
+      "source": "def foldRegistryEffect (world : World) (tx : EconomicTransaction) (result : Result) : RegistryState :=\n  { result.state with held := result.state.held.filter fun holding =>\n      !(holding.kind == .active && (foldRemainingTerminations world tx).any\n        (fun b => b.request.key == holding.key)) }"
+    },
+    {
+      "declaration": "Singular.foldObligations",
+      "module": "Singular.Economics.FoldProjection",
+      "line": 76,
+      "sha256": "84110adfe8a59d3f2c3d700af62948d81dd5f2395ce5709858641fe3b94a9389",
+      "source": "def foldObligations (members : List FoldMember) : FoldObligations :=\n  { donation := (members.map FoldMember.donation).sum,\n    tips := (members.map FoldMember.tip).sum,\n    carriers := (members.map FoldMember.carrier).sum }"
+    },
+    {
+      "declaration": "Singular.foldOrdinary",
+      "module": "Singular.Economics.FoldRouting",
+      "line": 8,
+      "sha256": "b7f7487315189103b2785f63585747c532d464a953063d2c63e308d8e51b1109",
+      "source": "def foldOrdinary (output : EconomicOutput) : Bool :=\n  output.output.stateTokens == 0 && output.contents.trieReadyTags.isEmpty &&\n    output.contents.applicationTags.isEmpty && output.singularTags.isEmpty"
+    },
+    {
+      "declaration": "Singular.foldOrdinaryLovelace",
+      "module": "Singular.Economics.FoldRouting",
+      "line": 12,
+      "sha256": "37102b8572493d4ee9c271ac7365e2513859a0b26a3c539e87a4b9e054543df0",
+      "source": "def foldOrdinaryLovelace (outputs : List EconomicOutput) : Nat :=\n  ((outputs.filter foldOrdinary).map (·.output.lovelace)).sum"
+    },
+    {
+      "declaration": "Singular.foldBareValue",
+      "module": "Singular.Economics.FoldRouting",
+      "line": 15,
+      "sha256": "cb06464ee6cd9b21f0464726045e02e3dab751339763053d8489cb8b0eba3149",
+      "source": "def foldBareValue (output : EconomicOutput) : Bool :=\n  output.output.assets.isEmpty && output.contents.otherAssets.isEmpty"
+    },
+    {
+      "declaration": "Singular.foldStateShape",
+      "module": "Singular.Economics.FoldRouting",
+      "line": 18,
+      "sha256": "562f62c9e80a7829b4603584ebc39bde530d281cde8c16ff8df466bac3fdfe73",
+      "source": "def foldStateShape (c : Config) (output : EconomicOutput) : Bool :=\n  decide (output.output.stateTokens = 1 ∧ output.output.stateToken = some c.stateToken ∧\n    output.output.datum = .inline ∧ output.output.config = some c ∧\n    output.request = none ∧ output.singularTags = [] ∧\n    output.contents.trieReadyTags = [] ∧ output.contents.applicationTags = []) &&\n    foldBareValue output"
+    },
+    {
+      "declaration": "Singular.foldSameQuantities",
+      "module": "Singular.Economics.FoldRouting",
+      "line": 27,
+      "sha256": "81c7f90a66ab7f0b19cd33a304d77483bd258c228fb9758e83a015c14a97ce52",
+      "source": "def foldSameQuantities {α : Type} [DecidableEq α]\n    (left right : List (α × Int)) : Bool :=\n  (left.map Prod.fst ++ right.map Prod.fst).all fun tag =>\n    decide (((left.filter fun p => decide (p.1 = tag)).map Prod.snd).sum =\n      ((right.filter fun p => decide (p.1 = tag)).map Prod.snd).sum)"
+    },
+    {
+      "declaration": "Singular.foldMint",
+      "module": "Singular.Economics.FoldRouting",
+      "line": 33,
+      "sha256": "b242f32afde55a6327003df2206eaf6ba89817bbfb758cf65e0badb3ce03c78b",
+      "source": "def foldMint (c : Config) (members : List FoldMember) : List (SingularTag × Int) :=\n  members.flatMap fun member => match member with\n    | .registration b => [(c.singularTag b.request.key, 1)]\n    | .termination b => b.request.singularTags.map (fun tag => (tag, -1))"
+    },
+    {
+      "declaration": "Singular.foldCarrierTags",
+      "module": "Singular.Economics.FoldRouting",
+      "line": 38,
+      "sha256": "8f7bcc997e813271eb0c4efcc5374c3446f107c83e988656eabd639cfcbdd123",
+      "source": "def foldCarrierTags (c : Config) (members : List FoldMember) : List SingularTag :=\n  members.filterMap fun member => match member with\n    | .registration b => some (c.singularTag b.request.key)\n    | .termination _ => none"
+    },
+    {
+      "declaration": "Singular.foldCarrierRefusal",
+      "module": "Singular.Economics.FoldRouting",
+      "line": 43,
+      "sha256": "8fee85ffc7cd461390acf4b1b1590b4f592ebbe8d3c84feabc746752c26aa2a4",
+      "source": "def foldCarrierRefusal (c : Config) (outputs : List EconomicOutput)\n    (member : FoldMember) : Option String := do\n  match member with\n  | .termination _ => none\n  | .registration b =>\n    let r := b.request\n    let [output] := outputs.filter (fun o => o.singularTags.contains (c.singularTag r.key))\n      | return \"fold-destination-mismatch\"\n    if output.output.address != some r.destination || output.output.datumValue != r.datum ||\n        output.output.datum != datumFormOf r.datum then return \"fold-destination-mismatch\"\n    if output.output.lovelace != r.carrierAda then return \"destination-carrier-mismatch\"\n    if !decide (output.singularTags = [c.singularTag r.key] ∧ output.output.stateTokens = 0 ∧\n        output.request = none ∧ output.contents.trieReadyTags = [] ∧\n        output.contents.applicationTags = []) || !foldBareValue output then\n      return \"fold-destination-mismatch\"\n    none"
+    },
+    {
+      "declaration": "Singular.foldRoutingRefusal",
+      "module": "Singular.Economics.FoldRouting",
+      "line": 60,
+      "sha256": "321507060129e9a8422c5aa707bfc885f7e09f0aeb19b22acef75d82af5e2c9e",
+      "source": "def foldRoutingRefusal (world : World) (u : EconomicUtxo) (tx : EconomicTransaction)\n    (result : Result) : Option String := do\n  let spent := economicSpent u tx\n  let [state] := spent.filter (fun o => o.output.stateTokens > 0) | return \"fold-state-missing\"\n  if !foldStateShape world.registry.config state ||\n      world.registry.config.root != rootOf world.registry.trie then return \"fold-state-mismatch\"\n  let [continued] := tx.outputs.filter (fun o => o.output.stateTokens > 0)\n    | return \"fold-state-mismatch\"\n  if !foldStateShape result.state.config continued then return \"fold-state-mismatch\"\n  if continued.output.lovelace != state.output.lovelace then return \"fold-state-value-mismatch\"\n  let members := foldMembers world tx\n  if !requestTagsBurned u tx then return \"fold-tag-not-burned\"\n  if let some why := members.findSome? (foldCarrierRefusal world.registry.config tx.outputs) then return why\n  if !foldSameQuantities tx.singularMint (foldMint world.registry.config members) ||\n      !decide ((tx.outputs.flatMap (·.singularTags)).Perm (foldCarrierTags world.registry.config members)) then\n    return \"fold-singular-mismatch\"\n  if !tx.stateMint.isEmpty || !tx.transaction.mint.isEmpty ||\n      !(tx.outputs.all foldBareValue) || !(spent.all foldBareValue) then return \"fold-foreign-asset\"\n  if tx.transaction.donation != (foldObligations members).donation then return \"fold-donation-mismatch\"\n  if foldOrdinaryLovelace spent < tx.transaction.fee then return \"fold-fee-funding-short\"\n  if !balanced u.ledger tx.transaction then return \"fold-unbalanced\"\n  none"
+    },
+    {
+      "declaration": "Singular.EconomicUtxo",
+      "module": "Singular.Economics.Observation",
+      "line": 22,
+      "sha256": "6d230ff113b0fab0be6dbccc8cb0c9a28f1813d0e507f48282b4ec93a303f6a3",
+      "source": "abbrev EconomicUtxo := List (OutRef × EconomicOutput)"
+    },
+    {
+      "declaration": "Singular.EconomicUtxo.ledger",
+      "module": "Singular.Economics.Observation",
+      "line": 37,
+      "sha256": "761e4e817d63326a55be02b9269d91e68b093c4cfd58c13b920cea7204490ba1",
+      "source": "def EconomicUtxo.ledger (u : EconomicUtxo) : Utxo :=\n  u.map fun (ref, observed) => (ref, observed.output)"
+    },
+    {
+      "declaration": "Singular.economicLookup",
+      "module": "Singular.Economics.Observation",
+      "line": 40,
+      "sha256": "d66af056ba51548dc3300a13b7b1adfe91ce971cb8a5390737d30f7e93323aeb",
+      "source": "def economicLookup (u : EconomicUtxo) (ref : OutRef) : Option EconomicOutput :=\n  (u.find? fun entry => entry.1 == ref).map Prod.snd"
+    },
+    {
+      "declaration": "Singular.economicSpent",
+      "module": "Singular.Economics.Observation",
+      "line": 43,
+      "sha256": "d965e70e0e01bc9334e41ffe0acdbf9086e96522d132fd6a66c94b0948f52eb2",
+      "source": "def economicSpent (u : EconomicUtxo) (tx : EconomicTransaction) : List EconomicOutput :=\n  (u.filter fun p => inputsContainReference tx.transaction.inputs p.1).map Prod.snd"
+    },
+    {
+      "declaration": "Singular.observesRegistration",
+      "module": "Singular.Economics.Observation",
+      "line": 52,
+      "sha256": "53036def02f283f121457f066980325b0869ff659c7ff291520299028f65a8c6",
+      "source": "def observesRegistration (u : EconomicUtxo) (r : RegistrationRequest) : Bool :=\n  match economicLookup u r.reference with\n  | none => false\n  | some o => decide (o.request = some (.registration r) ∧ o.contents = r.contents ∧\n      o.singularTags = [] ∧ o.output.role = .request ∧ o.output.datum = .inline ∧\n      o.output.lovelace = r.contents.lovelace ∧ o.output.stateTokens = 0 ∧\n      o.output.assets = [])"
+    },
+    {
+      "declaration": "Singular.observesTermination",
+      "module": "Singular.Economics.Observation",
+      "line": 60,
+      "sha256": "5afda7c797b62b723f47c3446e752dd57d07fe833504d27f3af903f22116588c",
+      "source": "def observesTermination (u : EconomicUtxo) (r : TerminationRequest) : Bool :=\n  match economicLookup u r.reference with\n  | none => false\n  | some o => decide (o.request = some (.termination r) ∧ o.contents = r.contents ∧\n      o.singularTags = r.singularTags ∧ o.output.role = .request ∧\n      o.output.datum = .inline ∧ o.output.lovelace = r.contents.lovelace ∧\n      o.output.stateTokens = 0 ∧ o.output.assets = [])"
+    },
+    {
+      "declaration": "Singular.observesWorld",
+      "module": "Singular.Economics.Observation",
+      "line": 70,
+      "sha256": "00e76ce3844c537429e2ce8601d557ce3d442b9909e1315ea8a360897fc81dec",
+      "source": "def observesWorld (world : World) (u : EconomicUtxo) : Bool :=\n  world.pending.all (fun b => observesRegistration u b.request) &&\n    world.terminations.all (fun b => observesTermination u b.request)"
+    },
+    {
+      "declaration": "Singular.economicObservationRefusal",
+      "module": "Singular.Economics.Observation",
+      "line": 74,
+      "sha256": "1b8729a1d5c47d75afc749f2572c3c857c93e88180c410595a36f585d995fa8a",
+      "source": "def economicObservationRefusal (world : World) (u : EconomicUtxo)\n    (tx : EconomicTransaction) : Option String :=\n  if ¬ (u.map Prod.fst).Nodup then some \"unspent-reference-duplicate\"\n  else if !(u.all fun p => p.1.tx != tx.identity) then some \"transaction-identity-not-fresh\"\n  else if !observesWorld world u then some \"request-observation-mismatch\"\n  else if tx.outputs.map (·.output) != tx.transaction.outputs ||\n      !(tx.outputs.all fun o => o.output.lovelace == o.contents.lovelace) then\n    some \"output-observation-mismatch\"\n  else none"
+    },
+    {
+      "declaration": "Singular.exactBurns",
+      "module": "Singular.Economics.Observation",
+      "line": 86,
+      "sha256": "575f86f2cbe58398e0a78436db78422820143b9a6450646936f85bc1dfcc49f9",
+      "source": "def exactBurns {α : Type} [DecidableEq α] (held : List α) (mint : List (α × Int)) : Bool :=\n  (held ++ mint.map Prod.fst).all fun tag =>\n    decide (((mint.filter fun p => decide (p.1 = tag)).map Prod.snd).sum =\n      -(Int.ofNat (held.count tag)))"
+    },
+    {
+      "declaration": "Singular.applicationTagIdentity",
+      "module": "Singular.Economics.Observation",
+      "line": 93,
+      "sha256": "cd5cd0af162bd12d4ee72e59735cbb682ba4a4c7190c5a977954a98b006bb1e0",
+      "source": "def applicationTagIdentity (tag : Approval) : TokenId := ⟨tag.policy, tag.assetName⟩"
+    },
+    {
+      "declaration": "Singular.requestTagsBurned",
+      "module": "Singular.Economics.Observation",
+      "line": 95,
+      "sha256": "01077369d7c231393fa5671c6a2b8da6418eccbd2643493c0361459dc1ef9050",
+      "source": "def requestTagsBurned (u : EconomicUtxo) (tx : EconomicTransaction) : Bool :=\n  let spent := economicSpent u tx\n  exactBurns (spent.flatMap (·.contents.trieReadyTags)) tx.trieReadyMint &&\n    exactBurns ((spent.flatMap (·.contents.applicationTags)).map applicationTagIdentity)\n      tx.applicationMint &&\n    tx.outputs.all (fun o => o.contents.trieReadyTags.isEmpty && o.contents.applicationTags.isEmpty)"
+    },
+    {
+      "declaration": "Singular.refundAmount",
+      "module": "Singular.Economics.Refunds",
+      "line": 9,
+      "sha256": "7009685ec2a31dc20cce8530e89f22445fab095d69ede7e3f5f12108ed503332",
+      "source": "def refundAmount (request : RegistrationRequest) (retraction : Bool) : Nat :=\n  if retraction then request.contents.lovelace\n  else request.contents.lovelace - request.declaredTip"
+    },
+    {
+      "declaration": "Singular.refundOwed",
+      "module": "Singular.Economics.Refunds",
+      "line": 13,
+      "sha256": "f2aab934b005dd18270cba0492e3b83972f60ecc9dc225546eb639fe9c597cca",
+      "source": "def refundOwed (requests : List RegistrationRequest) (retraction : Bool)\n    (address : Nat) : Nat :=\n  ((requests.filter fun r => r.refundAddress == address).map\n    fun r => refundAmount r retraction).sum"
+    },
+    {
+      "declaration": "Singular.refundObligations",
+      "module": "Singular.Economics.Refunds",
+      "line": 20,
+      "sha256": "02d86112e99a52598e94268d8f5da4adda9854439e992e534f20960139124f7a",
+      "source": "def refundObligations (requests : List RegistrationRequest) (retraction : Bool) :\n    List (Nat × Nat) :=\n  (requests.map (·.refundAddress)).eraseDups.map fun address =>\n    (address, refundOwed requests retraction address)"
+    },
+    {
+      "declaration": "Singular.refundPaid",
+      "module": "Singular.Economics.Refunds",
+      "line": 28,
+      "sha256": "45fe7c711945c44f5392cc6f405a262c2f50be75461b176b927e1e3c72405afb",
+      "source": "def refundPaid (tx : EconomicTransaction) (address : Nat) : Nat :=\n  ((tx.outputs.filter fun o => o.output.address == some address).map\n    fun o => o.output.lovelace).sum"
+    },
+    {
+      "declaration": "Singular.refundRefusal",
+      "module": "Singular.Economics.Refunds",
+      "line": 32,
+      "sha256": "244f02e703284be1a411a840f199b8a6b58d63c8a24d978617770e04a93102fe",
+      "source": "def refundRefusal (tx : EconomicTransaction) (obligations : List (Nat × Nat))\n    (reason : String) : Option String :=\n  if obligations.all (fun obligation => decide (obligation.2 ≤ refundPaid tx obligation.1))\n  then none else some reason"
+    },
+    {
+      "declaration": "Singular.rejectedRequests",
+      "module": "Singular.Economics.Refunds",
+      "line": 40,
+      "sha256": "c365a58bd161192b3928aefc702275a7576e58c96be6675baa3a684486407813",
+      "source": "def rejectedRequests (world : World) (members : List (OutRef × RejectReason)) :\n    List RegistrationRequest :=\n  members.filterMap fun member =>\n    (world.pending.find? fun b => b.request.reference == member.1).map (·.request)"
+    },
+    {
+      "declaration": "Singular.registrationRejectionGround",
+      "module": "Singular.Economics.Rejection",
+      "line": 16,
+      "sha256": "adf5d17194faf87ac35428f56810e5110b5d2bf0a345239b3e7c8c71a2927660",
+      "source": "def registrationRejectionGround (world : World) (r : RegistrationRequest)\n    (interval : Interval) (ground : RejectReason) : Option String :=\n  match ground with\n  | .mismatch leaf =>\n    if leaf != trieGet world.registry.trie r.key then some \"reject-evidence-mismatch\"\n    else if (transition .insertActive leaf).isSome then some \"reject-compatible\"\n    else none\n  | .expired =>\n    if interval.lower < r.submittedAt + world.registry.config.processTime +\n        world.registry.config.retractTime then some \"reject-not-expired\"\n    else none"
+    },
+    {
+      "declaration": "Singular.terminationRejectionGround",
+      "module": "Singular.Economics.Rejection",
+      "line": 30,
+      "sha256": "51d8fb53f1cbd21f46d79566eab3738bee29a8c0f93f1999959620591bd4760b",
+      "source": "def terminationRejectionGround (world : World) (r : TerminationRequest)\n    (ground : RejectReason) : Option String :=\n  match ground with\n  | .mismatch leaf =>\n    if leaf != trieGet world.registry.trie r.key then some \"reject-evidence-mismatch\"\n    else if (transition .updateTerminal leaf).isSome then some \"reject-compatible\"\n    else none\n  | .expired => some \"reject-termination-no-expiry\""
+    },
+    {
+      "declaration": "Singular.rejectionMemberRefusal",
+      "module": "Singular.Economics.Rejection",
+      "line": 39,
+      "sha256": "8965ce180bbba8d2a7174d0be57e73a78be5a096ad7a28d5fa931288ebe4b186",
+      "source": "def rejectionMemberRefusal (world : World) (interval : Interval)\n    (member : OutRef × RejectReason) : Option String :=\n  match world.pending.find? (fun b => b.request.reference == member.1) with\n  | some b => registrationRejectionGround world b.request interval member.2\n  | none =>\n    match world.terminations.find? (fun b => b.request.reference == member.1) with\n    | some b =>\n      match terminationRejectionGround world b.request member.2 with\n      | some why => some why\n      | none => some \"reject-termination\"\n    | none => some \"reject-request-not-pending\""
+    },
+    {
+      "declaration": "Singular.rejectionStateRefusal",
+      "module": "Singular.Economics.Rejection",
+      "line": 51,
+      "sha256": "906b37698c64d04a15d1c6b42fafad2ced8dc7973e13571c240a36b1c3ac7e60",
+      "source": "def rejectionStateRefusal (world : World) (u : EconomicUtxo) (r : Rejection) : Option String :=\n  if !inputsContainReference r.transaction.transaction.referenceInputs r.stateReference then\n    some \"reject-state-reference-missing\"\n  else match economicLookup u r.stateReference with\n  | none => some \"reference-input-missing\"\n  | some o =>\n    if o.output.stateTokens != 1 || o.output.role != .state then some \"reject-state-token-missing\"\n    else match o.output.stateToken with\n    | none => some \"reject-state-token-missing\"\n    | some token =>\n      if token.policy != world.registry.config.stateToken.policy then some \"reject-foreign-state\"\n      else if token.name != world.registry.config.stateToken.name then some \"reject-state-token-name\"\n      else if o.output.datum != .inline then some \"reject-state-datum\"\n      else match o.output.config with\n      | none => some \"reject-state-datum\"\n      | some config =>\n        if config.root != rootOf world.registry.trie then some \"reject-stale-state\"\n        else if config != world.registry.config then some \"reject-state-configuration\"\n        else none"
+    },
+    {
+      "declaration": "Singular.rejectionInputsRefusal",
+      "module": "Singular.Economics.Rejection",
+      "line": 73,
+      "sha256": "fc6a881c95043d54fafde7eeef849933c9fc8d5803bac39daf9cb1a5bac091ba",
+      "source": "def rejectionInputsRefusal (u : EconomicUtxo) (r : Rejection) : Option String :=\n  let tx := r.transaction.transaction\n  if inputsContainReference tx.inputs r.stateReference &&\n      inputsContainReference tx.referenceInputs r.stateReference then some \"reject-state-overlap\"\n  else if (spentOutputs u.ledger tx).any (fun o => o.stateTokens > 0 || o.role == .state) then\n    some \"reject-state-spent\"\n  else if ¬ (tx.inputs.map (·.ref)).Nodup ∨ ¬ (r.members.map Prod.fst).Nodup then\n    some \"reject-duplicate-input\"\n  else if !disjointInputs tx then some \"reject-input-overlap\"\n  else inputPresenceRefusal u.ledger tx"
+    },
+    {
+      "declaration": "Singular.rejectionSupplyUnchanged",
+      "module": "Singular.Economics.Rejection",
+      "line": 86,
+      "sha256": "f35d4798345e8728956960b8faf4ce55d43cff1e82bbd66c62ceab44218d2bb7",
+      "source": "def rejectionSupplyUnchanged (u : EconomicUtxo) (tx : EconomicTransaction) : Bool :=\n  tx.transaction.mint.isEmpty && tx.stateMint.isEmpty && tx.singularMint.isEmpty &&\n    (economicSpent u tx).all (fun o => o.output.stateTokens == 0 &&\n      o.output.assets.isEmpty && o.singularTags.isEmpty && o.contents.otherAssets.isEmpty) &&\n    tx.outputs.all (fun o => o.output.stateTokens == 0 && o.output.assets.isEmpty &&\n      o.singularTags.isEmpty && o.contents.otherAssets.isEmpty)"
+    },
+    {
+      "declaration": "Singular.rejectionRefusal",
+      "module": "Singular.Economics.Rejection",
+      "line": 93,
+      "sha256": "a6417f7e0380afb8bae34a9259b7ecc916f8e32a303951957cac37ebc0f7a80c",
+      "source": "def rejectionRefusal (world : World) (u : EconomicUtxo) (r : Rejection) : Option String := do\n  if let some why := rejectionInputsRefusal u r then return why\n  if let some why := rejectionStateRefusal world u r then return why\n  if let some why := economicObservationRefusal world u r.transaction then return why\n  let some interval := r.transaction.transaction.validity | return \"reject-interval-missing\"\n  if ¬ interval.valid then return \"reject-interval-empty\"\n  if r.members.isEmpty then return \"reject-empty-batch\"\n  if ¬ (r.transaction.transaction.inputs.map (·.ref)).Perm\n      (r.members.map fun m => some m.1) then return \"reject-input-members\"\n  if let some why := r.members.findSome? (rejectionMemberRefusal world interval) then return why\n  if !requestTagsBurned u r.transaction then return \"reject-tag-not-burned\"\n  if !rejectionSupplyUnchanged u r.transaction then return \"reject-registry-supply\"\n  if let some why := refundRefusal r.transaction\n      (refundObligations (rejectedRequests world r.members) false) \"reject-refund-short\" then\n    return why\n  none"
+    },
+    {
+      "declaration": "Singular.rejectionEffect",
+      "module": "Singular.Economics.Rejection",
+      "line": 110,
+      "sha256": "da6734da163e5f7308cba83c8754312fc9825708f7add3205c87697ba0df60fc",
+      "source": "def rejectionEffect (world : World) (r : Rejection) : World :=\n  { world with pending := world.pending.filter fun b =>\n      !(r.members.any fun m => m.1 == b.request.reference) }"
+    },
+    {
+      "declaration": "Singular.rejectionAccepted",
+      "module": "Singular.Economics.Rejection",
+      "line": 117,
+      "sha256": "fd9156b41b163ac4bd98282764a107245941d01c83a6a044effdf9a2e3ee0ec2",
+      "source": "def rejectionAccepted (world : World) (u : EconomicUtxo) (r : Rejection) : Except String World :=\n  match rejectionRefusal world u r with\n  | some why => .error why\n  | none => .ok (rejectionEffect world r)"
+    },
+    {
+      "declaration": "Singular.retractionInputsRefusal",
+      "module": "Singular.Economics.Retraction",
+      "line": 9,
+      "sha256": "572a586f2f8749e2c8abb653c832ae31ac1cc831080882a10d61794fe57b42b4",
+      "source": "def retractionInputsRefusal (u : EconomicUtxo) (tx : EconomicTransaction) : Option String :=\n  if (spentOutputs u.ledger tx.transaction).any (fun o => o.stateTokens > 0 || o.role == .state)\n  then some \"retract-state-spent\"\n  else if (u.filter fun p => inputsContainReference tx.transaction.referenceInputs p.1).any\n      (fun p => p.2.output.stateTokens > 0 || p.2.output.role == .state)\n  then some \"retract-state-read\"\n  else if ¬ (tx.transaction.inputs.map (·.ref)).Nodup then some \"retract-duplicate-input\"\n  else if !disjointInputs tx.transaction then some \"retract-input-overlap\"\n  else inputPresenceRefusal u.ledger tx.transaction"
+    },
+    {
+      "declaration": "Singular.retractionRequest",
+      "module": "Singular.Economics.Retraction",
+      "line": 19,
+      "sha256": "beb3a135c0713f736f831c7f9b539cf6d8d65bfe8ab0572fc188a9d63ac34074",
+      "source": "def retractionRequest (world : World) (tx : EconomicTransaction) :\n    Except String RegistrationRequest := do\n  if world.terminations.any (fun b =>\n      inputsContainReference tx.transaction.inputs b.request.reference) then\n    throw \"retract-registration-only\"\n  match world.pending.filter (fun b =>\n      inputsContainReference tx.transaction.inputs b.request.reference) with\n  | [] => throw \"retract-request-not-pending\"\n  | [booking] => pure booking.request\n  | _ => throw \"retract-single-request\""
+    },
+    {
+      "declaration": "Singular.retractionRefusal",
+      "module": "Singular.Economics.Retraction",
+      "line": 30,
+      "sha256": "1bdb5e8c7a9d2c476281ea712ba56e0acb7edf738377829a09942d251f52ec3d",
+      "source": "def retractionRefusal (world : World) (u : EconomicUtxo)\n    (tx : EconomicTransaction) : Option String := do\n  if let some why := retractionInputsRefusal u tx then return why\n  if let some why := economicObservationRefusal world u tx then return why\n  match retractionRequest world tx with\n  | .error why => return why\n  | .ok request =>\n    if let some why := retractionFundingRefusal u tx request then return why\n    if !(tx.transaction.signers.contains request.refundAddress) then return \"retract-owner\"\n    let some interval := tx.transaction.validity | return \"retract-interval-missing\"\n    if ¬ interval.valid then return \"retract-interval-empty\"\n    if interval.lower < request.submittedAt + world.registry.config.processTime ||\n        request.submittedAt + world.registry.config.processTime + world.registry.config.retractTime <\n          interval.upper then return \"retract-window\"\n    if !requestTagsBurned u tx then return \"retract-tag-not-burned\"\n    if !(tx.outputs.all foldBareValue) || !((economicSpent u tx).all foldBareValue) then\n      return \"retract-foreign-asset\"\n    if !rejectionSupplyUnchanged u tx then return \"retract-registry-supply\"\n    if let some why := refundRefusal tx (refundObligations [request] true) \"retract-refund-short\"\n      then return why\n    if tx.transaction.donation != 0 then return \"retract-donation\"\n    if retractionFundingLovelace u tx request < tx.transaction.fee then\n      return \"retract-fee-funding-short\"\n    if !balanced u.ledger tx.transaction then return \"retract-unbalanced\"\n    none"
+    },
+    {
+      "declaration": "Singular.retractionEffect",
+      "module": "Singular.Economics.Retraction",
+      "line": 56,
+      "sha256": "77fb989f2bc2cf72875bf7a5f1a112e83deba80095fdace1ea57ff7a196ddc20",
+      "source": "def retractionEffect (world : World) (tx : EconomicTransaction) : World :=\n  { world with pending := world.pending.filter fun b =>\n      !inputsContainReference tx.transaction.inputs b.request.reference }"
+    },
+    {
+      "declaration": "Singular.retractionAccepted",
+      "module": "Singular.Economics.Retraction",
+      "line": 60,
+      "sha256": "402b38f16cd6c14d59e0bf0d34b4150fec5a2d1e0bda0312e49b466a2fd5b81c",
+      "source": "def retractionAccepted (world : World) (u : EconomicUtxo)\n    (tx : EconomicTransaction) : Except String World :=\n  match retractionRefusal world u tx with\n  | some why => .error why\n  | none => .ok (retractionEffect world tx)"
+    },
+    {
+      "declaration": "Singular.retractionFunding",
+      "module": "Singular.Economics.RetractionFunding",
+      "line": 9,
+      "sha256": "12a0fd81b68b9af5c207876fd0e30e687b09c575325f86b98ce83a04487bcd82",
+      "source": "def retractionFunding (u : EconomicUtxo) (tx : EconomicTransaction)\n    (request : RegistrationRequest) : List EconomicOutput :=\n  (u.filter fun entry => inputsContainReference tx.transaction.inputs entry.1 &&\n    entry.1 != request.reference).map Prod.snd"
+    },
+    {
+      "declaration": "Singular.retractionFundingRefusal",
+      "module": "Singular.Economics.RetractionFunding",
+      "line": 14,
+      "sha256": "86f72e4c855b7f0291d1b4c271717140426157d966883969d02548f1c4bde95a",
+      "source": "def retractionFundingRefusal (u : EconomicUtxo) (tx : EconomicTransaction)\n    (request : RegistrationRequest) : Option String :=\n  (retractionFunding u tx request).findSome? fun output =>\n    if output.output.stateTokens > 0 || output.output.role == .state then\n      some \"retract-state-spent\"\n    else if !output.contents.trieReadyTags.isEmpty then some \"retract-funding-trie-ready-tag\"\n    else if !output.contents.applicationTags.isEmpty then some \"retract-funding-application-tag\"\n    else if !output.singularTags.isEmpty then some \"retract-funding-singular-tag\"\n    else if output.output.role == .request then some \"retract-funding-request-address\"\n    else if output.request.isSome then some \"retract-funding-request\"\n    else none"
+    },
+    {
+      "declaration": "Singular.retractionFundingLovelace",
+      "module": "Singular.Economics.RetractionFunding",
+      "line": 26,
+      "sha256": "962137be4a7088033eef399fe16855f0f389db37c4365b1dddd0108173bcdcb4",
+      "source": "def retractionFundingLovelace (u : EconomicUtxo) (tx : EconomicTransaction)\n    (request : RegistrationRequest) : Nat :=\n  foldOrdinaryLovelace (retractionFunding u tx request)"
+    },
+    {
+      "declaration": "Singular.terminationDeclaredLovelace",
+      "module": "Singular.Economics.Termination",
+      "line": 8,
+      "sha256": "494a18680c455cbcf2caf351ab9df9ba1c65053735d8a7c5ab1c554e6162c234",
+      "source": "def terminationDeclaredLovelace (r : TerminationRequest) : Nat :=\n  r.declaredTip + r.carrierAda"
+    },
+    {
+      "declaration": "Singular.terminationContentsShape",
+      "module": "Singular.Economics.Termination",
+      "line": 11,
+      "sha256": "b66b095ad86dfe896a6261f6994f8e86cb142baaba7bc64f7f4711286fc4781f",
+      "source": "def terminationContentsShape (c : Config) (r : TerminationRequest) : Bool :=\n  decide (c.minimumTip ≤ r.declaredTip ∧ r.contents.otherAssets = [] ∧\n    r.refundAddress = none ∧ r.submittedAt = none ∧ r.contents.applicationTags = [])"
+    },
+    {
+      "declaration": "Singular.terminationCustody",
+      "module": "Singular.Economics.Termination",
+      "line": 24,
+      "sha256": "37842b290d6372bfd601626570fd82c83a2728e03fbebab92c26eafdc8fc5dc7",
+      "source": "def terminationCustody (registry : RegistryState) (key : Key) : List Holding :=\n  registry.held.filter fun h => h.key == key && h.kind == .active"
+    },
+    {
+      "declaration": "Singular.terminationBookingRefusal",
+      "module": "Singular.Economics.Termination",
+      "line": 31,
+      "sha256": "1a280aedf361a811a054640a3b448f270d94c0f3724830b688cbaf418a7333a3",
+      "source": "def terminationBookingRefusal (registry : RegistryState) (b : TerminationBooking) : Option String :=\n  let c := registry.config\n  let r := b.request\n  if !terminationContentsShape c r || r.contents.lovelace < terminationDeclaredLovelace r then\n    some \"dirty-request\"\n  else if terminationDeclaredLovelace r < r.contents.lovelace then\n    some \"hidden-surplus\"\n  else if !decide (r.registryId = c.registryId ∧ r.singularTags = [c.singularTag r.key]) then\n    some \"forged-singular-tag\"\n  else if !decide (r.contents.trieReadyTags = [r.trieReadyTag c] ∧ b.trieReadyTagsMinted = [r.trieReadyTag c]) then\n    some \"forged-trie-ready-tag\"\n  else if !decide (trieGet registry.trie r.key = .known .active) ||\n      (terminationCustody registry r.key).isEmpty then\n    some \"singular-tag-not-in-custody\"\n  else if !decide (b.custodyInputs = terminationCustody registry r.key ∧ b.custodyInputs.length = 1) then\n    some \"forged-singular-tag\"\n  else none"
+    },
+    {
+      "declaration": "Singular.Utxo",
+      "module": "Singular.Economics.Transaction",
+      "line": 13,
+      "sha256": "651f2545fc5f2fe0b80f32ab7507e498cca2d1add1ee7fa409e88c7d543bcd3f",
+      "source": "abbrev Utxo := List (OutRef × TxOutput)"
+    },
+    {
+      "declaration": "Singular.inputsContainReference",
+      "module": "Singular.Economics.Transaction",
+      "line": 15,
+      "sha256": "a028e1bf17349b84c0660f7d8cbba3fe070b78b3f3b740c681acd4c73aa3034d",
+      "source": "def inputsContainReference (inputs : List TxInput) (ref : OutRef) : Bool :=\n  inputs.any fun i => decide (i.ref = some ref)"
+    },
+    {
+      "declaration": "Singular.disjointInputs",
+      "module": "Singular.Economics.Transaction",
+      "line": 19,
+      "sha256": "f6c9e35b93a8af3bcd8b9d6d2dd68a30a9c60364e50e94b6f5c9d44f5bcfa8c3",
+      "source": "def disjointInputs (tx : Tx) : Bool :=\n  tx.referenceInputs.all fun i =>\n    match i.ref with\n    | none => true\n    | some ref => !inputsContainReference tx.inputs ref"
+    },
+    {
+      "declaration": "Singular.inputPresent",
+      "module": "Singular.Economics.Transaction",
+      "line": 25,
+      "sha256": "194a6183752ce8fc9bb2f98c6d5ed7498fd403a19f1e198a75236325085fece5",
+      "source": "def inputPresent (u : Utxo) (i : TxInput) : Bool :=\n  match i.ref with\n  | none => false\n  | some ref => u.any fun p => decide (p.1 = ref)"
+    },
+    {
+      "declaration": "Singular.inputPresenceRefusal",
+      "module": "Singular.Economics.Transaction",
+      "line": 32,
+      "sha256": "5687bb8caf52b20bc4c88799486bcd2e3562ef20bf63ab39920199940642bb98",
+      "source": "def inputPresenceRefusal (u : Utxo) (tx : Tx) : Option String :=\n  if !(tx.inputs.all (inputPresent u)) then some \"spent-input-missing\"\n  else if !(tx.referenceInputs.all (inputPresent u)) then some \"reference-input-missing\"\n  else none"
+    },
+    {
+      "declaration": "Singular.spentOutputs",
+      "module": "Singular.Economics.Transaction",
+      "line": 46,
+      "sha256": "9670846f4886c58e7939c852beea6f3211bb0ce16df93197a07a79aca9e493bc",
+      "source": "def spentOutputs (u : Utxo) (tx : Tx) : List TxOutput :=\n  (u.filter fun p => inputsContainReference tx.inputs p.1).map Prod.snd"
+    },
+    {
+      "declaration": "Singular.outputLovelace",
+      "module": "Singular.Economics.Transaction",
+      "line": 49,
+      "sha256": "c73b96a64d7ad3adb9a134df3ac7bc0a902bd419d29569195aec634eb7a15438",
+      "source": "def outputLovelace (outputs : List TxOutput) : Nat := (outputs.map (·.lovelace)).sum"
+    },
+    {
+      "declaration": "Singular.outputAssets",
+      "module": "Singular.Economics.Transaction",
+      "line": 50,
+      "sha256": "a142d5275785020c3db9f1940c5a440ca678593e408f4bd43d37aceeecf70b7f",
+      "source": "def outputAssets (outputs : List TxOutput) : List (Asset × Int) := outputs.flatMap (·.assets)"
+    },
+    {
+      "declaration": "Singular.stateTokenValue",
+      "module": "Singular.Economics.Transaction",
+      "line": 54,
+      "sha256": "94f868aa648528008d4d34813efcd1693d5185c3b172bf7c9e89d2e959d4ee2b",
+      "source": "def stateTokenValue (outputs : List TxOutput) (token : Option TokenId) : Nat :=\n  ((outputs.filter fun o => decide (o.stateToken = token)).map (·.stateTokens)).sum"
+    },
+    {
+      "declaration": "Singular.stateTokenSupport",
+      "module": "Singular.Economics.Transaction",
+      "line": 57,
+      "sha256": "70a0a761936c8b3ead780b942d12034fed04221f27a0522041f61e1ca61a43ab",
+      "source": "def stateTokenSupport (before after : List TxOutput) : List (Option TokenId) :=\n  before.map (·.stateToken) ++ after.map (·.stateToken)"
+    },
+    {
+      "declaration": "Singular.balanced",
+      "module": "Singular.Economics.Transaction",
+      "line": 63,
+      "sha256": "d8527ad9c314ae121e0fafc1f845d45220cc6ab3f136bb13cf53a48954d19d2c",
+      "source": "def balanced (u : Utxo) (tx : Tx) : Bool :=\n  let spent := spentOutputs u tx\n  outputLovelace spent == outputLovelace tx.outputs + tx.donation + tx.fee &&\n  assetSame (outputAssets spent ++ tx.mint) (outputAssets tx.outputs) &&\n  (stateTokenSupport spent tx.outputs).all fun token =>\n    stateTokenValue spent token == stateTokenValue tx.outputs token"
+    },
+    {
+      "declaration": "Singular.RequestPool",
+      "module": "Singular.Economics.WorldState",
+      "line": 12,
+      "sha256": "f4b21cc1250e02b31b2f149c09bf1756da8ec1550bbb11687e9248d28ae690a3",
+      "source": "abbrev RequestPool := List RegistrationBooking"
+    },
+    {
+      "declaration": "Singular.book",
+      "module": "Singular.Economics.WorldState",
+      "line": 27,
+      "sha256": "fce254e14ebeedcb795e8612b7b00658fbe5333b495b3d962cdb9505e0f5fa96",
+      "source": "def book (world : World) (booking : RegistrationBooking) : Except String World :=\n  match registrationBookingRefusal world.registry.config booking with\n  | some reason => .error reason\n  | none =>\n    if world.pending.any (fun pending => decide (pending.request.reference = booking.request.reference)) ||\n        world.terminations.any (fun pending => decide (pending.request.reference = booking.request.reference)) then\n      .error \"request-already-pending\"\n    else .ok { world with pending := booking :: world.pending }"
+    },
+    {
+      "declaration": "Singular.bookTermination",
+      "module": "Singular.Economics.WorldState",
+      "line": 39,
+      "sha256": "f5d3a14a4a08c8a15ca854a0f92e3a2465f14f7e8aacf8322c66a9a347133cba",
+      "source": "def bookTermination (world : World) (booking : TerminationBooking) : Except String World :=\n  match terminationBookingRefusal world.registry booking with\n  | some reason => .error reason\n  | none =>\n    if world.pending.any (fun p => decide (p.request.reference = booking.request.reference)) ||\n        world.terminations.any (fun p => decide (p.request.reference = booking.request.reference)) then\n      .error \"request-already-pending\"\n    else .ok {\n      world with\n      registry := { world.registry with\n        held := world.registry.held.filter (fun h => !(h.key == booking.request.key && h.kind == .active)) }\n      terminations := booking :: world.terminations }"
+    },
+    {
+      "declaration": "Singular.inPhase1",
+      "module": "Singular.Model.Admission",
+      "line": 65,
+      "sha256": "6aa9269b27feee4a26d290198300fe00f466c051d59e3049d77cf1f002319e6a",
+      "source": "def inPhase1 (c : Config) (submittedAt validTo : Nat) : Bool :=\n  decide (validTo ≤ submittedAt + c.processTime)"
+    },
+    {
+      "declaration": "Singular.Asset",
+      "module": "Singular.Model.Assets",
+      "line": 17,
+      "sha256": "f8910e467cf2ff3b0f09e6aa66b8031cf331bbce41e21637ea59c03bc47ac793",
+      "source": "abbrev Asset := TokenKind × Key"
+    },
+    {
+      "declaration": "Singular.assetKind",
+      "module": "Singular.Model.Assets",
+      "line": 20,
+      "sha256": "1cb586a134e1bc6f255ff417af819b640c6166867855a792ad5f2e523fa7b038",
+      "source": "def assetKind (ds : List (Asset × Int)) (x : Asset) : Int :=\n  ds.foldl (fun n p => if p.1 == x then n + p.2 else n) 0"
+    },
+    {
+      "declaration": "Singular.assetPlus",
+      "module": "Singular.Model.Assets",
+      "line": 24,
+      "sha256": "9a6347b8572d50e18a80e6f57cc89aedd5d1c5b794e094fdf3dbff5923457558",
+      "source": "def assetPlus (a b : List (Asset × Int)) : List (Asset × Int) :=\n  ((a.map Prod.fst ++ b.map Prod.fst).eraseDups).map fun x =>\n    (x, assetKind a x + assetKind b x)"
+    },
+    {
+      "declaration": "Singular.assetSame",
+      "module": "Singular.Model.Assets",
+      "line": 29,
+      "sha256": "0cd0f3d88027cf26e1b2aa7869b1df1df432e3e339ec36d6d03967966856daeb",
+      "source": "def assetSame (a b : List (Asset × Int)) : Bool :=\n  (a.map Prod.fst ++ b.map Prod.fst).all fun x => assetKind a x == assetKind b x"
+    },
+    {
+      "declaration": "Singular.Config.trieReadyTag",
+      "module": "Singular.Model.Booking",
+      "line": 13,
+      "sha256": "abacec76d93d8a2bfc200334e20e126d789b4ecf7ec1cb60f3e3199031ed6b69",
+      "source": "def Config.trieReadyTag (c : Config) (commitment : Nat) : TokenId :=\n  ⟨c.registryId, commitment + 1⟩"
+    },
+    {
+      "declaration": "Singular.bookingCommitment",
+      "module": "Singular.Model.Booking",
+      "line": 19,
+      "sha256": "04ceb060e04c1a80320c30592116679180e36393e9d73e7fcb76aadbf2675af2",
+      "source": "def bookingCommitment (domain : Nat) (fields : List Nat) : Nat :=\n  (fnv1a (toJson (domain :: fields)).compress.toUTF8.data.toList).toNat"
+    },
+    {
+      "declaration": "Singular.applicationTagAssetName",
+      "module": "Singular.Model.Booking",
+      "line": 24,
+      "sha256": "a2f5feb274dd51b7032fb6f18d773cb7d9fb6830545b7bc48d12e12cd0508f96",
+      "source": "def applicationTagAssetName (key refundAddress destination nonce : Nat) : Nat :=\n  bookingCommitment 0 [(edgeOrdinal .insertActive).toNat, key, refundAddress, destination, nonce]"
+    },
+    {
+      "declaration": "Singular.trieReadyTagAssetName",
+      "module": "Singular.Model.Booking",
+      "line": 35,
+      "sha256": "2837c42f93deaefa79fcc6ce25b6ca8d8d6f4c71887b28fd56211be82f2556dd",
+      "source": "def trieReadyTagAssetName (operation : BookingOperation) (nonce : Nat) : Nat :=\n  bookingCommitment 1 ((match operation with\n    | .registration key refundAddress destination cost tip carrier =>\n      [0, key, refundAddress, destination, cost, tip, carrier]\n    | .termination key destination => [1, key, destination]) ++ [nonce])"
+    },
+    {
+      "declaration": "Singular.RegistrationRequest.operation",
+      "module": "Singular.Model.Booking",
+      "line": 99,
+      "sha256": "61d947d003afe2f5acdf0d0c7357c17689d881ec1cace4f6272c6205bf537920",
+      "source": "def RegistrationRequest.operation (r : RegistrationRequest) : BookingOperation :=\n  .registration r.key r.refundAddress r.destination r.registrationCost r.declaredTip r.carrierAda"
+    },
+    {
+      "declaration": "Singular.RegistrationRequest.trieReadyTag",
+      "module": "Singular.Model.Booking",
+      "line": 102,
+      "sha256": "b4dbf0852b8cf54714f39c18f0916a617bf22bed8f1b638d26bc1b9d7d6b7f58",
+      "source": "def RegistrationRequest.trieReadyTag (r : RegistrationRequest) (c : Config) : TokenId :=\n  c.trieReadyTag (trieReadyTagAssetName r.operation r.nonce)"
+    },
+    {
+      "declaration": "Singular.allowed",
+      "module": "Singular.Model.Fold",
+      "line": 11,
+      "sha256": "34f40125aa98d69cdbc2c7277467be175ad287a6a6666a718ff0781f4bf8d7a8",
+      "source": "def allowed (e : Edge) : Bool :=\n  e == .insertActive || e == .updateTerminal"
+    },
+    {
+      "declaration": "Singular.delta",
+      "module": "Singular.Model.Fold",
+      "line": 16,
+      "sha256": "2d3fb2f9632ef7516e0a799fa0136a655471c532f4dd01b8097b4026f452e954",
+      "source": "def delta (e : Edge) : List (TokenKind × Int) :=\n  match e with\n  | .insertActive => [(.active, 1)]\n  | .updateTerminal => [(.active, -1)]\n  | _ => []"
+    },
+    {
+      "declaration": "Singular.transition",
+      "module": "Singular.Model.Fold",
+      "line": 23,
+      "sha256": "55b29a53281b64eef030d019acc2e54f0e870b19ece6cc7104b532c31ac790d6",
+      "source": "def transition (e : Edge) (before : Leaf) : Option Leaf :=\n  match e, before with\n  | .insertActive, .unknown => some (.known .active)\n  | .updateTerminal, .known .active => some (.known .terminal)\n  | _, _ => none"
+    },
+    {
+      "declaration": "Singular.Action",
+      "module": "Singular.Model.Fold",
+      "line": 30,
+      "sha256": "7e0b416aab1f29c70535c713a580bff6a2448e608390256269dbe4d821e7a04a",
+      "source": "def Action := Request"
+    },
+    {
+      "declaration": "Singular.assetDelta",
+      "module": "Singular.Model.Fold",
+      "line": 34,
+      "sha256": "1752911b8ccc190f2384d029a9c2be33851274870d86cffc4791c303a37ada88",
+      "source": "def assetDelta (a : Action) : List (Asset × Int) :=\n  (delta a.edge).map fun p => ((p.1, a.key), p.2)"
+    },
+    {
+      "declaration": "Singular.requestClaim",
+      "module": "Singular.Model.Fold",
+      "line": 40,
+      "sha256": "b94035b61ccb3d6b63cfe359507deed9ba0ac128d0b808ec2d4bb381a8981315",
+      "source": "def requestClaim (b : Action) : List (Asset × Int) :=\n  b.claimed.map fun p => ((p.1, b.key), p.2)"
+    },
+    {
+      "declaration": "Singular.claimedMint",
+      "module": "Singular.Model.Fold",
+      "line": 44,
+      "sha256": "68a3f4febc58433306ccbf9e0f277940fda9ab346b848d69fa9164f477344951",
+      "source": "def claimedMint (batch : List Action) : List (Asset × Int) :=\n  batch.foldl (fun acc b => assetPlus acc (requestClaim b)) []"
+    },
+    {
+      "declaration": "Singular.actualMint",
+      "module": "Singular.Model.Fold",
+      "line": 48,
+      "sha256": "dc9eb22f7c02eaa544d64c603fef419f4db4575a25385fefb74a3df203ce314a",
+      "source": "def actualMint (batch : List Action) : List (Asset × Int) :=\n  batch.foldl (fun acc b => assetPlus acc (assetDelta b)) []"
+    },
+    {
+      "declaration": "Singular.admitsFor",
+      "module": "Singular.Model.Fold",
+      "line": 73,
+      "sha256": "75ae731cc971a2d8e865129cc7b1e9781b3348395d9bed3ac55586cf783e4d9f",
+      "source": "def admitsFor (c : Config) (r : Request) (approval : Option Approval) : Bool :=\n  match approval with\n    | none => false\n    | some ap =>\n      ap.policy == c.applicationPolicy && ap.edge == r.edge && ap.key == r.key &&\n        ap.owner == r.owner && ap.destination == requestDestination r &&\n        ap.assetName == approvalAssetName ap.edge ap.key ap.owner ap.destination"
+    },
+    {
+      "declaration": "Singular.refusal",
+      "module": "Singular.Model.Fold",
+      "line": 89,
+      "sha256": "f3b5eed8ae8958a490dcefa7aef9211d6784103d23736dc77bfe8cc1f9f4051f",
+      "source": "def refusal (s : RegistryState) (a : Action) : Option String :=\n  if !allowed a.edge then some \"edge-inadmissible\"\n  else match a.approval with\n    | none => some \"no-approval\"\n    | some ap =>\n      if ap.policy != s.config.applicationPolicy then some \"no-approval\"\n      else if !admitsFor s.config a a.approval then some \"approval-mismatch\"\n      else\n        let before := trieGet s.trie a.key\n        let activePresent := s.held.any fun h => h.key == a.key && h.kind == .active\n        match a.edge, before with\n        | .insertActive, .unknown => none\n        | .insertActive, _ => some \"key-exists\"\n        | .updateTerminal, .known .active =>\n            if activePresent then none else some \"token-missing\"\n        | .updateTerminal, .unknown => some \"key-unknown\"\n        | .updateTerminal, .known .absent => some \"not-booked\"\n        | .updateTerminal, .known .terminal => some \"terminal-immutable\"\n        | _, _ => some \"edge-inadmissible\""
+    },
+    {
+      "declaration": "Singular.emptyResult",
+      "module": "Singular.Model.Fold",
+      "line": 116,
+      "sha256": "50823fa854f6e3523223cee3caa3227bd25365feeea8e172aa8a8fc511a60b14",
+      "source": "def emptyResult (s : RegistryState) : Result :=\n  { state := s, mint := [], paid := [] }"
+    },
+    {
+      "declaration": "Singular.combineResults",
+      "module": "Singular.Model.Fold",
+      "line": 119,
+      "sha256": "f9dd7183ea0571051c4a8cf73903fe0a73aff17eaa841d366713adae44497135",
+      "source": "def combineResults (first rest : Result) : Result :=\n  { state := rest.state, mint := assetPlus first.mint rest.mint, paid := first.paid ++ rest.paid }"
+    },
+    {
+      "declaration": "Singular.applyEdge",
+      "module": "Singular.Model.Fold",
+      "line": 124,
+      "sha256": "efba58fb1eba0e3eace2805c135840c0cc192b8c5b6000e66964d2aded1f0766",
+      "source": "def applyEdge (s : RegistryState) (a : Action) : Result :=\n  let state : RegistryState :=\n    match a.edge with\n    | .insertActive =>\n      let trie := trieSet s.trie a.key (.known .active)\n      { s with trie := trie\n             , config := { s.config with root := rootOf trie }\n             , held := { key := a.key, kind := .active, output := a.output\n                        , datum := a.datum } :: s.held }\n    | .updateTerminal =>\n      let trie := trieSet s.trie a.key (.known .terminal)\n      { s with trie := trie\n             , config := { s.config with root := rootOf trie }\n             , held := s.held.filter fun h => !(h.key == a.key && h.kind == .active) }\n    | _ => s\n  { state, mint := assetDelta a, paid := [] }"
+    },
+    {
+      "declaration": "Singular.step",
+      "module": "Singular.Model.Fold",
+      "line": 142,
+      "sha256": "b6ee98e817a360f7830d82d961474fc69066bbcfec8020ca2f7a0bdfb8172810",
+      "source": "def step (s : RegistryState) (a : Action) : Except String Result :=\n  match refusal s a with\n  | some why => .error why\n  | none => .ok (applyEdge s a)"
+    },
+    {
+      "declaration": "Singular.foldActions",
+      "module": "Singular.Model.Fold",
+      "line": 150,
+      "sha256": "34e361d67d7fa8398645e51c9483f94ed383e7e6949eb6ba738f8ad9926e36c1",
+      "source": "def foldActions (s : RegistryState) (batch : List Action) : Except String Result :=\n  match batch with\n  | [] => .ok (emptyResult s)\n  | b :: bs => do\n    let first ← step s b\n    let rest ← foldActions first.state bs\n    pure (combineResults first rest)"
+    },
+    {
+      "declaration": "Singular.batchConsumesCreated",
+      "module": "Singular.Model.Fold",
+      "line": 160,
+      "sha256": "9fb772d975614e02531735d53a0a2f7ebca21f0b24f6bfaee0e724e2ede08caa",
+      "source": "def batchConsumesCreated (batch : List Request) : Option String := go [] batch\nwhere\n  go (created : List Key) : List Request → Option String\n    | [] => none\n    | r :: rs =>\n      if r.edge == .updateTerminal && created.contains r.key then some \"token-missing\"\n      else go (if r.edge == .insertActive then r.key :: created else created) rs"
+    },
+    {
+      "declaration": "Singular.foldBatch",
+      "module": "Singular.Model.Fold",
+      "line": 174,
+      "sha256": "0f859fb7293a7e3034438fe4bee2b06b5decc8a75ecaca553fbe4adfad0f6297",
+      "source": "def foldBatch (s : RegistryState) (batch : List Action) : Except String Result := do\n  if batch.isEmpty then throw \"empty-fold\"\n  let r ← foldActions s batch\n  if assetSame (claimedMint batch) (actualMint batch) then\n    match batchConsumesCreated batch with\n    | some why => throw why\n    | none => pure r\n  else throw \"net-mint-mismatch\""
+    },
+    {
+      "declaration": "Singular.Key",
+      "module": "Singular.Model.Primitives",
+      "line": 9,
+      "sha256": "026243ff19004141d3cf75e87899ed0e690e7e0a6f945426c3de477237205075",
+      "source": "abbrev Key := Nat"
+    },
+    {
+      "declaration": "Singular.stateByte",
+      "module": "Singular.Model.Primitives",
+      "line": 33,
+      "sha256": "c36e5f1a90538cc413f2d168f79b9ad7bcf5c91da6a10227d4006db5c1a1ba7a",
+      "source": "def stateByte (s : State) : UInt8 :=\n  match s with | .absent => 0x00 | .active => 0x01 | .terminal => 0x02"
+    },
+    {
+      "declaration": "Singular.Interval.width",
+      "module": "Singular.Model.Registry",
+      "line": 20,
+      "sha256": "a1dab6a08fc45d55282dce9e9a2aaef51ba182a048fdc4597b67fb0aa3ea132a",
+      "source": "def Interval.width (i : Interval) : Nat := i.upper - i.lower"
+    },
+    {
+      "declaration": "Singular.Interval.valid",
+      "module": "Singular.Model.Registry",
+      "line": 21,
+      "sha256": "aae055fc13d0580ed69a8fa18def3fca22383efcabd243c7b60da0d78ec90a7e",
+      "source": "def Interval.valid (i : Interval) : Prop := i.lower < i.upper"
+    },
+    {
+      "declaration": "Singular.Config.stateToken",
+      "module": "Singular.Model.Registry",
+      "line": 89,
+      "sha256": "3b217d8936f2e279a78b83b07d2df074778a0de5faf26f164ed87bb8f5f3c1c2",
+      "source": "def Config.stateToken (c : Config) : TokenId := ⟨c.registryId, 0⟩"
+    },
+    {
+      "declaration": "Singular.fnv1a",
+      "module": "Singular.Model.Registry",
+      "line": 102,
+      "sha256": "0b6431d75cecce9c0108a44664e7b6721d177210c41627ddaf243a7e1497ae65",
+      "source": "def fnv1a (bs : List UInt8) : UInt64 :=\n  bs.foldl (fun h b => (h ^^^ b.toUInt64) * 16777619) 14695981039346656037"
+    },
+    {
+      "declaration": "Singular.u64bytes",
+      "module": "Singular.Model.Registry",
+      "line": 105,
+      "sha256": "c8e15096a94b9ca3804a2f847cd813b2639f009d28f9fa7553b5be8b3c379fe1",
+      "source": "def u64bytes (n : UInt64) : List UInt8 :=\n  [(n >>> 56).toNat.toUInt8, (n >>> 48).toNat.toUInt8, (n >>> 40).toNat.toUInt8,\n   (n >>> 32).toNat.toUInt8, (n >>> 24).toNat.toUInt8, (n >>> 16).toNat.toUInt8,\n   (n >>> 8).toNat.toUInt8, n.toNat.toUInt8]"
+    },
+    {
+      "declaration": "Singular.Trie",
+      "module": "Singular.Model.Registry",
+      "line": 111,
+      "sha256": "2c3a931d4f41a59a94335cb2047f0485e79178ebc6d036a46834f4b2422fa95d",
+      "source": "abbrev Trie := List (Key × Leaf)"
+    },
+    {
+      "declaration": "Singular.trieGet",
+      "module": "Singular.Model.Registry",
+      "line": 114,
+      "sha256": "a0ad2f5245274b3d3d5850aa145fd9f91f4050bee3f961eac8363731241be0d1",
+      "source": "def trieGet (t : Trie) (k : Key) : Leaf :=\n  ((t.filter (·.1 == k)).head?).map (·.2) |>.getD .unknown"
+    },
+    {
+      "declaration": "Singular.trieSet",
+      "module": "Singular.Model.Registry",
+      "line": 118,
+      "sha256": "d34e9f927312b60f0ad63a5a261a360a79c707ce12e42e3221b3b0e52f092796",
+      "source": "def trieSet (t : Trie) (k : Key) (l : Leaf) : Trie :=\n  (k, l) :: t.filter (fun p => p.1 != k)"
+    },
+    {
+      "declaration": "Singular.leafByte",
+      "module": "Singular.Model.Registry",
+      "line": 129,
+      "sha256": "2e85c1bd30213aa1ad4df942f9e8d4d46c29f777e070ee65299d028fc2ee7574",
+      "source": "def leafByte (l : Leaf) : UInt8 :=\n  match l with | .unknown => 0xFF | .known s => stateByte s"
+    },
+    {
+      "declaration": "Singular.rootOf",
+      "module": "Singular.Model.Registry",
+      "line": 135,
+      "sha256": "b5ace8da72116c0bc9a0cbdad31132bdaf6635209c3d030b6b8bfab8761b4a32",
+      "source": "def rootOf (t : Trie) : ByteArray :=\n  let sorted := (t.toArray.qsort (fun a b => a.1 < b.1)).toList\n  let bytes : List UInt8 :=\n    sorted.flatMap fun p =>\n      u64bytes (fnv1a [p.1.toUInt8]) ++ [p.1.toUInt8, leafByte p.2]\n  ByteArray.mk (u64bytes (fnv1a bytes)).toArray"
+    },
+    {
+      "declaration": "Singular.datumFormOf",
+      "module": "Singular.Model.Registry",
+      "line": 167,
+      "sha256": "418a994e67656446da6d6af076815bada5b78e51317a342ee342c45805280f73",
+      "source": "def datumFormOf : Option Nat → DatumForm\n  | some _ => .inline\n  | none => .none"
+    },
+    {
+      "declaration": "Singular.edgeOrdinal",
+      "module": "Singular.Model.Request",
+      "line": 8,
+      "sha256": "2bade54d3e5dd84caa0e520b818fe4f856e99891403260d9949ef2c73e315724",
+      "source": "def edgeOrdinal (e : Edge) : UInt8 :=\n  match e with\n  | .insertAbsent => 0 | .insertActive => 1 | .updateActive => 2\n  | .updateTerminal => 3 | .deleteAbsent => 4 | .deleteActive => 5\n  | .witnessTerminal => 6"
+    },
+    {
+      "declaration": "Singular.approvalAssetName",
+      "module": "Singular.Model.Request",
+      "line": 18,
+      "sha256": "7ab7b3253ab6f9a8e59eaffe5653178dbce6346957620d28e457006fa7962b4a",
+      "source": "def approvalAssetName (e : Edge) (key owner destination : Nat) : Nat :=\n  ((fnv1a [edgeOrdinal e, key.toUInt8, owner.toUInt8, destination.toUInt8]) &&& 0xFFFFFFFF).toNat"
+    },
+    {
+      "declaration": "Singular.requestDestination",
+      "module": "Singular.Model.Request",
+      "line": 95,
+      "sha256": "16365cb477dafd703d06b0f7183f3a0953be2012ee2b95566619fb47163f98b2",
+      "source": "def requestDestination (r : Request) : Nat :=\n  if r.edge == .insertAbsent then 0 else r.output"
+    },
+    {
+      "declaration": "Singular.Config.singularTag",
+      "module": "Singular.Model.Termination",
+      "line": 19,
+      "sha256": "6abc05d58a2cfe4f66524851c1bcfc20809024d20cb8fe80f10455a7abc05f35",
+      "source": "def Config.singularTag (c : Config) (key : Key) : SingularTag :=\n  ⟨c.registryId, ⟨c.activePolicy, key⟩⟩"
+    },
+    {
+      "declaration": "Singular.TerminationRequest.operation",
+      "module": "Singular.Model.Termination",
+      "line": 65,
+      "sha256": "89ebb52fae6f8cbd038ca1111cbef02f1304ce4c0cd75adbd222bf368bb0e8d8",
+      "source": "def TerminationRequest.operation (r : TerminationRequest) : BookingOperation :=\n  .termination r.key r.destination"
+    },
+    {
+      "declaration": "Singular.TerminationRequest.trieReadyTag",
+      "module": "Singular.Model.Termination",
+      "line": 68,
+      "sha256": "002d88512b4b93ce20b4a517e9d83dd4d4332c0cc15fd423845abfd39ed86d5d",
+      "source": "def TerminationRequest.trieReadyTag (r : TerminationRequest) (c : Config) : TokenId :=\n  c.trieReadyTag (trieReadyTagAssetName r.operation r.nonce)"
+    }
+  ],
+  "decisions": [
+    {
+      "declaration": "CardanoKeri.Registry.bookRegistration",
+      "occurrence": 0,
+      "reason": "keri-registration-value-mismatch"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.bookRegistration",
+      "occurrence": 1,
+      "reason": "keri-registration-reconstruction-mismatch"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.park",
+      "occurrence": 0,
+      "reason": "keri-carrier-missing"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.park",
+      "occurrence": 1,
+      "reason": "keri-close-refused"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.revive",
+      "occurrence": 0,
+      "reason": "keri-carrier-missing"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.revive",
+      "occurrence": 1,
+      "reason": "keri-revival-refused"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.convictCkpt",
+      "occurrence": 0,
+      "reason": "keri-carrier-missing"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.convictCkpt",
+      "occurrence": 1,
+      "reason": "keri-conviction-refused"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.bookTermination",
+      "occurrence": 0,
+      "reason": "keri-carrier-missing"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.bookTermination",
+      "occurrence": 1,
+      "reason": "keri-conviction-required"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.bookTermination",
+      "occurrence": 2,
+      "reason": "keri-termination-binding-mismatch"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.bookTermination",
+      "occurrence": 3,
+      "reason": "keri-termination-reconstruction-mismatch"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.installMember",
+      "occurrence": 0,
+      "reason": "keri-termination-metadata-missing"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.installMember",
+      "occurrence": 1,
+      "reason": "keri-termination-metadata-mismatch"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.installMember",
+      "occurrence": 2,
+      "reason": "keri-registration-metadata-missing"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.foldResult",
+      "occurrence": 0,
+      "reason": "keri-fold-reconstruction-mismatch"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.fold",
+      "occurrence": 0,
+      "reason": "keri-generation-mismatch"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.fold",
+      "occurrence": 1,
+      "reason": "keri-plugin-mismatch"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.fold",
+      "occurrence": 2,
+      "reason": "keri-inception-refused"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.recoverRegistrations",
+      "occurrence": 0,
+      "reason": "keri-recovery-reconstruction-mismatch"
+    },
+    {
+      "declaration": "Singular.registrationBookingRefusal",
+      "occurrence": 0,
+      "reason": "dirty-request"
+    },
+    {
+      "declaration": "Singular.registrationBookingRefusal",
+      "occurrence": 1,
+      "reason": "hidden-surplus"
+    },
+    {
+      "declaration": "Singular.registrationBookingRefusal",
+      "occurrence": 2,
+      "reason": "forged-trie-ready-tag"
+    },
+    {
+      "declaration": "Singular.registrationBookingRefusal",
+      "occurrence": 3,
+      "reason": "dirty-request"
+    },
+    {
+      "declaration": "Singular.registrationBookingRefusal",
+      "occurrence": 4,
+      "reason": "invalid-booking-interval"
+    },
+    {
+      "declaration": "Singular.registrationBookingRefusal",
+      "occurrence": 5,
+      "reason": "backdated-booking"
+    },
+    {
+      "declaration": "Singular.registrationBookingRefusal",
+      "occurrence": 6,
+      "reason": "booking-too-wide"
+    },
+    {
+      "declaration": "Singular.foldMemberRefusal",
+      "occurrence": 0,
+      "reason": "not-phase1"
+    },
+    {
+      "declaration": "Singular.foldPrerequisite",
+      "occurrence": 0,
+      "reason": "fold-duplicate-input"
+    },
+    {
+      "declaration": "Singular.foldPrerequisite",
+      "occurrence": 1,
+      "reason": "fold-input-overlap"
+    },
+    {
+      "declaration": "Singular.foldPrerequisite",
+      "occurrence": 2,
+      "reason": "empty-fold"
+    },
+    {
+      "declaration": "Singular.foldPrerequisite",
+      "occurrence": 3,
+      "reason": "fold-interval-missing"
+    },
+    {
+      "declaration": "Singular.foldPrerequisite",
+      "occurrence": 4,
+      "reason": "fold-interval-empty"
+    },
+    {
+      "declaration": "Singular.foldPrerequisite",
+      "occurrence": 5,
+      "reason": "fold-unrecognized-input"
+    },
+    {
+      "declaration": "Singular.foldCarrierRefusal",
+      "occurrence": 0,
+      "reason": "fold-destination-mismatch"
+    },
+    {
+      "declaration": "Singular.foldCarrierRefusal",
+      "occurrence": 1,
+      "reason": "fold-destination-mismatch"
+    },
+    {
+      "declaration": "Singular.foldCarrierRefusal",
+      "occurrence": 2,
+      "reason": "destination-carrier-mismatch"
+    },
+    {
+      "declaration": "Singular.foldCarrierRefusal",
+      "occurrence": 3,
+      "reason": "fold-destination-mismatch"
+    },
+    {
+      "declaration": "Singular.foldRoutingRefusal",
+      "occurrence": 0,
+      "reason": "fold-state-missing"
+    },
+    {
+      "declaration": "Singular.foldRoutingRefusal",
+      "occurrence": 1,
+      "reason": "fold-state-mismatch"
+    },
+    {
+      "declaration": "Singular.foldRoutingRefusal",
+      "occurrence": 2,
+      "reason": "fold-state-mismatch"
+    },
+    {
+      "declaration": "Singular.foldRoutingRefusal",
+      "occurrence": 3,
+      "reason": "fold-state-mismatch"
+    },
+    {
+      "declaration": "Singular.foldRoutingRefusal",
+      "occurrence": 4,
+      "reason": "fold-state-value-mismatch"
+    },
+    {
+      "declaration": "Singular.foldRoutingRefusal",
+      "occurrence": 5,
+      "reason": "fold-tag-not-burned"
+    },
+    {
+      "declaration": "Singular.foldRoutingRefusal",
+      "occurrence": 6,
+      "reason": "fold-singular-mismatch"
+    },
+    {
+      "declaration": "Singular.foldRoutingRefusal",
+      "occurrence": 7,
+      "reason": "fold-foreign-asset"
+    },
+    {
+      "declaration": "Singular.foldRoutingRefusal",
+      "occurrence": 8,
+      "reason": "fold-donation-mismatch"
+    },
+    {
+      "declaration": "Singular.foldRoutingRefusal",
+      "occurrence": 9,
+      "reason": "fold-fee-funding-short"
+    },
+    {
+      "declaration": "Singular.foldRoutingRefusal",
+      "occurrence": 10,
+      "reason": "fold-unbalanced"
+    },
+    {
+      "declaration": "Singular.economicObservationRefusal",
+      "occurrence": 0,
+      "reason": "unspent-reference-duplicate"
+    },
+    {
+      "declaration": "Singular.economicObservationRefusal",
+      "occurrence": 1,
+      "reason": "transaction-identity-not-fresh"
+    },
+    {
+      "declaration": "Singular.economicObservationRefusal",
+      "occurrence": 2,
+      "reason": "request-observation-mismatch"
+    },
+    {
+      "declaration": "Singular.economicObservationRefusal",
+      "occurrence": 3,
+      "reason": "output-observation-mismatch"
+    },
+    {
+      "declaration": "Singular.registrationRejectionGround",
+      "occurrence": 0,
+      "reason": "reject-evidence-mismatch"
+    },
+    {
+      "declaration": "Singular.registrationRejectionGround",
+      "occurrence": 1,
+      "reason": "reject-compatible"
+    },
+    {
+      "declaration": "Singular.registrationRejectionGround",
+      "occurrence": 2,
+      "reason": "reject-not-expired"
+    },
+    {
+      "declaration": "Singular.terminationRejectionGround",
+      "occurrence": 0,
+      "reason": "reject-evidence-mismatch"
+    },
+    {
+      "declaration": "Singular.terminationRejectionGround",
+      "occurrence": 1,
+      "reason": "reject-compatible"
+    },
+    {
+      "declaration": "Singular.terminationRejectionGround",
+      "occurrence": 2,
+      "reason": "reject-termination-no-expiry"
+    },
+    {
+      "declaration": "Singular.rejectionMemberRefusal",
+      "occurrence": 0,
+      "reason": "reject-termination"
+    },
+    {
+      "declaration": "Singular.rejectionMemberRefusal",
+      "occurrence": 1,
+      "reason": "reject-request-not-pending"
+    },
+    {
+      "declaration": "Singular.rejectionStateRefusal",
+      "occurrence": 0,
+      "reason": "reject-state-reference-missing"
+    },
+    {
+      "declaration": "Singular.rejectionStateRefusal",
+      "occurrence": 1,
+      "reason": "reference-input-missing"
+    },
+    {
+      "declaration": "Singular.rejectionStateRefusal",
+      "occurrence": 2,
+      "reason": "reject-state-token-missing"
+    },
+    {
+      "declaration": "Singular.rejectionStateRefusal",
+      "occurrence": 3,
+      "reason": "reject-state-token-missing"
+    },
+    {
+      "declaration": "Singular.rejectionStateRefusal",
+      "occurrence": 4,
+      "reason": "reject-foreign-state"
+    },
+    {
+      "declaration": "Singular.rejectionStateRefusal",
+      "occurrence": 5,
+      "reason": "reject-state-token-name"
+    },
+    {
+      "declaration": "Singular.rejectionStateRefusal",
+      "occurrence": 6,
+      "reason": "reject-state-datum"
+    },
+    {
+      "declaration": "Singular.rejectionStateRefusal",
+      "occurrence": 7,
+      "reason": "reject-state-datum"
+    },
+    {
+      "declaration": "Singular.rejectionStateRefusal",
+      "occurrence": 8,
+      "reason": "reject-stale-state"
+    },
+    {
+      "declaration": "Singular.rejectionStateRefusal",
+      "occurrence": 9,
+      "reason": "reject-state-configuration"
+    },
+    {
+      "declaration": "Singular.rejectionInputsRefusal",
+      "occurrence": 0,
+      "reason": "reject-state-overlap"
+    },
+    {
+      "declaration": "Singular.rejectionInputsRefusal",
+      "occurrence": 1,
+      "reason": "reject-state-spent"
+    },
+    {
+      "declaration": "Singular.rejectionInputsRefusal",
+      "occurrence": 2,
+      "reason": "reject-duplicate-input"
+    },
+    {
+      "declaration": "Singular.rejectionInputsRefusal",
+      "occurrence": 3,
+      "reason": "reject-input-overlap"
+    },
+    {
+      "declaration": "Singular.rejectionRefusal",
+      "occurrence": 0,
+      "reason": "reject-interval-missing"
+    },
+    {
+      "declaration": "Singular.rejectionRefusal",
+      "occurrence": 1,
+      "reason": "reject-interval-empty"
+    },
+    {
+      "declaration": "Singular.rejectionRefusal",
+      "occurrence": 2,
+      "reason": "reject-empty-batch"
+    },
+    {
+      "declaration": "Singular.rejectionRefusal",
+      "occurrence": 3,
+      "reason": "reject-input-members"
+    },
+    {
+      "declaration": "Singular.rejectionRefusal",
+      "occurrence": 4,
+      "reason": "reject-tag-not-burned"
+    },
+    {
+      "declaration": "Singular.rejectionRefusal",
+      "occurrence": 5,
+      "reason": "reject-registry-supply"
+    },
+    {
+      "declaration": "Singular.rejectionRefusal",
+      "occurrence": 6,
+      "reason": "reject-refund-short"
+    },
+    {
+      "declaration": "Singular.retractionInputsRefusal",
+      "occurrence": 0,
+      "reason": "retract-state-spent"
+    },
+    {
+      "declaration": "Singular.retractionInputsRefusal",
+      "occurrence": 1,
+      "reason": "retract-state-read"
+    },
+    {
+      "declaration": "Singular.retractionInputsRefusal",
+      "occurrence": 2,
+      "reason": "retract-duplicate-input"
+    },
+    {
+      "declaration": "Singular.retractionInputsRefusal",
+      "occurrence": 3,
+      "reason": "retract-input-overlap"
+    },
+    {
+      "declaration": "Singular.retractionRequest",
+      "occurrence": 0,
+      "reason": "retract-registration-only"
+    },
+    {
+      "declaration": "Singular.retractionRequest",
+      "occurrence": 1,
+      "reason": "retract-request-not-pending"
+    },
+    {
+      "declaration": "Singular.retractionRequest",
+      "occurrence": 2,
+      "reason": "retract-single-request"
+    },
+    {
+      "declaration": "Singular.retractionRefusal",
+      "occurrence": 0,
+      "reason": "retract-owner"
+    },
+    {
+      "declaration": "Singular.retractionRefusal",
+      "occurrence": 1,
+      "reason": "retract-interval-missing"
+    },
+    {
+      "declaration": "Singular.retractionRefusal",
+      "occurrence": 2,
+      "reason": "retract-interval-empty"
+    },
+    {
+      "declaration": "Singular.retractionRefusal",
+      "occurrence": 3,
+      "reason": "retract-window"
+    },
+    {
+      "declaration": "Singular.retractionRefusal",
+      "occurrence": 4,
+      "reason": "retract-tag-not-burned"
+    },
+    {
+      "declaration": "Singular.retractionRefusal",
+      "occurrence": 5,
+      "reason": "retract-foreign-asset"
+    },
+    {
+      "declaration": "Singular.retractionRefusal",
+      "occurrence": 6,
+      "reason": "retract-registry-supply"
+    },
+    {
+      "declaration": "Singular.retractionRefusal",
+      "occurrence": 7,
+      "reason": "retract-refund-short"
+    },
+    {
+      "declaration": "Singular.retractionRefusal",
+      "occurrence": 8,
+      "reason": "retract-donation"
+    },
+    {
+      "declaration": "Singular.retractionRefusal",
+      "occurrence": 9,
+      "reason": "retract-fee-funding-short"
+    },
+    {
+      "declaration": "Singular.retractionRefusal",
+      "occurrence": 10,
+      "reason": "retract-unbalanced"
+    },
+    {
+      "declaration": "Singular.retractionFundingRefusal",
+      "occurrence": 0,
+      "reason": "retract-state-spent"
+    },
+    {
+      "declaration": "Singular.retractionFundingRefusal",
+      "occurrence": 1,
+      "reason": "retract-funding-trie-ready-tag"
+    },
+    {
+      "declaration": "Singular.retractionFundingRefusal",
+      "occurrence": 2,
+      "reason": "retract-funding-application-tag"
+    },
+    {
+      "declaration": "Singular.retractionFundingRefusal",
+      "occurrence": 3,
+      "reason": "retract-funding-singular-tag"
+    },
+    {
+      "declaration": "Singular.retractionFundingRefusal",
+      "occurrence": 4,
+      "reason": "retract-funding-request-address"
+    },
+    {
+      "declaration": "Singular.retractionFundingRefusal",
+      "occurrence": 5,
+      "reason": "retract-funding-request"
+    },
+    {
+      "declaration": "Singular.terminationBookingRefusal",
+      "occurrence": 0,
+      "reason": "dirty-request"
+    },
+    {
+      "declaration": "Singular.terminationBookingRefusal",
+      "occurrence": 1,
+      "reason": "hidden-surplus"
+    },
+    {
+      "declaration": "Singular.terminationBookingRefusal",
+      "occurrence": 2,
+      "reason": "forged-singular-tag"
+    },
+    {
+      "declaration": "Singular.terminationBookingRefusal",
+      "occurrence": 3,
+      "reason": "forged-trie-ready-tag"
+    },
+    {
+      "declaration": "Singular.terminationBookingRefusal",
+      "occurrence": 4,
+      "reason": "singular-tag-not-in-custody"
+    },
+    {
+      "declaration": "Singular.terminationBookingRefusal",
+      "occurrence": 5,
+      "reason": "forged-singular-tag"
+    },
+    {
+      "declaration": "Singular.inputPresenceRefusal",
+      "occurrence": 0,
+      "reason": "spent-input-missing"
+    },
+    {
+      "declaration": "Singular.inputPresenceRefusal",
+      "occurrence": 1,
+      "reason": "reference-input-missing"
+    },
+    {
+      "declaration": "Singular.book",
+      "occurrence": 0,
+      "reason": "request-already-pending"
+    },
+    {
+      "declaration": "Singular.bookTermination",
+      "occurrence": 0,
+      "reason": "request-already-pending"
+    },
+    {
+      "declaration": "Singular.refusal",
+      "occurrence": 0,
+      "reason": "edge-inadmissible"
+    },
+    {
+      "declaration": "Singular.refusal",
+      "occurrence": 1,
+      "reason": "no-approval"
+    },
+    {
+      "declaration": "Singular.refusal",
+      "occurrence": 2,
+      "reason": "no-approval"
+    },
+    {
+      "declaration": "Singular.refusal",
+      "occurrence": 3,
+      "reason": "approval-mismatch"
+    },
+    {
+      "declaration": "Singular.refusal",
+      "occurrence": 4,
+      "reason": "key-exists"
+    },
+    {
+      "declaration": "Singular.refusal",
+      "occurrence": 5,
+      "reason": "token-missing"
+    },
+    {
+      "declaration": "Singular.refusal",
+      "occurrence": 6,
+      "reason": "key-unknown"
+    },
+    {
+      "declaration": "Singular.refusal",
+      "occurrence": 7,
+      "reason": "not-booked"
+    },
+    {
+      "declaration": "Singular.refusal",
+      "occurrence": 8,
+      "reason": "terminal-immutable"
+    },
+    {
+      "declaration": "Singular.refusal",
+      "occurrence": 9,
+      "reason": "edge-inadmissible"
+    },
+    {
+      "declaration": "Singular.batchConsumesCreated",
+      "occurrence": 0,
+      "reason": "token-missing"
+    },
+    {
+      "declaration": "Singular.foldBatch",
+      "occurrence": 0,
+      "reason": "empty-fold"
+    },
+    {
+      "declaration": "Singular.foldBatch",
+      "occurrence": 1,
+      "reason": "net-mint-mismatch"
+    }
+  ]
+}

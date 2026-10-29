@@ -17,9 +17,10 @@ Cardano-side rules on top and take none of KERI's away.
 
 Authorize **iff** all of these hold. Anything else fails closed.
 
-1. **Present.** There is a checkpoint UTxO. Parked (closed by its owner; the
-   registry leaf keeps the hash) and convicted (terminal after a duplicity
-   proof) have none — no candidate.
+1. **Present.** There is an active checkpoint UTxO. Parked outputs retain
+   their token, minimum ADA and key state but are explicitly refused, as is
+   pending conviction custody. Convicted is terminal after the associated
+   Registry fold and has no candidate.
 2. **The token.** Exact policy, quantity one, the AID-derived asset.
 3. **Both bonds full.** `D_reg`, the conviction bond, is there; `B`, the
    freeze bond, is there. Frozen is `B` absent.

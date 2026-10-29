@@ -11,8 +11,8 @@ fold and retract requests under the model's admission and timing rules.
 
 This is a **specification candidate**, following the operator's instruction to take
 the API from the Lean specifications. It does not yet define a complete SDK
-contract. The checkpoint source revision is
-`88e930945d8b757913d653defe6f2ed3b2b06ffb`. The separate
+contract. The checkpoint source revision and every extracted source hash are bound in
+[model provenance](model-provenance.json). The separate
 [credential, TEL and delegation profile](statements.md) uses the named
 statement branch at `4906cfaed34e43405b04d3cc8746bd6388fc8452`.
 The issue supplies coverage
@@ -38,32 +38,29 @@ flowchart LR
 `Action`, `Env`, `Step`, `stepFn`, `SysStep` and `consumableStateB` are the
 source of the extraction below. Its eight actions have thirteen transition
 constructors because payment and state cases are outcomes of an action.
-[Registry.lean](../../lean/CardanoKeri/Registry.lean) separately defines seven
-actions and the request plugin's `processBody`.
+[Registry.lean](../../lean/CardanoKeri/Registry.lean) imports the public Singular
+economic booking and fold judgments. Its local carrier adapter and Checkpoint
+share the retained-output boundary: parking preserves the output, representative
+token and active registry key. Revival rotates that output locally. Conviction
+first leaves a termination-pending carrier; only an accepted consuming fold
+burns the token and retires the key.
 
-The two models have an integration difference. Checkpoint close
-burns the UTxO immediately and parks a key-state commitment in the leaf.
-Registry pause parks a UTxO, which a later reap consumes to post a registry
-request. **Checkpoint is the offered lifecycle profile**, as its source
-explicitly declares. Registry's `pause`, `resume`, `reap` and `convictCkpt`
-are excluded from the offered lifecycle. The Registry section below is a
-compatibility inventory for a later implementation of request mechanics;
-it does not offer a second meaning of close. Checkpoint's window is
-juvenility; Registry's window is a reaping grace period. Adapting Registry
-to this lifecycle is an on-chain/model implementation gap, not an unresolved
-choice for callers of this API.
+Checkpoint `SysStep` retains the actual registration origin and the exact pending
+termination entry. A completion must replay an accepted fold under that stored
+context and consume that request. A valid fold for another request cannot complete
+this identity. [The certificate adapter](../../lean/CardanoKeri/CheckpointCertificate.lean)
+executes that judgment; the separate local action grid does not establish it.
 
-[Cage.lean](../../lean/CardanoKeri/Cage.lean) models the fold authorization
-boundary and comparison modes. Its owner bypass and trivial plugin examples
-are not offered product operations. [Samaritan.lean](../../lean/CardanoKeri/Samaritan.lean)
-models conditional reap/fold economics, not another public operation.
+[Samaritan.lean](../../lean/CardanoKeri/Samaritan.lean) states conditional booking
+and fold economics. It does not add another caller operation or a guaranteed
+refund of the request minimum ADA.
 
 | Choice | Alternative | Reason |
 | --- | --- | --- |
-| Derive operations from executable Lean definitions | Infer them from CLI names | The operator selected Lean as semantic authority. |
-| Offer Checkpoint's lifecycle; retain Registry as a compatibility inventory | Offer both sets of lifecycle operations | Checkpoint declares itself the sole lifecycle specification. |
-| CDDL maps for named fields | Require positional tuples throughout | The API has named records; native evidence encodings are a separate boundary. |
-| Leave evidence representation open where Lean abstracts it | Accept caller-provided booleans as proof | Lean predicates stand for verification, not trusted caller assertions. |
+| Derive operations from executable Lean definitions | Infer them from CLI names | Lean governs semantics. |
+| Keep local transitions and associated system completion distinct | Treat local conviction as final retirement | The actual consuming fold owns retirement. |
+| CDDL maps for named fields | Require positional tuples throughout | Native evidence encodings remain a separate boundary. |
+| Leave evidence representation open where Lean abstracts it | Accept caller-provided booleans as proof | Predicates stand for verification. |
 
 ## Checkpoint operations
 
@@ -84,10 +81,11 @@ network client, resolver callback or evidence-fetching adapter belongs to it.
 stateDiagram-v2
   absent --> present: register, both bonds and initial pool
   present --> present: rotate, poison, freeze or topUp
-  present --> parked: close, refund and burn UTxO
+  present --> parked: close, refund bonds and retain output
   parked --> present: reopen with later rotation and fresh bonds
-  present --> convicted: duplicity proof
-  parked --> convicted: duplicity proof, no value held
+  present --> terminationPending: duplicity proof
+  parked --> terminationPending: duplicity proof, retain output
+  terminationPending --> convicted: associated consuming fold
 ```
 
 Present checkpoints carry independent poison and freeze flags. An action's
@@ -97,14 +95,14 @@ terms rather than KERI event types.
 
 | Caller goal / action | Caller supplies beyond common context | What the caller obtains | Refusal conditions in the model |
 | --- | --- | --- | --- |
-| Sponsor an AID: `register` | Refund address, initial pool; funding for `D + B + pool0` | Present checkpoint at sequence and epoch zero, born now; funds locked | State is not absent; at `SysStep`, registry leaf is not absent |
+| Sponsor an AID: `register` | Refund address, initial pool; funding for `D + B + pool0` | Present checkpoint at sequence and epoch zero, born now; funds locked | State is not absent; at `SysStep`, no matching accepted registration origin is supplied |
 | Land a rotation: `rotate` | Later establishment sequence, `keep` or `deposit`, premium payee, optional replacement refund address; witnessed rotation and required intent authorization | Next epoch/sequence; poison cleared; refund address updated if supplied. If pool covers `P`, pay `P`; otherwise accept without payment. `deposit` clears freeze and brings missing `B`; `keep` preserves freeze | No present checkpoint; invalid rotation evidence; sequence not later; required intent unauthorized |
 | Declare current keys unsafe: `poison` | Current-key quorum declaration | Poison flag set, no value movement | No present checkpoint; quorum absent; already poisoned |
 | Report stale keys: `freeze` | Later witnessed rotation, hunter payee | Existing `B` paid to hunter; freeze flag set; old epoch and sequence retained | No present checkpoint; invalid evidence; sequence not later; pool covers `P`; already frozen; poisoned |
 | Fund future advances: `topUp` | Pool increment | Pool increased, including a permitted zero increment; no authorization guard | No present checkpoint |
-| Prove duplicity: `convict` | Duplicity evidence against recorded epoch/sequence; convictor payee | Terminal conviction. Present: `D` to convictor, held `B` and pool to refund address. Parked: no value movement | State neither present nor parked; duplicity evidence invalid |
-| Leave: `close` (the checkpoint model's reap) | Later witnessed rotation, payee, optional new refund address; new-key intent binds close payee and refund option | Parked commitment to the resulting epoch/sequence; UTxO burned. Pay `P` only when covered, refund all remaining held value | No present checkpoint; invalid rotation; sequence not later; close intent unauthorized |
-| Return: `reopen` | Rotation from exactly the parked key state to a later sequence; fresh `D`, `B`, initial pool and sponsor-selected refund address | Clean, fully bonded present checkpoint, born now, next epoch | State not parked; invalid rotation path; sequence not later; at `SysStep`, leaf not parked |
+| Prove duplicity: `convict` | Duplicity evidence against recorded epoch/sequence; convictor payee | Termination pending, retaining token and key state. Present: `D` to convictor, held `B` and pool to refund address. Parked: no bond or pool movement | State neither present nor parked; duplicity evidence invalid |
+| Leave: `close` (the checkpoint model's reap) | Later witnessed rotation, payee, optional new refund address; new-key intent binds close payee and refund option | Parked output retaining token, minimum ADA and resulting epoch/sequence. Pay `P` only when covered; refund remaining bonds and pool | No present checkpoint; invalid rotation; sequence not later; close intent unauthorized |
+| Return: `reopen` | Rotation from exactly the parked key state to a later sequence; fresh `D`, `B`, initial pool and sponsor-selected refund address | Clean, fully bonded present checkpoint, born now, next epoch | State not parked; invalid rotation path; sequence not later; pending termination or retired state |
 
 `keep` with no replacement refund address requires no additional intent
 signature. Every deposit, every close and every replacement refund address
@@ -114,56 +112,47 @@ pool is **not** a refusal for rotate or close. Deposit preserves `bornAt`
 and brings zero bond value when the freeze bond is already full. Close can
 consume a poisoned or frozen checkpoint; top-up can fund either.
 
-`register`, `reopen`, `close` and `convict` change the leaf. Rotate, poison,
-freeze and top-up do not. System registration requires leaf absence in
-addition to the per-AID state guard. The single-checkpoint function does not
-validate inception cryptography; the Registry plugin's register admission
-abstracts that check separately. Concrete proof encoding and atomic coupling
-remain a gap, not a Boolean supplied by an untrusted caller.
+Local parking, revival and conviction leave the registry key active. Registration
+installs the active key through an accepted fold; associated termination completion
+retires it permanently. A pending state has no local action exit and is not
+consumable. The local register function is a state transition fixture; it does
+not validate inception cryptography or certify an accepted Registry origin.
 
-## Registry compatibility inventory
+## Registry request mechanics
 
-As a request contributor or folder, I want the request's bond, tip and phase
-to determine its disposition. A failed batch leaves no accepted intermediate
-state. List order and repeated identifiers must be preserved until validation.
-These source operations expose integration work. They are not an additional
-offered lifecycle or a promise that today's Registry model implements
-Checkpoint's leaf updates.
+As a contributor or folder, I want the complete request, transaction inputs,
+outputs, assets and validity interval to determine the result. A refused action
+leaves the input state unchanged; an accepted action returns the complete state
+and application flow. The Registry wire profile is an executable model adapter,
+not a deployed transaction codec.
 
 ```mermaid
 flowchart LR
-  Contributor[Contributor] -->|contribute and deposit bond plus tip| Request[Request UTxO]
-  Request -->|process during processing phase| Fold[Atomic ordered fold]
-  Request -->|reject when rejectable and user-postable| Fold
-  Request -->|retract during retraction phase| Refund[Owner refund]
-  Fold -->|plugin admission and value routing| Registry[Updated registry and checkpoints]
-  Parked[Parked or tomb checkpoint] -->|reap when allowed| Go[Internal go request]
-  Go -->|process only| Fold
+  Booking[Registration booking] --> Fold[Accepted economic fold]
+  Fold --> Active[Active carrier]
+  Active --> Parked[Retained parked carrier]
+  Parked --> Active
+  Active --> Pending[Convicted carrier]
+  Parked --> Pending
+  Pending --> Request[Termination booking]
+  Request --> Final[Consuming fold and retired key]
 ```
 
-| Action | Caller supplies | Model result | Refusal conditions |
-| --- | --- | --- | --- |
-| `contribute` | AID, owner, submitted slot, operation | Request deposited with bond plus tip; request counter incremented | Operation is not user-postable (`register`, `revive`, `convict` are postable) |
-| `fold` | Folder payee, generation, pinned plugin, ordered nonempty batch of request IDs and process/reject choices | One atomic state update, generation increment, per-request tip to folder, plugin-specific bonds/refunds | Generation or plugin mismatch; empty batch; request missing/repeated; phase violation; forbidden rejection; plugin admission fails |
-| `retract` | Request ID | Request removed; bond plus tip refunded to its owner | Missing request or outside retraction phase |
-| `reap` | AID and reaper payee | Checkpoint consumed; internal go request posted; premium to reaper | Missing checkpoint; live checkpoint; parked checkpoint before grace expiry without quorum |
-| `pause` | AID and rotation evidence from recorded keys | Live checkpoint becomes parked now; key counter increments | Missing/non-live checkpoint or rotation invalid |
-| `resume` | AID and rotation evidence from recorded keys | Parked checkpoint becomes live; key counter increments | Missing/non-parked checkpoint or rotation invalid |
-| `convictCkpt` | AID and duplicity evidence | Checkpoint becomes tomb | Missing/already-tomb checkpoint or duplicity invalid |
+| Action | Required context | Result and limits |
+| --- | --- | --- |
+| `bookRegistration` | Complete generic booking, carrier ADA `Mc + D`, declared tip | Validated pending registration; no active carrier yet. |
+| `fold` | Expected generation and plugin, complete UTxO and economic transaction, KERI inception for registrations | Actual imported fold, installed carriers/bindings, consumed pending entries, generation advanced. |
+| `park` | Live carrier and coarse close authorization to recipient | Bond `D` returned, key counter advanced, token/output/`Mc` retained. |
+| `revive` | Parked carrier and rotation from its retained key | Fresh `D`, live carrier with next key counter, same token/output/`Mc`. |
+| `convictCkpt` | Live or parked carrier and coarse duplicity evidence | Pending carrier; key remains active until fold. |
+| `bookTermination` | Exact pending carrier and complete generic termination booking | Whole pending entry retains token/key/original holding metadata; request holds `Mr + tip`; booker receives `Mc - Mr - tip` and pays its fee separately. |
+| `genericRetraction`, `genericRejection` | Full imported recovery transaction and registration request | Exact generic recovery result; these wrappers do not settle all application recovery requirements. |
 
-Plugin admission requires absent leaf plus inception evidence for register;
-dormant leaf, no remaining checkpoint and rotation evidence for revive;
-active leaf for internal go-dormant/go-convicted; dormant leaf plus duplicity
-for convict. Internal go requests cannot be contributed or rejected by the
-user-postable path. The model's `Actor.owner` label on retract is not an
-executable signer check: `stepFn` has no caller identity argument.
-
-Processing requires `now < submittedAt + process`, with no lower bound in
-that predicate. Retraction includes its lower endpoint and excludes its upper
-endpoint. Rejection includes the final endpoint and also allows requests
-dated in the future. This extraction preserves those exact conditions.
-The `far` timestamp used for internal requests is finite; unbounded permanent
-processing availability is not implied.
+Registry's coarse evidence predicates do not establish equivalence to Checkpoint's
+concrete duplicity and signed intent checks. The associated Checkpoint system
+requires both its local evidence and the actual stored Registry receipt. Recovery
+deadlines and payment conditions come from the imported judgments; there is no
+user-posted revival request, dormant leaf or timestamp shortcut.
 
 ## Reads and missing models
 
@@ -250,28 +239,26 @@ truncate Lean values to a machine word. [The encoding contract](encoding.md)
 defines deterministic maps, exact integers and preservation of signed bytes.
 
 Existing Lean trace drivers supply accepted/refused transition observations.
-Fresh runs produced 1,380 checkpoint grid cells and 3,000 registry grid cells,
-plus their seeded traces and stories. [The model corpus](checkpoint-conformance.json)
-retains the checkpoint grid in the named-map profile, including each accepted
-transition outcome. [The provenance record](model-provenance.json)
-binds the sources and complete trace output hashes. The conformance toolchain
-reads this repository's `lean-toolchain` through
-[model-toolchain.nix](model-toolchain.nix), rather than inheriting Blaster's
-version. Fresh Lean 4.27.0 builds and runs produced byte-identical checkpoint
-and registry trace outputs to the initial Lean 4.24.0 run. Only the executable
-Checkpoint and Registry modules were built for this extraction; this is not
-a fresh certification of every theorem.
+The current local Checkpoint grid contains 1,472 complete cells; Registry's
+local grid has 56 cells alongside connected traces, stories and economic boundary
+cases. The associated Checkpoint system has a separate connected 34-cell corpus.
+[The model corpus](checkpoint-conformance.json) retains the Checkpoint grid in
+the named-map profile. [The provenance record](model-provenance.json) binds source
+hashes, the public Singular dependency and complete trace hashes.
+The toolchain comes from this repository's `lean-toolchain` through
+[model-toolchain.nix](model-toolchain.nix). Extraction is finite execution evidence;
+its counts do not establish universal correctness or production correspondence.
 
 The driver encoding and proposed CDDL profile are distinct. CDDL uses a
 discriminator named `action`, renames the action's `sn'` to `sn`, `op` to
 `bond`, `refund'` to `refund`, and top-up's `x` to `amount`. It flattens the
-present-state wrapper and the parked key-state wrapper into named maps.
+present-state wrapper and the parked and pending key-state wrappers into named maps.
 The [conformance generator](extract-checkpoint.mjs) applies this representation
 mapping to the existing Lean trace output and annotates the failed guards.
 It preserves accepted states and value flows from Lean, and checks that a
 nonempty refusal set agrees with Lean's `none` for every grid cell.
 [The model corpus](checkpoint-conformance.json) contains 119 accepted and
-1,261 refused cells, covers all eight actions and all ten `stepFn` refusal
+1,353 refused cells, covers all eight actions and all ten `stepFn` refusal
 names, and passes CDDL validation. Its finite oracle tables are test inputs,
 not cryptographic evidence accepted by the production API.
 These are normative candidate vectors for the abstract transition profile.
@@ -289,7 +276,7 @@ current freeze semantics: take existing `B` under its guards, retain old
 keys, and permit unpaid rotation. The historical alternative requiring a
 new hunter bond is excluded.
 
-Registry adaptation, concrete cryptographic evidence profiles and missing
+Concrete Registry deployment mapping, cryptographic evidence profiles and missing
 query models remain implementation/model work recorded in
 [the gap inventory](gaps.md). Delegation, TEL and credential shapes and
 source-executed examples are now specified in [their refinement](statements.md);

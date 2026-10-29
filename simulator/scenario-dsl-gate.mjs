@@ -8,7 +8,7 @@
  * both generated pages for paste/file play and branch export, and proves
  * each guard class can fail on a verified scratch mutation.
  *
- * GREEN prints the 30 / 104 / 115 denominators. Empty or truncated
+ * GREEN prints the 30 / 106 / 84 denominators. Empty or truncated
  * discovery is a refusal, not a smaller success.
  */
 
@@ -42,7 +42,7 @@ const DOCUMENTED = [
   'checkpoint',
   'simulator/checkpoint-simulator-scenarios/01-alice-appears.dsl',
 ];
-const WANT = { total: 30, checkpointFiles: 15, registryFiles: 15, checkpointSteps: 104, registrySteps: 115 };
+const WANT = { total: 30, checkpointFiles: 15, registryFiles: 15, checkpointSteps: 106, registrySteps: 84 };
 
 const sha256 = b => createHash('sha256').update(b).digest('hex');
 const rows = [];
@@ -395,7 +395,7 @@ function snapshotPlay(win) {
   return {
     nodeCount: nodes.length,
     forks,
-    refused: nodes.filter(n => n.record && (n.record.ok === false || (n.record.result && n.record.result.ok === false))).length,
+    refused: nodes.filter(n => n.record && (n.record.ok === false || (n.record.result && !n.record.result.ok))).length,
     actionRecords: records.length,
     state: (($('state-name') || {}).textContent || '') + '|' + (($('where') || {}).textContent || '').slice(0, 80),
     verdict: (($('verdict') || {}).textContent || '').slice(0, 80),
@@ -417,7 +417,8 @@ function expectedShape(family, sc) {
   countRef(sc.steps);
   for (const fk of sc.forks || []) {
     forkSteps += visSteps(fk.steps).length;
-    if (family === 'registry' && fk.env) envNodes++;
+    // Registry fork evidence belongs to the complete event input; it does
+    // not add a synthetic action or an extra displayed node.
     countRef(fk.steps);
   }
   let actions = 0;
@@ -467,6 +468,12 @@ function checkPlay() {
       if (snap.refused !== oracle.refused) errs.push(`${basename(f)}: refused page=${snap.refused} json-oracle=${oracle.refused}`);
       if (snap.actionRecords !== oracle.actions) errs.push(`${basename(f)}: actionRecords page=${snap.actionRecords} json-oracle=${oracle.actions}`);
       if (!(checked.stepsRun > 0)) errs.push(`${basename(f)}: independent checker reported stepsRun=${checked.stepsRun}`);
+      if (family === 'registry') {
+        const observed = api.app.nodes.filter(n => n.record).map(n => ({env:n.record.env, result:n.record.result}));
+        const expected = [...checked.replay.cells, ...checked.replay.forks.flatMap(f => f.cells)]
+          .map(c => ({env:c.env, result:c.result}));
+        if (!sameJson(observed, expected)) errs.push(`${basename(f)}: complete page result or fork environment differs`);
+      }
       if (oracle.nodeCount <= 1) errs.push(`${basename(f)}: json oracle is degenerate (nodeCount ${oracle.nodeCount})`);
     }
     const priorLen = api.app.nodes.length, priorCursor = api.app.cursor, priorRef = api.app.nodes;
@@ -552,14 +559,14 @@ function driveRegistryExport(win) {
   $('btn-reset').click();
   const ev = d.querySelector('#next-moves .ev-quick[data-actor="alice"][data-ev="inception"]');
   if (ev) ev.click();
-  const contrib = [...d.querySelectorAll('#next-moves .act[data-actor="alice"][data-kind="contribute"]')].find(x => /registration|register/i.test(x.textContent));
+  const contrib = [...d.querySelectorAll('#next-moves .act[data-actor="alice"][data-kind="bookRegistration"]')].find(x => /registration|register/i.test(x.textContent));
   if (contrib) { contrib.click(); $('act-submit').click(); }
   const after = RS.app.cursor;
-  const fold = [...d.querySelectorAll('#next-moves .act[data-kind="fold"]')].find(x => /fold/i.test(x.textContent));
+  const fold = d.querySelector('#next-moves .act[data-kind="fold"]');
   if (fold) { fold.click(); $('act-submit').click(); }
   RS.goTo(after);
   $('slot-plus1').click();
-  const retract = d.querySelector('#next-moves .act[data-kind="retract"]');
+  const retract = d.querySelector('#next-moves .act[data-kind="genericRetraction"]');
   if (retract && !retract.disabled) { retract.click(); $('act-submit').click(); }
   const path = [];
   for (let id = RS.app.cursor; id !== null; id = nodeOf(RS, id).parent) path.unshift(nodeOf(RS, id));
@@ -649,7 +656,10 @@ function checkScope() {
   }
   if (existsSync(GRAMMAR) && readFileSync(GRAMMAR, 'utf8').length > 40 * 1024) errs.push('grammar module exceeds 40 KiB');
   for (const f of [...discover(CK_DIR), ...discover(RG_DIR)]) {
-    if (readFileSync(f).length > 40 * 1024) errs.push(`${basename(f)} exceeds 40 KiB`);
+    // Complete Registry transactions carry inputs, outputs and full expected
+    // successors; keep their portable DSL bounded without dropping fields.
+    const limit = f.startsWith(RG_DIR) ? 128 * 1024 : 40 * 1024;
+    if (readFileSync(f).length > limit) errs.push(`${basename(f)} exceeds ${limit} bytes`);
   }
   row('INV-375-SCOPE', errs.length === 0, errs.length ? errs.join(' | ') : 'JSON corpus parseable; size caps hold');
 }

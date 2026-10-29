@@ -19,7 +19,11 @@
       "pause": 500
     },
     {
-      "text": "A consumer trusts an active checkpoint only once it is older than the juvenility window W.",
+      "text": "A consumer trusts an active checkpoint only once it is older than the juvenility window W. A parked KERI output retains its token, minimum ADA and last key state, while the registry key stays active; consumers refuse it.",
+      "pause": 400
+    },
+    {
+      "text": "The owner’s close pays the addressed D/B/pool flows defined by Checkpoint. Samaritan.Reap instead describes termination booking after conviction. Its booker avoids a loss only when the booking premium covers the external booking fee. Addressed self-fold recovery has additional accepted-fold and output-destination premises.",
       "pause": 400
     }
   ],
@@ -59,6 +63,6 @@
   ],
   "_source": {
     "file": "words.md",
-    "sha256": "61a7e8590ffc86f2d8d0e34cdc97e0f24ef0d63425268e5080488d045ccf1fb2"
+    "sha256": "3ae563defad049d993808b1ea24e9fcd8ca30ad94584c75092e19f65b78847ad"
   }
 }

@@ -21,7 +21,7 @@ flowchart LR
 
 ## Semantic conformance encoding
 
-`checkpoint-model-v1` and `statements-model-v1` are separate abstract model
+`checkpoint-model-v2` and `statements-model-v1` are separate abstract model
 profiles. Their natural numbers use
 CDDL's `unsigned` prelude type, which includes both ordinary unsigned CBOR
 integers and positive bignums. This is a shape for abstract addresses, epochs

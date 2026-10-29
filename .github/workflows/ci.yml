@@ -181,7 +181,7 @@ jobs:
       # Validates the 21-row RETIRED ledger against the frozen base, rejects
       # retired imports as unknown modules, and checks live axioms.
       - name: Retirement ledger gate
-        run: nix shell nixpkgs#ripgrep nixpkgs#gawk nixpkgs#gnused nixpkgs#gnugrep nixpkgs#coreutils nixpkgs#diffutils --command bash scripts/check-lean-traceability.sh
+        run: nix shell nixpkgs#ripgrep nixpkgs#gawk nixpkgs#gnused nixpkgs#gnugrep nixpkgs#coreutils nixpkgs#diffutils nixpkgs#nodejs --command bash scripts/check-lean-traceability.sh
 
   lean-singular-dependency:
     name: Lean Singular dependency (clean full roots + controls)

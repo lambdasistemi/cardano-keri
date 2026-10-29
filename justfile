@@ -521,10 +521,9 @@ check-version-remnant-sweep:
 bounty-entitlement-blaster:
     cd offchain && nix run --quiet --no-write-lock-file .#bounty-entitlement-blaster
 
-# Enforce the 17-row Lean -> QuickCheck -> Aiken executable map, including
-# generated-vector drift.
+# Check the retirement ledger, compiled proof trust, contracts and story bindings.
 check-lean-traceability:
-    ./scripts/check-lean-traceability.sh
+    nix shell nixpkgs#ripgrep nixpkgs#gawk nixpkgs#gnused nixpkgs#gnugrep nixpkgs#coreutils nixpkgs#diffutils nixpkgs#nodejs --command bash scripts/check-lean-traceability.sh
 
 # Standing repository-CI contract (#234 Stage-D): every identity documented in
 # the Blaster trust-base table must byte-match its authoritative flake.lock

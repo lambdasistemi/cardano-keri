@@ -5,7 +5,7 @@
       "pause": 500
     },
     {
-      "text": "cardano-keri projects public KERI events into a Cardano checkpoint. KERI is Key Event Receipt Infrastructure; a KERI AID (Autonomic Identifier) has a signed KEL (Key Event Log). The chain does not discover KEL events by itself. It verifies the event evidence supplied in a transaction.",
+      "text": "A relying application wants to know which checkpoint it can trust, what the chain verifies, and what its own integration must establish. cardano-keri projects public KERI events into a Cardano checkpoint. KERI is Key Event Receipt Infrastructure; a KERI AID (Autonomic Identifier) has a signed KEL (Key Event Log). The chain does not discover KEL events by itself. It verifies the event evidence supplied in a transaction.",
       "pause": 400
     },
     {
@@ -127,7 +127,7 @@
       "pause": 500
     },
     {
-      "text": "The successor must satisfy new.seq == spent.seq + 1 and new.native_sn > spent.native_sn. No superseding recovery exists on chain, and the accepted design does not add one (ruling D-022). KERI's superseding rule applies to a rotation over an interaction, and interactions never reach the chain, so every recovery the checkpoint can express is a forward advance. The one scenario that would need a rollback is a thief who declined the winning move; it is an accepted, stated limit.",
+      "text": "The successor must satisfy new.seq == spent.seq + 1 and new.native_sn > spent.native_sn. No superseding recovery exists on chain, and the accepted design does not add one. KERI's superseding rule applies to a rotation over an interaction, and interactions never reach the chain, so every recovery the checkpoint can express is a forward advance. The one scenario that would need a rollback is a thief who declined the winning move; it is an accepted, stated limit.",
       "pause": 400
     }
   ],
@@ -145,7 +145,7 @@
       "pause": 400
     },
     {
-      "text": "Under ruling D-036, close is the reap: a witnessed rotation by the next keys whose signed message names the payee and the refund address; the parked output retains the token, minimum ADA and key state, and the registry key stays active. That is what stops a thief holding only the current keys from erasing the owner's Cardano presence. See Compromise of the current keys.",
+      "text": "In the accepted model, close is the reap: a witnessed rotation by the next keys whose signed message names the payee and the refund address; the parked output retains the token, minimum ADA and key state, and the registry key stays active. That is what stops a thief holding only the current keys from erasing the owner's Cardano presence. See Compromise of the current keys.",
       "pause": 400
     }
   ],
@@ -169,7 +169,7 @@
       "pause": 400
     },
     {
-      "text": "The registry of the accepted design removes this: one leaf per AID, an absence proof required to insert, and the token mint-once by construction (rulings D-024, D-037).",
+      "text": "The registry of the accepted design removes this: one leaf per AID, an absence proof required to insert, and the token mint-once by construction.",
       "pause": 400
     }
   ],
@@ -237,15 +237,23 @@
       "pause": 500
     },
     {
-      "text": "The one thing outside the machine. A consumer authorizes iff:",
+      "text": "A treasury fixes its intended network, published release, registry seed and AID independently of a candidate. The reviewed holding predicate requires matching validated network/release, the release's application credential, exactly one complete expected representative asset, and a decoded application datum for that AID. Its unchanged lifecycle condition then requires a present, unfrozen, unpoisoned state at least the juvenility window old.",
       "pause": 400
     },
     {
-      "text": "and, once validity ships, now ≤ valid_until. It fails closed on absent, frozen, poisoned, juvenile, convicted and parked. Frozen is a value-level fact, not a flag: a frozen checkpoint is missing B.",
+      "text": "The output cannot select the context against which it is authenticated. Exact consumer identity binds the actual pinned Singular State/Active declarations, finite naming premises, registration bridge and model evidence. The consumer checklist explains the complete integration rule.",
       "pause": 400
     },
     {
-      "text": "What the predicate cannot know is whether the owner rotated on KERI an hour ago and no hunter has landed it yet. That is what the pool is for.",
+      "text": "Parking and pending conviction retain custody but refuse consumption. Revival is local and starts a fresh juvenility window. Permanent retirement requires the matching actual terminal fold. Another registry may register the same AID; its holding still fails the original treasury's context.",
+      "pause": 400
+    },
+    {
+      "text": "The model's present/unfrozen state represents full bonds. A real decoder and observer must establish that those fields correspond to the same output's physical value. The holding predicate and realizesState do not validate current unspentness. Network/release discovery, byte encodings and faithful observation remain explicit implementation obligations. The payment's own threshold check is separate, and no checkpoint expiry field is modeled.",
+      "pause": 400
+    },
+    {
+      "text": "The consumer implementation remains unaccepted until both real implementation properties and a connected ledger-boundary journey execute. Lean proofs and simulator replay count as neither production layer. A consumer still cannot know from this state alone whether an unseen KERI rotation has occurred.",
       "pause": 400
     }
   ],
@@ -297,7 +305,7 @@
       "pause": 500
     },
     {
-      "text": "An indexer maps the AID-derived policy and asset name to a candidate UTxO reference. The consuming transaction revalidates the token, script, datum, AID, sequence, and state against the ledger.",
+      "text": "In the redesigned consumer, an indexer locates candidates for the independently chosen complete registry and AID context. It does not choose the expected asset or release. The consuming transaction revalidates the token, script, datum, AID, sequence, and state against the ledger.",
       "pause": 400
     },
     {
@@ -311,7 +319,7 @@
       "pause": 500
     },
     {
-      "text": "Registrations, reopens, closes and convictions are requests that anyone may apply in batches; a stalled registry delays them and forges nothing. Rotations, poisons, freezes and top-ups never touch it, so an identity's ordinary life does not depend on it at all. Consumers never touch it.",
+      "text": "Registration and terminal completion use actual registry folds. Parking, revival, rotations, poison, freezing and top-ups are local Checkpoint transitions. Pending custody remains until its recorded request is consumed by a matching fold. The consumer authenticates the holding against its fixed registry identity; it need not spend the registry state.",
       "pause": 400
     }
   ],
@@ -347,6 +355,6 @@
   ],
   "_source": {
     "file": "trust-model.md",
-    "sha256": "c34c90643c693af66820c1c96c55fb8a3356ae359a276218e9818c48a37e8821"
+    "sha256": "f12bb0b4a6f5c605b495cddab1c4624c936b6e7d33b06b8088b0781956dcada3"
   }
 }

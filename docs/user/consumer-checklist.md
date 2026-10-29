@@ -1,46 +1,101 @@
 # Consumer checklist
 
-!!! note "What ships, and the accepted design"
-    No production consumer ships. The checklist below is the accepted
-    design's fail-closed rule, playable as
-    [The treasury reads Alice's checkpoint](../simulator/index.html).
-    What a preprod reader can do today is resolve one ACTIVE V1
-    checkpoint by role address and revalidate the token; ARMED and
-    FROZEN reject by role.
+A treasury wants to pay Alice using the key state from its chosen registry.
+It must reject a convincing checkpoint from another registry, another AID or
+another network, as well as a checkpoint that is frozen, poisoned, too young,
+parked or awaiting termination.
 
-The treasury is a Cardano validator that authorizes a payment against
-Alice's current keys by reading her checkpoint as a CIP-31 reference
-input. It never writes the checkpoint. It never reads the registry. What
-it reads is Alice's current key state as a KERI
-[validator](https://trustoverip.github.io/kswg-keri-specification/#validator) would establish it; the conditions below add
-Cardano-side rules on top and take none of KERI's away.
+!!! note "Model rule; production conformance remains open"
+    The reviewed consumer model and its executable simulator express this
+    rule. They do not establish a deployed consumer, a Cardano datum decoder
+    or a current-output observer. The existing V1 reader is a separate
+    implementation; its naming rule is not the redesigned registry rule.
+    This code is not for mainnet.
 
-Authorize **iff** all of these hold. Anything else fails closed.
+## Fix the intended identity first
 
-1. **Present.** There is an active checkpoint UTxO. Parked outputs retain
-   their token, minimum ADA and key state but are explicitly refused, as is
-   pending conviction custody. Convicted is terminal after the associated
-   Registry fold and has no candidate.
-2. **The token.** Exact policy, quantity one, the AID-derived asset.
-3. **Both bonds full.** `D_reg`, the conviction bond, is there; `B`, the
-   freeze bond, is there. Frozen is `B` absent.
-4. **Not poisoned.** The poison is the owner's own lock: the current
-   quorum's declaration makes the checkpoint unconsumable until a rotation
-   clears it.
-5. **Older than `W`.** `W` is the juvenility window, the age a checkpoint
-   must reach before a consumer trusts it. Juvenility is consumer policy.
-   The machine does not wait; the treasury does.
-6. **The payment's own signature** satisfies the current threshold.
-   That check is the consumer's, outside the checkpoint machine.
+The treasury fixes its network, published KERI release, registry creation
+seed and intended AID independently of the output it is checking. A trusted
+integration supplies the actual network and resolves the complete release.
+An unknown release or a network mismatch is an error or refusal, never
+permission to adopt the candidate's values.
 
-Zero candidates: reject. Several candidates: reject. The registry is
-what makes "several" impossible in the accepted design; until it
-ships, a V1 reader cannot prove uniqueness.
+```mermaid
+flowchart TD
+  T["Fix trusted context"] -->|then| E["Validate network<br/>and release"]
+  E -->|then| O["Check candidate<br/>asset and datum"]
+  O -->|then| V["Check credential<br/>and lifecycle"]
+  V -->|result| P["All pass: check payment<br/>Any fail: refuse payment"]
+```
 
-Play the story: nothing on chain, the treasury fails closed; nine
-slots after registration it is still juvenile; at slot `W` it accepts;
-poison, freeze, and park each change the verdict for a reason the
-simulation names.
+The candidate supplies evidence to compare with the fixed context. It does
+not choose the context. The payment's own authorization remains a separate
+check after holding eligibility succeeds.
 
-See [Identity operations](../architecture/identity-ops.md) and
-[Trust model](../design/trust-model.md).
+## Check the complete holding
+
+The model's `consumableHolding` proposition and `consumableHoldingB`
+executable predicate require all of the following:
+
+1. The observed network equals the intended network, and the resolved release
+   equals the complete intended descriptor: application policy, application
+   credential, state program and state policy.
+2. The output uses the release's application credential.
+3. The complete expected representative asset has aggregate quantity exactly
+   one in that output. Both its policy and name matter; two duplicate entries
+   of quantity one count as two and fail.
+4. The same output has an application datum that the selected release decoder
+   accepts for the intended AID.
+5. Its decoded state is present, unfrozen and unpoisoned, and the current slot
+   is at least its birth slot plus the juvenility window. Equality at that
+   boundary is sufficient. A zero window permits consumption at birth.
+
+The representative name is derived from the complete registry identity and
+encoded AID key through the imported Singular `activeAsset`. The registry
+identity is derived from the release and creation seed through `stateAsset`.
+It is not the raw AID, a human registry label or the allocated registration
+serial. See [Exact consumer identity](../design/consumer-identity.md) for the
+selected declarations and explicit encoding assumptions.
+
+A present model state holds the conviction bond; an unfrozen one holds the
+freeze bond. Establishing that a real output's datum and lovelace represent
+those model values is an additional implementation obligation. A Boolean
+flag alone is not evidence of physical value.
+
+## Follow the lifecycle story
+
+Registration does not grant immediate consumption: juvenility still applies.
+Authorized rotations retain the same representative asset. Parking retains
+the output, token and key state but makes it ineligible. Revival is a local
+transition with fresh bonds and a new juvenility window. Conviction retains
+ineligible pending custody until the matching recorded request is consumed
+by the actual terminal fold. Only that completion establishes retirement.
+
+After retirement, the same key cannot register or revive in that registry.
+Another registry can legitimately register the same AID; its token still
+fails this treasury's original context. This is not global AID uniqueness.
+
+[Play the treasury story](../simulator/index.html?story=11): inspect the exact
+holding, change an identity field, then follow creation, registration,
+rotations, parking, revival and the matching terminal completion. The
+simulator labels its finite naming and datum interpretations.
+
+## Complete the integration before relying on it
+
+The transaction must validate its current reference input, scripts, complete
+value and datum, then check the payment's own signatures against the current
+threshold. Neither immutable registration metadata nor the model's
+`realizesState` premise establishes that an output reference is still unspent.
+
+Reject zero or several eligible candidates. Missing tokens alone do not prove
+that an identity was never registered or is terminal. Unknown releases,
+network errors and provider failures must not become “identity absent”.
+The model has no checkpoint expiry field; booking intervals do not define
+consumer expiry or renewal.
+
+Production acceptance remains held until both implementation layers execute:
+properties over the real decoder, value map, scripts and trusted context;
+and a connected boundary journey through genuine creation, registration,
+updates, parking, revival and terminal burn. Lean proofs and JavaScript replay
+are model evidence, not either production layer. See the
+[trust boundaries](../design/trust-model.md#the-consumers-predicate).

@@ -8775,6 +8775,132 @@
    }
   ]
  },
+ "docs/design/consumer-identity.md": {
+  "evidence-and-implementation-acceptance": [
+   {
+    "index": 0,
+    "name": "docs-design-consumer-identity/evidence-and-implementation-acceptance-00",
+    "pause_ms": 500,
+    "v": "d3f95575c82b"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-consumer-identity/evidence-and-implementation-acceptance-01",
+    "pause_ms": 400,
+    "v": "fe907e5b2885"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-consumer-identity/evidence-and-implementation-acceptance-02",
+    "pause_ms": 400,
+    "v": "769e1e42dfa3"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-consumer-identity/evidence-and-implementation-acceptance-03",
+    "pause_ms": 400,
+    "v": "a5234c6ffbb9"
+   }
+  ],
+  "exact-consumer-identity": [
+   {
+    "index": 0,
+    "name": "docs-design-consumer-identity/exact-consumer-identity-00",
+    "pause_ms": 500,
+    "v": "f1828318d63d"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-consumer-identity/exact-consumer-identity-01",
+    "pause_ms": 400,
+    "v": "f793a98fd947"
+   }
+  ],
+  "identity-and-authority": [
+   {
+    "index": 0,
+    "name": "docs-design-consumer-identity/identity-and-authority-00",
+    "pause_ms": 500,
+    "v": "64939d0d0106"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-consumer-identity/identity-and-authority-01",
+    "pause_ms": 400,
+    "v": "f3692ab650ee"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-consumer-identity/identity-and-authority-02",
+    "pause_ms": 400,
+    "v": "27fc4e082c21"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-consumer-identity/identity-and-authority-03",
+    "pause_ms": 400,
+    "v": "2946385d50be"
+   }
+  ],
+  "the-bounded-registration-bridge": [
+   {
+    "index": 0,
+    "name": "docs-design-consumer-identity/the-bounded-registration-bridge-00",
+    "pause_ms": 500,
+    "v": "a63fd837efe1"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-consumer-identity/the-bounded-registration-bridge-01",
+    "pause_ms": 400,
+    "v": "fc331bdb9d26"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-consumer-identity/the-bounded-registration-bridge-02",
+    "pause_ms": 400,
+    "v": "bcde8557c0c7"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-consumer-identity/the-bounded-registration-bridge-03",
+    "pause_ms": 400,
+    "v": "a15ebbac6661"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-consumer-identity/the-bounded-registration-bridge-04",
+    "pause_ms": 400,
+    "v": "598405ea5a39"
+   }
+  ],
+  "what-the-interpretation-must-establish": [
+   {
+    "index": 0,
+    "name": "docs-design-consumer-identity/what-the-interpretation-must-establish-00",
+    "pause_ms": 500,
+    "v": "9eb62fa5fc8a"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-consumer-identity/what-the-interpretation-must-establish-01",
+    "pause_ms": 400,
+    "v": "5165dff820e1"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-consumer-identity/what-the-interpretation-must-establish-02",
+    "pause_ms": 400,
+    "v": "26258b85ce27"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-consumer-identity/what-the-interpretation-must-establish-03",
+    "pause_ms": 400,
+    "v": "c69b81010971"
+   }
+  ]
+ },
  "docs/design/credential-verification.md": {
   "decisions": [
    {
@@ -11957,7 +12083,7 @@
     "index": 3,
     "name": "docs-design-trust-model/close-cannot-redirect-the-refund-03",
     "pause_ms": 400,
-    "v": "a61613537a6d"
+    "v": "10fc897ed4a6"
    }
   ],
   "current-key-theft": [
@@ -12023,7 +12149,7 @@
     "index": 3,
     "name": "docs-design-trust-model/duplicate-live-registration-03",
     "pause_ms": 400,
-    "v": "d8d85f8302d4"
+    "v": "ccb42f1e11bf"
    }
   ],
   "full-kel-history": [
@@ -12101,7 +12227,7 @@
     "index": 1,
     "name": "docs-design-trust-model/indexers-01",
     "pause_ms": 400,
-    "v": "65aa1a5d1ecd"
+    "v": "1556fe27055f"
    },
    {
     "index": 2,
@@ -12271,19 +12397,31 @@
     "index": 1,
     "name": "docs-design-trust-model/the-consumers-predicate-01",
     "pause_ms": 400,
-    "v": "416ce7836b6e"
+    "v": "781238902cab"
    },
    {
     "index": 2,
     "name": "docs-design-trust-model/the-consumers-predicate-02",
     "pause_ms": 400,
-    "v": "2f8a1f37f86a"
+    "v": "9d0c221fc631"
    },
    {
     "index": 3,
     "name": "docs-design-trust-model/the-consumers-predicate-03",
     "pause_ms": 400,
-    "v": "11db0f659198"
+    "v": "7fab273414f3"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-trust-model/the-consumers-predicate-04",
+    "pause_ms": 400,
+    "v": "a32eac61b61e"
+   },
+   {
+    "index": 5,
+    "name": "docs-design-trust-model/the-consumers-predicate-05",
+    "pause_ms": 400,
+    "v": "6756c0b104db"
    }
   ],
   "the-projection-law": [
@@ -12329,7 +12467,7 @@
     "index": 1,
     "name": "docs-design-trust-model/the-registry-01",
     "pause_ms": 400,
-    "v": "a64ea2195767"
+    "v": "337667ca1d38"
    }
   ],
   "the-sequence-never-moves-backward": [
@@ -12343,7 +12481,7 @@
     "index": 1,
     "name": "docs-design-trust-model/the-sequence-never-moves-backward-01",
     "pause_ms": 400,
-    "v": "910c90f35860"
+    "v": "75b8ff40ceaa"
    }
   ],
   "threat-summary": [
@@ -12379,7 +12517,7 @@
     "index": 1,
     "name": "docs-design-trust-model/trust-model-01",
     "pause_ms": 400,
-    "v": "89f6949bd004"
+    "v": "eaecf55942b7"
    },
    {
     "index": 2,
@@ -16216,6 +16354,88 @@
   ]
  },
  "docs/user/consumer-checklist.md": {
+  "check-the-complete-holding": [
+   {
+    "index": 0,
+    "name": "docs-user-consumer-checklist/check-the-complete-holding-00",
+    "pause_ms": 500,
+    "v": "bb873bd94fbc"
+   },
+   {
+    "index": 1,
+    "name": "docs-user-consumer-checklist/check-the-complete-holding-01",
+    "pause_ms": 400,
+    "v": "f82632b001fc"
+   },
+   {
+    "index": 2,
+    "name": "docs-user-consumer-checklist/check-the-complete-holding-02",
+    "pause_ms": 300,
+    "v": "9b93c3e6b23e"
+   },
+   {
+    "index": 3,
+    "name": "docs-user-consumer-checklist/check-the-complete-holding-03",
+    "pause_ms": 300,
+    "v": "3e41c1dca5e5"
+   },
+   {
+    "index": 4,
+    "name": "docs-user-consumer-checklist/check-the-complete-holding-04",
+    "pause_ms": 300,
+    "v": "3491f4f1fe4e"
+   },
+   {
+    "index": 5,
+    "name": "docs-user-consumer-checklist/check-the-complete-holding-05",
+    "pause_ms": 300,
+    "v": "2c290a3924c8"
+   },
+   {
+    "index": 6,
+    "name": "docs-user-consumer-checklist/check-the-complete-holding-06",
+    "pause_ms": 300,
+    "v": "e44fc4bf8930"
+   },
+   {
+    "index": 7,
+    "name": "docs-user-consumer-checklist/check-the-complete-holding-07",
+    "pause_ms": 400,
+    "v": "c3b845442e8b"
+   },
+   {
+    "index": 8,
+    "name": "docs-user-consumer-checklist/check-the-complete-holding-08",
+    "pause_ms": 400,
+    "v": "f49f095f412d"
+   }
+  ],
+  "complete-the-integration-before-relying-on-it": [
+   {
+    "index": 0,
+    "name": "docs-user-consumer-checklist/complete-the-integration-before-relying-on-it-00",
+    "pause_ms": 500,
+    "v": "99e9edc1dce6"
+   },
+   {
+    "index": 1,
+    "name": "docs-user-consumer-checklist/complete-the-integration-before-relying-on-it-01",
+    "pause_ms": 400,
+    "v": "f74aea97f8bb"
+   },
+   {
+    "index": 2,
+    "name": "docs-user-consumer-checklist/complete-the-integration-before-relying-on-it-02",
+    "pause_ms": 400,
+    "v": "bbad7fefd351"
+   },
+   {
+    "index": 3,
+    "name": "docs-user-consumer-checklist/complete-the-integration-before-relying-on-it-03",
+    "pause_ms": 400,
+    "v": "6ffc03b86502"
+   }
+  ],
   "consumer-checklist": [
    {
     "index": 0,
@@ -16227,79 +16447,65 @@
     "index": 1,
     "name": "docs-user-consumer-checklist/consumer-checklist-01",
     "pause_ms": 400,
-    "v": "8e4317788ddf"
+    "v": "7633d9a45172"
    },
    {
     "index": 2,
     "name": "docs-user-consumer-checklist/consumer-checklist-02",
     "pause_ms": 400,
-    "v": "b55bae2b959e"
+    "v": "d0806549e946"
    },
    {
     "index": 3,
     "name": "docs-user-consumer-checklist/consumer-checklist-03",
     "pause_ms": 400,
-    "v": "cc20dd08d9d6"
+    "v": "8ce8a8e93cbf"
+   }
+  ],
+  "fix-the-intended-identity-first": [
+   {
+    "index": 0,
+    "name": "docs-user-consumer-checklist/fix-the-intended-identity-first-00",
+    "pause_ms": 500,
+    "v": "d54fabfc66a0"
    },
    {
-    "index": 4,
-    "name": "docs-user-consumer-checklist/consumer-checklist-04",
+    "index": 1,
+    "name": "docs-user-consumer-checklist/fix-the-intended-identity-first-01",
     "pause_ms": 400,
-    "v": "eb1ffa1731f4"
+    "v": "a11db5e1da5f"
    },
    {
-    "index": 5,
-    "name": "docs-user-consumer-checklist/consumer-checklist-05",
-    "pause_ms": 300,
-    "v": "c73e95dbe852"
-   },
-   {
-    "index": 6,
-    "name": "docs-user-consumer-checklist/consumer-checklist-06",
-    "pause_ms": 300,
-    "v": "9d5615740eb8"
-   },
-   {
-    "index": 7,
-    "name": "docs-user-consumer-checklist/consumer-checklist-07",
-    "pause_ms": 300,
-    "v": "024349dbc6e2"
-   },
-   {
-    "index": 8,
-    "name": "docs-user-consumer-checklist/consumer-checklist-08",
-    "pause_ms": 300,
-    "v": "80e3abeeceae"
-   },
-   {
-    "index": 9,
-    "name": "docs-user-consumer-checklist/consumer-checklist-09",
-    "pause_ms": 300,
-    "v": "99b0b45ae0d0"
-   },
-   {
-    "index": 10,
-    "name": "docs-user-consumer-checklist/consumer-checklist-10",
-    "pause_ms": 300,
-    "v": "a44e387db640"
-   },
-   {
-    "index": 11,
-    "name": "docs-user-consumer-checklist/consumer-checklist-11",
+    "index": 2,
+    "name": "docs-user-consumer-checklist/fix-the-intended-identity-first-02",
     "pause_ms": 400,
-    "v": "946b8c8f69d9"
+    "v": "e91e32cbbe6b"
+   }
+  ],
+  "follow-the-lifecycle-story": [
+   {
+    "index": 0,
+    "name": "docs-user-consumer-checklist/follow-the-lifecycle-story-00",
+    "pause_ms": 500,
+    "v": "1510c600373b"
    },
    {
-    "index": 12,
-    "name": "docs-user-consumer-checklist/consumer-checklist-12",
+    "index": 1,
+    "name": "docs-user-consumer-checklist/follow-the-lifecycle-story-01",
     "pause_ms": 400,
-    "v": "df03b70de4ab"
+    "v": "e426db254755"
    },
    {
-    "index": 13,
-    "name": "docs-user-consumer-checklist/consumer-checklist-13",
+    "index": 2,
+    "name": "docs-user-consumer-checklist/follow-the-lifecycle-story-02",
     "pause_ms": 400,
-    "v": "ff37e90c45a7"
+    "v": "34a4a3b1d2fc"
+   },
+   {
+    "index": 3,
+    "name": "docs-user-consumer-checklist/follow-the-lifecycle-story-03",
+    "pause_ms": 400,
+    "v": "08df7660b047"
    }
   ]
  },

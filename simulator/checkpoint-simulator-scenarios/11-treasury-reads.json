@@ -1,13 +1,28 @@
 {
   "story": 11,
-  "title": "The treasury reads Alice's checkpoint",
-  "goal": "As the treasury validator, I want to authorize a payment only if Alice's keys really are current, so I read her checkpoint as a reference input.",
+  "title": "Treasury eligibility: local Checkpoint steps",
+  "goal": "Explore the lifecycle eligibility clause. The exact-holding journey above also checks the treasury’s fixed identity context and follows actual termination completion.",
   "params": {
     "D": 1000,
     "B": 5,
     "P": 2,
     "W": 10
   },
+  "atoms": [
+    "11.present",
+    "11.the-freeze-bond-held",
+    "11.not-poisoned",
+    "11.born-at-least-w-slots",
+    "11.the-signature-on-the-payment",
+    "11.later-when-validity-ships-within",
+    "11.on-absent",
+    "11.frozen",
+    "11.poisoned",
+    "11.juvenile",
+    "11.parked",
+    "11.convicted",
+    "11.pending-custody"
+  ],
   "steps": [
     {
       "slot": 0,
@@ -280,6 +295,17 @@
       "slot": 20,
       "who": "alice",
       "say": "Unfrozen by a depositing rotation: consumable at once (juvenility is untouched by a deposit).",
+      "evidence": {
+        "add": [
+          {
+            "intentAuthorized": [
+              1,
+              "deposit",
+              null
+            ]
+          }
+        ]
+      },
       "action": {
         "rotate": {
           "sn'": 1,
@@ -371,17 +397,6 @@
           "local_progress_unless_pending_or_retired",
           "trace_poison_fold",
           "trace_sn_monotone_all"
-        ]
-      },
-      "evidence": {
-        "add": [
-          {
-            "intentAuthorized": [
-              1,
-              "deposit",
-              null
-            ]
-          }
         ]
       }
     },
@@ -481,7 +496,7 @@
     {
       "slot": 30,
       "who": "alice",
-      "say": "Parked by the close: no checkpoint to read.",
+      "say": "Parked by the close: custody is retained, but the treasury refuses it.",
       "evidence": {
         "add": [
           {
@@ -594,7 +609,7 @@
     {
       "slot": 40,
       "who": "alice",
-      "say": "Revived through the registry with a witnessed rotation from the parked key state: juvenile.",
+      "say": "Reopened by a witnessed local rotation from the parked key state: juvenile.",
       "evidence": {
         "add": [
           {
@@ -696,7 +711,7 @@
     {
       "slot": 50,
       "who": "cora",
-      "say": "Convicted: fails closed, forever.",
+      "say": "Conviction requests termination: pending custody fails closed. The connected exact-holding journey above continues through the matching consuming fold.",
       "evidence": {
         "add": [
           {
@@ -789,20 +804,5 @@
         ]
       }
     }
-  ],
-  "atoms": [
-    "11.present",
-    "11.the-freeze-bond-held",
-    "11.not-poisoned",
-    "11.born-at-least-w-slots",
-    "11.the-signature-on-the-payment",
-    "11.later-when-validity-ships-within",
-    "11.on-absent",
-    "11.frozen",
-    "11.poisoned",
-    "11.juvenile",
-    "11.parked",
-    "11.convicted",
-    "11.pending-custody"
   ]
 }

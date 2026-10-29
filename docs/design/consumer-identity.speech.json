@@ -1,0 +1,92 @@
+{
+  "exact-consumer-identity": [
+    {
+      "text": "Exact consumer identity.",
+      "pause": 500
+    },
+    {
+      "text": "A relying contract wants Alice's eligible checkpoint in one chosen registry. A valid checkpoint elsewhere must not authorize its payment. The reviewed model makes that choice explicit before it examines a candidate holding.",
+      "pause": 400
+    }
+  ],
+  "identity-and-authority": [
+    {
+      "text": "Identity and authority.",
+      "pause": 500
+    },
+    {
+      "text": "The model binds to the public Singular revision d69ab005c3b710aeebf033d3c5cd08c56feb5643. It imports the actual application-held identity declarations from that same pinned tree. This nested model coexists with Singular's reduced economic model; importing it does not establish a production implementation.",
+      "pause": 400
+    },
+    {
+      "text": "stateAsset returns the release's state policy and the hash of the encoded State preimage containing the creation seed. activeAsset uses that full registry asset and the encoded AID key in its Active preimage. The active asset's policy is the registry's policy. These are the imported functions, not a second naming algorithm copied into KERI.",
+      "pause": 400
+    },
+    {
+      "text": "The consumer definitions live in CardanoKeri.ConsumerIdentity; their exact source identities and theorem statements are recorded in the repository's consumer bindings and theorem-story ledger. The preserved custody baseline is KERI revision ff78b1c0d87a29d2f856cb32f1261591f84831db. All existing lifecycle eligibility, custody and economic contracts remain in force. The new holding predicate adds identity and observation requirements.",
+      "pause": 400
+    }
+  ],
+  "the-bounded-registration-bridge": [
+    {
+      "text": "The bounded registration bridge.",
+      "pause": 500
+    },
+    {
+      "text": "The connected model begins at actual genesis and executes both folds. It never starts by declaring that a final holding is valid.",
+      "pause": 400
+    },
+    {
+      "text": "createRegistry checks configuration correspondence and actual imported genesis. registerJoint executes booking, the preserved economic fold, the full-identity fold and Checkpoint registration. It checks the selected outputs' key, reference, credential, datum, quantity, deposit and trie mapping, then constructs the stored registration origin.",
+      "pause": 400
+    },
+    {
+      "text": "moneyAgreementB compares complete spent references, input reference/value pairs, ordered output amounts, fee, donation and validity interval between the two fold observations. This does not equate physical holding lovelace with Checkpoint conviction bond, freeze bond and pool values. Those remain separate abstractions pending a real decoder and observer.",
+      "pause": 400
+    },
+    {
+      "text": "The proofs establish inversion, completeness under the explicit component premises, delivered-origin correspondence and preservation of the old eligibility predicate. The connected fixture continues through all four rotation branches, freeze and recovery, poison and clearing, park and local revival, concrete conviction, booking and matching completion. It executes a full-identity terminal fold against the same state reference and money observations. A valid foreign request cannot complete the stored pending request; a mixed fold that consumes that request can.",
+      "pause": 400
+    }
+  ],
+  "what-the-interpretation-must-establish": [
+    {
+      "text": "What the interpretation must establish.",
+      "pause": 500
+    },
+    {
+      "text": "The model takes a codec, hash, AID-to-key function and release-indexed datum decoder as interpretation inputs. Its finite separation theorems expose the codec and collision premises in their types. Distinct AID labels do not imply distinct encoded keys without a corresponding mapping premise.",
+      "pause": 400
+    },
+    {
+      "text": "The executable corpus publishes its finite preimage tables and checks every pair in the declared domain. Constant codecs, constant hashes and a constant reduced-registry map fail their respective premises. These controls are not cryptographic proofs or Cardano byte vectors.",
+      "pause": 400
+    },
+    {
+      "text": "realizesState checks the credential, representative quantity and decoded AID/state. It has no current-reference or unspentness check. Local fixture observations are explicitly selected model interpretations, not a production observer. No checkpoint expiry or renewal behavior is supplied by the model.",
+      "pause": 400
+    }
+  ],
+  "evidence-and-implementation-acceptance": [
+    {
+      "text": "Evidence and implementation acceptance.",
+      "pause": 500
+    },
+    {
+      "text": "The source includes twenty-six proved consumer statements with bound Given/When/Then stories. The model driver emits the complete accepted and refused queries, connected certificate events and actual fold observations. The browser and command-line simulator use the same pure consumer function; their replay gates compare those observations with freshly generated Lean output. Mutation controls change executable decision sites and retain setup failures separately from detected behavioral faults.",
+      "pause": 400
+    },
+    {
+      "text": "This establishes a local model and simulator candidate. Independent acceptance, hosted checks and publication are separate evidence. Production completion under the consumer implementation ticket requires both real implementation properties and connected ledger-boundary tests, including the observation obligations above. Neither layer is supplied by proving the model or replaying its corpus. This code is not for mainnet.",
+      "pause": 400
+    },
+    {
+      "text": "Start with the consumer checklist, then play the treasury story.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "consumer-identity.md",
+    "sha256": "75c6a4992c7f86dccaf0f6ea399e950517e5619ebf8a85b2e234a2c12599a88f"
+  }
+}

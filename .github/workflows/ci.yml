@@ -183,6 +183,9 @@ jobs:
       - name: Retirement ledger gate
         run: nix shell nixpkgs#ripgrep nixpkgs#gawk nixpkgs#gnused nixpkgs#gnugrep nixpkgs#coreutils nixpkgs#diffutils nixpkgs#nodejs --command bash scripts/check-lean-traceability.sh
 
+      - name: Exact consumer model and simulator
+        run: nix shell --no-write-lock-file path:./lean#lean nixpkgs#nodejs --command bash scripts/check-consumer-design.sh
+
   lean-singular-dependency:
     name: Lean Singular dependency (clean full roots + controls)
     runs-on: nixos

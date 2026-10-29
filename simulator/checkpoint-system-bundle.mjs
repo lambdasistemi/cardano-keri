@@ -7,13 +7,13 @@ export function systemBundle() {
   const sources={},names={
     './checkpoint-simulator-core.mjs':'C','./registry-economic-core.mjs':'E',
     './registry-wire.mjs':'W','./registry-simulator-core.mjs':'R',
-    './checkpoint-system-core.mjs':'S','./checkpoint-system-properties.mjs':'P',
+    './checkpoint-system-core.mjs':'S','./checkpoint-system-properties.mjs':'P','./consumer-core.mjs':'U','./consumer-properties.mjs':'V',
   };
   let script='(()=>{\n';
   const core=read('checkpoint-simulator-core.mjs');sources['checkpoint-simulator-core.mjs']=hash(core);
   const exports=core.match(/export \{([\s\S]*?)\};/)[1];
   script+=`const C={${exports}};\n`;
-  for(const file of ['registry-economic-core.mjs','registry-wire.mjs','registry-simulator-core.mjs','checkpoint-system-core.mjs','checkpoint-system-properties.mjs']) {
+  for(const file of ['registry-economic-core.mjs','registry-wire.mjs','registry-simulator-core.mjs','checkpoint-system-core.mjs','checkpoint-system-properties.mjs','consumer-core.mjs','consumer-properties.mjs']) {
     const raw=read(file);sources[file]=hash(raw);const exported=[];
     for(const m of raw.matchAll(/^export (?:function|class|const) ([A-Za-z_]\w*)/gm))exported.push(m[1]);
     for(const m of raw.matchAll(/^export (?:const )?\{([^}]+)\}/gm))exported.push(...m[1].split(',').map(x=>x.trim()));
@@ -26,6 +26,9 @@ export function systemBundle() {
   }
   const corpus=read('checkpoint-system-corpus.json');sources['checkpoint-system-corpus.json']=hash(corpus);
   const page=read('checkpoint-system-page.mjs');sources['checkpoint-system-page.mjs']=hash(page);
+  const consumer=read('consumer-corpus.json'),consumerPage=read('consumer-page.mjs');
+  sources['consumer-corpus.json']=hash(consumer);sources['consumer-page.mjs']=hash(consumerPage);
+  script+=`const CONSUMER_CORPUS=${consumer.trim()};\n(()=>{${consumerPage}})();\n`;
   script+=`const SYSTEM_CORPUS=${corpus.trim()};\n${page}\n})();\n`;
   return `/* System source bindings: ${JSON.stringify(sources)} */\n${script}`;
 }

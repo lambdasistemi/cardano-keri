@@ -375,6 +375,19 @@
 <div id="hud" aria-live="polite"></div>
 <div id="toast" role="status"></div>
 <main>
+  <details class="card wide" id="consumer-player">
+    <summary>The treasury checks Alice's exact holding</summary>
+    <p>The treasury fixes its network, release, registry seed and Alice's AID before seeing a candidate. Follow registration through rotations, parked custody, revival and the consuming termination fold. Change one candidate field to see why it is refused.</p>
+    <div class="stagebar"><button id="consumer-reset" type="button">Registration</button><button id="consumer-prev" type="button">Previous</button><button id="consumer-next" type="button">Next</button><span id="consumer-position"></span></div>
+    <p id="consumer-story"></p><p id="consumer-result" role="status"></p>
+    <dl id="consumer-summary"></dl>
+    <label for="consumer-case">Try a candidate at maturity</label> <select id="consumer-case"><option value="">Return to the connected journey</option></select>
+    <p id="consumer-limit">These are finite model observations. References after registration are fixture observations; a current ledger observer is still required. This is not a Cardano byte decoder or production conformance evidence. Not for mainnet.</p>
+    <details><summary>The treasury's fixed context and exact asset</summary><pre id="consumer-context" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre></details>
+    <details><summary>Inspect the candidate or try a changed holding</summary><p>The trusted context and interpretation remain fixed. Edit only the holding below. Unsupported input is reported separately from refusal.</p><textarea id="consumer-holding" aria-label="candidate holding JSON" style="width:100%;min-height:12rem;box-sizing:border-box"></textarea><button id="consumer-try" type="button">Check holding</button></details>
+    <details><summary>Sampled consumer property ledger</summary><p>Each row checks a finite witness from this complete journey and its candidate controls. Universal statements are proved in Lean; production conformance remains open.</p><pre id="consumer-properties" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre></details>
+    <details><summary>Connected state and transaction evidence</summary><pre id="consumer-evidence" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:28rem;overflow:auto"></pre></details>
+  </details>
   <details class="card" id="system-player">
     <summary>Connected system journeys <small>Registration receipt → retained output → pending request → consuming fold</small></summary>
     <p>Play the actual system events with their fixed registration origin and complete transaction observations. The local stories below show the Checkpoint Step facet. These finite examples do not establish production conformance.</p>
@@ -1768,6 +1781,7 @@ const _playStory = playStory;
 const _playLoadedScenario = playLoadedScenario;
 playStory = function(n) {
   adoptTree(_playStory(n));
+  if (window.CKC) window.CKC.show(String(n) === "11");
   app.story = SCENARIOS.find(x => String(x.story) === String(n)) || app.story;
   app.challenge = null; app.pastPunch = false;
   if ($('pots')) $('pots').open = false;

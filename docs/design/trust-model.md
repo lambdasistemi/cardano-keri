@@ -1,6 +1,8 @@
 # Trust model
 
-cardano-keri projects public KERI events into a Cardano checkpoint. KERI is
+A relying application wants to know which checkpoint it can trust, what the
+chain verifies, and what its own integration must establish. cardano-keri
+projects public KERI events into a Cardano checkpoint. KERI is
 Key Event Receipt Infrastructure; a KERI **AID** (Autonomic Identifier) has a
 signed **KEL** (Key Event Log). The chain does not discover KEL events by
 itself. It verifies the event evidence supplied in a transaction.
@@ -85,7 +87,7 @@ advance requires the type span to read `rot` and registration requires `icp`.
 
 The successor must satisfy `new.seq == spent.seq + 1` and
 `new.native_sn > spent.native_sn`. No superseding recovery exists on chain, and
-the accepted design does not add one (ruling D-022). KERI's superseding rule applies
+the accepted design does not add one. KERI's superseding rule applies
 to a rotation over an interaction, and interactions never reach the chain, so
 every recovery the checkpoint can express is a forward advance. The one
 scenario that would need a rollback is a thief who declined the winning move;
@@ -99,7 +101,7 @@ refund address. The transaction burns the checkpoint token and refunds the
 complete checkpoint value only to that address.
 
 !!! warning "Close changes in the accepted design"
-    Under ruling D-036, close is the **reap**: a witnessed rotation by
+    In the accepted model, close is the **reap**: a witnessed rotation by
     the *next* keys whose signed message names the payee and the refund
     address; the parked output retains the token, minimum ADA and key state,
     and the registry key stays active. That is what stops a
@@ -120,8 +122,7 @@ this is a residual rather than an inconvenience. A holder of some past epoch's
 keys can mint a second checkpoint and advance it exactly to their epoch.
 
 The registry of the accepted design removes this: one leaf per AID, an absence proof
-required to insert, and the token mint-once by construction (rulings D-024,
-D-037).
+required to insert, and the token mint-once by construction.
 
 ### Current-key theft
 
@@ -175,9 +176,9 @@ the checkpoint simulator, and unbuilt on chain.
 |---|---|
 | The keys move only by a rotation; the poison (the owner's own lock on the checkpoint) never moves them | a poison touches the poison bit and nothing else |
 | The poison is epoch-local | any witnessed rotation clears it, and only a poison sets it |
-| A poisoned checkpoint answers only to a rotation | no close, no second poison, no consumer authorization |
+| Poisoned checkpoints cannot authorize a consumer | the consumer rejects poison; a rotation clears it |
 | No present state is absorbing | the next-key holder can always rotate, with any bond option |
-| One incarnation per AID, ever | the registry insert needs an absence proof; the token mints once |
+| One incarnation per AID in the chosen registry | registration requires an unknown key; a retired key cannot register again |
 | Only conviction is terminal | a parked AID reopens on a rotation later than the parked key state |
 | `D_reg` is never a fee source | it leaves only at close or a conviction |
 | The pool never gates a transition | an unpaid rotation is still a valid rotation |
@@ -186,19 +187,43 @@ the checkpoint simulator, and unbuilt on chain.
 
 ### The consumer's predicate
 
-The one thing outside the machine. A consumer authorizes iff:
+A treasury fixes its intended network, published release, registry seed and
+AID independently of a candidate. The reviewed holding predicate requires
+matching validated network/release, the release's application credential,
+exactly one complete expected representative asset, and a decoded application
+datum for that AID. Its unchanged lifecycle condition then requires a present,
+unfrozen, unpoisoned state at least the juvenility window old.
 
-```text
-present ∧ D_reg full ∧ B full ∧ ¬poisoned ∧ now − born_at ≥ W
-        ∧ the payment's own signature satisfies the current threshold
+```mermaid
+flowchart TD
+  T["Treasury fixes identity"] -->|then| E["Resolve network<br/>and release"]
+  E -->|then| O["Observe current output"]
+  O -->|compare| V["Exact identity<br/>and eligible state"]
+  V -->|result| P["All pass: payment check<br/>Any fail: refusal"]
 ```
 
-and, once validity ships, `now ≤ valid_until`. It fails closed on absent,
-frozen, poisoned, juvenile, convicted and parked. **Frozen** is a
-value-level fact, not a flag: a frozen checkpoint is missing `B`.
+The output cannot select the context against which it is authenticated.
+[Exact consumer identity](consumer-identity.md) binds the actual pinned
+Singular State/Active declarations, finite naming premises, registration
+bridge and model evidence. The [consumer checklist](../user/consumer-checklist.md)
+explains the complete integration rule.
 
-What the predicate cannot know is whether the owner rotated on KERI an hour ago
-and no hunter has landed it yet. That is what the pool is for.
+Parking and pending conviction retain custody but refuse consumption. Revival
+is local and starts a fresh juvenility window. Permanent retirement requires
+the matching actual terminal fold. Another registry may register the same AID;
+its holding still fails the original treasury's context.
+
+The model's present/unfrozen state represents full bonds. A real decoder and
+observer must establish that those fields correspond to the same output's
+physical value. The holding predicate and `realizesState` do not validate
+current unspentness. Network/release discovery, byte encodings and faithful
+observation remain explicit implementation obligations. The payment's own
+threshold check is separate, and no checkpoint expiry field is modeled.
+
+The consumer implementation remains unaccepted until both real implementation
+properties and a connected ledger-boundary journey execute. Lean proofs and
+simulator replay count as neither production layer. A consumer still cannot
+know from this state alone whether an unseen KERI rotation has occurred.
 
 ## Trust and responsibility boundaries
 
@@ -242,8 +267,9 @@ donation. Removing the residual would mean removing the relayer.
 
 ### Indexers
 
-An indexer maps the AID-derived policy and asset name to a candidate UTxO
-reference. The consuming transaction revalidates the token, script, datum,
+In the redesigned consumer, an indexer locates candidates for the independently
+chosen complete registry and AID context. It does not choose the expected
+asset or release. The consuming transaction revalidates the token, script, datum,
 AID, sequence, and state against the ledger.
 
 A stale reference points to a spent output and rejects. A false reference does
@@ -251,10 +277,11 @@ not match. An unavailable indexer affects liveness only.
 
 ### The registry
 
-Registrations, reopens, closes and convictions are requests that anyone may
-apply in batches; a stalled registry delays them and forges nothing. Rotations,
-poisons, freezes and top-ups never touch it, so an identity's ordinary life
-does not depend on it at all. Consumers never touch it.
+Registration and terminal completion use actual registry folds. Parking,
+revival, rotations, poison, freezing and top-ups are local Checkpoint
+transitions. Pending custody remains until its recorded request is consumed
+by a matching fold. The consumer authenticates the holding against its fixed
+registry identity; it need not spend the registry state.
 
 ### Full KEL history
 
@@ -284,12 +311,12 @@ The **Result** column marks whether the response ships today or is designed.
 | Roll the checkpoint back to an earlier sequence | Reject: the sequence is strictly increasing | shipped |
 | Authorize a value operation with stolen current keys | **No rejection is available** — those keys are the current authority | shipped |
 | Close the checkpoint with stolen current keys | **No rejection is available today** — close is a current-controller operation | shipped |
-| Same, under the accepted design | Reject: close is a rotation and needs the next keys (D-036) | designed |
+| Same, under the accepted design | Reject: close is a rotation and needs the next keys | designed |
 | Register a second checkpoint for one AID | **No rejection is available today** | shipped |
 | Same, under the accepted design | Reject: the registry insert needs an absence proof | designed |
-| A relayer parks, ages, or closes the owner using her public rotation | Reject: the intent is unsigned by the new keys (D-038) | designed |
-| One stolen member key of a multisig poisons the identity | Reject: the poison is evaluated at the current threshold (D-023) | designed |
-| Poison an already-poisoned epoch, or close from one | Reject: only a rotation leaves a poisoned state | designed |
+| A relayer parks, ages, or closes the owner using her public rotation | Reject: the intent is unsigned by the new keys | designed |
+| One stolen member key of a multisig poisons the identity | Reject: the poison is evaluated at the current threshold | designed |
+| Authorize a payment from a poisoned checkpoint | Reject: the consumer requires an unpoisoned state | designed |
 | Take `D_reg` without a duplicity proof | Reject: `D_reg` is never a fee source | designed |
 | Freeze an identity whose pool pays | Reject: the freeze requires `pool < P` | designed |
 | Convict without two witnessed rotations at one sequence | Reject: the proof needs the tip's own keys and `toad` receipts on both | designed |

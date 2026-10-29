@@ -1,0 +1,114 @@
+\documentclass[12pt]{article}
+\usepackage[paperwidth=8.5in,paperheight=9in,margin=0.55in]{geometry}
+\usepackage{amsmath,amssymb}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{7pt}
+\begin{document}
+\begin{center}
+{\Large\bfseries From observations to freshness}\\[4pt]
+{Research definitions for one chosen identity and history}
+\end{center}
+
+For a supplied finite event set $E$, let $s_e$ be an event's sequence,
+$p_e$ its publication time, and $a_e$ its evidence-availability time.
+Only events with both times known and already reached contribute:
+\[
+ E_t=\{e\in E\mid p_e\text{ and }a_e\text{ known},\ p_e\le t,\ a_e\le t\},
+ \qquad F_E(t)=\max_{e\in E_t}s_e\quad(E_t\ne\varnothing).
+\]
+The empty set yields \emph{unknown}, not sequence zero.
+If the chain projects sequence $c$, the supported observed lag is
+\[
+ L(c,F)=
+ \begin{cases}
+ F-c & c\le F,\\
+ \text{ahead of observation }(c,F) & c>F.
+ \end{cases}
+\]
+Missing projection, unknown observations and unsupported observations have
+separate results. Example: $F=3$, $c=1$ gives $L=2$ events.
+Zero observed lag does not rule out hidden events.
+
+For one event with publication time $p_e$ and inclusion time $t_e$,
+\[
+ D(e,t_e)=t_e-p_e\qquad\text{when }p_e\text{ is known and }p_e\le t_e.
+\]
+Otherwise delay is undefined. Event counts and time are different units.
+Consumer maturity is another property:
+\[
+ \mathrm{eligible}(s,t)\quad\not\Rightarrow\quad L(s,F_E(t))=0.
+\]
+The draft exhibits an eligible checkpoint three events behind its observation.
+
+\textbf{Mirror obligation.} For registry $r$ and revocation identifier $x$,
+coverage means that $r$ exists and its stored revoked set contains $x$.
+Completeness quantifies over valid anchored revocation seal walks:
+\[
+ \text{valid anchored revocation walk for }x\text{ in }r
+ \ \Longrightarrow\ \mathrm{Covered}(r,x).
+\]
+This is a proposed coverage requirement, not a completeness result established
+by the checkpoint metric. The draft proves no composition or independence of
+the two models.
+
+\textbf{Lean map:} \texttt{frontierFrom}, \texttt{sequenceLag},
+\texttt{projectionDelay}, \texttt{eligible},\\
+\texttt{RevocationCovered},
+\texttt{MirrorComplete}. Observations and their authenticity/completeness
+remain supplied research inputs.
+
+\newpage
+\begin{center}
+{\Large\bfseries Three conditional research claims}\\[4pt]
+{All three Lean statements are intentionally unproved}
+\end{center}
+
+\textbf{Accounting definition.} For one agent and a fixed horizon,
+\[
+ U=R+P_{\rm returned}+P_{\rm terminal}
+       -P_{\rm committed}-F_{\rm sponsor}-C.
+\]
+$C$ sums monitoring, success, failure, racing, locked-capital and manufacturing
+costs. Principal returned against equal principal committed is not profit.
+Units, costs, control of addresses and terminal valuation are research choices.
+
+\textbf{C1: submit versus stop.} Restrict to a lawful keep rotation without
+refund change, with both choices feasible. Its account has no capital input:
+\[
+ U_{\rm submit}=r-C,\qquad U_{\rm stop}=0,
+ \qquad r>C\ \Longrightarrow\ U_{\rm submit}>U_{\rm stop}.
+\]
+$r$ is the actual addressed rotation premium. Example: $10-3=7$;
+with costs $12$, utility is $-2$. This comparison proves neither equilibrium
+nor timely submission. Lean: \texttt{C1\_submit\_over\_stop}.
+
+\textbf{C2: compose separate delay bounds.} For a lawful included event with
+ordered publication, observation, submission and inclusion times,
+\[
+ t_o\le t_p+\delta_o,\quad
+ t_s\le t_o+\delta_s,\quad
+ t_i\le t_s+\delta_i
+ \quad\Longrightarrow\quad
+ t_i-t_p\le\delta_o+\delta_s+\delta_i.
+\]
+Each bound needs its own justification. Inclusion is already a premise;
+this is not a liveness guarantee. Lean: \texttt{C2\_delay\_composition}.
+
+\textbf{C3: finite funded service.} For an actual trace containing only
+rotations and pool top-ups, fixed premium $P>0$, initial pool $Q_0$,
+total added funding $T$, and budget $B$,
+\[
+ Q_0+T\le B
+ \quad\Longrightarrow\quad
+ \sum_j r_j\le B\quad\land\quad N_{\rm paid}P\le B.
+\]
+This bounds premium spending and paid rotations, not all costs or unpaid
+progress. Example: $Q_0=20$, $P=10$, $T=0$ supports two paid updates.
+Lean: \texttt{C3\_funded\_work\_bound}.
+
+\textbf{Discussion target.} Choose the service metric, justify observations
+and costs, model competition and funding renewal, then strengthen or replace
+these statements. The Lean types are authoritative for their exact premises;
+these formulas are their reading guide.
+\end{document}

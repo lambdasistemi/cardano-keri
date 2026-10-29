@@ -1,0 +1,36 @@
+---
+config:
+  layout: elk
+  theme: base
+  themeVariables:
+    primaryColor: "#ffffff"
+    primaryBorderColor: "#333333"
+    primaryTextColor: "#1a1a1a"
+    lineColor: "#333333"
+    edgeLabelBackground: "#e6e6e6"
+    fontFamily: "Inter, Helvetica, Arial, sans-serif"
+    fontSize: "15px"
+  elk:
+    nodePlacementStrategy: BRANDES_KOEPF
+    mergeEdges: false
+---
+flowchart TB
+  S["Sponsor"] -->|funds| P["Premium pool<br/>finite budget"]
+  C["Controller"] -->|publishes| E["Events and evidence"]
+  E -->|observed by| M["Monitor / submitter"]
+  M -->|attempts update| I["Chain inclusion<br/>timing is an assumption"]
+  I -->|lawful update| K["Checkpoint advances"]
+  K -->|paid branch| R["Addressed premium"]
+  P -->|funds reward| R
+  R -->|revenue| U["Submitter utility<br/>reward minus attributed costs"]
+  M -. monitoring / attempts .-> U
+  classDef sponsor fill:#fff9e0,stroke:#333333,color:#1a1a1a
+  classDef controller fill:#fdf1ff,stroke:#333333,color:#1a1a1a
+  classDef submitter fill:#efefff,stroke:#333333,color:#1a1a1a
+  classDef chain fill:#eefcf9,stroke:#333333,color:#1a1a1a
+  classDef result fill:#fff4e8,stroke:#333333,color:#1a1a1a
+  class S,P sponsor
+  class C,E controller
+  class M submitter
+  class I,K chain
+  class R,U result

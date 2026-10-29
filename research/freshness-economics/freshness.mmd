@@ -1,0 +1,34 @@
+---
+config:
+  layout: elk
+  theme: base
+  themeVariables:
+    primaryColor: "#ffffff"
+    primaryBorderColor: "#333333"
+    primaryTextColor: "#1a1a1a"
+    lineColor: "#333333"
+    edgeLabelBackground: "#e6e6e6"
+    fontFamily: "Inter, Helvetica, Arial, sans-serif"
+    fontSize: "15px"
+  elk:
+    nodePlacementStrategy: BRANDES_KOEPF
+    mergeEdges: false
+---
+flowchart TB
+  subgraph C["Checkpoint freshness"]
+    direction TB
+    E["Published events<br/>with available evidence"] -->|sample| O["Observed frontier<br/>sequence 3"]
+    O --> L["Observed lag = 2 events"]
+    K["On-chain checkpoint<br/>sequence 1"] --> L
+  end
+  subgraph M["Revocation mirror"]
+    direction TB
+    A["Valid anchored revocation"] -->|push| R["Revocation mirror"]
+    R --> V["Is this revocation covered?"]
+  end
+  style C fill:#eefcf9,stroke:#6b9f93
+  style M fill:#e9f9fd,stroke:#6698a5
+  classDef source fill:#fdf1ff,stroke:#333333,color:#1a1a1a
+  classDef state fill:#ffffff,stroke:#333333,color:#1a1a1a
+  class E,A source
+  class O,L,K,R,V state

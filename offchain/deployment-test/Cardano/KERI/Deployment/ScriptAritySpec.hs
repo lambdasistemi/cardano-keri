@@ -814,6 +814,18 @@ groupBoundaries =
     , ("s0_maintenance_escrow.s0_maintenance_escrow", Unapplied s0MeasurementBoundary)
     , ("s0_reference_cursor_consumer.s0_reference_cursor_consumer", Unapplied s0MeasurementBoundary)
     , ("s0_staging_proof_token.s0_staging_proof_token", Unapplied s0MeasurementBoundary)
+    ,
+        ( "consumer_example.consumer_example"
+        , Unapplied
+            "example consumer for tests: applied by the local-chain \
+            \specification only, no published deployment identity"
+        )
+    ,
+        ( "consumer_seed_policy.consumer_seed_policy"
+        , Unapplied
+            "test-only seeding policy (seeded holding, not a registration \
+            \journey): no published deployment identity"
+        )
     ]
 
 -- | S0 groups are measured raw skeletons, not published deployment identities.

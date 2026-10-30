@@ -743,7 +743,7 @@ check-flake-lock-guard:
 # --self-test) exercises the exact code this recipe runs, not a copy of it;
 # the guard's own INV-259-ASSERT caller-presence check requires this exact
 # invocation to remain in this recipe.
-ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
+ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken check-consumer-vectors ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
     ./scripts/check-flake-lock-guard.sh --assert-lock-unchanged
 
 # #478: clean exact-compiler build and public proposition controls, identical to CI.
@@ -754,6 +754,14 @@ check-singular-lean:
 # published Singular registry package, with interface controls; identical to CI.
 check-singular-aiken:
     cd aiken-singular-consumer && nix build --no-write-lock-file --no-link -L .#checks.x86_64-linux.aiken-singular-consumer
+
+# #343: regenerate the consumer corpus vectors from simulator/consumer-corpus.json.
+gen-consumer-vectors:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/consumer-vectors.mjs
+
+# #343: the committed consumer vectors are exactly what the corpus generates; identical to CI.
+check-consumer-vectors:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/consumer-vectors.mjs --check
 
 # Validate the offered-interface schemas and generate its MkDocs reference.
 check-offered-interface:

@@ -402,16 +402,6 @@ gen-advance-vectors:
 check-advance-vectors: gen-advance-vectors
     git diff --exit-code onchain/lib/cardano_keri/checkpoint/advance_vectors.ak
 
-# Generate #117 Close message/address/signature vectors from the Haskell model.
-gen-close-vectors:
-    mkdir -p onchain/lib/cardano_keri/checkpoint
-    cd offchain && nix develop --quiet --no-write-lock-file -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-close-vectors -- ../onchain/lib/cardano_keri/checkpoint/close_vectors.ak'
-    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/checkpoint/close_vectors.ak
-
-# Regenerate and reject any committed Haskell/Aiken Close vector drift.
-check-close-vectors: gen-close-vectors
-    git diff --exit-code onchain/lib/cardano_keri/checkpoint/close_vectors.ak
-
 # Regenerate the isolated #116 freeze-bond parity vectors from the Haskell
 # model. The generator is the sole source of wire bytes, role constants,
 # parameter verdicts, and raw deadline-boundary verdicts.
@@ -424,7 +414,7 @@ gen-freeze-bond-vectors:
 check-freeze-bond-vectors: gen-freeze-bond-vectors
     git diff --exit-code onchain/lib/cardano_keri/checkpoint/freeze_bond_vectors.ak
 
-# Regenerate the 17 Lean-theorem verdicts from the pure Haskell lifecycle
+# Regenerate the 14 Lean-theorem verdicts from the pure Haskell lifecycle
 # mirror. The generated Aiken module is never edited by hand.
 gen-lifecycle-trace-vectors:
     mkdir -p onchain/lib/cardano_keri/checkpoint
@@ -726,7 +716,7 @@ ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
-ci-offchain: build-offchain unit deployment-unit indexer-unit query-algebra-check local-write-path-check backend-check backend-transcript-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-close-vectors check-freeze-bond-vectors check-migration-types-vectors check-bounty-commitment-vectors check-bounty-entitlement-vectors check-lean-traceability check-blaster-identity-consistency check-version-remnant-sweep
+ci-offchain: build-offchain unit deployment-unit indexer-unit query-algebra-check local-write-path-check backend-check backend-transcript-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-freeze-bond-vectors check-migration-types-vectors check-bounty-commitment-vectors check-bounty-entitlement-vectors check-lean-traceability check-blaster-identity-consistency check-version-remnant-sweep
 
 # #259: shared flake-lock guard — declared/locked reconciliation, justfile +
 # workflow invocation guarding, and caller parity (INV-259-PARITY: required

@@ -150,9 +150,9 @@ spec = describe "#136 Register observer wire" $ do
                 , registrationEvidenceData evidence
                 ]
 
-    it "encodes the small Advance arm without changing Close constructor zero" $
+    it "encodes the small Advance arm at spend constructor zero" $
         advanceSpendRedeemerData
-            `shouldBe` Constr 1 []
+            `shouldBe` Constr 0 []
 
     it "forwards Advance evidence in the observer envelope for the named input" $
         advanceObserverRedeemerData
@@ -225,11 +225,11 @@ spec = describe "#136 Register observer wire" $ do
 
     it "encodes the thin Freeze arm without opening ClaimFreeze" $
         freezeSpendRedeemerData (BS.replicate 28 0x42)
-            `shouldBe` Constr 2 [B (BS.replicate 28 0x42)]
+            `shouldBe` Constr 1 [B (BS.replicate 28 0x42)]
 
-    it "opens only ClaimFreeze at constructor three with its payout index" $
+    it "opens only ClaimFreeze at constructor two with its payout index" $
         claimFreezeSpendRedeemerData 5
-            `shouldBe` Constr 3 [I 5]
+            `shouldBe` Constr 2 [I 5]
 
     it "forwards the exact Freeze proof under observer action two" $
         freezeObserverRedeemerData
@@ -300,10 +300,10 @@ spec = describe "#136 Register observer wire" $ do
                     ]
                 ]
 
-    it "keeps ConvictBurn at mint constructor two and names the checkpoint input" $
+    it "keeps ConvictBurn at mint constructor one and names the checkpoint input" $
         convictBurnRedeemerData (BS.replicate 32 0xf1) 11
             `shouldBe` Constr
-                2
+                1
                 [ Constr
                     0
                     [ B (BS.replicate 32 0xf1)
@@ -311,10 +311,10 @@ spec = describe "#136 Register observer wire" $ do
                     ]
                 ]
 
-    it "keeps Convict at spend constructor four with exact payout indices" $
+    it "keeps Convict at spend constructor three with exact payout indices" $
         convictSpendRedeemerData (BS.replicate 28 0x51) 3 7
             `shouldBe` Constr
-                4
+                3
                 [ B (BS.replicate 28 0x51)
                 , I 3
                 , I 7

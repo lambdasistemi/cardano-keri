@@ -8,21 +8,16 @@ module Cardano.KERI.AID.Checkpoint.LifecycleModelSpec (
     prop_bond_transfer_only_via_elapsed_window,
     prop_abandonment_pays_exactly_B,
     prop_frozen_implies_true_silence,
-    prop_close_lie_always_voidable,
-    prop_close_at_tip_unchallengeable,
     prop_current_state_is_quiet,
     prop_value_conservation,
     prop_value_conservation_trace,
     prop_convict_dominance,
     prop_tombstone_terminal_but_no_aid_bar,
     prop_replay_convergence,
-    prop_close_cycle_requires_elapsed_window,
 ) where
 
 import Cardano.KERI.AID.Checkpoint.LifecycleModel
 import Data.Either (fromRight, isLeft, isRight)
-import Data.List (findIndex)
-import Data.Maybe (fromMaybe)
 import Test.Hspec (Spec, describe, it)
 import Test.QuickCheck (
     Gen,
@@ -54,10 +49,6 @@ spec = describe "T116-R4 Lean lifecycle traceability" $ do
         property prop_abandonment_pays_exactly_B
     it "prop_frozen_implies_true_silence [monadic state-machine]" $
         property prop_frozen_implies_true_silence
-    it "prop_close_lie_always_voidable [direct]" $
-        property prop_close_lie_always_voidable
-    it "prop_close_at_tip_unchallengeable [direct]" $
-        property prop_close_at_tip_unchallengeable
     it "prop_current_state_is_quiet [direct]" $
         property prop_current_state_is_quiet
     it "prop_value_conservation [direct]" $
@@ -70,10 +61,8 @@ spec = describe "T116-R4 Lean lifecycle traceability" $ do
         property prop_tombstone_terminal_but_no_aid_bar
     it "prop_replay_convergence [monadic state-machine]" $
         property prop_replay_convergence
-    it "prop_close_cycle_requires_elapsed_window [monadic state-machine]" $
-        property prop_close_cycle_requires_elapsed_window
 
--- Eight trace/reachability goals use QuickCheck's monadic state-machine
+-- Seven trace/reachability goals use QuickCheck's monadic state-machine
 -- harness.  Each case is generated without global Arbitrary instances.
 
 prop_advance_totality :: Property
@@ -158,7 +147,7 @@ prop_replay_convergence :: Property
 prop_replay_convergence = monadicIO $ do
     p <- pick genParams
     eventCount <- pick (chooseInteger (1, 12))
-    let env = Env [0 .. eventCount - 1] False []
+    let env = Env [0 .. eventCount - 1] False
         txs = Tx 0 Register : [Tx k Advance | k <- [1 .. eventCount - 1]]
         result = runTrace p env 0 initConfig txs
     assertWith "active_advance_chain: replay reaches the KEL tip in N steps" $
@@ -167,21 +156,7 @@ prop_replay_convergence = monadicIO $ do
                 Right cfg -> state cfg == Active (eventCount - 1)
                 Left _ -> False
 
-prop_close_cycle_requires_elapsed_window :: Property
-prop_close_cycle_requires_elapsed_window = monadicIO $ do
-    CloseTraceCase{..} <- pick genCloseTrace
-    let result = runTrace ctParams ctEnv 0 initConfig ctTxs
-        finalIndex = fromMaybe (-1) (findIndex ((== FinalizeClose) . action) ctTxs)
-        preceding = if finalIndex > 0 then Just (ctTxs !! (finalIndex - 1)) else Nothing
-    assertWith "TraceFrom.step_at: finalize is immediately preceded by its elapsed closeIntent" $
-        isRight result
-            && case preceding of
-                Just intent ->
-                    action intent == CloseIntent ctRefund
-                        && slot intent + closeWindow ctParams <= slot (ctTxs !! finalIndex)
-                Nothing -> False
-
--- Nine per-transition goals use direct QuickCheck properties.
+-- Seven per-transition goals use direct QuickCheck properties.
 
 prop_adversarial_advance_is_progress :: Property
 prop_adversarial_advance_is_progress = forAll genAdvanceCase $ \AdvanceCase{..} ->
@@ -213,29 +188,16 @@ prop_abandonment_pays_exactly_B = forAll genClaimCase $ \ClaimCase{..} ->
                     && deposits (ledger cfg') == deposits (ledger ccConfig)
             Left _ -> False
 
-prop_close_lie_always_voidable :: Property
-prop_close_lie_always_voidable = forAll genClosingBehindCase $ \ClosingCase{..} ->
-    counterexample "behind Closing admits both challengeClose and direct advance" $
-        isRight (dispatch clParams clEnv clConfig (Tx clSlot (ChallengeClose clActor)))
-            && isRight (dispatch clParams clEnv clConfig (Tx clSlot Advance))
-
-prop_close_at_tip_unchallengeable :: Property
-prop_close_at_tip_unchallengeable = forAll genClosingAtTipCase $ \ClosingCase{..} ->
-    counterexample "at-tip Closing rejects both voids and finalizes after deadline" $
-        isLeft (dispatch clParams clEnv clConfig (Tx clSlot (ChallengeClose clActor)))
-            && isLeft (dispatch clParams clEnv clConfig (Tx clSlot Advance))
-            && isRight (dispatch clParams clEnv clConfig (Tx clDeadline FinalizeClose))
-
 prop_current_state_is_quiet :: Property
 prop_current_state_is_quiet = forAll genCurrentCase $ \CurrentCase{..} ->
-    let actions = actionUniverse curRefund
+    let actions = actionUniverse curActor
         admitted =
             [ act
             | act <- actions
             , isRight (dispatch curParams curEnv curConfig (Tx curSlot act))
             ]
-     in counterexample "at-tip fork-free Active admits only capability closeIntent" $
-            admitted == [CloseIntent curRefund]
+     in counterexample "at-tip fork-free Active admits nothing" $
+            null admitted
 
 prop_value_conservation :: Property
 prop_value_conservation = forAll genValidStep $ \ValidStep{..} ->
@@ -280,8 +242,8 @@ genAdvanceCase = do
     k <- genSeq
     t <- genSlot
     actor <- genAddr
-    source <- elements [Active k, Armed k actor (t + 1), Frozen k, Closing k actor t]
-    let env = Env [0 .. k + 1] False [k]
+    source <- elements [Active k, Armed k actor (t + 1), Frozen k]
+    let env = Env [0 .. k + 1] False
     pure (AdvanceCase p env (balancedConfig p source) (Tx t Advance) k)
 
 data ArmedWindowCase = ArmedWindowCase
@@ -301,7 +263,7 @@ genArmedWindowCase = do
     hunter <- genAddr
     fork <- elements [False, True]
     let s = Armed k hunter (t + 1)
-    pure (ArmedWindowCase p (Env [0 .. k + 1] fork [k]) (balancedConfig p s) t hunter)
+    pure (ArmedWindowCase p (Env [0 .. k + 1] fork) (balancedConfig p s) t hunter)
 
 data ClaimCase = ClaimCase
     { ccParams :: Params
@@ -321,42 +283,14 @@ genClaimCase = do
     delay <- chooseInteger (0, 20)
     hunter <- genAddr
     let s = Armed k hunter deadline
-    pure (ClaimCase p (Env [0 .. k + 1] False [k]) (balancedConfig p s) (Tx (deadline + delay) Claim) k hunter)
-
-data ClosingCase = ClosingCase
-    { clParams :: Params
-    , clEnv :: Env
-    , clConfig :: Config
-    , clSlot :: Slot
-    , clDeadline :: Slot
-    , clActor :: Addr
-    }
-    deriving stock (Show)
-
-genClosingBehindCase :: Gen ClosingCase
-genClosingBehindCase = genClosingCase True
-
-genClosingAtTipCase :: Gen ClosingCase
-genClosingAtTipCase = genClosingCase False
-
-genClosingCase :: Bool -> Gen ClosingCase
-genClosingCase isBehind = do
-    p <- genParams
-    k <- genSeq
-    t <- genSlot
-    wait <- chooseInteger (1, 20)
-    actor <- genAddr
-    let deadline = t + wait
-        events = if isBehind then [0 .. k + 1] else [0 .. k]
-        s = Closing k actor deadline
-    pure (ClosingCase p (Env events False [k]) (balancedConfig p s) t deadline actor)
+    pure (ClaimCase p (Env [0 .. k + 1] False) (balancedConfig p s) (Tx (deadline + delay) Claim) k hunter)
 
 data CurrentCase = CurrentCase
     { curParams :: Params
     , curEnv :: Env
     , curConfig :: Config
     , curSlot :: Slot
-    , curRefund :: Addr
+    , curActor :: Addr
     }
     deriving stock (Show)
 
@@ -365,7 +299,7 @@ genCurrentCase = do
     p <- genParams
     k <- genSeq
     t <- genSlot
-    CurrentCase p (Env [0 .. k] False [k]) (balancedConfig p (Active k)) t
+    CurrentCase p (Env [0 .. k] False) (balancedConfig p (Active k)) t
         <$> genAddr
 
 data ValidStep = ValidStep
@@ -382,25 +316,20 @@ genValidStep = do
     k <- genSeq
     t <- genSlot
     actor <- genAddr
-    which <- chooseInteger (0, 13)
-    let ahead = Env [0 .. k + 1] False [k]
+    which <- chooseInteger (0, 8)
+    let ahead = Env [0 .. k + 1] False
         forked = ahead{forkEvidence = True}
         mk env s act = ValidStep p env (balancedConfig p s) (Tx t act)
     pure $ case which of
-        0 -> ValidStep p (Env [0] False []) initConfig (Tx t Register)
+        0 -> ValidStep p (Env [0] False) initConfig (Tx t Register)
         1 -> mk ahead (Active k) Advance
         2 -> mk ahead (Armed k actor (t + 1)) Advance
         3 -> mk ahead (Frozen k) Advance
-        4 -> mk ahead (Closing k actor t) Advance
-        5 -> mk ahead (Active k) (Arm actor)
-        6 -> mk ahead (Armed k actor t) Claim
-        7 -> mk ahead (Active k) (CloseIntent actor)
-        8 -> mk ahead (Closing k actor t) (ChallengeClose (actor + 1))
-        9 -> mk ahead (Closing k actor t) FinalizeClose
-        10 -> mk forked (Active k) (Convict actor)
-        11 -> mk forked (Armed k (actor + 1) t) (Convict actor)
-        12 -> mk forked (Frozen k) (Convict actor)
-        _ -> mk forked (Closing k actor t) (Convict actor)
+        4 -> mk ahead (Active k) (Arm actor)
+        5 -> mk ahead (Armed k actor t) Claim
+        6 -> mk forked (Active k) (Convict actor)
+        7 -> mk forked (Armed k (actor + 1) t) (Convict actor)
+        _ -> mk forked (Frozen k) (Convict actor)
 
 data ConvictCase = ConvictCase
     { cvParams :: Params
@@ -415,7 +344,7 @@ genConvictCase :: Gen ConvictCase
 genConvictCase = do
     ValidStep{..} <- genValidStep
     actor <- genAddr
-    liveState <- elements [Active 0, Armed 0 actor 10, Frozen 0, Closing 0 actor 10]
+    liveState <- elements [Active 0, Armed 0 actor 10, Frozen 0]
     pure (ConvictCase vsParams vsEnv{forkEvidence = True} (balancedConfig vsParams liveState) (slot vsTx) actor)
 
 data TombstoneSystemCase = TombstoneSystemCase
@@ -440,7 +369,7 @@ genTombstoneSystemCase = do
         freshId = 2
         tombstone = balancedConfig p (Tombstone k)
         sys = Sys [(tombstoneId, tombstone), (freshId, initConfig)]
-    pure (TombstoneSystemCase p (Env [0 .. k + 1] True [k]) tombstone sys tombstoneId freshId t actor)
+    pure (TombstoneSystemCase p (Env [0 .. k + 1] True) tombstone sys tombstoneId freshId t actor)
 
 data AdvanceTotalityCase = AdvanceTotalityCase
     { atParams :: Params
@@ -457,9 +386,9 @@ genAdvanceTotalityCase = do
     k <- chooseInteger (0, 5)
     start <- genSlot
     actor <- genAddr
-    variant <- chooseInteger (0, 4)
+    variant <- chooseInteger (0, 3)
     past <- elements [False, True]
-    let env = Env [0 .. k + 1] False [0 .. k + 1]
+    let env = Env [0 .. k + 1] False
         prefix = Tx start Register : [Tx (start + n) Advance | n <- [1 .. k]]
         activeCfg = fromRight initConfig (runTrace p env start initConfig prefix)
         t = start + k + 1
@@ -469,7 +398,6 @@ genAdvanceTotalityCase = do
             2 -> do
                 armed <- dispatch p env activeCfg (Tx t (Arm actor))
                 dispatch p env armed (Tx (t + freezeWindow p) Claim)
-            3 -> dispatch p env activeCfg (Tx t (CloseIntent actor))
             _ -> Right activeCfg
         cfg = fromRight activeCfg staged
         chosenSlot = case state cfg of
@@ -505,7 +433,7 @@ genPermissionlessTrace = do
     rounds <- chooseInteger (2, 8)
     choices <- vectorOf (fromIntegral rounds) (elements [False, True])
     actor <- genAddr
-    let env = Env [0 .. rounds + 1] False []
+    let env = Env [0 .. rounds + 1] False
         build (t, accumulated) stall =
             if stall
                 then
@@ -536,14 +464,10 @@ genBountyTrace = do
     p <- genParams
     k <- chooseInteger (0, 5)
     hunter <- genAddr
-    viaChallenge <- elements [False, True]
-    let env = Env [0 .. k + 1] False [0 .. k]
+    let env = Env [0 .. k + 1] False
         prefix = Tx 0 Register : [Tx n Advance | n <- [1 .. k]]
         t = k + 1
-        arming =
-            if viaChallenge
-                then [Tx t (CloseIntent (hunter + 1)), Tx t (ChallengeClose hunter)]
-                else [Tx t (Arm hunter)]
+        arming = [Tx t (Arm hunter)]
         txs = prefix ++ arming ++ [Tx (t + freezeWindow p) Claim]
         armIndex = length prefix + length arming - 1
         claimIndex = length txs - 1
@@ -553,39 +477,19 @@ genMixedTrace :: Gen TraceCase
 genMixedTrace = do
     p <- genParams
     actor <- genAddr
-    fragment <- chooseInteger (0, 4)
-    let env = Env [0 .. 6] True [0 .. 6]
+    fragment <- chooseInteger (0, 2)
+    let env = Env [0 .. 6] True
         txs = case fragment of
             0 -> [Tx 0 Register, Tx 1 Advance, Tx 2 (Arm actor), Tx (2 + freezeWindow p) Claim, Tx (2 + freezeWindow p) Advance]
-            1 -> [Tx 0 Register, Tx 1 (CloseIntent actor), Tx (1 + closeWindow p) FinalizeClose, Tx (1 + closeWindow p) Register]
-            2 -> [Tx 0 Register, Tx 1 (CloseIntent actor), Tx 1 (ChallengeClose (actor + 1)), Tx (1 + freezeWindow p) Claim]
-            3 -> [Tx 0 Register, Tx 1 Advance, Tx 2 (Convict actor)]
+            1 -> [Tx 0 Register, Tx 1 Advance, Tx 2 (Convict actor)]
             _ -> [Tx 0 Register, Tx 1 (Arm actor), Tx 1 (Convict (actor + 1))]
     pure (TraceCase p env txs)
 
-data CloseTraceCase = CloseTraceCase
-    { ctParams :: Params
-    , ctEnv :: Env
-    , ctTxs :: [Tx]
-    , ctRefund :: Addr
-    }
-    deriving stock (Show)
-
-genCloseTrace :: Gen CloseTraceCase
-genCloseTrace = do
-    p <- genParams
-    refund <- genAddr
-    t <- chooseInteger (1, 20)
-    let env = Env [0] False [0]
-        txs = [Tx 0 Register, Tx t (CloseIntent refund), Tx (t + closeWindow p) FinalizeClose]
-    pure (CloseTraceCase p env txs refund)
-
 progressTx :: Params -> Env -> Slot -> Config -> Tx
 progressTx _p _env t cfg = case state cfg of
-    Active k -> Tx t (CloseIntent (k + 100))
+    Active _ -> Tx t Advance
     Armed _ _ deadline -> Tx (max t deadline) Claim
     Frozen _ -> Tx t Advance
-    Closing _ _ deadline -> Tx (max t deadline) FinalizeClose
     Absent -> Tx t Register
     Tombstone _ -> Tx t Register
 
@@ -595,9 +499,6 @@ actionUniverse actor =
     , Advance
     , Arm actor
     , Claim
-    , CloseIntent actor
-    , ChallengeClose actor
-    , FinalizeClose
     , Convict actor
     ]
 
@@ -611,7 +512,6 @@ genParams :: Gen Params
 genParams =
     Params
         <$> chooseInteger (1, 20)
-        <*> chooseInteger (1, 20)
         <*> chooseInteger (1, 20)
         <*> chooseInteger (1, 20)
         <*> chooseInteger (1, 20)

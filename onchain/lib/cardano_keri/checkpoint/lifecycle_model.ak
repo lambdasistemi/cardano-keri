@@ -12,13 +12,11 @@ pub type Params {
   deposit: Int,
   bond: Int,
   freeze_window: Int,
-  close_window: Int,
 }
 
 pub type Env {
   kel_tip: Int,
   fork_evidence: Bool,
-  close_capabilities: List<Int>,
 }
 
 pub type MachState {
@@ -26,14 +24,12 @@ pub type MachState {
   Active(Int)
   Armed(Int, Int, Int)
   Frozen(Int)
-  Closing(Int, Int, Int)
   Tombstone(Int)
 }
 
 pub type TransferKind {
   Bounty
   Forfeiture
-  Refund
 }
 
 pub type Transfer {
@@ -57,9 +53,6 @@ pub type Action {
   Advance
   Arm(Int)
   Claim
-  CloseIntent(Int)
-  ChallengeClose(Int)
-  FinalizeClose
   Convict(Int)
 }
 
@@ -85,7 +78,6 @@ pub fn carried(params: Params, state: MachState) -> Int {
     Active(_) -> params.min_ada + params.deposit + params.bond
     Armed(_, _, _) -> params.min_ada + params.deposit + params.bond
     Frozen(_) -> params.min_ada + params.deposit
-    Closing(_, _, _) -> params.min_ada + params.deposit + params.bond
     Tombstone(_) -> params.min_ada
   }
 }
@@ -178,23 +170,6 @@ pub fn advance_frozen(
   }
 }
 
-pub fn advance_closing(
-  _params: Params,
-  env: Env,
-  config: Config,
-  tx: Tx,
-) -> Option<Config> {
-  when config.state is {
-    Closing(sequence, _, _) ->
-      if tx.action == Advance && behind(env, sequence) {
-        Some(Config { ..config, state: Active(sequence + 1) })
-      } else {
-        None
-      }
-    _ -> None
-  }
-}
-
 pub fn arm(params: Params, env: Env, config: Config, tx: Tx) -> Option<Config> {
   when Pair(config.state, tx.action) is {
     Pair(Active(sequence), Arm(hunter)) ->
@@ -233,84 +208,6 @@ pub fn claim(
                     destination: hunter,
                     amount: params.bond,
                     kind: Bounty,
-                  },
-                ],
-              ),
-            },
-          },
-        )
-      } else {
-        None
-      }
-    _ -> None
-  }
-}
-
-pub fn close_intent(
-  params: Params,
-  env: Env,
-  config: Config,
-  tx: Tx,
-) -> Option<Config> {
-  when Pair(config.state, tx.action) is {
-    Pair(Active(sequence), CloseIntent(refund)) ->
-      if list.has(env.close_capabilities, sequence) {
-        Some(
-          Config {
-            ..config,
-            state: Closing(sequence, refund, tx.slot + params.close_window),
-          },
-        )
-      } else {
-        None
-      }
-    _ -> None
-  }
-}
-
-pub fn challenge_close(
-  params: Params,
-  env: Env,
-  config: Config,
-  tx: Tx,
-) -> Option<Config> {
-  when Pair(config.state, tx.action) is {
-    Pair(Closing(sequence, _, _), ChallengeClose(challenger)) ->
-      if behind(env, sequence) {
-        Some(
-          Config {
-            ..config,
-            state: Armed(sequence, challenger, tx.slot + params.freeze_window),
-          },
-        )
-      } else {
-        None
-      }
-    _ -> None
-  }
-}
-
-pub fn finalize_close(
-  params: Params,
-  _env: Env,
-  config: Config,
-  tx: Tx,
-) -> Option<Config> {
-  when config.state is {
-    Closing(_, refund, deadline) ->
-      if tx.action == FinalizeClose && deadline <= tx.slot {
-        Some(
-          Config {
-            state: Absent,
-            ledger: Ledger {
-              ..config.ledger,
-              outflows: list.concat(
-                config.ledger.outflows,
-                [
-                  Transfer {
-                    destination: refund,
-                    amount: params.min_ada + params.deposit + params.bond,
-                    kind: Refund,
                   },
                 ],
               ),
@@ -405,36 +302,6 @@ pub fn convict_frozen(
   }
 }
 
-pub fn convict_closing(
-  params: Params,
-  env: Env,
-  config: Config,
-  tx: Tx,
-) -> Option<Config> {
-  when Pair(config.state, tx.action) is {
-    Pair(Closing(sequence, _, _), Convict(convictor)) ->
-      convict_with(
-        params,
-        env,
-        config,
-        sequence,
-        [
-          Transfer {
-            destination: convictor,
-            amount: params.deposit,
-            kind: Forfeiture,
-          },
-          Transfer {
-            destination: convictor,
-            amount: params.bond,
-            kind: Forfeiture,
-          },
-        ],
-      )
-    _ -> None
-  }
-}
-
 fn convict_with(
   _params: Params,
   env: Env,
@@ -468,19 +335,11 @@ pub fn dispatch(
     Pair(Active(_), Advance) -> advance_active(params, env, config, tx)
     Pair(Armed(_, _, _), Advance) -> advance_armed(params, env, config, tx)
     Pair(Frozen(_), Advance) -> advance_frozen(params, env, config, tx)
-    Pair(Closing(_, _, _), Advance) -> advance_closing(params, env, config, tx)
     Pair(Active(_), Arm(_)) -> arm(params, env, config, tx)
     Pair(Armed(_, _, _), Claim) -> claim(params, env, config, tx)
-    Pair(Active(_), CloseIntent(_)) -> close_intent(params, env, config, tx)
-    Pair(Closing(_, _, _), ChallengeClose(_)) ->
-      challenge_close(params, env, config, tx)
-    Pair(Closing(_, _, _), FinalizeClose) ->
-      finalize_close(params, env, config, tx)
     Pair(Active(_), Convict(_)) -> convict_active(params, env, config, tx)
     Pair(Armed(_, _, _), Convict(_)) -> convict_armed(params, env, config, tx)
     Pair(Frozen(_), Convict(_)) -> convict_frozen(params, env, config, tx)
-    Pair(Closing(_, _, _), Convict(_)) ->
-      convict_closing(params, env, config, tx)
     _ -> None
   }
 }

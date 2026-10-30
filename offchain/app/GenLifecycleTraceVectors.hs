@@ -3,7 +3,7 @@ Module      : Main
 Description : Haskell-to-Aiken theorem verdict vectors for T116-R4
 
 Emits deterministic verdicts computed by the pure lifecycle mirror.  The
-generated Aiken module is the parity boundary consumed by the 17 mechanically
+generated Aiken module is the parity boundary consumed by the 14 mechanically
 named Aiken tests.
 -}
 module Main (main) where
@@ -45,15 +45,12 @@ theoremVerdicts =
     , ("bond_transfer_only_via_elapsed_window", bondTransferOnlyViaElapsedWindow)
     , ("abandonment_pays_exactly_B", abandonmentPaysExactlyB)
     , ("frozen_implies_true_silence", frozenImpliesTrueSilence)
-    , ("close_lie_always_voidable", closeLieAlwaysVoidable)
-    , ("close_at_tip_unchallengeable", closeAtTipUnchallengeable)
     , ("current_state_is_quiet", currentStateIsQuiet)
     , ("value_conservation", valueConservation)
     , ("value_conservation_trace", valueConservationTrace)
     , ("convict_dominance", convictDominance)
     , ("tombstone_terminal_but_no_aid_bar", tombstoneTerminalButNoAidBar)
     , ("replay_convergence", replayConvergence)
-    , ("close_cycle_requires_elapsed_window", closeCycleRequiresElapsedWindow)
     ]
 
 advanceTotality :: Bool
@@ -62,7 +59,12 @@ advanceTotality =
 
 noAbsorbingBusyState :: Bool
 noAbsorbingBusyState =
-    isRight (dispatch params tipEnv active1 (Tx 0 (CloseIntent refund)))
+    all
+        isRight
+        [ dispatch params aheadEnv active0 (Tx 0 Advance)
+        , dispatch params aheadEnv armed0 (Tx 10 Claim)
+        , dispatch params aheadEnv frozen0 (Tx 0 Advance)
+        ]
 
 adversarialAdvanceIsProgress :: Bool
 adversarialAdvanceIsProgress =
@@ -73,7 +75,7 @@ boundedChurn =
     isRight $
         runTrace
             params
-            (Env [0, 1, 2] False [])
+            (Env [0, 1, 2] False)
             0
             initConfig
             [ Tx 0 Register
@@ -88,7 +90,7 @@ armedExclusiveWindow =
     isRight (dispatch params aheadEnv armed0 (Tx 9 Advance))
         && all
             (isLeft . dispatch params aheadEnv armed0 . Tx 9)
-            [Register, Arm hunter, Claim, CloseIntent refund, ChallengeClose hunter, FinalizeClose]
+            [Register, Arm hunter, Claim]
 
 bondTransferOnlyViaElapsedWindow :: Bool
 bondTransferOnlyViaElapsedWindow = case claimResult of
@@ -107,23 +109,11 @@ frozenImpliesTrueSilence =
     slot (Tx 0 (Arm hunter)) + freezeWindow params <= slot (Tx 10 Claim)
         && fmap state claimResult == Right (Frozen 0)
 
-closeLieAlwaysVoidable :: Bool
-closeLieAlwaysVoidable =
-    isRight (dispatch params aheadEnv closing0 (Tx 0 (ChallengeClose hunter)))
-        && isRight (dispatch params aheadEnv closing0 (Tx 0 Advance))
-
-closeAtTipUnchallengeable :: Bool
-closeAtTipUnchallengeable =
-    isLeft (dispatch params tipEnv closing1 (Tx 20 (ChallengeClose hunter)))
-        && isLeft (dispatch params tipEnv closing1 (Tx 20 Advance))
-        && isRight (dispatch params tipEnv closing1 (Tx 20 FinalizeClose))
-
 currentStateIsQuiet :: Bool
 currentStateIsQuiet =
-    isRight (dispatch params tipEnv active1 (Tx 0 (CloseIntent refund)))
-        && all
-            (isLeft . dispatch params tipEnv active1 . Tx 0)
-            [Register, Advance, Arm hunter, Claim, ChallengeClose hunter, FinalizeClose, Convict hunter]
+    all
+        (isLeft . dispatch params tipEnv active1 . Tx 0)
+        [Register, Advance, Arm hunter, Claim, Convict hunter]
 
 valueConservation :: Bool
 valueConservation = case dispatch params aheadEnv initConfig (Tx 0 Register) of
@@ -144,13 +134,13 @@ convictDominance :: Bool
 convictDominance =
     all
         (\cfg -> isRight (dispatch params forkEnv cfg (Tx 0 (Convict hunter))))
-        [active0, armed0, frozen0, closing0]
+        [active0, armed0, frozen0]
 
 tombstoneTerminalButNoAidBar :: Bool
 tombstoneTerminalButNoAidBar =
     all
         (isLeft . dispatch params forkEnv tombstone0 . Tx 0)
-        [Register, Advance, Arm hunter, Claim, CloseIntent refund, ChallengeClose hunter, FinalizeClose, Convict hunter]
+        [Register, Advance, Arm hunter, Claim, Convict hunter]
         && case sysDispatch params aheadEnv system 2 (Tx 0 Register) of
             Right sys' ->
                 lookupInstance 1 sys' == Just tombstone0
@@ -163,42 +153,27 @@ replayConvergence =
         state
         ( runTrace
             params
-            (Env [0, 1, 2] False [])
+            (Env [0, 1, 2] False)
             0
             initConfig
             [Tx 0 Register, Tx 1 Advance, Tx 2 Advance]
         )
         == Right (Active 2)
 
-closeCycleRequiresElapsedWindow :: Bool
-closeCycleRequiresElapsedWindow =
-    isRight
-        ( runTrace
-            params
-            tipEnv
-            0
-            initConfig
-            [Tx 0 Register, Tx 1 (CloseIntent refund), Tx 21 FinalizeClose]
-        )
-        && 1 + closeWindow params <= 21
-
 params :: Params
-params = Params 2 5 3 10 20
+params = Params 2 5 3 10
 
 aheadEnv :: Env
-aheadEnv = Env [0, 1] False [0, 1]
+aheadEnv = Env [0, 1] False
 
 tipEnv :: Env
-tipEnv = Env [0, 1] False [0, 1]
+tipEnv = Env [0, 1] False
 
 forkEnv :: Env
-forkEnv = Env [0, 1] True [0, 1]
+forkEnv = Env [0, 1] True
 
 hunter :: Addr
 hunter = 7
-
-refund :: Addr
-refund = 8
 
 active0 :: Config
 active0 = balancedConfig (Active 0)
@@ -211,12 +186,6 @@ armed0 = balancedConfig (Armed 0 hunter 10)
 
 frozen0 :: Config
 frozen0 = balancedConfig (Frozen 0)
-
-closing0 :: Config
-closing0 = balancedConfig (Closing 0 refund 20)
-
-closing1 :: Config
-closing1 = balancedConfig (Closing 1 refund 20)
 
 tombstone0 :: Config
 tombstone0 = balancedConfig (Tombstone 0)

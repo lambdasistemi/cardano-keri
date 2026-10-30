@@ -20,7 +20,7 @@
 //// thaw from FROZEN. #116 R3 opens ACTIVE|ARMED|FROZEN Convict, routes the
 //// protected deposit and freeze bond by explicit output index, writes the
 //// exact terminal tombstone, and pre-dispatches every named input by
-//// role+datum; `Close` remains explicitly fail-closed before deployment.
+//// role+datum.
 
 use aiken/collection/dict
 use aiken/collection/list
@@ -79,8 +79,7 @@ pub type MintRedeemer {
 /// and runs V1-V7 (KERI rotation admission). `Freeze` carries the signed KERI
 /// wire evidence that opens ACTIVE -> ARMED; `ClaimFreeze` opens ARMED ->
 /// FROZEN; `Convict` carries the witnessed conflicting event, the convictor,
-/// and explicit payout indices for ACTIVE|ARMED|FROZEN -> TOMBSTONE. `Close`
-/// remains fail-closed.
+/// and explicit payout indices for ACTIVE|ARMED|FROZEN -> TOMBSTONE.
 pub type SpendRedeemer {
   Advance { evidence: AdvanceEvidence }
   Freeze {
@@ -96,7 +95,6 @@ pub type SpendRedeemer {
     hunter_output_index: Int,
     reveal: BountyRevealV1,
   }
-  Close
 }
 
 /// Exact named-input classification performed before any branch predicate.

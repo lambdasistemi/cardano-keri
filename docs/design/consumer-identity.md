@@ -184,10 +184,7 @@ checkpoint parameters, and it spends only if some reference input is a
 consumable holding for that context. The end-to-end specification
 (`ConsumerE2ESpec`) runs it on a local test chain: one transaction that
 references the eligible holding settles, and transactions that reference a
-rival registry's token, a holding of quantity two, a parked holding (a case
-the model no longer has since
-[#493](https://github.com/lambdasistemi/cardano-keri/issues/493); the test
-diverges until the off-chain follow-up), a holding with termination pending, and a retired holding (convicted, and absent) are
+rival registry's token, a holding of quantity two, a holding with termination pending, and a retired holding (convicted, and absent) are
 rejected when the consumer script evaluates false. Each refusal carries no
 other script and passes the ledger rules, so the rejection is the consumer's
 own verdict.

@@ -54,11 +54,11 @@ registerObserverRedeemerData checkpointPolicy evidence =
         , registrationEvidenceData evidence
         ]
 
-{- | The small checkpoint validator keeps @Close@ at index zero and opens the
-thin, evidence-free @Advance@ arm at index one.
+{- | The small checkpoint validator's thin, evidence-free @Advance@ arm is
+constructor index zero.
 -}
 advanceSpendRedeemerData :: Data
-advanceSpendRedeemerData = Constr 1 []
+advanceSpendRedeemerData = Constr 0 []
 
 {- | The dedicated Advance observer envelope: action one, checkpoint policy,
 the named spent output reference, and the unchanged rotation evidence.
@@ -102,34 +102,33 @@ advanceObserverRedeemerDataWithAction action checkpointPolicy spentTxId spentInd
         , advanceEvidenceData evidence
         ]
 
-{- | The small checkpoint keeps @Close@ at index zero and @Advance@ at index
-one. Story #137 opens only the thin @Freeze { hunter_pkh }@ constructor at
-index two; @ClaimFreeze@ remains absent and therefore fail-closed.
+{- | The small checkpoint opens the thin @Freeze { hunter_pkh }@ constructor at
+index one, after @Advance@ at index zero.
 -}
 freezeSpendRedeemerData :: ByteString -> Data
-freezeSpendRedeemerData hunterPkh = Constr 2 [B hunterPkh]
+freezeSpendRedeemerData hunterPkh = Constr 1 [B hunterPkh]
 
 {- | Story #138 opens only @ClaimFreeze { hunter_output_index }@ at
-constructor index three. The index names the exact hunter payout output.
+constructor index two. The index names the exact hunter payout output.
 -}
 claimFreezeSpendRedeemerData :: Integer -> Data
 claimFreezeSpendRedeemerData hunterOutputIndex =
-    Constr 3 [I hunterOutputIndex]
+    Constr 2 [I hunterOutputIndex]
 
-{- | Conviction burns the token under mint constructor two and names the exact
+{- | Conviction burns the token under mint constructor one and names the exact
 checkpoint input.
 -}
 convictBurnRedeemerData :: ByteString -> Integer -> Data
 convictBurnRedeemerData spentTxId spentIndex =
-    Constr 2 [Constr 0 [B spentTxId, I spentIndex]]
+    Constr 1 [Constr 0 [B spentTxId, I spentIndex]]
 
-{- | Conviction is spend constructor four; evidence remains in the isolated
+{- | Conviction is spend constructor three; evidence remains in the isolated
 observer envelope.
 -}
 convictSpendRedeemerData :: ByteString -> Integer -> Integer -> Data
 convictSpendRedeemerData convictorPkh convictorOutputIndex hunterOutputIndex =
     Constr
-        4
+        3
         [ B convictorPkh
         , I convictorOutputIndex
         , I hunterOutputIndex

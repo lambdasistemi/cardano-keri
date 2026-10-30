@@ -18,7 +18,7 @@ use cardano/transaction.{
 }
 use cardano_keri/consumer.{
   Absent, Context, Convicted, DecodedDatum, Environment, Hash, Live, Params,
-  Parked, Present, PublishedRelease, State, TerminationPending, Token,
+  Present, PublishedRelease, State, TerminationPending, Token,
   authenticated_context, consumable_holding, consumable_state, registry_asset,
   representative_asset,
 }
@@ -221,7 +221,6 @@ fn lifecycle_states() -> List<(State, Bool)> {
   [
     (Absent, False),
     (Convicted, False),
-    (Parked(Hash { epoch: 0, sn: 0 }), False),
     (TerminationPending(Hash { epoch: 1, sn: 3 }), False),
     (live_with(False, False, 2), True),
     (live_with(False, False, 1), True),
@@ -468,7 +467,7 @@ test ci11_ineligible_state_refused() {
 }
 
 // ---------------------------------------------------------------------
-// CI12: parked or pending termination, at any time
+// CI12: pending termination, at any time
 // ---------------------------------------------------------------------
 
 test ci12_retained_custody_refused() {
@@ -479,9 +478,7 @@ test ci12_retained_custody_refused() {
     fn(now) {
       refuses_all(
         [
-          with_now(with_state(q, Parked(h)), now),
           with_now(with_state(q, TerminationPending(h)), now),
-          with_w(with_now(with_state(q, Parked(h)), now), 0),
           with_w(with_now(with_state(q, TerminationPending(h)), now), 0),
         ],
       )

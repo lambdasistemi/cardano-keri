@@ -23,8 +23,6 @@ use cardano_keri/checkpoint/advance.{
   AdvanceEvidence, AdvancePredicateValid, advance_predicate,
 }
 use cardano_keri/checkpoint/advance_vectors as advance_vec
-use cardano_keri/checkpoint/close.{CloseEvidence}
-use cardano_keri/checkpoint/close_vectors as close_vec
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
 use cardano_keri/checkpoint/enforcement.{EnforcementEvidence}
 use cardano_keri/checkpoint/enforcement_vectors as enforcement_vec
@@ -54,7 +52,7 @@ use cardano_keri/migration/types.{
 use checkpoint.{Freeze as SplitFreeze}
 use checkpoint_observer
 use checkpoint_register.{
-  Advance, ClaimFreeze, Close, CloseBurn, Convict, ConvictBurn, Freeze, Register,
+  Advance, ClaimFreeze, Convict, ConvictBurn, Freeze, Register,
 }
 
 /// The applied network these fixtures deploy under, matching the `network_id`
@@ -218,83 +216,6 @@ test lifecycle_observer_deregistration_fails_closed() fail {
     UnregisterCredential { credential: Script(lifecycle_hash), refund: Never },
     placeholder,
   )
-}
-
-fn close_own_ref() -> OutputReference {
-  OutputReference {
-    transaction_id: close_vec.pos_2key_context.spent_txid,
-    output_index: close_vec.pos_2key_context.spent_index,
-  }
-}
-
-fn close_tx(evidence: CloseEvidence) -> Transaction {
-  let context = close_vec.pos_2key_context
-  let aid_name = deriveAidAssetName(context.old.cesr_aid)
-  let bonded = min_ada + d_reg + freeze_bond
-  let own_input = input_at(
-    close_own_ref(),
-    Output {
-      address: from_script(policy),
-      value: from_lovelace(bonded) |> merge(from_asset(policy, aid_name, 1)),
-      datum: InlineDatum(V1(context.old)),
-      reference_script: None,
-    },
-  )
-  let refund = Output {
-    address: evidence.refund_address,
-    value: from_lovelace(bonded),
-    datum: NoDatum,
-    reference_script: None,
-  }
-  spend_context(
-    [own_input],
-    [],
-    [refund],
-    from_asset(policy, aid_name, -1),
-    [],
-    interval.everything,
-    0,
-  )
-}
-
-fn run_close(evidence: CloseEvidence) -> Bool {
-  let tx = close_tx(evidence)
-  checkpoint_register.checkpoint_register.mint(
-    migration_hash,
-    lifecycle_hash,
-    advance_hash,
-    enforcement_hash,
-    entitlement_hash,
-    1,
-    d_reg,
-    freeze_bond,
-    freeze_window,
-    CloseBurn { checkpoint_ref: close_own_ref() },
-    policy,
-    tx,
-  ) && checkpoint_register.checkpoint_register.spend(
-    migration_hash,
-    lifecycle_hash,
-    advance_hash,
-    enforcement_hash,
-    entitlement_hash,
-    1,
-    d_reg,
-    freeze_bond,
-    freeze_window,
-    None,
-    Close { evidence },
-    close_own_ref(),
-    tx,
-  )
-}
-
-test close_small_accepts_controller_authorized_refund() {
-  run_close(close_vec.pos_2key_evidence)
-}
-
-test close_small_rejects_unauthorized_controller() fail {
-  run_close(close_vec.neg_below_threshold_evidence)
 }
 
 // ---------------------------------------------------------------------

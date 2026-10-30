@@ -208,14 +208,13 @@ liveData bornAt =
         , PLC.I 5
         ]
 
-data StateKind = Absent | Present | Parked | Pending | Convicted
+data StateKind = Absent | Present | Pending | Convicted
 
 stateData :: StateKind -> PLC.Data
 stateData Absent = PLC.Constr 0 []
 stateData Present = PLC.Constr 1 [liveData 0]
-stateData Parked = PLC.Constr 2 [PLC.Constr 0 [PLC.I 0, PLC.I 0]]
-stateData Pending = PLC.Constr 3 [PLC.Constr 0 [PLC.I 0, PLC.I 0]]
-stateData Convicted = PLC.Constr 4 []
+stateData Pending = PLC.Constr 2 [PLC.Constr 0 [PLC.I 0, PLC.I 0]]
+stateData Convicted = PLC.Constr 3 []
 
 decodedDatum :: Integer -> StateKind -> PLC.Data
 decodedDatum aid s = PLC.Constr 0 [PLC.I aid, stateData s]
@@ -238,7 +237,6 @@ refusals :: [Scenario]
 refusals =
     [ Scenario "a rival registry's token" True 1 Present
     , Scenario "quantity two" False 2 Present
-    , Scenario "a parked holding" False 1 Parked
     , Scenario "a holding with termination pending" False 1 Pending
     , Scenario "a retired holding (convicted)" False 1 Convicted
     , Scenario "a retired holding (absent)" False 1 Absent

@@ -1,10 +1,23 @@
-//// The consumer predicate (#343), RED stub: every function is a placeholder
-//// that cannot satisfy the Lean `consumableHoldingB`. Replaced by the
-//// transcription in the GREEN commit.
+//// The consumer predicate (#343): the Lean `consumableHoldingB`
+//// (lean/CardanoKeri/ConsumerIdentity.lean) clause for clause, over a
+//// candidate holding read as a reference input.
+////
+//// The network, release, seed and AID come from the relying contract
+//// (`Context`, `Environment`); hash, codec, AID-to-key map and datum decoder
+//// are function parameters (the Lean `Interpretation`). Nothing is read from
+//// the candidate output except what the Lean reads: its payment credential,
+//// the total quantity of the representative asset, and its datum through the
+//// decoder.
+////
+//// Lean name -> Aiken: registryAsset -> registry_asset, representativeAsset ->
+//// representative_asset, decoded -> decoded, authenticatedContextB ->
+//// authenticated_context, Checkpoint.consumableStateB -> consumable_state,
+//// consumableHoldingB -> consumable_holding. A datum is "an application datum"
+//// when it is inline; the decoder says whether it decodes.
 
 use cardano/address.{Credential}
-use cardano/assets.{AssetName, PolicyId}
-use cardano/transaction.{Output, OutputReference}
+use cardano/assets.{AssetName, PolicyId, quantity_of}
+use cardano/transaction.{InlineDatum, Output, OutputReference}
 
 /// Lean `PublishedRelease`.
 pub type PublishedRelease {
@@ -96,45 +109,91 @@ pub type KeyFn =
 pub type DecodeFn =
   fn(PublishedRelease, Data) -> Option<DecodedDatum>
 
-pub fn registry_asset(_hash: HashFn, _code: CodeFn, c: Context) -> Token {
-  Token { policy: c.release.state_policy, name: #"" }
+/// Lean `registryAsset`: the release's state policy and the hash of the
+/// code of the State preimage of the seed.
+pub fn registry_asset(hash: HashFn, code: CodeFn, c: Context) -> Token {
+  Token {
+    policy: c.release.state_policy,
+    name: hash(code(StatePreimage { seed: c.seed })),
+  }
 }
 
+/// Lean `representativeAsset`: the registry's policy and the hash of the code
+/// of the Active preimage of the registry asset and the AID's key.
 pub fn representative_asset(
-  _hash: HashFn,
-  _code: CodeFn,
-  _key_of: KeyFn,
+  hash: HashFn,
+  code: CodeFn,
+  key_of: KeyFn,
   c: Context,
 ) -> Token {
-  Token { policy: c.release.state_policy, name: #"" }
+  let registry = registry_asset(hash, code, c)
+  Token {
+    policy: registry.policy,
+    name: hash(code(ActivePreimage { registry, key: key_of(c.aid) })),
+  }
 }
 
-pub fn decoded(
-  _decode: DecodeFn,
-  _c: Context,
-  _o: Output,
-) -> Option<DecodedDatum> {
-  None
+/// Lean `decoded`: only an inline datum is an application datum, and the
+/// decoder may still reject it.
+pub fn decoded(decode: DecodeFn, c: Context, o: Output) -> Option<DecodedDatum> {
+  when o.datum is {
+    InlineDatum(raw) -> decode(c.release, raw)
+    _ -> None
+  }
 }
 
-pub fn authenticated_context(_c: Context, _e: Environment) -> Bool {
-  False
+/// Lean `authenticatedContextB`: the observed network is the intended one and
+/// the resolved release is exactly the intended complete release.
+pub fn authenticated_context(c: Context, e: Environment) -> Bool {
+  e.network == c.network && e.release == Some(c.release)
 }
 
-pub fn consumable_state(_p: Params, _now: Int, _s: State) -> Bool {
-  False
+/// Lean `Checkpoint.consumableStateB`: present, unfrozen, unpoisoned and at
+/// least `w` old.
+pub fn consumable_state(p: Params, now: Int, s: State) -> Bool {
+  when s is {
+    Present(l) -> !l.frozen && !l.poisoned && l.born_at + p.w <= now
+    Parked(_) -> False
+    TerminationPending(_) -> False
+    Absent -> False
+    Convicted -> False
+  }
 }
 
+/// Lean `AH.quantity o (representativeAsset i c)`: the total quantity of the
+/// representative asset in the output, over all entries.
+pub fn representative_quantity(
+  hash: HashFn,
+  code: CodeFn,
+  key_of: KeyFn,
+  c: Context,
+  o: Output,
+) -> Int {
+  let asset = representative_asset(hash, code, key_of, c)
+  quantity_of(o.value, asset.policy, asset.name)
+}
+
+/// Lean `consumableHoldingB`. Clauses, in the Lean order: authenticated
+/// context; application credential; total quantity of the representative
+/// asset is one; a decoded datum for the intended AID in a consumable state.
 pub fn consumable_holding(
-  _hash: HashFn,
-  _code: CodeFn,
-  _key_of: KeyFn,
-  _decode: DecodeFn,
-  _c: Context,
-  _e: Environment,
-  _p: Params,
-  _now: Int,
-  _o: Output,
+  hash: HashFn,
+  code: CodeFn,
+  key_of: KeyFn,
+  decode: DecodeFn,
+  c: Context,
+  e: Environment,
+  p: Params,
+  now: Int,
+  o: Output,
 ) -> Bool {
-  False
+  and {
+    authenticated_context(c, e),
+    o.address.payment_credential == c.release.application_credential,
+    representative_quantity(hash, code, key_of, c, o) == 1,
+    when decoded(decode, c, o) is {
+      None -> False
+      Some(d) -> d.aid == c.aid && consumable_state(p, now, d.state)
+    },
+  }
 }

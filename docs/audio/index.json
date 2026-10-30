@@ -11583,6 +11583,172 @@
    }
   ]
  },
+ "docs/design/singular-package-boundary.md": {
+  "building-the-keri-libraries-against-the-singular-package": [
+   {
+    "index": 0,
+    "name": "docs-design-singular-package-boundary/building-the-keri-libraries-against-the-singular-package-00",
+    "pause_ms": 500,
+    "v": "8250cc0a66e7"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-singular-package-boundary/building-the-keri-libraries-against-the-singular-package-01",
+    "pause_ms": 400,
+    "v": "cc8dd27c4324"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-singular-package-boundary/building-the-keri-libraries-against-the-singular-package-02",
+    "pause_ms": 400,
+    "v": "b3ee5e84b18f"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-singular-package-boundary/building-the-keri-libraries-against-the-singular-package-03",
+    "pause_ms": 400,
+    "v": "f203e51d8321"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-singular-package-boundary/building-the-keri-libraries-against-the-singular-package-04",
+    "pause_ms": 400,
+    "v": "6c3bcfd56905"
+   },
+   {
+    "index": 5,
+    "name": "docs-design-singular-package-boundary/building-the-keri-libraries-against-the-singular-package-05",
+    "pause_ms": 400,
+    "v": "8754f0ab6d5f"
+   }
+  ],
+  "controls": [
+   {
+    "index": 0,
+    "name": "docs-design-singular-package-boundary/controls-00",
+    "pause_ms": 500,
+    "v": "617e7ad86a22"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-singular-package-boundary/controls-01",
+    "pause_ms": 400,
+    "v": "08799d374140"
+   }
+  ],
+  "decisions": [
+   {
+    "index": 0,
+    "name": "docs-design-singular-package-boundary/decisions-00",
+    "pause_ms": 500,
+    "v": "05d5282e9dbd"
+   }
+  ],
+  "remaining-production-work": [
+   {
+    "index": 0,
+    "name": "docs-design-singular-package-boundary/remaining-production-work-00",
+    "pause_ms": 500,
+    "v": "d458f0e5552a"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-singular-package-boundary/remaining-production-work-01",
+    "pause_ms": 400,
+    "v": "c0ea91da3988"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-singular-package-boundary/remaining-production-work-02",
+    "pause_ms": 300,
+    "v": "512430a84988"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-singular-package-boundary/remaining-production-work-03",
+    "pause_ms": 300,
+    "v": "d59e301cb9e1"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-singular-package-boundary/remaining-production-work-04",
+    "pause_ms": 300,
+    "v": "46433c993998"
+   },
+   {
+    "index": 5,
+    "name": "docs-design-singular-package-boundary/remaining-production-work-05",
+    "pause_ms": 300,
+    "v": "027f1c37294d"
+   },
+   {
+    "index": 6,
+    "name": "docs-design-singular-package-boundary/remaining-production-work-06",
+    "pause_ms": 300,
+    "v": "f548dd86f3ec"
+   }
+  ],
+  "the-package-boundary": [
+   {
+    "index": 0,
+    "name": "docs-design-singular-package-boundary/the-package-boundary-00",
+    "pause_ms": 500,
+    "v": "c5e195a11f5b"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-singular-package-boundary/the-package-boundary-01",
+    "pause_ms": 400,
+    "v": "c51a7993f1a6"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-singular-package-boundary/the-package-boundary-02",
+    "pause_ms": 400,
+    "v": "db18ac0f062c"
+   }
+  ],
+  "what-the-check-assembles": [
+   {
+    "index": 0,
+    "name": "docs-design-singular-package-boundary/what-the-check-assembles-00",
+    "pause_ms": 500,
+    "v": "f7dfbaa3a42a"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-singular-package-boundary/what-the-check-assembles-01",
+    "pause_ms": 400,
+    "v": "ae43f651cd26"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-singular-package-boundary/what-the-check-assembles-02",
+    "pause_ms": 400,
+    "v": "4984eb3c9671"
+   }
+  ],
+  "what-the-tests-show-and-what-they-do-not": [
+   {
+    "index": 0,
+    "name": "docs-design-singular-package-boundary/what-the-tests-show-and-what-they-do-not-00",
+    "pause_ms": 500,
+    "v": "b16bfa1c907e"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-singular-package-boundary/what-the-tests-show-and-what-they-do-not-01",
+    "pause_ms": 400,
+    "v": "11e1e0b1df31"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-singular-package-boundary/what-the-tests-show-and-what-they-do-not-02",
+    "pause_ms": 400,
+    "v": "f527dab83aa9"
+   }
+  ]
+ },
  "docs/design/super-watcher.md": {
   "advance": [
    {

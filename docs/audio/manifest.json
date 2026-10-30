@@ -324290,6 +324290,4076 @@
     }
    ]
   },
+  "docs-design-singular-package-boundary/building-the-keri-libraries-against-the-singular-package-00": {
+   "audio_sha256": "8250cc0a66e762470ae8718b2cb6ec06271c00b573bf047def8b77f8dd8c7203",
+   "characters": 68,
+   "cost": 6.732e-05,
+   "duration": 3.65,
+   "index": 0,
+   "key": "d5d6a8f5b76cb307c3f89c915770e317a682f84a886aed4c302ea5c46493c559",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 500,
+   "section": "building-the-keri-libraries-against-the-singular-package",
+   "sent_text": "Building the [KERI](/kˈɛɹi/) Libraries Against the Singular Package.",
+   "text": "Building the KERI Libraries Against the Singular Package.",
+   "words": [
+    {
+     "end": 0.488,
+     "start": 0.175,
+     "text": "Building"
+    },
+    {
+     "end": 0.575,
+     "start": 0.488,
+     "text": "the"
+    },
+    {
+     "end": 0.9,
+     "start": 0.575,
+     "text": "KERI"
+    },
+    {
+     "end": 1.562,
+     "start": 0.9,
+     "text": "Libraries"
+    },
+    {
+     "end": 1.913,
+     "start": 1.562,
+     "text": "Against"
+    },
+    {
+     "end": 2.037,
+     "start": 1.913,
+     "text": "the"
+    },
+    {
+     "end": 2.45,
+     "start": 2.037,
+     "text": "Singular"
+    },
+    {
+     "end": 3.45,
+     "start": 2.45,
+     "text": "Package"
+    },
+    {
+     "end": 3.65,
+     "start": 3.45,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/building-the-keri-libraries-against-the-singular-package-01": {
+   "audio_sha256": "cc8dd27c43248cd4087001814530e08617ecad751e20efdad3910332d58cf948",
+   "characters": 484,
+   "cost": 0.00047916,
+   "duration": 30.5,
+   "index": 1,
+   "key": "3006b4be932f25912b9cfbe17f3628a68cfe35dcee6420b0657f8703d30a2a3e",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 400,
+   "section": "building-the-keri-libraries-against-the-singular-package",
+   "sent_text": "A contributor preparing the [KERI](/kˈɛɹi/) integration with the redesigned Singular registry runs one command and learns whether the reusable [KERI](/kˈɛɹi/) Aiken libraries still compile and test next to the published Singular registry package. When Singular's interface moves underneath them, the same command fails and names what moved: a value that is no longer exported, a module that no longer exists, or an approval that no longer commits to a field [KERI](/kˈɛɹi/) relies on.",
+   "text": "A contributor preparing the KERI integration with the redesigned Singular registry runs one command and learns whether the reusable KERI Aiken libraries still compile and test next to the published Singular registry package. When Singular's interface moves underneath them, the same command fails and names what moved: a value that is no longer exported, a module that no longer exists, or an approval that no longer commits to a field KERI relies on.",
+   "words": [
+    {
+     "end": 0.325,
+     "start": 0.25,
+     "text": "A"
+    },
+    {
+     "end": 1.025,
+     "start": 0.325,
+     "text": "contributor"
+    },
+    {
+     "end": 1.6,
+     "start": 1.025,
+     "text": "preparing"
+    },
+    {
+     "end": 1.737,
+     "start": 1.6,
+     "text": "the"
+    },
+    {
+     "end": 2.1,
+     "start": 1.737,
+     "text": "KERI"
+    },
+    {
+     "end": 2.85,
+     "start": 2.1,
+     "text": "integration"
+    },
+    {
+     "end": 3.0,
+     "start": 2.85,
+     "text": "with"
+    },
+    {
+     "end": 3.138,
+     "start": 3.0,
+     "text": "the"
+    },
+    {
+     "end": 3.862,
+     "start": 3.138,
+     "text": "redesigned"
+    },
+    {
+     "end": 4.4,
+     "start": 3.862,
+     "text": "Singular"
+    },
+    {
+     "end": 5.125,
+     "start": 4.4,
+     "text": "registry"
+    },
+    {
+     "end": 5.562,
+     "start": 5.125,
+     "text": "runs"
+    },
+    {
+     "end": 5.838,
+     "start": 5.562,
+     "text": "one"
+    },
+    {
+     "end": 6.537,
+     "start": 5.838,
+     "text": "command"
+    },
+    {
+     "end": 6.688,
+     "start": 6.537,
+     "text": "and"
+    },
+    {
+     "end": 7.125,
+     "start": 6.688,
+     "text": "learns"
+    },
+    {
+     "end": 7.4,
+     "start": 7.125,
+     "text": "whether"
+    },
+    {
+     "end": 7.537,
+     "start": 7.4,
+     "text": "the"
+    },
+    {
+     "end": 8.188,
+     "start": 7.537,
+     "text": "reusable"
+    },
+    {
+     "end": 8.55,
+     "start": 8.188,
+     "text": "KERI"
+    },
+    {
+     "end": 8.925,
+     "start": 8.55,
+     "text": "Aiken"
+    },
+    {
+     "end": 9.538,
+     "start": 8.925,
+     "text": "libraries"
+    },
+    {
+     "end": 9.825,
+     "start": 9.538,
+     "text": "still"
+    },
+    {
+     "end": 10.375,
+     "start": 9.825,
+     "text": "compile"
+    },
+    {
+     "end": 10.512,
+     "start": 10.375,
+     "text": "and"
+    },
+    {
+     "end": 11.1,
+     "start": 10.512,
+     "text": "test"
+    },
+    {
+     "end": 11.45,
+     "start": 11.1,
+     "text": "next"
+    },
+    {
+     "end": 11.538,
+     "start": 11.45,
+     "text": "to"
+    },
+    {
+     "end": 11.663,
+     "start": 11.538,
+     "text": "the"
+    },
+    {
+     "end": 12.212,
+     "start": 11.663,
+     "text": "published"
+    },
+    {
+     "end": 12.75,
+     "start": 12.212,
+     "text": "Singular"
+    },
+    {
+     "end": 13.225,
+     "start": 12.75,
+     "text": "registry"
+    },
+    {
+     "end": 14.425,
+     "start": 13.225,
+     "text": "package"
+    },
+    {
+     "end": 14.7,
+     "start": 14.425,
+     "text": "."
+    },
+    {
+     "end": 15.087,
+     "start": 14.9,
+     "text": "When"
+    },
+    {
+     "end": 15.65,
+     "start": 15.087,
+     "text": "Singular's"
+    },
+    {
+     "end": 16.212,
+     "start": 15.65,
+     "text": "interface"
+    },
+    {
+     "end": 16.575,
+     "start": 16.212,
+     "text": "moves"
+    },
+    {
+     "end": 17.075,
+     "start": 16.575,
+     "text": "underneath"
+    },
+    {
+     "end": 17.4,
+     "start": 17.075,
+     "text": "them"
+    },
+    {
+     "end": 17.5,
+     "start": 17.4,
+     "text": ","
+    },
+    {
+     "end": 17.638,
+     "start": 17.5,
+     "text": "the"
+    },
+    {
+     "end": 17.975,
+     "start": 17.638,
+     "text": "same"
+    },
+    {
+     "end": 18.462,
+     "start": 17.975,
+     "text": "command"
+    },
+    {
+     "end": 18.95,
+     "start": 18.462,
+     "text": "fails"
+    },
+    {
+     "end": 19.075,
+     "start": 18.95,
+     "text": "and"
+    },
+    {
+     "end": 19.45,
+     "start": 19.075,
+     "text": "names"
+    },
+    {
+     "end": 19.65,
+     "start": 19.45,
+     "text": "what"
+    },
+    {
+     "end": 20.65,
+     "start": 19.65,
+     "text": "moved"
+    },
+    {
+     "end": 20.875,
+     "start": 20.65,
+     "text": ":"
+    },
+    {
+     "end": 21.15,
+     "start": 21.075,
+     "text": "a"
+    },
+    {
+     "end": 21.575,
+     "start": 21.15,
+     "text": "value"
+    },
+    {
+     "end": 21.725,
+     "start": 21.575,
+     "text": "that"
+    },
+    {
+     "end": 21.875,
+     "start": 21.725,
+     "text": "is"
+    },
+    {
+     "end": 22.075,
+     "start": 21.875,
+     "text": "no"
+    },
+    {
+     "end": 22.5,
+     "start": 22.075,
+     "text": "longer"
+    },
+    {
+     "end": 23.25,
+     "start": 22.5,
+     "text": "exported"
+    },
+    {
+     "end": 23.362,
+     "start": 23.25,
+     "text": ","
+    },
+    {
+     "end": 23.487,
+     "start": 23.362,
+     "text": "a"
+    },
+    {
+     "end": 23.9,
+     "start": 23.487,
+     "text": "module"
+    },
+    {
+     "end": 24.1,
+     "start": 23.9,
+     "text": "that"
+    },
+    {
+     "end": 24.275,
+     "start": 24.1,
+     "text": "no"
+    },
+    {
+     "end": 24.675,
+     "start": 24.275,
+     "text": "longer"
+    },
+    {
+     "end": 25.75,
+     "start": 24.675,
+     "text": "exists"
+    },
+    {
+     "end": 25.95,
+     "start": 25.75,
+     "text": ","
+    },
+    {
+     "end": 26.3,
+     "start": 26.15,
+     "text": "or"
+    },
+    {
+     "end": 26.4,
+     "start": 26.3,
+     "text": "an"
+    },
+    {
+     "end": 26.875,
+     "start": 26.4,
+     "text": "approval"
+    },
+    {
+     "end": 27.087,
+     "start": 26.875,
+     "text": "that"
+    },
+    {
+     "end": 27.3,
+     "start": 27.087,
+     "text": "no"
+    },
+    {
+     "end": 27.725,
+     "start": 27.3,
+     "text": "longer"
+    },
+    {
+     "end": 28.125,
+     "start": 27.725,
+     "text": "commits"
+    },
+    {
+     "end": 28.212,
+     "start": 28.125,
+     "text": "to"
+    },
+    {
+     "end": 28.312,
+     "start": 28.212,
+     "text": "a"
+    },
+    {
+     "end": 28.65,
+     "start": 28.312,
+     "text": "field"
+    },
+    {
+     "end": 29.038,
+     "start": 28.65,
+     "text": "KERI"
+    },
+    {
+     "end": 29.475,
+     "start": 29.038,
+     "text": "relies"
+    },
+    {
+     "end": 30.3,
+     "start": 29.475,
+     "text": "on"
+    },
+    {
+     "end": 30.5,
+     "start": 30.3,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/building-the-keri-libraries-against-the-singular-package-02": {
+   "audio_sha256": "b3ee5e84b18f344c151ae016af12e385e286d959b2d430252a9b0d9b21ffc58b",
+   "characters": 282,
+   "cost": 0.00027917999999999997,
+   "duration": 19.775,
+   "index": 2,
+   "key": "f0de15617ee7946c856f6ea872d8e9aba586e3da6cde3fc7599b9813770bf2e8",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 400,
+   "section": "building-the-keri-libraries-against-the-singular-package",
+   "sent_text": "The command builds the Nix check in aiken-singular-consumer/ from a clean checkout. Hosted CI runs the same check in the required Onchain (Aiken) job and keeps the compiler, lock, test and control receipts as the singular-aiken-consumer-<commit> workflow artifact for fourteen days.",
+   "text": "The command builds the Nix check in aiken-singular-consumer/ from a clean checkout. Hosted CI runs the same check in the required Onchain (Aiken) job and keeps the compiler, lock, test and control receipts as the singular-aiken-consumer-<commit> workflow artifact for fourteen days.",
+   "words": [
+    {
+     "end": 0.25,
+     "start": 0.175,
+     "text": "The"
+    },
+    {
+     "end": 0.762,
+     "start": 0.25,
+     "text": "command"
+    },
+    {
+     "end": 1.1,
+     "start": 0.762,
+     "text": "builds"
+    },
+    {
+     "end": 1.237,
+     "start": 1.1,
+     "text": "the"
+    },
+    {
+     "end": 1.538,
+     "start": 1.237,
+     "text": "Nix"
+    },
+    {
+     "end": 1.888,
+     "start": 1.538,
+     "text": "check"
+    },
+    {
+     "end": 2.062,
+     "start": 1.888,
+     "text": "in"
+    },
+    {
+     "end": 3.6,
+     "start": 2.062,
+     "text": "aiken-singular-consumer/"
+    },
+    {
+     "end": 3.737,
+     "start": 3.6,
+     "text": "from"
+    },
+    {
+     "end": 3.8,
+     "start": 3.737,
+     "text": "a"
+    },
+    {
+     "end": 4.125,
+     "start": 3.8,
+     "text": "clean"
+    },
+    {
+     "end": 5.15,
+     "start": 4.125,
+     "text": "checkout"
+    },
+    {
+     "end": 5.35,
+     "start": 5.15,
+     "text": "."
+    },
+    {
+     "end": 5.938,
+     "start": 5.55,
+     "text": "Hosted"
+    },
+    {
+     "end": 6.438,
+     "start": 5.938,
+     "text": "CI"
+    },
+    {
+     "end": 6.775,
+     "start": 6.438,
+     "text": "runs"
+    },
+    {
+     "end": 6.912,
+     "start": 6.775,
+     "text": "the"
+    },
+    {
+     "end": 7.262,
+     "start": 6.912,
+     "text": "same"
+    },
+    {
+     "end": 7.575,
+     "start": 7.262,
+     "text": "check"
+    },
+    {
+     "end": 7.662,
+     "start": 7.575,
+     "text": "in"
+    },
+    {
+     "end": 7.75,
+     "start": 7.662,
+     "text": "the"
+    },
+    {
+     "end": 8.325,
+     "start": 7.75,
+     "text": "required"
+    },
+    {
+     "end": 8.85,
+     "start": 8.325,
+     "text": "Onchain"
+    },
+    {
+     "end": 8.925,
+     "start": 8.85,
+     "text": "("
+    },
+    {
+     "end": 9.275,
+     "start": 8.925,
+     "text": "Aiken"
+    },
+    {
+     "end": 9.363,
+     "start": 9.275,
+     "text": ")"
+    },
+    {
+     "end": 9.8,
+     "start": 9.363,
+     "text": "job"
+    },
+    {
+     "end": 9.925,
+     "start": 9.8,
+     "text": "and"
+    },
+    {
+     "end": 10.212,
+     "start": 9.925,
+     "text": "keeps"
+    },
+    {
+     "end": 10.3,
+     "start": 10.212,
+     "text": "the"
+    },
+    {
+     "end": 11.425,
+     "start": 10.3,
+     "text": "compiler"
+    },
+    {
+     "end": 11.65,
+     "start": 11.425,
+     "text": ","
+    },
+    {
+     "end": 12.425,
+     "start": 11.85,
+     "text": "lock"
+    },
+    {
+     "end": 12.675,
+     "start": 12.425,
+     "text": ","
+    },
+    {
+     "end": 13.25,
+     "start": 12.9,
+     "text": "test"
+    },
+    {
+     "end": 13.375,
+     "start": 13.25,
+     "text": "and"
+    },
+    {
+     "end": 13.95,
+     "start": 13.375,
+     "text": "control"
+    },
+    {
+     "end": 14.55,
+     "start": 13.95,
+     "text": "receipts"
+    },
+    {
+     "end": 14.725,
+     "start": 14.55,
+     "text": "as"
+    },
+    {
+     "end": 14.863,
+     "start": 14.725,
+     "text": "the"
+    },
+    {
+     "end": 16.638,
+     "start": 14.863,
+     "text": "singular-aiken-consumer-<commit>"
+    },
+    {
+     "end": 17.175,
+     "start": 16.638,
+     "text": "workflow"
+    },
+    {
+     "end": 17.8,
+     "start": 17.175,
+     "text": "artifact"
+    },
+    {
+     "end": 17.962,
+     "start": 17.8,
+     "text": "for"
+    },
+    {
+     "end": 18.5,
+     "start": 17.962,
+     "text": "fourteen"
+    },
+    {
+     "end": 19.575,
+     "start": 18.5,
+     "text": "days"
+    },
+    {
+     "end": 19.775,
+     "start": 19.575,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/building-the-keri-libraries-against-the-singular-package-03": {
+   "audio_sha256": "f203e51d832142689897716c6ca38cc37e98eb2c015b920962ac9397d333605a",
+   "characters": 274,
+   "cost": 0.00027125999999999995,
+   "duration": 18.0,
+   "index": 3,
+   "key": "f3d9cc868d2b0dea23d76a727e1626696ac132a38c6ca9e166556285bae6e0ff",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 400,
+   "section": "building-the-keri-libraries-against-the-singular-package",
+   "sent_text": "This is technical preparation. It shows that the libraries meet at the package interface. It does not show that [KERI](/kˈɛɹi/) registration, parking or conviction behave as the [KERI](/kˈɛɹi/) model says once they run through Singular; that is the application work of #324.",
+   "text": "This is technical preparation. It shows that the libraries meet at the package interface. It does not show that KERI registration, parking or conviction behave as the KERI model says once they run through Singular; that is the application work of #324.",
+   "words": [
+    {
+     "end": 0.35,
+     "start": 0.175,
+     "text": "This"
+    },
+    {
+     "end": 0.5,
+     "start": 0.35,
+     "text": "is"
+    },
+    {
+     "end": 0.975,
+     "start": 0.5,
+     "text": "technical"
+    },
+    {
+     "end": 2.15,
+     "start": 0.975,
+     "text": "preparation"
+    },
+    {
+     "end": 2.35,
+     "start": 2.15,
+     "text": "."
+    },
+    {
+     "end": 2.688,
+     "start": 2.525,
+     "text": "It"
+    },
+    {
+     "end": 3.075,
+     "start": 2.688,
+     "text": "shows"
+    },
+    {
+     "end": 3.213,
+     "start": 3.075,
+     "text": "that"
+    },
+    {
+     "end": 3.3,
+     "start": 3.213,
+     "text": "the"
+    },
+    {
+     "end": 3.9,
+     "start": 3.3,
+     "text": "libraries"
+    },
+    {
+     "end": 4.125,
+     "start": 3.9,
+     "text": "meet"
+    },
+    {
+     "end": 4.213,
+     "start": 4.125,
+     "text": "at"
+    },
+    {
+     "end": 4.3,
+     "start": 4.213,
+     "text": "the"
+    },
+    {
+     "end": 4.713,
+     "start": 4.3,
+     "text": "package"
+    },
+    {
+     "end": 5.725,
+     "start": 4.713,
+     "text": "interface"
+    },
+    {
+     "end": 5.925,
+     "start": 5.725,
+     "text": "."
+    },
+    {
+     "end": 6.188,
+     "start": 6.1,
+     "text": "It"
+    },
+    {
+     "end": 6.312,
+     "start": 6.188,
+     "text": "does"
+    },
+    {
+     "end": 6.55,
+     "start": 6.312,
+     "text": "not"
+    },
+    {
+     "end": 6.762,
+     "start": 6.55,
+     "text": "show"
+    },
+    {
+     "end": 6.9,
+     "start": 6.762,
+     "text": "that"
+    },
+    {
+     "end": 7.2,
+     "start": 6.9,
+     "text": "KERI"
+    },
+    {
+     "end": 8.45,
+     "start": 7.2,
+     "text": "registration"
+    },
+    {
+     "end": 8.625,
+     "start": 8.45,
+     "text": ","
+    },
+    {
+     "end": 9.363,
+     "start": 8.825,
+     "text": "parking"
+    },
+    {
+     "end": 9.525,
+     "start": 9.363,
+     "text": "or"
+    },
+    {
+     "end": 10.125,
+     "start": 9.525,
+     "text": "conviction"
+    },
+    {
+     "end": 10.7,
+     "start": 10.125,
+     "text": "behave"
+    },
+    {
+     "end": 10.9,
+     "start": 10.7,
+     "text": "as"
+    },
+    {
+     "end": 11.0,
+     "start": 10.9,
+     "text": "the"
+    },
+    {
+     "end": 11.325,
+     "start": 11.0,
+     "text": "KERI"
+    },
+    {
+     "end": 11.712,
+     "start": 11.325,
+     "text": "model"
+    },
+    {
+     "end": 12.038,
+     "start": 11.712,
+     "text": "says"
+    },
+    {
+     "end": 12.35,
+     "start": 12.038,
+     "text": "once"
+    },
+    {
+     "end": 12.512,
+     "start": 12.35,
+     "text": "they"
+    },
+    {
+     "end": 12.8,
+     "start": 12.512,
+     "text": "run"
+    },
+    {
+     "end": 13.012,
+     "start": 12.8,
+     "text": "through"
+    },
+    {
+     "end": 14.1,
+     "start": 13.012,
+     "text": "Singular"
+    },
+    {
+     "end": 14.325,
+     "start": 14.1,
+     "text": ";"
+    },
+    {
+     "end": 14.75,
+     "start": 14.525,
+     "text": "that"
+    },
+    {
+     "end": 14.863,
+     "start": 14.75,
+     "text": "is"
+    },
+    {
+     "end": 14.975,
+     "start": 14.863,
+     "text": "the"
+    },
+    {
+     "end": 15.65,
+     "start": 14.975,
+     "text": "application"
+    },
+    {
+     "end": 15.962,
+     "start": 15.65,
+     "text": "work"
+    },
+    {
+     "end": 16.112,
+     "start": 15.962,
+     "text": "of"
+    },
+    {
+     "end": 17.775,
+     "start": 16.112,
+     "text": "324"
+    },
+    {
+     "end": 18.0,
+     "start": 17.775,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/building-the-keri-libraries-against-the-singular-package-04": {
+   "audio_sha256": "6c3bcfd56905941008c659992232f2f2378d1a60e60a9f12447bed31c94980a7",
+   "characters": 15,
+   "cost": 1.485e-05,
+   "duration": 1.15,
+   "index": 4,
+   "key": "4c92dc0a126ebfcddc747218c34466a48ce37a8c5a9ffa37171f715165c7435c",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 400,
+   "section": "building-the-keri-libraries-against-the-singular-package",
+   "sent_text": "Not for mainnet",
+   "text": "Not for mainnet",
+   "words": [
+    {
+     "end": 0.387,
+     "start": 0.2,
+     "text": "Not"
+    },
+    {
+     "end": 0.488,
+     "start": 0.387,
+     "text": "for"
+    },
+    {
+     "end": 1.15,
+     "start": 0.488,
+     "text": "mainnet"
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/building-the-keri-libraries-against-the-singular-package-05": {
+   "audio_sha256": "8754f0ab6d5f55b9249c5fee1839232129cfb8c52af79a4f4b8b6c37d7711b2b",
+   "characters": 71,
+   "cost": 7.028999999999999e-05,
+   "duration": 4.575,
+   "index": 5,
+   "key": "9ab4c9bcc5ab43781fb0aaf0bf6454620de00133ed2772fa6c23d47c3083b835",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 400,
+   "section": "building-the-keri-libraries-against-the-singular-package",
+   "sent_text": "The consumer package and the contracts it compiles are not for mainnet.",
+   "text": "The consumer package and the contracts it compiles are not for mainnet.",
+   "words": [
+    {
+     "end": 0.25,
+     "start": 0.175,
+     "text": "The"
+    },
+    {
+     "end": 0.8,
+     "start": 0.25,
+     "text": "consumer"
+    },
+    {
+     "end": 1.35,
+     "start": 0.8,
+     "text": "package"
+    },
+    {
+     "end": 1.462,
+     "start": 1.35,
+     "text": "and"
+    },
+    {
+     "end": 1.55,
+     "start": 1.462,
+     "text": "the"
+    },
+    {
+     "end": 2.112,
+     "start": 1.55,
+     "text": "contracts"
+    },
+    {
+     "end": 2.2,
+     "start": 2.112,
+     "text": "it"
+    },
+    {
+     "end": 2.938,
+     "start": 2.2,
+     "text": "compiles"
+    },
+    {
+     "end": 3.1,
+     "start": 2.938,
+     "text": "are"
+    },
+    {
+     "end": 3.35,
+     "start": 3.1,
+     "text": "not"
+    },
+    {
+     "end": 3.475,
+     "start": 3.35,
+     "text": "for"
+    },
+    {
+     "end": 4.375,
+     "start": 3.475,
+     "text": "mainnet"
+    },
+    {
+     "end": 4.575,
+     "start": 4.375,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/controls-00": {
+   "audio_sha256": "617e7ad86a2289e1ee8fcb56958a1d2e010d931f13c0515ad21b9356adb898ce",
+   "characters": 9,
+   "cost": 8.91e-06,
+   "duration": 1.35,
+   "index": 0,
+   "key": "1d9c9e41511df807a4def3d0427c0776ac2584463f34a58556ea34e0f9a94ab2",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 500,
+   "section": "controls",
+   "sent_text": "Controls.",
+   "text": "Controls.",
+   "words": [
+    {
+     "end": 1.15,
+     "start": 0.2,
+     "text": "Controls"
+    },
+    {
+     "end": 1.35,
+     "start": 1.15,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/controls-01": {
+   "audio_sha256": "08799d374140be11600e532c28f141c30c019d0975230c88b3e3962c8ea5d0a1",
+   "characters": 96,
+   "cost": 9.503999999999998e-05,
+   "duration": 6.35,
+   "index": 1,
+   "key": "2e30fab3cd9ca1db33150fdafe7b21c0b2a4a5041957a413fecba8b638e46a9e",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 400,
+   "section": "controls",
+   "sent_text": "Each control runs inside the same check and must fail for its stated reason, or the check fails.",
+   "text": "Each control runs inside the same check and must fail for its stated reason, or the check fails.",
+   "words": [
+    {
+     "end": 0.4,
+     "start": 0.2,
+     "text": "Each"
+    },
+    {
+     "end": 0.887,
+     "start": 0.4,
+     "text": "control"
+    },
+    {
+     "end": 1.275,
+     "start": 0.887,
+     "text": "runs"
+    },
+    {
+     "end": 1.712,
+     "start": 1.275,
+     "text": "inside"
+    },
+    {
+     "end": 1.8,
+     "start": 1.712,
+     "text": "the"
+    },
+    {
+     "end": 2.088,
+     "start": 1.8,
+     "text": "same"
+    },
+    {
+     "end": 2.45,
+     "start": 2.088,
+     "text": "check"
+    },
+    {
+     "end": 2.575,
+     "start": 2.45,
+     "text": "and"
+    },
+    {
+     "end": 2.862,
+     "start": 2.575,
+     "text": "must"
+    },
+    {
+     "end": 3.175,
+     "start": 2.862,
+     "text": "fail"
+    },
+    {
+     "end": 3.287,
+     "start": 3.175,
+     "text": "for"
+    },
+    {
+     "end": 3.425,
+     "start": 3.287,
+     "text": "its"
+    },
+    {
+     "end": 3.85,
+     "start": 3.425,
+     "text": "stated"
+    },
+    {
+     "end": 4.35,
+     "start": 3.85,
+     "text": "reason"
+    },
+    {
+     "end": 4.463,
+     "start": 4.35,
+     "text": ","
+    },
+    {
+     "end": 4.65,
+     "start": 4.463,
+     "text": "or"
+    },
+    {
+     "end": 4.787,
+     "start": 4.65,
+     "text": "the"
+    },
+    {
+     "end": 5.05,
+     "start": 4.787,
+     "text": "check"
+    },
+    {
+     "end": 6.125,
+     "start": 5.05,
+     "text": "fails"
+    },
+    {
+     "end": 6.35,
+     "start": 6.125,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/decisions-00": {
+   "audio_sha256": "05d5282e9dbd8a9e21bedc5aeabb5cf4a11447197c404650c67dc7685f6b6c14",
+   "characters": 10,
+   "cost": 9.9e-06,
+   "duration": 1.45,
+   "index": 0,
+   "key": "cccdc9b283c86c5c496226564e46071d2f49222e587655d9d2c0d24ac3813c56",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 500,
+   "section": "decisions",
+   "sent_text": "Decisions.",
+   "text": "Decisions.",
+   "words": [
+    {
+     "end": 1.225,
+     "start": 0.175,
+     "text": "Decisions"
+    },
+    {
+     "end": 1.45,
+     "start": 1.225,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/remaining-production-work-00": {
+   "audio_sha256": "d458f0e5552ab32aa21aed7a7f4099d0038ea5d6773b06e75331ae8e7998f44f",
+   "characters": 26,
+   "cost": 2.5739999999999998e-05,
+   "duration": 1.925,
+   "index": 0,
+   "key": "857ab2896d8fd3c288165fe8eb09aba0adbb8ff896af6e87038e087fa5b1d9a4",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 500,
+   "section": "remaining-production-work",
+   "sent_text": "Remaining production work.",
+   "text": "Remaining production work.",
+   "words": [
+    {
+     "end": 0.625,
+     "start": 0.2,
+     "text": "Remaining"
+    },
+    {
+     "end": 1.087,
+     "start": 0.625,
+     "text": "production"
+    },
+    {
+     "end": 1.725,
+     "start": 1.087,
+     "text": "work"
+    },
+    {
+     "end": 1.925,
+     "start": 1.725,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/remaining-production-work-01": {
+   "audio_sha256": "c0ea91da3988fc0e4eec0fb7815332c058bf2e85fc307f8e66a24cd610799a6b",
+   "characters": 88,
+   "cost": 8.711999999999999e-05,
+   "duration": 6.45,
+   "index": 1,
+   "key": "0085b3e9a636db7771b4dbe4ae55de4ca7d7a6b7eccfe4685d8d8890d38db689",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 400,
+   "section": "remaining-production-work",
+   "sent_text": "The check stops at the package boundary. The production work it leaves, tracked in #324:",
+   "text": "The check stops at the package boundary. The production work it leaves, tracked in #324:",
+   "words": [
+    {
+     "end": 0.25,
+     "start": 0.175,
+     "text": "The"
+    },
+    {
+     "end": 0.463,
+     "start": 0.25,
+     "text": "check"
+    },
+    {
+     "end": 0.788,
+     "start": 0.463,
+     "text": "stops"
+    },
+    {
+     "end": 0.863,
+     "start": 0.788,
+     "text": "at"
+    },
+    {
+     "end": 0.95,
+     "start": 0.863,
+     "text": "the"
+    },
+    {
+     "end": 1.35,
+     "start": 0.95,
+     "text": "package"
+    },
+    {
+     "end": 2.3,
+     "start": 1.35,
+     "text": "boundary"
+    },
+    {
+     "end": 2.5,
+     "start": 2.3,
+     "text": "."
+    },
+    {
+     "end": 2.75,
+     "start": 2.675,
+     "text": "The"
+    },
+    {
+     "end": 3.275,
+     "start": 2.75,
+     "text": "production"
+    },
+    {
+     "end": 3.475,
+     "start": 3.275,
+     "text": "work"
+    },
+    {
+     "end": 3.625,
+     "start": 3.475,
+     "text": "it"
+    },
+    {
+     "end": 4.1,
+     "start": 3.625,
+     "text": "leaves"
+    },
+    {
+     "end": 4.175,
+     "start": 4.1,
+     "text": ","
+    },
+    {
+     "end": 4.512,
+     "start": 4.175,
+     "text": "tracked"
+    },
+    {
+     "end": 4.662,
+     "start": 4.512,
+     "text": "in"
+    },
+    {
+     "end": 6.225,
+     "start": 4.662,
+     "text": "324"
+    },
+    {
+     "end": 6.45,
+     "start": 6.225,
+     "text": ":"
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/remaining-production-work-02": {
+   "audio_sha256": "512430a849887fb6132423e4bbabf925cdc62308f014b53210d989b5544a8ab1",
+   "characters": 225,
+   "cost": 0.00022275,
+   "duration": 15.05,
+   "index": 2,
+   "key": "1608b6c45ab90806f9828e80c0320cc4acf6eb4ca1fa3a6866c8b0012f81c053",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 300,
+   "section": "remaining-production-work",
+   "sent_text": "the [KERI](/kˈɛɹi/) approval policy that checks the inception evidence, signatures, receipts, refund binding, bond amounts and initial checkpoint datum at booking, and mints the registration approval Singular consumes (#348);",
+   "text": "the KERI approval policy that checks the inception evidence, signatures, receipts, refund binding, bond amounts and initial checkpoint datum at booking, and mints the registration approval Singular consumes (#348);",
+   "words": [
+    {
+     "end": 0.363,
+     "start": 0.25,
+     "text": "the"
+    },
+    {
+     "end": 0.725,
+     "start": 0.363,
+     "text": "KERI"
+    },
+    {
+     "end": 1.188,
+     "start": 0.725,
+     "text": "approval"
+    },
+    {
+     "end": 1.75,
+     "start": 1.188,
+     "text": "policy"
+    },
+    {
+     "end": 1.962,
+     "start": 1.75,
+     "text": "that"
+    },
+    {
+     "end": 2.275,
+     "start": 1.962,
+     "text": "checks"
+    },
+    {
+     "end": 2.425,
+     "start": 2.275,
+     "text": "the"
+    },
+    {
+     "end": 3.037,
+     "start": 2.425,
+     "text": "inception"
+    },
+    {
+     "end": 3.65,
+     "start": 3.037,
+     "text": "evidence"
+    },
+    {
+     "end": 3.775,
+     "start": 3.65,
+     "text": ","
+    },
+    {
+     "end": 4.575,
+     "start": 3.775,
+     "text": "signatures"
+    },
+    {
+     "end": 4.65,
+     "start": 4.575,
+     "text": ","
+    },
+    {
+     "end": 5.25,
+     "start": 4.65,
+     "text": "receipts"
+    },
+    {
+     "end": 5.325,
+     "start": 5.25,
+     "text": ","
+    },
+    {
+     "end": 5.85,
+     "start": 5.325,
+     "text": "refund"
+    },
+    {
+     "end": 6.375,
+     "start": 5.85,
+     "text": "binding"
+    },
+    {
+     "end": 6.463,
+     "start": 6.375,
+     "text": ","
+    },
+    {
+     "end": 6.825,
+     "start": 6.463,
+     "text": "bond"
+    },
+    {
+     "end": 7.325,
+     "start": 6.825,
+     "text": "amounts"
+    },
+    {
+     "end": 7.45,
+     "start": 7.325,
+     "text": "and"
+    },
+    {
+     "end": 7.863,
+     "start": 7.45,
+     "text": "initial"
+    },
+    {
+     "end": 8.375,
+     "start": 7.863,
+     "text": "checkpoint"
+    },
+    {
+     "end": 8.775,
+     "start": 8.375,
+     "text": "datum"
+    },
+    {
+     "end": 8.9,
+     "start": 8.775,
+     "text": "at"
+    },
+    {
+     "end": 9.525,
+     "start": 8.9,
+     "text": "booking"
+    },
+    {
+     "end": 9.625,
+     "start": 9.525,
+     "text": ","
+    },
+    {
+     "end": 9.762,
+     "start": 9.625,
+     "text": "and"
+    },
+    {
+     "end": 10.1,
+     "start": 9.762,
+     "text": "mints"
+    },
+    {
+     "end": 10.225,
+     "start": 10.1,
+     "text": "the"
+    },
+    {
+     "end": 11.0,
+     "start": 10.225,
+     "text": "registration"
+    },
+    {
+     "end": 11.462,
+     "start": 11.0,
+     "text": "approval"
+    },
+    {
+     "end": 12.0,
+     "start": 11.462,
+     "text": "Singular"
+    },
+    {
+     "end": 12.762,
+     "start": 12.0,
+     "text": "consumes"
+    },
+    {
+     "end": 12.85,
+     "start": 12.762,
+     "text": "("
+    },
+    {
+     "end": 14.75,
+     "start": 12.85,
+     "text": "348"
+    },
+    {
+     "end": 15.0,
+     "start": 14.75,
+     "text": ")"
+    },
+    {
+     "end": 15.05,
+     "start": 15.0,
+     "text": ";"
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/remaining-production-work-03": {
+   "audio_sha256": "d59e301cb9e129957c109c05b0abcf6456acb3e944bae180e0a77ba4561467c6",
+   "characters": 148,
+   "cost": 0.00014651999999999997,
+   "duration": 9.95,
+   "index": 3,
+   "key": "58915e48d129eaeae59b43ba1bc22dcb60ffe01988f31f03e156ca0324b8c393",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 300,
+   "section": "remaining-production-work",
+   "sent_text": "a token policy for checkpoint and fact tokens separate from the approval policy, since a registration request carries exactly one application token;",
+   "text": "a token policy for checkpoint and fact tokens separate from the approval policy, since a registration request carries exactly one application token;",
+   "words": [
+    {
+     "end": 0.312,
+     "start": 0.225,
+     "text": "a"
+    },
+    {
+     "end": 0.725,
+     "start": 0.312,
+     "text": "token"
+    },
+    {
+     "end": 1.225,
+     "start": 0.725,
+     "text": "policy"
+    },
+    {
+     "end": 1.388,
+     "start": 1.225,
+     "text": "for"
+    },
+    {
+     "end": 1.975,
+     "start": 1.388,
+     "text": "checkpoint"
+    },
+    {
+     "end": 2.112,
+     "start": 1.975,
+     "text": "and"
+    },
+    {
+     "end": 2.562,
+     "start": 2.112,
+     "text": "fact"
+    },
+    {
+     "end": 3.025,
+     "start": 2.562,
+     "text": "tokens"
+    },
+    {
+     "end": 3.475,
+     "start": 3.025,
+     "text": "separate"
+    },
+    {
+     "end": 3.638,
+     "start": 3.475,
+     "text": "from"
+    },
+    {
+     "end": 3.775,
+     "start": 3.638,
+     "text": "the"
+    },
+    {
+     "end": 4.225,
+     "start": 3.775,
+     "text": "approval"
+    },
+    {
+     "end": 4.9,
+     "start": 4.225,
+     "text": "policy"
+    },
+    {
+     "end": 5.0,
+     "start": 4.9,
+     "text": ","
+    },
+    {
+     "end": 5.188,
+     "start": 5.0,
+     "text": "since"
+    },
+    {
+     "end": 5.275,
+     "start": 5.188,
+     "text": "a"
+    },
+    {
+     "end": 6.025,
+     "start": 5.275,
+     "text": "registration"
+    },
+    {
+     "end": 6.588,
+     "start": 6.025,
+     "text": "request"
+    },
+    {
+     "end": 7.0,
+     "start": 6.588,
+     "text": "carries"
+    },
+    {
+     "end": 7.637,
+     "start": 7.0,
+     "text": "exactly"
+    },
+    {
+     "end": 7.9,
+     "start": 7.637,
+     "text": "one"
+    },
+    {
+     "end": 8.6,
+     "start": 7.9,
+     "text": "application"
+    },
+    {
+     "end": 9.725,
+     "start": 8.6,
+     "text": "token"
+    },
+    {
+     "end": 9.95,
+     "start": 9.725,
+     "text": ";"
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/remaining-production-work-04": {
+   "audio_sha256": "46433c993998325018ef2384148b35ffa293c068a121194006b2a815f6aad54c",
+   "characters": 108,
+   "cost": 0.00010692,
+   "duration": 7.1,
+   "index": 4,
+   "key": "4b8d9ea75b81d984f375ae5f4b1d35df9f40e56810b417aca5bf9a29c05c9733",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 300,
+   "section": "remaining-production-work",
+   "sent_text": "the registry identity and active token in the checkpoint datum, which changes the checkpoint datum encoding;",
+   "text": "the registry identity and active token in the checkpoint datum, which changes the checkpoint datum encoding;",
+   "words": [
+    {
+     "end": 0.312,
+     "start": 0.2,
+     "text": "the"
+    },
+    {
+     "end": 0.875,
+     "start": 0.312,
+     "text": "registry"
+    },
+    {
+     "end": 1.525,
+     "start": 0.875,
+     "text": "identity"
+    },
+    {
+     "end": 1.663,
+     "start": 1.525,
+     "text": "and"
+    },
+    {
+     "end": 2.162,
+     "start": 1.663,
+     "text": "active"
+    },
+    {
+     "end": 2.6,
+     "start": 2.162,
+     "text": "token"
+    },
+    {
+     "end": 2.713,
+     "start": 2.6,
+     "text": "in"
+    },
+    {
+     "end": 2.812,
+     "start": 2.713,
+     "text": "the"
+    },
+    {
+     "end": 3.325,
+     "start": 2.812,
+     "text": "checkpoint"
+    },
+    {
+     "end": 3.85,
+     "start": 3.325,
+     "text": "datum"
+    },
+    {
+     "end": 3.925,
+     "start": 3.85,
+     "text": ","
+    },
+    {
+     "end": 4.162,
+     "start": 3.925,
+     "text": "which"
+    },
+    {
+     "end": 4.65,
+     "start": 4.162,
+     "text": "changes"
+    },
+    {
+     "end": 4.787,
+     "start": 4.65,
+     "text": "the"
+    },
+    {
+     "end": 5.3,
+     "start": 4.787,
+     "text": "checkpoint"
+    },
+    {
+     "end": 5.675,
+     "start": 5.3,
+     "text": "datum"
+    },
+    {
+     "end": 6.9,
+     "start": 5.675,
+     "text": "encoding"
+    },
+    {
+     "end": 7.1,
+     "start": 6.9,
+     "text": ";"
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/remaining-production-work-05": {
+   "audio_sha256": "027f1c37294d44b99bffde68ca1a3791968636565d4348f85c9e61b0a1eb5642",
+   "characters": 144,
+   "cost": 0.00014256,
+   "duration": 9.25,
+   "index": 5,
+   "key": "1ee1a2289a9b08266dbfb53d86f7506ea1152da3644c042ae1024dbbc2f31d49",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 300,
+   "section": "remaining-production-work",
+   "sent_text": "the encoding of the approval preimage in the off-chain builders, bound to the published Singular byte specification once it is settled upstream;",
+   "text": "the encoding of the approval preimage in the off-chain builders, bound to the published Singular byte specification once it is settled upstream;",
+   "words": [
+    {
+     "end": 0.325,
+     "start": 0.2,
+     "text": "the"
+    },
+    {
+     "end": 0.875,
+     "start": 0.325,
+     "text": "encoding"
+    },
+    {
+     "end": 0.962,
+     "start": 0.875,
+     "text": "of"
+    },
+    {
+     "end": 1.1,
+     "start": 0.962,
+     "text": "the"
+    },
+    {
+     "end": 1.612,
+     "start": 1.1,
+     "text": "approval"
+    },
+    {
+     "end": 2.2,
+     "start": 1.612,
+     "text": "preimage"
+    },
+    {
+     "end": 2.312,
+     "start": 2.2,
+     "text": "in"
+    },
+    {
+     "end": 2.463,
+     "start": 2.312,
+     "text": "the"
+    },
+    {
+     "end": 3.1,
+     "start": 2.463,
+     "text": "off-chain"
+    },
+    {
+     "end": 3.7,
+     "start": 3.1,
+     "text": "builders"
+    },
+    {
+     "end": 3.787,
+     "start": 3.7,
+     "text": ","
+    },
+    {
+     "end": 4.2,
+     "start": 3.787,
+     "text": "bound"
+    },
+    {
+     "end": 4.3,
+     "start": 4.2,
+     "text": "to"
+    },
+    {
+     "end": 4.438,
+     "start": 4.3,
+     "text": "the"
+    },
+    {
+     "end": 4.975,
+     "start": 4.438,
+     "text": "published"
+    },
+    {
+     "end": 5.5,
+     "start": 4.975,
+     "text": "Singular"
+    },
+    {
+     "end": 5.8,
+     "start": 5.5,
+     "text": "byte"
+    },
+    {
+     "end": 6.738,
+     "start": 5.8,
+     "text": "specification"
+    },
+    {
+     "end": 7.012,
+     "start": 6.738,
+     "text": "once"
+    },
+    {
+     "end": 7.1,
+     "start": 7.012,
+     "text": "it"
+    },
+    {
+     "end": 7.262,
+     "start": 7.1,
+     "text": "is"
+    },
+    {
+     "end": 7.675,
+     "start": 7.262,
+     "text": "settled"
+    },
+    {
+     "end": 9.05,
+     "start": 7.675,
+     "text": "upstream"
+    },
+    {
+     "end": 9.25,
+     "start": 9.05,
+     "text": ";"
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/remaining-production-work-06": {
+   "audio_sha256": "f548dd86f3ec6a15af5edd0eeb8a327cedeea58a4af3f5c1af5723aa97861d5d",
+   "characters": 140,
+   "cost": 0.00013859999999999998,
+   "duration": 12.575,
+   "index": 6,
+   "key": "571f33a4dd4b6cce605f91a04e99b25017300b3dbdb28e3fb8a3792f4a703074",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 300,
+   "section": "remaining-production-work",
+   "sent_text": "termination approvals for conviction (#350), whose upstream vectors are not settled (#743), and the released Singular compatibility of #747.",
+   "text": "termination approvals for conviction (#350), whose upstream vectors are not settled (#743), and the released Singular compatibility of #747.",
+   "words": [
+    {
+     "end": 0.925,
+     "start": 0.25,
+     "text": "termination"
+    },
+    {
+     "end": 1.55,
+     "start": 0.925,
+     "text": "approvals"
+    },
+    {
+     "end": 1.7,
+     "start": 1.55,
+     "text": "for"
+    },
+    {
+     "end": 2.4,
+     "start": 1.7,
+     "text": "conviction"
+    },
+    {
+     "end": 2.475,
+     "start": 2.4,
+     "text": "("
+    },
+    {
+     "end": 3.525,
+     "start": 2.475,
+     "text": "350"
+    },
+    {
+     "end": 3.6,
+     "start": 3.525,
+     "text": ")"
+    },
+    {
+     "end": 3.65,
+     "start": 3.6,
+     "text": ","
+    },
+    {
+     "end": 3.938,
+     "start": 3.65,
+     "text": "whose"
+    },
+    {
+     "end": 4.537,
+     "start": 3.938,
+     "text": "upstream"
+    },
+    {
+     "end": 5.05,
+     "start": 4.537,
+     "text": "vectors"
+    },
+    {
+     "end": 5.2,
+     "start": 5.05,
+     "text": "are"
+    },
+    {
+     "end": 5.475,
+     "start": 5.2,
+     "text": "not"
+    },
+    {
+     "end": 5.975,
+     "start": 5.475,
+     "text": "settled"
+    },
+    {
+     "end": 6.05,
+     "start": 5.975,
+     "text": "("
+    },
+    {
+     "end": 7.5,
+     "start": 6.05,
+     "text": "743"
+    },
+    {
+     "end": 7.675,
+     "start": 7.5,
+     "text": ")"
+    },
+    {
+     "end": 7.75,
+     "start": 7.675,
+     "text": ","
+    },
+    {
+     "end": 7.863,
+     "start": 7.75,
+     "text": "and"
+    },
+    {
+     "end": 7.95,
+     "start": 7.863,
+     "text": "the"
+    },
+    {
+     "end": 8.475,
+     "start": 7.95,
+     "text": "released"
+    },
+    {
+     "end": 9.025,
+     "start": 8.475,
+     "text": "Singular"
+    },
+    {
+     "end": 9.925,
+     "start": 9.025,
+     "text": "compatibility"
+    },
+    {
+     "end": 10.087,
+     "start": 9.925,
+     "text": "of"
+    },
+    {
+     "end": 12.25,
+     "start": 10.087,
+     "text": "747"
+    },
+    {
+     "end": 12.575,
+     "start": 12.25,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/the-package-boundary-00": {
+   "audio_sha256": "c5e195a11f5b8a5a53e5557ff55fdd916ea993e5621c2416e07c64b9d4eeb416",
+   "characters": 21,
+   "cost": 2.0789999999999996e-05,
+   "duration": 1.775,
+   "index": 0,
+   "key": "b42c7f7d7b44731679dbdaa6a176f45b25a0be7bf9e39449eadf6634de5c85f5",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 500,
+   "section": "the-package-boundary",
+   "sent_text": "The package boundary.",
+   "text": "The package boundary.",
+   "words": [
+    {
+     "end": 0.25,
+     "start": 0.175,
+     "text": "The"
+    },
+    {
+     "end": 0.675,
+     "start": 0.25,
+     "text": "package"
+    },
+    {
+     "end": 1.575,
+     "start": 0.675,
+     "text": "boundary"
+    },
+    {
+     "end": 1.775,
+     "start": 1.575,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/the-package-boundary-01": {
+   "audio_sha256": "c51a7993f1a6a259c1caa35cff1095aab20daa4e03a1b3b70ac3a131f7db45e8",
+   "characters": 172,
+   "cost": 0.00017027999999999998,
+   "duration": 11.725,
+   "index": 1,
+   "key": "75dab83b7540dc6537380bae07eb35e9f63ad0f9028d97f95f7e317141e82625",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 400,
+   "section": "the-package-boundary",
+   "sent_text": "A package that depends on Singular sees only its library modules; its validators are not importable. The [KERI](/kˈɛɹi/) side uses the redesigned singular_state namespaces:",
+   "text": "A package that depends on Singular sees only its library modules; its validators are not importable. The KERI side uses the redesigned singular_state namespaces:",
+   "words": [
+    {
+     "end": 0.275,
+     "start": 0.2,
+     "text": "A"
+    },
+    {
+     "end": 0.775,
+     "start": 0.275,
+     "text": "package"
+    },
+    {
+     "end": 0.913,
+     "start": 0.775,
+     "text": "that"
+    },
+    {
+     "end": 1.337,
+     "start": 0.913,
+     "text": "depends"
+    },
+    {
+     "end": 1.538,
+     "start": 1.337,
+     "text": "on"
+    },
+    {
+     "end": 2.037,
+     "start": 1.538,
+     "text": "Singular"
+    },
+    {
+     "end": 2.487,
+     "start": 2.037,
+     "text": "sees"
+    },
+    {
+     "end": 2.8,
+     "start": 2.487,
+     "text": "only"
+    },
+    {
+     "end": 3.0,
+     "start": 2.8,
+     "text": "its"
+    },
+    {
+     "end": 3.5,
+     "start": 3.0,
+     "text": "library"
+    },
+    {
+     "end": 4.575,
+     "start": 3.5,
+     "text": "modules"
+    },
+    {
+     "end": 4.775,
+     "start": 4.575,
+     "text": ";"
+    },
+    {
+     "end": 5.15,
+     "start": 4.975,
+     "text": "its"
+    },
+    {
+     "end": 5.887,
+     "start": 5.15,
+     "text": "validators"
+    },
+    {
+     "end": 6.062,
+     "start": 5.887,
+     "text": "are"
+    },
+    {
+     "end": 6.375,
+     "start": 6.062,
+     "text": "not"
+    },
+    {
+     "end": 7.15,
+     "start": 6.375,
+     "text": "importable"
+    },
+    {
+     "end": 7.25,
+     "start": 7.15,
+     "text": "."
+    },
+    {
+     "end": 7.375,
+     "start": 7.25,
+     "text": "The"
+    },
+    {
+     "end": 7.713,
+     "start": 7.375,
+     "text": "KERI"
+    },
+    {
+     "end": 8.05,
+     "start": 7.713,
+     "text": "side"
+    },
+    {
+     "end": 8.45,
+     "start": 8.05,
+     "text": "uses"
+    },
+    {
+     "end": 8.587,
+     "start": 8.45,
+     "text": "the"
+    },
+    {
+     "end": 9.288,
+     "start": 8.587,
+     "text": "redesigned"
+    },
+    {
+     "end": 10.075,
+     "start": 9.288,
+     "text": "singular_state"
+    },
+    {
+     "end": 11.525,
+     "start": 10.075,
+     "text": "namespaces"
+    },
+    {
+     "end": 11.725,
+     "start": 11.525,
+     "text": ":"
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/the-package-boundary-02": {
+   "audio_sha256": "db18ac0f062c2b8bdb33889ab2ddbfd99235847d23cfa22c9d62fa07e013373b",
+   "characters": 341,
+   "cost": 0.00033758999999999997,
+   "duration": 23.875,
+   "index": 2,
+   "key": "b9fc2ba0f54c0c976994adc33a40946d653206b3e4230b6c693617851da8ba95",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 400,
+   "section": "the-package-boundary",
+   "sent_text": "Singular calls nothing in [KERI](/kˈɛɹi/). The only [KERI](/kˈɛɹi/) value it reads is the checkpoint output named by a registration: its address, its value and the datum it carries, which Singular hashes without interpreting. These requirements are the ones the public Singular issues #742 and #743 state for a registration and its approval.",
+   "text": "Singular calls nothing in KERI. The only KERI value it reads is the checkpoint output named by a registration: its address, its value and the datum it carries, which Singular hashes without interpreting. These requirements are the ones the public Singular issues #742 and #743 state for a registration and its approval.",
+   "words": [
+    {
+     "end": 0.55,
+     "start": 0.2,
+     "text": "Singular"
+    },
+    {
+     "end": 0.85,
+     "start": 0.55,
+     "text": "calls"
+    },
+    {
+     "end": 1.138,
+     "start": 0.85,
+     "text": "nothing"
+    },
+    {
+     "end": 1.275,
+     "start": 1.138,
+     "text": "in"
+    },
+    {
+     "end": 2.1,
+     "start": 1.275,
+     "text": "KERI"
+    },
+    {
+     "end": 2.3,
+     "start": 2.1,
+     "text": "."
+    },
+    {
+     "end": 2.6,
+     "start": 2.475,
+     "text": "The"
+    },
+    {
+     "end": 2.9,
+     "start": 2.6,
+     "text": "only"
+    },
+    {
+     "end": 3.225,
+     "start": 2.9,
+     "text": "KERI"
+    },
+    {
+     "end": 3.625,
+     "start": 3.225,
+     "text": "value"
+    },
+    {
+     "end": 3.775,
+     "start": 3.625,
+     "text": "it"
+    },
+    {
+     "end": 4.287,
+     "start": 3.775,
+     "text": "reads"
+    },
+    {
+     "end": 4.45,
+     "start": 4.287,
+     "text": "is"
+    },
+    {
+     "end": 4.588,
+     "start": 4.45,
+     "text": "the"
+    },
+    {
+     "end": 5.075,
+     "start": 4.588,
+     "text": "checkpoint"
+    },
+    {
+     "end": 5.562,
+     "start": 5.075,
+     "text": "output"
+    },
+    {
+     "end": 5.875,
+     "start": 5.562,
+     "text": "named"
+    },
+    {
+     "end": 6.05,
+     "start": 5.875,
+     "text": "by"
+    },
+    {
+     "end": 6.125,
+     "start": 6.05,
+     "text": "a"
+    },
+    {
+     "end": 7.475,
+     "start": 6.125,
+     "text": "registration"
+    },
+    {
+     "end": 7.675,
+     "start": 7.475,
+     "text": ":"
+    },
+    {
+     "end": 8.025,
+     "start": 7.875,
+     "text": "its"
+    },
+    {
+     "end": 8.5,
+     "start": 8.025,
+     "text": "address"
+    },
+    {
+     "end": 8.55,
+     "start": 8.5,
+     "text": ","
+    },
+    {
+     "end": 8.762,
+     "start": 8.55,
+     "text": "its"
+    },
+    {
+     "end": 9.262,
+     "start": 8.762,
+     "text": "value"
+    },
+    {
+     "end": 9.387,
+     "start": 9.262,
+     "text": "and"
+    },
+    {
+     "end": 9.475,
+     "start": 9.387,
+     "text": "the"
+    },
+    {
+     "end": 9.85,
+     "start": 9.475,
+     "text": "datum"
+    },
+    {
+     "end": 9.975,
+     "start": 9.85,
+     "text": "it"
+    },
+    {
+     "end": 10.525,
+     "start": 9.975,
+     "text": "carries"
+    },
+    {
+     "end": 10.6,
+     "start": 10.525,
+     "text": ","
+    },
+    {
+     "end": 10.825,
+     "start": 10.6,
+     "text": "which"
+    },
+    {
+     "end": 11.35,
+     "start": 10.825,
+     "text": "Singular"
+    },
+    {
+     "end": 11.85,
+     "start": 11.35,
+     "text": "hashes"
+    },
+    {
+     "end": 12.175,
+     "start": 11.85,
+     "text": "without"
+    },
+    {
+     "end": 13.45,
+     "start": 12.175,
+     "text": "interpreting"
+    },
+    {
+     "end": 13.65,
+     "start": 13.45,
+     "text": "."
+    },
+    {
+     "end": 14.1,
+     "start": 13.875,
+     "text": "These"
+    },
+    {
+     "end": 14.887,
+     "start": 14.1,
+     "text": "requirements"
+    },
+    {
+     "end": 15.05,
+     "start": 14.887,
+     "text": "are"
+    },
+    {
+     "end": 15.188,
+     "start": 15.05,
+     "text": "the"
+    },
+    {
+     "end": 15.625,
+     "start": 15.188,
+     "text": "ones"
+    },
+    {
+     "end": 15.762,
+     "start": 15.625,
+     "text": "the"
+    },
+    {
+     "end": 16.188,
+     "start": 15.762,
+     "text": "public"
+    },
+    {
+     "end": 16.7,
+     "start": 16.188,
+     "text": "Singular"
+    },
+    {
+     "end": 17.188,
+     "start": 16.7,
+     "text": "issues"
+    },
+    {
+     "end": 18.75,
+     "start": 17.188,
+     "text": "742"
+    },
+    {
+     "end": 18.938,
+     "start": 18.75,
+     "text": "and"
+    },
+    {
+     "end": 20.462,
+     "start": 18.938,
+     "text": "743"
+    },
+    {
+     "end": 20.875,
+     "start": 20.462,
+     "text": "state"
+    },
+    {
+     "end": 21.025,
+     "start": 20.875,
+     "text": "for"
+    },
+    {
+     "end": 21.125,
+     "start": 21.025,
+     "text": "a"
+    },
+    {
+     "end": 22.075,
+     "start": 21.125,
+     "text": "registration"
+    },
+    {
+     "end": 22.25,
+     "start": 22.075,
+     "text": "and"
+    },
+    {
+     "end": 22.45,
+     "start": 22.25,
+     "text": "its"
+    },
+    {
+     "end": 23.65,
+     "start": 22.45,
+     "text": "approval"
+    },
+    {
+     "end": 23.875,
+     "start": 23.65,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/what-the-check-assembles-00": {
+   "audio_sha256": "f7dfbaa3a42a95db392f3d261897a435039f5077de31f60f87884a59103199ae",
+   "characters": 25,
+   "cost": 2.475e-05,
+   "duration": 1.75,
+   "index": 0,
+   "key": "9a4d1171abf84916922b7a4618a4755fdcba77465dad8ffc96bc321de9c805ca",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 500,
+   "section": "what-the-check-assembles",
+   "sent_text": "What the check assembles.",
+   "text": "What the check assembles.",
+   "words": [
+    {
+     "end": 0.287,
+     "start": 0.175,
+     "text": "What"
+    },
+    {
+     "end": 0.375,
+     "start": 0.287,
+     "text": "the"
+    },
+    {
+     "end": 0.587,
+     "start": 0.375,
+     "text": "check"
+    },
+    {
+     "end": 1.55,
+     "start": 0.587,
+     "text": "assembles"
+    },
+    {
+     "end": 1.75,
+     "start": 1.55,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/what-the-check-assembles-01": {
+   "audio_sha256": "ae43f651cd268d30da651c612bc7d6d8088a37250b4ad312ce5facc4106e656d",
+   "characters": 634,
+   "cost": 0.00062766,
+   "duration": 42.65,
+   "index": 1,
+   "key": "d3274b5b33f0b5970e5b4370192b79a1a76a2c6b32e3481c14960519072de82a",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 400,
+   "section": "what-the-check-assembles",
+   "sent_text": "The consumer package is assembled inside the Nix sandbox from sources only. Its own library is the committed compatibility tests together with the [KERI](/kˈɛɹi/) libraries of the same commit. Its dependencies are the Singular registry package at the public Singular commit d69ab005, the same commit the [KERI](/kˈɛɹi/) Lean model is built against, and the shared Aiken prelude packages at the versions both projects already use. The compiler is the Aiken release every other onchain recipe of this repository uses. The whole graph is compiled, then the compatibility tests and the retained [KERI](/kˈɛɹi/) registration tests are run.",
+   "text": "The consumer package is assembled inside the Nix sandbox from sources only. Its own library is the committed compatibility tests together with the KERI libraries of the same commit. Its dependencies are the Singular registry package at the public Singular commit d69ab005, the same commit the KERI Lean model is built against, and the shared Aiken prelude packages at the versions both projects already use. The compiler is the Aiken release every other onchain recipe of this repository uses. The whole graph is compiled, then the compatibility tests and the retained KERI registration tests are run.",
+   "words": [
+    {
+     "end": 0.25,
+     "start": 0.175,
+     "text": "The"
+    },
+    {
+     "end": 0.8,
+     "start": 0.25,
+     "text": "consumer"
+    },
+    {
+     "end": 1.388,
+     "start": 0.8,
+     "text": "package"
+    },
+    {
+     "end": 1.525,
+     "start": 1.388,
+     "text": "is"
+    },
+    {
+     "end": 2.162,
+     "start": 1.525,
+     "text": "assembled"
+    },
+    {
+     "end": 2.662,
+     "start": 2.162,
+     "text": "inside"
+    },
+    {
+     "end": 2.75,
+     "start": 2.662,
+     "text": "the"
+    },
+    {
+     "end": 3.0,
+     "start": 2.75,
+     "text": "Nix"
+    },
+    {
+     "end": 3.575,
+     "start": 3.0,
+     "text": "sandbox"
+    },
+    {
+     "end": 3.775,
+     "start": 3.575,
+     "text": "from"
+    },
+    {
+     "end": 4.25,
+     "start": 3.775,
+     "text": "sources"
+    },
+    {
+     "end": 5.2,
+     "start": 4.25,
+     "text": "only"
+    },
+    {
+     "end": 5.425,
+     "start": 5.2,
+     "text": "."
+    },
+    {
+     "end": 5.8,
+     "start": 5.6,
+     "text": "Its"
+    },
+    {
+     "end": 6.05,
+     "start": 5.8,
+     "text": "own"
+    },
+    {
+     "end": 6.662,
+     "start": 6.05,
+     "text": "library"
+    },
+    {
+     "end": 6.825,
+     "start": 6.662,
+     "text": "is"
+    },
+    {
+     "end": 6.95,
+     "start": 6.825,
+     "text": "the"
+    },
+    {
+     "end": 7.4,
+     "start": 6.95,
+     "text": "committed"
+    },
+    {
+     "end": 8.312,
+     "start": 7.4,
+     "text": "compatibility"
+    },
+    {
+     "end": 8.75,
+     "start": 8.312,
+     "text": "tests"
+    },
+    {
+     "end": 9.225,
+     "start": 8.75,
+     "text": "together"
+    },
+    {
+     "end": 9.363,
+     "start": 9.225,
+     "text": "with"
+    },
+    {
+     "end": 9.488,
+     "start": 9.363,
+     "text": "the"
+    },
+    {
+     "end": 9.825,
+     "start": 9.488,
+     "text": "KERI"
+    },
+    {
+     "end": 10.45,
+     "start": 9.825,
+     "text": "libraries"
+    },
+    {
+     "end": 10.538,
+     "start": 10.45,
+     "text": "of"
+    },
+    {
+     "end": 10.663,
+     "start": 10.538,
+     "text": "the"
+    },
+    {
+     "end": 11.0,
+     "start": 10.663,
+     "text": "same"
+    },
+    {
+     "end": 12.025,
+     "start": 11.0,
+     "text": "commit"
+    },
+    {
+     "end": 12.25,
+     "start": 12.025,
+     "text": "."
+    },
+    {
+     "end": 12.675,
+     "start": 12.45,
+     "text": "Its"
+    },
+    {
+     "end": 13.538,
+     "start": 12.675,
+     "text": "dependencies"
+    },
+    {
+     "end": 13.675,
+     "start": 13.538,
+     "text": "are"
+    },
+    {
+     "end": 13.825,
+     "start": 13.675,
+     "text": "the"
+    },
+    {
+     "end": 14.375,
+     "start": 13.825,
+     "text": "Singular"
+    },
+    {
+     "end": 14.85,
+     "start": 14.375,
+     "text": "registry"
+    },
+    {
+     "end": 15.387,
+     "start": 14.85,
+     "text": "package"
+    },
+    {
+     "end": 15.488,
+     "start": 15.387,
+     "text": "at"
+    },
+    {
+     "end": 15.587,
+     "start": 15.488,
+     "text": "the"
+    },
+    {
+     "end": 16.013,
+     "start": 15.587,
+     "text": "public"
+    },
+    {
+     "end": 16.538,
+     "start": 16.013,
+     "text": "Singular"
+    },
+    {
+     "end": 16.938,
+     "start": 16.538,
+     "text": "commit"
+    },
+    {
+     "end": 20.4,
+     "start": 16.938,
+     "text": "d69ab005"
+    },
+    {
+     "end": 20.65,
+     "start": 20.4,
+     "text": ","
+    },
+    {
+     "end": 20.925,
+     "start": 20.825,
+     "text": "the"
+    },
+    {
+     "end": 21.2,
+     "start": 20.925,
+     "text": "same"
+    },
+    {
+     "end": 21.487,
+     "start": 21.2,
+     "text": "commit"
+    },
+    {
+     "end": 21.575,
+     "start": 21.487,
+     "text": "the"
+    },
+    {
+     "end": 21.9,
+     "start": 21.575,
+     "text": "KERI"
+    },
+    {
+     "end": 22.1,
+     "start": 21.9,
+     "text": "Lean"
+    },
+    {
+     "end": 22.513,
+     "start": 22.1,
+     "text": "model"
+    },
+    {
+     "end": 22.675,
+     "start": 22.513,
+     "text": "is"
+    },
+    {
+     "end": 22.95,
+     "start": 22.675,
+     "text": "built"
+    },
+    {
+     "end": 23.825,
+     "start": 22.95,
+     "text": "against"
+    },
+    {
+     "end": 24.025,
+     "start": 23.825,
+     "text": ","
+    },
+    {
+     "end": 24.312,
+     "start": 24.225,
+     "text": "and"
+    },
+    {
+     "end": 24.438,
+     "start": 24.312,
+     "text": "the"
+    },
+    {
+     "end": 24.788,
+     "start": 24.438,
+     "text": "shared"
+    },
+    {
+     "end": 25.212,
+     "start": 24.788,
+     "text": "Aiken"
+    },
+    {
+     "end": 25.725,
+     "start": 25.212,
+     "text": "prelude"
+    },
+    {
+     "end": 26.3,
+     "start": 25.725,
+     "text": "packages"
+    },
+    {
+     "end": 26.388,
+     "start": 26.3,
+     "text": "at"
+    },
+    {
+     "end": 26.475,
+     "start": 26.388,
+     "text": "the"
+    },
+    {
+     "end": 27.038,
+     "start": 26.475,
+     "text": "versions"
+    },
+    {
+     "end": 27.35,
+     "start": 27.038,
+     "text": "both"
+    },
+    {
+     "end": 27.85,
+     "start": 27.35,
+     "text": "projects"
+    },
+    {
+     "end": 28.225,
+     "start": 27.85,
+     "text": "already"
+    },
+    {
+     "end": 29.2,
+     "start": 28.225,
+     "text": "use"
+    },
+    {
+     "end": 29.4,
+     "start": 29.2,
+     "text": "."
+    },
+    {
+     "end": 29.675,
+     "start": 29.6,
+     "text": "The"
+    },
+    {
+     "end": 30.337,
+     "start": 29.675,
+     "text": "compiler"
+    },
+    {
+     "end": 30.487,
+     "start": 30.337,
+     "text": "is"
+    },
+    {
+     "end": 30.638,
+     "start": 30.487,
+     "text": "the"
+    },
+    {
+     "end": 31.025,
+     "start": 30.638,
+     "text": "Aiken"
+    },
+    {
+     "end": 31.6,
+     "start": 31.025,
+     "text": "release"
+    },
+    {
+     "end": 31.987,
+     "start": 31.6,
+     "text": "every"
+    },
+    {
+     "end": 32.312,
+     "start": 31.987,
+     "text": "other"
+    },
+    {
+     "end": 32.75,
+     "start": 32.312,
+     "text": "onchain"
+    },
+    {
+     "end": 33.35,
+     "start": 32.75,
+     "text": "recipe"
+    },
+    {
+     "end": 33.475,
+     "start": 33.35,
+     "text": "of"
+    },
+    {
+     "end": 33.675,
+     "start": 33.475,
+     "text": "this"
+    },
+    {
+     "end": 34.4,
+     "start": 33.675,
+     "text": "repository"
+    },
+    {
+     "end": 35.45,
+     "start": 34.4,
+     "text": "uses"
+    },
+    {
+     "end": 35.65,
+     "start": 35.45,
+     "text": "."
+    },
+    {
+     "end": 35.95,
+     "start": 35.85,
+     "text": "The"
+    },
+    {
+     "end": 36.2,
+     "start": 35.95,
+     "text": "whole"
+    },
+    {
+     "end": 36.575,
+     "start": 36.2,
+     "text": "graph"
+    },
+    {
+     "end": 36.725,
+     "start": 36.575,
+     "text": "is"
+    },
+    {
+     "end": 37.425,
+     "start": 36.725,
+     "text": "compiled"
+    },
+    {
+     "end": 37.5,
+     "start": 37.425,
+     "text": ","
+    },
+    {
+     "end": 37.688,
+     "start": 37.5,
+     "text": "then"
+    },
+    {
+     "end": 37.775,
+     "start": 37.688,
+     "text": "the"
+    },
+    {
+     "end": 38.612,
+     "start": 37.775,
+     "text": "compatibility"
+    },
+    {
+     "end": 39.1,
+     "start": 38.612,
+     "text": "tests"
+    },
+    {
+     "end": 39.213,
+     "start": 39.1,
+     "text": "and"
+    },
+    {
+     "end": 39.3,
+     "start": 39.213,
+     "text": "the"
+    },
+    {
+     "end": 39.862,
+     "start": 39.3,
+     "text": "retained"
+    },
+    {
+     "end": 40.2,
+     "start": 39.862,
+     "text": "KERI"
+    },
+    {
+     "end": 40.925,
+     "start": 40.2,
+     "text": "registration"
+    },
+    {
+     "end": 41.325,
+     "start": 40.925,
+     "text": "tests"
+    },
+    {
+     "end": 41.487,
+     "start": 41.325,
+     "text": "are"
+    },
+    {
+     "end": 42.45,
+     "start": 41.487,
+     "text": "run"
+    },
+    {
+     "end": 42.65,
+     "start": 42.45,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/what-the-check-assembles-02": {
+   "audio_sha256": "4984eb3c96714a191e2578eca2cee82453f540217505d0e16765583c7a03157b",
+   "characters": 234,
+   "cost": 0.00023166,
+   "duration": 15.3,
+   "index": 2,
+   "key": "bcdceacc11967c7beea31daca9d1fe2bc889cf8536247a31a9f0c46bb19357d1",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 400,
+   "section": "what-the-check-assembles",
+   "sent_text": "The check then reads the tests declared in those modules and requires the tests the compiler reports to be exactly the same set, every one passed, and none of the sets empty. A selection that silently runs fewer tests fails the check.",
+   "text": "The check then reads the tests declared in those modules and requires the tests the compiler reports to be exactly the same set, every one passed, and none of the sets empty. A selection that silently runs fewer tests fails the check.",
+   "words": [
+    {
+     "end": 0.35,
+     "start": 0.225,
+     "text": "The"
+    },
+    {
+     "end": 0.675,
+     "start": 0.35,
+     "text": "check"
+    },
+    {
+     "end": 0.913,
+     "start": 0.675,
+     "text": "then"
+    },
+    {
+     "end": 1.25,
+     "start": 0.913,
+     "text": "reads"
+    },
+    {
+     "end": 1.388,
+     "start": 1.25,
+     "text": "the"
+    },
+    {
+     "end": 1.825,
+     "start": 1.388,
+     "text": "tests"
+    },
+    {
+     "end": 2.35,
+     "start": 1.825,
+     "text": "declared"
+    },
+    {
+     "end": 2.475,
+     "start": 2.35,
+     "text": "in"
+    },
+    {
+     "end": 2.737,
+     "start": 2.475,
+     "text": "those"
+    },
+    {
+     "end": 3.325,
+     "start": 2.737,
+     "text": "modules"
+    },
+    {
+     "end": 3.438,
+     "start": 3.325,
+     "text": "and"
+    },
+    {
+     "end": 4.05,
+     "start": 3.438,
+     "text": "requires"
+    },
+    {
+     "end": 4.188,
+     "start": 4.05,
+     "text": "the"
+    },
+    {
+     "end": 4.675,
+     "start": 4.188,
+     "text": "tests"
+    },
+    {
+     "end": 4.775,
+     "start": 4.675,
+     "text": "the"
+    },
+    {
+     "end": 5.375,
+     "start": 4.775,
+     "text": "compiler"
+    },
+    {
+     "end": 5.85,
+     "start": 5.375,
+     "text": "reports"
+    },
+    {
+     "end": 5.95,
+     "start": 5.85,
+     "text": "to"
+    },
+    {
+     "end": 6.137,
+     "start": 5.95,
+     "text": "be"
+    },
+    {
+     "end": 6.75,
+     "start": 6.137,
+     "text": "exactly"
+    },
+    {
+     "end": 6.887,
+     "start": 6.75,
+     "text": "the"
+    },
+    {
+     "end": 7.225,
+     "start": 6.887,
+     "text": "same"
+    },
+    {
+     "end": 7.65,
+     "start": 7.225,
+     "text": "set"
+    },
+    {
+     "end": 7.75,
+     "start": 7.65,
+     "text": ","
+    },
+    {
+     "end": 8.075,
+     "start": 7.75,
+     "text": "every"
+    },
+    {
+     "end": 8.312,
+     "start": 8.075,
+     "text": "one"
+    },
+    {
+     "end": 8.925,
+     "start": 8.312,
+     "text": "passed"
+    },
+    {
+     "end": 9.025,
+     "start": 8.925,
+     "text": ","
+    },
+    {
+     "end": 9.163,
+     "start": 9.025,
+     "text": "and"
+    },
+    {
+     "end": 9.363,
+     "start": 9.163,
+     "text": "none"
+    },
+    {
+     "end": 9.438,
+     "start": 9.363,
+     "text": "of"
+    },
+    {
+     "end": 9.562,
+     "start": 9.438,
+     "text": "the"
+    },
+    {
+     "end": 9.887,
+     "start": 9.562,
+     "text": "sets"
+    },
+    {
+     "end": 11.05,
+     "start": 9.887,
+     "text": "empty"
+    },
+    {
+     "end": 11.3,
+     "start": 11.05,
+     "text": "."
+    },
+    {
+     "end": 11.575,
+     "start": 11.5,
+     "text": "A"
+    },
+    {
+     "end": 12.038,
+     "start": 11.575,
+     "text": "selection"
+    },
+    {
+     "end": 12.238,
+     "start": 12.038,
+     "text": "that"
+    },
+    {
+     "end": 12.725,
+     "start": 12.238,
+     "text": "silently"
+    },
+    {
+     "end": 13.038,
+     "start": 12.725,
+     "text": "runs"
+    },
+    {
+     "end": 13.375,
+     "start": 13.038,
+     "text": "fewer"
+    },
+    {
+     "end": 13.788,
+     "start": 13.375,
+     "text": "tests"
+    },
+    {
+     "end": 14.137,
+     "start": 13.788,
+     "text": "fails"
+    },
+    {
+     "end": 14.262,
+     "start": 14.137,
+     "text": "the"
+    },
+    {
+     "end": 15.1,
+     "start": 14.262,
+     "text": "check"
+    },
+    {
+     "end": 15.3,
+     "start": 15.1,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/what-the-tests-show-and-what-they-do-not-00": {
+   "audio_sha256": "b16bfa1c907e025eebda18735f2f8f153a002d7c465b94f5cbaf4f5b28da46e4",
+   "characters": 42,
+   "cost": 4.157999999999999e-05,
+   "duration": 2.525,
+   "index": 0,
+   "key": "89535531c1f2a2d02a94aea25c8e6c53480f35a9587393b7e7bb4b9f6c3d3b2b",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 500,
+   "section": "what-the-tests-show-and-what-they-do-not",
+   "sent_text": "What the tests show, and what they do not.",
+   "text": "What the tests show, and what they do not.",
+   "words": [
+    {
+     "end": 0.287,
+     "start": 0.175,
+     "text": "What"
+    },
+    {
+     "end": 0.375,
+     "start": 0.287,
+     "text": "the"
+    },
+    {
+     "end": 0.663,
+     "start": 0.375,
+     "text": "tests"
+    },
+    {
+     "end": 0.975,
+     "start": 0.663,
+     "text": "show"
+    },
+    {
+     "end": 1.025,
+     "start": 0.975,
+     "text": ","
+    },
+    {
+     "end": 1.138,
+     "start": 1.025,
+     "text": "and"
+    },
+    {
+     "end": 1.263,
+     "start": 1.138,
+     "text": "what"
+    },
+    {
+     "end": 1.4,
+     "start": 1.263,
+     "text": "they"
+    },
+    {
+     "end": 1.575,
+     "start": 1.4,
+     "text": "do"
+    },
+    {
+     "end": 2.325,
+     "start": 1.575,
+     "text": "not"
+    },
+    {
+     "end": 2.525,
+     "start": 2.325,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/what-the-tests-show-and-what-they-do-not-01": {
+   "audio_sha256": "11e1e0b1df313aaa08325da0f40a831c3b9a67ff46512e3a53ceed4b4fd8b2b5",
+   "characters": 303,
+   "cost": 0.00029997,
+   "duration": 20.075,
+   "index": 1,
+   "key": "53631f2777082119ccfde439c1906303f010b659e67c354bcb70a7dac3dd3b41",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 400,
+   "section": "what-the-tests-show-and-what-they-do-not",
+   "sent_text": "Reusing the legacy registration predicate is not the redesigned application. The redesign moves registration to a [KERI](/kˈɛɹi/) approval policy that Singular's fold consumes; that policy does not exist yet, so no test here can show that [KERI](/kˈɛɹi/) and Singular agree on a registration as a whole.",
+   "text": "Reusing the legacy registration predicate is not the redesigned application. The redesign moves registration to a KERI approval policy that Singular's fold consumes; that policy does not exist yet, so no test here can show that KERI and Singular agree on a registration as a whole.",
+   "words": [
+    {
+     "end": 0.75,
+     "start": 0.2,
+     "text": "Reusing"
+    },
+    {
+     "end": 0.875,
+     "start": 0.75,
+     "text": "the"
+    },
+    {
+     "end": 1.35,
+     "start": 0.875,
+     "text": "legacy"
+    },
+    {
+     "end": 2.025,
+     "start": 1.35,
+     "text": "registration"
+    },
+    {
+     "end": 2.7,
+     "start": 2.025,
+     "text": "predicate"
+    },
+    {
+     "end": 2.888,
+     "start": 2.7,
+     "text": "is"
+    },
+    {
+     "end": 3.2,
+     "start": 2.888,
+     "text": "not"
+    },
+    {
+     "end": 3.338,
+     "start": 3.2,
+     "text": "the"
+    },
+    {
+     "end": 3.975,
+     "start": 3.338,
+     "text": "redesigned"
+    },
+    {
+     "end": 5.275,
+     "start": 3.975,
+     "text": "application"
+    },
+    {
+     "end": 5.475,
+     "start": 5.275,
+     "text": "."
+    },
+    {
+     "end": 5.775,
+     "start": 5.675,
+     "text": "The"
+    },
+    {
+     "end": 6.412,
+     "start": 5.775,
+     "text": "redesign"
+    },
+    {
+     "end": 6.75,
+     "start": 6.412,
+     "text": "moves"
+    },
+    {
+     "end": 7.637,
+     "start": 6.75,
+     "text": "registration"
+    },
+    {
+     "end": 7.8,
+     "start": 7.637,
+     "text": "to"
+    },
+    {
+     "end": 7.912,
+     "start": 7.8,
+     "text": "a"
+    },
+    {
+     "end": 8.25,
+     "start": 7.912,
+     "text": "KERI"
+    },
+    {
+     "end": 8.7,
+     "start": 8.25,
+     "text": "approval"
+    },
+    {
+     "end": 9.25,
+     "start": 8.7,
+     "text": "policy"
+    },
+    {
+     "end": 9.462,
+     "start": 9.25,
+     "text": "that"
+    },
+    {
+     "end": 10.062,
+     "start": 9.462,
+     "text": "Singular's"
+    },
+    {
+     "end": 10.425,
+     "start": 10.062,
+     "text": "fold"
+    },
+    {
+     "end": 11.7,
+     "start": 10.425,
+     "text": "consumes"
+    },
+    {
+     "end": 11.9,
+     "start": 11.7,
+     "text": ";"
+    },
+    {
+     "end": 12.225,
+     "start": 12.075,
+     "text": "that"
+    },
+    {
+     "end": 12.65,
+     "start": 12.225,
+     "text": "policy"
+    },
+    {
+     "end": 12.812,
+     "start": 12.65,
+     "text": "does"
+    },
+    {
+     "end": 12.962,
+     "start": 12.812,
+     "text": "not"
+    },
+    {
+     "end": 13.35,
+     "start": 12.962,
+     "text": "exist"
+    },
+    {
+     "end": 14.025,
+     "start": 13.35,
+     "text": "yet"
+    },
+    {
+     "end": 14.225,
+     "start": 14.025,
+     "text": ","
+    },
+    {
+     "end": 14.575,
+     "start": 14.425,
+     "text": "so"
+    },
+    {
+     "end": 14.75,
+     "start": 14.575,
+     "text": "no"
+    },
+    {
+     "end": 15.038,
+     "start": 14.75,
+     "text": "test"
+    },
+    {
+     "end": 15.275,
+     "start": 15.038,
+     "text": "here"
+    },
+    {
+     "end": 15.5,
+     "start": 15.275,
+     "text": "can"
+    },
+    {
+     "end": 15.825,
+     "start": 15.5,
+     "text": "show"
+    },
+    {
+     "end": 16.038,
+     "start": 15.825,
+     "text": "that"
+    },
+    {
+     "end": 16.587,
+     "start": 16.038,
+     "text": "KERI"
+    },
+    {
+     "end": 16.763,
+     "start": 16.587,
+     "text": "and"
+    },
+    {
+     "end": 17.275,
+     "start": 16.763,
+     "text": "Singular"
+    },
+    {
+     "end": 17.725,
+     "start": 17.275,
+     "text": "agree"
+    },
+    {
+     "end": 17.862,
+     "start": 17.725,
+     "text": "on"
+    },
+    {
+     "end": 17.925,
+     "start": 17.862,
+     "text": "a"
+    },
+    {
+     "end": 18.712,
+     "start": 17.925,
+     "text": "registration"
+    },
+    {
+     "end": 18.85,
+     "start": 18.712,
+     "text": "as"
+    },
+    {
+     "end": 18.95,
+     "start": 18.85,
+     "text": "a"
+    },
+    {
+     "end": 19.875,
+     "start": 18.95,
+     "text": "whole"
+    },
+    {
+     "end": 20.075,
+     "start": 19.875,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-singular-package-boundary/what-the-tests-show-and-what-they-do-not-02": {
+   "audio_sha256": "f527dab83aa956d3604ba3831780a0f19e128a5916da9a8d3a0f656210ec8cb6",
+   "characters": 362,
+   "cost": 0.00035837999999999994,
+   "duration": 25.75,
+   "index": 2,
+   "key": "eae0b6e9f41c6ba9386bedea69da6cb824d0d5d861af2f750448fb372fb34e9c",
+   "page": "docs/design/singular-package-boundary.md",
+   "pause_ms": 400,
+   "section": "what-the-tests-show-and-what-they-do-not",
+   "sent_text": "The 12 October 2026 local probe passed two compatibility tests and the same sixty-four registration tests. Those two probe tests were never committed and are retired; the fifteen compatibility tests replace them. The registration tests, the predicate they exercise and their generated vectors are unchanged since that probe, and so are the sixty-four test names.",
+   "text": "The 12 October 2026 local probe passed two compatibility tests and the same sixty-four registration tests. Those two probe tests were never committed and are retired; the fifteen compatibility tests replace them. The registration tests, the predicate they exercise and their generated vectors are unchanged since that probe, and so are the sixty-four test names.",
+   "words": [
+    {
+     "end": 0.275,
+     "start": 0.2,
+     "text": "The"
+    },
+    {
+     "end": 0.637,
+     "start": 0.275,
+     "text": "12"
+    },
+    {
+     "end": 1.125,
+     "start": 0.637,
+     "text": "October"
+    },
+    {
+     "end": 2.162,
+     "start": 1.125,
+     "text": "2026"
+    },
+    {
+     "end": 2.562,
+     "start": 2.162,
+     "text": "local"
+    },
+    {
+     "end": 3.013,
+     "start": 2.562,
+     "text": "probe"
+    },
+    {
+     "end": 3.438,
+     "start": 3.013,
+     "text": "passed"
+    },
+    {
+     "end": 3.7,
+     "start": 3.438,
+     "text": "two"
+    },
+    {
+     "end": 4.537,
+     "start": 3.7,
+     "text": "compatibility"
+    },
+    {
+     "end": 5.088,
+     "start": 4.537,
+     "text": "tests"
+    },
+    {
+     "end": 5.213,
+     "start": 5.088,
+     "text": "and"
+    },
+    {
+     "end": 5.338,
+     "start": 5.213,
+     "text": "the"
+    },
+    {
+     "end": 5.775,
+     "start": 5.338,
+     "text": "same"
+    },
+    {
+     "end": 6.4,
+     "start": 5.775,
+     "text": "sixty-four"
+    },
+    {
+     "end": 7.1,
+     "start": 6.4,
+     "text": "registration"
+    },
+    {
+     "end": 8.225,
+     "start": 7.1,
+     "text": "tests"
+    },
+    {
+     "end": 8.45,
+     "start": 8.225,
+     "text": "."
+    },
+    {
+     "end": 8.85,
+     "start": 8.625,
+     "text": "Those"
+    },
+    {
+     "end": 9.05,
+     "start": 8.85,
+     "text": "two"
+    },
+    {
+     "end": 9.325,
+     "start": 9.05,
+     "text": "probe"
+    },
+    {
+     "end": 9.7,
+     "start": 9.325,
+     "text": "tests"
+    },
+    {
+     "end": 9.85,
+     "start": 9.7,
+     "text": "were"
+    },
+    {
+     "end": 10.15,
+     "start": 9.85,
+     "text": "never"
+    },
+    {
+     "end": 10.725,
+     "start": 10.15,
+     "text": "committed"
+    },
+    {
+     "end": 10.863,
+     "start": 10.725,
+     "text": "and"
+    },
+    {
+     "end": 10.95,
+     "start": 10.863,
+     "text": "are"
+    },
+    {
+     "end": 12.05,
+     "start": 10.95,
+     "text": "retired"
+    },
+    {
+     "end": 12.25,
+     "start": 12.05,
+     "text": ";"
+    },
+    {
+     "end": 12.525,
+     "start": 12.425,
+     "text": "the"
+    },
+    {
+     "end": 12.975,
+     "start": 12.525,
+     "text": "fifteen"
+    },
+    {
+     "end": 13.7,
+     "start": 12.975,
+     "text": "compatibility"
+    },
+    {
+     "end": 14.075,
+     "start": 13.7,
+     "text": "tests"
+    },
+    {
+     "end": 14.55,
+     "start": 14.075,
+     "text": "replace"
+    },
+    {
+     "end": 15.25,
+     "start": 14.55,
+     "text": "them"
+    },
+    {
+     "end": 15.425,
+     "start": 15.25,
+     "text": "."
+    },
+    {
+     "end": 15.675,
+     "start": 15.6,
+     "text": "The"
+    },
+    {
+     "end": 16.375,
+     "start": 15.675,
+     "text": "registration"
+    },
+    {
+     "end": 17.175,
+     "start": 16.375,
+     "text": "tests"
+    },
+    {
+     "end": 17.375,
+     "start": 17.175,
+     "text": ","
+    },
+    {
+     "end": 17.625,
+     "start": 17.55,
+     "text": "the"
+    },
+    {
+     "end": 18.1,
+     "start": 17.625,
+     "text": "predicate"
+    },
+    {
+     "end": 18.312,
+     "start": 18.1,
+     "text": "they"
+    },
+    {
+     "end": 19.188,
+     "start": 18.312,
+     "text": "exercise"
+    },
+    {
+     "end": 19.312,
+     "start": 19.188,
+     "text": "and"
+    },
+    {
+     "end": 19.487,
+     "start": 19.312,
+     "text": "their"
+    },
+    {
+     "end": 20.075,
+     "start": 19.487,
+     "text": "generated"
+    },
+    {
+     "end": 20.612,
+     "start": 20.075,
+     "text": "vectors"
+    },
+    {
+     "end": 20.775,
+     "start": 20.612,
+     "text": "are"
+    },
+    {
+     "end": 21.587,
+     "start": 20.775,
+     "text": "unchanged"
+    },
+    {
+     "end": 21.825,
+     "start": 21.587,
+     "text": "since"
+    },
+    {
+     "end": 22.1,
+     "start": 21.825,
+     "text": "that"
+    },
+    {
+     "end": 23.025,
+     "start": 22.1,
+     "text": "probe"
+    },
+    {
+     "end": 23.275,
+     "start": 23.025,
+     "text": ","
+    },
+    {
+     "end": 23.575,
+     "start": 23.475,
+     "text": "and"
+    },
+    {
+     "end": 23.775,
+     "start": 23.575,
+     "text": "so"
+    },
+    {
+     "end": 23.862,
+     "start": 23.775,
+     "text": "are"
+    },
+    {
+     "end": 23.95,
+     "start": 23.862,
+     "text": "the"
+    },
+    {
+     "end": 24.5,
+     "start": 23.95,
+     "text": "sixty-four"
+    },
+    {
+     "end": 24.763,
+     "start": 24.5,
+     "text": "test"
+    },
+    {
+     "end": 25.55,
+     "start": 24.763,
+     "text": "names"
+    },
+    {
+     "end": 25.75,
+     "start": 25.55,
+     "text": "."
+    }
+   ]
+  },
   "docs-design-super-watcher/advance-00": {
    "audio_sha256": "28be36c860ec1a4db50902e397a4bfd2d46418775d7b9aaab0874b3cd8c226b0",
    "characters": 8,

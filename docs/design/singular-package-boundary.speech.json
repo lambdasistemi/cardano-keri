@@ -1,0 +1,120 @@
+{
+  "building-the-keri-libraries-against-the-singular-package": [
+    {
+      "text": "Building the KERI Libraries Against the Singular Package.",
+      "pause": 500
+    },
+    {
+      "text": "A contributor preparing the KERI integration with the redesigned Singular registry runs one command and learns whether the reusable KERI Aiken libraries still compile and test next to the published Singular registry package. When Singular's interface moves underneath them, the same command fails and names what moved: a value that is no longer exported, a module that no longer exists, or an approval that no longer commits to a field KERI relies on.",
+      "pause": 400
+    },
+    {
+      "text": "The command builds the Nix check in aiken-singular-consumer/ from a clean checkout. Hosted CI runs the same check in the required Onchain (Aiken) job and keeps the compiler, lock, test and control receipts as the singular-aiken-consumer-<commit> workflow artifact for fourteen days.",
+      "pause": 400
+    },
+    {
+      "text": "This is technical preparation. It shows that the libraries meet at the package interface. It does not show that KERI registration, parking or conviction behave as the KERI model says once they run through Singular; that is the application work of #324.",
+      "pause": 400
+    },
+    {
+      "text": "Not for mainnet",
+      "pause": 400
+    },
+    {
+      "text": "The consumer package and the contracts it compiles are not for mainnet.",
+      "pause": 400
+    }
+  ],
+  "what-the-check-assembles": [
+    {
+      "text": "What the check assembles.",
+      "pause": 500
+    },
+    {
+      "text": "The consumer package is assembled inside the Nix sandbox from sources only. Its own library is the committed compatibility tests together with the KERI libraries of the same commit. Its dependencies are the Singular registry package at the public Singular commit d69ab005, the same commit the KERI Lean model is built against, and the shared Aiken prelude packages at the versions both projects already use. The compiler is the Aiken release every other onchain recipe of this repository uses. The whole graph is compiled, then the compatibility tests and the retained KERI registration tests are run.",
+      "pause": 400
+    },
+    {
+      "text": "The check then reads the tests declared in those modules and requires the tests the compiler reports to be exactly the same set, every one passed, and none of the sets empty. A selection that silently runs fewer tests fails the check.",
+      "pause": 400
+    }
+  ],
+  "the-package-boundary": [
+    {
+      "text": "The package boundary.",
+      "pause": 500
+    },
+    {
+      "text": "A package that depends on Singular sees only its library modules; its validators are not importable. The KERI side uses the redesigned singular_state namespaces:",
+      "pause": 400
+    },
+    {
+      "text": "Singular calls nothing in KERI. The only KERI value it reads is the checkpoint output named by a registration: its address, its value and the datum it carries, which Singular hashes without interpreting. These requirements are the ones the public Singular issues #742 and #743 state for a registration and its approval.",
+      "pause": 400
+    }
+  ],
+  "what-the-tests-show-and-what-they-do-not": [
+    {
+      "text": "What the tests show, and what they do not.",
+      "pause": 500
+    },
+    {
+      "text": "Reusing the legacy registration predicate is not the redesigned application. The redesign moves registration to a KERI approval policy that Singular's fold consumes; that policy does not exist yet, so no test here can show that KERI and Singular agree on a registration as a whole.",
+      "pause": 400
+    },
+    {
+      "text": "The 12 October 2026 local probe passed two compatibility tests and the same sixty-four registration tests. Those two probe tests were never committed and are retired; the fifteen compatibility tests replace them. The registration tests, the predicate they exercise and their generated vectors are unchanged since that probe, and so are the sixty-four test names.",
+      "pause": 400
+    }
+  ],
+  "controls": [
+    {
+      "text": "Controls.",
+      "pause": 500
+    },
+    {
+      "text": "Each control runs inside the same check and must fail for its stated reason, or the check fails.",
+      "pause": 400
+    }
+  ],
+  "decisions": [
+    {
+      "text": "Decisions.",
+      "pause": 500
+    }
+  ],
+  "remaining-production-work": [
+    {
+      "text": "Remaining production work.",
+      "pause": 500
+    },
+    {
+      "text": "The check stops at the package boundary. The production work it leaves, tracked in #324:",
+      "pause": 400
+    },
+    {
+      "text": "the KERI approval policy that checks the inception evidence, signatures, receipts, refund binding, bond amounts and initial checkpoint datum at booking, and mints the registration approval Singular consumes (#348);",
+      "pause": 300
+    },
+    {
+      "text": "a token policy for checkpoint and fact tokens separate from the approval policy, since a registration request carries exactly one application token;",
+      "pause": 300
+    },
+    {
+      "text": "the registry identity and active token in the checkpoint datum, which changes the checkpoint datum encoding;",
+      "pause": 300
+    },
+    {
+      "text": "the encoding of the approval preimage in the off-chain builders, bound to the published Singular byte specification once it is settled upstream;",
+      "pause": 300
+    },
+    {
+      "text": "termination approvals for conviction (#350), whose upstream vectors are not settled (#743), and the released Singular compatibility of #747.",
+      "pause": 300
+    }
+  ],
+  "_source": {
+    "file": "singular-package-boundary.md",
+    "sha256": "447c51cad9717f1caccf86315e5eb1f420182e59ff3532d0f830cdc0f695ddb7"
+  }
+}

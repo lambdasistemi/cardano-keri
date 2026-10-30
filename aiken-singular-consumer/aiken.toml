@@ -1,0 +1,29 @@
+name = "lambdasistemi/cardano-keri-singular-consumer"
+version = "0.0.0"
+compiler = "v1.1.23"
+plutus = "v3"
+description = "Builds the reusable KERI libraries together with the published Singular registry package"
+
+[repository]
+user = "lambdasistemi"
+project = "cardano-keri"
+platform = "github"
+
+[[dependencies]]
+name = "aiken-lang/stdlib"
+version = "v2.2.0"
+source = "github"
+
+[[dependencies]]
+name = "aiken-lang/merkle-patricia-forestry"
+version = "v2.1.0"
+source = "github"
+
+# Staged from the public Singular commit pinned in flake.nix (its onchain/
+# project); Aiken derives the directory build/packages/singular-registry.
+[[dependencies]]
+name = "singular/registry"
+version = "0.0.0"
+source = "github"
+
+[config]

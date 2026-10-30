@@ -10,21 +10,23 @@
 use aiken/builtin
 use aiken/collection/list
 use aiken/crypto.{blake2b_256}
+use aiken/primitive/bytearray
 use cardano/address.{Address, Credential, Script, VerificationKey}
 use cardano/assets.{Value}
 use cardano/transaction.{
   DatumHash, InlineDatum, NoDatum, Output, OutputReference,
 }
 use cardano_keri/consumer.{
-  Absent, ActivePreimage, Context, Convicted, DecodedDatum, Environment, Hash,
-  Live, Params, Parked, Preimage, Present, PublishedRelease, State,
-  StatePreimage, TerminationPending, Token, authenticated_context,
-  consumable_holding, consumable_state, registry_asset, representative_asset,
+  Absent, Context, Convicted, DecodedDatum, Environment, Hash, Live, Params,
+  Parked, Present, PublishedRelease, State, TerminationPending, Token,
+  authenticated_context, consumable_holding, consumable_state, registry_asset,
+  representative_asset,
 }
 use cardano_keri/consumer_corpus_vectors as vec
 use cardano_keri/consumer_table_interpretation.{
   Query, Tables, table_code, table_hash, table_key_of, verdict,
 }
+use cardano_keri/consumer_test_interpretation as test_interpretation
 
 // ---------------------------------------------------------------------
 // Variations of the anchor row (born at 2, W = 5, now = 7: maturity is exact)
@@ -510,20 +512,7 @@ test registry_and_representative_formulas_follow_the_tables() {
 // registry's token never selects the consumer's context
 // ---------------------------------------------------------------------
 
-/// Collision-free for the tested domain: the hash of a canonical encoding.
-fn inj_hash(code: ByteArray) -> ByteArray {
-  blake2b_256(code)
-}
-
-fn inj_code(preimage: Preimage) -> ByteArray {
-  builtin.serialise_data(preimage)
-}
-
-fn inj_key(aid: Int) -> ByteArray {
-  builtin.serialise_data(aid)
-}
-
-fn inj_decode(
+fn decode_from(
   datums: List<(Data, DecodedDatum)>,
 ) -> fn(PublishedRelease, Data) -> Option<DecodedDatum> {
   fn(_release, raw) {
@@ -535,24 +524,42 @@ fn inj_decode(
 }
 
 fn representative_of(c: Context) -> Token {
-  representative_asset(inj_hash, inj_code, inj_key, c)
+  representative_asset(
+    test_interpretation.hash,
+    test_interpretation.code,
+    test_interpretation.key_of,
+    c,
+  )
 }
 
 fn seed(tx: ByteArray, index: Int) -> OutputReference {
   OutputReference { transaction_id: tx, output_index: index }
 }
 
-/// The Lean formula, written out independently of the predicate.
+/// The Lean formula over the documented test layout, written out
+/// independently of the predicate and of the shared module's functions.
 fn expected_representative(c: Context) -> Token {
-  let registry = Token {
-    policy: c.release.state_policy,
-    name: blake2b_256(builtin.serialise_data(StatePreimage { seed: c.seed })),
-  }
+  let registry_name = blake2b_256(
+    bytearray.concat(
+      #"00",
+      bytearray.concat(
+        c.seed.transaction_id,
+        bytearray.from_int_big_endian(c.seed.output_index, 8),
+      ),
+    ),
+  )
   Token {
-    policy: registry.policy,
+    policy: c.release.state_policy,
     name: blake2b_256(
-      builtin.serialise_data(
-        ActivePreimage { registry, key: builtin.serialise_data(c.aid) },
+      bytearray.concat(
+        #"01",
+        bytearray.concat(
+          c.release.state_policy,
+          bytearray.concat(
+            registry_name,
+            bytearray.from_int_big_endian(c.aid, 8),
+          ),
+        ),
       ),
     ),
   }
@@ -577,10 +584,10 @@ fn accepts_with(c: Context, o: Output) -> Bool {
   let decoded = DecodedDatum { aid: c.aid, state: live(2) }
   let q = base()
   consumable_holding(
-    inj_hash,
-    inj_code,
-    inj_key,
-    inj_decode([(builtin.i_data(711), decoded)]),
+    test_interpretation.hash,
+    test_interpretation.code,
+    test_interpretation.key_of,
+    decode_from([(builtin.i_data(711), decoded)]),
     c,
     q.environment,
     q.params,
@@ -605,10 +612,14 @@ test ci13_ci14_ci15_names_separate_keys_registries_and_seeds() {
     seed: seed(flip_byte(c.seed.transaction_id), 3),
   }
   representative_of(c) == expected_representative(c) && registry_asset(
-    inj_hash,
-    inj_code,
+    test_interpretation.hash,
+    test_interpretation.code,
     c,
-  ) != registry_asset(inj_hash, inj_code, other_seed_index) && list.all(
+  ) != registry_asset(
+    test_interpretation.hash,
+    test_interpretation.code,
+    other_seed_index,
+  ) && list.all(
     [other_aid, other_registry, other_seed_index, other_seed_tx],
     fn(d) {
       representative_of(c) != representative_of(d) && representative_of(d) == expected_representative(

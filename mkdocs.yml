@@ -127,6 +127,7 @@ nav:
       - Verifying Credentials Against the Checkpoint: design/credential-verification.md
       - Regulated DeFi Gate: design/defi-gate.md
       - The Registry as an MPFS Instance: design/registry-as-mpfs.md
+      - Building the KERI Libraries Against the Singular Package: design/singular-package-boundary.md
   - Business Cases:
       - Comparison & Factored Core: design/business-cases/index.md
       - Regulated DeFi: design/business-cases/regulated-defi.md

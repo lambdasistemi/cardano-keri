@@ -19,3 +19,6 @@ import CardanoKeri.ConsumerFixtures
 import CardanoKeri.ConsumerWire
 import CardanoKeri.ConsumerJourney
 import CardanoKeri.ConsumerControls
+import CardanoKeri.ConsumerBytes
+import CardanoKeri.ConsumerBytesGoals
+import CardanoKeri.ConsumerBytesVectors

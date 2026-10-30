@@ -1,0 +1,191 @@
+{"vectors":
+ [{"statePreimage":
+   "d8799fd8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00ffff",
+   "stateName":
+   "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf",
+   "note": "a transferable AID (code E) in the base registry",
+   "key":
+   "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550",
+   "input":
+   {"statePolicy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+    "seed":
+    {"transactionId":
+     "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+     "outputIndex": 0},
+    "aid": "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"},
+   "id": "transferable-aid",
+   "asset":
+   {"policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+    "name": "866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8"},
+   "activePreimage":
+   "d87a9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550ff",
+   "activeName":
+   "866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8"},
+  {"statePreimage":
+   "d8799fd8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00ffff",
+   "stateName":
+   "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf",
+   "note":
+   "another AID in the same registry: the same state name, another active name",
+   "key":
+   "4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776f",
+   "input":
+   {"statePolicy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+    "seed":
+    {"transactionId":
+     "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+     "outputIndex": 0},
+    "aid": "EEBjyTcVHGUZHrR1x3wuxOxbrzH0_cGfAYJJQHME3Pwo"},
+   "id": "other-aid-same-registry",
+   "asset":
+   {"policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+    "name": "07758b6c783532bf93bb2dbeeef28a8287716447662dd60a13b3357799e53110"},
+   "activePreimage":
+   "d87a9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776fff",
+   "activeName":
+   "07758b6c783532bf93bb2dbeeef28a8287716447662dd60a13b3357799e53110"},
+  {"statePreimage":
+   "d8799fd8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00ffff",
+   "stateName":
+   "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf",
+   "note": "a non-transferable AID (code B) in the base registry",
+   "key":
+   "42506265435445557a507a35554558344a394d6b384a535432625a56337068764351386857733064694d3134",
+   "input":
+   {"statePolicy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+    "seed":
+    {"transactionId":
+     "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+     "outputIndex": 0},
+    "aid": "BPbeCTEUzPz5UEX4J9Mk8JST2bZV3phvCQ8hWs0diM14"},
+   "id": "non-transferable-aid",
+   "asset":
+   {"policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+    "name": "fda241c4049323fa652a76f3d500e7828b49acdd1eca2a112adfa5265653fc80"},
+   "activePreimage":
+   "d87a9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c42506265435445557a507a35554558344a394d6b384a535432625a56337068764351386857733064694d3134ff",
+   "activeName":
+   "fda241c4049323fa652a76f3d500e7828b49acdd1eca2a112adfa5265653fc80"},
+  {"statePreimage":
+   "d8799fd8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f01ffff",
+   "stateName":
+   "137d838233aa11f5c452b27faba772d541440f2a8aabb0357f565d5fe182002c",
+   "note":
+   "the same AID in a registry created from another output of the same transaction",
+   "key":
+   "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550",
+   "input":
+   {"statePolicy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+    "seed":
+    {"transactionId":
+     "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+     "outputIndex": 1},
+    "aid": "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"},
+   "id": "rival-seed-output-index",
+   "asset":
+   {"policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+    "name": "2f55cee243abd69ae7276f2478fffb5dbac67bd0146e90bfa8432b59cc04be15"},
+   "activePreimage":
+   "d87a9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820137d838233aa11f5c452b27faba772d541440f2a8aabb0357f565d5fe182002cff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550ff",
+   "activeName":
+   "2f55cee243abd69ae7276f2478fffb5dbac67bd0146e90bfa8432b59cc04be15"},
+  {"statePreimage":
+   "d8799fd8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1e00ffff",
+   "stateName":
+   "187d076638ea18d91c192c59092396bb7bf9c0f302ead97cf65751af0e878bcc",
+   "note": "the same AID in a registry created from another transaction",
+   "key":
+   "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550",
+   "input":
+   {"statePolicy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+    "seed":
+    {"transactionId":
+     "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1e",
+     "outputIndex": 0},
+    "aid": "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"},
+   "id": "rival-seed-transaction",
+   "asset":
+   {"policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+    "name": "d934a32be44496f7452cbae58775ce251138a942e121dbcc80e1f2883a9969a9"},
+   "activePreimage":
+   "d87a9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820187d076638ea18d91c192c59092396bb7bf9c0f302ead97cf65751af0e878bccff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550ff",
+   "activeName":
+   "d934a32be44496f7452cbae58775ce251138a942e121dbcc80e1f2883a9969a9"},
+  {"statePreimage":
+   "d8799fd8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00ffff",
+   "stateName":
+   "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf",
+   "note": "the same AID and seed under another state policy (another release)",
+   "key":
+   "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550",
+   "input":
+   {"statePolicy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f6",
+    "seed":
+    {"transactionId":
+     "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+     "outputIndex": 0},
+    "aid": "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"},
+   "id": "other-state-policy",
+   "asset":
+   {"policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f6",
+    "name": "66b57382eb1f585288faa37a7a7ee4591ede1f8a2cc0d289be96140e19e73ce9"},
+   "activePreimage":
+   "d87a9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f65820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550ff",
+   "activeName":
+   "66b57382eb1f585288faa37a7a7ee4591ede1f8a2cc0d289be96140e19e73ce9"},
+  {"statePreimage":
+   "d8799fd8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f1818ffff",
+   "stateName":
+   "9d417daf68fb27a72855350afe1b3720d6f1fe33a72f470a3c6d422e84d2230d",
+   "note": "an output index needing one following byte",
+   "key":
+   "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550",
+   "input":
+   {"statePolicy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+    "seed":
+    {"transactionId":
+     "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+     "outputIndex": 24},
+    "aid": "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"},
+   "id": "seed-output-index-24",
+   "asset":
+   {"policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+    "name": "5f5c9b01bac42f5f47a57e27f2d3b11bde6e741926d034b8b380cbcf35f6bbc5"},
+   "activePreimage":
+   "d87a9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f758209d417daf68fb27a72855350afe1b3720d6f1fe33a72f470a3c6d422e84d2230dff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550ff",
+   "activeName":
+   "5f5c9b01bac42f5f47a57e27f2d3b11bde6e741926d034b8b380cbcf35f6bbc5"},
+  {"statePreimage":
+   "d8799fd8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f190100ffff",
+   "stateName":
+   "dc4d6b04df49082c68c31bee1f1c79f1d50bd845678b3db5c311da83a45a38f0",
+   "note": "an output index needing two following bytes",
+   "key":
+   "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550",
+   "input":
+   {"statePolicy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+    "seed":
+    {"transactionId":
+     "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+     "outputIndex": 256},
+    "aid": "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"},
+   "id": "seed-output-index-256",
+   "asset":
+   {"policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+    "name": "1917168024281cff5941cd308be5d1b9b2bd35c54937153fe3dbc884759270b2"},
+   "activePreimage":
+   "d87a9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820dc4d6b04df49082c68c31bee1f1c79f1d50bd845678b3db5c311da83a45a38f0ff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550ff",
+   "activeName":
+   "1917168024281cff5941cd308be5d1b9b2bd35c54937153fe3dbc884759270b2"}],
+ "singular": "d69ab005c3b710aeebf033d3c5cd08c56feb5643",
+ "model": "lean/CardanoKeri/ConsumerBytes.lean",
+ "layout":
+ {"statePreimage":
+  "Plutus Data serialisation of State { seed: OutputReference { transaction_id, output_index } }",
+  "name": "BLAKE2b-256 of the preimage",
+  "key": "the AID's qualified CESR text bytes (UTF-8)",
+  "asset": "policy: the state policy; name: activeName",
+  "activePreimage":
+  "Plutus Data serialisation of Active { registry: RegistryIdentity { policy: state policy, name: stateName }, key }"},
+ "description":
+ "Byte vectors of the concrete consumer identity: for each relying-contract input (state policy, seed, AID) the registry key, the serialised State and Active preimages, their names and the representative asset a genuine holding carries."}

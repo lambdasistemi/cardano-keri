@@ -814,6 +814,18 @@ groupBoundaries =
     , ("s0_maintenance_escrow.s0_maintenance_escrow", Unapplied s0MeasurementBoundary)
     , ("s0_reference_cursor_consumer.s0_reference_cursor_consumer", Unapplied s0MeasurementBoundary)
     , ("s0_staging_proof_token.s0_staging_proof_token", Unapplied s0MeasurementBoundary)
+    ,
+        ( "consumer_example.consumer_example"
+        , Unapplied
+            "example consumer for tests: applied by the local-chain \
+            \specification only, no published deployment identity"
+        )
+    ,
+        ( "consumer_seed_policy.consumer_seed_policy"
+        , Unapplied
+            "test-only seeding policy (seeded holding, not a registration \
+            \journey): no published deployment identity"
+        )
     ]
 
 -- | S0 groups are measured raw skeletons, not published deployment identities.
@@ -1121,6 +1133,14 @@ than declared beside 'cageBuilderPath'.  The
 checkpointE2EDriverPath :: FilePath
 checkpointE2EDriverPath = "offchain/e2e/CheckpointTxBuilder.hs"
 
+{- | The consumer E2E specification, which applies the consumer context and
+parameters to the example consumer validator to deploy it on a throwaway
+devnet (#343).  It publishes no deployment identity, so it is excluded from
+the horizon like the checkpoint E2E driver.
+-}
+consumerE2ESpecPath :: FilePath
+consumerE2ESpecPath = "offchain/e2e/ConsumerE2ESpec.hs"
+
 {- | One census row: a module, an identifier, and how many times that identifier
 occurs in that module's syntax tree.
 
@@ -1175,6 +1195,7 @@ defaultScanConfig root =
             [ "offchain/deployment-test/Cardano/KERI/Deployment/ScriptAritySpec.hs"
             , entitlementSpecPath
             , checkpointE2EDriverPath
+            , consumerE2ESpecPath
             ]
         }
 

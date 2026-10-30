@@ -1218,7 +1218,7 @@
                 export KERI_CAGE_BLUEPRINT="${blueprint}"
                 export KERI_CHECKPOINT_BLUEPRINT="${blueprint}"
                 cd "${inputs.cardano-node-clients}"
-                exec e2e-tests --match "#136 register a small identity end to end" "$@"
+                exec e2e-tests --match "#136 register a small identity end to end" --match "#343 consumer predicate on the local chain" "$@"
               '';
             };
             cageRunner = pkgs.writeShellApplication {

@@ -3,8 +3,6 @@
  * not replace Reach proofs or establish implementation conformance. */
 import { equal, toInternal, toWire, singularTag } from './registry-economic-core.mjs';
 export const THEOREMS = [
-  { id: 'retained-park', title: 'Parking retains custody and returns the authorized bond', lean: 'Registry.park_retains' },
-  { id: 'retained-revive', title: 'Revival rotates the retained key and adds a fresh bond', lean: 'Registry.revive_retains' },
   { id: 'pending-conviction', title: 'Conviction retains custody pending termination', lean: 'Registry.local_conviction_retains' },
   { id: 'booking-custody', title: 'Booking moves the whole carrier into pending custody', lean: 'Registry.bookTermination_iff, Registry.booking_keeps_active_supply' },
   { id: 'pending-frame', title: 'Unconsumed pending entries remain whole', lean: 'Registry.pending_preserved_unless_consumed' },
@@ -25,11 +23,7 @@ export function properties(record) {
   const { params: p, input: s, action, result: { ok: { state: n, flow: f } } } = toInternal(record);
   const kind = Object.keys(action)[0], a = action[kind], before = carrier(s, a.aid), after = carrier(n, a.aid);
   const check = (id, premise, conclusion) => { if (premise) out[id] = { v: conclusion() ? 'holds' : 'fails' }; };
-  const local = ['park', 'revive', 'convictCkpt'].includes(kind);
-  check('retained-park', kind === 'park' && before?.st === 'live', () =>
-    equal(after, { ...before, k: before.k + 1n, st: 'parked' }) && equal(f.bondReturn, [a.recipient, p.D]) && getLeaf(n, a.aid) === 'active');
-  check('retained-revive', kind === 'revive' && before?.st === 'parked', () =>
-    equal(after, { ...before, k: before.k + 1n, st: 'live' }) && f.deposited === p.D && equal(f.locked, [[a.aid, p.D]]) && getLeaf(n, a.aid) === 'active');
+  const local = kind === 'convictCkpt';
   check('pending-conviction', kind === 'convictCkpt' && !!before, () =>
     equal(after, { ...before, st: 'terminationPending' }) && getLeaf(n, a.aid) === 'active');
   check('booking-custody', kind === 'bookTermination' && before?.st === 'terminationPending', () => {

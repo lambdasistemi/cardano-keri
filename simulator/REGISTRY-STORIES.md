@@ -1,8 +1,8 @@
 # Registry stories
 
-Start with a request, process it into a live carrier, park while retaining that carrier, and revive from its retained key. Conviction starts a different path: pending custody, booking, then the consuming fold that retires the key. [Play the registry](registry-simulator.html).
+Start with a request and process it into a live carrier. There is no owner exit: a carrier stays live until it is convicted. Conviction starts the only path out: pending custody, booking, then the consuming fold that retires the key. [Play the registry](registry-simulator.html).
 
-These fifteen stable story IDs are the canonical Registry simulator stories. [M1-STORIES.md](M1-STORIES.md) remains the canonical M1 checkpoint story artifact; this catalogue does not replace it. Each story JSON carries the complete inputs and Lean-generated results; its DSL is an equivalent editable form. The player branches at refusals and preserves earlier nodes.
+These fifteen stable story IDs are the canonical Registry simulator stories; stories 9, 11 and 13 are retired (no owner exit) and keep their numbers. [M1-STORIES.md](M1-STORIES.md) remains the canonical M1 checkpoint story artifact; this catalogue does not replace it. Each story JSON carries the complete inputs and Lean-generated results; its DSL is an equivalent editable form. The player branches at refusals and preserves earlier nodes.
 
 ## Model and evidence boundary
 
@@ -92,35 +92,23 @@ Application Flow and economic transactions have different scopes. Registry convi
 
 [Scenario](registry-simulator-scenarios/08-plugin-swap.json) · [Editable DSL](registry-simulator-scenarios/08-plugin-swap.dsl)
 
-## 9. Alice parks and revives her retained output
+## 9. Alice parks and revives her retained output (retired)
 
-**Given** Alice has a live carrier, recipient-specific close evidence and a rotation from the retained key.
+Retired: there is no owner exit, so there is no parking and no revival. The number is kept; its disposition is in [registry-story-migration.json](registry-story-migration.json).
 
-**When** She parks, then revives the same retained output.
+## 10. A live carrier cannot be swept into a termination
 
-**Then** Parking returns the bond, keeps the token, original holding and min-ADA, and advances the key once. Revival adds a fresh bond and advances the retained key once. The registry remains active.
-
-[Scenario](registry-simulator-scenarios/09-pause-and-resume.json) · [Editable DSL](registry-simulator-scenarios/09-pause-and-resume.dsl)
-
-## 10. Parking cannot be swept into a termination
-
-**Given** A parked carrier retains its token, key and min-ADA.
+**Given** A live carrier retains its token, key and min-ADA, and nobody has convicted it.
 
 **When** Sam tries to book it as a termination.
 
-**Then** The booking is refused because conviction has not made the carrier pending. Waiting does not create a sweep entitlement.
+**Then** The booking is refused because only a convicted carrier can be booked. There is no owner exit to collect, and waiting creates no sweep entitlement.
 
 [Scenario](registry-simulator-scenarios/10-sam-reaps.json) · [Editable DSL](registry-simulator-scenarios/10-sam-reaps.dsl)
 
-## 11. Alice returns with the same token binding
+## 11. Alice returns with the same token binding (retired)
 
-**Given** A carrier is parked at its retained key with the same permanent token binding.
-
-**When** Alice supplies the later rotation from that key and a fresh bond.
-
-**Then** The same binding and original holding return to live custody. A rotation from another key does not suffice.
-
-[Scenario](registry-simulator-scenarios/11-alice-revives.json) · [Editable DSL](registry-simulator-scenarios/11-alice-revives.dsl)
+Retired: there is no parked state, so there is no revival. The number is kept; its disposition is in [registry-story-migration.json](registry-story-migration.json).
 
 ## 12. Conviction becomes permanent through the consuming fold
 
@@ -132,15 +120,9 @@ Application Flow and economic transactions have different scopes. Registry convi
 
 [Scenario](registry-simulator-scenarios/12-cora-convicts-bob.json) · [Editable DSL](registry-simulator-scenarios/12-cora-convicts-bob.dsl)
 
-## 13. Cora convicts the parked output
+## 13. Cora convicts the parked output (retired)
 
-**Given** A parked carrier still holds its key, token and min-ADA.
-
-**When** Cora presents duplicity at that retained key, followed by booking and consuming fold.
-
-**Then** The parked carrier follows the same pending-custody retirement path. Parking does not erase the evidence target.
-
-[Scenario](registry-simulator-scenarios/13-convict-dormant.json) · [Editable DSL](registry-simulator-scenarios/13-convict-dormant.dsl)
+Retired: there is no parked state; conviction of a live carrier is story 12. The number is kept; its disposition is in [registry-story-migration.json](registry-story-migration.json).
 
 ## 14. A pending termination has only the consuming fold exit
 
@@ -164,4 +146,4 @@ Application Flow and economic transactions have different scopes. Registry convi
 
 ## Earlier semantics
 
-The migration ledger retains each earlier source digest and the disposition of its stable ID. Dormant registry leaves, revival requests and the timed sweep of parked output are retired by the retained-output model revision. Their old expected outcomes are not counted as current passing tests. Parking keeps min-ADA in custody; booking premiums apply only after conviction.
+The migration ledger retains each earlier source digest and the disposition of its stable ID. Dormant registry leaves, revival requests and the timed sweep of parked output were retired by the retained-output model revision; parking and revival are retired by the no-owner-exit revision. Their old expected outcomes are not counted as current passing tests. Booking premiums apply only after conviction.

@@ -27,10 +27,6 @@ actors:
   7: "termination booker"
   42: "Alice, request refund address"
 env:
-  closeAuth:
-    - [11, 6]
-    - [12, 6]
-    - [13, 6]
   duplicity:
     - [11, 0]
     - [11, 1]
@@ -42,10 +38,6 @@ env:
     - [13, 1]
     - [13, 2]
   inception: [11, 12, 13, 14, 15]
-  rotationFrom:
-    - [11, 1]
-    - [12, 1]
-    - [13, 1]
 step:
   now: 0
   actor: "anyone presenting the required evidence"
@@ -304,10 +296,6 @@ fork:
   at: 0
   title: "Process one identity while another remains pending"
   env:
-    closeAuth:
-      - [11, 6]
-      - [12, 6]
-      - [13, 6]
     duplicity:
       - [11, 0]
       - [11, 1]
@@ -319,10 +307,6 @@ fork:
       - [13, 1]
       - [13, 2]
     inception: [11, 12, 13, 14, 15]
-    rotationFrom:
-      - [11, 1]
-      - [12, 1]
-      - [13, 1]
   expectFinal:
     bindings:
       - [13, 2]
@@ -350,10 +334,6 @@ fork:
       - [13,{"known":{"s":"active"}}]
   step:
     env:
-      closeAuth:
-        - [11, 6]
-        - [12, 6]
-        - [13, 6]
       duplicity:
         - [11, 0]
         - [11, 1]
@@ -365,10 +345,6 @@ fork:
         - [13, 1]
         - [13, 2]
       inception: [11, 12, 13, 14, 15]
-      rotationFrom:
-        - [11, 1]
-        - [12, 1]
-        - [13, 1]
     now: 0
     actor: anyone
     as: Alice
@@ -432,10 +408,6 @@ fork:
     note: "Alice books her registration."
   step:
     env:
-      closeAuth:
-        - [11, 6]
-        - [12, 6]
-        - [13, 6]
       duplicity:
         - [11, 0]
         - [11, 1]
@@ -447,10 +419,6 @@ fork:
         - [13, 1]
         - [13, 2]
       inception: [11, 12, 13, 14, 15]
-      rotationFrom:
-        - [11, 1]
-        - [12, 1]
-        - [13, 1]
     now: 0
     actor: anyone
     as: Alice
@@ -514,10 +482,6 @@ fork:
     note: "Bob books his registration beside Alice’s."
   step:
     env:
-      closeAuth:
-        - [11, 6]
-        - [12, 6]
-        - [13, 6]
       duplicity:
         - [11, 0]
         - [11, 1]
@@ -529,10 +493,6 @@ fork:
         - [13, 1]
         - [13, 2]
       inception: [11, 12, 13, 14, 15]
-      rotationFrom:
-        - [11, 1]
-        - [12, 1]
-        - [13, 1]
     now: 0
     actor: anyone
     as: Hal
@@ -610,10 +570,6 @@ fork:
     note: "Hal processes the selected requests."
   step:
     env:
-      closeAuth:
-        - [11, 6]
-        - [12, 6]
-        - [13, 6]
       duplicity:
         - [11, 0]
         - [11, 1]
@@ -625,10 +581,6 @@ fork:
         - [13, 1]
         - [13, 2]
       inception: [11, 12, 13, 14, 15]
-      rotationFrom:
-        - [11, 1]
-        - [12, 1]
-        - [13, 1]
     now: 0
     actor: anyone
     as: Cora
@@ -673,10 +625,6 @@ fork:
     note: "Cora proves duplicity at Alice’s current key."
   step:
     env:
-      closeAuth:
-        - [11, 6]
-        - [12, 6]
-        - [13, 6]
       duplicity:
         - [11, 0]
         - [11, 1]
@@ -688,10 +636,6 @@ fork:
         - [13, 1]
         - [13, 2]
       inception: [11, 12, 13, 14, 15]
-      rotationFrom:
-        - [11, 1]
-        - [12, 1]
-        - [13, 1]
     now: 0
     actor: anyone
     as: Cora
@@ -736,10 +680,6 @@ fork:
     note: "Cora proves duplicity at Bob’s current key."
   step:
     env:
-      closeAuth:
-        - [11, 6]
-        - [12, 6]
-        - [13, 6]
       duplicity:
         - [11, 0]
         - [11, 1]
@@ -751,10 +691,6 @@ fork:
         - [13, 1]
         - [13, 2]
       inception: [11, 12, 13, 14, 15]
-      rotationFrom:
-        - [11, 1]
-        - [12, 1]
-        - [13, 1]
     now: 0
     actor: anyone
     as: Sam
@@ -821,10 +757,6 @@ fork:
     note: "Sam books Alice’s pending termination."
   step:
     env:
-      closeAuth:
-        - [11, 6]
-        - [12, 6]
-        - [13, 6]
       duplicity:
         - [11, 0]
         - [11, 1]
@@ -836,10 +768,6 @@ fork:
         - [13, 1]
         - [13, 2]
       inception: [11, 12, 13, 14, 15]
-      rotationFrom:
-        - [11, 1]
-        - [12, 1]
-        - [13, 1]
     now: 0
     actor: anyone
     as: Sam
@@ -906,10 +834,6 @@ fork:
     note: "Sam books Bob’s pending termination without changing Alice’s."
   step:
     env:
-      closeAuth:
-        - [11, 6]
-        - [12, 6]
-        - [13, 6]
       duplicity:
         - [11, 0]
         - [11, 1]
@@ -921,10 +845,6 @@ fork:
         - [13, 1]
         - [13, 2]
       inception: [11, 12, 13, 14, 15]
-      rotationFrom:
-        - [11, 1]
-        - [12, 1]
-        - [13, 1]
     now: 0
     actor: anyone
     as: Alice
@@ -992,10 +912,6 @@ fork:
     note: "Another identity books a registration beside both terminations."
   step:
     env:
-      closeAuth:
-        - [11, 6]
-        - [12, 6]
-        - [13, 6]
       duplicity:
         - [11, 0]
         - [11, 1]
@@ -1007,10 +923,6 @@ fork:
         - [13, 1]
         - [13, 2]
       inception: [11, 12, 13, 14, 15]
-      rotationFrom:
-        - [11, 1]
-        - [12, 1]
-        - [13, 1]
     now: 0
     actor: anyone
     as: Hal
@@ -1089,10 +1001,6 @@ fork:
     note: "Hal registers the new identity and completes Alice’s termination; Bob’s entire pending entry remains."
   step:
     env:
-      closeAuth:
-        - [11, 6]
-        - [12, 6]
-        - [13, 6]
       duplicity:
         - [11, 0]
         - [11, 1]
@@ -1104,10 +1012,6 @@ fork:
         - [13, 1]
         - [13, 2]
       inception: [11, 12, 13, 14, 15]
-      rotationFrom:
-        - [11, 1]
-        - [12, 1]
-        - [13, 1]
     now: 0
     actor: anyone
     as: Alice
@@ -1177,10 +1081,6 @@ fork:
     note: "A further registration is booked while Bob’s pending entry remains."
   step:
     env:
-      closeAuth:
-        - [11, 6]
-        - [12, 6]
-        - [13, 6]
       duplicity:
         - [11, 0]
         - [11, 1]
@@ -1192,10 +1092,6 @@ fork:
         - [13, 1]
         - [13, 2]
       inception: [11, 12, 13, 14, 15]
-      rotationFrom:
-        - [11, 1]
-        - [12, 1]
-        - [13, 1]
     now: 0
     actor: anyone
     as: Alice
@@ -1267,10 +1163,6 @@ fork:
     note: "The refund owner reclaims that registration with Bob’s pending entry untouched."
   step:
     env:
-      closeAuth:
-        - [11, 6]
-        - [12, 6]
-        - [13, 6]
       duplicity:
         - [11, 0]
         - [11, 1]
@@ -1282,10 +1174,6 @@ fork:
         - [13, 1]
         - [13, 2]
       inception: [11, 12, 13, 14, 15]
-      rotationFrom:
-        - [11, 1]
-        - [12, 1]
-        - [13, 1]
     now: 0
     actor: anyone
     as: Hal

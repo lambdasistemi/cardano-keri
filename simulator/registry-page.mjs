@@ -128,10 +128,8 @@ function describeFlow(f) {
   return bits.length ? bits.join('; ') : 'no application flow recorded';
 }
 const REASON_WORDS = {
-  "keri-close-refused": "Parking needs a live carrier and close authorization for this recipient.",
-  "keri-revival-refused": "Revival needs a parked carrier and a rotation from its retained key.",
   "keri-conviction-refused": "Conviction needs duplicity at the retained key and a carrier not already pending.",
-  "keri-conviction-required": "Only a convicted carrier can be booked for termination; parking is not sufficient.",
+  "keri-conviction-required": "Only a convicted carrier can be booked for termination; a live carrier stays in custody until it is convicted.",
   "keri-carrier-missing": "This identity has no retained carrier at this point.",
   "keri-generation-mismatch": "This proposal names a registry generation that has already moved.",
   "keri-plugin-mismatch": "The proposed application policy differs from the registry configuration.",
@@ -149,8 +147,6 @@ const REASON_WORDS = {
 const reasonText = reason => (REASON_WORDS[reason] || reason.replaceAll('-', ' ')) + ' [' + reason + ']';
 function needsOf(action) {
   const t = actionTag(action);
-  if (t === 'park') return { cls: 'keys', text: 'close evidence authorizing this bond recipient' };
-  if (t === 'revive') return { cls: 'keys', text: 'rotation from the retained key' };
   if (t === 'convictCkpt') return { cls: 'public', text: 'duplicity evidence at this key' };
   if (t === 'genericRetraction') return { cls: 'keys', text: 'refund-owner signature and retraction interval' };
   return { cls: 'public', text: t === 'fold' ? 'complete batch, value, token and authorization checks' : 'complete request or transaction observations' };
@@ -198,7 +194,7 @@ function drawScene() {
   const requests=pendingOf(sess);
   parts.push(box('inbox',510,65,203,'requests · '+requests.length,requests.slice(0,5).map(m=>m.kind+' · '+m.booking.request.key),'tray'));
   const holders=[...st.carriers.map(c=>({aid:c.aid,token:c.token,k:c.k,state:c.st,min:c.minAda})),...st.terminations.map(e=>({aid:e.payload.aid,token:e.payload.token,k:e.payload.keyState,state:'booked termination',min:e.booking.request.contents.lovelace}))];
-  holders.slice(0,3).forEach((c,i)=>{const x=288+i*143;layout['ckpt:'+c.aid]={x:x+65,y:330};parts.push(box('ckpt:'+c.aid,x,280,138,'AID '+c.aid,[c.state,'token '+c.token+' · key '+c.k,'retained '+c.min],c.state==='parked'?'ck parked':'ck'));});
+  holders.slice(0,3).forEach((c,i)=>{const x=288+i*143;layout['ckpt:'+c.aid]={x:x+65,y:330};parts.push(box('ckpt:'+c.aid,x,280,138,'AID '+c.aid,[c.state,'token '+c.token+' · key '+c.k,'retained '+c.min],'ck'));});
   if(!holders.length)parts.push(s('text',{class:'hint',x:305,y:330},'No retained carrier or booked termination'));
   parts.push(box('validator',300,423,400,'Transaction judgment',['admit or refuse these complete observations'],'tray'));
   const rows=Object.entries(sess.env).flatMap(([key,xs])=>xs.map(x=>key+' '+(Array.isArray(x)?x.join('/') : x)));
@@ -276,7 +272,7 @@ function edgeFx(n, dir, dur) {
   if(n.kind==='evidence'){pulse('tray');return;}
   if(!n.record)return;
   const r=n.record,ok=!!r.result.ok,kind=actionTag(r.action),actor='actor:'+(actorOfNode(n)||app.actor||'mallory');
-  const label = ({bookRegistration:'Register',bookTermination:'Book termination',convictCkpt:'Convict',genericRetraction:'Retract',genericRejection:'Reject',park:'Park',revive:'Revive',fold:'Fold'})[kind];
+  const label = ({bookRegistration:'Register',bookTermination:'Book termination',convictCkpt:'Convict',genericRetraction:'Retract',genericRejection:'Reject',fold:'Fold'})[kind];
   fly(card(label,dir<0),actor,'validator',{dir,dur:dur*.5,done:()=>mark('validator',ok,ok?'accepted':r.result.error)});
   if(!ok)return;
   const f=r.result.ok.flow;
@@ -387,10 +383,10 @@ function renderPots() {
   svg.append(s('text',{x:170,y:45},'→'),s('text',{x:360,y:45},'→'));
   const dl=clear($('pots-dl')),p=cur().params,c=st.config;
   for(const [term,body] of [
-    ['Bond D ('+p.D+')','Locks on registration and revival; parking returns it to the authorized recipient.'],
-    ['Retained min-ADA ('+p.Mc+')','Stays with a parked carrier. Parking does not create a request or a sweep reward.'],
+    ['Bond D ('+p.D+')','Locks on registration. There is no owner exit: a carrier is live until it is convicted.'],
+    ['Retained min-ADA ('+p.Mc+')','Stays with the carrier until a termination booking moves it into the request.'],
     ['Request min-ADA ('+p.Mr+') and tip ('+p.tip+')','Termination booking retains both in its request; the premium is carrier min-ADA minus these two values. Booking fees use external funding.'],
-    ['Active registry key','Covers live, parked and termination-pending custody. Only a consuming termination fold retires it.'],
+    ['Active registry key','Covers live and termination-pending custody. Only a consuming termination fold retires it.'],
     ['Pending termination','Conviction retains the token and key. Booking moves whole custody to a request; another request cannot complete it.'],
     ['Retired registry key','Permanent. Its representative token was burned by the consuming fold.'],
     ['Time windows','Registration processing: '+c.processTime+' slots after submission. Owner retraction: the following '+c.retractTime+' slots. Complete transaction bounds are checked.'],
@@ -471,7 +467,7 @@ function renderNext() {
   $('refused-moves').hidden = !nRefused;
   renderActForm();
 }
-const FIELDS={park:[['aid','AID'],['recipient','bond recipient']],revive:[['aid','AID']],convictCkpt:[['aid','AID']],fold:[['expectedGen','generation'],['expectedPlugin','application policy']]};
+const FIELDS={convictCkpt:[['aid','AID']],fold:[['expectedGen','generation'],['expectedPlugin','application policy']]};
 function renderActForm() {
   const form=$('act-form');form.hidden=!app.pending;if(!app.pending)return;
   const t=actionTag(app.pending.action),d=dataOf(app.pending.action),fields=clear($('act-fields'));
@@ -490,10 +486,10 @@ const backendMoveSlot=moveSlot;
 moveSlot=function(target){try{adoptTree(backendMoveSlot(currentTree(),target),true);$('slot-msg').textContent='';render();}catch(error){$('slot-msg').textContent=error.message;}};
 function renderEvidence() {
   const sess=cur(),env=sess.env;
-  const aids=[...new Set([11,12,13,...env.inception,...env.rotationFrom.map(r=>r[0]),...env.duplicity.map(r=>r[0]),...env.closeAuth.map(r=>r[0]),...sess.state.carriers.map(c=>c.aid),...(app.extraAids||[])])];
-  const tbl=h('table',{class:'evtable'},h('thead',{},h('tr',{},...['AID','inception','rotation from key','duplicity at key','close recipient'].map(t=>h('th',{},t))))),tb=h('tbody',{});
+  const aids=[...new Set([11,12,13,...env.inception,...env.duplicity.map(r=>r[0]),...sess.state.carriers.map(c=>c.aid),...(app.extraAids||[])])];
+  const tbl=h('table',{class:'evtable'},h('thead',{},h('tr',{},...['AID','inception','duplicity at key'].map(t=>h('th',{},t))))),tb=h('tbody',{});
   const cb=(kind,args,label)=>h('label',{},h('input',{type:'checkbox',dataset:{ev:kind,aid:args[0],k:args[1]??''},checked:evHas(env,kind,args),onchange:e=>{adoptTree(editEvidence(currentTree(),{[kind]:args},e.target.checked),true);render();}}),label);
-  for(const aid of aids){const key=ckptOf(sess,aid)?.k??0;const ks=[...new Set([0,1,2,3,key])];tb.append(h('tr',{},h('td',{},aid),h('td',{},cb('inception',[aid],'verifies')),h('td',{},ks.map(k=>cb('rotationFrom',[aid,k],String(k)))),h('td',{},ks.map(k=>cb('duplicity',[aid,k],String(k)))),h('td',{},[6,42,99].map(a=>cb('closeAuth',[aid,a],String(a))))));}
+  for(const aid of aids){const key=ckptOf(sess,aid)?.k??0;const ks=[...new Set([0,1,2,3,key])];tb.append(h('tr',{},h('td',{},aid),h('td',{},cb('inception',[aid],'verifies')),h('td',{},ks.map(k=>cb('duplicity',[aid,k],String(k))))));}
   tbl.append(tb);clear($('evbody')).append(tbl);
 }
 
@@ -580,11 +576,11 @@ function renderMoney() {
 }
 /* ---- the story player: a scenario becomes a tree ------------------------------ */
 function startFresh() {
-  const sc=SCENARIOS[0];newTree({...newSession(sc.params,sc.config,{inception:[],rotationFrom:[],duplicity:[],closeAuth:[]}),now:0},'An empty registry. Bring evidence, book a request, then process it.');
+  const sc=SCENARIOS[0];newTree({...newSession(sc.params,sc.config,{inception:[],duplicity:[]}),now:0},'An empty registry. Bring evidence, book a request, then process it.');
   app.story=null;app.punch=null;app.challenge=null;app.pastPunch=false;
 }
-const CHALLENGES={register:{title:'Return a bond to the wrong address',actor:'mallory',goal:'Alice has a live carrier. Try to park it with her bond sent to address 99 without close authorization for that recipient.',won:()=>pathTo(app.cursor).map(node).some(n=>n.record?.result.ok?.flow.bondReturn?.[0]===99),why:'The park step requires close evidence for exactly the recipient in this action. Public rotations do not authorize another recipient. If you add that exact close premise to the model evidence table, the premise has changed.'}};
-function playChallenge(id){if(id!=='register'){startFresh();render();return;}const tree=Backend.playStory(9);tree.cursor=2;adoptTree(tree);app.story=null;app.challenge=CHALLENGES[id];app.actor='mallory';render();}
+const CHALLENGES={sweep:{title:'Sweep a live carrier',actor:'sam',goal:'Alice has a live carrier and nobody holds duplicity against her key. Try to book its termination and collect the booking premium.',won:()=>pathTo(app.cursor).map(node).some(n=>n.record?.action?.bookTermination&&n.record.result.ok),why:'A termination booking requires a convicted carrier: a live carrier cannot be booked (Registry.live_cannot_book). There is no owner exit to collect. Conviction needs duplicity at the carrier’s key; if you add that premise to the model evidence table, the premise has changed.'}};
+function playChallenge(id){if(id!=='sweep'){startFresh();render();return;}const tree=Backend.playStory(10);tree.cursor=2;adoptTree(tree);app.story=null;app.challenge=CHALLENGES[id];app.actor='sam';render();}
 
 function renderChallenge() {
   const box = $('challenge'); if (!box) return;
@@ -592,9 +588,9 @@ function renderChallenge() {
   clear(box);
   const won = c.won();
   box.append(h('div', {}, h('b', {}, '★ ' + c.title + ' — '), c.goal, ' ', h('span', { class: 'tiny' }, 'moves so far: ' + pathTo(app.cursor).filter(id => node(id).record).length)));
-  box.append(won ? h('div', { class: 'won' }, 'The model was supplied close evidence for the other recipient.') : h('div', { class: 'tiny' }, 'not yet'));
-  box.append(h('details', { open: won || undefined }, h('summary', {}, won ? 'what it bought you' : 'give up: why the recipient matters'), h('div', {}, c.why)));
-  if (won && !app.wonShown) { app.wonShown = true; toast('The close premise now authorizes that recipient.', 5000); }
+  box.append(won ? h('div', { class: 'won' }, 'The model was supplied duplicity evidence and the carrier was convicted first.') : h('div', { class: 'tiny' }, 'not yet'));
+  box.append(h('details', { open: won || undefined }, h('summary', {}, won ? 'what it bought you' : 'give up: why conviction comes first'), h('div', {}, c.why)));
+  if (won && !app.wonShown) { app.wonShown = true; toast('Only a convicted carrier was booked.', 5000); }
 }
 const _playStory = playStory;
 const _playLoadedScenario = playLoadedScenario;
@@ -633,7 +629,7 @@ function runSelftest() {
   const rows=[],row=(what,ok,detail='')=>rows.push({what,ok,detail});
   for(const sc of SCENARIOS){const r=checkScenario(sc);row('story '+sc.id,r.ok,r.problems.join('; '));}
   const c=checkCorpus(REGISTRY_LEAN_TRACES_V3);row('complete Lean corpus',c.ok,c.cells+' cells '+c.reasons.join('; '));
-  try{playStory(9);$('hist-next').click();$('hist-next').click();$('hist-next').click();row('parking control',ckptOf(cur(),11)?.st==='parked');$('hist-prev').click();row('tree rewind',ckptOf(cur(),11)?.st==='live');const fork=app.nodes.find(n=>n.branch);goTo(fork.id);row('fork selection',app.cursor===fork.id);row('drawn tree',document.querySelectorAll('#tree .node').length===app.nodes.length);row('theorem observations',!document.querySelector('#ledger .broken'));row('scene',$('scene').querySelectorAll('[data-obj]').length>=10);toggleTheme();toggleTheme();}catch(error){row('controls',false,error.message);}
+  try{playStory(12);$('hist-next').click();$('hist-next').click();$('hist-next').click();row('conviction control',ckptOf(cur(),11)?.st==='terminationPending');$('hist-prev').click();row('tree rewind',ckptOf(cur(),11)?.st==='live');const fork=app.nodes.find(n=>n.branch);goTo(fork.id);row('fork selection',app.cursor===fork.id);row('drawn tree',document.querySelectorAll('#tree .node').length===app.nodes.length);row('theorem observations',!document.querySelector('#ledger .broken'));row('scene',$('scene').querySelectorAll('[data-obj]').length>=10);toggleTheme();toggleTheme();}catch(error){row('controls',false,error.message);}
   const ok=rows.every(r=>r.ok);document.title=(ok?'PASS':'FAIL')+' — registry simulator selftest';$('selftest-out').hidden=false;$('selftest-out').textContent=rows.map(r=>(r.ok?'PASS ':'FAIL ')+r.what+' '+r.detail).join('\n');window.__selftest={ok,rows};return ok;
 }
 

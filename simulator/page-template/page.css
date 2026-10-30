@@ -81,10 +81,8 @@
   #scene .utxo { fill: var(--card); stroke: var(--line); stroke-width: 1.5; }
   #scene .utxo.poisoned { stroke: var(--poison); }
   #scene .utxo.absent { stroke-dasharray: 6 4; fill: none; }
-  #scene .utxo.parked { stroke-dasharray: 2 4; opacity: .6; }
   #scene .token { fill: var(--accent-bg); stroke: var(--accent); stroke-width: 2; }
   #scene .token.absent { fill: none; stroke: var(--line); stroke-dasharray: 5 3; }
-  #scene .token.parked { fill: none; stroke: var(--warn); stroke-dasharray: 5 3; }
   #scene .token.convicted { fill: var(--bad-bg); stroke: var(--bad); }
   #scene .tk { font-family: var(--mono); font-size: 11px; text-anchor: middle; }
   #scene .datum-k { font-size: 10px; fill: var(--muted); }

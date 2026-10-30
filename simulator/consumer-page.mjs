@@ -8,12 +8,10 @@ const stories={
  'rotate-keep-unpaid-frozen':'This unpaid rotation keeps the frozen state; newer keys alone do not restore the bond.',
  'rotate-deposit-unpaid':'The depositing rotation restores eligibility without changing the exact representative.',
  'poisoned':'Poison blocks consumer use while the output remains held.',
- 'parked':'Closing retains the representative in parked custody. An active registry key is insufficient for payment.',
- 'revived-juvenile':'A witnessed local reopening retains the same asset and starts a new juvenility window.',
- 'revived-mature':'The reopened checkpoint has matured; the treasury can use it again.',
+ 'mature':'After its rotations the checkpoint is live and mature; the treasury can use it. There is no owner exit: it stays live until it is convicted.',
  'termination-pending':'Conviction makes the checkpoint ineligible. Its representative is still in pending custody.',
  'termination-booked':'The actual termination booking is associated with this origin. Booking alone does not retire it.',
- 'retired-after-matching-fold':'The matching economic fold is consumed by system completion. The full identity fold burns the active asset. Re-registration and revival attempts are refused.'
+ 'retired-after-matching-fold':'The matching economic fold is consumed by system completion. The full identity fold burns the active asset. Re-registration and later local rotations are refused.'
 };
 function verdict(q){
  const r=U.consumerVerdict(q);

@@ -195,62 +195,6 @@ step:
           refundTo: 1
           sn: 2
     exhibits: [T10_bonds_are_observable, T14_pool_decreases_only_by_premium, T16_payments_are_named, T1_rotate_strict, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T2_epoch_only_by_rotation, T3_epoch_local, T3_rotation_clears, T5_every_bond_option, T5_keep_is_rotated, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_intent_requires_new_keys, T6_refund_change_requires_new_keys, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, trace_poison_fold, trace_sn_monotone_all]
-step:
-  slot: 12
-  who: alice
-  say: "At her leave the stranger’s bonds go to Alice: her new keys sign the close naming herself payee; the premium and everything else come home. A stale registration is a donation."
-  evidence:
-    add: [{"quorum":[2]},{"rotationTo":[2,2,3]},{"intentAuthorized":[3,{"close":{"payee":1}},null]}]
-  action:
-    close:
-      sn': 3
-      payee: 1
-      refund': null
-  expect:
-    ok: true
-    state:
-      parked:
-        h:
-          epoch: 3
-          sn: 3
-    flow:
-      bIn: 0
-      convictor: null
-      dregIn: 0
-      hunter:
-        addr: 1
-        b: 0
-        dreg: 0
-        pool: 2
-      poolIn: 0
-      refund:
-        addr: 1
-        b: 5
-        dreg: 1000
-        pool: 4
-    verdict: not-present
-    modelResult:
-      flow:
-        bIn: 0
-        convictor: null
-        dregIn: 0
-        hunter:
-          addr: 1
-          b: 0
-          dreg: 0
-          pool: 2
-        poolIn: 0
-        refund:
-          addr: 1
-          b: 5
-          dreg: 1000
-          pool: 4
-      state:
-        parked:
-          h:
-            epoch: 3
-            sn: 3
-    exhibits: [T10_bonds_are_observable, T16_close_destination, T16_close_needs_rotation, T16_copied_reap_refused, T16_parked_hash_is_the_closed_checkpoints, T16_payments_are_named, T1_sn_monotone_all, T2_close_and_reopen_open_epochs, T5_close_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_intent_requires_new_keys, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, parked_and_convicted_hold_no_bonds_or_pool, trace_sn_monotone_all]
 fork:
   id: unrelated-intent
   at: 2

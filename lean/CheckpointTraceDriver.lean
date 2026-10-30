@@ -150,7 +150,7 @@ def gridJson (p : Params) : Json :=
   Json.mkObj [("now", toJson now), ("states", toJson states), ("actions", toJson gridActions),
     ("envs", toJson (gridEnvs.map (·.2))), ("cells", Json.arr cells.toArray), ("consumable", Json.arr cons.toArray)]
 
-/-! ## Story cells: Lean's verdict on every step of the fifteen scenario files
+/-! ## Story cells: Lean's verdict on every step of the played scenario files (the retired story numbers have none)
 
 The scenario files are the simulator's; the driver folds each one exactly as
 the JavaScript session does (per-step params, seeds, evidence rows, the slot

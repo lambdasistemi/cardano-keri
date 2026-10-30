@@ -12,9 +12,12 @@ export function checkSources({surface,clauses,markdown,stories,root=ROOT}) {
   const declarations=new Map(surface.definitions.map(d=>[d.declaration,d]));
   assert.equal(declarations.size,surface.definitions.length,'duplicate source declaration');
   for(const d of surface.definitions){assert.equal(sha256(d.source),d.sha256,'declaration digest '+d.declaration);assert(surface.compiled.some(c=>c.declaration===d.declaration&&c.module===d.module),'not compiled '+d.declaration);}
-  assert.equal(clauses.version,3);assert.equal(clauses.clauses.length,15,'missing story clause');
+  const retired=JSON.parse(readFileSync(join(root,'simulator','registry-story-migration.json'),'utf8')).stories.filter(s=>s.retired).map(s=>s.id);
+  const played=Array.from({length:15},(_,i)=>i+1).filter(n=>!retired.includes(n));
+  assert.equal(clauses.version,3);assert.equal(clauses.clauses.length,played.length,'missing story clause');
   assert.equal(sha256(markdown),clauses.storiesMarkdownSha256,'changed reader clauses');
-  assert.deepEqual(clauses.clauses.map(c=>c.story),Array.from({length:15},(_,i)=>i+1),'clause roster');
+  assert.deepEqual(clauses.clauses.map(c=>c.story),played,'clause roster');
+  for(const n of retired)assert(markdown.includes(`## ${n}. `)&&!stories.some(s=>s.scenario.id===n),'retired story '+n+' keeps its number and has no scenario');
   let cells=0;
   for(const clause of clauses.clauses){
     const sc=stories.find(s=>s.scenario.id===clause.story);assert(sc,'missing scenario');
@@ -27,7 +30,7 @@ export function checkSources({surface,clauses,markdown,stories,root=ROOT}) {
     assert.deepEqual(clause.anchors.map(a=>a.declaration),actions.map(a=>'CardanoKeri.Registry.'+a),'action source coverage');
     for(const anchor of clause.anchors)assert.equal(anchor.sha256,declarations.get(anchor.declaration)?.sha256,'action declaration drift');
   }
-  assert.equal(cells,84,'whole story/fork census');
+  assert.equal(cells,64,'whole story/fork census');
   return {clauses:clauses.clauses.length,cells,definitions:declarations.size,decisionSites:surface.decisions.length};
 }
 export function loadBindings() {
@@ -36,9 +39,9 @@ export function loadBindings() {
 export function bindingControls(bindings) {
   const controls=[
     ['missing story clause',x=>x.clauses.clauses.pop(),/missing story clause/],
-    ['lost fork cell',x=>x.clauses.clauses[14].cells.pop(),/story result binding/],
+    ['lost fork cell',x=>x.clauses.clauses.at(-1).cells.pop(),/story result binding/],
     ['missing action anchor',x=>x.clauses.clauses[8].anchors.pop(),/action source coverage/],
-    ['changed source clause',x=>{x.clauses.clauses[8].then='Parking burns the retained token.';},/complete then clause/],
+    ['changed source clause',x=>{x.clauses.clauses[8].then='Booking a live carrier burns its token.';},/complete then clause/],
     ['edited declaration digest',x=>{x.surface.definitions[0].sha256='0'.repeat(64);},/declaration digest/],
     ['empty source inventory',x=>{x.surface.compiled=[];},/empty source census/],
   ];

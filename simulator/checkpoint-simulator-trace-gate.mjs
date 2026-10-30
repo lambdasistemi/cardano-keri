@@ -37,7 +37,7 @@
  * byte-identical output — then production GREEN.
  */
 
-import { readFileSync, writeFileSync, mkdtempSync, rmSync, cpSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync, mkdtempSync, rmSync, cpSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
@@ -107,8 +107,9 @@ async function runGate(opts) {
   if (fresh.schema !== SCHEMA || fresh.version !== 2) reasons.push('driver output has the wrong schema/version');
   if (!Array.isArray(fresh.traces) || !fresh.traces.length || fresh.traces.some(t => !t.steps || !t.steps.length))
     reasons.push('fresh corpus has no traces or a trace without steps');
-  if (!Array.isArray(fresh.stories) || fresh.stories.length !== 15 || fresh.stories.some(s => !s.steps || !s.steps.length))
-    reasons.push('fresh corpus has no story cells for all fifteen stories');
+  const played = readdirSync(join(HERE, 'checkpoint-simulator-scenarios')).filter(f => f.endsWith('.json')).length;
+  if (!Array.isArray(fresh.stories) || fresh.stories.length !== played || fresh.stories.some(s => !s.steps || !s.steps.length))
+    reasons.push(`fresh corpus has no story cells for all ${played} played stories`);
   // embedded fixture and stated sha
   let emb;
   try { emb = extractEmbedded(doc); } catch (e) { return { ok: false, reasons: [...reasons, e.message] }; }

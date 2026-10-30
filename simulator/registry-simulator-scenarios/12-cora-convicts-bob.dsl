@@ -27,10 +27,6 @@ actors:
   7: "termination booker"
   42: "Alice, request refund address"
 env:
-  closeAuth:
-    - [11, 6]
-    - [12, 6]
-    - [13, 6]
   duplicity:
     - [11, 0]
     - [11, 1]
@@ -42,10 +38,6 @@ env:
     - [13, 1]
     - [13, 2]
   inception: [11, 12, 13, 14, 15]
-  rotationFrom:
-    - [11, 1]
-    - [12, 1]
-    - [13, 1]
 step:
   now: 0
   actor: "anyone presenting the required evidence"

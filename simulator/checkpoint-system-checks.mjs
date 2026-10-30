@@ -5,7 +5,7 @@ import {newSystem,attemptSystem,checkSystemCorpus,validateCommand,replaySystem} 
 import {equal} from './registry-economic-core.mjs';
 import {SYSTEM_THEOREMS,systemProperties} from './checkpoint-system-properties.mjs';
 const corpus=JSON.parse(readFileSync(new URL('./checkpoint-system-corpus.json',import.meta.url)));
-const report=checkSystemCorpus(corpus);assert.deepEqual(report,{cells:34,accepted:22,refused:12});
+const report=checkSystemCorpus(corpus);assert.deepEqual(report,{cells:33,accepted:22,refused:11});
 const first=corpus.traces[0].cells[0],initial=newSystem(first.params,first.env);
 const registered=attemptSystem(initial,first.command).session;
 assert.equal(initial.state.aids.length,0,'mutated initial state');
@@ -32,9 +32,9 @@ const stored=corpus.traces[2].cells.at(-1);assert.equal(stored.result.error,'ker
 const shown=new Set();
 for(const trace of corpus.traces)for(const cell of trace.cells)for(const[name,row]of Object.entries(systemProperties(cell))){assert(row.holds,name+': '+cell.name);if(row.exhibited)shown.add(name);}
 assert.deepEqual([...shown].sort(),SYSTEM_THEOREMS.slice().sort(),'system property premise census');
-const closed=corpus.traces[0].cells.find(c=>c.name==='park'),bad=structuredClone(closed.result);
+const rotated=corpus.traces[0].cells.find(c=>c.name==='rotate'),bad=structuredClone(rotated.result);
 bad.ok.state.aids[0].leaf='absent';
-for(const name of ['T8_leaf_agrees_with_state','T8_edges_leave_the_leaf','T8_present_implies_registered','T8_leaf_states','T8_utxo_iff_active','T8_leaf_never_absent_again','T8_sysstep_partition'])assert.equal(systemProperties(closed,bad)[name].holds,false,'fabricated system conclusion '+name);
+for(const name of ['T8_leaf_agrees_with_state','T8_edges_leave_the_leaf','T8_present_implies_registered','T8_leaf_states','T8_utxo_iff_active','T8_leaf_never_absent_again','T8_sysstep_partition'])assert.equal(systemProperties(rotated,bad)[name].holds,false,'fabricated system conclusion '+name);
 // A deliberately inconsistent input is a checker control only, not a Reach
 // witness or a semantic mutation of the model.
 const wrongOrigin=structuredClone(first);wrongOrigin.input.aids=[{...first.result.ok.state.aids[0],leaf:'active'}];

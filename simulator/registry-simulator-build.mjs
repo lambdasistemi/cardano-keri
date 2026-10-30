@@ -34,7 +34,9 @@ const modules = [
 let script = "'use strict';\n" + modules.map(args => moduleBody(...args)).join('\n');
 const dir = option('--scenarios','registry-simulator-scenarios');
 const scenarios = readdirSync(dir).filter(f=>f.endsWith('.json')).sort().map(f=>JSON.parse(read(join(dir,f))));
-if (scenarios.length !== 15 || scenarios.some((s,i)=>s.id!==i+1)) throw Error('incomplete story roster');
+const retiredStories = JSON.parse(read(join(HERE,'registry-story-migration.json'))).stories.filter(s=>s.retired).map(s=>s.id);
+const playedStories = Array.from({length:15},(_,i)=>i+1).filter(n=>!retiredStories.includes(n));
+if (scenarios.length !== playedStories.length || scenarios.some((s,i)=>s.id!==playedStories[i])) throw Error('incomplete story roster');
 for (const sc of scenarios) { const r=checkScenario(sc); if(!r.ok) throw Error(r.problems.join('; ')); }
 const rawCorpus = read(option('--corpus','registry-simulator-corpus.json')).trim(), corpus = JSON.parse(rawCorpus);
 const report=checkCorpus(corpus);if(!report.ok)throw Error(report.reasons.join('; '));
@@ -55,7 +57,7 @@ if(template.split('<!-- @@REGISTRY_SCRIPT@@ -->').length!==2)throw Error('templa
 const rendered=template.replace('<!-- @@REGISTRY_SCRIPT@@ -->',`<script>\n/* Source bindings: ${JSON.stringify(sources)} */\n${script.replace(/<\/script/gi,'<\\/script')}\n</script>`);
 if(process.argv.includes('--check')) {
   for(const target of [HTML,DOCS])if(!existsSync(target)||read(target)!==rendered)throw Error('stale generated page: '+target);
-  console.log(`PASS: ${Object.keys(sources).length} bound sources; 15 stories; ${report.cells} complete corpus cells; byte-identical published page.`);
+  console.log(`PASS: ${Object.keys(sources).length} bound sources; ${scenarios.length} stories; ${report.cells} complete corpus cells; byte-identical published page.`);
 } else {
   for(const target of [HTML,DOCS]){mkdirSync(dirname(target),{recursive:true});writeFileSync(target,rendered);}
   console.log(`Generated Registry wire v3 page: ${report.cells} corpus cells.`);

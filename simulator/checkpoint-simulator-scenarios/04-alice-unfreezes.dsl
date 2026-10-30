@@ -122,7 +122,7 @@ step:
         pool: 0
       poolIn: 0
       refund: null
-    exhibits: [T10_bonds_are_observable, T15_b_leaves_only_by_freeze, T15_freeze_makes_inert, T16_payments_are_named, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T5_freeze_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_frozen_flips_only_by_rotation_or_freeze, T7_step_iff_stepFn, T7_trace_iff_replay, T8_reopen_actor_is_proof, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, trace_poison_fold, trace_sn_monotone_all]
+    exhibits: [T10_bonds_are_observable, T15_b_leaves_only_by_freeze, T15_freeze_makes_inert, T16_payments_are_named, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T5_freeze_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_frozen_flips_only_by_rotation_or_freeze, T7_step_iff_stepFn, T7_trace_iff_replay, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 20
   who: alice
@@ -286,62 +286,10 @@ step:
           pool: 21
           refundTo: 1
           sn: 2
-    exhibits: [T10_bonds_are_observable, T14_pool_increases_only_by_topup, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T4_current_key_thief_cannot_park, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, trace_poison_fold, trace_sn_monotone_all]
+    exhibits: [T10_bonds_are_observable, T14_pool_increases_only_by_topup, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T4_current_key_thief_cannot_rotate_or_freeze, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 30
   who: hal
   say: "Hal sees a pool worth landing rotations for again."
   expect:
     verdict: consumable
-fork:
-  id: leave
-  at: 2
-  title: "Alice leaves instead of unfreezing"
-  step:
-    slot: 20
-    who: alice
-    say: "Leaving is enabled from a frozen state as well: Alice lands the same rotation as the close, her new keys signing the close naming herself payee. The pool (1) does not cover the premium, so nobody is paid it; the conviction bond and the pool she still holds go to her refund address — the freeze bond is Hal’s already — the parked output retains the token, minimum ADA and key state (1, 1), while the registry key stays active."
-    evidence:
-      add: [{"intentAuthorized":[1,{"close":{"payee":1}},null]}]
-    action:
-      close:
-        sn': 1
-        payee: 1
-        refund': null
-    expect:
-      ok: true
-      state:
-        parked:
-          h:
-            epoch: 1
-            sn: 1
-      flow:
-        bIn: 0
-        convictor: null
-        dregIn: 0
-        hunter: null
-        poolIn: 0
-        refund:
-          addr: 1
-          b: 0
-          dreg: 1000
-          pool: 1
-      verdict: not-present
-      modelResult:
-        flow:
-          bIn: 0
-          convictor: null
-          dregIn: 0
-          hunter: null
-          poolIn: 0
-          refund:
-            addr: 1
-            b: 0
-            dreg: 1000
-            pool: 1
-        state:
-          parked:
-            h:
-              epoch: 1
-              sn: 1
-      exhibits: [T10_bonds_are_observable, T16_close_destination, T16_close_needs_rotation, T16_copied_reap_refused, T16_parked_hash_is_the_closed_checkpoints, T1_sn_monotone_all, T2_close_and_reopen_open_epochs, T5_close_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_intent_requires_new_keys, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, parked_and_convicted_hold_no_bonds_or_pool, trace_sn_monotone_all]

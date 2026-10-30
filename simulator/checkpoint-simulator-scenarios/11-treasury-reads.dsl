@@ -9,7 +9,7 @@ params:
   B: 5
   P: 2
   W: 10
-atoms: ["11.present", "11.the-freeze-bond-held", "11.not-poisoned", "11.born-at-least-w-slots", "11.the-signature-on-the-payment", "11.later-when-validity-ships-within", "11.on-absent", "11.frozen", "11.poisoned", "11.juvenile", "11.parked", "11.convicted", "11.pending-custody"]
+atoms: ["11.present", "11.the-freeze-bond-held", "11.not-poisoned", "11.born-at-least-w-slots", "11.the-signature-on-the-payment", "11.later-when-validity-ships-within", "11.on-absent", "11.frozen", "11.poisoned", "11.juvenile", "11.convicted", "11.pending-custody"]
 step:
   slot: 0
   who: treasury
@@ -125,7 +125,7 @@ step:
         pool: 0
       poolIn: 0
       refund: null
-    exhibits: [T10_bonds_are_observable, T15_b_leaves_only_by_freeze, T15_freeze_makes_inert, T16_payments_are_named, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T5_freeze_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_frozen_flips_only_by_rotation_or_freeze, T7_step_iff_stepFn, T7_trace_iff_replay, T8_reopen_actor_is_proof, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, trace_poison_fold, trace_sn_monotone_all]
+    exhibits: [T10_bonds_are_observable, T15_b_leaves_only_by_freeze, T15_freeze_makes_inert, T16_payments_are_named, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T5_freeze_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_frozen_flips_only_by_rotation_or_freeze, T7_step_iff_stepFn, T7_trace_iff_replay, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 15
   who: friend
@@ -282,119 +282,13 @@ step:
       hunter: null
       poolIn: 0
       refund: null
-    exhibits: [T10_bonds_are_observable, T10_current_quorum_never_restores, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T3_only_poison_sets, T4_current_key_thief_cannot_park, T4_current_quorum_only_poisons, T5_poison_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, trace_poison_fold, trace_sn_monotone_all]
-step:
-  slot: 30
-  who: alice
-  say: "Parked by the close: custody is retained, but the treasury refuses it."
-  evidence:
-    add: [{"rotationTo":[1,1,2]},{"intentAuthorized":[2,{"close":{"payee":1}},null]}]
-  action:
-    close:
-      sn': 2
-      payee: 1
-      refund': null
-  expect:
-    ok: true
-    verdict: not-present
-    modelResult:
-      flow:
-        bIn: 0
-        convictor: null
-        dregIn: 0
-        hunter:
-          addr: 1
-          b: 0
-          dreg: 0
-          pool: 2
-        poolIn: 0
-        refund:
-          addr: 1
-          b: 5
-          dreg: 1000
-          pool: 2
-      state:
-        parked:
-          h:
-            epoch: 2
-            sn: 2
-    state:
-      parked:
-        h:
-          epoch: 2
-          sn: 2
-    flow:
-      bIn: 0
-      convictor: null
-      dregIn: 0
-      hunter:
-        addr: 1
-        b: 0
-        dreg: 0
-        pool: 2
-      poolIn: 0
-      refund:
-        addr: 1
-        b: 5
-        dreg: 1000
-        pool: 2
-    exhibits: [T10_bonds_are_observable, T16_close_destination, T16_close_needs_rotation, T16_copied_reap_refused, T16_parked_hash_is_the_closed_checkpoints, T16_payments_are_named, T1_sn_monotone_all, T2_close_and_reopen_open_epochs, T4_poisoned_blocks_quorum_and_freeze, T5_close_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_intent_requires_new_keys, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, parked_and_convicted_hold_no_bonds_or_pool, trace_sn_monotone_all]
-step:
-  slot: 40
-  who: alice
-  say: "Reopened by a witnessed local rotation from the parked key state: juvenile."
-  evidence:
-    add: [{"rotationTo":[2,2,3]}]
-  action:
-    reopen:
-      sn': 3
-      refund: 1
-      pool0: 10
-  expect:
-    ok: true
-    verdict: juvenile
-    modelResult:
-      flow:
-        bIn: 5
-        convictor: null
-        dregIn: 1000
-        hunter: null
-        poolIn: 10
-        refund: null
-      state:
-        present:
-          l:
-            bornAt: 40
-            epoch: 3
-            frozen: false
-            poisoned: false
-            pool: 10
-            refundTo: 1
-            sn: 3
-    state:
-      present:
-        l:
-          bornAt: 40
-          epoch: 3
-          frozen: false
-          poisoned: false
-          pool: 10
-          refundTo: 1
-          sn: 3
-    flow:
-      bIn: 5
-      convictor: null
-      dregIn: 1000
-      hunter: null
-      poolIn: 10
-      refund: null
-    exhibits: [T10_reopen_is_juvenile, T1_reopen_strict, T1_sn_monotone_all, T1_trace_sn_monotone, T2_close_and_reopen_open_epochs, T3_epoch_local, T5_reopen_enabled, T6_component_conservation, T6_dreg_enters_only_at_birth, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_parked_only_revives_or_convicts, T8_parked_returns_only_by_revival, T8_reopen_actor_is_proof, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, parked_and_convicted_hold_no_bonds_or_pool, trace_poison_fold, trace_sn_monotone_all]
+    exhibits: [T10_bonds_are_observable, T10_current_quorum_never_restores, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T3_only_poison_sets, T4_current_key_thief_cannot_rotate_or_freeze, T4_current_quorum_only_poisons, T5_poison_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 50
   who: treasury
   say: "Consumable. What the treasury cannot know: whether Alice rotated on KERI an hour ago and no hunter has landed it yet. That is why the pool exists."
   expect:
-    verdict: consumable
+    verdict: poisoned
 step:
   slot: 50
   who: cora
@@ -405,47 +299,8 @@ step:
     convict:
       payee: 3
   expect:
-    ok: true
-    verdict: not-present
-    modelResult:
-      flow:
-        bIn: 0
-        convictor:
-          addr: 3
-          b: 0
-          dreg: 1000
-          pool: 0
-        dregIn: 0
-        hunter: null
-        poolIn: 0
-        refund:
-          addr: 1
-          b: 5
-          dreg: 0
-          pool: 10
-      state:
-        terminationPending:
-          h:
-            epoch: 3
-            sn: 3
-    state:
-      terminationPending:
-        h:
-          epoch: 3
-          sn: 3
-    flow:
-      bIn: 0
-      convictor:
-        addr: 3
-        b: 0
-        dreg: 1000
-        pool: 0
-      dregIn: 0
-      hunter: null
-      poolIn: 0
-      refund:
-        addr: 1
-        b: 5
-        dreg: 0
-        pool: 10
-    exhibits: [T10_bonds_are_observable, T12_convict_exact, T16_payments_are_named, T1_sn_monotone_all, T4_current_key_thief_cannot_park, T5_convict_enabled, T6_component_conservation, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_reopen_actor_is_proof, T9_juvenility_is_consumer_only, consumableStateB_iff, pending_consumer_refused, pending_custody_observations, trace_sn_monotone_all]
+    ok: false
+    verdict: poisoned
+    modelResult: null
+    exhibits: [T10_bonds_are_observable, T12_convict_exact, T7_step_iff_stepFn, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, consumableStateB_iff]
+    reason: no-duplicity-proof

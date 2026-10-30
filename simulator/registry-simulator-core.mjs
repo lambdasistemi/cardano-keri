@@ -29,18 +29,10 @@ function execute(p, env, s, action) {
     const next = E.bookRegistration(world, b);
     after = { ...s, registrations: [b, ...s.registrations] };
     require(E.equal(toWorld(after), next), 'keri-registration-reconstruction-mismatch'); moved = flow({ deposited: b.request.contents.lovelace });
-  } else if (['park', 'revive', 'convictCkpt', 'bookTermination'].includes(kind)) {
+  } else if (['convictCkpt', 'bookTermination'].includes(kind)) {
     const c = carrierAt(s, a.aid); require(c !== null, 'keri-carrier-missing');
     const evidence = (name, second) => env[name].some(([aid, value]) => aid === a.aid && value === second);
-    if (kind === 'park') {
-      require(c.st === 'live' && evidence('closeAuth', a.recipient), 'keri-close-refused');
-      after = { ...s, carriers: s.carriers.map(old => old.aid === a.aid ? { ...old, k: old.k + 1n, st: 'parked' } : old) };
-      moved = flow({ bondReturn: [a.recipient, p.D] });
-    } else if (kind === 'revive') {
-      require(c.st === 'parked' && evidence('rotationFrom', c.k), 'keri-revival-refused');
-      after = { ...s, carriers: s.carriers.map(old => old.aid === a.aid ? { ...old, k: old.k + 1n, st: 'live' } : old) };
-      moved = flow({ deposited: p.D, locked: [[a.aid, p.D]] });
-    } else if (kind === 'convictCkpt') {
+    if (kind === 'convictCkpt') {
       require(c.st !== 'terminationPending' && evidence('duplicity', c.k), 'keri-conviction-refused');
       after = { ...s, carriers: s.carriers.map(old => old.aid === a.aid ? { ...old, st: 'terminationPending' } : old) };
     } else {
@@ -121,16 +113,16 @@ export function checkCorpus(doc) {
   };
   try {
     if (doc.schema !== SCHEMA || doc.version !== VERSION) throw Error('schema/version');
-    const names = ['retained-output', 'mixed-custody-and-recovery', 'expired-registration', 'registration-retraction', 'seed-437', 'seed-9001'];
+    const names = ['live-until-convicted', 'mixed-custody-and-recovery', 'expired-registration', 'registration-retraction', 'seed-437', 'seed-9001'];
     if (!equal(doc.traces.map(t => t.name), names)) throw Error('trace roster');
     for (const trace of doc.traces) {
       if (!trace.cells.length) throw Error(`empty trace ${trace.name}`);
       chain(trace.cells, init(trace.cells[0].input.config), trace.name);
     }
-    if (doc.grid.length !== 56 || doc.boundaries.length !== 161) throw Error('boundary census');
+    if (doc.grid.length !== 12 || doc.boundaries.length !== 161) throw Error('boundary census');
     doc.grid.forEach((c, i) => inspect(c, `local[${i}]`));
     doc.boundaries.forEach((c, i) => inspect(c, `economic[${i}]`));
-    if (!equal(doc.stories.map(s => s.id), Array.from({ length: 15 }, (_, i) => i + 1))) throw Error('story roster');
+    if (!doc.stories.length || doc.stories.some((s, i) => !Number.isSafeInteger(s.id) || s.id < 1 || s.id > 15 || (i > 0 && s.id <= doc.stories[i - 1].id))) throw Error('story roster');
     let forks = 0;
     for (const story of doc.stories) {
       if (!story.cells.length) throw Error(`empty story ${story.id}`);
@@ -144,7 +136,7 @@ export function checkCorpus(doc) {
         if (!equal(result, fork.final)) fail(`story ${story.id}/${fork.id}: final mismatch`);
       }
     }
-    if (forks !== 24) throw Error(`fork census ${forks}`);
+    if (forks !== 19) throw Error(`fork census ${forks}`);
     if (!applied || !refused) throw Error('missing positive or refusal controls');
   } catch (error) { fail(error.message); }
   return { ok: !reasons.length, cells, applied, refused, reasons };
@@ -204,7 +196,7 @@ export function checkScenario(scenario, name = scenario.slug) {
 
 export function newSession(params, config, env) {
   const state = init(config);
-  decodeInput(params, env, state, { park: { aid: 0, recipient: 0 } });
+  decodeInput(params, env, state, { convictCkpt: { aid: 0 } });
   return { params: structuredClone(params), env: validateEnv(env), state };
 }
 export function attempt(session, action) {
@@ -213,6 +205,6 @@ export function attempt(session, action) {
   return { session: { ...session, state: result.ok?.state ?? session.state }, record };
 }
 export function setEvidence(session, env) {
-  decodeInput(session.params, env, session.state, { park: { aid: 0, recipient: 0 } });
+  decodeInput(session.params, env, session.state, { convictCkpt: { aid: 0 } });
   return { ...session, env: validateEnv(env) };
 }

@@ -155,7 +155,7 @@
           "T1_trace_sn_monotone",
           "T3_epoch_local",
           "T3_only_poison_sets",
-          "T4_current_key_thief_cannot_park",
+          "T4_current_key_thief_cannot_rotate_or_freeze",
           "T4_current_quorum_only_poisons",
           "T5_poison_enabled",
           "T6_component_conservation",
@@ -304,34 +304,6 @@
         },
         {
           "slot": 12,
-          "who": "mallory",
-          "say": "Mallory, with the stolen current keys, tries to close and take the bonds. Under D-036 the poison is no longer what stops her: a close is a witnessed rotation by the next keys, and she cannot present one.",
-          "action": {
-            "close": {
-              "sn'": 1,
-              "payee": 4,
-              "refund'": null
-            }
-          },
-          "expect": {
-            "ok": false,
-            "reason": "no-witnessed-rotation",
-            "verdict": "poisoned",
-            "modelResult": null,
-            "exhibits": [
-              "T10_bonds_are_observable",
-              "T16_close_needs_rotation",
-              "T7_step_iff_stepFn",
-              "T9_juvenility_is_consumer_only",
-              "consumableStateB_iff"
-            ]
-          },
-          "evidence": {
-            "add": []
-          }
-        },
-        {
-          "slot": 12,
           "who": "hal",
           "say": "Hal holds a later witnessed rotation and the pool is short, but a poisoned checkpoint cannot be frozen: it is already unconsumable, nothing to freeze.",
           "evidence": {
@@ -360,7 +332,7 @@
               "T10_bonds_are_observable",
               "T4_poisoned_blocks_quorum_and_freeze",
               "T7_step_iff_stepFn",
-              "T8_reopen_actor_is_proof",
+              "T8_freeze_and_convict_actors_are_proof",
               "T9_juvenility_is_consumer_only",
               "consumableStateB_iff"
             ]
@@ -446,41 +418,6 @@
               "trace_poison_fold",
               "trace_sn_monotone_all"
             ]
-          }
-        }
-      ]
-    },
-    {
-      "id": "retired-keys",
-      "at": 2,
-      "title": "Mallory tries the reap with the retired keys — refused",
-      "steps": [
-        {
-          "slot": 12,
-          "who": "mallory",
-          "say": "Mallory's stolen keys are the retired epoch's. A close is a witnessed rotation by the next keys (D-036); she has none. Her keys are good for nothing on chain.",
-          "action": {
-            "close": {
-              "sn'": 2,
-              "payee": 4,
-              "refund'": null
-            }
-          },
-          "expect": {
-            "ok": false,
-            "reason": "no-witnessed-rotation",
-            "verdict": "consumable",
-            "modelResult": null,
-            "exhibits": [
-              "T10_bonds_are_observable",
-              "T16_close_needs_rotation",
-              "T7_step_iff_stepFn",
-              "T9_juvenility_is_consumer_only",
-              "consumableStateB_iff"
-            ]
-          },
-          "evidence": {
-            "add": []
           }
         }
       ]

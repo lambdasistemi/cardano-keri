@@ -167,7 +167,7 @@ step:
       hunter: null
       poolIn: 0
       refund: null
-    exhibits: [T10_bonds_are_observable, T10_current_quorum_never_restores, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T3_only_poison_sets, T4_current_key_thief_cannot_park, T4_current_quorum_only_poisons, T5_poison_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, trace_poison_fold, trace_sn_monotone_all]
+    exhibits: [T10_bonds_are_observable, T10_current_quorum_never_restores, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T3_only_poison_sets, T4_current_key_thief_cannot_rotate_or_freeze, T4_current_quorum_only_poisons, T5_poison_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 12
   who: cora
@@ -221,7 +221,7 @@ step:
           h:
             epoch: 1
             sn: 1
-    exhibits: [T10_bonds_are_observable, T12_convict_exact, T16_payments_are_named, T1_sn_monotone_all, T4_current_key_thief_cannot_park, T4_poisoned_blocks_quorum_and_freeze, T4_poisoned_nonrotation_inert, T5_convict_enabled, T6_component_conservation, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_reopen_actor_is_proof, T9_juvenility_is_consumer_only, consumableStateB_iff, pending_consumer_refused, pending_custody_observations, trace_sn_monotone_all]
+    exhibits: [T10_bonds_are_observable, T12_convict_exact, T16_payments_are_named, T1_sn_monotone_all, T4_current_key_thief_cannot_rotate_or_freeze, T4_poisoned_blocks_quorum_and_freeze, T4_poisoned_nonrotation_inert, T5_convict_enabled, T6_component_conservation, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, consumableStateB_iff, pending_consumer_refused, pending_custody_observations, trace_sn_monotone_all]
 fork:
   id: noproof
   at: 2
@@ -238,7 +238,7 @@ fork:
       reason: no-duplicity-proof
       verdict: poisoned
       modelResult: null
-      exhibits: [T10_bonds_are_observable, T12_convict_exact, T7_step_iff_stepFn, T8_reopen_actor_is_proof, T9_juvenility_is_consumer_only, consumableStateB_iff]
+      exhibits: [T10_bonds_are_observable, T12_convict_exact, T7_step_iff_stepFn, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, consumableStateB_iff]
 fork:
   id: terminal
   at: 3
@@ -253,23 +253,6 @@ fork:
       rotate:
         sn': 1
         op: deposit
-        payee: 1
-        refund': null
-    expect:
-      ok: false
-      reason: termination-pending
-      verdict: not-present
-      modelResult: null
-      exhibits: [T7_step_iff_stepFn, T9_juvenility_is_consumer_only, consumableStateB_iff, pending_consumer_refused, pending_custody_observations, pending_has_no_local_exit, pending_step_impossible, trace_from_pending]
-  step:
-    slot: 12
-    who: alice
-    say: "Pending termination custody refuses another close."
-    evidence:
-      add: []
-    action:
-      close:
-        sn': 1
         payee: 1
         refund': null
     expect:
@@ -309,4 +292,4 @@ fork:
       reason: no-duplicity-proof
       verdict: juvenile
       modelResult: null
-      exhibits: [T10_bonds_are_observable, T12_convict_exact, T7_step_iff_stepFn, T8_reopen_actor_is_proof, T9_juvenility_is_consumer_only, consumableStateB_iff]
+      exhibits: [T10_bonds_are_observable, T12_convict_exact, T7_step_iff_stepFn, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, consumableStateB_iff]

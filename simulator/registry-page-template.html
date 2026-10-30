@@ -89,10 +89,8 @@
   #scene .utxo { fill: var(--card); stroke: var(--line); stroke-width: 1.5; }
   #scene .utxo.poisoned { stroke: var(--poison); }
   #scene .utxo.absent { stroke-dasharray: 6 4; fill: none; }
-  #scene .utxo.parked { stroke-dasharray: 2 4; opacity: .6; }
   #scene .token { fill: var(--accent-bg); stroke: var(--accent); stroke-width: 2; }
   #scene .token.absent { fill: none; stroke: var(--line); stroke-dasharray: 5 3; }
-  #scene .token.parked { fill: none; stroke: var(--warn); stroke-dasharray: 5 3; }
   #scene .token.convicted { fill: var(--bad-bg); stroke: var(--bad); }
   #scene .tk { font-family: var(--mono); font-size: 11px; text-anchor: middle; }
   #scene .datum-k { font-size: 10px; fill: var(--muted); }
@@ -362,7 +360,7 @@
   /* the registry's own entities (the checkpoint's colours: D = the bond, B = min-ADA, pool = tips and premiums) */
   .badge { display: inline-block; padding: 0 6px; border-radius: 5px; font-size: .72rem; font-family: var(--mono); }
   .badge.live, .badge.p1 { background: var(--ok-bg); color: var(--ok); }
-  .badge.parked, .badge.p2 { background: var(--warn-bg); color: var(--warn); }
+  .badge.p2 { background: var(--warn-bg); color: var(--warn); }
   .badge.tomb, .badge.p3, .badge.future { background: var(--bad-bg); color: var(--bad); }
   .badge.go { background: var(--accent-bg); color: var(--accent); }
   .kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: .84rem; margin: 6px 0; }
@@ -374,16 +372,16 @@
   .evtable th { color: var(--muted); font-weight: 600; }
   #where .sum.gen { color: var(--accent); }
   #scene .leafcard { fill: var(--card); stroke: var(--line); }
-  #scene .leafcard.active { stroke: var(--ok); } #scene .leafcard.dormant { stroke: var(--warn); } #scene .leafcard.convicted { stroke: var(--bad); }
+  #scene .leafcard.active { stroke: var(--ok); } #scene .leafcard.convicted { stroke: var(--bad); }
   #scene .reqcard { fill: var(--paper); stroke: var(--line); }
   #scene .reqcard.go { stroke: var(--accent); stroke-dasharray: 3 2; }
   #scene .reqcard.p2 { stroke: var(--warn); } #scene .reqcard.p3 { stroke: var(--bad); }
   #scene .req-t { font-family: var(--mono); font-size: 9.5px; }
   #scene .ck { fill: var(--card); stroke: var(--line); stroke-width: 1.5; }
-  #scene .ck.parked { stroke: var(--warn); stroke-dasharray: 5 3; } #scene .ck.tomb { stroke: var(--bad); }
+  #scene .ck.tomb { stroke: var(--bad); }
   #scene .ck-t { font-size: 10px; text-anchor: middle; }
   #scene .ck-w { font-family: var(--serif); font-size: 14px; font-weight: 600; text-anchor: middle; }
-  #scene .ck-w.parked { fill: var(--warn); } #scene .ck-w.tomb { fill: var(--bad); }
+  #scene .ck-w.tomb { fill: var(--bad); }
   #scene .gen { font-family: var(--mono); font-size: 11px; fill: var(--accent); }
   #scene { aspect-ratio: 1000 / 600; }
   #dsl-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0 0; }
@@ -394,7 +392,7 @@
 </head>
 <body>
 <header>
-  <h1>The registry <small>One key per identity. Park and revive while retaining custody; conviction ends in a consuming retirement fold.</small></h1>
+  <h1>The registry <small>One key per identity. A carrier is live until it is convicted; conviction ends in a consuming retirement fold.</small></h1>
   <div class="slotbar">
     <span class="lbl">proposal slot</span> <b id="slot-now">0</b>
     <input id="slot-input" type="text" inputmode="numeric" value="0" aria-label="choose proposal slot">
@@ -469,7 +467,7 @@
   <section class="drawers">
     <details class="card" id="act-drawer">
       <summary>Evidence by hand <small>the Env: what the plugin and the policy would verify over the bytes, decided by you</small></summary>
-      <div class="blurb">Supply the finite model premises: inception, rotation from a retained key, duplicity at a key, or close authorization for an exact recipient. Editing a premise creates a new branch; it does not generate a signature.</div>
+      <div class="blurb">Supply the finite model premises: inception, or duplicity at a key. Editing a premise creates a new branch; it does not generate a signature.</div>
       <div id="evbody"></div>
       <div class="ev-form"><label>AID <input id="ev-aid" type="number" min="0" step="1" value="11"></label><button type="button" class="ghost" id="ev-add">Add an AID row</button></div>
     </details>
@@ -497,7 +495,7 @@
 
     <details class="card about" id="about-drawer">
       <summary>What this is <small>and is not</small></summary>
-      <p>This is an executable transcription of <code>Registry.stepFn</code> and the pinned public Singular transaction judgments. The registry holds absent, active or permanently retired keys. Carriers retain their token and key while parked. Conviction preserves custody pending booking; only a consuming fold retires the key and burns its token. Requests and transactions carry full value, routing and custody observations.</p>
+      <p>This is an executable transcription of <code>Registry.stepFn</code> and the pinned public Singular transaction judgments. The registry holds absent, active or permanently retired keys. There is no owner exit: a carrier stays live until it is convicted. Conviction preserves custody pending booking; only a consuming fold retires the key and burns its token. Requests and transactions carry full value, routing and custody observations.</p>
       <p>Evidence is a finite table of model predicates. This page does not construct KERI signatures, prove arbitrary uploaded histories reachable, submit transactions, or establish production conformance. Concrete checkpoint key states and duplicity have a separate model; no key encoding equivalence is asserted here. Transaction assembly uses model fixtures, with every proposal judged by the same core.</p>
       <p>Wire version 3 represents safe integers as JSON numbers and larger integers as canonical decimal strings, with exact arithmetic throughout. The chart uses scaled coordinates; the numbers and exported data remain exact. A theorem lamp checks a stated finite observation. The Lean parity lamp lights only for a complete input in the embedded corpus. Exported interactive expectations are simulator results, not new Lean oracle output. <a href="?selftest=1">Run the self-test</a>.</p>
       <p id="pf-params" class="tiny"></p>

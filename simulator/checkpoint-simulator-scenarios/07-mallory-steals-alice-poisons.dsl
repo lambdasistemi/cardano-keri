@@ -107,7 +107,7 @@ step:
           pool: 1
           refundTo: 1
           sn: 0
-    exhibits: [T10_bonds_are_observable, T10_current_quorum_never_restores, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T3_only_poison_sets, T4_current_key_thief_cannot_park, T4_current_quorum_only_poisons, T5_poison_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, trace_poison_fold, trace_sn_monotone_all]
+    exhibits: [T10_bonds_are_observable, T10_current_quorum_never_restores, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T3_only_poison_sets, T4_current_key_thief_cannot_rotate_or_freeze, T4_current_quorum_only_poisons, T5_poison_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 12
   who: alice
@@ -182,23 +182,6 @@ fork:
       exhibits: [T10_bonds_are_observable, T4_poisoned_blocks_quorum_and_freeze, T7_step_iff_stepFn, T9_juvenility_is_consumer_only, consumableStateB_iff]
   step:
     slot: 12
-    who: mallory
-    say: "Mallory, with the stolen current keys, tries to close and take the bonds. Under D-036 the poison is no longer what stops her: a close is a witnessed rotation by the next keys, and she cannot present one."
-    evidence:
-      add: []
-    action:
-      close:
-        sn': 1
-        payee: 4
-        refund': null
-    expect:
-      ok: false
-      reason: no-witnessed-rotation
-      verdict: poisoned
-      modelResult: null
-      exhibits: [T10_bonds_are_observable, T16_close_needs_rotation, T7_step_iff_stepFn, T9_juvenility_is_consumer_only, consumableStateB_iff]
-  step:
-    slot: 12
     who: hal
     say: "Hal holds a later witnessed rotation and the pool is short, but a poisoned checkpoint cannot be frozen: it is already unconsumable, nothing to freeze."
     evidence:
@@ -212,7 +195,7 @@ fork:
       reason: poisoned
       verdict: poisoned
       modelResult: null
-      exhibits: [T10_bonds_are_observable, T4_poisoned_blocks_quorum_and_freeze, T7_step_iff_stepFn, T8_reopen_actor_is_proof, T9_juvenility_is_consumer_only, consumableStateB_iff]
+      exhibits: [T10_bonds_are_observable, T4_poisoned_blocks_quorum_and_freeze, T7_step_iff_stepFn, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, consumableStateB_iff]
   step:
     slot: 12
     who: friend
@@ -262,24 +245,3 @@ fork:
         poolIn: 5
         refund: null
       exhibits: [T10_bonds_are_observable, T14_pool_increases_only_by_topup, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T4_poisoned_blocks_quorum_and_freeze, T4_poisoned_nonrotation_inert, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, trace_poison_fold, trace_sn_monotone_all]
-fork:
-  id: retired-keys
-  at: 2
-  title: "Mallory tries the reap with the retired keys — refused"
-  step:
-    slot: 12
-    who: mallory
-    say: "Mallory's stolen keys are the retired epoch's. A close is a witnessed rotation by the next keys (D-036); she has none. Her keys are good for nothing on chain."
-    evidence:
-      add: []
-    action:
-      close:
-        sn': 2
-        payee: 4
-        refund': null
-    expect:
-      ok: false
-      reason: no-witnessed-rotation
-      verdict: consumable
-      modelResult: null
-      exhibits: [T10_bonds_are_observable, T16_close_needs_rotation, T7_step_iff_stepFn, T9_juvenility_is_consumer_only, consumableStateB_iff]

@@ -17,7 +17,7 @@
 <main>
   <details class="card wide" id="consumer-player">
     <summary>The treasury checks Alice's exact holding</summary>
-    <p>The treasury fixes its network, release, registry seed and Alice's AID before seeing a candidate. Follow registration through rotations, parked custody, revival and the consuming termination fold. Change one candidate field to see why it is refused.</p>
+    <p>The treasury fixes its network, release, registry seed and Alice's AID before seeing a candidate. Follow registration through rotations, pending custody and the consuming termination fold. Change one candidate field to see why it is refused.</p>
     <div class="stagebar"><button id="consumer-reset" type="button">Registration</button><button id="consumer-prev" type="button">Previous</button><button id="consumer-next" type="button">Next</button><span id="consumer-position"></span></div>
     <p id="consumer-story"></p><p id="consumer-result" role="status"></p>
     <dl id="consumer-summary"></dl>
@@ -67,7 +67,7 @@
     <div id="where"></div>
     <div id="challenge" hidden></div>
     <details id="pots"><summary>What the words mean: the three pots, W, and the states a checkpoint moves through</summary>
-      <svg id="hub" role="img" aria-label="the states as rooms: Live in the middle, Poisoned and Frozen beside it and back, Parked a room outside the chain with a way back, Convicted sealed"></svg>
+      <svg id="hub" role="img" aria-label="the states as rooms: Live in the middle, Poisoned and Frozen beside it and back, Pending custody after a conviction, Convicted sealed"></svg>
       <dl id="pots-dl"></dl>
     </details>
     <div id="narration"></div>
@@ -112,8 +112,7 @@
         </select></label>
         <label id="ev-la">epoch <input id="ev-a" type="number" min="0" step="1" value="0"></label>
         <label id="ev-lb">from sn <input id="ev-b" type="number" min="0" step="1" value="0"></label>
-        <label id="ev-li" hidden>intent <select id="ev-intent"><option value="keep">keep</option><option value="deposit">deposit (unfreeze)</option><option value="close">close (leave)</option></select></label>
-        <label id="ev-lp" hidden>payee <input id="ev-payee" type="number" min="0" step="1" value="1"></label>
+        <label id="ev-li" hidden>intent <select id="ev-intent"><option value="keep">keep</option><option value="deposit">deposit (unfreeze)</option></select></label>
         <label id="ev-lc">to sn' <input id="ev-c" type="number" min="0" step="1" value="1"></label>
         <button type="button" class="ghost" id="ev-add">Add row</button>
       </div>

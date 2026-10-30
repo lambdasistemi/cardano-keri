@@ -46,12 +46,12 @@ add('CI08','wrong_asset_refused',c=>['wrong-policy','wrong-name','other-aid-toke
 add('CI09','malformed_datum_refused',c=>['datum-empty','datum-root','datum-malformed'].every(n=>refused(c,n)),flip('datum-empty'));
 add('CI10','wrong_datum_aid_refused',c=>refused(c,'datum-other-aid'),flip('datum-other-aid'));
 add('CI11','ineligible_state_refused',c=>['maturity-minus-one','frozen','poisoned','absent-datum','terminal-datum'].every(n=>refused(c,n)),flip('frozen'));
-add('CI12','retained_custody_refused',c=>['parked','termination-pending','termination-booked'].every(n=>refused(c,n)),flip('parked'));
+add('CI12','retained_custody_refused',c=>['termination-pending','termination-booked'].every(n=>refused(c,n)),flip('termination-pending'));
 add('CI13','different_encoded_keys_distinct',c=>!equal(cell(c,'other-aid-token').query.holding.assets[0][0],a(c)),c=>{cell(c,'other-aid-token').query.holding.assets[0][0]=a(c);});
 add('CI14','different_registries_distinct',c=>!equal(cell(c,'rival-registry-policy').query.holding.assets[0][0],a(c)),c=>{cell(c,'rival-registry-policy').query.holding.assets[0][0]=a(c);});
 add('CI15','different_seeds_distinct',c=>['rival-seed-transaction','rival-seed-index'].every(n=>!equal(cell(c,n).query.holding.assets[0][0],a(c))),c=>{cell(c,'rival-seed-index').query.holding.assets[0][0]=a(c);});
 add('CI16','rival_seed_refused',c=>refused(c,'genuine-rival-registry'),flip('genuine-rival-registry'));
-add('CI17','local_step_retains_exact_asset',c=>c.journey.filter(f=>f.holding).every(f=>equal(f.logicalAsset,a(c))&&quantity(f.holding,a(c))===1n),c=>{frame(c,'parked').holding.assets=[];});
+add('CI17','local_step_retains_exact_asset',c=>c.journey.filter(f=>f.holding).every(f=>equal(f.logicalAsset,a(c))&&quantity(f.holding,a(c))===1n),c=>{frame(c,'mature').holding.assets=[];});
 add('CI18','completion_refuses_consumer',c=>{const f=c.journey.at(-1);return f.holding===null&&f.logicalAsset===null&&f.system.aids[0].state==='convicted'&&refused(c,f.name);},c=>{c.journey.at(-1).holding=c.journey[1].holding;});
 add('CI19','system_preserves_identity_binding',origin,breakOrigin);
 // CI20 samples the two explicit registry identities and the fixture map rows.

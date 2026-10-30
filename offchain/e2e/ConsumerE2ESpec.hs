@@ -43,6 +43,7 @@ import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as B8
 import Data.ByteString.Short qualified as SBS
+import Data.Char (digitToInt, isDigit)
 import Data.List (isInfixOf)
 import Data.Map.Strict qualified as Map
 import Data.Sequence.Strict qualified as StrictSeq
@@ -358,7 +359,7 @@ unhex [] = BS.empty
 unhex (a : b : rest) = BS.cons (digit a * 16 + digit b) (unhex rest)
   where
     digit c
-        | c >= '0' && c <= '9' = fromIntegral (fromEnum c - fromEnum '0')
+        | isDigit c = fromIntegral (digitToInt c)
         | c >= 'a' && c <= 'f' = fromIntegral (fromEnum c - fromEnum 'a' + 10)
         | otherwise = error "unhex: not a lowercase hexadecimal digit"
 unhex _ = error "unhex: odd length"

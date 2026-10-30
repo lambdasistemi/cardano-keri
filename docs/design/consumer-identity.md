@@ -130,7 +130,7 @@ collision freedom exists; the statements name the assumption in their types.
 With it, the theorems for different AIDs, different seeds and a rival seed's
 registry hold for the concrete bytes.
 
-The [vector table](https://github.com/lambdasistemi/cardano-keri/blob/main/lean/consumer-identity-vectors.json)
+The [vector table](https://github.com/lambdasistemi/cardano-keri/blob/a17ab42a1482b6515406a361dedfb4297c69ac04/lean/consumer-identity-vectors.json)
 lists, for each state policy, seed and AID, the key, both serialised
 preimages, both names and the representative asset a genuine holding
 carries. The Lean emits the table and checks the committed copy. Each row runs

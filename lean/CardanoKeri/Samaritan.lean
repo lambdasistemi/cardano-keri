@@ -2,7 +2,7 @@ import Singular.Statements.FoldAccounting
 import Singular.Statements.FoldTermination
 
 /-! Convicted-carrier booking and actual imported fold accounting.
-Parking retains its min-ADA; only booking a convicted carrier uses this split. -/
+Only booking a convicted carrier uses this split. -/
 namespace CardanoKeri.Samaritan
 
 structure Reap where

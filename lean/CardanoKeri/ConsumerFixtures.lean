@@ -17,12 +17,12 @@ end S
 def cp : Params := { D := 3, B := 2, P := 1, W := 5, hD := by decide, hB := by decide }
 def evidence : TraceWire.EnvTable := {
   rotationTo := (List.range 12).map fun n => (n, n, n + 1)
-  intentAuthorized := (List.range 13).flatMap fun n => [(n, .deposit, none), (n, .close 6, none)]
+  intentAuthorized := (List.range 13).flatMap fun n => [(n, .deposit, none)]
   quorum := List.range 13
   duplicityAt := (List.range 13).map fun n => (n, n) }
 def ce : Env := evidence.toEnv
 def registryEnvironment : CardanoKeri.Registry.TraceWire.EnvTable := {
-  inception := [11, 12, 13], rotationFrom := [(11, 1)], closeAuth := [(11, 6)],
+  inception := [11, 12, 13],
   duplicity := [11, 12, 13].flatMap fun aid => (List.range 13).map fun n => (aid, n) }
 def context : Context := {
   network := 0

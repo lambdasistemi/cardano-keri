@@ -1,6 +1,7 @@
-import CardanoKeri.Registry
-/-! Connected economic registration, retained parking and termination witnesses.
-W1-W5 cover the connected lifecycle; N1 excludes phantom alias bindings. -/
+import CardanoKeri.RegistryGoals
+/-! Connected economic registration, conviction and termination witnesses.
+W5 covers the connected lifecycle, W6 the refused booking of a live
+checkpoint; N1 excludes phantom alias bindings. There is no owner exit. -/
 namespace CardanoKeri.Registry.Examples
 set_option maxRecDepth 10000
 set_option maxHeartbeats 2000000
@@ -13,21 +14,18 @@ def cfg : Singular.Config := {
   registryId := 9, registrationCost := 2, bookingWidth := 1 }
 def env : Env := {
   inception := fun _ => true,
-  closeAuth := fun aid recipient => aid == 11 && recipient == 6,
-  rotationFrom := fun aid k => aid == 11 && k == 1,
   duplicity := fun _ _ => true }
-def parkedCarrier : Carrier := {
+def liveCarrier : Carrier := {
   aid := 11, token := 0,
-  original := ⟨11, .active, 111, some 777⟩, k := 1, st := .parked, minAda := 4 }
-def ParkingJourney (registered parked : Sys) : Prop :=
+  original := ⟨11, .active, 111, some 777⟩, k := 0, st := .live, minAda := 4 }
+def RegistrationJourney (registered : Sys) : Prop :=
   ∃ (b : Singular.RegistrationBooking) (booked : Sys)
     (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction)
-    (f0 f1 f2 : Flow),
+    (f0 f1 : Flow),
     b.request.key = 11 ∧ b.request.destination = 111 ∧ b.request.datum = some 777 ∧
     b.request.reference = ⟨100, 0⟩ ∧ b.request.contents.lovelace = 17 ∧
     bookRegistration p (Sys.init cfg) b = .ok (f0, booked) ∧
-    fold p env booked 0 cfg.applicationPolicy u tx = .ok (f1, registered) ∧
-    park p env registered 11 6 = .ok (f2, parked)
+    fold p env booked 0 cfg.applicationPolicy u tx = .ok (f1, registered)
 def registrationTag : Singular.Approval :=
   { policy := cfg.applicationPolicy, edge := .insertActive, key := 11,
     owner := 42, destination := 111,
@@ -44,16 +42,13 @@ def registration : Singular.RegistrationBooking := {
   trieReadyTagsMinted := registrationRequest.contents.trieReadyTags,
   applicationTagsMinted := [registrationTag] }
 def registrationBooked : Sys := { Sys.init cfg with registrations := [registration] }
-def liveCarrier : Carrier := { parkedCarrier with k := 0, st := .live }
 def registered : Sys := {
   Sys.init cfg with
   gen := 1,
   config := { cfg with root := Singular.rootOf [(11, .known .active)] },
   trie := [(11, .known .active)], carriers := [liveCarrier],
   bindings := [(11, 0)], nextToken := 1, treasury := 2 }
-def parked : Sys := { registered with carriers := [parkedCarrier] }
-def revived : Sys := { parked with carriers := [{ parkedCarrier with k := 2, st := .live }] }
-def pending : Sys := { parked with carriers := [{ parkedCarrier with st := .terminationPending }] }
+def pending : Sys := { registered with carriers := [{ liveCarrier with st := .terminationPending }] }
 def registrationUnspent : Singular.EconomicUtxo :=
   [(registrationRequest.reference, Singular.registrationWitnessOutput registration),
    (⟨101, 0⟩, Singular.foldWitnessState cfg),
@@ -82,11 +77,11 @@ def terminationRequest : Singular.TerminationRequest :=
     contents := { lovelace := 3, trieReadyTags := [], applicationTags := [] } }
   { bare with contents := { bare.contents with trieReadyTags := [bare.trieReadyTag cfg] } }
 def termination : Singular.TerminationBooking := {
-  request := terminationRequest, custodyInputs := [parkedCarrier.original],
+  request := terminationRequest, custodyInputs := [liveCarrier.original],
   trieReadyTagsMinted := terminationRequest.contents.trieReadyTags }
 def terminationEntry : TerminationEntry := {
   booking := termination, payload := {
-    aid := 11, token := 0, keyState := 1, original := parkedCarrier.original,
+    aid := 11, token := 0, keyState := 0, original := liveCarrier.original,
     booker := 7, bookingFee := 1 } }
 def terminationBooked : Sys := {
   pending with carriers := [], terminations := [terminationEntry] }
@@ -177,7 +172,6 @@ theorem registration_folded :
     registrationUnspent,
     registered,
     liveCarrier,
-    parkedCarrier,
     carrierOutput,
     cfg,
     p,
@@ -206,32 +200,10 @@ No additional local parameters; use the definitions in this module.
 When observe the Registry transition, projection or custody relation named by this theorem.
 Then the complete conclusion is:
 
-park p env registered 11 6 = .ok ({ bondReturn := some (6, 10) }, parked)
--/
-theorem parking_success :
-    park p env registered 11 6 = .ok ({ bondReturn := some (6, 10) }, parked) := by rfl
-/-- Given the complete parameters and hypotheses:
-
-No additional local parameters; use the definitions in this module.
-
-When observe the Registry transition, projection or custody relation named by this theorem.
-Then the complete conclusion is:
-
-revive p env parked 11 = .ok ({ deposited := 10, locked := [(11, 10)] }, revived)
--/
-theorem revival_success :
-    revive p env parked 11 = .ok ({ deposited := 10, locked := [(11, 10)] }, revived) := by rfl
-/-- Given the complete parameters and hypotheses:
-
-No additional local parameters; use the definitions in this module.
-
-When observe the Registry transition, projection or custody relation named by this theorem.
-Then the complete conclusion is:
-
-convictCkpt env parked 11 = .ok ({}, pending)
+convictCkpt env registered 11 = .ok ({}, pending)
 -/
 theorem conviction_success :
-    convictCkpt env parked 11 = .ok ({}, pending) := by rfl
+    convictCkpt env registered 11 = .ok ({}, pending) := by rfl
 /-- Given the complete parameters and hypotheses:
 
 No additional local parameters; use the definitions in this module.
@@ -245,7 +217,7 @@ bookTermination p pending 11 7 1 termination =
 theorem termination_booked :
     bookTermination p pending 11 7 1 termination =
       .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, terminationBooked) := by
-  simp [bookTermination, carrierAt, pending, parked, registered, liveCarrier, parkedCarrier,
+  simp [bookTermination, carrierAt, pending, registered, liveCarrier,
     termination, terminationRequest, terminationEntry, terminationBooked, p, cfg,
     Singular.bookTermination, Singular.terminationBookingRefusal, Singular.terminationContentsShape,
     Singular.terminationDeclaredLovelace, Singular.terminationCustody, Sys.toWorld, Sys.init,
@@ -310,7 +282,6 @@ theorem termination_folded :
     terminationUnspent,
     retired,
     pending,
-    parked,
     pendingAt,
     Singular.terminationWitnessTransaction,
     Singular.terminationWitnessUnspent,
@@ -321,7 +292,6 @@ theorem termination_folded :
     Singular.terminationWitnessOutput,
     registered,
     liveCarrier,
-    parkedCarrier,
     cfg,
     p,
     Sys.init,
@@ -349,12 +319,12 @@ No additional local parameters; use the definitions in this module.
 When observe the Registry transition, projection or custody relation named by this theorem.
 Then the complete conclusion is:
 
-ParkingJourney registered parked
+RegistrationJourney registered
 -/
-theorem parking_journey : ParkingJourney registered parked := by
+theorem registration_journey : RegistrationJourney registered := by
   exact ⟨registration, registrationBooked, registrationUnspent, registrationTransaction,
-    { deposited := 17 }, { locked := [(11, 10)] }, { bondReturn := some (6, 10) },
-    rfl, rfl, rfl, rfl, rfl, registration_booked, registration_folded, parking_success⟩
+    { deposited := 17 }, { locked := [(11, 10)] },
+    rfl, rfl, rfl, rfl, rfl, registration_booked, registration_folded⟩
 /-- Given the complete parameters and hypotheses:
 
 No additional local parameters; use the definitions in this module.
@@ -385,21 +355,10 @@ No additional local parameters; use the definitions in this module.
 When observe the Registry transition, projection or custody relation named by this theorem.
 Then the complete conclusion is:
 
-Reach p env cfg parked
--/
-theorem parked_reachable : Reach p env cfg parked :=
-  Reach.next registered_reachable (action := .park 11 6) parking_success
-/-- Given the complete parameters and hypotheses:
-
-No additional local parameters; use the definitions in this module.
-
-When observe the Registry transition, projection or custody relation named by this theorem.
-Then the complete conclusion is:
-
 Reach p env cfg pending
 -/
 theorem pending_reachable : Reach p env cfg pending :=
-  Reach.next parked_reachable (action := .convictCkpt 11) conviction_success
+  Reach.next registered_reachable (action := .convictCkpt 11) conviction_success
 /-- Given the complete parameters and hypotheses:
 
 No additional local parameters; use the definitions in this module.
@@ -430,98 +389,12 @@ No additional local parameters; use the definitions in this module.
 When observe the Registry transition, projection or custody relation named by this theorem.
 Then the complete conclusion is:
 
-∃ registered parked, ParkingJourney registered parked ∧
-      Reach p env cfg registered ∧ Reach p env cfg parked ∧
-      carrierAt parked 11 = some parkedCarrier ∧ minAdaAt parked 11 = 4 ∧
-      Singular.trieGet parked.trie 11 = .known .active ∧
-      parked.toWorld = registered.toWorld ∧
-      parked.terminations = [] ∧
-      park p env registered 11 6 = .ok ({ bondReturn := some (6, 10) }, parked)
--/
-theorem W1_connected_parking :
-    ∃ registered parked, ParkingJourney registered parked ∧
-      Reach p env cfg registered ∧ Reach p env cfg parked ∧
-      carrierAt parked 11 = some parkedCarrier ∧ minAdaAt parked 11 = 4 ∧
-      Singular.trieGet parked.trie 11 = .known .active ∧
-      parked.toWorld = registered.toWorld ∧
-      parked.terminations = [] ∧
-      park p env registered 11 6 = .ok ({ bondReturn := some (6, 10) }, parked) := by
-  refine ⟨registered, parked, parking_journey, registered_reachable, parked_reachable, ?_⟩
-  exact ⟨rfl, rfl, rfl, rfl, rfl, parking_success⟩
-/-- Given the complete parameters and hypotheses:
-
-No additional local parameters; use the definitions in this module.
-
-When observe the Registry transition, projection or custody relation named by this theorem.
-Then the complete conclusion is:
-
-∃ registered parked revived, ParkingJourney registered parked ∧
-      revive p env parked 11 = .ok ({ deposited := 10, locked := [(11, 10)] }, revived) ∧
-      carrierAt revived 11 = some { parkedCarrier with k := 2, st := .live } ∧
-      minAdaAt revived 11 = 4 ∧ revived.toWorld = parked.toWorld ∧
-      revived.bindings = parked.bindings ∧ revived.nextToken = parked.nextToken
--/
-theorem W2_connected_revival :
-    ∃ registered parked revived, ParkingJourney registered parked ∧
-      revive p env parked 11 = .ok ({ deposited := 10, locked := [(11, 10)] }, revived) ∧
-      carrierAt revived 11 = some { parkedCarrier with k := 2, st := .live } ∧
-      minAdaAt revived 11 = 4 ∧ revived.toWorld = parked.toWorld ∧
-      revived.bindings = parked.bindings ∧ revived.nextToken = parked.nextToken := by
-  refine ⟨registered, parked, revived, parking_journey, revival_success, ?_⟩
-  exact ⟨rfl, rfl, rfl, rfl, rfl⟩
-/-- Given the complete parameters and hypotheses:
-
-No additional local parameters; use the definitions in this module.
-
-When observe the Registry transition, projection or custody relation named by this theorem.
-Then the complete conclusion is:
-
-∃ registered parked, ParkingJourney registered parked ∧
-      revive p { env with rotationFrom := fun _ _ => false } parked 11 =
-        .error "keri-revival-refused" ∧
-      carrierAt parked 11 = some parkedCarrier ∧ minAdaAt parked 11 = 4 ∧
-      Singular.trieGet parked.trie 11 = .known .active
--/
-theorem W3_refused_revival_keeps_output :
-    ∃ registered parked, ParkingJourney registered parked ∧
-      revive p { env with rotationFrom := fun _ _ => false } parked 11 =
-        .error "keri-revival-refused" ∧
-      carrierAt parked 11 = some parkedCarrier ∧ minAdaAt parked 11 = 4 ∧
-      Singular.trieGet parked.trie 11 = .known .active := by
-  refine ⟨registered, parked, parking_journey, ?_⟩
-  exact ⟨rfl, rfl, rfl, rfl⟩
-/-- Given the complete parameters and hypotheses:
-
-No additional local parameters; use the definitions in this module.
-
-When observe the Registry transition, projection or custody relation named by this theorem.
-Then the complete conclusion is:
-
-∃ registered parked, ParkingJourney registered parked ∧
-      park p env registered 11 7 = .error "keri-close-refused" ∧
-      park p { env with closeAuth := fun _ _ => false } registered 11 6 =
-        .error "keri-close-refused"
--/
-theorem W4_wrong_recipient_and_missing_premise :
-    ∃ registered parked, ParkingJourney registered parked ∧
-      park p env registered 11 7 = .error "keri-close-refused" ∧
-      park p { env with closeAuth := fun _ _ => false } registered 11 6 =
-        .error "keri-close-refused" := by
-  refine ⟨registered, parked, parking_journey, ?_⟩
-  exact ⟨rfl, rfl⟩
-/-- Given the complete parameters and hypotheses:
-
-No additional local parameters; use the definitions in this module.
-
-When observe the Registry transition, projection or custody relation named by this theorem.
-Then the complete conclusion is:
-
-∃ registered parked pending booked retired,
+∃ registered pending booked retired,
       ∃ (b : Singular.TerminationBooking) (u : Singular.EconomicUtxo)
         (tx : Singular.EconomicTransaction) (f : Flow),
-      ParkingJourney registered parked ∧
-      convictCkpt env parked 11 = .ok ({}, pending) ∧
-      carrierAt pending 11 = some { parkedCarrier with st := .terminationPending } ∧
+      RegistrationJourney registered ∧
+      convictCkpt env registered 11 = .ok ({}, pending) ∧
+      carrierAt pending 11 = some { liveCarrier with st := .terminationPending } ∧
       Singular.trieGet pending.trie 11 = .known .active ∧
       b.request.reference = ⟨200, 0⟩ ∧
       bookTermination p pending 11 7 1 b =
@@ -534,12 +407,12 @@ Then the complete conclusion is:
       pendingAt retired ⟨200, 0⟩ = none
 -/
 theorem W5_connected_termination :
-    ∃ registered parked pending booked retired,
+    ∃ registered pending booked retired,
       ∃ (b : Singular.TerminationBooking) (u : Singular.EconomicUtxo)
         (tx : Singular.EconomicTransaction) (f : Flow),
-      ParkingJourney registered parked ∧
-      convictCkpt env parked 11 = .ok ({}, pending) ∧
-      carrierAt pending 11 = some { parkedCarrier with st := .terminationPending } ∧
+      RegistrationJourney registered ∧
+      convictCkpt env registered 11 = .ok ({}, pending) ∧
+      carrierAt pending 11 = some { liveCarrier with st := .terminationPending } ∧
       Singular.trieGet pending.trie 11 = .known .active ∧
       b.request.reference = ⟨200, 0⟩ ∧
       bookTermination p pending 11 7 1 b =
@@ -550,10 +423,25 @@ theorem W5_connected_termination :
       Singular.worldSingularSupply retired.toWorld 11 = 0 ∧
       tx.transaction.donation = 2 ∧ Singular.foldCarrierLovelace tx.outputs = 0 ∧
       pendingAt retired ⟨200, 0⟩ = none := by
-  refine ⟨registered, parked, pending, terminationBooked, retired, termination,
-    terminationUnspent, terminationTransaction, {}, parking_journey, conviction_success, ?_⟩
+  refine ⟨registered, pending, terminationBooked, retired, termination,
+    terminationUnspent, terminationTransaction, {}, registration_journey, conviction_success, ?_⟩
   exact ⟨by decide, by decide, rfl, termination_booked, by decide,
     termination_folded, by decide, by decide, by decide, by decide, by decide⟩
+
+/-- Given the registered checkpoint of this module: reachable, its carrier live
+(alive, not convicted).
+When a booker presents the termination booking of this module for it.
+Then the booking is refused with `keri-conviction-required`, and the carrier,
+its minimum ADA and its active registry key are all still there. This is the
+reachable witness of `live_cannot_book`: there is no owner exit, so a live
+checkpoint cannot be booked for retirement. -/
+theorem W6_live_booking_refused :
+    Reach p env cfg registered ∧ carrierAt registered 11 = some liveCarrier ∧
+      liveCarrier.st = .live ∧
+      bookTermination p registered 11 7 1 termination = .error "keri-conviction-required" ∧
+      minAdaAt registered 11 = 4 ∧ Singular.trieGet registered.trie 11 = .known .active := by
+  exact ⟨registered_reachable, rfl, rfl,
+    live_cannot_book p registered 11 7 1 termination liveCarrier rfl rfl, rfl, rfl⟩
 /-- Given the complete parameters and hypotheses:
 
 No additional local parameters; use the definitions in this module.

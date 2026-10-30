@@ -60,9 +60,7 @@ def localSteps : List (String × Nat × Action) := [
   ("rotate-deposit-unpaid", 15, .rotate 7 .deposit 7 none),
   ("poisoned", 16, .poison),
   ("rotate-clears-poison-unpaid", 17, .rotate 8 .keep 7 none),
-  ("refill", 18, .topUp 3),
-  ("parked", 20, .close 9 6 none),
-  ("revived-juvenile", 30, .reopen 10 42 5)]
+  ("refill", 18, .topUp 3)]
 
 structure Journey where
   input : RegistrationInput
@@ -106,9 +104,9 @@ def journey : Except String Journey := do
     pure (frames ++ [snapshot name r.holding next serial now], next, serial + 1,
       events ++ [(SystemWire.cell name cp evidence machine (.local context.aid now action)).1]))
       (start, registered, 1, [firstEvent])
-  let frames := frames ++ [snapshot "revived-mature" r.holding live serial 35]
+  let frames := frames ++ [snapshot "mature" r.holding live serial 35]
   let pending ← advance live (.local context.aid 36 (.convict 7))
-  let history : List CardanoKeri.Registry.Action := [.park 11 6, .revive 11, .convictCkpt 11]
+  let history : List CardanoKeri.Registry.Action := [.convictCkpt 11]
   let before ← CardanoKeri.Registry.replay q.registryParams q.registryEnv r.after history
   let booking ← CardanoKeri.Registry.Scenarios.termination before context.aid 200
   let booked ← advance pending (.book context.aid 7 1 history booking)
@@ -125,10 +123,10 @@ def journey : Except String Journey := do
   let events := events ++ [
     (SystemWire.cell "convict" cp evidence live (.local context.aid 36 (.convict 7))).1,
     (SystemWire.cell "book" cp evidence pending (.book context.aid 7 1 history booking)).1,
-    (SystemWire.cell "pending-revival-refused" cp evidence booked (.local context.aid 38 (.reopen 11 42 5))).1,
+    (SystemWire.cell "pending-rotation-refused" cp evidence booked (.local context.aid 38 (.rotate 11 .keep 7 none))).1,
     (SystemWire.cell "complete" cp evidence booked (.complete context.aid completion)).1,
     (SystemWire.cell "retired-registration-refused" cp evidence terminal (registrationCommand q)).1,
-    (SystemWire.cell "retired-revival-refused" cp evidence terminal (.local context.aid 42 (.reopen 11 42 5))).1]
+    (SystemWire.cell "retired-rotation-refused" cp evidence terminal (.local context.aid 42 (.rotate 11 .keep 7 none))).1]
   pure ⟨q, r, registered, live, pending, booked, terminal, booking, completion, frames, events⟩
 
 end CardanoKeri.ConsumerIdentity.Witness

@@ -15,14 +15,14 @@ theorem Env.duplicityAt_iff (env : Env) (epoch : Epoch) (sn : Seq) :
 
 /-- Given Any environment and epoch, with sequence zero.
 When Evaluate duplicity at inception.
-Then The guard is false regardless of supplied context or rival; neither live nor parked booking may bypass it. -/
+Then The guard is false regardless of supplied context or rival; no booking may bypass it. -/
 theorem Env.inception_duplicity_refused (env : Env) (epoch : Epoch) :
     env.duplicityAt epoch 0 = false := by
   cases hc : env.convictionContext epoch 0 <;>
     cases hr : env.convictionRival epoch 0 <;>
       simp [Env.duplicityAt, hc, hr, CardanoKeri.Duplicity.sequence_zero_refused]
 
-/-- Given All arguments and the exact successful local Checkpoint conviction premise in the statement, against the actual source live or parked key state.
+/-- Given All arguments and the exact successful local Checkpoint conviction premise in the statement, against the actual source live key state.
 When Invert that local conviction into explicit terminationPending at the unchanged source key state.
 Then For T12 inversions the pending target is arbitrary and must equal the actual source hash; a wrong pending-key successor is excluded by this owning equality. Every original action, addressed D/B/pool payment, concrete-context, event-validity, same-sequence and distinct-event clause in the full conclusion is preserved verbatim. The representative and generic key remain active at the combined booking boundary; no local burn or retirement is asserted. -/
 theorem convict_requires_concrete_pair (p : Params) (env : Env)
@@ -39,21 +39,9 @@ theorem convict_requires_concrete_pair (p : Params) (env : Env)
     (Env.duplicityAt_iff env l.epoch l.sn).mp (T12_convict_exact p env h).2.2
   exact ⟨context, rival, hc, hr, (Duplicity.duplicityAt_iff _ _ _ _).mp hd⟩
 
-/-- Given All arguments and the exact successful local Checkpoint conviction premise in the statement, against the actual source live or parked key state.
-When Invert that local conviction into explicit terminationPending at the unchanged source key state.
-Then For T12 inversions the pending target is arbitrary and must equal the actual source hash; a wrong pending-key successor is excluded by this owning equality. Every original action, addressed D/B/pool payment, concrete-context, event-validity, same-sequence and distinct-event clause in the full conclusion is preserved verbatim. The representative and generic key remain active at the combined booking boundary; no local burn or retirement is asserted. -/
-theorem parked_convict_requires_concrete_pair (p : Params) (env : Env)
-    {a : Action} {t : Slot} {hs : Hash} {f : Flow}
-    (h : Step p env a t (.parked hs) f (.terminationPending hs)) :
-    f = {} ∧ ∃ context rival, env.convictionContext hs.epoch hs.sn = some context ∧
-      env.convictionRival hs.epoch hs.sn = some rival ∧
-      Duplicity.duplicityAt hs.epoch hs.sn context rival = true := by
-  exact ⟨(T12_convict_parked_exact p env h).2.2.1,
-    (Env.duplicityAt_iff env hs.epoch hs.sn).mp (T12_convict_parked_exact p env h).2.2.2⟩
-
 /-- Given A concrete context/rival pair satisfies Duplicity.duplicityAt epoch sn; next is strictly larger than sn.
 When Evaluate that same pair at epoch,next.
-Then The target-bound predicate is false. The old declaration contains no Step or convicted successor, so its exact type survives; separately bind this false guard to refusal of actual live and parked booking into pending. -/
+Then The target-bound predicate is false. The old declaration contains no Step or convicted successor, so its exact type survives; separately bind this false guard to refusal of actual live booking into pending. -/
 theorem old_pair_cannot_convict_new_target (epoch sn next : Nat)
     (context : Duplicity.Context) (rival : Duplicity.SignedEvent)
     (old : Duplicity.duplicityAt epoch sn context rival = true) (later : sn < next) :

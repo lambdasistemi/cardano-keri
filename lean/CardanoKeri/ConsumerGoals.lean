@@ -125,24 +125,24 @@ theorem wrong_datum_aid_refused (i : Interpretation) (c : Context) (e : Environm
 
 /-- CI11. Given any decoded state refused by old consumableState; when the
 stronger holding predicate is checked; then refuse for every identity and
-quantity. Covers absent/parked/pending/convicted/frozen/poisoned/juvenile. -/
+quantity. Covers absent/pending/convicted/frozen/poisoned/juvenile. -/
 theorem ineligible_state_refused (i : Interpretation) (c : Context) (e : Environment)
     (p : Params) (now : Slot) (o : AH.ObservedOutput) (d : DecodedDatum)
     (datum : decoded i c o = some d) (bad : ¬ consumableState p now d.state) :
     ¬ consumableHolding i c e p now o := by
   simp [consumableHolding, datum, bad]
 
-/-- CI12. Given a parked or pending datum and arbitrary key state; when checked
+/-- CI12. Given a pending-termination datum and arbitrary key state; when checked
 at any time; then refuse both proposition and Boolean, even though a token
 and an active registry key can still exist. -/
 theorem retained_custody_refused (i : Interpretation) (c : Context) (e : Environment)
     (p : Params) (now : Slot) (o : AH.ObservedOutput) (d : DecodedDatum) (h : Hash)
     (datum : decoded i c o = some d)
-    (retained : d.state = .parked h ∨ d.state = .terminationPending h) :
+    (retained : d.state = .terminationPending h) :
     ¬ consumableHolding i c e p now o ∧ consumableHoldingB i c e p now o = false := by
   have no : ¬ consumableHolding i c e p now o := by
     apply ineligible_state_refused i c e p now o d datum
-    rcases retained with hst | hst <;> simp [hst, consumableState]
+    simp [retained, consumableState]
   exact ⟨no, Bool.eq_false_iff.mpr (fun h => no ((consumableHoldingB_iff i c e p now o).mp h))⟩
 
 /-- CI13. Given the same registry and two distinct encoded keys, with explicit

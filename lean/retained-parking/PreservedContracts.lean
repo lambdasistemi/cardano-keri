@@ -1,7 +1,8 @@
 import CardanoKeri
 
-/-! Exact expected types for the retained-output revision. Unused proof binder
-names have an underscore prefix; premises and conclusions are unchanged. -/
+/-! Exact expected types preserved unchanged through the retained-output and
+no-owner-exit revisions. Unused proof binder names have an underscore prefix;
+premises and conclusions are unchanged. -/
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.trace_from_convicted : ∀ (p : Params) (env : Env) {t : Slot} {es : List (Slot × Action)} {s' : State} (_h : Trace p env t .convicted es s'), s' = .convicted)
 end CardanoKeri.Checkpoint
@@ -18,12 +19,6 @@ namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T1_sn_monotone_all : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {s s' : State} {f : Flow} (_h : Step p env a t s f s') (n n' : Seq) (_hn : s.sn? = some n) (_hn' : s'.sn? = some n'), n ≤ n')
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T1_reopen_strict : ∀ (p : Params) (env : Env) {t : Slot} {h : Hash} {f : Flow} {sn' : Seq} {refund : Addr} {pool0 : Value} {l' : Live} (_hs : Step p env (.reopen sn' refund pool0) t (.parked h) f (.present l')), h.sn < l'.sn)
-end CardanoKeri.Checkpoint
-namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T1_close_rotation_cannot_revive : ∀ (p : Params) (env : Env) {t t' : Slot} {l : Live} {f f' : Flow} {sn' : Seq} {payee : Addr} {r' : Option Addr} {h : Hash} {refund : Addr} {pool0 : Value} {s' : State} (_hc : Step p env (.close sn' payee r') t (.present l) f (.parked h)), ¬ Step p env (.reopen sn' refund pool0) t' (.parked h) f' s')
-end CardanoKeri.Checkpoint
-namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.trace_sn_monotone_all : ∀ (p : Params) (env : Env) {t : Slot} {s s' : State} {es : List (Slot × Action)} (_h : Trace p env t s es s'), ∀ n n', s.sn? = some n → s'.sn? = some n' → n ≤ n')
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
@@ -31,9 +26,6 @@ namespace CardanoKeri.Checkpoint
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T2_epoch_only_by_rotation : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live} {f : Flow} (_h : Step p env a t (.present l) f (.present l')) (_hne : l'.epoch ≠ l.epoch), a.actor = .nextKeys ∧ l'.epoch = l.epoch + 1)
-end CardanoKeri.Checkpoint
-namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T2_close_and_reopen_open_epochs : ∀ (p : Params) (env : Env) {t : Slot}, (∀ {l : Live} {f : Flow} {h : Hash} {sn' : Seq} {payee : Addr} {r' : Option Addr}, Step p env (.close sn' payee r') t (.present l) f (.parked h) → h.epoch = l.epoch + 1 ∧ h.sn = sn') ∧ (∀ {h : Hash} {f : Flow} {l' : Live} {sn' : Seq} {refund : Addr} {pool0 : Value}, Step p env (.reopen sn' refund pool0) t (.parked h) f (.present l') → l'.epoch = h.epoch + 1 ∧ l'.sn = sn'))
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T3_rotation_clears : ∀ (p : Params) (env : Env) {t : Slot} {l l' : Live} {f : Flow} {sn' : Seq} {op : BondOp} {payee : Addr} {r' : Option Addr} (_h : Step p env (.rotate sn' op payee r') t (.present l) f (.present l')), l'.poisoned = false)
@@ -60,9 +52,6 @@ namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T4_current_quorum_only_poisons : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {s s' : State} {f : Flow} (_h : Step p env a t s f s') (_hq : a.actor = .currentQuorum), a = .poison)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T4_current_key_thief_cannot_park : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live} {f : Flow} {s' : State} (_hthief : ∀ sn', env.rotationTo l.epoch l.sn sn' = false) (_h : Step p env a t (.present l) f s'), a.actor ≠ .nextKeys ∧ (∀ sn' payee, a ≠ .freeze sn' payee) ∧ (∀ h', s' ≠ .parked h'))
-end CardanoKeri.Checkpoint
-namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T5_every_bond_option : ∀ (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : Seq) (payee : Addr) (_hev : env.rotationTo l.epoch l.sn sn' = true) (_hsn : l.sn < sn'), ∀ (op : BondOp) (r' : Option Addr), env.intentOk (l.epoch + 1) op.intent r' = true → ∃ (f : Flow) (l' : Live), Step p env (.rotate sn' op payee r') t (.present l) f (.present l'))
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
@@ -78,28 +67,16 @@ namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T5_freeze_enabled : ∀ (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : Seq) (payee : Addr) (_hev : env.rotationTo l.epoch l.sn sn' = true) (_hsn : l.sn < sn') (_hpool : l.pool < p.P) (_hb : l.frozen = false) (_hclean : l.poisoned = false), ∃ (f : Flow) (l' : Live), Step p env (.freeze sn' payee) t (.present l) f (.present l'))
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T5_close_enabled : ∀ (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : Seq) (payee : Addr) (r' : Option Addr) (_hev : env.rotationTo l.epoch l.sn sn' = true) (_hsn : l.sn < sn') (_hauth : env.intentOk (l.epoch + 1) (.close payee) r' = true), ∃ f, Step p env (.close sn' payee r') t (.present l) f (.parked ⟨l.epoch + 1, sn'⟩))
-end CardanoKeri.Checkpoint
-namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T5_reopen_enabled : ∀ (p : Params) (env : Env) (t : Slot) (h : Hash) (sn' : Seq) (refund : Addr) (pool0 : Value) (_hev : env.rotationTo h.epoch h.sn sn' = true) (_hsn : h.sn < sn'), ∃ f l', Step p env (.reopen sn' refund pool0) t (.parked h) f (.present l'))
-end CardanoKeri.Checkpoint
-namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T5_keep_needs_no_intent : ∀ (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : Seq) (payee : Addr) (_hev : env.rotationTo l.epoch l.sn sn' = true) (_hsn : l.sn < sn'), ∃ (f : Flow) (l' : Live), Step p env (.rotate sn' .keep payee none) t (.present l) f (.present l'))
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T6_dreg_never_moves_between_present_states : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live} {f : Flow} (_h : Step p env a t (.present l) f (.present l')), f.dregIn = 0 ∧ Payment?.dreg f.refund = 0 ∧ Payment?.dreg f.hunter = 0 ∧ Payment?.dreg f.convictor = 0)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T6_dreg_enters_only_at_birth : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {s s' : State} {f : Flow} (_h : Step p env a t s f s') (_hin : f.dregIn ≠ 0), ((∃ refund pool0, a = .register refund pool0 ∧ s = .absent) ∨ (∃ sn' refund pool0 hs, a = .reopen sn' refund pool0 ∧ s = .parked hs)) ∧ f.dregIn = p.D ∧ f.bIn = p.B ∧ ∃ l', s' = .present l' ∧ l'.frozen = false ∧ l'.bornAt = t)
-end CardanoKeri.Checkpoint
-namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T6_refund_change_requires_new_keys : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live} {f : Flow} (_h : Step p env a t (.present l) f (.present l')) (_hne : l'.refundTo ≠ l.refundTo), ∃ sn' op payee, a = .rotate sn' op payee (some l'.refundTo) ∧ env.intentAuthorized l'.epoch op.intent (some l'.refundTo) = true)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T6_frozen_flips_only_by_rotation_or_freeze : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live} {f : Flow} (_h : Step p env a t (.present l) f (.present l')) (_hne : l'.frozen ≠ l.frozen), a.actor = .nextKeys ∨ (∃ sn' payee, a = .freeze sn' payee))
-end CardanoKeri.Checkpoint
-namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T6_intent_requires_new_keys : ∀ (p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow} {s' : State}, (∀ {sn' payee r'}, Step p env (.rotate sn' .deposit payee r') t (.present l) f s' → env.intentAuthorized (l.epoch + 1) .deposit r' = true) ∧ (∀ {sn' payee r'}, Step p env (.close sn' payee r') t (.present l) f s' → env.intentAuthorized (l.epoch + 1) (.close payee) r' = true) ∧ (∀ {sn' payee r}, Step p env (.rotate sn' .keep payee (some r)) t (.present l) f s' → env.intentAuthorized (l.epoch + 1) .keep (some r) = true))
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T6_relayer_cannot_park_age_or_close : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live} {f : Flow} {s' : State} (_h : Step p env a t (.present l) f s') (_hno : ∀ i r, env.intentAuthorized (l.epoch + 1) i r = false) (_hact : a.actor = .nextKeys), ∃ sn' payee, a = .rotate sn' .keep payee none)
@@ -109,9 +86,6 @@ namespace CardanoKeri.Checkpoint
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T8_present_implies_registered : ∀ (p : Params) (env : Env) {s : Sys} (_h : SysReach p env s) (aid : AID) (_hne : s.states aid ≠ .absent), s.leaves aid ≠ .absent)
-end CardanoKeri.Checkpoint
-namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T8_reopen_actor_is_proof : ∀ (sn' : Seq) (refund : Addr) (pool0 : Value), (Action.reopen sn' refund pool0).actor = .proof ∧ (Action.freeze sn' refund).actor = .proof ∧ (Action.convict refund).actor = .proof)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T9_juvenility_is_consumer_only : ∀ (p : Params) (env : Env) (W' : Nat) {a : Action} {t : Slot} {s s' : State} {f : Flow}, Step p env a t s f s' ↔ Step { p with W := W' } env a t s f s')
@@ -124,12 +98,6 @@ namespace CardanoKeri.Checkpoint
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T10_current_quorum_never_restores : ∀ (p : Params) (env : Env) {a : Action} {t t' : Slot} {l : Live} {f : Flow} {s' : State} (_h : Step p env a t (.present l) f s') (_hq : a.actor = .currentQuorum), ¬ consumableState p t' s')
-end CardanoKeri.Checkpoint
-namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T10_reopen_is_juvenile : ∀ (p : Params) (env : Env) {t t' : Slot} {h : Hash} {f : Flow} {sn' : Seq} {refund : Addr} {pool0 : Value} {l' : Live} (_hs : Step p env (.reopen sn' refund pool0) t (.parked h) f (.present l')), f.dregIn = p.D ∧ f.bIn = p.B ∧ l'.frozen = false ∧ l'.bornAt = t ∧ (t' < t + p.W → ¬ consumableState p t' (.present l')))
-end CardanoKeri.Checkpoint
-namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T10_bonds_are_observable : ∀ (p : Params) (l : Live) (h : Hash), (State.present l).dregHeld p ≠ (State.parked h).dregHeld p ∧ (State.present l).dregHeld p ≠ State.convicted.dregHeld p ∧ (l.frozen = true → (State.present l).bHeld p ≠ p.B))
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T14_pool_decreases_only_by_premium : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live} {f : Flow} (_h : Step p env a t (.present l) f (.present l')) (_hlt : l'.pool < l.pool), a.actor = .nextKeys ∧ l'.pool + p.P = l.pool ∧ Payment?.pool f.hunter = p.P)

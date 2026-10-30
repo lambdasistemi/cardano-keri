@@ -30,8 +30,9 @@ oracle. The separate `duplicity` cases emit complete evidence and verdicts.
 the grid states at `bornAt + W − 1 / = / + 1` so the JavaScript consumer
 agrees with the model's by hash.
 
-Local states are absent, present (live, poisoned, frozen), retained parked,
-termination pending and convicted. Only an associated system completion
+Local states are absent, present (live, poisoned, frozen), termination
+pending and convicted. There is no owner exit: no close, no parked state and
+no revival. Only an associated system completion
 retires a pending identity; no local action performs that transition.
 -/
 
@@ -74,29 +75,21 @@ def seeds : List Seed := [
     env := { rotationTo := [(0, 0, 1), (1, 1, 2)], intentAuthorized := [(1, .deposit, none), (2, .deposit, none)], quorum := [], duplicityAt := [] },
     steps := [(0, .register 1 1), (12, .freeze 1 2), (12, .freeze 1 2), (20, .rotate 1 .deposit 1 none),
               (20, .topUp 20), (25, .rotate 2 .deposit 1 none)] },
-  { name := "close-then-revive",
-    env := { rotationTo := [(0, 0, 1), (1, 1, 2)], intentAuthorized := [(1, .close 1, none)], quorum := [0, 1], duplicityAt := [] },
-    steps := [(0, .register 1 10), (12, .close 1 1 none), (12, .close 2 1 none), (12, .poison),
-              (12, .freeze 2 2), (12, .topUp 3), (12, .register 1 10), (40, .reopen 1 1 5), (40, .reopen 2 1 5), (40, .topUp 3)] },
-  { name := "poison-then-close-then-reopen",
-    env := { rotationTo := [(0, 0, 1), (1, 1, 2)], intentAuthorized := [(1, .close 2, none)], quorum := [0], duplicityAt := [] },
+  { name := "poison-then-rotate",
+    env := { rotationTo := [(0, 0, 1), (1, 1, 2)], intentAuthorized := [], quorum := [0], duplicityAt := [] },
     steps := [(0, .register 1 1), (12, .poison), (12, .poison), (12, .freeze 1 2), (12, .topUp 5),
-              (12, .close 1 2 none), (12, .topUp 1), (12, .rotate 2 .keep 2 none), (12, .reopen 1 1 5), (30, .reopen 2 1 5),
-              (30, .topUp 1)] },
+              (12, .rotate 1 .keep 2 none), (12, .poison), (12, .topUp 1)] },
   { name := "convict",
     env := { rotationTo := [(0, 0, 1)], intentAuthorized := [], quorum := [1], duplicityAt := [(1, 1)] },
-    steps := [(0, .register 1 12), (12, .rotate 1 .keep 2 none), (12, .convict 3), (12, .rotate 1 .deposit 1 none), (12, .close 1 1 none),
-              (12, .topUp 1), (12, .register 1 10), (12, .reopen 1 1 10)] },
-  { name := "convict-parked",
-    env := { rotationTo := [(0, 0, 1), (1, 1, 2)], intentAuthorized := [(1, .close 1, none)], quorum := [], duplicityAt := [(1, 1)] },
-    steps := [(0, .register 1 10), (12, .close 1 1 none), (12, .convict 3), (12, .reopen 2 1 10), (12, .convict 3)] },
+    steps := [(0, .register 1 12), (12, .rotate 1 .keep 2 none), (12, .convict 3), (12, .rotate 1 .deposit 1 none),
+              (12, .topUp 1), (12, .register 1 10), (12, .convict 3)] },
+  { name := "convict-frozen",
+    env := { rotationTo := [(0, 0, 1), (1, 1, 2)], intentAuthorized := [], quorum := [], duplicityAt := [(1, 1)] },
+    steps := [(0, .register 1 3), (12, .rotate 1 .keep 2 none), (12, .freeze 2 2), (12, .convict 3), (12, .topUp 1)] },
   { name := "relayer-on-public-data",
     env := { rotationTo := [(0, 0, 1)], intentAuthorized := [], quorum := [0, 1], duplicityAt := [] },
-    steps := [(0, .register 1 10), (12, .rotate 1 .deposit 2 none), (12, .close 1 2 none),
-              (12, .rotate 1 .keep 2 (some 9)), (12, .rotate 1 .keep 2 none), (12, .close 1 2 none)] },
-  { name := "copied-reap",
-    env := { rotationTo := [(0, 0, 1)], intentAuthorized := [(1, .close 2, none)], quorum := [], duplicityAt := [] },
-    steps := [(0, .register 1 10), (12, .close 1 9 none), (12, .close 1 2 (some 9)), (12, .close 1 2 none), (12, .reopen 2 1 10)] }
+    steps := [(0, .register 1 10), (12, .rotate 1 .deposit 2 none),
+              (12, .rotate 1 .keep 2 (some 9)), (12, .rotate 1 .keep 2 none)] }
 ]
 
 def traceJson (p : Params) (sd : Seed) : Json :=
@@ -119,25 +112,21 @@ def gridPresent (p : Params) : List State :=
         State.present ⟨1, 1, poisoned, frozen, 10, 1, pool⟩
 
 def gridStates (p : Params) : List State :=
-  [.absent, .parked ⟨1, 1⟩, .terminationPending ⟨1, 1⟩, .convicted] ++ gridPresent p
+  [.absent, .terminationPending ⟨1, 1⟩, .convicted] ++ gridPresent p
 
 /-- Actions with their sequence at −1 / = / +1 of the datum's (1), both bond
-options, the refund option none / authorized (1) / unauthorized (9); the close
-with the same sequences, the signed payee (2) and a copied payee (9), and the
-same refund options; the reopen at −1 / = / +1 of the parked sequence (1). -/
+options and the refund option none / authorized (1) / unauthorized (9). -/
 def gridActions : List Action :=
   [.register 6 7, .poison, .topUp 5, .convict 3] ++
   ([0, 1, 2].map fun sn' => Action.freeze sn' 2) ++
   ([0, 1, 2].flatMap fun sn' =>
     [BondOp.keep, .deposit].flatMap fun op =>
-      [none, some 1, some 9].map fun r => Action.rotate sn' op 2 r) ++
-  ([0, 1, 2].flatMap fun sn' => [2, 9].flatMap fun payee => [none, some 1, some 9].map fun r => Action.close sn' payee r) ++
-  ([0, 1, 2].map fun sn' => Action.reopen sn' 1 7)
+      [none, some 1, some 9].map fun r => Action.rotate sn' op 2 r)
 
-/-- Two oracles: everything the grid can ask for (one close message: payee 2), and nothing. -/
+/-- Two oracles: everything the grid can ask for, and nothing. -/
 def gridEnvs : List (String × EnvTable) :=
   [("full", { rotationTo := [(1, 1, 0), (1, 1, 1), (1, 1, 2)],
-              intentAuthorized := [(2, .keep, some 1), (2, .deposit, none), (2, .deposit, some 1), (2, .close 2, none), (2, .close 2, some 1)],
+              intentAuthorized := [(2, .keep, some 1), (2, .deposit, none), (2, .deposit, some 1)],
               quorum := [1], duplicityAt := [(1, 1)] }),
    ("none", { rotationTo := [], intentAuthorized := [], quorum := [], duplicityAt := [] })]
 

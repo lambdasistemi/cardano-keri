@@ -1,53 +1,5 @@
 [
   {
-    "id": "park-token",
-    "before": "if old.aid == aid then { old with k := old.k + 1, st := .parked } else old",
-    "after": "if old.aid == aid then { old with k := old.k + 1, st := .parked, token := old.token + 1 } else old",
-    "failure": "parked-entire-carrier",
-    "owner": "CardanoKeri.Registry.park_retains",
-    "test": "RegistryRetentionChecks"
-  },
-  {
-    "id": "park-min-ada",
-    "before": "if old.aid == aid then { old with k := old.k + 1, st := .parked } else old",
-    "after": "if old.aid == aid then { old with k := old.k + 1, st := .parked, minAda := 0 } else old",
-    "failure": "parked-entire-carrier",
-    "owner": "CardanoKeri.Registry.park_retains",
-    "test": "RegistryRetentionChecks"
-  },
-  {
-    "id": "park-output",
-    "before": "pure ({ bondReturn := some (recipient, p.D) }, { s with carriers := carriers })",
-    "after": "pure ({ bondReturn := some (recipient, p.D) }, { s with carriers := [] })",
-    "failure": "parked-entire-carrier",
-    "owner": "CardanoKeri.Registry.park_retains",
-    "test": "RegistryRetentionChecks"
-  },
-  {
-    "id": "park-recipient",
-    "before": "bondReturn := some (recipient, p.D)",
-    "after": "bondReturn := some (recipient + 1, p.D)",
-    "failure": "parked-world-and-flow",
-    "owner": "CardanoKeri.Registry.park_retains",
-    "test": "RegistryRetentionChecks"
-  },
-  {
-    "id": "revive-wrong-key",
-    "before": "env.rotationFrom aid c.k != true",
-    "after": "env.rotationFrom aid (c.k + 1) != true",
-    "failure": "wrong-retained-key",
-    "owner": "CardanoKeri.Registry.revive_iff",
-    "test": "RegistryRetentionChecks"
-  },
-  {
-    "id": "revive-no-fresh-bond",
-    "before": "pure ({ deposited := p.D, locked := [(aid, p.D)] }, { s with carriers := carriers })",
-    "after": "pure ({ locked := [(aid, p.D)] }, { s with carriers := carriers })",
-    "failure": "revived-world-fresh-bond",
-    "owner": "CardanoKeri.Registry.revive_retains",
-    "test": "RegistryRetentionChecks"
-  },
-  {
     "id": "convict-premature-retirement",
     "before": "pure ({}, { s with carriers := carriers })",
     "after": "pure ({}, { s with carriers := carriers, trie := Singular.trieSet s.trie aid (.known .terminal) })",
@@ -149,7 +101,7 @@
     "id": "live-booking-allowed",
     "before": "if c.st != .terminationPending then throw \"keri-conviction-required\"",
     "after": "if false then throw \"keri-conviction-required\"",
-    "owner": "CardanoKeri.Registry.bookTermination_iff",
+    "owner": "CardanoKeri.Registry.live_cannot_book, CardanoKeri.Registry.bookTermination_iff",
     "failure": "live-booking-refused",
     "test": "RegistryRetentionChecks",
     "kind": "semantic-runtime"

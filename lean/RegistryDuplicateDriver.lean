@@ -8,9 +8,7 @@ namespace DuplicateStory
 
 def evidence : EnvTable := {
   inception := [11]
-  rotationFrom := [(11, 1)]
-  duplicity := [(11, 0), (11, 1), (11, 2)]
-  closeAuth := [(11, 6)] }
+  duplicity := [(11, 0), (11, 1), (11, 2)] }
 
 def trace : Except String (List Json) := do
   let first := registration start.state 11 100

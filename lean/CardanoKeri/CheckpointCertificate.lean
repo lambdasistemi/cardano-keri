@@ -92,31 +92,20 @@ def isRegistration : Action → Bool
   | .register _ _ => true
   | _ => false
 
-def reopenAllowed (s : Sys) (aid : AID) : Action → Bool
-  | .reopen _ _ _ => decide (s.leaves aid = .active)
-  | _ => true
-
 def localCertificate (current : CertifiedSys) (p : Params) (env : Env)
     (aid : AID) (now : Slot) (action : Action) : Except String (CertificateResult current p env) := do
   if localAction : isRegistration action = false then
-    if active : reopenAllowed current.state aid action = true then
-      match executed : stepFn p env action now (current.state.states aid) with
-      | none => throw "checkpoint-local-refused"
-      | some (flow, state) =>
-        have nonregister : ∀ refund pool, action ≠ .register refund pool := by
-          intro refund pool equal
-          subst action
-          contradiction
-        have reopen : (∃ sn refund pool, action = .reopen sn refund pool) →
-            current.state.leaves aid = .active := by
-          rintro ⟨sn, refund, pool, rfl⟩
-          simpa [reopenAllowed] using active
-        let event : SysStep p env current.state (current.state.set aid state) :=
-          .local ⟨aid, action, now, flow, state, nonregister,
-            (T7_step_iff_stepFn p env).mpr executed,
-            reopen, rfl⟩
-        pure { next := current.advance event, event, checkpointFlow := some flow }
-    else throw "checkpoint-reopen-leaf"
+    match executed : stepFn p env action now (current.state.states aid) with
+    | none => throw "checkpoint-local-refused"
+    | some (flow, state) =>
+      have nonregister : ∀ refund pool, action ≠ .register refund pool := by
+        intro refund pool equal
+        subst action
+        contradiction
+      let event : SysStep p env current.state (current.state.set aid state) :=
+        .local ⟨aid, action, now, flow, state, nonregister,
+          (T7_step_iff_stepFn p env).mpr executed, rfl⟩
+      pure { next := current.advance event, event, checkpointFlow := some flow }
   else throw "checkpoint-registration-receipt-required"
 
 def registerCertificate (current : CertifiedSys) (p : Params) (env : Env)

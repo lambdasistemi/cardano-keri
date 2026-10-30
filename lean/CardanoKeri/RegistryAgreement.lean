@@ -3,8 +3,8 @@ import CardanoKeri.RegistryCompleteness
 /-!
 # Executable registry actions and their relation
 
-The relation retains every action's actual execution result. Local parking
-and revival retain the carrier; only an accepted imported termination fold
+The relation retains every action's actual execution result. Local
+conviction retains the carrier; only an accepted imported termination fold
 retires the registry key. Whole pending custody and refusal laws live in
 RegistryCustody and RegistryReach.
 -/
@@ -28,10 +28,6 @@ theorem remove_absent {α : Type} {rs : List (Nat × α)} {id : Nat}
 inductive Step (p : Params) (env : Env) : Action → Sys → Flow → Sys → Prop where
   | bookRegistration {s s' f b} : bookRegistration p s b = .ok (f, s') →
       Step p env (.bookRegistration b) s f s'
-  | park {s s' f aid recipient} : park p env s aid recipient = .ok (f, s') →
-      Step p env (.park aid recipient) s f s'
-  | revive {s s' f aid} : revive p env s aid = .ok (f, s') →
-      Step p env (.revive aid) s f s'
   | convict {s s' f aid} : convictCkpt env s aid = .ok (f, s') →
       Step p env (.convictCkpt aid) s f s'
   | bookTermination {s s' f aid booker fee b} :
@@ -53,8 +49,6 @@ theorem step_iff (p : Params) (env : Env) (a : Action) (s s' : Sys) (f : Flow) :
   · intro h
     cases a with
     | bookRegistration b => exact .bookRegistration h
-    | park aid recipient => exact .park h
-    | revive aid => exact .revive h
     | convictCkpt aid => exact .convict h
     | bookTermination aid booker fee b => exact .bookTermination h
     | fold gen plugin u tx => exact .fold h

@@ -26,11 +26,8 @@ stops them from using it *now*.
 | A consuming application | Satisfy any authorization the application resolves against the ACTIVE checkpoint's current weighted key state | Change which keys the checkpoint publishes |
 
 !!! success "Under the accepted design, the `Close` row goes empty"
-    Close becomes the **reap**, the only close there is: a witnessed rotation by the next keys
-    whose signed message names the payee and the refund address
-    (ruling D-036), so it needs the next keys exactly like any other
-    rotation. Parking retains the token, minimum ADA and key state in an
-    output while the registry key stays active. A duplicity proof enters
+    There is no close: the design has no owner exit, no parking and no
+    revival, so the current keys cannot end the identity. A duplicity proof enters
     pending custody; its associated Registry fold completes conviction. Deposit is the unfreeze. That intent is signed by the
     keys of the epoch the rotation opens (ruling D-038). A thief
     holding only the current keys is left with exactly one Cardano

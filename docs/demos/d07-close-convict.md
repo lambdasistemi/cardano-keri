@@ -25,7 +25,7 @@ sequenceDiagram
     Chain-->>CKERI: Terminal state or script refusal
 ```
 
-The [V1 close guide](../user/close.md) documents a narrower deployed preprod transaction. It supplies a useful `kli` and `ckeri` baseline, but it does not prove registry close, reopened custody or conviction. No full D-07 preprod cast is attached yet.
+The [V1 close guide](../user/close.md) documents a narrower deployed preprod transaction. It supplies a useful `kli` and `ckeri` baseline, but it does not prove conviction (the accepted design has no registry close and no reopening). No full D-07 preprod cast is attached yet.
 
 ## Presenter path: 10–15 minutes when connected
 

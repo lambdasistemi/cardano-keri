@@ -65,7 +65,7 @@ gap the accepted design closes.
 
 ## The hunter's wage — accepted design
 
-The owner parks three separate sums in the checkpoint, and only two of them
+The owner keeps three separate sums in the checkpoint, and only two of them
 can ever reach a hunter:
 
 | Component | What it is for | Reaches a hunter when |
@@ -113,9 +113,9 @@ A hunter is not:
 It can submit only evidence the validators accept. When cryptographic evidence
 is absent, it may alert users but cannot manufacture an on-chain truth. It
 cannot forge controller signatures or witness receipts, activate uncommitted
-keys, move the owner's refund address, park the owner, reset her juvenility
+keys, move the owner's refund address, reset her juvenility
 (the age her checkpoint must reach before a consumer trusts it)
-window, or close her: every bond option other than `keep`, and every new refund
+window: every bond option other than `keep`, and every new refund
 address, is signed by the keys of the epoch the rotation opens.
 
 ## Evidence rules
@@ -200,8 +200,7 @@ censorship, or a colluding witness threshold.
 
 Applications should not silently outsource all freshness policy to one hunter.
 The **juvenility window** `W` exists for that reason: a consumer refuses a
-checkpoint younger than `W` slots after a registration, a reopen or a
-resurrecting rotation, and `W` is calibrated above measured relayer latency
+checkpoint younger than `W` slots after its registration, and `W` is calibrated above measured relayer latency
 rather than guessed. Its value is set from the measurement taken in epic
 [#325](https://github.com/lambdasistemi/cardano-keri/issues/325).
 
@@ -216,7 +215,7 @@ answers which issued roles remain valid. Only the first plane is in M1.
 
 The hunter is safe to make permissionless because it pays to submit public
 proofs whose on-chain result is deterministic, and it is paid from value the
-owner chose to park. A hostile hunter can withhold its own service or waste
+owner chose to keep there. A hostile hunter can withhold its own service or waste
 fees on invalid transactions. It cannot choose a different valid successor,
 take `D_reg` without a duplicity proof, take `B` while the pool pays, or move
 one lovelace to an address the owner's keys did not authorize.

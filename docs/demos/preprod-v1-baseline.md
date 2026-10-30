@@ -2,7 +2,7 @@
 
 As an identity controller, I want my keripy inception to create a Cardano checkpoint and my signed close to end it, so that I can inspect the identity event, confirmed transactions and fresh state readbacks together.
 
-This is a **completed preprod V1 baseline recorded on 23 September 2026**. It exercises the deployed checkpoint V1. It does not include a Singular registry fold, the later checkpoint model's conviction and parking behavior, or an ACDC gate. Those are separate [dated targets](index.md).
+This is a **completed preprod V1 baseline recorded on 23 September 2026**. It exercises the deployed checkpoint V1. It does not include a Singular registry fold, the later checkpoint model's conviction behavior, or an ACDC gate. Those are separate [dated targets](index.md).
 
 This historical cast used `ckeri` 0.4.0 with Koios for manifest verification and status readbacks. The [future demo plan](index.md#indexer-contract-for-the-dated-plays) uses the local follower indexer explicitly; the cast is not evidence that the indexer path has run.
 

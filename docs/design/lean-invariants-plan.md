@@ -1,5 +1,13 @@
 # Plan: bring the watcher and incentive design into Lean
 
+!!! note "Superseded lifecycle"
+    This dated record describes parking, revival and the owner's close as they
+    stood when it was written. The accepted design has since removed them:
+    there is no owner exit, and a checkpoint is alive until it is convicted
+    ([#493](https://github.com/lambdasistemi/cardano-keri/issues/493)). The
+    text below is kept as written.
+
+
 ## The stories this plan must cover
 
 An identity owner needs to see what happens when current or next keys are

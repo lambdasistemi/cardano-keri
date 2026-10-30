@@ -32,4 +32,4 @@ Play the forks: Mallory and Hal try everything on the poisoned
 checkpoint; Mallory tries the reap with the retired keys and is
 refused.
 
-See also [Hunters](hunters.md) and [Close, reopen, revival](reopen-revival.md).
+See also [Hunters](hunters.md) and [No owner exit](reopen-revival.md).

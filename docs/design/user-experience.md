@@ -15,7 +15,7 @@ future Veridian integration must make visible.
 The accepted design assumes the identity owner rotates her keys with `kli` and never
 touches Cardano except to put money in. Everything on the Cardano side is done
 by [hunters](super-watcher.md) — anyone paid to land her rotations, or to
-freeze her checkpoint when it cannot pay for one — paid from value she parks
+freeze her checkpoint when it cannot pay for one — paid from value she keeps
 in her checkpoint.
 
 A user interface that forgets this will be wrong in a specific way: it will
@@ -46,11 +46,10 @@ a checkpoint or an old key:
 |---|---|---|
 | Consumable checkpoint | Current key state is available and answerable | designed |
 | Poisoned | The controller has declared this epoch compromised; do not authorize | designed |
-| Juvenile | Registered or resurrected less than `W` slots ago, the juvenility window; too fresh to trust | designed |
+| Juvenile | Registered less than `W` slots ago, the juvenility window; too fresh to trust | designed |
 | Frozen | A hunter took the freeze bond `B` because the pool of advance funds ran dry | designed |
 | Pending conviction | Duplicity proved; retained custody awaits its associated Registry fold | designed |
 | Convicted | Proven duplicity; terminal, and it will never come back | designed |
-| Parked | The retained output holds the token, minimum ADA and key state; a later witnessed rotation revives it | designed |
 | No candidate | Nothing on chain for this AID | shipped |
 | Multiple candidates | Ambiguous registration; fail closed | shipped — the registry removes it |
 | Stale outref | The checkpoint changed; refresh and rebuild | shipped |
@@ -116,23 +115,27 @@ The UI must be honest about the one case this does not cover: if the thief also
 holds the **next** keys, her rotation is control by KERI's own rule, and the
 poison lasts until that rotation and no longer.
 
-## Leaving and coming back
+## No way out but conviction
 
-There is no pause and no withdraw. An identity is active, parked, in pending conviction custody, or
-convicted after the associated Registry fold.
+There is no owner exit: no close, no parking, no revival, no pause and no
+withdraw. As an identity owner, Alice keeps her checkpoint alive — bonds,
+rotations, unfreezing — until it is convicted. As a relying party, the
+treasury sees a checkpoint that is either alive or convicted (pending
+conviction custody first, then convicted after the associated Registry fold).
 
-- **Close** is the reap: a witnessed rotation by the *next* keys whose
-  signed message names the payee of the premium (the fee for landing a
-  rotation) and the refund address.
-  The output retains the token, minimum ADA and that key state; the registry key stays active.
-  The current keys cannot close.
-- **Reopen** is the revival: a witnessed rotation later than the parked
-  key state, with fresh bonds, born juvenile. A parked identity is not
-  terminal; only conviction is.
 - **Deposit** is the unfreeze: a rotation that refills `B` after a hunter
   took it. It is a no-op on full bonds, still signed by the new keys.
+- **Refund address** changes travel with a rotation, signed by the new keys.
+  The address matters only at conviction, when the bonds and the pool go there.
 
-Before signing any of these the UI must display the exact checkpoint input, the
+Whether an owner who stops maintaining a checkpoint should recover its bonds
+and pool is an open economic question: today they leave a live checkpoint only
+through rotation premiums, a freeze (the freeze bond, to a hunter) and
+conviction. Parking was removed because it left unsettled who holds the
+deposit while parked and how a sponsor is tracked; it may return only with an
+economic model that settles both.
+
+Before signing a rotation intent the UI must display the exact checkpoint input, the
 AID and sequence, the destination address, the amounts of all three components,
 and the network and policy — because that is precisely the set of facts the
 signed intent binds.

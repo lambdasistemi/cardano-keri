@@ -1,4 +1,4 @@
-# Verify retained parking and associated retirement
+# Verify retained custody and associated retirement
 
 The current campaigns execute the actual model definitions and complete finite
 fixtures. Each subject must compile against an unchanged baseline and its
@@ -7,9 +7,9 @@ A proof failure, missing import, timeout or unrelated error is not a kill.
 
 | Campaign | Cases | Evidence |
 | --- | --- | --- |
-| `checkpoint-atoms.json` | 39 | Local decidable mirror and observation mutations; complete result checks |
-| `checkpoint-mutants.json` | 11 | Retained output, parked/pending refusal, pending keys and addressed close flows |
-| `registry-mutants.json` | 19 | Token/output/minimum ADA, exact revival/authorization, custody tails, binding domain, generation and plugin |
+| `checkpoint-atoms.json` | 22 | Local decidable mirror and observation mutations; complete result checks |
+| `checkpoint-mutants.json` | 5 | Pending refusal, pending keys and addressed conviction flows |
+| `registry-mutants.json` | 13 | Token/output/minimum ADA, live-booking refusal, custody tails, binding domain, generation and plugin |
 | `samaritan-mutants.json` | 4 | Actual constructor domain, request funding, premium and external fee |
 
 The economic campaign compiles the exact definition prefix of `Samaritan.lean`
@@ -37,16 +37,17 @@ They are implementation mutants. The separate foreign-context receipt controls
 are type-interface checks. Neither category is counted as a Lean model mutant.
 
 `ReviewedContracts.lean` checks all 106 revised exact contracts and
-`PreservedContracts.lean` checks 74 preserved contracts. `theorem-stories.json`
-binds 312 lifecycle/transport theorem identities, their source narratives,
+`PreservedContracts.lean` checks 63 preserved contracts. `theorem-stories.json`
+binds 332 lifecycle/transport theorem identities, their source narratives,
 complete formal Given/Then and source hashes. `story-bindings.mjs` rejects drift;
 compilation remains the authority on the propositions and axiom closure.
 
 The earlier mutation ledgers and receipts remain historical at their recorded
 revisions. In particular, their 79-atom/20-theorem denominator is not a fresh
-result for this revision. The parked-leaf and close-leaf faults change direction:
-parking now keeps the active key and close leaves it unchanged. The old
-system-revival parked-leaf guard has no current counterpart; exact stored-origin
+result for this revision. The owner-exit removal retired the parking, revival
+and close mutants (31 of them, listed with reasons in
+`../NO-OWNER-EXIT-DISPOSITIONS.md`); the old system-revival guard has no
+current counterpart; exact stored-origin
 and pending-request completion have separate actual-system evidence.
 
 Production validators and builders require their own two implementation layers

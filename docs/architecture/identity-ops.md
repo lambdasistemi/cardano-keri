@@ -46,13 +46,12 @@ epic [#322](https://github.com/lambdasistemi/cardano-keri/issues/322) decides.
 |---|---|---|
 | Register | Creates a bonded checkpoint at sequence zero. No uniqueness rule | A registry request: absence proof, insert and checkpoint mint together; no second first-registration |
 | Advance | Applies one genuine witnessed rotation | The same, plus a bond option, an optional new refund address, and the premium `P` (the fee the pool pays for landing a rotation) to whoever landed it |
-| Close | Current controllers burn the token and take the refund | The **reap**: a witnessed rotation by the **next** keys naming payee and refund; the output retains its token, minimum ADA and key state; the registry key stays active |
+| Close | Current controllers burn the token and take the refund | **Gone.** There is no owner exit: a checkpoint is alive until it is convicted |
 | Freeze | Moves a lagging checkpoint to ARMED for the response window | Payment to a hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one) when the pool is short. The datum is untouched; `B` leaves |
 | ClaimFreeze / thaw | Pays the recorded hunter after the deadline; thaw re-posts `B` | **Gone.** No deadline, no claim, no timeout economy |
 | Convict | Burns the token on a witnessed irreconcilable fork | A terminal `Convicted` state on a duplicity proof; `D_reg` in full to the convictor |
 | Poison | — | New: the current quorum declares the epoch compromised |
 | Top-up | — | New: anyone adds to the pool. No signature, no datum change |
-| Reopen | — | New: a parked identity returns on a witnessed rotation later than the parked key state, with fresh bonds |
 
 ## Register
 
@@ -104,10 +103,8 @@ attestation may be issued more than once; registry admission supplies checkpoint
 uniqueness. Its concrete format and validation are still to be implemented.
 Application checks that the AID has **no leaf**,
 inserts one, and creates the checkpoint in the same transaction. The persistent
-leaf prevents a second first-registration of the AID. Revival is a separate,
-guarded operation: the registry model permits it from `dormant k` and allocates
-a fresh abstract token. This does not specify a concrete asset-name encoding or
-prove that token bytes are minted only once across every revival. See
+leaf prevents a second first-registration of the AID, and there is no revival:
+a registered identity stays live until it is convicted. See
 [the registration guarantee](follow-one-identity.md#what-registration-guarantees)
 for the atomic mint/insertion obligation and the model's evidence limits.
 
@@ -168,8 +165,8 @@ The predicate is unchanged. What is added is everything around it:
 
 Every option other than `keep`, and every new address, travels in **one message
 signed by the keys of the epoch the rotation opens** (ruling D-038). A relayer
-landing the owner's public rotation therefore cannot park her, reset her
-juvenility, or move her money. Absent means keep and unchanged.
+landing the owner's public rotation therefore cannot reset her
+juvenility or move her money. Absent means keep and unchanged.
 
 ## Close
 
@@ -191,16 +188,16 @@ address limits where the money goes but not whether the identity dies.
 
 ### Under the accepted design
 
-Close is the **reap**: a witnessed rotation by the next keys whose signed
-message names the payee of the premium and the refund address (ruling
-D-036). The parked output retains its token, minimum ADA and
-that key state; the registry key stays active. It needs the next keys exactly like any other rotation,
-so the current-key thief loses this move entirely — the only Cardano
-power the current keys retain is the poison, and a rotation clears that.
+There is no close. The owner keeps her checkpoint alive — bonds, rotations,
+unfreezing — until it is convicted; a relying party sees a checkpoint that
+is either alive or convicted. The current-key thief loses the close entirely:
+the only Cardano power the current keys retain is the poison, and a rotation
+clears that.
 
-There is no pause. Close is **not terminal**: a parked identity returns
-on a witnessed rotation later than the parked key state, with fresh
-bonds and a fresh juvenility window. Only a conviction is final.
+There is no pause, no parking and no revival. Only a conviction is final.
+Whether an owner who stops maintaining a checkpoint should recover its bonds
+and pool is an open economic question: today they leave a live checkpoint
+only through rotation premiums, a freeze and conviction.
 
 ## Freeze
 
@@ -278,7 +275,7 @@ exposes no command for it.
 The same proof, a different effect. The convictor names a payee and takes
 `D_reg` in full; `B` and the pool go to the refund address; the checkpoint
 becomes `Convicted`, terminal; the token stays, and there is **no
-transition out** — no rotate, no poison, no close (rulings D-030, D-031).
+transition out** — no rotate, no poison, no freeze, no top-up (D-030, D-031).
 
 Terminality is not severity. KERI has no event that un-duplicates an
 identifier: superseding recovery is a rotation over an interaction, by rule and
@@ -293,15 +290,10 @@ next-key thief with `toad` colluding witnesses can convict the identity she
 already controls under KERI and take `D_reg` on the way out. Exposure is
 `D_reg` and the witness set the controller chose.
 
-## Top-up and reopen — new in the accepted design
+## Top-up — new in the accepted design
 
 **Top-up** adds value to the pool. No signature, no datum change, anyone. It is
 how a friend, an employer or a consortium pays for an identity's maintenance.
-
-**Reopen** brings a parked identity back: a witnessed rotation later than
-the parked key state, fresh bonds, a first pool, and a refund address
-chosen by whoever pays. A rotation at or below the parked sequence
-cannot reopen — that is what stops a stale resurrection.
 
 ## What is off chain
 

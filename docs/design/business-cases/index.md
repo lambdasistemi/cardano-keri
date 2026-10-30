@@ -3,11 +3,10 @@
 !!! note "What ships, and the accepted design"
     Unless a paragraph below is marked as preprod or `main` today, it
     describes the accepted design (D-036 to D-040). In that design an
-    identity is **active** or **parked** (a retained output holds its token,
-    minimum ADA and last key state; the registry key stays active). A duplicity
-    proof enters pending custody; its associated Registry fold makes it
-    **convicted** (terminal); there is no withdraw; the only close is **the
-    reap**, a rotation by the next keys; a `deposit` rotation is the
+    identity is **active** until it is convicted: there is no owner exit, no
+    parking and no revival. A duplicity proof enters pending custody; its
+    associated Registry fold makes it **convicted** (terminal); there is no
+    withdraw; a `deposit` rotation is the
     unfreeze; and the **poison**, the owner's own lock on the checkpoint,
     lasts one epoch and is cleared by rotation. Play the
     [checkpoint simulation](../../simulator/index.html).

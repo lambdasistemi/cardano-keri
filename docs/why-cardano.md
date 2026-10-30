@@ -74,7 +74,7 @@ Every move in the lifecycle may be submitted by anyone, and the submitter has
 next state"; it means anyone may pay the fee to relay public evidence whose
 result is **already determined**. Registration, rotation, the poison
 declaration (the owner's own lock on the checkpoint), the freeze, the top-up,
-the conviction, the close and the reopen
+and the conviction
 are each open to any submitter, and in each case the evidence decides the
 outcome — not the relayer, and not any operator. If one relayer refuses,
 anyone else may.
@@ -115,11 +115,10 @@ proved in `lean/CardanoKeri/Checkpoint.lean`. None of them is shipped on
 - **Every move of value answers to the owner.** The bonds and the pool leave
   only to the refund address the owner controls, and that address moves only
   when the keys of the epoch a rotation opens sign for it. A relayer landing
-  the owner's public rotation cannot park her, age her, or close her.
-- **Exit and return are the owner's.** Close needs the next keys, exactly like
-  any rotation, so a thief holding only the current keys cannot erase the
-  identity and take the money. And close is not the end: a witnessed rotation
-  later than the tombstone reopens it.
+  the owner's public rotation cannot age her or move her refund address.
+- **There is no owner exit.** A checkpoint is alive until it is convicted,
+  so a thief holding only the current keys cannot erase the identity and
+  take the money.
 
 !!! info "This was not the first design"
     An earlier design put a privileged oracle writer in front of a shared

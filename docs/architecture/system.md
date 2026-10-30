@@ -15,7 +15,7 @@ later work.
 | Layer | Purpose | Status |
 |---|---|---|
 | Identity checkpoint | Project a KERI AID's current keys, thresholds, witnesses and sequence into a sovereign Cardano UTxO | Register, close and advance settled on preprod; the enforcement economy settled on a devnet only |
-| The accepted design's machine | Poison (the owner's own lock on the checkpoint), three value components, the premium (the fee the pool pays whoever lands a rotation) and freeze of the hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one), terminal conviction, close by the next keys, reopen | Proved in Lean, playable in the simulator, no on-chain code — epics #322–#323 |
+| The accepted design's machine | Poison (the owner's own lock on the checkpoint), three value components, the premium (the fee the pool pays whoever lands a rotation) and freeze of the hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one), terminal conviction, no owner exit | Proved in Lean, playable in the simulator, no on-chain code — epics #322–#323 |
 | Registry | One incarnation per AID, ever | Designed; the permissionless cage (an MPFS store, a Merkle Patricia Forestry map behind one validator) runs on a development network in [singular](https://github.com/lambdasistemi/singular) (release v0.3.0); the keri leaf map and the registration policy are epic #324 |
 | Credential verification | Verify ACDC credential chains and TEL revocation state | Designed and prototyped; no settled vertical story |
 | Value authorization | Let an application gate a state change on a consumable checkpoint and credentials | Designed; not a shipped service |
@@ -105,8 +105,8 @@ sequenceDiagram
 ```
 
 Appliers race on one shared object; the loser wastes work, never safety. A
-request nobody applies within its window is retractable with a refund. Close,
-reopen and conviction travel the same way as leaf updates. Rotations, poisons,
+request nobody applies within its window is retractable with a refund.
+Conviction travels the same way as a leaf update. Rotations, poisons,
 freezes and top-ups never touch the registry.
 
 ## Advance and enforcement — shipped
@@ -155,7 +155,7 @@ flowchart LR
 ```
 
 Two edges move the identity — a rotation and a poison — and four boundary
-transitions cross its edges: register, close, reopen and convict. Nothing has a
+transitions cross its edges: register and convict. Nothing has a
 deadline; the freeze has no window to expire, because the owner returns by
 rotating with a deposit whenever she likes.
 

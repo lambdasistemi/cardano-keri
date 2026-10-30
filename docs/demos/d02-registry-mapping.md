@@ -1,7 +1,7 @@
 # Map the Singular registry to Cardano KERI
 
-As a KERI integrator, I need to see which layer admits an identity, retains its
-parked output and completes permanent retirement. As a relying party, I must
+As a KERI integrator, I need to see which layer admits an identity, keeps its
+live carrier until conviction and completes permanent retirement. As a relying party, I must
 not mistake an active registry key for a consumable checkpoint.
 
 This page maps the current Lean model and its simulators. It does not establish
@@ -19,8 +19,9 @@ booking and fold judgments; `RegistryAgreement.lean` binds the projection.
 `Checkpoint.lean` governs the funded lifecycle and associated system;
 `CheckpointCertificate.lean` executes the receipt interface.
 
-The [parking ruling](https://github.com/lambdasistemi/cardano-keri/issues/437)
-requires retained output/token/key state and minimum ADA. The
+There is no owner exit
+([#493](https://github.com/lambdasistemi/cardano-keri/issues/493)): no
+parking and no revival; a carrier is live until it is convicted. The
 [correspondence register](https://github.com/lambdasistemi/cardano-keri/issues/435)
 keeps other open model obligations. The earlier mapping is retained in the
 [historical source](https://github.com/lambdasistemi/cardano-keri/blob/70f3fc800fb3e49f9eb55584b62a2c87a82eb08d/docs/demos/d02-registry-mapping.md).
@@ -32,9 +33,7 @@ flowchart LR
   Admission[KERI admission] --> Booking[Complete booking]
   Booking --> Fold[Imported accepted fold]
   Fold --> Carrier[Active carrier]
-  Carrier --> Local[Park or revive locally]
   Carrier --> Conviction[Duplicity and pending custody]
-  Local --> Conviction
   Conviction --> Request[Exact termination request]
   Request --> Completion[Consuming fold: burn and retire]
 ```
@@ -48,7 +47,6 @@ an accepted fold consumes the associated pending request.
 | Owner story | Model responsibility | Remaining implementation boundary |
 | --- | --- | --- |
 | Register once | Actual booking/fold plus KERI inception; unique permanent binding | Concrete inception/receipt verification and transaction mapping |
-| Park and return | Retained output/token/`Mc`; rotation from the parked key; fresh bonds | Validator and builder correspondence |
 | Convict | Concrete Checkpoint duplicity; pending state; exact booking association | Evidence codec and actual on-chain custody |
 | Complete retirement | Stored-context replay and exact consumed request; burn only at fold | Transaction construction and chain confirmation |
 | Read eligibility | Present, mature, unpoisoned, unfrozen checkpoint | Exact token/canonical registry and consuming transaction checks |
@@ -56,11 +54,9 @@ an accepted fold consumes the associated pending request.
 
 ## Value and authorization
 
-Checkpoint close binds its premium payee and optional refund address through
-new-key intent. A copied close with another payee is refused. Parking refunds
-bonds and pool but retains minimum ADA. Conviction of a live checkpoint pays
-its conviction bond to the convictor and returns held freeze bond and pool to
-the refund address; a parked checkpoint holds neither bond nor pool.
+A refund-address change travels with a rotation, signed by the new keys.
+There is no close. Conviction pays the conviction bond to the convictor and
+returns the held freeze bond and pool to the refund address.
 
 Termination booking splits `Mc` into `Mr + tip` for the request and
 `Mc - Mr - tip` for the booker. The booker pays its booking fee separately.
@@ -75,7 +71,7 @@ for another request cannot complete the selected identity.
 
 ## Registry identity and lookup
 
-An active key remains active while its output is parked or termination is
+An active key remains active while its carrier is live or termination is
 pending. The reader must classify the holding before treating it as eligible.
 The model's integer token counter is not a Cardano asset-name specification.
 Exact identity, canonical registry selection and validity extensions remain in

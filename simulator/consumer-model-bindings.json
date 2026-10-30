@@ -1,0 +1,289 @@
+{
+  "version": 1,
+  "singular": "d69ab005c3b710aeebf033d3c5cd08c56feb5643",
+  "sources": {
+    "lean/CardanoKeri/Checkpoint.lean": "3042e4de66c0ce150597c208c1109c47dd8dff14957343480c11bd99f203df82",
+    "lean/CardanoKeri/CheckpointSystemEvidence.lean": "999f7eaa7751572659d9a87c30802fef9dea1d3c5052fa8518f675d12a12d383",
+    "lean/CardanoKeri/ConsumerControls.lean": "5d14e6b7b12a258b84452cad79a37accb72a9d12efe734b64c15e4451b7490f0",
+    "lean/CardanoKeri/ConsumerFixtures.lean": "c3b033d70535a2da67ea59f1eddc5ade2ae9b2afb39a4cedc11a0ad6b4aa8951",
+    "lean/CardanoKeri/ConsumerGoals.lean": "e676624a2540c1cbc8517a3350a788809989a20331f3c97ba9730777796e4bac",
+    "lean/CardanoKeri/ConsumerIdentity.lean": "b64721cbfbdbaa79e824449bbb9bc0fd8fdb8c3aa47b878454df704334ae19d6",
+    "lean/CardanoKeri/ConsumerJourney.lean": "ba2f90ffc5b6d4064e50a8b957c4aa7c1c66530c10fbb0d39773cf997984d488",
+    "lean/CardanoKeri/ConsumerWire.lean": "82b7088d8ada127c6ecee9ca50ef483fcf240cf31e981489006e08ec51ede4d4",
+    "lean/ConsumerTraceDriver.lean": "a1685eeb33ec8bb37bac5d75253d579dc2faa2d428b391e139faba9eb8c6e3ff",
+    "lean/lake-manifest.json": "ef13f1c22115496b001a180312413f19cb8324750104a49fe249d7e470a10590",
+    "lean/lakefile.lean": "b14f233e96652e27994a96fe0057d49af89b9ecbb5a35738dbdc2c488e4687c8",
+    "simulator/consumer-cli.mjs": "d679c03ad4cdba6eb7ba798831c65a0b7874e35a95d578eafbf895e1fe25fb36",
+    "simulator/consumer-core.mjs": "26dd2c609fbfbf8322d5e8f17a99b4d759980c0e85ce9e3d3b6f42e11e536448",
+    "simulator/consumer-corpus.json": "bd6bfdddf05ada551b2f8f45522061129fef4afbbf9fe846f1a5d652a3f8d420",
+    "simulator/consumer-properties.mjs": "b5e107d5cc0391b994f794f6d4707431116c29317c4d17dbe8f34b49db33068f"
+  },
+  "properties": [
+    {
+      "id": "CI01",
+      "declaration": "CardanoKeri.ConsumerIdentity.consumableHoldingB_iff",
+      "statementSha256": "e44bbf5f3cbfd9f8515d18e9a5192a0409ceca8a60a67e52170b9dd82167c0d3"
+    },
+    {
+      "id": "CI02",
+      "declaration": "CardanoKeri.ConsumerIdentity.consumableHolding_exact",
+      "statementSha256": "a60439af00df8b4415a76dd1704a74e7c352431f66bb144e686d1851470c5f62"
+    },
+    {
+      "id": "CI03",
+      "declaration": "CardanoKeri.ConsumerIdentity.existing_eligibility_preserved",
+      "statementSha256": "55080fcc635da569e10ab38d63ce083188d64922a5960b306e4da01949728b4c"
+    },
+    {
+      "id": "CI04",
+      "declaration": "CardanoKeri.ConsumerIdentity.wrong_network_refused",
+      "statementSha256": "1c5fe09b16fac6766c822b9ed2cc7a9dc196fbfe7b6a64711d0b42da290b09ec"
+    },
+    {
+      "id": "CI05",
+      "declaration": "CardanoKeri.ConsumerIdentity.wrong_or_unknown_release_refused",
+      "statementSha256": "7a2629d4156608a065760962836f979792070f8f475eb8b3bf9e1bd8d04d0cce"
+    },
+    {
+      "id": "CI06",
+      "declaration": "CardanoKeri.ConsumerIdentity.wrong_credential_refused",
+      "statementSha256": "b04b6ea094c94541023d6eb1212a955d0a61db3862a9e0958b56e1922f6b37bb"
+    },
+    {
+      "id": "CI07",
+      "declaration": "CardanoKeri.ConsumerIdentity.wrong_quantity_refused",
+      "statementSha256": "0e8afae3d81fc22df746606ddfd7558e90f120b866d9df06d2b2452556a79d63"
+    },
+    {
+      "id": "CI08",
+      "declaration": "CardanoKeri.ConsumerIdentity.wrong_asset_refused",
+      "statementSha256": "8b9f367f23043d697ae3bac2032843ee372ae58d72e04cc62f6c514499cdf1be"
+    },
+    {
+      "id": "CI09",
+      "declaration": "CardanoKeri.ConsumerIdentity.malformed_datum_refused",
+      "statementSha256": "80d7a87cf53a5fc5079022a4c3abcaf4366587afca7f9632ea19846e23c2dfed"
+    },
+    {
+      "id": "CI10",
+      "declaration": "CardanoKeri.ConsumerIdentity.wrong_datum_aid_refused",
+      "statementSha256": "7ece5e5bffd98debf409cbd5016d498908d017b8901f2bacfad87dd8476219d2"
+    },
+    {
+      "id": "CI11",
+      "declaration": "CardanoKeri.ConsumerIdentity.ineligible_state_refused",
+      "statementSha256": "637b9359d49a94277230884eddb0ad0fc678f47f4524f72027b29713548512d9"
+    },
+    {
+      "id": "CI12",
+      "declaration": "CardanoKeri.ConsumerIdentity.retained_custody_refused",
+      "statementSha256": "0a984d171cc174f524ea295ed68d1ae4d79a516785ee5f1745103799ba814453"
+    },
+    {
+      "id": "CI13",
+      "declaration": "CardanoKeri.ConsumerIdentity.different_encoded_keys_distinct",
+      "statementSha256": "52ffba2dbe8bc0f83bd2f2185d2011dae44a9b16511009165cd73a284ff04dd9"
+    },
+    {
+      "id": "CI14",
+      "declaration": "CardanoKeri.ConsumerIdentity.different_registries_distinct",
+      "statementSha256": "3be03eff755fe09a680cd1c66211c34e9041aabec573ad570e786dbf331e8401"
+    },
+    {
+      "id": "CI15",
+      "declaration": "CardanoKeri.ConsumerIdentity.different_seeds_distinct",
+      "statementSha256": "4cbf711b51b9cc91a6e6fb5f91506c967da3a6cb334ccd1bdbf31f8ef4677475"
+    },
+    {
+      "id": "CI16",
+      "declaration": "CardanoKeri.ConsumerIdentity.rival_seed_refused",
+      "statementSha256": "ff90298c8ff5ce3b96e2f19d8217846383d65c0321b52ed2fb8d00eacbb73e17"
+    },
+    {
+      "id": "CI17",
+      "declaration": "CardanoKeri.ConsumerIdentity.local_step_retains_exact_asset",
+      "statementSha256": "b12e6eb5060794a6834a113619dd37c2efc8ea8c7abd5484d3c7fcff27bd7728"
+    },
+    {
+      "id": "CI18",
+      "declaration": "CardanoKeri.ConsumerIdentity.completion_refuses_consumer",
+      "statementSha256": "783a9ead839ec98f2745b21aa0efec67589d898b097b8829ccd5b24d85d2ef0f"
+    },
+    {
+      "id": "CI19",
+      "declaration": "CardanoKeri.ConsumerIdentity.system_preserves_identity_binding",
+      "statementSha256": "ead7bfc300b6c31776d75b067472635e2b42bb3a8332652a77b3aa747daebc5c"
+    },
+    {
+      "id": "CI20",
+      "declaration": "CardanoKeri.ConsumerIdentity.faithful_origin_registry_separation",
+      "statementSha256": "2731b875ae34cebb19d73d04fbf402aa278d2240182766bc48abb717ccf58651"
+    },
+    {
+      "id": "CI21",
+      "declaration": "CardanoKeri.ConsumerIdentity.createRegistry_exact",
+      "statementSha256": "f4c396b350a58f3b5204edf0452f66310479cb1a170296a60fdd91ed2a8e37d4"
+    },
+    {
+      "id": "CI22",
+      "declaration": "CardanoKeri.ConsumerIdentity.createRegistry_complete",
+      "statementSha256": "51f4cecff2bb0e95e2f3acf7b30af98539a63dfbf45e7ff5bbaee9ff95f840e9"
+    },
+    {
+      "id": "CI23",
+      "declaration": "CardanoKeri.ConsumerIdentity.registerJoint_sound",
+      "statementSha256": "88aa1856dacb3203f91facf0ad82dc7afa46778862bf197a0ca6a0740cfc04f6"
+    },
+    {
+      "id": "CI24",
+      "declaration": "CardanoKeri.ConsumerIdentity.registerJoint_money",
+      "statementSha256": "54a4612422d703596ab6205c4fe1c1d3e30565be0ec782dbe18e0922d30cacac"
+    },
+    {
+      "id": "CI25",
+      "declaration": "CardanoKeri.ConsumerIdentity.registered_consumer_iff",
+      "statementSha256": "182feb55095dafc4e3c415e00447d36ef5b2c02845fd31b12ec1d9131ddd9df2"
+    },
+    {
+      "id": "CI26",
+      "declaration": "CardanoKeri.ConsumerIdentity.registerJoint_complete",
+      "statementSha256": "745d394f35827a6f8c7caf817f362e6fdd786e38363d37160090886af2e96df8"
+    }
+  ],
+  "roster": {
+    "fields": [
+      "positive-anchor",
+      "maturity-minus-one",
+      "maturity-plus-one",
+      "zero-w-birth",
+      "wrong-policy",
+      "wrong-name",
+      "missing-token",
+      "quantity-zero",
+      "quantity-two",
+      "duplicate-entries",
+      "other-aid-token",
+      "rival-seed-transaction",
+      "rival-seed-index",
+      "rival-registry-policy",
+      "wrong-network",
+      "unknown-release",
+      "release-application-policy",
+      "release-credential",
+      "release-state-program",
+      "release-state-policy",
+      "holding-credential",
+      "datum-empty",
+      "datum-root",
+      "datum-malformed",
+      "datum-other-aid",
+      "table-missing-key",
+      "table-missing-code",
+      "table-missing-hash",
+      "table-ambiguous-key",
+      "absent-datum",
+      "terminal-datum",
+      "genuine-rival-registry"
+    ],
+    "journey": [
+      "registered-juvenile",
+      "registered-mature",
+      "rotate-keep-paid",
+      "rotate-deposit-paid",
+      "rotate-keep-paid-3",
+      "rotate-keep-paid-4",
+      "rotate-keep-paid-5",
+      "frozen",
+      "rotate-keep-unpaid-frozen",
+      "rotate-deposit-unpaid",
+      "poisoned",
+      "rotate-clears-poison-unpaid",
+      "refill",
+      "parked",
+      "revived-juvenile",
+      "revived-mature",
+      "termination-pending",
+      "termination-booked",
+      "retired-after-matching-fold"
+    ],
+    "controls": [
+      "genesis-positive",
+      "genesis-no-seed",
+      "genesis-double-seed",
+      "genesis-wrong-seed",
+      "genesis-no-invocation",
+      "genesis-wrong-mint",
+      "genesis-no-output",
+      "genesis-double-output",
+      "genesis-wrong-credential",
+      "genesis-wrong-policy",
+      "genesis-wrong-name",
+      "genesis-wrong-quantity",
+      "genesis-wrong-datum",
+      "genesis-wrong-root",
+      "genesis-nonbare",
+      "configuration-registry",
+      "configuration-application",
+      "configuration-active",
+      "nonempty-distinct-preimage-domain",
+      "finite-encoding",
+      "finite-collision-free",
+      "constant-code-violates-premise",
+      "constant-hash-violates-premise",
+      "distinct-aid-keys",
+      "faithful-registry-map",
+      "constant-registry-map-violates-premise",
+      "registration-positive",
+      "registration-no-holding",
+      "registration-full-fold-required",
+      "registration-fee-correspondence",
+      "registration-donation-correspondence",
+      "registration-interval-correspondence",
+      "registration-complete-spent-correspondence",
+      "registration-spent-value-correspondence",
+      "registration-output-value-correspondence",
+      "registration-checkpoint-datum-correspondence",
+      "terminal-full-fold-executed",
+      "terminal-economics-agree",
+      "terminal-no-active-output",
+      "terminal-active-burn",
+      "system-reregistration-refused",
+      "system-revival-refused",
+      "registry-reregistration-refused",
+      "registry-revival-refused",
+      "repeat-completion-refused",
+      "pending-revival-refused"
+    ],
+    "events": [
+      "register",
+      "rotate-keep-paid",
+      "rotate-deposit-paid",
+      "rotate-keep-paid-3",
+      "rotate-keep-paid-4",
+      "rotate-keep-paid-5",
+      "frozen",
+      "rotate-keep-unpaid-frozen",
+      "rotate-deposit-unpaid",
+      "poisoned",
+      "rotate-clears-poison-unpaid",
+      "refill",
+      "parked",
+      "revived-juvenile",
+      "convict",
+      "book",
+      "pending-revival-refused",
+      "complete",
+      "retired-registration-refused",
+      "retired-revival-refused"
+    ],
+    "association": [
+      "valid-foreign-fold-refused",
+      "mixed-fold-completes-recorded-request"
+    ]
+  },
+  "limits": [
+    "Finite sampled properties; universal theorems are checked by Lean.",
+    "Fixture codec and hash, no Cardano byte vectors.",
+    "Current observer and two production implementation layers remain required."
+  ]
+}

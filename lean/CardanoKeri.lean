@@ -12,3 +12,10 @@ import CardanoKeri.SingularBinding
 import CardanoKeri.CheckpointCompletionGoals
 import CardanoKeri.CheckpointLifecycleExamples
 import CardanoKeri.CheckpointSystemFixtures
+import CardanoKeri.ConsumerIdentity
+import CardanoKeri.ConsumerGoals
+
+import CardanoKeri.ConsumerFixtures
+import CardanoKeri.ConsumerWire
+import CardanoKeri.ConsumerJourney
+import CardanoKeri.ConsumerControls

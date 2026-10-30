@@ -9,7 +9,7 @@ import {createHash} from 'node:crypto';
 const root=path.resolve(import.meta.dirname,'../..');
 const hash=x=>createHash('sha256').update(x).digest('hex');
 const dir=path.join(root,'lean/CardanoKeri');
-const files=fs.readdirSync(dir).filter(f=>/^(Checkpoint|Registry|ConcreteConvictionGoals|Samaritan).*\.lean$/.test(f)).sort();
+const files=fs.readdirSync(dir).filter(f=>/^(Checkpoint|Registry|Consumer|ConcreteConvictionGoals|Samaritan).*\.lean$/.test(f)).sort();
 function separator(text,wanted){let depth=0;for(let i=0;i<text.length;i++){if('({['.includes(text[i]))depth++;if(')}]'.includes(text[i]))depth--;if(depth===0&&text.slice(i,i+wanted.length)===wanted)return i;}throw Error('missing top-level '+wanted);}
 export function collect(){
   const sources={},rows=[];
@@ -29,7 +29,7 @@ export function collect(){
       rows.push({declaration,path:relative,line:text.slice(0,ev.index).split('\n').length,
         statement,statementSha256:hash(statement),sourceStory:narrative,
         story:{given:given||'No additional local parameters; use the definitions in this module.',
-          when: file.startsWith('Registry')?'Observe the Registry transition, projection or custody relation named by this theorem.':file==='Samaritan.lean'?'Observe the booking split or accepted fold accounting named by this theorem.':'Observe the local Checkpoint or associated system relation named by this theorem.',
+          when: file.startsWith('Consumer')?'Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.':file.startsWith('Registry')?'Observe the Registry transition, projection or custody relation named by this theorem.':file==='Samaritan.lean'?'Observe the booking split or accepted fold accounting named by this theorem.':'Observe the local Checkpoint or associated system relation named by this theorem.',
           then},storySha256:hash(JSON.stringify({narrative,given,then}))});
     }
   }

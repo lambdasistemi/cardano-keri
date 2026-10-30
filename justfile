@@ -760,3 +760,7 @@ ci-release-scripts:
     ./scripts/release/test-changelog
     ./scripts/release/test-plan
     ./scripts/release/test-next-version
+
+# Exact consumer model corpus, simulator, properties and targeted JavaScript mutations.
+check-consumer-design:
+    nix shell --no-write-lock-file path:./lean#lean nixpkgs#nodejs --command bash scripts/check-consumer-design.sh

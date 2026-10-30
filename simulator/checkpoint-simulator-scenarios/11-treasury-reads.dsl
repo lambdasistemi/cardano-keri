@@ -2,8 +2,8 @@ grammar: 1
 family: checkpoint
 
 story: 11
-title: "The treasury reads Alice's checkpoint"
-goal: "As the treasury validator, I want to authorize a payment only if Alice's keys really are current, so I read her checkpoint as a reference input."
+title: "Treasury eligibility: local Checkpoint steps"
+goal: "Explore the lifecycle eligibility clause. The exact-holding journey above also checks the treasury’s fixed identity context and follows actual termination completion."
 params:
   D: 1000
   B: 5
@@ -286,7 +286,7 @@ step:
 step:
   slot: 30
   who: alice
-  say: "Parked by the close: no checkpoint to read."
+  say: "Parked by the close: custody is retained, but the treasury refuses it."
   evidence:
     add: [{"rotationTo":[1,1,2]},{"intentAuthorized":[2,{"close":{"payee":1}},null]}]
   action:
@@ -342,7 +342,7 @@ step:
 step:
   slot: 40
   who: alice
-  say: "Revived through the registry with a witnessed rotation from the parked key state: juvenile."
+  say: "Reopened by a witnessed local rotation from the parked key state: juvenile."
   evidence:
     add: [{"rotationTo":[2,2,3]}]
   action:
@@ -398,7 +398,7 @@ step:
 step:
   slot: 50
   who: cora
-  say: "Convicted: fails closed, forever."
+  say: "Conviction requests termination: pending custody fails closed. The connected exact-holding journey above continues through the matching consuming fold."
   evidence:
     add: [{"duplicityAt":[3,3]}]
   action:

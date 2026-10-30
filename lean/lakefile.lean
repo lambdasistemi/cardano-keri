@@ -14,3 +14,9 @@ lean_lib CardanoKeri
 Not a default target; `lake build CardanoKeriStatements` builds it. -/
 lean_lib CardanoKeriStatements where
   roots := #[`CardanoKeri.Statements]
+
+/-- Identity declarations from the same pinned public Singular tree. This
+library owns the nested source path without introducing a second revision. -/
+lean_lib SingularApplicationHeld where
+  srcDir := ".lake/packages/singular/models/singular-application-held/lean"
+  roots := #[`SingularApplicationHeld.Assets, `SingularApplicationHeld.Core]

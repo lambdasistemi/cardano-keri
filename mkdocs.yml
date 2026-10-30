@@ -115,6 +115,7 @@ nav:
       - The project's words: design/words.md
       - AID Model: design/aid-model.md
       - Trust Model: design/trust-model.md
+      - Exact consumer identity: design/consumer-identity.md
       - Compromise of the Current Keys: design/key-compromise.md
       - Operational: design/operational.md
       - User Experience: design/user-experience.md

@@ -14,6 +14,12 @@
     "lean/CardanoKeri/CheckpointSystemWire.lean": "4bce5a0c36722efff3c5166e1f27ccc51a3151e30b5faeee7997bd036758a72c",
     "lean/CardanoKeri/CheckpointTraceWire.lean": "49e86f002cbbbcb9a0090e06649fe0a3f35f29ba22ed0669980ec942fce276f3",
     "lean/CardanoKeri/ConcreteConvictionGoals.lean": "fdd05ed9997bd435109f87bf0eeba5fe297d881e18ff265e2ef32770fa511b9d",
+    "lean/CardanoKeri/ConsumerControls.lean": "5d14e6b7b12a258b84452cad79a37accb72a9d12efe734b64c15e4451b7490f0",
+    "lean/CardanoKeri/ConsumerFixtures.lean": "c3b033d70535a2da67ea59f1eddc5ade2ae9b2afb39a4cedc11a0ad6b4aa8951",
+    "lean/CardanoKeri/ConsumerGoals.lean": "e676624a2540c1cbc8517a3350a788809989a20331f3c97ba9730777796e4bac",
+    "lean/CardanoKeri/ConsumerIdentity.lean": "b64721cbfbdbaa79e824449bbb9bc0fd8fdb8c3aa47b878454df704334ae19d6",
+    "lean/CardanoKeri/ConsumerJourney.lean": "ba2f90ffc5b6d4064e50a8b957c4aa7c1c66530c10fbb0d39773cf997984d488",
+    "lean/CardanoKeri/ConsumerWire.lean": "82b7088d8ada127c6ecee9ca50ef483fcf240cf31e981489006e08ec51ede4d4",
     "lean/CardanoKeri/Registry.lean": "670e1385d1626dc10c599c8296a020c4bd20775a411ede494b3f2a84f5385947",
     "lean/CardanoKeri/RegistryAdapterFacts.lean": "b81fb1834dfddb948d2ecf2d85ad8df59024f7f725c8ae13adc0f2b5591439fc",
     "lean/CardanoKeri/RegistryAgreement.lean": "d40192439a635b9d57bfc43b46b3b3e56439a965466b7df2871e47bb48df18a5",
@@ -1811,6 +1817,370 @@
         "then": "Duplicity.duplicityAt epoch next context rival = false"
       },
       "storySha256": "ced0830a54a6d29e68cfa1f874ddd04bd391148a0df403f066c21429bb6eea66"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.consumableHoldingB_iff",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 20,
+      "statement": "theorem consumableHoldingB_iff (i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput) :\n    consumableHoldingB i c e p now o = true ↔ consumableHolding i c e p now o",
+      "statementSha256": "e44bbf5f3cbfd9f8515d18e9a5192a0409ceca8a60a67e52170b9dd82167c0d3",
+      "sourceStory": "CI01. Given any interpretation, independently fixed consumer context,\nvalidated-environment observation, Params, slot and output; when comparing\nthe Boolean and proposition; then true iff all proposition clauses hold,\nin both directions. No hash premise is needed for agreement.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "consumableHoldingB i c e p now o = true ↔ consumableHolding i c e p now o"
+      },
+      "storySha256": "58f55236e7b1f4f1a1ffd6c7d2795c159f57e1957ef9ab2272df261c856f18f4"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.consumableHolding_exact",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 33,
+      "statement": "theorem consumableHolding_exact (i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput) :\n    consumableHolding i c e p now o ↔\n      e.network = c.network ∧ e.release = some c.release ∧\n      o.credential = c.release.applicationCredential ∧\n      AH.quantity o (representativeAsset i c) = 1 ∧\n      ∃ l : Live, decoded i c o = some ⟨c.aid, .present l⟩ ∧\n        l.frozen = false ∧ l.poisoned = false ∧ l.bornAt + p.W ≤ now",
+      "statementSha256": "a60439af00df8b4415a76dd1704a74e7c352431f66bb144e686d1851470c5f62",
+      "sourceStory": "CI02. Given arbitrary inputs; when an output is evaluated; then acceptance\nis equivalent to exact network, resolved complete release, application\ncredential, exact representative quantity one and a decoded intended-AID\nlive datum, unfrozen, unpoisoned and at least bornAt+W old. Both directions\nand all eight clauses are obligations.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "consumableHolding i c e p now o ↔\n      e.network = c.network ∧ e.release = some c.release ∧\n      o.credential = c.release.applicationCredential ∧\n      AH.quantity o (representativeAsset i c) = 1 ∧\n      ∃ l : Live, decoded i c o = some ⟨c.aid, .present l⟩ ∧\n        l.frozen = false ∧ l.poisoned = false ∧ l.bornAt + p.W ≤ now"
+      },
+      "storySha256": "4d21a73e78e1055d8e9e2c07a1a4f1242c88d4ae95025e442ecca894d2e49c7b"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.existing_eligibility_preserved",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 53,
+      "statement": "theorem existing_eligibility_preserved (i : Interpretation) (c : Context)\n    (e : Environment) (p : Params) (now : Slot) (s : State) (o : AH.ObservedOutput)\n    (context : authenticatedContext c e) (realizes : realizesState i c s o) :\n    consumableHolding i c e p now o ↔ consumableState p now s",
+      "statementSha256": "55080fcc635da569e10ab38d63ce083188d64922a5960b306e4da01949728b4c",
+      "sourceStory": "CI03. Given any actual output whose exact credential, unit asset quantity\nand decoded AID/state realize the intended state, and an authenticated\nexternal context; when consumed; then acceptance iff the full old lifecycle\npredicate holds. This is a refinement premise, not evidence that an output\nexists or its decoder is faithful.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context)\n    (e : Environment) (p : Params) (now : Slot) (s : State) (o : AH.ObservedOutput)\n    (context : authenticatedContext c e) (realizes : realizesState i c s o)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "consumableHolding i c e p now o ↔ consumableState p now s"
+      },
+      "storySha256": "5276a56ffdd4f45671d94b547fa0bfb4bc0ae52f4926f91b9c21c42272f14399"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.wrong_network_refused",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 63,
+      "statement": "theorem wrong_network_refused (i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput) (wrong : e.network ≠ c.network) :\n    ¬ consumableHolding i c e p now o",
+      "statementSha256": "1c5fe09b16fac6766c822b9ed2cc7a9dc196fbfe7b6a64711d0b42da290b09ec",
+      "sourceStory": "CI04. Given different intended and actual networks; when a consumer checks\nany candidate; then it refuses regardless of asset or datum. The actual\nnetwork observation is supplied by the integration, not the candidate.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput) (wrong : e.network ≠ c.network)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "¬ consumableHolding i c e p now o"
+      },
+      "storySha256": "de39b10ee39c1fe81d41e0af35e25e3926e52ac91b4f8ed6e926f0a84b36079a"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.wrong_or_unknown_release_refused",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 73,
+      "statement": "theorem wrong_or_unknown_release_refused (i : Interpretation) (c : Context)\n    (e : Environment) (p : Params) (now : Slot) (o : AH.ObservedOutput)\n    (wrong : e.release ≠ some c.release) :\n    ¬ consumableHolding i c e p now o",
+      "statementSha256": "7a2629d4156608a065760962836f979792070f8f475eb8b3bf9e1bd8d04d0cce",
+      "sourceStory": "CI05. Given an unresolved or different complete PublishedRelease; when\nchecking any candidate; then refuse. Equality includes applicationPolicy,\napplicationCredential, stateProgram and statePolicy; version text is not\nsilently treated as a published script identity.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context)\n    (e : Environment) (p : Params) (now : Slot) (o : AH.ObservedOutput)\n    (wrong : e.release ≠ some c.release)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "¬ consumableHolding i c e p now o"
+      },
+      "storySha256": "24e8ee359998c84c2334c1378e132e87d78577a8a34e586f19f78f71c7d810b5"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.wrong_credential_refused",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 82,
+      "statement": "theorem wrong_credential_refused (i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput)\n    (wrong : o.credential ≠ c.release.applicationCredential) :\n    ¬ consumableHolding i c e p now o",
+      "statementSha256": "b04b6ea094c94541023d6eb1212a955d0a61db3862a9e0958b56e1922f6b37bb",
+      "sourceStory": "CI06. Given a wrong application credential on the actual output; when\nchecking it; then refuse even if it holds the exact token and a live datum.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput)\n    (wrong : o.credential ≠ c.release.applicationCredential)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "¬ consumableHolding i c e p now o"
+      },
+      "storySha256": "a55f6a78efec1689ae552902bb5c4372258404c315ae37c6f9ac978ca98086d4"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.wrong_quantity_refused",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 92,
+      "statement": "theorem wrong_quantity_refused (i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput)\n    (wrong : AH.quantity o (representativeAsset i c) ≠ 1) :\n    ¬ consumableHolding i c e p now o",
+      "statementSha256": "0e8afae3d81fc22df746606ddfd7558e90f120b866d9df06d2b2452556a79d63",
+      "sourceStory": "CI07. Given total quantity of the intended asset unequal to one; when\nchecking that output; then refuse, including zero and two, aggregated over\nall matching asset entries. Other asset quantities cannot replace it.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput)\n    (wrong : AH.quantity o (representativeAsset i c) ≠ 1)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "¬ consumableHolding i c e p now o"
+      },
+      "storySha256": "e1014d7c5285585d8d25c77ed825c76a2929b24bd4d98a67f6378f98224dccce"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.wrong_asset_refused",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 103,
+      "statement": "theorem wrong_asset_refused (i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput) (a : Singular.TokenId) (n : Nat)\n    (assets : o.assets = [(a, n)]) (wrong : a ≠ representativeAsset i c) :\n    ¬ consumableHolding i c e p now o",
+      "statementSha256": "8b9f367f23043d697ae3bac2032843ee372ae58d72e04cc62f6c514499cdf1be",
+      "sourceStory": "CI08. Given any singleton supplied asset distinct from the intended one,\nwith any quantity; when checking that output; then refuse. A wrong policy\nOR wrong name suffices for distinctness. This does not reject an unrelated\nasset merely for coexisting with one valid intended token.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput) (a : Singular.TokenId) (n : Nat)\n    (assets : o.assets = [(a, n)]) (wrong : a ≠ representativeAsset i c)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "¬ consumableHolding i c e p now o"
+      },
+      "storySha256": "8d7efa1263cea3420db351515e695ba560b0dadfd4895694b3e9b676e05a22bc"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.malformed_datum_refused",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 113,
+      "statement": "theorem malformed_datum_refused (i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput) (bad : decoded i c o = none) :\n    ¬ consumableHolding i c e p now o",
+      "statementSha256": "80d7a87cf53a5fc5079022a4c3abcaf4366587afca7f9632ea19846e23c2dfed",
+      "sourceStory": "CI09. Given a non-application datum, absent datum, or decoder rejection;\nwhen checking the candidate; then refuse. Concrete malformed-byte detection\nis delegated to the selected decoder and is not proved by this theorem.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput) (bad : decoded i c o = none)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "¬ consumableHolding i c e p now o"
+      },
+      "storySha256": "b6d5f8a2df9b3ae6861fb71163570d3dba9c6e7890c9c0fbd0f1b20831b3b2b8"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.wrong_datum_aid_refused",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 120,
+      "statement": "theorem wrong_datum_aid_refused (i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput) (d : DecodedDatum)\n    (datum : decoded i c o = some d) (wrong : d.aid ≠ c.aid) :\n    ¬ consumableHolding i c e p now o",
+      "statementSha256": "7ece5e5bffd98debf409cbd5016d498908d017b8901f2bacfad87dd8476219d2",
+      "sourceStory": "CI10. Given a decoded datum for another AID; when checking it against the\nindependently fixed intended AID; then refuse, even if names collide.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput) (d : DecodedDatum)\n    (datum : decoded i c o = some d) (wrong : d.aid ≠ c.aid)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "¬ consumableHolding i c e p now o"
+      },
+      "storySha256": "a0ebf98c1f03ccb32dac22c15426582e7ff0d575b50446e1b3639362e67618b7"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.ineligible_state_refused",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 129,
+      "statement": "theorem ineligible_state_refused (i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput) (d : DecodedDatum)\n    (datum : decoded i c o = some d) (bad : ¬ consumableState p now d.state) :\n    ¬ consumableHolding i c e p now o",
+      "statementSha256": "637b9359d49a94277230884eddb0ad0fc678f47f4524f72027b29713548512d9",
+      "sourceStory": "CI11. Given any decoded state refused by old consumableState; when the\nstronger holding predicate is checked; then refuse for every identity and\nquantity. Covers absent/parked/pending/convicted/frozen/poisoned/juvenile.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput) (d : DecodedDatum)\n    (datum : decoded i c o = some d) (bad : ¬ consumableState p now d.state)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "¬ consumableHolding i c e p now o"
+      },
+      "storySha256": "a0253e65aa67a4113a0a83c55d0d121cfa5f81baa3ed81716d294f0496596cca"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.retained_custody_refused",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 138,
+      "statement": "theorem retained_custody_refused (i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput) (d : DecodedDatum) (h : Hash)\n    (datum : decoded i c o = some d)\n    (retained : d.state = .parked h ∨ d.state = .terminationPending h) :\n    ¬ consumableHolding i c e p now o ∧ consumableHoldingB i c e p now o = false",
+      "statementSha256": "0a984d171cc174f524ea295ed68d1ae4d79a516785ee5f1745103799ba814453",
+      "sourceStory": "CI12. Given a parked or pending datum and arbitrary key state; when checked\nat any time; then refuse both proposition and Boolean, even though a token\nand an active registry key can still exist.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput) (d : DecodedDatum) (h : Hash)\n    (datum : decoded i c o = some d)\n    (retained : d.state = .parked h ∨ d.state = .terminationPending h)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "¬ consumableHolding i c e p now o ∧ consumableHoldingB i c e p now o = false"
+      },
+      "storySha256": "43681971106b8a07a1a0cac7ef0901ed39aa490a79f45ae19114d0efec69188c"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.different_encoded_keys_distinct",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 152,
+      "statement": "theorem different_encoded_keys_distinct (i : Interpretation) (c d : Context)\n    (sameRegistry : registryAsset i c = registryAsset i d)\n    (keys : i.keyOf c.aid ≠ i.keyOf d.aid)\n    (encoding : AH.FiniteEncoding i.code (identityDomain i c d))\n    (collision : AH.FiniteCollisionFree i.hash i.code (identityDomain i c d)) :\n    representativeAsset i c ≠ representativeAsset i d",
+      "statementSha256": "52ffba2dbe8bc0f83bd2f2185d2011dae44a9b16511009165cd73a284ff04dd9",
+      "sourceStory": "CI13. Given the same registry and two distinct encoded keys, with explicit\nfinite encoding and collision premises on the two Active preimages; when\nderiving names using the actual imported activeAsset; then the full assets\ndiffer. AID-to-key injectivity is not inferred from distinct AID labels.",
+      "story": {
+        "given": "(i : Interpretation) (c d : Context)\n    (sameRegistry : registryAsset i c = registryAsset i d)\n    (keys : i.keyOf c.aid ≠ i.keyOf d.aid)\n    (encoding : AH.FiniteEncoding i.code (identityDomain i c d))\n    (collision : AH.FiniteCollisionFree i.hash i.code (identityDomain i c d))",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "representativeAsset i c ≠ representativeAsset i d"
+      },
+      "storySha256": "e68b68c5bd3ef163984092bc83f0c4c6c9efe02de79e616fbb06ce76bd826ea6"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.different_registries_distinct",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 169,
+      "statement": "theorem different_registries_distinct (i : Interpretation) (c d : Context)\n    (registries : registryAsset i c ≠ registryAsset i d)\n    (encoding : AH.FiniteEncoding i.code (identityDomain i c d))\n    (collision : AH.FiniteCollisionFree i.hash i.code (identityDomain i c d)) :\n    representativeAsset i c ≠ representativeAsset i d",
+      "statementSha256": "3be03eff755fe09a680cd1c66211c34e9041aabec573ad570e786dbf331e8401",
+      "sourceStory": "CI14. Given two unequal complete registry identities and explicit finite\nencoding and collision premises covering both Active preimages; when naming\nany keys; then active assets differ. A name-only registry comparison is not\nthe premise: either the state policy or state name can distinguish them.",
+      "story": {
+        "given": "(i : Interpretation) (c d : Context)\n    (registries : registryAsset i c ≠ registryAsset i d)\n    (encoding : AH.FiniteEncoding i.code (identityDomain i c d))\n    (collision : AH.FiniteCollisionFree i.hash i.code (identityDomain i c d))",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "representativeAsset i c ≠ representativeAsset i d"
+      },
+      "storySha256": "cd48e7a371a6e5efbe33046189dcc66951ec11d4ea4a42d5e4a14626022061a7"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.different_seeds_distinct",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 185,
+      "statement": "theorem different_seeds_distinct (i : Interpretation) (c d : Context)\n    (seeds : c.seed ≠ d.seed)\n    (encoding : AH.FiniteEncoding i.code (identityDomain i c d))\n    (collision : AH.FiniteCollisionFree i.hash i.code (identityDomain i c d)) :\n    registryAsset i c ≠ registryAsset i d ∧\n    representativeAsset i c ≠ representativeAsset i d",
+      "statementSha256": "4cbf711b51b9cc91a6e6fb5f91506c967da3a6cb334ccd1bdbf31f8ef4677475",
+      "sourceStory": "CI15. Given different seeds (transaction or index), arbitrary releases and\nAIDs, with separate finite encoding and collision premises containing both\nState and Active preimages; when deriving full registry/active identities;\nthen both registry and representative assets differ. No global hash\ninjectivity is assumed.",
+      "story": {
+        "given": "(i : Interpretation) (c d : Context)\n    (seeds : c.seed ≠ d.seed)\n    (encoding : AH.FiniteEncoding i.code (identityDomain i c d))\n    (collision : AH.FiniteCollisionFree i.hash i.code (identityDomain i c d))",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "registryAsset i c ≠ registryAsset i d ∧\n    representativeAsset i c ≠ representativeAsset i d"
+      },
+      "storySha256": "2f9888d7ff2393e8f6e3db84508a7e520fbdf377871734df75d8f1a84c65bee8"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.rival_seed_refused",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 203,
+      "statement": "theorem rival_seed_refused (i : Interpretation) (c rival : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput) (n : Nat)\n    (seeds : c.seed ≠ rival.seed)\n    (assets : o.assets = [(representativeAsset i rival, n)])\n    (encoding : AH.FiniteEncoding i.code (identityDomain i c rival))\n    (collision : AH.FiniteCollisionFree i.hash i.code (identityDomain i c rival)) :\n    ¬ consumableHolding i c e p now o",
+      "statementSha256": "ff90298c8ff5ce3b96e2f19d8217846383d65c0321b52ed2fb8d00eacbb73e17",
+      "sourceStory": "CI16. Given a consistent rival seed's singleton active asset, any quantity,\nand explicit finite encoding/collision premises; when checked against the\nconsumer's original fixed context; then refuse. Rival self-consistency never\nselects the context. No claim is made if expected assets also coexist.",
+      "story": {
+        "given": "(i : Interpretation) (c rival : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput) (n : Nat)\n    (seeds : c.seed ≠ rival.seed)\n    (assets : o.assets = [(representativeAsset i rival, n)])\n    (encoding : AH.FiniteEncoding i.code (identityDomain i c rival))\n    (collision : AH.FiniteCollisionFree i.hash i.code (identityDomain i c rival))",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "¬ consumableHolding i c e p now o"
+      },
+      "storySha256": "1fcd06d4e4996a646256d4bf6692d9fef16896576855dde5c21a562c3e669f0f"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.local_step_retains_exact_asset",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 218,
+      "statement": "theorem local_step_retains_exact_asset (i : Interpretation) (c : Context)\n    (p : Params) (env : Env) (a : Action) (now : Slot) (s s' : State) (f : Flow)\n    (step : Step p env a now s f s') (held : s.hasOutput = true) :\n    s'.hasOutput = true ∧ heldRepresentative i c s' = heldRepresentative i c s",
+      "statementSha256": "b12e6eb5060794a6834a113619dd37c2efc8ea8c7abd5484d3c7fcff27bd7728",
+      "sourceStory": "CI17. Given an actual accepted local Checkpoint Step from any state holding\nan output; when observing logical custody afterward; then the output remains\nand the complete representative asset is unchanged. This covers every\nrotation branch, park, revival, poison, freeze, top-up and local conviction;\nit does not assert full current ledger-output correspondence.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context)\n    (p : Params) (env : Env) (a : Action) (now : Slot) (s s' : State) (f : Flow)\n    (step : Step p env a now s f s') (held : s.hasOutput = true)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "s'.hasOutput = true ∧ heldRepresentative i c s' = heldRepresentative i c s"
+      },
+      "storySha256": "1a0235fcc74872530918dbdc0b8b937e2c60054c7bf0cd9b98c6958172e7e55a"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.completion_refuses_consumer",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 229,
+      "statement": "theorem completion_refuses_consumer (i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (s s' : Sys) (event : CompletionEvent s s') :\n    ∃ aid association, s.pending aid = some association ∧\n      s.states aid = .terminationPending association.keyState ∧\n      s'.states aid = .convicted ∧ s'.pending aid = none ∧\n      heldRepresentative i { c with aid := aid } (s'.states aid) = none ∧\n      (∀ o, decoded i { c with aid := aid } o = some ⟨aid, s'.states aid⟩ →\n        ¬ consumableHolding i { c with aid := aid } e p now o) ∧\n      s'.origins = s.origins",
+      "statementSha256": "783a9ead839ec98f2745b21aa0efec67589d898b097b8829ccd5b24d85d2ef0f",
+      "sourceStory": "CI18. Given actual system completion using its stored origin/request/receipt;\nwhen observing the target key; then some previously pending AID becomes\nconvicted, its pending association clears, its logical representative is\nabsent, its new consumer predicate refuses any output decoding to that state,\nand all origins remain unchanged. The imported receipt owns burn/retirement.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (s s' : Sys) (event : CompletionEvent s s')",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "∃ aid association, s.pending aid = some association ∧\n      s.states aid = .terminationPending association.keyState ∧\n      s'.states aid = .convicted ∧ s'.pending aid = none ∧\n      heldRepresentative i { c with aid := aid } (s'.states aid) = none ∧\n      (∀ o, decoded i { c with aid := aid } o = some ⟨aid, s'.states aid⟩ →\n        ¬ consumableHolding i { c with aid := aid } e p now o) ∧\n      s'.origins = s.origins"
+      },
+      "storySha256": "ff7c59fa98ef5ba4a165bb1db91844128848b7296cee3121494f438de76a860e"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.system_preserves_identity_binding",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 249,
+      "statement": "theorem system_preserves_identity_binding (i : Interpretation) (c : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (p : Params) (env : Env)\n    (s s' : Sys) (origin : Origin) (bound : originBinding i c abstractRegistry origin)\n    (stored : s.origins c.aid = some origin) (step : SysStep p env s s') :\n    s'.origins c.aid = some origin ∧ originBinding i c abstractRegistry origin",
+      "statementSha256": "ead7bfc300b6c31776d75b067472635e2b42bb3a8332652a77b3aa747daebc5c",
+      "sourceStory": "CI19. Given any accepted system step and a previously bound stored origin;\nwhen inspecting that AID afterward; then the exact stored origin and its\nreduced-to-full configuration binding remain. No changing current output\nreference or datum is inferred from stable origin provenance.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (p : Params) (env : Env)\n    (s s' : Sys) (origin : Origin) (bound : originBinding i c abstractRegistry origin)\n    (stored : s.origins c.aid = some origin) (step : SysStep p env s s')",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "s'.origins c.aid = some origin ∧ originBinding i c abstractRegistry origin"
+      },
+      "storySha256": "295611066f44240949fc34885b55410f6318923bb5b941b90ac10222c3cecc30"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.faithful_origin_registry_separation",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 260,
+      "statement": "theorem faithful_origin_registry_separation (i : Interpretation) (c d : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (oc od : Origin)\n    (bc : originBinding i c abstractRegistry oc)\n    (bd : originBinding i d abstractRegistry od)\n    (different : registryAsset i c ≠ registryAsset i d)\n    (faithful : faithfulRegistryMap abstractRegistry [registryAsset i c, registryAsset i d]) :\n    oc.configuration.registryId ≠ od.configuration.registryId",
+      "statementSha256": "2731b875ae34cebb19d73d04fbf402aa278d2240182766bc48abb717ccf58651",
+      "sourceStory": "CI20. Given two distinct full registry identities, two bound origins and\nan explicitly faithful abstractRegistry map on exactly these identities;\nwhen observing reduced configuration registry ids; then they differ. Without\nfaithfulness, binding alone provides no separation theorem.",
+      "story": {
+        "given": "(i : Interpretation) (c d : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (oc od : Origin)\n    (bc : originBinding i c abstractRegistry oc)\n    (bd : originBinding i d abstractRegistry od)\n    (different : registryAsset i c ≠ registryAsset i d)\n    (faithful : faithfulRegistryMap abstractRegistry [registryAsset i c, registryAsset i d])",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "oc.configuration.registryId ≠ od.configuration.registryId"
+      },
+      "storySha256": "816d0979679afed78fa69ae56d90146f0dbaa42ecaad119e4501f44b5ed54ff1"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.createRegistry_exact",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 278,
+      "statement": "theorem createRegistry_exact (i : Interpretation) (c : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (cfg : Singular.Config)\n    (commit : SingularApplicationHeld.TrieCommit)\n    (tx : SingularApplicationHeld.Assets.TxView) (outputs : List AH.ObservedOutput)\n    (result : CreatedRegistry)\n    (accepted : createRegistry i c abstractRegistry cfg commit tx outputs = .ok result) :\n    configBinding i c abstractRegistry cfg = true ∧\n    SingularApplicationHeld.genesis .none i.hash i.code commit c.release c.seed tx outputs = true ∧\n    result.full.identity = registryAsset i c ∧ result.full.seed = c.seed ∧\n    result.full.trie = [] ∧ result.full.state ∈ outputs ∧\n    0 < AH.quantity result.full.state (registryAsset i c) ∧\n    result.economic = CardanoKeri.Registry.Sys.init cfg",
+      "statementSha256": "f4c396b350a58f3b5204edf0452f66310479cb1a170296a60fdd91ed2a8e37d4",
+      "sourceStory": "CI21. Given any successful proposed creation bridge; when observing its\nresult; then the exact configuration binding and actual imported genesis\npassed, the selected state is an actual supplied output carrying the registry\nasset, the full identity/seed/empty trie are fixed by consumer Context, and\nthe economic state is exactly the old Sys.init cfg. This is a conditional\ninversion, not a claim that every genesis observation is ledger-valid.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (cfg : Singular.Config)\n    (commit : SingularApplicationHeld.TrieCommit)\n    (tx : SingularApplicationHeld.Assets.TxView) (outputs : List AH.ObservedOutput)\n    (result : CreatedRegistry)\n    (accepted : createRegistry i c abstractRegistry cfg commit tx outputs = .ok result)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "configBinding i c abstractRegistry cfg = true ∧\n    SingularApplicationHeld.genesis .none i.hash i.code commit c.release c.seed tx outputs = true ∧\n    result.full.identity = registryAsset i c ∧ result.full.seed = c.seed ∧\n    result.full.trie = [] ∧ result.full.state ∈ outputs ∧\n    0 < AH.quantity result.full.state (registryAsset i c) ∧\n    result.economic = CardanoKeri.Registry.Sys.init cfg"
+      },
+      "storySha256": "d8105040d9080ee7d40edff70c5be0f19b8448804e97e2888cb4bef401f20416"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.createRegistry_complete",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 306,
+      "statement": "theorem createRegistry_complete (i : Interpretation) (c : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (cfg : Singular.Config)\n    (commit : SingularApplicationHeld.TrieCommit)\n    (tx : SingularApplicationHeld.Assets.TxView) (outputs : List AH.ObservedOutput)\n    (binding : configBinding i c abstractRegistry cfg = true)\n    (genesis : SingularApplicationHeld.genesis .none i.hash i.code commit c.release c.seed tx outputs = true) :\n    ∃ result, createRegistry i c abstractRegistry cfg commit tx outputs = .ok result",
+      "statementSha256": "51f4cecff2bb0e95e2f3acf7b30af98539a63dfbf45e7ff5bbaee9ff95f840e9",
+      "sourceStory": "CI22. Given matching trusted configuration and an actual successful\nimported genesis observation; when running the bridge; then some result\nexists. The adapter cannot refuse a permitted genesis solely through its\nstate-selection guard. Together with CI21 this constrains both directions.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (cfg : Singular.Config)\n    (commit : SingularApplicationHeld.TrieCommit)\n    (tx : SingularApplicationHeld.Assets.TxView) (outputs : List AH.ObservedOutput)\n    (binding : configBinding i c abstractRegistry cfg = true)\n    (genesis : SingularApplicationHeld.genesis .none i.hash i.code commit c.release c.seed tx outputs = true)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "∃ result, createRegistry i c abstractRegistry cfg commit tx outputs = .ok result"
+      },
+      "storySha256": "5368ac29002753886ed8c0e5beffa69e95ba8f74df8991e15b852808cfff0887"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.registerJoint_sound",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 334,
+      "statement": "theorem registerJoint_sound (i : Interpretation) (c : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (commit : SingularApplicationHeld.TrieCommit)\n    (q : RegistrationInput) (r : Registered)\n    (accepted : registerJoint i c abstractRegistry commit q = .ok r) :\n    createRegistry i c abstractRegistry q.configuration commit q.genesisTx q.genesisOutputs = .ok r.created ∧\n    CardanoKeri.Registry.bookRegistration q.registryParams r.created.economic q.booking =\n      .ok (r.registrationFlow, r.booked) ∧\n    CardanoKeri.Registry.fold q.registryParams q.registryEnv r.booked r.booked.gen\n      r.booked.config.applicationPolicy q.unspent q.economicTx = .ok (r.foldFlow, r.after) ∧\n    SingularApplicationHeld.fold .none i.hash i.code commit c.release q.fullFold = true ∧\n    stepFn q.checkpointParams q.checkpointEnv (.register q.refund q.pool) q.now .absent =\n      some (r.checkpointFlow, r.checkpoint) ∧\n    registrationAgreementB i c q r.created r.booked r.after r.checkpoint r.holding r.economicHolding = true ∧\n    ∃ receipt : CardanoKeri.Registry.FoldReceipt q.registryParams q.registryEnv q.configuration,\n      receipt.before = r.booked ∧ receipt.after = r.after ∧\n      receipt.unspent = q.unspent ∧ receipt.transaction = q.economicTx ∧\n      receipt.flow = r.foldFlow ∧ DeliveredOrigin receipt q.booking c.aid r.origin ∧\n      realizesState i c r.checkpoint r.holding ∧ r.origin.carrierRef = r.holding.reference",
+      "statementSha256": "88aa1856dacb3203f91facf0ad82dc7afa46778862bf197a0ca6a0740cfc04f6",
+      "sourceStory": "CI23. Given any successful bounded joint registration (the complete input\ncontains genesis outputs, genuine booking, economic unspent/transaction,\nfull-identity fold and selected holding index, plus fixed model contexts);\nwhen observing its result; then actual creation/book/economic fold/full fold/\nCheckpoint registration all succeeded, the complete registration agreement\npassed, and an actual indexed #437 receipt delivers the stored origin. Its\ncurrent initial holding realizes that exact AID/Checkpoint state, and its\nreference equals the stored carrier reference. No consumer conclusion is an\ninput and no arbitrary physical-ledger equivalence is asserted.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (commit : SingularApplicationHeld.TrieCommit)\n    (q : RegistrationInput) (r : Registered)\n    (accepted : registerJoint i c abstractRegistry commit q = .ok r)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "createRegistry i c abstractRegistry q.configuration commit q.genesisTx q.genesisOutputs = .ok r.created ∧\n    CardanoKeri.Registry.bookRegistration q.registryParams r.created.economic q.booking =\n      .ok (r.registrationFlow, r.booked) ∧\n    CardanoKeri.Registry.fold q.registryParams q.registryEnv r.booked r.booked.gen\n      r.booked.config.applicationPolicy q.unspent q.economicTx = .ok (r.foldFlow, r.after) ∧\n    SingularApplicationHeld.fold .none i.hash i.code commit c.release q.fullFold = true ∧\n    stepFn q.checkpointParams q.checkpointEnv (.register q.refund q.pool) q.now .absent =\n      some (r.checkpointFlow, r.checkpoint) ∧\n    registrationAgreementB i c q r.created r.booked r.after r.checkpoint r.holding r.economicHolding = true ∧\n    ∃ receipt : CardanoKeri.Registry.FoldReceipt q.registryParams q.registryEnv q.configuration,\n      receipt.before = r.booked ∧ receipt.after = r.after ∧\n      receipt.unspent = q.unspent ∧ receipt.transaction = q.economicTx ∧\n      receipt.flow = r.foldFlow ∧ DeliveredOrigin receipt q.booking c.aid r.origin ∧\n      realizesState i c r.checkpoint r.holding ∧ r.origin.carrierRef = r.holding.reference"
+      },
+      "storySha256": "3da5c909f5f71783c32f253b523d33451057016c151f1b8bc3fbd73e5a9d9a98"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.registerJoint_money",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 394,
+      "statement": "theorem registerJoint_money (i : Interpretation) (c : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (commit : SingularApplicationHeld.TrieCommit)\n    (q : RegistrationInput) (r : Registered)\n    (accepted : registerJoint i c abstractRegistry commit q = .ok r) :\n    q.fullFold.assets.spent = q.economicTx.transaction.inputs.filterMap (·.ref) ∧\n    q.economicTx.transaction.inputs.length = (q.economicTx.transaction.inputs.filterMap (·.ref)).length ∧\n    q.fullFold.spentOutputs.map (fun o => (o.reference, o.lovelace)) =\n      (q.unspent.filter fun item => Singular.inputsContainReference\n        q.economicTx.transaction.inputs item.1).map (fun item => (item.1, item.2.output.lovelace)) ∧\n    q.fullFold.outputs.map (·.lovelace) = q.economicTx.outputs.map (fun o => o.output.lovelace) ∧\n    q.fullFold.fee = q.economicTx.transaction.fee ∧\n    q.fullFold.donation = q.economicTx.transaction.donation ∧\n    some q.fullFold.interval = q.economicTx.transaction.validity",
+      "statementSha256": "54a4612422d703596ab6205c4fe1c1d3e30565be0ec782dbe18e0922d30cacac",
+      "sourceStory": "CI24. Given a successful joint registration; when comparing its two actual\nfold money observations; then complete spent references agree with every\nreferenced economic input (none omitted), input reference/value pairs agree,\nall output amounts agree in order, fees/donations agree and the full validity\ninterval equals the economic transaction's present interval. All conjuncts\nare required; this does not identify approval token encodings.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (commit : SingularApplicationHeld.TrieCommit)\n    (q : RegistrationInput) (r : Registered)\n    (accepted : registerJoint i c abstractRegistry commit q = .ok r)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "q.fullFold.assets.spent = q.economicTx.transaction.inputs.filterMap (·.ref) ∧\n    q.economicTx.transaction.inputs.length = (q.economicTx.transaction.inputs.filterMap (·.ref)).length ∧\n    q.fullFold.spentOutputs.map (fun o => (o.reference, o.lovelace)) =\n      (q.unspent.filter fun item => Singular.inputsContainReference\n        q.economicTx.transaction.inputs item.1).map (fun item => (item.1, item.2.output.lovelace)) ∧\n    q.fullFold.outputs.map (·.lovelace) = q.economicTx.outputs.map (fun o => o.output.lovelace) ∧\n    q.fullFold.fee = q.economicTx.transaction.fee ∧\n    q.fullFold.donation = q.economicTx.transaction.donation ∧\n    some q.fullFold.interval = q.economicTx.transaction.validity"
+      },
+      "storySha256": "6daecbb6d0df84003fef3a14a6c0fb0ecfe6b17590bb75168458100077e7706b"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.registered_consumer_iff",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 416,
+      "statement": "theorem registered_consumer_iff (i : Interpretation) (c : Context) (e : Environment)\n    (abstractRegistry : Singular.TokenId → Nat) (commit : SingularApplicationHeld.TrieCommit)\n    (q : RegistrationInput) (r : Registered) (now : Slot)\n    (accepted : registerJoint i c abstractRegistry commit q = .ok r)\n    (context : authenticatedContext c e) :\n    consumableHolding i c e q.checkpointParams now r.holding ↔\n      consumableState q.checkpointParams now r.checkpoint",
+      "statementSha256": "182feb55095dafc4e3c415e00447d36ef5b2c02845fd31b12ec1d9131ddd9df2",
+      "sourceStory": "CI25. Given actual successful joint registration and independently\nauthenticated environment; when the treasury reads its actual delivered\nholding at any time; then acceptance iff the unchanged old lifecycle\neligibility holds at that time. Juvenility remains effective; success of\nregistration alone is never assumed to imply immediate consumer acceptance.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context) (e : Environment)\n    (abstractRegistry : Singular.TokenId → Nat) (commit : SingularApplicationHeld.TrieCommit)\n    (q : RegistrationInput) (r : Registered) (now : Slot)\n    (accepted : registerJoint i c abstractRegistry commit q = .ok r)\n    (context : authenticatedContext c e)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "consumableHolding i c e q.checkpointParams now r.holding ↔\n      consumableState q.checkpointParams now r.checkpoint"
+      },
+      "storySha256": "ff649751eed7b9afc27d47e7d601f2a6624dab951221847c350ee3bbfb1c5f77"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.registerJoint_complete",
+      "path": "lean/CardanoKeri/ConsumerGoals.lean",
+      "line": 434,
+      "statement": "theorem registerJoint_complete (i : Interpretation) (c : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (commit : SingularApplicationHeld.TrieCommit)\n    (q : RegistrationInput) (created : CreatedRegistry)\n    (booked after : CardanoKeri.Registry.Sys) (bookFlow foldFlow : CardanoKeri.Registry.Flow)\n    (cpFlow : Flow) (st : State) (o : AH.ObservedOutput) (eo : Singular.EconomicOutput) (token : Nat)\n    (genesis : createRegistry i c abstractRegistry q.configuration commit q.genesisTx q.genesisOutputs = .ok created)\n    (book : CardanoKeri.Registry.bookRegistration q.registryParams created.economic q.booking = .ok (bookFlow, booked))\n    (fold : CardanoKeri.Registry.fold q.registryParams q.registryEnv booked booked.gen\n      booked.config.applicationPolicy q.unspent q.economicTx = .ok (foldFlow, after))\n    (fullFold : SingularApplicationHeld.fold .none i.hash i.code commit c.release q.fullFold = true)\n    (registration : stepFn q.checkpointParams q.checkpointEnv (.register q.refund q.pool) q.now .absent = some (cpFlow, st))\n    (fullOutput : q.fullFold.outputs[q.holdingIndex]? = some o)\n    (economicOutput : q.economicTx.outputs[q.holdingIndex]? = some eo)\n    (agreement : registrationAgreementB i c q created booked after st o eo = true)\n    (binding : CardanoKeri.Registry.bindingAt after c.aid = some token) :\n    ∃ r, registerJoint i c abstractRegistry commit q = .ok r",
+      "statementSha256": "745d394f35827a6f8c7caf817f362e6fdd786e38363d37160090886af2e96df8",
+      "sourceStory": "CI26. Given concrete successful genesis, booking, economic fold and\nfull-identity fold; actual Checkpoint registration; actual selected output in\nboth transactions; successful complete relation check; and the installed\nbinding alias; when running the bridge; then it returns some result. These\nare executable component/representation preconditions, not a consumer verdict\nor a whole-machine equivalence premise. The connected witness must establish\nevery premise by execution rather than seed final states.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (commit : SingularApplicationHeld.TrieCommit)\n    (q : RegistrationInput) (created : CreatedRegistry)\n    (booked after : CardanoKeri.Registry.Sys) (bookFlow foldFlow : CardanoKeri.Registry.Flow)\n    (cpFlow : Flow) (st : State) (o : AH.ObservedOutput) (eo : Singular.EconomicOutput) (token : Nat)\n    (genesis : createRegistry i c abstractRegistry q.configuration commit q.genesisTx q.genesisOutputs = .ok created)\n    (book : CardanoKeri.Registry.bookRegistration q.registryParams created.economic q.booking = .ok (bookFlow, booked))\n    (fold : CardanoKeri.Registry.fold q.registryParams q.registryEnv booked booked.gen\n      booked.config.applicationPolicy q.unspent q.economicTx = .ok (foldFlow, after))\n    (fullFold : SingularApplicationHeld.fold .none i.hash i.code commit c.release q.fullFold = true)\n    (registration : stepFn q.checkpointParams q.checkpointEnv (.register q.refund q.pool) q.now .absent = some (cpFlow, st))\n    (fullOutput : q.fullFold.outputs[q.holdingIndex]? = some o)\n    (economicOutput : q.economicTx.outputs[q.holdingIndex]? = some eo)\n    (agreement : registrationAgreementB i c q created booked after st o eo = true)\n    (binding : CardanoKeri.Registry.bindingAt after c.aid = some token)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "∃ r, registerJoint i c abstractRegistry commit q = .ok r"
+      },
+      "storySha256": "a770400d3d7369c24b475bbd27d9938b0aafe8a6a183394a24e9e8d442fe80d6"
     },
     {
       "declaration": "CardanoKeri.Registry.projected_request_admitted",

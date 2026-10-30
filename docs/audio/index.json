@@ -8874,6 +8874,44 @@
     "v": "598405ea5a39"
    }
   ],
+  "the-concrete-bytes": [
+   {
+    "index": 0,
+    "name": "docs-design-consumer-identity/the-concrete-bytes-00",
+    "pause_ms": 500,
+    "v": "4ebf30ab1575"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-consumer-identity/the-concrete-bytes-01",
+    "pause_ms": 400,
+    "v": "5c019155dd9b"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-consumer-identity/the-concrete-bytes-02",
+    "pause_ms": 400,
+    "v": "6cb524e5b380"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-consumer-identity/the-concrete-bytes-03",
+    "pause_ms": 400,
+    "v": "1991f7e49d54"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-consumer-identity/the-concrete-bytes-04",
+    "pause_ms": 400,
+    "v": "773a0892ccba"
+   },
+   {
+    "index": 5,
+    "name": "docs-design-consumer-identity/the-concrete-bytes-05",
+    "pause_ms": 400,
+    "v": "65e829ed9ab7"
+   }
+  ],
   "what-the-interpretation-must-establish": [
    {
     "index": 0,
@@ -8891,7 +8929,7 @@
     "index": 2,
     "name": "docs-design-consumer-identity/what-the-interpretation-must-establish-02",
     "pause_ms": 400,
-    "v": "26258b85ce27"
+    "v": "28828087e6ac"
    },
    {
     "index": 3,

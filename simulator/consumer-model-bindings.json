@@ -4,6 +4,9 @@
   "sources": {
     "lean/CardanoKeri/Checkpoint.lean": "3042e4de66c0ce150597c208c1109c47dd8dff14957343480c11bd99f203df82",
     "lean/CardanoKeri/CheckpointSystemEvidence.lean": "999f7eaa7751572659d9a87c30802fef9dea1d3c5052fa8518f675d12a12d383",
+    "lean/CardanoKeri/ConsumerBytes.lean": "9d7f752d59e32acb6c77bda9e5f6e9a146f09e9de7983ea10456c7225739d712",
+    "lean/CardanoKeri/ConsumerBytesGoals.lean": "4822023b95c0a3ed0f99b5ee09784e5beb3700582611a80f867defc35cbcdae4",
+    "lean/CardanoKeri/ConsumerBytesVectors.lean": "ec7952aa84aa108395196ec44a38bfbcfc4ac414617565e3a6fd7f4778323745",
     "lean/CardanoKeri/ConsumerControls.lean": "5d14e6b7b12a258b84452cad79a37accb72a9d12efe734b64c15e4451b7490f0",
     "lean/CardanoKeri/ConsumerFixtures.lean": "c3b033d70535a2da67ea59f1eddc5ade2ae9b2afb39a4cedc11a0ad6b4aa8951",
     "lean/CardanoKeri/ConsumerGoals.lean": "e676624a2540c1cbc8517a3350a788809989a20331f3c97ba9730777796e4bac",

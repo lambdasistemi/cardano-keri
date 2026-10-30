@@ -86,13 +86,13 @@ imply distinct encoded keys without a corresponding mapping premise.
 
 The executable corpus publishes its finite preimage tables and checks every
 pair in the declared domain. Constant codecs, constant hashes and a constant
-reduced-registry map fail their respective premises. These controls are not
-cryptographic proofs or Cardano byte vectors.
+reduced-registry map fail their respective premises. These controls use a
+fixture codec and hash; the concrete bytes follow in the next section.
 
 | Boundary still owed | Effect on a real consumer |
 |---|---|
-| AID key encoding and State/Active serialization | Bind concrete KERI bytes to the selected upstream preimages and reviewed vectors |
-| Hash and published scripts | Bind actual policy application and script hashes to an authenticated release manifest |
+| Hash collision freedom | Rely on BLAKE2b-256 having no collision over the identity domain; this is assumed, not proved |
+| Published scripts | Bind actual policy application and script hashes to an authenticated release manifest |
 | Network and release resolution | Obtain them independently; missing or conflicting evidence refuses |
 | Datum and complete physical value | Decode the same output and establish its relation to the model's state and bonds |
 | Current reference and holding movement | Verify current unspentness and observation fidelity; registration Origin is immutable metadata |
@@ -103,6 +103,47 @@ cryptographic proofs or Cardano byte vectors.
 AID/state. It has no current-reference or unspentness check. Local fixture
 observations are explicitly selected model interpretations, not a production
 observer. No checkpoint expiry or renewal behavior is supplied by the model.
+
+## The concrete bytes
+
+The model declares one concrete interpretation in
+`CardanoKeri.ConsumerIdentity.Bytes`. The registry key of an AID is the
+AID's qualified CESR text bytes. The codec is the Plutus Data serialisation of
+the `Preimage` type in Singular's
+[`singular_state/preimage` module](https://github.com/lambdasistemi/singular/blob/d69ab005c3b710aeebf033d3c5cd08c56feb5643/onchain/lib/singular_state/preimage.ak)
+at the pinned revision. The hash is BLAKE2b-256, as in that module. The datum
+decoder remains an input to the interpretation.
+
+The upstream model carries byte strings such as transaction ids, policies,
+asset names and keys as natural numbers. Each such field carries its bytes
+through a bijective base-256 numeral, so empty strings and leading zero bytes
+keep their identity. Output indices and deposits are plain integers.
+
+| Premise of the consumer statements | Status for the concrete bytes |
+|---|---|
+| Finite encoding over the identity domain | Proved for every pair of contexts: reading the serialisation back recovers the seed, the registry and the key |
+| Finite collision freedom over the identity domain | Reduced to BLAKE2b-256 having no collision over the same four preimages, which stays an explicit assumption |
+| Distinct AIDs have distinct keys | Proved: the key is the AID's CESR text, so equal keys mean equal AIDs |
+
+A 256-bit digest of inputs of any length cannot be injective, so no proof of
+collision freedom exists; the statements name the assumption in their types.
+With it, the theorems for different AIDs, different seeds and a rival seed's
+registry hold for the concrete bytes.
+
+The [vector table](https://github.com/lambdasistemi/cardano-keri/blob/a17ab42a1482b6515406a361dedfb4297c69ac04/lean/consumer-identity-vectors.json)
+lists, for each state policy, seed and AID, the key, both serialised
+preimages, both names and the representative asset a genuine holding
+carries. The Lean emits the table and checks the committed copy. Each row runs
+the consumer predicate: the committed asset is accepted, and a changed state
+policy, transaction id, output index, AID or asset name is refused. Changing
+any committed field of the table fails the check. The same code reproduces
+every preimage and name of Singular's own table at the pinned revision,
+across its five roles.
+
+These checks cover the listed inputs only. The registration approval role
+splices an already serialised holding address and is outside the consumer
+statements. The Aiken consumer predicate must reproduce the table under
+[the consumer implementation ticket](https://github.com/lambdasistemi/cardano-keri/issues/343).
 
 ## Evidence and implementation acceptance
 

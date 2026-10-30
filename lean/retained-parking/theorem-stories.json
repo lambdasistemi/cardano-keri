@@ -14,6 +14,9 @@
     "lean/CardanoKeri/CheckpointSystemWire.lean": "4bce5a0c36722efff3c5166e1f27ccc51a3151e30b5faeee7997bd036758a72c",
     "lean/CardanoKeri/CheckpointTraceWire.lean": "49e86f002cbbbcb9a0090e06649fe0a3f35f29ba22ed0669980ec942fce276f3",
     "lean/CardanoKeri/ConcreteConvictionGoals.lean": "fdd05ed9997bd435109f87bf0eeba5fe297d881e18ff265e2ef32770fa511b9d",
+    "lean/CardanoKeri/ConsumerBytes.lean": "9d7f752d59e32acb6c77bda9e5f6e9a146f09e9de7983ea10456c7225739d712",
+    "lean/CardanoKeri/ConsumerBytesGoals.lean": "4822023b95c0a3ed0f99b5ee09784e5beb3700582611a80f867defc35cbcdae4",
+    "lean/CardanoKeri/ConsumerBytesVectors.lean": "ec7952aa84aa108395196ec44a38bfbcfc4ac414617565e3a6fd7f4778323745",
     "lean/CardanoKeri/ConsumerControls.lean": "5d14e6b7b12a258b84452cad79a37accb72a9d12efe734b64c15e4451b7490f0",
     "lean/CardanoKeri/ConsumerFixtures.lean": "c3b033d70535a2da67ea59f1eddc5ade2ae9b2afb39a4cedc11a0ad6b4aa8951",
     "lean/CardanoKeri/ConsumerGoals.lean": "e676624a2540c1cbc8517a3350a788809989a20331f3c97ba9730777796e4bac",
@@ -1817,6 +1820,384 @@
         "then": "Duplicity.duplicityAt epoch next context rival = false"
       },
       "storySha256": "ced0830a54a6d29e68cfa1f874ddd04bd391148a0df403f066c21429bb6eea66"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.pack_unpack",
+      "path": "lean/CardanoKeri/ConsumerBytes.lean",
+      "line": 47,
+      "statement": "theorem pack_unpack (n : Nat) : pack (unpack n) = n",
+      "statementSha256": "e79cea72328162fa5940e332a34ce8b65d5a4710eac68b0b68d673cf106ceff4",
+      "sourceStory": "BL1. Given any carried number; when unpacked to bytes and packed again; then it is unchanged.",
+      "story": {
+        "given": "(n : Nat)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "pack (unpack n) = n"
+      },
+      "storySha256": "d54ec4d5c0a09cf164d0e487cca924c95ca7cb47b87342e8a17aaeaf219ae5df"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.unpack_pack",
+      "path": "lean/CardanoKeri/ConsumerBytes.lean",
+      "line": 59,
+      "statement": "theorem unpack_pack (bs : List Nat) (h : Bytes bs) : unpack (pack bs) = bs",
+      "statementSha256": "6fd89daac8be89f56b764a59d7dd1fe0e1acb6b49936dc5e5ccf33bb53b2378e",
+      "sourceStory": "BL2. Given a byte string (every element below 256); when packed and unpacked; then it is\nunchanged.",
+      "story": {
+        "given": "(bs : List Nat) (h : Bytes bs)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "unpack (pack bs) = bs"
+      },
+      "storySha256": "c2a8bf4509f419e1220fce3cbafa69f881e8a0455d75af7b8db2983c3442e087"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.unpack_injective",
+      "path": "lean/CardanoKeri/ConsumerBytes.lean",
+      "line": 72,
+      "statement": "theorem unpack_injective {m n : Nat} (h : unpack m = unpack n) : m = n",
+      "statementSha256": "55c64ad4514a2bb6d66805673a16f641490865fac3b28b5048578f09531f63f7",
+      "sourceStory": "BL3. Given two carried numbers with the same bytes; when compared; then they are equal.",
+      "story": {
+        "given": "{m n : Nat} (h : unpack m = unpack n)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "m = n"
+      },
+      "storySha256": "734bfb10a3073d6f3305739d13cd7f0807cbe10fd0751ddea7bb81f6485f1c67"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.pack_injective",
+      "path": "lean/CardanoKeri/ConsumerBytes.lean",
+      "line": 76,
+      "statement": "theorem pack_injective {a b : List Nat} (ha : Bytes a) (hb : Bytes b)\n    (h : pack a = pack b) : a = b",
+      "statementSha256": "b369c6627910e4289e9b61fb9481f47fc31cea927a9bc7cd5f02ce14480693a5",
+      "sourceStory": "BL4. Given two byte strings with the same carried number; when compared; then they are equal.",
+      "story": {
+        "given": "{a b : List Nat} (ha : Bytes a) (hb : Bytes b)\n    (h : pack a = pack b)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "a = b"
+      },
+      "storySha256": "7afa7a192afe2c9d1ff4a47a152ae539cad300f13215cef3a8de33d60406c5d1"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.blake2b256_bytes",
+      "path": "lean/CardanoKeri/ConsumerBytes.lean",
+      "line": 225,
+      "statement": "theorem blake2b256_bytes (bs : List Nat) : Bytes (blake2b256 bs)",
+      "statementSha256": "fed76c289d13492756aac40ac5f44785f085fd40c1912a4a0719c21036057339",
+      "sourceStory": "BL5. Given any input; when hashed with BLAKE2b-256; then every output element is a byte.",
+      "story": {
+        "given": "(bs : List Nat)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "Bytes (blake2b256 bs)"
+      },
+      "storySha256": "f68b917de32b744d7b2b2f7df170cfc161e9601286f44b99ec3897e926b1246c"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.be_length",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 64,
+      "statement": "theorem be_length (k n : Nat) : (be k n).length = k",
+      "statementSha256": "ceb9378ff4b83e4037dd4b290de38d323f6a0160bcefb442703661a650794f53",
+      "sourceStory": "BR1. Given a width and a number; when written big-endian at that width; then the length is\nthe width.",
+      "story": {
+        "given": "(k n : Nat)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "(be k n).length = k"
+      },
+      "storySha256": "7b2000a4a9e6b37dec5d005554ad0993e088ce9b5dc952e2b5140babe799bfab"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.beVal_append",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 71,
+      "statement": "theorem beVal_append (xs : List Nat) (b : Nat) : beVal (xs ++ [b]) = beVal xs * 256 + b",
+      "statementSha256": "c682bf3df68df25175c55a71997429f9ddfabf5505559c1f3a39c4f860449af8",
+      "sourceStory": "BR2. Given bytes and one more byte; when reading the big-endian value; then the value shifts\nby one byte and adds it.",
+      "story": {
+        "given": "(xs : List Nat) (b : Nat)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "beVal (xs ++ [b]) = beVal xs * 256 + b"
+      },
+      "storySha256": "efc3e4b762d1d4fcf89573f24c957dcf4dedbf712ff03943f1a43a8827b79dd3"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.beVal_be",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 76,
+      "statement": "theorem beVal_be (k n : Nat) : beVal (be k n) = n % 256 ^ k",
+      "statementSha256": "44246767f8a2bb101f328cc0396e365d00ed8dbaad265bbae9d5b32a3a58af1b",
+      "sourceStory": "BR3. Given a width and a number; when written big-endian and read back; then the number\nmodulo the width's range returns.",
+      "story": {
+        "given": "(k n : Nat)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "beVal (be k n) = n % 256 ^ k"
+      },
+      "storySha256": "a0e1b5e53cb874e009daeeecde5db293fe321af4168d9a5fac955ae5fd160865"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.readBe_be",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 85,
+      "statement": "theorem readBe_be (k n : Nat) (t : List Nat) (h : n < 256 ^ k) :\n    readBe k (be k n ++ t) = some (n, t)",
+      "statementSha256": "89609f7df7ab05021b18a68f79a9dc8853d24654784023ab940bdaef55d376f9",
+      "sourceStory": "BR4. Given a number within a width's range and any rest; when written big-endian and read;\nthen the number and the rest return.",
+      "story": {
+        "given": "(k n : Nat) (t : List Nat) (h : n < 256 ^ k)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "readBe k (be k n ++ t) = some (n, t)"
+      },
+      "storySha256": "cb16623ff9e0747fe01db0d1962a1bc976bf28bdd8ee117e328ee87954e72299"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.readHead_head",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 93,
+      "statement": "theorem readHead_head (m n : Nat) (t : List Nat)\n    (hn : n < 18446744073709551616) : readHead (head m n ++ t) = some (m, n, t)",
+      "statementSha256": "ffc42799b8505c23d1315020e0963004bf88890f39c713a97a4b7ab92c8dfe38",
+      "sourceStory": "BR5. Given a major type below 8, an argument below 2^64 and any rest; when the shortest head\nis written and read; then major type, argument and rest return.",
+      "story": {
+        "given": "(m n : Nat) (t : List Nat)\n    (hn : n < 18446744073709551616)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "readHead (head m n ++ t) = some (m, n, t)"
+      },
+      "storySha256": "3b219808362c7936ef25c2391572340449003cf2e14a8cce4d2fd8bfb97a0343"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.head_cons",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 125,
+      "statement": "theorem head_cons (m n : Nat) : ∃ b rest, head m n = b :: rest ∧ b / 32 = m ∧ b % 32 ≤ 27",
+      "statementSha256": "272f9eb4b3479b108101aa5bb62928e2094a58b7653aa35a02297babf2a4224e",
+      "sourceStory": "BR15. Given a major type and an argument; when the shortest head is written; then its first\nbyte carries the major type and an additional-information value of at most 27.",
+      "story": {
+        "given": "(m n : Nat)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "∃ b rest, head m n = b :: rest ∧ b / 32 = m ∧ b % 32 ≤ 27"
+      },
+      "storySha256": "f6bd4ecad6f30a502da8771a19f29816af34e5814db4caef937835a475a7af6c"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.chunks_length",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 138,
+      "statement": "theorem chunks_length (bs : List Nat) : bs.length ≤ (chunks bs).length",
+      "statementSha256": "6eeaf8faf195b7228fe92a8591ae83c67e6dbe64ea6d895bba6817d082ce9fe6",
+      "sourceStory": "BR6. Given a byte string; when chunked; then the chunks are at least as long as the string.",
+      "story": {
+        "given": "(bs : List Nat)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "bs.length ≤ (chunks bs).length"
+      },
+      "storySha256": "63b878ec6e772975bd771d400048413ba8680cfd9722fe95916631b1dc64675d"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.readChunks_chunks",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 152,
+      "statement": "theorem readChunks_chunks (bs t : List Nat) (fuel : Nat) (hf : bs.length < fuel) :\n    readChunks fuel (chunks bs ++ 0xff :: t) = some (bs, t)",
+      "statementSha256": "cb148c6db3435eea3975d670ee3e5acf6f7d8ddfd9c2bab7890084bd9dd8d1c3",
+      "sourceStory": "BR7. Given a byte string, any rest and enough fuel; when its chunks and a break byte are\nread; then the string and the rest return.",
+      "story": {
+        "given": "(bs t : List Nat) (fuel : Nat) (hf : bs.length < fuel)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "readChunks fuel (chunks bs ++ 0xff :: t) = some (bs, t)"
+      },
+      "storySha256": "c64465323e4c9faf593dac3dc179486febbaf073b04f9b449eb2e0846bca21f6"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.readBstr_bstr",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 177,
+      "statement": "theorem readBstr_bstr (bs t : List Nat) : readBstr (bstr bs ++ t) = some (bs, t)",
+      "statementSha256": "7dabf661417a78ffaa131ae793d11fa31b21f3500b141a8eee58eb7cf84f92e0",
+      "sourceStory": "BR8. Given a byte string and any rest; when serialised and read; then the string and the\nrest return.",
+      "story": {
+        "given": "(bs t : List Nat)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "readBstr (bstr bs ++ t) = some (bs, t)"
+      },
+      "storySha256": "59321b47df25a1c6065f3dd72a069c474b4a21dbdda6739ab677443f53fadcc0"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.beVal_minimalBe",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 195,
+      "statement": "theorem beVal_minimalBe (n : Nat) : beVal (minimalBe n) = n",
+      "statementSha256": "7fa450cb72269440026a9277e0f78acb82cb8a2ac5e5b263e9cd64cdd1b1b74d",
+      "sourceStory": "BR9. Given a number; when written big-endian without leading zeros and read; then it returns.",
+      "story": {
+        "given": "(n : Nat)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "beVal (minimalBe n) = n"
+      },
+      "storySha256": "f4353437839691483af55b70375a4a4da77e1bb369cfe0eeb0063bbef32e1b51"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.readInt_int",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 206,
+      "statement": "theorem readInt_int (n : Nat) (t : List Nat) : readInt (int n ++ t) = some (n, t)",
+      "statementSha256": "72a23600df802dccde41f46a9742bcf66d87d38a2478f912efdd3369991c08e0",
+      "sourceStory": "BR10. Given a non-negative integer and any rest; when serialised and read; then the integer\nand the rest return.",
+      "story": {
+        "given": "(n : Nat) (t : List Nat)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "readInt (int n ++ t) = some (n, t)"
+      },
+      "storySha256": "2ad5f4bcde6f5e87f298f22e47eefc2d43a5dc2883fb87d017e196ea6adb50e9"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.bstr_cancel",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 220,
+      "statement": "theorem bstr_cancel {a b t u : List Nat} (h : bstr a ++ t = bstr b ++ u) : a = b ∧ t = u",
+      "statementSha256": "580220b59add17116f572f8ccafb0540261041e1dff36d9dd97082fa0e5b04f0",
+      "sourceStory": "BR11. Given two serialised byte strings with rests that concatenate equally; when compared;\nthen strings and rests are equal.",
+      "story": {
+        "given": "{a b t u : List Nat} (h : bstr a ++ t = bstr b ++ u)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "a = b ∧ t = u"
+      },
+      "storySha256": "4aee2d02caaa856d22e80ca33ad6b51238cbe4f73856e04d077fcbfbf9ce5ed4"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.int_cancel",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 227,
+      "statement": "theorem int_cancel {m n : Nat} {t u : List Nat} (h : int m ++ t = int n ++ u) : m = n ∧ t = u",
+      "statementSha256": "c17ad1ebaeaf2487bfd12da44fd9a30f2fc332e89a4bbb550e073e8cf4d2fa56",
+      "sourceStory": "BR12. Given two serialised integers with rests that concatenate equally; when compared; then\nintegers and rests are equal.",
+      "story": {
+        "given": "{m n : Nat} {t u : List Nat} (h : int m ++ t = int n ++ u)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "m = n ∧ t = u"
+      },
+      "storySha256": "9b9f02cefe4cb296106adbc0be7d606fc5c3b818fb7a84d9e71048e00cdd0b68"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.code_state",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 241,
+      "statement": "theorem code_state (seed : Singular.OutRef) : code (.state seed) =\n    [0xd8, 121, 0x9f, 0xd8, 121, 0x9f] ++ bstr (unpack seed.tx) ++ int seed.index ++ [0xff, 0xff]",
+      "statementSha256": "b9a21d250165e949009d8d3cf745092165c787a4ea12f6f1aa68ebd45ae92edd",
+      "sourceStory": "BR13. Given a seed; when its State preimage is serialised; then the bytes are constructor 0\naround the seed's output reference.",
+      "story": {
+        "given": "(seed : Singular.OutRef)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "code (.state seed) =\n    [0xd8, 121, 0x9f, 0xd8, 121, 0x9f] ++ bstr (unpack seed.tx) ++ int seed.index ++ [0xff, 0xff]"
+      },
+      "storySha256": "b877f19a55396b6521f0dbf1782409e55055d01bd996e7159f64273943ece354"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.code_active",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 247,
+      "statement": "theorem code_active (r : Singular.TokenId) (key : Singular.Key) : code (.active r key) =\n    [0xd8, 122, 0x9f, 0xd8, 121, 0x9f] ++ bstr (unpack r.policy) ++ bstr (unpack r.name) ++\n      [0xff] ++ bstr (unpack key) ++ [0xff]",
+      "statementSha256": "d77b8b3065f576608516d21d3dd96097fc5a019a6ecfd9d58ff3c03554ea502c",
+      "sourceStory": "BR14. Given a registry and a key; when their Active preimage is serialised; then the bytes\nare constructor 1 around the registry identity and the key.",
+      "story": {
+        "given": "(r : Singular.TokenId) (key : Singular.Key)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "code (.active r key) =\n    [0xd8, 122, 0x9f, 0xd8, 121, 0x9f] ++ bstr (unpack r.policy) ++ bstr (unpack r.name) ++\n      [0xff] ++ bstr (unpack key) ++ [0xff]"
+      },
+      "storySha256": "31dd9231db1be2525a03a79c377cad074f3e13efd14e88a0330eb5590448b07b"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.code_injective_on_identity",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 255,
+      "statement": "theorem code_injective_on_identity (a b : AH.Preimage) (ha : IdentityPreimage a)\n    (hb : IdentityPreimage b) (h : code a = code b) : a = b",
+      "statementSha256": "1a5dc339de71963fcb0b2b7e481caf3a973e7a9dfc31d3451aadbaa595e9b42d",
+      "sourceStory": "BC1. Given two State or Active preimages; when serialised by the concrete\ncodec; then equal bytes mean equal preimages, field by field: transaction id\nand output index of the seed, or policy and name of the registry and the key.",
+      "story": {
+        "given": "(a b : AH.Preimage) (ha : IdentityPreimage a)\n    (hb : IdentityPreimage b) (h : code a = code b)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "a = b"
+      },
+      "storySha256": "a9463e82f8bdf9d18767e36efa9c538d70de7ded9b5c0fd84ebe291c8a86cafd"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.finiteEncoding",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 287,
+      "statement": "theorem finiteEncoding (decode : AH.PublishedRelease → Nat → Option DecodedDatum)\n    (c d : Context) :\n    AH.FiniteEncoding (interpretation decode).code\n      (identityDomain (interpretation decode) c d)",
+      "statementSha256": "870271aa76739ae72122b77bbf415dea04095c42e47eb11f3b44615ae66f9084",
+      "sourceStory": "BC2. Given any interpretation built from the concrete bytes and any two\nconsumer contexts; when serialising their identity domain (both State and both\nActive preimages); then the finite encoding premise of the consumer statements\nholds. No assumption is added.",
+      "story": {
+        "given": "(decode : AH.PublishedRelease → Nat → Option DecodedDatum)\n    (c d : Context)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "AH.FiniteEncoding (interpretation decode).code\n      (identityDomain (interpretation decode) c d)"
+      },
+      "storySha256": "333e5f4b9e98366563231f7ada7d532effdbf661dba24d464875ad8d293356d7"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.finiteCollisionFree",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 307,
+      "statement": "theorem finiteCollisionFree (decode : AH.PublishedRelease → Nat → Option DecodedDatum)\n    (c d : Context)\n    (digest : DigestCollisionFree (identityDomain (interpretation decode) c d)) :\n    AH.FiniteCollisionFree (interpretation decode).hash (interpretation decode).code\n      (identityDomain (interpretation decode) c d)",
+      "statementSha256": "375ff67acf99171482290eb3cf7d3293859f1b52853e9e22cff8c51dcc3a1e57",
+      "sourceStory": "BC3. Given BLAKE2b-256 digest collision freedom over the identity domain;\nwhen names are the carried digests of the serialised preimages; then the\nfinite collision premise of the consumer statements holds. The premise is not\ndischarged: a 256-bit digest of unbounded inputs is not injective.",
+      "story": {
+        "given": "(decode : AH.PublishedRelease → Nat → Option DecodedDatum)\n    (c d : Context)\n    (digest : DigestCollisionFree (identityDomain (interpretation decode) c d))",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "AH.FiniteCollisionFree (interpretation decode).hash (interpretation decode).code\n      (identityDomain (interpretation decode) c d)"
+      },
+      "storySha256": "fd05c3c183c7b95160b91d10ecc31728ea68c1e7f94333fe746931eed24529a2"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.keyOf_cesr",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 317,
+      "statement": "theorem keyOf_cesr (text : String) : unpack (keyOf (aidOfCesr text)) = utf8 text ∧\n    ∀ a b : AID, keyOf a = keyOf b → a = b",
+      "statementSha256": "93252c6c8a0ce9e6faf0641e407571f84f9d96f382130dbae824e315caa8145d",
+      "sourceStory": "BC4. Given two AIDs; when taking their registry keys; then the keys are\nthe AIDs' qualified CESR text bytes and distinct AIDs have distinct keys.",
+      "story": {
+        "given": "(text : String)",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "unpack (keyOf (aidOfCesr text)) = utf8 text ∧\n    ∀ a b : AID, keyOf a = keyOf b → a = b"
+      },
+      "storySha256": "9a0ad3a94efbd6b6cf15dc49b1b8a99cc19cb63ee086c6412255e580d3ba6455"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.different_aids_distinct",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 328,
+      "statement": "theorem different_aids_distinct (decode : AH.PublishedRelease → Nat → Option DecodedDatum)\n    (c d : Context) (sameRegistry : registryAsset (interpretation decode) c =\n      registryAsset (interpretation decode) d)\n    (aids : c.aid ≠ d.aid)\n    (digest : DigestCollisionFree (identityDomain (interpretation decode) c d)) :\n    representativeAsset (interpretation decode) c ≠ representativeAsset (interpretation decode) d",
+      "statementSha256": "d473155eb67afbfa1bbaa70cccc70b0636147211f9450c3c81ec40072f9cfc9f",
+      "sourceStory": "BC5. Given the concrete interpretation, one registry and two different\nAIDs, and digest collision freedom over their identity domain; when deriving\nrepresentative assets; then they differ.",
+      "story": {
+        "given": "(decode : AH.PublishedRelease → Nat → Option DecodedDatum)\n    (c d : Context) (sameRegistry : registryAsset (interpretation decode) c =\n      registryAsset (interpretation decode) d)\n    (aids : c.aid ≠ d.aid)\n    (digest : DigestCollisionFree (identityDomain (interpretation decode) c d))",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "representativeAsset (interpretation decode) c ≠ representativeAsset (interpretation decode) d"
+      },
+      "storySha256": "acfb1bacbd86f4ce9172453ac0921b7fb6a2dab15f73c5e598be6771f861edc5"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.different_seeds_distinct_bytes",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 340,
+      "statement": "theorem different_seeds_distinct_bytes (decode : AH.PublishedRelease → Nat → Option DecodedDatum)\n    (c d : Context) (seeds : c.seed ≠ d.seed)\n    (digest : DigestCollisionFree (identityDomain (interpretation decode) c d)) :\n    registryAsset (interpretation decode) c ≠ registryAsset (interpretation decode) d ∧\n    representativeAsset (interpretation decode) c ≠ representativeAsset (interpretation decode) d",
+      "statementSha256": "013f06738fca766a9d2055274c38ed77b433400cf1af71393d30dd5a878dd0ea",
+      "sourceStory": "BC6. Given the concrete interpretation and two different seeds, and digest\ncollision freedom over their identity domain; when deriving registry and\nrepresentative assets; then both differ.",
+      "story": {
+        "given": "(decode : AH.PublishedRelease → Nat → Option DecodedDatum)\n    (c d : Context) (seeds : c.seed ≠ d.seed)\n    (digest : DigestCollisionFree (identityDomain (interpretation decode) c d))",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "registryAsset (interpretation decode) c ≠ registryAsset (interpretation decode) d ∧\n    representativeAsset (interpretation decode) c ≠ representativeAsset (interpretation decode) d"
+      },
+      "storySha256": "ff6fac0737ea02cb2cf1937e97aa164786310efc5c192247b2617b2a01e8cbe0"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.Bytes.rival_seed_refused_bytes",
+      "path": "lean/CardanoKeri/ConsumerBytesGoals.lean",
+      "line": 351,
+      "statement": "theorem rival_seed_refused_bytes (decode : AH.PublishedRelease → Nat → Option DecodedDatum)\n    (c rival : Context) (e : Environment) (p : Params) (now : Slot) (o : AH.ObservedOutput)\n    (n : Nat) (seeds : c.seed ≠ rival.seed)\n    (assets : o.assets = [(representativeAsset (interpretation decode) rival, n)])\n    (digest : DigestCollisionFree (identityDomain (interpretation decode) c rival)) :\n    ¬ consumableHolding (interpretation decode) c e p now o",
+      "statementSha256": "79fddd030fb5a1794e84a2fecf49bdd5c7e58b0fdf44a8679f560ce9427d5123",
+      "sourceStory": "BC7. Given the concrete interpretation, a consistent rival seed's singleton\nactive asset and digest collision freedom over the two contexts' identity\ndomain; when checked against the consumer's fixed context; then refuse.",
+      "story": {
+        "given": "(decode : AH.PublishedRelease → Nat → Option DecodedDatum)\n    (c rival : Context) (e : Environment) (p : Params) (now : Slot) (o : AH.ObservedOutput)\n    (n : Nat) (seeds : c.seed ≠ rival.seed)\n    (assets : o.assets = [(representativeAsset (interpretation decode) rival, n)])\n    (digest : DigestCollisionFree (identityDomain (interpretation decode) c rival))",
+        "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
+        "then": "¬ consumableHolding (interpretation decode) c e p now o"
+      },
+      "storySha256": "e18838abd31e7a8b5c772f2e824190d136bd7230dbdfa36832d84b7388a80a9a"
     },
     {
       "declaration": "CardanoKeri.ConsumerIdentity.consumableHoldingB_iff",

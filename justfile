@@ -743,12 +743,17 @@ check-flake-lock-guard:
 # --self-test) exercises the exact code this recipe runs, not a copy of it;
 # the guard's own INV-259-ASSERT caller-presence check requires this exact
 # invocation to remain in this recipe.
-ci: check-flake-lock-guard ci-release-scripts check-singular-lean ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
+ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
     ./scripts/check-flake-lock-guard.sh --assert-lock-unchanged
 
 # #478: clean exact-compiler build and public proposition controls, identical to CI.
 check-singular-lean:
     cd lean && nix build --no-write-lock-file --no-link -L .#checks.x86_64-linux.singular-dependency
+
+# #477: the reusable KERI Aiken libraries compiled and tested together with the
+# published Singular registry package, with interface controls; identical to CI.
+check-singular-aiken:
+    cd aiken-singular-consumer && nix build --no-write-lock-file --no-link -L .#checks.x86_64-linux.aiken-singular-consumer
 
 # Validate the offered-interface schemas and generate its MkDocs reference.
 check-offered-interface:

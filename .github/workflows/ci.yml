@@ -147,6 +147,25 @@ jobs:
       - name: Check (tests + type-check)
         working-directory: onchain
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check
+      # The reusable KERI libraries compiled together with the published
+      # Singular registry package; compatibility and retained registration
+      # tests, test-identity agreement and interface controls (#477).
+      - name: Singular package consumer (KERI libraries + controls)
+        working-directory: aiken-singular-consumer
+        run: |
+          set -o pipefail
+          nix build --no-write-lock-file -L \
+            .#checks.x86_64-linux.aiken-singular-consumer \
+            --out-link ../singular-aiken-consumer-receipts 2>&1 | tee ../singular-aiken-consumer-build.log
+      - name: Retain compiler, lock, test and control receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: singular-aiken-consumer-${{ github.sha }}
+          path: |
+            singular-aiken-consumer-build.log
+            singular-aiken-consumer-receipts/
+          retention-days: 14
 
   lean:
     name: Lean (Checkpoint sole spec + retirement ledger)

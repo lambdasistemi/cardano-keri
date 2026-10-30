@@ -1133,6 +1133,14 @@ than declared beside 'cageBuilderPath'.  The
 checkpointE2EDriverPath :: FilePath
 checkpointE2EDriverPath = "offchain/e2e/CheckpointTxBuilder.hs"
 
+{- | The consumer E2E specification, which applies the consumer context and
+parameters to the example consumer validator to deploy it on a throwaway
+devnet (#343).  It publishes no deployment identity, so it is excluded from
+the horizon like the checkpoint E2E driver.
+-}
+consumerE2ESpecPath :: FilePath
+consumerE2ESpecPath = "offchain/e2e/ConsumerE2ESpec.hs"
+
 {- | One census row: a module, an identifier, and how many times that identifier
 occurs in that module's syntax tree.
 
@@ -1187,6 +1195,7 @@ defaultScanConfig root =
             [ "offchain/deployment-test/Cardano/KERI/Deployment/ScriptAritySpec.hs"
             , entitlementSpecPath
             , checkpointE2EDriverPath
+            , consumerE2ESpecPath
             ]
         }
 

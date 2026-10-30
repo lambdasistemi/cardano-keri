@@ -15,7 +15,11 @@ node simulator/consumer-js-mutants.mjs "$consumer_mutation_receipts"
 (
   cd lean
   lake build CardanoKeri.ConsumerBytesVectors
-  lake env lean --run ConsumerBytesDriver.lean | diff -u consumer-identity-vectors.json -
+  generated=$(mktemp)
+  lake env lean --run ConsumerBytesDriver.lean >"$generated"
+  node -e 'const fs=require("fs");if(fs.readFileSync(process.argv[1],"utf8")!==fs.readFileSync(process.argv[2],"utf8")){console.error("consumer-identity-vectors.json differs from the Lean output");process.exit(1)}' \
+    consumer-identity-vectors.json "$generated"
+  rm -f -- "$generated"
   lake env lean --run ConsumerBytesDriver.lean --check consumer-identity-vectors.json
   lake env lean --run ConsumerBytesDriver.lean --singular \
     .lake/packages/singular/offchain/test/fixtures/preimage-vectors.json

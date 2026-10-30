@@ -25,6 +25,14 @@ consumer script: its transaction passes every ledger rule, carries no other
 script, and is rejected by the node when that script evaluates false. The
 refusals differ from the accepting transaction only in the holding they
 reference.
+
+The same journey runs a second time with the concrete identity bytes of the
+Lean model (@consumer_identity_example@, @consumer_identity_bytes@): the
+registry name, the key and the representative name are recomputed here from
+the Lean layout, and checked against the vectors of
+@lean/consumer-identity-vectors.json@ before they name anything on chain. The
+datum decoder is still the declared test choice, and the holdings are still
+seeded.
 -}
 module ConsumerE2ESpec (spec) where
 
@@ -35,12 +43,15 @@ import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as B8
 import Data.ByteString.Short qualified as SBS
+import Data.Char (digitToInt, isDigit)
 import Data.List (isInfixOf)
 import Data.Map.Strict qualified as Map
 import Data.Sequence.Strict qualified as StrictSeq
 import Data.Set qualified as Set
+import Data.Text (Text)
+import Data.Text qualified as T
 import Data.Time.Clock.POSIX (getPOSIXTime)
-import Data.Word (Word32)
+import Data.Word (Word32, Word8)
 import Lens.Micro ((&), (.~), (^.))
 import System.Environment (lookupEnv)
 import System.IO (hPutStrLn, stderr)
@@ -206,8 +217,8 @@ stateData Parked = PLC.Constr 2 [PLC.Constr 0 [PLC.I 0, PLC.I 0]]
 stateData Pending = PLC.Constr 3 [PLC.Constr 0 [PLC.I 0, PLC.I 0]]
 stateData Convicted = PLC.Constr 4 []
 
-decodedDatum :: StateKind -> PLC.Data
-decodedDatum s = PLC.Constr 0 [PLC.I intendedAid, stateData s]
+decodedDatum :: Integer -> StateKind -> PLC.Data
+decodedDatum aid s = PLC.Constr 0 [PLC.I aid, stateData s]
 
 -- ---------------------------------------------------------------------------
 -- Scenarios
@@ -236,6 +247,214 @@ refusals =
 scenarios :: [Scenario]
 scenarios = accepting : refusals
 
+{- | What differs between the two connected runs: the consumer validator, the
+AID the consumer fixes, how a representative asset is named from the state
+policy and the seed transaction, and the scenarios.
+-}
+data Variant = Variant
+    { vValidator :: Text
+    -- ^ blueprint title of the consumer validator
+    , vAid :: Integer
+    , vRepresentativeName :: ByteString -> ByteString -> ByteString
+    -- ^ state policy, seed transaction id
+    , vScenarios :: [Scenario]
+    }
+
+-- | The declared test interpretation (not the registry byte layout).
+testVariant :: Variant
+testVariant =
+    Variant
+        { vValidator = "consumer_example.consumer_example.spend"
+        , vAid = intendedAid
+        , vRepresentativeName = representativeName
+        , vScenarios = scenarios
+        }
+
+-- | The concrete identity bytes of the Lean model.
+concreteVariant :: Variant
+concreteVariant =
+    Variant
+        { vValidator =
+            "consumer_identity_example.consumer_identity_example.spend"
+        , vAid = concreteAid
+        , vRepresentativeName = \statePolicy tx ->
+            concreteRepresentativeName statePolicy tx 0 concreteAidText
+        , vScenarios =
+            [ accepting
+            , Scenario "a rival seed's token" True 1 Present
+            ]
+        }
+
+-- ---------------------------------------------------------------------------
+-- The concrete identity bytes, written out from the Lean layout
+-- ---------------------------------------------------------------------------
+
+-- | Lean @pack@: the bijective base-256 numeral of a byte string.
+packBytes :: ByteString -> Integer
+packBytes = BS.foldr (\b acc -> toInteger b + 1 + 256 * acc) 0
+
+-- | CBOR head of a major type and an argument below 2^64, shortest form.
+cborHead :: Word8 -> Integer -> ByteString
+cborHead major n
+    | n < 24 = BS.pack [major * 32 + fromInteger n]
+    | n < 256 = BS.cons (major * 32 + 24) (be 1)
+    | n < 65_536 = BS.cons (major * 32 + 25) (be 2)
+    | n < 4_294_967_296 = BS.cons (major * 32 + 26) (be 4)
+    | otherwise = BS.cons (major * 32 + 27) (be 8)
+  where
+    be k = BS.pack [fromIntegral (n `shiftR` (8 * i)) | i <- [k - 1, k - 2 .. 0]]
+
+-- | A byte string of at most 64 bytes, definite.
+cborBytes :: ByteString -> ByteString
+cborBytes b
+    | BS.length b <= 64 = cborHead 2 (toInteger (BS.length b)) <> b
+    | otherwise = error "cborBytes: the identity fields are at most 64 bytes"
+
+-- | Lean @code (State seed)@: constructor 0 holding the output reference.
+concreteStatePreimage :: ByteString -> Integer -> ByteString
+concreteStatePreimage tx index =
+    BS.concat
+        [ BS.pack [0xd8, 0x79, 0x9f, 0xd8, 0x79, 0x9f]
+        , cborBytes tx
+        , cborHead 0 index
+        , BS.pack [0xff, 0xff]
+        ]
+
+-- | Lean @code (Active registry key)@: constructor 1 holding the registry.
+concreteActivePreimage :: ByteString -> ByteString -> ByteString -> ByteString
+concreteActivePreimage policy registry key =
+    BS.concat
+        [ BS.pack [0xd8, 0x7a, 0x9f, 0xd8, 0x79, 0x9f]
+        , cborBytes policy
+        , cborBytes registry
+        , BS.pack [0xff]
+        , cborBytes key
+        , BS.pack [0xff]
+        ]
+
+-- | The registry asset name: the hash of the state preimage.
+concreteRegistryName :: ByteString -> Integer -> ByteString
+concreteRegistryName tx index = blake2b256 (concreteStatePreimage tx index)
+
+{- | The representative asset name: the hash of the active preimage, over the
+state policy, the registry name and the AID's CESR text.
+-}
+concreteRepresentativeName ::
+    ByteString -> ByteString -> Integer -> ByteString -> ByteString
+concreteRepresentativeName policy tx index key =
+    blake2b256
+        (concreteActivePreimage policy (concreteRegistryName tx index) key)
+
+-- | The qualified CESR text of the intended AID (vector @transferable-aid@).
+concreteAidText :: ByteString
+concreteAidText = B8.pack "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"
+
+-- | Lean @aidOfCesr@ of that text: the AID the consumer fixes.
+concreteAid :: Integer
+concreteAid = packBytes concreteAidText
+
+-- | Bytes from hexadecimal text (the vectors' notation).
+unhex :: String -> ByteString
+unhex [] = BS.empty
+unhex (a : b : rest) = BS.cons (digit a * 16 + digit b) (unhex rest)
+  where
+    digit c
+        | isDigit c = fromIntegral (digitToInt c)
+        | c >= 'a' && c <= 'f' = fromIntegral (fromEnum c - fromEnum 'a' + 10)
+        | otherwise = error "unhex: not a lowercase hexadecimal digit"
+unhex _ = error "unhex: odd length"
+
+{- | The vectors of @lean/consumer-identity-vectors.json@: id, state policy,
+seed transaction id, seed output index, CESR text, expected registry name and
+expected representative name. Copied from the file, not computed here.
+-}
+leanVectors :: [(String, String, String, Integer, String, String, String)]
+leanVectors =
+    [
+        ( "transferable-aid"
+        , "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7"
+        , "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+        , 0
+        , "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"
+        , "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf"
+        , "866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8"
+        )
+    ,
+        ( "other-aid-same-registry"
+        , "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7"
+        , "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+        , 0
+        , "EEBjyTcVHGUZHrR1x3wuxOxbrzH0_cGfAYJJQHME3Pwo"
+        , "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf"
+        , "07758b6c783532bf93bb2dbeeef28a8287716447662dd60a13b3357799e53110"
+        )
+    ,
+        ( "non-transferable-aid"
+        , "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7"
+        , "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+        , 0
+        , "BPbeCTEUzPz5UEX4J9Mk8JST2bZV3phvCQ8hWs0diM14"
+        , "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf"
+        , "fda241c4049323fa652a76f3d500e7828b49acdd1eca2a112adfa5265653fc80"
+        )
+    ,
+        ( "rival-seed-output-index"
+        , "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7"
+        , "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+        , 1
+        , "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"
+        , "137d838233aa11f5c452b27faba772d541440f2a8aabb0357f565d5fe182002c"
+        , "2f55cee243abd69ae7276f2478fffb5dbac67bd0146e90bfa8432b59cc04be15"
+        )
+    ,
+        ( "rival-seed-transaction"
+        , "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7"
+        , "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1e"
+        , 0
+        , "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"
+        , "187d076638ea18d91c192c59092396bb7bf9c0f302ead97cf65751af0e878bcc"
+        , "d934a32be44496f7452cbae58775ce251138a942e121dbcc80e1f2883a9969a9"
+        )
+    ,
+        ( "other-state-policy"
+        , "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f6"
+        , "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+        , 0
+        , "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"
+        , "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf"
+        , "66b57382eb1f585288faa37a7a7ee4591ede1f8a2cc0d289be96140e19e73ce9"
+        )
+    ,
+        ( "seed-output-index-24"
+        , "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7"
+        , "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+        , 24
+        , "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"
+        , "9d417daf68fb27a72855350afe1b3720d6f1fe33a72f470a3c6d422e84d2230d"
+        , "5f5c9b01bac42f5f47a57e27f2d3b11bde6e741926d034b8b380cbcf35f6bbc5"
+        )
+    ,
+        ( "seed-output-index-256"
+        , "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7"
+        , "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+        , 256
+        , "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"
+        , "dc4d6b04df49082c68c31bee1f1c79f1d50bd845678b3db5c311da83a45a38f0"
+        , "1917168024281cff5941cd308be5d1b9b2bd35c54937153fe3dbc884759270b2"
+        )
+    ]
+
+-- | The off-chain naming reproduces every vector of the Lean model.
+namesMatchTheLeanVectors :: Spec
+namesMatchTheLeanVectors =
+    forM_ leanVectors $ \(vid, policy, tx, index, cesr, registry, active) ->
+        it ("names " <> vid <> " as the Lean vector does") $ do
+            let txBytes = unhex tx
+                key = B8.pack cesr
+            concreteRegistryName txBytes index `shouldBe` unhex registry
+            concreteRepresentativeName (unhex policy) txBytes index key
+                `shouldBe` unhex active
+
 -- ---------------------------------------------------------------------------
 -- World
 -- ---------------------------------------------------------------------------
@@ -255,13 +474,22 @@ data World = World
 
 spec :: Spec
 spec =
-    describe "#343 consumer predicate on the local chain" $
-        aroundAll withSeededWorld $ do
+    describe "#343 consumer predicate on the local chain" $ do
+        aroundAll (withSeededWorld testVariant) $ do
             it "settles a spend that references the eligible holding" $
                 \w -> acceptingSettles w
             forM_ (zip [1 ..] refusals) $ \(ix, sc) ->
                 it ("refuses, in the consumer script, " <> scName sc) $
                     \w -> refusalIsScriptFailure w ix sc
+        describe "concrete identity bytes, test datum decoder" $ do
+            namesMatchTheLeanVectors
+            aroundAll (withSeededWorld concreteVariant) $ do
+                it "settles a spend that references the holding named by the concrete identity bytes" $
+                    \w -> acceptingSettles w
+                forM_ (zip [1 ..] (drop 1 (vScenarios concreteVariant))) $
+                    \(ix, sc) ->
+                        it ("refuses, in the consumer script, " <> scName sc) $
+                            \w -> refusalIsScriptFailure w ix sc
 
 -- ---------------------------------------------------------------------------
 -- Setup
@@ -282,8 +510,8 @@ scriptHashOf bytes =
 scriptAddr :: ScriptHash -> Addr
 scriptAddr h = Addr Testnet (ScriptHashObj h) StakeRefNull
 
-withSeededWorld :: (World -> IO ()) -> IO ()
-withSeededWorld action = do
+withSeededWorld :: Variant -> (World -> IO ()) -> IO ()
+withSeededWorld variant action = do
     bpPath <-
         lookupEnv "KERI_CAGE_BLUEPRINT"
             >>= maybe (fail "KERI_CAGE_BLUEPRINT not set") pure
@@ -294,10 +522,8 @@ withSeededWorld action = do
                 "consumer_seed_policy.consumer_seed_policy.mint"
                 bp
     consumerCode <-
-        maybe (fail "consumer_example not in the blueprint") pure $
-            extractCompiledCodeExact
-                "consumer_example.consumer_example.spend"
-                bp
+        maybe (fail (T.unpack (vValidator variant) <> " not in the blueprint")) pure $
+            extractCompiledCodeExact (vValidator variant) bp
     let seedHash = computeScriptHash seedProgram
         statePolicyBytes = scriptHashBytes seedHash
         contextData =
@@ -312,7 +538,7 @@ withSeededWorld action = do
                     , PLC.B statePolicyBytes
                     ]
                 , PLC.Constr 0 [PLC.B seedTx, PLC.I 0]
-                , PLC.I intendedAid
+                , PLC.I (vAid variant)
                 ]
         consumerProgram = applyDataArgs [contextData, paramsData] consumerCode
         consumerHash = computeScriptHash consumerProgram
@@ -322,6 +548,7 @@ withSeededWorld action = do
         dbg ("seed policy " <> show seedHash <> "; consumer " <> show consumerHash)
         world <-
             seedWorld
+                variant
                 prov
                 sub
                 seedProgram
@@ -428,6 +655,7 @@ holding per scenario to the test application credential, each with a
 decoded datum of its state; lock one consumer output per scenario.
 -}
 buildSeedTx ::
+    Variant ->
     Provider IO ->
     SBS.ShortByteString ->
     ScriptHash ->
@@ -436,16 +664,16 @@ buildSeedTx ::
     Utxo ->
     Utxo ->
     IO ConwayTx
-buildSeedTx prov seedProgram seedHash statePolicyBytes consumerProgram feeUtxo collUtxo = do
+buildSeedTx variant prov seedProgram seedHash statePolicyBytes consumerProgram feeUtxo collUtxo = do
     pp <- queryProtocolParams prov
     let policyId = PolicyID seedHash
-        intendedName = representativeName statePolicyBytes seedTx
-        rivalName = representativeName statePolicyBytes rivalSeedTx
+        intendedName = vRepresentativeName variant statePolicyBytes seedTx
+        rivalName = vRepresentativeName variant statePolicyBytes rivalSeedTx
         nameOf sc
             | scRivalRegistry sc = rivalName
             | otherwise = intendedName
         total pick =
-            sum [scQuantity sc | sc <- scenarios, pick sc]
+            sum [scQuantity sc | sc <- vScenarios variant, pick sc]
         mintMA =
             MultiAsset . Map.singleton policyId $
                 Map.fromList
@@ -463,14 +691,16 @@ buildSeedTx prov seedProgram seedHash statePolicyBytes consumerProgram feeUtxo c
                             (scQuantity sc)
                     )
                 )
-                & datumTxOutL .~ mkInlineDatum (decodedDatum (scState sc))
+                & datumTxOutL .~ mkInlineDatum (decodedDatum (vAid variant) (scState sc))
         locked =
             mkBasicTxOut
                 (cageScriptAddr consumerProgram Testnet)
                 (inject (Coin lockedAda))
         outs =
             StrictSeq.fromList
-                (map holding scenarios <> map (const locked) scenarios)
+                ( map holding (vScenarios variant)
+                    <> map (const locked) (vScenarios variant)
+                )
         redeemers =
             Redeemers $
                 Map.singleton
@@ -501,6 +731,7 @@ buildSeedTx prov seedProgram seedHash statePolicyBytes consumerProgram feeUtxo c
         Right r -> pure (balancedTx r)
 
 seedWorld ::
+    Variant ->
     Provider IO ->
     Submitter IO ->
     SBS.ShortByteString ->
@@ -509,7 +740,7 @@ seedWorld ::
     SBS.ShortByteString ->
     ScriptHash ->
     IO World
-seedWorld prov sub seedProgram seedHash statePolicyBytes consumerProgram consumerHash = do
+seedWorld variant prov sub seedProgram seedHash statePolicyBytes consumerProgram consumerHash = do
     splitTx <- withinSecs 60 "split" (buildSplitTx prov)
     splitId <- submitOk sub "wallet split" splitTx
     wallet <- awaitOutputs prov (outputsOf splitId [0 .. 5])
@@ -520,6 +751,7 @@ seedWorld prov sub seedProgram seedHash statePolicyBytes consumerProgram consume
     seedTx' <-
         withinSecs 90 "seed" $
             buildSeedTx
+                variant
                 prov
                 seedProgram
                 seedHash
@@ -528,7 +760,7 @@ seedWorld prov sub seedProgram seedHash statePolicyBytes consumerProgram consume
                 mintFee
                 mintColl
     seedId <- submitOk sub "seeded holdings" seedTx'
-    let n = fromIntegral (length scenarios)
+    let n = fromIntegral (length (vScenarios variant))
     holdings <- awaitOutputs prov (outputsOf seedId [0 .. n - 1])
     locked <- awaitOutputs prov (outputsOf seedId [n .. 2 * n - 1])
     dbg "seeded holdings and consumer outputs settled"

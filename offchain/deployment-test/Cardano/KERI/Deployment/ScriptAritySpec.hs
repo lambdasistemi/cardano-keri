@@ -821,6 +821,13 @@ groupBoundaries =
             \specification only, no published deployment identity"
         )
     ,
+        ( "consumer_identity_example.consumer_identity_example"
+        , Unapplied
+            "example consumer on the concrete identity bytes, for tests: \
+            \applied by the local-chain specification only, no published \
+            \deployment identity"
+        )
+    ,
         ( "consumer_seed_policy.consumer_seed_policy"
         , Unapplied
             "test-only seeding policy (seeded holding, not a registration \

@@ -51,13 +51,13 @@ const economicOutput = record({ output, contents, singularTags: list(singular), 
 const economicTx = record({ transaction: tx, identity: nat, outputs: list(economicOutput), trieReadyMint: list(pair(token, integer)), applicationMint: list(pair(token, integer)), stateMint: list(pair(token, integer)), singularMint: list(pair(singular, integer)) });
 const utxo = list(pair(ref, economicOutput));
 const rejection = record({ transaction: economicTx, stateReference: ref, members: list(pair(ref, variant({ mismatch: record({ leaf }) }, ['expired']))) });
-const carrier = record({ ...fields('aid token k minAda'), original: holding, st: enumeration(['live', 'parked', 'terminationPending']) });
+const carrier = record({ ...fields('aid token k minAda'), original: holding, st: enumeration(['live', 'terminationPending']) });
 const payload = record({ ...fields('aid token keyState booker bookingFee'), original: holding });
 const sys = record({ ...fields('gen treasury nextToken'), config, trie: list(pair(nat, leaf)), carriers: list(carrier), registrations: list(regBooking), terminations: list(record({ booking: termBooking, payload })), bindings: list(pair(nat, nat)) });
 const params = record(fields('D tip Mc Mr'));
-const env = record({ inception: list(nat), rotationFrom: list(pair(nat, nat)), duplicity: list(pair(nat, nat)), closeAuth: list(pair(nat, nat)) });
+const env = record({ inception: list(nat), duplicity: list(pair(nat, nat)) });
 const action = variant({
-  bookRegistration: record({ booking: regBooking }), park: record(fields('aid recipient')), revive: record(fields('aid')), convictCkpt: record(fields('aid')),
+  bookRegistration: record({ booking: regBooking }), convictCkpt: record(fields('aid')),
   bookTermination: record({ ...fields('aid booker fee'), booking: termBooking }),
   fold: record({ ...fields('expectedGen expectedPlugin'), unspent: utxo, transaction: economicTx }),
   genericRetraction: record({ unspent: utxo, transaction: economicTx }), genericRejection: record({ unspent: utxo, transaction: rejection }),

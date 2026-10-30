@@ -18,7 +18,7 @@ export function systemProperties(cell,result=cell.result) {
   row('T8_leaf_states',true,()=>after.aids.every(r=>(r.leaf==='active')===hasOutput(r.state)&&(r.leaf!=='retired'||r.state==='convicted')));
   row('T8_utxo_iff_active',true,()=>after.aids.every(r=>hasOutput(r.state)===(r.leaf==='active')));
   row('T8_leaf_never_absent_again',accepted&&before.aids.some(r=>r.leaf!=='absent'),()=>before.aids.every(r=>{const n=rowAt(after,r.aid);return(r.leaf==='absent'||n.leaf!=='absent')&&(r.leaf!=='retired'||n.leaf==='retired');}));
-  row('T8_mint_once',accepted&&['register','reopen'].includes(localKind),()=>localKind==='register'?old.leaf==='absent':stateKind(old.state)==='parked'&&old.leaf==='active');
+  row('T8_mint_once',accepted&&localKind==='register',()=>old.leaf==='absent');
   // The complete oracle result includes both value flows and every stored
   // origin/association field; success was constructed with the actual event.
   row('T8_sysstep_partition',accepted,()=>['register','local','book','complete'].includes(kind)&&equal(result,cell.result));

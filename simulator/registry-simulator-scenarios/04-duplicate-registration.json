@@ -37,12 +37,6 @@
     "42": "Alice, request refund address"
   },
   "env": {
-    "closeAuth": [
-      [
-        11,
-        6
-      ]
-    ],
     "duplicity": [
       [
         11,
@@ -59,12 +53,6 @@
     ],
     "inception": [
       11
-    ],
-    "rotationFrom": [
-      [
-        11,
-        1
-      ]
     ]
   },
   "steps": [

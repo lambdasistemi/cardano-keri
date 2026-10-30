@@ -9,9 +9,7 @@ namespace RegistryTrace
 
 def evidence : EnvTable := {
   inception := [11, 12, 13, 14, 15]
-  rotationFrom := [(11, 1), (12, 1), (13, 1)]
-  duplicity := [11, 12, 13].flatMap (fun aid => [0, 1, 2].map (fun key => (aid, key)))
-  closeAuth := [(11, 6), (12, 6), (13, 6)] }
+  duplicity := [11, 12, 13].flatMap (fun aid => [0, 1, 2].map (fun key => (aid, key))) }
 
 structure Run where
   state : Sys := Sys.init cfg
@@ -42,14 +40,13 @@ def terminate (aid ref : Nat) : Driver Unit := do
 def localJourney : Driver Unit := do
   book 11 100
   process [100]
-  act "wrong-close-recipient" (.park 11 9) false
-  act "park" (.park 11 6)
-  let parked := (← get).state
-  let noRotation := { evidence with rotationFrom := [] }
-  modify fun r => { r with cells := r.cells ++ [cell "missing-rotation" p noRotation parked (.revive 11)] }
-  act "revive" (.revive 11)
+  let liveBooking ← liftM (termination (← get).state 11 199)
+  act "live-termination-booking-refused" (.bookTermination 11 7 1 liveBooking) false
+  let live := (← get).state
+  let noDuplicity := { evidence with duplicity := [] }
+  modify fun r => { r with cells := r.cells ++ [cell "missing-duplicity" p noDuplicity live (.convictCkpt 11)] }
   act "convict" (.convictCkpt 11)
-  act "pending-revival-refused" (.revive 11) false
+  act "repeat-conviction-refused" (.convictCkpt 11) false
   terminate 11 200
   process [200] 20
   act "retired-registration-booking" (.bookRegistration (registration (← get).state 11 300))
@@ -120,17 +117,13 @@ def seededJourney (seed : Nat) : Driver Unit := do
   book 11 100
   book 12 101
   process [100, 101]
-  act "park-before-seeded-actions" (.park 11 6)
-  act "revive-before-seeded-actions" (.revive 11)
   let mut random := seed
   for index in List.range 100 do
     random := (random * 1664525 + 1013904223) % 4294967296
     let aid := 11 + random % 3
-    let action := match (random / 3) % 4 with
-      | 0 => Action.park aid 6
-      | 1 => Action.revive aid
-      | 2 => Action.convictCkpt aid
-      | _ => Action.park aid 99
+    let action := match (random / 3) % 2 with
+      | 0 => Action.convictCkpt aid
+      | _ => Action.convictCkpt (aid + 10)
     act s!"seed-{seed}-step-{index}" action false
 
 def run (name : String) (driver : Driver Unit) : Except String Json := do
@@ -139,18 +132,16 @@ def run (name : String) (driver : Driver Unit) : Except String Json := do
 
 def grid : Except String (List Json) := do
   let (_, live) ← (do book 11 100; process [100] : Driver Unit).run {}
-  let (_, parked) ← (act "park" (.park 11 6)).run live
-  let (_, pending) ← (act "convict" (.convictCkpt 11)).run parked
-  let actions : List Action := [.park 11 6, .park 11 7, .revive 11, .convictCkpt 11,
-    .park 12 6, .revive 12, .convictCkpt 12]
-  pure ([Sys.init cfg, live.state, parked.state, pending.state].flatMap fun s =>
+  let (_, pending) ← (act "convict" (.convictCkpt 11)).run live
+  let actions : List Action := [.convictCkpt 11, .convictCkpt 12]
+  pure ([Sys.init cfg, live.state, pending.state].flatMap fun s =>
     [evidence, {}].flatMap fun e => actions.map fun action => cell "local-boundary" p e s action)
 
 end RegistryTrace
 
 def main : IO Unit := do
   let generated := do
-    let traces ← [ ("retained-output", RegistryTrace.localJourney),
+    let traces ← [ ("live-until-convicted", RegistryTrace.localJourney),
       ("mixed-custody-and-recovery", RegistryTrace.mixedJourney),
       ("expired-registration", RegistryTrace.rejectionJourney),
       ("registration-retraction", RegistryTrace.recoveryJourney),

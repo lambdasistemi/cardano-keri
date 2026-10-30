@@ -73,7 +73,7 @@ export function executeConsumer(query) {const r=consumerVerdict(query);return r.
 export function checkConsumerCorpus(corpus) {
   if(corpus.schema!=='cardano-keri.consumer.identity'||corpus.version!==1||!corpus.fields?.length||!corpus.journey?.length||!corpus.checks?.length)throw Error('consumer-corpus-schema');
   // Fixed approved fixture census: reject truncation even when all remaining cells pass.
-  if(corpus.fields.length!==32||corpus.journey.length!==19||corpus.checks.length!==46||corpus.events?.length!==20)throw Error('consumer-corpus-roster');
+  if(corpus.fields.length!==32||corpus.journey.length!==17||corpus.checks.length!==46||corpus.events?.length!==18)throw Error('consumer-corpus-roster');
   if(!unique(corpus.checks.map(c=>c[0]))||!unique(corpus.events.map(c=>c.name)))throw Error('consumer-duplicate-control');
   const cells=[...corpus.fields,...corpus.journey.map(frame=>frame.consumer)];
   if(!unique(corpus.fields.map(c=>c.name))||!unique(corpus.journey.map(c=>c.name)))throw Error('consumer-duplicate-case');

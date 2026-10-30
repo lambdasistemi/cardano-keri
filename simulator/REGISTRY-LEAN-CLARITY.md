@@ -10,6 +10,12 @@ comment and a definition disagreed; every audit finding that was not folded
 into the Lean, with what it waits for. The Lean is the law; this file is the
 list of what the law left open. Dates are 2026 unless said.
 
+> **Historical record.** The pause, resume, park, revive and close decisions
+> below describe earlier revisions. Issue #493 removed the owner exit: the
+> Registry adapter has no park or revive action, no parked carrier state and
+> no `rotationFrom` or `closeAuth` premise; a carrier is live until it is
+> convicted. The rows are kept as written.
+
 ## Decisions the simulator took (D)
 
 | id | point | decision | source |

@@ -1,7 +1,8 @@
 # Play the M1 identity model
 
-As an identity owner, register, rotate, park and revive a checkpoint while
-following its key state and addressed payments. As a relying party, inspect
+As an identity owner, register, rotate, unfreeze and top up a checkpoint while
+following its key state and addressed payments. There is no owner exit: a
+checkpoint is alive until it is convicted. As a relying party, inspect
 why a checkpoint is unusable. As a folder, inspect the complete transaction
 and pending request that make a Registry transition possible.
 
@@ -14,12 +15,11 @@ editable actions. These are executable model adapters, not transaction builders.
 
 | Surface | Authority | What is compared |
 | --- | --- | --- |
-| Checkpoint local player | `Checkpoint.stepFn` and local theorem premises | Full next state and addressed flow, consumer verdict, 15 stories and branches |
+| Checkpoint local player | `Checkpoint.stepFn` and local theorem premises | Full next state and addressed flow, consumer verdict, 12 played stories (15 numbers, 3 retired) and branches |
 | Registry player | `Registry.stepFn` and the imported Singular economic judgments | Complete booking/transaction context, full successor world and application flow |
 | Checkpoint associated-system panel | Actual `SysStep` certificates under stored context | Registration origins, whole pending entries, exact consuming receipts, both flow records |
 
-Parking retains the output, token, minimum ADA and last key state. Revival is
-local and brings fresh bonds. Conviction is pending until the associated fold
+There is no close, no parked state and no revival. Conviction is pending until the associated fold
 consumes its exact request; it does not immediately retire the key. The local
 player cannot establish that final boundary alone. Use its **associated system**
 panel to select a connected journey, step through its full states and receipts,
@@ -34,20 +34,21 @@ scenarios share one grammar in `scenario-dsl.mjs`; the page and CLI load it.
 
 ## Model observations and test scope
 
-Checkpoint wire v2 contains eight traces, a 1,472-cell local grid, theorem and
-consumer observations, and 101 story action cells. Together its local action
-observations contain 207 accepted and 1,422 refused results. Local session
+Checkpoint wire v2 contains six traces, a 750-cell local grid, theorem and
+consumer observations, and 60 story action cells. Together its local action
+observations contain 157 accepted and 688 refused results. Local session
 multi-AID checks exercise frames; they do not claim SysStep reachability.
 
-Registry wire v3 contains six connected traces, a 56-cell local grid, 161
-economic boundary cells and 15 stories with 24 forks and 84 story cells:
-547 complete observations, 120 accepted and 427 refused. Its model census
-lists 129 decision sites and 106 refusal reasons: 97 have executable witnesses
+Registry wire v3 contains six connected traces, a 12-cell local grid, 161
+economic boundary cells and 12 played stories (15 numbers, 3 retired) with 19
+forks and 64 story cells: 477 complete observations, 94 accepted and 383
+refused. Its model census lists 125 decision sites and 104 refusal reasons: 95
+have executable witnesses
 and nine have separately proved construction exclusions. This is reason-level
 coverage, not proof that every repeated branch site was executed.
 
-The associated Checkpoint system has four connected traces and 34 complete
-cells, 22 accepted and 12 refused. It includes stored-context replay, another
+The associated Checkpoint system has four connected traces and 33 complete
+cells, 22 accepted and 11 refused. It includes stored-context replay, another
 valid request that cannot complete the selected identity, and a mixed fold
 that can. Eight properties are evaluated only on actual system events.
 

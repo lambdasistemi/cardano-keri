@@ -7,12 +7,12 @@ import { toInternal, toWire, equal } from './registry-economic-core.mjs';
 export const NAMES = { 42: 'Alice (refund address)', 6: 'authorized bond recipient', 7: 'Sam (booker)' };
 export const nameOf = address => NAMES[address] ?? `address ${address}`;
 export const CAST = {
-  alice: { name: 'Alice', role: 'identity owner', aid: 11, blurb: 'Holds the keys of AID 11; wants a usable checkpoint and her authorized bond return.' },
+  alice: { name: 'Alice', role: 'identity owner', aid: 11, blurb: 'Holds the keys of AID 11; wants a usable checkpoint, kept alive until it is convicted.' },
   bob: { name: 'Bob', role: 'identity owner', aid: 12, blurb: 'Holds the keys of AID 12; wants the other identity to leave his custody unchanged.' },
   hal: { name: 'Hal', role: 'folder', blurb: 'Holds a view of the requests and funds a fee; wants to process a valid batch.' },
-  sam: { name: 'Sam', role: 'booker', blurb: 'Can book a convicted carrier and receive the exact booking premium; cannot sweep a parked carrier.' },
+  sam: { name: 'Sam', role: 'booker', blurb: 'Can book a convicted carrier and receive the exact booking premium; cannot sweep a live carrier.' },
   cora: { name: 'Cora', role: 'convictor', blurb: 'Brings duplicity evidence against a retained key; wants its termination to reach the consuming fold.' },
-  mallory: { name: 'Mallory', role: 'challenger', blurb: 'Tries a wrong recipient, stale generation, duplicate input or different policy.' },
+  mallory: { name: 'Mallory', role: 'challenger', blurb: 'Tries a stale generation, duplicate input or different policy.' },
 };
 export const ACTOR_ORDER = Object.keys(CAST);
 export const actionTag = action => action && typeof action === 'object' && Object.keys(action).length === 1 ? Object.keys(action)[0] : null;
@@ -21,8 +21,6 @@ export function describeAction(action) {
   const a = dataOf(action);
   switch (actionTag(action)) {
     case 'bookRegistration': return `book registration of AID ${a.booking.request.key}`;
-    case 'park': return `park AID ${a.aid}; bond to ${nameOf(a.recipient)}`;
-    case 'revive': return `revive AID ${a.aid} from its retained key`;
     case 'convictCkpt': return `convict AID ${a.aid}; retain pending custody`;
     case 'bookTermination': return `book termination of AID ${a.aid}`;
     case 'fold': return `process a batch at generation ${a.expectedGen}`;
@@ -33,7 +31,7 @@ export function describeAction(action) {
 }
 export function offersFor(actorId, tree, nodeId = tree.cursor) {
   const session = tree.nodes[nodeId].session, { params, state } = session;
-  decodeInput(params, session.env, state, { park: { aid: 0, recipient: 0 } });
+  decodeInput(params, session.env, state, { convictCkpt: { aid: 0 } });
   const exact = toInternal(state), time = toInternal(session.now ?? 0);
   const pending = [...exact.registrations, ...exact.terminations.map(e => e.booking)];
   const fresh = pending.reduce((n, b) => n + b.request.reference.tx, 100n) + exact.gen;
@@ -42,10 +40,7 @@ export function offersFor(actorId, tree, nodeId = tree.cursor) {
   const aid = CAST[actorId]?.aid;
   if (aid) {
     offer('book a registration request', B.registrationAction(params, state, aid, toWire(fresh), toWire(time)));
-    offer('park with bond recipient 6', { park: { aid, recipient: 6 } });
-    offer('revive from the retained key', { revive: { aid } });
-    const key = state.carriers.find(c => equal(c.aid, aid))?.k ?? 0;
-    keri.push({ label: 'inception verifies', row: { inception: [aid] } }, { label: `rotation from key ${key}`, row: { rotationFrom: [aid, key] } }, { label: 'close authorizes recipient 6', row: { closeAuth: [aid, 6] } });
+    keri.push({ label: 'inception verifies', row: { inception: [aid] } });
     for (const b of exact.registrations.filter(b => b.request.key === BigInt(aid))) {
       offer(`reclaim request ${b.request.reference.tx}`, B.retractionAction(params, state, toWire(b.request.reference), toWire(time), toWire(time + 1n), [toWire(b.request.refundAddress)]));
     }
@@ -57,7 +52,6 @@ export function offersFor(actorId, tree, nodeId = tree.cursor) {
     if (actorId === 'mallory') {
       offer('try another application policy', { fold: { ...action.fold, expectedPlugin: toWire(exact.config.applicationPolicy + 1n) } });
       offer('try another generation', { fold: { ...action.fold, expectedGen: toWire(exact.gen === 0n ? 1n : exact.gen - 1n) } });
-      offer('try a different bond recipient', { park: { aid: 11, recipient: 99 } });
       if (pending.length) {
         const duplicate = structuredClone(action); duplicate.fold.transaction.transaction.inputs.push(structuredClone(duplicate.fold.transaction.transaction.inputs[0]));
         offer('try spending a request twice', duplicate);

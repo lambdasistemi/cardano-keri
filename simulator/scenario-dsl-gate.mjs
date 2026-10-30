@@ -42,7 +42,7 @@ const DOCUMENTED = [
   'checkpoint',
   'simulator/checkpoint-simulator-scenarios/01-alice-appears.dsl',
 ];
-const WANT = { total: 30, checkpointFiles: 15, registryFiles: 15, checkpointSteps: 106, registrySteps: 84 };
+const WANT = { total: 24, checkpointFiles: 12, registryFiles: 12, checkpointSteps: 65, registrySteps: 64 };
 
 const sha256 = b => createHash('sha256').update(b).digest('hex');
 const rows = [];
@@ -130,8 +130,8 @@ function checkExtentGuards() {
   const emptyFails = emptyCk.length + emptyRg.length !== WANT.total;
   const short = scratch();
   mkdirSync(join(short, 'ck')); mkdirSync(join(short, 'rg'));
-  for (let i = 0; i < 14; i++) writeFileSync(join(short, 'ck', `s${i}.dsl`), 'grammar: 1\n');
-  for (let i = 0; i < 15; i++) writeFileSync(join(short, 'rg', `s${i}.dsl`), 'grammar: 1\n');
+  for (let i = 0; i < WANT.checkpointFiles - 1; i++) writeFileSync(join(short, 'ck', `s${i}.dsl`), 'grammar: 1\n');
+  for (let i = 0; i < WANT.registryFiles; i++) writeFileSync(join(short, 'rg', `s${i}.dsl`), 'grammar: 1\n');
   const shortCk = discover(join(short, 'ck'));
   const shortRg = discover(join(short, 'rg'));
   const shortFails = !(shortCk.length === WANT.checkpointFiles && shortRg.length === WANT.registryFiles && shortCk.length + shortRg.length === WANT.total);

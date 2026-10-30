@@ -1,7 +1,8 @@
 import CardanoKeri.Duplicity
 import CardanoKeri.Registry
 
-/-! Checkpoint lifecycle with retained parking and explicit pending termination. -/
+/-! Checkpoint lifecycle: alive until convicted, then explicit pending termination.
+There is no owner exit: no close, no parking and no revival. -/
 
 namespace CardanoKeri.Checkpoint
 
@@ -37,7 +38,6 @@ inductive BondOp where
 inductive Intent where
   | keep
   | deposit
-  | close (payee : Addr)
   deriving DecidableEq, Repr
 
 def BondOp.intent : BondOp → Intent
@@ -86,10 +86,6 @@ inductive Action where
   | topUp (x : Value)
 
   | convict (payee : Addr)
-
-  | close (sn' : Seq) (payee : Addr) (refund' : Option Addr)
-
-  | reopen (sn' : Seq) (refund : Addr) (pool0 : Value)
   deriving Repr
 
 def Action.actor : Action → Actor
@@ -99,8 +95,6 @@ def Action.actor : Action → Actor
   | .freeze .. => .proof
   | .topUp .. => .anyone
   | .convict .. => .proof
-  | .close .. => .nextKeys
-  | .reopen .. => .proof
 
 structure KeyState where
   epoch : Epoch
@@ -141,7 +135,6 @@ inductive State where
 
   | present (l : Live)
 
-  | parked (h : Hash)
   | terminationPending (h : Hash)
 
   | convicted
@@ -149,7 +142,7 @@ inductive State where
 
 def State.sn? : State → Option Seq
   | .present l => some l.sn
-  | .parked h | .terminationPending h => some h.sn
+  | .terminationPending h => some h.sn
   | .absent => none
   | .convicted => none
 
@@ -202,12 +195,12 @@ def Payment?.pool : Option Payment → Value
 
 def consumableState (p : Params) (now : Slot) : State → Prop
   | .present l => l.frozen = false ∧ l.poisoned = false ∧ l.bornAt + p.W ≤ now
-  | .parked _ | .terminationPending _ => False
+  | .terminationPending _ => False
   | .absent | .convicted => False
 
 def consumableStateB (p : Params) (now : Slot) : State → Bool
   | .present l => l.frozen == false && l.poisoned == false && decide (l.bornAt + p.W ≤ now)
-  | .parked _ | .terminationPending _ => false
+  | .terminationPending _ => false
   | .absent | .convicted => false
 
 inductive Step (p : Params) (env : Env) : Action → Slot → State → Flow → State → Prop
@@ -274,33 +267,6 @@ inductive Step (p : Params) (env : Env) : Action → Slot → State → Flow →
           convictor := some { addr := payee, dreg := p.D } }
         (.terminationPending l.hash)
 
-  | convictParked {h : Hash} (now : Slot) (payee : Addr)
-      (hdup : env.duplicityAt h.epoch h.sn = true) :
-      Step p env (.convict payee) now (.parked h) {} (.terminationPending h)
-
-  | closePaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
-      (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
-      (hauth : env.intentOk (l.epoch + 1) (.close payee) refund' = true)
-      (hpay : p.P ≤ l.pool) :
-      Step p env (.close sn' payee refund') now (.present l)
-        { refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool - p.P },
-          hunter := some { addr := payee, pool := p.P } }
-        (.parked ⟨l.epoch + 1, sn'⟩)
-
-  | closeUnpaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
-      (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
-      (hauth : env.intentOk (l.epoch + 1) (.close payee) refund' = true)
-      (hnopay : l.pool < p.P) :
-      Step p env (.close sn' payee refund') now (.present l)
-        { refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool } }
-        (.parked ⟨l.epoch + 1, sn'⟩)
-
-  | reopen {h : Hash} (now : Slot) (sn' : Seq) (refund : Addr) (pool0 : Value)
-      (hev : env.rotationTo h.epoch h.sn sn' = true) (hsn : h.sn < sn') :
-      Step p env (.reopen sn' refund pool0) now (.parked h)
-        { dregIn := p.D, bIn := p.B, poolIn := pool0 }
-        (.present ⟨sn', h.epoch + 1, false, false, now, refund, pool0⟩)
-
 def stepFn (p : Params) (env : Env) (a : Action) (now : Slot) (s : State) : Option (Flow × State) :=
   match a, s with
   | .register refund pool0, .absent =>
@@ -346,26 +312,6 @@ def stepFn (p : Params) (env : Env) (a : Action) (now : Slot) (s : State) : Opti
                 convictor := some { addr := payee, dreg := p.D } },
               .terminationPending l.hash)
       else none
-  | .convict _, .parked h =>
-      if env.duplicityAt h.epoch h.sn = true then
-        some ({}, .terminationPending h)
-      else none
-  | .close sn' payee refund', .present l =>
-      if env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
-         env.intentOk (l.epoch + 1) (.close payee) refund' = true then
-        if p.P ≤ l.pool then
-          some ({ refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool - p.P },
-                  hunter := some { addr := payee, pool := p.P } },
-                .parked ⟨l.epoch + 1, sn'⟩)
-        else
-          some ({ refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool } },
-                .parked ⟨l.epoch + 1, sn'⟩)
-      else none
-  | .reopen sn' refund pool0, .parked h =>
-      if env.rotationTo h.epoch h.sn sn' = true ∧ h.sn < sn' then
-        some ({ dregIn := p.D, bIn := p.B, poolIn := pool0 },
-              .present ⟨sn', h.epoch + 1, false, false, now, refund, pool0⟩)
-      else none
   | _, _ => none
 
 inductive Trace (p : Params) (env : Env) : Slot → State → List (Slot × Action) → State → Prop
@@ -391,7 +337,6 @@ def poisonAfter : Bool → List (Slot × Action) → Bool
   | _, (_, .poison) :: rest => poisonAfter true rest
   | _, (_, .rotate ..) :: rest => poisonAfter false rest
   | _, (_, .register ..) :: rest => poisonAfter false rest
-  | _, (_, .reopen ..) :: rest => poisonAfter false rest
   | b, _ :: rest => poisonAfter b rest
 
 def poisonSinceLastRotation (es : List (Slot × Action)) : Bool :=
@@ -405,11 +350,11 @@ inductive Leaf where
 
 def State.leaf : State → Leaf
   | .absent => .absent
-  | .present _ | .parked _ | .terminationPending _ => .active
+  | .present _ | .terminationPending _ => .active
   | .convicted => .retired
 
 def State.hasOutput : State → Bool
-  | .present _ | .parked _ | .terminationPending _ => true
+  | .present _ | .terminationPending _ => true
   | .absent | .convicted => false
 
 def State.representativeHeld (s : State) : Nat := if s.hasOutput then 1 else 0
@@ -499,7 +444,6 @@ def LocalEvent (p : Params) (env : Env) (s s' : Sys) : Prop :=
   ∃ (aid : AID) (a : Action) (now : Slot) (f : Flow) (st : State),
     (∀ refund pool0, a ≠ .register refund pool0) ∧
     Step p env a now (s.states aid) f st ∧
-    ((∃ sn' refund pool0, a = .reopen sn' refund pool0) → s.leaves aid = .active) ∧
     s' = s.set aid st
 
 -- The request association is fixed by an actual booking in this origin's

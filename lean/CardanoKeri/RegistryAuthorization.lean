@@ -11,7 +11,7 @@ def ConvictionOrigin (p : Params) (env : Env) (cfg : Singular.Config)
   ∃ before after : Sys, ∃ c : Carrier,
     Reach p env cfg before ∧ carrierAt before aid = some c ∧
     c.token = token ∧ c.k = key ∧ c.original = original ∧
-    (c.st = .live ∨ c.st = .parked) ∧ env.duplicity aid c.k = true ∧
+    c.st = .live ∧ env.duplicity aid c.k = true ∧
     convictCkpt env before aid = .ok ({}, after)
 
 /-- Both prebooking convicted carriers and complete booked records carry the
@@ -85,26 +85,6 @@ theorem authorization_step (p : Params) (env : Env) (cfg : Singular.Config)
   | bookRegistration b =>
     obtain ⟨_, _, rfl, _⟩ := bookRegistration_sound p hs
     exact history
-  | park aid recipient =>
-    obtain ⟨source, _, _, _, _, rfl⟩ := (park_iff p env s s' aid recipient f).mp hs
-    refine ⟨?_, history.2⟩
-    intro c member pending
-    obtain ⟨old, oldMem, equal⟩ := List.mem_map.mp member
-    subst c
-    split at pending
-    · contradiction
-    · rename_i notSelected
-      simpa only [if_neg notSelected] using history.1 old oldMem pending
-  | revive aid =>
-    obtain ⟨source, _, _, _, _, rfl⟩ := (revive_iff p env s s' aid f).mp hs
-    refine ⟨?_, history.2⟩
-    intro c member pending
-    obtain ⟨old, oldMem, equal⟩ := List.mem_map.mp member
-    subst c
-    split at pending
-    · contradiction
-    · rename_i notSelected
-      simpa only [if_neg notSelected] using history.1 old oldMem pending
   | convictCkpt aid =>
     obtain ⟨source, lookup, state, evidence, flow, successor⟩ := (convictCkpt_iff env s s' aid f).mp hs
     have actual : convictCkpt env s aid = .ok ({}, s') := by simpa [stepFn, flow] using hs
@@ -174,7 +154,7 @@ observation. Each reachable booked payload has a real prior reachable KERI
 conviction at its retained key, using the existing opaque premise. This is
 not a proof that the opaque predicate equals concrete Checkpoint duplicity.
 All earlier pending records survive wholly; actual supply remains one and
-custody moves exactly once. Required refusals: parked/live without prior
+custody moves exactly once. Required refusals: live without prior
 conviction, invalid coarse proof, wrong holding/key/token, duplicate reference
 in either store, second booking of the same carrier, and a tail-drop mutant
 that otherwise still admits both bookings. Full concrete Checkpoint evidence
@@ -185,7 +165,7 @@ theorem pending_has_keri_authorization
     ∃ before after : Sys, ∃ c : Carrier,
       Reach p env cfg before ∧ carrierAt before e.payload.aid = some c ∧
       c.token = e.payload.token ∧ c.k = e.payload.keyState ∧
-      c.original = e.payload.original ∧ (c.st = .live ∨ c.st = .parked) ∧
+      c.original = e.payload.original ∧ c.st = .live ∧
       env.duplicity e.payload.aid c.k = true ∧
       convictCkpt env before e.payload.aid = .ok ({}, after) := by
   exact (reachable_authorization p env cfg hr).2 e he

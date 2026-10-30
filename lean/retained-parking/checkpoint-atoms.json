@@ -65,32 +65,6 @@
     "detail": "live conviction without proof"
   },
   {
-    "id": "CP-06",
-    "before": "      if env.duplicityAt h.epoch h.sn = true then",
-    "after": "      if true then",
-    "failure": "ATOM:CP-06",
-    "owner": "CardanoKeri.Checkpoint.T12_convict_parked_exact, CardanoKeri.Checkpoint.T5_convict_parked_enabled",
-    "test": "CheckpointAtomChecks",
-    "args": [
-      "CP-06"
-    ],
-    "kind": "decidable-mirror",
-    "detail": "parked conviction without proof"
-  },
-  {
-    "id": "CP-07",
-    "before": "        some ({}, .terminationPending h)",
-    "after": "        some ({ convictor := some { addr := 8, dreg := p.D } }, .terminationPending h)",
-    "failure": "ATOM:CP-07",
-    "owner": "CardanoKeri.Checkpoint.T12_convict_parked_exact, CardanoKeri.Checkpoint.T16_payments_are_named",
-    "test": "CheckpointAtomChecks",
-    "args": [
-      "CP-07"
-    ],
-    "kind": "decidable-mirror",
-    "detail": "parked conviction invents bond"
-  },
-  {
     "id": "CP-08",
     "before": "        some ({ refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },",
     "after": "        some ({ refund := some { addr := l.refundTo, pool := l.pool },",
@@ -173,208 +147,13 @@
     "before": "  | .keep, none => true",
     "after": "  | _, none => true",
     "failure": "ATOM:CP-14",
-    "owner": "CardanoKeri.Checkpoint.T16_copied_reap_refused, CardanoKeri.Checkpoint.T6_intent_requires_new_keys",
+    "owner": "CardanoKeri.Checkpoint.T6_intent_requires_new_keys, CardanoKeri.Checkpoint.T6_relayer_cannot_park_age_or_close",
     "test": "CheckpointAtomChecks",
     "args": [
       "CP-14"
     ],
     "kind": "observation",
     "detail": "preserved helper fault, current observation"
-  },
-  {
-    "id": "CP-15",
-    "before": "      if env.rotationTo h.epoch h.sn sn' = true ∧ h.sn < sn' then",
-    "after": "      if env.rotationTo h.epoch h.sn sn' = true ∧ h.sn ≤ sn' then",
-    "failure": "ATOM:CP-15",
-    "owner": "CardanoKeri.Checkpoint.T1_reopen_strict, CardanoKeri.Checkpoint.T5_reopen_enabled",
-    "test": "CheckpointAtomChecks",
-    "args": [
-      "CP-15"
-    ],
-    "kind": "decidable-mirror",
-    "detail": "stale revival"
-  },
-  {
-    "id": "CP-16",
-    "before": "      if env.rotationTo h.epoch h.sn sn' = true ∧ h.sn < sn' then",
-    "after": "      if env.rotationTo (h.epoch + 1) h.sn sn' = true ∧ h.sn < sn' then",
-    "failure": "ATOM:CP-16",
-    "owner": "CardanoKeri.Checkpoint.T4_current_key_thief_cannot_revive, CardanoKeri.Checkpoint.T5_reopen_enabled",
-    "test": "CheckpointAtomChecks",
-    "args": [
-      "CP-16"
-    ],
-    "kind": "decidable-mirror",
-    "detail": "wrong retained key context"
-  },
-  {
-    "id": "CP-17",
-    "before": "              .present ⟨sn', h.epoch + 1, false, false, now, refund, pool0⟩)",
-    "after": "              .present ⟨sn', h.epoch, false, false, now, refund, pool0⟩)",
-    "failure": "ATOM:CP-17",
-    "owner": "CardanoKeri.Checkpoint.T2_close_and_reopen_open_epochs",
-    "test": "CheckpointAtomChecks",
-    "args": [
-      "CP-17"
-    ],
-    "kind": "decidable-mirror",
-    "detail": "revival same epoch"
-  },
-  {
-    "id": "CP-18",
-    "before": "              .present ⟨sn', h.epoch + 1, false, false, now, refund, pool0⟩)",
-    "after": "              .present ⟨sn', h.epoch + 1, false, false, 0, refund, pool0⟩)",
-    "failure": "ATOM:CP-18",
-    "owner": "CardanoKeri.Checkpoint.T10_reopen_is_juvenile",
-    "test": "CheckpointAtomChecks",
-    "args": [
-      "CP-18"
-    ],
-    "kind": "decidable-mirror",
-    "detail": "revival old age"
-  },
-  {
-    "id": "CP-19",
-    "before": "              .present ⟨sn', h.epoch + 1, false, false, now, refund, pool0⟩)",
-    "after": "              .present ⟨sn', h.epoch + 1, false, true, now, refund, pool0⟩)",
-    "failure": "ATOM:CP-19",
-    "owner": "CardanoKeri.Checkpoint.T10_reopen_is_juvenile, CardanoKeri.Checkpoint.T6_component_conservation",
-    "test": "CheckpointAtomChecks",
-    "args": [
-      "CP-19"
-    ],
-    "kind": "decidable-mirror",
-    "detail": "revival frozen"
-  },
-  {
-    "id": "CP-20",
-    "before": "        some ({ dregIn := p.D, bIn := p.B, poolIn := pool0 },",
-    "after": "        some ({ bIn := p.B, poolIn := pool0 },",
-    "failure": "ATOM:CP-20",
-    "owner": "CardanoKeri.Checkpoint.T10_reopen_is_juvenile, CardanoKeri.Checkpoint.T6_component_conservation",
-    "test": "CheckpointAtomChecks",
-    "args": [
-      "CP-20"
-    ],
-    "kind": "decidable-mirror",
-    "detail": "revival no conviction bond"
-  },
-  {
-    "id": "CP-21",
-    "before": "                  hunter := some { addr := payee, pool := p.P } },\n                .parked ⟨l.epoch + 1, sn'⟩)",
-    "after": "                  hunter := some { addr := payee, pool := p.P } },\n                .parked ⟨l.epoch, sn'⟩)",
-    "failure": "ATOM:CP-21",
-    "owner": "CardanoKeri.Checkpoint.T16_close_destination, CardanoKeri.Checkpoint.T2_close_and_reopen_open_epochs",
-    "test": "CheckpointAtomChecks",
-    "args": [
-      "CP-21"
-    ],
-    "kind": "decidable-mirror",
-    "detail": "close old epoch"
-  },
-  {
-    "id": "CP-22",
-    "before": "          some ({ refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool } },\n                .parked ⟨l.epoch + 1, sn'⟩)",
-    "after": "          some ({ refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool } },\n                .parked ⟨l.epoch + 1, l.sn⟩)",
-    "failure": "ATOM:CP-22",
-    "owner": "CardanoKeri.Checkpoint.T16_parked_hash_is_the_closed_checkpoints",
-    "test": "CheckpointAtomChecks",
-    "args": [
-      "CP-22"
-    ],
-    "kind": "decidable-mirror",
-    "detail": "close old sequence"
-  },
-  {
-    "id": "CP-23",
-    "before": "         env.intentOk (l.epoch + 1) (.close payee) refund' = true then",
-    "after": "         env.intentOk (l.epoch + 1) (.close 0) refund' = true then",
-    "failure": "ATOM:CP-23",
-    "owner": "CardanoKeri.Checkpoint.T16_copied_reap_refused, CardanoKeri.Checkpoint.T16_close_destination",
-    "test": "CheckpointAtomChecks",
-    "args": [
-      "CP-23"
-    ],
-    "kind": "decidable-mirror",
-    "detail": "close copied payee"
-  },
-  {
-    "id": "CP-24",
-    "before": "         env.intentOk (l.epoch + 1) (.close payee) refund' = true then",
-    "after": "         env.intentOk (l.epoch + 1) .keep refund' = true then",
-    "failure": "ATOM:CP-24",
-    "owner": "CardanoKeri.Checkpoint.T16_copied_reap_refused, CardanoKeri.Checkpoint.T6_intent_requires_new_keys",
-    "test": "CheckpointAtomChecks",
-    "args": [
-      "CP-24"
-    ],
-    "kind": "decidable-mirror",
-    "detail": "close treated as keep"
-  },
-  {
-    "id": "CP-25",
-    "before": "                  hunter := some { addr := payee, pool := p.P } },",
-    "after": "                  hunter := some { addr := 43, pool := p.P } },",
-    "failure": "ATOM:CP-25",
-    "owner": "CardanoKeri.Checkpoint.T16_close_destination, CardanoKeri.Checkpoint.T16_copied_reap_refused",
-    "test": "CheckpointAtomChecks",
-    "args": [
-      "CP-25"
-    ],
-    "kind": "decidable-mirror",
-    "detail": "close pays refund recipient as premium"
-  },
-  {
-    "id": "CP-26",
-    "before": "          some ({ refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool - p.P },",
-    "after": "          some ({ refund := some { addr := l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool - p.P },",
-    "failure": "ATOM:CP-26",
-    "owner": "CardanoKeri.Checkpoint.T16_close_destination",
-    "test": "CheckpointAtomChecks",
-    "args": [
-      "CP-26"
-    ],
-    "kind": "decidable-mirror",
-    "detail": "close ignores new refund recipient"
-  },
-  {
-    "id": "CP-27",
-    "before": "          some ({ refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool - p.P },",
-    "after": "          some ({ refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool },",
-    "failure": "ATOM:CP-27",
-    "owner": "CardanoKeri.Checkpoint.T16_close_destination, CardanoKeri.Checkpoint.T6_component_conservation",
-    "test": "CheckpointAtomChecks",
-    "args": [
-      "CP-27"
-    ],
-    "kind": "decidable-mirror",
-    "detail": "close overpays pool"
-  },
-  {
-    "id": "CP-28",
-    "before": "  | .close sn' payee refund', .present l =>\n      if env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧",
-    "after": "  | .close sn' payee refund', .present l =>\n      if l.sn < sn' ∧",
-    "failure": "ATOM:CP-28",
-    "owner": "CardanoKeri.Checkpoint.T16_close_needs_rotation, CardanoKeri.Checkpoint.T4_current_key_thief_cannot_park",
-    "test": "CheckpointAtomChecks",
-    "args": [
-      "CP-28"
-    ],
-    "kind": "decidable-mirror",
-    "detail": "close without rotation"
-  },
-  {
-    "id": "CP-29",
-    "before": "          some ({ refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool } },\n                .parked ⟨l.epoch + 1, sn'⟩)",
-    "after": "          none",
-    "failure": "ATOM:CP-29",
-    "owner": "CardanoKeri.Checkpoint.T5_close_enabled",
-    "test": "CheckpointAtomChecks",
-    "args": [
-      "CP-29"
-    ],
-    "kind": "decidable-mirror",
-    "detail": "unpaid close disabled"
   },
   {
     "id": "CP-30",
@@ -394,7 +173,7 @@
     "before": "  if p.P ≤ l.pool then some { addr := payee, pool := p.P } else none",
     "after": "  some { addr := payee, pool := p.P }",
     "failure": "ATOM:CP-31",
-    "owner": "CardanoKeri.Checkpoint.T16_close_destination, CardanoKeri.Checkpoint.T5_keep_is_rotated",
+    "owner": "CardanoKeri.Checkpoint.T5_keep_is_rotated, CardanoKeri.Checkpoint.T5_deposit_on_full_is_keep",
     "test": "CheckpointAtomChecks",
     "args": [
       "CP-31"
@@ -404,8 +183,8 @@
   },
   {
     "id": "CP-32",
-    "before": "  | .present _ | .parked _ | .terminationPending _ => .active",
-    "after": "  | .parked _ => .retired\n  | .present _ | .terminationPending _ => .active",
+    "before": "  | .present _ | .terminationPending _ => .active",
+    "after": "  | .terminationPending _ => .retired\n  | .present _ => .active",
     "failure": "ATOM:CP-32",
     "owner": "CardanoKeri.Checkpoint.T8_leaf_states, CardanoKeri.Checkpoint.T8_utxo_iff_active",
     "test": "CheckpointAtomChecks",
@@ -413,7 +192,7 @@
       "CP-32"
     ],
     "kind": "observation",
-    "detail": "replacement fault: parked key prematurely retired; old active-leaf fault is required behavior now"
+    "detail": "replacement fault: pending key prematurely retired; the parked-key fault is retired with the parked state"
   },
   {
     "id": "CP-33",
@@ -431,7 +210,7 @@
   {
     "id": "CP-35",
     "before": "  | _ => false",
-    "after": "  | .close .. => true\n  | _ => false",
+    "after": "  | .convict .. => true\n  | _ => false",
     "failure": "ATOM:CP-35",
     "owner": "CardanoKeri.Checkpoint.T8_edges_leave_the_leaf",
     "test": "CheckpointAtomChecks",
@@ -439,7 +218,7 @@
       "CP-35"
     ],
     "kind": "observation",
-    "detail": "replacement fault: parking changes key; former leave-key-unchanged fault is required behavior now"
+    "detail": "replacement fault: conviction touches the leaf; the close fault is retired with the close"
   },
   {
     "id": "CP-36",
@@ -470,9 +249,9 @@
   {
     "id": "CP-38",
     "before": "  | .present _ => p.D\n  | _ => 0",
-    "after": "  | .present _ => p.D\n  | .parked _ => p.D\n  | _ => 0",
+    "after": "  | .present _ => p.D\n  | .terminationPending _ => p.D\n  | _ => 0",
     "failure": "ATOM:CP-38",
-    "owner": "CardanoKeri.Checkpoint.parked_and_convicted_hold_no_bonds_or_pool, CardanoKeri.Checkpoint.T6_dreg_never_a_fee",
+    "owner": "CardanoKeri.Checkpoint.pending_custody_observations, CardanoKeri.Checkpoint.T6_dreg_never_a_fee",
     "test": "CheckpointAtomChecks",
     "args": [
       "CP-38"
@@ -482,21 +261,21 @@
   },
   {
     "id": "CP-39",
-    "before": "      if env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧\n         env.intentOk (l.epoch + 1) (.close payee) refund' = true then",
+    "before": "      if env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧\n         env.intentOk (l.epoch + 1) op.intent refund' = true then",
     "after": "      if env.quorum l.epoch = true ∧ l.sn < sn' then",
     "failure": "ATOM:CP-39",
-    "owner": "CardanoKeri.Checkpoint.T4_current_key_thief_cannot_park, CardanoKeri.Checkpoint.T16_copied_reap_refused",
+    "owner": "CardanoKeri.Checkpoint.T4_current_key_thief_cannot_rotate_or_freeze",
     "test": "CheckpointAtomChecks",
     "args": [
       "CP-39"
     ],
     "kind": "decidable-mirror",
-    "detail": "current quorum parks without next keys"
+    "detail": "current quorum rotates without next keys"
   },
   {
     "id": "CP-40",
-    "before": "  | _, (_, .reopen ..) :: rest => poisonAfter false rest",
-    "after": "  | b, (_, .reopen ..) :: rest => poisonAfter b rest",
+    "before": "  | _, (_, .rotate ..) :: rest => poisonAfter false rest",
+    "after": "  | b, (_, .rotate ..) :: rest => poisonAfter b rest",
     "failure": "ATOM:CP-40",
     "owner": "CardanoKeri.Checkpoint.trace_poison_fold",
     "test": "CheckpointAtomChecks",
@@ -504,6 +283,6 @@
       "CP-40"
     ],
     "kind": "observation",
-    "detail": "preserved helper fault, current observation"
+    "detail": "preserved helper fault, current observation: a rotation fails to clear the poison bit"
   }
 ]

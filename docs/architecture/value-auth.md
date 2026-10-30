@@ -66,8 +66,8 @@ authorize iff  present
 and, once the validity edge ships, `now ≤ valid_until`. Everything else fails
 closed: absent, frozen (the freeze bond taken), poisoned (locked by the
 owner's own declaration), juvenile (younger than the window `W`), convicted,
-parked (an output retains its token, minimum ADA and last key state),
-and pending conviction custody.
+and pending conviction custody. There is no parked state: a checkpoint is
+alive until it is convicted.
 
 Three consequences an integrator should plan for:
 
@@ -77,12 +77,10 @@ Three consequences an integrator should plan for:
 - **Step 1 becomes a guarantee rather than a hope.** The redesigned registry admits one
   incarnation per AID, ever within that registry, so "exactly one candidate" is enforced on chain
   instead of being a residual the consumer carries.
-- **Conviction becomes terminal, and a parked identity can come back.** The
-  chain follows KERI: no key event un-duplicates an identifier, so
-  `Convicted` has no exit, while a parked identity reopens on a witnessed
-  rotation later than the parked key state. An application must not cache
-  "absent forever" for a parked AID, and must not expect a convicted one
-  to return.
+- **Conviction is the only end, and it is terminal.** The chain follows
+  KERI: no key event un-duplicates an identifier, so `Convicted` has no
+  exit. There is no owner exit either, so a registered AID is alive until it
+  is convicted. An application must not expect a convicted one to return.
 
 ## Pending Singular registry integration
 
@@ -113,20 +111,20 @@ flowchart TB
 
 A future consumer queries that exact asset under `S`, requires quantity one,
 authenticates the canonical registry and checks the holding's KERI datum
-and eligibility. A token in a parked output or pending termination is not
+and eligibility. A token in pending termination custody is not
 an eligible checkpoint. A missing token alone does not distinguish terminal
 from never registered; that requires registry history or a proof against the
 on-chain root. Provider failure must be reported as unavailable.
 
 Cardano KERI's model at `7cb4e716107d8ca7cc53dcdb0cd26549315ee256`
-still has the earlier registry and dependency binding. The parked-state
-and consumer changes remain pending under the
-[Lean correspondence register](https://github.com/lambdasistemi/cardano-keri/issues/435),
-[parking](https://github.com/lambdasistemi/cardano-keri/issues/437) and
+still has the earlier registry and dependency binding. The consumer changes
+remain pending under the
+[Lean correspondence register](https://github.com/lambdasistemi/cardano-keri/issues/435)
+and the
 [consumer predicate](https://github.com/lambdasistemi/cardano-keri/issues/439)
-work. In particular, the earlier parked description on this page is not the
-upstream target: parking must retain the token and key state in a KERI
-output, while the registry remains active. No model or runtime behavior is
+work. Parking, described by earlier revisions of this page, is removed:
+there is no owner exit
+([#493](https://github.com/lambdasistemi/cardano-keri/issues/493)). No model or runtime behavior is
 changed by this documentation. See the
 [complete mapping](../demos/d02-registry-mapping.md) for the remaining stories
 and evidence.
@@ -243,10 +241,9 @@ predicate afresh. The refusals differ in who caused them and in how they clear:
 |---|---|---|
 | Poisoned | the owner's current quorum | any witnessed rotation |
 | Frozen | a hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one), because the pool of advance funds was short | a rotation with `deposit` (the unfreeze) |
-| Juvenile | time, after a register, reopen or resurrecting rotation | `W` slots elapse |
+| Juvenile | time, after a registration | `W` slots elapse |
 | Pending conviction | anyone, with a duplicity proof | its associated consuming Registry fold completes retirement |
 | Convicted | the associated fold after a duplicity proof | never |
-| Parked | the owner, by the reap: a rotation by the next keys that retains the token, minimum ADA and key state in a parked output | a reopen |
 
 An application should not treat any of these as an error condition to retry.
 Each is a statement that the identity is currently unfit to authorize, and each

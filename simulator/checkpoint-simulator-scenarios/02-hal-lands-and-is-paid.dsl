@@ -147,7 +147,7 @@ fork:
       reason: pool-covers-premium
       verdict: consumable
       modelResult: null
-      exhibits: [T10_bonds_are_observable, T7_step_iff_stepFn, T8_reopen_actor_is_proof, T9_juvenility_is_consumer_only, consumableStateB_iff]
+      exhibits: [T10_bonds_are_observable, T7_step_iff_stepFn, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, consumableStateB_iff]
 fork:
   id: twice
   at: 2

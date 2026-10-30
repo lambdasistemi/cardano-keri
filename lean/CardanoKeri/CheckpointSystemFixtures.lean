@@ -10,13 +10,11 @@ open SystemWire TraceWire
 def p : Params := { D := 3, B := 2, P := 1, W := 5, hD := by decide, hB := by decide }
 def evidence : EnvTable := {
   rotationTo := [(0, 0, 1), (1, 1, 2)]
-  intentAuthorized := [(1, .close 6, none)]
+  intentAuthorized := []
   quorum := []
   duplicityAt := [(0, 0), (1, 1), (2, 2)] }
 def registryEnvironment : Registry.TraceWire.EnvTable := {
   inception := [11, 12, 13]
-  rotationFrom := [(11, 1)]
-  closeAuth := [(11, 6)]
   duplicity := [(11, 0), (11, 1), (11, 2), (12, 0)] }
 def context : RegistryContext := ⟨Registry.Scenarios.p, registryEnvironment, Registry.Scenarios.cfg⟩
 
@@ -31,10 +29,10 @@ def registrationCommand (ctx : RegistryContext := context) : Except String Comma
   let (u, tx) ← Registry.Scenarios.foldTransaction before [⟨100, 0⟩] 2 1 1
   pure (.register 11 2 42 5 ctx ⟨[.bookRegistration b], u, tx⟩ b 1)
 
-def parkedCommand : Command := .local 11 3 (.close 1 6 none)
-def revivedCommand : Command := .local 11 4 (.reopen 2 42 5)
+def rotatedCommand : Command := .local 11 3 (.rotate 1 .keep 7 none)
+def rotatedAgainCommand : Command := .local 11 4 (.rotate 2 .keep 7 none)
 def convictedCommand : Command := .local 11 5 (.convict 7)
-def registryLocalHistory : List Registry.Action := [.park 11 6, .revive 11, .convictCkpt 11]
+def registryLocalHistory : List Registry.Action := [.convictCkpt 11]
 
 def advance (machine : Machine) (command : Command) : Except String Machine := do
   let (next, _, _) ← execute machine p evidence.toEnv command
@@ -65,9 +63,9 @@ structure Fixture where
 def fixture : Except String Fixture := do
   let registration ← registrationCommand
   let registered ← advance Machine.init registration
-  let parked ← advance registered parkedCommand
-  let revived ← advance parked revivedCommand
-  let pending ← advance revived convictedCommand
+  let rotated ← advance registered rotatedCommand
+  let rotatedAgain ← advance rotated rotatedAgainCommand
+  let pending ← advance rotatedAgain convictedCommand
   let some origin := registered.certified.state.origins 11 | throw "fixture-origin-missing"
   let booking ← bookingCommand origin.registered
   let booked ← advance pending booking
@@ -96,27 +94,27 @@ def trace (name : String) (commands : List (String × Command)) : Json :=
 
 def traces : Except String (List Json) := do
   let f ← fixture
-  let journey := [("register", f.registration), ("park", parkedCommand),
-    ("revive", revivedCommand), ("convict", convictedCommand), ("book", f.booking)]
+  let journey := [("register", f.registration), ("rotate", rotatedCommand),
+    ("rotate-again", rotatedAgainCommand), ("convict", convictedCommand), ("book", f.booking)]
   let restricted ← registrationCommand { context with environment.duplicity := [] }
   pure [
     trace "retained-associated-completion" (journey ++ [
-      ("pending-refuses-local-revival", revivedCommand), ("complete", f.completion),
+      ("pending-refuses-local-rotation", .local 11 6 (.rotate 3 .keep 7 none)), ("complete", f.completion),
       ("repeat-completion-refused", f.completion), ("retired-registration-refused", f.registration)]),
     trace "same-context-other-request" (journey ++ [
       ("other-valid-fold-cannot-complete-this-request", f.otherCompletion),
       ("mixed-fold-completes-own-request", f.mixedCompletion)]),
     trace "stored-origin-environment" [
-      ("register-without-registry-duplicity", restricted), ("park", parkedCommand),
-      ("revive", revivedCommand), ("checkpoint-concrete-conviction", convictedCommand),
+      ("register-without-registry-duplicity", restricted), ("rotate", rotatedCommand),
+      ("rotate-again", rotatedAgainCommand), ("checkpoint-concrete-conviction", convictedCommand),
       ("booking-history-cannot-replace-stored-environment", f.booking)],
     trace "system-premises" [
       ("bare-registration-is-not-a-system-registration", .local 11 2 (.register 42 5)),
       ("completion-needs-association", f.completion), ("register", f.registration),
       ("duplicate-origin-refused", f.registration), ("book-live-refused", f.booking),
-      ("park", parkedCommand), ("book-parked-refused", f.booking),
-      ("parked-local-action-refused", .local 11 4 (.topUp 1)),
-      ("revive", revivedCommand), ("convict", convictedCommand), ("book", f.booking),
+      ("rotate", rotatedCommand), ("rotate-again", rotatedAgainCommand),
+      ("book-rotated-live-refused", f.booking),
+      ("convict", convictedCommand), ("book", f.booking),
       ("rebook-refused", f.booking), ("complete", f.completion)] ]
 
 end CardanoKeri.Checkpoint.SystemFixtures

@@ -48,10 +48,11 @@ guarantees: an approval the parent later overturns leaves an
 already-installed child leaf standing (D13); a bonded challenge for that
 divergence is a later ruling. Rule C/C1 (precedence decided further up
 the delegation chain) is not represented: such a rotation is refused,
-fail closed. `leave` merges the parked and convicted states of the
-checkpoint machine and permits re-registration; conviction terminality
-and revival from the parked key state are that machine's guarantees
-(`Checkpoint.T12`, `T8`), not this model's, and are not claimed here.
+fail closed. `leave` abstracts the checkpoint leaving the chain and
+permits re-registration. In the checkpoint machine only conviction leaves
+(there is no owner exit) and conviction is terminal; that terminality is
+the machine's guarantee (`Checkpoint.T12`, `T8`), not this model's, and is
+not claimed here.
 -/
 
 namespace CardanoKeri.Delegation
@@ -141,7 +142,7 @@ inductive Action where
   | advanceDelegated (child : AID) (ev : ChildEvent) (proof : Option Seq)
   /-- A delegated rotation at the latest sequence (rule B), consuming its certificate. -/
   | supersedeDelegated (child : AID) (ev : ChildEvent) (proof : Option Seq)
-  /-- The checkpoint leaves the chain: parked or convicted; no reference input. -/
+  /-- The checkpoint leaves the chain (conviction); no reference input. -/
   | leave (aid : AID)
   deriving Repr
 

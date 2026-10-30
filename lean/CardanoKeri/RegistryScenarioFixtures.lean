@@ -16,9 +16,7 @@ def cfg : Singular.Config := {
   registryId := 9, registrationCost := 2, bookingWidth := 1 }
 def env : Env := {
   inception := fun _ => true
-  rotationFrom := fun _ k => k == 1
-  duplicity := fun _ _ => true
-  closeAuth := fun _ recipient => recipient == 6 }
+  duplicity := fun _ _ => true }
 
 structure Reached where
   state : Sys

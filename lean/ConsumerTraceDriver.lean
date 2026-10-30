@@ -40,7 +40,7 @@ def main (args : List String) : IO Unit := do
     let name ← IO.ofExcept (frame.getObjValAs? String "name")
     let accepted ← IO.ofExcept ((← IO.ofExcept (frame.getObjVal? "consumer")).getObjVal? "result" >>= fun r => r.getObjValAs? Bool "ok")
     let refused := ["registered-juvenile", "frozen", "rotate-keep-unpaid-frozen", "poisoned",
-      "parked", "revived-juvenile", "termination-pending", "termination-booked", "retired-after-matching-fold"].contains name
+      "termination-pending", "termination-booked", "retired-after-matching-fold"].contains name
     unless accepted == !refused do throw (IO.userError ("CONTROL-FAILED journey/" ++ name))
   let full ← IO.ofExcept (completionIdentity j)
   let association ← IO.ofExcept (associationEvents j)

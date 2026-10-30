@@ -89,8 +89,6 @@ ev-lb
 ev-b
 ev-li
 ev-intent
-ev-lp
-ev-payee
 ev-lc
 ev-c
 ev-add

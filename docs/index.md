@@ -119,25 +119,22 @@ and never again, and three sums of money that never mix:
 - the **pool** — advance funds; pays the **premium** `P`, the fee for landing
   a rotation, to whoever lands it.
 
-**Retained parking, no withdraw.** An identity is **active** (live, poisoned
-or frozen), **parked** (an output retains its token, minimum ADA and last key
-state), in **pending conviction** custody, or **convicted** (terminal after
-the associated Registry fold). Parking and revival keep the registry key active. A
+**No owner exit, no withdraw.** An identity is **active** (live, poisoned
+or frozen), in **pending conviction** custody, or **convicted** (terminal after
+the associated Registry fold). The owner keeps it alive until it is convicted:
+there is no close, no parking and no revival. A
 rotation is the only thing that moves the keys; it carries a bond option
 (`keep` or `deposit`) and optionally a new refund address. `deposit` is
 the unfreeze: it refills `B` when a hunter has taken it. Every option
 other than `keep`, and every new refund address, is signed by the keys of
 the epoch the rotation opens (D-038) — so a relayer landing a public
-rotation can never park, age, or close the owner.
+rotation can never age the owner or move her refund address.
 
 ```mermaid
 flowchart TB
     start(( )) --> Absent["<b>Absent</b><br/>register — registry insert, once ever"]
     Absent -->|register| Active["<b>Active</b><br/>rotate — next keys + toad receipts, clears the poison<br/>poison — current quorum, once per epoch<br/>freeze — anyone, when the pool is short<br/>deposit — next keys refill B (the unfreeze)<br/>top-up — anyone"]
-    Active -->|close| Parked["<b>Parked</b><br/>close — reap by the next keys#59; output retains the token and key state<br/>reopen — witnessed rotation from that key state"]
-    Parked -->|reopen| Active
     Active -->|duplicity proof| Pending["<b>Pending conviction</b><br/>retained custody#59; no local exit"]
-    Parked -->|duplicity proof| Pending
     Pending -->|associated consuming Registry fold| Convicted["<b>Convicted</b><br/>token burned#59; registry key permanently retired"]
 ```
 
@@ -150,18 +147,18 @@ of the next keys *is* control. It buys the owner the window between noticing a
 theft and rotating.
 
 **The registry** maps each AID to absent, active or permanently retired.
-Parking, revival and pending conviction custody keep the key active. Only
-the associated consuming fold retires it. A parked identity returns by a
-witnessed rotation later than the parked key state, with fresh bonds. The
+A live carrier and pending conviction custody keep the key active. Only
+the associated consuming fold retires it. The
 registry uses the public model from
 [singular](https://github.com/lambdasistemi/singular), where it runs on a
 development network; see
 [where the registry is built](design/registry-as-mpfs.md#where-the-registry-is-built).
 
-**Leaving** is the reap, the only close there is: a witnessed rotation by the *next* keys whose
-signed message names the payee of the premium and the refund address. The
-current keys keep exactly one Cardano power, the poison. Close answers to
-the next keys, never the current ones.
+**There is no leaving.** A checkpoint ends only by conviction. The
+current keys keep exactly one Cardano power, the poison; everything else
+answers to the next keys, never the current ones. What happens to the bonds
+and pool of an owner who stops maintaining a checkpoint is an open economic
+question, left visible rather than answered.
 
 **The consumer's rule**, and the only thing outside the machine: authorize iff
 the checkpoint is present, both bonds are full, it is not poisoned, it is
@@ -174,8 +171,8 @@ satisfies the current threshold. Everything else fails closed.
 The record tree and its cursor, occupancy maps, the MPF fork and its upstream
 proposal, `ever_duplicitous`, and the whole ARMED/FROZEN enforcement economy —
 freeze-for-lag, the bounty, the entitlement, and the reaping of a paused
-checkpoint after a grace period (the word *reap* now names only the owner's
-close above). Interaction events
+checkpoint after a grace period; the owner's close and parking are removed
+as well. Interaction events
 (`ixn`) never touch the chain. Delegated identities are a later milestone.
 
 The freeze that survives is a different thing: it is what a hunter takes when
@@ -220,8 +217,8 @@ replay the fifteen stories as the acceptance suite (#326), and cut over preprod
   on Cardano.
 - [Rotate](user/rotate-preprod-identity.md) — Alice rotates, Hal lands it.
 - [Poison](user/poison.md) — Mallory steals the current keys.
-- [Close, reopen, revival](user/reopen-revival.md) — Alice leaves and
-  comes back.
+- [No owner exit](user/reopen-revival.md) — a checkpoint is alive until
+  it is convicted.
 - [Hunters](user/hunters.md) — the pool, the freeze, two hunters racing.
 - [Consumer checklist](user/consumer-checklist.md) — the treasury reads
   the checkpoint.

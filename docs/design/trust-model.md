@@ -100,12 +100,10 @@ binds the network, checkpoint policy, exact input reference, AID, sequence, and
 refund address. The transaction burns the checkpoint token and refunds the
 complete checkpoint value only to that address.
 
-!!! warning "Close changes in the accepted design"
-    In the accepted model, close is the **reap**: a witnessed rotation by
-    the *next* keys whose signed message names the payee and the refund
-    address; the parked output retains the token, minimum ADA and key state,
-    and the registry key stays active. That is what stops a
-    thief holding only the current keys from erasing the owner's
+!!! warning "Close is removed in the accepted design"
+    In the accepted model there is no owner exit: no close, no parking and
+    no revival; a checkpoint is alive until it is convicted. That is what
+    stops a thief holding only the current keys from erasing the owner's
     Cardano presence. See
     [Compromise of the current keys](key-compromise.md).
 
@@ -179,10 +177,10 @@ the checkpoint simulator, and unbuilt on chain.
 | Poisoned checkpoints cannot authorize a consumer | the consumer rejects poison; a rotation clears it |
 | No present state is absorbing | the next-key holder can always rotate, with any bond option |
 | One incarnation per AID in the chosen registry | registration requires an unknown key; a retired key cannot register again |
-| Only conviction is terminal | a parked AID reopens on a rotation later than the parked key state |
-| `D_reg` is never a fee source | it leaves only at close or a conviction |
+| Only conviction is terminal | there is no owner exit: no close, no parking, no revival |
+| `D_reg` is never a fee source | it leaves only at a conviction |
 | The pool never gates a transition | an unpaid rotation is still a valid rotation |
-| A relayer cannot park, age or close the owner | every intent other than `keep` is signed by the new epoch's keys |
+| A relayer cannot age the owner or move her refund address | every intent other than `keep` is signed by the new epoch's keys |
 | The refund address moves only by the owner's signature | at register, and at a rotation the new keys authorized |
 
 ### The consumer's predicate
@@ -208,8 +206,8 @@ Singular State/Active declarations, finite naming premises, registration
 bridge and model evidence. The [consumer checklist](../user/consumer-checklist.md)
 explains the complete integration rule.
 
-Parking and pending conviction retain custody but refuse consumption. Revival
-is local and starts a fresh juvenility window. Permanent retirement requires
+Pending conviction retains custody but refuses consumption; there is no
+parking and no revival. Permanent retirement requires
 the matching actual terminal fold. Another registry may register the same AID;
 its holding still fails the original treasury's context.
 
@@ -277,8 +275,8 @@ not match. An unavailable indexer affects liveness only.
 
 ### The registry
 
-Registration and terminal completion use actual registry folds. Parking,
-revival, rotations, poison, freezing and top-ups are local Checkpoint
+Registration and terminal completion use actual registry folds. Rotations,
+poison, freezing, top-ups and conviction are local Checkpoint
 transitions. Pending custody remains until its recorded request is consumed
 by a matching fold. The consumer authenticates the holding against its fixed
 registry identity; it need not spend the registry state.
@@ -314,7 +312,7 @@ The **Result** column marks whether the response ships today or is designed.
 | Same, under the accepted design | Reject: close is a rotation and needs the next keys | designed |
 | Register a second checkpoint for one AID | **No rejection is available today** | shipped |
 | Same, under the accepted design | Reject: the registry insert needs an absence proof | designed |
-| A relayer parks, ages, or closes the owner using her public rotation | Reject: the intent is unsigned by the new keys | designed |
+| A relayer ages the owner or moves her refund address using her public rotation | Reject: the intent is unsigned by the new keys | designed |
 | One stolen member key of a multisig poisons the identity | Reject: the poison is evaluated at the current threshold | designed |
 | Authorize a payment from a poisoned checkpoint | Reject: the consumer requires an unpoisoned state | designed |
 | Take `D_reg` without a duplicity proof | Reject: `D_reg` is never a fee source | designed |

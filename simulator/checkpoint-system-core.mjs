@@ -78,7 +78,6 @@ function transition(p,env,state,command) {
     next={aid:a.aid,leaf:C.leafOf(local.state),state:local.state,origin,pending:null};checkpointFlow=local.flow;registryFlow=receipt.flow;
   } else if(kind==='local') {
     require(C.actionKind(a.action)!=='register','checkpoint-registration-receipt-required');
-    require(C.actionKind(a.action)!=='reopen'||row.leaf==='active','checkpoint-reopen-leaf');
     const local=localStep(p,env,a.action,a.now,row.state);
     next={...row,state:local.state,leaf:C.leafOf(local.state)};checkpointFlow=local.flow;
   } else if(kind==='book') {

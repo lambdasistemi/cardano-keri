@@ -2,8 +2,8 @@
 
 A treasury wants to pay Alice using the key state from its chosen registry.
 It must reject a convincing checkpoint from another registry, another AID or
-another network, as well as a checkpoint that is frozen, poisoned, too young,
-parked or awaiting termination.
+another network, as well as a checkpoint that is frozen, poisoned, too young
+or awaiting termination.
 
 !!! note "Model rule; production conformance remains open"
     The reviewed consumer model and its executable simulator express this
@@ -65,19 +65,18 @@ flag alone is not evidence of physical value.
 ## Follow the lifecycle story
 
 Registration does not grant immediate consumption: juvenility still applies.
-Authorized rotations retain the same representative asset. Parking retains
-the output, token and key state but makes it ineligible. Revival is a local
-transition with fresh bonds and a new juvenility window. Conviction retains
+Authorized rotations retain the same representative asset. There is no owner
+exit: no parking and no revival. Conviction retains
 ineligible pending custody until the matching recorded request is consumed
 by the actual terminal fold. Only that completion establishes retirement.
 
-After retirement, the same key cannot register or revive in that registry.
+After retirement, the same key cannot register again in that registry.
 Another registry can legitimately register the same AID; its token still
 fails this treasury's original context. This is not global AID uniqueness.
 
 [Play the treasury story](../simulator/index.html?story=11): inspect the exact
 holding, change an identity field, then follow creation, registration,
-rotations, parking, revival and the matching terminal completion. The
+rotations, conviction and the matching terminal completion. The
 simulator labels its finite naming and datum interpretations.
 
 ## Complete the integration before relying on it
@@ -96,6 +95,6 @@ consumer expiry or renewal.
 Production acceptance remains held until both implementation layers execute:
 properties over the real decoder, value map, scripts and trusted context;
 and a connected boundary journey through genuine creation, registration,
-updates, parking, revival and terminal burn. Lean proofs and JavaScript replay
+updates, conviction and terminal burn. Lean proofs and JavaScript replay
 are model evidence, not either production layer. See the
 [trust boundaries](../design/trust-model.md#the-consumers-predicate).

@@ -43,16 +43,12 @@ instance : FromJson Params where
 
 structure EnvTable where
   inception : List Nat := []
-  rotationFrom : List (Nat × Nat) := []
   duplicity : List (Nat × Nat) := []
-  closeAuth : List (Nat × Nat) := []
   deriving ToJson, FromJson
 
 def EnvTable.toEnv (table : EnvTable) : Env := {
   inception := fun aid => table.inception.contains aid
-  rotationFrom := fun aid key => table.rotationFrom.contains (aid, key)
-  duplicity := fun aid key => table.duplicity.contains (aid, key)
-  closeAuth := fun aid recipient => table.closeAuth.contains (aid, recipient) }
+  duplicity := fun aid key => table.duplicity.contains (aid, key) }
 
 partial def exactJson (j : Json) : Json := match j with
   | .num _ => match j.getInt? with

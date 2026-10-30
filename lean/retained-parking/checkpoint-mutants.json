@@ -1,26 +1,10 @@
 [
   {
-    "id": "parked-output-lost",
-    "before": "def State.hasOutput : State → Bool\n  | .present _ | .parked _ | .terminationPending _ => true",
-    "after": "def State.hasOutput : State → Bool\n  | .parked _ => false\n  | .present _ | .terminationPending _ => true",
-    "failure": "parked-output-token-key",
-    "owner": "CardanoKeri.Checkpoint.T8_utxo_iff_active",
-    "test": "CheckpointRetentionChecks"
-  },
-  {
-    "id": "parked-consumer-accepted",
-    "before": "| .parked _ | .terminationPending _ => false\n  | .absent | .convicted => false",
-    "after": "| .parked _ => true\n  | .terminationPending _ => false\n  | .absent | .convicted => false",
-    "failure": "parked-consumer-refused",
-    "owner": "CardanoKeri.Checkpoint.consumableStateB_iff",
-    "test": "CheckpointRetentionChecks"
-  },
-  {
     "id": "pending-consumer-accepted",
-    "before": "| .parked _ | .terminationPending _ => false\n  | .absent | .convicted => false",
-    "after": "| .terminationPending _ => true\n  | .parked _ => false\n  | .absent | .convicted => false",
+    "before": "  | .terminationPending _ => false\n  | .absent | .convicted => false",
+    "after": "  | .terminationPending _ => true\n  | .absent | .convicted => false",
     "failure": "pending-consumer-refused",
-    "owner": "CardanoKeri.Checkpoint.pending_consumer_refused",
+    "owner": "CardanoKeri.Checkpoint.pending_consumer_refused, CardanoKeri.Checkpoint.consumableStateB_iff",
     "test": "CheckpointRetentionChecks"
   },
   {
@@ -32,14 +16,6 @@
     "test": "CheckpointRetentionChecks"
   },
   {
-    "id": "parked-pending-wrong-key",
-    "before": "some ({}, .terminationPending h)",
-    "after": "some ({}, .terminationPending { h with sn := h.sn + 1 })",
-    "failure": "parked-conviction-pending-key",
-    "owner": "CardanoKeri.Checkpoint.T12_convict_parked_exact",
-    "test": "CheckpointRetentionChecks"
-  },
-  {
     "id": "live-premature-retirement",
     "before": "              .terminationPending l.hash)",
     "after": "              .convicted)",
@@ -48,43 +24,19 @@
     "test": "CheckpointRetentionChecks"
   },
   {
-    "id": "parked-premature-retirement",
-    "before": "some ({}, .terminationPending h)",
-    "after": "some ({}, .convicted)",
-    "failure": "parked-conviction-pending-key",
-    "owner": "CardanoKeri.Checkpoint.T12_convict_parked_exact",
+    "id": "pending-output-lost",
+    "before": "  | .present _ | .terminationPending _ => true",
+    "after": "  | .terminationPending _ => false\n  | .present _ => true",
+    "failure": "live-conviction-pending-key",
+    "owner": "CardanoKeri.Checkpoint.T8_utxo_iff_active",
     "test": "CheckpointRetentionChecks"
   },
   {
-    "id": "close-dreg-lost",
-    "before": "some ({ refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool - p.P },\n                  hunter := some { addr := payee, pool := p.P } },",
-    "after": "some ({ refund := some { addr := refund'.getD l.refundTo, b := l.bHeld p, pool := l.pool - p.P },\n                  hunter := some { addr := payee, pool := p.P } },",
-    "failure": "close-addressed-components",
-    "owner": "CardanoKeri.Checkpoint.T16_close_destination",
-    "test": "CheckpointRetentionChecks"
-  },
-  {
-    "id": "close-bond-lost",
-    "before": "some ({ refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool - p.P },\n                  hunter := some { addr := payee, pool := p.P } },",
-    "after": "some ({ refund := some { addr := refund'.getD l.refundTo, dreg := p.D, pool := l.pool - p.P },\n                  hunter := some { addr := payee, pool := p.P } },",
-    "failure": "close-addressed-components",
-    "owner": "CardanoKeri.Checkpoint.T16_close_destination",
-    "test": "CheckpointRetentionChecks"
-  },
-  {
-    "id": "close-pool-overpaid",
-    "before": "some ({ refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool - p.P },\n                  hunter := some { addr := payee, pool := p.P } },",
-    "after": "some ({ refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool },\n                  hunter := some { addr := payee, pool := p.P } },",
-    "failure": "close-addressed-components",
-    "owner": "CardanoKeri.Checkpoint.T6_component_conservation",
-    "test": "CheckpointRetentionChecks"
-  },
-  {
-    "id": "close-payee-changed",
-    "before": "some ({ refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool - p.P },\n                  hunter := some { addr := payee, pool := p.P } },",
-    "after": "some ({ refund := some { addr := refund'.getD l.refundTo, dreg := p.D, b := l.bHeld p, pool := l.pool - p.P },\n                  hunter := some { addr := 0, pool := p.P } },",
-    "failure": "close-addressed-components",
-    "owner": "CardanoKeri.Checkpoint.T16_close_destination",
+    "id": "conviction-pool-overpaid",
+    "before": "        some ({ refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },",
+    "after": "        some ({ refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool + 1 },",
+    "failure": "conviction-addressed-components",
+    "owner": "CardanoKeri.Checkpoint.T6_component_conservation, CardanoKeri.Checkpoint.T12_convict_exact",
     "test": "CheckpointRetentionChecks"
   }
 ]

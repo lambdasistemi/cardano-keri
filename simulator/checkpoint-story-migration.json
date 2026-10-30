@@ -1,96 +1,99 @@
 {
   "version": 1,
-  "baseline": "70f3fc800fb3e49f9eb55584b62a2c87a82eb08d",
+  "baseline": "9c3664ac0930029e39517c1d10968c962c1f3bfa",
   "stories": [
     {
       "story": 1,
       "path": "simulator/checkpoint-simulator-scenarios/01-alice-appears.json",
-      "baselineSha256": "5be349a03672832f95fa5f7964334ee1110af3b4d4458d0a3bc42f009d79723b",
-      "disposition": "Unchanged local behavior; current complete Lean results and checker observations rebound."
+      "baselineSha256": "cc9b50cfbaf438ce05c877560b1a8aa488c131d1b2ca27472afd3ef3fc51beb2",
+      "disposition": "Unchanged local behavior; theorem rows of removed declarations dropped from the exhibited set."
     },
     {
       "story": 2,
       "path": "simulator/checkpoint-simulator-scenarios/02-hal-lands-and-is-paid.json",
-      "baselineSha256": "3198e6da12954daf7881d3a9beff88ea67b2943c3360f370d21a4a81c70234e1",
-      "disposition": "Unchanged local behavior; current complete Lean results and checker observations rebound."
+      "baselineSha256": "719f856b4de6672c5ef5a5f7dc5e5120d176840fb800d9008b7f4ee8368bb6bd",
+      "disposition": "Unchanged local behavior; theorem rows of removed declarations dropped from the exhibited set."
     },
     {
       "story": 3,
       "path": "simulator/checkpoint-simulator-scenarios/03-pool-dry-hal-freezes.json",
-      "baselineSha256": "46b9eb29571d5c8b96dcb078a2675f1e3d84432fa9b66b086ed564a0b82d88ce",
-      "disposition": "Unchanged local behavior; current complete Lean results and checker observations rebound."
+      "baselineSha256": "7e152d726079aa7ee3919e5eefd0a8721dfa7b5d2980310a48a01a43c8804266",
+      "disposition": "Unchanged local behavior; theorem rows of removed declarations dropped from the exhibited set."
     },
     {
       "story": 4,
       "path": "simulator/checkpoint-simulator-scenarios/04-alice-unfreezes.json",
-      "baselineSha256": "6b28535223d7ab6213aa3961b90bece1fb3fc07b681b17c1d104b38610cd0ab8",
-      "disposition": "Unchanged local behavior; current complete Lean results and checker observations rebound."
+      "baselineSha256": "81c5b0846c22d0f557dfd65214fd73c5e393be61a4294111a7410c81b23fdeff",
+      "disposition": "The fork in which Alice leaves from a frozen state is removed: there is no owner exit. Trunk unchanged; theorem rows rebound."
     },
     {
       "story": 5,
       "path": "simulator/checkpoint-simulator-scenarios/05-alice-goes-away.json",
-      "baselineSha256": "ca7b3e0f55fd9f6aff5191bc53f1c0093135add08b4f61c521e32ffff1431e5b",
-      "disposition": "Retained-output and pending-custody prose and exact results replace off-fold burn and retirement claims. Stable branch IDs remain."
+      "baselineSha256": "bc58f319e60d379f0329333933d1463922bf478384109a4d31580f1894df00b1",
+      "disposition": "Retired: there is no owner exit, so there is no close (the reap) and no parked output. The number is kept; the story is not played.",
+      "retired": true
     },
     {
       "story": 6,
       "path": "simulator/checkpoint-simulator-scenarios/06-alice-comes-back.json",
-      "baselineSha256": "8ea9a8f06a171c936e8ba39567246977d8b419c82550637383d405313188afad",
-      "disposition": "Retained-output and pending-custody prose and exact results replace off-fold burn and retirement claims. Stable branch IDs remain."
+      "baselineSha256": "e68799028c0047ce88b19d005e161c652843fe0f4e3f692427fa549f7675ca93",
+      "disposition": "Retired: there is no parked state, so there is no revival. The number is kept; the story is not played.",
+      "retired": true
     },
     {
       "story": 7,
       "path": "simulator/checkpoint-simulator-scenarios/07-mallory-steals-alice-poisons.json",
-      "baselineSha256": "67eb2b4ec6b421658d8963fcbade84cf424dcbe28b2ccebce2fc42cd5ca14446",
-      "disposition": "Unchanged local behavior; current complete Lean results and checker observations rebound."
+      "baselineSha256": "696bec93db58992e0db61aa2d3a5d87b998037328b3c1964996aff67676b30ef",
+      "disposition": "The two close attempts by Mallory (stolen current keys, retired keys) are removed with the close action; the poison and its clearing by rotation are unchanged."
     },
     {
       "story": 8,
       "path": "simulator/checkpoint-simulator-scenarios/08-alice-moves-refund-address.json",
-      "baselineSha256": "55061191b63faa4286ac6a838c043147a1e5e2bcf5ce270c3a71bfa6fb845ea9",
-      "disposition": "Unchanged local behavior; current complete Lean results and checker observations rebound."
+      "baselineSha256": "cc2abb1b7dbdefdbf0ff8ee343075843e487597190a616d1ca253a839dbcaf2c",
+      "disposition": "The closing leave that paid the stranger's bonds to Alice is removed with the close action; the signed refund-address move and its refusals are unchanged."
     },
     {
       "story": 9,
       "path": "simulator/checkpoint-simulator-scenarios/09-cora-convicts.json",
-      "baselineSha256": "bda9a94b05aa69af62ea38ff54d06b4c8c1f6989bec7f22274f49f699909a3b3",
-      "disposition": "Retained-output and pending-custody prose and exact results replace off-fold burn and retirement claims. Stable branch IDs remain."
+      "baselineSha256": "fafc3b5f8b7da12f906fcc66bd61b2dcebed6fdcfaf920f6621a5042b15672d5",
+      "disposition": "The close attempt on pending custody is removed with the close action; pending custody still refuses rotation and top-up."
     },
     {
       "story": 10,
       "path": "simulator/checkpoint-simulator-scenarios/10-alice-leaves-for-good.json",
-      "baselineSha256": "d5643c5b5232ab76c70d087026ea8a201e932b3ac983b23e00a373eba79b96e0",
-      "disposition": "Retained-output and pending-custody prose and exact results replace off-fold burn and retirement claims. Stable branch IDs remain."
+      "baselineSha256": "d8aaa47821e90444987681bb2c89651c8f98284f0047195d26dd78713760c144",
+      "disposition": "Retired: there is no owner exit; a poisoned checkpoint is recovered by a rotation (story 7). The number is kept; the story is not played.",
+      "retired": true
     },
     {
       "story": 11,
       "path": "simulator/checkpoint-simulator-scenarios/11-treasury-reads.json",
-      "baselineSha256": "8b193101d18e12730dd47d1487c44d0d001288d84094e30d2694a937d85f6666",
-      "disposition": "Unchanged local behavior; current complete Lean results and checker observations rebound."
+      "baselineSha256": "781d0b6ee2b22c84d9d68c7ccc2f4c1194d6a3c96417a1dba88a039b2dc4c80e",
+      "disposition": "The parked leg (close, then reopen) is removed and with it the parked refusal; conviction now follows the poisoned state directly. Every other verdict is unchanged."
     },
     {
       "story": 12,
       "path": "simulator/checkpoint-simulator-scenarios/12-stranger-registers-stale.json",
-      "baselineSha256": "b84d0b8acabd30fcd23c0eb86978a03c0f5d16a8e13910379d7dc2c84faffeff",
-      "disposition": "Local Step extent and separate origin or validity obligations are explicit; established actions remain."
+      "baselineSha256": "2b7880ec1f2e5399a866772647c07f8d104a87dbb8f63ec6f685991a760612bb",
+      "disposition": "Unchanged local behavior; theorem rows of removed declarations dropped from the exhibited set."
     },
     {
       "story": 13,
       "path": "simulator/checkpoint-simulator-scenarios/13-anyone-tops-up.json",
-      "baselineSha256": "25143e26214cb96b4580a9eaf1653bc474411ae9c53943c36c9c056e242d9f44",
-      "disposition": "Unchanged local behavior; current complete Lean results and checker observations rebound."
+      "baselineSha256": "0f39e0f5a1a48cd7823faa9c1bf2395ba07e78e17eb9df29f9bd78ec370bdb21",
+      "disposition": "Unchanged local behavior; theorem rows of removed declarations dropped from the exhibited set."
     },
     {
       "story": 14,
       "path": "simulator/checkpoint-simulator-scenarios/14-two-hunters-race.json",
-      "baselineSha256": "19f0fdcc83ffc6c76ebdbbbaa4f21bdc0f72b9639b51b5a193469de2b2773a75",
-      "disposition": "Unchanged local behavior; current complete Lean results and checker observations rebound."
+      "baselineSha256": "384c3436bfe3b9c6e803ac1b4eefbc5943944ad40e289c53bb4c802f3c06cb33",
+      "disposition": "Unchanged local behavior; theorem rows of removed declarations dropped from the exhibited set."
     },
     {
       "story": 15,
       "path": "simulator/checkpoint-simulator-scenarios/15-alice-forgets.json",
-      "baselineSha256": "d223b0ff5f4f1a911099a886164a04cc4869eb7e94ae5213f31e0c6cfef67b63",
-      "disposition": "Local Step extent and separate origin or validity obligations are explicit; established actions remain."
+      "baselineSha256": "a2fab5487002c22e1fe8b404d60575e3a2c5f401c94ee0ec9ca061a5cbf33f12",
+      "disposition": "Unchanged local behavior; theorem rows of removed declarations dropped from the exhibited set."
     }
   ]
 }

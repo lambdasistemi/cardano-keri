@@ -63,7 +63,8 @@ The request need not carry the raw inception if the attestation authenticates
 the initial key-state projection as well as the AID. The concrete evidence
 carrier, reference or consumption rules, and transaction budgets remain to be
 specified and measured. **Attestation is repeatable; checkpoint uniqueness is
-enforced by registry admission.** Revival remains a separate guarded operation.
+enforced by registry admission.** There is no revival: an identity is alive
+until it is convicted.
 The [registration guarantees](follow-one-identity.md#what-registration-guarantees)
 explain the model boundaries and link the playable duplicate-registration case.
 
@@ -163,7 +164,6 @@ checkpoint a consumer already resolves:
 | poisoned | one bit in the datum, set by the current quorum: the owner's own lock on the checkpoint | reject |
 | frozen | `B` absent — a hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one) took it | reject |
 | juvenile | `now − born_at < W` | reject |
-| parked | retained output with token, minimum ADA and last key state; registry key active | reject |
 | pending conviction | retained custody awaiting its associated Registry fold | reject |
 | convicted | the mark, terminal | no candidate |
 
@@ -182,8 +182,8 @@ otherwise.
 The accepted design adds exactly one shared structure, and confines it to the
 narrowest possible job: a **registry** mapping each AID to absent, active
 or permanently retired. A registration must prove absence before inserting,
-preventing a second first-registration of that AID. Parking and revival retain
-the token and active key. Conviction first enters pending custody; only its
+preventing a second first-registration of that AID. A live checkpoint keeps
+the token and the active key until it is convicted. Conviction first enters pending custody; only its
 associated consuming Registry fold burns the token and retires the key. See
 [the registration guarantee](follow-one-identity.md#what-registration-guarantees).
 Rotate, poison, freeze and top-up leave the key active, and consumers do not
@@ -260,19 +260,16 @@ controllers sign.
 !!! note "The accepted design changes this"
     Under the design ruled on 2026-09-02/03 (D-036 to D-040; the model is
     `lean/CardanoKeri/Checkpoint.lean`, the play is the
-    [checkpoint simulation](../simulator/index.html)) leaving is the
-    reap: a witnessed rotation by the *next* keys whose signed message
-    names the payee of the premium (the fee the pool pays for landing a
-    rotation) and the refund address. The current
+    [checkpoint simulation](../simulator/index.html)) there is no owner
+    exit: no close, no parking and no revival; a checkpoint is alive until
+    it is convicted
+    ([#493](https://github.com/lambdasistemi/cardano-keri/issues/493)). The current
     keys keep exactly one Cardano power, the poison. An identity is
-    active, parked (the output retains its token, minimum ADA and last
-    key state), pending conviction, or convicted after the associated
-    Registry fold. Parking and revival keep the registry key active; a parked identity is revived
-    by a witnessed rotation from exactly that key state, with fresh
-    bonds. What ships today is the close described above. Every bond
+    active, pending conviction, or convicted after the associated
+    Registry fold. What ships today is the close described above. Every bond
     option other than `keep`, and every new refund address, is signed
     by the keys of the epoch the rotation opens — so a relayer landing
-    a public rotation can never park, age, or close the owner.
+    a public rotation can never age the owner or move her refund address.
 
 ## Current boundary and future planes
 

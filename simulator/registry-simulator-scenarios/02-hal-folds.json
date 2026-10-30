@@ -37,20 +37,6 @@
     "42": "Alice, request refund address"
   },
   "env": {
-    "closeAuth": [
-      [
-        11,
-        6
-      ],
-      [
-        12,
-        6
-      ],
-      [
-        13,
-        6
-      ]
-    ],
     "duplicity": [
       [
         11,
@@ -95,20 +81,6 @@
       13,
       14,
       15
-    ],
-    "rotationFrom": [
-      [
-        11,
-        1
-      ],
-      [
-        12,
-        1
-      ],
-      [
-        13,
-        1
-      ]
     ]
   },
   "steps": [
@@ -817,9 +789,7 @@
       "title": "Try processing without inception evidence",
       "env": {
         "inception": [],
-        "rotationFrom": [],
-        "duplicity": [],
-        "closeAuth": []
+        "duplicity": []
       },
       "steps": [
         {

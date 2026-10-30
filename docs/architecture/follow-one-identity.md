@@ -138,13 +138,12 @@ and execution-budget feasibility still need measurement.
 
 The registry records an AID as absent, active or permanently retired. An active
 key identifies an existing incarnation; it does not certify that its checkpoint
-is consumable. Live, poisoned, frozen, parked and pending termination are
+is consumable. Live, poisoned, frozen and pending termination are
 application conditions.
 
-Parking retains the representative token, minimum ADA and last key state in an
-output. Revival consumes that retained output and rotates from exactly its key
-state with fresh bonds. Neither operation changes the active registry key or
-allocates a fresh token. Conviction first leaves a pending carrier. Booking
+There is no owner exit: no parking and no revival. A live checkpoint keeps
+its representative token and active registry key until it is convicted.
+Conviction first leaves a pending carrier. Booking
 transfers its custody into a complete pending termination entry; only the
 accepted fold consuming that exact request burns the token and retires the key.
 

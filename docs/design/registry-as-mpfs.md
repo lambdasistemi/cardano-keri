@@ -1,16 +1,17 @@
 # The registry and retained identity outputs
 
-As an identity owner, I can park while retaining my representative token and
-last key state, then return by rotating that output with fresh bonds. As a
-relying party, I must refuse a parked or termination-pending output. As a
-folder, I can process an admitted request without becoming the identity's
-controller.
+As an identity owner, I keep my checkpoint alive — bonds, rotations,
+unfreezing — until it is convicted; there is no owner exit, no parking and no
+revival. As a relying party, I see a checkpoint that is either alive or
+convicted, and I must refuse a termination-pending output. As a folder, I can
+process an admitted request without becoming the identity's controller.
 
 These are model guarantees under their stated premises. The simulators execute
 model transactions; they do not establish Aiken, builder or deployed conformance.
-The [parking ruling](https://github.com/lambdasistemi/cardano-keri/issues/437)
-and [correspondence register](https://github.com/lambdasistemi/cardano-keri/issues/435)
-own the lifecycle revision. The
+The [no owner exit revision](https://github.com/lambdasistemi/cardano-keri/issues/493)
+and the [correspondence register](https://github.com/lambdasistemi/cardano-keri/issues/435)
+own the lifecycle revision; the earlier
+[parking revision](https://github.com/lambdasistemi/cardano-keri/issues/437) is superseded. The
 [earlier design record](https://github.com/lambdasistemi/cardano-keri/blob/70f3fc800fb3e49f9eb55584b62a2c87a82eb08d/docs/design/registry-as-mpfs.md)
 remains historical; its replaced lifecycle and economic claims are not current guarantees.
 
@@ -38,10 +39,7 @@ own admission, authorization, custody metadata and addressed local flows.
 flowchart TD
   Request[Complete registration booking] --> Fold[Accepted economic fold]
   Fold --> Live[Live carrier and active key]
-  Live -->|Authorized close| Parked[Parked output: token, key state, minimum ADA]
-  Parked -->|Rotation and fresh bonds| Live
   Live -->|Duplicity| Pending[Termination-pending carrier]
-  Parked -->|Duplicity| Pending
   Pending --> Booked[Whole pending termination entry]
   Booked -->|Matching consuming fold| Retired[Retired key and burned token]
 ```
@@ -58,15 +56,12 @@ entry retains the complete generic booking and the original carrier metadata.
 | --- | --- | --- | --- |
 | Registration booking | A complete generic booking with carrier value `Mc + D` and the configured tip | `bookRegistration` accepts | The request is pending; no carrier has been created yet. |
 | Registration fold | Reachable state, the matching generation/plugin, KERI inception and an accepted imported economic transaction | `fold` consumes the booking | A carrier and permanent AID/token binding are installed with the committed holding. |
-| Park | A live carrier and close authorization to the named recipient | `park` accepts | Return `D`, advance its key counter, retain output/token/`Mc`, keep the registry active. |
-| Revive | A parked carrier and rotation from its retained key counter | `revive` accepts | Lock fresh `D`, advance the key counter and restore live state with the same output/token/`Mc`. |
-| Convict carrier | A live or parked carrier and duplicity against its key counter | `convictCkpt` accepts | Retain a termination-pending carrier and the active registry key. |
+| Convict carrier | A live carrier and duplicity against its key counter | `convictCkpt` accepts | Retain a termination-pending carrier and the active registry key. |
 | Book termination | That pending carrier and an exactly matching generic booking | `bookTermination` accepts | Move custody into the whole pending entry; retain its token/key/original holding association. |
 | Complete termination | A reachable pending entry and accepted consuming fold | `fold` consumes that request | Remove that pending entry, burn its active token and retire its key. Unconsumed entries remain whole. |
 | Registration recovery | The complete imported retraction or rejection transaction | The generic recovery judgment accepts | Reconstruct precisely the resulting pending registrations without changing unrelated custody. |
 
-The coarse Registry predicates are `inception`, `rotationFrom`, `duplicity`
-and `closeAuth`. They are declared abstractions, not cryptographic verification
+The coarse Registry predicates are `inception` and `duplicity`. They are declared abstractions, not cryptographic verification
 or a proof that they equal Checkpoint's concrete evidence predicates. In
 particular, the Registry flow does not summarize the Checkpoint conviction's
 bond and pool distribution.
@@ -82,8 +77,8 @@ equated by this adapter.
 Given a reachable Registry state, the model preserves unique carrier and
 pending custody, permanent bindings and the imported world's invariant.
 A second successful first-registration cannot replace an active or retired
-key. Local park and revive preserve the existing token; they do not mint a
-new incarnation. These guarantees are scoped to one model registry.
+key. There is no park and no revival, so no local step mints a new
+incarnation. These guarantees are scoped to one model registry.
 
 `RegistryReach.lean` proves reachable well-formedness. `RegistryCustody.lean`
 and `RegistryBurns.lean` prove custody and the fold-only retirement boundary.
@@ -101,11 +96,9 @@ canonical registry selection and transaction validity extensions remain in
 
 `Checkpoint.lean` owns the funded local lifecycle: concrete duplicity,
 rotation and signed intent, conviction/freeze bonds, pool, refund address,
-poison, freeze and juvenility. `close` refunds the remaining bonds and pool,
-with a premium only if the pool covers it; the resulting parked output retains
-its token and key state. `reopen` requires a later rotation from precisely that
-state and fresh bonds. The proved `consumableStateB` mirror refuses parked,
-pending and convicted states.
+poison, freeze and juvenility. There is no `close` and no `reopen`: a
+checkpoint leaves the live states only by conviction. The proved
+`consumableStateB` mirror refuses pending and convicted states.
 
 `SysStep` adds the actual registered origin and pending request association.
 `CheckpointCertificate.lean` replays Registry history under the stored
@@ -116,7 +109,7 @@ consuming that exact entry. A valid receipt for a different request in the same
 context is insufficient. A local pending state has no local exit.
 
 `CheckpointCompletionGoals.lean` states these receipt consequences.
-`CheckpointSystemFixtures.lean` supplies connected registration, park, revive,
+`CheckpointSystemFixtures.lean` supplies connected registration, rotation,
 conviction, booking and completion journeys, including a mixed fold and
 other-request refusals. The page's associated-system panel shows both addressed
 Checkpoint flow and Registry flow beside their full states.
@@ -129,7 +122,7 @@ Given `Mr + tip ≤ Mc`, booking splits the carrier minimum ADA exactly:
 - `Mc - Mr - tip` is the booker's premium.
 - The booking fee is paid separately by the booker.
 
-Parking retains `Mc`; it cannot also pay that value to a reaper. Booking needs
+A live carrier retains `Mc`; it cannot pay that value to a reaper. Booking needs
 conviction first. `Samaritan.booker_nonloss_iff` compares the premium with the
 booking fee. There is no unconditional promise that a booker makes a profit.
 

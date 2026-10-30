@@ -2,8 +2,8 @@
   "wireVersion": 3,
   "id": 10,
   "slug": "sam-reaps",
-  "story": "Parking cannot be swept into a termination",
-  "narrative": "The parked output remains in custody. A termination booking requires prior conviction; elapsed time grants no parking sweep.",
+  "story": "A live carrier cannot be swept into a termination",
+  "narrative": "A live carrier stays in custody until it is convicted. A termination booking requires prior conviction; there is no owner exit for a sweep to collect, and elapsed time grants none.",
   "params": {
     "D": 10,
     "Mc": 4,
@@ -32,25 +32,10 @@
   },
   "plugin": 7,
   "actors": {
-    "6": "authorized bond recipient",
     "7": "termination booker",
     "42": "Alice, request refund address"
   },
   "env": {
-    "closeAuth": [
-      [
-        11,
-        6
-      ],
-      [
-        12,
-        6
-      ],
-      [
-        13,
-        6
-      ]
-    ],
     "duplicity": [
       [
         11,
@@ -95,20 +80,6 @@
       13,
       14,
       15
-    ],
-    "rotationFrom": [
-      [
-        11,
-        1
-      ],
-      [
-        12,
-        1
-      ],
-      [
-        13,
-        1
-      ]
     ]
   },
   "steps": [
@@ -812,107 +783,6 @@
     {
       "now": 0,
       "actor": "anyone presenting the required evidence",
-      "as": "Alice",
-      "action": {
-        "park": {
-          "aid": 11,
-          "recipient": 6
-        }
-      },
-      "expect": {
-        "ok": true,
-        "result": {
-          "ok": {
-            "flow": {
-              "bondReturn": [
-                6,
-                10
-              ],
-              "bookingFee": 0,
-              "deposited": 0,
-              "intoRequest": 0,
-              "locked": [],
-              "premium": null
-            },
-            "observations": [
-              {
-                "aid": 11,
-                "binding": 0,
-                "leaf": {
-                  "known": {
-                    "s": "active"
-                  }
-                },
-                "minAda": 4,
-                "supply": 1
-              }
-            ],
-            "state": {
-              "bindings": [
-                [
-                  11,
-                  0
-                ]
-              ],
-              "carriers": [
-                {
-                  "aid": 11,
-                  "k": 1,
-                  "minAda": 4,
-                  "original": {
-                    "datum": 711,
-                    "key": 11,
-                    "kind": "active",
-                    "output": 111
-                  },
-                  "st": "parked",
-                  "token": 0
-                }
-              ],
-              "config": {
-                "activePolicy": 8,
-                "applicationPolicy": 7,
-                "bookingWidth": 1,
-                "maxFee": 1,
-                "processTime": 5,
-                "registrationCost": 2,
-                "registryId": 9,
-                "retractTime": 5,
-                "root": [
-                  187,
-                  43,
-                  111,
-                  81,
-                  131,
-                  142,
-                  177,
-                  246
-                ]
-              },
-              "gen": 1,
-              "nextToken": 1,
-              "registrations": [],
-              "terminations": [],
-              "treasury": 2,
-              "trie": [
-                [
-                  11,
-                  {
-                    "known": {
-                      "s": "active"
-                    }
-                  }
-                ]
-              ]
-            }
-          }
-        }
-      },
-      "note": "Park and return the bond to its authorized recipient"
-    },
-    {
-      "now": 0,
-      "actor": "anyone presenting the required evidence",
       "as": "Sam",
       "action": {
         "bookTermination": {
@@ -977,95 +847,10 @@
           "error": "keri-conviction-required"
         }
       },
-      "note": "Try booking a parked, unconvicted carrier for termination"
+      "note": "Try booking a live, unconvicted carrier for termination"
     }
   ],
-  "forks": [
-    {
-      "id": "wrong-recipient",
-      "at": 2,
-      "title": "Try returning the bond to an unauthorized recipient",
-      "steps": [
-        {
-          "now": 0,
-          "actor": "anyone presenting the required evidence",
-          "as": "Alice",
-          "action": {
-            "park": {
-              "aid": 11,
-              "recipient": 9
-            }
-          },
-          "expect": {
-            "ok": false,
-            "reason": "keri-close-refused",
-            "result": {
-              "error": "keri-close-refused"
-            }
-          },
-          "note": "Try returning the bond to an unauthorized recipient"
-        }
-      ],
-      "expectFinal": {
-        "bindings": [
-          [
-            11,
-            0
-          ]
-        ],
-        "carriers": [
-          {
-            "aid": 11,
-            "k": 0,
-            "minAda": 4,
-            "original": {
-              "datum": 711,
-              "key": 11,
-              "kind": "active",
-              "output": 111
-            },
-            "st": "live",
-            "token": 0
-          }
-        ],
-        "config": {
-          "activePolicy": 8,
-          "applicationPolicy": 7,
-          "bookingWidth": 1,
-          "maxFee": 1,
-          "processTime": 5,
-          "registrationCost": 2,
-          "registryId": 9,
-          "retractTime": 5,
-          "root": [
-            187,
-            43,
-            111,
-            81,
-            131,
-            142,
-            177,
-            246
-          ]
-        },
-        "gen": 1,
-        "nextToken": 1,
-        "registrations": [],
-        "terminations": [],
-        "treasury": 2,
-        "trie": [
-          [
-            11,
-            {
-              "known": {
-                "s": "active"
-              }
-            }
-          ]
-        ]
-      }
-    }
-  ],
+  "forks": [],
   "expectFinal": {
     "bindings": [
       [
@@ -1076,7 +861,7 @@
     "carriers": [
       {
         "aid": 11,
-        "k": 1,
+        "k": 0,
         "minAda": 4,
         "original": {
           "datum": 711,
@@ -1084,7 +869,7 @@
           "kind": "active",
           "output": 111
         },
-        "st": "parked",
+        "st": "live",
         "token": 0
       }
     ],

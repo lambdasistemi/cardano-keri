@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* Focused executable checks for the retained-output Registry simulator.
+/* Focused executable checks for the retained-custody Registry simulator.
  * The full scenario gate additionally binds source clauses and page controls. */
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -11,7 +11,9 @@ import { playStory, selectPath, projectJson, submit, replaceEvidence } from './r
 import { runSimulatorCli } from './registry-simulator-cli.mjs';
 const here = dirname(fileURLToPath(import.meta.url));
 const files = readdirSync(join(here, 'registry-simulator-scenarios')).filter(f => f.endsWith('.json')).sort();
-assert.equal(files.length, 15, 'story census');
+const retired = JSON.parse(readFileSync(join(here, 'registry-story-migration.json'), 'utf8')).stories.filter(s => s.retired).map(s => s.id);
+assert.equal(files.length, 15 - retired.length, 'story census');
+assert(files.every(f => !retired.includes(Number(f.slice(0, 2)))), 'a retired story has no scenario');
 let cells = 0, controls = 0;
 for (const file of files) {
   const sc = JSON.parse(readFileSync(join(here, 'registry-simulator-scenarios', file), 'utf8'));
@@ -33,24 +35,25 @@ for (const file of files) {
   accepted.expect.result.ok.state.gen++;
   assert(checkScenario(falseResult).problems.some(p => p.includes('full result mismatch')), 'fabricated result control'); controls++;
 }
-assert.equal(cells, 84, 'story and fork cell census');
-const sc = JSON.parse(readFileSync(join(here, 'registry-simulator-scenarios', files[8]), 'utf8'));
-const tree = playStory(sc.id), parked = tree.nodes.find(n => n.session.state.carriers[0]?.st === 'parked');
-assert(parked, 'reachable parked input');
-const session = parked.session;
-const valid = { revive: { aid: 11 } };
+assert.equal(cells, 64, 'story and fork cell census');
+const sc = JSON.parse(readFileSync(join(here, 'registry-simulator-scenarios', files.find(f => f.startsWith('12-'))), 'utf8'));
+const tree = playStory(sc.id), live = tree.nodes.find(n => n.session.state.carriers[0]?.st === 'live');
+assert(live, 'reachable live input');
+const session = live.session;
+const valid = { convictCkpt: { aid: 11 } };
 const before = JSON.stringify(session);
 const success = attempt(session, valid);
-assert(success.record.result.ok, 'positive revival');
+assert(success.record.result.ok, 'positive conviction');
+assert.equal(success.session.state.carriers[0].st, 'terminationPending', 'conviction retains pending custody');
 assert.equal(JSON.stringify(session), before, 'immutable source session');
 assert.equal(success.session.state.carriers[0].token, session.state.carriers[0].token, 'retained token');
 assert.deepEqual(success.session.state.trie, session.state.trie, 'retained active key');
-const withoutEvidence = setEvidence(session, { ...session.env, rotationFrom: [] });
-assert.equal(attempt(withoutEvidence, valid).record.result.error, 'keri-revival-refused', 'stored key evidence');
-const changed = submit(tree, valid, parked.id);
+const withoutEvidence = setEvidence(session, { ...session.env, duplicity: [] });
+assert.equal(attempt(withoutEvidence, valid).record.result.error, 'keri-conviction-refused', 'stored key evidence');
+const changed = submit(tree, valid, live.id);
 assert.equal(changed.nodes.length, tree.nodes.length + 1, 'free attempt is sibling');
-assert.equal(tree.nodes[parked.id].children.length + 1, changed.nodes[parked.id].children.length, 'original continuation retained');
-assert.equal(replaceEvidence(tree, withoutEvidence.env, parked.id).nodes.at(-1).kind, 'evidence');
+assert.equal(tree.nodes[live.id].children.length + 1, changed.nodes[live.id].children.length, 'original continuation retained');
+assert.equal(replaceEvidence(tree, withoutEvidence.env, live.id).nodes.at(-1).kind, 'evidence');
 const invalid = [
   ['negative state Nat', x => { x.state.gen = -1; }],
   ['unsafe state Number', x => { x.state.nextToken = 9007199254740992; }],
@@ -72,12 +75,11 @@ assert.throws(() => init({ ...sc.config, root: [256] }), /invalid-wire/, 'root b
 assert.throws(() => newSession({ ...sc.params, D: 0 }, sc.config, sc.env), /params.proofs/, 'positive bond'); controls++;
 const large = structuredClone(session);
 large.state.carriers[0].k = '9007199254740992';
-large.env.rotationFrom = [[11, '9007199254740992']];
-assert.equal(attempt(large, valid).session.state.carriers[0].k, '9007199254740993', 'exact successor above Number bound');
+large.env.duplicity = [[11, '9007199254740992']];
+assert.equal(attempt(large, valid).session.state.carriers[0].k, '9007199254740992', 'exact key above Number bound');
 const fakeCell = { params: session.params, env: session.env, input: session.state, action: valid, result: success.record.result };
 const broken = structuredClone(fakeCell); broken.result.ok.state.nextToken = 9007199254740992;
 assert.throws(() => checkCell(broken), /invalid-exact-integer/, 'corpus result exact-number validation'); controls++;
-const parent = structuredClone(session); parent.env.closeAuth = [];
-assert.equal(stepFn(parent.params, parent.env, { park: { aid: 11, recipient: 6 } }, success.session.state).error, 'keri-close-refused');
+assert.equal(stepFn(session.params, session.env, valid, success.session.state).error, 'keri-conviction-refused', 'pending custody is not convicted again');
 assert(equal(checkCell(fakeCell).actual, fakeCell.result));
-console.log(JSON.stringify({ stories: files.length, replayedCells: cells, negativeControls: controls, cliAndForks: 'pass', exactIntegerSuccessor: 'pass' }));
+console.log(JSON.stringify({ stories: files.length, replayedCells: cells, negativeControls: controls, cliAndForks: 'pass', exactIntegerKey: 'pass' }));

@@ -4,11 +4,11 @@
  * is fetched, and no signature is produced here. */
 import { toInternal, toWire, equal, singularTag, applicationName, readyTag, rootOf, known } from './registry-economic-core.mjs';
 import { decodeInput } from './registry-wire.mjs';
-const emptyEnv = { inception: [], rotationFrom: [], duplicity: [], closeAuth: [] };
+const emptyEnv = { inception: [], duplicity: [] };
 const sum = values => values.reduce((a, b) => a + b, 0n);
 const sub = (a, b) => a > b ? a - b : 0n;
 const nat = value => { const n = toInternal(value); if (typeof n !== 'bigint' || n < 0n) throw Error('invalid-fixture-nat'); return n; };
-const prepare = (params, state) => { const [p, , s] = decodeInput(params, emptyEnv, state, { park: { aid: 0, recipient: 0 } }); return [p, s]; };
+const prepare = (params, state) => { const [p, , s] = decodeInput(params, emptyEnv, state, { convictCkpt: { aid: 0 } }); return [p, s]; };
 const requests = s => [...s.registrations.map(b => ({ kind: 'registration', booking: b })), ...s.terminations.map(e => ({ kind: 'termination', booking: e.booking }))];
 const fresh = s => sum(requests(s).map(m => m.booking.request.reference.tx)) + 1n;
 const ordinary = amount => ({ output: { role: 'owner', datum: 'none', address: 0n, stateTokens: 0n, config: null, commitment: null, assets: [], lovelace: amount, reference: null, datumValue: null, stateToken: null }, contents: { lovelace: amount, applicationTags: [], trieReadyTags: [], otherAssets: [] }, singularTags: [], request: null });

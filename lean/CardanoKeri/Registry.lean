@@ -1,7 +1,7 @@
 import Singular.Statements.FoldAccounting
 import Singular.Statements.FoldTermination
 
-/-! Retained-output registry adapter. Generic booking and fold economics execute the pinned Singular model. Local evidence remains the named coarse Registry abstraction. -/
+/-! Registry adapter: a checkpoint is live until convicted; there is no owner exit. Generic booking and fold economics execute the pinned Singular model. Local evidence remains the named coarse Registry abstraction. -/
 namespace CardanoKeri.Registry
 structure Params where
   D : Nat
@@ -10,17 +10,14 @@ structure Params where
   Mr : Nat
   hD : 0 < D
   hFund : Mr + tip ≤ Mc
--- Same four named opaque premises as the base Registry Env; no claim of
--- equivalence with Checkpoint's concrete evidence or signature checks.
+-- Named opaque premises; no claim of equivalence with Checkpoint's concrete
+-- evidence or signature checks.
 structure Env where
   inception : Nat → Bool
-  rotationFrom : Nat → Nat → Bool
   duplicity : Nat → Nat → Bool
-  closeAuth : Nat → Nat → Bool
 
 inductive CkState where
   | live
-  | parked
   | terminationPending
   deriving DecidableEq, BEq
 
@@ -110,23 +107,6 @@ def bookRegistration (p : Params) (s : Sys)
   let after := { s with registrations := b :: s.registrations }
   if after.toWorld ≠ world then throw "keri-registration-reconstruction-mismatch"
   pure ({ deposited := b.request.contents.lovelace }, after)
-
--- Local parking preserves the old coarse closeAuth premise and bond recipient.
--- The separate Checkpoint model retains its full signed intent/rotation checks.
-def park (p : Params) (env : Env) (s : Sys) (aid recipient : Nat) :
-    Except String Result := do
-  let some c := carrierAt s aid | throw "keri-carrier-missing"
-  if c.st != .live || env.closeAuth aid recipient != true then throw "keri-close-refused"
-  let carriers := s.carriers.map (fun old =>
-    if old.aid == aid then { old with k := old.k + 1, st := .parked } else old)
-  pure ({ bondReturn := some (recipient, p.D) }, { s with carriers := carriers })
-
-def revive (p : Params) (env : Env) (s : Sys) (aid : Nat) : Except String Result := do
-  let some c := carrierAt s aid | throw "keri-carrier-missing"
-  if c.st != .parked || env.rotationFrom aid c.k != true then throw "keri-revival-refused"
-  let carriers := s.carriers.map (fun old =>
-    if old.aid == aid then { old with k := old.k + 1, st := .live } else old)
-  pure ({ deposited := p.D, locked := [(aid, p.D)] }, { s with carriers := carriers })
 
 -- Rename the old tomb stage to explicit pending: it is an extant convicted
 -- carrier awaiting booking, not a retired registry key. This retains the
@@ -236,8 +216,6 @@ def genericRejection (s : Sys) (u : Singular.EconomicUtxo)
 
 inductive Action where
   | bookRegistration (booking : Singular.RegistrationBooking)
-  | park (aid recipient : Nat)
-  | revive (aid : Nat)
   | convictCkpt (aid : Nat)
   | bookTermination (aid booker fee : Nat) (booking : Singular.TerminationBooking)
   | fold (expectedGen expectedPlugin : Nat)
@@ -248,8 +226,6 @@ inductive Action where
 def stepFn (p : Params) (env : Env) (action : Action) (s : Sys) : Except String Result :=
   match action with
   | .bookRegistration b => bookRegistration p s b
-  | .park aid recipient => park p env s aid recipient
-  | .revive aid => revive p env s aid
   | .convictCkpt aid => convictCkpt env s aid
   | .bookTermination aid booker fee b => bookTermination p s aid booker fee b
   | .fold gen plugin u tx => fold p env s gen plugin u tx

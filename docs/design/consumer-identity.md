@@ -39,7 +39,7 @@ force. The new holding predicate adds identity and observation requirements.
 | Imported complete State and Active identities | Treat the reduced model's raw key or registry label as the asset name | The two representations have different purposes |
 | Explicit finite codec and collision premises | Assume a finite cryptographic hash is globally injective | Separation claims need stated, bounded assumptions |
 | Actual economic fold plus identity fold | Replace economic routing with the identity-only fold | The identity fold does not route request money |
-| Preserved state eligibility inside the holding check | Treat any retained token or active leaf as consumable | Parked and pending holdings must refuse |
+| Preserved state eligibility inside the holding check | Treat any retained token or active leaf as consumable | Pending holdings must refuse |
 
 ## The bounded registration bridge
 
@@ -71,8 +71,8 @@ separate abstractions pending a real decoder and observer.
 The proofs establish inversion, completeness under the explicit component
 premises, delivered-origin correspondence and preservation of the old
 eligibility predicate. The connected fixture continues through all four
-rotation branches, freeze and recovery, poison and clearing, park and local
-revival, concrete conviction, booking and matching completion. It executes a
+rotation branches, freeze and recovery, poison and clearing, concrete
+conviction, booking and matching completion. It executes a
 full-identity terminal fold against the same state reference and money
 observations. A valid foreign request cannot complete the stored pending
 request; a mixed fold that consumes that request can.
@@ -184,8 +184,10 @@ checkpoint parameters, and it spends only if some reference input is a
 consumable holding for that context. The end-to-end specification
 (`ConsumerE2ESpec`) runs it on a local test chain: one transaction that
 references the eligible holding settles, and transactions that reference a
-rival registry's token, a holding of quantity two, a parked holding, a holding
-with termination pending, and a retired holding (convicted, and absent) are
+rival registry's token, a holding of quantity two, a parked holding (a case
+the model no longer has since
+[#493](https://github.com/lambdasistemi/cardano-keri/issues/493); the test
+diverges until the off-chain follow-up), a holding with termination pending, and a retired holding (convicted, and absent) are
 rejected when the consumer script evaluates false. Each refusal carries no
 other script and passes the ledger rules, so the rejection is the consumer's
 own verdict.

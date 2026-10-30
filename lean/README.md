@@ -1,9 +1,10 @@
 # The M1 identity model
 
-As an identity owner, park while retaining the output, token, minimum ADA and
-last key state, then revive through a later authorized rotation with fresh
-bonds. As a relying party, refuse parked and pending outputs. Conviction
-starts pending termination; an associated consuming fold completes retirement.
+As an identity owner, keep a checkpoint alive — bonds, rotations, freeze and
+unfreeze — until it is convicted; there is no owner exit, no parking and no
+revival. As a relying party, see a checkpoint that is either alive or
+convicted, and refuse pending outputs. Conviction starts pending termination;
+an associated consuming fold completes retirement.
 
 The project uses Lean 4.27.0 and the public Singular pin below. Checkpoint owns
 the funded lifecycle; Registry is the imported economic transport adapter.
@@ -60,10 +61,12 @@ the runner live in `retained-parking/`; model/subject compilation must succeed
 before a named runtime failure counts as a kill. Fabricated JavaScript checker
 failures and implementation mutants are recorded separately.
 
-The 106 changed contracts and 74 preserved live contracts are checked under
+The 88 changed contracts and 63 preserved live contracts are checked under
 explicit expected types in `retained-parking/ReviewedContracts.lean` and
 `PreservedContracts.lean`. Historical identities retain their dispositions;
 retired contracts do not count as current proofs or fresh mutation passes.
+`NO-OWNER-EXIT-DISPOSITIONS.md` records each statement the owner-exit removal
+retired, changed or replaced.
 The pre-D-036 retirement ledger remains `traceability.csv`.
 
 Read [the Registry design](../docs/design/registry-as-mpfs.md) for model limits

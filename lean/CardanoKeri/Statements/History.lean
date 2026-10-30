@@ -36,7 +36,7 @@ collision resistance is a hypothesis (`Function.Injective`) stated on the
 theorems that need it rather than a fact of the model.
 
 What this module does **not** model: the checkpoint lifecycle (bonds,
-poison, freeze, close, revival — `Checkpoint.lean` owns it; here an
+poison, freeze, conviction — `Checkpoint.lean` owns it; here an
 `advance` is what an accepted rotation does to the history, its evidence
 having been checked by that machine); the MPF proofs themselves (the root
 is the map it commits to and a proof is a lookup); the encoding of the

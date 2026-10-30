@@ -1,5 +1,13 @@
 # Watcher conformance review
 
+!!! note "Superseded lifecycle"
+    This dated record describes parking, revival and the owner's close as they
+    stood when it was written. The accepted design has since removed them:
+    there is no owner exit, and a checkpoint is alive until it is convicted
+    ([#493](https://github.com/lambdasistemi/cardano-keri/issues/493)). The
+    text below is kept as written.
+
+
 ## The consumer story
 
 A Cardano application uses a checkpoint to recognize an external identity. It

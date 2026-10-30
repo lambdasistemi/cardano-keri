@@ -36,12 +36,6 @@ theorem pending_record_frame (p : Params) (env : Env) {s s' : Sys}
   | bookRegistration b =>
     obtain ⟨_, _, rfl, _⟩ := bookRegistration_sound p hs
     exact hp
-  | park aid recipient =>
-    obtain ⟨c, _, _, _, _, rfl⟩ := (park_iff p env s s' aid recipient f).mp hs
-    exact hp
-  | revive aid =>
-    obtain ⟨c, _, _, _, _, rfl⟩ := (revive_iff p env s s' aid f).mp hs
-    exact hp
   | convictCkpt aid =>
     obtain ⟨c, _, _, _, _, rfl⟩ := (convictCkpt_iff env s s' aid f).mp hs
     exact hp
@@ -137,9 +131,7 @@ competing action, and absence of consumption of its exact reference; when
 observing its successor; then the complete old record, token binding, active
 leaf and supply remain. This covers local steps, booking in either store,
 generic recovery and mixed fold. No obsolete now<far premise is imported.
-Given a parked carrier without its own rotation, revival refuses and the
-input still contains its exact carrier, Mc and active leaf; no fictitious
-post-state after refusal is asserted. These are the successors to Agreement's
+These are the successors to Agreement's
 custody and refusal obligations, not merely names for the old go-request. -/
 theorem pending_preserved_unless_consumed
     (p : Params) (env : Env) (cfg : Singular.Config) {s s' : Sys}
@@ -158,11 +150,10 @@ theorem pending_preserved_unless_consumed
 /-- Given an actual transition and changed leaf, or a reachable already-retired
 key, or the exact lookup/state premises of the refusals; when taking/attempting
 the action; then only an actual fold can change a leaf, retirement cannot be
-re-registered/revived, and neither pending revival nor unconvicted parked
-booking is admitted. An absent carrier after booking is separately refused
+re-registered, and unconvicted live booking is not admitted. An absent carrier after booking is separately refused
 by carrier-missing. No far-slot convention protects termination; its actual
-state and the generic request kind do. Positive registered/parked/revived and
-registered/convicted/booked/folded traces must accompany these refusals. -/
+state and the generic request kind do. Positive registered/convicted/booked/folded
+traces must accompany these refusals. -/
 theorem retired_preserved (p : Params) (env : Env) (cfg : Singular.Config)
     {s s' : Sys} (hr : Reach p env cfg s) {action : Action} {f : Flow}
     (hs : stepFn p env action s = .ok (f, s')) (aid : Nat)
@@ -199,82 +190,7 @@ theorem carrier_edit_other (s : Sys) (edit : Carrier → Carrier)
 retention theorems; when one of the actual local functions succeeds; then
 all source/guard/exact-flow/successor clauses in its iff hold in both
 directions, and every stated actual-world, metadata, counter, other-AID,
-key/alias/holding/min-ADA clause holds. Close and revival advance precisely
-once; conviction preserves the key. Registry's empty internal conviction
-flow is scoped to its coarse transport, not denial of Checkpoint's addressed
-payments. Two-AID reachable witnesses and single-field key/token/Mc/frame
-mutations are required. A fallback minAdaAt=0 alone is never the success
-witness. No same-token claim is based only on token count. -/
-theorem park_retains (p : Params) (env : Env) (cfg : Singular.Config)
-    {s s' : Sys} {aid recipient : Nat} {f : Flow} {c : Carrier}
-    (hr : Reach p env cfg s) (hc : carrierAt s aid = some c)
-    (hs : park p env s aid recipient = .ok (f, s')) :
-    carrierAt s' aid = some { c with k := c.k + 1, st := .parked } ∧
-    minAdaAt s' aid = p.Mc ∧ s'.toWorld = s.toWorld ∧
-    s'.bindings = s.bindings ∧ s'.nextToken = s.nextToken ∧ s'.gen = s.gen ∧
-    s'.terminations = s.terminations ∧ s'.registrations = s.registrations ∧
-    (∀ other, other ≠ aid → carrierAt s' other = carrierAt s other) ∧
-    f = { bondReturn := some (recipient, p.D) } := by
-  have shape := (reachable_wellFormed p env cfg hr).carrierShape c (List.mem_of_find?_eq_some hc)
-  have key : c.aid = aid := by simpa using List.find?_some hc
-  have world := local_actions_world p env (action := .park aid recipient) (Or.inl ⟨aid, recipient, rfl⟩) hs
-  obtain ⟨current, _, _, _, rfl, rfl⟩ := (park_iff p env s s' aid recipient f).mp hs
-  let edit := fun old : Carrier => if old.aid == aid then { old with k := old.k + 1, st := .parked } else old
-  have same : ∀ old, (edit old).aid = old.aid := by intro old; dsimp [edit]; split <;> rfl
-  have found : carrierAt { s with carriers := s.carriers.map edit } aid = some { c with k := c.k + 1, st := .parked } := by
-    rw [carrier_edit_lookup s edit same aid]
-    simp [hc, edit, key]
-  refine ⟨found, ?_, world, rfl, rfl, rfl, rfl, rfl, ?_, rfl⟩
-  · change ((carrierAt { s with carriers := s.carriers.map edit } aid).map (·.minAda)).getD 0 = p.Mc
-    simp [found, shape.2.2.1]
-  · intro other different
-    apply carrier_edit_other s edit same other
-    intro old key
-    simp [edit, key, different]
-
-/-- Given all typed inputs, and reachability/current carrier lookup in the
-retention theorems; when one of the actual local functions succeeds; then
-all source/guard/exact-flow/successor clauses in its iff hold in both
-directions, and every stated actual-world, metadata, counter, other-AID,
-key/alias/holding/min-ADA clause holds. Close and revival advance precisely
-once; conviction preserves the key. Registry's empty internal conviction
-flow is scoped to its coarse transport, not denial of Checkpoint's addressed
-payments. Two-AID reachable witnesses and single-field key/token/Mc/frame
-mutations are required. A fallback minAdaAt=0 alone is never the success
-witness. No same-token claim is based only on token count. -/
-theorem revive_retains (p : Params) (env : Env) (cfg : Singular.Config)
-    {s s' : Sys} {aid : Nat} {f : Flow} {c : Carrier}
-    (hr : Reach p env cfg s) (hc : carrierAt s aid = some c)
-    (hs : revive p env s aid = .ok (f, s')) :
-    carrierAt s' aid = some { c with k := c.k + 1, st := .live } ∧
-    minAdaAt s' aid = p.Mc ∧ s'.toWorld = s.toWorld ∧
-    s'.bindings = s.bindings ∧ s'.nextToken = s.nextToken ∧ s'.gen = s.gen ∧
-    s'.terminations = s.terminations ∧ s'.registrations = s.registrations ∧
-    (∀ other, other ≠ aid → carrierAt s' other = carrierAt s other) ∧
-    f = { deposited := p.D, locked := [(aid, p.D)] } := by
-  have shape := (reachable_wellFormed p env cfg hr).carrierShape c (List.mem_of_find?_eq_some hc)
-  have key : c.aid = aid := by simpa using List.find?_some hc
-  have world := local_actions_world p env (action := .revive aid) (Or.inr (Or.inl ⟨aid, rfl⟩)) hs
-  obtain ⟨current, _, _, _, rfl, rfl⟩ := (revive_iff p env s s' aid f).mp hs
-  let edit := fun old : Carrier => if old.aid == aid then { old with k := old.k + 1, st := .live } else old
-  have same : ∀ old, (edit old).aid = old.aid := by intro old; dsimp [edit]; split <;> rfl
-  have found : carrierAt { s with carriers := s.carriers.map edit } aid = some { c with k := c.k + 1, st := .live } := by
-    rw [carrier_edit_lookup s edit same aid]
-    simp [hc, edit, key]
-  refine ⟨found, ?_, world, rfl, rfl, rfl, rfl, rfl, ?_, rfl⟩
-  · change ((carrierAt { s with carriers := s.carriers.map edit } aid).map (·.minAda)).getD 0 = p.Mc
-    simp [found, shape.2.2.1]
-  · intro other different
-    apply carrier_edit_other s edit same other
-    intro old key
-    simp [edit, key, different]
-
-/-- Given all typed inputs, and reachability/current carrier lookup in the
-retention theorems; when one of the actual local functions succeeds; then
-all source/guard/exact-flow/successor clauses in its iff hold in both
-directions, and every stated actual-world, metadata, counter, other-AID,
-key/alias/holding/min-ADA clause holds. Close and revival advance precisely
-once; conviction preserves the key. Registry's empty internal conviction
+key/alias/holding/min-ADA clause holds. Conviction preserves the key. Registry's empty internal conviction
 flow is scoped to its coarse transport, not denial of Checkpoint's addressed
 payments. Two-AID reachable witnesses and single-field key/token/Mc/frame
 mutations are required. A fallback minAdaAt=0 alone is never the success
@@ -290,7 +206,7 @@ theorem local_conviction_retains (p : Params) (env : Env) (cfg : Singular.Config
     (∀ other, other ≠ aid → carrierAt s' other = carrierAt s other) ∧ f = {} := by
   have shape := (reachable_wellFormed p env cfg hr).carrierShape c (List.mem_of_find?_eq_some hc)
   have key : c.aid = aid := by simpa using List.find?_some hc
-  have world := local_actions_world p env (action := .convictCkpt aid) (Or.inr (Or.inr ⟨aid, rfl⟩)) hs
+  have world := local_actions_world p env (action := .convictCkpt aid) ⟨aid, rfl⟩ hs
   obtain ⟨current, _, _, _, rfl, rfl⟩ := (convictCkpt_iff env s s' aid f).mp hs
   let edit := fun old : Carrier => if old.aid == aid then { old with st := .terminationPending } else old
   have same : ∀ old, (edit old).aid = old.aid := by intro old; dsimp [edit]; split <;> rfl
@@ -360,7 +276,7 @@ observation. Each reachable booked payload has a real prior reachable KERI
 conviction at its retained key, using the existing opaque premise. This is
 not a proof that the opaque predicate equals concrete Checkpoint duplicity.
 All earlier pending records survive wholly; actual supply remains one and
-custody moves exactly once. Required refusals: parked/live without prior
+custody moves exactly once. Required refusals: live without prior
 conviction, invalid coarse proof, wrong holding/key/token, duplicate reference
 in either store, second booking of the same carrier, and a tail-drop mutant
 that otherwise still admits both bookings. Full concrete Checkpoint evidence

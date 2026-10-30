@@ -20,7 +20,7 @@ receipts as the `singular-aiken-consumer-<commit>` workflow artifact for
 fourteen days.
 
 This is technical preparation. It shows that the libraries meet at the
-package interface. It does not show that KERI registration, parking or
+package interface. It does not show that KERI registration and
 conviction behave as the KERI model says once they run through Singular; that
 is the application work of
 [#324](https://github.com/lambdasistemi/cardano-keri/issues/324).

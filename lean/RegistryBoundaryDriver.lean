@@ -8,9 +8,7 @@ namespace RegistryBoundary
 
 def evidence : EnvTable := {
   inception := [11, 12, 13, 9007199254740993]
-  rotationFrom := [(11, 1)]
-  duplicity := [(11, 0), (11, 1), (12, 0)]
-  closeAuth := [(11, 6)] }
+  duplicity := [(11, 0), (11, 1), (12, 0)] }
 
 def appendCell (s : Sys) (name : String) (action : Action) : Json := cell name p evidence s action
 

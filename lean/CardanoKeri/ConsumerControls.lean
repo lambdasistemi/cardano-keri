@@ -104,11 +104,11 @@ def terminalControls (j : Journey) : Except String (List (String × Bool)) := do
     ("terminal-no-active-output", full.outputs.all fun o => AH.quantity o (representativeAsset interpretation context) == 0),
     ("terminal-active-burn", SingularApplicationHeld.Assets.mintQty full.assets (representativeAsset interpretation context) == -1),
     ("system-reregistration-refused", (advance j.terminal (registrationCommand j.input)).toOption.isNone),
-    ("system-revival-refused", (advance j.terminal (.local context.aid 42 (.reopen 11 42 5))).toOption.isNone),
+    ("system-rotation-refused", (advance j.terminal (.local context.aid 42 (.rotate 11 .keep 7 none))).toOption.isNone),
     ("registry-reregistration-refused", reRegistered.toOption.isNone),
-    ("registry-revival-refused", (CardanoKeri.Registry.revive j.input.registryParams j.input.registryEnv after context.aid).toOption.isNone),
+    ("registry-reconviction-refused", (CardanoKeri.Registry.convictCkpt j.input.registryEnv after context.aid).toOption.isNone),
     ("repeat-completion-refused", (advance j.terminal (.complete context.aid j.completion)).toOption.isNone),
-    ("pending-revival-refused", (advance j.booked (.local context.aid 38 (.reopen 11 42 5))).toOption.isNone)]
+    ("pending-rotation-refused", (advance j.booked (.local context.aid 38 (.rotate 11 .keep 7 none))).toOption.isNone)]
 
 
 def genesisControls (j : Journey) : List (String × Bool) :=

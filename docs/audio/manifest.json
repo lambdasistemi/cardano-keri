@@ -236424,13 +236424,13 @@
      "text": "replay"
     },
     {
-     "end": 21.0,
+     "end": 21,
      "start": 20.675,
      "text": "gates"
     },
     {
      "end": 21.4,
-     "start": 21.0,
+     "start": 21,
      "text": "compare"
     },
     {
@@ -236849,13 +236849,13 @@
      "text": "."
     },
     {
-     "end": 27.0,
+     "end": 27,
      "start": 26.825,
      "text": "This"
     },
     {
      "end": 27.237,
-     "start": 27.0,
+     "start": 27,
      "text": "code"
     },
     {
@@ -236984,13 +236984,13 @@
      "text": "consumer"
     },
     {
-     "end": 2.0,
+     "end": 2,
      "start": 1.05,
      "text": "identity"
     },
     {
      "end": 2.2,
-     "start": 2.0,
+     "start": 2,
      "text": "."
     }
    ]
@@ -237414,13 +237414,13 @@
      "text": "it"
     },
     {
-     "end": 29.0,
+     "end": 29,
      "start": 28.8,
      "text": "does"
     },
     {
      "end": 29.237,
-     "start": 29.0,
+     "start": 29,
      "text": "not"
     },
     {
@@ -237554,7 +237554,7 @@
      "text": "seed"
     },
     {
-     "end": 8.0,
+     "end": 8,
      "start": 7.775,
      "text": "."
     },
@@ -237640,7 +237640,7 @@
     },
     {
      "end": 15.125,
-     "start": 15.0,
+     "start": 15,
      "text": "The"
     },
     {
@@ -237749,13 +237749,13 @@
      "text": "into"
     },
     {
-     "end": 24.0,
+     "end": 24,
      "start": 23.013,
      "text": "KERI"
     },
     {
      "end": 24.2,
-     "start": 24.0,
+     "start": 24,
      "text": "."
     }
    ]
@@ -238244,13 +238244,13 @@
      "text": "is"
     },
     {
-     "end": 9.0,
+     "end": 9,
      "start": 8.1,
      "text": "valid"
     },
     {
      "end": 9.225,
-     "start": 9.0,
+     "start": 9,
      "text": "."
     }
    ]
@@ -239214,18 +239214,18 @@
      "text": "stored"
     },
     {
-     "end": 33.0,
+     "end": 33,
      "start": 32.625,
      "text": "pending"
     },
     {
-     "end": 34.0,
-     "start": 33.0,
+     "end": 34,
+     "start": 33,
      "text": "request"
     },
     {
      "end": 34.2,
-     "start": 34.0,
+     "start": 34,
      "text": ";"
     },
     {
@@ -239271,6 +239271,1711 @@
     {
      "end": 37.05,
      "start": 36.85,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-consumer-identity/the-concrete-bytes-00": {
+   "audio_sha256": "4ebf30ab15751b0780b634cbe9d37ebe748e4430e3cf64f58fd0de3838351b49",
+   "characters": 19,
+   "cost": 1.8809999999999998e-05,
+   "duration": 1.575,
+   "index": 0,
+   "key": "f44a5d302d204ce709fcbc6c9a6d04a4f037e5c8b2e21c9b34862f60da1a9e76",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 500,
+   "section": "the-concrete-bytes",
+   "sent_text": "The concrete bytes.",
+   "text": "The concrete bytes.",
+   "words": [
+    {
+     "end": 0.25,
+     "start": 0.175,
+     "text": "The"
+    },
+    {
+     "end": 0.65,
+     "start": 0.25,
+     "text": "concrete"
+    },
+    {
+     "end": 1.375,
+     "start": 0.65,
+     "text": "bytes"
+    },
+    {
+     "end": 1.575,
+     "start": 1.375,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-consumer-identity/the-concrete-bytes-01": {
+   "audio_sha256": "5c019155dd9b00244da4f6cf8e20e7d6e174e3804fb6ec01fbcc71b7a3761ee0",
+   "characters": 387,
+   "cost": 0.00038312999999999997,
+   "duration": 30.2,
+   "index": 1,
+   "key": "c40ecdf648068d2c0e4d5b1645fb5f6b5c2227c8840a3999c25473430726dafb",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 400,
+   "section": "the-concrete-bytes",
+   "sent_text": "The model declares one concrete interpretation in CardanoKeri.ConsumerIdentity.Bytes. The registry key of an AID is the AID's qualified CESR text bytes. The codec is the Plutus Data serialisation of the Preimage type in Singular's singular_state/preimage module at the pinned revision. The hash is BLAKE2b-256, as in that module. The datum decoder remains an input to the interpretation.",
+   "text": "The model declares one concrete interpretation in CardanoKeri.ConsumerIdentity.Bytes. The registry key of an AID is the AID's qualified CESR text bytes. The codec is the Plutus Data serialisation of the Preimage type in Singular's singular_state/preimage module at the pinned revision. The hash is BLAKE2b-256, as in that module. The datum decoder remains an input to the interpretation.",
+   "words": [
+    {
+     "end": 0.3,
+     "start": 0.2,
+     "text": "The"
+    },
+    {
+     "end": 0.675,
+     "start": 0.3,
+     "text": "model"
+    },
+    {
+     "end": 1.138,
+     "start": 0.675,
+     "text": "declares"
+    },
+    {
+     "end": 1.438,
+     "start": 1.138,
+     "text": "one"
+    },
+    {
+     "end": 1.938,
+     "start": 1.438,
+     "text": "concrete"
+    },
+    {
+     "end": 2.825,
+     "start": 1.938,
+     "text": "interpretation"
+    },
+    {
+     "end": 3,
+     "start": 2.825,
+     "text": "in"
+    },
+    {
+     "end": 4.05,
+     "start": 3,
+     "text": "CardanoKeri"
+    },
+    {
+     "end": 4.15,
+     "start": 4.05,
+     "text": "."
+    },
+    {
+     "end": 5.15,
+     "start": 4.15,
+     "text": "ConsumerIdentity"
+    },
+    {
+     "end": 5.225,
+     "start": 5.15,
+     "text": "."
+    },
+    {
+     "end": 6.2,
+     "start": 5.225,
+     "text": "Bytes"
+    },
+    {
+     "end": 6.4,
+     "start": 6.2,
+     "text": "."
+    },
+    {
+     "end": 6.675,
+     "start": 6.575,
+     "text": "The"
+    },
+    {
+     "end": 7.188,
+     "start": 6.675,
+     "text": "registry"
+    },
+    {
+     "end": 7.45,
+     "start": 7.188,
+     "text": "key"
+    },
+    {
+     "end": 7.537,
+     "start": 7.45,
+     "text": "of"
+    },
+    {
+     "end": 7.662,
+     "start": 7.537,
+     "text": "an"
+    },
+    {
+     "end": 8.55,
+     "start": 7.662,
+     "text": "AID"
+    },
+    {
+     "end": 8.712,
+     "start": 8.55,
+     "text": "is"
+    },
+    {
+     "end": 8.863,
+     "start": 8.712,
+     "text": "the"
+    },
+    {
+     "end": 9.5,
+     "start": 8.863,
+     "text": "AID's"
+    },
+    {
+     "end": 10.113,
+     "start": 9.5,
+     "text": "qualified"
+    },
+    {
+     "end": 10.75,
+     "start": 10.113,
+     "text": "CESR"
+    },
+    {
+     "end": 11.05,
+     "start": 10.75,
+     "text": "text"
+    },
+    {
+     "end": 11.95,
+     "start": 11.05,
+     "text": "bytes"
+    },
+    {
+     "end": 12.15,
+     "start": 11.95,
+     "text": "."
+    },
+    {
+     "end": 12.462,
+     "start": 12.35,
+     "text": "The"
+    },
+    {
+     "end": 12.925,
+     "start": 12.462,
+     "text": "codec"
+    },
+    {
+     "end": 13.075,
+     "start": 12.925,
+     "text": "is"
+    },
+    {
+     "end": 13.212,
+     "start": 13.075,
+     "text": "the"
+    },
+    {
+     "end": 13.712,
+     "start": 13.212,
+     "text": "Plutus"
+    },
+    {
+     "end": 14.087,
+     "start": 13.712,
+     "text": "Data"
+    },
+    {
+     "end": 15.025,
+     "start": 14.087,
+     "text": "serialisation"
+    },
+    {
+     "end": 15.113,
+     "start": 15.025,
+     "text": "of"
+    },
+    {
+     "end": 15.212,
+     "start": 15.113,
+     "text": "the"
+    },
+    {
+     "end": 15.812,
+     "start": 15.212,
+     "text": "Preimage"
+    },
+    {
+     "end": 16.212,
+     "start": 15.812,
+     "text": "type"
+    },
+    {
+     "end": 16.4,
+     "start": 16.212,
+     "text": "in"
+    },
+    {
+     "end": 17.05,
+     "start": 16.4,
+     "text": "Singular's"
+    },
+    {
+     "end": 18.462,
+     "start": 17.05,
+     "text": "singular_state/preimage"
+    },
+    {
+     "end": 19.15,
+     "start": 18.462,
+     "text": "module"
+    },
+    {
+     "end": 19.3,
+     "start": 19.15,
+     "text": "at"
+    },
+    {
+     "end": 19.413,
+     "start": 19.3,
+     "text": "the"
+    },
+    {
+     "end": 19.725,
+     "start": 19.413,
+     "text": "pinned"
+    },
+    {
+     "end": 20.95,
+     "start": 19.725,
+     "text": "revision"
+    },
+    {
+     "end": 21.175,
+     "start": 20.95,
+     "text": "."
+    },
+    {
+     "end": 21.487,
+     "start": 21.375,
+     "text": "The"
+    },
+    {
+     "end": 21.9,
+     "start": 21.487,
+     "text": "hash"
+    },
+    {
+     "end": 22.062,
+     "start": 21.9,
+     "text": "is"
+    },
+    {
+     "end": 23.05,
+     "start": 22.062,
+     "text": "BLAKE"
+    },
+    {
+     "end": 23.175,
+     "start": 23.05,
+     "text": "2"
+    },
+    {
+     "end": 24.5,
+     "start": 23.175,
+     "text": "b-256"
+    },
+    {
+     "end": 24.6,
+     "start": 24.5,
+     "text": ","
+    },
+    {
+     "end": 24.825,
+     "start": 24.6,
+     "text": "as"
+    },
+    {
+     "end": 24.95,
+     "start": 24.825,
+     "text": "in"
+    },
+    {
+     "end": 25.2,
+     "start": 24.95,
+     "text": "that"
+    },
+    {
+     "end": 25.875,
+     "start": 25.2,
+     "text": "module"
+    },
+    {
+     "end": 26,
+     "start": 25.875,
+     "text": "."
+    },
+    {
+     "end": 26.125,
+     "start": 26,
+     "text": "The"
+    },
+    {
+     "end": 26.5,
+     "start": 26.125,
+     "text": "datum"
+    },
+    {
+     "end": 27.05,
+     "start": 26.5,
+     "text": "decoder"
+    },
+    {
+     "end": 27.575,
+     "start": 27.05,
+     "text": "remains"
+    },
+    {
+     "end": 27.737,
+     "start": 27.575,
+     "text": "an"
+    },
+    {
+     "end": 28.175,
+     "start": 27.737,
+     "text": "input"
+    },
+    {
+     "end": 28.288,
+     "start": 28.175,
+     "text": "to"
+    },
+    {
+     "end": 28.425,
+     "start": 28.288,
+     "text": "the"
+    },
+    {
+     "end": 30,
+     "start": 28.425,
+     "text": "interpretation"
+    },
+    {
+     "end": 30.2,
+     "start": 30,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-consumer-identity/the-concrete-bytes-02": {
+   "audio_sha256": "6cb524e5b38022a61ee998a035d048cd370585e170be7e8844ae225f45377516",
+   "characters": 296,
+   "cost": 0.00029303999999999995,
+   "duration": 20.8,
+   "index": 2,
+   "key": "8f34028b46518e3e9db87cedfb0642f8ec2aae4e1b7bdbbfdfd5affd5263f4ec",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 400,
+   "section": "the-concrete-bytes",
+   "sent_text": "The upstream model carries byte strings such as transaction ids, policies, asset names and keys as natural numbers. Each such field carries its bytes through a bijective base-256 numeral, so empty strings and leading zero bytes keep their identity. Output indices and deposits are plain integers.",
+   "text": "The upstream model carries byte strings such as transaction ids, policies, asset names and keys as natural numbers. Each such field carries its bytes through a bijective base-256 numeral, so empty strings and leading zero bytes keep their identity. Output indices and deposits are plain integers.",
+   "words": [
+    {
+     "end": 0.325,
+     "start": 0.2,
+     "text": "The"
+    },
+    {
+     "end": 0.875,
+     "start": 0.325,
+     "text": "upstream"
+    },
+    {
+     "end": 1.237,
+     "start": 0.875,
+     "text": "model"
+    },
+    {
+     "end": 1.663,
+     "start": 1.237,
+     "text": "carries"
+    },
+    {
+     "end": 1.975,
+     "start": 1.663,
+     "text": "byte"
+    },
+    {
+     "end": 2.45,
+     "start": 1.975,
+     "text": "strings"
+    },
+    {
+     "end": 2.675,
+     "start": 2.45,
+     "text": "such"
+    },
+    {
+     "end": 2.825,
+     "start": 2.675,
+     "text": "as"
+    },
+    {
+     "end": 3.55,
+     "start": 2.825,
+     "text": "transaction"
+    },
+    {
+     "end": 3.95,
+     "start": 3.55,
+     "text": "ids"
+    },
+    {
+     "end": 4.037,
+     "start": 3.95,
+     "text": ","
+    },
+    {
+     "end": 4.775,
+     "start": 4.037,
+     "text": "policies"
+    },
+    {
+     "end": 4.863,
+     "start": 4.775,
+     "text": ","
+    },
+    {
+     "end": 5.3,
+     "start": 4.863,
+     "text": "asset"
+    },
+    {
+     "end": 5.7,
+     "start": 5.3,
+     "text": "names"
+    },
+    {
+     "end": 5.838,
+     "start": 5.7,
+     "text": "and"
+    },
+    {
+     "end": 6.287,
+     "start": 5.838,
+     "text": "keys"
+    },
+    {
+     "end": 6.45,
+     "start": 6.287,
+     "text": "as"
+    },
+    {
+     "end": 6.9,
+     "start": 6.45,
+     "text": "natural"
+    },
+    {
+     "end": 8.05,
+     "start": 6.9,
+     "text": "numbers"
+    },
+    {
+     "end": 8.25,
+     "start": 8.05,
+     "text": "."
+    },
+    {
+     "end": 8.65,
+     "start": 8.45,
+     "text": "Each"
+    },
+    {
+     "end": 8.9,
+     "start": 8.65,
+     "text": "such"
+    },
+    {
+     "end": 9.2,
+     "start": 8.9,
+     "text": "field"
+    },
+    {
+     "end": 9.562,
+     "start": 9.2,
+     "text": "carries"
+    },
+    {
+     "end": 9.75,
+     "start": 9.562,
+     "text": "its"
+    },
+    {
+     "end": 10.163,
+     "start": 9.75,
+     "text": "bytes"
+    },
+    {
+     "end": 10.363,
+     "start": 10.163,
+     "text": "through"
+    },
+    {
+     "end": 10.425,
+     "start": 10.363,
+     "text": "a"
+    },
+    {
+     "end": 11.025,
+     "start": 10.425,
+     "text": "bijective"
+    },
+    {
+     "end": 12.225,
+     "start": 11.025,
+     "text": "base-256"
+    },
+    {
+     "end": 13.175,
+     "start": 12.225,
+     "text": "numeral"
+    },
+    {
+     "end": 13.375,
+     "start": 13.175,
+     "text": ","
+    },
+    {
+     "end": 13.725,
+     "start": 13.575,
+     "text": "so"
+    },
+    {
+     "end": 14.025,
+     "start": 13.725,
+     "text": "empty"
+    },
+    {
+     "end": 14.575,
+     "start": 14.025,
+     "text": "strings"
+    },
+    {
+     "end": 14.7,
+     "start": 14.575,
+     "text": "and"
+    },
+    {
+     "end": 15.025,
+     "start": 14.7,
+     "text": "leading"
+    },
+    {
+     "end": 15.35,
+     "start": 15.025,
+     "text": "zero"
+    },
+    {
+     "end": 15.7,
+     "start": 15.35,
+     "text": "bytes"
+    },
+    {
+     "end": 15.95,
+     "start": 15.7,
+     "text": "keep"
+    },
+    {
+     "end": 16.138,
+     "start": 15.95,
+     "text": "their"
+    },
+    {
+     "end": 17.2,
+     "start": 16.138,
+     "text": "identity"
+    },
+    {
+     "end": 17.4,
+     "start": 17.2,
+     "text": "."
+    },
+    {
+     "end": 17.95,
+     "start": 17.6,
+     "text": "Output"
+    },
+    {
+     "end": 18.487,
+     "start": 17.95,
+     "text": "indices"
+    },
+    {
+     "end": 18.587,
+     "start": 18.487,
+     "text": "and"
+    },
+    {
+     "end": 19.2,
+     "start": 18.587,
+     "text": "deposits"
+    },
+    {
+     "end": 19.3,
+     "start": 19.2,
+     "text": "are"
+    },
+    {
+     "end": 19.625,
+     "start": 19.3,
+     "text": "plain"
+    },
+    {
+     "end": 20.6,
+     "start": 19.625,
+     "text": "integers"
+    },
+    {
+     "end": 20.8,
+     "start": 20.6,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-consumer-identity/the-concrete-bytes-03": {
+   "audio_sha256": "1991f7e49d54ac8885e13075638c5c262bc5b8f580940623e4c2af8a1b9e5aea",
+   "characters": 268,
+   "cost": 0.00026532,
+   "duration": 18.7,
+   "index": 3,
+   "key": "30e2a1bca07cd22999860a6648de431ba7dd1d9238d3a10f65f508f2c31716fe",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 400,
+   "section": "the-concrete-bytes",
+   "sent_text": "A 256-bit digest of inputs of any length cannot be injective, so no proof of collision freedom exists; the statements name the assumption in their types. With it, the theorems for different AIDs, different seeds and a rival seed's registry hold for the concrete bytes.",
+   "text": "A 256-bit digest of inputs of any length cannot be injective, so no proof of collision freedom exists; the statements name the assumption in their types. With it, the theorems for different AIDs, different seeds and a rival seed's registry hold for the concrete bytes.",
+   "words": [
+    {
+     "end": 0.312,
+     "start": 0.225,
+     "text": "A"
+    },
+    {
+     "end": 1.763,
+     "start": 0.312,
+     "text": "256-bit"
+    },
+    {
+     "end": 2.325,
+     "start": 1.763,
+     "text": "digest"
+    },
+    {
+     "end": 2.487,
+     "start": 2.325,
+     "text": "of"
+    },
+    {
+     "end": 3,
+     "start": 2.487,
+     "text": "inputs"
+    },
+    {
+     "end": 3.138,
+     "start": 3,
+     "text": "of"
+    },
+    {
+     "end": 3.463,
+     "start": 3.138,
+     "text": "any"
+    },
+    {
+     "end": 3.862,
+     "start": 3.463,
+     "text": "length"
+    },
+    {
+     "end": 4.25,
+     "start": 3.862,
+     "text": "cannot"
+    },
+    {
+     "end": 4.425,
+     "start": 4.25,
+     "text": "be"
+    },
+    {
+     "end": 5.125,
+     "start": 4.425,
+     "text": "injective"
+    },
+    {
+     "end": 5.238,
+     "start": 5.125,
+     "text": ","
+    },
+    {
+     "end": 5.438,
+     "start": 5.238,
+     "text": "so"
+    },
+    {
+     "end": 5.688,
+     "start": 5.438,
+     "text": "no"
+    },
+    {
+     "end": 6.012,
+     "start": 5.688,
+     "text": "proof"
+    },
+    {
+     "end": 6.125,
+     "start": 6.012,
+     "text": "of"
+    },
+    {
+     "end": 6.662,
+     "start": 6.125,
+     "text": "collision"
+    },
+    {
+     "end": 7.05,
+     "start": 6.662,
+     "text": "freedom"
+    },
+    {
+     "end": 8.325,
+     "start": 7.05,
+     "text": "exists"
+    },
+    {
+     "end": 8.525,
+     "start": 8.325,
+     "text": ";"
+    },
+    {
+     "end": 8.775,
+     "start": 8.7,
+     "text": "the"
+    },
+    {
+     "end": 9.275,
+     "start": 8.775,
+     "text": "statements"
+    },
+    {
+     "end": 9.488,
+     "start": 9.275,
+     "text": "name"
+    },
+    {
+     "end": 9.575,
+     "start": 9.488,
+     "text": "the"
+    },
+    {
+     "end": 10.038,
+     "start": 9.575,
+     "text": "assumption"
+    },
+    {
+     "end": 10.113,
+     "start": 10.038,
+     "text": "in"
+    },
+    {
+     "end": 10.275,
+     "start": 10.113,
+     "text": "their"
+    },
+    {
+     "end": 11.1,
+     "start": 10.275,
+     "text": "types"
+    },
+    {
+     "end": 11.3,
+     "start": 11.1,
+     "text": "."
+    },
+    {
+     "end": 11.712,
+     "start": 11.5,
+     "text": "With"
+    },
+    {
+     "end": 11.875,
+     "start": 11.712,
+     "text": "it"
+    },
+    {
+     "end": 11.95,
+     "start": 11.875,
+     "text": ","
+    },
+    {
+     "end": 12.087,
+     "start": 11.95,
+     "text": "the"
+    },
+    {
+     "end": 12.65,
+     "start": 12.087,
+     "text": "theorems"
+    },
+    {
+     "end": 12.775,
+     "start": 12.65,
+     "text": "for"
+    },
+    {
+     "end": 13.1,
+     "start": 12.775,
+     "text": "different"
+    },
+    {
+     "end": 13.925,
+     "start": 13.1,
+     "text": "AIDs"
+    },
+    {
+     "end": 14,
+     "start": 13.925,
+     "text": ","
+    },
+    {
+     "end": 14.413,
+     "start": 14,
+     "text": "different"
+    },
+    {
+     "end": 14.9,
+     "start": 14.413,
+     "text": "seeds"
+    },
+    {
+     "end": 15.012,
+     "start": 14.9,
+     "text": "and"
+    },
+    {
+     "end": 15.113,
+     "start": 15.012,
+     "text": "a"
+    },
+    {
+     "end": 15.538,
+     "start": 15.113,
+     "text": "rival"
+    },
+    {
+     "end": 15.9,
+     "start": 15.538,
+     "text": "seed's"
+    },
+    {
+     "end": 16.45,
+     "start": 15.9,
+     "text": "registry"
+    },
+    {
+     "end": 16.725,
+     "start": 16.45,
+     "text": "hold"
+    },
+    {
+     "end": 16.837,
+     "start": 16.725,
+     "text": "for"
+    },
+    {
+     "end": 16.925,
+     "start": 16.837,
+     "text": "the"
+    },
+    {
+     "end": 17.425,
+     "start": 16.925,
+     "text": "concrete"
+    },
+    {
+     "end": 18.5,
+     "start": 17.425,
+     "text": "bytes"
+    },
+    {
+     "end": 18.7,
+     "start": 18.5,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-consumer-identity/the-concrete-bytes-04": {
+   "audio_sha256": "773a0892ccba58dfb9d88dd1b64249d622d83bb6f6c2fa06651ef04c2f75c63a",
+   "characters": 557,
+   "cost": 0.00055143,
+   "duration": 38.925,
+   "index": 4,
+   "key": "d6c0ee07b409029b8b64033837b7ab99095318c936ed324c2d46c5e5a8bf2140",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 400,
+   "section": "the-concrete-bytes",
+   "sent_text": "The vector table lists, for each state policy, seed and AID, the key, both serialised preimages, both names and the representative asset a genuine holding carries. The Lean emits the table and checks the committed copy. Each row runs the consumer predicate: the committed asset is accepted, and a changed state policy, transaction id, output index, AID or asset name is refused. Changing any committed field of the table fails the check. The same code reproduces every preimage and name of Singular's own table at the pinned revision, across its five roles.",
+   "text": "The vector table lists, for each state policy, seed and AID, the key, both serialised preimages, both names and the representative asset a genuine holding carries. The Lean emits the table and checks the committed copy. Each row runs the consumer predicate: the committed asset is accepted, and a changed state policy, transaction id, output index, AID or asset name is refused. Changing any committed field of the table fails the check. The same code reproduces every preimage and name of Singular's own table at the pinned revision, across its five roles.",
+   "words": [
+    {
+     "end": 0.3,
+     "start": 0.225,
+     "text": "The"
+    },
+    {
+     "end": 0.675,
+     "start": 0.3,
+     "text": "vector"
+    },
+    {
+     "end": 1.075,
+     "start": 0.675,
+     "text": "table"
+    },
+    {
+     "end": 1.425,
+     "start": 1.075,
+     "text": "lists"
+    },
+    {
+     "end": 1.475,
+     "start": 1.425,
+     "text": ","
+    },
+    {
+     "end": 1.65,
+     "start": 1.475,
+     "text": "for"
+    },
+    {
+     "end": 1.925,
+     "start": 1.65,
+     "text": "each"
+    },
+    {
+     "end": 2.263,
+     "start": 1.925,
+     "text": "state"
+    },
+    {
+     "end": 2.9,
+     "start": 2.263,
+     "text": "policy"
+    },
+    {
+     "end": 3.025,
+     "start": 2.9,
+     "text": ","
+    },
+    {
+     "end": 3.45,
+     "start": 3.025,
+     "text": "seed"
+    },
+    {
+     "end": 3.612,
+     "start": 3.45,
+     "text": "and"
+    },
+    {
+     "end": 4.475,
+     "start": 3.612,
+     "text": "AID"
+    },
+    {
+     "end": 4.575,
+     "start": 4.475,
+     "text": ","
+    },
+    {
+     "end": 4.713,
+     "start": 4.575,
+     "text": "the"
+    },
+    {
+     "end": 5.1,
+     "start": 4.713,
+     "text": "key"
+    },
+    {
+     "end": 5.213,
+     "start": 5.1,
+     "text": ","
+    },
+    {
+     "end": 5.6,
+     "start": 5.213,
+     "text": "both"
+    },
+    {
+     "end": 6.325,
+     "start": 5.6,
+     "text": "serialised"
+    },
+    {
+     "end": 7.1,
+     "start": 6.325,
+     "text": "preimages"
+    },
+    {
+     "end": 7.175,
+     "start": 7.1,
+     "text": ","
+    },
+    {
+     "end": 7.463,
+     "start": 7.175,
+     "text": "both"
+    },
+    {
+     "end": 7.975,
+     "start": 7.463,
+     "text": "names"
+    },
+    {
+     "end": 8.137,
+     "start": 7.975,
+     "text": "and"
+    },
+    {
+     "end": 8.225,
+     "start": 8.137,
+     "text": "the"
+    },
+    {
+     "end": 9.012,
+     "start": 8.225,
+     "text": "representative"
+    },
+    {
+     "end": 9.475,
+     "start": 9.012,
+     "text": "asset"
+    },
+    {
+     "end": 9.587,
+     "start": 9.475,
+     "text": "a"
+    },
+    {
+     "end": 10.1,
+     "start": 9.587,
+     "text": "genuine"
+    },
+    {
+     "end": 10.475,
+     "start": 10.1,
+     "text": "holding"
+    },
+    {
+     "end": 11.675,
+     "start": 10.475,
+     "text": "carries"
+    },
+    {
+     "end": 11.9,
+     "start": 11.675,
+     "text": "."
+    },
+    {
+     "end": 12.175,
+     "start": 12.075,
+     "text": "The"
+    },
+    {
+     "end": 12.425,
+     "start": 12.175,
+     "text": "Lean"
+    },
+    {
+     "end": 12.725,
+     "start": 12.425,
+     "text": "emits"
+    },
+    {
+     "end": 12.825,
+     "start": 12.725,
+     "text": "the"
+    },
+    {
+     "end": 13.337,
+     "start": 12.825,
+     "text": "table"
+    },
+    {
+     "end": 13.488,
+     "start": 13.337,
+     "text": "and"
+    },
+    {
+     "end": 13.788,
+     "start": 13.488,
+     "text": "checks"
+    },
+    {
+     "end": 13.875,
+     "start": 13.788,
+     "text": "the"
+    },
+    {
+     "end": 14.275,
+     "start": 13.875,
+     "text": "committed"
+    },
+    {
+     "end": 15.175,
+     "start": 14.275,
+     "text": "copy"
+    },
+    {
+     "end": 15.4,
+     "start": 15.175,
+     "text": "."
+    },
+    {
+     "end": 15.8,
+     "start": 15.6,
+     "text": "Each"
+    },
+    {
+     "end": 16.025,
+     "start": 15.8,
+     "text": "row"
+    },
+    {
+     "end": 16.288,
+     "start": 16.025,
+     "text": "runs"
+    },
+    {
+     "end": 16.375,
+     "start": 16.288,
+     "text": "the"
+    },
+    {
+     "end": 16.85,
+     "start": 16.375,
+     "text": "consumer"
+    },
+    {
+     "end": 17.775,
+     "start": 16.85,
+     "text": "predicate"
+    },
+    {
+     "end": 17.975,
+     "start": 17.775,
+     "text": ":"
+    },
+    {
+     "end": 18.25,
+     "start": 18.175,
+     "text": "the"
+    },
+    {
+     "end": 18.688,
+     "start": 18.25,
+     "text": "committed"
+    },
+    {
+     "end": 19.1,
+     "start": 18.688,
+     "text": "asset"
+    },
+    {
+     "end": 19.25,
+     "start": 19.1,
+     "text": "is"
+    },
+    {
+     "end": 19.8,
+     "start": 19.25,
+     "text": "accepted"
+    },
+    {
+     "end": 19.85,
+     "start": 19.8,
+     "text": ","
+    },
+    {
+     "end": 19.962,
+     "start": 19.85,
+     "text": "and"
+    },
+    {
+     "end": 20.038,
+     "start": 19.962,
+     "text": "a"
+    },
+    {
+     "end": 20.525,
+     "start": 20.038,
+     "text": "changed"
+    },
+    {
+     "end": 20.85,
+     "start": 20.525,
+     "text": "state"
+    },
+    {
+     "end": 21.425,
+     "start": 20.85,
+     "text": "policy"
+    },
+    {
+     "end": 21.5,
+     "start": 21.425,
+     "text": ","
+    },
+    {
+     "end": 22.25,
+     "start": 21.5,
+     "text": "transaction"
+    },
+    {
+     "end": 22.6,
+     "start": 22.25,
+     "text": "id"
+    },
+    {
+     "end": 22.7,
+     "start": 22.6,
+     "text": ","
+    },
+    {
+     "end": 23.15,
+     "start": 22.7,
+     "text": "output"
+    },
+    {
+     "end": 23.7,
+     "start": 23.15,
+     "text": "index"
+    },
+    {
+     "end": 23.812,
+     "start": 23.7,
+     "text": ","
+    },
+    {
+     "end": 24.663,
+     "start": 23.812,
+     "text": "AID"
+    },
+    {
+     "end": 24.837,
+     "start": 24.663,
+     "text": "or"
+    },
+    {
+     "end": 25.275,
+     "start": 24.837,
+     "text": "asset"
+    },
+    {
+     "end": 25.6,
+     "start": 25.275,
+     "text": "name"
+    },
+    {
+     "end": 25.75,
+     "start": 25.6,
+     "text": "is"
+    },
+    {
+     "end": 27.075,
+     "start": 25.75,
+     "text": "refused"
+    },
+    {
+     "end": 27.3,
+     "start": 27.075,
+     "text": "."
+    },
+    {
+     "end": 27.9,
+     "start": 27.5,
+     "text": "Changing"
+    },
+    {
+     "end": 28.1,
+     "start": 27.9,
+     "text": "any"
+    },
+    {
+     "end": 28.513,
+     "start": 28.1,
+     "text": "committed"
+    },
+    {
+     "end": 28.812,
+     "start": 28.513,
+     "text": "field"
+    },
+    {
+     "end": 28.888,
+     "start": 28.812,
+     "text": "of"
+    },
+    {
+     "end": 28.975,
+     "start": 28.888,
+     "text": "the"
+    },
+    {
+     "end": 29.388,
+     "start": 28.975,
+     "text": "table"
+    },
+    {
+     "end": 29.737,
+     "start": 29.388,
+     "text": "fails"
+    },
+    {
+     "end": 29.862,
+     "start": 29.737,
+     "text": "the"
+    },
+    {
+     "end": 30.675,
+     "start": 29.862,
+     "text": "check"
+    },
+    {
+     "end": 30.875,
+     "start": 30.675,
+     "text": "."
+    },
+    {
+     "end": 31.188,
+     "start": 31.075,
+     "text": "The"
+    },
+    {
+     "end": 31.5,
+     "start": 31.188,
+     "text": "same"
+    },
+    {
+     "end": 31.85,
+     "start": 31.5,
+     "text": "code"
+    },
+    {
+     "end": 32.588,
+     "start": 31.85,
+     "text": "reproduces"
+    },
+    {
+     "end": 32.938,
+     "start": 32.588,
+     "text": "every"
+    },
+    {
+     "end": 33.55,
+     "start": 32.938,
+     "text": "preimage"
+    },
+    {
+     "end": 33.675,
+     "start": 33.55,
+     "text": "and"
+    },
+    {
+     "end": 34.013,
+     "start": 33.675,
+     "text": "name"
+    },
+    {
+     "end": 34.138,
+     "start": 34.013,
+     "text": "of"
+    },
+    {
+     "end": 34.737,
+     "start": 34.138,
+     "text": "Singular's"
+    },
+    {
+     "end": 35.013,
+     "start": 34.737,
+     "text": "own"
+    },
+    {
+     "end": 35.425,
+     "start": 35.013,
+     "text": "table"
+    },
+    {
+     "end": 35.513,
+     "start": 35.425,
+     "text": "at"
+    },
+    {
+     "end": 35.6,
+     "start": 35.513,
+     "text": "the"
+    },
+    {
+     "end": 35.875,
+     "start": 35.6,
+     "text": "pinned"
+    },
+    {
+     "end": 36.5,
+     "start": 35.875,
+     "text": "revision"
+    },
+    {
+     "end": 36.6,
+     "start": 36.5,
+     "text": ","
+    },
+    {
+     "end": 37.025,
+     "start": 36.6,
+     "text": "across"
+    },
+    {
+     "end": 37.225,
+     "start": 37.025,
+     "text": "its"
+    },
+    {
+     "end": 37.55,
+     "start": 37.225,
+     "text": "five"
+    },
+    {
+     "end": 38.7,
+     "start": 37.55,
+     "text": "roles"
+    },
+    {
+     "end": 38.925,
+     "start": 38.7,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-consumer-identity/the-concrete-bytes-05": {
+   "audio_sha256": "65e829ed9ab73a2cc0c98c1947c5708c3d8887824e018eeb0e63dfbda038cf5b",
+   "characters": 255,
+   "cost": 0.00025245,
+   "duration": 17.3,
+   "index": 5,
+   "key": "f1e11fc7dc58d2d6e00394ca48a5477bda639adbe46ea621f6cd200d04390618",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 400,
+   "section": "the-concrete-bytes",
+   "sent_text": "These checks cover the listed inputs only. The registration approval role splices an already serialised holding address and is outside the consumer statements. The Aiken consumer predicate must reproduce the table under the consumer implementation ticket.",
+   "text": "These checks cover the listed inputs only. The registration approval role splices an already serialised holding address and is outside the consumer statements. The Aiken consumer predicate must reproduce the table under the consumer implementation ticket.",
+   "words": [
+    {
+     "end": 0.4,
+     "start": 0.175,
+     "text": "These"
+    },
+    {
+     "end": 0.725,
+     "start": 0.4,
+     "text": "checks"
+    },
+    {
+     "end": 0.988,
+     "start": 0.725,
+     "text": "cover"
+    },
+    {
+     "end": 1.075,
+     "start": 0.988,
+     "text": "the"
+    },
+    {
+     "end": 1.4,
+     "start": 1.075,
+     "text": "listed"
+    },
+    {
+     "end": 1.85,
+     "start": 1.4,
+     "text": "inputs"
+    },
+    {
+     "end": 2.7,
+     "start": 1.85,
+     "text": "only"
+    },
+    {
+     "end": 2.9,
+     "start": 2.7,
+     "text": "."
+    },
+    {
+     "end": 3.2,
+     "start": 3.1,
+     "text": "The"
+    },
+    {
+     "end": 3.95,
+     "start": 3.2,
+     "text": "registration"
+    },
+    {
+     "end": 4.4,
+     "start": 3.95,
+     "text": "approval"
+    },
+    {
+     "end": 4.787,
+     "start": 4.4,
+     "text": "role"
+    },
+    {
+     "end": 5.35,
+     "start": 4.787,
+     "text": "splices"
+    },
+    {
+     "end": 5.525,
+     "start": 5.35,
+     "text": "an"
+    },
+    {
+     "end": 6.125,
+     "start": 5.525,
+     "text": "already"
+    },
+    {
+     "end": 6.875,
+     "start": 6.125,
+     "text": "serialised"
+    },
+    {
+     "end": 7.275,
+     "start": 6.875,
+     "text": "holding"
+    },
+    {
+     "end": 7.912,
+     "start": 7.275,
+     "text": "address"
+    },
+    {
+     "end": 8.05,
+     "start": 7.912,
+     "text": "and"
+    },
+    {
+     "end": 8.2,
+     "start": 8.05,
+     "text": "is"
+    },
+    {
+     "end": 8.788,
+     "start": 8.2,
+     "text": "outside"
+    },
+    {
+     "end": 8.875,
+     "start": 8.788,
+     "text": "the"
+    },
+    {
+     "end": 9.425,
+     "start": 8.875,
+     "text": "consumer"
+    },
+    {
+     "end": 10.675,
+     "start": 9.425,
+     "text": "statements"
+    },
+    {
+     "end": 10.875,
+     "start": 10.675,
+     "text": "."
+    },
+    {
+     "end": 11.212,
+     "start": 11.075,
+     "text": "The"
+    },
+    {
+     "end": 11.65,
+     "start": 11.212,
+     "text": "Aiken"
+    },
+    {
+     "end": 12.2,
+     "start": 11.65,
+     "text": "consumer"
+    },
+    {
+     "end": 12.788,
+     "start": 12.2,
+     "text": "predicate"
+    },
+    {
+     "end": 13.087,
+     "start": 12.788,
+     "text": "must"
+    },
+    {
+     "end": 13.725,
+     "start": 13.087,
+     "text": "reproduce"
+    },
+    {
+     "end": 13.863,
+     "start": 13.725,
+     "text": "the"
+    },
+    {
+     "end": 14.413,
+     "start": 13.863,
+     "text": "table"
+    },
+    {
+     "end": 14.663,
+     "start": 14.413,
+     "text": "under"
+    },
+    {
+     "end": 14.75,
+     "start": 14.663,
+     "text": "the"
+    },
+    {
+     "end": 15.375,
+     "start": 14.75,
+     "text": "consumer"
+    },
+    {
+     "end": 16.175,
+     "start": 15.375,
+     "text": "implementation"
+    },
+    {
+     "end": 17.1,
+     "start": 16.175,
+     "text": "ticket"
+    },
+    {
+     "end": 17.3,
+     "start": 17.1,
      "text": "."
     }
    ]
@@ -239504,13 +241209,13 @@
      "text": "AID"
     },
     {
-     "end": 16.0,
+     "end": 16,
      "start": 15.5,
      "text": "labels"
     },
     {
      "end": 16.125,
-     "start": 16.0,
+     "start": 16,
      "text": "do"
     },
     {
@@ -239571,17 +241276,17 @@
    ]
   },
   "docs-design-consumer-identity/what-the-interpretation-must-establish-02": {
-   "audio_sha256": "26258b85ce27bcf621ad522ac891f77c784f2b21e1bc7f13c3084ae262d8ae73",
-   "characters": 274,
-   "cost": 0.00027125999999999995,
-   "duration": 18.9,
+   "audio_sha256": "28828087e6ac361fb5f8ddd5c9857059b9577180584c7dec369d39d2a4e3bf10",
+   "characters": 297,
+   "cost": 0.00029403,
+   "duration": 20.15,
    "index": 2,
-   "key": "d596f317f0d7d6f4caf474840edcf2f1c722d47338d2f1ba77b2da387caf7d8e",
+   "key": "b0a09d83a39a6f458efaaebcf6d3b30b299dfda3f1150faec09629a74106eadd",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
    "section": "what-the-interpretation-must-establish",
-   "sent_text": "The executable corpus publishes its finite preimage tables and checks every pair in the declared domain. Constant codecs, constant hashes and a constant reduced-registry map fail their respective premises. These controls are not cryptographic proofs or Cardano byte vectors.",
-   "text": "The executable corpus publishes its finite preimage tables and checks every pair in the declared domain. Constant codecs, constant hashes and a constant reduced-registry map fail their respective premises. These controls are not cryptographic proofs or Cardano byte vectors.",
+   "sent_text": "The executable corpus publishes its finite preimage tables and checks every pair in the declared domain. Constant codecs, constant hashes and a constant reduced-registry map fail their respective premises. These controls use a fixture codec and hash; the concrete bytes follow in the next section.",
+   "text": "The executable corpus publishes its finite preimage tables and checks every pair in the declared domain. Constant codecs, constant hashes and a constant reduced-registry map fail their respective premises. These controls use a fixture codec and hash; the concrete bytes follow in the next section.",
    "words": [
     {
      "end": 0.325,
@@ -239659,13 +241364,13 @@
      "text": "declared"
     },
     {
-     "end": 7.0,
+     "end": 7,
      "start": 5.875,
      "text": "domain"
     },
     {
      "end": 7.225,
-     "start": 7.0,
+     "start": 7,
      "text": "."
     },
     {
@@ -239744,58 +241449,93 @@
      "text": "."
     },
     {
-     "end": 14.575,
-     "start": 14.35,
+     "end": 14.6,
+     "start": 14.375,
      "text": "These"
     },
     {
-     "end": 15.2,
-     "start": 14.575,
+     "end": 15.225,
+     "start": 14.6,
      "text": "controls"
     },
     {
-     "end": 15.325,
-     "start": 15.2,
-     "text": "are"
+     "end": 15.438,
+     "start": 15.225,
+     "text": "use"
     },
     {
-     "end": 15.55,
-     "start": 15.325,
-     "text": "not"
+     "end": 15.538,
+     "start": 15.438,
+     "text": "a"
     },
     {
-     "end": 16.275,
-     "start": 15.55,
-     "text": "cryptographic"
+     "end": 15.975,
+     "start": 15.538,
+     "text": "fixture"
     },
     {
-     "end": 16.737,
-     "start": 16.275,
-     "text": "proofs"
+     "end": 16.425,
+     "start": 15.975,
+     "text": "codec"
     },
     {
-     "end": 16.9,
-     "start": 16.737,
-     "text": "or"
+     "end": 16.562,
+     "start": 16.425,
+     "text": "and"
     },
     {
-     "end": 17.425,
-     "start": 16.9,
-     "text": "Cardano"
+     "end": 17.1,
+     "start": 16.562,
+     "text": "hash"
     },
     {
-     "end": 17.675,
-     "start": 17.425,
-     "text": "byte"
+     "end": 17.2,
+     "start": 17.1,
+     "text": ";"
     },
     {
-     "end": 18.7,
-     "start": 17.675,
-     "text": "vectors"
+     "end": 17.3,
+     "start": 17.2,
+     "text": "the"
     },
     {
-     "end": 18.9,
-     "start": 18.7,
+     "end": 17.775,
+     "start": 17.3,
+     "text": "concrete"
+    },
+    {
+     "end": 18.138,
+     "start": 17.775,
+     "text": "bytes"
+    },
+    {
+     "end": 18.487,
+     "start": 18.138,
+     "text": "follow"
+    },
+    {
+     "end": 18.562,
+     "start": 18.487,
+     "text": "in"
+    },
+    {
+     "end": 18.65,
+     "start": 18.562,
+     "text": "the"
+    },
+    {
+     "end": 18.925,
+     "start": 18.65,
+     "text": "next"
+    },
+    {
+     "end": 19.95,
+     "start": 18.925,
+     "text": "section"
+    },
+    {
+     "end": 20.15,
+     "start": 19.95,
      "text": "."
     }
    ]

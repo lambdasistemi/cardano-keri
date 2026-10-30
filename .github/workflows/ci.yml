@@ -149,6 +149,8 @@ jobs:
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check
       - name: Consumer vectors drift
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/consumer-vectors.mjs --check
+      - name: Consumer identity vectors drift
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/consumer-identity-vectors.mjs --check
       # The reusable KERI libraries compiled together with the published
       # Singular registry package; compatibility and retained registration
       # tests, test-identity agreement and interface controls (#477).

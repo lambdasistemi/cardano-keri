@@ -80,20 +80,14 @@ test pack_after_unpack_is_the_number() {
 }
 
 test the_carrier_separates_byte_strings_and_numbers() {
-  let strings = byte_strings()
+  let packed = list.map(byte_strings(), fn(bs) { (bs, bytes.pack(bs)) })
+  let unpacked = list.map(numbers(), fn(n) { (n, bytes.unpack(n)) })
   list.all(
-    strings,
-    fn(a) {
-      list.all(strings, fn(b) { a == b || bytes.pack(a) != bytes.pack(b) })
-    },
+    packed,
+    fn(a) { list.all(packed, fn(b) { a.1st == b.1st == ( a.2nd == b.2nd ) }) },
   ) && list.all(
-    numbers(),
-    fn(m) {
-      list.all(
-        numbers(),
-        fn(n) { m == n || bytes.unpack(m) != bytes.unpack(n) },
-      )
-    },
+    unpacked,
+    fn(m) { list.all(unpacked, fn(n) { m.1st == n.1st == ( m.2nd == n.2nd ) }) },
   )
 }
 
@@ -242,26 +236,19 @@ test committed_fields_bind_the_active_name() {
   let contexts = grid(context_of(first_vector()))
   let names = list.map(contexts, fn(c) { named(c).2nd })
   list.length(contexts) == 72 && list.all(
-    list.range(0, 71),
-    fn(i) {
-      list.all(
-        list.range(0, 71),
-        fn(j) { i == j || list.at(names, i) != list.at(names, j) },
-      )
-    },
+    names,
+    fn(a) { list.length(list.filter(names, fn(b) { a == b })) == 1 },
   )
 }
 
 test the_registry_name_binds_the_seed_alone() {
-  let contexts = grid(context_of(first_vector()))
+  let seeds = list.map(
+    grid(context_of(first_vector())),
+    fn(c) { (c.seed, named(c).1st) },
+  )
   list.all(
-    contexts,
-    fn(a) {
-      list.all(
-        contexts,
-        fn(b) { a.seed == b.seed == ( named(a).1st == named(b).1st ) },
-      )
-    },
+    seeds,
+    fn(a) { list.all(seeds, fn(b) { a.1st == b.1st == ( a.2nd == b.2nd ) }) },
   )
 }
 

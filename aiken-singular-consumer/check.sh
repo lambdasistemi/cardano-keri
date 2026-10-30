@@ -166,8 +166,15 @@ cp -r "$consumer_source/lib" "$fmt_dir/"
 chmod -R u+w "$fmt_dir"
 (cd "$fmt_dir" && aiken fmt --check) || fail 'compatibility tests are not formatted'
 
-run_tests "$main" "$receipt_dir/aiken-check.json" "$receipt_dir/aiken-check-diagnostics.log" \
-  || fail 'the consumer did not compile or a test failed (see aiken-check.json or aiken-check-diagnostics.log)'
+if ! run_tests "$main" "$receipt_dir/aiken-check.json" "$receipt_dir/aiken-check-diagnostics.log"; then
+  # A failed check keeps no output, so the reason goes to the build log.
+  if [[ -s "$receipt_dir/aiken-check.json" ]]; then
+    executed "$receipt_dir/aiken-check.json" | grep -v ' pass$' || true
+    fail 'a test failed'
+  fi
+  grep -E 'Error|─▶|unknown' "$receipt_dir/aiken-check-diagnostics.log" || true
+  fail 'the consumer did not compile'
+fi
 cmp "$main/aiken.lock" "$consumer_source/aiken.lock" || fail 'fresh resolution differs from tracked lock'
 discovered "$main" > "$receipt_dir/discovered.txt"
 executed "$receipt_dir/aiken-check.json" > "$receipt_dir/executed.txt"

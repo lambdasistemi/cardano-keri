@@ -1137,6 +1137,7 @@ test-suite e2e-tests
     Cardano.Node.Client.Balance
     CheckpointE2ESpec
     CheckpointTxBuilder
+    ConsumerE2ESpec
     FollowerE2ESpec
     Paths_cardano_keri
 

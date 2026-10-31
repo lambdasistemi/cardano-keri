@@ -54,3 +54,6 @@ node scripts/checkpoint-datum-vectors.mjs --check
   rm -f -- "$generated"
   lake env lean --run CheckpointValueDriver.lean --check checkpoint-value-vectors.json
 )
+# The checkpoint writer's Aiken tests (#339) are exactly what the committed
+# vectors of the version 2 datum and of the output's value generate.
+node scripts/checkpoint-writer-vectors.mjs --check

@@ -147,7 +147,7 @@
       "pause": 400
     },
     {
-      "text": "These checks cover the listed inputs; the theorems cover all inputs. The on-chain validator does not write version 2 yet, and the Aiken consumer does not yet decode it; reading the pool and the bonds from the value is not modelled. This code is not for mainnet.",
+      "text": "These checks cover the listed inputs; the theorems cover all inputs. The Aiken consumer decodes version 2 (the datum decoder in Aiken); the on-chain validator does not write version 2 yet, and reading the pool and the bonds from the value is not modelled. This code is not for mainnet.",
       "pause": 400
     }
   ],
@@ -171,23 +171,23 @@
       "pause": 500
     },
     {
-      "text": "consumer_example is a spending validator for a relying contract. It is parameterised by the consumer context (network, release, seed, AID) and the checkpoint parameters, and it spends only if some reference input is a consumable holding for that context. The end-to-end specification (ConsumerE2ESpec) runs it on a local test chain: one transaction that references the eligible holding settles, and transactions that reference a rival registry's token, a holding of quantity two, a holding with termination pending, and a retired holding (convicted, and absent) are rejected when the consumer script evaluates false. Each refusal carries no other script and passes the ledger rules, so the rejection is the consumer's own verdict.",
+      "text": "consumer_identity_example is a spending validator for a relying contract. It is parameterised by the consumer context (network, release, seed, AID) and the checkpoint parameters, and it spends only if some reference input is a consumable holding for that context, on the concrete identity bytes and the datum decoder of the Lean model. The end-to-end specification (ConsumerE2ESpec) runs it on a local test chain: one transaction that references the eligible holding settles, and transactions that reference a rival registry's token, a rival seed's token, a holding of quantity two, a holding with termination pending, and a holding carrying a version 1 datum are rejected when the consumer script evaluates false. Each refusal carries no other script and passes the ledger rules, so the rejection is the consumer's own verdict. The holdings carry version 2 datums written field by field from the Lean layout, the AID as its qualified CESR text.",
       "pause": 400
     },
     {
-      "text": "Two labels bound what this proves.",
+      "text": "The Lean writes no datum for an absent or a convicted state (CheckpointDatum.datum is none for both), so a retired holding with a version 2 datum does not exist; those two arms of consumable_state stay covered by the Aiken predicate tests.",
       "pause": 400
     },
     {
-      "text": "Test interpretation, not the registry byte layout. This connected run (the one above) uses the declared functions of consumer_test_interpretation: the hash is blake2b-256; the code of a State preimage is 0x00, the seed transaction id and the output index as eight bytes; the code of an Active preimage is 0x01, the registry policy, the registry asset name and the AID as eight bytes; the AID's key is the AID as eight bytes; the decoder reads the inline datum as the decoded datum itself. None of this is the Singular registry's layout. A second connected run uses the concrete identity bytes instead (next section); this one is kept as it is.",
-      "pause": 300
+      "text": "One label bounds what this proves.",
+      "pause": 400
     },
     {
       "text": "Seeded holding, not a registration journey. The holdings are minted by a test-only policy at a test application credential. The genuine registration journey belongs to #324.",
       "pause": 300
     },
     {
-      "text": "Declared limits of the example. A script cannot observe the network or resolve a release, so the example's environment is the context it is parameterised with (the trusted integration's observation). now is the lower bound of the transaction's validity interval, in the same unit as the datum's birth time and the maturity parameter; a transaction with no finite lower bound is refused. A datum that does not decode as the declared shape makes the test decoder fail rather than answer. The acceptance item that binds the predicate to the actual Singular-backed output stays open: the Aiken datum decoder, which reproduces the checkpoint datum decoder, and the registration journey are still outstanding (see the next section).",
+      "text": "Declared limits of the example. A script cannot observe the network or resolve a release, so the example's environment is the context it is parameterised with (the trusted integration's observation). now is the lower bound of the transaction's validity interval, in the same unit as the datum's birth time and the maturity parameter; a transaction with no finite lower bound is refused. A datum the decoder does not accept makes the consumer refuse the holding; it never makes the script fail. The pool and the bond amounts are held in the output's value and are not read from it (the datum decodes with a pool of 0; #339). The acceptance item that binds the predicate to the actual Singular-backed output stays open: the registration journey is still outstanding.",
       "pause": 400
     }
   ],
@@ -217,11 +217,45 @@
       "pause": 300
     },
     {
-      "text": "Connected. consumer_identity_example is consumer_example with the concrete bytes. ConsumerE2ESpec (\"concrete identity bytes, test datum decoder\") recomputes the names from the Lean layout, checks them against the vectors, and on the local test chain settles a spend that references the holding so named and refuses, in the consumer script, a spend that references a rival seed's holding.",
+      "text": "Connected. ConsumerE2ESpec recomputes the names from the Lean layout, checks them against the vectors, and on the local test chain settles a spend that references the holding so named and refuses, in the consumer script, a spend that references a rival seed's holding.",
       "pause": 300
     },
     {
-      "text": "What stays a declared test choice: the datum decoder (consumer_test_interpretation.decode; the Lean declares the version 2 decoder in the checkpoint datum, which the Aiken side does not reproduce yet), the environment (the contract's own context stands for the trusted integration's observation), and the seeded holdings (the genuine registration journey belongs to #324). These checks cover the vectors and the generated variations only: byte strings of more than 64 bytes would be serialised in chunks, which no vector reaches (a CESR text is 44 bytes). This code is not for mainnet.",
+      "text": "What stays a declared test choice: the environment (the contract's own context stands for the trusted integration's observation) and the seeded holdings (the genuine registration journey belongs to #324). These checks cover the vectors and the generated variations only: byte strings of more than 64 bytes would be serialised in chunks, which no vector reaches (a CESR text is 44 bytes). This code is not for mainnet.",
+      "pause": 400
+    }
+  ],
+  "the-datum-decoder-in-aiken": [
+    {
+      "text": "The datum decoder in Aiken.",
+      "pause": 500
+    },
+    {
+      "text": "onchain/lib/cardano_keri/consumer_checkpoint_datum.ak is CardanoKeri.CheckpointDatum.decodeData and decode over the inline datum as Plutus data, with the Lean's field readers under the same names. The consumer validator passes the concrete identity bytes and this decoder to the predicate.",
+      "pause": 400
+    },
+    {
+      "text": "Raw bytes are the ledger's. The Lean reads the datum's serialised bytes. On chain the ledger delivers the inline datum to the script already as plutus data, so the Aiken decoder starts at the data and has no counterpart of parse. This is a representation boundary, declared here: nothing in this repository runs the ledger's parse, and the connected test above is the only evidence that the data the ledger delivers is the data the Lean describes. In the Aiken tests, aiken/cbor.deserialise of a vector's datum bytes stands in for the ledger's parse; bytes that are not one whole datum never reach the decoder, as the Lean's ofBytes? refuses them. The one vector with tagged big numbers (large-numbers) is read by the generator instead, because that function stops the whole test run on a tagged big number.",
+      "pause": 400
+    },
+    {
+      "text": "The decoder never fails. Every unwrap of plutus data follows a test of its kind, so a datum the decoder does not accept is None, never an abort: a contract that scans reference inputs skips an unrelated output's datum instead of failing on it.",
+      "pause": 400
+    },
+    {
+      "text": "Two executable layers check it, beside the connected run.",
+      "pause": 400
+    },
+    {
+      "text": "The Lean vectors. consumer_checkpoint_datum_vectors.ak is generated by scripts/checkpoint-datum-vectors.mjs from lean/checkpoint-datum-vectors.json (just gen-checkpoint-datum-vectors). Each of the thirty-six rows has a test that the decoder returns the row's result and a test that the consumer predicate, on the concrete identity bytes and this decoder, returns the row's verdict; each test is named after the row. just check-checkpoint-datum-vectors rejects any drift and runs in the Lean CI job with the other consumer design checks.",
+      "pause": 300
+    },
+    {
+      "text": "Properties (consumer_checkpoint_datum_tests.ak): the decoder never fails on arbitrary data; every value of each field it reads decodes to the Lean's result; and every other kind of node in each position, including each component of the key material, is refused.",
+      "pause": 300
+    },
+    {
+      "text": "These checks cover the vectors and the generated variations only. This code is not for mainnet.",
       "pause": 400
     }
   ],
@@ -245,6 +279,6 @@
   ],
   "_source": {
     "file": "consumer-identity.md",
-    "sha256": "3caec1f7471ea58c9ee089cbad66c536b56b888bf482b52558964b8a22a6bbc5"
+    "sha256": "3d3f4cd35dda2d2918d7cdc4f739a6bbb89cc650a33faececf79193e2f3014ea"
   }
 }

@@ -815,12 +815,6 @@ groupBoundaries =
     , ("s0_reference_cursor_consumer.s0_reference_cursor_consumer", Unapplied s0MeasurementBoundary)
     , ("s0_staging_proof_token.s0_staging_proof_token", Unapplied s0MeasurementBoundary)
     ,
-        ( "consumer_example.consumer_example"
-        , Unapplied
-            "example consumer for tests: applied by the local-chain \
-            \specification only, no published deployment identity"
-        )
-    ,
         ( "consumer_identity_example.consumer_identity_example"
         , Unapplied
             "example consumer on the concrete identity bytes, for tests: \

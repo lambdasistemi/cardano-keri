@@ -6,6 +6,8 @@
     "lean/CardanoKeri/Checkpoint.lean": "f04d40626060d2b262e27db0d8c823623fc6fd8588e3d9cd93f71589ecc02c29",
     "lean/CardanoKeri/CheckpointCertificate.lean": "a84ccbcc21b6f6e5b5669add8a4f985b59de85e17c411b03643af1ca1bf3f3b7",
     "lean/CardanoKeri/CheckpointCompletionGoals.lean": "d6861d6cddc941fe6a8dd8781398676a250748dcba70eafc6338edd9b6bccde2",
+    "lean/CardanoKeri/CheckpointDatum.lean": "4b78f04fe4fc00c7ea1a08dd68350bf4e3ddd1302d78b3f1d5edb23d4b6f7d68",
+    "lean/CardanoKeri/CheckpointDatumGoals.lean": "f86c26af84ced086016303b767eea21f39c5ac9706939eec2f7b10d117bccab0",
     "lean/CardanoKeri/CheckpointGoals.lean": "44b90990102b7055332e8511e4bd1723e5026959afc7d80f83cca765b2376a51",
     "lean/CardanoKeri/CheckpointLifecycleExamples.lean": "92b555c088456dbc868e899b4caa8365e2e9452aecd034409a3bde2303579f59",
     "lean/CardanoKeri/CheckpointReceiptCheck.lean": "b8e503afc6b39c864d5670b5b746ada934e519beb2c45b291be66d811e1085d8",
@@ -126,6 +128,1014 @@
         "then": "s'.origins aid = some origin"
       },
       "storySha256": "5147b99609dfb9d286bcd444010e959984a7caf7f3e00f9300f02c04c155fbc0"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.fuel_succ",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 20,
+      "statement": "theorem fuel_succ {fuel n : Nat} (h : n + 1 ≤ fuel) : ∃ f, fuel = f + 1 ∧ n ≤ f",
+      "statementSha256": "acc79e00e4868d15a655cd30d6bf37e70faeabd915bfd9d15910a106e9fdd0b9",
+      "sourceStory": "Given fuel above a bound; when inspected; then it is a successor whose predecessor is at least the bound.",
+      "story": {
+        "given": "{fuel n : Nat} (h : n + 1 ≤ fuel)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "∃ f, fuel = f + 1 ∧ n ≤ f"
+      },
+      "storySha256": "39a50de8cb335122ae7d858fc4bdb840d1b6acc1620fcb83ec312b84b187df24"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.head_first",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 25,
+      "statement": "theorem head_first (m n : Nat) (hm : m < 7) (rest : List Nat) :\n    ∃ b r, head m n ++ rest = b :: r ∧ b ≠ 0xff",
+      "statementSha256": "1204a5efaebcb564830609ec95225b178d3375a0961c34bb0ffe77d9d14c2018",
+      "sourceStory": "Given a CBOR head of a major type below 7 and any rest; when written; then the first byte is\nnot the break byte.",
+      "story": {
+        "given": "(m n : Nat) (hm : m < 7) (rest : List Nat)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "∃ b r, head m n ++ rest = b :: r ∧ b ≠ 0xff"
+      },
+      "storySha256": "2af4240ad20ffc244262a773119fe3371806284db3339fa16d16f5b61911b24f"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.cbor_first",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 32,
+      "statement": "theorem cbor_first (d : Data) : ∃ b r, cbor d = b :: r ∧ b ≠ 0xff",
+      "statementSha256": "a5fe0931ee01eded19e8680ffd4ca60788f3e8f417fec5a4e56bd785260cf97a",
+      "sourceStory": "Given any `Data`; when serialised; then it is not empty and does not start with the break\nbyte, so a list or map reader never mistakes an item for its end.",
+      "story": {
+        "given": "(d : Data)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "∃ b r, cbor d = b :: r ∧ b ≠ 0xff"
+      },
+      "storySha256": "b0e2afc1aadf2f9e62f455c11198a55ac5c35fa4b26237f38cfb1840990e27eb"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.parse_head",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 71,
+      "statement": "theorem parse_head (fuel m n : Nat) (t : List Nat) (hm : m < 7) (hn : n < 18446744073709551616) :\n    parse (fuel + 1) (head m n ++ t) =\n      if m = 0 then some (.int n, t)\n      else if m = 1 then some (.int (Int.negSucc n), t)\n      else if m = 2 then (if n ≤ t.length then some (.bytes (t.take n), t.drop n) else none)\n      else if m = 4 then (parseCount fuel n t).map fun p => (.list p.1, p.2)\n      else if m = 5 then (parseEntries fuel n t).map fun p => (.map p.1, p.2)\n      else if m = 6 then\n        if n = 2 then (readBstr t).map fun p => (.int (beVal p.1), p.2)\n        else if n = 3 then (readBstr t).map fun p => (.int (Int.negSucc (beVal p.1)), p.2)\n        else if 121 ≤ n ∧ n < 128 then\n          match parse fuel t with\n          | some (.list fs, r') => some (.constr (n - 121) fs, r')\n          | _ => none\n        else if 1280 ≤ n ∧ n < 1401 then\n          match parse fuel t with\n          | some (.list fs, r') => some (.constr (n - 1280 + 7) fs, r')\n          | _ => none\n        else if n = 102 then\n          match parse fuel t with\n          | some (.list [.int (.ofNat i), .list fs], r') => some (.constr i fs, r')\n          | _ => none\n        else none\n      else none",
+      "statementSha256": "45c93343edee75c5289c41bf38541b3d66c7906c414c606b6670524430892804",
+      "sourceStory": "Given a CBOR head of major type `m` below 7 and argument below 2^64, and any rest; when read\nby one step of the item reader; then the reader dispatches on that major type and argument.",
+      "story": {
+        "given": "(fuel m n : Nat) (t : List Nat) (hm : m < 7) (hn : n < 18446744073709551616)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "parse (fuel + 1) (head m n ++ t) =\n      if m = 0 then some (.int n, t)\n      else if m = 1 then some (.int (Int.negSucc n), t)\n      else if m = 2 then (if n ≤ t.length then some (.bytes (t.take n), t.drop n) else none)\n      else if m = 4 then (parseCount fuel n t).map fun p => (.list p.1, p.2)\n      else if m = 5 then (parseEntries fuel n t).map fun p => (.map p.1, p.2)\n      else if m = 6 then\n        if n = 2 then (readBstr t).map fun p => (.int (beVal p.1), p.2)\n        else if n = 3 then (readBstr t).map fun p => (.int (Int.negSucc (beVal p.1)), p.2)\n        else if 121 ≤ n ∧ n < 128 then\n          match parse fuel t with\n          | some (.list fs, r') => some (.constr (n - 121) fs, r')\n          | _ => none\n        else if 1280 ≤ n ∧ n < 1401 then\n          match parse fuel t with\n          | some (.list fs, r') => some (.constr (n - 1280 + 7) fs, r')\n          | _ => none\n        else if n = 102 then\n          match parse fuel t with\n          | some (.list [.int (.ofNat i), .list fs], r') => some (.constr i fs, r')\n          | _ => none\n        else none\n      else none"
+      },
+      "storySha256": "e1190487b8e6c26eefe1a84ea89108901b6782317fc13a9f1cf3784a731146cc"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.parse_intBytes",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 107,
+      "statement": "theorem parse_intBytes (n : Int) (fuel : Nat) (t : List Nat) (h : (intBytes n).length ≤ fuel) :\n    parse fuel (intBytes n ++ t) = some (.int n, t)",
+      "statementSha256": "dda8ee4ba85ea3ffeea927624b8fbb1de05f06934a78b944cad87b022981bf5f",
+      "sourceStory": "Given a signed integer and any rest; when serialised and read with enough fuel; then the\ninteger and the rest return.",
+      "story": {
+        "given": "(n : Int) (fuel : Nat) (t : List Nat) (h : (intBytes n).length ≤ fuel)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "parse fuel (intBytes n ++ t) = some (.int n, t)"
+      },
+      "storySha256": "1f2e7326b5cfec00510ac86186f023fef84cfd528b3579bf119cbd9d2cd24f45"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.parse_bstr",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 153,
+      "statement": "theorem parse_bstr (bs : List Nat) (fuel : Nat) (t : List Nat) (h : (bstr bs).length ≤ fuel) :\n    parse fuel (bstr bs ++ t) = some (.bytes bs, t)",
+      "statementSha256": "96457c494f250c78b4e039c589086682260db0533cb4678aab27ace7276db702",
+      "sourceStory": "Given a byte string and any rest; when serialised and read with enough fuel; then the\nstring and the rest return.",
+      "story": {
+        "given": "(bs : List Nat) (fuel : Nat) (t : List Nat) (h : (bstr bs).length ≤ fuel)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "parse fuel (bstr bs ++ t) = some (.bytes bs, t)"
+      },
+      "storySha256": "8f4b1ed0449f53d3ff1b527cd93141f0602be31e06ef6d8a825417bc06905464"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.parse_wrapList",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 175,
+      "statement": "theorem parse_wrapList (xs : List Data) (fuel : Nat) (t : List Nat)\n    (h : (wrapList xs.isEmpty (cborItems xs)).length ≤ fuel)\n    (items : ∀ f, (cborItems xs).length + 1 ≤ f →\n      parseUntilBreak f (cborItems xs ++ 0xff :: t) = some (xs, t)) :\n    parse fuel (wrapList xs.isEmpty (cborItems xs) ++ t) = some (.list xs, t)",
+      "statementSha256": "9073eaa03000f9a88c4a38e14b8c038d585c9836ca7b6e013e39bb96c149558e",
+      "sourceStory": "Given a list of items whose serialisation followed by a break byte is read back with any\nenough fuel; when the list is serialised and read; then the list and the rest return.",
+      "story": {
+        "given": "(xs : List Data) (fuel : Nat) (t : List Nat)\n    (h : (wrapList xs.isEmpty (cborItems xs)).length ≤ fuel)\n    (items : ∀ f, (cborItems xs).length + 1 ≤ f →\n      parseUntilBreak f (cborItems xs ++ 0xff :: t) = some (xs, t))",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "parse fuel (wrapList xs.isEmpty (cborItems xs) ++ t) = some (.list xs, t)"
+      },
+      "storySha256": "3badff90dac711b049e1f473fe1f329b860dc159c49fe1919b7f6f995c524b47"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.parse_constr",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 198,
+      "statement": "theorem parse_constr (i : Nat) (fs : List Data) (fuel : Nat) (t : List Nat)\n    (h : (cbor (.constr i fs)).length ≤ fuel)\n    (items : ∀ f, (cborItems fs).length + 1 ≤ f →\n      parseUntilBreak f (cborItems fs ++ 0xff :: t) = some (fs, t)) :\n    parse fuel (cbor (.constr i fs) ++ t) = some (.constr i fs, t)",
+      "statementSha256": "3aab0bfcbe505bc77786291a575142699521da0404436b3c99a0366c09ae91d5",
+      "sourceStory": "Given a constructor whose fields' serialisation followed by a break byte is read back with\nany enough fuel; when serialised and read; then the constructor and the rest return. Every\nindex takes its own tag form: 121–127, 1280–1400, or 102 over `[index, fields]`.",
+      "story": {
+        "given": "(i : Nat) (fs : List Data) (fuel : Nat) (t : List Nat)\n    (h : (cbor (.constr i fs)).length ≤ fuel)\n    (items : ∀ f, (cborItems fs).length + 1 ≤ f →\n      parseUntilBreak f (cborItems fs ++ 0xff :: t) = some (fs, t))",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "parse fuel (cbor (.constr i fs) ++ t) = some (.constr i fs, t)"
+      },
+      "storySha256": "78693c7f3a80cc401f5d6586e2d848dede811faa4cbf06e882311b0b4773e2d2"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.parse_map",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 263,
+      "statement": "theorem parse_map (es : List (Data × Data)) (fuel : Nat) (t : List Nat)\n    (h : (cbor (.map es)).length ≤ fuel)\n    (entries : ∀ f, (cborEntries es).length ≤ f →\n      parseEntries f es.length (cborEntries es ++ t) = some (es, t))\n    (entriesBreak : ∀ f, (cborEntries es).length + 1 ≤ f →\n      parseEntriesUntilBreak f (cborEntries es ++ 0xff :: t) = some (es, t)) :\n    parse fuel (cbor (.map es) ++ t) = some (.map es, t)",
+      "statementSha256": "b04012e11defceed54ae56c08c467d0654d8ea98263e5bfa624fac9f07533bd3",
+      "sourceStory": "Given a map whose entries are read back with any enough fuel, counted or up to a break\nbyte; when serialised and read; then the map and the rest return.",
+      "story": {
+        "given": "(es : List (Data × Data)) (fuel : Nat) (t : List Nat)\n    (h : (cbor (.map es)).length ≤ fuel)\n    (entries : ∀ f, (cborEntries es).length ≤ f →\n      parseEntries f es.length (cborEntries es ++ t) = some (es, t))\n    (entriesBreak : ∀ f, (cborEntries es).length + 1 ≤ f →\n      parseEntriesUntilBreak f (cborEntries es ++ 0xff :: t) = some (es, t))",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "parse fuel (cbor (.map es) ++ t) = some (.map es, t)"
+      },
+      "storySha256": "df0fd527ecebff3874eda316386e4fe893a605a7f61a238f5ddb1dde43e8f2e7"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.parse_cbor",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 292,
+      "statement": "theorem parse_cbor (d : Data) (fuel : Nat) (t : List Nat) (h : (cbor d).length ≤ fuel) :\n    parse fuel (cbor d ++ t) = some (d, t)",
+      "statementSha256": "ad9563ac4402f5965a1bf48a3c653af2735f64f5414e91853adaa68b7b728447",
+      "sourceStory": "Given any `Data`, any rest and fuel of at least its serialisation's length; when serialised\nand read; then the `Data` and the rest return.",
+      "story": {
+        "given": "(d : Data) (fuel : Nat) (t : List Nat) (h : (cbor d).length ≤ fuel)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "parse fuel (cbor d ++ t) = some (d, t)"
+      },
+      "storySha256": "046cd98765b72ec8e246c0b75e40e16e2fa51eeeb3c5bbfee4a9d95592095081"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.parseUntilBreak_cborItems",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 308,
+      "statement": "theorem parseUntilBreak_cborItems (xs : List Data) (fuel : Nat) (t : List Nat)\n    (h : (cborItems xs).length + 1 ≤ fuel) :\n    parseUntilBreak fuel (cborItems xs ++ 0xff :: t) = some (xs, t)",
+      "statementSha256": "2221580e76dce369b989b47c71bd67f22e497f47218213fecd7d0c6b8ddee518",
+      "sourceStory": "Given items, any rest and enough fuel; when serialised back to back with a break byte and\nread; then the items and the rest return.",
+      "story": {
+        "given": "(xs : List Data) (fuel : Nat) (t : List Nat)\n    (h : (cborItems xs).length + 1 ≤ fuel)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "parseUntilBreak fuel (cborItems xs ++ 0xff :: t) = some (xs, t)"
+      },
+      "storySha256": "51d09657000f9cdaeb7499201224ffd09c208d56b0be3d4ccbad845ec015a6a9"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.parseEntries_cborEntries",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 331,
+      "statement": "theorem parseEntries_cborEntries (es : List (Data × Data)) (fuel : Nat) (t : List Nat)\n    (h : (cborEntries es).length ≤ fuel) :\n    parseEntries fuel es.length (cborEntries es ++ t) = some (es, t)",
+      "statementSha256": "90e1c21edcd8cf4d35b02a68a172f8c92b6de7d7fee0c3f17426260a09b20d8b",
+      "sourceStory": "Given map entries, any rest and enough fuel; when serialised and read as that many\nentries; then the entries and the rest return.",
+      "story": {
+        "given": "(es : List (Data × Data)) (fuel : Nat) (t : List Nat)\n    (h : (cborEntries es).length ≤ fuel)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "parseEntries fuel es.length (cborEntries es ++ t) = some (es, t)"
+      },
+      "storySha256": "90c63544348b67ebfc6eacb1f484e57822b62beacad5b440e43ba251ee1058b5"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.parseEntriesUntilBreak_cborEntries",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 355,
+      "statement": "theorem parseEntriesUntilBreak_cborEntries (es : List (Data × Data)) (fuel : Nat)\n    (t : List Nat) (h : (cborEntries es).length + 1 ≤ fuel) :\n    parseEntriesUntilBreak fuel (cborEntries es ++ 0xff :: t) = some (es, t)",
+      "statementSha256": "76e7acb902fafed3c77a980d7edceb91bc96cddec172c68826ff88159b2290fc",
+      "sourceStory": "Given map entries, any rest and enough fuel; when serialised with a break byte and read;\nthen the entries and the rest return.",
+      "story": {
+        "given": "(es : List (Data × Data)) (fuel : Nat)\n    (t : List Nat) (h : (cborEntries es).length + 1 ≤ fuel)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "parseEntriesUntilBreak fuel (cborEntries es ++ 0xff :: t) = some (es, t)"
+      },
+      "storySha256": "f7eddb3129152d7e1b2cf0a9429ea33566832f40a2d9846f4c1f74c1f94002d0"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.bytes_append",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 403,
+      "statement": "theorem bytes_append {a b : List Nat} : Bytes (a ++ b) ↔ Bytes a ∧ Bytes b",
+      "statementSha256": "41bd7e5ae0958ead92820a47e5f4cf035860affbd82185749c4d82c1a6456fdb",
+      "sourceStory": "Given two lists; when concatenated; then the result holds bytes only exactly when both do.",
+      "story": {
+        "given": "{a b : List Nat}",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "Bytes (a ++ b) ↔ Bytes a ∧ Bytes b"
+      },
+      "storySha256": "533e89e67dc59206f27fece9e01e0b7c55bc8777fa2c0b5cbfd147d517417891"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.bytes_singleton",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 409,
+      "statement": "theorem bytes_singleton {b : Nat} (h : b < 256) : Bytes [b]",
+      "statementSha256": "5790acb0ff118fceaa66e6cb374437dcc334d195519b0f60edc785de354b136e",
+      "sourceStory": "Given a number below 256; when it is the only element; then the list holds bytes only.",
+      "story": {
+        "given": "{b : Nat} (h : b < 256)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "Bytes [b]"
+      },
+      "storySha256": "4861ee7569c95a0ff8845298233dee2de9b17db69ec55cf677f0051ee39f6111"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.unpack_bytes",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 413,
+      "statement": "theorem unpack_bytes (n : Nat) : Bytes (unpack n)",
+      "statementSha256": "6aedf0a6d638dc8b4a38bf3e2108886bb6b75ee4553675d6c6ec5ba1c931c62a",
+      "sourceStory": "Given any carried number; when unpacked; then every element is a byte.",
+      "story": {
+        "given": "(n : Nat)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "Bytes (unpack n)"
+      },
+      "storySha256": "d779cd5ed87525b9119e50bcc1fb2ec0e54c54bd3e98e755036c757a85b76f63"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.be_bytes",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 426,
+      "statement": "theorem be_bytes (k n : Nat) : Bytes (be k n)",
+      "statementSha256": "b6c9fc666cb79a55ca4beeb22642658be941f8e4bfbdd8ef70511b211d6ff493",
+      "sourceStory": "Given a width and a number; when written big-endian; then every element is a byte.",
+      "story": {
+        "given": "(k n : Nat)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "Bytes (be k n)"
+      },
+      "storySha256": "c049c4b9ec5cda220e7ddc2950971e8ec61a4ff00971677f14d356006a7829cd"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.head_bytes",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 432,
+      "statement": "theorem head_bytes (m n : Nat) (hm : m < 7) : Bytes (head m n)",
+      "statementSha256": "eb54eeae0f76042e68489617f2574153560ee1090635f79cfd53d7093ee26cc5",
+      "sourceStory": "Given a major type below 7 and any argument; when the CBOR head is written; then every element is a byte.",
+      "story": {
+        "given": "(m n : Nat) (hm : m < 7)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "Bytes (head m n)"
+      },
+      "storySha256": "40ddd8626d2db4ef5b7f57973c2b7b63805806397c4099f573532025cc2acae1"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.chunks_bytes",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 445,
+      "statement": "theorem chunks_bytes (bs : List Nat) (h : Bytes bs) : Bytes (chunks bs)",
+      "statementSha256": "6cbaf50030680c0d779bbe7840d08b069d5e9be84f2362553204358d7be5ccde",
+      "sourceStory": "Given a byte string; when chunked; then every element of the chunks is a byte.",
+      "story": {
+        "given": "(bs : List Nat) (h : Bytes bs)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "Bytes (chunks bs)"
+      },
+      "storySha256": "4c1c486c76734314257781aaa289bce049c32757c6b6f4a2dedec419215d277a"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.bstr_bytes",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 458,
+      "statement": "theorem bstr_bytes (bs : List Nat) (h : Bytes bs) : Bytes (bstr bs)",
+      "statementSha256": "f078204dc66613ded668bae8e722578526aafb794d211a11fdd1f7b43930d90f",
+      "sourceStory": "Given a byte string; when serialised; then every element is a byte.",
+      "story": {
+        "given": "(bs : List Nat) (h : Bytes bs)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "Bytes (bstr bs)"
+      },
+      "storySha256": "f22fa2027cff25929b34e005052e59fb84414c6bab7835ec43ce100735f48955"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.minimalBe_bytes",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 466,
+      "statement": "theorem minimalBe_bytes (n : Nat) : Bytes (minimalBe n)",
+      "statementSha256": "0c7db1a9898de3a830451e6806aeebc992edbd67c50404cebe4ea38029a735ad",
+      "sourceStory": "Given a number; when written big-endian without leading zeros; then every element is a byte.",
+      "story": {
+        "given": "(n : Nat)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "Bytes (minimalBe n)"
+      },
+      "storySha256": "751a78b6b00a133fc97935fee12534bbf3735441d684b456296bbf7202ee99d2"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.intBytes_bytes",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 475,
+      "statement": "theorem intBytes_bytes (n : Int) : Bytes (intBytes n)",
+      "statementSha256": "27074c3181ac9e352c0460769efc5c75a91f8513c871951d6f39a0a6fba8e39f",
+      "sourceStory": "Given a signed integer; when serialised; then every element is a byte.",
+      "story": {
+        "given": "(n : Int)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "Bytes (intBytes n)"
+      },
+      "storySha256": "6db162fa204cdbf045813b32293672e89a15bc4e9c3fcb57b0371f6b91990b79"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.constrTag_bytes",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 489,
+      "statement": "theorem constrTag_bytes (i : Nat) : Bytes (constrTag i)",
+      "statementSha256": "8f666924907be4b52c29ffbd08102c6a65edfbbc3ea3f2631f6a22629c2621da",
+      "sourceStory": "Given a constructor index; when its tag is written; then every element is a byte.",
+      "story": {
+        "given": "(i : Nat)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "Bytes (constrTag i)"
+      },
+      "storySha256": "62fda7e4c6fe0113cf1f2fb7eba9b5ae11029cb5b87bf228d0d29dd102e644f8"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.wrapList_bytes",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 499,
+      "statement": "theorem wrapList_bytes (e : Bool) (items : List Nat) (h : Bytes items) :\n    Bytes (wrapList e items)",
+      "statementSha256": "a99e30e9afcb0435d470981022ef30ea002cbd2effb9f0d3874ff0e283de0b4c",
+      "sourceStory": "Given list items that are bytes; when wrapped as a list; then every element is a byte.",
+      "story": {
+        "given": "(e : Bool) (items : List Nat) (h : Bytes items)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "Bytes (wrapList e items)"
+      },
+      "storySha256": "c21ee479633ce12af3412e6414aef33e3c8683b5966f4b04c9935b7b38f7bf0f"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.cbor_bytes",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 509,
+      "statement": "theorem cbor_bytes (d : Data) (h : d.Bytewise) : Bytes (cbor d)",
+      "statementSha256": "dfbba63c357391a9b9a3fc58af55cb15b696814885219af83a36c285a6bc0c3a",
+      "sourceStory": "Given `Data` whose byte strings hold bytes; when serialised; then every element is a byte.",
+      "story": {
+        "given": "(d : Data) (h : d.Bytewise)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "Bytes (cbor d)"
+      },
+      "storySha256": "45697476d42cefa6b77a5d986017bb340436259fa753012f63e003fe251505c0"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.cborItems_bytes",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 529,
+      "statement": "theorem cborItems_bytes (xs : List Data) (h : itemsBytewise xs) : Bytes (cborItems xs)",
+      "statementSha256": "907f34a74f97e9c547b80b09a9cb9bb10aa3c52e1e72a3edfe0cf9563fa1de73",
+      "sourceStory": "Given items whose byte strings hold bytes; when serialised back to back; then every element is a byte.",
+      "story": {
+        "given": "(xs : List Data) (h : itemsBytewise xs)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "Bytes (cborItems xs)"
+      },
+      "storySha256": "1e409d0ef7ad41903d06767d6b663bc23f0fa2259390f1adafaa36e0c2b27ea8"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.cborEntries_bytes",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 538,
+      "statement": "theorem cborEntries_bytes (es : List (Data × Data)) (h : entriesBytewise es) :\n    Bytes (cborEntries es)",
+      "statementSha256": "d6f54a700e14f58997a815ffbd4f64d10d565a698dc05b6e0b78d27e9853051d",
+      "sourceStory": "Given map entries whose byte strings hold bytes; when serialised; then every element is a byte.",
+      "story": {
+        "given": "(es : List (Data × Data)) (h : entriesBytewise es)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "Bytes (cborEntries es)"
+      },
+      "storySha256": "3cde1a667f8cb7b27222e21899bc31f08f22da5ae68e9b26cd583f929494adb3"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.ofBytes?_cbor",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 550,
+      "statement": "theorem ofBytes?_cbor (d : Data) : ofBytes? (cbor d) = some d",
+      "statementSha256": "7c75a4c135a377cc40a36c973e018c8bbffe3f87ca179ffaa2d504386fb827aa",
+      "sourceStory": "Given any `Data`; when serialised and read as a whole byte string; then it returns.",
+      "story": {
+        "given": "(d : Data)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "ofBytes? (cbor d) = some d"
+      },
+      "storySha256": "73ebc7fc978f8ab1e835750dd54c077a19847aa9d57def91fc6c0001c82008c4"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.unpack_raw",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 557,
+      "statement": "theorem unpack_raw (d : Data) (h : d.Bytewise) : unpack (raw d) = cbor d",
+      "statementSha256": "21c421fcea78826bda191a8700808c6d79d2bae68a0979e892a01a2b8126742d",
+      "sourceStory": "Given `Data` whose byte strings hold bytes; when carried as a raw datum and unpacked; then\nits serialisation returns.",
+      "story": {
+        "given": "(d : Data) (h : d.Bytewise)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "unpack (raw d) = cbor d"
+      },
+      "storySha256": "ea906b6794346fbea6a1c9ffcaaeb16b78de549c1f86ea79fb2e647062d1efd9"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.decode_raw",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 562,
+      "statement": "theorem decode_raw (r : AH.PublishedRelease) (d : Data) (h : d.Bytewise) :\n    decode r (raw d) = decodeData d",
+      "statementSha256": "6a75ed776e77938922e0f94864958862cc0969619ca2d94470e0004a8bb4366e",
+      "sourceStory": "Given `Data` whose byte strings hold bytes and any release; when its raw carrier is decoded;\nthen the result is the `Data`-level decoder's.",
+      "story": {
+        "given": "(r : AH.PublishedRelease) (d : Data) (h : d.Bytewise)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "decode r (raw d) = decodeData d"
+      },
+      "storySha256": "d8f2d084dad6e80ab0a0d1f3b8644a49cdc102057508ffca847769a9e83feb68"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.mapM_map_inverse",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 569,
+      "statement": "theorem mapM_map_inverse {α β : Type} {f : α → Option β} {g : β → α}\n    (h : ∀ b, f (g b) = some b) (bs : List β) : (bs.map g).mapM f = some bs",
+      "statementSha256": "5dfac02335ae82a187638cfc090d315e6b9d7a7d1ef2c7e76c2efb1695395f10",
+      "sourceStory": "Given a reader that returns what a writer wrote; when it reads a whole list the writer wrote; then the list returns.",
+      "story": {
+        "given": "{α β : Type} {f : α → Option β} {g : β → α}\n    (h : ∀ b, f (g b) = some b) (bs : List β)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "(bs.map g).mapM f = some bs"
+      },
+      "storySha256": "aa06d2e1ac97c53c52d2e251126f8e41f4230cd6354a017079ff9d338c51c0d3"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.mapM_some_inverse",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 576,
+      "statement": "theorem mapM_some_inverse {α β : Type} {f : α → Option β} {g : β → α}\n    (h : ∀ a b, f a = some b → a = g b) :\n    ∀ (as : List α) (bs : List β), as.mapM f = some bs → as = bs.map g\n  | [], bs, hm => by simp at hm; subst hm; rfl\n  | a :: as, bs, hm => by\n    simp only [List.mapM_cons, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hm\n    obtain ⟨b, hb, bs', hbs, rfl⟩",
+      "statementSha256": "21c418cb36e5527dd450fe3aacbdd6cd1a9005e7a7990f95e8d359aafd88d10a",
+      "sourceStory": "Given a reader whose every success reads back what a writer writes; when it reads a whole list successfully; then the list is the writer's output of the result.",
+      "story": {
+        "given": "{α β : Type} {f : α → Option β} {g : β → α}\n    (h : ∀ a b, f a = some b → a = g b)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "∀ (as : List α) (bs : List β), as.mapM f = some bs → as = bs.map g\n  | [], bs, hm => by simp at hm; subst hm; rfl\n  | a :: as, bs, hm => by\n    simp only [List.mapM_cons, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hm\n    obtain ⟨b, hb, bs', hbs, rfl⟩"
+      },
+      "storySha256": "23fdfd625534222afb466cec2d2522b7372fa037482a1fb3e0c974bb914baa87"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.bool?_boolData",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 586,
+      "statement": "theorem bool?_boolData (b : Bool) : bool? (boolData b) = some b",
+      "statementSha256": "ec1244a841dbcde8fdc49807020ea1f5ed2a765c180de45c2214aaccb4168ace",
+      "sourceStory": "Given a Boolean; when written and read; then it returns.",
+      "story": {
+        "given": "(b : Bool)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "bool? (boolData b) = some b"
+      },
+      "storySha256": "7ef2cf882aacc3bb8f0c6cd238b35785f1212023d382cc7a369ffbc7406b87ac"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.weight?_weightData",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 589,
+      "statement": "theorem weight?_weightData (w : Weight) : weight? (weightData w) = some w",
+      "statementSha256": "1389d8ee2a5276ed53ad6244ea311b165069b75f03afa62da0fde2bd29950265",
+      "sourceStory": "Given a weight; when written and read; then it returns.",
+      "story": {
+        "given": "(w : Weight)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "weight? (weightData w) = some w"
+      },
+      "storySha256": "7143b2437ea4331d30367012bf52993546af4edca7544551de1c9b3f4555f8ff"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.threshold?_thresholdData",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 592,
+      "statement": "theorem threshold?_thresholdData (t : Threshold) : threshold? (thresholdData t) = some t",
+      "statementSha256": "a2b964009289f504d2f224d9ba37c44b5a0c45c51fad2a23f7403dba4c5fcdfd",
+      "sourceStory": "Given a threshold; when written and read; then it returns.",
+      "story": {
+        "given": "(t : Threshold)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "threshold? (thresholdData t) = some t"
+      },
+      "storySha256": "bf52452cb7d59d8af086d665256ca0750e6ac5a41c5f193ecaf3d48e67e0912f"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.bytesList?_bytesListData",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 602,
+      "statement": "theorem bytesList?_bytesListData (ks : List (List Nat)) :\n    bytesList? (bytesListData ks) = some ks",
+      "statementSha256": "549dd37d6a195117c9976a54802a4a7bc7941aa54c73c2fdec162838537f0728",
+      "sourceStory": "Given a list of byte strings; when written and read; then it returns.",
+      "story": {
+        "given": "(ks : List (List Nat))",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "bytesList? (bytesListData ks) = some ks"
+      },
+      "storySha256": "703ab3a52784417b6624ebf36dfe5008824f5f99c3d6fee7f07dae383b96d9f9"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.keyMaterial?_keyMaterialData",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 607,
+      "statement": "theorem keyMaterial?_keyMaterialData (k : KeyMaterial) :\n    keyMaterial? (keyMaterialData k) = some k",
+      "statementSha256": "2a4a3107373ef1d9834e086ead4ed5a9ce78a25a8e3bde598403141d0852f368",
+      "sourceStory": "Given key material; when written and read; then it returns.",
+      "story": {
+        "given": "(k : KeyMaterial)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "keyMaterial? (keyMaterialData k) = some k"
+      },
+      "storySha256": "e217173621bb750647cd65f4b65986bf3907e7aa304359e067f183adff03da25"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.byteString?_unpack",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 612,
+      "statement": "theorem byteString?_unpack (n : Nat) : byteString? (.bytes (unpack n)) = some (unpack n)",
+      "statementSha256": "5eeb51f4e981121fe59f5a8e3a100ca26af42e516de4e457bd32bf5ca8ec4318",
+      "sourceStory": "Given a carried number; when its bytes are read as a byte string; then the bytes return.",
+      "story": {
+        "given": "(n : Nat)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "byteString? (.bytes (unpack n)) = some (unpack n)"
+      },
+      "storySha256": "9c0bc6fce498ccef6b3c3bc12fc7802f4a79bbb8b256919c96a7a73bed2307c0"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.decodeData_datum",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 620,
+      "statement": "theorem decodeData_datum (aid : AID) (k : KeyMaterial) (s : State) (d : Data)\n    (h : datum aid k s = some d) : decodeData d = some ⟨aid, s.datumFacts⟩",
+      "statementSha256": "d8cf08256f1866f5d7490815f469504fa96747573aca8de17a53f4b2f7c1b17d",
+      "sourceStory": "Given any AID, key material and state with an output; when its version 2 datum is written\nand decoded; then the decoder returns that AID and the state's datum facts: the state itself,\nwith the pool, which the datum does not carry, at zero.",
+      "story": {
+        "given": "(aid : AID) (k : KeyMaterial) (s : State) (d : Data)\n    (h : datum aid k s = some d)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "decodeData d = some ⟨aid, s.datumFacts⟩"
+      },
+      "storySha256": "79d7b5cc95adfbf3f5a8a1d6a7c710554c17f3f52b757e5b15e2419e3f6bc621"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.bool?_some",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 639,
+      "statement": "theorem bool?_some {x : Data} {b : Bool} (h : bool? x = some b) : x = boolData b",
+      "statementSha256": "a9248095a39a5b571e2532a493adc5adc359db1e4708e785b197906cddcbad57",
+      "sourceStory": "Given `Data` read as a Boolean; when inspected; then it is that Boolean as written.",
+      "story": {
+        "given": "{x : Data} {b : Bool} (h : bool? x = some b)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "x = boolData b"
+      },
+      "storySha256": "a0190ba099ded72d7b7881ea1adc53e0e29c42a8a1d90f129959ccc62ab3d695"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.nat?_some",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 643,
+      "statement": "theorem nat?_some {x : Data} {n : Nat} (h : nat? x = some n) : x = .int n",
+      "statementSha256": "59ed59eaeca9d55223af50c95f62e6a7427bd36ac4643522379b57f2066bb11e",
+      "sourceStory": "Given `Data` read as a non-negative integer; when inspected; then it is that integer as written.",
+      "story": {
+        "given": "{x : Data} {n : Nat} (h : nat? x = some n)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "x = .int n"
+      },
+      "storySha256": "3c36b07ba09f797127593d217fec9496b26a3e22c0c1dc7eebfeace318313304"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.byteString?_some",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 647,
+      "statement": "theorem byteString?_some {x : Data} {bs : List Nat} (h : byteString? x = some bs) :\n    x = .bytes bs ∧ Bytes bs",
+      "statementSha256": "b6bb946f202d89a8ab72cdc36e98b77ae6b7f1ade8fdffe545dff20610deaa6e",
+      "sourceStory": "Given `Data` read as a byte string; when inspected; then it is that byte string and every element is a byte.",
+      "story": {
+        "given": "{x : Data} {bs : List Nat} (h : byteString? x = some bs)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "x = .bytes bs ∧ Bytes bs"
+      },
+      "storySha256": "c3e6bb452a32350279c3e30917aa6586ebf963195536cf2c883972b03db83a1d"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.bytesList?_some",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 660,
+      "statement": "theorem bytesList?_some {x : Data} {ks : List (List Nat)} (h : bytesList? x = some ks) :\n    x = bytesListData ks",
+      "statementSha256": "bc462dfde9a173d2a7d659bdf06c8c724b21674a5a821c15fa0c9532e08c649b",
+      "sourceStory": "Given `Data` read as a list of byte strings; when inspected; then it is that list as written.",
+      "story": {
+        "given": "{x : Data} {ks : List (List Nat)} (h : bytesList? x = some ks)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "x = bytesListData ks"
+      },
+      "storySha256": "beda01b5b72d52aab6d1795fa502c7752615edac6307ae89cde361115a4c345b"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.threshold?_some",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 670,
+      "statement": "theorem threshold?_some {x : Data} {t : Threshold} (h : threshold? x = some t) :\n    x = thresholdData t",
+      "statementSha256": "14c8e7b376c1ea77ad369d259ed06cd3dcfa611f80e4ea5b913f21b9a86135a8",
+      "sourceStory": "Given `Data` read as a threshold; when inspected; then it is that threshold as written.",
+      "story": {
+        "given": "{x : Data} {t : Threshold} (h : threshold? x = some t)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "x = thresholdData t"
+      },
+      "storySha256": "a3203788611f458e681da1352072d5348c22191c48b7b0c86b0b7f7d39660416"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.keyMaterial?_some",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 692,
+      "statement": "theorem keyMaterial?_some {x : Data} {k : KeyMaterial} (h : keyMaterial? x = some k) :\n    x = keyMaterialData k",
+      "statementSha256": "db03191d0487cbdb0f6bb240b6327b967590326d63bb74504ad25fddb25ebae7",
+      "sourceStory": "Given `Data` read as key material; when inspected; then it is that key material as written.",
+      "story": {
+        "given": "{x : Data} {k : KeyMaterial} (h : keyMaterial? x = some k)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "x = keyMaterialData k"
+      },
+      "storySha256": "fff5de771c8608108718ed65925deffa641c7c5a0256de52158f7261d2274108"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.decodeData_complete",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 706,
+      "statement": "theorem decodeData_complete (d : Data) (r : DecodedDatum) (h : decodeData d = some r) :\n    ∃ k, datum r.aid k r.state = some d ∧ r.state.datumFacts = r.state",
+      "statementSha256": "f43ad204ddc9698b35ff6b79302bb82d76905bb0d2c0bf9e893e3fcf26a2dca3",
+      "sourceStory": "Given any `Data` the decoder accepts; when inspected; then it is exactly the version 2\ndatum written for the decoded AID, the decoded state and some key material, and the decoded\nstate is its own datum facts. With `decodeData_datum`, the accepted `Data` are exactly the\nwritten datums, so every other shape is refused.",
+      "story": {
+        "given": "(d : Data) (r : DecodedDatum) (h : decodeData d = some r)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "∃ k, datum r.aid k r.state = some d ∧ r.state.datumFacts = r.state"
+      },
+      "storySha256": "f37467389b243893f8d6e0589f368e08e47021177ff99fded66c71b56e520082"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.refused_unless_written",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 725,
+      "statement": "theorem refused_unless_written (d : Data) (h : ∀ aid k s, datum aid k s ≠ some d) :\n    decodeData d = none",
+      "statementSha256": "dd36ab4c4d9b78f7abbe3c959a0031ef783ba33f3c55d123b42f561ce917306f",
+      "sourceStory": "Given any `Data` that is no written datum; when decoded; then it is refused.",
+      "story": {
+        "given": "(d : Data) (h : ∀ aid k s, datum aid k s ≠ some d)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "decodeData d = none"
+      },
+      "storySha256": "b458dd9d386124068d6002979e8ee010434156407f26abd2237b8143e8771d16"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.not_a_constructor_refused",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 734,
+      "statement": "theorem not_a_constructor_refused (d : Data) (h : ∀ i fs, d ≠ .constr i fs) :\n    decodeData d = none",
+      "statementSha256": "68c1935772f59f5348d6d20f8ce1e63688713a3f580fa00e7e9a38a154e70a6e",
+      "sourceStory": "Given any `Data` that is not a constructor; when decoded; then it is refused.",
+      "story": {
+        "given": "(d : Data) (h : ∀ i fs, d ≠ .constr i fs)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "decodeData d = none"
+      },
+      "storySha256": "9490e36095b0b2bd533dfee9e7808c88dcb24a18c31bd6a89eebca9e5b1bb11f"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.wrong_version_refused",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 741,
+      "statement": "theorem wrong_version_refused (i : Nat) (fs : List Data) (hi : i ≠ 1) :\n    decodeData (.constr i fs) = none",
+      "statementSha256": "f341231c19b92abb5f6f91bafbb87117c0184864df9bd175d9caf7cbd1f7606b",
+      "sourceStory": "Given a datum of any version other than 2, version 1 included; when decoded; then it is\nrefused.",
+      "story": {
+        "given": "(i : Nat) (fs : List Data) (hi : i ≠ 1)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "decodeData (.constr i fs) = none"
+      },
+      "storySha256": "e88ce2359ac3c64e50943ffabe85d6c0f367e5c6aed7a808b0c976309fc7df42"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.version_one_refused",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 748,
+      "statement": "theorem version_one_refused (fs : List Data) : decodeData (.constr 0 fs) = none",
+      "statementSha256": "d20e7bfc59a57ec15a238a516933cdc124c0990f11732296058832d0115584c0",
+      "sourceStory": "Given a version 1 datum, the layout the checkpoint validator writes today; when decoded;\nthen it is refused: it carries none of the consumer facts.",
+      "story": {
+        "given": "(fs : List Data)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "decodeData (.constr 0 fs) = none"
+      },
+      "storySha256": "69f1f125363bfb9f7ea3749f998890ba9953afac35235572b29c230da48d5ebf"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.version_arity_refused",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 752,
+      "statement": "theorem version_arity_refused (fs : List Data) (h : fs.length ≠ 1) :\n    decodeData (.constr 1 fs) = none",
+      "statementSha256": "6034149c24a5fb250b985c5a6b7f4069434e94968776dc43682645f68a3d615d",
+      "sourceStory": "Given a version 2 datum without exactly one field; when decoded; then it is refused.",
+      "story": {
+        "given": "(fs : List Data) (h : fs.length ≠ 1)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "decodeData (.constr 1 fs) = none"
+      },
+      "storySha256": "9c894e42eaf3f500c2399ccb720e3dcf356b1b51f2868080c27f72dfb2429af7"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.unknown_form_refused",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 759,
+      "statement": "theorem unknown_form_refused (j : Nat) (gs : List Data) (hj : 2 ≤ j) :\n    decodeData (.constr 1 [.constr j gs]) = none",
+      "statementSha256": "0b2db874240b275ef091e7c3fb329326fb47b92eacf0065de407a41494e1d6ec",
+      "sourceStory": "Given a version 2 datum whose form is neither live (0) nor pending termination (1); when\ndecoded; then it is refused.",
+      "story": {
+        "given": "(j : Nat) (gs : List Data) (hj : 2 ≤ j)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "decodeData (.constr 1 [.constr j gs]) = none"
+      },
+      "storySha256": "fb444cd5f4fb49c6fb322491307507c9ed5a46e40598b00a98a612e8381cf0b9"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.live_arity_refused",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 765,
+      "statement": "theorem live_arity_refused (gs : List Data) (h : gs.length ≠ 8) :\n    decodeData (.constr 1 [.constr 0 gs]) = none",
+      "statementSha256": "92e8653980615104f6cbb4384fa3690af7ece1458eb08199efdd7a7e10c00fa9",
+      "sourceStory": "Given a live datum without exactly eight fields; when decoded; then it is refused.",
+      "story": {
+        "given": "(gs : List Data) (h : gs.length ≠ 8)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "decodeData (.constr 1 [.constr 0 gs]) = none"
+      },
+      "storySha256": "8ac7386a4cab8898186509073784013c90f1d39211f80e316ab5defe0872c98e"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.pending_arity_refused",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 772,
+      "statement": "theorem pending_arity_refused (gs : List Data) (h : gs.length ≠ 4) :\n    decodeData (.constr 1 [.constr 1 gs]) = none",
+      "statementSha256": "d41dd1474719de68110d560eefc7ba1826a72583ec57bbece87adbf2132b651a",
+      "sourceStory": "Given a pending-termination datum without exactly four fields; when decoded; then it is\nrefused.",
+      "story": {
+        "given": "(gs : List Data) (h : gs.length ≠ 4)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "decodeData (.constr 1 [.constr 1 gs]) = none"
+      },
+      "storySha256": "28624d0e5de1ff8bdc2df015937015f5304fa77abf2821483f002d45542e99d6"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.live_fields_typed",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 780,
+      "statement": "theorem live_fields_typed (gs : List Data) (r : DecodedDatum)\n    (h : decodeData (.constr 1 [.constr 0 gs]) = some r) :\n    ∃ (aid refund : List Nat) (sn epoch bornAt : Nat) (poisoned frozen : Bool) (k : KeyMaterial),\n      gs = [.bytes aid, .int sn, .int epoch, boolData poisoned, boolData frozen, .int bornAt,\n        .bytes refund, keyMaterialData k]",
+      "statementSha256": "953e35072c1a6540d12665f2afec8a4b2c8f40b9e5d79fa2fd49f05bec6e38c9",
+      "sourceStory": "Given a live datum the decoder accepts; when its fields are inspected; then each has its\nkind: AID bytes, three non-negative integers and two Booleans in their places, refund bytes\nand well-shaped key material. Any field of another kind is refused.",
+      "story": {
+        "given": "(gs : List Data) (r : DecodedDatum)\n    (h : decodeData (.constr 1 [.constr 0 gs]) = some r)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "∃ (aid refund : List Nat) (sn epoch bornAt : Nat) (poisoned frozen : Bool) (k : KeyMaterial),\n      gs = [.bytes aid, .int sn, .int epoch, boolData poisoned, boolData frozen, .int bornAt,\n        .bytes refund, keyMaterialData k]"
+      },
+      "storySha256": "8f213572d30238bed8bebbc94b1c86d70d3d98eaccddf10ac1305e5210fbd77b"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.pending_fields_typed",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 797,
+      "statement": "theorem pending_fields_typed (gs : List Data) (r : DecodedDatum)\n    (h : decodeData (.constr 1 [.constr 1 gs]) = some r) :\n    ∃ (aid : List Nat) (sn epoch : Nat) (k : KeyMaterial),\n      gs = [.bytes aid, .int sn, .int epoch, keyMaterialData k]",
+      "statementSha256": "406c27cc2eb93032f5bdcbbe4fde5c1b9edca36b16ed1e9f47bfee3427dc5ad7",
+      "sourceStory": "Given a pending-termination datum the decoder accepts; when its fields are inspected; then\neach has its kind: AID bytes, two non-negative integers and well-shaped key material.",
+      "story": {
+        "given": "(gs : List Data) (r : DecodedDatum)\n    (h : decodeData (.constr 1 [.constr 1 gs]) = some r)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "∃ (aid : List Nat) (sn epoch : Nat) (k : KeyMaterial),\n      gs = [.bytes aid, .int sn, .int epoch, keyMaterialData k]"
+      },
+      "storySha256": "95e4917250b37136669fc527ef148457c89e18d0b114fd6466e9fc28f68f7411"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.bytesListData_bytewise",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 818,
+      "statement": "theorem bytesListData_bytewise (ks : List (List Nat)) (h : Bytes ks.flatten) :\n    (bytesListData ks).Bytewise",
+      "statementSha256": "fd3ecb47360d7d27fd533fbb5e676b8499e75eddefb8e49e84e5394c41471c2c",
+      "sourceStory": "Given a list of byte strings of bytes; when written; then every byte string in it holds bytes.",
+      "story": {
+        "given": "(ks : List (List Nat)) (h : Bytes ks.flatten)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "(bytesListData ks).Bytewise"
+      },
+      "storySha256": "90a99bf2c482b11047aa78b2476ccbc142106df0356ec9b9ee6a35f321379b9a"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.thresholdData_bytewise",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 830,
+      "statement": "theorem thresholdData_bytewise (t : Threshold) : (thresholdData t).Bytewise",
+      "statementSha256": "c80564dcf9307a206444516205723881f481d23099d9f235eccca2598bcbbbde",
+      "sourceStory": "Given a threshold; when written; then it holds no byte string that is not bytes.",
+      "story": {
+        "given": "(t : Threshold)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "(thresholdData t).Bytewise"
+      },
+      "storySha256": "7c24ab5c8c8d1b4eddc49fc14a9e1fbe2af9d9e3dd9e9e04463ccd8a1fcd8834"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.keyMaterialData_bytewise",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 848,
+      "statement": "theorem keyMaterialData_bytewise (k : KeyMaterial) (h : k.Bytewise) :\n    (keyMaterialData k).Bytewise",
+      "statementSha256": "17ee009b4d5f4e91d56fc75be4014181ca5a7ddd710c2f106b4aca87fde6db86",
+      "sourceStory": "Given key material whose keys and witnesses hold bytes; when written; then every byte string in it holds bytes.",
+      "story": {
+        "given": "(k : KeyMaterial) (h : k.Bytewise)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "(keyMaterialData k).Bytewise"
+      },
+      "storySha256": "d0fe669925077c66a5161f0a1ee87a4b94411cad8253227ca44640fd85419186"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.boolData_bytewise",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 859,
+      "statement": "theorem boolData_bytewise (b : Bool) : (boolData b).Bytewise",
+      "statementSha256": "e02f1a0b6507c8057fc034bf5063c9c30cf3f9e73bc3685d1da52bf914fd8258",
+      "sourceStory": "Given a Boolean; when written; then it holds no byte string that is not bytes.",
+      "story": {
+        "given": "(b : Bool)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "(boolData b).Bytewise"
+      },
+      "storySha256": "382e20606afc1ddd1c9dc47a68e6e215682e8ab9ee834c495dd690ee5894f740"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.datum_bytewise",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 864,
+      "statement": "theorem datum_bytewise (aid : AID) (k : KeyMaterial) (s : State) (d : Data)\n    (h : datum aid k s = some d) (hk : k.Bytewise) : d.Bytewise",
+      "statementSha256": "e6c269f1071271c4c88d8c4600030a91aedbbffce9a42dcb9164841380e0372c",
+      "sourceStory": "Given a written datum whose key material holds bytes; when inspected; then every byte\nstring in it holds bytes.",
+      "story": {
+        "given": "(aid : AID) (k : KeyMaterial) (s : State) (d : Data)\n    (h : datum aid k s = some d) (hk : k.Bytewise)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "d.Bytewise"
+      },
+      "storySha256": "b12bf7fd524482330d24bf38b6fb4cafc55d412aff999571bcce1c832d4f0189"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.decode_written",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 882,
+      "statement": "theorem decode_written (r : AH.PublishedRelease) (aid : AID) (k : KeyMaterial) (s : State)\n    (d : Data) (h : datum aid k s = some d) (hk : k.Bytewise) :\n    decode r (raw d) = some ⟨aid, s.datumFacts⟩",
+      "statementSha256": "e2684e5f7972eb3d51f2fb8893d2b99526acc4dc3bad12c0820d785df764dafb",
+      "sourceStory": "Given any AID, any state with an output and key material holding bytes; when its version 2\ndatum is carried as a raw application datum and decoded under any release; then the decoder\nreturns that AID and the state's datum facts.",
+      "story": {
+        "given": "(r : AH.PublishedRelease) (aid : AID) (k : KeyMaterial) (s : State)\n    (d : Data) (h : datum aid k s = some d) (hk : k.Bytewise)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "decode r (raw d) = some ⟨aid, s.datumFacts⟩"
+      },
+      "storySha256": "7a00bf74aca4a086d68460df4b52950a5c52ec41d12813fcb1cb610dbe22b6d1"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.decode_deterministic",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 889,
+      "statement": "theorem decode_deterministic (r : AH.PublishedRelease) (x : Nat) (a b : DecodedDatum)\n    (ha : decode r x = some a) (hb : decode r x = some b) : a = b",
+      "statementSha256": "1185f780fe847ae9a4c1089804227208c9226b2bdd6a4a75fc2bd82c05baf25d",
+      "sourceStory": "Given one raw datum decoded twice under one release; when the results are compared; then\nthey are equal.",
+      "story": {
+        "given": "(r : AH.PublishedRelease) (x : Nat) (a b : DecodedDatum)\n    (ha : decode r x = some a) (hb : decode r x = some b)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "a = b"
+      },
+      "storySha256": "7eb4cec551c5545e55d9d5a1487e4cb942baf4df65d3164bdfde0d5aa00e6ca5"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.decode_release_independent",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 896,
+      "statement": "theorem decode_release_independent (r r' : AH.PublishedRelease) (x : Nat) :\n    decode r x = decode r' x",
+      "statementSha256": "49fd8f1e290baacebab5a34e31ca5fc3bc31a19edaabc79f2dffaaf12e8b1ede",
+      "sourceStory": "Given one raw datum and two releases; when decoded under each; then the results are equal:\nthe layout does not depend on the release at this model revision.",
+      "story": {
+        "given": "(r r' : AH.PublishedRelease) (x : Nat)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "decode r x = decode r' x"
+      },
+      "storySha256": "c4b2819ebd1272d964fc011fb50bd6596a9f219abeab9cfee57166e493d7a91e"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.decode_accepts_only_written",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 901,
+      "statement": "theorem decode_accepts_only_written (r : AH.PublishedRelease) (x : Nat) (res : DecodedDatum)\n    (h : decode r x = some res) :\n    ∃ d k, ofBytes? (unpack x) = some d ∧ datum res.aid k res.state = some d ∧\n      res.state.datumFacts = res.state",
+      "statementSha256": "343402813d896b781906412b83fb923310c3b0e76631d878a72945981e0432e7",
+      "sourceStory": "Given a raw datum the decoder accepts; when inspected; then it reads as exactly one `Data`,\nwhich is the version 2 datum written for the decoded AID and state with some key material.",
+      "story": {
+        "given": "(r : AH.PublishedRelease) (x : Nat) (res : DecodedDatum)\n    (h : decode r x = some res)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "∃ d k, ofBytes? (unpack x) = some d ∧ datum res.aid k res.state = some d ∧\n      res.state.datumFacts = res.state"
+      },
+      "storySha256": "522150908dcb43e9e43bcf0d539224059cac7a059fb7df54ca2daeedc323020d"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.datumFacts_idem",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 913,
+      "statement": "theorem datumFacts_idem (s : State) : s.datumFacts.datumFacts = s.datumFacts",
+      "statementSha256": "7b98e689e9df80a3f1db987674cfe0b42e66984328bf42838919a59f09836893",
+      "sourceStory": "Given a state; when its datum facts are taken twice; then the result is its datum facts.",
+      "story": {
+        "given": "(s : State)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "s.datumFacts.datumFacts = s.datumFacts"
+      },
+      "storySha256": "5a818297fadd253877107cace6ee1ac088b4ed002e470e225a3bc4f261e7953a"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.consumable_datumFacts",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 918,
+      "statement": "theorem consumable_datumFacts (p : Params) (now : Slot) (s : State) :\n    consumableState p now s.datumFacts ↔ consumableState p now s",
+      "statementSha256": "9e267e08dcebc6e6f2f1c0e7ff26e89ca54d3d4d0d533873c9ff29aa770531ea",
+      "sourceStory": "Given any Params, slot and state; when the consumer predicate reads the state's datum facts\ninstead of the state; then its verdict is the same: it never reads the pool.",
+      "story": {
+        "given": "(p : Params) (now : Slot) (s : State)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "consumableState p now s.datumFacts ↔ consumableState p now s"
+      },
+      "storySha256": "de8a9cedc76806befcd2004a35419792a646ac9a259076dcb0c41de69b2e13a6"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.datum_hasOutput",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 923,
+      "statement": "theorem datum_hasOutput (aid : AID) (k : KeyMaterial) (s : State) (d : Data)\n    (h : datum aid k s = some d) : s.hasOutput = true",
+      "statementSha256": "9a72c853c8edf0d1bb7cb91511eb24c893ccf3d620e2b0e1e73fe86e6e042648",
+      "sourceStory": "Given a state for which a datum is written; when inspected; then the state has an output.",
+      "story": {
+        "given": "(aid : AID) (k : KeyMaterial) (s : State) (d : Data)\n    (h : datum aid k s = some d)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "s.hasOutput = true"
+      },
+      "storySha256": "5beb9ead3086719976374c728b140af3598bd4329f18e73d1cf5961ce1c72e3c"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.written_realizes",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 930,
+      "statement": "theorem written_realizes (c : Context) (s : State) (k : KeyMaterial) (d : Data)\n    (o : AH.ObservedOutput) (hd : datum c.aid k s = some d) (hk : k.Bytewise)\n    (cred : o.credential = c.release.applicationCredential)\n    (qty : AH.quantity o (representativeAsset interpretation c) = 1)\n    (held : o.datum = .application (raw d)) :\n    realizesState interpretation c s o",
+      "statementSha256": "e350d7625d034946d0f088696c0d2c2f285905a14850d0b32e288d83e86c0664",
+      "sourceStory": "Given a holding with the release's credential, the representative asset once and the raw\nversion 2 datum written for the intended AID and any state with an output, pool included;\nwhen observed through the concrete interpretation; then it realizes that state.",
+      "story": {
+        "given": "(c : Context) (s : State) (k : KeyMaterial) (d : Data)\n    (o : AH.ObservedOutput) (hd : datum c.aid k s = some d) (hk : k.Bytewise)\n    (cred : o.credential = c.release.applicationCredential)\n    (qty : AH.quantity o (representativeAsset interpretation c) = 1)\n    (held : o.datum = .application (raw d))",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "realizesState interpretation c s o"
+      },
+      "storySha256": "ced7d223570b6447fb937708b5f40e01e9aab70280957d18c1b0fced54d1e72e"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.written_holding_iff",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 944,
+      "statement": "theorem written_holding_iff (c : Context) (e : Environment) (p : Params) (now : Slot)\n    (s : State) (k : KeyMaterial) (d : Data) (o : AH.ObservedOutput)\n    (context : authenticatedContext c e) (hd : datum c.aid k s = some d) (hk : k.Bytewise)\n    (cred : o.credential = c.release.applicationCredential)\n    (qty : AH.quantity o (representativeAsset interpretation c) = 1)\n    (held : o.datum = .application (raw d)) :\n    consumableHolding interpretation c e p now o ↔ consumableState p now s",
+      "statementSha256": "3039e8c8ee0efca5c66accca3bdb82d63b863957b4fb25ea2c44238f382bbc0c",
+      "sourceStory": "Given an authenticated context and a holding carrying the raw version 2 datum written for\nthe intended AID and any state with an output, funded pools included; when the concrete\nconsumer reads it; then it is accepted exactly when the written state is consumable.",
+      "story": {
+        "given": "(c : Context) (e : Environment) (p : Params) (now : Slot)\n    (s : State) (k : KeyMaterial) (d : Data) (o : AH.ObservedOutput)\n    (context : authenticatedContext c e) (hd : datum c.aid k s = some d) (hk : k.Bytewise)\n    (cred : o.credential = c.release.applicationCredential)\n    (qty : AH.quantity o (representativeAsset interpretation c) = 1)\n    (held : o.datum = .application (raw d))",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "consumableHolding interpretation c e p now o ↔ consumableState p now s"
+      },
+      "storySha256": "06823cca060faed29b3d698f8d188b9bfd7bbab2d13a735743a2243731444c8f"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.funded_registration_agrees",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 958,
+      "statement": "theorem funded_registration_agrees (c : Context) (p : Params) (env : Env) (now : Slot)\n    (refund : Addr) (pool0 : Value) (flow : Flow) (st : State) (k : KeyMaterial) (d : Data)\n    (o : AH.ObservedOutput)\n    (registration : stepFn p env (.register refund pool0) now .absent = some (flow, st))\n    (hd : datum c.aid k st = some d) (hk : k.Bytewise) (held : o.datum = .application (raw d)) :\n    st = .present ⟨0, 0, false, false, now, refund, pool0⟩ ∧\n      decide ((decoded interpretation c o).map DecodedDatum.facts =\n        some ⟨c.aid, st.datumFacts⟩) = true",
+      "statementSha256": "f0dbef692bc8515677aa923fd300ebbfd220f16d346c889b59d056f34a6e02cb",
+      "sourceStory": "Given a registration funding the premium pool with any amount and a holding carrying the\nraw datum written for the registered state; when the registration bridge's datum clause reads\nit through the concrete interpretation; then the clause holds: the bridge does not refuse a\nfunded registration for its pool.",
+      "story": {
+        "given": "(c : Context) (p : Params) (env : Env) (now : Slot)\n    (refund : Addr) (pool0 : Value) (flow : Flow) (st : State) (k : KeyMaterial) (d : Data)\n    (o : AH.ObservedOutput)\n    (registration : stepFn p env (.register refund pool0) now .absent = some (flow, st))\n    (hd : datum c.aid k st = some d) (hk : k.Bytewise) (held : o.datum = .application (raw d))",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "st = .present ⟨0, 0, false, false, now, refund, pool0⟩ ∧\n      decide ((decoded interpretation c o).map DecodedDatum.facts =\n        some ⟨c.aid, st.datumFacts⟩) = true"
+      },
+      "storySha256": "a75d13793f0097b54caadfdc48ff19b622d6e3e44911972561b47107c2339d03"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDatum.version_one_holding_refused",
+      "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
+      "line": 973,
+      "statement": "theorem version_one_holding_refused (c : Context) (e : Environment) (p : Params) (now : Slot)\n    (o : AH.ObservedOutput) (fs : List Data) (hb : (Data.constr 0 fs).Bytewise)\n    (held : o.datum = .application (raw (.constr 0 fs))) :\n    ¬ consumableHolding interpretation c e p now o",
+      "statementSha256": "e7ad39bf7cac5426559d84139643ab6d0398851e66df8f47897feb6c6f4b2d12",
+      "sourceStory": "Given a holding carrying any raw version 1 datum; when the concrete consumer reads it; then\nit is refused, whatever the rest of the holding.",
+      "story": {
+        "given": "(c : Context) (e : Environment) (p : Params) (now : Slot)\n    (o : AH.ObservedOutput) (fs : List Data) (hb : (Data.constr 0 fs).Bytewise)\n    (held : o.datum = .application (raw (.constr 0 fs)))",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "¬ consumableHolding interpretation c e p now o"
+      },
+      "storySha256": "7dac1b5a5d186d07f5d5c789ee786da463d5dbaaa4d985cae0d29ef809c3ec52"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.T12_convicted_terminal",

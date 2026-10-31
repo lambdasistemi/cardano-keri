@@ -8,6 +8,7 @@
 //// `aiken/cbor.deserialise` stands in for it, so bytes that are not one whole
 //// `Data` never reach the decoder.
 
+use aiken/builtin.{b_data, constr_data, i_data, list_data}
 use aiken/cbor
 use cardano/address.{Address}
 use cardano/assets.{from_lovelace}
@@ -32,6 +33,85 @@ pub type DatumVector {
   aid: Int,
   now: Int,
   accepted: Bool,
+}
+
+/// The key material the Lean vectors use: one current key, one next key, both
+/// unweighted thresholds of 1, no witnesses, `toad` 0.
+pub fn simple_keys() -> Data {
+  constr_data(
+    0,
+    [
+      list_data(
+        [
+          b_data(
+            #"1f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8",
+          ),
+        ],
+      ),
+      constr_data(0, [i_data(1)]),
+      list_data(
+        [
+          b_data(
+            #"3e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017",
+          ),
+        ],
+      ),
+      constr_data(0, [i_data(1)]),
+      list_data([]),
+      i_data(0),
+    ],
+  )
+}
+
+fn bool_data(b: Bool) -> Data {
+  if b {
+    constr_data(1, [])
+  } else {
+    constr_data(0, [])
+  }
+}
+
+/// The version 2 live datum of an AID (its numeral), as the Lean `datum`
+/// writes it: not poisoned, not frozen, born at `born_at`, refunding to the
+/// 4-byte address 01020304, sequence number and epoch 0.
+pub fn live_datum(aid: Int, born_at: Int) -> Data {
+  constr_data(
+    1,
+    [
+      constr_data(
+        0,
+        [
+          b_data(concrete.key_of(aid)),
+          i_data(0),
+          i_data(0),
+          bool_data(False),
+          bool_data(False),
+          i_data(born_at),
+          b_data(#"01020304"),
+          simple_keys(),
+        ],
+      ),
+    ],
+  )
+}
+
+/// The version 2 termination-pending datum of an AID (its numeral).
+pub fn pending_datum(aid: Int) -> Data {
+  constr_data(
+    1,
+    [
+      constr_data(
+        1,
+        [b_data(concrete.key_of(aid)), i_data(4), i_data(2), simple_keys()],
+      ),
+    ],
+  )
+}
+
+/// The version 1 datum the checkpoint validator writes today (constructor 0),
+/// which carries no consumer facts.
+pub fn version_one_datum(aid: Int) -> Data {
+  constr_data(0, [b_data(concrete.key_of(aid)), i_data(0)])
 }
 
 /// The vectors' parameters: only the juvenility window is read.

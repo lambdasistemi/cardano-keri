@@ -14,13 +14,17 @@
 //// writer (`CardanoKeri.CheckpointDatum`, "Validity"); the version 2 rules are
 //// the version 1 rules for the key fields.
 
+use aiken/builtin
 use aiken/cbor
+use aiken/collection/list
 use cardano_keri/checkpoint/datum.{
-  CesrAidWidth, CheckpointDatumV1, CheckpointDatumV2, DatumInvalid, DatumValid,
-  DuplicateWitness, KeyMaterial, Live, NegativeBornAt, NegativeEpoch, NegativeSn,
-  NextIllFormed, TerminationPending, ThresholdIllFormed, ToadRange, V1,
-  WitnessWidth, datum_v2_well_formed, datum_well_formed,
+  CesrAidWidth, CheckpointDatum, CheckpointDatumV1, CheckpointDatumV2,
+  DatumInvalid, DatumValid, DuplicateWitness, KeyMaterial, Live, NegativeBornAt,
+  NegativeEpoch, NegativeSn, NextIllFormed, TerminationPending,
+  ThresholdIllFormed, ToadRange, V1, V2, WitnessWidth, datum_v2_well_formed,
+  datum_well_formed,
 }
+use cardano_keri/checkpoint/datum_v2_vectors as v2_vectors
 use cardano_keri/checkpoint/threshold.{
   DuplicateKey, EmptyKeys, KeyWidth, Unweighted, UnweightedRange, Weight,
   Weighted,
@@ -510,4 +514,101 @@ test v2_pending_toad_range() {
   datum_v2_well_formed(pending_v2(keys_v2([k1], Unweighted(1), [w1], 2))) == DatumInvalid(
     ToadRange,
   )
+}
+
+// ---------------------------------------------------------
+// A version 1 read refuses a version 2 datum
+// ---------------------------------------------------------
+//
+// Every version 1 read site is an `expect V1(..): CheckpointDatum = data`. The
+// version sum gained its second constructor, so the cast must keep refusing a
+// datum that carries it: a version 2 datum is not a version 1 datum.
+
+/// The version 2 datums of the accepted Lean vectors, as `Data`.
+fn as_data(datum: CheckpointDatum) -> Data {
+  let data: Data = datum
+  data
+}
+
+fn accepted_v2_data() -> List<Data> {
+  [
+    as_data(V2(v2_vectors.facts_registered_funded())),
+    as_data(V2(v2_vectors.facts_registered_juvenile())),
+    as_data(V2(v2_vectors.facts_rotated())),
+    as_data(V2(v2_vectors.facts_poisoned())),
+    as_data(V2(v2_vectors.facts_frozen())),
+    as_data(V2(v2_vectors.facts_pending_termination())),
+    as_data(V2(v2_vectors.facts_large_numbers())),
+  ]
+}
+
+fn v1_cast(data: Data) -> CheckpointDatumV1 {
+  expect V1(d): CheckpointDatum = data
+  d
+}
+
+/// Whether the version 1 cast accepts the datum. A refusal test is a `fail` test,
+/// which passes when its body errors and also when it evaluates to `False`; so
+/// the body must be `True` whenever the cast succeeds.
+fn v1_cast_accepts(data: Data) -> Bool {
+  let d = v1_cast(data)
+  d == d
+}
+
+fn v1_datum() -> CheckpointDatumV1 {
+  base([k1], Unweighted(1), [], 0)
+}
+
+/// Control: the accepted version 2 datums are well-formed `Data` that cast as
+/// version 2, so the refusals below are about the version tag alone.
+test v2_vectors_cast_as_version_2() {
+  list.length(accepted_v2_data()) == 7 && list.all(
+    accepted_v2_data(),
+    fn(data) {
+      expect V2(_): CheckpointDatum = data
+      True
+    },
+  )
+}
+
+/// Control: a version 1 datum still casts as version 1, to the same record.
+test v1_datum_casts_as_version_1() {
+  v1_cast(as_data(V1(v1_datum()))) == v1_datum()
+}
+
+test v1_cast_refuses_registered_funded() fail {
+  v1_cast_accepts(as_data(V2(v2_vectors.facts_registered_funded())))
+}
+
+test v1_cast_refuses_registered_juvenile() fail {
+  v1_cast_accepts(as_data(V2(v2_vectors.facts_registered_juvenile())))
+}
+
+test v1_cast_refuses_rotated() fail {
+  v1_cast_accepts(as_data(V2(v2_vectors.facts_rotated())))
+}
+
+test v1_cast_refuses_poisoned() fail {
+  v1_cast_accepts(as_data(V2(v2_vectors.facts_poisoned())))
+}
+
+test v1_cast_refuses_frozen() fail {
+  v1_cast_accepts(as_data(V2(v2_vectors.facts_frozen())))
+}
+
+test v1_cast_refuses_pending_termination() fail {
+  v1_cast_accepts(as_data(V2(v2_vectors.facts_pending_termination())))
+}
+
+test v1_cast_refuses_large_numbers() fail {
+  v1_cast_accepts(as_data(V2(v2_vectors.facts_large_numbers())))
+}
+
+/// The vectors above differ from a version 1 record in shape as well as in tag.
+/// This one isolates the tag: a well-formed version 1 record under the version
+/// 2 constructor index is still not a version 1 datum.
+test v1_cast_refuses_version_1_record_under_version_2_tag() fail {
+  let record = builtin.un_constr_data(as_data(V1(v1_datum()))).2nd
+  let tagged: Data = builtin.constr_data(1, record)
+  v1_cast_accepts(tagged)
 }

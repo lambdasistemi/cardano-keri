@@ -8,6 +8,7 @@
     "lean/CardanoKeri/CheckpointCompletionGoals.lean": "d6861d6cddc941fe6a8dd8781398676a250748dcba70eafc6338edd9b6bccde2",
     "lean/CardanoKeri/CheckpointDatum.lean": "4b78f04fe4fc00c7ea1a08dd68350bf4e3ddd1302d78b3f1d5edb23d4b6f7d68",
     "lean/CardanoKeri/CheckpointDatumGoals.lean": "f86c26af84ced086016303b767eea21f39c5ac9706939eec2f7b10d117bccab0",
+    "lean/CardanoKeri/CheckpointDatumVectors.lean": "8212966cd69b2aa2d4aa6024553e0cdd37804309756c4ccd6d4df510053399c0",
     "lean/CardanoKeri/CheckpointGoals.lean": "44b90990102b7055332e8511e4bd1723e5026959afc7d80f83cca765b2376a51",
     "lean/CardanoKeri/CheckpointLifecycleExamples.lean": "92b555c088456dbc868e899b4caa8365e2e9452aecd034409a3bde2303579f59",
     "lean/CardanoKeri/CheckpointReceiptCheck.lean": "b8e503afc6b39c864d5670b5b746ada934e519beb2c45b291be66d811e1085d8",

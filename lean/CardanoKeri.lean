@@ -24,3 +24,4 @@ import CardanoKeri.ConsumerBytesGoals
 import CardanoKeri.ConsumerBytesVectors
 import CardanoKeri.CheckpointDatum
 import CardanoKeri.CheckpointDatumGoals
+import CardanoKeri.CheckpointDatumVectors

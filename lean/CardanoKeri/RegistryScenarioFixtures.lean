@@ -29,7 +29,7 @@ def execute (before : Reached) (action : Action) : Except String (Flow × Reache
   | .error reason => .error reason
   | .ok (flow, after) => .ok (flow, ⟨after, .next before.proof h⟩)
 
-def registration (s : Sys) (aid reference : Nat) : Singular.RegistrationBooking :=
+def registration (s : Sys) (aid reference : Nat) (pool0 : Nat := 0) : Singular.RegistrationBooking :=
   let tag : Singular.Approval := {
     policy := s.config.applicationPolicy, edge := .insertActive, key := aid,
     owner := 42, destination := aid + 100,
@@ -38,9 +38,9 @@ def registration (s : Sys) (aid reference : Nat) : Singular.RegistrationBooking 
     reference := ⟨reference, 0⟩, registryId := s.config.registryId, key := aid,
     refundAddress := 42, destination := aid + 100, submittedAt := 1,
     registrationCost := s.config.registrationCost, declaredTip := p.tip,
-    carrierAda := p.Mc + p.D, datum := some (aid + 700),
+    carrierAda := p.Mc + p.D + pool0, datum := some (aid + 700),
     contents := {
-      lovelace := p.Mc + p.D + p.tip + s.config.registrationCost,
+      lovelace := p.Mc + p.D + pool0 + p.tip + s.config.registrationCost,
       applicationTags := [tag], trieReadyTags := [] } }
   let request := { bare with contents.trieReadyTags := [bare.trieReadyTag s.config] }
   { request, interval := ⟨0, 1⟩,

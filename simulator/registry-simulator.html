@@ -504,7 +504,7 @@
 </main>
 <pre id="selftest-out" hidden></pre>
 <script>
-/* Source bindings: {"registry-economic-core.mjs":"c0dc8d0a5572d5eee271394dac725e4debc72b954f2b5ce1331fba9168d345d3","registry-wire.mjs":"0a30f6deeaa985d6a934f4ec18ee5336111cf61620d11702d833a2c78d59f6f1","registry-simulator-core.mjs":"69fb0d0051ad5df310b45accc7a1b76946d4cd1a6c640502b28ce23df0284bd7","registry-fixtures.mjs":"7b89389177390a448bd54cac4a930be3899bb226967ec903bbd331a3f7c30cd3","registry-offers.mjs":"d2bc096da265a3150e7368f2bf3f3dd66abc54bdd6dbf4f27cc8ea9ba8430d73","registry-properties.mjs":"a99605191d415458fe900f3d47be9100e260824271ae7e92d5cd59e644c2039a","registry-simulator-backend.mjs":"f66a01473ea46cc3638bf8f828bae54c0c5a04c2dbbc69ae2df49377b39d4dfb","scenario-dsl.mjs":"f99480d4eb074ac42c308d8c2d61fbaac782ceac1037971689ae45ac5a607922","registry-page.mjs":"2becf0524ee6305dae754d812a586d213e6c0faf9326139dff642c19635903c2","registry-page-template.html":"70221d9735cf8fe6bb73a0a930ece1632badf0e08fd51ce78ee344c3a45def19"} */
+/* Source bindings: {"registry-economic-core.mjs":"c0dc8d0a5572d5eee271394dac725e4debc72b954f2b5ce1331fba9168d345d3","registry-wire.mjs":"0a30f6deeaa985d6a934f4ec18ee5336111cf61620d11702d833a2c78d59f6f1","registry-simulator-core.mjs":"2d3c01c44c4b3ba4a5d2cf726ae1f0eb3d24f0d512ded82f9bbdaa679005a54b","registry-fixtures.mjs":"c6621f97fd03ffa3aadd40a2097ea0eb657042acb3f3330e3dcea245cc687dd4","registry-offers.mjs":"d2bc096da265a3150e7368f2bf3f3dd66abc54bdd6dbf4f27cc8ea9ba8430d73","registry-properties.mjs":"a99605191d415458fe900f3d47be9100e260824271ae7e92d5cd59e644c2039a","registry-simulator-backend.mjs":"f66a01473ea46cc3638bf8f828bae54c0c5a04c2dbbc69ae2df49377b39d4dfb","scenario-dsl.mjs":"f99480d4eb074ac42c308d8c2d61fbaac782ceac1037971689ae45ac5a607922","registry-page.mjs":"2becf0524ee6305dae754d812a586d213e6c0faf9326139dff642c19635903c2","registry-page-template.html":"70221d9735cf8fe6bb73a0a930ece1632badf0e08fd51ce78ee344c3a45def19"} */
 'use strict';
 /* @@MODULE:E@@ sha256=c0dc8d0a5572d5eee271394dac725e4debc72b954f2b5ce1331fba9168d345d3 */
 const E = (() => {
@@ -859,7 +859,7 @@ return { decodeInput, validateState, validateConfig, validateEnv, validateResult
 })();
 /* @@MODULE:Wire:END@@ */
 
-/* @@MODULE:Core@@ sha256=69fb0d0051ad5df310b45accc7a1b76946d4cd1a6c640502b28ce23df0284bd7 */
+/* @@MODULE:Core@@ sha256=2d3c01c44c4b3ba4a5d2cf726ae1f0eb3d24f0d512ded82f9bbdaa679005a54b */
 const Core = (() => {
 /* Executable Registry adapter. Every action follows CardanoKeri.Registry.stepFn;
  * imported transaction judgments are in registry-economic-core.mjs. This is a
@@ -887,7 +887,7 @@ function execute(p, env, s, action) {
   let after = s, moved = flow({});
   if (kind === 'bookRegistration') {
     const b = a.booking;
-    require(b.request.carrierAda === p.Mc + p.D && b.request.declaredTip === p.tip, 'keri-registration-value-mismatch');
+    require(b.request.carrierAda >= p.Mc + p.D && b.request.declaredTip === p.tip, 'keri-registration-value-mismatch');
     const next = E.bookRegistration(world, b);
     after = { ...s, registrations: [b, ...s.registrations] };
     require(E.equal(toWorld(after), next), 'keri-registration-reconstruction-mismatch'); moved = flow({ deposited: b.request.contents.lovelace });
@@ -925,7 +925,7 @@ function execute(p, env, s, action) {
     after = { ...after, gen: s.gen + 1n, config: next.registry.config, trie: next.registry.trie, treasury: next.treasury,
       registrations: s.registrations.filter(b => !containsRef(a.transaction.transaction.inputs, b.request.reference)), terminations: s.terminations.filter(e => !containsRef(a.transaction.transaction.inputs, e.booking.request.reference)) };
     require(E.equal(toWorld(after), next), 'keri-fold-reconstruction-mismatch');
-    moved = flow({ locked: members.filter(m => m.kind === 'registration').map(m => [m.booking.request.key, p.D]) });
+    moved = flow({ locked: members.filter(m => m.kind === 'registration').map(m => [m.booking.request.key, m.booking.request.carrierAda - p.Mc]) });
   } else {
     const next = kind === 'genericRetraction' ? E.retractionAccepted(world, a.unspent, a.transaction) : E.rejectionAccepted(world, a.unspent, a.transaction);
     after = { ...s, registrations: s.registrations.filter(b => next.pending.some(old => E.equal(old, b))) };
@@ -1075,7 +1075,7 @@ return { SCHEMA, VERSION, canonical, equal, stepFn, init, validateState, checkCe
 })();
 /* @@MODULE:Core:END@@ */
 
-/* @@MODULE:B@@ sha256=7b89389177390a448bd54cac4a930be3899bb226967ec903bbd331a3f7c30cd3 */
+/* @@MODULE:B@@ sha256=c6621f97fd03ffa3aadd40a2097ea0eb657042acb3f3330e3dcea245cc687dd4 */
 const B = (() => {
 /* Model transaction assembly for interactive play. These are complete proposed
  * observations, derived from RegistryScenarioFixtures and the public Singular
@@ -1106,11 +1106,11 @@ function transaction(s, members, inputs, outputs, validity, fee, donation, signe
     applicationMint: members.flatMap(m => m.booking.request.contents.applicationTags).map(t => [{ policy: t.policy, name: t.assetName }, -1n]),
     stateMint: [], singularMint: [] };
 }
-function registrationAction(params, state, aidValue, referenceValue, timeValue = 0) {
-  const [p, s] = prepare(params, state), aid = nat(aidValue), reference = nat(referenceValue), time = nat(timeValue);
+function registrationAction(params, state, aidValue, referenceValue, timeValue = 0, poolValue = 0) {
+  const [p, s] = prepare(params, state), aid = nat(aidValue), reference = nat(referenceValue), time = nat(timeValue), pool0 = nat(poolValue);
   const request = { reference: { tx: reference, index: 0n }, registryId: s.config.registryId, key: aid, refundAddress: 42n,
-    destination: aid + 100n, submittedAt: time + 1n, registrationCost: s.config.registrationCost ?? 0n, declaredTip: p.tip, carrierAda: p.Mc + p.D, datum: aid + 700n,
-    contents: { lovelace: p.Mc + p.D + p.tip + (s.config.registrationCost ?? 0n), applicationTags: [], trieReadyTags: [], otherAssets: [] } };
+    destination: aid + 100n, submittedAt: time + 1n, registrationCost: s.config.registrationCost ?? 0n, declaredTip: p.tip, carrierAda: p.Mc + p.D + pool0, datum: aid + 700n,
+    contents: { lovelace: p.Mc + p.D + pool0 + p.tip + (s.config.registrationCost ?? 0n), applicationTags: [], trieReadyTags: [], otherAssets: [] } };
   const approval = { policy: s.config.applicationPolicy, edge: 'insertActive', key: aid, owner: 42n, destination: request.destination, assetName: applicationName(request), signatures: [] };
   request.contents.applicationTags = [approval]; request.contents.trieReadyTags = [readyTag(s.config, request, 'registration')];
   return toWire({ bookRegistration: { booking: { request, interval: { lower: time, upper: time + 1n }, trieReadyTagsMinted: request.contents.trieReadyTags, applicationTagsMinted: [approval] } } });

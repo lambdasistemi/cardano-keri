@@ -1,4 +1,4 @@
-import CardanoKeri.Checkpoint
+import CardanoKeri.CheckpointValue
 import SingularApplicationHeld.Core
 
 /-! Consumer identity and a bounded joint registration bridge.
@@ -17,13 +17,6 @@ structure DecodedDatum where
   aid : AID
   state : State
   deriving Repr, DecidableEq
-
-/-- The facts a checkpoint datum carries about a state. The premium pool is an
-amount held in the output's value, not a datum fact, so it is set to zero; the
-amounts are the separately named value obligation of `realizesState`. -/
-def _root_.CardanoKeri.Checkpoint.State.datumFacts : State → State
-  | .present l => .present { l with pool := 0 }
-  | s => s
 
 /-- A decoded datum with only its datum facts. -/
 def DecodedDatum.facts (d : DecodedDatum) : DecodedDatum := { d with state := d.state.datumFacts }
@@ -112,14 +105,16 @@ def identityDomain (i : Interpretation) (c d : Context) : List AH.Preimage :=
 
 /-- Refinement boundary for a current ledger holding. Caller must establish it
 from a complete actual observation and the selected decoder, not old Origin
-metadata. The datum carries the state's facts only (`State.datumFacts`): the
-premium pool and the bond amounts are held in the output's value, and reading
-them from the value is a separate named obligation. -/
-def realizesState (i : Interpretation) (c : Context) (s : State)
-    (o : AH.ObservedOutput) : Prop :=
+metadata. The datum carries the state's facts only (`State.datumFacts`); the
+deposit, the freeze bond and the premium pool are held in the output's value,
+which must be exactly what the state holds (`State.heldValue`), with the
+registry's minimum ADA. The economic parameters are trusted inputs. -/
+def realizesState (i : Interpretation) (c : Context) (p : Params)
+    (rp : CardanoKeri.Registry.Params) (s : State) (o : AH.ObservedOutput) : Prop :=
   o.credential = c.release.applicationCredential ∧
   AH.quantity o (representativeAsset i c) = s.representativeHeld ∧
-  (decoded i c o).map DecodedDatum.facts = some ⟨c.aid, s.datumFacts⟩
+  (decoded i c o).map DecodedDatum.facts = some ⟨c.aid, s.datumFacts⟩ ∧
+  o.lovelace = s.heldValue p rp
 
 /-- Faithfulness is a separate finite premise; originBinding alone does not
 prove that a consumer-allocated abstract registry id distinguishes registries. -/
@@ -192,7 +187,10 @@ def moneyAgreementB (q : RegistrationInput) : Bool :=
   some q.fullFold.interval == q.economicTx.transaction.validity
 
 /-- A single selected registration, with all identity/data/value links checked
-against the actual two transaction observations. This does not compare opaque
+against the actual two transaction observations. The registry's deposit `D` is
+the checkpoint's deposit plus freeze bond, and the declared carrier is exactly
+what the registered checkpoint holds, so its initial pool is the carrier less
+the minimum ADA, the deposit and the freeze bond. This does not compare opaque
 root bytes or claim equivalence for arbitrary batches. -/
 def registrationAgreementB (i : Interpretation) (c : Context) (q : RegistrationInput)
     (created : CreatedRegistry) (booked after : CardanoKeri.Registry.Sys)
@@ -212,6 +210,8 @@ def registrationAgreementB (i : Interpretation) (c : Context) (q : RegistrationI
   eo.output.address == some q.booking.request.destination &&
   eo.output.datumValue == q.booking.request.datum &&
   eo.output.lovelace == q.booking.request.carrierAda &&
+  q.registryParams.D == q.checkpointParams.D + q.checkpointParams.B &&
+  q.booking.request.carrierAda == st.heldValue q.checkpointParams q.registryParams &&
   eo.singularTags == [booked.config.singularTag c.aid] &&
   o.lovelace == q.booking.request.carrierAda &&
   (match o.datum, q.booking.request.datum with

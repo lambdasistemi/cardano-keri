@@ -969,8 +969,8 @@ serialized Checkpoint datum. `Examples.registration_folded` supplies the connect
 theorem registration_posted_value (p : Params) {s s' : Sys}
     {b : Singular.RegistrationBooking} {f : Flow}
     (hs : bookRegistration p s b = .ok (f, s')) :
-    b.request.carrierAda = p.Mc + p.D ∧ b.request.declaredTip = p.tip ∧
-    b.request.contents.lovelace = b.request.registrationCost + p.tip + (p.Mc + p.D) ∧
+    p.Mc + p.D ≤ b.request.carrierAda ∧ b.request.declaredTip = p.tip ∧
+    b.request.contents.lovelace = b.request.registrationCost + p.tip + b.request.carrierAda ∧
     f = { deposited := b.request.contents.lovelace } := by
   obtain ⟨⟨carrier, tip⟩, booked, _, flow⟩ := bookRegistration_sound p hs
   have admitted : Singular.registrationBookingRefusal s.config b = none := by
@@ -992,7 +992,7 @@ theorem registration_posted_value (p : Params) {s s' : Sys}
       have high : b.request.contents.lovelace ≤ Singular.registrationDeclaredLovelace b.request := by
         simpa using upper
       refine ⟨carrier, tip, ?_, flow⟩
-      simpa [Singular.registrationDeclaredLovelace, carrier, tip] using Nat.le_antisymm high low.2
+      simpa [Singular.registrationDeclaredLovelace, tip] using Nat.le_antisymm high low.2
 
 /-- Given actual imported registration booking success, or an actual selected
 registration in a successful adapter fold; when observing the request and

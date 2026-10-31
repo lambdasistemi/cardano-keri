@@ -91,7 +91,7 @@ pub fn row_positive_anchor() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -127,7 +127,7 @@ pub fn row_positive_anchor() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -137,7 +137,7 @@ pub fn row_positive_anchor() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -209,7 +209,7 @@ pub fn row_maturity_minus_one() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -245,7 +245,7 @@ pub fn row_maturity_minus_one() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 6,
     output: Output {
       address: Address {
@@ -255,7 +255,7 @@ pub fn row_maturity_minus_one() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -327,7 +327,7 @@ pub fn row_maturity_plus_one() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -363,7 +363,7 @@ pub fn row_maturity_plus_one() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 8,
     output: Output {
       address: Address {
@@ -373,7 +373,7 @@ pub fn row_maturity_plus_one() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -445,7 +445,7 @@ pub fn row_zero_w_birth() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -481,7 +481,7 @@ pub fn row_zero_w_birth() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 0 },
+    params: Params { d: 8, b: 2, p: 1, w: 0 },
     now: 2,
     output: Output {
       address: Address {
@@ -491,7 +491,7 @@ pub fn row_zero_w_birth() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -563,7 +563,7 @@ pub fn row_wrong_policy() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -599,7 +599,7 @@ pub fn row_wrong_policy() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -609,7 +609,7 @@ pub fn row_wrong_policy() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000009",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -681,7 +681,7 @@ pub fn row_wrong_name() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -717,7 +717,7 @@ pub fn row_wrong_name() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -727,7 +727,7 @@ pub fn row_wrong_name() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55231",
         1,
@@ -799,7 +799,7 @@ pub fn row_missing_token() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -835,7 +835,7 @@ pub fn row_missing_token() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -844,7 +844,7 @@ pub fn row_missing_token() -> Query {
         ),
         stake_credential: None,
       },
-      value: assets.from_lovelace(14),
+      value: assets.from_lovelace(17),
       datum: InlineDatum(builtin.i_data(711)),
       reference_script: None,
     },
@@ -912,7 +912,7 @@ pub fn row_quantity_zero() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -948,7 +948,7 @@ pub fn row_quantity_zero() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -958,7 +958,7 @@ pub fn row_quantity_zero() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         0,
@@ -1030,7 +1030,7 @@ pub fn row_quantity_two() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -1066,7 +1066,7 @@ pub fn row_quantity_two() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -1076,7 +1076,7 @@ pub fn row_quantity_two() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         2,
@@ -1148,7 +1148,7 @@ pub fn row_duplicate_entries() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -1184,7 +1184,7 @@ pub fn row_duplicate_entries() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -1195,7 +1195,7 @@ pub fn row_duplicate_entries() -> Query {
       },
       value: assets.add(
         assets.add(
-          assets.from_lovelace(14),
+          assets.from_lovelace(17),
           #"00000000000000000000000000000000000000000000000000000008",
           #"00000000000000000000000000000000000000000000000029a2988571c55230",
           1,
@@ -1271,7 +1271,7 @@ pub fn row_other_aid_token() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -1307,7 +1307,7 @@ pub fn row_other_aid_token() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -1317,7 +1317,7 @@ pub fn row_other_aid_token() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55231",
         1,
@@ -1389,7 +1389,7 @@ pub fn row_rival_seed_transaction() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -1425,7 +1425,7 @@ pub fn row_rival_seed_transaction() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -1435,7 +1435,7 @@ pub fn row_rival_seed_transaction() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2996e46c5efb9",
         1,
@@ -1507,7 +1507,7 @@ pub fn row_rival_seed_index() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -1543,7 +1543,7 @@ pub fn row_rival_seed_index() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -1553,7 +1553,7 @@ pub fn row_rival_seed_index() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571d49473",
         1,
@@ -1625,7 +1625,7 @@ pub fn row_rival_registry_policy() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -1661,7 +1661,7 @@ pub fn row_rival_registry_policy() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -1671,7 +1671,7 @@ pub fn row_rival_registry_policy() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000009",
         #"00000000000000000000000000000000000000000000000029a2996e46c5efb9",
         1,
@@ -1743,7 +1743,7 @@ pub fn row_wrong_network() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -1779,7 +1779,7 @@ pub fn row_wrong_network() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -1789,7 +1789,7 @@ pub fn row_wrong_network() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -1861,7 +1861,7 @@ pub fn row_unknown_release() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -1885,7 +1885,7 @@ pub fn row_unknown_release() -> Query {
       aid: 11,
     },
     environment: Environment { network: 0, release: None },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -1895,7 +1895,7 @@ pub fn row_unknown_release() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -1967,7 +1967,7 @@ pub fn row_release_application_policy() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -2003,7 +2003,7 @@ pub fn row_release_application_policy() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -2013,7 +2013,7 @@ pub fn row_release_application_policy() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -2085,7 +2085,7 @@ pub fn row_release_credential() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -2121,7 +2121,7 @@ pub fn row_release_credential() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -2131,7 +2131,7 @@ pub fn row_release_credential() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -2203,7 +2203,7 @@ pub fn row_release_state_program() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -2239,7 +2239,7 @@ pub fn row_release_state_program() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -2249,7 +2249,7 @@ pub fn row_release_state_program() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -2321,7 +2321,7 @@ pub fn row_release_state_policy() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -2357,7 +2357,7 @@ pub fn row_release_state_policy() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -2367,7 +2367,7 @@ pub fn row_release_state_policy() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -2439,7 +2439,7 @@ pub fn row_holding_credential() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -2475,7 +2475,7 @@ pub fn row_holding_credential() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -2485,7 +2485,7 @@ pub fn row_holding_credential() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -2557,7 +2557,7 @@ pub fn row_datum_empty() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -2593,7 +2593,7 @@ pub fn row_datum_empty() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -2603,7 +2603,7 @@ pub fn row_datum_empty() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -2675,7 +2675,7 @@ pub fn row_datum_root() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -2711,7 +2711,7 @@ pub fn row_datum_root() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -2721,7 +2721,7 @@ pub fn row_datum_root() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -2793,7 +2793,7 @@ pub fn row_datum_malformed() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -2829,7 +2829,7 @@ pub fn row_datum_malformed() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -2839,7 +2839,7 @@ pub fn row_datum_malformed() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -2911,7 +2911,7 @@ pub fn row_datum_other_aid() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -2947,7 +2947,7 @@ pub fn row_datum_other_aid() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -2957,7 +2957,7 @@ pub fn row_datum_other_aid() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -3029,7 +3029,7 @@ pub fn row_table_missing_key() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -3065,7 +3065,7 @@ pub fn row_table_missing_key() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -3075,7 +3075,7 @@ pub fn row_table_missing_key() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -3128,7 +3128,7 @@ pub fn row_table_missing_code() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -3164,7 +3164,7 @@ pub fn row_table_missing_code() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -3174,7 +3174,7 @@ pub fn row_table_missing_code() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -3238,7 +3238,7 @@ pub fn row_table_missing_hash() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -3274,7 +3274,7 @@ pub fn row_table_missing_hash() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -3284,7 +3284,7 @@ pub fn row_table_missing_hash() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -3357,7 +3357,7 @@ pub fn row_table_ambiguous_key() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -3393,7 +3393,7 @@ pub fn row_table_ambiguous_key() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -3403,7 +3403,7 @@ pub fn row_table_ambiguous_key() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -3499,7 +3499,7 @@ pub fn row_absent_datum() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -3509,7 +3509,7 @@ pub fn row_absent_datum() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -3604,7 +3604,7 @@ pub fn row_terminal_datum() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -3614,7 +3614,7 @@ pub fn row_terminal_datum() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2988571c55230",
         1,
@@ -3686,7 +3686,7 @@ pub fn row_genuine_rival_registry() -> Query {
                 frozen: False,
                 born_at: 2,
                 refund_to: 42,
-                pool: 5,
+                pool: 3,
               },
             ),
           },
@@ -3722,7 +3722,7 @@ pub fn row_genuine_rival_registry() -> Query {
         },
       ),
     },
-    params: Params { d: 3, b: 2, p: 1, w: 5 },
+    params: Params { d: 8, b: 2, p: 1, w: 5 },
     now: 7,
     output: Output {
       address: Address {
@@ -3732,7 +3732,7 @@ pub fn row_genuine_rival_registry() -> Query {
         stake_credential: None,
       },
       value: assets.add(
-        assets.from_lovelace(14),
+        assets.from_lovelace(17),
         #"00000000000000000000000000000000000000000000000000000008",
         #"00000000000000000000000000000000000000000000000029a2996e46c5efb9",
         1,

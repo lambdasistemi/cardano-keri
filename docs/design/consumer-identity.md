@@ -401,8 +401,11 @@ evidence that the data the ledger delivers is the data the Lean describes. In
 the Aiken tests, `aiken/cbor.deserialise` of a vector's datum bytes stands in
 for the ledger's parse; bytes that are not one whole datum never reach the
 decoder, as the Lean's `ofBytes?` refuses them. The one vector with tagged big
-numbers (`large-numbers`) is read by the generator instead, because that
-function stops the whole test run on a tagged big number.
+numbers (`large-numbers`) cannot be read that way, because that function stops
+the whole test run on a tagged big number. Its tests use data the generator
+builds, and require that this data serialises, with the plutus serialiser, to
+the vector's bytes, so the bytes of that row are checked against the Lean's
+inside the suite.
 
 **The decoder never fails.** Every unwrap of plutus data follows a test of its
 kind, so a datum the decoder does not accept is `None`, never an abort: a
@@ -417,8 +420,9 @@ Two executable layers check it, beside the connected run.
   Each of the thirty-six rows has a test that the decoder returns the row's
   result and a test that the consumer predicate, on the concrete identity bytes
   and this decoder, returns the row's verdict; each test is named after the
-  row. `just check-checkpoint-datum-vectors` rejects any drift and runs in the
-  Lean CI job with the other consumer design checks.
+  row. The Lean CI job runs `node scripts/checkpoint-datum-vectors.mjs --check`
+  as the last step of `scripts/check-consumer-design.sh` and fails on any
+  drift; `just check-checkpoint-datum-vectors` runs the same check locally.
 - **Properties** (`consumer_checkpoint_datum_tests.ak`): the decoder never
   fails on arbitrary data; every value of each field it reads decodes to the
   Lean's result; and every other kind of node in each position, including each

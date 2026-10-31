@@ -250996,17 +250996,17 @@
    ]
   },
   "docs-design-consumer-identity/the-datum-decoder-in-aiken-02": {
-   "audio_sha256": "6d3d804bc3053712795ad8344b6aa1e58a6c16863777f57324b261b14a75c76e",
-   "characters": 807,
-   "cost": 0.0007989299999999999,
-   "duration": 54.875,
+   "audio_sha256": "c8f8328cadfa054d573b416a2a06c5ce9628527c2becbbc5774e2a4e79badd82",
+   "characters": 1003,
+   "cost": 0.00099297,
+   "duration": 67.375,
    "index": 2,
-   "key": "6f03dbbbd6e2932ae59c24c8bef219613cc235e03e817ec0afc78393f7b43f76",
+   "key": "9f3ef075be34a40a32c1ae0da5bb6323a6a843d9c2f0d5c22fdd3b368ad20d59",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
    "section": "the-datum-decoder-in-aiken",
-   "sent_text": "Raw bytes are the ledger's. The Lean reads the datum's serialised bytes. On chain the ledger delivers the inline datum to the script already as plutus data, so the Aiken decoder starts at the data and has no counterpart of parse. This is a representation boundary, declared here: nothing in this repository runs the ledger's parse, and the connected test above is the only evidence that the data the ledger delivers is the data the Lean describes. In the Aiken tests, aiken/cbor.deserialise of a vector's datum bytes stands in for the ledger's parse; bytes that are not one whole datum never reach the decoder, as the Lean's ofBytes? refuses them. The one vector with tagged big numbers (large-numbers) is read by the generator instead, because that function stops the whole test run on a tagged big number.",
-   "text": "Raw bytes are the ledger's. The Lean reads the datum's serialised bytes. On chain the ledger delivers the inline datum to the script already as plutus data, so the Aiken decoder starts at the data and has no counterpart of parse. This is a representation boundary, declared here: nothing in this repository runs the ledger's parse, and the connected test above is the only evidence that the data the ledger delivers is the data the Lean describes. In the Aiken tests, aiken/cbor.deserialise of a vector's datum bytes stands in for the ledger's parse; bytes that are not one whole datum never reach the decoder, as the Lean's ofBytes? refuses them. The one vector with tagged big numbers (large-numbers) is read by the generator instead, because that function stops the whole test run on a tagged big number.",
+   "sent_text": "Raw bytes are the ledger's. The Lean reads the datum's serialised bytes. On chain the ledger delivers the inline datum to the script already as plutus data, so the Aiken decoder starts at the data and has no counterpart of parse. This is a representation boundary, declared here: nothing in this repository runs the ledger's parse, and the connected test above is the only evidence that the data the ledger delivers is the data the Lean describes. In the Aiken tests, aiken/cbor.deserialise of a vector's datum bytes stands in for the ledger's parse; bytes that are not one whole datum never reach the decoder, as the Lean's ofBytes? refuses them. The one vector with tagged big numbers (large-numbers) cannot be read that way, because that function stops the whole test run on a tagged big number. Its tests use data the generator builds, and require that this data serialises, with the plutus serialiser, to the vector's bytes, so the bytes of that row are checked against the Lean's inside the suite.",
+   "text": "Raw bytes are the ledger's. The Lean reads the datum's serialised bytes. On chain the ledger delivers the inline datum to the script already as plutus data, so the Aiken decoder starts at the data and has no counterpart of parse. This is a representation boundary, declared here: nothing in this repository runs the ledger's parse, and the connected test above is the only evidence that the data the ledger delivers is the data the Lean describes. In the Aiken tests, aiken/cbor.deserialise of a vector's datum bytes stands in for the ledger's parse; bytes that are not one whole datum never reach the decoder, as the Lean's ofBytes? refuses them. The one vector with tagged big numbers (large-numbers) cannot be read that way, because that function stops the whole test run on a tagged big number. Its tests use data the generator builds, and require that this data serialises, with the plutus serialiser, to the vector's bytes, so the bytes of that row are checked against the Lean's inside the suite.",
    "words": [
     {
      "end": 0.375,
@@ -251624,158 +251624,353 @@
      "text": "."
     },
     {
-     "end": 44.612,
-     "start": 44.5,
+     "end": 44.575,
+     "start": 44.475,
      "text": "The"
     },
     {
-     "end": 44.875,
-     "start": 44.612,
+     "end": 44.825,
+     "start": 44.575,
      "text": "one"
     },
     {
-     "end": 45.275,
-     "start": 44.875,
+     "end": 45.225,
+     "start": 44.825,
      "text": "vector"
     },
     {
-     "end": 45.463,
-     "start": 45.275,
+     "end": 45.412,
+     "start": 45.225,
      "text": "with"
     },
     {
-     "end": 45.9,
-     "start": 45.463,
+     "end": 45.825,
+     "start": 45.412,
      "text": "tagged"
     },
     {
-     "end": 46.125,
-     "start": 45.9,
+     "end": 46.05,
+     "start": 45.825,
      "text": "big"
     },
     {
-     "end": 46.65,
-     "start": 46.125,
+     "end": 46.6,
+     "start": 46.05,
      "text": "numbers"
     },
     {
-     "end": 46.725,
-     "start": 46.65,
+     "end": 46.675,
+     "start": 46.6,
      "text": "("
     },
     {
-     "end": 47.525,
-     "start": 46.725,
+     "end": 47.45,
+     "start": 46.675,
      "text": "large-numbers"
     },
     {
-     "end": 47.612,
-     "start": 47.525,
+     "end": 47.525,
+     "start": 47.45,
      "text": ")"
     },
     {
-     "end": 47.787,
-     "start": 47.612,
-     "text": "is"
+     "end": 47.875,
+     "start": 47.525,
+     "text": "cannot"
     },
     {
-     "end": 48.075,
-     "start": 47.787,
+     "end": 48.025,
+     "start": 47.875,
+     "text": "be"
+    },
+    {
+     "end": 48.275,
+     "start": 48.025,
      "text": "read"
     },
     {
-     "end": 48.225,
-     "start": 48.075,
-     "text": "by"
-    },
-    {
-     "end": 48.338,
-     "start": 48.225,
-     "text": "the"
-    },
-    {
-     "end": 48.925,
-     "start": 48.338,
-     "text": "generator"
-    },
-    {
-     "end": 50.025,
-     "start": 48.925,
-     "text": "instead"
-    },
-    {
-     "end": 50.25,
-     "start": 50.025,
-     "text": ","
-    },
-    {
-     "end": 50.725,
-     "start": 50.425,
-     "text": "because"
-    },
-    {
-     "end": 51.0,
-     "start": 50.725,
+     "end": 48.55,
+     "start": 48.275,
      "text": "that"
     },
     {
-     "end": 51.475,
-     "start": 51.0,
+     "end": 49.35,
+     "start": 48.55,
+     "text": "way"
+    },
+    {
+     "end": 49.6,
+     "start": 49.35,
+     "text": ","
+    },
+    {
+     "end": 50.075,
+     "start": 49.775,
+     "text": "because"
+    },
+    {
+     "end": 50.35,
+     "start": 50.075,
+     "text": "that"
+    },
+    {
+     "end": 50.825,
+     "start": 50.35,
      "text": "function"
     },
     {
-     "end": 51.85,
-     "start": 51.475,
+     "end": 51.2,
+     "start": 50.825,
      "text": "stops"
     },
     {
-     "end": 51.95,
-     "start": 51.85,
+     "end": 51.3,
+     "start": 51.2,
      "text": "the"
     },
     {
-     "end": 52.213,
-     "start": 51.95,
+     "end": 51.562,
+     "start": 51.3,
      "text": "whole"
     },
     {
-     "end": 52.638,
-     "start": 52.213,
+     "end": 51.987,
+     "start": 51.562,
      "text": "test"
     },
     {
-     "end": 52.95,
-     "start": 52.638,
+     "end": 52.3,
+     "start": 51.987,
      "text": "run"
     },
     {
-     "end": 53.062,
-     "start": 52.95,
+     "end": 52.412,
+     "start": 52.3,
      "text": "on"
     },
     {
-     "end": 53.138,
-     "start": 53.062,
+     "end": 52.487,
+     "start": 52.412,
      "text": "a"
     },
     {
-     "end": 53.55,
-     "start": 53.138,
+     "end": 52.9,
+     "start": 52.487,
      "text": "tagged"
     },
     {
-     "end": 53.775,
-     "start": 53.55,
+     "end": 53.125,
+     "start": 52.9,
      "text": "big"
     },
     {
-     "end": 54.65,
-     "start": 53.775,
+     "end": 54.0,
+     "start": 53.125,
      "text": "number"
     },
     {
-     "end": 54.875,
-     "start": 54.65,
+     "end": 54.225,
+     "start": 54.0,
+     "text": "."
+    },
+    {
+     "end": 54.638,
+     "start": 54.4,
+     "text": "Its"
+    },
+    {
+     "end": 55.05,
+     "start": 54.638,
+     "text": "tests"
+    },
+    {
+     "end": 55.338,
+     "start": 55.05,
+     "text": "use"
+    },
+    {
+     "end": 55.675,
+     "start": 55.338,
+     "text": "data"
+    },
+    {
+     "end": 55.812,
+     "start": 55.675,
+     "text": "the"
+    },
+    {
+     "end": 56.35,
+     "start": 55.812,
+     "text": "generator"
+    },
+    {
+     "end": 56.85,
+     "start": 56.35,
+     "text": "builds"
+    },
+    {
+     "end": 56.925,
+     "start": 56.85,
+     "text": ","
+    },
+    {
+     "end": 57.05,
+     "start": 56.925,
+     "text": "and"
+    },
+    {
+     "end": 57.625,
+     "start": 57.05,
+     "text": "require"
+    },
+    {
+     "end": 57.8,
+     "start": 57.625,
+     "text": "that"
+    },
+    {
+     "end": 58.0,
+     "start": 57.8,
+     "text": "this"
+    },
+    {
+     "end": 58.338,
+     "start": 58.0,
+     "text": "data"
+    },
+    {
+     "end": 59.75,
+     "start": 58.338,
+     "text": "serialises"
+    },
+    {
+     "end": 59.95,
+     "start": 59.75,
+     "text": ","
+    },
+    {
+     "end": 60.237,
+     "start": 60.125,
+     "text": "with"
+    },
+    {
+     "end": 60.325,
+     "start": 60.237,
+     "text": "the"
+    },
+    {
+     "end": 60.675,
+     "start": 60.325,
+     "text": "plutus"
+    },
+    {
+     "end": 61.4,
+     "start": 60.675,
+     "text": "serialiser"
+    },
+    {
+     "end": 61.475,
+     "start": 61.4,
+     "text": ","
+    },
+    {
+     "end": 61.562,
+     "start": 61.475,
+     "text": "to"
+    },
+    {
+     "end": 61.65,
+     "start": 61.562,
+     "text": "the"
+    },
+    {
+     "end": 62.1,
+     "start": 61.65,
+     "text": "vector's"
+    },
+    {
+     "end": 62.9,
+     "start": 62.1,
+     "text": "bytes"
+    },
+    {
+     "end": 63.1,
+     "start": 62.9,
+     "text": ","
+    },
+    {
+     "end": 63.388,
+     "start": 63.3,
+     "text": "so"
+    },
+    {
+     "end": 63.475,
+     "start": 63.388,
+     "text": "the"
+    },
+    {
+     "end": 63.763,
+     "start": 63.475,
+     "text": "bytes"
+    },
+    {
+     "end": 63.85,
+     "start": 63.763,
+     "text": "of"
+    },
+    {
+     "end": 64.125,
+     "start": 63.85,
+     "text": "that"
+    },
+    {
+     "end": 64.512,
+     "start": 64.125,
+     "text": "row"
+    },
+    {
+     "end": 64.688,
+     "start": 64.512,
+     "text": "are"
+    },
+    {
+     "end": 64.963,
+     "start": 64.688,
+     "text": "checked"
+    },
+    {
+     "end": 65.287,
+     "start": 64.963,
+     "text": "against"
+    },
+    {
+     "end": 65.375,
+     "start": 65.287,
+     "text": "the"
+    },
+    {
+     "end": 65.8,
+     "start": 65.375,
+     "text": "Lean's"
+    },
+    {
+     "end": 66.188,
+     "start": 65.8,
+     "text": "inside"
+    },
+    {
+     "end": 66.287,
+     "start": 66.188,
+     "text": "the"
+    },
+    {
+     "end": 67.175,
+     "start": 66.287,
+     "text": "suite"
+    },
+    {
+     "end": 67.375,
+     "start": 67.175,
      "text": "."
     }
    ]
@@ -252111,17 +252306,17 @@
    ]
   },
   "docs-design-consumer-identity/the-datum-decoder-in-aiken-05": {
-   "audio_sha256": "6f88294cd74d30b2f98f7752b4f8e94f1bcc63208f2029292495818eb96c4b9b",
-   "characters": 536,
-   "cost": 0.00053064,
-   "duration": 37.4,
+   "audio_sha256": "00424e2bce2f056f3b8fb678fa2309b441ab2f41c1508c25198edc9a3c6c1b89",
+   "characters": 628,
+   "cost": 0.00062172,
+   "duration": 44.95,
    "index": 5,
-   "key": "99339a142748a254840db1c409487c54cb87a8e08b3cec47ebf7c77f57765b5d",
+   "key": "0966bc49bb4b36a6084c72d284ea680e658a28a1d59252bb2bad452229c6cf8c",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 300,
    "section": "the-datum-decoder-in-aiken",
-   "sent_text": "The Lean vectors. consumer_checkpoint_datum_vectors.ak is generated by scripts/checkpoint-datum-vectors.mjs from lean/checkpoint-datum-vectors.json (just gen-checkpoint-datum-vectors). Each of the thirty-six rows has a test that the decoder returns the row's result and a test that the consumer predicate, on the concrete identity bytes and this decoder, returns the row's verdict; each test is named after the row. just check-checkpoint-datum-vectors rejects any drift and runs in the Lean CI job with the other consumer design checks.",
-   "text": "The Lean vectors. consumer_checkpoint_datum_vectors.ak is generated by scripts/checkpoint-datum-vectors.mjs from lean/checkpoint-datum-vectors.json (just gen-checkpoint-datum-vectors). Each of the thirty-six rows has a test that the decoder returns the row's result and a test that the consumer predicate, on the concrete identity bytes and this decoder, returns the row's verdict; each test is named after the row. just check-checkpoint-datum-vectors rejects any drift and runs in the Lean CI job with the other consumer design checks.",
+   "sent_text": "The Lean vectors. consumer_checkpoint_datum_vectors.ak is generated by scripts/checkpoint-datum-vectors.mjs from lean/checkpoint-datum-vectors.json (just gen-checkpoint-datum-vectors). Each of the thirty-six rows has a test that the decoder returns the row's result and a test that the consumer predicate, on the concrete identity bytes and this decoder, returns the row's verdict; each test is named after the row. The Lean CI job runs node scripts/checkpoint-datum-vectors.mjs --check as the last step of scripts/check-consumer-design.sh and fails on any drift; just check-checkpoint-datum-vectors runs the same check locally.",
+   "text": "The Lean vectors. consumer_checkpoint_datum_vectors.ak is generated by scripts/checkpoint-datum-vectors.mjs from lean/checkpoint-datum-vectors.json (just gen-checkpoint-datum-vectors). Each of the thirty-six rows has a test that the decoder returns the row's result and a test that the consumer predicate, on the concrete identity bytes and this decoder, returns the row's verdict; each test is named after the row. The Lean CI job runs node scripts/checkpoint-datum-vectors.mjs --check as the last step of scripts/check-consumer-design.sh and fails on any drift; just check-checkpoint-datum-vectors runs the same check locally.",
    "words": [
     {
      "end": 0.25,
@@ -252429,98 +252624,143 @@
      "text": "."
     },
     {
-     "end": 29.663,
+     "end": 29.475,
      "start": 29.375,
-     "text": "just"
+     "text": "The"
     },
     {
-     "end": 31.1,
-     "start": 29.663,
-     "text": "check-checkpoint-datum-vectors"
-    },
-    {
-     "end": 31.55,
-     "start": 31.1,
-     "text": "rejects"
-    },
-    {
-     "end": 31.837,
-     "start": 31.55,
-     "text": "any"
-    },
-    {
-     "end": 32.338,
-     "start": 31.837,
-     "text": "drift"
-    },
-    {
-     "end": 32.513,
-     "start": 32.338,
-     "text": "and"
-    },
-    {
-     "end": 32.975,
-     "start": 32.513,
-     "text": "runs"
-    },
-    {
-     "end": 33.062,
-     "start": 32.975,
-     "text": "in"
-    },
-    {
-     "end": 33.188,
-     "start": 33.062,
-     "text": "the"
-    },
-    {
-     "end": 33.6,
-     "start": 33.188,
+     "end": 29.85,
+     "start": 29.475,
      "text": "Lean"
     },
     {
-     "end": 34.088,
-     "start": 33.6,
+     "end": 30.35,
+     "start": 29.85,
      "text": "CI"
     },
     {
-     "end": 34.5,
-     "start": 34.088,
+     "end": 30.763,
+     "start": 30.35,
      "text": "job"
     },
     {
-     "end": 34.638,
-     "start": 34.5,
-     "text": "with"
+     "end": 31.138,
+     "start": 30.763,
+     "text": "runs"
     },
     {
-     "end": 34.75,
-     "start": 34.638,
+     "end": 31.513,
+     "start": 31.138,
+     "text": "node"
+    },
+    {
+     "end": 34.5,
+     "start": 31.513,
+     "text": "scripts/checkpoint-datum-vectors.mjs"
+    },
+    {
+     "end": 34.862,
+     "start": 34.5,
+     "text": "check"
+    },
+    {
+     "end": 35.025,
+     "start": 34.862,
+     "text": "as"
+    },
+    {
+     "end": 35.162,
+     "start": 35.025,
      "text": "the"
     },
     {
-     "end": 35.05,
-     "start": 34.75,
-     "text": "other"
+     "end": 35.525,
+     "start": 35.162,
+     "text": "last"
     },
     {
-     "end": 35.625,
-     "start": 35.05,
-     "text": "consumer"
+     "end": 35.812,
+     "start": 35.525,
+     "text": "step"
     },
     {
-     "end": 36.088,
-     "start": 35.625,
-     "text": "design"
+     "end": 35.925,
+     "start": 35.812,
+     "text": "of"
     },
     {
-     "end": 37.175,
-     "start": 36.088,
-     "text": "checks"
+     "end": 38.725,
+     "start": 35.925,
+     "text": "scripts/check-consumer-design.sh"
     },
     {
-     "end": 37.4,
-     "start": 37.175,
+     "end": 38.862,
+     "start": 38.725,
+     "text": "and"
+    },
+    {
+     "end": 39.287,
+     "start": 38.862,
+     "text": "fails"
+    },
+    {
+     "end": 39.45,
+     "start": 39.287,
+     "text": "on"
+    },
+    {
+     "end": 39.662,
+     "start": 39.45,
+     "text": "any"
+    },
+    {
+     "end": 40.8,
+     "start": 39.662,
+     "text": "drift"
+    },
+    {
+     "end": 41.05,
+     "start": 40.8,
+     "text": ";"
+    },
+    {
+     "end": 41.475,
+     "start": 41.25,
+     "text": "just"
+    },
+    {
+     "end": 42.787,
+     "start": 41.475,
+     "text": "check-checkpoint-datum-vectors"
+    },
+    {
+     "end": 43.112,
+     "start": 42.787,
+     "text": "runs"
+    },
+    {
+     "end": 43.225,
+     "start": 43.112,
+     "text": "the"
+    },
+    {
+     "end": 43.513,
+     "start": 43.225,
+     "text": "same"
+    },
+    {
+     "end": 43.775,
+     "start": 43.513,
+     "text": "check"
+    },
+    {
+     "end": 44.75,
+     "start": 43.775,
+     "text": "locally"
+    },
+    {
+     "end": 44.95,
+     "start": 44.75,
      "text": "."
     }
    ]

@@ -7,12 +7,19 @@
 //// `V1` wrapper (Constr 0 wrapping the inner Constr 0) are protocol surface;
 //// they change only by minting a new version tag. The `datum_well_formed`
 //// verdicts mirror the Slice-3 hspec suite one-for-one.
+////
+//// The `datum_v2_well_formed` tests below are the write-time validity of the
+//// version 2 datum's key material and numbers: one refusal per rule, and the
+//// boundaries that must stay accepted. The Lean leaves key validity to the
+//// writer (`CardanoKeri.CheckpointDatum`, "Validity"); the version 2 rules are
+//// the version 1 rules for the key fields.
 
 use aiken/cbor
 use cardano_keri/checkpoint/datum.{
-  CesrAidWidth, CheckpointDatumV1, DatumInvalid, DatumValid, DuplicateWitness,
-  NextIllFormed, ThresholdIllFormed, ToadRange, V1, WitnessWidth,
-  datum_well_formed,
+  CesrAidWidth, CheckpointDatumV1, CheckpointDatumV2, DatumInvalid, DatumValid,
+  DuplicateWitness, KeyMaterial, Live, NegativeBornAt, NegativeEpoch, NegativeSn,
+  NextIllFormed, TerminationPending, ThresholdIllFormed, ToadRange, V1,
+  WitnessWidth, datum_v2_well_formed, datum_well_formed,
 }
 use cardano_keri/checkpoint/threshold.{
   DuplicateKey, EmptyKeys, KeyWidth, Unweighted, UnweightedRange, Weight,
@@ -319,4 +326,188 @@ test wf_next_threshold_out_of_range() {
       next_threshold: Unweighted(2),
     },
   ) == DatumInvalid(NextIllFormed(UnweightedRange))
+}
+
+// ---------------------------------------------------------
+// Version 2 write-time validity
+// ---------------------------------------------------------
+
+fn keys_v2(
+  cur_keys: List<ByteArray>,
+  cur_threshold: threshold.Threshold,
+  witnesses: List<ByteArray>,
+  toad: Int,
+) -> KeyMaterial {
+  KeyMaterial {
+    cur_keys,
+    cur_threshold,
+    next_keys: [nk1],
+    next_threshold: Unweighted(1),
+    witnesses,
+    toad,
+  }
+}
+
+fn live_v2(keys: KeyMaterial) -> CheckpointDatumV2 {
+  Live {
+    aid: cesr_datum,
+    sn: 0,
+    epoch: 0,
+    poisoned: False,
+    frozen: False,
+    born_at: 0,
+    refund_to: #"01020304",
+    keys,
+  }
+}
+
+fn pending_v2(keys: KeyMaterial) -> CheckpointDatumV2 {
+  TerminationPending { aid: cesr_datum, sn: 0, epoch: 0, keys }
+}
+
+fn good_keys() -> KeyMaterial {
+  keys_v2([k1], Unweighted(1), [], 0)
+}
+
+fn live_numbers(sn: Int, epoch: Int, born_at: Int) -> CheckpointDatumV2 {
+  Live {
+    aid: cesr_datum,
+    sn,
+    epoch,
+    poisoned: False,
+    frozen: False,
+    born_at,
+    refund_to: #"01020304",
+    keys: good_keys(),
+  }
+}
+
+fn pending_numbers(sn: Int, epoch: Int) -> CheckpointDatumV2 {
+  TerminationPending { aid: cesr_datum, sn, epoch, keys: good_keys() }
+}
+
+test v2_live_valid() {
+  datum_v2_well_formed(live_v2(good_keys())) == DatumValid
+}
+
+test v2_pending_valid() {
+  datum_v2_well_formed(pending_v2(good_keys())) == DatumValid
+}
+
+test v2_witnesses_with_toad_at_count_valid() {
+  datum_v2_well_formed(live_v2(keys_v2([k1], Unweighted(1), [w1, w2], 2))) == DatumValid
+}
+
+test v2_witnesses_with_toad_one_valid() {
+  datum_v2_well_formed(live_v2(keys_v2([k1], Unweighted(1), [w1, w2], 1))) == DatumValid
+}
+
+test v2_cur_empty_keys() {
+  datum_v2_well_formed(live_v2(keys_v2([], Unweighted(1), [], 0))) == DatumInvalid(
+    ThresholdIllFormed(EmptyKeys),
+  )
+}
+
+test v2_cur_key_width() {
+  datum_v2_well_formed(live_v2(keys_v2([k31], Unweighted(1), [], 0))) == DatumInvalid(
+    ThresholdIllFormed(KeyWidth),
+  )
+}
+
+test v2_cur_duplicate_keys() {
+  datum_v2_well_formed(live_v2(keys_v2([k1, k1], Unweighted(1), [], 0))) == DatumInvalid(
+    ThresholdIllFormed(DuplicateKey),
+  )
+}
+
+test v2_cur_threshold_out_of_range() {
+  datum_v2_well_formed(live_v2(keys_v2([k1], Unweighted(2), [], 0))) == DatumInvalid(
+    ThresholdIllFormed(UnweightedRange),
+  )
+}
+
+test v2_next_empty_keys() {
+  datum_v2_well_formed(live_v2(KeyMaterial { ..good_keys(), next_keys: [] })) == DatumInvalid(
+    NextIllFormed(EmptyKeys),
+  )
+}
+
+test v2_next_threshold_out_of_range() {
+  datum_v2_well_formed(
+    live_v2(KeyMaterial { ..good_keys(), next_threshold: Unweighted(2) }),
+  ) == DatumInvalid(NextIllFormed(UnweightedRange))
+}
+
+test v2_witness_width() {
+  datum_v2_well_formed(live_v2(keys_v2([k1], Unweighted(1), [w1, k31], 1))) == DatumInvalid(
+    WitnessWidth,
+  )
+}
+
+test v2_duplicate_witness() {
+  datum_v2_well_formed(live_v2(keys_v2([k1], Unweighted(1), [w1, w1], 1))) == DatumInvalid(
+    DuplicateWitness,
+  )
+}
+
+test v2_toad_zero_with_witnesses() {
+  datum_v2_well_formed(live_v2(keys_v2([k1], Unweighted(1), [w1], 0))) == DatumInvalid(
+    ToadRange,
+  )
+}
+
+test v2_toad_above_witness_count() {
+  datum_v2_well_formed(live_v2(keys_v2([k1], Unweighted(1), [w1, w2], 3))) == DatumInvalid(
+    ToadRange,
+  )
+}
+
+test v2_toad_without_witnesses() {
+  datum_v2_well_formed(live_v2(keys_v2([k1], Unweighted(1), [], 1))) == DatumInvalid(
+    ToadRange,
+  )
+}
+
+test v2_toad_negative() {
+  datum_v2_well_formed(live_v2(keys_v2([k1], Unweighted(1), [w1], -1))) == DatumInvalid(
+    ToadRange,
+  )
+}
+
+test v2_live_negative_sn() {
+  datum_v2_well_formed(live_numbers(-1, 0, 0)) == DatumInvalid(NegativeSn)
+}
+
+test v2_live_negative_epoch() {
+  datum_v2_well_formed(live_numbers(0, -1, 0)) == DatumInvalid(NegativeEpoch)
+}
+
+test v2_live_negative_born_at() {
+  datum_v2_well_formed(live_numbers(0, 0, -1)) == DatumInvalid(NegativeBornAt)
+}
+
+test v2_pending_negative_sn() {
+  datum_v2_well_formed(pending_numbers(-1, 0)) == DatumInvalid(NegativeSn)
+}
+
+test v2_pending_negative_epoch() {
+  datum_v2_well_formed(pending_numbers(0, -1)) == DatumInvalid(NegativeEpoch)
+}
+
+test v2_pending_cur_empty_keys() {
+  datum_v2_well_formed(pending_v2(keys_v2([], Unweighted(1), [], 0))) == DatumInvalid(
+    ThresholdIllFormed(EmptyKeys),
+  )
+}
+
+test v2_pending_witness_width() {
+  datum_v2_well_formed(pending_v2(keys_v2([k1], Unweighted(1), [k31], 1))) == DatumInvalid(
+    WitnessWidth,
+  )
+}
+
+test v2_pending_toad_range() {
+  datum_v2_well_formed(pending_v2(keys_v2([k1], Unweighted(1), [w1], 2))) == DatumInvalid(
+    ToadRange,
+  )
 }

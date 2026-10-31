@@ -777,6 +777,7 @@ test-suite cli-tests
     Cardano.KERI.CLI.Backend.EndpointSpec
     Cardano.KERI.CLI.Backend.KoiosSpec
     Cardano.KERI.CLI.Backend.LocalSpec
+    Cardano.KERI.CLI.CommandSurfaceSpec
     Cardano.KERI.CLI.ProductionSpec
     Cardano.KERI.CLI.WriteCompositionBoundarySpec
 

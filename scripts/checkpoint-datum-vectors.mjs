@@ -268,8 +268,13 @@ const decodeTheorems = (r) => {
   if (!refusedTheorem[r.id]) throw new Error(`${r.id}: no refusal theorem named for this row`);
   return [...new Set([refusedTheorem[r.id], 'decode_accepts_only_written'])].map((t) => `\`${t}\``).join(', ');
 };
-const verdictTheorems = (r) =>
-  r.id === 'version-1' ? '`version_one_holding_refused`, `written_holding_iff`' : '`written_holding_iff`';
+// An accepted or refused written datum: the consumer's verdict is the iff. A
+// refused row's datum is not written, so its decoder result is none and the
+// consumer theorem for a decoder rejection applies (`CardanoKeri.ConsumerGoals`).
+const verdictTheorems = (r) => {
+  if (r.accepted) return '`written_holding_iff`';
+  return r.id === 'version-1' ? '`version_one_holding_refused`' : '`malformed_datum_refused`';
+};
 
 const rows = [
   ...data.accepted.map((r) => ({ ...r, accepted: true })),

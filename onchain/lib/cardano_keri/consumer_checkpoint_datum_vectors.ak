@@ -739,7 +739,7 @@ test decode_version_1() {
   decode_ok(vector_version_1())
 }
 
-/// Lean `version_one_holding_refused`, `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `version_one_holding_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_version_1() {
   verdict_ok(vector_version_1())
 }
@@ -749,7 +749,7 @@ test decode_version_3() {
   decode_ok(vector_version_3())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_version_3() {
   verdict_ok(vector_version_3())
 }
@@ -759,7 +759,7 @@ test decode_version_no_field() {
   decode_ok(vector_version_no_field())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_version_no_field() {
   verdict_ok(vector_version_no_field())
 }
@@ -769,7 +769,7 @@ test decode_version_two_fields() {
   decode_ok(vector_version_two_fields())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_version_two_fields() {
   verdict_ok(vector_version_two_fields())
 }
@@ -779,7 +779,7 @@ test decode_unknown_form() {
   decode_ok(vector_unknown_form())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_unknown_form() {
   verdict_ok(vector_unknown_form())
 }
@@ -789,7 +789,7 @@ test decode_live_seven_fields() {
   decode_ok(vector_live_seven_fields())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_live_seven_fields() {
   verdict_ok(vector_live_seven_fields())
 }
@@ -799,7 +799,7 @@ test decode_live_nine_fields() {
   decode_ok(vector_live_nine_fields())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_live_nine_fields() {
   verdict_ok(vector_live_nine_fields())
 }
@@ -809,7 +809,7 @@ test decode_pending_five_fields() {
   decode_ok(vector_pending_five_fields())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_pending_five_fields() {
   verdict_ok(vector_pending_five_fields())
 }
@@ -819,7 +819,7 @@ test decode_pending_negative_epoch() {
   decode_ok(vector_pending_negative_epoch())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_pending_negative_epoch() {
   verdict_ok(vector_pending_negative_epoch())
 }
@@ -829,7 +829,7 @@ test decode_aid_integer() {
   decode_ok(vector_aid_integer())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_aid_integer() {
   verdict_ok(vector_aid_integer())
 }
@@ -839,7 +839,7 @@ test decode_sn_negative() {
   decode_ok(vector_sn_negative())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_sn_negative() {
   verdict_ok(vector_sn_negative())
 }
@@ -849,7 +849,7 @@ test decode_epoch_bytes() {
   decode_ok(vector_epoch_bytes())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_epoch_bytes() {
   verdict_ok(vector_epoch_bytes())
 }
@@ -859,7 +859,7 @@ test decode_poisoned_not_boolean() {
   decode_ok(vector_poisoned_not_boolean())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_poisoned_not_boolean() {
   verdict_ok(vector_poisoned_not_boolean())
 }
@@ -869,7 +869,7 @@ test decode_poisoned_boolean_with_field() {
   decode_ok(vector_poisoned_boolean_with_field())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_poisoned_boolean_with_field() {
   verdict_ok(vector_poisoned_boolean_with_field())
 }
@@ -879,7 +879,7 @@ test decode_frozen_integer() {
   decode_ok(vector_frozen_integer())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_frozen_integer() {
   verdict_ok(vector_frozen_integer())
 }
@@ -889,7 +889,7 @@ test decode_born_at_negative() {
   decode_ok(vector_born_at_negative())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_born_at_negative() {
   verdict_ok(vector_born_at_negative())
 }
@@ -899,7 +899,7 @@ test decode_refund_integer() {
   decode_ok(vector_refund_integer())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_refund_integer() {
   verdict_ok(vector_refund_integer())
 }
@@ -909,7 +909,7 @@ test decode_keys_list() {
   decode_ok(vector_keys_list())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_keys_list() {
   verdict_ok(vector_keys_list())
 }
@@ -919,7 +919,7 @@ test decode_keys_five_fields() {
   decode_ok(vector_keys_five_fields())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_keys_five_fields() {
   verdict_ok(vector_keys_five_fields())
 }
@@ -929,7 +929,7 @@ test decode_key_integer() {
   decode_ok(vector_key_integer())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_key_integer() {
   verdict_ok(vector_key_integer())
 }
@@ -939,7 +939,7 @@ test decode_threshold_unknown_form() {
   decode_ok(vector_threshold_unknown_form())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_threshold_unknown_form() {
   verdict_ok(vector_threshold_unknown_form())
 }
@@ -949,7 +949,7 @@ test decode_weight_one_field() {
   decode_ok(vector_weight_one_field())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_weight_one_field() {
   verdict_ok(vector_weight_one_field())
 }
@@ -959,7 +959,7 @@ test decode_witnesses_map() {
   decode_ok(vector_witnesses_map())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_witnesses_map() {
   verdict_ok(vector_witnesses_map())
 }
@@ -969,7 +969,7 @@ test decode_toad_bytes() {
   decode_ok(vector_toad_bytes())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_toad_bytes() {
   verdict_ok(vector_toad_bytes())
 }
@@ -979,7 +979,7 @@ test decode_not_a_constructor() {
   decode_ok(vector_not_a_constructor())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_not_a_constructor() {
   verdict_ok(vector_not_a_constructor())
 }
@@ -989,7 +989,7 @@ test decode_trailing_byte() {
   decode_ok(vector_trailing_byte())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_trailing_byte() {
   verdict_ok(vector_trailing_byte())
 }
@@ -999,7 +999,7 @@ test decode_truncated() {
   decode_ok(vector_truncated())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_truncated() {
   verdict_ok(vector_truncated())
 }
@@ -1009,7 +1009,7 @@ test decode_empty() {
   decode_ok(vector_empty())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_empty() {
   verdict_ok(vector_empty())
 }
@@ -1019,7 +1019,7 @@ test decode_break_byte() {
   decode_ok(vector_break_byte())
 }
 
-/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
+/// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
 test verdict_break_byte() {
   verdict_ok(vector_break_byte())
 }

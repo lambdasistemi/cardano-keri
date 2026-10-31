@@ -2,8 +2,9 @@
 
 ## Stories this specification serves
 
-As an AID controller, I want to register, rotate, poison, close and reopen my
-checkpoint with the authorization and refunds the model requires. As an
+As an AID controller, I want to register, rotate and poison my checkpoint,
+which stays alive until it is convicted, with the authorization and refunds
+the model requires. As an
 advancer, I want to land public evidence and know whether I receive a premium.
 As a relying party, I want a verdict that distinguishes an unusable checkpoint
 from evidence I could not obtain. As a registry operator, I want to contribute,
@@ -18,6 +19,14 @@ statement branch at `4906cfaed34e43405b04d3cc8746bd6388fc8452`.
 The issue supplies coverage
 requirements; existing library code supplies implementation evidence. Neither
 silently adds operations or guards to the Lean model.
+
+**No owner exit.** The accepted model has no close, no parking and no
+revival: a checkpoint is alive until it is convicted
+([#493](https://github.com/lambdasistemi/cardano-keri/issues/493)). The
+`close` and `reopen` actions, the parked state and the Registry `park` and
+`revive` actions below come from the earlier model revision bound in model
+provenance. They are not offered, and `ckeri` has no `close` or `reopen`
+command.
 
 The [HTML presentation contract](presentation.md) explains how the reference
 is generated from these sources, including operation examples and schema downloads.

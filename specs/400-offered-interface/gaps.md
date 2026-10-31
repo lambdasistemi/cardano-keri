@@ -29,7 +29,7 @@ The checkpoint model's full state includes poison, freeze, birth slot, refund
 address and pool. The current
 [DatumV1](../../offchain/lib/Cardano/KERI/AID/Checkpoint/Datum.hs) representation and deployed
 observer family must not be assumed to implement that state merely because
-the CLI has commands named register, advance and close. Concrete source paths
+the CLI has commands named register and advance. Concrete source paths
 and wire evidence must be reconciled before marking an operation expressible.
 
 | Required operation | Lean source | Current implementation / remaining gap |
@@ -40,8 +40,8 @@ and wire evidence must be reconciled before marking an operation expressible.
 | Freeze | Checkpoint freeze | Current Checkpoint freeze is the offered semantics; historical freeze/seize code is not an implementation of it. |
 | Top up | Checkpoint topUp | No top-level CLI command; model pool mapping unresolved. |
 | Convict live/parked | Checkpoint convict and associated completion | Deployed enforcement code is not evidence of pending custody, consuming fold retirement or addressed flows; requires exact mapping. |
-| Close/reap | Checkpoint close; Registry park | CLI close exists. The retained token/output/minimum ADA, signed close and refund mapping require concrete implementation. |
-| Reopen | Checkpoint reopen; local Registry revive | No top-level CLI command; retained-output consumption, rotation and fresh bonds need a concrete mapping. |
+| Close/reap | Checkpoint close; Registry park (earlier model revision) | Not offered: the accepted model has no owner exit and a checkpoint is alive until it is convicted. `ckeri` has no close command. |
+| Reopen | Checkpoint reopen; local Registry revive (earlier model revision) | Not offered: the accepted model has no owner exit and a checkpoint is alive until it is convicted. `ckeri` has no reopen command. |
 | Registry booking/fold/recovery | Registry actions and imported economic judgments | Executable model; concrete request/transaction codec and deployment correspondence remain unbound. |
 | Registry park/revive/convictCkpt | Registry local carrier adapter | Coarse local predicates are not a proof of concrete Checkpoint authorization; use the associated receipt contract for completion. |
 | Read concrete key state | consumableStateB covers only state usability | CLI checkpoint exposes a concrete checkpoint view; abstract epochs cannot supply the required keys, thresholds, witnesses and toad. |
@@ -66,7 +66,7 @@ required by the ticket.
 ## Every command in the current CLI
 
 The constructors and parser in
-[CLI.hs](../../offchain/cli/Cardano/KERI/CLI.hs) enumerate fourteen leaf
+[CLI.hs](../../offchain/cli/Cardano/KERI/CLI.hs) enumerate thirteen leaf
 commands. None is removed by this specification. The mapping below names all
 remaining surface area, including infrastructure utilities that have no
 checkpoint action.
@@ -77,7 +77,6 @@ checkpoint action.
 | manifest verify | Outside Lean action catalogue | Manifest decoding and script/reference verification contract |
 | register | Partial correspondence to register | Concrete inception admission, transaction and registry mapping |
 | advance | Partial correspondence to rotate | Evidence, intents, value flow and transaction mapping |
-| close | Partial correspondence to close | Implement the selected Checkpoint lifecycle and transaction/refund mapping |
 | status | Infrastructure observation | Backend status and failure contract |
 | list | Infrastructure query | Enumeration, snapshot consistency and failures |
 | checkpoint | Concrete checkpoint query | Datum decoding and model-to-key-state/verdict mapping |

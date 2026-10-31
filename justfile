@@ -159,26 +159,6 @@ advance-path-check matcher="":
     PATH="$restricted_path" nix develop --quiet --no-write-lock-file -c cabal test advance-migration-tests -O0 \
         --test-show-details=direct "${test_options[@]}"
 
-# #181 Slice 3: focused in-process Close migration restricted-PATH proof.
-close-path-check matcher="":
-    #!/usr/bin/env bash
-    set -euo pipefail
-    restricted_path="$(dirname "$(command -v nix)")"
-    echo "close-path-check: PATH=$restricted_path"
-    if PATH="$restricted_path" command -v cardano-cli >/dev/null 2>&1; then
-        echo "close-path-check: cardano-cli is reachable under the restricted PATH; the control is not meaningful" >&2
-        exit 1
-    fi
-    echo "close-path-check: cardano-cli absent from the restricted PATH (expected)"
-    matcher='{{ matcher }}'
-    test_options=()
-    if [[ -n "$matcher" ]]; then
-        test_options+=("--test-option=--match=$matcher")
-    fi
-    cd offchain
-    PATH="$restricted_path" nix develop --quiet --no-write-lock-file -c cabal test close-migration-tests -O0 \
-        --test-show-details=direct "${test_options[@]}"
-
 # #181 Slice 3: focused endpoint-board post/update/retire restricted-PATH proof.
 board-path-check matcher="":
     #!/usr/bin/env bash

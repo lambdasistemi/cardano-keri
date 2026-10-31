@@ -67,7 +67,6 @@ library
     Cardano.KERI.AID.CESR
     Cardano.KERI.AID.Checkpoint.Advance
     Cardano.KERI.AID.Checkpoint.BountyCommitment
-    Cardano.KERI.AID.Checkpoint.Close
     Cardano.KERI.AID.Checkpoint.Datum
     Cardano.KERI.AID.Checkpoint.Enforcement
     Cardano.KERI.AID.Checkpoint.Entitlement
@@ -168,8 +167,6 @@ library deployment
     Cardano.KERI.Deployment.Advance
     Cardano.KERI.Deployment.AdvanceTransaction
     Cardano.KERI.Deployment.CheckpointMigration
-    Cardano.KERI.Deployment.Close
-    Cardano.KERI.Deployment.CloseTransaction
     Cardano.KERI.Deployment.EndpointBoard
     Cardano.KERI.Deployment.EndpointBoardManifest
     Cardano.KERI.Deployment.EndpointBoardTransaction
@@ -252,14 +249,13 @@ library chain-query-koios
     , cardano-keri:deployment
     , http-conduit
     , memory                    >=0.18 && <0.19
-    , plutus-core
     , text
 
   exposed-modules:  Cardano.KERI.ChainQuery.Koios
 
 -- #240 (MOD-240-WRITE-COMPOSITION): the provider-free write-composition
 -- boundary. Owns every transaction-building write command (deploy/register/
--- advance/close/endpoint-board deploy-post-update-retire); obtains chain
+-- advance/endpoint-board deploy-post-update-retire); obtains chain
 -- state and observes settlement only through the local follower/indexer
 -- tier ("indexer"), never "chain-query-koios"/http-conduit
 -- (INV-240-NOPROVIDER). "cli" depends on this component, never the reverse
@@ -402,7 +398,6 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.BountyEntitlementSpec
     Cardano.KERI.Deployment.ChainIndexSpec
     Cardano.KERI.Deployment.CheckpointMigrationSpec
-    Cardano.KERI.Deployment.CloseSpec
     Cardano.KERI.Deployment.EndpointBoardSpec
     Cardano.KERI.Deployment.EndpointBoardTransactionSpec
     Cardano.KERI.Deployment.KELSpec
@@ -619,47 +614,6 @@ test-suite advance-migration-tests
 
   autogen-modules:  Paths_cardano_keri
 
--- #181 Slice 3: focused in-process Close migration proof.
-test-suite close-migration-tests
-  import:           warnings
-  type:             exitcode-stdio-1.0
-  default-language: GHC2021
-  hs-source-dirs:   deployment-test
-  main-is:          close-migration/CloseMigrationMain.hs
-  other-modules:
-    Cardano.KERI.Deployment.CloseSpec
-    Cardano.KERI.Deployment.ParityOracle.Capture
-    Cardano.KERI.Deployment.TransactionRuntime.Fixtures
-    Cardano.KERI.Deployment.TransactionRuntime.RestrictedPathSpec
-    Paths_cardano_keri
-
-  build-depends:
-    , aeson
-    , base
-    , bech32
-    , bytestring
-    , cardano-crypto-class
-    , cardano-keri:deployment
-    , cardano-ledger-alonzo
-    , cardano-ledger-api
-    , cardano-ledger-binary
-    , cardano-ledger-conway
-    , cardano-ledger-core
-    , cardano-ledger-mary
-    , cardano-node-clients
-    , containers
-    , directory
-    , filepath
-    , hspec                    >=2.11 && <2.12
-    , hspec-core               >=2.11 && <2.12
-    , memory                   >=0.18 && <0.19
-    , microlens
-    , plutus-core
-    , process
-    , text
-
-  autogen-modules:  Paths_cardano_keri
-
 -- #181 Slice 3: focused in-process endpoint-board post/update/retire proof.
 test-suite board-migration-tests
   import:           warnings
@@ -777,6 +731,7 @@ test-suite cli-tests
     Cardano.KERI.CLI.Backend.EndpointSpec
     Cardano.KERI.CLI.Backend.KoiosSpec
     Cardano.KERI.CLI.Backend.LocalSpec
+    Cardano.KERI.CLI.CommandSurfaceSpec
     Cardano.KERI.CLI.ProductionSpec
     Cardano.KERI.CLI.WriteCompositionBoundarySpec
 
@@ -941,7 +896,6 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.AdvanceFixturesSpec
     Cardano.KERI.AID.Checkpoint.AdvanceSpec
     Cardano.KERI.AID.Checkpoint.BountyCommitmentSpec
-    Cardano.KERI.AID.Checkpoint.CloseSpec
     Cardano.KERI.AID.Checkpoint.DatumSpec
     Cardano.KERI.AID.Checkpoint.EnforcementSpec
     Cardano.KERI.AID.Checkpoint.EntitlementSpec
@@ -1022,18 +976,6 @@ executable gen-advance-vectors
     , cardano-keri
     , memory                >=0.18 && <0.19
     , text
-
-executable gen-close-vectors
-  import:           warnings
-  default-language: GHC2021
-  hs-source-dirs:   app
-  main-is:          GenCloseVectors.hs
-  build-depends:
-    , base
-    , bytestring
-    , cardano-crypto-class
-    , cardano-keri
-    , memory                >=0.18 && <0.19
 
 executable gen-freeze-bond-vectors
   import:           warnings

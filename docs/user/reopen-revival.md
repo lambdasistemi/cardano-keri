@@ -1,8 +1,9 @@
 # No owner exit
 
 !!! note "What ships, and the accepted design"
-    What ships today is `ckeri close` by the **current** keys, documented
-    on [Close your identity checkpoint](close.md). The accepted design has
+    `ckeri` no longer offers `close`; the close the M1 V1 release made by
+    the **current** keys is recorded on
+    [Close your identity checkpoint](close.md). The accepted design has
     no owner exit: no close, no parking and no revival. There is no
     withdraw. Conviction is the only way a checkpoint ends. Play
     [the checkpoint simulator](../simulator/index.html) and

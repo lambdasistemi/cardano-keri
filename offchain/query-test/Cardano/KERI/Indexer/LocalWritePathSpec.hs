@@ -81,7 +81,6 @@ import Cardano.KERI.Deployment.CLI (
     BoardRetireSettings (..),
     BoardTransactionSettings (..),
     BoardUpdateSettings (..),
-    CloseSettings (..),
     DeploySettings (..),
     LiveOpener,
     LocalOpener,
@@ -92,7 +91,6 @@ import Cardano.KERI.Deployment.CLI (
     runBoardPostWith,
     runBoardRetireWith,
     runBoardUpdateWith,
-    runCloseWith,
     runDeployWith,
     runRegisterWith,
  )
@@ -760,30 +758,6 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                         expectIncompletePhase
 
             it
-                "runCloseWith's submit path reaches its builder boundary having acquired exactly once"
-                $ do
-                    kelPath <-
-                        getDataFileName "deployment-test/fixtures/kli-export-2-of-5.cesr"
-                    signatures <-
-                        entrypointSignatureTokens 1 "kli-export-2-of-5-rotation.cesr"
-                    withBoundaryProbe
-                        (entrypointCloseSeed True)
-                        (entrypointClose kelPath signatures)
-                        expectCompletePhase
-
-            it
-                "runCloseWith does NOT reach its builder boundary when the live checkpoint output is withheld"
-                $ do
-                    kelPath <-
-                        getDataFileName "deployment-test/fixtures/kli-export-2-of-5.cesr"
-                    signatures <-
-                        entrypointSignatureTokens 1 "kli-export-2-of-5-rotation.cesr"
-                    withBoundaryProbe
-                        (entrypointCloseSeed False)
-                        (entrypointClose kelPath signatures)
-                        expectIncompletePhase
-
-            it
                 "runRegisterWith's preflight reaches its submission boundary having acquired exactly once"
                 $ do
                     kelPath <-
@@ -975,7 +949,7 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
 -- ---------------------------------------------------------------------------
 -- A-013 repair helpers (T240-S1-14 audit finding 1): builds a REAL
 -- 'LocalOpener' from a counting in-memory runner and calls the real,
--- unmodified production 'runAdvanceWith'\/'runCloseWith' entrypoints --
+-- unmodified production 'runAdvanceWith' entrypoint --
 -- never a re-implementation or a helper the entrypoint merely happens to
 -- also call -- so a production regression that stops calling the composed
 -- acquisition, calls a raw runner beside it, or invokes it twice changes
@@ -984,61 +958,17 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
 -- ALREADY-SIGNED\/self-addressed KEL exports "Cardano.KERI.Deployment.KELSpec"
 -- proves parseable, decoded once (via 'Cardano.KERI.AID.CESR.parsePrimitive')
 -- to the exact raw AID bytes each stream's own inception event carries, so
--- 'advanceConfiguredAid'\/'closeConfiguredAid' genuinely match what
--- 'parseRotationExport'\/'parseInceptionExport' return -- never a
--- fabricated AID. The manifest carries no script entries, so
--- 'mkAdvancePackage'\/'mkClosePackage' fail closed shortly AFTER the one
+-- 'advanceConfiguredAid' genuinely matches what 'parseRotationExport'
+-- returns -- never a fabricated AID. The manifest carries no script entries,
+-- so 'mkAdvancePackage' fails closed shortly AFTER the one
 -- acquisition this property observes (T280-S1-14's own audited property is
 -- acquisition COUNT, not full submission success); reaching that clean
 -- failure, or the live-bracket sentinel, is equally valid evidence that
 -- the local acquisition ran to completion exactly once.
 
-{- | The frozen inception fixture's own AID ("Cardano.KERI.Deployment.KELSpec"
+{- | The frozen rotation fixture's own AID ("Cardano.KERI.Deployment.KELSpec"
 proves it parses; confirmed once via 'Cardano.KERI.AID.CESR.parsePrimitive'
-and pinned here as literal bytes, matching 'inceptionFixtureAidText').
--}
-inceptionFixtureAidText :: Text
-inceptionFixtureAidText = "EN_OgA7LhFnVEX0jwoE9tSoh7-MfWx3TKzAVSIsrLiHW"
-
-inceptionFixtureAidBytes :: ByteString
-inceptionFixtureAidBytes =
-    BS.pack
-        [ 223
-        , 206
-        , 128
-        , 14
-        , 203
-        , 132
-        , 89
-        , 213
-        , 17
-        , 125
-        , 35
-        , 194
-        , 129
-        , 61
-        , 181
-        , 42
-        , 33
-        , 239
-        , 227
-        , 31
-        , 91
-        , 29
-        , 211
-        , 43
-        , 48
-        , 21
-        , 72
-        , 139
-        , 43
-        , 46
-        , 33
-        , 214
-        ]
-
-{- | The frozen rotation fixture's own AID, decoded the same way (see
-'inceptionFixtureAidText').
+and pinned here as literal bytes, matching 'rotationFixtureAidText').
 -}
 rotationFixtureAidText :: Text
 rotationFixtureAidText = "EDujsIfURabzXyyBulukdlPkG_BX9d4px6VEQFMd33zT"
@@ -1114,7 +1044,7 @@ fixtures (mirrors "Cardano.KERI.CLI.Backend.EndpointSpec"'s own proven
 checkpoint-fixture pattern).
 -}
 
-{- | The two manifest scripts advance\/close actually require:
+{- | The two manifest scripts advance actually requires:
 'mkAdvancePackage'\/'mkAdvancePlan' resolve @checkpoint-register@ and
 @observer-advance@ by name and additionally require the manifest's checkpoint
 policy to EQUAL the former's script hash. Real script bytes, so the manifest
@@ -1132,9 +1062,9 @@ entrypointObserverScriptBytes = SBS.toShort "s240-entrypoint-observer-advance"
 requires ('Cardano.KERI.Deployment.Registration.mkRegistrationPlan' resolves
 @hash-proof@ and @observer-lifecycle@ by name, additionally deriving a
 reward address from the latter's 28-byte hash). They live in the SAME
-manifest as advance\/close's two, so 'manifestReferencesTx' -- which
+manifest as advance's two, so 'manifestReferencesTx' -- which
 resolves EVERY manifest entry and fails closed on any that is absent --
-makes the advance\/close read set four reference outputs wide rather than
+makes the advance read set four reference outputs wide rather than
 two, and one shared manifest cannot drift from the four seeded rows.
 -}
 entrypointProofScriptBytes :: SBS.ShortByteString
@@ -1149,7 +1079,7 @@ entrypointCheckpointPolicy = PolicyID (computeScriptHash entrypointCheckpointScr
 {- | Both manifest script entries, each pointing at the reference output the
 fixture seeds for it. 'manifestReferencesTx' resolves every entry's hash
 inside the acquisition and fails closed on any that is absent, so these two
-entries are exactly what makes the advance\/close read set complete rather
+entries are exactly what makes the advance read set complete rather
 than trivially satisfiable.
 -}
 entrypointManifestScripts :: [ScriptEntry]
@@ -1204,10 +1134,6 @@ entrypointReferenceSeedWithout withheld =
     , Just name /= withheld
     ]
 
--- | The complete seeded reference outputs answering 'entrypointManifestScripts'.
-entrypointReferenceSeed :: [UtxoOp]
-entrypointReferenceSeed = entrypointReferenceSeedWithout Nothing
-
 entrypointCheckpointLedgerAddress :: Addr
 entrypointCheckpointLedgerAddress =
     let PolicyID policyScriptHash = entrypointCheckpointPolicy
@@ -1225,25 +1151,6 @@ entrypointCheckpointPolicyText :: Text
 entrypointCheckpointPolicyText =
     let PolicyID (ScriptHash h) = entrypointCheckpointPolicy
      in TE.decodeUtf8 (convertToBase Base16 (hashToBytes h))
-
-{- | One live checkpoint output at 'entrypointCheckpointAddress', carrying
-@aid@ as its decoded CESR AID -- reused for both the advance (rotation
-fixture AID) and close (inception fixture AID) examples.
--}
-entrypointCheckpointOutput :: ByteString -> Indexer.TxOut
-entrypointCheckpointOutput aid =
-    entrypointCheckpointOutputFor
-        CheckpointDatumV1
-            { cdCesrAid = aid
-            , cdCurKeys = [BS.replicate 32 0x11]
-            , cdCurThreshold = Unweighted 1
-            , cdNextKeys = [BS.replicate 32 0x22]
-            , cdNextThreshold = Unweighted 1
-            , cdWitnesses = []
-            , cdToad = 0
-            , cdSeq = 0
-            , cdNativeSn = 0
-            }
 
 {- | One live checkpoint output at 'entrypointCheckpointAddress' carrying an
 arbitrary V1 @datum@ inline, with the singleton checkpoint token that
@@ -1287,7 +1194,7 @@ inlineDatumOf plutus = Datum (dataToBinaryData (Data plutus))
 frozen checkpoint identity above plus all four 'entrypointManifestScripts'
 entries, each answered by its own seeded reference output. Because
 'manifestReferencesTx' resolves EVERY entry and fails closed on any that is
-absent, this manifest is what makes advance\/close's read set genuinely
+absent, this manifest is what makes advance's read set genuinely
 four references wide, and registration's plan builder ('hash-proof',
 'observer-lifecycle') buildable, from one source.
 -}
@@ -1380,8 +1287,8 @@ boundaryLocalOpener probe runner settings action =
             , localScopeBoardIdentity = localBoardIdentity settings
             }
 
-{- | The builder boundary for the six verbs that acquire BEFORE opening the
-live bracket (advance, close, register, board post\/update\/retire): the
+{- | The builder boundary for the five verbs that acquire BEFORE opening the
+live bracket (advance, register, board post\/update\/retire): the
 bracket itself. Records the count first, then throws, so the acquisition
 total is captured at the boundary rather than after unwinding.
 -}
@@ -2036,63 +1943,6 @@ entrypointAdvance kelPath signatures probe runner =
                 , advanceValidatorTestUnderSigned = False
                 , advanceValidatorTestUnderWitnessed = False
                 , advanceValidatorTestStale = False
-                }
-
-{- | Close's complete read set: the live checkpoint output for the inception
-export's own AID, every manifest reference output, and the funding row.
-@withCheckpoint@ is the ONE row a negative control withholds.
--}
-entrypointCloseSeed :: Bool -> [UtxoOp]
-entrypointCloseSeed withCheckpoint =
-    [ UtxoCreate
-        (sampleTxIn 0x51)
-        entrypointCheckpointAddress
-        (entrypointCheckpointOutput inceptionFixtureAidBytes)
-    | withCheckpoint
-    ]
-        <> entrypointReferenceSeed
-        <> entrypointFundingSeed
-
-{- | Close runs in its production @--validator-test-non-controller@ mode.
-Close's controller evidence is Ed25519 over a preimage this fixture's own
-synthetic spent datum determines, and no private key for that datum's
-current keys exists anywhere -- the alternative would be to weaken the
-spent datum's threshold to @Unweighted 0@, i.e. to fabricate a checkpoint
-that anyone could close. The validator-test mode is a real production path
-that skips only 'closePredicate'; it changes NOTHING about the read set
-this property observes, which is complete before that check is reached.
--}
-entrypointClose ::
-    FilePath ->
-    ByteString ->
-    BoundaryProbe ->
-    RunTransaction IO cf Cols op ->
-    IO ()
-entrypointClose kelPath signatures probe runner =
-    withSystemTempDirectory "ckeri-close-entrypoint" $ \dir -> do
-        let manifestPath = dir </> "manifest.json"
-            sigPath = dir </> "controller-signatures.txt"
-        writeManifestAtomic manifestPath entrypointManifest
-        BS.writeFile sigPath signatures
-        runCloseWith
-            (boundaryLocalOpener probe runner)
-            (boundaryLiveOpener probe)
-            CloseSettings
-                { closeNetwork = "preprod"
-                , closeNetworkMagic = 1
-                , closeConfiguredAid = inceptionFixtureAidText
-                , closeKel = kelPath
-                , closeTo = entrypointFundingAddressText
-                , closeSigningPackage = Nothing
-                , closeControllerSignatures = Just sigPath
-                , closePayer = Just "unused-payer"
-                , closeNodeSocket = Just "unused-node-socket"
-                , closeFundingAddress = Just entrypointFundingAddressText
-                , closeChangeAddress = Just entrypointFundingAddressText
-                , closeManifest = manifestPath
-                , closeStorePath = "unused-store-path"
-                , closeTimeoutSeconds = 30
-                , closeValidatorTestNonController = True
                 }
 
 {- | Registration's read set is the authenticated board catalog (no

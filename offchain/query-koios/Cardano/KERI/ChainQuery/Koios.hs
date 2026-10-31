@@ -33,10 +33,6 @@ module Cardano.KERI.ChainQuery.Koios (
     -- * Koios-response-only types
     ChainAssetHistory (..),
     ChainMintingTransaction (..),
-    ChainScriptRedeemers (..),
-    ChainScriptRedeemer (..),
-    ChainTransactionUtxos (..),
-    ChainTransactionPart (..),
     ChainTip (..),
     ChainTransactionInfo (..),
 
@@ -62,7 +58,6 @@ module Cardano.KERI.ChainQuery.Koios (
     koiosLiveCheckpoints,
     queryActiveCheckpoint,
     resolveActiveCheckpoint,
-    resolveClosedCheckpoint,
     latestMintingTransaction,
 
     -- * Board catalog discovery (moved from the former
@@ -138,7 +133,6 @@ import Network.HTTP.Simple (
     setRequestHeader,
     setRequestMethod,
  )
-import PlutusCore.Data (Data (..))
 import Text.Read (readMaybe)
 
 data ChainAssetHistory = ChainAssetHistory
@@ -152,35 +146,6 @@ data ChainMintingTransaction = ChainMintingTransaction
     { chainMintingTxId :: !Text
     , chainMintingQuantity :: !Integer
     , chainMintingBlockTime :: !Integer
-    }
-    deriving stock (Show, Eq)
-
-data ChainScriptRedeemers = ChainScriptRedeemers
-    { chainRedeemerScriptHash :: !Text
-    , chainScriptRedeemers :: ![ChainScriptRedeemer]
-    }
-    deriving stock (Show, Eq)
-
-data ChainScriptRedeemer = ChainScriptRedeemer
-    { chainRedeemerPurpose :: !Text
-    , chainRedeemerTxId :: !Text
-    , chainRedeemerData :: !Value
-    }
-    deriving stock (Show, Eq)
-
-data ChainTransactionUtxos = ChainTransactionUtxos
-    { chainTransactionTxId :: !Text
-    , chainTransactionInputs :: ![ChainTransactionPart]
-    , chainTransactionOutputs :: ![ChainTransactionPart]
-    }
-    deriving stock (Show, Eq)
-
-data ChainTransactionPart = ChainTransactionPart
-    { chainTransactionPartTxId :: !Text
-    , chainTransactionPartIndex :: !Int
-    , chainTransactionPartAddress :: !Text
-    , chainTransactionPartLovelace :: !Integer
-    , chainTransactionPartAssets :: ![ChainAsset]
     }
     deriving stock (Show, Eq)
 
@@ -236,26 +201,6 @@ instance FromJSON ChainMintingTransaction where
             <*> integerTextField o "quantity"
             <*> o .: "block_time"
 
-instance FromJSON ChainScriptRedeemers where
-    parseJSON = withObject "ChainScriptRedeemers" $ \o ->
-        ChainScriptRedeemers
-            <$> o .: "script_hash"
-            <*> o .: "redeemers"
-
-instance FromJSON ChainScriptRedeemer where
-    parseJSON = withObject "ChainScriptRedeemer" $ \o ->
-        ChainScriptRedeemer
-            <$> o .: "purpose"
-            <*> o .: "tx_hash"
-            <*> o .: "datum_value"
-
-instance FromJSON ChainTransactionUtxos where
-    parseJSON = withObject "ChainTransactionUtxos" $ \o ->
-        ChainTransactionUtxos
-            <$> o .: "tx_hash"
-            <*> o .: "inputs"
-            <*> o .: "outputs"
-
 instance FromJSON ChainTip where
     parseJSON = withObject "ChainTip" $ \o ->
         ChainTip <$> o .: "abs_slot" <*> o .: "hash"
@@ -265,18 +210,6 @@ instance FromJSON ChainTransactionInfo where
         ChainTransactionInfo
             <$> o .: "tx_hash"
             <*> o .: "absolute_slot"
-
-instance FromJSON ChainTransactionPart where
-    parseJSON = withObject "ChainTransactionPart" $ \o -> do
-        paymentAddress <- o .: "payment_addr"
-        chainTransactionPartAddress <-
-            withObject "PaymentAddress" (.: "bech32") paymentAddress
-        ChainTransactionPart
-            <$> o .: "tx_hash"
-            <*> o .: "tx_index"
-            <*> pure chainTransactionPartAddress
-            <*> integerTextField o "value"
-            <*> o .: "asset_list"
 
 -- | Attach bearer authorization when a token is configured.
 authorizeKoiosRequest :: Maybe KoiosToken -> Request -> Request
@@ -648,102 +581,6 @@ latestMintingTransaction policy assetName histories =
                             (comparing (\t -> (chainMintingBlockTime t, chainMintingTxId t)))
                             transactions
         _ -> Left "Koios returned ambiguous checkpoint asset history"
-
-{- | Prove a checkpoint's on-chain closure from its latest -1 mint, the
-matching 'ChainScriptRedeemers', and the closing transaction's own inputs
-and outputs (kept for the #176 status backend's DIRECTION-001 precedence
-check; not used by #257's registration proof verb).
--}
-resolveClosedCheckpoint ::
-    Text ->
-    Text ->
-    [ChainAssetHistory] ->
-    [ChainScriptRedeemers] ->
-    [ChainTransactionUtxos] ->
-    Either String (Maybe Text)
-resolveClosedCheckpoint policy assetName histories redeemerSets transactions = do
-    latest <- latestMintingTransaction policy assetName histories
-    case latest of
-        Nothing -> pure Nothing
-        Just minting
-            | chainMintingQuantity minting /= -1 ->
-                pure Nothing
-            | otherwise ->
-                pure $
-                    if provesClose minting
-                        then Just (chainMintingTxId minting)
-                        else Nothing
-  where
-    provesClose minting =
-        case ( matchingRedeemers
-             , filter
-                ( (== chainMintingTxId minting)
-                    . chainTransactionTxId
-                )
-                transactions
-             ) of
-            ([redeemers], [transaction]) ->
-                case checkpointInputs transaction of
-                    [checkpointInput] ->
-                        hasCloseBurn minting checkpointInput redeemers
-                            && hasCloseSpend minting redeemers
-                            && hasExactRefund checkpointInput transaction
-                    _ -> False
-            _ -> False
-    matchingRedeemers =
-        filter ((== policy) . chainRedeemerScriptHash) redeemerSets
-    checkpointInputs transaction =
-        filter
-            ( \input ->
-                case chainTransactionPartAssets input of
-                    [asset] ->
-                        chainAssetPolicy asset == policy
-                            && chainAssetName asset == assetName
-                            && chainAssetQuantity asset == 1
-                    _ -> False
-            )
-            (chainTransactionInputs transaction)
-    hasCloseBurn minting input redeemers =
-        any
-            ( \redeemer ->
-                chainRedeemerPurpose redeemer == "mint"
-                    && chainRedeemerTxId redeemer == chainMintingTxId minting
-                    && case plutusDataFromJson (chainRedeemerData redeemer) of
-                        Right
-                            ( Constr
-                                    1
-                                    [Constr 0 [B spentTxId, I spentIndex]]
-                                ) ->
-                                closeSpendTxIdHex spentTxId == chainTransactionPartTxId input
-                                    && spentIndex
-                                        == fromIntegral
-                                            (chainTransactionPartIndex input)
-                        _ -> False
-            )
-            (chainScriptRedeemers redeemers)
-    hasCloseSpend minting redeemers =
-        any
-            ( \redeemer ->
-                chainRedeemerPurpose redeemer == "spend"
-                    && chainRedeemerTxId redeemer == chainMintingTxId minting
-                    && case plutusDataFromJson (chainRedeemerData redeemer) of
-                        Right (Constr 0 [_closeEvidence]) -> True
-                        _ -> False
-            )
-            (chainScriptRedeemers redeemers)
-    hasExactRefund input transaction =
-        any
-            ( \output ->
-                chainTransactionPartLovelace output
-                    == chainTransactionPartLovelace input
-                    && chainTransactionPartAddress output
-                        /= chainTransactionPartAddress input
-                    && null (chainTransactionPartAssets output)
-            )
-            (chainTransactionOutputs transaction)
-
-closeSpendTxIdHex :: BS.ByteString -> Text
-closeSpendTxIdHex = TE.decodeUtf8 . convertToBase Base16
 
 {- | The Koios interpreter (RQ-257-05): every operation Koios can answer
 translates to its existing HTTP calls, and the result is labelled

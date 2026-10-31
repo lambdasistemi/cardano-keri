@@ -11,7 +11,6 @@ module Cardano.KERI.Deployment.CLI (
     RegisterSettings (..),
     RegisterRuntime (..),
     AdvanceSettings (..),
-    CloseSettings (..),
     BoardInstructions (..),
     BoardTransactionSettings (..),
     BoardPostSettings (..),
@@ -29,7 +28,6 @@ module Cardano.KERI.Deployment.CLI (
     deploySettingsParserWithOut,
     registerSettingsParser,
     advanceSettingsParser,
-    closeSettingsParser,
     boardPostSettingsParser,
     boardUpdateSettingsParser,
     boardRetireSettingsParser,
@@ -39,8 +37,6 @@ module Cardano.KERI.Deployment.CLI (
     runRegisterWith,
     runAdvance,
     runAdvanceWith,
-    runClose,
-    runCloseWith,
     runBoard,
     runBoardDeploy,
     runBoardDeployWith,
@@ -60,7 +56,6 @@ module Cardano.KERI.Deployment.CLI (
 ) where
 
 import Cardano.KERI.AID.Checkpoint.Advance (AdvanceEvidence (..))
-import Cardano.KERI.AID.Checkpoint.Close (CloseEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..))
 import Cardano.KERI.ChainQuery (
     ActiveCheckpoint (..),
@@ -102,14 +97,6 @@ import Cardano.KERI.Deployment.Advance (
     writeAdvanceSigningPackage,
  )
 import Cardano.KERI.Deployment.AdvanceTransaction qualified as AdvanceTx
-import Cardano.KERI.Deployment.Close (
-    ClosePackage (..),
-    CloseSigningFiles (..),
-    attachCloseControllerSignatures,
-    mkClosePackage,
-    writeCloseSigningPackage,
- )
-import Cardano.KERI.Deployment.CloseTransaction qualified as CloseTx
 import Cardano.KERI.Deployment.EndpointBoard (
     BoardEntry (..),
     EndpointRecord (..),
@@ -328,25 +315,6 @@ data AdvanceSettings = AdvanceSettings
     , advanceValidatorTestUnderSigned :: Bool
     , advanceValidatorTestUnderWitnessed :: Bool
     , advanceValidatorTestStale :: Bool
-    }
-    deriving stock (Show, Eq)
-
-data CloseSettings = CloseSettings
-    { closeNetwork :: Text
-    , closeNetworkMagic :: Int
-    , closeConfiguredAid :: Text
-    , closeKel :: FilePath
-    , closeTo :: Text
-    , closeSigningPackage :: Maybe FilePath
-    , closeControllerSignatures :: Maybe FilePath
-    , closePayer :: Maybe FilePath
-    , closeNodeSocket :: Maybe FilePath
-    , closeFundingAddress :: Maybe Text
-    , closeChangeAddress :: Maybe Text
-    , closeManifest :: FilePath
-    , closeStorePath :: FilePath
-    , closeTimeoutSeconds :: Int
-    , closeValidatorTestNonController :: Bool
     }
     deriving stock (Show, Eq)
 
@@ -703,123 +671,6 @@ advanceSettingsParser = do
             , Opt.value False
             ]
     pure AdvanceSettings{..}
-
-closeSettingsParser :: Opt.Parser CloseSettings
-closeSettingsParser = do
-    closeNetwork <-
-        textSetting
-            "network"
-            "CKERI_NETWORK"
-            "network"
-            "Cardano network name"
-            (Just "preprod")
-    closeNetworkMagic <-
-        intSetting
-            "network-magic"
-            "CKERI_NETWORK_MAGIC"
-            "network-magic"
-            "Cardano testnet network magic"
-            (Just 1)
-    closeConfiguredAid <-
-        textSetting
-            "aid"
-            "CKERI_AID"
-            "aid"
-            "44-character KERI E-code identifier"
-            Nothing
-    closeKel <-
-        stringSetting
-            "kel"
-            "CKERI_KEL"
-            "kel"
-            "Binary-safe path to the controller's kli inception export"
-            Nothing
-    closeTo <-
-        textSetting
-            "to"
-            "CKERI_TO"
-            "to"
-            "Preprod payment address receiving the complete escrow"
-            Nothing
-    closeSigningPackage <-
-        Opt.optional $
-            stringSetting
-                "signing-package"
-                "CKERI_SIGNING_PACKAGE"
-                "signing-package"
-                "Directory receiving the binary CloseMessage package"
-                Nothing
-    closeControllerSignatures <-
-        Opt.optional $
-            stringSetting
-                "controller-signatures"
-                "CKERI_CONTROLLER_SIGNATURES"
-                "controller-signatures"
-                "Bare indexed CESR signatures over close-message.cbor"
-                Nothing
-    closePayer <-
-        Opt.optional $
-            stringSetting
-                "payer"
-                "CKERI_PAYER"
-                "payer"
-                "Cardano payment signing-key file"
-                Nothing
-    closeNodeSocket <-
-        Opt.optional $
-            stringSetting
-                "node-socket"
-                "CKERI_NODE_SOCKET"
-                "node-socket"
-                "Cardano node socket"
-                Nothing
-    closeFundingAddress <-
-        Opt.optional $
-            textSetting
-                "funding-address"
-                "CKERI_FUNDING_ADDRESS"
-                "funding-address"
-                "Bech32 payment address funding the close fee"
-                Nothing
-    closeChangeAddress <-
-        Opt.optional $
-            textSetting
-                "change-address"
-                "CKERI_CHANGE_ADDRESS"
-                "change-address"
-                "Fee change address, distinct from the exact refund target"
-                Nothing
-    closeManifest <-
-        stringSetting
-            "manifest"
-            "CKERI_MANIFEST"
-            "manifest"
-            "V1 preprod deployment manifest"
-            (Just "deploy/preprod/m1-manifest.json")
-    closeStorePath <-
-        stringSetting
-            "store"
-            "CKERI_STORE"
-            "store"
-            "Local follower RocksDB store path"
-            Nothing
-    closeTimeoutSeconds <-
-        intSetting
-            "timeout-seconds"
-            "CKERI_TIMEOUT_SECONDS"
-            "timeout-seconds"
-            "Settlement timeout"
-            (Just 600)
-    closeValidatorTestNonController <-
-        Opt.yesNoSwitch
-            [ Opt.long "validator-test-non-controller"
-            , Opt.env "CKERI_VALIDATOR_TEST_NON_CONTROLLER"
-            , Opt.conf "validator-test-non-controller"
-            , Opt.help
-                "ACCEPTANCE ONLY: bypass local signature proof and reach the validator"
-            , Opt.value False
-            ]
-    pure CloseSettings{..}
 
 {- | #240: this module builds no combined \"board\" command parser of its
 own any more -- "Cardano.KERI.CLI" composes the four write leaves below
@@ -1498,7 +1349,7 @@ boardLocatorFor info =
         , boardLocatorAddress = endpointBoardAddress info
         }
 
-{- | #262: advance\/close's shared submit-phase reads -- every manifest
+{- | #262: advance's submit-phase reads -- every manifest
 reference script, the exact active-checkpoint output being spent (by the
 @(txid,index)@ identity the checkpoint lookup just returned, re-read as a
 real spendable row rather than reconstructed from the 'ActiveCheckpoint'
@@ -1524,7 +1375,7 @@ manifestAndActiveProgram manifest activeLocator fundingAddress =
                                 ((,,) refs activeOut <$>)
                                 (fundingOutputsProgram fundingAddress)
 
-{- | #262 (FUN-262-SUBMIT-PROGRAM, INV-240-SNAPSHOT): advance\/close's whole
+{- | #262 (FUN-262-SUBMIT-PROGRAM, INV-240-SNAPSHOT): advance's whole
 submit-phase acquisition as ONE monadic 'ChainQuery' program.
 
 This is the shape \#240 said the algebra could not express, and the reason it
@@ -1586,7 +1437,7 @@ spentCheckpointLocator active =
         , outputLocatorIndex = activeCheckpointIndex active
         }
 
-{- | The checkpoint locator advance\/close resolve against: the manifest's own
+{- | The checkpoint locator advance resolves against: the manifest's own
 checkpoint identity, which is also what
 'manifestLocalSettingsFor' gives the local scope, so the interpreter's
 identity check compares a value against itself sourced once
@@ -1630,10 +1481,10 @@ deployLocalSettingsFor storePath =
         , localBoardIdentity = Nothing
         }
 
-{- | #240 (N-026\/N-027\/DAT-240-LOCAL-SETTINGS): 'advance'\/'close' both
-operate on an existing manifest's own real checkpoint identity ('Just',
-validated); neither dispatches 'boardCatalog' or a board write, so the
-board identity is genuinely 'Nothing', never a fabricated value.
+{- | #240 (N-026\/N-027\/DAT-240-LOCAL-SETTINGS): 'advance' operates on an
+existing manifest's own real checkpoint identity ('Just', validated); it
+dispatches neither 'boardCatalog' nor a board write, so the board identity
+is genuinely 'Nothing', never a fabricated value.
 -}
 manifestLocalSettingsFor :: FilePath -> Manifest -> Either String LocalSettings
 manifestLocalSettingsFor storePath manifest = do
@@ -1702,21 +1553,6 @@ advanceLiveConfig settings payer nodeSocket fundingAddress =
         , liveSigningKeyFile = payer
         , liveFundingAddressText = fundingAddress
         , liveTimeoutSeconds = advanceTimeoutSeconds settings
-        }
-
-closeLiveConfig ::
-    CloseSettings ->
-    FilePath ->
-    FilePath ->
-    Text ->
-    LiveConfig
-closeLiveConfig settings payer nodeSocket fundingAddress =
-    LiveConfig
-        { liveNetworkMagic = closeNetworkMagic settings
-        , liveNodeSocket = nodeSocket
-        , liveSigningKeyFile = payer
-        , liveFundingAddressText = fundingAddress
-        , liveTimeoutSeconds = closeTimeoutSeconds settings
         }
 
 boardLiveConfig :: BoardTransactionSettings -> LiveConfig
@@ -2297,176 +2133,6 @@ warnValidatorTest label =
 requireAdvanceSetting :: String -> Maybe a -> IO a
 requireAdvanceSetting name =
     maybe (fail $ name <> " is required when submitting an advance") pure
-
-runClose :: CloseSettings -> IO ()
-runClose = runCloseWith withLocalQueryScope withLiveContext
-
--- | A-013 repair (T240-S1-14 audit finding 1): see 'runAdvanceWith'.
-runCloseWith :: LocalOpener -> LiveOpener -> CloseSettings -> IO ()
-runCloseWith openLocalScope openLiveContext settings = do
-    unless
-        (closeNetwork settings == "preprod" && closeNetworkMagic settings == 1)
-        (fail "M1 V1 close supports only preprod network magic 1")
-    unless
-        ( T.length (closeConfiguredAid settings) == 44
-            && "E" `T.isPrefixOf` closeConfiguredAid settings
-        )
-        (fail "AID must be one 44-character KERI E-code identifier")
-    when (closeTimeoutSeconds settings <= 0) $
-        fail "timeout-seconds must be positive"
-    kel <- BS.readFile (closeKel settings)
-    inception <- either fail pure (parseInceptionExport kel)
-    unless (closeConfiguredAid settings == inceptionAid inception) $
-        fail "configured AID does not match the kli inception export"
-    manifest <-
-        readManifest (closeManifest settings) >>= either fail pure
-    localSettings <-
-        either fail pure (manifestLocalSettingsFor (closeStorePath settings) manifest)
-    openLocalScope localSettings $ \scope ->
-        case (closeSigningPackage settings, closeControllerSignatures settings) of
-            (Just directory, Nothing) -> do
-                when (closeValidatorTestNonController settings) $
-                    fail "validator-test mode applies only when submitting"
-                active <-
-                    activeCheckpointLocal
-                        scope
-                        (manifestCheckpointLocator manifest)
-                        (closeConfiguredAid settings)
-                package <-
-                    either fail pure (mkClosePackage manifest active $ closeTo settings)
-                files <- writeCloseSigningPackage directory package
-                putStrLn $
-                    "signing package: "
-                        <> closePreimageFile files
-                putStrLn $
-                    "preimage sha256: "
-                        <> T.unpack (closePackageSha256 package)
-                putStrLn $
-                    "spent checkpoint: "
-                        <> T.unpack (closeSpentReference package)
-                putStrLn $
-                    "refund: "
-                        <> show (closeRefundLovelace package `div` 1_000_000)
-                        <> " tADA to "
-                        <> T.unpack (closeRefundAddress package)
-            (Nothing, Just signatureFile) ->
-                submitClose openLiveContext scope settings manifest signatureFile
-            _ ->
-                fail
-                    "choose exactly one of --signing-package DIR or \
-                    \--controller-signatures FILE"
-
-{- | A-013 repair (T240-S1-14 audit finding 1): the whole submit-phase
-acquisition -- current checkpoint, manifest references, the active
-checkpoint's own output, and funding -- runs as ONE composed acquisition,
-never a standalone 'activeCheckpointLocal' call followed by a second,
-separately-run one (INV-240-SNAPSHOT).
-
-\#262: that composition is now 'activeCheckpointSubmitProgram', a
-'Cardano.KERI.ChainQuery.Program.ChainQuery' program interpreted locally, and
-INV-240-LOCALTIER is MET by #262. The live bracket is a 'LiveOpener'
-parameter, matching 'submitAdvance''s own seam.
--}
-submitClose ::
-    LiveOpener ->
-    LocalQueryScope cf op ->
-    CloseSettings ->
-    Manifest ->
-    FilePath ->
-    IO ()
-submitClose openLiveContext scope settings manifest signatureFile = do
-    payer <- requireCloseSetting "--payer" (closePayer settings)
-    nodeSocket <-
-        requireCloseSetting "--node-socket" (closeNodeSocket settings)
-    fundingAddress <-
-        requireCloseSetting
-            "--funding-address"
-            (closeFundingAddress settings)
-    changeAddress <-
-        requireCloseSetting "--change-address" (closeChangeAddress settings)
-    signatureBytes <- BS.readFile signatureFile
-    signatures <-
-        either fail pure (parseIndexedSignatureLines signatureBytes)
-    bundle <-
-        acquire
-            scope
-            ( activeCheckpointSubmitProgram
-                (manifestCheckpointLocator manifest)
-                manifest
-                (closeConfiguredAid settings)
-                fundingAddress
-            )
-    (active, references, activeInput, funding) <-
-        case bundle of
-            ActiveCheckpointNotRegistered -> fail "checkpoint is not registered"
-            ActiveCheckpointSubmitBundle active refs activeInput funding ->
-                pure (active, refs, activeInput, funding)
-    package <- either fail pure (mkClosePackage manifest active $ closeTo settings)
-    submittedPackage <-
-        if closeValidatorTestNonController settings
-            then do
-                when (null signatures) $
-                    fail
-                        "non-controller validator test needs at least one signature"
-                warnValidatorTest "non-controller close"
-                pure
-                    package
-                        { closeEvidence =
-                            (closeEvidence package)
-                                { ceCtrlSigs = signatures
-                                }
-                        }
-            else
-                either
-                    fail
-                    pure
-                    (attachCloseControllerSignatures signatures package)
-    plan <- either fail pure (CloseTx.mkClosePlan manifest submittedPackage)
-    change <- either fail pure (decodePaymentAddress changeAddress)
-    let liveConfig =
-            closeLiveConfig
-                settings
-                payer
-                nodeSocket
-                fundingAddress
-    openLiveContext
-        liveConfig
-        (awaitLocalTransaction scope (closeTimeoutSeconds settings))
-        $ \context -> do
-            result <-
-                CloseTx.runCloseTransaction
-                    CloseTx.CloseConfig
-                        { CloseTx.closeRuntime =
-                            liveTransactionRuntime context
-                        , CloseTx.closeReferenceUtxos = references
-                        , CloseTx.closeFundingAddress =
-                            liveFundingAddress context
-                        , CloseTx.closeChangeAddress = change
-                        }
-                    plan
-                    funding
-                    activeInput
-                    >>= either (fail . show) pure
-            let txId = CloseTx.closeResultTxId result
-            _ <-
-                CloseTx.awaitClose
-                    (localTransactionSettled scope)
-                    2_000_000
-                    (closeTimeoutSeconds settings)
-                    txId
-                    >>= either (fail . show) pure
-            putStrLn $
-                "close txid: "
-                    <> T.unpack (renderTransactionId txId)
-            putStrLn $
-                "refunded: "
-                    <> show (closeRefundLovelace submittedPackage `div` 1_000_000)
-                    <> " tADA to "
-                    <> T.unpack (closeRefundAddress submittedPackage)
-
-requireCloseSetting :: String -> Maybe a -> IO a
-requireCloseSetting name =
-    maybe (fail $ name <> " is required when submitting a close") pure
 
 runDeploy :: DeploySettings -> IO ()
 runDeploy = runDeployWith withLocalQueryScope withLiveContext

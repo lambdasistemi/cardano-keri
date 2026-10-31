@@ -344,8 +344,6 @@
             project.hsPkgs.cardano-keri.components.tests.registration-migration-tests;
           advance-migration-tests-exe =
             project.hsPkgs.cardano-keri.components.tests.advance-migration-tests;
-          close-migration-tests-exe =
-            project.hsPkgs.cardano-keri.components.tests.close-migration-tests;
           board-migration-tests-exe =
             project.hsPkgs.cardano-keri.components.tests.board-migration-tests;
           local-write-path-tests-exe =
@@ -439,7 +437,6 @@
               publisher-migration-tests-exe
               registration-migration-tests-exe
               advance-migration-tests-exe
-              close-migration-tests-exe
               board-migration-tests-exe
               local-write-path-tests-exe
               pkgs.coreutils
@@ -453,7 +450,6 @@
                 publisher-migration-tests \
                 registration-migration-tests \
                 advance-migration-tests \
-                close-migration-tests \
                 board-migration-tests; do
                 echo "=== $suite (must pass) ==="
                 "$suite" && ok=1 || ok=0
@@ -489,8 +485,8 @@
                 fi
               fi
 
-              echo "=== verifying 8 base-oracle capture files under $CKERI_PARITY_ORACLE_DIR ==="
-              for shape in premint register advance close publish board-post board-update board-retire; do
+              echo "=== verifying 7 base-oracle capture files under $CKERI_PARITY_ORACLE_DIR ==="
+              for shape in premint register advance publish board-post board-update board-retire; do
                 for ext in txid txbody.cbor.hex; do
                   f="$CKERI_PARITY_ORACLE_DIR/$shape.$ext"
                   if [ ! -s "$f" ]; then
@@ -504,7 +500,7 @@
             '';
           };
           # #240 T240-S1-13: the permanent local-write-path family gate.
-          # Runs the same six suites 'local-write-path-oracle' proved RED
+          # Runs the same five suites 'local-write-path-oracle' proved RED
           # against at build 8 (evidence/build8), this time requiring every
           # one GREEN with a non-zero example count -- positive proof; an
           # empty, skipped, timed-out, or unclassifiable population fails
@@ -580,7 +576,6 @@
               publisher-migration-tests-exe
               registration-migration-tests-exe
               advance-migration-tests-exe
-              close-migration-tests-exe
               board-migration-tests-exe
               local-write-path-tests-exe
               cli-tests-exe
@@ -640,7 +635,6 @@
                 publisher-migration-tests \
                 registration-migration-tests \
                 advance-migration-tests \
-                close-migration-tests \
                 board-migration-tests \
                 local-write-path-tests \
                 cli-tests; do
@@ -660,7 +654,7 @@
 
               # N-031 item 3: name/count the write component and every
               # covered write shape explicitly, rather than trusting the
-              # six family Hspec totals alone as the census -- a suite
+              # five family Hspec totals alone as the census -- a suite
               # could pass zero-relevant examples and still report
               # "N examples, 0 failures" if every write-shape assertion
               # were silently dropped from it.
@@ -675,7 +669,7 @@
                 status=1
               else
                 for verb in \
-                  runDeploy runRegister runAdvance runClose \
+                  runDeploy runRegister runAdvance \
                   runBoardDeploy runBoardPost runBoardUpdate runBoardRetire; do
                   count=0
                   count="$(grep -cE "^$verb ::" "$cli_file" || true)"
@@ -690,7 +684,7 @@
               # N-034 (T240-S1-02/05, MOD-240-FOCUSED-GATE): a source-level
               # verb-name grep is not behavioral coverage. Execute the
               # REAL packaged `ckeri` binary's real opt-env-conf parser for
-              # every one of the eight write leaves and require the local
+              # every one of the seven write leaves and require the local
               # `--store`/`CKERI_STORE` surface present and every Koios
               # flag/env absent. Two read-only positive controls
               # (`manifest verify`, `board list`) prove the detection
@@ -719,7 +713,6 @@
               write_help_check deploy deploy
               write_help_check register register
               write_help_check advance advance
-              write_help_check close close
               write_help_check board-deploy board deploy
               write_help_check board-post board post
               write_help_check board-update board update
@@ -867,7 +860,6 @@
               # regression a reintroduced forbidden import must trip.
               builder_modules=(
                   Cardano/KERI/Deployment/AdvanceTransaction.hs
-                  Cardano/KERI/Deployment/CloseTransaction.hs
                   Cardano/KERI/Deployment/EndpointBoardTransaction.hs
                   Cardano/KERI/Deployment/Publisher.hs
                   Cardano/KERI/Deployment/Registration.hs

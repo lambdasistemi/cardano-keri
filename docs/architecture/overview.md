@@ -254,8 +254,8 @@ cannot choose new keys, skip a sequence, lower a threshold, or remove required
 witnesses.
 
 Where authority *is* needed, it is a signature over exactly the thing being
-decided. Today, close binds the refund address in a message the current
-controllers sign.
+decided. In the M1 V1 release, close bound the refund address in a message
+the current controllers signed; `ckeri` no longer offers that close.
 
 !!! note "The accepted design changes this"
     Under the design ruled on 2026-09-02/03 (D-036 to D-040; the model is
@@ -266,7 +266,7 @@ controllers sign.
     ([#493](https://github.com/lambdasistemi/cardano-keri/issues/493)). The current
     keys keep exactly one Cardano power, the poison. An identity is
     active, pending conviction, or convicted after the associated
-    Registry fold. What ships today is the close described above. Every bond
+    Registry fold. Every bond
     option other than `keep`, and every new refund address, is signed
     by the keys of the epoch the rotation opens — so a relayer landing
     a public rotation can never age the owner or move her refund address.

@@ -15,11 +15,9 @@ they change only by a new applied program hash.  The Aiken mirror is
 @offchain\/app\/GenMigrationTypesVectors.hs@ is the sole source of the byte
 fixtures both suites assert against.
 
-'FullAddress' and friends re-declare the Aiken @cardano\/address.Address@
-Plutus-Data mirror rather than importing the identical one from
-"Cardano.KERI.AID.Checkpoint.Close": that module carries the Close predicate,
-which this landing excludes, and MOD-254-PROTOCOL may not depend on checkpoint
-validator behaviour.
+'FullAddress' and friends are the one Haskell mirror of the Aiken
+@cardano\/address.Address@ Plutus Data; the endpoint-board retire refund
+uses it too.
 -}
 module Cardano.KERI.AID.Migration.Types (
     -- * Ledger mirrors

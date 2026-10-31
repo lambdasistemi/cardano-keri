@@ -16,15 +16,16 @@ export function collect(){
   for(const file of files){
     const relative='lean/CardanoKeri/'+file,text=fs.readFileSync(path.join(root,relative),'utf8');sources[relative]=hash(text);
     const stack=[];
-    const events=[...text.matchAll(/^(?:(namespace|section)\s*([^\n]*)|end(?:\s+[^\n]*)?|(private )?theorem\s+([^\s({:]+))/gm)];
+    const events=[...text.matchAll(/^(?:(namespace|section)\s*([^\n]*)|(mutual)$|end(?:\s+[^\n]*)?|(private )?theorem\s+([^\s({:]+))/gm)];
     for(const ev of events){
       if(ev[1]){stack.push({kind:ev[1],name:ev[2].trim()});continue;}
+      if(ev[3]){stack.push({kind:'mutual',name:''});continue;}
       if(ev[0].startsWith('end')){stack.pop();continue;}
       const tail=text.slice(ev.index),assignment=separator(tail,':='),statement=tail.slice(0,assignment).trim();
       const rest=statement.slice(ev[0].length),colon=separator(rest,':');
       const before=text.slice(0,ev.index).trimEnd();let narrative='';
       if(before.endsWith('-/')){const open=before.lastIndexOf('/--');if(open>=0&&before.indexOf('-/',open)===before.length-2)narrative=before.slice(open+3,-2).trim();}
-      const declaration=[...stack.filter(s=>s.kind==='namespace').map(s=>s.name),ev[4]].join('.');
+      const declaration=[...stack.filter(s=>s.kind==='namespace').map(s=>s.name),ev[5]].join('.');
       const given=rest.slice(0,colon).trim(),then=rest.slice(colon+1).trim();
       rows.push({declaration,path:relative,line:text.slice(0,ev.index).split('\n').length,
         statement,statementSha256:hash(statement),sourceStory:narrative,

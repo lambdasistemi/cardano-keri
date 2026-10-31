@@ -45,7 +45,7 @@
       "pause": 400
     },
     {
-      "text": "The proofs establish inversion, completeness under the explicit component premises, delivered-origin correspondence and preservation of the old eligibility predicate. The connected fixture continues through all four rotation branches, freeze and recovery, poison and clearing, park and local revival, concrete conviction, booking and matching completion. It executes a full-identity terminal fold against the same state reference and money observations. A valid foreign request cannot complete the stored pending request; a mixed fold that consumes that request can.",
+      "text": "The proofs establish inversion, completeness under the explicit component premises, delivered-origin correspondence and preservation of the old eligibility predicate. The connected fixture continues through all four rotation branches, freeze and recovery, poison and clearing, concrete conviction, booking and matching completion. It executes a full-identity terminal fold against the same state reference and money observations. A valid foreign request cannot complete the stored pending request; a mixed fold that consumes that request can.",
       "pause": 400
     }
   ],
@@ -63,7 +63,7 @@
       "pause": 400
     },
     {
-      "text": "realizesState checks the credential, representative quantity and decoded AID/state. It has no current-reference or unspentness check. Local fixture observations are explicitly selected model interpretations, not a production observer. No checkpoint expiry or renewal behavior is supplied by the model.",
+      "text": "realizesState checks the credential, representative quantity and decoded AID and datum facts: the decoded state compared with the intended state, both with the pool set to zero, because the pool is an amount held in the value and not a fact in the datum. It has no current-reference or unspentness check. Local fixture observations are explicitly selected model interpretations, not a production observer. No checkpoint expiry or renewal behavior is supplied by the model.",
       "pause": 400
     }
   ],
@@ -73,7 +73,7 @@
       "pause": 500
     },
     {
-      "text": "The model declares one concrete interpretation in CardanoKeri.ConsumerIdentity.Bytes. The registry key of an AID is the AID's qualified CESR text bytes. The codec is the Plutus Data serialisation of the Preimage type in Singular's singular_state/preimage module at the pinned revision. The hash is BLAKE2b-256, as in that module. The datum decoder remains an input to the interpretation.",
+      "text": "The model declares one concrete interpretation in CardanoKeri.ConsumerIdentity.Bytes. The registry key of an AID is the AID's qualified CESR text bytes. The codec is the Plutus Data serialisation of the Preimage type in Singular's singular_state/preimage module at the pinned revision. The hash is BLAKE2b-256, as in that module. The datum decoder is declared in the checkpoint datum.",
       "pause": 400
     },
     {
@@ -89,7 +89,139 @@
       "pause": 400
     },
     {
-      "text": "These checks cover the listed inputs only. The registration approval role splices an already serialised holding address and is outside the consumer statements. The Aiken consumer predicate must reproduce the table under the consumer implementation ticket.",
+      "text": "These checks cover the listed inputs only. The registration approval role splices an already serialised holding address and is outside the consumer statements. The Aiken consumer predicate reproduces the table, as described in the concrete identity bytes in Aiken.",
+      "pause": 400
+    }
+  ],
+  "the-checkpoint-datum": [
+    {
+      "text": "The checkpoint datum.",
+      "pause": 500
+    },
+    {
+      "text": "A contract author holds a candidate checkpoint output with an inline datum. The consumer must read that datum exactly as the checkpoint writes it: which AID it belongs to, whether it is live or awaiting termination, whether it is poisoned, whether its bond is frozen and when it was born. A datum that does not have that shape is refused. The model declares this datum, version 2, in CardanoKeri.CheckpointDatum, together with the decoder the consumer runs.",
+      "pause": 400
+    },
+    {
+      "text": "Version 1, constructor 0, is the layout the checkpoint validator writes today. It carries keys, thresholds, witnesses and counters, but no poison, no freeze, no birth slot and no pending-termination form, so a poisoned checkpoint and a clean one would be byte-identical. The decoder refuses it. Version 2 is written by the model first; the on-chain validator adopts it later.",
+      "pause": 400
+    },
+    {
+      "text": "The key material is constructor 0 with six fields, in the version 1 types: current keys (a list of byte strings), current threshold, next keys, next threshold, witnesses (a list of byte strings) and toad (an integer). A threshold is constructor 0 over an integer (unweighted) or constructor 1 over a list of clauses, each a list of weights; a weight is constructor 0 over a numerator and a denominator. A Boolean is Aiken's: false is constructor 0 and true is constructor 1, both without fields.",
+      "pause": 400
+    },
+    {
+      "text": "The serialisation is Plutus Data's: constructors 0 to 6 as tags 121 to 127, 7 to 127 as tags 1280 to 1400, any other index as tag 102 over the index and the fields; non-empty lists indefinite; maps definite; byte strings definite up to 64 bytes, otherwise in chunks of 64; integers plain below 2^64, otherwise tagged big numbers. A raw application datum is these bytes carried through the same bijective numeral as the identity bytes. The reader also accepts the other well-formed encodings of the same Data. One layout serves every release at this model revision; a new layout is a new version constructor.",
+      "pause": 400
+    },
+    {
+      "text": "What the Lean proves about it:",
+      "pause": 400
+    },
+    {
+      "text": "Reading back: every Data, read from its serialisation with any rest, returns with that rest (parse_cbor), and every serialised element is a byte, so the raw carrier is faithful (decode_raw).",
+      "pause": 300
+    },
+    {
+      "text": "Written datums decode: for every AID, key material and state with an output, the decoder returns that AID and the state's facts (decodeData_datum, decode_written).",
+      "pause": 300
+    },
+    {
+      "text": "Nothing else decodes: an accepted Data is exactly a written datum (decodeData_complete). A wrong version, version 1 included, a wrong number of fields, an unknown form and a field of the wrong kind are each refused (wrong_version_refused, version_one_refused, version_arity_refused, unknown_form_refused, live_arity_refused, pending_arity_refused, live_fields_typed, pending_fields_typed).",
+      "pause": 300
+    },
+    {
+      "text": "The decoder is a function of the raw datum alone: one datum, one result, under every release (decode_deterministic, decode_release_independent).",
+      "pause": 300
+    },
+    {
+      "text": "The consumer: with this decoder in the concrete interpretation, a holding carrying the datum written for any state, funded pools included, is accepted exactly when that state is consumable (written_holding_iff). A funded registration passes the registration bridge's datum check (funded_registration_agrees), and a version 1 datum is refused (version_one_holding_refused).",
+      "pause": 300
+    },
+    {
+      "text": "The twenty-six consumer statements are proved for every interpretation, so they hold with this one. Their wording is unchanged; the three that compare a decoded state with an intended one, through realizesState and the registration bridge, now compare the datum's facts, so they apply to funded registrations too.",
+      "pause": 400
+    },
+    {
+      "text": "The vector table lean/checkpoint-datum-vectors.json lists seven written datums with the decoder's result and the consumer's verdict on a genuine holding (registered and funded, juvenile, rotated with weighted thresholds and witnesses, poisoned, frozen, pending termination, numbers beyond 2^64), and twenty-nine datums the decoder refuses, each a named change: version 1, an unknown version, every wrong arity, every field of the wrong kind, a trailing byte, a truncated datum. The Lean emits the table and checks the committed copy against the decoder and the consumer predicate. Changing any committed field fails the check, and every node of every accepted datum, replaced by a node of another kind, is refused.",
+      "pause": 400
+    },
+    {
+      "text": "These checks cover the listed inputs; the theorems cover all inputs. The on-chain validator does not write version 2 yet, and the Aiken consumer does not yet decode it; reading the pool and the bonds from the value is not modelled. This code is not for mainnet.",
+      "pause": 400
+    }
+  ],
+  "the-consumer-predicate-in-aiken": [
+    {
+      "text": "The consumer predicate in Aiken.",
+      "pause": 500
+    },
+    {
+      "text": "onchain/lib/cardano_keri/consumer.ak is consumableHoldingB clause for clause, in the Lean order: authenticated network and complete release, the release's application credential, a total quantity of one for the representative asset, and a decoded datum for the intended AID in a consumable state (present, unfrozen, unpoisoned, at least W old). The registry and representative asset names follow registryAsset and representativeAsset. The network, release, seed and AID are arguments fixed by the relying contract. The hash, codec, AID-to-key map and datum decoder are four function arguments (Aiken data types cannot hold functions, so the Lean's Interpretation record becomes those four arguments); the candidate output selects none of them.",
+      "pause": 400
+    },
+    {
+      "text": "Two executable layers check it. All 32 queries of simulator/consumer-corpus.json are generated by scripts/consumer-vectors.mjs into consumer_corpus_vectors.ak, one test per row carrying the row's own expected result; the four rows whose interpretation tables are incomplete or ambiguous require the predicate to fail, never to answer. Property tests (consumer_tests.ak) run each clause beside its refusal over generated variations and name the theorem they mirror (CI01 to CI16). The vectors are regenerated and compared by node scripts/consumer-vectors.mjs --check.",
+      "pause": 400
+    }
+  ],
+  "the-connected-example": [
+    {
+      "text": "The connected example.",
+      "pause": 500
+    },
+    {
+      "text": "consumer_example is a spending validator for a relying contract. It is parameterised by the consumer context (network, release, seed, AID) and the checkpoint parameters, and it spends only if some reference input is a consumable holding for that context. The end-to-end specification (ConsumerE2ESpec) runs it on a local test chain: one transaction that references the eligible holding settles, and transactions that reference a rival registry's token, a holding of quantity two, a holding with termination pending, and a retired holding (convicted, and absent) are rejected when the consumer script evaluates false. Each refusal carries no other script and passes the ledger rules, so the rejection is the consumer's own verdict.",
+      "pause": 400
+    },
+    {
+      "text": "Two labels bound what this proves.",
+      "pause": 400
+    },
+    {
+      "text": "Test interpretation, not the registry byte layout. This connected run (the one above) uses the declared functions of consumer_test_interpretation: the hash is blake2b-256; the code of a State preimage is 0x00, the seed transaction id and the output index as eight bytes; the code of an Active preimage is 0x01, the registry policy, the registry asset name and the AID as eight bytes; the AID's key is the AID as eight bytes; the decoder reads the inline datum as the decoded datum itself. None of this is the Singular registry's layout. A second connected run uses the concrete identity bytes instead (next section); this one is kept as it is.",
+      "pause": 300
+    },
+    {
+      "text": "Seeded holding, not a registration journey. The holdings are minted by a test-only policy at a test application credential. The genuine registration journey belongs to #324.",
+      "pause": 300
+    },
+    {
+      "text": "Declared limits of the example. A script cannot observe the network or resolve a release, so the example's environment is the context it is parameterised with (the trusted integration's observation). now is the lower bound of the transaction's validity interval, in the same unit as the datum's birth time and the maturity parameter; a transaction with no finite lower bound is refused. A datum that does not decode as the declared shape makes the test decoder fail rather than answer. The acceptance item that binds the predicate to the actual Singular-backed output stays open: the Aiken datum decoder, which reproduces the checkpoint datum decoder, and the registration journey are still outstanding (see the next section).",
+      "pause": 400
+    }
+  ],
+  "the-concrete-identity-bytes-in-aiken": [
+    {
+      "text": "The concrete identity bytes in Aiken.",
+      "pause": 500
+    },
+    {
+      "text": "onchain/lib/cardano_keri/consumer_identity_bytes.ak computes, in Aiken, the names the Lean concrete interpretation computes. It is plugged into the predicate through the existing function arguments; the predicate is unchanged.",
+      "pause": 400
+    },
+    {
+      "text": "The relying contract fixes the state policy, the seed and the AID. The AID is the Lean aidOfCesr of its CESR text: the bijective base-256 number of the text's UTF-8 bytes. Only the State and Active preimages are computed, because the predicate uses only those two roles.",
+      "pause": 400
+    },
+    {
+      "text": "Three executable layers check it.",
+      "pause": 400
+    },
+    {
+      "text": "The Lean vectors. consumer_identity_vectors.ak is generated by scripts/consumer-identity-vectors.mjs from lean/consumer-identity-vectors.json (just gen-consumer-identity-vectors). just check-consumer-identity-vectors rejects any drift and runs in the Onchain CI job beside the corpus vectors check. For each of the eight vectors there is one test per claim: the state preimage, the registry name, the key (and the AID back from the key), the active preimage, the active name and the representative asset, each compared with the Lean bytes.",
+      "pause": 300
+    },
+    {
+      "text": "Properties (consumer_identity_tests.ak): the byte carrier laws, every width of the output index, the change of the active name under each committed field (seed transaction id, seed output index, state policy, AID) over a grid of seventy-two contexts, and the predicate itself accepting the holding named by the concrete bytes and refusing every rival's.",
+      "pause": 300
+    },
+    {
+      "text": "Connected. consumer_identity_example is consumer_example with the concrete bytes. ConsumerE2ESpec (\"concrete identity bytes, test datum decoder\") recomputes the names from the Lean layout, checks them against the vectors, and on the local test chain settles a spend that references the holding so named and refuses, in the consumer script, a spend that references a rival seed's holding.",
+      "pause": 300
+    },
+    {
+      "text": "What stays a declared test choice: the datum decoder (consumer_test_interpretation.decode; the Lean declares the version 2 decoder in the checkpoint datum, which the Aiken side does not reproduce yet), the environment (the contract's own context stands for the trusted integration's observation), and the seeded holdings (the genuine registration journey belongs to #324). These checks cover the vectors and the generated variations only: byte strings of more than 64 bytes would be serialised in chunks, which no vector reaches (a CESR text is 44 bytes). This code is not for mainnet.",
       "pause": 400
     }
   ],
@@ -113,6 +245,6 @@
   ],
   "_source": {
     "file": "consumer-identity.md",
-    "sha256": "a805cffc004c4849509110da9455b579cc2681cbb7bf880d1fb8d3f21f4dcb7e"
+    "sha256": "3caec1f7471ea58c9ee089cbad66c536b56b888bf482b52558964b8a22a6bbc5"
   }
 }

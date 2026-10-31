@@ -24,3 +24,17 @@ node simulator/consumer-js-mutants.mjs "$consumer_mutation_receipts"
   lake env lean --run ConsumerBytesDriver.lean --singular \
     .lake/packages/singular/offchain/test/fixtures/preimage-vectors.json
 )
+# The version 2 checkpoint datum and the consumer's decoder (#498): the
+# committed vectors are the Lean's output, every committed row is checked
+# against the decoder and the consumer predicate, every changed field fails
+# and every node of every accepted datum changed in kind is refused.
+(
+  cd lean
+  lake build CardanoKeri.CheckpointDatumVectors
+  generated=$(mktemp)
+  lake env lean --run CheckpointDatumDriver.lean >"$generated"
+  node -e 'const fs=require("fs");if(fs.readFileSync(process.argv[1],"utf8")!==fs.readFileSync(process.argv[2],"utf8")){console.error("checkpoint-datum-vectors.json differs from the Lean output");process.exit(1)}' \
+    checkpoint-datum-vectors.json "$generated"
+  rm -f -- "$generated"
+  lake env lean --run CheckpointDatumDriver.lean --check checkpoint-datum-vectors.json
+)

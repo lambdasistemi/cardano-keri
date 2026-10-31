@@ -1,0 +1,462 @@
+{"refused":
+ [{"note": "the version 1 layout the checkpoint validator writes today",
+   "id": "version-1",
+   "decoded": null,
+   "datum":
+   "d8799fd8799f582000070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d99f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff80000304ffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "an unknown version constructor",
+   "id": "version-3",
+   "decoded": null,
+   "datum":
+   "d87b9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "version 2 without its field",
+   "id": "version-no-field",
+   "decoded": null,
+   "datum": "d87a80",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "version 2 with two fields",
+   "id": "version-two-fields",
+   "decoded": null,
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "a version 2 form that is neither live nor pending termination",
+   "id": "unknown-form",
+   "decoded": null,
+   "datum":
+   "d87a9fd87b9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "a live datum without its key material",
+   "id": "live-seven-fields",
+   "decoded": null,
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9ffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "a live datum with an extra field",
+   "id": "live-nine-fields",
+   "decoded": null,
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ff00ffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "a pending-termination datum with an extra field",
+   "id": "pending-five-fields",
+   "decoded": null,
+   "datum":
+   "d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ff00ffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "a pending-termination datum with a negative epoch",
+   "id": "pending-negative-epoch",
+   "decoded": null,
+   "datum":
+   "d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500421d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "the AID as an integer",
+   "id": "aid-integer",
+   "decoded": null,
+   "datum":
+   "d87a9fd8799f050402d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "a negative sequence number",
+   "id": "sn-negative",
+   "decoded": null,
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235502002d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "the epoch as a byte string",
+   "id": "epoch-bytes",
+   "decoded": null,
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500440d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "poison as constructor 2",
+   "id": "poisoned-not-boolean",
+   "decoded": null,
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87b80d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "poison as a Boolean constructor carrying a field",
+   "id": "poisoned-boolean-with-field",
+   "decoded": null,
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87a9f00ffd87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "freeze as an integer",
+   "id": "frozen-integer",
+   "decoded": null,
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d8798001186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "a negative birth slot",
+   "id": "born-at-negative",
+   "decoded": null,
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87980386358390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "the refund address as an integer",
+   "id": "refund-integer",
+   "decoded": null,
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87980186407d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "the key material as a list",
+   "id": "keys-list",
+   "decoded": null,
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a99f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "key material without `toad`",
+   "id": "keys-five-fields",
+   "decoded": null,
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff80ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "a current key as an integer",
+   "id": "key-integer",
+   "decoded": null,
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f01ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "a threshold constructor that is neither unweighted nor weighted",
+   "id": "threshold-unknown-form",
+   "decoded": null,
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd87b9f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "a weight without its denominator",
+   "id": "weight-one-field",
+   "decoded": null,
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd87a9f9f9fd8799f01ffffffff8000ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "the witnesses as a map",
+   "id": "witnesses-map",
+   "decoded": null,
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ffa000ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "`toad` as a byte string",
+   "id": "toad-bytes",
+   "decoded": null,
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8040ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "the live fields as a bare list",
+   "id": "not-a-constructor",
+   "decoded": null,
+   "datum":
+   "9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "a written datum followed by one more byte",
+   "id": "trailing-byte",
+   "decoded": null,
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff00",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "a written datum missing its last byte",
+   "id": "truncated",
+   "decoded": null,
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "no bytes",
+   "id": "empty",
+   "decoded": null,
+   "datum": "",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note": "a lone break byte",
+   "id": "break-byte",
+   "decoded": null,
+   "datum": "ff",
+   "consumer": {"now": 200, "accepted": false}}],
+ "params": {"W": 10},
+ "model": "lean/CardanoKeri/CheckpointDatum.lean",
+ "layout":
+ {"pool":
+  "not in the datum: decoded as 0; the amount is held in the output's value",
+  "aid": "the AID's qualified CESR text bytes (UTF-8), as the registry key",
+  "Threshold":
+  "Unweighted = constructor 0 [int]; Weighted = constructor 1 [List<List<Weight>>]; Weight = constructor 0 [num: int, den: int]",
+  "KeyMaterial":
+  "constructor 0 [cur_keys: List<bytes>, cur_threshold: Threshold, next_keys: List<bytes>, next_threshold: Threshold, witnesses: List<bytes>, toad: int]",
+  "CheckpointDatumV2.TerminationPending":
+  "constructor 1 [aid: bytes, sn: int, epoch: int, keys: KeyMaterial]",
+  "CheckpointDatumV2.Live":
+  "constructor 0 [aid: bytes, sn: int, epoch: int, poisoned: Bool, frozen: Bool, born_at: int, refund_to: bytes, keys: KeyMaterial]",
+  "CheckpointDatum":
+  "V1 = constructor 0 (refused); V2 = constructor 1 [CheckpointDatumV2]",
+  "Bool": "False = constructor 0 []; True = constructor 1 []"},
+ "identity":
+ "lean/consumer-identity-vectors.json: state policy, seed and the representative asset of the AID",
+ "description":
+ "Vectors of the version 2 checkpoint datum: for each checkpoint state, AID and key material, the serialised inline datum, what the consumer's decoder returns and the consumer's verdict on a genuine holding carrying it; and serialised datums the decoder refuses.",
+ "accepted":
+ [{"note":
+   "just registered with a funded premium pool, read after its juvenility window: accepted; the pool is held in the value, not the datum",
+   "input":
+   {"state":
+    {"sn": 0,
+     "refundTo":
+     "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
+     "pool": 5000000,
+     "poisoned": false,
+     "frozen": false,
+     "form": "live",
+     "epoch": 0,
+     "bornAt": 100},
+    "keys":
+    {"witnesses": [],
+     "toad": 0,
+     "nextThreshold": {"unweighted": 1},
+     "nextKeys":
+     ["3e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017"],
+     "curThreshold": {"unweighted": 1},
+     "curKeys":
+     ["1f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8"]},
+    "aid": "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"},
+   "id": "registered-funded",
+   "decoded":
+   {"state":
+    {"sn": 0,
+     "refundTo":
+     "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
+     "pool": 0,
+     "poisoned": false,
+     "frozen": false,
+     "form": "live",
+     "epoch": 0,
+     "bornAt": 100},
+    "aid":
+    "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"},
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 110, "accepted": true}},
+  {"note":
+   "the same checkpoint read one slot before its juvenility window ends: decoded, refused by the consumer",
+   "input":
+   {"state":
+    {"sn": 0,
+     "refundTo":
+     "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
+     "pool": 5000000,
+     "poisoned": false,
+     "frozen": false,
+     "form": "live",
+     "epoch": 0,
+     "bornAt": 100},
+    "keys":
+    {"witnesses": [],
+     "toad": 0,
+     "nextThreshold": {"unweighted": 1},
+     "nextKeys":
+     ["3e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017"],
+     "curThreshold": {"unweighted": 1},
+     "curKeys":
+     ["1f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8"]},
+    "aid": "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"},
+   "id": "registered-juvenile",
+   "decoded":
+   {"state":
+    {"sn": 0,
+     "refundTo":
+     "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
+     "pool": 0,
+     "poisoned": false,
+     "frozen": false,
+     "form": "live",
+     "epoch": 0,
+     "bornAt": 100},
+    "aid":
+    "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"},
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 109, "accepted": false}},
+  {"note":
+   "a live checkpoint after rotations, with weighted thresholds and witnesses: accepted",
+   "input":
+   {"state":
+    {"sn": 7,
+     "refundTo":
+     "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
+     "pool": 0,
+     "poisoned": false,
+     "frozen": false,
+     "form": "live",
+     "epoch": 3,
+     "bornAt": 100},
+    "keys":
+    {"witnesses":
+     ["f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1",
+      "171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0",
+      "363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f"],
+     "toad": 2,
+     "nextThreshold": {"unweighted": 2},
+     "nextKeys":
+     ["bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c93",
+      "d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2"],
+     "curThreshold": {"weighted": [[[1, 2], [1, 2]], [[1, 1]]]},
+     "curKeys":
+     ["5d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f36",
+      "7c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e55",
+      "9ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d74"]},
+    "aid": "EEBjyTcVHGUZHrR1x3wuxOxbrzH0_cGfAYJJQHME3Pwo"},
+   "id": "rotated",
+   "decoded":
+   {"state":
+    {"sn": 7,
+     "refundTo":
+     "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
+     "pool": 0,
+     "poisoned": false,
+     "frozen": false,
+     "form": "live",
+     "epoch": 3,
+     "bornAt": 100},
+    "aid":
+    "4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776f"},
+   "datum":
+   "d87a9fd8799f582c4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776f0703d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58205d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f3658207c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e5558209ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d74ffd87a9f9f9fd8799f0102ffd8799f0102ffff9fd8799f0101ffffffff9f5820bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c935820d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2ffd8799f02ff9f5820f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad15820171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f05820363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080fff02ffffff",
+   "consumer": {"now": 200, "accepted": true}},
+  {"note":
+   "a live checkpoint its current keys have poisoned: decoded, refused by the consumer",
+   "input":
+   {"state":
+    {"sn": 4,
+     "refundTo":
+     "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
+     "pool": 3,
+     "poisoned": true,
+     "frozen": false,
+     "form": "live",
+     "epoch": 2,
+     "bornAt": 100},
+    "keys":
+    {"witnesses": [],
+     "toad": 0,
+     "nextThreshold": {"unweighted": 1},
+     "nextKeys":
+     ["3e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017"],
+     "curThreshold": {"unweighted": 1},
+     "curKeys":
+     ["1f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8"]},
+    "aid": "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"},
+   "id": "poisoned",
+   "decoded":
+   {"state":
+    {"sn": 4,
+     "refundTo":
+     "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
+     "pool": 0,
+     "poisoned": true,
+     "frozen": false,
+     "form": "live",
+     "epoch": 2,
+     "bornAt": 100},
+    "aid":
+    "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"},
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87a80d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note":
+   "a live checkpoint whose bond is frozen: decoded, refused by the consumer",
+   "input":
+   {"state":
+    {"sn": 4,
+     "refundTo":
+     "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
+     "pool": 3,
+     "poisoned": false,
+     "frozen": true,
+     "form": "live",
+     "epoch": 2,
+     "bornAt": 100},
+    "keys":
+    {"witnesses": [],
+     "toad": 0,
+     "nextThreshold": {"unweighted": 1},
+     "nextKeys":
+     ["3e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017"],
+     "curThreshold": {"unweighted": 1},
+     "curKeys":
+     ["1f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8"]},
+    "aid": "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"},
+   "id": "frozen",
+   "decoded":
+   {"state":
+    {"sn": 4,
+     "refundTo":
+     "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
+     "pool": 0,
+     "poisoned": false,
+     "frozen": true,
+     "form": "live",
+     "epoch": 2,
+     "bornAt": 100},
+    "aid":
+    "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"},
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87a80186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note":
+   "a convicted checkpoint awaiting its terminating fold: decoded, refused by the consumer",
+   "input":
+   {"state": {"sn": 4, "form": "terminationPending", "epoch": 2},
+    "keys":
+    {"witnesses": [],
+     "toad": 0,
+     "nextThreshold": {"unweighted": 1},
+     "nextKeys":
+     ["3e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017"],
+     "curThreshold": {"unweighted": 1},
+     "curKeys":
+     ["1f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8"]},
+    "aid": "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"},
+   "id": "pending-termination",
+   "decoded":
+   {"state": {"sn": 4, "form": "terminationPending", "epoch": 2},
+    "aid":
+    "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"},
+   "datum":
+   "d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 200, "accepted": false}},
+  {"note":
+   "sequence number and epoch beyond 2^64 (tagged big numbers) and a 70-byte refund address (chunked): accepted",
+   "input":
+   {"state":
+    {"sn": "18446744073709551621",
+     "refundTo":
+     "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9acafb2b5b8bbbec1c4c7cacdd0",
+     "pool": 0,
+     "poisoned": false,
+     "frozen": false,
+     "form": "live",
+     "epoch": "1180591620717411303424",
+     "bornAt": 100},
+    "keys":
+    {"witnesses": [],
+     "toad": 0,
+     "nextThreshold": {"unweighted": 1},
+     "nextKeys":
+     ["3e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017"],
+     "curThreshold": {"unweighted": 1},
+     "curKeys":
+     ["1f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8"]},
+    "aid": "BPbeCTEUzPz5UEX4J9Mk8JST2bZV3phvCQ8hWs0diM14"},
+   "id": "large-numbers",
+   "decoded":
+   {"state":
+    {"sn": "18446744073709551621",
+     "refundTo":
+     "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9acafb2b5b8bbbec1c4c7cacdd0",
+     "pool": 0,
+     "poisoned": false,
+     "frozen": false,
+     "form": "live",
+     "epoch": "1180591620717411303424",
+     "bornAt": 100},
+    "aid":
+    "42506265435445557a507a35554558344a394d6b384a535432625a56337068764351386857733064694d3134"},
+   "datum":
+   "d87a9fd8799f582c42506265435445557a507a35554558344a394d6b384a535432625a56337068764351386857733064694d3134c249010000000000000005c249400000000000000000d87980d8798018645f58400104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9acafb2b5b8bbbe46c1c4c7cacdd0ffd8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "consumer": {"now": 200, "accepted": true}}]}

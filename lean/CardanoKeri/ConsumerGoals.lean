@@ -55,7 +55,17 @@ theorem existing_eligibility_preserved (i : Interpretation) (c : Context)
     (context : authenticatedContext c e) (realizes : realizesState i c s o) :
     consumableHolding i c e p now o ↔ consumableState p now s := by
   rcases realizes with ⟨credential, quantity, datum⟩
-  cases s <;> simp_all [consumableHolding, consumableState, State.representativeHeld, State.hasOutput]
+  obtain ⟨⟨aid, st⟩, hd, hf⟩ := Option.map_eq_some_iff.mp datum
+  simp only [DecodedDatum.facts, DecodedDatum.mk.injEq] at hf
+  obtain ⟨rfl, hst⟩ := hf
+  -- The predicate never reads the pool, so equal datum facts give equal verdicts.
+  have facts : ∀ x : State, consumableState p now x.datumFacts ↔ consumableState p now x := by
+    intro x; cases x <;> simp [State.datumFacts, consumableState]
+  have holding : consumableHolding i c e p now o ↔
+      AH.quantity o (representativeAsset i c) = 1 ∧ consumableState p now st := by
+    simp [consumableHolding, context, credential, hd]
+  rw [holding, quantity, ← facts st, hst, facts]
+  cases s <;> simp [State.representativeHeld, State.hasOutput, consumableState]
 
 /-- CI04. Given different intended and actual networks; when a consumer checks
 any candidate; then it refuses regardless of asset or datum. The actual

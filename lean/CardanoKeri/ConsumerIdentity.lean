@@ -18,6 +18,16 @@ structure DecodedDatum where
   state : State
   deriving Repr, DecidableEq
 
+/-- The facts a checkpoint datum carries about a state. The premium pool is an
+amount held in the output's value, not a datum fact, so it is set to zero; the
+amounts are the separately named value obligation of `realizesState`. -/
+def _root_.CardanoKeri.Checkpoint.State.datumFacts : State → State
+  | .present l => .present { l with pool := 0 }
+  | s => s
+
+/-- A decoded datum with only its datum facts. -/
+def DecodedDatum.facts (d : DecodedDatum) : DecodedDatum := { d with state := d.state.datumFacts }
+
 structure Interpretation where
   hash : AH.Hash
   code : AH.Codec
@@ -102,12 +112,14 @@ def identityDomain (i : Interpretation) (c d : Context) : List AH.Preimage :=
 
 /-- Refinement boundary for a current ledger holding. Caller must establish it
 from a complete actual observation and the selected decoder, not old Origin
-metadata. Physical value/bond decoding is a separate named obligation. -/
+metadata. The datum carries the state's facts only (`State.datumFacts`): the
+premium pool and the bond amounts are held in the output's value, and reading
+them from the value is a separate named obligation. -/
 def realizesState (i : Interpretation) (c : Context) (s : State)
     (o : AH.ObservedOutput) : Prop :=
   o.credential = c.release.applicationCredential ∧
   AH.quantity o (representativeAsset i c) = s.representativeHeld ∧
-  decoded i c o = some ⟨c.aid, s⟩
+  (decoded i c o).map DecodedDatum.facts = some ⟨c.aid, s.datumFacts⟩
 
 /-- Faithfulness is a separate finite premise; originBinding alone does not
 prove that a consumer-allocated abstract registry id distinguishes registries. -/
@@ -206,7 +218,7 @@ def registrationAgreementB (i : Interpretation) (c : Context) (q : RegistrationI
     | .application raw, some expected => raw == expected
     | _, _ => false) &&
   AH.quantity o (representativeAsset i c) == 1 &&
-  decide (decoded i c o = some ⟨c.aid, st⟩) &&
+  decide ((decoded i c o).map DecodedDatum.facts = some ⟨c.aid, st.datumFacts⟩) &&
   moneyAgreementB q
 
 structure Registered where

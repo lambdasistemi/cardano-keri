@@ -162,7 +162,6 @@ seedTx, rivalSeedTx :: ByteString
 seedTx = BS.replicate 32 0xee
 rivalSeedTx = BS.replicate 32 0xdd
 
-
 -- ---------------------------------------------------------------------------
 -- Datum builders: the Lean version 2 layout, field by field
 -- ---------------------------------------------------------------------------
@@ -170,8 +169,9 @@ rivalSeedTx = BS.replicate 32 0xdd
 boolData :: Bool -> PLC.Data
 boolData b = PLC.Constr (if b then 1 else 0) []
 
--- | The key material the Lean vectors use: one current key, one next key, both
--- unweighted thresholds of 1, no witnesses, @toad@ 0.
+{- | The key material the Lean vectors use: one current key, one next key, both
+unweighted thresholds of 1, no witnesses, @toad@ 0.
+-}
 keyMaterialData :: PLC.Data
 keyMaterialData =
     PLC.Constr
@@ -184,8 +184,9 @@ keyMaterialData =
         , PLC.I 0
         ]
 
--- | Version 2, live: the AID's CESR text, sequence number, epoch, poisoned,
--- frozen, birth slot, refund address, key material.
+{- | Version 2, live: the AID's CESR text, sequence number, epoch, poisoned,
+frozen, birth slot, refund address, key material.
+-}
 liveDatum :: PLC.Data
 liveDatum =
     PLC.Constr
@@ -203,8 +204,9 @@ liveDatum =
             ]
         ]
 
--- | Version 2, termination pending: the AID's CESR text, sequence number,
--- epoch, key material.
+{- | Version 2, termination pending: the AID's CESR text, sequence number,
+epoch, key material.
+-}
 pendingDatum :: PLC.Data
 pendingDatum =
     PLC.Constr
@@ -214,8 +216,9 @@ pendingDatum =
             [PLC.B concreteAidText, PLC.I 0, PLC.I 0, keyMaterialData]
         ]
 
--- | The version 1 layout the checkpoint validator writes today (constructor 0,
--- no consumer facts), as the Lean vector @version-1@.
+{- | The version 1 layout the checkpoint validator writes today (constructor 0,
+no consumer facts), as the Lean vector @version-1@.
+-}
 versionOneDatum :: PLC.Data
 versionOneDatum =
     PLC.Constr
@@ -240,8 +243,9 @@ versionOneDatum =
 
 data DatumKind = LiveDatum | PendingDatum | VersionOneDatum
 
--- | A holding: the registry seed that names its token, how many of the token
--- it carries and what datum it carries.
+{- | A holding: the registry seed that names its token, how many of the token
+it carries and what datum it carries.
+-}
 data Scenario = Scenario
     { scName :: String
     , scSeedTx :: ByteString

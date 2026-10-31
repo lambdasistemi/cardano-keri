@@ -92,6 +92,7 @@ fn spends(v: IdentityVector, asset: Token, quantity: Int) -> Bool {
   spends_with(v, asset, quantity, live_datum(v.aid, 0))
 }
 
+/// Lean `written_holding_iff`: a genuine holding with a written, consumable datum is accepted.
 test accepts_the_holding_named_by_the_concrete_bytes() {
   let v = vector_transferable_aid()
   spends(v, v.asset, 1)
@@ -116,11 +117,13 @@ test refuses_quantity_two() {
   spends(v, v.asset, 1) && !spends(v, v.asset, 2)
 }
 
+/// Lean `written_holding_iff`: a written datum of a state that is not consumable is refused.
 test refuses_a_holding_with_termination_pending() {
   let v = vector_transferable_aid()
   spends(v, v.asset, 1) && !spends_with(v, v.asset, 1, pending_datum(v.aid))
 }
 
+/// Lean `version_one_holding_refused`.
 test refuses_a_holding_with_a_version_one_datum() {
   let v = vector_transferable_aid()
   spends(v, v.asset, 1) && !spends_with(v, v.asset, 1, version_one_datum(v.aid))

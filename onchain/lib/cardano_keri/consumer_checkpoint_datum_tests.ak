@@ -189,7 +189,7 @@ fn arbitrary_data() -> List<Data> {
   ]
 }
 
-/// `decode_accepts_only_written`, `unknown_form_refused`, ...: whatever the
+/// Lean `decode_accepts_only_written`, `unknown_form_refused`: whatever the
 /// shape, the answer is `None` and nothing aborts.
 test decoder_is_total_on_arbitrary_data() {
   list.all(arbitrary_data(), fn(d) { decoded(d) == None })
@@ -200,12 +200,14 @@ test decoder_is_total_on_arbitrary_data() {
 // version_arity_refused, unknown_form_refused)
 // ---------------------------------------------------------------------
 
+/// Lean `version_one_refused`.
 test version_one_is_refused() {
   decoded(constr_data(0, [constr_data(0, good_live())])) == None && decoded(
     constr_data(0, good_live()),
   ) == None
 }
 
+/// Lean `wrong_version_refused`.
 test other_versions_are_refused() {
   list.all(
     [2, 3, 6, 7, 127, 128, 1000],
@@ -215,12 +217,14 @@ test other_versions_are_refused() {
   )
 }
 
+/// Lean `version_arity_refused`.
 test version_arity_is_checked() {
   decoded(constr_data(1, [])) == None && decoded(
     constr_data(1, [constr_data(0, good_live()), constr_data(0, good_live())]),
   ) == None
 }
 
+/// Lean `unknown_form_refused`.
 test unknown_forms_are_refused() {
   list.all(
     [2, 3, 4, 100],
@@ -234,6 +238,7 @@ test unknown_forms_are_refused() {
 // Arity (live_arity_refused, pending_arity_refused)
 // ---------------------------------------------------------------------
 
+/// Lean `live_arity_refused`.
 test live_arity_is_checked() {
   list.all(
     [0, 1, 2, 3, 4, 5, 6, 7, 9, 10],
@@ -244,6 +249,7 @@ test live_arity_is_checked() {
   )
 }
 
+/// Lean `pending_arity_refused`.
 test pending_arity_is_checked() {
   list.all(
     [0, 1, 2, 3, 5, 6, 8],
@@ -302,6 +308,7 @@ fn live_state(
   }
 }
 
+/// Lean `decodeData_complete`, `decode_written`, `decodeData_datum`.
 test live_sn_epoch_born_at_decode_for_every_number() {
   list.all(
     numbers(),
@@ -332,6 +339,7 @@ test live_sn_epoch_born_at_decode_for_every_number() {
   )
 }
 
+/// Lean `decodeData_complete`, `decode_written`, `decodeData_datum`.
 test live_booleans_decode_in_every_combination() {
   list.all(
     [(False, False), (False, True), (True, False), (True, True)],
@@ -347,6 +355,7 @@ test live_booleans_decode_in_every_combination() {
   )
 }
 
+/// Lean `decodeData_complete`, `decode_written`, `decodeData_datum`.
 test live_aid_and_refund_decode_for_every_byte_string() {
   list.all(
     byte_strings(),
@@ -361,6 +370,7 @@ test live_aid_and_refund_decode_for_every_byte_string() {
   )
 }
 
+/// Lean `decodeData_complete`, `decode_written`, `decodeData_datum`.
 test pending_fields_decode_for_every_value() {
   list.all(
     numbers(),
@@ -418,6 +428,7 @@ fn valid_key_materials() -> List<Data> {
 
 /// The key material is read for its shape, never for its values: every shape
 /// the Lean accepts decodes to the same state.
+/// Lean `decodeData_complete`, `decode_written`.
 test valid_key_materials_decode() {
   list.all(
     valid_key_materials(),
@@ -518,6 +529,7 @@ fn pending_replacements(i: Int) -> List<Data> {
   }
 }
 
+/// Lean `live_fields_typed`.
 test live_fields_are_typed() {
   list.all(
     indices(8),
@@ -530,6 +542,7 @@ test live_fields_are_typed() {
   )
 }
 
+/// Lean `pending_fields_typed`.
 test pending_fields_are_typed() {
   list.all(
     indices(4),
@@ -613,6 +626,7 @@ fn key_replacements(i: Int) -> List<Data> {
 
 /// Every component of the key material is read for its shape, in a live and
 /// in a pending-termination datum.
+/// Lean `live_fields_typed`, `pending_fields_typed`.
 test key_material_components_are_typed() {
   list.all(
     indices(6),
@@ -634,6 +648,7 @@ test key_material_components_are_typed() {
 // decode_release_independent
 // ---------------------------------------------------------------------
 
+/// Lean `decode_release_independent`.
 test the_release_does_not_select_the_layout() {
   let other = PublishedRelease {
     application_policy: #"",

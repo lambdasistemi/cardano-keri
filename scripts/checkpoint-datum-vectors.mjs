@@ -241,6 +241,36 @@ const buildData = (d) => {
   return { stmts, root };
 };
 
+// The Lean theorems (lean/CardanoKeri/CheckpointDatumGoals.lean) each row
+// exhibits, named in the doc comment of its tests. Accepted rows exhibit the
+// written-datum theorems; a refused row exhibits the refusal theorem of its
+// change.
+const refusedTheorem = {
+  'version-1': 'version_one_refused',
+  'version-3': 'wrong_version_refused',
+  'version-no-field': 'version_arity_refused',
+  'version-two-fields': 'version_arity_refused',
+  'unknown-form': 'unknown_form_refused',
+  'live-seven-fields': 'live_arity_refused',
+  'live-nine-fields': 'live_arity_refused',
+  'pending-five-fields': 'pending_arity_refused',
+  'pending-negative-epoch': 'pending_fields_typed',
+  'not-a-constructor': 'decode_accepts_only_written',
+  'trailing-byte': 'decode_accepts_only_written',
+  'truncated': 'decode_accepts_only_written',
+  'empty': 'decode_accepts_only_written',
+  'break-byte': 'decode_accepts_only_written',
+};
+const liveFieldRows = ['aid-integer', 'sn-negative', 'epoch-bytes', 'poisoned-not-boolean', 'poisoned-boolean-with-field', 'frozen-integer', 'born-at-negative', 'refund-integer', 'keys-list', 'keys-five-fields', 'key-integer', 'threshold-unknown-form', 'weight-one-field', 'witnesses-map', 'toad-bytes'];
+for (const id of liveFieldRows) refusedTheorem[id] = 'live_fields_typed';
+const decodeTheorems = (r) => {
+  if (r.accepted) return '`decodeData_datum`, `decode_written`';
+  if (!refusedTheorem[r.id]) throw new Error(`${r.id}: no refusal theorem named for this row`);
+  return [...new Set([refusedTheorem[r.id], 'decode_accepts_only_written'])].map((t) => `\`${t}\``).join(', ');
+};
+const verdictTheorems = (r) =>
+  r.id === 'version-1' ? '`version_one_holding_refused`, `written_holding_iff`' : '`written_holding_iff`';
+
 const rows = [
   ...data.accepted.map((r) => ({ ...r, accepted: true })),
   ...data.refused.map((r) => ({ ...r, accepted: false })),
@@ -289,6 +319,8 @@ ${stmts.map((x) => '  ' + x).join('\n')}
   }
   return {
     id,
+    decodeTheorems: decodeTheorems(r),
+    verdictTheorems: verdictTheorems(r),
     text: constructionFn + `/// Vector \`${r.id}\`: ${r.note}.
 pub fn vector_${id}() -> DatumVector {
   DatumVector {
@@ -336,8 +368,8 @@ let body = '';
 for (const v of vs) body += `\n${v.text}`;
 body += `\n/// Every vector, in file order: the accepted rows, then the refused rows.\npub fn vectors() -> List<DatumVector> {\n  [\n${vs.map((v) => `    vector_${v.id}(),\n`).join('')}  ]\n}\n`;
 for (const v of vs) {
-  body += `\ntest decode_${v.id}() {\n  decode_ok(vector_${v.id}())\n}\n`;
-  body += `\ntest verdict_${v.id}() {\n  verdict_ok(vector_${v.id}())\n}\n`;
+  body += `\n/// Lean ${v.decodeTheorems}: the decoder returns the row's result.\ntest decode_${v.id}() {\n  decode_ok(vector_${v.id}())\n}\n`;
+  body += `\n/// Lean ${v.verdictTheorems}: the consumer's verdict on a genuine holding is the row's.\ntest verdict_${v.id}() {\n  verdict_ok(vector_${v.id}())\n}\n`;
 }
 
 const imports = `

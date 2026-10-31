@@ -664,290 +664,362 @@ pub fn vectors() -> List<DatumVector> {
   ]
 }
 
+/// Lean `decodeData_datum`, `decode_written`: the decoder returns the row's result.
 test decode_registered_funded() {
   decode_ok(vector_registered_funded())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_registered_funded() {
   verdict_ok(vector_registered_funded())
 }
 
+/// Lean `decodeData_datum`, `decode_written`: the decoder returns the row's result.
 test decode_registered_juvenile() {
   decode_ok(vector_registered_juvenile())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_registered_juvenile() {
   verdict_ok(vector_registered_juvenile())
 }
 
+/// Lean `decodeData_datum`, `decode_written`: the decoder returns the row's result.
 test decode_rotated() {
   decode_ok(vector_rotated())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_rotated() {
   verdict_ok(vector_rotated())
 }
 
+/// Lean `decodeData_datum`, `decode_written`: the decoder returns the row's result.
 test decode_poisoned() {
   decode_ok(vector_poisoned())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_poisoned() {
   verdict_ok(vector_poisoned())
 }
 
+/// Lean `decodeData_datum`, `decode_written`: the decoder returns the row's result.
 test decode_frozen() {
   decode_ok(vector_frozen())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_frozen() {
   verdict_ok(vector_frozen())
 }
 
+/// Lean `decodeData_datum`, `decode_written`: the decoder returns the row's result.
 test decode_pending_termination() {
   decode_ok(vector_pending_termination())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_pending_termination() {
   verdict_ok(vector_pending_termination())
 }
 
+/// Lean `decodeData_datum`, `decode_written`: the decoder returns the row's result.
 test decode_large_numbers() {
   decode_ok(vector_large_numbers())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_large_numbers() {
   verdict_ok(vector_large_numbers())
 }
 
+/// Lean `version_one_refused`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_version_1() {
   decode_ok(vector_version_1())
 }
 
+/// Lean `version_one_holding_refused`, `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_version_1() {
   verdict_ok(vector_version_1())
 }
 
+/// Lean `wrong_version_refused`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_version_3() {
   decode_ok(vector_version_3())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_version_3() {
   verdict_ok(vector_version_3())
 }
 
+/// Lean `version_arity_refused`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_version_no_field() {
   decode_ok(vector_version_no_field())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_version_no_field() {
   verdict_ok(vector_version_no_field())
 }
 
+/// Lean `version_arity_refused`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_version_two_fields() {
   decode_ok(vector_version_two_fields())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_version_two_fields() {
   verdict_ok(vector_version_two_fields())
 }
 
+/// Lean `unknown_form_refused`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_unknown_form() {
   decode_ok(vector_unknown_form())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_unknown_form() {
   verdict_ok(vector_unknown_form())
 }
 
+/// Lean `live_arity_refused`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_live_seven_fields() {
   decode_ok(vector_live_seven_fields())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_live_seven_fields() {
   verdict_ok(vector_live_seven_fields())
 }
 
+/// Lean `live_arity_refused`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_live_nine_fields() {
   decode_ok(vector_live_nine_fields())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_live_nine_fields() {
   verdict_ok(vector_live_nine_fields())
 }
 
+/// Lean `pending_arity_refused`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_pending_five_fields() {
   decode_ok(vector_pending_five_fields())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_pending_five_fields() {
   verdict_ok(vector_pending_five_fields())
 }
 
+/// Lean `pending_fields_typed`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_pending_negative_epoch() {
   decode_ok(vector_pending_negative_epoch())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_pending_negative_epoch() {
   verdict_ok(vector_pending_negative_epoch())
 }
 
+/// Lean `live_fields_typed`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_aid_integer() {
   decode_ok(vector_aid_integer())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_aid_integer() {
   verdict_ok(vector_aid_integer())
 }
 
+/// Lean `live_fields_typed`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_sn_negative() {
   decode_ok(vector_sn_negative())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_sn_negative() {
   verdict_ok(vector_sn_negative())
 }
 
+/// Lean `live_fields_typed`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_epoch_bytes() {
   decode_ok(vector_epoch_bytes())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_epoch_bytes() {
   verdict_ok(vector_epoch_bytes())
 }
 
+/// Lean `live_fields_typed`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_poisoned_not_boolean() {
   decode_ok(vector_poisoned_not_boolean())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_poisoned_not_boolean() {
   verdict_ok(vector_poisoned_not_boolean())
 }
 
+/// Lean `live_fields_typed`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_poisoned_boolean_with_field() {
   decode_ok(vector_poisoned_boolean_with_field())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_poisoned_boolean_with_field() {
   verdict_ok(vector_poisoned_boolean_with_field())
 }
 
+/// Lean `live_fields_typed`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_frozen_integer() {
   decode_ok(vector_frozen_integer())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_frozen_integer() {
   verdict_ok(vector_frozen_integer())
 }
 
+/// Lean `live_fields_typed`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_born_at_negative() {
   decode_ok(vector_born_at_negative())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_born_at_negative() {
   verdict_ok(vector_born_at_negative())
 }
 
+/// Lean `live_fields_typed`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_refund_integer() {
   decode_ok(vector_refund_integer())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_refund_integer() {
   verdict_ok(vector_refund_integer())
 }
 
+/// Lean `live_fields_typed`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_keys_list() {
   decode_ok(vector_keys_list())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_keys_list() {
   verdict_ok(vector_keys_list())
 }
 
+/// Lean `live_fields_typed`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_keys_five_fields() {
   decode_ok(vector_keys_five_fields())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_keys_five_fields() {
   verdict_ok(vector_keys_five_fields())
 }
 
+/// Lean `live_fields_typed`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_key_integer() {
   decode_ok(vector_key_integer())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_key_integer() {
   verdict_ok(vector_key_integer())
 }
 
+/// Lean `live_fields_typed`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_threshold_unknown_form() {
   decode_ok(vector_threshold_unknown_form())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_threshold_unknown_form() {
   verdict_ok(vector_threshold_unknown_form())
 }
 
+/// Lean `live_fields_typed`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_weight_one_field() {
   decode_ok(vector_weight_one_field())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_weight_one_field() {
   verdict_ok(vector_weight_one_field())
 }
 
+/// Lean `live_fields_typed`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_witnesses_map() {
   decode_ok(vector_witnesses_map())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_witnesses_map() {
   verdict_ok(vector_witnesses_map())
 }
 
+/// Lean `live_fields_typed`, `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_toad_bytes() {
   decode_ok(vector_toad_bytes())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_toad_bytes() {
   verdict_ok(vector_toad_bytes())
 }
 
+/// Lean `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_not_a_constructor() {
   decode_ok(vector_not_a_constructor())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_not_a_constructor() {
   verdict_ok(vector_not_a_constructor())
 }
 
+/// Lean `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_trailing_byte() {
   decode_ok(vector_trailing_byte())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_trailing_byte() {
   verdict_ok(vector_trailing_byte())
 }
 
+/// Lean `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_truncated() {
   decode_ok(vector_truncated())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_truncated() {
   verdict_ok(vector_truncated())
 }
 
+/// Lean `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_empty() {
   decode_ok(vector_empty())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_empty() {
   verdict_ok(vector_empty())
 }
 
+/// Lean `decode_accepts_only_written`: the decoder returns the row's result.
 test decode_break_byte() {
   decode_ok(vector_break_byte())
 }
 
+/// Lean `written_holding_iff`: the consumer's verdict on a genuine holding is the row's.
 test verdict_break_byte() {
   verdict_ok(vector_break_byte())
 }

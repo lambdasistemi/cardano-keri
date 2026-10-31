@@ -151,9 +151,20 @@ pub fn decode_row(
   }
 }
 
+/// A row whose `Data` the generator built serialises back to the row's datum
+/// bytes: the built `Data` is the datum the Lean describes, not a stand-in
+/// that merely decodes. A row read by the standard library has nothing to
+/// check here.
+pub fn reads_back(v: DatumVector) -> Bool {
+  when v.construction is {
+    Some(raw) -> cbor.serialise(raw) == v.datum
+    None -> True
+  }
+}
+
 /// The decoder returns the row's `decoded`.
 pub fn decode_ok(v: DatumVector) -> Bool {
-  decode_row(context_for(v.aid).release, v) == v.decoded
+  reads_back(v) && decode_row(context_for(v.aid).release, v) == v.decoded
 }
 
 /// A genuine holding of the context's representative asset carrying `raw`.
@@ -198,5 +209,5 @@ pub fn consumer_accepts(c: Context, now: Int, v: DatumVector) -> Bool {
 
 /// The consumer's verdict is the row's.
 pub fn verdict_ok(v: DatumVector) -> Bool {
-  consumer_accepts(context_for(v.aid), v.now, v) == v.accepted
+  reads_back(v) && consumer_accepts(context_for(v.aid), v.now, v) == v.accepted
 }

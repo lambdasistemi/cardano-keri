@@ -26,7 +26,6 @@
 //// stands in for the ledger's parse. Not for mainnet.
 
 use aiken/builtin
-use aiken/collection/list
 use cardano_keri/consumer.{
   DecodedDatum, Hash, Live, Present, PublishedRelease, TerminationPending,
 }

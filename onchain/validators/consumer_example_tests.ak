@@ -14,7 +14,7 @@ use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, placeholder,
 }
 use cardano_keri/consumer.{
-  Absent, Context, Convicted, DecodedDatum, Hash, Live, Params, Parked, Present,
+  Absent, Context, Convicted, DecodedDatum, Hash, Live, Params, Present,
   PublishedRelease, State, TerminationPending,
 }
 use consumer_example
@@ -168,11 +168,8 @@ test refuses_quantity_two() {
   !spend([reference(0, holding(intended(), 2, live(0)))], from(1000))
 }
 
-test refuses_parked_and_pending_and_retired_states() {
+test refuses_pending_and_retired_states() {
   !spend(
-    [reference(0, holding(intended(), 1, Parked(Hash { epoch: 0, sn: 0 })))],
-    from(1000),
-  ) && !spend(
     [
       reference(
         0,
@@ -209,4 +206,34 @@ test refuses_without_a_finite_lower_bound() fail {
     },
   )
   True
+}
+
+/// The holding datum as bytes on the wire, with the state left raw.
+type RawHolding {
+  aid: Int,
+  state: Data,
+}
+
+/// A hash-carrying state at constructor 2: the former parked state. The
+/// consumer reads constructor 2 as a pending termination, which it refuses.
+type StateTwoWithHash {
+  StateZero
+  StateOne
+  FormerParked(Hash)
+}
+
+test refuses_a_holding_at_the_former_parked_constructor() {
+  let state: Data = FormerParked(Hash { epoch: 0, sn: 0 })
+  let datum: Data = RawHolding { aid: 42, state }
+  let output = Output {
+    address: Address {
+      payment_credential: Script(app_credential),
+      stake_credential: None,
+    },
+    value: from_lovelace(3000000)
+      |> assets.add(state_policy, intended(), 1),
+    datum: InlineDatum(datum),
+    reference_script: None,
+  }
+  !spend([reference(0, output)], from(1000))
 }

@@ -150,7 +150,6 @@ Independent uses have independent, versioned domains:
 |---|---|
 | Checkpoint asset locator | `cardano-keri/checkpoint-asset/v1` |
 | Signed Advance message | `cardano-keri/checkpoint/adv/v1` |
-| Signed Close message | `cardano-keri/checkpoint/close/v1` |
 | Non-ACTIVE role-address derivation | `cardano-keri/checkpoint/role/v1` |
 
 The asset derivation also includes the `0x45` E-code byte before the raw AID.

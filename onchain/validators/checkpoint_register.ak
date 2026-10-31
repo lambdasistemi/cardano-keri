@@ -17,9 +17,6 @@ use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Redeemer, ScriptPurpose,
   Transaction, Withdraw, find_input,
 }
-use cardano_keri/checkpoint/close.{
-  CloseContext, CloseEvidence, CloseValid, close_predicate,
-}
 use cardano_keri/checkpoint/datum.{CheckpointDatum, CheckpointDatumV1, V1}
 use cardano_keri/checkpoint/enforcement_observer.{authorized_payee}
 use cardano_keri/checkpoint/freeze_bond.{
@@ -37,12 +34,9 @@ use cardano_keri/checkpoint/role.{Active, Armed}
 
 /// Registration evidence is carried by the lifecycle observer withdrawal.
 ///
-/// The #254 migration arms are appended, never inserted: constructor indices
-/// are wire surface, so an existing redeemer must keep the index it was
-/// deployed with.
+/// Constructor indices are wire surface: new arms are appended, never inserted.
 pub type MintRedeemer {
   Register
-  CloseBurn { checkpoint_ref: OutputReference }
   ConvictBurn { checkpoint_ref: OutputReference }
   /// Enter this generation from its pinned predecessor (#254 T254-104). The
   /// verdict runs in the promoted migration observer; this arm owns the token
@@ -54,7 +48,6 @@ pub type MintRedeemer {
 }
 
 pub type SpendRedeemer {
-  Close { evidence: CloseEvidence }
   Advance
   Freeze { hunter_pkh: ByteArray }
   ClaimFreeze { hunter_output_index: Int }
@@ -78,6 +71,7 @@ validator checkpoint_register(
   /// `observer_enforcement` on every Freeze/Convict settlement; both
   /// withdrawal redeemers must be the same envelope value.
   entitlement_hash: PolicyId,
+  /// Applied for a stable arity; this program no longer reads it.
   network_id: Int,
   d_reg: Int,
   freeze_bond: Int,
@@ -92,8 +86,6 @@ validator checkpoint_register(
         expect ran_register_check(lifecycle_hash, policy_id, tx)
         validate_register(d_reg, freeze_bond, policy_id, tx)
       }
-      CloseBurn { checkpoint_ref } ->
-        validate_close_burn(d_reg, freeze_bond, checkpoint_ref, policy_id, tx)
       ConvictBurn { checkpoint_ref } ->
         validate_convict_burn(d_reg, freeze_bond, checkpoint_ref, policy_id, tx)
       MigrateInMint { source_ref } -> {
@@ -117,8 +109,6 @@ validator checkpoint_register(
     expect freeze_bond_valid(freeze_bond)
     expect freeze_window_valid(freeze_window)
     when redeemer is {
-      Close { evidence } ->
-        validate_close(network_id, d_reg, freeze_bond, evidence, own_ref, tx)
       Advance -> {
         expect
           ran_advance_check(advance_hash, own_hash(tx, own_ref), own_ref, tx)
@@ -469,42 +459,6 @@ fn validate_register(
   True
 }
 
-fn validate_close_burn(
-  d_reg: Int,
-  freeze_bond: Int,
-  checkpoint_ref: OutputReference,
-  policy_id: PolicyId,
-  tx: Transaction,
-) -> Bool {
-  let Transaction { inputs, outputs, mint, .. } = tx
-  expect Some(checkpoint_input) = find_input(inputs, checkpoint_ref)
-  expect checkpoint_input.output.address == from_script(policy_id)
-  expect InlineDatum(datum_data) = checkpoint_input.output.datum
-  expect V1(old): CheckpointDatum = datum_data
-  let aid_name = deriveAidAssetName(old.cesr_aid)
-  expect
-    checkpoint_input.output.value == (
-      from_lovelace(lovelace_of(checkpoint_input.output.value))
-        |> merge(from_asset(policy_id, aid_name, 1))
-    )
-  expect
-    lovelace_of(checkpoint_input.output.value) >= checkpoint_min_ada + d_reg + freeze_bond
-  expect dict.to_pairs(tokens(mint, policy_id)) == [Pair(aid_name, -1)]
-  expect
-    list.length(
-      list.filter(
-        inputs,
-        fn(input) { quantity_of(input.output.value, policy_id, aid_name) == 1 },
-      ),
-    ) == 1
-  expect
-    list.all(
-      outputs,
-      fn(output) { quantity_of(output.value, policy_id, aid_name) == 0 },
-    )
-  True
-}
-
 fn convict_source(
   d_reg: Int,
   freeze_bond: Int,
@@ -565,59 +519,6 @@ fn validate_convict_burn(
     list.all(
       outputs,
       fn(output) { quantity_of(output.value, policy_id, aid_name) == 0 },
-    )
-  True
-}
-
-fn validate_close(
-  network_id: Int,
-  d_reg: Int,
-  freeze_bond: Int,
-  evidence: CloseEvidence,
-  own_ref: OutputReference,
-  tx: Transaction,
-) -> Bool {
-  let Transaction { inputs, outputs, mint, .. } = tx
-  expect Some(own_input) = find_input(inputs, own_ref)
-  expect Script(own_hash) = own_input.output.address.payment_credential
-  expect own_input.output.address == from_script(own_hash)
-  expect InlineDatum(datum_data) = own_input.output.datum
-  expect V1(old): CheckpointDatum = datum_data
-  let aid_name = deriveAidAssetName(old.cesr_aid)
-  expect
-    own_input.output.value == (
-      from_lovelace(lovelace_of(own_input.output.value))
-        |> merge(from_asset(own_hash, aid_name, 1))
-    )
-  expect
-    lovelace_of(own_input.output.value) >= checkpoint_min_ada + d_reg + freeze_bond
-  expect
-    close_predicate(
-      CloseContext {
-        network_id,
-        checkpoint_policy_id: own_hash,
-        spent_txid: own_ref.transaction_id,
-        spent_index: own_ref.output_index,
-        old,
-      },
-      evidence,
-    ) == CloseValid
-  expect dict.to_pairs(tokens(mint, own_hash)) == [Pair(aid_name, -1)]
-  expect evidence.refund_address.payment_credential != Script(own_hash)
-  expect [refund] = list.filter(
-    outputs,
-    fn(output) { output.address == evidence.refund_address },
-  )
-  expect refund.datum == NoDatum
-  expect
-    refund.value == merge(
-      own_input.output.value,
-      from_asset(own_hash, aid_name, -1),
-    )
-  expect
-    list.all(
-      outputs,
-      fn(output) { quantity_of(output.value, own_hash, aid_name) == 0 },
     )
   True
 }

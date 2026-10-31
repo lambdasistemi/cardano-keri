@@ -17,10 +17,6 @@ pub const abandonment_pays_exactly_B: Bool = True
 
 pub const frozen_implies_true_silence: Bool = True
 
-pub const close_lie_always_voidable: Bool = True
-
-pub const close_at_tip_unchallengeable: Bool = True
-
 pub const current_state_is_quiet: Bool = True
 
 pub const value_conservation: Bool = True
@@ -32,5 +28,3 @@ pub const convict_dominance: Bool = True
 pub const tombstone_terminal_but_no_aid_bar: Bool = True
 
 pub const replay_convergence: Bool = True
-
-pub const close_cycle_requires_elapsed_window: Bool = True

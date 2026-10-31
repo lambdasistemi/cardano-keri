@@ -82,7 +82,6 @@ pub type Live {
 pub type State {
   Absent
   Present(Live)
-  Parked(Hash)
   TerminationPending(Hash)
   Convicted
 }
@@ -153,7 +152,6 @@ pub fn authenticated_context(c: Context, e: Environment) -> Bool {
 pub fn consumable_state(p: Params, now: Int, s: State) -> Bool {
   when s is {
     Present(l) -> !l.frozen && !l.poisoned && l.born_at + p.w <= now
-    Parked(_) -> False
     TerminationPending(_) -> False
     Absent -> False
     Convicted -> False

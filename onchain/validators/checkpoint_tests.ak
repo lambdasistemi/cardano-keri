@@ -25,6 +25,7 @@
 //// Ordinary fixtures use the non-normative reference d_reg =
 //// 1_000_000_000 lovelace.
 
+use aiken/builtin
 use aiken/cbor
 use aiken/collection/list
 use aiken/crypto.{blake2b_256}
@@ -59,7 +60,7 @@ use cardano_keri/checkpoint/registration.{
 use cardano_keri/checkpoint/registration_vectors as vec
 use cardano_keri/checkpoint/role.{Active, Armed, Frozen, Tombstone}
 use cardano_keri/checkpoint/threshold.{Unweighted, Weight, Weighted}
-use checkpoint.{Advance, Close, Register}
+use checkpoint.{Advance, Register}
 
 /// Test-side encoding of the ratified Slice-4 spend redeemer. Keeping this
 /// local makes the RED diff test-only while still exercising the real handler's
@@ -68,7 +69,6 @@ type Slice4SpendRedeemer {
   Slice4Advance { evidence: AdvanceEvidence }
   Slice4Freeze { evidence: EnforcementEvidence }
   Slice4Convict
-  Slice4Close
 }
 
 /// Test-side encoding of the ratified Slice-5 spend redeemer. The constructor
@@ -79,7 +79,6 @@ type Slice5SpendRedeemer {
   Slice5Advance { evidence: AdvanceEvidence }
   Slice5Freeze { evidence: EnforcementEvidence }
   Slice5Convict { evidence: EnforcementEvidence }
-  Slice5Close
 }
 
 /// Test-side target wire for T116-R2. Its constructor order is the exact
@@ -90,7 +89,6 @@ type R2SpendRedeemer {
   R2Freeze { evidence: EnforcementEvidence, hunter_pkh: ByteArray }
   R2ClaimFreeze { hunter_output_index: Int }
   R2Convict
-  R2Close
 }
 
 /// Test-side target wire for T116-R3. The constructor order preserves the R2
@@ -107,7 +105,6 @@ type R3SpendRedeemer {
     convictor_output_index: Int,
     hunter_output_index: Int,
   }
-  R3Close
 }
 
 /// The hash-proof policy parameter (Tx A's policy; any 28-byte id — the
@@ -773,7 +770,7 @@ test reject_r10_spend_fails_closed() fail {
 // (V1-V3) plus one end-to-end predicate-evidence rejection through V4-V7
 // (the exhaustive AE/W/ctrl/receipt families already live in
 // advance_tests.ak at the predicate level). Slice 4 below opens Freeze and
-// ordinary-Advance thaw while Convict/Close stay fail-closed.
+// ordinary-Advance thaw while Convict stays fail-closed.
 // ---------------------------------------------------------------------
 
 /// Advance vectors were generated under network_id = 1 (the Register
@@ -2732,11 +2729,6 @@ test t116_s5_f11_reject_convict_from_terminal_tombstone() fail {
   run_advance(redeemer, convict_own_ref, terminal_tombstone_tx())
 }
 
-test t116_s5_f11_reject_close_from_terminal_tombstone() fail {
-  let redeemer: Data = Slice5Close
-  run_advance(redeemer, convict_own_ref, terminal_tombstone_tx())
-}
-
 // A same-AID tombstone may be supplied as read-only history and does not
 // prevent creation of a fresh independent ACTIVE registration.
 test t114_r3_accept_post_conviction_via_reference_input() {
@@ -3813,10 +3805,6 @@ test t116_r2_stage_reject_convict() fail {
   )
 }
 
-test t116_r2_stage_reject_close() fail {
-  run_r2(R2Close, r2_arm_tx(enf_vec.lag_freeze_tip))
-}
-
 /// D2 retained guard: reference-only same-AID history cannot weaken the live
 /// reserve; a repeated registration one lovelace below `min+D_reg+B` rejects.
 test t114_r3_reject_repeated_registration_one_below_bonded_floor() fail {
@@ -3841,15 +3829,6 @@ test t114_r3_reject_repeated_registration_one_below_bonded_floor() fail {
   run_register(
     vec.pos_2key_evidence,
     Transaction { ..tx, reference_inputs: [tombstone] },
-  )
-}
-
-test reject_close_fails_closed() fail {
-  let spent = adv_vec.pos_adv_wit_2key_spent
-  run_advance(
-    Close,
-    advance_own_ref(spent),
-    advance_tx(spent, old_adv_wit_2key, adv_vec.pos_adv_wit_2key_created),
   )
 }
 
@@ -4873,7 +4852,6 @@ type S254ESpendRedeemer {
     hunter_output_index: Int,
     reveal: S254EReveal,
   }
-  S254EClose
 }
 
 /// The canonical digest of the COMPLETE actual enforcement payload. Any
@@ -5785,3 +5763,14 @@ const applied_commitment: CommitmentFamily =
       commit_deposit: s254e_commit_deposit,
     },
   }
+
+/// The last constructor of the former spend redeemer, `Close`, is gone: its
+/// constructor index (4) is not a spend action.
+test reject_removed_close_constructor() fail {
+  let spent = adv_vec.pos_adv_wit_2key_spent
+  run_advance(
+    builtin.constr_data(4, []),
+    advance_own_ref(spent),
+    advance_tx(spent, old_adv_wit_2key, adv_vec.pos_adv_wit_2key_created),
+  )
+}

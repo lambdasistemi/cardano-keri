@@ -38,3 +38,6 @@ node simulator/consumer-js-mutants.mjs "$consumer_mutation_receipts"
   rm -f -- "$generated"
   lake env lean --run CheckpointDatumDriver.lean --check checkpoint-datum-vectors.json
 )
+# The Aiken test module generated from those vectors (#343) is exactly what
+# the committed vectors generate: one decoder test and one consumer test per row.
+node scripts/checkpoint-datum-vectors.mjs --check

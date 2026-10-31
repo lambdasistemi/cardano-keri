@@ -4,35 +4,32 @@
 
 {- |
 Module      : ConsumerE2ESpec
-Description : Connected boundary for the consumer predicate (#343 slice 2)
+Description : Connected boundary for the consumer predicate (#343)
 
 Starts a protocol devnet and exercises the example relying contract
-(@consumer_example@) that reads a candidate holding as a reference input and
-spends only if the Lean's @consumableHoldingB@ holds for it.
+(@consumer_identity_example@) that reads a candidate holding as a reference
+input and spends only if the Lean's @consumableHoldingB@ holds for it, on the
+concrete identity bytes and the datum decoder of the Lean model
+(@consumer_identity_bytes@, @consumer_checkpoint_datum@).
 
-Two labels bound what this proves:
+The registry name, the key and the representative name are recomputed here from
+the Lean layout, and checked against the vectors of
+@lean/consumer-identity-vectors.json@ before they name anything on chain. The
+holdings carry version 2 checkpoint datums written field by field from the
+layout of @lean/CardanoKeri/CheckpointDatum.lean@, the AID as its qualified
+CESR text.
 
-* test interpretation, not the registry byte layout: the hash, codec,
-  AID-to-key map and datum decoder are the declared test functions of
-  @consumer_test_interpretation@; the token names below are recomputed here
-  from that definition, not read back from the validator;
-* seeded holding, not a registration journey: the holdings are minted by the
-  test-only policy @consumer_seed_policy@ at a test application credential. The
-  genuine registration journey belongs to #324.
+One label bounds what this proves: a seeded holding, not a registration
+journey. The holdings are minted by the test-only policy
+@consumer_seed_policy@ at a test application credential; the genuine
+registration journey belongs to #324. The pool and the bond amounts are held in
+the output's value and are not read from it (#339).
 
 One accepting transaction settles. Every refusal is a Phase-2 failure of the
 consumer script: its transaction passes every ledger rule, carries no other
 script, and is rejected by the node when that script evaluates false. The
 refusals differ from the accepting transaction only in the holding they
 reference.
-
-The same journey runs a second time with the concrete identity bytes of the
-Lean model (@consumer_identity_example@, @consumer_identity_bytes@): the
-registry name, the key and the representative name are recomputed here from
-the Lean layout, and checked against the vectors of
-@lean/consumer-identity-vectors.json@ before they name anything on chain. The
-datum decoder is still the declared test choice, and the holdings are still
-seeded.
 -}
 module ConsumerE2ESpec (spec) where
 
@@ -146,10 +143,6 @@ type Utxo = (TxIn, TxOut ConwayEra)
 contextNetwork :: Integer
 contextNetwork = 0
 
--- | The intended AID.
-intendedAid :: Integer
-intendedAid = 42
-
 -- | Checkpoint parameters: only @w@ is read; maturity is one time unit.
 paramsData :: PLC.Data
 paramsData = PLC.Constr 0 [PLC.I 3, PLC.I 2, PLC.I 1, PLC.I 1]
@@ -170,118 +163,130 @@ seedTx = BS.replicate 32 0xee
 rivalSeedTx = BS.replicate 32 0xdd
 
 -- ---------------------------------------------------------------------------
--- The declared test interpretation, written out for the off-chain side
--- ---------------------------------------------------------------------------
-
-be8 :: Integer -> ByteString
-be8 n = BS.pack [fromIntegral (n `shiftR` (8 * k)) | k <- [7, 6 .. 0]]
-
--- | @code(State seed)@ then @hash@: the registry asset name.
-registryName :: ByteString -> ByteString
-registryName tx = blake2b256 (BS.concat [BS.singleton 0, tx, be8 0])
-
--- | @hash(code(Active registry key))@: the representative asset name.
-representativeName :: ByteString -> ByteString -> ByteString
-representativeName statePolicy tx =
-    blake2b256
-        ( BS.concat
-            [BS.singleton 1, statePolicy, registryName tx, be8 intendedAid]
-        )
-
--- ---------------------------------------------------------------------------
--- Datum builders (Plutus data of the Aiken types)
+-- Datum builders: the Lean version 2 layout, field by field
 -- ---------------------------------------------------------------------------
 
 boolData :: Bool -> PLC.Data
 boolData b = PLC.Constr (if b then 1 else 0) []
 
-liveData :: Integer -> PLC.Data
-liveData bornAt =
+{- | The key material the Lean vectors use: one current key, one next key, both
+unweighted thresholds of 1, no witnesses, @toad@ 0.
+-}
+keyMaterialData :: PLC.Data
+keyMaterialData =
     PLC.Constr
         0
-        [ PLC.I 0
+        [ PLC.List [PLC.B (unhex "1f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8")]
+        , PLC.Constr 0 [PLC.I 1]
+        , PLC.List [PLC.B (unhex "3e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017")]
+        , PLC.Constr 0 [PLC.I 1]
+        , PLC.List []
         , PLC.I 0
-        , boolData False
-        , boolData False
-        , PLC.I bornAt
-        , PLC.I 7
-        , PLC.I 5
         ]
 
-data StateKind = Absent | Present | Pending | Convicted
+{- | Version 2, live: the AID's CESR text, sequence number, epoch, poisoned,
+frozen, birth slot, refund address, key material.
+-}
+liveDatum :: PLC.Data
+liveDatum =
+    PLC.Constr
+        1
+        [ PLC.Constr
+            0
+            [ PLC.B concreteAidText
+            , PLC.I 0
+            , PLC.I 0
+            , boolData False
+            , boolData False
+            , PLC.I 0
+            , PLC.B (BS.pack [1, 2, 3, 4])
+            , keyMaterialData
+            ]
+        ]
 
-stateData :: StateKind -> PLC.Data
-stateData Absent = PLC.Constr 0 []
-stateData Present = PLC.Constr 1 [liveData 0]
-stateData Pending = PLC.Constr 2 [PLC.Constr 0 [PLC.I 0, PLC.I 0]]
-stateData Convicted = PLC.Constr 3 []
+{- | Version 2, termination pending: the AID's CESR text, sequence number,
+epoch, key material.
+-}
+pendingDatum :: PLC.Data
+pendingDatum =
+    PLC.Constr
+        1
+        [ PLC.Constr
+            1
+            [PLC.B concreteAidText, PLC.I 0, PLC.I 0, keyMaterialData]
+        ]
 
-decodedDatum :: Integer -> StateKind -> PLC.Data
-decodedDatum aid s = PLC.Constr 0 [PLC.I aid, stateData s]
+{- | The version 1 layout the checkpoint validator writes today (constructor 0,
+no consumer facts), as the Lean vector @version-1@.
+-}
+versionOneDatum :: PLC.Data
+versionOneDatum =
+    PLC.Constr
+        0
+        [ PLC.Constr
+            0
+            [ PLC.B (unhex "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9")
+            , PLC.List [PLC.B (unhex "1f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8")]
+            , PLC.Constr 0 [PLC.I 1]
+            , PLC.List [PLC.B (unhex "3e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017")]
+            , PLC.Constr 0 [PLC.I 1]
+            , PLC.List []
+            , PLC.I 0
+            , PLC.I 3
+            , PLC.I 4
+            ]
+        ]
 
 -- ---------------------------------------------------------------------------
 -- Scenarios
 -- ---------------------------------------------------------------------------
 
+data DatumKind = LiveDatum | PendingDatum | VersionOneDatum
+
+{- | A holding: the registry seed that names its token, how many of the token
+it carries and what datum it carries.
+-}
 data Scenario = Scenario
     { scName :: String
-    , scRivalRegistry :: Bool
+    , scSeedTx :: ByteString
+    , scSeedIndex :: Integer
     , scQuantity :: Integer
-    , scState :: StateKind
+    , scDatum :: DatumKind
     }
 
 accepting :: Scenario
-accepting = Scenario "the eligible holding" False 1 Present
+accepting = Scenario "the eligible holding" seedTx 0 1 LiveDatum
 
 refusals :: [Scenario]
 refusals =
-    [ Scenario "a rival registry's token" True 1 Present
-    , Scenario "quantity two" False 2 Present
-    , Scenario "a holding with termination pending" False 1 Pending
-    , Scenario "a retired holding (convicted)" False 1 Convicted
-    , Scenario "a retired holding (absent)" False 1 Absent
+    [ Scenario "a rival registry's token" rivalSeedTx 0 1 LiveDatum
+    , Scenario "a rival seed's token" seedTx 1 1 LiveDatum
+    , Scenario "quantity two" seedTx 0 2 LiveDatum
+    , Scenario "a holding with termination pending" seedTx 0 1 PendingDatum
+    , Scenario "a holding carrying a version 1 datum" seedTx 0 1 VersionOneDatum
     ]
 
 scenarios :: [Scenario]
 scenarios = accepting : refusals
 
-{- | What differs between the two connected runs: the consumer validator, the
-AID the consumer fixes, how a representative asset is named from the state
-policy and the seed transaction, and the scenarios.
--}
-data Variant = Variant
-    { vValidator :: Text
-    -- ^ blueprint title of the consumer validator
-    , vAid :: Integer
-    , vRepresentativeName :: ByteString -> ByteString -> ByteString
-    -- ^ state policy, seed transaction id
-    , vScenarios :: [Scenario]
-    }
+datumData :: DatumKind -> PLC.Data
+datumData LiveDatum = liveDatum
+datumData PendingDatum = pendingDatum
+datumData VersionOneDatum = versionOneDatum
 
--- | The declared test interpretation (not the registry byte layout).
-testVariant :: Variant
-testVariant =
-    Variant
-        { vValidator = "consumer_example.consumer_example.spend"
-        , vAid = intendedAid
-        , vRepresentativeName = representativeName
-        , vScenarios = scenarios
-        }
+-- | Blueprint title of the consumer validator.
+consumerValidator :: Text
+consumerValidator =
+    "consumer_identity_example.consumer_identity_example.spend"
 
--- | The concrete identity bytes of the Lean model.
-concreteVariant :: Variant
-concreteVariant =
-    Variant
-        { vValidator =
-            "consumer_identity_example.consumer_identity_example.spend"
-        , vAid = concreteAid
-        , vRepresentativeName = \statePolicy tx ->
-            concreteRepresentativeName statePolicy tx 0 concreteAidText
-        , vScenarios =
-            [ accepting
-            , Scenario "a rival seed's token" True 1 Present
-            ]
-        }
+-- | The representative asset name a holding of the scenario carries.
+representativeNameOf :: ByteString -> Scenario -> ByteString
+representativeNameOf statePolicy sc =
+    concreteRepresentativeName
+        statePolicy
+        (scSeedTx sc)
+        (scSeedIndex sc)
+        concreteAidText
 
 -- ---------------------------------------------------------------------------
 -- The concrete identity bytes, written out from the Lean layout
@@ -472,22 +477,14 @@ data World = World
 
 spec :: Spec
 spec =
-    describe "#343 consumer predicate on the local chain" $ do
-        aroundAll (withSeededWorld testVariant) $ do
+    describe "#343 consumer predicate on the local chain, Lean datum decoder" $ do
+        namesMatchTheLeanVectors
+        aroundAll withSeededWorld $ do
             it "settles a spend that references the eligible holding" $
                 \w -> acceptingSettles w
             forM_ (zip [1 ..] refusals) $ \(ix, sc) ->
                 it ("refuses, in the consumer script, " <> scName sc) $
                     \w -> refusalIsScriptFailure w ix sc
-        describe "concrete identity bytes, test datum decoder" $ do
-            namesMatchTheLeanVectors
-            aroundAll (withSeededWorld concreteVariant) $ do
-                it "settles a spend that references the holding named by the concrete identity bytes" $
-                    \w -> acceptingSettles w
-                forM_ (zip [1 ..] (drop 1 (vScenarios concreteVariant))) $
-                    \(ix, sc) ->
-                        it ("refuses, in the consumer script, " <> scName sc) $
-                            \w -> refusalIsScriptFailure w ix sc
 
 -- ---------------------------------------------------------------------------
 -- Setup
@@ -508,8 +505,8 @@ scriptHashOf bytes =
 scriptAddr :: ScriptHash -> Addr
 scriptAddr h = Addr Testnet (ScriptHashObj h) StakeRefNull
 
-withSeededWorld :: Variant -> (World -> IO ()) -> IO ()
-withSeededWorld variant action = do
+withSeededWorld :: (World -> IO ()) -> IO ()
+withSeededWorld action = do
     bpPath <-
         lookupEnv "KERI_CAGE_BLUEPRINT"
             >>= maybe (fail "KERI_CAGE_BLUEPRINT not set") pure
@@ -520,8 +517,8 @@ withSeededWorld variant action = do
                 "consumer_seed_policy.consumer_seed_policy.mint"
                 bp
     consumerCode <-
-        maybe (fail (T.unpack (vValidator variant) <> " not in the blueprint")) pure $
-            extractCompiledCodeExact (vValidator variant) bp
+        maybe (fail (T.unpack consumerValidator <> " not in the blueprint")) pure $
+            extractCompiledCodeExact consumerValidator bp
     let seedHash = computeScriptHash seedProgram
         statePolicyBytes = scriptHashBytes seedHash
         contextData =
@@ -536,7 +533,7 @@ withSeededWorld variant action = do
                     , PLC.B statePolicyBytes
                     ]
                 , PLC.Constr 0 [PLC.B seedTx, PLC.I 0]
-                , PLC.I (vAid variant)
+                , PLC.I concreteAid
                 ]
         consumerProgram = applyDataArgs [contextData, paramsData] consumerCode
         consumerHash = computeScriptHash consumerProgram
@@ -546,7 +543,6 @@ withSeededWorld variant action = do
         dbg ("seed policy " <> show seedHash <> "; consumer " <> show consumerHash)
         world <-
             seedWorld
-                variant
                 prov
                 sub
                 seedProgram
@@ -650,10 +646,9 @@ assetNameOf = AssetName . SBS.toShort
 
 {- | Mint the representative tokens with the test-only policy and pay one
 holding per scenario to the test application credential, each with a
-decoded datum of its state; lock one consumer output per scenario.
+datum of its kind; lock one consumer output per scenario.
 -}
 buildSeedTx ::
-    Variant ->
     Provider IO ->
     SBS.ShortByteString ->
     ScriptHash ->
@@ -662,22 +657,18 @@ buildSeedTx ::
     Utxo ->
     Utxo ->
     IO ConwayTx
-buildSeedTx variant prov seedProgram seedHash statePolicyBytes consumerProgram feeUtxo collUtxo = do
+buildSeedTx prov seedProgram seedHash statePolicyBytes consumerProgram feeUtxo collUtxo = do
     pp <- queryProtocolParams prov
     let policyId = PolicyID seedHash
-        intendedName = vRepresentativeName variant statePolicyBytes seedTx
-        rivalName = vRepresentativeName variant statePolicyBytes rivalSeedTx
-        nameOf sc
-            | scRivalRegistry sc = rivalName
-            | otherwise = intendedName
-        total pick =
-            sum [scQuantity sc | sc <- vScenarios variant, pick sc]
+        nameOf = representativeNameOf statePolicyBytes
+        minted =
+            Map.fromListWith
+                (+)
+                [(nameOf sc, scQuantity sc) | sc <- scenarios]
         mintMA =
             MultiAsset . Map.singleton policyId $
                 Map.fromList
-                    [ (assetNameOf intendedName, total (not . scRivalRegistry))
-                    , (assetNameOf rivalName, total scRivalRegistry)
-                    ]
+                    [(assetNameOf n, q) | (n, q) <- Map.toList minted]
         holding sc =
             mkBasicTxOut
                 (scriptAddr (scriptHashOf applicationCredential))
@@ -689,15 +680,15 @@ buildSeedTx variant prov seedProgram seedHash statePolicyBytes consumerProgram f
                             (scQuantity sc)
                     )
                 )
-                & datumTxOutL .~ mkInlineDatum (decodedDatum (vAid variant) (scState sc))
+                & datumTxOutL .~ mkInlineDatum (datumData (scDatum sc))
         locked =
             mkBasicTxOut
                 (cageScriptAddr consumerProgram Testnet)
                 (inject (Coin lockedAda))
         outs =
             StrictSeq.fromList
-                ( map holding (vScenarios variant)
-                    <> map (const locked) (vScenarios variant)
+                ( map holding scenarios
+                    <> map (const locked) scenarios
                 )
         redeemers =
             Redeemers $
@@ -729,7 +720,6 @@ buildSeedTx variant prov seedProgram seedHash statePolicyBytes consumerProgram f
         Right r -> pure (balancedTx r)
 
 seedWorld ::
-    Variant ->
     Provider IO ->
     Submitter IO ->
     SBS.ShortByteString ->
@@ -738,7 +728,7 @@ seedWorld ::
     SBS.ShortByteString ->
     ScriptHash ->
     IO World
-seedWorld variant prov sub seedProgram seedHash statePolicyBytes consumerProgram consumerHash = do
+seedWorld prov sub seedProgram seedHash statePolicyBytes consumerProgram consumerHash = do
     splitTx <- withinSecs 60 "split" (buildSplitTx prov)
     splitId <- submitOk sub "wallet split" splitTx
     wallet <- awaitOutputs prov (outputsOf splitId [0 .. 5])
@@ -749,7 +739,6 @@ seedWorld variant prov sub seedProgram seedHash statePolicyBytes consumerProgram
     seedTx' <-
         withinSecs 90 "seed" $
             buildSeedTx
-                variant
                 prov
                 seedProgram
                 seedHash
@@ -758,7 +747,7 @@ seedWorld variant prov sub seedProgram seedHash statePolicyBytes consumerProgram
                 mintFee
                 mintColl
     seedId <- submitOk sub "seeded holdings" seedTx'
-    let n = fromIntegral (length (vScenarios variant))
+    let n = fromIntegral (length scenarios)
     holdings <- awaitOutputs prov (outputsOf seedId [0 .. n - 1])
     locked <- awaitOutputs prov (outputsOf seedId [n .. 2 * n - 1])
     dbg "seeded holdings and consumer outputs settled"

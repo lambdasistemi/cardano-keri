@@ -6,8 +6,7 @@
 //// each committed field, and the predicate itself running on the concrete
 //// bytes.
 ////
-//// The datum decoder is the declared test choice
-//// (`consumer_test_interpretation.decode`); the Lean keeps it an input.
+//// The datum decoder is the Lean's (`consumer_checkpoint_datum.decode`).
 
 use aiken/collection/list
 use aiken/primitive/bytearray
@@ -15,13 +14,14 @@ use cardano/address.{Address, Script}
 use cardano/assets.{from_lovelace}
 use cardano/transaction.{InlineDatum, Output, OutputReference}
 use cardano_keri/consumer.{
-  Context, DecodedDatum, Environment, Live, Params, Present, PublishedRelease,
-  StatePreimage, Token, consumable_holding, registry_asset, representative_asset,
+  Context, Environment, Params, PublishedRelease, StatePreimage, Token,
+  consumable_holding, registry_asset, representative_asset,
 }
+use cardano_keri/consumer_checkpoint_datum as decoder
+use cardano_keri/consumer_checkpoint_datum_check.{live_datum}
 use cardano_keri/consumer_identity_bytes as bytes
 use cardano_keri/consumer_identity_check.{IdentityVector, context_of}
 use cardano_keri/consumer_identity_vectors.{vectors}
-use cardano_keri/consumer_test_interpretation as datum_choice
 
 // ---------------------------------------------------------------------
 // The vectors themselves
@@ -257,20 +257,7 @@ test the_registry_name_binds_the_seed_alone() {
 // ---------------------------------------------------------------------
 
 fn holding(t: Token, quantity: Int, aid: Int) -> Output {
-  let datum: Data = DecodedDatum {
-    aid,
-    state: Present(
-      Live {
-        sn: 0,
-        epoch: 0,
-        poisoned: False,
-        frozen: False,
-        born_at: 2,
-        refund_to: 7,
-        pool: 5,
-      },
-    ),
-  }
+  let datum: Data = live_datum(aid, 2)
   Output {
     address: Address {
       payment_credential: Script(
@@ -284,14 +271,14 @@ fn holding(t: Token, quantity: Int, aid: Int) -> Output {
   }
 }
 
-/// The predicate over the concrete bytes and the declared test decoder,
+/// The predicate over the concrete bytes and the Lean decoder,
 /// for the holding as the context's own AID would carry it.
 fn accepts(c: Context, t: Token, quantity: Int) -> Bool {
   consumable_holding(
     bytes.hash,
     bytes.code,
     bytes.key_of,
-    datum_choice.decode,
+    decoder.decode,
     c,
     Environment { network: c.network, release: Some(c.release) },
     Params { d: 3, b: 2, p: 1, w: 1 },

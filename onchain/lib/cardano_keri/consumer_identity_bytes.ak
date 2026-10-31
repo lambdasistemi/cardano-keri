@@ -13,8 +13,7 @@
 //// The constructors are built field by field here, so the bytes depend on the
 //// Lean layout and not on the declaration order of the predicate's own types.
 //// The datum decoder is not part of this module: the Lean keeps it an input,
-//// and the connected tests use the declared test choice
-//// (`consumer_test_interpretation.decode`). Not for mainnet.
+//// and it is `consumer_checkpoint_datum`. Not for mainnet.
 
 use aiken/builtin.{b_data, constr_data, i_data, serialise_data}
 use aiken/crypto.{blake2b_256}

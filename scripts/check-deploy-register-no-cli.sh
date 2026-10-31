@@ -13,7 +13,6 @@ fixture="$repo_root/scripts/fixtures/deploy-register-cardano-cli-positive-contro
 publisher="$repo_root/offchain/deployment/Cardano/KERI/Deployment/Publisher.hs"
 registration="$repo_root/offchain/deployment/Cardano/KERI/Deployment/Registration.hs"
 advance="$repo_root/offchain/deployment/Cardano/KERI/Deployment/AdvanceTransaction.hs"
-close="$repo_root/offchain/deployment/Cardano/KERI/Deployment/CloseTransaction.hs"
 board="$repo_root/offchain/deployment/Cardano/KERI/Deployment/EndpointBoardTransaction.hs"
 # #240: the write command module moved out of offchain/deployment/ into
 # the provider-free write-composition component.
@@ -28,7 +27,7 @@ fi
 echo "deploy-register-no-cli-guard: positive control OK (guard detects $fixture)"
 
 # This closes both the visible query and transaction-build-in-disguise paths.
-modules=("$publisher" "$registration" "$advance" "$close" "$board" "$cli")
+modules=("$publisher" "$registration" "$advance" "$board" "$cli")
 
 # Fail closed before any absence result is credited: a grep miss caused by
 # a moved/renamed/deleted target must never be read as "no violation

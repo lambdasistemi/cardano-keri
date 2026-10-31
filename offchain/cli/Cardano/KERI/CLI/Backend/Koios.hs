@@ -383,10 +383,10 @@ catchKoios action = do
 {- | Resolve the currently active checkpoint, preferring a proven latest
 burn in @asset_history@ over a live-looking @asset_utxos@ answer
 (DIRECTION-001): Koios's live UTxO index can still show a spent checkpoint
-asset as present for a brief window after a Close, so the checkpoint's own
+asset as present for a brief window after its token is burned, so its own
 minting/burning history is the higher-precedence source. Only once no
 proven burn is found does a resolved live UTxO count as active; either way,
-a genuinely never-registered AID and a proven-closed one both render as
+a genuinely never-registered AID and a proven-burned one both render as
 'Nothing' here.
 -}
 resolveKoiosActive ::

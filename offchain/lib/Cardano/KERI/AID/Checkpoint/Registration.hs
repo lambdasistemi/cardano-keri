@@ -116,7 +116,7 @@ data DeploymentContext = DeploymentContext
     -- ^ ledger min-ADA floor of the state output
     , dcDReg :: !Integer
     {- ^ deployment-fixed registration bond whose operator magnitude is
-    selected pre-mainnet; #117 owns Close/migration/consumer lookup,
+    selected pre-mainnet; #117 owns migration/consumer lookup,
     not this security parameter
     -}
     }

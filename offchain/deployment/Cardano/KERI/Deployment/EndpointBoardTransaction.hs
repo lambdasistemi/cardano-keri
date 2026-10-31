@@ -44,12 +44,12 @@ module Cardano.KERI.Deployment.EndpointBoardTransaction (
 ) where
 
 import Cardano.Crypto.Hash (hashFromBytes, hashToBytes)
-import Cardano.KERI.AID.Checkpoint.Close (
+import Cardano.KERI.AID.Checkpoint.Wire (asPlcData)
+import Cardano.KERI.AID.Migration.Types (
     AddressCredential (..),
     FullAddress (..),
+    StakeCredential (..),
  )
-import Cardano.KERI.AID.Checkpoint.Wire (asPlcData)
-import Cardano.KERI.Deployment.Close (decodeRefundAddress)
 import Cardano.KERI.Deployment.EndpointBoard (
     AuthorizedBoardDatum (..),
     BoardAuthorization (..),
@@ -92,6 +92,7 @@ import Cardano.KERI.Deployment.TransactionRuntime (
 import Cardano.Ledger.Address (Addr (..), decodeAddr)
 import Cardano.Ledger.Api.Tx.Out (referenceScriptTxOutL, valueTxOutL)
 import Cardano.Ledger.BaseTypes (
+    CertIx (..),
     Network (Mainnet, Testnet),
     StrictMaybe (SJust, SNothing),
     TxIx (..),
@@ -103,6 +104,12 @@ import Cardano.Ledger.Core (
     TxOut,
     hashScript,
     mkBasicTxOut,
+ )
+import Cardano.Ledger.Credential (
+    Credential (..),
+    Ptr (..),
+    SlotNo32 (..),
+    StakeReference (..),
  )
 import Cardano.Ledger.Hashes (
     KeyHash (..),
@@ -1161,6 +1168,53 @@ paymentKeyHash address = do
     case faPaymentCredential decoded of
         VerificationKeyCredential keyHash -> pure keyHash
         ScriptCredential _ -> Left "board ownership requires a Cardano payment verification key"
+
+-- | Decode a preprod Shelley payment address into the Aiken address wire.
+decodeRefundAddress :: Text -> Either String FullAddress
+decodeRefundAddress encoded = do
+    (hrp, dataPart) <-
+        either
+            (Left . ("refund address is not Bech32: " <>) . show)
+            Right
+            (Bech32.decodeLenient encoded)
+    unless (Bech32.humanReadablePartToText hrp == "addr_test") $
+        Left "refund address must use the addr_test Bech32 prefix"
+    bytes <-
+        maybe
+            (Left "refund address Bech32 data is invalid")
+            Right
+            (Bech32.dataPartToBytes dataPart)
+    address <-
+        maybe
+            (Left "refund address is not a supported Shelley payment address")
+            Right
+            (decodeAddr bytes :: Maybe Addr)
+    case address of
+        Addr Testnet payment stake ->
+            FullAddress
+                <$> credential payment
+                <*> traverseStake stake
+        Addr Mainnet _ _ ->
+            Left "refund address belongs to mainnet"
+        AddrBootstrap{} ->
+            Left "Byron bootstrap refund addresses are unsupported"
+  where
+    credential = \case
+        KeyHashObj (KeyHash paymentHash) ->
+            Right $ VerificationKeyCredential $ hashToBytes paymentHash
+        ScriptHashObj (ScriptHash scriptHash) ->
+            Right $ ScriptCredential $ hashToBytes scriptHash
+    traverseStake = \case
+        StakeRefNull -> Right Nothing
+        StakeRefBase value ->
+            Just . InlineStakeCredential <$> credential value
+        StakeRefPtr (Ptr (SlotNo32 slot) (TxIx txIndex) (CertIx certIndex)) ->
+            Right $
+                Just $
+                    PointerStakeCredential
+                        (fromIntegral slot)
+                        (fromIntegral txIndex)
+                        (fromIntegral certIndex)
 
 endpointDatum :: BS.ByteString -> EndpointRecord -> Value
 endpointDatum owner record =

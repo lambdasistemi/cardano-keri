@@ -4,8 +4,8 @@
 Module      : Cardano.KERI.CLI
 Description : Production @ckeri@ command composition
 
-The top-level 'Instructions' parser/dispatcher. Six commands
-(@deploy@\/@manifest verify@\/@register@\/@advance@\/@close@\/@board@) are
+The top-level 'Instructions' parser/dispatcher. Five commands
+(@deploy@\/@manifest verify@\/@register@\/@advance@\/@board@) are
 unchanged, reusing "Cardano.KERI.Deployment.CLI"'s existing settings/parsers/
 runners; only @status@ is new, routed through the #177 backend seam
 ("Cardano.KERI.CLI.Backend") via the same 'resolveBackend' dispatch table
@@ -49,20 +49,17 @@ import Cardano.KERI.CLI.Backend.Local (openLocalBackend)
 import Cardano.KERI.Deployment.CLI (
     AdvanceSettings,
     BoardInstructions (..),
-    CloseSettings,
     DeploySettings,
     RegisterSettings,
     advanceSettingsParser,
     boardPostSettingsParser,
     boardRetireSettingsParser,
     boardUpdateSettingsParser,
-    closeSettingsParser,
     deploySettingsParser,
     deploySettingsParserWithOut,
     registerSettingsParser,
     runAdvance,
     runBoard,
-    runClose,
     runDeploy,
     runRegister,
  )
@@ -90,7 +87,6 @@ data Instructions
     | ManifestVerify !VerifySettings
     | Register !RegisterSettings
     | Advance !AdvanceSettings
-    | Close !CloseSettings
     | Status !BackendSettings
     | List !ListSettings
     | Checkpoint !CheckpointSettings
@@ -184,10 +180,6 @@ instance Opt.HasParser Instructions where
                     "Advance a live checkpoint from a witnessed kli rotation"
                     (Advance <$> Opt.subConfig "advance" advanceSettingsParser)
                 , Opt.command
-                    "close"
-                    "Close a live checkpoint and refund its complete escrow"
-                    (Close <$> Opt.subConfig "close" closeSettingsParser)
-                , Opt.command
                     "status"
                     "Report an AID's checkpoint from a selected backend"
                     (Status <$> Opt.subConfig "status" backendSettingsParser)
@@ -215,7 +207,6 @@ runInstructions = \case
     ManifestVerify settings -> runVerify settings
     Register settings -> runRegister settings
     Advance settings -> runAdvance settings
-    Close settings -> runClose settings
     Status settings -> runBackendStatusCLI settings
     List settings -> runBackendListCLI settings
     Checkpoint settings -> runBackendCheckpointCLI settings

@@ -14,7 +14,6 @@ mkdir "$outside"
 "$ckeri" --help | grep -q "manifest"
 "$ckeri" --help | grep -q "register"
 "$ckeri" --help | grep -q "advance"
-"$ckeri" --help | grep -q "close"
 "$ckeri" --help | grep -q "status"
 "$ckeri" deploy --help | grep -q -- "--node-socket"
 "$ckeri" deploy --help | grep -q "CKERI_NODE_SOCKET"
@@ -45,19 +44,6 @@ mkdir "$outside"
 "$ckeri" advance --help | grep -q "validator-test-under-signed"
 "$ckeri" advance --help | grep -q "validator-test-under-witnessed"
 "$ckeri" advance --help | grep -q "validator-test-stale"
-"$ckeri" close --help | grep -q -- "--aid"
-"$ckeri" close --help | grep -q "CKERI_AID"
-"$ckeri" close --help | grep -q -- "--kel"
-"$ckeri" close --help | grep -q "CKERI_KEL"
-"$ckeri" close --help | grep -q -- "--to"
-"$ckeri" close --help | grep -q "CKERI_TO"
-"$ckeri" close --help | grep -q -- "--signing-package"
-"$ckeri" close --help | grep -q "CKERI_SIGNING_PACKAGE"
-"$ckeri" close --help | grep -q -- "--controller-signatures"
-"$ckeri" close --help | grep -q "CKERI_CONTROLLER_SIGNATURES"
-"$ckeri" close --help | grep -q -- "--change-address"
-"$ckeri" close --help | grep -q "CKERI_CHANGE_ADDRESS"
-"$ckeri" close --help | grep -q "validator-test-non-controller"
 "$ckeri" status --help | grep -q "AID"
 "$ckeri" status --help | grep -q "CKERI_AID"
 "$ckeri" status --help | grep -q -- "--koios-token"
@@ -65,6 +51,35 @@ mkdir "$outside"
 "$ckeri" status --help | grep -q -- "--board-manifest"
 "$ckeri" status --help | grep -q "CKERI_BOARD_MANIFEST"
 "$ckeri" board post --help | grep -q "default: 4000000"
+
+# A checkpoint is alive until it is convicted: the packaged parser must
+# report close and reopen as unrecognised commands. advance is recognised
+# (it fails only for its missing options) and an invented name is refused
+# the same way, so the detection is shown able to answer both ways.
+parser_verdict() {
+  local output
+  output="$("$ckeri" "$1" 2>&1 || true)"
+  if sed 's/\x1b\[[0-9;]*m//g' <<<"$output" | grep -qF "Unrecognised command: $1"; then
+    echo unrecognised
+  else
+    echo recognised
+  fi
+}
+
+expect_parser_verdict() {
+  local actual
+  actual="$(parser_verdict "$1")"
+  if [[ "$actual" != "$2" ]]; then
+    printf 'ckeri %s: expected the parser to answer %s, got %s\n' \
+      "$1" "$2" "$actual" >&2
+    exit 1
+  fi
+}
+
+expect_parser_verdict close unrecognised
+expect_parser_verdict reopen unrecognised
+expect_parser_verdict no-such-command unrecognised
+expect_parser_verdict advance recognised
 
 reject_retired_cardano_cli_help() {
   local command_label="$1"
@@ -81,7 +96,6 @@ reject_retired_cardano_cli_help() {
 reject_retired_cardano_cli_help deploy deploy
 reject_retired_cardano_cli_help register register
 reject_retired_cardano_cli_help advance advance
-reject_retired_cardano_cli_help close close
 reject_retired_cardano_cli_help board-deploy board deploy
 reject_retired_cardano_cli_help board-post board post
 reject_retired_cardano_cli_help board-update board update
@@ -107,7 +121,6 @@ reject_write_koios_help() {
 reject_write_koios_help deploy deploy
 reject_write_koios_help register register
 reject_write_koios_help advance advance
-reject_write_koios_help close close
 reject_write_koios_help board-deploy board deploy
 reject_write_koios_help board-post board post
 reject_write_koios_help board-update board update

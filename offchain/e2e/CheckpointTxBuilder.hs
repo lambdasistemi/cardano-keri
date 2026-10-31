@@ -9,13 +9,13 @@ Description : Production-shaped #114 checkpoint transactions for withDevnet
 
 Loads the tracked-source Aiken blueprint, applies the production checkpoint
 validator's six deployment parameters in order, and builds real Conway
-transactions for Register, Arm, Advance, Claim, Thaw, and Close.
+transactions for Register, Arm, Advance, Claim, and Thaw.
 
 The pinned devnet's 251-entry Plutus V3 model cannot price the Plomin builtins
 used by the real hash-proof policy.  This boundary therefore executes and
 asserts that exact mint failure, while retaining only compile-checked pending
-coverage for the positive Register -> Arm -> Claim chain.  Advance and Close
-remain real production-script staging rejections.
+coverage for the positive Register -> Arm -> Claim chain.  Advance remains a
+real production-script staging rejection.
 -}
 module CheckpointTxBuilder (
     CheckpointEnv (..),
@@ -25,7 +25,6 @@ module CheckpointTxBuilder (
     stagedCheckpointDevnet,
     stagedCheckpointDevnetSocket,
     advanceRejection,
-    closeRejection,
     hashProofMintOldCostRejection,
     pendingHashProofRegisterArmClaimScenario,
     rejectionIsOldCostPlominBoundary,
@@ -41,7 +40,6 @@ module CheckpointTxBuilder (
     buildAdvanceTx,
     buildClaimTx,
     buildThawTx,
-    buildCloseTx,
 ) where
 
 import Cardano.Crypto.DSIGN (
@@ -2032,14 +2030,6 @@ advanceRejection env = do
             validity
             False
     expectProductionScriptRejection env "Advance" tx
-
-closeRejection :: CheckpointEnv -> IO RejectionEvidence
-closeRejection env = do
-    prepareWallet env
-    (fixture, _) <- loadLifecycleFixture
-    staged <- stageCheckpointInput env (rfDatum fixture)
-    tx <- buildCloseTx env staged (currentValidity env)
-    expectProductionScriptRejection env "Close" tx
 
 hashProofMintOldCostRejection :: CheckpointEnv -> IO RejectionEvidence
 hashProofMintOldCostRejection env = do
@@ -4300,7 +4290,7 @@ requireExactAllRight label expected observed = do
 
 {- | The old-cost devnet cannot create the hash-proof input required for a
 real Register.  This deliberately tokenless output is therefore used only for
-the independent Advance/Close negative staging checks below; it is never a
+the independent Advance negative staging check below; it is never a
 substitute for the blocked positive Register lineage.
 -}
 stageCheckpointInput ::
@@ -4329,7 +4319,7 @@ stageCheckpointInput env datum = do
             (const True)
             >>= requireJust "manual checkpoint staging input did not settle"
     dbg
-        "manual ACTIVE checkpoint input has no production token lineage; only Advance/Close rejection is asserted"
+        "manual ACTIVE checkpoint input has no production token lineage; only Advance rejection is asserted"
     pure CheckpointInput{checkpointUtxo = utxo, checkpointDatum = datum}
 
 {- | The split checkpoint family's arm.  #254 S254-E: the redeemer now names
@@ -4420,18 +4410,6 @@ buildThawTx ::
     IO ConwayTx
 buildThawTx env input successor evidence validity =
     buildAdvanceTx env input successor evidence validity True
-
-buildCloseTx ::
-    CheckpointEnv -> CheckpointInput -> IO ValidityPlan -> IO ConwayTx
-buildCloseTx env input validityAction = do
-    validity <- validityAction
-    buildCheckpointSpend
-        env
-        input
-        closeRedeemerData
-        validity
-        [mkBasicTxOut (envOwner env) (snd (checkpointUtxo input) ^. valueTxOutL)]
-        0
 
 buildCheckpointSpend ::
     CheckpointEnv ->
@@ -4904,9 +4882,6 @@ freezeRedeemerData evidence hunter reveal =
 
 claimRedeemerData :: Integer -> PLC.Data
 claimRedeemerData outputIndex = Constr 2 [I outputIndex]
-
-closeRedeemerData :: PLC.Data
-closeRedeemerData = Constr 4 []
 
 advanceEvidenceData :: AdvanceEvidence -> PLC.Data
 advanceEvidenceData AdvanceEvidence{..} =

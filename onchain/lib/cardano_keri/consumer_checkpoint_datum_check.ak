@@ -16,10 +16,10 @@ use cardano_keri/consumer.{
   Context, DecodedDatum, Environment, Params, PublishedRelease,
   consumable_holding, representative_asset,
 }
+use cardano_keri/consumer_checkpoint_datum as decoder
 use cardano_keri/consumer_identity_bytes as concrete
 use cardano_keri/consumer_identity_check.{IdentityVector, context_of}
 use cardano_keri/consumer_identity_vectors.{vector_transferable_aid}
-use cardano_keri/consumer_test_interpretation as decoder
 
 /// One row of `lean/checkpoint-datum-vectors.json`: the datum's CBOR bytes,
 /// the `Data` the generator built for a datum the standard library cannot read

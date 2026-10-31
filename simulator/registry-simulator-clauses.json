@@ -1,7 +1,7 @@
 {
   "version": 3,
   "model": "CardanoKeri.Registry.stepFn",
-  "surfaceSha256": "de914e3f76bc091a2f80a758b56ba24d3903690b73a64ad42738c2f3a979246a",
+  "surfaceSha256": "879e3e35b038082a3e299d4c5e4b9807e7025e48c50bf20e4968f96a36a148de",
   "storiesMarkdownSha256": "9d29c0ae2c295c60f71eef9541d3ae8b67aada769d8498cff866c2cc81a0ba0e",
   "clauses": [
     {

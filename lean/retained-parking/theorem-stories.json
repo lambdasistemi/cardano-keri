@@ -7,7 +7,7 @@
     "lean/CardanoKeri/CheckpointCertificate.lean": "a84ccbcc21b6f6e5b5669add8a4f985b59de85e17c411b03643af1ca1bf3f3b7",
     "lean/CardanoKeri/CheckpointCompletionGoals.lean": "d6861d6cddc941fe6a8dd8781398676a250748dcba70eafc6338edd9b6bccde2",
     "lean/CardanoKeri/CheckpointDatum.lean": "4b78f04fe4fc00c7ea1a08dd68350bf4e3ddd1302d78b3f1d5edb23d4b6f7d68",
-    "lean/CardanoKeri/CheckpointDatumGoals.lean": "f86c26af84ced086016303b767eea21f39c5ac9706939eec2f7b10d117bccab0",
+    "lean/CardanoKeri/CheckpointDatumGoals.lean": "8784ee53f4520b1d5e3e768ac8f5d957192a7e6776c327154eafe02abbdb8d87",
     "lean/CardanoKeri/CheckpointDatumVectors.lean": "8212966cd69b2aa2d4aa6024553e0cdd37804309756c4ccd6d4df510053399c0",
     "lean/CardanoKeri/CheckpointGoals.lean": "44b90990102b7055332e8511e4bd1723e5026959afc7d80f83cca765b2376a51",
     "lean/CardanoKeri/CheckpointLifecycleExamples.lean": "92b555c088456dbc868e899b4caa8365e2e9452aecd034409a3bde2303579f59",
@@ -16,31 +16,34 @@
     "lean/CardanoKeri/CheckpointSystemFixtures.lean": "b6232cda9576c8aa80caa7bb3c4f086e07035f83d75341bec31c929dad7e1e82",
     "lean/CardanoKeri/CheckpointSystemWire.lean": "4bce5a0c36722efff3c5166e1f27ccc51a3151e30b5faeee7997bd036758a72c",
     "lean/CardanoKeri/CheckpointTraceWire.lean": "49e86f002cbbbcb9a0090e06649fe0a3f35f29ba22ed0669980ec942fce276f3",
+    "lean/CardanoKeri/CheckpointValue.lean": "91135258df7f22f4bb62f0dbf8b683cce7e5aa9d348a769f1c4fd3949cf2785b",
+    "lean/CardanoKeri/CheckpointValueGoals.lean": "542a71ad054d204cee1a8cc634a962e8d3a9e1470d6f739c73b2a19bd0977d30",
+    "lean/CardanoKeri/CheckpointValueVectors.lean": "aa973a9f763a385a8a98eb20f8a3ba34c20eb3a6b6930ddae541dafab650421f",
     "lean/CardanoKeri/ConcreteConvictionGoals.lean": "0ada46e2279f5609fc259022e044cf3055ed67fd03ea4450ce3b07c8d24b54f0",
     "lean/CardanoKeri/ConsumerBytes.lean": "9d7f752d59e32acb6c77bda9e5f6e9a146f09e9de7983ea10456c7225739d712",
     "lean/CardanoKeri/ConsumerBytesGoals.lean": "4822023b95c0a3ed0f99b5ee09784e5beb3700582611a80f867defc35cbcdae4",
     "lean/CardanoKeri/ConsumerBytesVectors.lean": "ec7952aa84aa108395196ec44a38bfbcfc4ac414617565e3a6fd7f4778323745",
     "lean/CardanoKeri/ConsumerControls.lean": "462960552961957af55a4b079ebd0e30e4b6f3a99eb8c76e0a7cae2d713dfcb4",
-    "lean/CardanoKeri/ConsumerFixtures.lean": "56b22a2f916b6c969c4590d9a785f5d892ab0b9fe4a595916cab2e17926089a3",
-    "lean/CardanoKeri/ConsumerGoals.lean": "0cd986397151768eac7a7d37123a5e8dc47bdb58c334a014cf9f340ed165c867",
-    "lean/CardanoKeri/ConsumerIdentity.lean": "174e7b269db18733e49789f14cb83ab0d40527f79348a9a6eb5c7444d933c3c2",
+    "lean/CardanoKeri/ConsumerFixtures.lean": "1d68588fcd6696e940a33d94bc711f6ed807dc545cf680ae3dbeffe3e2c38e87",
+    "lean/CardanoKeri/ConsumerGoals.lean": "38b93d6db3b619fc5717b18a1b76d86abd5b8971ede50e120a15144306da3e64",
+    "lean/CardanoKeri/ConsumerIdentity.lean": "79a33dd07efdf1bcd3d66041b2ce45948eade4c880bf0704eb7cad3a6725489f",
     "lean/CardanoKeri/ConsumerJourney.lean": "672748c61c2ac4d1d6745bdea4e9d95807deb0665523c57e47a111ababaa5fe5",
     "lean/CardanoKeri/ConsumerWire.lean": "82b7088d8ada127c6ecee9ca50ef483fcf240cf31e981489006e08ec51ede4d4",
-    "lean/CardanoKeri/Registry.lean": "ff13e16eb825673b4124ab061eec71f859da21aae78285afb7a0f6125e839a12",
+    "lean/CardanoKeri/Registry.lean": "814f082f772cfad6e2999b91448fe886328930857754fcc811a6d790fd843fe7",
     "lean/CardanoKeri/RegistryAdapterFacts.lean": "b81fb1834dfddb948d2ecf2d85ad8df59024f7f725c8ae13adc0f2b5591439fc",
     "lean/CardanoKeri/RegistryAgreement.lean": "644063dc0913341dddbbdd4f1bc52bddd4fc15a5f5b230b93884be6dc9509206",
     "lean/CardanoKeri/RegistryAuthorization.lean": "7842d877e49666f2ba3fc5e6d92e6fbcfdfeab5958f97d9add5b41a6a4551337",
     "lean/CardanoKeri/RegistryBurns.lean": "a8b25274e315dc0474556f91508f2eefbc0c1ddfb15a1cc50ff5ee3860822e87",
-    "lean/CardanoKeri/RegistryCompleteness.lean": "d680833fdd7fd8d979a4f8530b059f622186ad1d46b6585ada6741199498af2f",
+    "lean/CardanoKeri/RegistryCompleteness.lean": "dff87793449776e641c75e377b5fb0db1dd650e8cfd0597bf09fab046056e87a",
     "lean/CardanoKeri/RegistryCustody.lean": "4ef6726d4fd7a764e95c213241e778d556ffc7f37adf5dfa04d80a5e84191843",
     "lean/CardanoKeri/RegistryFold.lean": "ff8361b458137af9a0976e834189c45936dfdae29f929a52bfc3fba5e76ce153",
-    "lean/CardanoKeri/RegistryGoals.lean": "77241f91d1edfbbc7fe7c8caafb17034fef1f1a21cddc652d8eba432c686a64f",
+    "lean/CardanoKeri/RegistryGoals.lean": "fe50cfdee65ee9dfb5c776880b2f8e223b9ac79fcdda89c11a8009c16cd04d74",
     "lean/CardanoKeri/RegistryInvariant.lean": "d82e8fce6587b87e355ab975939761b56d13445f96aaa2f26382cc0a5ad4f83d",
     "lean/CardanoKeri/RegistryLifecycleExamples.lean": "02cf73282f63c2ef29e5c897bf1b5fcaa1916bb4c77ffbfba4096481b5f8bd69",
     "lean/CardanoKeri/RegistryMetadata.lean": "59db598868b8a06372b93ede1bfc48009b4558cd10e196d323c35b3826213973",
     "lean/CardanoKeri/RegistryReach.lean": "2f885eb9c1e767c4b282b72ed563db92cbaf39b41ad1ecca0dcee7b4f7c79784",
     "lean/CardanoKeri/RegistryReplay.lean": "9b3bfde641498235e5945b9e4475b3d5e436533af2a3cc9827474cb14c904d6a",
-    "lean/CardanoKeri/RegistryScenarioFixtures.lean": "5d03e2ed6657267c8bca83b1f7aa4257eeb27d2c36f74d5649246e70004801dc",
+    "lean/CardanoKeri/RegistryScenarioFixtures.lean": "6b3374686e6cbac7029c2ea96553bafa86f04a7fd6bbadf7eb9cbcc74e8d0cbc",
     "lean/CardanoKeri/RegistryTermination.lean": "16f9174984cf1a209f0508ce5f442feb1e15a5813d29412fe1911b36b29fab3e",
     "lean/CardanoKeri/RegistryTraceWire.lean": "d471d1405308fef18432f063ddfe2c972ffb65673e84434b43895b537981a07c",
     "lean/CardanoKeri/Samaritan.lean": "5d1bec605cc872fff50de7e6b1e957a164e305b4cc0469983f9861721251168e"
@@ -1085,21 +1088,21 @@
     {
       "declaration": "CardanoKeri.CheckpointDatum.written_realizes",
       "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
-      "line": 930,
-      "statement": "theorem written_realizes (c : Context) (s : State) (k : KeyMaterial) (d : Data)\n    (o : AH.ObservedOutput) (hd : datum c.aid k s = some d) (hk : k.Bytewise)\n    (cred : o.credential = c.release.applicationCredential)\n    (qty : AH.quantity o (representativeAsset interpretation c) = 1)\n    (held : o.datum = .application (raw d)) :\n    realizesState interpretation c s o",
-      "statementSha256": "e350d7625d034946d0f088696c0d2c2f285905a14850d0b32e288d83e86c0664",
-      "sourceStory": "Given a holding with the release's credential, the representative asset once and the raw\nversion 2 datum written for the intended AID and any state with an output, pool included;\nwhen observed through the concrete interpretation; then it realizes that state.",
+      "line": 931,
+      "statement": "theorem written_realizes (c : Context) (p : Params) (rp : CardanoKeri.Registry.Params) (s : State)\n    (k : KeyMaterial) (d : Data)\n    (o : AH.ObservedOutput) (hd : datum c.aid k s = some d) (hk : k.Bytewise)\n    (cred : o.credential = c.release.applicationCredential)\n    (qty : AH.quantity o (representativeAsset interpretation c) = 1)\n    (held : o.datum = .application (raw d)) (value : o.lovelace = s.heldValue p rp) :\n    realizesState interpretation c p rp s o",
+      "statementSha256": "a99ff1681588cb81f5ea9870df92ac714a00687b47d5112ec558be1636d1faed",
+      "sourceStory": "Given a holding with the release's credential, the representative asset once and the raw\nversion 2 datum written for the intended AID and any state with an output, pool included,\nholding exactly the lovelace that state holds; when observed through the concrete\ninterpretation; then it realizes that state.",
       "story": {
-        "given": "(c : Context) (s : State) (k : KeyMaterial) (d : Data)\n    (o : AH.ObservedOutput) (hd : datum c.aid k s = some d) (hk : k.Bytewise)\n    (cred : o.credential = c.release.applicationCredential)\n    (qty : AH.quantity o (representativeAsset interpretation c) = 1)\n    (held : o.datum = .application (raw d))",
+        "given": "(c : Context) (p : Params) (rp : CardanoKeri.Registry.Params) (s : State)\n    (k : KeyMaterial) (d : Data)\n    (o : AH.ObservedOutput) (hd : datum c.aid k s = some d) (hk : k.Bytewise)\n    (cred : o.credential = c.release.applicationCredential)\n    (qty : AH.quantity o (representativeAsset interpretation c) = 1)\n    (held : o.datum = .application (raw d)) (value : o.lovelace = s.heldValue p rp)",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "realizesState interpretation c s o"
+        "then": "realizesState interpretation c p rp s o"
       },
-      "storySha256": "ced7d223570b6447fb937708b5f40e01e9aab70280957d18c1b0fced54d1e72e"
+      "storySha256": "6228443a2fa759103bf52544ebe7fb8720b7b00fe79613f81d35f23561883465"
     },
     {
       "declaration": "CardanoKeri.CheckpointDatum.written_holding_iff",
       "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
-      "line": 944,
+      "line": 946,
       "statement": "theorem written_holding_iff (c : Context) (e : Environment) (p : Params) (now : Slot)\n    (s : State) (k : KeyMaterial) (d : Data) (o : AH.ObservedOutput)\n    (context : authenticatedContext c e) (hd : datum c.aid k s = some d) (hk : k.Bytewise)\n    (cred : o.credential = c.release.applicationCredential)\n    (qty : AH.quantity o (representativeAsset interpretation c) = 1)\n    (held : o.datum = .application (raw d)) :\n    consumableHolding interpretation c e p now o ↔ consumableState p now s",
       "statementSha256": "3039e8c8ee0efca5c66accca3bdb82d63b863957b4fb25ea2c44238f382bbc0c",
       "sourceStory": "Given an authenticated context and a holding carrying the raw version 2 datum written for\nthe intended AID and any state with an output, funded pools included; when the concrete\nconsumer reads it; then it is accepted exactly when the written state is consumable.",
@@ -1113,7 +1116,7 @@
     {
       "declaration": "CardanoKeri.CheckpointDatum.funded_registration_agrees",
       "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
-      "line": 958,
+      "line": 965,
       "statement": "theorem funded_registration_agrees (c : Context) (p : Params) (env : Env) (now : Slot)\n    (refund : Addr) (pool0 : Value) (flow : Flow) (st : State) (k : KeyMaterial) (d : Data)\n    (o : AH.ObservedOutput)\n    (registration : stepFn p env (.register refund pool0) now .absent = some (flow, st))\n    (hd : datum c.aid k st = some d) (hk : k.Bytewise) (held : o.datum = .application (raw d)) :\n    st = .present ⟨0, 0, false, false, now, refund, pool0⟩ ∧\n      decide ((decoded interpretation c o).map DecodedDatum.facts =\n        some ⟨c.aid, st.datumFacts⟩) = true",
       "statementSha256": "f0dbef692bc8515677aa923fd300ebbfd220f16d346c889b59d056f34a6e02cb",
       "sourceStory": "Given a registration funding the premium pool with any amount and a holding carrying the\nraw datum written for the registered state; when the registration bridge's datum clause reads\nit through the concrete interpretation; then the clause holds: the bridge does not refuse a\nfunded registration for its pool.",
@@ -1127,7 +1130,7 @@
     {
       "declaration": "CardanoKeri.CheckpointDatum.version_one_holding_refused",
       "path": "lean/CardanoKeri/CheckpointDatumGoals.lean",
-      "line": 973,
+      "line": 980,
       "statement": "theorem version_one_holding_refused (c : Context) (e : Environment) (p : Params) (now : Slot)\n    (o : AH.ObservedOutput) (fs : List Data) (hb : (Data.constr 0 fs).Bytewise)\n    (held : o.datum = .application (raw (.constr 0 fs))) :\n    ¬ consumableHolding interpretation c e p now o",
       "statementSha256": "e7ad39bf7cac5426559d84139643ab6d0398851e66df8f47897feb6c6f4b2d12",
       "sourceStory": "Given a holding carrying any raw version 1 datum; when the concrete consumer reads it; then\nit is refused, whatever the rest of the holding.",
@@ -2483,6 +2486,244 @@
       "storySha256": "d4c749c05b62d719f741ab20c6c089b7040e5bd54540a1263e5a78f444d26141"
     },
     {
+      "declaration": "CardanoKeri.Checkpoint.present_held_amounts",
+      "path": "lean/CardanoKeri/CheckpointValue.lean",
+      "line": 34,
+      "statement": "theorem present_held_amounts (p : Params) (l : Live) :\n    (State.present l).heldAmounts p = p.D + (if l.frozen then 0 else p.B) + l.pool",
+      "statementSha256": "f47d440a1145b2d3b395b6afa4c0fae43b2d0c89e705f43650fb30f5612f6ece",
+      "sourceStory": "Given any parameters and a live checkpoint.\nWhen its held amounts are computed.\nThen it holds the deposit, the freeze bond unless frozen, and its pool.",
+      "story": {
+        "given": "(p : Params) (l : Live)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "(State.present l).heldAmounts p = p.D + (if l.frozen then 0 else p.B) + l.pool"
+      },
+      "storySha256": "2ac5e2ab9f71f8dee881b014b9750d8db203afa48877231a4617df6008a8bbc1"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.no_amounts_without_live_checkpoint",
+      "path": "lean/CardanoKeri/CheckpointValue.lean",
+      "line": 41,
+      "statement": "theorem no_amounts_without_live_checkpoint (p : Params) (h : Hash) :\n    (State.terminationPending h).heldAmounts p = 0 ∧\n    State.absent.heldAmounts p = 0 ∧ State.convicted.heldAmounts p = 0",
+      "statementSha256": "2d263901fe975f1d7a1778587143768d9fadf07fffe6953016ba0904e17fb86b",
+      "sourceStory": "Given any parameters and key state.\nWhen the held amounts of a pending termination, an absent and a convicted\ncheckpoint are computed.\nThen all three hold none of the deposit, the freeze bond or the pool.",
+      "story": {
+        "given": "(p : Params) (h : Hash)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "(State.terminationPending h).heldAmounts p = 0 ∧\n    State.absent.heldAmounts p = 0 ∧ State.convicted.heldAmounts p = 0"
+      },
+      "storySha256": "3103fb1dafa4ed6d1534b15eb6a039e3b997747a93405b2bdccca10864dbacff"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.held_amounts_conserved",
+      "path": "lean/CardanoKeri/CheckpointValue.lean",
+      "line": 50,
+      "statement": "theorem held_amounts_conserved (p : Params) (env : Env) {a : Action} {t : Slot}\n    {s s' : State} {f : Flow} (h : Step p env a t s f s') :\n    s.heldAmounts p + f.takenIn = s'.heldAmounts p + f.paidOut",
+      "statementSha256": "a14814d45449d945914d16ae42ae067efe246e284c1640e7c644ac59ea470f47",
+      "sourceStory": "Given every successful step over arbitrary parameters, environment, action,\ntime and states.\nWhen the held amounts before and after and the step's flow are compared.\nThen what the input holds plus what the step takes in equals what the output\nholds plus what the step pays out.",
+      "story": {
+        "given": "(p : Params) (env : Env) {a : Action} {t : Slot}\n    {s s' : State} {f : Flow} (h : Step p env a t s f s')",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "s.heldAmounts p + f.takenIn = s'.heldAmounts p + f.paidOut"
+      },
+      "storySha256": "06827c3ff8640c64122722b1af431708d92ca67a81f266f2dd3668b566bc05b8"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.conviction_pays_out_every_amount",
+      "path": "lean/CardanoKeri/CheckpointValue.lean",
+      "line": 61,
+      "statement": "theorem conviction_pays_out_every_amount (p : Params) (env : Env) {t : Slot} {l : Live}\n    {payee : Addr} {f : Flow} {s' : State} (h : Step p env (.convict payee) t (.present l) f s') :\n    Payment?.total f.convictor = p.D ∧\n    Payment?.total f.refund = l.bHeld p + l.pool ∧\n    Payment?.total f.hunter = 0 ∧\n    s'.heldAmounts p = 0 ∧\n    f.paidOut = (State.present l).heldAmounts p",
+      "statementSha256": "fa9ffde02edccd318398fc0fea7737edb5c99fab56d83eb3d32d023736c3c5d2",
+      "sourceStory": "Given a live checkpoint convicted to its pending termination.\nWhen the step's payments are compared with what the live checkpoint held.\nThen the convictor receives exactly the deposit, the refund address exactly the\nfreeze bond held and the pool, and the pending output keeps none of them.",
+      "story": {
+        "given": "(p : Params) (env : Env) {t : Slot} {l : Live}\n    {payee : Addr} {f : Flow} {s' : State} (h : Step p env (.convict payee) t (.present l) f s')",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "Payment?.total f.convictor = p.D ∧\n    Payment?.total f.refund = l.bHeld p + l.pool ∧\n    Payment?.total f.hunter = 0 ∧\n    s'.heldAmounts p = 0 ∧\n    f.paidOut = (State.present l).heldAmounts p"
+      },
+      "storySha256": "2bf07fe1941b624f71ece3e9edb99a48bbd0eeda286c310861885387179a6a82"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.present_held_value",
+      "path": "lean/CardanoKeri/CheckpointValue.lean",
+      "line": 106,
+      "statement": "theorem present_held_value (p : Params) (rp : CardanoKeri.Registry.Params) (l : Live) :\n    (State.present l).heldValue p rp = rp.Mc + p.D + (if l.frozen then 0 else p.B) + l.pool",
+      "statementSha256": "3f3991214502ff5c7c90fc6d4322d86e65d31a2887071df07f0c983a8eb9f63a",
+      "sourceStory": "Given any parameters and a live checkpoint.\nWhen the lovelace its output holds is computed.\nThen it is the minimum ADA, the deposit, the freeze bond unless frozen, and the pool.",
+      "story": {
+        "given": "(p : Params) (rp : CardanoKeri.Registry.Params) (l : Live)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "(State.present l).heldValue p rp = rp.Mc + p.D + (if l.frozen then 0 else p.B) + l.pool"
+      },
+      "storySha256": "f2f2cc738a1bd63d829a5c7d3039575b0d60710b1e3db9a61b787241d6f302e2"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.pending_holds_minimum_ada",
+      "path": "lean/CardanoKeri/CheckpointValue.lean",
+      "line": 116,
+      "statement": "theorem pending_holds_minimum_ada (p : Params) (rp : CardanoKeri.Registry.Params) (h : Hash) :\n    (State.terminationPending h).heldValue p rp = rp.Mc ∧\n    State.absent.heldValue p rp = 0 ∧ State.convicted.heldValue p rp = 0",
+      "statementSha256": "683a57ed52ac26cd96b8f60b012b21e4bf98adb37d523793c7230f51c3b818f1",
+      "sourceStory": "Given any parameters and key state.\nWhen the lovelace of a pending termination output is computed.\nThen it is exactly the registry's minimum ADA, the amount the termination booking\nrequires of the pending carrier; absent and convicted checkpoints have no output\nand hold nothing.",
+      "story": {
+        "given": "(p : Params) (rp : CardanoKeri.Registry.Params) (h : Hash)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "(State.terminationPending h).heldValue p rp = rp.Mc ∧\n    State.absent.heldValue p rp = 0 ∧ State.convicted.heldValue p rp = 0"
+      },
+      "storySha256": "b5a0e5e608f888c0c21bbc2f4a68bed7f5b9322b1ff395f72467239ef4b74a9b"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.registration_holds_carrier",
+      "path": "lean/CardanoKeri/CheckpointValue.lean",
+      "line": 126,
+      "statement": "theorem registration_holds_carrier (p : Params) (rp : CardanoKeri.Registry.Params) (env : Env)\n    {t : Slot} {refund : Addr} {pool0 : Value} {s : State} {f : Flow} {s' : State}\n    (h : Step p env (.register refund pool0) t s f s') :\n    s'.heldValue p rp = rp.Mc + p.D + p.B + pool0 ∧ s'.heldValue p rp = rp.Mc + f.takenIn",
+      "statementSha256": "0f6d6ac068d0caec47a3164d603b9e74fee02066273645f90d82447c9ce80aa1",
+      "sourceStory": "Given a registration step with any refund address and initial pool.\nWhen the lovelace of the registered output is computed.\nThen it is the minimum ADA plus everything the step takes in: the deposit, the\nfreeze bond and the initial pool.",
+      "story": {
+        "given": "(p : Params) (rp : CardanoKeri.Registry.Params) (env : Env)\n    {t : Slot} {refund : Addr} {pool0 : Value} {s : State} {f : Flow} {s' : State}\n    (h : Step p env (.register refund pool0) t s f s')",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "s'.heldValue p rp = rp.Mc + p.D + p.B + pool0 ∧ s'.heldValue p rp = rp.Mc + f.takenIn"
+      },
+      "storySha256": "81aec2e83b7ebc1a912580c11b8797ede5beee88f3ef4216bffe9909702bf5b1"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.held_value_conserved",
+      "path": "lean/CardanoKeri/CheckpointValue.lean",
+      "line": 140,
+      "statement": "theorem held_value_conserved (p : Params) (rp : CardanoKeri.Registry.Params) (env : Env)\n    {a : Action} {t : Slot} {s s' : State} {f : Flow} (h : Step p env a t s f s')\n    (output : s.hasOutput = true) :\n    s.heldValue p rp + f.takenIn = s'.heldValue p rp + f.paidOut",
+      "statementSha256": "b0b6ae1636dd2b56265659fbd526a9fe1fa44b656bc6f35764b1aace4203c439",
+      "sourceStory": "Given every successful step from a state that has an output (every step\nexcept registration) over arbitrary parameters, environment, action and time.\nWhen the lovelace before and after and the step's flow are compared.\nThen what the input holds plus what the step takes in equals what the output\nholds plus what the step pays out; the minimum ADA stays in the output.",
+      "story": {
+        "given": "(p : Params) (rp : CardanoKeri.Registry.Params) (env : Env)\n    {a : Action} {t : Slot} {s s' : State} {f : Flow} (h : Step p env a t s f s')\n    (output : s.hasOutput = true)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "s.heldValue p rp + f.takenIn = s'.heldValue p rp + f.paidOut"
+      },
+      "storySha256": "151e8435ec2da5769dc61a12f09f37b7173290e8e0b57d4b96c5d2f60ce525be"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.withValue_heldValue",
+      "path": "lean/CardanoKeri/CheckpointValue.lean",
+      "line": 152,
+      "statement": "theorem withValue_heldValue (p : Params) (rp : CardanoKeri.Registry.Params) (s : State)\n    (output : s.hasOutput = true) :\n    s.datumFacts.withValue p rp (s.heldValue p rp) = some s",
+      "statementSha256": "24a9c0e936eb5ca5977a1936f609728da4b5b10094d0c7dad936e8802cb6aad2",
+      "sourceStory": "Given any parameters and a state with an output.\nWhen its datum facts are paired with the lovelace it holds.\nThen they determine the state again, pool included.",
+      "story": {
+        "given": "(p : Params) (rp : CardanoKeri.Registry.Params) (s : State)\n    (output : s.hasOutput = true)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "s.datumFacts.withValue p rp (s.heldValue p rp) = some s"
+      },
+      "storySha256": "ab24c8f7a9d0971b0e31a335916413bc788153929f1bf41869363110496901f6"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.withValue_iff",
+      "path": "lean/CardanoKeri/CheckpointValue.lean",
+      "line": 171,
+      "statement": "theorem withValue_iff (p : Params) (rp : CardanoKeri.Registry.Params) (s : State)\n    (output : s.hasOutput = true) (v : Value) :\n    s.datumFacts.withValue p rp v = some s ↔ v = s.heldValue p rp",
+      "statementSha256": "c44c9c91732f6c4aa07c54f3f42a03eb8e7690795d32a45c25981c7abfa78d95",
+      "sourceStory": "Given any parameters, a state with an output and any lovelace.\nWhen the state's datum facts are read together with that lovelace.\nThen they give back exactly that state if and only if the lovelace is what the\nstate holds: the reading the vectors execute is the value clause.",
+      "story": {
+        "given": "(p : Params) (rp : CardanoKeri.Registry.Params) (s : State)\n    (output : s.hasOutput = true) (v : Value)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "s.datumFacts.withValue p rp v = some s ↔ v = s.heldValue p rp"
+      },
+      "storySha256": "95f604374fbe5627450e730585f97d593a85c027df00865db8ee68a01dee02a6"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.valueFloor_datumFacts",
+      "path": "lean/CardanoKeri/CheckpointValueGoals.lean",
+      "line": 13,
+      "statement": "theorem valueFloor_datumFacts (p : Params) (rp : CardanoKeri.Registry.Params) (s : State) :\n    s.datumFacts.valueFloor p rp = s.valueFloor p rp",
+      "statementSha256": "13cff10c21866d6312c36afa205c47e261813a314729891db94d44f30685b2a0",
+      "sourceStory": "Given any parameters and state.\nWhen the value floor of its datum facts is computed.\nThen it is the floor of the state itself: the floor reads no pool.",
+      "story": {
+        "given": "(p : Params) (rp : CardanoKeri.Registry.Params) (s : State)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "s.datumFacts.valueFloor p rp = s.valueFloor p rp"
+      },
+      "storySha256": "fc7436a4c07f25d128efce7a5c5f0e5171df4dfe58cdf81d2c45d75289a72de5"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.valueFloor_le_heldValue",
+      "path": "lean/CardanoKeri/CheckpointValueGoals.lean",
+      "line": 20,
+      "statement": "theorem valueFloor_le_heldValue (p : Params) (rp : CardanoKeri.Registry.Params) (s : State) :\n    s.valueFloor p rp ≤ s.heldValue p rp",
+      "statementSha256": "9e885219e662089fd9e99fad177f6b6830191bad74f918d2387cb308916fc00f",
+      "sourceStory": "Given any parameters and a state with an output.\nWhen its held lovelace is compared with its value floor.\nThen the floor is never above what the state holds.",
+      "story": {
+        "given": "(p : Params) (rp : CardanoKeri.Registry.Params) (s : State)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "s.valueFloor p rp ≤ s.heldValue p rp"
+      },
+      "storySha256": "bc32137e565f965e0f0056c0f0c3b4d5ff810b931b22e164366ca1997016d20e"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.realizes_determines_state",
+      "path": "lean/CardanoKeri/CheckpointValueGoals.lean",
+      "line": 30,
+      "statement": "theorem realizes_determines_state (i : Interpretation) (c : Context) (p : Params)\n    (rp : CardanoKeri.Registry.Params) {s s' : State} {o : AH.ObservedOutput}\n    (h : realizesState i c p rp s o) (h' : realizesState i c p rp s' o) : s = s'",
+      "statementSha256": "be5b38525897e38dc37d631628ed60d41e83dacfaf45e850c4d82bd97474e74a",
+      "sourceStory": "Given any interpretation, context and parameters, and one holding that realizes\ntwo states.\nWhen the two states are compared.\nThen they are the same state, pool included: the datum's facts and the holding's\nlovelace determine the full state.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context) (p : Params)\n    (rp : CardanoKeri.Registry.Params) {s s' : State} {o : AH.ObservedOutput}\n    (h : realizesState i c p rp s o) (h' : realizesState i c p rp s' o)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "s = s'"
+      },
+      "storySha256": "7600df80f52286f1c0c38afcf80c04332bca989c651e7751677e958a924909ba"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.short_holding_refused",
+      "path": "lean/CardanoKeri/CheckpointValueGoals.lean",
+      "line": 58,
+      "statement": "theorem short_holding_refused (i : Interpretation) (c : Context) (p : Params)\n    (rp : CardanoKeri.Registry.Params) (s : State) (o : AH.ObservedOutput)\n    (short : o.lovelace < s.valueFloor p rp) : ¬ realizesState i c p rp s o",
+      "statementSha256": "282eaf54754ea3c444244d60e3853e44540885c600e3a9cf5e294a2023fd2a0e",
+      "sourceStory": "Given any interpretation, context and parameters, and a holding whose lovelace\nis below the floor of a state: the minimum ADA plus the deposit plus the freeze\nbond a live state's datum says is held, or the minimum ADA of a pending one.\nWhen it is checked against that state.\nThen it does not realize it, whatever its pool: a holding missing part of a bond\nis refused.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context) (p : Params)\n    (rp : CardanoKeri.Registry.Params) (s : State) (o : AH.ObservedOutput)\n    (short : o.lovelace < s.valueFloor p rp)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "¬ realizesState i c p rp s o"
+      },
+      "storySha256": "029046d6973becd82b9de0ed1dfde00b8900880caf458aa3b33f5c49f483f196"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.missing_bond_lovelace_refused",
+      "path": "lean/CardanoKeri/CheckpointValueGoals.lean",
+      "line": 69,
+      "statement": "theorem missing_bond_lovelace_refused (i : Interpretation) (c : Context) (p : Params)\n    (rp : CardanoKeri.Registry.Params) (l : Live) (o : AH.ObservedOutput)\n    (unfrozen : l.frozen = false) (short : o.lovelace + 1 = rp.Mc + p.D + p.B) (pool : Value) :\n    ¬ realizesState i c p rp (.present { l with pool := pool }) o",
+      "statementSha256": "51cee9105cab2443d5c648d25e9b2ae76e9e714fe58e89f6446592b1c5367c49",
+      "sourceStory": "Given a live unfrozen checkpoint and a holding one lovelace short of what it\nholds with an empty pool.\nWhen the holding is checked against every live state with the same datum facts.\nThen none is realized: the freeze bond, or the deposit, is short by one.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context) (p : Params)\n    (rp : CardanoKeri.Registry.Params) (l : Live) (o : AH.ObservedOutput)\n    (unfrozen : l.frozen = false) (short : o.lovelace + 1 = rp.Mc + p.D + p.B) (pool : Value)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "¬ realizesState i c p rp (.present { l with pool := pool }) o"
+      },
+      "storySha256": "dadb4a5577b16efcd8908215b0b3a5614cbc7c71ca687f182b8b4859adbd8eee"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.short_carrier_registration_refused",
+      "path": "lean/CardanoKeri/CheckpointValueGoals.lean",
+      "line": 81,
+      "statement": "theorem short_carrier_registration_refused (rp : CardanoKeri.Registry.Params)\n    (s : CardanoKeri.Registry.Sys) (b : Singular.RegistrationBooking)\n    (short : b.request.carrierAda + 1 = rp.Mc + rp.D) :\n    CardanoKeri.Registry.bookRegistration rp s b = .error \"keri-registration-value-mismatch\"",
+      "statementSha256": "eb835ffd456877b8e774d4f163494c4284b34e1180b051322f21b94a970c37ba",
+      "sourceStory": "Given any registry parameters and a registration booking whose declared carrier\nis one lovelace short of the minimum ADA plus the deposit and freeze bond.\nWhen the registry books it.\nThen the booking is refused for its value.",
+      "story": {
+        "given": "(rp : CardanoKeri.Registry.Params)\n    (s : CardanoKeri.Registry.Sys) (b : Singular.RegistrationBooking)\n    (short : b.request.carrierAda + 1 = rp.Mc + rp.D)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "CardanoKeri.Registry.bookRegistration rp s b = .error \"keri-registration-value-mismatch\""
+      },
+      "storySha256": "353f52ec981be6086d76dac5dc6345b8a839bc16a9b9f8e0f6a29305b4d6272a"
+    },
+    {
+      "declaration": "CardanoKeri.ConsumerIdentity.registerJoint_value",
+      "path": "lean/CardanoKeri/CheckpointValueGoals.lean",
+      "line": 94,
+      "statement": "theorem registerJoint_value (i : Interpretation) (c : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (commit : SingularApplicationHeld.TrieCommit)\n    (q : RegistrationInput) (r : Registered)\n    (accepted : registerJoint i c abstractRegistry commit q = .ok r) :\n    q.registryParams.D = q.checkpointParams.D + q.checkpointParams.B ∧\n    q.booking.request.carrierAda =\n      q.registryParams.Mc + q.checkpointParams.D + q.checkpointParams.B + q.pool ∧\n    r.holding.lovelace = q.booking.request.carrierAda",
+      "statementSha256": "ec7f2a9509a7a05e683888f48974615da78f2663db51262fcbd6378f556ba55b",
+      "sourceStory": "Given a successful joint registration.\nWhen its parameters, declared carrier, registered checkpoint and holding are compared.\nThen the registry's deposit is the checkpoint's deposit plus freeze bond; the carrier\nis the minimum ADA plus the deposit, the freeze bond and the chosen initial pool; and\nthe delivered holding holds exactly that.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (commit : SingularApplicationHeld.TrieCommit)\n    (q : RegistrationInput) (r : Registered)\n    (accepted : registerJoint i c abstractRegistry commit q = .ok r)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "q.registryParams.D = q.checkpointParams.D + q.checkpointParams.B ∧\n    q.booking.request.carrierAda =\n      q.registryParams.Mc + q.checkpointParams.D + q.checkpointParams.B + q.pool ∧\n    r.holding.lovelace = q.booking.request.carrierAda"
+      },
+      "storySha256": "a054f0cbef66b240da93eb36df0850fe6e0d8fcb3d3c27af97a018b359cc94e2"
+    },
+    {
       "declaration": "CardanoKeri.Checkpoint.Env.duplicityAt_iff",
       "path": "lean/CardanoKeri/ConcreteConvictionGoals.lean",
       "line": 8,
@@ -2948,15 +3189,15 @@
       "declaration": "CardanoKeri.ConsumerIdentity.existing_eligibility_preserved",
       "path": "lean/CardanoKeri/ConsumerGoals.lean",
       "line": 53,
-      "statement": "theorem existing_eligibility_preserved (i : Interpretation) (c : Context)\n    (e : Environment) (p : Params) (now : Slot) (s : State) (o : AH.ObservedOutput)\n    (context : authenticatedContext c e) (realizes : realizesState i c s o) :\n    consumableHolding i c e p now o ↔ consumableState p now s",
-      "statementSha256": "55080fcc635da569e10ab38d63ce083188d64922a5960b306e4da01949728b4c",
+      "statement": "theorem existing_eligibility_preserved (i : Interpretation) (c : Context)\n    (e : Environment) (p : Params) (rp : CardanoKeri.Registry.Params) (now : Slot) (s : State)\n    (o : AH.ObservedOutput) (context : authenticatedContext c e) (realizes : realizesState i c p rp s o) :\n    consumableHolding i c e p now o ↔ consumableState p now s",
+      "statementSha256": "301d2bd1bf08b320ac80f69e7eb339d547aefe94b014a2f1e9a1b8c7f6e5b1f9",
       "sourceStory": "CI03. Given any actual output whose exact credential, unit asset quantity\nand decoded AID/state realize the intended state, and an authenticated\nexternal context; when consumed; then acceptance iff the full old lifecycle\npredicate holds. This is a refinement premise, not evidence that an output\nexists or its decoder is faithful.",
       "story": {
-        "given": "(i : Interpretation) (c : Context)\n    (e : Environment) (p : Params) (now : Slot) (s : State) (o : AH.ObservedOutput)\n    (context : authenticatedContext c e) (realizes : realizesState i c s o)",
+        "given": "(i : Interpretation) (c : Context)\n    (e : Environment) (p : Params) (rp : CardanoKeri.Registry.Params) (now : Slot) (s : State)\n    (o : AH.ObservedOutput) (context : authenticatedContext c e) (realizes : realizesState i c p rp s o)",
         "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
         "then": "consumableHolding i c e p now o ↔ consumableState p now s"
       },
-      "storySha256": "5276a56ffdd4f45671d94b547fa0bfb4bc0ae52f4926f91b9c21c42272f14399"
+      "storySha256": "28b4c83c772cc16b959dae26add4d131154478597e8e0f1af13da61b7d772722"
     },
     {
       "declaration": "CardanoKeri.ConsumerIdentity.wrong_network_refused",
@@ -3228,20 +3469,20 @@
       "declaration": "CardanoKeri.ConsumerIdentity.registerJoint_sound",
       "path": "lean/CardanoKeri/ConsumerGoals.lean",
       "line": 344,
-      "statement": "theorem registerJoint_sound (i : Interpretation) (c : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (commit : SingularApplicationHeld.TrieCommit)\n    (q : RegistrationInput) (r : Registered)\n    (accepted : registerJoint i c abstractRegistry commit q = .ok r) :\n    createRegistry i c abstractRegistry q.configuration commit q.genesisTx q.genesisOutputs = .ok r.created ∧\n    CardanoKeri.Registry.bookRegistration q.registryParams r.created.economic q.booking =\n      .ok (r.registrationFlow, r.booked) ∧\n    CardanoKeri.Registry.fold q.registryParams q.registryEnv r.booked r.booked.gen\n      r.booked.config.applicationPolicy q.unspent q.economicTx = .ok (r.foldFlow, r.after) ∧\n    SingularApplicationHeld.fold .none i.hash i.code commit c.release q.fullFold = true ∧\n    stepFn q.checkpointParams q.checkpointEnv (.register q.refund q.pool) q.now .absent =\n      some (r.checkpointFlow, r.checkpoint) ∧\n    registrationAgreementB i c q r.created r.booked r.after r.checkpoint r.holding r.economicHolding = true ∧\n    ∃ receipt : CardanoKeri.Registry.FoldReceipt q.registryParams q.registryEnv q.configuration,\n      receipt.before = r.booked ∧ receipt.after = r.after ∧\n      receipt.unspent = q.unspent ∧ receipt.transaction = q.economicTx ∧\n      receipt.flow = r.foldFlow ∧ DeliveredOrigin receipt q.booking c.aid r.origin ∧\n      realizesState i c r.checkpoint r.holding ∧ r.origin.carrierRef = r.holding.reference",
-      "statementSha256": "88aa1856dacb3203f91facf0ad82dc7afa46778862bf197a0ca6a0740cfc04f6",
+      "statement": "theorem registerJoint_sound (i : Interpretation) (c : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (commit : SingularApplicationHeld.TrieCommit)\n    (q : RegistrationInput) (r : Registered)\n    (accepted : registerJoint i c abstractRegistry commit q = .ok r) :\n    createRegistry i c abstractRegistry q.configuration commit q.genesisTx q.genesisOutputs = .ok r.created ∧\n    CardanoKeri.Registry.bookRegistration q.registryParams r.created.economic q.booking =\n      .ok (r.registrationFlow, r.booked) ∧\n    CardanoKeri.Registry.fold q.registryParams q.registryEnv r.booked r.booked.gen\n      r.booked.config.applicationPolicy q.unspent q.economicTx = .ok (r.foldFlow, r.after) ∧\n    SingularApplicationHeld.fold .none i.hash i.code commit c.release q.fullFold = true ∧\n    stepFn q.checkpointParams q.checkpointEnv (.register q.refund q.pool) q.now .absent =\n      some (r.checkpointFlow, r.checkpoint) ∧\n    registrationAgreementB i c q r.created r.booked r.after r.checkpoint r.holding r.economicHolding = true ∧\n    ∃ receipt : CardanoKeri.Registry.FoldReceipt q.registryParams q.registryEnv q.configuration,\n      receipt.before = r.booked ∧ receipt.after = r.after ∧\n      receipt.unspent = q.unspent ∧ receipt.transaction = q.economicTx ∧\n      receipt.flow = r.foldFlow ∧ DeliveredOrigin receipt q.booking c.aid r.origin ∧\n      realizesState i c q.checkpointParams q.registryParams r.checkpoint r.holding ∧ r.origin.carrierRef = r.holding.reference",
+      "statementSha256": "a496e70eb06ef30d446c3fbed95e28f4a5485214dd1475aabc2e61df7d64ec30",
       "sourceStory": "CI23. Given any successful bounded joint registration (the complete input\ncontains genesis outputs, genuine booking, economic unspent/transaction,\nfull-identity fold and selected holding index, plus fixed model contexts);\nwhen observing its result; then actual creation/book/economic fold/full fold/\nCheckpoint registration all succeeded, the complete registration agreement\npassed, and an actual indexed #437 receipt delivers the stored origin. Its\ncurrent initial holding realizes that exact AID/Checkpoint state, and its\nreference equals the stored carrier reference. No consumer conclusion is an\ninput and no arbitrary physical-ledger equivalence is asserted.",
       "story": {
         "given": "(i : Interpretation) (c : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (commit : SingularApplicationHeld.TrieCommit)\n    (q : RegistrationInput) (r : Registered)\n    (accepted : registerJoint i c abstractRegistry commit q = .ok r)",
         "when": "Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.",
-        "then": "createRegistry i c abstractRegistry q.configuration commit q.genesisTx q.genesisOutputs = .ok r.created ∧\n    CardanoKeri.Registry.bookRegistration q.registryParams r.created.economic q.booking =\n      .ok (r.registrationFlow, r.booked) ∧\n    CardanoKeri.Registry.fold q.registryParams q.registryEnv r.booked r.booked.gen\n      r.booked.config.applicationPolicy q.unspent q.economicTx = .ok (r.foldFlow, r.after) ∧\n    SingularApplicationHeld.fold .none i.hash i.code commit c.release q.fullFold = true ∧\n    stepFn q.checkpointParams q.checkpointEnv (.register q.refund q.pool) q.now .absent =\n      some (r.checkpointFlow, r.checkpoint) ∧\n    registrationAgreementB i c q r.created r.booked r.after r.checkpoint r.holding r.economicHolding = true ∧\n    ∃ receipt : CardanoKeri.Registry.FoldReceipt q.registryParams q.registryEnv q.configuration,\n      receipt.before = r.booked ∧ receipt.after = r.after ∧\n      receipt.unspent = q.unspent ∧ receipt.transaction = q.economicTx ∧\n      receipt.flow = r.foldFlow ∧ DeliveredOrigin receipt q.booking c.aid r.origin ∧\n      realizesState i c r.checkpoint r.holding ∧ r.origin.carrierRef = r.holding.reference"
+        "then": "createRegistry i c abstractRegistry q.configuration commit q.genesisTx q.genesisOutputs = .ok r.created ∧\n    CardanoKeri.Registry.bookRegistration q.registryParams r.created.economic q.booking =\n      .ok (r.registrationFlow, r.booked) ∧\n    CardanoKeri.Registry.fold q.registryParams q.registryEnv r.booked r.booked.gen\n      r.booked.config.applicationPolicy q.unspent q.economicTx = .ok (r.foldFlow, r.after) ∧\n    SingularApplicationHeld.fold .none i.hash i.code commit c.release q.fullFold = true ∧\n    stepFn q.checkpointParams q.checkpointEnv (.register q.refund q.pool) q.now .absent =\n      some (r.checkpointFlow, r.checkpoint) ∧\n    registrationAgreementB i c q r.created r.booked r.after r.checkpoint r.holding r.economicHolding = true ∧\n    ∃ receipt : CardanoKeri.Registry.FoldReceipt q.registryParams q.registryEnv q.configuration,\n      receipt.before = r.booked ∧ receipt.after = r.after ∧\n      receipt.unspent = q.unspent ∧ receipt.transaction = q.economicTx ∧\n      receipt.flow = r.foldFlow ∧ DeliveredOrigin receipt q.booking c.aid r.origin ∧\n      realizesState i c q.checkpointParams q.registryParams r.checkpoint r.holding ∧ r.origin.carrierRef = r.holding.reference"
       },
-      "storySha256": "3da5c909f5f71783c32f253b523d33451057016c151f1b8bc3fbd73e5a9d9a98"
+      "storySha256": "db08add32710478b92f8ed037d13e24819d4cf39f0813d931039538331796c99"
     },
     {
       "declaration": "CardanoKeri.ConsumerIdentity.registerJoint_money",
       "path": "lean/CardanoKeri/ConsumerGoals.lean",
-      "line": 404,
+      "line": 405,
       "statement": "theorem registerJoint_money (i : Interpretation) (c : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (commit : SingularApplicationHeld.TrieCommit)\n    (q : RegistrationInput) (r : Registered)\n    (accepted : registerJoint i c abstractRegistry commit q = .ok r) :\n    q.fullFold.assets.spent = q.economicTx.transaction.inputs.filterMap (·.ref) ∧\n    q.economicTx.transaction.inputs.length = (q.economicTx.transaction.inputs.filterMap (·.ref)).length ∧\n    q.fullFold.spentOutputs.map (fun o => (o.reference, o.lovelace)) =\n      (q.unspent.filter fun item => Singular.inputsContainReference\n        q.economicTx.transaction.inputs item.1).map (fun item => (item.1, item.2.output.lovelace)) ∧\n    q.fullFold.outputs.map (·.lovelace) = q.economicTx.outputs.map (fun o => o.output.lovelace) ∧\n    q.fullFold.fee = q.economicTx.transaction.fee ∧\n    q.fullFold.donation = q.economicTx.transaction.donation ∧\n    some q.fullFold.interval = q.economicTx.transaction.validity",
       "statementSha256": "54a4612422d703596ab6205c4fe1c1d3e30565be0ec782dbe18e0922d30cacac",
       "sourceStory": "CI24. Given a successful joint registration; when comparing its two actual\nfold money observations; then complete spent references agree with every\nreferenced economic input (none omitted), input reference/value pairs agree,\nall output amounts agree in order, fees/donations agree and the full validity\ninterval equals the economic transaction's present interval. All conjuncts\nare required; this does not identify approval token encodings.",
@@ -3255,7 +3496,7 @@
     {
       "declaration": "CardanoKeri.ConsumerIdentity.registered_consumer_iff",
       "path": "lean/CardanoKeri/ConsumerGoals.lean",
-      "line": 426,
+      "line": 427,
       "statement": "theorem registered_consumer_iff (i : Interpretation) (c : Context) (e : Environment)\n    (abstractRegistry : Singular.TokenId → Nat) (commit : SingularApplicationHeld.TrieCommit)\n    (q : RegistrationInput) (r : Registered) (now : Slot)\n    (accepted : registerJoint i c abstractRegistry commit q = .ok r)\n    (context : authenticatedContext c e) :\n    consumableHolding i c e q.checkpointParams now r.holding ↔\n      consumableState q.checkpointParams now r.checkpoint",
       "statementSha256": "182feb55095dafc4e3c415e00447d36ef5b2c02845fd31b12ec1d9131ddd9df2",
       "sourceStory": "CI25. Given actual successful joint registration and independently\nauthenticated environment; when the treasury reads its actual delivered\nholding at any time; then acceptance iff the unchanged old lifecycle\neligibility holds at that time. Juvenility remains effective; success of\nregistration alone is never assumed to imply immediate consumer acceptance.",
@@ -3269,7 +3510,7 @@
     {
       "declaration": "CardanoKeri.ConsumerIdentity.registerJoint_complete",
       "path": "lean/CardanoKeri/ConsumerGoals.lean",
-      "line": 444,
+      "line": 446,
       "statement": "theorem registerJoint_complete (i : Interpretation) (c : Context)\n    (abstractRegistry : Singular.TokenId → Nat) (commit : SingularApplicationHeld.TrieCommit)\n    (q : RegistrationInput) (created : CreatedRegistry)\n    (booked after : CardanoKeri.Registry.Sys) (bookFlow foldFlow : CardanoKeri.Registry.Flow)\n    (cpFlow : Flow) (st : State) (o : AH.ObservedOutput) (eo : Singular.EconomicOutput) (token : Nat)\n    (genesis : createRegistry i c abstractRegistry q.configuration commit q.genesisTx q.genesisOutputs = .ok created)\n    (book : CardanoKeri.Registry.bookRegistration q.registryParams created.economic q.booking = .ok (bookFlow, booked))\n    (fold : CardanoKeri.Registry.fold q.registryParams q.registryEnv booked booked.gen\n      booked.config.applicationPolicy q.unspent q.economicTx = .ok (foldFlow, after))\n    (fullFold : SingularApplicationHeld.fold .none i.hash i.code commit c.release q.fullFold = true)\n    (registration : stepFn q.checkpointParams q.checkpointEnv (.register q.refund q.pool) q.now .absent = some (cpFlow, st))\n    (fullOutput : q.fullFold.outputs[q.holdingIndex]? = some o)\n    (economicOutput : q.economicTx.outputs[q.holdingIndex]? = some eo)\n    (agreement : registrationAgreementB i c q created booked after st o eo = true)\n    (binding : CardanoKeri.Registry.bindingAt after c.aid = some token) :\n    ∃ r, registerJoint i c abstractRegistry commit q = .ok r",
       "statementSha256": "745d394f35827a6f8c7caf817f362e6fdd786e38363d37160090886af2e96df8",
       "sourceStory": "CI26. Given concrete successful genesis, booking, economic fold and\nfull-identity fold; actual Checkpoint registration; actual selected output in\nboth transactions; successful complete relation check; and the installed\nbinding alias; when running the bridge; then it returns some result. These\nare executable component/representation preconditions, not a consumer verdict\nor a whole-machine equivalence premise. The connected witness must establish\nevery premise by execution rather than seed final states.",
@@ -4866,15 +5107,15 @@
       "declaration": "CardanoKeri.Registry.registration_posted_value",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
       "line": 969,
-      "statement": "theorem registration_posted_value (p : Params) {s s' : Sys}\n    {b : Singular.RegistrationBooking} {f : Flow}\n    (hs : bookRegistration p s b = .ok (f, s')) :\n    b.request.carrierAda = p.Mc + p.D ∧ b.request.declaredTip = p.tip ∧\n    b.request.contents.lovelace = b.request.registrationCost + p.tip + (p.Mc + p.D) ∧\n    f = { deposited := b.request.contents.lovelace }",
-      "statementSha256": "4dd8e4b3cccf3188cb3bb694482663e595c8d6ed7519c20af2e3b9b5eb6ab1f5",
+      "statement": "theorem registration_posted_value (p : Params) {s s' : Sys}\n    {b : Singular.RegistrationBooking} {f : Flow}\n    (hs : bookRegistration p s b = .ok (f, s')) :\n    p.Mc + p.D ≤ b.request.carrierAda ∧ b.request.declaredTip = p.tip ∧\n    b.request.contents.lovelace = b.request.registrationCost + p.tip + b.request.carrierAda ∧\n    f = { deposited := b.request.contents.lovelace }",
+      "statementSha256": "8ddc6e5d1d69a0dc8c6806040503df7abf88cab0ea90a2974cd85b600f10846b",
       "sourceStory": "Given actual imported registration booking success, or an actual selected\nregistration in a successful adapter fold; when observing the request and\nreal economic output; then the entire declared carrier budget and exact\nunique tagged destination output follow, with unchanged opaque datum and no\nhidden tags/assets. This proves neither a Cardano minimum nor the full changing\nserialized Checkpoint datum. `Examples.registration_folded` supplies the connected registration witness. `RegistryBoundaryDriver` executes complete delivery controls.",
       "story": {
         "given": "(p : Params) {s s' : Sys}\n    {b : Singular.RegistrationBooking} {f : Flow}\n    (hs : bookRegistration p s b = .ok (f, s'))",
         "when": "Observe the Registry transition, projection or custody relation named by this theorem.",
-        "then": "b.request.carrierAda = p.Mc + p.D ∧ b.request.declaredTip = p.tip ∧\n    b.request.contents.lovelace = b.request.registrationCost + p.tip + (p.Mc + p.D) ∧\n    f = { deposited := b.request.contents.lovelace }"
+        "then": "p.Mc + p.D ≤ b.request.carrierAda ∧ b.request.declaredTip = p.tip ∧\n    b.request.contents.lovelace = b.request.registrationCost + p.tip + b.request.carrierAda ∧\n    f = { deposited := b.request.contents.lovelace }"
       },
-      "storySha256": "c91b7d763152ca500519880c2d4196b153fb226cf442e2105d6ad21472099a48"
+      "storySha256": "ab908af55fc1566bf024d89ca6b1e39fd1c861dbc6344d8254b3cad9a9715e2c"
     },
     {
       "declaration": "CardanoKeri.Registry.registration_delivery",

@@ -51,10 +51,10 @@ external context; when consumed; then acceptance iff the full old lifecycle
 predicate holds. This is a refinement premise, not evidence that an output
 exists or its decoder is faithful. -/
 theorem existing_eligibility_preserved (i : Interpretation) (c : Context)
-    (e : Environment) (p : Params) (now : Slot) (s : State) (o : AH.ObservedOutput)
-    (context : authenticatedContext c e) (realizes : realizesState i c s o) :
+    (e : Environment) (p : Params) (rp : CardanoKeri.Registry.Params) (now : Slot) (s : State)
+    (o : AH.ObservedOutput) (context : authenticatedContext c e) (realizes : realizesState i c p rp s o) :
     consumableHolding i c e p now o ↔ consumableState p now s := by
-  rcases realizes with ⟨credential, quantity, datum⟩
+  rcases realizes with ⟨credential, quantity, datum, _⟩
   obtain ⟨⟨aid, st⟩, hd, hf⟩ := Option.map_eq_some_iff.mp datum
   simp only [DecodedDatum.facts, DecodedDatum.mk.injEq] at hf
   obtain ⟨rfl, hst⟩ := hf
@@ -358,7 +358,7 @@ theorem registerJoint_sound (i : Interpretation) (c : Context)
       receipt.before = r.booked ∧ receipt.after = r.after ∧
       receipt.unspent = q.unspent ∧ receipt.transaction = q.economicTx ∧
       receipt.flow = r.foldFlow ∧ DeliveredOrigin receipt q.booking c.aid r.origin ∧
-      realizesState i c r.checkpoint r.holding ∧ r.origin.carrierRef = r.holding.reference := by
+      realizesState i c q.checkpointParams q.registryParams r.checkpoint r.holding ∧ r.origin.carrierRef = r.holding.reference := by
   unfold registerJoint at accepted
   simp only [bind, Except.bind, pure, Except.pure] at accepted
   repeat first | split at accepted | contradiction
@@ -380,7 +380,7 @@ theorem registerJoint_sound (i : Interpretation) (c : Context)
   all_goals have clauses := agree
   all_goals simp only [registrationAgreementB, Bool.and_eq_true, and_assoc] at clauses
   all_goals rcases clauses with ⟨_, _, _, key, _, selected, _, _, ref, _, cred,
-    addr, datum, value, tags, _, _, qty, decoded, _⟩
+    addr, datum, value, _, carrierHeld, tags, holdingValue, _, qty, decoded, _⟩
   · refine ⟨?_, by simpa using key, rfl, rfl, rfl, rfl, rfl, ht,
       q.holdingIndex, eo, heo, rfl, ?_, ?_, ?_, ?_⟩
     · simpa [receipt] using selected
@@ -392,7 +392,8 @@ theorem registerJoint_sound (i : Interpretation) (c : Context)
       simp [stepFn] at hcp
       rcases hcp with ⟨_, rfl⟩
       rfl
-    exact ⟨by simpa using cred, by simpa [held] using qty, by simpa using decoded⟩
+    exact ⟨by simpa using cred, by simpa [held] using qty, by simpa using decoded,
+      by simpa [beq_iff_eq] using (beq_iff_eq.mp holdingValue).trans (beq_iff_eq.mp carrierHeld)⟩
   · exact (by simpa using ref : o.reference = ⟨q.economicTx.identity, q.holdingIndex⟩).symm
 
 /-- CI24. Given a successful joint registration; when comparing its two actual
@@ -432,7 +433,8 @@ theorem registered_consumer_iff (i : Interpretation) (c : Context) (e : Environm
       consumableState q.checkpointParams now r.checkpoint := by
   obtain ⟨receipt, _, _, _, _, _, _, realized, _⟩ :=
     (registerJoint_sound i c abstractRegistry commit q r accepted).2.2.2.2.2.2
-  exact existing_eligibility_preserved i c e q.checkpointParams now r.checkpoint r.holding context realized
+  exact existing_eligibility_preserved i c e q.checkpointParams q.registryParams now r.checkpoint r.holding
+    context realized
 
 /-- CI26. Given concrete successful genesis, booking, economic fold and
 full-identity fold; actual Checkpoint registration; actual selected output in

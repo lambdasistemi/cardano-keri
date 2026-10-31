@@ -93,8 +93,11 @@ structure Flow where
 
 abbrev Result := Flow × Sys
 
+-- The application carrier holds the minimum ADA `Mc`, the checkpoint's deposit and
+-- freeze bond `D`, and above them the initial premium pool the registrant chooses.
+-- A carrier short of `Mc + D` is refused.
 def registrationShape (p : Params) (b : Singular.RegistrationBooking) : Prop :=
-  b.request.carrierAda = p.Mc + p.D ∧ b.request.declaredTip = p.tip
+  p.Mc + p.D ≤ b.request.carrierAda ∧ b.request.declaredTip = p.tip
 
 instance (p : Params) (b : Singular.RegistrationBooking) :
     Decidable (registrationShape p b) :=
@@ -180,7 +183,7 @@ def foldResult (p : Params) (s : Sys) (tx : Singular.EconomicTransaction)
       !Singular.inputsContainReference tx.transaction.inputs e.booking.request.reference) }
   if after.toWorld ≠ world then throw "keri-fold-reconstruction-mismatch"
   let locked := members.filterMap (fun m => match m with
-    | .registration b => some (b.request.key, p.D)
+    | .registration b => some (b.request.key, b.request.carrierAda - p.Mc)
     | .termination _ => none)
   pure ({ locked := locked }, after)
 

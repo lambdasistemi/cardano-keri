@@ -25,7 +25,7 @@ function execute(p, env, s, action) {
   let after = s, moved = flow({});
   if (kind === 'bookRegistration') {
     const b = a.booking;
-    require(b.request.carrierAda === p.Mc + p.D && b.request.declaredTip === p.tip, 'keri-registration-value-mismatch');
+    require(b.request.carrierAda >= p.Mc + p.D && b.request.declaredTip === p.tip, 'keri-registration-value-mismatch');
     const next = E.bookRegistration(world, b);
     after = { ...s, registrations: [b, ...s.registrations] };
     require(E.equal(toWorld(after), next), 'keri-registration-reconstruction-mismatch'); moved = flow({ deposited: b.request.contents.lovelace });
@@ -63,7 +63,7 @@ function execute(p, env, s, action) {
     after = { ...after, gen: s.gen + 1n, config: next.registry.config, trie: next.registry.trie, treasury: next.treasury,
       registrations: s.registrations.filter(b => !containsRef(a.transaction.transaction.inputs, b.request.reference)), terminations: s.terminations.filter(e => !containsRef(a.transaction.transaction.inputs, e.booking.request.reference)) };
     require(E.equal(toWorld(after), next), 'keri-fold-reconstruction-mismatch');
-    moved = flow({ locked: members.filter(m => m.kind === 'registration').map(m => [m.booking.request.key, p.D]) });
+    moved = flow({ locked: members.filter(m => m.kind === 'registration').map(m => [m.booking.request.key, m.booking.request.carrierAda - p.Mc]) });
   } else {
     const next = kind === 'genericRetraction' ? E.retractionAccepted(world, a.unspent, a.transaction) : E.rejectionAccepted(world, a.unspent, a.transaction);
     after = { ...s, registrations: s.registrations.filter(b => next.pending.some(old => E.equal(old, b))) };

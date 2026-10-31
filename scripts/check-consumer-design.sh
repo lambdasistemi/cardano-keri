@@ -41,3 +41,16 @@ node simulator/consumer-js-mutants.mjs "$consumer_mutation_receipts"
 # The Aiken test module generated from those vectors (#343) is exactly what
 # the committed vectors generate: one decoder test and one consumer test per row.
 node scripts/checkpoint-datum-vectors.mjs --check
+# The checkpoint output's value (#502): the committed vectors are the Lean's
+# output, every committed row is checked against the Lean and every changed
+# field fails.
+(
+  cd lean
+  lake build CardanoKeri.CheckpointValueVectors
+  generated=$(mktemp)
+  lake env lean --run CheckpointValueDriver.lean >"$generated"
+  node -e 'const fs=require("fs");if(fs.readFileSync(process.argv[1],"utf8")!==fs.readFileSync(process.argv[2],"utf8")){console.error("checkpoint-value-vectors.json differs from the Lean output");process.exit(1)}' \
+    checkpoint-value-vectors.json "$generated"
+  rm -f -- "$generated"
+  lake env lean --run CheckpointValueDriver.lean --check checkpoint-value-vectors.json
+)

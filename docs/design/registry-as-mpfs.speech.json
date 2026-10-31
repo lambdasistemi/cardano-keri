@@ -1,48 +1,136 @@
 {
   "the-registry-and-retained-identity-outputs": [
     {
-      "text": "The registry and retained identity outputs. An owner parks while retaining the output, token, minimum ADA and key state, and returns through rotation with fresh bonds. Consumers refuse parked and pending outputs. These are model guarantees, not production conformance. Earlier replaced claims remain in the historical design record.",
+      "text": "The registry and retained identity outputs.",
       "pause": 500
+    },
+    {
+      "text": "As an identity owner, I keep my checkpoint alive — bonds, rotations, unfreezing — until it is convicted; there is no owner exit, no parking and no revival. As a relying party, I see a checkpoint that is either alive or convicted, and I must refuse a termination-pending output. As a folder, I can process an admitted request without becoming the identity's controller.",
+      "pause": 400
+    },
+    {
+      "text": "These are model guarantees under their stated premises. The simulators execute model transactions; they do not establish Aiken, builder or deployed conformance. The no owner exit revision and the correspondence register own the lifecycle revision; the earlier parking revision is superseded. The earlier design record remains historical; its replaced lifecycle and economic claims are not current guarantees.",
+      "pause": 400
     }
   ],
   "where-the-registry-is-built": [
     {
-      "text": "The model imports public Singular commit d69ab005c3b710aeebf033d3c5cd08c56feb5643 under Lean 4.27.0. Registry projects its carriers and pending entries to the actual imported world. It executes booking and economic folds, then checks that reconstruction agrees. Public upstream product requirements and executable model evidence remain separate.",
+      "text": "Where the registry is built.",
       "pause": 500
+    },
+    {
+      "text": "The model imports the public Singular commit d69ab005c3b710aeebf033d3c5cd08c56feb5643, tree 2979dcfc58b092313b0ce7fa0493722539b9ea65, under Lean 4.27.0. The pinned sources define the imported generic booking, economic fold and registration-recovery judgments. Public upstream requirements include registration, termination, reading and integration. The executable model pin and those product requirements are distinct evidence.",
+      "pause": 400
+    },
+    {
+      "text": "Registry.Sys.toWorld projects KERI carriers and pending entries to the imported Singular.World. Registration booking and termination booking invoke its actual judgments. Registry.fold invokes Singular.foldAccepted, then reconstructs the KERI state and checks that its projection equals the returned world. RegistryAgreement.lean binds this correspondence. KERI retains its own admission, authorization, custody metadata and addressed local flows.",
+      "pause": 400
     }
   ],
   "the-machine-registrylean": [
     {
-      "text": "The machine stores generation, configuration, trie, carriers, bookings, whole termination entries, treasury and permanent bindings. Registration creates a carrier only through an accepted fold. Park returns the bond and retains the carrier. Revive rotates locally and deposits a fresh bond. Conviction leaves pending custody. Booking records the complete request and carrier association; only a consuming fold completes retirement. Generic recovery uses the full imported transaction. Registry evidence is coarse. Carrier original is a stable provenance descriptor, not an equality with the evolving serialized Checkpoint datum or current ledger reference. The coarse counter and concrete key encoding are not universally equated.",
+      "text": "The machine (Registry.lean).",
       "pause": 500
+    },
+    {
+      "text": "Sys contains the generation, imported configuration and trie, carriers, registration bookings, complete termination entries, treasury, permanent AID/token bindings and next token counter. A carrier stores its original holding, AID, token, key counter, local state and minimum ADA. A termination entry retains the complete generic booking and the original carrier metadata.",
+      "pause": 400
+    },
+    {
+      "text": "The coarse Registry predicates are inception and duplicity. They are declared abstractions, not cryptographic verification or a proof that they equal Checkpoint's concrete evidence predicates. In particular, the Registry flow does not summarize the Checkpoint conviction's bond and pool distribution.",
+      "pause": 400
+    },
+    {
+      "text": "Carrier.original is the stable imported holding descriptor retained as provenance. It does not prove equality with the complete serialized, evolving Checkpoint datum or a current ledger output reference. The separate coarse key counter and concrete Checkpoint key-state encoding are not universally equated by this adapter.",
+      "pause": 400
     }
   ],
   "what-registration-guarantees": [
     {
-      "text": "On reachable states, the model preserves unique custody and permanent bindings. A second first-registration cannot replace an active or retired key. Parking and revival keep the token. An active key alone is not consumer authority. Concrete token bytes, canonical registry and transaction authentication remain separate obligations.",
+      "text": "What registration guarantees.",
       "pause": 500
+    },
+    {
+      "text": "Given a reachable Registry state, the model preserves unique carrier and pending custody, permanent bindings and the imported world's invariant. A second successful first-registration cannot replace an active or retired key. There is no park and no revival, so no local step mints a new incarnation. These guarantees are scoped to one model registry.",
+      "pause": 400
+    },
+    {
+      "text": "RegistryReach.lean proves reachable well-formedness. RegistryCustody.lean and RegistryBurns.lean prove custody and the fold-only retirement boundary. RegistryMetadata.lean, RegistryFold.lean and RegistryCompleteness.lean prove reconstruction and completeness under the complete premises. RegistryAuthorization.lean proves the local authorization consequences. The numbered public consequences and inversions remain in RegistryGoals.lean.",
+      "pause": 400
+    },
+    {
+      "text": "An active key is not a consumer authorization. The reader must inspect the application output and enforce the consumer contract. Exact token bytes, canonical registry selection and transaction validity extensions remain in consumer authentication.",
+      "pause": 400
     }
   ],
   "checkpoint-and-the-associated-system": [
     {
-      "text": "Checkpoint owns concrete duplicity, signed intent, bonds, pool, poison, freeze and juvenility. Close refunds remaining bonds and pool while retaining the output and key state. Revival needs a later rotation from that state and fresh bonds. The associated system retains the actual registered origin and whole pending entry. Its certificate replays the stored context and consumes the exact request. Another valid request cannot complete this identity. The system player shows both flows and full states.",
+      "text": "Checkpoint and the associated system.",
       "pause": 500
+    },
+    {
+      "text": "Checkpoint.lean owns the funded local lifecycle: concrete duplicity, rotation and signed intent, conviction/freeze bonds, pool, refund address, poison, freeze and juvenility. There is no close and no reopen: a checkpoint leaves the live states only by conviction. The proved consumableStateB mirror refuses pending and convicted states.",
+      "pause": 400
+    },
+    {
+      "text": "SysStep adds the actual registered origin and pending request association. CheckpointCertificate.lean replays Registry history under the stored parameters, environment and initial configuration. Registration requires an actual accepted registration. Booking binds the request reference, AID, token, key state and complete entry to the origin. Completion needs an accepted fold consuming that exact entry. A valid receipt for a different request in the same context is insufficient. A local pending state has no local exit.",
+      "pause": 400
+    },
+    {
+      "text": "CheckpointCompletionGoals.lean states these receipt consequences. CheckpointSystemFixtures.lean supplies connected registration, rotation, conviction, booking and completion journeys, including a mixed fold and other-request refusals. The page's associated-system panel shows both addressed Checkpoint flow and Registry flow beside their full states.",
+      "pause": 400
     }
   ],
   "booking-and-fold-economics": [
     {
-      "text": "Booking requires request minimum ADA plus tip to fit in carrier minimum ADA. The request receives that sum, the booker receives the remainder, and the fee is external. Parking retains minimum ADA and cannot also pay it away. Registration delivers declared carrier ADA, destination and datum to the token-bearing output and sends registration cost to treasury. Termination has no carrier output: request ADA less declared tip goes to treasury, equal to request minimum ADA for a matching KERI booking. Tips are ordinary value governed by accounting, not an automatic named payment. Self-fold accounting requires its exact matching, address, output and fee premises. Profit is conditional.",
+      "text": "Booking and fold economics.",
       "pause": 500
+    },
+    {
+      "text": "Given Mr + tip ≤ Mc, booking splits the carrier minimum ADA exactly:",
+      "pause": 400
+    },
+    {
+      "text": "Mr + tip funds the termination request.",
+      "pause": 300
+    },
+    {
+      "text": "Mc - Mr - tip is the booker's premium.",
+      "pause": 300
+    },
+    {
+      "text": "The booking fee is paid separately by the booker.",
+      "pause": 300
+    },
+    {
+      "text": "A live carrier retains Mc; it cannot pay that value to a reaper. Booking needs conviction first. Samaritan.booker_nonloss_iff compares the premium with the booking fee. There is no unconditional promise that a booker makes a profit.",
+      "pause": 400
+    },
+    {
+      "text": "The imported fold accounts for actual inputs, outputs, fees and donation. Registration delivers the declared carrier ADA, destination and datum to the token-bearing output and routes registration cost to treasury. Termination creates no carrier output: request ADA less declared tip goes to treasury, which is Mr for a matching KERI booking. Declared tips are ordinary value subject to transaction accounting, not an automatic payment to a named person. termination_fold_accounting and self_fold_addressed_accounting use those values. The latter requires all ordinary outputs at the named address, matching booking data and its other explicit transaction premises. A fold does not promise an automatic refund of Mr to the booker. Booking conservation and addressed self-fold accounting are different claims.",
+      "pause": 400
     }
   ],
   "executable-evidence-and-limits": [
     {
-      "text": "The Registry and Checkpoint pages replay complete generated observations, with an associated-system player for receipts. Kernel proofs, finite executions, model mutants and checker controls are different evidence. Source bindings belong to the candidate. Production construction, submission, rollback, live availability, cryptographic codecs and broader request recovery require their own correspondence and implementation tests.",
+      "text": "Executable evidence and limits.",
       "pause": 500
+    },
+    {
+      "text": "The Registry simulator replays complete wire-v3 transactions, including refusals and economic boundaries. The Checkpoint simulator has local lifecycle stories and a separate associated-system player. The canonical reader stories are simulator/M1-STORIES.md and simulator/REGISTRY-STORIES.md.",
+      "pause": 400
+    },
+    {
+      "text": "The Lean build, exact contract checks, compiled axiom inventory, finite model mutations, fresh corpus replay and browser/CLI checks cover separate evidence classes. Their source bindings are recorded with the candidate. Finite examples are not the universal proofs; checker mutations are not model mutations.",
+      "pause": 400
+    },
+    {
+      "text": "The model does not establish production transaction construction, submission, rollback handling, live-chain availability or cryptographic codec correctness. Broader application request recovery remains in request lifecycle. Those obligations require their own model correspondence and both implementation test layers before production acceptance.",
+      "pause": 400
     }
   ],
   "_source": {
     "file": "registry-as-mpfs.md",
-    "sha256": "13f25e5a534bf301ee0b29b668877992dc5996fc26a831c9bf4e91bf8a6c2049"
+    "sha256": "771554270a0faeb1e38c23b508aa7e55841e91d29daea99a437628067ba308c1"
   }
 }

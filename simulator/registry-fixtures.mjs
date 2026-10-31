@@ -27,11 +27,11 @@ function transaction(s, members, inputs, outputs, validity, fee, donation, signe
     applicationMint: members.flatMap(m => m.booking.request.contents.applicationTags).map(t => [{ policy: t.policy, name: t.assetName }, -1n]),
     stateMint: [], singularMint: [] };
 }
-export function registrationAction(params, state, aidValue, referenceValue, timeValue = 0) {
-  const [p, s] = prepare(params, state), aid = nat(aidValue), reference = nat(referenceValue), time = nat(timeValue);
+export function registrationAction(params, state, aidValue, referenceValue, timeValue = 0, poolValue = 0) {
+  const [p, s] = prepare(params, state), aid = nat(aidValue), reference = nat(referenceValue), time = nat(timeValue), pool0 = nat(poolValue);
   const request = { reference: { tx: reference, index: 0n }, registryId: s.config.registryId, key: aid, refundAddress: 42n,
-    destination: aid + 100n, submittedAt: time + 1n, registrationCost: s.config.registrationCost ?? 0n, declaredTip: p.tip, carrierAda: p.Mc + p.D, datum: aid + 700n,
-    contents: { lovelace: p.Mc + p.D + p.tip + (s.config.registrationCost ?? 0n), applicationTags: [], trieReadyTags: [], otherAssets: [] } };
+    destination: aid + 100n, submittedAt: time + 1n, registrationCost: s.config.registrationCost ?? 0n, declaredTip: p.tip, carrierAda: p.Mc + p.D + pool0, datum: aid + 700n,
+    contents: { lovelace: p.Mc + p.D + pool0 + p.tip + (s.config.registrationCost ?? 0n), applicationTags: [], trieReadyTags: [], otherAssets: [] } };
   const approval = { policy: s.config.applicationPolicy, edge: 'insertActive', key: aid, owner: 42n, destination: request.destination, assetName: applicationName(request), signatures: [] };
   request.contents.applicationTags = [approval]; request.contents.trieReadyTags = [readyTag(s.config, request, 'registration')];
   return toWire({ bookRegistration: { booking: { request, interval: { lower: time, upper: time + 1n }, trieReadyTagsMinted: request.contents.trieReadyTags, applicationTagsMinted: [approval] } } });

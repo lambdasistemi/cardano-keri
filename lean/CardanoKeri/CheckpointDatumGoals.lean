@@ -925,15 +925,17 @@ theorem datum_hasOutput (aid : AID) (k : KeyMaterial) (s : State) (d : Data)
   cases s <;> simp_all [datum, State.hasOutput]
 
 /-- Given a holding with the release's credential, the representative asset once and the raw
-version 2 datum written for the intended AID and any state with an output, pool included;
-when observed through the concrete interpretation; then it realizes that state. -/
-theorem written_realizes (c : Context) (s : State) (k : KeyMaterial) (d : Data)
+version 2 datum written for the intended AID and any state with an output, pool included,
+holding exactly the lovelace that state holds; when observed through the concrete
+interpretation; then it realizes that state. -/
+theorem written_realizes (c : Context) (p : Params) (rp : CardanoKeri.Registry.Params) (s : State)
+    (k : KeyMaterial) (d : Data)
     (o : AH.ObservedOutput) (hd : datum c.aid k s = some d) (hk : k.Bytewise)
     (cred : o.credential = c.release.applicationCredential)
     (qty : AH.quantity o (representativeAsset interpretation c) = 1)
-    (held : o.datum = .application (raw d)) :
-    realizesState interpretation c s o := by
-  refine ⟨cred, ?_, ?_⟩
+    (held : o.datum = .application (raw d)) (value : o.lovelace = s.heldValue p rp) :
+    realizesState interpretation c p rp s o := by
+  refine ⟨cred, ?_, ?_, value⟩
   · simp [qty, State.representativeHeld, datum_hasOutput _ _ _ _ hd]
   · simp [decoded, held, interpretation, Bytes.interpretation,
       decode_written c.release c.aid k s d hd hk, DecodedDatum.facts, datumFacts_idem]
@@ -947,9 +949,14 @@ theorem written_holding_iff (c : Context) (e : Environment) (p : Params) (now : 
     (cred : o.credential = c.release.applicationCredential)
     (qty : AH.quantity o (representativeAsset interpretation c) = 1)
     (held : o.datum = .application (raw d)) :
-    consumableHolding interpretation c e p now o ↔ consumableState p now s :=
-  existing_eligibility_preserved interpretation c e p now s o context
-    (written_realizes c s k d o hd hk cred qty held)
+    consumableHolding interpretation c e p now o ↔ consumableState p now s := by
+  -- The consumer reads no amount, so the holding's value is not a premise here.
+  have facts : consumableState p now s.datumFacts ↔ consumableState p now s := by
+    cases s <;> simp [State.datumFacts, consumableState]
+  unfold consumableHolding
+  rw [qty]
+  simp [context, cred, decoded, held, interpretation, Bytes.interpretation,
+    decode_written c.release c.aid k s d hd hk, facts]
 
 /-- Given a registration funding the premium pool with any amount and a holding carrying the
 raw datum written for the registered state; when the registration bridge's datum clause reads

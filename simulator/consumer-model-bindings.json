@@ -8,9 +8,9 @@
     "lean/CardanoKeri/ConsumerBytesGoals.lean": "4822023b95c0a3ed0f99b5ee09784e5beb3700582611a80f867defc35cbcdae4",
     "lean/CardanoKeri/ConsumerBytesVectors.lean": "ec7952aa84aa108395196ec44a38bfbcfc4ac414617565e3a6fd7f4778323745",
     "lean/CardanoKeri/ConsumerControls.lean": "462960552961957af55a4b079ebd0e30e4b6f3a99eb8c76e0a7cae2d713dfcb4",
-    "lean/CardanoKeri/ConsumerFixtures.lean": "56b22a2f916b6c969c4590d9a785f5d892ab0b9fe4a595916cab2e17926089a3",
-    "lean/CardanoKeri/ConsumerGoals.lean": "0cd986397151768eac7a7d37123a5e8dc47bdb58c334a014cf9f340ed165c867",
-    "lean/CardanoKeri/ConsumerIdentity.lean": "174e7b269db18733e49789f14cb83ab0d40527f79348a9a6eb5c7444d933c3c2",
+    "lean/CardanoKeri/ConsumerFixtures.lean": "1d68588fcd6696e940a33d94bc711f6ed807dc545cf680ae3dbeffe3e2c38e87",
+    "lean/CardanoKeri/ConsumerGoals.lean": "38b93d6db3b619fc5717b18a1b76d86abd5b8971ede50e120a15144306da3e64",
+    "lean/CardanoKeri/ConsumerIdentity.lean": "79a33dd07efdf1bcd3d66041b2ce45948eade4c880bf0704eb7cad3a6725489f",
     "lean/CardanoKeri/ConsumerJourney.lean": "672748c61c2ac4d1d6745bdea4e9d95807deb0665523c57e47a111ababaa5fe5",
     "lean/CardanoKeri/ConsumerWire.lean": "82b7088d8ada127c6ecee9ca50ef483fcf240cf31e981489006e08ec51ede4d4",
     "lean/ConsumerTraceDriver.lean": "9c076becf7a5878bf2bf606c370443d368b138a110f7b6a1e80a59248ab04581",
@@ -18,7 +18,7 @@
     "lean/lakefile.lean": "b14f233e96652e27994a96fe0057d49af89b9ecbb5a35738dbdc2c488e4687c8",
     "simulator/consumer-cli.mjs": "d679c03ad4cdba6eb7ba798831c65a0b7874e35a95d578eafbf895e1fe25fb36",
     "simulator/consumer-core.mjs": "4f1d73205748471d2530762772f7574a0d450cba4879f3252e973230b1af673f",
-    "simulator/consumer-corpus.json": "8d505fa061d5bbf105a3f336a3480fe69aebf028b1b51e9a1989cfaa83ae3cb4",
+    "simulator/consumer-corpus.json": "032e87de36a109b0cadacc9f2f57ca9d86539fd6f3fcdfd7161acb50fa360a14",
     "simulator/consumer-properties.mjs": "44357618d6c7b1fa35f06735947650de0d312b5ef6a8c366ece6a8f7254eb3f9"
   },
   "properties": [
@@ -35,7 +35,7 @@
     {
       "id": "CI03",
       "declaration": "CardanoKeri.ConsumerIdentity.existing_eligibility_preserved",
-      "statementSha256": "55080fcc635da569e10ab38d63ce083188d64922a5960b306e4da01949728b4c"
+      "statementSha256": "301d2bd1bf08b320ac80f69e7eb339d547aefe94b014a2f1e9a1b8c7f6e5b1f9"
     },
     {
       "id": "CI04",
@@ -135,7 +135,7 @@
     {
       "id": "CI23",
       "declaration": "CardanoKeri.ConsumerIdentity.registerJoint_sound",
-      "statementSha256": "88aa1856dacb3203f91facf0ad82dc7afa46778862bf197a0ca6a0740cfc04f6"
+      "statementSha256": "a496e70eb06ef30d446c3fbed95e28f4a5485214dd1475aabc2e61df7d64ec30"
     },
     {
       "id": "CI24",

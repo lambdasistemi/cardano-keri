@@ -319,7 +319,7 @@ theorem fold_complete (p : Params) (env : Env) (cfg : Singular.Config)
     terminations := s.terminations.filter (fun e =>
       !Singular.inputsContainReference tx.transaction.inputs e.booking.request.reference) }
   let flow : Flow := { locked := (Singular.foldMembers s.toWorld tx).filterMap (fun m => match m with
-    | .registration b => some (b.request.key, p.D)
+    | .registration b => some (b.request.key, b.request.carrierAda - p.Mc)
     | .termination _ => none) }
   have projected : after.toWorld = world := by
     have registry : ({

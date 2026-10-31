@@ -64,9 +64,11 @@ mapping, then constructs the stored registration origin.
 
 `moneyAgreementB` compares complete spent references, input reference/value
 pairs, ordered output amounts, fee, donation and validity interval between
-the two fold observations. This does not equate physical holding lovelace
-with Checkpoint conviction bond, freeze bond and pool values. Those remain
-separate abstractions pending a real decoder and observer.
+the two fold observations. The bridge also requires the registry's deposit to be
+the checkpoint's deposit plus freeze bond, and the declared carrier to be exactly
+the lovelace the registered checkpoint holds, so the initial pool is what the
+carrier holds above the minimum ADA, the deposit and the freeze bond (see [the
+checkpoint output's value](#the-checkpoint-outputs-value)).
 
 The proofs establish inversion, completeness under the explicit component
 premises, delivered-origin correspondence and preservation of the old
@@ -94,15 +96,16 @@ fixture codec and hash; the concrete bytes follow in the next section.
 | Hash collision freedom | Rely on BLAKE2b-256 having no collision over the identity domain; this is assumed, not proved |
 | Published scripts | Bind actual policy application and script hashes to an authenticated release manifest |
 | Network and release resolution | Obtain them independently; missing or conflicting evidence refuses |
-| Physical value | Read the premium pool and the bond amounts from the output's value; the datum carries the state's facts only (see [the checkpoint datum](#the-checkpoint-datum)), and the value layout belongs to the on-chain datum version 2 work ([#339](https://github.com/lambdasistemi/cardano-keri/issues/339)) |
+| Physical value | Read the premium pool from the output's value and require at least the minimum ADA, the deposit and the freeze bond the datum says are held (see [the checkpoint output's value](#the-checkpoint-outputs-value)); the validator enforcing it on chain is the datum version 2 work ([#339](https://github.com/lambdasistemi/cardano-keri/issues/339)) |
 | Current reference and holding movement | Verify current unspentness and observation fidelity; registration Origin is immutable metadata |
 | Reduced registry identifier | Establish the explicit finite faithful mapping when separation relies on that representation |
 | Discovery and settlement | Do not infer absence or terminality from an empty lookup or a provider failure |
 
-`realizesState` checks the credential, representative quantity and decoded
-AID and datum facts: the decoded state compared with the intended state, both
-with the pool set to zero, because the pool is an amount held in the value and
-not a fact in the datum. It has no current-reference or unspentness check. Local fixture
+`realizesState` checks the credential, representative quantity, decoded AID and
+datum facts, and the output's lovelace: the decoded state is compared with the
+intended state, both with the pool set to zero, because the pool is an amount
+held in the value and not a fact in the datum; the lovelace must be exactly
+what the intended state holds. It has no current-reference or unspentness check. Local fixture
 observations are explicitly selected model interpretations, not a production
 observer. No checkpoint expiry or renewal behavior is supplied by the model.
 
@@ -237,8 +240,8 @@ What the Lean proves about it:
 The twenty-six consumer statements are proved for every interpretation, so they
 hold with this one. Their wording is unchanged; the three that compare a
 decoded state with an intended one, through `realizesState` and the
-registration bridge, now compare the datum's facts, so they apply to funded
-registrations too.
+registration bridge, compare the datum's facts and the output's lovelace, so
+they apply to funded registrations too.
 
 The vector table `lean/checkpoint-datum-vectors.json` lists seven written
 datums with the decoder's result and the consumer's verdict on a genuine
@@ -254,8 +257,89 @@ node of another kind, is refused.
 These checks cover the listed inputs; the theorems cover all inputs. The
 Aiken consumer decodes version 2 ([the datum decoder in
 Aiken](#the-datum-decoder-in-aiken)); the on-chain validator does not write
-version 2 yet, and reading the pool and the bonds from the value is not
-modelled. This code is not for mainnet.
+version 2 yet. Reading the pool and the bonds from the value is modelled in
+[the checkpoint output's value](#the-checkpoint-outputs-value). This code is
+not for mainnet.
+
+## The checkpoint output's value
+
+A contract author holds a candidate checkpoint output and has read its datum.
+The datum says the checkpoint is live and its bond is not frozen, but it
+carries no amounts. The author wants to know the bonds are really there: the
+output's lovelace must be what that state holds, and a holding missing part of
+a bond must be refused. The model states this amount in
+`CardanoKeri.CheckpointValue` as `State.heldValue`.
+
+```mermaid
+stateDiagram-v2
+  [*] --> Live: register<br/>Mc + D + B + pool0
+  Live --> Live: rotate, poison,<br/>top-up
+  Live --> Frozen: freeze<br/>B to hunter
+  Frozen --> Live: deposit<br/>rotation, B in
+  Frozen --> Frozen: rotate,<br/>poison,<br/>top-up
+  Live --> Pending: convict<br/>D, B, pool out
+  Frozen --> Pending: convict<br/>D, pool out
+  Pending --> [*]: booking<br/>takes Mc
+```
+
+The diagram reads in words: a registration delivers the minimum ADA, the
+deposit, the freeze bond and the initial pool the registrant chooses. Every
+later step moves exactly the amounts its flow names. A freeze pays the freeze
+bond to the hunter, a rotation with a deposit brings it back, and a conviction
+pays the deposit to the convictor and the bond and pool to the refund address.
+The pending output keeps only the minimum ADA, which the termination booking
+consumes.
+
+| State | Lovelace the output holds | Floor: below it the holding is refused |
+|---|---|---|
+| Live, not frozen | `Mc + D + B + pool` | `Mc + D + B` |
+| Live, frozen | `Mc + D + pool` | `Mc + D` |
+| Pending termination | `Mc` | `Mc` |
+| Absent or convicted | no output | none |
+
+Here `Mc` is the registry's minimum ADA, `D` the deposit and `B` the freeze bond
+of the checkpoint's parameters, and `pool` the premium pool. The datum's facts
+and the lovelace together give back the whole state: the pool is the lovelace
+above the floor (`withValue_iff`, `realizes_determines_state`).
+
+- Every step keeps the amounts: what the input holds plus what the step takes
+  in equals what the output holds plus what it pays out
+  (`held_amounts_conserved`, `held_value_conserved`); a registration holds the
+  minimum ADA plus everything it takes in (`registration_holds_carrier`).
+- A conviction pays out everything the live checkpoint held except the minimum
+  ADA, and the pending output holds exactly the minimum ADA the termination
+  booking requires (`conviction_pays_out_every_amount`,
+  `pending_holds_minimum_ada`).
+- A holding below the floor realizes no state with those facts, whatever its
+  pool (`short_holding_refused`, `missing_bond_lovelace_refused`).
+- The registry books a carrier of at least `Mc + D_registry`, where the
+  registry's deposit is the checkpoint's deposit plus freeze bond; one lovelace
+  short is refused (`short_carrier_registration_refused`). A successful joint
+  registration delivers exactly `Mc + D + B + pool0` (`registerJoint_value`).
+
+| Decision | Chosen | Rejected | Why |
+|---|---|---|---|
+| The minimum ADA | Separate from the deposit, and the registry's `Mc` | Part of the deposit; a checkpoint parameter of its own | A conviction pays the whole deposit out, yet the pending output exists until the termination booking, which requires `Mc` of it |
+| What registration delivers | A carrier of `Mc + D + B + pool0`, the pool chosen per registration | A fixed carrier; a pool or bond paid outside the carrier | The registry's fold delivers exactly the declared carrier to the output |
+| Where the amounts live | In the output's value | In the datum | The datum carries facts; the value carries amounts |
+
+The vector table `lean/checkpoint-value-vectors.json` takes the seven states of
+the datum vectors and gives, for each, the lovelace its output holds, its floor
+and what a holding with those datum facts reads as at lovelace values around
+them: the state itself only at the lovelace it holds. It also books
+registration carriers with initial pools of 0, 3 and five million, refuses one
+carrier short by one lovelace, and records the connected registration fixture,
+whose carrier of 17 is the minimum ADA 4, the deposit 8, the freeze bond 2 and
+the pool 3. The Lean emits the table and checks the committed copy; changing
+any committed field fails the check.
+
+These checks cover the listed inputs; the theorems cover all inputs. The
+consumer predicate itself does not read the value: a relying contract that
+needs the bonds checks the lovelace against the floor, and the validator that
+enforces the amounts on chain is the datum version 2 work
+([#339](https://github.com/lambdasistemi/cardano-keri/issues/339)). How an
+honest owner recovers the deposit, the freeze bond or the pool is not settled
+by the model.
 
 ## The consumer predicate in Aiken
 

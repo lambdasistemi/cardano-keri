@@ -54,7 +54,7 @@ entry retains the complete generic booking and the original carrier metadata.
 
 | Action | Given | When | Then |
 | --- | --- | --- | --- |
-| Registration booking | A complete generic booking with carrier value `Mc + D` and the configured tip | `bookRegistration` accepts | The request is pending; no carrier has been created yet. |
+| Registration booking | A complete generic booking with carrier value at least `Mc + D` (minimum ADA, then the checkpoint's deposit and freeze bond, then the initial pool the registrant chooses) and the configured tip | `bookRegistration` accepts; a carrier one lovelace short is refused | The request is pending; no carrier has been created yet. |
 | Registration fold | Reachable state, the matching generation/plugin, KERI inception and an accepted imported economic transaction | `fold` consumes the booking | A carrier and permanent AID/token binding are installed with the committed holding. |
 | Convict carrier | A live carrier and duplicity against its key counter | `convictCkpt` accepts | Retain a termination-pending carrier and the active registry key. |
 | Book termination | That pending carrier and an exactly matching generic booking | `bookTermination` accepts | Move custody into the whole pending entry; retain its token/key/original holding association. |

@@ -41,7 +41,7 @@
       "pause": 400
     },
     {
-      "text": "moneyAgreementB compares complete spent references, input reference/value pairs, ordered output amounts, fee, donation and validity interval between the two fold observations. This does not equate physical holding lovelace with Checkpoint conviction bond, freeze bond and pool values. Those remain separate abstractions pending a real decoder and observer.",
+      "text": "moneyAgreementB compares complete spent references, input reference/value pairs, ordered output amounts, fee, donation and validity interval between the two fold observations. The bridge also requires the registry's deposit to be the checkpoint's deposit plus freeze bond, and the declared carrier to be exactly the lovelace the registered checkpoint holds, so the initial pool is what the carrier holds above the minimum ADA, the deposit and the freeze bond (see the checkpoint output's value).",
       "pause": 400
     },
     {
@@ -63,7 +63,7 @@
       "pause": 400
     },
     {
-      "text": "realizesState checks the credential, representative quantity and decoded AID and datum facts: the decoded state compared with the intended state, both with the pool set to zero, because the pool is an amount held in the value and not a fact in the datum. It has no current-reference or unspentness check. Local fixture observations are explicitly selected model interpretations, not a production observer. No checkpoint expiry or renewal behavior is supplied by the model.",
+      "text": "realizesState checks the credential, representative quantity, decoded AID and datum facts, and the output's lovelace: the decoded state is compared with the intended state, both with the pool set to zero, because the pool is an amount held in the value and not a fact in the datum; the lovelace must be exactly what the intended state holds. It has no current-reference or unspentness check. Local fixture observations are explicitly selected model interpretations, not a production observer. No checkpoint expiry or renewal behavior is supplied by the model.",
       "pause": 400
     }
   ],
@@ -139,7 +139,7 @@
       "pause": 300
     },
     {
-      "text": "The twenty-six consumer statements are proved for every interpretation, so they hold with this one. Their wording is unchanged; the three that compare a decoded state with an intended one, through realizesState and the registration bridge, now compare the datum's facts, so they apply to funded registrations too.",
+      "text": "The twenty-six consumer statements are proved for every interpretation, so they hold with this one. Their wording is unchanged; the three that compare a decoded state with an intended one, through realizesState and the registration bridge, compare the datum's facts and the output's lovelace, so they apply to funded registrations too.",
       "pause": 400
     },
     {
@@ -147,7 +147,49 @@
       "pause": 400
     },
     {
-      "text": "These checks cover the listed inputs; the theorems cover all inputs. The Aiken consumer decodes version 2 (the datum decoder in Aiken); the on-chain validator does not write version 2 yet, and reading the pool and the bonds from the value is not modelled. This code is not for mainnet.",
+      "text": "These checks cover the listed inputs; the theorems cover all inputs. The Aiken consumer decodes version 2 (the datum decoder in Aiken); the on-chain validator does not write version 2 yet. Reading the pool and the bonds from the value is modelled in the checkpoint output's value. This code is not for mainnet.",
+      "pause": 400
+    }
+  ],
+  "the-checkpoint-outputs-value": [
+    {
+      "text": "The checkpoint output's value.",
+      "pause": 500
+    },
+    {
+      "text": "A contract author holds a candidate checkpoint output and has read its datum. The datum says the checkpoint is live and its bond is not frozen, but it carries no amounts. The author wants to know the bonds are really there: the output's lovelace must be what that state holds, and a holding missing part of a bond must be refused. The model states this amount in CardanoKeri.CheckpointValue as State.heldValue.",
+      "pause": 400
+    },
+    {
+      "text": "The diagram reads in words: a registration delivers the minimum ADA, the deposit, the freeze bond and the initial pool the registrant chooses. Every later step moves exactly the amounts its flow names. A freeze pays the freeze bond to the hunter, a rotation with a deposit brings it back, and a conviction pays the deposit to the convictor and the bond and pool to the refund address. The pending output keeps only the minimum ADA, which the termination booking consumes.",
+      "pause": 400
+    },
+    {
+      "text": "Here Mc is the registry's minimum ADA, D the deposit and B the freeze bond of the checkpoint's parameters, and pool the premium pool. The datum's facts and the lovelace together give back the whole state: the pool is the lovelace above the floor (withValue_iff, realizes_determines_state).",
+      "pause": 400
+    },
+    {
+      "text": "Every step keeps the amounts: what the input holds plus what the step takes in equals what the output holds plus what it pays out (held_amounts_conserved, held_value_conserved); a registration holds the minimum ADA plus everything it takes in (registration_holds_carrier).",
+      "pause": 300
+    },
+    {
+      "text": "A conviction pays out everything the live checkpoint held except the minimum ADA, and the pending output holds exactly the minimum ADA the termination booking requires (conviction_pays_out_every_amount, pending_holds_minimum_ada).",
+      "pause": 300
+    },
+    {
+      "text": "A holding below the floor realizes no state with those facts, whatever its pool (short_holding_refused, missing_bond_lovelace_refused).",
+      "pause": 300
+    },
+    {
+      "text": "The registry books a carrier of at least Mc + D_registry, where the registry's deposit is the checkpoint's deposit plus freeze bond; one lovelace short is refused (short_carrier_registration_refused). A successful joint registration delivers exactly Mc + D + B + pool0 (registerJoint_value).",
+      "pause": 300
+    },
+    {
+      "text": "The vector table lean/checkpoint-value-vectors.json takes the seven states of the datum vectors and gives, for each, the lovelace its output holds, its floor and what a holding with those datum facts reads as at lovelace values around them: the state itself only at the lovelace it holds. It also books registration carriers with initial pools of 0, 3 and five million, refuses one carrier short by one lovelace, and records the connected registration fixture, whose carrier of 17 is the minimum ADA 4, the deposit 8, the freeze bond 2 and the pool 3. The Lean emits the table and checks the committed copy; changing any committed field fails the check.",
+      "pause": 400
+    },
+    {
+      "text": "These checks cover the listed inputs; the theorems cover all inputs. The consumer predicate itself does not read the value: a relying contract that needs the bonds checks the lovelace against the floor, and the validator that enforces the amounts on chain is the datum version 2 work (#339). How an honest owner recovers the deposit, the freeze bond or the pool is not settled by the model.",
       "pause": 400
     }
   ],
@@ -279,6 +321,6 @@
   ],
   "_source": {
     "file": "consumer-identity.md",
-    "sha256": "f67d178804f69927d63f160c247c0339c67de748ba3fbf74a89be61df57d941b"
+    "sha256": "cc5860033a2b982254af7a2cdf79d419608bf60fa2327c1c185fa96e8648b553"
   }
 }

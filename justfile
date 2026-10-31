@@ -713,7 +713,7 @@ check-flake-lock-guard:
 # --self-test) exercises the exact code this recipe runs, not a copy of it;
 # the guard's own INV-259-ASSERT caller-presence check requires this exact
 # invocation to remain in this recipe.
-ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken check-consumer-vectors check-consumer-identity-vectors ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
+ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken check-consumer-vectors check-consumer-identity-vectors check-checkpoint-datum-vectors ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
     ./scripts/check-flake-lock-guard.sh --assert-lock-unchanged
 
 # #478: clean exact-compiler build and public proposition controls, identical to CI.
@@ -740,6 +740,14 @@ gen-consumer-identity-vectors:
 # #343: the committed identity vectors are exactly what the Lean vectors generate; identical to CI.
 check-consumer-identity-vectors:
     nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/consumer-identity-vectors.mjs --check
+
+# #343: regenerate the checkpoint datum vectors from lean/checkpoint-datum-vectors.json.
+gen-checkpoint-datum-vectors:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-datum-vectors.mjs
+
+# #343: the committed datum vector tests are exactly what the Lean vectors generate; also run in CI by scripts/check-consumer-design.sh.
+check-checkpoint-datum-vectors:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-datum-vectors.mjs --check
 
 # Validate the offered-interface schemas and generate its MkDocs reference.
 check-offered-interface:

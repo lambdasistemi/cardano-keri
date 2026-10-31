@@ -25,8 +25,8 @@ The one case this does not cover: if the thief also holds the **next**
 keys, her rotation *is* control by KERI's own rule
 ([security properties of pre-rotation](https://trustoverip.github.io/kswg-keri-specification/#security-properties-of-pre-rotation)).
 The poison lasts until that rotation and no longer. The stolen-current-keys
-case it does cover is KERI's [establishment live attack](https://trustoverip.github.io/kswg-keri-specification/#establishment-live-attack). Close answers to the next keys, so
-that thief can reap (close by a rotation of the next keys).
+case it does cover is KERI's [establishment live attack](https://trustoverip.github.io/kswg-keri-specification/#establishment-live-attack). There is
+no close for that thief to take: a checkpoint is alive until it is convicted.
 
 Play the forks: Mallory and Hal try everything on the poisoned
 checkpoint; Mallory tries the reap with the retired keys and is

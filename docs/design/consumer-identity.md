@@ -94,13 +94,15 @@ fixture codec and hash; the concrete bytes follow in the next section.
 | Hash collision freedom | Rely on BLAKE2b-256 having no collision over the identity domain; this is assumed, not proved |
 | Published scripts | Bind actual policy application and script hashes to an authenticated release manifest |
 | Network and release resolution | Obtain them independently; missing or conflicting evidence refuses |
-| Datum and complete physical value | Decode the same output and establish its relation to the model's state and bonds |
+| Physical value | Read the premium pool and the bond amounts from the output's value; the datum carries the state's facts only (see [the checkpoint datum](#the-checkpoint-datum)), and the value layout belongs to the on-chain datum version 2 work ([#339](https://github.com/lambdasistemi/cardano-keri/issues/339)) |
 | Current reference and holding movement | Verify current unspentness and observation fidelity; registration Origin is immutable metadata |
 | Reduced registry identifier | Establish the explicit finite faithful mapping when separation relies on that representation |
 | Discovery and settlement | Do not infer absence or terminality from an empty lookup or a provider failure |
 
 `realizesState` checks the credential, representative quantity and decoded
-AID/state. It has no current-reference or unspentness check. Local fixture
+AID and datum facts: the decoded state compared with the intended state, both
+with the pool set to zero, because the pool is an amount held in the value and
+not a fact in the datum. It has no current-reference or unspentness check. Local fixture
 observations are explicitly selected model interpretations, not a production
 observer. No checkpoint expiry or renewal behavior is supplied by the model.
 
@@ -112,7 +114,7 @@ AID's qualified CESR text bytes. The codec is the Plutus Data serialisation of
 the `Preimage` type in Singular's
 [`singular_state/preimage` module](https://github.com/lambdasistemi/singular/blob/d69ab005c3b710aeebf033d3c5cd08c56feb5643/onchain/lib/singular_state/preimage.ak)
 at the pinned revision. The hash is BLAKE2b-256, as in that module. The datum
-decoder remains an input to the interpretation.
+decoder is declared in [the checkpoint datum](#the-checkpoint-datum).
 
 The upstream model carries byte strings such as transaction ids, policies,
 asset names and keys as natural numbers. Each such field carries its bytes
@@ -144,6 +146,115 @@ These checks cover the listed inputs only. The registration approval role
 splices an already serialised holding address and is outside the consumer
 statements. The Aiken consumer predicate reproduces the table, as described
 in [the concrete identity bytes in Aiken](#the-concrete-identity-bytes-in-aiken).
+
+## The checkpoint datum
+
+A contract author holds a candidate checkpoint output with an inline datum.
+The consumer must read that datum exactly as the checkpoint writes it: which
+AID it belongs to, whether it is live or awaiting termination, whether it is
+poisoned, whether its bond is frozen and when it was born. A datum that does
+not have that shape is refused. The model declares this datum, version 2, in
+`CardanoKeri.CheckpointDatum`, together with the decoder the consumer runs.
+
+```mermaid
+flowchart LR
+  D["CheckpointDatum<br/>V2 = constructor 1"] -->|form 0| L["Live: aid, sn, epoch,<br/>poisoned, frozen, born_at,<br/>refund_to, keys"]
+  D -->|form 1| P["TerminationPending:<br/>aid, sn, epoch, keys"]
+  L -->|decoder| S["present state,<br/>pool set to zero"]
+  P -->|decoder| T["terminationPending state"]
+  O["version 1 or any<br/>other shape"] -->|decoder| R["refused"]
+  S -->|consumer| V{"unpoisoned, unfrozen,<br/>born_at + W ≤ now?"}
+  V -->|yes| A["accepted"]
+  V -->|no| R
+  T -->|consumer| R
+```
+
+Version 1, constructor 0, is the layout the checkpoint validator writes today.
+It carries keys, thresholds, witnesses and counters, but no poison, no freeze,
+no birth slot and no pending-termination form, so a poisoned checkpoint and a
+clean one would be byte-identical. The decoder refuses it. Version 2 is
+written by the model first; the on-chain validator adopts it later.
+
+| Position | Field | Kind | Lean state | What the consumer does with it |
+|---|---|---|---|---|
+| Live 0, Pending 0 | `aid` | byte string: the qualified CESR text | `DecodedDatum.aid` | Requires it to equal the AID the relying contract fixed |
+| Live 1, Pending 1 | `sn` | non-negative integer | `Live.sn`, `Hash.sn` | Nothing |
+| Live 2, Pending 2 | `epoch` | non-negative integer | `Live.epoch`, `Hash.epoch` | Nothing |
+| Live 3 | `poisoned` | Boolean | `Live.poisoned` | Refuses when true |
+| Live 4 | `frozen` | Boolean | `Live.frozen` | Refuses when true: the bond is not held |
+| Live 5 | `born_at` | non-negative integer | `Live.bornAt` | Refuses until `born_at + W ≤ now` |
+| Live 6 | `refund_to` | byte string | `Live.refundTo` | Nothing |
+| Live 7, Pending 3 | `keys` | key material | none | Checks its shape only |
+| none | the premium pool | not in the datum | `Live.pool`, decoded as zero | Nothing; the amount is held in the value |
+
+The key material is constructor 0 with six fields, in the version 1 types:
+current keys (a list of byte strings), current threshold, next keys, next
+threshold, witnesses (a list of byte strings) and `toad` (an integer). A
+threshold is constructor 0 over an integer (unweighted) or constructor 1 over
+a list of clauses, each a list of weights; a weight is constructor 0 over a
+numerator and a denominator. A Boolean is Aiken's: false is constructor 0 and
+true is constructor 1, both without fields.
+
+| Decision | Chosen | Rejected | Why |
+|---|---|---|---|
+| Which datum the consumer reads | Version 2, declared in the Lean first | Decoding version 1 as written today | Version 1 carries none of the facts the consumer needs |
+| How the AID is carried | Its qualified CESR text, the registry key of [the concrete bytes](#the-concrete-bytes) | The 32 raw digest bytes | The key is the text; rebuilding it from a digest needs a derivation code the datum does not carry |
+| Where the pool and the bonds live | In the output's value | In the datum | The datum carries facts, the value carries amounts |
+| What the decoder validates | Every shape in the whole datum; the values of the fields it reads | The full well-formedness of the key material | Key widths, threshold ranges, witness duplicates and `toad` are the checkpoint validator's obligation when it writes the datum |
+
+The serialisation is Plutus Data's: constructors 0 to 6 as tags 121 to 127,
+7 to 127 as tags 1280 to 1400, any other index as tag 102 over the index and
+the fields; non-empty lists indefinite; maps definite; byte strings definite up
+to 64 bytes, otherwise in chunks of 64; integers plain below 2^64, otherwise
+tagged big numbers. A raw application datum is these bytes carried through the
+same bijective numeral as the identity bytes. The reader also accepts the other
+well-formed encodings of the same Data. One layout serves every release at this
+model revision; a new layout is a new version constructor.
+
+What the Lean proves about it:
+
+- Reading back: every Data, read from its serialisation with any rest, returns
+  with that rest (`parse_cbor`), and every serialised element is a byte, so the
+  raw carrier is faithful (`decode_raw`).
+- Written datums decode: for every AID, key material and state with an output,
+  the decoder returns that AID and the state's facts (`decodeData_datum`,
+  `decode_written`).
+- Nothing else decodes: an accepted Data is exactly a written datum
+  (`decodeData_complete`). A wrong version, version 1 included, a wrong number
+  of fields, an unknown form and a field of the wrong kind are each refused
+  (`wrong_version_refused`, `version_one_refused`, `version_arity_refused`,
+  `unknown_form_refused`, `live_arity_refused`, `pending_arity_refused`,
+  `live_fields_typed`, `pending_fields_typed`).
+- The decoder is a function of the raw datum alone: one datum, one result,
+  under every release (`decode_deterministic`, `decode_release_independent`).
+- The consumer: with this decoder in the concrete interpretation, a holding
+  carrying the datum written for any state, funded pools included, is accepted
+  exactly when that state is consumable (`written_holding_iff`). A funded
+  registration passes the registration bridge's datum check
+  (`funded_registration_agrees`), and a version 1 datum is refused
+  (`version_one_holding_refused`).
+
+The twenty-six consumer statements are proved for every interpretation, so they
+hold with this one. Their wording is unchanged; the three that compare a
+decoded state with an intended one, through `realizesState` and the
+registration bridge, now compare the datum's facts, so they apply to funded
+registrations too.
+
+The vector table `lean/checkpoint-datum-vectors.json` lists seven written
+datums with the decoder's result and the consumer's verdict on a genuine
+holding (registered and funded, juvenile, rotated with weighted thresholds and
+witnesses, poisoned, frozen, pending termination, numbers beyond 2^64), and
+twenty-nine datums the decoder refuses, each a named change: version 1, an
+unknown version, every wrong arity, every field of the wrong kind, a trailing
+byte, a truncated datum. The Lean emits the table and checks the committed
+copy against the decoder and the consumer predicate. Changing any committed
+field fails the check, and every node of every accepted datum, replaced by a
+node of another kind, is refused.
+
+These checks cover the listed inputs; the theorems cover all inputs. The
+on-chain validator does not write version 2 yet, and the Aiken consumer does
+not yet decode it; reading the pool and the bonds from the value is not
+modelled. This code is not for mainnet.
 
 ## The consumer predicate in Aiken
 
@@ -211,7 +322,7 @@ transaction's validity interval, in the same unit as the datum's birth time and
 the maturity parameter; a transaction with no finite lower bound is refused.
 A datum that does not decode as the declared shape makes the test decoder fail
 rather than answer. The acceptance item that binds the predicate to the actual
-Singular-backed output stays open: the datum decoder and the registration
+Singular-backed output stays open: the Aiken datum decoder, which reproduces [the checkpoint datum](#the-checkpoint-datum) decoder, and the registration
 journey are still outstanding (see the next section).
 
 ### The concrete identity bytes in Aiken
@@ -256,7 +367,7 @@ Three executable layers check it.
   a rival seed's holding.
 
 What stays a declared test choice: the datum decoder
-(`consumer_test_interpretation.decode`; the Lean keeps it an input), the
+(`consumer_test_interpretation.decode`; the Lean declares the version 2 decoder in [the checkpoint datum](#the-checkpoint-datum), which the Aiken side does not reproduce yet), the
 environment (the contract's own context stands for the trusted integration's
 observation), and the seeded holdings (the genuine registration journey belongs
 to [#324](https://github.com/lambdasistemi/cardano-keri/issues/324)). These

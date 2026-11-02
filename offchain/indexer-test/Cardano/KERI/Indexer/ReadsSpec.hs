@@ -276,6 +276,7 @@ checkpointRecord txIn aid datum =
         , crTxIn = txIn
         , crAddress = checkpointAddress
         , crDatum = datum
+        , crFacts = liveOfKeyState "" 0 datum
         }
 
 checkpointOutput :: ByteString -> CheckpointDatumV1 -> Indexer.TxOut

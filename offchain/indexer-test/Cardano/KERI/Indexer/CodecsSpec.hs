@@ -124,6 +124,7 @@ spec = describe "decodeCheckpointOutput" $ do
                     , crTxIn = sampleTxIn
                     , crAddress = sampleIndexerAddress
                     , crDatum = sampleDatum
+                    , crFacts = liveOfKeyState "" 0 sampleDatum
                     }
 
     it "rejects undecodable TxOut bytes with TxOutUndecodable" $

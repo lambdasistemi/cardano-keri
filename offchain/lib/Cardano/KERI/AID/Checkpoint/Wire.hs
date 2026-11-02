@@ -10,7 +10,6 @@ module Cardano.KERI.AID.Checkpoint.Wire (
     advanceSpendRedeemerData,
     advanceObserverRedeemerData,
     advanceEvidenceData,
-    convictBurnRedeemerData,
     convictObserverRedeemerData,
     convictSpendRedeemerData,
     enforcementEvidenceData,
@@ -42,11 +41,11 @@ registerObserverRedeemerData checkpointPolicy evidence =
         , registrationEvidenceData evidence
         ]
 
-{- | The small checkpoint validator's thin, evidence-free @Advance@ arm is
-constructor index zero.
+{- | The checkpoint validator's @Advance@ arm is constructor index zero and
+names the output that receives the premium when the pool covers it.
 -}
-advanceSpendRedeemerData :: Data
-advanceSpendRedeemerData = Constr 0 []
+advanceSpendRedeemerData :: Integer -> Data
+advanceSpendRedeemerData payeeOutputIndex = Constr 0 [I payeeOutputIndex]
 
 {- | The dedicated Advance observer envelope: action one, checkpoint policy,
 the named spent output reference, and the unchanged rotation evidence.
@@ -68,13 +67,6 @@ advanceObserverRedeemerData checkpointPolicy spentTxId spentIndex evidence =
             ]
         , advanceEvidenceData evidence
         ]
-
-{- | Conviction burns the token under mint constructor one and names the exact
-checkpoint input.
--}
-convictBurnRedeemerData :: ByteString -> Integer -> Data
-convictBurnRedeemerData spentTxId spentIndex =
-    Constr 1 [Constr 0 [B spentTxId, I spentIndex]]
 
 {- | Conviction is spend constructor one; evidence remains in the isolated
 observer envelope.

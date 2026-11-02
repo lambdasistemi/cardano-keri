@@ -16,8 +16,9 @@ module Cardano.KERI.Indexer.Codecs (
 
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatumV1 (..),
+    CheckpointDatumV2,
     checkpointDatumFromData,
-    datumKeyState,
+    datumFacts,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
     deriveAidAssetName,
@@ -77,7 +78,9 @@ data CheckpointRecord = CheckpointRecord
     , crAddress :: !Address
     -- ^ Upstream indexed address.
     , crDatum :: !CheckpointDatumV1
-    -- ^ Decoded checkpoint state.
+    -- ^ Decoded checkpoint key state.
+    , crFacts :: !CheckpointDatumV2
+    -- ^ The version 2 datum the output carries.
     }
     deriving stock (Eq, Show)
 
@@ -107,11 +110,11 @@ decodeCheckpointOutput checkpointPolicy txIn address (Indexer.TxOut rawTxOut) = 
                 (BSL.fromStrict rawTxOut) ::
                 Either DecoderError (TxOut ConwayEra)
             )
-    datum <-
+    (facts, datum) <-
         case ledgerTxOut ^. datumTxOutL of
             Datum binaryDatum ->
                 let Data plutusDatum = binaryDataToData binaryDatum
-                 in case checkpointDatumFromData plutusDatum >>= datumKeyState of
+                 in case checkpointDatumFromData plutusDatum >>= datumFacts of
                         Just checkpointDatum -> Right checkpointDatum
                         Nothing -> Left DatumUndecodable
             NoDatum -> Left NoInlineDatum
@@ -136,4 +139,5 @@ decodeCheckpointOutput checkpointPolicy txIn address (Indexer.TxOut rawTxOut) = 
                     , crTxIn = txIn
                     , crAddress = address
                     , crDatum = datum
+                    , crFacts = facts
                     }

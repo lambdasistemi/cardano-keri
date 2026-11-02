@@ -27,6 +27,7 @@ module Cardano.KERI.Deployment.AdvanceTransaction (
 import Cardano.Crypto.Hash (hashFromBytes)
 import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (..))
 import Cardano.KERI.AID.Checkpoint.Message (SpentCheckpoint (..))
+import Cardano.KERI.AID.Checkpoint.Value (RotationSettlement (..))
 import Cardano.KERI.AID.Checkpoint.Wire (
     advanceObserverRedeemerData,
     advanceSpendRedeemerData,
@@ -103,6 +104,7 @@ import Cardano.Tx.Build (
     InterpretIO (..),
     TxBuild,
     certify,
+    payTo,
     payTo',
     reference,
     spend,
@@ -113,7 +115,7 @@ import Cardano.Tx.Build (
 import Codec.Binary.Bech32 qualified as Bech32
 import Control.Concurrent (threadDelay)
 import Control.Exception (SomeException, try)
-import Control.Monad (unless, when)
+import Control.Monad (unless, void, when)
 import Data.Aeson (Value)
 import Data.Bifunctor (first)
 import Data.ByteArray.Encoding (
@@ -147,6 +149,10 @@ data AdvancePlan = AdvancePlan
     , planSpendRedeemer :: !Value
     , planObserverRedeemer :: !Value
     , planSuccessorDatum :: !Value
+    , planSuccessorLovelace :: !Integer
+    -- ^ the lovelace the successor output holds, exactly
+    , planPremiumPaid :: !Integer
+    -- ^ the premium the payee output receives; zero when the pool does not cover it
     }
     deriving stock (Show, Eq)
 
@@ -202,7 +208,7 @@ mkAdvancePlan manifest package = do
         planCheckpointAssetName = activeCheckpointAssetName active
         planCheckpointAddress = activeCheckpointAddress active
         planStateOutput = renderStateOutput active
-        planSpendRedeemer = plutusDataJson advanceSpendRedeemerData
+        planSpendRedeemer = plutusDataJson (advanceSpendRedeemerData premiumOutputIndex)
         planObserverRedeemer =
             plutusDataJson $
                 advanceObserverRedeemerData
@@ -211,7 +217,9 @@ mkAdvancePlan manifest package = do
                     (scIndex spent)
                     (advanceEvidence package)
         planSuccessorDatum =
-            plutusDataJson $ asPlcData $ V1 $ advanceSuccessor package
+            plutusDataJson $ asPlcData $ V2 $ advanceSuccessorFacts package
+        planSuccessorLovelace = advanceSuccessorLovelace package
+        planPremiumPaid = settlementPaid (advanceSettlement package)
     pure AdvancePlan{..}
 
 runAdvanceTransaction ::
@@ -257,6 +265,8 @@ data AdvanceInputs = AdvanceInputs
     , advanceSpendData :: !RawData
     , advanceObserverData :: !RawData
     , advanceSuccessorData :: !RawData
+    , advanceSuccessorValue :: !MaryValue
+    , advancePremium :: !Integer
     }
 
 advanceInputs ::
@@ -290,6 +300,8 @@ advanceInputs config plan fundingInputs activeInput registerObserver = do
     advanceSpendData <- rawPlanData "advance spend redeemer" (planSpendRedeemer plan)
     advanceObserverData <- rawPlanData "advance observer redeemer" (planObserverRedeemer plan)
     advanceSuccessorData <- rawPlanData "successor datum" (planSuccessorDatum plan)
+    let advanceSuccessorValue = successorValue (planSuccessorLovelace plan) activeInput
+        advancePremium = planPremiumPaid plan
     advanceFunding <-
         first AdvanceFundingSelectionFailed $
             selectFundingPair
@@ -319,11 +331,18 @@ advanceProgram
         } = do
         mapM_ (spend . fst) (fundingSpends funding)
         _ <- spendScript (fst advanceActiveInput) advanceSpendData
+        -- The successor is the first output and the premium payee the
+        -- second: the redeemer names index `premiumOutputIndex`.
         _ <-
             payTo'
                 advanceCheckpointAddress
-                (snd advanceActiveInput ^. valueTxOutL)
+                advanceSuccessorValue
                 advanceSuccessorData
+        when (advancePremium > 0) $
+            void $
+                payTo
+                    (advanceFundingAddress config)
+                    (MaryValue (Coin advancePremium) mempty)
         mapM_ (reference . fst) advanceReferences
         when registerObserver $ do
             let credential =
@@ -341,6 +360,18 @@ advanceProgram
             (Coin 0)
             advanceObserverData
         valid (advanceCheck pparams)
+
+{- | The active output's value with its lovelace replaced: the token stays,
+the lovelace is what the successor holds.
+-}
+successorValue :: Integer -> (TxIn, TxOut ConwayEra) -> MaryValue
+successorValue lovelace (_, txOut) =
+    case txOut ^. valueTxOutL of
+        MaryValue _ assets -> MaryValue (Coin lovelace) assets
+
+-- | The output index of the premium payee: after the successor state.
+premiumOutputIndex :: Integer
+premiumOutputIndex = 1
 
 data AdvanceCtx a
 

@@ -488,6 +488,7 @@ decodeActiveCheckpoint policy addr aidText (txIn, indexerTxOut@(Indexer.TxOut ra
             , activeCheckpointLovelace = lovelace
             , activeCheckpointAssets = assets
             , activeCheckpointDatum = crDatum record
+            , activeCheckpointFacts = crFacts record
             }
 
 {- | Render raw indexer address bytes the same bech32 form the Koios

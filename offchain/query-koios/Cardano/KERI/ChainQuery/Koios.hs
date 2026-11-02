@@ -74,6 +74,7 @@ import Cardano.KERI.AID.CESR (Primitive (..), parsePrimitive)
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatumV1 (..),
     checkpointDatumFromData,
+    datumFacts,
     datumKeyState,
  )
 import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
@@ -500,7 +501,7 @@ resolveActiveCheckpointOne locator aid assetName utxo = do
         Left "checkpoint output does not hold exactly one queried token"
     inline <- maybe (Left "checkpoint output has no inline datum") Right (chainAssetInlineDatum utxo)
     dat <- plutusDataFromJson inline
-    datum <- maybe (Left "checkpoint inline datum is not a version 2 checkpoint datum") Right (checkpointDatumFromData dat >>= datumKeyState)
+    (facts, datum) <- maybe (Left "checkpoint inline datum is not a version 2 checkpoint datum") Right (checkpointDatumFromData dat >>= datumFacts)
     expectedAid <- case parsePrimitive (TE.encodeUtf8 aid) of
         Right (SelfAddressing raw, rest) | BS.null rest -> Right raw
         _ -> Left "AID must be one 44-character KERI E-code identifier"
@@ -516,6 +517,7 @@ resolveActiveCheckpointOne locator aid assetName utxo = do
             , activeCheckpointLovelace = chainAssetLovelace utxo
             , activeCheckpointAssets = chainAssetList utxo
             , activeCheckpointDatum = datum
+            , activeCheckpointFacts = facts
             }
 
 {- | Manifest\/list-shaped compatibility wrapper for the pre-#257 caller

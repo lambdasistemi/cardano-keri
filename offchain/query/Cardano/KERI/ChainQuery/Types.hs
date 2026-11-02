@@ -54,7 +54,7 @@ module Cardano.KERI.ChainQuery.Types (
 ) where
 
 import Cardano.KERI.AID.CESR (Primitive (SelfAddressing), parsePrimitive)
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1)
+import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1, CheckpointDatumV2)
 import Codec.Binary.Bech32 qualified as Bech32
 import Data.Aeson (
     FromJSON (..),
@@ -372,6 +372,9 @@ data ActiveCheckpoint = ActiveCheckpoint
     , activeCheckpointLovelace :: !Integer
     , activeCheckpointAssets :: ![ChainAsset]
     , activeCheckpointDatum :: !CheckpointDatumV1
+    -- ^ the key state of the datum, in the version 1 record the shared predicates use
+    , activeCheckpointFacts :: !CheckpointDatumV2
+    -- ^ the version 2 datum the output carries
     }
     deriving stock (Show, Eq)
 

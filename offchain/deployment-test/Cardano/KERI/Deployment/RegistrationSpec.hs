@@ -36,8 +36,13 @@ hash's Plutus language set.
 module Cardano.KERI.Deployment.RegistrationSpec (spec) where
 
 import Cardano.Crypto.Hash (hashFromStringAsHex, hashToBytes)
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..))
+import Cardano.KERI.AID.Checkpoint.Datum (
+    CheckpointDatum (V2),
+    CheckpointDatumV1 (..),
+    liveOfKeyState,
+ )
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted))
+import Cardano.KERI.AID.Checkpoint.Wire (asPlcData)
 import Cardano.KERI.ChainQuery (
     ActiveCheckpoint (..),
     ChainAsset (..),
@@ -67,12 +72,15 @@ import Cardano.KERI.Deployment.Manifest (
 import Cardano.KERI.Deployment.ParityOracle.Capture (captureShape)
 import Cardano.KERI.Deployment.Registration (
     RegisterConfig (..),
+    RegistrationBirth (..),
     RegistrationCheckError (..),
     RegistrationError (..),
     RegistrationPlan (..),
     mkRegistrationPlan,
     premintOne,
     registerOne,
+    registrationBirth,
+    withBirth,
  )
 import Cardano.KERI.Deployment.Script (
     computeScriptHash,
@@ -148,6 +156,7 @@ import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Node.Client.Ledger (ConwayTx)
+import Cardano.Node.Client.Provider (Provider (..), SlotNo (..))
 import Cardano.Node.Client.Submitter (SubmitResult (..))
 import Cardano.Tx.Build (Check (..))
 import Codec.Binary.Bech32 qualified as Bech32
@@ -158,7 +167,7 @@ import Data.ByteString.Short qualified as SBS
 import Data.Either (isLeft)
 import Data.Foldable (toList)
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
-import Data.List (elemIndex)
+import Data.List (elemIndex, isInfixOf)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromJust)
 import Data.Set qualified as Set
@@ -169,6 +178,7 @@ import Lens.Micro ((&), (.~), (^.))
 import Paths_cardano_keri (getDataFileName)
 import PlutusCore.Data (Data (..))
 import System.Directory (findExecutable)
+import System.IO.Error (ioeGetErrorString)
 import Test.Hspec (
     Spec,
     describe,
@@ -177,6 +187,7 @@ import Test.Hspec (
     shouldContain,
     shouldNotContain,
     shouldSatisfy,
+    shouldThrow,
  )
 
 spec :: Spec
@@ -186,6 +197,7 @@ spec = do
     failureTaxonomySpec
     awaitAssetSpec
     boundedCollateralSpec
+    registrationBirthSpec
 
 -- ---------------------------------------------------------------------------
 -- #232 bounded phase-2 collateral loss
@@ -1160,3 +1172,61 @@ awaitAssetSpec = describe "observeSettlement (registration)" $ do
                 chainAssetTxId utxo `shouldBe` "matchingtx"
                 chainAssetIndex utxo `shouldBe` 4
             Left err -> fail ("expected a match, got " <> show err)
+
+-- ---------------------------------------------------------------------------
+-- #339 the version 2 registration: when it is born and whom it refunds
+
+{- | A node whose slots last the given number of milliseconds: the floor
+conversion the provider offers, and nothing else.
+-}
+slotsOf :: Integer -> Provider IO
+slotsOf slotMs =
+    Provider
+        { withAcquired = const unused
+        , queryUTxOs = const unused
+        , queryUTxOByTxIn = const unused
+        , queryProtocolParams = unused
+        , queryLedgerSnapshot = unused
+        , queryStakeRewards = const unused
+        , queryRewardAccounts = const unused
+        , queryVoteDelegatees = const unused
+        , queryTreasury = unused
+        , queryGovernanceState = unused
+        , evaluateTx = const unused
+        , posixMsToSlot = \ms -> pure (SlotNo (fromInteger (ms `div` slotMs)))
+        , posixMsCeilSlot = const unused
+        , queryUpperBoundSlot = const unused
+        }
+  where
+    unused :: IO a
+    unused = fail "the registration birth asks the node for slots only"
+
+registrationBirthSpec :: Spec
+registrationBirthSpec = describe "registration birth (version 2 datum)" $ do
+    it "is valid until the start of the slot containing one minute from now" $ do
+        birth <- registrationBirth (slotsOf 1_000) refundBytes 1_700_000_000_250
+        -- now + 60 s = 1_700_000_060_250, in the slot starting at ...060_000
+        birthBornAt birth `shouldBe` 1_700_000_060_000
+        birthUpperSlot birth `shouldBe` 1_700_000_060
+        birthRefundTo birth `shouldBe` refundBytes
+
+    it "finds the start of a slot that is not aligned to a second" $ do
+        birth <- registrationBirth (slotsOf 100) refundBytes 1_700_000_000_250
+        birthBornAt birth `shouldBe` 1_700_000_060_200
+        birthUpperSlot birth `shouldBe` 17_000_000_602
+
+    it "refuses a node whose slots outlast the search window" $
+        registrationBirth (slotsOf 10_000) refundBytes 1_700_000_005_000
+            `shouldThrow` (\err -> "longer than five seconds" `isInfixOf` ioeGetErrorString err)
+
+    it "writes the live datum with the birth, the refund address and no poison" $ do
+        birth <- registrationBirth (slotsOf 1_000) refundBytes 1_700_000_000_250
+        let born = withBirth birth syntheticPlan
+        planUpperSlot born `shouldBe` birthUpperSlot birth
+        planCheckpointDatum born
+            `shouldBe` plutusDataJson
+                ( asPlcData $
+                    V2 (liveOfKeyState refundBytes (birthBornAt birth) syntheticKeyState)
+                )
+  where
+    refundBytes = BS.cons 0x00 (BS.replicate 56 0x42)

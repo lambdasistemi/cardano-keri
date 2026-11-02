@@ -1171,7 +1171,7 @@ entrypointCheckpointOutputFor datum =
         mkBasicTxOut
             entrypointCheckpointLedgerAddress
             ( MaryValue
-                (Coin 5_000_000)
+                (Coin 1_007_000_000)
                 ( MultiAsset $
                     Map.singleton
                         entrypointCheckpointPolicy
@@ -3512,6 +3512,7 @@ parityExpectedCheckpoint =
                 }
             ]
         , activeCheckpointDatum = parityCheckpointDatum
+        , activeCheckpointFacts = liveOfKeyState "" 0 parityCheckpointDatum
         }
 
 {- | A checkpoint output that is well-formed at every level EXCEPT its

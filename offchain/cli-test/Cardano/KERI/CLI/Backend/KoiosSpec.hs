@@ -370,6 +370,7 @@ registrationFixture =
         , activeCheckpointLovelace = 5_000_000
         , activeCheckpointAssets = []
         , activeCheckpointDatum = datumX0
+        , activeCheckpointFacts = liveOfKeyState "" 0 datumX0
         }
 
 registrationTxInfo :: ChainTransactionInfo
@@ -380,6 +381,7 @@ advancedFixture =
     registrationFixture
         { activeCheckpointTxId = "2020202020202020202020202020202020202020202020202020202020202020"
         , activeCheckpointDatum = datumX0{cdSeq = 1, cdNativeSn = 1}
+        , activeCheckpointFacts = liveOfKeyState "" 0 datumX0{cdSeq = 1, cdNativeSn = 1}
         }
 
 advancedTxInfo :: ChainTransactionInfo

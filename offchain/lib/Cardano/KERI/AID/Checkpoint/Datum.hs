@@ -70,6 +70,9 @@ module Cardano.KERI.AID.Checkpoint.Datum (
     -- * The version 1 key-state view of a version 2 checkpoint
     keyStateView,
     datumKeyState,
+    datumFacts,
+    rotatedLive,
+    convictedOf,
     liveOfKeyState,
 ) where
 
@@ -523,6 +526,56 @@ datumKeyState = \case
     V2 TerminationPending{tpAid, tpSn, tpEpoch, tpKeys} ->
         (\raw -> keyStateView raw tpSn tpEpoch tpKeys) <$> aidDigest tpAid
     V1 _ -> Nothing
+
+{- | The version 2 datum of a checkpoint output with its key state, for a
+datum whose identifier is canonical.
+-}
+datumFacts :: CheckpointDatum -> Maybe (CheckpointDatumV2, CheckpointDatumV1)
+datumFacts = \case
+    datum@(V2 facts) -> (,) facts <$> datumKeyState datum
+    V1 _ -> Nothing
+
+{- | The live datum a rotation to this key state writes (Lean
+@rotateKeepPaid@, @rotateKeepUnpaid@): the sequence number of the new
+establishment event, one more epoch, no poison and the new keys; the
+identifier, the frozen flag, the birth time and the refund address are
+unchanged. 'Nothing' for a datum that is not live.
+-}
+rotatedLive :: CheckpointDatumV2 -> CheckpointDatumV1 -> Maybe CheckpointDatumV2
+rotatedLive old CheckpointDatumV1{..} = case old of
+    Live{} ->
+        Just
+            old
+                { lvSn = cdNativeSn
+                , lvEpoch = lvEpoch old + 1
+                , lvPoisoned = False
+                , lvKeys =
+                    KeyMaterial
+                        { kmCurKeys = cdCurKeys
+                        , kmCurThreshold = cdCurThreshold
+                        , kmNextKeys = cdNextKeys
+                        , kmNextThreshold = cdNextThreshold
+                        , kmWitnesses = cdWitnesses
+                        , kmToad = cdToad
+                        }
+                }
+    TerminationPending{} -> Nothing
+
+{- | The datum a conviction writes (Lean @Step.convict@): the identifier, the
+sequence number, the epoch and the keys of the live datum, as a pending
+termination. 'Nothing' for a datum that is not live.
+-}
+convictedOf :: CheckpointDatumV2 -> Maybe CheckpointDatumV2
+convictedOf = \case
+    Live{lvAid, lvSn, lvEpoch, lvKeys} ->
+        Just
+            TerminationPending
+                { tpAid = lvAid
+                , tpSn = lvSn
+                , tpEpoch = lvEpoch
+                , tpKeys = lvKeys
+                }
+    TerminationPending{} -> Nothing
 
 {- | The live version 2 datum of a key state: the identifier text of its
 digest, the sequence number and epoch from the record, no poison, not frozen.

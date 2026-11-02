@@ -71,6 +71,7 @@ module Cardano.KERI.AID.Checkpoint.Datum (
     keyStateView,
     datumKeyState,
     datumFacts,
+    isTerminationPending,
     rotatedLive,
     convictedOf,
     liveOfKeyState,
@@ -515,19 +516,26 @@ keyStateView rawAid sn epoch KeyMaterial{..} =
         , cdNativeSn = sn
         }
 
-{- | The key state a checkpoint output declares, in the version 1 record the
-shared predicates and the readers use: a live or pending version 2 datum
-whose identifier is canonical. A version 1 datum is no longer a checkpoint.
+{- | The key state of a live checkpoint, in the version 1 record the shared
+predicates and the readers use: a live version 2 datum whose identifier is
+canonical. A pending termination is not an active checkpoint (Lean
+@terminationPending@: not present, not consumable), and a version 1 datum is no
+longer a checkpoint.
 -}
 datumKeyState :: CheckpointDatum -> Maybe CheckpointDatumV1
 datumKeyState = \case
     V2 Live{lvAid, lvSn, lvEpoch, lvKeys} ->
         (\raw -> keyStateView raw lvSn lvEpoch lvKeys) <$> aidDigest lvAid
-    V2 TerminationPending{tpAid, tpSn, tpEpoch, tpKeys} ->
-        (\raw -> keyStateView raw tpSn tpEpoch tpKeys) <$> aidDigest tpAid
+    V2 TerminationPending{} -> Nothing
     V1 _ -> Nothing
 
-{- | The version 2 datum of a checkpoint output with its key state, for a
+-- | Whether the datum is a convicted checkpoint awaiting completion.
+isTerminationPending :: CheckpointDatum -> Bool
+isTerminationPending = \case
+    V2 TerminationPending{} -> True
+    _ -> False
+
+{- | The version 2 datum of a live checkpoint output with its key state, for a
 datum whose identifier is canonical.
 -}
 datumFacts :: CheckpointDatum -> Maybe (CheckpointDatumV2, CheckpointDatumV1)

@@ -51,6 +51,7 @@ import Cardano.KERI.ChainQuery.Koios (
     ChainTransactionInfo (..),
     KoiosToken,
     checkpointAssetName,
+    isTerminationPendingUtxo,
     latestMintingTransaction,
     queryAddressUtxos,
     queryAssetHistory,
@@ -291,6 +292,7 @@ decodeCheckpointUtxo :: Manifest -> ChainAssetUtxo -> Either BackendError (Maybe
 decodeCheckpointUtxo manifest utxo =
     case filter ((== policy) . chainAssetPolicy) (chainAssetList utxo) of
         [] -> Right Nothing
+        _ | isTerminationPendingUtxo utxo -> Right Nothing
         [asset] -> do
             unless (chainAssetQuantity asset == 1) $
                 Left (MalformedResponse "checkpoint output does not hold exactly one policy token")

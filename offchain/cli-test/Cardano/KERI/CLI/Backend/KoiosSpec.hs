@@ -282,9 +282,7 @@ activePrecedenceSpec = describe "resolveKoiosActive (DIRECTION-001)" $ do
         resolveKoiosList
             sampleManifest
             [liveLookingUtxo, pendingUtxo{chainAssetTxId = T.replicate 64 "2"}]
-            [ ChainTransactionInfo (chainAssetTxId liveLookingUtxo) 129_700_000
-            , ChainTransactionInfo (T.replicate 64 "2") 129_700_001
-            ]
+            [ChainTransactionInfo (chainAssetTxId liveLookingUtxo) 129_700_000]
             (Just (ChainTip 129_700_010 "tip-hash"))
             `shouldSatisfy` isExpectedList
 

@@ -56,6 +56,7 @@ module Cardano.KERI.ChainQuery.Koios (
     checkpointAssetName,
     koiosCurrentCheckpoint,
     koiosLiveCheckpoints,
+    isTerminationPendingUtxo,
     queryActiveCheckpoint,
     resolveActiveCheckpoint,
     latestMintingTransaction,
@@ -76,6 +77,7 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     checkpointDatumFromData,
     datumFacts,
     datumKeyState,
+    isTerminationPending,
  )
 import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
 import Cardano.KERI.ChainQuery.Interpreter (ChainQueryInterpreter, chainQueryInterpreter)
@@ -429,7 +431,7 @@ koiosCurrentCheckpoint baseUrl token locator aid =
         Right () -> case checkpointAssetName aid of
             Left err -> pure (Left (InvalidLocator (T.pack err)))
             Right assetName -> do
-                utxos <- queryAssetUtxos baseUrl token (checkpointLocatorPolicyId locator) assetName
+                utxos <- filter (not . isTerminationPendingUtxo) <$> queryAssetUtxos baseUrl token (checkpointLocatorPolicyId locator) assetName
                 pure $ case utxos of
                     [] -> Right Nothing
                     [utxo] ->
@@ -470,10 +472,21 @@ koiosLiveCheckpoints baseUrl token locator =
             utxos <- queryAddressUtxos baseUrl token (checkpointLocatorAddress locator)
             pure $
                 first (DecodingFailure . T.pack) $
-                    traverse (decodeOneLiveCheckpoint locator) (filter carriesCheckpointPolicy utxos)
+                    traverse (decodeOneLiveCheckpoint locator) (filter live utxos)
   where
+    -- A convicted checkpoint keeps its token but is no live checkpoint.
+    live utxo = carriesCheckpointPolicy utxo && not (isTerminationPendingUtxo utxo)
     carriesCheckpointPolicy utxo =
         any ((== checkpointLocatorPolicyId locator) . chainAssetPolicy) (chainAssetList utxo)
+
+{- | Whether the output holds a convicted checkpoint (a pending termination):
+the token stays, the checkpoint is over.
+-}
+isTerminationPendingUtxo :: ChainAssetUtxo -> Bool
+isTerminationPendingUtxo utxo =
+    case chainAssetInlineDatum utxo >>= either (const Nothing) Just . plutusDataFromJson of
+        Just dat -> maybe False isTerminationPending (checkpointDatumFromData dat)
+        Nothing -> False
 
 decodeOneLiveCheckpoint :: CheckpointLocator -> ChainAssetUtxo -> Either String ActiveCheckpoint
 decodeOneLiveCheckpoint locator utxo = do
@@ -530,15 +543,17 @@ resolveActiveCheckpoint ::
     Manifest -> Text -> Text -> [ChainAssetUtxo] -> Either String ActiveCheckpoint
 resolveActiveCheckpoint _ _ _ [] =
     Left "checkpoint is not registered"
-resolveActiveCheckpoint manifest aid assetName [utxo] =
-    resolveActiveCheckpointOne
-        CheckpointLocator
-            { checkpointLocatorPolicyId = checkpointPolicyId (manifestCheckpoint manifest)
-            , checkpointLocatorAddress = checkpointAddressBech32 (manifestCheckpoint manifest)
-            }
-        aid
-        assetName
-        utxo
+resolveActiveCheckpoint manifest aid assetName [utxo]
+    | isTerminationPendingUtxo utxo = Left "checkpoint is not registered"
+    | otherwise =
+        resolveActiveCheckpointOne
+            CheckpointLocator
+                { checkpointLocatorPolicyId = checkpointPolicyId (manifestCheckpoint manifest)
+                , checkpointLocatorAddress = checkpointAddressBech32 (manifestCheckpoint manifest)
+                }
+            aid
+            assetName
+            utxo
 resolveActiveCheckpoint _ _ _ matches =
     Left $
         "checkpoint lookup is ambiguous: "

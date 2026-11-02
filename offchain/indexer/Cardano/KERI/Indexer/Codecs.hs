@@ -19,6 +19,7 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatumV2,
     checkpointDatumFromData,
     datumFacts,
+    isTerminationPending,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
     deriveAidAssetName,
@@ -89,6 +90,8 @@ data CheckpointDecodeError
     = TxOutUndecodable !String
     | NoInlineDatum
     | DatumUndecodable
+    | -- | A convicted checkpoint: the token stays but the checkpoint is over.
+      TerminationPendingOutput
     | NoCheckpointAsset
     | AssetNameMismatch
     | MultipleCheckpointAssets
@@ -114,8 +117,10 @@ decodeCheckpointOutput checkpointPolicy txIn address (Indexer.TxOut rawTxOut) = 
         case ledgerTxOut ^. datumTxOutL of
             Datum binaryDatum ->
                 let Data plutusDatum = binaryDataToData binaryDatum
-                 in case checkpointDatumFromData plutusDatum >>= datumFacts of
-                        Just checkpointDatum -> Right checkpointDatum
+                 in case checkpointDatumFromData plutusDatum of
+                        Just decoded
+                            | isTerminationPending decoded -> Left TerminationPendingOutput
+                            | otherwise -> maybe (Left DatumUndecodable) Right (datumFacts decoded)
                         Nothing -> Left DatumUndecodable
             NoDatum -> Left NoInlineDatum
             DatumHash _ -> Left NoInlineDatum

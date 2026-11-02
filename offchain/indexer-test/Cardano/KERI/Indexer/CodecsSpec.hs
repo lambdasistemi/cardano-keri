@@ -86,7 +86,6 @@ import Data.ByteString (
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Short qualified as SBS
-import Data.Either (isLeft)
 import Data.Function (
     (&),
  )
@@ -133,7 +132,7 @@ spec = describe "decodeCheckpointOutput" $ do
 
     it "does not decode a convicted checkpoint (termination pending) as a record" $
         decodeCase positiveCase{caseDatum = inlineDatum (plutusData $ V2 pendingSample)}
-            `shouldSatisfy` isLeft
+            `shouldBe` Left TerminationPendingOutput
 
     it "rejects undecodable TxOut bytes with TxOutUndecodable" $
         decodeCheckpointOutput

@@ -139,7 +139,9 @@ spec = describe "version 2 checkpoint datum" $ do
             fmap cdNativeSn (datumKeyState (V2 (live 4 2 True)))
                 `shouldBe` Just 4
         it "reads the epoch as the checkpoint counter" $
-            fmap cdSeq (datumKeyState (V2 pending)) `shouldBe` Just 2
+            fmap cdSeq (datumKeyState (V2 (live 4 2 False))) `shouldBe` Just 2
+        it "has no key state for a pending termination: it is no active checkpoint" $
+            datumKeyState (V2 pending) `shouldBe` Nothing
         it "refuses a malformed identifier" $
             datumKeyState (V2 (liveOf (BC.pack "not an aid") 0 0 False 100 keys))
                 `shouldBe` Nothing

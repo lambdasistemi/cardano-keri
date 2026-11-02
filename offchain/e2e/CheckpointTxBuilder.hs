@@ -582,16 +582,14 @@ verifyRegisterScriptSizes env = do
     measure "observer_entitlement reference script" (envEntitlementScript env) (SBS.length (envEntitlementBytes env))
     measure "hash_proof reference script" (envHashProofScript env) (SBS.length (envHashProofBytes env))
     measure "bounty_commitment reference script" (envCommitmentScript env) (SBS.length (envCommitmentBytes env))
-    -- #339: re-derived from the applied advance program after the version 2
-    -- checkpoint datum work, not reused from #254 S254-E (14_876). The shared
-    -- key-material verdict that datum_well_formed now delegates to moves the
-    -- checkpoint, observer-advance and observer-lifecycle programs; the
-    -- version 2 constructor of the datum sum moves only observer-migration,
-    -- through its version-sum reads. Transitive compiled drift; the 16_133
-    -- ceiling is unchanged.
-    unless (SBS.length (envAdvanceBytes env) == 14_867) $
+    -- #339: re-derived from the applied advance program after the two-step
+    -- freeze was removed, not reused from the previous pin (14_867). The
+    -- advance observer no longer reads the Armed datum or the armed-response
+    -- action, so its applied program is shorter. The 16_133 ceiling is
+    -- unchanged.
+    unless (SBS.length (envAdvanceBytes env) == 14_695) $
         fail
-            ( "observer_advance applied program changed from 14,867 bytes: "
+            ( "observer_advance applied program changed from 14,695 bytes: "
                 <> show (SBS.length (envAdvanceBytes env))
             )
 

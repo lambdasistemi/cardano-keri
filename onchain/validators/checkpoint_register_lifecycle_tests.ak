@@ -1650,20 +1650,44 @@ test convict_refuses_a_missing_refund() fail {
 }
 
 test convict_refuses_to_pay_the_refund_from_the_convictors_output() fail {
-  // One output at the convictor's address cannot serve both payouts.
+  // The refund address is the convictor's, and the convictor's output holds
+  // exactly the deposit: with no other output, only counting the convictor's
+  // own output could meet the refund.
   let refund_to = bytearray.concat(#"61", convictor)
   run_convict(
     1,
     convict_tx(
       v2_data(live(tip, False, False, refund_to)),
       floor_unfrozen + convict_pool,
-      [
-        pending_output(honest_pending(), mc, tip_name()),
-        paid(convictor, d_reg + freeze_bond + convict_pool),
-      ],
+      [pending_output(honest_pending(), mc, tip_name()), paid(convictor, d_reg)],
       zero,
     ),
   )
+}
+
+test convict_refuses_a_mint_under_the_policy() fail {
+  // The accepted conviction with one other token minted under the policy.
+  run_convict(
+    1,
+    convict_tx(
+      v2_data(live(tip, False, False, refund_enterprise_key())),
+      floor_unfrozen + convict_pool,
+      [pending_output(honest_pending(), mc, tip_name()), ..honest_payouts()],
+      from_asset(policy, "another", 1),
+    ),
+  )
+}
+
+test advance_refuses_a_mint_under_the_policy() fail {
+  // The accepted paid rotation with one other token minted under the policy.
+  let base = advance_tx(
+    v2_data(adv_old(False, False)),
+    v2_data(adv_new(False)),
+    floor_unfrozen + 3_000_000,
+    floor_unfrozen + 1_000_000,
+    [paid(hunter_pkh, premium)],
+  )
+  run_advance(1, Transaction { ..base, mint: from_asset(policy, "another", 1) })
 }
 
 test convict_refuses_a_version_1_input() fail {

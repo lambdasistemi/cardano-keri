@@ -30,6 +30,7 @@ use aiken/cbor
 use aiken/collection/list
 use aiken/crypto.{blake2b_256}
 use aiken/interval
+use aiken/primitive/bytearray
 use cage_context.{
   ada_output, input_at, min_ada, mint_context, out_ref, owner_vkh, seed_tx_id,
   spend_context,
@@ -52,6 +53,7 @@ use cardano_keri/checkpoint/enforcement.{EnforcementEvidence, TombstoneV1}
 use cardano_keri/checkpoint/enforcement_vectors as enf_vec
 use cardano_keri/checkpoint/entitlement.{validate_convict_entitlement}
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
+use cardano_keri/checkpoint/previous_freeze_fixture as previous_freeze
 use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
@@ -2936,6 +2938,26 @@ fn s254e_reveal(
   S254EReveal { commitment_ref: ref, nonce, refund_index: index }
 }
 
+/// The same handler driven with a redeemer that is already wire data.
+fn run_s254e_raw(
+  redeemer: Data,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  checkpoint.checkpoint.spend(
+    0,
+    hp_policy,
+    network_id,
+    d_reg,
+    r2_freeze_bond,
+    applied_commitment,
+    None,
+    redeemer,
+    own_ref,
+    tx,
+  )
+}
+
 fn run_s254e(
   redeemer: S254ESpendRedeemer,
   own_ref: OutputReference,
@@ -3103,6 +3125,211 @@ test reject_removed_close_constructor() fail {
 // #339 — the two-step freeze is not part of the checkpoint. Each transaction
 // below is one the previous validator accepted; every one is now refused.
 // ---------------------------------------------------------------------
+
+const previous_armed_tag: ByteArray = #"02"
+
+const previous_frozen_tag: ByteArray = #"00"
+
+const previous_hunter: ByteArray =
+  #"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+const previous_upper: Int = 1_000
+
+const previous_deadline: Int = previous_upper + 500
+
+/// The address a removed role occupied: the policy's script with the staking
+/// marker the role scheme derived from the role tag.
+fn previous_role_address(tag: ByteArray) -> Address {
+  from_script(policy)
+    |> with_delegation_script(
+        builtin.blake2b_224(
+          bytearray.concat(
+            bytearray.concat("cardano-keri/checkpoint/role/v1", policy),
+            tag,
+          ),
+        ),
+      )
+}
+
+/// The armed datum (second version): the tip, the hunter and the deadline.
+fn previous_armed_datum(tip: CheckpointDatumV1) -> Data {
+  let tip_data: Data = tip
+  builtin.constr_data(
+    1,
+    [
+      tip_data,
+      builtin.b_data(previous_hunter),
+      builtin.i_data(previous_deadline),
+    ],
+  )
+}
+
+fn previous_surplus_value(tip: CheckpointDatumV1) -> Value {
+  from_lovelace(min_ada + d_reg + r2_freeze_bond)
+    |> merge(from_asset(policy, deriveAidAssetName(tip.cesr_aid), 1))
+    |> merge(from_lovelace(17))
+    |> merge(from_asset(hp_policy, #"f2", 3))
+}
+
+/// The commitment the hunter opened for the freeze. The action it names has
+/// the same encoding as the conviction action: the one remaining constructor.
+fn previous_freeze_commitment() -> S254ECommitment {
+  let scope = s254e_scope(
+    staged_own_ref,
+    S254EConvictEntitlement,
+    s254e_marker(s254e_seed_ref),
+    0,
+  )
+  s254e_commitment(
+    scope,
+    s254e_evidence_digest(previous_freeze.rotation_wire),
+    previous_hunter,
+    s254e_nonce,
+  )
+}
+
+/// The freeze the previous validator accepted: the active checkpoint becomes
+/// the same value at the armed role, with the matured commitment consumed and
+/// its deposit refunded to the hunter.
+fn previous_freeze_tx() -> Transaction {
+  let tip = previous_freeze.lag_tip
+  let commitment = previous_freeze_commitment()
+  let S254ECommitmentV1 { marker, payee_pkh, .. } = commitment
+  let value = previous_surplus_value(tip)
+  let base = r2_context(
+    role.address(policy, Active),
+    V1(tip),
+    value,
+    [
+      Output {
+        address: previous_role_address(previous_armed_tag),
+        value,
+        datum: InlineDatum(previous_armed_datum(tip)),
+        reference_script: None,
+      },
+    ],
+    zero,
+    interval.between(s254e_commit_min_age, previous_upper),
+  )
+  Transaction {
+    ..base,
+    inputs: list.concat(
+      base.inputs,
+      [s254e_commitment_input(s254e_commitment_ref, commitment)],
+    ),
+    outputs: list.concat(base.outputs, [s254e_refund_output(payee_pkh)]),
+    mint: s254e_marker_burn(marker),
+  }
+}
+
+/// The claim the previous validator accepted: the armed checkpoint, past its
+/// deadline, pays the bond to the hunter and becomes the frozen checkpoint.
+fn previous_claim_tx() -> Transaction {
+  let tip = previous_freeze.lag_tip
+  let value = previous_surplus_value(tip)
+  r2_context(
+    previous_role_address(previous_armed_tag),
+    previous_armed_datum(tip),
+    value,
+    [
+      r2_hunter_output(previous_hunter, from_lovelace(r2_freeze_bond), NoDatum),
+      Output {
+        address: previous_role_address(previous_frozen_tag),
+        value: value |> merge(from_lovelace(-r2_freeze_bond)),
+        datum: InlineDatum(V1(tip)),
+        reference_script: None,
+      },
+    ],
+    zero,
+    interval.after(previous_deadline),
+  )
+}
+
+/// A conviction of a checkpoint held at a removed role.
+fn previous_convict_tx(
+  address: Address,
+  datum: Data,
+  protected: Int,
+  hunter_payouts: List<Output>,
+) -> Transaction {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  let evidence = enf_vec.fork_witnessed_convict_wire
+  r3_context(
+    address,
+    datum,
+    r3_state_value(tip, protected),
+    list.concat(
+      [r3_payout_output(r3_convictor, from_lovelace(d_reg), NoDatum)],
+      list.concat(
+        hunter_payouts,
+        [
+          r3_terminal_output(tip, evidence, r3_terminal_value(tip)),
+          r3_change_output(),
+        ],
+      ),
+    ),
+    zero,
+  )
+}
+
+/// The freeze commitment is byte-for-byte the one the previous validator
+/// accepted (its digest was taken from the previous action encoding).
+test previous_freeze_commitment_is_the_previous_encoding() {
+  let S254ECommitmentV1 { hash, .. } = previous_freeze_commitment()
+  hash == #"7ccbc3c8b57c76c5d1b732a3bef0a3b487c6268025465bf099d37ac9920c59af"
+}
+
+test previous_freeze_spend_is_refused() fail {
+  let evidence: Data = previous_freeze.rotation_wire
+  let reveal: Data = s254e_reveal(s254e_commitment_ref, s254e_nonce, 2)
+  run_s254e_raw(
+    builtin.constr_data(1, [evidence, builtin.b_data(previous_hunter), reveal]),
+    staged_own_ref,
+    previous_freeze_tx(),
+  )
+}
+
+test previous_claim_freeze_spend_is_refused() fail {
+  run_s254e_raw(
+    builtin.constr_data(2, [builtin.i_data(0)]),
+    staged_own_ref,
+    previous_claim_tx(),
+  )
+}
+
+test convict_of_an_armed_checkpoint_is_refused() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  run_s254e_convict(
+    r3_convictor,
+    0,
+    previous_convict_tx(
+      previous_role_address(previous_armed_tag),
+      previous_armed_datum(tip),
+      d_reg + r2_freeze_bond,
+      [
+        r3_payout_output(
+          previous_hunter,
+          from_lovelace(r2_freeze_bond),
+          NoDatum,
+        ),
+      ],
+    ),
+  )
+}
+
+test convict_of_a_frozen_checkpoint_is_refused() fail {
+  let tip = enf_vec.fork_witnessed_convict_tip
+  run_s254e_convict(
+    r3_convictor,
+    0,
+    previous_convict_tx(
+      previous_role_address(previous_frozen_tag),
+      V1(tip),
+      d_reg,
+      [],
+    ),
+  )
+}
 
 // ---------------------------------------------------------------------
 // The entitlement rule through the applied conviction. Each row changes one

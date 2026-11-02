@@ -39,6 +39,7 @@ use cardano_keri/checkpoint/observer.{
   ObserverClaim, ObserverEnvelope, observe_advance, observe_convict,
   observe_migration, observe_register,
 }
+use cardano_keri/checkpoint/previous_freeze_fixture as previous_freeze
 use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
@@ -1773,21 +1774,70 @@ test freeze_action_tag_is_refused_for_a_convict_spend() fail {
   run_convict_spend(tx)
 }
 
+/// The transaction the previous freeze accepted: the active checkpoint becomes
+/// the same value at the armed role, carrying the hunter and the deadline,
+/// under both observers and the freeze action tag.
+fn removed_freeze_tx(
+  tip: CheckpointDatumV1,
+  evidence: EnforcementEvidence,
+) -> Transaction {
+  let own_input = input_at(
+    freeze_ref(),
+    Output {
+      address: role.address(policy, Active),
+      value: freeze_value(tip),
+      datum: InlineDatum(V1(tip)),
+      reference_script: None,
+    },
+  )
+  let armed = Output {
+    address: removed_role_address(armed_role_tag),
+    value: freeze_value(tip),
+    datum: InlineDatum(removed_armed(1, tip, hunter, freeze_deadline)),
+    reference_script: None,
+  }
+  let tx = spend_context(
+    [own_input],
+    [],
+    [armed],
+    zero,
+    [],
+    interval.between(0, freeze_upper),
+    0,
+  )
+  let enforcement_credential = Script(enforcement_hash)
+  let entitlement_credential = Script(entitlement_hash)
+  let observer_redeemer: Data = convict_envelope_for(
+    removed_freeze_action,
+    freeze_ref(),
+    evidence,
+    hunter,
+  )
+  Transaction {
+    ..tx,
+    withdrawals: [
+      Pair(enforcement_credential, 0), Pair(entitlement_credential, 0),
+    ],
+    redeemers: [
+      Pair(Withdraw(enforcement_credential), observer_redeemer),
+      Pair(Withdraw(entitlement_credential), observer_redeemer),
+    ],
+  }
+}
+
 test freeze_redeemer_is_refused() fail {
-  let tip = enforcement_vec.fork_witnessed_convict_tip
-  let evidence = enforcement_vec.fork_witnessed_convict_wire
   removed_spend(
     removed_spend_redeemer(1, [builtin.b_data(hunter)]),
-    convict_ref(),
-    active_convict_tx(tip, evidence),
+    freeze_ref(),
+    removed_freeze_tx(previous_freeze.lag_tip, previous_freeze.rotation_wire),
   )
 }
 
 test claim_freeze_redeemer_is_refused() fail {
-  let tip = enforcement_vec.fork_witnessed_convict_tip
+  let tip = previous_freeze.lag_tip
   removed_spend(
     removed_spend_redeemer(2, [builtin.i_data(0)]),
-    convict_ref(),
+    freeze_ref(),
     claim_tx_with(tip, hunter, freeze_bond, freeze_deadline, claimed_value(tip)),
   )
 }

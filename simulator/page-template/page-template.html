@@ -464,13 +464,12 @@
       <div class="ev-form">
         <label>kind <select id="ev-kind">
           <option value="rotationTo">witnessed rotation</option>
-          <option value="intentAuthorized">intent signed by the new keys (option, refund address)</option>
+          <option value="depositAuthorized">deposit signed by the new keys</option>
           <option value="quorum">current quorum signed</option>
           <option value="duplicityAt">duplicity proof</option>
         </select></label>
         <label id="ev-la">epoch <input id="ev-a" type="number" min="0" step="1" value="0"></label>
         <label id="ev-lb">from sn <input id="ev-b" type="number" min="0" step="1" value="0"></label>
-        <label id="ev-li" hidden>intent <select id="ev-intent"><option value="keep">keep</option><option value="deposit">deposit (unfreeze)</option></select></label>
         <label id="ev-lc">to sn' <input id="ev-c" type="number" min="0" step="1" value="1"></label>
         <button type="button" class="ghost" id="ev-add">Add row</button>
       </div>
@@ -633,17 +632,16 @@ function offersFor(actorId, tree, nodeId) {
   switch (actorId) {
     case 'alice':
       ev('kli rotate: sn ' + sn + ' → ' + (sn + 1) + ', receipted by the witnesses', { rotationTo: [e, sn, sn + 1] }, 'a valid witnessed rotation from the current keys');
-      ev('my next keys sign: keep the bonds, refund address → 1 (Alice)', { intentAuthorized: [e + 1, 'keep', 1] }, 'the keys the rotation reveals sign the intent and the address (D-038)');
-      ev('my next keys sign: deposit (unfreeze)', { intentAuthorized: [e + 1, 'deposit', null] }, 'the keys the rotation reveals sign the deposit (D-038)');
+      ev('my next keys sign: deposit (unfreeze)', { depositAuthorized: [e + 1] }, 'the keys the rotation reveals sign the deposit (D-038)');
       ev('key holders sign at threshold (quorum, epoch ' + e + ')', { quorum: [e] }, 'the current quorum signs a Cardano-side preimage');
-      act('rotate', 'land my rotation, keep the bonds', { rotate: { "sn'": sn2, op: 'keep', payee: 1, "refund'": null } });
-      act('rotate', 'land my rotation, deposit (unfreeze; on full bonds a keep)', { rotate: { "sn'": sn2, op: 'deposit', payee: 1, "refund'": null } });
+      act('rotate', 'land my rotation, keep the bonds', { rotate: { "sn'": sn2, op: 'keep', payee: 1 } });
+      act('rotate', 'land my rotation, deposit (unfreeze; on full bonds a keep)', { rotate: { "sn'": sn2, op: 'deposit', payee: 1 } });
       act('poison', 'poison this epoch', 'poison');
       act('topUp', 'add to my pool', { topUp: { x: 5 } });
       act('register', 'register my inception (refund to me)', { register: { refund: 1, pool0: 10 } });
       break;
     case 'hal':
-      act('rotate', 'land Alice’s rotation, paid P to Hal', { rotate: { "sn'": sn2, op: 'keep', payee: 2, "refund'": null } });
+      act('rotate', 'land Alice’s rotation, paid P to Hal', { rotate: { "sn'": sn2, op: 'keep', payee: 2 } });
       act('freeze', 'freeze her on the old keys, take B', { freeze: { "sn'": sn2, payee: 2 } });
       break;
     case 'cora':
@@ -654,12 +652,12 @@ function offersFor(actorId, tree, nodeId) {
       ev('steal the current keys (sign as quorum, epoch ' + ke + ')', { quorum: [ke] }, 'with the current keys she signs at threshold');
       ev('steal the next keys too (rotate ' + ksn + ' → ' + (ksn + 1) + ')', { rotationTo: [ke, ksn, ksn + 1] }, 'control by KERI’s own rule');
       act('poison', 'poison with the stolen keys', 'poison');
-      act('rotate', 'rotate with the stolen next keys, paid to Mallory', { rotate: { "sn'": sn2, op: 'keep', payee: 4, "refund'": null } });
+      act('rotate', 'rotate with the stolen next keys, paid to Mallory', { rotate: { "sn'": sn2, op: 'keep', payee: 4 } });
       act('register', 'register Alice’s inception myself, at an epoch whose keys I hold (refund to Mallory)', { register: { refund: 4, pool0: 10 } });
       break;
     case 'anyone':
       act('register', 'register her inception for her (refund to Alice)', { register: { refund: 1, pool0: 10 } });
-      act('register', 'register her inception, refund to myself (a donation at her first rotation)', { register: { refund: 6, pool0: 10 } });
+      act('register', 'register her inception, refund to myself (fixed for the checkpoint’s life)', { register: { refund: 6, pool0: 10 } });
       act('topUp', 'top up her pool', { topUp: { x: 5 } });
       break;
   }
@@ -923,7 +921,7 @@ function describeAction(a) {
   const k = actionKind(a); const d = dataOf(a);
   switch (k) {
     case 'register': return `register (refund → ${nameOf(d.refund)}, pool ${d.pool0})`;
-    case 'rotate': return `rotate to sn ${d["sn'"]}, ${d.op}, payee ${nameOf(d.payee)}` + (d["refund'"] !== null && d["refund'"] !== undefined ? `, refund → ${nameOf(d["refund'"])}` : '');
+    case 'rotate': return `rotate to sn ${d["sn'"]}, ${d.op}, payee ${nameOf(d.payee)}`;
     case 'poison': return 'poison';
     case 'freeze': return `freeze (presenting sn ${d["sn'"]}), payee ${nameOf(d.payee)}`;
     case 'topUp': return `top-up ${d.x}`; case 'convict': return `convict, payee ${nameOf(d.payee)}`;
@@ -1053,7 +1051,7 @@ function drawScene() {
   const trg = s('g', { dataset: { obj: 'tray', key: 'tray' }, transform: `translate(${tr.x},${tr.y})` });
   trg.append(s('rect', { class: 'tray', x: -170, y: -34, width: 340, height: 74, rx: 8 }), s('text', { class: 'hint', x: -162, y: -20 }, 'evidence presented (the Env): what the validator verifies over the bytes'));
   const receipts = [];
-  const rw = { rotationTo: r => `rot e${r[0]} sn${r[1]}→${r[2]}`, intentAuthorized: r => `e${r[0]} signs ${r[1]}${r[2] === null ? '' : ' →' + nameOf(r[2])}`, quorum: r => `quorum e${r[0]}`, duplicityAt: r => `dup e${r[0]} sn${r[1]}` };
+  const rw = { rotationTo: r => `rot e${r[0]} sn${r[1]}→${r[2]}`, depositAuthorized: r => `e${r[0]} signs deposit`, quorum: r => `quorum e${r[0]}`, duplicityAt: r => `dup e${r[0]} sn${r[1]}` };
   trg.append(s('text', { class: 'hint', x: -162, y: 36 }, 'rot = witnessed rotation · dup = duplicity proof · e = key epoch · sn = sequence number of the KERI event'));
   for (const kd of EV_KINDS) for (const r of sess.env[kd]) receipts.push(rw[kd](r));
   receipts.slice(0, 8).forEach((txt, i) => { const x = -162 + (i % 4) * 84, y = -8 + Math.floor(i / 4) * 22; trg.append(s('rect', { class: 'receipt', x, y, width: 78, height: 17, rx: 4 }), s('text', { class: 'receipt-t', x: x + 4, y: y + 12 }, txt.slice(0, 15))); });
@@ -1158,7 +1156,7 @@ function edgeFx(n, dir, dur) {
     const row = n.evRow; if (!row) { pulse('tray'); return; }
     const kind = Object.keys(row)[0];
     const from = kind === 'duplicityAt' ? 'actor:cora' : (kind === 'quorum' && n.who === WHO.mallory) ? 'actor:mallory' : 'witnesses';
-    const el = scroll({ rotationTo: 'rotation', intentAuthorized: 'signed intent', quorum: 'quorum', duplicityAt: 'proof' }[kind], rewind);
+    const el = scroll({ rotationTo: 'rotation', depositAuthorized: 'signed deposit', quorum: 'quorum', duplicityAt: 'proof' }[kind], rewind);
     fly(el, from, 'tray', { dir, dur: D, done: () => pulse('tray') });
     if (n.removed) floatText('tray', rewind ? '+ row' : '− row', '', 0);
     return;
@@ -1276,14 +1274,14 @@ const INTEREST = {
 function needsOf(action) {
   const k = actionKind(action), d = dataOf(action);
   if (actorOf(action) === 'currentQuorum') return { cls: 'keys', text: 'the current keys sign' };
-  if (k === 'rotate' && (d.op !== 'keep' || (d["refund'"] !== null && d["refund'"] !== undefined))) return { cls: 'keys', text: 'public rotation · the new keys sign the intent' };
+  if (k === 'rotate' && d.op !== 'keep') return { cls: 'keys', text: 'public rotation · the new keys sign the deposit' };
   if (k === 'rotate' || k === 'freeze') return { cls: 'public', text: 'a public witnessed rotation' };
   if (k === 'convict') return { cls: 'public', text: 'a public duplicity proof' };
   return { cls: 'public', text: 'no signature' };
 }
 // what happened on the edge into a node, in one or two words: the action (with
 // the bond option of a rotation), the slot time moved to, the evidence presented
-const EV_VERB = { rotationTo: 'rotation', intentAuthorized: 'intent', quorum: 'quorum', duplicityAt: 'duplicity' };
+const EV_VERB = { rotationTo: 'rotation', depositAuthorized: 'deposit', quorum: 'quorum', duplicityAt: 'duplicity' };
 function nodeVerb(n) {
   if (n.record) {
     const a = n.record.action, k = actionKind(a), d = dataOf(a);
@@ -1532,7 +1530,7 @@ function renderCast() {
 }
 const FIELDS = {
   register: [['refund', 'refund address'], ['pool0', 'initial pool']],
-  rotate: [["sn'", 'to sequence'], ['op', 'bond option'], ['payee', 'payee address'], ["refund'", 'new refund address (blank = keep)']],
+  rotate: [["sn'", 'to sequence'], ['op', 'bond option'], ['payee', 'payee address']],
   freeze: [["sn'", 'presenting sequence'], ['payee', 'payee address']],
   topUp: [['x', 'amount']], convict: [['payee', 'payee address']], poison: [],
 };
@@ -1547,7 +1545,7 @@ function renderActForm() {
     let input;
     if (f === 'op') input = h('select', { onchange: e => { d.op = e.target.value; renderActForm(); } }, BOND_OPS.map(op => h('option', { value: op, selected: d.op === op }, op)));
     else input = h('input', { type: 'number', min: 0, step: 1, value: d[f] === null || d[f] === undefined ? '' : String(d[f]),
-      onchange: e => { const v = e.target.value.trim(); const n = parseNat(v); d[f] = v === '' ? (f === "refund'" ? null : '') : (n === null ? v : n); renderActForm(); } });
+      onchange: e => { const v = e.target.value.trim(); const n = parseNat(v); d[f] = v === '' ? '' : (n === null ? v : n); renderActForm(); } });
     fields.append(h('label', {}, label, input));
   }
   const dr = dryRun(currentTree(), a);
@@ -1562,15 +1560,14 @@ function submitPending() {
   adoptTree(submit(currentTree(), app.actor, action).tree, true);
   render();
 }
-const EV_LABELS = { rotationTo: ['epoch', 'from sn', "to sn'"], intentAuthorized: ['epoch', null, 'refund address (blank = unchanged)'], quorum: ['epoch', null, null], duplicityAt: ['epoch', 'sn', null] };
+const EV_LABELS = { rotationTo: ['epoch', 'from sn', "to sn'"], depositAuthorized: ['epoch', null, null], quorum: ['epoch', null, null], duplicityAt: ['epoch', 'sn', null] };
 function renderEvidence() {
   const sess = cur();
   const kind = $('ev-kind').value;
   const labels = EV_LABELS[kind];
   [['ev-la', 'ev-a'], ['ev-lb', 'ev-b'], ['ev-lc', 'ev-c']].forEach(([lid], i) => { const lab = $(lid); lab.hidden = !labels[i]; if (labels[i]) lab.firstChild.textContent = labels[i] + ' '; });
-  $('ev-li').hidden = kind !== 'intentAuthorized';
   const rows = clear($('ev-rows'));
-  const words = { rotationTo: r => `witnessed rotation: epoch ${r[0]}, sn ${r[1]} → ${r[2]}`, intentAuthorized: r => `keys of epoch ${r[0]} signed the intent «${intentWord(r[1])}»${r[2] === null ? ', refund address unchanged' : ', refund address ' + r[2] + ' (' + nameOf(r[2]) + ')'}`, quorum: r => `the quorum of epoch ${r[0]} signed`, duplicityAt: r => `duplicity at epoch ${r[0]}, sn ${r[1]}` };
+  const words = { rotationTo: r => `witnessed rotation: epoch ${r[0]}, sn ${r[1]} → ${r[2]}`, depositAuthorized: r => `keys of epoch ${r[0]} signed the deposit`, quorum: r => `the quorum of epoch ${r[0]} signed`, duplicityAt: r => `duplicity at epoch ${r[0]}, sn ${r[1]}` };
   let n = 0;
   for (const k of EV_KINDS) for (const r of sess.env[k]) {
     n++;
@@ -1581,18 +1578,9 @@ function renderEvidence() {
 }
 function addEvidenceFromForm() {
   const kind = $('ev-kind').value;
-  let args;
-  if (kind === 'intentAuthorized') {
-    const e = parseNat($('ev-a').value); const r = $('ev-c').value.trim() === '' ? null : parseNat($('ev-c').value);
-    if (e === null || (r === null && $('ev-c').value.trim() !== '')) { $('slot-msg').textContent = 'evidence fields must be whole numbers from 0 to 2^53 − 1'; return; }
-    let intent = $('ev-intent').value;
-    args = [e, intent, r];
-  } else {
-    const vals = ['ev-a', 'ev-b', 'ev-c'].map(id => parseNat($(id).value));
-    const n = EV_LABELS[kind].filter(Boolean).length;
-    args = vals.slice(0, n);
-    if (!args.every(isNat)) { $('slot-msg').textContent = 'evidence fields must be whole numbers from 0 to 2^53 − 1'; return; }
-  }
+  const vals = ['ev-a', 'ev-b', 'ev-c'].map(id => parseNat($(id).value));
+  const args = vals.slice(0, EV_LABELS[kind].filter(Boolean).length);
+  if (!args.every(isNat)) { $('slot-msg').textContent = 'evidence fields must be whole numbers from 0 to 2^53 − 1'; return; }
   adoptTree(treeAddEvidence(currentTree(), { [kind]: args }).tree, true);
   render();
 }
@@ -1947,7 +1935,6 @@ function wire() {
   $('act-submit').addEventListener('click', submitPending);
   $('act-cancel').addEventListener('click', () => { app.pending = null; renderNext(); });
   $('ev-kind').addEventListener('change', renderEvidence);
-  $('ev-intent').addEventListener('change', renderEvidence);
   $('ev-add').addEventListener('click', addEvidenceFromForm);
   $('slot-input').addEventListener('change', e => { const n = parseNat(e.target.value); if (n === null) { $('slot-msg').textContent = 'the slot must be a whole number from 0 to 2^53 − 1'; $('slot-input').value = fmt(cur().now); return; } moveSlot(n); });
   $('slot-plus1').addEventListener('click', () => moveSlot(cur().now + 1));

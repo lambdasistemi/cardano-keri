@@ -87,8 +87,6 @@ ev-la
 ev-a
 ev-lb
 ev-b
-ev-li
-ev-intent
 ev-lc
 ev-c
 ev-add

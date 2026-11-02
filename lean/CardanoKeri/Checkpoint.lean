@@ -35,20 +35,12 @@ inductive BondOp where
   | deposit
   deriving DecidableEq, Repr
 
-inductive Intent where
-  | keep
-  | deposit
-  deriving DecidableEq, Repr
-
-def BondOp.intent : BondOp → Intent
-  | .keep => .keep
-  | .deposit => .deposit
-
 structure Env where
 
   rotationTo : Epoch → Seq → Seq → Bool
 
-  intentAuthorized : Epoch → Intent → Option Addr → Bool
+  -- The keys of epoch `e` signed the deposit of the rotation that opens `e`.
+  depositAuthorized : Epoch → Bool
 
   quorum : Epoch → Bool
 
@@ -61,10 +53,9 @@ def Env.duplicityAt (env : Env) (epoch : Epoch) (sn : Seq) : Bool :=
   | some context, some rival => CardanoKeri.Duplicity.duplicityAt epoch sn context rival
   | _, _ => false
 
-def Env.intentOk (env : Env) (e : Epoch) (i : Intent) (r : Option Addr) : Bool :=
-  match i, r with
-  | .keep, none => true
-  | i, r => env.intentAuthorized e i r
+def Env.bondOpOk (env : Env) (e : Epoch) : BondOp → Bool
+  | .keep => true
+  | .deposit => env.depositAuthorized e
 
 inductive Actor where
   | nextKeys
@@ -77,7 +68,7 @@ inductive Action where
 
   | register (refund : Addr) (pool0 : Value)
 
-  | rotate (sn' : Seq) (op : BondOp) (payee : Addr) (refund' : Option Addr)
+  | rotate (sn' : Seq) (op : BondOp) (payee : Addr)
 
   | poison
 
@@ -124,9 +115,8 @@ def Live.hash (l : Live) : Hash := ⟨l.epoch, l.sn⟩
 
 def Live.bHeld (p : Params) (l : Live) : Value := if l.frozen then 0 else p.B
 
-def Live.rotated (p : Params) (l : Live) (sn' : Seq) (refund' : Option Addr) : Live :=
+def Live.rotated (p : Params) (l : Live) (sn' : Seq) : Live :=
   { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
-           refundTo := refund'.getD l.refundTo,
            pool := if p.P ≤ l.pool then l.pool - p.P else l.pool }
 
 inductive State where
@@ -210,41 +200,36 @@ inductive Step (p : Params) (env : Env) : Action → Slot → State → Flow →
         { dregIn := p.D, bIn := p.B, poolIn := pool0 }
         (.present ⟨0, 0, false, false, now, refund, pool0⟩)
 
-  | rotateKeepPaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
+  | rotateKeepPaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr)
       (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
-      (hauth : env.intentOk (l.epoch + 1) .keep refund' = true)
       (hpay : p.P ≤ l.pool) :
-      Step p env (.rotate sn' .keep payee refund') now (.present l)
+      Step p env (.rotate sn' .keep payee) now (.present l)
         { hunter := some { addr := payee, pool := p.P } }
-        (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
-                           refundTo := refund'.getD l.refundTo, pool := l.pool - p.P })
+        (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, pool := l.pool - p.P })
 
-  | rotateKeepUnpaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
+  | rotateKeepUnpaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr)
       (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
-      (hauth : env.intentOk (l.epoch + 1) .keep refund' = true)
       (hnopay : l.pool < p.P) :
-      Step p env (.rotate sn' .keep payee refund') now (.present l)
+      Step p env (.rotate sn' .keep payee) now (.present l)
         {}
-        (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
-                           refundTo := refund'.getD l.refundTo })
+        (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false })
 
-  | rotateDepositPaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
+  | rotateDepositPaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr)
       (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
-      (hauth : env.intentOk (l.epoch + 1) .deposit refund' = true)
+      (hauth : env.depositAuthorized (l.epoch + 1) = true)
       (hpay : p.P ≤ l.pool) :
-      Step p env (.rotate sn' .deposit payee refund') now (.present l)
+      Step p env (.rotate sn' .deposit payee) now (.present l)
         { bIn := p.B - l.bHeld p, hunter := some { addr := payee, pool := p.P } }
         (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false,
-                           refundTo := refund'.getD l.refundTo, pool := l.pool - p.P })
+                           pool := l.pool - p.P })
 
-  | rotateDepositUnpaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr) (refund' : Option Addr)
+  | rotateDepositUnpaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr)
       (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
-      (hauth : env.intentOk (l.epoch + 1) .deposit refund' = true)
+      (hauth : env.depositAuthorized (l.epoch + 1) = true)
       (hnopay : l.pool < p.P) :
-      Step p env (.rotate sn' .deposit payee refund') now (.present l)
+      Step p env (.rotate sn' .deposit payee) now (.present l)
         { bIn := p.B - l.bHeld p }
-        (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false,
-                           refundTo := refund'.getD l.refundTo })
+        (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false })
 
   | poison {l : Live} (now : Slot)
       (hq : env.quorum l.epoch = true) (hclean : l.poisoned = false) :
@@ -272,28 +257,25 @@ def stepFn (p : Params) (env : Env) (a : Action) (now : Slot) (s : State) : Opti
   | .register refund pool0, .absent =>
       some ({ dregIn := p.D, bIn := p.B, poolIn := pool0 },
             .present ⟨0, 0, false, false, now, refund, pool0⟩)
-  | .rotate sn' op payee refund', .present l =>
+  | .rotate sn' op payee, .present l =>
       if env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
-         env.intentOk (l.epoch + 1) op.intent refund' = true then
-        let r' := refund'.getD l.refundTo
+         env.bondOpOk (l.epoch + 1) op = true then
         match op with
         | .keep =>
             if p.P ≤ l.pool then
               some ({ hunter := some { addr := payee, pool := p.P } },
                     .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
-                                      refundTo := r', pool := l.pool - p.P })
+                                      pool := l.pool - p.P })
             else
-              some ({}, .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
-                                          refundTo := r' })
+              some ({}, .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false })
         | .deposit =>
             if p.P ≤ l.pool then
               some ({ bIn := p.B - l.bHeld p, hunter := some { addr := payee, pool := p.P } },
                     .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false,
-                                      refundTo := r', pool := l.pool - p.P })
+                                      pool := l.pool - p.P })
             else
               some ({ bIn := p.B - l.bHeld p },
-                    .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false,
-                                      refundTo := r' })
+                    .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false })
       else none
   | .poison, .present l =>
       if env.quorum l.epoch = true ∧ l.poisoned = false then

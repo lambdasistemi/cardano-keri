@@ -3,19 +3,19 @@
   "scope": "Current lifecycle and transport theorem source stories with complete formal binders and conclusions; no production correspondence claim",
   "singular": "d69ab005c3b710aeebf033d3c5cd08c56feb5643",
   "sources": {
-    "lean/CardanoKeri/Checkpoint.lean": "f04d40626060d2b262e27db0d8c823623fc6fd8588e3d9cd93f71589ecc02c29",
+    "lean/CardanoKeri/Checkpoint.lean": "8b6d98cab94555c92fb894b12e717e960e3307e00df49c9ab34be2d37848f359",
     "lean/CardanoKeri/CheckpointCertificate.lean": "a84ccbcc21b6f6e5b5669add8a4f985b59de85e17c411b03643af1ca1bf3f3b7",
     "lean/CardanoKeri/CheckpointCompletionGoals.lean": "d6861d6cddc941fe6a8dd8781398676a250748dcba70eafc6338edd9b6bccde2",
     "lean/CardanoKeri/CheckpointDatum.lean": "4b78f04fe4fc00c7ea1a08dd68350bf4e3ddd1302d78b3f1d5edb23d4b6f7d68",
     "lean/CardanoKeri/CheckpointDatumGoals.lean": "8784ee53f4520b1d5e3e768ac8f5d957192a7e6776c327154eafe02abbdb8d87",
     "lean/CardanoKeri/CheckpointDatumVectors.lean": "8212966cd69b2aa2d4aa6024553e0cdd37804309756c4ccd6d4df510053399c0",
-    "lean/CardanoKeri/CheckpointGoals.lean": "44b90990102b7055332e8511e4bd1723e5026959afc7d80f83cca765b2376a51",
-    "lean/CardanoKeri/CheckpointLifecycleExamples.lean": "92b555c088456dbc868e899b4caa8365e2e9452aecd034409a3bde2303579f59",
+    "lean/CardanoKeri/CheckpointGoals.lean": "f87cf31f0adc3d778685ff00fc3ac5d54feb0c8856832299e4e4c315de0bfcc0",
+    "lean/CardanoKeri/CheckpointLifecycleExamples.lean": "0641f10a9ea175e0f26bbb35bf04b763112d9872cc3030035768ff6adb5749f5",
     "lean/CardanoKeri/CheckpointReceiptCheck.lean": "b8e503afc6b39c864d5670b5b746ada934e519beb2c45b291be66d811e1085d8",
     "lean/CardanoKeri/CheckpointSystemEvidence.lean": "999f7eaa7751572659d9a87c30802fef9dea1d3c5052fa8518f675d12a12d383",
-    "lean/CardanoKeri/CheckpointSystemFixtures.lean": "b6232cda9576c8aa80caa7bb3c4f086e07035f83d75341bec31c929dad7e1e82",
+    "lean/CardanoKeri/CheckpointSystemFixtures.lean": "8986333c24cee8e1ae8dff99219c5edb174455e0ebc23ee8ee00b90088f2cd88",
     "lean/CardanoKeri/CheckpointSystemWire.lean": "4bce5a0c36722efff3c5166e1f27ccc51a3151e30b5faeee7997bd036758a72c",
-    "lean/CardanoKeri/CheckpointTraceWire.lean": "49e86f002cbbbcb9a0090e06649fe0a3f35f29ba22ed0669980ec942fce276f3",
+    "lean/CardanoKeri/CheckpointTraceWire.lean": "c3f2f6b1050885eb094efc7e2d90e9215450a858e0b0de7efa4d5c433d4f21ed",
     "lean/CardanoKeri/CheckpointValue.lean": "91135258df7f22f4bb62f0dbf8b683cce7e5aa9d348a769f1c4fd3949cf2785b",
     "lean/CardanoKeri/CheckpointValueGoals.lean": "542a71ad054d204cee1a8cc634a962e8d3a9e1470d6f739c73b2a19bd0977d30",
     "lean/CardanoKeri/CheckpointValueVectors.lean": "aa973a9f763a385a8a98eb20f8a3ba34c20eb3a6b6930ddae541dafab650421f",
@@ -23,11 +23,11 @@
     "lean/CardanoKeri/ConsumerBytes.lean": "9d7f752d59e32acb6c77bda9e5f6e9a146f09e9de7983ea10456c7225739d712",
     "lean/CardanoKeri/ConsumerBytesGoals.lean": "4822023b95c0a3ed0f99b5ee09784e5beb3700582611a80f867defc35cbcdae4",
     "lean/CardanoKeri/ConsumerBytesVectors.lean": "ec7952aa84aa108395196ec44a38bfbcfc4ac414617565e3a6fd7f4778323745",
-    "lean/CardanoKeri/ConsumerControls.lean": "462960552961957af55a4b079ebd0e30e4b6f3a99eb8c76e0a7cae2d713dfcb4",
-    "lean/CardanoKeri/ConsumerFixtures.lean": "1d68588fcd6696e940a33d94bc711f6ed807dc545cf680ae3dbeffe3e2c38e87",
+    "lean/CardanoKeri/ConsumerControls.lean": "2bd44b3b16fc65a7aff04a9d97e21101f1925380c2931f26433430ef54dd95d0",
+    "lean/CardanoKeri/ConsumerFixtures.lean": "bfac31a0078cc275c7bff9f62061b85202c5aae08e129ee8549592aef4ce6b7c",
     "lean/CardanoKeri/ConsumerGoals.lean": "38b93d6db3b619fc5717b18a1b76d86abd5b8971ede50e120a15144306da3e64",
     "lean/CardanoKeri/ConsumerIdentity.lean": "79a33dd07efdf1bcd3d66041b2ce45948eade4c880bf0704eb7cad3a6725489f",
-    "lean/CardanoKeri/ConsumerJourney.lean": "672748c61c2ac4d1d6745bdea4e9d95807deb0665523c57e47a111ababaa5fe5",
+    "lean/CardanoKeri/ConsumerJourney.lean": "35e9e6b91b5c93a330c3bfe4627d07a07c9db31b7887f669108f6559a6a83f92",
     "lean/CardanoKeri/ConsumerWire.lean": "82b7088d8ada127c6ecee9ca50ef483fcf240cf31e981489006e08ec51ede4d4",
     "lean/CardanoKeri/Registry.lean": "814f082f772cfad6e2999b91448fe886328930857754fcc811a6d790fd843fe7",
     "lean/CardanoKeri/RegistryAdapterFacts.lean": "b81fb1834dfddb948d2ecf2d85ad8df59024f7f725c8ae13adc0f2b5591439fc",
@@ -1285,15 +1285,15 @@
       "declaration": "CardanoKeri.Checkpoint.T1_rotate_strict",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
       "line": 146,
-      "statement": "theorem T1_rotate_strict (p : Params) (env : Env) {t : Slot} {l l' : Live} {f : Flow}\n    {sn' : Seq} {op : BondOp} {payee : Addr} {r' : Option Addr}\n    (h : Step p env (.rotate sn' op payee r') t (.present l) f (.present l')) : l.sn < l'.sn",
-      "statementSha256": "842ba9ad5c1b1ac66a7d664ff8d05bc18517983f74620f43756257cc0e322a0d",
+      "statement": "theorem T1_rotate_strict (p : Params) (env : Env) {t : Slot} {l l' : Live} {f : Flow}\n    {sn' : Seq} {op : BondOp} {payee : Addr}\n    (h : Step p env (.rotate sn' op payee) t (.present l) f (.present l')) : l.sn < l'.sn",
+      "statementSha256": "db18d350acff63cc1be2a7896fe0e5c2732be514154ec5294053b52bb657f3a1",
       "sourceStory": "**T1b.** Every rotation strictly increases the sequence.",
       "story": {
-        "given": "(p : Params) (env : Env) {t : Slot} {l l' : Live} {f : Flow}\n    {sn' : Seq} {op : BondOp} {payee : Addr} {r' : Option Addr}\n    (h : Step p env (.rotate sn' op payee r') t (.present l) f (.present l'))",
+        "given": "(p : Params) (env : Env) {t : Slot} {l l' : Live} {f : Flow}\n    {sn' : Seq} {op : BondOp} {payee : Addr}\n    (h : Step p env (.rotate sn' op payee) t (.present l) f (.present l'))",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
         "then": "l.sn < l'.sn"
       },
-      "storySha256": "19b4da7f0c7117e5492d7df14158c32946ce125f38b5806f49cf87b73541ae42"
+      "storySha256": "94b2a2006e0b15e7a42ff6c4e88d9cd1d5f4f457ee10528396d2edae24c9d6ad"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.T1_sn_monotone_all",
@@ -1355,15 +1355,15 @@
       "declaration": "CardanoKeri.Checkpoint.T3_rotation_clears",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
       "line": 193,
-      "statement": "theorem T3_rotation_clears (p : Params) (env : Env) {t : Slot} {l l' : Live} {f : Flow}\n    {sn' : Seq} {op : BondOp} {payee : Addr} {r' : Option Addr}\n    (h : Step p env (.rotate sn' op payee r') t (.present l) f (.present l')) : l'.poisoned = false",
-      "statementSha256": "b1e200a30a278787bf878cebf614e2960e34630cd03db757d089a9819b55f5ba",
+      "statement": "theorem T3_rotation_clears (p : Params) (env : Env) {t : Slot} {l l' : Live} {f : Flow}\n    {sn' : Seq} {op : BondOp} {payee : Addr}\n    (h : Step p env (.rotate sn' op payee) t (.present l) f (.present l')) : l'.poisoned = false",
+      "statementSha256": "c67ff770a74a2139a52442cf6d632f6be28a1a52215f3185cf05cb4b239db26f",
       "sourceStory": "**T3a.** A rotation always yields an unpoisoned state.",
       "story": {
-        "given": "(p : Params) (env : Env) {t : Slot} {l l' : Live} {f : Flow}\n    {sn' : Seq} {op : BondOp} {payee : Addr} {r' : Option Addr}\n    (h : Step p env (.rotate sn' op payee r') t (.present l) f (.present l'))",
+        "given": "(p : Params) (env : Env) {t : Slot} {l l' : Live} {f : Flow}\n    {sn' : Seq} {op : BondOp} {payee : Addr}\n    (h : Step p env (.rotate sn' op payee) t (.present l) f (.present l'))",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
         "then": "l'.poisoned = false"
       },
-      "storySha256": "51da9bda77becb5508347080aa0a00d8b6c4fb203f778bdc8b6f3cabc3db1451"
+      "storySha256": "e390117238ef20cada7b8cda02e987e2024c9c4818e319161753439c3eada16b"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.T3_only_rotation_clears",
@@ -1480,49 +1480,49 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T5_every_bond_option",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 294,
-      "statement": "theorem T5_every_bond_option (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : Seq)\n    (payee : Addr) (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn') :\n    ∀ (op : BondOp) (r' : Option Addr), env.intentOk (l.epoch + 1) op.intent r' = true →\n      ∃ (f : Flow) (l' : Live), Step p env (.rotate sn' op payee r') t (.present l) f (.present l')",
-      "statementSha256": "be6c6a0556822fe916b797e5daf424c79818945b31fe7b606476269f1e52a399",
-      "sourceStory": "**T5a.** Given a valid witnessed rotation and the new keys' signature on\nthe bond option and the optional new refund address — one message carrying\nboth (D-038) — both bond options are enabled at every address choice,\nwhatever the pool holds (payment is never a gate, T14) and whether or not\nthe checkpoint is frozen. `keep` with no new address needs no signature.",
+      "line": 293,
+      "statement": "theorem T5_every_bond_option (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : Seq)\n    (payee : Addr) (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn') :\n    ∀ (op : BondOp), env.bondOpOk (l.epoch + 1) op = true →\n      ∃ (f : Flow) (l' : Live), Step p env (.rotate sn' op payee) t (.present l) f (.present l')",
+      "statementSha256": "e44a56aac8598ab41d703b94a6f835ab4cd5cad83940c2bc4e5a9b0030f4268b",
+      "sourceStory": "**T5a.** Given a valid witnessed rotation, both bond options are enabled\nwhatever the pool holds (payment is never a gate, T14) and whether or not the\ncheckpoint is frozen: a keep needs no signature, a deposit needs the new\nkeys' signature on it (D-038).",
       "story": {
         "given": "(p : Params) (env : Env) (t : Slot) (l : Live) (sn' : Seq)\n    (payee : Addr) (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "∀ (op : BondOp) (r' : Option Addr), env.intentOk (l.epoch + 1) op.intent r' = true →\n      ∃ (f : Flow) (l' : Live), Step p env (.rotate sn' op payee r') t (.present l) f (.present l')"
+        "then": "∀ (op : BondOp), env.bondOpOk (l.epoch + 1) op = true →\n      ∃ (f : Flow) (l' : Live), Step p env (.rotate sn' op payee) t (.present l) f (.present l')"
       },
-      "storySha256": "bf21313c0290be646996a98b004941bedfd8a5a63128a6d7ffcb8baf86af40f4"
+      "storySha256": "d622a868468ed7911decfccb07bf004f5fe5c1f0c3d81639dfa9d3990ecfad0b"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.T5_keep_is_rotated",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 313,
-      "statement": "theorem T5_keep_is_rotated (p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow} {s' : State}\n    {sn' : Seq} {payee : Addr} {r' : Option Addr}\n    (hk : Step p env (.rotate sn' .keep payee r') t (.present l) f s') :\n    f = { hunter := p.premium l payee } ∧ s' = .present (l.rotated p sn' r')",
-      "statementSha256": "29a8bfbba05d57f82bea4b1978c256575bca694b980125c4fdfe3e3aea546eb8",
+      "line": 312,
+      "statement": "theorem T5_keep_is_rotated (p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow} {s' : State}\n    {sn' : Seq} {payee : Addr}\n    (hk : Step p env (.rotate sn' .keep payee) t (.present l) f s') :\n    f = { hunter := p.premium l payee } ∧ s' = .present (l.rotated p sn')",
+      "statementSha256": "e6f8b951bf8463edd8a38e8dc8722e95c343d84449529d79af33ccbd057f47c9",
       "sourceStory": "**T5j.** A keep is exactly the rotated datum with the premium: the flow\nis the premium to the payee and nothing else, the state is `Live.rotated`\n— which ties the helper the next two statements use to the constructors'\nfield-by-field conclusions.",
       "story": {
-        "given": "(p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow} {s' : State}\n    {sn' : Seq} {payee : Addr} {r' : Option Addr}\n    (hk : Step p env (.rotate sn' .keep payee r') t (.present l) f s')",
+        "given": "(p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow} {s' : State}\n    {sn' : Seq} {payee : Addr}\n    (hk : Step p env (.rotate sn' .keep payee) t (.present l) f s')",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "f = { hunter := p.premium l payee } ∧ s' = .present (l.rotated p sn' r')"
+        "then": "f = { hunter := p.premium l payee } ∧ s' = .present (l.rotated p sn')"
       },
-      "storySha256": "a6a3747efae0e3278b7fa920128751ff2a3dc55f13f1a17f28c01d92c36dfd0e"
+      "storySha256": "b6f07affd5d7cbd4b52c046e6514b93e1a19a47b1dcf2bb5e2fac23a151c0330"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.T5_deposit_on_full_is_keep",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 328,
-      "statement": "theorem T5_deposit_on_full_is_keep (p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow}\n    {s' : State} {sn' : Seq} {payee : Addr} {r' : Option Addr}\n    (hfull : l.frozen = false)\n    (hd : Step p env (.rotate sn' .deposit payee r') t (.present l) f s') :\n    f = { hunter := p.premium l payee } ∧ f.bIn = 0 ∧ f.dregIn = 0 ∧ f.poolIn = 0 ∧\n    s' = .present (l.rotated p sn' r') ∧\n    ∃ l', s' = .present l' ∧ l'.bornAt = l.bornAt ∧ l'.frozen = false ∧ l'.sn = sn' ∧\n      l'.epoch = l.epoch + 1 ∧ l'.poisoned = false ∧ l'.refundTo = r'.getD l.refundTo ∧\n      ((p.P ≤ l.pool ∧ f.hunter = some { addr := payee, pool := p.P } ∧ l'.pool + p.P = l.pool) ∨\n       (l.pool < p.P ∧ f.hunter = none ∧ l'.pool = l.pool))",
-      "statementSha256": "ac312dcaf55deb808002866e704a3388ad89c3dfd7438a12514a5951b12b95b2",
+      "line": 327,
+      "statement": "theorem T5_deposit_on_full_is_keep (p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow}\n    {s' : State} {sn' : Seq} {payee : Addr}\n    (hfull : l.frozen = false)\n    (hd : Step p env (.rotate sn' .deposit payee) t (.present l) f s') :\n    f = { hunter := p.premium l payee } ∧ f.bIn = 0 ∧ f.dregIn = 0 ∧ f.poolIn = 0 ∧\n    s' = .present (l.rotated p sn') ∧\n    ∃ l', s' = .present l' ∧ l'.bornAt = l.bornAt ∧ l'.frozen = false ∧ l'.sn = sn' ∧\n      l'.epoch = l.epoch + 1 ∧ l'.poisoned = false ∧ l'.refundTo = l.refundTo ∧\n      ((p.P ≤ l.pool ∧ f.hunter = some { addr := payee, pool := p.P } ∧ l'.pool + p.P = l.pool) ∨\n       (l.pool < p.P ∧ f.hunter = none ∧ l'.pool = l.pool))",
+      "statementSha256": "a183f2943263675751769221ab9f8486efd76329b456ee44237b4d582940759b",
       "sourceStory": "**T5h.** D-040: a deposit is a no-op on full bonds. Every licensed\ndeposit from an unfrozen checkpoint is keep-shaped — from the deposit step\nalone, whatever else the keys did or did not sign: it brings nothing, pays\nthe premium as a keep would, leaves the rotated datum with the freeze bit\nclear, and resets nothing (`bornAt` unchanged).",
       "story": {
-        "given": "(p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow}\n    {s' : State} {sn' : Seq} {payee : Addr} {r' : Option Addr}\n    (hfull : l.frozen = false)\n    (hd : Step p env (.rotate sn' .deposit payee r') t (.present l) f s')",
+        "given": "(p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow}\n    {s' : State} {sn' : Seq} {payee : Addr}\n    (hfull : l.frozen = false)\n    (hd : Step p env (.rotate sn' .deposit payee) t (.present l) f s')",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "f = { hunter := p.premium l payee } ∧ f.bIn = 0 ∧ f.dregIn = 0 ∧ f.poolIn = 0 ∧\n    s' = .present (l.rotated p sn' r') ∧\n    ∃ l', s' = .present l' ∧ l'.bornAt = l.bornAt ∧ l'.frozen = false ∧ l'.sn = sn' ∧\n      l'.epoch = l.epoch + 1 ∧ l'.poisoned = false ∧ l'.refundTo = r'.getD l.refundTo ∧\n      ((p.P ≤ l.pool ∧ f.hunter = some { addr := payee, pool := p.P } ∧ l'.pool + p.P = l.pool) ∨\n       (l.pool < p.P ∧ f.hunter = none ∧ l'.pool = l.pool))"
+        "then": "f = { hunter := p.premium l payee } ∧ f.bIn = 0 ∧ f.dregIn = 0 ∧ f.poolIn = 0 ∧\n    s' = .present (l.rotated p sn') ∧\n    ∃ l', s' = .present l' ∧ l'.bornAt = l.bornAt ∧ l'.frozen = false ∧ l'.sn = sn' ∧\n      l'.epoch = l.epoch + 1 ∧ l'.poisoned = false ∧ l'.refundTo = l.refundTo ∧\n      ((p.P ≤ l.pool ∧ f.hunter = some { addr := payee, pool := p.P } ∧ l'.pool + p.P = l.pool) ∨\n       (l.pool < p.P ∧ f.hunter = none ∧ l'.pool = l.pool))"
       },
-      "storySha256": "7921e64a5f9d078d03ebf4f2c53275c8094beedc9c0112b7ff600a201b7bb321"
+      "storySha256": "a9a989a640e3b6cd774a20f38a2f89faa9f98d879b8ec88d9e3a02dda035992f"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.T5_poison_enabled",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 354,
+      "line": 353,
       "statement": "theorem T5_poison_enabled (p : Params) (env : Env) (t : Slot) (l : Live)\n    (hq : env.quorum l.epoch = true) (hclean : l.poisoned = false) :\n    ∃ l', Step p env .poison t (.present l) {} (.present l')",
       "statementSha256": "426d78198026df1bcca2947dc535eafde13a04ab4d5f04368b00f5e08c6905b3",
       "sourceStory": "**T5b.** Given the quorum, an unpoisoned state can be poisoned.",
@@ -1536,7 +1536,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T5_freeze_enabled",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 361,
+      "line": 360,
       "statement": "theorem T5_freeze_enabled (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : Seq) (payee : Addr)\n    (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')\n    (hpool : l.pool < p.P) (hb : l.frozen = false) (hclean : l.poisoned = false) :\n    ∃ (f : Flow) (l' : Live), Step p env (.freeze sn' payee) t (.present l) f (.present l')",
       "statementSha256": "f6f6c9c1b452422b2ff8245d0ccbc07bee35ae74ad1772b68faaa9bc8730e357",
       "sourceStory": "**T5c.** Given a later witnessed rotation, a short pool, the freeze bond\nheld and no poison, the freeze is enabled.",
@@ -1550,7 +1550,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T5_convict_enabled",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 370,
+      "line": 369,
       "statement": "theorem T5_convict_enabled (p : Params) (env : Env) (t : Slot) (l : Live) (payee : Addr)\n    (hdup : env.duplicityAt l.epoch l.sn = true) :\n    ∃ f, Step p env (.convict payee) t (.present l) f (.terminationPending l.hash)",
       "statementSha256": "f13e9bc49cc07fa405e165d10c8beca91085fac38191fd38bf7aa59d1b131622",
       "sourceStory": "Given Every parameter, slot, source state and payee in the exact type; the enabled statements additionally assume concrete duplicity at that source state.\nWhen Execute the local conviction transition, or compare it to its complete guard in the iff statements.\nThen The exact existing component flow and concrete duplicity guard remain; the target is pending at the source hash. Both iff directions remain obligations. Enabled clauses are local applicability only, not a claim that an arbitrary economic request can be booked.",
@@ -1564,21 +1564,21 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T5_keep_needs_no_intent",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 378,
-      "statement": "theorem T5_keep_needs_no_intent (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : Seq) (payee : Addr)\n    (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn') :\n    ∃ (f : Flow) (l' : Live), Step p env (.rotate sn' .keep payee none) t (.present l) f (.present l')",
-      "statementSha256": "a18e7fd524760a072090e3c787c48b1252af3dd0e95bb490b68712227cfc663f",
-      "sourceStory": "**T5g.** D-038's empty message: a keep that names no new address needs no\nsignature at all — given the witnessed rotation it is enabled under every\nenvironment, whatever the new keys did or did not sign.",
+      "line": 377,
+      "statement": "theorem T5_keep_needs_no_intent (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : Seq) (payee : Addr)\n    (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn') :\n    ∃ (f : Flow) (l' : Live), Step p env (.rotate sn' .keep payee) t (.present l) f (.present l')",
+      "statementSha256": "cac997f6539ab3e2fd05874d91658a97c49c5cfe721e94ccc6a5d43d12819d0b",
+      "sourceStory": "**T5g.** D-038's empty message: a keep needs no signature at all — given\nthe witnessed rotation it is enabled under every environment, whatever the\nnew keys did or did not sign.",
       "story": {
         "given": "(p : Params) (env : Env) (t : Slot) (l : Live) (sn' : Seq) (payee : Addr)\n    (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "∃ (f : Flow) (l' : Live), Step p env (.rotate sn' .keep payee none) t (.present l) f (.present l')"
+        "then": "∃ (f : Flow) (l' : Live), Step p env (.rotate sn' .keep payee) t (.present l) f (.present l')"
       },
-      "storySha256": "bcd7d5623c6c03ac4d7d067c500ae595aaa66a0064babacd6114afe868a6baf0"
+      "storySha256": "2bc88eb02f064dad8d1d897ad2b69f4f2fd0b251d4556943314ef59b857a70d9"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.T6_component_conservation",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 390,
+      "line": 389,
       "statement": "theorem T6_component_conservation (p : Params) (env : Env) {a : Action} {t : Slot} {s s' : State} {f : Flow}\n    (h : Step p env a t s f s') :\n    s.dregHeld p + f.dregIn = s'.dregHeld p + Payment?.dreg f.refund + Payment?.dreg f.hunter + Payment?.dreg f.convictor ∧\n    s.bHeld p + f.bIn = s'.bHeld p + Payment?.b f.refund + Payment?.b f.hunter + Payment?.b f.convictor ∧\n    s.poolHeld + f.poolIn = s'.poolHeld + Payment?.pool f.refund + Payment?.pool f.hunter + Payment?.pool f.convictor",
       "statementSha256": "c6df6b5316adff00aaf3f8898a41e502914f4d198db278528206209d86420ac0",
       "sourceStory": "Given Every successful Step over arbitrary states, actions, time, environment and Params.\nWhen Observe before/after holdings and addressed flow.\nThen Each of D, B and pool satisfies its own full incoming = retained + refund + hunter + convictor equality. No component is used as an undeclared min-ADA or fee source.",
@@ -1592,7 +1592,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T6_dreg_never_a_fee",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 400,
+      "line": 399,
       "statement": "theorem T6_dreg_never_a_fee (p : Params) (env : Env) {a : Action} {t : Slot} {s s' : State} {f : Flow}\n    (h : Step p env a t s f s') :\n    Payment?.dreg f.hunter = 0 ∧\n    (Payment?.dreg f.refund ≠ 0 → Payment?.dreg f.refund = p.D ∧ s.dregHeld p = p.D ∧ s'.dregHeld p = 0) ∧\n    (Payment?.dreg f.convictor ≠ 0 → Payment?.dreg f.convictor = p.D ∧ s.dregHeld p = p.D ∧ ∃ l, s = .present l ∧ s' = .terminationPending l.hash)",
       "statementSha256": "8df3507094535884c47eb326c6372d47d4f6bdb021833a42e88dc7ca0799b730",
       "sourceStory": "Given Every parameter/environment/action/time/state/flow and an actual local Step.\nWhen Inspect D payments to hunter, refund and convictor.\nThen Hunter receives zero D; every nonzero refund is exactly D from a D-holding source to a zero-D successor; every nonzero convictor payment is exactly D from a D-holding live source, and the target is pending at that same source hash. All original amount/source/non-fee clauses remain.",
@@ -1606,7 +1606,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T6_dreg_never_moves_between_present_states",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 410,
+      "line": 409,
       "statement": "theorem T6_dreg_never_moves_between_present_states (p : Params) (env : Env) {a : Action} {t : Slot}\n    {l l' : Live} {f : Flow} (h : Step p env a t (.present l) f (.present l')) :\n    f.dregIn = 0 ∧ Payment?.dreg f.refund = 0 ∧ Payment?.dreg f.hunter = 0 ∧ Payment?.dreg f.convictor = 0",
       "statementSha256": "109f3c3256886936dc08fbc96b1185829a9ba4c3413999754c5197c3fb90013c",
       "sourceStory": "**T6h.** No unbonded on-chain state (D-040): between present states the\nconviction bond neither enters nor leaves — a present checkpoint holds it\nin full before and after every step that keeps the UTxO.",
@@ -1620,7 +1620,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T6_dreg_enters_only_at_birth",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 417,
+      "line": 416,
       "statement": "theorem T6_dreg_enters_only_at_birth (p : Params) (env : Env) {a : Action} {t : Slot} {s s' : State} {f : Flow}\n    (h : Step p env a t s f s') (hin : f.dregIn ≠ 0) :\n    (∃ refund pool0, a = .register refund pool0 ∧ s = .absent) ∧\n    f.dregIn = p.D ∧ f.bIn = p.B ∧ ∃ l', s' = .present l' ∧ l'.frozen = false ∧ l'.bornAt = t",
       "statementSha256": "5c61188d6218d66291c3e78aa27c1bba1dd13a0ea8c8e82d36e4010b0de24407",
       "sourceStory": "**T6c.** The conviction bond enters only at the birth, the registration,\nand then in full, together with the freeze bond.",
@@ -1632,23 +1632,79 @@
       "storySha256": "0efdaff701c9decc121b74c4c54e9ab6d5672519b306cc77a308d27cfef6cf32"
     },
     {
-      "declaration": "CardanoKeri.Checkpoint.T6_refund_change_requires_new_keys",
+      "declaration": "CardanoKeri.Checkpoint.T6_refund_fixed",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 428,
-      "statement": "theorem T6_refund_change_requires_new_keys (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live} {f : Flow}\n    (h : Step p env a t (.present l) f (.present l')) (hne : l'.refundTo ≠ l.refundTo) :\n    ∃ sn' op payee, a = .rotate sn' op payee (some l'.refundTo) ∧\n      env.intentAuthorized l'.epoch op.intent (some l'.refundTo) = true",
-      "statementSha256": "4d199bd5d16688e2ed58f223bfecb9819ed181fa65f78075a73aecc93d7718b6",
-      "sourceStory": "**T6d.** `refundTo` changes only under a rotation that names the new\naddress, and the message the new keys signed is that rotation's own option\nwith that address (D-032, D-038): no unrelated intent authorizes the move.",
+      "line": 426,
+      "statement": "theorem T6_refund_fixed (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live} {f : Flow}\n    (h : Step p env a t (.present l) f (.present l')) : l'.refundTo = l.refundTo",
+      "statementSha256": "14f3beec894d9c3c77e05556584f72213584740851df7dee5e2e1e83c83867eb",
+      "sourceStory": "**T6d.** The refund address is fixed: no step between present states\nchanges `refundTo`, whoever acts and whatever the keys sign.",
       "story": {
-        "given": "(p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live} {f : Flow}\n    (h : Step p env a t (.present l) f (.present l')) (hne : l'.refundTo ≠ l.refundTo)",
+        "given": "(p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live} {f : Flow}\n    (h : Step p env a t (.present l) f (.present l'))",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "∃ sn' op payee, a = .rotate sn' op payee (some l'.refundTo) ∧\n      env.intentAuthorized l'.epoch op.intent (some l'.refundTo) = true"
+        "then": "l'.refundTo = l.refundTo"
       },
-      "storySha256": "2438bae484ae1242db651c68b455481121bd28acb54493f562bf9e60e6208057"
+      "storySha256": "d6650f56e2d8c34627e6a984ce1441a492c91727c8bd77abf64e4ea91d6013a7"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.step_from_present_keeps_refund",
+      "path": "lean/CardanoKeri/CheckpointGoals.lean",
+      "line": 432,
+      "statement": "theorem step_from_present_keeps_refund (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live}\n    {f : Flow} {s' : State} (h : Step p env a t (.present l) f s') :\n    (∃ l', s' = .present l' ∧ l'.refundTo = l.refundTo) ∨ ∃ k, s' = .terminationPending k",
+      "statementSha256": "3137f968da19bed806e63a884471865aacf38851384222e780615e4c3eae8eaa",
+      "sourceStory": "A step from a present state keeps the refund address or enters pending\ntermination.",
+      "story": {
+        "given": "(p : Params) (env : Env) {a : Action} {t : Slot} {l : Live}\n    {f : Flow} {s' : State} (h : Step p env a t (.present l) f s')",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "(∃ l', s' = .present l' ∧ l'.refundTo = l.refundTo) ∨ ∃ k, s' = .terminationPending k"
+      },
+      "storySha256": "eee89e5f9490e2ec744cbe5aba88fe157d8b04f3e50e2756349e03842ab755de"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.T6_refund_fixed_along_trace",
+      "path": "lean/CardanoKeri/CheckpointGoals.lean",
+      "line": 441,
+      "statement": "theorem T6_refund_fixed_along_trace (p : Params) (env : Env) {t : Slot} {l l' : Live}\n    {es : List (Slot × Action)} (h : Trace p env t (.present l) es (.present l')) :\n    l'.refundTo = l.refundTo",
+      "statementSha256": "2d37563a7d025663be0cd74cd7544489b9c6d1b5160461e41b1b095360f191a0",
+      "sourceStory": "**T6i.** Along any trace between present states the refund address never\nchanges.",
+      "story": {
+        "given": "(p : Params) (env : Env) {t : Slot} {l l' : Live}\n    {es : List (Slot × Action)} (h : Trace p env t (.present l) es (.present l'))",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "l'.refundTo = l.refundTo"
+      },
+      "storySha256": "36ccc943c51bc0b0149b846b8d7c3d9f6de8339f232506fec2613ad2063b85ff"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.T6_refund_is_registration_address",
+      "path": "lean/CardanoKeri/CheckpointGoals.lean",
+      "line": 460,
+      "statement": "theorem T6_refund_is_registration_address (p : Params) (env : Env) {t : Slot} {l : Live}\n    {es : List (Slot × Action)} (h : Trace p env t .absent es (.present l)) :\n    ∃ t0 pool0 rest, es = (t0, .register l.refundTo pool0) :: rest",
+      "statementSha256": "c3a3ed34e1a096d082e18aa076c7a2803a2eddfe1be4771ae4641200e41bf77b",
+      "sourceStory": "**T6j.** Every live checkpoint holds the refund address its registration\nnamed: a trace from `absent` to a present state starts with the registration,\nand that registration's address is the one held.",
+      "story": {
+        "given": "(p : Params) (env : Env) {t : Slot} {l : Live}\n    {es : List (Slot × Action)} (h : Trace p env t .absent es (.present l))",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "∃ t0 pool0 rest, es = (t0, .register l.refundTo pool0) :: rest"
+      },
+      "storySha256": "6c7a95492ac573a9df95a2d671a4786b92680eb5bd8e847c458d935f6f832f11"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.T6_conviction_refunds_registration_address",
+      "path": "lean/CardanoKeri/CheckpointGoals.lean",
+      "line": 474,
+      "statement": "theorem T6_conviction_refunds_registration_address (p : Params) (env : Env) {t t0 now : Slot}\n    {r : Addr} {pool0 : Value} {rest : List (Slot × Action)} {l : Live} {payee : Addr} {f : Flow}\n    {s' : State}\n    (h : Trace p env t .absent ((t0, .register r pool0) :: rest) (.present l))\n    (hc : Step p env (.convict payee) now (.present l) f s') :\n    f.refund = some { addr := r, b := l.bHeld p, pool := l.pool }",
+      "statementSha256": "f9bbe5b608d2b5a8eda98b809d5a7e80dffdb6cfa1d0cfecf04ce7491a61af0b",
+      "sourceStory": "**T6k.** Conviction pays the registration's refund address: from a\ncheckpoint registered with refund address `r`, whatever rotations, poisons,\nfreezes and top-ups followed, a conviction pays the freeze bond held and the\nwhole pool to exactly `r`.",
+      "story": {
+        "given": "(p : Params) (env : Env) {t t0 now : Slot}\n    {r : Addr} {pool0 : Value} {rest : List (Slot × Action)} {l : Live} {payee : Addr} {f : Flow}\n    {s' : State}\n    (h : Trace p env t .absent ((t0, .register r pool0) :: rest) (.present l))\n    (hc : Step p env (.convict payee) now (.present l) f s')",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "f.refund = some { addr := r, b := l.bHeld p, pool := l.pool }"
+      },
+      "storySha256": "15b182a58896d5b707e3b6c1f3a5ee27840b57e9024e71cd2df9e81510f25977"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.T6_frozen_flips_only_by_rotation_or_freeze",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 455,
+      "line": 491,
       "statement": "theorem T6_frozen_flips_only_by_rotation_or_freeze (p : Params) (env : Env) {a : Action} {t : Slot}\n    {l l' : Live} {f : Flow}\n    (h : Step p env a t (.present l) f (.present l')) (hne : l'.frozen ≠ l.frozen) :\n    a.actor = .nextKeys ∨ (∃ sn' payee, a = .freeze sn' payee)",
       "statementSha256": "71da8c8da006fbd4f8b09beddac0cb3178785abf71d53bcce4bf33a028314666",
       "sourceStory": "**T6e.** The freeze bond moves between present states only by a rotation\n(the deposit) or a freeze; poison and top-up move no bond.",
@@ -1660,37 +1716,37 @@
       "storySha256": "38efdc0182db73328c4b1918bfc73869fc091813a1c96958ab625c2b668ce15f"
     },
     {
-      "declaration": "CardanoKeri.Checkpoint.T6_intent_requires_new_keys",
+      "declaration": "CardanoKeri.Checkpoint.T6_deposit_requires_new_keys",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 465,
-      "statement": "theorem T6_intent_requires_new_keys (p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow} {s' : State} :\n    (∀ {sn' payee r'}, Step p env (.rotate sn' .deposit payee r') t (.present l) f s' →\n      env.intentAuthorized (l.epoch + 1) .deposit r' = true) ∧\n    (∀ {sn' payee r}, Step p env (.rotate sn' .keep payee (some r)) t (.present l) f s' →\n      env.intentAuthorized (l.epoch + 1) .keep (some r) = true)",
-      "statementSha256": "83d9e389a6dbd9894b23cee4961df0acf2870c0cfba325ab968d3a40e5931623",
-      "sourceStory": "**T6f.** Every intent other than the empty one is authorized by the keys\nof the epoch the rotation opens (D-038): a deposit and a keep with a new\naddress each carry the new keys' signature on that intent and that\naddress. A relayer with public data alone can land a keep and nothing else.",
+      "line": 500,
+      "statement": "theorem T6_deposit_requires_new_keys (p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow}\n    {s' : State} {sn' : Seq} {payee : Addr}\n    (h : Step p env (.rotate sn' .deposit payee) t (.present l) f s') :\n    env.depositAuthorized (l.epoch + 1) = true",
+      "statementSha256": "8d2c550c225f2f6d4bd731297e5f783c51b4c8ee9f88ed15879c610dc73e4a3b",
+      "sourceStory": "**T6f.** A deposit is authorized by the keys of the epoch the rotation\nopens (D-038): it carries the new keys' signature on that deposit. A relayer\nwith public data alone can land a keep and nothing else.",
       "story": {
-        "given": "(p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow} {s' : State}",
+        "given": "(p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow}\n    {s' : State} {sn' : Seq} {payee : Addr}\n    (h : Step p env (.rotate sn' .deposit payee) t (.present l) f s')",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "(∀ {sn' payee r'}, Step p env (.rotate sn' .deposit payee r') t (.present l) f s' →\n      env.intentAuthorized (l.epoch + 1) .deposit r' = true) ∧\n    (∀ {sn' payee r}, Step p env (.rotate sn' .keep payee (some r)) t (.present l) f s' →\n      env.intentAuthorized (l.epoch + 1) .keep (some r) = true)"
+        "then": "env.depositAuthorized (l.epoch + 1) = true"
       },
-      "storySha256": "cc75b4f9e751de7f2c771ba0f9cad655c7cc6363d44db38446e1c4f1cd6921fe"
+      "storySha256": "61deaf223cb91cde77710b5213dda2577a860822029f05e11031ed8047a2e40c"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.T6_relayer_cannot_park_age_or_close",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 485,
-      "statement": "theorem T6_relayer_cannot_park_age_or_close (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live}\n    {f : Flow} {s' : State} (h : Step p env a t (.present l) f s')\n    (hno : ∀ i r, env.intentAuthorized (l.epoch + 1) i r = false) (hact : a.actor = .nextKeys) :\n    ∃ sn' payee, a = .rotate sn' .keep payee none",
-      "statementSha256": "1819228ee74256ecdb2127174aac5cec294ca9897ed557bfbcafeeb69337d20e",
-      "sourceStory": "**T6g.** Without the new keys' signature nothing but a keep with the\naddress unchanged lands: if the keys of epoch `e + 1` authorized no intent\nat all, every next-keys step from epoch `e` is a keep with `refund' = none` —\na relayer cannot unfreeze or move the address. (There is no owner close to\nmake; the name is kept as the statement's identity.)",
+      "line": 512,
+      "statement": "theorem T6_relayer_cannot_park_age_or_close (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live}\n    {f : Flow} {s' : State} (h : Step p env a t (.present l) f s')\n    (hno : env.depositAuthorized (l.epoch + 1) = false) (hact : a.actor = .nextKeys) :\n    ∃ sn' payee, a = .rotate sn' .keep payee",
+      "statementSha256": "6ca110cc011ca017611ddee65106b1925373be8607198dc7b29bb71e3e631bda",
+      "sourceStory": "**T6g.** Without the new keys' signature nothing but a keep lands: if the\nkeys of epoch `e + 1` signed no deposit, every next-keys step from epoch `e`\nis a keep — a relayer cannot unfreeze. (There is no owner close to make; the\nname is kept as the statement's identity.)",
       "story": {
-        "given": "(p : Params) (env : Env) {a : Action} {t : Slot} {l : Live}\n    {f : Flow} {s' : State} (h : Step p env a t (.present l) f s')\n    (hno : ∀ i r, env.intentAuthorized (l.epoch + 1) i r = false) (hact : a.actor = .nextKeys)",
+        "given": "(p : Params) (env : Env) {a : Action} {t : Slot} {l : Live}\n    {f : Flow} {s' : State} (h : Step p env a t (.present l) f s')\n    (hno : env.depositAuthorized (l.epoch + 1) = false) (hact : a.actor = .nextKeys)",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "∃ sn' payee, a = .rotate sn' .keep payee none"
+        "then": "∃ sn' payee, a = .rotate sn' .keep payee"
       },
-      "storySha256": "0df59b21276db23d2817026dc06b86e00c4044e772302d91c3341e9cf0e31383"
+      "storySha256": "ca0a7bb9a79cd4829e56bda52474525ebf4635b29f8e3ce5391b170d0f0991eb"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.T7_step_iff_stepFn",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 512,
+      "line": 531,
       "statement": "theorem T7_step_iff_stepFn (p : Params) (env : Env) {a : Action} {t : Slot} {s s' : State} {f : Flow} :\n    Step p env a t s f s' ↔ stepFn p env a t s = some (f, s')",
       "statementSha256": "22a49f2a3ebd8eaf8d318ae757f7b6e67180fe72180debb3bc74be94cdda2e6a",
       "sourceStory": "Given All p/env/actions/times/states/flows/successors without additional reachability assumptions.\nWhen Compare Step with executable stepFn.\nThen Step holds iff stepFn returns precisely some(flow,successor), in both directions.",
@@ -1704,7 +1760,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T7_trace_iff_replay",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 619,
+      "line": 638,
       "statement": "theorem T7_trace_iff_replay (p : Params) (env : Env) {t : Slot} {s s' : State} {es : List (Slot × Action)} :\n    Trace p env t s es s' ↔ replay p env t s es = some s'",
       "statementSha256": "6f6c90cdf55185bb0216dfb3fde1ba9d196db2536bd3d4352d1d0c0b9a5a663e",
       "sourceStory": "Given All p/env/start-time/states and timestamped action lists.\nWhen Compare Trace with replay.\nThen Trace holds iff replay returns precisely the stated final state; timestamp and refusal semantics unchanged.",
@@ -1718,7 +1774,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T8_leaf_agrees_with_state",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 650,
+      "line": 669,
       "statement": "theorem T8_leaf_agrees_with_state (p : Params) (env : Env) {s : Sys} (h : SysReach p env s) (aid : AID) :\n    s.leaves aid = (s.states aid).leaf",
       "statementSha256": "61e979759cc0afc10e89c7b1686ac3c93a09c450ddb76e8c7a74e5b561c839e3",
       "sourceStory": "**T8a.** In every reachable system every leaf agrees with its state:\nthe leaf is exactly the identity-level projection of the UTxO's state.",
@@ -1732,7 +1788,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T8_edges_leave_the_leaf",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 676,
+      "line": 695,
       "statement": "theorem T8_edges_leave_the_leaf (p : Params) (env : Env) {s : Sys} {aid : AID} {a : Action} {now : Slot}\n    {f : Flow} {st' : State} (hs : SysReach p env s) (hstep : Step p env a now (s.states aid) f st') :\n    (s.set aid st').leaves = s.leaves ↔ a.touchesLeaf = false",
       "statementSha256": "bc1eb77ed7880ec3b1c29d21a24228fe33fefb2d9c6315d0728a4ad34cbbe091",
       "sourceStory": "Given Arbitrary reachable Checkpoint Sys and a successful local Step on the chosen AID with every typed parameter.\nWhen Apply Sys.set to that local result.\nThen The entire leaf function is unchanged iff Action.touchesLeaf is false. Only local registration has touchesLeaf=true; conviction-to-pending is false. Completed retirement is a separate associated system event, not a local Action.",
@@ -1746,7 +1802,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T8_present_implies_registered",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 698,
+      "line": 717,
       "statement": "theorem T8_present_implies_registered (p : Params) (env : Env) {s : Sys} (h : SysReach p env s)\n    (aid : AID) (hne : s.states aid ≠ .absent) : s.leaves aid ≠ .absent",
       "statementSha256": "c2a1d05273443526f16043af0b1ce7426972155f3401f5f872fa7377c8353d8d",
       "sourceStory": "**T8c.** In every reachable system, an AID with a state other than\n`absent` has a leaf: active or retired — the token was minted once\nby a registration under an absence proof and the leaf never returns to\nabsent.",
@@ -1760,7 +1816,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T8_leaf_states",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 708,
+      "line": 727,
       "statement": "theorem T8_leaf_states (p : Params) (env : Env) {s : Sys} (h : SysReach p env s) (aid : AID) :\n    (s.leaves aid = .active ↔\n      (∃ l, s.states aid = .present l) ∨\n      (∃ pending, s.states aid = .terminationPending pending)) ∧\n    (s.leaves aid = .retired → s.states aid = .convicted)",
       "statementSha256": "ffba342e56b4f0f26beb8342b1f5ff050081ba39804cbeb0d5d16d4ed77a439a",
       "sourceStory": "Given All p/env/reachable system s and AID; no assumption of live eligibility.\nWhen Observe the key and application state.\nThen Active iff present or terminationPending, in both directions; retired implies completed conviction. The pending payload retains the recorded key state; its system association retains the whole booked request.",
@@ -1774,7 +1830,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T8_utxo_iff_active",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 720,
+      "line": 739,
       "statement": "theorem T8_utxo_iff_active (p : Params) (env : Env) {s : Sys} (h : SysReach p env s) (aid : AID) :\n    (s.states aid).hasOutput = true ↔ s.leaves aid = .active",
       "statementSha256": "9bc8e407cca277d0d8822beb4a445174265ad448ce36ec44660c8ec40b567466",
       "sourceStory": "Given All p/env/s/aid with SysReach p env s.\nWhen Observe State.hasOutput and the leaf.\nThen Output existence iff active key, including present and terminationPending. The pending output retains the representative; completed conviction has neither output nor active key.",
@@ -1788,7 +1844,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T8_leaf_never_absent_again",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 729,
+      "line": 748,
       "statement": "theorem T8_leaf_never_absent_again (p : Params) (env : Env) {s s' : Sys} (hs : SysReach p env s)\n    (h : SysStep p env s s') (aid : AID) :\n    (s.leaves aid ≠ .absent → s'.leaves aid ≠ .absent) ∧\n    (s.leaves aid = .retired → s'.leaves aid = .retired)",
       "statementSha256": "4d855452b1541e738dc84bbeca8e6b5ad1b6a68f80c5f56d3999e2eccefbdf7b",
       "sourceStory": "Given Arbitrary reachable Checkpoint Sys, actual system step and AID.\nWhen Observe that AID after the step.\nThen A nonabsent leaf never becomes absent, and a retired leaf remains retired. Registration-origin and booking-association events preserve the same lifecycle clauses.",
@@ -1802,7 +1858,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T8_mint_once",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 764,
+      "line": 783,
       "statement": "theorem T8_mint_once (p : Params) (env : Env) {s : Sys} (h : SysReach p env s) (aid : AID) :\n    (∀ refund pool0 now f st', Step p env (.register refund pool0) now (s.states aid) f st' →\n      s.leaves aid = .absent)",
       "statementSha256": "0923a7f7338c88279cc01d7539336c32be0775842121dc961ffa12d27681025e",
       "sourceStory": "Given All p/env/reachable s/aid, and all action data, times, flows and successors in each quantified clause.\nWhen A registration succeeds.\nThen Registration requires the previously absent key. There is no other minting step. Same-token identity is separately checked in Registry.",
@@ -1816,7 +1872,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T8_freeze_and_convict_actors_are_proof",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 775,
+      "line": 794,
       "statement": "theorem T8_freeze_and_convict_actors_are_proof (sn' : Seq) (payee : Addr) :\n    (Action.freeze sn' payee).actor = .proof ∧ (Action.convict payee).actor = .proof",
       "statementSha256": "028f1fc1d82c4c91e5b66af79a762d3d64c83d734269ac1e0a009799d0f6dafe",
       "sourceStory": "**T8j.** A freeze and a conviction are proof-bearing: their actor is the\nevidence class — never `anyone` (D-036, D-037).",
@@ -1830,7 +1886,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T8_sysstep_partition",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 782,
+      "line": 801,
       "statement": "theorem T8_sysstep_partition (p : Params) (env : Env) {s s' : Sys}\n    (h : SysStep p env s s') :\n    RegistrationEvent p env s s' ∨ LocalEvent p env s s' ∨\n      BookingEvent s s' ∨ CompletionEvent s s'",
       "statementSha256": "3ad1b5a62306099535815ed139651d7fd9d75efc3d2f13401b140aa4f8f380c7",
       "sourceStory": "Given Arbitrary Checkpoint parameters and environment, before/after abstract Sys and actual SysStep.\nWhen Classify the system transition.\nThen Exactly the fully defined RegistrationEvent, LocalEvent, BookingEvent or CompletionEvent holds. Local lifecycle clauses remain complete; registration binds the actual origin, booking fixes its pending association, and completion checks the stored context, history, hash, full entry, reference and alias. Full mixed Registry effects are separate from this focused Checkpoint observation.",
@@ -1844,7 +1900,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.consumableStateB_iff",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 797,
+      "line": 816,
       "statement": "theorem consumableStateB_iff (p : Params) (now : Slot) (s : State) :\n    consumableStateB p now s = true ↔ consumableState p now s",
       "statementSha256": "03f17965ac55258d8879ffe2a917f88b1ec90b745ae58b3c4baacfdb7ff35849",
       "sourceStory": "Given All Params, slots and State values.\nWhen Evaluate the Boolean and proposition.\nThen Boolean is true iff the full proposition holds, both directions; the explicit pending branch remains false.",
@@ -1858,7 +1914,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T9_juvenility_is_consumer_only",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 803,
+      "line": 822,
       "statement": "theorem T9_juvenility_is_consumer_only (p : Params) (env : Env) (W' : Nat) {a : Action} {t : Slot}\n    {s s' : State} {f : Flow} :\n    Step p env a t s f s' ↔ Step { p with W := W' } env a t s f s'",
       "statementSha256": "b39087f4ed82e0b6cee4855487072a96b826262fc01f4a76462543517540d9bc",
       "sourceStory": "**T9.** No transition depends on `W`: the registry's grace window is not\nthis machine's, and this machine has none.",
@@ -1872,7 +1928,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T10_inert_without_next_keys",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 821,
+      "line": 840,
       "statement": "theorem T10_inert_without_next_keys (p : Params) (env : Env) {a : Action} {t t' : Slot} {l : Live} {f : Flow}\n    {s' : State} (h : Step p env a t (.present l) f s')\n    (hfrozen : l.frozen = true) (hnot : a.actor ≠ .nextKeys) :\n    ¬ consumableState p t' s'",
       "statementSha256": "266957308d0ae4a2261a87c916574e9f7ac5fdc6490c13723708082eca06088a",
       "sourceStory": "**T10a.** If the freeze bond is missing, no step by anyone but the next\nkeys yields a consumable state.",
@@ -1886,21 +1942,21 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T10_only_deposit_restores",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 830,
-      "statement": "theorem T10_only_deposit_restores (p : Params) (env : Env) {a : Action} {t t' : Slot} {l : Live} {f : Flow}\n    {s' : State} (h : Step p env a t (.present l) f s')\n    (hfrozen : l.frozen = true) (hc : consumableState p t' s') :\n    (∃ sn' payee r', a = .rotate sn' .deposit payee r') ∧\n    ∃ l', s' = .present l' ∧ l'.frozen = false ∧ l'.bornAt = l.bornAt ∧ f.bIn = p.B",
-      "statementSha256": "01a6bb2979608eec39c48e1e9666cf009660d98ce323f8c8a4b516911d57051c",
+      "line": 849,
+      "statement": "theorem T10_only_deposit_restores (p : Params) (env : Env) {a : Action} {t t' : Slot} {l : Live} {f : Flow}\n    {s' : State} (h : Step p env a t (.present l) f s')\n    (hfrozen : l.frozen = true) (hc : consumableState p t' s') :\n    (∃ sn' payee, a = .rotate sn' .deposit payee) ∧\n    ∃ l', s' = .present l' ∧ l'.frozen = false ∧ l'.bornAt = l.bornAt ∧ f.bIn = p.B",
+      "statementSha256": "49f489d6c791baf794fcc95b3bed47ad4181a1da134ede503070a00a79abe7a1",
       "sourceStory": "**T10b.** Only a depositing rotation restores consumability to a frozen\ncheckpoint, and it does not restart juvenility (D-040: the deposit is the\nunfreeze, not a bonding).",
       "story": {
         "given": "(p : Params) (env : Env) {a : Action} {t t' : Slot} {l : Live} {f : Flow}\n    {s' : State} (h : Step p env a t (.present l) f s')\n    (hfrozen : l.frozen = true) (hc : consumableState p t' s')",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "(∃ sn' payee r', a = .rotate sn' .deposit payee r') ∧\n    ∃ l', s' = .present l' ∧ l'.frozen = false ∧ l'.bornAt = l.bornAt ∧ f.bIn = p.B"
+        "then": "(∃ sn' payee, a = .rotate sn' .deposit payee) ∧\n    ∃ l', s' = .present l' ∧ l'.frozen = false ∧ l'.bornAt = l.bornAt ∧ f.bIn = p.B"
       },
-      "storySha256": "c6209c0af2fce47d93ab98f1e168dd88d1b4aa18e383aa3740e091830f312053"
+      "storySha256": "0cce6703528d44847e682af1381c5928ed6d7deb8108b8e8fd903dee5373d9e1"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.T10_current_quorum_never_restores",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 841,
+      "line": 860,
       "statement": "theorem T10_current_quorum_never_restores (p : Params) (env : Env) {a : Action} {t t' : Slot} {l : Live}\n    {f : Flow} {s' : State} (h : Step p env a t (.present l) f s') (hq : a.actor = .currentQuorum) :\n    ¬ consumableState p t' s'",
       "statementSha256": "18861c6ec35057083eaf228c23135dd9d2e71d134abda2b7785736a4700ddd8f",
       "sourceStory": "**T10c.** The current quorum never produces a consumable state: its only\nmove is the poison.",
@@ -1914,7 +1970,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T10_bonds_are_observable",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 850,
+      "line": 869,
       "statement": "theorem T10_bonds_are_observable (p : Params) (l : Live) (h : Hash) :\n    (State.present l).dregHeld p ≠ (State.terminationPending h).dregHeld p ∧\n    (State.present l).dregHeld p ≠ State.convicted.dregHeld p ∧\n    (l.frozen = true → (State.present l).bHeld p ≠ p.B)",
       "statementSha256": "3505e3144ffd81e4fffb2262d80ef8c2c0a461f0bf36498fe0154a14b14f1e6e",
       "sourceStory": "**T10e.** Both bonds are positive, so the bond states are observable in\nvalue: a present checkpoint holds the conviction bond and a pending or\nconvicted identity holds none of it, so the two differ in value; a frozen\ncheckpoint holds less than the full freeze bond.",
@@ -1928,7 +1984,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.convicted_holds_no_bonds_or_pool",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 864,
+      "line": 883,
       "statement": "theorem convicted_holds_no_bonds_or_pool (p : Params) :\n    State.convicted.dregHeld p = 0 ∧ State.convicted.bHeld p = 0 ∧ State.convicted.poolHeld = 0",
       "statementSha256": "ebdcf456864c7e8fbfca0ab73512a43a8be8a40bfe7963e67899dc34261d91ac",
       "sourceStory": "Given Every Params p; no transition or reachability hypothesis.\nWhen Compute dregHeld, bHeld and poolHeld for convicted.\nThen All three quantities are zero. The pending-custody equivalents are in pending_custody_observations.",
@@ -1942,7 +1998,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T12_convict_exact",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 873,
+      "line": 892,
       "statement": "theorem T12_convict_exact (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live} {f : Flow} {pendingKey : Hash}\n    (h : Step p env a t (.present l) f (.terminationPending pendingKey)) :\n    pendingKey = l.hash ∧\n    (∃ payee, a = .convict payee ∧\n      f = { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },\n            convictor := some { addr := payee, dreg := p.D } }) ∧\n    env.duplicityAt l.epoch l.sn = true",
       "statementSha256": "efb7cea29fcbc70aee957b6df40481a537807520f58e47b70941c19f5f4a5952",
       "sourceStory": "Given All arguments and the exact successful local Checkpoint conviction premise in the statement, against the actual source live key state.\nWhen Invert that local conviction into explicit terminationPending at the unchanged source key state.\nThen For T12 inversions the pending target is arbitrary and must equal the actual source hash; a wrong pending-key successor is excluded by this owning equality. Every original action, addressed D/B/pool payment, concrete-context, event-validity, same-sequence and distinct-event clause in the full conclusion is preserved verbatim. The representative and generic key remain active at the combined booking boundary; no local burn or retirement is asserted.",
@@ -1956,7 +2012,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T14_pool_decreases_only_by_premium",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 887,
+      "line": 906,
       "statement": "theorem T14_pool_decreases_only_by_premium (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live}\n    {f : Flow} (h : Step p env a t (.present l) f (.present l')) (hlt : l'.pool < l.pool) :\n    a.actor = .nextKeys ∧ l'.pool + p.P = l.pool ∧ Payment?.pool f.hunter = p.P",
       "statementSha256": "54a240f9aabea734c6f4f61ca0986c19086ebd562846deada8edd6c2bb9bed8f",
       "sourceStory": "**T14a.** The pool decreases between present states only by the premium\nunder a paid rotation.",
@@ -1970,7 +2026,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T14_pool_increases_only_by_topup",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 893,
+      "line": 912,
       "statement": "theorem T14_pool_increases_only_by_topup (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live}\n    {f : Flow} (h : Step p env a t (.present l) f (.present l')) (hlt : l.pool < l'.pool) :\n    ∃ x, a = .topUp x ∧ f = { poolIn := x } ∧ l' = { l with pool := l.pool + x }",
       "statementSha256": "45d313ec57d64be8963b122177051c90c0cdac2dbe4849b4bfed36e61b385ba5",
       "sourceStory": "**T14b.** The pool increases between present states only by a top-up.",
@@ -1984,7 +2040,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T15_b_leaves_only_by_freeze",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 903,
+      "line": 922,
       "statement": "theorem T15_b_leaves_only_by_freeze (p : Params) (env : Env) {a : Action} {t : Slot}\n    {l l' : Live} {f : Flow} (h : Step p env a t (.present l) f (.present l'))\n    (hheld : l.frozen = false) (hgone : l'.frozen = true) :\n    ∃ sn' payee, a = .freeze sn' payee ∧ env.rotationTo l.epoch l.sn sn' = true ∧ l.pool < p.P ∧\n      l' = { l with frozen := true } ∧ f = { hunter := some { addr := payee, b := p.B } }",
       "statementSha256": "2c4d347fce8e9e38dbfd4716c3e76f6ebaa943d4c63bfcab446d71fdf874b9df",
       "sourceStory": "**T15a.** The freeze bond leaves a present state for a present state\nonly by a freeze — proof of a later rotation, pool short, exactly `B` to the\nhunter, datum otherwise untouched.",
@@ -1998,21 +2054,21 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T15_b_returns_only_by_deposit",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 914,
-      "statement": "theorem T15_b_returns_only_by_deposit (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live}\n    {f : Flow} (h : Step p env a t (.present l) f (.present l'))\n    (hgone : l.frozen = true) (hback : l'.frozen = false) :\n    (∃ sn' payee r', a = .rotate sn' .deposit payee r') ∧ f.bIn = p.B",
-      "statementSha256": "176fb500ee28372425a6250109b36073bc9e24b12b456e3f1f7551859918e98a",
+      "line": 933,
+      "statement": "theorem T15_b_returns_only_by_deposit (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live}\n    {f : Flow} (h : Step p env a t (.present l) f (.present l'))\n    (hgone : l.frozen = true) (hback : l'.frozen = false) :\n    (∃ sn' payee, a = .rotate sn' .deposit payee) ∧ f.bIn = p.B",
+      "statementSha256": "5aea79da385b9de1a76cd0778d618e72f9fd6554918c811212326c99ce673e6a",
       "sourceStory": "**T15b.** The freeze bond returns only by a depositing rotation, and then\nin full.",
       "story": {
         "given": "(p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live}\n    {f : Flow} (h : Step p env a t (.present l) f (.present l'))\n    (hgone : l.frozen = true) (hback : l'.frozen = false)",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "(∃ sn' payee r', a = .rotate sn' .deposit payee r') ∧ f.bIn = p.B"
+        "then": "(∃ sn' payee, a = .rotate sn' .deposit payee) ∧ f.bIn = p.B"
       },
-      "storySha256": "521ae41cf5be4e1f496c51ed3c1cbd7407e4c8a9f4bf213ea82d2279b39f1c72"
+      "storySha256": "fefe22e3931329af32184c922786898a4c47b2d939160fc60ca2fe35d116a5e4"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.T15_freeze_makes_inert",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 924,
+      "line": 943,
       "statement": "theorem T15_freeze_makes_inert (p : Params) (env : Env) {t t' : Slot} {l l' : Live} {f : Flow}\n    {sn' : Seq} {payee : Addr} (h : Step p env (.freeze sn' payee) t (.present l) f (.present l')) :\n    ¬ consumableState p t' (.present l')",
       "statementSha256": "71422f1b602161f20f9ec349ab8afcfa635eb4b5f7cae0516d3b1df375ae7303",
       "sourceStory": "**T15c.** A freeze makes the checkpoint unconsumable — the bond is\npositive, so \"missing\" is observable.",
@@ -2026,7 +2082,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.T16_payments_are_named",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 936,
+      "line": 955,
       "statement": "theorem T16_payments_are_named (p : Params) (env : Env) {a : Action} {t : Slot} {s s' : State} {f : Flow}\n    (h : Step p env a t s f s') :\n    (∀ q, f.hunter = some q → (q.dreg = 0 ∧ q.b = 0 ∧ q.pool = p.P) ∨ (q.dreg = 0 ∧ q.b = p.B ∧ q.pool = 0)) ∧\n    (∀ q, f.convictor = some q → q.b = 0 ∧ q.pool = 0 ∧ q.dreg = s.dregHeld p)",
       "statementSha256": "2886bde4255f809c8ede6ba4769da9c9a09a4c738762893c35acb2c66bc8009c",
       "sourceStory": "**T16c.** No step pays a hunter anything but the premium or the freeze\nbond, and no step pays a convictor anything but the conviction bond.",
@@ -2040,7 +2096,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Step.register_iff",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 947,
+      "line": 966,
       "statement": "theorem Step.register_iff {p : Params} {env : Env} (now : Slot) (refund : Addr) (pool0 : Value) :\n    Step p env (.register refund pool0) now .absent\n      { dregIn := p.D, bIn := p.B, poolIn := pool0 }\n      (.present ⟨0, 0, false, false, now, refund, pool0⟩) ↔ True",
       "statementSha256": "be9d701efa89dffb4d269beee660795b4cfdae90f065c2b1bf4e8eebf9df456f",
       "sourceStory": "Inversion for `register`: no guards.",
@@ -2054,63 +2110,63 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Step.rotateKeepPaid_iff",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 956,
-      "statement": "theorem Step.rotateKeepPaid_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)\n    (payee : Addr) (refund' : Option Addr) :\n    Step p env (.rotate sn' .keep payee refund') now (.present l)\n      { hunter := some { addr := payee, pool := p.P } }\n      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,\n                         refundTo := refund'.getD l.refundTo, pool := l.pool - p.P }) ↔\n    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧\n    env.intentOk (l.epoch + 1) .keep refund' = true ∧ p.P ≤ l.pool",
-      "statementSha256": "6ec2b9446ebad76c1161db1e2396c8a23dd1aa84f587a74c744bc9fe9bae640e",
+      "line": 975,
+      "statement": "theorem Step.rotateKeepPaid_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)\n    (payee : Addr) :\n    Step p env (.rotate sn' .keep payee) now (.present l)\n      { hunter := some { addr := payee, pool := p.P } }\n      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, pool := l.pool - p.P }) ↔\n    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ p.P ≤ l.pool",
+      "statementSha256": "7d1e5d549038974f6ea7e35711851fc9adba54eacf9953c8e7ccbd3f8a4273d5",
       "sourceStory": "Inversion for `rotateKeepPaid`.",
       "story": {
-        "given": "{p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)\n    (payee : Addr) (refund' : Option Addr)",
+        "given": "{p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)\n    (payee : Addr)",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "Step p env (.rotate sn' .keep payee refund') now (.present l)\n      { hunter := some { addr := payee, pool := p.P } }\n      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,\n                         refundTo := refund'.getD l.refundTo, pool := l.pool - p.P }) ↔\n    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧\n    env.intentOk (l.epoch + 1) .keep refund' = true ∧ p.P ≤ l.pool"
+        "then": "Step p env (.rotate sn' .keep payee) now (.present l)\n      { hunter := some { addr := payee, pool := p.P } }\n      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, pool := l.pool - p.P }) ↔\n    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ p.P ≤ l.pool"
       },
-      "storySha256": "68087c93ae055a59a84ac04b33f7dc510df199ea4621574dc595d51f6b239e90"
+      "storySha256": "4a331e9b702857fcca27af0066bbd645116845b6a84e2bd831a345954236dece"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.Step.rotateKeepUnpaid_iff",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 972,
-      "statement": "theorem Step.rotateKeepUnpaid_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)\n    (payee : Addr) (refund' : Option Addr) :\n    Step p env (.rotate sn' .keep payee refund') now (.present l) {}\n      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,\n                         refundTo := refund'.getD l.refundTo }) ↔\n    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧\n    env.intentOk (l.epoch + 1) .keep refund' = true ∧ l.pool < p.P",
-      "statementSha256": "bfb8a46d7c6034a21c2c502009c29493e01f6c24cc5d284697f24fb9dad879b0",
+      "line": 989,
+      "statement": "theorem Step.rotateKeepUnpaid_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)\n    (payee : Addr) :\n    Step p env (.rotate sn' .keep payee) now (.present l) {}\n      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false }) ↔\n    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ l.pool < p.P",
+      "statementSha256": "4938fb6387ce575ce4b180e38b64e884060990b7e8970d3fc21b86a01c5b1580",
       "sourceStory": "Inversion for `rotateKeepUnpaid`.",
       "story": {
-        "given": "{p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)\n    (payee : Addr) (refund' : Option Addr)",
+        "given": "{p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)\n    (payee : Addr)",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "Step p env (.rotate sn' .keep payee refund') now (.present l) {}\n      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,\n                         refundTo := refund'.getD l.refundTo }) ↔\n    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧\n    env.intentOk (l.epoch + 1) .keep refund' = true ∧ l.pool < p.P"
+        "then": "Step p env (.rotate sn' .keep payee) now (.present l) {}\n      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false }) ↔\n    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ l.pool < p.P"
       },
-      "storySha256": "57fd745047a774b0e5b83893efa943e115d748c40d0ec375c68b2fa75844a6f4"
+      "storySha256": "64ef7be8f6d4861e3fe9c70d3f881cf0da17a64efbcda8685227b02fde8b4087"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.Step.rotateDepositPaid_iff",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 987,
-      "statement": "theorem Step.rotateDepositPaid_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)\n    (payee : Addr) (refund' : Option Addr) :\n    Step p env (.rotate sn' .deposit payee refund') now (.present l)\n      { bIn := p.B - l.bHeld p, hunter := some { addr := payee, pool := p.P } }\n      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,\n                         frozen := false, refundTo := refund'.getD l.refundTo,\n                         pool := l.pool - p.P }) ↔\n    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧\n    env.intentOk (l.epoch + 1) .deposit refund' = true ∧ p.P ≤ l.pool",
-      "statementSha256": "46b3401193bab85457082a25ad68b53e660494928780f64b4b3e893f7f974d1f",
+      "line": 1002,
+      "statement": "theorem Step.rotateDepositPaid_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)\n    (payee : Addr) :\n    Step p env (.rotate sn' .deposit payee) now (.present l)\n      { bIn := p.B - l.bHeld p, hunter := some { addr := payee, pool := p.P } }\n      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,\n                         frozen := false, pool := l.pool - p.P }) ↔\n    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧\n    env.depositAuthorized (l.epoch + 1) = true ∧ p.P ≤ l.pool",
+      "statementSha256": "d6efa53efc5209d134f44bf208f19004d666888fc1f2550b858e544925f59cf2",
       "sourceStory": "Inversion for `rotateDepositPaid`.",
       "story": {
-        "given": "{p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)\n    (payee : Addr) (refund' : Option Addr)",
+        "given": "{p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)\n    (payee : Addr)",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "Step p env (.rotate sn' .deposit payee refund') now (.present l)\n      { bIn := p.B - l.bHeld p, hunter := some { addr := payee, pool := p.P } }\n      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,\n                         frozen := false, refundTo := refund'.getD l.refundTo,\n                         pool := l.pool - p.P }) ↔\n    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧\n    env.intentOk (l.epoch + 1) .deposit refund' = true ∧ p.P ≤ l.pool"
+        "then": "Step p env (.rotate sn' .deposit payee) now (.present l)\n      { bIn := p.B - l.bHeld p, hunter := some { addr := payee, pool := p.P } }\n      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,\n                         frozen := false, pool := l.pool - p.P }) ↔\n    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧\n    env.depositAuthorized (l.epoch + 1) = true ∧ p.P ≤ l.pool"
       },
-      "storySha256": "22ebc880593a6e0d0828bcce9f71876f2fd1ad160b4826ad1e844cc647ae113c"
+      "storySha256": "86137b2a8f05ed9aed94760f90ae11e62b6d36789a5cd382e7777ff4c91a3ed9"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.Step.rotateDepositUnpaid_iff",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 1004,
-      "statement": "theorem Step.rotateDepositUnpaid_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)\n    (payee : Addr) (refund' : Option Addr) :\n    Step p env (.rotate sn' .deposit payee refund') now (.present l)\n      { bIn := p.B - l.bHeld p }\n      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,\n                         frozen := false, refundTo := refund'.getD l.refundTo }) ↔\n    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧\n    env.intentOk (l.epoch + 1) .deposit refund' = true ∧ l.pool < p.P",
-      "statementSha256": "ef91dbca38ddd5faafde67d6522b58ea65a36e5cab0c075323fd3e834a94443f",
+      "line": 1018,
+      "statement": "theorem Step.rotateDepositUnpaid_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)\n    (payee : Addr) :\n    Step p env (.rotate sn' .deposit payee) now (.present l)\n      { bIn := p.B - l.bHeld p }\n      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false }) ↔\n    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧\n    env.depositAuthorized (l.epoch + 1) = true ∧ l.pool < p.P",
+      "statementSha256": "32c3989ac43f8107ed2d73156a1f950f20096b0cf2f2b54c9fb5b6f8725320cd",
       "sourceStory": "Inversion for `rotateDepositUnpaid`.",
       "story": {
-        "given": "{p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)\n    (payee : Addr) (refund' : Option Addr)",
+        "given": "{p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)\n    (payee : Addr)",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "Step p env (.rotate sn' .deposit payee refund') now (.present l)\n      { bIn := p.B - l.bHeld p }\n      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,\n                         frozen := false, refundTo := refund'.getD l.refundTo }) ↔\n    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧\n    env.intentOk (l.epoch + 1) .deposit refund' = true ∧ l.pool < p.P"
+        "then": "Step p env (.rotate sn' .deposit payee) now (.present l)\n      { bIn := p.B - l.bHeld p }\n      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false }) ↔\n    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧\n    env.depositAuthorized (l.epoch + 1) = true ∧ l.pool < p.P"
       },
-      "storySha256": "1e918d61013188cf218fb5bc4c1472215c48cd52a48af1931412b546ebc01bd2"
+      "storySha256": "4ceeb1d1c1e40bff943f60341689f02ad392fa0f111100db8392fa28698c11a2"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.Step.poison_iff",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 1020,
+      "line": 1033,
       "statement": "theorem Step.poison_iff {p : Params} {env : Env} (l : Live) (now : Slot) :\n    Step p env .poison now (.present l) {} (.present { l with poisoned := true }) ↔\n    env.quorum l.epoch = true ∧ l.poisoned = false",
       "statementSha256": "298461538a2df4bd3a9a5ff3995db0176193f962aa4c31ea5be9fc886427b70e",
       "sourceStory": "Inversion for `poison`.",
@@ -2124,7 +2180,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Step.freeze_iff",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 1031,
+      "line": 1044,
       "statement": "theorem Step.freeze_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq) (payee : Addr) :\n    Step p env (.freeze sn' payee) now (.present l)\n      { hunter := some { addr := payee, b := p.B } }\n      (.present { l with frozen := true }) ↔\n    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ l.pool < p.P ∧\n    l.frozen = false ∧ l.poisoned = false",
       "statementSha256": "5ba75f8ad4bf4d46efc3d53ab020fb21a4a83c0a3bfbefc6891eb12becba32ed",
       "sourceStory": "Inversion for `freeze`.",
@@ -2138,7 +2194,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Step.topUp_iff",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 1045,
+      "line": 1058,
       "statement": "theorem Step.topUp_iff {p : Params} {env : Env} (l : Live) (now : Slot) (x : Value) :\n    Step p env (.topUp x) now (.present l) { poolIn := x }\n      (.present { l with pool := l.pool + x }) ↔ True",
       "statementSha256": "efc63da443db4fb31649d7f56d5c313b533265c1123565e13a0101dc1bfc7743",
       "sourceStory": "Inversion for `topUp`: no guards.",
@@ -2152,7 +2208,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Step.convict_iff",
       "path": "lean/CardanoKeri/CheckpointGoals.lean",
-      "line": 1055,
+      "line": 1068,
       "statement": "theorem Step.convict_iff {p : Params} {env : Env} (l : Live) (now : Slot) (payee : Addr) :\n    Step p env (.convict payee) now (.present l)\n      { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },\n        convictor := some { addr := payee, dreg := p.D } } (.terminationPending l.hash) ↔\n    env.duplicityAt l.epoch l.sn = true",
       "statementSha256": "e2c552b9ba8ead41b5ff59f98ff37729cc1e8bbe7d202a647d2ca075896bdd3b",
       "sourceStory": "Given Every parameter, slot, source state and payee in the exact type; the enabled statements additionally assume concrete duplicity at that source state.\nWhen Execute the local conviction transition, or compare it to its complete guard in the iff statements.\nThen The exact existing component flow and concrete duplicity guard remain; the target is pending at the source hash. Both iff directions remain obligations. Enabled clauses are local applicability only, not a claim that an arbitrary economic request can be booked.",

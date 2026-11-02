@@ -88,6 +88,7 @@
           "T6_component_conservation",
           "T6_dreg_enters_only_at_birth",
           "T6_dreg_never_a_fee",
+          "T6_refund_is_registration_address",
           "T7_step_iff_stepFn",
           "T7_trace_iff_replay",
           "T8_absent_only_registers",

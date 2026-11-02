@@ -106,13 +106,12 @@
       <div class="ev-form">
         <label>kind <select id="ev-kind">
           <option value="rotationTo">witnessed rotation</option>
-          <option value="intentAuthorized">intent signed by the new keys (option, refund address)</option>
+          <option value="depositAuthorized">deposit signed by the new keys</option>
           <option value="quorum">current quorum signed</option>
           <option value="duplicityAt">duplicity proof</option>
         </select></label>
         <label id="ev-la">epoch <input id="ev-a" type="number" min="0" step="1" value="0"></label>
         <label id="ev-lb">from sn <input id="ev-b" type="number" min="0" step="1" value="0"></label>
-        <label id="ev-li" hidden>intent <select id="ev-intent"><option value="keep">keep</option><option value="deposit">deposit (unfreeze)</option></select></label>
         <label id="ev-lc">to sn' <input id="ev-c" type="number" min="0" step="1" value="1"></label>
         <button type="button" class="ghost" id="ev-add">Add row</button>
       </div>

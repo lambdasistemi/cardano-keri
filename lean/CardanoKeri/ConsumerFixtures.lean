@@ -18,7 +18,7 @@ end S
 def cp : Params := { D := 8, B := 2, P := 1, W := 5, hD := by decide, hB := by decide }
 def evidence : TraceWire.EnvTable := {
   rotationTo := (List.range 12).map fun n => (n, n, n + 1)
-  intentAuthorized := (List.range 13).flatMap fun n => [(n, .deposit, none)]
+  depositAuthorized := List.range 13
   quorum := List.range 13
   duplicityAt := (List.range 13).map fun n => (n, n) }
 def ce : Env := evidence.toEnv

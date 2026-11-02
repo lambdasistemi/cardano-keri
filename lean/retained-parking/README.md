@@ -36,9 +36,9 @@ certificate adapter: consuming another request and replacing the stored context.
 They are implementation mutants. The separate foreign-context receipt controls
 are type-interface checks. Neither category is counted as a Lean model mutant.
 
-`ReviewedContracts.lean` checks all 106 revised exact contracts and
-`PreservedContracts.lean` checks 63 preserved contracts. `theorem-stories.json`
-binds 332 lifecycle/transport theorem identities, their source narratives,
+`ReviewedContracts.lean` checks all 105 revised exact contracts and
+`PreservedContracts.lean` checks 49 preserved contracts. `theorem-stories.json`
+binds 425 lifecycle/transport theorem identities, their source narratives,
 complete formal Given/Then and source hashes. `story-bindings.mjs` rejects drift;
 compilation remains the authority on the propositions and axiom closure.
 

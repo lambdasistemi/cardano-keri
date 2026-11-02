@@ -14,7 +14,7 @@ def p : Params := { D := 3, B := 2, P := 1, W := 5, hD := by decide, hB := by de
 def env : Env := {
   rotationTo := fun epoch sn next => (epoch == 0 && sn == 0 && next == 1) ||
     (epoch == 1 && sn == 1 && next == 2),
-  intentAuthorized := fun _ _ _ => false,
+  depositAuthorized := fun _ => false,
   quorum := fun _ => false,
   convictionContext := fun epoch sn => some (Duplicity.fixture epoch sn).1,
   convictionRival := fun epoch sn => some (Duplicity.fixture epoch sn).2 }
@@ -88,10 +88,10 @@ SysStep p env registered rotated
 -/
 theorem rotated_step : SysStep p env registered rotated := by
   apply SysStep.local
-  refine ⟨11, .rotate 1 .keep 6 none, 3, { hunter := some { addr := 6, pool := 1 } },
+  refine ⟨11, .rotate 1 .keep 6, 3, { hunter := some { addr := 6, pool := 1 } },
     .present rotatedLive, ?_, ?_, rfl⟩
   · intro refund pool equal; cases equal
-  · exact Step.rotateKeepPaid 3 1 6 none (by decide) (by decide) (by decide) (by decide)
+  · exact Step.rotateKeepPaid 3 1 6 (by decide) (by decide) (by decide)
 
 /-- Given the complete parameters and hypotheses:
 

@@ -232,8 +232,8 @@
       "kind": "guard",
       "decl": "Step.rotateDepositUnpaid",
       "hyp": "hauth",
-      "text": "env.intentOk (l.epoch + 1) .deposit refund' = true",
-      "reason": "intent-not-authorized"
+      "text": "env.depositAuthorized (l.epoch + 1) = true",
+      "reason": "deposit-not-authorized"
     },
     {
       "id": "4.then-the-freeze-bond-is",
@@ -263,8 +263,7 @@
         "sn",
         "epoch",
         "poisoned",
-        "frozen",
-        "refundTo"
+        "frozen"
       ],
       "match": {
         "ok": true,
@@ -305,27 +304,108 @@
       "reason": "already-poisoned"
     },
     {
-      "id": "8.the-signature-over-the-new",
+      "id": "8.the-registration-takes-the-refund",
       "story": 8,
-      "clause": "the signature over the new address at the new threshold by the keys the rotation reveals",
+      "clause": "the registration takes the refund address as given",
       "class": "guard",
-      "kind": "guard",
-      "decl": "Step.rotateKeepPaid",
-      "hyp": "hauth",
-      "text": "env.intentOk (l.epoch + 1) .keep refund' = true",
-      "reason": "intent-not-authorized"
+      "kind": "post-state",
+      "decl": "Step.register",
+      "text": "now, refund, pool0",
+      "match": {
+        "ok": true,
+        "kind": "register"
+      },
+      "note": "the registered datum holds the address the registration names; whoever pays the registration chooses it (D-032)."
     },
     {
-      "id": "8.a-relayer-submitting-her-public",
+      "id": "8.with-no-signature-over-it",
       "story": 8,
-      "clause": "A relayer submitting her public rotation without that signature leaves the address unchanged",
-      "class": "overrule",
-      "kind": "refusal",
+      "clause": "with no signature over it",
+      "class": "guard",
+      "kind": "no-guard",
+      "decl": "Step.register",
+      "text": ".register refund pool0",
+      "match": {
+        "ok": true,
+        "kind": "register"
+      },
+      "note": "Step.register has no hypothesis: no key signs the refund address; the controllers sign only the inception event, which the model does not carry."
+    },
+    {
+      "id": "8.a-rotation-leaves-the-refund",
+      "story": 8,
+      "clause": "a rotation leaves the refund address as it was",
+      "class": "guard",
+      "kind": "post-state",
       "decl": "Step.rotateKeepPaid",
-      "hyp": "hauth",
-      "text": "env.intentOk (l.epoch + 1)",
-      "reason": "intent-not-authorized",
-      "note": "a rotation that names an address the new keys did not sign in the intent message is refused whole (hauth fails), not landed with the old address; a rotation naming no address needs no signature and keeps it. Story 8's scenario plays both (D-032, D-038)."
+      "text": "{ l with sn := sn', epoch := l.epoch + 1, poisoned := false, pool := l.pool - p.P }",
+      "updates": [
+        "sn",
+        "epoch",
+        "poisoned",
+        "pool"
+      ],
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "keep",
+        "refundUnchanged": true
+      },
+      "note": "the rotation carries no address; refundTo is not among the fields the post-state sets (T6_refund_fixed)."
+    },
+    {
+      "id": "8.so-does-a-deposit",
+      "story": 8,
+      "clause": "so does a deposit",
+      "class": "guard",
+      "kind": "post-state",
+      "decl": "Step.rotateDepositPaid",
+      "text": "{ l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false, pool := l.pool - p.P }",
+      "updates": [
+        "sn",
+        "epoch",
+        "poisoned",
+        "frozen",
+        "pool"
+      ],
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "op": "deposit",
+        "refundUnchanged": true
+      },
+      "note": "the new keys sign the deposit only; refundTo is not among the fields the post-state sets."
+    },
+    {
+      "id": "8.a-top-up-adds-to-the",
+      "story": 8,
+      "clause": "a top-up adds to the pool and nothing else",
+      "class": "guard",
+      "kind": "post-state",
+      "decl": "Step.topUp",
+      "text": "{ l with pool := l.pool + x }",
+      "updates": [
+        "pool"
+      ],
+      "match": {
+        "ok": true,
+        "kind": "topUp"
+      },
+      "note": "a top-up by anyone adds to the one pool, which a conviction pays to the refund address."
+    },
+    {
+      "id": "8.a-conviction-pays-the-freeze",
+      "story": 8,
+      "clause": "a conviction pays the freeze bond held and the pool to the refund address",
+      "class": "guard",
+      "kind": "payment",
+      "decl": "Step.convict",
+      "text": "refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool }",
+      "match": {
+        "ok": true,
+        "kind": "convict"
+      },
+      "note": "the address is the registration’s along the whole trace (T6_conviction_refunds_registration_address)."
     },
     {
       "id": "9.the-second-rotation-is-at",
@@ -520,22 +600,6 @@
       "clause": "anyone can advance it onward with Alice's later public rotations",
       "class": "omission",
       "note": "the submitter is not modelled. Action.actor derives the authorizer from the action and a rotation's is nextKeys — Alice's rotation authorizes itself; nothing in Step or SysStep names who carries the transaction. Scenario 12 plays Hal landing Alice's later rotation, which the Lean admits because the evidence (hev) holds, not because 'anyone' is a rule of the machine. Campaign 1 anchored this to `| .register .. => .anyone`, the actor of a registration: an over-attribution."
-    },
-    {
-      "id": "12.the-moment-that-happens-mallory",
-      "story": 12,
-      "clause": "the moment that happens, Mallory's bonds answer to Alice's keys (story 8)",
-      "class": "guard",
-      "kind": "guard",
-      "decl": "Step.rotateKeepPaid",
-      "hyp": "hauth",
-      "text": "env.intentOk (l.epoch + 1) .keep refund'",
-      "match": {
-        "ok": true,
-        "kind": "rotate",
-        "refundChanged": true
-      },
-      "note": "the bonds answer to whoever can move the refund address: after Alice's rotation only her new keys can sign a new one in the intent message (hauth, D-038), and a conviction pays the bonds and pool there (Step.convict), never to the convictor."
     },
     {
       "id": "12.it-can-happen-once-per",
@@ -843,37 +907,6 @@
       }
     },
     {
-      "id": "refund-unauthorized-refused",
-      "story": 8,
-      "clause": "a rotation naming an address the new keys did not sign is refused",
-      "match": {
-        "ok": false,
-        "kind": "rotate",
-        "reason": "intent-not-authorized"
-      }
-    },
-    {
-      "id": "refund-null-preserved",
-      "story": 8,
-      "clause": "a rotation naming no address lands and keeps the refund address",
-      "match": {
-        "ok": true,
-        "kind": "rotate",
-        "refundNull": true,
-        "refundUnchanged": true
-      }
-    },
-    {
-      "id": "refund-moved-by-new-keys",
-      "story": 8,
-      "clause": "a rotation whose new keys signed the address moves it",
-      "match": {
-        "ok": true,
-        "kind": "rotate",
-        "refundChanged": true
-      }
-    },
-    {
       "id": "convict-from-poisoned",
       "story": 9,
       "clause": "conviction is enabled from a poisoned state",
@@ -998,7 +1031,7 @@
         "ok": false,
         "kind": "rotate",
         "op": "deposit",
-        "reason": "intent-not-authorized"
+        "reason": "deposit-not-authorized"
       }
     },
     {
@@ -1011,6 +1044,25 @@
         "op": "deposit",
         "preWord": "frozen",
         "bornAtUnchanged": true
+      }
+    },
+    {
+      "id": "refund-kept-by-rotation",
+      "story": 8,
+      "clause": "a rotation lands and keeps the refund address",
+      "match": {
+        "ok": true,
+        "kind": "rotate",
+        "refundUnchanged": true
+      }
+    },
+    {
+      "id": "conviction-refunds-the-sponsor",
+      "story": 8,
+      "clause": "a conviction pays the freeze bond and the pool, top-ups included, to the sponsor’s address",
+      "match": {
+        "ok": true,
+        "kind": "convict"
       }
     },
     {

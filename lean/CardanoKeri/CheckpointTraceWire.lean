@@ -12,7 +12,6 @@ open CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint.TraceWire
 
 deriving instance Lean.ToJson for BondOp
-deriving instance Lean.ToJson for Intent
 deriving instance Lean.ToJson for Action
 deriving instance Lean.ToJson for KeyState
 deriving instance Lean.ToJson for Live
@@ -20,7 +19,6 @@ deriving instance Lean.ToJson for State
 deriving instance Lean.ToJson for Payment
 deriving instance Lean.ToJson for Flow
 deriving instance Lean.FromJson for BondOp
-deriving instance Lean.FromJson for Intent
 deriving instance Lean.FromJson for Action
 deriving instance Lean.FromJson for KeyState
 deriving instance Lean.FromJson for Live
@@ -46,14 +44,14 @@ def paramsOfJson (j : Json) : Except String Params := do
 fixtures. A selector is a model scenario, not proof of real cryptography. -/
 structure EnvTable where
   rotationTo : List (Nat × Nat × Nat)
-  /-- `(e, intent, refund address or none)`: the keys of epoch `e` signed that intent message (D-038, D-039). -/
-  intentAuthorized : List (Nat × Intent × Option Nat)
+  /-- The epochs whose keys signed the deposit of the rotation that opens them (D-038). -/
+  depositAuthorized : List Nat
   quorum : List Nat
   duplicityAt : List (Nat × Nat)
 
 def EnvTable.toEnv (t : EnvTable) : Env where
   rotationTo := fun e sn sn' => t.rotationTo.contains (e, sn, sn')
-  intentAuthorized := fun e i r => t.intentAuthorized.contains (e, i, r)
+  depositAuthorized := fun e => t.depositAuthorized.contains e
   quorum := fun e => t.quorum.contains e
   convictionContext := fun e sn =>
     if t.duplicityAt.contains (e, sn) then some (CardanoKeri.Duplicity.fixture e sn).1 else none
@@ -63,7 +61,7 @@ def EnvTable.toEnv (t : EnvTable) : Env where
 instance : ToJson EnvTable where
   toJson t := Json.mkObj [
     ("rotationTo", toJson (t.rotationTo.map fun (e, sn, sn') => [e, sn, sn'])),
-    ("intentAuthorized", Json.arr (t.intentAuthorized.map fun (e, i, r) => Json.arr #[toJson e, toJson i, toJson r]).toArray),
+    ("depositAuthorized", toJson (t.depositAuthorized.map fun e => [e])),
     ("quorum", toJson (t.quorum.map fun e => [e])),
     ("duplicityAt", toJson (t.duplicityAt.map fun (e, sn) => [e, sn]))]
 
@@ -78,15 +76,12 @@ def EnvTable.applyRow (t : EnvTable) (add : Bool) (row : Json) : Except String E
     | [e, sn, sn'] => pure { t with rotationTo := upd t.rotationTo (e, sn, sn') }
     | _ => throw "rotationTo row needs three numbers"
   | .error _ =>
-  match row.getObjVal? "intentAuthorized" with
+  match row.getObjVal? "depositAuthorized" with
   | .ok v =>
-    match v.getArr? with
-    | .ok #[ej, ij, rj] =>
-      let e : Nat ← fromJson? ej
-      let i : Intent ← fromJson? ij
-      let r : Option Nat ← if rj.isNull then pure none else (fromJson? rj : Except String Nat).map some
-      pure { t with intentAuthorized := upd t.intentAuthorized (e, i, r) }
-    | _ => throw "intentAuthorized row needs [epoch, intent, address or null]"
+    let l ← nats v
+    match l with
+    | [e] => pure { t with depositAuthorized := upd t.depositAuthorized e }
+    | _ => throw "depositAuthorized row needs one number"
   | .error _ =>
   match row.getObjVal? "quorum" with
   | .ok v =>

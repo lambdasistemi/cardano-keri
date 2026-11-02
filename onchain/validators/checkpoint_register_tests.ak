@@ -1904,6 +1904,20 @@ test removed_armed_datum_is_the_previous_encoding() {
   ) == previous_armed_v1
 }
 
+/// The second-version Armed datum, serialized by the previous type, byte for
+/// byte: the version the freeze rows build.
+test removed_armed_datum_second_version_is_the_previous_encoding() {
+  let previous_armed_v2 = #"d87a9fd8799f5820aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa9f58200101010101010101010101010101010101010101010101010101010101010101ffd8799f01ff9f58200a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0affd8799f01ff80000000ff581cbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1903e9ff"
+  cbor.serialise(
+    removed_armed(
+      1,
+      previous_golden_tip(),
+      #"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      1001,
+    ),
+  ) == previous_armed_v2
+}
+
 /// Every removed-shape transaction builds, and holds its input at the removed
 /// role address, so a refusal above cannot be a builder failing.
 test removed_shape_fixtures_build() {

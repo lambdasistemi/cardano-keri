@@ -605,14 +605,12 @@ verifyRegisterScriptSizes env = do
     measure "observer_entitlement reference script" (envEntitlementScript env) (SBS.length (envEntitlementBytes env))
     measure "hash_proof reference script" (envHashProofScript env) (SBS.length (envHashProofBytes env))
     measure "bounty_commitment reference script" (envCommitmentScript env) (SBS.length (envCommitmentBytes env))
-    -- #339: re-derived from the applied advance program after the two-step
-    -- freeze was removed, not reused from the previous pin (14_867). The
-    -- advance observer no longer reads the Armed datum or the armed-response
-    -- action, so its applied program is shorter. The 16_133 ceiling is
-    -- unchanged.
-    unless (SBS.length (envAdvanceBytes env) == 14_695) $
+    -- #339: re-derived from the applied advance program once it reads the
+    -- version 2 datum (14_695 before), not reused from the previous pin. The
+    -- 16_133 ceiling is unchanged.
+    unless (SBS.length (envAdvanceBytes env) == 15_778) $
         fail
-            ( "observer_advance applied program changed from 14,695 bytes: "
+            ( "observer_advance applied program changed from 15,778 bytes: "
                 <> show (SBS.length (envAdvanceBytes env))
             )
 

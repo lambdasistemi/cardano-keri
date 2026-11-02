@@ -503,6 +503,57 @@ test migrate_out_arm_refuses_a_pending_source() fail {
   migrate_out_arm(V2(mig_pending_datum()))
 }
 
+// The accepted exit with a second checkpoint of the same policy and key state
+// in the transaction: the program is run for that second input, while the
+// observation and the controllers' package name the first. Only the comparison
+// between the claim and the spent input can refuse it.
+test migrate_out_refuses_an_observation_of_another_input() fail {
+  let other_ref = OutputReference {
+    transaction_id: mig_vec.fixture_source_txid,
+    output_index: 5,
+  }
+  let other = input_at(
+    other_ref,
+    Output {
+      address: from_script(mig_source_policy),
+      value: from_lovelace(mig_protected)
+        |> merge(
+            from_asset(mig_source_policy, mig_vec.fixture_aid_asset_name, 1),
+          ),
+      datum: InlineDatum(V2(mig_source_datum())),
+      reference_script: None,
+    },
+  )
+  let base = spend_context(
+    [mig_source_input(mig_source_datum()), other],
+    [],
+    [mig_successor_output(mig_source_datum())],
+    mig_replacement_mint(),
+    [],
+    interval.everything,
+    0,
+  )
+  let credential = Script(migration_hash)
+  let envelope = ObserverEnvelope {
+    claim: ObserverClaim {
+      action: observe_migration,
+      checkpoint_policy: mig_source_policy,
+      own_ref: Some(mig_source_ref()),
+    },
+    payload: builtin.i_data(0),
+  }
+  let redeemer: Data = envelope
+  let tx = Transaction {
+    ..base,
+    withdrawals: [Pair(credential, 0)],
+    redeemers: [Pair(Withdraw(credential), redeemer)],
+  }
+  removed_spend(removed_spend_redeemer(2, []), other_ref, tx) && run_migrate_out(
+    MigrateOutProof { authorization: mig_authorization(mig_signed_state()) },
+    tx,
+  )
+}
+
 // Cut by epic ruling NOTE-006 (2026-08-12), sha256
 // 1ef670c52897ebdda575805ac8a4fcf011bcc3749a3d5632c6d5c196a588c4d1:
 //

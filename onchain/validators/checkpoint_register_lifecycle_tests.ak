@@ -1250,6 +1250,14 @@ fn convict_ref() -> OutputReference {
 }
 
 fn convict_envelope(evidence: EnforcementEvidence) -> ObserverEnvelope {
+  convict_envelope_naming(convict_ref(), evidence)
+}
+
+/// The envelope whose claim names the input `named`.
+fn convict_envelope_naming(
+  named: OutputReference,
+  evidence: EnforcementEvidence,
+) -> ObserverEnvelope {
   let payload: Data = EnforcementProofV1 {
     evidence,
     payee_pkh: convictor,
@@ -1259,7 +1267,7 @@ fn convict_envelope(evidence: EnforcementEvidence) -> ObserverEnvelope {
     claim: ObserverClaim {
       action: observe_convict,
       checkpoint_policy: policy,
-      own_ref: Some(convict_ref()),
+      own_ref: Some(named),
     },
     payload,
   }
@@ -1284,9 +1292,29 @@ fn convict_tx(
   convict_tx_of(tip, wire, input_datum, input_lovelace, outputs, mint)
 }
 
+fn convict_tx_of(
+  tip_of: CheckpointDatumV1,
+  wire_of: EnforcementEvidence,
+  input_datum: Data,
+  input_lovelace: Int,
+  outputs: List<Output>,
+  mint: Value,
+) -> Transaction {
+  convict_tx_naming(
+    convict_ref(),
+    tip_of,
+    wire_of,
+    input_datum,
+    input_lovelace,
+    outputs,
+    mint,
+  )
+}
+
 /// The same, for a conviction of the checkpoint with key state `tip_of`
 /// under the evidence `wire_of`.
-fn convict_tx_of(
+fn convict_tx_naming(
+  named: OutputReference,
   tip_of: CheckpointDatumV1,
   wire_of: EnforcementEvidence,
   input_datum: Data,
@@ -1314,7 +1342,7 @@ fn convict_tx_of(
   )
   let enforcement_credential = Script(enforcement_hash)
   let entitlement_credential = Script(entitlement_hash)
-  let observer_redeemer: Data = convict_envelope(wire_of)
+  let observer_redeemer: Data = convict_envelope_naming(named, wire_of)
   with_reservation(
     Transaction {
       ..base,
@@ -1327,7 +1355,7 @@ fn convict_tx_of(
       ],
     },
     commit_policy,
-    commitment_for(convict_ref(), ConvictEntitlement, convictor, wire_of),
+    commitment_for(named, ConvictEntitlement, convictor, wire_of),
   )
 }
 
@@ -2007,5 +2035,107 @@ test register_refuses_a_born_at_below_zero() fail {
     registered(refund_enterprise_key(), -5),
     floor_unfrozen,
     upto(-5, False),
+  )
+}
+
+// ---------------------------------------------------------------------
+// The observation must name the input being spent
+// ---------------------------------------------------------------------
+
+/// An input that is not the checkpoint, carrying the datum a decoy needs.
+fn decoy_input(
+  ref: OutputReference,
+  address: Address,
+  datum: Data,
+  lovelace: Int,
+) -> Input {
+  input_at(
+    ref,
+    Output {
+      address,
+      value: from_lovelace(lovelace),
+      datum: InlineDatum(datum),
+      reference_script: None,
+    },
+  )
+}
+
+// The accepted paid rotation of the checkpoint, with one input added that is
+// not the checkpoint: a key-address output whose datum is the same live
+// checkpoint, and the advance envelope names that input. The evidence is a
+// valid rotation of what the decoy declares, so only the comparison between
+// the envelope and the spent input can refuse it.
+test advance_refuses_an_observation_of_another_input() fail {
+  let decoy_ref = out_ref(seed_tx_id, 77)
+  let decoy = decoy_input(
+    decoy_ref,
+    from_verification_key(owner_vkh),
+    v2_data(adv_old(False, False)),
+    floor_unfrozen + 3_000_000,
+  )
+  let base = advance_tx(
+    v2_data(adv_old(False, False)),
+    v2_data(adv_new(False)),
+    floor_unfrozen + 3_000_000,
+    floor_unfrozen + 1_000_000,
+    [paid(hunter_pkh, premium)],
+  )
+  let envelope = ObserverEnvelope {
+    claim: ObserverClaim {
+      action: observe_advance,
+      checkpoint_policy: policy,
+      own_ref: Some(decoy_ref),
+    },
+    payload: adv_evidence,
+  }
+  let redeemer: Data = envelope
+  let credential = Script(advance_hash)
+  let tx = Transaction {
+    ..base,
+    inputs: [decoy, ..base.inputs],
+    redeemers: [Pair(Withdraw(credential), redeemer)],
+  }
+  run_spend(advance_redeemer(1), adv_ref(), tx) && checkpoint_observer.observer_advance.withdraw(
+    0,
+    envelope,
+    0,
+    tx,
+  )
+}
+
+// The accepted conviction with one input added at the checkpoint address that
+// holds no token and declares the same live checkpoint; both observers name it
+// and its reservation is scoped to it.
+test convict_refuses_an_observation_of_another_input() fail {
+  let decoy_ref = out_ref(seed_tx_id, 78)
+  let decoy = decoy_input(
+    decoy_ref,
+    from_script(policy),
+    v2_data(live(tip, False, False, refund_enterprise_key())),
+    floor_unfrozen + convict_pool,
+  )
+  let base = convict_tx_naming(
+    decoy_ref,
+    tip,
+    wire,
+    v2_data(live(tip, False, False, refund_enterprise_key())),
+    floor_unfrozen + convict_pool,
+    [pending_output(honest_pending(), mc, tip_name()), ..honest_payouts()],
+    zero,
+  )
+  let tx = Transaction { ..base, inputs: [decoy, ..base.inputs] }
+  let envelope = convict_envelope_naming(decoy_ref, wire)
+  run_spend(convict_redeemer(1), convict_ref(), tx) && checkpoint_observer.observer_enforcement.withdraw(
+    0,
+    commitment_family,
+    envelope,
+    0,
+    tx,
+  ) && checkpoint_observer.observer_entitlement.withdraw(
+    0,
+    commitment_family,
+    envelope,
+    0,
+    tx,
   )
 }

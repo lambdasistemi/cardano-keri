@@ -384,7 +384,7 @@ sampleManifest =
                 0
                 1_000_000_000
                 5_000_000
-                2_000_000
+                (Just 2_000_000)
         , manifestCheckpoint =
             CheckpointInfo
                 "addr_test1wqxpdsfvar9xppev4h25t5fg9uraeya46g4pxnjyy564wdqhr6822"

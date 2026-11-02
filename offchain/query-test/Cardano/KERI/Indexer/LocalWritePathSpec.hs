@@ -1235,7 +1235,7 @@ entrypointManifest =
                 , parameterNetworkDiscriminator = 0
                 , parameterRegistrationBond = 1_000_000_000
                 , parameterFreezeBond = 5_000_000
-                , parameterPremium = 2_000_000
+                , parameterPremium = Just 2_000_000
                 }
         , manifestCheckpoint =
             CheckpointInfo

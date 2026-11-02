@@ -37,6 +37,7 @@ import Data.Aeson (
     object,
     withObject,
     (.:),
+    (.:?),
     (.=),
  )
 import Data.Aeson qualified as Aeson
@@ -87,7 +88,8 @@ data DeploymentParameters = DeploymentParameters
     , parameterNetworkDiscriminator :: Integer
     , parameterRegistrationBond :: Integer
     , parameterFreezeBond :: Integer
-    , parameterPremium :: Integer
+    , parameterPremium :: !(Maybe Integer)
+    -- ^ absent in the manifest of a generation that has no premium
     }
     deriving stock (Show, Eq)
 
@@ -171,12 +173,15 @@ instance FromJSON BlueprintInfo where
 instance ToJSON DeploymentParameters where
     toJSON parameters =
         object
-            [ "checkpointVersion" .= parameterCheckpointVersion parameters
-            , "networkDiscriminator" .= parameterNetworkDiscriminator parameters
-            , "registrationBondLovelace" .= parameterRegistrationBond parameters
-            , "freezeBondLovelace" .= parameterFreezeBond parameters
-            , "premiumLovelace" .= parameterPremium parameters
-            ]
+            ( [ "checkpointVersion" .= parameterCheckpointVersion parameters
+              , "networkDiscriminator" .= parameterNetworkDiscriminator parameters
+              , "registrationBondLovelace" .= parameterRegistrationBond parameters
+              , "freezeBondLovelace" .= parameterFreezeBond parameters
+              ]
+                <> [ "premiumLovelace" .= premium
+                   | Just premium <- [parameterPremium parameters]
+                   ]
+            )
 
 instance FromJSON DeploymentParameters where
     parseJSON = withObject "DeploymentParameters" $ \o ->
@@ -185,7 +190,7 @@ instance FromJSON DeploymentParameters where
             <*> o .: "networkDiscriminator"
             <*> o .: "registrationBondLovelace"
             <*> o .: "freezeBondLovelace"
-            <*> o .: "premiumLovelace"
+            <*> o .:? "premiumLovelace"
 
 instance ToJSON CheckpointInfo where
     toJSON checkpoint =
@@ -240,7 +245,7 @@ v1Parameters =
         , parameterNetworkDiscriminator = v1NetworkDiscriminator
         , parameterRegistrationBond = v1RegistrationBond
         , parameterFreezeBond = v1FreezeBond
-        , parameterPremium = v1Premium
+        , parameterPremium = Just v1Premium
         }
 
 blueprintSha256 :: FilePath -> IO Text

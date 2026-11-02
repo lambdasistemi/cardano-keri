@@ -129,6 +129,11 @@ mkAdvancePackage manifest active rotation = do
             (activeCheckpointTxId active)
     let parameters = manifestParameters manifest
         facts = activeCheckpointFacts active
+    premium <-
+        maybe
+            (Left "the manifest has no premiumLovelace: its generation has no premium and cannot be advanced")
+            Right
+            (parameterPremium parameters)
     settlement <-
         maybe
             (Left "the checkpoint is not a live output holding its deposit and bond")
@@ -137,7 +142,7 @@ mkAdvancePackage manifest active rotation = do
                 checkpointMinAda
                 (parameterRegistrationBond parameters)
                 (parameterFreezeBond parameters)
-                (parameterPremium parameters)
+                premium
                 facts
                 (activeCheckpointLovelace active)
             )

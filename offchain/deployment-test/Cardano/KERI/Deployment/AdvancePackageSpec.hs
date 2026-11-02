@@ -38,6 +38,7 @@ import Data.Aeson.KeyMap qualified as KM
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString qualified as BS
 import Data.Either (isLeft)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text.Encoding qualified as TE
 import Paths_cardano_keri (getDataFileName)
@@ -47,6 +48,7 @@ import Test.Hspec (
     expectationFailure,
     it,
     shouldBe,
+    shouldContain,
     shouldSatisfy,
  )
 
@@ -120,6 +122,30 @@ spec = describe "Advance package and plan from a live version 2 checkpoint" $ do
             Aeson.Success _ -> pure ()
             Aeson.Error err -> expectationFailure err
 
+    it "keeps a manifest without a premium without one, and one with it as written" $ do
+        value <- manifestValueWithoutPremium
+        case Aeson.fromJSON value :: Aeson.Result Manifest of
+            Aeson.Success without -> do
+                parameterPremium (manifestParameters without) `shouldBe` Nothing
+                Aeson.fromJSON (Aeson.toJSON without) `shouldBe` Aeson.Success without
+                case Aeson.toJSON (manifestParameters without) of
+                    Aeson.Object fields -> KM.member "premiumLovelace" fields `shouldBe` False
+                    other -> expectationFailure ("parameters are not an object: " <> show other)
+            Aeson.Error err -> expectationFailure err
+        (with, _) <- fixtures
+        parameterPremium (manifestParameters with) `shouldBe` Just 2_000_000
+        Aeson.fromJSON (Aeson.toJSON with) `shouldBe` Aeson.Success with
+
+    it "refuses to advance under a manifest without a premium, and names the field" $ do
+        value <- manifestValueWithoutPremium
+        (_, rotation) <- fixtures
+        case Aeson.fromJSON value :: Aeson.Result Manifest of
+            Aeson.Success without ->
+                case mkAdvancePackage without (activeAt without rotation (floorOf without + 10_000_000) False) rotation of
+                    Left err -> err `shouldContain` "premiumLovelace"
+                    Right _ -> expectationFailure "advanced without a premium"
+            Aeson.Error err -> expectationFailure err
+
     it "plans the payee output index, the paid premium and the exact successor lovelace" $ do
         (manifest, rotation) <- fixtures
         let lovelace = floorOf manifest + premiumOf manifest + 7
@@ -167,7 +193,7 @@ fixtures = do
     pure (manifest, rotation)
 
 premiumOf :: Manifest -> Integer
-premiumOf = parameterPremium . manifestParameters
+premiumOf = fromMaybe (error "the fixture manifest has a premium") . parameterPremium . manifestParameters
 
 {- | The lovelace a live, unfrozen checkpoint holds with an empty pool: the
 minimum ADA, the deposit and the freeze bond.

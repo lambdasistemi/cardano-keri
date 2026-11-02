@@ -63,6 +63,7 @@ import Cardano.KERI.Deployment.Script (
     v1CommitmentParameters,
     v1FreezeBond,
     v1NetworkDiscriminator,
+    v1Premium,
     v1RegistrationBond,
  )
 import Control.Exception (SomeException, displayException, try)
@@ -326,7 +327,7 @@ registerAritySpec = beforeAll withFixture $
         it "s254_r_register_version_argument_absent" $ \fixture -> do
             applied <- registerArguments fixture
             expected <- expectedRegisterArguments fixture
-            -- The exact eight-argument list, in order, built from the sibling
+            -- The exact nine-argument list, in order, built from the sibling
             -- artifacts this same derivation produced.
             applied `shouldBe` expected
             -- Stated separately so a failure names the defect rather than
@@ -703,6 +704,7 @@ expectedRegisterArguments fixture = do
         , I v1NetworkDiscriminator
         , I v1RegistrationBond
         , I v1FreezeBond
+        , I v1Premium
         ]
   where
     policyOf name =

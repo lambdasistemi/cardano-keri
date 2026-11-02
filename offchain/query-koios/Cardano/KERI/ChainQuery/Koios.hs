@@ -72,9 +72,9 @@ module Cardano.KERI.ChainQuery.Koios (
 
 import Cardano.KERI.AID.CESR (Primitive (..), parsePrimitive)
 import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatum (..),
     CheckpointDatumV1 (..),
     checkpointDatumFromData,
+    datumKeyState,
  )
 import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
 import Cardano.KERI.ChainQuery.Interpreter (ChainQueryInterpreter, chainQueryInterpreter)
@@ -486,9 +486,8 @@ decodeOneLiveCheckpoint locator utxo = do
     decodedCheckpointAid u = do
         inline <- maybe (Left "checkpoint output has no inline datum") Right (chainAssetInlineDatum u)
         dat <- plutusDataFromJson inline
-        checkpoint <- maybe (Left "checkpoint inline datum is not the frozen V1 schema") Right (checkpointDatumFromData dat)
-        case checkpoint of
-            V1 value -> Right (cdCesrAid value)
+        value <- maybe (Left "checkpoint inline datum is not a version 2 checkpoint datum") Right (checkpointDatumFromData dat >>= datumKeyState)
+        Right (cdCesrAid value)
 
 {- | Resolve one exactly-one-output checkpoint asset match into
 'ActiveCheckpoint' (address, quantity, datum, and AID identity checks).
@@ -501,9 +500,7 @@ resolveActiveCheckpointOne locator aid assetName utxo = do
         Left "checkpoint output does not hold exactly one queried token"
     inline <- maybe (Left "checkpoint output has no inline datum") Right (chainAssetInlineDatum utxo)
     dat <- plutusDataFromJson inline
-    checkpoint <- maybe (Left "checkpoint inline datum is not the frozen V1 schema") Right (checkpointDatumFromData dat)
-    datum <- case checkpoint of
-        V1 value -> Right value
+    datum <- maybe (Left "checkpoint inline datum is not a version 2 checkpoint datum") Right (checkpointDatumFromData dat >>= datumKeyState)
     expectedAid <- case parsePrimitive (TE.encodeUtf8 aid) of
         Right (SelfAddressing raw, rest) | BS.null rest -> Right raw
         _ -> Left "AID must be one 44-character KERI E-code identifier"

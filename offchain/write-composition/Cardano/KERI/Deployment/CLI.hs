@@ -167,6 +167,7 @@ import Cardano.KERI.Indexer.ChainQuery (
     withLocalQueryScope,
  )
 import Cardano.KERI.Indexer.Config (decodeAddress)
+import Cardano.Ledger.Address (serialiseAddr)
 import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core (TxOut)
@@ -181,6 +182,7 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Time.Clock (diffUTCTime, getCurrentTime)
+import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Time.Format (defaultTimeLocale, formatTime)
 import OptEnvConf qualified as Opt
 import System.Directory (doesDirectoryExist)
@@ -1885,8 +1887,14 @@ submitRegistration scope settings manifest plan =
                     chainAssetUtxoToLedgerOutput (settlementObservedUtxo proof)
             registerSnapshot <-
                 fetchSnapshot [planProofPolicy plan, planCheckpointPolicy plan, lifecycleHash]
+            nowMs <- round . (* 1000) <$> getPOSIXTime
+            birth <-
+                Registration.registrationBirth
+                    (liveProvider context)
+                    (serialiseAddr (liveFundingAddress context))
+                    nowMs
             registerTxId <-
-                registerOne config plan registerSnapshot proofInput
+                registerOne config (Registration.withBirth birth plan) registerSnapshot proofInput
                     >>= either (fail . show) pure
             _ <-
                 observeOrFail

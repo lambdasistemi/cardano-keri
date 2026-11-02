@@ -19,7 +19,7 @@ stale ACTIVE index row" scenario.
 -}
 module Cardano.KERI.CLI.Backend.KoiosSpec (spec) where
 
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V1), CheckpointDatumV1 (..))
+import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V2), CheckpointDatumV1 (..), liveOfKeyState)
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted))
 import Cardano.KERI.CLI.Backend (
     BackendError (..),
@@ -300,7 +300,7 @@ sampleManifest =
         , manifestNetwork = NetworkInfo "preprod" 1
         , manifestSource = SourceInfo "repository" "commit"
         , manifestBlueprint = BlueprintInfo "digest"
-        , manifestParameters = DeploymentParameters 0 0 0 0
+        , manifestParameters = DeploymentParameters 0 0 0 0 0
         , manifestCheckpoint = CheckpointInfo checkpointAddress policy
         , manifestPublishedAt = "2026-01-01T00:00:00Z"
         , manifestScripts = []
@@ -353,7 +353,7 @@ burnHistory =
 
 toDatumValue :: CheckpointDatumV1 -> Value
 toDatumValue datum =
-    let BuiltinData plc = toBuiltinData (V1 datum)
+    let BuiltinData plc = toBuiltinData (V2 (liveOfKeyState "" 0 datum))
      in plutusDataJson plc
 
 registrationTxId :: ByteString

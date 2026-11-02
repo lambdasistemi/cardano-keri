@@ -15,7 +15,7 @@ module Cardano.KERI.Indexer.Query.ServerSpec (spec) where
 
 import Cardano.Crypto.Hash.Class (hashFromBytes)
 import Cardano.KERI.AID.CESR (qb64Aid, qb64Verkey)
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V1), CheckpointDatumV1 (..))
+import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V2), CheckpointDatumV1 (..), liveOfKeyState)
 import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..), Weight (..))
 import Cardano.KERI.Deployment.EndpointBoard (EndpointRecord (..), parseEndpointRecord)
@@ -845,7 +845,7 @@ checkpointOutput aid datum =
     Indexer.TxOut $
         serialize'
             (eraProtVerLow @ConwayEra)
-            (baseTxOut & datumTxOutL .~ inlineDatum (plutusData (V1 datum)))
+            (baseTxOut & datumTxOutL .~ inlineDatum (plutusData (V2 (liveOfKeyState "" 0 datum))))
   where
     baseTxOut :: TxOut ConwayEra
     baseTxOut =

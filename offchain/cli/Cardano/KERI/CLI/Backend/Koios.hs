@@ -27,7 +27,7 @@ module Cardano.KERI.CLI.Backend.Koios (
 ) where
 
 import Cardano.KERI.AID.CESR (qb64Aid, qb64Verkey)
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (..), CheckpointDatumV1 (..), checkpointDatumFromData)
+import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..), checkpointDatumFromData, datumKeyState)
 import Cardano.KERI.CLI.Backend (
     BackendError (..),
     CheckpointFields (..),
@@ -300,13 +300,11 @@ decodeCheckpointUtxo manifest utxo =
                     Right
                     (chainAssetInlineDatum utxo)
             dat <- either (Left . MalformedResponse . T.pack) Right (plutusDataFromJson inline)
-            checkpoint <-
+            datum <-
                 maybe
-                    (Left (MalformedResponse "checkpoint inline datum is not the frozen V1 schema"))
+                    (Left (MalformedResponse "checkpoint inline datum is not a version 2 checkpoint datum"))
                     Right
-                    (checkpointDatumFromData dat)
-            datum <- case checkpoint of
-                V1 value -> Right value
+                    (checkpointDatumFromData dat >>= datumKeyState)
             let aid = TE.decodeUtf8 (qb64Aid (cdCesrAid datum))
             assetName <- either (Left . MalformedResponse . T.pack) Right (checkpointAssetName aid)
             unless (chainAssetName asset == assetName) $

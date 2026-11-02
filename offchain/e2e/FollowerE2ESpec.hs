@@ -206,6 +206,7 @@ mkFollowerManifest env =
                 , parameterNetworkDiscriminator = 0
                 , parameterRegistrationBond = 1
                 , parameterFreezeBond = 1
+                , parameterPremium = 1
                 }
         , manifestCheckpoint =
             CheckpointInfo

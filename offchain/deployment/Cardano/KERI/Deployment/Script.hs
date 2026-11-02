@@ -48,6 +48,7 @@ module Cardano.KERI.Deployment.Script (
     v1NetworkDiscriminator,
     v1RegistrationBond,
     v1FreezeBond,
+    v1Premium,
 ) where
 
 import Cardano.Crypto.Hash (hashToBytes)
@@ -263,8 +264,9 @@ applyPredecessorParam predecessorPolicy =
 There is no version argument.  @checkpoint_register@ declares no version
 parameter, so the integer this plan used to lead with occupied the slot the
 ledger fills with the script context (#254 A-007).  After A-002 the plan is
-eight arguments: the five sibling observer hashes (migration, lifecycle,
-advance, enforcement, entitlement) then the three deployment integers.  The
+nine arguments: the five sibling observer hashes (migration, lifecycle,
+advance, enforcement, entitlement) then the four deployment integers (network,
+registration bond, freeze bond, premium).  The
 constructor still fails closed on declared-vs-supplied arity.
 -}
 applyCheckpointParams ::
@@ -276,8 +278,9 @@ applyCheckpointParams ::
     Integer ->
     Integer ->
     Integer ->
+    Integer ->
     [Data]
-applyCheckpointParams migrationHash lifecycleHash advanceHash enforcementHash entitlementHash network registrationBond freezeBond =
+applyCheckpointParams migrationHash lifecycleHash advanceHash enforcementHash entitlementHash network registrationBond freezeBond premium =
     [ B migrationHash
     , B lifecycleHash
     , B advanceHash
@@ -286,6 +289,7 @@ applyCheckpointParams migrationHash lifecycleHash advanceHash enforcementHash en
     , I network
     , I registrationBond
     , I freezeBond
+    , I premium
     ]
 
 applyLifecycleParams :: Integer -> ByteString -> Integer -> [Data]
@@ -405,6 +409,10 @@ v1RegistrationBond = 1_000_000_000
 
 v1FreezeBond :: Integer
 v1FreezeBond = 5_000_000
+
+-- | The premium (Lean @P@) a landed rotation pays from the pool, in lovelace.
+v1Premium :: Integer
+v1Premium = 2_000_000
 
 {- | #254 S254-E: the release's explicit commitment lifetime, in slots.
 
@@ -566,6 +574,7 @@ deriveV1Scripts blueprint = do
                     v1NetworkDiscriminator
                     v1RegistrationBond
                     v1FreezeBond
+                    v1Premium
                 )
                 checkpointProgram
     checkpoint <- appliedCheckpoint

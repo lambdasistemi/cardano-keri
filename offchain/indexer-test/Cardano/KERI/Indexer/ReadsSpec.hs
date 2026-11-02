@@ -13,6 +13,7 @@ import Cardano.Crypto.Hash.Class (
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
     CheckpointDatumV1 (..),
+    liveOfKeyState,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
     deriveAidAssetName,
@@ -286,7 +287,7 @@ checkpointOutput aid datum =
             checkpointPolicy
             (Map.singleton (AssetName . SBS.toShort $ deriveAidAssetName aid) 1)
         )
-        (inlineDatum . plutusData $ V1 datum)
+        (inlineDatum . plutusData $ V2 (liveOfKeyState "" 0 datum))
 
 plainOutput :: Addr -> Integer -> Indexer.TxOut
 plainOutput address lovelace =

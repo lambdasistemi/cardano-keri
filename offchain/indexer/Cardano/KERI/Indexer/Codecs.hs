@@ -15,9 +15,9 @@ module Cardano.KERI.Indexer.Codecs (
 ) where
 
 import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatum (..),
     CheckpointDatumV1 (..),
     checkpointDatumFromData,
+    datumKeyState,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
     deriveAidAssetName,
@@ -111,8 +111,8 @@ decodeCheckpointOutput checkpointPolicy txIn address (Indexer.TxOut rawTxOut) = 
         case ledgerTxOut ^. datumTxOutL of
             Datum binaryDatum ->
                 let Data plutusDatum = binaryDataToData binaryDatum
-                 in case checkpointDatumFromData plutusDatum of
-                        Just (V1 checkpointDatum) -> Right checkpointDatum
+                 in case checkpointDatumFromData plutusDatum >>= datumKeyState of
+                        Just checkpointDatum -> Right checkpointDatum
                         Nothing -> Left DatumUndecodable
             NoDatum -> Left NoInlineDatum
             DatumHash _ -> Left NoInlineDatum

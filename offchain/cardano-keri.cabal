@@ -896,6 +896,7 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.AdvanceSpec
     Cardano.KERI.AID.Checkpoint.BountyCommitmentSpec
     Cardano.KERI.AID.Checkpoint.DatumSpec
+    Cardano.KERI.AID.Checkpoint.DatumV2Spec
     Cardano.KERI.AID.Checkpoint.EnforcementSpec
     Cardano.KERI.AID.Checkpoint.EntitlementSpec
     Cardano.KERI.AID.Checkpoint.FixtureLoader

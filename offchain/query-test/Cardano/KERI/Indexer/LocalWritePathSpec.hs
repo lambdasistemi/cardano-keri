@@ -44,7 +44,7 @@ module Cardano.KERI.Indexer.LocalWritePathSpec (spec) where
 import Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
 import Cardano.KERI.AID.Blake3.Checkpoint (blake3Hash)
 import Cardano.KERI.AID.CESR (qb64Verkey)
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V1), CheckpointDatumV1 (..))
+import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V2), CheckpointDatumV1 (..), liveOfKeyState)
 import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted, Weighted), Weight (Weight))
 import Cardano.KERI.ChainQuery.LedgerOutput (
@@ -1164,7 +1164,7 @@ entrypointCheckpointOutputFor datum =
     Indexer.TxOut $
         serialize'
             (eraProtVerLow @ConwayEra)
-            (baseTxOut & datumTxOutL .~ inlineDatumOf (plutusData (V1 datum)))
+            (baseTxOut & datumTxOutL .~ inlineDatumOf (plutusData (V2 (liveOfKeyState "" 0 datum))))
   where
     baseTxOut :: TxOut ConwayEra
     baseTxOut =
@@ -1211,6 +1211,7 @@ entrypointManifest =
                 , parameterNetworkDiscriminator = 0
                 , parameterRegistrationBond = 1_000_000_000
                 , parameterFreezeBond = 5_000_000
+                , parameterPremium = 2_000_000
                 }
         , manifestCheckpoint =
             CheckpointInfo
@@ -3436,7 +3437,7 @@ parityCheckpointOutput datum =
     Indexer.TxOut $
         serialize'
             (eraProtVerLow @ConwayEra)
-            (baseTxOut & datumTxOutL .~ inlineDatum (plutusData (V1 datum)))
+            (baseTxOut & datumTxOutL .~ inlineDatum (plutusData (V2 (liveOfKeyState "" 0 datum))))
   where
     Indexer.Address addrABytes = addrA
     keyHash = fromJust (hashFromBytes addrABytes)

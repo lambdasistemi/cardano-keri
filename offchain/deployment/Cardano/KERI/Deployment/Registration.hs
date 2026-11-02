@@ -18,6 +18,9 @@ unchanged as the former @awaitAsset@).
 -}
 module Cardano.KERI.Deployment.Registration (
     RegistrationPlan (..),
+    RegistrationBirth (..),
+    withBirth,
+    registrationBirth,
     RegisterConfig (..),
     RegistrationCheckError (..),
     RegistrationError (..),
@@ -32,6 +35,7 @@ import Cardano.Crypto.Hash (hashFromBytes)
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
     CheckpointDatumV1 (..),
+    liveOfKeyState,
  )
 import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
 import Cardano.KERI.AID.Checkpoint.Registration (
@@ -108,6 +112,7 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Node.Client.Ledger (ConwayTx)
+import Cardano.Node.Client.Provider (Provider, SlotNo (..), posixMsToSlot)
 import Cardano.Tx.Build (
     CertWitness (ScriptCert),
     Check (..),
@@ -120,6 +125,7 @@ import Cardano.Tx.Build (
     reference,
     spend,
     valid,
+    validTo,
     withdrawScript,
  )
 import Codec.Binary.Bech32 qualified as Bech32
@@ -163,8 +169,24 @@ data RegistrationPlan = RegistrationPlan
     , planObserverRedeemer :: !Value
     , planLifecycleCertificateRedeemer :: !Value
     , planCheckpointDatum :: !Value
+    , planKeyState :: !CheckpointDatumV1
+    -- ^ the inception key state the datum is written from
+    , planUpperSlot :: !Integer
+    -- ^ the slot the registration is valid until; its start is the datum's @born_at@
     }
     deriving stock (Show, Eq)
+
+{- | When and for whom a registration is made: the registration transaction is
+valid until `birthUpperSlot`, whose POSIX start in milliseconds is the
+checkpoint's @born_at@, and a conviction refunds `birthRefundTo`, the ledger
+bytes of the address that paid.
+-}
+data RegistrationBirth = RegistrationBirth
+    { birthRefundTo :: !ByteString
+    , birthBornAt :: !Integer
+    , birthUpperSlot :: !Integer
+    }
+    deriving stock (Eq, Show)
 
 {- | Caller-owned capabilities for one registration evolution (#257: no
 query callback or concrete provider — RQ-257-07). Reference and payer rows
@@ -277,8 +299,64 @@ mkRegistrationPlan manifest escrow inception = do
                         (decodeHexUnsafe checkpointPolicy)
                         evidence
             , planLifecycleCertificateRedeemer = plutusDataJson (I 0)
-            , planCheckpointDatum = plutusDataJson (asPlcData $ V1 datum)
+            , planCheckpointDatum = checkpointDatumJson noBirth datum
+            , planKeyState = datum
+            , planUpperSlot = birthUpperSlot noBirth
             }
+  where
+    noBirth = RegistrationBirth{birthRefundTo = "", birthBornAt = 0, birthUpperSlot = 0}
+
+{- | The birth of a registration made at `now` (POSIX milliseconds): valid for
+the next minute, the upper bound being the start of the slot that contains it,
+whose POSIX milliseconds the node's conversion gives by bisection.
+-}
+registrationBirth ::
+    Provider IO ->
+    -- | ledger bytes of the paying address
+    ByteString ->
+    -- | now, POSIX milliseconds
+    Integer ->
+    IO RegistrationBirth
+registrationBirth provider refund now = do
+    let target = now + 60_000
+        slotAt = posixMsToSlot provider
+    slot <- slotAt target
+    before <- slotAt (target - 5_000)
+    when (before >= slot) $
+        fail "registrationBirth: the node's slot is longer than five seconds"
+    start <- bisect slotAt slot (target - 5_000) target
+    pure
+        RegistrationBirth
+            { birthRefundTo = refund
+            , birthBornAt = start
+            , birthUpperSlot = fromIntegral (unSlotNo slot)
+            }
+  where
+    bisect slotAt slot lo hi
+        | lo + 1 >= hi = pure hi
+        | otherwise = do
+            let mid = (lo + hi) `div` 2
+            found <- slotAt mid
+            if found < slot then bisect slotAt slot mid hi else bisect slotAt slot lo mid
+
+-- | The inline datum a registration writes, as plan JSON.
+checkpointDatumJson :: RegistrationBirth -> CheckpointDatumV1 -> Value
+checkpointDatumJson birth datum =
+    plutusDataJson
+        ( asPlcData $
+            V2 (liveOfKeyState (birthRefundTo birth) (birthBornAt birth) datum)
+        )
+
+{- | Fix when and for whom the registration is made: the datum's @born_at@ and
+refund address, and the slot the transaction is valid until. A plan made
+without it cannot be registered (the upper slot is zero).
+-}
+withBirth :: RegistrationBirth -> RegistrationPlan -> RegistrationPlan
+withBirth birth plan =
+    plan
+        { planCheckpointDatum = checkpointDatumJson birth (planKeyState plan)
+        , planUpperSlot = birthUpperSlot birth
+        }
 
 {- | Build, sign, submit, and observe the hash-proof premint transaction.
 
@@ -350,6 +428,7 @@ registerOne config plan snapshot proofInput =
                         registerProofRedeemer
                         registerObserverRedeemer
                         registerDatum
+                        (planUpperSlot plan)
                 )
 
 data PremintInputs = PremintInputs
@@ -459,6 +538,8 @@ registerInputs config plan snapshot proofInput = do
         rawPlanData "proof burn redeemer" (planProofBurnRedeemer plan)
     observerRedeemer <-
         rawPlanData "observer redeemer" (planObserverRedeemer plan)
+    when (planUpperSlot plan <= 0) $
+        Left (RegistrationPlanRejected "registration birth is not set")
     datum <- rawPlanData "checkpoint datum" (planCheckpointDatum plan)
     fundingPair <-
         first RegistrationFundingSelectionFailed $
@@ -544,6 +625,7 @@ registerProgram ::
     RawData ->
     RawData ->
     RawData ->
+    Integer ->
     TxBuild RegisterCtx RegistrationCheckError ()
 registerProgram
     pparams
@@ -560,7 +642,8 @@ registerProgram
     checkpointRedeemer
     proofRedeemer
     observerRedeemer
-    checkpointDatum = do
+    checkpointDatum
+    upperSlot = do
         mapM_ (spend . fst) (fundingSpends funding)
         _ <- spend (fst proofInput)
         _ <-
@@ -583,6 +666,7 @@ registerProgram
             (registerLifecycleRewardAccount config)
             (Coin 0)
             observerRedeemer
+        validTo (SlotNo (fromIntegral upperSlot))
         valid (registrationCheck pparams)
 runRegistrationBuild ::
     RegisterConfig ->

@@ -372,6 +372,7 @@ sampleManifest =
                 0
                 1_000_000_000
                 5_000_000
+                2_000_000
         , manifestCheckpoint =
             CheckpointInfo
                 "addr_test1wqxpdsfvar9xppev4h25t5fg9uraeya46g4pxnjyy564wdqhr6822"
@@ -537,6 +538,22 @@ syntheticPlan =
         , planLifecycleCertificateRedeemer =
             plutusDataJson syntheticLifecycleRedeemer
         , planCheckpointDatum = plutusDataJson syntheticCheckpointDatum
+        , planKeyState = syntheticKeyState
+        , planUpperSlot = 123
+        }
+
+syntheticKeyState :: CheckpointDatumV1
+syntheticKeyState =
+    CheckpointDatumV1
+        { cdCesrAid = BS.replicate 32 0xaa
+        , cdCurKeys = [BS.replicate 32 0x01]
+        , cdCurThreshold = Unweighted 1
+        , cdNextKeys = [BS.replicate 32 0x02]
+        , cdNextThreshold = Unweighted 1
+        , cdWitnesses = []
+        , cdToad = 0
+        , cdSeq = 0
+        , cdNativeSn = 0
         }
 
 syntheticPremintRedeemer :: Data

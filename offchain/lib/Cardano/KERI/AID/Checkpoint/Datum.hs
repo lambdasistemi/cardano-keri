@@ -69,6 +69,8 @@ module Cardano.KERI.AID.Checkpoint.Datum (
 
     -- * The version 1 key-state view of a version 2 checkpoint
     keyStateView,
+    datumKeyState,
+    liveOfKeyState,
 ) where
 
 import Cardano.Crypto.Hash.Blake2b (
@@ -76,6 +78,10 @@ import Cardano.Crypto.Hash.Blake2b (
  )
 import Cardano.Crypto.Hash.Class (
     digest,
+ )
+import Cardano.KERI.AID.CESR (
+    aidDigest,
+    qb64Aid,
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold,
@@ -504,4 +510,47 @@ keyStateView rawAid sn epoch KeyMaterial{..} =
         , cdToad = kmToad
         , cdSeq = epoch
         , cdNativeSn = sn
+        }
+
+{- | The key state a checkpoint output declares, in the version 1 record the
+shared predicates and the readers use: a live or pending version 2 datum
+whose identifier is canonical. A version 1 datum is no longer a checkpoint.
+-}
+datumKeyState :: CheckpointDatum -> Maybe CheckpointDatumV1
+datumKeyState = \case
+    V2 Live{lvAid, lvSn, lvEpoch, lvKeys} ->
+        (\raw -> keyStateView raw lvSn lvEpoch lvKeys) <$> aidDigest lvAid
+    V2 TerminationPending{tpAid, tpSn, tpEpoch, tpKeys} ->
+        (\raw -> keyStateView raw tpSn tpEpoch tpKeys) <$> aidDigest tpAid
+    V1 _ -> Nothing
+
+{- | The live version 2 datum of a key state: the identifier text of its
+digest, the sequence number and epoch from the record, no poison, not frozen.
+The birth time and the refund address are the registration's.
+-}
+liveOfKeyState ::
+    -- | the ledger bytes of the refund address
+    ByteString ->
+    -- | the birth time, POSIX milliseconds
+    Integer ->
+    CheckpointDatumV1 ->
+    CheckpointDatumV2
+liveOfKeyState refund bornAt CheckpointDatumV1{..} =
+    Live
+        { lvAid = qb64Aid cdCesrAid
+        , lvSn = cdNativeSn
+        , lvEpoch = cdSeq
+        , lvPoisoned = False
+        , lvFrozen = False
+        , lvBornAt = bornAt
+        , lvRefundTo = refund
+        , lvKeys =
+            KeyMaterial
+                { kmCurKeys = cdCurKeys
+                , kmCurThreshold = cdCurThreshold
+                , kmNextKeys = cdNextKeys
+                , kmNextThreshold = cdNextThreshold
+                , kmWitnesses = cdWitnesses
+                , kmToad = cdToad
+                }
         }

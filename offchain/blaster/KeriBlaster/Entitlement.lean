@@ -47,7 +47,7 @@ its scope, its maturity window, and its refund. That is where all four named
 classes are decidable without crypto.
 
 The **checkpoint program** is identified and arity-asserted by the flake's
-extraction — its seventh applied `CommitmentFamily` argument is required there,
+extraction — its sixth applied `CommitmentFamily` argument is required there,
 from the live blueprint — but it is NOT executed here, and this module emits an
 explicit non-claim saying so rather than letting its identity row be read as a
 behavioural result. Two independent reasons, both recorded because either alone

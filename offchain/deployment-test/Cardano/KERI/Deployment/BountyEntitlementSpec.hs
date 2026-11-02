@@ -276,7 +276,7 @@ reachSpec = describe "family reaches the deployed register" $ do
                 `shouldNotBe` computeScriptHash program
             artifactScriptHash enforcement
                 `shouldNotBe` artifactScriptHash register
-    it "applies a seventh argument to the split checkpoint program" $
+    it "applies a sixth argument to the split checkpoint program" $
         withBlueprint $ \blueprint -> do
             family <- either fail pure (deriveCommitmentFamily blueprint)
             program <- requireProgram blueprint splitCheckpointTitle

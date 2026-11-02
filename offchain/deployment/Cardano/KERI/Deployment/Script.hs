@@ -157,7 +157,7 @@ extractCompiledCodeExact title blueprint =
 {- | How many arguments a named compiled validator still expects.
 
 #254 S254-E asserts these counts as deployment facts: the split checkpoint
-takes a seventh @CommitmentFamily@ argument and the enforcement observer takes
+takes a sixth @CommitmentFamily@ argument and the enforcement observer takes
 a second, so an implementation that quietly dropped either would change this
 number and be caught here rather than at settlement time.  The count is the
 length of the blueprint parameter list — the only source of declared arity.

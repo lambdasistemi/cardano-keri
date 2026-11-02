@@ -52,7 +52,6 @@ import Cardano.KERI.AID.Checkpoint.Entitlement (
     prepareEntitledEnforcement,
     validateConvictEntitlement,
     validateConvictPayouts,
-    validateEntitledEnforcement,
  )
 import Cardano.KERI.AID.Checkpoint.FreezeBond (
     Inclusivity (..),
@@ -145,24 +144,15 @@ evidenceMutants =
 matcherSpec :: Spec
 matcherSpec = describe "matching against actual evidence" $ do
     it "accepts the reservation opened over THIS evidence" $
-        entitlementMatches commitment checkpointRef ConvictEntitlement evidence nonce
+        entitlementMatches commitment checkpointRef evidence nonce
             `shouldBe` EntitlementValid
     it "refuses a reservation opened over a different payload" $
         entitlementMatches
             commitment
             checkpointRef
-            ConvictEntitlement
             perturbedEvidence
             nonce
             `shouldBe` EntitlementInvalid EntitlementHash
-    it "refuses a Convict reservation presented as another action" $
-        entitlementMatches
-            commitment
-            checkpointRef
-            FreezeEntitlement
-            evidence
-            nonce
-            `shouldBe` EntitlementInvalid EntitlementAction
 
 -- ---------------------------------------------------------
 -- The shared settlement rule
@@ -197,16 +187,6 @@ settlementSpec = describe "shared settlement rule" $ do
             family
             payee
             context{scCommitmentInputs = []}
-            `shouldBe` False
-    it "refuses a reservation opened for another action" $
-        validateEntitledEnforcement
-            family
-            FreezeEntitlement
-            evidence
-            payee
-            reveal
-            checkpointRef
-            context
             `shouldBe` False
     it "refuses a settlement against another checkpoint" $
         validateConvictEntitlement
@@ -359,13 +339,12 @@ builderSpec = describe "prepareEntitledEnforcement" $ do
         prepareEntitledEnforcement
             family
             resolved
-            FreezeEntitlement
-            evidence
+            perturbedEvidence
             checkpointRef
             nonce
             1
             settlementRange
-            `shouldBe` Left (EnforcementNotEntitled EntitlementAction)
+            `shouldBe` Left (EnforcementNotEntitled EntitlementHash)
   where
     built = buildWith family resolved settlementRange
 
@@ -378,7 +357,6 @@ buildWith fam candidate =
     prepareEntitledEnforcement
         fam
         candidate
-        ConvictEntitlement
         evidence
         checkpointRef
         nonce

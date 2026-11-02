@@ -23,10 +23,10 @@ use cardano/transaction.{
 use cardano_keri/bounty_commitment.{
   BountyAction, BountyCommitment, BountyCommitmentV1, BountyRevealV1,
   BountyScope, CommitmentFamily, CommitmentParameters, ConvictEntitlement,
-  EntitlementAction, EntitlementCheckpoint, EntitlementDigestWidth,
-  EntitlementHash, EntitlementInvalid, EntitlementMarker, EntitlementNonceWidth,
-  EntitlementValid, EntitlementVerdict, FreezeEntitlement, commitment_domain,
-  commitment_hash, commitment_preimage, commitment_schema, marker_name,
+  EntitlementCheckpoint, EntitlementDigestWidth, EntitlementHash,
+  EntitlementInvalid, EntitlementMarker, EntitlementNonceWidth, EntitlementValid,
+  EntitlementVerdict, commitment_domain, commitment_hash, commitment_preimage,
+  commitment_schema, marker_name,
 }
 use cardano_keri/checkpoint/enforcement.{EnforcementEvidence}
 use cardano_keri/checkpoint/enforcement_vectors as vec
@@ -224,24 +224,6 @@ fn convict_verdict(
   validate_convict_entitlement(f, e, payee, r, ref, tx)
 }
 
-/// A reservation opened for the other action: same checkpoint and evidence.
-fn other_action_commitment() -> BountyCommitment {
-  commitment_over(
-    scope_for(FreezeEntitlement, checkpoint_ref),
-    enforcement_evidence_digest(evidence),
-    hunter,
-    nonce,
-  )
-}
-
-fn other_action_tx() -> Transaction {
-  settlement_tx(commit_policy, other_action_commitment(), 1, applied_lifetime)
-}
-
-// ---------------------------------------------------------------------
-// The accepted honest baseline
-// ---------------------------------------------------------------------
-
 /// Every rejection below is measured against this. If this row ever stops
 /// passing, the negatives beside it stop meaning anything, because "rejected"
 /// would no longer distinguish the mutation from the fixture.
@@ -367,28 +349,6 @@ test entitlement_mutated_evidence_rejects() {
   )
 }
 
-/// A reservation opened for another action is not a Convict reservation.
-test entitlement_action_cross_use_rejects() {
-  and {
-    convict_verdict(
-      family,
-      evidence,
-      hunter,
-      reveal(),
-      checkpoint_ref,
-      honest_tx(),
-    ),
-    !convict_verdict(
-      family,
-      evidence,
-      hunter,
-      reveal(),
-      checkpoint_ref,
-      other_action_tx(),
-    ),
-  }
-}
-
 /// A reservation opened over a different checkpoint cannot settle this one.
 test entitlement_foreign_checkpoint_rejects() {
   !convict_verdict(
@@ -415,13 +375,7 @@ test entitlement_wrong_nonce_rejects() {
 /// The pure matcher agrees with the settlement rule about the honest case, so
 /// the rows above are not passing because the matcher is inert.
 test entitlement_matches_accepts_the_honest_preimage() {
-  entitlement_matches(
-    honest_commitment(),
-    checkpoint_ref,
-    ConvictEntitlement,
-    evidence,
-    nonce,
-  ) == EntitlementValid
+  entitlement_matches(honest_commitment(), checkpoint_ref, evidence, nonce) == EntitlementValid
 }
 
 // ---------------------------------------------------------------------
@@ -544,20 +498,6 @@ fn observed(envelope: ObserverEnvelope, tx: Transaction) -> Bool {
 /// reservation through the entitlement observer alone.
 test s254_e_entitlement_observer_accepts_honest_envelopes() {
   observed(honest_convict_envelope(), honest_tx())
-}
-
-/// The reservation is read by the claim's action: the honest envelope is
-/// accepted against a Convict reservation and refused against a reservation
-/// opened for another action, though checkpoint, evidence, payee and nonce are
-/// identical.
-///
-/// This is the row that makes the whole section non-vacuous: an inert dispatch
-/// cannot satisfy it, and neither can one that ignores the tag.
-test s254_e_entitlement_observer_routes_on_the_action_tag() {
-  and {
-    observed(honest_convict_envelope(), honest_tx()),
-    !observed(honest_convict_envelope(), other_action_tx()),
-  }
 }
 
 /// INV-271-ENTITLEMENT. An attacker naming itself in the payload cannot settle
@@ -964,19 +904,12 @@ test entitlement_vectors_verdicts_agree() {
   }
   and {
     verdict_tag(
-      entitlement_matches(
-        commitment,
-        checkpoint,
-        FreezeEntitlement,
-        evidence_payload,
-        ev.nonce,
-      ),
+      entitlement_matches(commitment, checkpoint, evidence_payload, ev.nonce),
     ) == ev.verdict_honest,
     verdict_tag(
       entitlement_matches(
         commitment,
         checkpoint,
-        FreezeEntitlement,
         evidence_payload,
         ev.short_nonce,
       ),
@@ -984,17 +917,7 @@ test entitlement_vectors_verdicts_agree() {
     verdict_tag(
       entitlement_matches(
         commitment,
-        checkpoint,
-        ConvictEntitlement,
-        evidence_payload,
-        ev.nonce,
-      ),
-    ) == ev.verdict_convict_action,
-    verdict_tag(
-      entitlement_matches(
-        commitment,
         other_checkpoint,
-        FreezeEntitlement,
         evidence_payload,
         ev.nonce,
       ),
@@ -1003,7 +926,6 @@ test entitlement_vectors_verdicts_agree() {
       entitlement_matches(
         BountyCommitmentV1 { ..commitment, marker: ev.other_marker },
         checkpoint,
-        FreezeEntitlement,
         evidence_payload,
         ev.nonce,
       ),
@@ -1012,7 +934,6 @@ test entitlement_vectors_verdicts_agree() {
       entitlement_matches(
         commitment,
         checkpoint,
-        FreezeEntitlement,
         EnforcementEvidence {
           ..evidence_payload,
           event_bytes: ev.event_bytes |> flip_last,
@@ -1024,7 +945,6 @@ test entitlement_vectors_verdicts_agree() {
       entitlement_matches(
         commitment,
         checkpoint,
-        FreezeEntitlement,
         evidence_payload,
         ev.nonce |> flip_last,
       ),
@@ -1033,7 +953,6 @@ test entitlement_vectors_verdicts_agree() {
       entitlement_matches(
         BountyCommitmentV1 { ..commitment, payee_pkh: substituted_payee },
         checkpoint,
-        FreezeEntitlement,
         evidence_payload,
         ev.nonce,
       ),
@@ -1047,8 +966,7 @@ test entitlement_vectors_verdict_set_is_not_constant() {
   and {
     ev.verdict_honest == 0,
     ev.verdict_short_nonce != ev.verdict_honest,
-    ev.verdict_convict_action != ev.verdict_short_nonce,
-    ev.verdict_other_checkpoint != ev.verdict_convict_action,
+    ev.verdict_other_checkpoint != ev.verdict_short_nonce,
     ev.verdict_marker_left_scope != ev.verdict_other_checkpoint,
     ev.verdict_substituted_evidence != ev.verdict_marker_left_scope,
   }
@@ -1106,7 +1024,7 @@ fn parity_scope() -> BountyScope {
     network: ev.network,
     checkpoint_policy: ev.checkpoint_policy,
     checkpoint_ref: parity_checkpoint_ref(),
-    action: FreezeEntitlement,
+    action: ConvictEntitlement,
     marker: ev.marker,
     commit_upper: ev.commit_upper,
     eligible_after: ev.eligible_after,
@@ -1163,7 +1081,6 @@ fn verdict_tag(verdict: EntitlementVerdict) -> Int {
     EntitlementValid -> 0
     EntitlementInvalid(EntitlementDigestWidth) -> 1
     EntitlementInvalid(EntitlementNonceWidth) -> 2
-    EntitlementInvalid(EntitlementAction) -> 3
     EntitlementInvalid(EntitlementCheckpoint) -> 4
     EntitlementInvalid(EntitlementMarker) -> 5
     EntitlementInvalid(EntitlementHash) -> 6

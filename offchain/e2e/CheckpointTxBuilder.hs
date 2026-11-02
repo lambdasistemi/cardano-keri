@@ -48,7 +48,6 @@ import Cardano.KERI.AID.Checkpoint.Advance (
     advancePredicate,
  )
 import Cardano.KERI.AID.Checkpoint.BountyCommitment (
-    BountyAction (..),
     BountyCommitment (..),
     BountyCommitmentPlan (..),
     BountyMint (..),
@@ -1032,7 +1031,6 @@ productionRegisterConvictScenario env = do
                 prepareLiveEntitlement
                     env
                     (checkpointUtxo active)
-                    ConvictEntitlement
                     payload
                     convictor
                     (commitmentNonce nonceLabel)
@@ -1056,7 +1054,6 @@ productionRegisterConvictScenario env = do
         prepareLiveEntitlement
             env
             (checkpointUtxo active)
-            ConvictEntitlement
             conflict
             convictor
             (commitmentNonce "151-active-conflict")
@@ -3698,12 +3695,11 @@ openLiveReservation ::
     CheckpointEnv ->
     String ->
     (TxIn, TxOut ConwayEra) ->
-    BountyAction ->
     EnforcementEvidence ->
     ByteString ->
     ByteString ->
     IO ResolvedCommitment
-openLiveReservation env label checkpointInput action evidence payee nonce = do
+openLiveReservation env label checkpointInput evidence payee nonce = do
     commitmentRef <-
         requireJust
             "bounty_commitment reference was not deployed during setup"
@@ -3730,7 +3726,6 @@ openLiveReservation env label checkpointInput action evidence payee nonce = do
                 (declaredSlotRange opening)
                 (policyBytes (envCheckpointPolicy env))
                 (outputRefOf (fst checkpointInput))
-                action
                 (enforcementEvidenceDigest evidence)
                 payee
                 nonce
@@ -3812,14 +3807,13 @@ and no negative row fails on an entitlement mismatch it never meant to test.
 prepareLiveEntitlement ::
     CheckpointEnv ->
     (TxIn, TxOut ConwayEra) ->
-    BountyAction ->
     EnforcementEvidence ->
     ByteString ->
     ByteString ->
     IO EntitledEnforcementPlan
-prepareLiveEntitlement env checkpointInput action evidence payee nonce = do
+prepareLiveEntitlement env checkpointInput evidence payee nonce = do
     resolved <-
-        openLiveReservation env label checkpointInput action evidence payee nonce
+        openLiveReservation env label checkpointInput evidence payee nonce
     validity <- entitledSettlementValidity env label resolved
     plan <-
         either
@@ -3828,7 +3822,6 @@ prepareLiveEntitlement env checkpointInput action evidence payee nonce = do
             ( prepareEntitledEnforcement
                 (envCommitmentFamily env)
                 resolved
-                action
                 evidence
                 (outputRefOf (fst checkpointInput))
                 nonce
@@ -3846,4 +3839,4 @@ prepareLiveEntitlement env checkpointInput action evidence payee nonce = do
         )
     pure plan
   where
-    label = "live " <> show action
+    label = "live conviction"

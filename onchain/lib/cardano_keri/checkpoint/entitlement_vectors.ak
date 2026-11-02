@@ -160,8 +160,6 @@ pub const verdict_honest: Int = 0
 
 pub const verdict_short_nonce: Int = 2
 
-pub const verdict_convict_action: Int = 3
-
 pub const verdict_other_checkpoint: Int = 4
 
 pub const verdict_marker_left_scope: Int = 5

@@ -70,11 +70,8 @@ pub const nonce_min_width: Int = 32
 // ---------------------------------------------------------------------
 
 /// Closed versioned entitlement action. The checkpoint settles only a
-/// conviction, so `ConvictEntitlement` is the one action it honours;
-/// `FreezeEntitlement` keeps its constructor index so the commitment
-/// program's wire is unchanged.
+/// conviction, so the one action is `ConvictEntitlement`.
 pub type BountyAction {
-  FreezeEntitlement
   ConvictEntitlement
 }
 
@@ -203,7 +200,6 @@ pub type CommitmentVerdict {
 pub type EntitlementError {
   EntitlementDigestWidth
   EntitlementNonceWidth
-  EntitlementAction
   EntitlementCheckpoint
   EntitlementMarker
   EntitlementHash
@@ -330,7 +326,6 @@ pub fn commitment_well_formed(
 pub fn entitlement_matches(
   commitment: BountyCommitment,
   checkpoint_ref: OutputReference,
-  action: BountyAction,
   evidence_digest: ByteArray,
   nonce: ByteArray,
 ) -> EntitlementVerdict {
@@ -339,8 +334,6 @@ pub fn entitlement_matches(
     EntitlementInvalid(EntitlementDigestWidth)
   } else if bytearray.length(nonce) < nonce_min_width {
     EntitlementInvalid(EntitlementNonceWidth)
-  } else if scope.action != action {
-    EntitlementInvalid(EntitlementAction)
   } else if scope.checkpoint_ref != checkpoint_ref {
     EntitlementInvalid(EntitlementCheckpoint)
   } else if marker != scope.marker {

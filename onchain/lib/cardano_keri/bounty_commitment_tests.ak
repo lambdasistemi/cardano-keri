@@ -18,17 +18,17 @@ use cardano_keri/bounty_commitment.{
   BountyCommitment, BountyCommitmentPreimage, BountyCommitmentV1, BountyRevealV1,
   BountyScope, CommitmentHashWidth, CommitmentInvalid, CommitmentMarkerBinding,
   CommitmentParameters, CommitmentPayeeWidth, CommitmentValid,
-  ConvictEntitlement, EntitlementAction, EntitlementCheckpoint,
-  EntitlementDigestWidth, EntitlementHash, EntitlementInvalid, EntitlementMarker,
-  EntitlementNonceWidth, EntitlementValid, ExpiredCommitmentSweepV1,
-  FreezeEntitlement, Open, ParametersAge, ParametersDeposit, ParametersInvalid,
-  ParametersLifetime, ParametersValid, Retire, Reveal, ScopeAge,
-  ScopeCheckpointPolicyWidth, ScopeCheckpointRefWidth, ScopeDomain, ScopeInvalid,
-  ScopeLifetime, ScopeMarkerWidth, ScopeNetwork, ScopeSchema, ScopeValid, Sweep,
-  at_or_after, at_or_before, commit_deposit_floor, commit_min_age,
-  commitment_domain, commitment_hash, commitment_preimage, commitment_schema,
-  commitment_well_formed, entitlement_matches, marker_name, non_empty,
-  parameters_well_formed, raw_upper, scope_well_formed, strictly_after,
+  ConvictEntitlement, EntitlementCheckpoint, EntitlementDigestWidth,
+  EntitlementHash, EntitlementInvalid, EntitlementMarker, EntitlementNonceWidth,
+  EntitlementValid, ExpiredCommitmentSweepV1, Open, ParametersAge,
+  ParametersDeposit, ParametersInvalid, ParametersLifetime, ParametersValid,
+  Retire, Reveal, ScopeAge, ScopeCheckpointPolicyWidth, ScopeCheckpointRefWidth,
+  ScopeDomain, ScopeInvalid, ScopeLifetime, ScopeMarkerWidth, ScopeNetwork,
+  ScopeSchema, ScopeValid, Sweep, at_or_after, at_or_before,
+  commit_deposit_floor, commit_min_age, commitment_domain, commitment_hash,
+  commitment_preimage, commitment_schema, commitment_well_formed,
+  entitlement_matches, marker_name, non_empty, parameters_well_formed, raw_upper,
+  scope_well_formed, strictly_after,
 }
 use cardano_keri/bounty_commitment_vectors as vec
 
@@ -105,7 +105,7 @@ pub fn scope() -> BountyScope {
     network: vec.network,
     checkpoint_policy: vec.checkpoint_policy,
     checkpoint_ref: checkpoint_ref(),
-    action: FreezeEntitlement,
+    action: ConvictEntitlement,
     marker: vec.marker,
     commit_upper: vec.commit_upper,
     eligible_after: vec.eligible_after,
@@ -203,11 +203,7 @@ test bounty_commitment_reference_cbor_matches_haskell() {
 }
 
 test bounty_commitment_action_cbor_matches_haskell() {
-  and {
-    cbor.serialise(FreezeEntitlement) == vec.golden_action_freeze,
-    cbor.serialise(ConvictEntitlement) == vec.golden_action_convict,
-    vec.golden_action_freeze != vec.golden_action_convict,
-  }
+  cbor.serialise(ConvictEntitlement) == vec.golden_action_convict
 }
 
 test bounty_commitment_scope_cbor_matches_haskell() {
@@ -318,13 +314,6 @@ test bounty_commitment_scope_checkpoint_binds() {
       vec.mut_checkpoint_index,
     ),
   }
-}
-
-test bounty_commitment_scope_action_binds() {
-  moved(
-    with_scope(BountyScope { ..scope(), action: ConvictEntitlement }),
-    vec.mut_action,
-  )
 }
 
 test bounty_commitment_scope_marker_binds() {
@@ -802,7 +791,6 @@ test bounty_commitment_entitlement_matches_the_honest_opening() {
   entitlement_matches(
     commitment(),
     checkpoint_ref(),
-    FreezeEntitlement,
     vec.evidence_digest,
     vec.nonce,
   ) == EntitlementValid
@@ -812,22 +800,13 @@ test bounty_commitment_entitlement_rejects_substituted_context() {
   and {
     entitlement_matches(
       commitment(),
-      checkpoint_ref(),
-      ConvictEntitlement,
-      vec.evidence_digest,
-      vec.nonce,
-    ) == EntitlementInvalid(EntitlementAction),
-    entitlement_matches(
-      commitment(),
       other_seed_ref(),
-      FreezeEntitlement,
       vec.evidence_digest,
       vec.nonce,
     ) == EntitlementInvalid(EntitlementCheckpoint),
     entitlement_matches(
       BountyCommitmentV1 { ..commitment(), marker: vec.other_marker },
       checkpoint_ref(),
-      FreezeEntitlement,
       vec.evidence_digest,
       vec.nonce,
     ) == EntitlementInvalid(EntitlementMarker),
@@ -839,28 +818,21 @@ test bounty_commitment_entitlement_rejects_substituted_secrets() {
     entitlement_matches(
       commitment(),
       checkpoint_ref(),
-      FreezeEntitlement,
       flip_last(vec.evidence_digest),
       vec.nonce,
     ) == EntitlementInvalid(EntitlementHash),
     entitlement_matches(
       commitment(),
       checkpoint_ref(),
-      FreezeEntitlement,
       vec.evidence_digest,
       flip_last(vec.nonce),
     ) == EntitlementInvalid(EntitlementHash),
+    entitlement_matches(commitment(), checkpoint_ref(), #"eded", vec.nonce) == EntitlementInvalid(
+      EntitlementDigestWidth,
+    ),
     entitlement_matches(
       commitment(),
       checkpoint_ref(),
-      FreezeEntitlement,
-      #"eded",
-      vec.nonce,
-    ) == EntitlementInvalid(EntitlementDigestWidth),
-    entitlement_matches(
-      commitment(),
-      checkpoint_ref(),
-      FreezeEntitlement,
       vec.evidence_digest,
       #"1111",
     ) == EntitlementInvalid(EntitlementNonceWidth),
@@ -874,7 +846,6 @@ test bounty_commitment_entitlement_cannot_be_satisfied_by_the_payee_alone() {
   entitlement_matches(
     BountyCommitmentV1 { ..commitment(), payee_pkh: flip_last(vec.payee) },
     checkpoint_ref(),
-    FreezeEntitlement,
     vec.evidence_digest,
     vec.nonce,
   ) == EntitlementInvalid(EntitlementHash)

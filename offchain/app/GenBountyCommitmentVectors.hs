@@ -89,12 +89,9 @@ commitDepositFloor = 5000000
 outRef :: ByteString -> Integer -> Data
 outRef txId index = Constr 0 [B txId, I index]
 
--- | @FreezeEntitlement@ is constructor 0, @ConvictEntitlement@ is 1.
-freezeAction :: Data
-freezeAction = Constr 0 []
-
+-- | @ConvictEntitlement@ is constructor 0, the only action.
 convictAction :: Data
-convictAction = Constr 1 []
+convictAction = Constr 0 []
 
 -- | The @BountyScope@ mirror.
 data Scope = Scope
@@ -259,7 +256,7 @@ scope =
         , scNetwork = 42
         , scCheckpointPolicy = checkpointPolicy
         , scCheckpointRef = checkpointRef
-        , scAction = freezeAction
+        , scAction = convictAction
         , scMarker = marker
         , scCommitUpper = commitUpper
         , scEligibleAfter = eligibleAfter
@@ -311,7 +308,6 @@ mutants =
         , withScope
             (\s -> s{scCheckpointRef = outRef checkpointTxId (checkpointIndex + 1)})
         )
-    , ("mut_action", withScope (\s -> s{scAction = convictAction}))
     , ("mut_marker", withScope (\s -> s{scMarker = otherMarker}))
     ,
         ( "mut_window"
@@ -369,7 +365,6 @@ output =
           , byteConst "commitment_hash" canonicalHash
           , byteConst "golden_seed_ref" (canonical seedRef)
           , byteConst "golden_checkpoint_ref" (canonical checkpointRef)
-          , byteConst "golden_action_freeze" (canonical freezeAction)
           , byteConst "golden_action_convict" (canonical convictAction)
           , byteConst "golden_scope" (canonical (scopeData scope))
           , byteConst "golden_preimage" (canonical (preimageData preimage))

@@ -157,7 +157,7 @@ scope =
         , bsNetwork = cpNetwork parameters
         , bsCheckpointPolicy = checkpointPolicy
         , bsCheckpointRef = checkpointRef
-        , bsAction = FreezeEntitlement
+        , bsAction = ConvictEntitlement
         , bsMarker = marker
         , bsCommitUpper = commitUpper
         , bsEligibleAfter = commitUpper + cpCommitMinAge parameters
@@ -294,7 +294,6 @@ verdictTag = \case
     EntitlementValid -> 0
     EntitlementInvalid EntitlementDigestWidth -> 1
     EntitlementInvalid EntitlementNonceWidth -> 2
-    EntitlementInvalid EntitlementAction -> 3
     EntitlementInvalid EntitlementCheckpoint -> 4
     EntitlementInvalid EntitlementMarker -> 5
     EntitlementInvalid EntitlementHash -> 6
@@ -309,25 +308,20 @@ vectors rather than to a row that could never fire.
 -}
 verdictRows :: [(String, EntitlementVerdict)]
 verdictRows =
-    [ ("honest", matches commitment checkpointRef FreezeEntitlement evidence nonce)
+    [ ("honest", matches commitment checkpointRef evidence nonce)
     ,
         ( "short_nonce"
-        , matches commitment checkpointRef FreezeEntitlement evidence shortNonce
-        )
-    ,
-        ( "convict_action"
-        , matches commitment checkpointRef ConvictEntitlement evidence nonce
+        , matches commitment checkpointRef evidence shortNonce
         )
     ,
         ( "other_checkpoint"
-        , matches commitment otherCheckpointRef FreezeEntitlement evidence nonce
+        , matches commitment otherCheckpointRef evidence nonce
         )
     ,
         ( "marker_left_scope"
         , matches
             commitment{bcMarker = markerName otherSeedRef}
             checkpointRef
-            FreezeEntitlement
             evidence
             nonce
         )
@@ -336,7 +330,6 @@ verdictRows =
         , matches
             commitment
             checkpointRef
-            FreezeEntitlement
             evidence{eneEventBytes = flipLast eventBytes}
             nonce
         )
@@ -345,7 +338,6 @@ verdictRows =
         , matches
             commitment
             checkpointRef
-            FreezeEntitlement
             evidence
             (flipLast nonce)
         )
@@ -354,7 +346,6 @@ verdictRows =
         , matches
             commitment{bcPayeePkh = BS.replicate 28 0xaa}
             checkpointRef
-            FreezeEntitlement
             evidence
             nonce
         )

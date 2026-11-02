@@ -2769,7 +2769,6 @@ const s254e_foreign_commit_policy: PolicyId =
 
 /// Test-side mirror of the frozen `BountyAction`.
 type S254EAction {
-  S254EFreezeEntitlement
   S254EConvictEntitlement
 }
 
@@ -3418,12 +3417,6 @@ test s254_e_scope_cross_product_honest_neighbour_accepts() {
 test s254_e_scope_checkpoint_outref_mutant_rejects() fail {
   s254e_scope_mutant(
     fn(scope) { S254EScope { ..scope, checkpoint_ref: crossed_own_ref } },
-  )
-}
-
-test s254_e_scope_action_mutant_rejects() fail {
-  s254e_scope_mutant(
-    fn(scope) { S254EScope { ..scope, action: S254EFreezeEntitlement } },
   )
 }
 

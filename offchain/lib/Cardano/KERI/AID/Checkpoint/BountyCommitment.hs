@@ -173,13 +173,10 @@ nonceMinWidth = 32
 -- ---------------------------------------------------------
 
 {- | Closed versioned entitlement action.  The checkpoint settles only a
-conviction, so 'ConvictEntitlement' is the one action it honours;
-'FreezeEntitlement' keeps its constructor index so the commitment program's
-wire is unchanged.
+conviction, so the one action is 'ConvictEntitlement'.
 -}
 data BountyAction
-    = FreezeEntitlement
-    | ConvictEntitlement
+    = ConvictEntitlement
     deriving stock (Show, Eq)
 
 {- | @DAT-271-SCOPE@.  Everything a commitment is scoped to, all of it inside
@@ -285,13 +282,11 @@ fromData = fromBuiltinData . BuiltinData
 
 instance ToData BountyAction where
     toBuiltinData = \case
-        FreezeEntitlement -> BuiltinData (Constr 0 [])
-        ConvictEntitlement -> BuiltinData (Constr 1 [])
+        ConvictEntitlement -> BuiltinData (Constr 0 [])
 
 instance FromData BountyAction where
     fromBuiltinData (BuiltinData d) = case d of
-        Constr 0 [] -> Just FreezeEntitlement
-        Constr 1 [] -> Just ConvictEntitlement
+        Constr 0 [] -> Just ConvictEntitlement
         _ -> Nothing
 
 instance ToData BountyScope where
@@ -497,7 +492,6 @@ data CommitmentVerdict
 data EntitlementError
     = EntitlementDigestWidth
     | EntitlementNonceWidth
-    | EntitlementAction
     | EntitlementCheckpoint
     | EntitlementMarker
     | EntitlementHash
@@ -610,16 +604,14 @@ observer's obligation (@DATA-INV-271-02@, S254-E).
 entitlementMatches ::
     BountyCommitment ->
     OutputRef ->
-    BountyAction ->
     ByteString ->
     ByteString ->
     EntitlementVerdict
-entitlementMatches commitment checkpointRef action evidenceDigest nonce
+entitlementMatches commitment checkpointRef evidenceDigest nonce
     | BS.length evidenceDigest /= digestWidth =
         EntitlementInvalid EntitlementDigestWidth
     | BS.length nonce < nonceMinWidth =
         EntitlementInvalid EntitlementNonceWidth
-    | bsAction scope /= action = EntitlementInvalid EntitlementAction
     | bsCheckpointRef scope /= checkpointRef =
         EntitlementInvalid EntitlementCheckpoint
     | bcMarker commitment /= bsMarker scope =
@@ -818,8 +810,6 @@ prepareBountyCommitment ::
     ByteString ->
     -- | the exact checkpoint output being reserved against
     OutputRef ->
-    -- | which enforcement action is reserved
-    BountyAction ->
     -- | the opaque enforcement evidence digest
     ByteString ->
     -- | the fixed future beneficiary
@@ -834,7 +824,6 @@ prepareBountyCommitment
     range
     checkpointPolicy
     checkpointRef
-    action
     evidenceDigest
     payeePkh
     nonce = do
@@ -853,7 +842,7 @@ prepareBountyCommitment
                     , bsNetwork = cpNetwork parameters
                     , bsCheckpointPolicy = checkpointPolicy
                     , bsCheckpointRef = checkpointRef
-                    , bsAction = action
+                    , bsAction = ConvictEntitlement
                     , bsMarker = marker
                     , bsCommitUpper = commitUpper
                     , bsEligibleAfter =

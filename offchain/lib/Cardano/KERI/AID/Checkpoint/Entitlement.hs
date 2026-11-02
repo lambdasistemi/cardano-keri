@@ -16,7 +16,7 @@ with the named mature commitment is this module's row.
 Consent is not entitlement.  A signature proves a party agrees to be paid; it
 never proves that party earned the payment, because an attacker signs as
 itself and names itself.  Only a prior, matured, hash-committed reservation
-over (checkpoint, action, actual evidence, payee, nonce) distinguishes the two.
+over (checkpoint, actual evidence, payee, nonce) distinguishes the two.
 
 The rule is modelled over an explicit 'SettlementContext' rather than a ledger
 transaction: it names exactly the facts the on-chain rule reads, so a parity
@@ -35,7 +35,6 @@ module Cardano.KERI.AID.Checkpoint.Entitlement (
     SettlementContext (..),
 
     -- * The shared settlement rule
-    validateEntitledEnforcement,
     validateConvictEntitlement,
 
     -- * Payout admissibility
@@ -54,7 +53,6 @@ import Cardano.Crypto.Hash.Class (
     digest,
  )
 import Cardano.KERI.AID.Checkpoint.BountyCommitment (
-    BountyAction (..),
     BountyCommitment (..),
     BountyRevealV1 (..),
     BountyScope (..),
@@ -139,15 +137,13 @@ scope field, the payee, the evidence, or the nonce breaks the match.
 entitlementMatches ::
     BountyCommitment ->
     OutputRef ->
-    BountyAction ->
     EnforcementEvidence ->
     ByteString ->
     EntitlementVerdict
-entitlementMatches commitment checkpointRef action evidence =
+entitlementMatches commitment checkpointRef evidence =
     Component.entitlementMatches
         commitment
         checkpointRef
-        action
         (enforcementEvidenceDigest evidence)
 
 -- ---------------------------------------------------------
@@ -176,7 +172,7 @@ data SettlementContext = SettlementContext
 -- The shared settlement rule
 -- ---------------------------------------------------------
 
-{- | The shared settlement rule behind both enforcement actions.
+{- | The settlement rule behind the conviction action.
 
 Every leg is load-bearing:
 
@@ -207,9 +203,8 @@ of the policy pin.  Scope well-formedness is established once, at open time,
 by the genuine commitment program running over @cfParameters@.  That
 inheritance is exactly what the pin buys.
 -}
-validateEntitledEnforcement ::
+validateConvictEntitlement ::
     CommitmentFamily ->
-    BountyAction ->
     EnforcementEvidence ->
     -- | the payee this settlement is about to pay
     ByteString ->
@@ -218,9 +213,8 @@ validateEntitledEnforcement ::
     OutputRef ->
     SettlementContext ->
     Bool
-validateEntitledEnforcement
+validateConvictEntitlement
     family
-    action
     evidence
     payee
     reveal
@@ -236,7 +230,6 @@ validateEntitledEnforcement
                     && entitlementMatches
                         commitment
                         checkpointRef
-                        action
                         evidence
                         (brNonce reveal)
                         == EntitlementValid
@@ -271,20 +264,6 @@ one entry burning exactly one marker.
 burnsExactlyOne :: SettlementContext -> ByteString -> Bool
 burnsExactlyOne context marker = scPolicyMint context == [(marker, -1)]
 
-{- | Convict entitlement.  The action is a distinct scope value, so a
-reservation opened for another action can never be spent as a Convict one.
--}
-validateConvictEntitlement ::
-    CommitmentFamily ->
-    EnforcementEvidence ->
-    ByteString ->
-    BountyRevealV1 ->
-    OutputRef ->
-    SettlementContext ->
-    Bool
-validateConvictEntitlement family =
-    validateEntitledEnforcement family ConvictEntitlement
-
 -- ---------------------------------------------------------
 -- Payout admissibility
 -- ---------------------------------------------------------
@@ -312,8 +291,7 @@ chain state, the digest is derived from the evidence the observer will itself
 validate, and the payee is the one the reservation already named.
 -}
 data EntitledEnforcementPlan = EntitledEnforcementPlan
-    { eepAction :: !BountyAction
-    , eepCheckpointRef :: !OutputRef
+    { eepCheckpointRef :: !OutputRef
     -- ^ the checkpoint output being settled
     , eepCommitmentRef :: !OutputRef
     -- ^ the reservation input being revealed and retired
@@ -369,8 +347,6 @@ prepareEntitledEnforcement ::
     CommitmentFamily ->
     -- | the reservation resolved from chain state
     ResolvedCommitment ->
-    -- | which enforcement action is being settled
-    BountyAction ->
     -- | the COMPLETE actual enforcement evidence
     EnforcementEvidence ->
     -- | the checkpoint output being settled
@@ -385,7 +361,6 @@ prepareEntitledEnforcement ::
 prepareEntitledEnforcement
     family
     resolved
-    action
     evidence
     checkpointRef
     nonce
@@ -402,7 +377,6 @@ prepareEntitledEnforcement
         case entitlementMatches
             commitment
             checkpointRef
-            action
             evidence
             nonce of
             EntitlementInvalid reason ->
@@ -424,8 +398,7 @@ prepareEntitledEnforcement
                     }
         pure
             EntitledEnforcementPlan
-                { eepAction = action
-                , eepCheckpointRef = checkpointRef
+                { eepCheckpointRef = checkpointRef
                 , eepCommitmentRef = rcRef resolved
                 , eepPolicy = policy
                 , eepReveal = reveal

@@ -80,14 +80,12 @@ pub fn enforcement_evidence_digest(evidence: EnforcementEvidence) -> ByteArray {
 pub fn entitlement_matches(
   commitment: BountyCommitment,
   checkpoint_ref: OutputReference,
-  action: BountyAction,
   evidence: EnforcementEvidence,
   nonce: ByteArray,
 ) -> EntitlementVerdict {
   commitment_entitlement_matches(
     commitment,
     checkpoint_ref,
-    action,
     enforcement_evidence_digest(evidence),
     nonce,
   )
@@ -149,13 +147,7 @@ fn validate_entitled_enforcement(
         // The pin comes FIRST: nothing below can authorize a settlement out of
         // a reservation that never belonged to this release's family.
         policy == family.policy,
-        entitlement_matches(
-          commitment,
-          checkpoint_ref,
-          ConvictEntitlement,
-          evidence,
-          reveal.nonce,
-        ) == EntitlementValid,
+        entitlement_matches(commitment, checkpoint_ref, evidence, reveal.nonce) == EntitlementValid,
         payee_pkh == payee,
         at_or_after(tx.validity_range, scope.eligible_after),
         at_or_before(tx.validity_range, scope.expires_at),

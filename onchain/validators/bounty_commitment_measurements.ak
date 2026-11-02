@@ -26,7 +26,7 @@ use cardano/transaction.{
 }
 use cardano_keri/bounty_commitment.{
   BountyCommitment, BountyCommitmentV1, BountyRevealV1, BountyScope,
-  CommitmentParameters, ExpiredCommitmentSweepV1, FreezeEntitlement, Open,
+  CommitmentParameters, ConvictEntitlement, ExpiredCommitmentSweepV1, Open,
   Retire, Reveal, Sweep, commitment_domain, commitment_hash, commitment_preimage,
   commitment_schema, marker_name,
 }
@@ -107,7 +107,7 @@ fn scope() -> BountyScope {
     network: network_id,
     checkpoint_policy,
     checkpoint_ref: out_ref(checkpoint_txid, 3),
-    action: FreezeEntitlement,
+    action: ConvictEntitlement,
     marker: marker(),
     commit_upper,
     eligible_after: commit_upper + 1,

@@ -18,7 +18,7 @@ use cardano/transaction.{
   Transaction, Withdraw, find_input,
 }
 use cardano_keri/checkpoint/datum.{
-  CheckpointDatum, CheckpointDatumV1, Live, V1, V2,
+  CheckpointDatum, Live, TerminationPending, V2,
 }
 use cardano_keri/checkpoint/enforcement_observer.{authorized_payee}
 use cardano_keri/checkpoint/freeze_bond.{freeze_bond_valid}
@@ -39,7 +39,6 @@ use cardano_keri/checkpoint/value.{held_value, with_value}
 /// deployment may drop arms, which moves the later ones up.
 pub type MintRedeemer {
   Register
-  ConvictBurn { checkpoint_ref: OutputReference }
 }
 
 pub type SpendRedeemer {
@@ -79,8 +78,6 @@ validator checkpoint_register(
         expect ran_register_check(lifecycle_hash, policy_id, tx)
         validate_register(network_id, d_reg, freeze_bond, policy_id, tx)
       }
-      ConvictBurn { checkpoint_ref } ->
-        validate_convict_burn(d_reg, freeze_bond, checkpoint_ref, policy_id, tx)
     }
   }
 
@@ -118,6 +115,7 @@ validator checkpoint_register(
             tx,
           )
         validate_convict(
+          network_id,
           d_reg,
           freeze_bond,
           convictor_pkh,
@@ -394,44 +392,6 @@ fn validate_register(
   True
 }
 
-fn validate_convict_burn(
-  d_reg: Int,
-  freeze_bond: Int,
-  checkpoint_ref: OutputReference,
-  policy_id: PolicyId,
-  tx: Transaction,
-) -> Bool {
-  let Transaction { inputs, outputs, mint, .. } = tx
-  expect Some(checkpoint_input) = find_input(inputs, checkpoint_ref)
-  let (tip, protected_lovelace) = convict_source(
-    d_reg,
-    freeze_bond,
-    policy_id,
-    checkpoint_input,
-  )
-  let aid_name = deriveAidAssetName(tip.cesr_aid)
-  expect
-    checkpoint_input.output.value == (
-      from_lovelace(lovelace_of(checkpoint_input.output.value))
-        |> merge(from_asset(policy_id, aid_name, 1))
-    )
-  expect lovelace_of(checkpoint_input.output.value) >= protected_lovelace
-  expect dict.to_pairs(tokens(mint, policy_id)) == [Pair(aid_name, -1)]
-  expect
-    list.length(
-      list.filter(
-        inputs,
-        fn(input) { quantity_of(input.output.value, policy_id, aid_name) == 1 },
-      ),
-    ) == 1
-  expect
-    list.all(
-      outputs,
-      fn(output) { quantity_of(output.value, policy_id, aid_name) == 0 },
-    )
-  True
-}
-
 fn expect_exact_payout(
   outputs: List<Output>,
   output_index: Int,
@@ -444,21 +404,6 @@ fn expect_exact_payout(
   expect output.value == from_lovelace(lovelace)
   expect output.datum == NoDatum
   True
-}
-
-/// The protected lovelace of a checkpoint a conviction may burn, and its tip.
-/// Only an ACTIVE checkpoint is a source: any other role address, or a
-/// datum of another family, fails.
-fn convict_source(
-  d_reg: Int,
-  freeze_bond: Int,
-  policy_id: PolicyId,
-  input: Input,
-) -> (CheckpointDatumV1, Int) {
-  expect InlineDatum(source_data) = input.output.datum
-  expect input.output.address == role.address(policy_id, Active)
-  expect V1(tip): CheckpointDatum = source_data
-  (tip, checkpoint_min_ada + d_reg + freeze_bond)
 }
 
 fn validate_advance(
@@ -534,7 +479,12 @@ fn validate_advance(
   }
 }
 
+/// Convict a live checkpoint: the token stays at the checkpoint address in a
+/// pending termination that holds the minimum ADA, the convictor receives the
+/// registration deposit, and the refund address receives the bond (unless
+/// frozen) and the pool.
 fn validate_convict(
+  network_id: Int,
   d_reg: Int,
   freeze_bond: Int,
   convictor_pkh: ByteArray,
@@ -545,29 +495,69 @@ fn validate_convict(
   let Transaction { inputs, outputs, mint, .. } = tx
   expect Some(own_input) = find_input(inputs, own_ref)
   expect Script(own_hash) = own_input.output.address.payment_credential
-  let (tip, protected_lovelace) = convict_source(
+  expect own_input.output.address == role.address(own_hash, Active)
+  expect InlineDatum(source_data) = own_input.output.datum
+  expect V2(live): CheckpointDatum = source_data
+  expect Live { aid, sn, epoch, frozen, refund_to, keys, .. } = live
+  expect [Pair(aid_name, 1)] = dict.to_pairs(
+    tokens(own_input.output.value, own_hash),
+  )
+  expect Some(pool) = with_value(
+    checkpoint_min_ada,
     d_reg,
     freeze_bond,
-    own_hash,
-    own_input,
+    live,
+    lovelace_of(own_input.output.value),
   )
-  let aid_name = deriveAidAssetName(tip.cesr_aid)
-  expect
-    own_input.output.value == (
-      from_lovelace(lovelace_of(own_input.output.value))
-        |> merge(from_asset(own_hash, aid_name, 1))
-    )
-  expect lovelace_of(own_input.output.value) >= protected_lovelace
-  expect dict.to_pairs(tokens(mint, own_hash)) == [Pair(aid_name, -1)]
-  expect
-    list.all(
-      outputs,
-      fn(output) { quantity_of(output.value, own_hash, aid_name) == 0 },
-    )
-  expect_exact_payout(
+  expect dict.to_pairs(tokens(mint, own_hash)) == []
+  let terminated = TerminationPending { aid, sn, epoch, keys }
+  expect [pending_output] = list.filter(
+    outputs,
+    fn(output) { quantity_of(output.value, own_hash, aid_name) > 0 },
+  )
+  let pending_datum: CheckpointDatum = V2(terminated)
+  expect and {
+      pending_output.address == from_script(own_hash),
+      pending_output.datum == InlineDatum(pending_datum),
+      pending_output.value == (
+        from_lovelace(
+          held_value(checkpoint_min_ada, d_reg, freeze_bond, terminated, 0),
+        )
+          |> merge(from_asset(own_hash, aid_name, 1))
+      ),
+    }
+  let bond_held = if frozen {
+    0
+  } else {
+    freeze_bond
+  }
+  expect_exact_payout(outputs, convictor_output_index, convictor_pkh, d_reg) && refund_paid(
+    network_id,
     outputs,
     convictor_output_index,
-    convictor_pkh,
-    protected_lovelace,
+    refund_to,
+    bond_held + pool,
+  )
+}
+
+/// Some output other than the convictor's pays at least `required` lovelace
+/// to the refund address, whose ledger bytes the datum carries. A refund of
+/// nothing needs no output.
+fn refund_paid(
+  network_id: Int,
+  outputs: List<Output>,
+  skip_index: Int,
+  refund_to: ByteArray,
+  required: Int,
+) -> Bool {
+  required == 0 || list.indexed_foldr(
+    outputs,
+    False,
+    fn(index, output, found) {
+      found || index != skip_index && refund.ledger_bytes(
+        network_id,
+        output.address,
+      ) == Some(refund_to) && lovelace_of(output.value) >= required
+    },
   )
 }

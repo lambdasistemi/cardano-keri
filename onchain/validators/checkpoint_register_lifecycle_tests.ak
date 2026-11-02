@@ -15,12 +15,13 @@ use cage_context.{
   input_at, min_ada, mint_context, out_ref, owner_vkh, seed_tx_id, spend_context,
 }
 use cardano/address.{
-  Address, Script, from_script, from_verification_key, with_delegation_key,
-  with_delegation_script,
+  Address, Credential, Script, from_script, from_verification_key,
+  with_delegation_key, with_delegation_script,
 }
 use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge, zero}
 use cardano/transaction.{
-  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, Withdraw,
+  InlineDatum, Input, NoDatum, Output, OutputReference, ScriptPurpose,
+  Transaction, Withdraw,
 }
 use cardano_keri/bounty_commitment.{
   BountyAction, BountyCommitment, BountyCommitmentV1, BountyRevealV1,
@@ -1269,11 +1270,24 @@ fn convict_tx(
   outputs: List<Output>,
   mint: Value,
 ) -> Transaction {
+  convict_tx_of(tip, wire, input_datum, input_lovelace, outputs, mint)
+}
+
+/// The same, for a conviction of the checkpoint with key state `tip_of`
+/// under the evidence `wire_of`.
+fn convict_tx_of(
+  tip_of: CheckpointDatumV1,
+  wire_of: EnforcementEvidence,
+  input_datum: Data,
+  input_lovelace: Int,
+  outputs: List<Output>,
+  mint: Value,
+) -> Transaction {
   let own_input = input_at(
     convict_ref(),
     Output {
       address: from_script(policy),
-      value: token_value(input_lovelace, tip_name()),
+      value: token_value(input_lovelace, deriveAidAssetName(tip_of.cesr_aid)),
       datum: InlineDatum(input_datum),
       reference_script: None,
     },
@@ -1289,7 +1303,7 @@ fn convict_tx(
   )
   let enforcement_credential = Script(enforcement_hash)
   let entitlement_credential = Script(entitlement_hash)
-  let observer_redeemer: Data = convict_envelope(wire)
+  let observer_redeemer: Data = convict_envelope(wire_of)
   with_reservation(
     Transaction {
       ..base,
@@ -1302,7 +1316,7 @@ fn convict_tx(
       ],
     },
     commit_policy,
-    commitment_for(convict_ref(), ConvictEntitlement, convictor, wire),
+    commitment_for(convict_ref(), ConvictEntitlement, convictor, wire_of),
   )
 }
 
@@ -1772,5 +1786,182 @@ test two_convictions_cannot_share_one_refund_output() fail {
     envelope,
     0,
     tx,
+  )
+}
+
+// ---------------------------------------------------------------------
+// The two observers a conviction composes
+// ---------------------------------------------------------------------
+
+fn honest_convict_tx() -> Transaction {
+  convict_tx(
+    v2_data(live(tip, False, False, refund_enterprise_key())),
+    floor_unfrozen + convict_pool,
+    [pending_output(honest_pending(), mc, tip_name()), ..honest_payouts()],
+    zero,
+  )
+}
+
+fn spend_convict(tx: Transaction) -> Bool {
+  run_spend(convict_redeemer(1), convict_ref(), tx)
+}
+
+fn with_observers(
+  tx: Transaction,
+  withdrawals: List<Pair<Credential, Int>>,
+  redeemers: List<Pair<ScriptPurpose, Data>>,
+) -> Transaction {
+  Transaction { ..tx, withdrawals, redeemers }
+}
+
+test convict_accepts_paired_observers_with_the_same_envelope() {
+  spend_convict(honest_convict_tx())
+}
+
+test convict_refuses_a_missing_enforcement_observer() fail {
+  let redeemer: Data = convict_envelope(wire)
+  let entitlement_credential = Script(entitlement_hash)
+  spend_convict(
+    with_observers(
+      honest_convict_tx(),
+      [Pair(entitlement_credential, 0)],
+      [Pair(Withdraw(entitlement_credential), redeemer)],
+    ),
+  )
+}
+
+test convict_refuses_a_missing_entitlement_observer() fail {
+  let redeemer: Data = convict_envelope(wire)
+  let enforcement_credential = Script(enforcement_hash)
+  spend_convict(
+    with_observers(
+      honest_convict_tx(),
+      [Pair(enforcement_credential, 0)],
+      [Pair(Withdraw(enforcement_credential), redeemer)],
+    ),
+  )
+}
+
+fn spend_with_two_envelopes(
+  enforcement_envelope: ObserverEnvelope,
+  entitlement_envelope: ObserverEnvelope,
+) -> Bool {
+  let enforcement_redeemer: Data = enforcement_envelope
+  let entitlement_redeemer: Data = entitlement_envelope
+  let enforcement_credential = Script(enforcement_hash)
+  let entitlement_credential = Script(entitlement_hash)
+  spend_convict(
+    with_observers(
+      honest_convict_tx(),
+      [Pair(enforcement_credential, 0), Pair(entitlement_credential, 0)],
+      [
+        Pair(Withdraw(enforcement_credential), enforcement_redeemer),
+        Pair(Withdraw(entitlement_credential), entitlement_redeemer),
+      ],
+    ),
+  )
+}
+
+test convict_refuses_paired_observers_with_different_reveals() fail {
+  let honest = convict_envelope(wire)
+  expect proof: EnforcementProofV1 = honest.payload
+  let other_reveal = BountyRevealV1 {
+    ..proof.reveal,
+    nonce: #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa01",
+  }
+  let changed_payload: Data = EnforcementProofV1 {
+    ..proof,
+    reveal: other_reveal,
+  }
+  let changed = ObserverEnvelope {
+    claim: honest.claim,
+    payload: changed_payload,
+  }
+  expect honest.payload != changed.payload
+  spend_with_two_envelopes(honest, changed)
+}
+
+test convict_refuses_paired_observers_with_different_evidence() fail {
+  let honest = convict_envelope(wire)
+  expect proof: EnforcementProofV1 = honest.payload
+  let changed_payload: Data = EnforcementProofV1 {
+    ..proof,
+    evidence: EnforcementEvidence { ..wire, wit_sigs: [] },
+  }
+  let changed = ObserverEnvelope {
+    claim: honest.claim,
+    payload: changed_payload,
+  }
+  expect honest.payload != changed.payload
+  spend_with_two_envelopes(honest, changed)
+}
+
+test enforcement_observer_accepts_the_witnessed_fork_over_a_live_checkpoint() {
+  checkpoint_observer.observer_enforcement.withdraw(
+    0,
+    commitment_family,
+    convict_envelope(wire),
+    0,
+    honest_convict_tx(),
+  )
+}
+
+test enforcement_observer_refuses_a_conflict_without_its_witness_receipts() fail {
+  let unwitnessed = EnforcementEvidence { ..wire, wit_sigs: [] }
+  checkpoint_observer.observer_enforcement.withdraw(
+    0,
+    commitment_family,
+    convict_envelope(unwitnessed),
+    0,
+    honest_convict_tx(),
+  )
+}
+
+test enforcement_observer_refuses_a_recorded_event_that_conflicts_with_nothing() fail {
+  let honest_tip = enforcement_vec.fork_witnessed_honest_tip
+  let honest_wire = enforcement_vec.fork_witnessed_honest_wire
+  let tx = convict_tx_of(
+    honest_tip,
+    honest_wire,
+    v2_data(live(honest_tip, False, False, refund_enterprise_key())),
+    floor_unfrozen + convict_pool,
+    [
+      pending_output(
+        v2_data(pending(honest_tip)),
+        mc,
+        deriveAidAssetName(honest_tip.cesr_aid),
+      ),
+      ..honest_payouts()
+    ],
+    zero,
+  )
+  checkpoint_observer.observer_enforcement.withdraw(
+    0,
+    commitment_family,
+    convict_envelope(honest_wire),
+    0,
+    tx,
+  )
+}
+
+test convict_of_a_frozen_checkpoint_with_an_empty_pool_needs_no_refund_output() {
+  run_convict(
+    1,
+    convict_tx(
+      v2_data(live(tip, False, True, refund_enterprise_key())),
+      floor_frozen,
+      [pending_output(honest_pending(), mc, tip_name()), paid(convictor, d_reg)],
+      zero,
+    ),
+  )
+}
+
+test register_refuses_a_born_at_below_zero() fail {
+  // The upper bound and born_at agree, so only the datum's own validity can
+  // refuse it.
+  register_with(
+    registered(refund_enterprise_key(), -5),
+    floor_unfrozen,
+    upto(-5, False),
   )
 }

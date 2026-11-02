@@ -112,10 +112,10 @@ proved in `lean/CardanoKeri/Checkpoint.lean`. None of them is shipped on
   A validator reads it as a reference input and decides for itself. There is
   no service to be up, no writer to be honest, and no completeness claim for
   anyone to assert.
-- **Every move of value answers to the owner.** The bonds and the pool leave
-  only to the refund address the owner controls, and that address moves only
-  when the keys of the epoch a rotation opens sign for it. A relayer landing
-  the owner's public rotation cannot age her or move her refund address.
+- **Every move of value is fixed in advance.** The bonds and the pool leave
+  only to the refund address chosen by whoever paid the registration, and no
+  step changes it. A relayer landing the owner's public rotation cannot
+  unfreeze her or move the money.
 - **There is no owner exit.** A checkpoint is alive until it is convicted,
   so a thief holding only the current keys cannot erase the identity and
   take the money.

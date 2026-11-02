@@ -10,7 +10,7 @@ open SystemWire TraceWire
 def p : Params := { D := 3, B := 2, P := 1, W := 5, hD := by decide, hB := by decide }
 def evidence : EnvTable := {
   rotationTo := [(0, 0, 1), (1, 1, 2)]
-  intentAuthorized := []
+  depositAuthorized := []
   quorum := []
   duplicityAt := [(0, 0), (1, 1), (2, 2)] }
 def registryEnvironment : Registry.TraceWire.EnvTable := {
@@ -29,8 +29,8 @@ def registrationCommand (ctx : RegistryContext := context) : Except String Comma
   let (u, tx) ← Registry.Scenarios.foldTransaction before [⟨100, 0⟩] 2 1 1
   pure (.register 11 2 42 5 ctx ⟨[.bookRegistration b], u, tx⟩ b 1)
 
-def rotatedCommand : Command := .local 11 3 (.rotate 1 .keep 7 none)
-def rotatedAgainCommand : Command := .local 11 4 (.rotate 2 .keep 7 none)
+def rotatedCommand : Command := .local 11 3 (.rotate 1 .keep 7)
+def rotatedAgainCommand : Command := .local 11 4 (.rotate 2 .keep 7)
 def convictedCommand : Command := .local 11 5 (.convict 7)
 def registryLocalHistory : List Registry.Action := [.convictCkpt 11]
 
@@ -99,7 +99,7 @@ def traces : Except String (List Json) := do
   let restricted ← registrationCommand { context with environment.duplicity := [] }
   pure [
     trace "retained-associated-completion" (journey ++ [
-      ("pending-refuses-local-rotation", .local 11 6 (.rotate 3 .keep 7 none)), ("complete", f.completion),
+      ("pending-refuses-local-rotation", .local 11 6 (.rotate 3 .keep 7)), ("complete", f.completion),
       ("repeat-completion-refused", f.completion), ("retired-registration-refused", f.registration)]),
     trace "same-context-other-request" (journey ++ [
       ("other-valid-fold-cannot-complete-this-request", f.otherCompletion),

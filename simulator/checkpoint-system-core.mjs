@@ -102,7 +102,7 @@ const sessions=new WeakSet();
 function freeze(value) {if(value&&typeof value==='object'&&!Object.isFrozen(value)){Object.values(value).forEach(freeze);Object.freeze(value);}return value;}
 function session(value) {const copy=freeze(structuredClone(value));sessions.add(copy);return copy;}
 export function newSystem(params,env) {
-  fields(params,['D','B','P','W'],'params');fields(env,['rotationTo','intentAuthorized','quorum','duplicityAt'],'env');
+  fields(params,['D','B','P','W'],'params');fields(env,['rotationTo','depositAuthorized','quorum','duplicityAt'],'env');
   if(C.validateParams(params)||C.validateEnv(env))throw Error('invalid-system-wire:checkpoint-context');
   return session({params,env,state:{aids:[]},records:[]});
 }

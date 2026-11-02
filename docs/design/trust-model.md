@@ -180,8 +180,8 @@ the checkpoint simulator, and unbuilt on chain.
 | Only conviction is terminal | there is no owner exit: no close, no parking, no revival |
 | `D_reg` is never a fee source | it leaves only at a conviction |
 | The pool never gates a transition | an unpaid rotation is still a valid rotation |
-| A relayer cannot age the owner or move her refund address | every intent other than `keep` is signed by the new epoch's keys |
-| The refund address moves only by the owner's signature | at register, and at a rotation the new keys authorized |
+| A relayer cannot unfreeze the owner | a `deposit` is signed by the new epoch's keys |
+| The refund address belongs to whoever paid the registration, for the checkpoint's whole life | it is set at registration and no step changes it |
 
 ### The consumer's predicate
 
@@ -259,9 +259,9 @@ Permissionlessness has one price, and it is stated rather than hidden: because
 the chain cannot tell the controller from a relayer, the **first** registration
 of an AID, or a resurrection using a public rotation whose keys have leaked,
 can be made by a stale-key holder who advances only to their own epoch. The
-window is bounded by juvenility, closed by any advance to the tip, and the
-attacker's bonds are then the controller's — a stale registration is a
-donation. Removing the residual would mean removing the relayer.
+window is bounded by juvenility and closed by any advance to the tip. The
+attacker's bonds stay the attacker's: the refund address is fixed at
+registration. Removing the residual would mean removing the relayer.
 
 ### Indexers
 
@@ -312,7 +312,8 @@ The **Result** column marks whether the response ships today or is designed.
 | Same, under the accepted design | Reject: close is a rotation and needs the next keys | designed |
 | Register a second checkpoint for one AID | **No rejection is available today** | shipped |
 | Same, under the accepted design | Reject: the registry insert needs an absence proof | designed |
-| A relayer ages the owner or moves her refund address using her public rotation | Reject: the intent is unsigned by the new keys | designed |
+| A relayer unfreezes the owner using her public rotation | Reject: the deposit is unsigned by the new keys | designed |
+| Anyone, the controllers included, moves the refund address after registration | Reject: no step changes the refund address | designed |
 | One stolen member key of a multisig poisons the identity | Reject: the poison is evaluated at the current threshold | designed |
 | Authorize a payment from a poisoned checkpoint | Reject: the consumer requires an unpoisoned state | designed |
 | Take `D_reg` without a duplicity proof | Reject: `D_reg` is never a fee source | designed |

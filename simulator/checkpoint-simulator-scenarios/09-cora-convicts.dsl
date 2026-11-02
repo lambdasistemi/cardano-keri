@@ -56,19 +56,18 @@ step:
       hunter: null
       poolIn: 12
       refund: null
-    exhibits: [T3_epoch_local, T6_component_conservation, T6_dreg_enters_only_at_birth, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_absent_only_registers, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired]
+    exhibits: [T3_epoch_local, T6_component_conservation, T6_dreg_enters_only_at_birth, T6_dreg_never_a_fee, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T8_absent_only_registers, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired]
 step:
   slot: 1
   who: alice
   say: "Alice lands her first rotation. Its prior-next commitment anchors both branches of the later duplicity proof."
   evidence:
-    add: [{"rotationTo":[0,0,1]},{"intentAuthorized":[1,"keep",null]}]
+    add: [{"rotationTo":[0,0,1]}]
   action:
     rotate:
       sn': 1
       op: keep
       payee: 2
-      refund': null
   expect:
     ok: true
     live:
@@ -119,7 +118,7 @@ step:
         pool: 2
       poolIn: 0
       refund: null
-    exhibits: [T10_bonds_are_observable, T14_pool_decreases_only_by_premium, T16_payments_are_named, T1_rotate_strict, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T2_epoch_only_by_rotation, T3_epoch_local, T3_rotation_clears, T5_every_bond_option, T5_keep_is_rotated, T5_keep_needs_no_intent, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, trace_poison_fold, trace_sn_monotone_all]
+    exhibits: [T10_bonds_are_observable, T14_pool_decreases_only_by_premium, T16_payments_are_named, T1_rotate_strict, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T2_epoch_only_by_rotation, T3_epoch_local, T3_rotation_clears, T5_every_bond_option, T5_keep_is_rotated, T5_keep_needs_no_intent, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T6_relayer_cannot_park_age_or_close, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, step_from_present_keeps_refund, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 12
   who: alice
@@ -167,7 +166,7 @@ step:
       hunter: null
       poolIn: 0
       refund: null
-    exhibits: [T10_bonds_are_observable, T10_current_quorum_never_restores, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T3_only_poison_sets, T4_current_key_thief_cannot_rotate_or_freeze, T4_current_quorum_only_poisons, T5_poison_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, trace_poison_fold, trace_sn_monotone_all]
+    exhibits: [T10_bonds_are_observable, T10_current_quorum_never_restores, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T3_only_poison_sets, T4_current_key_thief_cannot_rotate_or_freeze, T4_current_quorum_only_poisons, T5_poison_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, step_from_present_keeps_refund, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 12
   who: cora
@@ -221,7 +220,7 @@ step:
           h:
             epoch: 1
             sn: 1
-    exhibits: [T10_bonds_are_observable, T12_convict_exact, T16_payments_are_named, T1_sn_monotone_all, T4_current_key_thief_cannot_rotate_or_freeze, T4_poisoned_blocks_quorum_and_freeze, T4_poisoned_nonrotation_inert, T5_convict_enabled, T6_component_conservation, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, consumableStateB_iff, pending_consumer_refused, pending_custody_observations, trace_sn_monotone_all]
+    exhibits: [T10_bonds_are_observable, T12_convict_exact, T16_payments_are_named, T1_sn_monotone_all, T4_current_key_thief_cannot_rotate_or_freeze, T4_poisoned_blocks_quorum_and_freeze, T4_poisoned_nonrotation_inert, T5_convict_enabled, T6_component_conservation, T6_conviction_refunds_registration_address, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, consumableStateB_iff, pending_consumer_refused, pending_custody_observations, step_from_present_keeps_refund, trace_sn_monotone_all]
 fork:
   id: noproof
   at: 2
@@ -254,7 +253,6 @@ fork:
         sn': 1
         op: deposit
         payee: 1
-        refund': null
     expect:
       ok: false
       reason: termination-pending

@@ -113,10 +113,10 @@ A hunter is not:
 It can submit only evidence the validators accept. When cryptographic evidence
 is absent, it may alert users but cannot manufacture an on-chain truth. It
 cannot forge controller signatures or witness receipts, activate uncommitted
-keys, move the owner's refund address, reset her juvenility
+keys, move the refund address, or reset the owner's juvenility
 (the age her checkpoint must reach before a consumer trusts it)
-window: every bond option other than `keep`, and every new refund
-address, is signed by the keys of the epoch the rotation opens.
+window: no step changes the refund address, and a `deposit` is signed by
+the keys of the epoch the rotation opens.
 
 ## Evidence rules
 

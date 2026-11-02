@@ -144,8 +144,8 @@ theorem T1_sn_monotone (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : 
 
 /-- **T1b.** Every rotation strictly increases the sequence. -/
 theorem T1_rotate_strict (p : Params) (env : Env) {t : Slot} {l l' : Live} {f : Flow}
-    {sn' : Seq} {op : BondOp} {payee : Addr} {r' : Option Addr}
-    (h : Step p env (.rotate sn' op payee r') t (.present l) f (.present l')) : l.sn < l'.sn := by
+    {sn' : Seq} {op : BondOp} {payee : Addr}
+    (h : Step p env (.rotate sn' op payee) t (.present l) f (.present l')) : l.sn < l'.sn := by
   cases h <;> exact ‹l.sn < _›
 
 /-- **T1d.** No step decreases the sequence a state records, across every
@@ -191,8 +191,8 @@ theorem T2_epoch_only_by_rotation (p : Params) (env : Env) {a : Action} {t : Slo
 
 /-- **T3a.** A rotation always yields an unpoisoned state. -/
 theorem T3_rotation_clears (p : Params) (env : Env) {t : Slot} {l l' : Live} {f : Flow}
-    {sn' : Seq} {op : BondOp} {payee : Addr} {r' : Option Addr}
-    (h : Step p env (.rotate sn' op payee r') t (.present l) f (.present l')) : l'.poisoned = false := by
+    {sn' : Seq} {op : BondOp} {payee : Addr}
+    (h : Step p env (.rotate sn' op payee) t (.present l) f (.present l')) : l'.poisoned = false := by
   cases h <;> rfl
 
 /-- **T3b.** Only a rotation clears the poison. -/
@@ -286,38 +286,37 @@ theorem T4_current_key_thief_cannot_rotate_or_freeze (p : Params) (env : Env) {a
 
 /-! ## T5 — totality: every ruled transition is enabled when its evidence is -/
 
-/-- **T5a.** Given a valid witnessed rotation and the new keys' signature on
-the bond option and the optional new refund address — one message carrying
-both (D-038) — both bond options are enabled at every address choice,
-whatever the pool holds (payment is never a gate, T14) and whether or not
-the checkpoint is frozen. `keep` with no new address needs no signature. -/
+/-- **T5a.** Given a valid witnessed rotation, both bond options are enabled
+whatever the pool holds (payment is never a gate, T14) and whether or not the
+checkpoint is frozen: a keep needs no signature, a deposit needs the new
+keys' signature on it (D-038). -/
 theorem T5_every_bond_option (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : Seq)
     (payee : Addr) (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn') :
-    ∀ (op : BondOp) (r' : Option Addr), env.intentOk (l.epoch + 1) op.intent r' = true →
-      ∃ (f : Flow) (l' : Live), Step p env (.rotate sn' op payee r') t (.present l) f (.present l') := by
-  intro op r' hauth
+    ∀ (op : BondOp), env.bondOpOk (l.epoch + 1) op = true →
+      ∃ (f : Flow) (l' : Live), Step p env (.rotate sn' op payee) t (.present l) f (.present l') := by
+  intro op hauth
   cases op with
   | keep =>
     by_cases hpay : p.P ≤ l.pool
-    · exact ⟨_, _, Step.rotateKeepPaid t sn' payee r' hev hsn hauth hpay⟩
-    · exact ⟨_, _, Step.rotateKeepUnpaid t sn' payee r' hev hsn hauth (Nat.lt_of_not_le hpay)⟩
+    · exact ⟨_, _, Step.rotateKeepPaid t sn' payee hev hsn hpay⟩
+    · exact ⟨_, _, Step.rotateKeepUnpaid t sn' payee hev hsn (Nat.lt_of_not_le hpay)⟩
   | deposit =>
     by_cases hpay : p.P ≤ l.pool
-    · exact ⟨_, _, Step.rotateDepositPaid t sn' payee r' hev hsn hauth hpay⟩
-    · exact ⟨_, _, Step.rotateDepositUnpaid t sn' payee r' hev hsn hauth (Nat.lt_of_not_le hpay)⟩
+    · exact ⟨_, _, Step.rotateDepositPaid t sn' payee hev hsn hauth hpay⟩
+    · exact ⟨_, _, Step.rotateDepositUnpaid t sn' payee hev hsn hauth (Nat.lt_of_not_le hpay)⟩
 
 /-- **T5j.** A keep is exactly the rotated datum with the premium: the flow
 is the premium to the payee and nothing else, the state is `Live.rotated`
 — which ties the helper the next two statements use to the constructors'
 field-by-field conclusions. -/
 theorem T5_keep_is_rotated (p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow} {s' : State}
-    {sn' : Seq} {payee : Addr} {r' : Option Addr}
-    (hk : Step p env (.rotate sn' .keep payee r') t (.present l) f s') :
-    f = { hunter := p.premium l payee } ∧ s' = .present (l.rotated p sn' r') := by
+    {sn' : Seq} {payee : Addr}
+    (hk : Step p env (.rotate sn' .keep payee) t (.present l) f s') :
+    f = { hunter := p.premium l payee } ∧ s' = .present (l.rotated p sn') := by
   cases hk with
-  | rotateKeepPaid _ _ _ _ hev hsn hauth hpay =>
+  | rotateKeepPaid _ _ _ hev hsn hpay =>
     simp [Params.premium, Live.rotated, hpay]
-  | rotateKeepUnpaid _ _ _ _ hev hsn hauth hnopay =>
+  | rotateKeepUnpaid _ _ _ hev hsn hnopay =>
     simp [Params.premium, Live.rotated, Nat.not_le.mpr hnopay]
 
 /-- **T5h.** D-040: a deposit is a no-op on full bonds. Every licensed
@@ -326,24 +325,24 @@ alone, whatever else the keys did or did not sign: it brings nothing, pays
 the premium as a keep would, leaves the rotated datum with the freeze bit
 clear, and resets nothing (`bornAt` unchanged). -/
 theorem T5_deposit_on_full_is_keep (p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow}
-    {s' : State} {sn' : Seq} {payee : Addr} {r' : Option Addr}
+    {s' : State} {sn' : Seq} {payee : Addr}
     (hfull : l.frozen = false)
-    (hd : Step p env (.rotate sn' .deposit payee r') t (.present l) f s') :
+    (hd : Step p env (.rotate sn' .deposit payee) t (.present l) f s') :
     f = { hunter := p.premium l payee } ∧ f.bIn = 0 ∧ f.dregIn = 0 ∧ f.poolIn = 0 ∧
-    s' = .present (l.rotated p sn' r') ∧
+    s' = .present (l.rotated p sn') ∧
     ∃ l', s' = .present l' ∧ l'.bornAt = l.bornAt ∧ l'.frozen = false ∧ l'.sn = sn' ∧
-      l'.epoch = l.epoch + 1 ∧ l'.poisoned = false ∧ l'.refundTo = r'.getD l.refundTo ∧
+      l'.epoch = l.epoch + 1 ∧ l'.poisoned = false ∧ l'.refundTo = l.refundTo ∧
       ((p.P ≤ l.pool ∧ f.hunter = some { addr := payee, pool := p.P } ∧ l'.pool + p.P = l.pool) ∨
        (l.pool < p.P ∧ f.hunter = none ∧ l'.pool = l.pool)) := by
   cases hd with
-  | rotateDepositPaid _ _ _ _ hev hsn hauth hpay =>
+  | rotateDepositPaid _ _ _ hev hsn hauth hpay =>
     refine ⟨?_, ?_, rfl, rfl, ?_, _, rfl, rfl, rfl, rfl, rfl, rfl, rfl, Or.inl ⟨hpay, ?_, ?_⟩⟩
     · simp [Params.premium, Live.bHeld, hfull, hpay]
     · simp [Live.bHeld, hfull]
     · simp [Live.rotated, hfull, hpay]
     · simp []
     · simp; omega'
-  | rotateDepositUnpaid _ _ _ _ hev hsn hauth hnopay =>
+  | rotateDepositUnpaid _ _ _ hev hsn hauth hnopay =>
     refine ⟨?_, ?_, rfl, rfl, ?_, _, rfl, rfl, rfl, rfl, rfl, rfl, rfl, Or.inr ⟨hnopay, ?_, rfl⟩⟩
     · simp [Params.premium, Live.bHeld, hfull, Nat.not_le.mpr hnopay]
     · simp [Live.bHeld, hfull]
@@ -372,15 +371,15 @@ theorem T5_convict_enabled (p : Params) (env : Env) (t : Slot) (l : Live) (payee
     ∃ f, Step p env (.convict payee) t (.present l) f (.terminationPending l.hash) := by
   exact ⟨_, Step.convict t payee hdup⟩
 
-/-- **T5g.** D-038's empty message: a keep that names no new address needs no
-signature at all — given the witnessed rotation it is enabled under every
-environment, whatever the new keys did or did not sign. -/
+/-- **T5g.** D-038's empty message: a keep needs no signature at all — given
+the witnessed rotation it is enabled under every environment, whatever the
+new keys did or did not sign. -/
 theorem T5_keep_needs_no_intent (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : Seq) (payee : Addr)
     (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn') :
-    ∃ (f : Flow) (l' : Live), Step p env (.rotate sn' .keep payee none) t (.present l) f (.present l') := by
+    ∃ (f : Flow) (l' : Live), Step p env (.rotate sn' .keep payee) t (.present l) f (.present l') := by
   by_cases hpay : p.P ≤ l.pool
-  · exact ⟨_, _, Step.rotateKeepPaid t sn' payee none hev hsn rfl hpay⟩
-  · exact ⟨_, _, Step.rotateKeepUnpaid t sn' payee none hev hsn rfl (Nat.lt_of_not_le hpay)⟩
+  · exact ⟨_, _, Step.rotateKeepPaid t sn' payee hev hsn hpay⟩
+  · exact ⟨_, _, Step.rotateKeepUnpaid t sn' payee hev hsn (Nat.lt_of_not_le hpay)⟩
 
 /-! ## T6 — value: three components that never mix -/
 
@@ -422,33 +421,70 @@ theorem T6_dreg_enters_only_at_birth (p : Params) (env : Env) {a : Action} {t : 
     | exact ⟨⟨_, _, rfl, rfl⟩, rfl, rfl, _, rfl, rfl, rfl⟩
     | exact (hin rfl).elim
 
-/-- **T6d.** `refundTo` changes only under a rotation that names the new
-address, and the message the new keys signed is that rotation's own option
-with that address (D-032, D-038): no unrelated intent authorizes the move. -/
-theorem T6_refund_change_requires_new_keys (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live} {f : Flow}
-    (h : Step p env a t (.present l) f (.present l')) (hne : l'.refundTo ≠ l.refundTo) :
-    ∃ sn' op payee, a = .rotate sn' op payee (some l'.refundTo) ∧
-      env.intentAuthorized l'.epoch op.intent (some l'.refundTo) = true := by
+/-- **T6d.** The refund address is fixed: no step between present states
+changes `refundTo`, whoever acts and whatever the keys sign. -/
+theorem T6_refund_fixed (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live} {f : Flow}
+    (h : Step p env a t (.present l) f (.present l')) : l'.refundTo = l.refundTo := by
+  cases h <;> rfl
+
+/-- A step from a present state keeps the refund address or enters pending
+termination. -/
+theorem step_from_present_keeps_refund (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live}
+    {f : Flow} {s' : State} (h : Step p env a t (.present l) f s') :
+    (∃ l', s' = .present l' ∧ l'.refundTo = l.refundTo) ∨ ∃ k, s' = .terminationPending k := by
   cases h with
-  | rotateKeepPaid _ sn' payee refund' hev hsn hauth hpay =>
-    cases refund' with
-    | none => exact absurd rfl hne
-    | some r => exact ⟨_, _, _, rfl, by simpa [Env.intentOk, BondOp.intent] using hauth⟩
-  | rotateKeepUnpaid _ sn' payee refund' hev hsn hauth hnopay =>
-    cases refund' with
-    | none => exact absurd rfl hne
-    | some r => exact ⟨_, _, _, rfl, by simpa [Env.intentOk, BondOp.intent] using hauth⟩
-  | rotateDepositPaid _ sn' payee refund' hev hsn hauth hpay =>
-    cases refund' with
-    | none => exact absurd rfl hne
-    | some r => exact ⟨_, _, _, rfl, by simpa [Env.intentOk, BondOp.intent] using hauth⟩
-  | rotateDepositUnpaid _ sn' payee refund' hev hsn hauth hnopay =>
-    cases refund' with
-    | none => exact absurd rfl hne
-    | some r => exact ⟨_, _, _, rfl, by simpa [Env.intentOk, BondOp.intent] using hauth⟩
-  | poison => exact absurd rfl hne
-  | freeze => exact absurd rfl hne
-  | topUp => exact absurd rfl hne
+  | convict => exact Or.inr ⟨_, rfl⟩
+  | _ => exact Or.inl ⟨_, rfl, rfl⟩
+
+/-- **T6i.** Along any trace between present states the refund address never
+changes. -/
+theorem T6_refund_fixed_along_trace (p : Params) (env : Env) {t : Slot} {l l' : Live}
+    {es : List (Slot × Action)} (h : Trace p env t (.present l) es (.present l')) :
+    l'.refundTo = l.refundTo := by
+  have gen : ∀ {t : Slot} {s s'' : State} {es : List (Slot × Action)}, Trace p env t s es s'' →
+      ∀ l l', s = .present l → s'' = .present l' → l'.refundTo = l.refundTo := by
+    intro t s s'' es h
+    induction h with
+    | nil t s => intro l l' h1 h2; rw [h1] at h2; cases h2; rfl
+    | cons hle hs htail ih =>
+      intro l l' h1 h2
+      subst h1
+      rcases step_from_present_keeps_refund p env hs with ⟨l1, rfl, hr⟩ | ⟨k, rfl⟩
+      · exact (ih l1 l' rfl h2).trans hr
+      · rw [trace_from_pending p env htail] at h2; cases h2
+  exact gen h l l' rfl rfl
+
+/-- **T6j.** Every live checkpoint holds the refund address its registration
+named: a trace from `absent` to a present state starts with the registration,
+and that registration's address is the one held. -/
+theorem T6_refund_is_registration_address (p : Params) (env : Env) {t : Slot} {l : Live}
+    {es : List (Slot × Action)} (h : Trace p env t .absent es (.present l)) :
+    ∃ t0 pool0 rest, es = (t0, .register l.refundTo pool0) :: rest := by
+  cases h with
+  | cons hle hs htail =>
+    cases hs with
+    | register =>
+      rw [T6_refund_fixed_along_trace p env htail]
+      exact ⟨_, _, _, rfl⟩
+
+/-- **T6k.** Conviction pays the registration's refund address: from a
+checkpoint registered with refund address `r`, whatever rotations, poisons,
+freezes and top-ups followed, a conviction pays the freeze bond held and the
+whole pool to exactly `r`. -/
+theorem T6_conviction_refunds_registration_address (p : Params) (env : Env) {t t0 now : Slot}
+    {r : Addr} {pool0 : Value} {rest : List (Slot × Action)} {l : Live} {payee : Addr} {f : Flow}
+    {s' : State}
+    (h : Trace p env t .absent ((t0, .register r pool0) :: rest) (.present l))
+    (hc : Step p env (.convict payee) now (.present l) f s') :
+    f.refund = some { addr := r, b := l.bHeld p, pool := l.pool } := by
+  cases h with
+  | cons hle hs htail =>
+    cases hs with
+    | register =>
+      have hr := T6_refund_fixed_along_trace p env htail
+      cases hc
+      simp only at hr
+      rw [hr]
 
 /-- **T6e.** The freeze bond moves between present states only by a rotation
 (the deposit) or a freeze; poison and top-up move no bond. -/
@@ -458,47 +494,30 @@ theorem T6_frozen_flips_only_by_rotation_or_freeze (p : Params) (env : Env) {a :
     a.actor = .nextKeys ∨ (∃ sn' payee, a = .freeze sn' payee) := by
   cases h <;> simp_all [Action.actor]
 
-/-- **T6f.** Every intent other than the empty one is authorized by the keys
-of the epoch the rotation opens (D-038): a deposit and a keep with a new
-address each carry the new keys' signature on that intent and that
-address. A relayer with public data alone can land a keep and nothing else. -/
-theorem T6_intent_requires_new_keys (p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow} {s' : State} :
-    (∀ {sn' payee r'}, Step p env (.rotate sn' .deposit payee r') t (.present l) f s' →
-      env.intentAuthorized (l.epoch + 1) .deposit r' = true) ∧
-    (∀ {sn' payee r}, Step p env (.rotate sn' .keep payee (some r)) t (.present l) f s' →
-      env.intentAuthorized (l.epoch + 1) .keep (some r) = true) := by
-  refine ⟨?_, ?_⟩
-  · intro sn' payee r' h
-    cases h with
-    | rotateDepositPaid _ _ _ _ hev hsn hauth hpay => cases r' <;> simpa [Env.intentOk] using hauth
-    | rotateDepositUnpaid _ _ _ _ hev hsn hauth hnopay => cases r' <;> simpa [Env.intentOk] using hauth
-  · intro sn' payee r h
-    cases h with
-    | rotateKeepPaid _ _ _ _ hev hsn hauth hpay => simpa [Env.intentOk] using hauth
-    | rotateKeepUnpaid _ _ _ _ hev hsn hauth hnopay => simpa [Env.intentOk] using hauth
+/-- **T6f.** A deposit is authorized by the keys of the epoch the rotation
+opens (D-038): it carries the new keys' signature on that deposit. A relayer
+with public data alone can land a keep and nothing else. -/
+theorem T6_deposit_requires_new_keys (p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow}
+    {s' : State} {sn' : Seq} {payee : Addr}
+    (h : Step p env (.rotate sn' .deposit payee) t (.present l) f s') :
+    env.depositAuthorized (l.epoch + 1) = true := by
+  cases h with
+  | rotateDepositPaid _ _ _ hev hsn hauth hpay => exact hauth
+  | rotateDepositUnpaid _ _ _ hev hsn hauth hnopay => exact hauth
 
-/-- **T6g.** Without the new keys' signature nothing but a keep with the
-address unchanged lands: if the keys of epoch `e + 1` authorized no intent
-at all, every next-keys step from epoch `e` is a keep with `refund' = none` —
-a relayer cannot unfreeze or move the address. (There is no owner close to
-make; the name is kept as the statement's identity.) -/
+/-- **T6g.** Without the new keys' signature nothing but a keep lands: if the
+keys of epoch `e + 1` signed no deposit, every next-keys step from epoch `e`
+is a keep — a relayer cannot unfreeze. (There is no owner close to make; the
+name is kept as the statement's identity.) -/
 theorem T6_relayer_cannot_park_age_or_close (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live}
     {f : Flow} {s' : State} (h : Step p env a t (.present l) f s')
-    (hno : ∀ i r, env.intentAuthorized (l.epoch + 1) i r = false) (hact : a.actor = .nextKeys) :
-    ∃ sn' payee, a = .rotate sn' .keep payee none := by
+    (hno : env.depositAuthorized (l.epoch + 1) = false) (hact : a.actor = .nextKeys) :
+    ∃ sn' payee, a = .rotate sn' .keep payee := by
   cases h with
-  | rotateKeepPaid _ sn' payee r' hev hsn hauth hpay =>
-    cases r' with
-    | none => exact ⟨_, _, rfl⟩
-    | some r => simp_all [Env.intentOk]
-  | rotateKeepUnpaid _ sn' payee r' hev hsn hauth hnopay =>
-    cases r' with
-    | none => exact ⟨_, _, rfl⟩
-    | some r => simp_all [Env.intentOk]
-  | rotateDepositPaid _ sn' payee r' hev hsn hauth hpay =>
-    cases r' <;> simp_all [Env.intentOk]
-  | rotateDepositUnpaid _ sn' payee r' hev hsn hauth hnopay =>
-    cases r' <;> simp_all [Env.intentOk]
+  | rotateKeepPaid _ sn' payee hev hsn hpay => exact ⟨_, _, rfl⟩
+  | rotateKeepUnpaid _ sn' payee hev hsn hnopay => exact ⟨_, _, rfl⟩
+  | rotateDepositPaid _ sn' payee hev hsn hauth hpay => simp_all
+  | rotateDepositUnpaid _ sn' payee hev hsn hauth hnopay => simp_all
   | poison => simp [Action.actor] at hact
   | freeze => simp [Action.actor] at hact
   | topUp => simp [Action.actor] at hact
@@ -513,7 +532,7 @@ theorem T7_step_iff_stepFn (p : Params) (env : Env) {a : Action} {t : Slot} {s s
     Step p env a t s f s' ↔ stepFn p env a t s = some (f, s') := by
   constructor
   · intro h
-    cases h <;> simp_all [stepFn, BondOp.intent]
+    cases h <;> simp_all [stepFn, Env.bondOpOk]
   · intro h
     cases a with
     | register refund pool0 =>
@@ -525,27 +544,27 @@ theorem T7_step_iff_stepFn (p : Params) (env : Env) {a : Action} {t : Slot} {s s
       | present l => simp [stepFn] at h
       | convicted => simp [stepFn] at h
       | terminationPending hs => simp [stepFn] at h
-    | rotate sn' op payee refund' =>
+    | rotate sn' op payee =>
       cases s with
       | present l =>
         cases op with
         | keep =>
-          simp only [stepFn, BondOp.intent] at h
+          simp only [stepFn, Env.bondOpOk] at h
           split at h
           · rename_i hc
-            obtain ⟨hev, hsn, hauth⟩ := hc
+            obtain ⟨hev, hsn, -⟩ := hc
             split at h
             · rename_i hpay
               simp only [Option.some.injEq, Prod.mk.injEq] at h
               obtain ⟨rfl, rfl⟩ := h
-              exact Step.rotateKeepPaid _ _ _ _ hev hsn hauth hpay
+              exact Step.rotateKeepPaid _ _ _ hev hsn hpay
             · rename_i hnopay
               simp only [Option.some.injEq, Prod.mk.injEq] at h
               obtain ⟨rfl, rfl⟩ := h
-              exact Step.rotateKeepUnpaid _ _ _ _ hev hsn hauth (Nat.lt_of_not_le hnopay)
+              exact Step.rotateKeepUnpaid _ _ _ hev hsn (Nat.lt_of_not_le hnopay)
           · simp at h
         | deposit =>
-          simp only [stepFn, BondOp.intent] at h
+          simp only [stepFn, Env.bondOpOk] at h
           split at h
           · rename_i hc
             obtain ⟨hev, hsn, hauth⟩ := hc
@@ -553,11 +572,11 @@ theorem T7_step_iff_stepFn (p : Params) (env : Env) {a : Action} {t : Slot} {s s
             · rename_i hpay
               simp only [Option.some.injEq, Prod.mk.injEq] at h
               obtain ⟨rfl, rfl⟩ := h
-              exact Step.rotateDepositPaid _ _ _ _ hev hsn hauth hpay
+              exact Step.rotateDepositPaid _ _ _ hev hsn hauth hpay
             · rename_i hnopay
               simp only [Option.some.injEq, Prod.mk.injEq] at h
               obtain ⟨rfl, rfl⟩ := h
-              exact Step.rotateDepositUnpaid _ _ _ _ hev hsn hauth (Nat.lt_of_not_le hnopay)
+              exact Step.rotateDepositUnpaid _ _ _ hev hsn hauth (Nat.lt_of_not_le hnopay)
           · simp at h
       | absent => simp [stepFn] at h
       | convicted => simp [stepFn] at h
@@ -805,10 +824,10 @@ theorem T9_juvenility_is_consumer_only (p : Params) (env : Env) (W' : Nat) {a : 
     Step p env a t s f s' ↔ Step { p with W := W' } env a t s f s' := by
   constructor <;> intro h <;> cases h <;> first
     | exact Step.register _ _ _
-    | exact Step.rotateKeepPaid _ _ _ _ ‹_› ‹_› ‹_› ‹_›
-    | exact Step.rotateKeepUnpaid _ _ _ _ ‹_› ‹_› ‹_› ‹_›
-    | exact Step.rotateDepositPaid _ _ _ _ ‹_› ‹_› ‹_› ‹_›
-    | exact Step.rotateDepositUnpaid _ _ _ _ ‹_› ‹_› ‹_› ‹_›
+    | exact Step.rotateKeepPaid _ _ _ ‹_› ‹_› ‹_›
+    | exact Step.rotateKeepUnpaid _ _ _ ‹_› ‹_› ‹_›
+    | exact Step.rotateDepositPaid _ _ _ ‹_› ‹_› ‹_› ‹_›
+    | exact Step.rotateDepositUnpaid _ _ _ ‹_› ‹_› ‹_› ‹_›
     | exact Step.poison _ ‹_› ‹_›
     | exact Step.freeze _ _ _ ‹_› ‹_› ‹_› ‹_› ‹_›
     | exact Step.topUp _ _
@@ -830,10 +849,10 @@ unfreeze, not a bonding). -/
 theorem T10_only_deposit_restores (p : Params) (env : Env) {a : Action} {t t' : Slot} {l : Live} {f : Flow}
     {s' : State} (h : Step p env a t (.present l) f s')
     (hfrozen : l.frozen = true) (hc : consumableState p t' s') :
-    (∃ sn' payee r', a = .rotate sn' .deposit payee r') ∧
+    (∃ sn' payee, a = .rotate sn' .deposit payee) ∧
     ∃ l', s' = .present l' ∧ l'.frozen = false ∧ l'.bornAt = l.bornAt ∧ f.bIn = p.B := by
   cases h <;> first
-    | exact ⟨⟨_, _, _, rfl⟩, _, rfl, rfl, rfl, by simp [Live.bHeld, hfrozen]⟩
+    | exact ⟨⟨_, _, rfl⟩, _, rfl, rfl, rfl, by simp [Live.bHeld, hfrozen]⟩
     | (exfalso; simp_all [consumableState])
 
 /-- **T10c.** The current quorum never produces a consumable state: its only
@@ -914,9 +933,9 @@ in full. -/
 theorem T15_b_returns_only_by_deposit (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live}
     {f : Flow} (h : Step p env a t (.present l) f (.present l'))
     (hgone : l.frozen = true) (hback : l'.frozen = false) :
-    (∃ sn' payee r', a = .rotate sn' .deposit payee r') ∧ f.bIn = p.B := by
+    (∃ sn' payee, a = .rotate sn' .deposit payee) ∧ f.bIn = p.B := by
   cases h <;> first
-    | exact ⟨⟨_, _, _, rfl⟩, by simp [Live.bHeld, hgone]⟩
+    | exact ⟨⟨_, _, rfl⟩, by simp [Live.bHeld, hgone]⟩
     | simp_all
 
 /-- **T15c.** A freeze makes the checkpoint unconsumable — the bond is
@@ -954,67 +973,61 @@ theorem Step.register_iff {p : Params} {env : Env} (now : Slot) (refund : Addr) 
 
 /-- Inversion for `rotateKeepPaid`. -/
 theorem Step.rotateKeepPaid_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)
-    (payee : Addr) (refund' : Option Addr) :
-    Step p env (.rotate sn' .keep payee refund') now (.present l)
+    (payee : Addr) :
+    Step p env (.rotate sn' .keep payee) now (.present l)
       { hunter := some { addr := payee, pool := p.P } }
-      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
-                         refundTo := refund'.getD l.refundTo, pool := l.pool - p.P }) ↔
-    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
-    env.intentOk (l.epoch + 1) .keep refund' = true ∧ p.P ≤ l.pool := by
+      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, pool := l.pool - p.P }) ↔
+    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ p.P ≤ l.pool := by
   constructor
   · intro h
     cases h with
-    | rotateKeepPaid _ _ _ _ hev hsn hauth hpay => exact ⟨hev, hsn, hauth, hpay⟩
-  · rintro ⟨hev, hsn, hauth, hpay⟩
-    exact Step.rotateKeepPaid now sn' payee refund' hev hsn hauth hpay
+    | rotateKeepPaid _ _ _ hev hsn hpay => exact ⟨hev, hsn, hpay⟩
+  · rintro ⟨hev, hsn, hpay⟩
+    exact Step.rotateKeepPaid now sn' payee hev hsn hpay
 
 /-- Inversion for `rotateKeepUnpaid`. -/
 theorem Step.rotateKeepUnpaid_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)
-    (payee : Addr) (refund' : Option Addr) :
-    Step p env (.rotate sn' .keep payee refund') now (.present l) {}
-      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
-                         refundTo := refund'.getD l.refundTo }) ↔
-    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
-    env.intentOk (l.epoch + 1) .keep refund' = true ∧ l.pool < p.P := by
+    (payee : Addr) :
+    Step p env (.rotate sn' .keep payee) now (.present l) {}
+      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false }) ↔
+    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ l.pool < p.P := by
   constructor
   · intro h
     cases h with
-    | rotateKeepUnpaid _ _ _ _ hev hsn hauth hnopay => exact ⟨hev, hsn, hauth, hnopay⟩
-  · rintro ⟨hev, hsn, hauth, hnopay⟩
-    exact Step.rotateKeepUnpaid now sn' payee refund' hev hsn hauth hnopay
+    | rotateKeepUnpaid _ _ _ hev hsn hnopay => exact ⟨hev, hsn, hnopay⟩
+  · rintro ⟨hev, hsn, hnopay⟩
+    exact Step.rotateKeepUnpaid now sn' payee hev hsn hnopay
 
 /-- Inversion for `rotateDepositPaid`. -/
 theorem Step.rotateDepositPaid_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)
-    (payee : Addr) (refund' : Option Addr) :
-    Step p env (.rotate sn' .deposit payee refund') now (.present l)
+    (payee : Addr) :
+    Step p env (.rotate sn' .deposit payee) now (.present l)
       { bIn := p.B - l.bHeld p, hunter := some { addr := payee, pool := p.P } }
       (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
-                         frozen := false, refundTo := refund'.getD l.refundTo,
-                         pool := l.pool - p.P }) ↔
+                         frozen := false, pool := l.pool - p.P }) ↔
     env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
-    env.intentOk (l.epoch + 1) .deposit refund' = true ∧ p.P ≤ l.pool := by
+    env.depositAuthorized (l.epoch + 1) = true ∧ p.P ≤ l.pool := by
   constructor
   · intro h
     cases h with
-    | rotateDepositPaid _ _ _ _ hev hsn hauth hpay => exact ⟨hev, hsn, hauth, hpay⟩
+    | rotateDepositPaid _ _ _ hev hsn hauth hpay => exact ⟨hev, hsn, hauth, hpay⟩
   · rintro ⟨hev, hsn, hauth, hpay⟩
-    exact Step.rotateDepositPaid now sn' payee refund' hev hsn hauth hpay
+    exact Step.rotateDepositPaid now sn' payee hev hsn hauth hpay
 
 /-- Inversion for `rotateDepositUnpaid`. -/
 theorem Step.rotateDepositUnpaid_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)
-    (payee : Addr) (refund' : Option Addr) :
-    Step p env (.rotate sn' .deposit payee refund') now (.present l)
+    (payee : Addr) :
+    Step p env (.rotate sn' .deposit payee) now (.present l)
       { bIn := p.B - l.bHeld p }
-      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
-                         frozen := false, refundTo := refund'.getD l.refundTo }) ↔
+      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false }) ↔
     env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
-    env.intentOk (l.epoch + 1) .deposit refund' = true ∧ l.pool < p.P := by
+    env.depositAuthorized (l.epoch + 1) = true ∧ l.pool < p.P := by
   constructor
   · intro h
     cases h with
-    | rotateDepositUnpaid _ _ _ _ hev hsn hauth hnopay => exact ⟨hev, hsn, hauth, hnopay⟩
+    | rotateDepositUnpaid _ _ _ hev hsn hauth hnopay => exact ⟨hev, hsn, hauth, hnopay⟩
   · rintro ⟨hev, hsn, hauth, hnopay⟩
-    exact Step.rotateDepositUnpaid now sn' payee refund' hev hsn hauth hnopay
+    exact Step.rotateDepositUnpaid now sn' payee hev hsn hauth hnopay
 
 /-- Inversion for `poison`. -/
 theorem Step.poison_iff {p : Params} {env : Env} (l : Live) (now : Slot) :
@@ -1104,41 +1117,31 @@ variable (p : Params) (env : Env)
     { dregIn := p.D, bIn := p.B, poolIn := pool0 }
     (.present ⟨0, 0, false, false, now, refund, pool0⟩) ↔ True)
 
-#check (Step.rotateKeepPaid_iff : ∀ (l : Live) (now : Slot) (sn' : Seq)
-    (payee : Addr) (refund' : Option Addr),
-  Step p env (.rotate sn' .keep payee refund') now (.present l)
+#check (Step.rotateKeepPaid_iff : ∀ (l : Live) (now : Slot) (sn' : Seq) (payee : Addr),
+  Step p env (.rotate sn' .keep payee) now (.present l)
     { hunter := some { addr := payee, pool := p.P } }
-    (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
-                       refundTo := refund'.getD l.refundTo, pool := l.pool - p.P }) ↔
-  env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
-  env.intentOk (l.epoch + 1) .keep refund' = true ∧ p.P ≤ l.pool)
+    (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, pool := l.pool - p.P }) ↔
+  env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ p.P ≤ l.pool)
 
-#check (Step.rotateKeepUnpaid_iff : ∀ (l : Live) (now : Slot) (sn' : Seq)
-    (payee : Addr) (refund' : Option Addr),
-  Step p env (.rotate sn' .keep payee refund') now (.present l) {}
-    (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
-                       refundTo := refund'.getD l.refundTo }) ↔
-  env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
-  env.intentOk (l.epoch + 1) .keep refund' = true ∧ l.pool < p.P)
+#check (Step.rotateKeepUnpaid_iff : ∀ (l : Live) (now : Slot) (sn' : Seq) (payee : Addr),
+  Step p env (.rotate sn' .keep payee) now (.present l) {}
+    (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false }) ↔
+  env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ l.pool < p.P)
 
-#check (Step.rotateDepositPaid_iff : ∀ (l : Live) (now : Slot) (sn' : Seq)
-    (payee : Addr) (refund' : Option Addr),
-  Step p env (.rotate sn' .deposit payee refund') now (.present l)
+#check (Step.rotateDepositPaid_iff : ∀ (l : Live) (now : Slot) (sn' : Seq) (payee : Addr),
+  Step p env (.rotate sn' .deposit payee) now (.present l)
     { bIn := p.B - l.bHeld p, hunter := some { addr := payee, pool := p.P } }
     (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
-                       frozen := false, refundTo := refund'.getD l.refundTo,
-                       pool := l.pool - p.P }) ↔
+                       frozen := false, pool := l.pool - p.P }) ↔
   env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
-  env.intentOk (l.epoch + 1) .deposit refund' = true ∧ p.P ≤ l.pool)
+  env.depositAuthorized (l.epoch + 1) = true ∧ p.P ≤ l.pool)
 
-#check (Step.rotateDepositUnpaid_iff : ∀ (l : Live) (now : Slot) (sn' : Seq)
-    (payee : Addr) (refund' : Option Addr),
-  Step p env (.rotate sn' .deposit payee refund') now (.present l)
+#check (Step.rotateDepositUnpaid_iff : ∀ (l : Live) (now : Slot) (sn' : Seq) (payee : Addr),
+  Step p env (.rotate sn' .deposit payee) now (.present l)
     { bIn := p.B - l.bHeld p }
-    (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
-                       frozen := false, refundTo := refund'.getD l.refundTo }) ↔
+    (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false }) ↔
   env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
-  env.intentOk (l.epoch + 1) .deposit refund' = true ∧ l.pool < p.P)
+  env.depositAuthorized (l.epoch + 1) = true ∧ l.pool < p.P)
 
 #check (Step.poison_iff : ∀ (l : Live) (now : Slot),
   Step p env .poison now (.present l) {} (.present { l with poisoned := true }) ↔

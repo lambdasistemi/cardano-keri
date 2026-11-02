@@ -139,7 +139,7 @@
       "pause": 500
     },
     {
-      "text": "Registration becomes a request against the registry: it identifies the AID, binds the inception evidence, and carries the bonds and a refund address chosen by whoever pays. It is applied in a batch by anyone. This does not require the raw inception to be stored in the request: the proposed earlier attestation would authenticate inception validity and its initial key state. Such an attestation may be issued more than once; registry admission supplies checkpoint uniqueness. Its concrete format and validation are still to be implemented. Application checks that the AID has no leaf, inserts one, and creates the checkpoint in the same transaction. The persistent leaf prevents a second first-registration of the AID. Revival is a separate, guarded operation: the registry model permits it from dormant k and allocates a fresh abstract token. This does not specify a concrete asset-name encoding or prove that token bytes are minted only once across every revival. See the registration guarantee for the atomic mint/insertion obligation and the model's evidence limits.",
+      "text": "Registration becomes a request against the registry: it identifies the AID, binds the inception evidence, and carries the bonds and a refund address chosen by whoever pays. It is applied in a batch by anyone. This does not require the raw inception to be stored in the request: the proposed earlier attestation would authenticate inception validity and its initial key state. Such an attestation may be issued more than once; registry admission supplies checkpoint uniqueness. Its concrete format and validation are still to be implemented. Application checks that the AID has no leaf, inserts one, and creates the checkpoint in the same transaction. The persistent leaf prevents a second first-registration of the AID, and there is no revival: a registered identity stays live until it is convicted. See the registration guarantee for the atomic mint/insertion obligation and the model's evidence limits.",
       "pause": 400
     },
     {
@@ -225,10 +225,6 @@
       "pause": 300
     },
     {
-      "text": "an optional new refund address;",
-      "pause": 300
-    },
-    {
       "text": "the premium P paid from the pool to the payee the transaction names, when the pool covers it. An unpaid rotation is still a valid rotation: no transition ever requires the pool;",
       "pause": 300
     },
@@ -237,7 +233,7 @@
       "pause": 300
     },
     {
-      "text": "Every option other than keep, and every new address, travels in one message signed by the keys of the epoch the rotation opens (ruling D-038). A relayer landing the owner's public rotation therefore cannot park her, reset her juvenility, or move her money. Absent means keep and unchanged.",
+      "text": "A deposit travels in a message signed by the keys of the epoch the rotation opens (D-038). A relayer landing the owner's public rotation therefore cannot unfreeze her. Absent means keep. No rotation changes the refund address: it is chosen by whoever pays the registration and fixed for the checkpoint's whole life.",
       "pause": 400
     }
   ],
@@ -271,11 +267,11 @@
       "pause": 500
     },
     {
-      "text": "Close is the reap: a witnessed rotation by the next keys whose signed message names the payee of the premium and the refund address (ruling D-036). The parked output retains its token, minimum ADA and that key state; the registry key stays active. It needs the next keys exactly like any other rotation, so the current-key thief loses this move entirely — the only Cardano power the current keys retain is the poison, and a rotation clears that.",
+      "text": "There is no close. The owner keeps her checkpoint alive — bonds, rotations, unfreezing — until it is convicted; a relying party sees a checkpoint that is either alive or convicted. The current-key thief loses the close entirely: the only Cardano power the current keys retain is the poison, and a rotation clears that.",
       "pause": 400
     },
     {
-      "text": "There is no pause. Close is not terminal: a parked identity returns on a witnessed rotation later than the parked key state, with fresh bonds and a fresh juvenility window. Only a conviction is final.",
+      "text": "There is no pause, no parking and no revival. Only a conviction is final. Whether an owner who stops maintaining a checkpoint should recover its bonds and pool is an open economic question: today they leave a live checkpoint only through rotation premiums, a freeze and conviction.",
       "pause": 400
     }
   ],
@@ -365,7 +361,7 @@
       "pause": 500
     },
     {
-      "text": "The same proof, a different effect. The convictor names a payee and takes D_reg in full; B and the pool go to the refund address; the checkpoint becomes Convicted, terminal; the token stays, and there is no transition out — no rotate, no poison, no close (rulings D-030, D-031).",
+      "text": "The same proof, a different effect. The convictor names a payee and takes D_reg in full; B and the pool go to the refund address; the checkpoint becomes Convicted, terminal; the token stays, and there is no transition out — no rotate, no poison, no freeze, no top-up (D-030, D-031).",
       "pause": 400
     },
     {
@@ -377,17 +373,13 @@
       "pause": 400
     }
   ],
-  "top-up-and-reopen-new-in-the-accepted-design": [
+  "top-up-new-in-the-accepted-design": [
     {
-      "text": "Top-up and reopen — new in the accepted design.",
+      "text": "Top-up — new in the accepted design.",
       "pause": 500
     },
     {
       "text": "Top-up adds value to the pool. No signature, no datum change, anyone. It is how a friend, an employer or a consortium pays for an identity's maintenance.",
-      "pause": 400
-    },
-    {
-      "text": "Reopen brings a parked identity back: a witnessed rotation later than the parked key state, fresh bonds, a first pool, and a refund address chosen by whoever pays. A rotation at or below the parked sequence cannot reopen — that is what stops a stale resurrection.",
       "pause": 400
     }
   ],
@@ -427,6 +419,6 @@
   ],
   "_source": {
     "file": "identity-ops.md",
-    "sha256": "b6ea319a0ce393bb7356431465c232914c0867b3da0ac37463993158904eba5a"
+    "sha256": "a648f5f71c3a78b45855dbf8611cf84094068862681cf7da35ed01646439f4ce"
   }
 }

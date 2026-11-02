@@ -50,7 +50,7 @@
       "story": 8,
       "path": "simulator/checkpoint-simulator-scenarios/08-alice-moves-refund-address.json",
       "baselineSha256": "cc2abb1b7dbdefdbf0ff8ee343075843e487597190a616d1ca253a839dbcaf2c",
-      "disposition": "The closing leave that paid the stranger's bonds to Alice is removed with the close action; the signed refund-address move and its refusals are unchanged."
+      "disposition": "The closing leave that paid the stranger's bonds to Alice is removed with the close action; the signed refund-address move and its refusals are unchanged. Rewritten at the fixed-refund revision (#505): the story is the sponsor’s, whose refund address is fixed at registration; it is played by simulator/checkpoint-simulator-scenarios/08-refund-stays-with-the-sponsor.json and its dispositions are in lean/FIXED-REFUND-DISPOSITIONS.md."
     },
     {
       "story": 9,
@@ -75,7 +75,7 @@
       "story": 12,
       "path": "simulator/checkpoint-simulator-scenarios/12-stranger-registers-stale.json",
       "baselineSha256": "2b7880ec1f2e5399a866772647c07f8d104a87dbb8f63ec6f685991a760612bb",
-      "disposition": "Unchanged local behavior; theorem rows of removed declarations dropped from the exhibited set."
+      "disposition": "Unchanged local behavior; theorem rows of removed declarations dropped from the exhibited set. At the fixed-refund revision (#505) the step in which Alice moved Mallory’s refund address lands as a plain rotation and the address stays Mallory’s."
     },
     {
       "story": 13,

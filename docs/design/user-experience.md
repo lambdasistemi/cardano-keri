@@ -69,9 +69,9 @@ private keys:
 4. wait for settlement.
 
 The resulting checkpoint is controlled by the keys in Alice's inception, not
-by the relayer. If somebody else pays, they are donating: the refund address is
-theirs only until Alice's first rotation moves it, and the money then answers
-to her keys.
+by the relayer. Whoever pays chooses the refund address, and it stays theirs
+for the checkpoint's whole life: if the checkpoint is convicted, the freeze
+bond and the pool go back to that address, whatever Alice's keys sign.
 
 The UI should show the AID; the controller threshold; the witness threshold;
 the expected checkpoint policy and asset; each of the three sums; the premint
@@ -92,11 +92,10 @@ moved. Until the advance settles, Cardano still has the old key state — and
 under the accepted design, whether it settles promptly depends on whether Alice's
 pool can pay a hunter.
 
-A rotation is also where Alice exercises every other choice she has: the bond
-option (`keep`, or `deposit` to unfreeze) and a
-new refund address. All of them travel in **one message her new keys sign**, so
-a UI must display the intent and the address together, before signing, exactly
-as the chain will read them.
+A rotation is also where Alice chooses the bond option: `keep`, or `deposit`
+to unfreeze. A `deposit` travels in **a message her new keys sign**, so a UI
+must display it before signing, exactly as the chain will read it. A rotation
+never changes the refund address.
 
 ## Poison
 
@@ -125,8 +124,9 @@ conviction custody first, then convicted after the associated Registry fold).
 
 - **Deposit** is the unfreeze: a rotation that refills `B` after a hunter
   took it. It is a no-op on full bonds, still signed by the new keys.
-- **Refund address** changes travel with a rotation, signed by the new keys.
-  The address matters only at conviction, when the bonds and the pool go there.
+- **Refund address** is set by whoever pays the registration and never
+  changes. It matters only at conviction, when the freeze bond and the pool go
+  there.
 
 Whether an owner who stops maintaining a checkpoint should recover its bonds
 and pool is an open economic question: today they leave a live checkpoint only

@@ -92,8 +92,8 @@
   },
   {
     "id": "CP-10",
-    "before": "                    .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false,\n                                      refundTo := r' })",
-    "after": "                    .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false,\n                                      refundTo := r', bornAt := now })",
+    "before": "                    .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false })",
+    "after": "                    .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false, bornAt := now })",
     "failure": "ATOM:CP-10",
     "owner": "CardanoKeri.Checkpoint.T10_only_deposit_restores, CardanoKeri.Checkpoint.T5_deposit_on_full_is_keep",
     "test": "CheckpointAtomChecks",
@@ -118,36 +118,36 @@
   },
   {
     "id": "CP-12",
-    "before": "         env.intentOk (l.epoch + 1) op.intent refund' = true then",
-    "after": "         env.intentOk (l.epoch + 1) .keep refund' = true then",
+    "before": "         env.bondOpOk (l.epoch + 1) op = true then",
+    "after": "         env.bondOpOk (l.epoch + 1) .keep = true then",
     "failure": "ATOM:CP-12",
-    "owner": "CardanoKeri.Checkpoint.T5_every_bond_option, CardanoKeri.Checkpoint.T6_intent_requires_new_keys",
+    "owner": "CardanoKeri.Checkpoint.T5_every_bond_option, CardanoKeri.Checkpoint.T6_deposit_requires_new_keys",
     "test": "CheckpointAtomChecks",
     "args": [
       "CP-12"
     ],
     "kind": "decidable-mirror",
-    "detail": "deposit uses keep intent"
+    "detail": "deposit checked as a keep"
   },
   {
     "id": "CP-13",
-    "before": "         env.intentOk (l.epoch + 1) op.intent refund' = true then",
-    "after": "         true then",
+    "before": "poisoned := false,\n                                      pool := l.pool - p.P })",
+    "after": "poisoned := false,\n                                      refundTo := payee, pool := l.pool - p.P })",
     "failure": "ATOM:CP-13",
-    "owner": "CardanoKeri.Checkpoint.T5_keep_is_rotated, CardanoKeri.Checkpoint.T6_refund_change_requires_new_keys",
+    "owner": "CardanoKeri.Checkpoint.T6_refund_fixed, CardanoKeri.Checkpoint.T5_keep_is_rotated, CardanoKeri.Checkpoint.T5_keep_needs_no_intent",
     "test": "CheckpointAtomChecks",
     "args": [
       "CP-13"
     ],
     "kind": "decidable-mirror",
-    "detail": "rotation ignores signed address"
+    "detail": "a rotation moves the refund address"
   },
   {
     "id": "CP-14",
-    "before": "  | .keep, none => true",
-    "after": "  | _, none => true",
+    "before": "  | .deposit => env.depositAuthorized e",
+    "after": "  | .deposit => true",
     "failure": "ATOM:CP-14",
-    "owner": "CardanoKeri.Checkpoint.T6_intent_requires_new_keys, CardanoKeri.Checkpoint.T6_relayer_cannot_park_age_or_close",
+    "owner": "CardanoKeri.Checkpoint.T6_deposit_requires_new_keys, CardanoKeri.Checkpoint.T6_relayer_cannot_park_age_or_close",
     "test": "CheckpointAtomChecks",
     "args": [
       "CP-14"
@@ -157,8 +157,8 @@
   },
   {
     "id": "CP-30",
-    "before": "           refundTo := refund'.getD l.refundTo,\n           pool := if p.P ≤ l.pool then l.pool - p.P else l.pool }",
-    "after": "           refundTo := refund'.getD l.refundTo, bornAt := 0,\n           pool := if p.P ≤ l.pool then l.pool - p.P else l.pool }",
+    "before": "  { l with sn := sn', epoch := l.epoch + 1, poisoned := false,\n           pool := if p.P ≤ l.pool then l.pool - p.P else l.pool }",
+    "after": "  { l with sn := sn', epoch := l.epoch + 1, poisoned := false, bornAt := 0,\n           pool := if p.P ≤ l.pool then l.pool - p.P else l.pool }",
     "failure": "ATOM:CP-30",
     "owner": "CardanoKeri.Checkpoint.T5_keep_is_rotated, CardanoKeri.Checkpoint.T5_deposit_on_full_is_keep",
     "test": "CheckpointAtomChecks",
@@ -261,7 +261,7 @@
   },
   {
     "id": "CP-39",
-    "before": "      if env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧\n         env.intentOk (l.epoch + 1) op.intent refund' = true then",
+    "before": "      if env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧\n         env.bondOpOk (l.epoch + 1) op = true then",
     "after": "      if env.quorum l.epoch = true ∧ l.sn < sn' then",
     "failure": "ATOM:CP-39",
     "owner": "CardanoKeri.Checkpoint.T4_current_key_thief_cannot_rotate_or_freeze",

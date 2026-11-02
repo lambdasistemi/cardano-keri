@@ -54,8 +54,8 @@ an accepted fold consumes the associated pending request.
 
 ## Value and authorization
 
-A refund-address change travels with a rotation, signed by the new keys.
-There is no close. Conviction pays the conviction bond to the convictor and
+The refund address is chosen by whoever pays the registration and no step
+changes it. There is no close. Conviction pays the conviction bond to the convictor and
 returns the held freeze bond and pool to the refund address.
 
 Termination booking splits `Mc` into `Mr + tip` for the request and

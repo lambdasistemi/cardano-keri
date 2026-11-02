@@ -97,10 +97,10 @@ function checkExactNat(core, corpus) {
   const live = (over = {}) => ({ present: { l: { sn: 1, epoch: 1, poisoned: false, frozen: false, bornAt: 0, refundTo: 7, pool: 4, ...over } } });
   const LIVE = ['sn', 'epoch', 'bornAt', 'refundTo', 'pool'];
   const pendingSt = (over = {}) => ({ terminationPending: { h: { epoch: 1, sn: 1, ...over } } });
-  const EV_SHAPES = { rotationTo: [1, 1, 2], intentAuthorized: [2, 'keep', 7], quorum: [1], duplicityAt: [1, 1] };
-  const EV_NAT = { rotationTo: [0, 1, 2], intentAuthorized: [0, 2], quorum: [0], duplicityAt: [0, 1] };   // the Nat entries of each row
+  const EV_SHAPES = { rotationTo: [1, 1, 2], depositAuthorized: [2], quorum: [1], duplicityAt: [1, 1] };
+  const EV_NAT = { rotationTo: [0, 1, 2], depositAuthorized: [0], quorum: [0], duplicityAt: [0, 1] };   // the Nat entries of each row
   // an action that consults each predicate from live(), and one that consults none
-  const CONSULTING = { rotationTo: { rotate: { "sn'": 2, op: 'keep', payee: 1, "refund'": null } }, intentAuthorized: { rotate: { "sn'": 2, op: 'keep', payee: 1, "refund'": 7 } }, quorum: 'poison', duplicityAt: { convict: { payee: 1 } } };
+  const CONSULTING = { rotationTo: { rotate: { "sn'": 2, op: 'keep', payee: 1 } }, depositAuthorized: { rotate: { "sn'": 2, op: 'deposit', payee: 1 } }, quorum: 'poison', duplicityAt: { convict: { payee: 1 } } };
   const NOP = { topUp: { x: 0 } };
   const okEnv = core.envAdd(core.envAdd(core.emptyEnv(), { quorum: [1] }), { rotationTo: [1, 1, 2] });
   const got = r => (r.ok ? 'ok' : r.reason + (r.field !== undefined ? '/' + r.field : ''));
@@ -120,11 +120,10 @@ function checkExactNat(core, corpus) {
     const tag = typeof v === 'string' ? JSON.stringify(v) : String(v);
     if (core.isNat(v)) problems.push(`isNat accepts ${tag}`);
     for (const k of ['D', 'B', 'P', 'W']) if (core.validateParams({ ...P, [k]: v }) === null) problems.push(`params accept ${k}=${tag}`);
-    const actions = [{ register: { refund: v, pool0: 1 } }, { register: { refund: 1, pool0: v } }, { rotate: { "sn'": v, op: 'keep', payee: 1, "refund'": null } },
-      { rotate: { "sn'": 2, op: 'keep', payee: v, "refund'": null } }, { rotate: { "sn'": 2, op: 'keep', payee: 1, "refund'": v } }, { freeze: { "sn'": v, payee: 1 } },
+    const actions = [{ register: { refund: v, pool0: 1 } }, { register: { refund: 1, pool0: v } }, { rotate: { "sn'": v, op: 'keep', payee: 1 } },
+      { rotate: { "sn'": 2, op: 'keep', payee: v } }, { freeze: { "sn'": v, payee: 1 } },
       { freeze: { "sn'": 2, payee: v } }, { topUp: { x: v } }, { convict: { payee: v } }];
     for (const a of actions) {
-      if (a.rotate && a.rotate["sn'"] === 2 && a.rotate.payee === 1 && (v === null || v === undefined)) continue; // refund' null / absent means none
       const n = core.normalizeAction(a);
       if (n.ok || n.reason !== 'invalid-nat') problems.push(`action ${JSON.stringify(a)} not refused invalid-nat (got ${n.ok ? 'ok' : n.reason})`);
       const r = core.step(P, core.emptyEnv(), a, 1, a.register ? 'absent' : live());
@@ -163,7 +162,6 @@ function checkExactNat(core, corpus) {
     // ---- every entry point that takes an evidence table refuses a corrupted
     // entry of any predicate, whether or not the action consults it
     for (const k of Object.keys(EV_SHAPES)) for (const j of EV_NAT[k]) {
-      if (k === 'intentAuthorized' && j === 2 && v === null) continue;   // the address entry admits null: unchanged
       const row = EV_SHAPES[k].slice(); row[j] = v;
       const env = { ...core.emptyEnv(), [k]: [row] };
       const field = `${k}[0][${j}]`;
@@ -212,7 +210,7 @@ function checkExactNat(core, corpus) {
     verdict(`consumable on non-state ${core.canon(st)}`, () => core.consumable(P, 5, st), 'invalid-state', field);
     refusal(`attempt on non-state ${core.canon(st)}`, () => core.attempt({ ...core.newSession(P), state: st, leaves: { 1: 'active' } }, NOP, 0).record, 'invalid-state', field);
   }
-  const tables = [[null, 'env'], [[], 'env'], [{ ...core.emptyEnv(), bogus: [] }, 'bogus'], [{ ...core.emptyEnv(), quorum: 'x' }, 'quorum'], [{ ...core.emptyEnv(), intentAuthorized: [[1, 'burn', null]] }, 'intentAuthorized[0][1]'],
+  const tables = [[null, 'env'], [[], 'env'], [{ ...core.emptyEnv(), bogus: [] }, 'bogus'], [{ ...core.emptyEnv(), quorum: 'x' }, 'quorum'], [{ ...core.emptyEnv(), intentAuthorized: [] }, 'intentAuthorized'], [{ ...core.emptyEnv(), depositAuthorized: [[1, 2]] }, 'depositAuthorized[0]'],
     [{ ...core.emptyEnv(), quorum: [[1, 2]] }, 'quorum[0]'], [{ ...core.emptyEnv(), rotationTo: [[1, 1]] }, 'rotationTo[0]'], [{ ...core.emptyEnv(), duplicityAt: [1] }, 'duplicityAt[0]']];
   for (const [env, field] of tables) {
     refusal(`step under non-table ${core.canon(env)}`, () => core.step(P, env, NOP, 1, live()), 'invalid-evidence', field);
@@ -221,6 +219,8 @@ function checkExactNat(core, corpus) {
     refusal(`attempt under non-table ${core.canon(env)}`, () => core.attempt({ ...core.newSession(P), state: live(), registry: [1], env }, NOP, 0).record, 'invalid-evidence', field);
   }
   refusal('replay of a non-list', () => core.replay(P, okEnv, 0, live(), 'x'), 'invalid-action', 'list');
+  // the refund address is fixed at registration: a rotation has no address to name
+  refusal('a rotation naming a refund address', () => core.step(P, okEnv, { rotate: { "sn'": 2, op: 'keep', payee: 1, "refund'": 1 } }, 1, live()), 'invalid-action', "refund'");
   refusal('replay of a non-pair entry', () => core.replay(P, okEnv, 0, live(), [[1, NOP, 2]]), 'invalid-action', 'list[0]');
   verdict('consumable under a zero bond', () => core.consumable({ ...P, D: 0 }, 5, live()), 'invalid-params', 'D must be positive');
   // a boundary refusal exhibits no theorem: T5 / T8 / T12 must not read a non-state as a refused-with-evidence step
@@ -236,7 +236,7 @@ function checkExactNat(core, corpus) {
   const top2 = core.step(hp, core.emptyEnv(), { topUp: { x: 1 } }, 0, live({ pool: M - 1 }));
   if (!top2.ok || top2.state.present.l.pool !== M) problems.push('topUp 1 on a pool of 2^53 − 2 did not give 2^53 − 1 exactly');
   const env = core.envAdd(core.emptyEnv(), { rotationTo: [M, 1, 2] });
-  const rot = core.step(hp, env, { rotate: { "sn'": 2, op: 'keep', payee: 1, "refund'": null } }, 0, live({ epoch: M }));
+  const rot = core.step(hp, env, { rotate: { "sn'": 2, op: 'keep', payee: 1 } }, 0, live({ epoch: M }));
   if (rot.ok || rot.reason !== 'invalid-nat' || rot.field !== 'epoch') problems.push('rotation from epoch 2^53 − 1 was not refused invalid-nat/epoch: ' + JSON.stringify(rot));
   if (core.natAdd(M, 1) !== null || core.natAdd(M - 1, 1) !== M || core.natAdd(2 ** 52, 2 ** 52) !== null) problems.push('natAdd is not exact at the bound');
   // a state beyond the bound forced past validation: the step must refuse, and if a
@@ -278,12 +278,12 @@ function checkLocalSessions(core, corpus) {
       const l = core.liveOf(st);
       const e = l ? l.epoch : 0, sn = l ? l.sn : 0;
       // evidence arrives at random, for this AID's current epoch and sequence
-      if (rnd() < 0.5) s = core.addEvidence(s, pick([{ rotationTo: [e, sn, sn + 1] }, { quorum: [e] }, { duplicityAt: [e, sn] }, { intentAuthorized: [e + 1, 'keep', 1] }, { intentAuthorized: [e + 1, 'deposit', null] }, { rotationTo: [e, sn, sn + 2] }]));
+      if (rnd() < 0.5) s = core.addEvidence(s, pick([{ rotationTo: [e, sn, sn + 1] }, { quorum: [e] }, { duplicityAt: [e, sn] }, { depositAuthorized: [e + 1] }, { rotationTo: [e, sn, sn + 2] }]));
       if (rnd() < 0.1) for (const k of core.EV_KINDS) for (const row of s.env[k].slice()) if (rnd() < 0.3) s = core.removeEvidence(s, { [k]: row });
       let action;
       if (core.stateKind(st) === 'absent' && rnd() < 0.7) action = { register: { refund: pick([1, 4, 6]), pool0: Math.floor(rnd() * 12) } };
       else action = pick([
-        { rotate: { "sn'": pick([sn + 1, sn, sn + 2]), op: pick(core.BOND_OPS), payee: pick([1, 2, 4]), "refund'": pick([null, null, 1, 9]) } },
+        { rotate: { "sn'": pick([sn + 1, sn, sn + 2]), op: pick(core.BOND_OPS), payee: pick([1, 2, 4]) } },
         'poison', { freeze: { "sn'": sn + 1, payee: 2 } }, { topUp: { x: Math.floor(rnd() * 5) } }, { convict: { payee: 3 } },
         { register: { refund: 6, pool0: 1 } },
       ]);
@@ -473,7 +473,7 @@ function inversionClaim(core, name, p, env, now, pre, action) {
     return claim(rhs, { ...(deposit ? { bIn: p.B - core.bHeldOf(p, l) } : {}),
       ...(paid ? { hunter: pay(d.payee, 0, 0, p.P) } : {}) },
     core.present({ ...l, sn: d["sn'"], epoch: l.epoch + 1, poisoned: false,
-      ...(deposit ? { frozen: false } : {}), refundTo: d["refund'"] ?? l.refundTo,
+      ...(deposit ? { frozen: false } : {}),
       pool: paid ? Math.max(0, l.pool - p.P) : l.pool }));
   }
   throw new Error('unmapped inversion ' + name);
@@ -556,9 +556,7 @@ function recordMatches(core, m, t) {
     m.op === undefined || dd.op === m.op,
     m.preWord === undefined || core.stateWord(params, r.pre) === m.preWord,
     !m.prePoisoned || (lp && lp.poisoned === true),
-    !m.refundNull || dd["refund'"] === null,
     !m.refundUnchanged || (lp && lq && lp.refundTo === lq.refundTo),
-    !m.refundChanged || (lp && lq && lp.refundTo !== lq.refundTo),
     !m.hunterPool || (r.ok && fl.hunter && fl.hunter.pool > 0),
     !m.noFlow || (r.ok && core.canon(fl) === core.canon(core.flow({}))),
     !m.refundToAlice || (r.ok && fl.refund && fl.refund.addr === 1),
@@ -1002,7 +1000,7 @@ function fabricatedViolations(core) {
   const rows = rs => rs.reduce((e, r) => core.envAdd(e, { [Object.keys(r)[0]]: r[Object.keys(r)[0]] }), core.emptyEnv());
   const pay = (addr, dreg = 0, b = 0, pool = 0) => ({ addr, dreg, b, pool });
   const TOP = { topUp: { x: 1 } };
-  const ROT = (sn2, op, payee = 2, r = null) => ({ rotate: { "sn'": sn2, op, payee, "refund'": r } });
+  const ROT = (sn2, op, payee = 2) => ({ rotate: { "sn'": sn2, op, payee } });
   const rotEnv = rows([{ rotationTo: [1, 1, 2] }]);
   const dupEnv = rows([{ duplicityAt: [1, 1] }]);
   // one fabricated step: `before` and `after` are sessions, `rec` the record theoremReport reads
@@ -1036,7 +1034,7 @@ function fabricatedViolations(core) {
     T4_current_key_thief_cannot_rotate_or_freeze: () => mk({ pre: live, post: rotated(), action: ROT(2, 'keep'), flow: { hunter: pay(2, 0, 0, 2) } }),
     T5_every_bond_option: () => mk({ pre: live, action: ROT(2, 'keep'), env: rotEnv, ok: false, reason: 'no-quorum' }),
     T5_keep_is_rotated: () => mk({ pre: live, post: rotated(), action: ROT(2, 'keep'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 3) } }),
-    T5_deposit_on_full_is_keep: () => mk({ pre: live, post: rotated({ bornAt: 99 }), action: ROT(2, 'deposit'), env: rows([{ rotationTo: [1, 1, 2] }, { intentAuthorized: [2, 'deposit', null] }]), flow: { hunter: pay(2, 0, 0, 2) } }),
+    T5_deposit_on_full_is_keep: () => mk({ pre: live, post: rotated({ bornAt: 99 }), action: ROT(2, 'deposit'), env: rows([{ rotationTo: [1, 1, 2] }, { depositAuthorized: [2] }]), flow: { hunter: pay(2, 0, 0, 2) } }),
     T5_keep_needs_no_intent: () => mk({ pre: live, action: ROT(2, 'keep'), env: rotEnv, ok: false, reason: 'no-quorum' }),
     T5_poison_enabled: () => mk({ pre: live, action: 'poison', env: rows([{ quorum: [1] }]), ok: false, reason: 'no-quorum' }),
     T5_freeze_enabled: () => mk({ pre: pr(L({ pool: 1 })), action: { freeze: { "sn'": 2, payee: 2 } }, env: rotEnv, ok: false, reason: 'poisoned' }),
@@ -1045,9 +1043,13 @@ function fabricatedViolations(core) {
     T6_dreg_never_a_fee: () => mk({ pre: live, post: rotated(), action: ROT(2, 'keep'), env: rotEnv, flow: { hunter: pay(2, 1, 0, 2) } }),
     T6_dreg_never_moves_between_present_states: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1, dregIn: 1 } }),
     T6_dreg_enters_only_at_birth: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1, dregIn: 1000 } }),
-    T6_refund_change_requires_new_keys: () => mk({ pre: live, post: pr(L({ pool: 11, refundTo: 9 })), action: TOP, flow: { poolIn: 1 } }),
+    T6_refund_fixed: () => mk({ pre: live, post: pr(L({ pool: 11, refundTo: 9 })), action: TOP, flow: { poolIn: 1 } }),
+    step_from_present_keeps_refund: () => mk({ pre: live, post: pr(L({ pool: 11, refundTo: 9 })), action: TOP, flow: { poolIn: 1 } }),
+    T6_refund_fixed_along_trace: () => mk({ pre: live, post: pr(L({ pool: 11, refundTo: 9 })), action: TOP, flow: { poolIn: 1 }, origin: live }),
+    T6_refund_is_registration_address: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, history: [[0, { register: { refund: 6, pool0: 10 } }], [12, TOP]] }),
+    T6_conviction_refunds_registration_address: () => mk({ pre: live, post: { terminationPending: { h: { epoch: 1, sn: 1 } } }, action: { convict: { payee: 3 } }, env: dupEnv, flow: { refund: pay(1, 0, 5, 10), convictor: pay(3, 1000) }, history: [[0, { register: { refund: 6, pool0: 10 } }], [12, { convict: { payee: 3 } }]] }),
     T6_frozen_flips_only_by_rotation_or_freeze: () => mk({ pre: live, post: pr(L({ pool: 11, frozen: true })), action: TOP, flow: { poolIn: 1 } }),
-    T6_intent_requires_new_keys: () => mk({ pre: live, post: rotated(), action: ROT(2, 'deposit'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 2) } }),
+    T6_deposit_requires_new_keys: () => mk({ pre: live, post: rotated(), action: ROT(2, 'deposit'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 2) } }),
     T6_relayer_cannot_park_age_or_close: () => mk({ pre: live, post: rotated(), action: ROT(2, 'deposit'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 2) } }),
     T7_step_iff_stepFn: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, corpus: { params: P, traces: [{ name: 'fab', env: env0, steps: [{ now: 12, input: live, action: TOP, result: null }] }] } }),
     T7_trace_iff_replay: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, corpus: { params: P, traces: [{ name: 'fab', env: env0, steps: [{ now: 12, input: live, action: TOP, result: { flow: core.flow({ poolIn: 1 }), state: pr(L({ pool: 11 })) } }] }] } }),
@@ -1319,15 +1321,17 @@ async function selftest(work) {
     { name: 'core guard flipped: a rotation at a sequence not later than the checkpoint’s lands', expect: /expected ok=false, got ok=true|theorem VIOLATED: .*T(1|7)/,
       make: () => ({ core: mutant('m-rotate-sequence', [["      if (!(l.sn < sn2)) return refuse('sequence-not-later');\n      const epoch2 = natAdd(l.epoch, 1);", "      const epoch2 = natAdd(l.epoch, 1);"]]), skipBuild: true }) },
     { name: 'core effect changed: a paid rotation pays the premium to the refund address, not to the payee', expect: /flow mismatch|theorem VIOLATED: .*T(16|7)/,
-      make: () => ({ core: mutant('m-rotate-payee', [["      if (p.P <= l.pool) return some({ bIn, hunter: payment(payee, 0, 0, p.P) }, present({ ...next, pool: l.pool - p.P }));", "      if (p.P <= l.pool) return some({ bIn, hunter: payment(r2, 0, 0, p.P) }, present({ ...next, pool: l.pool - p.P }));"]]), skipBuild: true }) },
+      make: () => ({ core: mutant('m-rotate-payee', [["      if (p.P <= l.pool) return some({ bIn, hunter: payment(payee, 0, 0, p.P) }, present({ ...next, pool: l.pool - p.P }));", "      if (p.P <= l.pool) return some({ bIn, hunter: payment(l.refundTo, 0, 0, p.P) }, present({ ...next, pool: l.pool - p.P }));"]]), skipBuild: true }) },
     { name: 'core guard flipped: a checkpoint is convicted without a proof against its key state', expect: /expected ok=false, got ok=true|theorem VIOLATED: .*T(12|5|7)/,
       make: () => ({ core: mutant('m-convict', [["      if (!envDuplicityAt(env, l.epoch, l.sn)) return refuse('no-duplicity-proof');\n", ""]]), skipBuild: true }) },
     { name: 'core guard flipped: pending custody takes a local step', expect: /expected reason «termination-pending»|expected ok=false, got ok=true|theorem VIOLATED: .*pending/,
       make: () => ({ core: mutant('m-pending-local', [["  if (sk === 'terminationPending') return refuse('termination-pending');\n", "  if (sk === 'terminationPending') return refuse('absent-needs-register');\n"]]), skipBuild: true }) },
     { name: 'core effect changed: a deposit restarts juvenility (D-040 says it does not)', expect: /live datum mismatch|theorem VIOLATED: .*T(5|10|7)/,
       make: () => ({ core: mutant('m-deposit-ages', [["      if (op === 'deposit') next.frozen = false;", "      if (op === 'deposit') { next.frozen = false; next.bornAt = now; }"]]), skipBuild: true }) },
-    { name: 'core guard weakened: any signed intent authorizes a new refund address (T6_refund_change_requires_new_keys)', expect: /expected ok=false, got ok=true|theorem VIOLATED: .*T(6|7)/,
-      make: () => ({ core: mutant('m-t6d', [["      if (!intentOk(env, epoch2, op, r)) return refuse('intent-not-authorized');", "      if (!intentOk(env, epoch2, op, r) && !['keep', 'deposit'].some(i => intentOk(env, epoch2, i, r) || intentOk(env, epoch2, i, null))) return refuse('intent-not-authorized');"]]), skipBuild: true }) },
+    { name: 'core effect changed: a rotation moves the refund address to its payee (T6_refund_fixed)', expect: /theorem VIOLATED: .*T6|live datum mismatch|state mismatch/,
+      make: () => ({ core: mutant('m-refund-moved', [["      const next = { ...l, sn: sn2, epoch: epoch2, poisoned: false };", "      const next = { ...l, sn: sn2, epoch: epoch2, poisoned: false, refundTo: payee };"]]), skipBuild: true }) },
+    { name: 'core guard weakened: a deposit lands without the new keys’ signature (T6_deposit_requires_new_keys)', expect: /expected ok=false, got ok=true|theorem VIOLATED: .*T(6|7)/,
+      make: () => ({ core: mutant('m-deposit-unsigned', [["const bondOpOk = (env, e, op) => op === 'keep' || envDepositAuthorized(env, e);", "const bondOpOk = (env, e, op) => true;"]]), skipBuild: true }) },
     { name: 'a theorem row deleted from the core (T1_rotate_strict has no checker)', expect: /theorem T1_rotate_strict is declared in the Lean but has no checker row/,
       make: () => ({ core: mutant('m-row-deleted', [["  row('T1_rotate_strict', ok && pp && rot, () => [[lp.sn < lq.sn, 'a rotation did not increase the sequence']]);\n", ""]]), skipBuild: true }) },
     { name: 'a theorem row renamed in the core (T1_rotate_strict → T1_rotate_strictly)', expect: /theorem T1_rotate_strict is declared in the Lean but has no checker row|checker row T1_rotate_strictly names no theorem/,

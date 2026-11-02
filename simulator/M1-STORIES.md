@@ -54,10 +54,9 @@ The words below are ours:
 - **Poison**: Alice's own lock on her checkpoint: a declaration signed by the
   current keys at their threshold that makes the checkpoint unconsumable
   until a witnessed rotation clears it.
-- **Refund address**: where the bonds and pool go when the checkpoint is
-  convicted. Set when the
-  checkpoint is registered, moved only at a rotation and only by the new
-  keys.
+- **Refund address**: where the freeze bond and the pool go when the
+  checkpoint is convicted. Chosen by whoever pays the registration and fixed
+  for the checkpoint's whole life: no rotation, poison or other step moves it.
 - **Pending conviction**: the retained representative remains in custody while
   its associated termination request awaits a consuming Registry fold.
 - **Consumable**: what the treasury accepts — bonded (the freeze bond held),
@@ -88,8 +87,8 @@ checkpoint, so that Cardano contracts can read her key state.*
 - **After**: `Present`, epoch 0, not poisoned, born now, unconsumable for
   `W` slots (juvenile).
 - **Alice sees** a checkpoint she did not necessarily create. If a stranger
-  registered it, the refund address is the stranger's — until Alice's first
-  rotation moves it (story 8).
+  registered it, the refund address is the stranger's, for the checkpoint's
+  whole life (story 8).
 - **Open**: none.
 
 ## 2. Alice rotates, Hal lands it, Hal is paid
@@ -182,20 +181,23 @@ trusting this epoch now, before I have managed to rotate.*
   control by KERI's own rule; the chain follows KERI. Alice's poison lasts
   until that rotation and no longer.
 
-## 8. Alice moves her refund address
+## 8. The refund address stays the sponsor's
 
-*As Alice, I want the money to come back to me and not to whoever
-registered my checkpoint.*
+*As a sponsor, I pay Alice's registration — the conviction bond, the
+freeze bond and the first pool — and I want the bond and the pool I paid to
+go back to the refund address I chose if her checkpoint is ever convicted.*
 
-- **Before**: any bonded state whose refund address is not hers.
-- **Action**: at a rotation, Alice's new keys sign the new refund address
-  along with the rotation.
-- **The chain checks**: the signature over the new address at the new
-  threshold by the keys the rotation reveals. A relayer submitting her
-  public rotation without that signature leaves the address unchanged.
-- **After**: the refund address is Alice's. If a stranger had registered
-  her, the stranger's bonds now go to Alice's address if the checkpoint is
-  ever convicted: a stale registration is a donation.
+- **Before**: nothing on chain for this AID.
+- **Action**: the sponsor registers Alice with his own refund address; Alice
+  rotates, deposits and tops up the pool; Cora convicts.
+- **The chain checks**: the registration takes the refund address as given,
+  with no signature over it; a rotation leaves the refund address as it was;
+  so does a deposit; a top-up adds to the pool and nothing else; a conviction
+  pays the freeze bond held and the pool to the refund address.
+- **After**: `D_reg` goes to Cora; the freeze bond and the whole pool, top-ups
+  by others included, go to the sponsor's address. Alice's keys control her
+  identity, not the sponsor's money.
+- **Open**: none.
 
 ## 9. Cora convicts
 
@@ -250,12 +252,13 @@ myself and stop advancing at my epoch.*
 - **Action**: story 1, then advances up to the epoch whose keys Mallory
   holds.
 - **What limits it**: the checkpoint is juvenile for `W` slots; anyone can
-  advance it onward with Alice's later public rotations; the moment that
-  happens, Mallory's bonds answer to Alice's keys (story 8). It can happen
+  advance it onward with Alice's later public rotations. It can happen
   once per AID, ever.
 - **Stated as a limit**: this residual exists because advance is
   permissionless — the chain cannot tell the owner from a relayer — and
-  removing it would mean removing the relayer.
+  removing it would mean removing the relayer. Mallory's bonds stay hers:
+  the refund address is fixed at registration (story 8), so a stale
+  registration is not a donation to Alice.
 
 ## 13. Anyone tops up the pool
 

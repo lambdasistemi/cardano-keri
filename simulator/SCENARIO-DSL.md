@@ -43,7 +43,7 @@ Repeatable section keywords `step:` and `fork:` append to `steps` and `forks`. O
 | `- item` | list item |
 | `{...}` or a JSON array | exact JSON when a nested tuple would be awkward |
 
-Quote strings that contain spaces or punctuation. Keys such as `sn'` and `refund'` are legal unquoted.
+Quote strings that contain spaces or punctuation. Keys such as `sn'` are legal unquoted.
 
 ## Checkpoint fields
 

@@ -23,11 +23,10 @@
  * Lean driver emits is compared byte-for-byte after key sorting:
  *   state   'absent' | {present:{l:{sn,epoch,poisoned,frozen,bornAt,refundTo,pool}}}
  *           | {terminationPending:{h:{epoch,sn}}} | 'convicted'
- *   action  {register:{refund,pool0}} | {rotate:{"sn'",op,payee,"refund'"}} | 'poison'
+ *   action  {register:{refund,pool0}} | {rotate:{"sn'",op,payee}} | 'poison'
  *           | {freeze:{"sn'",payee}} | {topUp:{x}} | {convict:{payee}}
- *   intent  'keep' | 'deposit'
  *   flow    {dregIn,bIn,poolIn,refund,hunter,convictor}   payment {addr,dreg,b,pool}
- *   env     {rotationTo:[[e,sn,sn']], intentAuthorized:[[e,intent,addr|null]], quorum:[[e]], duplicityAt:[[e,sn]]}
+ *   env     {rotationTo:[[e,sn,sn']], depositAuthorized:[[e]], quorum:[[e]], duplicityAt:[[e,sn]]}
  *
  * The slices between `@@CORE:<id>@@` markers are inlined verbatim into
  * checkpoint-simulator.html by checkpoint-simulator-build.mjs; the page
@@ -92,7 +91,7 @@ function parseJsonExact(text) {
 const REASONS = [
   'invalid-params', 'invalid-nat', 'invalid-action', 'invalid-state', 'invalid-evidence',
   'convicted-terminal', 'termination-pending', 'absent-needs-register', 'already-present',
-  'no-witnessed-rotation', 'sequence-not-later', 'intent-not-authorized',
+  'no-witnessed-rotation', 'sequence-not-later', 'deposit-not-authorized',
   'no-quorum', 'already-poisoned', 'poisoned', 'pool-covers-premium', 'freeze-bond-missing',
   'no-duplicity-proof', 'slot-regression',
 ];
@@ -112,7 +111,7 @@ const ROTATES = ['Step.rotateKeepPaid', 'Step.rotateKeepUnpaid', 'Step.rotateDep
 const LEAN_GUARDS = {
   'no-witnessed-rotation': { decls: [...ROTATES, 'Step.freeze'], hyp: 'hev', text: 'env.rotationTo' },
   'sequence-not-later': { decls: [...ROTATES, 'Step.freeze'], hyp: 'hsn', text: "< sn'" },
-  'intent-not-authorized': { decls: [...ROTATES], hyp: 'hauth', text: 'env.intentOk (l.epoch + 1)' },
+  'deposit-not-authorized': { decls: ['Step.rotateDepositPaid', 'Step.rotateDepositUnpaid'], hyp: 'hauth', text: 'env.depositAuthorized (l.epoch + 1)' },
   'no-quorum': { decls: ['Step.poison'], hyp: 'hq', text: 'env.quorum l.epoch = true' },
   'already-poisoned': { decls: ['Step.poison'], hyp: 'hclean', text: 'l.poisoned = false' },
   'poisoned': { decls: ['Step.freeze'], hyp: 'hclean', text: 'l.poisoned = false' },
@@ -175,10 +174,8 @@ function validateParams(p) {
 // ---- Actions ---------------------------------------------------------------
 const ACTION_KINDS = ['register', 'rotate', 'poison', 'freeze', 'topUp', 'convict'];
 const BOND_OPS = ['keep', 'deposit'];
-// what the new keys sign along with the refund address (D-038): a bond option,
-// 'keep' | 'deposit'
-const INTENT_KINDS = ['keep', 'deposit'];
-const intentKind = i => (i === 'keep' || i === 'deposit') ? i : null;
+// the named arguments of each constructor of Action; any other key is refused by name
+const ACTION_FIELDS = { register: ['refund', 'pool0'], rotate: ["sn'", 'op', 'payee'], freeze: ["sn'", 'payee'], topUp: ['x'], convict: ['payee'] };
 
 function actionKind(a) {
   if (a === 'poison') return a;
@@ -197,7 +194,8 @@ function normalizeAction(a) {
   const bad = (...fs) => fs.map(([v, f]) => nat(v, f)).find(Boolean);
   const d = a[kind];
   if (kind !== 'poison' && (!d || typeof d !== 'object' || Array.isArray(d))) return { ok: false, reason: 'invalid-action', field: kind };
-  const optAddr = (v, f) => { const r = v === undefined ? null : v; return r !== null && !isNat(r) ? { ok: false, reason: 'invalid-nat', field: f } : { r }; };
+  const extra = kind === 'poison' ? undefined : Object.keys(d).find(k => !ACTION_FIELDS[kind].includes(k));
+  if (extra !== undefined) return { ok: false, reason: 'invalid-action', field: extra };
   switch (kind) {
     case 'poison': return { ok: true, kind, action: kind };
     case 'register': {
@@ -207,8 +205,7 @@ function normalizeAction(a) {
     case 'rotate': {
       const e = bad([d["sn'"], "sn'"], [d.payee, 'payee']); if (e) return e;
       if (!BOND_OPS.includes(d.op)) return { ok: false, reason: 'invalid-action', field: 'op' };
-      const o = optAddr(d["refund'"], "refund'"); if (o.ok === false) return o;
-      return { ok: true, kind, action: { rotate: { "sn'": d["sn'"], op: d.op, payee: d.payee, "refund'": o.r } } };
+      return { ok: true, kind, action: { rotate: { "sn'": d["sn'"], op: d.op, payee: d.payee } } };
     }
     case 'freeze': {
       const e = bad([d["sn'"], "sn'"], [d.payee, 'payee']); if (e) return e;
@@ -240,13 +237,11 @@ function actorOf(a) {
 }
 
 // ---- Env: decision tables ----------------------------------------------------
-// rotationTo [e, sn, sn'] · intentAuthorized [e, intent, addr | null] · quorum [e] · duplicityAt [e, sn]
-const EV_KINDS = ['rotationTo', 'intentAuthorized', 'quorum', 'duplicityAt'];
-const EV_ARITY = { rotationTo: 3, intentAuthorized: 3, quorum: 1, duplicityAt: 2 };
-// the type of each entry of a row: 'nat', 'intent', 'addr?' (a Nat or null)
-const EV_SHAPE = { rotationTo: ['nat', 'nat', 'nat'], intentAuthorized: ['nat', 'intent', 'addr?'], quorum: ['nat'], duplicityAt: ['nat', 'nat'] };
-const entryOk = (ty, v) => (ty === 'nat' ? isNat(v) : ty === 'intent' ? intentKind(v) !== null : (v === null || isNat(v)));
-const emptyEnv = () => ({ rotationTo: [], intentAuthorized: [], quorum: [], duplicityAt: [] });
+// rotationTo [e, sn, sn'] · depositAuthorized [e] · quorum [e] · duplicityAt [e, sn]
+const EV_KINDS = ['rotationTo', 'depositAuthorized', 'quorum', 'duplicityAt'];
+const EV_ARITY = { rotationTo: 3, depositAuthorized: 1, quorum: 1, duplicityAt: 2 };
+const entryOk = v => isNat(v);
+const emptyEnv = () => ({ rotationTo: [], depositAuthorized: [], quorum: [], duplicityAt: [] });
 // validateEnv(env) → null | {reason, field, message}: the complete table — exactly
 // the four Lean predicates (a missing one is empty), every row of the right
 // arity, every entry of its type — checked before any predicate is consulted
@@ -261,17 +256,15 @@ function validateEnv(env) {
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
       if (!Array.isArray(r) || r.length !== EV_ARITY[k]) return bad('invalid-evidence', `${k}[${i}]`, `${k}[${i}] is not a row of ${EV_ARITY[k]}`);
-      for (let j = 0; j < r.length; j++) {
-        const ty = EV_SHAPE[k][j];
-        if (!entryOk(ty, r[j])) return bad(ty === 'intent' ? 'invalid-evidence' : 'invalid-nat', `${k}[${i}][${j}]`, `${k}[${i}][${j}] is not ${ty === 'nat' ? 'a non-negative integer' : ty === 'intent' ? 'an intent (keep or deposit)' : 'an address or null'}`);
-      }
+      for (let j = 0; j < r.length; j++)
+        if (!entryOk(r[j])) return bad('invalid-nat', `${k}[${i}][${j}]`, `${k}[${i}][${j}] is not a non-negative integer`);
     }
   }
   return null;
 }
 const envHas = (env, kind, args) => (env[kind] || []).some(r => canon(r) === canon(args));
 const envRotationTo = (env, e, sn, sn2) => envHas(env, 'rotationTo', [e, sn, sn2]);
-const envIntentAuthorized = (env, e, intent, r) => envHas(env, 'intentAuthorized', [e, intent, r === undefined ? null : r]);
+const envDepositAuthorized = (env, e) => envHas(env, 'depositAuthorized', [e]);
 const envQuorum = (env, e) => envHas(env, 'quorum', [e]);
 // Concrete transcription of CardanoKeri.Duplicity. The public scenario table
 // selects a documented example pair; it does not assert a duplicity verdict.
@@ -351,13 +344,12 @@ const envDuplicityAt = (env, e, sn) => {
   const { context, rival } = duplicityFixture(e, sn);
   return concreteDuplicityAt(e, sn, context, rival);
 };
-// Env.intentOk: keep with no new address is the empty message and needs nothing;
-// every other intent, and every new address, needs the signed message (D-038)
-const intentOk = (env, e, intent, r) => ((intent === 'keep' && (r === null || r === undefined)) ? true : envIntentAuthorized(env, e, intent, r));
+// Env.bondOpOk: a keep needs nothing; a deposit needs the new keys' signature (D-038)
+const bondOpOk = (env, e, op) => op === 'keep' || envDepositAuthorized(env, e);
 // a row is {kind:[args]}; returns the env with the row added / removed
 function envAdd(env, row) {
   const [kind] = Object.keys(row); const args = row[kind];
-  if (!EV_KINDS.includes(kind) || !Array.isArray(args) || args.length !== EV_ARITY[kind] || !args.every((v, j) => entryOk(EV_SHAPE[kind][j], v))) throw new Error('bad evidence row ' + JSON.stringify(row));
+  if (!EV_KINDS.includes(kind) || !Array.isArray(args) || args.length !== EV_ARITY[kind] || !args.every(entryOk)) throw new Error('bad evidence row ' + JSON.stringify(row));
   if (envHas(env, kind, args)) return env;
   return { ...env, [kind]: [...env[kind], args] };
 }
@@ -393,7 +385,7 @@ const snOf = s => { const k = stateKind(s); const l = liveOf(s); return k === 'p
 // Live.hash: the key state a present checkpoint records
 const hashOfLive = l => ({ epoch: l.epoch, sn: l.sn });
 // Live.rotated: the datum a rotation to sn' leaves before its bond option
-const rotated = (p, l, sn2, r) => ({ ...l, sn: sn2, epoch: l.epoch + 1, poisoned: false, refundTo: r === null || r === undefined ? l.refundTo : r, pool: p.P <= l.pool ? l.pool - p.P : l.pool });
+const rotated = (p, l, sn2) => ({ ...l, sn: sn2, epoch: l.epoch + 1, poisoned: false, pool: p.P <= l.pool ? l.pool - p.P : l.pool });
 // Params.premium: P to the payee when the pool covers it, nothing otherwise
 const premium = (p, l, payee) => (p.P <= l.pool ? payment(payee, 0, 0, p.P) : null);
 // State.leaf: absent | active (including pending custody) | retired
@@ -484,13 +476,12 @@ function step(p, env, action, now, state) {
   switch (kind) {
     case 'register': return refuse('already-present');
     case 'rotate': {
-      const { "sn'": sn2, op, payee, "refund'": r } = a.rotate;
+      const { "sn'": sn2, op, payee } = a.rotate;
       if (!envRotationTo(env, l.epoch, l.sn, sn2)) return refuse('no-witnessed-rotation');
       if (!(l.sn < sn2)) return refuse('sequence-not-later');
       const epoch2 = natAdd(l.epoch, 1); if (epoch2 === null) return refuse('invalid-nat', 'epoch');
-      if (!intentOk(env, epoch2, op, r)) return refuse('intent-not-authorized');
-      const r2 = r === null ? l.refundTo : r;
-      const next = { ...l, sn: sn2, epoch: epoch2, poisoned: false, refundTo: r2 };
+      if (!bondOpOk(env, epoch2, op)) return refuse('deposit-not-authorized');
+      const next = { ...l, sn: sn2, epoch: epoch2, poisoned: false };
       const bIn = op === 'deposit' ? p.B - bHeldOf(p, l) : 0;
       if (op === 'deposit') next.frozen = false;
       if (p.P <= l.pool) return some({ bIn, hunter: payment(payee, 0, 0, p.P) }, present({ ...next, pool: l.pool - p.P }));
@@ -675,7 +666,7 @@ const CAST = {
   treasury: { name: 'The treasury', role: 'a consumer', addr: 5, blurb: 'A Cardano validator that authorizes payments against Alice’s current keys by reading her checkpoint as a reference input.' },
   cora: { name: 'Cora', role: 'a convictor', addr: 3, blurb: 'She holds two of Alice’s rotations at the same sequence, both receipted by Alice’s witnesses.' },
   mallory: { name: 'Mallory', role: 'a thief', addr: 4, blurb: 'Sometimes she has Alice’s current keys; sometimes the next ones too.' },
-  anyone: { name: 'A sponsor', role: 'pays for her presence', addr: 6, blurb: 'Someone who wants Alice served on Cardano — a service, a friend, a DAO. Registers her public inception, tops up her pool; the machine asks no signature of him. If he names his own refund address, his bonds go back to Alice at her first rotation: a stale registration is a donation.' },
+  anyone: { name: 'A sponsor', role: 'pays for her presence', addr: 6, blurb: 'Someone who wants Alice served on Cardano — a service, a friend, a DAO. Registers her public inception, tops up her pool; the machine asks no signature of him. The refund address he names at registration is fixed for the checkpoint’s life: on conviction his bonds and the pool go back to it, whatever Alice rotates.' },
 };
 const whoAddr = addr => Object.values(CAST).find(c => c.addr === addr) || { name: 'address ' + addr };
 const STATE_WORDS = {
@@ -691,9 +682,9 @@ function stateWord(p, s) {
   if (l.poisoned) return 'poisoned';
   return 'live';
 }
-// an intent in words: 'keep' | 'deposit'
-const INTENT_WORDS = { keep: 'keep the bonds', deposit: 'deposit (unfreeze)' };
-const intentWord = i => INTENT_WORDS[intentKind(i)] || String(i);
+// a bond option in words: 'keep' | 'deposit'
+const BOND_OP_WORDS = { keep: 'keep the bonds', deposit: 'deposit (unfreeze)' };
+const bondOpWord = op => BOND_OP_WORDS[op] || String(op);
 const VERDICT_WORDS = {
   consumable: 'Consumable: bonded, not frozen, not poisoned, past the juvenility window.',
   'not-present': 'Not consumable: only a live checkpoint can qualify; absent, pending and retired states are refused.',
@@ -717,14 +708,14 @@ function explain(rec, s) {
       : `"${rec.field}" must be a non-negative whole number at most 2^53 − 1: lovelace, slots and sequence numbers do not go negative, fractional or beyond what is represented exactly.`;
     case 'invalid-action': return 'The validator does not know this redeemer; only register, rotate, poison, freeze, top-up and convict exist. There is no owner exit.';
     case 'invalid-state': return `"${rec.field}" is not part of a checkpoint state: a state is Absent, Present with its seven datum fields, Pending with its key state, or Convicted. Nothing is evaluated on a non-state.`;
-    case 'invalid-evidence': return `"${rec.field}" is not part of an evidence table: the four predicates (witnessed rotation, signed intent, quorum, duplicity) as rows of 3, 3, 1 and 2 entries. Nothing is evaluated under a non-table.`;
+    case 'invalid-evidence': return `"${rec.field}" is not part of an evidence table: the four predicates (witnessed rotation, signed deposit, quorum, duplicity) as rows of 3, 1, 1 and 2 entries. Nothing is evaluated under a non-table.`;
     case 'termination-pending': return 'Conviction is pending: only completion of the associated imported fold can retire this identity.';
     case 'convicted-terminal': return 'Convicted is terminal: no rotation, no poison, no registration, ever. No KERI event un-duplicates an identifier.';
     case 'absent-needs-register': return 'Nothing is on chain for this AID. The only thing that can happen first is a registration.';
     case 'already-present': return 'This AID already has its checkpoint. The token is minted once, ever.';
     case 'no-witnessed-rotation': return `No witnessed rotation from epoch ${l.epoch} at sequence ${l.sn} to sequence ${d["sn'"]} was presented: signatures at the current threshold, revealed keys matching the pre-committed digests, receipts from the witnesses.`;
     case 'sequence-not-later': return `The presented rotation is at sequence ${d["sn'"]}, not later than the checkpoint’s ${l.sn}: the checkpoint cannot roll back.`;
-    case 'intent-not-authorized': return `The keys of epoch ${l.epoch + 1} — the ones this rotation reveals — did not sign the intent «${INTENT_WORDS[d.op] || d.op}${d["refund'"] !== null && d["refund'"] !== undefined ? ', refund → ' + d["refund'"] : ''}». Public data lands a rotation that keeps the bonds; unfreezing and moving the refund address are the owner’s, signed at the rotation (D-038).`;
+    case 'deposit-not-authorized': return `The keys of epoch ${l.epoch + 1} — the ones this rotation reveals — did not sign the deposit. Public data lands a rotation that keeps the bonds; unfreezing is the owner’s, signed at the rotation (D-038).`;
     case 'no-quorum': return `The current keys of epoch ${l.epoch} did not sign at their threshold. Keys of a retired epoch count for nothing.`;
     case 'already-poisoned': return 'This epoch is already poisoned; the poison is declared once per epoch and only a rotation clears it.';
     case 'poisoned': return 'A poisoned checkpoint cannot be frozen: it is already unconsumable, there is nothing to freeze.';
@@ -754,10 +745,10 @@ const THEOREMS = [
     plain: 'From a poisoned state the current quorum can do nothing and no proof can freeze it; nothing but the next keys yields a consumable state. The current keys’ only Cardano power is the poison. When the next keys never signed a rotation, no step is by the next keys and none freezes the checkpoint.' },
   { id: 'T5', title: 'Every ruled transition is enabled when its evidence is',
     lean: ['T5_every_bond_option', 'T5_keep_is_rotated', 'T5_deposit_on_full_is_keep', 'T5_keep_needs_no_intent', 'T5_poison_enabled', 'T5_freeze_enabled', 'T5_convict_enabled'],
-    plain: 'Given a witnessed rotation and the new keys’ signature on the option, both bond options are enabled whatever the pool holds (payment is never a gate); a keep is exactly the rotated datum plus the premium, and a deposit on full bonds is a keep; given the quorum an unpoisoned state can be poisoned; given a later rotation, a short pool, the freeze bond held and no poison the freeze is enabled; given a duplicity proof conviction is enabled from every present state.' },
-  { id: 'T6', title: 'Three value components that never mix; every intent signed by the new keys',
-    lean: ['T6_component_conservation', 'T6_dreg_never_a_fee', 'T6_dreg_never_moves_between_present_states', 'T6_dreg_enters_only_at_birth', 'T6_refund_change_requires_new_keys', 'T6_frozen_flips_only_by_rotation_or_freeze', 'T6_intent_requires_new_keys', 'T6_relayer_cannot_park_age_or_close'],
-    plain: 'For each of the conviction bond, the freeze bond and the pool: held plus in equals held after plus out. The conviction bond is never a fee, never moves between present states, and enters only at the registration. The refund address changes only under a rotation whose new keys signed it. A deposit and a new address each carry the new keys’ signature on that intent (D-038): a relayer with public data alone lands a keep and nothing else.' },
+    plain: 'Given a witnessed rotation (and, for a deposit, the new keys’ signature on it), both bond options are enabled whatever the pool holds (payment is never a gate); a keep is exactly the rotated datum plus the premium, and a deposit on full bonds is a keep; given the quorum an unpoisoned state can be poisoned; given a later rotation, a short pool, the freeze bond held and no poison the freeze is enabled; given a duplicity proof conviction is enabled from every present state.' },
+  { id: 'T6', title: 'Three value components that never mix; the refund address is fixed; a deposit is signed by the new keys',
+    lean: ['T6_component_conservation', 'T6_dreg_never_a_fee', 'T6_dreg_never_moves_between_present_states', 'T6_dreg_enters_only_at_birth', 'T6_refund_fixed', 'step_from_present_keeps_refund', 'T6_refund_fixed_along_trace', 'T6_refund_is_registration_address', 'T6_conviction_refunds_registration_address', 'T6_frozen_flips_only_by_rotation_or_freeze', 'T6_deposit_requires_new_keys', 'T6_relayer_cannot_park_age_or_close'],
+    plain: 'For each of the conviction bond, the freeze bond and the pool: held plus in equals held after plus out. The conviction bond is never a fee, never moves between present states, and enters only at the registration. The refund address is the one the registration named and no step changes it: a conviction pays the freeze bond held and the pool to exactly that address. A deposit carries the new keys’ signature (D-038): a relayer with public data alone lands a keep and nothing else.' },
   { id: 'T7', title: 'The state is the fold of the accepted actions',
     lean: ['T7_step_iff_stepFn', 'T7_trace_iff_replay'],
     plain: 'The transition relation and the functional step agree exactly, and a trace is exactly a successful replay: replaying every accepted action from the origin reproduces the current state.' },
@@ -794,7 +785,7 @@ function evidenceBits(env, state, action) {
   if (!l) return [];
   const e1 = natAdd(l.epoch, 1);
   switch (k) {
-    case 'rotate': return [envRotationTo(env, l.epoch, l.sn, d["sn'"]), intentOk(env, e1, d.op, d["refund'"])];
+    case 'rotate': return [envRotationTo(env, l.epoch, l.sn, d["sn'"]), bondOpOk(env, e1, d.op)];
     case 'freeze': return [envRotationTo(env, l.epoch, l.sn, d["sn'"])];
     case 'poison': return [envQuorum(env, l.epoch)];
     case 'convict': return [envDuplicityAt(env, l.epoch, l.sn)];
@@ -855,14 +846,14 @@ function theoremReport(before, after, rec) {
   const accepted = before.records.filter(r => r.ok && r.aid === rec.aid);
   const firstPresent = lo ? { l: lo, es: after.history } : (() => { const k = accepted.findIndex(r => stateKind(r.state) === 'present'); return k < 0 ? null : { l: liveOf(accepted[k].state), es: after.history.slice(k + 1) }; })();
   const snPre = snOf(pre), snPost = ok ? snOf(post) : null;
-  const rot = kind === 'rotate', op = rot ? d.op : null, r2 = d["refund'"] === undefined ? null : d["refund'"];
+  const rot = kind === 'rotate', op = rot ? d.op : null;
   const rotEv = !!lp && stepped && envRotationTo(env, lp.epoch, lp.sn, d["sn'"]) && lp.sn < d["sn'"];
   // what a thief of the current keys can present: no rotation from the key state at all
   const noRotFrom = (e, sn) => boundaryOk && !env.rotationTo.some(rw => rw[0] === e && rw[1] === sn);
   const heldZero = x => x.dreg === 0 && x.b === 0 && x.pool === 0;
   const hi = held(p, pre), ho = held(p, post);
   const pr = paid(f.refund), ph = paid(f.hunter), pc = paid(f.convictor);
-  const keepShaped = () => { const bIn0 = f.bIn === 0 && f.dregIn === 0 && f.poolIn === 0; const fl = eq(f, flow({ hunter: premium(p, lp, d.payee) })); const st = eq(post, present(rotated(p, lp, d["sn'"], r2))); return [bIn0, fl, st]; };
+  const keepShaped = () => { const bIn0 = f.bIn === 0 && f.dregIn === 0 && f.poolIn === 0; const fl = eq(f, flow({ hunter: premium(p, lp, d.payee) })); const st = eq(post, present(rotated(p, lp, d["sn'"]))); return [bIn0, fl, st]; };
 
   // ---- T1: the checkpoint cannot roll back
   row('T1_sn_monotone', ok && pp, () => [[lp.sn <= lq.sn, 'sequence decreased between live states']]);
@@ -890,15 +881,15 @@ function theoremReport(before, after, rec) {
   row('T4_current_key_thief_cannot_rotate_or_freeze', ok && !!lp && noRotFrom(lp.epoch, lp.sn), () => [
     [actor !== 'nextKeys', 'with no rotation from the key state, a next-keys step landed'], [kind !== 'freeze', 'with no rotation from the key state, a freeze landed']]);
   // ---- T5: totality — the evidence antecedent held ⇒ the step is accepted
-  const anteRot = rot && rotEv && intentOk(env, e1, op, r2);
-  row('T5_every_bond_option', anteRot, () => [[ok, 'the rotation’s evidence and signed intent held but it was refused: ' + rec.reason]]);
+  const anteRot = rot && rotEv && bondOpOk(env, e1, op);
+  row('T5_every_bond_option', anteRot, () => [[ok, 'the rotation’s evidence held (and a deposit was signed) but it was refused: ' + rec.reason]]);
   row('T5_keep_is_rotated', ok && rot && op === 'keep', () => { const [, fl, st] = keepShaped(); return [[fl, 'a keep’s flow is not the premium to the payee and nothing else'], [st, 'a keep’s datum is not the rotated datum']]; });
   row('T5_deposit_on_full_is_keep', ok && rot && op === 'deposit' && !!lp && !lp.frozen, () => { const [bIn0, fl, st] = keepShaped(); return [[bIn0, 'a deposit on full bonds brought something'], [fl, 'a deposit on full bonds paid other than a keep'], [st, 'a deposit on full bonds left other than the rotated datum'], [!!lq && lq.bornAt === lp.bornAt, 'a deposit on full bonds reset juvenility']]; });
-  row('T5_keep_needs_no_intent', rot && op === 'keep' && r2 === null && rotEv, () => [[ok, 'a keep with no new address was refused although the rotation is witnessed: ' + rec.reason]]);
+  row('T5_keep_needs_no_intent', rot && op === 'keep' && rotEv, () => [[ok, 'a keep was refused although the rotation is witnessed: ' + rec.reason]]);
   row('T5_poison_enabled', kind === 'poison' && stepped && !!lp && envQuorum(env, lp.epoch) && !lp.poisoned, () => [[ok, 'the quorum signed on a clean state but the poison was refused: ' + rec.reason]]);
   row('T5_freeze_enabled', kind === 'freeze' && rotEv && lp.pool < p.P && !lp.frozen && !lp.poisoned, () => [[ok, 'the freeze’s evidence held but it was refused: ' + rec.reason]]);
   row('T5_convict_enabled', kind === 'convict' && stepped && !!lp && envDuplicityAt(env, lp.epoch, lp.sn), () => [[ok, 'a duplicity proof was presented but the conviction was refused: ' + rec.reason]]);
-  // ---- T6: value, and the intent signatures
+  // ---- T6: value, the fixed refund address, and the deposit signature
   row('T6_component_conservation', ok, () => [
     [big(hi.dreg) + big(f.dregIn) === big(ho.dreg) + big(pr.dreg) + big(ph.dreg) + big(pc.dreg), 'conviction bond not conserved'],
     [big(hi.b) + big(f.bIn) === big(ho.b) + big(pr.b) + big(ph.b) + big(pc.b), 'freeze bond not conserved'],
@@ -911,15 +902,16 @@ function theoremReport(before, after, rec) {
   row('T6_dreg_enters_only_at_birth', ok && f.dregIn !== 0, () => [
     [kind === 'register' && preK === 'absent', 'the conviction bond entered other than at the registration'],
     [f.dregIn === p.D && f.bIn === p.B && !!lq && lq.frozen === false && lq.bornAt === rec.slot, 'a birth did not bring both bonds in full, unfrozen, born now']]);
-  row('T6_refund_change_requires_new_keys', ok && pp && lq.refundTo !== lp.refundTo, () => [
-    [rot && r2 === lq.refundTo && envIntentAuthorized(env, lq.epoch, op, lq.refundTo), 'the refund address moved other than by a rotation naming it, signed by the new keys as that rotation’s own intent']]);
+  row('T6_refund_fixed', ok && pp, () => [[lq.refundTo === lp.refundTo, 'a step between live states moved the refund address']]);
+  row('step_from_present_keeps_refund', ok && !!lp, () => [[(!!lq && lq.refundTo === lp.refundTo) || postK === 'terminationPending', 'a step from a live state neither kept the refund address nor entered pending custody']]);
+  row('T6_refund_fixed_along_trace', ok && mine && !!lq && !!firstPresent && firstPresent.es.length > 0, () => [[lq.refundTo === firstPresent.l.refundTo, 'the refund address differs from the first checkpoint of this play']]);
+  const registration = mine && stateKind(origin) === 'absent' && after.history.length > 0 && actionKind(after.history[0][1]) === 'register' ? after.history[0][1].register : null;
+  row('T6_refund_is_registration_address', ok && mine && !!lq && stateKind(origin) === 'absent', () => [[!!registration && registration.refund === lq.refundTo, 'the live checkpoint does not hold the refund address its registration named']]);
+  row('T6_conviction_refunds_registration_address', ok && kind === 'convict' && !!lp && !!registration, () => [[eq(f.refund, payment(registration.refund, 0, bHeldOf(p, lp), lp.pool)), 'the conviction did not pay the freeze bond held and the pool to the registration’s refund address']]);
   row('T6_frozen_flips_only_by_rotation_or_freeze', ok && pp && lq.frozen !== lp.frozen, () => [[actor === 'nextKeys' || kind === 'freeze', 'the freeze bond moved under poison or top-up']]);
-  const signed = (intent, r) => envIntentAuthorized(env, e1, intent, r);
-  row('T6_intent_requires_new_keys', ok && rot && (op !== 'keep' || r2 !== null), () => [
-    [!(rot && op === 'deposit') || signed('deposit', r2), 'a deposit landed without the new keys’ signature on it'],
-    [!(rot && op === 'keep' && r2 !== null) || signed('keep', r2), 'a new refund address landed without the new keys’ signature on it']]);
-  const noIntent = boundaryOk && e1 !== null && !env.intentAuthorized.some(rw => rw[0] === e1);
-  row('T6_relayer_cannot_park_age_or_close', ok && actor === 'nextKeys' && noIntent, () => [[rot && op === 'keep' && r2 === null, 'with no signed intent at the new epoch, something other than a keep with the address unchanged landed']]);
+  row('T6_deposit_requires_new_keys', ok && rot && op === 'deposit', () => [[envDepositAuthorized(env, e1), 'a deposit landed without the new keys’ signature on it']]);
+  const noDeposit = boundaryOk && e1 !== null && !envDepositAuthorized(env, e1);
+  row('T6_relayer_cannot_park_age_or_close', ok && actor === 'nextKeys' && noDeposit, () => [[rot && op === 'keep', 'with no signed deposit at the new epoch, something other than a keep landed']]);
   // ---- T7: parity with the Lean — the cell in the embedded corpus, and the fold
   const cell = stepped ? leanCell(before.corpus, p, rec.slot, pre, a, env) : undefined;
   row('T7_step_iff_stepFn', cell !== undefined, () => [
@@ -1186,11 +1178,11 @@ export {
   hasOutput, representativeHeld,
   thresholdSatisfied, derivedWitnesses, verifiedSigners, signingValid, receiptsValid, rotationValid, concreteDuplicityAt, duplicityFixture,
   canon, isNat, REASONS, VERDICTS, LEAN_GUARDS, LEAN_SPLITS, VERDICT_CONJUNCTS, constructorOf,
-  validateParams, ACTION_KINDS, BOND_OPS, INTENT_KINDS, intentKind, actionKind, normalizeAction, actorOf,
-  EV_KINDS, EV_ARITY, EV_SHAPE, emptyEnv, envHas, envAdd, envRemove, envUnion, validateEnv, intentOk, stateKind, liveOf, present, payment, flow, held, paid, snOf, leafOf, leafKind, rotated, premium, bHeldOf,
+  validateParams, ACTION_KINDS, BOND_OPS, actionKind, normalizeAction, actorOf,
+  EV_KINDS, EV_ARITY, emptyEnv, envHas, envAdd, envRemove, envUnion, validateEnv, bondOpOk, stateKind, liveOf, present, payment, flow, held, paid, snOf, leafOf, leafKind, rotated, premium, bHeldOf,
   LIVE_NATS, LIVE_BOOLS, validateState, validateFlow, step, consumable, consumableB, consumableEver, replay, poisonAfter, poisonSinceLastRotation,
   newSession, withParams, addEvidence, removeEvidence, seed, seedOther, stateOfAid, leafOfAid, allAids, setSlot, attempt, heldSoFar,
   MAX_NAT, natAdd, parseNat, lossyJsonNumbers, parseJsonExact, evidenceBits, cellKey, leanCell,
-  CAST, whoAddr, STATE_WORDS, stateWord, VERDICT_WORDS, INTENT_WORDS, intentWord, explain, THEOREMS, theoremReport, lampsOf,
+  CAST, whoAddr, STATE_WORDS, stateWord, VERDICT_WORDS, BOND_OP_WORDS, bondOpWord, explain, THEOREMS, theoremReport, lampsOf,
   matchesPartial, checkScenario, checkCorpus,
 };

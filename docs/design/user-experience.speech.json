@@ -23,7 +23,7 @@
       "pause": 500
     },
     {
-      "text": "The accepted design assumes the identity owner rotates her keys with kli and never touches Cardano except to put money in. Everything on the Cardano side is done by hunters — anyone paid to land her rotations, or to freeze her checkpoint when it cannot pay for one — paid from value she parks in her checkpoint.",
+      "text": "The accepted design assumes the identity owner rotates her keys with kli and never touches Cardano except to put money in. Everything on the Cardano side is done by hunters — anyone paid to land her rotations, or to freeze her checkpoint when it cannot pay for one — paid from value she keeps in her checkpoint.",
       "pause": 400
     },
     {
@@ -101,7 +101,7 @@
       "pause": 300
     },
     {
-      "text": "The resulting checkpoint is controlled by the keys in Alice's inception, not by the relayer. If somebody else pays, they are donating: the refund address is theirs only until Alice's first rotation moves it, and the money then answers to her keys.",
+      "text": "The resulting checkpoint is controlled by the keys in Alice's inception, not by the relayer. Whoever pays chooses the refund address, and it stays theirs for the checkpoint's whole life: if the checkpoint is convicted, the freeze bond and the pool go back to that address, whatever Alice's keys sign.",
       "pause": 400
     },
     {
@@ -127,7 +127,7 @@
       "pause": 400
     },
     {
-      "text": "A rotation is also where Alice exercises every other choice she has: the bond option (keep, or deposit to unfreeze) and a new refund address. All of them travel in one message her new keys sign, so a UI must display the intent and the address together, before signing, exactly as the chain will read them.",
+      "text": "A rotation is also where Alice chooses the bond option: keep, or deposit to unfreeze. A deposit travels in a message her new keys sign, so a UI must display it before signing, exactly as the chain will read it. A rotation never changes the refund address.",
       "pause": 400
     }
   ],
@@ -149,29 +149,29 @@
       "pause": 400
     }
   ],
-  "leaving-and-coming-back": [
+  "no-way-out-but-conviction": [
     {
-      "text": "Leaving and coming back.",
+      "text": "No way out but conviction.",
       "pause": 500
     },
     {
-      "text": "There is no pause and no withdraw. An identity is active, parked, in pending conviction custody, or convicted after the associated Registry fold.",
+      "text": "There is no owner exit: no close, no parking, no revival, no pause and no withdraw. As an identity owner, Alice keeps her checkpoint alive — bonds, rotations, unfreezing — until it is convicted. As a relying party, the treasury sees a checkpoint that is either alive or convicted (pending conviction custody first, then convicted after the associated Registry fold).",
       "pause": 400
-    },
-    {
-      "text": "Close is the reap: a witnessed rotation by the next keys whose signed message names the payee of the premium (the fee for landing a rotation) and the refund address. The output retains the token, minimum ADA and that key state; the registry key stays active. The current keys cannot close.",
-      "pause": 300
-    },
-    {
-      "text": "Reopen is the revival: a witnessed rotation later than the parked key state, with fresh bonds, born juvenile. A parked identity is not terminal; only conviction is.",
-      "pause": 300
     },
     {
       "text": "Deposit is the unfreeze: a rotation that refills B after a hunter took it. It is a no-op on full bonds, still signed by the new keys.",
       "pause": 300
     },
     {
-      "text": "Before signing any of these the UI must display the exact checkpoint input, the AID and sequence, the destination address, the amounts of all three components, and the network and policy — because that is precisely the set of facts the signed intent binds.",
+      "text": "Refund address is set by whoever pays the registration and never changes. It matters only at conviction, when the freeze bond and the pool go there.",
+      "pause": 300
+    },
+    {
+      "text": "Whether an owner who stops maintaining a checkpoint should recover its bonds and pool is an open economic question: today they leave a live checkpoint only through rotation premiums, a freeze (the freeze bond, to a hunter) and conviction. Parking was removed because it left unsettled who holds the deposit while parked and how a sponsor is tracked; it may return only with an economic model that settles both.",
+      "pause": 400
+    },
+    {
+      "text": "Before signing a rotation intent the UI must display the exact checkpoint input, the AID and sequence, the destination address, the amounts of all three components, and the network and policy — because that is precisely the set of facts the signed intent binds.",
       "pause": 400
     }
   ],
@@ -249,6 +249,6 @@
   ],
   "_source": {
     "file": "user-experience.md",
-    "sha256": "d77418ad00ecd8425a7957f45b1900b42bdc651014d952417ed8d64a7cd7461d"
+    "sha256": "6634a34e2b98cd7d9f4a606e0817a0890cd56966b42ab8ac3d4972f237820936"
   }
 }

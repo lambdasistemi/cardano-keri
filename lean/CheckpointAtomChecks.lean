@@ -13,12 +13,12 @@ def l : Live := ⟨1, 1, false, false, 3, 42, 4⟩
 def short : Live := { l with pool := 0 }
 def env : Env := {
   rotationTo := fun e sn next => decide (e = 1 ∧ sn = 1 ∧ next = 2)
-  intentAuthorized := fun e i r => decide (e = 2 ∧ i = .deposit ∧ r = none)
+  depositAuthorized := fun e => decide (e = 2)
   quorum := fun _ => true
   convictionContext := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).1
   convictionRival := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).2 }
 def noDup : Env := { env with convictionRival := fun _ _ => none }
-def noIntent : Env := { env with intentAuthorized := fun _ _ _ => false }
+def noDeposit : Env := { env with depositAuthorized := fun _ => false }
 def run (e : Env) (s : State) (a : Action) := stepFn p e a 9 s
 def check (target : Option String) (id : String) (b : Bool) : Except String Unit := if target.isSome && target != some id then .ok () else if b then .ok () else .error id
 
@@ -35,16 +35,17 @@ def observations (target : Option String) : Except String Unit := do
        convictor := some { addr := 8, dreg := 3 } }, .terminationPending ⟨1, 1⟩)))
   let deposit : Flow × State := ({ bIn := 2, hunter := some { addr := 7, pool := 1 } },
     .present { l with sn := 2, epoch := 2, pool := 3 })
-  check "CP-09" (decide (run env (.present { l with frozen := true }) (.rotate 2 .deposit 7 none) = some deposit))
-  check "CP-10" (decide (run env (.present short) (.rotate 2 .deposit 7 none) =
+  check "CP-09" (decide (run env (.present { l with frozen := true }) (.rotate 2 .deposit 7) = some deposit))
+  check "CP-10" (decide (run env (.present short) (.rotate 2 .deposit 7) =
     some ({}, .present { short with sn := 2, epoch := 2 })))
-  check "CP-11" (decide (run env (.present l) (.rotate 2 .deposit 7 none) =
+  check "CP-11" (decide (run env (.present l) (.rotate 2 .deposit 7) =
     some ({ hunter := some { addr := 7, pool := 1 } }, .present { l with sn := 2, epoch := 2, pool := 3 })))
-  check "CP-12" ((run noIntent (.present l) (.rotate 2 .deposit 7 none)).isNone)
-  check "CP-13" ((run noIntent (.present l) (.rotate 2 .keep 7 (some 43))).isNone)
-  check "CP-14" (!noIntent.intentOk 2 .deposit none)
+  check "CP-12" ((run noDeposit (.present l) (.rotate 2 .deposit 7)).isNone)
+  check "CP-13" (decide (run noDeposit (.present l) (.rotate 2 .keep 7) =
+    some ({ hunter := some { addr := 7, pool := 1 } }, .present { l with sn := 2, epoch := 2, pool := 3 })))
+  check "CP-14" (!noDeposit.bondOpOk 2 .deposit)
   let noRotation := { env with rotationTo := fun _ _ _ => false }
-  check "CP-30" (decide ((l.rotated p 2 none).bornAt = 3))
+  check "CP-30" (decide ((l.rotated p 2).bornAt = 3))
   check "CP-31" ((p.premium short 7).isNone)
   check "CP-32" (decide ((State.terminationPending ⟨1, 1⟩).leaf = .active))
   check "CP-33" (decide (State.convicted.leaf = .retired))
@@ -54,9 +55,9 @@ def observations (target : Option String) : Except String Unit := do
   check "CP-36" (decide (l.bHeld p = 2 ∧ ({ l with frozen := true } : Live).bHeld p = 0))
   check "CP-37" (!consumableStateB p 99 (.present { l with frozen := true }))
   check "CP-38" (decide ((State.terminationPending ⟨1, 1⟩).dregHeld p = 0))
-  let history : List (Slot × Action) := [(0, .poison), (1, .rotate 2 .keep 7 none)]
-  check "CP-39" ((run { noRotation with intentAuthorized := fun _ _ _ => false }
-    (.present short) (.rotate 2 .keep 7 none)).isNone)
+  let history : List (Slot × Action) := [(0, .poison), (1, .rotate 2 .keep 7)]
+  check "CP-39" ((run { noRotation with depositAuthorized := fun _ => false }
+    (.present short) (.rotate 2 .keep 7)).isNone)
   check "CP-40" (!poisonAfter false history)
 end CheckpointAtoms
 

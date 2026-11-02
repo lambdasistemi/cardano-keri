@@ -99,7 +99,7 @@
       "pause": 400
     },
     {
-      "text": "Every move in the lifecycle may be submitted by anyone, and the submitter has no discretion whatsoever. \"Anyone\" does not mean \"anyone may choose the next state\"; it means anyone may pay the fee to relay public evidence whose result is already determined. Registration, rotation, the poison declaration (the owner's own lock on the checkpoint), the freeze, the top-up, the conviction, the close and the reopen are each open to any submitter, and in each case the evidence decides the outcome — not the relayer, and not any operator. If one relayer refuses, anyone else may.",
+      "text": "Every move in the lifecycle may be submitted by anyone, and the submitter has no discretion whatsoever. \"Anyone\" does not mean \"anyone may choose the next state\"; it means anyone may pay the fee to relay public evidence whose result is already determined. Registration, rotation, the poison declaration (the owner's own lock on the checkpoint), the freeze, the top-up, and the conviction are each open to any submitter, and in each case the evidence decides the outcome — not the relayer, and not any operator. If one relayer refuses, anyone else may.",
       "pause": 400
     }
   ],
@@ -133,11 +133,11 @@
       "pause": 300
     },
     {
-      "text": "Every move of value answers to the owner. The bonds and the pool leave only to the refund address the owner controls, and that address moves only when the keys of the epoch a rotation opens sign for it. A relayer landing the owner's public rotation cannot park her, age her, or close her.",
+      "text": "Every move of value is fixed in advance. The bonds and the pool leave only to the refund address chosen by whoever paid the registration, and no step changes it. A relayer landing the owner's public rotation cannot unfreeze her or move the money.",
       "pause": 300
     },
     {
-      "text": "Exit and return are the owner's. Close needs the next keys, exactly like any rotation, so a thief holding only the current keys cannot erase the identity and take the money. And close is not the end: a witnessed rotation later than the tombstone reopens it.",
+      "text": "There is no owner exit. A checkpoint is alive until it is convicted, so a thief holding only the current keys cannot erase the identity and take the money.",
       "pause": 300
     },
     {
@@ -247,6 +247,6 @@
   ],
   "_source": {
     "file": "why-cardano.md",
-    "sha256": "f64b2ce2afe3c0427f80f69ef0decd0d59d238856041554108a6fa2c83c93cbf"
+    "sha256": "90084c952eb2851e22c5800df2a6be953b17d9b0ef118253147b586fb2dc6b49"
   }
 }

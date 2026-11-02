@@ -38,7 +38,6 @@ step:
       sn': 1
       op: keep
       payee: 2
-      refund': null
   expect:
     ok: true
     live:

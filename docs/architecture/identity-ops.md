@@ -45,7 +45,7 @@ epic [#322](https://github.com/lambdasistemi/cardano-keri/issues/322) decides.
 | Operation | Shipped today | Under the accepted design |
 |---|---|---|
 | Register | Creates a bonded checkpoint at sequence zero. No uniqueness rule | A registry request: absence proof, insert and checkpoint mint together; no second first-registration |
-| Advance | Applies one genuine witnessed rotation | The same, plus a bond option, an optional new refund address, and the premium `P` (the fee the pool pays for landing a rotation) to whoever landed it |
+| Advance | Applies one genuine witnessed rotation | The same, plus a bond option and the premium `P` (the fee the pool pays for landing a rotation) to whoever landed it. The refund address is never changed |
 | Close | Current controllers burn the token and take the refund | **Gone.** There is no owner exit: a checkpoint is alive until it is convicted |
 | Freeze | Moves a lagging checkpoint to ARMED for the response window | Payment to a hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one) when the pool is short. The datum is untouched; `B` leaves |
 | ClaimFreeze / thaw | Pays the recorded hunter after the deadline; thaw re-posts `B` | **Gone.** No deadline, no claim, no timeout economy |
@@ -157,16 +157,16 @@ The predicate is unchanged. What is added is everything around it:
 
 - a **bond option** — `keep`, or `deposit` (the unfreeze: refill `B` when
   a hunter has taken it). There is no withdraw;
-- an optional **new refund address**;
 - the **premium** `P` paid from the pool to the payee the transaction names,
   when the pool covers it. An unpaid rotation is still a valid rotation: no
   transition ever requires the pool;
 - the **poison cleared**, unconditionally.
 
-Every option other than `keep`, and every new address, travels in **one message
-signed by the keys of the epoch the rotation opens** (ruling D-038). A relayer
-landing the owner's public rotation therefore cannot reset her
-juvenility or move her money. Absent means keep and unchanged.
+A `deposit` travels in **a message signed by the keys of the epoch the rotation
+opens** (D-038). A relayer landing the owner's public rotation therefore
+cannot unfreeze her. Absent means keep. No rotation changes the refund address:
+it is chosen by whoever pays the registration and fixed for the checkpoint's
+whole life.
 
 ## Close
 

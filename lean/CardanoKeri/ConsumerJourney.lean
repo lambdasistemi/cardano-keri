@@ -50,16 +50,16 @@ def advance (machine : Machine) (command : Command) : Except String Machine := d
   pure next
 
 def localSteps : List (String × Nat × Action) := [
-  ("rotate-keep-paid", 8, .rotate 1 .keep 7 none),
-  ("rotate-deposit-paid", 9, .rotate 2 .deposit 7 none),
-  ("rotate-keep-paid-3", 10, .rotate 3 .keep 7 none),
-  ("rotate-keep-paid-4", 11, .rotate 4 .keep 7 none),
-  ("rotate-keep-paid-5", 12, .rotate 5 .keep 7 none),
+  ("rotate-keep-paid", 8, .rotate 1 .keep 7),
+  ("rotate-deposit-paid", 9, .rotate 2 .deposit 7),
+  ("rotate-keep-paid-3", 10, .rotate 3 .keep 7),
+  ("rotate-keep-paid-4", 11, .rotate 4 .keep 7),
+  ("rotate-keep-paid-5", 12, .rotate 5 .keep 7),
   ("frozen", 13, .freeze 6 7),
-  ("rotate-keep-unpaid-frozen", 14, .rotate 6 .keep 7 none),
-  ("rotate-deposit-unpaid", 15, .rotate 7 .deposit 7 none),
+  ("rotate-keep-unpaid-frozen", 14, .rotate 6 .keep 7),
+  ("rotate-deposit-unpaid", 15, .rotate 7 .deposit 7),
   ("poisoned", 16, .poison),
-  ("rotate-clears-poison-unpaid", 17, .rotate 8 .keep 7 none),
+  ("rotate-clears-poison-unpaid", 17, .rotate 8 .keep 7),
   ("refill", 18, .topUp 3)]
 
 structure Journey where
@@ -123,10 +123,10 @@ def journey : Except String Journey := do
   let events := events ++ [
     (SystemWire.cell "convict" cp evidence live (.local context.aid 36 (.convict 7))).1,
     (SystemWire.cell "book" cp evidence pending (.book context.aid 7 1 history booking)).1,
-    (SystemWire.cell "pending-rotation-refused" cp evidence booked (.local context.aid 38 (.rotate 11 .keep 7 none))).1,
+    (SystemWire.cell "pending-rotation-refused" cp evidence booked (.local context.aid 38 (.rotate 11 .keep 7))).1,
     (SystemWire.cell "complete" cp evidence booked (.complete context.aid completion)).1,
     (SystemWire.cell "retired-registration-refused" cp evidence terminal (registrationCommand q)).1,
-    (SystemWire.cell "retired-rotation-refused" cp evidence terminal (.local context.aid 42 (.rotate 11 .keep 7 none))).1]
+    (SystemWire.cell "retired-rotation-refused" cp evidence terminal (.local context.aid 42 (.rotate 11 .keep 7))).1]
   pure ⟨q, r, registered, live, pending, booked, terminal, booking, completion, frames, events⟩
 
 end CardanoKeri.ConsumerIdentity.Witness

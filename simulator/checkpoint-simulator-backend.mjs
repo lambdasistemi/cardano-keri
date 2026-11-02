@@ -133,17 +133,16 @@ function offersFor(actorId, tree, nodeId) {
   switch (actorId) {
     case 'alice':
       ev('kli rotate: sn ' + sn + ' → ' + (sn + 1) + ', receipted by the witnesses', { rotationTo: [e, sn, sn + 1] }, 'a valid witnessed rotation from the current keys');
-      ev('my next keys sign: keep the bonds, refund address → 1 (Alice)', { intentAuthorized: [e + 1, 'keep', 1] }, 'the keys the rotation reveals sign the intent and the address (D-038)');
-      ev('my next keys sign: deposit (unfreeze)', { intentAuthorized: [e + 1, 'deposit', null] }, 'the keys the rotation reveals sign the deposit (D-038)');
+      ev('my next keys sign: deposit (unfreeze)', { depositAuthorized: [e + 1] }, 'the keys the rotation reveals sign the deposit (D-038)');
       ev('key holders sign at threshold (quorum, epoch ' + e + ')', { quorum: [e] }, 'the current quorum signs a Cardano-side preimage');
-      act('rotate', 'land my rotation, keep the bonds', { rotate: { "sn'": sn2, op: 'keep', payee: 1, "refund'": null } });
-      act('rotate', 'land my rotation, deposit (unfreeze; on full bonds a keep)', { rotate: { "sn'": sn2, op: 'deposit', payee: 1, "refund'": null } });
+      act('rotate', 'land my rotation, keep the bonds', { rotate: { "sn'": sn2, op: 'keep', payee: 1 } });
+      act('rotate', 'land my rotation, deposit (unfreeze; on full bonds a keep)', { rotate: { "sn'": sn2, op: 'deposit', payee: 1 } });
       act('poison', 'poison this epoch', 'poison');
       act('topUp', 'add to my pool', { topUp: { x: 5 } });
       act('register', 'register my inception (refund to me)', { register: { refund: 1, pool0: 10 } });
       break;
     case 'hal':
-      act('rotate', 'land Alice’s rotation, paid P to Hal', { rotate: { "sn'": sn2, op: 'keep', payee: 2, "refund'": null } });
+      act('rotate', 'land Alice’s rotation, paid P to Hal', { rotate: { "sn'": sn2, op: 'keep', payee: 2 } });
       act('freeze', 'freeze her on the old keys, take B', { freeze: { "sn'": sn2, payee: 2 } });
       break;
     case 'cora':
@@ -154,12 +153,12 @@ function offersFor(actorId, tree, nodeId) {
       ev('steal the current keys (sign as quorum, epoch ' + ke + ')', { quorum: [ke] }, 'with the current keys she signs at threshold');
       ev('steal the next keys too (rotate ' + ksn + ' → ' + (ksn + 1) + ')', { rotationTo: [ke, ksn, ksn + 1] }, 'control by KERI’s own rule');
       act('poison', 'poison with the stolen keys', 'poison');
-      act('rotate', 'rotate with the stolen next keys, paid to Mallory', { rotate: { "sn'": sn2, op: 'keep', payee: 4, "refund'": null } });
+      act('rotate', 'rotate with the stolen next keys, paid to Mallory', { rotate: { "sn'": sn2, op: 'keep', payee: 4 } });
       act('register', 'register Alice’s inception myself, at an epoch whose keys I hold (refund to Mallory)', { register: { refund: 4, pool0: 10 } });
       break;
     case 'anyone':
       act('register', 'register her inception for her (refund to Alice)', { register: { refund: 1, pool0: 10 } });
-      act('register', 'register her inception, refund to myself (a donation at her first rotation)', { register: { refund: 6, pool0: 10 } });
+      act('register', 'register her inception, refund to myself (fixed for the checkpoint’s life)', { register: { refund: 6, pool0: 10 } });
       act('topUp', 'top up her pool', { topUp: { x: 5 } });
       break;
   }

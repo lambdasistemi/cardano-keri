@@ -1,42 +1,90 @@
 {
   "map-the-singular-registry-to-cardano-keri": [
     {
-      "text": "Map Singular to Cardano KERI. This map explains admission, retained parking and permanent retirement in the current Lean model and simulators. It does not establish validator, builder or deployment conformance. An active registry key alone is not consumability.",
+      "text": "Map the Singular registry to Cardano KERI.",
       "pause": 500
+    },
+    {
+      "text": "As a KERI integrator, I need to see which layer admits an identity, keeps its live carrier until conviction and completes permanent retirement. As a relying party, I must not mistake an active registry key for a consumable checkpoint.",
+      "pause": 400
+    },
+    {
+      "text": "This page maps the current Lean model and its simulators. It does not establish production validator, builder or deployment conformance. The preprod V1 baseline is a separate implementation. Start with the runnable identity examples or the Registry design for the full premises.",
+      "pause": 400
     }
   ],
   "bound-sources-and-acceptance-boundary": [
     {
-      "text": "The model binds public Singular d69ab005c3b710aeebf033d3c5cd08c56feb5643. Registry imports its economic judgments, Checkpoint owns the funded lifecycle and the certificate adapter executes the receipt interface. The parking ruling owns retained custody; the correspondence register retains other obligations. The older mapping remains historical.",
+      "text": "Bound sources and acceptance boundary.",
       "pause": 500
+    },
+    {
+      "text": "The public Singular dependency is commit d69ab005c3b710aeebf033d3c5cd08c56feb5643, tree 2979dcfc58b092313b0ce7fa0493722539b9ea65. Registry.lean imports its economic booking and fold judgments; RegistryAgreement.lean binds the projection. Checkpoint.lean governs the funded lifecycle and associated system; CheckpointCertificate.lean executes the receipt interface.",
+      "pause": 400
+    },
+    {
+      "text": "There is no owner exit (#493): no parking and no revival; a carrier is live until it is convicted. The correspondence register keeps other open model obligations. The earlier mapping is retained in the historical source.",
+      "pause": 400
     }
   ],
   "registration-and-termination-boundary": [
     {
-      "text": "Registration uses a complete booking and accepted imported fold. KERI retains admission and custody metadata. Parking and revival are local. Conviction leaves a pending carrier, booking associates the exact termination request, and its consuming fold burns the token and retires the key. Concrete codecs, cryptography and deployment correspondence still need verification.",
+      "text": "Registration and termination boundary.",
       "pause": 500
+    },
+    {
+      "text": "The Registry adapter uses actual imported transactions, including their inputs, outputs, assets and validity intervals. KERI still owns its application admission and custody metadata. Registration creates the active carrier and permanent binding only after an accepted fold. Termination completes only when an accepted fold consumes the associated pending request.",
+      "pause": 400
     }
   ],
   "value-and-authorization": [
     {
-      "text": "Close binds the premium payee and optional refund address through new-key intent. Parking refunds bonds and pool but retains minimum ADA. Live conviction pays the conviction bond and refunds remaining bond and pool; parked conviction has neither to pay. Booking funds request minimum ADA plus tip and pays the remainder to the booker, with an external fee. Fold accounting promises no automatic refund of request minimum ADA to that booker. Self-fold allocation needs its stated address premises. Coarse Registry evidence is not interchangeable with concrete Checkpoint evidence.",
+      "text": "Value and authorization.",
       "pause": 500
+    },
+    {
+      "text": "The refund address is chosen by whoever pays the registration and no step changes it. There is no close. Conviction pays the conviction bond to the convictor and returns the held freeze bond and pool to the refund address.",
+      "pause": 400
+    },
+    {
+      "text": "Termination booking splits Mc into Mr + tip for the request and Mc - Mr - tip for the booker. The booker pays its booking fee separately. The actual fold accounting does not guarantee that Mr returns to that booker. Self-fold accounting names the recipient and requires all its stated output, fee and matching-booking premises.",
+      "pause": 400
+    },
+    {
+      "text": "Registry's coarse evidence predicates and Checkpoint's concrete evidence are not interchangeable. The associated system combines local Checkpoint evidence with a replayed accepted Registry origin and receipt. A same-context receipt for another request cannot complete the selected identity.",
+      "pause": 400
     }
   ],
   "registry-identity-and-lookup": [
     {
-      "text": "The key remains active while parked or pending. Readers classify the holding. Integer token counters are not asset-name specifications. Exact identity, canonical registry and validity remain consumer-authentication work; provider failure is not absence. Public upstream requirements are separate from this pinned execution and deployment evidence.",
+      "text": "Registry identity and lookup.",
       "pause": 500
+    },
+    {
+      "text": "An active key remains active while its carrier is live or termination is pending. The reader must classify the holding before treating it as eligible. The model's integer token counter is not a Cardano asset-name specification. Exact identity, canonical registry selection and validity extensions remain in consumer authentication. A provider failure must not become evidence of absence.",
+      "pause": 400
+    },
+    {
+      "text": "Public upstream requirements for registration, termination and reading remain separate from this pinned model execution and from KERI deployment evidence.",
+      "pause": 400
     }
   ],
   "what-can-be-checked-now": [
     {
-      "text": "Play the Registry page for complete transactions and the Checkpoint page for local stories and associated receipts. Fresh Lean results are compared with JavaScript, CLI and embedded page results, including full states and flows. Proofs, executions, model mutants and checker controls remain distinct. Broader recovery and production correspondence remain open.",
+      "text": "What can be checked now.",
       "pause": 500
+    },
+    {
+      "text": "Play the Registry simulator for complete transactions and the Checkpoint simulator for local stories and associated receipt journeys. Fresh Lean corpora are compared with the independent JavaScript cores, CLI results and embedded pages. Full states and addressed flows are compared, not only accepted/refused counts.",
+      "pause": 400
+    },
+    {
+      "text": "Kernel proofs, finite executions, model mutations and fabricated checker controls remain distinct evidence. This mapping does not close broader request lifecycle, consumer authentication or production correspondence. Every production invariant still needs its bound story and both implementation test layers.",
+      "pause": 400
     }
   ],
   "_source": {
     "file": "d02-registry-mapping.md",
-    "sha256": "ccdbb311f5d6e77a5303de552ea5b14fc18709f8ad25c02b5be6b568cb6c6550"
+    "sha256": "f2ecd89d1d24d6066ebd5f175db7014e4a6e608f5c6e664ea7351b0a47e8cdb7"
   }
 }

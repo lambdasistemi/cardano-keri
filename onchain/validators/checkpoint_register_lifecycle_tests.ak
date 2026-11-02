@@ -523,7 +523,11 @@ test register_refuses_a_frozen_start() fail {
 }
 
 test register_refuses_a_termination_pending_start() fail {
-  register_with(pending(vec.pos_2key_datum), mc, upto(registered_at, False))
+  register_with(
+    pending(vec.pos_2key_datum),
+    floor_unfrozen,
+    upto(registered_at, False),
+  )
 }
 
 test register_refuses_keys_that_are_not_well_formed() fail {
@@ -1075,29 +1079,31 @@ test advance_refuses_a_version_1_successor() fail {
 }
 
 test advance_refuses_a_version_1_input() fail {
-  // What the previous program accepted: a version 1 rotation holding the
-  // deposit.
+  // The accepted paid rotation with the spent datum alone replaced by the
+  // version 1 record of the same key state.
   run_advance(
     1,
     advance_tx(
       v1_data(adv_old_v1()),
-      v1_data(created),
-      floor_frozen,
-      floor_frozen,
-      [],
+      v2_data(adv_new(False)),
+      floor_unfrozen + 3_000_000,
+      floor_unfrozen + 1_000_000,
+      [paid(hunter_pkh, premium)],
     ),
   )
 }
 
 test advance_refuses_a_termination_pending_input() fail {
+  // The accepted paid rotation with the spent datum alone replaced by the
+  // pending termination of the same key state.
   run_advance(
     1,
     advance_tx(
       v2_data(pending(adv_old_v1())),
       v2_data(adv_new(False)),
-      mc,
-      floor_unfrozen,
-      [],
+      floor_unfrozen + 3_000_000,
+      floor_unfrozen + 1_000_000,
+      [paid(hunter_pkh, premium)],
     ),
   )
 }
@@ -1330,10 +1336,23 @@ const convict_pool: Int = 3_000_000
 /// the pending output keeps the token and `Mc`, the convictor receives `D`,
 /// the refund address receives `B` and the pool.
 fn convict_unfrozen(pending_datum: Data, outputs: List<Output>) -> Bool {
+  convict_unfrozen_from(
+    v2_data(live(tip, False, False, refund_enterprise_key())),
+    pending_datum,
+    outputs,
+  )
+}
+
+/// The same conviction of an unfrozen checkpoint, the spent datum given.
+fn convict_unfrozen_from(
+  input_datum: Data,
+  pending_datum: Data,
+  outputs: List<Output>,
+) -> Bool {
   run_convict(
     1,
     convict_tx(
-      v2_data(live(tip, False, False, refund_enterprise_key())),
+      input_datum,
       floor_unfrozen + convict_pool,
       [pending_output(pending_datum, mc, tip_name()), ..outputs],
       zero,
@@ -1593,29 +1612,15 @@ test convict_refuses_to_pay_the_refund_from_the_convictors_output() fail {
 }
 
 test convict_refuses_a_version_1_input() fail {
-  // What the previous program accepted: a version 1 checkpoint burnt, its
-  // whole holding paid to the convictor.
-  run_convict(
-    0,
-    convict_tx(
-      v1_data(tip),
-      floor_unfrozen,
-      [paid(convictor, floor_unfrozen)],
-      from_asset(policy, tip_name(), -1),
-    ),
-  )
+  // The accepted conviction with the spent datum alone replaced by the
+  // version 1 record of the same key state.
+  convict_unfrozen_from(v1_data(tip), honest_pending(), honest_payouts())
 }
 
 test convict_refuses_a_termination_pending_input() fail {
-  run_convict(
-    1,
-    convict_tx(
-      honest_pending(),
-      mc,
-      [pending_output(honest_pending(), mc, tip_name()), paid(convictor, d_reg)],
-      zero,
-    ),
-  )
+  // The accepted conviction with the spent datum alone replaced by the
+  // pending termination of the same key state.
+  convict_unfrozen_from(honest_pending(), honest_pending(), honest_payouts())
 }
 
 test the_burning_mint_redeemer_is_gone() fail {
@@ -1634,18 +1639,136 @@ test the_burning_mint_redeemer_is_gone() fail {
 }
 
 // ---------------------------------------------------------------------
-// V5 — the pending output is inert
+// One payee or refund output cannot be counted for two checkpoints
 // ---------------------------------------------------------------------
 
-test a_pending_output_cannot_be_advanced_even_with_the_rotation_evidence() fail {
-  run_advance(
-    1,
-    advance_tx(
-      v2_data(pending(adv_old_v1())),
-      v2_data(adv_new(False)),
-      mc,
-      floor_unfrozen,
-      [],
+const spent_b: SpentCheckpoint = advance_vec.pos_adv_wit_7key_spent
+
+const created_b: CheckpointDatumV1 = advance_vec.pos_adv_wit_7key_created
+
+fn rotation_io(
+  ref: OutputReference,
+  name: ByteArray,
+  old: CheckpointDatumV2,
+  new: CheckpointDatumV2,
+  input_lovelace: Int,
+  successor_lovelace: Int,
+) -> (Input, Output) {
+  (
+    input_at(
+      ref,
+      Output {
+        address: from_script(policy),
+        value: token_value(input_lovelace, name),
+        datum: InlineDatum(v2_data(old)),
+        reference_script: None,
+      },
     ),
+    Output {
+      address: from_script(policy),
+      value: token_value(successor_lovelace, name),
+      datum: InlineDatum(v2_data(new)),
+      reference_script: None,
+    },
+  )
+}
+
+// Two checkpoints rotate in one transaction, each with a premium to pay and
+// each pointing at the one output that pays a single premium. The advance
+// observer is withdrawn once, for the first checkpoint's rotation.
+test two_rotations_cannot_share_one_payee_output() fail {
+  let ref_b = out_ref(spent_b.txid, 5)
+  let old_b_v1 = CheckpointDatumV1 {
+    ..adv_old_v1(),
+    cesr_aid: spent_b.cesr_aid,
+  }
+  let (input_a, successor_a) = rotation_io(
+    adv_ref(),
+    spent.aid_asset_name,
+    adv_old(False, False),
+    adv_new(False),
+    floor_unfrozen + 3_000_000,
+    floor_unfrozen + 1_000_000,
+  )
+  let (input_b, successor_b) = rotation_io(
+    ref_b,
+    spent_b.aid_asset_name,
+    live(old_b_v1, False, False, refund_enterprise_key()),
+    live(created_b, False, False, refund_enterprise_key()),
+    floor_unfrozen + 3_000_000,
+    floor_unfrozen + 1_000_000,
+  )
+  let base = advance_tx(
+    v2_data(adv_old(False, False)),
+    v2_data(adv_new(False)),
+    floor_unfrozen + 3_000_000,
+    floor_unfrozen + 1_000_000,
+    [],
+  )
+  let tx = Transaction {
+    ..base,
+    inputs: [input_a, input_b],
+    outputs: [successor_a, successor_b, paid(hunter_pkh, premium)],
+  }
+  run_spend(advance_redeemer(2), adv_ref(), tx) && run_spend(
+    advance_redeemer(2),
+    ref_b,
+    tx,
+  ) && checkpoint_observer.observer_advance.withdraw(
+    0,
+    advance_envelope(),
+    0,
+    tx,
+  )
+}
+
+// Two checkpoints are convicted in one transaction with one refund output
+// that holds what a single refund requires. The enforcement and entitlement
+// observers are withdrawn once, for the first checkpoint's conviction.
+test two_convictions_cannot_share_one_refund_output() fail {
+  let ref_b = out_ref(seed_tx_id, 16)
+  let tip_b = enforcement_vec.fork_convict_tip
+  let name_b = deriveAidAssetName(tip_b.cesr_aid)
+  let base = convict_tx(
+    v2_data(live(tip, False, False, refund_enterprise_key())),
+    floor_unfrozen + convict_pool,
+    [
+      pending_output(honest_pending(), mc, tip_name()),
+      pending_output(v2_data(pending(tip_b)), mc, name_b),
+      paid(convictor, d_reg),
+      paid(convictor, d_reg),
+      paid(refund_pkh, freeze_bond + convict_pool),
+    ],
+    zero,
+  )
+  let input_b = input_at(
+    ref_b,
+    Output {
+      address: from_script(policy),
+      value: token_value(floor_unfrozen + convict_pool, name_b),
+      datum: InlineDatum(
+        v2_data(live(tip_b, False, False, refund_enterprise_key())),
+      ),
+      reference_script: None,
+    },
+  )
+  let tx = Transaction { ..base, inputs: [input_b, ..base.inputs] }
+  let envelope = convict_envelope(wire)
+  run_spend(convict_redeemer(2), convict_ref(), tx) && run_spend(
+    convict_redeemer(3),
+    ref_b,
+    tx,
+  ) && checkpoint_observer.observer_enforcement.withdraw(
+    0,
+    commitment_family,
+    envelope,
+    0,
+    tx,
+  ) && checkpoint_observer.observer_entitlement.withdraw(
+    0,
+    commitment_family,
+    envelope,
+    0,
+    tx,
   )
 }

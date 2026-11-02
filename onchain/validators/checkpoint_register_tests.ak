@@ -1024,6 +1024,24 @@ test migration_boundary_accepts_composed_migrate_out() {
   )
 }
 
+// A source that is still a version 1 datum is no longer a checkpoint to
+// migrate: the same composed exit that is accepted above, refused.
+test migration_boundary_refuses_a_version_1_source() fail {
+  let tx = spend_context(
+    [mig_source_input(mig_source_datum())],
+    [],
+    [mig_successor_output(mig_source_datum())],
+    mig_replacement_mint(),
+    [],
+    interval.everything,
+    0,
+  )
+  run_migrate_out(
+    MigrateOutProof { authorization: mig_authorization(mig_signed_state()) },
+    tx,
+  )
+}
+
 // Cut by epic ruling NOTE-006 (2026-08-12), sha256
 // 1ef670c52897ebdda575805ac8a4fcf011bcc3749a3d5632c6d5c196a588c4d1:
 //

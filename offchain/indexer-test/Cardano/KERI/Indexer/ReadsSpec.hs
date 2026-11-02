@@ -13,6 +13,7 @@ import Cardano.Crypto.Hash.Class (
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
     CheckpointDatumV1 (..),
+    convictedOf,
     liveOfKeyState,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
@@ -92,6 +93,7 @@ import Data.List (
     sortOn,
  )
 import Data.Map.Strict qualified as Map
+import Data.Maybe (fromJust)
 import Data.Word (
     Word16,
     Word64,
@@ -126,6 +128,15 @@ spec = describe "Cardano.KERI.Indexer.Reads" $ do
             liveCheckpoints view `shouldReturnIO` [record]
             checkpointForAid view aidX `shouldReturnIO` Just record
             checkpointForAid view unknownAid `shouldReturnIO` Nothing
+
+    it "reads a convicted checkpoint (termination pending) as no live checkpoint" $
+        withInMemoryIndexer $ \handle -> do
+            let txIn = sampleTxIn 0x5a 0
+                view = checkpointView handle
+            applyBatch handle 1 0x8a [checkpointCreatePending txIn aidX datumX0]
+
+            liveCheckpoints view `shouldReturnIO` []
+            checkpointForAid view aidX `shouldReturnIO` Nothing
 
     it "removes a checkpoint when its carrying UTxO is spent" $
         withInMemoryIndexer $ \handle -> do
@@ -281,6 +292,18 @@ checkpointRecord txIn aid datum =
 
 checkpointOutput :: ByteString -> CheckpointDatumV1 -> Indexer.TxOut
 checkpointOutput aid datum =
+    checkpointOutputWith aid (V2 (liveOfKeyState "" 0 datum))
+
+-- | The output of the checkpoint after its conviction: the token stays.
+checkpointCreatePending :: Indexer.TxIn -> ByteString -> CheckpointDatumV1 -> UtxoOp
+checkpointCreatePending txIn aid datum =
+    UtxoCreate
+        txIn
+        checkpointAddress
+        (checkpointOutputWith aid (V2 (fromJust (convictedOf (liveOfKeyState "" 0 datum)))))
+
+checkpointOutputWith :: ByteString -> CheckpointDatum -> Indexer.TxOut
+checkpointOutputWith aid body =
     encodeOutput
         checkpointLedgerAddress
         5_000_000
@@ -288,7 +311,7 @@ checkpointOutput aid datum =
             checkpointPolicy
             (Map.singleton (AssetName . SBS.toShort $ deriveAidAssetName aid) 1)
         )
-        (inlineDatum . plutusData $ V2 (liveOfKeyState "" 0 datum))
+        (inlineDatum (plutusData body))
 
 plainOutput :: Addr -> Integer -> Indexer.TxOut
 plainOutput address lovelace =

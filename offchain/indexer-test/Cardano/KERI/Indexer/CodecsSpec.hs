@@ -8,6 +8,8 @@ import Cardano.Crypto.Hash.Class (
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
     CheckpointDatumV1 (..),
+    CheckpointDatumV2,
+    convictedOf,
     liveOfKeyState,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
@@ -84,10 +86,12 @@ import Data.ByteString (
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Short qualified as SBS
+import Data.Either (isLeft)
 import Data.Function (
     (&),
  )
 import Data.Map.Strict qualified as Map
+import Data.Maybe (fromJust)
 import Data.Text (
     Text,
  )
@@ -126,6 +130,10 @@ spec = describe "decodeCheckpointOutput" $ do
                     , crDatum = sampleDatum
                     , crFacts = liveOfKeyState "" 0 sampleDatum
                     }
+
+    it "does not decode a convicted checkpoint (termination pending) as a record" $
+        decodeCase positiveCase{caseDatum = inlineDatum (plutusData $ V2 pendingSample)}
+            `shouldSatisfy` isLeft
 
     it "rejects undecodable TxOut bytes with TxOutUndecodable" $
         decodeCheckpointOutput
@@ -235,6 +243,10 @@ data OutputCase = OutputCase
     , caseAssets :: !(Map.Map PolicyID (Map.Map AssetName Integer))
     , caseDatum :: !(Datum ConwayEra)
     }
+
+-- | The datum a conviction of the sample checkpoint leaves.
+pendingSample :: CheckpointDatumV2
+pendingSample = fromJust (convictedOf (liveOfKeyState "" 0 sampleDatum))
 
 positiveCase :: OutputCase
 positiveCase =

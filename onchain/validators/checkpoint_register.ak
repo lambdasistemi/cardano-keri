@@ -421,7 +421,7 @@ fn validate_advance(
   expect own_input.output.address == role.address(own_hash, Active)
   expect InlineDatum(old_data) = own_input.output.datum
   expect V2(old): CheckpointDatum = old_data
-  expect Live { aid, epoch, frozen, born_at, refund_to, .. } = old
+  expect Live { frozen, born_at, refund_to, .. } = old
   expect [Pair(aid_name, 1)] = dict.to_pairs(
     tokens(own_input.output.value, own_hash),
   )
@@ -433,8 +433,6 @@ fn validate_advance(
   expect V2(new): CheckpointDatum = new_data
   expect  
       Live {
-        aid: new_aid,
-        epoch: new_epoch,
         poisoned: False,
         frozen: new_frozen,
         born_at: new_born_at,
@@ -443,8 +441,6 @@ fn validate_advance(
       }
     = new
   expect and {
-      new_aid == aid,
-      new_epoch == epoch + 1,
       new_frozen == frozen,
       new_born_at == born_at,
       new_refund_to == refund_to,

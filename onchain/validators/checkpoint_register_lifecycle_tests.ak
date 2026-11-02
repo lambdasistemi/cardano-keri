@@ -1045,8 +1045,19 @@ test advance_refuses_a_changed_refund_address() fail {
 }
 
 test advance_refuses_a_changed_frozen_flag() fail {
+  // The successor holds exactly what its own (frozen) facts say, so only the
+  // copy rule can refuse it.
   let base = parts(adv_new(False))
-  rotate_into(from_parts(Parts { ..base, frozen: True }))
+  run_advance(
+    1,
+    advance_tx(
+      v2_data(adv_old(False, False)),
+      v2_data(from_parts(Parts { ..base, frozen: True })),
+      floor_unfrozen + 3_000_000,
+      floor_frozen + 1_000_000,
+      [paid(hunter_pkh, premium)],
+    ),
+  )
 }
 
 test advance_refuses_a_poisoned_successor() fail {
@@ -1953,6 +1964,39 @@ test convict_of_a_frozen_checkpoint_with_an_empty_pool_needs_no_refund_output() 
       [pending_output(honest_pending(), mc, tip_name()), paid(convictor, d_reg)],
       zero,
     ),
+  )
+}
+
+test register_refuses_evidence_without_the_controller_signatures() fail {
+  let unsigned = RegistrationEvidence { ..reg_evidence, ctrl_sigs: [] }
+  run_register_tx(
+    register_tx(
+      v2_data(registered(refund_enterprise_key(), registered_at)),
+      floor_unfrozen,
+      honest_name(),
+      honest_proof(),
+      unsigned,
+      upto(registered_at, False),
+    ),
+    unsigned,
+  )
+}
+
+test register_refuses_well_formed_keys_that_the_event_does_not_carry() fail {
+  let datum = registered(refund_enterprise_key(), registered_at)
+  let keys = parts(datum).keys
+  expect [_, second, ..] = keys.cur_keys
+  let other_first = #"0101010101010101010101010101010101010101010101010101010101010101"
+  expect other_first != second
+  register_with(
+    from_parts(
+      Parts {
+        ..parts(datum),
+        keys: KeyMaterial { ..keys, cur_keys: [other_first, second] },
+      },
+    ),
+    floor_unfrozen,
+    upto(registered_at, False),
   )
 }
 

@@ -33,6 +33,8 @@ import Cardano.KERI.Deployment.Manifest (
     readManifest,
  )
 import Cardano.KERI.Deployment.Registration (plutusDataJson)
+import Data.Aeson qualified as Aeson
+import Data.Aeson.KeyMap qualified as KM
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString qualified as BS
 import Data.Either (isLeft)
@@ -112,6 +114,12 @@ spec = describe "Advance package and plan from a live version 2 checkpoint" $ do
                     }
         mkAdvancePackage manifest pending rotation `shouldSatisfy` isLeft
 
+    it "reads a manifest of a generation without a premium, as it was written" $ do
+        value <- manifestValueWithoutPremium
+        case Aeson.fromJSON value :: Aeson.Result Manifest of
+            Aeson.Success _ -> pure ()
+            Aeson.Error err -> expectationFailure err
+
     it "plans the payee output index, the paid premium and the exact successor lovelace" $ do
         (manifest, rotation) <- fixtures
         let lovelace = floorOf manifest + premiumOf manifest + 7
@@ -125,6 +133,25 @@ spec = describe "Advance package and plan from a live version 2 checkpoint" $ do
                 planSuccessorLovelace plan `shouldBe` floorOf manifest + 7
                 planSuccessorDatum plan
                     `shouldBe` plutusDataJson (asPlcData (V2 (advanceSuccessorFacts package)))
+
+{- | The fixture manifest as JSON with the premium field removed: the shape of a
+manifest written for a generation that has none.
+-}
+manifestValueWithoutPremium :: IO Aeson.Value
+manifestValueWithoutPremium = do
+    path <-
+        getDataFileName "deployment-test/fixtures/register-preflight-m1-manifest.json"
+    decoded <- Aeson.eitherDecodeFileStrict' path >>= either fail pure
+    pure $ case decoded of
+        Aeson.Object top
+            | Just (Aeson.Object fields) <- KM.lookup "parameters" top ->
+                Aeson.Object
+                    ( KM.insert
+                        "parameters"
+                        (Aeson.Object (KM.delete "premiumLovelace" fields))
+                        top
+                    )
+        other -> other
 
 fixtures :: IO (Manifest, RotationExport)
 fixtures = do

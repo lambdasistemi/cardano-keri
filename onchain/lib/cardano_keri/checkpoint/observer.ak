@@ -115,7 +115,12 @@ pub fn validate_registration(
   True
 }
 
-/// Validate a genuine rotation against the named ACTIVE input and successor.
+/// Validate a genuine rotation against the named live input and successor.
+///
+/// The rotation evidence is verified by the unchanged advance predicate over
+/// the key states the two version 2 datums declare: the spent checkpoint's
+/// epoch and sequence number play the predicate's checkpoint counter and
+/// native sequence number, and the successor must carry the same AID text.
 pub fn validate_advance(envelope: ObserverEnvelope, tx: Transaction) -> Bool {
   let ObserverEnvelope { claim, payload } = envelope
   expect Some(own_ref) = claim.own_ref
@@ -123,25 +128,42 @@ pub fn validate_advance(envelope: ObserverEnvelope, tx: Transaction) -> Bool {
   expect Some(own_input) = find_input(tx.inputs, own_ref)
   expect InlineDatum(old_data) = own_input.output.datum
   expect claim.action == observe_advance
-  expect V1(old): CheckpointDatum = old_data
+  expect  
+      V2(Live { aid, sn: old_sn, epoch: old_epoch, keys: old_keys, .. }): CheckpointDatum
+    = old_data
   expect Some(state_output) = list.find(
     tx.outputs,
     fn(output) { output.address == from_script(claim.checkpoint_policy) },
   )
   expect InlineDatum(new_data) = state_output.datum
-  expect V1(new): CheckpointDatum = new_data
+  expect  
+      V2(Live { aid: new_aid, sn: new_sn, epoch: new_epoch, keys: new_keys, .. }): CheckpointDatum
+    = new_data
+  expect new_aid == aid
+  expect Some(digest) = aid_digest(aid)
+  let new = CheckpointDatumV1 {
+    cesr_aid: digest,
+    cur_keys: new_keys.cur_keys,
+    cur_threshold: new_keys.cur_threshold,
+    next_keys: new_keys.next_keys,
+    next_threshold: new_keys.next_threshold,
+    witnesses: new_keys.witnesses,
+    toad: new_keys.toad,
+    seq: new_epoch,
+    native_sn: new_sn,
+  }
   let spent = SpentCheckpoint {
     network_id: 0,
     policy_id: claim.checkpoint_policy,
-    aid_asset_name: deriveAidAssetName(old.cesr_aid),
+    aid_asset_name: deriveAidAssetName(digest),
     txid: own_ref.transaction_id,
     index: own_ref.output_index,
-    cesr_aid: old.cesr_aid,
-    witnesses: old.witnesses,
-    next_keys: old.next_keys,
-    next_threshold: old.next_threshold,
-    seq: old.seq,
-    native_sn: old.native_sn,
+    cesr_aid: digest,
+    witnesses: old_keys.witnesses,
+    next_keys: old_keys.next_keys,
+    next_threshold: old_keys.next_threshold,
+    seq: old_epoch,
+    native_sn: old_sn,
   }
   advance_predicate(spent, new, evidence) == AdvancePredicateValid
 }

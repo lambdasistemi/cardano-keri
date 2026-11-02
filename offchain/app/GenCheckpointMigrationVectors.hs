@@ -51,15 +51,12 @@ import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
  )
 import Cardano.KERI.AID.Migration.Checkpoint (
-    LegacyCheckpointIdentity (..),
     MigrationError (..),
     MigrationMessage,
     MigrationSource (..),
-    Predecessor (..),
     checkpointMigrationAuthorized,
     encodeMigrationMessage,
     migrationMessage,
-    preprodV0,
  )
 import Cardano.KERI.AID.Migration.Types (
     AddressCredential (..),
@@ -233,11 +230,6 @@ migrationTarget =
         , mtLegacyRefundAddress = Nothing
         }
 
--- | The legacy-bridge target: version 1 succeeding deployed v0, with refund.
-legacyTarget :: MigrationTarget
-legacyTarget =
-    migrationTarget{mtLegacyRefundAddress = Just refundAddress}
-
 -- | The permanent-family source: an ACTIVE version-1 row on network 1.
 source :: MigrationSource
 source =
@@ -249,33 +241,11 @@ source =
         , msSourceState = sourceStateData
         }
 
-{- | The legacy source: the exact committed preprod v0 ACTIVE row.  Its policy
-and version come from 'preprodV0' in the oracle rather than being restated
-here, so the released identity has exactly one definition.
--}
-legacySource :: MigrationSource
-legacySource =
-    source
-        { msNetworkId = lcNetworkId preprodV0
-        , msSourcePolicy = legacyPolicyBytes
-        }
-
--- | The frozen preprod v0 minting policy, as released.
-legacyPolicyBytes :: ByteString
-legacyPolicyBytes = lcPolicy preprodV0
-
--- ---------------------------------------------------------
--- The golden message and its named mutants
--- ---------------------------------------------------------
-
 goldenMessage :: MigrationMessage
 goldenMessage = migrationMessage source migrationTarget
 
 goldenBytes :: ByteString
 goldenBytes = encodeMigrationMessage source migrationTarget
-
-legacyBytes :: ByteString
-legacyBytes = encodeMigrationMessage legacySource legacyTarget
 
 {- | One mutation per redirectable field.  These are the replay/redirect
 negatives: a controller signature over the golden message must not authorize
@@ -290,7 +260,7 @@ messageMutants =
     , m "source_ref" "the exact consumed source output" $
         encodeMigrationMessage source{msSourceRef = mutantRef} migrationTarget
     , m "source_role" "the source lifecycle position" $
-        encodeMigrationMessage source{msSourceRole = CheckpointFrozen} migrationTarget
+        encodeMigrationMessage source{msSourceRole = Board} migrationTarget
     , m "source_state" "the carried source projection" $
         encodeMigrationMessage source{msSourceState = mutantStateData} migrationTarget
     , m "target_policy" "the successor minting policy" $
@@ -298,7 +268,7 @@ messageMutants =
     , m "target_role" "the successor lifecycle position" $
         encodeMigrationMessage
             source
-            migrationTarget{mtTargetRole = CheckpointFrozen}
+            migrationTarget{mtTargetRole = Board}
     , m "target_address" "the successor address" $
         encodeMigrationMessage
             source
@@ -338,10 +308,6 @@ sig2 = signOver controller2 goldenBytes
 foreignSig = signOver foreigner goldenBytes
 sig0OverMutant = signOver controller0 (mutantBytesFor "negative_message_source_ref")
 
-legacySig0, legacySig1 :: ByteString
-legacySig0 = signOver controller0 legacyBytes
-legacySig1 = signOver controller1 legacyBytes
-
 -- | The bytes of a named message mutant.
 mutantBytesFor :: String -> ByteString
 mutantBytesFor wanted =
@@ -370,14 +336,6 @@ authorityNegatives =
 -- Successor material
 -- ---------------------------------------------------------
 
--- | The single predecessor policy the target program is applied with.
-pinnedPredecessor :: Predecessor
-pinnedPredecessor = Predecessor{pdPredecessorPolicy = sourcePolicy}
-
--- ---------------------------------------------------------
--- The vector set
--- ---------------------------------------------------------
-
 data Vec = Vec String String ByteString
 
 vectors :: [Vec]
@@ -389,7 +347,6 @@ fixtures =
     , Vec "fixture_aid_asset_name" "input: the AID token label both policies carry" aidAssetName
     , Vec "fixture_source_policy" "input: source minting policy" sourcePolicy
     , Vec "fixture_target_policy" "input: target minting policy" targetPolicy
-    , Vec "fixture_legacy_policy" "input: the committed preprod v0 policy" legacyPolicyBytes
     , Vec "fixture_source_txid" "input: consumed source transaction id" sourceTxid
     , Vec "fixture_mutant_txid" "input: a different transaction id" mutantTxid
     , Vec "fixture_target_script" "input: successor payment script hash" targetScript
@@ -407,8 +364,6 @@ fixtures =
     , Vec "fixture_sig_2" "input: controller 2 over the golden message" sig2
     , Vec "fixture_foreign_sig" "input: the outsider over the golden message" foreignSig
     , Vec "fixture_sig_0_over_mutant" "input: controller 0 over a redirected message" sig0OverMutant
-    , Vec "fixture_legacy_sig_0" "input: controller 0 over the legacy message" legacySig0
-    , Vec "fixture_legacy_sig_1" "input: controller 1 over the legacy message" legacySig1
     ]
 
 goldens :: [Vec]
@@ -418,11 +373,8 @@ goldens =
     , Vec "golden_source_state" "state: the carried payload, verbatim" (canonicalCborData sourceStateData)
     , Vec "golden_mutant_source_state" "state: a projection with a bumped counter" (canonicalCborData mutantStateData)
     , Vec "golden_message" "message: the canonical permanent-family preimage" goldenBytes
-    , Vec "golden_legacy_message" "message: the canonical legacy-bridge preimage" legacyBytes
     , Vec "golden_predecessor" "predecessor: the actual consumed output" (canonicalCbor sourcePredecessor)
     , Vec "golden_target" "target: the permanent-family successor identity" (canonicalCbor migrationTarget)
-    , Vec "golden_legacy_target" "target: the legacy successor identity with refund" (canonicalCbor legacyTarget)
-    , Vec "golden_pinned_predecessor_policy" "edge: the single accepted predecessor policy" (pdPredecessorPolicy pinnedPredecessor)
     ]
 
 negatives :: [Vec]
@@ -449,8 +401,6 @@ selfCheck = do
     let encodings = goldenBytes : [bytes | (_, _, bytes) <- messageMutants]
     unless (length (nub encodings) == length encodings) $
         fail "named message mutations collide; the negatives prove nothing"
-    unless (goldenBytes /= legacyBytes) $
-        fail "the permanent and legacy messages encode alike"
     unless (BS.isInfixOf migrationDomain goldenBytes) $
         fail "the canonical message does not carry the frozen domain"
 

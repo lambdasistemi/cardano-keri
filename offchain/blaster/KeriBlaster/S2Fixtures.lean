@@ -274,8 +274,7 @@ def advanceEvidence : Data :=
 
 /-- The stable action tag for Advance (`observe_advance` in `observer.ak`).
 
-`validate_advance` compares `claim.action` against it to decide whether the
-spent datum is a plain `CheckpointDatum` or the Armed response form.
+`validate_advance` requires `claim.action` to equal it.
 -/
 def observeAdvance : Int := 1
 

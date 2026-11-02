@@ -172,8 +172,10 @@ nonceMinWidth = 32
 -- Wire types
 -- ---------------------------------------------------------
 
-{- | Closed versioned entitlement action.  Claim has no action of its own: it
-consumes the hunter entitlement Freeze already recorded.
+{- | Closed versioned entitlement action.  The checkpoint settles only a
+conviction, so 'ConvictEntitlement' is the one action it honours;
+'FreezeEntitlement' keeps its constructor index so the commitment program's
+wire is unchanged.
 -}
 data BountyAction
     = FreezeEntitlement

@@ -48,7 +48,6 @@ module Cardano.KERI.Deployment.Script (
     v1NetworkDiscriminator,
     v1RegistrationBond,
     v1FreezeBond,
-    v1FreezeWindow,
 ) where
 
 import Cardano.Crypto.Hash (hashToBytes)
@@ -251,7 +250,7 @@ mkAppliedArtifact name role validator plan program
     declared = length (vParameters validator)
     supplied = length plan
 
-{- | The one lineage input a #254 successor program takes: the single
+{- | The one lineage input a #254 successor board program takes: the single
 predecessor minting policy it accepts.  Release identity is the resulting
 hash, so no generation integer is applied.
 -}
@@ -264,8 +263,8 @@ applyPredecessorParam predecessorPolicy =
 There is no version argument.  @checkpoint_register@ declares no version
 parameter, so the integer this plan used to lead with occupied the slot the
 ledger fills with the script context (#254 A-007).  After A-002 the plan is
-nine arguments: the five sibling observer hashes (migration, lifecycle,
-advance, enforcement, entitlement) then the four deployment integers.  The
+eight arguments: the five sibling observer hashes (migration, lifecycle,
+advance, enforcement, entitlement) then the three deployment integers.  The
 constructor still fails closed on declared-vs-supplied arity.
 -}
 applyCheckpointParams ::
@@ -277,9 +276,8 @@ applyCheckpointParams ::
     Integer ->
     Integer ->
     Integer ->
-    Integer ->
     [Data]
-applyCheckpointParams migrationHash lifecycleHash advanceHash enforcementHash entitlementHash network registrationBond freezeBond freezeWindow =
+applyCheckpointParams migrationHash lifecycleHash advanceHash enforcementHash entitlementHash network registrationBond freezeBond =
     [ B migrationHash
     , B lifecycleHash
     , B advanceHash
@@ -288,7 +286,6 @@ applyCheckpointParams migrationHash lifecycleHash advanceHash enforcementHash en
     , I network
     , I registrationBond
     , I freezeBond
-    , I freezeWindow
     ]
 
 applyLifecycleParams :: Integer -> ByteString -> Integer -> [Data]
@@ -338,18 +335,16 @@ applyCheckpointFamilyParams ::
     Integer ->
     Integer ->
     Integer ->
-    Integer ->
     CommitmentFamily ->
     SBS.ShortByteString ->
     SBS.ShortByteString
-applyCheckpointFamilyParams version hashProofPolicy network registrationBond freezeBond freezeWindow family =
+applyCheckpointFamilyParams version hashProofPolicy network registrationBond freezeBond family =
     applyDataArgs
         [ I version
         , B hashProofPolicy
         , I network
         , I registrationBond
         , I freezeBond
-        , I freezeWindow
         , asData family
         ]
 
@@ -410,9 +405,6 @@ v1RegistrationBond = 1_000_000_000
 
 v1FreezeBond :: Integer
 v1FreezeBond = 5_000_000
-
-v1FreezeWindow :: Integer
-v1FreezeWindow = 10_000
 
 {- | #254 S254-E: the release's explicit commitment lifetime, in slots.
 
@@ -546,15 +538,14 @@ deriveV1Scripts blueprint = do
         require
             "checkpoint_observer.observer_migration.withdraw"
             "observer-migration"
-    -- The successor observer is applied with exactly one input: the single
-    -- predecessor policy it accepts.  Its own hash is its release identity, so
-    -- there is no generation integer to apply.
+    -- The migration observer takes no applied parameter: the source generation
+    -- is the one whose program asks, so its own hash is its release identity.
     migration <-
         mkAppliedArtifact
             "observer-migration"
             "withdrawal-observer"
             migrationValidator
-            (applyPredecessorParam (scriptHashBytes hashProofHash))
+            []
             migrationProgram
     let migrationHash = artifactScriptHash migration
     (checkpointValidator, checkpointProgram) <-
@@ -575,7 +566,6 @@ deriveV1Scripts blueprint = do
                     v1NetworkDiscriminator
                     v1RegistrationBond
                     v1FreezeBond
-                    v1FreezeWindow
                 )
                 checkpointProgram
     checkpoint <- appliedCheckpoint

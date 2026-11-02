@@ -1,4 +1,4 @@
-//// Convict/Freeze divergence-enforcement predicates (#106 Slice 4).
+//// Convict divergence-enforcement predicates (#106 Slice 4).
 ////
 //// Mirrors the Slice-3 Haskell `Cardano.KERI.AID.Checkpoint.Enforcement`
 //// verdict-for-verdict: `EnforcementEvidence` is EE0-EE9-bound before decoded
@@ -247,7 +247,7 @@ pub fn convict_predicate(
   ) < tip.toad {
     // step 4: witnessed anti-fork gate — the conflicting event must carry at
     // least `toad` verifying witness receipts (toad=0 is the vacuous
-    // witnessless tier). Reuses the freeze predicate's receipt count.
+    // witnessless tier). Uses the witness receipt count below.
     ConvictInvalid(CvInsufficientReceipts)
   } else if forward_agrees(tip, evidence) {
     ConvictInvalid(CvNoConflict)
@@ -266,77 +266,6 @@ fn forward_agrees(tip: CheckpointDatumV1, evidence: EventEvidence) -> Bool {
   evidence.cur_threshold == tip.cur_threshold && evidence.next_keys == tip.next_keys && evidence.next_threshold == tip.next_threshold && evidence.toad == tip.toad
 }
 
-// ---------------------------------------------------------
-// Freeze (lag -> frozen)
-// ---------------------------------------------------------
-
-/// A freeze rejection reason (mirrors the Slice-3 `FreezeError`).
-pub type FreezeError {
-  /// The evidence is not a rotation (`t != "rot"`).
-  FzNotRotation
-  /// The evidence is for a different AID than the tip.
-  FzAidMismatch
-  /// The evidence sn is not strictly ahead of the tip's `native_sn`.
-  FzNotAhead
-  /// A verifying revealed key's digest is not in the tip's `next_keys`.
-  FzUncommittedReveal
-  /// The committed positions do not satisfy the tip's `next_threshold`.
-  FzPriorQuorumUnsatisfied
-  /// Verifying witness receipts number fewer than the tip's `toad`.
-  FzInsufficientReceipts
-}
-
-/// The freeze verdict. `FreezeValid` ≙ `Right ()`, `FreezeInvalid(e)` ≙
-/// `Left e` (mirrors the Slice-3 `Either FreezeError ()`).
-pub type FreezeVerdict {
-  FreezeValid
-  FreezeInvalid(FreezeError)
-}
-
-/// The freeze predicate: a rotation strictly ahead of the tip that provably
-/// spends the tip's own pre-rotation commitment and carries enough witness
-/// receipts. Same ordered checks as the Slice-3 Haskell `freezePredicate`.
-pub fn freeze_predicate(
-  tip: CheckpointDatumV1,
-  evidence: EventEvidence,
-) -> FreezeVerdict {
-  if evidence.t != "rot" {
-    FreezeInvalid(FzNotRotation)
-  } else if evidence.cesr_aid != tip.cesr_aid {
-    FreezeInvalid(FzAidMismatch)
-  } else if !(evidence.native_sn > tip.native_sn) {
-    FreezeInvalid(FzNotAhead)
-  } else {
-    // Committed reveal: each verifying revealed key's next_key_digest must sit
-    // in the tip's committed next_keys, and those positions must satisfy the
-    // committed next_threshold (KERI pre-rotation gate).
-    let verified = verified_keys(
-      evidence.revealed_keys,
-      evidence.event_bytes,
-      evidence.ctrl_sigs,
-    )
-    when locate_all(verified, tip.next_keys) is {
-      None -> FreezeInvalid(FzUncommittedReveal)
-      Some(positions) ->
-        if !evaluate(tip.next_threshold, list.length(tip.next_keys), positions) {
-          FreezeInvalid(FzPriorQuorumUnsatisfied)
-        } else if count_receipts(
-          tip.witnesses,
-          evidence.event_bytes,
-          evidence.wit_sigs,
-        ) >= tip.toad {
-          FreezeValid
-        } else {
-          FreezeInvalid(FzInsufficientReceipts)
-        }
-    }
-  }
-}
-
-// ---------------------------------------------------------
-// Shared helpers
-// ---------------------------------------------------------
-
 /// The positions whose `(idx, sig)` verifies with `keys[idx]` over `msg`.
 fn verified_positions(
   keys: List<ByteArray>,
@@ -351,29 +280,6 @@ fn verified_positions(
         Some(k) ->
           if verify_ed25519_signature(k, msg, sig) {
             Some(idx)
-          } else {
-            None
-          }
-        None -> None
-      }
-    },
-  )
-}
-
-/// The keys whose `(idx, sig)` verifies with `keys[idx]` over `msg`.
-fn verified_keys(
-  keys: List<ByteArray>,
-  msg: ByteArray,
-  sigs: List<(Int, ByteArray)>,
-) -> List<ByteArray> {
-  list.filter_map(
-    sigs,
-    fn(pair) {
-      let (idx, sig) = pair
-      when list.at(keys, idx) is {
-        Some(k) ->
-          if verify_ed25519_signature(k, msg, sig) {
-            Some(k)
           } else {
             None
           }
@@ -445,13 +351,12 @@ pub type TombstoneV1 {
 }
 
 // ---------------------------------------------------------
-// Output-shape layer (spec Convict 6 / Freeze 4)
+// Output-shape layer (spec Convict 6)
 // ---------------------------------------------------------
 
 /// The role of a continuing-output's script address in the #106 lifecycle.
 pub type AddressRole {
   Active
-  Frozen
   Tombstone
 }
 
@@ -511,40 +416,5 @@ pub fn convict_output_predicate(
     ConvictOutputInvalid(CoWrongRecord)
   } else {
     ConvictOutputValid
-  }
-}
-
-/// A freeze output-shape rejection reason (mirrors the Slice-5
-/// `FreezeOutputError`).
-pub type FreezeOutputError {
-  /// The continuing output is not at the frozen role.
-  FoNotFrozen
-  /// The continuing output does not carry the identity token.
-  FoMissingToken
-  /// The datum is not byte-identical to the tip checkpoint datum.
-  FoDatumChanged
-}
-
-/// The freeze output-shape verdict. `FreezeOutputValid` ≙ `Right ()`.
-pub type FreezeOutputVerdict {
-  FreezeOutputValid
-  FreezeOutputInvalid(FreezeOutputError)
-}
-
-/// Freeze output shape (spec Freeze 4): the continuing output must sit at the
-/// frozen role, carry the token, and hold the tip checkpoint datum unchanged.
-/// Same ordered checks as the Slice-5 Haskell `freezeOutputPredicate`.
-pub fn freeze_output_predicate(
-  tip: CheckpointDatumV1,
-  out: ContinuingOutput,
-) -> FreezeOutputVerdict {
-  if out.role != Frozen {
-    FreezeOutputInvalid(FoNotFrozen)
-  } else if !out.has_token {
-    FreezeOutputInvalid(FoMissingToken)
-  } else if out.datum != CheckpointOutput(tip) {
-    FreezeOutputInvalid(FoDatumChanged)
-  } else {
-    FreezeOutputValid
   }
 }

@@ -9,14 +9,10 @@ live validator decodes.
 module Cardano.KERI.AID.Checkpoint.Wire (
     advanceSpendRedeemerData,
     advanceObserverRedeemerData,
-    responseAdvanceObserverRedeemerData,
     advanceEvidenceData,
-    claimFreezeSpendRedeemerData,
     convictBurnRedeemerData,
     convictObserverRedeemerData,
     convictSpendRedeemerData,
-    freezeSpendRedeemerData,
-    freezeObserverRedeemerData,
     enforcementEvidenceData,
     enforcementProofData,
     registerObserverRedeemerData,
@@ -61,51 +57,17 @@ advanceObserverRedeemerData ::
     Integer ->
     AdvanceEvidence ->
     Data
-advanceObserverRedeemerData = advanceObserverRedeemerDataWithAction 1
-
-{- | The Armed response-Advance observer envelope uses action three so the
-heavy observer can select the Armed datum wire without repeating role-address
-derivation already enforced by the thin checkpoint arm.
--}
-responseAdvanceObserverRedeemerData ::
-    ByteString ->
-    ByteString ->
-    Integer ->
-    AdvanceEvidence ->
-    Data
-responseAdvanceObserverRedeemerData = advanceObserverRedeemerDataWithAction 3
-
-advanceObserverRedeemerDataWithAction ::
-    Integer ->
-    ByteString ->
-    ByteString ->
-    Integer ->
-    AdvanceEvidence ->
-    Data
-advanceObserverRedeemerDataWithAction action checkpointPolicy spentTxId spentIndex evidence =
+advanceObserverRedeemerData checkpointPolicy spentTxId spentIndex evidence =
     Constr
         0
         [ Constr
             0
-            [ I action
+            [ I 1
             , B checkpointPolicy
             , Constr 0 [Constr 0 [B spentTxId, I spentIndex]]
             ]
         , advanceEvidenceData evidence
         ]
-
-{- | The small checkpoint opens the thin @Freeze { hunter_pkh }@ constructor at
-index one, after @Advance@ at index zero.
--}
-freezeSpendRedeemerData :: ByteString -> Data
-freezeSpendRedeemerData hunterPkh = Constr 1 [B hunterPkh]
-
-{- | Story #138 opens only @ClaimFreeze { hunter_output_index }@ at
-constructor index two. The index names the exact hunter payout output.
--}
-claimFreezeSpendRedeemerData :: Integer -> Data
-claimFreezeSpendRedeemerData hunterOutputIndex =
-    Constr 2 [I hunterOutputIndex]
 
 {- | Conviction burns the token under mint constructor one and names the exact
 checkpoint input.
@@ -114,39 +76,12 @@ convictBurnRedeemerData :: ByteString -> Integer -> Data
 convictBurnRedeemerData spentTxId spentIndex =
     Constr 1 [Constr 0 [B spentTxId, I spentIndex]]
 
-{- | Conviction is spend constructor three; evidence remains in the isolated
+{- | Conviction is spend constructor one; evidence remains in the isolated
 observer envelope.
 -}
-convictSpendRedeemerData :: ByteString -> Integer -> Integer -> Data
-convictSpendRedeemerData convictorPkh convictorOutputIndex hunterOutputIndex =
-    Constr
-        3
-        [ B convictorPkh
-        , I convictorOutputIndex
-        , I hunterOutputIndex
-        ]
-
-{- | The enforcement observer envelope for @Freeze@: stable action two, the
-applied checkpoint policy, the named spent output reference, and the #254
-@EnforcementProofV1@ payload that replaced the bare evidence.
--}
-freezeObserverRedeemerData ::
-    ByteString ->
-    ByteString ->
-    Integer ->
-    EnforcementProofV1 ->
-    Data
-freezeObserverRedeemerData checkpointPolicy spentTxId spentIndex proof =
-    Constr
-        0
-        [ Constr
-            0
-            [ I 2
-            , B checkpointPolicy
-            , Constr 0 [Constr 0 [B spentTxId, I spentIndex]]
-            ]
-        , enforcementProofData proof
-        ]
+convictSpendRedeemerData :: ByteString -> Integer -> Data
+convictSpendRedeemerData convictorPkh convictorOutputIndex =
+    Constr 1 [B convictorPkh, I convictorOutputIndex]
 
 -- | The witnessed-conflict observer envelope uses isolated action four.
 convictObserverRedeemerData ::

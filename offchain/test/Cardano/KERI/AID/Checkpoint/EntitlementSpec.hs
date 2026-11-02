@@ -39,9 +39,6 @@ import Cardano.KERI.AID.Checkpoint.BountyCommitment (
     commitmentSchema,
     markerName,
  )
-import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatumV1 (..),
- )
 import Cardano.KERI.AID.Checkpoint.Enforcement (
     EnforcementEvidence (..),
  )
@@ -50,26 +47,21 @@ import Cardano.KERI.AID.Checkpoint.Entitlement (
     EntitledEnforcementError (..),
     EntitledEnforcementPlan (..),
     SettlementContext (..),
-    SettlementOutput (..),
     enforcementEvidenceDigest,
     entitlementMatches,
     prepareEntitledEnforcement,
-    validateClaimEntitledPayout,
     validateConvictEntitlement,
     validateConvictPayouts,
-    validateFreezeEntitlement,
+    validateEntitledEnforcement,
  )
 import Cardano.KERI.AID.Checkpoint.FreezeBond (
-    ArmedDatum (..),
     Inclusivity (..),
     RawBound (..),
-    Role (..),
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
  )
 import Cardano.KERI.AID.Migration.Types (
-    AddressCredential (..),
     OutputRef (..),
  )
 import Data.Bits (
@@ -95,7 +87,6 @@ spec = describe "S254-E shared bounty-entitlement rule" $ do
     matcherSpec
     settlementSpec
     calibrationSpec
-    claimPayoutSpec
     convictPayoutSpec
     builderSpec
 
@@ -154,21 +145,21 @@ evidenceMutants =
 matcherSpec :: Spec
 matcherSpec = describe "matching against actual evidence" $ do
     it "accepts the reservation opened over THIS evidence" $
-        entitlementMatches commitment checkpointRef FreezeEntitlement evidence nonce
+        entitlementMatches commitment checkpointRef ConvictEntitlement evidence nonce
             `shouldBe` EntitlementValid
     it "refuses a reservation opened over a different payload" $
         entitlementMatches
             commitment
             checkpointRef
-            FreezeEntitlement
+            ConvictEntitlement
             perturbedEvidence
             nonce
             `shouldBe` EntitlementInvalid EntitlementHash
-    it "refuses a Freeze reservation presented as a Convict one" $
+    it "refuses a Convict reservation presented as another action" $
         entitlementMatches
             commitment
             checkpointRef
-            ConvictEntitlement
+            FreezeEntitlement
             evidence
             nonce
             `shouldBe` EntitlementInvalid EntitlementAction
@@ -180,18 +171,18 @@ matcherSpec = describe "matching against actual evidence" $ do
 settlementSpec :: Spec
 settlementSpec = describe "shared settlement rule" $ do
     it "settles an honest matured entitled reveal" $
-        freeze family payee context `shouldBe` True
+        entitled family payee context `shouldBe` True
     it
         "refuses a counterfeit reservation at a FOREIGN script, however \
         \perfectly authored"
-        $ freeze family payee counterfeitContext
+        $ entitled family payee counterfeitContext
             `shouldBe` False
     it "accepts that same counterfeit against the attacker's own family" $
         -- The fixture is sound: no other leg objects to it, so the refusal
         -- above is the policy pin's and nobody else's.
-        freeze attackerFamily payee counterfeitContext `shouldBe` True
+        entitled attackerFamily payee counterfeitContext `shouldBe` True
     it "refuses a reservation parked beside the wrong deposit" $
-        freeze
+        entitled
             family
             payee
             context
@@ -200,18 +191,25 @@ settlementSpec = describe "shared settlement rule" $ do
                 }
             `shouldBe` False
     it "refuses to pay anyone but the committed beneficiary" $
-        freeze family attacker context `shouldBe` False
+        entitled family attacker context `shouldBe` False
     it "refuses a reveal naming a reservation that is not an input" $
-        freeze
+        entitled
             family
             payee
             context{scCommitmentInputs = []}
             `shouldBe` False
-    it "refuses a Freeze reservation spent as a Convict settlement" $
-        validateConvictEntitlement family evidence payee reveal checkpointRef context
+    it "refuses a reservation opened for another action" $
+        validateEntitledEnforcement
+            family
+            FreezeEntitlement
+            evidence
+            payee
+            reveal
+            checkpointRef
+            context
             `shouldBe` False
     it "refuses a settlement against another checkpoint" $
-        validateFreezeEntitlement
+        validateConvictEntitlement
             family
             evidence
             payee
@@ -220,7 +218,7 @@ settlementSpec = describe "shared settlement rule" $ do
             context
             `shouldBe` False
     it "refuses a substituted nonce" $
-        validateFreezeEntitlement
+        validateConvictEntitlement
             family
             evidence
             payee
@@ -229,7 +227,7 @@ settlementSpec = describe "shared settlement rule" $ do
             context
             `shouldBe` False
     it "refuses a reveal naming some other reservation's input" $
-        validateFreezeEntitlement
+        validateConvictEntitlement
             family
             evidence
             payee
@@ -238,25 +236,25 @@ settlementSpec = describe "shared settlement rule" $ do
             context
             `shouldBe` False
     it "accepts a reveal at exactly the maturity boundary" $
-        freezeIn (finiteRange 1001 1500) `shouldBe` True
+        convictIn (finiteRange 1001 1500) `shouldBe` True
     it "refuses a reveal one slot before maturity" $
-        freezeIn (finiteRange 1000 1500) `shouldBe` False
+        convictIn (finiteRange 1000 1500) `shouldBe` False
     it "accepts a reveal at exactly the expiry boundary" $
-        freezeIn (finiteRange 10_999 11_000) `shouldBe` True
+        convictIn (finiteRange 10_999 11_000) `shouldBe` True
     it "refuses a reveal one slot after expiry" $
-        freezeIn (finiteRange 11_001 11_500) `shouldBe` False
+        convictIn (finiteRange 11_001 11_500) `shouldBe` False
     it "refuses a settlement in a window that denotes no slot at all" $
-        freezeIn (finiteRange 1002 1001) `shouldBe` False
+        convictIn (finiteRange 1002 1001) `shouldBe` False
     it "refuses a reveal that does not retire the marker" $
-        freeze family payee context{scPolicyMint = []} `shouldBe` False
+        entitled family payee context{scPolicyMint = []} `shouldBe` False
     it "refuses a reveal that mints instead of burning" $
-        freeze
+        entitled
             family
             payee
             context{scPolicyMint = [(marker, 1)]}
             `shouldBe` False
     it "refuses a reveal that burns some other marker too" $
-        freeze
+        entitled
             family
             payee
             context
@@ -265,11 +263,11 @@ settlementSpec = describe "shared settlement rule" $ do
                 }
             `shouldBe` False
   where
-    freezeIn range = freeze family payee context{scValidity = range}
+    convictIn range = entitled family payee context{scValidity = range}
 
-freeze :: CommitmentFamily -> ByteString -> SettlementContext -> Bool
-freeze fam beneficiary =
-    validateFreezeEntitlement fam evidence beneficiary reveal checkpointRef
+entitled :: CommitmentFamily -> ByteString -> SettlementContext -> Bool
+entitled fam beneficiary =
+    validateConvictEntitlement fam evidence beneficiary reveal checkpointRef
 
 -- ---------------------------------------------------------
 -- Calibration: consent is not entitlement
@@ -280,11 +278,11 @@ calibrationSpec = describe "consent is not entitlement" $ do
     it "signer-only mutant ACCEPTS the attacker's self-substitution" $
         signerOnlyMutant attacker [attacker] `shouldBe` True
     it "the shipped rule REFUSES that same transaction" $
-        freeze family attacker context `shouldBe` False
+        entitled family attacker context `shouldBe` False
     it "the shipped rule needs no fresh signature from the payee" $
         -- The context carries no signatory set at all, and the honest
         -- settlement still succeeds: withholding a signature is not a veto.
-        freeze family payee context `shouldBe` True
+        entitled family payee context `shouldBe` True
 
 {- | The discarded consent-only rule: whoever signs may be paid.
 
@@ -296,68 +294,19 @@ signerOnlyMutant :: ByteString -> [ByteString] -> Bool
 signerOnlyMutant beneficiary signatories = beneficiary `elem` signatories
 
 -- ---------------------------------------------------------
--- Claim payout
--- ---------------------------------------------------------
-
-claimPayoutSpec :: Spec
-claimPayoutSpec = describe "claim pays the stored hunter" $ do
-    it "pays the hunter recorded in an ArmedV2 state" $
-        claim armedV2 0 [hunterPayout] `shouldBe` True
-    it "pays the hunter recorded in a legacy ArmedV1 state" $
-        claim armedV1 0 [hunterPayout] `shouldBe` True
-    it "cannot acquire a new payee" $
-        claim
-            armedV2
-            0
-            [hunterPayout{soPaymentCredential = VerificationKeyCredential attacker}]
-            `shouldBe` False
-    it "refuses a script payout standing in for the hunter" $
-        claim
-            armedV2
-            0
-            [hunterPayout{soPaymentCredential = ScriptCredential hunter}]
-            `shouldBe` False
-    it "refuses a delegated address" $
-        claim armedV2 0 [hunterPayout{soHasStakeCredential = True}]
-            `shouldBe` False
-    it "refuses a datum-bearing payout" $
-        claim armedV2 0 [hunterPayout{soHasDatum = True}] `shouldBe` False
-    it "refuses a reference-script-bearing payout" $
-        claim armedV2 0 [hunterPayout{soHasReferenceScript = True}]
-            `shouldBe` False
-    it "refuses an index past the end of the outputs" $
-        claim armedV2 1 [hunterPayout] `shouldBe` False
-    it "refuses a negative index" $
-        claim armedV2 (-1) [hunterPayout] `shouldBe` False
-  where
-    claim = validateClaimEntitledPayout
-
--- ---------------------------------------------------------
 -- Conviction payout admissibility
 -- ---------------------------------------------------------
 
 convictPayoutSpec :: Spec
 convictPayoutSpec = describe "conviction payout admissibility" $ do
-    it "routes nothing at all without entitlement, whatever the indices" $
-        validateConvictPayouts Active False 0 1 twoOutputs `shouldBe` False
-    it "admits an entitled ACTIVE conviction" $
-        validateConvictPayouts Active True 0 1 twoOutputs `shouldBe` True
-    it "admits an entitled ARMED conviction at distinct indices" $
-        validateConvictPayouts Armed True 0 1 twoOutputs `shouldBe` True
-    it "refuses one output satisfying both protected ARMED payouts" $
-        validateConvictPayouts Armed True 0 0 twoOutputs `shouldBe` False
-    it "refuses an ARMED hunter index past the end" $
-        validateConvictPayouts Armed True 0 2 twoOutputs `shouldBe` False
-    it "ignores the hunter index for a FROZEN conviction" $
-        validateConvictPayouts Frozen True 0 99 twoOutputs `shouldBe` True
-    it "admits no payout at all from a tombstone" $
-        validateConvictPayouts Tombstone True 0 1 twoOutputs `shouldBe` False
+    it "routes nothing at all without entitlement, whatever the index" $
+        validateConvictPayouts False 0 2 `shouldBe` False
+    it "admits an entitled conviction" $
+        validateConvictPayouts True 0 2 `shouldBe` True
     it "refuses a convictor index past the end" $
-        validateConvictPayouts Active True 2 1 twoOutputs `shouldBe` False
+        validateConvictPayouts True 2 2 `shouldBe` False
     it "refuses a negative convictor index" $
-        validateConvictPayouts Active True (-1) 1 twoOutputs `shouldBe` False
-  where
-    twoOutputs = [hunterPayout, hunterPayout]
+        validateConvictPayouts True (-1) 2 `shouldBe` False
 
 -- ---------------------------------------------------------
 -- Builder
@@ -384,7 +333,7 @@ builderSpec = describe "prepareEntitledEnforcement" $ do
     it "emits a plan the shared rule then accepts" $
         fmap
             ( \plan ->
-                validateFreezeEntitlement
+                validateConvictEntitlement
                     family
                     (epEvidence (eepProof plan))
                     (eepBountyPayee plan)
@@ -410,7 +359,7 @@ builderSpec = describe "prepareEntitledEnforcement" $ do
         prepareEntitledEnforcement
             family
             resolved
-            ConvictEntitlement
+            FreezeEntitlement
             evidence
             checkpointRef
             nonce
@@ -429,7 +378,7 @@ buildWith fam candidate =
     prepareEntitledEnforcement
         fam
         candidate
-        FreezeEntitlement
+        ConvictEntitlement
         evidence
         checkpointRef
         nonce
@@ -493,9 +442,6 @@ payee = BS.replicate 28 0x9a
 attacker :: ByteString
 attacker = BS.replicate 28 0xaa
 
-hunter :: ByteString
-hunter = BS.replicate 28 0x8b
-
 nonce :: ByteString
 nonce = BS.replicate 32 0x11
 
@@ -507,7 +453,7 @@ scope =
         , bsNetwork = cpNetwork parameters
         , bsCheckpointPolicy = checkpointPolicy
         , bsCheckpointRef = checkpointRef
-        , bsAction = FreezeEntitlement
+        , bsAction = ConvictEntitlement
         , bsMarker = marker
         , bsCommitUpper = 1000
         , bsEligibleAfter = 1000 + cpCommitMinAge parameters
@@ -558,7 +504,6 @@ context =
         { scCommitmentInputs = [resolved]
         , scValidity = settlementRange
         , scPolicyMint = [(marker, -1)]
-        , scOutputs = [hunterPayout]
         }
 
 {- | The counterfeit sits at a script the attacker deployed itself, so the
@@ -570,35 +515,6 @@ self-minted marker.
 counterfeitContext :: SettlementContext
 counterfeitContext =
     context{scCommitmentInputs = [resolved{rcPolicy = foreignPolicy}]}
-
-hunterPayout :: SettlementOutput
-hunterPayout =
-    SettlementOutput
-        { soPaymentCredential = VerificationKeyCredential hunter
-        , soHasStakeCredential = False
-        , soHasDatum = False
-        , soHasReferenceScript = False
-        }
-
-armedV1 :: ArmedDatum
-armedV1 = ArmedV1 checkpointState hunter 1500
-
-armedV2 :: ArmedDatum
-armedV2 = ArmedV2 checkpointState hunter 1500
-
-checkpointState :: CheckpointDatumV1
-checkpointState =
-    CheckpointDatumV1
-        { cdCesrAid = BS.replicate 32 0x01
-        , cdCurKeys = [verkey]
-        , cdCurThreshold = Unweighted 1
-        , cdNextKeys = [keyDigest]
-        , cdNextThreshold = Unweighted 1
-        , cdWitnesses = []
-        , cdToad = 0
-        , cdSeq = 1
-        , cdNativeSn = 1
-        }
 
 finiteRange :: Integer -> Integer -> SlotRange
 finiteRange lower upper =

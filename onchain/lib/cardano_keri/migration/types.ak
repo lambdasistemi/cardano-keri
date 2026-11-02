@@ -29,7 +29,10 @@ pub const migration_domain: ByteArray =
 /// S254-2, never to this module.
 pub type MigrationRole {
   CheckpointActive
+  /// Kept so that `Board` keeps its constructor index, which the endpoint
+  /// board's migration wire shares; the checkpoint no longer has this role.
   CheckpointFrozen
+  /// Kept so that `Board` keeps its constructor index (see above).
   CheckpointArmed
   Board
 }

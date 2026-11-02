@@ -1,6 +1,6 @@
 {- |
 Module      : Cardano.KERI.AID.Checkpoint.Enforcement
-Description : Convict\/Freeze divergence-enforcement predicates, #106
+Description : Convict divergence-enforcement predicate, #106
 
 Validator-free schema-support layer: the 'EnforcementEvidence' wire binder
 checks EE0-EE9 before constructing decoded 'EventEvidence', then the pure
@@ -8,10 +8,9 @@ predicates consume that decoded evidence plus the tip 'CheckpointDatumV1'. O1
 is resolved — all controller and witness signatures verify over
 'eeEventBytes' (the full event serialization, @serder.raw@), never the SAID.
 
-The two predicates share the establishment-event gate (@rot@, same AID, a
-sequence relation) then diverge: 'convictPredicate' proves a __double-sign__
-(same reveal at the same sn, diverging forward commitment); 'freezePredicate'
-proves a __committed, witnessed later event__ (the checkpoint is behind).
+The conviction predicate gates on the establishment event (@rot@, same AID, the
+tip's own sequence number) and proves a __double-sign__ (same reveal at the
+same sn, diverging forward commitment).
 -}
 module Cardano.KERI.AID.Checkpoint.Enforcement (
     -- * Signed wire evidence and EE0-EE9 binding
@@ -26,10 +25,6 @@ module Cardano.KERI.AID.Checkpoint.Enforcement (
     ConvictError (..),
     convictPredicate,
 
-    -- * Freeze (lag -> frozen)
-    FreezeError (..),
-    freezePredicate,
-
     -- * Lifecycle: the conviction-record datum
     TombstoneV1 (..),
 
@@ -39,13 +34,8 @@ module Cardano.KERI.AID.Checkpoint.Enforcement (
     ContinuingOutput (..),
     ConvictOutputError (..),
     convictOutputPredicate,
-    FreezeOutputError (..),
-    freezeOutputPredicate,
 ) where
 
-import Cardano.KERI.AID.Blake3.Checkpoint (
-    blake3Hash,
- )
 import Cardano.KERI.AID.CESR (
     qb64Aid,
     qb64Verkey,
@@ -68,7 +58,6 @@ import Cardano.KERI.AID.Ed25519 (
     verifyEd25519,
  )
 import Control.Monad (
-    forM,
     unless,
     when,
  )
@@ -77,9 +66,6 @@ import Data.ByteString (
  )
 import Data.ByteString qualified as BS
 import Data.IntSet qualified as IntSet
-import Data.List (
-    elemIndex,
- )
 import PlutusCore.Data (
     Data (..),
  )
@@ -357,8 +343,7 @@ convictPredicate d e = do
         (Left CvQuorumUnsatisfied)
     -- 4. witnessed anti-fork gate: the conflicting event must carry at least
     --    @toad@ verifying witness receipts (only a real published duplicity can
-    --    convict). @toad == 0@ is the vacuous witnessless tier. Mirrors the
-    --    freeze predicate's witness check.
+    --    convict). @toad == 0@ is the vacuous witnessless tier.
     let receiptIndices =
             IntSet.fromList
                 [ idx
@@ -380,79 +365,6 @@ convictPredicate d e = do
                 && eeNextThreshold e == cdNextThreshold d
                 && eeToad e == cdToad d
     when agrees (Left CvNoConflict)
-
--- ---------------------------------------------------------
--- Freeze (lag -> frozen)
--- ---------------------------------------------------------
-
--- | A freeze rejection reason (one constructor per ordered check).
-data FreezeError
-    = -- | The evidence is not a rotation (@t /= "rot"@).
-      FzNotRotation
-    | -- | The evidence is for a different AID than the tip.
-      FzAidMismatch
-    | -- | The evidence sn is not strictly ahead of the tip's @native_sn@.
-      FzNotAhead
-    | -- | A verifying revealed key's digest is not in the tip's @next_keys@.
-      FzUncommittedReveal
-    | -- | The committed positions do not satisfy the tip's @next_threshold@.
-      FzPriorQuorumUnsatisfied
-    | -- | Verifying witness receipts number fewer than the tip's @toad@.
-      FzInsufficientReceipts
-    deriving stock (Show, Eq)
-
-{- | The freeze predicate: a rotation strictly ahead of the tip that provably
-spends the tip's own pre-rotation commitment and carries enough witness
-receipts. Checks in order (spec "The @Freeze@ predicate"):
-
-  1. establishment gate — @rot@, same AID, @native_sn@ strictly greater;
-  2. committed reveal + prior quorum — each verifying revealed key's
-     @blake3(qb64(key))@ digest locates a position in the tip's @next_keys@
-     (an unlocated one is 'FzUncommittedReveal'), and those positions satisfy
-     the tip's @next_threshold@;
-  3. witnessed — distinct tip-witness indices with receipts verifying over
-     'eeEventBytes' number at least the tip's @toad@ (vacuous when @toad == 0@,
-     the documented weaker witnessless tier).
--}
-freezePredicate ::
-    CheckpointDatumV1 -> EventEvidence -> Either FreezeError ()
-freezePredicate d e = do
-    -- 1. establishment gate; the event is strictly ahead of the checkpoint.
-    unless (eeType e == "rot") (Left FzNotRotation)
-    unless (eeCesrAid e == cdCesrAid d) (Left FzAidMismatch)
-    unless (eeNativeSn e > cdNativeSn d) (Left FzNotAhead)
-    -- 2. committed reveal: each verifying key must sit in the pre-rotation
-    --    commitment (blake3 over its qb64), and the located positions must
-    --    satisfy the committed next threshold (KERI pre-rotation gate).
-    let verifiedKeys =
-            [ k
-            | (idx, sig) <- eeCtrlSigs e
-            , Just k <- [eeRevealedKeys e `atMay` idx]
-            , verifyEd25519 k (eeEventBytes e) sig
-            ]
-    positions <-
-        forM verifiedKeys $ \k ->
-            case elemIndex (blake3Hash (qb64Verkey k)) (cdNextKeys d) of
-                Just p -> Right p
-                Nothing -> Left FzUncommittedReveal
-    unless
-        ( evaluate
-            (cdNextThreshold d)
-            (length (cdNextKeys d))
-            (IntSet.fromList positions)
-        )
-        (Left FzPriorQuorumUnsatisfied)
-    -- 3. witnessed: receipts over the tip's witnesses meet toad (0 = vacuous).
-    let receiptIndices =
-            IntSet.fromList
-                [ idx
-                | (idx, sig) <- eeWitSigs e
-                , Just w <- [cdWitnesses d `atMay` idx]
-                , verifyEd25519 w (eeEventBytes e) sig
-                ]
-    unless
-        (fromIntegral (IntSet.size receiptIndices) >= cdToad d)
-        (Left FzInsufficientReceipts)
 
 -- ---------------------------------------------------------
 -- Helper
@@ -502,11 +414,11 @@ instance FromData TombstoneV1 where
     fromBuiltinData _ = Nothing
 
 -- ---------------------------------------------------------
--- Output-shape layer (spec Convict 6 / Freeze 4)
+-- Output-shape layer (spec Convict 6)
 -- ---------------------------------------------------------
 
 -- | The role of a continuing-output's script address in the #106 lifecycle.
-data AddressRole = Active | Frozen | Tombstone
+data AddressRole = Active | Tombstone
     deriving stock (Show, Eq)
 
 {- | The datum carried by a continuing output: either the ongoing checkpoint
@@ -558,25 +470,3 @@ convictOutputPredicate tip e out = do
                     (eeSaid e)
                 )
     unless (coDatum out == expected) (Left CoWrongRecord)
-
--- | A freeze output-shape rejection reason (one constructor per check).
-data FreezeOutputError
-    = -- | The continuing output is not at the frozen role.
-      FoNotFrozen
-    | -- | The continuing output does not carry the identity token.
-      FoMissingToken
-    | -- | The datum is not byte-identical to the tip checkpoint datum.
-      FoDatumChanged
-    deriving stock (Show, Eq)
-
-{- | Freeze output shape (spec Freeze 4): the continuing output must sit at the
-frozen role, carry the token, and hold the tip checkpoint datum unchanged.
--}
-freezeOutputPredicate ::
-    CheckpointDatumV1 ->
-    ContinuingOutput ->
-    Either FreezeOutputError ()
-freezeOutputPredicate tip out = do
-    unless (coRole out == Frozen) (Left FoNotFrozen)
-    unless (coHasToken out) (Left FoMissingToken)
-    unless (coDatum out == CheckpointOutput tip) (Left FoDatumChanged)

@@ -155,7 +155,7 @@ def observerPairs : List ObserverPair :=
     , publishTitle := "checkpoint_observer.observer_enforcement.publish"
       -- _version : Int
     , parameters := [ .I 0 ]
-      -- `validate_enforcement` dispatches on the Freeze/Convict tags and
+      -- `validate_enforcement` dispatches on the Convict tag and
       -- resolves a role-derived address; its own fixture is not built yet.
     , rewardContext := KeriBlaster.S2.Fixtures.rewardData }
   ]

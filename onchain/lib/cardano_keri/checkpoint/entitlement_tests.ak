@@ -15,9 +15,7 @@ use aiken/collection/list
 use aiken/crypto.{blake2b_256}
 use aiken/interval
 use aiken/primitive/bytearray
-use cardano/address.{
-  Address, Inline, Script, VerificationKey, from_script, from_verification_key,
-}
+use cardano/address.{from_script, from_verification_key}
 use cardano/assets.{PolicyId, from_asset, from_lovelace, merge, zero}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, placeholder,
@@ -30,22 +28,17 @@ use cardano_keri/bounty_commitment.{
   EntitlementValid, EntitlementVerdict, FreezeEntitlement, commitment_domain,
   commitment_hash, commitment_preimage, commitment_schema, marker_name,
 }
-use cardano_keri/checkpoint/datum.{CheckpointDatumV1}
 use cardano_keri/checkpoint/enforcement.{EnforcementEvidence}
 use cardano_keri/checkpoint/enforcement_vectors as vec
 use cardano_keri/checkpoint/entitlement.{
   EnforcementProofV1, enforcement_evidence_digest, entitlement_matches,
-  validate_claim_entitled_payout, validate_convict_entitlement,
-  validate_convict_payouts, validate_entitlement_observation,
-  validate_freeze_entitlement,
+  validate_convict_entitlement, validate_convict_payouts,
+  validate_entitlement_observation,
 }
 use cardano_keri/checkpoint/entitlement_vectors as ev
-use cardano_keri/checkpoint/freeze_bond.{ArmedV1, ArmedV2}
 use cardano_keri/checkpoint/observer.{
   ObserverClaim, ObserverEnvelope, observe_advance, observe_convict,
-  observe_freeze,
 }
-use cardano_keri/checkpoint/role.{Active, Armed, Frozen, Tombstone}
 use cardano_keri/checkpoint/threshold.{Unweighted}
 
 // ---------------------------------------------------------------------
@@ -124,7 +117,7 @@ const commitment_ref: OutputReference =
     output_index: 0,
   }
 
-const evidence: EnforcementEvidence = vec.lag_freeze_wire
+const evidence: EnforcementEvidence = vec.fork_witnessed_convict_wire
 
 // ---------------------------------------------------------------------
 // Fixture builders
@@ -159,11 +152,11 @@ fn commitment_over(
   }
 }
 
-/// The honest Freeze reservation: this checkpoint, this action, the digest of
+/// The honest Convict reservation: this checkpoint, this action, the digest of
 /// this actual evidence, this payee.
 fn honest_commitment() -> BountyCommitment {
   commitment_over(
-    scope_for(FreezeEntitlement, checkpoint_ref),
+    scope_for(ConvictEntitlement, checkpoint_ref),
     enforcement_evidence_digest(evidence),
     hunter,
     nonce,
@@ -220,7 +213,7 @@ fn reveal() -> BountyRevealV1 {
   BountyRevealV1 { commitment_ref, nonce, refund_index: 0 }
 }
 
-fn freeze_verdict(
+fn convict_verdict(
   f: CommitmentFamily,
   e: EnforcementEvidence,
   payee: ByteArray,
@@ -228,7 +221,21 @@ fn freeze_verdict(
   ref: OutputReference,
   tx: Transaction,
 ) -> Bool {
-  validate_freeze_entitlement(f, e, payee, r, ref, tx)
+  validate_convict_entitlement(f, e, payee, r, ref, tx)
+}
+
+/// A reservation opened for the other action: same checkpoint and evidence.
+fn other_action_commitment() -> BountyCommitment {
+  commitment_over(
+    scope_for(FreezeEntitlement, checkpoint_ref),
+    enforcement_evidence_digest(evidence),
+    hunter,
+    nonce,
+  )
+}
+
+fn other_action_tx() -> Transaction {
+  settlement_tx(commit_policy, other_action_commitment(), 1, applied_lifetime)
 }
 
 // ---------------------------------------------------------------------
@@ -238,8 +245,8 @@ fn freeze_verdict(
 /// Every rejection below is measured against this. If this row ever stops
 /// passing, the negatives beside it stop meaning anything, because "rejected"
 /// would no longer distinguish the mutation from the fixture.
-test entitlement_honest_freeze_settlement_accepts() {
-  freeze_verdict(
+test entitlement_honest_convict_settlement_accepts() {
+  convict_verdict(
     family,
     evidence,
     hunter,
@@ -262,7 +269,7 @@ test entitlement_counterfeit_policy_rejects_and_unpinned_mutant_accepts() {
   let counterfeit = honest_commitment()
   let tx = settlement_tx(foreign_policy, counterfeit, 1, applied_lifetime)
   and {
-    freeze_verdict(
+    convict_verdict(
       foreign_family,
       evidence,
       hunter,
@@ -270,7 +277,7 @@ test entitlement_counterfeit_policy_rejects_and_unpinned_mutant_accepts() {
       checkpoint_ref,
       tx,
     ),
-    !freeze_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx),
+    !convict_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx),
   }
 }
 
@@ -285,13 +292,20 @@ test entitlement_absent_commitment_rejects() {
     nonce,
     refund_index: 0,
   }
-  !freeze_verdict(family, evidence, hunter, absent, checkpoint_ref, honest_tx())
+  !convict_verdict(
+    family,
+    evidence,
+    hunter,
+    absent,
+    checkpoint_ref,
+    honest_tx(),
+  )
 }
 
 /// The committed payee is the whole point: an attacker naming itself against
 /// somebody else's reservation is refused even though every other leg holds.
 test entitlement_substituted_payee_rejects() {
-  !freeze_verdict(
+  !convict_verdict(
     family,
     evidence,
     attacker,
@@ -322,13 +336,13 @@ test entitlement_inexact_deposit_rejects() {
       },
     ],
   }
-  !freeze_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx)
+  !convict_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx)
 }
 
 /// Without the burn the reservation could settle again.
 test entitlement_unburned_marker_rejects() {
   let tx = Transaction { ..honest_tx(), mint: zero }
-  !freeze_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx)
+  !convict_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx)
 }
 
 // ---------------------------------------------------------------------
@@ -343,7 +357,7 @@ test entitlement_mutated_evidence_rejects() {
     ..evidence,
     native_sn: evidence.native_sn + 1,
   }
-  !freeze_verdict(
+  !convict_verdict(
     family,
     mutated,
     hunter,
@@ -353,21 +367,31 @@ test entitlement_mutated_evidence_rejects() {
   )
 }
 
-/// A Freeze reservation is not a Convict reservation.
+/// A reservation opened for another action is not a Convict reservation.
 test entitlement_action_cross_use_rejects() {
-  !validate_convict_entitlement(
-    family,
-    evidence,
-    hunter,
-    reveal(),
-    checkpoint_ref,
-    honest_tx(),
-  )
+  and {
+    convict_verdict(
+      family,
+      evidence,
+      hunter,
+      reveal(),
+      checkpoint_ref,
+      honest_tx(),
+    ),
+    !convict_verdict(
+      family,
+      evidence,
+      hunter,
+      reveal(),
+      checkpoint_ref,
+      other_action_tx(),
+    ),
+  }
 }
 
 /// A reservation opened over a different checkpoint cannot settle this one.
 test entitlement_foreign_checkpoint_rejects() {
-  !freeze_verdict(
+  !convict_verdict(
     family,
     evidence,
     hunter,
@@ -385,7 +409,7 @@ test entitlement_wrong_nonce_rejects() {
     nonce: other_nonce,
     refund_index: 0,
   }
-  !freeze_verdict(family, evidence, hunter, wrong, checkpoint_ref, honest_tx())
+  !convict_verdict(family, evidence, hunter, wrong, checkpoint_ref, honest_tx())
 }
 
 /// The pure matcher agrees with the settlement rule about the honest case, so
@@ -394,7 +418,7 @@ test entitlement_matches_accepts_the_honest_preimage() {
   entitlement_matches(
     honest_commitment(),
     checkpoint_ref,
-    FreezeEntitlement,
+    ConvictEntitlement,
     evidence,
     nonce,
   ) == EntitlementValid
@@ -413,14 +437,14 @@ test entitlement_same_slot_reveal_rejects() {
     0,
     applied_lifetime,
   )
-  !freeze_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx)
+  !convict_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx)
 }
 
 /// One slot of age is enough — the boundary is admitted, not merely the
 /// interior, so the row above pins an exact edge rather than a vague gap.
 test entitlement_exactly_one_slot_of_age_accepts() {
   let tx = settlement_tx(commit_policy, honest_commitment(), 1, 1)
-  freeze_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx)
+  convict_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx)
 }
 
 /// Past `expires_at` the reservation is dead.
@@ -431,7 +455,7 @@ test entitlement_expired_reveal_rejects() {
     applied_lifetime + 1,
     applied_lifetime + 2,
   )
-  !freeze_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx)
+  !convict_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx)
 }
 
 /// The last admissible slot is admitted.
@@ -442,7 +466,7 @@ test entitlement_reveal_at_exact_expiry_accepts() {
     1,
     applied_lifetime,
   )
-  freeze_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx)
+  convict_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx)
 }
 
 // ---------------------------------------------------------------------
@@ -494,16 +518,6 @@ fn enforcement_envelope(
   }
 }
 
-fn honest_freeze_envelope() -> ObserverEnvelope {
-  enforcement_envelope(
-    observe_freeze,
-    checkpoint_ref,
-    hunter,
-    evidence,
-    reveal(),
-  )
-}
-
 fn honest_convict_envelope() -> ObserverEnvelope {
   enforcement_envelope(
     observe_convict,
@@ -526,41 +540,23 @@ fn observed(envelope: ObserverEnvelope, tx: Transaction) -> Bool {
   observed_with(family, envelope, tx)
 }
 
-/// The Convict reservation: same checkpoint and evidence, different action.
-fn convict_commitment() -> BountyCommitment {
-  commitment_over(
-    scope_for(ConvictEntitlement, checkpoint_ref),
-    enforcement_evidence_digest(evidence),
-    hunter,
-    nonce,
-  )
-}
-
-fn convict_tx() -> Transaction {
-  settlement_tx(commit_policy, convict_commitment(), 1, applied_lifetime)
-}
-
-/// The honest baseline for this half: both enforcement actions settle against
-/// their own reservation through the entitlement observer alone.
+/// The honest baseline for this half: the conviction settles against its own
+/// reservation through the entitlement observer alone.
 test s254_e_entitlement_observer_accepts_honest_envelopes() {
-  and {
-    observed(honest_freeze_envelope(), honest_tx()),
-    observed(honest_convict_envelope(), convict_tx()),
-  }
+  observed(honest_convict_envelope(), honest_tx())
 }
 
-/// The dispatch reads the claim's action tag and nothing else decides it: each
-/// honest envelope is accepted against its own reservation and refused against
-/// the other's, even though checkpoint, evidence, payee and nonce are identical.
+/// The reservation is read by the claim's action: the honest envelope is
+/// accepted against a Convict reservation and refused against a reservation
+/// opened for another action, though checkpoint, evidence, payee and nonce are
+/// identical.
 ///
 /// This is the row that makes the whole section non-vacuous: an inert dispatch
 /// cannot satisfy it, and neither can one that ignores the tag.
 test s254_e_entitlement_observer_routes_on_the_action_tag() {
   and {
-    observed(honest_freeze_envelope(), honest_tx()),
-    observed(honest_convict_envelope(), convict_tx()),
-    !observed(honest_convict_envelope(), honest_tx()),
-    !observed(honest_freeze_envelope(), convict_tx()),
+    observed(honest_convict_envelope(), honest_tx()),
+    !observed(honest_convict_envelope(), other_action_tx()),
   }
 }
 
@@ -568,14 +564,14 @@ test s254_e_entitlement_observer_routes_on_the_action_tag() {
 /// somebody else's reservation, though every other leg is untouched.
 test s254_e_entitlement_observer_substituted_payee_rejects() {
   let substituted = enforcement_envelope(
-    observe_freeze,
+    observe_convict,
     checkpoint_ref,
     attacker,
     evidence,
     reveal(),
   )
   and {
-    observed(honest_freeze_envelope(), honest_tx()),
+    observed(honest_convict_envelope(), honest_tx()),
     !observed(substituted, honest_tx()),
   }
 }
@@ -584,7 +580,7 @@ test s254_e_entitlement_observer_substituted_payee_rejects() {
 /// has no reservation behind it.
 test s254_e_entitlement_observer_absent_commitment_rejects() {
   let absent = enforcement_envelope(
-    observe_freeze,
+    observe_convict,
     checkpoint_ref,
     hunter,
     evidence,
@@ -595,7 +591,7 @@ test s254_e_entitlement_observer_absent_commitment_rejects() {
     },
   )
   and {
-    observed(honest_freeze_envelope(), honest_tx()),
+    observed(honest_convict_envelope(), honest_tx()),
     !observed(absent, honest_tx()),
   }
 }
@@ -608,14 +604,14 @@ test s254_e_entitlement_observer_absent_commitment_rejects() {
 /// evidence is not trusted here, it is hashed.
 test s254_e_entitlement_observer_mutated_evidence_rejects() {
   let mutated = enforcement_envelope(
-    observe_freeze,
+    observe_convict,
     checkpoint_ref,
     hunter,
     EnforcementEvidence { ..evidence, native_sn: evidence.native_sn + 1 },
     reveal(),
   )
   and {
-    observed(honest_freeze_envelope(), honest_tx()),
+    observed(honest_convict_envelope(), honest_tx()),
     !observed(mutated, honest_tx()),
   }
 }
@@ -623,14 +619,14 @@ test s254_e_entitlement_observer_mutated_evidence_rejects() {
 /// INV-271-SCOPE. The nonce is inside the hashed preimage.
 test s254_e_entitlement_observer_wrong_nonce_rejects() {
   let wrong = enforcement_envelope(
-    observe_freeze,
+    observe_convict,
     checkpoint_ref,
     hunter,
     evidence,
     BountyRevealV1 { commitment_ref, nonce: other_nonce, refund_index: 0 },
   )
   and {
-    observed(honest_freeze_envelope(), honest_tx()),
+    observed(honest_convict_envelope(), honest_tx()),
     !observed(wrong, honest_tx()),
   }
 }
@@ -640,14 +636,14 @@ test s254_e_entitlement_observer_wrong_nonce_rejects() {
 /// this one.
 test s254_e_entitlement_observer_foreign_checkpoint_rejects() {
   let foreign = enforcement_envelope(
-    observe_freeze,
+    observe_convict,
     other_checkpoint_ref,
     hunter,
     evidence,
     reveal(),
   )
   and {
-    observed(honest_freeze_envelope(), honest_tx()),
+    observed(honest_convict_envelope(), honest_tx()),
     !observed(foreign, honest_tx()),
   }
 }
@@ -663,8 +659,8 @@ test s254_e_entitlement_observer_age_boundary_is_exact() {
     applied_lifetime,
   )
   and {
-    observed(honest_freeze_envelope(), aged),
-    !observed(honest_freeze_envelope(), same_slot),
+    observed(honest_convict_envelope(), aged),
+    !observed(honest_convict_envelope(), same_slot),
   }
 }
 
@@ -677,8 +673,8 @@ test s254_e_entitlement_observer_expiry_boundary_is_exact() {
     applied_lifetime + 2,
   )
   and {
-    observed(honest_freeze_envelope(), honest_tx()),
-    !observed(honest_freeze_envelope(), expired),
+    observed(honest_convict_envelope(), honest_tx()),
+    !observed(honest_convict_envelope(), expired),
   }
 }
 
@@ -705,12 +701,12 @@ test s254_e_entitlement_observer_value_legs_reject() {
     ],
   }
   and {
-    observed(honest_freeze_envelope(), honest_tx()),
+    observed(honest_convict_envelope(), honest_tx()),
     !observed(
-      honest_freeze_envelope(),
+      honest_convict_envelope(),
       Transaction { ..honest_tx(), mint: zero },
     ),
-    !observed(honest_freeze_envelope(), short_deposit),
+    !observed(honest_convict_envelope(), short_deposit),
   }
 }
 
@@ -730,8 +726,8 @@ test s254_e_entitlement_observer_counterfeit_policy_rejects() {
     applied_lifetime,
   )
   and {
-    observed_with(foreign_family, honest_freeze_envelope(), tx),
-    !observed_with(family, honest_freeze_envelope(), tx),
+    observed_with(foreign_family, honest_convict_envelope(), tx),
+    !observed_with(family, honest_convict_envelope(), tx),
   }
 }
 
@@ -742,6 +738,13 @@ test s254_e_entitlement_observer_counterfeit_policy_rejects() {
 /// Stated honestly: this is the one row in this section an inert dispatch also
 /// satisfies. `s254_e_entitlement_observer_routes_on_the_action_tag` is what
 /// establishes that the dispatch is not inert.
+test s254_e_entitlement_observer_removed_freeze_action_fails() fail {
+  observed(
+    enforcement_envelope(2, checkpoint_ref, hunter, evidence, reveal()),
+    honest_tx(),
+  )
+}
+
 test s254_e_entitlement_observer_unknown_action_fails() fail {
   observed(
     enforcement_envelope(
@@ -759,94 +762,6 @@ test s254_e_entitlement_observer_unknown_action_fails() fail {
 // INV-271-CONSENT — stored payee, no fresh signature
 // ---------------------------------------------------------------------
 
-fn armed_v1() -> Data {
-  let d: Data = ArmedV1 {
-    checkpoint: vec.lag_freeze_tip,
-    hunter_pkh: hunter,
-    deadline: 9,
-  }
-  d
-}
-
-fn armed_v2_datum() -> freeze_bond.ArmedDatum {
-  ArmedV2 { checkpoint: vec.lag_freeze_tip, hunter_pkh: hunter, deadline: 9 }
-}
-
-fn armed_v1_datum() -> freeze_bond.ArmedDatum {
-  ArmedV1 { checkpoint: vec.lag_freeze_tip, hunter_pkh: hunter, deadline: 9 }
-}
-
-fn claim_tx(out: Output) -> Transaction {
-  Transaction { ..placeholder, outputs: [out], extra_signatories: [] }
-}
-
-/// The beneficiary comes from stored consent, and NO signature is required —
-/// `extra_signatories` is empty. Requiring one would hand any party a veto.
-test entitlement_claim_pays_stored_hunter_without_any_signature() {
-  let tx = claim_tx(payout(hunter, 5_000_000))
-  and {
-    tx.extra_signatories == [],
-    validate_claim_entitled_payout(armed_v2_datum(), 0, tx),
-  }
-}
-
-/// Both ARMED constructors resolve the payee identically: that is what keeping
-/// one `ArmedDatum` sum buys, and why the migration family can carry either.
-test entitlement_claim_reads_both_armed_versions_identically() {
-  let tx = claim_tx(payout(hunter, 5_000_000))
-  and {
-    validate_claim_entitled_payout(armed_v1_datum(), 0, tx),
-    validate_claim_entitled_payout(armed_v2_datum(), 0, tx),
-  }
-}
-
-/// Claim cannot acquire a new beneficiary.
-test entitlement_claim_to_other_payee_rejects() {
-  !validate_claim_entitled_payout(
-    armed_v2_datum(),
-    0,
-    claim_tx(payout(attacker, 5_000_000)),
-  )
-}
-
-/// A datum-bearing or script-locked output is not an enterprise payout.
-test entitlement_claim_to_datum_bearing_output_rejects() {
-  let out = Output {
-    address: from_verification_key(hunter),
-    value: from_lovelace(5_000_000),
-    datum: InlineDatum(armed_v1()),
-    reference_script: None,
-  }
-  !validate_claim_entitled_payout(armed_v2_datum(), 0, claim_tx(out))
-}
-
-/// A staked address is not the enterprise payout the rule requires.
-test entitlement_claim_to_staked_address_rejects() {
-  let out = Output {
-    address: Address {
-      payment_credential: VerificationKey(hunter),
-      stake_credential: Some(Inline(Script(checkpoint_policy))),
-    },
-    value: from_lovelace(5_000_000),
-    datum: NoDatum,
-    reference_script: None,
-  }
-  !validate_claim_entitled_payout(armed_v2_datum(), 0, claim_tx(out))
-}
-
-/// An index past the end of the output list is not a payout.
-test entitlement_claim_out_of_range_index_rejects() {
-  !validate_claim_entitled_payout(
-    armed_v2_datum(),
-    7,
-    claim_tx(payout(hunter, 5_000_000)),
-  )
-}
-
-// ---------------------------------------------------------------------
-// Conviction payout admissibility
-// ---------------------------------------------------------------------
-
 fn two_output_tx() -> Transaction {
   Transaction {
     ..placeholder,
@@ -855,44 +770,19 @@ fn two_output_tx() -> Transaction {
 }
 
 /// Entitlement is a STRUCTURAL precondition: a conviction that established none
-/// routes nothing at all, whatever its indices say.
+/// routes nothing at all, whatever its index says.
 test entitlement_convict_payouts_require_entitlement() {
   and {
-    validate_convict_payouts(Active, True, 0, 0, two_output_tx()),
-    !validate_convict_payouts(Active, False, 0, 0, two_output_tx()),
+    validate_convict_payouts(True, 0, two_output_tx()),
+    !validate_convict_payouts(False, 0, two_output_tx()),
   }
-}
-
-/// ARMED keeps the two protected payouts at distinct indices, so one output
-/// cannot satisfy both the convictor's deposit and the hunter's bond.
-test entitlement_convict_armed_requires_distinct_indices() {
-  and {
-    validate_convict_payouts(Armed, True, 0, 1, two_output_tx()),
-    !validate_convict_payouts(Armed, True, 0, 0, two_output_tx()),
-  }
-}
-
-/// ACTIVE and FROZEN carry one protected payout, so index equality is not a
-/// defect there — stated as an accepted neighbour so the row above is known to
-/// be about ARMED rather than about indices in general.
-test entitlement_convict_active_and_frozen_allow_one_index() {
-  and {
-    validate_convict_payouts(Active, True, 0, 0, two_output_tx()),
-    validate_convict_payouts(Frozen, True, 0, 0, two_output_tx()),
-  }
-}
-
-/// A tombstone is terminal and admits no payout at all.
-test entitlement_convict_tombstone_admits_no_payout() {
-  !validate_convict_payouts(Tombstone, True, 0, 1, two_output_tx())
 }
 
 /// Indices must actually address an output.
 test entitlement_convict_out_of_range_indices_reject() {
   and {
-    !validate_convict_payouts(Active, True, 9, 0, two_output_tx()),
-    !validate_convict_payouts(Active, True, -1, 0, two_output_tx()),
-    !validate_convict_payouts(Armed, True, 0, 9, two_output_tx()),
+    !validate_convict_payouts(True, 9, two_output_tx()),
+    !validate_convict_payouts(True, -1, two_output_tx()),
   }
 }
 
@@ -1049,40 +939,13 @@ test entitlement_vectors_mutant_digests_are_distinct() {
 }
 
 /// The shapes S254-E introduced serialize identically in the two languages.
-///
-/// `golden_armed_v1` and `golden_armed_v2` are the row that pins the shared
-/// sum's constructor indices across the boundary: an off-chain mirror that
-/// wrote the successor at constructor zero would produce a datum the validator
-/// still decodes, and the two would silently disagree about which version was
-/// written.
 test entitlement_vectors_shapes_agree() {
-  let armed_state = parity_armed_state()
   and {
     cbor.serialise(parity_commitment()) == ev.golden_commitment,
     cbor.serialise(parity_reveal()) == ev.golden_reveal,
     cbor.serialise(parity_parameters()) == ev.golden_commitment_parameters,
     cbor.serialise(parity_family()) == ev.golden_commitment_family,
-    cbor.serialise(
-      ArmedV1 {
-        checkpoint: armed_state,
-        hunter_pkh: ev.hunter,
-        deadline: ev.deadline,
-      },
-    ) == ev.golden_armed_v1,
-    cbor.serialise(
-      ArmedV2 {
-        checkpoint: armed_state,
-        hunter_pkh: ev.hunter,
-        deadline: ev.deadline,
-      },
-    ) == ev.golden_armed_v2,
   }
-}
-
-/// The two ARMED constructors are genuinely different bytes. Without this the
-/// row above would pass for a mirror that collapsed them.
-test entitlement_vectors_armed_versions_are_distinguishable() {
-  ev.golden_armed_v1 != ev.golden_armed_v2
 }
 
 /// The shared matcher reaches the same VERDICT — and the same reason — as the
@@ -1287,20 +1150,6 @@ fn parity_family() -> CommitmentFamily {
   CommitmentFamily {
     policy: ev.commitment_policy,
     parameters: parity_parameters(),
-  }
-}
-
-fn parity_armed_state() -> CheckpointDatumV1 {
-  CheckpointDatumV1 {
-    cesr_aid: #"0101010101010101010101010101010101010101010101010101010101010101",
-    cur_keys: [ev.verkey],
-    cur_threshold: Unweighted(1),
-    next_keys: [ev.key_digest],
-    next_threshold: Unweighted(1),
-    witnesses: [],
-    toad: 0,
-    seq: 1,
-    native_sn: 1,
   }
 }
 

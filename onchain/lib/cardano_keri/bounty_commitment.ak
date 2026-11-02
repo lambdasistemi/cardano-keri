@@ -69,8 +69,10 @@ pub const nonce_min_width: Int = 32
 // DAT-271-ACTION / DAT-271-SCOPE / DAT-271-PREIMAGE
 // ---------------------------------------------------------------------
 
-/// Closed versioned entitlement action. ClaimFreeze has no action of its
-/// own: it consumes the hunter entitlement Freeze already recorded.
+/// Closed versioned entitlement action. The checkpoint settles only a
+/// conviction, so `ConvictEntitlement` is the one action it honours;
+/// `FreezeEntitlement` keeps its constructor index so the commitment
+/// program's wire is unchanged.
 pub type BountyAction {
   FreezeEntitlement
   ConvictEntitlement

@@ -54,7 +54,7 @@ behavioural result. Two independent reasons, both recorded because either alone
 would be enough:
 
 * its entitlement leg sits behind `bind_enforcement_evidence` and
-  `freeze_predicate`, which verify Ed25519 signatures — a builtin the pinned
+  `convict_predicate`, which verify Ed25519 signatures — a builtin the pinned
   evaluator refuses — so a mutant aimed at it would settle as
   `COULD-NOT-EVALUATE`, which is not a rejection and must never be reported as
   one;

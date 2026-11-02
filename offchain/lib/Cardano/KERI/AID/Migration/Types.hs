@@ -190,8 +190,12 @@ board-side position; its state and inventory rules belong to S254-2.
 -}
 data MigrationRole
     = CheckpointActive
-    | CheckpointFrozen
-    | CheckpointArmed
+    | {- | kept so that 'Board' keeps its constructor index, which the endpoint
+      board's migration wire shares; the checkpoint no longer has this role
+      -}
+      CheckpointFrozen
+    | -- | kept so that 'Board' keeps its constructor index (see above)
+      CheckpointArmed
     | Board
     deriving stock (Show, Eq)
 

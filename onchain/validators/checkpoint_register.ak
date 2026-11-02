@@ -7,6 +7,7 @@
 
 use aiken/collection/dict
 use aiken/collection/list
+use aiken/interval.{Finite}
 use aiken/primitive/bytearray
 use cardano/address.{Credential, Script, from_script, from_verification_key}
 use cardano/assets.{
@@ -16,14 +17,17 @@ use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Redeemer, ScriptPurpose,
   Transaction, Withdraw, find_input,
 }
-use cardano_keri/checkpoint/datum.{CheckpointDatum, CheckpointDatumV1, V1}
+use cardano_keri/checkpoint/datum.{
+  CheckpointDatum, CheckpointDatumV1, Live, V1, V2,
+}
 use cardano_keri/checkpoint/enforcement_observer.{authorized_payee}
 use cardano_keri/checkpoint/freeze_bond.{freeze_bond_valid}
-use cardano_keri/checkpoint/message.{deriveAidAssetName}
+use cardano_keri/checkpoint/message.{aid_digest, deriveAidAssetName}
 use cardano_keri/checkpoint/observer.{
   ObserverClaim, ObserverEnvelope, observe_advance, observe_convict,
   observe_migration, observe_register,
 }
+use cardano_keri/checkpoint/refund
 use cardano_keri/checkpoint/registration.{valid_registration_deposit}
 use cardano_keri/checkpoint/role.{Active}
 
@@ -55,7 +59,7 @@ validator checkpoint_register(
   /// `observer_enforcement` on every Convict settlement; both withdrawal
   /// redeemers must be the same envelope value.
   entitlement_hash: PolicyId,
-  /// Applied for a stable arity; this program no longer reads it.
+  /// The network a refund address must be written for.
   network_id: Int,
   d_reg: Int,
   freeze_bond: Int,
@@ -67,7 +71,7 @@ validator checkpoint_register(
     when mint_redeemer is {
       Register -> {
         expect ran_register_check(lifecycle_hash, policy_id, tx)
-        validate_register(d_reg, freeze_bond, policy_id, tx)
+        validate_register(network_id, d_reg, freeze_bond, policy_id, tx)
       }
       ConvictBurn { checkpoint_ref } ->
         validate_convict_burn(d_reg, freeze_bond, checkpoint_ref, policy_id, tx)
@@ -330,12 +334,13 @@ fn ran_observed_enforcement(
 }
 
 fn validate_register(
+  network_id: Int,
   d_reg: Int,
   freeze_bond: Int,
   policy_id: PolicyId,
   tx: Transaction,
 ) -> Bool {
-  let Transaction { inputs, outputs, mint, .. } = tx
+  let Transaction { inputs, outputs, mint, validity_range, .. } = tx
   expect [Pair(aid_name, 1)] = dict.to_pairs(tokens(mint, policy_id))
   expect [state_output] = list.filter(
     outputs,
@@ -343,8 +348,23 @@ fn validate_register(
   )
   expect quantity_of(state_output.value, policy_id, aid_name) == 1
   expect InlineDatum(datum_data) = state_output.datum
-  expect V1(d): CheckpointDatum = datum_data
-  expect aid_name == deriveAidAssetName(d.cesr_aid)
+  expect  
+      V2(Live {
+        aid,
+        sn: 0,
+        epoch: 0,
+        poisoned: False,
+        frozen: False,
+        born_at,
+        refund_to,
+        ..
+      }): CheckpointDatum
+    = datum_data
+  expect Some(digest) = aid_digest(aid)
+  expect aid_name == deriveAidAssetName(digest)
+  expect Finite(upper) = validity_range.upper_bound.bound_type
+  expect born_at == upper
+  expect refund.payable(network_id, refund_to)
   expect
     list.all(
       inputs,

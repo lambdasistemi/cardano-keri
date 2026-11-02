@@ -22,8 +22,8 @@ use cardano_keri/checkpoint/message.{
   AdvanceInvalid, AdvanceValid, Eq2AssetOrAidMismatch, Eq5SequenceMismatch,
   Eq6CurrentQuorumUnsatisfied, Eq6PriorNextQuorumUnsatisfied,
   Eq7CreatedStateMismatch, Eq8CreatedIllFormed, EqW1CutInvalid, EqW2AddInvalid,
-  RevealedSuccessorSigners, SpentCheckpoint, advance_equalities,
-  checkpoint_asset_domain_tag, deriveAidAssetName,
+  RevealedSuccessorSigners, SpentCheckpoint, advance_equalities, aid_digest,
+  checkpoint_asset_domain_tag, deriveAidAssetName, qb64_aid,
 }
 use cardano_keri/checkpoint/threshold.{
   DuplicateKey, Unweighted, Weight, Weighted, evaluate,
@@ -581,4 +581,50 @@ test advance_witness_toad_out_of_bounds_rejected() {
     [w4],
     sigs_revealed(),
   ) == AdvanceInvalid(Eq8CreatedIllFormed(ToadRange))
+}
+
+// ---------------------------------------------------------------------
+// aid_digest: the inverse of qb64_aid over canonical text
+// ---------------------------------------------------------------------
+
+const digest_samples: List<ByteArray> =
+  [
+    #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
+    #"0000000000000000000000000000000000000000000000000000000000000000",
+    #"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    #"fb442d0b050570133d187479e3b092cc0e46d06598ee207155bc0147a9525d7c",
+    #"fbefbefbfbefbefbfbefbefbfbefbefbfbefbefbfbefbefbfbefbefbfbefbefb",
+  ]
+
+test aid_digest_inverts_qb64_aid_on_every_sample() {
+  expect list.length(digest_samples) == 5
+  list.all(
+    digest_samples,
+    fn(digest) { aid_digest(qb64_aid(digest)) == Some(digest) },
+  )
+}
+
+test aid_digest_refuses_text_that_is_not_the_aid_of_a_digest() {
+  let text = qb64_aid(
+    #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
+  )
+  and {
+    // wrong length
+    aid_digest(bytearray.drop(text, 1)) == None,
+    aid_digest(bytearray.concat(text, "A")) == None,
+    aid_digest("") == None,
+    // another derivation code
+    aid_digest(bytearray.push(bytearray.drop(text, 1), 68)) == None,
+    // a character outside the alphabet
+    aid_digest(
+      bytearray.concat(bytearray.take(text, 20), "+")
+        |> bytearray.concat(bytearray.drop(text, 21)),
+    ) == None,
+    // padding that is not zero: the second character is at least 'Q'
+    aid_digest(
+      bytearray.take(text, 1)
+        |> bytearray.concat("Q")
+        |> bytearray.concat(bytearray.drop(text, 2)),
+    ) == None,
+  }
 }

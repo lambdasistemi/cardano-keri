@@ -15,8 +15,13 @@ use cardano/transaction.{InlineDatum, OutputReference, Transaction, find_input}
 use cardano_keri/checkpoint/advance.{
   AdvanceEvidence, AdvancePredicateValid, advance_predicate,
 }
-use cardano_keri/checkpoint/datum.{CheckpointDatum, V1}
-use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
+use cardano_keri/checkpoint/datum.{
+  CheckpointDatum, CheckpointDatumV1, DatumValid, Live, V1, V2,
+  datum_v2_well_formed,
+}
+use cardano_keri/checkpoint/message.{
+  SpentCheckpoint, aid_digest, deriveAidAssetName,
+}
 use cardano_keri/checkpoint/registration.{
   DeploymentContext, RegistrationEvidence, RegistrationValid, proof_token_name,
   registration_predicate,
@@ -74,8 +79,24 @@ pub fn validate_registration(
     fn(output) { output.address == active },
   )
   expect InlineDatum(datum_data) = state_output.datum
-  expect V1(d): CheckpointDatum = datum_data
-  let proof_name = proof_token_name(evidence.event_bytes, d.cesr_aid)
+  expect V2(registered): CheckpointDatum = datum_data
+  expect datum_v2_well_formed(registered) == DatumValid
+  expect Live { aid, keys, .. } = registered
+  expect Some(digest) = aid_digest(aid)
+  // The event's own predicate runs over the key state the datum declares,
+  // read as the inception: sequence number and epoch zero.
+  let d = CheckpointDatumV1 {
+    cesr_aid: digest,
+    cur_keys: keys.cur_keys,
+    cur_threshold: keys.cur_threshold,
+    next_keys: keys.next_keys,
+    next_threshold: keys.next_threshold,
+    witnesses: keys.witnesses,
+    toad: keys.toad,
+    seq: 0,
+    native_sn: 0,
+  }
+  let proof_name = proof_token_name(evidence.event_bytes, digest)
   expect
     list.any(
       inputs,

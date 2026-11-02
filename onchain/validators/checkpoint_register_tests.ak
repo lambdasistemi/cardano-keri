@@ -1,5 +1,6 @@
 //// #136 — real-script tests for the register-only checkpoint vertical.
 
+use aiken/builtin
 use aiken/cbor
 use aiken/collection/list
 use aiken/interval
@@ -2203,4 +2204,228 @@ test s254_e_register_paired_observers_same_envelope_accepts() {
   let tip = enforcement_vec.lag_freeze_tip
   let evidence = enforcement_vec.lag_freeze_wire
   register_freeze_spend(freeze_tx(tip, evidence))
+}
+
+// ---------------------------------------------------------------------
+// #339 — the two-step freeze and the migration entry are not part of the
+// checkpoint. Each transaction below is one the previous validator accepted;
+// every one is now refused.
+// ---------------------------------------------------------------------
+
+fn removed_spend_redeemer(
+  index: Int,
+  fields: List<Data>,
+) -> checkpoint_register.SpendRedeemer {
+  let data: Data = builtin.constr_data(index, fields)
+  expect redeemer: checkpoint_register.SpendRedeemer = data
+  redeemer
+}
+
+fn removed_spend(
+  redeemer: checkpoint_register.SpendRedeemer,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  checkpoint_register.checkpoint_register.spend(
+    migration_hash,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    entitlement_hash,
+    1,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    None,
+    redeemer,
+    own_ref,
+    tx,
+  )
+}
+
+fn removed_mint(
+  redeemer: checkpoint_register.MintRedeemer,
+  mint_policy: PolicyId,
+  tx: Transaction,
+) -> Bool {
+  checkpoint_register.checkpoint_register.mint(
+    migration_hash,
+    lifecycle_hash,
+    advance_hash,
+    enforcement_hash,
+    entitlement_hash,
+    1,
+    d_reg,
+    freeze_bond,
+    freeze_window,
+    redeemer,
+    mint_policy,
+    tx,
+  )
+}
+
+test removed_freeze_spend_is_refused() fail {
+  let tip = enforcement_vec.lag_freeze_tip
+  let evidence = enforcement_vec.lag_freeze_wire
+  removed_spend(
+    removed_spend_redeemer(1, [builtin.b_data(hunter)]),
+    freeze_ref(),
+    freeze_tx(tip, evidence),
+  )
+}
+
+test removed_claim_freeze_spend_is_refused() fail {
+  let tip = enforcement_vec.lag_freeze_tip
+  removed_spend(
+    removed_spend_redeemer(2, [builtin.i_data(0)]),
+    freeze_ref(),
+    claim_tx_with(tip, hunter, freeze_bond, freeze_deadline, claimed_value(tip)),
+  )
+}
+
+test freeze_action_is_refused_by_the_enforcement_observer() fail {
+  let tip = enforcement_vec.lag_freeze_tip
+  let evidence = enforcement_vec.lag_freeze_wire
+  checkpoint_observer.observer_enforcement.withdraw(
+    0,
+    commitment_family,
+    freeze_envelope(evidence),
+    0,
+    freeze_tx(tip, evidence),
+  )
+}
+
+test freeze_action_is_refused_by_the_entitlement_observer() fail {
+  let tip = enforcement_vec.lag_freeze_tip
+  let evidence = enforcement_vec.lag_freeze_wire
+  checkpoint_observer.observer_entitlement.withdraw(
+    0,
+    commitment_family,
+    freeze_envelope(evidence),
+    0,
+    freeze_tx(tip, evidence),
+  )
+}
+
+test advance_of_an_armed_checkpoint_is_refused() fail {
+  run_armed_response(freeze_deadline - 1)
+}
+
+test response_advance_action_is_refused_by_the_advance_observer() fail {
+  let spent = advance_vec.pos_adv_wit_2key_spent
+  let envelope = ObserverEnvelope {
+    claim: ObserverClaim {
+      action: observe_response_advance,
+      checkpoint_policy: policy,
+      own_ref: Some(rotate_ref(spent)),
+    },
+    payload: advance_vec.pos_adv_wit_2key_evidence,
+  }
+  checkpoint_observer.observer_advance.withdraw(
+    1,
+    envelope,
+    0,
+    armed_rotate_tx(
+      spent,
+      advance_vec.pos_adv_wit_2key_created,
+      freeze_deadline - 1,
+    ),
+  )
+}
+
+test advance_of_a_frozen_checkpoint_is_refused() fail {
+  run_thaw_small(min_ada + d_reg + freeze_bond)
+}
+
+test convict_burn_of_an_armed_checkpoint_is_refused() fail {
+  let tip = enforcement_vec.fork_witnessed_convict_tip
+  let evidence = enforcement_vec.fork_witnessed_convict_wire
+  removed_mint(
+    ConvictBurn { checkpoint_ref: convict_ref() },
+    policy,
+    armed_convict_tx(tip, evidence),
+  )
+}
+
+test convict_spend_of_an_armed_checkpoint_is_refused() fail {
+  let tip = enforcement_vec.fork_witnessed_convict_tip
+  let evidence = enforcement_vec.fork_witnessed_convict_wire
+  removed_spend(
+    Convict {
+      convictor_pkh: convictor,
+      convictor_output_index: 0,
+      hunter_output_index: 1,
+    },
+    convict_ref(),
+    armed_convict_tx(tip, evidence),
+  )
+}
+
+test convict_burn_of_a_frozen_checkpoint_is_refused() fail {
+  let tip = enforcement_vec.fork_witnessed_convict_tip
+  let evidence = enforcement_vec.fork_witnessed_convict_wire
+  removed_mint(
+    ConvictBurn { checkpoint_ref: convict_ref() },
+    policy,
+    frozen_convict_tx(tip, evidence),
+  )
+}
+
+test convict_spend_of_a_frozen_checkpoint_is_refused() fail {
+  let tip = enforcement_vec.fork_witnessed_convict_tip
+  let evidence = enforcement_vec.fork_witnessed_convict_wire
+  removed_spend(
+    Convict {
+      convictor_pkh: convictor,
+      convictor_output_index: 0,
+      hunter_output_index: 0,
+    },
+    convict_ref(),
+    frozen_convict_tx(tip, evidence),
+  )
+}
+
+/// A transaction that enters this generation from its predecessor: the source
+/// is spent, one token is minted under the successor policy, and the migration
+/// observer is withdrawn with a claim naming the successor and the source.
+fn migrate_in_tx() -> Transaction {
+  let tx = spend_context(
+    [mig_source_input(mig_source_datum())],
+    [],
+    [mig_successor_output(mig_source_datum())],
+    mig_replacement_mint(),
+    [],
+    interval.everything,
+    0,
+  )
+  let credential = Script(migration_hash)
+  let envelope = ObserverEnvelope {
+    claim: ObserverClaim {
+      action: observe_migration,
+      checkpoint_policy: mig_target_policy,
+      own_ref: Some(mig_source_ref()),
+    },
+    payload: builtin.i_data(0),
+  }
+  let redeemer: Data = envelope
+  Transaction {
+    ..tx,
+    withdrawals: [Pair(credential, 0)],
+    redeemers: [Pair(Withdraw(credential), redeemer)],
+  }
+}
+
+fn removed_mint_redeemer(index: Int) -> checkpoint_register.MintRedeemer {
+  let source_ref: Data = mig_source_ref()
+  let data: Data = builtin.constr_data(index, [source_ref])
+  expect redeemer: checkpoint_register.MintRedeemer = data
+  redeemer
+}
+
+test migrate_in_mint_is_refused() fail {
+  removed_mint(removed_mint_redeemer(2), mig_target_policy, migrate_in_tx())
+}
+
+test legacy_migrate_in_mint_is_refused() fail {
+  removed_mint(removed_mint_redeemer(3), mig_target_policy, migrate_in_tx())
 }

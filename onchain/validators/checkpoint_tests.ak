@@ -5774,3 +5774,28 @@ test reject_removed_close_constructor() fail {
     advance_tx(spent, old_adv_wit_2key, adv_vec.pos_adv_wit_2key_created),
   )
 }
+
+// ---------------------------------------------------------------------
+// #339 — the two-step freeze is not part of the checkpoint. Each transaction
+// below is one the previous validator accepted; every one is now refused.
+// ---------------------------------------------------------------------
+
+test removed_freeze_spend_is_refused() fail {
+  run_s254e(
+    s254e_entitled_arm_redeemer(r2_hunter),
+    freeze_own_ref,
+    s254e_entitled_arm_tx(),
+  )
+}
+
+test removed_claim_freeze_spend_is_refused() fail {
+  run_r2(r2_claim_redeemer(0), r2_claim_tx(enf_vec.lag_freeze_tip, r2_deadline))
+}
+
+test convict_of_an_armed_checkpoint_is_refused() fail {
+  run_s254e_convict(r3_convictor, 0, 1, r3_armed_tx())
+}
+
+test convict_of_a_frozen_checkpoint_is_refused() fail {
+  run_s254e_convict(r3_convictor, 0, 0, r3_frozen_tx())
+}

@@ -76,11 +76,16 @@ spec =
             it "preserves the stock signed-reference transaction budget" $ \artifacts -> do
                 map (SBS.length . artifactProgram) artifacts
                     `shouldSatisfy` all (<= 16_133)
-                -- #254 S254-E: re-derived from deriveV1Scripts after the
-                -- observer split, not reused from A-002 (14_876) or S254-R
-                -- (14_775). Transitive compiled drift; the 16_133 ceiling
-                -- is unchanged.
-                programLength "observer-advance" artifacts `shouldBe` 14_876
+                -- #339: re-derived from deriveV1Scripts after the version 2
+                -- checkpoint datum work, not reused from #254 S254-E (14_876).
+                -- The shared key-material verdict that datum_well_formed now
+                -- delegates to moves the checkpoint, observer-advance and
+                -- observer-lifecycle programs: the observer-advance blueprint
+                -- program goes from 14_871 to 14_861 bytes, applied 14_876 to
+                -- 14_867. The version 2 constructor of the datum sum moves
+                -- only observer-migration, through its version-sum reads.
+                -- Transitive compiled drift; the 16_133 ceiling is unchanged.
+                programLength "observer-advance" artifacts `shouldBe` 14_867
         describe "M1 endpoint-board script" $ do
             -- Historical fact, not a live derivation: the M1 endpoint board
             -- was deployed 2026-07-29 compiled with aiken 1.1.21 (blueprint

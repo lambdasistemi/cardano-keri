@@ -44,11 +44,37 @@ pub type CheckpointDatumV1 {
   native_sn: Int,
 }
 
-/// The checkpoint datum version sum. `V1` is constructor index 0; a v1-only
-/// validator fails closed on an unknown constructor. Serialises as
-/// `Constr 0 [<inner CheckpointDatumV1>]`.
+/// The key material of a version 2 checkpoint (Lean `KeyMaterial`): the
+/// version 1 record's key fields, with the same types, in their own record.
+pub type KeyMaterial {
+  cur_keys: List<ByteArray>,
+  cur_threshold: Threshold,
+  next_keys: List<ByteArray>,
+  next_threshold: Threshold,
+  witnesses: List<ByteArray>,
+  toad: Int,
+}
+
+/// The version 2 checkpoint datum (Lean `CheckpointDatumV2`).
+pub type CheckpointDatumV2 {
+  Live {
+    aid: ByteArray,
+    sn: Int,
+    epoch: Int,
+    poisoned: Bool,
+    frozen: Bool,
+    born_at: Int,
+    refund_to: ByteArray,
+    keys: KeyMaterial,
+  }
+  TerminationPending { aid: ByteArray, sn: Int, epoch: Int, keys: KeyMaterial }
+}
+
+/// The checkpoint datum version sum. `V1` is constructor index 0 and `V2`
+/// index 1; a validator fails closed on a constructor it does not know.
 pub type CheckpointDatum {
   V1(CheckpointDatumV1)
+  V2(CheckpointDatumV2)
 }
 
 // ---------------------------------------------------------
@@ -72,6 +98,12 @@ pub type DatumError {
   /// `toad` violates the KERI `bt` rule: `toad == 0` iff `witnesses` is
   /// empty, else `1 <= toad <= len(witnesses)` (rule 14).
   ToadRange
+  /// A version 2 `sn` is negative.
+  NegativeSn
+  /// A version 2 `epoch` is negative.
+  NegativeEpoch
+  /// A version 2 `born_at` is negative.
+  NegativeBornAt
 }
 
 /// The datum well-formedness verdict. `DatumValid` ≙ `Right ()`,
@@ -82,34 +114,90 @@ pub type DatumVerdict {
   DatumInvalid(DatumError)
 }
 
-/// Full datum well-formedness. Delegates the current and next key-set +
-/// threshold F18 checks to the Slice-5 `well_formed`, and additionally pins
-/// the fixed-width primitive domains (`cesr_aid`, witness verkeys all exactly
-/// 32 bytes) and the rule-14 witness/`toad` constraints. Nothing malformed
-/// can serialize past it.
+/// Full datum well-formedness. Pins the fixed-width primitive domain
+/// (`cesr_aid` exactly 32 bytes) and delegates the key material to
+/// `key_material_verdict`. Nothing malformed can serialize past it.
 pub fn datum_well_formed(d: CheckpointDatumV1) -> DatumVerdict {
   if bytearray.length(d.cesr_aid) != 32 {
     DatumInvalid(CesrAidWidth)
   } else {
-    when threshold.well_formed(d.cur_keys, d.cur_threshold) is {
-      Invalid(e) -> DatumInvalid(ThresholdIllFormed(e))
-      _ ->
-        when threshold.well_formed(d.next_keys, d.next_threshold) is {
-          Invalid(e) -> DatumInvalid(NextIllFormed(e))
-          _ ->
-            if !list.all(d.witnesses, fn(w) { bytearray.length(w) == 32 }) {
-              DatumInvalid(WitnessWidth)
-            } else if list.length(list.unique(d.witnesses)) != list.length(
-              d.witnesses,
-            ) {
-              DatumInvalid(DuplicateWitness)
-            } else if !toad_ok(d.toad, list.length(d.witnesses)) {
-              DatumInvalid(ToadRange)
-            } else {
-              DatumValid
-            }
-        }
-    }
+    key_material_verdict(
+      d.cur_keys,
+      d.cur_threshold,
+      d.next_keys,
+      d.next_threshold,
+      d.witnesses,
+      d.toad,
+    )
+  }
+}
+
+/// Write-time validity of a version 2 datum (the Lean leaves it to the
+/// writer): the numbers it carries are non-negative and its key material is
+/// the version 1 key material rule. No rule on `aid` or `refund_to`.
+pub fn datum_v2_well_formed(d: CheckpointDatumV2) -> DatumVerdict {
+  when d is {
+    Live { sn, epoch, born_at, keys, .. } ->
+      if sn < 0 {
+        DatumInvalid(NegativeSn)
+      } else if epoch < 0 {
+        DatumInvalid(NegativeEpoch)
+      } else if born_at < 0 {
+        DatumInvalid(NegativeBornAt)
+      } else {
+        keys_verdict(keys)
+      }
+    TerminationPending { sn, epoch, keys, .. } ->
+      if sn < 0 {
+        DatumInvalid(NegativeSn)
+      } else if epoch < 0 {
+        DatumInvalid(NegativeEpoch)
+      } else {
+        keys_verdict(keys)
+      }
+  }
+}
+
+fn keys_verdict(k: KeyMaterial) -> DatumVerdict {
+  key_material_verdict(
+    k.cur_keys,
+    k.cur_threshold,
+    k.next_keys,
+    k.next_threshold,
+    k.witnesses,
+    k.toad,
+  )
+}
+
+/// The current and next key-set + threshold F18 checks (the Slice-5
+/// `well_formed`), then the rule-14 witness/`toad` constraints: witness
+/// verkeys exactly 32 bytes, no duplicates.
+fn key_material_verdict(
+  cur_keys: List<ByteArray>,
+  cur_threshold: Threshold,
+  next_keys: List<ByteArray>,
+  next_threshold: Threshold,
+  witnesses: List<ByteArray>,
+  toad: Int,
+) -> DatumVerdict {
+  when threshold.well_formed(cur_keys, cur_threshold) is {
+    Invalid(e) -> DatumInvalid(ThresholdIllFormed(e))
+    _ ->
+      when threshold.well_formed(next_keys, next_threshold) is {
+        Invalid(e) -> DatumInvalid(NextIllFormed(e))
+        _ ->
+          if !list.all(witnesses, fn(w) { bytearray.length(w) == 32 }) {
+            DatumInvalid(WitnessWidth)
+          } else if list.length(list.unique(witnesses)) != list.length(
+            witnesses,
+          ) {
+            DatumInvalid(DuplicateWitness)
+          } else if !toad_ok(toad, list.length(witnesses)) {
+            DatumInvalid(ToadRange)
+          } else {
+            DatumValid
+          }
+      }
   }
 }
 

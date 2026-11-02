@@ -3,7 +3,7 @@ Module      : Cardano.KERI.AID.Checkpoint.EnforcementSpec
 Description : Enforcement wire binding and predicates over keripy fixtures
 
 Builds wire and decoded enforcement evidence from the committed keripy fixtures,
-proves ordered EE0-EE9 binding, and drives Convict/Freeze predicates including
+proves ordered EE0-EE9 binding, and drives the Convict predicate including
 the distinct-receipt and kt-conflict corrections. Negative cases mutate loaded
 fixtures in-spec; fixture JSON is never edited.
 -}
@@ -22,15 +22,11 @@ import Cardano.KERI.AID.Checkpoint.Enforcement (
     EnforcementBindingError (..),
     EnforcementEvidence (..),
     EventEvidence (..),
-    FreezeError (..),
-    FreezeOutputError (..),
     OutputDatum (..),
     TombstoneV1 (..),
     bindEnforcementEvidence,
     convictOutputPredicate,
     convictPredicate,
-    freezeOutputPredicate,
-    freezePredicate,
  )
 import Cardano.KERI.AID.Checkpoint.FixtureLoader (
     arrayField,
@@ -76,10 +72,9 @@ import Test.Hspec (
 import Text.Read (readMaybe)
 
 spec :: Spec
-spec = describe "Enforcement - convict/freeze over the keripy fixtures" $ do
+spec = describe "Enforcement - convict over the keripy fixtures" $ do
     fork <- runIO (loadFixture "fork.json")
     honest2 <- runIO (loadFixture "honest_2key.json")
-    honest7 <- runIO (loadFixture "honest_7key.json")
     lagFx <- runIO (loadFixture "lag.json")
     forkW <- runIO (loadFixture "fork_witnessed.json")
 
@@ -228,47 +223,7 @@ spec = describe "Enforcement - convict/freeze over the keripy fixtures" $ do
                 convictPredicate tip ev{eeCurThreshold = Unweighted 1}
                     `shouldBe` Right ()
 
-    describe "freeze" $ do
-        -- honest_2key: a legit later event, toad=0 tier (Cardano is behind).
-        it "honest_2key: witnessless later rot freezes" $
-            withBuilt (freezeSetup honest2 Nothing) $ \(tip, ev) ->
-                freezePredicate tip ev `shouldBe` Right ()
-
-        -- lag: witnessed later event; the receipt satisfies toad=1.
-        it "lag: witnessed later rot freezes" $
-            withBuilt (freezeSetup lagFx (Just "rot_witness_receipts")) $ \(tip, ev) ->
-                freezePredicate tip ev `shouldBe` Right ()
-
-        -- honest_7key: 3-of-7 partial reveal still satisfies the weighted nt.
-        it "honest_7key: partial reveal satisfies the committed weighted nt" $
-            withBuilt (freezeSetup honest7 Nothing) $ \(tip, ev) ->
-                freezePredicate tip ev `shouldBe` Right ()
-
-        -- F10: an event not strictly ahead of the tip.
-        it "F10: evidence at the tip's sn -> FzNotAhead" $
-            withBuilt (freezeSetup honest2 Nothing) $ \(tip, ev) ->
-                freezePredicate tip ev{eeNativeSn = cdNativeSn tip}
-                    `shouldBe` Left FzNotAhead
-
-        -- F9: a revealed key whose digest is not in the tip's next_keys.
-        it "F9: reveal not in next_keys -> FzUncommittedReveal" $
-            withBuilt (freezeSetup honest2 Nothing) $ \(tip, ev) ->
-                freezePredicate tip{cdNextKeys = [BS.replicate 32 0]} ev
-                    `shouldBe` Left FzUncommittedReveal
-
-        -- F8: fewer verifying receipts than toad.
-        it "F8: receipts below toad -> FzInsufficientReceipts" $
-            withBuilt (freezeSetup lagFx (Just "rot_witness_receipts")) $ \(tip, ev) ->
-                freezePredicate tip ev{eeWitSigs = []}
-                    `shouldBe` Left FzInsufficientReceipts
-
-        it "W3: a duplicated valid receipt cannot fake toad=2" $
-            withBuilt (freezeSetup lagFx (Just "rot_witness_receipts")) $ \(tip, ev) ->
-                freezePredicate
-                    tip{cdToad = 2}
-                    ev{eeWitSigs = eeWitSigs ev <> eeWitSigs ev}
-                    `shouldBe` Left FzInsufficientReceipts
-
+    describe "convict quorum" $ do
         -- F2: some controller sigs verify, but not enough for cur_threshold
         -- (distinct from F1's zero-signature case).
         it "F2: sigs below threshold -> CvQuorumUnsatisfied" $
@@ -312,30 +267,6 @@ spec = describe "Enforcement - convict/freeze over the keripy fixtures" $ do
                 convictOutputPredicate tip ev (tombstoneOut tip ev True Active)
                     `shouldBe` Left CoNotTombstone
 
-    describe "freeze output shape (Freeze 4)" $ do
-        it "valid: Frozen + token + unchanged datum" $
-            withBuilt (freezeSetup lagFx (Just "rot_witness_receipts")) $ \(tip, _) ->
-                freezeOutputPredicate tip (checkpointOut tip True Frozen)
-                    `shouldBe` Right ()
-
-        -- F12: freeze output at a non-frozen role.
-        it "F12: non-frozen role -> FoNotFrozen" $
-            withBuilt (freezeSetup lagFx (Just "rot_witness_receipts")) $ \(tip, _) ->
-                freezeOutputPredicate tip (checkpointOut tip True Active)
-                    `shouldBe` Left FoNotFrozen
-
-        -- F12: freeze output with a mutated datum.
-        it "F12: mutated datum -> FoDatumChanged" $
-            withBuilt (freezeSetup lagFx (Just "rot_witness_receipts")) $ \(tip, _) ->
-                freezeOutputPredicate
-                    tip
-                    ( ContinuingOutput
-                        Frozen
-                        True
-                        (CheckpointOutput tip{cdNativeSn = cdNativeSn tip + 1})
-                    )
-                    `shouldBe` Left FoDatumChanged
-
 -- ---------------------------------------------------------------------------
 -- Output-shape + tombstone fixtures/helpers
 -- ---------------------------------------------------------------------------
@@ -352,10 +283,6 @@ tombstoneOut tip ev hasTok role =
         role
         hasTok
         (TombstoneOutput (TombstoneV1 (cdCesrAid tip) (cdNativeSn tip) (eeSaid ev)))
-
--- | A checkpoint continuing-output carrying the tip datum unchanged.
-checkpointOut :: CheckpointDatumV1 -> Bool -> AddressRole -> ContinuingOutput
-checkpointOut tip hasTok role = ContinuingOutput role hasTok (CheckpointOutput tip)
 
 -- | Decode a hex literal, erroring on malformed input.
 hexBs :: Text -> ByteString
@@ -408,14 +335,6 @@ honestConvictSetup :: Value -> Either String (CheckpointDatumV1, EventEvidence)
 honestConvictSetup fx = do
     tip <- tipFrom fx "rot" 1
     ev <- evidenceFrom fx "rot" "rot_sigs" Nothing
-    pure (tip, ev)
-
--- | Freeze: tip = the icp state, evidence = the later rot (+ optional receipts).
-freezeSetup ::
-    Value -> Maybe Text -> Either String (CheckpointDatumV1, EventEvidence)
-freezeSetup fx witKey = do
-    tip <- tipFrom fx "icp" 0
-    ev <- evidenceFrom fx "rot" "rot_sigs" witKey
     pure (tip, ev)
 
 {- | Build the ratified enforcement wire evidence and its decoded counterpart

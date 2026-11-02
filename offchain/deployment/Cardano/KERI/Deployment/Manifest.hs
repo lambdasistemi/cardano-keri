@@ -25,7 +25,6 @@ import Cardano.KERI.Deployment.Script (
     scriptHashText,
     v1CheckpointVersion,
     v1FreezeBond,
-    v1FreezeWindow,
     v1NetworkDiscriminator,
     v1RegistrationBond,
  )
@@ -87,7 +86,6 @@ data DeploymentParameters = DeploymentParameters
     , parameterNetworkDiscriminator :: Integer
     , parameterRegistrationBond :: Integer
     , parameterFreezeBond :: Integer
-    , parameterFreezeWindow :: Integer
     }
     deriving stock (Show, Eq)
 
@@ -175,7 +173,6 @@ instance ToJSON DeploymentParameters where
             , "networkDiscriminator" .= parameterNetworkDiscriminator parameters
             , "registrationBondLovelace" .= parameterRegistrationBond parameters
             , "freezeBondLovelace" .= parameterFreezeBond parameters
-            , "freezeWindowSlots" .= parameterFreezeWindow parameters
             ]
 
 instance FromJSON DeploymentParameters where
@@ -185,7 +182,6 @@ instance FromJSON DeploymentParameters where
             <*> o .: "networkDiscriminator"
             <*> o .: "registrationBondLovelace"
             <*> o .: "freezeBondLovelace"
-            <*> o .: "freezeWindowSlots"
 
 instance ToJSON CheckpointInfo where
     toJSON checkpoint =
@@ -240,7 +236,6 @@ v1Parameters =
         , parameterNetworkDiscriminator = v1NetworkDiscriminator
         , parameterRegistrationBond = v1RegistrationBond
         , parameterFreezeBond = v1FreezeBond
-        , parameterFreezeWindow = v1FreezeWindow
         }
 
 blueprintSha256 :: FilePath -> IO Text

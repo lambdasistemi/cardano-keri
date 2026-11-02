@@ -7,7 +7,7 @@
 ////     object, its lifecycle, and its hash. At that boundary the enforcement
 ////     evidence digest is an **opaque** 32-byte value: the component cannot
 ////     and does not claim a supplied digest is the digest of actual evidence.
-////   * The enforcement observer owns the **actual** Freeze/Convict evidence.
+////   * The enforcement observer owns the **actual** Convict evidence.
 ////     Deriving the canonical digest from that complete payload, and
 ////     reconciling it with the named mature commitment, is this module's row.
 ////
@@ -24,20 +24,15 @@
 use aiken/cbor
 use aiken/collection/list
 use aiken/crypto.{blake2b_256}
-use cardano/address.{VerificationKey}
-use cardano/transaction.{NoDatum, OutputReference, Transaction}
+use cardano/transaction.{OutputReference, Transaction}
 use cardano_keri/bounty_commitment.{
   BountyAction, BountyCommitment, BountyCommitmentV1, BountyRevealV1,
   CommitmentFamily, ConvictEntitlement, EntitlementValid, EntitlementVerdict,
-  FreezeEntitlement, at_or_after, at_or_before, burns_exactly_one,
+  at_or_after, at_or_before, burns_exactly_one,
   entitlement_matches as commitment_entitlement_matches, own_commitment,
 }
 use cardano_keri/checkpoint/enforcement.{EnforcementEvidence}
-use cardano_keri/checkpoint/freeze_bond.{ArmedDatum, armed_hunter}
-use cardano_keri/checkpoint/observer.{
-  ObserverEnvelope, observe_convict, observe_freeze,
-}
-use cardano_keri/checkpoint/role.{Active, Armed, Frozen, Role, Tombstone}
+use cardano_keri/checkpoint/observer.{ObserverEnvelope, observe_convict}
 
 /// `DAT-254-ENFORCEMENT-PROOF`. The enforcement family's observer payload.
 ///
@@ -85,20 +80,18 @@ pub fn enforcement_evidence_digest(evidence: EnforcementEvidence) -> ByteArray {
 pub fn entitlement_matches(
   commitment: BountyCommitment,
   checkpoint_ref: OutputReference,
-  action: BountyAction,
   evidence: EnforcementEvidence,
   nonce: ByteArray,
 ) -> EntitlementVerdict {
   commitment_entitlement_matches(
     commitment,
     checkpoint_ref,
-    action,
     enforcement_evidence_digest(evidence),
     nonce,
   )
 }
 
-/// The shared settlement rule behind both enforcement actions.
+/// The settlement rule behind the conviction action.
 ///
 /// Every leg is load-bearing:
 ///
@@ -140,7 +133,6 @@ pub fn entitlement_matches(
 /// commitment anywhere else is refused before any of these fields is read.
 fn validate_entitled_enforcement(
   family: CommitmentFamily,
-  action: BountyAction,
   evidence: EnforcementEvidence,
   payee: ByteArray,
   reveal: BountyRevealV1,
@@ -155,13 +147,7 @@ fn validate_entitled_enforcement(
         // The pin comes FIRST: nothing below can authorize a settlement out of
         // a reservation that never belonged to this release's family.
         policy == family.policy,
-        entitlement_matches(
-          commitment,
-          checkpoint_ref,
-          action,
-          evidence,
-          reveal.nonce,
-        ) == EntitlementValid,
+        entitlement_matches(commitment, checkpoint_ref, evidence, reveal.nonce) == EntitlementValid,
         payee_pkh == payee,
         at_or_after(tx.validity_range, scope.eligible_after),
         at_or_before(tx.validity_range, scope.expires_at),
@@ -171,31 +157,9 @@ fn validate_entitled_enforcement(
   }
 }
 
-/// Freeze entitlement: the hunter named by this arming transaction must be the
+/// Convict entitlement: the convictor named by this transaction must be the
 /// payee of a matured, authentic commitment opened over THIS checkpoint, the
-/// Freeze action, and the digest of THIS actual evidence.
-pub fn validate_freeze_entitlement(
-  family: CommitmentFamily,
-  evidence: EnforcementEvidence,
-  hunter: ByteArray,
-  reveal: BountyRevealV1,
-  checkpoint_ref: OutputReference,
-  tx: Transaction,
-) -> Bool {
-  validate_entitled_enforcement(
-    family,
-    FreezeEntitlement,
-    evidence,
-    hunter,
-    reveal,
-    checkpoint_ref,
-    tx,
-  )
-}
-
-/// Convict entitlement, over any of ACTIVE, ARMED or FROZEN. The action is a
-/// distinct scope value, so a Freeze reservation can never be spent as a
-/// Convict one.
+/// Convict action, and the digest of THIS actual evidence.
 pub fn validate_convict_entitlement(
   family: CommitmentFamily,
   evidence: EnforcementEvidence,
@@ -206,13 +170,29 @@ pub fn validate_convict_entitlement(
 ) -> Bool {
   validate_entitled_enforcement(
     family,
-    ConvictEntitlement,
     evidence,
     convictor,
     reveal,
     checkpoint_ref,
     tx,
   )
+}
+
+/// Admissibility of a conviction's payout structure.
+///
+/// The convictor's entitlement is a STRUCTURAL precondition of any payout: a
+/// conviction that did not establish entitlement routes nothing at all, whatever
+/// its index says.
+pub fn validate_convict_payouts(
+  valid_entitlement: Bool,
+  convictor_index: Int,
+  tx: Transaction,
+) -> Bool {
+  and {
+    valid_entitlement,
+    convictor_index >= 0,
+    convictor_index < list.length(tx.outputs),
+  }
 }
 
 /// The entitlement half of the A-002 two-observer split.
@@ -223,7 +203,7 @@ pub fn validate_convict_entitlement(
 /// cut without deleting a demonstrated check. A-002 therefore separates the two
 /// responsibilities into two applied observers reading the SAME payload:
 ///
-///   * the enforcement observer owns the actual Freeze/Convict KERI evidence;
+///   * the enforcement observer owns the actual Convict KERI evidence;
 ///   * this rule owns the mature, authentic, hash-committed reservation that
 ///     entitles a named payee to be paid for it.
 ///
@@ -233,10 +213,7 @@ pub fn validate_convict_entitlement(
 /// different digest and cannot reproduce the committed hash. What this half
 /// cannot establish on its own is that the evidence is genuine KERI — which is
 /// exactly the other observer's row. Neither half alone authorizes settlement:
-/// binding the two to one envelope value is the register's, and belongs to the
-/// post-rebase slice that owns the register's applied credentials.
-///
-/// This is placement, not a weakening or a duplication of authority.
+/// binding the two to one envelope value is the register's.
 pub fn validate_entitlement_observation(
   family: CommitmentFamily,
   envelope: ObserverEnvelope,
@@ -250,80 +227,6 @@ pub fn validate_entitlement_observation(
   // payload, so an envelope cannot name one checkpoint to the register and
   // another to its own reservation.
   expect Some(own_ref) = claim.own_ref
-  if claim.action == observe_freeze {
-    validate_freeze_entitlement(
-      family,
-      evidence,
-      payee_pkh,
-      reveal,
-      own_ref,
-      tx,
-    )
-  } else if claim.action == observe_convict {
-    validate_convict_entitlement(
-      family,
-      evidence,
-      payee_pkh,
-      reveal,
-      own_ref,
-      tx,
-    )
-  } else {
-    fail
-  }
-}
-
-/// Claim pays the hunter recorded in the ARMED state — stored consent, not a
-/// fresh redeemer field and not a fresh signature.
-///
-/// The beneficiary is read through `armed_hunter` and nothing else, so Claim
-/// cannot acquire a new payee. The output must be a datum-free,
-/// reference-script-free enterprise payout to that exact key hash; the lovelace
-/// magnitude stays with the checkpoint, which owns the bond parameter.
-pub fn validate_claim_entitled_payout(
-  armed: ArmedDatum,
-  hunter_output_index: Int,
-  tx: Transaction,
-) -> Bool {
-  let hunter_pkh = armed_hunter(armed)
-  when list.at(tx.outputs, hunter_output_index) is {
-    Some(out) -> and {
-        out.address.payment_credential == VerificationKey(hunter_pkh),
-        out.address.stake_credential == None,
-        out.datum == NoDatum,
-        out.reference_script == None,
-      }
-    None -> False
-  }
-}
-
-/// Admissibility of a conviction's payout structure for the source role.
-///
-/// The convictor's entitlement is a STRUCTURAL precondition of any payout: a
-/// conviction that did not establish entitlement routes nothing at all, whatever
-/// its indices say. ARMED additionally keeps the two protected payouts at
-/// distinct indices so one output cannot satisfy both the convictor's deposit
-/// and the hunter's bond. A tombstone is terminal and admits no payout.
-pub fn validate_convict_payouts(
-  source: Role,
-  valid_entitlement: Bool,
-  convictor_index: Int,
-  hunter_index: Int,
-  tx: Transaction,
-) -> Bool {
-  and {
-    valid_entitlement,
-    convictor_index >= 0,
-    convictor_index < list.length(tx.outputs),
-    when source is {
-      Armed -> and {
-          convictor_index != hunter_index,
-          hunter_index >= 0,
-          hunter_index < list.length(tx.outputs),
-        }
-      Active -> True
-      Frozen -> True
-      Tombstone -> False
-    },
-  }
+  expect claim.action == observe_convict
+  validate_convict_entitlement(family, evidence, payee_pkh, reveal, own_ref, tx)
 }

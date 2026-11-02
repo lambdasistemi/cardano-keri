@@ -8,7 +8,7 @@ The deployment half of T254-107.  It establishes three things about the
 production derivation, all read from the live blueprint rather than asserted:
 
 * the compiled programs really take the new arguments — the split checkpoint's
-  seventh @CommitmentFamily@ and the enforcement observer's second — so an
+  sixth @CommitmentFamily@ and the enforcement observer's second — so an
   implementation that stubbed the family away would change an argument count
   and be caught here;
 * the deployed commitment policy is the hash of the commitment program applied
@@ -33,8 +33,9 @@ import Cardano.KERI.AID.Checkpoint.BountyCommitment (
     parametersWellFormed,
  )
 import Cardano.KERI.Deployment.Script (
-    Blueprint,
+    Blueprint (..),
     ScriptArtifact (..),
+    Validator (..),
     applyAdvanceParams,
     applyCheckpointFamilyParams,
     applyCommitmentParams,
@@ -51,7 +52,6 @@ import Cardano.KERI.Deployment.Script (
     v1CommitmentLifetime,
     v1CommitmentParameters,
     v1FreezeBond,
-    v1FreezeWindow,
     v1NetworkDiscriminator,
     v1RegistrationBond,
     validatorParameterCount,
@@ -59,6 +59,7 @@ import Cardano.KERI.Deployment.Script (
 import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as SBS
 import Data.Text (Text)
+import Data.Text qualified as T
 import System.Environment (getEnv)
 import Test.Hspec (
     Spec,
@@ -66,6 +67,7 @@ import Test.Hspec (
     it,
     shouldBe,
     shouldNotBe,
+    shouldSatisfy,
  )
 
 spec :: Spec
@@ -108,10 +110,10 @@ magnitudesSpec = describe "release magnitudes" $ do
 
 aritySpec :: Spec
 aritySpec = describe "compiled argument counts" $ do
-    it "gives the split checkpoint a seventh CommitmentFamily argument" $
+    it "gives the split checkpoint a sixth CommitmentFamily argument" $
         withBlueprint $ \blueprint ->
             validatorParameterCount "checkpoint.checkpoint.spend" blueprint
-                `shouldBe` Just 7
+                `shouldBe` Just 6
     it "gives the enforcement observer a second argument" $
         withBlueprint $ \blueprint -> do
             validatorParameterCount
@@ -131,16 +133,33 @@ aritySpec = describe "compiled argument counts" $ do
                 "checkpoint_observer.observer_advance.withdraw"
                 blueprint
                 `shouldBe` Just 1
-    it "gives the combined register a ninth entitlement-observer credential" $
-        -- A-002 adds the entitlement observer as an applied register
-        -- argument.  The constructor still fails closed on declared vs
-        -- supplied arity; this row records the declaration the plan must
-        -- match.
+    it "gives the combined register eight applied parameters" $
+        -- The five observer credentials and the three deployment integers.
+        -- The constructor still fails closed on declared vs supplied arity;
+        -- this row records the declaration the plan must match.
         withBlueprint $ \blueprint ->
             validatorParameterCount
                 "checkpoint_register.checkpoint_register.mint"
                 blueprint
-                `shouldBe` Just 9
+                `shouldBe` Just 8
+    it "declares no freeze window on any checkpoint program" $
+        withBlueprint $ \blueprint -> do
+            let checkpointPrograms =
+                    [ validator
+                    | validator <- validators blueprint
+                    , any
+                        (`T.isPrefixOf` vTitle validator)
+                        ["checkpoint_register.", "checkpoint.checkpoint."]
+                    ]
+            -- The control is non-vacuous: the census sees both programs.
+            length checkpointPrograms `shouldSatisfy` (>= 2)
+            let offenders =
+                    [ (vTitle validator, parameter)
+                    | validator <- checkpointPrograms
+                    , parameter <- vParameters validator
+                    , "freeze_window" `T.isInfixOf` parameter
+                    ]
+            offenders `shouldBe` []
     it "gives the commitment program exactly its magnitudes" $
         withBlueprint $ \blueprint ->
             validatorParameterCount
@@ -257,7 +276,7 @@ reachSpec = describe "family reaches the deployed register" $ do
                 `shouldNotBe` computeScriptHash program
             artifactScriptHash enforcement
                 `shouldNotBe` artifactScriptHash register
-    it "applies a seventh argument to the split checkpoint program" $
+    it "applies a sixth argument to the split checkpoint program" $
         withBlueprint $ \blueprint -> do
             family <- either fail pure (deriveCommitmentFamily blueprint)
             program <- requireProgram blueprint splitCheckpointTitle
@@ -268,7 +287,6 @@ reachSpec = describe "family reaches the deployed register" $ do
                         v1NetworkDiscriminator
                         v1RegistrationBond
                         v1FreezeBond
-                        v1FreezeWindow
                         family
                         program
             computeScriptHash applied `shouldNotBe` computeScriptHash program

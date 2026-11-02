@@ -28,15 +28,9 @@ module Cardano.KERI.AID.Migration.Checkpoint (
     MigrationSource (..),
     MigrationMessage (..),
 
-    -- * Edge and continuity inputs
-    Predecessor (..),
+    -- * Continuity inputs
     CheckpointRoleState (..),
     PolicyReplacement (..),
-
-    -- * Legacy bridge inputs
-    LegacyCheckpointIdentity (..),
-    LegacyCloseEvidence (..),
-    preprodV0,
 
     -- * Transaction mirror
     MigrationValue,
@@ -57,11 +51,8 @@ module Cardano.KERI.AID.Migration.Checkpoint (
     migrationMessage,
     encodeMigrationMessage,
     checkpointMigrationAuthorized,
-    validPredecessorTransition,
     checkpointTransitionContinuous,
     validateCheckpointMigrateOut,
-    validateCheckpointMigrateIn,
-    validateLegacyCheckpointMigrateIn,
 ) where
 
 import Cardano.KERI.AID.Checkpoint.Datum (
@@ -97,14 +88,9 @@ import Cardano.KERI.AID.Migration.Types (
     migrationDomain,
     optionData,
  )
-import Data.ByteArray.Encoding (
-    Base (Base16),
-    convertFromBase,
- )
 import Data.ByteString (
     ByteString,
  )
-import Data.ByteString qualified as BS
 import Data.IntSet qualified as IntSet
 import Data.Map.Strict (
     Map,
@@ -188,25 +174,10 @@ dataOf x = let BuiltinData d = toBuiltinData x in d
 -- Edge and continuity inputs
 -- ---------------------------------------------------------
 
-{- | The applied predecessor a target program pins.  Both fields are compiled
-into the successor program as parameters, so no datum or redeemer value can
-substitute either identity.
--}
-newtype Predecessor = Predecessor
-    { pdPredecessorPolicy :: ByteString
-    -- ^ the single minting policy this successor program accepts
-    }
-    deriving stock (Show, Eq)
-
-{- | A decoded lifecycle position plus its complete role payload.  ARMED
-carries its hunter and deadline; ACTIVE and FROZEN carry neither, and a role
-that invents either is not the role it claims to be.
--}
+-- | A decoded lifecycle position with its checkpoint state.
 data CheckpointRoleState = CheckpointRoleState
     { crRole :: !MigrationRole
     , crCheckpoint :: !CheckpointDatumV1
-    , crHunterPkh :: !(Maybe ByteString)
-    , crDeadline :: !(Maybe Integer)
     }
     deriving stock (Show, Eq)
 
@@ -224,56 +195,6 @@ data PolicyReplacement = PolicyReplacement
 
 -- ---------------------------------------------------------
 -- Legacy bridge inputs
--- ---------------------------------------------------------
-
-{- | The immutable identity of the deployed preprod v0 checkpoint program.  It
-is data, pinned by the target program — never derived by recompiling current
-source, which would produce different bytes and prove nothing about what is
-actually on preprod.
--}
-data LegacyCheckpointIdentity = LegacyCheckpointIdentity
-    { lcNetworkName :: !ByteString
-    , lcNetworkMagic :: !Integer
-    , lcNetworkId :: !Integer
-    , lcPolicy :: !ByteString
-    , lcSourceCommit :: !ByteString
-    }
-    deriving stock (Show, Eq)
-
-{- | The exact committed preprod v0 checkpoint family (T254-004).  These are
-release facts recorded in @deploy\/preprod\/m1-manifest.json@, restated here as
-the only legacy source the bridge admits.
--}
-preprodV0 :: LegacyCheckpointIdentity
-preprodV0 =
-    LegacyCheckpointIdentity
-        { lcNetworkName = "preprod"
-        , lcNetworkMagic = 1
-        , lcNetworkId = 0
-        , lcPolicy = policy
-        , lcSourceCommit = "50a582064ddfde15ebfa3649c6b6fea8d39fc697"
-        }
-  where
-    -- Raw 28 bytes, never the 56-character hex text: a policy id compared
-    -- against its own ASCII spelling can never match anything on chain.
-    policy = case convertFromBase Base16 hex of
-        Right bytes | BS.length bytes == 28 -> bytes
-        _ -> error "preprod v0 policy is not 28 bytes of hex"
-    hex :: ByteString
-    hex = "0c16c12ce8ca60872cadd545d1282f07dc93b5d22a134e4425355734"
-
-{- | The v0 exit the same transaction must have performed: the immutable v0
-program's own controller-authorized @Close@ refund plus its exact @CloseBurn@.
--}
-data LegacyCloseEvidence = LegacyCloseEvidence
-    { lceRefundAddress :: !FullAddress
-    , lceRefundLovelace :: !Integer
-    , lceBurnedAssetName :: !ByteString
-    }
-    deriving stock (Show, Eq)
-
--- ---------------------------------------------------------
--- Transaction mirror
 -- ---------------------------------------------------------
 
 {- | A multi-asset value: @(policy, asset name) -> quantity@.  Lovelace is the
@@ -336,12 +257,8 @@ data MigrationError
       MigrationDatumIllFormed !DatumError
     | -- | the current controller threshold is not met by valid distinct indices
       MigrationQuorumUnsatisfied
-    | -- | the target is not exactly the source generation plus one
-      MigrationVersionNotSuccessor
-    | -- | the consumed source is not the successor's pinned predecessor
+    | -- | the consumed source is not at the canonical role address of its policy
       MigrationForeignPredecessor
-    | -- | the successor's applied version marker disagrees with its datum
-      MigrationAppliedVersionMismatch
     | -- | a KEL projection field changed across the move
       MigrationIdentityChanged
     | -- | the lifecycle position or its role payload changed across the move
@@ -354,12 +271,6 @@ data MigrationError
       MigrationAmbiguousSuccessor
     | -- | the burn\/mint pair is not the exact one-for-one replacement
       MigrationTokenTransitionInvalid
-    | -- | the legacy source is not the exact committed preprod v0 family
-      MigrationLegacyIdentityMismatch
-    | -- | the legacy source is not ACTIVE, and has no authorized exit
-      MigrationLegacyRoleUnsupported
-    | -- | the legacy close refund is not exact
-      MigrationLegacyRefundMismatch
     deriving stock (Show, Eq)
 
 -- | @Right ()@ is acceptance; @Left e@ names the class that refused.
@@ -428,53 +339,6 @@ checkpointMigrationAuthorized sourceState message signatures =
                     then Right ()
                     else Left MigrationQuorumUnsatisfied
 
-{- | The lineage edge, as the transaction itself.
-
-Release identity is the applied successor hash, so there is no version to
-compare and no stored back-pointer to trust.  What must hold is that the exact
-output the controllers signed over is genuinely spent here, under the one
-predecessor policy this successor program was applied with.  A package naming
-another policy, another output, or an output this transaction does not consume
-is refused -- which is also what makes a split transaction unrepresentable:
-the burn and the mint cannot be in different transactions if the mint requires
-this spend.
--}
-validPredecessorTransition ::
-    MigrationSource ->
-    Predecessor ->
-    MigrationTx ->
-    MigrationVerdict
-validPredecessorTransition source expected tx
-    | msSourcePolicy source /= pdPredecessorPolicy expected =
-        Left MigrationForeignPredecessor
-    | otherwise = do
-        input <-
-            maybe
-                (Left MigrationSourceMissing)
-                Right
-                (findInput (msSourceRef source) tx)
-        -- The observed consumed output is the naming authority.  Deriving the
-        -- asset name from the signed payload instead would let a package name
-        -- the token it wants to move rather than the one it actually spends.
-        observed <- decodeCheckpoint (miDatum input)
-        signed <-
-            maybe
-                (Left MigrationIdentityChanged)
-                Right
-                (checkpointFrom (msSourceState source))
-        -- The predecessor must be sitting at the canonical role address of
-        -- the accepted policy, compared as one whole value.
-        sourceAddressIsRole (msSourceRole source) (msSourcePolicy source) input
-        if tokenOf (msSourcePolicy source) (assetNameOf observed) (miValue input) /= 1
-            then Left MigrationForeignPredecessor
-            else
-                -- Separately: the projection the quorum signed must be the one
-                -- this transaction consumes.  The signature decides what was
-                -- approved; every continuity check reads the observation.
-                if signed /= observed
-                    then Left MigrationIdentityChanged
-                    else Right ()
-
 {- | Check that identity, lifecycle position, role payload and protected value
 all survive the move, admitting only the one policy-token replacement.
 
@@ -492,10 +356,6 @@ checkpointTransitionContinuous source successor replacement
     | crCheckpoint source /= crCheckpoint successor =
         Left MigrationIdentityChanged
     | crRole source /= crRole successor =
-        Left MigrationRoleChanged
-    | crHunterPkh source /= crHunterPkh successor =
-        Left MigrationRoleChanged
-    | crDeadline source /= crDeadline successor =
         Left MigrationRoleChanged
     | prSuccessorValue /= expected =
         Left MigrationValueChanged
@@ -569,133 +429,6 @@ validateCheckpointMigrateOut authorization ownRef tx = do
                                             , prSuccessorValue = moValue successorOutput
                                             }
 
-{- | The successor generation's entry arm.
-
-Its lineage input is the single predecessor policy it was applied with; there
-is no version to compare and no stored origin to trust.  What it requires is
-that the named predecessor output is genuinely spent in this same transaction,
-which is also what makes the burn and the mint inseparable.
--}
-validateCheckpointMigrateIn ::
-    Predecessor ->
-    OutputRef ->
-    MigrationAuthorization ->
-    ByteString ->
-    MigrationTx ->
-    MigrationVerdict
-validateCheckpointMigrateIn predecessor sourceRef authorization policy tx = do
-    input <- maybe (Left MigrationSourceMissing) Right (findInput sourceRef tx)
-    sourceState <- decodeCheckpoint (miDatum input)
-    let source = sourceOf authorization (mtxNetworkId tx)
-        target = maTarget authorization
-        assetName = assetNameOf sourceState
-        sourcePolicy = msSourcePolicy source
-    carried <-
-        maybe
-            (Left MigrationIdentityChanged)
-            Right
-            (checkpointFrom (msSourceState source))
-    if carried /= sourceState
-        then Left MigrationIdentityChanged
-        else do
-            validPredecessorTransition source predecessor tx
-            successorOutput <- soleSuccessor policy assetName tx
-            successorState <- decodeCheckpoint (moDatum successorOutput)
-            checkpointMigrationAuthorized
-                sourceState
-                (migrationMessage source target)
-                (maControllerSignatures authorization)
-            if tokenOf sourcePolicy assetName (mtxMint tx) /= -1
-                || tokenOf policy assetName (mtxMint tx) /= 1
-                then Left MigrationTokenTransitionInvalid
-                else
-                    checkpointTransitionContinuous
-                        (roleStateOf (msSourceRole source) sourceState)
-                        (roleStateOf (mtTargetRole target) successorState)
-                        PolicyReplacement
-                            { prSourcePolicy = sourcePolicy
-                            , prTargetPolicy = policy
-                            , prAssetName = assetName
-                            , prSourceValue = miValue input
-                            , prSuccessorValue = moValue successorOutput
-                            }
-
-{- | The one-off bridge out of the immutable deployed preprod v0 program.
-
-v0 has no migrate-out arm, so the transaction must show that program's own
-authorized @Close@ refund and exact @CloseBurn@ instead — and because @Close@
-is its only authorized exit, ARMED and FROZEN v0 rows have none and are
-refused here rather than rewritten.  The refunded value leaves to the refund
-address, so the successor is capitalized independently with equal protected
-lovelace: a recapitalization, not a transfer of the refunded ada.
--}
-validateLegacyCheckpointMigrateIn ::
-    LegacyCheckpointIdentity ->
-    OutputRef ->
-    LegacyCloseEvidence ->
-    MigrationAuthorization ->
-    ByteString ->
-    MigrationTx ->
-    MigrationVerdict
-validateLegacyCheckpointMigrateIn v0 sourceRef close authorization policy tx = do
-    input <- maybe (Left MigrationSourceMissing) Right (findInput sourceRef tx)
-    sourceState <- decodeCheckpoint (miDatum input)
-    let source = sourceOf authorization (mtxNetworkId tx)
-        target = maTarget authorization
-        assetName = assetNameOf sourceState
-    carried <-
-        maybe
-            (Left MigrationIdentityChanged)
-            Right
-            (checkpointFrom (msSourceState source))
-    if carried /= sourceState
-        then Left MigrationIdentityChanged
-        else
-            if msSourcePolicy source /= lcPolicy v0
-                || mtxNetworkId tx /= lcNetworkId v0
-                then Left MigrationLegacyIdentityMismatch
-                else
-                    if msSourceRole source /= CheckpointActive
-                        then Left MigrationLegacyRoleUnsupported
-                        else do
-                            -- Only after the role is known eligible:
-                            -- the v0 row must sit at the canonical
-                            -- ACTIVE role address of the v0 policy,
-                            -- compared as one whole value. Checking
-                            -- this first would collapse the distinct
-                            -- "v0 has no authorized exit for this
-                            -- role" refusal into a shape mismatch.
-                            sourceAddressIsRole
-                                (msSourceRole source)
-                                (lcPolicy v0)
-                                input
-                            successorOutput <- soleSuccessor policy assetName tx
-                            successorState <-
-                                decodeCheckpoint (moDatum successorOutput)
-                            checkpointMigrationAuthorized
-                                sourceState
-                                (migrationMessage source target)
-                                (maControllerSignatures authorization)
-                            if lceBurnedAssetName close /= assetName
-                                || tokenOf (lcPolicy v0) assetName (mtxMint tx) /= -1
-                                || tokenOf policy assetName (mtxMint tx) /= 1
-                                then Left MigrationTokenTransitionInvalid
-                                else
-                                    if not (exactRefund close tx)
-                                        then Left MigrationLegacyRefundMismatch
-                                        else
-                                            if lovelaceOf (moValue successorOutput)
-                                                /= lovelaceOf (miValue input)
-                                                then Left MigrationValueChanged
-                                                else
-                                                    if successorState /= sourceState
-                                                        then Left MigrationIdentityChanged
-                                                        else Right ()
-
--- ---------------------------------------------------------
--- Shared observation helpers
--- ---------------------------------------------------------
-
 -- | The source view an authorization proposes, bound to the observed network.
 sourceOf :: MigrationAuthorization -> Integer -> MigrationSource
 sourceOf MigrationAuthorization{..} networkId =
@@ -748,24 +481,12 @@ label of the AID.
 assetNameOf :: CheckpointDatumV1 -> ByteString
 assetNameOf = deriveAidAssetName . cdCesrAid
 
--- | Whether the legacy close refund is exactly what the evidence claims.
-exactRefund :: LegacyCloseEvidence -> MigrationTx -> Bool
-exactRefund LegacyCloseEvidence{..} tx =
-    case filter ((== lceRefundAddress) . moAddress) (mtxOutputs tx) of
-        [refund] -> lovelaceOf (moValue refund) == lceRefundLovelace
-        _ -> False
-
-{- | The lifecycle position a decoded row occupies.  ACTIVE and FROZEN carry no
-role payload; ARMED's hunter and deadline are carried by its own datum, which
-this oracle does not decode.
--}
+-- | The lifecycle position a decoded row occupies, with its checkpoint state.
 roleStateOf :: MigrationRole -> CheckpointDatumV1 -> CheckpointRoleState
 roleStateOf role state =
     CheckpointRoleState
         { crRole = role
         , crCheckpoint = state
-        , crHunterPkh = Nothing
-        , crDeadline = Nothing
         }
 
 {- | The canonical role address a policy's lifecycle position occupies, built
@@ -784,8 +505,8 @@ roleAddress policy role =
 lifecycleRole :: MigrationRole -> Maybe Role
 lifecycleRole = \case
     CheckpointActive -> Just Active
-    CheckpointFrozen -> Just Frozen
-    CheckpointArmed -> Just Armed
+    CheckpointFrozen -> Nothing
+    CheckpointArmed -> Nothing
     Board -> Nothing
 
 {- | The predecessor must be sitting at the canonical role address of the

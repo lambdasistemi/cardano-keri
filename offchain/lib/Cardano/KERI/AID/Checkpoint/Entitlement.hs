@@ -9,14 +9,14 @@ observer's @EnforcementProofV1@ payload (@MOD-271-OBSERVER@, T254-107).
 This module is the seam between two things that must never be conflated.
 "Cardano.KERI.AID.Checkpoint.BountyCommitment" owns the commitment object and
 its hash, and at that boundary the enforcement evidence digest is __opaque__.
-The enforcement observer owns the __actual__ Freeze\/Convict evidence, so
+The enforcement observer owns the __actual__ Convict evidence, so
 deriving the canonical digest from that complete payload and reconciling it
 with the named mature commitment is this module's row.
 
 Consent is not entitlement.  A signature proves a party agrees to be paid; it
 never proves that party earned the payment, because an attacker signs as
 itself and names itself.  Only a prior, matured, hash-committed reservation
-over (checkpoint, action, actual evidence, payee, nonce) distinguishes the two.
+over (checkpoint, actual evidence, payee, nonce) distinguishes the two.
 
 The rule is modelled over an explicit 'SettlementContext' rather than a ledger
 transaction: it names exactly the facts the on-chain rule reads, so a parity
@@ -32,16 +32,12 @@ module Cardano.KERI.AID.Checkpoint.Entitlement (
     entitlementMatches,
 
     -- * Settlement context
-    SettlementOutput (..),
     SettlementContext (..),
 
     -- * The shared settlement rule
-    validateEntitledEnforcement,
-    validateFreezeEntitlement,
     validateConvictEntitlement,
 
     -- * Payout admissibility
-    validateClaimEntitledPayout,
     validateConvictPayouts,
 
     -- * Builder
@@ -57,7 +53,6 @@ import Cardano.Crypto.Hash.Class (
     digest,
  )
 import Cardano.KERI.AID.Checkpoint.BountyCommitment (
-    BountyAction (..),
     BountyCommitment (..),
     BountyRevealV1 (..),
     BountyScope (..),
@@ -76,13 +71,7 @@ import Cardano.KERI.AID.Checkpoint.BountyCommitment qualified as Component
 import Cardano.KERI.AID.Checkpoint.Enforcement (
     EnforcementEvidence,
  )
-import Cardano.KERI.AID.Checkpoint.FreezeBond (
-    ArmedDatum,
-    Role (..),
-    armedHunter,
- )
 import Cardano.KERI.AID.Migration.Types (
-    AddressCredential (..),
     OutputRef,
     canonicalCbor,
  )
@@ -148,34 +137,18 @@ scope field, the payee, the evidence, or the nonce breaks the match.
 entitlementMatches ::
     BountyCommitment ->
     OutputRef ->
-    BountyAction ->
     EnforcementEvidence ->
     ByteString ->
     EntitlementVerdict
-entitlementMatches commitment checkpointRef action evidence =
+entitlementMatches commitment checkpointRef evidence =
     Component.entitlementMatches
         commitment
         checkpointRef
-        action
         (enforcementEvidenceDigest evidence)
 
 -- ---------------------------------------------------------
 -- Settlement context
 -- ---------------------------------------------------------
-
-{- | One transaction output, in the shape the payout legs actually read: a
-payment credential, whether it carries a delegation part, and whether it
-carries a datum or a reference script.  Value is deliberately absent — the
-shared rule constrains the payout's /shape/, and the lovelace magnitude stays
-with the checkpoint, which owns the bond parameter.
--}
-data SettlementOutput = SettlementOutput
-    { soPaymentCredential :: !AddressCredential
-    , soHasStakeCredential :: !Bool
-    , soHasDatum :: !Bool
-    , soHasReferenceScript :: !Bool
-    }
-    deriving stock (Show, Eq)
 
 {- | Exactly the transaction facts the shared settlement rule reads.
 
@@ -192,7 +165,6 @@ data SettlementContext = SettlementContext
     , scValidity :: !SlotRange
     , scPolicyMint :: ![(ByteString, Integer)]
     -- ^ the whole mint map under the resolved commitment policy
-    , scOutputs :: ![SettlementOutput]
     }
     deriving stock (Show, Eq)
 
@@ -200,7 +172,7 @@ data SettlementContext = SettlementContext
 -- The shared settlement rule
 -- ---------------------------------------------------------
 
-{- | The shared settlement rule behind both enforcement actions.
+{- | The settlement rule behind the conviction action.
 
 Every leg is load-bearing:
 
@@ -231,9 +203,8 @@ of the policy pin.  Scope well-formedness is established once, at open time,
 by the genuine commitment program running over @cfParameters@.  That
 inheritance is exactly what the pin buys.
 -}
-validateEntitledEnforcement ::
+validateConvictEntitlement ::
     CommitmentFamily ->
-    BountyAction ->
     EnforcementEvidence ->
     -- | the payee this settlement is about to pay
     ByteString ->
@@ -242,9 +213,8 @@ validateEntitledEnforcement ::
     OutputRef ->
     SettlementContext ->
     Bool
-validateEntitledEnforcement
+validateConvictEntitlement
     family
-    action
     evidence
     payee
     reveal
@@ -260,7 +230,6 @@ validateEntitledEnforcement
                     && entitlementMatches
                         commitment
                         checkpointRef
-                        action
                         evidence
                         (brNonce reveal)
                         == EntitlementValid
@@ -295,90 +264,21 @@ one entry burning exactly one marker.
 burnsExactlyOne :: SettlementContext -> ByteString -> Bool
 burnsExactlyOne context marker = scPolicyMint context == [(marker, -1)]
 
-{- | Freeze entitlement: the hunter named by this arming transaction must be
-the payee of a matured, authentic commitment opened over THIS checkpoint, the
-Freeze action, and the digest of THIS actual evidence.
--}
-validateFreezeEntitlement ::
-    CommitmentFamily ->
-    EnforcementEvidence ->
-    ByteString ->
-    BountyRevealV1 ->
-    OutputRef ->
-    SettlementContext ->
-    Bool
-validateFreezeEntitlement family =
-    validateEntitledEnforcement family FreezeEntitlement
-
-{- | Convict entitlement, over any of ACTIVE, ARMED or FROZEN.  The action is
-a distinct scope value, so a Freeze reservation can never be spent as a
-Convict one.
--}
-validateConvictEntitlement ::
-    CommitmentFamily ->
-    EnforcementEvidence ->
-    ByteString ->
-    BountyRevealV1 ->
-    OutputRef ->
-    SettlementContext ->
-    Bool
-validateConvictEntitlement family =
-    validateEntitledEnforcement family ConvictEntitlement
-
 -- ---------------------------------------------------------
 -- Payout admissibility
 -- ---------------------------------------------------------
 
-{- | Claim pays the hunter recorded in the ARMED state — stored consent, not a
-fresh redeemer field and not a fresh signature.
-
-The beneficiary is read through 'armedHunter' and nothing else, so Claim
-cannot acquire a new payee.  The output must be a datum-free,
-reference-script-free enterprise payout to that exact key hash.
--}
-validateClaimEntitledPayout ::
-    ArmedDatum -> Integer -> [SettlementOutput] -> Bool
-validateClaimEntitledPayout armed hunterOutputIndex outputs =
-    case indexOutput outputs hunterOutputIndex of
-        Nothing -> False
-        Just out ->
-            soPaymentCredential out
-                == VerificationKeyCredential (armedHunter armed)
-                && not (soHasStakeCredential out)
-                && not (soHasDatum out)
-                && not (soHasReferenceScript out)
-
-{- | Admissibility of a conviction's payout structure for the source role.
+{- | Admissibility of a conviction's payout structure.
 
 The convictor's entitlement is a STRUCTURAL precondition of any payout: a
 conviction that did not establish entitlement routes nothing at all, whatever
-its indices say.  ARMED additionally keeps the two protected payouts at
-distinct indices so one output cannot satisfy both the convictor's deposit and
-the hunter's bond.  A tombstone is terminal and admits no payout.
+its index says.
 -}
-validateConvictPayouts ::
-    Role -> Bool -> Integer -> Integer -> [SettlementOutput] -> Bool
-validateConvictPayouts source validEntitlement convictorIndex hunterIndex outputs =
+validateConvictPayouts :: Bool -> Integer -> Integer -> Bool
+validateConvictPayouts validEntitlement convictorIndex outputCount =
     validEntitlement
         && convictorIndex >= 0
         && convictorIndex < outputCount
-        && case source of
-            Armed ->
-                convictorIndex /= hunterIndex
-                    && hunterIndex >= 0
-                    && hunterIndex < outputCount
-            Active -> True
-            Frozen -> True
-            Tombstone -> False
-  where
-    outputCount = fromIntegral (length outputs)
-
--- | Aiken @list.at@: a negative or out-of-range index resolves to nothing.
-indexOutput :: [SettlementOutput] -> Integer -> Maybe SettlementOutput
-indexOutput outputs index
-    | index < 0 = Nothing
-    | index >= fromIntegral (length outputs) = Nothing
-    | otherwise = Just (outputs !! fromIntegral index)
 
 -- ---------------------------------------------------------
 -- Builder
@@ -391,8 +291,7 @@ chain state, the digest is derived from the evidence the observer will itself
 validate, and the payee is the one the reservation already named.
 -}
 data EntitledEnforcementPlan = EntitledEnforcementPlan
-    { eepAction :: !BountyAction
-    , eepCheckpointRef :: !OutputRef
+    { eepCheckpointRef :: !OutputRef
     -- ^ the checkpoint output being settled
     , eepCommitmentRef :: !OutputRef
     -- ^ the reservation input being revealed and retired
@@ -448,8 +347,6 @@ prepareEntitledEnforcement ::
     CommitmentFamily ->
     -- | the reservation resolved from chain state
     ResolvedCommitment ->
-    -- | which enforcement action is being settled
-    BountyAction ->
     -- | the COMPLETE actual enforcement evidence
     EnforcementEvidence ->
     -- | the checkpoint output being settled
@@ -464,7 +361,6 @@ prepareEntitledEnforcement ::
 prepareEntitledEnforcement
     family
     resolved
-    action
     evidence
     checkpointRef
     nonce
@@ -481,7 +377,6 @@ prepareEntitledEnforcement
         case entitlementMatches
             commitment
             checkpointRef
-            action
             evidence
             nonce of
             EntitlementInvalid reason ->
@@ -503,8 +398,7 @@ prepareEntitledEnforcement
                     }
         pure
             EntitledEnforcementPlan
-                { eepAction = action
-                , eepCheckpointRef = checkpointRef
+                { eepCheckpointRef = checkpointRef
                 , eepCommitmentRef = rcRef resolved
                 , eepPolicy = policy
                 , eepReveal = reveal

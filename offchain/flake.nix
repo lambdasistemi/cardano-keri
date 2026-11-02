@@ -1622,7 +1622,7 @@
 
               # The two target identities, with the applied-argument count
               # each program must still declare. The counts are the arity
-              # evidence: the checkpoint's seventh argument is the
+              # evidence: the checkpoint's sixth argument is the
               # `CommitmentFamily` this slice threads through it, and a
               # deployment that stubbed the family away would change this
               # number and fail the extraction rather than the proof.
@@ -1635,7 +1635,7 @@
                 {
                   role = "checkpoint";
                   title = "checkpoint.checkpoint.spend";
-                  params = 7;
+                  params = 6;
                 }
               ];
 

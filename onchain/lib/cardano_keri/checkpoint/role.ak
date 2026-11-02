@@ -9,9 +9,7 @@ use cardano/assets.{PolicyId}
 
 pub type Role {
   Active
-  Frozen
   Tombstone
-  Armed
 }
 
 const domain: ByteArray = "cardano-keri/checkpoint/role/v1"
@@ -19,9 +17,7 @@ const domain: ByteArray = "cardano-keri/checkpoint/role/v1"
 pub fn role_tag(role: Role) -> Option<ByteArray> {
   when role is {
     Active -> None
-    Frozen -> Some(#"00")
     Tombstone -> Some(#"01")
-    Armed -> Some(#"02")
   }
 }
 
@@ -40,12 +36,8 @@ pub fn address(policy: PolicyId, role: Role) -> Address {
 pub fn classify(policy: PolicyId, candidate: Address) -> Option<Role> {
   if candidate == address(policy, Active) {
     Some(Active)
-  } else if candidate == address(policy, Frozen) {
-    Some(Frozen)
   } else if candidate == address(policy, Tombstone) {
     Some(Tombstone)
-  } else if candidate == address(policy, Armed) {
-    Some(Armed)
   } else {
     None
   }

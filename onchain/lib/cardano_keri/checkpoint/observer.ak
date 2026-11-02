@@ -16,7 +16,6 @@ use cardano_keri/checkpoint/advance.{
   AdvanceEvidence, AdvancePredicateValid, advance_predicate,
 }
 use cardano_keri/checkpoint/datum.{CheckpointDatum, V1}
-use cardano_keri/checkpoint/freeze_bond.{ArmedDatum, armed_checkpoint}
 use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
 use cardano_keri/checkpoint/registration.{
   DeploymentContext, RegistrationEvidence, RegistrationValid, proof_token_name,
@@ -28,12 +27,6 @@ pub const observe_register: Int = 0
 
 /// The stable action tag for Advance.
 pub const observe_advance: Int = 1
-
-/// The stable action tag for Freeze.
-pub const observe_freeze: Int = 2
-
-/// The stable action tag for an Armed response Advance.
-pub const observe_response_advance: Int = 3
 
 /// The stable action tag for Convict.
 pub const observe_convict: Int = 4
@@ -108,15 +101,8 @@ pub fn validate_advance(envelope: ObserverEnvelope, tx: Transaction) -> Bool {
   expect evidence: AdvanceEvidence = payload
   expect Some(own_input) = find_input(tx.inputs, own_ref)
   expect InlineDatum(old_data) = own_input.output.datum
-  let old = if claim.action == observe_advance {
-    expect V1(old): CheckpointDatum = old_data
-    old
-  } else {
-    // The thin checkpoint arm admits only actions 1 and 3, so this branch is
-    // necessarily the Armed response form in the composed transaction.
-    expect armed: ArmedDatum = old_data
-    armed_checkpoint(armed)
-  }
+  expect claim.action == observe_advance
+  expect V1(old): CheckpointDatum = old_data
   expect Some(state_output) = list.find(
     tx.outputs,
     fn(output) { output.address == from_script(claim.checkpoint_policy) },

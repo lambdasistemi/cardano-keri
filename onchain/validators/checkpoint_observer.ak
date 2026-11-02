@@ -1,4 +1,4 @@
-//// #136/#137/#142 — Register, Advance, and Freeze checkpoint observers.
+//// #136/#137/#142 — Register, Advance, and Convict checkpoint observers.
 ////
 //// Each script stake credential can be registered once by anyone and cannot
 //// authorize deregistration. Lifecycle owns Register evidence; the distinct
@@ -60,10 +60,10 @@ validator observer_advance(_version: Int) {
 ///
 /// The applied Register program cannot carry the migration verdict and stay
 /// under the released 16,133-byte signed-reference transaction ceiling, so the
-/// heavy half runs here. `predecessor_policy` is an applied parameter, never a
-/// redeemer field: the applied hash is this program's release identity, and the
-/// one policy it accepts is its only lineage input.
-validator observer_migration(predecessor_policy: PolicyId) {
+/// heavy half runs here. It takes no applied parameter: the source generation
+/// is the one whose program asks, named by the claim, and the controllers'
+/// signed package must name that same policy and output.
+validator observer_migration {
   withdraw(redeemer: Data, _account: Data, tx: Transaction) {
     expect envelope: ObserverEnvelope = redeemer
     let claim = envelope.claim
@@ -73,13 +73,7 @@ validator observer_migration(predecessor_policy: PolicyId) {
     // the other's reading of the transaction.
     expect Some(source_ref) = claim.own_ref
     expect proof: MigrationProof = envelope.payload
-    validate_migration_observation(
-      predecessor_policy,
-      claim.checkpoint_policy,
-      source_ref,
-      proof,
-      tx,
-    )
+    validate_migration_observation(source_ref, proof, tx)
   }
 
   publish(_redeemer: Data, certificate: Certificate, _tx: Transaction) {

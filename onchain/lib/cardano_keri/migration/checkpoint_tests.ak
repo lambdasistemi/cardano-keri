@@ -13,22 +13,18 @@
 //// exactly the failure mode a fail-closed body would hide.
 
 use aiken/cbor
-use cardano/address.{Address, Inline, Script, VerificationKey, from_script}
+use cardano/address.{Address, Script, VerificationKey}
 use cardano/assets.{add, zero}
-use cardano/transaction.{
-  InlineDatum, Input, Output, OutputReference, Transaction, placeholder,
-}
-use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
+use cardano/transaction.{OutputReference}
+use cardano_keri/checkpoint/datum.{CheckpointDatumV1}
 use cardano_keri/checkpoint/threshold.{Unweighted}
 use cardano_keri/migration/checkpoint.{
   CheckpointRoleState, MigrationSource, MigrationValid, PolicyReplacement,
-  Predecessor, checkpoint_migration_authorized, checkpoint_transition_continuous,
-  migration_message, valid_predecessor_transition,
+  checkpoint_migration_authorized, checkpoint_transition_continuous,
+  migration_message,
 }
 use cardano_keri/migration/checkpoint_vectors as vec
-use cardano_keri/migration/types.{
-  CheckpointActive, CheckpointFrozen, MigrationTarget,
-}
+use cardano_keri/migration/types.{Board, CheckpointActive, MigrationTarget}
 
 // ---------------------------------------------------------
 // Fixture material, built from the generator's own inputs
@@ -135,37 +131,8 @@ fn quorum() -> List<(Int, ByteArray)> {
   sigs([(0, vec.fixture_sig_0), (1, vec.fixture_sig_1)])
 }
 
-fn pinned() -> Predecessor {
-  Predecessor { predecessor_policy: vec.fixture_source_policy }
-}
-
-/// A transaction that genuinely spends the named predecessor output holding
-/// its own token. The lineage edge is this spend, so the fixtures build it
-/// rather than asserting it.
-fn spending_tx(policy: ByteArray, ref: OutputReference) -> Transaction {
-  let input = Input {
-    output_reference: ref,
-    output: Output {
-      address: from_script(policy),
-      value: source_value(),
-      datum: InlineDatum(V1(source_datum())),
-      reference_script: None,
-    },
-  }
-  Transaction { ..placeholder, inputs: [input] }
-}
-
-fn predecessor_tx() -> Transaction {
-  spending_tx(vec.fixture_source_policy, source_ref())
-}
-
 fn active_role(d: CheckpointDatumV1) -> CheckpointRoleState {
-  CheckpointRoleState {
-    state_role: CheckpointActive,
-    checkpoint: d,
-    hunter_pkh: None,
-    deadline: None,
-  }
+  CheckpointRoleState { state_role: CheckpointActive, checkpoint: d }
 }
 
 /// The source value: protected lovelace plus exactly one source-policy token.
@@ -235,7 +202,7 @@ test checkpoint_migration_message_binds_source_outref() {
 }
 
 test checkpoint_migration_message_binds_source_role() {
-  let redirected = MigrationSource { ..source(), source_role: CheckpointFrozen }
+  let redirected = MigrationSource { ..source(), source_role: Board }
   and {
     encoded(redirected, migration_target()) == vec.negative_message_source_role,
     encoded(redirected, migration_target()) != golden(),
@@ -265,10 +232,7 @@ test checkpoint_migration_message_binds_target_family() {
 }
 
 test checkpoint_migration_message_binds_target_role() {
-  let redirected = MigrationTarget {
-    ..migration_target(),
-    target_role: CheckpointFrozen,
-  }
+  let redirected = MigrationTarget { ..migration_target(), target_role: Board }
   and {
     encoded(source(), redirected) == vec.negative_message_target_role,
     encoded(source(), redirected) != golden(),
@@ -365,67 +329,6 @@ test checkpoint_migration_permissionless_relay() {
 // Permanent family edge (INV-254-LINKAGE)
 // ---------------------------------------------------------
 
-test checkpoint_migration_predecessor_accepts_exact_source() {
-  // The lineage edge is the spend itself: the exact signed output, holding
-  // its own token, under the one policy this successor accepts.
-  valid_predecessor_transition(source(), pinned(), predecessor_tx()) == MigrationValid
-}
-
-test checkpoint_migration_wrong_predecessor_policy_rejects() {
-  // A package naming another family is refused even though that family's
-  // output is genuinely spent.
-  let foreign = Predecessor { predecessor_policy: vec.fixture_legacy_policy }
-  and {
-    valid_predecessor_transition(source(), pinned(), predecessor_tx()) == MigrationValid,
-    valid_predecessor_transition(source(), foreign, predecessor_tx()) != MigrationValid,
-  }
-}
-
-test checkpoint_migration_wrong_predecessor_outref_rejects() {
-  // The signed output and the consumed output must be the same output.
-  let elsewhere = MigrationSource { ..source(), source_ref: mutant_ref() }
-  and {
-    valid_predecessor_transition(source(), pinned(), predecessor_tx()) == MigrationValid,
-    valid_predecessor_transition(elsewhere, pinned(), predecessor_tx()) != MigrationValid,
-  }
-}
-
-test checkpoint_migration_missing_predecessor_input_rejects() {
-  // Nothing is spent at all: there is no edge to stand on.
-  and {
-    valid_predecessor_transition(source(), pinned(), predecessor_tx()) == MigrationValid,
-    valid_predecessor_transition(source(), pinned(), placeholder) != MigrationValid,
-  }
-}
-
-test checkpoint_migration_split_transaction_rejects() {
-  // Splitting the move across two transactions is unrepresentable: a mint
-  // that does not consume the predecessor here has no predecessor at all.
-  // The spent output carries no token of the accepted policy, which is what a
-  // second transaction would look like from inside the first.
-  let tokenless = Input {
-    output_reference: source_ref(),
-    output: Output {
-      address: from_script(vec.fixture_source_policy),
-      value: zero |> add("", "", 8_000_000),
-      datum: InlineDatum(V1(source_datum())),
-      reference_script: None,
-    },
-  }
-  and {
-    valid_predecessor_transition(source(), pinned(), predecessor_tx()) == MigrationValid,
-    valid_predecessor_transition(
-      source(),
-      pinned(),
-      Transaction { ..placeholder, inputs: [tokenless] },
-    ) != MigrationValid,
-  }
-}
-
-// ---------------------------------------------------------
-// Identity, role and value continuity (INV-254-IDENTITY, INV-254-VALUE)
-// ---------------------------------------------------------
-
 test checkpoint_migration_preserves_kel_projection() {
   let moved = CheckpointDatumV1 { ..source_datum(), seq: 8 }
   and {
@@ -445,13 +348,11 @@ test checkpoint_migration_preserves_kel_projection() {
 }
 
 test checkpoint_migration_preserves_role_payload() {
-  // ACTIVE must stay ACTIVE, and a successor that invents an ARMED payload is
-  // not the role it claims to be.
+  // ACTIVE must stay ACTIVE: a successor at another position is not the role
+  // it was authorized to be.
   let invented = CheckpointRoleState {
-    state_role: CheckpointActive,
+    state_role: Board,
     checkpoint: source_datum(),
-    hunter_pkh: Some(vec.fixture_refund_vkey),
-    deadline: Some(99),
   }
   and {
     checkpoint_transition_continuous(

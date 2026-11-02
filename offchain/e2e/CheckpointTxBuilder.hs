@@ -8,38 +8,28 @@ Module      : CheckpointTxBuilder
 Description : Production-shaped #114 checkpoint transactions for withDevnet
 
 Loads the tracked-source Aiken blueprint, applies the production checkpoint
-validator's six deployment parameters in order, and builds real Conway
-transactions for Register, Arm, Advance, Claim, and Thaw.
+validator's deployment parameters in order, and builds real Conway
+transactions for Register, Advance and Convict.
 
 The pinned devnet's 251-entry Plutus V3 model cannot price the Plomin builtins
 used by the real hash-proof policy.  This boundary therefore executes and
-asserts that exact mint failure, while retaining only compile-checked pending
-coverage for the positive Register -> Arm -> Claim chain.  Advance remains a
-real production-script staging rejection.
+asserts that exact mint failure.  Advance remains a real production-script
+staging rejection.
 -}
 module CheckpointTxBuilder (
     CheckpointEnv (..),
     CheckpointInput (..),
     RejectionEvidence,
-    BoundaryCases,
     stagedCheckpointDevnet,
     stagedCheckpointDevnetSocket,
     advanceRejection,
     hashProofMintOldCostRejection,
-    pendingHashProofRegisterArmClaimScenario,
     rejectionIsOldCostPlominBoundary,
     rejectionReachedProductionScript,
-    responseBoundaryCases,
-    boundaryCasesCoverDeadline,
     productionRegisterScenario,
     productionRegisterAdvanceScenario,
     productionRegisterConvictScenario,
-    productionRegisterFreezeScenario,
-    productionRegisterSeizeScenario,
-    buildArmTx,
     buildAdvanceTx,
-    buildClaimTx,
-    buildThawTx,
 ) where
 
 import Cardano.Crypto.DSIGN (
@@ -58,11 +48,9 @@ import Cardano.KERI.AID.Checkpoint.Advance (
     advancePredicate,
  )
 import Cardano.KERI.AID.Checkpoint.BountyCommitment (
-    BountyAction (..),
     BountyCommitment (..),
     BountyCommitmentPlan (..),
     BountyMint (..),
-    BountyRevealV1 (..),
     BountyScope (..),
     BountySpend (..),
     CommitmentFamily (..),
@@ -85,15 +73,9 @@ import Cardano.KERI.AID.Checkpoint.Entitlement (
     prepareEntitledEnforcement,
  )
 import Cardano.KERI.AID.Checkpoint.FreezeBond (
-    ArmedDatum (..),
     Inclusivity (..),
     RawBound (..),
     Role (..),
-    armedCheckpoint,
-    armedDeadline,
-    armedHunter,
-    claimAtOrAfterDeadline,
-    responseBeforeDeadline,
     roleHash,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
@@ -109,14 +91,10 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     advanceObserverRedeemerData,
     advanceSpendRedeemerData,
     asPlcData,
-    claimFreezeSpendRedeemerData,
     convictBurnRedeemerData,
     convictObserverRedeemerData,
     convictSpendRedeemerData,
-    freezeObserverRedeemerData,
-    freezeSpendRedeemerData,
     registerObserverRedeemerData,
-    responseAdvanceObserverRedeemerData,
  )
 import Cardano.KERI.AID.E2E.Datum (extractDatum, mkInlineDatum)
 import Cardano.KERI.AID.E2E.Script (
@@ -131,7 +109,6 @@ import Cardano.KERI.AID.E2E.Script (
     scriptHashBytes,
     v1CommitmentParameters,
     v1FreezeBond,
-    v1FreezeWindow,
     v1RegistrationBond,
  )
 import Cardano.KERI.AID.Migration.Types (OutputRef (..))
@@ -323,11 +300,6 @@ data CheckpointInput = CheckpointInput
     , checkpointDatum :: !CheckpointDatumV1
     }
 
-data ConvictSource
-    = ConvictFromActive
-    | ConvictFromArmed !ByteString
-    | ConvictFromFrozen
-
 data RejectionEvidence = RejectionEvidence
     { rejectionLabel :: !String
     , rejectionTxId :: !TxId
@@ -345,15 +317,6 @@ data ValidityPlan = ValidityPlan
     }
     deriving stock (Show, Eq)
 
-data BoundaryCases = BoundaryCases
-    { armUpper :: !ValidityPlan
-    , hardDeadlineMs :: !Integer
-    , justBeforeResponse :: !ValidityPlan
-    , exactDeadlineClaim :: !ValidityPlan
-    , afterDeadlineClaim :: !ValidityPlan
-    }
-    deriving stock (Show, Eq)
-
 checkpointMinAda :: Integer
 checkpointMinAda = 2_000_000
 
@@ -362,9 +325,6 @@ registrationBond = v1RegistrationBond
 
 freezeBond :: Integer
 freezeBond = v1FreezeBond
-
-freezeWindow :: Integer
-freezeWindow = v1FreezeWindow
 
 scriptFee :: Integer
 scriptFee = 3_000_000
@@ -622,16 +582,14 @@ verifyRegisterScriptSizes env = do
     measure "observer_entitlement reference script" (envEntitlementScript env) (SBS.length (envEntitlementBytes env))
     measure "hash_proof reference script" (envHashProofScript env) (SBS.length (envHashProofBytes env))
     measure "bounty_commitment reference script" (envCommitmentScript env) (SBS.length (envCommitmentBytes env))
-    -- #339: re-derived from the applied advance program after the version 2
-    -- checkpoint datum work, not reused from #254 S254-E (14_876). The shared
-    -- key-material verdict that datum_well_formed now delegates to moves the
-    -- checkpoint, observer-advance and observer-lifecycle programs; the
-    -- version 2 constructor of the datum sum moves only observer-migration,
-    -- through its version-sum reads. Transitive compiled drift; the 16_133
-    -- ceiling is unchanged.
-    unless (SBS.length (envAdvanceBytes env) == 14_867) $
+    -- #339: re-derived from the applied advance program after the two-step
+    -- freeze was removed, not reused from the previous pin (14_867). The
+    -- advance observer no longer reads the Armed datum or the armed-response
+    -- action, so its applied program is shorter. The 16_133 ceiling is
+    -- unchanged.
+    unless (SBS.length (envAdvanceBytes env) == 14_695) $
         fail
-            ( "observer_advance applied program changed from 14,867 bytes: "
+            ( "observer_advance applied program changed from 14,695 bytes: "
                 <> show (SBS.length (envAdvanceBytes env))
             )
 
@@ -1037,355 +995,9 @@ productionRegisterAdvanceScenario env = do
             <> show (fst successor)
         )
 
-productionRegisterFreezeScenario :: CheckpointEnv -> IO ()
-productionRegisterFreezeScenario env = do
-    fixture <- loadFreezeStoryFixture
-    let firstFixture = fsFirstRotation fixture
-        responseFixture = fsResponseRotation fixture
-        secondResponseFixture = fsSecondResponseRotation fixture
-        hunter = beneficiaryPkh storyHunter
-    (registered, checkpointRef) <-
-        productionRegisterScenarioWithReference
-            env
-            (rsRegistration firstFixture)
-    advanceRef <-
-        requireJust
-            "observer_advance reference was not deployed during setup"
-            (envAdvanceReference env)
-    enforcementRef <-
-        requireJust
-            "observer_enforcement reference was not deployed during setup"
-            (envEnforcementReference env)
-    let firstEvidence =
-            signedRotateEvidence
-                env
-                registered
-                firstFixture
-                (rsRotationSigners firstFixture)
-                (aeWitReceipts (rsUnsignedEvidence firstFixture))
-    case advancePredicate
-        (rotateSpentCheckpoint env registered)
-        (rsCreated firstFixture)
-        firstEvidence of
-        Left predicateError ->
-            fail
-                ( "checkpoint first Advance: signed evidence failed the pure predicate: "
-                    <> show predicateError
-                )
-        Right () -> pure ()
-    firstAdvanceTxId <-
-        submitTwoPassAdvance
-            env
-            "checkpoint first Advance"
-            checkpointRef
-            advanceRef
-            registered
-            (rsCreated firstFixture)
-            firstEvidence
-    advancedUtxo <-
-        pollOutput
-            (envProvider env)
-            firstAdvanceTxId
-            [0, 1]
-            ( hasAsset
-                (envCheckpointPolicy env)
-                (deriveAidAssetName (cdCesrAid (rsCreated firstFixture)))
-            )
-            >>= requireJust "first Advance successor did not settle"
-    let advanced =
-            CheckpointInput
-                { checkpointUtxo = advancedUtxo
-                , checkpointDatum = rsCreated firstFixture
-                }
-        honestFreeze = fsFreezeEvidence fixture
-        invalidFork =
-            honestFreeze
-                { eneRevealedKeys = drop 1 (eneRevealedKeys honestFreeze)
-                }
-        belowControllerThreshold =
-            honestFreeze{eneCtrlSigs = take 1 (eneCtrlSigs honestFreeze)}
-        underWitnessed =
-            honestFreeze{eneWitSigs = take 1 (eneWitSigs honestFreeze)}
-    -- #280: every enforcement envelope carries a matured reservation that was
-    -- opened in an earlier transaction over the EXACT evidence it reveals.  A
-    -- row that varies its evidence therefore varies its digest and needs its
-    -- own reservation: that is what keeps each negative row attributable to
-    -- the enforcement predicate it is about, instead of failing earlier on an
-    -- entitlement mismatch nobody meant to test.
-    mapM_
-        ( \(row, payload, nonceLabel) -> do
-            plan <-
-                prepareLiveEntitlement
-                    env
-                    (checkpointUtxo advanced)
-                    FreezeEntitlement
-                    payload
-                    hunter
-                    (commitmentNonce nonceLabel)
-            rejectFreezeEvidence
-                env
-                checkpointRef
-                enforcementRef
-                advanced
-                hunter
-                row
-                plan
-        )
-        [
-            ( "Freeze invalid contested rotation"
-            , invalidFork
-            , "137-invalid-contested-rotation"
-            )
-        ,
-            ( "Freeze below controller threshold"
-            , belowControllerThreshold
-            , "137-below-controller-threshold"
-            )
-        , ("Freeze under-witnessed", underWitnessed, "137-under-witnessed")
-        ]
-    honestPlan <-
-        prepareLiveEntitlement
-            env
-            (checkpointUtxo advanced)
-            FreezeEntitlement
-            honestFreeze
-            hunter
-            (commitmentNonce "137-honest-freeze")
-    (freezeTxId, freezeValidity) <-
-        submitTwoPassFreeze
-            env
-            "checkpoint Freeze"
-            checkpointRef
-            enforcementRef
-            advanced
-            honestPlan
-            hunter
-    let deadline = upperPosixMs freezeValidity + freezeWindow
-    armedUtxo <-
-        pollOutput
-            (envProvider env)
-            freezeTxId
-            [0, 1]
-            ( hasAsset
-                (envCheckpointPolicy env)
-                (deriveAidAssetName (cdCesrAid (checkpointDatum advanced)))
-            )
-            >>= requireJust "Freeze ARMED output did not settle"
-    assertArmedCheckpoint
-        env
-        advanced
-        hunter
-        deadline
-        freezeValidity
-        armedUtxo
-    let armed =
-            CheckpointInput
-                { checkpointUtxo = armedUtxo
-                , checkpointDatum = checkpointDatum advanced
-                }
-        responseEvidence =
-            signedRotateEvidence
-                env
-                armed
-                responseFixture
-                (rsRotationSigners responseFixture)
-                (aeWitReceipts (rsUnsignedEvidence responseFixture))
-    case advancePredicate
-        (rotateSpentCheckpoint env armed)
-        (rsCreated responseFixture)
-        responseEvidence of
-        Left predicateError ->
-            fail
-                ( "checkpoint response Advance: signed evidence failed the pure predicate: "
-                    <> show predicateError
-                )
-        Right () -> pure ()
-    responseValidity <- currentValidity env
-    unless
-        (upperPosixMs responseValidity < deadline)
-        (fail "response Advance validity is not wholly before the stored Freeze deadline")
-    responseTxId <-
-        submitTwoPassAdvanceWithValidity
-            env
-            "checkpoint response Advance"
-            checkpointRef
-            advanceRef
-            armed
-            (rsCreated responseFixture)
-            responseEvidence
-            (Just responseValidity)
-    responseUtxo <-
-        pollOutput
-            (envProvider env)
-            responseTxId
-            [0, 1]
-            ( hasAsset
-                (envCheckpointPolicy env)
-                (deriveAidAssetName (cdCesrAid (rsCreated responseFixture)))
-            )
-            >>= requireJust "response Advance successor did not settle"
-    unless
-        (snd responseUtxo ^. addrTxOutL == roleAddress env Active)
-        (fail "response Advance successor is not at the ACTIVE address")
-    unless
-        (snd responseUtxo ^. valueTxOutL == snd armedUtxo ^. valueTxOutL)
-        (fail "response Advance did not preserve the bond and complete checkpoint value")
-    case extractDatum (snd responseUtxo) of
-        Just (V1 datum)
-            | datum == rsCreated responseFixture -> pure ()
-        _ -> fail "response Advance successor does not carry the exact honest sibling datum"
-    remaining <-
-        withinSecs 30 "query response-advanced checkpoint input" $
-            queryUTxOByTxIn
-                (envProvider env)
-                (Set.singleton (fst armedUtxo))
-    unless (Map.null remaining) $
-        fail "response Advance left the ARMED checkpoint input unspent"
-    let responded =
-            CheckpointInput
-                { checkpointUtxo = responseUtxo
-                , checkpointDatum = rsCreated responseFixture
-                }
-        secondFreezeEvidence = fsSecondFreezeEvidence fixture
-    stalePlan <-
-        prepareLiveEntitlement
-            env
-            (checkpointUtxo responded)
-            FreezeEntitlement
-            honestFreeze
-            hunter
-            (commitmentNonce "137-stale-evidence-replay")
-    rejectFreezeEvidence
-        env
-        checkpointRef
-        enforcementRef
-        responded
-        hunter
-        "Freeze stale evidence replay"
-        stalePlan
-    secondPlan <-
-        prepareLiveEntitlement
-            env
-            (checkpointUtxo responded)
-            FreezeEntitlement
-            secondFreezeEvidence
-            hunter
-            (commitmentNonce "137-second-freeze")
-    (secondFreezeTxId, secondFreezeValidity) <-
-        submitTwoPassFreeze
-            env
-            "checkpoint second Freeze"
-            checkpointRef
-            enforcementRef
-            responded
-            secondPlan
-            hunter
-    let secondDeadline = upperPosixMs secondFreezeValidity + freezeWindow
-    secondArmedUtxo <-
-        pollOutput
-            (envProvider env)
-            secondFreezeTxId
-            [0, 1]
-            ( hasAsset
-                (envCheckpointPolicy env)
-                (deriveAidAssetName (cdCesrAid (checkpointDatum responded)))
-            )
-            >>= requireJust "second Freeze ARMED output did not settle"
-    assertArmedCheckpoint
-        env
-        responded
-        hunter
-        secondDeadline
-        secondFreezeValidity
-        secondArmedUtxo
-    let secondArmed =
-            CheckpointInput
-                { checkpointUtxo = secondArmedUtxo
-                , checkpointDatum = checkpointDatum responded
-                }
-        secondResponseEvidence =
-            signedRotateEvidence
-                env
-                secondArmed
-                secondResponseFixture
-                (rsRotationSigners secondResponseFixture)
-                (aeWitReceipts (rsUnsignedEvidence secondResponseFixture))
-    case advancePredicate
-        (rotateSpentCheckpoint env secondArmed)
-        (rsCreated secondResponseFixture)
-        secondResponseEvidence of
-        Left predicateError ->
-            fail
-                ( "checkpoint second response Advance: signed evidence failed the pure predicate: "
-                    <> show predicateError
-                )
-        Right () -> pure ()
-    secondResponseValidity <- currentValidity env
-    unless
-        (upperPosixMs secondResponseValidity < secondDeadline)
-        (fail "second response Advance validity is not wholly before the stored Freeze deadline")
-    secondResponseTxId <-
-        submitTwoPassAdvanceWithValidity
-            env
-            "checkpoint second response Advance"
-            checkpointRef
-            advanceRef
-            secondArmed
-            (rsCreated secondResponseFixture)
-            secondResponseEvidence
-            (Just secondResponseValidity)
-    secondResponseUtxo <-
-        pollOutput
-            (envProvider env)
-            secondResponseTxId
-            [0, 1]
-            ( hasAsset
-                (envCheckpointPolicy env)
-                (deriveAidAssetName (cdCesrAid (rsCreated secondResponseFixture)))
-            )
-            >>= requireJust "second response Advance successor did not settle"
-    unless
-        (snd secondResponseUtxo ^. addrTxOutL == roleAddress env Active)
-        (fail "second response Advance successor is not at the ACTIVE address")
-    unless
-        (snd secondResponseUtxo ^. valueTxOutL == snd secondArmedUtxo ^. valueTxOutL)
-        (fail "second response Advance did not preserve the bond and complete checkpoint value")
-    case extractDatum (snd secondResponseUtxo) of
-        Just (V1 datum)
-            | datum == rsCreated secondResponseFixture -> pure ()
-        _ ->
-            fail
-                "second response Advance successor does not carry the exact honest sibling datum"
-    secondRemaining <-
-        withinSecs 30 "query second response-advanced checkpoint input" $
-            queryUTxOByTxIn
-                (envProvider env)
-                (Set.singleton (fst secondArmedUtxo))
-    unless (Map.null secondRemaining) $
-        fail "second response Advance left the ARMED checkpoint input unspent"
-    dbg
-        ( "Freeze story settled; register="
-            <> show (fst (checkpointUtxo registered))
-            <> "; first-advance="
-            <> show firstAdvanceTxId
-            <> "; freeze="
-            <> show freezeTxId
-            <> "; response-advance="
-            <> show responseTxId
-            <> "; stale-freeze-replay=rejected"
-            <> "; second-freeze="
-            <> show secondFreezeTxId
-            <> "; second-response-advance="
-            <> show secondResponseTxId
-            <> "; deadline="
-            <> show deadline
-            <> "; second-deadline="
-            <> show secondDeadline
-        )
-
 productionRegisterConvictScenario :: CheckpointEnv -> IO ()
 productionRegisterConvictScenario env = do
-    fixture <- loadFreezeStoryFixture
+    fixture <- loadConvictStoryFixture
     references <- deployRegisterReferences env
     checkpointRef <-
         requireJust "Convict checkpoint reference is absent" (listToMaybe references)
@@ -1397,16 +1009,12 @@ productionRegisterConvictScenario env = do
         requireJust
             "observer_enforcement reference was not deployed during setup"
             (envEnforcementReference env)
-    let hunter = beneficiaryPkh storyHunter
-        convictor = beneficiaryPkh storyConvictor
-        conflict = fsFreezeEvidence fixture
-        freezeTrigger = fsSecondFreezeEvidence fixture
+    let convictor = beneficiaryPkh storyConvictor
+        conflict = fsConflictEvidence fixture
         unwitnessed = conflict{eneWitSigs = take 1 (eneWitSigs conflict)}
         recorded = fsRecordedEvidence fixture
-    -- #280: as for Freeze, a conviction settles only against the convictor's
-    -- own matured reservation, opened over the exact evidence it reveals.  The
-    -- trigger Freeze inside this story pays the hunter, so the two payees hold
-    -- separate reservations and neither can be read out of the other's.
+    -- #280: a conviction settles only against the convictor's own matured
+    -- reservation, opened over the exact evidence it reveals.
     active <-
         prepareConvictActive
             env
@@ -1421,7 +1029,6 @@ productionRegisterConvictScenario env = do
                 prepareLiveEntitlement
                     env
                     (checkpointUtxo active)
-                    ConvictEntitlement
                     payload
                     convictor
                     (commitmentNonce nonceLabel)
@@ -1430,7 +1037,6 @@ productionRegisterConvictScenario env = do
                 checkpointRef
                 enforcementRef
                 active
-                ConvictFromActive
                 convictor
                 row
                 plan
@@ -1446,7 +1052,6 @@ productionRegisterConvictScenario env = do
         prepareLiveEntitlement
             env
             (checkpointUtxo active)
-            ConvictEntitlement
             conflict
             convictor
             (commitmentNonce "151-active-conflict")
@@ -1457,180 +1062,14 @@ productionRegisterConvictScenario env = do
             checkpointRef
             enforcementRef
             active
-            ConvictFromActive
             convictor
             activePlan
     assertConvictSettlement
         env
         "ACTIVE"
         active
-        ConvictFromActive
         convictor
         activeTxId
-
-    armedActive <-
-        prepareConvictActive
-            env
-            references
-            checkpointRef
-            advanceRef
-            "ARMED"
-            fixture
-    armedTriggerPlan <-
-        prepareLiveEntitlement
-            env
-            (checkpointUtxo armedActive)
-            FreezeEntitlement
-            freezeTrigger
-            hunter
-            (commitmentNonce "151-armed-setup-freeze")
-    (armedTxId, armedValidity) <-
-        submitTwoPassFreeze
-            env
-            "Convict ARMED setup Freeze"
-            checkpointRef
-            enforcementRef
-            armedActive
-            armedTriggerPlan
-            hunter
-    armedUtxo <-
-        pollOutput
-            (envProvider env)
-            armedTxId
-            [0, 1]
-            ( hasAsset
-                (envCheckpointPolicy env)
-                (deriveAidAssetName (cdCesrAid (checkpointDatum armedActive)))
-            )
-            >>= requireJust "Convict ARMED source did not settle"
-    let deadline = upperPosixMs armedValidity + freezeWindow
-        armed =
-            CheckpointInput
-                { checkpointUtxo = armedUtxo
-                , checkpointDatum = checkpointDatum armedActive
-                }
-        armedSource = ConvictFromArmed hunter
-    assertArmedCheckpoint env armedActive hunter deadline armedValidity armedUtxo
-    armedConvictPlan <-
-        prepareLiveEntitlement
-            env
-            (checkpointUtxo armed)
-            ConvictEntitlement
-            conflict
-            convictor
-            (commitmentNonce "151-armed-conflict")
-    armedConvictTxId <-
-        submitTwoPassConvict
-            env
-            "checkpoint Convict ARMED"
-            checkpointRef
-            enforcementRef
-            armed
-            armedSource
-            convictor
-            armedConvictPlan
-    assertConvictSettlement
-        env
-        "ARMED"
-        armed
-        armedSource
-        convictor
-        armedConvictTxId
-
-    frozenActive <-
-        prepareConvictActive
-            env
-            references
-            checkpointRef
-            advanceRef
-            "FROZEN"
-            fixture
-    frozenTriggerPlan <-
-        prepareLiveEntitlement
-            env
-            (checkpointUtxo frozenActive)
-            FreezeEntitlement
-            freezeTrigger
-            hunter
-            (commitmentNonce "151-frozen-setup-freeze")
-    (frozenArmTxId, frozenArmValidity) <-
-        submitTwoPassFreeze
-            env
-            "Convict FROZEN setup Freeze"
-            checkpointRef
-            enforcementRef
-            frozenActive
-            frozenTriggerPlan
-            hunter
-    frozenArmedUtxo <-
-        pollOutput
-            (envProvider env)
-            frozenArmTxId
-            [0, 1]
-            ( hasAsset
-                (envCheckpointPolicy env)
-                (deriveAidAssetName (cdCesrAid (checkpointDatum frozenActive)))
-            )
-            >>= requireJust "Convict FROZEN setup ARMED output did not settle"
-    let frozenDeadline = upperPosixMs frozenArmValidity + freezeWindow
-        frozenArmed =
-            CheckpointInput
-                { checkpointUtxo = frozenArmedUtxo
-                , checkpointDatum = checkpointDatum frozenActive
-                }
-    assertArmedCheckpoint
-        env
-        frozenActive
-        hunter
-        frozenDeadline
-        frozenArmValidity
-        frozenArmedUtxo
-    claimValidity <- awaitClaimValidity env frozenDeadline
-    claimTxId <-
-        submitTwoPassClaim
-            env
-            "Convict FROZEN setup ClaimFreeze"
-            checkpointRef
-            frozenArmed
-            hunter
-            claimValidity
-    frozenUtxo <-
-        assertClaimSettlement
-            env
-            (checkpointDatum frozenArmed)
-            hunter
-            frozenArmedUtxo
-            claimTxId
-    let frozen =
-            CheckpointInput
-                { checkpointUtxo = frozenUtxo
-                , checkpointDatum = checkpointDatum frozenArmed
-                }
-    frozenConvictPlan <-
-        prepareLiveEntitlement
-            env
-            (checkpointUtxo frozen)
-            ConvictEntitlement
-            conflict
-            convictor
-            (commitmentNonce "151-frozen-conflict")
-    frozenConvictTxId <-
-        submitTwoPassConvict
-            env
-            "checkpoint Convict FROZEN"
-            checkpointRef
-            enforcementRef
-            frozen
-            ConvictFromFrozen
-            convictor
-            frozenConvictPlan
-    assertConvictSettlement
-        env
-        "FROZEN"
-        frozen
-        ConvictFromFrozen
-        convictor
-        frozenConvictTxId
 
 prepareConvictActive ::
     CheckpointEnv ->
@@ -1638,7 +1077,7 @@ prepareConvictActive ::
     (TxIn, TxOut ConwayEra) ->
     (TxIn, TxOut ConwayEra) ->
     String ->
-    FreezeStoryFixture ->
+    ConvictStoryFixture ->
     IO CheckpointInput
 prepareConvictActive env references checkpointRef advanceRef row fixture = do
     let firstRotation = fsFirstRotation fixture
@@ -1742,283 +1181,6 @@ prepareConvictActive env references checkpointRef advanceRef row fixture = do
             , checkpointDatum = rsCreated recordedRotation
             }
 
-productionRegisterSeizeScenario :: CheckpointEnv -> IO ()
-productionRegisterSeizeScenario env = do
-    fixture <- loadFreezeStoryFixture
-    let firstFixture = fsFirstRotation fixture
-        thawFixture = fsResponseRotation fixture
-        hunter = beneficiaryPkh storyHunter
-        wrongHunter = BS.replicate 28 0x43
-    (registered, checkpointRef) <-
-        productionRegisterScenarioWithReference
-            env
-            (rsRegistration firstFixture)
-    advanceRef <-
-        requireJust
-            "observer_advance reference was not deployed during setup"
-            (envAdvanceReference env)
-    enforcementRef <-
-        requireJust
-            "observer_enforcement reference was not deployed during setup"
-            (envEnforcementReference env)
-    let firstEvidence =
-            signedRotateEvidence
-                env
-                registered
-                firstFixture
-                (rsRotationSigners firstFixture)
-                (aeWitReceipts (rsUnsignedEvidence firstFixture))
-    case advancePredicate
-        (rotateSpentCheckpoint env registered)
-        (rsCreated firstFixture)
-        firstEvidence of
-        Left predicateError ->
-            fail
-                ( "seize-delay first Advance failed the pure predicate: "
-                    <> show predicateError
-                )
-        Right () -> pure ()
-    firstAdvanceTxId <-
-        submitTwoPassAdvance
-            env
-            "seize-delay first Advance"
-            checkpointRef
-            advanceRef
-            registered
-            (rsCreated firstFixture)
-            firstEvidence
-    advancedUtxo <-
-        pollOutput
-            (envProvider env)
-            firstAdvanceTxId
-            [0, 1]
-            ( hasAsset
-                (envCheckpointPolicy env)
-                (deriveAidAssetName (cdCesrAid (rsCreated firstFixture)))
-            )
-            >>= requireJust "seize-delay first Advance successor did not settle"
-    let advanced =
-            CheckpointInput
-                { checkpointUtxo = advancedUtxo
-                , checkpointDatum = rsCreated firstFixture
-                }
-        freezeEvidence = fsFreezeEvidence fixture
-    -- #280: the seize story's arming Freeze is an entitled settlement like any
-    -- other, so it consumes the hunter's own matured reservation.
-    seizePlan <-
-        prepareLiveEntitlement
-            env
-            (checkpointUtxo advanced)
-            FreezeEntitlement
-            freezeEvidence
-            hunter
-            (commitmentNonce "138-arming-freeze")
-    (freezeTxId, freezeValidity) <-
-        submitTwoPassFreeze
-            env
-            "seize-delay Freeze"
-            checkpointRef
-            enforcementRef
-            advanced
-            seizePlan
-            hunter
-    let deadline = upperPosixMs freezeValidity + freezeWindow
-    armedUtxo <-
-        pollOutput
-            (envProvider env)
-            freezeTxId
-            [0, 1]
-            ( hasAsset
-                (envCheckpointPolicy env)
-                (deriveAidAssetName (cdCesrAid (checkpointDatum advanced)))
-            )
-            >>= requireJust "seize-delay ARMED output did not settle"
-    assertArmedCheckpoint
-        env
-        advanced
-        hunter
-        deadline
-        freezeValidity
-        armedUtxo
-    let armed =
-            CheckpointInput
-                { checkpointUtxo = armedUtxo
-                , checkpointDatum = checkpointDatum advanced
-                }
-    earlyValidity <- currentValidity env
-    unless
-        (lowerPosixMs earlyValidity < deadline)
-        (fail "seize-delay live early-claim window already elapsed")
-    rejectClaim
-        env
-        checkpointRef
-        armed
-        hunter
-        earlyValidity
-        "seize-delay early ClaimFreeze"
-    claimValidity <- awaitClaimValidity env deadline
-    rejectClaim
-        env
-        checkpointRef
-        armed
-        wrongHunter
-        claimValidity
-        "seize-delay wrong-hunter ClaimFreeze"
-    claimTxId <-
-        submitTwoPassClaim
-            env
-            "seize-delay ClaimFreeze"
-            checkpointRef
-            armed
-            hunter
-            claimValidity
-    frozenUtxo <-
-        assertClaimSettlement
-            env
-            (checkpointDatum armed)
-            hunter
-            armedUtxo
-            claimTxId
-    let frozen =
-            CheckpointInput
-                { checkpointUtxo = frozenUtxo
-                , checkpointDatum = checkpointDatum armed
-                }
-        thawEvidence =
-            signedRotateEvidence
-                env
-                frozen
-                thawFixture
-                (rsRotationSigners thawFixture)
-                (aeWitReceipts (rsUnsignedEvidence thawFixture))
-        thawSuccessor = rsCreated thawFixture
-    case advancePredicate
-        (rotateSpentCheckpoint env frozen)
-        thawSuccessor
-        thawEvidence of
-        Left predicateError ->
-            fail
-                ( "seize-delay thaw Advance failed the pure predicate: "
-                    <> show predicateError
-                )
-        Right () -> pure ()
-    thawTxId <-
-        submitTwoPassAdvance
-            env
-            "seize-delay thaw Advance"
-            checkpointRef
-            advanceRef
-            frozen
-            thawSuccessor
-            thawEvidence
-    thawedUtxo <-
-        pollOutput
-            (envProvider env)
-            thawTxId
-            [0, 1]
-            ( hasAsset
-                (envCheckpointPolicy env)
-                (deriveAidAssetName (cdCesrAid thawSuccessor))
-            )
-            >>= requireJust "seize-delay thaw successor did not settle"
-    unless
-        (snd thawedUtxo ^. addrTxOutL == roleAddress env Active)
-        (fail "seize-delay thaw successor is not ACTIVE")
-    unless
-        ( snd thawedUtxo ^. valueTxOutL
-            == addLovelace freezeBond (snd frozenUtxo ^. valueTxOutL)
-        )
-        (fail "seize-delay thaw did not re-post exactly B")
-    case extractDatum (snd thawedUtxo) of
-        Just (V1 datum)
-            | datum == thawSuccessor -> pure ()
-        _ -> fail "seize-delay thaw successor does not carry the real next datum"
-    remaining <-
-        withinSecs 30 "query seize-delay FROZEN checkpoint input" $
-            queryUTxOByTxIn
-                (envProvider env)
-                (Set.singleton (fst frozenUtxo))
-    unless (Map.null remaining) $
-        fail "seize-delay thaw left the FROZEN checkpoint input unspent"
-    dbg
-        ( "Seize-delay story settled; register="
-            <> show (fst (checkpointUtxo registered))
-            <> "; first-advance="
-            <> show firstAdvanceTxId
-            <> "; freeze="
-            <> show freezeTxId
-            <> "; early-claim=rejected"
-            <> "; wrong-hunter=rejected"
-            <> "; claim="
-            <> show claimTxId
-            <> "; thaw-advance="
-            <> show thawTxId
-            <> "; hunter-payout="
-            <> show freezeBond
-            <> "; frozen-reserve="
-            <> show (checkpointMinAda + registrationBond)
-            <> "; thaw-repost="
-            <> show freezeBond
-        )
-
-{- | This is deliberately not run on the old-cost devnet.  Referencing this
-scenario from the authorized PENDING row type-checks the real hash-proof mint,
-permissionless Register with @D_reg+B@, Arm, and Claim builders without
-claiming settlement before cardano-node-clients#190 supplies Plomin pricing.
--}
-pendingHashProofRegisterArmClaimScenario :: CheckpointEnv -> IO ()
-pendingHashProofRegisterArmClaimScenario env = do
-    (fixture, armEvidence) <- loadLifecycleFixture
-    registered <- productionRegisterScenarioWith env fixture
-    boundaries <- responseBoundaryCases env
-    unless
-        (boundaryCasesCoverDeadline boundaries)
-        (fail "node-derived deadline plans do not cover before/exact/after boundary")
-    let hunter = BS.replicate 28 0x42
-        armValidity = armUpper boundaries
-        deadline = hardDeadlineMs boundaries
-    -- #254 S254-E: the split family's arm is entitled too, so it needs the
-    -- reveal of a matured reservation.  #280 wires the live reservation
-    -- lifecycle for the COMBINED register that this deployment actually
-    -- publishes; the split family is not derived by 'deriveV1Scripts', so
-    -- there is no reservation here to reveal and this row still fails closed.
-    armReveal <- requireSplitFamilyReveal
-    armTx <-
-        withinSecs 90 "build checkpoint Arm" $
-            buildArmTx
-                env
-                registered
-                armEvidence
-                hunter
-                armReveal
-                armValidity
-    armTxId <- submitSettling env "checkpoint Arm" armTx
-    armed <-
-        pollOutput
-            (envProvider env)
-            armTxId
-            [0, 1]
-            (hasAsset (envCheckpointPolicy env) (deriveAidAssetName (cdCesrAid (rfDatum fixture))))
-            >>= requireJust "ARMED checkpoint output did not settle"
-    assertArmedCheckpoint env registered hunter deadline armValidity armed
-    claimValidity <- awaitClaimValidity env deadline
-    claimTx <-
-        withinSecs 90 "build checkpoint Claim" $
-            buildClaimTx
-                env
-                CheckpointInput{checkpointUtxo = armed, checkpointDatum = rfDatum fixture}
-                hunter
-                claimValidity
-    claimTxId <- submitSettling env "checkpoint Claim" claimTx
-    _ <-
-        assertClaimSettlement
-            env
-            (rfDatum fixture)
-            hunter
-            armed
-            claimTxId
-    pure ()
-
 advanceRejection :: CheckpointEnv -> IO RejectionEvidence
 advanceRejection env = do
     prepareWallet env
@@ -2032,7 +1194,6 @@ advanceRejection env = do
             (checkpointDatum staged)
             dummyAdvanceEvidence
             validity
-            False
     expectProductionScriptRejection env "Advance" tx
 
 hashProofMintOldCostRejection :: CheckpointEnv -> IO RejectionEvidence
@@ -2217,13 +1378,11 @@ data RotateStoryFixture = RotateStoryFixture
     , rsCurrentSigners :: ![SignKeyDSIGN Ed25519DSIGN]
     }
 
-data FreezeStoryFixture = FreezeStoryFixture
+data ConvictStoryFixture = ConvictStoryFixture
     { fsFirstRotation :: !RotateStoryFixture
-    , fsFreezeEvidence :: !EnforcementEvidence
+    , fsConflictEvidence :: !EnforcementEvidence
     , fsRecordedEvidence :: !EnforcementEvidence
     , fsResponseRotation :: !RotateStoryFixture
-    , fsSecondFreezeEvidence :: !EnforcementEvidence
-    , fsSecondResponseRotation :: !RotateStoryFixture
     }
 
 data RegisterScriptPlan = RegisterScriptPlan
@@ -2413,8 +1572,8 @@ loadRotateStoryFixture = do
             id
             (integerArrayAt key value)
 
-loadFreezeStoryFixture :: IO FreezeStoryFixture
-loadFreezeStoryFixture = do
+loadConvictStoryFixture :: IO ConvictStoryFixture
+loadConvictStoryFixture = do
     path <- getDataFileName "test/keri-fixtures/fixtures/freeze_story.json"
     root <- eitherDecodeFileStrict path >>= either fail pure
     inception <- either fail pure (atKey "icp" root)
@@ -2435,8 +1594,6 @@ loadFreezeStoryFixture = do
         either fail pure (seedSignersAt "rotation_1_current" seeds)
     responseSigners <-
         either fail pure (seedSignersAt "rotation_2_current" seeds)
-    secondResponseSigners <-
-        either fail pure (seedSignersAt "rotation_3_current" seeds)
     firstRecord <- either fail pure (atKey "rot_1" root)
     first <-
         either fail pure $
@@ -2453,10 +1610,10 @@ loadFreezeStoryFixture = do
         either fail pure (indexedSignaturesAt "controller_sigs" conflictRecord)
     conflictReceipts <-
         either fail pure (indexedSignaturesAt "witness_receipts" conflictRecord)
-    unsignedFreeze <-
+    unsignedConflict <-
         either fail pure $
             enforcementEvidenceFrom conflictWithOffsets conflictSignatures
-    let freezeEvidence = unsignedFreeze{eneWitSigs = conflictReceipts}
+    let conflictEvidence = unsignedConflict{eneWitSigs = conflictReceipts}
     responseRecord <- either fail pure (atKey "rot_2_recorded" root)
     responseEvent <- either fail pure (atKey "event" responseRecord)
     responseWithOffsets <- either fail pure (withDerivedOffsets responseEvent)
@@ -2479,38 +1636,12 @@ loadFreezeStoryFixture = do
                 responseRecord
                 responseSigners
                 firstSigners
-    secondConflictRecord <- either fail pure (atKey "rot_3_conflict" root)
-    secondConflictEvent <- either fail pure (atKey "event" secondConflictRecord)
-    secondConflictWithOffsets <-
-        either fail pure (withDerivedOffsets secondConflictEvent)
-    secondConflictSignatures <-
-        either fail pure (indexedSignaturesAt "controller_sigs" secondConflictRecord)
-    secondConflictReceipts <-
-        either fail pure (indexedSignaturesAt "witness_receipts" secondConflictRecord)
-    unsignedSecondFreeze <-
-        either fail pure $
-            enforcementEvidenceFrom
-                secondConflictWithOffsets
-                secondConflictSignatures
-    let secondFreezeEvidence =
-            unsignedSecondFreeze{eneWitSigs = secondConflictReceipts}
-    secondResponseRecord <- either fail pure (atKey "rot_3_recorded" root)
-    secondResponse <-
-        either fail pure $
-            rotateStoryFrom
-                registration
-                (rsCreated response)
-                secondResponseRecord
-                secondResponseSigners
-                responseSigners
     pure
-        FreezeStoryFixture
+        ConvictStoryFixture
             { fsFirstRotation = first
-            , fsFreezeEvidence = freezeEvidence
+            , fsConflictEvidence = conflictEvidence
             , fsRecordedEvidence = recordedEvidence
             , fsResponseRotation = response
-            , fsSecondFreezeEvidence = secondFreezeEvidence
-            , fsSecondResponseRotation = secondResponse
             }
 
 rotateStoryFrom ::
@@ -3052,37 +2183,22 @@ buildRotateStoryTxWith budgets env checkpointRef advanceRef input successor evid
         spendPurpose = ConwaySpending (AsIx stateIndex)
         rewardPurpose = ConwayRewarding (AsIx 0)
         expected = Set.fromList [spendPurpose, rewardPurpose]
-        inputAddress = snd (checkpointUtxo input) ^. addrTxOutL
-        repostBond = inputAddress == roleAddress env Frozen
-        observerRedeemerData
-            | inputAddress == roleAddress env Armed =
-                responseAdvanceObserverRedeemerData
-                    (policyBytes (envCheckpointPolicy env))
-                    spentTxIdBytes
-                    spentIndex
-                    evidence
-            | otherwise =
-                advanceObserverRedeemerData
-                    (policyBytes (envCheckpointPolicy env))
-                    spentTxIdBytes
-                    spentIndex
-                    evidence
+        observerRedeemerData =
+            advanceObserverRedeemerData
+                (policyBytes (envCheckpointPolicy env))
+                spentTxIdBytes
+                spentIndex
+                evidence
         stateOut =
             mkStateOutput
                 env
                 Active
-                ( addLovelace
-                    (if repostBond then freezeBond else 0)
-                    (snd (checkpointUtxo input) ^. valueTxOutL)
-                )
+                (snd (checkpointUtxo input) ^. valueTxOutL)
                 (asPlcData (V1 successor))
         changeOut =
             mkBasicTxOut
                 (envOwner env)
-                ( addLovelace
-                    (-scriptFee - if repostBond then freezeBond else 0)
-                    (feeOut ^. valueTxOutL)
-                )
+                (addLovelace (-scriptFee) (feeOut ^. valueTxOutL))
         redeemers =
             Redeemers $
                 Map.fromList
@@ -3158,355 +2274,6 @@ buildRotateStoryTxWith budgets env checkpointRef advanceRef input successor evid
 advanceSpendExUnits :: ExUnits
 advanceSpendExUnits = ExUnits 2_000_000 1_000_000_000
 
-buildFreezeStoryTxWith ::
-    Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
-    CheckpointEnv ->
-    (TxIn, TxOut ConwayEra) ->
-    (TxIn, TxOut ConwayEra) ->
-    (TxIn, TxOut ConwayEra) ->
-    CheckpointInput ->
-    EntitledEnforcementPlan ->
-    ByteString ->
-    ValidityPlan ->
-    IO
-        ( ConwayTx
-        , Set.Set (ConwayPlutusPurpose AsIx ConwayEra)
-        )
-buildFreezeStoryTxWith budgets env checkpointRef enforcementRef reservation input plan hunter validity = do
-    entitlementRef <-
-        requireJust
-            "observer_entitlement reference was not deployed during setup"
-            (envEntitlementReference env)
-    commitmentRef <-
-        requireJust
-            "bounty_commitment reference was not deployed during setup"
-            (envCommitmentReference env)
-    unless (eepBountyPayee plan == hunter) $
-        fail "Freeze envelope does not name the hunter this settlement pays"
-    unless (cpoIndex (eepRefund plan) == settlementRefundIndex) $
-        fail "Freeze reservation refund is not planned at the settlement index"
-    params <-
-        withinSecs 30 "query Freeze protocol parameters" $
-            queryProtocolParams (envProvider env)
-    wallet <-
-        withinSecs 30 "query Freeze wallet" $
-            queryUTxOs (envProvider env) (envOwner env)
-    (feeUtxo, collateralUtxo) <-
-        pickDisjoint
-            wallet
-            [ stateIn
-            , reservationIn
-            , fst checkpointRef
-            , fst enforcementRef
-            , fst entitlementRef
-            , fst commitmentRef
-            ]
-    let (feeIn, feeOut) = feeUtxo
-        collateralIn = fst collateralUtxo
-        allInputs = Set.fromList [stateIn, reservationIn, feeIn]
-        stateIndex = spendingIndex stateIn allInputs
-        spendPurpose = ConwaySpending (AsIx stateIndex)
-        revealPurpose =
-            ConwaySpending (AsIx (spendingIndex reservationIn allInputs))
-        markerName = AssetName (SBS.toShort (fst (eepBurn plan)))
-        burned =
-            MultiAsset $
-                Map.singleton
-                    (envCommitmentPolicy env)
-                    (Map.singleton markerName (snd (eepBurn plan)))
-        retirePurpose =
-            ConwayMinting (AsIx (mintingIndex (envCommitmentPolicy env) burned))
-        refundOut =
-            mkBasicTxOut
-                (keyAddress (cpoRecipientPkh (eepRefund plan)))
-                (inject (Coin (cpoLovelace (eepRefund plan))))
-        (withdrawalMap, enforcementPurpose, entitlementPurpose) =
-            observerWithdrawals env
-        expected =
-            Set.fromList
-                [ spendPurpose
-                , revealPurpose
-                , retirePurpose
-                , enforcementPurpose
-                , entitlementPurpose
-                ]
-        armedDatum =
-            ArmedV2
-                { adCheckpoint = checkpointDatum input
-                , adHunterPkh = hunter
-                , adDeadline = upperPosixMs validity + freezeWindow
-                }
-        stateOut =
-            mkStateOutput
-                env
-                Armed
-                (snd (checkpointUtxo input) ^. valueTxOutL)
-                (asPlcData armedDatum)
-        changeOut =
-            mkBasicTxOut
-                (envOwner env)
-                (addLovelace (-scriptFee) (feeOut ^. valueTxOutL))
-        observerRedeemer =
-            ledgerData
-                ( freezeObserverRedeemerData
-                    (policyBytes (envCheckpointPolicy env))
-                    spentTxIdBytes
-                    spentIndex
-                    (eepProof plan)
-                )
-        redeemers =
-            Redeemers $
-                Map.fromList
-                    [
-                        ( spendPurpose
-                        ,
-                            ( ledgerData (freezeSpendRedeemerData hunter)
-                            , Map.findWithDefault
-                                advanceSpendExUnits
-                                spendPurpose
-                                budgets
-                            )
-                        )
-                    ,
-                        ( revealPurpose
-                        ,
-                            ( ledgerData (asPlcData (Reveal (eepReveal plan)))
-                            , Map.findWithDefault
-                                commitmentExUnits
-                                revealPurpose
-                                budgets
-                            )
-                        )
-                    ,
-                        ( retirePurpose
-                        ,
-                            ( ledgerData (asPlcData Retire)
-                            , Map.findWithDefault
-                                commitmentExUnits
-                                retirePurpose
-                                budgets
-                            )
-                        )
-                    ,
-                        ( enforcementPurpose
-                        ,
-                            ( observerRedeemer
-                            , Map.findWithDefault
-                                rejectingObserverExUnits
-                                enforcementPurpose
-                                budgets
-                            )
-                        )
-                    ,
-                        ( entitlementPurpose
-                        ,
-                            ( observerRedeemer
-                            , Map.findWithDefault
-                                rejectingObserverExUnits
-                                entitlementPurpose
-                                budgets
-                            )
-                        )
-                    ]
-        body =
-            mkBasicTxBody
-                & inputsTxBodyL .~ allInputs
-                & outputsTxBodyL
-                    .~ StrictSeq.fromList [refundOut, stateOut, changeOut]
-                & feeTxBodyL .~ Coin scriptFee
-                & mintTxBodyL .~ burned
-                & withdrawalsTxBodyL .~ Withdrawals withdrawalMap
-                & collateralInputsTxBodyL .~ Set.singleton collateralIn
-                & referenceInputsTxBodyL
-                    .~ Set.fromList
-                        [ fst checkpointRef
-                        , fst enforcementRef
-                        , fst entitlementRef
-                        , fst commitmentRef
-                        ]
-                & reqSignerHashesTxBodyL
-                    .~ Set.fromList
-                        (map requiredSignerHash (eepRequiredSigners plan))
-                & vldtTxBodyL
-                    .~ ValidityInterval
-                        (SJust (lowerSlot validity))
-                        (SJust (upperSlot validity))
-                & scriptIntegrityHashTxBodyL
-                    .~ computeScriptIntegrity
-                        (Set.singleton PlutusV3)
-                        params
-                        redeemers
-                        (TxDats mempty)
-    pure
-        ( mkBasicTx body
-            & witsTxL . rdmrsTxWitsL .~ redeemers
-        , expected
-        )
-  where
-    stateIn = fst (checkpointUtxo input)
-    reservationIn = fst reservation
-    (spentTxIdBytes, spentIndex) =
-        case stateIn of
-            TxIn (TxId safeHash) (TxIx outputIndex) ->
-                ( hashToBytes (extractHash safeHash)
-                , fromIntegral outputIndex
-                )
-
-rejectFreezeEvidence ::
-    CheckpointEnv ->
-    (TxIn, TxOut ConwayEra) ->
-    (TxIn, TxOut ConwayEra) ->
-    CheckpointInput ->
-    ByteString ->
-    String ->
-    EntitledEnforcementPlan ->
-    IO ()
-rejectFreezeEvidence env checkpointRef enforcementRef input hunter label plan = do
-    (reservation, resolved) <- liveReservation env label plan
-    validity <- entitledSettlementValidity env label resolved
-    payeeKey <- beneficiarySignKey label (eepBountyPayee plan)
-    (candidate, expected) <-
-        withinSecs 90 (label <> ": build applied candidate") $
-            buildFreezeStoryTxWith
-                Map.empty
-                env
-                checkpointRef
-                enforcementRef
-                reservation
-                input
-                plan
-                hunter
-                validity
-    let signed = addKeyWitness payeeKey (addKeyWitness genesisSignKey candidate)
-    observed <-
-        withinSecs 120 (label <> ": attribute the rejection") $
-            evaluateTx (envProvider env) signed
-    unless (Map.keysSet observed == expected) $
-        fail
-            ( label
-                <> ": unexpected evaluator purpose set: "
-                <> show (Map.keysSet observed)
-            )
-    assertEnforcementAttribution env label observed
-    -- Declared units must fit @ppMaxTxExUnits@ for a transaction the node will
-    -- admit at all, so every leg that produced a cost carries its observed one
-    -- and only the rejecting leg falls back to 'rejectingObserverExUnits'.
-    let rejectBudgets =
-            Map.map
-                deterministicMargin
-                (Map.mapMaybe (either (const Nothing) Just) observed)
-    (rebuilt, rebuiltExpected) <-
-        withinSecs 90 (label <> ": rebuild the rejected candidate") $
-            buildFreezeStoryTxWith
-                rejectBudgets
-                env
-                checkpointRef
-                enforcementRef
-                reservation
-                input
-                plan
-                hunter
-                validity
-    unless (rebuiltExpected == expected) $
-        fail (label <> ": purpose set changed after budget binding")
-    _ <-
-        expectProductionScriptRejection
-            env
-            label
-            (addKeyWitness payeeKey rebuilt)
-    pure ()
-
-submitTwoPassFreeze ::
-    CheckpointEnv ->
-    String ->
-    (TxIn, TxOut ConwayEra) ->
-    (TxIn, TxOut ConwayEra) ->
-    CheckpointInput ->
-    EntitledEnforcementPlan ->
-    ByteString ->
-    IO (TxId, ValidityPlan)
-submitTwoPassFreeze env label checkpointRef enforcementRef input plan hunter = do
-    (reservation, resolved) <- liveReservation env label plan
-    validity <- entitledSettlementValidity env label resolved
-    payeeKey <- beneficiarySignKey label (eepBountyPayee plan)
-    let sign = addKeyWitness payeeKey . addKeyWitness genesisSignKey
-    (discovery, expected) <-
-        withinSecs 90 (label <> ": build discovery binding") $
-            buildFreezeStoryTxWith
-                Map.empty
-                env
-                checkpointRef
-                enforcementRef
-                reservation
-                input
-                plan
-                hunter
-                validity
-    discoveryObserved <-
-        withinSecs 120 (label <> ": evaluate discovery binding") $
-            evaluateTx (envProvider env) (sign discovery)
-    discoveryUnits <-
-        requireExactAllRight (label <> ": discovery") expected discoveryObserved
-    let finalBudgets = Map.map deterministicMargin discoveryUnits
-    (final, finalExpected) <-
-        withinSecs 90 (label <> ": rebuild final binding") $
-            buildFreezeStoryTxWith
-                finalBudgets
-                env
-                checkpointRef
-                enforcementRef
-                reservation
-                input
-                plan
-                hunter
-                validity
-    unless (finalExpected == expected) $
-        fail (label <> ": final purpose set changed after budget binding")
-    let signedFinal = sign final
-        finalBytes = serialize (eraProtVerLow @ConwayEra) signedFinal
-    finalObserved <-
-        withinSecs 120 (label <> ": evaluate final binding") $
-            evaluateTx (envProvider env) signedFinal
-    finalUnits <-
-        requireExactAllRight (label <> ": final") expected finalObserved
-    mapM_
-        ( \(purpose, observed) ->
-            let declared = Map.findWithDefault (ExUnits 0 0) purpose finalBudgets
-             in unless (withinDeclared observed declared) $
-                    fail
-                        ( label
-                            <> ": observed units exceed final declaration for "
-                            <> show purpose
-                        )
-        )
-        (Map.toList finalUnits)
-    params <-
-        withinSecs 30 (label <> ": query final maximum") $
-            queryProtocolParams (envProvider env)
-    let aggregate = foldr addExUnits (ExUnits 0 0) (Map.elems finalBudgets)
-        maximumUnits = params ^. ppMaxTxExUnitsL
-    unless (withinDeclared aggregate maximumUnits) $
-        fail
-            ( label
-                <> ": aggregate declared exunits exceed ppMaxTxExUnits: "
-                <> show aggregate
-            )
-    dbg
-        ( label
-            <> ": two-pass final bytes="
-            <> show (BSL.length finalBytes)
-            <> " observed="
-            <> show finalUnits
-            <> " declared="
-            <> show finalBudgets
-        )
-    result <-
-        withinSecs 60 ("submit unchanged " <> label) $
-            submitTx (envSubmitter env) signedFinal
-    case result of
-        Submitted txId -> pure (txId, validity)
-        Rejected reason -> fail (label <> " rejected: " <> B8.unpack reason)
-
 buildConvictStoryTxWith ::
     Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
     CheckpointEnv ->
@@ -3514,7 +2281,6 @@ buildConvictStoryTxWith ::
     (TxIn, TxOut ConwayEra) ->
     (TxIn, TxOut ConwayEra) ->
     CheckpointInput ->
-    ConvictSource ->
     ByteString ->
     EntitledEnforcementPlan ->
     ValidityPlan ->
@@ -3522,7 +2288,7 @@ buildConvictStoryTxWith ::
         ( ConwayTx
         , Set.Set (ConwayPlutusPurpose AsIx ConwayEra)
         )
-buildConvictStoryTxWith budgets env checkpointRef enforcementRef reservation input source convictor plan validity = do
+buildConvictStoryTxWith budgets env checkpointRef enforcementRef reservation input convictor plan validity = do
     entitlementRef <-
         requireJust
             "observer_entitlement reference was not deployed during setup"
@@ -3596,20 +2362,10 @@ buildConvictStoryTxWith budgets env checkpointRef enforcementRef reservation inp
             mkBasicTxOut
                 (keyAddress (cpoRecipientPkh (eepRefund plan)))
                 (inject (Coin (cpoLovelace (eepRefund plan))))
-        (protected, hunterPayouts, hunterOutputIndex) =
-            case source of
-                ConvictFromActive ->
-                    (checkpointMinAda + registrationBond + freezeBond, [], 0)
-                ConvictFromArmed hunter ->
-                    ( checkpointMinAda + registrationBond
-                    , [mkBasicTxOut (keyAddress hunter) (inject (Coin freezeBond))]
-                    , 2
-                    )
-                ConvictFromFrozen ->
-                    (checkpointMinAda + registrationBond, [], 0)
+        protected = checkpointMinAda + registrationBond + freezeBond
         convictorOutputIndex = 1
         sourceCoin = unCoin (snd (checkpointUtxo input) ^. coinTxOutL)
-        surplus = sourceCoin - protected - if null hunterPayouts then 0 else freezeBond
+        surplus = sourceCoin - protected
         convictorOut =
             mkBasicTxOut
                 (keyAddress convictor)
@@ -3618,7 +2374,7 @@ buildConvictStoryTxWith budgets env checkpointRef enforcementRef reservation inp
             mkBasicTxOut
                 (envOwner env)
                 (addLovelace (surplus - scriptFee) (feeOut ^. valueTxOutL))
-        outputs = refundOut : convictorOut : hunterPayouts <> [changeOut]
+        outputs = [refundOut, convictorOut, changeOut]
         observerRedeemer =
             ledgerData
                 ( convictObserverRedeemerData
@@ -3657,7 +2413,6 @@ buildConvictStoryTxWith budgets env checkpointRef enforcementRef reservation inp
                                 ( convictSpendRedeemerData
                                     convictor
                                     convictorOutputIndex
-                                    hunterOutputIndex
                                 )
                             , Map.findWithDefault
                                 (ExUnits 2_000_000 1_200_000_000)
@@ -3751,12 +2506,11 @@ rejectConvictEvidence ::
     (TxIn, TxOut ConwayEra) ->
     (TxIn, TxOut ConwayEra) ->
     CheckpointInput ->
-    ConvictSource ->
     ByteString ->
     String ->
     EntitledEnforcementPlan ->
     IO ()
-rejectConvictEvidence env checkpointRef enforcementRef input source convictor label plan = do
+rejectConvictEvidence env checkpointRef enforcementRef input convictor label plan = do
     (reservation, resolved) <- liveReservation env label plan
     validity <- entitledSettlementValidity env label resolved
     payeeKey <- beneficiarySignKey label (eepBountyPayee plan)
@@ -3769,7 +2523,6 @@ rejectConvictEvidence env checkpointRef enforcementRef input source convictor la
                 enforcementRef
                 reservation
                 input
-                source
                 convictor
                 plan
                 validity
@@ -3832,11 +2585,10 @@ submitTwoPassConvict ::
     (TxIn, TxOut ConwayEra) ->
     (TxIn, TxOut ConwayEra) ->
     CheckpointInput ->
-    ConvictSource ->
     ByteString ->
     EntitledEnforcementPlan ->
     IO TxId
-submitTwoPassConvict env label checkpointRef enforcementRef input source convictor plan = do
+submitTwoPassConvict env label checkpointRef enforcementRef input convictor plan = do
     (reservation, resolved) <- liveReservation env label plan
     validity <- entitledSettlementValidity env label resolved
     payeeKey <- beneficiarySignKey label (eepBountyPayee plan)
@@ -3850,7 +2602,6 @@ submitTwoPassConvict env label checkpointRef enforcementRef input source convict
                 enforcementRef
                 reservation
                 input
-                source
                 convictor
                 plan
                 validity
@@ -3869,7 +2620,6 @@ submitTwoPassConvict env label checkpointRef enforcementRef input source convict
                 enforcementRef
                 reservation
                 input
-                source
                 convictor
                 plan
                 validity
@@ -3913,186 +2663,6 @@ submitTwoPassConvict env label checkpointRef enforcementRef input source convict
             <> "; observed="
             <> show finalUnits
             <> "; declared="
-            <> show finalBudgets
-        )
-    result <-
-        withinSecs 60 ("submit unchanged " <> label) $
-            submitTx (envSubmitter env) signedFinal
-    case result of
-        Submitted txId -> pure txId
-        Rejected reason -> fail (label <> " rejected: " <> B8.unpack reason)
-
-buildClaimStoryTxWith ::
-    Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
-    CheckpointEnv ->
-    (TxIn, TxOut ConwayEra) ->
-    CheckpointInput ->
-    ByteString ->
-    ValidityPlan ->
-    IO
-        ( ConwayTx
-        , Set.Set (ConwayPlutusPurpose AsIx ConwayEra)
-        )
-buildClaimStoryTxWith budgets env checkpointRef input payoutHunter validity = do
-    params <-
-        withinSecs 30 "query ClaimFreeze protocol parameters" $
-            queryProtocolParams (envProvider env)
-    wallet <-
-        withinSecs 30 "query ClaimFreeze wallet" $
-            queryUTxOs (envProvider env) (envOwner env)
-    (feeUtxo, collateralUtxo) <-
-        pickDisjoint wallet [stateIn, fst checkpointRef]
-    let (feeIn, feeOut) = feeUtxo
-        collateralIn = fst collateralUtxo
-        allInputs = Set.fromList [stateIn, feeIn]
-        stateIndex = spendingIndex stateIn allInputs
-        spendPurpose = ConwaySpending (AsIx stateIndex)
-        expected = Set.singleton spendPurpose
-        payoutOut =
-            mkBasicTxOut
-                (keyAddress payoutHunter)
-                (inject (Coin freezeBond))
-        stateOut =
-            mkStateOutput
-                env
-                Frozen
-                ( addLovelace
-                    (-freezeBond)
-                    (snd (checkpointUtxo input) ^. valueTxOutL)
-                )
-                (asPlcData (V1 (checkpointDatum input)))
-        changeOut =
-            mkBasicTxOut
-                (envOwner env)
-                (addLovelace (-scriptFee) (feeOut ^. valueTxOutL))
-        redeemers =
-            Redeemers $
-                Map.singleton
-                    spendPurpose
-                    ( ledgerData (claimFreezeSpendRedeemerData 0)
-                    , Map.findWithDefault
-                        advanceSpendExUnits
-                        spendPurpose
-                        budgets
-                    )
-        body =
-            mkBasicTxBody
-                & inputsTxBodyL .~ allInputs
-                & outputsTxBodyL
-                    .~ StrictSeq.fromList [payoutOut, stateOut, changeOut]
-                & feeTxBodyL .~ Coin scriptFee
-                & collateralInputsTxBodyL .~ Set.singleton collateralIn
-                & referenceInputsTxBodyL .~ Set.singleton (fst checkpointRef)
-                & vldtTxBodyL
-                    .~ ValidityInterval
-                        (SJust (lowerSlot validity))
-                        (SJust (upperSlot validity))
-                & scriptIntegrityHashTxBodyL
-                    .~ computeScriptIntegrity
-                        (Set.singleton PlutusV3)
-                        params
-                        redeemers
-                        (TxDats mempty)
-    pure
-        ( mkBasicTx body
-            & witsTxL . rdmrsTxWitsL .~ redeemers
-        , expected
-        )
-  where
-    stateIn = fst (checkpointUtxo input)
-
-rejectClaim ::
-    CheckpointEnv ->
-    (TxIn, TxOut ConwayEra) ->
-    CheckpointInput ->
-    ByteString ->
-    ValidityPlan ->
-    String ->
-    IO ()
-rejectClaim env checkpointRef input payoutHunter validity label = do
-    (candidate, _) <-
-        withinSecs 90 (label <> ": build applied candidate") $
-            buildClaimStoryTxWith
-                Map.empty
-                env
-                checkpointRef
-                input
-                payoutHunter
-                validity
-    _ <- expectProductionScriptRejection env label candidate
-    pure ()
-
-submitTwoPassClaim ::
-    CheckpointEnv ->
-    String ->
-    (TxIn, TxOut ConwayEra) ->
-    CheckpointInput ->
-    ByteString ->
-    ValidityPlan ->
-    IO TxId
-submitTwoPassClaim env label checkpointRef input hunter validity = do
-    (discovery, expected) <-
-        withinSecs 90 (label <> ": build discovery binding") $
-            buildClaimStoryTxWith
-                Map.empty
-                env
-                checkpointRef
-                input
-                hunter
-                validity
-    discoveryObserved <-
-        withinSecs 120 (label <> ": evaluate discovery binding") $
-            evaluateTx (envProvider env) (addKeyWitness genesisSignKey discovery)
-    discoveryUnits <-
-        requireExactAllRight (label <> ": discovery") expected discoveryObserved
-    let finalBudgets = Map.map deterministicMargin discoveryUnits
-    (final, finalExpected) <-
-        withinSecs 90 (label <> ": rebuild final binding") $
-            buildClaimStoryTxWith
-                finalBudgets
-                env
-                checkpointRef
-                input
-                hunter
-                validity
-    unless (finalExpected == expected) $
-        fail (label <> ": final purpose set changed after budget binding")
-    let signedFinal = addKeyWitness genesisSignKey final
-        finalBytes = serialize (eraProtVerLow @ConwayEra) signedFinal
-    finalObserved <-
-        withinSecs 120 (label <> ": evaluate final binding") $
-            evaluateTx (envProvider env) signedFinal
-    finalUnits <-
-        requireExactAllRight (label <> ": final") expected finalObserved
-    mapM_
-        ( \(purpose, observed) ->
-            let declared = Map.findWithDefault (ExUnits 0 0) purpose finalBudgets
-             in unless (withinDeclared observed declared) $
-                    fail
-                        ( label
-                            <> ": observed units exceed final declaration for "
-                            <> show purpose
-                        )
-        )
-        (Map.toList finalUnits)
-    params <-
-        withinSecs 30 (label <> ": query final maximum") $
-            queryProtocolParams (envProvider env)
-    let aggregate = foldr addExUnits (ExUnits 0 0) (Map.elems finalBudgets)
-        maximumUnits = params ^. ppMaxTxExUnitsL
-    unless (withinDeclared aggregate maximumUnits) $
-        fail
-            ( label
-                <> ": aggregate declared exunits exceed ppMaxTxExUnits: "
-                <> show aggregate
-            )
-    dbg
-        ( label
-            <> ": two-pass final bytes="
-            <> show (BSL.length finalBytes)
-            <> " observed="
-            <> show finalUnits
-            <> " declared="
             <> show finalBudgets
         )
     result <-
@@ -4326,47 +2896,14 @@ stageCheckpointInput env datum = do
         "manual ACTIVE checkpoint input has no production token lineage; only Advance rejection is asserted"
     pure CheckpointInput{checkpointUtxo = utxo, checkpointDatum = datum}
 
-{- | The split checkpoint family's arm.  #254 S254-E: the redeemer now names
-the matured reservation entitling this hunter, so the caller must supply the
-reveal that a resolved commitment produced.
--}
-buildArmTx ::
-    CheckpointEnv ->
-    CheckpointInput ->
-    EnforcementEvidence ->
-    ByteString ->
-    BountyRevealV1 ->
-    ValidityPlan ->
-    IO ConwayTx
-buildArmTx env input evidence hunter reveal validity =
-    buildCheckpointSpend
-        env
-        input
-        (freezeRedeemerData evidence hunter reveal)
-        validity
-        [ mkStateOutput
-            env
-            Armed
-            (snd (checkpointUtxo input) ^. valueTxOutL)
-            ( asPlcData
-                ArmedV2
-                    { adCheckpoint = checkpointDatum input
-                    , adHunterPkh = hunter
-                    , adDeadline = upperPosixMs validity + freezeWindow
-                    }
-            )
-        ]
-        0
-
 buildAdvanceTx ::
     CheckpointEnv ->
     CheckpointInput ->
     CheckpointDatumV1 ->
     AdvanceEvidence ->
     ValidityPlan ->
-    Bool ->
     IO ConwayTx
-buildAdvanceTx env input successor evidence validity repostBond =
+buildAdvanceTx env input successor evidence validity =
     buildCheckpointSpend
         env
         input
@@ -4375,45 +2912,10 @@ buildAdvanceTx env input successor evidence validity repostBond =
         [ mkStateOutput
             env
             Active
-            (addLovelace (if repostBond then freezeBond else 0) inputValue)
+            (snd (checkpointUtxo input) ^. valueTxOutL)
             (asPlcData (V1 successor))
         ]
-        (if repostBond then freezeBond else 0)
-  where
-    inputValue = snd (checkpointUtxo input) ^. valueTxOutL
-
-buildClaimTx ::
-    CheckpointEnv ->
-    CheckpointInput ->
-    ByteString ->
-    ValidityPlan ->
-    IO ConwayTx
-buildClaimTx env input hunter validity =
-    buildCheckpointSpend
-        env
-        input
-        (claimRedeemerData 0)
-        validity
-        [ mkBasicTxOut (keyAddress hunter) (inject (Coin freezeBond))
-        , mkStateOutput
-            env
-            Frozen
-            (addLovelace (-freezeBond) inputValue)
-            (asPlcData (V1 (checkpointDatum input)))
-        ]
         0
-  where
-    inputValue = snd (checkpointUtxo input) ^. valueTxOutL
-
-buildThawTx ::
-    CheckpointEnv ->
-    CheckpointInput ->
-    CheckpointDatumV1 ->
-    AdvanceEvidence ->
-    ValidityPlan ->
-    IO ConwayTx
-buildThawTx env input successor evidence validity =
-    buildAdvanceTx env input successor evidence validity True
 
 buildCheckpointSpend ::
     CheckpointEnv ->
@@ -4482,58 +2984,6 @@ keyAddress bytes =
         )
         StakeRefNull
 
-responseBoundaryCases :: CheckpointEnv -> IO BoundaryCases
-responseBoundaryCases env = withinSecs 120 "checkpoint deadline boundary conversion" $ do
-    snapshot <- queryLedgerSnapshot (envProvider env)
-    let SlotNo tip = ledgerTipSlot snapshot
-        armLowerSlot = SlotNo (if tip > 2 then tip - 2 else 0)
-        armUpperSlot = SlotNo (tip + 5)
-    armLowerMs <- slotStartPosixMs env armLowerSlot
-    armUpperMs <- slotStartPosixMs env armUpperSlot
-    nextSlotMs <- slotStartPosixMs env (SlotNo (tip + 6))
-    let slotLengthMs = nextSlotMs - armUpperMs
-        deadline = armUpperMs + freezeWindow
-    unless (slotLengthMs > 0) (fail "node reported a non-positive slot length")
-    beforeUpper <- posixMsToSlot (envProvider env) (deadline - 1)
-    exact <- posixMsToSlot (envProvider env) deadline
-    afterLower <- posixMsCeilSlot (envProvider env) (deadline + 1)
-    beforeMs <- slotStartPosixMs env beforeUpper
-    exactMs <- slotStartPosixMs env exact
-    afterMs <- slotStartPosixMs env afterLower
-    let mkPlan lo loMs hi hiMs =
-            ValidityPlan
-                { lowerSlot = lo
-                , upperSlot = hi
-                , lowerPosixMs = loMs
-                , upperPosixMs = hiMs
-                }
-        armPlan = mkPlan armLowerSlot armLowerMs armUpperSlot armUpperMs
-        beforePlan = mkPlan armLowerSlot armLowerMs beforeUpper beforeMs
-        exactPlan = mkPlan exact exactMs (SlotNo (unSlotNo exact + 20)) (exactMs + 20 * slotLengthMs)
-        afterPlan = mkPlan afterLower afterMs (SlotNo (unSlotNo afterLower + 20)) (afterMs + 20 * slotLengthMs)
-    pure
-        BoundaryCases
-            { armUpper = armPlan
-            , hardDeadlineMs = deadline
-            , justBeforeResponse = beforePlan
-            , exactDeadlineClaim = exactPlan
-            , afterDeadlineClaim = afterPlan
-            }
-
-boundaryCasesCoverDeadline :: BoundaryCases -> Bool
-boundaryCasesCoverDeadline cases =
-    responseBeforeDeadline
-        (hardDeadlineMs cases)
-        (Just (Finite (upperPosixMs (justBeforeResponse cases)) Inclusive))
-        && claimAtOrAfterDeadline
-            (hardDeadlineMs cases)
-            (Just (Finite (lowerPosixMs (exactDeadlineClaim cases)) Inclusive))
-        && claimAtOrAfterDeadline
-            (hardDeadlineMs cases)
-            (Just (Finite (lowerPosixMs (afterDeadlineClaim cases)) Inclusive))
-        && lowerPosixMs (exactDeadlineClaim cases) == hardDeadlineMs cases
-        && lowerPosixMs (afterDeadlineClaim cases) > hardDeadlineMs cases
-
 currentValidity :: CheckpointEnv -> IO ValidityPlan
 currentValidity env = do
     snapshot <-
@@ -4550,40 +3000,6 @@ currentValidity env = do
             , lowerPosixMs = lowerMs
             , upperPosixMs = upperMs
             }
-
-{- | Poll the node until it has reached a slot whose start is at or after the
-stored on-chain deadline.  The wait is bounded and every retry re-queries the
-node; it is deliberately not a wall-clock sleep.
--}
-awaitClaimValidity :: CheckpointEnv -> Integer -> IO ValidityPlan
-awaitClaimValidity env deadline = go pollAttempts
-  where
-    go remaining
-        | remaining <= 0 = fail "node did not reach the Claim deadline before polling timed out"
-        | otherwise = do
-            snapshot <-
-                withinSecs 30 "query node Claim tip" $
-                    queryLedgerSnapshot (envProvider env)
-            let lower = ledgerTipSlot snapshot
-            lowerMs <- slotStartPosixMs env lower
-            if lowerMs < deadline
-                then threadDelay 1_000_000 >> go (remaining - 1)
-                else do
-                    let upper = SlotNo (unSlotNo lower + 20)
-                    upperMs <- slotStartPosixMs env upper
-                    unless
-                        ( claimAtOrAfterDeadline
-                            deadline
-                            (Just (Finite lowerMs Inclusive))
-                        )
-                        (fail "node-derived Claim lower bound is before the stored deadline")
-                    pure
-                        ValidityPlan
-                            { lowerSlot = lower
-                            , upperSlot = upper
-                            , lowerPosixMs = lowerMs
-                            , upperPosixMs = upperMs
-                            }
 
 assertActiveCheckpoint ::
     CheckpointEnv -> RegistrationFixture -> (TxIn, TxOut ConwayEra) -> IO ()
@@ -4602,96 +3018,22 @@ assertActiveCheckpoint env fixture (_, output) = do
             | datum == rfDatum fixture -> pure ()
         _ -> fail "registered checkpoint output does not carry the production V1 datum lineage"
 
-assertArmedCheckpoint ::
-    CheckpointEnv ->
-    CheckpointInput ->
-    ByteString ->
-    Integer ->
-    ValidityPlan ->
-    (TxIn, TxOut ConwayEra) ->
-    IO ()
-assertArmedCheckpoint env input hunter deadline armValidity (_, output) = do
-    unless
-        (output ^. addrTxOutL == roleAddress env Armed)
-        (fail "Arm did not create an ARMED role-0x02 output")
-    unless
-        (output ^. valueTxOutL == snd (checkpointUtxo input) ^. valueTxOutL)
-        (fail "Arm did not preserve the registered token and reserve custody")
-    unless
-        (deadline == upperPosixMs armValidity + freezeWindow)
-        (fail "Arm deadline is not arm upper bound plus W_freeze")
-    -- #254 S254-E: an entitled arm writes the lean successor ArmedV2.  The
-    -- constructor is asserted exactly, not read through the shared
-    -- accessors, because "which version did the validator write" is the fact
-    -- this row exists to establish; the accessors are then used for the three
-    -- carried fields, which are version-independent by design.
-    case extractDatum output of
-        Just armed@ArmedV2{}
-            | armedCheckpoint armed == checkpointDatum input
-                && armedHunter armed == hunter
-                && armedDeadline armed == deadline ->
-                pure ()
-        Just ArmedV1{} ->
-            fail "Arm produced the legacy ArmedV1 successor, not ArmedV2"
-        _ -> fail "Arm output does not carry the exact ArmedV2 checkpoint/hunter/deadline wrapper"
-
-assertClaimSettlement ::
-    CheckpointEnv ->
-    CheckpointDatumV1 ->
-    ByteString ->
-    (TxIn, TxOut ConwayEra) ->
-    TxId ->
-    IO (TxIn, TxOut ConwayEra)
-assertClaimSettlement env expectedDatum hunter armed claimTxId = do
-    payout <-
-        pollOutput
-            (envProvider env)
-            claimTxId
-            [0, 1, 2]
-            (isExactHunterPayout hunter)
-            >>= requireJust "Claim hunter payout did not settle"
-    frozen <-
-        pollOutput
-            (envProvider env)
-            claimTxId
-            [0, 1, 2]
-            (isFrozenCheckpoint env expectedDatum)
-            >>= requireJust "Claim FROZEN checkpoint output did not settle"
-    unless
-        (isExactHunterPayout hunter (snd payout))
-        (fail "Claim hunter payout is not exactly B at the named hunter key")
-    unless
-        (snd frozen ^. valueTxOutL == addLovelace (-freezeBond) (snd armed ^. valueTxOutL))
-        (fail "Claim FROZEN checkpoint does not retain the remaining reserve and AID token")
-    pure frozen
-
 assertConvictSettlement ::
     CheckpointEnv ->
     String ->
     CheckpointInput ->
-    ConvictSource ->
     ByteString ->
     TxId ->
     IO ()
-assertConvictSettlement env row input source convictor convictTxId = do
-    let outputIndexes =
-            case source of
-                ConvictFromArmed _ -> [0, 1, 2, 3]
-                _ -> [0, 1, 2]
+assertConvictSettlement env row input convictor convictTxId = do
+    let outputIndexes = [0, 1, 2]
         outputRefs =
             Set.fromList
                 [ TxIn convictTxId (TxIx (fromIntegral outputIndex))
                 | outputIndex <- outputIndexes
                 ]
         aidName = deriveAidAssetName (cdCesrAid (checkpointDatum input))
-        protected =
-            case source of
-                ConvictFromActive ->
-                    checkpointMinAda + registrationBond + freezeBond
-                ConvictFromArmed _ ->
-                    checkpointMinAda + registrationBond
-                ConvictFromFrozen ->
-                    checkpointMinAda + registrationBond
+        protected = checkpointMinAda + registrationBond + freezeBond
     _ <-
         pollOutput
             (envProvider env)
@@ -4739,24 +3081,10 @@ assertConvictSettlement env row input source convictor convictTxId = do
     unless
         (unCoin (convictorOut ^. coinTxOutL) == protected)
         (fail ("Convict " <> row <> " protected payout amount is wrong"))
-    case source of
-        ConvictFromArmed hunter -> do
-            hunterOut <-
-                requireJust
-                    "Convict ARMED output index 2 is absent"
-                    (Map.lookup (TxIn convictTxId (TxIx 2)) outputs)
-            unless
-                (isExactHunterPayout hunter hunterOut)
-                (fail "Convict ARMED output 2 is not the exact hunter payout B")
-        _ -> pure ()
     when
         (any (hasAsset (envCheckpointPolicy env) aidName) (Map.elems outputs))
         (fail ("Convict " <> row <> " left the burned AID token in an output"))
-    let roleAddresses =
-            [ roleAddress env Active
-            , roleAddress env Armed
-            , roleAddress env Frozen
-            ]
+    let roleAddresses = [roleAddress env Active]
     unless
         (all ((`notElem` roleAddresses) . (^. addrTxOutL)) (Map.elems outputs))
         (fail ("Convict " <> row <> " created a checkpoint-role successor"))
@@ -4776,19 +3104,8 @@ assertConvictSettlement env row input source convictor convictTxId = do
             <> show (fst (checkpointUtxo input))
             <> "; convictor-output=1:"
             <> show protected
-            <> case source of
-                ConvictFromArmed hunter ->
-                    "; hunter-output=2:"
-                        <> show freezeBond
-                        <> "@"
-                        <> show hunter
-                _ -> ""
             <> "; aid-token-absent=true; checkpoint-successor-absent=true"
         )
-
-isExactHunterPayout :: ByteString -> TxOut ConwayEra -> Bool
-isExactHunterPayout hunter =
-    isExactKeyPayout hunter freezeBond
 
 isExactKeyPayout :: ByteString -> Integer -> TxOut ConwayEra -> Bool
 isExactKeyPayout recipient amount output =
@@ -4796,14 +3113,6 @@ isExactKeyPayout recipient amount output =
         && case output ^. valueTxOutL of
             MaryValue (Coin lovelace) (MultiAsset assets) ->
                 lovelace == amount && Map.null assets
-
-isFrozenCheckpoint :: CheckpointEnv -> CheckpointDatumV1 -> TxOut ConwayEra -> Bool
-isFrozenCheckpoint env expectedDatum output =
-    output ^. addrTxOutL == roleAddress env Frozen
-        && hasAsset (envCheckpointPolicy env) (deriveAidAssetName (cdCesrAid expectedDatum)) output
-        && case extractDatum output of
-            Just (V1 datum) -> datum == expectedDatum
-            _ -> False
 
 slotStartPosixMs :: CheckpointEnv -> SlotNo -> IO Integer
 slotStartPosixMs env target = do
@@ -4875,18 +3184,6 @@ registerRedeemerData = Constr 0 []
 advanceRedeemerData :: AdvanceEvidence -> PLC.Data
 advanceRedeemerData evidence = Constr 0 [advanceEvidenceData evidence]
 
-{- | The split checkpoint family opens Freeze at constructor one.  #254
-S254-E added the third field: the reveal that names the matured reservation
-entitling this hunter.  The arm cannot be posted without it.
--}
-freezeRedeemerData ::
-    EnforcementEvidence -> ByteString -> BountyRevealV1 -> PLC.Data
-freezeRedeemerData evidence hunter reveal =
-    Constr 1 [enforcementEvidenceData evidence, B hunter, asPlcData reveal]
-
-claimRedeemerData :: Integer -> PLC.Data
-claimRedeemerData outputIndex = Constr 2 [I outputIndex]
-
 advanceEvidenceData :: AdvanceEvidence -> PLC.Data
 advanceEvidenceData AdvanceEvidence{..} =
     Constr
@@ -4907,16 +3204,6 @@ advanceEvidenceData AdvanceEvidence{..} =
         , signatureListData aeCtrlSigs
         , signatureListData aeWitReceipts
         ]
-
-{- | The Aiken @EnforcementEvidence@ record.
-
-#254 S254-E made these exact bytes the preimage of the canonical enforcement
-evidence digest, so the field order now lives once, with the type, in
-@Cardano.KERI.AID.Checkpoint.Enforcement@.  A local copy here would be a
-second thing to keep in step with a hash.
--}
-enforcementEvidenceData :: EnforcementEvidence -> PLC.Data
-enforcementEvidenceData = asPlcData
 
 intListData :: (Integral a) => [a] -> PLC.Data
 intListData = List . map (I . fromIntegral)
@@ -5100,25 +3387,10 @@ findSubsequence needle haystack =
         (\offset -> needle `BS.isPrefixOf` BS.drop offset haystack)
         [0 .. BS.length haystack - BS.length needle]
 
-{- | The reveal a split-family Arm would need, and cannot have here.
-
-@deriveV1Scripts@ publishes the COMBINED @checkpoint_register@, not the split
-@checkpoint@ family, so this deployment has no split-family checkpoint for a
-reservation to be scoped to.  #280 wires the live reservation lifecycle for the
-family that IS deployed; this compile-only row keeps failing closed with the
-exact missing precondition rather than synthesizing a reveal.
--}
-requireSplitFamilyReveal :: IO BountyRevealV1
-requireSplitFamilyReveal =
-    fail
-        "the split checkpoint family is not part of this deployment, so a\
-        \ split-family Arm has no matured #271 reservation to reveal; #280\
-        \ wires the combined register's live entitlement instead"
-
 {- | #280: a story beneficiary the harness can actually witness.
 
 Both @validate_commitment_open@ and @validate_commitment_reveal@ require
-@list.has(tx.extra_signatories, payee_pkh)@, so a Freeze hunter or a convictor
+@list.has(tx.extra_signatories, payee_pkh)@, so a convictor
 is a real Ed25519 key pair here rather than a constant byte pattern: without
 the signing key no reservation could be opened over it and none could be
 revealed.
@@ -5138,17 +3410,13 @@ beneficiaryFromSeed tag =
   where
     key = mkSignKey (BS.replicate 32 tag)
 
--- | The Freeze hunter every live enforcement story pays.
-storyHunter :: Beneficiary
-storyHunter = beneficiaryFromSeed 0x42
-
--- | The convictor, deliberately a different key from 'storyHunter'.
+-- | The convictor every live enforcement story pays.
 storyConvictor :: Beneficiary
 storyConvictor = beneficiaryFromSeed 0x51
 
 beneficiarySignKey :: String -> ByteString -> IO (SignKeyDSIGN Ed25519DSIGN)
 beneficiarySignKey label payee =
-    case filter ((== payee) . beneficiaryPkh) [storyHunter, storyConvictor] of
+    case filter ((== payee) . beneficiaryPkh) [storyConvictor] of
         [beneficiary] -> pure (beneficiaryKey beneficiary)
         _ ->
             fail
@@ -5158,8 +3426,8 @@ beneficiarySignKey label payee =
                 )
 
 {- | The exact output index every entitled settlement refunds the deposit at.
-Fixing it at zero lets one reveal plan serve Freeze and all three Convict
-sources without the refund index becoming a per-shape argument of the reveal.
+Fixing it at zero keeps the refund index from becoming a per-shape argument
+of the reveal.
 -}
 settlementRefundIndex :: Integer
 settlementRefundIndex = 0
@@ -5168,26 +3436,13 @@ settlementRefundIndex = 0
 commitmentExUnits :: ExUnits
 commitmentExUnits = ExUnits 2_000_000 1_500_000_000
 
-{- | Declared allowance for an observer leg whose units cannot be discovered.
-
-A negative row's enforcement observer returns an error rather than a cost, so
-its budget cannot come from the evaluator.  Five legs at the generic
-'scriptExUnits' ceiling sum to thirty million memory units and the node rejects
-the transaction at Phase-1 before any script runs, reporting a budgeting
-mistake as an enforcement rejection.  This bounded allowance keeps the
-aggregate inside @ppMaxTxExUnits@ and still far exceeds the ~3.2M the leg costs
-when it succeeds.
--}
-rejectingObserverExUnits :: ExUnits
-rejectingObserverExUnits = ExUnits 8_000_000 5_000_000_000
-
 -- | The blueprint title of the #271 commitment program.
 commitmentValidatorTitle :: Text
 commitmentValidatorTitle = "bounty_commitment.bounty_commitment.spend"
 
 {- | The two paired observer withdrawal accounts and their reward purposes.
 
-Shared by the Freeze and Convict builders and by the negative rows, so a row
+Shared by the Convict builder and by the negative rows, so a row
 asserting "the enforcement observer is the leg that rejected this evidence"
 names the very purpose the builder declared, rather than a re-derivation that
 could drift away from it.
@@ -5396,8 +3651,7 @@ entitledSettlementValidity env label resolved = do
     lowerMs <- slotStartPosixMs env lower
     -- Both conversions sit AT the tip and the endpoint is derived from the
     -- era's own slot length: 25 slots is inside the node's forecast but
-    -- outside the reduced search bracket above, and 'assertArmedCheckpoint'
-    -- re-reads the deadline the ledger computed from this endpoint.
+    -- outside the reduced search bracket above.
     nextMs <- slotStartPosixMs env (SlotNo (unSlotNo lower + 1))
     let slotLengthMs = nextMs - lowerMs
     unless (slotLengthMs > 0) $
@@ -5439,12 +3693,11 @@ openLiveReservation ::
     CheckpointEnv ->
     String ->
     (TxIn, TxOut ConwayEra) ->
-    BountyAction ->
     EnforcementEvidence ->
     ByteString ->
     ByteString ->
     IO ResolvedCommitment
-openLiveReservation env label checkpointInput action evidence payee nonce = do
+openLiveReservation env label checkpointInput evidence payee nonce = do
     commitmentRef <-
         requireJust
             "bounty_commitment reference was not deployed during setup"
@@ -5471,7 +3724,6 @@ openLiveReservation env label checkpointInput action evidence payee nonce = do
                 (declaredSlotRange opening)
                 (policyBytes (envCheckpointPolicy env))
                 (outputRefOf (fst checkpointInput))
-                action
                 (enforcementEvidenceDigest evidence)
                 payee
                 nonce
@@ -5553,14 +3805,13 @@ and no negative row fails on an entitlement mismatch it never meant to test.
 prepareLiveEntitlement ::
     CheckpointEnv ->
     (TxIn, TxOut ConwayEra) ->
-    BountyAction ->
     EnforcementEvidence ->
     ByteString ->
     ByteString ->
     IO EntitledEnforcementPlan
-prepareLiveEntitlement env checkpointInput action evidence payee nonce = do
+prepareLiveEntitlement env checkpointInput evidence payee nonce = do
     resolved <-
-        openLiveReservation env label checkpointInput action evidence payee nonce
+        openLiveReservation env label checkpointInput evidence payee nonce
     validity <- entitledSettlementValidity env label resolved
     plan <-
         either
@@ -5569,7 +3820,6 @@ prepareLiveEntitlement env checkpointInput action evidence payee nonce = do
             ( prepareEntitledEnforcement
                 (envCommitmentFamily env)
                 resolved
-                action
                 evidence
                 (outputRefOf (fst checkpointInput))
                 nonce
@@ -5587,4 +3837,4 @@ prepareLiveEntitlement env checkpointInput action evidence payee nonce = do
         )
     pure plan
   where
-    label = "live " <> show action
+    label = "live conviction"

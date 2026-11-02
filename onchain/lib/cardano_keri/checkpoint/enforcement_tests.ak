@@ -1,6 +1,6 @@
 //// Enforcement wire-binding and predicate parity tests (#116 Slice 2).
 ////
-//// Drives the EE0-EE9 binder and `convict_predicate`/`freeze_predicate` over
+//// Drives the EE0-EE9 binder and `convict_predicate` over
 //// generated vectors built from the same committed fixtures as the Haskell
 //// `EnforcementSpec`. Positives, wire mutations, distinct receipt quorum, and
 //// kt-only conflict must agree one-for-one across both languages.
@@ -17,18 +17,12 @@ use cardano_keri/checkpoint/enforcement.{
   EE1EventTypeMismatch, EE2AidMismatch, EE3SequenceMismatch, EE4SaidMismatch,
   EE5RevealedKeysMismatch, EE6CurThresholdMismatch, EE7NextKeysMismatch,
   EE8NextThresholdMismatch, EE9ToadMismatch, EnforcementBindingInvalid,
-  EnforcementBindingValid, EnforcementEvidence, EventEvidence, FoDatumChanged,
-  FoNotFrozen, FreezeInvalid, FreezeOutputInvalid, FreezeOutputValid,
-  FreezeValid, Frozen, FzInsufficientReceipts, FzNotAhead, FzUncommittedReveal,
-  Tombstone, TombstoneOutput, TombstoneV1, bind_enforcement_evidence,
-  convict_output_predicate, convict_predicate, freeze_output_predicate,
-  freeze_predicate,
+  EnforcementBindingValid, EnforcementEvidence, EventEvidence, Tombstone,
+  TombstoneOutput, TombstoneV1, bind_enforcement_evidence,
+  convict_output_predicate, convict_predicate,
 }
 use cardano_keri/checkpoint/enforcement_vectors as vec
 use cardano_keri/checkpoint/threshold.{Unweighted}
-
-const zero32: ByteArray =
-  #"0000000000000000000000000000000000000000000000000000000000000000"
 
 const other32: ByteArray =
   #"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
@@ -44,21 +38,20 @@ test wire_binding_accepts_offset_bearing_fixtures() {
   ) == EnforcementBindingValid(vec.fork_convict_evidence) && bind_enforcement_evidence(
     vec.fork_witnessed_convict_tip.cesr_aid,
     vec.fork_witnessed_convict_wire,
-  ) == EnforcementBindingValid(vec.fork_witnessed_convict_evidence) && bind_enforcement_evidence(
-    vec.lag_freeze_tip.cesr_aid,
-    vec.lag_freeze_wire,
-  ) == EnforcementBindingValid(vec.lag_freeze_evidence)
+  ) == EnforcementBindingValid(vec.fork_witnessed_convict_evidence)
 }
 
 test ee0_rejects_empty_and_over_1024_event_bytes() {
   let empty = EnforcementEvidence { ..vec.fork_convict_wire, event_bytes: #"" }
   let oversized = EnforcementEvidence {
     ..vec.fork_convict_wire,
-    event_bytes: bytearray.concat(
-      vec.honest7_freeze_evidence.event_bytes,
-      vec.honest7_freeze_evidence.event_bytes,
+    event_bytes: list.foldr(
+      [1, 2, 3, 4, 5],
+      #"",
+      fn(_, acc) { bytearray.concat(acc, vec.fork_convict_wire.event_bytes) },
     ),
   }
+  expect bytearray.length(oversized.event_bytes) > 1024
   bind_enforcement_evidence(vec.fork_convict_tip.cesr_aid, empty) == EnforcementBindingInvalid(
     EE0EventBytesLength,
   ) && bind_enforcement_evidence(vec.fork_convict_tip.cesr_aid, oversized) == EnforcementBindingInvalid(
@@ -136,22 +129,6 @@ test honest2_convict_is_no_conflict() {
   )
 }
 
-test honest2_freezes() {
-  freeze_predicate(vec.honest2_freeze_tip, vec.honest2_freeze_evidence) == FreezeValid
-}
-
-test lag_freezes() {
-  freeze_predicate(vec.lag_freeze_tip, vec.lag_freeze_evidence) == FreezeValid
-}
-
-test honest7_freezes() {
-  freeze_predicate(vec.honest7_freeze_tip, vec.honest7_freeze_evidence) == FreezeValid
-}
-
-// ---------------------------------------------------------
-// Negatives (mutations of a base vector; no fixture edits)
-// ---------------------------------------------------------
-
 test f4_convict_seq_mismatch() {
   let evidence = EventEvidence {
     ..vec.fork_convict_evidence,
@@ -188,34 +165,6 @@ test f1_convict_quorum_unsatisfied() {
     CvQuorumUnsatisfied,
   )
 }
-
-test f10_freeze_not_ahead() {
-  let evidence = EventEvidence {
-    ..vec.honest2_freeze_evidence,
-    native_sn: vec.honest2_freeze_tip.native_sn,
-  }
-  freeze_predicate(vec.honest2_freeze_tip, evidence) == FreezeInvalid(
-    FzNotAhead,
-  )
-}
-
-test f9_freeze_uncommitted_reveal() {
-  let tip = CheckpointDatumV1 { ..vec.honest2_freeze_tip, next_keys: [zero32] }
-  freeze_predicate(tip, vec.honest2_freeze_evidence) == FreezeInvalid(
-    FzUncommittedReveal,
-  )
-}
-
-test f8_freeze_insufficient_receipts() {
-  let evidence = EventEvidence { ..vec.lag_freeze_evidence, wit_sigs: [] }
-  freeze_predicate(vec.lag_freeze_tip, evidence) == FreezeInvalid(
-    FzInsufficientReceipts,
-  )
-}
-
-// ---------------------------------------------------------
-// F2: some controller sigs verify, but below cur_threshold
-// ---------------------------------------------------------
 
 test f2_convict_quorum_below_threshold() {
   // honest_2key convict tip is a 2-of-2; keep only one verifying signature.
@@ -294,43 +243,6 @@ test f13_convict_output_wrong_role() {
   ) == ConvictOutputInvalid(CoNotTombstone)
 }
 
-// ---------------------------------------------------------
-// Freeze output shape (Freeze 4) + F12
-// ---------------------------------------------------------
-
-fn freeze_checkpoint(has_token: Bool, role, datum) -> ContinuingOutput {
-  ContinuingOutput { role, has_token, datum: CheckpointOutput(datum) }
-}
-
-test freeze_output_valid() {
-  freeze_output_predicate(
-    vec.lag_freeze_tip,
-    freeze_checkpoint(True, Frozen, vec.lag_freeze_tip),
-  ) == FreezeOutputValid
-}
-
-test f12_freeze_output_wrong_role() {
-  freeze_output_predicate(
-    vec.lag_freeze_tip,
-    freeze_checkpoint(True, Active, vec.lag_freeze_tip),
-  ) == FreezeOutputInvalid(FoNotFrozen)
-}
-
-test f12_freeze_output_mutated_datum() {
-  let mutated = CheckpointDatumV1 {
-    ..vec.lag_freeze_tip,
-    native_sn: vec.lag_freeze_tip.native_sn + 1,
-  }
-  freeze_output_predicate(
-    vec.lag_freeze_tip,
-    freeze_checkpoint(True, Frozen, mutated),
-  ) == FreezeOutputInvalid(FoDatumChanged)
-}
-
-// ---------------------------------------------------------
-// Slice 7 — anti-fork: witness receipts on convict evidence
-// ---------------------------------------------------------
-
 // A WITNESSED fork (witness double-receipts sn=1, diverging n) convicts.
 test fork_witnessed_convicts() {
   convict_predicate(
@@ -373,18 +285,6 @@ test duplicate_receipt_cannot_fake_convict_toad_two() {
     ),
   }
   convict_predicate(tip, evidence) == ConvictInvalid(CvInsufficientReceipts)
-}
-
-test duplicate_receipt_cannot_fake_freeze_toad_two() {
-  let tip = CheckpointDatumV1 { ..vec.lag_freeze_tip, toad: 2 }
-  let evidence = EventEvidence {
-    ..vec.lag_freeze_evidence,
-    wit_sigs: list.concat(
-      vec.lag_freeze_evidence.wit_sigs,
-      vec.lag_freeze_evidence.wit_sigs,
-    ),
-  }
-  freeze_predicate(tip, evidence) == FreezeInvalid(FzInsufficientReceipts)
 }
 
 // W4: `kt` is a forward-agreement axis, after attribution under tip.kt.

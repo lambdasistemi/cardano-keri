@@ -51,9 +51,6 @@ import Cardano.KERI.AID.Checkpoint.BountyCommitment (
     commitmentSchema,
     markerName,
  )
-import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatumV1 (..),
- )
 import Cardano.KERI.AID.Checkpoint.Enforcement (
     EnforcementEvidence (..),
  )
@@ -61,9 +58,6 @@ import Cardano.KERI.AID.Checkpoint.Entitlement (
     EnforcementProofV1 (..),
     enforcementEvidenceDigest,
     entitlementMatches,
- )
-import Cardano.KERI.AID.Checkpoint.FreezeBond (
-    ArmedDatum (..),
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
@@ -143,9 +137,6 @@ marker = markerName seedRef
 payee :: ByteString
 payee = BS.replicate 28 0x9a
 
-hunter :: ByteString
-hunter = BS.replicate 28 0x8b
-
 nonce :: ByteString
 nonce = BS.replicate 32 0x11
 
@@ -154,9 +145,6 @@ shortNonce = BS.replicate 31 0x11
 
 commitUpper :: Integer
 commitUpper = 1000
-
-deadline :: Integer
-deadline = 1500
 
 refundIndex :: Integer
 refundIndex = 1
@@ -169,7 +157,7 @@ scope =
         , bsNetwork = cpNetwork parameters
         , bsCheckpointPolicy = checkpointPolicy
         , bsCheckpointRef = checkpointRef
-        , bsAction = FreezeEntitlement
+        , bsAction = ConvictEntitlement
         , bsMarker = marker
         , bsCommitUpper = commitUpper
         , bsEligibleAfter = commitUpper + cpCommitMinAge parameters
@@ -256,20 +244,6 @@ proof =
         , epReveal = reveal
         }
 
-checkpointState :: CheckpointDatumV1
-checkpointState =
-    CheckpointDatumV1
-        { cdCesrAid = BS.replicate 32 0x01
-        , cdCurKeys = [verkey]
-        , cdCurThreshold = Unweighted 1
-        , cdNextKeys = [keyDigest]
-        , cdNextThreshold = Unweighted 1
-        , cdWitnesses = []
-        , cdToad = 0
-        , cdSeq = 1
-        , cdNativeSn = 1
-        }
-
 -- ---------------------------------------------------------
 -- Per-field evidence mutants
 -- ---------------------------------------------------------
@@ -320,7 +294,6 @@ verdictTag = \case
     EntitlementValid -> 0
     EntitlementInvalid EntitlementDigestWidth -> 1
     EntitlementInvalid EntitlementNonceWidth -> 2
-    EntitlementInvalid EntitlementAction -> 3
     EntitlementInvalid EntitlementCheckpoint -> 4
     EntitlementInvalid EntitlementMarker -> 5
     EntitlementInvalid EntitlementHash -> 6
@@ -335,25 +308,20 @@ vectors rather than to a row that could never fire.
 -}
 verdictRows :: [(String, EntitlementVerdict)]
 verdictRows =
-    [ ("honest", matches commitment checkpointRef FreezeEntitlement evidence nonce)
+    [ ("honest", matches commitment checkpointRef evidence nonce)
     ,
         ( "short_nonce"
-        , matches commitment checkpointRef FreezeEntitlement evidence shortNonce
-        )
-    ,
-        ( "convict_action"
-        , matches commitment checkpointRef ConvictEntitlement evidence nonce
+        , matches commitment checkpointRef evidence shortNonce
         )
     ,
         ( "other_checkpoint"
-        , matches commitment otherCheckpointRef FreezeEntitlement evidence nonce
+        , matches commitment otherCheckpointRef evidence nonce
         )
     ,
         ( "marker_left_scope"
         , matches
             commitment{bcMarker = markerName otherSeedRef}
             checkpointRef
-            FreezeEntitlement
             evidence
             nonce
         )
@@ -362,7 +330,6 @@ verdictRows =
         , matches
             commitment
             checkpointRef
-            FreezeEntitlement
             evidence{eneEventBytes = flipLast eventBytes}
             nonce
         )
@@ -371,7 +338,6 @@ verdictRows =
         , matches
             commitment
             checkpointRef
-            FreezeEntitlement
             evidence
             (flipLast nonce)
         )
@@ -380,7 +346,6 @@ verdictRows =
         , matches
             commitment{bcPayeePkh = BS.replicate 28 0xaa}
             checkpointRef
-            FreezeEntitlement
             evidence
             nonce
         )
@@ -430,7 +395,6 @@ output
               , intConst "eligible_after" (bsEligibleAfter scope)
               , intConst "expires_at" (bsExpiresAt scope)
               , intConst "refund_index" refundIndex
-              , intConst "deadline" deadline
               , intConst "seed_index" (orOutputIndex seedRef)
               , intConst "other_seed_index" (orOutputIndex otherSeedRef)
               , intConst "commitment_index" (orOutputIndex commitmentRef)
@@ -442,7 +406,6 @@ output
               , byteConst "commitment_policy" commitmentPolicy
               , byteConst "checkpoint_policy" checkpointPolicy
               , byteConst "payee" payee
-              , byteConst "hunter" hunter
               , byteConst "nonce" nonce
               , byteConst "short_nonce" shortNonce
               , byteConst "marker" marker
@@ -467,8 +430,6 @@ output
               , byteConst "golden_reveal" (canonicalCbor reveal)
               , byteConst "golden_commitment_parameters" (canonicalCbor parameters)
               , byteConst "golden_commitment_family" (canonicalCbor family)
-              , byteConst "golden_armed_v1" (canonicalCbor armedV1)
-              , byteConst "golden_armed_v2" (canonicalCbor armedV2)
               ]
                 <> map mutantConst mutantDigests
                 <> map verdictConst verdictRows
@@ -477,12 +438,6 @@ output
     head' (row : _) = row
     head' [] = error "GenBountyEntitlementVectors: no verdict rows"
     digests = evidenceDigest : map snd mutantDigests
-
-armedV1 :: ArmedDatum
-armedV1 = ArmedV1 checkpointState hunter deadline
-
-armedV2 :: ArmedDatum
-armedV2 = ArmedV2 checkpointState hunter deadline
 
 mutantDigests :: [(String, ByteString)]
 mutantDigests =

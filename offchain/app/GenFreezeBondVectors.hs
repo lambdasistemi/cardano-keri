@@ -1,10 +1,10 @@
 {- |
 Module      : Main
-Description : Haskell-to-Aiken parity vectors for #116 freeze-bond R1
+Description : Haskell-to-Aiken parity vectors for the freeze bond and roles
 
-Generates every committed freeze-bond wire and pure-verdict constant from the
-Haskell model. The emitted Aiken module is generated-only and checked for drift
-by @just check-freeze-bond-vectors@.
+Generates every committed freeze-bond constant and the historical checkpoint
+and tombstone bytes from the Haskell model. The emitted Aiken module is
+generated-only and checked for drift by @just check-freeze-bond-vectors@.
 -}
 module Main (main) where
 
@@ -17,16 +17,9 @@ import Cardano.KERI.AID.Checkpoint.Enforcement (
     TombstoneV1 (..),
  )
 import Cardano.KERI.AID.Checkpoint.FreezeBond (
-    ArmedDatum (..),
-    Inclusivity (..),
-    RawBound (..),
     Role (..),
-    armDeadline,
-    claimAtOrAfterDeadline,
     freezeBondFloor,
     freezeBondValid,
-    freezeWindowValid,
-    responseBeforeDeadline,
     roleHash,
     roleTag,
  )
@@ -64,53 +57,17 @@ output =
         , "//// `just check-freeze-bond-vectors` regenerates and rejects drift."
         , ""
         , byteConst "policy" policy
-        , byteConst "hunter" hunter
-        , byteConst "hunter_short" (BS.replicate 27 0xbb)
-        , byteConst "hunter_long" (BS.replicate 29 0xbb)
-        , byteConst "frozen_tag" (required "FROZEN tag" (roleTag Frozen))
         , byteConst "tombstone_tag" (required "TOMBSTONE tag" (roleTag Tombstone))
-        , byteConst "armed_tag" (required "ARMED tag" (roleTag Armed))
-        , byteConst "frozen_role_hash" (required "FROZEN hash" (roleHash policy Frozen))
         , byteConst "tombstone_role_hash" (required "TOMBSTONE hash" (roleHash policy Tombstone))
-        , byteConst "armed_role_hash" (required "ARMED hash" (roleHash policy Armed))
         , byteConst "golden_checkpoint" (canonicalCbor (V1 checkpoint))
         , byteConst "golden_tombstone" (canonicalCbor tombstone)
-        , byteConst "golden_armed" (canonicalCbor armed)
         , intConst "freeze_bond_floor" freezeBondFloor
         , boolConst "bond_floor_valid" (freezeBondValid freezeBondFloor)
         , boolConst "bond_below_valid" (freezeBondValid (freezeBondFloor - 1))
-        , boolConst "window_zero_valid" (freezeWindowValid 0)
-        , boolConst "window_negative_valid" (freezeWindowValid (-1))
-        , boolConst "window_one_valid" (freezeWindowValid 1)
-        , intConst "deadline_inclusive" (deadlineFor Inclusive)
-        , intConst "deadline_exclusive" (deadlineFor Exclusive)
-        , intConst "deadline_large" (largeDeadline 10 (10 ^ (30 :: Integer)))
-        , boolConst "response_before" (responseBeforeDeadline 1000 (Just (Finite 999 Inclusive)))
-        , boolConst "response_exact" (responseBeforeDeadline 1000 (Just (Finite 1000 Exclusive)))
-        , boolConst "response_after" (responseBeforeDeadline 1000 (Just (Finite 1001 Inclusive)))
-        , boolConst "response_unbounded" (responseBeforeDeadline 1000 (Just PositiveInfinity))
-        , boolConst "response_missing" (responseBeforeDeadline 1000 Nothing)
-        , boolConst "claim_before" (claimAtOrAfterDeadline 1000 (Just (Finite 999 Exclusive)))
-        , boolConst "claim_exact" (claimAtOrAfterDeadline 1000 (Just (Finite 1000 Inclusive)))
-        , boolConst "claim_after" (claimAtOrAfterDeadline 1000 (Just (Finite 1001 Exclusive)))
-        , boolConst "claim_unbounded" (claimAtOrAfterDeadline 1000 (Just NegativeInfinity))
-        , boolConst "claim_missing" (claimAtOrAfterDeadline 1000 Nothing)
         ]
 
 required :: String -> Maybe a -> a
 required label = fromMaybe (error (label <> " unexpectedly absent"))
-
-deadlineFor :: Inclusivity -> Integer
-deadlineFor inclusivity =
-    case armDeadline 500 (Just (Finite 1000 inclusivity)) of
-        Right deadline -> deadline
-        Left err -> error ("deadline vector rejected: " <> show err)
-
-largeDeadline :: Integer -> Integer -> Integer
-largeDeadline freezeWindow upper =
-    case armDeadline freezeWindow (Just (Finite upper Exclusive)) of
-        Right deadline -> deadline
-        Left err -> error ("large deadline vector rejected: " <> show err)
 
 byteConst :: String -> ByteString -> String
 byteConst name value = "pub const " <> name <> ": ByteArray = #\"" <> hex value <> "\""
@@ -127,9 +84,6 @@ hex = BC.unpack . convertToBase Base16
 policy :: ByteString
 policy = BS.replicate 28 0xcc
 
-hunter :: ByteString
-hunter = BS.replicate 28 0xbb
-
 checkpoint :: CheckpointDatumV1
 checkpoint =
     CheckpointDatumV1
@@ -142,14 +96,6 @@ checkpoint =
         , cdToad = 0
         , cdSeq = 0
         , cdNativeSn = 0
-        }
-
-armed :: ArmedDatum
-armed =
-    ArmedV1
-        { adCheckpoint = checkpoint
-        , adHunterPkh = hunter
-        , adDeadline = 1001
         }
 
 tombstone :: TombstoneV1

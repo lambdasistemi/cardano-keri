@@ -21,7 +21,7 @@ use cardano/transaction.{
 use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
 use cardano_keri/checkpoint/message.{deriveAidAssetName}
 use cardano_keri/checkpoint/threshold.{Unweighted}
-use checkpoint_register.{MintRedeemer, SpendRedeemer}
+use checkpoint_register
 
 const policy: PolicyId =
   #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
@@ -44,8 +44,6 @@ const entitlement_hash: PolicyId =
 const d_reg: Int = 1_000_000_000
 
 const freeze_bond: Int = 5_000_000
-
-const freeze_window: Int = 10_000
 
 /// The wire shape of the former owner-close evidence.
 type FormerCloseEvidence {
@@ -148,7 +146,7 @@ fn exit_tx() -> Transaction {
   )
 }
 
-fn run_spend(redeemer: SpendRedeemer, tx: Transaction) -> Bool {
+fn run_spend(redeemer: Data, tx: Transaction) -> Bool {
   checkpoint_register.checkpoint_register.spend(
     migration_hash,
     lifecycle_hash,
@@ -158,7 +156,6 @@ fn run_spend(redeemer: SpendRedeemer, tx: Transaction) -> Bool {
     1,
     d_reg,
     freeze_bond,
-    freeze_window,
     None,
     redeemer,
     spent_ref(),
@@ -166,7 +163,7 @@ fn run_spend(redeemer: SpendRedeemer, tx: Transaction) -> Bool {
   )
 }
 
-fn run_mint(redeemer: MintRedeemer, tx: Transaction) -> Bool {
+fn run_mint(redeemer: Data, tx: Transaction) -> Bool {
   checkpoint_register.checkpoint_register.mint(
     migration_hash,
     lifecycle_hash,
@@ -176,7 +173,6 @@ fn run_mint(redeemer: MintRedeemer, tx: Transaction) -> Bool {
     1,
     d_reg,
     freeze_bond,
-    freeze_window,
     redeemer,
     policy,
     tx,
@@ -186,8 +182,7 @@ fn run_mint(redeemer: MintRedeemer, tx: Transaction) -> Bool {
 /// S1. The controllers' signed close of a live checkpoint is not an action.
 test owner_close_spend_is_refused() fail {
   let wire: Data = FormerClose { evidence: former_evidence() }
-  expect redeemer: SpendRedeemer = wire
-  run_spend(redeemer, exit_tx())
+  run_spend(wire, exit_tx())
 }
 
 /// S1 and S2 together: the whole owner-exit transaction (the former close
@@ -196,8 +191,6 @@ test owner_close_spend_is_refused() fail {
 test owner_exit_transaction_is_refused() fail {
   let spend_wire: Data = FormerClose { evidence: former_evidence() }
   let mint_wire: Data = FormerCloseBurn { checkpoint_ref: spent_ref() }
-  expect spend_redeemer: SpendRedeemer = spend_wire
-  expect mint_redeemer: MintRedeemer = mint_wire
   let tx = exit_tx()
-  run_mint(mint_redeemer, tx) && run_spend(spend_redeemer, tx)
+  run_mint(mint_wire, tx) && run_spend(spend_wire, tx)
 }

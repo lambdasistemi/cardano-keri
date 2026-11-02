@@ -16,17 +16,13 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     advanceEvidenceData,
     advanceObserverRedeemerData,
     advanceSpendRedeemerData,
-    claimFreezeSpendRedeemerData,
     convictBurnRedeemerData,
     convictObserverRedeemerData,
     convictSpendRedeemerData,
     enforcementEvidenceData,
     enforcementProofData,
-    freezeObserverRedeemerData,
-    freezeSpendRedeemerData,
     registerObserverRedeemerData,
     registrationEvidenceData,
-    responseAdvanceObserverRedeemerData,
  )
 import Cardano.KERI.AID.Migration.Types (OutputRef (..))
 import Data.ByteString qualified as BS
@@ -70,8 +66,8 @@ advanceEvidence =
         , aeWitReceipts = [(1, BS.replicate 64 0xd1)]
         }
 
-freezeEvidence :: EnforcementEvidence
-freezeEvidence =
+enforcementEvidence :: EnforcementEvidence
+enforcementEvidence =
     EnforcementEvidence
         { eneEventBytes = "rot-2-conflict"
         , eneOffT = 1
@@ -104,10 +100,10 @@ freezeEvidence =
 proof adds the payee the register will bind and the reveal that names the
 reservation earning it.
 -}
-freezeProof :: EnforcementProofV1
-freezeProof =
+enforcementProof :: EnforcementProofV1
+enforcementProof =
     EnforcementProofV1
-        { epEvidence = freezeEvidence
+        { epEvidence = enforcementEvidence
         , epPayeePkh = BS.replicate 28 0x9a
         , epReveal =
             BountyRevealV1
@@ -178,30 +174,6 @@ spec = describe "#136 Register observer wire" $ do
                 , advanceEvidenceData advanceEvidence
                 ]
 
-    it "uses action three to route an Armed response Advance" $
-        responseAdvanceObserverRedeemerData
-            (BS.replicate 28 0xc0)
-            (BS.replicate 32 0xe0)
-            7
-            advanceEvidence
-            `shouldBe` Constr
-                0
-                [ Constr
-                    0
-                    [ I 3
-                    , B (BS.replicate 28 0xc0)
-                    , Constr
-                        0
-                        [ Constr
-                            0
-                            [ B (BS.replicate 32 0xe0)
-                            , I 7
-                            ]
-                        ]
-                    ]
-                , advanceEvidenceData advanceEvidence
-                ]
-
     it "encodes Advance signature tuples as two-item lists" $
         advanceEvidenceData advanceEvidence
             `shouldBe` Constr
@@ -223,43 +195,11 @@ spec = describe "#136 Register observer wire" $ do
                 , List [List [I 1, B (BS.replicate 64 0xd1)]]
                 ]
 
-    it "encodes the thin Freeze arm without opening ClaimFreeze" $
-        freezeSpendRedeemerData (BS.replicate 28 0x42)
-            `shouldBe` Constr 1 [B (BS.replicate 28 0x42)]
-
-    it "opens only ClaimFreeze at constructor two with its payout index" $
-        claimFreezeSpendRedeemerData 5
-            `shouldBe` Constr 2 [I 5]
-
-    it "forwards the exact Freeze proof under observer action two" $
-        freezeObserverRedeemerData
-            (BS.replicate 28 0xc0)
-            (BS.replicate 32 0xf0)
-            9
-            freezeProof
-            `shouldBe` Constr
-                0
-                [ Constr
-                    0
-                    [ I 2
-                    , B (BS.replicate 28 0xc0)
-                    , Constr
-                        0
-                        [ Constr
-                            0
-                            [ B (BS.replicate 32 0xf0)
-                            , I 9
-                            ]
-                        ]
-                    ]
-                , enforcementProofData freezeProof
-                ]
-
     it "S254-E pins the EnforcementProofV1 field order as wire surface" $
-        enforcementProofData freezeProof
+        enforcementProofData enforcementProof
             `shouldBe` Constr
                 0
-                [ enforcementEvidenceData freezeEvidence
+                [ enforcementEvidenceData enforcementEvidence
                 , B (BS.replicate 28 0x9a)
                 , Constr
                     0
@@ -270,7 +210,7 @@ spec = describe "#136 Register observer wire" $ do
                 ]
 
     it "encodes enforcement signature tuples as two-item lists" $
-        enforcementEvidenceData freezeEvidence
+        enforcementEvidenceData enforcementEvidence
             `shouldBe` Constr
                 0
                 [ B "rot-2-conflict"
@@ -311,13 +251,12 @@ spec = describe "#136 Register observer wire" $ do
                     ]
                 ]
 
-    it "keeps Convict at spend constructor three with exact payout indices" $
-        convictSpendRedeemerData (BS.replicate 28 0x51) 3 7
+    it "puts Convict at spend constructor one with its convictor and payout index" $
+        convictSpendRedeemerData (BS.replicate 28 0x51) 3
             `shouldBe` Constr
-                3
+                1
                 [ B (BS.replicate 28 0x51)
                 , I 3
-                , I 7
                 ]
 
     it "forwards the witnessed-conflict proof under isolated observer action four" $
@@ -325,7 +264,7 @@ spec = describe "#136 Register observer wire" $ do
             (BS.replicate 28 0xc0)
             (BS.replicate 32 0xf1)
             11
-            freezeProof
+            enforcementProof
             `shouldBe` Constr
                 0
                 [ Constr
@@ -341,5 +280,5 @@ spec = describe "#136 Register observer wire" $ do
                             ]
                         ]
                     ]
-                , enforcementProofData freezeProof
+                , enforcementProofData enforcementProof
                 ]

@@ -337,7 +337,7 @@ check-checkpoint-vectors: gen-checkpoint-vectors
 # Regenerate the committed Aiken enforcement vectors (#106) from the committed
 # keripy fixtures via GenEnforcementVectors.hs. OFFLINE — reads the committed
 # JSON, no keripy. One Haskell computation is the source of truth for the tip +
-# evidence each scenario feeds convict_predicate/freeze_predicate; `aiken fmt`
+# evidence each scenario feeds convict_predicate; `aiken fmt`
 # then canonicalizes the emitted module.
 gen-enforcement-vectors:
     mkdir -p onchain/lib/cardano_keri/checkpoint
@@ -393,17 +393,6 @@ gen-freeze-bond-vectors:
 # Drift check: a fresh Haskell regenerate must reproduce the committed module.
 check-freeze-bond-vectors: gen-freeze-bond-vectors
     git diff --exit-code onchain/lib/cardano_keri/checkpoint/freeze_bond_vectors.ak
-
-# Regenerate the 14 Lean-theorem verdicts from the pure Haskell lifecycle
-# mirror. The generated Aiken module is never edited by hand.
-gen-lifecycle-trace-vectors:
-    mkdir -p onchain/lib/cardano_keri/checkpoint
-    cd offchain && nix develop --quiet --no-write-lock-file -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-lifecycle-trace-vectors -- ../onchain/lib/cardano_keri/checkpoint/lifecycle_model_vectors.ak'
-    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/checkpoint/lifecycle_model_vectors.ak
-
-# Drift check: Haskell is the sole source of theorem verdict fixtures.
-check-lifecycle-trace-vectors: gen-lifecycle-trace-vectors
-    git diff --exit-code onchain/lib/cardano_keri/checkpoint/lifecycle_model_vectors.ak
 
 # --- migration shared types (#254) ---
 
@@ -522,7 +511,7 @@ check-onchain:
 # exact mem/cpu per test) and fails only if a measurement test fails to run/pass.
 # The headroom verdict is the re-verifiable claim in specs/106-enforcement/MEASUREMENTS.md.
 measure-enforcement:
-    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check --plain-numbers -m measure_convict -m measure_freeze
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check --plain-numbers -m measure_convict
 
 # Measure the hash-proof minting policy ex-units at the three size tiers
 # (#114 S4: ~300 B class, 966 B GEDA-scale, 1024 B boundary). Same caveat as
@@ -586,8 +575,8 @@ mpf-proof-check:
       echo "mpf-proof-check: 2/2 fixture tests pass; miss() surface present; cache resolves v2.1.0"
     ' _ "$results"
 
-# Measure and mechanically gate the nine checkpoint ACCEPT paths: the six
-# inherited #116 rows plus the three #114 Register contexts. Every row must
+# Measure and mechanically gate the four checkpoint ACCEPT paths: the
+# inherited #116 conviction row plus the three #114 Register contexts. Every row must
 # pass and retain the 25%-headroom limits (10.5m memory, 7.5b CPU).
 measure-checkpoint:
     #!/usr/bin/env bash
@@ -599,12 +588,7 @@ measure-checkpoint:
       aiken check --plain-numbers -m measure_checkpoint | tee "$1"
       jq -e '\''
         [
-          "measure_checkpoint_arm_2key",
-          "measure_checkpoint_arm_7key",
-          "measure_checkpoint_claim",
           "measure_checkpoint_convict_active",
-          "measure_checkpoint_convict_armed",
-          "measure_checkpoint_convict_frozen",
           "measure_checkpoint_register_2key",
           "measure_checkpoint_register_witnessed",
           "measure_checkpoint_register_7key"

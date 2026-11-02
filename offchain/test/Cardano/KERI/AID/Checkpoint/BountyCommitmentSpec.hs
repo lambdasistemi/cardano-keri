@@ -226,13 +226,12 @@ commitmentSpec = describe "commitment datum well-formedness" $ do
 matcherSpec :: Spec
 matcherSpec = describe "standalone entitlement matching" $ do
     it "accepts the reservation it was opened as" $
-        matches commitment checkpointRef FreezeEntitlement digest nonce
+        matches commitment checkpointRef digest nonce
             `shouldBe` EntitlementValid
     it "rejects a digest that is not 32 bytes" $
         matches
             commitment
             checkpointRef
-            FreezeEntitlement
             (BS.replicate 31 0xed)
             nonce
             `shouldBe` EntitlementInvalid EntitlementDigestWidth
@@ -240,21 +239,16 @@ matcherSpec = describe "standalone entitlement matching" $ do
         matches
             commitment
             checkpointRef
-            FreezeEntitlement
             digest
             (BS.replicate 31 0x11)
             `shouldBe` EntitlementInvalid EntitlementNonceWidth
-    it "rejects a Freeze reservation spent as a Convict one" $
-        matches commitment checkpointRef ConvictEntitlement digest nonce
-            `shouldBe` EntitlementInvalid EntitlementAction
     it "rejects a reservation opened over another checkpoint" $
-        matches commitment otherCheckpointRef FreezeEntitlement digest nonce
+        matches commitment otherCheckpointRef digest nonce
             `shouldBe` EntitlementInvalid EntitlementCheckpoint
     it "rejects a datum whose marker left its scope" $
         matches
             commitment{bcMarker = markerName otherSeedRef}
             checkpointRef
-            FreezeEntitlement
             digest
             nonce
             `shouldBe` EntitlementInvalid EntitlementMarker
@@ -262,18 +256,16 @@ matcherSpec = describe "standalone entitlement matching" $ do
         matches
             commitment
             checkpointRef
-            FreezeEntitlement
             (flipLast digest)
             nonce
             `shouldBe` EntitlementInvalid EntitlementHash
     it "rejects a substituted nonce" $
-        matches commitment checkpointRef FreezeEntitlement digest otherNonce
+        matches commitment checkpointRef digest otherNonce
             `shouldBe` EntitlementInvalid EntitlementHash
     it "rejects a substituted payee, hash unchanged" $
         matches
             commitment{bcPayeePkh = attacker}
             checkpointRef
-            FreezeEntitlement
             digest
             nonce
             `shouldBe` EntitlementInvalid EntitlementHash
@@ -369,7 +361,6 @@ openBuilderSpec = describe "prepareBountyCommitment" $ do
                 entitlementMatches
                     (bcplDatum built)
                     checkpointRef
-                    FreezeEntitlement
                     digest
                     nonce
             )
@@ -400,7 +391,6 @@ openBuilderSpec = describe "prepareBountyCommitment" $ do
             openRange
             checkpointPolicy
             checkpointRef
-            FreezeEntitlement
             digest
             beneficiary
             nonce
@@ -417,7 +407,6 @@ openWith params range =
         range
         checkpointPolicy
         checkpointRef
-        FreezeEntitlement
         digest
         payee
         nonce
@@ -532,7 +521,7 @@ scope =
         , bsNetwork = cpNetwork parameters
         , bsCheckpointPolicy = checkpointPolicy
         , bsCheckpointRef = checkpointRef
-        , bsAction = FreezeEntitlement
+        , bsAction = ConvictEntitlement
         , bsMarker = markerName seedRef
         , bsCommitUpper = 1000
         , bsEligibleAfter = 1000 + cpCommitMinAge parameters

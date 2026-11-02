@@ -73,8 +73,6 @@ main = do
             [] -> (Nothing, defaultFixturesDir)
     fork <- load dir "fork.json"
     honest2 <- load dir "honest_2key.json"
-    honest7 <- load dir "honest_7key.json"
-    lagFx <- load dir "lag.json"
     forkW <- load dir "fork_witnessed.json"
     let scenarios =
             [
@@ -103,27 +101,6 @@ main = do
                 , "honest_2key: rot vs its own reflected state -> ConvictInvalid(CvNoConflict)"
                 , orDie (tipFrom honest2 "rot" 1)
                 , orDie (evidenceFrom honest2 "rot" "rot_sigs" Nothing)
-                , Nothing
-                )
-            ,
-                ( "honest2_freeze"
-                , "honest_2key: witnessless later rot -> FreezeValid"
-                , orDie (tipFrom honest2 "icp" 0)
-                , orDie (evidenceFrom honest2 "rot" "rot_sigs" Nothing)
-                , Nothing
-                )
-            ,
-                ( "lag_freeze"
-                , "lag: witnessed later rot (toad=1 receipt) -> FreezeValid"
-                , orDie (tipFrom lagFx "icp" 0)
-                , orDie (evidenceFrom lagFx "rot" "rot_sigs" (Just "rot_witness_receipts"))
-                , Just (orDie (offsetsFrom lagFx "rot"))
-                )
-            ,
-                ( "honest7_freeze"
-                , "honest_7key: 3-of-7 partial reveal vs weighted nt -> FreezeValid"
-                , orDie (tipFrom honest7 "icp" 0)
-                , orDie (evidenceFrom honest7 "rot" "rot_sigs" Nothing)
                 , Nothing
                 )
             ]
@@ -423,7 +400,7 @@ render scenarios =
             , ""
             , "use cardano_keri/checkpoint/datum.{CheckpointDatumV1}"
             , "use cardano_keri/checkpoint/enforcement.{EnforcementEvidence, EventEvidence}"
-            , "use cardano_keri/checkpoint/threshold.{Unweighted, Weighted, Weight}"
+            , "use cardano_keri/checkpoint/threshold.{Unweighted}"
             ]
     -- TombstoneV1 codec golden: canonical CBOR of a fixed synthetic record,
     -- byte-identical to the Haskell canonicalCbor (Constr 0, 3 fields).

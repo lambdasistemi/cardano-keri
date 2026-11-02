@@ -64,9 +64,7 @@ pub const golden_seed_ref: ByteArray =
 pub const golden_checkpoint_ref: ByteArray =
   #"d8799f5820c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c203ff"
 
-pub const golden_action_freeze: ByteArray = #"d87980"
-
-pub const golden_action_convict: ByteArray = #"d87a80"
+pub const golden_action_convict: ByteArray = #"d87980"
 
 pub const golden_scope: ByteArray =
   #"d8799f581e63617264616e6f2d6b6572692f626f756e74792d636f6d6d69746d656e7401182a581cc1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1d8799f5820c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c203ffd8798058200f8219330e041fa7ef5aa057d4cf444c47df7b3d2e6b0d49b05bc1a995ef4d631903e81903e9192af8ff"
@@ -111,9 +109,6 @@ pub const mut_checkpoint_txid: ByteArray =
 
 pub const mut_checkpoint_index: ByteArray =
   #"1113d822a59d838fd8285c5dae80ad28a4fbc1085dfd2563ee996ba6cfcfdc45"
-
-pub const mut_action: ByteArray =
-  #"0eecab5877f754151acec7f63ea1099a4e8023ff5ffae9eaf22d9d4d73c54c02"
 
 pub const mut_marker: ByteArray =
   #"fe5280d194b4406f284ddeaab903bb30ffcbdfeb125f210d709ff6dae77e9ae1"

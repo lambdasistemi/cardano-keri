@@ -40,8 +40,8 @@ as `COULD-NOT-EVALUATE` and fails the run. The mutant is deliberately built to
 be refused at the purpose dispatch, before any deposit, bond or signature work,
 so it cannot reach a builtin the evaluator lacks.
 
-__What this does not establish.__ The four policy-hash parameters applied here
-are placeholders of the correct width, not the four sibling hashes the
+__What this does not establish.__ The five policy-hash parameters applied here
+are placeholders of the correct width, not the five sibling hashes the
 deployment derives, so these runs say nothing about which observers the
 register trusts. The applied identity in the recipe's target row comes from the
 production derivation, not from this module; the recipe binds the two by
@@ -66,7 +66,7 @@ open CardanoLedgerApi.V3.Contexts (ScriptContext ScriptInfo TxInfo)
 /-- A fixed-width byte string from a literal, so widths stay visible. -/
 def label (s : String) : ByteString := { data := s }
 
-/-- The four policy hashes the register is applied to, at the exact 28-byte
+/-- The five policy hashes the register is applied to, at the exact 28-byte
 width a `PolicyId` has. They are placeholders: this module is evidence about
 arity, not about which observers the register trusts. -/
 def migrationHash : ByteString := label "s254r-migration-policy-01234"
@@ -77,14 +77,14 @@ def advanceHash : ByteString := label "s254r-advance-policy-0123456"
 
 def enforcementHash : ByteString := label "s254r-enforcement-policy-012"
 
-/-- The four deployment integers, at their real released values. -/
+def entitlementHash : ByteString := label "s254r-entitlement-policy-012"
+
+/-- The three deployment integers, at their real released values. -/
 def networkId : Int := 0
 
 def registrationDeposit : Int := 1000000000
 
 def freezeBond : Int := 5000000
-
-def freezeWindow : Int := 10000
 
 /-- The exact eight applied parameters of the corrected register, in the order
 `checkpoint_register` declares them.
@@ -98,10 +98,10 @@ def appliedParameters : List Data :=
   , Data.B lifecycleHash
   , Data.B advanceHash
   , Data.B enforcementHash
+  , Data.B entitlementHash
   , Data.I networkId
   , Data.I registrationDeposit
   , Data.I freezeBond
-  , Data.I freezeWindow
   ]
 
 /-- A `Data` argument as a UPLC term. -/

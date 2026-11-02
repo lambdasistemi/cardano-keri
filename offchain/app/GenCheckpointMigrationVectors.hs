@@ -39,10 +39,16 @@ import Cardano.Crypto.DSIGN (
 import Cardano.Crypto.Seed (
     mkSeedFromBytes,
  )
+import Cardano.KERI.AID.CESR (
+    qb64Aid,
+ )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
     CheckpointDatumV1 (..),
+    CheckpointDatumV2 (..),
+    KeyMaterial (..),
     canonicalCbor,
+    checkpointDatumToData,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
     deriveAidAssetName,
@@ -149,8 +155,33 @@ aidAssetName = deriveAidAssetName cesrAid
 signature is genuinely below quorum and two distinct ones genuinely meet it —
 a 1-of-n fixture could not tell a working quorum rule from a missing one.
 -}
-sourceDatum :: CheckpointDatumV1
+sourceDatum :: CheckpointDatumV2
 sourceDatum =
+    Live
+        { lvAid = aidText
+        , lvSn = 4
+        , lvEpoch = 7
+        , lvPoisoned = False
+        , lvFrozen = False
+        , lvBornAt = 1800000000000
+        , lvRefundTo = BS.cons 0x61 refundVkey
+        , lvKeys =
+            KeyMaterial
+                { kmCurKeys = controllerKeys
+                , kmCurThreshold = Unweighted 2
+                , kmNextKeys = [nextKeyDigest0, nextKeyDigest1]
+                , kmNextThreshold = Unweighted 1
+                , kmWitnesses = [witnessKey]
+                , kmToad = 1
+                }
+        }
+
+{- | The same checkpoint as the version 1 record, carried by a package the
+controllers also signed: the one input a version 2 program must refuse, and
+which the version 1 program accepted.
+-}
+version1Datum :: CheckpointDatumV1
+version1Datum =
     CheckpointDatumV1
         { cdCesrAid = cesrAid
         , cdCurKeys = controllerKeys
@@ -163,34 +194,54 @@ sourceDatum =
         , cdNativeSn = 4
         }
 
+version1StateData :: Data
+version1StateData = checkpointDatumToData (V1 version1Datum)
+
+version1Bytes :: ByteString
+version1Bytes =
+    encodeMigrationMessage source{msSourceState = version1StateData} migrationTarget
+
+version1Sig0, version1Sig1 :: ByteString
+version1Sig0 = signOver controller0 version1Bytes
+version1Sig1 = signOver controller1 version1Bytes
+
+{- | The same checkpoint as a pending termination, carried by a package the
+controllers also signed: it cannot be migrated.
+-}
+pendingDatum :: CheckpointDatumV2
+pendingDatum =
+    TerminationPending
+        { tpAid = aidText
+        , tpSn = lvSn sourceDatum
+        , tpEpoch = lvEpoch sourceDatum
+        , tpKeys = lvKeys sourceDatum
+        }
+
+pendingStateData :: Data
+pendingStateData = checkpointDatumToData (V2 pendingDatum)
+
+pendingBytes :: ByteString
+pendingBytes =
+    encodeMigrationMessage source{msSourceState = pendingStateData} migrationTarget
+
+pendingSig0, pendingSig1 :: ByteString
+pendingSig0 = signOver controller0 pendingBytes
+pendingSig1 = signOver controller1 pendingBytes
+
+-- | The source AID as its qualified CESR text.
+aidText :: ByteString
+aidText = qb64Aid cesrAid
+
 -- | The carried projection, verbatim, exactly as the authorization carries it.
 sourceStateData :: Data
 sourceStateData = checkpointTree
 
-{- | The projection as a @Data@ tree, in the exact constructor-0 layout the
-frozen @CheckpointDatum@ codec emits: the version sum wrapping the inner
-record.  This wrapped form is what the authorization carries verbatim.
+{- | The projection as a @Data@ tree, in the exact layout the checkpoint
+datum codec emits: the version sum (constructor 1) wrapping the live datum.
+This wrapped form is what the authorization carries verbatim.
 -}
 checkpointTree :: Data
-checkpointTree = Constr 0 [innerCheckpointTree]
-
-{- | The inner nine-field record alone, kept because the message carries the
-wrapped form and some fixtures need the bare record.
--}
-innerCheckpointTree :: Data
-innerCheckpointTree =
-    Constr
-        0
-        [ B (cdCesrAid sourceDatum)
-        , List [B k | k <- cdCurKeys sourceDatum]
-        , Constr 0 [I 2]
-        , List [B k | k <- cdNextKeys sourceDatum]
-        , Constr 0 [I 1]
-        , List [B w | w <- cdWitnesses sourceDatum]
-        , I (cdToad sourceDatum)
-        , I (cdSeq sourceDatum)
-        , I (cdNativeSn sourceDatum)
-        ]
+checkpointTree = checkpointDatumToData (V2 sourceDatum)
 
 sourceRef, mutantRef :: OutputRef
 sourceRef = OutputRef{orTransactionId = sourceTxid, orOutputIndex = 1}
@@ -288,12 +339,12 @@ messageMutants =
 mutantStateData :: Data
 mutantStateData =
     case checkpointTree of
-        Constr 0 [Constr 0 fields] ->
-            Constr 0 [Constr 0 (replaceSeq fields)]
+        Constr 1 [Constr 0 fields] ->
+            Constr 1 [Constr 0 (replaceEpoch fields)]
         other -> other
   where
-    replaceSeq fields =
-        [ if index == (7 :: Int) then I 8 else field
+    replaceEpoch fields =
+        [ if index == (2 :: Int) then I 8 else field
         | (index, field) <- zip [0 ..] fields
         ]
 
@@ -344,6 +395,8 @@ vectors = fixtures <> goldens <> negatives
 fixtures :: [Vec]
 fixtures =
     [ Vec "fixture_cesr_aid" "input: the source AID" cesrAid
+    , Vec "fixture_aid_text" "input: the source AID as its qualified CESR text" aidText
+    , Vec "fixture_refund_to" "input: the ledger bytes of the refund address the source carries" (lvRefundTo sourceDatum)
     , Vec "fixture_aid_asset_name" "input: the AID token label both policies carry" aidAssetName
     , Vec "fixture_source_policy" "input: source minting policy" sourcePolicy
     , Vec "fixture_target_policy" "input: target minting policy" targetPolicy
@@ -364,13 +417,19 @@ fixtures =
     , Vec "fixture_sig_2" "input: controller 2 over the golden message" sig2
     , Vec "fixture_foreign_sig" "input: the outsider over the golden message" foreignSig
     , Vec "fixture_sig_0_over_mutant" "input: controller 0 over a redirected message" sig0OverMutant
+    , Vec "fixture_pending_sig_0" "input: controller 0 over the pending-termination package" pendingSig0
+    , Vec "fixture_pending_sig_1" "input: controller 1 over the pending-termination package" pendingSig1
+    , Vec "fixture_version_1_sig_0" "input: controller 0 over the version 1 package" version1Sig0
+    , Vec "fixture_version_1_sig_1" "input: controller 1 over the version 1 package" version1Sig1
     ]
 
 goldens :: [Vec]
 goldens =
     [ Vec "golden_migration_domain" "domain: the frozen separator the message carries" migrationDomain
-    , Vec "golden_source_datum" "state: the source projection, canonical" (canonicalCbor (V1 sourceDatum))
+    , Vec "golden_source_datum" "state: the source projection, canonical" (canonicalCbor (V2 sourceDatum))
     , Vec "golden_source_state" "state: the carried payload, verbatim" (canonicalCborData sourceStateData)
+    , Vec "golden_version_1_source_state" "state: the version 1 record of the same key state, wrapped" (canonicalCbor (V1 version1Datum))
+    , Vec "golden_pending_source_state" "state: the pending termination of the same key state, wrapped" (canonicalCbor (V2 pendingDatum))
     , Vec "golden_mutant_source_state" "state: a projection with a bumped counter" (canonicalCborData mutantStateData)
     , Vec "golden_message" "message: the canonical permanent-family preimage" goldenBytes
     , Vec "golden_predecessor" "predecessor: the actual consumed output" (canonicalCbor sourcePredecessor)

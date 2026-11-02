@@ -28,9 +28,14 @@ import Cardano.Crypto.DSIGN (
 import Cardano.Crypto.Seed (
     mkSeedFromBytes,
  )
+import Cardano.KERI.AID.CESR (
+    qb64Aid,
+ )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
-    CheckpointDatumV1 (..),
+    CheckpointDatumV2 (..),
+    KeyMaterial (..),
+    checkpointDatumToData,
  )
 import Cardano.KERI.AID.Checkpoint.FreezeBond (
     Role (..),
@@ -63,12 +68,6 @@ import Data.Word (
  )
 import PlutusCore.Data (
     Data (..),
- )
-import PlutusTx.Builtins.Internal (
-    BuiltinData (..),
- )
-import PlutusTx.IsData.Class (
-    toBuiltinData,
  )
 import Test.Hspec (
     Spec,
@@ -114,26 +113,36 @@ witnessKey = bytesOf 32 0x90
 aidAssetName :: ByteString
 aidAssetName = deriveAidAssetName cesrAid
 
--- | A 2-of-3 source, so one signature is genuinely below quorum.
-sourceDatum :: CheckpointDatumV1
-sourceDatum =
-    CheckpointDatumV1
-        { cdCesrAid = cesrAid
-        , cdCurKeys = map verkeyOf [controller0, controller1, controller2]
-        , cdCurThreshold = Unweighted 2
-        , cdNextKeys = [bytesOf 32 0xd0, bytesOf 32 0xd1]
-        , cdNextThreshold = Unweighted 1
-        , cdWitnesses = [witnessKey]
-        , cdToad = 1
-        , cdSeq = 7
-        , cdNativeSn = 4
+-- | A 2-of-3 live source, so one signature is genuinely below quorum.
+sourceDatum :: CheckpointDatumV2
+sourceDatum = sourceAtEpoch 7
+
+sourceAtEpoch :: Integer -> CheckpointDatumV2
+sourceAtEpoch epoch =
+    Live
+        { lvAid = qb64Aid cesrAid
+        , lvSn = 4
+        , lvEpoch = epoch
+        , lvPoisoned = False
+        , lvFrozen = False
+        , lvBornAt = 1800000000000
+        , lvRefundTo = BS.cons 0x61 refundVkey
+        , lvKeys =
+            KeyMaterial
+                { kmCurKeys = map verkeyOf [controller0, controller1, controller2]
+                , kmCurThreshold = Unweighted 2
+                , kmNextKeys = [bytesOf 32 0xd0, bytesOf 32 0xd1]
+                , kmNextThreshold = Unweighted 1
+                , kmWitnesses = [witnessKey]
+                , kmToad = 1
+                }
         }
 
-{- | The projection the authorization carries verbatim: the v0 version sum
-wrapping the inner record.
+{- | The projection the authorization carries verbatim: the version sum
+wrapping the live datum.
 -}
 sourceStateData :: Data
-sourceStateData = let BuiltinData d = toBuiltinData (V1 sourceDatum) in d
+sourceStateData = checkpointDatumToData (V2 sourceDatum)
 
 {- | The row datum: the frozen `CheckpointDatum` version sum.  The lean design
 carries no generation integer and no origin back-pointer.
@@ -320,7 +329,7 @@ spec = describe "checkpoint migration" $ do
                 `shouldBe` Right ()
             checkpointTransitionContinuous
                 (active sourceDatum)
-                (active sourceDatum{cdSeq = 8})
+                (active (sourceAtEpoch 8))
                 (replacement good)
                 `shouldBe` Left MigrationIdentityChanged
 
@@ -370,10 +379,7 @@ spec = describe "checkpoint migration" $ do
             -- The observed input is the naming authority; the signed payload
             -- must equal it. A package signed over another checkpoint cannot
             -- move this one.
-            let elsewhere =
-                    let BuiltinData d =
-                            toBuiltinData (V1 sourceDatum{cdSeq = 23})
-                     in d
+            let elsewhere = checkpointDatumToData (V2 (sourceAtEpoch 23))
             validateCheckpointMigrateOut
                 authorization{maSourceState = elsewhere}
                 sourceRef

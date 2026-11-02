@@ -189,7 +189,8 @@ fn validate_migrate_out_tokens(
 ) -> Bool {
   let Transaction { inputs, outputs, mint, .. } = tx
   expect Some(own_input) = find_input(inputs, own_ref)
-  expect InlineDatum(_) = own_input.output.datum
+  expect InlineDatum(source_data) = own_input.output.datum
+  expect V2(Live { .. }): CheckpointDatum = source_data
   expect [Pair(aid_name, -1)] = dict.to_pairs(tokens(mint, own))
   expect quantity_of(own_input.output.value, own, aid_name) == 1
   expect

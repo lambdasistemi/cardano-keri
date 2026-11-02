@@ -23,9 +23,9 @@ use cardano/transaction.{
   InlineDatum, Output, OutputReference, Transaction, find_input,
 }
 use cardano_keri/checkpoint/datum.{
-  CheckpointDatum, CheckpointDatumV1, DatumValid, V1, datum_well_formed,
+  CheckpointDatum, CheckpointDatumV2, DatumValid, Live, V2, datum_v2_well_formed,
 }
-use cardano_keri/checkpoint/message.{deriveAidAssetName}
+use cardano_keri/checkpoint/message.{aid_digest, deriveAidAssetName}
 use cardano_keri/checkpoint/role
 use cardano_keri/checkpoint/threshold.{evaluate}
 use cardano_keri/migration/types.{
@@ -70,7 +70,7 @@ pub type MigrationMessage {
 /// A decoded lifecycle position with its checkpoint state.
 pub type CheckpointRoleState {
   state_role: MigrationRole,
-  checkpoint: CheckpointDatumV1,
+  checkpoint: CheckpointDatumV2,
 }
 
 /// The single admitted value difference across a migration: one named token
@@ -136,19 +136,16 @@ pub fn migration_message(
 /// does not verify never counts. `list.at` returning `None` establishes the
 /// first, `list.unique` the second, and the Ed25519 check the third.
 pub fn checkpoint_migration_authorized(
-  source_state: CheckpointDatumV1,
+  source_state: CheckpointDatumV2,
   message: MigrationMessage,
   signatures: List<(Int, ByteArray)>,
 ) -> MigrationVerdict {
-  when datum_well_formed(source_state) is {
+  when datum_v2_well_formed(source_state) is {
     DatumValid -> {
+      expect Live { keys, .. } = source_state
       let preimage = cbor.serialise(message)
-      let signed = verified_indices(source_state.cur_keys, preimage, signatures)
-      if evaluate(
-        source_state.cur_threshold,
-        list.length(source_state.cur_keys),
-        signed,
-      ) {
+      let signed = verified_indices(keys.cur_keys, preimage, signatures)
+      if evaluate(keys.cur_threshold, list.length(keys.cur_keys), signed) {
         MigrationValid
       } else {
         MigrationInvalid(MigrationQuorumUnsatisfied)
@@ -240,7 +237,8 @@ fn role_state_of(
   output: Output,
 ) -> CheckpointRoleState {
   expect InlineDatum(datum_data) = output.datum
-  expect V1(state): CheckpointDatum = datum_data
+  expect V2(state): CheckpointDatum = datum_data
+  expect Live { .. } = state
   CheckpointRoleState { state_role: observed_role, checkpoint: state }
 }
 
@@ -300,7 +298,7 @@ pub fn validate_checkpoint_migrate_out(
   // restatement of it: decode it through the frozen codec and require it to
   // equal what the consumed output actually holds.
   expect carried: CheckpointDatum = authorization.source_state
-  expect carried == V1(source_role_state.checkpoint)
+  expect carried == V2(source_role_state.checkpoint)
   let source = source_of(authorization)
   expect
     checkpoint_migration_authorized(
@@ -308,7 +306,9 @@ pub fn validate_checkpoint_migrate_out(
       migration_message(source, authorization.target),
       authorization.controller_signatures,
     ) == MigrationValid
-  let asset_name = deriveAidAssetName(source_role_state.checkpoint.cesr_aid)
+  expect Live { aid, .. } = source_role_state.checkpoint
+  expect Some(digest) = aid_digest(aid)
+  let asset_name = deriveAidAssetName(digest)
   expect dict.to_pairs(tokens(tx.mint, own_hash)) == [Pair(asset_name, -1)]
   // The exit is inseparable from its successor. Burning the source token and
   // creating nothing is not a migration, it is destruction of the identity —

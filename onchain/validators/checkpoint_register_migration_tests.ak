@@ -28,13 +28,18 @@ use cardano_keri/checkpoint/advance.{
   AdvanceEvidence, AdvancePredicateValid, advance_predicate,
 }
 use cardano_keri/checkpoint/advance_vectors as advance_vec
-use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
+use cardano_keri/checkpoint/datum.{
+  CheckpointDatumV1, CheckpointDatumV2, KeyMaterial, Live, TerminationPending,
+  V1, V2,
+}
 use cardano_keri/checkpoint/enforcement.{EnforcementEvidence}
 use cardano_keri/checkpoint/enforcement_vectors as enforcement_vec
 use cardano_keri/checkpoint/entitlement.{
   EnforcementProofV1, enforcement_evidence_digest,
 }
-use cardano_keri/checkpoint/message.{SpentCheckpoint, deriveAidAssetName}
+use cardano_keri/checkpoint/message.{
+  SpentCheckpoint, deriveAidAssetName, qb64_aid,
+}
 use cardano_keri/checkpoint/observer.{
   ObserverClaim, ObserverEnvelope, observe_advance, observe_convict,
   observe_migration, observe_register,
@@ -114,10 +119,8 @@ const mig_source_policy: PolicyId = mig_vec.fixture_source_policy
 
 const mig_target_policy: PolicyId = mig_vec.fixture_target_policy
 
-/// The exact source projection the generator signed over.
-fn mig_source_datum() -> CheckpointDatumV1 {
-  CheckpointDatumV1 {
-    cesr_aid: mig_vec.fixture_cesr_aid,
+fn mig_keys() -> KeyMaterial {
+  KeyMaterial {
     cur_keys: [
       mig_vec.fixture_ctrl_key_0,
       mig_vec.fixture_ctrl_key_1,
@@ -127,6 +130,47 @@ fn mig_source_datum() -> CheckpointDatumV1 {
     next_keys: [mig_vec.fixture_next_key_0, mig_vec.fixture_next_key_1],
     next_threshold: Unweighted(1),
     witnesses: [mig_vec.fixture_witness_key],
+    toad: 1,
+  }
+}
+
+/// The live source the generator signed over, at epoch `epoch`.
+fn mig_source_at(epoch: Int) -> CheckpointDatumV2 {
+  Live {
+    aid: qb64_aid(mig_vec.fixture_cesr_aid),
+    sn: 4,
+    epoch,
+    poisoned: False,
+    frozen: False,
+    born_at: 1_800_000_000_000,
+    refund_to: bytearray.concat(#"61", mig_vec.fixture_refund_vkey),
+    keys: mig_keys(),
+  }
+}
+
+fn mig_source_datum() -> CheckpointDatumV2 {
+  mig_source_at(7)
+}
+
+/// The same key state as a pending termination.
+fn mig_pending_datum() -> CheckpointDatumV2 {
+  TerminationPending {
+    aid: qb64_aid(mig_vec.fixture_cesr_aid),
+    sn: 4,
+    epoch: 7,
+    keys: mig_keys(),
+  }
+}
+
+/// The same key state as the version 1 record.
+fn mig_version_1_datum() -> CheckpointDatumV1 {
+  CheckpointDatumV1 {
+    cesr_aid: mig_vec.fixture_cesr_aid,
+    cur_keys: mig_keys().cur_keys,
+    cur_threshold: Unweighted(2),
+    next_keys: mig_keys().next_keys,
+    next_threshold: Unweighted(1),
+    witnesses: mig_keys().witnesses,
     toad: 1,
     seq: 7,
     native_sn: 4,
@@ -159,6 +203,16 @@ fn mig_target() -> MigrationTarget {
 /// The controller-signed package. `signed_state` is what the quorum actually
 /// put its signatures over, which is the whole subject of the replay control.
 fn mig_authorization(signed_state: Data) -> MigrationAuthorization {
+  mig_authorization_by(
+    signed_state,
+    [(0, mig_vec.fixture_sig_0), (1, mig_vec.fixture_sig_1)],
+  )
+}
+
+fn mig_authorization_by(
+  signed_state: Data,
+  signatures: List<(Int, ByteArray)>,
+) -> MigrationAuthorization {
   MigrationAuthorization {
     domain: mig_vec.golden_migration_domain,
     network_id: 1,
@@ -166,10 +220,7 @@ fn mig_authorization(signed_state: Data) -> MigrationAuthorization {
     source_role: CheckpointActive,
     source_state: signed_state,
     target: mig_target(),
-    controller_signatures: [
-      (0, mig_vec.fixture_sig_0),
-      (1, mig_vec.fixture_sig_1),
-    ],
+    controller_signatures: signatures,
   }
 }
 
@@ -180,7 +231,7 @@ fn mig_signed_state() -> Data {
 
 const mig_protected: Int = min_ada + d_reg + freeze_bond
 
-fn mig_source_input(carried: CheckpointDatumV1) -> Input {
+fn mig_source_input(carried: CheckpointDatumV2) -> Input {
   input_at(
     mig_source_ref(),
     Output {
@@ -189,18 +240,34 @@ fn mig_source_input(carried: CheckpointDatumV1) -> Input {
         |> merge(
             from_asset(mig_source_policy, mig_vec.fixture_aid_asset_name, 1),
           ),
-      datum: InlineDatum(V1(carried)),
+      datum: InlineDatum(V2(carried)),
       reference_script: None,
     },
   )
 }
 
-fn mig_successor_output(carried: CheckpointDatumV1) -> Output {
+/// The consumed source with an arbitrary inline datum.
+fn mig_source_input_of(datum: Data) -> Input {
+  input_at(
+    mig_source_ref(),
+    Output {
+      address: from_script(mig_source_policy),
+      value: from_lovelace(mig_protected)
+        |> merge(
+            from_asset(mig_source_policy, mig_vec.fixture_aid_asset_name, 1),
+          ),
+      datum: InlineDatum(datum),
+      reference_script: None,
+    },
+  )
+}
+
+fn mig_successor_output(carried: CheckpointDatumV2) -> Output {
   Output {
     address: from_script(mig_target_policy),
     value: from_lovelace(mig_protected)
       |> merge(from_asset(mig_target_policy, mig_vec.fixture_aid_asset_name, 1)),
-    datum: InlineDatum(V1(carried)),
+    datum: InlineDatum(V2(carried)),
     reference_script: None,
   }
 }
@@ -253,7 +320,7 @@ fn run_migrate_out(proof: MigrationProof, tx: Transaction) -> Bool {
 // message bytes is wrong, so a message-inequality control cannot see this;
 // only the transaction boundary can.
 test migration_boundary_rejects_signed_state_mismatch() fail {
-  let consumed = CheckpointDatumV1 { ..mig_source_datum(), seq: 23 }
+  let consumed = mig_source_at(23)
   let tx = spend_context(
     [mig_source_input(consumed)],
     [],
@@ -329,22 +396,111 @@ test migration_boundary_accepts_composed_migrate_out() {
   )
 }
 
-// A source that is still a version 1 datum is no longer a checkpoint to
-// migrate: the same composed exit that is accepted above, refused.
-test migration_boundary_refuses_a_version_1_source() fail {
-  let tx = spend_context(
-    [mig_source_input(mig_source_datum())],
+fn mig_refusal_tx(source_datum: Data, successor_datum: Data) -> Transaction {
+  spend_context(
+    [mig_source_input_of(source_datum)],
     [],
-    [mig_successor_output(mig_source_datum())],
+    [
+      Output {
+        ..mig_successor_output(mig_source_datum()),
+        datum: InlineDatum(successor_datum),
+      },
+    ],
     mig_replacement_mint(),
     [],
     interval.everything,
     0,
   )
+}
+
+/// The golden bytes are the datum the Haskell oracle signed over.
+test migration_source_is_the_golden_projection() {
+  let datum: Data = V2(mig_source_datum())
+  let pending: Data = V2(mig_pending_datum())
+  let version_1: Data = V1(mig_version_1_datum())
+  and {
+    cbor.serialise(datum) == mig_vec.golden_source_datum,
+    cbor.serialise(pending) == mig_vec.golden_pending_source_state,
+    cbor.serialise(version_1) == mig_vec.golden_version_1_source_state,
+  }
+}
+
+// The composed exit, with the source and successor datums alone replaced by
+// the version 1 record of the same key state, under a package the controllers
+// signed over that record.
+test migration_boundary_refuses_a_version_1_source() fail {
+  let version_1: Data = V1(mig_version_1_datum())
+  let state: Data = mig_vec.golden_version_1_source_state |> cbor_data
   run_migrate_out(
-    MigrateOutProof { authorization: mig_authorization(mig_signed_state()) },
-    tx,
+    MigrateOutProof {
+      authorization: mig_authorization_by(
+        state,
+        [
+          (0, mig_vec.fixture_version_1_sig_0),
+          (1, mig_vec.fixture_version_1_sig_1),
+        ],
+      ),
+    },
+    mig_refusal_tx(version_1, version_1),
   )
+}
+
+// The same, for a pending termination of the same key state.
+test migration_boundary_refuses_a_pending_source() fail {
+  let pending: Data = V2(mig_pending_datum())
+  let state: Data = mig_vec.golden_pending_source_state |> cbor_data
+  run_migrate_out(
+    MigrateOutProof {
+      authorization: mig_authorization_by(
+        state,
+        [(0, mig_vec.fixture_pending_sig_0), (1, mig_vec.fixture_pending_sig_1)],
+      ),
+    },
+    mig_refusal_tx(pending, pending),
+  )
+}
+
+fn cbor_data(bytes: ByteArray) -> Data {
+  expect Some(data) = cbor.deserialise(bytes)
+  data
+}
+
+/// The exit as the register program itself sees it: the migration observer
+/// is withdrawn with a claim naming the source, and the source datum is the one
+/// given. The successor is not read by this arm.
+fn migrate_out_arm(source_datum: Data) -> Bool {
+  let tx = mig_refusal_tx(source_datum, V2(mig_source_datum()))
+  let credential = Script(migration_hash)
+  let envelope = ObserverEnvelope {
+    claim: ObserverClaim {
+      action: observe_migration,
+      checkpoint_policy: mig_source_policy,
+      own_ref: Some(mig_source_ref()),
+    },
+    payload: builtin.i_data(0),
+  }
+  let redeemer: Data = envelope
+  removed_spend(
+    removed_spend_redeemer(2, []),
+    mig_source_ref(),
+    Transaction {
+      ..tx,
+      withdrawals: [Pair(credential, 0)],
+      redeemers: [Pair(Withdraw(credential), redeemer)],
+    },
+  )
+}
+
+test migrate_out_arm_accepts_a_live_source() {
+  migrate_out_arm(V2(mig_source_datum()))
+}
+
+test migrate_out_arm_refuses_a_version_1_source() fail {
+  migrate_out_arm(V1(mig_version_1_datum()))
+}
+
+test migrate_out_arm_refuses_a_pending_source() fail {
+  migrate_out_arm(V2(mig_pending_datum()))
 }
 
 // Cut by epic ruling NOTE-006 (2026-08-12), sha256

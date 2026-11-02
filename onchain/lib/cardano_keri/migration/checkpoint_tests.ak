@@ -13,10 +13,12 @@
 //// exactly the failure mode a fail-closed body would hide.
 
 use aiken/cbor
+use aiken/primitive/bytearray
 use cardano/address.{Address, Script, VerificationKey}
 use cardano/assets.{add, zero}
 use cardano/transaction.{OutputReference}
-use cardano_keri/checkpoint/datum.{CheckpointDatumV1}
+use cardano_keri/checkpoint/datum.{CheckpointDatumV2, KeyMaterial, Live}
+use cardano_keri/checkpoint/message.{qb64_aid}
 use cardano_keri/checkpoint/threshold.{Unweighted}
 use cardano_keri/migration/checkpoint.{
   CheckpointRoleState, MigrationSource, MigrationValid, PolicyReplacement,
@@ -30,9 +32,8 @@ use cardano_keri/migration/types.{Board, CheckpointActive, MigrationTarget}
 // Fixture material, built from the generator's own inputs
 // ---------------------------------------------------------
 
-fn source_datum() -> CheckpointDatumV1 {
-  CheckpointDatumV1 {
-    cesr_aid: vec.fixture_cesr_aid,
+fn source_keys() -> KeyMaterial {
+  KeyMaterial {
     cur_keys: [
       vec.fixture_ctrl_key_0,
       vec.fixture_ctrl_key_1,
@@ -43,9 +44,25 @@ fn source_datum() -> CheckpointDatumV1 {
     next_threshold: Unweighted(1),
     witnesses: [vec.fixture_witness_key],
     toad: 1,
-    seq: 7,
-    native_sn: 4,
   }
+}
+
+/// The live source checkpoint the generator signed over, at epoch `epoch`.
+fn source_at(epoch: Int) -> CheckpointDatumV2 {
+  Live {
+    aid: qb64_aid(vec.fixture_cesr_aid),
+    sn: 4,
+    epoch,
+    poisoned: False,
+    frozen: False,
+    born_at: 1_800_000_000_000,
+    refund_to: bytearray.concat(#"61", vec.fixture_refund_vkey),
+    keys: source_keys(),
+  }
+}
+
+fn source_datum() -> CheckpointDatumV2 {
+  source_at(7)
 }
 
 fn source_ref() -> OutputReference {
@@ -131,7 +148,7 @@ fn quorum() -> List<(Int, ByteArray)> {
   sigs([(0, vec.fixture_sig_0), (1, vec.fixture_sig_1)])
 }
 
-fn active_role(d: CheckpointDatumV1) -> CheckpointRoleState {
+fn active_role(d: CheckpointDatumV2) -> CheckpointRoleState {
   CheckpointRoleState { state_role: CheckpointActive, checkpoint: d }
 }
 
@@ -330,7 +347,7 @@ test checkpoint_migration_permissionless_relay() {
 // ---------------------------------------------------------
 
 test checkpoint_migration_preserves_kel_projection() {
-  let moved = CheckpointDatumV1 { ..source_datum(), seq: 8 }
+  let moved = source_at(8)
   and {
     checkpoint_transition_continuous(
       active_role(source_datum()),

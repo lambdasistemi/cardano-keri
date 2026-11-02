@@ -266,10 +266,10 @@ the current controllers signed; `ckeri` no longer offers that close.
     ([#493](https://github.com/lambdasistemi/cardano-keri/issues/493)). The current
     keys keep exactly one Cardano power, the poison. An identity is
     active, pending conviction, or convicted after the associated
-    Registry fold. Every bond
-    option other than `keep`, and every new refund address, is signed
+    Registry fold. A `deposit` is signed
     by the keys of the epoch the rotation opens — so a relayer landing
-    a public rotation can never age the owner or move her refund address.
+    a public rotation can never unfreeze the owner. The refund address is
+    chosen by whoever pays the registration and no step ever changes it.
 
 ## Current boundary and future planes
 

@@ -141,11 +141,11 @@
       "pause": 400
     },
     {
-      "text": "Close changes in the accepted design",
+      "text": "Close is removed in the accepted design",
       "pause": 400
     },
     {
-      "text": "In the accepted model, close is the reap: a witnessed rotation by the next keys whose signed message names the payee and the refund address; the parked output retains the token, minimum ADA and key state, and the registry key stays active. That is what stops a thief holding only the current keys from erasing the owner's Cardano presence. See Compromise of the current keys.",
+      "text": "In the accepted model there is no owner exit: no close, no parking and no revival; a checkpoint is alive until it is convicted. That is what stops a thief holding only the current keys from erasing the owner's Cardano presence. See Compromise of the current keys.",
       "pause": 400
     }
   ],
@@ -245,7 +245,7 @@
       "pause": 400
     },
     {
-      "text": "Parking and pending conviction retain custody but refuse consumption. Revival is local and starts a fresh juvenility window. Permanent retirement requires the matching actual terminal fold. Another registry may register the same AID; its holding still fails the original treasury's context.",
+      "text": "Pending conviction retains custody but refuses consumption; there is no parking and no revival. Permanent retirement requires the matching actual terminal fold. Another registry may register the same AID; its holding still fails the original treasury's context.",
       "pause": 400
     },
     {
@@ -295,7 +295,7 @@
       "pause": 400
     },
     {
-      "text": "Permissionlessness has one price, and it is stated rather than hidden: because the chain cannot tell the controller from a relayer, the first registration of an AID, or a resurrection using a public rotation whose keys have leaked, can be made by a stale-key holder who advances only to their own epoch. The window is bounded by juvenility, closed by any advance to the tip, and the attacker's bonds are then the controller's — a stale registration is a donation. Removing the residual would mean removing the relayer.",
+      "text": "Permissionlessness has one price, and it is stated rather than hidden: because the chain cannot tell the controller from a relayer, the first registration of an AID, or a resurrection using a public rotation whose keys have leaked, can be made by a stale-key holder who advances only to their own epoch. The window is bounded by juvenility and closed by any advance to the tip. The attacker's bonds stay the attacker's: the refund address is fixed at registration. Removing the residual would mean removing the relayer.",
       "pause": 400
     }
   ],
@@ -319,7 +319,7 @@
       "pause": 500
     },
     {
-      "text": "Registration and terminal completion use actual registry folds. Parking, revival, rotations, poison, freezing and top-ups are local Checkpoint transitions. Pending custody remains until its recorded request is consumed by a matching fold. The consumer authenticates the holding against its fixed registry identity; it need not spend the registry state.",
+      "text": "Registration and terminal completion use actual registry folds. Rotations, poison, freezing, top-ups and conviction are local Checkpoint transitions. Pending custody remains until its recorded request is consumed by a matching fold. The consumer authenticates the holding against its fixed registry identity; it need not spend the registry state.",
       "pause": 400
     }
   ],
@@ -355,6 +355,6 @@
   ],
   "_source": {
     "file": "trust-model.md",
-    "sha256": "f12bb0b4a6f5c605b495cddab1c4624c936b6e7d33b06b8088b0781956dcada3"
+    "sha256": "6426746d078e8e55efeef910d2576bd1522cc4fe8e2d0309563eeba86ff9d3e9"
   }
 }

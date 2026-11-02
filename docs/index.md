@@ -124,11 +124,11 @@ or frozen), in **pending conviction** custody, or **convicted** (terminal after
 the associated Registry fold). The owner keeps it alive until it is convicted:
 there is no close, no parking and no revival. A
 rotation is the only thing that moves the keys; it carries a bond option
-(`keep` or `deposit`) and optionally a new refund address. `deposit` is
-the unfreeze: it refills `B` when a hunter has taken it. Every option
-other than `keep`, and every new refund address, is signed by the keys of
-the epoch the rotation opens (D-038) — so a relayer landing a public
-rotation can never age the owner or move her refund address.
+(`keep` or `deposit`). `deposit` is the unfreeze: it refills `B` when a
+hunter has taken it, and it is signed by the keys of the epoch the rotation
+opens (D-038) — so a relayer landing a public rotation can never unfreeze
+the owner. The refund address is chosen by whoever pays the registration
+and no step ever changes it.
 
 ```mermaid
 flowchart TB

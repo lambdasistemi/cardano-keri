@@ -37,7 +37,7 @@
       "pause": 500
     },
     {
-      "text": "The request need not carry the raw inception if the attestation authenticates the initial key-state projection as well as the AID. The concrete evidence carrier, reference or consumption rules, and transaction budgets remain to be specified and measured. Attestation is repeatable; checkpoint uniqueness is enforced by registry admission. Revival remains a separate guarded operation. The registration guarantees explain the model boundaries and link the playable duplicate-registration case.",
+      "text": "The request need not carry the raw inception if the attestation authenticates the initial key-state projection as well as the AID. The concrete evidence carrier, reference or consumption rules, and transaction budgets remain to be specified and measured. Attestation is repeatable; checkpoint uniqueness is enforced by registry admission. There is no revival: an identity is alive until it is convicted. The registration guarantees explain the model boundaries and link the playable duplicate-registration case.",
       "pause": 400
     }
   ],
@@ -137,7 +137,7 @@
       "pause": 400
     },
     {
-      "text": "The accepted design adds exactly one shared structure, and confines it to the narrowest possible job: a registry mapping each AID to absent, active or permanently retired. A registration must prove absence before inserting, preventing a second first-registration of that AID. Parking and revival retain the token and active key. Conviction first enters pending custody; only its associated consuming Registry fold burns the token and retires the key. See the registration guarantee. Rotate, poison, freeze and top-up leave the key active, and consumers do not use an active key alone as authority.",
+      "text": "The accepted design adds exactly one shared structure, and confines it to the narrowest possible job: a registry mapping each AID to absent, active or permanently retired. A registration must prove absence before inserting, preventing a second first-registration of that AID. A live checkpoint keeps the token and the active key until it is convicted. Conviction first enters pending custody; only its associated consuming Registry fold burns the token and retires the key. See the registration guarantee. Rotate, poison, freeze and top-up leave the key active, and consumers do not use an active key alone as authority.",
       "pause": 400
     },
     {
@@ -177,7 +177,7 @@
       "pause": 400
     },
     {
-      "text": "Where authority is needed, it is a signature over exactly the thing being decided. Today, close binds the refund address in a message the current controllers sign.",
+      "text": "Where authority is needed, it is a signature over exactly the thing being decided. In the M1 V1 release, close bound the refund address in a message the current controllers signed; ckeri no longer offers that close.",
       "pause": 400
     },
     {
@@ -185,7 +185,7 @@
       "pause": 400
     },
     {
-      "text": "Under the design ruled on 2026-09-02/03 (D-036 to D-040; the model is lean/CardanoKeri/Checkpoint.lean, the play is the checkpoint simulation) leaving is the reap: a witnessed rotation by the next keys whose signed message names the payee of the premium (the fee the pool pays for landing a rotation) and the refund address. The current keys keep exactly one Cardano power, the poison. An identity is active, parked (the output retains its token, minimum ADA and last key state), pending conviction, or convicted after the associated Registry fold. Parking and revival keep the registry key active; a parked identity is revived by a witnessed rotation from exactly that key state, with fresh bonds. What ships today is the close described above. Every bond option other than keep, and every new refund address, is signed by the keys of the epoch the rotation opens — so a relayer landing a public rotation can never park, age, or close the owner.",
+      "text": "Under the design ruled on 2026-09-02/03 (D-036 to D-040; the model is lean/CardanoKeri/Checkpoint.lean, the play is the checkpoint simulation) there is no owner exit: no close, no parking and no revival; a checkpoint is alive until it is convicted (#493). The current keys keep exactly one Cardano power, the poison. An identity is active, pending conviction, or convicted after the associated Registry fold. A deposit is signed by the keys of the epoch the rotation opens — so a relayer landing a public rotation can never unfreeze the owner. The refund address is chosen by whoever pays the registration and no step ever changes it.",
       "pause": 400
     }
   ],
@@ -231,6 +231,6 @@
   ],
   "_source": {
     "file": "overview.md",
-    "sha256": "7f96371481d67b75a8bb6cb51f4777a0308016135ad5825b4cc2f8ddf454b45c"
+    "sha256": "a954aa9d9700825cf2b5a5d0a602729e89a2123b51c43cfaf8fecbbd056e31a1"
   }
 }

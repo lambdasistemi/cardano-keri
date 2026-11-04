@@ -214,7 +214,6 @@ pendingDatum =
         { tpAid = aidText
         , tpSn = lvSn sourceDatum
         , tpEpoch = lvEpoch sourceDatum
-        , tpKeys = lvKeys sourceDatum
         }
 
 pendingStateData :: Data

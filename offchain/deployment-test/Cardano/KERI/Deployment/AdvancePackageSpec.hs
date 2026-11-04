@@ -111,7 +111,6 @@ spec = describe "Advance package and plan from a live version 2 checkpoint" $ do
                             { tpAid = aidTextOf rotation
                             , tpSn = 0
                             , tpEpoch = 0
-                            , tpKeys = keysOf (rotationDatum rotation)
                             }
                     }
         mkAdvancePackage manifest pending rotation `shouldSatisfy` isLeft
@@ -212,17 +211,6 @@ bornAt = 1_700_000_000_000
 
 refundTo :: BS.ByteString
 refundTo = BS.cons 0x00 (BS.replicate 56 0x42)
-
-keysOf :: CheckpointDatumV1 -> KeyMaterial
-keysOf CheckpointDatumV1{..} =
-    KeyMaterial
-        { kmCurKeys = cdCurKeys
-        , kmCurThreshold = cdCurThreshold
-        , kmNextKeys = cdNextKeys
-        , kmNextThreshold = cdNextThreshold
-        , kmWitnesses = cdWitnesses
-        , kmToad = cdToad
-        }
 
 -- | The live checkpoint one rotation behind the export, holding this lovelace.
 activeAt :: Manifest -> RotationExport -> Integer -> Bool -> ActiveCheckpoint

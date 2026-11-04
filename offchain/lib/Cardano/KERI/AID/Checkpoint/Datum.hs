@@ -22,8 +22,8 @@ Version 2 (@V2@ is constructor 1) carries the facts of a checkpoint state:
 CheckpointDatumV2
   = Live                -- Constr 0, 8 fields:
       { aid, sn, epoch, poisoned, frozen, born_at, refund_to, keys }
-  | TerminationPending  -- Constr 1, 4 fields:
-      { aid, sn, epoch, keys }
+  | TerminationPending  -- Constr 1, 3 fields, no key material:
+      { aid, sn, epoch }
 KeyMaterial             -- Constr 0, 6 fields:
   { cur_keys, cur_threshold, next_keys, next_threshold, witnesses, toad }
 @
@@ -191,12 +191,13 @@ data CheckpointDatumV2
         -- ^ ledger bytes of the address a conviction refunds
         , lvKeys :: !KeyMaterial
         }
-    | -- | A convicted checkpoint awaiting completion (Constr 1, four fields).
+    | {- | A convicted checkpoint awaiting completion (Constr 1, three fields,
+      no key material: no step reads the keys of a pending checkpoint).
+      -}
       TerminationPending
         { tpAid :: !ByteString
         , tpSn :: !Integer
         , tpEpoch :: !Integer
-        , tpKeys :: !KeyMaterial
         }
     deriving stock (Show, Eq)
 
@@ -304,7 +305,7 @@ instance ToData CheckpointDatumV2 where
                 ]
     toBuiltinData TerminationPending{..} =
         BuiltinData $
-            Constr 1 [B tpAid, I tpSn, I tpEpoch, asData tpKeys]
+            Constr 1 [B tpAid, I tpSn, I tpEpoch]
 
 instance FromData CheckpointDatumV2 where
     fromBuiltinData
@@ -326,9 +327,8 @@ instance FromData CheckpointDatumV2 where
                     , lvRefundTo = refund
                     , ..
                     }
-    fromBuiltinData (BuiltinData (Constr 1 [B aid, I sn, I epoch, keys])) = do
-        tpKeys <- fromBuiltinData (BuiltinData keys)
-        pure TerminationPending{tpAid = aid, tpSn = sn, tpEpoch = epoch, ..}
+    fromBuiltinData (BuiltinData (Constr 1 [B aid, I sn, I epoch])) =
+        Just TerminationPending{tpAid = aid, tpSn = sn, tpEpoch = epoch}
     fromBuiltinData _ = Nothing
 
 -- | @CheckpointDatumV1@ -> @Constr 0 [9 fields in frozen order]@.
@@ -472,10 +472,9 @@ datumV2WellFormed = \case
         unless (lvEpoch >= 0) (Left NegativeEpoch)
         unless (lvBornAt >= 0) (Left NegativeBornAt)
         keysWellFormed lvKeys
-    TerminationPending{tpSn, tpEpoch, tpKeys} -> do
+    TerminationPending{tpSn, tpEpoch} -> do
         unless (tpSn >= 0) (Left NegativeSn)
         unless (tpEpoch >= 0) (Left NegativeEpoch)
-        keysWellFormed tpKeys
 
 keysWellFormed :: KeyMaterial -> Either DatumError ()
 keysWellFormed KeyMaterial{..} = do
@@ -570,18 +569,17 @@ rotatedLive old CheckpointDatumV1{..} = case old of
     TerminationPending{} -> Nothing
 
 {- | The datum a conviction writes (Lean @Step.convict@): the identifier, the
-sequence number, the epoch and the keys of the live datum, as a pending
-termination. 'Nothing' for a datum that is not live.
+sequence number and the epoch of the live datum, as a pending
+termination without key material. 'Nothing' for a datum that is not live.
 -}
 convictedOf :: CheckpointDatumV2 -> Maybe CheckpointDatumV2
 convictedOf = \case
-    Live{lvAid, lvSn, lvEpoch, lvKeys} ->
+    Live{lvAid, lvSn, lvEpoch} ->
         Just
             TerminationPending
                 { tpAid = lvAid
                 , tpSn = lvSn
                 , tpEpoch = lvEpoch
-                , tpKeys = lvKeys
                 }
     TerminationPending{} -> Nothing
 

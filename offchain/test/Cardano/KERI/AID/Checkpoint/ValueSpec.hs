@@ -62,7 +62,7 @@ live frozen =
 
 pending :: CheckpointDatumV2
 pending =
-    TerminationPending{tpAid = "aid", tpSn = 4, tpEpoch = 2, tpKeys = keys}
+    TerminationPending{tpAid = "aid", tpSn = 4, tpEpoch = 2}
 
 spec :: Spec
 spec = describe "Checkpoint.Value (Lean checkpoint-value-vectors)" $ do

@@ -37,13 +37,21 @@ import Data.ByteArray.Encoding (
 import Data.ByteString (
     ByteString,
  )
+import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as BC
+import PlutusCore.Data (Data (..))
 import Test.Hspec (
     Spec,
     describe,
+    expectationFailure,
     it,
     shouldBe,
+    shouldSatisfy,
  )
+
+lastMay :: [a] -> Maybe a
+lastMay [] = Nothing
+lastMay xs = Just (last xs)
 
 fromHex :: ByteString -> ByteString
 fromHex h = either error id (convertFromBase Base16 h)
@@ -92,14 +100,14 @@ liveOf aid sn epoch frozen bornAt material =
 
 pending :: CheckpointDatumV2
 pending =
-    TerminationPending{tpAid = aidText, tpSn = 4, tpEpoch = 2, tpKeys = keys}
+    TerminationPending{tpAid = aidText, tpSn = 4, tpEpoch = 2}
 
 -- | (Lean vector id, value, the datum bytes the Lean declares)
 rows :: [(String, CheckpointDatumV2, ByteString)]
 rows =
     [ ("registered-funded", live 0 0 False, fromHex "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff")
     , ("frozen", live 4 2 True, fromHex "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87a80186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff")
-    , ("pending-termination", pending, fromHex "d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff")
+    , ("pending-termination", pending, fromHex "d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402ffff")
     ]
 
 spec :: Spec
@@ -142,6 +150,19 @@ spec = describe "version 2 checkpoint datum" $ do
             fmap cdSeq (datumKeyState (V2 (live 4 2 False))) `shouldBe` Just 2
         it "has no key state for a pending termination: it is no active checkpoint" $
             datumKeyState (V2 pending) `shouldBe` Nothing
+        it "refuses the earlier four-field pending layout (Lean pending-with-keys)" $
+            case checkpointDatumToData (V2 (live 4 2 False)) of
+                Constr 1 [Constr 0 fields]
+                    | Just withKeys <- lastMay fields ->
+                        checkpointDatumFromData
+                            ( Constr
+                                1
+                                [Constr 1 [B aidText, I 4, I 2, withKeys]]
+                            )
+                            `shouldBe` Nothing
+                other -> expectationFailure ("not a live version 2 datum: " <> show other)
+        it "writes a pending termination within the Lean size bound" $
+            BS.length (canonicalCbor (V2 pending)) `shouldSatisfy` (<= 72)
         it "refuses a malformed identifier" $
             datumKeyState (V2 (liveOf (BC.pack "not an aid") 0 0 False 100 keys))
                 `shouldBe` Nothing

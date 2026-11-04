@@ -87,7 +87,12 @@ spec =
                 -- #339: re-derived once more after the version 1 datum
                 -- constructor left the shared datum type (15_778 -> 15_625);
                 -- the ceiling is unchanged.
-                programLength "observer-advance" artifacts `shouldBe` 15_625
+                -- #345: re-derived once the advance observer also hosts the
+                -- freeze verdict (15_625 -> 15_665) and the checkpoint program
+                -- gains the Freeze arm; the ceiling is unchanged, and the
+                -- checkpoint program's length is pinned beside it.
+                programLength "observer-advance" artifacts `shouldBe` 15_665
+                programLength "checkpoint-register" artifacts `shouldBe` 8_490
         describe "M1 endpoint-board script" $ do
             -- Historical fact, not a live derivation: the M1 endpoint board
             -- was deployed 2026-07-29 compiled with aiken 1.1.21 (blueprint

@@ -11,7 +11,8 @@ use cardano_keri/bounty_commitment.{CommitmentFamily}
 use cardano_keri/checkpoint/enforcement_observer.{validate_enforcement}
 use cardano_keri/checkpoint/entitlement.{validate_entitlement_observation}
 use cardano_keri/checkpoint/observer.{
-  ObserverEnvelope, observe_migration, validate_advance, validate_registration,
+  ObserverEnvelope, observe_freeze, observe_migration, validate_advance,
+  validate_freeze, validate_registration,
 }
 use cardano_keri/migration/checkpoint.{
   MigrationProof, validate_migration_observation,
@@ -41,10 +42,17 @@ validator observer_lifecycle(
   }
 }
 
+/// The rotation evidence observer: the rotation an Advance writes, and the
+/// same rotation presented as the evidence of a Freeze (#345). The claim's
+/// action tag picks the verdict; both run the unchanged advance predicate.
 validator observer_advance(_version: Int) {
   withdraw(redeemer: Data, _account: Data, tx: Transaction) {
     expect envelope: ObserverEnvelope = redeemer
-    validate_advance(envelope, tx)
+    if envelope.claim.action == observe_freeze {
+      validate_freeze(envelope, tx)
+    } else {
+      validate_advance(envelope, tx)
+    }
   }
 
   publish(_redeemer: Data, certificate: Certificate, _tx: Transaction) {

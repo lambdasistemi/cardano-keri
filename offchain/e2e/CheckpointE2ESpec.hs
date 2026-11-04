@@ -15,6 +15,7 @@ import Test.Hspec
 import CheckpointTxBuilder (
     productionRegisterAdvanceScenario,
     productionRegisterConvictScenario,
+    productionRegisterFreezeScenario,
     productionRegisterScenario,
     stagedCheckpointDevnet,
  )
@@ -35,3 +36,8 @@ spec = describe "#136 register a small identity end to end" $ do
         it
             "#151 convicts an ACTIVE checkpoint"
             productionRegisterConvictScenario
+
+    around stagedCheckpointDevnet $ do
+        it
+            "#345 freezes a checkpoint whose pool is below the premium on the controller's own next witnessed rotation"
+            productionRegisterFreezeScenario

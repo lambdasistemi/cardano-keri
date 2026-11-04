@@ -16,7 +16,7 @@ use cardano_keri/checkpoint/advance.{
   AdvanceEvidence, AdvancePredicateValid, advance_predicate,
 }
 use cardano_keri/checkpoint/datum.{
-  DatumValid, KeyStateView, Live, datum_v2_well_formed,
+  DatumValid, KeyMaterial, KeyStateView, Live, datum_v2_well_formed,
 }
 use cardano_keri/checkpoint/message.{
   SpentCheckpoint, aid_digest, deriveAidAssetName,
@@ -31,6 +31,11 @@ pub const observe_register: Int = 0
 
 /// The stable action tag for Advance.
 pub const observe_advance: Int = 1
+
+/// The stable action tag for Freeze: the controller's own later rotation presented
+/// as a freeze of a checkpoint whose pool is below the premium. Tag 2 was the
+/// two-step freeze's and has been unused since it was removed.
+pub const observe_freeze: Int = 2
 
 /// The stable action tag for Convict.
 pub const observe_convict: Int = 4
@@ -150,9 +155,81 @@ pub fn validate_advance(envelope: ObserverEnvelope, tx: Transaction) -> Bool {
     seq: new_epoch,
     native_sn: new_sn,
   }
-  let spent = SpentCheckpoint {
+  let spent = spent_checkpoint(
+    claim.checkpoint_policy,
+    own_ref,
+    digest,
+    old_keys,
+    old_epoch,
+    old_sn,
+  )
+  advance_predicate(spent, new, evidence) == AdvancePredicateValid
+}
+
+/// The rotation evidence of a freeze: the successor keeps the old keys, so the
+/// key state the advance predicate needs cannot be read from it and travels
+/// here. The rotated epoch is the spent epoch plus one and is not carried.
+pub type FreezeEvidence {
+  rotated_keys: KeyMaterial,
+  rotated_sn: Int,
+  rotation: AdvanceEvidence,
+}
+
+/// Validate a genuine later rotation against the named live input, as the
+/// evidence of a freeze (Lean `Step.freeze`, `env.rotationTo`, `l.sn < sn'`).
+///
+/// The unchanged advance predicate runs over the key states the spent datum
+/// and the evidence declare. Everything about the freeze that is not evidence
+/// (the pool, the flags, the successor, the hunter) is the checkpoint
+/// program's.
+pub fn validate_freeze(envelope: ObserverEnvelope, tx: Transaction) -> Bool {
+  let ObserverEnvelope { claim, payload } = envelope
+  expect claim.action == observe_freeze
+  expect Some(own_ref) = claim.own_ref
+  expect evidence: FreezeEvidence = payload
+  expect Some(own_input) = find_input(tx.inputs, own_ref)
+  expect InlineDatum(old_data) = own_input.output.datum
+  expect Live { aid, sn: old_sn, epoch: old_epoch, keys: old_keys, .. } = datum.read(
+    old_data,
+  )
+  expect Some(digest) = aid_digest(aid)
+  let rotated = evidence.rotated_keys
+  let new = KeyStateView {
+    cesr_aid: digest,
+    cur_keys: rotated.cur_keys,
+    cur_threshold: rotated.cur_threshold,
+    next_keys: rotated.next_keys,
+    next_threshold: rotated.next_threshold,
+    witnesses: rotated.witnesses,
+    toad: rotated.toad,
+    seq: old_epoch + 1,
+    native_sn: evidence.rotated_sn,
+  }
+  let spent = spent_checkpoint(
+    claim.checkpoint_policy,
+    own_ref,
+    digest,
+    old_keys,
+    old_epoch,
+    old_sn,
+  )
+  advance_predicate(spent, new, evidence.rotation) == AdvancePredicateValid
+}
+
+/// The spent checkpoint an advance or a freeze rotates away from: the spent
+/// epoch and sequence number play the predicate's checkpoint counter and
+/// native sequence number.
+fn spent_checkpoint(
+  policy_id: PolicyId,
+  own_ref: OutputReference,
+  digest: ByteArray,
+  old_keys: KeyMaterial,
+  old_epoch: Int,
+  old_sn: Int,
+) -> SpentCheckpoint {
+  SpentCheckpoint {
     network_id: 0,
-    policy_id: claim.checkpoint_policy,
+    policy_id,
     aid_asset_name: deriveAidAssetName(digest),
     txid: own_ref.transaction_id,
     index: own_ref.output_index,
@@ -163,5 +240,4 @@ pub fn validate_advance(envelope: ObserverEnvelope, tx: Transaction) -> Bool {
     seq: old_epoch,
     native_sn: old_sn,
   }
-  advance_predicate(spent, new, evidence) == AdvancePredicateValid
 }

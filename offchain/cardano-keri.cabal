@@ -70,6 +70,7 @@ library
     Cardano.KERI.AID.Checkpoint.Datum
     Cardano.KERI.AID.Checkpoint.Enforcement
     Cardano.KERI.AID.Checkpoint.Entitlement
+    Cardano.KERI.AID.Checkpoint.Freeze
     Cardano.KERI.AID.Checkpoint.FreezeBond
     Cardano.KERI.AID.Checkpoint.Message
     Cardano.KERI.AID.Checkpoint.Registration
@@ -170,6 +171,7 @@ library deployment
     Cardano.KERI.Deployment.EndpointBoard
     Cardano.KERI.Deployment.EndpointBoardManifest
     Cardano.KERI.Deployment.EndpointBoardTransaction
+    Cardano.KERI.Deployment.Freeze
     Cardano.KERI.Deployment.KEL
     Cardano.KERI.Deployment.LiveRuntime
     Cardano.KERI.Deployment.Manifest
@@ -401,6 +403,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.CheckpointMigrationSpec
     Cardano.KERI.Deployment.EndpointBoardSpec
     Cardano.KERI.Deployment.EndpointBoardTransactionSpec
+    Cardano.KERI.Deployment.FreezePackageSpec
     Cardano.KERI.Deployment.KELSpec
     Cardano.KERI.Deployment.ManifestSpec
     Cardano.KERI.Deployment.ParityOracle.Capture
@@ -903,6 +906,8 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.EntitlementSpec
     Cardano.KERI.AID.Checkpoint.FixtureLoader
     Cardano.KERI.AID.Checkpoint.FreezeBondSpec
+    Cardano.KERI.AID.Checkpoint.FreezeCorpus
+    Cardano.KERI.AID.Checkpoint.FreezeSpec
     Cardano.KERI.AID.Checkpoint.Keri68OracleSpec
     Cardano.KERI.AID.Checkpoint.MessageSpec
     Cardano.KERI.AID.Checkpoint.RegistrationFixturesSpec
@@ -987,6 +992,19 @@ executable gen-freeze-bond-vectors
   build-depends:
     , base
     , cardano-keri
+
+executable gen-freeze-vectors
+  import:           warnings
+  default-language: GHC2021
+  hs-source-dirs:   app
+  main-is:          GenFreezeVectors.hs
+  build-depends:
+    , base
+    , bytestring
+    , cardano-keri
+    , memory        >=0.18 && <0.19
+    , plutus-core
+    , plutus-tx
 
 -- #254 S254-1A: the sole source of the shared migration-type parity
 -- fixtures. Emits both the inputs and the expected encodings, so the Aiken

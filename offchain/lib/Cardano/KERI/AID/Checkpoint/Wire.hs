@@ -14,6 +14,9 @@ module Cardano.KERI.AID.Checkpoint.Wire (
     convictSpendRedeemerData,
     enforcementEvidenceData,
     enforcementProofData,
+    freezeEvidenceData,
+    freezeObserverRedeemerData,
+    freezeSpendRedeemerData,
     registerObserverRedeemerData,
     registrationEvidenceData,
     asPlcData,
@@ -22,6 +25,7 @@ module Cardano.KERI.AID.Checkpoint.Wire (
 import Cardano.KERI.AID.Checkpoint.Advance (AdvanceEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Enforcement (EnforcementEvidence)
 import Cardano.KERI.AID.Checkpoint.Entitlement (EnforcementProofV1 (..))
+import Cardano.KERI.AID.Checkpoint.Freeze (FreezeEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Registration (RegistrationEvidence (..))
 import Data.ByteString (ByteString)
 import PlutusCore.Data (Data (..))
@@ -66,6 +70,46 @@ advanceObserverRedeemerData checkpointPolicy spentTxId spentIndex evidence =
             , Constr 0 [Constr 0 [B spentTxId, I spentIndex]]
             ]
         , advanceEvidenceData evidence
+        ]
+
+{- | The Freeze arm is spend constructor three, appended after MigrateOut so
+nothing renumbers; it names the output that receives the freeze bond.
+-}
+freezeSpendRedeemerData :: Integer -> Data
+freezeSpendRedeemerData hunterOutputIndex =
+    Constr 3 [I hunterOutputIndex]
+
+{- | The Freeze observer envelope: action two, checkpoint policy, the named
+spent output reference, and the freeze evidence.
+-}
+freezeObserverRedeemerData ::
+    ByteString ->
+    ByteString ->
+    Integer ->
+    FreezeEvidence ->
+    Data
+freezeObserverRedeemerData checkpointPolicy spentTxId spentIndex evidence =
+    Constr
+        0
+        [ Constr
+            0
+            [ I 2
+            , B checkpointPolicy
+            , Constr 0 [Constr 0 [B spentTxId, I spentIndex]]
+            ]
+        , freezeEvidenceData evidence
+        ]
+
+{- | The Aiken freeze evidence record: the rotated keys, their sequence
+number and the rotation evidence.
+-}
+freezeEvidenceData :: FreezeEvidence -> Data
+freezeEvidenceData FreezeEvidence{..} =
+    Constr
+        0
+        [ asPlcData feRotatedKeys
+        , I feRotatedSn
+        , advanceEvidenceData feRotation
         ]
 
 {- | Conviction is spend constructor one; evidence remains in the isolated

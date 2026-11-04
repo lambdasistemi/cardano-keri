@@ -20,6 +20,8 @@ module Cardano.KERI.Deployment.AdvanceTransaction (
     AdvanceObservationTimeout (..),
     AdvanceResult (..),
     mkAdvancePlan,
+    mkAdvancePlanWith,
+    premiumOutputIndex,
     runAdvanceTransaction,
     awaitAdvance,
 ) where
@@ -189,7 +191,28 @@ instance ToData RawData where
     toBuiltinData (RawData datum) = BuiltinData datum
 
 mkAdvancePlan :: Manifest -> AdvancePackage -> Either String AdvancePlan
-mkAdvancePlan manifest package = do
+mkAdvancePlan =
+    mkAdvancePlanWith $ \policy package ->
+        let spent = advanceSpent package
+         in ( advanceSpendRedeemerData premiumOutputIndex
+            , advanceObserverRedeemerData
+                policy
+                (scTxid spent)
+                (scIndex spent)
+                (advanceEvidence package)
+            )
+
+{- | The plan of a rotation transaction whose spend and observer redeemers are
+given: an Advance, or a Freeze that rotates nothing but is presented on the
+same evidence. The successor, its lovelace and the payment to the funding
+address come from the package.
+-}
+mkAdvancePlanWith ::
+    (ByteString -> AdvancePackage -> (Data, Data)) ->
+    Manifest ->
+    AdvancePackage ->
+    Either String AdvancePlan
+mkAdvancePlanWith redeemers manifest package = do
     checkpoint <- scriptNamed "checkpoint-register" manifest
     observer <- scriptNamed "observer-advance" manifest
     policy <- decodeHexSized "checkpoint policy" 28 (scriptHash checkpoint)
@@ -200,7 +223,6 @@ mkAdvancePlan manifest package = do
             (scriptHash observer)
     planAdvanceRewardAddress <- rewardAddress observerHash
     let active = advanceActiveCheckpoint package
-        spent = advanceSpent package
         planSpentReference = advanceSpentReference package
         planCheckpointReference = renderReference (scriptReference checkpoint)
         planAdvanceReference = renderReference (scriptReference observer)
@@ -208,14 +230,9 @@ mkAdvancePlan manifest package = do
         planCheckpointAssetName = activeCheckpointAssetName active
         planCheckpointAddress = activeCheckpointAddress active
         planStateOutput = renderStateOutput active
-        planSpendRedeemer = plutusDataJson (advanceSpendRedeemerData premiumOutputIndex)
-        planObserverRedeemer =
-            plutusDataJson $
-                advanceObserverRedeemerData
-                    policy
-                    (scTxid spent)
-                    (scIndex spent)
-                    (advanceEvidence package)
+        (spendRedeemer, observerRedeemer) = redeemers policy package
+        planSpendRedeemer = plutusDataJson spendRedeemer
+        planObserverRedeemer = plutusDataJson observerRedeemer
         planSuccessorDatum =
             plutusDataJson $ asPlcData $ V2 $ advanceSuccessorFacts package
         planSuccessorLovelace = advanceSuccessorLovelace package

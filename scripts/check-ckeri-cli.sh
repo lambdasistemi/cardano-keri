@@ -14,6 +14,7 @@ mkdir "$outside"
 "$ckeri" --help | grep -q "manifest"
 "$ckeri" --help | grep -q "register"
 "$ckeri" --help | grep -q "advance"
+"$ckeri" --help | grep -q "freeze"
 "$ckeri" --help | grep -q "status"
 "$ckeri" deploy --help | grep -q -- "--node-socket"
 "$ckeri" deploy --help | grep -q "CKERI_NODE_SOCKET"
@@ -44,6 +45,14 @@ mkdir "$outside"
 "$ckeri" advance --help | grep -q "validator-test-under-signed"
 "$ckeri" advance --help | grep -q "validator-test-under-witnessed"
 "$ckeri" advance --help | grep -q "validator-test-stale"
+"$ckeri" freeze --help | grep -q -- "--aid"
+"$ckeri" freeze --help | grep -q "CKERI_AID"
+"$ckeri" freeze --help | grep -q -- "--kel"
+"$ckeri" freeze --help | grep -q "CKERI_KEL"
+"$ckeri" freeze --help | grep -q -- "--payer"
+"$ckeri" freeze --help | grep -q "CKERI_PAYER"
+"$ckeri" freeze --help | grep -q -- "--funding-address"
+"$ckeri" freeze --help | grep -q "CKERI_FUNDING_ADDRESS"
 "$ckeri" status --help | grep -q "AID"
 "$ckeri" status --help | grep -q "CKERI_AID"
 "$ckeri" status --help | grep -q -- "--koios-token"
@@ -80,6 +89,7 @@ expect_parser_verdict close unrecognised
 expect_parser_verdict reopen unrecognised
 expect_parser_verdict no-such-command unrecognised
 expect_parser_verdict advance recognised
+expect_parser_verdict freeze recognised
 
 reject_retired_cardano_cli_help() {
   local command_label="$1"
@@ -96,6 +106,7 @@ reject_retired_cardano_cli_help() {
 reject_retired_cardano_cli_help deploy deploy
 reject_retired_cardano_cli_help register register
 reject_retired_cardano_cli_help advance advance
+reject_retired_cardano_cli_help freeze freeze
 reject_retired_cardano_cli_help board-deploy board deploy
 reject_retired_cardano_cli_help board-post board post
 reject_retired_cardano_cli_help board-update board update
@@ -121,6 +132,7 @@ reject_write_koios_help() {
 reject_write_koios_help deploy deploy
 reject_write_koios_help register register
 reject_write_koios_help advance advance
+reject_write_koios_help freeze freeze
 reject_write_koios_help board-deploy board deploy
 reject_write_koios_help board-post board post
 reject_write_koios_help board-update board update

@@ -10,10 +10,13 @@ event signatures are never treated as Cardano Advance signatures.
 module Cardano.KERI.Deployment.Advance (
     AdvancePackage (..),
     AdvanceSigningFiles (..),
+    PackageBase (..),
+    packageBase,
     mkAdvancePackage,
     attachControllerSignatures,
     advanceSigningMetadata,
     writeAdvanceSigningPackage,
+    sha256Text,
 ) where
 
 import Cardano.KERI.AID.Checkpoint.Advance (
@@ -84,6 +87,7 @@ data AdvancePackage = AdvancePackage
     -- ^ the lovelace the successor output holds, exactly
     , advanceEvidence :: !AdvanceEvidence
     , advanceSigningPreimage :: !ByteString
+    -- ^ what the controller signs; empty for a freeze, which asks nobody's signature
     , advancePackageSha256 :: !Text
     }
     deriving stock (Show, Eq)
@@ -94,12 +98,22 @@ data AdvanceSigningFiles = AdvanceSigningFiles
     }
     deriving stock (Show, Eq)
 
-mkAdvancePackage ::
+{- | What every rotation package starts from, once the manifest, the live
+checkpoint and the rotation export agree: the deployment parameters, the
+premium and the spent checkpoint the evidence is checked against.
+-}
+data PackageBase = PackageBase
+    { pbParameters :: !DeploymentParameters
+    , pbPremium :: !Integer
+    , pbSpent :: !SpentCheckpoint
+    }
+
+packageBase ::
     Manifest ->
     ActiveCheckpoint ->
     RotationExport ->
-    Either String AdvancePackage
-mkAdvancePackage manifest active rotation = do
+    Either String PackageBase
+packageBase manifest active rotation = do
     unless
         ( networkName (manifestNetwork manifest) == "preprod"
             && networkMagic (manifestNetwork manifest) == 1
@@ -127,13 +141,38 @@ mkAdvancePackage manifest active rotation = do
             "checkpoint transaction id"
             32
             (activeCheckpointTxId active)
-    let parameters = manifestParameters manifest
-        facts = activeCheckpointFacts active
-    premium <-
+    let pbParameters = manifestParameters manifest
+        old = activeCheckpointDatum active
+    pbPremium <-
         maybe
             (Left "the manifest has no premiumLovelace: its generation has no premium and cannot be advanced")
             Right
-            (parameterPremium parameters)
+            (parameterPremium pbParameters)
+    let pbSpent =
+            SpentCheckpoint
+                { scNetworkId = parameterNetworkDiscriminator pbParameters
+                , scPolicyId = policy
+                , scAidAssetName = assetName
+                , scTxid = txId
+                , scIndex = fromIntegral $ activeCheckpointIndex active
+                , scCesrAid = cdCesrAid old
+                , scWitnesses = cdWitnesses old
+                , scNextKeys = cdNextKeys old
+                , scNextThreshold = cdNextThreshold old
+                , scSeq = cdSeq old
+                , scNativeSn = cdNativeSn old
+                }
+    pure PackageBase{..}
+
+mkAdvancePackage ::
+    Manifest ->
+    ActiveCheckpoint ->
+    RotationExport ->
+    Either String AdvancePackage
+mkAdvancePackage manifest active rotation = do
+    PackageBase{pbParameters = parameters, pbPremium = premium, pbSpent = spent} <-
+        packageBase manifest active rotation
+    let facts = activeCheckpointFacts active
     settlement <-
         maybe
             (Left "the checkpoint is not a live output holding its deposit and bond")
@@ -151,24 +190,8 @@ mkAdvancePackage manifest active rotation = do
             (Left "the checkpoint is not live")
             Right
             (rotatedLive facts (rotationDatum rotation))
-    let old = activeCheckpointDatum active
-        successor = rotationDatum rotation
+    let successor = rotationDatum rotation
         evidence = rotationEvidence rotation
-        spent =
-            SpentCheckpoint
-                { scNetworkId =
-                    parameterNetworkDiscriminator (manifestParameters manifest)
-                , scPolicyId = policy
-                , scAidAssetName = assetName
-                , scTxid = txId
-                , scIndex = fromIntegral $ activeCheckpointIndex active
-                , scCesrAid = cdCesrAid old
-                , scWitnesses = cdWitnesses old
-                , scNextKeys = cdNextKeys old
-                , scNextThreshold = cdNextThreshold old
-                , scSeq = cdSeq old
-                , scNativeSn = cdNativeSn old
-                }
         preimage =
             canonicalCbor $
                 reconstructAdvanceMessage

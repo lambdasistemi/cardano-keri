@@ -27,7 +27,7 @@ The card also asks, as an identity controller with a short hunter pool, to see t
 
 ## Preprod operator play
 
-The controller creates and witnesses a KERI rotation with keripy, then gives the CESR stream to a separate hunter. The hunter submits `ckeri advance` against the connected preprod checkpoint and reads back the checkpoint, pool, bond and payout. Repeat from a deliberately short pool to show the accepted freeze or unpaid branch and its actual transaction effects. The deployed V1 preprod release does not implement this full hunter and registry story. No cast is attached until both preprod branches and their refusal receipts have been observed.
+The controller creates and witnesses a KERI rotation with keripy, then gives the CESR stream to a separate hunter. The hunter submits `ckeri advance` against the connected preprod checkpoint and reads back the checkpoint, pool, bond and payout. Repeat from a deliberately short pool: the hunter submits `ckeri freeze` with the same export, and the checkpoint is frozen on its old keys while the hunter receives the bond. Show the unpaid branch and the actual transaction effects of both. The deployed V1 preprod release does not implement this full hunter and registry story. No cast is attached until both preprod branches and their refusal receipts have been observed.
 
 ## Presenter path: 10–15 minutes when runnable
 

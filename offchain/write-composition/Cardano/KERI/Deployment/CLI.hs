@@ -11,6 +11,7 @@ module Cardano.KERI.Deployment.CLI (
     RegisterSettings (..),
     RegisterRuntime (..),
     AdvanceSettings (..),
+    FreezeSettings (..),
     BoardInstructions (..),
     BoardTransactionSettings (..),
     BoardPostSettings (..),
@@ -28,6 +29,7 @@ module Cardano.KERI.Deployment.CLI (
     deploySettingsParserWithOut,
     registerSettingsParser,
     advanceSettingsParser,
+    freezeSettingsParser,
     boardPostSettingsParser,
     boardUpdateSettingsParser,
     boardRetireSettingsParser,
@@ -37,6 +39,8 @@ module Cardano.KERI.Deployment.CLI (
     runRegisterWith,
     runAdvance,
     runAdvanceWith,
+    runFreeze,
+    runFreezeWith,
     runBoard,
     runBoardDeploy,
     runBoardDeployWith,
@@ -112,6 +116,11 @@ import Cardano.KERI.Deployment.EndpointBoardManifest (
     writeEndpointBoardManifestAtomic,
  )
 import Cardano.KERI.Deployment.EndpointBoardTransaction qualified as BoardTx
+import Cardano.KERI.Deployment.Freeze (
+    checkFreezePackage,
+    mkFreezePackage,
+    mkFreezePlan,
+ )
 import Cardano.KERI.Deployment.KEL (
     InceptionExport (..),
     RotationExport (..),
@@ -317,6 +326,24 @@ data AdvanceSettings = AdvanceSettings
     , advanceValidatorTestUnderSigned :: Bool
     , advanceValidatorTestUnderWitnessed :: Bool
     , advanceValidatorTestStale :: Bool
+    }
+    deriving stock (Show, Eq)
+
+{- | A freeze presents the controller's own witnessed rotation exactly as the
+log exports it: nobody signs anything for it, so there is no signing phase and
+the payer, the node and the funding address are always needed.
+-}
+data FreezeSettings = FreezeSettings
+    { freezeNetwork :: Text
+    , freezeNetworkMagic :: Int
+    , freezeConfiguredAid :: Text
+    , freezeKel :: FilePath
+    , freezePayer :: FilePath
+    , freezeNodeSocket :: FilePath
+    , freezeFundingAddress :: Text
+    , freezeManifest :: FilePath
+    , freezeStorePath :: FilePath
+    , freezeTimeoutSeconds :: Int
     }
     deriving stock (Show, Eq)
 
@@ -673,6 +700,80 @@ advanceSettingsParser = do
             , Opt.value False
             ]
     pure AdvanceSettings{..}
+
+freezeSettingsParser :: Opt.Parser FreezeSettings
+freezeSettingsParser = do
+    freezeNetwork <-
+        textSetting
+            "network"
+            "CKERI_NETWORK"
+            "network"
+            "Cardano network name"
+            (Just "preprod")
+    freezeNetworkMagic <-
+        intSetting
+            "network-magic"
+            "CKERI_NETWORK_MAGIC"
+            "network-magic"
+            "Cardano testnet network magic"
+            (Just 1)
+    freezeConfiguredAid <-
+        textSetting
+            "aid"
+            "CKERI_AID"
+            "aid"
+            "44-character KERI E-code identifier"
+            Nothing
+    freezeKel <-
+        stringSetting
+            "kel"
+            "CKERI_KEL"
+            "kel"
+            "Binary-safe path to a witnessed kli rotation export"
+            Nothing
+    freezePayer <-
+        stringSetting
+            "payer"
+            "CKERI_PAYER"
+            "payer"
+            "Cardano payment signing-key file"
+            Nothing
+    freezeNodeSocket <-
+        stringSetting
+            "node-socket"
+            "CKERI_NODE_SOCKET"
+            "node-socket"
+            "Cardano node socket"
+            Nothing
+    freezeFundingAddress <-
+        textSetting
+            "funding-address"
+            "CKERI_FUNDING_ADDRESS"
+            "funding-address"
+            "Bech32 payment address funding the freeze and receiving the freeze bond"
+            Nothing
+    freezeManifest <-
+        stringSetting
+            "manifest"
+            "CKERI_MANIFEST"
+            "manifest"
+            "V1 preprod deployment manifest"
+            (Just "deploy/preprod/m1-manifest.json")
+    freezeStorePath <-
+        stringSetting
+            "store"
+            "CKERI_STORE"
+            "store"
+            "Local follower RocksDB store path"
+            Nothing
+    freezeTimeoutSeconds <-
+        intSetting
+            "timeout-seconds"
+            "CKERI_TIMEOUT_SECONDS"
+            "timeout-seconds"
+            "Settlement timeout"
+            (Just 600)
+    pure FreezeSettings{..}
 
 {- | #240: this module builds no combined \"board\" command parser of its
 own any more -- "Cardano.KERI.CLI" composes the four write leaves below
@@ -2037,50 +2138,153 @@ submitAdvance openLiveContext scope settings manifest rotation signatureFile = d
     submittedPackage <-
         prepareSubmittedPackage settings active signatures package
     plan <- either fail pure (AdvanceTx.mkAdvancePlan manifest submittedPackage)
-    openLiveContext
+    submitRotation
+        openLiveContext
+        scope
         ( advanceLiveConfig
             settings
             payer
             nodeSocket
             fundingAddress
         )
-        (awaitLocalTransaction scope (advanceTimeoutSeconds settings))
-        $ \context -> do
-            observerAccount <-
-                either fail pure $
-                    rewardAccountForScript "observer-advance" manifest
-            observerRegistered <-
-                rewardAccountRegistered context observerAccount
-            result <-
-                AdvanceTx.runAdvanceTransaction
-                    AdvanceTx.AdvanceConfig
-                        { AdvanceTx.advanceRuntime =
-                            liveTransactionRuntime context
-                        , AdvanceTx.advanceReferenceUtxos = references
-                        , AdvanceTx.advanceFundingAddress =
-                            liveFundingAddress context
-                        , AdvanceTx.advanceObserverRewardAccount =
-                            observerAccount
-                        }
-                    plan
-                    funding
-                    activeInput
-                    (not observerRegistered)
-                    >>= either (fail . show) pure
-            let txId = AdvanceTx.resultAdvanceTxId result
-            _ <-
-                AdvanceTx.awaitAdvance
-                    (probeSettlement (localSettlementObserver scope))
-                    2_000_000
-                    (advanceTimeoutSeconds settings)
-                    (AdvanceTx.planCheckpointPolicy plan)
-                    (AdvanceTx.planCheckpointAssetName plan)
-                    (renderTransactionId txId)
-                    (AdvanceTx.planCheckpointAddress plan)
-                    >>= either (fail . show) pure
-            putStrLn $
-                "advance txid: "
-                    <> T.unpack (renderTransactionId txId)
+        (advanceTimeoutSeconds settings)
+        "advance"
+        manifest
+        references
+        activeInput
+        funding
+        plan
+
+{- | Build, sign and settle the transaction of a rotation plan through the live
+runtime, then wait for the checkpoint output it writes: the shared tail of
+Advance and Freeze, which differ only in their plans.
+-}
+submitRotation ::
+    LiveOpener ->
+    LocalQueryScope cf op ->
+    LiveConfig ->
+    Int ->
+    String ->
+    Manifest ->
+    [(TxIn, TxOut ConwayEra)] ->
+    (TxIn, TxOut ConwayEra) ->
+    [(TxIn, TxOut ConwayEra)] ->
+    AdvanceTx.AdvancePlan ->
+    IO ()
+submitRotation
+    openLiveContext
+    scope
+    liveConfig
+    timeoutSeconds
+    label
+    manifest
+    references
+    activeInput
+    funding
+    plan =
+        openLiveContext
+            liveConfig
+            (awaitLocalTransaction scope timeoutSeconds)
+            $ \context -> do
+                observerAccount <-
+                    either fail pure $
+                        rewardAccountForScript "observer-advance" manifest
+                observerRegistered <-
+                    rewardAccountRegistered context observerAccount
+                result <-
+                    AdvanceTx.runAdvanceTransaction
+                        AdvanceTx.AdvanceConfig
+                            { AdvanceTx.advanceRuntime =
+                                liveTransactionRuntime context
+                            , AdvanceTx.advanceReferenceUtxos = references
+                            , AdvanceTx.advanceFundingAddress =
+                                liveFundingAddress context
+                            , AdvanceTx.advanceObserverRewardAccount =
+                                observerAccount
+                            }
+                        plan
+                        funding
+                        activeInput
+                        (not observerRegistered)
+                        >>= either (fail . show) pure
+                let txId = AdvanceTx.resultAdvanceTxId result
+                _ <-
+                    AdvanceTx.awaitAdvance
+                        (probeSettlement (localSettlementObserver scope))
+                        2_000_000
+                        timeoutSeconds
+                        (AdvanceTx.planCheckpointPolicy plan)
+                        (AdvanceTx.planCheckpointAssetName plan)
+                        (renderTransactionId txId)
+                        (AdvanceTx.planCheckpointAddress plan)
+                        >>= either (fail . show) pure
+                putStrLn $
+                    label
+                        <> " txid: "
+                        <> T.unpack (renderTransactionId txId)
+
+{- | Freeze a live checkpoint on the controller's own later witnessed rotation,
+paying the freeze bond to the funding address. The live and local brackets are
+parameters, as for 'runAdvanceWith'.
+-}
+runFreeze :: FreezeSettings -> IO ()
+runFreeze = runFreezeWith withLocalQueryScope withLiveContext
+
+runFreezeWith :: LocalOpener -> LiveOpener -> FreezeSettings -> IO ()
+runFreezeWith openLocalScope openLiveContext settings = do
+    unless
+        (freezeNetwork settings == "preprod" && freezeNetworkMagic settings == 1)
+        (fail "M1 V1 freeze supports only preprod network magic 1")
+    unless
+        ( T.length (freezeConfiguredAid settings) == 44
+            && "E" `T.isPrefixOf` freezeConfiguredAid settings
+        )
+        (fail "AID must be one 44-character KERI E-code identifier")
+    when (freezeTimeoutSeconds settings <= 0) $
+        fail "timeout-seconds must be positive"
+    kel <- BS.readFile (freezeKel settings)
+    rotation <- either fail pure (parseRotationExport kel)
+    unless (freezeConfiguredAid settings == rotationAid rotation) $
+        fail "configured AID does not match the kli rotation export"
+    manifest <-
+        readManifest (freezeManifest settings) >>= either fail pure
+    localSettings <-
+        either fail pure (manifestLocalSettingsFor (freezeStorePath settings) manifest)
+    openLocalScope localSettings $ \scope -> do
+        bundle <-
+            acquire
+                scope
+                ( activeCheckpointSubmitProgram
+                    (manifestCheckpointLocator manifest)
+                    manifest
+                    (freezeConfiguredAid settings)
+                    (freezeFundingAddress settings)
+                )
+        (active, references, activeInput, funding) <-
+            case bundle of
+                ActiveCheckpointNotRegistered -> fail "checkpoint is not registered"
+                ActiveCheckpointSubmitBundle active refs activeInput funding ->
+                    pure (active, refs, activeInput, funding)
+        package <- either fail pure (mkFreezePackage manifest active rotation)
+        either fail pure (checkFreezePackage manifest package)
+        plan <- either fail pure (mkFreezePlan manifest package)
+        submitRotation
+            openLiveContext
+            scope
+            LiveConfig
+                { liveNetworkMagic = freezeNetworkMagic settings
+                , liveNodeSocket = freezeNodeSocket settings
+                , liveSigningKeyFile = freezePayer settings
+                , liveFundingAddressText = freezeFundingAddress settings
+                , liveTimeoutSeconds = freezeTimeoutSeconds settings
+                }
+            (freezeTimeoutSeconds settings)
+            "freeze"
+            manifest
+            references
+            activeInput
+            funding
+            plan
 
 prepareSubmittedPackage ::
     AdvanceSettings ->

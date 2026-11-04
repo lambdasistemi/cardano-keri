@@ -69,6 +69,7 @@ module Cardano.KERI.AID.Checkpoint.Datum (
     datumKeyState,
     datumFacts,
     isTerminationPending,
+    keyMaterialOf,
     rotatedLive,
     convictedOf,
     liveOfKeyState,
@@ -480,6 +481,18 @@ datumFacts :: CheckpointDatum -> Maybe (CheckpointDatumV2, KeyStateView)
 datumFacts = \case
     datum@(V2 facts) -> (,) facts <$> datumKeyState datum
 
+-- | The key material of a key state: its keys, thresholds, witnesses and toad.
+keyMaterialOf :: KeyStateView -> KeyMaterial
+keyMaterialOf KeyStateView{..} =
+    KeyMaterial
+        { kmCurKeys = cdCurKeys
+        , kmCurThreshold = cdCurThreshold
+        , kmNextKeys = cdNextKeys
+        , kmNextThreshold = cdNextThreshold
+        , kmWitnesses = cdWitnesses
+        , kmToad = cdToad
+        }
+
 {- | The live datum a rotation to this key state writes (Lean
 @rotateKeepPaid@, @rotateKeepUnpaid@): the sequence number of the new
 establishment event, one more epoch, no poison and the new keys; the
@@ -487,22 +500,14 @@ identifier, the frozen flag, the birth time and the refund address are
 unchanged. 'Nothing' for a datum that is not live.
 -}
 rotatedLive :: CheckpointDatumV2 -> KeyStateView -> Maybe CheckpointDatumV2
-rotatedLive old KeyStateView{..} = case old of
+rotatedLive old view@KeyStateView{..} = case old of
     Live{} ->
         Just
             old
                 { lvSn = cdNativeSn
                 , lvEpoch = lvEpoch old + 1
                 , lvPoisoned = False
-                , lvKeys =
-                    KeyMaterial
-                        { kmCurKeys = cdCurKeys
-                        , kmCurThreshold = cdCurThreshold
-                        , kmNextKeys = cdNextKeys
-                        , kmNextThreshold = cdNextThreshold
-                        , kmWitnesses = cdWitnesses
-                        , kmToad = cdToad
-                        }
+                , lvKeys = keyMaterialOf view
                 }
     TerminationPending{} -> Nothing
 
@@ -532,7 +537,7 @@ liveOfKeyState ::
     Integer ->
     KeyStateView ->
     CheckpointDatumV2
-liveOfKeyState refund bornAt KeyStateView{..} =
+liveOfKeyState refund bornAt view@KeyStateView{..} =
     Live
         { lvAid = qb64Aid cdCesrAid
         , lvSn = cdNativeSn
@@ -541,13 +546,5 @@ liveOfKeyState refund bornAt KeyStateView{..} =
         , lvFrozen = False
         , lvBornAt = bornAt
         , lvRefundTo = refund
-        , lvKeys =
-            KeyMaterial
-                { kmCurKeys = cdCurKeys
-                , kmCurThreshold = cdCurThreshold
-                , kmNextKeys = cdNextKeys
-                , kmNextThreshold = cdNextThreshold
-                , kmWitnesses = cdWitnesses
-                , kmToad = cdToad
-                }
+        , lvKeys = keyMaterialOf view
         }

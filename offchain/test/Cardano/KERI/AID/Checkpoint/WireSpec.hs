@@ -8,8 +8,10 @@ module Cardano.KERI.AID.Checkpoint.WireSpec (spec) where
 
 import Cardano.KERI.AID.Checkpoint.Advance (AdvanceEvidence (..))
 import Cardano.KERI.AID.Checkpoint.BountyCommitment (BountyRevealV1 (..))
+import Cardano.KERI.AID.Checkpoint.Datum (KeyMaterial (..))
 import Cardano.KERI.AID.Checkpoint.Enforcement (EnforcementEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Entitlement (EnforcementProofV1 (..))
+import Cardano.KERI.AID.Checkpoint.Freeze (FreezeEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Registration (RegistrationEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
 import Cardano.KERI.AID.Checkpoint.Wire (
@@ -20,6 +22,9 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     convictSpendRedeemerData,
     enforcementEvidenceData,
     enforcementProofData,
+    freezeEvidenceData,
+    freezeObserverRedeemerData,
+    freezeSpendRedeemerData,
     registerObserverRedeemerData,
     registrationEvidenceData,
  )
@@ -110,6 +115,22 @@ enforcementProof =
                 , brNonce = BS.replicate 32 0x11
                 , brRefundIndex = 1
                 }
+        }
+
+freezeEvidence :: FreezeEvidence
+freezeEvidence =
+    FreezeEvidence
+        { feRotatedKeys =
+            KeyMaterial
+                { kmCurKeys = [BS.replicate 32 0x01]
+                , kmCurThreshold = Unweighted 1
+                , kmNextKeys = [BS.replicate 32 0x02]
+                , kmNextThreshold = Unweighted 1
+                , kmWitnesses = []
+                , kmToad = 0
+                }
+        , feRotatedSn = 6
+        , feRotation = advanceEvidence
         }
 
 spec :: Spec
@@ -269,4 +290,48 @@ spec = describe "#136 Register observer wire" $ do
                         ]
                     ]
                 , enforcementProofData enforcementProof
+                ]
+
+    it "appends the Freeze arm at spend constructor three, after MigrateOut" $
+        freezeSpendRedeemerData 5 `shouldBe` Constr 3 [I 5]
+
+    it "encodes the freeze evidence as the rotated keys, their sequence number and the rotation" $
+        freezeEvidenceData freezeEvidence
+            `shouldBe` Constr
+                0
+                [ Constr
+                    0
+                    [ List [B (BS.replicate 32 0x01)]
+                    , Constr 0 [I 1]
+                    , List [B (BS.replicate 32 0x02)]
+                    , Constr 0 [I 1]
+                    , List []
+                    , I 0
+                    ]
+                , I 6
+                , advanceEvidenceData advanceEvidence
+                ]
+
+    it "forwards the freeze evidence in the observer envelope under action two for the named input" $
+        freezeObserverRedeemerData
+            (BS.replicate 28 0xc0)
+            (BS.replicate 32 0xe0)
+            7
+            freezeEvidence
+            `shouldBe` Constr
+                0
+                [ Constr
+                    0
+                    [ I 2
+                    , B (BS.replicate 28 0xc0)
+                    , Constr
+                        0
+                        [ Constr
+                            0
+                            [ B (BS.replicate 32 0xe0)
+                            , I 7
+                            ]
+                        ]
+                    ]
+                , freezeEvidenceData freezeEvidence
                 ]

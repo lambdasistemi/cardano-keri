@@ -9,7 +9,7 @@
       "pause": 400
     },
     {
-      "text": "The hunter's freeze, the premium, and top-up are accepted design, not shipped. Play The pool runs dry, so Hal freezes her instead and Two hunters race. What ships today is Freeze as an ARMED role-address for lag, with a response window — a different machine, retired by the accepted design.",
+      "text": "The hunter's freeze is one transaction in this generation of the checkpoint program, and ckeri freeze submits it. It runs on a local test chain and is not deployed to preprod; this code is not for mainnet. Top-up and the unfreeze are accepted design, not shipped. Play The pool runs dry, so Hal freezes her instead and Two hunters race.",
       "pause": 400
     },
     {
@@ -17,7 +17,7 @@
       "pause": 400
     },
     {
-      "text": "When the pool cannot cover P, he freezes her instead. He presents the later rotation as evidence, takes the freeze bond B (what a hunter takes when the pool cannot pay), and leaves the datum untouched. The checkpoint is inert to everyone but the next keys: consumers reject it; a second freeze is refused; the poison (the owner's own lock on the checkpoint) still belongs to the current quorum. Alice unfreezes with a deposit rotation — the new keys refill B. Deposit is a no-op on full bonds.",
+      "text": "When the pool cannot cover P, he freezes her instead. He presents the later rotation as evidence, exactly as the log exports it, and takes the freeze bond B (what a hunter takes when the pool cannot pay). The datum keeps its old keys and sequence number; only the frozen flag is set, and the checkpoint then holds the minimum ADA, the deposit and the pool. ckeri freeze lands it and pays the bond to the funding address. The checkpoint is inert to everyone but the next keys: consumers reject it; a second freeze is refused; the poison (the owner's own lock on the checkpoint) still belongs to the current quorum. Alice unfreezes with a deposit rotation — the new keys refill B. Deposit is a no-op on full bonds.",
       "pause": 400
     },
     {
@@ -29,7 +29,7 @@
       "pause": 400
     },
     {
-      "text": "The freeze that ships on preprod today is not this. It is freeze-for-lag: ACTIVE to ARMED, a deadline, a claim. That economy goes. The freeze that survives is what a hunter takes when the owner's pool has run dry.",
+      "text": "The earlier freeze-for-lag, ACTIVE to ARMED with a deadline and a claim, is gone: nothing arms, waits or claims. The freeze that remains is what a hunter takes when the owner's pool has run dry, in a single transaction.",
       "pause": 400
     },
     {

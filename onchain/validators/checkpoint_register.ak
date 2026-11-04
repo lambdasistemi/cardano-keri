@@ -23,7 +23,7 @@ use cardano_keri/checkpoint/freeze_bond.{freeze_bond_valid}
 use cardano_keri/checkpoint/message.{aid_digest, deriveAidAssetName}
 use cardano_keri/checkpoint/observer.{
   ObserverClaim, ObserverEnvelope, observe_advance, observe_convict,
-  observe_migration, observe_register,
+  observe_freeze, observe_migration, observe_register,
 }
 use cardano_keri/checkpoint/refund
 use cardano_keri/checkpoint/registration.{valid_registration_deposit}
@@ -46,6 +46,11 @@ pub type SpendRedeemer {
   Convict { convictor_pkh: ByteArray, convictor_output_index: Int }
   /// Leave this generation under its own controller quorum (#254 T254-104).
   MigrateOut
+  /// Freeze a live checkpoint whose pool is below the premium, on the
+  /// controller's own later witnessed rotation (#345). Appended after
+  /// `MigrateOut`: nothing renumbers. `hunter_output_index` names the output
+  /// that receives the freeze bond.
+  Freeze { hunter_output_index: Int }
 }
 
 const checkpoint_min_ada: Int = 2_000_000
@@ -92,7 +97,13 @@ validator checkpoint_register(
     when spend_redeemer is {
       Advance { payee_output_index } -> {
         expect
-          ran_advance_check(advance_hash, own_hash(tx, own_ref), own_ref, tx)
+          ran_rotation_check(
+            advance_hash,
+            own_hash(tx, own_ref),
+            observe_advance,
+            own_ref,
+            tx,
+          )
         validate_advance(
           d_reg,
           freeze_bond,
@@ -126,6 +137,24 @@ validator checkpoint_register(
         let own = own_hash(tx, own_ref)
         expect ran_migration_check(migration_hash, own, own_ref, tx)
         validate_migrate_out_tokens(own, own_ref, tx)
+      }
+      Freeze { hunter_output_index } -> {
+        expect
+          ran_rotation_check(
+            advance_hash,
+            own_hash(tx, own_ref),
+            observe_freeze,
+            own_ref,
+            tx,
+          )
+        validate_freeze(
+          d_reg,
+          freeze_bond,
+          premium,
+          hunter_output_index,
+          own_ref,
+          tx,
+        )
       }
     }
   }
@@ -238,9 +267,12 @@ fn ran_register_check(
   True
 }
 
-fn ran_advance_check(
+/// The rotation observer ran for this action over this spent output: an
+/// Advance claims `observe_advance`, a Freeze `observe_freeze`.
+fn ran_rotation_check(
   advance_hash: PolicyId,
   checkpoint_policy: PolicyId,
+  action: Int,
   own_ref: OutputReference,
   tx: Transaction,
 ) -> Bool {
@@ -261,7 +293,7 @@ fn ran_advance_check(
             if redeemer_credential == credential {
               expect envelope: ObserverEnvelope = redeemer
               let claim = envelope.claim
-              claim.action == observe_advance && claim.checkpoint_policy == checkpoint_policy && claim.own_ref == Some(
+              claim.action == action && claim.checkpoint_policy == checkpoint_policy && claim.own_ref == Some(
                 own_ref,
               )
             } else {
@@ -472,6 +504,77 @@ fn validate_advance(
   } else {
     True
   }
+}
+
+/// Freeze a live checkpoint (Lean `Step.freeze`): the pool is below the premium,
+/// the checkpoint is neither frozen nor poisoned, and the successor is the same
+/// datum with `frozen` set, holding the minimum ADA, the deposit and the pool.
+/// The freeze bond leaves to the hunter output. The rotation evidence is the
+/// observer's, bound to this output by `ran_rotation_check`.
+fn validate_freeze(
+  d_reg: Int,
+  freeze_bond: Int,
+  premium: Int,
+  hunter_output_index: Int,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  let Transaction { inputs, outputs, mint, .. } = tx
+  expect Some(own_input) = find_input(inputs, own_ref)
+  expect Script(own_hash) = own_input.output.address.payment_credential
+  expect own_input.output.address == role.address(own_hash, Active)
+  expect InlineDatum(old_data) = own_input.output.datum
+  let old = datum.read(old_data)
+  expect  
+      Live {
+        aid,
+        sn,
+        epoch,
+        poisoned: False,
+        frozen: False,
+        born_at,
+        refund_to,
+        keys,
+      }
+    = old
+  expect [Pair(aid_name, 1)] = dict.to_pairs(
+    tokens(own_input.output.value, own_hash),
+  )
+  expect Some(pool) = with_value(
+    checkpoint_min_ada,
+    d_reg,
+    freeze_bond,
+    old,
+    lovelace_of(own_input.output.value),
+  )
+  expect pool < premium
+  expect dict.to_pairs(tokens(mint, own_hash)) == []
+  let frozen = Live {
+    aid,
+    sn,
+    epoch,
+    poisoned: False,
+    frozen: True,
+    born_at,
+    refund_to,
+    keys,
+  }
+  expect [state_output] = list.filter(
+    outputs,
+    fn(output) { output.address == from_script(own_hash) },
+  )
+  expect state_output.datum == InlineDatum(datum.write(frozen))
+  expect
+    state_output.value == (
+      from_lovelace(
+        held_value(checkpoint_min_ada, d_reg, freeze_bond, frozen, pool),
+      )
+        |> merge(from_asset(own_hash, aid_name, 1))
+    )
+  expect Some(hunter) = list.at(outputs, hunter_output_index)
+  quantity_of(hunter.value, own_hash, aid_name) == 0 && lovelace_of(
+    hunter.value,
+  ) >= freeze_bond
 }
 
 /// Convict a live checkpoint: the token stays at the checkpoint address in a

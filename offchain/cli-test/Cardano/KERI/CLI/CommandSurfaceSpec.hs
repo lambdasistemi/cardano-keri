@@ -9,8 +9,8 @@ unrecognised commands.
 
 An unrecognised command is told apart from a recognised command that merely
 lacks its options: a recognised command still fails here (no options are
-given), but never with 'ParseErrorUnrecognisedCommand'. The @advance@ and
-@status@ examples are that control, and the invented command name shows the
+given), but never with 'ParseErrorUnrecognisedCommand'. The @advance@,
+@freeze@ and @status@ examples are that control, and the invented command name shows the
 refusal is detectable at all.
 -}
 module Cardano.KERI.CLI.CommandSurfaceSpec (spec) where
@@ -39,6 +39,8 @@ spec = describe "ckeri command surface" $ do
         unrecognisedCommands ["advance"] >>= (`shouldBe` [])
     it "recognises status" $
         unrecognisedCommands ["status"] >>= (`shouldBe` [])
+    it "recognises freeze: a hunter presents the controller's own rotation" $
+        unrecognisedCommands ["freeze"] >>= (`shouldBe` [])
 
 {- | The command names the production parser reports as unrecognised for
 these arguments, with no environment and no configuration file.

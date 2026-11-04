@@ -394,6 +394,34 @@ gen-freeze-bond-vectors:
 check-freeze-bond-vectors: gen-freeze-bond-vectors
     git diff --exit-code onchain/lib/cardano_keri/checkpoint/freeze_bond_vectors.ak
 
+# --- one-step freeze (#345) ---
+
+# Regenerate the freeze wire parity vectors from the Haskell encoders: the
+# bytes of the Freeze redeemer, the freeze evidence and the observer envelope
+# beside the typed inputs the Aiken suite serialises and compares.
+gen-freeze-vectors:
+    mkdir -p onchain/lib/cardano_keri/checkpoint
+    cd offchain && nix develop --quiet --no-write-lock-file -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-freeze-vectors -- ../onchain/lib/cardano_keri/checkpoint/freeze_vectors.ak'
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/checkpoint/freeze_vectors.ak
+
+# Drift check: a fresh Haskell regenerate must reproduce the committed module.
+check-freeze-vectors: gen-freeze-vectors
+    git diff --exit-code onchain/lib/cardano_keri/checkpoint/freeze_vectors.ak
+
+# Regenerate the freeze cells of the Lean corpus, for both layers.
+gen-checkpoint-freeze-vectors:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-freeze-vectors.mjs
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt validators/checkpoint_register_freeze_corpus_tests.ak
+
+# Drift check: the committed freeze cells equal the Lean corpus's.
+check-checkpoint-freeze-vectors:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-freeze-vectors.mjs --check
+
+# One mutation control per premise of the freeze: each removed check must make
+# a freeze test fail, and the harness's own controls must behave.
+check-freeze-mutants:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/check-freeze-mutants.mjs
+
 # --- migration shared types (#254) ---
 
 # Regenerate the committed #254 shared migration-type parity vectors from the
@@ -680,7 +708,7 @@ ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
-ci-offchain: build-offchain unit deployment-unit indexer-unit query-algebra-check local-write-path-check backend-check backend-transcript-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-freeze-bond-vectors check-migration-types-vectors check-bounty-commitment-vectors check-bounty-entitlement-vectors check-lean-traceability check-blaster-identity-consistency check-version-remnant-sweep
+ci-offchain: build-offchain unit deployment-unit indexer-unit query-algebra-check local-write-path-check backend-check backend-transcript-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-freeze-bond-vectors check-freeze-vectors check-migration-types-vectors check-bounty-commitment-vectors check-bounty-entitlement-vectors check-lean-traceability check-blaster-identity-consistency check-version-remnant-sweep
 
 # #259: shared flake-lock guard — declared/locked reconciliation, justfile +
 # workflow invocation guarding, and caller parity (INV-259-PARITY: required
@@ -697,7 +725,7 @@ check-flake-lock-guard:
 # --self-test) exercises the exact code this recipe runs, not a copy of it;
 # the guard's own INV-259-ASSERT caller-presence check requires this exact
 # invocation to remain in this recipe.
-ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken check-consumer-vectors check-consumer-identity-vectors check-checkpoint-datum-vectors check-checkpoint-writer-vectors ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
+ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken check-consumer-vectors check-consumer-identity-vectors check-checkpoint-datum-vectors check-checkpoint-writer-vectors check-checkpoint-freeze-vectors check-freeze-mutants ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
     ./scripts/check-flake-lock-guard.sh --assert-lock-unchanged
 
 # #478: clean exact-compiler build and public proposition controls, identical to CI.

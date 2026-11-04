@@ -23,7 +23,7 @@ substituted controller evidence, receipt-index games), per the A-001
 condition-1 offset-misdirection family and the epic's incoming-set
 witness ruling.
 -}
-module Cardano.KERI.AID.Checkpoint.AdvanceSpec (spec) where
+module Cardano.KERI.AID.Checkpoint.AdvanceSpec (spec, AdvCase (..), advCase) where
 
 import Cardano.Crypto.DSIGN (
     SignKeyDSIGN,

@@ -29,6 +29,7 @@ module CheckpointTxBuilder (
     productionRegisterScenario,
     productionRegisterAdvanceScenario,
     productionRegisterConvictScenario,
+    productionRegisterFreezeScenario,
     buildAdvanceTx,
 ) where
 
@@ -67,6 +68,7 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatumV2 (..),
     KeyStateView (..),
     convictedOf,
+    keyMaterialOf,
     liveOfKeyState,
     rotatedLive,
  )
@@ -75,6 +77,13 @@ import Cardano.KERI.AID.Checkpoint.Entitlement (
     EntitledEnforcementPlan (..),
     enforcementEvidenceDigest,
     prepareEntitledEnforcement,
+ )
+import Cardano.KERI.AID.Checkpoint.Freeze (
+    FreezeEvidence (..),
+    FreezeParams (..),
+    FreezeSettlement (..),
+    freezeSettlement,
+    frozenLive,
  )
 import Cardano.KERI.AID.Checkpoint.FreezeBond (
     Inclusivity (..),
@@ -102,6 +111,8 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     asPlcData,
     convictObserverRedeemerData,
     convictSpendRedeemerData,
+    freezeObserverRedeemerData,
+    freezeSpendRedeemerData,
     registerObserverRedeemerData,
  )
 import Cardano.KERI.AID.E2E.Datum (extractDatum, mkInlineDatum)
@@ -607,10 +618,11 @@ verifyRegisterScriptSizes env = do
     -- #339: re-derived from the applied advance program once it reads the
     -- version 2 datum (14_695 before), not reused from the previous pin. The
     -- 16_133 ceiling is unchanged. Re-derived again after the version 1
-    -- datum constructor left the shared datum type (15_778 before).
-    unless (SBS.length (envAdvanceBytes env) == 15_625) $
+    -- datum constructor left the shared datum type (15_778 before). Re-derived
+    -- once more when the observer also hosts the freeze verdict (15_625 before).
+    unless (SBS.length (envAdvanceBytes env) == 15_665) $
         fail
-            ( "observer_advance applied program changed from 15,625 bytes: "
+            ( "observer_advance applied program changed from 15,665 bytes: "
                 <> show (SBS.length (envAdvanceBytes env))
             )
 
@@ -996,6 +1008,165 @@ productionRegisterAdvanceScenario env = do
             <> "; successor="
             <> show (fst successor)
         )
+
+{- | A freeze, end to end: register with a pool that covers the premium, advance
+once (the premium leaves the pool, which drops below it), then present the
+controller's own next witnessed rotation as a freeze. The refusals are the
+freeze's evidence premises, each judged by the production script; the accepted
+freeze settles a frozen datum on the old keys and pays the bond.
+-}
+productionRegisterFreezeScenario :: CheckpointEnv -> IO ()
+productionRegisterFreezeScenario env = do
+    fixture <- loadConvictStoryFixture
+    let firstRotation = fsFirstRotation fixture
+        laterRotation = fsResponseRotation fixture
+    (registered, checkpointRef) <-
+        productionRegisterScenarioWithReference env (rsRegistration firstRotation)
+    advanceRef <-
+        requireJust
+            "observer_advance reference was not deployed during setup"
+            (envAdvanceReference env)
+    let firstEvidence =
+            signedRotateEvidence
+                env
+                registered
+                firstRotation
+                (rsRotationSigners firstRotation)
+                (aeWitReceipts (rsUnsignedEvidence firstRotation))
+    firstAdvanceTxId <-
+        submitTwoPassAdvance
+            env
+            "Freeze setup Advance"
+            checkpointRef
+            advanceRef
+            registered
+            (rsCreated firstRotation)
+            firstEvidence
+    firstAdvancedUtxo <-
+        pollOutput
+            (envProvider env)
+            firstAdvanceTxId
+            [0, 1]
+            ( hasAsset
+                (envCheckpointPolicy env)
+                (deriveAidAssetName (cdCesrAid (rsCreated firstRotation)))
+            )
+            >>= requireJust "Freeze setup Advance did not settle"
+    advanced <-
+        settledAdvance
+            env
+            "Freeze setup Advance"
+            registered
+            (rsCreated firstRotation)
+            firstAdvanceTxId
+            firstAdvancedUtxo
+    let created = rsCreated laterRotation
+        honest =
+            signedRotateEvidence
+                env
+                advanced
+                laterRotation
+                (rsRotationSigners laterRotation)
+                (aeWitReceipts (rsUnsignedEvidence laterRotation))
+        stolen =
+            signedRotateEvidence
+                env
+                advanced
+                laterRotation
+                (rsCurrentSigners laterRotation)
+                (aeWitReceipts (rsUnsignedEvidence laterRotation))
+        belowThreshold = honest{aeCtrlSigs = take 1 (aeCtrlSigs honest)}
+        underWitnessed = honest{aeWitReceipts = take 1 (aeWitReceipts honest)}
+        rejected label evidence =
+            rejectRotation
+                (freezeOp created evidence)
+                env
+                checkpointRef
+                advanceRef
+                advanced
+                created
+                label
+    case advancePredicate (rotateSpentCheckpoint env advanced) created honest of
+        Left predicateError ->
+            fail
+                ( "checkpoint Freeze: signed evidence failed the pure predicate: "
+                    <> show predicateError
+                )
+        Right () -> pure ()
+    sequence_
+        [ rejected "Freeze stolen-current" stolen
+        , rejected "Freeze below-successor-threshold" belowThreshold
+        , rejected "Freeze under-witnessed" underWitnessed
+        ]
+    freezeTxId <-
+        submitTwoPassRotation
+            (freezeOp created honest)
+            env
+            "checkpoint Freeze"
+            checkpointRef
+            advanceRef
+            advanced
+            created
+            Nothing
+    frozenUtxo <-
+        pollOutput
+            (envProvider env)
+            freezeTxId
+            [0, 1]
+            (hasAsset (envCheckpointPolicy env) (deriveAidAssetName (cdCesrAid created)))
+            >>= requireJust "Freeze successor did not settle"
+    settledFreeze env "Freeze" advanced freezeTxId frozenUtxo
+    remaining <-
+        withinSecs 30 "query frozen checkpoint input" $
+            queryUTxOByTxIn
+                (envProvider env)
+                (Set.singleton (fst (checkpointUtxo advanced)))
+    unless (Map.null remaining) $
+        fail "Freeze left the advanced checkpoint input unspent"
+    dbg ("Freeze settled; tx id=" <> show freezeTxId)
+
+{- | What a settled freeze left: the successor at the ACTIVE address carrying
+the exact frozen datum on the old keys and the minimum ADA, the deposit and the
+pool, and the hunter output carrying the freeze bond.
+-}
+settledFreeze ::
+    CheckpointEnv ->
+    String ->
+    CheckpointInput ->
+    TxId ->
+    (TxIn, TxOut ConwayEra) ->
+    IO ()
+settledFreeze env row before freezeTxId utxo = do
+    settlement <-
+        requireJust
+            (row <> ": the frozen checkpoint was not freezable")
+            ( freezeSettlement
+                freezeParams
+                (checkpointFacts before)
+                (unCoin (snd (checkpointUtxo before) ^. coinTxOutL))
+            )
+    expected <-
+        requireJust
+            (row <> ": the frozen checkpoint was not live")
+            (frozenLive (checkpointFacts before))
+    unless
+        (snd utxo ^. addrTxOutL == roleAddress env Active)
+        (fail (row <> ": successor is not at the ACTIVE address"))
+    case extractDatum (snd utxo) of
+        Just (V2 facts)
+            | facts == expected -> pure ()
+        _ -> fail (row <> ": successor does not carry the exact frozen version 2 datum")
+    unless
+        (unCoin (snd utxo ^. coinTxOutL) == fsSuccessorLovelace settlement)
+        (fail (row <> ": successor lovelace is not the minimum ADA, the deposit and the pool"))
+    let hunterRef = TxIn freezeTxId (TxIx (fromIntegral premiumOutputIndex))
+    hunter <-
+        withinSecs 30 (row <> ": query hunter output") $
+            queryUTxOByTxIn (envProvider env) (Set.singleton hunterRef)
+    case Map.lookup hunterRef hunter of
+        Just out
+            | unCoin (out ^. coinTxOutL) >= fsHunterPaid settlement -> pure ()
+        _ -> fail (row <> ": the hunter output is missing or short of the bond")
 
 productionRegisterConvictScenario :: CheckpointEnv -> IO ()
 productionRegisterConvictScenario env = do
@@ -2165,20 +2336,115 @@ submitTwoPassRegister env label referenceUtxos fixture proofUtxo = do
         Submitted txId -> pure (txId, validity)
         Rejected reason -> fail (label <> " rejected: " <> B8.unpack reason)
 
-buildRotateStoryTxWith ::
+{- | What differs between the transactions that present a rotation to the
+rotation observer: an Advance writes the rotated datum and pays the premium, a
+Freeze writes the frozen datum and pays the freeze bond.
+-}
+data RotationOp = RotationOp
+    { roSettle ::
+        CheckpointInput ->
+        KeyStateView ->
+        IO (CheckpointDatumV2, Integer, Integer)
+    {- ^ the successor datum, the lovelace it holds, and the lovelace the
+    second output receives (none when zero)
+    -}
+    , roSpendRedeemer :: PLC.Data
+    , roObserverRedeemer :: ByteString -> ByteString -> Integer -> PLC.Data
+    -- ^ from the checkpoint policy and the spent output
+    }
+
+-- | The Advance of a checkpoint on this rotation evidence.
+advanceOp :: AdvanceEvidence -> RotationOp
+advanceOp evidence =
+    RotationOp
+        { roSettle = \input successor -> do
+            settlement <-
+                requireJust
+                    "Advance: the checkpoint is not a live output holding its floor"
+                    ( rotationSettlement
+                        checkpointMinAda
+                        registrationBond
+                        freezeBond
+                        premium
+                        (checkpointFacts input)
+                        (unCoin (snd (checkpointUtxo input) ^. coinTxOutL))
+                    )
+            successorFacts <-
+                requireJust
+                    "Advance: the checkpoint is not live"
+                    (rotatedLive (checkpointFacts input) successor)
+            pure
+                ( successorFacts
+                , heldValue
+                    checkpointMinAda
+                    registrationBond
+                    freezeBond
+                    successorFacts
+                    (settlementPoolAfter settlement)
+                , settlementPaid settlement
+                )
+        , roSpendRedeemer = advanceSpendRedeemerData premiumOutputIndex
+        , roObserverRedeemer = \policy txid index ->
+            advanceObserverRedeemerData policy txid index evidence
+        }
+
+-- | The Freeze of a checkpoint on this rotated key state and its evidence.
+freezeOp :: KeyStateView -> AdvanceEvidence -> RotationOp
+freezeOp rotated evidence =
+    RotationOp
+        { roSettle = \input _ -> do
+            let facts = checkpointFacts input
+            settlement <-
+                requireJust
+                    "Freeze: the checkpoint cannot be frozen"
+                    ( freezeSettlement
+                        freezeParams
+                        facts
+                        (unCoin (snd (checkpointUtxo input) ^. coinTxOutL))
+                    )
+            successorFacts <-
+                requireJust "Freeze: the checkpoint is not live" (frozenLive facts)
+            pure
+                ( successorFacts
+                , fsSuccessorLovelace settlement
+                , fsHunterPaid settlement
+                )
+        , roSpendRedeemer = freezeSpendRedeemerData premiumOutputIndex
+        , roObserverRedeemer = \policy txid index ->
+            freezeObserverRedeemerData
+                policy
+                txid
+                index
+                FreezeEvidence
+                    { feRotatedKeys = keyMaterialOf rotated
+                    , feRotatedSn = cdNativeSn rotated
+                    , feRotation = evidence
+                    }
+        }
+
+freezeParams :: FreezeParams
+freezeParams =
+    FreezeParams
+        { fpMinAda = checkpointMinAda
+        , fpDeposit = registrationBond
+        , fpBond = freezeBond
+        , fpPremium = premium
+        }
+
+buildRotationTxWith ::
+    RotationOp ->
     Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
     CheckpointEnv ->
     (TxIn, TxOut ConwayEra) ->
     (TxIn, TxOut ConwayEra) ->
     CheckpointInput ->
     KeyStateView ->
-    AdvanceEvidence ->
     Maybe ValidityPlan ->
     IO
         ( ConwayTx
         , Set.Set (ConwayPlutusPurpose AsIx ConwayEra)
         )
-buildRotateStoryTxWith budgets env checkpointRef advanceRef input successor evidence validity = do
+buildRotationTxWith op budgets env checkpointRef advanceRef input successor validity = do
     params <-
         withinSecs 30 "query Advance protocol parameters" $
             queryProtocolParams (envProvider env)
@@ -2187,21 +2453,8 @@ buildRotateStoryTxWith budgets env checkpointRef advanceRef input successor evid
             queryUTxOs (envProvider env) (envOwner env)
     (feeUtxo, collateralUtxo) <-
         pickDisjoint wallet [stateIn, fst checkpointRef, fst advanceRef]
-    settlement <-
-        requireJust
-            "Advance: the checkpoint is not a live output holding its floor"
-            ( rotationSettlement
-                checkpointMinAda
-                registrationBond
-                freezeBond
-                premium
-                (checkpointFacts input)
-                (unCoin (snd (checkpointUtxo input) ^. coinTxOutL))
-            )
-    successorFacts <-
-        requireJust
-            "Advance: the checkpoint is not live"
-            (rotatedLive (checkpointFacts input) successor)
+    (successorFacts, successorLovelace, payeeLovelace) <-
+        roSettle op input successor
     let (feeIn, feeOut) = feeUtxo
         collateralIn = fst collateralUtxo
         allInputs = Set.fromList [stateIn, feeIn]
@@ -2210,30 +2463,24 @@ buildRotateStoryTxWith budgets env checkpointRef advanceRef input successor evid
         rewardPurpose = ConwayRewarding (AsIx 0)
         expected = Set.fromList [spendPurpose, rewardPurpose]
         observerRedeemerData =
-            advanceObserverRedeemerData
+            roObserverRedeemer
+                op
                 (policyBytes (envCheckpointPolicy env))
                 spentTxIdBytes
                 spentIndex
-                evidence
         stateOut =
             mkStateOutput
                 env
                 Active
                 ( withLovelace
-                    ( heldValue
-                        checkpointMinAda
-                        registrationBond
-                        freezeBond
-                        successorFacts
-                        (settlementPoolAfter settlement)
-                    )
+                    successorLovelace
                     (snd (checkpointUtxo input) ^. valueTxOutL)
                 )
                 (asPlcData (V2 successorFacts))
-        -- The premium payee is the second output.
+        -- The premium or bond payee is the second output.
         premiumOuts =
-            [ mkBasicTxOut (envOwner env) (inject (Coin (settlementPaid settlement)))
-            | settlementPaid settlement > 0
+            [ mkBasicTxOut (envOwner env) (inject (Coin payeeLovelace))
+            | payeeLovelace > 0
             ]
         changeOut =
             mkBasicTxOut
@@ -2245,7 +2492,7 @@ buildRotateStoryTxWith budgets env checkpointRef advanceRef input successor evid
                     [
                         ( spendPurpose
                         ,
-                            ( ledgerData (advanceSpendRedeemerData premiumOutputIndex)
+                            ( ledgerData (roSpendRedeemer op)
                             , Map.findWithDefault
                                 advanceSpendExUnits
                                 spendPurpose
@@ -2723,17 +2970,29 @@ rejectRotateEvidence ::
     String ->
     AdvanceEvidence ->
     IO ()
-rejectRotateEvidence env checkpointRef advanceRef input successor label evidence = do
+rejectRotateEvidence env checkpointRef advanceRef input successor label evidence =
+    rejectRotation (advanceOp evidence) env checkpointRef advanceRef input successor label
+
+rejectRotation ::
+    RotationOp ->
+    CheckpointEnv ->
+    (TxIn, TxOut ConwayEra) ->
+    (TxIn, TxOut ConwayEra) ->
+    CheckpointInput ->
+    KeyStateView ->
+    String ->
+    IO ()
+rejectRotation op env checkpointRef advanceRef input successor label = do
     (candidate, _) <-
         withinSecs 90 (label <> ": build applied candidate") $
-            buildRotateStoryTxWith
+            buildRotationTxWith
+                op
                 Map.empty
                 env
                 checkpointRef
                 advanceRef
                 input
                 successor
-                evidence
                 Nothing
     _ <- expectProductionScriptRejection env label candidate
     pure ()
@@ -2747,38 +3006,38 @@ submitTwoPassAdvance ::
     KeyStateView ->
     AdvanceEvidence ->
     IO TxId
-submitTwoPassAdvance env label checkpointRef advanceRef input successor evidence = do
-    submitTwoPassAdvanceWithValidity
+submitTwoPassAdvance env label checkpointRef advanceRef input successor evidence =
+    submitTwoPassRotation
+        (advanceOp evidence)
         env
         label
         checkpointRef
         advanceRef
         input
         successor
-        evidence
         Nothing
 
-submitTwoPassAdvanceWithValidity ::
+submitTwoPassRotation ::
+    RotationOp ->
     CheckpointEnv ->
     String ->
     (TxIn, TxOut ConwayEra) ->
     (TxIn, TxOut ConwayEra) ->
     CheckpointInput ->
     KeyStateView ->
-    AdvanceEvidence ->
     Maybe ValidityPlan ->
     IO TxId
-submitTwoPassAdvanceWithValidity env label checkpointRef advanceRef input successor evidence validity = do
+submitTwoPassRotation op env label checkpointRef advanceRef input successor validity = do
     (discovery, expected) <-
         withinSecs 90 (label <> ": build discovery binding") $
-            buildRotateStoryTxWith
+            buildRotationTxWith
+                op
                 Map.empty
                 env
                 checkpointRef
                 advanceRef
                 input
                 successor
-                evidence
                 validity
     discoveryObserved <-
         withinSecs 120 (label <> ": evaluate discovery binding") $
@@ -2788,14 +3047,14 @@ submitTwoPassAdvanceWithValidity env label checkpointRef advanceRef input succes
     let finalBudgets = Map.map deterministicMargin discoveryUnits
     (final, finalExpected) <-
         withinSecs 90 (label <> ": rebuild final binding") $
-            buildRotateStoryTxWith
+            buildRotationTxWith
+                op
                 finalBudgets
                 env
                 checkpointRef
                 advanceRef
                 input
                 successor
-                evidence
                 validity
     unless (finalExpected == expected) $
         fail (label <> ": final purpose set changed after budget binding")

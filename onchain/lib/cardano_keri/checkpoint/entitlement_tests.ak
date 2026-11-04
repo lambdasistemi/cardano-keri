@@ -1,10 +1,10 @@
 //// #254 S254-E — unit proofs for the shared bounty-entitlement rule, T254-107.
 ////
-//// The applied-program rows live in `checkpoint_tests.ak` and
-//// `checkpoint_register_tests.ak`, where whole transactions run through whole
-//// validators. What lives here is the layer underneath: each leg of the shared
-//// rule, exercised on its own, with an accepted honest neighbour beside every
-//// rejection so no row can pass because its fixture was quietly broken.
+//// The applied-program rows live in `checkpoint_register_lifecycle_tests.ak`,
+//// where whole transactions run through whole validators. What lives here is
+//// the layer underneath: each leg of the shared rule, exercised on its own,
+//// with an accepted honest neighbour beside every rejection so no row can pass
+//// because its fixture was quietly broken.
 ////
 //// Every negative in this module states what it changed from the honest case
 //// and changes only that. A rejection that could also be explained by a

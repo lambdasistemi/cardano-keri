@@ -1625,13 +1625,11 @@
               # a deployment that changed the commitment's applied
               # magnitudes would change this number and fail the extraction
               # rather than the proof.
-              entitlementPrograms = [
-                {
-                  role = "commitment";
-                  title = "bounty_commitment.bounty_commitment.spend";
-                  params = 1;
-                }
-              ];
+              entitlementPrograms = [{
+                role = "commitment";
+                title = "bounty_commitment.bounty_commitment.spend";
+                params = 1;
+              }];
 
               entitlementArtifacts =
                 pkgs.runCommand "cardano-keri-entitlement-uplc-programs" {

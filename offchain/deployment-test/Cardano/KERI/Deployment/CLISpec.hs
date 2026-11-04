@@ -16,7 +16,7 @@ board-catalog values from it, never from a bare query callback.
 -}
 module Cardano.KERI.Deployment.CLISpec (spec) where
 
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..), liveOfKeyState)
+import Cardano.KERI.AID.Checkpoint.Datum (KeyStateView (..), liveOfKeyState)
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted))
 import Cardano.KERI.ChainQuery (
     ActiveCheckpoint (..),
@@ -217,9 +217,9 @@ sampleActiveCheckpoint =
         , activeCheckpointFacts = liveOfKeyState "" 0 sampleDatum
         }
 
-sampleDatum :: CheckpointDatumV1
+sampleDatum :: KeyStateView
 sampleDatum =
-    CheckpointDatumV1
+    KeyStateView
         { cdCesrAid = BS.replicate 32 0x00
         , cdCurKeys = [BS.replicate 32 0x11]
         , cdCurThreshold = Unweighted 1

@@ -24,8 +24,8 @@ import Cardano.KERI.AID.Checkpoint.Advance (
     AdvanceEvidence (..),
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatumV1 (..),
-    datumWellFormed,
+    KeyStateView (..),
+    keyStateWellFormed,
  )
 import Cardano.KERI.AID.Checkpoint.Registration (
     RegistrationEvidence (..),
@@ -71,7 +71,7 @@ the decoded 32-byte self-addressing digest expected on-chain.
 -}
 data InceptionExport = InceptionExport
     { inceptionAid :: !Text
-    , inceptionDatum :: !CheckpointDatumV1
+    , inceptionDatum :: !KeyStateView
     , inceptionEvidence :: !RegistrationEvidence
     , inceptionDigestOffset :: !Int
     }
@@ -85,7 +85,7 @@ the exact @rot@ bytes but are not the Cardano-specific, outref-bound
 -}
 data RotationExport = RotationExport
     { rotationAid :: !Text
-    , rotationDatum :: !CheckpointDatumV1
+    , rotationDatum :: !KeyStateView
     , rotationEvidence :: !AdvanceEvidence
     , rotationEventSignatures :: ![(Int, ByteString)]
     }
@@ -210,7 +210,7 @@ parseInceptionExport stream = do
             <*> pure controllerSignatures
             <*> pure witnessReceipts
     let datum =
-            CheckpointDatumV1
+            KeyStateView
                 { cdCesrAid = aid
                 , cdCurKeys = currentKeys
                 , cdCurThreshold = eventCurrentThreshold event
@@ -284,7 +284,7 @@ parseRotationExport stream = do
         (Left "rotation witness additions are not a valid delta")
     let incomingWitnesses = survivingWitnesses <> witnessAdds
         datum =
-            CheckpointDatumV1
+            KeyStateView
                 { cdCesrAid = aid
                 , cdCurKeys = currentKeys
                 , cdCurThreshold = rotationCurrentThreshold event
@@ -298,7 +298,7 @@ parseRotationExport stream = do
     either
         (Left . ("rotation successor datum is malformed: " <>) . show)
         Right
-        (datumWellFormed datum)
+        (keyStateWellFormed datum)
     (eventSignatures, witnessReceipts) <- parseAttachments attachments
     when (null eventSignatures) $
         Left "KEL rotation has no controller indexed signatures"

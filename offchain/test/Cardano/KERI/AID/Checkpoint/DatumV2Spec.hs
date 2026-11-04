@@ -17,10 +17,10 @@ import Cardano.KERI.AID.CESR (
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
-    CheckpointDatumV1 (..),
     CheckpointDatumV2 (..),
     DatumError (..),
     KeyMaterial (..),
+    KeyStateView (..),
     canonicalCbor,
     checkpointDatumFromData,
     checkpointDatumToData,

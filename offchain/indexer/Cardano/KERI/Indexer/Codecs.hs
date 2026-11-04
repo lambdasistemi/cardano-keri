@@ -15,8 +15,8 @@ module Cardano.KERI.Indexer.Codecs (
 ) where
 
 import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatumV1 (..),
     CheckpointDatumV2,
+    KeyStateView (..),
     checkpointDatumFromData,
     datumFacts,
     isTerminationPending,
@@ -78,7 +78,7 @@ data CheckpointRecord = CheckpointRecord
     -- ^ Upstream indexed transaction input.
     , crAddress :: !Address
     -- ^ Upstream indexed address.
-    , crDatum :: !CheckpointDatumV1
+    , crDatum :: !KeyStateView
     -- ^ Decoded checkpoint key state.
     , crFacts :: !CheckpointDatumV2
     -- ^ The version 2 datum the output carries.

@@ -72,11 +72,11 @@ import Cardano.KERI.AID.CESR (
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CesrAid,
-    CheckpointDatumV1 (..),
     DatumError,
+    KeyStateView (..),
     Verkey,
     blake2b_256,
-    datumWellFormed,
+    keyStateWellFormed,
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
@@ -265,12 +265,12 @@ data InceptionError
 
 -- | Validate the structural inception projection carried by a datum.
 validateInceptionDatum ::
-    EventType -> CheckpointDatumV1 -> Either InceptionError ()
+    EventType -> KeyStateView -> Either InceptionError ()
 validateInceptionDatum et d = do
     unless (et == Icp) (Left DelegatedInceptionRejected)
     unless (BS.length (cdCesrAid d) == 32) (Left InceptionAidWidth)
     unless (cdNativeSn d == 0) (Left InceptionNativeSnNonZero)
-    first InceptionIllFormed (datumWellFormed d)
+    first InceptionIllFormed (keyStateWellFormed d)
 
 -- ---------------------------------------------------------
 -- The registration predicate
@@ -337,7 +337,7 @@ checked bounds-first, so a truncated (tail) or negative offset
 fails its field's check like any mismatch.
 -}
 eventBinding ::
-    CheckpointDatumV1 ->
+    KeyStateView ->
     RegistrationEvidence ->
     Either RegistrationError ()
 eventBinding d e = do
@@ -381,7 +381,7 @@ shape itself (R1\/R2\/R5) is the S5 validator layer.
 registrationPredicate ::
     DeploymentContext ->
     -- | The inline datum @D@ of the genesis state output.
-    CheckpointDatumV1 ->
+    KeyStateView ->
     -- | The state output's lovelace (R8).
     Integer ->
     RegistrationEvidence ->

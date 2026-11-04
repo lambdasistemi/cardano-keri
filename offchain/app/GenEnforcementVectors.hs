@@ -6,14 +6,14 @@ Reads the committed keripy fixtures
 (@offchain\/test\/keri-fixtures\/fixtures\/*.json@) and emits a self-contained
 Aiken module
 (@onchain\/lib\/cardano_keri\/checkpoint\/enforcement_vectors.ak@) of
-@pub const@ tip 'CheckpointDatumV1' + decoded 'EventEvidence' values, plus
+@pub const@ tip 'KeyStateView' + decoded 'EventEvidence' values, plus
 'EnforcementEvidence' wire values for every Slice-1 offset-bearing scenario.
 The Aiken @enforcement_tests.ak@ drives the binder and predicates to prove
 verdict parity with Haskell over the same fixtures.
 
 The fixture -> (tip, decoded evidence, optional wire offsets) mapping mirrors
 the @EnforcementSpec@ builders exactly. The generator reuses the shipped
-'CheckpointDatumV1'\/'EventEvidence'\/'Threshold' types and CESR decoder; it is
+'KeyStateView'\/'EventEvidence'\/'Threshold' types and CESR decoder; it is
 OFFLINE (no keripy) and deterministic (drift-checked).
 
 Invocation: @gen-enforcement-vectors OUT_PATH [FIXTURES_DIR]@ (default fixtures
@@ -26,12 +26,10 @@ import Cardano.KERI.AID.CESR (
     parsePrimitive,
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatumV1 (..),
-    canonicalCbor,
+    KeyStateView (..),
  )
 import Cardano.KERI.AID.Checkpoint.Enforcement (
     EventEvidence (..),
-    TombstoneV1 (..),
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
@@ -126,11 +124,11 @@ orDie = either error id
 -- Scenario builders (mirror the Slice-3 EnforcementSpec builders)
 -- ---------------------------------------------------------
 
-tipFrom :: Value -> Text -> Integer -> Either String CheckpointDatumV1
+tipFrom :: Value -> Text -> Integer -> Either String KeyStateView
 tipFrom fx evKey seqNo = do
     de <- decodeEvent fx evKey
     pure
-        CheckpointDatumV1
+        KeyStateView
             { cdCesrAid = deAid de
             , cdCurKeys = deKeys de
             , cdCurThreshold = deKt de
@@ -147,12 +145,12 @@ tipFrom fx evKey seqNo = do
 witnessed AID's current witness set is inherited, not restated by the rot.
 -}
 tipFromWitnessed ::
-    Value -> Text -> Text -> Integer -> Either String CheckpointDatumV1
+    Value -> Text -> Text -> Integer -> Either String KeyStateView
 tipFromWitnessed fx evKey witKey seqNo = do
     de <- decodeEvent fx evKey
     wde <- decodeEvent fx witKey
     pure
-        CheckpointDatumV1
+        KeyStateView
             { cdCesrAid = deAid de
             , cdCurKeys = deKeys de
             , cdCurThreshold = deKt de
@@ -376,14 +374,14 @@ textArrayField value k = do
 type Scenario =
     ( String
     , String
-    , CheckpointDatumV1
+    , KeyStateView
     , EventEvidence
     , Maybe EnforcementOffsets
     )
 
 render :: [Scenario] -> String
 render scenarios =
-    header <> "\n" <> golden <> "\n" <> concatMap renderScenario scenarios
+    header <> "\n" <> concatMap renderScenario scenarios
   where
     header =
         unlines
@@ -394,31 +392,19 @@ render scenarios =
             , "//// fixtures). Each scenario is the tip datum + decoded evidence the"
             , "//// EnforcementSpec builds from the same JSON; offset-bearing scenarios"
             , "//// also carry the ratified EnforcementEvidence wire value."
-            , "//// enforcement_tests.ak asserts binder/predicate Haskell parity, plus"
-            , "//// the TombstoneV1 codec golden. `just"
+            , "//// enforcement_tests.ak asserts binder/predicate Haskell parity. `just"
             , "//// check-enforcement-vectors` forbids drift."
             , ""
-            , "use cardano_keri/checkpoint/datum.{CheckpointDatumV1}"
+            , "use cardano_keri/checkpoint/datum.{KeyStateView}"
             , "use cardano_keri/checkpoint/enforcement.{EnforcementEvidence, EventEvidence}"
             , "use cardano_keri/checkpoint/threshold.{Unweighted}"
             ]
-    -- TombstoneV1 codec golden: canonical CBOR of a fixed synthetic record,
-    -- byte-identical to the Haskell canonicalCbor (Constr 0, 3 fields).
-    golden =
-        unlines
-            [ "/// TombstoneV1 { cesr_aid: 0xaa*32, convicted_at_native_sn: 1,"
-            , "/// evidence_said: 0xcc*32 } canonical CBOR (byte-parity golden)"
-            , "pub const golden_tombstone: ByteArray ="
-            , "  " <> hexLit (canonicalCbor goldenTombstone)
-            ]
-    goldenTombstone =
-        TombstoneV1 (BS.replicate 32 0xaa) 1 (BS.replicate 32 0xcc)
 
 renderScenario :: Scenario -> String
 renderScenario (name, doc, tip, evidence, offsets) =
     unlines
         [ "/// " <> doc
-        , "pub const " <> name <> "_tip: CheckpointDatumV1 = " <> renderDatum tip
+        , "pub const " <> name <> "_tip: KeyStateView = " <> renderDatum tip
         , ""
         , "pub const " <> name <> "_evidence: EventEvidence = " <> renderEvidence evidence
         , ""
@@ -455,9 +441,9 @@ renderWire name offsets =
   where
     evidence = name <> "_evidence"
 
-renderDatum :: CheckpointDatumV1 -> String
+renderDatum :: KeyStateView -> String
 renderDatum d =
-    "CheckpointDatumV1 { "
+    "KeyStateView { "
         <> intercalate
             ", "
             [ "cesr_aid: " <> hexLit (cdCesrAid d)

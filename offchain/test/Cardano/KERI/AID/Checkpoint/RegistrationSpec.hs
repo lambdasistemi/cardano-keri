@@ -21,8 +21,8 @@ the pure predicate carries no length guard.
 module Cardano.KERI.AID.Checkpoint.RegistrationSpec (spec) where
 
 import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatumV1 (..),
     DatumError (..),
+    KeyStateView (..),
     blake2b_256,
  )
 import Cardano.KERI.AID.Checkpoint.FixtureLoader (
@@ -99,7 +99,7 @@ funded = dcMinAda ctx0 + dcDReg ctx0
 data RegCase = RegCase
     { rcRaw :: ByteString
     -- ^ @event.raw_hex@ decoded — the KERI serialization.
-    , rcDatum :: CheckpointDatumV1
+    , rcDatum :: KeyStateView
     -- ^ The genesis datum implied by the event's own key-state.
     , rcEvidence :: RegistrationEvidence
     -- ^ Honest offsets, event-own signatures, and witness receipts.
@@ -137,7 +137,7 @@ regCase fx key = do
     witnessReceipts <- optionalCommittedSigs sub "witness_receipts"
     obsoleteSigs <- oldMessageSigs
     let datum =
-            CheckpointDatumV1
+            KeyStateView
                 { cdCesrAid = aid
                 , cdCurKeys = ks
                 , cdCurThreshold = kt

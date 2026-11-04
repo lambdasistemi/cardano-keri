@@ -29,7 +29,7 @@ import Cardano.KERI.AID.CESR (
     Primitive (..),
     parsePrimitive,
  )
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..))
+import Cardano.KERI.AID.Checkpoint.Datum (KeyStateView (..))
 import Cardano.KERI.Deployment.EndpointBoard (
     BoardEntry (..),
     missingBoardWitnesses,

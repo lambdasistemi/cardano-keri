@@ -22,8 +22,8 @@ import Cardano.KERI.AID.Checkpoint.Advance (
     reconstructAdvanceMessage,
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatumV1 (..),
     CheckpointDatumV2,
+    KeyStateView (..),
     canonicalCbor,
     rotatedLive,
  )
@@ -75,7 +75,7 @@ data AdvancePackage = AdvancePackage
     , advanceActiveCheckpoint :: !ActiveCheckpoint
     , advanceSpentReference :: !Text
     , advanceSpent :: !SpentCheckpoint
-    , advanceSuccessor :: !CheckpointDatumV1
+    , advanceSuccessor :: !KeyStateView
     , advanceSuccessorFacts :: !CheckpointDatumV2
     -- ^ the version 2 datum the successor output carries
     , advanceSettlement :: !RotationSettlement

@@ -34,7 +34,7 @@ module Cardano.KERI.Deployment.Registration (
 import Cardano.Crypto.Hash (hashFromBytes)
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
-    CheckpointDatumV1 (..),
+    KeyStateView (..),
     liveOfKeyState,
  )
 import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
@@ -169,7 +169,7 @@ data RegistrationPlan = RegistrationPlan
     , planObserverRedeemer :: !Value
     , planLifecycleCertificateRedeemer :: !Value
     , planCheckpointDatum :: !Value
-    , planKeyState :: !CheckpointDatumV1
+    , planKeyState :: !KeyStateView
     -- ^ the inception key state the datum is written from
     , planUpperSlot :: !Integer
     -- ^ the slot the registration is valid until; its start is the datum's @born_at@
@@ -340,7 +340,7 @@ registrationBirth provider refund now = do
             if found < slot then bisect slotAt slot mid hi else bisect slotAt slot lo mid
 
 -- | The inline datum a registration writes, as plan JSON.
-checkpointDatumJson :: RegistrationBirth -> CheckpointDatumV1 -> Value
+checkpointDatumJson :: RegistrationBirth -> KeyStateView -> Value
 checkpointDatumJson birth datum =
     plutusDataJson
         ( asPlcData $

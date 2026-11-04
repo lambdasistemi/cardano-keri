@@ -57,3 +57,16 @@ node scripts/checkpoint-datum-vectors.mjs --check
 # The checkpoint writer's Aiken tests (#339) are exactly what the committed
 # vectors of the version 2 datum and of the output's value generate.
 node scripts/checkpoint-writer-vectors.mjs --check
+# The deposit intent's signed bytes (#517): the committed vectors are the
+# Lean's output, every committed row is checked against the Lean and every
+# changed field fails.
+(
+  cd lean
+  lake build CardanoKeri.CheckpointDepositVectors
+  generated=$(mktemp)
+  lake env lean --run CheckpointDepositDriver.lean >"$generated"
+  node -e 'const fs=require("fs");if(fs.readFileSync(process.argv[1],"utf8")!==fs.readFileSync(process.argv[2],"utf8")){console.error("checkpoint-deposit-vectors.json differs from the Lean output");process.exit(1)}' \
+    checkpoint-deposit-vectors.json "$generated"
+  rm -f -- "$generated"
+  lake env lean --run CheckpointDepositDriver.lean --check checkpoint-deposit-vectors.json
+)

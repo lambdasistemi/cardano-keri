@@ -30,3 +30,4 @@ import CardanoKeri.CheckpointDatumGoals
 import CardanoKeri.CheckpointDatumVectors
 import CardanoKeri.CheckpointDeposit
 import CardanoKeri.CheckpointDepositGoals
+import CardanoKeri.CheckpointDepositVectors

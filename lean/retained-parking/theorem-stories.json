@@ -11,6 +11,7 @@
     "lean/CardanoKeri/CheckpointDatumVectors.lean": "f26d2a611cf441ad797d0531f8e28aa117948e74a719e88738154fe608219b4b",
     "lean/CardanoKeri/CheckpointDeposit.lean": "e1feee3da31a2656b36302ef86b10d2d0c09b3b9e1c8911fed624cec474fb0bf",
     "lean/CardanoKeri/CheckpointDepositGoals.lean": "c6ddf3b2434e365b59bdccfd2bc074b60208d63b3358141f147d8ac0fcf1055f",
+    "lean/CardanoKeri/CheckpointDepositVectors.lean": "a2f667a9b702ab4020621185a472e32d30d4d13624a536474dc2e33adbe06ecf",
     "lean/CardanoKeri/CheckpointGoals.lean": "f87cf31f0adc3d778685ff00fc3ac5d54feb0c8856832299e4e4c315de0bfcc0",
     "lean/CardanoKeri/CheckpointLifecycleExamples.lean": "0641f10a9ea175e0f26bbb35bf04b763112d9872cc3030035768ff6adb5749f5",
     "lean/CardanoKeri/CheckpointReceiptCheck.lean": "b8e503afc6b39c864d5670b5b746ada934e519beb2c45b291be66d811e1085d8",

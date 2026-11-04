@@ -40,7 +40,7 @@ import Cardano.KERI.AID.CESR (
     qb64Verkey,
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatumV1 (..),
+    KeyStateView (..),
     Verkey,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
@@ -137,7 +137,7 @@ Retained only for 'Cardano.KERI.Deployment.Advance.mkAdvancePackage'
 reconstructAdvanceMessage ::
     SpentCheckpoint ->
     -- | The created (successor) datum @NEW@.
-    CheckpointDatumV1 ->
+    KeyStateView ->
     -- | @wit_cut@ (KERI @br@).
     [Verkey] ->
     -- | @wit_add@ (KERI @ba@).
@@ -214,7 +214,7 @@ checked (ratified QC — no SAID proof on the advance path).
 -}
 eventBinding ::
     -- | The created (successor) datum @NEW@.
-    CheckpointDatumV1 ->
+    KeyStateView ->
     AdvanceEvidence ->
     Either AdvanceEventError ()
 eventBinding new e = do
@@ -296,7 +296,7 @@ entries could never verify, rather than silently ignored.
 advancePredicate ::
     SpentCheckpoint ->
     -- | The created (successor) datum @NEW@.
-    CheckpointDatumV1 ->
+    KeyStateView ->
     AdvanceEvidence ->
     Either AdvancePredicateError ()
 advancePredicate sc new e = do

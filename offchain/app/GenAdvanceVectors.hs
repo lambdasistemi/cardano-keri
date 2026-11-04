@@ -49,8 +49,8 @@ import Cardano.KERI.AID.Checkpoint.Advance (
     reconstructAdvanceMessage,
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatumV1 (..),
     DatumError (..),
+    KeyStateView (..),
     canonicalCbor,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
@@ -161,7 +161,7 @@ assertVerdict s =
 data AdvCase = AdvCase
     { acRaw :: ByteString
     , acSpent :: SpentCheckpoint
-    , acCreated :: CheckpointDatumV1
+    , acCreated :: KeyStateView
     , acEvidence :: AdvanceEvidence
     , acNewSet :: [ByteString]
     , acOldWitnesses :: [ByteString]
@@ -242,7 +242,7 @@ loadAdvCase doc key = do
                 , scNativeSn = 0
                 }
         created =
-            CheckpointDatumV1
+            KeyStateView
                 { cdCesrAid = aid
                 , cdCurKeys = rotKeys
                 , cdCurThreshold = rotThr
@@ -346,7 +346,7 @@ data Scenario = Scenario
     { scName :: String
     , scDoc :: String
     , scSpent :: SpentCheckpoint
-    , scCreated :: CheckpointDatumV1
+    , scCreated :: KeyStateView
     , scEvidence :: AdvanceEvidence
     , scExpected :: Either AdvancePredicateError ()
     }
@@ -919,7 +919,7 @@ render scenarios =
             , "  AdvReceiptQuorumUnsatisfied, AdvanceEvidence, AdvancePredicateInvalid,"
             , "  AdvancePredicateValid, AdvancePredicateVerdict,"
             , "}"
-            , "use cardano_keri/checkpoint/datum.{CheckpointDatumV1, ToadRange}"
+            , "use cardano_keri/checkpoint/datum.{KeyStateView, ToadRange}"
             , "use cardano_keri/checkpoint/message.{"
             , "  Eq5SequenceMismatch, EqW1CutInvalid, EqW2AddInvalid,"
             , "  Eq6CurrentQuorumUnsatisfied, Eq6PriorNextQuorumUnsatisfied,"
@@ -937,7 +937,7 @@ renderScenario s =
         , ""
         , "pub const "
             <> n
-            <> "_created: CheckpointDatumV1 = "
+            <> "_created: KeyStateView = "
             <> renderDatum (scCreated s)
         , ""
         , "pub const "
@@ -973,9 +973,9 @@ renderSpent s =
             ]
         <> " }"
 
-renderDatum :: CheckpointDatumV1 -> String
+renderDatum :: KeyStateView -> String
 renderDatum d =
-    "CheckpointDatumV1 { "
+    "KeyStateView { "
         <> intercalate
             ", "
             [ "cesr_aid: " <> hexLit (cdCesrAid d)

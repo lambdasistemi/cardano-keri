@@ -3,7 +3,7 @@ Module      : Main
 Description : Shared golden\/negative vector generator for the #68 checkpoint contract
 
 The single Haskell computation that produces every canonical byte string of the
-frozen @CheckpointDatumV1@ wire contract, reusing the Slice-2\/3 codec modules
+threshold encoding and the AID asset-name derivation, reusing the Slice-2\/3 codec modules
 (@Cardano.KERI.AID.Checkpoint.{Threshold,Datum,Message}@) as the sole source of
 truth — it never re-implements encoding.
 
@@ -21,8 +21,6 @@ written there; with none it is printed to stdout.
 module Main (main) where
 
 import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatum (..),
-    CheckpointDatumV1 (..),
     blake2b_256,
     canonicalCbor,
  )
@@ -43,9 +41,6 @@ import Data.ByteString (
  )
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as BC
-import Data.Word (
-    Word8,
- )
 import System.Environment (
     getArgs,
  )
@@ -53,20 +48,6 @@ import System.Environment (
 -- ---------------------------------------------------------
 -- Shared fixture material (identical to the Slice-2/3 hspec goldens)
 -- ---------------------------------------------------------
-
--- | A 32-byte value of a single repeated byte.
-b32 :: Word8 -> ByteString
-b32 = BS.replicate 32
-
--- Key digests / fixed material shared with DatumSpec.
-k1, k2, k3, cesrDatum, nk1, w1, w2 :: ByteString
-k1 = b32 0x01
-k2 = b32 0x02
-k3 = b32 0x03
-cesrDatum = b32 0xaa
-nk1 = b32 0x0a
-w1 = b32 0xb1
-w2 = b32 0xb2
 
 -- Derivation-family material shared with MessageSpec.
 cesrA, cesrAFlipped :: ByteString
@@ -76,32 +57,6 @@ cesrAFlipped = BS.pack (1 : [1 .. 31]) -- one-bit flip of byte 0
 -- ---------------------------------------------------------
 -- Constructors matching the hspec fixtures
 -- ---------------------------------------------------------
-
--- | The @V1@-wrapped checkpoint datum from positional fields.
-mkV1 ::
-    ByteString ->
-    [ByteString] ->
-    Threshold ->
-    [ByteString] ->
-    Threshold ->
-    [ByteString] ->
-    Integer ->
-    Integer ->
-    Integer ->
-    CheckpointDatum
-mkV1 cesr keys thr nkeys nthr wits toad seqn nsn =
-    V1
-        CheckpointDatumV1
-            { cdCesrAid = cesr
-            , cdCurKeys = keys
-            , cdCurThreshold = thr
-            , cdNextKeys = nkeys
-            , cdNextThreshold = nthr
-            , cdWitnesses = wits
-            , cdToad = toad
-            , cdSeq = seqn
-            , cdNativeSn = nsn
-            }
 
 -- | The @deriveAidAssetName@ negative computed with the WRONG code (@0x46@).
 wrongCodeAsset :: ByteString
@@ -148,79 +103,6 @@ vectors =
         "golden_threshold_zero_weight"
         "threshold: zero-weight clause member [[0/1, 1/1]] (KERI reserve)"
         (canonicalCbor (Weighted [[Weight 0 1, Weight 1 1]]))
-    , -- Datum canonical CBOR (Slice 6 mirror).
-      Vec
-        "golden_datum_1of1"
-        "datum: 1-of-1 (Unweighted 1, witnessless)"
-        ( canonicalCbor
-            (mkV1 cesrDatum [k1] (Unweighted 1) [nk1] (Unweighted 1) [] 0 0 0)
-        )
-    , Vec
-        "golden_datum_integer_m_of_n"
-        "datum: integer m-of-n (Unweighted 2, 3 keys)"
-        ( canonicalCbor
-            (mkV1 cesrDatum [k1, k2, k3] (Unweighted 2) [nk1] (Unweighted 1) [] 0 5 7)
-        )
-    , Vec
-        "golden_datum_weighted"
-        "datum: single-clause weighted [[1/2, 1/2]]"
-        ( canonicalCbor
-            ( mkV1
-                cesrDatum
-                [k1, k2]
-                (Weighted [[Weight 1 2, Weight 1 2]])
-                [nk1]
-                (Unweighted 1)
-                []
-                0
-                2
-                4
-            )
-        )
-    , Vec
-        "golden_datum_multi_clause"
-        "datum: multi-clause weighted [[1/1], [1/1]]"
-        ( canonicalCbor
-            ( mkV1
-                cesrDatum
-                [k1, k2]
-                (Weighted [[Weight 1 1], [Weight 1 1]])
-                [nk1]
-                (Unweighted 1)
-                []
-                0
-                1
-                3
-            )
-        )
-    , Vec
-        "golden_datum_zero_weight"
-        "datum: zero-weight clause member [[0/1, 1/1]] (KERI reserve)"
-        ( canonicalCbor
-            ( mkV1
-                cesrDatum
-                [k1, k2]
-                (Weighted [[Weight 0 1, Weight 1 1]])
-                [nk1]
-                (Unweighted 1)
-                []
-                0
-                0
-                0
-            )
-        )
-    , Vec
-        "golden_datum_witnessed"
-        "datum: witnessed (non-empty witnesses, toad=2)"
-        ( canonicalCbor
-            (mkV1 cesrDatum [k1] (Unweighted 1) [nk1] (Unweighted 1) [w1, w2] 2 3 9)
-        )
-    , Vec
-        "golden_datum_witnessless"
-        "datum: witnessless (toad=0, empty witnesses)"
-        ( canonicalCbor
-            (mkV1 cesrDatum [k1] (Unweighted 1) [nk1] (Unweighted 1) [] 0 0 0)
-        )
     , -- deriveAidAssetName: the golden derivation + its key negatives.
       Vec
         "golden_derivation_cesr_aid"

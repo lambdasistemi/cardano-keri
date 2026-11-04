@@ -56,7 +56,7 @@ module Cardano.KERI.Deployment.CLI (
 ) where
 
 import Cardano.KERI.AID.Checkpoint.Advance (AdvanceEvidence (..))
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..))
+import Cardano.KERI.AID.Checkpoint.Datum (KeyStateView (..))
 import Cardano.KERI.ChainQuery (
     ActiveCheckpoint (..),
     BoardLocator (..),

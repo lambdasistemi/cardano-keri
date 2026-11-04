@@ -33,8 +33,8 @@ import Cardano.KERI.AID.CESR (
     parsePrimitive,
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatumV1 (..),
     DatumError (..),
+    KeyStateView (..),
  )
 import Cardano.KERI.AID.Checkpoint.Registration (
     DeploymentContext (..),
@@ -163,7 +163,7 @@ assertVerdict s =
 -- | One registration sub-fixture, lifted into predicate inputs.
 data RegCase = RegCase
     { rcRaw :: ByteString
-    , rcDatum :: CheckpointDatumV1
+    , rcDatum :: KeyStateView
     , rcEvidence :: RegistrationEvidence
     , rcOldMessageSigs :: [(Int, ByteString)]
     }
@@ -196,7 +196,7 @@ regCase fx key = do
     receipts <- optionalSigList sub "witness_receipts"
     obsoleteSigs <- oldMessageSigs
     let datum =
-            CheckpointDatumV1
+            KeyStateView
                 { cdCesrAid = aid
                 , cdCurKeys = ks
                 , cdCurThreshold = kt
@@ -241,7 +241,7 @@ data Scenario = Scenario
     { scName :: String
     , scDoc :: String
     , scCtx :: DeploymentContext
-    , scDatum :: CheckpointDatumV1
+    , scDatum :: KeyStateView
     , scLovelace :: Integer
     , scEvidence :: RegistrationEvidence
     , scExpected :: Either RegistrationError ()
@@ -910,7 +910,7 @@ render wit wgt scenarios =
             , "//// parity) plus the proof-name/re-spelling/qb64 byte goldens."
             , "//// `just check-registration-vectors` forbids drift."
             , ""
-            , "use cardano_keri/checkpoint/datum.{CheckpointDatumV1, ThresholdIllFormed}"
+            , "use cardano_keri/checkpoint/datum.{KeyStateView, ThresholdIllFormed}"
             , "use cardano_keri/checkpoint/registration.{"
             , "  DeploymentContext, E1EventTypeMismatch, E2AidMismatch, E3SequenceMismatch,"
             , "  E4CurKeysMismatch, E5CurThresholdMismatch, E6NextKeysMismatch,"
@@ -975,7 +975,7 @@ renderScenario s =
         , ""
         , "pub const "
             <> n
-            <> "_datum: CheckpointDatumV1 = "
+            <> "_datum: KeyStateView = "
             <> renderDatum (scDatum s)
         , ""
         , "pub const " <> n <> "_lovelace: Int = " <> show (scLovelace s)
@@ -1004,9 +1004,9 @@ renderCtx ctx =
             ]
         <> " }"
 
-renderDatum :: CheckpointDatumV1 -> String
+renderDatum :: KeyStateView -> String
 renderDatum d =
-    "CheckpointDatumV1 { "
+    "KeyStateView { "
         <> intercalate
             ", "
             [ "cesr_aid: " <> hexLit (cdCesrAid d)

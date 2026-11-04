@@ -17,7 +17,7 @@ module Cardano.KERI.CLI.Backend.EndpointSpec (spec) where
 
 import Cardano.Crypto.Hash.Class (hashFromBytes)
 import Cardano.KERI.AID.CESR (qb64Aid, qb64Verkey)
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V2), CheckpointDatumV1 (..), liveOfKeyState)
+import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V2), KeyStateView (..), liveOfKeyState)
 import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted))
 import Cardano.KERI.CLI.Backend (
@@ -189,9 +189,9 @@ aidY = BS.replicate 32 0x00
 renderAid :: ByteString -> Text
 renderAid = TE.decodeUtf8 . qb64Aid
 
-datumY :: CheckpointDatumV1
+datumY :: KeyStateView
 datumY =
-    CheckpointDatumV1
+    KeyStateView
         { cdCesrAid = aidY
         , cdCurKeys = [BS.replicate 32 0x11]
         , cdCurThreshold = Unweighted 1
@@ -203,11 +203,11 @@ datumY =
         , cdNativeSn = 3
         }
 
-checkpointCreate :: Indexer.TxIn -> ByteString -> CheckpointDatumV1 -> UtxoOp
+checkpointCreate :: Indexer.TxIn -> ByteString -> KeyStateView -> UtxoOp
 checkpointCreate txIn aid datum =
     UtxoCreate txIn checkpointAddress (checkpointOutput aid datum)
 
-checkpointOutput :: ByteString -> CheckpointDatumV1 -> Indexer.TxOut
+checkpointOutput :: ByteString -> KeyStateView -> Indexer.TxOut
 checkpointOutput aid datum =
     Indexer.TxOut $
         serialize'

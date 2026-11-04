@@ -38,7 +38,7 @@ module Cardano.KERI.Deployment.RegistrationSpec (spec) where
 import Cardano.Crypto.Hash (hashFromStringAsHex, hashToBytes)
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (V2),
-    CheckpointDatumV1 (..),
+    KeyStateView (..),
     liveOfKeyState,
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted))
@@ -554,9 +554,9 @@ syntheticPlan =
         , planUpperSlot = 123
         }
 
-syntheticKeyState :: CheckpointDatumV1
+syntheticKeyState :: KeyStateView
 syntheticKeyState =
-    CheckpointDatumV1
+    KeyStateView
         { cdCesrAid = BS.replicate 32 0xaa
         , cdCurKeys = [BS.replicate 32 0x01]
         , cdCurThreshold = Unweighted 1

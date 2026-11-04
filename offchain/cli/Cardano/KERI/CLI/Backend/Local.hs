@@ -13,7 +13,7 @@ slice, so there is no honest lag to report (never a fabricated zero).
 module Cardano.KERI.CLI.Backend.Local (mkLocalBackend, openLocalBackend) where
 
 import Cardano.KERI.AID.CESR (Primitive (SelfAddressing), parsePrimitive, qb64Aid, qb64Verkey)
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..))
+import Cardano.KERI.AID.Checkpoint.Datum (KeyStateView (..))
 import Cardano.KERI.CLI.Backend (
     BackendError (..),
     CheckpointFields (..),

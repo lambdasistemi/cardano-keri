@@ -31,12 +31,11 @@ fail() {
     exit 1
 }
 
-# The exact role/title pairs the recipe must identify, declared once so a
+# The exact role/title pair the recipe must identify, declared once so a
 # control cannot silently cover fewer.
-roles=(commitment checkpoint)
+roles=(commitment)
 titles=(
     'bounty_commitment.bounty_commitment.spend'
-    'checkpoint.checkpoint.spend'
 )
 
 # The exact mutant classes the frozen slice gate requires.
@@ -45,12 +44,11 @@ classes=(entitlement age scope payout)
 check_transcript() {
     local transcript="$1"
 
-    # Exactly two identity rows, one per role, each naming its own title and a
-    # full-width program hash.
+    # Exactly one identity row, naming its title and a full-width program hash.
     local identities
-    identities="$(grep -cE '^M8\.entitlement-target role=(commitment|checkpoint) title=[^ ]+ program_sha256=[0-9a-f]{64}$' "$transcript" || true)"
-    [[ "$identities" -eq 2 ]] ||
-        fail "expected exactly 2 target identity rows, found $identities"
+    identities="$(grep -cE '^M8\.entitlement-target role=(commitment) title=[^ ]+ program_sha256=[0-9a-f]{64}$' "$transcript" || true)"
+    [[ "$identities" -eq 1 ]] ||
+        fail "expected exactly 1 target identity row, found $identities"
 
     local index
     for index in "${!roles[@]}"; do
@@ -59,32 +57,11 @@ check_transcript() {
             fail "missing identity row for role ${roles[$index]} at ${titles[$index]}"
     done
 
-    # The two programs must be DIFFERENT programs. One hash reported twice
-    # would satisfy the pattern above while proving one target.
-    local distinct
-    distinct="$(grep -E '^M8\.entitlement-target ' "$transcript" |
-        sed 's/.*program_sha256=//' | sort -u | wc -l)"
-    [[ "$distinct" -eq 2 ]] ||
-        fail "the two identity rows report $distinct distinct programs, not 2"
-
     # The instrument's own positive control must have settled before any
     # mutant is believed.
     grep -qE '^M8\.entitlement-control case=applied-parameters role=commitment outcome=HALT steps=[0-9]+$' \
         "$transcript" ||
         fail "the commitment program did not settle on its parameters alone"
-
-    # The checkpoint target is identified and arity-asserted but NOT executed,
-    # and the run must say so out loud. Requiring the non-claim is what stops
-    # its identity row from being read as a behavioural result.
-    grep -qE '^M8\.entitlement-not-established subject=checkpoint-target applied_arguments=7 required_basis=executed-under-pinned-cek reason=[^ ]+$' \
-        "$transcript" ||
-        fail "the checkpoint target's non-claim is absent; its identity row would read as a result it did not earn"
-
-    # ...and it must not ALSO claim to have executed it.
-    if grep -qE '^M8\.entitlement-control case=applied-parameters role=checkpoint ' \
-        "$transcript"; then
-        fail "the run reports executing the checkpoint program while also declaring it not established"
-    fi
 
     # The accepted honest neighbour. Without it four rejections establish
     # nothing about the fields they vary.
@@ -149,24 +126,9 @@ grep -v '^M8\.entitlement-control case=honest-reveal' "$work/real.txt" \
     >"$work/control-b.txt"
 control "honest-neighbour-absent" "$work/control-b.txt"
 
-# Control C: both identity rows reporting the same program.
-awk '
-  /^M8\.entitlement-target / {
-    if (!seen) { seen = $NF }
-    sub(/program_sha256=.*/, seen)
-  }
-  { print }
-' "$work/real.txt" >"$work/control-c.txt"
-control "one-program-reported-twice" "$work/control-c.txt"
-
 # Control D: the instrument's own control did not settle.
 sed 's/^\(M8\.entitlement-control case=applied-parameters role=commitment outcome=\)HALT/\1ERROR/' \
     "$work/real.txt" >"$work/control-d.txt"
 control "commitment-control-unsettled" "$work/control-d.txt"
 
-# Control E: the checkpoint non-claim removed, leaving a bare identity row.
-grep -v '^M8\.entitlement-not-established subject=checkpoint-target' \
-    "$work/real.txt" >"$work/control-e.txt"
-control "checkpoint-non-claim-absent" "$work/control-e.txt"
-
-printf 'test-entitlement-contract: PASS targets=2 mutants=4 controls=5\n'
+printf 'test-entitlement-contract: PASS targets=1 mutants=4 controls=3\n'

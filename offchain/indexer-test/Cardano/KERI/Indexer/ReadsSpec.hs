@@ -12,7 +12,7 @@ import Cardano.Crypto.Hash.Class (
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
-    CheckpointDatumV1 (..),
+    KeyStateView (..),
     convictedOf,
     liveOfKeyState,
  )
@@ -267,7 +267,7 @@ checkpointView handle =
 checkpointCreate ::
     Indexer.TxIn ->
     ByteString ->
-    CheckpointDatumV1 ->
+    KeyStateView ->
     UtxoOp
 checkpointCreate txIn aid datum =
     UtxoCreate
@@ -278,7 +278,7 @@ checkpointCreate txIn aid datum =
 checkpointRecord ::
     Indexer.TxIn ->
     ByteString ->
-    CheckpointDatumV1 ->
+    KeyStateView ->
     CheckpointRecord
 checkpointRecord txIn aid datum =
     CheckpointRecord
@@ -290,12 +290,12 @@ checkpointRecord txIn aid datum =
         , crFacts = liveOfKeyState "" 0 datum
         }
 
-checkpointOutput :: ByteString -> CheckpointDatumV1 -> Indexer.TxOut
+checkpointOutput :: ByteString -> KeyStateView -> Indexer.TxOut
 checkpointOutput aid datum =
     checkpointOutputWith aid (V2 (liveOfKeyState "" 0 datum))
 
 -- | The output of the checkpoint after its conviction: the token stays.
-checkpointCreatePending :: Indexer.TxIn -> ByteString -> CheckpointDatumV1 -> UtxoOp
+checkpointCreatePending :: Indexer.TxIn -> ByteString -> KeyStateView -> UtxoOp
 checkpointCreatePending txIn aid datum =
     UtxoCreate
         txIn
@@ -341,14 +341,14 @@ plutusData value =
     let BuiltinData datum = toBuiltinData value
      in datum
 
-datumX0, datumX1, datumY0 :: CheckpointDatumV1
+datumX0, datumX1, datumY0 :: KeyStateView
 datumX0 = checkpointDatum aidX 0
 datumX1 = checkpointDatum aidX 1
 datumY0 = checkpointDatum aidY 0
 
-checkpointDatum :: ByteString -> Integer -> CheckpointDatumV1
+checkpointDatum :: ByteString -> Integer -> KeyStateView
 checkpointDatum aid sequenceNumber =
-    CheckpointDatumV1
+    KeyStateView
         { cdCesrAid = aid
         , cdCurKeys = [BS.replicate 32 0x11]
         , cdCurThreshold = Unweighted 1

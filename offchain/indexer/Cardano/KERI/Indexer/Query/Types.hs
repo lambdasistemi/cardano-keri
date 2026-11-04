@@ -134,7 +134,7 @@ thresholdToJson (Weighted clauses) =
     weightPair (Weight num den) = (num, den)
 
 {- | The nullable @checkpoint@ payload's fields. Field names are prefixed
-@chk@, distinct from 'Cardano.KERI.AID.Checkpoint.Datum.CheckpointDatumV1's
+@chk@, distinct from 'Cardano.KERI.AID.Checkpoint.Datum.KeyStateView's
 @cd@-prefixed fields (the two types are commonly in scope together in
 "Cardano.KERI.Indexer.Query.Server"); this is a pure Haskell-identifier
 choice and has no effect on the JSON below, which is unchanged.

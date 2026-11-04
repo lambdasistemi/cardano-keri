@@ -19,7 +19,7 @@ SC-2's property over the upstream store, not re-proved here (see
 -}
 module FollowerE2ESpec (spec) where
 
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..))
+import Cardano.KERI.AID.Checkpoint.Datum (KeyStateView (..))
 import Cardano.KERI.Deployment.Manifest (
     BlueprintInfo (..),
     CheckpointInfo (..),

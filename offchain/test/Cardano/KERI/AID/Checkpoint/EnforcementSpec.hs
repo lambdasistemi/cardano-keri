@@ -11,21 +11,14 @@ module Cardano.KERI.AID.Checkpoint.EnforcementSpec (spec) where
 
 import Cardano.Crypto.Hash (Blake2b_256, digest)
 import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatumV1 (..),
-    canonicalCbor,
+    KeyStateView (..),
  )
 import Cardano.KERI.AID.Checkpoint.Enforcement (
-    AddressRole (..),
-    ContinuingOutput (..),
     ConvictError (..),
-    ConvictOutputError (..),
     EnforcementBindingError (..),
     EnforcementEvidence (..),
     EventEvidence (..),
-    OutputDatum (..),
-    TombstoneV1 (..),
     bindEnforcementEvidence,
-    convictOutputPredicate,
     convictPredicate,
  )
 import Cardano.KERI.AID.Checkpoint.FixtureLoader (
@@ -56,10 +49,6 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Numeric (readHex)
-import PlutusTx.IsData.Class (
-    fromBuiltinData,
-    toBuiltinData,
- )
 import Test.Hspec (
     Expectation,
     Spec,
@@ -231,59 +220,6 @@ spec = describe "Enforcement - convict over the keripy fixtures" $ do
                 convictPredicate tip ev{eeCtrlSigs = take 1 (eeCtrlSigs ev)}
                     `shouldBe` Left CvQuorumUnsatisfied
 
-    describe "TombstoneV1 wire codec" $ do
-        it "canonical CBOR golden (Constr 0, 3 fields)" $
-            canonicalCbor goldenTombstone
-                `shouldBe` hexBs
-                    "d8799f5820aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa015820ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccff"
-        it "round-trips through Plutus Data" $
-            fromBuiltinData (toBuiltinData goldenTombstone)
-                `shouldBe` Just goldenTombstone
-
-    describe "convict output shape (Convict 6)" $ do
-        it "valid: Tombstone + token + correct record" $
-            withBuilt (convictSetup fork) $ \(tip, ev) ->
-                convictOutputPredicate tip ev (tombstoneOut tip ev True Tombstone)
-                    `shouldBe` Right ()
-
-        -- F13: convict output missing the token.
-        it "F13: missing token -> CoMissingToken" $
-            withBuilt (convictSetup fork) $ \(tip, ev) ->
-                convictOutputPredicate tip ev (tombstoneOut tip ev False Tombstone)
-                    `shouldBe` Left CoMissingToken
-
-        -- F13: convict output carrying a checkpoint datum, not the record.
-        it "F13: wrong record -> CoWrongRecord" $
-            withBuilt (convictSetup fork) $ \(tip, ev) ->
-                convictOutputPredicate
-                    tip
-                    ev
-                    (ContinuingOutput Tombstone True (CheckpointOutput tip))
-                    `shouldBe` Left CoWrongRecord
-
-        -- F13: convict output at a non-tombstone role.
-        it "F13: non-tombstone role -> CoNotTombstone" $
-            withBuilt (convictSetup fork) $ \(tip, ev) ->
-                convictOutputPredicate tip ev (tombstoneOut tip ev True Active)
-                    `shouldBe` Left CoNotTombstone
-
--- ---------------------------------------------------------------------------
--- Output-shape + tombstone fixtures/helpers
--- ---------------------------------------------------------------------------
-
--- | A fixed synthetic conviction record for the byte-parity golden.
-goldenTombstone :: TombstoneV1
-goldenTombstone = TombstoneV1 (BS.replicate 32 0xaa) 1 (BS.replicate 32 0xcc)
-
--- | The tombstone continuing-output a valid conviction writes.
-tombstoneOut ::
-    CheckpointDatumV1 -> EventEvidence -> Bool -> AddressRole -> ContinuingOutput
-tombstoneOut tip ev hasTok role =
-    ContinuingOutput
-        role
-        hasTok
-        (TombstoneOutput (TombstoneV1 (cdCesrAid tip) (cdNativeSn tip) (eeSaid ev)))
-
 -- | Decode a hex literal, erroring on malformed input.
 hexBs :: Text -> ByteString
 hexBs = either error id . decodeHex
@@ -293,7 +229,7 @@ hexBs = either error id . decodeHex
 -- ---------------------------------------------------------------------------
 
 -- | fork conviction: tip = rot_recorded state, evidence = rot_conflict.
-convictSetup :: Value -> Either String (CheckpointDatumV1, EventEvidence)
+convictSetup :: Value -> Either String (KeyStateView, EventEvidence)
 convictSetup fx = do
     tip <- tipFrom fx "rot_recorded" 1
     ev <- evidenceFrom fx "rot_conflict" "rot_conflict_sigs" Nothing
@@ -304,7 +240,7 @@ set from the icp, since a rotation does not restate @b@); evidence = the
 witness-receipted rot_conflict.
 -}
 forkWitnessedConvictSetup ::
-    Value -> Either String (CheckpointDatumV1, EventEvidence)
+    Value -> Either String (KeyStateView, EventEvidence)
 forkWitnessedConvictSetup fx = do
     tip <- tipFromWitnessed fx "rot_recorded" "icp" 1
     ev <-
@@ -319,7 +255,7 @@ forkWitnessedConvictSetup fx = do
 rot_recorded (with its own witness receipts) — must not be a conflict.
 -}
 forkWitnessedHonestSetup ::
-    Value -> Either String (CheckpointDatumV1, EventEvidence)
+    Value -> Either String (KeyStateView, EventEvidence)
 forkWitnessedHonestSetup fx = do
     tip <- tipFromWitnessed fx "rot_recorded" "icp" 1
     ev <-
@@ -331,7 +267,7 @@ forkWitnessedHonestSetup fx = do
     pure (tip, ev)
 
 -- | F3 conviction: tip = the state the rot reflects, evidence = that same rot.
-honestConvictSetup :: Value -> Either String (CheckpointDatumV1, EventEvidence)
+honestConvictSetup :: Value -> Either String (KeyStateView, EventEvidence)
 honestConvictSetup fx = do
     tip <- tipFrom fx "rot" 1
     ev <- evidenceFrom fx "rot" "rot_sigs" Nothing
@@ -386,11 +322,11 @@ wireSetup fx evKey ctrlKey witKey = do
         )
 
 -- | Build the tip datum a fixture event reflects (@cur = k@, @next = n@, ...).
-tipFrom :: Value -> Text -> Integer -> Either String CheckpointDatumV1
+tipFrom :: Value -> Text -> Integer -> Either String KeyStateView
 tipFrom fx evKey seqNo = do
     de <- decodeEvent fx evKey
     pure
-        CheckpointDatumV1
+        KeyStateView
             { cdCesrAid = deAid de
             , cdCurKeys = deKeys de
             , cdCurThreshold = deKt de
@@ -407,12 +343,12 @@ tipFrom fx evKey seqNo = do
 witnessed AID's current witness set is inherited, not restated by the rot.
 -}
 tipFromWitnessed ::
-    Value -> Text -> Text -> Integer -> Either String CheckpointDatumV1
+    Value -> Text -> Text -> Integer -> Either String KeyStateView
 tipFromWitnessed fx evKey witKey seqNo = do
     de <- decodeEvent fx evKey
     wde <- decodeEvent fx witKey
     pure
-        CheckpointDatumV1
+        KeyStateView
             { cdCesrAid = deAid de
             , cdCurKeys = deKeys de
             , cdCurThreshold = deKt de

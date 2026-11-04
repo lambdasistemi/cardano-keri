@@ -2,21 +2,18 @@
 
 {- |
 Module      : Cardano.KERI.AID.Checkpoint.Datum
-Description : The checkpoint datum wire codec: the frozen version 1 record (#68) and the version 2 datum (#339)
+Description : The checkpoint datum wire codec: the version 2 datum (#339) and the key state the event predicates run over
 
-The versioned checkpoint datum as a validator-free schema-support layer: the
-'CheckpointDatum' version sum, the 'CheckpointDatumV1' record, and the
-canonical Plutus 'Data' / CBOR serialization the Aiken encoder mirrors
-byte-for-byte.
+The checkpoint datum as a validator-free schema-support layer: the version 2
+'CheckpointDatum' and the canonical Plutus 'Data' / CBOR serialization the Aiken
+encoder mirrors byte-for-byte. The outer constructor is index 1; every other
+index is refused when reading.
 
 @
-CheckpointDatum   = V1 CheckpointDatumV1   -- Constr 0, wrapping the inner record
-CheckpointDatumV1                          -- Constr 0, 9 fields in frozen order:
-  { cesr_aid, cur_keys, cur_threshold, next_keys, next_threshold,
-    witnesses, toad, seq, native_sn }
+CheckpointDatum = V2 CheckpointDatumV2  -- Constr 1, wrapping the datum
 @
 
-Version 2 (@V2@ is constructor 1) carries the facts of a checkpoint state:
+The datum carries the facts of a checkpoint state:
 
 @
 CheckpointDatumV2
@@ -52,7 +49,7 @@ module Cardano.KERI.AID.Checkpoint.Datum (
 
     -- * The versioned datum
     CheckpointDatum (..),
-    CheckpointDatumV1 (..),
+    KeyStateView (..),
     CheckpointDatumV2 (..),
     KeyMaterial (..),
 
@@ -64,10 +61,10 @@ module Cardano.KERI.AID.Checkpoint.Datum (
 
     -- * Datum-level well-formedness (rule 14)
     DatumError (..),
-    datumWellFormed,
+    keyStateWellFormed,
     datumV2WellFormed,
 
-    -- * The version 1 key-state view of a version 2 checkpoint
+    -- * The key-state view of a version 2 checkpoint
     keyStateView,
     datumKeyState,
     datumFacts,
@@ -146,17 +143,15 @@ type CesrAid = ByteString
 -- Types
 -- ---------------------------------------------------------
 
-{- | The checkpoint datum version sum. @V1@ is constructor index 0 and @V2@
-index 1; a validator fails closed on a constructor it does not know.
+{- | The checkpoint datum: the version 2 datum under outer constructor index 1.
+Every other constructor index is refused when reading.
 -}
-data CheckpointDatum
-    = -- | Constr 0, wrapping the inner v1 record.
-      V1 CheckpointDatumV1
-    | -- | Constr 1, wrapping the version 2 datum.
+newtype CheckpointDatum
+    = -- | Constr 1, wrapping the version 2 datum.
       V2 CheckpointDatumV2
     deriving stock (Show, Eq)
 
--- | The key material of a version 2 checkpoint: the version 1 record's key fields.
+-- | The key material of a version 2 checkpoint: the key fields of 'KeyStateView'.
 data KeyMaterial = KeyMaterial
     { kmCurKeys :: ![Verkey]
     -- ^ current establishment raw verkeys (KERI @k@)
@@ -201,10 +196,12 @@ data CheckpointDatumV2
         }
     deriving stock (Show, Eq)
 
-{- | The frozen sovereign per-AID checkpoint state (Constr 0). The 9 fields
-are positional and security-significant; reordering changes the bytes.
+{- | The key state of a checkpoint as the event predicates read it: the AID
+digest, the key material and the two counters. It is built from a live version 2
+datum (@cdSeq@ is its epoch, @cdNativeSn@ its sequence number) and has no wire
+form.
 -}
-data CheckpointDatumV1 = CheckpointDatumV1
+data KeyStateView = KeyStateView
     { cdCesrAid :: !CesrAid
     -- ^ external AID binding (KERI @i@, E-code)
     , cdCurKeys :: ![Verkey]
@@ -241,14 +238,11 @@ unB :: Data -> Maybe ByteString
 unB (B b) = Just b
 unB _ = Nothing
 
--- | @V1 v@ -> @Constr 0 [<inner record>]@, @V2 v@ -> @Constr 1 [<datum>]@.
+-- | @V2 v@ -> @Constr 1 [<datum>]@.
 instance ToData CheckpointDatum where
-    toBuiltinData (V1 v) = BuiltinData (Constr 0 [asData v])
     toBuiltinData (V2 v) = BuiltinData (Constr 1 [asData v])
 
 instance FromData CheckpointDatum where
-    fromBuiltinData (BuiltinData (Constr 0 [d])) =
-        V1 <$> fromBuiltinData (BuiltinData d)
     fromBuiltinData (BuiltinData (Constr 1 [d])) =
         V2 <$> fromBuiltinData (BuiltinData d)
     fromBuiltinData _ = Nothing
@@ -331,59 +325,6 @@ instance FromData CheckpointDatumV2 where
         Just TerminationPending{tpAid = aid, tpSn = sn, tpEpoch = epoch}
     fromBuiltinData _ = Nothing
 
--- | @CheckpointDatumV1@ -> @Constr 0 [9 fields in frozen order]@.
-instance ToData CheckpointDatumV1 where
-    toBuiltinData CheckpointDatumV1{..} =
-        BuiltinData $
-            Constr
-                0
-                [ B cdCesrAid
-                , List (map B cdCurKeys)
-                , asData cdCurThreshold
-                , List (map B cdNextKeys)
-                , asData cdNextThreshold
-                , List (map B cdWitnesses)
-                , I cdToad
-                , I cdSeq
-                , I cdNativeSn
-                ]
-
-instance FromData CheckpointDatumV1 where
-    fromBuiltinData
-        ( BuiltinData
-                ( Constr
-                        0
-                        [ B cesr
-                            , List keys
-                            , thr
-                            , List nkeys
-                            , nthr
-                            , List wits
-                            , I toad
-                            , I s
-                            , I nsn
-                            ]
-                    )
-            ) = do
-            cdCurKeys <- traverse unB keys
-            cdNextKeys <- traverse unB nkeys
-            cdWitnesses <- traverse unB wits
-            cdCurThreshold <- fromBuiltinData (BuiltinData thr)
-            cdNextThreshold <- fromBuiltinData (BuiltinData nthr)
-            pure
-                CheckpointDatumV1
-                    { cdCesrAid = cesr
-                    , cdCurKeys = cdCurKeys
-                    , cdCurThreshold = cdCurThreshold
-                    , cdNextKeys = cdNextKeys
-                    , cdNextThreshold = cdNextThreshold
-                    , cdWitnesses = cdWitnesses
-                    , cdToad = toad
-                    , cdSeq = s
-                    , cdNativeSn = nsn
-                    }
-    fromBuiltinData _ = Nothing
-
 -- | The public Plutus 'Data' tree of a checkpoint datum.
 checkpointDatumToData :: CheckpointDatum -> Data
 checkpointDatumToData = asData
@@ -445,8 +386,8 @@ to Slice-2 'wellFormed', and additionally pins the fixed-width primitive
 domains (@cesr_aid@, witness verkeys all exactly 32 bytes) and the rule-14
 witness\/@toad@ constraints. Nothing malformed can serialize past it.
 -}
-datumWellFormed :: CheckpointDatumV1 -> Either DatumError ()
-datumWellFormed CheckpointDatumV1{..} = do
+keyStateWellFormed :: KeyStateView -> Either DatumError ()
+keyStateWellFormed KeyStateView{..} = do
     unless (BS.length cdCesrAid == 32) (Left CesrAidWidth)
     -- Delegate cur_keys + cur_threshold to the reused Slice-2 F18 predicate.
     first ThresholdIllFormed (wellFormed cdCurKeys cdCurThreshold)
@@ -462,7 +403,7 @@ datumWellFormed CheckpointDatumV1{..} = do
         | otherwise = 1 <= cdToad && cdToad <= fromIntegral (length cdWitnesses)
 
 {- | Write-time validity of a version 2 datum: the numbers it carries are
-non-negative and its key material obeys the version 1 key rules. No rule on
+non-negative and its key material obeys the key-state rules. No rule on
 the identifier text or the refund address.
 -}
 datumV2WellFormed :: CheckpointDatumV2 -> Either DatumError ()
@@ -488,7 +429,7 @@ keysWellFormed KeyMaterial{..} = do
         | null kmWitnesses = kmToad == 0
         | otherwise = 1 <= kmToad && kmToad <= fromIntegral (length kmWitnesses)
 
-{- | The version 1 record the shared registration, rotation and enforcement
+{- | The key-state view the shared registration, rotation and enforcement
 predicates read, built from the facts of a version 2 checkpoint: the raw
 32-byte identifier digest, the key material, the epoch standing for the
 checkpoint counter and the sequence number for the native sequence number.
@@ -501,9 +442,9 @@ keyStateView ::
     -- | the epoch
     Integer ->
     KeyMaterial ->
-    CheckpointDatumV1
+    KeyStateView
 keyStateView rawAid sn epoch KeyMaterial{..} =
-    CheckpointDatumV1
+    KeyStateView
         { cdCesrAid = rawAid
         , cdCurKeys = kmCurKeys
         , cdCurThreshold = kmCurThreshold
@@ -515,18 +456,16 @@ keyStateView rawAid sn epoch KeyMaterial{..} =
         , cdNativeSn = sn
         }
 
-{- | The key state of a live checkpoint, in the version 1 record the shared
-predicates and the readers use: a live version 2 datum whose identifier is
-canonical. A pending termination is not an active checkpoint (Lean
-@terminationPending@: not present, not consumable), and a version 1 datum is no
-longer a checkpoint.
+{- | The key state of a live checkpoint, in the record the shared predicates and
+the readers use: a live version 2 datum whose identifier is canonical. A
+pending termination is not an active checkpoint (Lean @terminationPending@: not
+present, not consumable).
 -}
-datumKeyState :: CheckpointDatum -> Maybe CheckpointDatumV1
+datumKeyState :: CheckpointDatum -> Maybe KeyStateView
 datumKeyState = \case
     V2 Live{lvAid, lvSn, lvEpoch, lvKeys} ->
         (\raw -> keyStateView raw lvSn lvEpoch lvKeys) <$> aidDigest lvAid
     V2 TerminationPending{} -> Nothing
-    V1 _ -> Nothing
 
 -- | Whether the datum is a convicted checkpoint awaiting completion.
 isTerminationPending :: CheckpointDatum -> Bool
@@ -537,10 +476,9 @@ isTerminationPending = \case
 {- | The version 2 datum of a live checkpoint output with its key state, for a
 datum whose identifier is canonical.
 -}
-datumFacts :: CheckpointDatum -> Maybe (CheckpointDatumV2, CheckpointDatumV1)
+datumFacts :: CheckpointDatum -> Maybe (CheckpointDatumV2, KeyStateView)
 datumFacts = \case
     datum@(V2 facts) -> (,) facts <$> datumKeyState datum
-    V1 _ -> Nothing
 
 {- | The live datum a rotation to this key state writes (Lean
 @rotateKeepPaid@, @rotateKeepUnpaid@): the sequence number of the new
@@ -548,8 +486,8 @@ establishment event, one more epoch, no poison and the new keys; the
 identifier, the frozen flag, the birth time and the refund address are
 unchanged. 'Nothing' for a datum that is not live.
 -}
-rotatedLive :: CheckpointDatumV2 -> CheckpointDatumV1 -> Maybe CheckpointDatumV2
-rotatedLive old CheckpointDatumV1{..} = case old of
+rotatedLive :: CheckpointDatumV2 -> KeyStateView -> Maybe CheckpointDatumV2
+rotatedLive old KeyStateView{..} = case old of
     Live{} ->
         Just
             old
@@ -592,9 +530,9 @@ liveOfKeyState ::
     ByteString ->
     -- | the birth time, POSIX milliseconds
     Integer ->
-    CheckpointDatumV1 ->
+    KeyStateView ->
     CheckpointDatumV2
-liveOfKeyState refund bornAt CheckpointDatumV1{..} =
+liveOfKeyState refund bornAt KeyStateView{..} =
     Live
         { lvAid = qb64Aid cdCesrAid
         , lvSn = cdNativeSn

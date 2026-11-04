@@ -1,38 +1,32 @@
-//// Byte-identity + well-formedness tests for the Aiken `CheckpointDatumV1`
-//// codec (#68 Slice 6). Each `cbor.serialise` assert mirrors a frozen
-//// `vectors.ak` golden produced by the Slice-2/3 Haskell encoder
-//// (`Cardano.KERI.AID.Checkpoint.Datum`) — this file is one half of the
-//// cross-language parity proof. Field order (9 datum fields, with the
-//// explicit KERI `(next_keys, next_threshold)` pre-rotation pair) and the
-//// `V1` wrapper (Constr 0 wrapping the inner Constr 0) are protocol surface;
-//// they change only by minting a new version tag. The `datum_well_formed`
-//// verdicts mirror the Slice-3 hspec suite one-for-one.
+//// Well-formedness tests for the Aiken `KeyStateView` and the version 2
+//// datum, and the wire tests of the version 2 datum reader and writer. The
+//// `key_state_well_formed` verdicts mirror the Haskell `DatumSpec` one-for-one.
 ////
 //// The `datum_v2_well_formed` tests below are the write-time validity of the
 //// version 2 datum's key material and numbers: one refusal per rule, and the
 //// boundaries that must stay accepted. The Lean leaves key validity to the
 //// writer (`CardanoKeri.CheckpointDatum`, "Validity"); the version 2 rules are
-//// the version 1 rules for the key fields.
+//// the key-state rules for the key fields.
+////
+//// The last section is the outer constructor: `datum.read` accepts exactly
+//// constructor index 1 with one field, and refuses index 0.
 
 use aiken/builtin
-use aiken/cbor
 use aiken/collection/list
 use cardano_keri/checkpoint/datum.{
-  CesrAidWidth, CheckpointDatum, CheckpointDatumV1, CheckpointDatumV2,
-  DatumInvalid, DatumValid, DuplicateWitness, KeyMaterial, Live, NegativeBornAt,
-  NegativeEpoch, NegativeSn, NextIllFormed, TerminationPending,
-  ThresholdIllFormed, ToadRange, V1, V2, WitnessWidth, datum_v2_well_formed,
-  datum_well_formed,
+  CesrAidWidth, CheckpointDatumV2, DatumInvalid, DatumValid, DuplicateWitness,
+  KeyMaterial, KeyStateView, Live, NegativeBornAt, NegativeEpoch, NegativeSn,
+  NextIllFormed, TerminationPending, ThresholdIllFormed, ToadRange, WitnessWidth,
+  datum_v2_well_formed, key_state_well_formed,
 }
 use cardano_keri/checkpoint/datum_v2_vectors as v2_vectors
 use cardano_keri/checkpoint/threshold.{
   DuplicateKey, EmptyKeys, KeyWidth, Unweighted, UnweightedRange, Weight,
   Weighted,
 }
-use cardano_keri/checkpoint/vectors
 
 // ---------------------------------------------------------
-// Field fixtures (identical to the GenCheckpointVectors.hs inputs)
+// Field fixtures
 // ---------------------------------------------------------
 
 const cesr_datum: ByteArray =
@@ -68,8 +62,8 @@ fn base(
   cur_threshold: threshold.Threshold,
   witnesses: List<ByteArray>,
   toad: Int,
-) -> CheckpointDatumV1 {
-  CheckpointDatumV1 {
+) -> KeyStateView {
+  KeyStateView {
     cesr_aid: cesr_datum,
     cur_keys,
     cur_threshold,
@@ -83,155 +77,19 @@ fn base(
 }
 
 // ---------------------------------------------------------
-// Datum byte-identity: cbor.serialise(V1(record)) == vectors.const
-// ---------------------------------------------------------
-
-test datum_1of1() {
-  cbor.serialise(
-    V1(
-      CheckpointDatumV1 {
-        cesr_aid: cesr_datum,
-        cur_keys: [k1],
-        cur_threshold: Unweighted(1),
-        next_keys: [nk1],
-        next_threshold: Unweighted(1),
-        witnesses: [],
-        toad: 0,
-        seq: 0,
-        native_sn: 0,
-      },
-    ),
-  ) == vectors.golden_datum_1of1
-}
-
-test datum_integer_m_of_n() {
-  cbor.serialise(
-    V1(
-      CheckpointDatumV1 {
-        cesr_aid: cesr_datum,
-        cur_keys: [k1, k2, k3],
-        cur_threshold: Unweighted(2),
-        next_keys: [nk1],
-        next_threshold: Unweighted(1),
-        witnesses: [],
-        toad: 0,
-        seq: 5,
-        native_sn: 7,
-      },
-    ),
-  ) == vectors.golden_datum_integer_m_of_n
-}
-
-test datum_weighted() {
-  cbor.serialise(
-    V1(
-      CheckpointDatumV1 {
-        cesr_aid: cesr_datum,
-        cur_keys: [k1, k2],
-        cur_threshold: Weighted(
-          [[Weight { num: 1, den: 2 }, Weight { num: 1, den: 2 }]],
-        ),
-        next_keys: [nk1],
-        next_threshold: Unweighted(1),
-        witnesses: [],
-        toad: 0,
-        seq: 2,
-        native_sn: 4,
-      },
-    ),
-  ) == vectors.golden_datum_weighted
-}
-
-test datum_multi_clause() {
-  cbor.serialise(
-    V1(
-      CheckpointDatumV1 {
-        cesr_aid: cesr_datum,
-        cur_keys: [k1, k2],
-        cur_threshold: Weighted(
-          [[Weight { num: 1, den: 1 }], [Weight { num: 1, den: 1 }]],
-        ),
-        next_keys: [nk1],
-        next_threshold: Unweighted(1),
-        witnesses: [],
-        toad: 0,
-        seq: 1,
-        native_sn: 3,
-      },
-    ),
-  ) == vectors.golden_datum_multi_clause
-}
-
-test datum_zero_weight() {
-  cbor.serialise(
-    V1(
-      CheckpointDatumV1 {
-        cesr_aid: cesr_datum,
-        cur_keys: [k1, k2],
-        cur_threshold: Weighted(
-          [[Weight { num: 0, den: 1 }, Weight { num: 1, den: 1 }]],
-        ),
-        next_keys: [nk1],
-        next_threshold: Unweighted(1),
-        witnesses: [],
-        toad: 0,
-        seq: 0,
-        native_sn: 0,
-      },
-    ),
-  ) == vectors.golden_datum_zero_weight
-}
-
-test datum_witnessed() {
-  cbor.serialise(
-    V1(
-      CheckpointDatumV1 {
-        cesr_aid: cesr_datum,
-        cur_keys: [k1],
-        cur_threshold: Unweighted(1),
-        next_keys: [nk1],
-        next_threshold: Unweighted(1),
-        witnesses: [w1, w2],
-        toad: 2,
-        seq: 3,
-        native_sn: 9,
-      },
-    ),
-  ) == vectors.golden_datum_witnessed
-}
-
-test datum_witnessless() {
-  cbor.serialise(
-    V1(
-      CheckpointDatumV1 {
-        cesr_aid: cesr_datum,
-        cur_keys: [k1],
-        cur_threshold: Unweighted(1),
-        next_keys: [nk1],
-        next_threshold: Unweighted(1),
-        witnesses: [],
-        toad: 0,
-        seq: 0,
-        native_sn: 0,
-      },
-    ),
-  ) == vectors.golden_datum_witnessless
-}
-
-// ---------------------------------------------------------
-// datum_well_formed positives (mirrors DatumSpec)
+// key_state_well_formed positives (mirrors DatumSpec)
 // ---------------------------------------------------------
 
 test wf_witnessless() {
-  datum_well_formed(base([k1], Unweighted(1), [], 0)) == DatumValid
+  key_state_well_formed(base([k1], Unweighted(1), [], 0)) == DatumValid
 }
 
 test wf_witnessed() {
-  datum_well_formed(base([k1], Unweighted(1), [w1, w2], 2)) == DatumValid
+  key_state_well_formed(base([k1], Unweighted(1), [w1, w2], 2)) == DatumValid
 }
 
 test wf_zero_weight_member() {
-  datum_well_formed(
+  key_state_well_formed(
     base(
       [k1, k2],
       Weighted([[Weight { num: 0, den: 1 }, Weight { num: 1, den: 1 }]]),
@@ -242,90 +100,89 @@ test wf_zero_weight_member() {
 }
 
 // ---------------------------------------------------------
-// datum_well_formed rule-14 rejections (exact errors)
+// key_state_well_formed rule-14 rejections (exact errors)
 // ---------------------------------------------------------
 
 test wf_toad_over_witness_count() {
-  datum_well_formed(base([k1], Unweighted(1), [w1], 2)) == DatumInvalid(
+  key_state_well_formed(base([k1], Unweighted(1), [w1], 2)) == DatumInvalid(
     ToadRange,
   )
 }
 
 test wf_toad_zero_with_witnesses() {
   // KERI bt rule: a witnessed state needs toad >= 1.
-  datum_well_formed(base([k1], Unweighted(1), [w1], 0)) == DatumInvalid(
+  key_state_well_formed(base([k1], Unweighted(1), [w1], 0)) == DatumInvalid(
     ToadRange,
   )
 }
 
 test wf_toad_nonzero_without_witnesses() {
-  datum_well_formed(base([k1], Unweighted(1), [], 1)) == DatumInvalid(ToadRange)
+  key_state_well_formed(base([k1], Unweighted(1), [], 1)) == DatumInvalid(
+    ToadRange,
+  )
 }
 
 test wf_negative_toad() {
-  datum_well_formed(base([k1], Unweighted(1), [w1], -1)) == DatumInvalid(
+  key_state_well_formed(base([k1], Unweighted(1), [w1], -1)) == DatumInvalid(
     ToadRange,
   )
 }
 
 test wf_duplicate_witness() {
-  datum_well_formed(base([k1], Unweighted(1), [w1, w1], 1)) == DatumInvalid(
+  key_state_well_formed(base([k1], Unweighted(1), [w1, w1], 1)) == DatumInvalid(
     DuplicateWitness,
   )
 }
 
 test wf_witness_width() {
-  datum_well_formed(base([k1], Unweighted(1), [k31], 1)) == DatumInvalid(
+  key_state_well_formed(base([k1], Unweighted(1), [k31], 1)) == DatumInvalid(
     WitnessWidth,
   )
 }
 
 // ---------------------------------------------------------
-// datum_well_formed primitive-domain widths + delegated F18 checks
+// key_state_well_formed primitive-domain widths + delegated F18 checks
 // ---------------------------------------------------------
 
 test wf_cesr_aid_width() {
-  datum_well_formed(
-    CheckpointDatumV1 {
-      ..base([k1], Unweighted(1), [], 0),
-      cesr_aid: cesr_short,
-    },
+  key_state_well_formed(
+    KeyStateView { ..base([k1], Unweighted(1), [], 0), cesr_aid: cesr_short },
   ) == DatumInvalid(CesrAidWidth)
 }
 
 test wf_cur_key_width() {
-  datum_well_formed(base([k31], Unweighted(1), [], 0)) == DatumInvalid(
+  key_state_well_formed(base([k31], Unweighted(1), [], 0)) == DatumInvalid(
     ThresholdIllFormed(KeyWidth),
   )
 }
 
 test wf_cur_empty_keys() {
-  datum_well_formed(base([], Unweighted(1), [], 0)) == DatumInvalid(
+  key_state_well_formed(base([], Unweighted(1), [], 0)) == DatumInvalid(
     ThresholdIllFormed(EmptyKeys),
   )
 }
 
 test wf_cur_duplicate_keys() {
-  datum_well_formed(base([k1, k1], Unweighted(1), [], 0)) == DatumInvalid(
+  key_state_well_formed(base([k1, k1], Unweighted(1), [], 0)) == DatumInvalid(
     ThresholdIllFormed(DuplicateKey),
   )
 }
 
 test wf_next_empty_keys() {
-  datum_well_formed(
-    CheckpointDatumV1 { ..base([k1], Unweighted(1), [], 0), next_keys: [] },
+  key_state_well_formed(
+    KeyStateView { ..base([k1], Unweighted(1), [], 0), next_keys: [] },
   ) == DatumInvalid(NextIllFormed(EmptyKeys))
 }
 
 test wf_next_key_width() {
-  datum_well_formed(
-    CheckpointDatumV1 { ..base([k1], Unweighted(1), [], 0), next_keys: [k31] },
+  key_state_well_formed(
+    KeyStateView { ..base([k1], Unweighted(1), [], 0), next_keys: [k31] },
   ) == DatumInvalid(NextIllFormed(KeyWidth))
 }
 
 test wf_next_threshold_out_of_range() {
-  datum_well_formed(
-    CheckpointDatumV1 {
+  key_state_well_formed(
+    KeyStateView {
       ..base([k1], Unweighted(1), [], 0),
       next_threshold: Unweighted(2),
     },
@@ -499,98 +356,105 @@ test v2_pending_negative_epoch() {
 }
 
 // ---------------------------------------------------------
-// A version 1 read refuses a version 2 datum
+// The outer constructor
 // ---------------------------------------------------------
 //
-// Every version 1 read site is an `expect V1(..): CheckpointDatum = data`. The
-// version sum gained its second constructor, so the cast must keep refusing a
-// datum that carries it: a version 2 datum is not a version 1 datum.
+// The version 2 datum is `Constr 1 [<datum>]`. The reader refuses every other
+// constructor index; the retired layout was index 0.
 
-/// The version 2 datums of the accepted Lean vectors, as `Data`.
-fn as_data(datum: CheckpointDatum) -> Data {
-  let data: Data = datum
-  data
-}
-
-fn accepted_v2_data() -> List<Data> {
+/// The version 2 datums of the accepted Lean vectors.
+fn accepted_v2() -> List<CheckpointDatumV2> {
   [
-    as_data(V2(v2_vectors.facts_registered_funded())),
-    as_data(V2(v2_vectors.facts_registered_juvenile())),
-    as_data(V2(v2_vectors.facts_rotated())),
-    as_data(V2(v2_vectors.facts_poisoned())),
-    as_data(V2(v2_vectors.facts_frozen())),
-    as_data(V2(v2_vectors.facts_pending_termination())),
-    as_data(V2(v2_vectors.facts_large_numbers())),
+    v2_vectors.facts_registered_funded(),
+    v2_vectors.facts_registered_juvenile(),
+    v2_vectors.facts_rotated(),
+    v2_vectors.facts_poisoned(),
+    v2_vectors.facts_frozen(),
+    v2_vectors.facts_pending_termination(),
+    v2_vectors.facts_large_numbers(),
   ]
 }
 
-fn v1_cast(data: Data) -> CheckpointDatumV1 {
-  expect V1(d): CheckpointDatum = data
-  d
+/// The same fields under constructor index 0.
+fn under_constructor_0(data: Data) -> Data {
+  let fields = builtin.un_constr_data(data).2nd
+  builtin.constr_data(0, fields)
 }
 
-/// Whether the version 1 cast accepts the datum. A refusal test is a `fail` test,
-/// which passes when its body errors and also when it evaluates to `False`; so
-/// the body must be `True` whenever the cast succeeds.
-fn v1_cast_accepts(data: Data) -> Bool {
-  let d = v1_cast(data)
+/// Whether the reader accepts the datum. A refusal test is a `fail` test, which
+/// passes when its body errors and also when it evaluates to `False`; so the
+/// body must be `True` whenever the reader succeeds.
+fn read_accepts(data: Data) -> Bool {
+  let d = datum.read(data)
   d == d
 }
 
-fn v1_datum() -> CheckpointDatumV1 {
-  base([k1], Unweighted(1), [], 0)
-}
-
-/// Control: the accepted version 2 datums are well-formed `Data` that cast as
-/// version 2, so the refusals below are about the version tag alone.
-test v2_vectors_cast_as_version_2() {
-  list.length(accepted_v2_data()) == 7 && list.all(
-    accepted_v2_data(),
-    fn(data) {
-      expect V2(_): CheckpointDatum = data
-      True
-    },
+/// Control: the reader returns each accepted vector, and the writer is its
+/// inverse, so the refusals below are about the constructor index alone.
+test read_returns_what_write_wrote() {
+  list.length(accepted_v2()) == 7 && list.all(
+    accepted_v2(),
+    fn(facts) { datum.read(datum.write(facts)) == facts },
   )
 }
 
-/// Control: a version 1 datum still casts as version 1, to the same record.
-test v1_datum_casts_as_version_1() {
-  v1_cast(as_data(V1(v1_datum()))) == v1_datum()
+test write_uses_constructor_index_1() {
+  list.all(
+    accepted_v2(),
+    fn(facts) { builtin.un_constr_data(datum.write(facts)).1st == 1 },
+  )
 }
 
-test v1_cast_refuses_registered_funded() fail {
-  v1_cast_accepts(as_data(V2(v2_vectors.facts_registered_funded())))
+test read_refuses_registered_funded_under_constructor_0() fail {
+  read_accepts(
+    under_constructor_0(datum.write(v2_vectors.facts_registered_funded())),
+  )
 }
 
-test v1_cast_refuses_registered_juvenile() fail {
-  v1_cast_accepts(as_data(V2(v2_vectors.facts_registered_juvenile())))
+test read_refuses_registered_juvenile_under_constructor_0() fail {
+  read_accepts(
+    under_constructor_0(datum.write(v2_vectors.facts_registered_juvenile())),
+  )
 }
 
-test v1_cast_refuses_rotated() fail {
-  v1_cast_accepts(as_data(V2(v2_vectors.facts_rotated())))
+test read_refuses_rotated_under_constructor_0() fail {
+  read_accepts(under_constructor_0(datum.write(v2_vectors.facts_rotated())))
 }
 
-test v1_cast_refuses_poisoned() fail {
-  v1_cast_accepts(as_data(V2(v2_vectors.facts_poisoned())))
+test read_refuses_poisoned_under_constructor_0() fail {
+  read_accepts(under_constructor_0(datum.write(v2_vectors.facts_poisoned())))
 }
 
-test v1_cast_refuses_frozen() fail {
-  v1_cast_accepts(as_data(V2(v2_vectors.facts_frozen())))
+test read_refuses_frozen_under_constructor_0() fail {
+  read_accepts(under_constructor_0(datum.write(v2_vectors.facts_frozen())))
 }
 
-test v1_cast_refuses_pending_termination() fail {
-  v1_cast_accepts(as_data(V2(v2_vectors.facts_pending_termination())))
+test read_refuses_pending_termination_under_constructor_0() fail {
+  read_accepts(
+    under_constructor_0(datum.write(v2_vectors.facts_pending_termination())),
+  )
 }
 
-test v1_cast_refuses_large_numbers() fail {
-  v1_cast_accepts(as_data(V2(v2_vectors.facts_large_numbers())))
+test read_refuses_large_numbers_under_constructor_0() fail {
+  read_accepts(
+    under_constructor_0(datum.write(v2_vectors.facts_large_numbers())),
+  )
 }
 
-/// The vectors above differ from a version 1 record in shape as well as in tag.
-/// This one isolates the tag: a well-formed version 1 record under the version
-/// 2 constructor index is still not a version 1 datum.
-test v1_cast_refuses_version_1_record_under_version_2_tag() fail {
-  let record = builtin.un_constr_data(as_data(V1(v1_datum()))).2nd
-  let tagged: Data = builtin.constr_data(1, record)
-  v1_cast_accepts(tagged)
+/// The retired record: the nine-field key state under constructor index 0.
+test read_refuses_the_nine_field_record_under_constructor_0() fail {
+  let record: Data = base([k1], Unweighted(1), [], 0)
+  read_accepts(builtin.constr_data(0, [record]))
+}
+
+/// The nine-field record is not a version 2 datum even under index 1.
+test read_refuses_the_nine_field_record_under_constructor_1() fail {
+  let record: Data = base([k1], Unweighted(1), [], 0)
+  read_accepts(builtin.constr_data(1, [record]))
+}
+
+/// The datum is the only field.
+test read_refuses_a_second_field() fail {
+  let inner: Data = v2_vectors.facts_frozen()
+  read_accepts(builtin.constr_data(1, [inner, inner]))
 }

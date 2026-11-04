@@ -41,8 +41,8 @@ import Cardano.KERI.AID.Checkpoint.Advance (
     reconstructAdvanceMessage,
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatumV1 (..),
     DatumError (..),
+    KeyStateView (..),
     canonicalCbor,
  )
 import Cardano.KERI.AID.Checkpoint.FixtureLoader (
@@ -161,7 +161,7 @@ data AdvCase = AdvCase
     -- ^ @rot.raw_hex@ decoded — the KERI serialization.
     , acSpent :: SpentCheckpoint
     -- ^ The @OLD@ spent context implied by the icp event.
-    , acCreated :: CheckpointDatumV1
+    , acCreated :: KeyStateView
     -- ^ The @NEW@ successor datum implied by the rot event.
     , acEvidence :: AdvanceEvidence
     -- ^ Honest offsets, the fixture's own event_raw ctrl sigs + receipts.
@@ -255,7 +255,7 @@ advCase doc key = do
                 , scNativeSn = 0
                 }
         created =
-            CheckpointDatumV1
+            KeyStateView
                 { cdCesrAid = aid
                 , cdCurKeys = rotKeys
                 , cdCurThreshold = rotThr

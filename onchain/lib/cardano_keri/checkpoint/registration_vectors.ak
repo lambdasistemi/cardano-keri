@@ -10,7 +10,7 @@
 //// parity) plus the proof-name/re-spelling/qb64 byte goldens.
 //// `just check-registration-vectors` forbids drift.
 
-use cardano_keri/checkpoint/datum.{CheckpointDatumV1, ThresholdIllFormed}
+use cardano_keri/checkpoint/datum.{KeyStateView, ThresholdIllFormed}
 use cardano_keri/checkpoint/registration.{
   DRegBelowMinimum, DeploymentContext, E1EventTypeMismatch, E2AidMismatch,
   E3SequenceMismatch, E4CurKeysMismatch, E5CurThresholdMismatch,
@@ -66,8 +66,8 @@ pub const d_reg_below_floor: Int = 4999999
 pub const pos_witnessed_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const pos_witnessed_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const pos_witnessed_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -131,8 +131,8 @@ pub const pos_witnessed_verdict: RegistrationVerdict = RegistrationValid
 pub const pos_weighted_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const pos_weighted_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const pos_weighted_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"49e847caa22c96eb94ff701acd23ba80edfbb413c0e8d402f4706d1022ea47fe",
     cur_keys: [
       #"a6bfd2edb31722ffbff5a436e100af92bafa9db694f6a165ac4f09832be22b86",
@@ -205,8 +205,8 @@ pub const pos_weighted_verdict: RegistrationVerdict = RegistrationValid
 pub const pos_deposit_boundary_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const pos_deposit_boundary_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const pos_deposit_boundary_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -270,8 +270,8 @@ pub const pos_deposit_boundary_verdict: RegistrationVerdict = RegistrationValid
 pub const pos_2key_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const pos_2key_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const pos_2key_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"33f1c3f607175773a00e6750ea9ef24dd7e5cc961b35951b50981e5388374d9a",
     cur_keys: [
       #"02ca8bf431e5b6ec5849166b3b979504b50ea3ba1f274353d278b022f6ead026",
@@ -322,8 +322,8 @@ pub const pos_2key_verdict: RegistrationVerdict = RegistrationValid
 pub const pos_7key_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const pos_7key_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const pos_7key_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"072b920b7022eed732095825c0535bd8057986783f501db1b836ed9be72ab45c",
     cur_keys: [
       #"ae8382bc588fa03ef590a2f97a67c1c05cb575627dd9d83e7e42aa4cd0d00871",
@@ -428,8 +428,8 @@ pub const pos_7key_verdict: RegistrationVerdict = RegistrationValid
 pub const d1_deployment_below_floor_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 4999999 }
 
-pub const d1_deployment_below_floor_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const d1_deployment_below_floor_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -494,8 +494,8 @@ pub const d1_deployment_below_floor_verdict: RegistrationVerdict =
 pub const r3_seq_nonzero_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r3_seq_nonzero_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const r3_seq_nonzero_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -560,8 +560,8 @@ pub const r3_seq_nonzero_verdict: RegistrationVerdict =
 pub const r4_native_sn_nonzero_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r4_native_sn_nonzero_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const r4_native_sn_nonzero_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -626,8 +626,8 @@ pub const r4_native_sn_nonzero_verdict: RegistrationVerdict =
 pub const e1_dip_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const e1_dip_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const e1_dip_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"9c841ea8d9f094a981c36222b822adc21d87b2955abbd5a349f7b8f0269cef1c",
     cur_keys: [
       #"f5e3d9e80c82040e78bdb5ed49c03b984b9a0c0a47cb12b02057b99c1e7073ab",
@@ -673,8 +673,8 @@ pub const e1_dip_verdict: RegistrationVerdict =
 pub const e1_drt_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const e1_drt_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const e1_drt_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"9c841ea8d9f094a981c36222b822adc21d87b2955abbd5a349f7b8f0269cef1c",
     cur_keys: [
       #"201a270bc2ffd155609330b97c20cc2d8fe22d126a111e0b0bee30512d8f2256",
@@ -720,8 +720,8 @@ pub const e1_drt_verdict: RegistrationVerdict =
 pub const e2_crossed_aid_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const e2_crossed_aid_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const e2_crossed_aid_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"49e847caa22c96eb94ff701acd23ba80edfbb413c0e8d402f4706d1022ea47fe",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -786,8 +786,8 @@ pub const e2_crossed_aid_verdict: RegistrationVerdict =
 pub const e3_off_s_at_t_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const e3_off_s_at_t_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const e3_off_s_at_t_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -852,8 +852,8 @@ pub const e3_off_s_at_t_verdict: RegistrationVerdict =
 pub const e4_squat_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const e4_squat_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const e4_squat_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"a6bfd2edb31722ffbff5a436e100af92bafa9db694f6a165ac4f09832be22b86",
@@ -918,8 +918,8 @@ pub const e4_squat_verdict: RegistrationVerdict =
 pub const e5_kt_restated_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const e5_kt_restated_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const e5_kt_restated_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -984,8 +984,8 @@ pub const e5_kt_restated_verdict: RegistrationVerdict =
 pub const e5_weighted_mutated_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const e5_weighted_mutated_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const e5_weighted_mutated_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"49e847caa22c96eb94ff701acd23ba80edfbb413c0e8d402f4706d1022ea47fe",
     cur_keys: [
       #"a6bfd2edb31722ffbff5a436e100af92bafa9db694f6a165ac4f09832be22b86",
@@ -1059,8 +1059,8 @@ pub const e5_weighted_mutated_verdict: RegistrationVerdict =
 pub const e6_next_flipped_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const e6_next_flipped_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const e6_next_flipped_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -1125,8 +1125,8 @@ pub const e6_next_flipped_verdict: RegistrationVerdict =
 pub const e7_nt_restated_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const e7_nt_restated_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const e7_nt_restated_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -1191,8 +1191,8 @@ pub const e7_nt_restated_verdict: RegistrationVerdict =
 pub const e8_witness_flipped_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const e8_witness_flipped_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const e8_witness_flipped_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -1257,8 +1257,8 @@ pub const e8_witness_flipped_verdict: RegistrationVerdict =
 pub const e8_witness_count_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const e8_witness_count_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const e8_witness_count_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -1322,8 +1322,8 @@ pub const e8_witness_count_verdict: RegistrationVerdict =
 pub const e9_toad_restated_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const e9_toad_restated_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const e9_toad_restated_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -1388,8 +1388,8 @@ pub const e9_toad_restated_verdict: RegistrationVerdict =
 pub const r7_old_message_sigs_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_old_message_sigs_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const r7_old_message_sigs_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -1454,8 +1454,8 @@ pub const r7_old_message_sigs_verdict: RegistrationVerdict =
 pub const r7_below_threshold_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_below_threshold_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const r7_below_threshold_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -1516,8 +1516,8 @@ pub const r7_below_threshold_verdict: RegistrationVerdict =
 pub const r7_negative_index_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_negative_index_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const r7_negative_index_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -1582,8 +1582,8 @@ pub const r7_negative_index_verdict: RegistrationVerdict =
 pub const r7_oob_index_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_oob_index_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const r7_oob_index_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -1648,8 +1648,8 @@ pub const r7_oob_index_verdict: RegistrationVerdict =
 pub const r7_bad_signature_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_bad_signature_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const r7_bad_signature_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -1714,8 +1714,8 @@ pub const r7_bad_signature_verdict: RegistrationVerdict =
 pub const r7_below_weighted_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_below_weighted_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const r7_below_weighted_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"49e847caa22c96eb94ff701acd23ba80edfbb413c0e8d402f4706d1022ea47fe",
     cur_keys: [
       #"a6bfd2edb31722ffbff5a436e100af92bafa9db694f6a165ac4f09832be22b86",
@@ -1785,8 +1785,8 @@ pub const r7_below_weighted_verdict: RegistrationVerdict =
 pub const r7_dup_index_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_dup_index_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const r7_dup_index_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -1851,8 +1851,8 @@ pub const r7_dup_index_verdict: RegistrationVerdict =
 pub const r7_wrong_controller_keys_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_wrong_controller_keys_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const r7_wrong_controller_keys_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -1917,8 +1917,8 @@ pub const r7_wrong_controller_keys_verdict: RegistrationVerdict =
 pub const r7_crossed_event_bytes_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_crossed_event_bytes_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const r7_crossed_event_bytes_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -1983,8 +1983,8 @@ pub const r7_crossed_event_bytes_verdict: RegistrationVerdict =
 pub const r7_receipts_empty_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_receipts_empty_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const r7_receipts_empty_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -2040,8 +2040,8 @@ pub const r7_receipts_empty_verdict: RegistrationVerdict =
 pub const r7_receipts_below_toad_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_receipts_below_toad_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const r7_receipts_below_toad_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -2102,8 +2102,8 @@ pub const r7_receipts_below_toad_verdict: RegistrationVerdict =
 pub const r7_receipts_dup_index_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_receipts_dup_index_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const r7_receipts_dup_index_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -2168,8 +2168,8 @@ pub const r7_receipts_dup_index_verdict: RegistrationVerdict =
 pub const r7_receipts_negative_index_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_receipts_negative_index_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const r7_receipts_negative_index_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -2234,8 +2234,8 @@ pub const r7_receipts_negative_index_verdict: RegistrationVerdict =
 pub const r7_receipts_oob_index_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_receipts_oob_index_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const r7_receipts_oob_index_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -2300,8 +2300,8 @@ pub const r7_receipts_oob_index_verdict: RegistrationVerdict =
 pub const r7_receipts_wrong_keys_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_receipts_wrong_keys_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const r7_receipts_wrong_keys_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -2366,8 +2366,8 @@ pub const r7_receipts_wrong_keys_verdict: RegistrationVerdict =
 pub const r7_receipts_bad_signature_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_receipts_bad_signature_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const r7_receipts_bad_signature_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -2432,8 +2432,8 @@ pub const r7_receipts_bad_signature_verdict: RegistrationVerdict =
 pub const r7_zero_toad_nonempty_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r7_zero_toad_nonempty_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const r7_zero_toad_nonempty_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"33f1c3f607175773a00e6750ea9ef24dd7e5cc961b35951b50981e5388374d9a",
     cur_keys: [
       #"02ca8bf431e5b6ec5849166b3b979504b50ea3ba1f274353d278b022f6ead026",
@@ -2490,8 +2490,8 @@ pub const r7_zero_toad_nonempty_verdict: RegistrationVerdict =
 pub const r8_deposit_short_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const r8_deposit_short_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const r8_deposit_short_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -2556,8 +2556,8 @@ pub const r8_deposit_short_verdict: RegistrationVerdict =
 pub const mis_off_i_shift_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const mis_off_i_shift_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_off_i_shift_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -2622,8 +2622,8 @@ pub const mis_off_i_shift_verdict: RegistrationVerdict =
 pub const mis_overlap_k_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const mis_overlap_k_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_overlap_k_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -2688,8 +2688,8 @@ pub const mis_overlap_k_verdict: RegistrationVerdict =
 pub const mis_k_into_n_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const mis_k_into_n_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_k_into_n_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -2754,8 +2754,8 @@ pub const mis_k_into_n_verdict: RegistrationVerdict =
 pub const mis_k_into_b_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const mis_k_into_b_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_k_into_b_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -2820,8 +2820,8 @@ pub const mis_k_into_b_verdict: RegistrationVerdict =
 pub const mis_i_at_k_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const mis_i_at_k_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_i_at_k_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -2886,8 +2886,8 @@ pub const mis_i_at_k_verdict: RegistrationVerdict =
 pub const mis_b_at_k_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const mis_b_at_k_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_b_at_k_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -2952,8 +2952,8 @@ pub const mis_b_at_k_verdict: RegistrationVerdict =
 pub const mis_trunc_i_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const mis_trunc_i_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_trunc_i_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -3018,8 +3018,8 @@ pub const mis_trunc_i_verdict: RegistrationVerdict =
 pub const mis_trunc_k_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const mis_trunc_k_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_trunc_k_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -3084,8 +3084,8 @@ pub const mis_trunc_k_verdict: RegistrationVerdict =
 pub const mis_neg_i_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const mis_neg_i_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_neg_i_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",
@@ -3150,8 +3150,8 @@ pub const mis_neg_i_verdict: RegistrationVerdict =
 pub const mis_dup_k_ctx: DeploymentContext =
   DeploymentContext { min_ada: 2000000, d_reg: 1000000000 }
 
-pub const mis_dup_k_datum: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_dup_k_datum: KeyStateView =
+  KeyStateView {
     cesr_aid: #"395f95ec3a153a976adecb9b5b97a55761452dafb588b3de763a6830c076b982",
     cur_keys: [
       #"39ab1c080cbc6e25d5e3740ea3caebcae3f7fe8ea8abc0156084ccb4b7632b7f",

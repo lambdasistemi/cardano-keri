@@ -1,10 +1,10 @@
 //// #254 S254-E — unit proofs for the shared bounty-entitlement rule, T254-107.
 ////
-//// The applied-program rows live in `checkpoint_tests.ak` and
-//// `checkpoint_register_tests.ak`, where whole transactions run through whole
-//// validators. What lives here is the layer underneath: each leg of the shared
-//// rule, exercised on its own, with an accepted honest neighbour beside every
-//// rejection so no row can pass because its fixture was quietly broken.
+//// The applied-program rows live in `checkpoint_register_lifecycle_tests.ak`,
+//// where whole transactions run through whole validators. What lives here is
+//// the layer underneath: each leg of the shared rule, exercised on its own,
+//// with an accepted honest neighbour beside every rejection so no row can pass
+//// because its fixture was quietly broken.
 ////
 //// Every negative in this module states what it changed from the honest case
 //// and changes only that. A rejection that could also be explained by a
@@ -32,8 +32,7 @@ use cardano_keri/checkpoint/enforcement.{EnforcementEvidence}
 use cardano_keri/checkpoint/enforcement_vectors as vec
 use cardano_keri/checkpoint/entitlement.{
   EnforcementProofV1, enforcement_evidence_digest, entitlement_matches,
-  validate_convict_entitlement, validate_convict_payouts,
-  validate_entitlement_observation,
+  validate_convict_entitlement, validate_entitlement_observation,
 }
 use cardano_keri/checkpoint/entitlement_vectors as ev
 use cardano_keri/checkpoint/observer.{
@@ -696,34 +695,6 @@ test s254_e_entitlement_observer_unknown_action_fails() fail {
     ),
     honest_tx(),
   )
-}
-
-// ---------------------------------------------------------------------
-// INV-271-CONSENT — stored payee, no fresh signature
-// ---------------------------------------------------------------------
-
-fn two_output_tx() -> Transaction {
-  Transaction {
-    ..placeholder,
-    outputs: [payout(hunter, 1), payout(attacker, 2)],
-  }
-}
-
-/// Entitlement is a STRUCTURAL precondition: a conviction that established none
-/// routes nothing at all, whatever its index says.
-test entitlement_convict_payouts_require_entitlement() {
-  and {
-    validate_convict_payouts(True, 0, two_output_tx()),
-    !validate_convict_payouts(False, 0, two_output_tx()),
-  }
-}
-
-/// Indices must actually address an output.
-test entitlement_convict_out_of_range_indices_reject() {
-  and {
-    !validate_convict_payouts(True, 9, two_output_tx()),
-    !validate_convict_payouts(True, -1, two_output_tx()),
-  }
 }
 
 // ---------------------------------------------------------------------

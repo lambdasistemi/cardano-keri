@@ -18,7 +18,7 @@
 
 use aiken/collection/list
 use aiken/crypto.{verify_ed25519_signature}
-use cardano_keri/checkpoint/datum.{CheckpointDatumV1}
+use cardano_keri/checkpoint/datum.{KeyStateView}
 use cardano_keri/checkpoint/message.{
   AdvanceError, AdvanceInvalid, AdvanceValid, RevealedSuccessorSigners,
   SpentCheckpoint, advance_equalities, qb64_aid, qb64_verkey,
@@ -109,7 +109,7 @@ pub type AdvanceEventVerdict {
 /// #106/#114 offset-misdirection discipline). `d` and `p` are deliberately
 /// never checked (ratified QC — no SAID proof on the advance path).
 pub fn event_binding(
-  new: CheckpointDatumV1,
+  new: KeyStateView,
   e: AdvanceEvidence,
 ) -> AdvanceEventVerdict {
   if !slice_matches(e.event_bytes, e.off_t, "rot") {
@@ -225,7 +225,7 @@ pub type AdvancePredicateVerdict {
 /// entries could never verify, rather than silently ignored.
 pub fn advance_predicate(
   spent: SpentCheckpoint,
-  new: CheckpointDatumV1,
+  new: KeyStateView,
   e: AdvanceEvidence,
 ) -> AdvancePredicateVerdict {
   let revealed = RevealedSuccessorSigners(

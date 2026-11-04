@@ -9,8 +9,8 @@ import Cardano.KERI.AID.CESR (
     qb64Verkey,
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatumV1 (..),
     DatumError (..),
+    KeyStateView (..),
     blake2b_256,
  )
 import Cardano.KERI.AID.Checkpoint.FixtureLoader (
@@ -169,9 +169,9 @@ spent =
         }
 
 -- The created (successor) checkpoint datum for a valid succession.
-createdValid :: CheckpointDatumV1
+createdValid :: KeyStateView
 createdValid =
-    CheckpointDatumV1
+    KeyStateView
         { cdCesrAid = cesrA
         , cdCurKeys = newKeys
         , cdCurThreshold = newThr
@@ -229,7 +229,7 @@ reserveSpent =
         , scNextThreshold = third 7
         }
 
-reserveCreated :: CheckpointDatumV1
+reserveCreated :: KeyStateView
 reserveCreated =
     createdValid
         { cdCurKeys = reserveRevealed
@@ -260,7 +260,7 @@ data DeltaFixture = DeltaFixture
     { dfSpent :: SpentCheckpoint
     , dfWitCut :: [ByteString]
     , dfWitAdd :: [ByteString]
-    , dfCreated :: CheckpointDatumV1
+    , dfCreated :: KeyStateView
     , dfSigners :: RevealedSuccessorSigners
     , dfIcpKeys :: [ByteString]
     , dfOldWitnesses :: [ByteString]
@@ -335,7 +335,7 @@ deltaFixture doc key = either error id $ do
                 , scNativeSn = 0
                 }
         created =
-            CheckpointDatumV1
+            KeyStateView
                 { cdCesrAid = aid
                 , cdCurKeys = rotKeys
                 , cdCurThreshold = rotThr

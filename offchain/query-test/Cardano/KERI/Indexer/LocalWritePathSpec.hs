@@ -44,7 +44,7 @@ module Cardano.KERI.Indexer.LocalWritePathSpec (spec) where
 import Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
 import Cardano.KERI.AID.Blake3.Checkpoint (blake3Hash)
 import Cardano.KERI.AID.CESR (qb64Verkey)
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V2), CheckpointDatumV1 (..), convictedOf, liveOfKeyState)
+import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V2), KeyStateView (..), convictedOf, liveOfKeyState)
 import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted, Weighted), Weight (Weight))
 import Cardano.KERI.ChainQuery.LedgerOutput (
@@ -1110,7 +1110,7 @@ entrypointManifestScripts :: [ScriptEntry]
 entrypointManifestScripts =
     [ ScriptEntry
         { scriptName = "checkpoint-register"
-        , scriptBlueprintTitle = "checkpoint.checkpoint.spend"
+        , scriptBlueprintTitle = "checkpoint_register.checkpoint_register.spend"
         , scriptRole = "spend"
         , scriptHash = scriptHashText (computeScriptHash entrypointCheckpointScriptBytes)
         , scriptProgramBytes = SBS.length entrypointCheckpointScriptBytes
@@ -1183,7 +1183,7 @@ datum's own AID derives -- so the seeded row, the asset
 @scAidAssetName@, and the datum @advanceEqualities@ reads as the SPENT
 state all come from one value and cannot drift apart.
 -}
-entrypointCheckpointOutputFor :: CheckpointDatumV1 -> Indexer.TxOut
+entrypointCheckpointOutputFor :: KeyStateView -> Indexer.TxOut
 entrypointCheckpointOutputFor datum =
     Indexer.TxOut $
         serialize'
@@ -1850,9 +1850,9 @@ beside it, so the fixture cannot drift away from the bytes
   * eq7: @wit_cut@\/@wit_add@ are both empty in this export, so the derived
     incoming set is the spent witness set, which is the successor's.
 -}
-entrypointAdvanceSpentDatum :: RotationExport -> CheckpointDatumV1
+entrypointAdvanceSpentDatum :: RotationExport -> KeyStateView
 entrypointAdvanceSpentDatum rotation =
-    CheckpointDatumV1
+    KeyStateView
         { cdCesrAid = cdCesrAid successor
         , cdCurKeys = [BS.replicate 32 0x11]
         , cdCurThreshold = Unweighted 1
@@ -3420,9 +3420,9 @@ output carry more than one asset, THAT comparison would need to answer
 an ordering question this one does not (a note for whoever cuts that
 slice, per A-016).
 -}
-parityCheckpointDatum :: CheckpointDatumV1
+parityCheckpointDatum :: KeyStateView
 parityCheckpointDatum =
-    CheckpointDatumV1
+    KeyStateView
         { cdCesrAid = BS.replicate 32 0x71
         , cdCurKeys = [BS.replicate 32 0x11, BS.replicate 32 0x12]
         , cdCurThreshold = Weighted [[Weight 1 2, Weight 1 2]]
@@ -3456,12 +3456,12 @@ parityCheckpointTxIn = Indexer.TxIn (BS.replicate 32 0x44) 0
 Plutus datum and exactly the one checkpoint NFT under
 'unusedCheckpointPolicy', named for @datum@'s own AID.
 -}
-parityCheckpointOutput :: CheckpointDatumV1 -> Indexer.TxOut
+parityCheckpointOutput :: KeyStateView -> Indexer.TxOut
 parityCheckpointOutput datum =
     parityCheckpointOutputWith datum (V2 (liveOfKeyState "" 0 datum))
 
 -- | The same output carrying another checkpoint datum for the same token.
-parityCheckpointOutputWith :: CheckpointDatumV1 -> CheckpointDatum -> Indexer.TxOut
+parityCheckpointOutputWith :: KeyStateView -> CheckpointDatum -> Indexer.TxOut
 parityCheckpointOutputWith datum body =
     Indexer.TxOut $
         serialize'
@@ -3500,7 +3500,7 @@ parityPendingOutput =
         parityCheckpointDatum
         (V2 (fromJust (convictedOf (liveOfKeyState "" 0 parityCheckpointDatum))))
 
-perturbedParityCheckpointDatum :: CheckpointDatumV1
+perturbedParityCheckpointDatum :: KeyStateView
 perturbedParityCheckpointDatum =
     parityCheckpointDatum{cdCurThreshold = Weighted [[Weight 1 3, Weight 1 2]]}
 

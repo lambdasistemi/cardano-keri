@@ -1620,24 +1620,16 @@
               # exist in that baseline.
               entitlementModule = "KeriBlaster.Entitlement";
 
-              # The two target identities, with the applied-argument count
-              # each program must still declare. The counts are the arity
-              # evidence: the checkpoint's sixth argument is the
-              # `CommitmentFamily` this slice threads through it, and a
-              # deployment that stubbed the family away would change this
-              # number and fail the extraction rather than the proof.
-              entitlementPrograms = [
-                {
-                  role = "commitment";
-                  title = "bounty_commitment.bounty_commitment.spend";
-                  params = 1;
-                }
-                {
-                  role = "checkpoint";
-                  title = "checkpoint.checkpoint.spend";
-                  params = 6;
-                }
-              ];
+              # The target identity, with the applied-argument count the
+              # program must still declare. The count is the arity evidence:
+              # a deployment that changed the commitment's applied
+              # magnitudes would change this number and fail the extraction
+              # rather than the proof.
+              entitlementPrograms = [{
+                role = "commitment";
+                title = "bounty_commitment.bounty_commitment.spend";
+                params = 1;
+              }];
 
               entitlementArtifacts =
                 pkgs.runCommand "cardano-keri-entitlement-uplc-programs" {

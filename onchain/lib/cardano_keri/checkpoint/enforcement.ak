@@ -3,7 +3,7 @@
 //// Mirrors the Slice-3 Haskell `Cardano.KERI.AID.Checkpoint.Enforcement`
 //// verdict-for-verdict: `EnforcementEvidence` is EE0-EE9-bound before decoded
 //// `EventEvidence` reaches the predicates alongside the tip
-//// `CheckpointDatumV1`. O1 is resolved — all controller and witness signatures
+//// `KeyStateView`. O1 is resolved — all controller and witness signatures
 //// verify over `event_bytes` (the full event serialization), never the SAID.
 ////
 //// `enforcement_tests.ak` asserts these verdicts match the Haskell over the
@@ -12,7 +12,7 @@
 use aiken/collection/list
 use aiken/crypto.{verify_ed25519_signature}
 use aiken/primitive/bytearray
-use cardano_keri/checkpoint/datum.{CheckpointDatumV1}
+use cardano_keri/checkpoint/datum.{KeyStateView}
 use cardano_keri/checkpoint/message.{next_key_digest, qb64_aid, qb64_verkey}
 use cardano_keri/checkpoint/registration.{
   respell_hex, respell_threshold, slice_matches,
@@ -223,7 +223,7 @@ pub type ConvictVerdict {
 /// `toad = 0`); (5) conflict — divergence on `kt`/`n`/`nt`/`bt` only (the
 /// witness set is NOT a conflict axis).
 pub fn convict_predicate(
-  tip: CheckpointDatumV1,
+  tip: KeyStateView,
   evidence: EventEvidence,
 ) -> ConvictVerdict {
   if evidence.t != "rot" {
@@ -262,7 +262,7 @@ pub fn convict_predicate(
 /// rotation restates no `b` (only the `br`/`ba` delta), so
 /// `evidence.witnesses` is always `[]` and comparing it to a witnessed tip would
 /// phantom-convict the AID's own honest rotation.
-fn forward_agrees(tip: CheckpointDatumV1, evidence: EventEvidence) -> Bool {
+fn forward_agrees(tip: KeyStateView, evidence: EventEvidence) -> Bool {
   evidence.cur_threshold == tip.cur_threshold && evidence.next_keys == tip.next_keys && evidence.next_threshold == tip.next_threshold && evidence.toad == tip.toad
 }
 
@@ -334,87 +334,4 @@ fn count_receipts(
       ),
     ),
   )
-}
-
-// ---------------------------------------------------------
-// Lifecycle: the conviction-record datum (TombstoneV1)
-// ---------------------------------------------------------
-
-/// The conviction record a Convict spend writes to the tombstone output — a
-/// NEW frozen wire type (Constr 0, three fields in order), mirroring the
-/// Slice-5 Haskell `TombstoneV1`. cbor.serialise is byte-identical to the
-/// Haskell canonicalCbor (see enforcement_vectors.golden_tombstone).
-pub type TombstoneV1 {
-  cesr_aid: ByteArray,
-  convicted_at_native_sn: Int,
-  evidence_said: ByteArray,
-}
-
-// ---------------------------------------------------------
-// Output-shape layer (spec Convict 6)
-// ---------------------------------------------------------
-
-/// The role of a continuing-output's script address in the #106 lifecycle.
-pub type AddressRole {
-  Active
-  Tombstone
-}
-
-/// The datum a continuing output carries: the ongoing checkpoint state or the
-/// terminal conviction record.
-pub type OutputDatum {
-  CheckpointOutput(CheckpointDatumV1)
-  TombstoneOutput(TombstoneV1)
-}
-
-/// An abstract continuing-output descriptor — the schema-layer projection of a
-/// transaction output (role, whether it carries the identity token, and its
-/// datum), NOT the ledger's Output. The output-shape predicates operate on this.
-pub type ContinuingOutput {
-  role: AddressRole,
-  has_token: Bool,
-  datum: OutputDatum,
-}
-
-/// A conviction output-shape rejection reason (mirrors the Slice-5
-/// `ConvictOutputError`).
-pub type ConvictOutputError {
-  /// The continuing output is not at the tombstone role.
-  CoNotTombstone
-  /// The continuing output does not carry the identity token.
-  CoMissingToken
-  /// The datum is not the exact expected TombstoneV1 conviction record.
-  CoWrongRecord
-}
-
-/// The conviction output-shape verdict. `ConvictOutputValid` ≙ `Right ()`.
-pub type ConvictOutputVerdict {
-  ConvictOutputValid
-  ConvictOutputInvalid(ConvictOutputError)
-}
-
-/// Convict output shape (spec Convict 6): the continuing output must sit at the
-/// tombstone role, carry the token, and hold exactly
-/// `TombstoneV1 { tip.cesr_aid, tip.native_sn, evidence.said }`. Same ordered
-/// checks as the Slice-5 Haskell `convictOutputPredicate`.
-pub fn convict_output_predicate(
-  tip: CheckpointDatumV1,
-  evidence: EventEvidence,
-  out: ContinuingOutput,
-) -> ConvictOutputVerdict {
-  if out.role != Tombstone {
-    ConvictOutputInvalid(CoNotTombstone)
-  } else if !out.has_token {
-    ConvictOutputInvalid(CoMissingToken)
-  } else if out.datum != TombstoneOutput(
-    TombstoneV1 {
-      cesr_aid: tip.cesr_aid,
-      convicted_at_native_sn: tip.native_sn,
-      evidence_said: evidence.said,
-    },
-  ) {
-    ConvictOutputInvalid(CoWrongRecord)
-  } else {
-    ConvictOutputValid
-  }
 }

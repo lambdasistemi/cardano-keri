@@ -4,7 +4,7 @@ Description : Convict divergence-enforcement predicate, #106
 
 Validator-free schema-support layer: the 'EnforcementEvidence' wire binder
 checks EE0-EE9 before constructing decoded 'EventEvidence', then the pure
-predicates consume that decoded evidence plus the tip 'CheckpointDatumV1'. O1
+predicates consume that decoded evidence plus the tip 'KeyStateView'. O1
 is resolved — all controller and witness signatures verify over
 'eeEventBytes' (the full event serialization, @serder.raw@), never the SAID.
 
@@ -21,19 +21,9 @@ module Cardano.KERI.AID.Checkpoint.Enforcement (
     -- * Decoded event evidence
     EventEvidence (..),
 
-    -- * Convict (fork -> tombstone)
+    -- * Convict (fork -> conviction)
     ConvictError (..),
     convictPredicate,
-
-    -- * Lifecycle: the conviction-record datum
-    TombstoneV1 (..),
-
-    -- * Output-shape layer
-    AddressRole (..),
-    OutputDatum (..),
-    ContinuingOutput (..),
-    ConvictOutputError (..),
-    convictOutputPredicate,
 ) where
 
 import Cardano.KERI.AID.CESR (
@@ -42,8 +32,8 @@ import Cardano.KERI.AID.CESR (
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CesrAid,
-    CheckpointDatumV1 (..),
     KeyDigest,
+    KeyStateView (..),
     Verkey,
  )
 import Cardano.KERI.AID.Checkpoint.Registration (
@@ -73,7 +63,6 @@ import PlutusTx.Builtins.Internal (
     BuiltinData (..),
  )
 import PlutusTx.IsData.Class (
-    FromData (..),
     ToData (..),
  )
 
@@ -322,7 +311,7 @@ quorum, that diverges from the tip on any forward field. Checks in order (spec
      agreement everywhere is not a conflict and is rejected.
 -}
 convictPredicate ::
-    CheckpointDatumV1 -> EventEvidence -> Either ConvictError ()
+    KeyStateView -> EventEvidence -> Either ConvictError ()
 convictPredicate d e = do
     -- 1. establishment gate.
     unless (eeType e == "rot") (Left CvNotRotation)
@@ -377,96 +366,3 @@ atMay xs i
     | otherwise = case drop i xs of
         (x : _) -> Just x
         [] -> Nothing
-
--- ---------------------------------------------------------
--- Lifecycle: the conviction-record datum (TombstoneV1)
--- ---------------------------------------------------------
-
-{- | The conviction record a @Convict@ spend writes to the tombstone output
-(a NEW frozen wire type; @Constr 0@, three fields in order). It records the
-convicted AID, the native sn the double-sign occurred at, and the raw
-(E-code-stripped) SAID of the conflicting event.
--}
-data TombstoneV1 = TombstoneV1
-    { tvCesrAid :: !CesrAid
-    -- ^ the convicted AID (KERI @i@, raw)
-    , tvConvictedAtNativeSn :: !Integer
-    -- ^ the native sn the conflicting reveal occurred at
-    , tvEvidenceSaid :: !ByteString
-    -- ^ the conflicting event's SAID (KERI @d@, raw)
-    }
-    deriving stock (Show, Eq)
-
--- | @Constr 0 [B cesr_aid, I convicted_at_native_sn, B evidence_said]@.
-instance ToData TombstoneV1 where
-    toBuiltinData TombstoneV1{..} =
-        BuiltinData $
-            Constr
-                0
-                [ B tvCesrAid
-                , I tvConvictedAtNativeSn
-                , B tvEvidenceSaid
-                ]
-
-instance FromData TombstoneV1 where
-    fromBuiltinData (BuiltinData (Constr 0 [B cesr, I sn, B said])) =
-        Just (TombstoneV1 cesr sn said)
-    fromBuiltinData _ = Nothing
-
--- ---------------------------------------------------------
--- Output-shape layer (spec Convict 6)
--- ---------------------------------------------------------
-
--- | The role of a continuing-output's script address in the #106 lifecycle.
-data AddressRole = Active | Tombstone
-    deriving stock (Show, Eq)
-
-{- | The datum carried by a continuing output: either the ongoing checkpoint
-state or the terminal conviction record.
--}
-data OutputDatum
-    = CheckpointOutput CheckpointDatumV1
-    | TombstoneOutput TombstoneV1
-    deriving stock (Show, Eq)
-
-{- | An abstract continuing-output descriptor — the schema-layer projection of a
-transaction output (role, whether it carries the identity token, and its
-datum), NOT the ledger's @TxOut@. The output-shape predicates operate on this.
--}
-data ContinuingOutput = ContinuingOutput
-    { coRole :: !AddressRole
-    , coHasToken :: !Bool
-    , coDatum :: !OutputDatum
-    }
-    deriving stock (Show, Eq)
-
--- | A conviction output-shape rejection reason (one constructor per check).
-data ConvictOutputError
-    = -- | The continuing output is not at the tombstone role.
-      CoNotTombstone
-    | -- | The continuing output does not carry the identity token.
-      CoMissingToken
-    | -- | The datum is not the exact expected 'TombstoneV1' conviction record.
-      CoWrongRecord
-    deriving stock (Show, Eq)
-
-{- | Convict output shape (spec Convict 6): the continuing output must sit at the
-tombstone role, carry the token, and hold exactly
-@TombstoneV1 tip.cesr_aid tip.native_sn evidence.said@.
--}
-convictOutputPredicate ::
-    CheckpointDatumV1 ->
-    EventEvidence ->
-    ContinuingOutput ->
-    Either ConvictOutputError ()
-convictOutputPredicate tip e out = do
-    unless (coRole out == Tombstone) (Left CoNotTombstone)
-    unless (coHasToken out) (Left CoMissingToken)
-    let expected =
-            TombstoneOutput
-                ( TombstoneV1
-                    (cdCesrAid tip)
-                    (cdNativeSn tip)
-                    (eeSaid e)
-                )
-    unless (coDatum out == expected) (Left CoWrongRecord)

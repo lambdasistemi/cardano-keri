@@ -32,16 +32,15 @@
 use aiken/builtin
 use aiken/cbor
 use cardano_keri/checkpoint/datum.{
-  CheckpointDatum, CheckpointDatumV2, DatumValid, KeyMaterial, Live,
-  TerminationPending, V2, datum_v2_well_formed,
+  CheckpointDatumV2, DatumValid, KeyMaterial, Live, TerminationPending,
+  datum_v2_well_formed,
 }
 use cardano_keri/checkpoint/threshold.{Unweighted, Weight, Weighted}
 
-/// The writer's read of a `Data`: the typed read as the version 2 datum, then
+/// The writer's read of a `Data`: the version 2 datum under outer constructor 1, then
 /// write-time validity. A `Data` of any other shape does not read.
 fn writer_accepts(data: Data) -> Bool {
-  expect V2(d): CheckpointDatum = data
-  datum_v2_well_formed(d) == DatumValid
+  datum_v2_well_formed(datum.read(data)) == DatumValid
 }
 
 /// Whether the ledger's parse reads the bytes as one whole `Data`.
@@ -94,13 +93,12 @@ fn data_registered_funded() -> Data {
 
 /// Lean `datum`: the value built from the row's input serialises to the row's datum.
 test layout_registered_funded() {
-  cbor.serialise(V2(facts_registered_funded())) == #"d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff"
+  cbor.serialise(datum.write(facts_registered_funded())) == #"d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff"
 }
 
 /// Lean `datum`: the row's datum reads back into the value built from its input.
 test reads_back_registered_funded() {
-  expect read: CheckpointDatum = data_registered_funded()
-  read == V2(facts_registered_funded())
+  datum.read(data_registered_funded()) == facts_registered_funded()
 }
 
 /// The writer's read accepts the row's datum.
@@ -147,13 +145,12 @@ fn data_registered_juvenile() -> Data {
 
 /// Lean `datum`: the value built from the row's input serialises to the row's datum.
 test layout_registered_juvenile() {
-  cbor.serialise(V2(facts_registered_juvenile())) == #"d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff"
+  cbor.serialise(datum.write(facts_registered_juvenile())) == #"d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff"
 }
 
 /// Lean `datum`: the row's datum reads back into the value built from its input.
 test reads_back_registered_juvenile() {
-  expect read: CheckpointDatum = data_registered_juvenile()
-  read == V2(facts_registered_juvenile())
+  datum.read(data_registered_juvenile()) == facts_registered_juvenile()
 }
 
 /// The writer's read accepts the row's datum.
@@ -212,13 +209,12 @@ fn data_rotated() -> Data {
 
 /// Lean `datum`: the value built from the row's input serialises to the row's datum.
 test layout_rotated() {
-  cbor.serialise(V2(facts_rotated())) == #"d87a9fd8799f582c4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776f0703d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58205d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f3658207c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e5558209ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d74ffd87a9f9f9fd8799f0102ffd8799f0102ffff9fd8799f0101ffffffff9f5820bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c935820d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2ffd8799f02ff9f5820f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad15820171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f05820363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080fff02ffffff"
+  cbor.serialise(datum.write(facts_rotated())) == #"d87a9fd8799f582c4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776f0703d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58205d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f3658207c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e5558209ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d74ffd87a9f9f9fd8799f0102ffd8799f0102ffff9fd8799f0101ffffffff9f5820bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c935820d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2ffd8799f02ff9f5820f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad15820171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f05820363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080fff02ffffff"
 }
 
 /// Lean `datum`: the row's datum reads back into the value built from its input.
 test reads_back_rotated() {
-  expect read: CheckpointDatum = data_rotated()
-  read == V2(facts_rotated())
+  datum.read(data_rotated()) == facts_rotated()
 }
 
 /// The writer's read accepts the row's datum.
@@ -265,13 +261,12 @@ fn data_poisoned() -> Data {
 
 /// Lean `datum`: the value built from the row's input serialises to the row's datum.
 test layout_poisoned() {
-  cbor.serialise(V2(facts_poisoned())) == #"d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87a80d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff"
+  cbor.serialise(datum.write(facts_poisoned())) == #"d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87a80d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff"
 }
 
 /// Lean `datum`: the row's datum reads back into the value built from its input.
 test reads_back_poisoned() {
-  expect read: CheckpointDatum = data_poisoned()
-  read == V2(facts_poisoned())
+  datum.read(data_poisoned()) == facts_poisoned()
 }
 
 /// The writer's read accepts the row's datum.
@@ -318,13 +313,12 @@ fn data_frozen() -> Data {
 
 /// Lean `datum`: the value built from the row's input serialises to the row's datum.
 test layout_frozen() {
-  cbor.serialise(V2(facts_frozen())) == #"d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87a80186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff"
+  cbor.serialise(datum.write(facts_frozen())) == #"d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87a80186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff"
 }
 
 /// Lean `datum`: the row's datum reads back into the value built from its input.
 test reads_back_frozen() {
-  expect read: CheckpointDatum = data_frozen()
-  read == V2(facts_frozen())
+  datum.read(data_frozen()) == facts_frozen()
 }
 
 /// The writer's read accepts the row's datum.
@@ -350,13 +344,12 @@ fn data_pending_termination() -> Data {
 
 /// Lean `datum`: the value built from the row's input serialises to the row's datum.
 test layout_pending_termination() {
-  cbor.serialise(V2(facts_pending_termination())) == #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402ffff"
+  cbor.serialise(datum.write(facts_pending_termination())) == #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402ffff"
 }
 
 /// Lean `datum`: the row's datum reads back into the value built from its input.
 test reads_back_pending_termination() {
-  expect read: CheckpointDatum = data_pending_termination()
-  read == V2(facts_pending_termination())
+  datum.read(data_pending_termination()) == facts_pending_termination()
 }
 
 /// The writer's read accepts the row's datum.
@@ -444,13 +437,14 @@ fn data_large_numbers() -> Data {
 
 /// Lean `datum`: the value built from the row's input serialises to the row's datum.
 test layout_large_numbers() {
-  cbor.serialise(V2(facts_large_numbers())) == #"d87a9fd8799f582c42506265435445557a507a35554558344a394d6b384a535432625a56337068764351386857733064694d3134c249010000000000000005c249400000000000000000d87980d8798018645f58400104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9acafb2b5b8bbbe46c1c4c7cacdd0ffd8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff"
+  cbor.serialise(datum.write(facts_large_numbers())) == #"d87a9fd8799f582c42506265435445557a507a35554558344a394d6b384a535432625a56337068764351386857733064694d3134c249010000000000000005c249400000000000000000d87980d8798018645f58400104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9acafb2b5b8bbbe46c1c4c7cacdd0ffd8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff"
 }
 
 /// Lean `datum`: the row's datum reads back into the value built from its input, and the built Data is the row's datum.
 test reads_back_large_numbers() {
-  expect read: CheckpointDatum = data_large_numbers()
-  read == V2(facts_large_numbers()) && cbor.serialise(data_large_numbers()) == #"d87a9fd8799f582c42506265435445557a507a35554558344a394d6b384a535432625a56337068764351386857733064694d3134c249010000000000000005c249400000000000000000d87980d8798018645f58400104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9acafb2b5b8bbbe46c1c4c7cacdd0ffd8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff"
+  datum.read(data_large_numbers()) == facts_large_numbers() && cbor.serialise(
+    data_large_numbers(),
+  ) == #"d87a9fd8799f582c42506265435445557a507a35554558344a394d6b384a535432625a56337068764351386857733064694d3134c249010000000000000005c249400000000000000000d87980d8798018645f58400104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9acafb2b5b8bbbe46c1c4c7cacdd0ffd8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff"
 }
 
 /// The writer's read accepts the row's datum.

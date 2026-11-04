@@ -44,9 +44,9 @@ import Cardano.KERI.AID.CESR (
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
-    CheckpointDatumV1 (..),
     CheckpointDatumV2 (..),
     KeyMaterial (..),
+    KeyStateView (..),
     canonicalCbor,
     checkpointDatumToData,
  )
@@ -55,6 +55,7 @@ import Cardano.KERI.AID.Checkpoint.Message (
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
+    Weight (..),
  )
 import Cardano.KERI.AID.Migration.Checkpoint (
     MigrationError (..),
@@ -180,9 +181,9 @@ sourceDatum =
 controllers also signed: the one input a version 2 program must refuse, and
 which the version 1 program accepted.
 -}
-version1Datum :: CheckpointDatumV1
+version1Datum :: KeyStateView
 version1Datum =
-    CheckpointDatumV1
+    KeyStateView
         { cdCesrAid = cesrAid
         , cdCurKeys = controllerKeys
         , cdCurThreshold = Unweighted 2
@@ -194,8 +195,29 @@ version1Datum =
         , cdNativeSn = 4
         }
 
+{- | The retired layout: the nine-field key state under outer constructor 0.
+Nothing reads or writes it any more; it is built here only so the refusal
+fixtures below are signed over a real earlier-layout package.
+-}
 version1StateData :: Data
-version1StateData = checkpointDatumToData (V1 version1Datum)
+version1StateData =
+    Constr 0 [Constr 0 fields]
+  where
+    KeyStateView{..} = version1Datum
+    plain (Unweighted m) = Constr 0 [I m]
+    plain (Weighted clauses) =
+        Constr 1 [List [List [Constr 0 [I n, I d] | Weight n d <- clause] | clause <- clauses]]
+    fields =
+        [ B cdCesrAid
+        , List (map B cdCurKeys)
+        , plain cdCurThreshold
+        , List (map B cdNextKeys)
+        , plain cdNextThreshold
+        , List (map B cdWitnesses)
+        , I cdToad
+        , I cdSeq
+        , I cdNativeSn
+        ]
 
 version1Bytes :: ByteString
 version1Bytes =
@@ -427,7 +449,7 @@ goldens =
     [ Vec "golden_migration_domain" "domain: the frozen separator the message carries" migrationDomain
     , Vec "golden_source_datum" "state: the source projection, canonical" (canonicalCbor (V2 sourceDatum))
     , Vec "golden_source_state" "state: the carried payload, verbatim" (canonicalCborData sourceStateData)
-    , Vec "golden_version_1_source_state" "state: the version 1 record of the same key state, wrapped" (canonicalCbor (V1 version1Datum))
+    , Vec "golden_version_1_source_state" "state: the version 1 record of the same key state, wrapped" (canonicalCborData version1StateData)
     , Vec "golden_pending_source_state" "state: the pending termination of the same key state, wrapped" (canonicalCbor (V2 pendingDatum))
     , Vec "golden_mutant_source_state" "state: a projection with a bumped counter" (canonicalCborData mutantStateData)
     , Vec "golden_message" "message: the canonical permanent-family preimage" goldenBytes

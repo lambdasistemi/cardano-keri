@@ -13,9 +13,9 @@ module Cardano.KERI.Deployment.AdvancePackageSpec (spec) where
 
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
-    CheckpointDatumV1 (..),
     CheckpointDatumV2 (..),
     KeyMaterial (..),
+    KeyStateView (..),
     datumKeyState,
     liveOfKeyState,
  )

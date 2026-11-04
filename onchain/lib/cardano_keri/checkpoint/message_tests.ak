@@ -15,9 +15,7 @@
 use aiken/collection/list
 use aiken/crypto
 use aiken/primitive/bytearray
-use cardano_keri/checkpoint/datum.{
-  CheckpointDatumV1, ThresholdIllFormed, ToadRange,
-}
+use cardano_keri/checkpoint/datum.{KeyStateView, ThresholdIllFormed, ToadRange}
 use cardano_keri/checkpoint/message.{
   AdvanceInvalid, AdvanceValid, Eq2AssetOrAidMismatch, Eq5SequenceMismatch,
   Eq6CurrentQuorumUnsatisfied, Eq6PriorNextQuorumUnsatisfied,
@@ -178,20 +176,20 @@ fn witnessed_spent() -> SpentCheckpoint {
   SpentCheckpoint { ..spent(), witnesses: [w1, w2, w3] }
 }
 
-fn witnessed_created() -> CheckpointDatumV1 {
-  CheckpointDatumV1 { ..created_valid(), witnesses: [w2, w3, w4], toad: 2 }
+fn witnessed_created() -> KeyStateView {
+  KeyStateView { ..created_valid(), witnesses: [w2, w3, w4], toad: 2 }
 }
 
-fn witnessed_keep_created() -> CheckpointDatumV1 {
-  CheckpointDatumV1 { ..created_valid(), witnesses: [w1, w2, w3], toad: 2 }
+fn witnessed_keep_created() -> KeyStateView {
+  KeyStateView { ..created_valid(), witnesses: [w1, w2, w3], toad: 2 }
 }
 
-fn witnessed_downgrade_created() -> CheckpointDatumV1 {
-  CheckpointDatumV1 { ..created_valid(), witnesses: [], toad: 0 }
+fn witnessed_downgrade_created() -> KeyStateView {
+  KeyStateView { ..created_valid(), witnesses: [], toad: 0 }
 }
 
-fn created_valid() -> CheckpointDatumV1 {
-  CheckpointDatumV1 {
+fn created_valid() -> KeyStateView {
+  KeyStateView {
     cesr_aid: cesr_a(),
     cur_keys: [nk11],
     cur_threshold: Unweighted(1),
@@ -263,7 +261,7 @@ test advance_stolen_current_quorum_crafted_message_rejected() {
   // pre-rotation gate rejects.
   advance_equalities(
     spent(),
-    CheckpointDatumV1 {
+    KeyStateView {
       ..created_valid(),
       cur_keys: [k1, k2],
       cur_threshold: Unweighted(2),
@@ -278,7 +276,7 @@ test advance_substituted_successor_set_rejected() {
   let sub = #"9999999999999999999999999999999999999999999999999999999999999999"
   advance_equalities(
     spent(),
-    CheckpointDatumV1 { ..created_valid(), cur_keys: [sub] },
+    KeyStateView { ..created_valid(), cur_keys: [sub] },
     [],
     [],
     RevealedSuccessorSigners([sub]),
@@ -289,7 +287,7 @@ test advance_substituted_successor_set_rejected() {
 test advance_bad_seq_to() {
   advance_equalities(
     spent(),
-    CheckpointDatumV1 { ..created_valid(), seq: 5 },
+    KeyStateView { ..created_valid(), seq: 5 },
     [],
     [],
     sigs_revealed(),
@@ -299,7 +297,7 @@ test advance_bad_seq_to() {
 test advance_non_increasing_native_sn() {
   advance_equalities(
     spent(),
-    CheckpointDatumV1 { ..created_valid(), native_sn: 0 },
+    KeyStateView { ..created_valid(), native_sn: 0 },
     [],
     [],
     sigs_revealed(),
@@ -310,7 +308,7 @@ test advance_non_increasing_native_sn() {
 test advance_crossed_cesr_aid() {
   advance_equalities(
     spent(),
-    CheckpointDatumV1 { ..created_valid(), cesr_aid: crossed_aid },
+    KeyStateView { ..created_valid(), cesr_aid: crossed_aid },
     [],
     [],
     sigs_revealed(),
@@ -333,7 +331,7 @@ test advance_cross_asset_name() {
 test advance_ill_formed_toad_rejected() {
   advance_equalities(
     spent(),
-    CheckpointDatumV1 { ..created_valid(), toad: 1 },
+    KeyStateView { ..created_valid(), toad: 1 },
     [],
     [],
     sigs_revealed(),
@@ -343,7 +341,7 @@ test advance_ill_formed_toad_rejected() {
 test advance_duplicated_successor_key_rejected() {
   advance_equalities(
     spent(),
-    CheckpointDatumV1 {
+    KeyStateView {
       ..created_valid(),
       cur_keys: [nk11, nk11],
       cur_threshold: Unweighted(2),
@@ -410,8 +408,8 @@ fn reserve_spent() -> SpentCheckpoint {
   }
 }
 
-fn reserve_created() -> CheckpointDatumV1 {
-  CheckpointDatumV1 {
+fn reserve_created() -> KeyStateView {
+  KeyStateView {
     ..created_valid(),
     cur_keys: [rn0, rn5, rn6],
     cur_threshold: third(3),
@@ -439,7 +437,7 @@ test advance_reserve_insufficient_reveal_rejected() {
   // pre-rotation gate rejects.
   advance_equalities(
     reserve_spent(),
-    CheckpointDatumV1 {
+    KeyStateView {
       ..reserve_created(),
       cur_keys: [rn0, rn5, aug],
       cur_threshold: Unweighted(1),
@@ -456,7 +454,7 @@ test advance_reserve_augmented_key_accepted() {
   // advance passes.
   advance_equalities(
     reserve_spent(),
-    CheckpointDatumV1 {
+    KeyStateView {
       ..reserve_created(),
       cur_keys: [rn0, rn5, rn6, aug],
       cur_threshold: Unweighted(3),
@@ -556,7 +554,7 @@ test advance_witness_cut_add_overlap_rejected() {
 test advance_witness_derived_set_mismatch_rejected() {
   advance_equalities(
     witnessed_spent(),
-    CheckpointDatumV1 { ..witnessed_created(), witnesses: [w1, w2, w3] },
+    KeyStateView { ..witnessed_created(), witnesses: [w1, w2, w3] },
     [w1],
     [w4],
     sigs_revealed(),
@@ -566,7 +564,7 @@ test advance_witness_derived_set_mismatch_rejected() {
 test advance_witness_wrong_survivor_order_rejected() {
   advance_equalities(
     witnessed_spent(),
-    CheckpointDatumV1 { ..witnessed_created(), witnesses: [w4, w2, w3] },
+    KeyStateView { ..witnessed_created(), witnesses: [w4, w2, w3] },
     [w1],
     [w4],
     sigs_revealed(),
@@ -576,7 +574,7 @@ test advance_witness_wrong_survivor_order_rejected() {
 test advance_witness_toad_out_of_bounds_rejected() {
   advance_equalities(
     witnessed_spent(),
-    CheckpointDatumV1 { ..witnessed_created(), toad: 9 },
+    KeyStateView { ..witnessed_created(), toad: 9 },
     [w1],
     [w4],
     sigs_revealed(),

@@ -1,27 +1,28 @@
-//// Frozen sovereign per-AID `CheckpointDatumV1` wire codec (#68 Slice 6).
+//// The checkpoint datum wire codec: the version 2 datum (Lean
+//// `CheckpointDatumV2`) read from and written to Plutus `Data`, and the key
+//// state view the event predicates are evaluated over.
 ////
-//// Mirrors the Slice-3 Haskell `Cardano.KERI.AID.Checkpoint.Datum`
-//// byte-for-byte: the `CheckpointDatum` version sum (`V1` = Constr 0 wrapping
-//// the inner record) and the 9-field `CheckpointDatumV1` record (Constr 0)
-//// encode to the exact canonical Plutus-Data CBOR the Haskell encoder emits
-//// (see `vectors.ak`). Constructor indices and field order are protocol
-//// surface; they change only by minting a new version tag. The pre-rotation
-//// commitment is the explicit `(next_keys, next_threshold)` pair — the KERI
-//// `n` digest list plus `nt` — so a rotation may reveal any satisfiable
-//// subset of the committed digests (KERI partial/reserve rotation) and
-//// restate its own current threshold, exactly as the KERI dual-threshold
-//// rule allows.
+//// The datum is `Constr 1 [<datum>]`: the outer constructor index is protocol
+//// surface and is checked by `read`, which refuses every other index. The
+//// pre-rotation commitment is the explicit `(next_keys, next_threshold)` pair
+//// — the KERI `n` digest list plus `nt` — so a rotation may reveal any
+//// satisfiable subset of the committed digests (KERI partial/reserve
+//// rotation) and restate its own current threshold, exactly as the KERI
+//// dual-threshold rule allows.
 
+use aiken/builtin
 use aiken/collection/list
 use aiken/primitive/bytearray
 use cardano_keri/checkpoint/threshold.{Invalid, Threshold, ThresholdError}
 
 // ---------------------------------------------------------
-// Types (constructor order + field order frozen against vectors.ak)
+// Types (constructor order + field order frozen against the Lean vectors)
 // ---------------------------------------------------------
 
-/// The frozen sovereign per-AID checkpoint state (Constr 0). The 9 fields are
-/// positional and security-significant; reordering changes the bytes.
+/// The key state of a checkpoint as the event predicates read it: the AID
+/// digest, the key material and the two counters. A reader builds it from a
+/// version 2 `Live` datum (`seq` is its `epoch`, `native_sn` its `sn`); it is
+/// never written to the chain.
 ///
 /// - `cesr_aid`: external AID binding (KERI `i`)
 /// - `cur_keys`: current establishment key digests (KERI `k`), positional
@@ -30,9 +31,9 @@ use cardano_keri/checkpoint/threshold.{Invalid, Threshold, ThresholdError}
 /// - `next_threshold`: pre-rotation next threshold (KERI `nt`)
 /// - `witnesses`: current witness verkeys (KERI `b`), positional
 /// - `toad`: witness threshold (KERI `bt`); 0 iff no witnesses, else in [1, len]
-/// - `seq`: Cardano checkpoint projection counter; starts 0, +1 per advance
+/// - `seq`: checkpoint counter
 /// - `native_sn`: KERI native sequence number `s` of the reflected est. event
-pub type CheckpointDatumV1 {
+pub type KeyStateView {
   cesr_aid: ByteArray,
   cur_keys: List<ByteArray>,
   cur_threshold: Threshold,
@@ -44,8 +45,8 @@ pub type CheckpointDatumV1 {
   native_sn: Int,
 }
 
-/// The key material of a version 2 checkpoint (Lean `KeyMaterial`): the
-/// version 1 record's key fields, with the same types, in their own record.
+/// The key material of a version 2 checkpoint (Lean `KeyMaterial`): the key
+/// fields of the key state view, with the same types, in their own record.
 pub type KeyMaterial {
   cur_keys: List<ByteArray>,
   cur_threshold: Threshold,
@@ -73,18 +74,30 @@ pub type CheckpointDatumV2 {
   TerminationPending { aid: ByteArray, sn: Int, epoch: Int }
 }
 
-/// The checkpoint datum version sum. `V1` is constructor index 0 and `V2`
-/// index 1; a validator fails closed on a constructor it does not know.
-pub type CheckpointDatum {
-  V1(CheckpointDatumV1)
-  V2(CheckpointDatumV2)
+/// Read the version 2 datum out of an inline datum. The outer constructor must
+/// be index 1 with exactly one field, the datum; any other constructor index
+/// (the retired layout was index 0) aborts, as does a field that is not a
+/// `CheckpointDatumV2`. Callers `expect` a datum, so a refusal is a failed
+/// validation.
+pub fn read(data: Data) -> CheckpointDatumV2 {
+  let Pair(tag, fields) = builtin.un_constr_data(data)
+  expect tag == 1
+  expect [inner] = fields
+  expect datum: CheckpointDatumV2 = inner
+  datum
+}
+
+/// Write a version 2 datum as an inline datum: `Constr 1 [<datum>]`.
+pub fn write(datum: CheckpointDatumV2) -> Data {
+  let inner: Data = datum
+  builtin.constr_data(1, [inner])
 }
 
 // ---------------------------------------------------------
-// Datum-level well-formedness (spec rule 14)
+// Well-formedness (spec rule 14)
 // ---------------------------------------------------------
 
-/// A datum-level well-formedness rejection reason (mirrors the Slice-3
+/// A well-formedness rejection reason (mirrors the
 /// Haskell `DatumError`).
 pub type DatumError {
   /// `cesr_aid` is not exactly 32 bytes.
@@ -117,10 +130,10 @@ pub type DatumVerdict {
   DatumInvalid(DatumError)
 }
 
-/// Full datum well-formedness. Pins the fixed-width primitive domain
+/// Well-formedness of a key state view. Pins the fixed-width primitive domain
 /// (`cesr_aid` exactly 32 bytes) and delegates the key material to
 /// `key_material_verdict`. Nothing malformed can serialize past it.
-pub fn datum_well_formed(d: CheckpointDatumV1) -> DatumVerdict {
+pub fn key_state_well_formed(d: KeyStateView) -> DatumVerdict {
   if bytearray.length(d.cesr_aid) != 32 {
     DatumInvalid(CesrAidWidth)
   } else {

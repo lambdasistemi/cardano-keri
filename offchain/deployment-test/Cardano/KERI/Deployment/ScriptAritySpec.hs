@@ -744,19 +744,6 @@ boundary that does not run through 'mkAppliedArtifact' — its consumer,
 drives that exact applier and recovers what it applied instead of taking its
 arity on trust.
 
-@checkpoint.checkpoint@ is the legacy M1 group in THIS live blueprint, and it
-is classified raw and unpublished: the deployment derivation does not touch it,
-so it produces no artifact and no identity. It is classified rather than
-omitted, so it cannot quietly acquire one.
-
-That is a separate fact from the M8 S2 evidence, which executes a
-@checkpoint.checkpoint.spend@ program taken from the FROZEN baseline blueprint.
-That is a different artifact of a different blueprint, it publishes no identity
-either, and it is classified on its own row in the application-site census in
-@scripts/check-version-remnant-sweep.sh@. The two are deliberately not conflated
-here: "this live group is unapplied" and "that frozen program is executed as
-evidence" are different claims about different bytes.
-
 S254-E's entitlement group will appear here after rebase, and will have to enter
 this same census.
 -}
@@ -799,13 +786,6 @@ groupBoundaries =
         , AppliedBy
             "applyParams"
             (applyParams v1CheckpointVersion cagePredecessorPolicy)
-        )
-    ,
-        ( "checkpoint.checkpoint"
-        , Unapplied
-            "legacy M1 group: no off-chain application site; the M8 S2 \
-            \evidence executes it from the frozen baseline with Lean-supplied \
-            \parameters and publishes no identity"
         )
     , ("s0_append.s0_append", Unapplied s0MeasurementBoundary)
     , ("s0_consumer_predicates.s0_consumer_predicates", Unapplied s0MeasurementBoundary)

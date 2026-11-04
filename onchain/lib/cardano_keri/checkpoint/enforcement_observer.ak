@@ -15,7 +15,7 @@
 
 use cardano/transaction.{InlineDatum, Transaction, find_input}
 use cardano_keri/bounty_commitment.{CommitmentFamily}
-use cardano_keri/checkpoint/datum.{CheckpointDatum, CheckpointDatumV1, Live, V2}
+use cardano_keri/checkpoint/datum.{KeyStateView, Live}
 use cardano_keri/checkpoint/enforcement.{
   ConvictValid, EnforcementBindingValid, bind_enforcement_evidence,
   convict_predicate,
@@ -71,12 +71,12 @@ fn observe_convict_impl(
   expect Some(own_input) = find_input(tx.inputs, own_ref)
   expect InlineDatum(source_data) = own_input.output.datum
   expect own_input.output.address == role.address(policy_id, Active)
-  expect V2(Live { aid, sn, epoch, keys, .. }): CheckpointDatum = source_data
+  expect Live { aid, sn, epoch, keys, .. } = datum.read(source_data)
   expect Some(digest) = aid_digest(aid)
   // The tip the conviction is about: the live checkpoint's key state, its
   // epoch and sequence number standing for the predicate's counter and
   // native sequence number.
-  let tip = CheckpointDatumV1 {
+  let tip = KeyStateView {
     cesr_aid: digest,
     cur_keys: keys.cur_keys,
     cur_threshold: keys.cur_threshold,

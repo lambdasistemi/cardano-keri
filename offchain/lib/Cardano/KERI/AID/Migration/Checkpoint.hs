@@ -70,7 +70,6 @@ import Cardano.KERI.AID.Checkpoint.Datum (
  )
 import Cardano.KERI.AID.Checkpoint.FreezeBond (
     Role (..),
-    roleHash,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
     deriveAidAssetName,
@@ -89,7 +88,6 @@ import Cardano.KERI.AID.Migration.Types (
     MigrationRole (..),
     MigrationTarget (..),
     OutputRef (..),
-    StakeCredential (..),
     canonicalCbor,
     migrationDomain,
     optionData,
@@ -508,16 +506,11 @@ roleStateOf role state =
         }
 
 {- | The canonical role address a policy's lifecycle position occupies, built
-the way the on-chain path builds it rather than described field by field:
-ACTIVE is the bare script address, and every tagged role delegates to its
-deterministic role script.  The role derivation is reused from
-"Cardano.KERI.AID.Checkpoint.FreezeBond" so there is exactly one mirror of it.
+the way the on-chain path builds it: ACTIVE is the bare script address.
 -}
 roleAddress :: ByteString -> Role -> FullAddress
-roleAddress policy role =
-    FullAddress
-        (ScriptCredential policy)
-        (fmap (InlineStakeCredential . ScriptCredential) (roleHash policy role))
+roleAddress policy Active =
+    FullAddress (ScriptCredential policy) Nothing
 
 -- | The checkpoint lifecycle position a migration role names, if it names one.
 lifecycleRole :: MigrationRole -> Maybe Role

@@ -22,7 +22,6 @@
 //// two cannot drift apart into different rules.
 
 use aiken/cbor
-use aiken/collection/list
 use aiken/crypto.{blake2b_256}
 use cardano/transaction.{OutputReference, Transaction}
 use cardano_keri/bounty_commitment.{
@@ -176,23 +175,6 @@ pub fn validate_convict_entitlement(
     checkpoint_ref,
     tx,
   )
-}
-
-/// Admissibility of a conviction's payout structure.
-///
-/// The convictor's entitlement is a STRUCTURAL precondition of any payout: a
-/// conviction that did not establish entitlement routes nothing at all, whatever
-/// its index says.
-pub fn validate_convict_payouts(
-  valid_entitlement: Bool,
-  convictor_index: Int,
-  tx: Transaction,
-) -> Bool {
-  and {
-    valid_entitlement,
-    convictor_index >= 0,
-    convictor_index < list.length(tx.outputs),
-  }
 }
 
 /// The entitlement half of the A-002 two-observer split.

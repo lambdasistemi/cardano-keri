@@ -19,7 +19,7 @@ stale ACTIVE index row" scenario.
 -}
 module Cardano.KERI.CLI.Backend.KoiosSpec (spec) where
 
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V2), CheckpointDatumV1 (..), convictedOf, liveOfKeyState)
+import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V2), KeyStateView (..), convictedOf, liveOfKeyState)
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted))
 import Cardano.KERI.CLI.Backend (
     BackendError (..),
@@ -331,9 +331,9 @@ liveLookingUtxo =
         , chainAssetReferenceScript = Nothing
         }
 
-liveDatum :: CheckpointDatumV1
+liveDatum :: KeyStateView
 liveDatum =
-    CheckpointDatumV1
+    KeyStateView
         { cdCesrAid = BS.replicate 32 0x00
         , cdCurKeys = [BS.replicate 32 0x11]
         , cdCurThreshold = Unweighted 1
@@ -375,7 +375,7 @@ burnHistory =
             [ChainMintingTransaction "burntx0000000000000000000000000000000000000000000000000000" (-1) 100]
         }
 
-toDatumValue :: CheckpointDatumV1 -> Value
+toDatumValue :: KeyStateView -> Value
 toDatumValue datum = toDatumValueOf (V2 (liveOfKeyState "" 0 datum))
 
 toDatumValueOf :: CheckpointDatum -> Value
@@ -417,9 +417,9 @@ advancedTxInfo = ChainTransactionInfo "20202020202020202020202020202020202020202
 aidText :: Text
 aidText = "EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 
-datumX0 :: CheckpointDatumV1
+datumX0 :: KeyStateView
 datumX0 =
-    CheckpointDatumV1
+    KeyStateView
         { cdCesrAid = registrationTxId
         , cdCurKeys = [BS.replicate 32 0x11]
         , cdCurThreshold = Unweighted 1

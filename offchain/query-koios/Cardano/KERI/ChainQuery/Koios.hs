@@ -73,7 +73,7 @@ module Cardano.KERI.ChainQuery.Koios (
 
 import Cardano.KERI.AID.CESR (Primitive (..), parsePrimitive)
 import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatumV1 (..),
+    KeyStateView (..),
     checkpointDatumFromData,
     datumFacts,
     datumKeyState,

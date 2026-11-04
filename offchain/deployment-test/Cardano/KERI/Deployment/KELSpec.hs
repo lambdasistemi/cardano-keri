@@ -8,7 +8,7 @@ import Cardano.KERI.AID.Checkpoint.Advance (
     AdvanceEvidence (..),
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatumV1 (..),
+    KeyStateView (..),
  )
 import Cardano.KERI.AID.Checkpoint.Registration (
     DeploymentContext (..),

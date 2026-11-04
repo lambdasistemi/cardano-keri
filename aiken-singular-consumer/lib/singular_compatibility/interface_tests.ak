@@ -5,8 +5,9 @@
 //// Each test imports the KERI checkpoint namespaces and the Singular
 //// `singular_state` namespaces together and exercises the values Singular
 //// publishes for a registration: the registration approval, the active token
-//// and the holding guards of a fold. The KERI values are the generated
-//// registration vectors, so the holding carries a real KERI checkpoint datum.
+//// and the holding guards of a fold. The KERI values are the generated version 2
+//// checkpoint datum vectors and registration vectors, so the holding carries
+//// the datum a registration writes.
 ////
 //// This is dependency evidence only. It shows that the interface accepts KERI
 //// values and commits to every field the approval names. It does not show that
@@ -19,10 +20,8 @@ use aiken/crypto.{blake2b_256}
 use cardano/address.{Address, Inline, Script, VerificationKey}
 use cardano/assets.{AssetName, PolicyId}
 use cardano/transaction.{InlineDatum, NoDatum, Output, OutputReference}
-use cardano_keri/checkpoint/datum.{CheckpointDatum, CheckpointDatumV1, V1}
-use cardano_keri/checkpoint/registration.{
-  RegistrationValid, registration_predicate,
-}
+use cardano_keri/checkpoint/datum.{CheckpointDatumV2, Live}
+use cardano_keri/checkpoint/datum_v2_vectors as v2
 use cardano_keri/checkpoint/registration_vectors as vec
 use singular_state/fold.{
   Register, approval_for, change_approval, registration_deposit,
@@ -71,6 +70,17 @@ fn registry() -> RegistryIdentity {
   registry_identity(state_policy, seed)
 }
 
+/// The identifier a checkpoint datum is about, as the key it registers.
+fn aid_of(checkpoint: CheckpointDatumV2) -> ByteArray {
+  expect Live { aid, .. } = checkpoint
+  aid
+}
+
+/// The datum every test registers: a funded, registered live checkpoint.
+fn held() -> CheckpointDatumV2 {
+  v2.facts_registered_funded()
+}
+
 fn holding_address(stake_key: ByteArray) -> Address {
   Address {
     payment_credential: Script(checkpoint_script),
@@ -81,22 +91,20 @@ fn holding_address(stake_key: ByteArray) -> Address {
 /// A KERI checkpoint output: the checkpoint datum inline, at the checkpoint
 /// script, holding `lovelace` and `active` tokens of the key's active asset.
 fn keri_holding(
-  datum: CheckpointDatumV1,
+  checkpoint: CheckpointDatumV2,
   address: Address,
   lovelace: Int,
   active: Int,
 ) -> Output {
-  let checkpoint: CheckpointDatum = V1(datum)
-  let checkpoint_data: Data = checkpoint
   Output {
     address,
     value: assets.from_lovelace(lovelace)
       |> assets.add(
           state_policy,
-          active_token_name(registry(), datum.cesr_aid),
+          active_token_name(registry(), aid_of(checkpoint)),
           active,
         ),
-    datum: InlineDatum(checkpoint_data),
+    datum: InlineDatum(datum.write(checkpoint)),
     reference_script: None,
   }
 }
@@ -111,18 +119,17 @@ fn register(key: ByteArray, holding: Int, deposit: Int) {
 /// hash of the Plutus Data serialisation of the preimage, whose initial datum
 /// is the blake2b-256 hash of the serialised holding datum.
 fn expected_approval(
-  datum: CheckpointDatumV1,
+  checkpoint: CheckpointDatumV2,
   address: Address,
   deposit: Int,
 ) -> AssetName {
-  let checkpoint: CheckpointDatum = V1(datum)
   blake2b_256(
     cbor.serialise(
       RegistrationApproval {
         registry: registry(),
-        key: datum.cesr_aid,
+        key: aid_of(checkpoint),
         holding_address: address,
-        initial_datum: blake2b_256(cbor.serialise(checkpoint)),
+        initial_datum: blake2b_256(cbor.serialise(datum.write(checkpoint))),
         deposit,
       },
     ),
@@ -130,17 +137,17 @@ fn expected_approval(
 }
 
 /// The approval Singular recomputes for registering `key` in `registry` into
-/// a KERI holding that carries `datum` at `address`.
+/// a KERI holding that carries `checkpoint` at `address`.
 fn approval_of(
   registry: RegistryIdentity,
   key: ByteArray,
-  datum: CheckpointDatumV1,
+  checkpoint: CheckpointDatumV2,
   address: Address,
   deposit: Int,
 ) -> Option<AssetName> {
   approval_for(
     registry,
-    [keri_holding(datum, address, vec.pos_witnessed_lovelace, 1)],
+    [keri_holding(checkpoint, address, vec.pos_witnessed_lovelace, 1)],
     register(key, 0, deposit),
   )
 }
@@ -149,8 +156,8 @@ fn approval_of(
 fn witnessed_approval() -> Option<AssetName> {
   approval_of(
     registry(),
-    vec.pos_witnessed_datum.cesr_aid,
-    vec.pos_witnessed_datum,
+    aid_of(held()),
+    held(),
     holding_address(owner_stake_key),
     vec.d_reg_floor,
   )
@@ -183,11 +190,7 @@ fn admits_witnessed_approval(recomputed: Option<AssetName>) -> Bool {
 
 test keri_checkpoint_holding_yields_its_registration_approval() {
   witnessed_approval() == Some(
-    expected_approval(
-      vec.pos_witnessed_datum,
-      holding_address(owner_stake_key),
-      vec.d_reg_floor,
-    ),
+    expected_approval(held(), holding_address(owner_stake_key), vec.d_reg_floor),
   )
 }
 
@@ -199,8 +202,8 @@ test registry_is_committed() {
   !admits_witnessed_approval(
     approval_of(
       registry_identity(other_state_policy, seed),
-      vec.pos_witnessed_datum.cesr_aid,
-      vec.pos_witnessed_datum,
+      aid_of(held()),
+      held(),
       holding_address(owner_stake_key),
       vec.d_reg_floor,
     ),
@@ -211,8 +214,8 @@ test key_is_committed() {
   !admits_witnessed_approval(
     approval_of(
       registry(),
-      vec.pos_weighted_datum.cesr_aid,
-      vec.pos_witnessed_datum,
+      aid_of(v2.facts_rotated()),
+      held(),
       holding_address(owner_stake_key),
       vec.d_reg_floor,
     ),
@@ -223,8 +226,8 @@ test holding_stake_part_is_committed() {
   !admits_witnessed_approval(
     approval_of(
       registry(),
-      vec.pos_witnessed_datum.cesr_aid,
-      vec.pos_witnessed_datum,
+      aid_of(held()),
+      held(),
       holding_address(other_stake_key),
       vec.d_reg_floor,
     ),
@@ -237,25 +240,16 @@ test holding_payment_part_is_committed() {
     stake_credential: Some(Inline(VerificationKey(owner_stake_key))),
   }
   !admits_witnessed_approval(
-    approval_of(
-      registry(),
-      vec.pos_witnessed_datum.cesr_aid,
-      vec.pos_witnessed_datum,
-      elsewhere,
-      vec.d_reg_floor,
-    ),
+    approval_of(registry(), aid_of(held()), held(), elsewhere, vec.d_reg_floor),
   )
 }
 
 test initial_checkpoint_datum_is_committed() {
-  let other: CheckpointDatumV1 = CheckpointDatumV1 {
-    ..vec.pos_weighted_datum,
-    cesr_aid: vec.pos_witnessed_datum.cesr_aid,
-  }
+  let other = v2.facts_frozen()
   !admits_witnessed_approval(
     approval_of(
       registry(),
-      vec.pos_witnessed_datum.cesr_aid,
+      aid_of(held()),
       other,
       holding_address(owner_stake_key),
       vec.d_reg_floor,
@@ -267,37 +261,12 @@ test deposit_is_committed() {
   !admits_witnessed_approval(
     approval_of(
       registry(),
-      vec.pos_witnessed_datum.cesr_aid,
-      vec.pos_witnessed_datum,
+      aid_of(held()),
+      held(),
       holding_address(owner_stake_key),
       vec.d_reg_floor + 1,
     ),
   )
-}
-
-test legacy_registration_predicate_and_approval_share_one_datum() {
-  let address = holding_address(owner_stake_key)
-  and {
-    registration_predicate(
-      vec.pos_witnessed_ctx,
-      vec.pos_witnessed_datum,
-      vec.pos_witnessed_lovelace,
-      vec.pos_witnessed_evidence,
-    ) == RegistrationValid,
-    approval_of(
-      registry(),
-      vec.pos_witnessed_datum.cesr_aid,
-      vec.pos_witnessed_datum,
-      address,
-      vec.pos_witnessed_ctx.d_reg,
-    ) == Some(
-      expected_approval(
-        vec.pos_witnessed_datum,
-        address,
-        vec.pos_witnessed_ctx.d_reg,
-      ),
-    ),
-  }
 }
 
 // ---------------------------------------------------------
@@ -305,29 +274,25 @@ test legacy_registration_predicate_and_approval_share_one_datum() {
 // ---------------------------------------------------------
 
 test active_token_is_named_per_registry_and_key() {
-  let key = vec.pos_witnessed_datum.cesr_aid
+  let key = aid_of(held())
   let other_registry = registry_identity(other_state_policy, seed)
   and {
     active_token_name(registry(), key) != active_token_name(other_registry, key),
     active_token_name(registry(), key) != active_token_name(
       registry(),
-      vec.pos_weighted_datum.cesr_aid,
+      aid_of(v2.facts_rotated()),
     ),
   }
 }
 
 test role_names_of_one_key_never_coincide() {
-  let key = vec.pos_witnessed_datum.cesr_aid
+  let key = aid_of(held())
   let names = [
     state_token_name(seed),
     active_token_name(registry(), key),
     configuration_token_name(registry()),
     approval_name(termination_preimage(key, registry())),
-    expected_approval(
-      vec.pos_witnessed_datum,
-      holding_address(owner_stake_key),
-      vec.d_reg_floor,
-    ),
+    expected_approval(held(), holding_address(owner_stake_key), vec.d_reg_floor),
   ]
   list.length(list.unique(names)) == list.length(names)
 }
@@ -344,9 +309,9 @@ test registry_identity_is_the_state_token_of_its_seed() {
 // ---------------------------------------------------------
 
 test registration_placement_accepts_the_keri_holding() {
-  let datum = vec.pos_witnessed_datum
+  let checkpoint = held()
   let holding = keri_holding(
-    datum,
+    checkpoint,
     holding_address(owner_stake_key),
     vec.pos_witnessed_lovelace,
     1,
@@ -354,17 +319,17 @@ test registration_placement_accepts_the_keri_holding() {
   registration_placement(
     registry(),
     [holding],
-    [register(datum.cesr_aid, 0, vec.d_reg_floor)],
+    [register(aid_of(checkpoint), 0, vec.d_reg_floor)],
     request,
-    datum.cesr_aid,
+    aid_of(checkpoint),
     0,
   )
 }
 
 test registration_placement_refuses_a_second_active_token() {
-  let datum = vec.pos_witnessed_datum
+  let checkpoint = held()
   let holding = keri_holding(
-    datum,
+    checkpoint,
     holding_address(owner_stake_key),
     vec.pos_witnessed_lovelace,
     1,
@@ -372,24 +337,24 @@ test registration_placement_refuses_a_second_active_token() {
   !registration_placement(
     registry(),
     [holding, holding],
-    [register(datum.cesr_aid, 0, vec.d_reg_floor)],
+    [register(aid_of(checkpoint), 0, vec.d_reg_floor)],
     request,
-    datum.cesr_aid,
+    aid_of(checkpoint),
     0,
   )
 }
 
 test registration_deposit_holds_the_keri_registration_floor() {
-  let datum = vec.pos_witnessed_datum
+  let checkpoint = held()
   let address = holding_address(owner_stake_key)
   and {
     registration_deposit(
       vec.d_reg_floor,
-      keri_holding(datum, address, vec.d_reg_floor, 1),
+      keri_holding(checkpoint, address, vec.d_reg_floor, 1),
     ),
     !registration_deposit(
       vec.d_reg_floor,
-      keri_holding(datum, address, vec.d_reg_below_floor, 1),
+      keri_holding(checkpoint, address, vec.d_reg_below_floor, 1),
     ),
   }
 }

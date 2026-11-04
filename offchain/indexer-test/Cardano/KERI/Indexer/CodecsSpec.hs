@@ -7,8 +7,8 @@ import Cardano.Crypto.Hash.Class (
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
-    CheckpointDatumV1 (..),
     CheckpointDatumV2,
+    KeyStateView (..),
     convictedOf,
     liveOfKeyState,
  )
@@ -295,9 +295,9 @@ plutusData value =
 wrongDatum :: PLC.Data
 wrongDatum = PLC.Constr 1 []
 
-sampleDatum :: CheckpointDatumV1
+sampleDatum :: KeyStateView
 sampleDatum =
-    CheckpointDatumV1
+    KeyStateView
         { cdCesrAid = aidX
         , cdCurKeys = [BS.replicate 32 0x11]
         , cdCurThreshold = Unweighted 1

@@ -59,12 +59,12 @@ import Cardano.KERI.AID.CESR (
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CesrAid,
-    CheckpointDatumV1 (..),
     DatumError,
     KeyDigest,
+    KeyStateView (..),
     Verkey,
     blake2b_256,
-    datumWellFormed,
+    keyStateWellFormed,
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold,
@@ -313,7 +313,7 @@ data AdvanceError
       incoming set.
       -}
       Eq7CreatedStateMismatch
-    | -- | eq8: the created datum failed 'datumWellFormed' (F18 + rule 14).
+    | -- | eq8: the created datum failed 'keyStateWellFormed' (F18 + rule 14).
       Eq8CreatedIllFormed DatumError
     deriving stock (Show, Eq)
 
@@ -342,7 +342,7 @@ to be well-formed (which alone bounds @toad@: rule 14 requires
 advanceEqualities ::
     SpentCheckpoint ->
     -- | The created (successor) datum @NEW@.
-    CheckpointDatumV1 ->
+    KeyStateView ->
     -- | @wit_cut@ (KERI @br@).
     [Verkey] ->
     -- | @wit_add@ (KERI @ba@).
@@ -409,7 +409,7 @@ advanceEqualities sc new witCut witAdd (RevealedSuccessorSigners controlled) = d
     let newSet = survivors <> witAdd
     unless (cdWitnesses new == newSet) (Left Eq7CreatedStateMismatch)
     -- eq8: nothing ill-formed can be written (F18 + rule 14 on the successor).
-    first Eq8CreatedIllFormed (datumWellFormed new)
+    first Eq8CreatedIllFormed (keyStateWellFormed new)
 
 -- | Positions in @keys@ whose entry appears in the given evidence list.
 positionsIn :: [ByteString] -> [ByteString] -> IntSet

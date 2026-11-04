@@ -986,9 +986,7 @@ executable gen-freeze-bond-vectors
   main-is:          GenFreezeBondVectors.hs
   build-depends:
     , base
-    , bytestring
     , cardano-keri
-    , memory        >=0.18 && <0.19
 
 -- #254 S254-1A: the sole source of the shared migration-type parity
 -- fixtures. Emits both the inputs and the expected encodings, so the Aiken

@@ -27,7 +27,7 @@ module Cardano.KERI.CLI.Backend.Koios (
 ) where
 
 import Cardano.KERI.AID.CESR (qb64Aid, qb64Verkey)
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..), checkpointDatumFromData, datumKeyState)
+import Cardano.KERI.AID.Checkpoint.Datum (KeyStateView (..), checkpointDatumFromData, datumKeyState)
 import Cardano.KERI.CLI.Backend (
     BackendError (..),
     CheckpointFields (..),

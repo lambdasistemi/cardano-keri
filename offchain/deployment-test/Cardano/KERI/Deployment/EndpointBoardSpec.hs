@@ -18,7 +18,7 @@ import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.KERI.AID.Blake3.Checkpoint (blake3Hash)
 import Cardano.KERI.AID.CESR (qb64Aid, qb64Verkey)
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV1 (..))
+import Cardano.KERI.AID.Checkpoint.Datum (KeyStateView (..))
 import Cardano.KERI.ChainQuery (
     ChainAsset (..),
     ChainAssetUtxo (..),

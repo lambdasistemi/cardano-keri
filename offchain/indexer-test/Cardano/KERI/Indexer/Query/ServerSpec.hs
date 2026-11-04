@@ -15,7 +15,7 @@ module Cardano.KERI.Indexer.Query.ServerSpec (spec) where
 
 import Cardano.Crypto.Hash.Class (hashFromBytes)
 import Cardano.KERI.AID.CESR (qb64Aid, qb64Verkey)
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V2), CheckpointDatumV1 (..), liveOfKeyState)
+import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V2), KeyStateView (..), liveOfKeyState)
 import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..), Weight (..))
 import Cardano.KERI.Deployment.EndpointBoard (EndpointRecord (..), parseEndpointRecord)
@@ -706,7 +706,7 @@ withObject resp check =
 -- from the production 'Cardano.KERI.Indexer.Query.Types.ToJSON' instances)
 
 expectedCheckpointJson ::
-    ByteString -> Indexer.TxIn -> CheckpointDatumV1 -> Int -> Int -> Value
+    ByteString -> Indexer.TxIn -> KeyStateView -> Int -> Int -> Value
 expectedCheckpointJson aid txIn datum asOfSlot tipLag =
     object
         [ "aid" .= TE.decodeUtf8 (qb64Aid aid)
@@ -787,9 +787,9 @@ thresholdJson (Weighted clauses) =
 aidX :: ByteString
 aidX = BS.replicate 32 0x31
 
-datumX0 :: CheckpointDatumV1
+datumX0 :: KeyStateView
 datumX0 =
-    CheckpointDatumV1
+    KeyStateView
         { cdCesrAid = aidX
         , cdCurKeys = [BS.replicate 32 0x11]
         , cdCurThreshold = Unweighted 1
@@ -836,11 +836,11 @@ boardAddress = Indexer.Address (serialiseAddr boardLedgerAddress)
 boardOwner :: ByteString
 boardOwner = BS.replicate 28 0x33
 
-checkpointCreate :: Indexer.TxIn -> ByteString -> CheckpointDatumV1 -> UtxoOp
+checkpointCreate :: Indexer.TxIn -> ByteString -> KeyStateView -> UtxoOp
 checkpointCreate txIn aid datum =
     UtxoCreate txIn checkpointAddress (checkpointOutput aid datum)
 
-checkpointOutput :: ByteString -> CheckpointDatumV1 -> Indexer.TxOut
+checkpointOutput :: ByteString -> KeyStateView -> Indexer.TxOut
 checkpointOutput aid datum =
     Indexer.TxOut $
         serialize'

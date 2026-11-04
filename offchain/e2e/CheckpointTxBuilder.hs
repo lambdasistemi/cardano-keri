@@ -64,8 +64,8 @@ import Cardano.KERI.AID.Checkpoint.BountyCommitment (
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
-    CheckpointDatumV1 (..),
     CheckpointDatumV2 (..),
+    KeyStateView (..),
     convictedOf,
     liveOfKeyState,
     rotatedLive,
@@ -80,7 +80,6 @@ import Cardano.KERI.AID.Checkpoint.FreezeBond (
     Inclusivity (..),
     RawBound (..),
     Role (..),
-    roleHash,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
     SpentCheckpoint (..),
@@ -308,7 +307,7 @@ data CheckpointEnv = CheckpointEnv
 
 data CheckpointInput = CheckpointInput
     { checkpointUtxo :: !(TxIn, TxOut ConwayEra)
-    , checkpointDatum :: !CheckpointDatumV1
+    , checkpointDatum :: !KeyStateView
     -- ^ the key state of the output's datum
     , checkpointFacts :: !CheckpointDatumV2
     -- ^ the version 2 datum the output carries, as read from the chain
@@ -607,10 +606,11 @@ verifyRegisterScriptSizes env = do
     measure "bounty_commitment reference script" (envCommitmentScript env) (SBS.length (envCommitmentBytes env))
     -- #339: re-derived from the applied advance program once it reads the
     -- version 2 datum (14_695 before), not reused from the previous pin. The
-    -- 16_133 ceiling is unchanged.
-    unless (SBS.length (envAdvanceBytes env) == 15_778) $
+    -- 16_133 ceiling is unchanged. Re-derived again after the version 1
+    -- datum constructor left the shared datum type (15_778 before).
+    unless (SBS.length (envAdvanceBytes env) == 15_625) $
         fail
-            ( "observer_advance applied program changed from 15,778 bytes: "
+            ( "observer_advance applied program changed from 15,625 bytes: "
                 <> show (SBS.length (envAdvanceBytes env))
             )
 
@@ -787,20 +787,6 @@ registerObserverStakeCredential env observerHash observerScript reference label 
 roleAddress :: CheckpointEnv -> Role -> Addr
 roleAddress env Active =
     Addr Testnet (ScriptHashObj (envCheckpointHash env)) StakeRefNull
-roleAddress env role =
-    Addr
-        Testnet
-        (ScriptHashObj (envCheckpointHash env))
-        (StakeRefBase (ScriptHashObj marker))
-  where
-    markerBytes =
-        fromMaybe (error "roleAddress: ACTIVE has no role marker") $
-            roleHash (policyBytes (envCheckpointPolicy env)) role
-    marker =
-        ScriptHash $
-            fromMaybe
-                (error "roleAddress: role hash is not 28 bytes")
-                (hashFromBytes markerBytes)
 
 deployReferenceScript ::
     CheckpointEnv ->
@@ -1374,7 +1360,7 @@ buildSplitTx env = do
         (balanceTx params [input] [] (envOwner env) (mkBasicTx body))
 
 data RegistrationFixture = RegistrationFixture
-    { rfDatum :: !CheckpointDatumV1
+    { rfDatum :: !KeyStateView
     , rfEvidence :: !RegistrationEvidence
     , rfRaw :: !ByteString
     , rfAid :: !ByteString
@@ -1385,7 +1371,7 @@ data RegistrationFixture = RegistrationFixture
 
 data RotateStoryFixture = RotateStoryFixture
     { rsRegistration :: !RegistrationFixture
-    , rsCreated :: !CheckpointDatumV1
+    , rsCreated :: !KeyStateView
     , rsUnsignedEvidence :: !AdvanceEvidence
     , rsRotationSigners :: ![SignKeyDSIGN Ed25519DSIGN]
     , rsCurrentSigners :: ![SignKeyDSIGN Ed25519DSIGN]
@@ -1527,7 +1513,7 @@ loadRotateStoryFixture = do
     witnessReceipts <-
         either fail pure (indexedSignaturesAt "rot_witness_receipts" family)
     let created =
-            CheckpointDatumV1
+            KeyStateView
                 { cdCesrAid = cdCesrAid (rfDatum registration)
                 , cdCurKeys = currentKeys
                 , cdCurThreshold = currentThreshold
@@ -1659,7 +1645,7 @@ loadConvictStoryFixture = do
 
 rotateStoryFrom ::
     RegistrationFixture ->
-    CheckpointDatumV1 ->
+    KeyStateView ->
     Value ->
     [SignKeyDSIGN Ed25519DSIGN] ->
     [SignKeyDSIGN Ed25519DSIGN] ->
@@ -1679,7 +1665,7 @@ rotateStoryFrom registration prior record rotationSigners currentSigners = do
     nativeSn <- hexIntegerAt "s" ked
     witnessReceipts <- indexedSignaturesAt "witness_receipts" record
     let created =
-            CheckpointDatumV1
+            KeyStateView
                 { cdCesrAid = cdCesrAid prior
                 , cdCurKeys = currentKeys
                 , cdCurThreshold = currentThreshold
@@ -1818,7 +1804,7 @@ registrationFixtureFrom event signatures receipts = do
     offBt <- integerAt "bt" offsets
     offD <- eventSaidOffset event
     let datum =
-            CheckpointDatumV1
+            KeyStateView
                 { cdCesrAid = aid
                 , cdCurKeys = currentKeys
                 , cdCurThreshold = currentThreshold
@@ -2185,7 +2171,7 @@ buildRotateStoryTxWith ::
     (TxIn, TxOut ConwayEra) ->
     (TxIn, TxOut ConwayEra) ->
     CheckpointInput ->
-    CheckpointDatumV1 ->
+    KeyStateView ->
     AdvanceEvidence ->
     Maybe ValidityPlan ->
     IO
@@ -2733,7 +2719,7 @@ rejectRotateEvidence ::
     (TxIn, TxOut ConwayEra) ->
     (TxIn, TxOut ConwayEra) ->
     CheckpointInput ->
-    CheckpointDatumV1 ->
+    KeyStateView ->
     String ->
     AdvanceEvidence ->
     IO ()
@@ -2758,7 +2744,7 @@ submitTwoPassAdvance ::
     (TxIn, TxOut ConwayEra) ->
     (TxIn, TxOut ConwayEra) ->
     CheckpointInput ->
-    CheckpointDatumV1 ->
+    KeyStateView ->
     AdvanceEvidence ->
     IO TxId
 submitTwoPassAdvance env label checkpointRef advanceRef input successor evidence = do
@@ -2778,7 +2764,7 @@ submitTwoPassAdvanceWithValidity ::
     (TxIn, TxOut ConwayEra) ->
     (TxIn, TxOut ConwayEra) ->
     CheckpointInput ->
-    CheckpointDatumV1 ->
+    KeyStateView ->
     AdvanceEvidence ->
     Maybe ValidityPlan ->
     IO TxId
@@ -2924,7 +2910,7 @@ the independent Advance negative staging check below; it is never a
 substitute for the blocked positive Register lineage.
 -}
 stageCheckpointInput ::
-    CheckpointEnv -> CheckpointDatumV1 -> IO CheckpointInput
+    CheckpointEnv -> KeyStateView -> IO CheckpointInput
 stageCheckpointInput env datum = do
     let facts = liveOfKeyState (serialiseAddr (envOwner env)) 0 datum
     params <- withinSecs 30 "query staging protocol parameters" (queryProtocolParams (envProvider env))
@@ -2961,7 +2947,7 @@ stageCheckpointInput env datum = do
 buildAdvanceTx ::
     CheckpointEnv ->
     CheckpointInput ->
-    CheckpointDatumV1 ->
+    KeyStateView ->
     ValidityPlan ->
     IO ConwayTx
 buildAdvanceTx env input successor validity = do
@@ -3895,7 +3881,7 @@ settledAdvance ::
     CheckpointEnv ->
     String ->
     CheckpointInput ->
-    CheckpointDatumV1 ->
+    KeyStateView ->
     TxId ->
     (TxIn, TxOut ConwayEra) ->
     IO CheckpointInput

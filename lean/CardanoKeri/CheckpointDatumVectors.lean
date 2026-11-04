@@ -95,10 +95,10 @@ def refusedData : List (String × String × Data) := [
   ("unknown-form", "a version 2 form that is neither live nor pending termination", .constr 1 [.constr 2 liveFields]),
   ("live-seven-fields", "a live datum without its key material", live (liveFields.take 7)),
   ("live-nine-fields", "a live datum with an extra field", live (liveFields ++ [.int 0])),
-  ("pending-five-fields", "a pending-termination datum with an extra field",
-    .constr 1 [.constr 1 [.bytes (utf8 aidE), .int 4, .int 2, keyMaterialData simpleKeys, .int 0]]),
+  ("pending-with-keys", "a pending-termination datum carrying key material, the earlier four-field layout",
+    .constr 1 [.constr 1 [.bytes (utf8 aidE), .int 4, .int 2, keyMaterialData simpleKeys]]),
   ("pending-negative-epoch", "a pending-termination datum with a negative epoch",
-    .constr 1 [.constr 1 [.bytes (utf8 aidE), .int 4, .int (-2), keyMaterialData simpleKeys]]),
+    .constr 1 [.constr 1 [.bytes (utf8 aidE), .int 4, .int (-2)]]),
   ("aid-integer", "the AID as an integer", withField 0 (.int 5)),
   ("sn-negative", "a negative sequence number", withField 1 (.int (-1))),
   ("epoch-bytes", "the epoch as a byte string", withField 2 (.bytes [])),
@@ -201,12 +201,13 @@ def table : Except String Json := do
     ("layout", Json.mkObj [
       ("CheckpointDatum", toJson "V1 = constructor 0 (refused); V2 = constructor 1 [CheckpointDatumV2]"),
       ("CheckpointDatumV2.Live", toJson "constructor 0 [aid: bytes, sn: int, epoch: int, poisoned: Bool, frozen: Bool, born_at: int, refund_to: bytes, keys: KeyMaterial]"),
-      ("CheckpointDatumV2.TerminationPending", toJson "constructor 1 [aid: bytes, sn: int, epoch: int, keys: KeyMaterial]"),
+      ("CheckpointDatumV2.TerminationPending", toJson "constructor 1 [aid: bytes, sn: int, epoch: int]; no key material"),
       ("KeyMaterial", toJson "constructor 0 [cur_keys: List<bytes>, cur_threshold: Threshold, next_keys: List<bytes>, next_threshold: Threshold, witnesses: List<bytes>, toad: int]"),
       ("Threshold", toJson "Unweighted = constructor 0 [int]; Weighted = constructor 1 [List<List<Weight>>]; Weight = constructor 0 [num: int, den: int]"),
       ("Bool", toJson "False = constructor 0 []; True = constructor 1 []"),
       ("aid", toJson "the AID's qualified CESR text bytes (UTF-8), as the registry key"),
-      ("pool", toJson "not in the datum: decoded as 0; the amount is held in the output's value")]),
+      ("pool", toJson "not in the datum: decoded as 0; the amount is held in the output's value"),
+      ("pendingSizeBound", toJson s!"{pendingSizeBound} bytes: the largest serialised TerminationPending datum for an AID of at most 44 bytes with sn and epoch below 2^64")]),
     ("accepted", Json.arr accepted.toArray),
     ("refused", Json.arr refused.toArray)])
 
@@ -309,7 +310,25 @@ def kindControls : Except String Nat := do
       count := count + 1
   pure count
 
-def checkTable (j : Json) : Except String (Nat × Nat × Nat × Nat) := do
+/-- Every committed pending-termination datum within the bound's premises (an AID of at most
+44 bytes, sequence number and epoch below 2^64) is at most `pendingSizeBound` bytes. Returns
+how many rows it measured, which must not be zero. -/
+def pendingSizes (rs : Array Json) : Except String Nat := do
+  let mut count := 0
+  for row in rs do
+    let id ← str row ["id"]
+    let some a := acceptedCases.find? (·.id == id) | throw s!"{id}: no such accepted case"
+    let .terminationPending h := a.state | continue
+    unless (utf8 a.aid).length ≤ 44 && h.sn < 18446744073709551616 && h.epoch < 18446744073709551616 do
+      continue
+    let bytes ← ofHex (← str row ["datum"])
+    unless bytes.length ≤ pendingSizeBound do
+      throw s!"{id}: a pending-termination datum of {bytes.length} bytes exceeds {pendingSizeBound}"
+    count := count + 1
+  if count == 0 then throw "no pending-termination row within the bound's premises"
+  pure count
+
+def checkTable (j : Json) : Except String (Nat × Nat × Nat × Nat × Nat) := do
   let accepted ← rows j "accepted"
   let refused ← rows j "refused"
   unless accepted.size == acceptedCases.length do throw "accepted count differs from the Lean cases"
@@ -317,6 +336,6 @@ def checkTable (j : Json) : Except String (Nat × Nat × Nat × Nat) := do
   for row in accepted do verifyAccepted row
   for row in refused do verifyRefused row
   let fields := (← fieldControls accepted verifyAccepted) + (← fieldControls refused verifyRefused)
-  pure (accepted.size, refused.size, fields, ← kindControls)
+  pure (accepted.size, refused.size, fields, ← kindControls, ← pendingSizes accepted)
 
 end CardanoKeri.CheckpointDatum.Vectors

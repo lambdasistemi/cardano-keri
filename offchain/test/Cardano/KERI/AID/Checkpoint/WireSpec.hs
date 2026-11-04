@@ -9,6 +9,7 @@ module Cardano.KERI.AID.Checkpoint.WireSpec (spec) where
 import Cardano.KERI.AID.Checkpoint.Advance (AdvanceEvidence (..))
 import Cardano.KERI.AID.Checkpoint.BountyCommitment (BountyRevealV1 (..))
 import Cardano.KERI.AID.Checkpoint.Datum (KeyMaterial (..))
+import Cardano.KERI.AID.Checkpoint.Deposit (BondOption (..))
 import Cardano.KERI.AID.Checkpoint.Enforcement (EnforcementEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Entitlement (EnforcementProofV1 (..))
 import Cardano.KERI.AID.Checkpoint.Freeze (FreezeEvidence (..))
@@ -166,9 +167,17 @@ spec = describe "#136 Register observer wire" $ do
                 , registrationEvidenceData evidence
                 ]
 
-    it "encodes the Advance arm at spend constructor zero with its payee output index" $
-        advanceSpendRedeemerData 4
-            `shouldBe` Constr 0 [I 4]
+    it "encodes the Advance arm at spend constructor zero with its payee output index and the keep option" $
+        advanceSpendRedeemerData 4 Keep
+            `shouldBe` Constr 0 [I 4, Constr 0 []]
+
+    it "encodes the Advance arm with the deposit option and its signatures" $
+        advanceSpendRedeemerData 4 (Deposit [(1, BS.replicate 64 0xa1)])
+            `shouldBe` Constr
+                0
+                [ I 4
+                , Constr 1 [List [List [I 1, B (BS.replicate 64 0xa1)]]]
+                ]
 
     it "forwards Advance evidence in the observer envelope for the named input" $
         advanceObserverRedeemerData

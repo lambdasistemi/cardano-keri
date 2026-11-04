@@ -16,6 +16,7 @@ import CheckpointTxBuilder (
     productionRegisterAdvanceScenario,
     productionRegisterConvictScenario,
     productionRegisterFreezeScenario,
+    productionRegisterFreezeThenDepositScenario,
     productionRegisterScenario,
     stagedCheckpointDevnet,
  )
@@ -41,3 +42,8 @@ spec = describe "#136 register a small identity end to end" $ do
         it
             "#345 freezes a checkpoint whose pool is below the premium on the controller's own next witnessed rotation"
             productionRegisterFreezeScenario
+
+    around stagedCheckpointDevnet $ do
+        it
+            "#345 restores the bond of a frozen checkpoint with the controller's deposit rotation, refuses a deposit whose intent names another amount, and the checkpoint is consumable again"
+            productionRegisterFreezeThenDepositScenario

@@ -422,6 +422,44 @@ check-checkpoint-freeze-vectors:
 check-freeze-mutants:
     nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/check-freeze-mutants.mjs
 
+# --- the deposit option of Advance (#345) ---
+
+# Regenerate the rows of the Lean deposit vectors with their signatures, for
+# both layers (the Aiken data module and its row tests, the Haskell module).
+gen-checkpoint-deposit-vectors:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-deposit-vectors.mjs
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/checkpoint/deposit_vectors.ak validators/checkpoint_register_deposit_vector_tests.ak
+
+# Drift check: the committed deposit rows equal the Lean vectors', re-encoded.
+check-checkpoint-deposit-vectors:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-deposit-vectors.mjs --check
+
+# Regenerate the deposit wire parity vectors from the Haskell encoders: the
+# bytes of the Advance spend redeemer with each bond option and of a deposit
+# intent beside the typed inputs the Aiken suite serialises and compares.
+gen-deposit-vectors:
+    mkdir -p onchain/lib/cardano_keri/checkpoint
+    cd offchain && nix develop --quiet --no-write-lock-file -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-deposit-vectors -- ../onchain/lib/cardano_keri/checkpoint/deposit_wire_vectors.ak'
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/checkpoint/deposit_wire_vectors.ak
+
+# Drift check: a fresh Haskell regenerate must reproduce the committed module.
+check-deposit-vectors: gen-deposit-vectors
+    git diff --exit-code onchain/lib/cardano_keri/checkpoint/deposit_wire_vectors.ak
+
+# One mutation control per premise of the deposit option: each changed check
+# must make a deposit test fail, and the harness's own controls must behave.
+check-deposit-mutants:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/check-deposit-mutants.mjs
+
+# Regenerate the deposit cells of the Lean corpus, for both layers.
+gen-checkpoint-deposit-corpus:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-deposit-corpus.mjs
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt validators/checkpoint_register_deposit_corpus_tests.ak
+
+# Drift check: the committed deposit cells equal the Lean corpus's.
+check-checkpoint-deposit-corpus:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-deposit-corpus.mjs --check
+
 # --- migration shared types (#254) ---
 
 # Regenerate the committed #254 shared migration-type parity vectors from the
@@ -708,7 +746,7 @@ ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3
 
 # Offchain CI gate (mirrors the Offchain + Dev shell jobs)
-ci-offchain: build-offchain unit deployment-unit indexer-unit query-algebra-check local-write-path-check backend-check backend-transcript-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-freeze-bond-vectors check-freeze-vectors check-migration-types-vectors check-bounty-commitment-vectors check-bounty-entitlement-vectors check-lean-traceability check-blaster-identity-consistency check-version-remnant-sweep
+ci-offchain: build-offchain unit deployment-unit indexer-unit query-algebra-check local-write-path-check backend-check backend-transcript-check query-endpoint-check query-endpoint-cache-guard check-ckeri-cli check-register-acceptance check-advance-acceptance check-close-acceptance check-board-acceptance hlint format-check-offchain devshell-offchain check-checkpoint-vectors check-enforcement-vectors check-registration-vectors check-advance-vectors check-freeze-bond-vectors check-freeze-vectors check-deposit-vectors check-migration-types-vectors check-bounty-commitment-vectors check-bounty-entitlement-vectors check-lean-traceability check-blaster-identity-consistency check-version-remnant-sweep
 
 # #259: shared flake-lock guard — declared/locked reconciliation, justfile +
 # workflow invocation guarding, and caller parity (INV-259-PARITY: required
@@ -725,7 +763,7 @@ check-flake-lock-guard:
 # --self-test) exercises the exact code this recipe runs, not a copy of it;
 # the guard's own INV-259-ASSERT caller-presence check requires this exact
 # invocation to remain in this recipe.
-ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken check-consumer-vectors check-consumer-identity-vectors check-checkpoint-datum-vectors check-checkpoint-writer-vectors check-checkpoint-freeze-vectors check-freeze-mutants ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
+ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken check-consumer-vectors check-consumer-identity-vectors check-checkpoint-datum-vectors check-checkpoint-writer-vectors check-checkpoint-freeze-vectors check-freeze-mutants check-deposit-mutants check-checkpoint-deposit-vectors check-checkpoint-deposit-corpus ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
     ./scripts/check-flake-lock-guard.sh --assert-lock-unchanged
 
 # #478: clean exact-compiler build and public proposition controls, identical to CI.

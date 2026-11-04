@@ -270,7 +270,7 @@ pub fn advance_predicate(
 // The distinct positions whose `(idx, sig)` verifies with `keys[idx]`
 // over `msg` (mirrors the S4 Haskell `IntSet.fromList` dedup; reused for
 // both V5's controller-signature gate and V7's receipt gate).
-fn verified_indices(
+pub fn verified_indices(
   keys: List<ByteArray>,
   msg: ByteArray,
   sigs: List<(Int, ByteArray)>,

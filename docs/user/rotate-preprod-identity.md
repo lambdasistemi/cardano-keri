@@ -5,7 +5,8 @@
     accepted design pays a hunter (anyone paid to land rotations) the premium
     `P`, the fee for landing one, from the owner's pool of advance funds, and
     a rotation carries `keep` or `deposit` (the unfreeze), signed by
-    the next keys. Play
+    the next keys. The deposit option is on a local test chain only: see
+    [Restore the freeze bond](#restore-the-freeze-bond). Play
     [Alice rotates, Hal lands it, Hal is paid](../simulator/index.html).
     There is no withdraw.
 
@@ -187,3 +188,39 @@ The separate
 2-of-5 controller with three witnesses and threshold two. Its under-signed,
 under-witnessed, and stale attempts each reach the deployed Plutus evaluator
 and fail. The transcript checker requires all three failures independently.
+
+## Restore the freeze bond
+
+!!! warning "Local test chain only"
+    The deposit option is not deployed to preprod; this code is not for mainnet.
+
+When a hunter froze the checkpoint because its pool could not pay the premium,
+the freeze bond `B` left with the hunter and the checkpoint cannot be consumed.
+The rotation the hunter presented is the controller's own: landing it with the
+deposit option restores the bond and unfreezes the checkpoint, in one
+transaction.
+
+Ask for the exact bytes the rotation's new keys must sign. The signing step
+writes `deposit-intent.cbor` beside `advance-message.cbor` and prints its path
+and sha256:
+
+```console
+ckeri advance --aid <AID> --kel rotation.cesr --store <STORE> --deposit --signing-package ./package
+```
+
+The new keys of the rotation sign `deposit-intent.cbor` as raw bytes. The
+signatures go in a file, one bare indexed CESR signature per line, in the format
+of `--controller-signatures`. Then submit the rotation with both files:
+
+```console
+ckeri advance --aid <AID> --kel rotation.cesr --store <STORE> \
+  --deposit --controller-signatures controller-signatures.txt \
+  --deposit-signatures deposit-signatures.txt \
+  --payer <KEY> --node-socket <SOCKET> --funding-address <ADDRESS>
+```
+
+The intent names the network, the checkpoint policy, the spent output, the
+identifier, the new sequence number, the new epoch and the amount, which is the
+bond when the checkpoint is frozen and zero when it is not. A signature made for
+another output, another rotation or another amount is refused, and so is a
+deposit signed by fewer keys than the rotation's threshold.

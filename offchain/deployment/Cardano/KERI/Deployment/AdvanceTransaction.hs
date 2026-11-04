@@ -20,6 +20,7 @@ module Cardano.KERI.Deployment.AdvanceTransaction (
     AdvanceObservationTimeout (..),
     AdvanceResult (..),
     mkAdvancePlan,
+    mkDepositPlan,
     mkAdvancePlanWith,
     premiumOutputIndex,
     runAdvanceTransaction,
@@ -28,6 +29,7 @@ module Cardano.KERI.Deployment.AdvanceTransaction (
 
 import Cardano.Crypto.Hash (hashFromBytes)
 import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (..))
+import Cardano.KERI.AID.Checkpoint.Deposit (BondOption (..))
 import Cardano.KERI.AID.Checkpoint.Message (SpentCheckpoint (..))
 import Cardano.KERI.AID.Checkpoint.Value (RotationSettlement (..))
 import Cardano.KERI.AID.Checkpoint.Wire (
@@ -191,10 +193,30 @@ instance ToData RawData where
     toBuiltinData (RawData datum) = BuiltinData datum
 
 mkAdvancePlan :: Manifest -> AdvancePackage -> Either String AdvancePlan
-mkAdvancePlan =
+mkAdvancePlan = mkAdvancePlanBond Keep
+
+{- | The plan of an Advance that deposits the bond, with the signatures of the
+new keys over the package's deposit intent. A package that carries no intent
+(one made for the keep option) is refused.
+-}
+mkDepositPlan ::
+    Manifest ->
+    AdvancePackage ->
+    [(Int, ByteString)] ->
+    Either String AdvancePlan
+mkDepositPlan manifest package signatures = do
+    maybe
+        (Left "the package carries no deposit intent: it was made for the keep option")
+        (const (Right ()))
+        (advanceDepositIntent package)
+    mkAdvancePlanBond (Deposit signatures) manifest package
+
+mkAdvancePlanBond ::
+    BondOption -> Manifest -> AdvancePackage -> Either String AdvancePlan
+mkAdvancePlanBond bond =
     mkAdvancePlanWith $ \policy package ->
         let spent = advanceSpent package
-         in ( advanceSpendRedeemerData premiumOutputIndex
+         in ( advanceSpendRedeemerData premiumOutputIndex bond
             , advanceObserverRedeemerData
                 policy
                 (scTxid spent)

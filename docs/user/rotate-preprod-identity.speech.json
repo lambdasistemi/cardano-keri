@@ -9,7 +9,7 @@
       "pause": 400
     },
     {
-      "text": "This page is the V1 ckeri advance that ships on preprod. The accepted design pays a hunter (anyone paid to land rotations) the premium P, the fee for landing one, from the owner's pool of advance funds, and a rotation carries keep or deposit (the unfreeze), signed by the next keys. Play Alice rotates, Hal lands it, Hal is paid. There is no withdraw.",
+      "text": "This page is the V1 ckeri advance that ships on preprod. The accepted design pays a hunter (anyone paid to land rotations) the premium P, the fee for landing one, from the owner's pool of advance funds, and a rotation carries keep or deposit (the unfreeze), signed by the next keys. The deposit option is on a local test chain only: see Restore the freeze bond. Play Alice rotates, Hal lands it, Hal is paid. There is no withdraw.",
       "pause": 400
     },
     {
@@ -155,8 +155,38 @@
       "pause": 400
     }
   ],
+  "restore-the-freeze-bond": [
+    {
+      "text": "Restore the freeze bond.",
+      "pause": 500
+    },
+    {
+      "text": "Local test chain only",
+      "pause": 400
+    },
+    {
+      "text": "The deposit option is not deployed to preprod; this code is not for mainnet.",
+      "pause": 400
+    },
+    {
+      "text": "When a hunter froze the checkpoint because its pool could not pay the premium, the freeze bond B left with the hunter and the checkpoint cannot be consumed. The rotation the hunter presented is the controller's own: landing it with the deposit option restores the bond and unfreezes the checkpoint, in one transaction.",
+      "pause": 400
+    },
+    {
+      "text": "Ask for the exact bytes the rotation's new keys must sign. The signing step writes deposit-intent.cbor beside advance-message.cbor and prints its path and sha256:",
+      "pause": 400
+    },
+    {
+      "text": "The new keys of the rotation sign deposit-intent.cbor as raw bytes. The signatures go in a file, one bare indexed CESR signature per line, in the format of --controller-signatures. Then submit the rotation with both files:",
+      "pause": 400
+    },
+    {
+      "text": "The intent names the network, the checkpoint policy, the spent output, the identifier, the new sequence number, the new epoch and the amount, which is the bond when the checkpoint is frozen and zero when it is not. A signature made for another output, another rotation or another amount is refused, and so is a deposit signed by fewer keys than the rotation's threshold.",
+      "pause": 400
+    }
+  ],
   "_source": {
     "file": "rotate-preprod-identity.md",
-    "sha256": "39c3245fcf0ba6afa13e2b3c41cbbc50319995213069bd65b8f371b9d0bf2ddd"
+    "sha256": "83f052d9daddb4ff6bfb591d70af3eda71b35f3533e1e9044ee95f670024371a"
   }
 }

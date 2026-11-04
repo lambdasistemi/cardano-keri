@@ -68,6 +68,7 @@ library
     Cardano.KERI.AID.Checkpoint.Advance
     Cardano.KERI.AID.Checkpoint.BountyCommitment
     Cardano.KERI.AID.Checkpoint.Datum
+    Cardano.KERI.AID.Checkpoint.Deposit
     Cardano.KERI.AID.Checkpoint.Enforcement
     Cardano.KERI.AID.Checkpoint.Entitlement
     Cardano.KERI.AID.Checkpoint.Freeze
@@ -902,6 +903,9 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.BountyCommitmentSpec
     Cardano.KERI.AID.Checkpoint.DatumSpec
     Cardano.KERI.AID.Checkpoint.DatumV2Spec
+    Cardano.KERI.AID.Checkpoint.DepositCorpus
+    Cardano.KERI.AID.Checkpoint.DepositSpec
+    Cardano.KERI.AID.Checkpoint.DepositVectors
     Cardano.KERI.AID.Checkpoint.EnforcementSpec
     Cardano.KERI.AID.Checkpoint.EntitlementSpec
     Cardano.KERI.AID.Checkpoint.FixtureLoader
@@ -998,6 +1002,19 @@ executable gen-freeze-vectors
   default-language: GHC2021
   hs-source-dirs:   app
   main-is:          GenFreezeVectors.hs
+  build-depends:
+    , base
+    , bytestring
+    , cardano-keri
+    , memory        >=0.18 && <0.19
+    , plutus-core
+    , plutus-tx
+
+executable gen-deposit-vectors
+  import:           warnings
+  default-language: GHC2021
+  hs-source-dirs:   app
+  main-is:          GenDepositVectors.hs
   build-depends:
     , base
     , bytestring

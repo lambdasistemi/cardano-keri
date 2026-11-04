@@ -30,6 +30,7 @@ module CheckpointTxBuilder (
     productionRegisterAdvanceScenario,
     productionRegisterConvictScenario,
     productionRegisterFreezeScenario,
+    productionRegisterFreezeThenDepositScenario,
     buildAdvanceTx,
 ) where
 
@@ -71,6 +72,17 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     keyMaterialOf,
     liveOfKeyState,
     rotatedLive,
+ )
+import Cardano.KERI.AID.Checkpoint.Deposit (
+    BondOption (..),
+    DepositFacts (..),
+    DepositInput (..),
+    DepositIntent (..),
+    DepositParams (..),
+    DepositRefusal,
+    depositIntentPreimage,
+    depositVerdict,
+    requiredIntent,
  )
 import Cardano.KERI.AID.Checkpoint.Enforcement (EnforcementEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Entitlement (
@@ -1018,48 +1030,9 @@ freeze settles a frozen datum on the old keys and pays the bond.
 productionRegisterFreezeScenario :: CheckpointEnv -> IO ()
 productionRegisterFreezeScenario env = do
     fixture <- loadConvictStoryFixture
-    let firstRotation = fsFirstRotation fixture
-        laterRotation = fsResponseRotation fixture
-    (registered, checkpointRef) <-
-        productionRegisterScenarioWithReference env (rsRegistration firstRotation)
-    advanceRef <-
-        requireJust
-            "observer_advance reference was not deployed during setup"
-            (envAdvanceReference env)
-    let firstEvidence =
-            signedRotateEvidence
-                env
-                registered
-                firstRotation
-                (rsRotationSigners firstRotation)
-                (aeWitReceipts (rsUnsignedEvidence firstRotation))
-    firstAdvanceTxId <-
-        submitTwoPassAdvance
-            env
-            "Freeze setup Advance"
-            checkpointRef
-            advanceRef
-            registered
-            (rsCreated firstRotation)
-            firstEvidence
-    firstAdvancedUtxo <-
-        pollOutput
-            (envProvider env)
-            firstAdvanceTxId
-            [0, 1]
-            ( hasAsset
-                (envCheckpointPolicy env)
-                (deriveAidAssetName (cdCesrAid (rsCreated firstRotation)))
-            )
-            >>= requireJust "Freeze setup Advance did not settle"
-    advanced <-
-        settledAdvance
-            env
-            "Freeze setup Advance"
-            registered
-            (rsCreated firstRotation)
-            firstAdvanceTxId
-            firstAdvancedUtxo
+    let laterRotation = fsResponseRotation fixture
+    (checkpointRef, advanceRef, advanced) <-
+        advanceOnceForRotationStory env fixture
     let created = rsCreated laterRotation
         honest =
             signedRotateEvidence
@@ -1124,6 +1097,59 @@ productionRegisterFreezeScenario env = do
     unless (Map.null remaining) $
         fail "Freeze left the advanced checkpoint input unspent"
     dbg ("Freeze settled; tx id=" <> show freezeTxId)
+
+{- | Register the story's identity and land its first rotation with the keep
+option: the shared start of the freeze and the deposit journeys, which leaves
+the pool below the premium. Returns the checkpoint and observer references and
+the settled advanced checkpoint.
+-}
+advanceOnceForRotationStory ::
+    CheckpointEnv ->
+    ConvictStoryFixture ->
+    IO ((TxIn, TxOut ConwayEra), (TxIn, TxOut ConwayEra), CheckpointInput)
+advanceOnceForRotationStory env fixture = do
+    let firstRotation = fsFirstRotation fixture
+    (registered, checkpointRef) <-
+        productionRegisterScenarioWithReference env (rsRegistration firstRotation)
+    advanceRef <-
+        requireJust
+            "observer_advance reference was not deployed during setup"
+            (envAdvanceReference env)
+    let firstEvidence =
+            signedRotateEvidence
+                env
+                registered
+                firstRotation
+                (rsRotationSigners firstRotation)
+                (aeWitReceipts (rsUnsignedEvidence firstRotation))
+    firstAdvanceTxId <-
+        submitTwoPassAdvance
+            env
+            "Freeze setup Advance"
+            checkpointRef
+            advanceRef
+            registered
+            (rsCreated firstRotation)
+            firstEvidence
+    firstAdvancedUtxo <-
+        pollOutput
+            (envProvider env)
+            firstAdvanceTxId
+            [0, 1]
+            ( hasAsset
+                (envCheckpointPolicy env)
+                (deriveAidAssetName (cdCesrAid (rsCreated firstRotation)))
+            )
+            >>= requireJust "Freeze setup Advance did not settle"
+    advanced <-
+        settledAdvance
+            env
+            "Freeze setup Advance"
+            registered
+            (rsCreated firstRotation)
+            firstAdvanceTxId
+            firstAdvancedUtxo
+    pure (checkpointRef, advanceRef, advanced)
 
 {- | What a settled freeze left: the successor at the ACTIVE address carrying
 the exact frozen datum on the old keys and the minimum ADA, the deposit and the
@@ -2383,7 +2409,7 @@ advanceOp evidence =
                     (settlementPoolAfter settlement)
                 , settlementPaid settlement
                 )
-        , roSpendRedeemer = advanceSpendRedeemerData premiumOutputIndex
+        , roSpendRedeemer = advanceSpendRedeemerData premiumOutputIndex Keep
         , roObserverRedeemer = \policy txid index ->
             advanceObserverRedeemerData policy txid index evidence
         }
@@ -2420,6 +2446,48 @@ freezeOp rotated evidence =
                     , feRotatedSn = cdNativeSn rotated
                     , feRotation = evidence
                     }
+        }
+
+{- | The Deposit of a frozen checkpoint on this rotation evidence, with the
+signatures of the rotation's new keys over the deposit intent: the rotated
+datum unfrozen, holding the minimum ADA, the deposit, the freeze bond and the
+pool that is left after the premium.
+-}
+depositOp :: AdvanceEvidence -> [(Int, ByteString)] -> RotationOp
+depositOp evidence signatures =
+    RotationOp
+        { roSettle = \input successor -> do
+            settlement <-
+                requireJust
+                    "Deposit: the checkpoint is not a live output holding its floor"
+                    ( rotationSettlement
+                        checkpointMinAda
+                        registrationBond
+                        freezeBond
+                        premium
+                        (checkpointFacts input)
+                        (unCoin (snd (checkpointUtxo input) ^. coinTxOutL))
+                    )
+            rotated <-
+                requireJust
+                    "Deposit: the checkpoint is not live"
+                    (rotatedLive (checkpointFacts input) successor)
+            let successorFacts = case rotated of
+                    live@Live{} -> live{lvFrozen = False}
+                    other -> other
+            pure
+                ( successorFacts
+                , heldValue
+                    checkpointMinAda
+                    registrationBond
+                    freezeBond
+                    successorFacts
+                    (settlementPoolAfter settlement)
+                , settlementPaid settlement
+                )
+        , roSpendRedeemer = advanceSpendRedeemerData premiumOutputIndex (Deposit signatures)
+        , roObserverRedeemer = \policy txid index ->
+            advanceObserverRedeemerData policy txid index evidence
         }
 
 freezeParams :: FreezeParams
@@ -2482,10 +2550,17 @@ buildRotationTxWith op budgets env checkpointRef advanceRef input successor vali
             [ mkBasicTxOut (envOwner env) (inject (Coin payeeLovelace))
             | payeeLovelace > 0
             ]
+        -- What the successor and the payee hold beyond the spent output comes
+        -- from the fee input: nothing for an Advance or a Freeze, the freeze
+        -- bond for a deposit on a frozen checkpoint.
+        inflow =
+            successorLovelace
+                + payeeLovelace
+                - unCoin (snd (checkpointUtxo input) ^. coinTxOutL)
         changeOut =
             mkBasicTxOut
                 (envOwner env)
-                (addLovelace (-scriptFee) (feeOut ^. valueTxOutL))
+                (addLovelace (-(scriptFee + inflow)) (feeOut ^. valueTxOutL))
         redeemers =
             Redeemers $
                 Map.fromList
@@ -3217,7 +3292,7 @@ buildAdvanceTx env input successor validity = do
     buildCheckpointSpend
         env
         input
-        (advanceSpendRedeemerData premiumOutputIndex)
+        (advanceSpendRedeemerData premiumOutputIndex Keep)
         validity
         [ mkStateOutput
             env
@@ -4192,3 +4267,236 @@ settledAdvance env row before created advanceTxId utxo = do
             , checkpointDatum = created
             , checkpointFacts = expected
             }
+
+{- | #345: the connected journey register, advance, freeze, then the deposit
+rotation that restores the bond and makes the checkpoint consumable again.
+
+The controller's later witnessed rotation is first presented by a hunter as a
+freeze, which leaves the datum on the old keys and sets the frozen flag. The
+same rotation then lands as a deposit, signed over the deposit intent of the
+frozen output by the rotation's new keys. The refusals are judged by the
+production scripts: an intent that names another amount, an intent for another
+output, signatures by the spent keys, and one signature below the threshold.
+The accepted deposit settles the rotated datum unfrozen on the new keys,
+holding the minimum ADA, the deposit, the bond and the pool.
+
+"Consumable again" is what the deposit decides: the settled datum is neither
+frozen nor poisoned, where the frozen output was not. The maturity window is a
+consumer's parameter over the unchanged birth slot, and no consumer transaction
+is run against the output.
+-}
+productionRegisterFreezeThenDepositScenario :: CheckpointEnv -> IO ()
+productionRegisterFreezeThenDepositScenario env = do
+    fixture <- loadConvictStoryFixture
+    let laterRotation = fsResponseRotation fixture
+        created = rsCreated laterRotation
+    (checkpointRef, advanceRef, advanced) <-
+        advanceOnceForRotationStory env fixture
+    let honest =
+            signedRotateEvidence
+                env
+                advanced
+                laterRotation
+                (rsRotationSigners laterRotation)
+                (aeWitReceipts (rsUnsignedEvidence laterRotation))
+    freezeTxId <-
+        submitTwoPassRotation
+            (freezeOp created honest)
+            env
+            "checkpoint Freeze (deposit journey)"
+            checkpointRef
+            advanceRef
+            advanced
+            created
+            Nothing
+    frozenUtxo <-
+        pollOutput
+            (envProvider env)
+            freezeTxId
+            [0, 1]
+            (hasAsset (envCheckpointPolicy env) (deriveAidAssetName (cdCesrAid created)))
+            >>= requireJust "Freeze successor did not settle"
+    settledFreeze env "Freeze" advanced freezeTxId frozenUtxo
+    frozenFacts <-
+        requireJust
+            "the advanced checkpoint was not freezable"
+            (frozenLive (checkpointFacts advanced))
+    let frozen =
+            CheckpointInput
+                { checkpointUtxo = frozenUtxo
+                , checkpointDatum = checkpointDatum advanced
+                , checkpointFacts = frozenFacts
+                }
+    when (notFrozenNorPoisoned frozenFacts) $
+        fail "the frozen checkpoint is already consumable"
+    let (spentTx, spentIx) = spentOutputBytes frozen
+        intentAt (txBytes, ix) deposit =
+            fmap
+                (\intent -> depositIntentPreimage intent{diDeposit = deposit})
+                ( requiredIntent
+                    freezeBond
+                    DepositFacts
+                        { dfNetworkId = 0
+                        , dfPolicy = policyBytes (envCheckpointPolicy env)
+                        , dfTxId = txBytes
+                        , dfOutputIndex = ix
+                        }
+                    frozenFacts
+                    (cdNativeSn created)
+                )
+        intentFor ref deposit =
+            requireJust "the frozen checkpoint has no deposit intent" (intentAt ref deposit)
+        newKeys = rsRotationSigners laterRotation
+    required <- intentFor (spentTx, spentIx) freezeBond
+    namesNothing <- intentFor (spentTx, spentIx) 0
+    otherOutput <- intentFor (spentTx, spentIx + 1) freezeBond
+    let good = indexedSignaturesOver required newKeys
+        rejected label signatures =
+            rejectRotation
+                (depositOp honest signatures)
+                env
+                checkpointRef
+                advanceRef
+                frozen
+                created
+                label
+    -- The Haskell verdict accepts the deposit the production scripts are about
+    -- to judge, and refuses the one that names another amount.
+    depositVerdictOf env frozen created honest good
+        >>= either (fail . ("the Haskell verdict refuses the honest deposit: " <>) . show) pure
+    depositVerdictOf env frozen created honest (indexedSignaturesOver namesNothing newKeys)
+        >>= either (const (pure ())) (const (fail "the Haskell verdict accepts a deposit that names another amount"))
+    sequence_
+        [ rejected "Deposit names another amount" (indexedSignaturesOver namesNothing newKeys)
+        , rejected "Deposit signed for another output" (indexedSignaturesOver otherOutput newKeys)
+        , rejected
+            "Deposit signed by the spent keys"
+            (indexedSignaturesOver required (rsCurrentSigners laterRotation))
+        , rejected "Deposit below the threshold" (take 1 good)
+        ]
+    depositTxId <-
+        submitTwoPassRotation
+            (depositOp honest good)
+            env
+            "checkpoint Deposit"
+            checkpointRef
+            advanceRef
+            frozen
+            created
+            Nothing
+    depositUtxo <-
+        pollOutput
+            (envProvider env)
+            depositTxId
+            [0, 1]
+            (hasAsset (envCheckpointPolicy env) (deriveAidAssetName (cdCesrAid created)))
+            >>= requireJust "Deposit successor did not settle"
+    settledDeposit env "Deposit" frozen created depositUtxo
+    remaining <-
+        withinSecs 30 "query the frozen checkpoint input" $
+            queryUTxOByTxIn
+                (envProvider env)
+                (Set.singleton (fst (checkpointUtxo frozen)))
+    unless (Map.null remaining) $
+        fail "Deposit left the frozen checkpoint input unspent"
+    dbg ("Deposit settled; tx id=" <> show depositTxId)
+
+-- | Neither frozen nor poisoned: what a deposit decides of a live checkpoint.
+notFrozenNorPoisoned :: CheckpointDatumV2 -> Bool
+notFrozenNorPoisoned = \case
+    Live{lvFrozen = False, lvPoisoned = False} -> True
+    _ -> False
+
+-- | The transaction id and output index of the spent output, as bytes and an integer.
+spentOutputBytes :: CheckpointInput -> (ByteString, Integer)
+spentOutputBytes input = case fst (checkpointUtxo input) of
+    TxIn (TxId safeHash) (TxIx outputIndex) ->
+        (hashToBytes (extractHash safeHash), fromIntegral outputIndex)
+
+{- | The Haskell verdict of the deposit the journey is about to submit, from
+the chain's own view of the frozen output and what the deposit settles.
+-}
+depositVerdictOf ::
+    CheckpointEnv ->
+    CheckpointInput ->
+    KeyStateView ->
+    AdvanceEvidence ->
+    [(Int, ByteString)] ->
+    IO (Either DepositRefusal ())
+depositVerdictOf env input successor evidence signatures = do
+    (successorFacts, successorLovelace, payee) <-
+        roSettle (depositOp evidence signatures) input successor
+    let (spentTx, spentIx) = spentOutputBytes input
+    pure $
+        depositVerdict
+            DepositParams
+                { dpNetworkId = 0
+                , dpMinAda = checkpointMinAda
+                , dpDeposit = registrationBond
+                , dpBond = freezeBond
+                , dpPremium = premium
+                }
+            DepositInput
+                { dnPolicy = policyBytes (envCheckpointPolicy env)
+                , dnSpentTxId = spentTx
+                , dnSpentIndex = spentIx
+                , dnSpentDatum = checkpointFacts input
+                , dnSpentLovelace = unCoin (snd (checkpointUtxo input) ^. coinTxOutL)
+                , dnSuccessorDatum = successorFacts
+                , dnSuccessorLovelace = successorLovelace
+                , dnPayeeLovelace = if payee > 0 then Just payee else Nothing
+                , dnMinted = False
+                , dnSignatures = signatures
+                , dnRotation = evidence
+                }
+
+{- | What a settled deposit left: the successor at the ACTIVE address carrying
+the exact rotated datum unfrozen on the new keys, holding the minimum ADA, the
+deposit, the freeze bond and the pool, and not frozen where the spent output was.
+-}
+settledDeposit ::
+    CheckpointEnv ->
+    String ->
+    CheckpointInput ->
+    KeyStateView ->
+    (TxIn, TxOut ConwayEra) ->
+    IO ()
+settledDeposit env row before created utxo = do
+    settlement <-
+        requireJust
+            (row <> ": the frozen checkpoint was not a live output holding its floor")
+            ( rotationSettlement
+                checkpointMinAda
+                registrationBond
+                freezeBond
+                premium
+                (checkpointFacts before)
+                (unCoin (snd (checkpointUtxo before) ^. coinTxOutL))
+            )
+    rotated <-
+        requireJust
+            (row <> ": the frozen checkpoint was not live")
+            (rotatedLive (checkpointFacts before) created)
+    let expected = case rotated of
+            live@Live{} -> live{lvFrozen = False}
+            other -> other
+    unless
+        (snd utxo ^. addrTxOutL == roleAddress env Active)
+        (fail (row <> ": successor is not at the ACTIVE address"))
+    case extractDatum (snd utxo) of
+        Just (V2 facts)
+            | facts == expected -> pure ()
+        _ -> fail (row <> ": successor does not carry the exact rotated, unfrozen version 2 datum")
+    unless
+        (notFrozenNorPoisoned expected)
+        (fail (row <> ": the settled checkpoint is still frozen or poisoned"))
+    unless
+        ( unCoin (snd utxo ^. coinTxOutL)
+            == heldValue
+                checkpointMinAda
+                registrationBond
+                freezeBond
+                expected
+                (settlementPoolAfter settlement)
+        )
+        (fail (row <> ": successor lovelace is not the minimum ADA, the deposit, the bond and the pool"))

@@ -179,7 +179,7 @@ import Data.Function ((&))
 import Data.Functor (void)
 import Data.Functor.Identity (Identity (..), runIdentity)
 import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef, writeIORef)
-import Data.List (find, isSuffixOf)
+import Data.List (find, isInfixOf, isSuffixOf)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromJust)
 import Data.Text (Text)
@@ -199,7 +199,7 @@ import System.Directory (createDirectoryIfMissing, doesDirectoryExist, listDirec
 import System.Environment (lookupEnv)
 import System.FilePath ((</>))
 import System.IO.Temp (withSystemTempDirectory)
-import Test.Hspec (Spec, describe, expectationFailure, it, shouldBe, shouldNotBe)
+import Test.Hspec (Spec, describe, expectationFailure, it, shouldBe, shouldNotBe, shouldSatisfy)
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck (
     Gen,
@@ -766,6 +766,42 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                         (entrypointAdvanceSeed rotation Nothing)
                         (entrypointAdvance kelPath signatures)
                         expectCompletePhase
+
+            it
+                "runAdvanceWith with the deposit option reaches its builder boundary having acquired exactly once"
+                $ do
+                    rotation <- entrypointRotationExport
+                    kelPath <-
+                        getDataFileName
+                            "deployment-test/fixtures/kli-export-2-of-5-rotation.cesr"
+                    signatures <-
+                        entrypointSignatureTokens 2 "kli-export-2-of-5-rotation.cesr"
+                    withBoundaryProbe
+                        (entrypointAdvanceSeed rotation Nothing)
+                        (entrypointAdvanceWith True True kelPath signatures)
+                        expectCompletePhase
+
+            it
+                "runAdvanceWith refuses deposit signatures without the deposit option, before acquiring anything"
+                $ do
+                    rotation <- entrypointRotationExport
+                    kelPath <-
+                        getDataFileName
+                            "deployment-test/fixtures/kli-export-2-of-5-rotation.cesr"
+                    signatures <-
+                        entrypointSignatureTokens 2 "kli-export-2-of-5-rotation.cesr"
+                    withBoundaryProbe
+                        (entrypointAdvanceSeed rotation Nothing)
+                        (entrypointAdvanceWith False True kelPath signatures)
+                        ( \probe outcome -> do
+                            expectIncompletePhase probe outcome
+                            acquisitions <- readIORef (probeAcquisitions probe)
+                            acquisitions `shouldBe` 0
+                            either
+                                ((`shouldSatisfy` ("--deposit-signatures applies only with --deposit" `isInfixOf`)) . show)
+                                (const (expectationFailure "the entrypoint accepted deposit signatures without --deposit"))
+                                outcome
+                        )
 
             it
                 "runAdvanceWith does NOT reach its builder boundary when one manifest reference output is withheld"
@@ -1942,7 +1978,22 @@ entrypointAdvance ::
     BoundaryProbe ->
     RunTransaction IO cf Cols op ->
     IO ()
-entrypointAdvance kelPath signatures probe runner =
+entrypointAdvance = entrypointAdvanceWith False False
+
+{- | The same, with the bond option the settings name: whether the bond is
+deposited, and whether the deposit signatures are supplied (the controller's
+signatures over the intent are the same tokens, which the entrypoint only
+parses).
+-}
+entrypointAdvanceWith ::
+    Bool ->
+    Bool ->
+    FilePath ->
+    ByteString ->
+    BoundaryProbe ->
+    RunTransaction IO cf Cols op ->
+    IO ()
+entrypointAdvanceWith deposit depositSignatures kelPath signatures probe runner =
     withSystemTempDirectory "ckeri-advance-entrypoint" $ \dir -> do
         let manifestPath = dir </> "manifest.json"
             sigPath = dir </> "controller-signatures.txt"
@@ -1958,6 +2009,9 @@ entrypointAdvance kelPath signatures probe runner =
                 , advanceKel = kelPath
                 , advanceSigningPackage = Nothing
                 , advanceControllerSignatures = Just sigPath
+                , advanceDeposit = deposit
+                , advanceDepositSignatures =
+                    if depositSignatures then Just sigPath else Nothing
                 , advancePayer = Just "unused-payer"
                 , advanceNodeSocket = Just "unused-node-socket"
                 , advanceFundingAddress = Just entrypointFundingAddressText

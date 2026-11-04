@@ -253,7 +253,7 @@ const refusedTheorem = {
   'unknown-form': 'unknown_form_refused',
   'live-seven-fields': 'live_arity_refused',
   'live-nine-fields': 'live_arity_refused',
-  'pending-five-fields': 'pending_arity_refused',
+  'pending-with-keys': 'pending_arity_refused',
   'pending-negative-epoch': 'pending_fields_typed',
   'not-a-constructor': 'decode_accepts_only_written',
   'trailing-byte': 'decode_accepts_only_written',

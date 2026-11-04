@@ -133,15 +133,15 @@ aritySpec = describe "compiled argument counts" $ do
                 "checkpoint_observer.observer_advance.withdraw"
                 blueprint
                 `shouldBe` Just 1
-    it "gives the combined register eight applied parameters" $
-        -- The five observer credentials and the three deployment integers.
+    it "gives the combined register nine applied parameters" $
+        -- The five observer credentials and the four deployment integers.
         -- The constructor still fails closed on declared vs supplied arity;
         -- this row records the declaration the plan must match.
         withBlueprint $ \blueprint ->
             validatorParameterCount
                 "checkpoint_register.checkpoint_register.mint"
                 blueprint
-                `shouldBe` Just 8
+                `shouldBe` Just 9
     it "declares no freeze window on any checkpoint program" $
         withBlueprint $ \blueprint -> do
             let checkpointPrograms =

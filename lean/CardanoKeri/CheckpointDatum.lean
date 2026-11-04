@@ -13,11 +13,15 @@ Layout (constructor indices and field order are protocol surface):
   facts and is refused here); `V2` is constructor 1 with one field.
 * `CheckpointDatumV2.Live` (constructor 0, eight fields): `aid`, `sn`, `epoch`,
   `poisoned`, `frozen`, `born_at`, `refund_to`, `keys`.
-* `CheckpointDatumV2.TerminationPending` (constructor 1, four fields): `aid`,
-  `sn`, `epoch`, `keys`.
+* `CheckpointDatumV2.TerminationPending` (constructor 1, three fields): `aid`,
+  `sn`, `epoch`. No key material: no step reads the keys of a pending
+  checkpoint, and its output holds the fixed minimum ADA `Mc`, which the ledger
+  minimum of an output with a datum of unbounded size could exceed. The key
+  state at conviction stays readable in the spent live output. The serialised
+  size is bounded (`pendingSizeBound`).
 * `KeyMaterial` (constructor 0, six fields): `cur_keys`, `cur_threshold`,
   `next_keys`, `next_threshold`, `witnesses`, `toad`, with the types of the
-  version 1 record. The model does not read them.
+  version 1 record. Only the live form carries it. The model does not read it.
 * Booleans are Aiken's: `False` constructor 0, `True` constructor 1, no fields.
 
 Facts in the datum, amounts in the value. The datum carries the facts of a
@@ -195,7 +199,7 @@ abbrev Weight := Int × Int
 inductive Threshold where
   | unweighted (m : Int)
   | weighted (clauses : List (List Weight))
-  deriving Repr, DecidableEq
+  deriving Repr, DecidableEq, Inhabited
 
 /-- The key material a checkpoint carries and the model does not read. -/
 structure KeyMaterial where
@@ -205,7 +209,7 @@ structure KeyMaterial where
   nextThreshold : Threshold
   witnesses : List (List Nat)
   toad : Int
-  deriving Repr, DecidableEq
+  deriving Repr, DecidableEq, Inhabited
 
 def boolData : Bool → Data
   | false => .constr 0 []
@@ -224,15 +228,22 @@ def keyMaterialData (k : KeyMaterial) : Data :=
     thresholdData k.nextThreshold, bytesListData k.witnesses, .int k.toad]
 
 /-- The version 2 datum of a checkpoint state that has an output, for the AID
-and key material it carries. A state without an output has no datum. The pool
-is not written: it is an amount held in the value. -/
+it carries and, when live, its key material. A state without an output has no
+datum. The pool is not written: it is an amount held in the value. A pending
+termination carries no key material. -/
 def datum (aid : AID) (k : KeyMaterial) : State → Option Data
   | .present l => some (.constr 1 [.constr 0 [.bytes (unpack aid), .int l.sn, .int l.epoch,
       boolData l.poisoned, boolData l.frozen, .int l.bornAt, .bytes (unpack l.refundTo),
       keyMaterialData k]])
   | .terminationPending h => some (.constr 1 [.constr 1 [.bytes (unpack aid), .int h.sn,
-      .int h.epoch, keyMaterialData k]])
+      .int h.epoch]])
   | .absent | .convicted => none
+
+/-- The largest serialised pending-termination datum, in bytes, for an AID of
+at most 44 bytes of qualified CESR text (the width of the one-character codes)
+with a sequence number and an epoch below 2^64 (`pending_size_le_bound`). The
+minimum ADA `Mc` is checked against an output carrying a datum of this size. -/
+def pendingSizeBound : Nat := 72
 
 /-! ## The decoder -/
 
@@ -290,11 +301,10 @@ def decodeData : Data → Option DecodedDatum
     let refundTo ← byteString? refundTo
     let _ ← keyMaterial? keys
     pure ⟨pack aid, .present ⟨sn, epoch, poisoned, frozen, bornAt, pack refundTo, 0⟩⟩
-  | .constr 1 [.constr 1 [aid, sn, epoch, keys]] => do
+  | .constr 1 [.constr 1 [aid, sn, epoch]] => do
     let aid ← byteString? aid
     let sn ← nat? sn
     let epoch ← nat? epoch
-    let _ ← keyMaterial? keys
     pure ⟨pack aid, .terminationPending ⟨epoch, sn⟩⟩
   | _ => none
 

@@ -8,6 +8,9 @@ import Cardano.Crypto.Hash.Class (
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
     CheckpointDatumV1 (..),
+    CheckpointDatumV2,
+    convictedOf,
+    liveOfKeyState,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
     deriveAidAssetName,
@@ -87,6 +90,7 @@ import Data.Function (
     (&),
  )
 import Data.Map.Strict qualified as Map
+import Data.Maybe (fromJust)
 import Data.Text (
     Text,
  )
@@ -107,7 +111,6 @@ import PlutusTx.IsData.Class (
 import Test.Hspec (
     Spec,
     describe,
-    expectationFailure,
     it,
     shouldBe,
     shouldSatisfy,
@@ -124,7 +127,12 @@ spec = describe "decodeCheckpointOutput" $ do
                     , crTxIn = sampleTxIn
                     , crAddress = sampleIndexerAddress
                     , crDatum = sampleDatum
+                    , crFacts = liveOfKeyState "" 0 sampleDatum
                     }
+
+    it "does not decode a convicted checkpoint (termination pending) as a record" $
+        decodeCase positiveCase{caseDatum = inlineDatum (plutusData $ V2 pendingSample)}
+            `shouldBe` Left TerminationPendingOutput
 
     it "rejects undecodable TxOut bytes with TxOutUndecodable" $
         decodeCheckpointOutput
@@ -192,7 +200,7 @@ spec = describe "decodeCheckpointOutput" $ do
                 }
             `shouldBe` Left MultipleCheckpointAssets
 
-    it "decodes real M1 chain components in a locally assembled TxOut envelope" $ do
+    it "refuses the retired version 1 datum of a real M1 chain component in a locally assembled TxOut envelope" $ do
         -- Koios captured the tx input, address, value, policy, asset name and
         -- inline datum. There was no preprod node socket, so only the Conway
         -- era-serialised TxOut envelope is assembled locally.
@@ -223,14 +231,10 @@ spec = describe "decodeCheckpointOutput" $ do
         serialiseAddr ledgerAddress `shouldBe` rawAddress
         fixtureAddressBech32 fixture
             `shouldBe` "addr_test1wqxpdsfvar9xppev4h25t5fg9uraeya46g4pxnjyy564wdqhr6822"
-        case decodeCheckpointOutput policy txIn indexerAddress (encodeCase outputCase) of
-            Left err -> expectationFailure ("golden decode failed: " <> show err)
-            Right record -> do
-                crAid record `shouldBe` goldenAid
-                crAssetName record `shouldBe` capturedAsset
-                crTxIn record `shouldBe` txIn
-                crAddress record `shouldBe` indexerAddress
-                crDatum record `shouldBe` goldenDatum
+        -- The captured datum is the retired version 1 layout: the output is
+        -- still the real chain component, and it is no longer a checkpoint.
+        decodeCheckpointOutput policy txIn indexerAddress (encodeCase outputCase)
+            `shouldBe` Left DatumUndecodable
 
 data OutputCase = OutputCase
     { caseAddress :: !Addr
@@ -238,6 +242,10 @@ data OutputCase = OutputCase
     , caseAssets :: !(Map.Map PolicyID (Map.Map AssetName Integer))
     , caseDatum :: !(Datum ConwayEra)
     }
+
+-- | The datum a conviction of the sample checkpoint leaves.
+pendingSample :: CheckpointDatumV2
+pendingSample = fromJust (convictedOf (liveOfKeyState "" 0 sampleDatum))
 
 positiveCase :: OutputCase
 positiveCase =
@@ -248,7 +256,7 @@ positiveCase =
             Map.singleton
                 checkpointPolicy
                 (Map.singleton (assetName assetX) 1)
-        , caseDatum = inlineDatum (plutusData $ V1 sampleDatum)
+        , caseDatum = inlineDatum (plutusData $ V2 (liveOfKeyState "" 0 sampleDatum))
         }
 
 decodeCase ::
@@ -379,27 +387,3 @@ decodePlutusData bytes =
     case deserialiseOrFail (BSL.fromStrict bytes) of
         Right datum -> datum
         Left err -> error ("invalid fixture datum CBOR: " <> show err)
-
-goldenAid :: ByteString
-goldenAid =
-    hexText "f72f797359b865886da85505520c58de5fc884133065ea6b469f5d3382b2ad46"
-
-goldenDatum :: CheckpointDatumV1
-goldenDatum =
-    CheckpointDatumV1
-        { cdCesrAid = goldenAid
-        , cdCurKeys =
-            [ hexText
-                "2949f7b46498ab88fdedb1160f44723cd04cb1df8209974c57773a9c4ab60688"
-            ]
-        , cdCurThreshold = Unweighted 1
-        , cdNextKeys =
-            [ hexText
-                "b9e60ef4194482de6da2c79f40eca6f278eebfa65070010439dac3e769ab8937"
-            ]
-        , cdNextThreshold = Unweighted 1
-        , cdWitnesses = []
-        , cdToad = 0
-        , cdSeq = 0
-        , cdNativeSn = 0
-        }

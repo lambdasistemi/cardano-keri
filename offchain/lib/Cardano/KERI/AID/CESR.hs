@@ -3,6 +3,7 @@ module Cardano.KERI.AID.CESR (
     parsePrimitive,
     qb64Verkey,
     qb64Aid,
+    aidDigest,
 ) where
 
 import Data.ByteArray.Encoding (
@@ -90,3 +91,16 @@ qb64Aid digest =
     BS.cons 0x45 (BS.drop 1 b64) -- 'E' replaces the leading 'A'
   where
     b64 = convertToBase Base64URLUnpadded (BS.cons 0x00 digest)
+
+{- | The raw 32-byte digest of an E-code AID text: the inverse of 'qb64Aid'
+over exactly the canonical text (44 characters, code @\'E\'@, a zero leading
+byte), @Nothing@ for any other text.
+-}
+aidDigest :: ByteString -> Maybe ByteString
+aidDigest text = case parsePrimitive text of
+    Right (SelfAddressing digest, rest)
+        | BS.null rest
+        , BS.length digest == 32
+        , qb64Aid digest == text ->
+            Just digest
+    _ -> Nothing

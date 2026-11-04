@@ -67,3 +67,59 @@ fn encode_groups(
     bytearray.from_int_big_endian(acc, out_len)
   }
 }
+
+/// The value of a url-safe alphabet byte, or -1 for any other byte.
+fn sextet(c: Int) -> Int {
+  if c >= 65 && c <= 90 {
+    c - 65
+  } else if c >= 97 && c <= 122 {
+    c - 71
+  } else if c >= 48 && c <= 57 {
+    c + 4
+  } else if c == 45 {
+    62
+  } else if c == 95 {
+    63
+  } else {
+    -1
+  }
+}
+
+/// Decode unpadded base64url whose length is a multiple of four (so whole
+/// 24-bit groups, no partial tail). `None` for any byte outside the
+/// alphabet or any other length. Four characters read as one integer and
+/// accumulate, the inverse of `encode`'s grouping.
+pub fn decode(text: ByteArray) -> Option<ByteArray> {
+  let len = bytearray.length(text)
+  if len % 4 == 0 {
+    decode_groups(text, 0, len, 0)
+  } else {
+    None
+  }
+}
+
+fn decode_groups(
+  text: ByteArray,
+  off: Int,
+  len: Int,
+  acc: Int,
+) -> Option<ByteArray> {
+  if off == len {
+    Some(bytearray.from_int_big_endian(acc, len / 4 * 3))
+  } else {
+    let a = sextet(bytearray.at(text, off))
+    let b = sextet(bytearray.at(text, off + 1))
+    let c = sextet(bytearray.at(text, off + 2))
+    let d = sextet(bytearray.at(text, off + 3))
+    if a < 0 || b < 0 || c < 0 || d < 0 {
+      None
+    } else {
+      decode_groups(
+        text,
+        off + 4,
+        len,
+        acc * 16777216 + ( a * 64 + b ) * 4096 + c * 64 + d,
+      )
+    }
+  }
+}

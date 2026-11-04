@@ -628,8 +628,7 @@ theorem decodeData_datum (aid : AID) (k : KeyMaterial) (s : State) (d : Data)
   | terminationPending h' =>
     simp only [datum, Option.some.injEq] at h
     subst h
-    simp [decodeData, byteString?_unpack, nat?, keyMaterial?_keyMaterialData, pack_unpack,
-      State.datumFacts]
+    simp [decodeData, byteString?_unpack, nat?, pack_unpack, State.datumFacts]
   | absent => simp [datum] at h
   | convicted => simp [datum] at h
 
@@ -700,8 +699,8 @@ theorem keyMaterial?_some {x : Data} {k : KeyMaterial} (h : keyMaterial? x = som
   · simp at h
 
 /-- Given any `Data` the decoder accepts; when inspected; then it is exactly the version 2
-datum written for the decoded AID, the decoded state and some key material, and the decoded
-state is its own datum facts. With `decodeData_datum`, the accepted `Data` are exactly the
+datum written for the decoded AID, the decoded state and some key material (which only the
+live form carries), and the decoded state is its own datum facts. With `decodeData_datum`, the accepted `Data` are exactly the
 written datums, so every other shape is refused. -/
 theorem decodeData_complete (d : Data) (r : DecodedDatum) (h : decodeData d = some r) :
     ∃ k, datum r.aid k r.state = some d ∧ r.state.datumFacts = r.state := by
@@ -715,10 +714,10 @@ theorem decodeData_complete (d : Data) (r : DecodedDatum) (h : decodeData d = so
     simp [datum, unpack_pack ab bab, unpack_pack rb brb, nat?_some hsn, nat?_some hep,
       bool?_some hpo, bool?_some hfr, nat?_some hborn, keyMaterial?_some hk]
   · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨ab, hab, sn, hsn, ep, hep, k, hk, rfl⟩ := h
+    obtain ⟨ab, hab, sn, hsn, ep, hep, rfl⟩ := h
     obtain ⟨rfl, bab⟩ := byteString?_some hab
-    refine ⟨k, ?_, rfl⟩
-    simp [datum, unpack_pack ab bab, nat?_some hsn, nat?_some hep, keyMaterial?_some hk]
+    refine ⟨default, ?_, rfl⟩
+    simp [datum, unpack_pack ab bab, nat?_some hsn, nat?_some hep]
   · simp at h
 
 /-- Given any `Data` that is no written datum; when decoded; then it is refused. -/
@@ -767,9 +766,9 @@ theorem live_arity_refused (gs : List Data) (h : gs.length ≠ 8) :
   refused_unless_written _ fun aid k s hd => by
     cases s <;> simp [datum] at hd <;> (subst hd; simp at h)
 
-/-- Given a pending-termination datum without exactly four fields; when decoded; then it is
-refused. -/
-theorem pending_arity_refused (gs : List Data) (h : gs.length ≠ 4) :
+/-- Given a pending-termination datum without exactly three fields, the earlier layout with
+key material included; when decoded; then it is refused. -/
+theorem pending_arity_refused (gs : List Data) (h : gs.length ≠ 3) :
     decodeData (.constr 1 [.constr 1 gs]) = none :=
   refused_unless_written _ fun aid k s hd => by
     cases s <;> simp [datum] at hd <;> (subst hd; simp at h)
@@ -793,17 +792,16 @@ theorem live_fields_typed (gs : List Data) (r : DecodedDatum)
   | convicted => rw [hs] at hk; simp [datum] at hk
 
 /-- Given a pending-termination datum the decoder accepts; when its fields are inspected; then
-each has its kind: AID bytes, two non-negative integers and well-shaped key material. -/
+each has its kind: AID bytes and two non-negative integers, and there is no key material. -/
 theorem pending_fields_typed (gs : List Data) (r : DecodedDatum)
     (h : decodeData (.constr 1 [.constr 1 gs]) = some r) :
-    ∃ (aid : List Nat) (sn epoch : Nat) (k : KeyMaterial),
-      gs = [.bytes aid, .int sn, .int epoch, keyMaterialData k] := by
+    ∃ (aid : List Nat) (sn epoch : Nat), gs = [.bytes aid, .int sn, .int epoch] := by
   obtain ⟨k, hk, _⟩ := decodeData_complete _ r h
   cases hs : r.state with
   | terminationPending h' =>
     rw [hs] at hk
     simp [datum] at hk
-    exact ⟨_, _, _, _, hk.symm⟩
+    exact ⟨_, _, _, hk.symm⟩
   | present l => rw [hs] at hk; simp [datum] at hk
   | absent => rw [hs] at hk; simp [datum] at hk
   | convicted => rw [hs] at hk; simp [datum] at hk
@@ -872,9 +870,83 @@ theorem datum_bytewise (aid : AID) (k : KeyMaterial) (s : State) (d : Data)
   | terminationPending h' =>
     simp only [datum, Option.some.injEq] at h
     subst h
-    simp [Data.Bytewise, itemsBytewise, unpack_bytes, km]
+    simp [Data.Bytewise, itemsBytewise, unpack_bytes]
   | absent => simp [datum] at h
   | convicted => simp [datum] at h
+
+/-! ## The size of a pending termination -/
+
+/-- Given any CBOR head; when written; then it is at most nine bytes. -/
+theorem head_length_le (m n : Nat) : (head m n).length ≤ 9 := by
+  unfold head
+  repeat' split
+  all_goals simp [be_length]
+
+/-- Given a byte string of at most 64 bytes; when serialised; then it takes at most two bytes
+more than its length. -/
+theorem bstr_length_le (bs : List Nat) (h : bs.length ≤ 64) :
+    (bstr bs).length ≤ bs.length + 2 := by
+  have hh : (head 2 bs.length).length ≤ 2 := by
+    unfold head
+    repeat' split
+    all_goals simp [be_length] <;> omega
+  simp only [bstr, if_pos h, List.length_append]
+  omega
+
+/-- Given a non-negative integer below 2^64; when serialised; then it takes at most nine bytes. -/
+theorem intBytes_length_le (n : Nat) (h : n < 18446744073709551616) :
+    (intBytes (.ofNat n)).length ≤ 9 := by
+  simp only [intBytes, Bytes.int, if_pos h]
+  exact head_length_le 0 n
+
+/-- Given any AID, key material and pending termination; when its version 2 datum is
+serialised; then it takes eight bytes of constructor framing plus the serialised AID, sequence
+number and epoch: the key material, which it does not carry, does not count. -/
+theorem pending_size (aid : AID) (k : KeyMaterial) (h : Hash) (d : Data)
+    (hd : datum aid k (.terminationPending h) = some d) :
+    (cbor d).length = 8 + (bstr (unpack aid)).length + (intBytes (.ofNat h.sn)).length +
+      (intBytes (.ofNat h.epoch)).length := by
+  simp only [datum, Option.some.injEq] at hd
+  subst hd
+  simp [cbor, cborItems, constrTag, wrapList, head, be]
+  omega
+
+/-- Given an AID of at most 64 bytes and a pending termination whose sequence number and epoch
+are below 2^64; when its version 2 datum is serialised; then it takes at most the AID's length
+plus 28 bytes, whatever the key material. -/
+theorem pending_size_le (aid : AID) (k : KeyMaterial) (h : Hash) (d : Data)
+    (hd : datum aid k (.terminationPending h) = some d) (haid : (unpack aid).length ≤ 64)
+    (hsn : h.sn < 18446744073709551616) (hep : h.epoch < 18446744073709551616) :
+    (cbor d).length ≤ (unpack aid).length + 28 := by
+  have := bstr_length_le _ haid
+  have := intBytes_length_le _ hsn
+  have := intBytes_length_le _ hep
+  rw [pending_size aid k h d hd]
+  omega
+
+/-- Given an AID of at most 44 bytes, the qualified CESR text of a one-character code, and a
+pending termination whose sequence number and epoch are below 2^64; when its version 2 datum is
+serialised; then it takes at most `pendingSizeBound` bytes, whatever the key material. -/
+theorem pending_size_le_bound (aid : AID) (k : KeyMaterial) (h : Hash) (d : Data)
+    (hd : datum aid k (.terminationPending h) = some d) (haid : (unpack aid).length ≤ 44)
+    (hsn : h.sn < 18446744073709551616) (hep : h.epoch < 18446744073709551616) :
+    (cbor d).length ≤ pendingSizeBound := by
+  have := pending_size_le aid k h d hd (by omega) hsn hep
+  simp only [pendingSizeBound]
+  omega
+
+/-- Given a 44-byte AID and a pending termination with sequence number and epoch at 2^64 - 1;
+when its version 2 datum is serialised; then it takes exactly `pendingSizeBound` bytes: the
+bound is attained. -/
+theorem pending_size_bound_attained :
+    ∃ (aid : AID) (h : Hash) (d : Data), (unpack aid).length = 44 ∧
+      h.sn < 18446744073709551616 ∧ h.epoch < 18446744073709551616 ∧
+      datum aid default (.terminationPending h) = some d ∧ (cbor d).length = pendingSizeBound := by
+  have hb : Bytes (List.replicate 44 69) := by simp [Bytes]
+  refine ⟨pack (List.replicate 44 69), ⟨18446744073709551615, 18446744073709551615⟩, _,
+    by rw [unpack_pack _ hb]; simp, by decide, by decide, rfl, ?_⟩
+  rw [pending_size _ default _ _ rfl, unpack_pack _ hb]
+  simp [bstr, intBytes, Bytes.int, head, be, pendingSizeBound]
 
 /-- Given any AID, any state with an output and key material holding bytes; when its version 2
 datum is carried as a raw application datum and decoded under any release; then the decoder

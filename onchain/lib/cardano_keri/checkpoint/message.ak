@@ -279,3 +279,23 @@ fn positions_in(keys: List<ByteArray>, controlled: List<ByteArray>) -> List<Int>
     },
   )
 }
+
+/// The raw 32-byte digest of a version 2 checkpoint's AID text: the
+/// 44-character CESR text with code `'E'`, valid base64url, whose leading
+/// byte (the code's padding) is zero. `None` for any other text, so
+/// `qb64_aid(digest) == text` holds exactly when this returns the digest.
+pub fn aid_digest(text: ByteArray) -> Option<ByteArray> {
+  if bytearray.length(text) == 44 && bytearray.at(text, 0) == 69 {
+    when base64url.decode(bytearray.push(bytearray.drop(text, 1), 65)) is {
+      Some(raw) ->
+        if bytearray.at(raw, 0) == 0 {
+          Some(bytearray.drop(raw, 1))
+        } else {
+          None
+        }
+      None -> None
+    }
+  } else {
+    None
+  }
+}

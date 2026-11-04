@@ -26,6 +26,7 @@ import Cardano.KERI.Deployment.Script (
     v1CheckpointVersion,
     v1FreezeBond,
     v1NetworkDiscriminator,
+    v1Premium,
     v1RegistrationBond,
  )
 import Crypto.Hash (Digest, SHA256, hash)
@@ -36,6 +37,7 @@ import Data.Aeson (
     object,
     withObject,
     (.:),
+    (.:?),
     (.=),
  )
 import Data.Aeson qualified as Aeson
@@ -86,6 +88,8 @@ data DeploymentParameters = DeploymentParameters
     , parameterNetworkDiscriminator :: Integer
     , parameterRegistrationBond :: Integer
     , parameterFreezeBond :: Integer
+    , parameterPremium :: !(Maybe Integer)
+    -- ^ absent in the manifest of a generation that has no premium
     }
     deriving stock (Show, Eq)
 
@@ -169,11 +173,15 @@ instance FromJSON BlueprintInfo where
 instance ToJSON DeploymentParameters where
     toJSON parameters =
         object
-            [ "checkpointVersion" .= parameterCheckpointVersion parameters
-            , "networkDiscriminator" .= parameterNetworkDiscriminator parameters
-            , "registrationBondLovelace" .= parameterRegistrationBond parameters
-            , "freezeBondLovelace" .= parameterFreezeBond parameters
-            ]
+            ( [ "checkpointVersion" .= parameterCheckpointVersion parameters
+              , "networkDiscriminator" .= parameterNetworkDiscriminator parameters
+              , "registrationBondLovelace" .= parameterRegistrationBond parameters
+              , "freezeBondLovelace" .= parameterFreezeBond parameters
+              ]
+                <> [ "premiumLovelace" .= premium
+                   | Just premium <- [parameterPremium parameters]
+                   ]
+            )
 
 instance FromJSON DeploymentParameters where
     parseJSON = withObject "DeploymentParameters" $ \o ->
@@ -182,6 +190,7 @@ instance FromJSON DeploymentParameters where
             <*> o .: "networkDiscriminator"
             <*> o .: "registrationBondLovelace"
             <*> o .: "freezeBondLovelace"
+            <*> o .:? "premiumLovelace"
 
 instance ToJSON CheckpointInfo where
     toJSON checkpoint =
@@ -236,6 +245,7 @@ v1Parameters =
         , parameterNetworkDiscriminator = v1NetworkDiscriminator
         , parameterRegistrationBond = v1RegistrationBond
         , parameterFreezeBond = v1FreezeBond
+        , parameterPremium = Just v1Premium
         }
 
 blueprintSha256 :: FilePath -> IO Text

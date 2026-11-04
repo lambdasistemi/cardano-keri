@@ -19,7 +19,7 @@ stale ACTIVE index row" scenario.
 -}
 module Cardano.KERI.CLI.Backend.KoiosSpec (spec) where
 
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V1), CheckpointDatumV1 (..))
+import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V2), CheckpointDatumV1 (..), convictedOf, liveOfKeyState)
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted))
 import Cardano.KERI.CLI.Backend (
     BackendError (..),
@@ -60,6 +60,7 @@ import Control.Exception (AsyncException (ThreadKilled), throwIO, try)
 import Data.Aeson (Value)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
+import Data.Maybe (fromJust)
 import Data.Text (Text)
 import Data.Text qualified as T
 import PlutusTx.Builtins.Internal (BuiltinData (..))
@@ -273,6 +274,18 @@ activePrecedenceSpec = describe "resolveKoiosActive (DIRECTION-001)" $ do
         resolveKoiosActive sampleManifest aidText assetName [] []
             `shouldBe` Right Nothing
 
+    it "a convicted checkpoint (termination pending) is not active: the token stays but the checkpoint is over" $
+        resolveKoiosActive sampleManifest aidText assetName [] [pendingUtxo]
+            `shouldBe` Right Nothing
+
+    it "a convicted checkpoint is not listed beside the live ones" $
+        resolveKoiosList
+            sampleManifest
+            [liveLookingUtxo, pendingUtxo{chainAssetTxId = T.replicate 64 "2"}]
+            [ChainTransactionInfo (chainAssetTxId liveLookingUtxo) 129_700_000]
+            (Just (ChainTip 129_700_010 "tip-hash"))
+            `shouldSatisfy` isExpectedList
+
 activeIsJust :: Maybe ActiveCheckpoint -> Bool
 activeIsJust (Just _) = True
 activeIsJust Nothing = False
@@ -300,7 +313,7 @@ sampleManifest =
         , manifestNetwork = NetworkInfo "preprod" 1
         , manifestSource = SourceInfo "repository" "commit"
         , manifestBlueprint = BlueprintInfo "digest"
-        , manifestParameters = DeploymentParameters 0 0 0 0
+        , manifestParameters = DeploymentParameters 0 0 0 0 Nothing
         , manifestCheckpoint = CheckpointInfo checkpointAddress policy
         , manifestPublishedAt = "2026-01-01T00:00:00Z"
         , manifestScripts = []
@@ -314,25 +327,36 @@ liveLookingUtxo =
         , chainAssetAddress = checkpointAddress
         , chainAssetLovelace = 5_000_000
         , chainAssetList = [ChainAsset policy assetName 1]
-        , chainAssetInlineDatum = Just (toDatumValue closedDatum)
+        , chainAssetInlineDatum = Just (toDatumValue liveDatum)
         , chainAssetReferenceScript = Nothing
         }
-  where
-    closedDatum =
-        CheckpointDatumV1
-            { cdCesrAid = BS.replicate 32 0x00
-            , cdCurKeys = [BS.replicate 32 0x11]
-            , cdCurThreshold = Unweighted 1
-            , cdNextKeys = [BS.replicate 32 0x22]
-            , cdNextThreshold = Unweighted 1
-            , cdWitnesses = []
-            , cdToad = 0
-            , cdSeq = 0
-            , cdNativeSn = 0
-            }
+
+liveDatum :: CheckpointDatumV1
+liveDatum =
+    CheckpointDatumV1
+        { cdCesrAid = BS.replicate 32 0x00
+        , cdCurKeys = [BS.replicate 32 0x11]
+        , cdCurThreshold = Unweighted 1
+        , cdNextKeys = [BS.replicate 32 0x22]
+        , cdNextThreshold = Unweighted 1
+        , cdWitnesses = []
+        , cdToad = 0
+        , cdSeq = 0
+        , cdNativeSn = 0
+        }
 
 payerAddress :: Text
 payerAddress = "addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d"
+
+{- | The output the conviction of the live-looking checkpoint leaves: the token
+stays under a termination pending datum.
+-}
+pendingUtxo :: ChainAssetUtxo
+pendingUtxo =
+    liveLookingUtxo
+        { chainAssetInlineDatum =
+            Just (toDatumValueOf (V2 (fromJust (convictedOf (liveOfKeyState "" 0 liveDatum)))))
+        }
 
 payerUtxo :: ChainAssetUtxo
 payerUtxo =
@@ -352,8 +376,11 @@ burnHistory =
         }
 
 toDatumValue :: CheckpointDatumV1 -> Value
-toDatumValue datum =
-    let BuiltinData plc = toBuiltinData (V1 datum)
+toDatumValue datum = toDatumValueOf (V2 (liveOfKeyState "" 0 datum))
+
+toDatumValueOf :: CheckpointDatum -> Value
+toDatumValueOf datum =
+    let BuiltinData plc = toBuiltinData datum
      in plutusDataJson plc
 
 registrationTxId :: ByteString
@@ -370,6 +397,7 @@ registrationFixture =
         , activeCheckpointLovelace = 5_000_000
         , activeCheckpointAssets = []
         , activeCheckpointDatum = datumX0
+        , activeCheckpointFacts = liveOfKeyState "" 0 datumX0
         }
 
 registrationTxInfo :: ChainTransactionInfo
@@ -380,6 +408,7 @@ advancedFixture =
     registrationFixture
         { activeCheckpointTxId = "2020202020202020202020202020202020202020202020202020202020202020"
         , activeCheckpointDatum = datumX0{cdSeq = 1, cdNativeSn = 1}
+        , activeCheckpointFacts = liveOfKeyState "" 0 datumX0{cdSeq = 1, cdNativeSn = 1}
         }
 
 advancedTxInfo :: ChainTransactionInfo

@@ -1,3 +1,5 @@
+{-# LANGUAGE NamedFieldPuns #-}
+
 {- |
 Module      : Cardano.KERI.AID.Migration.Checkpoint
 Description : Checkpoint-family migration parity oracle, #254 (MOD-254-PARITY)
@@ -55,12 +57,16 @@ module Cardano.KERI.AID.Migration.Checkpoint (
     validateCheckpointMigrateOut,
 ) where
 
+import Cardano.KERI.AID.CESR (
+    aidDigest,
+ )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
-    CheckpointDatumV1 (..),
+    CheckpointDatumV2 (..),
     DatumError,
+    KeyMaterial (..),
     checkpointDatumFromData,
-    datumWellFormed,
+    datumV2WellFormed,
  )
 import Cardano.KERI.AID.Checkpoint.FreezeBond (
     Role (..),
@@ -177,7 +183,7 @@ dataOf x = let BuiltinData d = toBuiltinData x in d
 -- | A decoded lifecycle position with its checkpoint state.
 data CheckpointRoleState = CheckpointRoleState
     { crRole :: !MigrationRole
-    , crCheckpoint :: !CheckpointDatumV1
+    , crCheckpoint :: !CheckpointDatumV2
     }
     deriving stock (Show, Eq)
 
@@ -313,16 +319,17 @@ here by deduplicating verified positions into an 'IntSet.IntSet' before
 'evaluate' sees them, which also filters the range.
 -}
 checkpointMigrationAuthorized ::
-    CheckpointDatumV1 ->
+    CheckpointDatumV2 ->
     MigrationMessage ->
     [(Integer, ByteString)] ->
     MigrationVerdict
 checkpointMigrationAuthorized sourceState message signatures =
-    case datumWellFormed sourceState of
-        Left e -> Left (MigrationDatumIllFormed e)
-        Right () ->
+    case (datumV2WellFormed sourceState, liveKeys sourceState) of
+        (Left e, _) -> Left (MigrationDatumIllFormed e)
+        (Right (), Nothing) -> Left MigrationIdentityChanged
+        (Right (), Just keyMaterial) ->
             let preimage = canonicalCbor message
-                keys = cdCurKeys sourceState
+                keys = kmCurKeys keyMaterial
                 n = length keys
                 verified =
                     IntSet.fromList
@@ -335,7 +342,7 @@ checkpointMigrationAuthorized sourceState message signatures =
                             preimage
                             signature
                         ]
-             in if evaluate (cdCurThreshold sourceState) n verified
+             in if evaluate (kmCurThreshold keyMaterial) n verified
                     then Right ()
                     else Left MigrationQuorumUnsatisfied
 
@@ -387,8 +394,9 @@ validateCheckpointMigrateOut authorization ownRef tx = do
     sourceState <- decodeCheckpoint (miDatum input)
     let source = sourceOf authorization (mtxNetworkId tx)
         target = maTarget authorization
-        assetName = assetNameOf sourceState
-        sourcePolicy = msSourcePolicy source
+    assetName <-
+        maybe (Left MigrationIdentityChanged) Right (assetNameOf sourceState)
+    let sourcePolicy = msSourcePolicy source
     -- The signed projection must be the consumed projection: the quorum signs
     -- `source_state`, while every continuity check reads the observed state.
     carried <-
@@ -465,24 +473,34 @@ soleSuccessor policy assetName tx =
     holdsTarget output = tokenOf policy assetName (moValue output) > 0
 
 -- | Decode a carried v0-shaped checkpoint projection.
-decodeCheckpoint :: Maybe Data -> Either MigrationError CheckpointDatumV1
+decodeCheckpoint :: Maybe Data -> Either MigrationError CheckpointDatumV2
 decodeCheckpoint = \case
     Just d
         | Just state <- checkpointFrom d -> Right state
     _ -> Left MigrationIdentityChanged
 
 -- | Read a v0-shaped @CheckpointDatum@ tree, unwrapping its version sum.
-checkpointFrom :: Data -> Maybe CheckpointDatumV1
-checkpointFrom d = (\(V1 inner) -> inner) <$> checkpointDatumFromData d
+checkpointFrom :: Data -> Maybe CheckpointDatumV2
+checkpointFrom d = case checkpointDatumFromData d of
+    Just (V2 live@Live{}) -> Just live
+    _ -> Nothing
+
+-- | The key material of a live checkpoint; a pending termination has none to sign with.
+liveKeys :: CheckpointDatumV2 -> Maybe KeyMaterial
+liveKeys = \case
+    Live{lvKeys} -> Just lvKeys
+    TerminationPending{} -> Nothing
 
 {- | The asset name of a checkpoint, mirroring the Aiken @deriveAidAssetName@
 label of the AID.
 -}
-assetNameOf :: CheckpointDatumV1 -> ByteString
-assetNameOf = deriveAidAssetName . cdCesrAid
+assetNameOf :: CheckpointDatumV2 -> Maybe ByteString
+assetNameOf = \case
+    Live{lvAid} -> deriveAidAssetName <$> aidDigest lvAid
+    TerminationPending{tpAid} -> deriveAidAssetName <$> aidDigest tpAid
 
 -- | The lifecycle position a decoded row occupies, with its checkpoint state.
-roleStateOf :: MigrationRole -> CheckpointDatumV1 -> CheckpointRoleState
+roleStateOf :: MigrationRole -> CheckpointDatumV2 -> CheckpointRoleState
 roleStateOf role state =
     CheckpointRoleState
         { crRole = role

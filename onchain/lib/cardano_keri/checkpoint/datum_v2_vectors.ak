@@ -332,42 +332,25 @@ test accepted_frozen() {
   writer_accepts(data_frozen())
 }
 
-/// The key material of vector `pending-termination`.
-pub fn keys_pending_termination() -> KeyMaterial {
-  KeyMaterial {
-    cur_keys: [
-      #"1f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8",
-    ],
-    cur_threshold: Unweighted(1),
-    next_keys: [
-      #"3e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017",
-    ],
-    next_threshold: Unweighted(1),
-    witnesses: [],
-    toad: 0,
-  }
-}
-
 /// The facts of vector `pending-termination`: a convicted checkpoint awaiting its terminating fold: decoded, refused by the consumer.
 pub fn facts_pending_termination() -> CheckpointDatumV2 {
   TerminationPending {
     aid: #"454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550",
     sn: 4,
     epoch: 2,
-    keys: keys_pending_termination(),
   }
 }
 
 /// The Data of vector `pending-termination`.
 fn data_pending_termination() -> Data {
   parse(
-    #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+    #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402ffff",
   )
 }
 
 /// Lean `datum`: the value built from the row's input serialises to the row's datum.
 test layout_pending_termination() {
-  cbor.serialise(V2(facts_pending_termination())) == #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff"
+  cbor.serialise(V2(facts_pending_termination())) == #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402ffff"
 }
 
 /// Lean `datum`: the row's datum reads back into the value built from its input.
@@ -581,18 +564,18 @@ test refused_live_nine_fields() fail {
   )
 }
 
-/// Vector `pending-five-fields` is one whole `Data`: a pending-termination datum with an extra field.
-test parses_pending_five_fields() {
+/// Vector `pending-with-keys` is one whole `Data`: a pending-termination datum carrying key material, the earlier four-field layout.
+test parses_pending_with_keys() {
   parses(
-    #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ff00ffff",
+    #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
   )
 }
 
-/// The writer's read does not accept vector `pending-five-fields`.
-test refused_pending_five_fields() fail {
+/// The writer's read does not accept vector `pending-with-keys`.
+test refused_pending_with_keys() fail {
   writer_accepts(
     parse(
-      #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ff00ffff",
+      #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
     ),
   )
 }
@@ -600,7 +583,7 @@ test refused_pending_five_fields() fail {
 /// Vector `pending-negative-epoch` is one whole `Data`: a pending-termination datum with a negative epoch.
 test parses_pending_negative_epoch() {
   parses(
-    #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500421d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+    #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500421ffff",
   )
 }
 
@@ -608,7 +591,7 @@ test parses_pending_negative_epoch() {
 test refused_pending_negative_epoch() fail {
   writer_accepts(
     parse(
-      #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500421d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+      #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500421ffff",
     ),
   )
 }

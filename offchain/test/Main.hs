@@ -9,6 +9,7 @@ import Cardano.KERI.AID.Checkpoint.AdvanceFixturesSpec qualified as AdvanceFixtu
 import Cardano.KERI.AID.Checkpoint.AdvanceSpec qualified as AdvanceSpec
 import Cardano.KERI.AID.Checkpoint.BountyCommitmentSpec qualified as BountyCommitmentSpec
 import Cardano.KERI.AID.Checkpoint.DatumSpec qualified as DatumSpec
+import Cardano.KERI.AID.Checkpoint.DatumV2Spec qualified as DatumV2Spec
 import Cardano.KERI.AID.Checkpoint.EnforcementSpec qualified as EnforcementSpec
 import Cardano.KERI.AID.Checkpoint.EntitlementSpec qualified as EntitlementSpec
 import Cardano.KERI.AID.Checkpoint.FreezeBondSpec qualified as FreezeBondSpec
@@ -17,6 +18,7 @@ import Cardano.KERI.AID.Checkpoint.MessageSpec qualified as MessageSpec
 import Cardano.KERI.AID.Checkpoint.RegistrationFixturesSpec qualified as RegistrationFixturesSpec
 import Cardano.KERI.AID.Checkpoint.RegistrationSpec qualified as RegistrationSpec
 import Cardano.KERI.AID.Checkpoint.ThresholdSpec qualified as ThresholdSpec
+import Cardano.KERI.AID.Checkpoint.ValueSpec qualified as ValueSpec
 import Cardano.KERI.AID.Checkpoint.WireSpec qualified as WireSpec
 import Cardano.KERI.AID.Ed25519Spec qualified as Ed25519Spec
 import Cardano.KERI.AID.Migration.CheckpointSpec qualified as MigrationCheckpointSpec
@@ -35,6 +37,7 @@ main = hspec $ do
     AdvanceFixturesSpec.spec
     AdvanceSpec.spec
     DatumSpec.spec
+    DatumV2Spec.spec
     MessageSpec.spec
     Keri68OracleSpec.spec
     EnforcementSpec.spec
@@ -43,6 +46,7 @@ main = hspec $ do
     EntitlementSpec.spec
     RegistrationFixturesSpec.spec
     RegistrationSpec.spec
+    ValueSpec.spec
     WireSpec.spec
     MigrationTypesSpec.spec
     MigrationCheckpointSpec.spec

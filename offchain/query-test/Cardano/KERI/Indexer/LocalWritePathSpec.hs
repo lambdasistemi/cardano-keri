@@ -44,7 +44,7 @@ module Cardano.KERI.Indexer.LocalWritePathSpec (spec) where
 import Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
 import Cardano.KERI.AID.Blake3.Checkpoint (blake3Hash)
 import Cardano.KERI.AID.CESR (qb64Verkey)
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V1), CheckpointDatumV1 (..))
+import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatum (V2), CheckpointDatumV1 (..), convictedOf, liveOfKeyState)
 import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted, Weighted), Weight (Weight))
 import Cardano.KERI.ChainQuery.LedgerOutput (
@@ -605,6 +605,30 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                             Nothing -> expectationFailure "expected the perturbed checkpoint to still decode, got Nothing"
                         Left err -> expectationFailure ("expected the perturbed checkpoint to still decode, got " <> show err)
 
+            it "a convicted checkpoint (termination pending) is no current checkpoint on both acquisition paths" $
+                withInMemoryIndexerRunner $ \handle runner -> do
+                    applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) [UtxoCreate parityCheckpointTxIn addrA parityPendingOutput]
+                    result <-
+                        capAtomicQuery
+                            redCapabilities
+                            (queryHandleLocalScope (testQueryHandle runner))
+                            (currentCheckpoint parityCheckpointLocator parityCheckpointAid)
+                    case result of
+                        Right snapshot -> snapshotValue snapshot `shouldBe` Nothing
+                        Left err -> expectationFailure ("expected no current checkpoint, got " <> show err)
+
+            it "a convicted checkpoint is not among the live checkpoints on both acquisition paths" $
+                withInMemoryIndexerRunner $ \handle runner -> do
+                    applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) [UtxoCreate parityCheckpointTxIn addrA parityPendingOutput]
+                    result <-
+                        capAtomicQuery
+                            redCapabilities
+                            (queryHandleLocalScope (testQueryHandle runner))
+                            (liveCheckpoints parityCheckpointLocator)
+                    case result of
+                        Right snapshot -> snapshotValue snapshot `shouldBe` []
+                        Left err -> expectationFailure ("expected no live checkpoint, got " <> show err)
+
             it "fails closed the same way on absence: no live checkpoint output for this AID at all (currentCheckpoint, both acquisition paths report no error)" $
                 withInMemoryIndexerRunner $ \handle runner -> do
                     applyAtSlot handle (Indexer.SlotNo 10) (blockHash 0x01) []
@@ -1164,14 +1188,14 @@ entrypointCheckpointOutputFor datum =
     Indexer.TxOut $
         serialize'
             (eraProtVerLow @ConwayEra)
-            (baseTxOut & datumTxOutL .~ inlineDatumOf (plutusData (V1 datum)))
+            (baseTxOut & datumTxOutL .~ inlineDatumOf (plutusData (V2 (liveOfKeyState "" 0 datum))))
   where
     baseTxOut :: TxOut ConwayEra
     baseTxOut =
         mkBasicTxOut
             entrypointCheckpointLedgerAddress
             ( MaryValue
-                (Coin 5_000_000)
+                (Coin 1_007_000_000)
                 ( MultiAsset $
                     Map.singleton
                         entrypointCheckpointPolicy
@@ -1211,6 +1235,7 @@ entrypointManifest =
                 , parameterNetworkDiscriminator = 0
                 , parameterRegistrationBond = 1_000_000_000
                 , parameterFreezeBond = 5_000_000
+                , parameterPremium = Just 2_000_000
                 }
         , manifestCheckpoint =
             CheckpointInfo
@@ -3433,10 +3458,15 @@ Plutus datum and exactly the one checkpoint NFT under
 -}
 parityCheckpointOutput :: CheckpointDatumV1 -> Indexer.TxOut
 parityCheckpointOutput datum =
+    parityCheckpointOutputWith datum (V2 (liveOfKeyState "" 0 datum))
+
+-- | The same output carrying another checkpoint datum for the same token.
+parityCheckpointOutputWith :: CheckpointDatumV1 -> CheckpointDatum -> Indexer.TxOut
+parityCheckpointOutputWith datum body =
     Indexer.TxOut $
         serialize'
             (eraProtVerLow @ConwayEra)
-            (baseTxOut & datumTxOutL .~ inlineDatum (plutusData (V1 datum)))
+            (baseTxOut & datumTxOutL .~ inlineDatum (plutusData body))
   where
     Indexer.Address addrABytes = addrA
     keyHash = fromJust (hashFromBytes addrABytes)
@@ -3462,6 +3492,14 @@ weight (@1\/2 -> 1\/3@, still satisfies @canonicalWeight@: den > 0,
 0 <= num <= den, gcd num den == 1) -- a well-formed-but-different value
 inside the exact nested path identified above, never a decode rejection.
 -}
+
+-- | The output the conviction of the parity checkpoint leaves at its address.
+parityPendingOutput :: Indexer.TxOut
+parityPendingOutput =
+    parityCheckpointOutputWith
+        parityCheckpointDatum
+        (V2 (fromJust (convictedOf (liveOfKeyState "" 0 parityCheckpointDatum))))
+
 perturbedParityCheckpointDatum :: CheckpointDatumV1
 perturbedParityCheckpointDatum =
     parityCheckpointDatum{cdCurThreshold = Weighted [[Weight 1 3, Weight 1 2]]}
@@ -3511,6 +3549,7 @@ parityExpectedCheckpoint =
                 }
             ]
         , activeCheckpointDatum = parityCheckpointDatum
+        , activeCheckpointFacts = liveOfKeyState "" 0 parityCheckpointDatum
         }
 
 {- | A checkpoint output that is well-formed at every level EXCEPT its

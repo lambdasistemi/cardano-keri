@@ -162,7 +162,7 @@ not have that shape is refused. The model declares this datum, version 2, in
 ```mermaid
 flowchart LR
   D["CheckpointDatum<br/>V2 = constructor 1"] -->|form 0| L["Live: aid, sn, epoch,<br/>poisoned, frozen, born_at,<br/>refund_to, keys"]
-  D -->|form 1| P["TerminationPending:<br/>aid, sn, epoch, keys"]
+  D -->|form 1| P["TerminationPending:<br/>aid, sn, epoch"]
   L -->|decoder| S["present state,<br/>pool set to zero"]
   P -->|decoder| T["terminationPending state"]
   O["version 1 or any<br/>other shape"] -->|decoder| R["refused"]
@@ -187,7 +187,7 @@ written by the model first; the on-chain validator adopts it later.
 | Live 4 | `frozen` | Boolean | `Live.frozen` | Refuses when true: the bond is not held |
 | Live 5 | `born_at` | non-negative integer | `Live.bornAt` | Refuses until `born_at + W ≤ now` |
 | Live 6 | `refund_to` | byte string | `Live.refundTo` | Nothing |
-| Live 7, Pending 3 | `keys` | key material | none | Checks its shape only |
+| Live 7 | `keys` | key material; not in the pending form | none | Checks its shape only |
 | none | the premium pool | not in the datum | `Live.pool`, decoded as zero | Nothing; the amount is held in the value |
 
 The key material is constructor 0 with six fields, in the version 1 types:
@@ -204,6 +204,7 @@ true is constructor 1, both without fields.
 | How the AID is carried | Its qualified CESR text, the registry key of [the concrete bytes](#the-concrete-bytes) | The 32 raw digest bytes | The key is the text; rebuilding it from a digest needs a derivation code the datum does not carry |
 | Where the pool and the bonds live | In the output's value | In the datum | The datum carries facts, the value carries amounts |
 | What the decoder validates | Every shape in the whole datum; the values of the fields it reads | The full well-formedness of the key material | Key widths, threshold ranges, witness duplicates and `toad` are the checkpoint validator's obligation when it writes the datum |
+| What the pending-termination form carries | `aid`, `sn` and `epoch`: at most 72 bytes serialised for a 44-byte AID with `sn` and `epoch` below 2^64 (`pendingSizeBound`, `pending_size_le_bound`) | The key material as well | The output holds the fixed minimum ADA `Mc`, and the ledger minimum grows with the datum while the key material is unbounded; no step reads the keys in that state, and the key state at conviction stays readable in the spent live output |
 
 The serialisation is Plutus Data's: constructors 0 to 6 as tags 121 to 127,
 7 to 127 as tags 1280 to 1400, any other index as tag 102 over the index and

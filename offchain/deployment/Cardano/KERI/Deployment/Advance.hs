@@ -23,10 +23,18 @@ import Cardano.KERI.AID.Checkpoint.Advance (
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatumV1 (..),
+    CheckpointDatumV2,
     canonicalCbor,
+    rotatedLive,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
     SpentCheckpoint (..),
+ )
+import Cardano.KERI.AID.Checkpoint.Value (
+    RotationSettlement (..),
+    checkpointMinAda,
+    heldValue,
+    rotationSettlement,
  )
 import Cardano.KERI.ChainQuery (
     ActiveCheckpoint (..),
@@ -68,6 +76,12 @@ data AdvancePackage = AdvancePackage
     , advanceSpentReference :: !Text
     , advanceSpent :: !SpentCheckpoint
     , advanceSuccessor :: !CheckpointDatumV1
+    , advanceSuccessorFacts :: !CheckpointDatumV2
+    -- ^ the version 2 datum the successor output carries
+    , advanceSettlement :: !RotationSettlement
+    -- ^ the premium paid out of the pool and the pool left
+    , advanceSuccessorLovelace :: !Integer
+    -- ^ the lovelace the successor output holds, exactly
     , advanceEvidence :: !AdvanceEvidence
     , advanceSigningPreimage :: !ByteString
     , advancePackageSha256 :: !Text
@@ -113,6 +127,30 @@ mkAdvancePackage manifest active rotation = do
             "checkpoint transaction id"
             32
             (activeCheckpointTxId active)
+    let parameters = manifestParameters manifest
+        facts = activeCheckpointFacts active
+    premium <-
+        maybe
+            (Left "the manifest has no premiumLovelace: its generation has no premium and cannot be advanced")
+            Right
+            (parameterPremium parameters)
+    settlement <-
+        maybe
+            (Left "the checkpoint is not a live output holding its deposit and bond")
+            Right
+            ( rotationSettlement
+                checkpointMinAda
+                (parameterRegistrationBond parameters)
+                (parameterFreezeBond parameters)
+                premium
+                facts
+                (activeCheckpointLovelace active)
+            )
+    successorFacts <-
+        maybe
+            (Left "the checkpoint is not live")
+            Right
+            (rotatedLive facts (rotationDatum rotation))
     let old = activeCheckpointDatum active
         successor = rotationDatum rotation
         evidence = rotationEvidence rotation
@@ -148,6 +186,15 @@ mkAdvancePackage manifest active rotation = do
                     <> T.pack (show $ activeCheckpointIndex active)
             , advanceSpent = spent
             , advanceSuccessor = successor
+            , advanceSuccessorFacts = successorFacts
+            , advanceSettlement = settlement
+            , advanceSuccessorLovelace =
+                heldValue
+                    checkpointMinAda
+                    (parameterRegistrationBond parameters)
+                    (parameterFreezeBond parameters)
+                    successorFacts
+                    (settlementPoolAfter settlement)
             , advanceEvidence = evidence
             , advanceSigningPreimage = preimage
             , advancePackageSha256 = sha256Text preimage

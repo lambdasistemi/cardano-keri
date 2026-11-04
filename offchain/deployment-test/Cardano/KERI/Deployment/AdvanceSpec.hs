@@ -205,6 +205,59 @@ spec = describe "in-process advance transaction" $ do
                 drop (length order - 3) order
                     `shouldBe` ["sign", "submit", "observe"]
 
+    it "pays the premium to the second output and leaves the successor exactly its lovelace" $ do
+        callsRef <- newIORef []
+        signedRef <- newIORef Nothing
+        runtime <- standInRuntime callsRef signedRef
+        let paidPlan =
+                syntheticPlan
+                    { planSuccessorLovelace = 5_000_000
+                    , planPremiumPaid = 2_000_000
+                    }
+        result <-
+            runAdvanceTransaction
+                (advanceConfig runtime)
+                paidPlan
+                fundingInputs
+                activeInput
+                False
+        either (\err -> fail ("expected advance success, got " <> show err)) (const (pure ())) result
+        signed <- readIORef signedRef
+        case signed of
+            Nothing -> fail "trSign was never called"
+            Just tx -> do
+                let outputs = toList (tx ^. bodyTxL . outputsTxBodyL)
+                case outputs of
+                    state : payee : _ -> do
+                        state ^. addrTxOutL `shouldBe` checkpointAddr
+                        state ^. valueTxOutL
+                            `shouldBe` MaryValue
+                                (Coin 5_000_000)
+                                (let MaryValue _ assets = checkpointValue in assets)
+                        payee ^. addrTxOutL `shouldBe` fundingAddr
+                        payee ^. valueTxOutL
+                            `shouldBe` MaryValue (Coin 2_000_000) (MultiAsset mempty)
+                    _ -> fail "expected the successor and the premium outputs"
+
+    it "writes no premium output when none is paid" $ do
+        callsRef <- newIORef []
+        signedRef <- newIORef Nothing
+        runtime <- standInRuntime callsRef signedRef
+        result <-
+            runAdvanceTransaction
+                (advanceConfig runtime)
+                syntheticPlan
+                fundingInputs
+                activeInput
+                False
+        either (\err -> fail ("expected advance success, got " <> show err)) (const (pure ())) result
+        signed <- readIORef signedRef
+        case signed of
+            Nothing -> fail "trSign was never called"
+            Just tx ->
+                length [() | o <- toList (tx ^. bodyTxL . outputsTxBodyL), o ^. addrTxOutL == checkpointAddr]
+                    `shouldBe` 1
+
     it "fails closed on underfunding, evaluation rejection, and submission rejection" $ do
         callsRef <- newIORef []
         signedRef <- newIORef Nothing
@@ -435,6 +488,8 @@ syntheticPlan =
         , planSpendRedeemer = plutusDataJson spendRedeemer
         , planObserverRedeemer = plutusDataJson observerRedeemer
         , planSuccessorDatum = plutusDataJson successorDatum
+        , planSuccessorLovelace = 7_000_000
+        , planPremiumPaid = 0
         }
 
 spendRedeemer, observerRedeemer, successorDatum :: Data

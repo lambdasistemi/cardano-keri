@@ -134,7 +134,7 @@ fn live(fields: List<Data>) -> Data {
 }
 
 fn good_pending() -> List<Data> {
-  [b_data(aid_bytes()), i_data(4), i_data(2), keys()]
+  [b_data(aid_bytes()), i_data(4), i_data(2)]
 }
 
 fn pending(fields: List<Data>) -> Data {
@@ -252,11 +252,20 @@ test live_arity_is_checked() {
 /// Lean `pending_arity_refused`.
 test pending_arity_is_checked() {
   list.all(
-    [0, 1, 2, 3, 5, 6, 8],
+    [0, 1, 2, 4, 5, 6],
     fn(n) {
       let fields = list.concat(good_pending(), good_pending()) |> list.take(n)
       decoded(pending(fields)) == None
     },
+  )
+}
+
+/// Lean `pending_arity_refused`, vector `pending-with-keys`: the earlier
+/// four-field layout, with the key material, is refused.
+test pending_with_keys_is_refused() {
+  list.all(
+    valid_key_materials(),
+    fn(k) { decoded(pending(list.concat(good_pending(), [k]))) == None },
   )
 }
 
@@ -378,7 +387,7 @@ test pending_fields_decode_for_every_value() {
       list.all(
         byte_strings(),
         fn(bs) {
-          decoded(pending([b_data(bs), i_data(n), i_data(n + 1), keys()])) == Some(
+          decoded(pending([b_data(bs), i_data(n), i_data(n + 1)])) == Some(
             DecodedDatum {
               aid: pack(bs),
               state: TerminationPending(Hash { epoch: n + 1, sn: n }),
@@ -438,7 +447,7 @@ test valid_key_materials_decode() {
           aid: pack(aid_bytes()),
           state: Present(live_state(3, 1, False, True, 9, #"")),
         },
-      ) && decoded(pending([b_data(aid_bytes()), i_data(4), i_data(2), k])) == Some(
+      ) && decoded(pending([b_data(aid_bytes()), i_data(4), i_data(2)])) == Some(
         DecodedDatum {
           aid: pack(aid_bytes()),
           state: TerminationPending(Hash { epoch: 2, sn: 4 }),
@@ -524,8 +533,7 @@ fn live_replacements(i: Int) -> List<Data> {
 fn pending_replacements(i: Int) -> List<Data> {
   when i is {
     0 -> not_bytes()
-    1 | 2 -> not_nat()
-    _ -> not_keys()
+    _ -> not_nat()
   }
 }
 
@@ -545,7 +553,7 @@ test live_fields_are_typed() {
 /// Lean `pending_fields_typed`.
 test pending_fields_are_typed() {
   list.all(
-    indices(4),
+    indices(3),
     fn(i) {
       list.all(
         pending_replacements(i),
@@ -624,9 +632,8 @@ fn key_replacements(i: Int) -> List<Data> {
   }
 }
 
-/// Every component of the key material is read for its shape, in a live and
-/// in a pending-termination datum.
-/// Lean `live_fields_typed`, `pending_fields_typed`.
+/// Every component of the key material of a live datum is read for its shape.
+/// Lean `live_fields_typed`.
 test key_material_components_are_typed() {
   list.all(
     indices(6),
@@ -635,9 +642,7 @@ test key_material_components_are_typed() {
         key_replacements(i),
         fn(r) {
           let k = keys_with(set_at(key_fields(), i, r))
-          decoded(set_at(good_live(), 7, k) |> live) == None && decoded(
-            set_at(good_pending(), 3, k) |> pending,
-          ) == None
+          decoded(set_at(good_live(), 7, k) |> live) == None
         },
       )
     },

@@ -56,6 +56,7 @@ module Cardano.KERI.ChainQuery.Koios (
     checkpointAssetName,
     koiosCurrentCheckpoint,
     koiosLiveCheckpoints,
+    isTerminationPendingUtxo,
     queryActiveCheckpoint,
     resolveActiveCheckpoint,
     latestMintingTransaction,
@@ -72,9 +73,11 @@ module Cardano.KERI.ChainQuery.Koios (
 
 import Cardano.KERI.AID.CESR (Primitive (..), parsePrimitive)
 import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatum (..),
     CheckpointDatumV1 (..),
     checkpointDatumFromData,
+    datumFacts,
+    datumKeyState,
+    isTerminationPending,
  )
 import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
 import Cardano.KERI.ChainQuery.Interpreter (ChainQueryInterpreter, chainQueryInterpreter)
@@ -428,7 +431,7 @@ koiosCurrentCheckpoint baseUrl token locator aid =
         Right () -> case checkpointAssetName aid of
             Left err -> pure (Left (InvalidLocator (T.pack err)))
             Right assetName -> do
-                utxos <- queryAssetUtxos baseUrl token (checkpointLocatorPolicyId locator) assetName
+                utxos <- filter (not . isTerminationPendingUtxo) <$> queryAssetUtxos baseUrl token (checkpointLocatorPolicyId locator) assetName
                 pure $ case utxos of
                     [] -> Right Nothing
                     [utxo] ->
@@ -469,10 +472,21 @@ koiosLiveCheckpoints baseUrl token locator =
             utxos <- queryAddressUtxos baseUrl token (checkpointLocatorAddress locator)
             pure $
                 first (DecodingFailure . T.pack) $
-                    traverse (decodeOneLiveCheckpoint locator) (filter carriesCheckpointPolicy utxos)
+                    traverse (decodeOneLiveCheckpoint locator) (filter live utxos)
   where
+    -- A convicted checkpoint keeps its token but is no live checkpoint.
+    live utxo = carriesCheckpointPolicy utxo && not (isTerminationPendingUtxo utxo)
     carriesCheckpointPolicy utxo =
         any ((== checkpointLocatorPolicyId locator) . chainAssetPolicy) (chainAssetList utxo)
+
+{- | Whether the output holds a convicted checkpoint (a pending termination):
+the token stays, the checkpoint is over.
+-}
+isTerminationPendingUtxo :: ChainAssetUtxo -> Bool
+isTerminationPendingUtxo utxo =
+    case chainAssetInlineDatum utxo >>= either (const Nothing) Just . plutusDataFromJson of
+        Just dat -> maybe False isTerminationPending (checkpointDatumFromData dat)
+        Nothing -> False
 
 decodeOneLiveCheckpoint :: CheckpointLocator -> ChainAssetUtxo -> Either String ActiveCheckpoint
 decodeOneLiveCheckpoint locator utxo = do
@@ -486,9 +500,8 @@ decodeOneLiveCheckpoint locator utxo = do
     decodedCheckpointAid u = do
         inline <- maybe (Left "checkpoint output has no inline datum") Right (chainAssetInlineDatum u)
         dat <- plutusDataFromJson inline
-        checkpoint <- maybe (Left "checkpoint inline datum is not the frozen V1 schema") Right (checkpointDatumFromData dat)
-        case checkpoint of
-            V1 value -> Right (cdCesrAid value)
+        value <- maybe (Left "checkpoint inline datum is not a version 2 checkpoint datum") Right (checkpointDatumFromData dat >>= datumKeyState)
+        Right (cdCesrAid value)
 
 {- | Resolve one exactly-one-output checkpoint asset match into
 'ActiveCheckpoint' (address, quantity, datum, and AID identity checks).
@@ -501,9 +514,7 @@ resolveActiveCheckpointOne locator aid assetName utxo = do
         Left "checkpoint output does not hold exactly one queried token"
     inline <- maybe (Left "checkpoint output has no inline datum") Right (chainAssetInlineDatum utxo)
     dat <- plutusDataFromJson inline
-    checkpoint <- maybe (Left "checkpoint inline datum is not the frozen V1 schema") Right (checkpointDatumFromData dat)
-    datum <- case checkpoint of
-        V1 value -> Right value
+    (facts, datum) <- maybe (Left "checkpoint inline datum is not a version 2 checkpoint datum") Right (checkpointDatumFromData dat >>= datumFacts)
     expectedAid <- case parsePrimitive (TE.encodeUtf8 aid) of
         Right (SelfAddressing raw, rest) | BS.null rest -> Right raw
         _ -> Left "AID must be one 44-character KERI E-code identifier"
@@ -519,6 +530,7 @@ resolveActiveCheckpointOne locator aid assetName utxo = do
             , activeCheckpointLovelace = chainAssetLovelace utxo
             , activeCheckpointAssets = chainAssetList utxo
             , activeCheckpointDatum = datum
+            , activeCheckpointFacts = facts
             }
 
 {- | Manifest\/list-shaped compatibility wrapper for the pre-#257 caller
@@ -531,15 +543,17 @@ resolveActiveCheckpoint ::
     Manifest -> Text -> Text -> [ChainAssetUtxo] -> Either String ActiveCheckpoint
 resolveActiveCheckpoint _ _ _ [] =
     Left "checkpoint is not registered"
-resolveActiveCheckpoint manifest aid assetName [utxo] =
-    resolveActiveCheckpointOne
-        CheckpointLocator
-            { checkpointLocatorPolicyId = checkpointPolicyId (manifestCheckpoint manifest)
-            , checkpointLocatorAddress = checkpointAddressBech32 (manifestCheckpoint manifest)
-            }
-        aid
-        assetName
-        utxo
+resolveActiveCheckpoint manifest aid assetName [utxo]
+    | isTerminationPendingUtxo utxo = Left "checkpoint is not registered"
+    | otherwise =
+        resolveActiveCheckpointOne
+            CheckpointLocator
+                { checkpointLocatorPolicyId = checkpointPolicyId (manifestCheckpoint manifest)
+                , checkpointLocatorAddress = checkpointAddressBech32 (manifestCheckpoint manifest)
+                }
+            aid
+            assetName
+            utxo
 resolveActiveCheckpoint _ _ _ matches =
     Left $
         "checkpoint lookup is ambiguous: "

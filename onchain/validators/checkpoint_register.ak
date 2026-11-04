@@ -7,6 +7,7 @@
 
 use aiken/collection/dict
 use aiken/collection/list
+use aiken/interval.{Finite}
 use aiken/primitive/bytearray
 use cardano/address.{Credential, Script, from_script, from_verification_key}
 use cardano/assets.{
@@ -16,16 +17,20 @@ use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Redeemer, ScriptPurpose,
   Transaction, Withdraw, find_input,
 }
-use cardano_keri/checkpoint/datum.{CheckpointDatum, CheckpointDatumV1, V1}
+use cardano_keri/checkpoint/datum.{
+  CheckpointDatum, Live, TerminationPending, V2,
+}
 use cardano_keri/checkpoint/enforcement_observer.{authorized_payee}
 use cardano_keri/checkpoint/freeze_bond.{freeze_bond_valid}
-use cardano_keri/checkpoint/message.{deriveAidAssetName}
+use cardano_keri/checkpoint/message.{aid_digest, deriveAidAssetName}
 use cardano_keri/checkpoint/observer.{
   ObserverClaim, ObserverEnvelope, observe_advance, observe_convict,
   observe_migration, observe_register,
 }
+use cardano_keri/checkpoint/refund
 use cardano_keri/checkpoint/registration.{valid_registration_deposit}
 use cardano_keri/checkpoint/role.{Active}
+use cardano_keri/checkpoint/value.{held_value, with_value}
 
 /// Registration evidence is carried by the lifecycle observer withdrawal.
 ///
@@ -34,11 +39,12 @@ use cardano_keri/checkpoint/role.{Active}
 /// deployment may drop arms, which moves the later ones up.
 pub type MintRedeemer {
   Register
-  ConvictBurn { checkpoint_ref: OutputReference }
 }
 
 pub type SpendRedeemer {
-  Advance
+  /// `payee_output_index` names the output that receives the premium when
+  /// the pool covers it; it is not read otherwise.
+  Advance { payee_output_index: Int }
   Convict { convictor_pkh: ByteArray, convictor_output_index: Int }
   /// Leave this generation under its own controller quorum (#254 T254-104).
   MigrateOut
@@ -55,22 +61,23 @@ validator checkpoint_register(
   /// `observer_enforcement` on every Convict settlement; both withdrawal
   /// redeemers must be the same envelope value.
   entitlement_hash: PolicyId,
-  /// Applied for a stable arity; this program no longer reads it.
+  /// The network a refund address must be written for.
   network_id: Int,
   d_reg: Int,
   freeze_bond: Int,
+  /// The premium (Lean `Params.P`) a rotation pays from the pool.
+  premium: Int,
 ) {
   mint(redeemer: Data, policy_id: PolicyId, tx: Transaction) {
     expect valid_registration_deposit(d_reg)
     expect freeze_bond_valid(freeze_bond)
+    expect premium >= 0
     expect mint_redeemer: MintRedeemer = redeemer
     when mint_redeemer is {
       Register -> {
         expect ran_register_check(lifecycle_hash, policy_id, tx)
-        validate_register(d_reg, freeze_bond, policy_id, tx)
+        validate_register(network_id, d_reg, freeze_bond, policy_id, tx)
       }
-      ConvictBurn { checkpoint_ref } ->
-        validate_convict_burn(d_reg, freeze_bond, checkpoint_ref, policy_id, tx)
     }
   }
 
@@ -82,12 +89,20 @@ validator checkpoint_register(
   ) {
     expect valid_registration_deposit(d_reg)
     expect freeze_bond_valid(freeze_bond)
+    expect premium >= 0
     expect spend_redeemer: SpendRedeemer = redeemer
     when spend_redeemer is {
-      Advance -> {
+      Advance { payee_output_index } -> {
         expect
           ran_advance_check(advance_hash, own_hash(tx, own_ref), own_ref, tx)
-        validate_advance(d_reg, own_ref, tx)
+        validate_advance(
+          d_reg,
+          freeze_bond,
+          premium,
+          payee_output_index,
+          own_ref,
+          tx,
+        )
       }
       Convict { convictor_pkh, convictor_output_index } -> {
         expect
@@ -100,6 +115,7 @@ validator checkpoint_register(
             tx,
           )
         validate_convict(
+          network_id,
           d_reg,
           freeze_bond,
           convictor_pkh,
@@ -173,7 +189,8 @@ fn validate_migrate_out_tokens(
 ) -> Bool {
   let Transaction { inputs, outputs, mint, .. } = tx
   expect Some(own_input) = find_input(inputs, own_ref)
-  expect InlineDatum(_) = own_input.output.datum
+  expect InlineDatum(source_data) = own_input.output.datum
+  expect V2(Live { .. }): CheckpointDatum = source_data
   expect [Pair(aid_name, -1)] = dict.to_pairs(tokens(mint, own))
   expect quantity_of(own_input.output.value, own, aid_name) == 1
   expect
@@ -330,12 +347,13 @@ fn ran_observed_enforcement(
 }
 
 fn validate_register(
+  network_id: Int,
   d_reg: Int,
   freeze_bond: Int,
   policy_id: PolicyId,
   tx: Transaction,
 ) -> Bool {
-  let Transaction { inputs, outputs, mint, .. } = tx
+  let Transaction { inputs, outputs, mint, validity_range, .. } = tx
   expect [Pair(aid_name, 1)] = dict.to_pairs(tokens(mint, policy_id))
   expect [state_output] = list.filter(
     outputs,
@@ -343,8 +361,23 @@ fn validate_register(
   )
   expect quantity_of(state_output.value, policy_id, aid_name) == 1
   expect InlineDatum(datum_data) = state_output.datum
-  expect V1(d): CheckpointDatum = datum_data
-  expect aid_name == deriveAidAssetName(d.cesr_aid)
+  expect  
+      V2(Live {
+        aid,
+        sn: 0,
+        epoch: 0,
+        poisoned: False,
+        frozen: False,
+        born_at,
+        refund_to,
+        ..
+      }): CheckpointDatum
+    = datum_data
+  expect Some(digest) = aid_digest(aid)
+  expect aid_name == deriveAidAssetName(digest)
+  expect Finite(upper) = validity_range.upper_bound.bound_type
+  expect born_at == upper
+  expect refund.payable(network_id, refund_to)
   expect
     list.all(
       inputs,
@@ -357,44 +390,6 @@ fn validate_register(
     )
   expect
     lovelace_of(state_output.value) >= checkpoint_min_ada + d_reg + freeze_bond
-  True
-}
-
-fn validate_convict_burn(
-  d_reg: Int,
-  freeze_bond: Int,
-  checkpoint_ref: OutputReference,
-  policy_id: PolicyId,
-  tx: Transaction,
-) -> Bool {
-  let Transaction { inputs, outputs, mint, .. } = tx
-  expect Some(checkpoint_input) = find_input(inputs, checkpoint_ref)
-  let (tip, protected_lovelace) = convict_source(
-    d_reg,
-    freeze_bond,
-    policy_id,
-    checkpoint_input,
-  )
-  let aid_name = deriveAidAssetName(tip.cesr_aid)
-  expect
-    checkpoint_input.output.value == (
-      from_lovelace(lovelace_of(checkpoint_input.output.value))
-        |> merge(from_asset(policy_id, aid_name, 1))
-    )
-  expect lovelace_of(checkpoint_input.output.value) >= protected_lovelace
-  expect dict.to_pairs(tokens(mint, policy_id)) == [Pair(aid_name, -1)]
-  expect
-    list.length(
-      list.filter(
-        inputs,
-        fn(input) { quantity_of(input.output.value, policy_id, aid_name) == 1 },
-      ),
-    ) == 1
-  expect
-    list.all(
-      outputs,
-      fn(output) { quantity_of(output.value, policy_id, aid_name) == 0 },
-    )
   True
 }
 
@@ -412,23 +407,11 @@ fn expect_exact_payout(
   True
 }
 
-/// The protected lovelace of a checkpoint a conviction may burn, and its tip.
-/// Only an ACTIVE checkpoint is a source: any other role address, or a
-/// datum of another family, fails.
-fn convict_source(
-  d_reg: Int,
-  freeze_bond: Int,
-  policy_id: PolicyId,
-  input: Input,
-) -> (CheckpointDatumV1, Int) {
-  expect InlineDatum(source_data) = input.output.datum
-  expect input.output.address == role.address(policy_id, Active)
-  expect V1(tip): CheckpointDatum = source_data
-  (tip, checkpoint_min_ada + d_reg + freeze_bond)
-}
-
 fn validate_advance(
   d_reg: Int,
+  freeze_bond: Int,
+  premium: Int,
+  payee_output_index: Int,
   own_ref: OutputReference,
   tx: Transaction,
 ) -> Bool {
@@ -436,24 +419,69 @@ fn validate_advance(
   expect Some(own_input) = find_input(inputs, own_ref)
   expect Script(own_hash) = own_input.output.address.payment_credential
   expect own_input.output.address == role.address(own_hash, Active)
-  expect InlineDatum(old_datum_data) = own_input.output.datum
-  expect V1(old): CheckpointDatum = old_datum_data
-  let aid_name = deriveAidAssetName(old.cesr_aid)
-  expect quantity_of(own_input.output.value, own_hash, aid_name) == 1
+  expect InlineDatum(old_data) = own_input.output.datum
+  expect V2(old): CheckpointDatum = old_data
+  expect Live { frozen, born_at, refund_to, .. } = old
+  expect [Pair(aid_name, 1)] = dict.to_pairs(
+    tokens(own_input.output.value, own_hash),
+  )
   expect [state_output] = list.filter(
     outputs,
     fn(output) { output.address == from_script(own_hash) },
   )
-  expect InlineDatum(new_datum_data) = state_output.datum
-  expect V1(_new): CheckpointDatum = new_datum_data
-  expect quantity_of(state_output.value, own_hash, aid_name) == 1
-  expect state_output.value == own_input.output.value
+  expect InlineDatum(new_data) = state_output.datum
+  expect V2(new): CheckpointDatum = new_data
+  expect  
+      Live {
+        poisoned: False,
+        frozen: new_frozen,
+        born_at: new_born_at,
+        refund_to: new_refund_to,
+        ..
+      }
+    = new
+  expect and {
+      new_frozen == frozen,
+      new_born_at == born_at,
+      new_refund_to == refund_to,
+    }
   expect dict.to_pairs(tokens(mint, own_hash)) == []
-  expect lovelace_of(state_output.value) >= checkpoint_min_ada + d_reg
-  True
+  expect Some(pool) = with_value(
+    checkpoint_min_ada,
+    d_reg,
+    freeze_bond,
+    old,
+    lovelace_of(own_input.output.value),
+  )
+  let paid = premium <= pool
+  let pool_after = if paid {
+    pool - premium
+  } else {
+    pool
+  }
+  expect
+    state_output.value == (
+      from_lovelace(
+        held_value(checkpoint_min_ada, d_reg, freeze_bond, new, pool_after),
+      )
+        |> merge(from_asset(own_hash, aid_name, 1))
+    )
+  if paid {
+    expect Some(payee) = list.at(outputs, payee_output_index)
+    quantity_of(payee.value, own_hash, aid_name) == 0 && lovelace_of(
+      payee.value,
+    ) >= premium
+  } else {
+    True
+  }
 }
 
+/// Convict a live checkpoint: the token stays at the checkpoint address in a
+/// pending termination that holds the minimum ADA, the convictor receives the
+/// registration deposit, and the refund address receives the bond (unless
+/// frozen) and the pool.
 fn validate_convict(
+  network_id: Int,
   d_reg: Int,
   freeze_bond: Int,
   convictor_pkh: ByteArray,
@@ -464,29 +492,69 @@ fn validate_convict(
   let Transaction { inputs, outputs, mint, .. } = tx
   expect Some(own_input) = find_input(inputs, own_ref)
   expect Script(own_hash) = own_input.output.address.payment_credential
-  let (tip, protected_lovelace) = convict_source(
+  expect own_input.output.address == role.address(own_hash, Active)
+  expect InlineDatum(source_data) = own_input.output.datum
+  expect V2(live): CheckpointDatum = source_data
+  expect Live { aid, sn, epoch, frozen, refund_to, .. } = live
+  expect [Pair(aid_name, 1)] = dict.to_pairs(
+    tokens(own_input.output.value, own_hash),
+  )
+  expect Some(pool) = with_value(
+    checkpoint_min_ada,
     d_reg,
     freeze_bond,
-    own_hash,
-    own_input,
+    live,
+    lovelace_of(own_input.output.value),
   )
-  let aid_name = deriveAidAssetName(tip.cesr_aid)
-  expect
-    own_input.output.value == (
-      from_lovelace(lovelace_of(own_input.output.value))
-        |> merge(from_asset(own_hash, aid_name, 1))
-    )
-  expect lovelace_of(own_input.output.value) >= protected_lovelace
-  expect dict.to_pairs(tokens(mint, own_hash)) == [Pair(aid_name, -1)]
-  expect
-    list.all(
-      outputs,
-      fn(output) { quantity_of(output.value, own_hash, aid_name) == 0 },
-    )
-  expect_exact_payout(
+  expect dict.to_pairs(tokens(mint, own_hash)) == []
+  let terminated = TerminationPending { aid, sn, epoch }
+  expect [pending_output] = list.filter(
+    outputs,
+    fn(output) { quantity_of(output.value, own_hash, aid_name) > 0 },
+  )
+  let pending_datum: CheckpointDatum = V2(terminated)
+  expect and {
+      pending_output.address == from_script(own_hash),
+      pending_output.datum == InlineDatum(pending_datum),
+      pending_output.value == (
+        from_lovelace(
+          held_value(checkpoint_min_ada, d_reg, freeze_bond, terminated, 0),
+        )
+          |> merge(from_asset(own_hash, aid_name, 1))
+      ),
+    }
+  let bond_held = if frozen {
+    0
+  } else {
+    freeze_bond
+  }
+  expect_exact_payout(outputs, convictor_output_index, convictor_pkh, d_reg) && refund_paid(
+    network_id,
     outputs,
     convictor_output_index,
-    convictor_pkh,
-    protected_lovelace,
+    refund_to,
+    bond_held + pool,
+  )
+}
+
+/// Some output other than the convictor's pays at least `required` lovelace
+/// to the refund address, whose ledger bytes the datum carries. A refund of
+/// nothing needs no output.
+fn refund_paid(
+  network_id: Int,
+  outputs: List<Output>,
+  skip_index: Int,
+  refund_to: ByteArray,
+  required: Int,
+) -> Bool {
+  required == 0 || list.indexed_foldr(
+    outputs,
+    False,
+    fn(index, output, found) {
+      found || index != skip_index && refund.ledger_bytes(
+        network_id,
+        output.address,
+      ) == Some(refund_to) && lovelace_of(output.value) >= required
+    },
   )
 }

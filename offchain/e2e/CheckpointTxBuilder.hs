@@ -65,6 +65,10 @@ import Cardano.KERI.AID.Checkpoint.BountyCommitment (
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
     CheckpointDatumV1 (..),
+    CheckpointDatumV2 (..),
+    convictedOf,
+    liveOfKeyState,
+    rotatedLive,
  )
 import Cardano.KERI.AID.Checkpoint.Enforcement (EnforcementEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Entitlement (
@@ -87,11 +91,16 @@ import Cardano.KERI.AID.Checkpoint.Registration (
     proofTokenName,
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
+import Cardano.KERI.AID.Checkpoint.Value (
+    RotationSettlement (..),
+    heldValue,
+    rotationSettlement,
+    withValue,
+ )
 import Cardano.KERI.AID.Checkpoint.Wire (
     advanceObserverRedeemerData,
     advanceSpendRedeemerData,
     asPlcData,
-    convictBurnRedeemerData,
     convictObserverRedeemerData,
     convictSpendRedeemerData,
     registerObserverRedeemerData,
@@ -109,6 +118,7 @@ import Cardano.KERI.AID.E2E.Script (
     scriptHashBytes,
     v1CommitmentParameters,
     v1FreezeBond,
+    v1Premium,
     v1RegistrationBond,
  )
 import Cardano.KERI.AID.Migration.Types (OutputRef (..))
@@ -117,6 +127,7 @@ import Cardano.Ledger.Address (
     AccountId (..),
     Addr (..),
     Withdrawals (..),
+    serialiseAddr,
  )
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.PParams (ppCostModelsL, ppMaxTxExUnitsL)
@@ -151,7 +162,7 @@ import Cardano.Ledger.Api.Tx.Wits (rdmrsTxWitsL, scriptTxWitsL)
 import Cardano.Ledger.BaseTypes (
     Inject (..),
     Network (Testnet),
-    StrictMaybe (SJust),
+    StrictMaybe (SJust, SNothing),
     TxIx (..),
  )
 import Cardano.Ledger.Binary (serialize)
@@ -298,6 +309,9 @@ data CheckpointEnv = CheckpointEnv
 data CheckpointInput = CheckpointInput
     { checkpointUtxo :: !(TxIn, TxOut ConwayEra)
     , checkpointDatum :: !CheckpointDatumV1
+    -- ^ the key state of the output's datum
+    , checkpointFacts :: !CheckpointDatumV2
+    -- ^ the version 2 datum the output carries, as read from the chain
     }
 
 data RejectionEvidence = RejectionEvidence
@@ -325,6 +339,15 @@ registrationBond = v1RegistrationBond
 
 freezeBond :: Integer
 freezeBond = v1FreezeBond
+
+premium :: Integer
+premium = v1Premium
+
+{- | The pool a registration funds beyond its deposit and bond: enough for
+the premium of one rotation and a remainder the conviction refunds.
+-}
+initialPool :: Integer
+initialPool = premium + 1_000_000
 
 scriptFee :: Integer
 scriptFee = 3_000_000
@@ -582,14 +605,12 @@ verifyRegisterScriptSizes env = do
     measure "observer_entitlement reference script" (envEntitlementScript env) (SBS.length (envEntitlementBytes env))
     measure "hash_proof reference script" (envHashProofScript env) (SBS.length (envHashProofBytes env))
     measure "bounty_commitment reference script" (envCommitmentScript env) (SBS.length (envCommitmentBytes env))
-    -- #339: re-derived from the applied advance program after the two-step
-    -- freeze was removed, not reused from the previous pin (14_867). The
-    -- advance observer no longer reads the Armed datum or the armed-response
-    -- action, so its applied program is shorter. The 16_133 ceiling is
-    -- unchanged.
-    unless (SBS.length (envAdvanceBytes env) == 14_695) $
+    -- #339: re-derived from the applied advance program once it reads the
+    -- version 2 datum (14_695 before), not reused from the previous pin. The
+    -- 16_133 ceiling is unchanged.
+    unless (SBS.length (envAdvanceBytes env) == 15_778) $
         fail
-            ( "observer_advance applied program changed from 14,695 bytes: "
+            ( "observer_advance applied program changed from 15,778 bytes: "
                 <> show (SBS.length (envAdvanceBytes env))
             )
 
@@ -870,7 +891,7 @@ productionRegisterScenarioUsingReferences env referenceUtxos fixture = do
             [0, 1]
             (hasAsset (envHashProofPolicy env) (rfProofName fixture))
             >>= requireJust "hash-proof output did not settle"
-    registerTxId <-
+    (registerTxId, registerValidity) <-
         submitTwoPassRegister
             env
             "checkpoint Register"
@@ -885,11 +906,12 @@ productionRegisterScenarioUsingReferences env referenceUtxos fixture = do
             [0, 1]
             (hasAsset (envCheckpointPolicy env) checkpointName)
             >>= requireJust "registered checkpoint output did not settle"
-    assertActiveCheckpoint env fixture registered
+    registeredOnChain <- assertActiveCheckpoint env fixture registerValidity registered
     pure
         ( CheckpointInput
             { checkpointUtxo = registered
             , checkpointDatum = rfDatum fixture
+            , checkpointFacts = registeredOnChain
             }
         , checkpointRef
         )
@@ -974,13 +996,7 @@ productionRegisterAdvanceScenario env = do
     unless
         (snd successor ^. addrTxOutL == roleAddress env Active)
         (fail "Advance successor is not at the ACTIVE address")
-    unless
-        (snd successor ^. valueTxOutL == snd (checkpointUtxo registered) ^. valueTxOutL)
-        (fail "Advance did not preserve the complete registered value")
-    case extractDatum (snd successor) of
-        Just (V1 datum)
-            | datum == created -> pure ()
-        _ -> fail "Advance successor does not carry the exact rotated V1 datum"
+    _ <- settledAdvance env "Advance" registered created advanceTxId successor
     remaining <-
         withinSecs 30 "query advanced checkpoint input" $
             queryUTxOByTxIn
@@ -1125,12 +1141,15 @@ prepareConvictActive env references checkpointRef advanceRef row fixture = do
                 (deriveAidAssetName (cdCesrAid (rsCreated firstRotation)))
             )
             >>= requireJust ("Convict " <> row <> " first Advance did not settle")
-    let firstAdvanced =
-            CheckpointInput
-                { checkpointUtxo = firstAdvancedUtxo
-                , checkpointDatum = rsCreated firstRotation
-                }
-        recordedEvidence =
+    firstAdvanced <-
+        settledAdvance
+            env
+            ("Convict " <> row <> " setup first Advance")
+            registered
+            (rsCreated firstRotation)
+            firstAdvanceTxId
+            firstAdvancedUtxo
+    let recordedEvidence =
             signedRotateEvidence
                 env
                 firstAdvanced
@@ -1168,18 +1187,13 @@ prepareConvictActive env references checkpointRef advanceRef row fixture = do
                 (deriveAidAssetName (cdCesrAid (rsCreated recordedRotation)))
             )
             >>= requireJust ("Convict " <> row <> " ACTIVE source did not settle")
-    unless
-        (snd advancedUtxo ^. addrTxOutL == roleAddress env Active)
-        (fail ("Convict " <> row <> " source is not ACTIVE"))
-    case extractDatum (snd advancedUtxo) of
-        Just (V1 datum)
-            | datum == rsCreated recordedRotation -> pure ()
-        _ -> fail ("Convict " <> row <> " source datum is not the conflict tip")
-    pure
-        CheckpointInput
-            { checkpointUtxo = advancedUtxo
-            , checkpointDatum = rsCreated recordedRotation
-            }
+    settledAdvance
+        env
+        ("Convict " <> row <> " ACTIVE source")
+        firstAdvanced
+        (rsCreated recordedRotation)
+        recordedAdvanceTxId
+        advancedUtxo
 
 advanceRejection :: CheckpointEnv -> IO RejectionEvidence
 advanceRejection env = do
@@ -1192,7 +1206,6 @@ advanceRejection env = do
             env
             staged
             (checkpointDatum staged)
-            dummyAdvanceEvidence
             validity
     expectProductionScriptRejection env "Advance" tx
 
@@ -2014,8 +2027,9 @@ buildRegisterTxWith ::
     CheckpointEnv ->
     RegistrationFixture ->
     (TxIn, TxOut ConwayEra) ->
+    ValidityPlan ->
     IO ConwayTx
-buildRegisterTxWith budgets referenceUtxos env fixture proofUtxo = do
+buildRegisterTxWith budgets referenceUtxos env fixture proofUtxo validity = do
     params <- withinSecs 30 "query Register protocol parameters" (queryProtocolParams (envProvider env))
     wallet <- withinSecs 30 "query Register wallet" (queryUTxOs (envProvider env) (envOwner env))
     (feeUtxo, collateralUtxo) <- pickDisjoint wallet [fst proofUtxo]
@@ -2035,7 +2049,7 @@ buildRegisterTxWith budgets referenceUtxos env fixture proofUtxo = do
                     ]
         stateValue =
             MaryValue
-                (Coin (checkpointMinAda + registrationBond + freezeBond))
+                (Coin (checkpointMinAda + registrationBond + freezeBond + initialPool))
                 ( MultiAsset $
                     Map.singleton
                         (envCheckpointPolicy env)
@@ -2043,13 +2057,14 @@ buildRegisterTxWith budgets referenceUtxos env fixture proofUtxo = do
                 )
         stateOut =
             mkBasicTxOut (roleAddress env Active) stateValue
-                & datumTxOutL .~ mkInlineDatum (asPlcData (V1 (rfDatum fixture)))
+                & datumTxOutL .~ mkInlineDatum (asPlcData (V2 (registeredFacts env fixture validity)))
         availableCoin = unCoin (proofOut ^. coinTxOutL) + unCoin (feeOut ^. coinTxOutL)
         changeCoin =
             availableCoin
                 - checkpointMinAda
                 - registrationBond
                 - freezeBond
+                - initialPool
                 - scriptFee
         changeOut = mkBasicTxOut (envOwner env) (inject (Coin changeCoin))
         allInputs = Set.fromList [proofIn, feeIn]
@@ -2081,6 +2096,8 @@ buildRegisterTxWith budgets referenceUtxos env fixture proofUtxo = do
                 & mintTxBodyL .~ minted
                 & withdrawalsTxBodyL .~ rspWithdrawals plan
                 & collateralInputsTxBodyL .~ Set.singleton collateralIn
+                & vldtTxBodyL
+                    .~ ValidityInterval SNothing (SJust (upperSlot validity))
                 & referenceInputsTxBodyL .~ Set.fromList (map fst referenceUtxos)
                 & scriptIntegrityHashTxBodyL
                     .~ computeScriptIntegrity
@@ -2094,18 +2111,26 @@ buildRegisterTxWith budgets referenceUtxos env fixture proofUtxo = do
                 .~ (if null referenceUtxos then scriptWitnesses else Map.empty)
             & witsTxL . rdmrsTxWitsL .~ rspRedeemers plan
 
+{- | The datum a registration writes: the fixture's key state born at the end of
+the validity interval, refunding the registering wallet.
+-}
+registeredFacts :: CheckpointEnv -> RegistrationFixture -> ValidityPlan -> CheckpointDatumV2
+registeredFacts env fixture validity =
+    liveOfKeyState (serialiseAddr (envOwner env)) (upperPosixMs validity) (rfDatum fixture)
+
 submitTwoPassRegister ::
     CheckpointEnv ->
     String ->
     [(TxIn, TxOut ConwayEra)] ->
     RegistrationFixture ->
     (TxIn, TxOut ConwayEra) ->
-    IO TxId
+    IO (TxId, ValidityPlan)
 submitTwoPassRegister env label referenceUtxos fixture proofUtxo = do
     let expected = registerEvaluationPurposes env
+    validity <- tipValidity env label
     discovery <-
         withinSecs 90 (label <> ": build discovery binding") $
-            buildRegisterTxWith Map.empty referenceUtxos env fixture proofUtxo
+            buildRegisterTxWith Map.empty referenceUtxos env fixture proofUtxo validity
     discoveryObserved <-
         withinSecs 120 (label <> ": evaluate discovery binding") $
             evaluateTx (envProvider env) (addKeyWitness genesisSignKey discovery)
@@ -2113,7 +2138,7 @@ submitTwoPassRegister env label referenceUtxos fixture proofUtxo = do
     let finalBudgets = Map.map deterministicMargin discoveryUnits
     final <-
         withinSecs 90 (label <> ": rebuild final binding") $
-            buildRegisterTxWith finalBudgets referenceUtxos env fixture proofUtxo
+            buildRegisterTxWith finalBudgets referenceUtxos env fixture proofUtxo validity
     let signedFinal = addKeyWitness genesisSignKey final
         finalBytes = serialize (eraProtVerLow @ConwayEra) signedFinal
     finalObserved <-
@@ -2151,7 +2176,7 @@ submitTwoPassRegister env label referenceUtxos fixture proofUtxo = do
         withinSecs 60 ("submit unchanged " <> label) $
             submitTx (envSubmitter env) signedFinal
     case result of
-        Submitted txId -> pure txId
+        Submitted txId -> pure (txId, validity)
         Rejected reason -> fail (label <> " rejected: " <> B8.unpack reason)
 
 buildRotateStoryTxWith ::
@@ -2176,6 +2201,21 @@ buildRotateStoryTxWith budgets env checkpointRef advanceRef input successor evid
             queryUTxOs (envProvider env) (envOwner env)
     (feeUtxo, collateralUtxo) <-
         pickDisjoint wallet [stateIn, fst checkpointRef, fst advanceRef]
+    settlement <-
+        requireJust
+            "Advance: the checkpoint is not a live output holding its floor"
+            ( rotationSettlement
+                checkpointMinAda
+                registrationBond
+                freezeBond
+                premium
+                (checkpointFacts input)
+                (unCoin (snd (checkpointUtxo input) ^. coinTxOutL))
+            )
+    successorFacts <-
+        requireJust
+            "Advance: the checkpoint is not live"
+            (rotatedLive (checkpointFacts input) successor)
     let (feeIn, feeOut) = feeUtxo
         collateralIn = fst collateralUtxo
         allInputs = Set.fromList [stateIn, feeIn]
@@ -2193,8 +2233,22 @@ buildRotateStoryTxWith budgets env checkpointRef advanceRef input successor evid
             mkStateOutput
                 env
                 Active
-                (snd (checkpointUtxo input) ^. valueTxOutL)
-                (asPlcData (V1 successor))
+                ( withLovelace
+                    ( heldValue
+                        checkpointMinAda
+                        registrationBond
+                        freezeBond
+                        successorFacts
+                        (settlementPoolAfter settlement)
+                    )
+                    (snd (checkpointUtxo input) ^. valueTxOutL)
+                )
+                (asPlcData (V2 successorFacts))
+        -- The premium payee is the second output.
+        premiumOuts =
+            [ mkBasicTxOut (envOwner env) (inject (Coin (settlementPaid settlement)))
+            | settlementPaid settlement > 0
+            ]
         changeOut =
             mkBasicTxOut
                 (envOwner env)
@@ -2205,7 +2259,7 @@ buildRotateStoryTxWith budgets env checkpointRef advanceRef input successor evid
                     [
                         ( spendPurpose
                         ,
-                            ( ledgerData advanceSpendRedeemerData
+                            ( ledgerData (advanceSpendRedeemerData premiumOutputIndex)
                             , Map.findWithDefault
                                 advanceSpendExUnits
                                 spendPurpose
@@ -2226,7 +2280,7 @@ buildRotateStoryTxWith budgets env checkpointRef advanceRef input successor evid
         baseBody =
             mkBasicTxBody
                 & inputsTxBodyL .~ allInputs
-                & outputsTxBodyL .~ StrictSeq.fromList [stateOut, changeOut]
+                & outputsTxBodyL .~ StrictSeq.fromList ([stateOut] <> premiumOuts <> [changeOut])
                 & feeTxBodyL .~ Coin scriptFee
                 & withdrawalsTxBodyL
                     .~ Withdrawals
@@ -2317,6 +2371,20 @@ buildConvictStoryTxWith budgets env checkpointRef enforcementRef reservation inp
             , fst entitlementRef
             , fst commitmentRef
             ]
+    pendingFacts <-
+        requireJust
+            "Convict: the checkpoint is not live"
+            (convictedOf (checkpointFacts input))
+    _ <-
+        requireJust
+            "Convict: the checkpoint holds less than its floor"
+            ( withValue
+                checkpointMinAda
+                registrationBond
+                freezeBond
+                (checkpointFacts input)
+                (unCoin (snd (checkpointUtxo input) ^. coinTxOutL))
+            )
     let (feeIn, feeOut) = feeUtxo
         collateralIn = fst collateralUtxo
         allInputs = Set.fromList [stateIn, reservationIn, feeIn]
@@ -2328,32 +2396,18 @@ buildConvictStoryTxWith budgets env checkpointRef enforcementRef reservation inp
             observerWithdrawals env
         expected =
             Set.fromList
-                [ mintPurpose
-                , retirePurpose
+                [ retirePurpose
                 , spendPurpose
                 , revealPurpose
                 , enforcementPurpose
                 , entitlementPurpose
                 ]
-        checkpointName =
-            AssetName $
-                SBS.toShort $
-                    deriveAidAssetName (cdCesrAid (checkpointDatum input))
         markerName = AssetName (SBS.toShort (fst (eepBurn plan)))
         minted =
             MultiAsset $
-                Map.fromList
-                    [
-                        ( envCheckpointPolicy env
-                        , Map.singleton checkpointName (-1)
-                        )
-                    ,
-                        ( envCommitmentPolicy env
-                        , Map.singleton markerName (snd (eepBurn plan))
-                        )
-                    ]
-        mintPurpose =
-            ConwayMinting (AsIx (mintingIndex (envCheckpointPolicy env) minted))
+                Map.singleton
+                    (envCommitmentPolicy env)
+                    (Map.singleton markerName (snd (eepBurn plan)))
         retirePurpose =
             ConwayMinting (AsIx (mintingIndex (envCommitmentPolicy env) minted))
         -- #280: the deposit refund sits at output zero for every settlement
@@ -2362,19 +2416,38 @@ buildConvictStoryTxWith budgets env checkpointRef enforcementRef reservation inp
             mkBasicTxOut
                 (keyAddress (cpoRecipientPkh (eepRefund plan)))
                 (inject (Coin (cpoLovelace (eepRefund plan))))
-        protected = checkpointMinAda + registrationBond + freezeBond
         convictorOutputIndex = 1
-        sourceCoin = unCoin (snd (checkpointUtxo input) ^. coinTxOutL)
-        surplus = sourceCoin - protected
+        -- What the pending termination and the convictor do not take: the
+        -- bond (unless frozen) and the pool.
+        refundLovelace =
+            unCoin (snd (checkpointUtxo input) ^. coinTxOutL)
+                - checkpointMinAda
+                - registrationBond
+        -- The pending termination keeps the token at the checkpoint address and
+        -- holds the minimum ADA; the convictor receives the deposit; the bond
+        -- and the pool go to the refund address the datum committed.
+        pendingOut =
+            mkStateOutput
+                env
+                Active
+                ( MaryValue
+                    (Coin checkpointMinAda)
+                    (let MaryValue _ assets = snd (checkpointUtxo input) ^. valueTxOutL in assets)
+                )
+                (asPlcData (V2 pendingFacts))
         convictorOut =
             mkBasicTxOut
                 (keyAddress convictor)
-                (inject (Coin protected))
+                (inject (Coin registrationBond))
+        refundToOut =
+            mkBasicTxOut
+                (envOwner env)
+                (inject (Coin refundLovelace))
         changeOut =
             mkBasicTxOut
                 (envOwner env)
-                (addLovelace (surplus - scriptFee) (feeOut ^. valueTxOutL))
-        outputs = [refundOut, convictorOut, changeOut]
+                (addLovelace (-scriptFee) (feeOut ^. valueTxOutL))
+        outputs = [refundOut, convictorOut, pendingOut, refundToOut, changeOut]
         observerRedeemer =
             ledgerData
                 ( convictObserverRedeemerData
@@ -2387,16 +2460,6 @@ buildConvictStoryTxWith budgets env checkpointRef enforcementRef reservation inp
             Redeemers $
                 Map.fromList
                     [
-                        ( mintPurpose
-                        ,
-                            ( ledgerData (convictBurnRedeemerData spentTxIdBytes spentIndex)
-                            , Map.findWithDefault
-                                (ExUnits 1_500_000 800_000_000)
-                                mintPurpose
-                                budgets
-                            )
-                        )
-                    ,
                         ( retirePurpose
                         ,
                             ( ledgerData (asPlcData Retire)
@@ -2479,13 +2542,6 @@ buildConvictStoryTxWith budgets env checkpointRef enforcementRef reservation inp
                         params
                         redeemers
                         (TxDats mempty)
-    unless (surplus >= 0) $
-        fail
-            ( "Convict source is below its protected reserve: source="
-                <> show sourceCoin
-                <> " protected="
-                <> show protected
-            )
     pure
         ( mkBasicTx body
             & witsTxL . rdmrsTxWitsL .~ redeemers
@@ -2870,6 +2926,7 @@ substitute for the blocked positive Register lineage.
 stageCheckpointInput ::
     CheckpointEnv -> CheckpointDatumV1 -> IO CheckpointInput
 stageCheckpointInput env datum = do
+    let facts = liveOfKeyState (serialiseAddr (envOwner env)) 0 datum
     params <- withinSecs 30 "query staging protocol parameters" (queryProtocolParams (envProvider env))
     wallet <- withinSecs 30 "query staging wallet" (queryUTxOs (envProvider env) (envOwner env))
     feeUtxo <- requireJust "stageCheckpointInput: no wallet UTxO" (largestFirst wallet)
@@ -2877,7 +2934,7 @@ stageCheckpointInput env datum = do
             mkBasicTxOut
                 (roleAddress env Active)
                 (inject (Coin (checkpointMinAda + registrationBond + freezeBond)))
-                & datumTxOutL .~ mkInlineDatum (asPlcData (V1 datum))
+                & datumTxOutL .~ mkInlineDatum (asPlcData (V2 facts))
         tx = mkBasicTx (mkBasicTxBody & outputsTxBodyL .~ StrictSeq.singleton stagedOut)
     balanced <-
         either
@@ -2894,26 +2951,34 @@ stageCheckpointInput env datum = do
             >>= requireJust "manual checkpoint staging input did not settle"
     dbg
         "manual ACTIVE checkpoint input has no production token lineage; only Advance rejection is asserted"
-    pure CheckpointInput{checkpointUtxo = utxo, checkpointDatum = datum}
+    pure
+        CheckpointInput
+            { checkpointUtxo = utxo
+            , checkpointDatum = datum
+            , checkpointFacts = facts
+            }
 
 buildAdvanceTx ::
     CheckpointEnv ->
     CheckpointInput ->
     CheckpointDatumV1 ->
-    AdvanceEvidence ->
     ValidityPlan ->
     IO ConwayTx
-buildAdvanceTx env input successor evidence validity =
+buildAdvanceTx env input successor validity = do
+    successorFacts <-
+        requireJust
+            "Advance: the checkpoint is not live"
+            (rotatedLive (checkpointFacts input) successor)
     buildCheckpointSpend
         env
         input
-        (advanceRedeemerData evidence)
+        (advanceSpendRedeemerData premiumOutputIndex)
         validity
         [ mkStateOutput
             env
             Active
             (snd (checkpointUtxo input) ^. valueTxOutL)
-            (asPlcData (V1 successor))
+            (asPlcData (V2 successorFacts))
         ]
         0
 
@@ -2968,6 +3033,14 @@ mkStateOutput env role value datum =
     mkBasicTxOut (roleAddress env role) value
         & datumTxOutL .~ mkInlineDatum datum
 
+-- | The index of the output that receives the premium.
+premiumOutputIndex :: Integer
+premiumOutputIndex = 1
+
+-- | The value with its lovelace replaced.
+withLovelace :: Integer -> MaryValue -> MaryValue
+withLovelace lovelace (MaryValue _ assets) = MaryValue (Coin lovelace) assets
+
 addLovelace :: Integer -> MaryValue -> MaryValue
 addLovelace amount (MaryValue (Coin lovelace) assets) =
     MaryValue (Coin (lovelace + amount)) assets
@@ -3002,8 +3075,12 @@ currentValidity env = do
             }
 
 assertActiveCheckpoint ::
-    CheckpointEnv -> RegistrationFixture -> (TxIn, TxOut ConwayEra) -> IO ()
-assertActiveCheckpoint env fixture (_, output) = do
+    CheckpointEnv ->
+    RegistrationFixture ->
+    ValidityPlan ->
+    (TxIn, TxOut ConwayEra) ->
+    IO CheckpointDatumV2
+assertActiveCheckpoint env fixture validity (_, output) = do
     unless
         (output ^. addrTxOutL == roleAddress env Active)
         (fail "registered checkpoint output is not at the production ACTIVE role address")
@@ -3011,12 +3088,12 @@ assertActiveCheckpoint env fixture (_, output) = do
         (hasAsset (envCheckpointPolicy env) (deriveAidAssetName (cdCesrAid (rfDatum fixture))) output)
         (fail "registered checkpoint output does not retain its production AID token")
     unless
-        (unCoin (output ^. coinTxOutL) >= checkpointMinAda + registrationBond + freezeBond)
-        (fail "registered checkpoint output is short of checkpoint_min_ada + D_reg + B")
+        (unCoin (output ^. coinTxOutL) == checkpointMinAda + registrationBond + freezeBond + initialPool)
+        (fail "registered checkpoint output does not hold checkpoint_min_ada + D_reg + B + the funded pool")
     case extractDatum output of
-        Just (V1 datum)
-            | datum == rfDatum fixture -> pure ()
-        _ -> fail "registered checkpoint output does not carry the production V1 datum lineage"
+        Just (V2 facts)
+            | facts == registeredFacts env fixture validity -> pure facts
+        _ -> fail "registered checkpoint output does not carry the live version 2 datum of the registration"
 
 assertConvictSettlement ::
     CheckpointEnv ->
@@ -3026,20 +3103,24 @@ assertConvictSettlement ::
     TxId ->
     IO ()
 assertConvictSettlement env row input convictor convictTxId = do
-    let outputIndexes = [0, 1, 2]
+    let outputIndexes = [0, 1, 2, 3]
         outputRefs =
             Set.fromList
                 [ TxIn convictTxId (TxIx (fromIntegral outputIndex))
                 | outputIndex <- outputIndexes
                 ]
         aidName = deriveAidAssetName (cdCesrAid (checkpointDatum input))
-        protected = checkpointMinAda + registrationBond + freezeBond
+        sourceCoin = unCoin (snd (checkpointUtxo input) ^. coinTxOutL)
+    pending <-
+        requireJust
+            ("Convict " <> row <> " source is not live")
+            (convictedOf (checkpointFacts input))
     _ <-
         pollOutput
             (envProvider env)
             convictTxId
             outputIndexes
-            (isExactKeyPayout convictor protected)
+            (isExactKeyPayout convictor registrationBond)
             >>= requireJust ("Convict " <> row <> " payout did not settle")
     outputs <-
         withinSecs 30 ("query Convict " <> row <> " outputs") $
@@ -3051,14 +3132,15 @@ assertConvictSettlement env row input convictor convictTxId = do
                 <> " settlement query did not return every output: "
                 <> show (Map.keysSet outputs)
             )
+    let outputAt index =
+            requireJust
+                ("Convict " <> row <> " output index " <> show index <> " is absent")
+                (Map.lookup (TxIn convictTxId (TxIx index)) outputs)
     -- #280: output zero is the reservation's deposit refund, so the convictor
-    -- and hunter payouts the register indexes sit one place along.  Asserting
+    -- payout, the pending termination and the refund sit after it.  Asserting
     -- the refund from settled chain state is what proves the reveal returned
     -- exactly the applied deposit to exactly the committed beneficiary.
-    refundOut <-
-        requireJust
-            ("Convict " <> row <> " output index 0 is absent")
-            (Map.lookup (TxIn convictTxId (TxIx 0)) outputs)
+    refundOut <- outputAt 0
     unless
         ( isExactKeyPayout
             convictor
@@ -3071,23 +3153,33 @@ assertConvictSettlement env row input convictor convictTxId = do
                 <> " output 0 is not the exact reservation deposit refund"
             )
         )
-    convictorOut <-
-        requireJust
-            ("Convict " <> row <> " output index 1 is absent")
-            (Map.lookup (TxIn convictTxId (TxIx 1)) outputs)
+    convictorOut <- outputAt 1
     unless
-        (isExactKeyPayout convictor protected convictorOut)
+        (isExactKeyPayout convictor registrationBond convictorOut)
         (fail ("Convict " <> row <> " output 1 is not the exact convictor payout"))
+    -- The token stays: the pending termination holds the minimum ADA, the
+    -- AID token and the datum the Lean conviction writes.
+    pendingOut <- outputAt 2
     unless
-        (unCoin (convictorOut ^. coinTxOutL) == protected)
-        (fail ("Convict " <> row <> " protected payout amount is wrong"))
-    when
-        (any (hasAsset (envCheckpointPolicy env) aidName) (Map.elems outputs))
-        (fail ("Convict " <> row <> " left the burned AID token in an output"))
-    let roleAddresses = [roleAddress env Active]
+        ( pendingOut ^. addrTxOutL == roleAddress env Active
+            && hasAsset (envCheckpointPolicy env) aidName pendingOut
+            && unCoin (pendingOut ^. coinTxOutL) == checkpointMinAda
+        )
+        (fail ("Convict " <> row <> " output 2 is not the pending termination holding the token"))
+    case extractDatum pendingOut of
+        Just (V2 facts)
+            | facts == pending -> pure ()
+        _ -> fail ("Convict " <> row <> " pending output does not carry the termination pending datum")
+    -- The bond (unless frozen) and the pool go to the committed refund
+    -- address, with no token.
+    refundToOut <- outputAt 3
     unless
-        (all ((`notElem` roleAddresses) . (^. addrTxOutL)) (Map.elems outputs))
-        (fail ("Convict " <> row <> " created a checkpoint-role successor"))
+        ( refundToOut ^. addrTxOutL == envOwner env
+            && not (hasAsset (envCheckpointPolicy env) aidName refundToOut)
+            && unCoin (refundToOut ^. coinTxOutL)
+                == sourceCoin - checkpointMinAda - registrationBond
+        )
+        (fail ("Convict " <> row <> " output 3 is not the refund of the bond and the pool"))
     remaining <-
         withinSecs 30 ("query Convict " <> row <> " source input") $
             queryUTxOByTxIn
@@ -3103,8 +3195,9 @@ assertConvictSettlement env row input convictor convictTxId = do
             <> "; source-input="
             <> show (fst (checkpointUtxo input))
             <> "; convictor-output=1:"
-            <> show protected
-            <> "; aid-token-absent=true; checkpoint-successor-absent=true"
+            <> show registrationBond
+            <> "; pending-output=2; refund-output=3:"
+            <> show (sourceCoin - checkpointMinAda - registrationBond)
         )
 
 isExactKeyPayout :: ByteString -> Integer -> TxOut ConwayEra -> Bool
@@ -3145,26 +3238,6 @@ slotStartPosixMs env target = do
                 then search slotAt mid hi
                 else search slotAt lo mid
 
-dummyAdvanceEvidence :: AdvanceEvidence
-dummyAdvanceEvidence =
-    AdvanceEvidence
-        { aeEventBytes = "{}"
-        , aeOffT = 0
-        , aeOffI = 0
-        , aeOffS = 0
-        , aeOffK = []
-        , aeOffKt = 0
-        , aeOffN = []
-        , aeOffNt = 0
-        , aeOffBr = []
-        , aeOffBa = []
-        , aeOffBt = 0
-        , aeWitCut = []
-        , aeWitAdd = []
-        , aeCtrlSigs = []
-        , aeWitReceipts = []
-        }
-
 hashProofRedeemerData :: RegistrationFixture -> PLC.Data
 hashProofRedeemerData fixture =
     Constr
@@ -3180,37 +3253,6 @@ hashProofBurnRedeemerData = Constr 0 [B "", B "", I 0, I 0]
 
 registerRedeemerData :: PLC.Data
 registerRedeemerData = Constr 0 []
-
-advanceRedeemerData :: AdvanceEvidence -> PLC.Data
-advanceRedeemerData evidence = Constr 0 [advanceEvidenceData evidence]
-
-advanceEvidenceData :: AdvanceEvidence -> PLC.Data
-advanceEvidenceData AdvanceEvidence{..} =
-    Constr
-        0
-        [ B aeEventBytes
-        , I (fromIntegral aeOffT)
-        , I (fromIntegral aeOffI)
-        , I (fromIntegral aeOffS)
-        , intListData aeOffK
-        , I (fromIntegral aeOffKt)
-        , intListData aeOffN
-        , I (fromIntegral aeOffNt)
-        , intListData aeOffBr
-        , intListData aeOffBa
-        , I (fromIntegral aeOffBt)
-        , List (map B aeWitCut)
-        , List (map B aeWitAdd)
-        , signatureListData aeCtrlSigs
-        , signatureListData aeWitReceipts
-        ]
-
-intListData :: (Integral a) => [a] -> PLC.Data
-intListData = List . map (I . fromIntegral)
-
-signatureListData :: [(Int, ByteString)] -> PLC.Data
-signatureListData =
-    List . map (\(index, signature) -> Constr 0 [I (fromIntegral index), B signature])
 
 ledgerData :: PLC.Data -> Ledger.Data ConwayEra
 ledgerData = Ledger.Data
@@ -3643,28 +3685,8 @@ entitledSettlementValidity ::
 entitledSettlementValidity env label resolved = do
     let scope = bcScope (rcDatum resolved)
     awaitCommitmentMaturity env label (bsEligibleAfter scope)
-    snapshot <-
-        withinSecs 30 (label <> ": query settlement tip") $
-            queryLedgerSnapshot (envProvider env)
-    let lower = ledgerTipSlot snapshot
-        upper = SlotNo (unSlotNo lower + 25)
-    lowerMs <- slotStartPosixMs env lower
-    -- Both conversions sit AT the tip and the endpoint is derived from the
-    -- era's own slot length: 25 slots is inside the node's forecast but
-    -- outside the reduced search bracket above.
-    nextMs <- slotStartPosixMs env (SlotNo (unSlotNo lower + 1))
-    let slotLengthMs = nextMs - lowerMs
-    unless (slotLengthMs > 0) $
-        fail (label <> ": the node reported a non-positive slot length")
-    let upperMs = lowerMs + 25 * slotLengthMs
-        validity =
-            ValidityPlan
-                { lowerSlot = lower
-                , upperSlot = upper
-                , lowerPosixMs = lowerMs
-                , upperPosixMs = upperMs
-                }
-        range = declaredSlotRange validity
+    validity <- tipValidity env label
+    let range = declaredSlotRange validity
     unless (atOrAfter range (bsEligibleAfter scope)) $
         fail
             ( label
@@ -3680,6 +3702,32 @@ entitledSettlementValidity env label resolved = do
                 <> show (bsExpiresAt scope)
             )
     pure validity
+
+{- | A validity interval from the ledger tip to 25 slots ahead, inside the
+node's forecast.
+-}
+tipValidity :: CheckpointEnv -> String -> IO ValidityPlan
+tipValidity env label = do
+    snapshot <-
+        withinSecs 30 (label <> ": query settlement tip") $
+            queryLedgerSnapshot (envProvider env)
+    let lower = ledgerTipSlot snapshot
+        upper = SlotNo (unSlotNo lower + 25)
+    lowerMs <- slotStartPosixMs env lower
+    -- Both conversions sit AT the tip and the endpoint is derived from the
+    -- era's own slot length: 25 slots is inside the node's forecast but
+    -- outside the reduced search bracket above.
+    nextMs <- slotStartPosixMs env (SlotNo (unSlotNo lower + 1))
+    let slotLengthMs = nextMs - lowerMs
+    unless (slotLengthMs > 0) $
+        fail (label <> ": the node reported a non-positive slot length")
+    pure
+        ValidityPlan
+            { lowerSlot = lower
+            , upperSlot = upper
+            , lowerPosixMs = lowerMs
+            , upperPosixMs = lowerMs + 25 * slotLengthMs
+            }
 
 {- | Submit one authentic #271 opening and resolve the output it created.
 
@@ -3838,3 +3886,64 @@ prepareLiveEntitlement env checkpointInput evidence payee nonce = do
     pure plan
   where
     label = "live conviction"
+
+{- | The checkpoint input an Advance settled. The successor carries the rotated
+version 2 datum and exactly the lovelace the Lean @heldValue@ gives it once the
+premium left the pool, and the premium reached the output the redeemer names.
+-}
+settledAdvance ::
+    CheckpointEnv ->
+    String ->
+    CheckpointInput ->
+    CheckpointDatumV1 ->
+    TxId ->
+    (TxIn, TxOut ConwayEra) ->
+    IO CheckpointInput
+settledAdvance env row before created advanceTxId utxo = do
+    settlement <-
+        requireJust
+            (row <> ": the advanced checkpoint was not a live output holding its floor")
+            ( rotationSettlement
+                checkpointMinAda
+                registrationBond
+                freezeBond
+                premium
+                (checkpointFacts before)
+                (unCoin (snd (checkpointUtxo before) ^. coinTxOutL))
+            )
+    expected <-
+        requireJust
+            (row <> ": the advanced checkpoint was not live")
+            (rotatedLive (checkpointFacts before) created)
+    unless
+        (snd utxo ^. addrTxOutL == roleAddress env Active)
+        (fail (row <> ": successor is not at the ACTIVE address"))
+    case extractDatum (snd utxo) of
+        Just (V2 facts)
+            | facts == expected -> pure ()
+        _ -> fail (row <> ": successor does not carry the exact rotated version 2 datum")
+    unless
+        ( unCoin (snd utxo ^. coinTxOutL)
+            == heldValue
+                checkpointMinAda
+                registrationBond
+                freezeBond
+                expected
+                (settlementPoolAfter settlement)
+        )
+        (fail (row <> ": successor lovelace is not the held value after the premium"))
+    when (settlementPaid settlement > 0) $ do
+        let payeeRef = TxIn advanceTxId (TxIx (fromIntegral premiumOutputIndex))
+        payee <-
+            withinSecs 30 (row <> ": query premium output") $
+                queryUTxOByTxIn (envProvider env) (Set.singleton payeeRef)
+        case Map.lookup payeeRef payee of
+            Just out
+                | unCoin (out ^. coinTxOutL) >= settlementPaid settlement -> pure ()
+            _ -> fail (row <> ": the premium output is missing or short")
+    pure
+        CheckpointInput
+            { checkpointUtxo = utxo
+            , checkpointDatum = created
+            , checkpointFacts = expected
+            }

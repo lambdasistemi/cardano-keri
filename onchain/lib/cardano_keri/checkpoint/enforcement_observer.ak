@@ -15,7 +15,7 @@
 
 use cardano/transaction.{InlineDatum, Transaction, find_input}
 use cardano_keri/bounty_commitment.{CommitmentFamily}
-use cardano_keri/checkpoint/datum.{CheckpointDatum, V1}
+use cardano_keri/checkpoint/datum.{CheckpointDatum, CheckpointDatumV1, Live, V2}
 use cardano_keri/checkpoint/enforcement.{
   ConvictValid, EnforcementBindingValid, bind_enforcement_evidence,
   convict_predicate,
@@ -23,6 +23,7 @@ use cardano_keri/checkpoint/enforcement.{
 use cardano_keri/checkpoint/entitlement.{
   EnforcementProofV1, enforcement_evidence_digest,
 }
+use cardano_keri/checkpoint/message.{aid_digest}
 use cardano_keri/checkpoint/observer.{
   ObserverClaim, ObserverEnvelope, observe_convict,
 }
@@ -70,9 +71,24 @@ fn observe_convict_impl(
   expect Some(own_input) = find_input(tx.inputs, own_ref)
   expect InlineDatum(source_data) = own_input.output.datum
   expect own_input.output.address == role.address(policy_id, Active)
-  expect V1(tip): CheckpointDatum = source_data
+  expect V2(Live { aid, sn, epoch, keys, .. }): CheckpointDatum = source_data
+  expect Some(digest) = aid_digest(aid)
+  // The tip the conviction is about: the live checkpoint's key state, its
+  // epoch and sequence number standing for the predicate's counter and
+  // native sequence number.
+  let tip = CheckpointDatumV1 {
+    cesr_aid: digest,
+    cur_keys: keys.cur_keys,
+    cur_threshold: keys.cur_threshold,
+    next_keys: keys.next_keys,
+    next_threshold: keys.next_threshold,
+    witnesses: keys.witnesses,
+    toad: keys.toad,
+    seq: epoch,
+    native_sn: sn,
+  }
   expect EnforcementBindingValid(decoded) = bind_enforcement_evidence(
-    tip.cesr_aid,
+    digest,
     evidence,
   )
   expect convict_predicate(tip, decoded) == ConvictValid

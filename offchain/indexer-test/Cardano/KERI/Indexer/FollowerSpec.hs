@@ -329,6 +329,7 @@ manifestWithAddress address =
                 , parameterNetworkDiscriminator = 0
                 , parameterRegistrationBond = 1
                 , parameterFreezeBond = 1
+                , parameterPremium = Just 1
                 }
         , manifestCheckpoint =
             CheckpointInfo

@@ -74,6 +74,7 @@ library
     Cardano.KERI.AID.Checkpoint.Message
     Cardano.KERI.AID.Checkpoint.Registration
     Cardano.KERI.AID.Checkpoint.Threshold
+    Cardano.KERI.AID.Checkpoint.Value
     Cardano.KERI.AID.Checkpoint.Wire
     Cardano.KERI.AID.Ed25519
     Cardano.KERI.AID.Migration.Checkpoint
@@ -393,6 +394,7 @@ test-suite deployment-tests
   hs-source-dirs:   deployment-test
   main-is:          Main.hs
   other-modules:
+    Cardano.KERI.Deployment.AdvancePackageSpec
     Cardano.KERI.Deployment.AdvanceSpec
     Cardano.KERI.Deployment.BountyEntitlementSpec
     Cardano.KERI.Deployment.ChainIndexSpec
@@ -896,6 +898,7 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.AdvanceSpec
     Cardano.KERI.AID.Checkpoint.BountyCommitmentSpec
     Cardano.KERI.AID.Checkpoint.DatumSpec
+    Cardano.KERI.AID.Checkpoint.DatumV2Spec
     Cardano.KERI.AID.Checkpoint.EnforcementSpec
     Cardano.KERI.AID.Checkpoint.EntitlementSpec
     Cardano.KERI.AID.Checkpoint.FixtureLoader
@@ -905,6 +908,7 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.RegistrationFixturesSpec
     Cardano.KERI.AID.Checkpoint.RegistrationSpec
     Cardano.KERI.AID.Checkpoint.ThresholdSpec
+    Cardano.KERI.AID.Checkpoint.ValueSpec
     Cardano.KERI.AID.Checkpoint.WireSpec
     Cardano.KERI.AID.Ed25519Spec
     Cardano.KERI.AID.Migration.CheckpointSpec

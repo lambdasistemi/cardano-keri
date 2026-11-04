@@ -365,8 +365,8 @@ fn live_v2(keys: KeyMaterial) -> CheckpointDatumV2 {
   }
 }
 
-fn pending_v2(keys: KeyMaterial) -> CheckpointDatumV2 {
-  TerminationPending { aid: cesr_datum, sn: 0, epoch: 0, keys }
+fn pending_v2() -> CheckpointDatumV2 {
+  TerminationPending { aid: cesr_datum, sn: 0, epoch: 0 }
 }
 
 fn good_keys() -> KeyMaterial {
@@ -387,7 +387,7 @@ fn live_numbers(sn: Int, epoch: Int, born_at: Int) -> CheckpointDatumV2 {
 }
 
 fn pending_numbers(sn: Int, epoch: Int) -> CheckpointDatumV2 {
-  TerminationPending { aid: cesr_datum, sn, epoch, keys: good_keys() }
+  TerminationPending { aid: cesr_datum, sn, epoch }
 }
 
 test v2_live_valid() {
@@ -395,7 +395,7 @@ test v2_live_valid() {
 }
 
 test v2_pending_valid() {
-  datum_v2_well_formed(pending_v2(good_keys())) == DatumValid
+  datum_v2_well_formed(pending_v2()) == DatumValid
 }
 
 test v2_witnesses_with_toad_at_count_valid() {
@@ -496,24 +496,6 @@ test v2_pending_negative_sn() {
 
 test v2_pending_negative_epoch() {
   datum_v2_well_formed(pending_numbers(0, -1)) == DatumInvalid(NegativeEpoch)
-}
-
-test v2_pending_cur_empty_keys() {
-  datum_v2_well_formed(pending_v2(keys_v2([], Unweighted(1), [], 0))) == DatumInvalid(
-    ThresholdIllFormed(EmptyKeys),
-  )
-}
-
-test v2_pending_witness_width() {
-  datum_v2_well_formed(pending_v2(keys_v2([k1], Unweighted(1), [k31], 1))) == DatumInvalid(
-    WitnessWidth,
-  )
-}
-
-test v2_pending_toad_range() {
-  datum_v2_well_formed(pending_v2(keys_v2([k1], Unweighted(1), [w1], 2))) == DatumInvalid(
-    ToadRange,
-  )
 }
 
 // ---------------------------------------------------------

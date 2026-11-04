@@ -1083,6 +1083,9 @@ renderDatumError = \case
     WitnessWidth -> "WitnessWidth"
     DuplicateWitness -> "DuplicateWitness"
     ToadRange -> "ToadRange"
+    NegativeSn -> "NegativeSn"
+    NegativeEpoch -> "NegativeEpoch"
+    NegativeBornAt -> "NegativeBornAt"
 
 -- | Nullary constructor names are shared verbatim across languages.
 renderThresholdError :: ThresholdError -> String

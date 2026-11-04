@@ -105,7 +105,7 @@ import Cardano.KERI.ChainQuery.Registration (
  )
 import Cardano.KERI.Deployment.EndpointBoardManifest (frozenEndpointBoardPolicyId)
 import Cardano.KERI.Indexer.Board (indexedBoardCatalog)
-import Cardano.KERI.Indexer.Codecs (CheckpointRecord (..), decodeCheckpointOutput)
+import Cardano.KERI.Indexer.Codecs (CheckpointDecodeError (..), CheckpointRecord (..), decodeCheckpointOutput)
 import Cardano.KERI.Indexer.Query.Tx (
     QueryHandle (..),
     payerUtxosTxAcrossAddresses,
@@ -139,6 +139,7 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Short qualified as SBS
 import Data.Map.Strict qualified as Map
+import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
@@ -445,13 +446,15 @@ decodedCheckpointRows ::
     [(Indexer.TxIn, Indexer.TxOut)] ->
     Either ChainQueryError [((Indexer.TxIn, Indexer.TxOut), CheckpointRecord)]
 decodedCheckpointRows policy addr =
-    traverse decodeRow
+    fmap catMaybes . traverse decodeRow
   where
+    -- A convicted checkpoint is a known state, not a malformed row: it is
+    -- no live checkpoint, so it is skipped.
     decodeRow entry@(txIn, txOut) =
-        (,) entry
-            <$> first
-                (DecodingFailure . T.pack . show)
-                (decodeCheckpointOutput policy txIn addr txOut)
+        case decodeCheckpointOutput policy txIn addr txOut of
+            Left TerminationPendingOutput -> Right Nothing
+            Left err -> Left (DecodingFailure (T.pack (show err)))
+            Right record -> Right (Just (entry, record))
 
 {- | Decode one indexed output into 'ActiveCheckpoint': datum via the
 existing 'decodeCheckpointOutput'; lovelace\/assets via a fresh ledger
@@ -488,6 +491,7 @@ decodeActiveCheckpoint policy addr aidText (txIn, indexerTxOut@(Indexer.TxOut ra
             , activeCheckpointLovelace = lovelace
             , activeCheckpointAssets = assets
             , activeCheckpointDatum = crDatum record
+            , activeCheckpointFacts = crFacts record
             }
 
 {- | Render raw indexer address bytes the same bech32 form the Koios

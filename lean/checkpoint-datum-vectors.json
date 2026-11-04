@@ -40,17 +40,18 @@
    "datum":
    "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ff00ffff",
    "consumer": {"now": 200, "accepted": false}},
-  {"note": "a pending-termination datum with an extra field",
-   "id": "pending-five-fields",
+  {"note":
+   "a pending-termination datum carrying key material, the earlier four-field layout",
+   "id": "pending-with-keys",
    "decoded": null,
    "datum":
-   "d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ff00ffff",
+   "d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
    "consumer": {"now": 200, "accepted": false}},
   {"note": "a pending-termination datum with a negative epoch",
    "id": "pending-negative-epoch",
    "decoded": null,
    "datum":
-   "d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500421d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500421ffff",
    "consumer": {"now": 200, "accepted": false}},
   {"note": "the AID as an integer",
    "id": "aid-integer",
@@ -175,13 +176,15 @@
  "layout":
  {"pool":
   "not in the datum: decoded as 0; the amount is held in the output's value",
+  "pendingSizeBound":
+  "72 bytes: the largest serialised TerminationPending datum for an AID of at most 44 bytes with sn and epoch below 2^64",
   "aid": "the AID's qualified CESR text bytes (UTF-8), as the registry key",
   "Threshold":
   "Unweighted = constructor 0 [int]; Weighted = constructor 1 [List<List<Weight>>]; Weight = constructor 0 [num: int, den: int]",
   "KeyMaterial":
   "constructor 0 [cur_keys: List<bytes>, cur_threshold: Threshold, next_keys: List<bytes>, next_threshold: Threshold, witnesses: List<bytes>, toad: int]",
   "CheckpointDatumV2.TerminationPending":
-  "constructor 1 [aid: bytes, sn: int, epoch: int, keys: KeyMaterial]",
+  "constructor 1 [aid: bytes, sn: int, epoch: int]; no key material",
   "CheckpointDatumV2.Live":
   "constructor 0 [aid: bytes, sn: int, epoch: int, poisoned: Bool, frozen: Bool, born_at: int, refund_to: bytes, keys: KeyMaterial]",
   "CheckpointDatum":
@@ -418,7 +421,7 @@
     "aid":
     "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"},
    "datum":
-   "d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+   "d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402ffff",
    "consumer": {"now": 200, "accepted": false}},
   {"note":
    "sequence number and epoch beyond 2^64 (tagged big numbers) and a 70-byte refund address (chunked): accepted",

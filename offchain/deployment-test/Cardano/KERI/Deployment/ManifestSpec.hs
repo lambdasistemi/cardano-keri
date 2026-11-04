@@ -84,7 +84,10 @@ spec =
                 -- #339: re-derived again once the advance observer reads the
                 -- version 2 datum (14_695 -> 15_778); still below the unchanged
                 -- 16_133 ceiling.
-                programLength "observer-advance" artifacts `shouldBe` 15_778
+                -- #339: re-derived once more after the version 1 datum
+                -- constructor left the shared datum type (15_778 -> 15_625);
+                -- the ceiling is unchanged.
+                programLength "observer-advance" artifacts `shouldBe` 15_625
         describe "M1 endpoint-board script" $ do
             -- Historical fact, not a live derivation: the M1 endpoint board
             -- was deployed 2026-07-29 compiled with aiken 1.1.21 (blueprint

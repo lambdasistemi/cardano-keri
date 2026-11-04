@@ -46,26 +46,11 @@ of the entitled family that owns the reservation: its authenticity by value,
 its scope, its maturity window, and its refund. That is where all four named
 classes are decidable without crypto.
 
-The **checkpoint program** is identified and arity-asserted by the flake's
-extraction — its sixth applied `CommitmentFamily` argument is required there,
-from the live blueprint — but it is NOT executed here, and this module emits an
-explicit non-claim saying so rather than letting its identity row be read as a
-behavioural result. Two independent reasons, both recorded because either alone
-would be enough:
-
-* its entitlement leg sits behind `bind_enforcement_evidence` and
-  `convict_predicate`, which verify Ed25519 signatures — a builtin the pinned
-  evaluator refuses — so a mutant aimed at it would settle as
-  `COULD-NOT-EVALUATE`, which is not a rejection and must never be reported as
-  one;
-* elaborating the entitled checkpoint program alongside the commitment program
-  in one module overflows the Lean elaborator's stack (observed, exit 134),
-  so this instrument cannot hold both.
-
-Its entitlement legs are proved instead by the Aiken applied-program rows in
-`checkpoint_tests.ak` and `checkpoint_register_tests.ak`, by the Haskell mirror
-in `EntitlementSpec`, and by the cross-language verdict vectors. This run
-claims exactly what it observed and no more.
+The entitlement legs of the checkpoint register are not executed here. They are
+checked by the Aiken tests on its observers (`entitlement_tests.ak` and
+`checkpoint_register_lifecycle_tests.ak`), by the Haskell mirror in
+`EntitlementSpec`, and by the cross-language verdict vectors. This run claims
+exactly what it observed and no more.
 -/
 
 -- Decoding a whole applied validator exceeds the default elaboration
@@ -99,9 +84,6 @@ def commitmentPolicy : ByteString := label "s254e-commitment-policy-01ab"
 
 /-- 28 bytes. -/
 def checkpointPolicy : ByteString := label "s254e-checkpoint-policy-01ab"
-
-/-- 28 bytes. -/
-def hashProofPolicy : ByteString := label "s254e-hash-proof-policy-01ab"
 
 /-- 28 bytes: the beneficiary the reservation named. -/
 def payee : ByteString := label "s254e-committed-payee-01abcd"
@@ -168,10 +150,6 @@ def parametersData : Data :=
     , Data.I commitMinAge
     , Data.I commitmentLifetime
     , Data.I commitDeposit ]
-
-/-- `CommitmentFamily`: the pinned policy plus those magnitudes. -/
-def familyData : Data :=
-  Data.Constr 0 [Data.B commitmentPolicy, parametersData]
 
 /-- `BountyScope`, parameterised by the one field the scope mutant varies. -/
 def scopeData (scopeNetwork : Int) : Data :=
@@ -325,23 +303,6 @@ def budget : Nat := 10000000
 /-- The commitment program's single applied argument. -/
 def commitmentParameters : List Data := [parametersData]
 
-/-- The checkpoint program's seven applied arguments, ending in the
-`CommitmentFamily` this slice added.
-
-Kept as a definition even though this instrument does not execute that program:
-it is the exact argument list the deployment applies, and writing it here is
-what makes the non-claim below specific — the row names a program whose shape
-this module knows, not one it merely heard about.
--/
-def checkpointParameters : List Data :=
-  [ Data.I 0
-  , Data.B hashProofPolicy
-  , Data.I network
-  , Data.I 1000000000
-  , Data.I 5000000
-  , Data.I 10000
-  , familyData ]
-
 /-- Run the imported commitment program against one context. -/
 def runCommitment (context : ScriptContext) : KeriBlaster.S2.Cek.Trace :=
   KeriBlaster.S2.Cek.runProgram
@@ -419,11 +380,6 @@ def run : IO UInt32 := do
     parameterControl "commitment" commitmentSpend.script commitmentParameters
   if !commitmentOk then
     return 1
-  -- The explicit non-claim about the second target. It is emitted
-  -- unconditionally beside the identity row precisely so that row cannot be
-  -- read as a behavioural result, and it names the applied argument count this
-  -- module knows the program takes.
-  IO.println s!"M8.entitlement-not-established subject=checkpoint-target applied_arguments={checkpointParameters.length} required_basis=executed-under-pinned-cek reason=entitlement-leg-behind-refused-ed25519-builtin"
   let honestOk ← honestControl
   if !honestOk then
     return 1

@@ -1110,7 +1110,7 @@ entrypointManifestScripts :: [ScriptEntry]
 entrypointManifestScripts =
     [ ScriptEntry
         { scriptName = "checkpoint-register"
-        , scriptBlueprintTitle = "checkpoint.checkpoint.spend"
+        , scriptBlueprintTitle = "checkpoint_register.checkpoint_register.spend"
         , scriptRole = "spend"
         , scriptHash = scriptHashText (computeScriptHash entrypointCheckpointScriptBytes)
         , scriptProgramBytes = SBS.length entrypointCheckpointScriptBytes

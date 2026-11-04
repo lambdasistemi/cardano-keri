@@ -607,10 +607,11 @@ verifyRegisterScriptSizes env = do
     measure "bounty_commitment reference script" (envCommitmentScript env) (SBS.length (envCommitmentBytes env))
     -- #339: re-derived from the applied advance program once it reads the
     -- version 2 datum (14_695 before), not reused from the previous pin. The
-    -- 16_133 ceiling is unchanged.
-    unless (SBS.length (envAdvanceBytes env) == 15_778) $
+    -- 16_133 ceiling is unchanged. Re-derived again after the version 1
+    -- datum constructor left the shared datum type (15_778 before).
+    unless (SBS.length (envAdvanceBytes env) == 15_625) $
         fail
-            ( "observer_advance applied program changed from 15,778 bytes: "
+            ( "observer_advance applied program changed from 15,625 bytes: "
                 <> show (SBS.length (envAdvanceBytes env))
             )
 

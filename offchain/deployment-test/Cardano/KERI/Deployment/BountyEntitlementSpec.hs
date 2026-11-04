@@ -37,7 +37,6 @@ import Cardano.KERI.Deployment.Script (
     ScriptArtifact (..),
     Validator (..),
     applyAdvanceParams,
-    applyCheckpointFamilyParams,
     applyCommitmentParams,
     applyDataArgs,
     applyEnforcementParams,
@@ -51,9 +50,7 @@ import Cardano.KERI.Deployment.Script (
     v1CommitDeposit,
     v1CommitmentLifetime,
     v1CommitmentParameters,
-    v1FreezeBond,
     v1NetworkDiscriminator,
-    v1RegistrationBond,
     validatorParameterCount,
  )
 import Data.ByteString qualified as BS
@@ -110,10 +107,6 @@ magnitudesSpec = describe "release magnitudes" $ do
 
 aritySpec :: Spec
 aritySpec = describe "compiled argument counts" $ do
-    it "gives the split checkpoint a sixth CommitmentFamily argument" $
-        withBlueprint $ \blueprint ->
-            validatorParameterCount "checkpoint.checkpoint.spend" blueprint
-                `shouldBe` Just 6
     it "gives the enforcement observer a second argument" $
         withBlueprint $ \blueprint -> do
             validatorParameterCount
@@ -147,12 +140,19 @@ aritySpec = describe "compiled argument counts" $ do
             let checkpointPrograms =
                     [ validator
                     | validator <- validators blueprint
-                    , any
-                        (`T.isPrefixOf` vTitle validator)
-                        ["checkpoint_register.", "checkpoint.checkpoint."]
+                    , "checkpoint_register." `T.isPrefixOf` vTitle validator
                     ]
-            -- The control is non-vacuous: the census sees both programs.
-            length checkpointPrograms `shouldSatisfy` (>= 2)
+            -- The control is non-vacuous: the census sees the register's
+            -- mint and spend programs, so a prefix that matched nothing
+            -- or a blueprint without the register would fail here.
+            map vTitle checkpointPrograms
+                `shouldSatisfy` ( \titles ->
+                                    all
+                                        (`elem` titles)
+                                        [ "checkpoint_register.checkpoint_register.mint"
+                                        , "checkpoint_register.checkpoint_register.spend"
+                                        ]
+                                )
             let offenders =
                     [ (vTitle validator, parameter)
                     | validator <- checkpointPrograms
@@ -276,20 +276,6 @@ reachSpec = describe "family reaches the deployed register" $ do
                 `shouldNotBe` computeScriptHash program
             artifactScriptHash enforcement
                 `shouldNotBe` artifactScriptHash register
-    it "applies a sixth argument to the split checkpoint program" $
-        withBlueprint $ \blueprint -> do
-            family <- either fail pure (deriveCommitmentFamily blueprint)
-            program <- requireProgram blueprint splitCheckpointTitle
-            let applied =
-                    applyCheckpointFamilyParams
-                        v1CheckpointVersion
-                        (BS.replicate 28 0xaa)
-                        v1NetworkDiscriminator
-                        v1RegistrationBond
-                        v1FreezeBond
-                        family
-                        program
-            computeScriptHash applied `shouldNotBe` computeScriptHash program
 
 -- ---------------------------------------------------------
 -- Helpers
@@ -303,9 +289,6 @@ enforcementTitle = "checkpoint_observer.observer_enforcement.withdraw"
 
 registerTitle :: Text
 registerTitle = "checkpoint_register.checkpoint_register.mint"
-
-splitCheckpointTitle :: Text
-splitCheckpointTitle = "checkpoint.checkpoint.spend"
 
 withBlueprint :: (Blueprint -> IO ()) -> IO ()
 withBlueprint action = do

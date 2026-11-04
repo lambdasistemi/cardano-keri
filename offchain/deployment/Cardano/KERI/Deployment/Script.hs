@@ -27,7 +27,6 @@ module Cardano.KERI.Deployment.Script (
     applyCommitmentParams,
     applyDataArgs,
     applyEnforcementParams,
-    applyCheckpointFamilyParams,
     v1CommitmentParameters,
     v1CommitmentLifetime,
     v1CommitDeposit,
@@ -325,32 +324,6 @@ applyEnforcementParams ::
     [Data]
 applyEnforcementParams version family =
     [I version, asData family]
-
-{- | #254 S254-E: the split checkpoint validator's SEVENTH applied argument.
-
-The split family is not part of the M1 deployment derived by
-'deriveV1Scripts' — the combined register is — but the argument is real and
-its arity is observable in the compiled blueprint, which is what the
-@bounty-entitlement-blaster@ M8 control applies and asserts.
--}
-applyCheckpointFamilyParams ::
-    Integer ->
-    ByteString ->
-    Integer ->
-    Integer ->
-    Integer ->
-    CommitmentFamily ->
-    SBS.ShortByteString ->
-    SBS.ShortByteString
-applyCheckpointFamilyParams version hashProofPolicy network registrationBond freezeBond family =
-    applyDataArgs
-        [ I version
-        , B hashProofPolicy
-        , I network
-        , I registrationBond
-        , I freezeBond
-        , asData family
-        ]
 
 -- | Strip the 'BuiltinData' wrapper from a value's 'Data' tree.
 asData :: (ToData a) => a -> Data

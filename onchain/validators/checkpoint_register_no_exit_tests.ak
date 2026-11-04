@@ -18,8 +18,9 @@ use cardano/assets.{PolicyId, from_asset, from_lovelace, merge}
 use cardano/transaction.{
   InlineDatum, NoDatum, Output, OutputReference, Transaction,
 }
-use cardano_keri/checkpoint/datum.{CheckpointDatumV1, V1}
+use cardano_keri/checkpoint/datum.{KeyStateView}
 use cardano_keri/checkpoint/message.{deriveAidAssetName}
+use cardano_keri/checkpoint/retired_layout.{retired_layout}
 use cardano_keri/checkpoint/threshold.{Unweighted}
 use checkpoint_register
 
@@ -69,8 +70,8 @@ fn spent_ref() -> OutputReference {
   }
 }
 
-fn tip() -> CheckpointDatumV1 {
-  CheckpointDatumV1 {
+fn tip() -> KeyStateView {
+  KeyStateView {
     cesr_aid: #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     cur_keys: [
       #"8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
@@ -125,7 +126,7 @@ fn exit_tx() -> Transaction {
     Output {
       address: from_script(policy),
       value: from_lovelace(bonded) |> merge(from_asset(policy, aid_name, 1)),
-      datum: InlineDatum(V1(tip())),
+      datum: InlineDatum(retired_layout(tip())),
       reference_script: None,
     },
   )

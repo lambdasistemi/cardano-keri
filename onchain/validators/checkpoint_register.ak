@@ -17,9 +17,7 @@ use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Redeemer, ScriptPurpose,
   Transaction, Withdraw, find_input,
 }
-use cardano_keri/checkpoint/datum.{
-  CheckpointDatum, Live, TerminationPending, V2,
-}
+use cardano_keri/checkpoint/datum.{Live, TerminationPending}
 use cardano_keri/checkpoint/enforcement_observer.{authorized_payee}
 use cardano_keri/checkpoint/freeze_bond.{freeze_bond_valid}
 use cardano_keri/checkpoint/message.{aid_digest, deriveAidAssetName}
@@ -190,7 +188,7 @@ fn validate_migrate_out_tokens(
   let Transaction { inputs, outputs, mint, .. } = tx
   expect Some(own_input) = find_input(inputs, own_ref)
   expect InlineDatum(source_data) = own_input.output.datum
-  expect V2(Live { .. }): CheckpointDatum = source_data
+  expect Live { .. } = datum.read(source_data)
   expect [Pair(aid_name, -1)] = dict.to_pairs(tokens(mint, own))
   expect quantity_of(own_input.output.value, own, aid_name) == 1
   expect
@@ -362,7 +360,7 @@ fn validate_register(
   expect quantity_of(state_output.value, policy_id, aid_name) == 1
   expect InlineDatum(datum_data) = state_output.datum
   expect  
-      V2(Live {
+      Live {
         aid,
         sn: 0,
         epoch: 0,
@@ -371,8 +369,8 @@ fn validate_register(
         born_at,
         refund_to,
         ..
-      }): CheckpointDatum
-    = datum_data
+      }
+    = datum.read(datum_data)
   expect Some(digest) = aid_digest(aid)
   expect aid_name == deriveAidAssetName(digest)
   expect Finite(upper) = validity_range.upper_bound.bound_type
@@ -420,7 +418,7 @@ fn validate_advance(
   expect Script(own_hash) = own_input.output.address.payment_credential
   expect own_input.output.address == role.address(own_hash, Active)
   expect InlineDatum(old_data) = own_input.output.datum
-  expect V2(old): CheckpointDatum = old_data
+  let old = datum.read(old_data)
   expect Live { frozen, born_at, refund_to, .. } = old
   expect [Pair(aid_name, 1)] = dict.to_pairs(
     tokens(own_input.output.value, own_hash),
@@ -430,7 +428,7 @@ fn validate_advance(
     fn(output) { output.address == from_script(own_hash) },
   )
   expect InlineDatum(new_data) = state_output.datum
-  expect V2(new): CheckpointDatum = new_data
+  let new = datum.read(new_data)
   expect  
       Live {
         poisoned: False,
@@ -494,7 +492,7 @@ fn validate_convict(
   expect Script(own_hash) = own_input.output.address.payment_credential
   expect own_input.output.address == role.address(own_hash, Active)
   expect InlineDatum(source_data) = own_input.output.datum
-  expect V2(live): CheckpointDatum = source_data
+  let live = datum.read(source_data)
   expect Live { aid, sn, epoch, frozen, refund_to, .. } = live
   expect [Pair(aid_name, 1)] = dict.to_pairs(
     tokens(own_input.output.value, own_hash),
@@ -512,7 +510,7 @@ fn validate_convict(
     outputs,
     fn(output) { quantity_of(output.value, own_hash, aid_name) > 0 },
   )
-  let pending_datum: CheckpointDatum = V2(terminated)
+  let pending_datum: Data = datum.write(terminated)
   expect and {
       pending_output.address == from_script(own_hash),
       pending_output.datum == InlineDatum(pending_datum),

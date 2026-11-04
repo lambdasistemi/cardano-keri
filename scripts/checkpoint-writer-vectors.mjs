@@ -248,16 +248,15 @@ const datumModule = () => {
 use aiken/builtin
 use aiken/cbor
 use cardano_keri/checkpoint/datum.{
-  CheckpointDatum, CheckpointDatumV2, DatumValid, KeyMaterial, Live,
-  TerminationPending, V2, datum_v2_well_formed,
+  CheckpointDatumV2, DatumValid, KeyMaterial, Live, TerminationPending,
+  datum_v2_well_formed,
 }
 use cardano_keri/checkpoint/threshold.{Unweighted, Weight, Weighted}
 
-/// The writer's read of a \`Data\`: the typed read as the version 2 datum, then
+/// The writer's read of a \`Data\`: the version 2 datum under outer constructor 1, then
 /// write-time validity. A \`Data\` of any other shape does not read.
 fn writer_accepts(data: Data) -> Bool {
-  expect V2(d): CheckpointDatum = data
-  datum_v2_well_formed(d) == DatumValid
+  datum_v2_well_formed(datum.read(data)) == DatumValid
 }
 
 /// Whether the ledger's parse reads the bytes as one whole \`Data\`.
@@ -296,14 +295,15 @@ ${body(construct ? rowData(input) : call('parse', [hexLit(r.datum)]))}}
     out += `
 /// Lean \`datum\`: the value built from the row's input serialises to the row's datum.
 test layout_${id}() {
-  cbor.serialise(V2(facts_${id}())) == ${datumLit}
+  cbor.serialise(datum.write(facts_${id}())) == ${datumLit}
 }
 `;
     out += `
 /// Lean \`datum\`: the row's datum reads back into the value built from its input${construct ? ', and the built Data is the row\'s datum' : ''}.
 test reads_back_${id}() {
-  expect read: CheckpointDatum = data_${id}()
-  read == V2(facts_${id}())${construct ? ` && cbor.serialise(data_${id}()) == ${datumLit}` : ''}
+  datum.read(data_${id}()) == facts_${id}()${construct ? ` && cbor.serialise(
+    data_${id}(),
+  ) == ${datumLit}` : ''}
 }
 `;
     out += `

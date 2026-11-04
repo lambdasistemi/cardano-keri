@@ -26,7 +26,7 @@ use aiken/crypto.{blake2b_256, verify_ed25519_signature}
 use aiken/primitive/bytearray
 use cardano_keri/base64url
 use cardano_keri/checkpoint/datum.{
-  CheckpointDatumV1, DatumError, DatumInvalid, DatumValid, datum_well_formed,
+  DatumError, DatumInvalid, DatumValid, KeyStateView, key_state_well_formed,
 }
 use cardano_keri/checkpoint/message.{qb64_aid, qb64_verkey}
 use cardano_keri/checkpoint/threshold.{
@@ -229,7 +229,7 @@ pub type InceptionVerdict {
 /// Validate the structural inception projection carried by a datum.
 pub fn validate_inception_datum(
   event_type: EventType,
-  d: CheckpointDatumV1,
+  d: KeyStateView,
 ) -> InceptionVerdict {
   if event_type != Icp {
     InceptionInvalid(DelegatedInceptionRejected)
@@ -238,7 +238,7 @@ pub fn validate_inception_datum(
   } else if d.native_sn != 0 {
     InceptionInvalid(InceptionNativeSnNonZero)
   } else {
-    when datum_well_formed(d) is {
+    when key_state_well_formed(d) is {
       DatumInvalid(err) -> InceptionInvalid(InceptionIllFormed(err))
       DatumValid -> InceptionValid
     }
@@ -307,7 +307,7 @@ pub type RegistrationVerdict {
 /// bounds-first, so a truncated (tail) or negative offset fails its
 /// field's check like any mismatch.
 pub fn event_binding(
-  d: CheckpointDatumV1,
+  d: KeyStateView,
   e: RegistrationEvidence,
 ) -> RegistrationVerdict {
   if !slice_matches(e.event_bytes, e.off_t, "icp") {
@@ -362,7 +362,7 @@ pub fn event_binding(
 /// transaction shape itself (R1/R2/R5) is the S5 validator layer.
 pub fn registration_predicate(
   ctx: DeploymentContext,
-  d: CheckpointDatumV1,
+  d: KeyStateView,
   lovelace: Int,
   e: RegistrationEvidence,
 ) -> RegistrationVerdict {

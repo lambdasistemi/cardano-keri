@@ -5,22 +5,16 @@
 //// fixtures). Each scenario is the tip datum + decoded evidence the
 //// EnforcementSpec builds from the same JSON; offset-bearing scenarios
 //// also carry the ratified EnforcementEvidence wire value.
-//// enforcement_tests.ak asserts binder/predicate Haskell parity, plus
-//// the TombstoneV1 codec golden. `just
+//// enforcement_tests.ak asserts binder/predicate Haskell parity. `just
 //// check-enforcement-vectors` forbids drift.
 
-use cardano_keri/checkpoint/datum.{CheckpointDatumV1}
+use cardano_keri/checkpoint/datum.{KeyStateView}
 use cardano_keri/checkpoint/enforcement.{EnforcementEvidence, EventEvidence}
 use cardano_keri/checkpoint/threshold.{Unweighted}
 
-/// TombstoneV1 { cesr_aid: 0xaa*32, convicted_at_native_sn: 1,
-/// evidence_said: 0xcc*32 } canonical CBOR (byte-parity golden)
-pub const golden_tombstone: ByteArray =
-  #"d8799f5820aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa015820ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccff"
-
 /// fork: rot_conflict double-signs the rot_recorded tip -> ConvictValid
-pub const fork_convict_tip: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const fork_convict_tip: KeyStateView =
+  KeyStateView {
     cesr_aid: #"fb442d0b050570133d187479e3b092cc0e46d06598ee207155bc0147a9525d7c",
     cur_keys: [
       #"c3f0fbee3789c4a7b50d7a2a3e41371f9c3bbeeca921027fa116686ea26e2be4",
@@ -86,8 +80,8 @@ pub const fork_convict_wire: EnforcementEvidence =
   }
 
 /// fork_witnessed: witnessed rot_conflict double-signs the witnessed rot_recorded tip -> ConvictValid
-pub const fork_witnessed_convict_tip: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const fork_witnessed_convict_tip: KeyStateView =
+  KeyStateView {
     cesr_aid: #"bf1924e1e0d2e93a67065696153161e4a440337cc08b50678287e774f447e07e",
     cur_keys: [
       #"f1e8386db5cf69655f4e59c2e470a0ca921689683b3f932434a4097590fdc8e5",
@@ -160,8 +154,8 @@ pub const fork_witnessed_convict_wire: EnforcementEvidence =
   }
 
 /// fork_witnessed F3b: the witnessed AID's OWN honest rot_recorded as evidence -> ConvictInvalid(CvNoConflict)
-pub const fork_witnessed_honest_tip: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const fork_witnessed_honest_tip: KeyStateView =
+  KeyStateView {
     cesr_aid: #"bf1924e1e0d2e93a67065696153161e4a440337cc08b50678287e774f447e07e",
     cur_keys: [
       #"f1e8386db5cf69655f4e59c2e470a0ca921689683b3f932434a4097590fdc8e5",
@@ -234,8 +228,8 @@ pub const fork_witnessed_honest_wire: EnforcementEvidence =
   }
 
 /// honest_2key: rot vs its own reflected state -> ConvictInvalid(CvNoConflict)
-pub const honest2_convict_tip: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const honest2_convict_tip: KeyStateView =
+  KeyStateView {
     cesr_aid: #"82c7ebac162d209cdc4e98bd76774ad09ee3ad4983abc4936e71b699653ad3e5",
     cur_keys: [
       #"31ef2cde2e41026aa942d27564996aa6a676cd04d61f4a43069d893a34781ea6",

@@ -32,8 +32,7 @@ use cardano_keri/bounty_commitment.{
 use cardano_keri/checkpoint/advance.{AdvanceEvidence}
 use cardano_keri/checkpoint/advance_vectors as advance_vec
 use cardano_keri/checkpoint/datum.{
-  CheckpointDatumV1, CheckpointDatumV2, KeyMaterial, Live, TerminationPending,
-  V1, V2,
+  CheckpointDatumV2, KeyMaterial, KeyStateView, Live, TerminationPending,
 }
 use cardano_keri/checkpoint/enforcement.{EnforcementEvidence}
 use cardano_keri/checkpoint/enforcement_vectors as enforcement_vec
@@ -51,6 +50,7 @@ use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
 use cardano_keri/checkpoint/registration_vectors as vec
+use cardano_keri/checkpoint/retired_layout.{retired_layout}
 use cardano_keri/checkpoint/threshold.{Unweighted}
 use checkpoint_observer
 use checkpoint_register
@@ -187,7 +187,7 @@ fn run_spend(redeemer: Data, own_ref: OutputReference, tx: Transaction) -> Bool 
   )
 }
 
-fn keys_of(d: CheckpointDatumV1) -> KeyMaterial {
+fn keys_of(d: KeyStateView) -> KeyMaterial {
   KeyMaterial {
     cur_keys: d.cur_keys,
     cur_threshold: d.cur_threshold,
@@ -201,7 +201,7 @@ fn keys_of(d: CheckpointDatumV1) -> KeyMaterial {
 /// A live version 2 checkpoint for a key state taken from the shared vectors:
 /// `sn` is the key state's sequence number and `epoch` its rotation count.
 fn live(
-  d: CheckpointDatumV1,
+  d: KeyStateView,
   poisoned: Bool,
   frozen: Bool,
   refund_to: ByteArray,
@@ -218,7 +218,7 @@ fn live(
   }
 }
 
-fn pending(d: CheckpointDatumV1) -> CheckpointDatumV2 {
+fn pending(d: KeyStateView) -> CheckpointDatumV2 {
   TerminationPending {
     aid: qb64_aid(d.cesr_aid),
     sn: d.native_sn,
@@ -274,13 +274,11 @@ fn from_pending_parts(p: PendingParts) -> CheckpointDatumV2 {
 }
 
 fn v2_data(d: CheckpointDatumV2) -> Data {
-  let data: Data = V2(d)
-  data
+  datum.write(d)
 }
 
-fn v1_data(d: CheckpointDatumV1) -> Data {
-  let data: Data = V1(d)
-  data
+fn v1_data(d: KeyStateView) -> Data {
+  retired_layout(d)
 }
 
 fn token_value(lovelace: Int, name: ByteArray) -> Value {
@@ -757,12 +755,12 @@ test refund_refuses_an_empty_address() fail {
 
 const spent: SpentCheckpoint = advance_vec.pos_adv_wit_2key_spent
 
-const created: CheckpointDatumV1 = advance_vec.pos_adv_wit_2key_created
+const created: KeyStateView = advance_vec.pos_adv_wit_2key_created
 
 const adv_evidence: AdvanceEvidence = advance_vec.pos_adv_wit_2key_evidence
 
-fn adv_old_v1() -> CheckpointDatumV1 {
-  CheckpointDatumV1 {
+fn adv_old_v1() -> KeyStateView {
+  KeyStateView {
     cesr_aid: spent.cesr_aid,
     cur_keys: [
       #"bf1145e4449d74e9f09bd6aaffcbcd295f2a82e9fcbb5689c5346b3c274bccbb",
@@ -1271,7 +1269,7 @@ fn convict_envelope_naming(
   }
 }
 
-const tip: CheckpointDatumV1 = enforcement_vec.fork_witnessed_convict_tip
+const tip: KeyStateView = enforcement_vec.fork_witnessed_convict_tip
 
 const wire: EnforcementEvidence = enforcement_vec.fork_witnessed_convict_wire
 
@@ -1291,7 +1289,7 @@ fn convict_tx(
 }
 
 fn convict_tx_of(
-  tip_of: CheckpointDatumV1,
+  tip_of: KeyStateView,
   wire_of: EnforcementEvidence,
   input_datum: Data,
   input_lovelace: Int,
@@ -1313,7 +1311,7 @@ fn convict_tx_of(
 /// under the evidence `wire_of`.
 fn convict_tx_naming(
   named: OutputReference,
-  tip_of: CheckpointDatumV1,
+  tip_of: KeyStateView,
   wire_of: EnforcementEvidence,
   input_datum: Data,
   input_lovelace: Int,
@@ -1734,7 +1732,7 @@ test the_burning_mint_redeemer_is_gone() fail {
 
 const spent_b: SpentCheckpoint = advance_vec.pos_adv_wit_7key_spent
 
-const created_b: CheckpointDatumV1 = advance_vec.pos_adv_wit_7key_created
+const created_b: KeyStateView = advance_vec.pos_adv_wit_7key_created
 
 fn rotation_io(
   ref: OutputReference,
@@ -1768,10 +1766,7 @@ fn rotation_io(
 // observer is withdrawn once, for the first checkpoint's rotation.
 test two_rotations_cannot_share_one_payee_output() fail {
   let ref_b = out_ref(spent_b.txid, 5)
-  let old_b_v1 = CheckpointDatumV1 {
-    ..adv_old_v1(),
-    cesr_aid: spent_b.cesr_aid,
-  }
+  let old_b_v1 = KeyStateView { ..adv_old_v1(), cesr_aid: spent_b.cesr_aid }
   let (input_a, successor_a) = rotation_io(
     adv_ref(),
     spent.aid_asset_name,

@@ -22,7 +22,7 @@
 use aiken/collection/list
 use aiken/crypto.{verify_ed25519_signature}
 use aiken/primitive/bytearray
-use cardano_keri/checkpoint/datum.{CheckpointDatumV1, ThresholdIllFormed}
+use cardano_keri/checkpoint/datum.{KeyStateView, ThresholdIllFormed}
 use cardano_keri/checkpoint/registration.{
   DRegBelowMinimum, DeploymentContext, E1EventTypeMismatch, E2AidMismatch,
   E3SequenceMismatch, E4CurKeysMismatch, E5CurThresholdMismatch,
@@ -48,7 +48,7 @@ use cardano_keri/checkpoint/threshold.{
 /// pins for the scenario.
 fn parity(
   ctx: DeploymentContext,
-  d: CheckpointDatumV1,
+  d: KeyStateView,
   lovelace: Int,
   e: RegistrationEvidence,
   recorded: RegistrationVerdict,

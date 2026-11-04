@@ -17,7 +17,7 @@ use cardano_keri/checkpoint/advance.{
   AdvanceEvidence, AdvancePredicateInvalid, AdvancePredicateValid,
   AdvancePredicateVerdict,
 }
-use cardano_keri/checkpoint/datum.{CheckpointDatumV1, ToadRange}
+use cardano_keri/checkpoint/datum.{KeyStateView, ToadRange}
 use cardano_keri/checkpoint/message.{
   Eq5SequenceMismatch, Eq6CurrentQuorumUnsatisfied,
   Eq6PriorNextQuorumUnsatisfied, Eq7CreatedStateMismatch, Eq8CreatedIllFormed,
@@ -48,8 +48,8 @@ pub const pos_adv_wit_2key_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const pos_adv_wit_2key_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const pos_adv_wit_2key_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -155,8 +155,8 @@ pub const pos_adv_wit_7key_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const pos_adv_wit_7key_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const pos_adv_wit_7key_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"2162cda4b8d4b10e64fefb597991eaaa8d621d154346f2a16b4fc5da9fb320f0",
     cur_keys: [
       #"30dd99fe0504c7770b9391f61e990a387824e103f918dec2d19ef6d2762600eb",
@@ -275,8 +275,8 @@ pub const pos_adv_keep_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const pos_adv_keep_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const pos_adv_keep_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6542ffda65d1cc50b0bb0773b563fa15b7117a8b13eafb07c843b7cee8c07564",
     cur_keys: [
       #"186b6bfa0e2b0ccf89e98de50c70a2e06cd8007b28aebe4839008e5f11f96d63",
@@ -360,8 +360,8 @@ pub const pos_adv_downgrade_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const pos_adv_downgrade_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const pos_adv_downgrade_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"23908f737e40253d63bc4a2d44a1e506f52071231944b0e107385979c1dda410",
     cur_keys: [
       #"5a3a074f4fe49b02f553402171d7a4f5bb64efedbabad5c00afee91ca3344db5",
@@ -437,8 +437,8 @@ pub const ae1_off_t_at_i_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const ae1_off_t_at_i_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const ae1_off_t_at_i_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -527,8 +527,8 @@ pub const ae2_off_i_shift_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const ae2_off_i_shift_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const ae2_off_i_shift_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -617,8 +617,8 @@ pub const ae3_off_s_at_t_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const ae3_off_s_at_t_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const ae3_off_s_at_t_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -707,8 +707,8 @@ pub const ae4_overlap_k_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const ae4_overlap_k_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const ae4_overlap_k_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -814,8 +814,8 @@ pub const ae5_off_kt_at_bt_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const ae5_off_kt_at_bt_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const ae5_off_kt_at_bt_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"2162cda4b8d4b10e64fefb597991eaaa8d621d154346f2a16b4fc5da9fb320f0",
     cur_keys: [
       #"30dd99fe0504c7770b9391f61e990a387824e103f918dec2d19ef6d2762600eb",
@@ -934,8 +934,8 @@ pub const ae6_off_n_at_k_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const ae6_off_n_at_k_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const ae6_off_n_at_k_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -1041,8 +1041,8 @@ pub const ae7_off_nt_at_kt_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const ae7_off_nt_at_kt_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const ae7_off_nt_at_kt_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"2162cda4b8d4b10e64fefb597991eaaa8d621d154346f2a16b4fc5da9fb320f0",
     cur_keys: [
       #"30dd99fe0504c7770b9391f61e990a387824e103f918dec2d19ef6d2762600eb",
@@ -1161,8 +1161,8 @@ pub const ae8_off_br_at_ba_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const ae8_off_br_at_ba_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const ae8_off_br_at_ba_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -1251,8 +1251,8 @@ pub const ae9_off_ba_at_br_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const ae9_off_ba_at_br_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const ae9_off_ba_at_br_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -1358,8 +1358,8 @@ pub const ae10_off_bt_at_kt_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const ae10_off_bt_at_kt_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const ae10_off_bt_at_kt_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"2162cda4b8d4b10e64fefb597991eaaa8d621d154346f2a16b4fc5da9fb320f0",
     cur_keys: [
       #"30dd99fe0504c7770b9391f61e990a387824e103f918dec2d19ef6d2762600eb",
@@ -1478,8 +1478,8 @@ pub const mis_trunc_i_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const mis_trunc_i_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_trunc_i_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -1568,8 +1568,8 @@ pub const mis_neg_i_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const mis_neg_i_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_neg_i_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -1658,8 +1658,8 @@ pub const mis_dup_k_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const mis_dup_k_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_dup_k_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -1748,8 +1748,8 @@ pub const mis_br_into_k_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const mis_br_into_k_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_br_into_k_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -1838,8 +1838,8 @@ pub const mis_short_k_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const mis_short_k_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_short_k_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -1928,8 +1928,8 @@ pub const mis_short_n_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const mis_short_n_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_short_n_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -2018,8 +2018,8 @@ pub const mis_empty_br_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const mis_empty_br_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_empty_br_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -2108,8 +2108,8 @@ pub const mis_empty_ba_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const mis_empty_ba_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_empty_ba_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -2198,8 +2198,8 @@ pub const mis_t_into_p_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const mis_t_into_p_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_t_into_p_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -2288,8 +2288,8 @@ pub const mis_kt_into_d_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const mis_kt_into_d_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_kt_into_d_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -2378,8 +2378,8 @@ pub const mis_bt_into_a_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const mis_bt_into_a_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const mis_bt_into_a_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -2468,8 +2468,8 @@ pub const ctrl_bad_index_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const ctrl_bad_index_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const ctrl_bad_index_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -2554,8 +2554,8 @@ pub const ctrl_old_message_preimage_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const ctrl_old_message_preimage_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const ctrl_old_message_preimage_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -2644,8 +2644,8 @@ pub const ctrl_below_threshold_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const ctrl_below_threshold_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const ctrl_below_threshold_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -2730,8 +2730,8 @@ pub const ctrl_stolen_quorum_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const ctrl_stolen_quorum_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const ctrl_stolen_quorum_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -2820,8 +2820,8 @@ pub const ctrl_substituted_successor_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const ctrl_substituted_successor_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const ctrl_substituted_successor_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"bf1145e4449d74e9f09bd6aaffcbcd295f2a82e9fcbb5689c5346b3c274bccbb",
@@ -2910,8 +2910,8 @@ pub const w1_dup_cut_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const w1_dup_cut_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const w1_dup_cut_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -3001,8 +3001,8 @@ pub const w1_cut_non_member_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const w1_cut_non_member_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const w1_cut_non_member_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -3091,8 +3091,8 @@ pub const w2_dup_add_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const w2_dup_add_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const w2_dup_add_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -3182,8 +3182,8 @@ pub const w2_add_present_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const w2_add_present_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const w2_add_present_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -3272,8 +3272,8 @@ pub const w2_cut_add_overlap_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const w2_cut_add_overlap_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const w2_cut_add_overlap_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -3362,8 +3362,8 @@ pub const eq7_derived_set_mismatch_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const eq7_derived_set_mismatch_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const eq7_derived_set_mismatch_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -3452,8 +3452,8 @@ pub const eq7_wrong_order_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const eq7_wrong_order_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const eq7_wrong_order_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -3542,8 +3542,8 @@ pub const eq8_toad_out_of_bounds_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const eq8_toad_out_of_bounds_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const eq8_toad_out_of_bounds_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -3632,8 +3632,8 @@ pub const eq5_seq_skip_ahead_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const eq5_seq_skip_ahead_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const eq5_seq_skip_ahead_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -3722,8 +3722,8 @@ pub const v7_receipt_free_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const v7_receipt_free_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const v7_receipt_free_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -3803,8 +3803,8 @@ pub const v7_below_toad_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const v7_below_toad_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const v7_below_toad_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -3889,8 +3889,8 @@ pub const v7_bad_index_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const v7_bad_index_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const v7_bad_index_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -3979,8 +3979,8 @@ pub const v7_bad_sig_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const v7_bad_sig_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const v7_bad_sig_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -4069,8 +4069,8 @@ pub const v7_dup_index_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const v7_dup_index_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const v7_dup_index_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -4159,8 +4159,8 @@ pub const v7_wrong_member_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const v7_wrong_member_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const v7_wrong_member_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -4249,8 +4249,8 @@ pub const v7_cut_witness_receipt_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const v7_cut_witness_receipt_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const v7_cut_witness_receipt_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -4343,8 +4343,8 @@ pub const v7_outgoing_only_quorum_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const v7_outgoing_only_quorum_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const v7_outgoing_only_quorum_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"6e83440efe4578e3469d22d3693c78bc7250ed8e93b28651f74149688598e656",
     cur_keys: [
       #"317f4883eb0ca299a0214327c65ff37048884cc7f32d3bd2acb77aacd6b64291",
@@ -4437,8 +4437,8 @@ pub const v7_downgrade_nonempty_receipts_spent: SpentCheckpoint =
     native_sn: 0,
   }
 
-pub const v7_downgrade_nonempty_receipts_created: CheckpointDatumV1 =
-  CheckpointDatumV1 {
+pub const v7_downgrade_nonempty_receipts_created: KeyStateView =
+  KeyStateView {
     cesr_aid: #"23908f737e40253d63bc4a2d44a1e506f52071231944b0e107385979c1dda410",
     cur_keys: [
       #"5a3a074f4fe49b02f553402171d7a4f5bb64efedbabad5c00afee91ca3344db5",

@@ -36,7 +36,7 @@ use cardano_keri/checkpoint/advance.{
   AdvancePredicateVerdict, advance_predicate,
 }
 use cardano_keri/checkpoint/advance_vectors as vec
-use cardano_keri/checkpoint/datum.{CheckpointDatumV1, ToadRange}
+use cardano_keri/checkpoint/datum.{KeyStateView, ToadRange}
 use cardano_keri/checkpoint/message.{
   Eq5SequenceMismatch, Eq6CurrentQuorumUnsatisfied,
   Eq6PriorNextQuorumUnsatisfied, Eq7CreatedStateMismatch, Eq8CreatedIllFormed,
@@ -52,7 +52,7 @@ use cardano_keri/checkpoint/message.{
 /// pins for the scenario.
 fn parity(
   spent: SpentCheckpoint,
-  created: CheckpointDatumV1,
+  created: KeyStateView,
   e: AdvanceEvidence,
   recorded: AdvancePredicateVerdict,
   pinned: AdvancePredicateVerdict,

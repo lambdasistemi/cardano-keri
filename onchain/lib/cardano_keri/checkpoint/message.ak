@@ -34,7 +34,7 @@ use aiken/primitive/bytearray
 use cardano_keri/base64url
 use cardano_keri/blake3
 use cardano_keri/checkpoint/datum.{
-  CheckpointDatumV1, DatumError, DatumInvalid, datum_well_formed,
+  DatumError, DatumInvalid, KeyStateView, key_state_well_formed,
 }
 use cardano_keri/checkpoint/threshold.{Threshold, evaluate}
 
@@ -154,7 +154,7 @@ pub type AdvanceError {
   /// eq7 (W3): the created datum's witnesses do not equal the derived
   /// incoming set.
   Eq7CreatedStateMismatch
-  /// eq8: the created datum failed `datum_well_formed` (F18 + rule 14).
+  /// eq8: the created datum failed `key_state_well_formed` (F18 + rule 14).
   Eq8CreatedIllFormed(DatumError)
 }
 
@@ -188,7 +188,7 @@ pub type AdvanceVerdict {
 /// length(new_set)`, `0` only when `new_set` is empty).
 pub fn advance_equalities(
   spent: SpentCheckpoint,
-  new: CheckpointDatumV1,
+  new: KeyStateView,
   wit_cut: List<ByteArray>,
   wit_add: List<ByteArray>,
   signers: RevealedSuccessorSigners,
@@ -251,7 +251,7 @@ pub fn advance_equalities(
     AdvanceInvalid(Eq7CreatedStateMismatch)
   } else {
     // eq8: nothing ill-formed can be written (F18 + rule 14 on the successor).
-    when datum_well_formed(new) is {
+    when key_state_well_formed(new) is {
       DatumInvalid(e) -> AdvanceInvalid(Eq8CreatedIllFormed(e))
       _ -> AdvanceValid
     }

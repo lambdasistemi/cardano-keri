@@ -16,8 +16,7 @@ use cardano_keri/checkpoint/advance.{
   AdvanceEvidence, AdvancePredicateValid, advance_predicate,
 }
 use cardano_keri/checkpoint/datum.{
-  CheckpointDatum, CheckpointDatumV1, DatumValid, Live, V1, V2,
-  datum_v2_well_formed,
+  DatumValid, KeyStateView, Live, datum_v2_well_formed,
 }
 use cardano_keri/checkpoint/message.{
   SpentCheckpoint, aid_digest, deriveAidAssetName,
@@ -79,13 +78,13 @@ pub fn validate_registration(
     fn(output) { output.address == active },
   )
   expect InlineDatum(datum_data) = state_output.datum
-  expect V2(registered): CheckpointDatum = datum_data
+  let registered = datum.read(datum_data)
   expect datum_v2_well_formed(registered) == DatumValid
   expect Live { aid, keys, .. } = registered
   expect Some(digest) = aid_digest(aid)
   // The event's own predicate runs over the key state the datum declares,
   // read as the inception: sequence number and epoch zero.
-  let d = CheckpointDatumV1 {
+  let d = KeyStateView {
     cesr_aid: digest,
     cur_keys: keys.cur_keys,
     cur_threshold: keys.cur_threshold,
@@ -128,20 +127,19 @@ pub fn validate_advance(envelope: ObserverEnvelope, tx: Transaction) -> Bool {
   expect Some(own_input) = find_input(tx.inputs, own_ref)
   expect InlineDatum(old_data) = own_input.output.datum
   expect claim.action == observe_advance
-  expect  
-      V2(Live { aid, sn: old_sn, epoch: old_epoch, keys: old_keys, .. }): CheckpointDatum
-    = old_data
+  expect Live { aid, sn: old_sn, epoch: old_epoch, keys: old_keys, .. } = datum.read(
+    old_data,
+  )
   expect Some(state_output) = list.find(
     tx.outputs,
     fn(output) { output.address == from_script(claim.checkpoint_policy) },
   )
   expect InlineDatum(new_data) = state_output.datum
-  expect  
-      V2(Live { aid: new_aid, sn: new_sn, epoch: new_epoch, keys: new_keys, .. }): CheckpointDatum
-    = new_data
+  expect Live { aid: new_aid, sn: new_sn, epoch: new_epoch, keys: new_keys, .. }
+    = datum.read(new_data)
   expect new_aid == aid
   expect Some(digest) = aid_digest(aid)
-  let new = CheckpointDatumV1 {
+  let new = KeyStateView {
     cesr_aid: digest,
     cur_keys: new_keys.cur_keys,
     cur_threshold: new_keys.cur_threshold,

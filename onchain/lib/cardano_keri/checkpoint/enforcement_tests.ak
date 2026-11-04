@@ -5,21 +5,17 @@
 //// `EnforcementSpec`. Positives, wire mutations, distinct receipt quorum, and
 //// kt-only conflict must agree one-for-one across both languages.
 
-use aiken/cbor
 use aiken/collection/list
 use aiken/primitive/bytearray
-use cardano_keri/checkpoint/datum.{CheckpointDatumV1}
+use cardano_keri/checkpoint/datum.{KeyStateView}
 use cardano_keri/checkpoint/enforcement.{
-  Active, CheckpointOutput, CoMissingToken, CoNotTombstone, CoWrongRecord,
-  ContinuingOutput, ConvictInvalid, ConvictOutputInvalid, ConvictOutputValid,
-  ConvictValid, CvAidMismatch, CvInsufficientReceipts, CvNoConflict,
-  CvQuorumUnsatisfied, CvRevealMismatch, CvSeqMismatch, EE0EventBytesLength,
-  EE1EventTypeMismatch, EE2AidMismatch, EE3SequenceMismatch, EE4SaidMismatch,
-  EE5RevealedKeysMismatch, EE6CurThresholdMismatch, EE7NextKeysMismatch,
-  EE8NextThresholdMismatch, EE9ToadMismatch, EnforcementBindingInvalid,
-  EnforcementBindingValid, EnforcementEvidence, EventEvidence, Tombstone,
-  TombstoneOutput, TombstoneV1, bind_enforcement_evidence,
-  convict_output_predicate, convict_predicate,
+  ConvictInvalid, ConvictValid, CvAidMismatch, CvInsufficientReceipts,
+  CvNoConflict, CvQuorumUnsatisfied, CvRevealMismatch, CvSeqMismatch,
+  EE0EventBytesLength, EE1EventTypeMismatch, EE2AidMismatch, EE3SequenceMismatch,
+  EE4SaidMismatch, EE5RevealedKeysMismatch, EE6CurThresholdMismatch,
+  EE7NextKeysMismatch, EE8NextThresholdMismatch, EE9ToadMismatch,
+  EnforcementBindingInvalid, EnforcementBindingValid, EnforcementEvidence,
+  EventEvidence, bind_enforcement_evidence, convict_predicate,
 }
 use cardano_keri/checkpoint/enforcement_vectors as vec
 use cardano_keri/checkpoint/threshold.{Unweighted}
@@ -177,72 +173,6 @@ test f2_convict_quorum_below_threshold() {
   )
 }
 
-// ---------------------------------------------------------
-// TombstoneV1 codec byte-parity (against the Haskell golden)
-// ---------------------------------------------------------
-
-test tombstone_cbor_golden() {
-  let tomb = TombstoneV1 {
-    cesr_aid: #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    convicted_at_native_sn: 1,
-    evidence_said: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-  }
-  cbor.serialise(tomb) == vec.golden_tombstone
-}
-
-// ---------------------------------------------------------
-// Convict output shape (Convict 6) + F13
-// ---------------------------------------------------------
-
-fn convict_tombstone(has_token: Bool, role) -> ContinuingOutput {
-  ContinuingOutput {
-    role,
-    has_token,
-    datum: TombstoneOutput(
-      TombstoneV1 {
-        cesr_aid: vec.fork_convict_tip.cesr_aid,
-        convicted_at_native_sn: vec.fork_convict_tip.native_sn,
-        evidence_said: vec.fork_convict_evidence.said,
-      },
-    ),
-  }
-}
-
-test convict_output_valid() {
-  convict_output_predicate(
-    vec.fork_convict_tip,
-    vec.fork_convict_evidence,
-    convict_tombstone(True, Tombstone),
-  ) == ConvictOutputValid
-}
-
-test f13_convict_output_missing_token() {
-  convict_output_predicate(
-    vec.fork_convict_tip,
-    vec.fork_convict_evidence,
-    convict_tombstone(False, Tombstone),
-  ) == ConvictOutputInvalid(CoMissingToken)
-}
-
-test f13_convict_output_wrong_record() {
-  let out = ContinuingOutput {
-    role: Tombstone,
-    has_token: True,
-    datum: CheckpointOutput(vec.fork_convict_tip),
-  }
-  convict_output_predicate(vec.fork_convict_tip, vec.fork_convict_evidence, out) == ConvictOutputInvalid(
-    CoWrongRecord,
-  )
-}
-
-test f13_convict_output_wrong_role() {
-  convict_output_predicate(
-    vec.fork_convict_tip,
-    vec.fork_convict_evidence,
-    convict_tombstone(True, Active),
-  ) == ConvictOutputInvalid(CoNotTombstone)
-}
-
 // A WITNESSED fork (witness double-receipts sn=1, diverging n) convicts.
 test fork_witnessed_convicts() {
   convict_predicate(
@@ -276,7 +206,7 @@ test f1b_witnessed_fork_insufficient_receipts() {
 
 // W3: quorum counts distinct verifying witness indices, not signature pairs.
 test duplicate_receipt_cannot_fake_convict_toad_two() {
-  let tip = CheckpointDatumV1 { ..vec.fork_witnessed_convict_tip, toad: 2 }
+  let tip = KeyStateView { ..vec.fork_witnessed_convict_tip, toad: 2 }
   let evidence = EventEvidence {
     ..vec.fork_witnessed_convict_evidence,
     wit_sigs: list.concat(

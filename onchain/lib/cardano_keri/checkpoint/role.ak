@@ -1,43 +1,20 @@
-//// Deterministic full-address lifecycle roles for the combined checkpoint
-//// validator (#116). The staking credential is a marker, never authority.
+//// The full-address role of a checkpoint output. Only the active role has an
+//// address: the payment credential alone, with no staking credential.
 
-use aiken/builtin.{blake2b_224}
-use aiken/crypto.{ScriptHash}
-use aiken/primitive/bytearray
-use cardano/address.{Address, from_script, with_delegation_script}
+use cardano/address.{Address, from_script}
 use cardano/assets.{PolicyId}
 
 pub type Role {
   Active
-  Tombstone
 }
 
-const domain: ByteArray = "cardano-keri/checkpoint/role/v1"
-
-pub fn role_tag(role: Role) -> Option<ByteArray> {
-  when role is {
-    Active -> None
-    Tombstone -> Some(#"01")
-  }
-}
-
-pub fn hash(policy: PolicyId, role: Role) -> ScriptHash {
-  expect Some(tag) = role_tag(role)
-  blake2b_224(domain |> bytearray.concat(policy) |> bytearray.concat(tag))
-}
-
-pub fn address(policy: PolicyId, role: Role) -> Address {
-  when role is {
-    Active -> from_script(policy)
-    _ -> from_script(policy) |> with_delegation_script(hash(policy, role))
-  }
+pub fn address(policy: PolicyId, _role: Role) -> Address {
+  from_script(policy)
 }
 
 pub fn classify(policy: PolicyId, candidate: Address) -> Option<Role> {
   if candidate == address(policy, Active) {
     Some(Active)
-  } else if candidate == address(policy, Tombstone) {
-    Some(Tombstone)
   } else {
     None
   }

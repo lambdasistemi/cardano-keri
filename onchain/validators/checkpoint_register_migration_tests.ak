@@ -29,8 +29,7 @@ use cardano_keri/checkpoint/advance.{
 }
 use cardano_keri/checkpoint/advance_vectors as advance_vec
 use cardano_keri/checkpoint/datum.{
-  CheckpointDatumV1, CheckpointDatumV2, KeyMaterial, Live, TerminationPending,
-  V1, V2,
+  CheckpointDatumV2, KeyMaterial, KeyStateView, Live, TerminationPending,
 }
 use cardano_keri/checkpoint/enforcement.{EnforcementEvidence}
 use cardano_keri/checkpoint/enforcement_vectors as enforcement_vec
@@ -44,11 +43,11 @@ use cardano_keri/checkpoint/observer.{
   ObserverClaim, ObserverEnvelope, observe_advance, observe_convict,
   observe_migration, observe_register,
 }
-use cardano_keri/checkpoint/previous_freeze_fixture as previous_freeze
 use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
 use cardano_keri/checkpoint/registration_vectors as vec
+use cardano_keri/checkpoint/retired_layout.{retired_layout}
 use cardano_keri/checkpoint/role.{Active}
 use cardano_keri/checkpoint/threshold.{Unweighted}
 use cardano_keri/migration/checkpoint.{MigrateOutProof,
@@ -162,8 +161,8 @@ fn mig_pending_datum() -> CheckpointDatumV2 {
 }
 
 /// The same key state as the version 1 record.
-fn mig_version_1_datum() -> CheckpointDatumV1 {
-  CheckpointDatumV1 {
+fn mig_version_1_datum() -> KeyStateView {
+  KeyStateView {
     cesr_aid: mig_vec.fixture_cesr_aid,
     cur_keys: mig_keys().cur_keys,
     cur_threshold: Unweighted(2),
@@ -239,7 +238,7 @@ fn mig_source_input(carried: CheckpointDatumV2) -> Input {
         |> merge(
             from_asset(mig_source_policy, mig_vec.fixture_aid_asset_name, 1),
           ),
-      datum: InlineDatum(V2(carried)),
+      datum: InlineDatum(datum.write(carried)),
       reference_script: None,
     },
   )
@@ -266,7 +265,7 @@ fn mig_successor_output(carried: CheckpointDatumV2) -> Output {
     address: from_script(mig_target_policy),
     value: from_lovelace(mig_protected)
       |> merge(from_asset(mig_target_policy, mig_vec.fixture_aid_asset_name, 1)),
-    datum: InlineDatum(V2(carried)),
+    datum: InlineDatum(datum.write(carried)),
     reference_script: None,
   }
 }
@@ -414,9 +413,9 @@ fn mig_refusal_tx(source_datum: Data, successor_datum: Data) -> Transaction {
 
 /// The golden bytes are the datum the Haskell oracle signed over.
 test migration_source_is_the_golden_projection() {
-  let datum: Data = V2(mig_source_datum())
-  let pending: Data = V2(mig_pending_datum())
-  let version_1: Data = V1(mig_version_1_datum())
+  let datum: Data = datum.write(mig_source_datum())
+  let pending: Data = datum.write(mig_pending_datum())
+  let version_1: Data = retired_layout(mig_version_1_datum())
   and {
     cbor.serialise(datum) == mig_vec.golden_source_datum,
     cbor.serialise(pending) == mig_vec.golden_pending_source_state,
@@ -428,7 +427,7 @@ test migration_source_is_the_golden_projection() {
 // the version 1 record of the same key state, under a package the controllers
 // signed over that record.
 test migration_boundary_refuses_a_version_1_source() fail {
-  let version_1: Data = V1(mig_version_1_datum())
+  let version_1: Data = retired_layout(mig_version_1_datum())
   let state: Data = mig_vec.golden_version_1_source_state |> cbor_data
   run_migrate_out(
     MigrateOutProof {
@@ -446,7 +445,7 @@ test migration_boundary_refuses_a_version_1_source() fail {
 
 // The same, for a pending termination of the same key state.
 test migration_boundary_refuses_a_pending_source() fail {
-  let pending: Data = V2(mig_pending_datum())
+  let pending: Data = datum.write(mig_pending_datum())
   let state: Data = mig_vec.golden_pending_source_state |> cbor_data
   run_migrate_out(
     MigrateOutProof {
@@ -468,7 +467,7 @@ fn cbor_data(bytes: ByteArray) -> Data {
 /// is withdrawn with a claim naming the source, and the source datum is the one
 /// given. The successor is not read by this arm.
 fn migrate_out_arm(source_datum: Data) -> Bool {
-  let tx = mig_refusal_tx(source_datum, V2(mig_source_datum()))
+  let tx = mig_refusal_tx(source_datum, datum.write(mig_source_datum()))
   let credential = Script(migration_hash)
   let envelope = ObserverEnvelope {
     claim: ObserverClaim {
@@ -491,15 +490,15 @@ fn migrate_out_arm(source_datum: Data) -> Bool {
 }
 
 test migrate_out_arm_accepts_a_live_source() {
-  migrate_out_arm(V2(mig_source_datum()))
+  migrate_out_arm(datum.write(mig_source_datum()))
 }
 
 test migrate_out_arm_refuses_a_version_1_source() fail {
-  migrate_out_arm(V1(mig_version_1_datum()))
+  migrate_out_arm(retired_layout(mig_version_1_datum()))
 }
 
 test migrate_out_arm_refuses_a_pending_source() fail {
-  migrate_out_arm(V2(mig_pending_datum()))
+  migrate_out_arm(datum.write(mig_pending_datum()))
 }
 
 // The accepted exit with a second checkpoint of the same policy and key state
@@ -519,7 +518,7 @@ test migrate_out_refuses_an_observation_of_another_input() fail {
         |> merge(
             from_asset(mig_source_policy, mig_vec.fixture_aid_asset_name, 1),
           ),
-      datum: InlineDatum(V2(mig_source_datum())),
+      datum: InlineDatum(datum.write(mig_source_datum())),
       reference_script: None,
     },
   )

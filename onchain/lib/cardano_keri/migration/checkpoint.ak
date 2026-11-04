@@ -23,7 +23,7 @@ use cardano/transaction.{
   InlineDatum, Output, OutputReference, Transaction, find_input,
 }
 use cardano_keri/checkpoint/datum.{
-  CheckpointDatum, CheckpointDatumV2, DatumValid, Live, V2, datum_v2_well_formed,
+  CheckpointDatumV2, DatumValid, Live, datum_v2_well_formed,
 }
 use cardano_keri/checkpoint/message.{aid_digest, deriveAidAssetName}
 use cardano_keri/checkpoint/role
@@ -237,7 +237,7 @@ fn role_state_of(
   output: Output,
 ) -> CheckpointRoleState {
   expect InlineDatum(datum_data) = output.datum
-  expect V2(state): CheckpointDatum = datum_data
+  let state = datum.read(datum_data)
   expect Live { .. } = state
   CheckpointRoleState { state_role: observed_role, checkpoint: state }
 }
@@ -297,8 +297,7 @@ pub fn validate_checkpoint_migrate_out(
   // The carried payload is the source's own projection, not a caller's
   // restatement of it: decode it through the frozen codec and require it to
   // equal what the consumed output actually holds.
-  expect carried: CheckpointDatum = authorization.source_state
-  expect carried == V2(source_role_state.checkpoint)
+  expect authorization.source_state == datum.write(source_role_state.checkpoint)
   let source = source_of(authorization)
   expect
     checkpoint_migration_authorized(

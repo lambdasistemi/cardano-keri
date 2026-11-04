@@ -1,7 +1,64 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Checks the recorded history of the version 1 generation: the captured text
+# and, with CKERI_BIN set, that the recorded transactions and checkpoint outputs
+# are still on preprod. The version 2 `status` reader is covered by the
+# end-to-end and command-line suites, not here.
+
 cd "$(dirname "$0")/.."
+
+# Recorded history of the version 1 generation: the recorded checkpoint output
+# is checked on Koios without decoding its datum (the version 2 `status`
+# reader is covered by the end-to-end and command-line suites). The token name
+# is the blake2b-256 of the checkpoint domain tag, the E code and the AID digest.
+koios_utxo_info() { # <tx#ix>: the Koios record of that output
+  local args=(--fail --silent --show-error)
+  if [[ -n "${KOIOS_TOKEN:-}" ]]; then
+    args+=(--header "Authorization: Bearer $KOIOS_TOKEN")
+  fi
+  curl "${args[@]}" --request POST https://preprod.koios.rest/api/v1/utxo_info \
+    --header 'Content-Type: application/json' \
+    --data "$(jq -cn --arg ref "$1" '{_utxo_refs: [$ref], _extended: true}')"
+}
+
+checkpoint_output_held() { # <koios record> <aid> <checkpoint manifest>
+  local name
+  name="$(
+    {
+      printf 'cardano-keri/checkpoint-asset/v1\x45'
+      printf 'A%s' "${2:1}" | tr '_-' '/+' | base64 -d | tail -c 32
+    } | b2sum -l 256 | cut -d' ' -f1
+  )"
+  jq -e \
+    --arg address "$(jq -r .checkpoint.address "$3")" \
+    --arg policy "$(jq -r .checkpoint.policyId "$3")" \
+    --arg name "$name" '
+      length == 1
+      and .[0].is_spent == false
+      and .[0].address == $address
+      and any(.[0].asset_list[]?;
+        .policy_id == $policy and .asset_name == $name and .quantity == "1")
+    ' <<<"$1" >/dev/null
+}
+
+# The held check above must be able to fail: a wrong output reference and a
+# wrong token name are each refused.
+check_checkpoint_output() { # <tx#ix> <aid> <checkpoint manifest>
+  local held other wrong_aid
+  held="$(koios_utxo_info "$1")"
+  checkpoint_output_held "$held" "$2" "$3"
+  other="$(koios_utxo_info "${1%#*}#99")"
+  if checkpoint_output_held "$other" "$2" "$3"; then
+    echo "refusal control failed: a wrong tx#ix was accepted" >&2
+    exit 1
+  fi
+  wrong_aid="${2%?}$([[ "$2" == *A ]] && echo B || echo A)"
+  if checkpoint_output_held "$held" "$wrong_aid" "$3"; then
+    echo "refusal control failed: a wrong token name was accepted" >&2
+    exit 1
+  fi
+}
 
 transcript="${1:-deploy/preprod/m1-register-acceptance.txt}"
 historical_negative="${2:-deploy/preprod/m1-register-historical-negative-acceptance.txt}"
@@ -192,14 +249,7 @@ check_historical_register_base_assertions() (
   grep -Fqx '$ docker volume rm ckeri-159-acceptance-2of5-20260728' "$transcript"
 
   if [[ -n "${CKERI_BIN:-}" ]]; then
-    actual_status="$(
-      "$CKERI_BIN" status --aid "$multi_aid" \
-        --manifest "$manifest" \
-        --board-manifest deploy/preprod/board-manifest.json
-    )"
-    grep -Eq \
-      "^source https://preprod[.]koios[.]rest/api/v1 as_of_slot [0-9]+ tip_lag_slots [0-9]+ aid $multi_aid state ACTIVE seq 0 native 0 keys 2-of-5 witnesses 3 [(]toad 2[)] tx ${register_txids[2]}#0 watchable 3/3$" \
-      <<<"$actual_status"
+    check_checkpoint_output "${register_txids[2]}#0" "$multi_aid" "$manifest"
 
     tx_payload="$(
       printf '%s\n' "${premint_txids[@]}" "${register_txids[@]}" |

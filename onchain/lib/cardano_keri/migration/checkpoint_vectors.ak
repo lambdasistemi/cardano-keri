@@ -103,11 +103,11 @@ pub const fixture_sig_0_over_mutant: ByteArray =
 
 /// input: controller 0 over the pending-termination package
 pub const fixture_pending_sig_0: ByteArray =
-  #"29118ddcce99369eadee3f0bd143736343725ba76048250f193db0135637dab01eeb4abd037d50d48e73e65f6049f397e092662c575d05d151cd98b7a571910f"
+  #"8bf794b59dfadb054a6814578a61358df65739c63619d836d656a3cb470f429dad4deebd49fc0f76924371fa3cf206925c3bf5090ddea45e81591bcb433b9a03"
 
 /// input: controller 1 over the pending-termination package
 pub const fixture_pending_sig_1: ByteArray =
-  #"d953ff919fe9341a7d2f987c4678010c00e4d619844ac83e19fe7f01bfaf5d9ea42eee86cc92c97aa4b8afcea3721512775a8af22af1d55ba11dd6af71346c07"
+  #"49fc90cdf5f86e4153df4092e0c58f2c35244241f588b5eb6ec77bfec71fd236d800811d026943b1482905d5dbb0eec5afa320b24268a1094c4687c5060b1704"
 
 /// input: controller 0 over the version 1 package
 pub const fixture_version_1_sig_0: ByteArray =
@@ -135,7 +135,7 @@ pub const golden_version_1_source_state: ByteArray =
 
 /// state: the pending termination of the same key state, wrapped
 pub const golden_pending_source_state: ByteArray =
-  #"d87a9fd87a9f582c454b7171717171717171717171717171717171717171717171717171717171717171717171717171717171710407d8799f9f58205b9437adeaffbe8f41b13d96ed49d2f51cd6c266cd8ecc284b0552ec4912b8dd5820acdcc8494d458f44a7aaac1d6a84ec624daee88436db2ae26e67ba645a1062285820b7282fe472f97641c17097821a537874aaaa532645ad34dbd5987331a4e73f8dffd8799f02ff9f5820d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d05820d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1ffd8799f01ff9f58209090909090909090909090909090909090909090909090909090909090909090ff01ffffff"
+  #"d87a9fd87a9f582c454b7171717171717171717171717171717171717171717171717171717171717171717171717171717171710407ffff"
 
 /// state: a projection with a bumped counter
 pub const golden_mutant_source_state: ByteArray =

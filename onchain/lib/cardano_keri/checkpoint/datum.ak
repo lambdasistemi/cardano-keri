@@ -67,7 +67,10 @@ pub type CheckpointDatumV2 {
     refund_to: ByteArray,
     keys: KeyMaterial,
   }
-  TerminationPending { aid: ByteArray, sn: Int, epoch: Int, keys: KeyMaterial }
+  /// Three fields, no key material: no step reads the keys of a pending
+  /// checkpoint and its output holds the fixed minimum ADA (Lean
+  /// `pendingSizeBound`).
+  TerminationPending { aid: ByteArray, sn: Int, epoch: Int }
 }
 
 /// The checkpoint datum version sum. `V1` is constructor index 0 and `V2`
@@ -147,13 +150,13 @@ pub fn datum_v2_well_formed(d: CheckpointDatumV2) -> DatumVerdict {
       } else {
         keys_verdict(keys)
       }
-    TerminationPending { sn, epoch, keys, .. } ->
+    TerminationPending { sn, epoch, .. } ->
       if sn < 0 {
         DatumInvalid(NegativeSn)
       } else if epoch < 0 {
         DatumInvalid(NegativeEpoch)
       } else {
-        keys_verdict(keys)
+        DatumValid
       }
   }
 }

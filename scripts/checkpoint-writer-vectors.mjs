@@ -142,7 +142,6 @@ const factsNode = (id, input, keys) => {
       ['aid', aid],
       ['sn', int(s.sn)],
       ['epoch', int(s.epoch)],
-      ['keys', keys],
     ]);
   }
   throw new Error(`${id}: unknown state form ${s.form}`);
@@ -178,11 +177,11 @@ const rowData = (input) => {
   if (s.form === 'live') {
     return dataNode.c(1, [dataNode.c(0, [aid, dataNode.i(s.sn), dataNode.i(s.epoch), boolData(s.poisoned), boolData(s.frozen), dataNode.i(s.bornAt), dataNode.b(s.refundTo), keysData(input.keys)])]);
   }
-  return dataNode.c(1, [dataNode.c(1, [aid, dataNode.i(s.sn), dataNode.i(s.epoch), keysData(input.keys)])]);
+  return dataNode.c(1, [dataNode.c(1, [aid, dataNode.i(s.sn), dataNode.i(s.epoch)])]);
 };
 const needsConstruction = (input) => {
   const s = input.state;
-  const ints = [s.sn, s.epoch, s.bornAt, input.keys.toad].filter((v) => v !== undefined).map(big);
+  const ints = [s.sn, s.epoch, s.bornAt, s.form === 'live' ? input.keys.toad : undefined].filter((v) => v !== undefined).map(big);
   return ints.some((v) => v >= TWO64 || v < -TWO64);
 };
 
@@ -276,11 +275,14 @@ fn parse(datum: ByteArray) -> Data {
     const id = names(r.id);
     const input = r.input;
     const construct = needsConstruction(input);
-    out += `
+    if (input.state.form === 'live') {
+      out += `
 /// The key material of vector \`${r.id}\`.
 pub fn keys_${id}() -> KeyMaterial {
 ${body(keyMaterialNode(input.keys))}}
-
+`;
+    }
+    out += `
 /// The facts of vector \`${r.id}\`: ${r.note}.
 pub fn facts_${id}() -> CheckpointDatumV2 {
 ${body(factsNode(r.id, input, call(`keys_${id}`, [])))}}

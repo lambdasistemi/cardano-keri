@@ -152,13 +152,12 @@ fn mig_source_datum() -> CheckpointDatumV2 {
   mig_source_at(7)
 }
 
-/// The same key state as a pending termination.
+/// The same identifier as a pending termination.
 fn mig_pending_datum() -> CheckpointDatumV2 {
   TerminationPending {
     aid: qb64_aid(mig_vec.fixture_cesr_aid),
     sn: 4,
     epoch: 7,
-    keys: mig_keys(),
   }
 }
 

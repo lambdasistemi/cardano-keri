@@ -99,12 +99,7 @@ pub fn live_datum(aid: Int, born_at: Int) -> Data {
 pub fn pending_datum(aid: Int) -> Data {
   constr_data(
     1,
-    [
-      constr_data(
-        1,
-        [b_data(concrete.key_of(aid)), i_data(4), i_data(2), simple_keys()],
-      ),
-    ],
+    [constr_data(1, [b_data(concrete.key_of(aid)), i_data(4), i_data(2)])],
   )
 }
 

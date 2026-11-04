@@ -265,12 +265,12 @@ fn live_datum(fields: List<Data>) -> Option<DecodedDatum> {
   }
 }
 
-/// The termination-pending form of `decode_data`: four fields.
+/// The termination-pending form of `decode_data`: three fields, no key material.
 fn pending_datum(fields: List<Data>) -> Option<DecodedDatum> {
   when fields is {
-    [aid, sn, epoch, keys] ->
-      when (byte_string(aid), nat(sn), nat(epoch), key_material(keys)) is {
-        (Some(aid), Some(sn), Some(epoch), Some(_)) ->
+    [aid, sn, epoch] ->
+      when (byte_string(aid), nat(sn), nat(epoch)) is {
+        (Some(aid), Some(sn), Some(epoch)) ->
           Some(
             DecodedDatum {
               aid: pack(aid),

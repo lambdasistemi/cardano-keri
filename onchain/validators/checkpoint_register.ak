@@ -495,7 +495,7 @@ fn validate_convict(
   expect own_input.output.address == role.address(own_hash, Active)
   expect InlineDatum(source_data) = own_input.output.datum
   expect V2(live): CheckpointDatum = source_data
-  expect Live { aid, sn, epoch, frozen, refund_to, keys, .. } = live
+  expect Live { aid, sn, epoch, frozen, refund_to, .. } = live
   expect [Pair(aid_name, 1)] = dict.to_pairs(
     tokens(own_input.output.value, own_hash),
   )
@@ -507,7 +507,7 @@ fn validate_convict(
     lovelace_of(own_input.output.value),
   )
   expect dict.to_pairs(tokens(mint, own_hash)) == []
-  let terminated = TerminationPending { aid, sn, epoch, keys }
+  let terminated = TerminationPending { aid, sn, epoch }
   expect [pending_output] = list.filter(
     outputs,
     fn(output) { quantity_of(output.value, own_hash, aid_name) > 0 },

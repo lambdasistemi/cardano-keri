@@ -223,7 +223,6 @@ fn pending(d: CheckpointDatumV1) -> CheckpointDatumV2 {
     aid: qb64_aid(d.cesr_aid),
     sn: d.native_sn,
     epoch: d.seq,
-    keys: keys_of(d),
   }
 }
 
@@ -263,16 +262,15 @@ type PendingParts {
   aid: ByteArray,
   sn: Int,
   epoch: Int,
-  keys: KeyMaterial,
 }
 
 fn pending_parts(d: CheckpointDatumV2) -> PendingParts {
-  expect TerminationPending { aid, sn, epoch, keys } = d
-  PendingParts { aid, sn, epoch, keys }
+  expect TerminationPending { aid, sn, epoch } = d
+  PendingParts { aid, sn, epoch }
 }
 
 fn from_pending_parts(p: PendingParts) -> CheckpointDatumV2 {
-  TerminationPending { aid: p.aid, sn: p.sn, epoch: p.epoch, keys: p.keys }
+  TerminationPending { aid: p.aid, sn: p.sn, epoch: p.epoch }
 }
 
 fn v2_data(d: CheckpointDatumV2) -> Data {
@@ -1597,16 +1595,29 @@ test convict_refuses_a_pending_datum_with_another_epoch() fail {
   )
 }
 
-test convict_refuses_a_pending_datum_with_other_keys() fail {
+/// The earlier pending layout, with the key material of the convicted
+/// checkpoint as a fourth field.
+fn pending_with_keys() -> Data {
   let base = pending_parts(pending(tip))
-  convict_into(
-    from_pending_parts(
-      PendingParts {
-        ..base,
-        keys: KeyMaterial { ..base.keys, toad: base.keys.toad + 1 },
-      },
-    ),
+  let key_data: Data = keys_of(tip)
+  builtin.constr_data(
+    1,
+    [
+      builtin.constr_data(
+        1,
+        [
+          builtin.b_data(base.aid),
+          builtin.i_data(base.sn),
+          builtin.i_data(base.epoch),
+          key_data,
+        ],
+      ),
+    ],
   )
+}
+
+test convict_refuses_a_pending_datum_that_carries_key_material() fail {
+  convict_unfrozen(pending_with_keys(), honest_payouts())
 }
 
 test convict_refuses_a_live_datum_on_the_output() fail {

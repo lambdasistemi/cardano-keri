@@ -169,7 +169,7 @@ pub fn vector_frozen() -> DatumVector {
 /// Vector `pending-termination`: a convicted checkpoint awaiting its terminating fold: decoded, refused by the consumer.
 pub fn vector_pending_termination() -> DatumVector {
   DatumVector {
-    datum: #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+    datum: #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402ffff",
     construction: None,
     decoded: Some(
       DecodedDatum {
@@ -358,10 +358,10 @@ pub fn vector_live_nine_fields() -> DatumVector {
   }
 }
 
-/// Vector `pending-five-fields`: a pending-termination datum with an extra field.
-pub fn vector_pending_five_fields() -> DatumVector {
+/// Vector `pending-with-keys`: a pending-termination datum carrying key material, the earlier four-field layout.
+pub fn vector_pending_with_keys() -> DatumVector {
   DatumVector {
-    datum: #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ff00ffff",
+    datum: #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
     construction: None,
     decoded: None,
     aid: 2910331432707532315737692472889708369526644234965979213661613385579557475798435655722156727757107933105734,
@@ -373,7 +373,7 @@ pub fn vector_pending_five_fields() -> DatumVector {
 /// Vector `pending-negative-epoch`: a pending-termination datum with a negative epoch.
 pub fn vector_pending_negative_epoch() -> DatumVector {
   DatumVector {
-    datum: #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500421d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+    datum: #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500421ffff",
     construction: None,
     decoded: None,
     aid: 2910331432707532315737692472889708369526644234965979213661613385579557475798435655722156727757107933105734,
@@ -639,7 +639,7 @@ pub fn vectors() -> List<DatumVector> {
     vector_unknown_form(),
     vector_live_seven_fields(),
     vector_live_nine_fields(),
-    vector_pending_five_fields(),
+    vector_pending_with_keys(),
     vector_pending_negative_epoch(),
     vector_aid_integer(),
     vector_sn_negative(),
@@ -805,13 +805,13 @@ test verdict_live_nine_fields() {
 }
 
 /// Lean `pending_arity_refused`, `decode_accepts_only_written`: the decoder returns the row's result.
-test decode_pending_five_fields() {
-  decode_ok(vector_pending_five_fields())
+test decode_pending_with_keys() {
+  decode_ok(vector_pending_with_keys())
 }
 
 /// Lean `malformed_datum_refused`: the consumer's verdict on a genuine holding is the row's.
-test verdict_pending_five_fields() {
-  verdict_ok(vector_pending_five_fields())
+test verdict_pending_with_keys() {
+  verdict_ok(vector_pending_with_keys())
 }
 
 /// Lean `pending_fields_typed`, `decode_accepts_only_written`: the decoder returns the row's result.

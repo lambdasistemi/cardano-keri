@@ -140,6 +140,32 @@ spec = describe "version 2 checkpoint datum" $ do
         it "refuses key material with a toad beyond its witnesses" $
             datumV2WellFormed (liveOf aidText 0 0 False 100 keys{kmToad = 1})
                 `shouldBe` Left ToadRange
+    describe "outer constructor 0 is refused" $ do
+        it "refuses the nine-field record under constructor 0" $
+            checkpointDatumFromData
+                ( Constr
+                    0
+                    [ Constr
+                        0
+                        [ B (BS.replicate 32 0xaa)
+                        , List [B (BS.replicate 32 0x01)]
+                        , Constr 0 [I 1]
+                        , List [B (BS.replicate 32 0x0a)]
+                        , Constr 0 [I 1]
+                        , List []
+                        , I 0
+                        , I 0
+                        , I 0
+                        ]
+                    ]
+                )
+                `shouldBe` Nothing
+        it "refuses a version 2 body under constructor 0" $
+            case checkpointDatumToData (V2 (live 4 2 False)) of
+                Constr 1 body ->
+                    checkpointDatumFromData (Constr 0 body)
+                        `shouldBe` Nothing
+                other -> expectationFailure ("not a version 2 datum: " <> show other)
     describe "identifier text" $ do
         it "is the E-code text of a 32-byte digest" $
             (qb64Aid <$> aidDigest aidText) `shouldBe` Just aidText

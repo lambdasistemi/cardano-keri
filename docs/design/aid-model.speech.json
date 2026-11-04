@@ -9,7 +9,7 @@
       "pause": 400
     },
     {
-      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active or parked (a retained output holds its token, minimum ADA and last key state; the registry key stays active). A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design. In that design an identity is active until it is convicted: there is no owner exit, no parking and no revival. A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
       "pause": 400
     },
     {
@@ -191,6 +191,64 @@
       "pause": 400
     }
   ],
+  "the-deposit-intent": [
+    {
+      "text": "The deposit intent.",
+      "pause": 500
+    },
+    {
+      "text": "A hunter froze Alice's checkpoint because its premium pool was short: the hunter took the freeze bond B, and the checkpoint cannot be consumed until the bond is back. Alice restores it with her next witnessed rotation, choosing the deposit bond option. Anyone may submit the rotation, so the choice of the deposit must come from Alice herself: her new current keys, the keys of the epoch the rotation opens, sign a deposit intent. Nobody else can choose the deposit for her rotation, and her signature cannot be replayed on another checkpoint, another rotation, another output or another chain.",
+      "pause": 400
+    },
+    {
+      "text": "The diagram reads in words: Alice's new keys sign the intent for the exact output being advanced and the amount the deposit moves. Whoever submits the Advance carries the rotation event and those signatures. The validator never takes the intent from the submitter: it rebuilds it from the output it spends, the network it is applied to and its own policy, serialises it, and counts the signatures of the rotation's current keys over those bytes. When they meet the rotation's threshold, the successor is unfrozen and holds the bond again.",
+      "pause": 400
+    },
+    {
+      "text": "The model states the intent in CardanoKeri.CheckpointDeposit: the record DepositIntent, its Plutus Data serialisation DepositIntent.preimage, the intent the validator requires intentFor, and the concrete reading of \"the keys of the epoch the rotation opens signed the deposit\" (Evidence.authorizes, ReadsDeposit). The intent is Plutus Data constructor 0 with eight fields, in this order: the domain tag, the network, the checkpoint policy, the spent output reference, the AID, the new sequence number, the new epoch and the amount. The table gives each value and the replay it stops.",
+      "pause": 400
+    },
+    {
+      "text": "Each signature is an Ed25519 signature over the serialised intent, carried as a position in the rotation event's current keys and the signature bytes. A position outside the keys never counts, a repeated position counts once, and a signature that does not verify never counts. The counted positions must satisfy the rotation event's current threshold.",
+      "pause": 400
+    },
+    {
+      "text": "What the model proves about these bytes (in CardanoKeri.CheckpointDepositGoals):",
+      "pause": 400
+    },
+    {
+      "text": "two intents with the same bytes are the same intent, so changing any field changes the bytes (preimage_injective, intentFor_preimage_eq_iff);",
+      "pause": 300
+    },
+    {
+      "text": "the amount the intent names is the amount the deposit step brings in, the freeze bond when frozen and nothing when not (intentFor_deposit, deposit_step_moves_named_amount);",
+      "pause": 300
+    },
+    {
+      "text": "under the concrete reading, every deposit step carries the new keys' signature over exactly the intent for its spent output and amount, and a deposit is enabled whenever that signature and the witnessed rotation are there, on a frozen or an unfrozen checkpoint (deposit_step_requires_signed_intent, deposit_enabled, unfrozen_deposit_accepted_for_zero);",
+      "pause": 300
+    },
+    {
+      "text": "signatures made over one intent authorize no other, and signatures that verify under none of the rotation's current keys never count (authorization_does_not_transfer, signed_for_one_not_another, only_new_keys_count).",
+      "pause": 300
+    },
+    {
+      "text": "The Advance is refused when the intent is missing, signed below the new threshold, signed by the old keys, or names another AID, rotation, epoch, output, policy, network or amount.",
+      "pause": 400
+    },
+    {
+      "text": "Four decisions shape the intent. It names the exact output being advanced, not only the identity and the rotation, so a freeze that races Alice's signature makes her sign again for the frozen output. It names the amount that moves, not the constant bond. A deposit on an unfrozen checkpoint is accepted with an intent naming zero, not refused. And the bytes are fixed in the model, with vectors, before any validator is written. The table names the rejected alternatives.",
+      "pause": 400
+    },
+    {
+      "text": "The checked vectors are lean/checkpoint-deposit-vectors.json, written by lean/CheckpointDepositDriver.lean: for each spent state and observed network, policy, output and AID, the intent and its bytes; candidate intents accepted or refused for a state, one row per changed field; and signature sets with whether the deposit rotation is taken. Their signatures are symbolic, a named test key over a named row's bytes; an implementation reproduces each row with real Ed25519 signatures by its own test keys. scripts/check-consumer-design.sh regenerates the vectors, refuses any difference from the committed file, and requires every changed field of every committed row to fail.",
+      "pause": 400
+    },
+    {
+      "text": "What this does not establish: Ed25519 verification is a cryptographic primitive the model takes as a parameter; that one signature cannot verify over two different messages is an assumption stated where it is used; the threshold is read as the model's KERI threshold over key positions, and the correspondence of the datum's threshold encoding and its evaluation with that reading is not claimed here; reading the network, the policy and the spent output from the transaction is the validator's obligation. No validator implements the deposit option yet.",
+      "pause": 400
+    }
+  ],
   "duplicate-registration-residual": [
     {
       "text": "Duplicate-registration residual.",
@@ -289,6 +347,6 @@
   ],
   "_source": {
     "file": "aid-model.md",
-    "sha256": "e1f00e86755a361b6ef45c20e9e2e9f69dc963c7eefe2fcc239bd5d25b35e4e9"
+    "sha256": "56298438e3b6be4175d802a8f80ca36ce08c1a4bf11b3d399847cb5c75d2d6e0"
   }
 }

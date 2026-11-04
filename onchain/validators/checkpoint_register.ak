@@ -18,6 +18,7 @@ use cardano/transaction.{
   Transaction, Withdraw, find_input,
 }
 use cardano_keri/checkpoint/datum.{Live, TerminationPending}
+use cardano_keri/checkpoint/deposit.{deposit_authorized, required_intent}
 use cardano_keri/checkpoint/enforcement_observer.{authorized_payee}
 use cardano_keri/checkpoint/freeze_bond.{freeze_bond_valid}
 use cardano_keri/checkpoint/message.{aid_digest, deriveAidAssetName}
@@ -39,10 +40,22 @@ pub type MintRedeemer {
   Register
 }
 
+/// The bond option of an Advance (Lean `BondOp`): keep the bond state, or
+/// deposit the bond. Constructor indices are wire surface.
+pub type BondOp {
+  /// The successor keeps the frozen flag of the spent checkpoint.
+  Keep
+  /// The successor is unfrozen and holds the bond again. The signatures are
+  /// pairs of a position in the successor's current keys and the signature
+  /// bytes over the deposit intent (see `cardano_keri/checkpoint/deposit`).
+  Deposit { signatures: List<(Int, ByteArray)> }
+}
+
 pub type SpendRedeemer {
   /// `payee_output_index` names the output that receives the premium when
-  /// the pool covers it; it is not read otherwise.
-  Advance { payee_output_index: Int }
+  /// the pool covers it; it is not read otherwise. `bond` is the Lean's
+  /// `.rotate sn' op payee` option.
+  Advance { payee_output_index: Int, bond: BondOp }
   Convict { convictor_pkh: ByteArray, convictor_output_index: Int }
   /// Leave this generation under its own controller quorum (#254 T254-104).
   MigrateOut
@@ -95,7 +108,7 @@ validator checkpoint_register(
     expect premium >= 0
     expect spend_redeemer: SpendRedeemer = redeemer
     when spend_redeemer is {
-      Advance { payee_output_index } -> {
+      Advance { payee_output_index, bond } -> {
         expect
           ran_rotation_check(
             advance_hash,
@@ -105,10 +118,12 @@ validator checkpoint_register(
             tx,
           )
         validate_advance(
+          network_id,
           d_reg,
           freeze_bond,
           premium,
           payee_output_index,
+          bond,
           own_ref,
           tx,
         )
@@ -438,10 +453,12 @@ fn expect_exact_payout(
 }
 
 fn validate_advance(
+  network_id: Int,
   d_reg: Int,
   freeze_bond: Int,
   premium: Int,
   payee_output_index: Int,
+  bond: BondOp,
   own_ref: OutputReference,
   tx: Transaction,
 ) -> Bool {
@@ -451,7 +468,7 @@ fn validate_advance(
   expect own_input.output.address == role.address(own_hash, Active)
   expect InlineDatum(old_data) = own_input.output.datum
   let old = datum.read(old_data)
-  expect Live { frozen, born_at, refund_to, .. } = old
+  expect Live { aid, frozen, born_at, refund_to, .. } = old
   expect [Pair(aid_name, 1)] = dict.to_pairs(
     tokens(own_input.output.value, own_hash),
   )
@@ -463,17 +480,47 @@ fn validate_advance(
   let new = datum.read(new_data)
   expect  
       Live {
+        sn: new_sn,
+        epoch: new_epoch,
         poisoned: False,
         frozen: new_frozen,
         born_at: new_born_at,
         refund_to: new_refund_to,
+        keys: new_keys,
         ..
       }
     = new
   expect and {
-      new_frozen == frozen,
       new_born_at == born_at,
       new_refund_to == refund_to,
+    }
+  // The bond option (Lean `Env.bondOpOk`). Keep leaves the frozen flag as it
+  // was. Deposit unfreezes, and the keys the rotation reveals (the successor's
+  // current keys, proved by the rotation observer) signed the intent for this
+  // spent output and this amount, `B - bHeld`: the bond when the spent state is
+  // frozen, nothing when it is not.
+  expect
+    when bond is {
+      Keep -> new_frozen == frozen
+      Deposit { signatures } ->
+        !new_frozen && deposit_authorized(
+          new_keys.cur_keys,
+          new_keys.cur_threshold,
+          signatures,
+          required_intent(
+            network_id,
+            own_hash,
+            own_ref,
+            aid,
+            new_sn,
+            new_epoch,
+            if frozen {
+              freeze_bond
+            } else {
+              0
+            },
+          ),
+        )
     }
   expect dict.to_pairs(tokens(mint, own_hash)) == []
   expect Some(pool) = with_value(

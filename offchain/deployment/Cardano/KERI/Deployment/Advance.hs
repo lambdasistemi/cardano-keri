@@ -13,6 +13,7 @@ module Cardano.KERI.Deployment.Advance (
     PackageBase (..),
     packageBase,
     mkAdvancePackage,
+    mkDepositPackage,
     attachControllerSignatures,
     advanceSigningMetadata,
     writeAdvanceSigningPackage,
@@ -25,10 +26,15 @@ import Cardano.KERI.AID.Checkpoint.Advance (
     reconstructAdvanceMessage,
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
-    CheckpointDatumV2,
+    CheckpointDatumV2 (..),
     KeyStateView (..),
     canonicalCbor,
     rotatedLive,
+ )
+import Cardano.KERI.AID.Checkpoint.Deposit (
+    DepositFacts (..),
+    depositIntentPreimage,
+    requiredIntent,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
     SpentCheckpoint (..),
@@ -88,6 +94,10 @@ data AdvancePackage = AdvancePackage
     , advanceEvidence :: !AdvanceEvidence
     , advanceSigningPreimage :: !ByteString
     -- ^ what the controller signs; empty for a freeze, which asks nobody's signature
+    , advanceDepositIntent :: !(Maybe ByteString)
+    {- ^ for a deposit, the intent the new keys of the rotation sign (the Lean's
+    @DepositIntent@); 'Nothing' when the bond is kept
+    -}
     , advancePackageSha256 :: !Text
     }
     deriving stock (Show, Eq)
@@ -95,6 +105,7 @@ data AdvancePackage = AdvancePackage
 data AdvanceSigningFiles = AdvanceSigningFiles
     { advancePreimageFile :: !FilePath
     , advanceMetadataFile :: !FilePath
+    , advanceDepositIntentFile :: !(Maybe FilePath)
     }
     deriving stock (Show, Eq)
 
@@ -164,12 +175,32 @@ packageBase manifest active rotation = do
                 }
     pure PackageBase{..}
 
+-- | The package of an Advance that keeps the bond state.
 mkAdvancePackage ::
     Manifest ->
     ActiveCheckpoint ->
     RotationExport ->
     Either String AdvancePackage
-mkAdvancePackage manifest active rotation = do
+mkAdvancePackage = mkRotationPackage False
+
+{- | The package of an Advance that deposits the bond (Lean
+@rotateDepositPaid@, @rotateDepositUnpaid@): the successor is unfrozen and holds
+the bond again, and the package carries the intent the new keys must sign.
+-}
+mkDepositPackage ::
+    Manifest ->
+    ActiveCheckpoint ->
+    RotationExport ->
+    Either String AdvancePackage
+mkDepositPackage = mkRotationPackage True
+
+mkRotationPackage ::
+    Bool ->
+    Manifest ->
+    ActiveCheckpoint ->
+    RotationExport ->
+    Either String AdvancePackage
+mkRotationPackage deposit manifest active rotation = do
     PackageBase{pbParameters = parameters, pbPremium = premium, pbSpent = spent} <-
         packageBase manifest active rotation
     let facts = activeCheckpointFacts active
@@ -185,12 +216,27 @@ mkAdvancePackage manifest active rotation = do
                 facts
                 (activeCheckpointLovelace active)
             )
-    successorFacts <-
+    rotated <-
         maybe
             (Left "the checkpoint is not live")
             Right
             (rotatedLive facts (rotationDatum rotation))
     let successor = rotationDatum rotation
+        successorFacts = case rotated of
+            live@Live{} | deposit -> live{lvFrozen = False}
+            other -> other
+        intent =
+            depositIntentPreimage
+                <$> requiredIntent
+                    (parameterFreezeBond parameters)
+                    DepositFacts
+                        { dfNetworkId = scNetworkId spent
+                        , dfPolicy = scPolicyId spent
+                        , dfTxId = scTxid spent
+                        , dfOutputIndex = scIndex spent
+                        }
+                    facts
+                    (cdNativeSn successor)
         evidence = rotationEvidence rotation
         preimage =
             canonicalCbor $
@@ -220,6 +266,7 @@ mkAdvancePackage manifest active rotation = do
                     (settlementPoolAfter settlement)
             , advanceEvidence = evidence
             , advanceSigningPreimage = preimage
+            , advanceDepositIntent = if deposit then intent else Nothing
             , advancePackageSha256 = sha256Text preimage
             }
 
@@ -248,13 +295,21 @@ attachControllerSignatures signatures package = do
 
 advanceSigningMetadata :: AdvancePackage -> Value
 advanceSigningMetadata package =
-    object
+    object $
         [ "schema" .= ("cardano-keri/advance-signing-package/v1" :: Text)
         , "aid" .= advanceAid package
         , "spentReference" .= advanceSpentReference package
         , "preimageFile" .= ("advance-message.cbor" :: Text)
         , "preimageSha256" .= advancePackageSha256 package
         ]
+            <> maybe
+                []
+                ( \intent ->
+                    [ "depositIntentFile" .= ("deposit-intent.cbor" :: Text)
+                    , "depositIntentSha256" .= sha256Text intent
+                    ]
+                )
+                (advanceDepositIntent package)
 
 writeAdvanceSigningPackage ::
     FilePath ->
@@ -264,7 +319,13 @@ writeAdvanceSigningPackage directory package = do
     createDirectoryIfMissing True directory
     let advancePreimageFile = directory </> "advance-message.cbor"
         advanceMetadataFile = directory </> "package.json"
+        advanceDepositIntentFile =
+            (directory </> "deposit-intent.cbor")
+                <$ advanceDepositIntent package
     BS.writeFile advancePreimageFile (advanceSigningPreimage package)
+    mapM_
+        (BS.writeFile (directory </> "deposit-intent.cbor"))
+        (advanceDepositIntent package)
     Aeson.encodeFile advanceMetadataFile (advanceSigningMetadata package)
     pure AdvanceSigningFiles{..}
 

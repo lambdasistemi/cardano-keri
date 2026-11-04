@@ -41,6 +41,42 @@ spec = describe "ckeri command surface" $ do
         unrecognisedCommands ["status"] >>= (`shouldBe` [])
     it "recognises freeze: a hunter presents the controller's own rotation" $
         unrecognisedCommands ["freeze"] >>= (`shouldBe` [])
+    it "offers advance --deposit: the controller restores the freeze bond with the rotation" $
+        unrecognisedArguments (advanceWith ["--deposit"]) >>= (`shouldBe` [])
+    it "offers advance --deposit-signatures: the controller supplies the signatures over the intent" $
+        unrecognisedArguments (advanceWith ["--deposit-signatures", "deposit-signatures.txt"])
+            >>= (`shouldBe` [])
+    it "reports an invented advance option as unrecognised (the control of the two above)" $
+        unrecognisedArguments (advanceWith ["--no-such-option", "x"])
+            >>= (`shouldBe` ["--no-such-option", "x"])
+
+-- | The arguments of an @advance@ with its required settings, then these.
+advanceWith :: [String] -> [String]
+advanceWith extra =
+    ["advance", "--aid", "A", "--kel", "kel.json", "--store", "store"] <> extra
+
+{- | The arguments the production parser reports as unrecognised for these
+arguments, with no environment and no configuration file.
+-}
+unrecognisedArguments :: [String] -> IO [String]
+unrecognisedArguments args = do
+    result <-
+        runParserOn
+            allCapabilities
+            Nothing
+            (Opt.settingsParser :: Opt.Parser Instructions)
+            (parseArgs args)
+            EnvMap.empty
+            Nothing
+    pure $ either unrecognisedOptions (const []) result
+
+unrecognisedOptions :: NonEmpty ParseError -> [String]
+unrecognisedOptions errors =
+    concat
+        [ NE.toList options
+        | ParseError{parseErrorMessage = ParseErrorUnrecognised options} <-
+            NE.toList errors
+        ]
 
 {- | The command names the production parser reports as unrecognised for
 these arguments, with no environment and no configuration file.

@@ -112,6 +112,7 @@ mkFreezePackage manifest active rotation = do
             , advanceSuccessorLovelace = fsSuccessorLovelace settlement
             , advanceEvidence = evidence
             , advanceSigningPreimage = BS.empty
+            , advanceDepositIntent = Nothing
             , advancePackageSha256 = sha256Text BS.empty
             }
 

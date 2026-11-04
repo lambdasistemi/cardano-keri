@@ -376,10 +376,11 @@ pub fn honest_case(pool: Int) -> Freeze {
   }
 }
 
-/// `Advance { payee_output_index }`: constructor index zero.
+/// `Advance { payee_output_index, bond: Keep }`: constructor index zero, the
+/// keep option (constructor zero) after the payee output index.
 pub fn advance_redeemer(payee_output_index: Int) -> Data {
   let index: Data = payee_output_index
-  builtin.constr_data(0, [index])
+  builtin.constr_data(0, [index, builtin.constr_data(0, [])])
 }
 
 /// The honest freeze with the successor datum and its value replaced.

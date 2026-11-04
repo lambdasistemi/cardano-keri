@@ -19,12 +19,28 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     datumKeyState,
     liveOfKeyState,
  )
+import Cardano.KERI.AID.Checkpoint.Deposit (
+    BondOption (..),
+    DepositIntent (..),
+    depositDomain,
+    depositIntentPreimage,
+ )
 import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
 import Cardano.KERI.AID.Checkpoint.Value (RotationSettlement (..))
 import Cardano.KERI.AID.Checkpoint.Wire (advanceSpendRedeemerData, asPlcData)
 import Cardano.KERI.ChainQuery (ActiveCheckpoint (..))
-import Cardano.KERI.Deployment.Advance (AdvancePackage (..), mkAdvancePackage)
-import Cardano.KERI.Deployment.AdvanceTransaction (AdvancePlan (..), mkAdvancePlan)
+import Cardano.KERI.Deployment.Advance (
+    AdvancePackage (..),
+    AdvanceSigningFiles (..),
+    mkAdvancePackage,
+    mkDepositPackage,
+    writeAdvanceSigningPackage,
+ )
+import Cardano.KERI.Deployment.AdvanceTransaction (
+    AdvancePlan (..),
+    mkAdvancePlan,
+    mkDepositPlan,
+ )
 import Cardano.KERI.Deployment.KEL (RotationExport (..), parseRotationExport)
 import Cardano.KERI.Deployment.Manifest (
     CheckpointInfo (..),
@@ -35,13 +51,15 @@ import Cardano.KERI.Deployment.Manifest (
 import Cardano.KERI.Deployment.Registration (plutusDataJson)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.KeyMap qualified as KM
-import Data.ByteArray.Encoding (Base (Base16), convertToBase)
+import Data.ByteArray.Encoding (Base (Base16), convertFromBase, convertToBase)
 import Data.ByteString qualified as BS
 import Data.Either (isLeft)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text.Encoding qualified as TE
 import Paths_cardano_keri (getDataFileName)
+import System.FilePath ((</>))
+import System.IO.Temp (withSystemTempDirectory)
 import Test.Hspec (
     Spec,
     describe,
@@ -153,11 +171,85 @@ spec = describe "Advance package and plan from a live version 2 checkpoint" $ do
             Left err -> expectationFailure err
             Right plan -> do
                 planSpendRedeemer plan
-                    `shouldBe` plutusDataJson (advanceSpendRedeemerData 1)
+                    `shouldBe` plutusDataJson (advanceSpendRedeemerData 1 Keep)
                 planPremiumPaid plan `shouldBe` premiumOf manifest
                 planSuccessorLovelace plan `shouldBe` floorOf manifest + 7
                 planSuccessorDatum plan
                     `shouldBe` plutusDataJson (asPlcData (V2 (advanceSuccessorFacts package)))
+
+    describe "the deposit option (Lean rotateDepositPaid and rotateDepositUnpaid)" $ do
+        it "unfreezes the successor of a frozen checkpoint and holds the bond again" $ do
+            (manifest, rotation) <- fixtures
+            let bond = parameterFreezeBond (manifestParameters manifest)
+                frozenFloor = floorOf manifest - bond
+                pool = premiumOf manifest + 3
+            package <- depositAt manifest rotation (frozenFloor + pool) True
+            case advanceSuccessorFacts package of
+                Live{lvFrozen, lvPoisoned} -> (lvFrozen, lvPoisoned) `shouldBe` (False, False)
+                TerminationPending{} -> expectationFailure "the successor is not live"
+            settlementPaid (advanceSettlement package) `shouldBe` premiumOf manifest
+            advanceSuccessorLovelace package `shouldBe` floorOf manifest + 3
+
+        it "deposits nothing on an unfrozen checkpoint and the successor is the same as a keep" $ do
+            (manifest, rotation) <- fixtures
+            let lovelace = floorOf manifest + 4
+            deposit <- depositAt manifest rotation lovelace False
+            keep <- packageAt manifest rotation lovelace False
+            advanceSuccessorFacts deposit `shouldBe` advanceSuccessorFacts keep
+            advanceSuccessorLovelace deposit `shouldBe` advanceSuccessorLovelace keep
+
+        it "names the intent the new keys sign: the bond when frozen, nothing when not" $ do
+            (manifest, rotation) <- fixtures
+            let bond = parameterFreezeBond (manifestParameters manifest)
+                frozenFloor = floorOf manifest - bond
+            frozen <- depositAt manifest rotation (frozenFloor + 5) True
+            unfrozen <- depositAt manifest rotation (floorOf manifest + 5) False
+            advanceDepositIntent frozen
+                `shouldBe` Just (depositIntentPreimage (intentOf manifest rotation bond))
+            advanceDepositIntent unfrozen
+                `shouldBe` Just (depositIntentPreimage (intentOf manifest rotation 0))
+
+        it "carries no intent when the bond is kept" $ do
+            (manifest, rotation) <- fixtures
+            package <- packageAt manifest rotation (floorOf manifest) False
+            advanceDepositIntent package `shouldBe` Nothing
+
+        it "plans the deposit option and its signatures in the spend redeemer" $ do
+            (manifest, rotation) <- fixtures
+            let bond = parameterFreezeBond (manifestParameters manifest)
+                signatures = [(0, BS.replicate 64 0xa1), (1, BS.replicate 64 0xa2)]
+            package <- depositAt manifest rotation (floorOf manifest - bond + 7) True
+            case mkDepositPlan manifest package signatures of
+                Left err -> expectationFailure err
+                Right plan -> do
+                    planSpendRedeemer plan
+                        `shouldBe` plutusDataJson (advanceSpendRedeemerData 1 (Deposit signatures))
+                    planSuccessorLovelace plan `shouldBe` floorOf manifest + 7
+                    planSuccessorDatum plan
+                        `shouldBe` plutusDataJson (asPlcData (V2 (advanceSuccessorFacts package)))
+
+        it "refuses to plan a deposit from a package made for the keep option" $ do
+            (manifest, rotation) <- fixtures
+            package <- packageAt manifest rotation (floorOf manifest) False
+            mkDepositPlan manifest package [(0, BS.replicate 64 0xa1)] `shouldSatisfy` isLeft
+
+        it "writes the intent beside the advance message and names it in the metadata" $ do
+            (manifest, rotation) <- fixtures
+            let bond = parameterFreezeBond (manifestParameters manifest)
+            package <- depositAt manifest rotation (floorOf manifest - bond) True
+            withSystemTempDirectory "deposit-package" $ \directory -> do
+                files <- writeAdvanceSigningPackage directory package
+                advanceDepositIntentFile files `shouldBe` Just (directory </> "deposit-intent.cbor")
+                written <- BS.readFile (directory </> "deposit-intent.cbor")
+                Just written `shouldBe` advanceDepositIntent package
+                metadata <- Aeson.eitherDecodeFileStrict' (advanceMetadataFile files) >>= either fail pure
+                case metadata of
+                    Aeson.Object fields -> KM.member "depositIntentFile" fields `shouldBe` True
+                    other -> expectationFailure ("metadata is not an object: " <> show other)
+            withSystemTempDirectory "keep-package" $ \directory -> do
+                keep <- packageAt manifest rotation (floorOf manifest) False
+                files <- writeAdvanceSigningPackage directory keep
+                advanceDepositIntentFile files `shouldBe` Nothing
 
 {- | The fixture manifest as JSON with the premium field removed: the shape of a
 manifest written for a generation that has none.
@@ -231,6 +323,38 @@ activeAt manifest rotation lovelace frozen =
         }
   where
     view = (rotationDatum rotation){cdSeq = 0, cdNativeSn = 0}
+
+-- | The package of a deposit, from the live checkpoint one rotation behind the export.
+depositAt ::
+    Manifest -> RotationExport -> Integer -> Bool -> IO AdvancePackage
+depositAt manifest rotation lovelace frozen =
+    either
+        fail
+        pure
+        (mkDepositPackage manifest (activeAt manifest rotation lovelace frozen) rotation)
+
+{- | The intent the Lean requires for the fixture checkpoint's deposit rotation,
+written field by field from the fixture's own values.
+-}
+intentOf :: Manifest -> RotationExport -> Integer -> DepositIntent
+intentOf manifest rotation deposit =
+    DepositIntent
+        { diDomain = depositDomain
+        , diNetworkId = parameterNetworkDiscriminator (manifestParameters manifest)
+        , diCheckpointPolicy = policyBytes
+        , diSpentTxId = BS.replicate 32 0x10
+        , diSpentIndex = 0
+        , diAid = aidTextOf rotation
+        , diNewSn = cdNativeSn (rotationDatum rotation)
+        , diNewEpoch = 1
+        , diDeposit = deposit
+        }
+  where
+    policyBytes =
+        either
+            (error . ("the fixture policy is not hexadecimal: " <>))
+            id
+            (convertFromBase Base16 (TE.encodeUtf8 (checkpointPolicyId (manifestCheckpoint manifest))))
 
 packageAt ::
     Manifest -> RotationExport -> Integer -> Bool -> IO AdvancePackage

@@ -155,6 +155,12 @@ jobs:
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-freeze-vectors.mjs --check
       - name: Freeze mutation controls
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/check-freeze-mutants.mjs
+      - name: Deposit vectors drift
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-deposit-vectors.mjs --check
+      - name: Deposit corpus drift
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-deposit-corpus.mjs --check
+      - name: Deposit mutation controls
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/check-deposit-mutants.mjs
       # The reusable KERI libraries compiled together with the published
       # Singular registry package; compatibility and retained registration
       # tests, test-identity agreement and interface controls (#477).
@@ -305,6 +311,8 @@ jobs:
         run: nix develop --quiet --no-write-lock-file -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal build all --enable-tests -O0 --project-file=cabal.project.devshell'
       - name: Freeze wire vectors drift
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#just --command just check-freeze-vectors
+      - name: Deposit wire vectors drift
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#just --command just check-deposit-vectors
 
   e2e:
     name: E2E (withDevnet)

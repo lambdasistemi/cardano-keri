@@ -139,10 +139,10 @@ fn spend_data(index: Int, fields: List<Data>) -> Data {
   builtin.constr_data(index, fields)
 }
 
-/// `Advance { payee_output_index }`.
+/// `Advance { payee_output_index, bond: Keep }`.
 fn advance_redeemer(payee_output_index: Int) -> Data {
   let index: Data = payee_output_index
-  spend_data(0, [index])
+  spend_data(0, [index, spend_data(0, [])])
 }
 
 /// `Convict { convictor_pkh, convictor_output_index }`.

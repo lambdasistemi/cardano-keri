@@ -23,6 +23,7 @@ module Cardano.KERI.AID.Checkpoint.Wire (
 ) where
 
 import Cardano.KERI.AID.Checkpoint.Advance (AdvanceEvidence (..))
+import Cardano.KERI.AID.Checkpoint.Deposit (BondOption, bondOptionData)
 import Cardano.KERI.AID.Checkpoint.Enforcement (EnforcementEvidence)
 import Cardano.KERI.AID.Checkpoint.Entitlement (EnforcementProofV1 (..))
 import Cardano.KERI.AID.Checkpoint.Freeze (FreezeEvidence (..))
@@ -45,11 +46,13 @@ registerObserverRedeemerData checkpointPolicy evidence =
         , registrationEvidenceData evidence
         ]
 
-{- | The checkpoint validator's @Advance@ arm is constructor index zero and
-names the output that receives the premium when the pool covers it.
+{- | The checkpoint validator's @Advance@ arm is constructor index zero. It
+names the output that receives the premium when the pool covers it, then
+carries the bond option: keep the bond state, or deposit the bond.
 -}
-advanceSpendRedeemerData :: Integer -> Data
-advanceSpendRedeemerData payeeOutputIndex = Constr 0 [I payeeOutputIndex]
+advanceSpendRedeemerData :: Integer -> BondOption -> Data
+advanceSpendRedeemerData payeeOutputIndex bond =
+    Constr 0 [I payeeOutputIndex, bondOptionData bond]
 
 {- | The dedicated Advance observer envelope: action one, checkpoint policy,
 the named spent output reference, and the unchanged rotation evidence.

@@ -98,6 +98,8 @@ import Cardano.KERI.Deployment.Advance (
     AdvanceSigningFiles (..),
     attachControllerSignatures,
     mkAdvancePackage,
+    mkDepositPackage,
+    sha256Text,
     writeAdvanceSigningPackage,
  )
 import Cardano.KERI.Deployment.AdvanceTransaction qualified as AdvanceTx
@@ -183,11 +185,11 @@ import Cardano.Ledger.Core (TxOut)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Control.Concurrent (threadDelay)
 import Control.Exception (SomeException, try)
-import Control.Monad (unless, when, (>=>))
+import Control.Monad (forM_, unless, when, (>=>))
 import Data.ByteString qualified as BS
 import Data.Char (isHexDigit)
 import Data.List (find)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Time.Clock (diffUTCTime, getCurrentTime)
@@ -317,6 +319,8 @@ data AdvanceSettings = AdvanceSettings
     , advanceKel :: FilePath
     , advanceSigningPackage :: Maybe FilePath
     , advanceControllerSignatures :: Maybe FilePath
+    , advanceDeposit :: Bool
+    , advanceDepositSignatures :: Maybe FilePath
     , advancePayer :: Maybe FilePath
     , advanceNodeSocket :: Maybe FilePath
     , advanceFundingAddress :: Maybe Text
@@ -626,6 +630,23 @@ advanceSettingsParser = do
                 "CKERI_CONTROLLER_SIGNATURES"
                 "controller-signatures"
                 "Bare indexed CESR signatures over advance-message.cbor"
+                Nothing
+    advanceDeposit <-
+        Opt.yesNoSwitch
+            [ Opt.long "deposit"
+            , Opt.env "CKERI_DEPOSIT"
+            , Opt.conf "deposit"
+            , Opt.help
+                "Restore the freeze bond with the rotation: the successor is unfrozen and holds the bond again. The signing package then also holds deposit-intent.cbor, which the rotation's new keys sign"
+            , Opt.value False
+            ]
+    advanceDepositSignatures <-
+        Opt.optional $
+            stringSetting
+                "deposit-signatures"
+                "CKERI_DEPOSIT_SIGNATURES"
+                "deposit-signatures"
+                "Bare indexed CESR signatures over deposit-intent.cbor by the rotation's new keys, with --deposit"
                 Nothing
     advancePayer <-
         Opt.optional $
@@ -2037,6 +2058,8 @@ runAdvanceWith openLocalScope openLiveContext settings = do
         (fail "AID must be one 44-character KERI E-code identifier")
     when (advanceTimeoutSeconds settings <= 0) $
         fail "timeout-seconds must be positive"
+    when (isJust (advanceDepositSignatures settings) && not (advanceDeposit settings)) $
+        fail "--deposit-signatures applies only with --deposit"
     let negativeCount =
             length $
                 filter
@@ -2068,7 +2091,7 @@ runAdvanceWith openLocalScope openLiveContext settings = do
                         (manifestCheckpointLocator manifest)
                         (advanceConfiguredAid settings)
                 package <-
-                    either fail pure (mkAdvancePackage manifest active rotation)
+                    either fail pure (advancePackageFor settings manifest active rotation)
                 files <- writeAdvanceSigningPackage directory package
                 putStrLn $
                     "signing package: "
@@ -2079,6 +2102,10 @@ runAdvanceWith openLocalScope openLiveContext settings = do
                 putStrLn $
                     "spent checkpoint: "
                         <> T.unpack (advanceSpentReference package)
+                forM_ ((,) <$> advanceDepositIntentFile files <*> advanceDepositIntent package) $
+                    \(file, intent) -> do
+                        putStrLn $ "deposit intent: " <> file
+                        putStrLn $ "deposit intent sha256: " <> T.unpack (sha256Text intent)
             (Nothing, Just signatureFile) ->
                 submitAdvance openLiveContext scope settings manifest rotation signatureFile
             _ ->
@@ -2134,10 +2161,22 @@ submitAdvance openLiveContext scope settings manifest rotation signatureFile = d
             ActiveCheckpointNotRegistered -> fail "checkpoint is not registered"
             ActiveCheckpointSubmitBundle active refs activeInput funding ->
                 pure (active, refs, activeInput, funding)
-    package <- either fail pure (mkAdvancePackage manifest active rotation)
+    package <- either fail pure (advancePackageFor settings manifest active rotation)
     submittedPackage <-
         prepareSubmittedPackage settings active signatures package
-    plan <- either fail pure (AdvanceTx.mkAdvancePlan manifest submittedPackage)
+    plan <-
+        if advanceDeposit settings
+            then do
+                depositFile <-
+                    maybe
+                        (fail "--deposit needs --deposit-signatures FILE when submitting")
+                        pure
+                        (advanceDepositSignatures settings)
+                depositBytes <- BS.readFile depositFile
+                depositSignatures <-
+                    either fail pure (parseIndexedSignatureLines depositBytes)
+                either fail pure (AdvanceTx.mkDepositPlan manifest submittedPackage depositSignatures)
+            else either fail pure (AdvanceTx.mkAdvancePlan manifest submittedPackage)
     submitRotation
         openLiveContext
         scope
@@ -2285,6 +2324,17 @@ runFreezeWith openLocalScope openLiveContext settings = do
             activeInput
             funding
             plan
+
+-- | The package of the bond option the settings name.
+advancePackageFor ::
+    AdvanceSettings ->
+    Manifest ->
+    ActiveCheckpoint ->
+    RotationExport ->
+    Either String AdvancePackage
+advancePackageFor settings
+    | advanceDeposit settings = mkDepositPackage
+    | otherwise = mkAdvancePackage
 
 prepareSubmittedPackage ::
     AdvanceSettings ->

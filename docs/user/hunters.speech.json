@@ -9,7 +9,7 @@
       "pause": 400
     },
     {
-      "text": "The hunter's freeze is one transaction in this generation of the checkpoint program, and ckeri freeze submits it. It runs on a local test chain and is not deployed to preprod; this code is not for mainnet. Top-up and the unfreeze are accepted design, not shipped. Play The pool runs dry, so Hal freezes her instead and Two hunters race.",
+      "text": "The hunter's freeze and the controller's deposit rotation, which unfreezes, are one transaction each in this generation of the checkpoint program; ckeri freeze submits the freeze and ckeri advance --deposit the deposit rotation. They run on a local test chain and are not deployed to preprod; this code is not for mainnet. Top-up is accepted design, not shipped. Play The pool runs dry, so Hal freezes her instead and Two hunters race.",
       "pause": 400
     },
     {
@@ -17,7 +17,11 @@
       "pause": 400
     },
     {
-      "text": "When the pool cannot cover P, he freezes her instead. He presents the later rotation as evidence, exactly as the log exports it, and takes the freeze bond B (what a hunter takes when the pool cannot pay). The datum keeps its old keys and sequence number; only the frozen flag is set, and the checkpoint then holds the minimum ADA, the deposit and the pool. ckeri freeze lands it and pays the bond to the funding address. The checkpoint is inert to everyone but the next keys: consumers reject it; a second freeze is refused; the poison (the owner's own lock on the checkpoint) still belongs to the current quorum. Alice unfreezes with a deposit rotation — the new keys refill B. Deposit is a no-op on full bonds.",
+      "text": "When the pool cannot cover P, he freezes her instead. He presents the later rotation as evidence, exactly as the log exports it, and takes the freeze bond B (what a hunter takes when the pool cannot pay). The datum keeps its old keys and sequence number; only the frozen flag is set, and the checkpoint then holds the minimum ADA, the deposit and the pool. ckeri freeze --aid … --kel rotation.cesr … lands it and pays the bond to the funding address. The checkpoint is inert to everyone but the next keys: consumers reject it; a second freeze is refused; the poison (the owner's own lock on the checkpoint) still belongs to the current quorum.",
+      "pause": 400
+    },
+    {
+      "text": "Alice unfreezes with her next witnessed rotation, landed with the deposit option: ckeri advance --deposit … writes the exact bytes her new keys sign, an intent that names the network, the checkpoint policy, the spent output, her identifier, the new sequence number, the new epoch and the amount, and lands the rotation with those signatures. The successor is unfrozen and holds B again, so the checkpoint is consumable again; the premium is paid exactly when the pool covers it, as for any rotation. Nobody else can choose the deposit option for her rotation, and a signature for one output is worthless for another. On a checkpoint that is not frozen the intent names an amount of zero and the deposit brings nothing. See Rotate your preprod identity for the commands and The deposit intent for what is signed.",
       "pause": 400
     },
     {
@@ -39,6 +43,6 @@
   ],
   "_source": {
     "file": "hunters.md",
-    "sha256": "8b657aae0a162fe46353a85b71fc57c83e666bc758ffe93d0edc75d2777d5c50"
+    "sha256": "a3e145d2ce0e1a1244ae42c41af32499f8001f8501a8bdf3567f5636d319cde5"
   }
 }

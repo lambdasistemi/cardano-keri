@@ -2,7 +2,7 @@
 
 !!! note "What ships, and the accepted design"
     Unless a paragraph below is marked as preprod or `main` today, it
-    describes the accepted design (D-036 to D-040). In that design an
+    describes the accepted design. In that design an
     identity is **active** until it is convicted: there is no owner exit, no
     parking and no revival. A duplicity proof enters pending custody; its
     associated Registry fold makes it **convicted** (terminal); there is no
@@ -151,11 +151,125 @@ Independent uses have independent, versioned domains:
 | Checkpoint asset locator | `cardano-keri/checkpoint-asset/v1` |
 | Signed Advance message | `cardano-keri/checkpoint/adv/v1` |
 | Non-ACTIVE role-address derivation | `cardano-keri/checkpoint/role/v1` |
+| Deposit intent (accepted design, not yet on chain) | `cardano-keri/checkpoint/deposit/v1` |
 
 The asset derivation also includes the `0x45` E-code byte before the raw AID.
 Changing a domain, constructor index, or field order requires a new protocol
 version. The old shared Merkle Patricia Forest domains discussed in the
 historical vetting record are not part of the sovereign checkpoint wire.
+
+## The deposit intent
+
+A hunter froze Alice's checkpoint because its premium pool was short: the hunter
+took the freeze bond `B`, and the checkpoint cannot be consumed until the bond
+is back. Alice restores it with her next witnessed rotation, choosing the
+`deposit` bond option. Anyone may submit the rotation, so the choice of the
+deposit must come from Alice herself: her new current keys, the keys of the
+epoch the rotation opens, sign a deposit intent. Nobody else can choose the
+deposit for her rotation, and her signature cannot be replayed on another
+checkpoint, another rotation, another output or another chain.
+
+```mermaid
+sequenceDiagram
+  participant A as Alice's new keys
+  participant R as Submitter
+  participant V as Checkpoint validator
+  A->>A: build the intent for the frozen output and the amount B
+  A->>R: rotation event and signatures over the intent's bytes
+  R->>V: Advance with the deposit option
+  V->>V: rebuild the intent from the spent output,<br/>its own network and policy
+  V->>V: count the rotation keys' verified positions<br/>against the rotation's threshold
+  V-->>R: successor unfrozen, B brought in
+```
+
+The diagram reads in words: Alice's new keys sign the intent for the exact
+output being advanced and the amount the deposit moves. Whoever submits the
+Advance carries the rotation event and those signatures. The validator never
+takes the intent from the submitter: it rebuilds it from the output it spends,
+the network it is applied to and its own policy, serialises it, and counts the
+signatures of the rotation's current keys over those bytes. When they meet the
+rotation's threshold, the successor is unfrozen and holds the bond again.
+
+The model states the intent in `CardanoKeri.CheckpointDeposit`: the record
+`DepositIntent`, its Plutus Data serialisation `DepositIntent.preimage`, the
+intent the validator requires `intentFor`, and the concrete reading of "the
+keys of the epoch the rotation opens signed the deposit"
+(`Evidence.authorizes`, `ReadsDeposit`). The intent is Plutus Data constructor
+0 with eight fields, in this order: the domain tag, the network, the checkpoint
+policy, the spent output reference, the AID, the new sequence number, the new
+epoch and the amount. The table gives each value and the replay it stops.
+
+| Field | Value | What binding it stops |
+|---|---|---|
+| `domain` | the UTF-8 bytes of `cardano-keri/checkpoint/deposit/v1` | a signature made for another protocol or another version |
+| `network_id` | the network the validator is applied to | a signature from another chain |
+| `checkpoint_policy` | the policy of the checkpoint being advanced | a signature made for another deployment |
+| `spent_ref` | the output reference of the exact checkpoint output being advanced | a signature reused on a duplicate projection of the same AID or a later state of the same lineage |
+| `aid` | the AID the datum carries, its qualified CESR text bytes | a signature reused for another identity |
+| `new_sn` | the sequence number of the rotation event | a signature reused on another rotation |
+| `new_epoch` | the spent state's epoch plus one | a signature reused on another epoch |
+| `deposit` | `B − bHeld`: `B` when the spent state is frozen, `0` when it is not | a signature over one amount authorizing another |
+
+Each signature is an Ed25519 signature over the serialised intent, carried as a
+position in the rotation event's current keys and the signature bytes. A
+position outside the keys never counts, a repeated position counts once, and a
+signature that does not verify never counts. The counted positions must satisfy
+the rotation event's current threshold.
+
+What the model proves about these bytes (in `CardanoKeri.CheckpointDepositGoals`):
+
+- two intents with the same bytes are the same intent, so changing any field
+  changes the bytes (`preimage_injective`, `intentFor_preimage_eq_iff`);
+- the amount the intent names is the amount the deposit step brings in, the
+  freeze bond when frozen and nothing when not (`intentFor_deposit`,
+  `deposit_step_moves_named_amount`);
+- under the concrete reading, every deposit step carries the new keys'
+  signature over exactly the intent for its spent output and amount, and a
+  deposit is enabled whenever that signature and the witnessed rotation are
+  there, on a frozen or an unfrozen checkpoint (`deposit_step_requires_signed_intent`,
+  `deposit_enabled`, `unfrozen_deposit_accepted_for_zero`);
+- signatures made over one intent authorize no other, and signatures that
+  verify under none of the rotation's current keys never count
+  (`authorization_does_not_transfer`, `signed_for_one_not_another`,
+  `only_new_keys_count`).
+
+The Advance is refused when the intent is missing, signed below the new
+threshold, signed by the old keys, or names another AID, rotation, epoch,
+output, policy, network or amount.
+
+Four decisions shape the intent. It names the exact output being advanced, not
+only the identity and the rotation, so a freeze that races Alice's signature
+makes her sign again for the frozen output. It names the amount that moves, not
+the constant bond. A deposit on an unfrozen checkpoint is accepted with an
+intent naming zero, not refused. And the bytes are fixed in the model, with
+vectors, before any validator is written. The table names the rejected
+alternatives.
+
+| Decision | Chosen | Rejected | Why |
+|---|---|---|---|
+| Which output the intent names | the exact output being advanced | only the policy, AID, sequence number and epoch | the shorter intent would survive a freeze that races the signature, but the same signature would also validate on a duplicate projection of the AID; if a hunter freezes the output after Alice signed, she signs again for the frozen output |
+| Which amount the intent names | what moves, `B − bHeld` | the constant `B` | the signature then authorizes exactly the value change the step makes |
+| A deposit on an unfrozen checkpoint | accepted, with an intent naming `0` | refused | the model already allows it; it is a rotation that brings nothing |
+| Where the bytes are fixed | in the model, with vectors, before the validator is written | a declared gap left to the validator | the bytes are protocol surface and change only under a new domain |
+
+The checked vectors are `lean/checkpoint-deposit-vectors.json`, written by
+`lean/CheckpointDepositDriver.lean`: for each spent state and observed
+network, policy, output and AID, the intent and its bytes; candidate intents
+accepted or refused for a state, one row per changed field; and signature sets
+with whether the deposit rotation is taken. Their signatures are symbolic, a
+named test key over a named row's bytes; an implementation reproduces each row
+with real Ed25519 signatures by its own test keys. `scripts/check-consumer-design.sh`
+regenerates the vectors, refuses any difference from the committed file, and
+requires every changed field of every committed row to fail.
+
+What this does not establish: Ed25519 verification is a cryptographic primitive
+the model takes as a parameter; that one signature cannot verify over two
+different messages is an assumption stated where it is used; the threshold is
+read as the model's KERI threshold over key positions, and the correspondence
+of the datum's threshold encoding and its evaluation with that reading is not
+claimed here; reading the network, the policy and the spent output from the
+transaction is the validator's obligation. No validator implements the
+deposit option yet.
 
 ## Duplicate-registration residual
 

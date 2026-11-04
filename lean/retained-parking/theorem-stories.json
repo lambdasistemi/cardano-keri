@@ -9,6 +9,9 @@
     "lean/CardanoKeri/CheckpointDatum.lean": "6e512d71f99bba437788ae07f0fb1e26bdb06055d87ba80414486743a5a37857",
     "lean/CardanoKeri/CheckpointDatumGoals.lean": "4784383518c7800f6d1cb55a56a5b1c36edab45fb2eba5bc3bfaa5e73d8dae8e",
     "lean/CardanoKeri/CheckpointDatumVectors.lean": "f26d2a611cf441ad797d0531f8e28aa117948e74a719e88738154fe608219b4b",
+    "lean/CardanoKeri/CheckpointDeposit.lean": "e1feee3da31a2656b36302ef86b10d2d0c09b3b9e1c8911fed624cec474fb0bf",
+    "lean/CardanoKeri/CheckpointDepositGoals.lean": "c6ddf3b2434e365b59bdccfd2bc074b60208d63b3358141f147d8ac0fcf1055f",
+    "lean/CardanoKeri/CheckpointDepositVectors.lean": "a2f667a9b702ab4020621185a472e32d30d4d13624a536474dc2e33adbe06ecf",
     "lean/CardanoKeri/CheckpointGoals.lean": "f87cf31f0adc3d778685ff00fc3ac5d54feb0c8856832299e4e4c315de0bfcc0",
     "lean/CardanoKeri/CheckpointLifecycleExamples.lean": "0641f10a9ea175e0f26bbb35bf04b763112d9872cc3030035768ff6adb5749f5",
     "lean/CardanoKeri/CheckpointReceiptCheck.lean": "b8e503afc6b39c864d5670b5b746ada934e519beb2c45b291be66d811e1085d8",
@@ -1238,6 +1241,216 @@
         "then": "¬ consumableHolding interpretation c e p now o"
       },
       "storySha256": "7dac1b5a5d186d07f5d5c789ee786da463d5dbaaa4d985cae0d29ef809c3ec52"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDeposit.toData_injective",
+      "path": "lean/CardanoKeri/CheckpointDepositGoals.lean",
+      "line": 23,
+      "statement": "theorem toData_injective {i j : DepositIntent} (h : i.toData = j.toData) : i = j",
+      "statementSha256": "ce09030123fd0fdec7830426f30b425af8d35979c7f2a1882a16dc54eb4a0544",
+      "sourceStory": "Given two intents with the same Plutus Data; when compared; then they are the same intent.",
+      "story": {
+        "given": "{i j : DepositIntent} (h : i.toData = j.toData)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "i = j"
+      },
+      "storySha256": "5a426affc9d5e7456ab4b57baaa10a8c8dfc4a0caf278c1767114b8915afaaf6"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDeposit.preimage_injective",
+      "path": "lean/CardanoKeri/CheckpointDepositGoals.lean",
+      "line": 42,
+      "statement": "theorem preimage_injective {i j : DepositIntent} (h : i.preimage = j.preimage) : i = j",
+      "statementSha256": "8bc8af017c287f12b7a5ab67e52634c6ffc66c50e4347594284f66c04ae22303",
+      "sourceStory": "Given two intents whose signed bytes are equal; when compared; then they are the same\nintent.",
+      "story": {
+        "given": "{i j : DepositIntent} (h : i.preimage = j.preimage)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "i = j"
+      },
+      "storySha256": "7f878f62da58977d4d78b3ea056cc99e5cb7ad007d27e640faa8be44b8c802e1"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDeposit.preimage_eq_iff",
+      "path": "lean/CardanoKeri/CheckpointDepositGoals.lean",
+      "line": 50,
+      "statement": "theorem preimage_eq_iff (i j : DepositIntent) : i.preimage = j.preimage ↔ i = j",
+      "statementSha256": "eec4f262bc7e7c6ebde6b2e82ee13f9b4bf1c8f1d224c5133fa1dfef8f3ab23b",
+      "sourceStory": "Given any two intents; when their signed bytes are compared; then they are equal exactly when\nthe intents are.",
+      "story": {
+        "given": "(i j : DepositIntent)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "i.preimage = j.preimage ↔ i = j"
+      },
+      "storySha256": "82f8eee627e5387f3783cb20bbf4c20b1cc52db359d502632f2a1ca24bbae90f"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDeposit.preimage_ne_of_ne",
+      "path": "lean/CardanoKeri/CheckpointDepositGoals.lean",
+      "line": 56,
+      "statement": "theorem preimage_ne_of_ne {i j : DepositIntent} (h : i ≠ j) : i.preimage ≠ j.preimage",
+      "statementSha256": "69168f130f9e77c6026e954844ad8279bc3ebdcc3e295cf44a0dc1a0dcec7418",
+      "sourceStory": "Given two intents that differ in any field, the domain, the network, the policy, the spent\noutput, the AID, the sequence number, the epoch or the amount; when serialised; then their signed\nbytes differ.",
+      "story": {
+        "given": "{i j : DepositIntent} (h : i ≠ j)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "i.preimage ≠ j.preimage"
+      },
+      "storySha256": "c3225bc775492cbc46ca5b5af6330ff802b79fc5a10a3f2c3cff7492a2b6b7a5"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDeposit.intentFor_preimage_eq_iff",
+      "path": "lean/CardanoKeri/CheckpointDepositGoals.lean",
+      "line": 63,
+      "statement": "theorem intentFor_preimage_eq_iff (p p' : Params) (o o' : Observed) (l l' : Live) (sn sn' : Seq) :\n    (intentFor p o l sn).preimage = (intentFor p' o' l' sn').preimage ↔\n      o = o' ∧ sn = sn' ∧ l.epoch + 1 = l'.epoch + 1 ∧ p.B - l.bHeld p = p'.B - l'.bHeld p'",
+      "statementSha256": "0f668fa593a72476f6fc38008cd8e74ec0d86fa59692e433961edc55a09e6a4e",
+      "sourceStory": "Given two deposit rotations, each a spent state, its observed network, policy, output and AID,\nand a new sequence number; when the intents the validator requires are serialised; then the bytes\nare equal exactly when the observed facts, the new sequence numbers, the new epochs and the\namounts are.",
+      "story": {
+        "given": "(p p' : Params) (o o' : Observed) (l l' : Live) (sn sn' : Seq)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "(intentFor p o l sn).preimage = (intentFor p' o' l' sn').preimage ↔\n      o = o' ∧ sn = sn' ∧ l.epoch + 1 = l'.epoch + 1 ∧ p.B - l.bHeld p = p'.B - l'.bHeld p'"
+      },
+      "storySha256": "8ccac1f8e4055782f4819b6bddad757b2493c9db12799e39f1ea0d1ce9a0097a"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDeposit.intentFor_deposit",
+      "path": "lean/CardanoKeri/CheckpointDepositGoals.lean",
+      "line": 81,
+      "statement": "theorem intentFor_deposit (p : Params) (o : Observed) (l : Live) (sn' : Seq) :\n    (intentFor p o l sn').deposit = p.B - l.bHeld p ∧\n    (l.frozen = true → (intentFor p o l sn').deposit = p.B) ∧\n    (l.frozen = false → (intentFor p o l sn').deposit = 0)",
+      "statementSha256": "32fa0a0150e6767bfde2cebc7bafc194fef525bd1ac0052e04311d6e0d3b7341",
+      "sourceStory": "Given a spent live state and any observed facts and sequence number; when the intent the\nvalidator requires is built; then its amount is `B − bHeld`: the freeze bond `B` when the state is\nfrozen, `0` when it is not.",
+      "story": {
+        "given": "(p : Params) (o : Observed) (l : Live) (sn' : Seq)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "(intentFor p o l sn').deposit = p.B - l.bHeld p ∧\n    (l.frozen = true → (intentFor p o l sn').deposit = p.B) ∧\n    (l.frozen = false → (intentFor p o l sn').deposit = 0)"
+      },
+      "storySha256": "d6370d8decc896d37ee1905d99f46ee437baf0c6288a7b2cee1aeed20b51be69"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDeposit.deposit_step_moves_named_amount",
+      "path": "lean/CardanoKeri/CheckpointDepositGoals.lean",
+      "line": 89,
+      "statement": "theorem deposit_step_moves_named_amount (p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow}\n    {s' : State} {sn' : Seq} {payee : Addr}\n    (h : Step p env (.rotate sn' .deposit payee) t (.present l) f s') (o : Observed) :\n    f.bIn = (intentFor p o l sn').deposit",
+      "statementSha256": "72356421785591ee40d25a141cad817b0e802e3a59c5f22b732fd4112bc043f0",
+      "sourceStory": "Given a deposit rotation step from a live state; when its flow is read; then the amount it\nbrings into the output is the amount the required intent names, whatever was observed.",
+      "story": {
+        "given": "(p : Params) (env : Env) {t : Slot} {l : Live} {f : Flow}\n    {s' : State} {sn' : Seq} {payee : Addr}\n    (h : Step p env (.rotate sn' .deposit payee) t (.present l) f s') (o : Observed)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "f.bIn = (intentFor p o l sn').deposit"
+      },
+      "storySha256": "ecc7d83957178cc5c2150064c860320ae341bfb4d25296e10acf2dce49b22b98"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDeposit.deposit_step_requires_signed_intent",
+      "path": "lean/CardanoKeri/CheckpointDepositGoals.lean",
+      "line": 100,
+      "statement": "theorem deposit_step_requires_signed_intent (verify : Verify) (p : Params) (env : Env)\n    (ev : Evidence) {t : Slot} {l : Live} {f : Flow} {s' : State} {sn' : Seq} {payee : Addr}\n    (hread : ReadsDeposit verify p env ev l sn')\n    (h : Step p env (.rotate sn' .deposit payee) t (.present l) f s') :\n    ev.authorizes verify p l sn' = true",
+      "statementSha256": "662c58090a6f8526965174829858e8f585476a69b294f95182c2877b1620f539",
+      "sourceStory": "Given an environment that reads the deposit concretely at this rotation; when a deposit\nrotation step from the spent state is taken; then the new keys at the new threshold signed the\nintent for this spent state, this output and this amount.",
+      "story": {
+        "given": "(verify : Verify) (p : Params) (env : Env)\n    (ev : Evidence) {t : Slot} {l : Live} {f : Flow} {s' : State} {sn' : Seq} {payee : Addr}\n    (hread : ReadsDeposit verify p env ev l sn')\n    (h : Step p env (.rotate sn' .deposit payee) t (.present l) f s')",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "ev.authorizes verify p l sn' = true"
+      },
+      "storySha256": "9a71c39f56b1aa8329021dda4ee2225b18956872472ea9020d6ba5ffcdab2c98"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDeposit.deposit_enabled",
+      "path": "lean/CardanoKeri/CheckpointDepositGoals.lean",
+      "line": 111,
+      "statement": "theorem deposit_enabled (verify : Verify) (p : Params) (env : Env) (ev : Evidence) (t : Slot)\n    (l : Live) (sn' : Seq) (payee : Addr) (hread : ReadsDeposit verify p env ev l sn')\n    (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')\n    (hauth : ev.authorizes verify p l sn' = true) :\n    ∃ (f : Flow) (l' : Live), Step p env (.rotate sn' .deposit payee) t (.present l) f (.present l') ∧\n      f.bIn = (intentFor p ev.observed l sn').deposit",
+      "statementSha256": "8ba7ed020cfa4d81a9a5db3f0ddd7bc3807171caa478b334d96f30813fef3abe",
+      "sourceStory": "Given an environment that reads the deposit concretely at this rotation, a witnessed rotation\nto a later sequence number and evidence that authorizes the intent; when a deposit is submitted;\nthen the deposit step is enabled and brings exactly the amount the intent names.",
+      "story": {
+        "given": "(verify : Verify) (p : Params) (env : Env) (ev : Evidence) (t : Slot)\n    (l : Live) (sn' : Seq) (payee : Addr) (hread : ReadsDeposit verify p env ev l sn')\n    (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')\n    (hauth : ev.authorizes verify p l sn' = true)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "∃ (f : Flow) (l' : Live), Step p env (.rotate sn' .deposit payee) t (.present l) f (.present l') ∧\n      f.bIn = (intentFor p ev.observed l sn').deposit"
+      },
+      "storySha256": "33412b6ee18f657dedac5223c0c7f75db74ff7b936babe33fae21b3685c8bec5"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDeposit.unfrozen_deposit_accepted_for_zero",
+      "path": "lean/CardanoKeri/CheckpointDepositGoals.lean",
+      "line": 125,
+      "statement": "theorem unfrozen_deposit_accepted_for_zero (verify : Verify) (p : Params) (env : Env)\n    (ev : Evidence) (t : Slot) (l : Live) (sn' : Seq) (payee : Addr) (hfull : l.frozen = false)\n    (hread : ReadsDeposit verify p env ev l sn')\n    (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')\n    (hauth : ev.authorizes verify p l sn' = true) :\n    (intentFor p ev.observed l sn').deposit = 0 ∧\n    ∃ (f : Flow) (l' : Live), Step p env (.rotate sn' .deposit payee) t (.present l) f (.present l') ∧\n      f.bIn = 0",
+      "statementSha256": "4c6408a150c3b0ea41602f522ffa150ca51d6e408dad4ece6fdf7bfdc07ccdc2",
+      "sourceStory": "Given an unfrozen live state, an environment that reads the deposit concretely, a witnessed\nrotation and evidence that authorizes the intent; when a deposit is submitted; then the step is\nenabled, the intent names `0` and the step brings nothing.",
+      "story": {
+        "given": "(verify : Verify) (p : Params) (env : Env)\n    (ev : Evidence) (t : Slot) (l : Live) (sn' : Seq) (payee : Addr) (hfull : l.frozen = false)\n    (hread : ReadsDeposit verify p env ev l sn')\n    (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')\n    (hauth : ev.authorizes verify p l sn' = true)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "(intentFor p ev.observed l sn').deposit = 0 ∧\n    ∃ (f : Flow) (l' : Live), Step p env (.rotate sn' .deposit payee) t (.present l) f (.present l') ∧\n      f.bIn = 0"
+      },
+      "storySha256": "81e59668b90741a230689db519c50ee63d709117a80aac9405b01812775964b6"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDeposit.mem_verifiedPositions",
+      "path": "lean/CardanoKeri/CheckpointDepositGoals.lean",
+      "line": 142,
+      "statement": "theorem mem_verifiedPositions (verify : Verify) (keys : List (List Nat)) (m : List Nat)\n    (sigs : List (Nat × List Nat)) (k : Nat) :\n    k ∈ verifiedPositions verify keys m sigs ↔\n      ∃ s key, (k, s) ∈ sigs ∧ keys[k]? = some key ∧ verify key m s = true",
+      "statementSha256": "1c7164558cc9638655a4fd0c8474a5ea997837a0feeb5741489423df037ad4c6",
+      "sourceStory": "Given keys, a message and signatures; when the verified positions are computed; then a position\nis among them exactly when some signature at that position, by the key at that position, verifies\nover the message.",
+      "story": {
+        "given": "(verify : Verify) (keys : List (List Nat)) (m : List Nat)\n    (sigs : List (Nat × List Nat)) (k : Nat)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "k ∈ verifiedPositions verify keys m sigs ↔\n      ∃ s key, (k, s) ∈ sigs ∧ keys[k]? = some key ∧ verify key m s = true"
+      },
+      "storySha256": "56aac9f6f50e75007d64ff655bff0a130decd234b7315ac455418fda11e57b55"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDeposit.only_new_keys_count",
+      "path": "lean/CardanoKeri/CheckpointDepositGoals.lean",
+      "line": 162,
+      "statement": "theorem only_new_keys_count (verify : Verify) (keys : List Nat) (threshold : Duplicity.Threshold)\n    (sigs : List (Nat × List Nat)) (m : List Nat)\n    (hnone : ∀ k s, (k, s) ∈ sigs → ∀ key ∈ keys.map unpack, verify key m s = false)\n    (hnontrivial : threshold.satisfied (List.range keys.length) [] = false) :\n    signed verify keys threshold sigs m = false",
+      "statementSha256": "9ea75d7da8b7bbbd042a03b55fa5d4300d8763a9b98f3f1bee03fd105e71c6f0",
+      "sourceStory": "Given signatures none of which verifies over the message under any of the new keys, and a\nthreshold no empty signer set satisfies; when checked; then the new keys did not sign the\nmessage.",
+      "story": {
+        "given": "(verify : Verify) (keys : List Nat) (threshold : Duplicity.Threshold)\n    (sigs : List (Nat × List Nat)) (m : List Nat)\n    (hnone : ∀ k s, (k, s) ∈ sigs → ∀ key ∈ keys.map unpack, verify key m s = false)\n    (hnontrivial : threshold.satisfied (List.range keys.length) [] = false)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "signed verify keys threshold sigs m = false"
+      },
+      "storySha256": "cb62c95292c141e81576463da6a9a6291a74b103c950d854ce6ca8ac461334ee"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDeposit.signature_binds_one_intent",
+      "path": "lean/CardanoKeri/CheckpointDepositGoals.lean",
+      "line": 177,
+      "statement": "theorem signature_binds_one_intent (verify : Verify) (hbind : SignatureBinding verify)\n    {key s : List Nat} {i j : DepositIntent}\n    (hi : verify key i.preimage s = true) (hj : verify key j.preimage s = true) : i = j",
+      "statementSha256": "67e5118d42406057a004d4bbb3b68fade11f80bfd259dc19a50ed44b05499d3d",
+      "sourceStory": "Given a signature that verifies, under one key, over the bytes of two intents, and signatures\nthat bind their message; when the intents are compared; then they are the same intent.",
+      "story": {
+        "given": "(verify : Verify) (hbind : SignatureBinding verify)\n    {key s : List Nat} {i j : DepositIntent}\n    (hi : verify key i.preimage s = true) (hj : verify key j.preimage s = true)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "i = j"
+      },
+      "storySha256": "1e86e1b40e00fd2533438b13e82be968165327c818ae7ec3db8ba656c2482025"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDeposit.signed_for_one_not_another",
+      "path": "lean/CardanoKeri/CheckpointDepositGoals.lean",
+      "line": 185,
+      "statement": "theorem signed_for_one_not_another (verify : Verify) (keys : List Nat)\n    (threshold : Duplicity.Threshold) (sigs : List (Nat × List Nat)) {i j : DepositIntent}\n    (honly : ∀ k s, (k, s) ∈ sigs → ∀ key m, (keys.map unpack)[k]? = some key →\n      verify key m s = true → m = i.preimage)\n    (hnontrivial : threshold.satisfied (List.range keys.length) [] = false) (hne : j ≠ i) :\n    signed verify keys threshold sigs j.preimage = false",
+      "statementSha256": "a665cab62c13ed79d0c04e076bb806574c7a6f0f4b62cddaaa83b3dd9254692c",
+      "sourceStory": "Given signatures each of which verifies, under the key at its position, over the bytes of the\nintent `i` only, a threshold no empty signer set satisfies and another intent `j`; when the new\nkeys' signature over `j` is checked; then it is refused.",
+      "story": {
+        "given": "(verify : Verify) (keys : List Nat)\n    (threshold : Duplicity.Threshold) (sigs : List (Nat × List Nat)) {i j : DepositIntent}\n    (honly : ∀ k s, (k, s) ∈ sigs → ∀ key m, (keys.map unpack)[k]? = some key →\n      verify key m s = true → m = i.preimage)\n    (hnontrivial : threshold.satisfied (List.range keys.length) [] = false) (hne : j ≠ i)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "signed verify keys threshold sigs j.preimage = false"
+      },
+      "storySha256": "8d9dd3d92ec1f9e679c49de061b3f83daaedf8f4c9cee563454dff6a136f85ea"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointDeposit.authorization_does_not_transfer",
+      "path": "lean/CardanoKeri/CheckpointDepositGoals.lean",
+      "line": 203,
+      "statement": "theorem authorization_does_not_transfer (verify : Verify) (hbind : SignatureBinding verify)\n    (p p' : Params) (ev : Evidence) (o' : Observed) (l l' : Live) (sn sn' : Seq)\n    (hover : ∀ k s, (k, s) ∈ ev.signatures → ∀ key, (ev.newKeys.map unpack)[k]? = some key →\n      verify key (intentFor p ev.observed l sn).preimage s = true)\n    (hnontrivial : ev.newThreshold.satisfied (List.range ev.newKeys.length) [] = false)\n    (hdiff : intentFor p' o' l' sn' ≠ intentFor p ev.observed l sn) :\n    Evidence.authorizes verify p' { ev with observed := o' } l' sn' = false",
+      "statementSha256": "aaffbd778afce5306b807b4fe23c3ff56c42232d2393928b3b788729dc231277",
+      "sourceStory": "Given signatures that bind their message, each signature verifying under the key at its\nposition over the bytes of the intent for one deposit rotation, and a threshold no empty signer set\nsatisfies; when the same keys and signatures are presented for a rotation whose required intent\ndiffers, in network, policy, spent output, AID, sequence number, epoch or amount; then they do not\nauthorize it.",
+      "story": {
+        "given": "(verify : Verify) (hbind : SignatureBinding verify)\n    (p p' : Params) (ev : Evidence) (o' : Observed) (l l' : Live) (sn sn' : Seq)\n    (hover : ∀ k s, (k, s) ∈ ev.signatures → ∀ key, (ev.newKeys.map unpack)[k]? = some key →\n      verify key (intentFor p ev.observed l sn).preimage s = true)\n    (hnontrivial : ev.newThreshold.satisfied (List.range ev.newKeys.length) [] = false)\n    (hdiff : intentFor p' o' l' sn' ≠ intentFor p ev.observed l sn)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "Evidence.authorizes verify p' { ev with observed := o' } l' sn' = false"
+      },
+      "storySha256": "37b210db88f5074287793d61c3fccb7ce8cffda77f6029fd0ecb33ff76ecd8fd"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.T12_convicted_terminal",

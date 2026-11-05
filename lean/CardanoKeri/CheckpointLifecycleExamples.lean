@@ -30,8 +30,8 @@ def origin : Origin := {
   registered := CardanoKeri.Registry.Examples.registered, token := 0, registrationRef := ⟨100, 0⟩,
   carrierRef := ⟨102, 1⟩ }
 
-def live : Live := ⟨0, 0, false, false, 2, 42, 5⟩
-def rotatedLive : Live := ⟨1, 1, false, false, 2, 42, 4⟩
+def live : Live := ⟨0, 0, false, false, 2, 42, 5, false⟩
+def rotatedLive : Live := ⟨1, 1, false, false, 2, 42, 4, false⟩
 def registered : Sys := Sys.init.installOrigin 11 (.present live) origin
 def rotated : Sys := registered.set 11 (.present rotatedLive)
 def pending : Sys := rotated.set 11 (.terminationPending rotatedLive.hash)
@@ -75,7 +75,7 @@ theorem registered_step : SysStep p env Sys.init registered := by
   apply SysStep.register
   exact ⟨11, 2, 42, 5, { dregIn := 3, bIn := 2, poolIn := 5 }, .present live,
     CardanoKeri.Registry.Examples.p, CardanoKeri.Registry.Examples.env, CardanoKeri.Registry.Examples.cfg, registrationReceipt, CardanoKeri.Registry.Examples.registration, origin,
-    rfl, rfl, Step.register 2 42 5, delivered_origin, rfl⟩
+    rfl, rfl, Step.register 2 42 5 (by decide), delivered_origin, rfl⟩
 
 /-- Given the complete parameters and hypotheses:
 

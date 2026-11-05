@@ -41,7 +41,7 @@ structure Accepted where
   keys : KeyMaterial
   now : Slot
 
-def registered (pool : Nat) : State := .present ⟨0, 0, false, false, 100, pack (refundBytes 57), pool⟩
+def registered (pool : Nat) : State := .present ⟨0, 0, false, false, 100, pack (refundBytes 57), pool, false⟩
 
 def acceptedCases : List Accepted := [
   ⟨"registered-funded", "just registered with a funded premium pool, read after its juvenility window: accepted; the pool is held in the value, not the datum",
@@ -49,21 +49,24 @@ def acceptedCases : List Accepted := [
   ⟨"registered-juvenile", "the same checkpoint read one slot before its juvenility window ends: decoded, refused by the consumer",
     aidE, registered 5000000, simpleKeys, 109⟩,
   ⟨"rotated", "a live checkpoint after rotations, with weighted thresholds and witnesses: accepted",
-    aidE2, .present ⟨7, 3, false, false, 100, pack (refundBytes 57), 0⟩, richKeys, 200⟩,
+    aidE2, .present ⟨7, 3, false, false, 100, pack (refundBytes 57), 0, false⟩, richKeys, 200⟩,
+  ⟨"topped-up", "a live checkpoint topped up once since its last rotation: accepted; the mark only refuses a second top-up",
+    aidE2, .present ⟨7, 3, false, false, 100, pack (refundBytes 57), 4, true⟩, richKeys, 200⟩,
   ⟨"poisoned", "a live checkpoint its current keys have poisoned: decoded, refused by the consumer",
-    aidE, .present ⟨4, 2, true, false, 100, pack (refundBytes 57), 3⟩, simpleKeys, 200⟩,
+    aidE, .present ⟨4, 2, true, false, 100, pack (refundBytes 57), 3, false⟩, simpleKeys, 200⟩,
   ⟨"frozen", "a live checkpoint whose bond is frozen: decoded, refused by the consumer",
-    aidE, .present ⟨4, 2, false, true, 100, pack (refundBytes 57), 3⟩, simpleKeys, 200⟩,
+    aidE, .present ⟨4, 2, false, true, 100, pack (refundBytes 57), 3, false⟩, simpleKeys, 200⟩,
   ⟨"pending-termination", "a convicted checkpoint awaiting its terminating fold: decoded, refused by the consumer",
     aidE, .terminationPending ⟨2, 4⟩, simpleKeys, 200⟩,
   ⟨"large-numbers", "sequence number and epoch beyond 2^64 (tagged big numbers) and a 70-byte refund address (chunked): accepted",
-    aidB, .present ⟨18446744073709551621, 1180591620717411303424, false, false, 100, pack (refundBytes 70), 0⟩,
+    aidB, .present ⟨18446744073709551621, 1180591620717411303424, false, false, 100, pack (refundBytes 70), 0,
+      false⟩,
     simpleKeys, 200⟩]
 
-/-- The eight fields of the first accepted case's live datum. -/
+/-- The nine fields of a live datum. -/
 def liveFields : List Data :=
   [.bytes (utf8 aidE), .int 4, .int 2, boolData false, boolData false, .int 100,
-   .bytes (refundBytes 57), keyMaterialData simpleKeys]
+   .bytes (refundBytes 57), boolData false, keyMaterialData simpleKeys]
 
 def keyFields : List Data :=
   [bytesListData simpleKeys.curKeys, thresholdData simpleKeys.curThreshold,
@@ -74,7 +77,7 @@ def live (fs : List Data) : Data := .constr 1 [.constr 0 fs]
 
 def withField (i : Nat) (d : Data) : Data := live (liveFields.set i d)
 
-def withKeys (fs : List Data) : Data := withField 7 (.constr 0 fs)
+def withKeys (fs : List Data) : Data := withField 8 (.constr 0 fs)
 
 /-- The version 1 layout of `datum.ak`: a 32-byte AID, keys, thresholds,
 witnesses, `toad`, `seq` and `native_sn`. -/
@@ -93,8 +96,10 @@ def refusedData : List (String × String × Data) := [
   ("version-no-field", "version 2 without its field", .constr 1 []),
   ("version-two-fields", "version 2 with two fields", .constr 1 [.constr 0 liveFields, .constr 0 liveFields]),
   ("unknown-form", "a version 2 form that is neither live nor pending termination", .constr 1 [.constr 2 liveFields]),
-  ("live-seven-fields", "a live datum without its key material", live (liveFields.take 7)),
-  ("live-nine-fields", "a live datum with an extra field", live (liveFields ++ [.int 0])),
+  ("live-eight-fields", "a live datum without its key material", live (liveFields.take 8)),
+  ("live-without-topped-up", "a live datum without the top-up mark, the earlier eight-field layout",
+    live ((liveFields.take 7) ++ [keyMaterialData simpleKeys])),
+  ("live-ten-fields", "a live datum with an extra field", live (liveFields ++ [.int 0])),
   ("pending-with-keys", "a pending-termination datum carrying key material, the earlier four-field layout",
     .constr 1 [.constr 1 [.bytes (utf8 aidE), .int 4, .int 2, keyMaterialData simpleKeys]]),
   ("pending-negative-epoch", "a pending-termination datum with a negative epoch",
@@ -107,7 +112,9 @@ def refusedData : List (String × String × Data) := [
   ("frozen-integer", "freeze as an integer", withField 4 (.int 1)),
   ("born-at-negative", "a negative birth slot", withField 5 (.int (-100))),
   ("refund-integer", "the refund address as an integer", withField 6 (.int 7)),
-  ("keys-list", "the key material as a list", withField 7 (.list keyFields)),
+  ("topped-up-integer", "the top-up mark as an integer", withField 7 (.int 0)),
+  ("topped-up-not-boolean", "the top-up mark as constructor 2", withField 7 (.constr 2 [])),
+  ("keys-list", "the key material as a list", withField 8 (.list keyFields)),
   ("keys-five-fields", "key material without `toad`", withKeys (keyFields.take 5)),
   ("key-integer", "a current key as an integer", withKeys (keyFields.set 0 (.list [.int 1]))),
   ("threshold-unknown-form", "a threshold constructor that is neither unweighted nor weighted", withKeys (keyFields.set 1 (.constr 2 [.int 1]))),
@@ -151,7 +158,7 @@ def hexJson (bs : List Nat) : Json := toJson (toHex bs)
 def stateJson : State → Json
   | .present l => Json.mkObj [("form", "live"), ("sn", natJson l.sn), ("epoch", natJson l.epoch),
       ("poisoned", toJson l.poisoned), ("frozen", toJson l.frozen), ("bornAt", natJson l.bornAt),
-      ("refundTo", hexJson (unpack l.refundTo)), ("pool", natJson l.pool)]
+      ("refundTo", hexJson (unpack l.refundTo)), ("pool", natJson l.pool), ("toppedUp", toJson l.toppedUp)]
   | .terminationPending h => Json.mkObj [("form", "terminationPending"), ("sn", natJson h.sn),
       ("epoch", natJson h.epoch)]
   | .absent => Json.mkObj [("form", "absent")]
@@ -200,7 +207,7 @@ def table : Except String Json := do
     ("params", Json.mkObj [("W", natJson params.W)]),
     ("layout", Json.mkObj [
       ("CheckpointDatum", toJson "V1 = constructor 0 (refused); V2 = constructor 1 [CheckpointDatumV2]"),
-      ("CheckpointDatumV2.Live", toJson "constructor 0 [aid: bytes, sn: int, epoch: int, poisoned: Bool, frozen: Bool, born_at: int, refund_to: bytes, keys: KeyMaterial]"),
+      ("CheckpointDatumV2.Live", toJson "constructor 0 [aid: bytes, sn: int, epoch: int, poisoned: Bool, frozen: Bool, born_at: int, refund_to: bytes, topped_up: Bool, keys: KeyMaterial]"),
       ("CheckpointDatumV2.TerminationPending", toJson "constructor 1 [aid: bytes, sn: int, epoch: int]; no key material"),
       ("KeyMaterial", toJson "constructor 0 [cur_keys: List<bytes>, cur_threshold: Threshold, next_keys: List<bytes>, next_threshold: Threshold, witnesses: List<bytes>, toad: int]"),
       ("Threshold", toJson "Unweighted = constructor 0 [int]; Weighted = constructor 1 [List<List<Weight>>]; Weight = constructor 0 [num: int, den: int]"),

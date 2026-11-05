@@ -60,7 +60,7 @@ def context (i : Input) : Except String Context := do
 /-- The fixture decoder: the application datum `711` decodes to `aid` with a
 consumable live state. It never reads the asset, so a refusal below comes
 from the asset clause alone. -/
-def live : State := .present ⟨0, 0, false, false, 2, 42, 5⟩
+def live : State := .present ⟨0, 0, false, false, 2, 42, 5, false⟩
 def params : Params := { D := 3, B := 2, P := 1, W := 5, hD := by decide, hB := by decide }
 def now : Slot := 8
 def decoderFor (aid : AID) : AH.PublishedRelease → Nat → Option DecodedDatum :=

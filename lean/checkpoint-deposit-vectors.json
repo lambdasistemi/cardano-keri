@@ -4,7 +4,8 @@
    "note": "the required intent for a frozen checkpoint: accepted",
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -48,7 +49,8 @@
    "note": "the required intent for an unfrozen checkpoint, naming 0: accepted",
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 5000000,
@@ -92,7 +94,8 @@
    "note": "the required intent for a frozen, poisoned checkpoint: accepted",
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -136,7 +139,8 @@
    "note": "another version of the domain tag",
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -180,7 +184,8 @@
    "note": "another protocol's domain tag",
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -223,7 +228,8 @@
    "note": "the intent for network 1 presented on network 0",
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -267,7 +273,8 @@
    "note": "another checkpoint policy",
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -311,7 +318,8 @@
    "note": "an output of another transaction",
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -355,7 +363,8 @@
    "note": "another output of the same transaction",
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -399,7 +408,8 @@
    "note": "another AID",
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -443,7 +453,8 @@
    "note": "another rotation of the same lineage",
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -487,7 +498,8 @@
    "note": "the epoch of the spent state instead of the one the rotation opens",
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -531,7 +543,8 @@
    "note": "a frozen checkpoint with an intent naming 0",
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -576,7 +589,8 @@
    "a frozen checkpoint with an intent naming one lovelace less than the bond",
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -621,7 +635,8 @@
    "a frozen checkpoint with an intent naming one lovelace more than the bond",
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -665,7 +680,8 @@
    "note": "an unfrozen checkpoint with an intent naming the freeze bond",
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 5000000,
@@ -741,7 +757,8 @@
     "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"},
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -782,7 +799,8 @@
     "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"},
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 5000000,
@@ -824,7 +842,8 @@
     "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"},
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -865,7 +884,8 @@
     "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"},
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -907,7 +927,8 @@
     "42506265435445557a507a35554558344a394d6b384a535432625a56337068764351386857733064694d3134"},
    "input":
    {"spent":
-    {"sn": "18446744073709551621",
+    {"toppedUp": false,
+     "sn": "18446744073709551621",
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -935,7 +956,8 @@
    "step":
    {"taken": true,
     "successor":
-    {"sn": 7,
+    {"toppedUp": false,
+     "sn": 7,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -955,7 +977,8 @@
    "newKeys": ["new-0", "new-1", "new-2"],
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -982,7 +1005,8 @@
    "step":
    {"taken": true,
     "successor":
-    {"sn": 7,
+    {"toppedUp": false,
+     "sn": 7,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -1002,7 +1026,8 @@
    "newKeys": ["new-0", "new-1", "new-2"],
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -1035,7 +1060,8 @@
    "newKeys": ["new-0", "new-1", "new-2"],
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -1069,7 +1095,8 @@
    "newKeys": ["new-0", "new-1", "new-2"],
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -1103,7 +1130,8 @@
    "newKeys": ["new-0", "new-1", "new-2"],
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -1138,7 +1166,8 @@
    "newKeys": ["new-0", "new-1", "new-2"],
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -1172,7 +1201,8 @@
    "newKeys": ["new-0", "new-1", "new-2"],
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -1207,7 +1237,8 @@
    "newKeys": ["new-0", "new-1", "new-2"],
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -1241,7 +1272,8 @@
    "newKeys": ["new-0", "new-1", "new-2"],
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -1276,7 +1308,8 @@
    "newKeys": ["new-0", "new-1", "new-2"],
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -1303,7 +1336,8 @@
    "step":
    {"taken": true,
     "successor":
-    {"sn": 7,
+    {"toppedUp": false,
+     "sn": 7,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -1324,7 +1358,8 @@
    "newKeys": ["new-0", "new-1", "new-2"],
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -1356,7 +1391,8 @@
    "step":
    {"taken": true,
     "successor":
-    {"sn": 7,
+    {"toppedUp": false,
+     "sn": 7,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -1376,7 +1412,8 @@
    "newKeys": ["new-0", "new-1", "new-2"],
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -1414,7 +1451,8 @@
    "newKeys": ["new-0", "new-1", "new-2"],
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 0,
@@ -1441,7 +1479,8 @@
    "step":
    {"taken": true,
     "successor":
-    {"sn": 7,
+    {"toppedUp": false,
+     "sn": 7,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 4000000,
@@ -1461,7 +1500,8 @@
    "newKeys": ["new-0", "new-1", "new-2"],
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 5000000,
@@ -1496,7 +1536,8 @@
    "newKeys": ["new-0", "new-1", "new-2"],
    "input":
    {"spent":
-    {"sn": 4,
+    {"toppedUp": false,
+     "sn": 4,
      "refundTo":
      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
      "pool": 5000000,

@@ -32,7 +32,8 @@
  "held":
  [{"valueFloor": 14,
    "state":
-   {"sn": 0,
+   {"toppedUp": false,
+    "sn": 0,
     "refundTo":
     "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
     "pool": 5000000,
@@ -45,7 +46,8 @@
    "holdings":
    [{"realizes": true,
      "reads":
-     {"sn": 0,
+     {"toppedUp": false,
+      "sn": 0,
       "refundTo":
       "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
       "pool": 5000000,
@@ -57,7 +59,8 @@
      "lovelace": 5000014},
     {"realizes": false,
      "reads":
-     {"sn": 0,
+     {"toppedUp": false,
+      "sn": 0,
       "refundTo":
       "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
       "pool": 5000001,
@@ -69,7 +72,8 @@
      "lovelace": 5000015},
     {"realizes": false,
      "reads":
-     {"sn": 0,
+     {"toppedUp": false,
+      "sn": 0,
       "refundTo":
       "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
       "pool": 4999999,
@@ -81,7 +85,8 @@
      "lovelace": 5000013},
     {"realizes": false,
      "reads":
-     {"sn": 0,
+     {"toppedUp": false,
+      "sn": 0,
       "refundTo":
       "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
       "pool": 0,
@@ -95,7 +100,8 @@
    "heldValue": 5000014},
   {"valueFloor": 14,
    "state":
-   {"sn": 0,
+   {"toppedUp": false,
+    "sn": 0,
     "refundTo":
     "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
     "pool": 5000000,
@@ -108,7 +114,8 @@
    "holdings":
    [{"realizes": true,
      "reads":
-     {"sn": 0,
+     {"toppedUp": false,
+      "sn": 0,
       "refundTo":
       "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
       "pool": 5000000,
@@ -120,7 +127,8 @@
      "lovelace": 5000014},
     {"realizes": false,
      "reads":
-     {"sn": 0,
+     {"toppedUp": false,
+      "sn": 0,
       "refundTo":
       "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
       "pool": 5000001,
@@ -132,7 +140,8 @@
      "lovelace": 5000015},
     {"realizes": false,
      "reads":
-     {"sn": 0,
+     {"toppedUp": false,
+      "sn": 0,
       "refundTo":
       "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
       "pool": 4999999,
@@ -144,7 +153,8 @@
      "lovelace": 5000013},
     {"realizes": false,
      "reads":
-     {"sn": 0,
+     {"toppedUp": false,
+      "sn": 0,
       "refundTo":
       "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
       "pool": 0,
@@ -158,7 +168,8 @@
    "heldValue": 5000014},
   {"valueFloor": 14,
    "state":
-   {"sn": 7,
+   {"toppedUp": false,
+    "sn": 7,
     "refundTo":
     "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
     "pool": 0,
@@ -171,7 +182,8 @@
    "holdings":
    [{"realizes": true,
      "reads":
-     {"sn": 7,
+     {"toppedUp": false,
+      "sn": 7,
       "refundTo":
       "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
       "pool": 0,
@@ -183,7 +195,8 @@
      "lovelace": 14},
     {"realizes": false,
      "reads":
-     {"sn": 7,
+     {"toppedUp": false,
+      "sn": 7,
       "refundTo":
       "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
       "pool": 1,
@@ -197,7 +210,76 @@
    "heldValue": 14},
   {"valueFloor": 14,
    "state":
-   {"sn": 4,
+   {"toppedUp": true,
+    "sn": 7,
+    "refundTo":
+    "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
+    "pool": 4,
+    "poisoned": false,
+    "frozen": false,
+    "form": "live",
+    "epoch": 3,
+    "bornAt": 100},
+   "id": "topped-up",
+   "holdings":
+   [{"realizes": true,
+     "reads":
+     {"toppedUp": true,
+      "sn": 7,
+      "refundTo":
+      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
+      "pool": 4,
+      "poisoned": false,
+      "frozen": false,
+      "form": "live",
+      "epoch": 3,
+      "bornAt": 100},
+     "lovelace": 18},
+    {"realizes": false,
+     "reads":
+     {"toppedUp": true,
+      "sn": 7,
+      "refundTo":
+      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
+      "pool": 5,
+      "poisoned": false,
+      "frozen": false,
+      "form": "live",
+      "epoch": 3,
+      "bornAt": 100},
+     "lovelace": 19},
+    {"realizes": false,
+     "reads":
+     {"toppedUp": true,
+      "sn": 7,
+      "refundTo":
+      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
+      "pool": 3,
+      "poisoned": false,
+      "frozen": false,
+      "form": "live",
+      "epoch": 3,
+      "bornAt": 100},
+     "lovelace": 17},
+    {"realizes": false,
+     "reads":
+     {"toppedUp": true,
+      "sn": 7,
+      "refundTo":
+      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
+      "pool": 0,
+      "poisoned": false,
+      "frozen": false,
+      "form": "live",
+      "epoch": 3,
+      "bornAt": 100},
+     "lovelace": 14},
+    {"realizes": false, "reads": null, "lovelace": 13}],
+   "heldValue": 18},
+  {"valueFloor": 14,
+   "state":
+   {"toppedUp": false,
+    "sn": 4,
     "refundTo":
     "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
     "pool": 3,
@@ -210,7 +292,8 @@
    "holdings":
    [{"realizes": true,
      "reads":
-     {"sn": 4,
+     {"toppedUp": false,
+      "sn": 4,
       "refundTo":
       "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
       "pool": 3,
@@ -222,7 +305,8 @@
      "lovelace": 17},
     {"realizes": false,
      "reads":
-     {"sn": 4,
+     {"toppedUp": false,
+      "sn": 4,
       "refundTo":
       "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
       "pool": 4,
@@ -234,7 +318,8 @@
      "lovelace": 18},
     {"realizes": false,
      "reads":
-     {"sn": 4,
+     {"toppedUp": false,
+      "sn": 4,
       "refundTo":
       "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
       "pool": 2,
@@ -246,7 +331,8 @@
      "lovelace": 16},
     {"realizes": false,
      "reads":
-     {"sn": 4,
+     {"toppedUp": false,
+      "sn": 4,
       "refundTo":
       "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
       "pool": 0,
@@ -260,7 +346,8 @@
    "heldValue": 17},
   {"valueFloor": 12,
    "state":
-   {"sn": 4,
+   {"toppedUp": false,
+    "sn": 4,
     "refundTo":
     "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
     "pool": 3,
@@ -273,7 +360,8 @@
    "holdings":
    [{"realizes": true,
      "reads":
-     {"sn": 4,
+     {"toppedUp": false,
+      "sn": 4,
       "refundTo":
       "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
       "pool": 3,
@@ -285,7 +373,8 @@
      "lovelace": 15},
     {"realizes": false,
      "reads":
-     {"sn": 4,
+     {"toppedUp": false,
+      "sn": 4,
       "refundTo":
       "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
       "pool": 4,
@@ -297,7 +386,8 @@
      "lovelace": 16},
     {"realizes": false,
      "reads":
-     {"sn": 4,
+     {"toppedUp": false,
+      "sn": 4,
       "refundTo":
       "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
       "pool": 2,
@@ -309,7 +399,8 @@
      "lovelace": 14},
     {"realizes": false,
      "reads":
-     {"sn": 4,
+     {"toppedUp": false,
+      "sn": 4,
       "refundTo":
       "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
       "pool": 0,
@@ -333,7 +424,8 @@
    "heldValue": 4},
   {"valueFloor": 14,
    "state":
-   {"sn": "18446744073709551621",
+   {"toppedUp": false,
+    "sn": "18446744073709551621",
     "refundTo":
     "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9acafb2b5b8bbbec1c4c7cacdd0",
     "pool": 0,
@@ -346,7 +438,8 @@
    "holdings":
    [{"realizes": true,
      "reads":
-     {"sn": "18446744073709551621",
+     {"toppedUp": false,
+      "sn": "18446744073709551621",
       "refundTo":
       "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9acafb2b5b8bbbec1c4c7cacdd0",
       "pool": 0,
@@ -358,7 +451,8 @@
      "lovelace": 14},
     {"realizes": false,
      "reads":
-     {"sn": "18446744073709551621",
+     {"toppedUp": false,
+      "sn": "18446744073709551621",
       "refundTo":
       "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9acafb2b5b8bbbec1c4c7cacdd0",
       "pool": 1,
@@ -378,7 +472,8 @@
   "holdingLovelace": 17,
   "heldValue": 17,
   "checkpoint":
-  {"sn": 0,
+  {"toppedUp": false,
+   "sn": 0,
    "refundTo": "29",
    "pool": 3,
    "poisoned": false,

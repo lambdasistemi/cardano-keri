@@ -390,7 +390,7 @@ theorem registerJoint_sound (i : Interpretation) (c : Context)
     · simpa using value
   · have held : st.representativeHeld = 1 := by
       simp [stepFn] at hcp
-      rcases hcp with ⟨_, rfl⟩
+      rcases hcp with ⟨_, _, rfl⟩
       rfl
     exact ⟨by simpa using cred, by simpa [held] using qty, by simpa using decoded,
       by simpa [beq_iff_eq] using (beq_iff_eq.mp holdingValue).trans (beq_iff_eq.mp carrierHeld)⟩

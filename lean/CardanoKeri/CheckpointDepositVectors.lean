@@ -41,11 +41,11 @@ def observed : Observed :=
   { networkId := 0, checkpointPolicy := pack (bytesOf policyHex),
     spentRef := ⟨pack (bytesOf txHex), 1⟩, aid := pack (utf8 aidE) }
 
-def frozenState : Live := ⟨4, 2, false, true, 100, pack (refundBytes 57), 0⟩
-def unfrozenState : Live := ⟨4, 2, false, false, 100, pack (refundBytes 57), 5000000⟩
-def poisonedFrozenState : Live := ⟨4, 2, true, true, 100, pack (refundBytes 57), 0⟩
+def frozenState : Live := ⟨4, 2, false, true, 100, pack (refundBytes 57), 0, false⟩
+def unfrozenState : Live := ⟨4, 2, false, false, 100, pack (refundBytes 57), 5000000, false⟩
+def poisonedFrozenState : Live := ⟨4, 2, true, true, 100, pack (refundBytes 57), 0, false⟩
 def largeState : Live :=
-  ⟨18446744073709551621, 1180591620717411303424, false, true, 100, pack (refundBytes 57), 0⟩
+  ⟨18446744073709551621, 1180591620717411303424, false, true, 100, pack (refundBytes 57), 0, false⟩
 
 structure IntentCase where
   id : String

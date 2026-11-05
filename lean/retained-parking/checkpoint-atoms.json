@@ -40,8 +40,8 @@
   },
   {
     "id": "CP-04",
-    "before": "      some ({ poolIn := x }, .present { l with pool := l.pool + x })",
-    "after": "      some ({ poolIn := x }, .present { l with pool := l.pool + x, bornAt := now })",
+    "before": "        some ({ poolIn := x }, .present { l with pool := l.pool + x, toppedUp := true })",
+    "after": "        some ({ poolIn := x }, .present { l with pool := l.pool + x, toppedUp := true, bornAt := now })",
     "failure": "ATOM:CP-04",
     "owner": "CardanoKeri.Checkpoint.T14_pool_increases_only_by_topup",
     "test": "CheckpointAtomChecks",
@@ -92,8 +92,8 @@
   },
   {
     "id": "CP-10",
-    "before": "                    .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false })",
-    "after": "                    .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false, bornAt := now })",
+    "before": "                    .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false,\n                                      toppedUp := false })",
+    "after": "                    .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false,\n                                      toppedUp := false, bornAt := now })",
     "failure": "ATOM:CP-10",
     "owner": "CardanoKeri.Checkpoint.T10_only_deposit_restores, CardanoKeri.Checkpoint.T5_deposit_on_full_is_keep",
     "test": "CheckpointAtomChecks",
@@ -131,8 +131,8 @@
   },
   {
     "id": "CP-13",
-    "before": "poisoned := false,\n                                      pool := l.pool - p.P })",
-    "after": "poisoned := false,\n                                      refundTo := payee, pool := l.pool - p.P })",
+    "before": "poisoned := false,\n                                      toppedUp := false, pool := l.pool - p.P })",
+    "after": "poisoned := false,\n                                      toppedUp := false, refundTo := payee, pool := l.pool - p.P })",
     "failure": "ATOM:CP-13",
     "owner": "CardanoKeri.Checkpoint.T6_refund_fixed, CardanoKeri.Checkpoint.T5_keep_is_rotated, CardanoKeri.Checkpoint.T5_keep_needs_no_intent",
     "test": "CheckpointAtomChecks",
@@ -157,8 +157,8 @@
   },
   {
     "id": "CP-30",
-    "before": "  { l with sn := sn', epoch := l.epoch + 1, poisoned := false,\n           pool := if p.P ≤ l.pool then l.pool - p.P else l.pool }",
-    "after": "  { l with sn := sn', epoch := l.epoch + 1, poisoned := false, bornAt := 0,\n           pool := if p.P ≤ l.pool then l.pool - p.P else l.pool }",
+    "before": "  { l with sn := sn', epoch := l.epoch + 1, poisoned := false, toppedUp := false,\n           pool := if p.P ≤ l.pool then l.pool - p.P else l.pool }",
+    "after": "  { l with sn := sn', epoch := l.epoch + 1, poisoned := false, toppedUp := false, bornAt := 0,\n           pool := if p.P ≤ l.pool then l.pool - p.P else l.pool }",
     "failure": "ATOM:CP-30",
     "owner": "CardanoKeri.Checkpoint.T5_keep_is_rotated, CardanoKeri.Checkpoint.T5_deposit_on_full_is_keep",
     "test": "CheckpointAtomChecks",
@@ -284,5 +284,148 @@
     ],
     "kind": "observation",
     "detail": "preserved helper fault, current observation: a rotation fails to clear the poison bit"
+  },
+  {
+    "id": "second-top-up",
+    "before": "      if l.toppedUp = false ∧ p.P ≤ x then",
+    "after": "      if p.P ≤ x then",
+    "failure": "ATOM:second-top-up",
+    "owner": "CardanoKeri.Checkpoint.second_topUp_refused, CardanoKeri.Checkpoint.at_most_one_topUp_between_rotations, CardanoKeri.Checkpoint.Step.topUp_iff",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "second-top-up"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a key state topped up twice"
+  },
+  {
+    "id": "top-up-below-premium",
+    "before": "      if l.toppedUp = false ∧ p.P ≤ x then",
+    "after": "      if l.toppedUp = false then",
+    "failure": "ATOM:top-up-below-premium",
+    "owner": "CardanoKeri.Checkpoint.topUp_adds_at_least_premium, CardanoKeri.Checkpoint.Step.topUp_iff",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "top-up-below-premium"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a top-up of less than the premium"
+  },
+  {
+    "id": "top-up-leaves-mark-unset",
+    "before": "        some ({ poolIn := x }, .present { l with pool := l.pool + x, toppedUp := true })",
+    "after": "        some ({ poolIn := x }, .present { l with pool := l.pool + x })",
+    "failure": "ATOM:top-up-leaves-mark-unset",
+    "owner": "CardanoKeri.Checkpoint.topped_up_set_only_by_topUp, CardanoKeri.Checkpoint.at_most_one_topUp_between_rotations",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "top-up-leaves-mark-unset"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a top-up that does not mark its key state"
+  },
+  {
+    "id": "keep-paid-rotation-keeps-mark",
+    "before": "poisoned := false,\n                                      toppedUp := false, pool := l.pool - p.P })",
+    "after": "poisoned := false,\n                                      pool := l.pool - p.P })",
+    "failure": "ATOM:keep-paid-rotation-keeps-mark",
+    "owner": "CardanoKeri.Checkpoint.rotation_clears_topped_up, CardanoKeri.Checkpoint.Step.rotateKeepPaid_iff",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "keep-paid-rotation-keeps-mark"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a paid keep rotation that keeps the top-up mark"
+  },
+  {
+    "id": "keep-unpaid-rotation-keeps-mark",
+    "before": "              some ({}, .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,\n                                          toppedUp := false })",
+    "after": "              some ({}, .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false })",
+    "failure": "ATOM:keep-unpaid-rotation-keeps-mark",
+    "owner": "CardanoKeri.Checkpoint.rotation_clears_topped_up, CardanoKeri.Checkpoint.Step.rotateKeepUnpaid_iff",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "keep-unpaid-rotation-keeps-mark"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "an unpaid keep rotation that keeps the top-up mark"
+  },
+  {
+    "id": "deposit-paid-rotation-keeps-mark",
+    "before": "frozen := false,\n                                      toppedUp := false, pool := l.pool - p.P })",
+    "after": "frozen := false,\n                                      pool := l.pool - p.P })",
+    "failure": "ATOM:deposit-paid-rotation-keeps-mark",
+    "owner": "CardanoKeri.Checkpoint.rotation_clears_topped_up, CardanoKeri.Checkpoint.Step.rotateDepositPaid_iff",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "deposit-paid-rotation-keeps-mark"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a paid deposit rotation that keeps the top-up mark"
+  },
+  {
+    "id": "deposit-unpaid-rotation-keeps-mark",
+    "before": "frozen := false,\n                                      toppedUp := false })",
+    "after": "frozen := false })",
+    "failure": "ATOM:deposit-unpaid-rotation-keeps-mark",
+    "owner": "CardanoKeri.Checkpoint.rotation_clears_topped_up, CardanoKeri.Checkpoint.Step.rotateDepositUnpaid_iff",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "deposit-unpaid-rotation-keeps-mark"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "an unpaid deposit rotation that keeps the top-up mark"
+  },
+  {
+    "id": "registration-below-premium",
+    "before": "      if p.P ≤ pool0 then",
+    "after": "      if true then",
+    "failure": "ATOM:registration-below-premium",
+    "owner": "CardanoKeri.Checkpoint.registration_pool_at_least_premium, CardanoKeri.Checkpoint.Step.register_iff",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "registration-below-premium"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a registration whose initial pool is less than the premium"
+  },
+  {
+    "id": "registration-starts-topped-up",
+    "before": "              .present ⟨0, 0, false, false, now, refund, pool0, false⟩)",
+    "after": "              .present ⟨0, 0, false, false, now, refund, pool0, true⟩)",
+    "failure": "ATOM:registration-starts-topped-up",
+    "owner": "CardanoKeri.Checkpoint.Step.register_iff, CardanoKeri.Checkpoint.local_progress_unless_pending_or_retired",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "registration-starts-topped-up"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a registration whose key state starts topped up"
+  },
+  {
+    "id": "poison-clears-mark",
+    "before": "        some ({}, .present { l with poisoned := true })",
+    "after": "        some ({}, .present { l with poisoned := true, toppedUp := false })",
+    "failure": "ATOM:poison-clears-mark",
+    "owner": "CardanoKeri.Checkpoint.topped_up_kept_by_poison_and_freeze, CardanoKeri.Checkpoint.topped_up_cleared_only_by_rotation",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "poison-clears-mark"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a poison that clears the top-up mark"
+  },
+  {
+    "id": "freeze-clears-mark",
+    "before": "        some ({ hunter := some { addr := payee, b := p.B } }, .present { l with frozen := true })",
+    "after": "        some ({ hunter := some { addr := payee, b := p.B } }, .present { l with frozen := true, toppedUp := false })",
+    "failure": "ATOM:freeze-clears-mark",
+    "owner": "CardanoKeri.Checkpoint.topped_up_kept_by_poison_and_freeze, CardanoKeri.Checkpoint.topped_up_cleared_only_by_rotation",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "freeze-clears-mark"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a freeze that clears the top-up mark"
   }
 ]

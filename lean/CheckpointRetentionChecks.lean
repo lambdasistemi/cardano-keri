@@ -24,7 +24,7 @@ def journey : Except String Unit := do
   check "registration-bonds" (decide (registeredFlow = { dregIn := 3, bIn := 2, poolIn := 5 }))
   let (rotateFlow, rotated) ← execute live (.rotate 1 .keep 7) 3
   check "rotation-premium" (decide (rotateFlow = { hunter := some { addr := 7, pool := 1 } }))
-  check "rotation-exact-key" (decide (rotated = .present ⟨1, 1, false, false, 2, 42, 4⟩))
+  check "rotation-exact-key" (decide (rotated = .present ⟨1, 1, false, false, 2, 42, 4, false⟩))
   let wrongKey := { env with rotationTo := fun e sn sn' => decide (e = 2 ∧ sn = 1 ∧ sn' = 2) }
   check "wrong-key-refused" ((stepFn p wrongKey (.rotate 2 .keep 7) 4 rotated).isNone)
   let (convictFlow, pending) ← execute rotated (.convict 8) 5

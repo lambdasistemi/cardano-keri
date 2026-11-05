@@ -294,7 +294,7 @@ const keyList = ['new-0', 'new-1', 'new-2'].map((n) => hex(testKeys[n].publicKey
 const oldKeyList = ['old-0', 'old-1'].map((n) => hex(testKeys[n].publicKey));
 
 const aikenSpent = (s) =>
-  `Spent { sn: ${s.sn}, epoch: ${s.epoch}, born_at: ${s.bornAt}, refund_to: ${bytes(s.refundTo)}, pool: ${s.pool}, frozen: ${bool(s.frozen)}, poisoned: ${bool(s.poisoned)} }`;
+  `Spent { sn: ${s.sn}, epoch: ${s.epoch}, born_at: ${s.bornAt}, refund_to: ${bytes(s.refundTo)}, pool: ${s.pool}, frozen: ${bool(s.frozen)}, poisoned: ${bool(s.poisoned)}, topped_up: ${bool(s.toppedUp)} }`;
 const aikenFacts = (o) =>
   `Facts { network_id: ${o.networkId}, policy: ${bytes(o.checkpointPolicy)}, tx_id: ${bytes(o.spentRef.transactionId)}, output_index: ${o.spentRef.outputIndex}, aid: ${bytes(o.aid)} }`;
 
@@ -356,6 +356,7 @@ pub type Spent {
   pool: Int,
   frozen: Bool,
   poisoned: Bool,
+  topped_up: Bool,
 }
 
 /// What the validator observes: the network it is applied to, the policy and
@@ -517,7 +518,7 @@ const hsBool = bool;
 const hsFacts = (o) =>
   `VectorFacts {vfNetworkId = ${o.networkId}, vfPolicy = hex ${hsBytes(o.checkpointPolicy)}, vfTxId = hex ${hsBytes(o.spentRef.transactionId)}, vfOutputIndex = ${o.spentRef.outputIndex}, vfAid = hex ${hsBytes(o.aid)}}`;
 const hsSpent = (s) =>
-  `VectorSpent {vsSn = ${s.sn}, vsEpoch = ${s.epoch}, vsBornAt = ${s.bornAt}, vsRefundTo = hex ${hsBytes(s.refundTo)}, vsPool = ${s.pool}, vsFrozen = ${hsBool(s.frozen)}, vsPoisoned = ${hsBool(s.poisoned)}}`;
+  `VectorSpent {vsSn = ${s.sn}, vsEpoch = ${s.epoch}, vsBornAt = ${s.bornAt}, vsRefundTo = hex ${hsBytes(s.refundTo)}, vsPool = ${s.pool}, vsFrozen = ${hsBool(s.frozen)}, vsPoisoned = ${hsBool(s.poisoned)}, vsToppedUp = ${hsBool(s.toppedUp)}}`;
 
 const haskell = `{- |
 Module      : Cardano.KERI.AID.Checkpoint.DepositVectors
@@ -567,6 +568,7 @@ data VectorSpent = VectorSpent
     , vsPool :: Integer
     , vsFrozen :: Bool
     , vsPoisoned :: Bool
+    , vsToppedUp :: Bool
     }
     deriving stock (Show, Eq)
 

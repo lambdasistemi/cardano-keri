@@ -5,6 +5,14 @@
       "pause": 500
     },
     {
+      "text": "The current ckeri and this manifest",
+      "pause": 400
+    },
+    {
+      "text": "The committed preprod manifest describes the earlier deployed generation of the checkpoint program. The current ckeri cannot register against it until the redeployment (#356).",
+      "pause": 400
+    },
+    {
       "text": "What ships, and the accepted design",
       "pause": 400
     },
@@ -109,6 +117,6 @@
   ],
   "_source": {
     "file": "register-preprod-identity.md",
-    "sha256": "501c5dc7216f217114f5c7853f0514f77f2c2957f71a665460a7f508d5fa78dd"
+    "sha256": "0e6c6fde1a0eec51c8ef0c77e89591cf99730eda4e06898a401ed22dcdd4484d"
   }
 }

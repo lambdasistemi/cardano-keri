@@ -90,6 +90,7 @@ const state = (s) => {
       ['sn', int(l.sn)], ['epoch', int(l.epoch)],
       ['poisoned', bool(l.poisoned)], ['frozen', bool(l.frozen)],
       ['born_at', int(l.bornAt)], ['refund_to', int(l.refundTo)], ['pool', int(l.pool)],
+      ['topped_up', bool(l.toppedUp)],
     ])]);
   }
   if (c === 'terminationPending') return call('TerminationPending', [hash(s.terminationPending.h)]);

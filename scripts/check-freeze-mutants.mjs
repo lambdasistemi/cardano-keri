@@ -23,9 +23,9 @@
 // running the same copy once with a filter that selects no test (compile
 // only) and once with the freeze tests.
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { availableParallelism, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -40,8 +40,8 @@ const mutants = [
   { name: 'rotation-evidence', premise: 'rotationTo: the rotation is witnessed', file: OBSERVER, from: 'advance_predicate(spent, new, evidence.rotation) == AdvancePredicateValid\n}', to: 'advance_predicate(spent, new, evidence.rotation) == AdvancePredicateValid || True\n}' },
   { name: 'later-sequence-number', premise: "l.sn < sn'", file: MESSAGE, from: 'new.native_sn > spent.native_sn', to: 'new.native_sn >= spent.native_sn' },
   { name: 'short-pool', premise: 'l.pool < P', file: REGISTER, from: '  expect pool < premium\n', to: '  expect pool >= 0\n' },
-  { name: 'unfrozen', premise: 'l.frozen = false', file: REGISTER, from: '        poisoned: False,\n        frozen: False,\n        born_at,\n        refund_to,\n        keys,\n      }\n    = old', to: '        poisoned: False,\n        frozen: _,\n        born_at,\n        refund_to,\n        keys,\n      }\n    = old' },
-  { name: 'unpoisoned', premise: 'l.poisoned = false', file: REGISTER, from: '        poisoned: False,\n        frozen: False,\n        born_at,\n        refund_to,\n        keys,\n      }\n    = old', to: '        poisoned: _,\n        frozen: False,\n        born_at,\n        refund_to,\n        keys,\n      }\n    = old' },
+  { name: 'unfrozen', premise: 'l.frozen = false', file: REGISTER, from: '        poisoned: False,\n        frozen: False,\n        born_at,\n        refund_to,\n        topped_up,\n        keys,\n      }\n    = old', to: '        poisoned: False,\n        frozen: _,\n        born_at,\n        refund_to,\n        topped_up,\n        keys,\n      }\n    = old' },
+  { name: 'unpoisoned', premise: 'l.poisoned = false', file: REGISTER, from: '        poisoned: False,\n        frozen: False,\n        born_at,\n        refund_to,\n        topped_up,\n        keys,\n      }\n    = old', to: '        poisoned: _,\n        frozen: False,\n        born_at,\n        refund_to,\n        topped_up,\n        keys,\n      }\n    = old' },
   { name: 'successor-datum', premise: 'the successor is the same live state frozen', file: REGISTER, from: '  expect state_output.datum == InlineDatum(datum.write(frozen))\n', to: '' },
   { name: 'successor-value', premise: 'the successor holds Mc + D + pool', file: REGISTER, from: 'held_value(checkpoint_min_ada, d_reg, freeze_bond, frozen, pool)', to: 'held_value(checkpoint_min_ada, d_reg, freeze_bond, old, pool)' },
   { name: 'hunter-bond', premise: 'the hunter receives B', file: REGISTER, from: '  ) >= freeze_bond\n}\n\n/// Convict', to: '  ) >= 0\n}\n\n/// Convict' },
@@ -58,18 +58,56 @@ const survivorControl = { name: 'comment-only-edit', file: REGISTER, from: 'fn v
 
 const modules = ['checkpoint_register_freeze_tests', 'checkpoint_register_freeze_corpus_tests'];
 
-const aiken = (cwd, filter) => spawnSync('aiken', ['check', '-m', filter], { cwd, encoding: 'utf8' }).status;
+// Each compiler run over the freeze modules takes minutes (the corpus alone is
+// 150 transactions with signature checks), so the runs go in parallel, each in
+// a working copy of its own: the controls and every mutant are independent.
+const WORKERS = Math.max(1, Number(process.env.FREEZE_MUTANT_WORKERS ?? Math.min(4, availableParallelism())));
 
-const compiles = (cwd) => aiken(cwd, 'checkpoint_register_freeze_tests.{no_such_test_selects_nothing}') === 0;
-const freezeTestsPass = (cwd) => modules.every((m) => aiken(cwd, `${m}.{..}`) === 0);
+// With a terminal the compiler names the tests that fail, so a failed test (a
+// name) is told from a copy that does not compile (no name) by the run itself;
+// without one `script` is absent and a separate compile-only run tells them apart.
+const haveScript = spawnSync('script', ['--version'], { encoding: 'utf8' }).status === 0;
 
-// One working copy for every run: the dependencies compile once, and each edit
-// is undone before the next. The copy is removed at the end, whatever happens.
-const dir = mkdtempSync(join(tmpdir(), 'freeze-mutant-'));
-process.on('exit', () => rmSync(dir, { recursive: true, force: true }));
-cpSync(onchain, dir, { recursive: true });
+const aiken = (cwd, filter) =>
+  new Promise((done) => {
+    const [command, args] = haveScript
+      ? ['script', ['-qec', `aiken check -m '${filter}'`, '/dev/null']]
+      : ['aiken', ['check', '-m', filter]];
+    const child = spawn(command, args, { cwd });
+    let out = '';
+    child.stdout.on('data', (chunk) => { out += chunk; });
+    child.on('close', (status) => {
+      const text = out.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '');
+      done({ status, failing: [...text.matchAll(/FAIL \[[^\]]*\] (\S+)/g)].map((m) => m[1]) });
+    });
+  });
 
-const withEdit = (edit, body) => {
+const compiles = async (cwd) => (await aiken(cwd, 'checkpoint_register_freeze_tests.{no_such_test_selects_nothing}')).status === 0;
+
+// The first module whose run fails ends the verdict; a failing run that names no
+// test is a copy that does not compile, never a kill.
+const freezeTests = async (cwd) => {
+  for (const m of modules) {
+    const run = await aiken(cwd, `${m}.{..}`);
+    if (run.status === 0) continue;
+    const built = haveScript ? run.failing.length > 0 : await compiles(cwd);
+    return { ok: false, compiles: built };
+  }
+  return { ok: true, compiles: true };
+};
+
+// Working copies, one per worker: the dependencies compile in each, and each
+// edit is undone before the next. They are removed at the end, whatever happens.
+const dirs = Array.from({ length: Math.max(1, WORKERS) }, () => {
+  const dir = mkdtempSync(join(tmpdir(), 'freeze-mutant-'));
+  cpSync(onchain, dir, { recursive: true });
+  return dir;
+});
+process.on('exit', () => dirs.forEach((dir) => rmSync(dir, { recursive: true, force: true })));
+
+const occurrencesIn = (dir, edit) => readFileSync(join(dir, edit.file), 'utf8').split(edit.from).length - 1;
+
+const withEdit = async (dir, edit, body) => {
   if (!edit) return body();
   const path = join(dir, edit.file);
   const text = readFileSync(path, 'utf8');
@@ -79,35 +117,56 @@ const withEdit = (edit, body) => {
   if (mutated === text) throw new Error(`${edit.name}: the edit changed nothing`);
   writeFileSync(path, mutated);
   try {
-    return body();
+    return await body();
   } finally {
     writeFileSync(path, text);
   }
 };
 
+// Every edit must apply exactly once before any compiler runs.
+for (const edit of [survivorControl, ...mutants]) {
+  const occurrences = occurrencesIn(dirs[0], edit);
+  if (occurrences !== 1) throw new Error(`${edit.name}: the edit's text occurs ${occurrences} times in ${edit.file}, expected exactly once`);
+}
+
+// The tasks: the two controls, then every mutant.
+const tasks = [
+  { kind: 'control-unmutated', name: 'unmutated' },
+  { kind: 'control-comment', name: survivorControl.name, edit: survivorControl },
+  ...mutants.map((mutant) => ({ kind: 'mutant', name: mutant.name, edit: mutant })),
+];
+const results = new Array(tasks.length);
+let next = 0;
+await Promise.all(
+  dirs.map(async (dir) => {
+    for (;;) {
+      const index = next++;
+      if (index >= tasks.length) return;
+      const task = tasks[index];
+      results[index] = await withEdit(dir, task.edit, () => freezeTests(dir));
+    }
+  }),
+);
+
 const failures = [];
 const rows = [];
 
 // Control 1: the unmutated copy compiles and the freeze tests pass.
-if (!compiles(dir)) throw new Error('control: the unmutated copy does not compile');
-if (!freezeTestsPass(dir)) throw new Error('control: the freeze tests fail on the unmutated copy');
+if (!results[0].compiles) throw new Error('control: the unmutated copy does not compile');
+if (!results[0].ok) throw new Error('control: the freeze tests fail on the unmutated copy');
 rows.push(['unmutated', 'passes']);
 
 // Control 2: an edit that changes no behaviour survives.
-withEdit(survivorControl, () => {
-  if (!compiles(dir)) throw new Error('control: the comment-only copy does not compile');
-  if (!freezeTestsPass(dir)) throw new Error('control: a comment-only edit made a freeze test fail; the harness cannot tell a kill from a break');
-});
+if (!results[1].compiles) throw new Error('control: the comment-only copy does not compile');
+if (!results[1].ok) throw new Error('control: a comment-only edit made a freeze test fail; the harness cannot tell a kill from a break');
 rows.push([survivorControl.name, 'survives, as it must']);
 
-for (const mutant of mutants) {
-  const verdict = withEdit(mutant, () => {
-    if (!compiles(dir)) return 'DOES NOT COMPILE';
-    return freezeTestsPass(dir) ? 'SURVIVED' : 'killed';
-  });
+mutants.forEach((mutant, i) => {
+  const run = results[2 + i];
+  const verdict = !run.compiles ? 'DOES NOT COMPILE' : run.ok ? 'SURVIVED' : 'killed';
   rows.push([mutant.name, `${verdict}  (${mutant.premise})`]);
   if (verdict !== 'killed') failures.push(`${mutant.name}: ${verdict}`);
-}
+});
 
 const width = Math.max(...rows.map(([n]) => n.length));
 for (const [name, verdict] of rows) console.log(`${name.padEnd(width)}  ${verdict}`);

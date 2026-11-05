@@ -17,6 +17,7 @@ module Cardano.KERI.AID.Checkpoint.Wire (
     freezeEvidenceData,
     freezeObserverRedeemerData,
     freezeSpendRedeemerData,
+    topUpSpendRedeemerData,
     registerObserverRedeemerData,
     registrationEvidenceData,
     asPlcData,
@@ -81,6 +82,13 @@ nothing renumbers; it names the output that receives the freeze bond.
 freezeSpendRedeemerData :: Integer -> Data
 freezeSpendRedeemerData hunterOutputIndex =
     Constr 3 [I hunterOutputIndex]
+
+{- | The TopUp arm is spend constructor four, appended after Freeze so nothing
+renumbers; it carries the amount added to the pool, in lovelace.
+-}
+topUpSpendRedeemerData :: Integer -> Data
+topUpSpendRedeemerData amount =
+    Constr 4 [I amount]
 
 {- | The Freeze observer envelope: action two, checkpoint policy, the named
 spent output reference, and the freeze evidence.

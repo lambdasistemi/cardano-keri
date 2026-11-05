@@ -12,6 +12,7 @@ module Cardano.KERI.Deployment.CLI (
     RegisterRuntime (..),
     AdvanceSettings (..),
     FreezeSettings (..),
+    TopUpSettings (..),
     BoardInstructions (..),
     BoardTransactionSettings (..),
     BoardPostSettings (..),
@@ -30,6 +31,7 @@ module Cardano.KERI.Deployment.CLI (
     registerSettingsParser,
     advanceSettingsParser,
     freezeSettingsParser,
+    topUpSettingsParser,
     boardPostSettingsParser,
     boardUpdateSettingsParser,
     boardRetireSettingsParser,
@@ -41,6 +43,8 @@ module Cardano.KERI.Deployment.CLI (
     runAdvanceWith,
     runFreeze,
     runFreezeWith,
+    runTopUp,
+    runTopUpWith,
     runBoard,
     runBoardDeploy,
     runBoardDeployWith,
@@ -165,6 +169,12 @@ import Cardano.KERI.Deployment.Script (
     deriveV1Scripts,
     loadBlueprint,
  )
+import Cardano.KERI.Deployment.TopUp (
+    checkTopUpPackage,
+    mkTopUpPackage,
+    mkTopUpPlan,
+ )
+import Cardano.KERI.Deployment.TopUp qualified as TopUpTx
 import Cardano.KERI.Deployment.TransactionRuntime (renderTransactionId)
 import Cardano.KERI.Indexer.App (decodePolicyId)
 import Cardano.KERI.Indexer.ChainQuery (
@@ -348,6 +358,25 @@ data FreezeSettings = FreezeSettings
     , freezeManifest :: FilePath
     , freezeStorePath :: FilePath
     , freezeTimeoutSeconds :: Int
+    }
+    deriving stock (Show, Eq)
+
+{- | A top-up adds at least one premium to the pool of a live checkpoint, once
+per key state. Nobody signs anything for it but the payer, so there is no key
+event log and no signing phase: the payer, the node and the funding address are
+always needed.
+-}
+data TopUpSettings = TopUpSettings
+    { tupNetwork :: Text
+    , tupNetworkMagic :: Int
+    , tupConfiguredAid :: Text
+    , tupAmount :: Integer
+    , tupPayer :: FilePath
+    , tupNodeSocket :: FilePath
+    , tupFundingAddress :: Text
+    , tupManifest :: FilePath
+    , tupStorePath :: FilePath
+    , tupTimeoutSeconds :: Int
     }
     deriving stock (Show, Eq)
 
@@ -581,8 +610,8 @@ registerSettingsParser = do
             "escrow-lovelace"
             "CKERI_ESCROW_LOVELACE"
             "escrow-lovelace"
-            "ACTIVE output lovelace (acceptance-only underfunding override)"
-            (Just 1_007_000_000)
+            "ACTIVE output lovelace: the floor and a first pool of at least one premium"
+            (Just 1_009_000_000)
     pure RegisterSettings{..}
 
 advanceSettingsParser :: Opt.Parser AdvanceSettings
@@ -795,6 +824,80 @@ freezeSettingsParser = do
             "Settlement timeout"
             (Just 600)
     pure FreezeSettings{..}
+
+topUpSettingsParser :: Opt.Parser TopUpSettings
+topUpSettingsParser = do
+    tupNetwork <-
+        textSetting
+            "network"
+            "CKERI_NETWORK"
+            "network"
+            "Cardano network name"
+            (Just "preprod")
+    tupNetworkMagic <-
+        intSetting
+            "network-magic"
+            "CKERI_NETWORK_MAGIC"
+            "network-magic"
+            "Cardano testnet network magic"
+            (Just 1)
+    tupConfiguredAid <-
+        textSetting
+            "aid"
+            "CKERI_AID"
+            "aid"
+            "44-character KERI E-code identifier"
+            Nothing
+    tupAmount <-
+        integerSetting
+            "amount"
+            "CKERI_AMOUNT"
+            "amount"
+            "Lovelace added to the pool: at least one premium, once per key state"
+            Nothing
+    tupPayer <-
+        stringSetting
+            "payer"
+            "CKERI_PAYER"
+            "payer"
+            "Cardano payment signing-key file"
+            Nothing
+    tupNodeSocket <-
+        stringSetting
+            "node-socket"
+            "CKERI_NODE_SOCKET"
+            "node-socket"
+            "Cardano node socket"
+            Nothing
+    tupFundingAddress <-
+        textSetting
+            "funding-address"
+            "CKERI_FUNDING_ADDRESS"
+            "funding-address"
+            "Bech32 payment address funding the top-up"
+            Nothing
+    tupManifest <-
+        stringSetting
+            "manifest"
+            "CKERI_MANIFEST"
+            "manifest"
+            "V1 preprod deployment manifest"
+            (Just "deploy/preprod/m1-manifest.json")
+    tupStorePath <-
+        stringSetting
+            "store"
+            "CKERI_STORE"
+            "store"
+            "Local follower RocksDB store path"
+            Nothing
+    tupTimeoutSeconds <-
+        intSetting
+            "timeout-seconds"
+            "CKERI_TIMEOUT_SECONDS"
+            "timeout-seconds"
+            "Settlement timeout"
+            (Just 600)
+    pure TopUpSettings{..}
 
 {- | #240: this module builds no combined \"board\" command parser of its
 own any more -- "Cardano.KERI.CLI" composes the four write leaves below
@@ -2035,7 +2138,7 @@ submitRegistration scope settings manifest plan =
             putStrLn $
                 "escrow: "
                     <> show (registerEscrowLovelace settings `div` 1_000_000)
-                    <> " tADA (min 2 + D 1000 + B 5)"
+                    <> " tADA (min 2 + D 1000 + B 5 + first pool, at least one premium)"
 
 runAdvance :: AdvanceSettings -> IO ()
 runAdvance = runAdvanceWith withLocalQueryScope withLiveContext
@@ -2324,6 +2427,83 @@ runFreezeWith openLocalScope openLiveContext settings = do
             activeInput
             funding
             plan
+
+{- | Add at least one premium to the pool of a live checkpoint that has not been
+topped up since its last rotation. The package is checked against the Lean's
+premises before anything is built; the live and local brackets are parameters,
+as for 'runFreezeWith'.
+-}
+runTopUp :: TopUpSettings -> IO ()
+runTopUp = runTopUpWith withLocalQueryScope withLiveContext
+
+runTopUpWith :: LocalOpener -> LiveOpener -> TopUpSettings -> IO ()
+runTopUpWith openLocalScope openLiveContext settings = do
+    unless
+        (tupNetwork settings == "preprod" && tupNetworkMagic settings == 1)
+        (fail "M1 V1 top-up supports only preprod network magic 1")
+    unless
+        ( T.length (tupConfiguredAid settings) == 44
+            && "E" `T.isPrefixOf` tupConfiguredAid settings
+        )
+        (fail "AID must be one 44-character KERI E-code identifier")
+    when (tupTimeoutSeconds settings <= 0) $
+        fail "timeout-seconds must be positive"
+    manifest <-
+        readManifest (tupManifest settings) >>= either fail pure
+    localSettings <-
+        either fail pure (manifestLocalSettingsFor (tupStorePath settings) manifest)
+    openLocalScope localSettings $ \scope -> do
+        bundle <-
+            acquire
+                scope
+                ( activeCheckpointSubmitProgram
+                    (manifestCheckpointLocator manifest)
+                    manifest
+                    (tupConfiguredAid settings)
+                    (tupFundingAddress settings)
+                )
+        (active, references, activeInput, funding) <-
+            case bundle of
+                ActiveCheckpointNotRegistered -> fail "checkpoint is not registered"
+                ActiveCheckpointSubmitBundle active refs activeInput funding ->
+                    pure (active, refs, activeInput, funding)
+        package <- either fail pure (mkTopUpPackage manifest active (tupAmount settings))
+        either fail pure (checkTopUpPackage manifest package)
+        plan <- either fail pure (mkTopUpPlan manifest package)
+        openLiveContext
+            LiveConfig
+                { liveNetworkMagic = tupNetworkMagic settings
+                , liveNodeSocket = tupNodeSocket settings
+                , liveSigningKeyFile = tupPayer settings
+                , liveFundingAddressText = tupFundingAddress settings
+                , liveTimeoutSeconds = tupTimeoutSeconds settings
+                }
+            (awaitLocalTransaction scope (tupTimeoutSeconds settings))
+            $ \context -> do
+                txId <-
+                    TopUpTx.runTopUpTransaction
+                        TopUpTx.TopUpConfig
+                            { TopUpTx.topUpRuntime = liveTransactionRuntime context
+                            , TopUpTx.topUpReferenceUtxos = references
+                            , TopUpTx.topUpFundingAddress = liveFundingAddress context
+                            }
+                        plan
+                        funding
+                        activeInput
+                        >>= either (fail . show) pure
+                _ <-
+                    AdvanceTx.awaitAdvance
+                        (probeSettlement (localSettlementObserver scope))
+                        2_000_000
+                        (tupTimeoutSeconds settings)
+                        (TopUpTx.topUpPlanCheckpointPolicy plan)
+                        (TopUpTx.topUpPlanCheckpointAssetName plan)
+                        (renderTransactionId txId)
+                        (TopUpTx.topUpPlanCheckpointAddress plan)
+                        >>= either (fail . show) pure
+                putStrLn $
+                    "top-up txid: "
+                        <> T.unpack (renderTransactionId txId)
 
 -- | The package of the bond option the settings name.
 advancePackageFor ::

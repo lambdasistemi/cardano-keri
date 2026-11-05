@@ -94,8 +94,13 @@ spec =
                 -- #345: the checkpoint program also carries the bond option of
                 -- Advance and its deposit check (8_490 -> 9_480); the advance
                 -- observer is unchanged and the ceiling is too.
-                programLength "observer-advance" artifacts `shouldBe` 15_665
-                programLength "checkpoint-register" artifacts `shouldBe` 9_480
+                -- #522: re-derived once the live datum has nine fields, which
+                -- the advance observer reads: 15_665 -> 15_710. The checkpoint program
+                -- gains the TopUp arm, the registration's premium check and
+                -- the cleared-mark requirements (9_480 -> 10_370); the ceiling is
+                -- unchanged.
+                programLength "observer-advance" artifacts `shouldBe` 15_710
+                programLength "checkpoint-register" artifacts `shouldBe` 10_370
         describe "M1 endpoint-board script" $ do
             -- Historical fact, not a live derivation: the M1 endpoint board
             -- was deployed 2026-07-29 compiled with aiken 1.1.21 (blueprint

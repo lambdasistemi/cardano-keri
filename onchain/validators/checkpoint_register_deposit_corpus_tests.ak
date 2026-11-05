@@ -4,7 +4,7 @@
 ////
 //// The deposit-rotation cells of the Lean corpus's boundary grid (parameters
 //// `P = 2`, `B = 5`, `D = 1000`), one test per cell: every live state
-//// (poisoned and frozen both ways, the pool at one below, exactly and one above
+//// (poisoned, frozen and the top-up mark each clear and set, the pool at one below, exactly and one above
 //// the premium), the termination-pending state, a requested sequence number
 //// earlier than, equal to and later than the state's, under an oracle that
 //// evidences the rotation and authorizes the deposit and one that does neither.
@@ -12,7 +12,7 @@
 //// the deposit step of the corpus trace freeze-then-unfreeze.
 ////
 //// Mapping of the Lean values onto the ledger values:
-////   live state              a live version 2 datum with that poisoned / frozen
+////   live state              a live version 2 datum with that poisoned / frozen / top-up mark
 ////   pool (Lean units)       lovelace: pool x 1,000,000 (premium 2,000,000, bond 5,000,000)
 ////   sn' against the state's sn
 ////                           earlier / equal / later: the later case is the genuine
@@ -91,369 +91,729 @@ test cell_pending_s1_sn2_e1() fail {
   run(corpus_deposit_pending(False, False))
 }
 
-/// Lean grid state 3 (live, poisoned False, frozen False, pool 1) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 3 (live, poisoned False, frozen False, topped up False, pool 1) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s3_sn0_e0() fail {
-  run(corpus_deposit(False, False, 1, -1, True, True))
+  run(corpus_deposit(False, False, False, 1, -1, True, True))
 }
 
-/// Lean grid state 3 (live, poisoned False, frozen False, pool 1) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 3 (live, poisoned False, frozen False, topped up False, pool 1) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s3_sn0_e1() fail {
-  run(corpus_deposit(False, False, 1, -1, False, False))
+  run(corpus_deposit(False, False, False, 1, -1, False, False))
 }
 
-/// Lean grid state 3 (live, poisoned False, frozen False, pool 1) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 3 (live, poisoned False, frozen False, topped up False, pool 1) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s3_sn1_e0() fail {
-  run(corpus_deposit(False, False, 1, 0, True, True))
+  run(corpus_deposit(False, False, False, 1, 0, True, True))
 }
 
-/// Lean grid state 3 (live, poisoned False, frozen False, pool 1) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 3 (live, poisoned False, frozen False, topped up False, pool 1) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s3_sn1_e1() fail {
-  run(corpus_deposit(False, False, 1, 0, False, False))
+  run(corpus_deposit(False, False, False, 1, 0, False, False))
 }
 
-/// Lean grid state 3 (live, poisoned False, frozen False, pool 1) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+/// Lean grid state 3 (live, poisoned False, frozen False, topped up False, pool 1) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
 test cell_present_s3_sn2_e0() {
-  run(corpus_deposit(False, False, 1, 1, True, True))
+  run(corpus_deposit(False, False, False, 1, 1, True, True))
 }
 
-/// Lean grid state 3 (live, poisoned False, frozen False, pool 1) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 3 (live, poisoned False, frozen False, topped up False, pool 1) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s3_sn2_e1() fail {
-  run(corpus_deposit(False, False, 1, 1, False, False))
+  run(corpus_deposit(False, False, False, 1, 1, False, False))
 }
 
-/// Lean grid state 4 (live, poisoned False, frozen False, pool 2) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 4 (live, poisoned False, frozen False, topped up False, pool 2) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s4_sn0_e0() fail {
-  run(corpus_deposit(False, False, 2, -1, True, True))
+  run(corpus_deposit(False, False, False, 2, -1, True, True))
 }
 
-/// Lean grid state 4 (live, poisoned False, frozen False, pool 2) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 4 (live, poisoned False, frozen False, topped up False, pool 2) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s4_sn0_e1() fail {
-  run(corpus_deposit(False, False, 2, -1, False, False))
+  run(corpus_deposit(False, False, False, 2, -1, False, False))
 }
 
-/// Lean grid state 4 (live, poisoned False, frozen False, pool 2) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 4 (live, poisoned False, frozen False, topped up False, pool 2) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s4_sn1_e0() fail {
-  run(corpus_deposit(False, False, 2, 0, True, True))
+  run(corpus_deposit(False, False, False, 2, 0, True, True))
 }
 
-/// Lean grid state 4 (live, poisoned False, frozen False, pool 2) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 4 (live, poisoned False, frozen False, topped up False, pool 2) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s4_sn1_e1() fail {
-  run(corpus_deposit(False, False, 2, 0, False, False))
+  run(corpus_deposit(False, False, False, 2, 0, False, False))
 }
 
-/// Lean grid state 4 (live, poisoned False, frozen False, pool 2) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+/// Lean grid state 4 (live, poisoned False, frozen False, topped up False, pool 2) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
 test cell_present_s4_sn2_e0() {
-  run(corpus_deposit(False, False, 2, 1, True, True))
+  run(corpus_deposit(False, False, False, 2, 1, True, True))
 }
 
-/// Lean grid state 4 (live, poisoned False, frozen False, pool 2) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 4 (live, poisoned False, frozen False, topped up False, pool 2) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s4_sn2_e1() fail {
-  run(corpus_deposit(False, False, 2, 1, False, False))
+  run(corpus_deposit(False, False, False, 2, 1, False, False))
 }
 
-/// Lean grid state 5 (live, poisoned False, frozen False, pool 3) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 5 (live, poisoned False, frozen False, topped up False, pool 3) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s5_sn0_e0() fail {
-  run(corpus_deposit(False, False, 3, -1, True, True))
+  run(corpus_deposit(False, False, False, 3, -1, True, True))
 }
 
-/// Lean grid state 5 (live, poisoned False, frozen False, pool 3) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 5 (live, poisoned False, frozen False, topped up False, pool 3) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s5_sn0_e1() fail {
-  run(corpus_deposit(False, False, 3, -1, False, False))
+  run(corpus_deposit(False, False, False, 3, -1, False, False))
 }
 
-/// Lean grid state 5 (live, poisoned False, frozen False, pool 3) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 5 (live, poisoned False, frozen False, topped up False, pool 3) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s5_sn1_e0() fail {
-  run(corpus_deposit(False, False, 3, 0, True, True))
+  run(corpus_deposit(False, False, False, 3, 0, True, True))
 }
 
-/// Lean grid state 5 (live, poisoned False, frozen False, pool 3) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 5 (live, poisoned False, frozen False, topped up False, pool 3) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s5_sn1_e1() fail {
-  run(corpus_deposit(False, False, 3, 0, False, False))
+  run(corpus_deposit(False, False, False, 3, 0, False, False))
 }
 
-/// Lean grid state 5 (live, poisoned False, frozen False, pool 3) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+/// Lean grid state 5 (live, poisoned False, frozen False, topped up False, pool 3) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
 test cell_present_s5_sn2_e0() {
-  run(corpus_deposit(False, False, 3, 1, True, True))
+  run(corpus_deposit(False, False, False, 3, 1, True, True))
 }
 
-/// Lean grid state 5 (live, poisoned False, frozen False, pool 3) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 5 (live, poisoned False, frozen False, topped up False, pool 3) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s5_sn2_e1() fail {
-  run(corpus_deposit(False, False, 3, 1, False, False))
+  run(corpus_deposit(False, False, False, 3, 1, False, False))
 }
 
-/// Lean grid state 6 (live, poisoned False, frozen True, pool 1) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 6 (live, poisoned False, frozen True, topped up False, pool 1) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s6_sn0_e0() fail {
-  run(corpus_deposit(False, True, 1, -1, True, True))
+  run(corpus_deposit(False, True, False, 1, -1, True, True))
 }
 
-/// Lean grid state 6 (live, poisoned False, frozen True, pool 1) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 6 (live, poisoned False, frozen True, topped up False, pool 1) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s6_sn0_e1() fail {
-  run(corpus_deposit(False, True, 1, -1, False, False))
+  run(corpus_deposit(False, True, False, 1, -1, False, False))
 }
 
-/// Lean grid state 6 (live, poisoned False, frozen True, pool 1) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 6 (live, poisoned False, frozen True, topped up False, pool 1) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s6_sn1_e0() fail {
-  run(corpus_deposit(False, True, 1, 0, True, True))
+  run(corpus_deposit(False, True, False, 1, 0, True, True))
 }
 
-/// Lean grid state 6 (live, poisoned False, frozen True, pool 1) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 6 (live, poisoned False, frozen True, topped up False, pool 1) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s6_sn1_e1() fail {
-  run(corpus_deposit(False, True, 1, 0, False, False))
+  run(corpus_deposit(False, True, False, 1, 0, False, False))
 }
 
-/// Lean grid state 6 (live, poisoned False, frozen True, pool 1) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+/// Lean grid state 6 (live, poisoned False, frozen True, topped up False, pool 1) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
 test cell_present_s6_sn2_e0() {
-  run(corpus_deposit(False, True, 1, 1, True, True))
+  run(corpus_deposit(False, True, False, 1, 1, True, True))
 }
 
-/// Lean grid state 6 (live, poisoned False, frozen True, pool 1) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 6 (live, poisoned False, frozen True, topped up False, pool 1) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s6_sn2_e1() fail {
-  run(corpus_deposit(False, True, 1, 1, False, False))
+  run(corpus_deposit(False, True, False, 1, 1, False, False))
 }
 
-/// Lean grid state 7 (live, poisoned False, frozen True, pool 2) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 7 (live, poisoned False, frozen True, topped up False, pool 2) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s7_sn0_e0() fail {
-  run(corpus_deposit(False, True, 2, -1, True, True))
+  run(corpus_deposit(False, True, False, 2, -1, True, True))
 }
 
-/// Lean grid state 7 (live, poisoned False, frozen True, pool 2) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 7 (live, poisoned False, frozen True, topped up False, pool 2) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s7_sn0_e1() fail {
-  run(corpus_deposit(False, True, 2, -1, False, False))
+  run(corpus_deposit(False, True, False, 2, -1, False, False))
 }
 
-/// Lean grid state 7 (live, poisoned False, frozen True, pool 2) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 7 (live, poisoned False, frozen True, topped up False, pool 2) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s7_sn1_e0() fail {
-  run(corpus_deposit(False, True, 2, 0, True, True))
+  run(corpus_deposit(False, True, False, 2, 0, True, True))
 }
 
-/// Lean grid state 7 (live, poisoned False, frozen True, pool 2) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 7 (live, poisoned False, frozen True, topped up False, pool 2) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s7_sn1_e1() fail {
-  run(corpus_deposit(False, True, 2, 0, False, False))
+  run(corpus_deposit(False, True, False, 2, 0, False, False))
 }
 
-/// Lean grid state 7 (live, poisoned False, frozen True, pool 2) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+/// Lean grid state 7 (live, poisoned False, frozen True, topped up False, pool 2) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
 test cell_present_s7_sn2_e0() {
-  run(corpus_deposit(False, True, 2, 1, True, True))
+  run(corpus_deposit(False, True, False, 2, 1, True, True))
 }
 
-/// Lean grid state 7 (live, poisoned False, frozen True, pool 2) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 7 (live, poisoned False, frozen True, topped up False, pool 2) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s7_sn2_e1() fail {
-  run(corpus_deposit(False, True, 2, 1, False, False))
+  run(corpus_deposit(False, True, False, 2, 1, False, False))
 }
 
-/// Lean grid state 8 (live, poisoned False, frozen True, pool 3) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 8 (live, poisoned False, frozen True, topped up False, pool 3) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s8_sn0_e0() fail {
-  run(corpus_deposit(False, True, 3, -1, True, True))
+  run(corpus_deposit(False, True, False, 3, -1, True, True))
 }
 
-/// Lean grid state 8 (live, poisoned False, frozen True, pool 3) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 8 (live, poisoned False, frozen True, topped up False, pool 3) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s8_sn0_e1() fail {
-  run(corpus_deposit(False, True, 3, -1, False, False))
+  run(corpus_deposit(False, True, False, 3, -1, False, False))
 }
 
-/// Lean grid state 8 (live, poisoned False, frozen True, pool 3) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 8 (live, poisoned False, frozen True, topped up False, pool 3) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s8_sn1_e0() fail {
-  run(corpus_deposit(False, True, 3, 0, True, True))
+  run(corpus_deposit(False, True, False, 3, 0, True, True))
 }
 
-/// Lean grid state 8 (live, poisoned False, frozen True, pool 3) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 8 (live, poisoned False, frozen True, topped up False, pool 3) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s8_sn1_e1() fail {
-  run(corpus_deposit(False, True, 3, 0, False, False))
+  run(corpus_deposit(False, True, False, 3, 0, False, False))
 }
 
-/// Lean grid state 8 (live, poisoned False, frozen True, pool 3) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+/// Lean grid state 8 (live, poisoned False, frozen True, topped up False, pool 3) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
 test cell_present_s8_sn2_e0() {
-  run(corpus_deposit(False, True, 3, 1, True, True))
+  run(corpus_deposit(False, True, False, 3, 1, True, True))
 }
 
-/// Lean grid state 8 (live, poisoned False, frozen True, pool 3) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 8 (live, poisoned False, frozen True, topped up False, pool 3) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s8_sn2_e1() fail {
-  run(corpus_deposit(False, True, 3, 1, False, False))
+  run(corpus_deposit(False, True, False, 3, 1, False, False))
 }
 
-/// Lean grid state 9 (live, poisoned True, frozen False, pool 1) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 9 (live, poisoned True, frozen False, topped up False, pool 1) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s9_sn0_e0() fail {
-  run(corpus_deposit(True, False, 1, -1, True, True))
+  run(corpus_deposit(True, False, False, 1, -1, True, True))
 }
 
-/// Lean grid state 9 (live, poisoned True, frozen False, pool 1) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 9 (live, poisoned True, frozen False, topped up False, pool 1) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s9_sn0_e1() fail {
-  run(corpus_deposit(True, False, 1, -1, False, False))
+  run(corpus_deposit(True, False, False, 1, -1, False, False))
 }
 
-/// Lean grid state 9 (live, poisoned True, frozen False, pool 1) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 9 (live, poisoned True, frozen False, topped up False, pool 1) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s9_sn1_e0() fail {
-  run(corpus_deposit(True, False, 1, 0, True, True))
+  run(corpus_deposit(True, False, False, 1, 0, True, True))
 }
 
-/// Lean grid state 9 (live, poisoned True, frozen False, pool 1) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 9 (live, poisoned True, frozen False, topped up False, pool 1) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s9_sn1_e1() fail {
-  run(corpus_deposit(True, False, 1, 0, False, False))
+  run(corpus_deposit(True, False, False, 1, 0, False, False))
 }
 
-/// Lean grid state 9 (live, poisoned True, frozen False, pool 1) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+/// Lean grid state 9 (live, poisoned True, frozen False, topped up False, pool 1) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
 test cell_present_s9_sn2_e0() {
-  run(corpus_deposit(True, False, 1, 1, True, True))
+  run(corpus_deposit(True, False, False, 1, 1, True, True))
 }
 
-/// Lean grid state 9 (live, poisoned True, frozen False, pool 1) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 9 (live, poisoned True, frozen False, topped up False, pool 1) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s9_sn2_e1() fail {
-  run(corpus_deposit(True, False, 1, 1, False, False))
+  run(corpus_deposit(True, False, False, 1, 1, False, False))
 }
 
-/// Lean grid state 10 (live, poisoned True, frozen False, pool 2) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 10 (live, poisoned True, frozen False, topped up False, pool 2) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s10_sn0_e0() fail {
-  run(corpus_deposit(True, False, 2, -1, True, True))
+  run(corpus_deposit(True, False, False, 2, -1, True, True))
 }
 
-/// Lean grid state 10 (live, poisoned True, frozen False, pool 2) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 10 (live, poisoned True, frozen False, topped up False, pool 2) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s10_sn0_e1() fail {
-  run(corpus_deposit(True, False, 2, -1, False, False))
+  run(corpus_deposit(True, False, False, 2, -1, False, False))
 }
 
-/// Lean grid state 10 (live, poisoned True, frozen False, pool 2) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 10 (live, poisoned True, frozen False, topped up False, pool 2) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s10_sn1_e0() fail {
-  run(corpus_deposit(True, False, 2, 0, True, True))
+  run(corpus_deposit(True, False, False, 2, 0, True, True))
 }
 
-/// Lean grid state 10 (live, poisoned True, frozen False, pool 2) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 10 (live, poisoned True, frozen False, topped up False, pool 2) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s10_sn1_e1() fail {
-  run(corpus_deposit(True, False, 2, 0, False, False))
+  run(corpus_deposit(True, False, False, 2, 0, False, False))
 }
 
-/// Lean grid state 10 (live, poisoned True, frozen False, pool 2) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+/// Lean grid state 10 (live, poisoned True, frozen False, topped up False, pool 2) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
 test cell_present_s10_sn2_e0() {
-  run(corpus_deposit(True, False, 2, 1, True, True))
+  run(corpus_deposit(True, False, False, 2, 1, True, True))
 }
 
-/// Lean grid state 10 (live, poisoned True, frozen False, pool 2) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 10 (live, poisoned True, frozen False, topped up False, pool 2) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s10_sn2_e1() fail {
-  run(corpus_deposit(True, False, 2, 1, False, False))
+  run(corpus_deposit(True, False, False, 2, 1, False, False))
 }
 
-/// Lean grid state 11 (live, poisoned True, frozen False, pool 3) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 11 (live, poisoned True, frozen False, topped up False, pool 3) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s11_sn0_e0() fail {
-  run(corpus_deposit(True, False, 3, -1, True, True))
+  run(corpus_deposit(True, False, False, 3, -1, True, True))
 }
 
-/// Lean grid state 11 (live, poisoned True, frozen False, pool 3) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 11 (live, poisoned True, frozen False, topped up False, pool 3) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s11_sn0_e1() fail {
-  run(corpus_deposit(True, False, 3, -1, False, False))
+  run(corpus_deposit(True, False, False, 3, -1, False, False))
 }
 
-/// Lean grid state 11 (live, poisoned True, frozen False, pool 3) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 11 (live, poisoned True, frozen False, topped up False, pool 3) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s11_sn1_e0() fail {
-  run(corpus_deposit(True, False, 3, 0, True, True))
+  run(corpus_deposit(True, False, False, 3, 0, True, True))
 }
 
-/// Lean grid state 11 (live, poisoned True, frozen False, pool 3) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 11 (live, poisoned True, frozen False, topped up False, pool 3) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s11_sn1_e1() fail {
-  run(corpus_deposit(True, False, 3, 0, False, False))
+  run(corpus_deposit(True, False, False, 3, 0, False, False))
 }
 
-/// Lean grid state 11 (live, poisoned True, frozen False, pool 3) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+/// Lean grid state 11 (live, poisoned True, frozen False, topped up False, pool 3) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
 test cell_present_s11_sn2_e0() {
-  run(corpus_deposit(True, False, 3, 1, True, True))
+  run(corpus_deposit(True, False, False, 3, 1, True, True))
 }
 
-/// Lean grid state 11 (live, poisoned True, frozen False, pool 3) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 11 (live, poisoned True, frozen False, topped up False, pool 3) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s11_sn2_e1() fail {
-  run(corpus_deposit(True, False, 3, 1, False, False))
+  run(corpus_deposit(True, False, False, 3, 1, False, False))
 }
 
-/// Lean grid state 12 (live, poisoned True, frozen True, pool 1) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 12 (live, poisoned True, frozen True, topped up False, pool 1) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s12_sn0_e0() fail {
-  run(corpus_deposit(True, True, 1, -1, True, True))
+  run(corpus_deposit(True, True, False, 1, -1, True, True))
 }
 
-/// Lean grid state 12 (live, poisoned True, frozen True, pool 1) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 12 (live, poisoned True, frozen True, topped up False, pool 1) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s12_sn0_e1() fail {
-  run(corpus_deposit(True, True, 1, -1, False, False))
+  run(corpus_deposit(True, True, False, 1, -1, False, False))
 }
 
-/// Lean grid state 12 (live, poisoned True, frozen True, pool 1) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 12 (live, poisoned True, frozen True, topped up False, pool 1) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s12_sn1_e0() fail {
-  run(corpus_deposit(True, True, 1, 0, True, True))
+  run(corpus_deposit(True, True, False, 1, 0, True, True))
 }
 
-/// Lean grid state 12 (live, poisoned True, frozen True, pool 1) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 12 (live, poisoned True, frozen True, topped up False, pool 1) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s12_sn1_e1() fail {
-  run(corpus_deposit(True, True, 1, 0, False, False))
+  run(corpus_deposit(True, True, False, 1, 0, False, False))
 }
 
-/// Lean grid state 12 (live, poisoned True, frozen True, pool 1) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+/// Lean grid state 12 (live, poisoned True, frozen True, topped up False, pool 1) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
 test cell_present_s12_sn2_e0() {
-  run(corpus_deposit(True, True, 1, 1, True, True))
+  run(corpus_deposit(True, True, False, 1, 1, True, True))
 }
 
-/// Lean grid state 12 (live, poisoned True, frozen True, pool 1) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 12 (live, poisoned True, frozen True, topped up False, pool 1) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s12_sn2_e1() fail {
-  run(corpus_deposit(True, True, 1, 1, False, False))
+  run(corpus_deposit(True, True, False, 1, 1, False, False))
 }
 
-/// Lean grid state 13 (live, poisoned True, frozen True, pool 2) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 13 (live, poisoned True, frozen True, topped up False, pool 2) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s13_sn0_e0() fail {
-  run(corpus_deposit(True, True, 2, -1, True, True))
+  run(corpus_deposit(True, True, False, 2, -1, True, True))
 }
 
-/// Lean grid state 13 (live, poisoned True, frozen True, pool 2) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 13 (live, poisoned True, frozen True, topped up False, pool 2) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s13_sn0_e1() fail {
-  run(corpus_deposit(True, True, 2, -1, False, False))
+  run(corpus_deposit(True, True, False, 2, -1, False, False))
 }
 
-/// Lean grid state 13 (live, poisoned True, frozen True, pool 2) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 13 (live, poisoned True, frozen True, topped up False, pool 2) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s13_sn1_e0() fail {
-  run(corpus_deposit(True, True, 2, 0, True, True))
+  run(corpus_deposit(True, True, False, 2, 0, True, True))
 }
 
-/// Lean grid state 13 (live, poisoned True, frozen True, pool 2) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 13 (live, poisoned True, frozen True, topped up False, pool 2) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s13_sn1_e1() fail {
-  run(corpus_deposit(True, True, 2, 0, False, False))
+  run(corpus_deposit(True, True, False, 2, 0, False, False))
 }
 
-/// Lean grid state 13 (live, poisoned True, frozen True, pool 2) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+/// Lean grid state 13 (live, poisoned True, frozen True, topped up False, pool 2) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
 test cell_present_s13_sn2_e0() {
-  run(corpus_deposit(True, True, 2, 1, True, True))
+  run(corpus_deposit(True, True, False, 2, 1, True, True))
 }
 
-/// Lean grid state 13 (live, poisoned True, frozen True, pool 2) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 13 (live, poisoned True, frozen True, topped up False, pool 2) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s13_sn2_e1() fail {
-  run(corpus_deposit(True, True, 2, 1, False, False))
+  run(corpus_deposit(True, True, False, 2, 1, False, False))
 }
 
-/// Lean grid state 14 (live, poisoned True, frozen True, pool 3) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 14 (live, poisoned True, frozen True, topped up False, pool 3) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s14_sn0_e0() fail {
-  run(corpus_deposit(True, True, 3, -1, True, True))
+  run(corpus_deposit(True, True, False, 3, -1, True, True))
 }
 
-/// Lean grid state 14 (live, poisoned True, frozen True, pool 3) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 14 (live, poisoned True, frozen True, topped up False, pool 3) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s14_sn0_e1() fail {
-  run(corpus_deposit(True, True, 3, -1, False, False))
+  run(corpus_deposit(True, True, False, 3, -1, False, False))
 }
 
-/// Lean grid state 14 (live, poisoned True, frozen True, pool 3) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 14 (live, poisoned True, frozen True, topped up False, pool 3) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
 test cell_present_s14_sn1_e0() fail {
-  run(corpus_deposit(True, True, 3, 0, True, True))
+  run(corpus_deposit(True, True, False, 3, 0, True, True))
 }
 
-/// Lean grid state 14 (live, poisoned True, frozen True, pool 3) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 14 (live, poisoned True, frozen True, topped up False, pool 3) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s14_sn1_e1() fail {
-  run(corpus_deposit(True, True, 3, 0, False, False))
+  run(corpus_deposit(True, True, False, 3, 0, False, False))
 }
 
-/// Lean grid state 14 (live, poisoned True, frozen True, pool 3) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+/// Lean grid state 14 (live, poisoned True, frozen True, topped up False, pool 3) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
 test cell_present_s14_sn2_e0() {
-  run(corpus_deposit(True, True, 3, 1, True, True))
+  run(corpus_deposit(True, True, False, 3, 1, True, True))
 }
 
-/// Lean grid state 14 (live, poisoned True, frozen True, pool 3) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 14 (live, poisoned True, frozen True, topped up False, pool 3) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
 test cell_present_s14_sn2_e1() fail {
-  run(corpus_deposit(True, True, 3, 1, False, False))
+  run(corpus_deposit(True, True, False, 3, 1, False, False))
+}
+
+/// Lean grid state 15 (live, poisoned False, frozen False, topped up True, pool 1) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s15_sn0_e0() fail {
+  run(corpus_deposit(False, False, True, 1, -1, True, True))
+}
+
+/// Lean grid state 15 (live, poisoned False, frozen False, topped up True, pool 1) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s15_sn0_e1() fail {
+  run(corpus_deposit(False, False, True, 1, -1, False, False))
+}
+
+/// Lean grid state 15 (live, poisoned False, frozen False, topped up True, pool 1) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s15_sn1_e0() fail {
+  run(corpus_deposit(False, False, True, 1, 0, True, True))
+}
+
+/// Lean grid state 15 (live, poisoned False, frozen False, topped up True, pool 1) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s15_sn1_e1() fail {
+  run(corpus_deposit(False, False, True, 1, 0, False, False))
+}
+
+/// Lean grid state 15 (live, poisoned False, frozen False, topped up True, pool 1) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+test cell_present_s15_sn2_e0() {
+  run(corpus_deposit(False, False, True, 1, 1, True, True))
+}
+
+/// Lean grid state 15 (live, poisoned False, frozen False, topped up True, pool 1) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s15_sn2_e1() fail {
+  run(corpus_deposit(False, False, True, 1, 1, False, False))
+}
+
+/// Lean grid state 16 (live, poisoned False, frozen False, topped up True, pool 2) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s16_sn0_e0() fail {
+  run(corpus_deposit(False, False, True, 2, -1, True, True))
+}
+
+/// Lean grid state 16 (live, poisoned False, frozen False, topped up True, pool 2) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s16_sn0_e1() fail {
+  run(corpus_deposit(False, False, True, 2, -1, False, False))
+}
+
+/// Lean grid state 16 (live, poisoned False, frozen False, topped up True, pool 2) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s16_sn1_e0() fail {
+  run(corpus_deposit(False, False, True, 2, 0, True, True))
+}
+
+/// Lean grid state 16 (live, poisoned False, frozen False, topped up True, pool 2) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s16_sn1_e1() fail {
+  run(corpus_deposit(False, False, True, 2, 0, False, False))
+}
+
+/// Lean grid state 16 (live, poisoned False, frozen False, topped up True, pool 2) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+test cell_present_s16_sn2_e0() {
+  run(corpus_deposit(False, False, True, 2, 1, True, True))
+}
+
+/// Lean grid state 16 (live, poisoned False, frozen False, topped up True, pool 2) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s16_sn2_e1() fail {
+  run(corpus_deposit(False, False, True, 2, 1, False, False))
+}
+
+/// Lean grid state 17 (live, poisoned False, frozen False, topped up True, pool 3) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s17_sn0_e0() fail {
+  run(corpus_deposit(False, False, True, 3, -1, True, True))
+}
+
+/// Lean grid state 17 (live, poisoned False, frozen False, topped up True, pool 3) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s17_sn0_e1() fail {
+  run(corpus_deposit(False, False, True, 3, -1, False, False))
+}
+
+/// Lean grid state 17 (live, poisoned False, frozen False, topped up True, pool 3) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s17_sn1_e0() fail {
+  run(corpus_deposit(False, False, True, 3, 0, True, True))
+}
+
+/// Lean grid state 17 (live, poisoned False, frozen False, topped up True, pool 3) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s17_sn1_e1() fail {
+  run(corpus_deposit(False, False, True, 3, 0, False, False))
+}
+
+/// Lean grid state 17 (live, poisoned False, frozen False, topped up True, pool 3) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+test cell_present_s17_sn2_e0() {
+  run(corpus_deposit(False, False, True, 3, 1, True, True))
+}
+
+/// Lean grid state 17 (live, poisoned False, frozen False, topped up True, pool 3) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s17_sn2_e1() fail {
+  run(corpus_deposit(False, False, True, 3, 1, False, False))
+}
+
+/// Lean grid state 18 (live, poisoned False, frozen True, topped up True, pool 1) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s18_sn0_e0() fail {
+  run(corpus_deposit(False, True, True, 1, -1, True, True))
+}
+
+/// Lean grid state 18 (live, poisoned False, frozen True, topped up True, pool 1) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s18_sn0_e1() fail {
+  run(corpus_deposit(False, True, True, 1, -1, False, False))
+}
+
+/// Lean grid state 18 (live, poisoned False, frozen True, topped up True, pool 1) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s18_sn1_e0() fail {
+  run(corpus_deposit(False, True, True, 1, 0, True, True))
+}
+
+/// Lean grid state 18 (live, poisoned False, frozen True, topped up True, pool 1) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s18_sn1_e1() fail {
+  run(corpus_deposit(False, True, True, 1, 0, False, False))
+}
+
+/// Lean grid state 18 (live, poisoned False, frozen True, topped up True, pool 1) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+test cell_present_s18_sn2_e0() {
+  run(corpus_deposit(False, True, True, 1, 1, True, True))
+}
+
+/// Lean grid state 18 (live, poisoned False, frozen True, topped up True, pool 1) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s18_sn2_e1() fail {
+  run(corpus_deposit(False, True, True, 1, 1, False, False))
+}
+
+/// Lean grid state 19 (live, poisoned False, frozen True, topped up True, pool 2) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s19_sn0_e0() fail {
+  run(corpus_deposit(False, True, True, 2, -1, True, True))
+}
+
+/// Lean grid state 19 (live, poisoned False, frozen True, topped up True, pool 2) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s19_sn0_e1() fail {
+  run(corpus_deposit(False, True, True, 2, -1, False, False))
+}
+
+/// Lean grid state 19 (live, poisoned False, frozen True, topped up True, pool 2) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s19_sn1_e0() fail {
+  run(corpus_deposit(False, True, True, 2, 0, True, True))
+}
+
+/// Lean grid state 19 (live, poisoned False, frozen True, topped up True, pool 2) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s19_sn1_e1() fail {
+  run(corpus_deposit(False, True, True, 2, 0, False, False))
+}
+
+/// Lean grid state 19 (live, poisoned False, frozen True, topped up True, pool 2) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+test cell_present_s19_sn2_e0() {
+  run(corpus_deposit(False, True, True, 2, 1, True, True))
+}
+
+/// Lean grid state 19 (live, poisoned False, frozen True, topped up True, pool 2) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s19_sn2_e1() fail {
+  run(corpus_deposit(False, True, True, 2, 1, False, False))
+}
+
+/// Lean grid state 20 (live, poisoned False, frozen True, topped up True, pool 3) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s20_sn0_e0() fail {
+  run(corpus_deposit(False, True, True, 3, -1, True, True))
+}
+
+/// Lean grid state 20 (live, poisoned False, frozen True, topped up True, pool 3) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s20_sn0_e1() fail {
+  run(corpus_deposit(False, True, True, 3, -1, False, False))
+}
+
+/// Lean grid state 20 (live, poisoned False, frozen True, topped up True, pool 3) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s20_sn1_e0() fail {
+  run(corpus_deposit(False, True, True, 3, 0, True, True))
+}
+
+/// Lean grid state 20 (live, poisoned False, frozen True, topped up True, pool 3) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s20_sn1_e1() fail {
+  run(corpus_deposit(False, True, True, 3, 0, False, False))
+}
+
+/// Lean grid state 20 (live, poisoned False, frozen True, topped up True, pool 3) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+test cell_present_s20_sn2_e0() {
+  run(corpus_deposit(False, True, True, 3, 1, True, True))
+}
+
+/// Lean grid state 20 (live, poisoned False, frozen True, topped up True, pool 3) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s20_sn2_e1() fail {
+  run(corpus_deposit(False, True, True, 3, 1, False, False))
+}
+
+/// Lean grid state 21 (live, poisoned True, frozen False, topped up True, pool 1) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s21_sn0_e0() fail {
+  run(corpus_deposit(True, False, True, 1, -1, True, True))
+}
+
+/// Lean grid state 21 (live, poisoned True, frozen False, topped up True, pool 1) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s21_sn0_e1() fail {
+  run(corpus_deposit(True, False, True, 1, -1, False, False))
+}
+
+/// Lean grid state 21 (live, poisoned True, frozen False, topped up True, pool 1) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s21_sn1_e0() fail {
+  run(corpus_deposit(True, False, True, 1, 0, True, True))
+}
+
+/// Lean grid state 21 (live, poisoned True, frozen False, topped up True, pool 1) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s21_sn1_e1() fail {
+  run(corpus_deposit(True, False, True, 1, 0, False, False))
+}
+
+/// Lean grid state 21 (live, poisoned True, frozen False, topped up True, pool 1) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+test cell_present_s21_sn2_e0() {
+  run(corpus_deposit(True, False, True, 1, 1, True, True))
+}
+
+/// Lean grid state 21 (live, poisoned True, frozen False, topped up True, pool 1) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s21_sn2_e1() fail {
+  run(corpus_deposit(True, False, True, 1, 1, False, False))
+}
+
+/// Lean grid state 22 (live, poisoned True, frozen False, topped up True, pool 2) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s22_sn0_e0() fail {
+  run(corpus_deposit(True, False, True, 2, -1, True, True))
+}
+
+/// Lean grid state 22 (live, poisoned True, frozen False, topped up True, pool 2) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s22_sn0_e1() fail {
+  run(corpus_deposit(True, False, True, 2, -1, False, False))
+}
+
+/// Lean grid state 22 (live, poisoned True, frozen False, topped up True, pool 2) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s22_sn1_e0() fail {
+  run(corpus_deposit(True, False, True, 2, 0, True, True))
+}
+
+/// Lean grid state 22 (live, poisoned True, frozen False, topped up True, pool 2) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s22_sn1_e1() fail {
+  run(corpus_deposit(True, False, True, 2, 0, False, False))
+}
+
+/// Lean grid state 22 (live, poisoned True, frozen False, topped up True, pool 2) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+test cell_present_s22_sn2_e0() {
+  run(corpus_deposit(True, False, True, 2, 1, True, True))
+}
+
+/// Lean grid state 22 (live, poisoned True, frozen False, topped up True, pool 2) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s22_sn2_e1() fail {
+  run(corpus_deposit(True, False, True, 2, 1, False, False))
+}
+
+/// Lean grid state 23 (live, poisoned True, frozen False, topped up True, pool 3) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s23_sn0_e0() fail {
+  run(corpus_deposit(True, False, True, 3, -1, True, True))
+}
+
+/// Lean grid state 23 (live, poisoned True, frozen False, topped up True, pool 3) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s23_sn0_e1() fail {
+  run(corpus_deposit(True, False, True, 3, -1, False, False))
+}
+
+/// Lean grid state 23 (live, poisoned True, frozen False, topped up True, pool 3) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s23_sn1_e0() fail {
+  run(corpus_deposit(True, False, True, 3, 0, True, True))
+}
+
+/// Lean grid state 23 (live, poisoned True, frozen False, topped up True, pool 3) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s23_sn1_e1() fail {
+  run(corpus_deposit(True, False, True, 3, 0, False, False))
+}
+
+/// Lean grid state 23 (live, poisoned True, frozen False, topped up True, pool 3) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+test cell_present_s23_sn2_e0() {
+  run(corpus_deposit(True, False, True, 3, 1, True, True))
+}
+
+/// Lean grid state 23 (live, poisoned True, frozen False, topped up True, pool 3) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s23_sn2_e1() fail {
+  run(corpus_deposit(True, False, True, 3, 1, False, False))
+}
+
+/// Lean grid state 24 (live, poisoned True, frozen True, topped up True, pool 1) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s24_sn0_e0() fail {
+  run(corpus_deposit(True, True, True, 1, -1, True, True))
+}
+
+/// Lean grid state 24 (live, poisoned True, frozen True, topped up True, pool 1) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s24_sn0_e1() fail {
+  run(corpus_deposit(True, True, True, 1, -1, False, False))
+}
+
+/// Lean grid state 24 (live, poisoned True, frozen True, topped up True, pool 1) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s24_sn1_e0() fail {
+  run(corpus_deposit(True, True, True, 1, 0, True, True))
+}
+
+/// Lean grid state 24 (live, poisoned True, frozen True, topped up True, pool 1) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s24_sn1_e1() fail {
+  run(corpus_deposit(True, True, True, 1, 0, False, False))
+}
+
+/// Lean grid state 24 (live, poisoned True, frozen True, topped up True, pool 1) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+test cell_present_s24_sn2_e0() {
+  run(corpus_deposit(True, True, True, 1, 1, True, True))
+}
+
+/// Lean grid state 24 (live, poisoned True, frozen True, topped up True, pool 1) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s24_sn2_e1() fail {
+  run(corpus_deposit(True, True, True, 1, 1, False, False))
+}
+
+/// Lean grid state 25 (live, poisoned True, frozen True, topped up True, pool 2) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s25_sn0_e0() fail {
+  run(corpus_deposit(True, True, True, 2, -1, True, True))
+}
+
+/// Lean grid state 25 (live, poisoned True, frozen True, topped up True, pool 2) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s25_sn0_e1() fail {
+  run(corpus_deposit(True, True, True, 2, -1, False, False))
+}
+
+/// Lean grid state 25 (live, poisoned True, frozen True, topped up True, pool 2) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s25_sn1_e0() fail {
+  run(corpus_deposit(True, True, True, 2, 0, True, True))
+}
+
+/// Lean grid state 25 (live, poisoned True, frozen True, topped up True, pool 2) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s25_sn1_e1() fail {
+  run(corpus_deposit(True, True, True, 2, 0, False, False))
+}
+
+/// Lean grid state 25 (live, poisoned True, frozen True, topped up True, pool 2) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+test cell_present_s25_sn2_e0() {
+  run(corpus_deposit(True, True, True, 2, 1, True, True))
+}
+
+/// Lean grid state 25 (live, poisoned True, frozen True, topped up True, pool 2) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s25_sn2_e1() fail {
+  run(corpus_deposit(True, True, True, 2, 1, False, False))
+}
+
+/// Lean grid state 26 (live, poisoned True, frozen True, topped up True, pool 3) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s26_sn0_e0() fail {
+  run(corpus_deposit(True, True, True, 3, -1, True, True))
+}
+
+/// Lean grid state 26 (live, poisoned True, frozen True, topped up True, pool 3) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s26_sn0_e1() fail {
+  run(corpus_deposit(True, True, True, 3, -1, False, False))
+}
+
+/// Lean grid state 26 (live, poisoned True, frozen True, topped up True, pool 3) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+test cell_present_s26_sn1_e0() fail {
+  run(corpus_deposit(True, True, True, 3, 0, True, True))
+}
+
+/// Lean grid state 26 (live, poisoned True, frozen True, topped up True, pool 3) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s26_sn1_e1() fail {
+  run(corpus_deposit(True, True, True, 3, 0, False, False))
+}
+
+/// Lean grid state 26 (live, poisoned True, frozen True, topped up True, pool 3) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: accepted.
+test cell_present_s26_sn2_e0() {
+  run(corpus_deposit(True, True, True, 3, 1, True, True))
+}
+
+/// Lean grid state 26 (live, poisoned True, frozen True, topped up True, pool 3) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+test cell_present_s26_sn2_e1() fail {
+  run(corpus_deposit(True, True, True, 3, 1, False, False))
 }
 
 /// The deposit step of the corpus trace freeze-then-unfreeze (step 3): a
 /// frozen checkpoint with pool 1 takes the deposit rotation; the bond comes back
 /// and nobody is paid.
 test trace_freeze_then_unfreeze_deposit() {
-  run(corpus_deposit(False, True, 1, 1, True, True))
+  run(corpus_deposit(False, True, False, 1, 1, True, True))
 }

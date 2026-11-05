@@ -51,7 +51,7 @@ epic [#322](https://github.com/lambdasistemi/cardano-keri/issues/322) decides.
 | ClaimFreeze / thaw | Pays the recorded hunter after the deadline; thaw re-posts `B` | **Gone.** No deadline, no claim, no timeout economy |
 | Convict | Burns the token on a witnessed irreconcilable fork | A terminal `Convicted` state on a duplicity proof; `D_reg` in full to the convictor |
 | Poison | — | New: the current quorum declares the epoch compromised |
-| Top-up | — | New: anyone adds to the pool. No signature, no datum change |
+| Top-up | — | New: anyone adds at least one premium to the pool, once between two rotations. No signature. The only datum change is the top-up mark |
 
 ## Register
 
@@ -292,8 +292,14 @@ already controls under KERI and take `D_reg` on the way out. Exposure is
 
 ## Top-up — new in the accepted design
 
-**Top-up** adds value to the pool. No signature, no datum change, anyone. It is
-how a friend, an employer or a consortium pays for an identity's maintenance.
+**Top-up** adds value to the pool, at least one premium `P` at a time and only
+once between two rotations. No signature, anyone. It is how a friend, an
+employer or a consortium pays for an identity's maintenance. A top-up spends the
+checkpoint output, so a stream of tiny ones could keep the controller's own
+rotation and the hunters' transactions from landing; the datum therefore carries
+a top-up mark that a top-up sets and every rotation clears, and a second top-up
+before the next rotation is refused. Registration asks for the same minimum: the
+first pool is at least `P`.
 
 ## What is off chain
 

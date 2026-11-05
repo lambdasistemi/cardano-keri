@@ -18,6 +18,7 @@ pub type Spent {
   pool: Int,
   frozen: Bool,
   poisoned: Bool,
+  topped_up: Bool,
 }
 
 /// What the validator observes: the network it is applied to, the policy and
@@ -131,6 +132,7 @@ pub const requirements: List<Requirement> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -176,6 +178,7 @@ pub const requirements: List<Requirement> =
         pool: 5000000,
         frozen: False,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -221,6 +224,7 @@ pub const requirements: List<Requirement> =
         pool: 0,
         frozen: True,
         poisoned: True,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -266,6 +270,7 @@ pub const requirements: List<Requirement> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -311,6 +316,7 @@ pub const requirements: List<Requirement> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -356,6 +362,7 @@ pub const requirements: List<Requirement> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -401,6 +408,7 @@ pub const requirements: List<Requirement> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -446,6 +454,7 @@ pub const requirements: List<Requirement> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -491,6 +500,7 @@ pub const requirements: List<Requirement> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -536,6 +546,7 @@ pub const requirements: List<Requirement> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -581,6 +592,7 @@ pub const requirements: List<Requirement> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -626,6 +638,7 @@ pub const requirements: List<Requirement> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -671,6 +684,7 @@ pub const requirements: List<Requirement> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -716,6 +730,7 @@ pub const requirements: List<Requirement> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -761,6 +776,7 @@ pub const requirements: List<Requirement> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -806,6 +822,7 @@ pub const requirements: List<Requirement> =
         pool: 5000000,
         frozen: False,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -855,6 +872,7 @@ pub const authorizations: List<Authorization> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -888,6 +906,7 @@ pub const authorizations: List<Authorization> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -925,6 +944,7 @@ pub const authorizations: List<Authorization> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -954,6 +974,7 @@ pub const authorizations: List<Authorization> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -987,6 +1008,7 @@ pub const authorizations: List<Authorization> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -1020,6 +1042,7 @@ pub const authorizations: List<Authorization> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -1053,6 +1076,7 @@ pub const authorizations: List<Authorization> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -1086,6 +1110,7 @@ pub const authorizations: List<Authorization> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -1119,6 +1144,7 @@ pub const authorizations: List<Authorization> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -1152,6 +1178,7 @@ pub const authorizations: List<Authorization> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -1185,6 +1212,7 @@ pub const authorizations: List<Authorization> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -1222,6 +1250,7 @@ pub const authorizations: List<Authorization> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -1263,6 +1292,7 @@ pub const authorizations: List<Authorization> =
         pool: 0,
         frozen: True,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -1300,6 +1330,7 @@ pub const authorizations: List<Authorization> =
         pool: 5000000,
         frozen: False,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,
@@ -1333,6 +1364,7 @@ pub const authorizations: List<Authorization> =
         pool: 5000000,
         frozen: False,
         poisoned: False,
+        topped_up: False,
       },
       facts: Facts {
         network_id: 0,

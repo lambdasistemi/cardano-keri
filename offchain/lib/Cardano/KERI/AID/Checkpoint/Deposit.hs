@@ -209,6 +209,7 @@ data DepositRefusal
     | DepositBelowFloor
     | DepositSuccessorFrameChanged
     | DepositSuccessorPoisoned
+    | DepositSuccessorKeepsMark
     | DepositSuccessorStillFrozen
     | DepositSuccessorValueMismatch
     | DepositPremiumUnpaid
@@ -231,6 +232,7 @@ depositVerdict DepositParams{..} DepositInput{..} = do
             (withValue dpMinAda dpDeposit dpBond dnSpentDatum dnSpentLovelace)
     (sn', epoch', keys') <- case dnSuccessorDatum of
         Live{lvPoisoned = True} -> Left DepositSuccessorPoisoned
+        Live{lvToppedUp = True} -> Left DepositSuccessorKeepsMark
         Live{lvAid, lvSn, lvEpoch, lvBornAt, lvRefundTo, lvKeys}
             | lvAid == aid && lvBornAt == born && lvRefundTo == refund ->
                 Right (lvSn, lvEpoch, lvKeys)

@@ -379,7 +379,7 @@
       "pause": 500
     },
     {
-      "text": "Top-up adds value to the pool. No signature, no datum change, anyone. It is how a friend, an employer or a consortium pays for an identity's maintenance.",
+      "text": "Top-up adds value to the pool, at least one premium at a time and only once between two rotations. No signature, anyone. It is how a friend, an employer or a consortium pays for an identity's maintenance. A top-up spends the checkpoint output, so a stream of tiny ones could keep the controller's own rotation and the hunters' transactions from landing; the datum therefore carries a top-up mark that a top-up sets and every rotation clears, and a second top-up before the next rotation is refused. Registration asks for the same minimum: the first pool is at least P.",
       "pause": 400
     }
   ],
@@ -419,6 +419,6 @@
   ],
   "_source": {
     "file": "identity-ops.md",
-    "sha256": "a648f5f71c3a78b45855dbf8611cf84094068862681cf7da35ed01646439f4ce"
+    "sha256": "77ac6c504def2e6d707e8f40f2079308a6639fe0582ed7b4285ac116afb8ed8a"
   }
 }

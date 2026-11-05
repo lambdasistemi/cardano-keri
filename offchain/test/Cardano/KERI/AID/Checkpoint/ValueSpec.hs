@@ -48,7 +48,10 @@ keys =
         }
 
 live :: Bool -> CheckpointDatumV2
-live frozen =
+live frozen = liveMarked frozen False
+
+liveMarked :: Bool -> Bool -> CheckpointDatumV2
+liveMarked frozen toppedUp =
     Live
         { lvAid = "aid"
         , lvSn = 4
@@ -57,6 +60,7 @@ live frozen =
         , lvFrozen = frozen
         , lvBornAt = 100
         , lvRefundTo = "refund"
+        , lvToppedUp = toppedUp
         , lvKeys = keys
         }
 
@@ -69,6 +73,12 @@ spec = describe "Checkpoint.Value (Lean checkpoint-value-vectors)" $ do
     it "floors a live output at Mc + D + B and a frozen one at Mc + D" $ do
         valueFloor mc d b (live False) `shouldBe` 14
         valueFloor mc d b (live True) `shouldBe` 12
+
+    it "holds the same value whatever the top-up mark says (Lean held row topped-up)" $ do
+        let marked = liveMarked False True
+        valueFloor mc d b marked `shouldBe` valueFloor mc d b (live False)
+        heldValue mc d b marked 4 `shouldBe` heldValue mc d b (live False) 4
+        withValue mc d b marked 18 `shouldBe` withValue mc d b (live False) 18
 
     it "floors a pending termination at Mc whatever the pool" $ do
         valueFloor mc d b pending `shouldBe` 4

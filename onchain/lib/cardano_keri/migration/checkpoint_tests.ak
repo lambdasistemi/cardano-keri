@@ -57,6 +57,7 @@ fn source_at(epoch: Int) -> CheckpointDatumV2 {
     frozen: False,
     born_at: 1_800_000_000_000,
     refund_to: bytearray.concat(#"61", vec.fixture_refund_vkey),
+    topped_up: False,
     keys: source_keys(),
   }
 }

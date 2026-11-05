@@ -9,7 +9,7 @@
       "pause": 400
     },
     {
-      "text": "The hunter's freeze and the controller's deposit rotation, which unfreezes, are one transaction each in this generation of the checkpoint program; ckeri freeze submits the freeze and ckeri advance --deposit the deposit rotation. They run on a local test chain and are not deployed to preprod; this code is not for mainnet. Top-up is accepted design, not shipped. Play The pool runs dry, so Hal freezes her instead and Two hunters race.",
+      "text": "The hunter's freeze and the controller's deposit rotation, which unfreezes, are one transaction each in this generation of the checkpoint program; ckeri freeze submits the freeze and ckeri advance --deposit the deposit rotation. The top-up transaction runs through the production scripts on a local test chain; ckeri top-up plans for preprod only and needs a manifest with a premium, which no committed manifest has until the redeployment (#356). These run on a local test chain and are not deployed to preprod; this code is not for mainnet. Play The pool runs dry, so Hal freezes her instead and Two hunters race.",
       "pause": 400
     },
     {
@@ -25,7 +25,7 @@
       "pause": 400
     },
     {
-      "text": "Anyone may top up the pool. No signature, no datum change. A freeze is refused while the pool covers the premium.",
+      "text": "Anyone may top up the pool by at least one premium, once between two rotations; nobody signs anything. The top-up sets a mark in the datum and changes nothing else. Every rotation clears the mark and a freeze keeps it. A freeze is refused while the pool covers the premium. ckeri top-up, with the identifier and the amount, builds and submits the top-up; it plans for preprod only and needs a manifest with a premium, which no committed manifest has until the redeployment (#356). It refuses an amount below the premium and a checkpoint already topped up since its last rotation before it builds anything.",
       "pause": 400
     },
     {
@@ -43,6 +43,6 @@
   ],
   "_source": {
     "file": "hunters.md",
-    "sha256": "a3e145d2ce0e1a1244ae42c41af32499f8001f8501a8bdf3567f5636d319cde5"
+    "sha256": "8fb133be9fde840faa2b58a4ae111b371a9f8a0aced395bb8d512d35e96e1da3"
   }
 }

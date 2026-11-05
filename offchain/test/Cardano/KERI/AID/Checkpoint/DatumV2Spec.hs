@@ -29,6 +29,7 @@ import Cardano.KERI.AID.Checkpoint.Datum (
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
+    Weight (..),
  )
 import Data.ByteArray.Encoding (
     Base (Base16),
@@ -95,7 +96,44 @@ liveOf aid sn epoch frozen bornAt material =
         , lvFrozen = frozen
         , lvBornAt = bornAt
         , lvRefundTo = refundTo
+        , lvToppedUp = False
         , lvKeys = material
+        }
+
+{- | The Lean's row `topped-up`: the mark set, weighted current threshold,
+three witnesses.
+-}
+toppedUp :: CheckpointDatumV2
+toppedUp =
+    Live
+        { lvAid = "EEBjyTcVHGUZHrR1x3wuxOxbrzH0_cGfAYJJQHME3Pwo"
+        , lvSn = 7
+        , lvEpoch = 3
+        , lvPoisoned = False
+        , lvFrozen = False
+        , lvBornAt = 100
+        , lvRefundTo = refundTo
+        , lvToppedUp = True
+        , lvKeys =
+            KeyMaterial
+                { kmCurKeys =
+                    [ fromHex "5d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f36"
+                    , fromHex "7c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e55"
+                    , fromHex "9ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d74"
+                    ]
+                , kmCurThreshold = Weighted [[Weight 1 2, Weight 1 2], [Weight 1 1]]
+                , kmNextKeys =
+                    [ fromHex "bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c93"
+                    , fromHex "d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2"
+                    ]
+                , kmNextThreshold = Unweighted 2
+                , kmWitnesses =
+                    [ fromHex "f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1"
+                    , fromHex "171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0"
+                    , fromHex "363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f"
+                    ]
+                , kmToad = 2
+                }
         }
 
 pending :: CheckpointDatumV2
@@ -105,8 +143,9 @@ pending =
 -- | (Lean vector id, value, the datum bytes the Lean declares)
 rows :: [(String, CheckpointDatumV2, ByteString)]
 rows =
-    [ ("registered-funded", live 0 0 False, fromHex "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff")
-    , ("frozen", live 4 2 True, fromHex "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87a80186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff")
+    [ ("registered-funded", live 0 0 False, fromHex "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d87980d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff")
+    , ("frozen", live 4 2 True, fromHex "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402d87980d87a80186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d87980d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff")
+    , ("topped-up", toppedUp, fromHex "d87a9fd8799f582c4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776f0703d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d87a80d8799f9f58205d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f3658207c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e5558209ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d74ffd87a9f9f9fd8799f0102ffd8799f0102ffff9fd8799f0101ffffffff9f5820bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c935820d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2ffd8799f02ff9f5820f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad15820171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f05820363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080fff02ffffff")
     , ("pending-termination", pending, fromHex "d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500402ffff")
     ]
 

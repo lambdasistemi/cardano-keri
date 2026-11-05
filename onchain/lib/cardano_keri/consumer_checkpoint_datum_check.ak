@@ -73,7 +73,7 @@ fn bool_data(b: Bool) -> Data {
 
 /// The version 2 live datum of an AID (its numeral), as the Lean `datum`
 /// writes it: not poisoned, not frozen, born at `born_at`, refunding to the
-/// 4-byte address 01020304, sequence number and epoch 0.
+/// 4-byte address 01020304, the top-up mark clear, sequence number and epoch 0.
 pub fn live_datum(aid: Int, born_at: Int) -> Data {
   constr_data(
     1,
@@ -88,6 +88,7 @@ pub fn live_datum(aid: Int, born_at: Int) -> Data {
           bool_data(False),
           i_data(born_at),
           b_data(#"01020304"),
+          bool_data(False),
           simple_keys(),
         ],
       ),

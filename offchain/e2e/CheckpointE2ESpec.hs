@@ -13,11 +13,13 @@ import Control.Monad (void)
 import Test.Hspec
 
 import CheckpointTxBuilder (
+    productionFrozenTopUpScenario,
     productionRegisterAdvanceScenario,
     productionRegisterConvictScenario,
     productionRegisterFreezeScenario,
     productionRegisterFreezeThenDepositScenario,
     productionRegisterScenario,
+    productionRegisterTopUpScenario,
     stagedCheckpointDevnet,
  )
 
@@ -47,3 +49,13 @@ spec = describe "#136 register a small identity end to end" $ do
         it
             "#345 restores the bond of a frozen checkpoint with the controller's deposit rotation, refuses a deposit whose intent names another amount, and the checkpoint is consumable again"
             productionRegisterFreezeThenDepositScenario
+
+    around stagedCheckpointDevnet $ do
+        it
+            "#522 tops a registered checkpoint up by one premium, writes only the mark and refuses a second top-up in the same key state"
+            productionRegisterTopUpScenario
+
+    around stagedCheckpointDevnet $ do
+        it
+            "#522 tops a frozen checkpoint up to cover the premium, then the controller's keep rotation pays it, stays frozen and clears the mark"
+            productionFrozenTopUpScenario

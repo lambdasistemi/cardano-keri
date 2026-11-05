@@ -169,7 +169,7 @@ import Data.Foldable (toList)
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
 import Data.List (elemIndex, isInfixOf)
 import Data.Map.Strict qualified as Map
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as T
@@ -318,6 +318,58 @@ purePlanSpec =
                            ]
                     ]
 
+        describe "the first pool is at least one premium (#522)" $ do
+            let parameters = manifestParameters sampleManifest
+                floorLovelace =
+                    2_000_000
+                        + parameterRegistrationBond parameters
+                        + parameterFreezeBond parameters
+                premium =
+                    fromMaybe
+                        (error "the sample manifest carries a premium")
+                        (parameterPremium parameters)
+                plan escrow manifest = do
+                    fixture <-
+                        getDataFileName
+                            "deployment-test/fixtures/kli-export-single.cesr"
+                    kel <-
+                        BS.readFile fixture
+                            >>= either fail pure . parseInceptionExport
+                    pure (mkRegistrationPlan manifest escrow kel)
+                refusedFor needle = \case
+                    Left message -> needle `isInfixOf` message
+                    Right _ -> False
+            it "plans a registration whose first pool is exactly one premium" $ do
+                planned <- plan (floorLovelace + premium) sampleManifest
+                fmap planEscrowLovelace planned
+                    `shouldBe` Right (floorLovelace + premium)
+            it "plans a registration whose first pool is several premiums" $ do
+                planned <- plan (floorLovelace + 7 * premium) sampleManifest
+                fmap planEscrowLovelace planned
+                    `shouldBe` Right (floorLovelace + 7 * premium)
+            it "refuses a first pool one lovelace below the premium: pool-below-premium" $ do
+                planned <- plan (floorLovelace + premium - 1) sampleManifest
+                planned `shouldSatisfy` refusedFor "pool-below-premium"
+            it "refuses an empty first pool: pool-below-premium" $ do
+                planned <- plan floorLovelace sampleManifest
+                planned `shouldSatisfy` refusedFor "pool-below-premium"
+            it "refuses a carrier below the floor" $ do
+                planned <- plan (floorLovelace - 1) sampleManifest
+                planned `shouldSatisfy` isLeft
+            it "refuses a manifest that carries no premium, with a message that says so" $ do
+                planned <-
+                    plan
+                        (floorLovelace + premium)
+                        sampleManifest
+                            { manifestParameters =
+                                (manifestParameters sampleManifest)
+                                    { parameterPremium = Nothing
+                                    }
+                            }
+                planned
+                    `shouldBe` Left
+                        "the manifest has no premiumLovelace: its generation has no premium and cannot register a pool"
+
         it "binds the genuine KLI export to the immutable V1 manifest" $ do
             fixture <-
                 getDataFileName
@@ -327,7 +379,7 @@ purePlanSpec =
                 either
                     fail
                     pure
-                    (mkRegistrationPlan sampleManifest 1_007_000_000 kel)
+                    (mkRegistrationPlan sampleManifest 1_009_000_000 kel)
             planProofPolicy plan
                 `shouldBe` "d767a22b85d0a1c1e2a987b970e990c22c423b2211e788252d28deca"
             planCheckpointPolicy plan
@@ -336,13 +388,13 @@ purePlanSpec =
                 `shouldBe` "addr_test1wqxpdsfvar9xppev4h25t5fg9uraeya46g4pxnjyy564wdqhr6822"
             T.length (planProofName plan) `shouldBe` 64
             T.length (planCheckpointName plan) `shouldBe` 64
-            planEscrowLovelace plan `shouldBe` 1_007_000_000
+            planEscrowLovelace plan `shouldBe` 1_009_000_000
             let active =
                     ChainAssetUtxo
                         "registertx"
                         0
                         (planCheckpointAddress plan)
-                        1_007_000_000
+                        1_009_000_000
                         [ ChainAsset
                             (planCheckpointPolicy plan)
                             (planCheckpointName plan)

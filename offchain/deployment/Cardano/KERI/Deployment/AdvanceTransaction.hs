@@ -25,6 +25,21 @@ module Cardano.KERI.Deployment.AdvanceTransaction (
     premiumOutputIndex,
     runAdvanceTransaction,
     awaitAdvance,
+
+    -- * Pieces the other checkpoint spends share
+    RawData (..),
+    isPlainUtxo,
+    rawPlanData,
+    planAddress,
+    planAssetName,
+    planScriptHash,
+    planTxIn,
+    renderReference,
+    renderStateOutput,
+    requireCheckpointAsset,
+    resolveReference,
+    scriptNamed,
+    successorValue,
 ) where
 
 import Cardano.Crypto.Hash (hashFromBytes)

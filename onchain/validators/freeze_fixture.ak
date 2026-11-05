@@ -143,8 +143,17 @@ pub fn spent_keys() -> KeyMaterial {
   }
 }
 
-/// The spent checkpoint as a live version 2 datum.
+/// The spent checkpoint as a live version 2 datum, the top-up mark clear.
 pub fn live(poisoned: Bool, frozen: Bool) -> CheckpointDatumV2 {
+  live_marked(poisoned, frozen, False)
+}
+
+/// The spent checkpoint as a live version 2 datum with the top-up mark given.
+pub fn live_marked(
+  poisoned: Bool,
+  frozen: Bool,
+  topped_up: Bool,
+) -> CheckpointDatumV2 {
   Live {
     aid: qb64_aid(spent.cesr_aid),
     sn: spent.native_sn,
@@ -153,6 +162,7 @@ pub fn live(poisoned: Bool, frozen: Bool) -> CheckpointDatumV2 {
     frozen,
     born_at: registered_at,
     refund_to: bytearray.concat(#"61", refund_pkh),
+    topped_up,
     keys: spent_keys(),
   }
 }
@@ -167,12 +177,35 @@ pub type Parts {
   frozen: Bool,
   born_at: Int,
   refund_to: ByteArray,
+  topped_up: Bool,
   keys: KeyMaterial,
 }
 
 pub fn parts(d: CheckpointDatumV2) -> Parts {
-  expect Live { aid, sn, epoch, poisoned, frozen, born_at, refund_to, keys } = d
-  Parts { aid, sn, epoch, poisoned, frozen, born_at, refund_to, keys }
+  expect  
+      Live {
+        aid,
+        sn,
+        epoch,
+        poisoned,
+        frozen,
+        born_at,
+        refund_to,
+        topped_up,
+        keys,
+      }
+    = d
+  Parts {
+    aid,
+    sn,
+    epoch,
+    poisoned,
+    frozen,
+    born_at,
+    refund_to,
+    topped_up,
+    keys,
+  }
 }
 
 pub fn from_parts(p: Parts) -> CheckpointDatumV2 {
@@ -184,6 +217,7 @@ pub fn from_parts(p: Parts) -> CheckpointDatumV2 {
     frozen: p.frozen,
     born_at: p.born_at,
     refund_to: p.refund_to,
+    topped_up: p.topped_up,
     keys: p.keys,
   }
 }
@@ -461,6 +495,7 @@ pub fn spending_case(
 /// One cell of the Lean corpus's boundary grid: the freeze of a present state
 /// whose flags, pool and sequence-number relation are given.
 ///
+/// - `topped_up`: the state's top-up mark; a freeze keeps it
 /// - `pool_units`: the Lean pool, scaled by `unit`
 /// - `sn_relation`: the requested sequence number against the state's own,
 ///   negative (earlier), zero (equal) or positive (later); the later case is
@@ -471,6 +506,7 @@ pub fn spending_case(
 pub fn corpus_freeze(
   poisoned: Bool,
   frozen: Bool,
+  topped_up: Bool,
   pool_units: Int,
   sn_relation: Int,
   rotation_evidenced: Bool,
@@ -483,7 +519,10 @@ pub fn corpus_freeze(
   } else {
     rotated.native_sn + 1
   }
-  let old = Parts { ..parts(live(poisoned, frozen)), sn: spent_sn }
+  let old = Parts {
+    ..parts(live_marked(poisoned, frozen, topped_up)),
+    sn: spent_sn,
+  }
   let floor = if frozen {
     floor_frozen
   } else {

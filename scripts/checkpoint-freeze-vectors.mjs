@@ -16,7 +16,7 @@
 // exactly the freeze bond B).
 //
 // Mapping of the Lean values onto the ledger values (restated in each header):
-//   present state l             a live version 2 datum: `poisoned`, `frozen`
+//   present state l             a live version 2 datum: `poisoned`, `frozen`, `toppedUp`
 //   l.pool (Lean units)         lovelace: pool x 1,000,000 (P = 2, B = 5, D = 1000)
 //   sn' against l.sn            earlier / equal / later; the later case is the
 //                               genuine witnessed rotation, the other two
@@ -52,15 +52,15 @@ if (actionsByIndex.every((a) => a === null)) throw new Error('the corpus grid ha
 // corpus's recorded result.
 const sameLive = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
-// A live state already topped up since its last rotation is not emitted: the
-// corpus helpers do not encode the top-up mark yet. Each such cell is checked
-// here instead: the Lean gives it the verdict of the same state not topped up,
-// and an accepted freeze keeps the mark.
+// The top-up mark does not decide a freeze: the Lean gives a topped-up state
+// the verdict of the same state not topped up, and an accepted freeze keeps the
+// mark. Both are asserted below for every topped-up cell, which is then emitted
+// like any other.
 const unmarked = (s) => (typeof s === 'object' && s !== null && 'present' in s ? { present: { l: { ...s.present.l, toppedUp: false } } } : s);
 const cellAt = (s, a, e) => grid.cells.find((c) => c.s === s && c.a === a && c.e === e);
 const cells = [];
 const skipped = [];
-let markedChecked = 0;
+let markedEmitted = 0;
 let accepted = 0;
 let refused = 0;
 for (const cell of grid.cells) {
@@ -74,8 +74,7 @@ for (const cell of grid.cells) {
     if (!other) throw new Error(`topped-up cell ${cell.s}/${cell.a}/${cell.e} has no cell for the same state not topped up`);
     if ((cell.result === null) !== (other.result === null)) throw new Error(`topped-up cell ${cell.s}/${cell.a}/${cell.e}: the top-up mark changes the freeze verdict`);
     if (cell.result !== null && cell.result.state.present.l.toppedUp !== true) throw new Error(`topped-up cell ${cell.s}/${cell.a}/${cell.e}: a freeze cleared the top-up mark`);
-    markedChecked += 1;
-    continue;
+    markedEmitted += 1;
   }
   if (state === 'absent' || state === 'convicted') {
     skipped.push(`${typeof state === 'string' ? state : 'state'} state ${cell.s}, sn' ${act["sn'"]}, env ${cell.e}`);
@@ -104,6 +103,7 @@ for (const cell of grid.cells) {
     pending: isPending,
     poisoned: isPending ? false : live.poisoned,
     frozen: isPending ? false : live.frozen,
+    toppedUp: isPending ? false : live.toppedUp,
     pool: isPending ? 0 : live.pool,
     snPrime,
     relation,
@@ -114,15 +114,16 @@ for (const cell of grid.cells) {
   else refused += 1;
 }
 
-// Non-vacuity: the grid is 12 live states and 1 pending, three requested
-// sequence numbers, two oracles; both verdicts occur, and the accepted cells
-// are exactly the ones with a short pool, unfrozen, unpoisoned, a later
-// sequence number and the rotation evidenced (one pool value x one sn' x one oracle).
-if (cells.length !== 78) throw new Error(`expected 78 realizable freeze cells, found ${cells.length}`);
-if (markedChecked !== 72) throw new Error(`expected 72 topped-up freeze cells checked, found ${markedChecked}`);
+// Non-vacuity: the grid is 24 live states (12 with the top-up mark set) and 1
+// pending, three requested sequence numbers, two oracles; both verdicts occur,
+// and the accepted cells are exactly the ones with a short pool, unfrozen,
+// unpoisoned, a later sequence number and the rotation evidenced (one pool
+// value x one sn' x one oracle), with the mark clear and with the mark set.
+if (cells.length !== 150) throw new Error(`expected 150 realizable freeze cells, found ${cells.length}`);
+if (markedEmitted !== 72) throw new Error(`expected 72 topped-up freeze cells, found ${markedEmitted}`);
 if (skipped.length !== 12) throw new Error(`expected 12 unrealizable freeze cells, found ${skipped.length}`);
-if (accepted !== 1) throw new Error(`expected exactly 1 accepted freeze cell, found ${accepted}`);
-if (refused !== 77) throw new Error(`expected 77 refused freeze cells, found ${refused}`);
+if (accepted !== 2) throw new Error(`expected exactly 2 accepted freeze cells, found ${accepted}`);
+if (refused !== 148) throw new Error(`expected 148 refused freeze cells, found ${refused}`);
 const names = new Set(cells.map((c) => c.name));
 if (names.size !== cells.length) throw new Error('cell names are not unique');
 
@@ -132,10 +133,10 @@ if (names.size !== cells.length) throw new Error('cell names are not unique');
 const aikenCell = (c) => {
   const call = c.pending
     ? `corpus_freeze_pending(${bool(c.evidenced)})`
-    : `corpus_freeze(${bool(c.poisoned)}, ${bool(c.frozen)}, ${c.pool}, ${c.relation}, ${bool(c.evidenced)})`;
+    : `corpus_freeze(${bool(c.poisoned)}, ${bool(c.frozen)}, ${bool(c.toppedUp)}, ${c.pool}, ${c.relation}, ${bool(c.evidenced)})`;
   const what = c.pending
     ? `termination pending`
-    : `live, poisoned ${bool(c.poisoned)}, frozen ${bool(c.frozen)}, pool ${c.pool}`;
+    : `live, poisoned ${bool(c.poisoned)}, frozen ${bool(c.frozen)}, topped up ${bool(c.toppedUp)}, pool ${c.pool}`;
   return `/// Lean grid state ${c.stateIndex} (${what}) x freeze(sn' = ${c.snPrime}) x ${c.evidenced ? 'the rotation evidenced' : 'no rotation evidenced'}: ${c.verdict ? 'accepted' : 'refused'}.
 test ${c.name}()${c.verdict ? '' : ' fail'} {
   run(${call})
@@ -149,7 +150,7 @@ const aiken = `//// GENERATED by scripts/checkpoint-freeze-vectors.mjs from
 ////
 //// The freeze cells of the Lean corpus's boundary grid (parameters \`P = ${params.P}\`,
 //// \`B = ${params.B}\`, \`D = ${params.D}\`), one test per cell: every live state
-//// (poisoned and frozen both ways, the pool at one below, exactly and one above
+//// (poisoned, frozen and the top-up mark each clear and set, the pool at one below, exactly and one above
 //// the premium), the termination-pending state, a requested sequence number
 //// earlier than, equal to and later than the state's, under an oracle that
 //// evidences the rotation and one that does not. A refused cell is a \`fail\`
@@ -214,6 +215,7 @@ const hsCell = (c) => `    , CorpusCell
         , ccPending = ${hsBool(c.pending)}
         , ccPoisoned = ${hsBool(c.poisoned)}
         , ccFrozen = ${hsBool(c.frozen)}
+        , ccToppedUp = ${hsBool(c.toppedUp)}
         , ccPool = ${c.pool}
         , ccSnRelation = ${c.relation}
         , ccRotationEvidenced = ${hsBool(c.evidenced)}
@@ -249,6 +251,8 @@ data CorpusCell = CorpusCell
     -- ^ the state is a termination pending
     , ccPoisoned :: Bool
     , ccFrozen :: Bool
+    , ccToppedUp :: Bool
+    -- ^ the top-up mark of the live state; a freeze keeps it
     , ccPool :: Integer
     -- ^ the Lean pool, in Lean units
     , ccSnRelation :: Int

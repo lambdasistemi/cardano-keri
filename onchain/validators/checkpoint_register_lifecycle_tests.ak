@@ -97,6 +97,10 @@ const floor_unfrozen: Int = 1_007_000_000
 /// What a live, frozen checkpoint holds before its pool.
 const floor_frozen: Int = 1_002_000_000
 
+/// What a registration carrier holds when the first pool is exactly one
+/// premium, the least the Lean accepts (`p.P ≤ pool0`).
+const register_carrier: Int = 1_009_000_000
+
 /// The registration's upper validity bound, in POSIX milliseconds.
 const registered_at: Int = 1_800_000_000_000
 
@@ -119,6 +123,7 @@ test fixture_amounts_are_the_lean_arithmetic() {
   and {
     floor_unfrozen == mc + d_reg + freeze_bond,
     floor_frozen == mc + d_reg,
+    register_carrier == floor_unfrozen + premium,
     bytearray.length(refund_pkh) == 28,
     bytearray.length(refund_stake_pkh) == 28,
     bytearray.length(hunter_pkh) == 28,
@@ -214,6 +219,7 @@ fn live(
     frozen,
     born_at: registered_at,
     refund_to,
+    topped_up: False,
     keys: keys_of(d),
   }
 }
@@ -236,12 +242,35 @@ type Parts {
   frozen: Bool,
   born_at: Int,
   refund_to: ByteArray,
+  topped_up: Bool,
   keys: KeyMaterial,
 }
 
 fn parts(d: CheckpointDatumV2) -> Parts {
-  expect Live { aid, sn, epoch, poisoned, frozen, born_at, refund_to, keys } = d
-  Parts { aid, sn, epoch, poisoned, frozen, born_at, refund_to, keys }
+  expect  
+      Live {
+        aid,
+        sn,
+        epoch,
+        poisoned,
+        frozen,
+        born_at,
+        refund_to,
+        topped_up,
+        keys,
+      }
+    = d
+  Parts {
+    aid,
+    sn,
+    epoch,
+    poisoned,
+    frozen,
+    born_at,
+    refund_to,
+    topped_up,
+    keys,
+  }
 }
 
 fn from_parts(p: Parts) -> CheckpointDatumV2 {
@@ -253,6 +282,7 @@ fn from_parts(p: Parts) -> CheckpointDatumV2 {
     frozen: p.frozen,
     born_at: p.born_at,
     refund_to: p.refund_to,
+    topped_up: p.topped_up,
     keys: p.keys,
   }
 }
@@ -338,6 +368,7 @@ fn registered(refund_to: ByteArray, born_at: Int) -> CheckpointDatumV2 {
     frozen: False,
     born_at,
     refund_to,
+    topped_up: False,
     keys: keys_of(vec.pos_2key_datum),
   }
 }
@@ -428,7 +459,7 @@ fn register_with(
 fn register_honest() -> Bool {
   register_with(
     registered(refund_enterprise_key(), registered_at),
-    floor_unfrozen,
+    register_carrier,
     upto(registered_at, False),
   )
 }
@@ -440,7 +471,7 @@ test register_writes_live_with_the_lean_initial_facts() {
 test register_accepts_an_inclusive_upper_bound() {
   register_with(
     registered(refund_enterprise_key(), registered_at),
-    floor_unfrozen,
+    register_carrier,
     upto(registered_at, True),
   )
 }
@@ -448,7 +479,7 @@ test register_accepts_an_inclusive_upper_bound() {
 test register_books_the_excess_as_the_initial_pool() {
   register_with(
     registered(refund_enterprise_key(), registered_at),
-    floor_unfrozen + 17,
+    register_carrier + 17,
     upto(registered_at, False),
   )
 }
@@ -464,7 +495,7 @@ test register_refuses_a_carrier_short_by_one_lovelace() fail {
 test register_refuses_born_at_other_than_the_upper_bound() fail {
   register_with(
     registered(refund_enterprise_key(), registered_at + 1),
-    floor_unfrozen,
+    register_carrier,
     upto(registered_at, False),
   )
 }
@@ -472,7 +503,7 @@ test register_refuses_born_at_other_than_the_upper_bound() fail {
 test register_refuses_born_at_at_the_lower_bound() fail {
   register_with(
     registered(refund_enterprise_key(), registered_at - 10_000),
-    floor_unfrozen,
+    register_carrier,
     upto(registered_at, False),
   )
 }
@@ -480,7 +511,7 @@ test register_refuses_born_at_at_the_lower_bound() fail {
 test register_refuses_an_unbounded_upper_bound() fail {
   register_with(
     registered(refund_enterprise_key(), registered_at),
-    floor_unfrozen,
+    register_carrier,
     interval.after(registered_at - 10_000),
   )
 }
@@ -489,7 +520,7 @@ test register_refuses_a_nonzero_sn() fail {
   let datum = registered(refund_enterprise_key(), registered_at)
   register_with(
     from_parts(Parts { ..parts(datum), sn: 1 }),
-    floor_unfrozen,
+    register_carrier,
     upto(registered_at, False),
   )
 }
@@ -498,7 +529,7 @@ test register_refuses_a_nonzero_epoch() fail {
   let datum = registered(refund_enterprise_key(), registered_at)
   register_with(
     from_parts(Parts { ..parts(datum), epoch: 1 }),
-    floor_unfrozen,
+    register_carrier,
     upto(registered_at, False),
   )
 }
@@ -507,7 +538,7 @@ test register_refuses_a_poisoned_start() fail {
   let datum = registered(refund_enterprise_key(), registered_at)
   register_with(
     from_parts(Parts { ..parts(datum), poisoned: True }),
-    floor_unfrozen,
+    register_carrier,
     upto(registered_at, False),
   )
 }
@@ -516,7 +547,7 @@ test register_refuses_a_frozen_start() fail {
   let datum = registered(refund_enterprise_key(), registered_at)
   register_with(
     from_parts(Parts { ..parts(datum), frozen: True }),
-    floor_unfrozen,
+    register_carrier,
     upto(registered_at, False),
   )
 }
@@ -524,7 +555,7 @@ test register_refuses_a_frozen_start() fail {
 test register_refuses_a_termination_pending_start() fail {
   register_with(
     pending(vec.pos_2key_datum),
-    floor_unfrozen,
+    register_carrier,
     upto(registered_at, False),
   )
 }
@@ -539,7 +570,7 @@ test register_refuses_keys_that_are_not_well_formed() fail {
         keys: KeyMaterial { ..keys, toad: keys.toad + 5 },
       },
     ),
-    floor_unfrozen,
+    register_carrier,
     upto(registered_at, False),
   )
 }
@@ -548,7 +579,7 @@ fn register_with_aid_text(text: ByteArray) -> Bool {
   let datum = registered(refund_enterprise_key(), registered_at)
   register_with(
     from_parts(Parts { ..parts(datum), aid: text }),
-    floor_unfrozen,
+    register_carrier,
     upto(registered_at, False),
   )
 }
@@ -596,7 +627,7 @@ test register_refuses_an_aid_the_event_does_not_carry() fail {
   run_register_tx(
     register_tx(
       v2_data(from_parts(Parts { ..parts(datum), aid: qb64_aid(other) })),
-      floor_unfrozen,
+      register_carrier,
       deriveAidAssetName(other),
       proof_token_name(reg_evidence.event_bytes, other),
       reg_evidence,
@@ -613,7 +644,7 @@ test register_names_the_token_over_the_raw_digest_not_the_text() fail {
   run_register_tx(
     register_tx(
       v2_data(registered(refund_enterprise_key(), registered_at)),
-      floor_unfrozen,
+      register_carrier,
       text_name,
       honest_proof(),
       reg_evidence,
@@ -632,7 +663,7 @@ test register_burns_the_hash_proof_named_over_the_raw_digest() fail {
   run_register_tx(
     register_tx(
       v2_data(registered(refund_enterprise_key(), registered_at)),
-      floor_unfrozen,
+      register_carrier,
       honest_name(),
       text_proof,
       reg_evidence,
@@ -647,7 +678,7 @@ test register_refuses_a_version_1_datum() fail {
   run_register_tx(
     register_tx(
       v1_data(v1),
-      floor_unfrozen,
+      register_carrier,
       honest_name(),
       honest_proof(),
       reg_evidence,
@@ -664,7 +695,7 @@ test register_refuses_a_version_1_datum() fail {
 fn register_refund(refund_to: ByteArray) -> Bool {
   register_with(
     registered(refund_to, registered_at),
-    floor_unfrozen,
+    register_carrier,
     upto(registered_at, False),
   )
 }

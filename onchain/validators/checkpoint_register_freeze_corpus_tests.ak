@@ -4,7 +4,7 @@
 ////
 //// The freeze cells of the Lean corpus's boundary grid (parameters `P = 2`,
 //// `B = 5`, `D = 1000`), one test per cell: every live state
-//// (poisoned and frozen both ways, the pool at one below, exactly and one above
+//// (poisoned, frozen and the top-up mark each clear and set, the pool at one below, exactly and one above
 //// the premium), the termination-pending state, a requested sequence number
 //// earlier than, equal to and later than the state's, under an oracle that
 //// evidences the rotation and one that does not. A refused cell is a `fail`
@@ -89,362 +89,722 @@ test cell_pending_s1_sn2_norotation() fail {
   run(corpus_freeze_pending(False))
 }
 
-/// Lean grid state 3 (live, poisoned False, frozen False, pool 1) x freeze(sn' = 0) x the rotation evidenced: refused.
+/// Lean grid state 3 (live, poisoned False, frozen False, topped up False, pool 1) x freeze(sn' = 0) x the rotation evidenced: refused.
 test cell_present_s3_sn0_rotation() fail {
-  run(corpus_freeze(False, False, 1, -1, True))
+  run(corpus_freeze(False, False, False, 1, -1, True))
 }
 
-/// Lean grid state 3 (live, poisoned False, frozen False, pool 1) x freeze(sn' = 0) x no rotation evidenced: refused.
+/// Lean grid state 3 (live, poisoned False, frozen False, topped up False, pool 1) x freeze(sn' = 0) x no rotation evidenced: refused.
 test cell_present_s3_sn0_norotation() fail {
-  run(corpus_freeze(False, False, 1, -1, False))
+  run(corpus_freeze(False, False, False, 1, -1, False))
 }
 
-/// Lean grid state 3 (live, poisoned False, frozen False, pool 1) x freeze(sn' = 1) x the rotation evidenced: refused.
+/// Lean grid state 3 (live, poisoned False, frozen False, topped up False, pool 1) x freeze(sn' = 1) x the rotation evidenced: refused.
 test cell_present_s3_sn1_rotation() fail {
-  run(corpus_freeze(False, False, 1, 0, True))
+  run(corpus_freeze(False, False, False, 1, 0, True))
 }
 
-/// Lean grid state 3 (live, poisoned False, frozen False, pool 1) x freeze(sn' = 1) x no rotation evidenced: refused.
+/// Lean grid state 3 (live, poisoned False, frozen False, topped up False, pool 1) x freeze(sn' = 1) x no rotation evidenced: refused.
 test cell_present_s3_sn1_norotation() fail {
-  run(corpus_freeze(False, False, 1, 0, False))
+  run(corpus_freeze(False, False, False, 1, 0, False))
 }
 
-/// Lean grid state 3 (live, poisoned False, frozen False, pool 1) x freeze(sn' = 2) x the rotation evidenced: accepted.
+/// Lean grid state 3 (live, poisoned False, frozen False, topped up False, pool 1) x freeze(sn' = 2) x the rotation evidenced: accepted.
 test cell_present_s3_sn2_rotation() {
-  run(corpus_freeze(False, False, 1, 1, True))
+  run(corpus_freeze(False, False, False, 1, 1, True))
 }
 
-/// Lean grid state 3 (live, poisoned False, frozen False, pool 1) x freeze(sn' = 2) x no rotation evidenced: refused.
+/// Lean grid state 3 (live, poisoned False, frozen False, topped up False, pool 1) x freeze(sn' = 2) x no rotation evidenced: refused.
 test cell_present_s3_sn2_norotation() fail {
-  run(corpus_freeze(False, False, 1, 1, False))
+  run(corpus_freeze(False, False, False, 1, 1, False))
 }
 
-/// Lean grid state 4 (live, poisoned False, frozen False, pool 2) x freeze(sn' = 0) x the rotation evidenced: refused.
+/// Lean grid state 4 (live, poisoned False, frozen False, topped up False, pool 2) x freeze(sn' = 0) x the rotation evidenced: refused.
 test cell_present_s4_sn0_rotation() fail {
-  run(corpus_freeze(False, False, 2, -1, True))
+  run(corpus_freeze(False, False, False, 2, -1, True))
 }
 
-/// Lean grid state 4 (live, poisoned False, frozen False, pool 2) x freeze(sn' = 0) x no rotation evidenced: refused.
+/// Lean grid state 4 (live, poisoned False, frozen False, topped up False, pool 2) x freeze(sn' = 0) x no rotation evidenced: refused.
 test cell_present_s4_sn0_norotation() fail {
-  run(corpus_freeze(False, False, 2, -1, False))
+  run(corpus_freeze(False, False, False, 2, -1, False))
 }
 
-/// Lean grid state 4 (live, poisoned False, frozen False, pool 2) x freeze(sn' = 1) x the rotation evidenced: refused.
+/// Lean grid state 4 (live, poisoned False, frozen False, topped up False, pool 2) x freeze(sn' = 1) x the rotation evidenced: refused.
 test cell_present_s4_sn1_rotation() fail {
-  run(corpus_freeze(False, False, 2, 0, True))
+  run(corpus_freeze(False, False, False, 2, 0, True))
 }
 
-/// Lean grid state 4 (live, poisoned False, frozen False, pool 2) x freeze(sn' = 1) x no rotation evidenced: refused.
+/// Lean grid state 4 (live, poisoned False, frozen False, topped up False, pool 2) x freeze(sn' = 1) x no rotation evidenced: refused.
 test cell_present_s4_sn1_norotation() fail {
-  run(corpus_freeze(False, False, 2, 0, False))
+  run(corpus_freeze(False, False, False, 2, 0, False))
 }
 
-/// Lean grid state 4 (live, poisoned False, frozen False, pool 2) x freeze(sn' = 2) x the rotation evidenced: refused.
+/// Lean grid state 4 (live, poisoned False, frozen False, topped up False, pool 2) x freeze(sn' = 2) x the rotation evidenced: refused.
 test cell_present_s4_sn2_rotation() fail {
-  run(corpus_freeze(False, False, 2, 1, True))
+  run(corpus_freeze(False, False, False, 2, 1, True))
 }
 
-/// Lean grid state 4 (live, poisoned False, frozen False, pool 2) x freeze(sn' = 2) x no rotation evidenced: refused.
+/// Lean grid state 4 (live, poisoned False, frozen False, topped up False, pool 2) x freeze(sn' = 2) x no rotation evidenced: refused.
 test cell_present_s4_sn2_norotation() fail {
-  run(corpus_freeze(False, False, 2, 1, False))
+  run(corpus_freeze(False, False, False, 2, 1, False))
 }
 
-/// Lean grid state 5 (live, poisoned False, frozen False, pool 3) x freeze(sn' = 0) x the rotation evidenced: refused.
+/// Lean grid state 5 (live, poisoned False, frozen False, topped up False, pool 3) x freeze(sn' = 0) x the rotation evidenced: refused.
 test cell_present_s5_sn0_rotation() fail {
-  run(corpus_freeze(False, False, 3, -1, True))
+  run(corpus_freeze(False, False, False, 3, -1, True))
 }
 
-/// Lean grid state 5 (live, poisoned False, frozen False, pool 3) x freeze(sn' = 0) x no rotation evidenced: refused.
+/// Lean grid state 5 (live, poisoned False, frozen False, topped up False, pool 3) x freeze(sn' = 0) x no rotation evidenced: refused.
 test cell_present_s5_sn0_norotation() fail {
-  run(corpus_freeze(False, False, 3, -1, False))
+  run(corpus_freeze(False, False, False, 3, -1, False))
 }
 
-/// Lean grid state 5 (live, poisoned False, frozen False, pool 3) x freeze(sn' = 1) x the rotation evidenced: refused.
+/// Lean grid state 5 (live, poisoned False, frozen False, topped up False, pool 3) x freeze(sn' = 1) x the rotation evidenced: refused.
 test cell_present_s5_sn1_rotation() fail {
-  run(corpus_freeze(False, False, 3, 0, True))
+  run(corpus_freeze(False, False, False, 3, 0, True))
 }
 
-/// Lean grid state 5 (live, poisoned False, frozen False, pool 3) x freeze(sn' = 1) x no rotation evidenced: refused.
+/// Lean grid state 5 (live, poisoned False, frozen False, topped up False, pool 3) x freeze(sn' = 1) x no rotation evidenced: refused.
 test cell_present_s5_sn1_norotation() fail {
-  run(corpus_freeze(False, False, 3, 0, False))
+  run(corpus_freeze(False, False, False, 3, 0, False))
 }
 
-/// Lean grid state 5 (live, poisoned False, frozen False, pool 3) x freeze(sn' = 2) x the rotation evidenced: refused.
+/// Lean grid state 5 (live, poisoned False, frozen False, topped up False, pool 3) x freeze(sn' = 2) x the rotation evidenced: refused.
 test cell_present_s5_sn2_rotation() fail {
-  run(corpus_freeze(False, False, 3, 1, True))
+  run(corpus_freeze(False, False, False, 3, 1, True))
 }
 
-/// Lean grid state 5 (live, poisoned False, frozen False, pool 3) x freeze(sn' = 2) x no rotation evidenced: refused.
+/// Lean grid state 5 (live, poisoned False, frozen False, topped up False, pool 3) x freeze(sn' = 2) x no rotation evidenced: refused.
 test cell_present_s5_sn2_norotation() fail {
-  run(corpus_freeze(False, False, 3, 1, False))
+  run(corpus_freeze(False, False, False, 3, 1, False))
 }
 
-/// Lean grid state 6 (live, poisoned False, frozen True, pool 1) x freeze(sn' = 0) x the rotation evidenced: refused.
+/// Lean grid state 6 (live, poisoned False, frozen True, topped up False, pool 1) x freeze(sn' = 0) x the rotation evidenced: refused.
 test cell_present_s6_sn0_rotation() fail {
-  run(corpus_freeze(False, True, 1, -1, True))
+  run(corpus_freeze(False, True, False, 1, -1, True))
 }
 
-/// Lean grid state 6 (live, poisoned False, frozen True, pool 1) x freeze(sn' = 0) x no rotation evidenced: refused.
+/// Lean grid state 6 (live, poisoned False, frozen True, topped up False, pool 1) x freeze(sn' = 0) x no rotation evidenced: refused.
 test cell_present_s6_sn0_norotation() fail {
-  run(corpus_freeze(False, True, 1, -1, False))
+  run(corpus_freeze(False, True, False, 1, -1, False))
 }
 
-/// Lean grid state 6 (live, poisoned False, frozen True, pool 1) x freeze(sn' = 1) x the rotation evidenced: refused.
+/// Lean grid state 6 (live, poisoned False, frozen True, topped up False, pool 1) x freeze(sn' = 1) x the rotation evidenced: refused.
 test cell_present_s6_sn1_rotation() fail {
-  run(corpus_freeze(False, True, 1, 0, True))
+  run(corpus_freeze(False, True, False, 1, 0, True))
 }
 
-/// Lean grid state 6 (live, poisoned False, frozen True, pool 1) x freeze(sn' = 1) x no rotation evidenced: refused.
+/// Lean grid state 6 (live, poisoned False, frozen True, topped up False, pool 1) x freeze(sn' = 1) x no rotation evidenced: refused.
 test cell_present_s6_sn1_norotation() fail {
-  run(corpus_freeze(False, True, 1, 0, False))
+  run(corpus_freeze(False, True, False, 1, 0, False))
 }
 
-/// Lean grid state 6 (live, poisoned False, frozen True, pool 1) x freeze(sn' = 2) x the rotation evidenced: refused.
+/// Lean grid state 6 (live, poisoned False, frozen True, topped up False, pool 1) x freeze(sn' = 2) x the rotation evidenced: refused.
 test cell_present_s6_sn2_rotation() fail {
-  run(corpus_freeze(False, True, 1, 1, True))
+  run(corpus_freeze(False, True, False, 1, 1, True))
 }
 
-/// Lean grid state 6 (live, poisoned False, frozen True, pool 1) x freeze(sn' = 2) x no rotation evidenced: refused.
+/// Lean grid state 6 (live, poisoned False, frozen True, topped up False, pool 1) x freeze(sn' = 2) x no rotation evidenced: refused.
 test cell_present_s6_sn2_norotation() fail {
-  run(corpus_freeze(False, True, 1, 1, False))
+  run(corpus_freeze(False, True, False, 1, 1, False))
 }
 
-/// Lean grid state 7 (live, poisoned False, frozen True, pool 2) x freeze(sn' = 0) x the rotation evidenced: refused.
+/// Lean grid state 7 (live, poisoned False, frozen True, topped up False, pool 2) x freeze(sn' = 0) x the rotation evidenced: refused.
 test cell_present_s7_sn0_rotation() fail {
-  run(corpus_freeze(False, True, 2, -1, True))
+  run(corpus_freeze(False, True, False, 2, -1, True))
 }
 
-/// Lean grid state 7 (live, poisoned False, frozen True, pool 2) x freeze(sn' = 0) x no rotation evidenced: refused.
+/// Lean grid state 7 (live, poisoned False, frozen True, topped up False, pool 2) x freeze(sn' = 0) x no rotation evidenced: refused.
 test cell_present_s7_sn0_norotation() fail {
-  run(corpus_freeze(False, True, 2, -1, False))
+  run(corpus_freeze(False, True, False, 2, -1, False))
 }
 
-/// Lean grid state 7 (live, poisoned False, frozen True, pool 2) x freeze(sn' = 1) x the rotation evidenced: refused.
+/// Lean grid state 7 (live, poisoned False, frozen True, topped up False, pool 2) x freeze(sn' = 1) x the rotation evidenced: refused.
 test cell_present_s7_sn1_rotation() fail {
-  run(corpus_freeze(False, True, 2, 0, True))
+  run(corpus_freeze(False, True, False, 2, 0, True))
 }
 
-/// Lean grid state 7 (live, poisoned False, frozen True, pool 2) x freeze(sn' = 1) x no rotation evidenced: refused.
+/// Lean grid state 7 (live, poisoned False, frozen True, topped up False, pool 2) x freeze(sn' = 1) x no rotation evidenced: refused.
 test cell_present_s7_sn1_norotation() fail {
-  run(corpus_freeze(False, True, 2, 0, False))
+  run(corpus_freeze(False, True, False, 2, 0, False))
 }
 
-/// Lean grid state 7 (live, poisoned False, frozen True, pool 2) x freeze(sn' = 2) x the rotation evidenced: refused.
+/// Lean grid state 7 (live, poisoned False, frozen True, topped up False, pool 2) x freeze(sn' = 2) x the rotation evidenced: refused.
 test cell_present_s7_sn2_rotation() fail {
-  run(corpus_freeze(False, True, 2, 1, True))
+  run(corpus_freeze(False, True, False, 2, 1, True))
 }
 
-/// Lean grid state 7 (live, poisoned False, frozen True, pool 2) x freeze(sn' = 2) x no rotation evidenced: refused.
+/// Lean grid state 7 (live, poisoned False, frozen True, topped up False, pool 2) x freeze(sn' = 2) x no rotation evidenced: refused.
 test cell_present_s7_sn2_norotation() fail {
-  run(corpus_freeze(False, True, 2, 1, False))
+  run(corpus_freeze(False, True, False, 2, 1, False))
 }
 
-/// Lean grid state 8 (live, poisoned False, frozen True, pool 3) x freeze(sn' = 0) x the rotation evidenced: refused.
+/// Lean grid state 8 (live, poisoned False, frozen True, topped up False, pool 3) x freeze(sn' = 0) x the rotation evidenced: refused.
 test cell_present_s8_sn0_rotation() fail {
-  run(corpus_freeze(False, True, 3, -1, True))
+  run(corpus_freeze(False, True, False, 3, -1, True))
 }
 
-/// Lean grid state 8 (live, poisoned False, frozen True, pool 3) x freeze(sn' = 0) x no rotation evidenced: refused.
+/// Lean grid state 8 (live, poisoned False, frozen True, topped up False, pool 3) x freeze(sn' = 0) x no rotation evidenced: refused.
 test cell_present_s8_sn0_norotation() fail {
-  run(corpus_freeze(False, True, 3, -1, False))
+  run(corpus_freeze(False, True, False, 3, -1, False))
 }
 
-/// Lean grid state 8 (live, poisoned False, frozen True, pool 3) x freeze(sn' = 1) x the rotation evidenced: refused.
+/// Lean grid state 8 (live, poisoned False, frozen True, topped up False, pool 3) x freeze(sn' = 1) x the rotation evidenced: refused.
 test cell_present_s8_sn1_rotation() fail {
-  run(corpus_freeze(False, True, 3, 0, True))
+  run(corpus_freeze(False, True, False, 3, 0, True))
 }
 
-/// Lean grid state 8 (live, poisoned False, frozen True, pool 3) x freeze(sn' = 1) x no rotation evidenced: refused.
+/// Lean grid state 8 (live, poisoned False, frozen True, topped up False, pool 3) x freeze(sn' = 1) x no rotation evidenced: refused.
 test cell_present_s8_sn1_norotation() fail {
-  run(corpus_freeze(False, True, 3, 0, False))
+  run(corpus_freeze(False, True, False, 3, 0, False))
 }
 
-/// Lean grid state 8 (live, poisoned False, frozen True, pool 3) x freeze(sn' = 2) x the rotation evidenced: refused.
+/// Lean grid state 8 (live, poisoned False, frozen True, topped up False, pool 3) x freeze(sn' = 2) x the rotation evidenced: refused.
 test cell_present_s8_sn2_rotation() fail {
-  run(corpus_freeze(False, True, 3, 1, True))
+  run(corpus_freeze(False, True, False, 3, 1, True))
 }
 
-/// Lean grid state 8 (live, poisoned False, frozen True, pool 3) x freeze(sn' = 2) x no rotation evidenced: refused.
+/// Lean grid state 8 (live, poisoned False, frozen True, topped up False, pool 3) x freeze(sn' = 2) x no rotation evidenced: refused.
 test cell_present_s8_sn2_norotation() fail {
-  run(corpus_freeze(False, True, 3, 1, False))
+  run(corpus_freeze(False, True, False, 3, 1, False))
 }
 
-/// Lean grid state 9 (live, poisoned True, frozen False, pool 1) x freeze(sn' = 0) x the rotation evidenced: refused.
+/// Lean grid state 9 (live, poisoned True, frozen False, topped up False, pool 1) x freeze(sn' = 0) x the rotation evidenced: refused.
 test cell_present_s9_sn0_rotation() fail {
-  run(corpus_freeze(True, False, 1, -1, True))
+  run(corpus_freeze(True, False, False, 1, -1, True))
 }
 
-/// Lean grid state 9 (live, poisoned True, frozen False, pool 1) x freeze(sn' = 0) x no rotation evidenced: refused.
+/// Lean grid state 9 (live, poisoned True, frozen False, topped up False, pool 1) x freeze(sn' = 0) x no rotation evidenced: refused.
 test cell_present_s9_sn0_norotation() fail {
-  run(corpus_freeze(True, False, 1, -1, False))
+  run(corpus_freeze(True, False, False, 1, -1, False))
 }
 
-/// Lean grid state 9 (live, poisoned True, frozen False, pool 1) x freeze(sn' = 1) x the rotation evidenced: refused.
+/// Lean grid state 9 (live, poisoned True, frozen False, topped up False, pool 1) x freeze(sn' = 1) x the rotation evidenced: refused.
 test cell_present_s9_sn1_rotation() fail {
-  run(corpus_freeze(True, False, 1, 0, True))
+  run(corpus_freeze(True, False, False, 1, 0, True))
 }
 
-/// Lean grid state 9 (live, poisoned True, frozen False, pool 1) x freeze(sn' = 1) x no rotation evidenced: refused.
+/// Lean grid state 9 (live, poisoned True, frozen False, topped up False, pool 1) x freeze(sn' = 1) x no rotation evidenced: refused.
 test cell_present_s9_sn1_norotation() fail {
-  run(corpus_freeze(True, False, 1, 0, False))
+  run(corpus_freeze(True, False, False, 1, 0, False))
 }
 
-/// Lean grid state 9 (live, poisoned True, frozen False, pool 1) x freeze(sn' = 2) x the rotation evidenced: refused.
+/// Lean grid state 9 (live, poisoned True, frozen False, topped up False, pool 1) x freeze(sn' = 2) x the rotation evidenced: refused.
 test cell_present_s9_sn2_rotation() fail {
-  run(corpus_freeze(True, False, 1, 1, True))
+  run(corpus_freeze(True, False, False, 1, 1, True))
 }
 
-/// Lean grid state 9 (live, poisoned True, frozen False, pool 1) x freeze(sn' = 2) x no rotation evidenced: refused.
+/// Lean grid state 9 (live, poisoned True, frozen False, topped up False, pool 1) x freeze(sn' = 2) x no rotation evidenced: refused.
 test cell_present_s9_sn2_norotation() fail {
-  run(corpus_freeze(True, False, 1, 1, False))
+  run(corpus_freeze(True, False, False, 1, 1, False))
 }
 
-/// Lean grid state 10 (live, poisoned True, frozen False, pool 2) x freeze(sn' = 0) x the rotation evidenced: refused.
+/// Lean grid state 10 (live, poisoned True, frozen False, topped up False, pool 2) x freeze(sn' = 0) x the rotation evidenced: refused.
 test cell_present_s10_sn0_rotation() fail {
-  run(corpus_freeze(True, False, 2, -1, True))
+  run(corpus_freeze(True, False, False, 2, -1, True))
 }
 
-/// Lean grid state 10 (live, poisoned True, frozen False, pool 2) x freeze(sn' = 0) x no rotation evidenced: refused.
+/// Lean grid state 10 (live, poisoned True, frozen False, topped up False, pool 2) x freeze(sn' = 0) x no rotation evidenced: refused.
 test cell_present_s10_sn0_norotation() fail {
-  run(corpus_freeze(True, False, 2, -1, False))
+  run(corpus_freeze(True, False, False, 2, -1, False))
 }
 
-/// Lean grid state 10 (live, poisoned True, frozen False, pool 2) x freeze(sn' = 1) x the rotation evidenced: refused.
+/// Lean grid state 10 (live, poisoned True, frozen False, topped up False, pool 2) x freeze(sn' = 1) x the rotation evidenced: refused.
 test cell_present_s10_sn1_rotation() fail {
-  run(corpus_freeze(True, False, 2, 0, True))
+  run(corpus_freeze(True, False, False, 2, 0, True))
 }
 
-/// Lean grid state 10 (live, poisoned True, frozen False, pool 2) x freeze(sn' = 1) x no rotation evidenced: refused.
+/// Lean grid state 10 (live, poisoned True, frozen False, topped up False, pool 2) x freeze(sn' = 1) x no rotation evidenced: refused.
 test cell_present_s10_sn1_norotation() fail {
-  run(corpus_freeze(True, False, 2, 0, False))
+  run(corpus_freeze(True, False, False, 2, 0, False))
 }
 
-/// Lean grid state 10 (live, poisoned True, frozen False, pool 2) x freeze(sn' = 2) x the rotation evidenced: refused.
+/// Lean grid state 10 (live, poisoned True, frozen False, topped up False, pool 2) x freeze(sn' = 2) x the rotation evidenced: refused.
 test cell_present_s10_sn2_rotation() fail {
-  run(corpus_freeze(True, False, 2, 1, True))
+  run(corpus_freeze(True, False, False, 2, 1, True))
 }
 
-/// Lean grid state 10 (live, poisoned True, frozen False, pool 2) x freeze(sn' = 2) x no rotation evidenced: refused.
+/// Lean grid state 10 (live, poisoned True, frozen False, topped up False, pool 2) x freeze(sn' = 2) x no rotation evidenced: refused.
 test cell_present_s10_sn2_norotation() fail {
-  run(corpus_freeze(True, False, 2, 1, False))
+  run(corpus_freeze(True, False, False, 2, 1, False))
 }
 
-/// Lean grid state 11 (live, poisoned True, frozen False, pool 3) x freeze(sn' = 0) x the rotation evidenced: refused.
+/// Lean grid state 11 (live, poisoned True, frozen False, topped up False, pool 3) x freeze(sn' = 0) x the rotation evidenced: refused.
 test cell_present_s11_sn0_rotation() fail {
-  run(corpus_freeze(True, False, 3, -1, True))
+  run(corpus_freeze(True, False, False, 3, -1, True))
 }
 
-/// Lean grid state 11 (live, poisoned True, frozen False, pool 3) x freeze(sn' = 0) x no rotation evidenced: refused.
+/// Lean grid state 11 (live, poisoned True, frozen False, topped up False, pool 3) x freeze(sn' = 0) x no rotation evidenced: refused.
 test cell_present_s11_sn0_norotation() fail {
-  run(corpus_freeze(True, False, 3, -1, False))
+  run(corpus_freeze(True, False, False, 3, -1, False))
 }
 
-/// Lean grid state 11 (live, poisoned True, frozen False, pool 3) x freeze(sn' = 1) x the rotation evidenced: refused.
+/// Lean grid state 11 (live, poisoned True, frozen False, topped up False, pool 3) x freeze(sn' = 1) x the rotation evidenced: refused.
 test cell_present_s11_sn1_rotation() fail {
-  run(corpus_freeze(True, False, 3, 0, True))
+  run(corpus_freeze(True, False, False, 3, 0, True))
 }
 
-/// Lean grid state 11 (live, poisoned True, frozen False, pool 3) x freeze(sn' = 1) x no rotation evidenced: refused.
+/// Lean grid state 11 (live, poisoned True, frozen False, topped up False, pool 3) x freeze(sn' = 1) x no rotation evidenced: refused.
 test cell_present_s11_sn1_norotation() fail {
-  run(corpus_freeze(True, False, 3, 0, False))
+  run(corpus_freeze(True, False, False, 3, 0, False))
 }
 
-/// Lean grid state 11 (live, poisoned True, frozen False, pool 3) x freeze(sn' = 2) x the rotation evidenced: refused.
+/// Lean grid state 11 (live, poisoned True, frozen False, topped up False, pool 3) x freeze(sn' = 2) x the rotation evidenced: refused.
 test cell_present_s11_sn2_rotation() fail {
-  run(corpus_freeze(True, False, 3, 1, True))
+  run(corpus_freeze(True, False, False, 3, 1, True))
 }
 
-/// Lean grid state 11 (live, poisoned True, frozen False, pool 3) x freeze(sn' = 2) x no rotation evidenced: refused.
+/// Lean grid state 11 (live, poisoned True, frozen False, topped up False, pool 3) x freeze(sn' = 2) x no rotation evidenced: refused.
 test cell_present_s11_sn2_norotation() fail {
-  run(corpus_freeze(True, False, 3, 1, False))
+  run(corpus_freeze(True, False, False, 3, 1, False))
 }
 
-/// Lean grid state 12 (live, poisoned True, frozen True, pool 1) x freeze(sn' = 0) x the rotation evidenced: refused.
+/// Lean grid state 12 (live, poisoned True, frozen True, topped up False, pool 1) x freeze(sn' = 0) x the rotation evidenced: refused.
 test cell_present_s12_sn0_rotation() fail {
-  run(corpus_freeze(True, True, 1, -1, True))
+  run(corpus_freeze(True, True, False, 1, -1, True))
 }
 
-/// Lean grid state 12 (live, poisoned True, frozen True, pool 1) x freeze(sn' = 0) x no rotation evidenced: refused.
+/// Lean grid state 12 (live, poisoned True, frozen True, topped up False, pool 1) x freeze(sn' = 0) x no rotation evidenced: refused.
 test cell_present_s12_sn0_norotation() fail {
-  run(corpus_freeze(True, True, 1, -1, False))
+  run(corpus_freeze(True, True, False, 1, -1, False))
 }
 
-/// Lean grid state 12 (live, poisoned True, frozen True, pool 1) x freeze(sn' = 1) x the rotation evidenced: refused.
+/// Lean grid state 12 (live, poisoned True, frozen True, topped up False, pool 1) x freeze(sn' = 1) x the rotation evidenced: refused.
 test cell_present_s12_sn1_rotation() fail {
-  run(corpus_freeze(True, True, 1, 0, True))
+  run(corpus_freeze(True, True, False, 1, 0, True))
 }
 
-/// Lean grid state 12 (live, poisoned True, frozen True, pool 1) x freeze(sn' = 1) x no rotation evidenced: refused.
+/// Lean grid state 12 (live, poisoned True, frozen True, topped up False, pool 1) x freeze(sn' = 1) x no rotation evidenced: refused.
 test cell_present_s12_sn1_norotation() fail {
-  run(corpus_freeze(True, True, 1, 0, False))
+  run(corpus_freeze(True, True, False, 1, 0, False))
 }
 
-/// Lean grid state 12 (live, poisoned True, frozen True, pool 1) x freeze(sn' = 2) x the rotation evidenced: refused.
+/// Lean grid state 12 (live, poisoned True, frozen True, topped up False, pool 1) x freeze(sn' = 2) x the rotation evidenced: refused.
 test cell_present_s12_sn2_rotation() fail {
-  run(corpus_freeze(True, True, 1, 1, True))
+  run(corpus_freeze(True, True, False, 1, 1, True))
 }
 
-/// Lean grid state 12 (live, poisoned True, frozen True, pool 1) x freeze(sn' = 2) x no rotation evidenced: refused.
+/// Lean grid state 12 (live, poisoned True, frozen True, topped up False, pool 1) x freeze(sn' = 2) x no rotation evidenced: refused.
 test cell_present_s12_sn2_norotation() fail {
-  run(corpus_freeze(True, True, 1, 1, False))
+  run(corpus_freeze(True, True, False, 1, 1, False))
 }
 
-/// Lean grid state 13 (live, poisoned True, frozen True, pool 2) x freeze(sn' = 0) x the rotation evidenced: refused.
+/// Lean grid state 13 (live, poisoned True, frozen True, topped up False, pool 2) x freeze(sn' = 0) x the rotation evidenced: refused.
 test cell_present_s13_sn0_rotation() fail {
-  run(corpus_freeze(True, True, 2, -1, True))
+  run(corpus_freeze(True, True, False, 2, -1, True))
 }
 
-/// Lean grid state 13 (live, poisoned True, frozen True, pool 2) x freeze(sn' = 0) x no rotation evidenced: refused.
+/// Lean grid state 13 (live, poisoned True, frozen True, topped up False, pool 2) x freeze(sn' = 0) x no rotation evidenced: refused.
 test cell_present_s13_sn0_norotation() fail {
-  run(corpus_freeze(True, True, 2, -1, False))
+  run(corpus_freeze(True, True, False, 2, -1, False))
 }
 
-/// Lean grid state 13 (live, poisoned True, frozen True, pool 2) x freeze(sn' = 1) x the rotation evidenced: refused.
+/// Lean grid state 13 (live, poisoned True, frozen True, topped up False, pool 2) x freeze(sn' = 1) x the rotation evidenced: refused.
 test cell_present_s13_sn1_rotation() fail {
-  run(corpus_freeze(True, True, 2, 0, True))
+  run(corpus_freeze(True, True, False, 2, 0, True))
 }
 
-/// Lean grid state 13 (live, poisoned True, frozen True, pool 2) x freeze(sn' = 1) x no rotation evidenced: refused.
+/// Lean grid state 13 (live, poisoned True, frozen True, topped up False, pool 2) x freeze(sn' = 1) x no rotation evidenced: refused.
 test cell_present_s13_sn1_norotation() fail {
-  run(corpus_freeze(True, True, 2, 0, False))
+  run(corpus_freeze(True, True, False, 2, 0, False))
 }
 
-/// Lean grid state 13 (live, poisoned True, frozen True, pool 2) x freeze(sn' = 2) x the rotation evidenced: refused.
+/// Lean grid state 13 (live, poisoned True, frozen True, topped up False, pool 2) x freeze(sn' = 2) x the rotation evidenced: refused.
 test cell_present_s13_sn2_rotation() fail {
-  run(corpus_freeze(True, True, 2, 1, True))
+  run(corpus_freeze(True, True, False, 2, 1, True))
 }
 
-/// Lean grid state 13 (live, poisoned True, frozen True, pool 2) x freeze(sn' = 2) x no rotation evidenced: refused.
+/// Lean grid state 13 (live, poisoned True, frozen True, topped up False, pool 2) x freeze(sn' = 2) x no rotation evidenced: refused.
 test cell_present_s13_sn2_norotation() fail {
-  run(corpus_freeze(True, True, 2, 1, False))
+  run(corpus_freeze(True, True, False, 2, 1, False))
 }
 
-/// Lean grid state 14 (live, poisoned True, frozen True, pool 3) x freeze(sn' = 0) x the rotation evidenced: refused.
+/// Lean grid state 14 (live, poisoned True, frozen True, topped up False, pool 3) x freeze(sn' = 0) x the rotation evidenced: refused.
 test cell_present_s14_sn0_rotation() fail {
-  run(corpus_freeze(True, True, 3, -1, True))
+  run(corpus_freeze(True, True, False, 3, -1, True))
 }
 
-/// Lean grid state 14 (live, poisoned True, frozen True, pool 3) x freeze(sn' = 0) x no rotation evidenced: refused.
+/// Lean grid state 14 (live, poisoned True, frozen True, topped up False, pool 3) x freeze(sn' = 0) x no rotation evidenced: refused.
 test cell_present_s14_sn0_norotation() fail {
-  run(corpus_freeze(True, True, 3, -1, False))
+  run(corpus_freeze(True, True, False, 3, -1, False))
 }
 
-/// Lean grid state 14 (live, poisoned True, frozen True, pool 3) x freeze(sn' = 1) x the rotation evidenced: refused.
+/// Lean grid state 14 (live, poisoned True, frozen True, topped up False, pool 3) x freeze(sn' = 1) x the rotation evidenced: refused.
 test cell_present_s14_sn1_rotation() fail {
-  run(corpus_freeze(True, True, 3, 0, True))
+  run(corpus_freeze(True, True, False, 3, 0, True))
 }
 
-/// Lean grid state 14 (live, poisoned True, frozen True, pool 3) x freeze(sn' = 1) x no rotation evidenced: refused.
+/// Lean grid state 14 (live, poisoned True, frozen True, topped up False, pool 3) x freeze(sn' = 1) x no rotation evidenced: refused.
 test cell_present_s14_sn1_norotation() fail {
-  run(corpus_freeze(True, True, 3, 0, False))
+  run(corpus_freeze(True, True, False, 3, 0, False))
 }
 
-/// Lean grid state 14 (live, poisoned True, frozen True, pool 3) x freeze(sn' = 2) x the rotation evidenced: refused.
+/// Lean grid state 14 (live, poisoned True, frozen True, topped up False, pool 3) x freeze(sn' = 2) x the rotation evidenced: refused.
 test cell_present_s14_sn2_rotation() fail {
-  run(corpus_freeze(True, True, 3, 1, True))
+  run(corpus_freeze(True, True, False, 3, 1, True))
 }
 
-/// Lean grid state 14 (live, poisoned True, frozen True, pool 3) x freeze(sn' = 2) x no rotation evidenced: refused.
+/// Lean grid state 14 (live, poisoned True, frozen True, topped up False, pool 3) x freeze(sn' = 2) x no rotation evidenced: refused.
 test cell_present_s14_sn2_norotation() fail {
-  run(corpus_freeze(True, True, 3, 1, False))
+  run(corpus_freeze(True, True, False, 3, 1, False))
+}
+
+/// Lean grid state 15 (live, poisoned False, frozen False, topped up True, pool 1) x freeze(sn' = 0) x the rotation evidenced: refused.
+test cell_present_s15_sn0_rotation() fail {
+  run(corpus_freeze(False, False, True, 1, -1, True))
+}
+
+/// Lean grid state 15 (live, poisoned False, frozen False, topped up True, pool 1) x freeze(sn' = 0) x no rotation evidenced: refused.
+test cell_present_s15_sn0_norotation() fail {
+  run(corpus_freeze(False, False, True, 1, -1, False))
+}
+
+/// Lean grid state 15 (live, poisoned False, frozen False, topped up True, pool 1) x freeze(sn' = 1) x the rotation evidenced: refused.
+test cell_present_s15_sn1_rotation() fail {
+  run(corpus_freeze(False, False, True, 1, 0, True))
+}
+
+/// Lean grid state 15 (live, poisoned False, frozen False, topped up True, pool 1) x freeze(sn' = 1) x no rotation evidenced: refused.
+test cell_present_s15_sn1_norotation() fail {
+  run(corpus_freeze(False, False, True, 1, 0, False))
+}
+
+/// Lean grid state 15 (live, poisoned False, frozen False, topped up True, pool 1) x freeze(sn' = 2) x the rotation evidenced: accepted.
+test cell_present_s15_sn2_rotation() {
+  run(corpus_freeze(False, False, True, 1, 1, True))
+}
+
+/// Lean grid state 15 (live, poisoned False, frozen False, topped up True, pool 1) x freeze(sn' = 2) x no rotation evidenced: refused.
+test cell_present_s15_sn2_norotation() fail {
+  run(corpus_freeze(False, False, True, 1, 1, False))
+}
+
+/// Lean grid state 16 (live, poisoned False, frozen False, topped up True, pool 2) x freeze(sn' = 0) x the rotation evidenced: refused.
+test cell_present_s16_sn0_rotation() fail {
+  run(corpus_freeze(False, False, True, 2, -1, True))
+}
+
+/// Lean grid state 16 (live, poisoned False, frozen False, topped up True, pool 2) x freeze(sn' = 0) x no rotation evidenced: refused.
+test cell_present_s16_sn0_norotation() fail {
+  run(corpus_freeze(False, False, True, 2, -1, False))
+}
+
+/// Lean grid state 16 (live, poisoned False, frozen False, topped up True, pool 2) x freeze(sn' = 1) x the rotation evidenced: refused.
+test cell_present_s16_sn1_rotation() fail {
+  run(corpus_freeze(False, False, True, 2, 0, True))
+}
+
+/// Lean grid state 16 (live, poisoned False, frozen False, topped up True, pool 2) x freeze(sn' = 1) x no rotation evidenced: refused.
+test cell_present_s16_sn1_norotation() fail {
+  run(corpus_freeze(False, False, True, 2, 0, False))
+}
+
+/// Lean grid state 16 (live, poisoned False, frozen False, topped up True, pool 2) x freeze(sn' = 2) x the rotation evidenced: refused.
+test cell_present_s16_sn2_rotation() fail {
+  run(corpus_freeze(False, False, True, 2, 1, True))
+}
+
+/// Lean grid state 16 (live, poisoned False, frozen False, topped up True, pool 2) x freeze(sn' = 2) x no rotation evidenced: refused.
+test cell_present_s16_sn2_norotation() fail {
+  run(corpus_freeze(False, False, True, 2, 1, False))
+}
+
+/// Lean grid state 17 (live, poisoned False, frozen False, topped up True, pool 3) x freeze(sn' = 0) x the rotation evidenced: refused.
+test cell_present_s17_sn0_rotation() fail {
+  run(corpus_freeze(False, False, True, 3, -1, True))
+}
+
+/// Lean grid state 17 (live, poisoned False, frozen False, topped up True, pool 3) x freeze(sn' = 0) x no rotation evidenced: refused.
+test cell_present_s17_sn0_norotation() fail {
+  run(corpus_freeze(False, False, True, 3, -1, False))
+}
+
+/// Lean grid state 17 (live, poisoned False, frozen False, topped up True, pool 3) x freeze(sn' = 1) x the rotation evidenced: refused.
+test cell_present_s17_sn1_rotation() fail {
+  run(corpus_freeze(False, False, True, 3, 0, True))
+}
+
+/// Lean grid state 17 (live, poisoned False, frozen False, topped up True, pool 3) x freeze(sn' = 1) x no rotation evidenced: refused.
+test cell_present_s17_sn1_norotation() fail {
+  run(corpus_freeze(False, False, True, 3, 0, False))
+}
+
+/// Lean grid state 17 (live, poisoned False, frozen False, topped up True, pool 3) x freeze(sn' = 2) x the rotation evidenced: refused.
+test cell_present_s17_sn2_rotation() fail {
+  run(corpus_freeze(False, False, True, 3, 1, True))
+}
+
+/// Lean grid state 17 (live, poisoned False, frozen False, topped up True, pool 3) x freeze(sn' = 2) x no rotation evidenced: refused.
+test cell_present_s17_sn2_norotation() fail {
+  run(corpus_freeze(False, False, True, 3, 1, False))
+}
+
+/// Lean grid state 18 (live, poisoned False, frozen True, topped up True, pool 1) x freeze(sn' = 0) x the rotation evidenced: refused.
+test cell_present_s18_sn0_rotation() fail {
+  run(corpus_freeze(False, True, True, 1, -1, True))
+}
+
+/// Lean grid state 18 (live, poisoned False, frozen True, topped up True, pool 1) x freeze(sn' = 0) x no rotation evidenced: refused.
+test cell_present_s18_sn0_norotation() fail {
+  run(corpus_freeze(False, True, True, 1, -1, False))
+}
+
+/// Lean grid state 18 (live, poisoned False, frozen True, topped up True, pool 1) x freeze(sn' = 1) x the rotation evidenced: refused.
+test cell_present_s18_sn1_rotation() fail {
+  run(corpus_freeze(False, True, True, 1, 0, True))
+}
+
+/// Lean grid state 18 (live, poisoned False, frozen True, topped up True, pool 1) x freeze(sn' = 1) x no rotation evidenced: refused.
+test cell_present_s18_sn1_norotation() fail {
+  run(corpus_freeze(False, True, True, 1, 0, False))
+}
+
+/// Lean grid state 18 (live, poisoned False, frozen True, topped up True, pool 1) x freeze(sn' = 2) x the rotation evidenced: refused.
+test cell_present_s18_sn2_rotation() fail {
+  run(corpus_freeze(False, True, True, 1, 1, True))
+}
+
+/// Lean grid state 18 (live, poisoned False, frozen True, topped up True, pool 1) x freeze(sn' = 2) x no rotation evidenced: refused.
+test cell_present_s18_sn2_norotation() fail {
+  run(corpus_freeze(False, True, True, 1, 1, False))
+}
+
+/// Lean grid state 19 (live, poisoned False, frozen True, topped up True, pool 2) x freeze(sn' = 0) x the rotation evidenced: refused.
+test cell_present_s19_sn0_rotation() fail {
+  run(corpus_freeze(False, True, True, 2, -1, True))
+}
+
+/// Lean grid state 19 (live, poisoned False, frozen True, topped up True, pool 2) x freeze(sn' = 0) x no rotation evidenced: refused.
+test cell_present_s19_sn0_norotation() fail {
+  run(corpus_freeze(False, True, True, 2, -1, False))
+}
+
+/// Lean grid state 19 (live, poisoned False, frozen True, topped up True, pool 2) x freeze(sn' = 1) x the rotation evidenced: refused.
+test cell_present_s19_sn1_rotation() fail {
+  run(corpus_freeze(False, True, True, 2, 0, True))
+}
+
+/// Lean grid state 19 (live, poisoned False, frozen True, topped up True, pool 2) x freeze(sn' = 1) x no rotation evidenced: refused.
+test cell_present_s19_sn1_norotation() fail {
+  run(corpus_freeze(False, True, True, 2, 0, False))
+}
+
+/// Lean grid state 19 (live, poisoned False, frozen True, topped up True, pool 2) x freeze(sn' = 2) x the rotation evidenced: refused.
+test cell_present_s19_sn2_rotation() fail {
+  run(corpus_freeze(False, True, True, 2, 1, True))
+}
+
+/// Lean grid state 19 (live, poisoned False, frozen True, topped up True, pool 2) x freeze(sn' = 2) x no rotation evidenced: refused.
+test cell_present_s19_sn2_norotation() fail {
+  run(corpus_freeze(False, True, True, 2, 1, False))
+}
+
+/// Lean grid state 20 (live, poisoned False, frozen True, topped up True, pool 3) x freeze(sn' = 0) x the rotation evidenced: refused.
+test cell_present_s20_sn0_rotation() fail {
+  run(corpus_freeze(False, True, True, 3, -1, True))
+}
+
+/// Lean grid state 20 (live, poisoned False, frozen True, topped up True, pool 3) x freeze(sn' = 0) x no rotation evidenced: refused.
+test cell_present_s20_sn0_norotation() fail {
+  run(corpus_freeze(False, True, True, 3, -1, False))
+}
+
+/// Lean grid state 20 (live, poisoned False, frozen True, topped up True, pool 3) x freeze(sn' = 1) x the rotation evidenced: refused.
+test cell_present_s20_sn1_rotation() fail {
+  run(corpus_freeze(False, True, True, 3, 0, True))
+}
+
+/// Lean grid state 20 (live, poisoned False, frozen True, topped up True, pool 3) x freeze(sn' = 1) x no rotation evidenced: refused.
+test cell_present_s20_sn1_norotation() fail {
+  run(corpus_freeze(False, True, True, 3, 0, False))
+}
+
+/// Lean grid state 20 (live, poisoned False, frozen True, topped up True, pool 3) x freeze(sn' = 2) x the rotation evidenced: refused.
+test cell_present_s20_sn2_rotation() fail {
+  run(corpus_freeze(False, True, True, 3, 1, True))
+}
+
+/// Lean grid state 20 (live, poisoned False, frozen True, topped up True, pool 3) x freeze(sn' = 2) x no rotation evidenced: refused.
+test cell_present_s20_sn2_norotation() fail {
+  run(corpus_freeze(False, True, True, 3, 1, False))
+}
+
+/// Lean grid state 21 (live, poisoned True, frozen False, topped up True, pool 1) x freeze(sn' = 0) x the rotation evidenced: refused.
+test cell_present_s21_sn0_rotation() fail {
+  run(corpus_freeze(True, False, True, 1, -1, True))
+}
+
+/// Lean grid state 21 (live, poisoned True, frozen False, topped up True, pool 1) x freeze(sn' = 0) x no rotation evidenced: refused.
+test cell_present_s21_sn0_norotation() fail {
+  run(corpus_freeze(True, False, True, 1, -1, False))
+}
+
+/// Lean grid state 21 (live, poisoned True, frozen False, topped up True, pool 1) x freeze(sn' = 1) x the rotation evidenced: refused.
+test cell_present_s21_sn1_rotation() fail {
+  run(corpus_freeze(True, False, True, 1, 0, True))
+}
+
+/// Lean grid state 21 (live, poisoned True, frozen False, topped up True, pool 1) x freeze(sn' = 1) x no rotation evidenced: refused.
+test cell_present_s21_sn1_norotation() fail {
+  run(corpus_freeze(True, False, True, 1, 0, False))
+}
+
+/// Lean grid state 21 (live, poisoned True, frozen False, topped up True, pool 1) x freeze(sn' = 2) x the rotation evidenced: refused.
+test cell_present_s21_sn2_rotation() fail {
+  run(corpus_freeze(True, False, True, 1, 1, True))
+}
+
+/// Lean grid state 21 (live, poisoned True, frozen False, topped up True, pool 1) x freeze(sn' = 2) x no rotation evidenced: refused.
+test cell_present_s21_sn2_norotation() fail {
+  run(corpus_freeze(True, False, True, 1, 1, False))
+}
+
+/// Lean grid state 22 (live, poisoned True, frozen False, topped up True, pool 2) x freeze(sn' = 0) x the rotation evidenced: refused.
+test cell_present_s22_sn0_rotation() fail {
+  run(corpus_freeze(True, False, True, 2, -1, True))
+}
+
+/// Lean grid state 22 (live, poisoned True, frozen False, topped up True, pool 2) x freeze(sn' = 0) x no rotation evidenced: refused.
+test cell_present_s22_sn0_norotation() fail {
+  run(corpus_freeze(True, False, True, 2, -1, False))
+}
+
+/// Lean grid state 22 (live, poisoned True, frozen False, topped up True, pool 2) x freeze(sn' = 1) x the rotation evidenced: refused.
+test cell_present_s22_sn1_rotation() fail {
+  run(corpus_freeze(True, False, True, 2, 0, True))
+}
+
+/// Lean grid state 22 (live, poisoned True, frozen False, topped up True, pool 2) x freeze(sn' = 1) x no rotation evidenced: refused.
+test cell_present_s22_sn1_norotation() fail {
+  run(corpus_freeze(True, False, True, 2, 0, False))
+}
+
+/// Lean grid state 22 (live, poisoned True, frozen False, topped up True, pool 2) x freeze(sn' = 2) x the rotation evidenced: refused.
+test cell_present_s22_sn2_rotation() fail {
+  run(corpus_freeze(True, False, True, 2, 1, True))
+}
+
+/// Lean grid state 22 (live, poisoned True, frozen False, topped up True, pool 2) x freeze(sn' = 2) x no rotation evidenced: refused.
+test cell_present_s22_sn2_norotation() fail {
+  run(corpus_freeze(True, False, True, 2, 1, False))
+}
+
+/// Lean grid state 23 (live, poisoned True, frozen False, topped up True, pool 3) x freeze(sn' = 0) x the rotation evidenced: refused.
+test cell_present_s23_sn0_rotation() fail {
+  run(corpus_freeze(True, False, True, 3, -1, True))
+}
+
+/// Lean grid state 23 (live, poisoned True, frozen False, topped up True, pool 3) x freeze(sn' = 0) x no rotation evidenced: refused.
+test cell_present_s23_sn0_norotation() fail {
+  run(corpus_freeze(True, False, True, 3, -1, False))
+}
+
+/// Lean grid state 23 (live, poisoned True, frozen False, topped up True, pool 3) x freeze(sn' = 1) x the rotation evidenced: refused.
+test cell_present_s23_sn1_rotation() fail {
+  run(corpus_freeze(True, False, True, 3, 0, True))
+}
+
+/// Lean grid state 23 (live, poisoned True, frozen False, topped up True, pool 3) x freeze(sn' = 1) x no rotation evidenced: refused.
+test cell_present_s23_sn1_norotation() fail {
+  run(corpus_freeze(True, False, True, 3, 0, False))
+}
+
+/// Lean grid state 23 (live, poisoned True, frozen False, topped up True, pool 3) x freeze(sn' = 2) x the rotation evidenced: refused.
+test cell_present_s23_sn2_rotation() fail {
+  run(corpus_freeze(True, False, True, 3, 1, True))
+}
+
+/// Lean grid state 23 (live, poisoned True, frozen False, topped up True, pool 3) x freeze(sn' = 2) x no rotation evidenced: refused.
+test cell_present_s23_sn2_norotation() fail {
+  run(corpus_freeze(True, False, True, 3, 1, False))
+}
+
+/// Lean grid state 24 (live, poisoned True, frozen True, topped up True, pool 1) x freeze(sn' = 0) x the rotation evidenced: refused.
+test cell_present_s24_sn0_rotation() fail {
+  run(corpus_freeze(True, True, True, 1, -1, True))
+}
+
+/// Lean grid state 24 (live, poisoned True, frozen True, topped up True, pool 1) x freeze(sn' = 0) x no rotation evidenced: refused.
+test cell_present_s24_sn0_norotation() fail {
+  run(corpus_freeze(True, True, True, 1, -1, False))
+}
+
+/// Lean grid state 24 (live, poisoned True, frozen True, topped up True, pool 1) x freeze(sn' = 1) x the rotation evidenced: refused.
+test cell_present_s24_sn1_rotation() fail {
+  run(corpus_freeze(True, True, True, 1, 0, True))
+}
+
+/// Lean grid state 24 (live, poisoned True, frozen True, topped up True, pool 1) x freeze(sn' = 1) x no rotation evidenced: refused.
+test cell_present_s24_sn1_norotation() fail {
+  run(corpus_freeze(True, True, True, 1, 0, False))
+}
+
+/// Lean grid state 24 (live, poisoned True, frozen True, topped up True, pool 1) x freeze(sn' = 2) x the rotation evidenced: refused.
+test cell_present_s24_sn2_rotation() fail {
+  run(corpus_freeze(True, True, True, 1, 1, True))
+}
+
+/// Lean grid state 24 (live, poisoned True, frozen True, topped up True, pool 1) x freeze(sn' = 2) x no rotation evidenced: refused.
+test cell_present_s24_sn2_norotation() fail {
+  run(corpus_freeze(True, True, True, 1, 1, False))
+}
+
+/// Lean grid state 25 (live, poisoned True, frozen True, topped up True, pool 2) x freeze(sn' = 0) x the rotation evidenced: refused.
+test cell_present_s25_sn0_rotation() fail {
+  run(corpus_freeze(True, True, True, 2, -1, True))
+}
+
+/// Lean grid state 25 (live, poisoned True, frozen True, topped up True, pool 2) x freeze(sn' = 0) x no rotation evidenced: refused.
+test cell_present_s25_sn0_norotation() fail {
+  run(corpus_freeze(True, True, True, 2, -1, False))
+}
+
+/// Lean grid state 25 (live, poisoned True, frozen True, topped up True, pool 2) x freeze(sn' = 1) x the rotation evidenced: refused.
+test cell_present_s25_sn1_rotation() fail {
+  run(corpus_freeze(True, True, True, 2, 0, True))
+}
+
+/// Lean grid state 25 (live, poisoned True, frozen True, topped up True, pool 2) x freeze(sn' = 1) x no rotation evidenced: refused.
+test cell_present_s25_sn1_norotation() fail {
+  run(corpus_freeze(True, True, True, 2, 0, False))
+}
+
+/// Lean grid state 25 (live, poisoned True, frozen True, topped up True, pool 2) x freeze(sn' = 2) x the rotation evidenced: refused.
+test cell_present_s25_sn2_rotation() fail {
+  run(corpus_freeze(True, True, True, 2, 1, True))
+}
+
+/// Lean grid state 25 (live, poisoned True, frozen True, topped up True, pool 2) x freeze(sn' = 2) x no rotation evidenced: refused.
+test cell_present_s25_sn2_norotation() fail {
+  run(corpus_freeze(True, True, True, 2, 1, False))
+}
+
+/// Lean grid state 26 (live, poisoned True, frozen True, topped up True, pool 3) x freeze(sn' = 0) x the rotation evidenced: refused.
+test cell_present_s26_sn0_rotation() fail {
+  run(corpus_freeze(True, True, True, 3, -1, True))
+}
+
+/// Lean grid state 26 (live, poisoned True, frozen True, topped up True, pool 3) x freeze(sn' = 0) x no rotation evidenced: refused.
+test cell_present_s26_sn0_norotation() fail {
+  run(corpus_freeze(True, True, True, 3, -1, False))
+}
+
+/// Lean grid state 26 (live, poisoned True, frozen True, topped up True, pool 3) x freeze(sn' = 1) x the rotation evidenced: refused.
+test cell_present_s26_sn1_rotation() fail {
+  run(corpus_freeze(True, True, True, 3, 0, True))
+}
+
+/// Lean grid state 26 (live, poisoned True, frozen True, topped up True, pool 3) x freeze(sn' = 1) x no rotation evidenced: refused.
+test cell_present_s26_sn1_norotation() fail {
+  run(corpus_freeze(True, True, True, 3, 0, False))
+}
+
+/// Lean grid state 26 (live, poisoned True, frozen True, topped up True, pool 3) x freeze(sn' = 2) x the rotation evidenced: refused.
+test cell_present_s26_sn2_rotation() fail {
+  run(corpus_freeze(True, True, True, 3, 1, True))
+}
+
+/// Lean grid state 26 (live, poisoned True, frozen True, topped up True, pool 3) x freeze(sn' = 2) x no rotation evidenced: refused.
+test cell_present_s26_sn2_norotation() fail {
+  run(corpus_freeze(True, True, True, 3, 1, False))
 }

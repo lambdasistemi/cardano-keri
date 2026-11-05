@@ -29,7 +29,7 @@ use cardano_keri/checkpoint/observer.{
 use cardano_keri/checkpoint/refund
 use cardano_keri/checkpoint/registration.{valid_registration_deposit}
 use cardano_keri/checkpoint/role.{Active}
-use cardano_keri/checkpoint/value.{held_value, with_value}
+use cardano_keri/checkpoint/value.{held_value, registration_pool, with_value}
 
 /// Registration evidence is carried by the lifecycle observer withdrawal.
 ///
@@ -64,6 +64,10 @@ pub type SpendRedeemer {
   /// `MigrateOut`: nothing renumbers. `hunter_output_index` names the output
   /// that receives the freeze bond.
   Freeze { hunter_output_index: Int }
+  /// Add `amount`, at least one premium, to the pool of a live checkpoint
+  /// whose top-up mark is clear (#522). Appended after `Freeze`: nothing
+  /// renumbers. Anyone may do it; the mark stays set until the next rotation.
+  TopUp { amount: Int }
 }
 
 const checkpoint_min_ada: Int = 2_000_000
@@ -92,7 +96,14 @@ validator checkpoint_register(
     when mint_redeemer is {
       Register -> {
         expect ran_register_check(lifecycle_hash, policy_id, tx)
-        validate_register(network_id, d_reg, freeze_bond, policy_id, tx)
+        validate_register(
+          network_id,
+          d_reg,
+          freeze_bond,
+          premium,
+          policy_id,
+          tx,
+        )
       }
     }
   }
@@ -171,6 +182,8 @@ validator checkpoint_register(
           tx,
         )
       }
+      TopUp { amount } ->
+        validate_top_up(d_reg, freeze_bond, premium, amount, own_ref, tx)
     }
   }
 
@@ -395,6 +408,7 @@ fn validate_register(
   network_id: Int,
   d_reg: Int,
   freeze_bond: Int,
+  premium: Int,
   policy_id: PolicyId,
   tx: Transaction,
 ) -> Bool {
@@ -415,6 +429,7 @@ fn validate_register(
         frozen: False,
         born_at,
         refund_to,
+        topped_up: False,
         ..
       }
     = datum.read(datum_data)
@@ -433,8 +448,15 @@ fn validate_register(
       from_lovelace(lovelace_of(state_output.value))
         |> merge(from_asset(policy_id, aid_name, 1))
     )
-  expect
-    lovelace_of(state_output.value) >= checkpoint_min_ada + d_reg + freeze_bond
+  // The first pool is what the carrier holds above the minimum ADA, the
+  // deposit and the bond (Lean `Step.register`: `p.P ≤ pool0`).
+  expect Some(pool0) = registration_pool(
+    checkpoint_min_ada,
+    d_reg,
+    freeze_bond,
+    lovelace_of(state_output.value),
+  )
+  expect premium <= pool0
   True
 }
 
@@ -486,6 +508,7 @@ fn validate_advance(
         frozen: new_frozen,
         born_at: new_born_at,
         refund_to: new_refund_to,
+        topped_up: False,
         keys: new_keys,
         ..
       }
@@ -581,6 +604,7 @@ fn validate_freeze(
         frozen: False,
         born_at,
         refund_to,
+        topped_up,
         keys,
       }
     = old
@@ -604,6 +628,7 @@ fn validate_freeze(
     frozen: True,
     born_at,
     refund_to,
+    topped_up,
     keys,
   }
   expect [state_output] = list.filter(
@@ -704,5 +729,86 @@ fn refund_paid(
         output.address,
       ) == Some(refund_to) && lovelace_of(output.value) >= required
     },
+  )
+}
+
+/// Top up a live checkpoint (Lean `Step.topUp`): anyone adds at least one
+/// premium to the pool, once per key state. The successor is the spent datum
+/// with the top-up mark set and holds exactly the amount more; nothing is
+/// signed, no observer runs and no validity range is read. The token stays
+/// and nothing is minted or burnt under the policy.
+fn validate_top_up(
+  d_reg: Int,
+  freeze_bond: Int,
+  premium: Int,
+  amount: Int,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  let Transaction { inputs, outputs, mint, .. } = tx
+  expect Some(own_input) = find_input(inputs, own_ref)
+  expect Script(own_hash) = own_input.output.address.payment_credential
+  expect own_input.output.address == role.address(own_hash, Active)
+  expect InlineDatum(old_data) = own_input.output.datum
+  let old = datum.read(old_data)
+  expect  
+      Live {
+        aid,
+        sn,
+        epoch,
+        poisoned,
+        frozen,
+        born_at,
+        refund_to,
+        topped_up: False,
+        keys,
+      }
+    = old
+  expect premium <= amount
+  expect [Pair(aid_name, 1)] = dict.to_pairs(
+    tokens(own_input.output.value, own_hash),
+  )
+  expect Some(pool) = with_value(
+    checkpoint_min_ada,
+    d_reg,
+    freeze_bond,
+    old,
+    lovelace_of(own_input.output.value),
+  )
+  expect dict.to_pairs(tokens(mint, own_hash)) == []
+  expect
+    list.length(
+      list.filter(
+        inputs,
+        fn(input) {
+          input.output.address.payment_credential == Script(own_hash)
+        },
+      ),
+    ) == 1
+  let marked = Live {
+    aid,
+    sn,
+    epoch,
+    poisoned,
+    frozen,
+    born_at,
+    refund_to,
+    topped_up: True,
+    keys,
+  }
+  expect [state_output] = list.filter(
+    outputs,
+    fn(output) { output.address == from_script(own_hash) },
+  )
+  expect state_output.datum == InlineDatum(datum.write(marked))
+  let held = held_value(
+    checkpoint_min_ada,
+    d_reg,
+    freeze_bond,
+    marked,
+    pool + amount,
+  )
+  state_output.value == (
+    from_lovelace(held) |> merge(from_asset(own_hash, aid_name, 1))
   )
 }

@@ -102,7 +102,7 @@ fn refund_bytes() -> ByteArray {
   #"0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f52"
 }
 
-/// The eight fields of a live datum, in the Lean order.
+/// The nine fields of a live datum, in the Lean order, the top-up mark clear.
 fn live_fields_of(
   aid: ByteArray,
   sn: Int,
@@ -121,6 +121,7 @@ fn live_fields_of(
     bool_data(frozen),
     i_data(born_at),
     b_data(refund_to),
+    bool_data(False),
     k,
   ]
 }
@@ -241,10 +242,10 @@ test unknown_forms_are_refused() {
 /// Lean `live_arity_refused`.
 test live_arity_is_checked() {
   list.all(
-    [0, 1, 2, 3, 4, 5, 6, 7, 9, 10],
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11],
     fn(n) {
       let fields = list.concat(good_live(), good_live()) |> list.take(n)
-      n == 8 || decoded(live(fields)) == None
+      n == 9 || decoded(live(fields)) == None
     },
   )
 }
@@ -314,6 +315,7 @@ fn live_state(
     born_at,
     refund_to: pack(refund_to),
     pool: 0,
+    topped_up: False,
   }
 }
 
@@ -526,6 +528,7 @@ fn live_replacements(i: Int) -> List<Data> {
     1 | 2 | 5 -> not_nat()
     3 | 4 -> not_bool()
     6 -> not_bytes()
+    7 -> not_bool()
     _ -> not_keys()
   }
 }
@@ -540,7 +543,7 @@ fn pending_replacements(i: Int) -> List<Data> {
 /// Lean `live_fields_typed`.
 test live_fields_are_typed() {
   list.all(
-    indices(8),
+    indices(9),
     fn(i) {
       list.all(
         live_replacements(i),
@@ -664,5 +667,38 @@ test the_release_does_not_select_the_layout() {
   list.all(
     [live(good_live()), pending(good_pending()), constr_data(0, good_live())],
     fn(d) { decode_data(release(), d) == decode_data(other, d) },
+  )
+}
+
+/// Lean `decodeData_complete`: the top-up mark is a Boolean at index 7 and the
+/// decoder returns it.
+test the_top_up_mark_is_decoded_at_index_seven() {
+  let marked = list.concat(list.take(good_live(), 7), [bool_data(True), keys()])
+  decoded(live(marked)) == Some(
+    DecodedDatum {
+      aid: pack(aid_bytes()),
+      state: Present(
+        Live {
+          ..live_state(3, 1, False, True, 9, refund_bytes()),
+          topped_up: True,
+        },
+      ),
+    },
+  )
+}
+
+/// Lean `live_fields_typed`: a mark that is not a Boolean is refused.
+test a_top_up_mark_that_is_not_a_boolean_is_refused() {
+  list.all(
+    [
+      i_data(0),
+      i_data(1),
+      constr_data(2, []),
+      constr_data(1, [i_data(0)]),
+      keys(),
+    ],
+    fn(mark) {
+      decoded(live(list.concat(list.take(good_live(), 7), [mark, keys()]))) == None
+    },
   )
 }

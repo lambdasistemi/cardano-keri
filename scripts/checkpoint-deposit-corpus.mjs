@@ -53,8 +53,15 @@ if (actionsByIndex.every((a) => a === null)) throw new Error('the corpus grid ha
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
+// A live state already topped up since its last rotation is not emitted: the
+// corpus helpers do not encode the top-up mark yet. Each such cell is checked
+// here instead: the Lean gives it the verdict of the same state not topped up,
+// and an accepted deposit rotation clears the mark.
+const unmarked = (s) => (typeof s === 'object' && s !== null && 'present' in s ? { present: { l: { ...s.present.l, toppedUp: false } } } : s);
+const cellAt = (s, a, e) => grid.cells.find((c) => c.s === s && c.a === a && c.e === e);
 const cells = [];
 const skipped = [];
+let markedChecked = 0;
 let accepted = 0;
 let refused = 0;
 for (const cell of grid.cells) {
@@ -62,6 +69,15 @@ for (const cell of grid.cells) {
   if (act === null) continue;
   const state = grid.states[cell.s];
   const env = grid.envs[cell.e];
+  if (typeof state === 'object' && 'present' in state && state.present.l.toppedUp === true) {
+    const twin = grid.states.findIndex((s) => JSON.stringify(s) === JSON.stringify(unmarked(state)));
+    const other = twin < 0 ? undefined : cellAt(twin, cell.a, cell.e);
+    if (!other) throw new Error(`topped-up cell ${cell.s}/${cell.a}/${cell.e} has no cell for the same state not topped up`);
+    if ((cell.result === null) !== (other.result === null)) throw new Error(`topped-up cell ${cell.s}/${cell.a}/${cell.e}: the top-up mark changes the deposit verdict`);
+    if (cell.result !== null && (!same(cell.result, other.result))) throw new Error(`topped-up cell ${cell.s}/${cell.a}/${cell.e}: a deposit rotation does not clear the top-up mark to the same successor`);
+    markedChecked += 1;
+    continue;
+  }
   if (state === 'absent' || state === 'convicted') {
     skipped.push(`${typeof state === 'string' ? state : 'state'} state ${cell.s}, sn' ${act["sn'"]}, env ${cell.e}`);
     continue;
@@ -80,7 +96,7 @@ for (const cell of grid.cells) {
   if (verdict) {
     const { flow, state: after } = cell.result;
     const covers = params.P <= live.pool;
-    const successor = { ...live, sn: snPrime, epoch: live.epoch + 1, poisoned: false, frozen: false, pool: covers ? live.pool - params.P : live.pool };
+    const successor = { ...live, sn: snPrime, epoch: live.epoch + 1, poisoned: false, frozen: false, toppedUp: false, pool: covers ? live.pool - params.P : live.pool };
     if (!same(after, { present: { l: successor } })) throw new Error(`accepted cell ${cell.s}/${cell.a}/${cell.e}: the successor is not the rotated state, unfrozen and unpoisoned, with the premium taken from the pool exactly when it covers it`);
     const bIn = live.frozen ? params.B : 0;
     if (flow.bIn !== bIn) throw new Error(`accepted cell ${cell.s}/${cell.a}/${cell.e}: the deposit is B - bHeld = ${bIn}, the corpus moves ${flow.bIn}`);
@@ -111,6 +127,7 @@ for (const cell of grid.cells) {
 // states (poison, frozen and every pool) with the later sequence number under
 // the oracle that evidences the rotation and authorizes the deposit.
 if (cells.length !== 78) throw new Error(`expected 78 realizable deposit cells, found ${cells.length}`);
+if (markedChecked !== 72) throw new Error(`expected 72 topped-up deposit cells checked, found ${markedChecked}`);
 if (skipped.length !== 12) throw new Error(`expected 12 unrealizable deposit cells, found ${skipped.length}`);
 if (accepted !== 12) throw new Error(`expected exactly 12 accepted deposit cells (every live state, one sequence number, one oracle), found ${accepted}`);
 if (refused !== 66) throw new Error(`expected 66 refused deposit cells, found ${refused}`);

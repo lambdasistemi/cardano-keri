@@ -9,7 +9,7 @@ params:
   B: 5
   P: 2
   W: 10
-atoms: ["1.the-inception-parses-and-self", "1.the-aid-is-absent-from", "1.and-is-inserted", "1.this-is-the-only-way", "1.both-bonds-are-present"]
+atoms: ["1.the-inception-parses-and-self", "1.the-aid-is-absent-from", "1.and-is-inserted", "1.this-is-the-only-way", "1.both-bonds-are-present", "1.the-first-pool-is-at"]
 step:
   slot: 0
   who: treasury
@@ -35,42 +35,44 @@ step:
       pool: 10
       frozen: false
     flow:
-      bIn: 5
-      convictor: null
       dregIn: 1000
-      hunter: null
+      bIn: 5
       poolIn: 10
       refund: null
+      hunter: null
+      convictor: null
     verdict: juvenile
     modelResult:
       flow:
-        bIn: 5
-        convictor: null
         dregIn: 1000
-        hunter: null
+        bIn: 5
         poolIn: 10
         refund: null
+        hunter: null
+        convictor: null
       state:
         present:
           l:
-            bornAt: 0
-            epoch: 0
-            frozen: false
-            poisoned: false
-            pool: 10
-            refundTo: 6
             sn: 0
+            epoch: 0
+            poisoned: false
+            frozen: false
+            bornAt: 0
+            refundTo: 6
+            pool: 10
+            toppedUp: false
     state:
       present:
         l:
-          bornAt: 0
-          epoch: 0
-          frozen: false
-          poisoned: false
-          pool: 10
-          refundTo: 6
           sn: 0
-    exhibits: [T3_epoch_local, T6_component_conservation, T6_dreg_enters_only_at_birth, T6_dreg_never_a_fee, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T8_absent_only_registers, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired]
+          epoch: 0
+          poisoned: false
+          frozen: false
+          bornAt: 0
+          refundTo: 6
+          pool: 10
+          toppedUp: false
+    exhibits: [T3_epoch_local, T6_component_conservation, T6_dreg_enters_only_at_birth, T6_dreg_never_a_fee, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T8_absent_only_registers, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, local_progress_unless_pending_or_retired, registration_pool_at_least_premium]
 step:
   slot: 9
   who: treasury
@@ -97,6 +99,24 @@ fork:
     expect:
       ok: false
       reason: absent-needs-register
+      verdict: not-present
+      modelResult: null
+      exhibits: [T7_step_iff_stepFn, T8_absent_only_registers, T9_juvenility_is_consumer_only, consumableStateB_iff]
+fork:
+  id: short-pool
+  at: 0
+  title: "A first pool below one premium"
+  step:
+    slot: 0
+    who: friend
+    say: "A first pool of 1 is less than one premium (P = 2): refused. A registration delivers at least the premium its first rotation pays."
+    action:
+      register:
+        refund: 6
+        pool0: 1
+    expect:
+      ok: false
+      reason: pool-below-premium
       verdict: not-present
       modelResult: null
       exhibits: [T7_step_iff_stepFn, T8_absent_only_registers, T9_juvenility_is_consumer_only, consumableStateB_iff]

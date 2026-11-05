@@ -177,7 +177,7 @@ async function selftest(work) {
   const baseline=await runGate({freshRaw});
   if(!baseline.ok)throw Error('positive baseline: '+baseline.reasons.join('; '));
   const controls = [
-    { name: 'post-state mutated in the embedded corpus', expect: /structural difference|stated sha|grid: fresh and embedded differ/,
+    { name: 'post-state mutated in the embedded corpus', expect: /structural difference|stated sha|grid: fresh and embedded differ|story cells: fresh and embedded differ/,
       make: () => ({ html: writeTmp('m1.html', doc.replace(emb.fixtureText, emb.fixtureText.replace('"pool":8', '"pool":9'))), freshRaw }) },
     { name: 'embedded corpus emptied', expect: /empty|not found|stated sha/,
       make: () => ({ html: writeTmp('m2.html', doc.replace(/const LEAN_CORPUS = \{.*?\};\n/s, 'const LEAN_CORPUS = {};\n')), freshRaw }) },

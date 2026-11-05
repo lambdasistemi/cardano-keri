@@ -71,6 +71,18 @@
       "note": "the registration flow brings exactly D and B; a transaction bringing less is not a Step at all."
     },
     {
+      "id": "1.the-first-pool-is-at",
+      "story": 1,
+      "clause": "the first pool is at least one premium",
+      "class": "guard",
+      "kind": "refusal",
+      "decl": "Step.register",
+      "hyp": "hpool",
+      "text": "p.P ≤ pool0",
+      "reason": "pool-below-premium",
+      "note": "a registration delivers at least the premium its first rotation pays; the short-pool fork of the scenario is refused for it."
+    },
+    {
       "id": "2.signatures-at-the-current-threshold",
       "story": 2,
       "clause": "signatures at the current threshold over the rotation bytes",
@@ -263,7 +275,8 @@
         "sn",
         "epoch",
         "poisoned",
-        "frozen"
+        "frozen",
+        "toppedUp"
       ],
       "match": {
         "ok": true,
@@ -321,15 +334,8 @@
       "id": "8.with-no-signature-over-it",
       "story": 8,
       "clause": "with no signature over it",
-      "class": "guard",
-      "kind": "no-guard",
-      "decl": "Step.register",
-      "text": ".register refund pool0",
-      "match": {
-        "ok": true,
-        "kind": "register"
-      },
-      "note": "Step.register has no hypothesis: no key signs the refund address; the controllers sign only the inception event, which the model does not carry."
+      "class": "omission",
+      "note": "Step.register's only hypothesis (hpool) bounds the first pool; no key signs the refund address. The controllers sign only the inception event, which the model does not carry, so there is no signature for the model to require or omit."
     },
     {
       "id": "8.a-rotation-leaves-the-refund",
@@ -338,11 +344,12 @@
       "class": "guard",
       "kind": "post-state",
       "decl": "Step.rotateKeepPaid",
-      "text": "{ l with sn := sn', epoch := l.epoch + 1, poisoned := false, pool := l.pool - p.P }",
+      "text": "{ l with sn := sn', epoch := l.epoch + 1, poisoned := false, toppedUp := false, pool := l.pool - p.P }",
       "updates": [
         "sn",
         "epoch",
         "poisoned",
+        "toppedUp",
         "pool"
       ],
       "match": {
@@ -360,12 +367,13 @@
       "class": "guard",
       "kind": "post-state",
       "decl": "Step.rotateDepositPaid",
-      "text": "{ l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false, pool := l.pool - p.P }",
+      "text": "{ l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false, toppedUp := false, pool := l.pool - p.P }",
       "updates": [
         "sn",
         "epoch",
         "poisoned",
         "frozen",
+        "toppedUp",
         "pool"
       ],
       "match": {
@@ -379,19 +387,20 @@
     {
       "id": "8.a-top-up-adds-to-the",
       "story": 8,
-      "clause": "a top-up adds to the pool and nothing else",
+      "clause": "a top-up adds to the pool and sets the top-up mark, nothing else",
       "class": "guard",
       "kind": "post-state",
       "decl": "Step.topUp",
-      "text": "{ l with pool := l.pool + x }",
+      "text": "{ l with pool := l.pool + x, toppedUp := true }",
       "updates": [
-        "pool"
+        "pool",
+        "toppedUp"
       ],
       "match": {
         "ok": true,
         "kind": "topUp"
       },
-      "note": "a top-up by anyone adds to the one pool, which a conviction pays to the refund address."
+      "note": "a top-up by anyone adds to the one pool, which a conviction pays to the refund address; the mark it sets allows one top-up per key state."
     },
     {
       "id": "8.a-conviction-pays-the-freeze",
@@ -631,35 +640,53 @@
       }
     },
     {
-      "id": "13.the-datum-is-untouched",
+      "id": "13.the-datum-is-untouched-but",
       "story": 13,
-      "clause": "the datum is untouched",
+      "clause": "the datum is untouched but for the top-up mark",
       "class": "guard",
       "kind": "post-state",
       "decl": "Step.topUp",
-      "text": "{ l with pool := l.pool + x }",
+      "text": "{ l with pool := l.pool + x, toppedUp := true }",
       "updates": [
-        "pool"
+        "pool",
+        "toppedUp"
       ],
       "match": {
         "ok": true,
         "kind": "topUp"
       },
-      "note": "only the pool (value) moves; sn, epoch, poisoned, frozen, bornAt and refundTo stay — juvenility is not restarted."
+      "note": "only the pool (value) and the top-up mark move; sn, epoch, poisoned, frozen, bornAt and refundTo stay — juvenility is not restarted."
     },
     {
       "id": "13.no-signature",
       "story": 13,
       "clause": "no signature",
+      "class": "omission",
+      "note": "Step.topUp's two hypotheses (hfresh, hx) read only the datum's top-up mark and the amount: no evidence and no signature. The submitter is not modelled; Action.actor classes the top-up as anyone's."
+    },
+    {
+      "id": "13.once-per-key-state",
+      "story": 13,
+      "clause": "once per key state",
       "class": "guard",
-      "kind": "no-guard",
+      "kind": "refusal",
       "decl": "Step.topUp",
-      "text": "(.topUp x)",
-      "match": {
-        "ok": true,
-        "kind": "topUp"
-      },
-      "note": "the constructor has no guard hypothesis: no evidence, no signature."
+      "hyp": "hfresh",
+      "text": "l.toppedUp = false",
+      "reason": "already-topped-up",
+      "note": "the mark the first top-up sets refuses a second one until a rotation clears it; the scenario plays the griefing attempt."
+    },
+    {
+      "id": "13.at-least-one-premium",
+      "story": 13,
+      "clause": "at least one premium",
+      "class": "guard",
+      "kind": "refusal",
+      "decl": "Step.topUp",
+      "hyp": "hx",
+      "text": "p.P ≤ x",
+      "reason": "top-up-below-premium",
+      "note": "a top-up refills at least one premium; the below-premium fork of the scenario is refused for it."
     },
     {
       "id": "14.both-see-the-rotation",
@@ -1086,6 +1113,16 @@
         "ok": true,
         "kind": "topUp",
         "preWord": "frozen"
+      }
+    },
+    {
+      "id": "second-topup-refused",
+      "story": 13,
+      "clause": "a second top-up of the same key state is refused",
+      "match": {
+        "ok": false,
+        "kind": "topUp",
+        "reason": "already-topped-up"
       }
     }
   ]

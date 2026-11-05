@@ -42,7 +42,7 @@ const DOCUMENTED = [
   'checkpoint',
   'simulator/checkpoint-simulator-scenarios/01-alice-appears.dsl',
 ];
-const WANT = { total: 24, checkpointFiles: 12, registryFiles: 12, checkpointSteps: 64, registrySteps: 64 };
+const WANT = { total: 24, checkpointFiles: 12, registryFiles: 12, checkpointSteps: 72, registrySteps: 64 };
 
 const sha256 = b => createHash('sha256').update(b).digest('hex');
 const rows = [];

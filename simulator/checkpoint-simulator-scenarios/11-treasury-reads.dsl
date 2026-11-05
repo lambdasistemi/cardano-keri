@@ -23,46 +23,48 @@ step:
   action:
     register:
       refund: 1
-      pool0: 1
+      pool0: 2
   expect:
     ok: true
     verdict: juvenile
     modelResult:
       flow:
-        bIn: 5
-        convictor: null
         dregIn: 1000
-        hunter: null
-        poolIn: 1
+        bIn: 5
+        poolIn: 2
         refund: null
+        hunter: null
+        convictor: null
       state:
         present:
           l:
-            bornAt: 0
-            epoch: 0
-            frozen: false
-            poisoned: false
-            pool: 1
-            refundTo: 1
             sn: 0
+            epoch: 0
+            poisoned: false
+            frozen: false
+            bornAt: 0
+            refundTo: 1
+            pool: 2
+            toppedUp: false
     state:
       present:
         l:
-          bornAt: 0
-          epoch: 0
-          frozen: false
-          poisoned: false
-          pool: 1
-          refundTo: 1
           sn: 0
+          epoch: 0
+          poisoned: false
+          frozen: false
+          bornAt: 0
+          refundTo: 1
+          pool: 2
+          toppedUp: false
     flow:
-      bIn: 5
-      convictor: null
       dregIn: 1000
-      hunter: null
-      poolIn: 1
+      bIn: 5
+      poolIn: 2
       refund: null
-    exhibits: [T3_epoch_local, T6_component_conservation, T6_dreg_enters_only_at_birth, T6_dreg_never_a_fee, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T8_absent_only_registers, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired]
+      hunter: null
+      convictor: null
+    exhibits: [T3_epoch_local, T6_component_conservation, T6_dreg_enters_only_at_birth, T6_dreg_never_a_fee, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T8_absent_only_registers, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, local_progress_unless_pending_or_retired, registration_pool_at_least_premium]
 step:
   slot: 10
   who: treasury
@@ -72,60 +74,122 @@ step:
 step:
   slot: 12
   who: hal
-  say: "Frozen: the freeze bond is missing."
+  say: "Hal lands Alice’s first rotation and takes the premium: the pool is empty."
   evidence:
     add: [{"rotationTo":[0,0,1]}]
   action:
-    freeze:
+    rotate:
       sn': 1
+      op: keep
+      payee: 2
+  expect:
+    ok: true
+    verdict: consumable
+    modelResult:
+      flow:
+        dregIn: 0
+        bIn: 0
+        poolIn: 0
+        refund: null
+        hunter:
+          addr: 2
+          dreg: 0
+          b: 0
+          pool: 2
+        convictor: null
+      state:
+        present:
+          l:
+            sn: 1
+            epoch: 1
+            poisoned: false
+            frozen: false
+            bornAt: 0
+            refundTo: 1
+            pool: 0
+            toppedUp: false
+    state:
+      present:
+        l:
+          sn: 1
+          epoch: 1
+          poisoned: false
+          frozen: false
+          bornAt: 0
+          refundTo: 1
+          pool: 0
+          toppedUp: false
+    flow:
+      dregIn: 0
+      bIn: 0
+      poolIn: 0
+      refund: null
+      hunter:
+        addr: 2
+        dreg: 0
+        b: 0
+        pool: 2
+      convictor: null
+    exhibits: [T10_bonds_are_observable, T14_pool_decreases_only_by_premium, T16_payments_are_named, T1_rotate_strict, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T2_epoch_only_by_rotation, T3_epoch_local, T3_rotation_clears, T5_every_bond_option, T5_keep_is_rotated, T5_keep_needs_no_intent, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T6_relayer_cannot_park_age_or_close, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, local_progress_unless_pending_or_retired, rotation_clears_topped_up, step_from_present_keeps_refund, trace_poison_fold, trace_sn_monotone_all]
+step:
+  slot: 12
+  who: hal
+  say: "Frozen: the freeze bond is missing."
+  evidence:
+    add: [{"rotationTo":[1,1,2]}]
+  action:
+    freeze:
+      sn': 2
       payee: 2
   expect:
     ok: true
     verdict: frozen
     modelResult:
       flow:
-        bIn: 0
-        convictor: null
         dregIn: 0
-        hunter:
-          addr: 2
-          b: 5
-          dreg: 0
-          pool: 0
+        bIn: 0
         poolIn: 0
         refund: null
+        hunter:
+          addr: 2
+          dreg: 0
+          b: 5
+          pool: 0
+        convictor: null
       state:
         present:
           l:
-            bornAt: 0
-            epoch: 0
-            frozen: true
+            sn: 1
+            epoch: 1
             poisoned: false
-            pool: 1
+            frozen: true
+            bornAt: 0
             refundTo: 1
-            sn: 0
+            pool: 0
+            toppedUp: false
     state:
       present:
         l:
-          bornAt: 0
-          epoch: 0
-          frozen: true
+          sn: 1
+          epoch: 1
           poisoned: false
-          pool: 1
+          frozen: true
+          bornAt: 0
           refundTo: 1
-          sn: 0
+          pool: 0
+          toppedUp: false
     flow:
-      bIn: 0
-      convictor: null
       dregIn: 0
-      hunter:
-        addr: 2
-        b: 5
-        dreg: 0
-        pool: 0
+      bIn: 0
       poolIn: 0
       refund: null
-    exhibits: [T10_bonds_are_observable, T15_b_leaves_only_by_freeze, T15_freeze_makes_inert, T16_payments_are_named, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T5_freeze_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_frozen_flips_only_by_rotation_or_freeze, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, step_from_present_keeps_refund, trace_poison_fold, trace_sn_monotone_all]
+      hunter:
+        addr: 2
+        dreg: 0
+        b: 5
+        pool: 0
+      convictor: null
+    exhibits: [T10_bonds_are_observable, T15_b_leaves_only_by_freeze, T15_freeze_makes_inert, T16_payments_are_named, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T5_freeze_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_frozen_flips_only_by_rotation_or_freeze, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, local_progress_unless_pending_or_retired, step_from_present_keeps_refund, topped_up_kept_by_poison_and_freeze, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 15
   who: friend
@@ -138,49 +202,51 @@ step:
     verdict: frozen
     modelResult:
       flow:
-        bIn: 0
-        convictor: null
         dregIn: 0
-        hunter: null
+        bIn: 0
         poolIn: 5
         refund: null
+        hunter: null
+        convictor: null
       state:
         present:
           l:
-            bornAt: 0
-            epoch: 0
-            frozen: true
+            sn: 1
+            epoch: 1
             poisoned: false
-            pool: 6
+            frozen: true
+            bornAt: 0
             refundTo: 1
-            sn: 0
+            pool: 5
+            toppedUp: true
     state:
       present:
         l:
-          bornAt: 0
-          epoch: 0
-          frozen: true
+          sn: 1
+          epoch: 1
           poisoned: false
-          pool: 6
+          frozen: true
+          bornAt: 0
           refundTo: 1
-          sn: 0
+          pool: 5
+          toppedUp: true
     flow:
-      bIn: 0
-      convictor: null
       dregIn: 0
-      hunter: null
+      bIn: 0
       poolIn: 5
       refund: null
-    exhibits: [T10_bonds_are_observable, T10_inert_without_next_keys, T14_pool_increases_only_by_topup, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, step_from_present_keeps_refund, trace_poison_fold, trace_sn_monotone_all]
+      hunter: null
+      convictor: null
+    exhibits: [T10_bonds_are_observable, T10_inert_without_next_keys, T14_pool_increases_only_by_topup, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, step_from_present_keeps_refund, topUp_adds_at_least_premium, topped_up_set_only_by_topUp, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 20
   who: alice
   say: "Unfrozen by a depositing rotation: consumable at once (juvenility is untouched by a deposit)."
   evidence:
-    add: [{"depositAuthorized":[1]}]
+    add: [{"depositAuthorized":[2]}]
   action:
     rotate:
-      sn': 1
+      sn': 2
       op: deposit
       payee: 1
   expect:
@@ -188,48 +254,50 @@ step:
     verdict: consumable
     modelResult:
       flow:
-        bIn: 5
-        convictor: null
         dregIn: 0
-        hunter:
-          addr: 1
-          b: 0
-          dreg: 0
-          pool: 2
+        bIn: 5
         poolIn: 0
         refund: null
+        hunter:
+          addr: 1
+          dreg: 0
+          b: 0
+          pool: 2
+        convictor: null
       state:
         present:
           l:
-            bornAt: 0
-            epoch: 1
-            frozen: false
+            sn: 2
+            epoch: 2
             poisoned: false
-            pool: 4
+            frozen: false
+            bornAt: 0
             refundTo: 1
-            sn: 1
+            pool: 3
+            toppedUp: false
     state:
       present:
         l:
-          bornAt: 0
-          epoch: 1
-          frozen: false
+          sn: 2
+          epoch: 2
           poisoned: false
-          pool: 4
+          frozen: false
+          bornAt: 0
           refundTo: 1
-          sn: 1
+          pool: 3
+          toppedUp: false
     flow:
-      bIn: 5
-      convictor: null
       dregIn: 0
-      hunter:
-        addr: 1
-        b: 0
-        dreg: 0
-        pool: 2
+      bIn: 5
       poolIn: 0
       refund: null
-    exhibits: [T10_bonds_are_observable, T10_only_deposit_restores, T14_pool_decreases_only_by_premium, T15_b_returns_only_by_deposit, T16_payments_are_named, T1_rotate_strict, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T2_epoch_only_by_rotation, T3_epoch_local, T3_rotation_clears, T5_every_bond_option, T6_component_conservation, T6_deposit_requires_new_keys, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_frozen_flips_only_by_rotation_or_freeze, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, step_from_present_keeps_refund, trace_poison_fold, trace_sn_monotone_all]
+      hunter:
+        addr: 1
+        dreg: 0
+        b: 0
+        pool: 2
+      convictor: null
+    exhibits: [T10_bonds_are_observable, T10_only_deposit_restores, T14_pool_decreases_only_by_premium, T15_b_returns_only_by_deposit, T16_payments_are_named, T1_rotate_strict, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T2_epoch_only_by_rotation, T3_epoch_local, T3_rotation_clears, T5_every_bond_option, T6_component_conservation, T6_deposit_requires_new_keys, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_frozen_flips_only_by_rotation_or_freeze, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, local_progress_unless_pending_or_retired, rotation_clears_topped_up, step_from_present_keeps_refund, topped_up_cleared_only_by_rotation, topped_up_moves_only_on_evidence, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 30
   who: treasury
@@ -241,47 +309,49 @@ step:
   who: alice
   say: "Poisoned: fails closed."
   evidence:
-    add: [{"quorum":[1]}]
+    add: [{"quorum":[2]}]
   action: poison
   expect:
     ok: true
     verdict: poisoned
     modelResult:
       flow:
-        bIn: 0
-        convictor: null
         dregIn: 0
-        hunter: null
+        bIn: 0
         poolIn: 0
         refund: null
+        hunter: null
+        convictor: null
       state:
         present:
           l:
-            bornAt: 0
-            epoch: 1
-            frozen: false
+            sn: 2
+            epoch: 2
             poisoned: true
-            pool: 4
+            frozen: false
+            bornAt: 0
             refundTo: 1
-            sn: 1
+            pool: 3
+            toppedUp: false
     state:
       present:
         l:
-          bornAt: 0
-          epoch: 1
-          frozen: false
+          sn: 2
+          epoch: 2
           poisoned: true
-          pool: 4
+          frozen: false
+          bornAt: 0
           refundTo: 1
-          sn: 1
+          pool: 3
+          toppedUp: false
     flow:
-      bIn: 0
-      convictor: null
       dregIn: 0
-      hunter: null
+      bIn: 0
       poolIn: 0
       refund: null
-    exhibits: [T10_bonds_are_observable, T10_current_quorum_never_restores, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T3_only_poison_sets, T4_current_key_thief_cannot_rotate_or_freeze, T4_current_quorum_only_poisons, T5_poison_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, consumableStateB_iff, local_progress_unless_pending_or_retired, step_from_present_keeps_refund, trace_poison_fold, trace_sn_monotone_all]
+      hunter: null
+      convictor: null
+    exhibits: [T10_bonds_are_observable, T10_current_quorum_never_restores, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T3_only_poison_sets, T4_current_key_thief_cannot_rotate_or_freeze, T4_current_quorum_only_poisons, T5_poison_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, local_progress_unless_pending_or_retired, step_from_present_keeps_refund, topped_up_kept_by_poison_and_freeze, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 50
   who: treasury
@@ -299,7 +369,7 @@ step:
       payee: 3
   expect:
     ok: false
+    reason: no-duplicity-proof
     verdict: poisoned
     modelResult: null
     exhibits: [T10_bonds_are_observable, T12_convict_exact, T7_step_iff_stepFn, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, consumableStateB_iff]
-    reason: no-duplicity-proof

@@ -52,8 +52,15 @@ if (actionsByIndex.every((a) => a === null)) throw new Error('the corpus grid ha
 // corpus's recorded result.
 const sameLive = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
+// A live state already topped up since its last rotation is not emitted: the
+// corpus helpers do not encode the top-up mark yet. Each such cell is checked
+// here instead: the Lean gives it the verdict of the same state not topped up,
+// and an accepted freeze keeps the mark.
+const unmarked = (s) => (typeof s === 'object' && s !== null && 'present' in s ? { present: { l: { ...s.present.l, toppedUp: false } } } : s);
+const cellAt = (s, a, e) => grid.cells.find((c) => c.s === s && c.a === a && c.e === e);
 const cells = [];
 const skipped = [];
+let markedChecked = 0;
 let accepted = 0;
 let refused = 0;
 for (const cell of grid.cells) {
@@ -61,6 +68,15 @@ for (const cell of grid.cells) {
   if (act === null) continue;
   const state = grid.states[cell.s];
   const env = grid.envs[cell.e];
+  if (typeof state === 'object' && 'present' in state && state.present.l.toppedUp === true) {
+    const twin = grid.states.findIndex((s) => JSON.stringify(s) === JSON.stringify(unmarked(state)));
+    const other = twin < 0 ? undefined : cellAt(twin, cell.a, cell.e);
+    if (!other) throw new Error(`topped-up cell ${cell.s}/${cell.a}/${cell.e} has no cell for the same state not topped up`);
+    if ((cell.result === null) !== (other.result === null)) throw new Error(`topped-up cell ${cell.s}/${cell.a}/${cell.e}: the top-up mark changes the freeze verdict`);
+    if (cell.result !== null && cell.result.state.present.l.toppedUp !== true) throw new Error(`topped-up cell ${cell.s}/${cell.a}/${cell.e}: a freeze cleared the top-up mark`);
+    markedChecked += 1;
+    continue;
+  }
   if (state === 'absent' || state === 'convicted') {
     skipped.push(`${typeof state === 'string' ? state : 'state'} state ${cell.s}, sn' ${act["sn'"]}, env ${cell.e}`);
     continue;
@@ -103,6 +119,7 @@ for (const cell of grid.cells) {
 // are exactly the ones with a short pool, unfrozen, unpoisoned, a later
 // sequence number and the rotation evidenced (one pool value x one sn' x one oracle).
 if (cells.length !== 78) throw new Error(`expected 78 realizable freeze cells, found ${cells.length}`);
+if (markedChecked !== 72) throw new Error(`expected 72 topped-up freeze cells checked, found ${markedChecked}`);
 if (skipped.length !== 12) throw new Error(`expected 12 unrealizable freeze cells, found ${skipped.length}`);
 if (accepted !== 1) throw new Error(`expected exactly 1 accepted freeze cell, found ${accepted}`);
 if (refused !== 77) throw new Error(`expected 77 refused freeze cells, found ${refused}`);

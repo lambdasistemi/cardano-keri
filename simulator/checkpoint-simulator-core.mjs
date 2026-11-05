@@ -21,7 +21,7 @@
  *
  * JSON shapes follow Lean's derived `ToJson` exactly, so the corpus the
  * Lean driver emits is compared byte-for-byte after key sorting:
- *   state   'absent' | {present:{l:{sn,epoch,poisoned,frozen,bornAt,refundTo,pool}}}
+ *   state   'absent' | {present:{l:{sn,epoch,poisoned,frozen,bornAt,refundTo,pool,toppedUp}}}
  *           | {terminationPending:{h:{epoch,sn}}} | 'convicted'
  *   action  {register:{refund,pool0}} | {rotate:{"sn'",op,payee}} | 'poison'
  *           | {freeze:{"sn'",payee}} | {topUp:{x}} | {convict:{payee}}
@@ -90,10 +90,10 @@ function parseJsonExact(text) {
 // (the Lean returns `none` without a name; the naming is the simulator's)
 const REASONS = [
   'invalid-params', 'invalid-nat', 'invalid-action', 'invalid-state', 'invalid-evidence',
-  'convicted-terminal', 'termination-pending', 'absent-needs-register', 'already-present',
+  'convicted-terminal', 'termination-pending', 'absent-needs-register', 'pool-below-premium', 'already-present',
   'no-witnessed-rotation', 'sequence-not-later', 'deposit-not-authorized',
   'no-quorum', 'already-poisoned', 'poisoned', 'pool-covers-premium', 'freeze-bond-missing',
-  'no-duplicity-proof', 'slot-regression',
+  'already-topped-up', 'top-up-below-premium', 'no-duplicity-proof', 'slot-regression',
 ];
 // the consumer's verdicts; the last three are boundary refusals (a consumer
 // reading a non-state or under non-params decides nothing)
@@ -109,6 +109,7 @@ const VERDICTS = ['consumable', 'not-present', 'frozen', 'poisoned', 'juvenile',
 // binders are the Lean's.
 const ROTATES = ['Step.rotateKeepPaid', 'Step.rotateKeepUnpaid', 'Step.rotateDepositPaid', 'Step.rotateDepositUnpaid'];
 const LEAN_GUARDS = {
+  'pool-below-premium': { decls: ['Step.register'], hyp: 'hpool', text: 'p.P ≤ pool0' },
   'no-witnessed-rotation': { decls: [...ROTATES, 'Step.freeze'], hyp: 'hev', text: 'env.rotationTo' },
   'sequence-not-later': { decls: [...ROTATES, 'Step.freeze'], hyp: 'hsn', text: "< sn'" },
   'deposit-not-authorized': { decls: ['Step.rotateDepositPaid', 'Step.rotateDepositUnpaid'], hyp: 'hauth', text: 'env.depositAuthorized (l.epoch + 1)' },
@@ -117,6 +118,8 @@ const LEAN_GUARDS = {
   'poisoned': { decls: ['Step.freeze'], hyp: 'hclean', text: 'l.poisoned = false' },
   'pool-covers-premium': { decls: ['Step.freeze'], hyp: 'hpool', text: 'l.pool < p.P' },
   'freeze-bond-missing': { decls: ['Step.freeze'], hyp: 'hb', text: 'l.frozen = false' },
+  'already-topped-up': { decls: ['Step.topUp'], hyp: 'hfresh', text: 'l.toppedUp = false' },
+  'top-up-below-premium': { decls: ['Step.topUp'], hyp: 'hx', text: 'p.P ≤ x' },
   'no-duplicity-proof': { decls: ['Step.convict'], hyp: 'hdup', text: 'env.duplicityAt' },
   'slot-regression': { decls: ['Trace.cons'], hyp: 'hle', text: "t ≤ t'" },
   // no constructor has the (action, state): stepFn's fall-through, the theorem names it
@@ -385,7 +388,7 @@ const snOf = s => { const k = stateKind(s); const l = liveOf(s); return k === 'p
 // Live.hash: the key state a present checkpoint records
 const hashOfLive = l => ({ epoch: l.epoch, sn: l.sn });
 // Live.rotated: the datum a rotation to sn' leaves before its bond option
-const rotated = (p, l, sn2) => ({ ...l, sn: sn2, epoch: l.epoch + 1, poisoned: false, pool: p.P <= l.pool ? l.pool - p.P : l.pool });
+const rotated = (p, l, sn2) => ({ ...l, sn: sn2, epoch: l.epoch + 1, poisoned: false, toppedUp: false, pool: p.P <= l.pool ? l.pool - p.P : l.pool });
 // Params.premium: P to the payee when the pool covers it, nothing otherwise
 const premium = (p, l, payee) => (p.P <= l.pool ? payment(payee, 0, 0, p.P) : null);
 // State.leaf: absent | active (including pending custody) | retired
@@ -393,12 +396,12 @@ const leafOf = s => hasOutput(s) ? 'active' : stateKind(s) === 'convicted' ? 're
 const leafKind = lf => ['absent', 'active', 'retired'].includes(lf) ? lf : null;
 
 const LIVE_NATS = ['sn', 'epoch', 'bornAt', 'refundTo', 'pool'];
-const LIVE_BOOLS = ['poisoned', 'frozen'];
+const LIVE_BOOLS = ['poisoned', 'frozen', 'toppedUp'];
 const LIVE_FIELDS = [...LIVE_NATS, ...LIVE_BOOLS];
 const STATE_CTORS = ['present', 'terminationPending'];
 // validateState(s) → null | {reason, field, message}: the complete state — one
 // of the four Lean shapes, exactly one constructor with nothing beside it,
-// every Nat field a Nat, the two bits booleans, no field the Lean does not
+// every Nat field a Nat, the three bits booleans, no field the Lean does not
 // have — checked before anything reads it
 function validateState(s) {
   const bad = (reason, field, message) => ({ reason, field, message });
@@ -469,8 +472,9 @@ function step(p, env, action, now, state) {
   if (sk === 'absent') {
     if (kind !== 'register') return refuse('absent-needs-register');
     const { refund, pool0 } = a.register;
+    if (!(p.P <= pool0)) return refuse('pool-below-premium');
     return some({ dregIn: p.D, bIn: p.B, poolIn: pool0 },
-      present({ sn: 0, epoch: 0, poisoned: false, frozen: false, bornAt: now, refundTo: refund, pool: pool0 }));
+      present({ sn: 0, epoch: 0, poisoned: false, frozen: false, bornAt: now, refundTo: refund, pool: pool0, toppedUp: false }));
   }
   const l = state.present.l;
   switch (kind) {
@@ -481,7 +485,7 @@ function step(p, env, action, now, state) {
       if (!(l.sn < sn2)) return refuse('sequence-not-later');
       const epoch2 = natAdd(l.epoch, 1); if (epoch2 === null) return refuse('invalid-nat', 'epoch');
       if (!bondOpOk(env, epoch2, op)) return refuse('deposit-not-authorized');
-      const next = { ...l, sn: sn2, epoch: epoch2, poisoned: false };
+      const next = { ...l, sn: sn2, epoch: epoch2, poisoned: false, toppedUp: false };
       const bIn = op === 'deposit' ? p.B - bHeldOf(p, l) : 0;
       if (op === 'deposit') next.frozen = false;
       if (p.P <= l.pool) return some({ bIn, hunter: payment(payee, 0, 0, p.P) }, present({ ...next, pool: l.pool - p.P }));
@@ -501,8 +505,10 @@ function step(p, env, action, now, state) {
       return some({ hunter: payment(payee, 0, p.B, 0) }, present({ ...l, frozen: true }));
     }
     case 'topUp': {
+      if (l.toppedUp) return refuse('already-topped-up');
+      if (!(p.P <= a.topUp.x)) return refuse('top-up-below-premium');
       const pool2 = natAdd(l.pool, a.topUp.x); if (pool2 === null) return refuse('invalid-nat', 'pool');
-      return some({ poolIn: a.topUp.x }, present({ ...l, pool: pool2 }));
+      return some({ poolIn: a.topUp.x }, present({ ...l, pool: pool2, toppedUp: true }));
     }
     case 'convict': {
       if (!envDuplicityAt(env, l.epoch, l.sn)) return refuse('no-duplicity-proof');
@@ -707,11 +713,12 @@ function explain(rec, s) {
       ? `The resulting ${rec.field} would exceed 2^53 − 1, the largest whole number this simulator represents exactly; the Lean's Nat is unbounded, so the step is refused rather than rounded.`
       : `"${rec.field}" must be a non-negative whole number at most 2^53 − 1: lovelace, slots and sequence numbers do not go negative, fractional or beyond what is represented exactly.`;
     case 'invalid-action': return 'The validator does not know this redeemer; only register, rotate, poison, freeze, top-up and convict exist. There is no owner exit.';
-    case 'invalid-state': return `"${rec.field}" is not part of a checkpoint state: a state is Absent, Present with its seven datum fields, Pending with its key state, or Convicted. Nothing is evaluated on a non-state.`;
+    case 'invalid-state': return `"${rec.field}" is not part of a checkpoint state: a state is Absent, Present with its eight datum fields, Pending with its key state, or Convicted. Nothing is evaluated on a non-state.`;
     case 'invalid-evidence': return `"${rec.field}" is not part of an evidence table: the four predicates (witnessed rotation, signed deposit, quorum, duplicity) as rows of 3, 1, 1 and 2 entries. Nothing is evaluated under a non-table.`;
     case 'termination-pending': return 'Conviction is pending: only completion of the associated imported fold can retire this identity.';
     case 'convicted-terminal': return 'Convicted is terminal: no rotation, no poison, no registration, ever. No KERI event un-duplicates an identifier.';
     case 'absent-needs-register': return 'Nothing is on chain for this AID. The only thing that can happen first is a registration.';
+    case 'pool-below-premium': return `The initial pool (${d.pool0}) is less than one premium (${p.P}): a registration delivers at least one premium, so the first rotation is paid.`;
     case 'already-present': return 'This AID already has its checkpoint. The token is minted once, ever.';
     case 'no-witnessed-rotation': return `No witnessed rotation from epoch ${l.epoch} at sequence ${l.sn} to sequence ${d["sn'"]} was presented: signatures at the current threshold, revealed keys matching the pre-committed digests, receipts from the witnesses.`;
     case 'sequence-not-later': return `The presented rotation is at sequence ${d["sn'"]}, not later than the checkpoint’s ${l.sn}: the checkpoint cannot roll back.`;
@@ -721,6 +728,8 @@ function explain(rec, s) {
     case 'poisoned': return 'A poisoned checkpoint cannot be frozen: it is already unconsumable, there is nothing to freeze.';
     case 'pool-covers-premium': return `The pool (${l.pool}) covers the premium (${p.P}): there is nothing to freeze. Land the rotation and be paid instead.`;
     case 'freeze-bond-missing': return `The freeze bond is not there to take: the checkpoint is already frozen (the bond is ${p.B} when held, nothing now).`;
+    case 'already-topped-up': return 'This key state was already topped up: a top-up is allowed once between two rotations, so a stream of tiny top-ups cannot keep the checkpoint busy. The next touch needs KERI evidence: a rotation, a poison, a freeze or a conviction.';
+    case 'top-up-below-premium': return `The top-up (${d.x}) is less than one premium (${p.P}): a top-up refills at least one premium.`;
     case 'no-duplicity-proof': return `No second rotation at sequence ${l.sn} revealing the keys of epoch ${l.epoch}, signed at the current threshold and receipted by the tip’s witnesses, was presented.`;
     case 'slot-regression': return `Slot ${rec.slot} is before the last accepted slot ${rec.now}: the chain does not go backwards.`;
   }
@@ -764,9 +773,9 @@ const THEOREMS = [
   { id: 'T12', title: 'Conviction needs a proof and is exact',
     lean: ['T12_convicted_terminal', 'trace_from_convicted', 'T12_convict_exact', 'pending_step_impossible', 'trace_from_pending', 'pending_has_no_local_exit', 'pending_consumer_refused', 'pending_custody_observations'],
     plain: 'No local step leaves pending custody or Convicted. Concrete duplicity enters pending custody with the retained representative. A conviction pays D to the convictor and the remaining bonds and pool to the refund address. Only an associated Registry fold completes retirement.' },
-  { id: 'T14', title: 'The pool moves only by premium or top-up',
-    lean: ['T14_pool_decreases_only_by_premium', 'T14_pool_increases_only_by_topup'],
-    plain: 'Between live states the pool decreases only by the premium under a paid rotation, and increases only by a top-up that changes nothing else.' },
+  { id: 'T14', title: 'The pool moves only by premium or top-up; a top-up is once per key state, at least one premium',
+    lean: ['T14_pool_decreases_only_by_premium', 'T14_pool_increases_only_by_topup', 'topUp_adds_at_least_premium', 'second_topUp_refused', 'rotation_clears_topped_up', 'topped_up_set_only_by_topUp', 'topped_up_cleared_only_by_rotation', 'topped_up_kept_by_poison_and_freeze', 'topped_up_moves_only_on_evidence', 'at_most_one_topUp_between_rotations', 'registration_pool_at_least_premium'],
+    plain: 'Between live states the pool decreases only by the premium under a paid rotation, and increases only by a top-up that changes nothing but the pool and the top-up mark. A registration delivers at least one premium. A top-up adds at least one premium, at most once between two rotations: it marks the key state, every rotation clears the mark, poison and freeze keep it, and a marked checkpoint moves only on KERI evidence.' },
   { id: 'T15', title: 'The freeze bond leaves only by freeze',
     lean: ['T15_b_leaves_only_by_freeze', 'T15_b_returns_only_by_deposit', 'T15_freeze_makes_inert'],
     plain: 'Between live states the freeze bond leaves only by a freeze (a later rotation presented, pool short, exactly B to the hunter, datum otherwise untouched); it returns only by a depositing rotation, in full; a freeze makes the checkpoint unconsumable.' },
@@ -924,9 +933,9 @@ function theoremReport(before, after, rec) {
     [(() => { const rp = replay(p, after.envAll, after.originSlot, after.origin, after.history); return rp.ok && eq(rp.state, post); })(), 'replay of the accepted actions does not reproduce the state']]);
   // ---- T8: one incarnation per AID — the registry leaf over its three states
   const leafPre = leafOfAid(before, rec.aid), leafPost = leafOfAid(after, rec.aid);
-  row('T8_absent_only_registers', stepped && preK === 'absent', () => [[ok === (kind === 'register'), 'from absent, something other than a registration happened, or a registration was refused without cause']]);
-  const enabledFrom = st => { const k = stateKind(st); if (k === 'absent') return step(p, env, { register: { refund: 0, pool0: 0 } }, rec.slot, st).ok; if (k === 'present') return step(p, env, { topUp: { x: 0 } }, rec.slot, st).ok; return false; };
-  row('local_progress_unless_pending_or_retired', ok && mine && postK !== 'convicted' && postK !== 'terminationPending', () => [[enabledFrom(post), 'no step is enabled from a state that is neither pending nor convicted']]);
+  row('T8_absent_only_registers', stepped && preK === 'absent', () => [[ok === (kind === 'register' && p.P <= d.pool0), 'from absent, something other than a registration of at least one premium happened, or such a registration was refused']]);
+  const enabledFrom = st => { const k = stateKind(st); if (k === 'absent') return step(p, env, { register: { refund: 0, pool0: p.P } }, rec.slot, st).ok; if (k === 'present') return step(p, env, { topUp: { x: p.P } }, rec.slot, st).ok; return false; };
+  row('local_progress_unless_pending_or_retired', ok && mine && postK !== 'convicted' && postK !== 'terminationPending' && !(lq && lq.toppedUp), () => [[enabledFrom(post), 'no step is enabled from a state that is neither pending nor convicted nor topped up']]);
   row('T8_freeze_and_convict_actors_are_proof', boundaryOk && (kind === 'freeze' || kind === 'convict'), () => [[actorOf(a) === 'proof', 'a proof-bearing action is not classed as one']]);
   // ---- T9: juvenility is consumer policy; the consumer's program is its predicate
   row('consumableStateB_iff', stepped, () => [[consumable(p, rec.slot, post).ok === consumableB(p, rec.slot, post), 'the consumer’s Bool mirror disagrees with the conjuncts']]);
@@ -967,8 +976,22 @@ function theoremReport(before, after, rec) {
   row('T14_pool_decreases_only_by_premium', ok && pp && lq.pool < lp.pool, () => [
     [actor === 'nextKeys' && big(lq.pool) + big(p.P) === big(lp.pool) && ph.pool === p.P, 'the pool decreased other than by the premium under a rotation']]);
   row('T14_pool_increases_only_by_topup', ok && pp && (lp.pool < lq.pool || kind === 'topUp'), () => [
-    [!(lp.pool < lq.pool) || (kind === 'topUp' && eq(f, flow({ poolIn: d.x })) && big(lq.pool) === big(lp.pool) + big(d.x) && eq({ ...lq, pool: 0 }, { ...lp, pool: 0 })), 'the pool increased other than by a top-up that changes nothing else'],
+    [!(lp.pool < lq.pool) || (kind === 'topUp' && lp.toppedUp === false && p.P <= d.x && eq(f, flow({ poolIn: d.x })) && big(lq.pool) === big(lp.pool) + big(d.x) && eq({ ...lq, pool: 0, toppedUp: true }, { ...lp, pool: 0, toppedUp: true }) && lq.toppedUp === true), 'the pool increased other than by the first top-up of the key state, of at least the premium, changing nothing but the pool and the mark'],
     [kind !== 'topUp' || big(lq.pool) === big(lp.pool) + big(d.x), 'a top-up did not add exactly its amount (precision lost)']]);
+  // ---- the bounded top-up
+  row('topUp_adds_at_least_premium', ok && kind === 'topUp', () => [
+    [p.P <= d.x, 'a top-up of less than the premium landed'],
+    [eq(f, flow({ poolIn: d.x })), 'a top-up flow is not exactly its amount in'],
+    [!!lp && lp.toppedUp === false && !!lq && eq(lq, { ...lp, pool: lp.pool + d.x, toppedUp: true }), 'a top-up landed on a key state already topped up, or changed more than the pool and the mark']]);
+  row('second_topUp_refused', stepped && kind === 'topUp' && !!lp && lp.toppedUp === true, () => [[!ok, 'a second top-up of one key state landed']]);
+  row('rotation_clears_topped_up', ok && pp && rot, () => [[lq.toppedUp === false, 'a rotation left the top-up mark']]);
+  row('topped_up_set_only_by_topUp', ok && pp && !lp.toppedUp && lq.toppedUp, () => [[kind === 'topUp', 'the top-up mark was set by something other than a top-up']]);
+  row('topped_up_cleared_only_by_rotation', ok && pp && lp.toppedUp && !lq.toppedUp, () => [[rot, 'the top-up mark was cleared by something other than a rotation']]);
+  row('topped_up_kept_by_poison_and_freeze', ok && pp && (kind === 'poison' || kind === 'freeze'), () => [[lq.toppedUp === lp.toppedUp, 'a poison or a freeze changed the top-up mark']]);
+  row('topped_up_moves_only_on_evidence', ok && !!lp && lp.toppedUp === true, () => [[actor !== 'anyone', 'a step open to anyone landed on a checkpoint already topped up']]);
+  const sinceRotation = (() => { const es = after.history; let k = -1; es.forEach(([, x], i) => { if (actionKind(x) === 'rotate') k = i; }); const seg = es.slice(k + 1); const lo0 = k < 0 ? liveOf(origin) : null; return { topUps: seg.filter(([, x]) => actionKind(x) === 'topUp').length, marked: lo0 && lo0.toppedUp ? 1 : 0 }; })();
+  row('at_most_one_topUp_between_rotations', ok && mine, () => [[sinceRotation.topUps + sinceRotation.marked <= 1, 'more than one top-up landed between two rotations']]);
+  row('registration_pool_at_least_premium', ok && kind === 'register', () => [[p.P <= d.pool0, 'a registration delivered less than one premium']]);
   // ---- T15: the freeze bond
   row('T15_b_leaves_only_by_freeze', ok && pp && !lp.frozen && lq.frozen, () => [
     [kind === 'freeze' && envRotationTo(env, lp.epoch, lp.sn, d["sn'"]) && lp.pool < p.P && eq(lq, { ...lp, frozen: true }) && eq(f, flow({ hunter: payment(d.payee, 0, p.B, 0) })), 'the freeze bond left other than by an exact freeze']]);

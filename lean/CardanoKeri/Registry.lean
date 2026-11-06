@@ -196,24 +196,53 @@ def fold (p : Params) (env : Env) (s : Sys) (expectedGen expectedPlugin : Nat)
   let world ← Singular.foldAccepted s.toWorld u tx
   foldResult p s tx world
 
--- These wrappers expose only the already imported generic recovery judgment.
--- They do not claim to discharge broader KERI application recovery in #468,
--- nor inherit legacy Registry recovery statements by sharing a name.
+-- A returned registration leaves the registration pool and nothing else.
 def recoverRegistrations (s : Sys) (world : Singular.World) : Except String Sys := do
   let after := { s with registrations := s.registrations.filter (fun b =>
     world.pending.contains b) }
   if after.toWorld ≠ world then throw "keri-recovery-reconstruction-mismatch"
   pure after
 
-def genericRetraction (s : Sys) (u : Singular.EconomicUtxo)
-    (tx : Singular.EconomicTransaction) : Except String Result := do
-  let world ← Singular.retractionAccepted s.toWorld u tx
-  let after ← recoverRegistrations s world
-  pure ({}, after)
+/-- A booked registration's processing deadline: its booking transaction's
+validity upper bound, which booking requires to equal `submittedAt`, plus the
+deployment window `processTime`. A fold must end by it; a return may only
+start at it. -/
+def deadline (c : Singular.Config) (r : Singular.RegistrationRequest) : Nat :=
+  r.submittedAt + c.processTime
 
-def genericRejection (s : Sys) (u : Singular.EconomicUtxo)
-    (tx : Singular.Rejection) : Except String Result := do
-  let world ← Singular.rejectionAccepted s.toWorld u tx
+/-- A KERI registry has no retraction window: the return opens at the deadline,
+so a request that was not folded is never left without a spending path. -/
+def Deployment (c : Singular.Config) : Prop := c.retractTime = 0
+
+def returnedRegistration (s : Sys) (member : Singular.OutRef × Singular.RejectReason) :
+    Option Singular.RegistrationBooking :=
+  s.registrations.find? (fun b => b.request.reference == member.1)
+
+/-- Every member is a booked registration whose deadline the transaction's
+whole validity interval has reached. -/
+def returnMemberReady (s : Sys) (interval : Singular.Interval)
+    (member : Singular.OutRef × Singular.RejectReason) : Bool :=
+  match returnedRegistration s member with
+  | some b => decide (deadline s.config b.request ≤ interval.lower)
+  | none => false
+
+/-- After its deadline anyone may return an unfolded registration, a duplicate
+key's included, with no signature. The imported rejection pays each refund
+address at least its requests' contents less their declared tips; the KERI
+guards add the deadline, registration-only members and a balanced transaction;
+the spender may keep the declared tips. A pending termination is never
+returned: only its terminating fold consumes it. -/
+def returnRequests (s : Sys) (u : Singular.EconomicUtxo) (r : Singular.Rejection) :
+    Except String Result := do
+  let some interval := r.transaction.transaction.validity
+    | throw "keri-return-interval-missing"
+  if !r.members.all (fun m => (returnedRegistration s m).isSome) then
+    throw "keri-return-registration-only"
+  if !r.members.all (returnMemberReady s interval) then
+    throw "keri-return-before-deadline"
+  if !Singular.balanced u.ledger r.transaction.transaction then
+    throw "keri-return-unbalanced"
+  let world ← Singular.rejectionAccepted s.toWorld u r
   let after ← recoverRegistrations s world
   pure ({}, after)
 
@@ -223,8 +252,7 @@ inductive Action where
   | bookTermination (aid booker fee : Nat) (booking : Singular.TerminationBooking)
   | fold (expectedGen expectedPlugin : Nat)
       (unspent : Singular.EconomicUtxo) (transaction : Singular.EconomicTransaction)
-  | genericRetraction (unspent : Singular.EconomicUtxo) (transaction : Singular.EconomicTransaction)
-  | genericRejection (unspent : Singular.EconomicUtxo) (transaction : Singular.Rejection)
+  | returnRequests (unspent : Singular.EconomicUtxo) (transaction : Singular.Rejection)
 
 def stepFn (p : Params) (env : Env) (action : Action) (s : Sys) : Except String Result :=
   match action with
@@ -232,8 +260,7 @@ def stepFn (p : Params) (env : Env) (action : Action) (s : Sys) : Except String 
   | .convictCkpt aid => convictCkpt env s aid
   | .bookTermination aid booker fee b => bookTermination p s aid booker fee b
   | .fold gen plugin u tx => fold p env s gen plugin u tx
-  | .genericRetraction u tx => genericRetraction s u tx
-  | .genericRejection u tx => genericRejection s u tx
+  | .returnRequests u tx => returnRequests s u tx
 
 inductive Reach (p : Params) (env : Env) (cfg : Singular.Config) : Sys → Prop where
   | init : Reach p env cfg (Sys.init cfg)

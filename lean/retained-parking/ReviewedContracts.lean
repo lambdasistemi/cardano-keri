@@ -1,10 +1,11 @@
 import CardanoKeri
 
-/-! Exact expected types at the fixed-refund revision. Unused proof binder
+/-! Exact expected types at the request-lifecycle revision. Unused proof binder
 names have an underscore prefix. This file holds the contracts revised by the
-retained-output, no-owner-exit or fixed-refund revision; the dispositions of
-removed and changed contracts are in `lean/NO-OWNER-EXIT-DISPOSITIONS.md` and
-`lean/FIXED-REFUND-DISPOSITIONS.md`. -/
+retained-output, no-owner-exit, fixed-refund or request-lifecycle revision; the
+dispositions of removed and changed contracts are in
+`lean/NO-OWNER-EXIT-DISPOSITIONS.md`, `lean/FIXED-REFUND-DISPOSITIONS.md` and
+`lean/REQUEST-LIFECYCLE-DISPOSITIONS.md`. -/
 set_option pp.universes true
 namespace CardanoKeri.Samaritan
 #check (@CardanoKeri.Samaritan.reap_conserves : ∀ (r : Reap), (reap r).intoRequest + (reap r).premium = r.Mc)
@@ -112,12 +113,6 @@ namespace CardanoKeri.Registry
 #check (@CardanoKeri.Registry.terminal_leaf_permanent : ∀ (p : Params) (env : Env) {s s' : Sys} {action : Action} {f : Flow} (_hs : stepFn p env action s = .ok (f, s')) (aid : Nat) (_hk : Singular.trieGet s.trie aid = .known .terminal), Singular.trieGet s'.trie aid = .known .terminal)
 end CardanoKeri.Registry
 namespace CardanoKeri.Registry
-#check (@CardanoKeri.Registry.generic_retraction_sound : ∀ (s s' : Sys) (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction) (f : Flow) (_hs : genericRetraction s u tx = .ok (f, s')), Singular.retractionAccepted s.toWorld u tx = .ok s'.toWorld ∧ s'.carriers = s.carriers ∧ s'.terminations = s.terminations ∧ s'.config = s.config ∧ s'.trie = s.trie ∧ s'.gen = s.gen ∧ s'.treasury = s.treasury ∧ s'.bindings = s.bindings ∧ s'.nextToken = s.nextToken ∧ f = {})
-end CardanoKeri.Registry
-namespace CardanoKeri.Registry
-#check (@CardanoKeri.Registry.generic_rejection_sound : ∀ (s s' : Sys) (u : Singular.EconomicUtxo) (tx : Singular.Rejection) (f : Flow) (_hs : genericRejection s u tx = .ok (f, s')), Singular.rejectionAccepted s.toWorld u tx = .ok s'.toWorld ∧ s'.carriers = s.carriers ∧ s'.terminations = s.terminations ∧ s'.config = s.config ∧ s'.trie = s.trie ∧ s'.gen = s.gen ∧ s'.treasury = s.treasury ∧ s'.bindings = s.bindings ∧ s'.nextToken = s.nextToken ∧ f = {})
-end CardanoKeri.Registry
-namespace CardanoKeri.Registry
 #check (@CardanoKeri.Registry.current_sys_fold_accounting : ∀ (p : Params) (env : Env) (cfg : Singular.Config) {s s' : Sys} (_hr : Reach p env cfg s) {gen plugin : Nat} {u : Singular.EconomicUtxo} {tx : Singular.EconomicTransaction} {f : Flow} (_hs : fold p env s gen plugin u tx = .ok (f, s')), Singular.balanced u.ledger tx.transaction = true ∧ Singular.foldStateLovelace (Singular.economicSpent u tx) = Singular.foldStateLovelace tx.outputs ∧ tx.transaction.donation = (Singular.foldObligations (Singular.foldMembers s.toWorld tx)).donation ∧ Singular.foldCarrierLovelace tx.outputs = (Singular.foldObligations (Singular.foldMembers s.toWorld tx)).carriers ∧ Singular.foldOrdinaryLovelace tx.outputs + tx.transaction.fee = Singular.foldOrdinaryLovelace (Singular.economicSpent u tx) + (Singular.foldObligations (Singular.foldMembers s.toWorld tx)).tips ∧ tx.transaction.fee ≤ Singular.foldOrdinaryLovelace (Singular.economicSpent u tx) ∧ s'.treasury = s.treasury + tx.transaction.donation ∧ Singular.requestTagsBurned u tx = true)
 end CardanoKeri.Registry
 namespace CardanoKeri.Registry
@@ -140,18 +135,6 @@ namespace CardanoKeri.Registry
 end CardanoKeri.Registry
 namespace CardanoKeri.Registry
 #check (@CardanoKeri.Registry.registered_registration_refused : ∀ (p : Params) (env : Env) (s : Sys) (gen plugin : Nat) (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction) (b : Singular.RegistrationBooking) (_selected : Singular.FoldMember.registration b ∈ Singular.foldMembers s.toWorld tx) (_known : Singular.trieGet s.trie b.request.key = .known .active ∨ Singular.trieGet s.trie b.request.key = .known .terminal), (fold p env s gen plugin u tx).toOption = none)
-end CardanoKeri.Registry
-namespace CardanoKeri.Registry
-#check (@CardanoKeri.Registry.termination_retraction_refused : ∀ (p : Params) (env : Env) (cfg : Singular.Config) {s : Sys} (_hr : Reach p env cfg s) (ref : Singular.OutRef) (e : TerminationEntry) (_hp : pendingAt s ref = some e) (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction) (_spent : Singular.inputsContainReference tx.transaction.inputs ref = true), (genericRetraction s u tx).toOption = none)
-end CardanoKeri.Registry
-namespace CardanoKeri.Registry
-#check (@CardanoKeri.Registry.termination_rejection_refused : ∀ (p : Params) (env : Env) (cfg : Singular.Config) {s : Sys} (_hr : Reach p env cfg s) (ref : Singular.OutRef) (e : TerminationEntry) (_hp : pendingAt s ref = some e) (u : Singular.EconomicUtxo) (tx : Singular.Rejection) (reason : Singular.RejectReason) (_member : (ref, reason) ∈ tx.members), (genericRejection s u tx).toOption = none)
-end CardanoKeri.Registry
-namespace CardanoKeri.Registry
-#check (@CardanoKeri.Registry.retraction_refund_and_guards : ∀ (s s' : Sys) (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction) (f : Flow) (_hs : genericRetraction s u tx = .ok (f, s')), ∃ request : Singular.RegistrationRequest, ∃ interval : Singular.Interval, Singular.retractionRequest s.toWorld tx = .ok request ∧ tx.transaction.signers.contains request.refundAddress = true ∧ tx.transaction.validity = some interval ∧ interval.valid ∧ request.submittedAt + s.config.processTime ≤ interval.lower ∧ interval.upper ≤ request.submittedAt + s.config.processTime + s.config.retractTime ∧ request.contents.lovelace ≤ Singular.refundPaid tx request.refundAddress ∧ tx.transaction.donation = 0 ∧ Singular.requestTagsBurned u tx = true ∧ tx.transaction.fee ≤ Singular.retractionFundingLovelace u tx request ∧ Singular.balanced u.ledger tx.transaction = true)
-end CardanoKeri.Registry
-namespace CardanoKeri.Registry
-#check (@CardanoKeri.Registry.rejection_refund_destinations : ∀ (s s' : Sys) (u : Singular.EconomicUtxo) (tx : Singular.Rejection) (f : Flow) (_hs : genericRejection s u tx = .ok (f, s')), ∀ address, Singular.refundOwed (Singular.rejectedRequests s.toWorld tx.members) false address ≤ Singular.refundPaid tx.transaction address)
 end CardanoKeri.Registry
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.pending_has_no_local_exit : ∀ (p : Params) (env : Env) (h : Hash) (a : Action) (now : Slot), stepFn p env a now (.terminationPending h) = none)
@@ -321,3 +304,39 @@ end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.Step.rotateDepositUnpaid_iff : ∀ {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq) (payee : Addr), Step p env (.rotate sn' .deposit payee) now (.present l) { bIn := p.B - l.bHeld p } (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false, toppedUp := false }) ↔ env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ env.depositAuthorized (l.epoch + 1) = true ∧ l.pool < p.P)
 end CardanoKeri.Checkpoint
+namespace CardanoKeri.Registry
+#check (@CardanoKeri.Registry.return_sound : ∀ (s s' : Sys) (u : Singular.EconomicUtxo) (tx : Singular.Rejection) (f : Flow) (_hs : returnRequests s u tx = .ok (f, s')), (∃ interval, tx.transaction.transaction.validity = some interval ∧ tx.members.all (fun m => (returnedRegistration s m).isSome) = true ∧ tx.members.all (returnMemberReady s interval) = true) ∧ Singular.balanced u.ledger tx.transaction.transaction = true ∧ Singular.rejectionAccepted s.toWorld u tx = .ok s'.toWorld ∧ s'.carriers = s.carriers ∧ s'.terminations = s.terminations ∧ s'.config = s.config ∧ s'.trie = s.trie ∧ s'.gen = s.gen ∧ s'.treasury = s.treasury ∧ s'.bindings = s.bindings ∧ s'.nextToken = s.nextToken ∧ f = {})
+end CardanoKeri.Registry
+namespace CardanoKeri.Registry
+#check (@CardanoKeri.Registry.termination_return_refused : ∀ (p : Params) (env : Env) (cfg : Singular.Config) {s : Sys} (_hr : Reach p env cfg s) (ref : Singular.OutRef) (e : TerminationEntry) (_hp : pendingAt s ref = some e) (u : Singular.EconomicUtxo) (tx : Singular.Rejection) (reason : Singular.RejectReason) (_member : (ref, reason) ∈ tx.members), (returnRequests s u tx).toOption = none)
+end CardanoKeri.Registry
+namespace CardanoKeri.Registry
+#check (@CardanoKeri.Registry.return_refund_floor : ∀ (s s' : Sys) (u : Singular.EconomicUtxo) (tx : Singular.Rejection) (f : Flow) (_hs : returnRequests s u tx = .ok (f, s')), ∀ address, Singular.refundOwed (Singular.rejectedRequests s.toWorld tx.members) false address ≤ Singular.refundPaid tx.transaction address)
+end CardanoKeri.Registry
+namespace CardanoKeri.Registry
+#check (@CardanoKeri.Registry.fold_ends_by_deadline : ∀ (p : Params) (env : Env) {s s' : Sys} {gen plugin : Nat} {u : Singular.EconomicUtxo} {tx : Singular.EconomicTransaction} {f : Flow} (_hs : fold p env s gen plugin u tx = .ok (f, s')) {b : Singular.RegistrationBooking} (_selected : Singular.FoldMember.registration b ∈ Singular.foldMembers s.toWorld tx), ∃ interval, tx.transaction.validity = some interval ∧ b.request.submittedAt ≤ interval.lower ∧ interval.upper ≤ deadline s.config b.request)
+end CardanoKeri.Registry
+namespace CardanoKeri.Registry
+#check (@CardanoKeri.Registry.return_starts_at_deadline : ∀ (p : Params) {s s' : Sys} (_hw : WellFormed p s) {u : Singular.EconomicUtxo} {tx : Singular.Rejection} {f : Flow} (_hs : returnRequests s u tx = .ok (f, s')) {b : Singular.RegistrationBooking} (_hb : b ∈ s.registrations) {member : Singular.OutRef × Singular.RejectReason} (_named : member ∈ tx.members) (_ref : member.1 = b.request.reference), ∃ interval, tx.transaction.transaction.validity = some interval ∧ deadline s.config b.request ≤ interval.lower)
+end CardanoKeri.Registry
+namespace CardanoKeri.Registry
+#check (@CardanoKeri.Registry.consumed_registration_spends : ∀ (p : Params) (env : Env) {s s' : Sys} (_hw : WellFormed p s) {action : Action} {f : Flow} (_hs : stepFn p env action s = .ok (f, s')) {b : Singular.RegistrationBooking} (_hb : b ∈ s.registrations) (_gone : b ∉ s'.registrations), (∃ gen plugin u tx interval, action = .fold gen plugin u tx ∧ tx.transaction.validity = some interval ∧ interval.upper ≤ deadline s.config b.request) ∨ (∃ u tx interval, action = .returnRequests u tx ∧ tx.transaction.transaction.validity = some interval ∧ deadline s.config b.request ≤ interval.lower))
+end CardanoKeri.Registry
+namespace CardanoKeri.Registry
+#check (@CardanoKeri.Registry.window_spend_is_fold : ∀ (p : Params) (env : Env) {s s' : Sys} (_hw : WellFormed p s) {action : Action} {f : Flow} (_hs : stepFn p env action s = .ok (f, s')) {b : Singular.RegistrationBooking} (_hb : b ∈ s.registrations) (_gone : b ∉ s'.registrations) (_notFold : ∀ gen plugin u tx, action ≠ .fold gen plugin u tx), ∃ u tx interval, action = .returnRequests u tx ∧ tx.transaction.transaction.validity = some interval ∧ deadline s.config b.request ≤ interval.lower)
+end CardanoKeri.Registry
+namespace CardanoKeri.Registry
+#check (@CardanoKeri.Registry.return_pays_refund_address : ∀ (p : Params) {s s' : Sys} (_hw : WellFormed p s) {u : Singular.EconomicUtxo} {tx : Singular.Rejection} {f : Flow} (_hs : returnRequests s u tx = .ok (f, s')) {b : Singular.RegistrationBooking} (_hb : b ∈ s.registrations) {member : Singular.OutRef × Singular.RejectReason} (_named : member ∈ tx.members) (_ref : member.1 = b.request.reference), b.request.contents.lovelace - b.request.declaredTip ≤ Singular.refundPaid tx.transaction b.request.refundAddress)
+end CardanoKeri.Registry
+namespace CardanoKeri.Registry
+#check (@CardanoKeri.Registry.duplicate_returned_after_deadline : ∀ (p : Params) (env : Env) {s s' : Sys} (_hw : WellFormed p s) {action : Action} {f : Flow} (_hs : stepFn p env action s = .ok (f, s')) {b : Singular.RegistrationBooking} (_hb : b ∈ s.registrations) (_gone : b ∉ s'.registrations) (_known : Singular.trieGet s.trie b.request.key = .known .active ∨ Singular.trieGet s.trie b.request.key = .known .terminal), ∃ u tx interval, action = .returnRequests u tx ∧ tx.transaction.transaction.validity = some interval ∧ deadline s.config b.request ≤ interval.lower)
+end CardanoKeri.Registry
+namespace CardanoKeri.Registry
+#check (@CardanoKeri.Registry.termination_custody_only_fold : ∀ (p : Params) (env : Env) {s s' : Sys} {action : Action} {f : Flow} (_hs : stepFn p env action s = .ok (f, s')) (ref : Singular.OutRef) (e : TerminationEntry) (_hp : pendingAt s ref = some e) (_gone : pendingAt s' ref ≠ some e), ConsumesPending ref action)
+end CardanoKeri.Registry
+namespace CardanoKeri.Registry
+#check (@CardanoKeri.Registry.return_interval_present : ∀ (s : Sys) (u : Singular.EconomicUtxo) (r : Singular.Rejection) (_missing : r.transaction.transaction.validity = none), returnRequests s u r = .error "keri-return-interval-missing")
+end CardanoKeri.Registry
+namespace CardanoKeri.Registry
+#check (@CardanoKeri.Registry.return_member_is_registration : ∀ (s : Sys) (interval : Singular.Interval) (member : Singular.OutRef × Singular.RejectReason) (b : Singular.RegistrationBooking) (_found : returnedRegistration s member = some b), Singular.rejectionMemberRefusal s.toWorld interval member = Singular.registrationRejectionGround s.toWorld b.request interval member.2)
+end CardanoKeri.Registry

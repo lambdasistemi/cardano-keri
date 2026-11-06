@@ -74,44 +74,33 @@ def mixedJourney : Driver Unit := do
   act "mixed-fold" (.fold s.gen s.config.applicationPolicy u tx)
   book 14 103
   let recovery := (← get).state
-  let some b := recovery.registrations.head? | throw "recovery fixture missing"
-  let ru := Singular.terminationWitnessUnspent recovery.toWorld 1
-  let rt := Singular.retractionWitnessTransaction recovery.toWorld b ⟨6, 7⟩ [42] 1 1
-  act "missing-recovery-signer" (.genericRetraction ru { rt with transaction.signers := [] }) false
-  act "recover-registration" (.genericRetraction ru rt)
+  let (ru, rt) ← liftM (returnTransaction recovery [⟨103, 0⟩] 6)
+  act "return-before-deadline" (.returnRequests ru
+    { rt with transaction.transaction.validity := some ⟨5, 6⟩ }) false
+  act "return-registration" (.returnRequests ru rt)
   process [201] 20
 
-def rejectionJourney : Driver Unit := do
+def returnJourney : Driver Unit := do
   book 15 105
   let s := (← get).state
-  let some b := s.registrations.head? | throw "rejection fixture missing"
-  let fresh := Singular.terminationWitnessFresh s.toWorld
-  let u := Singular.terminationWitnessUnspent s.toWorld 0
-  let output := { Singular.foldWitnessOrdinary 16 with output.address := some 42 }
-  let tx : Singular.EconomicTransaction := {
-    identity := fresh + 1, outputs := [output]
-    transaction := {
-      inputs := [Singular.foldWitnessInput b.request.reference]
-      referenceInputs := [Singular.foldWitnessInput ⟨fresh, 0⟩]
-      outputs := [output.output], mint := [], signers := [], refunds := [], validity := some ⟨11, 12⟩ }
-    trieReadyMint := b.request.contents.trieReadyTags.map (fun tag => (tag, -1))
-    applicationMint := b.request.contents.applicationTags.map (fun tag => (Singular.applicationTagIdentity tag, -1)) }
-  let rejection : Singular.Rejection := {
-    transaction := tx, stateReference := ⟨fresh, 0⟩, members := [(b.request.reference, .expired)] }
-  act "rejection-too-early" (.genericRejection u
-    { rejection with transaction.transaction.validity := some ⟨10, 11⟩ }) false
-  act "expired-registration-rejected" (.genericRejection u rejection)
+  let (u, r) ← liftM (returnTransaction s [⟨105, 0⟩] 11)
+  act "return-straddling-deadline" (.returnRequests u
+    { r with transaction.transaction.validity := some ⟨5, 7⟩ }) false
+  act "expired-registration-returned" (.returnRequests u r)
 
-def recoveryJourney : Driver Unit := do
+/-- The processing window, both edges: a fold may end at the deadline, a
+return may start at it, neither crosses it. -/
+def windowJourney : Driver Unit := do
   book 11 100
+  book 12 101
+  process [100] 5
   let s := (← get).state
-  let some b := s.registrations.head? | throw "recovery fixture missing"
-  let u := Singular.terminationWitnessUnspent s.toWorld 1
-  let tx := Singular.retractionWitnessTransaction s.toWorld b ⟨6, 7⟩ [42] 1 1
-  act "early-retraction" (.genericRetraction u { tx with transaction.validity := some ⟨5, 6⟩ }) false
-  act "missing-retraction-signer" (.genericRetraction u { tx with transaction.signers := [] }) false
-  act "late-retraction" (.genericRetraction u { tx with transaction.validity := some ⟨10, 12⟩ }) false
-  act "retraction" (.genericRetraction u tx)
+  let (fu, ft) ← liftM (foldTransaction s [⟨101, 0⟩] 6 1 1)
+  act "fold-after-deadline" (.fold s.gen s.config.applicationPolicy fu ft) false
+  let (ru, rt) ← liftM (returnTransaction s [⟨101, 0⟩] 5)
+  act "return-in-window" (.returnRequests ru rt) false
+  let (ru, rt) ← liftM (returnTransaction s [⟨101, 0⟩] 6)
+  act "return-at-deadline" (.returnRequests ru rt)
 
 def seededJourney (seed : Nat) : Driver Unit := do
   book 11 100
@@ -143,8 +132,8 @@ def main : IO Unit := do
   let generated := do
     let traces ← [ ("live-until-convicted", RegistryTrace.localJourney),
       ("mixed-custody-and-recovery", RegistryTrace.mixedJourney),
-      ("expired-registration", RegistryTrace.rejectionJourney),
-      ("registration-retraction", RegistryTrace.recoveryJourney),
+      ("expired-registration", RegistryTrace.returnJourney),
+      ("registration-window", RegistryTrace.windowJourney),
       ("seed-437", RegistryTrace.seededJourney 437),
       ("seed-9001", RegistryTrace.seededJourney 9001) ].mapM fun (name, driver) => RegistryTrace.run name driver
     let grid ← RegistryTrace.grid

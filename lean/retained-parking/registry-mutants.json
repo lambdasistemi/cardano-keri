@@ -105,5 +105,53 @@
     "failure": "live-booking-refused",
     "test": "RegistryRetentionChecks",
     "kind": "semantic-runtime"
+  },
+  {
+    "id": "return-deadline-dropped",
+    "before": "if !r.members.all (returnMemberReady s interval) then",
+    "after": "if !r.members.all (returnMemberReady s interval) && false then",
+    "failure": "duplicate-early-return",
+    "owner": "CardanoKeri.Registry.window_spend_is_fold",
+    "test": "RegistryReturnChecks"
+  },
+  {
+    "id": "return-deadline-late-by-one",
+    "before": "| some b => decide (deadline s.config b.request ≤ interval.lower)",
+    "after": "| some b => decide (deadline s.config b.request ≤ interval.lower + 1)",
+    "failure": "duplicate-early-return",
+    "owner": "CardanoKeri.Registry.return_starts_at_deadline",
+    "test": "RegistryReturnChecks"
+  },
+  {
+    "id": "return-deadline-on-upper-bound",
+    "before": "| some b => decide (deadline s.config b.request ≤ interval.lower)",
+    "after": "| some b => decide (deadline s.config b.request ≤ interval.upper)",
+    "failure": "duplicate-early-return",
+    "owner": "CardanoKeri.Registry.return_starts_at_deadline",
+    "test": "RegistryReturnChecks"
+  },
+  {
+    "id": "deadline-without-window",
+    "before": "  r.submittedAt + c.processTime",
+    "after": "  r.submittedAt",
+    "failure": "duplicate-early-return",
+    "owner": "CardanoKeri.Registry.duplicate_returned_after_deadline",
+    "test": "RegistryReturnChecks"
+  },
+  {
+    "id": "return-balance-dropped",
+    "before": "if !Singular.balanced u.ledger r.transaction.transaction then",
+    "after": "if !Singular.balanced u.ledger r.transaction.transaction && false then",
+    "failure": "return-unbalanced-refused",
+    "owner": "CardanoKeri.Registry.return_sound",
+    "test": "RegistryReturnChecks"
+  },
+  {
+    "id": "return-registration-only-dropped",
+    "before": "if !r.members.all (fun m => (returnedRegistration s m).isSome) then",
+    "after": "if !r.members.all (fun m => (returnedRegistration s m).isSome) && false then",
+    "failure": "return-without-member-refused",
+    "owner": "CardanoKeri.Registry.return_member_is_registration",
+    "test": "RegistryReturnChecks"
   }
 ]

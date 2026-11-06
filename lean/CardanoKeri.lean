@@ -9,6 +9,7 @@ import CardanoKeri.Registry
 import CardanoKeri.RegistryGoals
 import CardanoKeri.RegistryAgreement
 import CardanoKeri.RegistryAdapterFacts
+import CardanoKeri.RegistryRequestLifecycle
 import CardanoKeri.RegistryLifecycleExamples
 import CardanoKeri.Samaritan
 import CardanoKeri.SingularBinding

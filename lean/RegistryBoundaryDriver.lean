@@ -112,103 +112,72 @@ def terminationCells (s : Sys) : Except String (List Json) := do
     ("termination-clock", { b with request.submittedAt := some 10 })
     ].map (fun (name, b) => run name b))
 
-/-- Registration recovery neighbors keep an actually booked starting state.
-Malformed observations are candidate transactions, never asserted histories. -/
-def recoveryCells (s : Sys) (b : Singular.RegistrationBooking) : List Json := Id.run do
-  let world := s.toWorld
-  let fresh := Singular.terminationWitnessFresh world
-  let u := Singular.terminationWitnessUnspent world 1
-  let tx := Singular.retractionWitnessTransaction world b ⟨6, 7⟩ [42] 1 1
-  let run := fun name u tx => appendCell s name (.genericRetraction u tx)
-  let stateInput := Singular.foldWitnessInput ⟨fresh, 0⟩
-  let variants : List (String × Singular.EconomicTransaction) := [
-    ("retract-valid", tx),
-    ("retract-interval-missing", { tx with transaction.validity := none }),
-    ("retract-interval-empty", { tx with transaction.validity := some ⟨6, 6⟩ }),
-    ("retract-ready-burn", { tx with trieReadyMint := [] }),
-    ("retract-application-burn", { tx with applicationMint := [] }),
-    ("retract-state-mint", { tx with stateMint := [(cfg.stateToken, 1)] }),
-    ("retract-singular-mint", { tx with singularMint := [(cfg.singularTag 11, 1)] }),
-    ("retract-foreign-mint", { tx with transaction.mint := [((.active, 11), 1)] }),
-    ("retract-donation", { tx with transaction.donation := 1 }),
-    ("retract-fee-short", { tx with transaction.fee := 2 }),
-    ("retract-unbalanced", syncOutputs tx (fun o => { o with
-      contents.lovelace := o.contents.lovelace + 1, output.lovelace := o.output.lovelace + 1 })),
-    ("retract-short-refund", syncOutputs tx (fun o => { o with
-      contents.lovelace := 16, output.lovelace := 16 })),
-    ("retract-wrong-refund", syncOutputs tx (fun o => { o with output.address := some 99 })),
-    ("retract-state-spent", { tx with transaction.inputs := stateInput :: tx.transaction.inputs }),
-    ("retract-state-read", { tx with transaction.referenceInputs := [stateInput] }),
-    ("retract-duplicate-input", { tx with transaction.inputs := tx.transaction.inputs ++ tx.transaction.inputs.take 1 }),
-    ("retract-overlap", { tx with transaction.referenceInputs := tx.transaction.inputs.take 1 }),
-    ("retract-no-request", { tx with transaction.inputs := tx.transaction.inputs.drop 1 }) ]
-  let funding : List (String × (Singular.EconomicOutput → Singular.EconomicOutput)) := [
-    ("retract-funding-ready", fun o => { o with contents.trieReadyTags := b.request.contents.trieReadyTags }),
-    ("retract-funding-application", fun o => { o with contents.applicationTags := b.request.contents.applicationTags }),
-    ("retract-funding-singular", fun o => { o with singularTags := [cfg.singularTag 11] }),
-    ("retract-funding-role", fun o => { o with output.role := .request }),
-    ("retract-funding-request", fun o => { o with request := some (.registration b.request) }),
-    ("retract-funding-assets", fun o => { o with contents.otherAssets := [(⟨99, 11⟩, 1)] }) ]
-  return variants.map (fun (name, tx) => run name u tx) ++ funding.map (fun (name, edit) =>
-    run name (u.map fun (ref, o) => (ref, if ref == ⟨fresh, 1⟩ then edit o else o)) tx)
-
-def rejectionCells (s : Sys) (b : Singular.RegistrationBooking) : List Json := Id.run do
-  let fresh := Singular.terminationWitnessFresh s.toWorld
-  let u := Singular.terminationWitnessUnspent s.toWorld 0
-  let output := { Singular.foldWitnessOrdinary 16 with output.address := some 42 }
-  let tx : Singular.EconomicTransaction := {
-    identity := fresh + 1, outputs := [output]
-    transaction := {
-      inputs := [Singular.foldWitnessInput b.request.reference]
-      referenceInputs := [Singular.foldWitnessInput ⟨fresh, 0⟩]
-      outputs := [output.output], mint := [], signers := [], refunds := [], validity := some ⟨11, 12⟩ }
-    trieReadyMint := b.request.contents.trieReadyTags.map (fun tag => (tag, -1))
-    applicationMint := b.request.contents.applicationTags.map (fun tag => (Singular.applicationTagIdentity tag, -1)) }
-  let r : Singular.Rejection := {
-    transaction := tx, stateReference := ⟨fresh, 0⟩, members := [(b.request.reference, .expired)] }
-  let run := fun name u r => appendCell s name (.genericRejection u r)
+/-- Return neighbors keep an actually booked starting state: one input
+changed per row. Malformed observations are candidate transactions, never
+asserted histories. The valid row pays the refund address the contents less the
+declared tip and leaves the tip as the fee. -/
+def returnCells (s : Sys) (b : Singular.RegistrationBooking) : Except String (List Json) := do
+  let (u, r) ← returnTransaction s [b.request.reference] 11
+  let tx := r.transaction
+  let fresh := r.stateReference.tx
+  let run := fun name u r => appendCell s name (.returnRequests u r)
+  let feeTwo : Singular.EconomicTransaction := { tx with transaction.fee := 2 }
+  let keepsMore := syncOutputs feeTwo (fun o => { o with
+    output.lovelace := 15, contents.lovelace := 15 })
+  -- Spending the state output, carried through unchanged so the transaction
+  -- still balances and the imported refusal is the one observed.
+  let stateRef : Singular.OutRef := ⟨fresh, 0⟩
+  let stateOut := ((u.find? (fun e => e.1 == stateRef)).map Prod.snd).getD (Singular.foldWitnessOrdinary 0)
+  let spendState : Singular.EconomicTransaction := { tx with
+    outputs := tx.outputs ++ [stateOut]
+    transaction.outputs := tx.transaction.outputs ++ [stateOut.output]
+    transaction.inputs := Singular.foldWitnessInput stateRef :: tx.transaction.inputs }
+  let deployedElsewhere := { s with config.retractTime := 5 }
+  let (elsewhereU, elsewhere) ← returnTransaction deployedElsewhere [b.request.reference] 6
   let variants : List (String × Singular.Rejection) := [
-    ("reject-valid", r),
-    ("reject-no-state-read", { r with transaction.transaction.referenceInputs := [] }),
-    ("reject-no-state-utxo", { r with
+    ("return-valid", r),
+    ("return-with-signer", { r with transaction.transaction.signers := [7] }),
+    ("return-before-deadline", { r with transaction.transaction.validity := some ⟨5, 6⟩ }),
+    ("return-straddling-deadline", { r with transaction.transaction.validity := some ⟨5, 7⟩ }),
+    ("return-at-deadline", { r with transaction.transaction.validity := some ⟨6, 7⟩ }),
+    ("return-unbalanced", { r with transaction.transaction.fee := 0 }),
+    ("return-spender-keeps-more-than-tip", { r with transaction := keepsMore }),
+    ("return-redirected-refund", { r with transaction := syncOutputs tx (fun o => { o with
+      output.address := some 99 }) }),
+    ("return-no-state-read", { r with transaction.transaction.referenceInputs := [] }),
+    ("return-no-state-utxo", { r with
       stateReference := ⟨999, 0⟩,
       transaction.transaction.referenceInputs := [Singular.foldWitnessInput ⟨999, 0⟩] }),
-    ("reject-spent-state-overlap", { r with
-      transaction.transaction.inputs :=
-        Singular.foldWitnessInput ⟨fresh, 0⟩ :: tx.transaction.inputs }),
-    ("reject-spent-state", { r with
-      transaction.transaction.referenceInputs := [],
-      transaction.transaction.inputs := Singular.foldWitnessInput ⟨fresh, 0⟩ :: tx.transaction.inputs }),
-    ("reject-duplicate-input", { r with transaction.transaction.inputs := tx.transaction.inputs ++ tx.transaction.inputs }),
-    ("reject-input-overlap", { r with
+    ("return-spent-state-overlap", { r with transaction := spendState }),
+    ("return-spent-state", { r with transaction := { spendState with transaction.referenceInputs := [] } }),
+    ("return-extra-input", { r with transaction.transaction.inputs :=
+      tx.transaction.inputs ++ [Singular.foldWitnessInput ⟨fresh, 1⟩] }),
+    ("return-duplicate-input", { r with transaction.transaction.inputs := tx.transaction.inputs ++ tx.transaction.inputs }),
+    ("return-input-overlap", { r with
       transaction.transaction.referenceInputs :=
         tx.transaction.inputs ++ tx.transaction.referenceInputs }),
-    ("reject-interval-missing", { r with transaction.transaction.validity := none }),
-    ("reject-interval-empty", { r with transaction.transaction.validity := some ⟨11, 11⟩ }),
-    ("reject-empty", { r with members := [] }),
-    ("reject-wrong-member", { r with members := [(⟨999, 0⟩, .expired)] }),
-    ("reject-nonpending-input", { r with
-      members := [(⟨fresh, 1⟩, .expired)],
-      transaction.transaction.inputs := [Singular.foldWitnessInput ⟨fresh, 1⟩] }),
-    ("reject-wrong-evidence", { r with members := [(b.request.reference, .mismatch (.known .active))] }),
-    ("reject-compatible", { r with members := [(b.request.reference, .mismatch .unknown)] }),
-    ("reject-ready-burn", { r with transaction.trieReadyMint := [] }),
-    ("reject-application-burn", { r with transaction.applicationMint := [] }),
-    ("reject-state-mint", { r with transaction.stateMint := [(cfg.stateToken, 1)] }),
-    ("reject-singular-mint", { r with transaction.singularMint := [(cfg.singularTag 11, 1)] }),
-    ("reject-short-refund", { r with transaction := syncOutputs tx (fun o => { o with
-      output.lovelace := 15, contents.lovelace := 15 }) }),
-    ("reject-wrong-refund", { r with transaction := syncOutputs tx (fun o => { o with output.address := some 99 }) }) ]
+    ("return-interval-missing", { r with transaction.transaction.validity := none }),
+    ("return-interval-empty", { r with transaction.transaction.validity := some ⟨11, 11⟩ }),
+    ("return-empty", { r with members := [] }),
+    ("return-wrong-member", { r with members := [(⟨999, 0⟩, .expired)] }),
+    ("return-wrong-evidence", { r with members := [(b.request.reference, .mismatch (.known .active))] }),
+    ("return-compatible", { r with members := [(b.request.reference, .mismatch .unknown)] }),
+    ("return-ready-burn", { r with transaction.trieReadyMint := [] }),
+    ("return-application-burn", { r with transaction.applicationMint := [] }),
+    ("return-state-mint", { r with transaction.stateMint := [(cfg.stateToken, 1)] }),
+    ("return-singular-mint", { r with transaction.singularMint := [(cfg.singularTag 11, 1)] }) ]
   let states : List (String × (Singular.EconomicOutput → Singular.EconomicOutput)) := [
-    ("reject-state-token-count", fun o => { o with output.stateTokens := 0 }),
-    ("reject-state-token-none", fun o => { o with output.stateToken := none }),
-    ("reject-state-policy", fun o => { o with output.stateToken := some ⟨99, 0⟩ }),
-    ("reject-state-name", fun o => { o with output.stateToken := some ⟨cfg.registryId, 99⟩ }),
-    ("reject-state-datum-form", fun o => { o with output.datum := .hashed }),
-    ("reject-state-config-none", fun o => { o with output.config := none }),
-    ("reject-stale-state", fun o => { o with output.config := some { s.config with root := ByteArray.empty } }),
-    ("reject-state-configuration", fun o => { o with output.config := some { s.config with processTime := 99 } }) ]
-  return variants.map (fun (name, r) => run name u r) ++ states.map (fun (name, edit) =>
+    ("return-state-token-count", fun o => { o with output.stateTokens := 0 }),
+    ("return-state-token-none", fun o => { o with output.stateToken := none }),
+    ("return-state-policy", fun o => { o with output.stateToken := some ⟨99, 0⟩ }),
+    ("return-state-name", fun o => { o with output.stateToken := some ⟨cfg.registryId, 99⟩ }),
+    ("return-state-datum-form", fun o => { o with output.datum := .hashed }),
+    ("return-state-config-none", fun o => { o with output.config := none }),
+    ("return-stale-state", fun o => { o with output.config := some { s.config with root := ByteArray.empty } }),
+    ("return-state-configuration", fun o => { o with output.config := some { s.config with processTime := 99 } }) ]
+  return variants.map (fun (name, r) => run name u r) ++
+    [appendCell deployedElsewhere "return-without-keri-deployment" (.returnRequests elsewhereU elsewhere)] ++
+    states.map (fun (name, edit) =>
     run name (u.map fun (ref, o) => (ref, if ref == ⟨fresh, 0⟩ then edit o else o)) r)
 
 /-- Deliberately inconsistent input states exercise the total function's
@@ -246,7 +215,7 @@ def inconsistentTerminationCells (s : Sys) : Except String (List Json) := do
     pure (folded ++ [
       cell "termination-missing-custody" p evidence missing (.fold s.gen cfg.applicationPolicy u tx),
       cell "termination-mismatch-not-recoverable" p evidence bad
-        (.genericRejection (Singular.terminationWitnessUnspent bad.toWorld 0) rejection)])
+        (.returnRequests (Singular.terminationWitnessUnspent bad.toWorld 0) rejection)])
 
 def cells : Except String (List Json) := do
   let (_, booked) ← execute start (.bookRegistration (registration start.state 11 100))
@@ -261,19 +230,18 @@ def cells : Except String (List Json) := do
   let rb := registration start.state 11 100
   let badStates ← inconsistentTerminationCells terminated.state
   let (_, twoBooked) ← execute booked (.bookRegistration (registration booked.state 12 101))
-  let recovery := Singular.retractionWitnessTransaction twoBooked.state.toWorld rb ⟨6, 7⟩ [42] 1 1
-  let recovery := { recovery with transaction.inputs := recovery.transaction.inputs ++ [Singular.foldWitnessInput ⟨101, 0⟩] }
+  let (returnU, returnBoth) ← returnTransaction twoBooked.state [⟨100, 0⟩, ⟨101, 0⟩] 11
+  let returns ← returnCells booked.state rb
   let some carrier := carrierAt pending.state 11 | throw "boundary-carrier-missing"
   let extra := { carrier with original := { carrier.original with key := 12 } }
   let inconsistent := { pending.state with carriers := pending.state.carriers ++ [extra] }
   let duplicateCustody := { terminated.state with carriers := pending.state.carriers }
   let (duplicateU, duplicateTx) ← foldTransaction duplicateCustody [⟨200, 0⟩] 2 1 1
-  pure (bookingCells ++ foldRegistration ++ foldTermination ++ term ++ recoveryCells booked.state rb ++ rejectionCells booked.state rb ++ badStates ++ [
+  pure (bookingCells ++ foldRegistration ++ foldTermination ++ term ++ returns ++ badStates ++ [
     appendCell inconsistent "termination-carrier-reconstruction" (.bookTermination 11 7 1 b),
     appendCell duplicateCustody "fold-carrier-reconstruction"
       (.fold duplicateCustody.gen cfg.applicationPolicy duplicateU duplicateTx),
-    appendCell twoBooked.state "retract-multiple-requests" (.genericRetraction
-      (Singular.terminationWitnessUnspent twoBooked.state.toWorld 1) recovery),
+    appendCell twoBooked.state "return-multiple-requests" (.returnRequests returnU returnBoth),
     appendCell { pending.state with trie := [] } "termination-without-active-leaf" (.bookTermination 11 7 1 b),
     appendCell booked.state "duplicate-registration-reference" (.bookRegistration rb),
     appendCell live.state "termination-requires-conviction" (.bookTermination 11 7 1 b),

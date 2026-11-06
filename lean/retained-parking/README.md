@@ -9,7 +9,7 @@ A proof failure, missing import, timeout or unrelated error is not a kill.
 | --- | --- | --- |
 | `checkpoint-atoms.json` | 33 | Local decidable mirror and observation mutations; complete result checks |
 | `checkpoint-mutants.json` | 5 | Pending refusal, pending keys and addressed conviction flows |
-| `registry-mutants.json` | 13 | Token/output/minimum ADA, live-booking refusal, custody tails, binding domain, generation and plugin |
+| `registry-mutants.json` | 19 | Token/output/minimum ADA, live-booking refusal, custody tails, binding domain, generation and plugin; the return's deadline, balance and registration-only guards |
 | `samaritan-mutants.json` | 4 | Actual constructor domain, request funding, premium and external fee |
 
 The economic campaign compiles the exact definition prefix of `Samaritan.lean`
@@ -36,9 +36,9 @@ certificate adapter: consuming another request and replacing the stored context.
 They are implementation mutants. The separate foreign-context receipt controls
 are type-interface checks. Neither category is counted as a Lean model mutant.
 
-`ReviewedContracts.lean` checks all 105 revised exact contracts and
+`ReviewedContracts.lean` checks all 111 revised exact contracts and
 `PreservedContracts.lean` checks 49 preserved contracts. `theorem-stories.json`
-binds 456 lifecycle/transport theorem identities, their source narratives,
+binds 469 lifecycle/transport theorem identities, their source narratives,
 complete formal Given/Then and source hashes. `story-bindings.mjs` rejects drift;
 compilation remains the authority on the propositions and axiom closure.
 

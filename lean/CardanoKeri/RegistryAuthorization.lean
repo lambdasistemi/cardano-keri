@@ -130,14 +130,10 @@ theorem authorization_step (p : Params) (env : Env) (cfg : Singular.Config)
     · intro e member
       rw [(fold_sound p env hs).2.2.2.2.2.2] at member
       exact history.2 e (List.mem_filter.mp member).1
-  | genericRetraction u tx =>
-    have facts := generic_retraction_sound s s' u tx f hs
-    exact ⟨fun c member pending => history.1 c (facts.2.1 ▸ member) pending,
-      fun e member => history.2 e (facts.2.2.1 ▸ member)⟩
-  | genericRejection u tx =>
-    have facts := generic_rejection_sound s s' u tx f hs
-    exact ⟨fun c member pending => history.1 c (facts.2.1 ▸ member) pending,
-      fun e member => history.2 e (facts.2.2.1 ▸ member)⟩
+  | returnRequests u tx =>
+    have facts := return_sound s s' u tx f hs
+    exact ⟨fun c member pending => history.1 c (facts.2.2.2.1 ▸ member) pending,
+      fun e member => history.2 e (facts.2.2.2.2.1 ▸ member)⟩
 
 /-- Every actual reachable state retains authorization in both custody stages. -/
 theorem reachable_authorization (p : Params) (env : Env) (cfg : Singular.Config)

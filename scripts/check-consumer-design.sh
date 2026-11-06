@@ -70,3 +70,16 @@ node scripts/checkpoint-writer-vectors.mjs --check
   rm -f -- "$generated"
   lake env lean --run CheckpointDepositDriver.lean --check checkpoint-deposit-vectors.json
 )
+# The registration request lifecycle (#468): the committed vectors are the
+# Lean's output, every committed row is checked against the Lean and every
+# changed field fails.
+(
+  cd lean
+  lake build CardanoKeri.RequestLifecycleVectors
+  generated=$(mktemp)
+  lake env lean --run RequestLifecycleDriver.lean >"$generated"
+  node -e 'const fs=require("fs");if(fs.readFileSync(process.argv[1],"utf8")!==fs.readFileSync(process.argv[2],"utf8")){console.error("request-lifecycle-vectors.json differs from the Lean output");process.exit(1)}' \
+    request-lifecycle-vectors.json "$generated"
+  rm -f -- "$generated"
+  lake env lean --run RequestLifecycleDriver.lean --check request-lifecycle-vectors.json
+)

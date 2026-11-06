@@ -34,10 +34,12 @@ The traceability gate performs a clean build and checks exact contract types.
 | `CheckpointGoals.lean` | Local and system invariants, inversions, executable equivalence and consumer refusal |
 | `CheckpointCompletionGoals.lean` | Stored origin, whole pending entry, request/key binding and completion consequences |
 | `CheckpointCertificate.lean`, `CheckpointSystemEvidence.lean` | Executable certificates and their actual SysStep proofs |
-| `Registry.lean`, `RegistryAgreement.lean` | Complete generic booking/fold/recovery execution and projection correspondence |
+| `Registry.lean`, `RegistryAgreement.lean` | Complete generic booking/fold execution, the request return and projection correspondence |
 | `RegistryInvariant.lean`, `RegistryReach.lean`, `RegistryCompleteness.lean` | Well-formedness, reachable preservation and complete reconstruction |
 | `RegistryCustody.lean`, `RegistryBurns.lean`, `RegistryAuthorization.lean` | Whole pending custody, fold-only retirement and application authorization |
 | `RegistryGoals.lean` | Numbered consequences and inversions |
+| `RegistryRequestLifecycle.lean` | Request lifecycle: only a fold until the deadline, then a return to the refund address less the tip; duplicates wait; termination custody only through its fold |
+| `RequestLifecycleVectors.lean` | Fold and return vectors at each time boundary, emitted by `RequestLifecycleDriver.lean` into `request-lifecycle-vectors.json` and checked against the Lean |
 | `Samaritan.lean` | Booking conservation and conditional actual-fold addressed accounting |
 
 Supporting metadata/fold/termination modules prove the intermediate list and
@@ -61,12 +63,13 @@ the runner live in `retained-parking/`; model/subject compilation must succeed
 before a named runtime failure counts as a kill. Fabricated JavaScript checker
 failures and implementation mutants are recorded separately.
 
-The 88 changed contracts and 63 preserved live contracts are checked under
+The 111 changed contracts and 49 preserved live contracts are checked under
 explicit expected types in `retained-parking/ReviewedContracts.lean` and
 `PreservedContracts.lean`. Historical identities retain their dispositions;
 retired contracts do not count as current proofs or fresh mutation passes.
 `NO-OWNER-EXIT-DISPOSITIONS.md` records each statement the owner-exit removal
-retired, changed or replaced.
+retired, changed or replaced; `REQUEST-LIFECYCLE-DISPOSITIONS.md` does the same
+for the request lifecycle, which replaced the retraction and the early rejection.
 The pre-D-036 retirement ledger remains `traceability.csv`.
 
 Read [the Registry design](../docs/design/registry-as-mpfs.md) for model limits
@@ -162,4 +165,5 @@ The dependency check establishes the pinned import and compiler boundary. The
 retained-output model additionally executes imported booking and fold judgments
 and proves its own correspondence contracts. Neither class of evidence proves
 production Aiken/Haskell correspondence or discharges consumer authentication
-(#439) and broader application recovery (#468).
+(#439) and the production request lifecycle, whose model is
+`RegistryRequestLifecycle.lean` (#468).

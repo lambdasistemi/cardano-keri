@@ -34,12 +34,12 @@ const outcomes = {
     { expect: { ok: true, result: { ok: { flow: { deposited: 17 } } } } },
     { expect: { ok: true, result: { ok: { flow: { locked: [[11, 10]] } } } } },
     { expect: { ok: true, result: { ok: { flow: { deposited: 17 } } } } },
-    { action: { genericRejection: { transaction: { transaction: { outputs: [
+    { action: { returnRequests: { transaction: { transaction: { outputs: [
       { output: { address: 42, lovelace: 16 }, contents: { lovelace: 16 } }
     ] } } } }, expect: { ok: true } },
   ], forks: [
     { id: 'control-3-key-exists', steps: [{ expect: { ok: false, result: { error: 'key-exists' } } }] },
-    { id: 'control-4-reject-not-expired', steps: [{ expect: { ok: false, result: { error: 'reject-not-expired' } } }] },
+    { id: 'duplicate-return-before-deadline', steps: [{ expect: { ok: false, result: { error: 'keri-return-before-deadline' } } }] },
   ], expectFinal: { bindings: [[11,0]], carriers: [{ aid:11, token:0, k:0, st:'live', minAda:4 }],
     registrations: [], nextToken:1, treasury:2 } },
 };
@@ -124,8 +124,8 @@ function selftest(sources) {
   badLive.steps[1].expect.live.bornAt = 99;
   rejects('false state at evidence-only step', () => verifyScenario('rotate', scenarioToDsl('checkpoint', badLive)), /observed live state/);
   const wrongFork = parseScenarioDsl(sources.duplicate).scenario;
-  wrongFork.forks[1].steps[0].action.genericRejection.transaction.transaction.transaction.validity = { lower: 11, upper: 12 };
-  rejects('early rejection branch now succeeds', () => verifyScenario('duplicate', scenarioToDsl('registry', wrongFork)), /replay/);
+  wrongFork.forks[1].steps[0].action.returnRequests.transaction.transaction.transaction.validity = { lower: 11, upper: 12 };
+  rejects('early return branch now succeeds', () => verifyScenario('duplicate', scenarioToDsl('registry', wrongFork)), /replay/);
   const html = names.map(name => `<pre><code>${sources[name].replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</code></pre>`).join('');
   verifyRendered(html, sources);
   rejects('rendered copy corruption', () => verifyRendered(html.replace('pool0: 10', 'pool0: 11'), sources), /rendered copy text/);

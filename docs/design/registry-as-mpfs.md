@@ -21,7 +21,11 @@ The model imports the public Singular commit
 `d69ab005c3b710aeebf033d3c5cd08c56feb5643`, tree
 `2979dcfc58b092313b0ce7fa0493722539b9ea65`, under Lean 4.27.0.
 The pinned sources define the imported generic booking, economic fold and
-registration-recovery judgments. Public upstream requirements include
+rejection judgments. KERI owns its request lifecycle: until a request's
+deadline only a fold spends it; from the deadline anyone returns it through
+`Registry.returnRequests`, which refines the imported rejection with the
+deadline, registration-only and balance guards. The KERI registry is deployed
+with `retractTime = 0`, so no retraction window exists. Public upstream requirements include
 [registration](https://github.com/lambdasistemi/singular/issues/742),
 [termination](https://github.com/lambdasistemi/singular/issues/743),
 [reading](https://github.com/lambdasistemi/singular/issues/744) and
@@ -59,7 +63,7 @@ entry retains the complete generic booking and the original carrier metadata.
 | Convict carrier | A live carrier and duplicity against its key counter | `convictCkpt` accepts | Retain a termination-pending carrier and the active registry key. |
 | Book termination | That pending carrier and an exactly matching generic booking | `bookTermination` accepts | Move custody into the whole pending entry; retain its token/key/original holding association. |
 | Complete termination | A reachable pending entry and accepted consuming fold | `fold` consumes that request | Remove that pending entry, burn its active token and retire its key. Unconsumed entries remain whole. |
-| Registration recovery | The complete imported retraction or rejection transaction | The generic recovery judgment accepts | Reconstruct precisely the resulting pending registrations without changing unrelated custody. |
+| Registration return | A booked registration that was not folded, a transaction whose whole validity interval starts at or after the request's deadline (booking validity upper bound plus the processing window), and an accepted imported rejection | `returnRequests` accepts, with no signature; before the deadline it refuses, and a pending termination is never a member | The refund address receives at least the contents less the declared tip; only the returned registrations leave the pool and all other custody is unchanged. |
 
 The coarse Registry predicates are `inception` and `duplicity`. They are declared abstractions, not cryptographic verification
 or a proof that they equal Checkpoint's concrete evidence predicates. In

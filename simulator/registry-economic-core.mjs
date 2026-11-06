@@ -187,36 +187,11 @@ export function foldAccepted(w, u, tx) {
     pending: w.pending.filter(b => !containsRef(t.inputs, b.request.reference)), terminations, treasury: w.treasury + t.donation };
 }
 const supplyUnchanged = (u, tx) => !tx.transaction.mint.length && !tx.stateMint.length && !tx.singularMint.length && [...spent(u, tx), ...tx.outputs].every(o => o.output.stateTokens === 0n && !o.output.assets.length && !o.singularTags.length && !o.contents.otherAssets.length);
-function refunds(tx, requests, retraction, reason) {
+function refunds(tx, requests, reason) {
   for (const address of requests.map(r => r.refundAddress)) {
-    const owed = sum(requests.filter(r => r.refundAddress === address).map(r => retraction ? r.contents.lovelace : sub(r.contents.lovelace, r.declaredTip)));
+    const owed = sum(requests.filter(r => r.refundAddress === address).map(r => sub(r.contents.lovelace, r.declaredTip)));
     require(sum(tx.outputs.filter(o => o.output.address === address).map(o => o.output.lovelace)) >= owed, reason);
   }
-}
-export function retractionAccepted(w, u, tx) {
-  const t = tx.transaction, inputs = spent(u, tx);
-  require(!inputs.some(o => o.output.stateTokens > 0n || o.output.role === 'state'), 'retract-state-spent');
-  require(!u.some(([ref, o]) => containsRef(t.referenceInputs, ref) && (o.output.stateTokens > 0n || o.output.role === 'state')), 'retract-state-read');
-  require(unique(t.inputs.map(i => i.ref)), 'retract-duplicate-input'); require(disjoint(t), 'retract-input-overlap');
-  presentInputs(u, t); observations(w, u, tx);
-  require(!w.terminations.some(b => containsRef(t.inputs, b.request.reference)), 'retract-registration-only');
-  const selected = w.pending.filter(b => containsRef(t.inputs, b.request.reference));
-  require(selected.length > 0, 'retract-request-not-pending'); require(selected.length === 1, 'retract-single-request');
-  const r = selected[0].request, funding = spentEntries(u, tx).filter(([ref]) => !equal(ref, r.reference)).map(([, o]) => o);
-  for (const o of funding) {
-    require(o.output.stateTokens === 0n && o.output.role !== 'state', 'retract-state-spent');
-    require(!o.contents.trieReadyTags.length, 'retract-funding-trie-ready-tag');
-    require(!o.contents.applicationTags.length, 'retract-funding-application-tag');
-    require(!o.singularTags.length, 'retract-funding-singular-tag');
-    require(o.output.role !== 'request', 'retract-funding-request-address'); require(o.request === null, 'retract-funding-request');
-  }
-  require(t.signers.includes(r.refundAddress), 'retract-owner');
-  require(t.validity !== null, 'retract-interval-missing'); require(t.validity.lower < t.validity.upper, 'retract-interval-empty');
-  require(t.validity.lower >= r.submittedAt + w.registry.config.processTime && t.validity.upper <= r.submittedAt + w.registry.config.processTime + w.registry.config.retractTime, 'retract-window');
-  require(tagsBurned(u, tx), 'retract-tag-not-burned'); require(tx.outputs.every(bare) && inputs.every(bare), 'retract-foreign-asset');
-  require(supplyUnchanged(u, tx), 'retract-registry-supply'); refunds(tx, [r], true, 'retract-refund-short');
-  require(t.donation === 0n, 'retract-donation'); require(ordinaryValue(funding) >= t.fee, 'retract-fee-funding-short'); require(balanced(u, tx), 'retract-unbalanced');
-  return { ...w, pending: w.pending.filter(b => !containsRef(t.inputs, b.request.reference)) };
 }
 export function rejectionAccepted(w, u, rejection) {
   const tx = rejection.transaction, t = tx.transaction, ref = rejection.stateReference, members = rejection.members;
@@ -248,6 +223,6 @@ export function rejectionAccepted(w, u, rejection) {
     require(member.kind === 'registration', 'reject-termination'); requests.push(r);
   }
   require(tagsBurned(u, tx), 'reject-tag-not-burned'); require(supplyUnchanged(u, tx), 'reject-registry-supply');
-  refunds(tx, requests, false, 'reject-refund-short');
+  refunds(tx, requests, 'reject-refund-short');
   return { ...w, pending: w.pending.filter(b => !members.some(([ref]) => equal(ref, b.request.reference))) };
 }

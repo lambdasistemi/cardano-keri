@@ -122,4 +122,5 @@ not a proof that the two models' evidence predicates are equivalent.
 
 Production Aiken, Haskell, `ckeri`, deployment and releases require their own
 correspondence evidence. Exact token/canonical registry and consumer validity
-work is tracked by #439; broader application request recovery by #468.
+work is tracked by #439. The request lifecycle (#468) is modelled and played
+here; its production validators and builders are separate work.

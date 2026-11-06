@@ -63,6 +63,10 @@
       "module": "CardanoKeri.Registry"
     },
     {
+      "declaration": "CardanoKeri.Registry.deadline",
+      "module": "CardanoKeri.Registry"
+    },
+    {
       "declaration": "CardanoKeri.Registry.Env.duplicity",
       "module": "CardanoKeri.Registry"
     },
@@ -76,14 +80,6 @@
     },
     {
       "declaration": "CardanoKeri.Registry.foldResult",
-      "module": "CardanoKeri.Registry"
-    },
-    {
-      "declaration": "CardanoKeri.Registry.genericRejection",
-      "module": "CardanoKeri.Registry"
-    },
-    {
-      "declaration": "CardanoKeri.Registry.genericRetraction",
       "module": "CardanoKeri.Registry"
     },
     {
@@ -148,6 +144,26 @@
     },
     {
       "declaration": "CardanoKeri.Registry.Result",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.returnedRegistration",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.returnMemberReady",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.returnMemberReady.match_1",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.returnRequests",
+      "module": "CardanoKeri.Registry"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.returnRequests.match_1",
       "module": "CardanoKeri.Registry"
     },
     {
@@ -2087,66 +2103,6 @@
       "module": "Singular.Model.Fold"
     },
     {
-      "declaration": "Singular.retractionAccepted",
-      "module": "Singular.Economics.Retraction"
-    },
-    {
-      "declaration": "Singular.retractionAccepted.match_1",
-      "module": "Singular.Economics.Retraction"
-    },
-    {
-      "declaration": "Singular.retractionEffect",
-      "module": "Singular.Economics.Retraction"
-    },
-    {
-      "declaration": "Singular.retractionFunding",
-      "module": "Singular.Economics.RetractionFunding"
-    },
-    {
-      "declaration": "Singular.retractionFundingLovelace",
-      "module": "Singular.Economics.RetractionFunding"
-    },
-    {
-      "declaration": "Singular.retractionFundingRefusal",
-      "module": "Singular.Economics.RetractionFunding"
-    },
-    {
-      "declaration": "Singular.retractionInputsRefusal",
-      "module": "Singular.Economics.Retraction"
-    },
-    {
-      "declaration": "Singular.retractionRefusal",
-      "module": "Singular.Economics.Retraction"
-    },
-    {
-      "declaration": "Singular.retractionRefusal._sparseCasesOn_1",
-      "module": "Singular.Economics.Retraction"
-    },
-    {
-      "declaration": "Singular.retractionRefusal.match_1",
-      "module": "Singular.Economics.Retraction"
-    },
-    {
-      "declaration": "Singular.retractionRefusal.match_4",
-      "module": "Singular.Economics.Retraction"
-    },
-    {
-      "declaration": "Singular.retractionRefusal.match_6",
-      "module": "Singular.Economics.Retraction"
-    },
-    {
-      "declaration": "Singular.retractionRequest",
-      "module": "Singular.Economics.Retraction"
-    },
-    {
-      "declaration": "Singular.retractionRequest._sparseCasesOn_1",
-      "module": "Singular.Economics.Retraction"
-    },
-    {
-      "declaration": "Singular.retractionRequest.match_1",
-      "module": "Singular.Economics.Retraction"
-    },
-    {
       "declaration": "Singular.rootOf",
       "module": "Singular.Model.Registry"
     },
@@ -2411,10 +2367,6 @@
       "module": "Singular.Model.Transaction"
     },
     {
-      "declaration": "Singular.Tx.signers",
-      "module": "Singular.Model.Transaction"
-    },
-    {
       "declaration": "Singular.Tx.validity",
       "module": "Singular.Model.Transaction"
     },
@@ -2523,7 +2475,7 @@
     {
       "module": "CardanoKeri.Registry",
       "path": "lean/CardanoKeri/Registry.lean",
-      "sha256": "814f082f772cfad6e2999b91448fe886328930857754fcc811a6d790fd843fe7"
+      "sha256": "22d86c6f572e9e4c427b792420bd740cfe1ad4a6cbcf7a8e181924816c50b167"
     },
     {
       "module": "Singular.Economics.Booking",
@@ -2559,16 +2511,6 @@
       "module": "Singular.Economics.Rejection",
       "path": "lean/.lake/packages/singular/lean/Singular/Economics/Rejection.lean",
       "sha256": "0f59f3266b6906493c5a6a32451738f2b3c112eeca7641bc13be84178ff9dd7d"
-    },
-    {
-      "module": "Singular.Economics.Retraction",
-      "path": "lean/.lake/packages/singular/lean/Singular/Economics/Retraction.lean",
-      "sha256": "f555302c59fba5528d023858b75dd31f7f59ee628601f745e9f4438dbc1e6914"
-    },
-    {
-      "module": "Singular.Economics.RetractionFunding",
-      "path": "lean/.lake/packages/singular/lean/Singular/Economics/RetractionFunding.lean",
-      "sha256": "008ebab7e1f11d4b955b51979c73430797b6d03b0da394b45c52637a8cceff94"
     },
     {
       "module": "Singular.Economics.Termination",
@@ -2713,36 +2655,50 @@
       "declaration": "CardanoKeri.Registry.fold",
       "module": "CardanoKeri.Registry",
       "line": 190,
-      "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70",
-      "source": "def fold (p : Params) (env : Env) (s : Sys) (expectedGen expectedPlugin : Nat)\n    (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction) : Except String Result := do\n  if expectedGen != s.gen then throw \"keri-generation-mismatch\"\n  if expectedPlugin != s.config.applicationPolicy then throw \"keri-plugin-mismatch\"\n  let members := Singular.foldMembers s.toWorld tx\n  if !registrationsAuthorized env members then throw \"keri-inception-refused\"\n  let world ← Singular.foldAccepted s.toWorld u tx\n  foldResult p s tx world\n\n-- These wrappers expose only the already imported generic recovery judgment.\n-- They do not claim to discharge broader KERI application recovery in #468,\n-- nor inherit legacy Registry recovery statements by sharing a name."
+      "sha256": "084a880586b6baed196058474fdbed7cf6b6973419fbe9d4e7645c1143e90ff8",
+      "source": "def fold (p : Params) (env : Env) (s : Sys) (expectedGen expectedPlugin : Nat)\n    (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction) : Except String Result := do\n  if expectedGen != s.gen then throw \"keri-generation-mismatch\"\n  if expectedPlugin != s.config.applicationPolicy then throw \"keri-plugin-mismatch\"\n  let members := Singular.foldMembers s.toWorld tx\n  if !registrationsAuthorized env members then throw \"keri-inception-refused\"\n  let world ← Singular.foldAccepted s.toWorld u tx\n  foldResult p s tx world\n\n-- A returned registration leaves the registration pool and nothing else."
     },
     {
       "declaration": "CardanoKeri.Registry.recoverRegistrations",
       "module": "CardanoKeri.Registry",
-      "line": 202,
+      "line": 200,
       "sha256": "3d34d24511c0712f02c5d27dcfd8ae7b6507978aa105241929bb1394b16a7ac6",
       "source": "def recoverRegistrations (s : Sys) (world : Singular.World) : Except String Sys := do\n  let after := { s with registrations := s.registrations.filter (fun b =>\n    world.pending.contains b) }\n  if after.toWorld ≠ world then throw \"keri-recovery-reconstruction-mismatch\"\n  pure after"
     },
     {
-      "declaration": "CardanoKeri.Registry.genericRetraction",
+      "declaration": "CardanoKeri.Registry.deadline",
       "module": "CardanoKeri.Registry",
-      "line": 208,
-      "sha256": "a98899354c0cb2c4e26ac29ce1259a6a219f8ba545a90fb10a0190470f00abe8",
-      "source": "def genericRetraction (s : Sys) (u : Singular.EconomicUtxo)\n    (tx : Singular.EconomicTransaction) : Except String Result := do\n  let world ← Singular.retractionAccepted s.toWorld u tx\n  let after ← recoverRegistrations s world\n  pure ({}, after)"
+      "line": 210,
+      "sha256": "ea24f4fe02c10cdf98f0ddf0432398b6d7c0d18176c1da60fc498e8d4ec9f96b",
+      "source": "def deadline (c : Singular.Config) (r : Singular.RegistrationRequest) : Nat :=\n  r.submittedAt + c.processTime"
     },
     {
-      "declaration": "CardanoKeri.Registry.genericRejection",
+      "declaration": "CardanoKeri.Registry.returnedRegistration",
       "module": "CardanoKeri.Registry",
-      "line": 214,
-      "sha256": "17c87772cf431e6a2ba3171350e5936c5bb0246953f0841bd4f8992b454f7b54",
-      "source": "def genericRejection (s : Sys) (u : Singular.EconomicUtxo)\n    (tx : Singular.Rejection) : Except String Result := do\n  let world ← Singular.rejectionAccepted s.toWorld u tx\n  let after ← recoverRegistrations s world\n  pure ({}, after)"
+      "line": 217,
+      "sha256": "0519434a98330e13487798e1bb3eaae217325a7f6892e50dc2b4bef5a165fb9c",
+      "source": "def returnedRegistration (s : Sys) (member : Singular.OutRef × Singular.RejectReason) :\n    Option Singular.RegistrationBooking :=\n  s.registrations.find? (fun b => b.request.reference == member.1)"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.returnMemberReady",
+      "module": "CardanoKeri.Registry",
+      "line": 223,
+      "sha256": "7daeca23604f50e550f3359e5478740d963135e13f2f139ba712135b282e43be",
+      "source": "def returnMemberReady (s : Sys) (interval : Singular.Interval)\n    (member : Singular.OutRef × Singular.RejectReason) : Bool :=\n  match returnedRegistration s member with\n  | some b => decide (deadline s.config b.request ≤ interval.lower)\n  | none => false"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.returnRequests",
+      "module": "CardanoKeri.Registry",
+      "line": 235,
+      "sha256": "a29b2f47e4b4094845e41fd5b290002cc03ca492acfaf7d7be32e4c9e7486fe8",
+      "source": "def returnRequests (s : Sys) (u : Singular.EconomicUtxo) (r : Singular.Rejection) :\n    Except String Result := do\n  let some interval := r.transaction.transaction.validity\n    | throw \"keri-return-interval-missing\"\n  if !r.members.all (fun m => (returnedRegistration s m).isSome) then\n    throw \"keri-return-registration-only\"\n  if !r.members.all (returnMemberReady s interval) then\n    throw \"keri-return-before-deadline\"\n  if !Singular.balanced u.ledger r.transaction.transaction then\n    throw \"keri-return-unbalanced\"\n  let world ← Singular.rejectionAccepted s.toWorld u r\n  let after ← recoverRegistrations s world\n  pure ({}, after)"
     },
     {
       "declaration": "CardanoKeri.Registry.stepFn",
       "module": "CardanoKeri.Registry",
-      "line": 229,
-      "sha256": "374a5bf4ddf2294883cf376ab75e15660d44a5ac2556d9c8e2da899d82e2db0f",
-      "source": "def stepFn (p : Params) (env : Env) (action : Action) (s : Sys) : Except String Result :=\n  match action with\n  | .bookRegistration b => bookRegistration p s b\n  | .convictCkpt aid => convictCkpt env s aid\n  | .bookTermination aid booker fee b => bookTermination p s aid booker fee b\n  | .fold gen plugin u tx => fold p env s gen plugin u tx\n  | .genericRetraction u tx => genericRetraction s u tx\n  | .genericRejection u tx => genericRejection s u tx"
+      "line": 257,
+      "sha256": "005e78edad4ee036a398fb315cea2d9595dd4f4ed7e36f5b3fd5108db0f14ee5",
+      "source": "def stepFn (p : Params) (env : Env) (action : Action) (s : Sys) : Except String Result :=\n  match action with\n  | .bookRegistration b => bookRegistration p s b\n  | .convictCkpt aid => convictCkpt env s aid\n  | .bookTermination aid booker fee b => bookTermination p s aid booker fee b\n  | .fold gen plugin u tx => fold p env s gen plugin u tx\n  | .returnRequests u tx => returnRequests s u tx"
     },
     {
       "declaration": "Singular.registrationApplicationTagValid",
@@ -3114,62 +3070,6 @@
       "line": 117,
       "sha256": "fd9156b41b163ac4bd98282764a107245941d01c83a6a044effdf9a2e3ee0ec2",
       "source": "def rejectionAccepted (world : World) (u : EconomicUtxo) (r : Rejection) : Except String World :=\n  match rejectionRefusal world u r with\n  | some why => .error why\n  | none => .ok (rejectionEffect world r)"
-    },
-    {
-      "declaration": "Singular.retractionInputsRefusal",
-      "module": "Singular.Economics.Retraction",
-      "line": 9,
-      "sha256": "572a586f2f8749e2c8abb653c832ae31ac1cc831080882a10d61794fe57b42b4",
-      "source": "def retractionInputsRefusal (u : EconomicUtxo) (tx : EconomicTransaction) : Option String :=\n  if (spentOutputs u.ledger tx.transaction).any (fun o => o.stateTokens > 0 || o.role == .state)\n  then some \"retract-state-spent\"\n  else if (u.filter fun p => inputsContainReference tx.transaction.referenceInputs p.1).any\n      (fun p => p.2.output.stateTokens > 0 || p.2.output.role == .state)\n  then some \"retract-state-read\"\n  else if ¬ (tx.transaction.inputs.map (·.ref)).Nodup then some \"retract-duplicate-input\"\n  else if !disjointInputs tx.transaction then some \"retract-input-overlap\"\n  else inputPresenceRefusal u.ledger tx.transaction"
-    },
-    {
-      "declaration": "Singular.retractionRequest",
-      "module": "Singular.Economics.Retraction",
-      "line": 19,
-      "sha256": "beb3a135c0713f736f831c7f9b539cf6d8d65bfe8ab0572fc188a9d63ac34074",
-      "source": "def retractionRequest (world : World) (tx : EconomicTransaction) :\n    Except String RegistrationRequest := do\n  if world.terminations.any (fun b =>\n      inputsContainReference tx.transaction.inputs b.request.reference) then\n    throw \"retract-registration-only\"\n  match world.pending.filter (fun b =>\n      inputsContainReference tx.transaction.inputs b.request.reference) with\n  | [] => throw \"retract-request-not-pending\"\n  | [booking] => pure booking.request\n  | _ => throw \"retract-single-request\""
-    },
-    {
-      "declaration": "Singular.retractionRefusal",
-      "module": "Singular.Economics.Retraction",
-      "line": 30,
-      "sha256": "1bdb5e8c7a9d2c476281ea712ba56e0acb7edf738377829a09942d251f52ec3d",
-      "source": "def retractionRefusal (world : World) (u : EconomicUtxo)\n    (tx : EconomicTransaction) : Option String := do\n  if let some why := retractionInputsRefusal u tx then return why\n  if let some why := economicObservationRefusal world u tx then return why\n  match retractionRequest world tx with\n  | .error why => return why\n  | .ok request =>\n    if let some why := retractionFundingRefusal u tx request then return why\n    if !(tx.transaction.signers.contains request.refundAddress) then return \"retract-owner\"\n    let some interval := tx.transaction.validity | return \"retract-interval-missing\"\n    if ¬ interval.valid then return \"retract-interval-empty\"\n    if interval.lower < request.submittedAt + world.registry.config.processTime ||\n        request.submittedAt + world.registry.config.processTime + world.registry.config.retractTime <\n          interval.upper then return \"retract-window\"\n    if !requestTagsBurned u tx then return \"retract-tag-not-burned\"\n    if !(tx.outputs.all foldBareValue) || !((economicSpent u tx).all foldBareValue) then\n      return \"retract-foreign-asset\"\n    if !rejectionSupplyUnchanged u tx then return \"retract-registry-supply\"\n    if let some why := refundRefusal tx (refundObligations [request] true) \"retract-refund-short\"\n      then return why\n    if tx.transaction.donation != 0 then return \"retract-donation\"\n    if retractionFundingLovelace u tx request < tx.transaction.fee then\n      return \"retract-fee-funding-short\"\n    if !balanced u.ledger tx.transaction then return \"retract-unbalanced\"\n    none"
-    },
-    {
-      "declaration": "Singular.retractionEffect",
-      "module": "Singular.Economics.Retraction",
-      "line": 56,
-      "sha256": "77fb989f2bc2cf72875bf7a5f1a112e83deba80095fdace1ea57ff7a196ddc20",
-      "source": "def retractionEffect (world : World) (tx : EconomicTransaction) : World :=\n  { world with pending := world.pending.filter fun b =>\n      !inputsContainReference tx.transaction.inputs b.request.reference }"
-    },
-    {
-      "declaration": "Singular.retractionAccepted",
-      "module": "Singular.Economics.Retraction",
-      "line": 60,
-      "sha256": "402b38f16cd6c14d59e0bf0d34b4150fec5a2d1e0bda0312e49b466a2fd5b81c",
-      "source": "def retractionAccepted (world : World) (u : EconomicUtxo)\n    (tx : EconomicTransaction) : Except String World :=\n  match retractionRefusal world u tx with\n  | some why => .error why\n  | none => .ok (retractionEffect world tx)"
-    },
-    {
-      "declaration": "Singular.retractionFunding",
-      "module": "Singular.Economics.RetractionFunding",
-      "line": 9,
-      "sha256": "12a0fd81b68b9af5c207876fd0e30e687b09c575325f86b98ce83a04487bcd82",
-      "source": "def retractionFunding (u : EconomicUtxo) (tx : EconomicTransaction)\n    (request : RegistrationRequest) : List EconomicOutput :=\n  (u.filter fun entry => inputsContainReference tx.transaction.inputs entry.1 &&\n    entry.1 != request.reference).map Prod.snd"
-    },
-    {
-      "declaration": "Singular.retractionFundingRefusal",
-      "module": "Singular.Economics.RetractionFunding",
-      "line": 14,
-      "sha256": "86f72e4c855b7f0291d1b4c271717140426157d966883969d02548f1c4bde95a",
-      "source": "def retractionFundingRefusal (u : EconomicUtxo) (tx : EconomicTransaction)\n    (request : RegistrationRequest) : Option String :=\n  (retractionFunding u tx request).findSome? fun output =>\n    if output.output.stateTokens > 0 || output.output.role == .state then\n      some \"retract-state-spent\"\n    else if !output.contents.trieReadyTags.isEmpty then some \"retract-funding-trie-ready-tag\"\n    else if !output.contents.applicationTags.isEmpty then some \"retract-funding-application-tag\"\n    else if !output.singularTags.isEmpty then some \"retract-funding-singular-tag\"\n    else if output.output.role == .request then some \"retract-funding-request-address\"\n    else if output.request.isSome then some \"retract-funding-request\"\n    else none"
-    },
-    {
-      "declaration": "Singular.retractionFundingLovelace",
-      "module": "Singular.Economics.RetractionFunding",
-      "line": 26,
-      "sha256": "962137be4a7088033eef399fe16855f0f389db37c4365b1dddd0108173bcdcb4",
-      "source": "def retractionFundingLovelace (u : EconomicUtxo) (tx : EconomicTransaction)\n    (request : RegistrationRequest) : Nat :=\n  foldOrdinaryLovelace (retractionFunding u tx request)"
     },
     {
       "declaration": "Singular.terminationDeclaredLovelace",
@@ -3709,6 +3609,26 @@
       "reason": "keri-recovery-reconstruction-mismatch"
     },
     {
+      "declaration": "CardanoKeri.Registry.returnRequests",
+      "occurrence": 0,
+      "reason": "keri-return-interval-missing"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.returnRequests",
+      "occurrence": 1,
+      "reason": "keri-return-registration-only"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.returnRequests",
+      "occurrence": 2,
+      "reason": "keri-return-before-deadline"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.returnRequests",
+      "occurrence": 3,
+      "reason": "keri-return-unbalanced"
+    },
+    {
       "declaration": "Singular.registrationBookingRefusal",
       "occurrence": 0,
       "reason": "dirty-request"
@@ -4017,126 +3937,6 @@
       "declaration": "Singular.rejectionRefusal",
       "occurrence": 6,
       "reason": "reject-refund-short"
-    },
-    {
-      "declaration": "Singular.retractionInputsRefusal",
-      "occurrence": 0,
-      "reason": "retract-state-spent"
-    },
-    {
-      "declaration": "Singular.retractionInputsRefusal",
-      "occurrence": 1,
-      "reason": "retract-state-read"
-    },
-    {
-      "declaration": "Singular.retractionInputsRefusal",
-      "occurrence": 2,
-      "reason": "retract-duplicate-input"
-    },
-    {
-      "declaration": "Singular.retractionInputsRefusal",
-      "occurrence": 3,
-      "reason": "retract-input-overlap"
-    },
-    {
-      "declaration": "Singular.retractionRequest",
-      "occurrence": 0,
-      "reason": "retract-registration-only"
-    },
-    {
-      "declaration": "Singular.retractionRequest",
-      "occurrence": 1,
-      "reason": "retract-request-not-pending"
-    },
-    {
-      "declaration": "Singular.retractionRequest",
-      "occurrence": 2,
-      "reason": "retract-single-request"
-    },
-    {
-      "declaration": "Singular.retractionRefusal",
-      "occurrence": 0,
-      "reason": "retract-owner"
-    },
-    {
-      "declaration": "Singular.retractionRefusal",
-      "occurrence": 1,
-      "reason": "retract-interval-missing"
-    },
-    {
-      "declaration": "Singular.retractionRefusal",
-      "occurrence": 2,
-      "reason": "retract-interval-empty"
-    },
-    {
-      "declaration": "Singular.retractionRefusal",
-      "occurrence": 3,
-      "reason": "retract-window"
-    },
-    {
-      "declaration": "Singular.retractionRefusal",
-      "occurrence": 4,
-      "reason": "retract-tag-not-burned"
-    },
-    {
-      "declaration": "Singular.retractionRefusal",
-      "occurrence": 5,
-      "reason": "retract-foreign-asset"
-    },
-    {
-      "declaration": "Singular.retractionRefusal",
-      "occurrence": 6,
-      "reason": "retract-registry-supply"
-    },
-    {
-      "declaration": "Singular.retractionRefusal",
-      "occurrence": 7,
-      "reason": "retract-refund-short"
-    },
-    {
-      "declaration": "Singular.retractionRefusal",
-      "occurrence": 8,
-      "reason": "retract-donation"
-    },
-    {
-      "declaration": "Singular.retractionRefusal",
-      "occurrence": 9,
-      "reason": "retract-fee-funding-short"
-    },
-    {
-      "declaration": "Singular.retractionRefusal",
-      "occurrence": 10,
-      "reason": "retract-unbalanced"
-    },
-    {
-      "declaration": "Singular.retractionFundingRefusal",
-      "occurrence": 0,
-      "reason": "retract-state-spent"
-    },
-    {
-      "declaration": "Singular.retractionFundingRefusal",
-      "occurrence": 1,
-      "reason": "retract-funding-trie-ready-tag"
-    },
-    {
-      "declaration": "Singular.retractionFundingRefusal",
-      "occurrence": 2,
-      "reason": "retract-funding-application-tag"
-    },
-    {
-      "declaration": "Singular.retractionFundingRefusal",
-      "occurrence": 3,
-      "reason": "retract-funding-singular-tag"
-    },
-    {
-      "declaration": "Singular.retractionFundingRefusal",
-      "occurrence": 4,
-      "reason": "retract-funding-request-address"
-    },
-    {
-      "declaration": "Singular.retractionFundingRefusal",
-      "occurrence": 5,
-      "reason": "retract-funding-request"
     },
     {
       "declaration": "Singular.terminationBookingRefusal",

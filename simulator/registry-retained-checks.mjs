@@ -35,7 +35,7 @@ for (const file of files) {
   accepted.expect.result.ok.state.gen++;
   assert(checkScenario(falseResult).problems.some(p => p.includes('full result mismatch')), 'fabricated result control'); controls++;
 }
-assert.equal(cells, 64, 'story and fork cell census');
+assert.equal(cells, 63, 'story and fork cell census');
 const sc = JSON.parse(readFileSync(join(here, 'registry-simulator-scenarios', files.find(f => f.startsWith('12-'))), 'utf8'));
 const tree = playStory(sc.id), live = tree.nodes.find(n => n.session.state.carriers[0]?.st === 'live');
 assert(live, 'reachable live input');

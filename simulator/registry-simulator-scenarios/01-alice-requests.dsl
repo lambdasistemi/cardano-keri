@@ -10,7 +10,7 @@ config:
   processTime: 5
   registrationCost: 2
   registryId: 9
-  retractTime: 5
+  retractTime: 0
   root: [203, 242, 156, 228, 132, 34, 35, 37]
 id: 1
 slug: alice-requests
@@ -91,7 +91,7 @@ step:
             processTime: 5
             registrationCost: 2
             registryId: 9
-            retractTime: 5
+            retractTime: 0
             root: [203, 242, 156, 228, 132, 34, 35, 37]
           gen: 0
           nextToken: 0
@@ -115,7 +115,7 @@ fork:
       processTime: 5
       registrationCost: 2
       registryId: 9
-      retractTime: 5
+      retractTime: 0
       root: [203, 242, 156, 228, 132, 34, 35, 37]
     gen: 0
     nextToken: 0
@@ -170,7 +170,7 @@ expectFinal:
     processTime: 5
     registrationCost: 2
     registryId: 9
-    retractTime: 5
+    retractTime: 0
     root: [203, 242, 156, 228, 132, 34, 35, 37]
   gen: 0
   nextToken: 0

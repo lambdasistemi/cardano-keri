@@ -42,7 +42,7 @@ const DOCUMENTED = [
   'checkpoint',
   'simulator/checkpoint-simulator-scenarios/01-alice-appears.dsl',
 ];
-const WANT = { total: 24, checkpointFiles: 12, registryFiles: 12, checkpointSteps: 72, registrySteps: 64 };
+const WANT = { total: 24, checkpointFiles: 12, registryFiles: 12, checkpointSteps: 72, registrySteps: 63 };
 
 const sha256 = b => createHash('sha256').update(b).digest('hex');
 const rows = [];
@@ -566,8 +566,8 @@ function driveRegistryExport(win) {
   if (fold) { fold.click(); $('act-submit').click(); }
   RS.goTo(after);
   $('slot-plus1').click();
-  const retract = d.querySelector('#next-moves .act[data-kind="genericRetraction"]');
-  if (retract && !retract.disabled) { retract.click(); $('act-submit').click(); }
+  const giveBack = d.querySelector('#next-moves .act[data-kind="returnRequests"]');
+  if (giveBack && !giveBack.disabled) { giveBack.click(); $('act-submit').click(); }
   const path = [];
   for (let id = RS.app.cursor; id !== null; id = nodeOf(RS, id).parent) path.unshift(nodeOf(RS, id));
   return { path, nodes: RS.app.nodes, cursor: RS.app.cursor };

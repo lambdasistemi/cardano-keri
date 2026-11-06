@@ -61,18 +61,14 @@ export function foldAction(params, state, referenceValues, timeValue = 2, fundin
   tx.singularMint = members.flatMap(({ kind, booking: { request: r } }) => kind === 'registration' ? [[singularTag(s.config, r.key), 1n]] : r.singularTags.map(t => [t, -1n]));
   return toWire({ fold: { expectedGen: s.gen, expectedPlugin: s.config.applicationPolicy, unspent: unspent(s, funding), transaction: tx } });
 }
-export function retractionAction(params, state, reference, lowerValue, upperValue, signers = [42], fundingValue = 1, feeValue = 1) {
-  const [, s] = prepare(params, state), ref = { tx: nat(reference.tx), index: nat(reference.index) }, funding = nat(fundingValue), fee = nat(feeValue);
-  const member = requests(s).find(m => equal(m.booking.request.reference, ref)); if (!member) throw Error('fixture-request-missing');
-  const r = member.booking.request, output = ordinary(r.contents.lovelace + sub(funding, fee)); output.output.address = r.refundAddress;
-  const tx = transaction(s, [member], [ref, { tx: fresh(s), index: 1n }], [output], { lower: nat(lowerValue), upper: nat(upperValue) }, fee, 0n, signers.map(nat));
-  return toWire({ genericRetraction: { unspent: unspent(s, funding), transaction: tx } });
-}
-export function rejectionAction(params, state, reference, lowerValue, upperValue, ground = 'expired') {
+/** A return of one booked registration: its refund address is paid the
+ * contents less the declared tip, the spender keeps the tip as the fee, and no
+ * signer is present. Acceptance is the adapter's, never this builder's. */
+export function returnAction(params, state, reference, lowerValue, upperValue, ground = 'expired') {
   const [, s] = prepare(params, state), ref = { tx: nat(reference.tx), index: nat(reference.index) };
   const member = requests(s).find(m => equal(m.booking.request.reference, ref)); if (!member) throw Error('fixture-request-missing');
   const r = member.booking.request, output = ordinary(sub(r.contents.lovelace, r.declaredTip)); output.output.address = r.refundAddress;
-  const tx = transaction(s, [member], [ref], [output], { lower: nat(lowerValue), upper: nat(upperValue) }, 0n, 0n);
+  const tx = transaction(s, [member], [ref], [output], { lower: nat(lowerValue), upper: nat(upperValue) }, r.declaredTip, 0n);
   tx.transaction.referenceInputs = [input({ tx: fresh(s), index: 0n })];
-  return toWire({ genericRejection: { unspent: unspent(s, 0n), transaction: { transaction: tx, stateReference: { tx: fresh(s), index: 0n }, members: [[ref, toInternal(ground)]] } } });
+  return toWire({ returnRequests: { unspent: unspent(s, 0n), transaction: { transaction: tx, stateReference: { tx: fresh(s), index: 0n }, members: [[ref, toInternal(ground)]] } } });
 }

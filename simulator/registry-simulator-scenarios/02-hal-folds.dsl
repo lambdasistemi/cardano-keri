@@ -10,7 +10,7 @@ config:
   processTime: 5
   registrationCost: 2
   registryId: 9
-  retractTime: 5
+  retractTime: 0
   root: [203, 242, 156, 228, 132, 34, 35, 37]
 id: 2
 slug: hal-folds
@@ -91,7 +91,7 @@ step:
             processTime: 5
             registrationCost: 2
             registryId: 9
-            retractTime: 5
+            retractTime: 0
             root: [203, 242, 156, 228, 132, 34, 35, 37]
           gen: 0
           nextToken: 0
@@ -112,7 +112,7 @@ step:
         applicationMint:
           - [{"name":"5369963716140239679","policy":7},-1]
         identity: 102
-        outputs: [{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":5,"root":[187,43,111,81,131,142,177,246]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},"request":null,"singularTags":[]},{"contents":{"applicationTags":[],"lovelace":14,"otherAssets":[],"trieReadyTags":[]},"output":{"address":111,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":711,"lovelace":14,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}]},{"contents":{"applicationTags":[],"lovelace":1,"otherAssets":[],"trieReadyTags":[]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[]}]
+        outputs: [{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":0,"root":[187,43,111,81,131,142,177,246]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},"request":null,"singularTags":[]},{"contents":{"applicationTags":[],"lovelace":14,"otherAssets":[],"trieReadyTags":[]},"output":{"address":111,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":711,"lovelace":14,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}]},{"contents":{"applicationTags":[],"lovelace":1,"otherAssets":[],"trieReadyTags":[]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[]}]
         singularMint:
           - [{"registryId":9,"token":{"name":11,"policy":8}},1]
         stateMint: []
@@ -121,7 +121,7 @@ step:
           fee: 1
           inputs: [{"approvals":0,"assets":[],"datum":"inline","datumValue":null,"lovelace":0,"ref":{"index":0,"tx":100},"role":"request","stateToken":null,"stateTokens":0},{"approvals":0,"assets":[],"datum":"inline","datumValue":null,"lovelace":0,"ref":{"index":0,"tx":101},"role":"request","stateToken":null,"stateTokens":0},{"approvals":0,"assets":[],"datum":"inline","datumValue":null,"lovelace":0,"ref":{"index":1,"tx":101},"role":"request","stateToken":null,"stateTokens":0}]
           mint: []
-          outputs: [{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":5,"root":[187,43,111,81,131,142,177,246]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},{"address":111,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":711,"lovelace":14,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0}]
+          outputs: [{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":0,"root":[187,43,111,81,131,142,177,246]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},{"address":111,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":711,"lovelace":14,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0}]
           referenceInputs: []
           refunds: []
           signers: []
@@ -132,7 +132,7 @@ step:
           - [{"name":"14272158603032493918","policy":9},-1]
       unspent:
         - [{"index":0,"tx":100},{"contents":{"applicationTags":[{"assetName":"5369963716140239679","destination":111,"edge":"insertActive","key":11,"owner":42,"policy":7,"signatures":[]}],"lovelace":17,"otherAssets":[],"trieReadyTags":[{"name":"14272158603032493918","policy":9}]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":null,"lovelace":17,"reference":null,"role":"request","stateToken":null,"stateTokens":0},"request":{"registration":{"request":{"carrierAda":14,"contents":{"applicationTags":[{"assetName":"5369963716140239679","destination":111,"edge":"insertActive","key":11,"owner":42,"policy":7,"signatures":[]}],"lovelace":17,"otherAssets":[],"trieReadyTags":[{"name":"14272158603032493918","policy":9}]},"datum":711,"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":100},"refundAddress":42,"registrationCost":2,"registryId":9,"submittedAt":1}}},"singularTags":[]}]
-        - [{"index":0,"tx":101},{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":5,"root":[203,242,156,228,132,34,35,37]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},"request":null,"singularTags":[]}]
+        - [{"index":0,"tx":101},{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":0,"root":[203,242,156,228,132,34,35,37]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},"request":null,"singularTags":[]}]
         - [{"index":1,"tx":101},{"contents":{"applicationTags":[],"lovelace":1,"otherAssets":[],"trieReadyTags":[]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[]}]
   expect:
     ok: true
@@ -159,7 +159,7 @@ step:
             processTime: 5
             registrationCost: 2
             registryId: 9
-            retractTime: 5
+            retractTime: 0
             root: [187, 43, 111, 81, 131, 142, 177, 246]
           gen: 1
           nextToken: 1
@@ -187,7 +187,7 @@ fork:
       processTime: 5
       registrationCost: 2
       registryId: 9
-      retractTime: 5
+      retractTime: 0
       root: [203, 242, 156, 228, 132, 34, 35, 37]
     gen: 0
     nextToken: 0
@@ -207,7 +207,7 @@ fork:
           applicationMint:
             - [{"name":"5369963716140239679","policy":7},-1]
           identity: 102
-          outputs: [{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":5,"root":[187,43,111,81,131,142,177,246]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},"request":null,"singularTags":[]},{"contents":{"applicationTags":[],"lovelace":14,"otherAssets":[],"trieReadyTags":[]},"output":{"address":111,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":711,"lovelace":14,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}]},{"contents":{"applicationTags":[],"lovelace":1,"otherAssets":[],"trieReadyTags":[]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[]}]
+          outputs: [{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":0,"root":[187,43,111,81,131,142,177,246]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},"request":null,"singularTags":[]},{"contents":{"applicationTags":[],"lovelace":14,"otherAssets":[],"trieReadyTags":[]},"output":{"address":111,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":711,"lovelace":14,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}]},{"contents":{"applicationTags":[],"lovelace":1,"otherAssets":[],"trieReadyTags":[]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[]}]
           singularMint:
             - [{"registryId":9,"token":{"name":11,"policy":8}},1]
           stateMint: []
@@ -216,7 +216,7 @@ fork:
             fee: 1
             inputs: [{"approvals":0,"assets":[],"datum":"inline","datumValue":null,"lovelace":0,"ref":{"index":0,"tx":100},"role":"request","stateToken":null,"stateTokens":0},{"approvals":0,"assets":[],"datum":"inline","datumValue":null,"lovelace":0,"ref":{"index":0,"tx":101},"role":"request","stateToken":null,"stateTokens":0},{"approvals":0,"assets":[],"datum":"inline","datumValue":null,"lovelace":0,"ref":{"index":1,"tx":101},"role":"request","stateToken":null,"stateTokens":0}]
             mint: []
-            outputs: [{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":5,"root":[187,43,111,81,131,142,177,246]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},{"address":111,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":711,"lovelace":14,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0}]
+            outputs: [{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":0,"root":[187,43,111,81,131,142,177,246]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},{"address":111,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":711,"lovelace":14,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0}]
             referenceInputs: []
             refunds: []
             signers: []
@@ -227,7 +227,7 @@ fork:
             - [{"name":"14272158603032493918","policy":9},-1]
         unspent:
           - [{"index":0,"tx":100},{"contents":{"applicationTags":[{"assetName":"5369963716140239679","destination":111,"edge":"insertActive","key":11,"owner":42,"policy":7,"signatures":[]}],"lovelace":17,"otherAssets":[],"trieReadyTags":[{"name":"14272158603032493918","policy":9}]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":null,"lovelace":17,"reference":null,"role":"request","stateToken":null,"stateTokens":0},"request":{"registration":{"request":{"carrierAda":14,"contents":{"applicationTags":[{"assetName":"5369963716140239679","destination":111,"edge":"insertActive","key":11,"owner":42,"policy":7,"signatures":[]}],"lovelace":17,"otherAssets":[],"trieReadyTags":[{"name":"14272158603032493918","policy":9}]},"datum":711,"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":100},"refundAddress":42,"registrationCost":2,"registryId":9,"submittedAt":1}}},"singularTags":[]}]
-          - [{"index":0,"tx":101},{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":5,"root":[203,242,156,228,132,34,35,37]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},"request":null,"singularTags":[]}]
+          - [{"index":0,"tx":101},{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":0,"root":[203,242,156,228,132,34,35,37]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},"request":null,"singularTags":[]}]
           - [{"index":1,"tx":101},{"contents":{"applicationTags":[],"lovelace":1,"otherAssets":[],"trieReadyTags":[]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[]}]
     expect:
       ok: false
@@ -247,7 +247,7 @@ expectFinal:
     processTime: 5
     registrationCost: 2
     registryId: 9
-    retractTime: 5
+    retractTime: 0
     root: [187, 43, 111, 81, 131, 142, 177, 246]
   gen: 1
   nextToken: 1

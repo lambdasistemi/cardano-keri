@@ -60,7 +60,7 @@ const action = variant({
   bookRegistration: record({ booking: regBooking }), convictCkpt: record(fields('aid')),
   bookTermination: record({ ...fields('aid booker fee'), booking: termBooking }),
   fold: record({ ...fields('expectedGen expectedPlugin'), unspent: utxo, transaction: economicTx }),
-  genericRetraction: record({ unspent: utxo, transaction: economicTx }), genericRejection: record({ unspent: utxo, transaction: rejection }),
+  returnRequests: record({ unspent: utxo, transaction: rejection }),
 });
 export function decodeInput(p, e, s, a) {
   const result = [params(toInternal(p), 'params'), env(toInternal(e), 'env'), sys(toInternal(s), 'state'), action(toInternal(a), 'action')];

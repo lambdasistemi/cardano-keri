@@ -66,6 +66,9 @@ pub type CheckpointDatumV2 {
     frozen: Bool,
     born_at: Int,
     refund_to: ByteArray,
+    /// The top-up mark (Lean `Live.toppedUp`): set by a top-up, cleared by
+    /// every rotation, kept by poison and freeze. Field 7, a Plutus Boolean.
+    topped_up: Bool,
     keys: KeyMaterial,
   }
   /// Three fields, no key material: no step reads the keys of a pending

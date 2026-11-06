@@ -76,6 +76,7 @@ library
     Cardano.KERI.AID.Checkpoint.Message
     Cardano.KERI.AID.Checkpoint.Registration
     Cardano.KERI.AID.Checkpoint.Threshold
+    Cardano.KERI.AID.Checkpoint.TopUp
     Cardano.KERI.AID.Checkpoint.Value
     Cardano.KERI.AID.Checkpoint.Wire
     Cardano.KERI.AID.Ed25519
@@ -179,6 +180,7 @@ library deployment
     Cardano.KERI.Deployment.Publisher
     Cardano.KERI.Deployment.Registration
     Cardano.KERI.Deployment.Script
+    Cardano.KERI.Deployment.TopUp
     Cardano.KERI.Deployment.TransactionRuntime
 
 library indexer
@@ -410,6 +412,8 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.RegistrationSpec
     Cardano.KERI.Deployment.ScriptAritySpec
+    Cardano.KERI.Deployment.TopUpPackageSpec
+    Cardano.KERI.Deployment.TopUpTransactionSpec
     Cardano.KERI.Deployment.TransactionRuntime.Fixtures
     Cardano.KERI.Deployment.TransactionRuntimeSpec
     Paths_cardano_keri
@@ -914,9 +918,12 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.FreezeSpec
     Cardano.KERI.AID.Checkpoint.Keri68OracleSpec
     Cardano.KERI.AID.Checkpoint.MessageSpec
+    Cardano.KERI.AID.Checkpoint.NineFieldDatumSpec
     Cardano.KERI.AID.Checkpoint.RegistrationFixturesSpec
     Cardano.KERI.AID.Checkpoint.RegistrationSpec
     Cardano.KERI.AID.Checkpoint.ThresholdSpec
+    Cardano.KERI.AID.Checkpoint.TopUpCorpus
+    Cardano.KERI.AID.Checkpoint.TopUpSpec
     Cardano.KERI.AID.Checkpoint.ValueSpec
     Cardano.KERI.AID.Checkpoint.WireSpec
     Cardano.KERI.AID.Ed25519Spec
@@ -1002,6 +1009,19 @@ executable gen-freeze-vectors
   default-language: GHC2021
   hs-source-dirs:   app
   main-is:          GenFreezeVectors.hs
+  build-depends:
+    , base
+    , bytestring
+    , cardano-keri
+    , memory        >=0.18 && <0.19
+    , plutus-core
+    , plutus-tx
+
+executable gen-topup-vectors
+  import:           warnings
+  default-language: GHC2021
+  hs-source-dirs:   app
+  main-is:          GenTopUpVectors.hs
   build-depends:
     , base
     , bytestring

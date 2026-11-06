@@ -185,7 +185,7 @@ keyMaterialData =
         ]
 
 {- | Version 2, live: the AID's CESR text, sequence number, epoch, poisoned,
-frozen, birth slot, refund address, key material.
+frozen, birth slot, refund address, top-up mark, key material.
 -}
 liveDatum :: PLC.Data
 liveDatum =
@@ -200,6 +200,7 @@ liveDatum =
             , boolData False
             , PLC.I 0
             , PLC.B (BS.pack [1, 2, 3, 4])
+            , boolData False
             , keyMaterialData
             ]
         ]

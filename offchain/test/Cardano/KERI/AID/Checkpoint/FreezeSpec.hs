@@ -75,7 +75,11 @@ floorFrozen = fpMinAda params + fpDeposit params
 
 -- | The spent checkpoint as a live datum, over the fixture's spent key state.
 liveOf :: AdvCase -> Bool -> Bool -> Integer -> CheckpointDatumV2
-liveOf c poisoned frozen sn =
+liveOf c poisoned frozen = liveMarked c poisoned frozen False
+
+-- | The spent checkpoint as a live datum with the top-up mark given.
+liveMarked :: AdvCase -> Bool -> Bool -> Bool -> Integer -> CheckpointDatumV2
+liveMarked c poisoned frozen toppedUp sn =
     Live
         { lvAid = qb64Aid (scCesrAid (acSpent c))
         , lvSn = sn
@@ -84,6 +88,7 @@ liveOf c poisoned frozen sn =
         , lvFrozen = frozen
         , lvBornAt = 1_800_000_000_000
         , lvRefundTo = BS.cons 0x61 (BS.replicate 28 0x53)
+        , lvToppedUp = toppedUp
         , lvKeys =
             KeyMaterial
                 { kmCurKeys = acIcpKeys c
@@ -235,6 +240,24 @@ spec = describe "Checkpoint.Freeze (#345, Lean Step.freeze)" $ do
                             (evidenceOf c)
                         )
                         `shouldSatisfy` isRotationRefused
+            it "keeps the top-up mark: accepts the freeze of a topped-up checkpoint" $ \fx ->
+                withCaseIO fx $ \c ->
+                    freezeVerdict
+                        params
+                        (freezeOf c (liveMarked c False False True (scNativeSn (acSpent c))) unit (evidenceOf c))
+                        `shouldBe` Right ()
+            it "keeps the top-up mark: the frozen copy of a topped-up checkpoint is marked" $ \fx ->
+                withCaseIO fx $ \c ->
+                    frozenLive (liveMarked c False False True 0)
+                        `shouldBe` Just (liveMarked c False True True 0)
+            it "refuses a freeze whose successor clears the top-up mark" $ \fx ->
+                withCaseIO fx $ \c ->
+                    freezeVerdict
+                        params
+                        (freezeOf c (liveMarked c False False True (scNativeSn (acSpent c))) unit (evidenceOf c))
+                            { fiSuccessorDatum = liveMarked c False True False (scNativeSn (acSpent c))
+                            }
+                        `shouldBe` Left FreezeSuccessorNotTheFrozenCopy
             it "refuses a successor that is not the frozen copy" $ \fx ->
                 withCaseIO fx $ \c ->
                     freezeVerdict
@@ -257,8 +280,11 @@ spec = describe "Checkpoint.Freeze (#345, Lean Step.freeze)" $ do
     describe "the Lean corpus: the Haskell verdict is the Lean's on every freeze cell" $
         beforeAll (loadFixture "advance.json") $ do
             it "covers the grid: both verdicts occur, and the premium and bond are the corpus's" $ \_ -> do
-                length corpusCells `shouldBe` 78
-                length (filter ccAccepted corpusCells) `shouldBe` 1
+                length corpusCells `shouldBe` 150
+                length (filter ccToppedUp corpusCells) `shouldBe` 72
+                length (filter ccAccepted corpusCells) `shouldBe` 2
+                length (filter (\cell -> ccAccepted cell && ccToppedUp cell) corpusCells)
+                    `shouldBe` 1
                 (corpusP, corpusB) `shouldBe` (2, 5)
             it "agrees with the Lean on every cell" $ \fx ->
                 withCaseIO fx $ \c ->
@@ -309,7 +335,7 @@ cellInput c cell
             | r > 0 -> scNativeSn (acSpent c)
             | r == 0 -> created
             | otherwise -> created + 1
-    old = liveOf c (ccPoisoned cell) (ccFrozen cell) spentSn
+    old = liveMarked c (ccPoisoned cell) (ccFrozen cell) (ccToppedUp cell) spentSn
     evidence
         | ccRotationEvidenced cell = evidenceOf c
         | otherwise = unevidenced (evidenceOf c)

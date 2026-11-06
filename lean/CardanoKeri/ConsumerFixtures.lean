@@ -41,7 +41,7 @@ def interpretation : Interpretation := {
   code := fixtureCodec
   keyOf := id
   decode := fun release raw => if release == context.release && raw == 711 then
-    some ⟨11, .present ⟨0, 0, false, false, 2, 42, 3⟩⟩ else none }
+    some ⟨11, .present ⟨0, 0, false, false, 2, 42, 3, false⟩⟩ else none }
 def abstractRegistry (r : Singular.TokenId) : Nat :=
   if r == registryAsset interpretation context then 9 else r.name + 100
 -- Finite witness interpretation only, not a cryptographic root implementation.

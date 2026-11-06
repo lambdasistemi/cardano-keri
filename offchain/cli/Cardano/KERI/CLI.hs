@@ -5,7 +5,7 @@ Module      : Cardano.KERI.CLI
 Description : Production @ckeri@ command composition
 
 The top-level 'Instructions' parser/dispatcher. Six commands
-(@deploy@\/@manifest verify@\/@register@\/@advance@\/@freeze@\/@board@) are
+(@deploy@\/@manifest verify@\/@register@\/@advance@\/@freeze@\/@top-up@\/@board@) are
 unchanged, reusing "Cardano.KERI.Deployment.CLI"'s existing settings/parsers/
 runners; only @status@ is new, routed through the #177 backend seam
 ("Cardano.KERI.CLI.Backend") via the same 'resolveBackend' dispatch table
@@ -52,6 +52,7 @@ import Cardano.KERI.Deployment.CLI (
     DeploySettings,
     FreezeSettings,
     RegisterSettings,
+    TopUpSettings,
     advanceSettingsParser,
     boardPostSettingsParser,
     boardRetireSettingsParser,
@@ -65,6 +66,8 @@ import Cardano.KERI.Deployment.CLI (
     runDeploy,
     runFreeze,
     runRegister,
+    runTopUp,
+    topUpSettingsParser,
  )
 import Cardano.KERI.Deployment.EndpointBoardManifest (
     EndpointBoardManifest,
@@ -91,6 +94,7 @@ data Instructions
     | Register !RegisterSettings
     | Advance !AdvanceSettings
     | Freeze !FreezeSettings
+    | TopUp !TopUpSettings
     | Status !BackendSettings
     | List !ListSettings
     | Checkpoint !CheckpointSettings
@@ -188,6 +192,10 @@ instance Opt.HasParser Instructions where
                     "Freeze a live checkpoint on the controller's own later witnessed rotation"
                     (Freeze <$> Opt.subConfig "freeze" freezeSettingsParser)
                 , Opt.command
+                    "top-up"
+                    "Add at least one premium to the pool of a live checkpoint, once per key state"
+                    (TopUp <$> Opt.subConfig "top-up" topUpSettingsParser)
+                , Opt.command
                     "status"
                     "Report an AID's checkpoint from a selected backend"
                     (Status <$> Opt.subConfig "status" backendSettingsParser)
@@ -216,6 +224,7 @@ runInstructions = \case
     Register settings -> runRegister settings
     Advance settings -> runAdvance settings
     Freeze settings -> runFreeze settings
+    TopUp settings -> runTopUp settings
     Status settings -> runBackendStatusCLI settings
     List settings -> runBackendListCLI settings
     Checkpoint settings -> runBackendCheckpointCLI settings

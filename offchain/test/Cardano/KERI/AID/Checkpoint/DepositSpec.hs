@@ -104,7 +104,11 @@ coveringPool = 3 * unit
 
 -- | The spent checkpoint as a live datum, over the fixture's spent key state.
 liveOf :: AdvCase -> Bool -> Bool -> Integer -> CheckpointDatumV2
-liveOf c poisoned frozen sn =
+liveOf c poisoned frozen = liveMarked c poisoned frozen False
+
+-- | The spent checkpoint as a live datum with the top-up mark given.
+liveMarked :: AdvCase -> Bool -> Bool -> Bool -> Integer -> CheckpointDatumV2
+liveMarked c poisoned frozen toppedUp sn =
     Live
         { lvAid = qb64Aid (scCesrAid (acSpent c))
         , lvSn = sn
@@ -113,6 +117,7 @@ liveOf c poisoned frozen sn =
         , lvFrozen = frozen
         , lvBornAt = birthSlot
         , lvRefundTo = refundAddress
+        , lvToppedUp = toppedUp
         , lvKeys =
             KeyMaterial
                 { kmCurKeys = acIcpKeys c
@@ -145,6 +150,7 @@ successorWith c frozen refund born aid =
         , lvFrozen = frozen
         , lvBornAt = born
         , lvRefundTo = refund
+        , lvToppedUp = False
         , lvKeys =
             KeyMaterial
                 { kmCurKeys = cdCurKeys created
@@ -223,6 +229,7 @@ spentOfRow s f =
         , lvFrozen = vsFrozen s
         , lvBornAt = vsBornAt s
         , lvRefundTo = vsRefundTo s
+        , lvToppedUp = vsToppedUp s
         , lvKeys =
             KeyMaterial
                 { kmCurKeys = []
@@ -368,6 +375,21 @@ spec = describe "Checkpoint.Deposit (#345, Lean CheckpointDeposit and Step.rotat
                         params
                         (honest c){dnRotation = (acEvidence c){aeCtrlSigs = [], aeWitReceipts = []}}
                         `shouldSatisfy` isRotationRefused
+            it "clears the top-up mark of a topped-up checkpoint: accepts the successor with the mark clear" $ \fx ->
+                withCaseIO fx $ \c ->
+                    depositVerdict
+                        params
+                        (honest c){dnSpentDatum = liveMarked c False True True (scNativeSn (acSpent c))}
+                        `shouldBe` Right ()
+            it "refuses a successor that keeps the top-up mark" $ \fx ->
+                withCaseIO fx $ \c ->
+                    depositVerdict
+                        params
+                        (honest c)
+                            { dnSpentDatum = liveMarked c False True True (scNativeSn (acSpent c))
+                            , dnSuccessorDatum = withMark True (successorOf c)
+                            }
+                        `shouldBe` Left DepositSuccessorKeepsMark
             it "refuses a successor that stays frozen" $ \fx ->
                 withCaseIO fx $ \c ->
                     depositVerdict
@@ -423,8 +445,11 @@ spec = describe "Checkpoint.Deposit (#345, Lean CheckpointDeposit and Step.rotat
     describe "the Lean corpus: the Haskell verdict is the Lean's on every deposit cell" $
         beforeAll (loadFixture "advance.json") $ do
             it "covers the grid: both verdicts occur" $ \_ -> do
-                length depositCells `shouldBe` 78
-                length (filter dcAccepted depositCells) `shouldBe` 12
+                length depositCells `shouldBe` 150
+                length (filter dcToppedUp depositCells) `shouldBe` 72
+                length (filter dcAccepted depositCells) `shouldBe` 24
+                length (filter (\cell -> dcAccepted cell && dcToppedUp cell) depositCells)
+                    `shouldBe` 12
             it "agrees with the Lean on every cell" $ \fx ->
                 withCaseIO fx $ \c ->
                     [ dcName cell
@@ -468,7 +493,7 @@ cellInput c cell =
     spentDatum
         | dcPending cell =
             TerminationPending (qb64Aid (scCesrAid (acSpent c))) (scNativeSn (acSpent c)) (scSeq (acSpent c))
-        | otherwise = liveOf c (dcPoisoned cell) (dcFrozen cell) spentSn
+        | otherwise = liveMarked c (dcPoisoned cell) (dcFrozen cell) (dcToppedUp cell) spentSn
     spentLovelace
         | dcPending cell = dpMinAda params
         | dcFrozen cell = floorFrozen + pool
@@ -487,3 +512,9 @@ cellInput c cell =
     rotation
         | dcRotationEvidenced cell = acEvidence c
         | otherwise = (acEvidence c){aeCtrlSigs = [], aeWitReceipts = []}
+
+-- | A live datum with its top-up mark given; any other datum is left as it is.
+withMark :: Bool -> CheckpointDatumV2 -> CheckpointDatumV2
+withMark mark = \case
+    d@Live{} -> d{lvToppedUp = mark}
+    other -> other

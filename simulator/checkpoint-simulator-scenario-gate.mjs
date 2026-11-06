@@ -94,14 +94,14 @@ function checkExactNat(core, corpus) {
   const problems = [], asserted = new Set();
   const P = { D: 10, B: 5, P: 2, W: 3 };
   const bads = [2 ** 53, 2 ** 53 + 2, 2 ** 60, -1, 1.5, '5', NaN, Infinity, null, undefined, true];
-  const live = (over = {}) => ({ present: { l: { sn: 1, epoch: 1, poisoned: false, frozen: false, bornAt: 0, refundTo: 7, pool: 4, ...over } } });
+  const live = (over = {}) => ({ present: { l: { sn: 1, epoch: 1, poisoned: false, frozen: false, bornAt: 0, refundTo: 7, pool: 4, toppedUp: false, ...over } } });
   const LIVE = ['sn', 'epoch', 'bornAt', 'refundTo', 'pool'];
   const pendingSt = (over = {}) => ({ terminationPending: { h: { epoch: 1, sn: 1, ...over } } });
   const EV_SHAPES = { rotationTo: [1, 1, 2], depositAuthorized: [2], quorum: [1], duplicityAt: [1, 1] };
   const EV_NAT = { rotationTo: [0, 1, 2], depositAuthorized: [0], quorum: [0], duplicityAt: [0, 1] };   // the Nat entries of each row
   // an action that consults each predicate from live(), and one that consults none
   const CONSULTING = { rotationTo: { rotate: { "sn'": 2, op: 'keep', payee: 1 } }, depositAuthorized: { rotate: { "sn'": 2, op: 'deposit', payee: 1 } }, quorum: 'poison', duplicityAt: { convict: { payee: 1 } } };
-  const NOP = { topUp: { x: 0 } };
+  const NOP = { topUp: { x: 2 } };
   const okEnv = core.envAdd(core.envAdd(core.emptyEnv(), { quorum: [1] }), { rotationTo: [1, 1, 2] });
   const got = r => (r.ok ? 'ok' : r.reason + (r.field !== undefined ? '/' + r.field : ''));
   // the entry point must refuse by name, with the offending field, before evaluating anything
@@ -133,7 +133,7 @@ function checkExactNat(core, corpus) {
     if (!threw) problems.push(`evidence row accepts ${tag}`);
     const s = core.newSession(P);
     if (core.setSlot(s, v).ok) problems.push(`setSlot accepts ${tag}`);
-    refusal(`attempt at slot ${tag}`, () => core.attempt(s, { register: { refund: 1, pool0: 1 } }, v).record, 'invalid-nat', 'slot');
+    refusal(`attempt at slot ${tag}`, () => core.attempt(s, { register: { refund: 1, pool0: 2 } }, v).record, 'invalid-nat', 'slot');
     refusal(`step at now=${tag}`, () => core.step(P, core.emptyEnv(), NOP, v, live()), 'invalid-nat', 'now');
     refusal(`replay from t0=${tag}`, () => core.replay(P, okEnv, v, live(), []), 'invalid-nat', 't0');
     refusal(`replay of a step at slot ${tag}`, () => core.replay(P, okEnv, 0, live(), [[v, NOP]]), 'invalid-nat', 'slot');
@@ -142,14 +142,14 @@ function checkExactNat(core, corpus) {
     // live datum with one corrupted field, whatever the action would have done
     for (const f of LIVE) {
       const st = live({ [f]: v });
-      refusal(`step topUp 0 on a live state with ${f}=${tag}`, () => core.step(P, okEnv, NOP, 1, st), 'invalid-nat', f);
+      refusal(`step topUp 2 on a live state with ${f}=${tag}`, () => core.step(P, okEnv, NOP, 1, st), 'invalid-nat', f);
       refusal(`step poison on a live state with ${f}=${tag}`, () => core.step(P, okEnv, 'poison', 1, st), 'invalid-nat', f);
       refusal(`replay from a live state with ${f}=${tag}`, () => core.replay(P, okEnv, 0, st, [[1, NOP]]), 'invalid-nat', f);
       refusal(`replay with no steps from a live state with ${f}=${tag}`, () => core.replay(P, okEnv, 0, st, []), 'invalid-nat', f);
       verdict(`consumable on a live state with ${f}=${tag}`, () => core.consumable(P, 5, st), 'invalid-nat', f);
       // the system step, on the played AID and on another AID
-      refusal(`attempt topUp 0 on the played AID with ${f}=${tag}`, () => core.attempt({ ...core.newSession(P), state: st, leaves: { 1: 'live' } }, NOP, 0).record, 'invalid-nat', f);
-      refusal(`attempt topUp 0 on AID 2 with ${f}=${tag}`, () => core.attempt({ ...core.newSession(P), others: { 2: st }, leaves: { 2: 'live' } }, NOP, 0, 2).record, 'invalid-nat', f);
+      refusal(`attempt topUp 2 on the played AID with ${f}=${tag}`, () => core.attempt({ ...core.newSession(P), state: st, leaves: { 1: 'live' } }, NOP, 0).record, 'invalid-nat', f);
+      refusal(`attempt topUp 2 on AID 2 with ${f}=${tag}`, () => core.attempt({ ...core.newSession(P), others: { 2: st }, leaves: { 2: 'live' } }, NOP, 0, 2).record, 'invalid-nat', f);
     }
     for (const f of ['epoch', 'sn']) {
       const pk = pendingSt({ [f]: v });
@@ -165,12 +165,12 @@ function checkExactNat(core, corpus) {
       const row = EV_SHAPES[k].slice(); row[j] = v;
       const env = { ...core.emptyEnv(), [k]: [row] };
       const field = `${k}[0][${j}]`;
-      refusal(`step topUp 0 (consults nothing) with evidence ${field}=${tag}`, () => core.step(P, env, NOP, 1, live()), 'invalid-nat', field);
+      refusal(`step topUp 2 (consults nothing) with evidence ${field}=${tag}`, () => core.step(P, env, NOP, 1, live()), 'invalid-nat', field);
       refusal(`step ${core.canon(CONSULTING[k])} (consults ${k}) with evidence ${field}=${tag}`, () => core.step(P, env, CONSULTING[k], 1, live()), 'invalid-nat', field);
-      refusal(`register from absent with evidence ${field}=${tag}`, () => core.step(P, env, { register: { refund: 1, pool0: 1 } }, 1, 'absent'), 'invalid-nat', field);
+      refusal(`register from absent with evidence ${field}=${tag}`, () => core.step(P, env, { register: { refund: 1, pool0: 2 } }, 1, 'absent'), 'invalid-nat', field);
       refusal(`replay with evidence ${field}=${tag}`, () => core.replay(P, env, 0, live(), [[1, NOP]]), 'invalid-nat', field);
       refusal(`replay with no steps with evidence ${field}=${tag}`, () => core.replay(P, env, 0, live(), []), 'invalid-nat', field);
-      refusal(`attempt topUp 0 with session evidence ${field}=${tag}`, () => core.attempt({ ...core.newSession(P), state: live(), registry: [1], env }, NOP, 0).record, 'invalid-nat', field);
+      refusal(`attempt topUp 2 with session evidence ${field}=${tag}`, () => core.attempt({ ...core.newSession(P), state: live(), registry: [1], env }, NOP, 0).record, 'invalid-nat', field);
     }
     // ---- the trace verifier: a corpus carrying a corrupted state or table is refused by name
     if (corpus) {
@@ -214,7 +214,7 @@ function checkExactNat(core, corpus) {
     [{ ...core.emptyEnv(), quorum: [[1, 2]] }, 'quorum[0]'], [{ ...core.emptyEnv(), rotationTo: [[1, 1]] }, 'rotationTo[0]'], [{ ...core.emptyEnv(), duplicityAt: [1] }, 'duplicityAt[0]']];
   for (const [env, field] of tables) {
     refusal(`step under non-table ${core.canon(env)}`, () => core.step(P, env, NOP, 1, live()), 'invalid-evidence', field);
-    refusal(`register under non-table ${core.canon(env)}`, () => core.step(P, env, { register: { refund: 1, pool0: 1 } }, 1, 'absent'), 'invalid-evidence', field);
+    refusal(`register under non-table ${core.canon(env)}`, () => core.step(P, env, { register: { refund: 1, pool0: 2 } }, 1, 'absent'), 'invalid-evidence', field);
     refusal(`replay under non-table ${core.canon(env)}`, () => core.replay(P, env, 0, live(), []), 'invalid-evidence', field);
     refusal(`attempt under non-table ${core.canon(env)}`, () => core.attempt({ ...core.newSession(P), state: live(), registry: [1], env }, NOP, 0).record, 'invalid-evidence', field);
   }
@@ -457,13 +457,13 @@ function inversionClaim(core, name, p, env, now, pre, action) {
   const pay = (addr, dreg = 0, b = 0, pool = 0) => core.payment(addr, dreg, b, pool);
   const claim = (rhs, f, state) => ({ rhs, result: { flow: core.flow(f), state } });
   if (ctor === 'register') return kind === 'register' && pre === 'absent' ?
-    claim(true, { dregIn: p.D, bIn: p.B, poolIn: d.pool0 }, core.present({ sn: 0, epoch: 0,
-      poisoned: false, frozen: false, bornAt: now, refundTo: d.refund, pool: d.pool0 })) : null;
+    claim(p.P <= d.pool0, { dregIn: p.D, bIn: p.B, poolIn: d.pool0 }, core.present({ sn: 0, epoch: 0,
+      poisoned: false, frozen: false, bornAt: now, refundTo: d.refund, pool: d.pool0, toppedUp: false })) : null;
   if (!l) return null;
   if (ctor === 'convict') return kind === 'convict' ? claim(bits[0],
     { refund: pay(l.refundTo, 0, core.bHeldOf(p, l), l.pool), convictor: pay(d.payee, p.D) }, { terminationPending: { h: { epoch: l.epoch, sn: l.sn } } }) : null;
   if (ctor === 'poison') return kind === 'poison' ? claim(bits[0] && !l.poisoned, {}, core.present({ ...l, poisoned: true })) : null;
-  if (ctor === 'topUp') return kind === 'topUp' ? claim(true, { poolIn: d.x }, core.present({ ...l, pool: l.pool + d.x })) : null;
+  if (ctor === 'topUp') return kind === 'topUp' ? claim(!l.toppedUp && p.P <= d.x, { poolIn: d.x }, core.present({ ...l, pool: l.pool + d.x, toppedUp: true })) : null;
   if (ctor === 'freeze') return kind === 'freeze' ? claim(bits[0] && l.sn < d["sn'"] && l.pool < p.P && !l.frozen && !l.poisoned,
     { hunter: pay(d.payee, 0, p.B) }, core.present({ ...l, frozen: true })) : null;
   const paid = ctor.endsWith('Paid'), deposit = ctor.startsWith('rotateDeposit');
@@ -472,7 +472,7 @@ function inversionClaim(core, name, p, env, now, pre, action) {
     const rhs = bits[0] && l.sn < d["sn'"] && bits[1] && (paid ? p.P <= l.pool : l.pool < p.P);
     return claim(rhs, { ...(deposit ? { bIn: p.B - core.bHeldOf(p, l) } : {}),
       ...(paid ? { hunter: pay(d.payee, 0, 0, p.P) } : {}) },
-    core.present({ ...l, sn: d["sn'"], epoch: l.epoch + 1, poisoned: false,
+    core.present({ ...l, sn: d["sn'"], epoch: l.epoch + 1, poisoned: false, toppedUp: false,
       ...(deposit ? { frozen: false } : {}),
       pool: paid ? Math.max(0, l.pool - p.P) : l.pool }));
   }
@@ -505,7 +505,7 @@ function checkInversions(core, leanRoot, corpus, names = INVERSION_NAMES, compar
       } else no++;
     }
     if (!yes) problems.push(name + ': no positive instance');
-    if (!no && !['Step.register_iff', 'Step.topUp_iff'].includes(name)) problems.push(name + ': no refusal instance');
+    if (!no) problems.push(name + ': no refusal instance');
     if (!control) problems.push(name + ': changed-flow negative control did not fail'); else controls++;
   }
   return { problems, checks, controls };
@@ -994,7 +994,7 @@ const STRUCTURAL_ROWS = {
 // non-structural declaration on which that exact row must report a violation
 function fabricatedViolations(core) {
   const P = { D: 1000, B: 5, P: 2, W: 10 };
-  const L = (o = {}) => ({ sn: 1, epoch: 1, poisoned: false, frozen: false, bornAt: 0, refundTo: 1, pool: 10, ...o });
+  const L = (o = {}) => ({ sn: 1, epoch: 1, poisoned: false, frozen: false, bornAt: 0, refundTo: 1, pool: 10, toppedUp: false, ...o });
   const pr = l => ({ present: { l } });
   const env0 = core.emptyEnv();
   const rows = rs => rs.reduce((e, r) => core.envAdd(e, { [Object.keys(r)[0]]: r[Object.keys(r)[0]] }), core.emptyEnv());
@@ -1015,6 +1015,7 @@ function fabricatedViolations(core) {
     return { before, after, rec };
   };
   const live = pr(L()), poisoned = pr(L({ poisoned: true })), frozen = pr(L({ frozen: true }));
+  const toppedUp = pr(L({ toppedUp: true })), TOP2 = { topUp: { x: 2 } };
   const rotated = (o = {}) => pr(L({ sn: 2, epoch: 2, pool: 8, ...o }));
   const cases = {
     T1_sn_monotone: () => mk({ pre: pr(L({ sn: 5 })), post: pr(L({ sn: 3, pool: 11 })), action: TOP, flow: { poolIn: 1 } }),
@@ -1071,6 +1072,15 @@ function fabricatedViolations(core) {
     T15_b_returns_only_by_deposit: () => mk({ pre: frozen, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 } }),
     T15_freeze_makes_inert: () => mk({ pre: pr(L({ pool: 1 })), post: pr(L({ pool: 1 })), action: { freeze: { "sn'": 2, payee: 2 } }, env: rotEnv, flow: { hunter: pay(2, 0, 5, 0) } }),
     T16_payments_are_named: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1, hunter: pay(2, 0, 0, 3) } }),
+    topUp_adds_at_least_premium: () => mk({ pre: live, post: pr(L({ pool: 11, toppedUp: true })), action: TOP, flow: { poolIn: 1 } }),
+    second_topUp_refused: () => mk({ pre: toppedUp, post: pr(L({ pool: 12, toppedUp: true })), action: TOP2, flow: { poolIn: 2 } }),
+    rotation_clears_topped_up: () => mk({ pre: toppedUp, post: rotated({ toppedUp: true }), action: ROT(2, 'keep'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 2) } }),
+    topped_up_set_only_by_topUp: () => mk({ pre: live, post: pr(L({ poisoned: true, toppedUp: true })), action: 'poison', env: rows([{ quorum: [1] }]) }),
+    topped_up_cleared_only_by_rotation: () => mk({ pre: toppedUp, post: pr(L({ poisoned: true })), action: 'poison', env: rows([{ quorum: [1] }]) }),
+    topped_up_kept_by_poison_and_freeze: () => mk({ pre: pr(L({ pool: 1, toppedUp: true })), post: pr(L({ pool: 1, frozen: true })), action: { freeze: { "sn'": 2, payee: 2 } }, env: rotEnv, flow: { hunter: pay(2, 0, 5, 0) } }),
+    topped_up_moves_only_on_evidence: () => mk({ pre: toppedUp, post: pr(L({ pool: 12, toppedUp: true })), action: TOP2, flow: { poolIn: 2 } }),
+    at_most_one_topUp_between_rotations: () => mk({ pre: toppedUp, post: pr(L({ pool: 12, toppedUp: true })), action: TOP2, flow: { poolIn: 2 }, origin: live, history: [[3, TOP2], [12, TOP2]] }),
+    registration_pool_at_least_premium: () => mk({ pre: 'absent', post: pr(L({ sn: 0, epoch: 0, pool: 1 })), action: { register: { refund: 1, pool0: 1 } }, flow: { dregIn: 1000, bIn: 5, poolIn: 1 } }),
   };
   return Object.keys(cases).map(name => ({ name, make: cases[name] }));
 }
@@ -1329,7 +1339,7 @@ async function selftest(work) {
     { name: 'core effect changed: a deposit restarts juvenility (D-040 says it does not)', expect: /live datum mismatch|theorem VIOLATED: .*T(5|10|7)/,
       make: () => ({ core: mutant('m-deposit-ages', [["      if (op === 'deposit') next.frozen = false;", "      if (op === 'deposit') { next.frozen = false; next.bornAt = now; }"]]), skipBuild: true }) },
     { name: 'core effect changed: a rotation moves the refund address to its payee (T6_refund_fixed)', expect: /theorem VIOLATED: .*T6|live datum mismatch|state mismatch/,
-      make: () => ({ core: mutant('m-refund-moved', [["      const next = { ...l, sn: sn2, epoch: epoch2, poisoned: false };", "      const next = { ...l, sn: sn2, epoch: epoch2, poisoned: false, refundTo: payee };"]]), skipBuild: true }) },
+      make: () => ({ core: mutant('m-refund-moved', [["      const next = { ...l, sn: sn2, epoch: epoch2, poisoned: false, toppedUp: false };", "      const next = { ...l, sn: sn2, epoch: epoch2, poisoned: false, toppedUp: false, refundTo: payee };"]]), skipBuild: true }) },
     { name: 'core guard weakened: a deposit lands without the new keys’ signature (T6_deposit_requires_new_keys)', expect: /expected ok=false, got ok=true|theorem VIOLATED: .*T(6|7)/,
       make: () => ({ core: mutant('m-deposit-unsigned', [["const bondOpOk = (env, e, op) => op === 'keep' || envDepositAuthorized(env, e);", "const bondOpOk = (env, e, op) => true;"]]), skipBuild: true }) },
     { name: 'a theorem row deleted from the core (T1_rotate_strict has no checker)', expect: /theorem T1_rotate_strict is declared in the Lean but has no checker row/,
@@ -1371,7 +1381,7 @@ async function selftest(work) {
     { name: 'core that rounds at 2^53 (isNat relaxed, sum unguarded)', expect: /isNat accepts 9007199254740992|accepted a top-up .* T6\/T14 flagged|precision/,
       make: () => ({ core: mutant('m-nat', [["const isNat = v => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;", "const isNat = v => typeof v === 'number' && Number.isInteger(v) && v >= 0;"],
         ['const natAdd = (a, b) => { const s = a + b; return isNat(s) && BigInt(a) + BigInt(b) === BigInt(s) ? s : null; };', 'const natAdd = (a, b) => a + b;']]), skipBuild: true }) },
-    { name: 'step skips the state and evidence validation (the helper stays; the real boundary is open)', expect: /step topUp 0 on a live state with sn=9007199254740992: expected invalid-nat\/sn, got ok/,
+    { name: 'step skips the state and evidence validation (the helper stays; the real boundary is open)', expect: /step topUp 2 on a live state with sn=9007199254740992: expected invalid-nat\/sn, got ok/,
       make: () => ({ core: mutant('m-step-boundary', [["  const sv = validateState(state); if (sv) return refuse(sv.reason, sv.field);\n  const ev = validateEnv(env); if (ev) return refuse(ev.reason, ev.field);\n  const a = na.action, kind = na.kind;", "  const a = na.action, kind = na.kind;"]]), skipBuild: true }) },
     { name: 'replay skips its own boundary (a corrupted origin with no steps passes)', expect: /replay with no steps from a live state with sn=9007199254740992: expected invalid-nat\/sn, got ok/,
       make: () => ({ core: mutant('m-replay-boundary', [["  const sv = validateState(state); if (sv) return refuse(null, sv.reason, sv.field);\n  const ev = validateEnv(env); if (ev) return refuse(null, ev.reason, ev.field);\n", ""]]), skipBuild: true }) },

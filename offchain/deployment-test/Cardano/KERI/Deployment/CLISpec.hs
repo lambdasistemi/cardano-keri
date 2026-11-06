@@ -130,7 +130,7 @@ spec = do
                             , registerTimeoutSeconds = 30
                             , registerAllowUnlistedWitnesses = True
                             , registerAllowExistingCheckpoint = True
-                            , registerEscrowLovelace = 1_007_000_000
+                            , registerEscrowLovelace = 1_009_000_000
                             }
                 runRegisterWith withLocalQueryScope runtime settings
                 readIORef callsRef

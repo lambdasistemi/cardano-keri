@@ -83,7 +83,8 @@ checkpoint, so that Cardano contracts can read her key state.*
   proof, `D_reg + B + pool₀`, and a refund address chosen by whoever pays.
 - **The chain checks**: the inception parses and self-addresses; the AID is
   absent from the registry, and is inserted — this is the only way the token
-  can ever be minted; both bonds are present.
+  can ever be minted; both bonds are present; the first pool is at least
+  one premium.
 - **After**: `Present`, epoch 0, not poisoned, born now, unconsumable for
   `W` slots (juvenile).
 - **Alice sees** a checkpoint she did not necessarily create. If a stranger
@@ -192,7 +193,8 @@ go back to the refund address I chose if her checkpoint is ever convicted.*
   rotates, deposits and tops up the pool; Cora convicts.
 - **The chain checks**: the registration takes the refund address as given,
   with no signature over it; a rotation leaves the refund address as it was;
-  so does a deposit; a top-up adds to the pool and nothing else; a conviction
+  so does a deposit; a top-up adds to the pool and sets the top-up mark,
+  nothing else; a conviction
   pays the freeze bond held and the pool to the refund address.
 - **After**: `D_reg` goes to Cora; the freeze bond and the whole pool, top-ups
   by others included, go to the sponsor's address. Alice's keys control her
@@ -264,8 +266,12 @@ myself and stop advancing at my epoch.*
 
 *As a friend of Alice, I want to pay for her maintenance.*
 
-- **Action**: add value to the pool; the datum is untouched; no signature.
-- **After**: hunters have a reason to serve her.
+- **Action**: add value to the pool, at least one premium, once per key
+  state; the datum is untouched but for the top-up mark; no signature.
+- **After**: hunters have a reason to serve her. A second top-up of the same
+  key state is refused, so nobody can keep the checkpoint busy with a stream
+  of tiny top-ups and make Alice's rotation fail on a spent input; the next
+  rotation clears the mark.
 
 ## 14. Two hunters race
 
@@ -290,9 +296,9 @@ myself and stop advancing at my epoch.*
 | State | Bonds | Poisoned | Who can act | Consumable |
 |---|---|---|---|---|
 | Absent | — | — | anyone: register | no |
-| Live (active) | `D_reg`, `B` held | no | next keys: rotate (keep / deposit); current quorum: poison; anyone: top-up; proof: freeze if pool < `P`, convict | after `W` slots |
-| Poisoned (active) | held | yes | next keys: rotate; anyone: top-up; proof: convict | no |
-| Frozen (active) | `B` missing | no | next keys: rotate with deposit (unfreeze); current quorum: poison; anyone: top-up; proof: convict | no |
+| Live (active) | `D_reg`, `B` held | no | next keys: rotate (keep / deposit); current quorum: poison; anyone: top-up, once per key state; proof: freeze if pool < `P`, convict | after `W` slots |
+| Poisoned (active) | held | yes | next keys: rotate; anyone: top-up, once per key state; proof: convict | no |
+| Frozen (active) | `B` missing | no | next keys: rotate with deposit (unfreeze); current quorum: poison; anyone: top-up, once per key state; proof: convict | no |
 | Pending custody | no bonds or pool; representative retained | — | associated booking and consuming fold only | no |
 | Convicted | representative burned at fold; key retired | — | nobody | never |
 

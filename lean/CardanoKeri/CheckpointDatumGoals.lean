@@ -707,12 +707,12 @@ theorem decodeData_complete (d : Data) (r : DecodedDatum) (h : decodeData d = so
   unfold decodeData at h
   split at h
   · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨ab, hab, sn, hsn, ep, hep, po, hpo, fr, hfr, born, hborn, rb, hrb, k, hk, rfl⟩ := h
+    obtain ⟨ab, hab, sn, hsn, ep, hep, po, hpo, fr, hfr, born, hborn, rb, hrb, tu, htu, k, hk, rfl⟩ := h
     obtain ⟨rfl, bab⟩ := byteString?_some hab
     obtain ⟨rfl, brb⟩ := byteString?_some hrb
     refine ⟨k, ?_, rfl⟩
     simp [datum, unpack_pack ab bab, unpack_pack rb brb, nat?_some hsn, nat?_some hep,
-      bool?_some hpo, bool?_some hfr, nat?_some hborn, keyMaterial?_some hk]
+      bool?_some hpo, bool?_some hfr, nat?_some hborn, bool?_some htu, keyMaterial?_some hk]
   · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨ab, hab, sn, hsn, ep, hep, rfl⟩ := h
     obtain ⟨rfl, bab⟩ := byteString?_some hab
@@ -760,8 +760,8 @@ theorem unknown_form_refused (j : Nat) (gs : List Data) (hj : 2 ≤ j) :
   refused_unless_written _ fun aid k s hd => by
     cases s <;> simp [datum] at hd <;> omega
 
-/-- Given a live datum without exactly eight fields; when decoded; then it is refused. -/
-theorem live_arity_refused (gs : List Data) (h : gs.length ≠ 8) :
+/-- Given a live datum without exactly nine fields; when decoded; then it is refused. -/
+theorem live_arity_refused (gs : List Data) (h : gs.length ≠ 9) :
     decodeData (.constr 1 [.constr 0 gs]) = none :=
   refused_unless_written _ fun aid k s hd => by
     cases s <;> simp [datum] at hd <;> (subst hd; simp at h)
@@ -774,19 +774,20 @@ theorem pending_arity_refused (gs : List Data) (h : gs.length ≠ 3) :
     cases s <;> simp [datum] at hd <;> (subst hd; simp at h)
 
 /-- Given a live datum the decoder accepts; when its fields are inspected; then each has its
-kind: AID bytes, three non-negative integers and two Booleans in their places, refund bytes
-and well-shaped key material. Any field of another kind is refused. -/
+kind: AID bytes, three non-negative integers and two Booleans in their places, refund bytes,
+the top-up Boolean and well-shaped key material. Any field of another kind is refused. -/
 theorem live_fields_typed (gs : List Data) (r : DecodedDatum)
     (h : decodeData (.constr 1 [.constr 0 gs]) = some r) :
-    ∃ (aid refund : List Nat) (sn epoch bornAt : Nat) (poisoned frozen : Bool) (k : KeyMaterial),
+    ∃ (aid refund : List Nat) (sn epoch bornAt : Nat) (poisoned frozen toppedUp : Bool)
+      (k : KeyMaterial),
       gs = [.bytes aid, .int sn, .int epoch, boolData poisoned, boolData frozen, .int bornAt,
-        .bytes refund, keyMaterialData k] := by
+        .bytes refund, boolData toppedUp, keyMaterialData k] := by
   obtain ⟨k, hk, _⟩ := decodeData_complete _ r h
   cases hs : r.state with
   | present l =>
     rw [hs] at hk
     simp [datum] at hk
-    exact ⟨_, _, _, _, _, _, _, _, hk.symm⟩
+    exact ⟨_, _, _, _, _, _, _, _, _, hk.symm⟩
   | terminationPending h' => rw [hs] at hk; simp [datum] at hk
   | absent => rw [hs] at hk; simp [datum] at hk
   | convicted => rw [hs] at hk; simp [datum] at hk
@@ -1030,7 +1031,7 @@ theorem written_holding_iff (c : Context) (e : Environment) (p : Params) (now : 
   simp [context, cred, decoded, held, interpretation, Bytes.interpretation,
     decode_written c.release c.aid k s d hd hk, facts]
 
-/-- Given a registration funding the premium pool with any amount and a holding carrying the
+/-- Given a registration funding the premium pool with any amount it accepts and a holding carrying the
 raw datum written for the registered state; when the registration bridge's datum clause reads
 it through the concrete interpretation; then the clause holds: the bridge does not refuse a
 funded registration for its pool. -/
@@ -1039,11 +1040,16 @@ theorem funded_registration_agrees (c : Context) (p : Params) (env : Env) (now :
     (o : AH.ObservedOutput)
     (registration : stepFn p env (.register refund pool0) now .absent = some (flow, st))
     (hd : datum c.aid k st = some d) (hk : k.Bytewise) (held : o.datum = .application (raw d)) :
-    st = .present ⟨0, 0, false, false, now, refund, pool0⟩ ∧
+    st = .present ⟨0, 0, false, false, now, refund, pool0, false⟩ ∧
       decide ((decoded interpretation c o).map DecodedDatum.facts =
         some ⟨c.aid, st.datumFacts⟩) = true := by
-  simp only [stepFn, Option.some.injEq, Prod.mk.injEq] at registration
-  refine ⟨registration.2.symm, ?_⟩
+  have born : st = .present ⟨0, 0, false, false, now, refund, pool0, false⟩ := by
+    simp only [stepFn] at registration
+    split at registration
+    · simp only [Option.some.injEq, Prod.mk.injEq] at registration
+      exact registration.2.symm
+    · simp at registration
+  refine ⟨born, ?_⟩
   simp [decoded, held, interpretation, Bytes.interpretation,
     decode_written c.release c.aid k st d hd hk, DecodedDatum.facts, datumFacts_idem]
 

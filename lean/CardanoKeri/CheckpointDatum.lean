@@ -11,8 +11,10 @@ Layout (constructor indices and field order are protocol surface):
 * `CheckpointDatum`: `V1` is constructor 0 (the layout of
   `onchain/lib/cardano_keri/checkpoint/datum.ak`, which carries no consumer
   facts and is refused here); `V2` is constructor 1 with one field.
-* `CheckpointDatumV2.Live` (constructor 0, eight fields): `aid`, `sn`, `epoch`,
-  `poisoned`, `frozen`, `born_at`, `refund_to`, `keys`.
+* `CheckpointDatumV2.Live` (constructor 0, nine fields): `aid`, `sn`, `epoch`,
+  `poisoned`, `frozen`, `born_at`, `refund_to`, `topped_up`, `keys`.
+  `topped_up` is the boolean the one top-up of a key state sets and every
+  rotation clears.
 * `CheckpointDatumV2.TerminationPending` (constructor 1, three fields): `aid`,
   `sn`, `epoch`. No key material: no step reads the keys of a pending
   checkpoint, and its output holds the fixed minimum ADA `Mc`, which the ledger
@@ -26,7 +28,8 @@ Layout (constructor indices and field order are protocol surface):
 
 Facts in the datum, amounts in the value. The datum carries the facts of a
 checkpoint state (`State.datumFacts`): sequence number, epoch, poison, freeze,
-birth slot, refund address and the pending-termination form. The premium pool
+birth slot, refund address, whether this key state was topped up, and the
+pending-termination form. The premium pool
 and the bond amounts are held in the output's value; reading them from the
 value is a separate obligation the model does not discharge (#339).
 
@@ -234,7 +237,7 @@ termination carries no key material. -/
 def datum (aid : AID) (k : KeyMaterial) : State → Option Data
   | .present l => some (.constr 1 [.constr 0 [.bytes (unpack aid), .int l.sn, .int l.epoch,
       boolData l.poisoned, boolData l.frozen, .int l.bornAt, .bytes (unpack l.refundTo),
-      keyMaterialData k]])
+      boolData l.toppedUp, keyMaterialData k]])
   | .terminationPending h => some (.constr 1 [.constr 1 [.bytes (unpack aid), .int h.sn,
       .int h.epoch]])
   | .absent | .convicted => none
@@ -291,7 +294,7 @@ def keyMaterial? : Data → Option KeyMaterial
 /-- The consumer's decoder at the `Data` level: version 2 only, every shape
 checked, the read fields validated, the pool left at zero. -/
 def decodeData : Data → Option DecodedDatum
-  | .constr 1 [.constr 0 [aid, sn, epoch, poisoned, frozen, bornAt, refundTo, keys]] => do
+  | .constr 1 [.constr 0 [aid, sn, epoch, poisoned, frozen, bornAt, refundTo, toppedUp, keys]] => do
     let aid ← byteString? aid
     let sn ← nat? sn
     let epoch ← nat? epoch
@@ -299,8 +302,9 @@ def decodeData : Data → Option DecodedDatum
     let frozen ← bool? frozen
     let bornAt ← nat? bornAt
     let refundTo ← byteString? refundTo
+    let toppedUp ← bool? toppedUp
     let _ ← keyMaterial? keys
-    pure ⟨pack aid, .present ⟨sn, epoch, poisoned, frozen, bornAt, pack refundTo, 0⟩⟩
+    pure ⟨pack aid, .present ⟨sn, epoch, poisoned, frozen, bornAt, pack refundTo, 0, toppedUp⟩⟩
   | .constr 1 [.constr 1 [aid, sn, epoch]] => do
     let aid ← byteString? aid
     let sn ← nat? sn

@@ -9,7 +9,7 @@ open CardanoKeri.Checkpoint
 namespace CheckpointAtoms
 
 def p : Params := ⟨3, 2, 1, 5, by decide, by decide⟩
-def l : Live := ⟨1, 1, false, false, 3, 42, 4⟩
+def l : Live := ⟨1, 1, false, false, 3, 42, 4, false⟩
 def short : Live := { l with pool := 0 }
 def env : Env := {
   rotationTo := fun e sn next => decide (e = 1 ∧ sn = 1 ∧ next = 2)
@@ -28,7 +28,7 @@ def observations (target : Option String) : Except String Unit := do
   check "CP-02" ((run env (.present { short with frozen := true }) (.freeze 2 7)).isNone)
   check "CP-03" ((run env (.present { l with poisoned := true }) .poison).isNone)
   check "CP-04" (decide (run env (.present l) (.topUp 2) =
-    some ({ poolIn := 2 }, .present { l with pool := 6 })))
+    some ({ poolIn := 2 }, .present { l with pool := 6, toppedUp := true })))
   check "CP-05" ((run noDup (.present l) (.convict 8)).isNone)
   check "CP-08" (decide (run env (.present l) (.convict 8) = some
     ({ refund := some { addr := 42, b := 2, pool := 4 },
@@ -59,9 +59,31 @@ def observations (target : Option String) : Except String Unit := do
   check "CP-39" ((run { noRotation with depositAuthorized := fun _ => false }
     (.present short) (.rotate 2 .keep 7)).isNone)
   check "CP-40" (!poisonAfter false history)
+  let topped : Live := { l with toppedUp := true }
+  let toppedShort : Live := { short with toppedUp := true }
+  check "second-top-up" ((run env (.present topped) (.topUp 2)).isNone)
+  check "top-up-below-premium" ((run env (.present l) (.topUp 0)).isNone)
+  check "top-up-leaves-mark-unset" (match run env (.present l) (.topUp 2) with
+    | some (_, s) => (run env s (.topUp 2)).isNone
+    | none => false)
+  check "keep-paid-rotation-keeps-mark" (decide (run env (.present topped) (.rotate 2 .keep 7) =
+    some ({ hunter := some { addr := 7, pool := 1 } }, .present { l with sn := 2, epoch := 2, pool := 3 })))
+  check "keep-unpaid-rotation-keeps-mark" (decide (run env (.present toppedShort) (.rotate 2 .keep 7) =
+    some ({}, .present { short with sn := 2, epoch := 2 })))
+  check "deposit-paid-rotation-keeps-mark" (decide (run env (.present topped) (.rotate 2 .deposit 7) =
+    some ({ hunter := some { addr := 7, pool := 1 } }, .present { l with sn := 2, epoch := 2, pool := 3 })))
+  check "deposit-unpaid-rotation-keeps-mark" (decide (run env (.present toppedShort) (.rotate 2 .deposit 7) =
+    some ({}, .present { short with sn := 2, epoch := 2 })))
+  check "registration-below-premium" ((run env .absent (.register 42 0)).isNone)
+  check "registration-starts-topped-up" (decide (run env .absent (.register 42 4) =
+    some ({ dregIn := 3, bIn := 2, poolIn := 4 }, .present ⟨0, 0, false, false, 9, 42, 4, false⟩)))
+  check "poison-clears-mark" (decide (run env (.present topped) .poison =
+    some ({}, .present { topped with poisoned := true })))
+  check "freeze-clears-mark" (decide (run env (.present toppedShort) (.freeze 2 7) =
+    some ({ hunter := some { addr := 7, b := 2 } }, .present { toppedShort with frozen := true })))
 end CheckpointAtoms
 
 def main (args : List String) : IO Unit :=
   match CheckpointAtoms.observations args.head? with
-  | .ok () => IO.println "PASS 22 current local atom observations; CP-34 has a system successor"
+  | .ok () => IO.println "PASS 33 current local atom observations; CP-34 has a system successor"
   | .error id => throw (IO.userError ("ATOM:" ++ id))

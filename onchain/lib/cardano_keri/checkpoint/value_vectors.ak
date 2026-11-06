@@ -167,6 +167,51 @@ test reads_rotated_at_13() {
   got == None && realizes == False
 }
 
+/// Lean `State.valueFloor`: vector `topped-up`.
+test floor_topped_up() {
+  floor_of(datum_vectors.facts_topped_up()) == 14
+}
+
+/// Lean `State.heldValue`: vector `topped-up`.
+test held_topped_up() {
+  held_of(datum_vectors.facts_topped_up(), 4) == 18
+}
+
+/// Lean `State.withValue`: vector `topped-up` at 18 lovelace reads as a state and realizes the row's state.
+test reads_topped_up_at_18() {
+  let got = read_at(datum_vectors.facts_topped_up(), 18)
+  let realizes = got == Some(4)
+  got == Some(4) && realizes == True
+}
+
+/// Lean `State.withValue`: vector `topped-up` at 19 lovelace reads as a state.
+test reads_topped_up_at_19() {
+  let got = read_at(datum_vectors.facts_topped_up(), 19)
+  let realizes = got == Some(4)
+  got == Some(5) && realizes == False
+}
+
+/// Lean `State.withValue`: vector `topped-up` at 17 lovelace reads as a state.
+test reads_topped_up_at_17() {
+  let got = read_at(datum_vectors.facts_topped_up(), 17)
+  let realizes = got == Some(4)
+  got == Some(3) && realizes == False
+}
+
+/// Lean `State.withValue`: vector `topped-up` at 14 lovelace reads as a state.
+test reads_topped_up_at_14() {
+  let got = read_at(datum_vectors.facts_topped_up(), 14)
+  let realizes = got == Some(4)
+  got == Some(0) && realizes == False
+}
+
+/// Lean `State.withValue`: vector `topped-up` at 13 lovelace reads as no state.
+test reads_topped_up_at_13() {
+  let got = read_at(datum_vectors.facts_topped_up(), 13)
+  let realizes = got == Some(4)
+  got == None && realizes == False
+}
+
 /// Lean `State.valueFloor`: vector `poisoned`.
 test floor_poisoned() {
   floor_of(datum_vectors.facts_poisoned()) == 14
@@ -356,6 +401,7 @@ fn facts_connected() -> CheckpointDatumV2 {
     frozen: False,
     born_at: 2,
     refund_to: #"29",
+    topped_up: False,
     keys: datum_vectors.keys_registered_funded(),
   }
 }

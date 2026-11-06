@@ -2055,7 +2055,7 @@ entrypointRegister kelPath probe runner =
                 , registerTimeoutSeconds = 30
                 , registerAllowUnlistedWitnesses = False
                 , registerAllowExistingCheckpoint = False
-                , registerEscrowLovelace = 1_007_000_000
+                , registerEscrowLovelace = 1_009_000_000
                 }
 
 {- | 'runDeployWith' begins at @loadArtifacts@ -> @deriveV1Scripts@, which

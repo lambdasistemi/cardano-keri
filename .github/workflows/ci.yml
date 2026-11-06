@@ -161,6 +161,14 @@ jobs:
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-deposit-corpus.mjs --check
       - name: Deposit mutation controls
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/check-deposit-mutants.mjs
+      - name: Checkpoint datum vectors drift
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-datum-vectors.mjs --check
+      - name: Checkpoint writer vectors drift
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-writer-vectors.mjs --check
+      - name: Top-up corpus drift
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-topup-vectors.mjs --check
+      - name: Top-up mutation controls
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/check-topup-mutants.mjs
       # The reusable KERI libraries compiled together with the published
       # Singular registry package; compatibility and retained registration
       # tests, test-identity agreement and interface controls (#477).
@@ -313,6 +321,10 @@ jobs:
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#just --command just check-freeze-vectors
       - name: Deposit wire vectors drift
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#just --command just check-deposit-vectors
+      - name: Top-up wire vectors drift
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#just --command just check-topup-vectors
+      - name: Checkpoint migration vectors drift
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#just --command just check-checkpoint-migration-vectors
 
   e2e:
     name: E2E (withDevnet)

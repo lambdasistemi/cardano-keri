@@ -422,6 +422,37 @@ check-checkpoint-freeze-vectors:
 check-freeze-mutants:
     nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/check-freeze-mutants.mjs
 
+# --- the bounded top-up (#346, #522) ---
+
+# Regenerate the top-up and registration cells of the Lean corpus, for both
+# layers.
+gen-checkpoint-topup-vectors:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-topup-vectors.mjs
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt validators/checkpoint_register_topup_corpus_tests.ak
+
+# Drift check: the committed top-up cells equal the Lean corpus's.
+check-checkpoint-topup-vectors:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-topup-vectors.mjs --check
+
+# Regenerate the top-up wire parity vectors from the Haskell encoders: the
+# bytes of the TopUp spend redeemer and of a live datum with the mark clear and
+# set, beside the typed inputs the Aiken suite serialises and compares.
+gen-topup-vectors:
+    mkdir -p onchain/lib/cardano_keri/checkpoint
+    cd offchain && nix develop --quiet --no-write-lock-file -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-topup-vectors -- ../onchain/lib/cardano_keri/checkpoint/topup_vectors.ak'
+    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/checkpoint/topup_vectors.ak
+
+# Drift check: a fresh Haskell regenerate must reproduce the committed module.
+check-topup-vectors: gen-topup-vectors
+    git diff --exit-code onchain/lib/cardano_keri/checkpoint/topup_vectors.ak
+
+# One mutation control per premise of the top-up, of the registration's first
+# pool, of the rotation's cleared mark and of the freeze's kept mark: each
+# changed check must make a test fail, and the harness's own controls must
+# behave.
+check-topup-mutants:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/check-topup-mutants.mjs
+
 # --- the deposit option of Advance (#345) ---
 
 # Regenerate the rows of the Lean deposit vectors with their signatures, for

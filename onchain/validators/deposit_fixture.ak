@@ -39,8 +39,8 @@ use cardano_keri/checkpoint/observer.{
 use cardano_keri/checkpoint/threshold.{Threshold, Unweighted}
 use freeze_fixture.{
   Parts, advance_hash, floor_frozen, floor_unfrozen, from_parts, hunter_pkh,
-  keys_of, live, mc, network_id, paid, parts, policy, premium, rotated, rotation,
-  spent, spent_ref, token_value, unevidenced, unit, v2_data,
+  keys_of, live, live_marked, mc, network_id, paid, parts, policy, premium,
+  rotated, rotation, spent, spent_ref, token_value, unevidenced, unit, v2_data,
 }
 
 /// A deposit or keep Advance ready to run: the applied network, the spent
@@ -125,6 +125,7 @@ pub fn vector_old(s: vec.Spent, f: vec.Facts) -> CheckpointDatumV2 {
     frozen: s.frozen,
     born_at: s.born_at,
     refund_to: s.refund_to,
+    topped_up: s.topped_up,
     keys: vector_spent_keys(),
   }
 }
@@ -145,6 +146,7 @@ pub fn vector_new(
     frozen: False,
     born_at: s.born_at,
     refund_to: s.refund_to,
+    topped_up: False,
     keys: vector_new_keys(threshold),
   }
 }
@@ -251,6 +253,7 @@ pub fn new_datum(frozen: Bool) -> CheckpointDatumV2 {
     frozen,
     born_at: old.born_at,
     refund_to: old.refund_to,
+    topped_up: False,
     keys: keys_of(rotated),
   }
 }
@@ -364,6 +367,7 @@ pub fn honest(poisoned: Bool, frozen: Bool, pool: Int, intent: String) -> Case {
 /// One cell of the Lean corpus's boundary grid: the deposit rotation of a
 /// present state whose flags, pool and sequence-number relation are given.
 ///
+/// - `topped_up`: the state's top-up mark; the rotation clears it
 /// - `pool_units`: the Lean pool, scaled by `unit`
 /// - `sn_relation`: the requested sequence number against the state's own,
 ///   negative (earlier), zero (equal) or positive (later); the later case is
@@ -376,6 +380,7 @@ pub fn honest(poisoned: Bool, frozen: Bool, pool: Int, intent: String) -> Case {
 pub fn corpus_deposit(
   poisoned: Bool,
   frozen: Bool,
+  topped_up: Bool,
   pool_units: Int,
   sn_relation: Int,
   rotation_evidenced: Bool,
@@ -389,7 +394,10 @@ pub fn corpus_deposit(
   } else {
     rotated.native_sn + 1
   }
-  let old = Parts { ..parts(live(poisoned, frozen)), sn: spent_sn }
+  let old = Parts {
+    ..parts(live_marked(poisoned, frozen, topped_up)),
+    sn: spent_sn,
+  }
   let evidence = if rotation_evidenced {
     rotation
   } else {

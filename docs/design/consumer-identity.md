@@ -161,7 +161,7 @@ not have that shape is refused. The model declares this datum, version 2, in
 
 ```mermaid
 flowchart LR
-  D["CheckpointDatum<br/>V2 = constructor 1"] -->|form 0| L["Live: aid, sn, epoch,<br/>poisoned, frozen, born_at,<br/>refund_to, keys"]
+  D["CheckpointDatum<br/>V2 = constructor 1"] -->|form 0| L["Live: aid, sn, epoch,<br/>poisoned, frozen, born_at,<br/>refund_to, topped_up, keys"]
   D -->|form 1| P["TerminationPending:<br/>aid, sn, epoch"]
   L -->|decoder| S["present state,<br/>pool set to zero"]
   P -->|decoder| T["terminationPending state"]
@@ -187,7 +187,8 @@ written by the model first; the on-chain validator adopts it later.
 | Live 4 | `frozen` | Boolean | `Live.frozen` | Refuses when true: the bond is not held |
 | Live 5 | `born_at` | non-negative integer | `Live.bornAt` | Refuses until `born_at + W ≤ now` |
 | Live 6 | `refund_to` | byte string | `Live.refundTo` | Nothing |
-| Live 7 | `keys` | key material; not in the pending form | none | Checks its shape only |
+| Live 7 | `topped_up` | Boolean: this key state was already topped up; every rotation clears it | `Live.toppedUp` | Nothing; a second top-up of the key state is refused by the checkpoint |
+| Live 8 | `keys` | key material; not in the pending form | none | Checks its shape only |
 | none | the premium pool | not in the datum | `Live.pool`, decoded as zero | Nothing; the amount is held in the value |
 
 The key material is constructor 0 with six fields, in the version 1 types:

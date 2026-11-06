@@ -70,15 +70,23 @@ def seeds : List Seed := [
   { name := "happy-path",
     env := { rotationTo := [(0, 0, 1), (1, 1, 2)], depositAuthorized := [], quorum := [], duplicityAt := [] },
     steps := [(0, .register 6 10), (12, .rotate 1 .keep 2), (12, .rotate 1 .keep 2),
-              (20, .topUp 5), (25, .rotate 2 .keep 2)] },
+              (20, .topUp 5), (20, .topUp 5), (25, .rotate 2 .keep 2), (25, .topUp 1), (25, .topUp 2)] },
+  { name := "registration-below-premium",
+    env := { rotationTo := [], depositAuthorized := [], quorum := [], duplicityAt := [] },
+    steps := [(0, .register 1 1), (0, .register 1 2), (0, .register 1 2)] },
   { name := "freeze-then-unfreeze",
-    env := { rotationTo := [(0, 0, 1), (1, 1, 2)], depositAuthorized := [1, 2], quorum := [], duplicityAt := [] },
-    steps := [(0, .register 1 1), (12, .freeze 1 2), (12, .freeze 1 2), (20, .rotate 1 .deposit 1),
-              (20, .topUp 20), (25, .rotate 2 .deposit 1)] },
+    env := { rotationTo := [(0, 0, 1), (1, 1, 2), (2, 2, 3)], depositAuthorized := [2, 3], quorum := [],
+             duplicityAt := [] },
+    steps := [(0, .register 1 3), (12, .rotate 1 .keep 2), (12, .freeze 2 2), (20, .rotate 2 .deposit 1),
+              (20, .topUp 20), (25, .rotate 3 .deposit 1)] },
   { name := "poison-then-rotate",
     env := { rotationTo := [(0, 0, 1), (1, 1, 2)], depositAuthorized := [], quorum := [0], duplicityAt := [] },
-    steps := [(0, .register 1 1), (12, .poison), (12, .poison), (12, .freeze 1 2), (12, .topUp 5),
+    steps := [(0, .register 1 2), (12, .poison), (12, .poison), (12, .freeze 1 2), (12, .topUp 5),
               (12, .rotate 1 .keep 2), (12, .poison), (12, .topUp 1)] },
+  { name := "topped-up-moves-only-on-evidence",
+    env := { rotationTo := [(0, 0, 1)], depositAuthorized := [], quorum := [0], duplicityAt := [] },
+    steps := [(0, .register 6 4), (3, .topUp 2), (4, .topUp 2), (5, .poison), (6, .topUp 3),
+              (12, .rotate 1 .keep 2), (13, .topUp 3)] },
   { name := "convict",
     env := { rotationTo := [(0, 0, 1)], depositAuthorized := [], quorum := [1], duplicityAt := [(1, 1)] },
     steps := [(0, .register 1 12), (12, .rotate 1 .keep 2), (12, .convict 3), (12, .rotate 1 .deposit 1),
@@ -103,23 +111,26 @@ def enumL (l : List α) : List (Nat × α) := (List.range l.length).zip l
 /-- Present states around the guards: `poisoned` and `frozen` both ways;
 `pool` at one below, exactly, one above the premium. The base datum is at
 epoch 1, sequence 1, born at 10, refund address 1. -/
-def gridPresent (p : Params) : List State :=
+def gridPresent (p : Params) (toppedUp : Bool) : List State :=
   let vals := fun (x : Nat) => [x - 1, x, x + 1]
   [false, true].flatMap fun poisoned =>
     [false, true].flatMap fun frozen =>
       (vals p.P).map fun pool =>
-        State.present ⟨1, 1, poisoned, frozen, 10, 1, pool⟩
+        State.present ⟨1, 1, poisoned, frozen, 10, 1, pool, toppedUp⟩
 
+/-- The states not yet topped up first, then the same states topped up. -/
 def gridStates (p : Params) : List State :=
-  [.absent, .terminationPending ⟨1, 1⟩, .convicted] ++ gridPresent p
+  [.absent, .terminationPending ⟨1, 1⟩, .convicted] ++ gridPresent p false ++ gridPresent p true
 
 /-- Actions with their sequence at −1 / = / +1 of the datum's (1), both bond
-options. -/
+options; registrations and top-ups above the premium (`P` = 2), then at one
+below and exactly the premium. -/
 def gridActions : List Action :=
   [.register 6 7, .poison, .topUp 5, .convict 3] ++
   ([0, 1, 2].map fun sn' => Action.freeze sn' 2) ++
   ([0, 1, 2].flatMap fun sn' =>
-    [BondOp.keep, .deposit].map fun op => Action.rotate sn' op 2)
+    [BondOp.keep, .deposit].map fun op => Action.rotate sn' op 2) ++
+  [.register 6 1, .register 6 2, .topUp 1, .topUp 2]
 
 /-- Two oracles: everything the grid can ask for, and nothing. -/
 def gridEnvs : List (String × EnvTable) :=

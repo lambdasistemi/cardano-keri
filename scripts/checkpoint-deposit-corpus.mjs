@@ -53,8 +53,15 @@ if (actionsByIndex.every((a) => a === null)) throw new Error('the corpus grid ha
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
+// The top-up mark does not decide a deposit rotation: the Lean gives a topped-up
+// state the verdict of the same state not topped up, and an accepted deposit
+// rotation clears the mark to the same successor. Both are asserted below for
+// every topped-up cell, which is then emitted like any other.
+const unmarked = (s) => (typeof s === 'object' && s !== null && 'present' in s ? { present: { l: { ...s.present.l, toppedUp: false } } } : s);
+const cellAt = (s, a, e) => grid.cells.find((c) => c.s === s && c.a === a && c.e === e);
 const cells = [];
 const skipped = [];
+let markedEmitted = 0;
 let accepted = 0;
 let refused = 0;
 for (const cell of grid.cells) {
@@ -62,6 +69,14 @@ for (const cell of grid.cells) {
   if (act === null) continue;
   const state = grid.states[cell.s];
   const env = grid.envs[cell.e];
+  if (typeof state === 'object' && 'present' in state && state.present.l.toppedUp === true) {
+    const twin = grid.states.findIndex((s) => JSON.stringify(s) === JSON.stringify(unmarked(state)));
+    const other = twin < 0 ? undefined : cellAt(twin, cell.a, cell.e);
+    if (!other) throw new Error(`topped-up cell ${cell.s}/${cell.a}/${cell.e} has no cell for the same state not topped up`);
+    if ((cell.result === null) !== (other.result === null)) throw new Error(`topped-up cell ${cell.s}/${cell.a}/${cell.e}: the top-up mark changes the deposit verdict`);
+    if (cell.result !== null && (!same(cell.result, other.result))) throw new Error(`topped-up cell ${cell.s}/${cell.a}/${cell.e}: a deposit rotation does not clear the top-up mark to the same successor`);
+    markedEmitted += 1;
+  }
   if (state === 'absent' || state === 'convicted') {
     skipped.push(`${typeof state === 'string' ? state : 'state'} state ${cell.s}, sn' ${act["sn'"]}, env ${cell.e}`);
     continue;
@@ -80,7 +95,7 @@ for (const cell of grid.cells) {
   if (verdict) {
     const { flow, state: after } = cell.result;
     const covers = params.P <= live.pool;
-    const successor = { ...live, sn: snPrime, epoch: live.epoch + 1, poisoned: false, frozen: false, pool: covers ? live.pool - params.P : live.pool };
+    const successor = { ...live, sn: snPrime, epoch: live.epoch + 1, poisoned: false, frozen: false, toppedUp: false, pool: covers ? live.pool - params.P : live.pool };
     if (!same(after, { present: { l: successor } })) throw new Error(`accepted cell ${cell.s}/${cell.a}/${cell.e}: the successor is not the rotated state, unfrozen and unpoisoned, with the premium taken from the pool exactly when it covers it`);
     const bIn = live.frozen ? params.B : 0;
     if (flow.bIn !== bIn) throw new Error(`accepted cell ${cell.s}/${cell.a}/${cell.e}: the deposit is B - bHeld = ${bIn}, the corpus moves ${flow.bIn}`);
@@ -95,6 +110,7 @@ for (const cell of grid.cells) {
     pending: isPending,
     poisoned: isPending ? false : live.poisoned,
     frozen: isPending ? false : live.frozen,
+    toppedUp: isPending ? false : live.toppedUp,
     pool: isPending ? 0 : live.pool,
     snPrime,
     relation,
@@ -106,14 +122,16 @@ for (const cell of grid.cells) {
   else refused += 1;
 }
 
-// Non-vacuity: 12 live states and 1 pending, three requested sequence numbers,
-// two oracles; both verdicts occur, and the accepted cells are exactly the live
-// states (poison, frozen and every pool) with the later sequence number under
-// the oracle that evidences the rotation and authorizes the deposit.
-if (cells.length !== 78) throw new Error(`expected 78 realizable deposit cells, found ${cells.length}`);
+// Non-vacuity: 24 live states (12 with the top-up mark set) and 1 pending,
+// three requested sequence numbers, two oracles; both verdicts occur, and the
+// accepted cells are exactly the live states (poison, frozen, the mark and every
+// pool) with the later sequence number under the oracle that evidences the
+// rotation and authorizes the deposit.
+if (cells.length !== 150) throw new Error(`expected 150 realizable deposit cells, found ${cells.length}`);
+if (markedEmitted !== 72) throw new Error(`expected 72 topped-up deposit cells, found ${markedEmitted}`);
 if (skipped.length !== 12) throw new Error(`expected 12 unrealizable deposit cells, found ${skipped.length}`);
-if (accepted !== 12) throw new Error(`expected exactly 12 accepted deposit cells (every live state, one sequence number, one oracle), found ${accepted}`);
-if (refused !== 66) throw new Error(`expected 66 refused deposit cells, found ${refused}`);
+if (accepted !== 24) throw new Error(`expected exactly 24 accepted deposit cells (every live state, one sequence number, one oracle), found ${accepted}`);
+if (refused !== 126) throw new Error(`expected 126 refused deposit cells, found ${refused}`);
 const names = new Set(cells.map((c) => c.name));
 if (names.size !== cells.length) throw new Error('cell names are not unique');
 
@@ -135,8 +153,8 @@ if (!same(step.result.state, { present: { l: { ...before, sn: step.action.rotate
 const aikenCell = (c) => {
   const call = c.pending
     ? `corpus_deposit_pending(${bool(c.evidenced)}, ${bool(c.authorized)})`
-    : `corpus_deposit(${bool(c.poisoned)}, ${bool(c.frozen)}, ${c.pool}, ${c.relation}, ${bool(c.evidenced)}, ${bool(c.authorized)})`;
-  const what = c.pending ? `termination pending` : `live, poisoned ${bool(c.poisoned)}, frozen ${bool(c.frozen)}, pool ${c.pool}`;
+    : `corpus_deposit(${bool(c.poisoned)}, ${bool(c.frozen)}, ${bool(c.toppedUp)}, ${c.pool}, ${c.relation}, ${bool(c.evidenced)}, ${bool(c.authorized)})`;
+  const what = c.pending ? `termination pending` : `live, poisoned ${bool(c.poisoned)}, frozen ${bool(c.frozen)}, topped up ${bool(c.toppedUp)}, pool ${c.pool}`;
   return `/// Lean grid state ${c.stateIndex} (${what}) x deposit rotation(sn' = ${c.snPrime}) x ${c.evidenced ? 'the rotation evidenced' : 'no rotation evidenced'}, ${c.authorized ? 'the deposit authorized' : 'no deposit authorized'}: ${c.verdict ? 'accepted' : 'refused'}.
 test ${c.name}()${c.verdict ? '' : ' fail'} {
   run(${call})
@@ -150,7 +168,7 @@ const aiken = `//// GENERATED by scripts/checkpoint-deposit-corpus.mjs from
 ////
 //// The deposit-rotation cells of the Lean corpus's boundary grid (parameters
 //// \`P = ${params.P}\`, \`B = ${params.B}\`, \`D = ${params.D}\`), one test per cell: every live state
-//// (poisoned and frozen both ways, the pool at one below, exactly and one above
+//// (poisoned, frozen and the top-up mark each clear and set, the pool at one below, exactly and one above
 //// the premium), the termination-pending state, a requested sequence number
 //// earlier than, equal to and later than the state's, under an oracle that
 //// evidences the rotation and authorizes the deposit and one that does neither.
@@ -158,7 +176,7 @@ const aiken = `//// GENERATED by scripts/checkpoint-deposit-corpus.mjs from
 //// the deposit step of the corpus trace freeze-then-unfreeze.
 ////
 //// Mapping of the Lean values onto the ledger values:
-////   live state              a live version 2 datum with that poisoned / frozen
+////   live state              a live version 2 datum with that poisoned / frozen / top-up mark
 ////   pool (Lean units)       lovelace: pool x 1,000,000 (premium 2,000,000, bond 5,000,000)
 ////   sn' against the state's sn
 ////                           earlier / equal / later: the later case is the genuine
@@ -212,7 +230,7 @@ ${cells.map(aikenCell).join('\n')}
 /// frozen checkpoint with pool 1 takes the deposit rotation; the bond comes back
 /// and nobody is paid.
 test trace_freeze_then_unfreeze_deposit() {
-  run(corpus_deposit(False, True, 1, 1, True, True))
+  run(corpus_deposit(False, True, False, 1, 1, True, True))
 }
 `;
 
@@ -224,6 +242,7 @@ const hsCell = (c) => `    , DepositCell
         , dcPending = ${bool(c.pending)}
         , dcPoisoned = ${bool(c.poisoned)}
         , dcFrozen = ${bool(c.frozen)}
+        , dcToppedUp = ${bool(c.toppedUp)}
         , dcPool = ${c.pool}
         , dcSnRelation = ${c.relation}
         , dcRotationEvidenced = ${bool(c.evidenced)}
@@ -258,6 +277,8 @@ data DepositCell = DepositCell
     -- ^ the state is a termination pending
     , dcPoisoned :: Bool
     , dcFrozen :: Bool
+    , dcToppedUp :: Bool
+    -- ^ the top-up mark of the live state; a rotation clears it
     , dcPool :: Integer
     -- ^ the Lean pool, in Lean units
     , dcSnRelation :: Int

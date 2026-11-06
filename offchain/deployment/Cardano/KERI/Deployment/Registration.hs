@@ -42,6 +42,12 @@ import Cardano.KERI.AID.Checkpoint.Registration (
     RegistrationEvidence (..),
     proofTokenName,
  )
+import Cardano.KERI.AID.Checkpoint.TopUp (
+    TopUpParams (..),
+    registrationRefusalName,
+    registrationVerdict,
+ )
+import Cardano.KERI.AID.Checkpoint.Value (checkpointMinAda)
 import Cardano.KERI.AID.Checkpoint.Wire (
     asPlcData,
     registerObserverRedeemerData,
@@ -235,10 +241,6 @@ mkRegistrationPlan manifest escrow inception = do
         (Left "registration manifest is not preprod network magic 1")
     when (escrow <= 0) $
         Left "escrow-lovelace must be positive"
-    let expectedEscrow =
-            2_000_000
-                + parameterRegistrationBond (manifestParameters manifest)
-                + parameterFreezeBond (manifestParameters manifest)
     when
         ( parameterRegistrationBond (manifestParameters manifest)
             /= 1_000_000_000
@@ -247,8 +249,23 @@ mkRegistrationPlan manifest escrow inception = do
     when
         (parameterFreezeBond (manifestParameters manifest) /= 5_000_000)
         (Left "manifest freeze bond is not the frozen M1 V1 value")
-    when (escrow > expectedEscrow) $
-        Left "escrow-lovelace exceeds the frozen M1 V1 escrow"
+    -- The first pool is what the carrier holds above the minimum ADA, the
+    -- deposit and the bond; the Lean needs it to be at least one premium.
+    premium <-
+        maybe
+            (Left "the manifest has no premiumLovelace: its generation has no premium and cannot register a pool")
+            Right
+            (parameterPremium (manifestParameters manifest))
+    _ <-
+        first (("registration refused (" <>) . (<> ")") . registrationRefusalName) $
+            registrationVerdict
+                TopUpParams
+                    { tuMinAda = checkpointMinAda
+                    , tuDeposit = parameterRegistrationBond (manifestParameters manifest)
+                    , tuBond = parameterFreezeBond (manifestParameters manifest)
+                    , tuPremium = premium
+                    }
+                escrow
     proof <- scriptNamed "hash-proof" manifest
     checkpoint <- scriptNamed "checkpoint-register" manifest
     lifecycle <- scriptNamed "observer-lifecycle" manifest

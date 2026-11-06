@@ -109,6 +109,9 @@ structure Live where
   refundTo : Addr
 
   pool : Value
+
+  -- Set by the one top-up this key state allows; every rotation clears it.
+  toppedUp : Bool
   deriving Repr, DecidableEq
 
 def Live.hash (l : Live) : Hash := ⟨l.epoch, l.sn⟩
@@ -116,7 +119,7 @@ def Live.hash (l : Live) : Hash := ⟨l.epoch, l.sn⟩
 def Live.bHeld (p : Params) (l : Live) : Value := if l.frozen then 0 else p.B
 
 def Live.rotated (p : Params) (l : Live) (sn' : Seq) : Live :=
-  { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
+  { l with sn := sn', epoch := l.epoch + 1, poisoned := false, toppedUp := false,
            pool := if p.P ≤ l.pool then l.pool - p.P else l.pool }
 
 inductive State where
@@ -195,24 +198,25 @@ def consumableStateB (p : Params) (now : Slot) : State → Bool
 
 inductive Step (p : Params) (env : Env) : Action → Slot → State → Flow → State → Prop
 
-  | register (now : Slot) (refund : Addr) (pool0 : Value) :
+  | register (now : Slot) (refund : Addr) (pool0 : Value) (hpool : p.P ≤ pool0) :
       Step p env (.register refund pool0) now .absent
         { dregIn := p.D, bIn := p.B, poolIn := pool0 }
-        (.present ⟨0, 0, false, false, now, refund, pool0⟩)
+        (.present ⟨0, 0, false, false, now, refund, pool0, false⟩)
 
   | rotateKeepPaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr)
       (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
       (hpay : p.P ≤ l.pool) :
       Step p env (.rotate sn' .keep payee) now (.present l)
         { hunter := some { addr := payee, pool := p.P } }
-        (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, pool := l.pool - p.P })
+        (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, toppedUp := false,
+                           pool := l.pool - p.P })
 
   | rotateKeepUnpaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr)
       (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
       (hnopay : l.pool < p.P) :
       Step p env (.rotate sn' .keep payee) now (.present l)
         {}
-        (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false })
+        (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, toppedUp := false })
 
   | rotateDepositPaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr)
       (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
@@ -221,7 +225,7 @@ inductive Step (p : Params) (env : Env) : Action → Slot → State → Flow →
       Step p env (.rotate sn' .deposit payee) now (.present l)
         { bIn := p.B - l.bHeld p, hunter := some { addr := payee, pool := p.P } }
         (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false,
-                           pool := l.pool - p.P })
+                           toppedUp := false, pool := l.pool - p.P })
 
   | rotateDepositUnpaid {l : Live} (now : Slot) (sn' : Seq) (payee : Addr)
       (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
@@ -229,7 +233,8 @@ inductive Step (p : Params) (env : Env) : Action → Slot → State → Flow →
       (hnopay : l.pool < p.P) :
       Step p env (.rotate sn' .deposit payee) now (.present l)
         { bIn := p.B - l.bHeld p }
-        (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false })
+        (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false,
+                           toppedUp := false })
 
   | poison {l : Live} (now : Slot)
       (hq : env.quorum l.epoch = true) (hclean : l.poisoned = false) :
@@ -242,8 +247,10 @@ inductive Step (p : Params) (env : Env) : Action → Slot → State → Flow →
         { hunter := some { addr := payee, b := p.B } }
         (.present { l with frozen := true })
 
-  | topUp {l : Live} (now : Slot) (x : Value) :
-      Step p env (.topUp x) now (.present l) { poolIn := x } (.present { l with pool := l.pool + x })
+  | topUp {l : Live} (now : Slot) (x : Value)
+      (hfresh : l.toppedUp = false) (hx : p.P ≤ x) :
+      Step p env (.topUp x) now (.present l) { poolIn := x }
+        (.present { l with pool := l.pool + x, toppedUp := true })
 
   | convict {l : Live} (now : Slot) (payee : Addr)
       (hdup : env.duplicityAt l.epoch l.sn = true) :
@@ -255,8 +262,10 @@ inductive Step (p : Params) (env : Env) : Action → Slot → State → Flow →
 def stepFn (p : Params) (env : Env) (a : Action) (now : Slot) (s : State) : Option (Flow × State) :=
   match a, s with
   | .register refund pool0, .absent =>
-      some ({ dregIn := p.D, bIn := p.B, poolIn := pool0 },
-            .present ⟨0, 0, false, false, now, refund, pool0⟩)
+      if p.P ≤ pool0 then
+        some ({ dregIn := p.D, bIn := p.B, poolIn := pool0 },
+              .present ⟨0, 0, false, false, now, refund, pool0, false⟩)
+      else none
   | .rotate sn' op payee, .present l =>
       if env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
          env.bondOpOk (l.epoch + 1) op = true then
@@ -265,17 +274,19 @@ def stepFn (p : Params) (env : Env) (a : Action) (now : Slot) (s : State) : Opti
             if p.P ≤ l.pool then
               some ({ hunter := some { addr := payee, pool := p.P } },
                     .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
-                                      pool := l.pool - p.P })
+                                      toppedUp := false, pool := l.pool - p.P })
             else
-              some ({}, .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false })
+              some ({}, .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
+                                          toppedUp := false })
         | .deposit =>
             if p.P ≤ l.pool then
               some ({ bIn := p.B - l.bHeld p, hunter := some { addr := payee, pool := p.P } },
                     .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false,
-                                      pool := l.pool - p.P })
+                                      toppedUp := false, pool := l.pool - p.P })
             else
               some ({ bIn := p.B - l.bHeld p },
-                    .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false })
+                    .present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false,
+                                      toppedUp := false })
       else none
   | .poison, .present l =>
       if env.quorum l.epoch = true ∧ l.poisoned = false then
@@ -287,7 +298,9 @@ def stepFn (p : Params) (env : Env) (a : Action) (now : Slot) (s : State) : Opti
         some ({ hunter := some { addr := payee, b := p.B } }, .present { l with frozen := true })
       else none
   | .topUp x, .present l =>
-      some ({ poolIn := x }, .present { l with pool := l.pool + x })
+      if l.toppedUp = false ∧ p.P ≤ x then
+        some ({ poolIn := x }, .present { l with pool := l.pool + x, toppedUp := true })
+      else none
   | .convict payee, .present l =>
       if env.duplicityAt l.epoch l.sn = true then
         some ({ refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },
@@ -323,6 +336,21 @@ def poisonAfter : Bool → List (Slot × Action) → Bool
 
 def poisonSinceLastRotation (es : List (Slot × Action)) : Bool :=
   poisonAfter false es
+
+def Action.isRotation : Action → Bool
+  | .rotate .. => true
+  | .register .. | .poison | .freeze .. | .topUp _ | .convict _ => false
+
+/-- The number of top-ups among the actions. -/
+def topUpCount : List (Slot × Action) → Nat
+  | [] => 0
+  | (_, .topUp _) :: rest => topUpCount rest + 1
+  | _ :: rest => topUpCount rest
+
+/-- One for a live checkpoint already topped up since its last rotation, zero otherwise. -/
+def State.toppedUpCount : State → Nat
+  | .present l => l.toppedUp.toNat
+  | _ => 0
 
 inductive Leaf where
   | absent

@@ -2052,24 +2052,18 @@
     "v": "d7fd917c0ed8"
    }
   ],
-  "top-up-and-reopen-new-in-the-accepted-design": [
+  "top-up-new-in-the-accepted-design": [
    {
     "index": 0,
-    "name": "docs-architecture-identity-ops/top-up-and-reopen-new-in-the-accepted-design-00",
+    "name": "docs-architecture-identity-ops/top-up-new-in-the-accepted-design-00",
     "pause_ms": 500,
-    "v": "40ff8688139d"
+    "v": "0069b2f0efb9"
    },
    {
     "index": 1,
-    "name": "docs-architecture-identity-ops/top-up-and-reopen-new-in-the-accepted-design-01",
+    "name": "docs-architecture-identity-ops/top-up-new-in-the-accepted-design-01",
     "pause_ms": 400,
-    "v": "4f68e5bcceec"
-   },
-   {
-    "index": 2,
-    "name": "docs-architecture-identity-ops/top-up-and-reopen-new-in-the-accepted-design-02",
-    "pause_ms": 400,
-    "v": "274b8719e32a"
+    "v": "66264466ae35"
    }
   ],
   "under-the-accepted-design": [
@@ -2083,7 +2077,7 @@
     "index": 1,
     "name": "docs-architecture-identity-ops/under-the-accepted-design-01",
     "pause_ms": 400,
-    "v": "82f87f432afd"
+    "v": "c355662ef6c6"
    },
    {
     "index": 2,
@@ -2115,25 +2109,19 @@
     "index": 3,
     "name": "docs-architecture-identity-ops/under-the-accepted-design_1-03",
     "pause_ms": 300,
-    "v": "575324d0f0e5"
+    "v": "3812dcb8ae86"
    },
    {
     "index": 4,
     "name": "docs-architecture-identity-ops/under-the-accepted-design_1-04",
     "pause_ms": 300,
-    "v": "e48b8b438013"
+    "v": "a19972505af6"
    },
    {
     "index": 5,
     "name": "docs-architecture-identity-ops/under-the-accepted-design_1-05",
-    "pause_ms": 300,
-    "v": "30ae35744878"
-   },
-   {
-    "index": 6,
-    "name": "docs-architecture-identity-ops/under-the-accepted-design_1-06",
     "pause_ms": 400,
-    "v": "2e46a7af6bff"
+    "v": "d53e4171e225"
    }
   ],
   "under-the-accepted-design_2": [
@@ -2147,13 +2135,13 @@
     "index": 1,
     "name": "docs-architecture-identity-ops/under-the-accepted-design_2-01",
     "pause_ms": 400,
-    "v": "c92c483b3e93"
+    "v": "27109884590a"
    },
    {
     "index": 2,
     "name": "docs-architecture-identity-ops/under-the-accepted-design_2-02",
     "pause_ms": 400,
-    "v": "a64cd46cdbac"
+    "v": "2f76f840249e"
    }
   ],
   "under-the-accepted-design_3": [
@@ -2193,7 +2181,7 @@
     "index": 1,
     "name": "docs-architecture-identity-ops/under-the-accepted-design_4-01",
     "pause_ms": 400,
-    "v": "fb1dcb981824"
+    "v": "a93de4fbc905"
    },
    {
     "index": 2,
@@ -17475,7 +17463,7 @@
     "index": 2,
     "name": "docs-user-hunters/hunters-02",
     "pause_ms": 400,
-    "v": "1d28cbd90178"
+    "v": "9e824291222f"
    },
    {
     "index": 3,
@@ -17487,31 +17475,37 @@
     "index": 4,
     "name": "docs-user-hunters/hunters-04",
     "pause_ms": 400,
-    "v": "6ffaef1ca145"
+    "v": "f81b13aecece"
    },
    {
     "index": 5,
     "name": "docs-user-hunters/hunters-05",
     "pause_ms": 400,
-    "v": "6d967dc901cc"
+    "v": "7ff8bd21d1e5"
    },
    {
     "index": 6,
     "name": "docs-user-hunters/hunters-06",
     "pause_ms": 400,
-    "v": "63578df4e7bd"
+    "v": "cf3f2c6daaf7"
    },
    {
     "index": 7,
     "name": "docs-user-hunters/hunters-07",
     "pause_ms": 400,
-    "v": "2d5c4081e8d8"
+    "v": "897c5a891bb1"
    },
    {
     "index": 8,
     "name": "docs-user-hunters/hunters-08",
     "pause_ms": 400,
-    "v": "b667d47df447"
+    "v": "d13b0e791660"
+   },
+   {
+    "index": 9,
+    "name": "docs-user-hunters/hunters-09",
+    "pause_ms": 400,
+    "v": "89c2ae029d03"
    }
   ]
  },
@@ -18301,61 +18295,73 @@
     "index": 1,
     "name": "docs-user-register-preprod-identity/register-your-identity-on-preprod-01",
     "pause_ms": 400,
-    "v": "1c559582f0f2"
+    "v": "1046d6dcdc9a"
    },
    {
     "index": 2,
     "name": "docs-user-register-preprod-identity/register-your-identity-on-preprod-02",
     "pause_ms": 400,
-    "v": "697636672851"
+    "v": "146ea4f7557e"
    },
    {
     "index": 3,
     "name": "docs-user-register-preprod-identity/register-your-identity-on-preprod-03",
     "pause_ms": 400,
-    "v": "652cefccf6ec"
+    "v": "bdb6274ed3c8"
    },
    {
     "index": 4,
     "name": "docs-user-register-preprod-identity/register-your-identity-on-preprod-04",
     "pause_ms": 400,
-    "v": "54b90c8886ce"
+    "v": "272bba290ff6"
    },
    {
     "index": 5,
     "name": "docs-user-register-preprod-identity/register-your-identity-on-preprod-05",
     "pause_ms": 400,
-    "v": "1986772c862c"
+    "v": "baaf2d4ed1f5"
    },
    {
     "index": 6,
     "name": "docs-user-register-preprod-identity/register-your-identity-on-preprod-06",
-    "pause_ms": 300,
-    "v": "8764c9f9cf87"
+    "pause_ms": 400,
+    "v": "8be1423de433"
    },
    {
     "index": 7,
     "name": "docs-user-register-preprod-identity/register-your-identity-on-preprod-07",
-    "pause_ms": 300,
-    "v": "65bf18fab6bd"
+    "pause_ms": 400,
+    "v": "11a57a8dfe4b"
    },
    {
     "index": 8,
     "name": "docs-user-register-preprod-identity/register-your-identity-on-preprod-08",
     "pause_ms": 300,
-    "v": "7804d98d8389"
+    "v": "8f57337f5d9c"
    },
    {
     "index": 9,
     "name": "docs-user-register-preprod-identity/register-your-identity-on-preprod-09",
     "pause_ms": 300,
-    "v": "d1c19ce454a2"
+    "v": "7c7f958b1f03"
    },
    {
     "index": 10,
     "name": "docs-user-register-preprod-identity/register-your-identity-on-preprod-10",
+    "pause_ms": 300,
+    "v": "c9d3c417e8cd"
+   },
+   {
+    "index": 11,
+    "name": "docs-user-register-preprod-identity/register-your-identity-on-preprod-11",
+    "pause_ms": 300,
+    "v": "c90a12ef9367"
+   },
+   {
+    "index": 12,
+    "name": "docs-user-register-preprod-identity/register-your-identity-on-preprod-12",
     "pause_ms": 400,
-    "v": "566ab974cf86"
+    "v": "9d77e633cf03"
    }
   ]
  },

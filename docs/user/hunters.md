@@ -4,8 +4,11 @@
     The hunter's freeze and the controller's deposit rotation, which unfreezes,
     are one transaction each in this generation of the checkpoint program;
     `ckeri freeze` submits the freeze and `ckeri advance --deposit` the deposit
-    rotation. They run on a local test chain and are not deployed to preprod;
-    this code is not for mainnet. Top-up is **accepted design**, not shipped. Play
+    rotation. The top-up transaction runs through the production scripts on a
+    local test chain; `ckeri top-up` plans for preprod only and needs a manifest
+    with a premium, which no committed manifest has until the redeployment
+    (#356). These run on a local test chain and are not deployed to preprod;
+    this code is not for mainnet. Play
     [The pool runs dry, so Hal freezes her instead](../simulator/index.html)
     and [Two hunters race](../simulator/index.html).
 
@@ -41,8 +44,14 @@ brings nothing. See [Rotate your preprod identity](rotate-preprod-identity.md)
 for the commands and [The deposit intent](../design/aid-model.md#the-deposit-intent)
 for what is signed.
 
-Anyone may top up the pool. No signature, no datum change. A freeze is
-refused while the pool covers the premium.
+Anyone may top up the pool by at least one premium, once between two
+rotations; nobody signs anything. The top-up sets a mark in the datum and
+changes nothing else. Every rotation clears the mark and a freeze keeps it. A
+freeze is refused while the pool covers the premium. `ckeri top-up --aid … --amount …`
+builds and submits the top-up; it plans for preprod only and needs a manifest
+with a premium, which no committed manifest has until the redeployment (#356).
+It refuses an amount below the premium and a checkpoint already topped up
+since its last rotation before it builds anything.
 
 Two hunters can race the same rotation. One winner, one refusal. The
 closer chooses *when* the reap (the owner's close, a rotation by the next

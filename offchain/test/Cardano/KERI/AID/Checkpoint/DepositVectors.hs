@@ -46,6 +46,7 @@ data VectorSpent = VectorSpent
     , vsPool :: Integer
     , vsFrozen :: Bool
     , vsPoisoned :: Bool
+    , vsToppedUp :: Bool
     }
     deriving stock (Show, Eq)
 
@@ -140,7 +141,7 @@ vectorRequirements =
     [ VectorRequirement
         { vrId = "frozen-required"
         , vrAccepted = True
-        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vrFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vrNewSn = 7
         , vrRequired = hex "d8799f582263617264616e6f2d6b6572692f636865636b706f696e742f6465706f7369742f763100581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7d8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f01ff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c476872355007031a004c4b40ff"
@@ -153,7 +154,7 @@ vectorRequirements =
     , VectorRequirement
         { vrId = "unfrozen-required"
         , vrAccepted = True
-        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 5000000, vsFrozen = False, vsPoisoned = False}
+        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 5000000, vsFrozen = False, vsPoisoned = False, vsToppedUp = False}
         , vrFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vrNewSn = 7
         , vrRequired = hex "d8799f582263617264616e6f2d6b6572692f636865636b706f696e742f6465706f7369742f763100581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7d8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f01ff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550070300ff"
@@ -166,7 +167,7 @@ vectorRequirements =
     , VectorRequirement
         { vrId = "poisoned-required"
         , vrAccepted = True
-        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = True}
+        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = True, vsToppedUp = False}
         , vrFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vrNewSn = 7
         , vrRequired = hex "d8799f582263617264616e6f2d6b6572692f636865636b706f696e742f6465706f7369742f763100581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7d8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f01ff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c476872355007031a004c4b40ff"
@@ -179,7 +180,7 @@ vectorRequirements =
     , VectorRequirement
         { vrId = "domain-v2"
         , vrAccepted = False
-        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vrFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vrNewSn = 7
         , vrRequired = hex "d8799f582263617264616e6f2d6b6572692f636865636b706f696e742f6465706f7369742f763100581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7d8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f01ff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c476872355007031a004c4b40ff"
@@ -192,7 +193,7 @@ vectorRequirements =
     , VectorRequirement
         { vrId = "domain-other-protocol"
         , vrAccepted = False
-        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vrFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vrNewSn = 7
         , vrRequired = hex "d8799f582263617264616e6f2d6b6572692f636865636b706f696e742f6465706f7369742f763100581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7d8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f01ff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c476872355007031a004c4b40ff"
@@ -205,7 +206,7 @@ vectorRequirements =
     , VectorRequirement
         { vrId = "other-network"
         , vrAccepted = False
-        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vrFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vrNewSn = 7
         , vrRequired = hex "d8799f582263617264616e6f2d6b6572692f636865636b706f696e742f6465706f7369742f763100581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7d8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f01ff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c476872355007031a004c4b40ff"
@@ -218,7 +219,7 @@ vectorRequirements =
     , VectorRequirement
         { vrId = "other-policy"
         , vrAccepted = False
-        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vrFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vrNewSn = 7
         , vrRequired = hex "d8799f582263617264616e6f2d6b6572692f636865636b706f696e742f6465706f7369742f763100581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7d8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f01ff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c476872355007031a004c4b40ff"
@@ -231,7 +232,7 @@ vectorRequirements =
     , VectorRequirement
         { vrId = "other-transaction"
         , vrAccepted = False
-        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vrFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vrNewSn = 7
         , vrRequired = hex "d8799f582263617264616e6f2d6b6572692f636865636b706f696e742f6465706f7369742f763100581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7d8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f01ff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c476872355007031a004c4b40ff"
@@ -244,7 +245,7 @@ vectorRequirements =
     , VectorRequirement
         { vrId = "other-output-index"
         , vrAccepted = False
-        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vrFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vrNewSn = 7
         , vrRequired = hex "d8799f582263617264616e6f2d6b6572692f636865636b706f696e742f6465706f7369742f763100581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7d8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f01ff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c476872355007031a004c4b40ff"
@@ -257,7 +258,7 @@ vectorRequirements =
     , VectorRequirement
         { vrId = "other-aid"
         , vrAccepted = False
-        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vrFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vrNewSn = 7
         , vrRequired = hex "d8799f582263617264616e6f2d6b6572692f636865636b706f696e742f6465706f7369742f763100581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7d8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f01ff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c476872355007031a004c4b40ff"
@@ -270,7 +271,7 @@ vectorRequirements =
     , VectorRequirement
         { vrId = "other-sequence-number"
         , vrAccepted = False
-        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vrFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vrNewSn = 7
         , vrRequired = hex "d8799f582263617264616e6f2d6b6572692f636865636b706f696e742f6465706f7369742f763100581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7d8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f01ff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c476872355007031a004c4b40ff"
@@ -283,7 +284,7 @@ vectorRequirements =
     , VectorRequirement
         { vrId = "old-epoch"
         , vrAccepted = False
-        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vrFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vrNewSn = 7
         , vrRequired = hex "d8799f582263617264616e6f2d6b6572692f636865636b706f696e742f6465706f7369742f763100581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7d8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f01ff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c476872355007031a004c4b40ff"
@@ -296,7 +297,7 @@ vectorRequirements =
     , VectorRequirement
         { vrId = "frozen-names-zero"
         , vrAccepted = False
-        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vrFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vrNewSn = 7
         , vrRequired = hex "d8799f582263617264616e6f2d6b6572692f636865636b706f696e742f6465706f7369742f763100581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7d8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f01ff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c476872355007031a004c4b40ff"
@@ -309,7 +310,7 @@ vectorRequirements =
     , VectorRequirement
         { vrId = "frozen-names-less"
         , vrAccepted = False
-        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vrFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vrNewSn = 7
         , vrRequired = hex "d8799f582263617264616e6f2d6b6572692f636865636b706f696e742f6465706f7369742f763100581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7d8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f01ff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c476872355007031a004c4b40ff"
@@ -322,7 +323,7 @@ vectorRequirements =
     , VectorRequirement
         { vrId = "frozen-names-more"
         , vrAccepted = False
-        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vrFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vrNewSn = 7
         , vrRequired = hex "d8799f582263617264616e6f2d6b6572692f636865636b706f696e742f6465706f7369742f763100581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7d8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f01ff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c476872355007031a004c4b40ff"
@@ -335,7 +336,7 @@ vectorRequirements =
     , VectorRequirement
         { vrId = "unfrozen-names-bond"
         , vrAccepted = False
-        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 5000000, vsFrozen = False, vsPoisoned = False}
+        , vrSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 5000000, vsFrozen = False, vsPoisoned = False, vsToppedUp = False}
         , vrFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vrNewSn = 7
         , vrRequired = hex "d8799f582263617264616e6f2d6b6572692f636865636b706f696e742f6465706f7369742f763100581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7d8799f5820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f01ff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550070300ff"
@@ -352,7 +353,7 @@ vectorAuthorizations =
     [ VectorAuthorization
         { vaId = "two-of-three"
         , vaAuthorized = True
-        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vaFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vaNewSn = 7
         , vaThreshold = Unweighted 2
@@ -362,7 +363,7 @@ vectorAuthorizations =
     , VectorAuthorization
         { vaId = "three-of-three"
         , vaAuthorized = True
-        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vaFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vaNewSn = 7
         , vaThreshold = Unweighted 2
@@ -372,7 +373,7 @@ vectorAuthorizations =
     , VectorAuthorization
         { vaId = "one-of-three"
         , vaAuthorized = False
-        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vaFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vaNewSn = 7
         , vaThreshold = Unweighted 2
@@ -382,7 +383,7 @@ vectorAuthorizations =
     , VectorAuthorization
         { vaId = "repeated-position"
         , vaAuthorized = False
-        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vaFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vaNewSn = 7
         , vaThreshold = Unweighted 2
@@ -392,7 +393,7 @@ vectorAuthorizations =
     , VectorAuthorization
         { vaId = "position-out-of-range"
         , vaAuthorized = False
-        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vaFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vaNewSn = 7
         , vaThreshold = Unweighted 2
@@ -402,7 +403,7 @@ vectorAuthorizations =
     , VectorAuthorization
         { vaId = "positions-swapped"
         , vaAuthorized = False
-        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vaFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vaNewSn = 7
         , vaThreshold = Unweighted 2
@@ -412,7 +413,7 @@ vectorAuthorizations =
     , VectorAuthorization
         { vaId = "old-keys"
         , vaAuthorized = False
-        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vaFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vaNewSn = 7
         , vaThreshold = Unweighted 2
@@ -422,7 +423,7 @@ vectorAuthorizations =
     , VectorAuthorization
         { vaId = "signed-other-output"
         , vaAuthorized = False
-        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vaFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vaNewSn = 7
         , vaThreshold = Unweighted 2
@@ -432,7 +433,7 @@ vectorAuthorizations =
     , VectorAuthorization
         { vaId = "signed-other-network"
         , vaAuthorized = False
-        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vaFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vaNewSn = 7
         , vaThreshold = Unweighted 2
@@ -442,7 +443,7 @@ vectorAuthorizations =
     , VectorAuthorization
         { vaId = "signed-zero-on-frozen"
         , vaAuthorized = False
-        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vaFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vaNewSn = 7
         , vaThreshold = Unweighted 2
@@ -452,7 +453,7 @@ vectorAuthorizations =
     , VectorAuthorization
         { vaId = "one-stale-two-current"
         , vaAuthorized = True
-        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vaFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vaNewSn = 7
         , vaThreshold = Unweighted 2
@@ -462,7 +463,7 @@ vectorAuthorizations =
     , VectorAuthorization
         { vaId = "weighted-two-halves"
         , vaAuthorized = True
-        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vaFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vaNewSn = 7
         , vaThreshold = Weighted [[Weight 1 2, Weight 1 2, Weight 1 2]]
@@ -472,7 +473,7 @@ vectorAuthorizations =
     , VectorAuthorization
         { vaId = "weighted-one-half"
         , vaAuthorized = False
-        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False}
+        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 0, vsFrozen = True, vsPoisoned = False, vsToppedUp = False}
         , vaFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vaNewSn = 7
         , vaThreshold = Weighted [[Weight 1 2, Weight 1 2, Weight 1 2]]
@@ -482,7 +483,7 @@ vectorAuthorizations =
     , VectorAuthorization
         { vaId = "unfrozen-zero"
         , vaAuthorized = True
-        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 5000000, vsFrozen = False, vsPoisoned = False}
+        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 5000000, vsFrozen = False, vsPoisoned = False, vsToppedUp = False}
         , vaFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vaNewSn = 7
         , vaThreshold = Unweighted 2
@@ -492,7 +493,7 @@ vectorAuthorizations =
     , VectorAuthorization
         { vaId = "unfrozen-signed-bond"
         , vaAuthorized = False
-        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 5000000, vsFrozen = False, vsPoisoned = False}
+        , vaSpent = VectorSpent{vsSn = 4, vsEpoch = 2, vsBornAt = 100, vsRefundTo = hex "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9", vsPool = 5000000, vsFrozen = False, vsPoisoned = False, vsToppedUp = False}
         , vaFacts = VectorFacts{vfNetworkId = 0, vfPolicy = hex "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7", vfTxId = hex "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", vfOutputIndex = 1, vfAid = hex "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}
         , vaNewSn = 7
         , vaThreshold = Unweighted 2

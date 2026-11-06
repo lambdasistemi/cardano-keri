@@ -10,7 +10,7 @@ unrecognised commands.
 An unrecognised command is told apart from a recognised command that merely
 lacks its options: a recognised command still fails here (no options are
 given), but never with 'ParseErrorUnrecognisedCommand'. The @advance@,
-@freeze@ and @status@ examples are that control, and the invented command name shows the
+@freeze@, @top-up@ and @status@ examples are that control, and the invented command name shows the
 refusal is detectable at all.
 -}
 module Cardano.KERI.CLI.CommandSurfaceSpec (spec) where
@@ -41,6 +41,8 @@ spec = describe "ckeri command surface" $ do
         unrecognisedCommands ["status"] >>= (`shouldBe` [])
     it "recognises freeze: a hunter presents the controller's own rotation" $
         unrecognisedCommands ["freeze"] >>= (`shouldBe` [])
+    it "recognises top-up: anyone adds at least one premium to a pool" $
+        unrecognisedCommands ["top-up"] >>= (`shouldBe` [])
     it "offers advance --deposit: the controller restores the freeze bond with the rotation" $
         unrecognisedArguments (advanceWith ["--deposit"]) >>= (`shouldBe` [])
     it "offers advance --deposit-signatures: the controller supplies the signatures over the intent" $

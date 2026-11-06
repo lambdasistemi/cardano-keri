@@ -226,10 +226,10 @@ pub fn key_material(d: Data) -> Option<KeyMaterial> {
   }
 }
 
-/// The live form of `decode_data`: eight fields.
+/// The live form of `decode_data`: nine fields, the top-up mark at index 7.
 fn live_datum(fields: List<Data>) -> Option<DecodedDatum> {
   when fields is {
-    [aid, sn, epoch, poisoned, frozen, born_at, refund_to, keys] ->
+    [aid, sn, epoch, poisoned, frozen, born_at, refund_to, topped_up, keys] ->
       when (byte_string(aid), nat(sn), nat(epoch), bool(poisoned)) is {
         (Some(aid), Some(sn), Some(epoch), Some(poisoned)) ->
           when
@@ -237,10 +237,17 @@ fn live_datum(fields: List<Data>) -> Option<DecodedDatum> {
               bool(frozen),
               nat(born_at),
               byte_string(refund_to),
+              bool(topped_up),
               key_material(keys),
             )
           is {
-            (Some(frozen), Some(born_at), Some(refund_to), Some(_)) ->
+            (
+              Some(frozen),
+              Some(born_at),
+              Some(refund_to),
+              Some(topped_up),
+              Some(_),
+            ) ->
               Some(
                 DecodedDatum {
                   aid: pack(aid),
@@ -253,6 +260,7 @@ fn live_datum(fields: List<Data>) -> Option<DecodedDatum> {
                       born_at,
                       refund_to: pack(refund_to),
                       pool: 0,
+                      topped_up,
                     },
                   ),
                 },

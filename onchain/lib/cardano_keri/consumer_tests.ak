@@ -108,13 +108,23 @@ fn live(born_at: Int) -> State {
       born_at,
       refund_to: 42,
       pool: 5,
+      topped_up: False,
     },
   )
 }
 
 fn live_with(poisoned: Bool, frozen: Bool, born_at: Int) -> State {
   Present(
-    Live { sn: 0, epoch: 0, poisoned, frozen, born_at, refund_to: 42, pool: 5 },
+    Live {
+      sn: 0,
+      epoch: 0,
+      poisoned,
+      frozen,
+      born_at,
+      refund_to: 42,
+      pool: 5,
+      topped_up: False,
+    },
   )
 }
 

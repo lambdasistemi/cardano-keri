@@ -1,5 +1,10 @@
 # Register your identity on preprod
 
+!!! warning "The current `ckeri` and this manifest"
+    The committed preprod manifest describes the earlier deployed generation of
+    the checkpoint program. The current `ckeri` cannot register against it until
+    the redeployment (#356).
+
 !!! note "What ships, and the accepted design"
     This page is the V1 `ckeri register` that ships on preprod: no
     uniqueness rule, no registry. The accepted design registers once

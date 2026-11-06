@@ -17,8 +17,8 @@ The datum carries the facts of a checkpoint state:
 
 @
 CheckpointDatumV2
-  = Live                -- Constr 0, 8 fields:
-      { aid, sn, epoch, poisoned, frozen, born_at, refund_to, keys }
+  = Live                -- Constr 0, 9 fields:
+      { aid, sn, epoch, poisoned, frozen, born_at, refund_to, topped_up, keys }
   | TerminationPending  -- Constr 1, 3 fields, no key material:
       { aid, sn, epoch }
 KeyMaterial             -- Constr 0, 6 fields:
@@ -171,7 +171,7 @@ data KeyMaterial = KeyMaterial
 
 -- | The version 2 checkpoint datum.
 data CheckpointDatumV2
-    = -- | A checkpoint that is alive (Constr 0, eight fields).
+    = -- | A checkpoint that is alive (Constr 0, nine fields).
       Live
         { lvAid :: !ByteString
         -- ^ the qualified CESR text of the identifier
@@ -185,6 +185,10 @@ data CheckpointDatumV2
         -- ^ upper validity bound of the registration, POSIX milliseconds
         , lvRefundTo :: !ByteString
         -- ^ ledger bytes of the address a conviction refunds
+        , lvToppedUp :: !Bool
+        {- ^ the top-up mark: set by a top-up, cleared by every rotation, kept by
+        poison and freeze (Lean @Live.toppedUp@)
+        -}
         , lvKeys :: !KeyMaterial
         }
     | {- | A convicted checkpoint awaiting completion (Constr 1, three fields,
@@ -296,6 +300,7 @@ instance ToData CheckpointDatumV2 where
                 , boolData lvFrozen
                 , I lvBornAt
                 , B lvRefundTo
+                , boolData lvToppedUp
                 , asData lvKeys
                 ]
     toBuiltinData TerminationPending{..} =
@@ -307,11 +312,12 @@ instance FromData CheckpointDatumV2 where
         ( BuiltinData
                 ( Constr
                         0
-                        [B aid, I sn, I epoch, poisoned, frozen, I bornAt, B refund, keys]
+                        [B aid, I sn, I epoch, poisoned, frozen, I bornAt, B refund, toppedUp, keys]
                     )
             ) = do
             lvPoisoned <- unBool poisoned
             lvFrozen <- unBool frozen
+            lvToppedUp <- unBool toppedUp
             lvKeys <- fromBuiltinData (BuiltinData keys)
             pure
                 Live
@@ -495,9 +501,9 @@ keyMaterialOf KeyStateView{..} =
 
 {- | The live datum a rotation to this key state writes (Lean
 @rotateKeepPaid@, @rotateKeepUnpaid@): the sequence number of the new
-establishment event, one more epoch, no poison and the new keys; the
-identifier, the frozen flag, the birth time and the refund address are
-unchanged. 'Nothing' for a datum that is not live.
+establishment event, one more epoch, no poison, the top-up mark cleared and
+the new keys; the identifier, the frozen flag, the birth time and the refund
+address are unchanged. 'Nothing' for a datum that is not live.
 -}
 rotatedLive :: CheckpointDatumV2 -> KeyStateView -> Maybe CheckpointDatumV2
 rotatedLive old view@KeyStateView{..} = case old of
@@ -507,6 +513,7 @@ rotatedLive old view@KeyStateView{..} = case old of
                 { lvSn = cdNativeSn
                 , lvEpoch = lvEpoch old + 1
                 , lvPoisoned = False
+                , lvToppedUp = False
                 , lvKeys = keyMaterialOf view
                 }
     TerminationPending{} -> Nothing
@@ -527,8 +534,9 @@ convictedOf = \case
     TerminationPending{} -> Nothing
 
 {- | The live version 2 datum of a key state: the identifier text of its
-digest, the sequence number and epoch from the record, no poison, not frozen.
-The birth time and the refund address are the registration's.
+digest, the sequence number and epoch from the record, no poison, not frozen,
+the top-up mark clear. The birth time and the refund address are the
+registration's.
 -}
 liveOfKeyState ::
     -- | the ledger bytes of the refund address
@@ -546,5 +554,6 @@ liveOfKeyState refund bornAt view@KeyStateView{..} =
         , lvFrozen = False
         , lvBornAt = bornAt
         , lvRefundTo = refund
+        , lvToppedUp = False
         , lvKeys = keyMaterialOf view
         }

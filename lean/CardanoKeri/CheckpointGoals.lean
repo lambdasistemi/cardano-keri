@@ -122,16 +122,17 @@ theorem T8_absent_only_registers (p : Params) (env : Env) {a : Action} {t : Slot
   cases h with
   | register => exact ⟨_, _, rfl⟩
 
-/-- Given Arbitrary parameters, environment, slot and state; state is neither convicted nor any terminationPending.
+/-- Given Arbitrary parameters, environment, slot and state; state is neither convicted nor any terminationPending, and a present state has not been topped up since its last rotation.
 When Ask for a local Checkpoint Step.
-Then There exists an action, flow and successor: registration from absent, a top-up from present. Pending has no local exit. Completion is a separate actual imported-fold system event with reachable origin, exact pending membership and an accepted supplied transaction. -/
+Then There exists an action, flow and successor: registration from absent, a top-up from present. Pending has no local exit. A present state already topped up moves only on KERI evidence (`topped_up_moves_only_on_evidence`). Completion is a separate actual imported-fold system event with reachable origin, exact pending membership and an accepted supplied transaction. -/
 theorem local_progress_unless_pending_or_retired (p : Params) (env : Env) (t : Slot) (s : State)
     (hnot : s ≠ .convicted)
-    (hnotPending : ∀ h, s ≠ .terminationPending h) :
+    (hnotPending : ∀ h, s ≠ .terminationPending h)
+    (hfresh : ∀ l, s = .present l → l.toppedUp = false) :
     ∃ a f s', Step p env a t s f s' := by
   cases s with
-  | absent => exact ⟨.register 0 0, _, _, Step.register t 0 0⟩
-  | present l => exact ⟨.topUp 0, _, _, Step.topUp t 0⟩
+  | absent => exact ⟨.register 0 p.P, _, _, Step.register t 0 p.P (Nat.le_refl _)⟩
+  | present l => exact ⟨.topUp p.P, _, _, Step.topUp t p.P (hfresh l rfl) (Nat.le_refl _)⟩
   | convicted => exact absurd rfl hnot
   | terminationPending h => exact absurd rfl (hnotPending h)
 
@@ -538,9 +539,13 @@ theorem T7_step_iff_stepFn (p : Params) (env : Env) {a : Action} {t : Slot} {s s
     | register refund pool0 =>
       cases s with
       | absent =>
-        simp only [stepFn, Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        exact Step.register _ _ _
+        simp only [stepFn] at h
+        split at h
+        · rename_i hpool
+          simp only [Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          exact Step.register _ _ _ hpool
+        · simp at h
       | present l => simp [stepFn] at h
       | convicted => simp [stepFn] at h
       | terminationPending hs => simp [stepFn] at h
@@ -612,9 +617,14 @@ theorem T7_step_iff_stepFn (p : Params) (env : Env) {a : Action} {t : Slot} {s s
     | topUp x =>
       cases s with
       | present l =>
-        simp only [stepFn, Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        exact Step.topUp _ _
+        simp only [stepFn] at h
+        split at h
+        · rename_i hc
+          obtain ⟨hfresh, hx⟩ := hc
+          simp only [Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          exact Step.topUp _ _ hfresh hx
+        · simp at h
       | absent => simp [stepFn] at h
       | convicted => simp [stepFn] at h
       | terminationPending hs => simp [stepFn] at h
@@ -823,14 +833,14 @@ theorem T9_juvenility_is_consumer_only (p : Params) (env : Env) (W' : Nat) {a : 
     {s s' : State} {f : Flow} :
     Step p env a t s f s' ↔ Step { p with W := W' } env a t s f s' := by
   constructor <;> intro h <;> cases h <;> first
-    | exact Step.register _ _ _
+    | exact Step.register _ _ _ ‹_›
     | exact Step.rotateKeepPaid _ _ _ ‹_› ‹_› ‹_›
     | exact Step.rotateKeepUnpaid _ _ _ ‹_› ‹_› ‹_›
     | exact Step.rotateDepositPaid _ _ _ ‹_› ‹_› ‹_› ‹_›
     | exact Step.rotateDepositUnpaid _ _ _ ‹_› ‹_› ‹_› ‹_›
     | exact Step.poison _ ‹_› ‹_›
     | exact Step.freeze _ _ _ ‹_› ‹_› ‹_› ‹_› ‹_›
-    | exact Step.topUp _ _
+    | exact Step.topUp _ _ ‹_› ‹_›
     | exact Step.convict _ _ ‹_›
 
 /-! ## T10 — a frozen checkpoint is inert to everyone but the next keys; an exited one holds no bonds or pool -/
@@ -908,13 +918,111 @@ theorem T14_pool_decreases_only_by_premium (p : Params) (env : Env) {a : Action}
     a.actor = .nextKeys ∧ l'.pool + p.P = l.pool ∧ Payment?.pool f.hunter = p.P := by
   cases h <;> simp_all [Action.actor, Payment?.pool] <;> omega'
 
-/-- **T14b.** The pool increases between present states only by a top-up. -/
+/-- **T14b.** The pool increases between present states only by a top-up:
+the first of its key state, of at least the premium. -/
 theorem T14_pool_increases_only_by_topup (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live}
     {f : Flow} (h : Step p env a t (.present l) f (.present l')) (hlt : l.pool < l'.pool) :
-    ∃ x, a = .topUp x ∧ f = { poolIn := x } ∧ l' = { l with pool := l.pool + x } := by
+    ∃ x, a = .topUp x ∧ l.toppedUp = false ∧ p.P ≤ x ∧ f = { poolIn := x } ∧
+      l' = { l with pool := l.pool + x, toppedUp := true } := by
   cases h <;> first
-    | exact ⟨_, rfl, rfl, rfl⟩
+    | exact ⟨_, rfl, ‹_›, ‹_›, rfl, rfl⟩
     | (exfalso; omega')
+
+/-! ## The bounded top-up: once per key state, at least the premium -/
+
+/-- A top-up adds at least the premium, exactly what it carries, to a present
+checkpoint not yet topped up since its last rotation, and marks it topped up. -/
+theorem topUp_adds_at_least_premium (p : Params) (env : Env) {x : Value} {t : Slot} {s s' : State}
+    {f : Flow} (h : Step p env (.topUp x) t s f s') :
+    p.P ≤ x ∧ f = { poolIn := x } ∧
+      ∃ l, s = .present l ∧ l.toppedUp = false ∧
+        s' = .present { l with pool := l.pool + x, toppedUp := true } := by
+  cases h with
+  | topUp _ _ hfresh hx => exact ⟨hx, rfl, _, rfl, hfresh, rfl⟩
+
+/-- A second top-up of one key state is refused. -/
+theorem second_topUp_refused (p : Params) (env : Env) {x : Value} {t : Slot} {l : Live} {f : Flow}
+    {s' : State} (hdone : l.toppedUp = true) (h : Step p env (.topUp x) t (.present l) f s') : False := by
+  cases h; simp_all
+
+/-- Every rotation, keeping or restoring the deposit, paid or unpaid, clears
+the top-up mark: the next key state may be topped up once. -/
+theorem rotation_clears_topped_up (p : Params) (env : Env) {sn' : Seq} {op : BondOp} {payee : Addr}
+    {t : Slot} {l l' : Live} {f : Flow}
+    (h : Step p env (.rotate sn' op payee) t (.present l) f (.present l')) : l'.toppedUp = false := by
+  cases h <;> rfl
+
+/-- Only a top-up sets the mark. -/
+theorem topped_up_set_only_by_topUp (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live}
+    {f : Flow} (h : Step p env a t (.present l) f (.present l'))
+    (hbefore : l.toppedUp = false) (hafter : l'.toppedUp = true) : ∃ x, a = .topUp x := by
+  cases h <;> first
+    | exact ⟨_, rfl⟩
+    | simp_all
+
+/-- Only a rotation clears the mark. -/
+theorem topped_up_cleared_only_by_rotation (p : Params) (env : Env) {a : Action} {t : Slot}
+    {l l' : Live} {f : Flow} (h : Step p env a t (.present l) f (.present l'))
+    (hbefore : l.toppedUp = true) (hafter : l'.toppedUp = false) :
+    ∃ sn' op payee, a = .rotate sn' op payee := by
+  cases h <;> first
+    | exact ⟨_, _, _, rfl⟩
+    | simp_all
+
+/-- Poison and freeze leave the mark as it is. -/
+theorem topped_up_kept_by_poison_and_freeze (p : Params) (env : Env) {a : Action} {t : Slot}
+    {l l' : Live} {f : Flow} (h : Step p env a t (.present l) f (.present l'))
+    (ha : a = .poison ∨ ∃ sn' payee, a = .freeze sn' payee) : l'.toppedUp = l.toppedUp := by
+  rcases ha with rfl | ⟨sn', payee, rfl⟩ <;> cases h <;> rfl
+
+/-- Once its key state is topped up, a checkpoint moves only on KERI
+evidence: no step from it is open to anyone. The next touch is a rotation by
+the next keys, a poison by the current quorum, or a freeze or a conviction
+carrying a proof. -/
+theorem topped_up_moves_only_on_evidence (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live}
+    {f : Flow} {s' : State} (h : Step p env a t (.present l) f s') (hdone : l.toppedUp = true) :
+    a.actor ≠ .anyone := by
+  cases h <;> simp_all [Action.actor]
+
+/-- Between two rotations at most one top-up is accepted: along any trace
+with no rotation, the top-ups it contains and the mark the starting state
+already carries add up to at most one. -/
+theorem at_most_one_topUp_between_rotations (p : Params) (env : Env) {t : Slot} {s s' : State}
+    {es : List (Slot × Action)} (h : Trace p env t s es s')
+    (hnorot : ∀ e ∈ es, e.2.isRotation = false) :
+    topUpCount es + s.toppedUpCount ≤ 1 := by
+  induction h with
+  | nil t s =>
+    cases s <;> simp [topUpCount, State.toppedUpCount, Bool.toNat_le]
+  | cons hle hs htail ih =>
+    have ih := ih (fun e he => hnorot e (List.mem_cons_of_mem _ he))
+    have hhead := hnorot _ (List.mem_cons_self ..)
+    cases hs with
+    | register => simpa [topUpCount, State.toppedUpCount] using ih
+    | rotateKeepPaid => simp [Action.isRotation] at hhead
+    | rotateKeepUnpaid => simp [Action.isRotation] at hhead
+    | rotateDepositPaid => simp [Action.isRotation] at hhead
+    | rotateDepositUnpaid => simp [Action.isRotation] at hhead
+    | poison => simpa [topUpCount, State.toppedUpCount] using ih
+    | freeze => simpa [topUpCount, State.toppedUpCount] using ih
+    | topUp _ _ hfresh =>
+      simp [topUpCount, State.toppedUpCount, hfresh] at ih ⊢
+      omega
+    | convict =>
+      cases htail with
+      | nil => simp [topUpCount, State.toppedUpCount, Bool.toNat_le]
+      | cons _ hs' _ => exact (pending_step_impossible p env _ hs').elim
+
+/-- Every live checkpoint's pool started from at least the premium: a trace
+from `absent` to a present state starts with a registration whose initial pool
+is at least `P`. -/
+theorem registration_pool_at_least_premium (p : Params) (env : Env) {t : Slot} {l : Live}
+    {es : List (Slot × Action)} (h : Trace p env t .absent es (.present l)) :
+    ∃ t0 refund pool0 rest, es = (t0, .register refund pool0) :: rest ∧ p.P ≤ pool0 := by
+  cases h with
+  | cons hle hs htail =>
+    cases hs with
+    | register _ _ _ hpool => exact ⟨_, _, _, _, rfl, hpool⟩
 
 /-- **T15a.** The freeze bond leaves a present state for a present state
 only by a freeze — proof of a later rotation, pool short, exactly `B` to the
@@ -962,21 +1070,24 @@ end CardanoKeri.Checkpoint
 
 namespace CardanoKeri.Checkpoint
 
-/-- Inversion for `register`: no guards. -/
+/-- Inversion for `register`: the initial pool is at least the premium. -/
 theorem Step.register_iff {p : Params} {env : Env} (now : Slot) (refund : Addr) (pool0 : Value) :
     Step p env (.register refund pool0) now .absent
       { dregIn := p.D, bIn := p.B, poolIn := pool0 }
-      (.present ⟨0, 0, false, false, now, refund, pool0⟩) ↔ True := by
+      (.present ⟨0, 0, false, false, now, refund, pool0, false⟩) ↔ p.P ≤ pool0 := by
   constructor
-  · intro _; trivial
-  · intro _; exact Step.register now refund pool0
+  · intro h
+    cases h with
+    | register _ _ _ hpool => exact hpool
+  · intro hpool; exact Step.register now refund pool0 hpool
 
 /-- Inversion for `rotateKeepPaid`. -/
 theorem Step.rotateKeepPaid_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)
     (payee : Addr) :
     Step p env (.rotate sn' .keep payee) now (.present l)
       { hunter := some { addr := payee, pool := p.P } }
-      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, pool := l.pool - p.P }) ↔
+      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, toppedUp := false,
+                         pool := l.pool - p.P }) ↔
     env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ p.P ≤ l.pool := by
   constructor
   · intro h
@@ -989,7 +1100,7 @@ theorem Step.rotateKeepPaid_iff {p : Params} {env : Env} (l : Live) (now : Slot)
 theorem Step.rotateKeepUnpaid_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq)
     (payee : Addr) :
     Step p env (.rotate sn' .keep payee) now (.present l) {}
-      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false }) ↔
+      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, toppedUp := false }) ↔
     env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ l.pool < p.P := by
   constructor
   · intro h
@@ -1004,7 +1115,7 @@ theorem Step.rotateDepositPaid_iff {p : Params} {env : Env} (l : Live) (now : Sl
     Step p env (.rotate sn' .deposit payee) now (.present l)
       { bIn := p.B - l.bHeld p, hunter := some { addr := payee, pool := p.P } }
       (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
-                         frozen := false, pool := l.pool - p.P }) ↔
+                         frozen := false, toppedUp := false, pool := l.pool - p.P }) ↔
     env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
     env.depositAuthorized (l.epoch + 1) = true ∧ p.P ≤ l.pool := by
   constructor
@@ -1019,7 +1130,8 @@ theorem Step.rotateDepositUnpaid_iff {p : Params} {env : Env} (l : Live) (now : 
     (payee : Addr) :
     Step p env (.rotate sn' .deposit payee) now (.present l)
       { bIn := p.B - l.bHeld p }
-      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false }) ↔
+      (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false,
+                         toppedUp := false }) ↔
     env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
     env.depositAuthorized (l.epoch + 1) = true ∧ l.pool < p.P := by
   constructor
@@ -1054,13 +1166,17 @@ theorem Step.freeze_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : 
   · rintro ⟨hev, hsn, hpool, hb, hclean⟩
     exact Step.freeze now sn' payee hev hsn hpool hb hclean
 
-/-- Inversion for `topUp`: no guards. -/
+/-- Inversion for `topUp`: the first of its key state, of at least the premium. -/
 theorem Step.topUp_iff {p : Params} {env : Env} (l : Live) (now : Slot) (x : Value) :
     Step p env (.topUp x) now (.present l) { poolIn := x }
-      (.present { l with pool := l.pool + x }) ↔ True := by
+      (.present { l with pool := l.pool + x, toppedUp := true }) ↔
+    l.toppedUp = false ∧ p.P ≤ x := by
   constructor
-  · intro _; trivial
-  · intro _; exact Step.topUp now x
+  · intro h
+    cases h with
+    | topUp _ _ hfresh hx => exact ⟨hfresh, hx⟩
+  · rintro ⟨hfresh, hx⟩
+    exact Step.topUp now x hfresh hx
 
 /-- Given Every parameter, slot, source state and payee in the exact type; the enabled statements additionally assume concrete duplicity at that source state.
 When Execute the local conviction transition, or compare it to its complete guard in the iff statements.
@@ -1115,31 +1231,33 @@ variable (p : Params) (env : Env)
 #check (Step.register_iff : ∀ (now : Slot) (refund : Addr) (pool0 : Value),
   Step p env (.register refund pool0) now .absent
     { dregIn := p.D, bIn := p.B, poolIn := pool0 }
-    (.present ⟨0, 0, false, false, now, refund, pool0⟩) ↔ True)
+    (.present ⟨0, 0, false, false, now, refund, pool0, false⟩) ↔ p.P ≤ pool0)
 
 #check (Step.rotateKeepPaid_iff : ∀ (l : Live) (now : Slot) (sn' : Seq) (payee : Addr),
   Step p env (.rotate sn' .keep payee) now (.present l)
     { hunter := some { addr := payee, pool := p.P } }
-    (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, pool := l.pool - p.P }) ↔
+    (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, toppedUp := false,
+                       pool := l.pool - p.P }) ↔
   env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ p.P ≤ l.pool)
 
 #check (Step.rotateKeepUnpaid_iff : ∀ (l : Live) (now : Slot) (sn' : Seq) (payee : Addr),
   Step p env (.rotate sn' .keep payee) now (.present l) {}
-    (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false }) ↔
+    (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, toppedUp := false }) ↔
   env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ l.pool < p.P)
 
 #check (Step.rotateDepositPaid_iff : ∀ (l : Live) (now : Slot) (sn' : Seq) (payee : Addr),
   Step p env (.rotate sn' .deposit payee) now (.present l)
     { bIn := p.B - l.bHeld p, hunter := some { addr := payee, pool := p.P } }
     (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false,
-                       frozen := false, pool := l.pool - p.P }) ↔
+                       frozen := false, toppedUp := false, pool := l.pool - p.P }) ↔
   env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
   env.depositAuthorized (l.epoch + 1) = true ∧ p.P ≤ l.pool)
 
 #check (Step.rotateDepositUnpaid_iff : ∀ (l : Live) (now : Slot) (sn' : Seq) (payee : Addr),
   Step p env (.rotate sn' .deposit payee) now (.present l)
     { bIn := p.B - l.bHeld p }
-    (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false }) ↔
+    (.present { l with sn := sn', epoch := l.epoch + 1, poisoned := false, frozen := false,
+                       toppedUp := false }) ↔
   env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧
   env.depositAuthorized (l.epoch + 1) = true ∧ l.pool < p.P)
 
@@ -1156,7 +1274,8 @@ variable (p : Params) (env : Env)
 
 #check (Step.topUp_iff : ∀ (l : Live) (now : Slot) (x : Value),
   Step p env (.topUp x) now (.present l) { poolIn := x }
-    (.present { l with pool := l.pool + x }) ↔ True)
+    (.present { l with pool := l.pool + x, toppedUp := true }) ↔
+  l.toppedUp = false ∧ p.P ≤ x)
 
 #check (Step.convict_iff : ∀ (l : Live) (now : Slot) (payee : Addr),
   Step p env (.convict payee) now (.present l)

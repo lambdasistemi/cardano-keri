@@ -218,6 +218,7 @@ fn live_v2(keys: KeyMaterial) -> CheckpointDatumV2 {
     frozen: False,
     born_at: 0,
     refund_to: #"01020304",
+    topped_up: False,
     keys,
   }
 }
@@ -239,6 +240,7 @@ fn live_numbers(sn: Int, epoch: Int, born_at: Int) -> CheckpointDatumV2 {
     frozen: False,
     born_at,
     refund_to: #"01020304",
+    topped_up: False,
     keys: good_keys(),
   }
 }

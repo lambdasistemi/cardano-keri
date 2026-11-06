@@ -28,6 +28,7 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     freezeSpendRedeemerData,
     registerObserverRedeemerData,
     registrationEvidenceData,
+    topUpSpendRedeemerData,
  )
 import Cardano.KERI.AID.Migration.Types (OutputRef (..))
 import Data.ByteString qualified as BS
@@ -303,6 +304,9 @@ spec = describe "#136 Register observer wire" $ do
 
     it "appends the Freeze arm at spend constructor three, after MigrateOut" $
         freezeSpendRedeemerData 5 `shouldBe` Constr 3 [I 5]
+
+    it "appends the TopUp arm at spend constructor four, after Freeze" $
+        topUpSpendRedeemerData 2_000_000 `shouldBe` Constr 4 [I 2_000_000]
 
     it "encodes the freeze evidence as the rotated keys, their sequence number and the rotation" $
         freezeEvidenceData freezeEvidence

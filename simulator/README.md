@@ -34,9 +34,9 @@ scenarios share one grammar in `scenario-dsl.mjs`; the page and CLI load it.
 
 ## Model observations and test scope
 
-Checkpoint wire v2 contains six traces, a 750-cell local grid, theorem and
-consumer observations, and 60 story action cells. Together its local action
-observations contain 157 accepted and 688 refused results. Local session
+Checkpoint wire v2 contains eight traces, a 918-cell local grid, theorem and
+consumer observations, and 67 story action cells. Together its local action
+observations contain 215 accepted and 817 refused results. Local session
 multi-AID checks exercise frames; they do not claim SysStep reachability.
 
 Registry wire v3 contains six connected traces, a 12-cell local grid, 161

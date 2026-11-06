@@ -12,6 +12,8 @@ import Cardano.KERI.Deployment.KELSpec qualified as KELSpec
 import Cardano.KERI.Deployment.ManifestSpec qualified as ManifestSpec
 import Cardano.KERI.Deployment.RegistrationSpec qualified as RegistrationSpec
 import Cardano.KERI.Deployment.ScriptAritySpec qualified as ScriptAritySpec
+import Cardano.KERI.Deployment.TopUpPackageSpec qualified as TopUpPackageSpec
+import Cardano.KERI.Deployment.TopUpTransactionSpec qualified as TopUpTransactionSpec
 import Cardano.KERI.Deployment.TransactionRuntimeSpec qualified as TransactionRuntimeSpec
 import System.Environment (getArgs, lookupEnv)
 import Test.Hspec (hspec)
@@ -55,6 +57,8 @@ suite = hspec $ do
     EndpointBoardTransactionSpec.spec
     AdvancePackageSpec.spec
     FreezePackageSpec.spec
+    TopUpPackageSpec.spec
+    TopUpTransactionSpec.spec
     KELSpec.spec
     ManifestSpec.spec
     CheckpointMigrationSpec.spec

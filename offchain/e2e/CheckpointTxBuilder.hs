@@ -31,6 +31,8 @@ module CheckpointTxBuilder (
     productionRegisterConvictScenario,
     productionRegisterFreezeScenario,
     productionRegisterFreezeThenDepositScenario,
+    productionRegisterTopUpScenario,
+    productionFrozenTopUpScenario,
     buildAdvanceTx,
 ) where
 
@@ -68,6 +70,7 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
     CheckpointDatumV2 (..),
     KeyStateView (..),
+    checkpointDatumToData,
     convictedOf,
     keyMaterialOf,
     liveOfKeyState,
@@ -111,6 +114,12 @@ import Cardano.KERI.AID.Checkpoint.Registration (
     proofTokenName,
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
+import Cardano.KERI.AID.Checkpoint.TopUp (
+    TopUpParams (..),
+    TopUpSettlement (..),
+    markedLive,
+    topUpSettlement,
+ )
 import Cardano.KERI.AID.Checkpoint.Value (
     RotationSettlement (..),
     heldValue,
@@ -126,6 +135,7 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     freezeObserverRedeemerData,
     freezeSpendRedeemerData,
     registerObserverRedeemerData,
+    topUpSpendRedeemerData,
  )
 import Cardano.KERI.AID.E2E.Datum (extractDatum, mkInlineDatum)
 import Cardano.KERI.AID.E2E.Script (
@@ -631,10 +641,11 @@ verifyRegisterScriptSizes env = do
     -- version 2 datum (14_695 before), not reused from the previous pin. The
     -- 16_133 ceiling is unchanged. Re-derived again after the version 1
     -- datum constructor left the shared datum type (15_778 before). Re-derived
-    -- once more when the observer also hosts the freeze verdict (15_625 before).
-    unless (SBS.length (envAdvanceBytes env) == 15_665) $
+    -- once more when the observer also hosts the freeze verdict (15_625 before),
+    -- and when the live datum gained its ninth field (15_665 before).
+    unless (SBS.length (envAdvanceBytes env) == 15_710) $
         fail
-            ( "observer_advance applied program changed from 15,665 bytes: "
+            ( "observer_advance applied program changed from 15,710 bytes: "
                 <> show (SBS.length (envAdvanceBytes env))
             )
 
@@ -3102,18 +3113,33 @@ submitTwoPassRotation ::
     KeyStateView ->
     Maybe ValidityPlan ->
     IO TxId
-submitTwoPassRotation op env label checkpointRef advanceRef input successor validity = do
+submitTwoPassRotation op env label checkpointRef advanceRef input successor validity =
+    submitTwoPassWith env label $ \budgets ->
+        buildRotationTxWith
+            op
+            budgets
+            env
+            checkpointRef
+            advanceRef
+            input
+            successor
+            validity
+
+{- | Build a transaction twice: once with no execution budget to discover the
+units each script needs, once with those units and a margin declared; submit
+the second unchanged. The builder is given the budgets by purpose.
+-}
+submitTwoPassWith ::
+    CheckpointEnv ->
+    String ->
+    ( Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
+      IO (ConwayTx, Set.Set (ConwayPlutusPurpose AsIx ConwayEra))
+    ) ->
+    IO TxId
+submitTwoPassWith env label build = do
     (discovery, expected) <-
         withinSecs 90 (label <> ": build discovery binding") $
-            buildRotationTxWith
-                op
-                Map.empty
-                env
-                checkpointRef
-                advanceRef
-                input
-                successor
-                validity
+            build Map.empty
     discoveryObserved <-
         withinSecs 120 (label <> ": evaluate discovery binding") $
             evaluateTx (envProvider env) (addKeyWitness genesisSignKey discovery)
@@ -3122,15 +3148,7 @@ submitTwoPassRotation op env label checkpointRef advanceRef input successor vali
     let finalBudgets = Map.map deterministicMargin discoveryUnits
     (final, finalExpected) <-
         withinSecs 90 (label <> ": rebuild final binding") $
-            buildRotationTxWith
-                op
-                finalBudgets
-                env
-                checkpointRef
-                advanceRef
-                input
-                successor
-                validity
+            build finalBudgets
     unless (finalExpected == expected) $
         fail (label <> ": final purpose set changed after budget binding")
     let signedFinal = addKeyWitness genesisSignKey final
@@ -4500,3 +4518,369 @@ settledDeposit env row before created utxo = do
                 (settlementPoolAfter settlement)
         )
         (fail (row <> ": successor lovelace is not the minimum ADA, the deposit, the bond and the pool"))
+
+-- ---------------------------------------------------------------------------
+-- The bounded top-up (#346, #522)
+-- ---------------------------------------------------------------------------
+
+topUpParams :: TopUpParams
+topUpParams =
+    TopUpParams
+        { tuMinAda = checkpointMinAda
+        , tuDeposit = registrationBond
+        , tuBond = freezeBond
+        , tuPremium = premium
+        }
+
+{- | What a top-up of this checkpoint by this amount writes and holds, by the
+Haskell model of the Lean's @topUp@: the marked datum and the lovelace of the
+successor. 'fail' when the model refuses.
+-}
+topUpOf :: CheckpointInput -> Integer -> IO (CheckpointDatumV2, Integer)
+topUpOf input amount = do
+    settlement <-
+        requireJust
+            "TopUp: the checkpoint cannot be topped up by this amount"
+            ( topUpSettlement
+                topUpParams
+                (checkpointFacts input)
+                (unCoin (snd (checkpointUtxo input) ^. coinTxOutL))
+                amount
+            )
+    facts <-
+        requireJust
+            "TopUp: the checkpoint is not live or was topped up since its last rotation"
+            (markedLive (checkpointFacts input))
+    pure (facts, tsSuccessorLovelace settlement)
+
+{- | A top-up transaction: the checkpoint output is spent with the TopUp
+redeemer and a successor that holds @successorLovelace@; the wallet funds the
+difference. The successor datum is a parameter so a refusal can be built from
+the same shape. There is no observer, no withdrawal and no validity range.
+-}
+buildTopUpTxWith ::
+    Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
+    CheckpointEnv ->
+    (TxIn, TxOut ConwayEra) ->
+    CheckpointInput ->
+    Integer ->
+    CheckpointDatumV2 ->
+    Integer ->
+    IO
+        ( ConwayTx
+        , Set.Set (ConwayPlutusPurpose AsIx ConwayEra)
+        )
+buildTopUpTxWith budgets env checkpointRef input amount successorFacts successorLovelace = do
+    params <-
+        withinSecs 30 "query TopUp protocol parameters" $
+            queryProtocolParams (envProvider env)
+    wallet <-
+        withinSecs 30 "query TopUp wallet" $
+            queryUTxOs (envProvider env) (envOwner env)
+    (feeUtxo, collateralUtxo) <-
+        pickDisjoint wallet [stateIn, fst checkpointRef]
+    let (feeIn, feeOut) = feeUtxo
+        collateralIn = fst collateralUtxo
+        allInputs = Set.fromList [stateIn, feeIn]
+        spendPurpose = ConwaySpending (AsIx (spendingIndex stateIn allInputs))
+        expected = Set.singleton spendPurpose
+        stateOut =
+            mkStateOutput
+                env
+                Active
+                ( withLovelace
+                    successorLovelace
+                    (snd (checkpointUtxo input) ^. valueTxOutL)
+                )
+                (asPlcData (V2 successorFacts))
+        inflow =
+            successorLovelace
+                - unCoin (snd (checkpointUtxo input) ^. coinTxOutL)
+        changeOut =
+            mkBasicTxOut
+                (envOwner env)
+                (addLovelace (-(scriptFee + inflow)) (feeOut ^. valueTxOutL))
+        redeemers =
+            Redeemers $
+                Map.singleton
+                    spendPurpose
+                    ( ledgerData (topUpSpendRedeemerData amount)
+                    , Map.findWithDefault advanceSpendExUnits spendPurpose budgets
+                    )
+        body =
+            mkBasicTxBody
+                & inputsTxBodyL .~ allInputs
+                & outputsTxBodyL .~ StrictSeq.fromList [stateOut, changeOut]
+                & feeTxBodyL .~ Coin scriptFee
+                & collateralInputsTxBodyL .~ Set.singleton collateralIn
+                & referenceInputsTxBodyL .~ Set.singleton (fst checkpointRef)
+                & scriptIntegrityHashTxBodyL
+                    .~ computeScriptIntegrity
+                        (Set.singleton PlutusV3)
+                        params
+                        redeemers
+                        (TxDats mempty)
+    pure
+        ( mkBasicTx body
+            & witsTxL . rdmrsTxWitsL .~ redeemers
+        , expected
+        )
+  where
+    stateIn = fst (checkpointUtxo input)
+
+-- | Submit the honest top-up of a checkpoint by an amount.
+submitTwoPassTopUp ::
+    CheckpointEnv ->
+    String ->
+    (TxIn, TxOut ConwayEra) ->
+    CheckpointInput ->
+    Integer ->
+    IO TxId
+submitTwoPassTopUp env label checkpointRef input amount = do
+    (facts, lovelace) <- topUpOf input amount
+    submitTwoPassWith env label $ \budgets ->
+        buildTopUpTxWith budgets env checkpointRef input amount facts lovelace
+
+{- | A top-up the production script must refuse, judged by the node: the
+successor datum and lovelace are given, so the refusal is the transaction's
+own and not the model's.
+-}
+rejectTopUp ::
+    CheckpointEnv ->
+    String ->
+    (TxIn, TxOut ConwayEra) ->
+    CheckpointInput ->
+    Integer ->
+    CheckpointDatumV2 ->
+    Integer ->
+    IO ()
+rejectTopUp env label checkpointRef input amount facts lovelace = do
+    (candidate, _) <-
+        withinSecs 90 (label <> ": build applied candidate") $
+            buildTopUpTxWith Map.empty env checkpointRef input amount facts lovelace
+    _ <- expectProductionScriptRejection env label candidate
+    pure ()
+
+{- | The two datums are the same bytes but for the top-up mark, field 7 of the
+live datum: the mark is the only field that moved.
+-}
+sameButMark :: PLC.Data -> PLC.Data -> Bool
+sameButMark (PLC.Constr 1 [PLC.Constr 0 before]) (PLC.Constr 1 [PLC.Constr 0 after]) =
+    length before == 9
+        && length after == 9
+        && [f | (i, f) <- zip [0 :: Int ..] before, i /= 7]
+            == [f | (i, f) <- zip [0 :: Int ..] after, i /= 7]
+        && (before !! 7, after !! 7) == (PLC.Constr 0 [], PLC.Constr 1 [])
+sameButMark _ _ = False
+
+{- | What a settled top-up left: the successor at the ACTIVE address carrying
+the datum of the spent output with the top-up mark set and nothing else
+changed, holding exactly the amount more.
+-}
+settledTopUp ::
+    CheckpointEnv ->
+    String ->
+    CheckpointInput ->
+    Integer ->
+    (TxIn, TxOut ConwayEra) ->
+    IO CheckpointInput
+settledTopUp env row before amount utxo = do
+    (expected, expectedLovelace) <- topUpOf before amount
+    unless
+        (snd utxo ^. addrTxOutL == roleAddress env Active)
+        (fail (row <> ": successor is not at the ACTIVE address"))
+    onChain <- case extractDatum (snd utxo) of
+        Just datum@(V2 facts)
+            | facts == expected -> pure datum
+        _ -> fail (row <> ": successor does not carry the marked version 2 datum")
+    unless
+        (sameButMark (checkpointDatumToData (V2 (checkpointFacts before))) (checkpointDatumToData onChain))
+        (fail (row <> ": the successor datum differs from the spent one in more than the top-up mark"))
+    unless
+        ( unCoin (snd utxo ^. coinTxOutL)
+            == unCoin (snd (checkpointUtxo before) ^. coinTxOutL) + amount
+        )
+        (fail (row <> ": the successor did not grow by exactly the amount"))
+    unless
+        (unCoin (snd utxo ^. coinTxOutL) == expectedLovelace)
+        (fail (row <> ": successor lovelace is not the held value of the grown pool"))
+    pure
+        CheckpointInput
+            { checkpointUtxo = utxo
+            , checkpointDatum = checkpointDatum before
+            , checkpointFacts = expected
+            }
+
+{- | #346, #522: register with a first pool that covers the premium, top it up by
+one premium, and try a second top-up in the same key state.
+
+The refusals are judged by the production script: an amount one lovelace below
+the premium, and a successor holding one lovelace more than the amount. The
+accepted top-up settles the registered datum with only the mark set, holding
+exactly the amount more. The second top-up of the marked output, which the
+Lean refuses, is refused by the node.
+-}
+productionRegisterTopUpScenario :: CheckpointEnv -> IO ()
+productionRegisterTopUpScenario env = do
+    (fixture, _) <- loadLifecycleFixture
+    (registered, checkpointRef) <-
+        productionRegisterScenarioWithReference env fixture
+    let amount = premium
+        lovelaceBefore = unCoin (snd (checkpointUtxo registered) ^. coinTxOutL)
+    unless (initialPool >= premium) $
+        fail "the registration's first pool does not cover the premium"
+    marked <-
+        requireJust
+            "TopUp: the registered checkpoint was not live"
+            (markedLive (checkpointFacts registered))
+    sequence_
+        [ rejectTopUp
+            env
+            "TopUp below the premium"
+            checkpointRef
+            registered
+            (premium - 1)
+            marked
+            (lovelaceBefore + premium - 1)
+        , rejectTopUp
+            env
+            "TopUp whose successor holds one lovelace too many"
+            checkpointRef
+            registered
+            amount
+            marked
+            (lovelaceBefore + amount + 1)
+        , rejectTopUp
+            env
+            "TopUp that leaves the mark clear"
+            checkpointRef
+            registered
+            amount
+            (checkpointFacts registered)
+            (lovelaceBefore + amount)
+        ]
+    topUpTxId <-
+        submitTwoPassTopUp env "checkpoint TopUp" checkpointRef registered amount
+    successor <-
+        pollOutput
+            (envProvider env)
+            topUpTxId
+            [0, 1]
+            (hasAsset (envCheckpointPolicy env) (deriveAidAssetName (cdCesrAid (checkpointDatum registered))))
+            >>= requireJust "TopUp successor did not settle"
+    toppedUp <- settledTopUp env "TopUp" registered amount successor
+    remaining <-
+        withinSecs 30 "query the spent registered checkpoint" $
+            queryUTxOByTxIn
+                (envProvider env)
+                (Set.singleton (fst (checkpointUtxo registered)))
+    unless (Map.null remaining) $
+        fail "TopUp left the registered checkpoint input unspent"
+    -- A second top-up in the same key state: the Lean refuses it, so the node does.
+    rejectTopUp
+        env
+        "second TopUp in the same key state"
+        checkpointRef
+        toppedUp
+        amount
+        (checkpointFacts toppedUp)
+        (unCoin (snd (checkpointUtxo toppedUp) ^. coinTxOutL) + amount)
+    dbg ("TopUp settled; tx id=" <> show topUpTxId)
+
+{- | #346, #522: a frozen checkpoint (its pool below the premium, frozen by the
+freeze path) is topped up to a pool that covers the premium; the controller's
+own rotation then lands with the keep option: it pays one premium from the
+pool, stays frozen and clears the mark.
+-}
+productionFrozenTopUpScenario :: CheckpointEnv -> IO ()
+productionFrozenTopUpScenario env = do
+    fixture <- loadConvictStoryFixture
+    let laterRotation = fsResponseRotation fixture
+        created = rsCreated laterRotation
+    (checkpointRef, advanceRef, advanced) <-
+        advanceOnceForRotationStory env fixture
+    let honest =
+            signedRotateEvidence
+                env
+                advanced
+                laterRotation
+                (rsRotationSigners laterRotation)
+                (aeWitReceipts (rsUnsignedEvidence laterRotation))
+    freezeTxId <-
+        submitTwoPassRotation
+            (freezeOp created honest)
+            env
+            "checkpoint Freeze (top-up journey)"
+            checkpointRef
+            advanceRef
+            advanced
+            created
+            Nothing
+    frozenUtxo <-
+        pollOutput
+            (envProvider env)
+            freezeTxId
+            [0, 1]
+            (hasAsset (envCheckpointPolicy env) (deriveAidAssetName (cdCesrAid created)))
+            >>= requireJust "Freeze successor did not settle"
+    settledFreeze env "Freeze" advanced freezeTxId frozenUtxo
+    frozenFacts <-
+        requireJust
+            "the advanced checkpoint was not freezable"
+            (frozenLive (checkpointFacts advanced))
+    let frozen =
+            CheckpointInput
+                { checkpointUtxo = frozenUtxo
+                , checkpointDatum = checkpointDatum advanced
+                , checkpointFacts = frozenFacts
+                }
+        frozenPool =
+            unCoin (snd frozenUtxo ^. coinTxOutL)
+                - (checkpointMinAda + registrationBond)
+    unless (frozenPool < premium) $
+        fail "the frozen checkpoint's pool already covers the premium"
+    topUpTxId <-
+        submitTwoPassTopUp env "checkpoint TopUp (frozen)" checkpointRef frozen premium
+    toppedUtxo <-
+        pollOutput
+            (envProvider env)
+            topUpTxId
+            [0, 1]
+            (hasAsset (envCheckpointPolicy env) (deriveAidAssetName (cdCesrAid created)))
+            >>= requireJust "TopUp of the frozen checkpoint did not settle"
+    topped <- settledTopUp env "TopUp (frozen)" frozen premium toppedUtxo
+    let toppedPool =
+            unCoin (snd toppedUtxo ^. coinTxOutL)
+                - (checkpointMinAda + registrationBond)
+    unless (toppedPool >= premium) $
+        fail "the topped-up pool does not cover the premium"
+    -- The controller's rotation, with the keep option: one premium leaves the
+    -- pool, the checkpoint stays frozen, the mark is clear.
+    advanceTxId <-
+        submitTwoPassRotation
+            (advanceOp honest)
+            env
+            "checkpoint Advance (topped-up frozen)"
+            checkpointRef
+            advanceRef
+            topped
+            created
+            Nothing
+    rotatedUtxo <-
+        pollOutput
+            (envProvider env)
+            advanceTxId
+            [0, 1]
+            (hasAsset (envCheckpointPolicy env) (deriveAidAssetName (cdCesrAid created)))
+            >>= requireJust "Advance of the topped-up frozen checkpoint did not settle"
+    rotated <-
+        settledAdvance env "Advance (topped-up frozen)" topped created advanceTxId rotatedUtxo
+    case checkpointFacts rotated of
+        Live{lvFrozen = True, lvToppedUp = False} -> pure ()
+        other -> fail ("the rotated checkpoint must stay frozen with the mark clear: " <> show other)
+    unless
+        ( unCoin (snd rotatedUtxo ^. coinTxOutL) - (checkpointMinAda + registrationBond)
+            == toppedPool - premium
+        )
+        (fail "the rotation did not pay exactly one premium from the pool")
+    dbg ("Frozen TopUp then Advance settled; tx id=" <> show advanceTxId)

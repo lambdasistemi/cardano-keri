@@ -166,6 +166,7 @@ sourceDatum =
         , lvFrozen = False
         , lvBornAt = 1800000000000
         , lvRefundTo = BS.cons 0x61 refundVkey
+        , lvToppedUp = False
         , lvKeys =
             KeyMaterial
                 { kmCurKeys = controllerKeys

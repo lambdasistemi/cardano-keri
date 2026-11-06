@@ -58695,18 +58695,18 @@
     }
    ]
   },
-  "docs-architecture-identity-ops/top-up-and-reopen-new-in-the-accepted-design-00": {
-   "audio_sha256": "40ff8688139d37748d86800203590e47180a019396c7707d128b68bab6c79b2a",
-   "characters": 47,
-   "cost": 2.914e-05,
-   "duration": 3.15,
+  "docs-architecture-identity-ops/top-up-new-in-the-accepted-design-00": {
+   "audio_sha256": "0069b2f0efb9d6abc53b64542dd13076ec91ed2ab0af871e25296ae437473bd6",
+   "characters": 36,
+   "cost": 3.564e-05,
+   "duration": 2.475,
    "index": 0,
-   "key": "04ece260f452bcc256b5b19bd010e84ef4b0229b17b099dcd11b54af665dc0ce",
+   "key": "8f36ecb1c865f902e9396afe4bb12bb252f797d255dc653054ff87032ed1be6c",
    "page": "docs/architecture/identity-ops.md",
    "pause_ms": 500,
-   "section": "top-up-and-reopen-new-in-the-accepted-design",
-   "sent_text": "Top-up and reopen — new in the accepted design.",
-   "text": "Top-up and reopen — new in the accepted design.",
+   "section": "top-up-new-in-the-accepted-design",
+   "sent_text": "Top-up — new in the accepted design.",
+   "text": "Top-up — new in the accepted design.",
    "words": [
     {
      "end": 0.538,
@@ -58714,504 +58714,604 @@
      "text": "Top-up"
     },
     {
-     "end": 0.637,
+     "end": 0.6,
      "start": 0.538,
-     "text": "and"
-    },
-    {
-     "end": 1.075,
-     "start": 0.637,
-     "text": "reopen"
-    },
-    {
-     "end": 1.15,
-     "start": 1.075,
      "text": "—"
     },
     {
-     "end": 1.337,
-     "start": 1.15,
+     "end": 0.738,
+     "start": 0.6,
      "text": "new"
     },
     {
-     "end": 1.413,
-     "start": 1.337,
+     "end": 0.812,
+     "start": 0.738,
      "text": "in"
     },
     {
-     "end": 1.5,
-     "start": 1.413,
+     "end": 0.887,
+     "start": 0.812,
      "text": "the"
     },
     {
-     "end": 1.975,
-     "start": 1.5,
+     "end": 1.35,
+     "start": 0.887,
      "text": "accepted"
     },
     {
-     "end": 2.95,
-     "start": 1.975,
+     "end": 2.275,
+     "start": 1.35,
      "text": "design"
     },
     {
-     "end": 3.15,
-     "start": 2.95,
+     "end": 2.475,
+     "start": 2.275,
      "text": "."
     }
    ]
   },
-  "docs-architecture-identity-ops/top-up-and-reopen-new-in-the-accepted-design-01": {
-   "audio_sha256": "4f68e5bcceecd611624e6120d8eb9a10201d9b66a90d3053625f12123413092a",
-   "characters": 153,
-   "cost": 9.486e-05,
-   "duration": 11.225,
+  "docs-architecture-identity-ops/top-up-new-in-the-accepted-design-01": {
+   "audio_sha256": "66264466ae3523429f1d1ad98297f27eb86bdf41a90aa58cb32843c42065c57e",
+   "characters": 568,
+   "cost": 0.0005623199999999999,
+   "duration": 38.0,
    "index": 1,
-   "key": "ff97d208a18ee1e2656742e578ae4c1aee7be6ad99a46396d19721bb7d6ce629",
+   "key": "75775eab76a4994ab8a36fab8ea35c0b95859fdca5e861f9e311fc2cf76e4c67",
    "page": "docs/architecture/identity-ops.md",
    "pause_ms": 400,
-   "section": "top-up-and-reopen-new-in-the-accepted-design",
-   "sent_text": "Top-up adds value to the pool. No signature, no datum change, anyone. It is how a friend, an employer or a consortium pays for an identity's maintenance.",
-   "text": "Top-up adds value to the pool. No signature, no datum change, anyone. It is how a friend, an employer or a consortium pays for an identity's maintenance.",
+   "section": "top-up-new-in-the-accepted-design",
+   "sent_text": "Top-up adds value to the pool, at least one premium at a time and only once between two rotations. No signature, anyone. It is how a friend, an employer or a consortium pays for an identity's maintenance. A top-up spends the checkpoint output, so a stream of tiny ones could keep the controller's own rotation and the hunters' transactions from landing; the datum therefore carries a top-up mark that a top-up sets and every rotation clears, and a second top-up before the next rotation is refused. Registration asks for the same minimum: the first pool is at least P.",
+   "text": "Top-up adds value to the pool, at least one premium at a time and only once between two rotations. No signature, anyone. It is how a friend, an employer or a consortium pays for an identity's maintenance. A top-up spends the checkpoint output, so a stream of tiny ones could keep the controller's own rotation and the hunters' transactions from landing; the datum therefore carries a top-up mark that a top-up sets and every rotation clears, and a second top-up before the next rotation is refused. Registration asks for the same minimum: the first pool is at least P.",
    "words": [
     {
-     "end": 0.55,
-     "start": 0.175,
+     "end": 0.625,
+     "start": 0.2,
      "text": "Top-up"
     },
     {
-     "end": 0.775,
-     "start": 0.55,
+     "end": 0.913,
+     "start": 0.625,
      "text": "adds"
     },
     {
-     "end": 1.1,
-     "start": 0.775,
+     "end": 1.325,
+     "start": 0.913,
      "text": "value"
     },
     {
-     "end": 1.188,
-     "start": 1.1,
+     "end": 1.45,
+     "start": 1.325,
      "text": "to"
     },
     {
-     "end": 1.275,
-     "start": 1.188,
+     "end": 1.587,
+     "start": 1.45,
      "text": "the"
     },
     {
      "end": 2.05,
-     "start": 1.275,
+     "start": 1.587,
      "text": "pool"
     },
     {
-     "end": 2.25,
+     "end": 2.138,
      "start": 2.05,
-     "text": "."
-    },
-    {
-     "end": 2.737,
-     "start": 2.5,
-     "text": "No"
-    },
-    {
-     "end": 3.325,
-     "start": 2.737,
-     "text": "signature"
-    },
-    {
-     "end": 3.375,
-     "start": 3.325,
      "text": ","
     },
     {
-     "end": 3.588,
-     "start": 3.375,
-     "text": "no"
-    },
-    {
-     "end": 4.062,
-     "start": 3.588,
-     "text": "datum"
-    },
-    {
-     "end": 4.6,
-     "start": 4.062,
-     "text": "change"
-    },
-    {
-     "end": 4.675,
-     "start": 4.6,
-     "text": ","
-    },
-    {
-     "end": 5.325,
-     "start": 4.675,
-     "text": "anyone"
-    },
-    {
-     "end": 5.425,
-     "start": 5.325,
-     "text": "."
-    },
-    {
-     "end": 5.575,
-     "start": 5.425,
-     "text": "It"
-    },
-    {
-     "end": 5.725,
-     "start": 5.575,
-     "text": "is"
-    },
-    {
-     "end": 5.925,
-     "start": 5.725,
-     "text": "how"
-    },
-    {
-     "end": 6.05,
-     "start": 5.925,
-     "text": "a"
-    },
-    {
-     "end": 6.5,
-     "start": 6.05,
-     "text": "friend"
-    },
-    {
-     "end": 6.575,
-     "start": 6.5,
-     "text": ","
-    },
-    {
-     "end": 6.675,
-     "start": 6.575,
-     "text": "an"
-    },
-    {
-     "end": 7.412,
-     "start": 6.675,
-     "text": "employer"
-    },
-    {
-     "end": 7.575,
-     "start": 7.412,
-     "text": "or"
-    },
-    {
-     "end": 7.675,
-     "start": 7.575,
-     "text": "a"
-    },
-    {
-     "end": 8.387,
-     "start": 7.675,
-     "text": "consortium"
-    },
-    {
-     "end": 8.85,
-     "start": 8.387,
-     "text": "pays"
-    },
-    {
-     "end": 8.962,
-     "start": 8.85,
-     "text": "for"
-    },
-    {
-     "end": 9.05,
-     "start": 8.962,
-     "text": "an"
-    },
-    {
-     "end": 9.675,
-     "start": 9.05,
-     "text": "identity's"
-    },
-    {
-     "end": 11.0,
-     "start": 9.675,
-     "text": "maintenance"
-    },
-    {
-     "end": 11.225,
-     "start": 11.0,
-     "text": "."
-    }
-   ]
-  },
-  "docs-architecture-identity-ops/top-up-and-reopen-new-in-the-accepted-design-02": {
-   "audio_sha256": "274b8719e32a5766ac2ae4464985f706bae2925a398d268ca76f3d8d9bb0b237",
-   "characters": 263,
-   "cost": 0.00016306,
-   "duration": 17.85,
-   "index": 2,
-   "key": "a30757e7374090dc08c675e74f9c3dedfb578764bc2edf9ce2f25ef200c69d36",
-   "page": "docs/architecture/identity-ops.md",
-   "pause_ms": 400,
-   "section": "top-up-and-reopen-new-in-the-accepted-design",
-   "sent_text": "Reopen brings a parked identity back: a witnessed rotation later than the parked key state, fresh bonds, a first pool, and a refund address chosen by whoever pays. A rotation at or below the parked sequence cannot reopen — that is what stops a stale resurrection.",
-   "text": "Reopen brings a parked identity back: a witnessed rotation later than the parked key state, fresh bonds, a first pool, and a refund address chosen by whoever pays. A rotation at or below the parked sequence cannot reopen — that is what stops a stale resurrection.",
-   "words": [
-    {
-     "end": 0.55,
-     "start": 0.2,
-     "text": "Reopen"
-    },
-    {
-     "end": 0.788,
-     "start": 0.55,
-     "text": "brings"
-    },
-    {
-     "end": 0.85,
-     "start": 0.788,
-     "text": "a"
-    },
-    {
-     "end": 1.175,
-     "start": 0.85,
-     "text": "parked"
-    },
-    {
-     "end": 1.65,
-     "start": 1.175,
-     "text": "identity"
-    },
-    {
-     "end": 2.375,
-     "start": 1.65,
-     "text": "back"
-    },
-    {
-     "end": 2.575,
-     "start": 2.375,
-     "text": ":"
-    },
-    {
-     "end": 2.888,
-     "start": 2.8,
-     "text": "a"
-    },
-    {
-     "end": 3.275,
-     "start": 2.888,
-     "text": "witnessed"
-    },
-    {
-     "end": 3.938,
-     "start": 3.275,
-     "text": "rotation"
-    },
-    {
-     "end": 4.325,
-     "start": 3.938,
-     "text": "later"
-    },
-    {
-     "end": 4.463,
-     "start": 4.325,
-     "text": "than"
-    },
-    {
-     "end": 4.55,
-     "start": 4.463,
-     "text": "the"
-    },
-    {
-     "end": 4.912,
-     "start": 4.55,
-     "text": "parked"
-    },
-    {
-     "end": 5.162,
-     "start": 4.912,
-     "text": "key"
-    },
-    {
-     "end": 5.625,
-     "start": 5.162,
-     "text": "state"
-    },
-    {
-     "end": 5.713,
-     "start": 5.625,
-     "text": ","
-    },
-    {
-     "end": 6.062,
-     "start": 5.713,
-     "text": "fresh"
-    },
-    {
-     "end": 6.625,
-     "start": 6.062,
-     "text": "bonds"
-    },
-    {
-     "end": 6.7,
-     "start": 6.625,
-     "text": ","
-    },
-    {
-     "end": 6.812,
-     "start": 6.7,
-     "text": "a"
-    },
-    {
-     "end": 7.188,
-     "start": 6.812,
-     "text": "first"
-    },
-    {
-     "end": 7.65,
-     "start": 7.188,
-     "text": "pool"
-    },
-    {
-     "end": 7.725,
-     "start": 7.65,
-     "text": ","
-    },
-    {
-     "end": 7.838,
-     "start": 7.725,
-     "text": "and"
-    },
-    {
-     "end": 7.925,
-     "start": 7.838,
-     "text": "a"
-    },
-    {
-     "end": 8.375,
-     "start": 7.925,
-     "text": "refund"
-    },
-    {
-     "end": 8.812,
-     "start": 8.375,
-     "text": "address"
-    },
-    {
-     "end": 9.25,
-     "start": 8.812,
-     "text": "chosen"
-    },
-    {
-     "end": 9.425,
-     "start": 9.25,
-     "text": "by"
-    },
-    {
-     "end": 9.8,
-     "start": 9.425,
-     "text": "whoever"
-    },
-    {
-     "end": 10.95,
-     "start": 9.8,
-     "text": "pays"
-    },
-    {
-     "end": 11.15,
-     "start": 10.95,
-     "text": "."
-    },
-    {
-     "end": 11.425,
-     "start": 11.35,
-     "text": "A"
-    },
-    {
-     "end": 12.137,
-     "start": 11.425,
-     "text": "rotation"
-    },
-    {
-     "end": 12.387,
-     "start": 12.137,
+     "end": 2.275,
+     "start": 2.138,
      "text": "at"
     },
     {
-     "end": 12.525,
-     "start": 12.387,
-     "text": "or"
+     "end": 2.55,
+     "start": 2.275,
+     "text": "least"
     },
     {
-     "end": 12.875,
-     "start": 12.525,
-     "text": "below"
+     "end": 2.775,
+     "start": 2.55,
+     "text": "one"
     },
     {
-     "end": 12.975,
-     "start": 12.875,
-     "text": "the"
+     "end": 3.25,
+     "start": 2.775,
+     "text": "premium"
     },
     {
-     "end": 13.3,
-     "start": 12.975,
-     "text": "parked"
+     "end": 3.338,
+     "start": 3.25,
+     "text": "at"
     },
     {
-     "end": 13.775,
-     "start": 13.3,
-     "text": "sequence"
-    },
-    {
-     "end": 14.15,
-     "start": 13.775,
-     "text": "cannot"
-    },
-    {
-     "end": 14.837,
-     "start": 14.15,
-     "text": "reopen"
-    },
-    {
-     "end": 14.925,
-     "start": 14.837,
-     "text": "—"
-    },
-    {
-     "end": 15.225,
-     "start": 14.925,
-     "text": "that"
-    },
-    {
-     "end": 15.375,
-     "start": 15.225,
-     "text": "is"
-    },
-    {
-     "end": 15.6,
-     "start": 15.375,
-     "text": "what"
-    },
-    {
-     "end": 15.962,
-     "start": 15.6,
-     "text": "stops"
-    },
-    {
-     "end": 16.025,
-     "start": 15.962,
+     "end": 3.438,
+     "start": 3.338,
      "text": "a"
     },
     {
-     "end": 16.375,
-     "start": 16.025,
-     "text": "stale"
+     "end": 3.963,
+     "start": 3.438,
+     "text": "time"
     },
     {
-     "end": 17.65,
-     "start": 16.375,
-     "text": "resurrection"
+     "end": 4.1,
+     "start": 3.963,
+     "text": "and"
     },
     {
-     "end": 17.85,
-     "start": 17.65,
+     "end": 4.4,
+     "start": 4.1,
+     "text": "only"
+    },
+    {
+     "end": 4.675,
+     "start": 4.4,
+     "text": "once"
+    },
+    {
+     "end": 5.037,
+     "start": 4.675,
+     "text": "between"
+    },
+    {
+     "end": 5.25,
+     "start": 5.037,
+     "text": "two"
+    },
+    {
+     "end": 6.65,
+     "start": 5.25,
+     "text": "rotations"
+    },
+    {
+     "end": 6.875,
+     "start": 6.65,
      "text": "."
+    },
+    {
+     "end": 7.363,
+     "start": 7.125,
+     "text": "No"
+    },
+    {
+     "end": 7.9,
+     "start": 7.363,
+     "text": "signature"
+    },
+    {
+     "end": 7.95,
+     "start": 7.9,
+     "text": ","
+    },
+    {
+     "end": 8.5,
+     "start": 7.95,
+     "text": "anyone"
+    },
+    {
+     "end": 8.575,
+     "start": 8.5,
+     "text": "."
+    },
+    {
+     "end": 8.725,
+     "start": 8.575,
+     "text": "It"
+    },
+    {
+     "end": 8.85,
+     "start": 8.725,
+     "text": "is"
+    },
+    {
+     "end": 9.05,
+     "start": 8.85,
+     "text": "how"
+    },
+    {
+     "end": 9.175,
+     "start": 9.05,
+     "text": "a"
+    },
+    {
+     "end": 9.625,
+     "start": 9.175,
+     "text": "friend"
+    },
+    {
+     "end": 9.675,
+     "start": 9.625,
+     "text": ","
+    },
+    {
+     "end": 9.775,
+     "start": 9.675,
+     "text": "an"
+    },
+    {
+     "end": 10.488,
+     "start": 9.775,
+     "text": "employer"
+    },
+    {
+     "end": 10.65,
+     "start": 10.488,
+     "text": "or"
+    },
+    {
+     "end": 10.75,
+     "start": 10.65,
+     "text": "a"
+    },
+    {
+     "end": 11.462,
+     "start": 10.75,
+     "text": "consortium"
+    },
+    {
+     "end": 11.95,
+     "start": 11.462,
+     "text": "pays"
+    },
+    {
+     "end": 12.062,
+     "start": 11.95,
+     "text": "for"
+    },
+    {
+     "end": 12.15,
+     "start": 12.062,
+     "text": "an"
+    },
+    {
+     "end": 12.75,
+     "start": 12.15,
+     "text": "identity's"
+    },
+    {
+     "end": 13.975,
+     "start": 12.75,
+     "text": "maintenance"
+    },
+    {
+     "end": 14.2,
+     "start": 13.975,
+     "text": "."
+    },
+    {
+     "end": 14.425,
+     "start": 14.375,
+     "text": "A"
+    },
+    {
+     "end": 14.812,
+     "start": 14.425,
+     "text": "top-up"
+    },
+    {
+     "end": 15.062,
+     "start": 14.812,
+     "text": "spends"
+    },
+    {
+     "end": 15.15,
+     "start": 15.062,
+     "text": "the"
+    },
+    {
+     "end": 15.575,
+     "start": 15.15,
+     "text": "checkpoint"
+    },
+    {
+     "end": 16.425,
+     "start": 15.575,
+     "text": "output"
+    },
+    {
+     "end": 16.625,
+     "start": 16.425,
+     "text": ","
+    },
+    {
+     "end": 17.025,
+     "start": 16.85,
+     "text": "so"
+    },
+    {
+     "end": 17.125,
+     "start": 17.025,
+     "text": "a"
+    },
+    {
+     "end": 17.487,
+     "start": 17.125,
+     "text": "stream"
+    },
+    {
+     "end": 17.612,
+     "start": 17.487,
+     "text": "of"
+    },
+    {
+     "end": 18.05,
+     "start": 17.612,
+     "text": "tiny"
+    },
+    {
+     "end": 18.4,
+     "start": 18.05,
+     "text": "ones"
+    },
+    {
+     "end": 18.575,
+     "start": 18.4,
+     "text": "could"
+    },
+    {
+     "end": 18.825,
+     "start": 18.575,
+     "text": "keep"
+    },
+    {
+     "end": 18.925,
+     "start": 18.825,
+     "text": "the"
+    },
+    {
+     "end": 19.638,
+     "start": 18.925,
+     "text": "controller's"
+    },
+    {
+     "end": 19.875,
+     "start": 19.638,
+     "text": "own"
+    },
+    {
+     "end": 20.825,
+     "start": 19.875,
+     "text": "rotation"
+    },
+    {
+     "end": 20.962,
+     "start": 20.825,
+     "text": "and"
+    },
+    {
+     "end": 21.05,
+     "start": 20.962,
+     "text": "the"
+    },
+    {
+     "end": 21.5,
+     "start": 21.05,
+     "text": "hunters'"
+    },
+    {
+     "end": 22.275,
+     "start": 21.5,
+     "text": "transactions"
+    },
+    {
+     "end": 22.475,
+     "start": 22.275,
+     "text": "from"
+    },
+    {
+     "end": 23.575,
+     "start": 22.475,
+     "text": "landing"
+    },
+    {
+     "end": 23.775,
+     "start": 23.575,
+     "text": ";"
+    },
+    {
+     "end": 24.075,
+     "start": 23.975,
+     "text": "the"
+    },
+    {
+     "end": 24.45,
+     "start": 24.075,
+     "text": "datum"
+    },
+    {
+     "end": 24.975,
+     "start": 24.45,
+     "text": "therefore"
+    },
+    {
+     "end": 25.337,
+     "start": 24.975,
+     "text": "carries"
+    },
+    {
+     "end": 25.438,
+     "start": 25.337,
+     "text": "a"
+    },
+    {
+     "end": 25.925,
+     "start": 25.438,
+     "text": "top-up"
+    },
+    {
+     "end": 26.2,
+     "start": 25.925,
+     "text": "mark"
+    },
+    {
+     "end": 26.312,
+     "start": 26.2,
+     "text": "that"
+    },
+    {
+     "end": 26.388,
+     "start": 26.312,
+     "text": "a"
+    },
+    {
+     "end": 26.888,
+     "start": 26.388,
+     "text": "top-up"
+    },
+    {
+     "end": 27.275,
+     "start": 26.888,
+     "text": "sets"
+    },
+    {
+     "end": 27.413,
+     "start": 27.275,
+     "text": "and"
+    },
+    {
+     "end": 27.725,
+     "start": 27.413,
+     "text": "every"
+    },
+    {
+     "end": 28.3,
+     "start": 27.725,
+     "text": "rotation"
+    },
+    {
+     "end": 29.325,
+     "start": 28.3,
+     "text": "clears"
+    },
+    {
+     "end": 29.525,
+     "start": 29.325,
+     "text": ","
+    },
+    {
+     "end": 29.812,
+     "start": 29.725,
+     "text": "and"
+    },
+    {
+     "end": 29.888,
+     "start": 29.812,
+     "text": "a"
+    },
+    {
+     "end": 30.225,
+     "start": 29.888,
+     "text": "second"
+    },
+    {
+     "end": 30.675,
+     "start": 30.225,
+     "text": "top-up"
+    },
+    {
+     "end": 30.987,
+     "start": 30.675,
+     "text": "before"
+    },
+    {
+     "end": 31.075,
+     "start": 30.987,
+     "text": "the"
+    },
+    {
+     "end": 31.35,
+     "start": 31.075,
+     "text": "next"
+    },
+    {
+     "end": 31.95,
+     "start": 31.35,
+     "text": "rotation"
+    },
+    {
+     "end": 32.1,
+     "start": 31.95,
+     "text": "is"
+    },
+    {
+     "end": 33.2,
+     "start": 32.1,
+     "text": "refused"
+    },
+    {
+     "end": 33.4,
+     "start": 33.2,
+     "text": "."
+    },
+    {
+     "end": 34.338,
+     "start": 33.6,
+     "text": "Registration"
+    },
+    {
+     "end": 34.7,
+     "start": 34.338,
+     "text": "asks"
+    },
+    {
+     "end": 34.812,
+     "start": 34.7,
+     "text": "for"
+    },
+    {
+     "end": 34.938,
+     "start": 34.812,
+     "text": "the"
+    },
+    {
+     "end": 35.25,
+     "start": 34.938,
+     "text": "same"
+    },
+    {
+     "end": 35.75,
+     "start": 35.25,
+     "text": "minimum"
+    },
+    {
+     "end": 35.85,
+     "start": 35.75,
+     "text": ":"
+    },
+    {
+     "end": 35.95,
+     "start": 35.85,
+     "text": "the"
+    },
+    {
+     "end": 36.25,
+     "start": 35.95,
+     "text": "first"
+    },
+    {
+     "end": 36.575,
+     "start": 36.25,
+     "text": "pool"
+    },
+    {
+     "end": 36.7,
+     "start": 36.575,
+     "text": "is"
+    },
+    {
+     "end": 36.825,
+     "start": 36.7,
+     "text": "at"
+    },
+    {
+     "end": 37.112,
+     "start": 36.825,
+     "text": "least"
+    },
+    {
+     "end": 38.0,
+     "start": 37.112,
+     "text": "P."
     }
    ]
   },
@@ -59256,17 +59356,17 @@
    ]
   },
   "docs-architecture-identity-ops/under-the-accepted-design-01": {
-   "audio_sha256": "82f87f432afd0f7318a16aca31751eeb85fcbec12b9939f624fa710f6cd821ec",
-   "characters": 1071,
-   "cost": 0.00066402,
-   "duration": 73.8,
+   "audio_sha256": "c355662ef6c68c98a068f0f2f1b63ca9054b0e0d985d1661dc9b9f6e49f8c917",
+   "characters": 905,
+   "cost": 0.00089595,
+   "duration": 61.9,
    "index": 1,
-   "key": "0fe0c2807069ffb299e90b2aa2825542986865ece6b2e97d8a3b2a906c928847",
+   "key": "7a1159bde7a145de91e4390562071a5d9a7cc88c670bfb027fccf95bee157df4",
    "page": "docs/architecture/identity-ops.md",
    "pause_ms": 400,
    "section": "under-the-accepted-design",
-   "sent_text": "Registration becomes a request against the registry: it identifies the AID, binds the inception evidence, and carries the bonds and a refund address chosen by whoever pays. It is applied in a batch by anyone. This does not require the raw inception to be stored in the request: the proposed earlier attestation would authenticate inception validity and its initial key state. Such an attestation may be issued more than once; registry admission supplies checkpoint uniqueness. Its concrete format and validation are still to be implemented. Application checks that the AID has no leaf, inserts one, and creates the checkpoint in the same transaction. The persistent leaf prevents a second first-registration of the AID. Revival is a separate, guarded operation: the registry model permits it from dormant k and allocates a fresh abstract token. This does not specify a concrete asset-name encoding or prove that token bytes are minted only once across every revival. See the registration guarantee for the atomic mint/insertion obligation and the model's evidence limits.",
-   "text": "Registration becomes a request against the registry: it identifies the AID, binds the inception evidence, and carries the bonds and a refund address chosen by whoever pays. It is applied in a batch by anyone. This does not require the raw inception to be stored in the request: the proposed earlier attestation would authenticate inception validity and its initial key state. Such an attestation may be issued more than once; registry admission supplies checkpoint uniqueness. Its concrete format and validation are still to be implemented. Application checks that the AID has no leaf, inserts one, and creates the checkpoint in the same transaction. The persistent leaf prevents a second first-registration of the AID. Revival is a separate, guarded operation: the registry model permits it from dormant k and allocates a fresh abstract token. This does not specify a concrete asset-name encoding or prove that token bytes are minted only once across every revival. See the registration guarantee for the atomic mint/insertion obligation and the model's evidence limits.",
+   "sent_text": "Registration becomes a request against the registry: it identifies the AID, binds the inception evidence, and carries the bonds and a refund address chosen by whoever pays. It is applied in a batch by anyone. This does not require the raw inception to be stored in the request: the proposed earlier attestation would authenticate inception validity and its initial key state. Such an attestation may be issued more than once; registry admission supplies checkpoint uniqueness. Its concrete format and validation are still to be implemented. Application checks that the AID has no leaf, inserts one, and creates the checkpoint in the same transaction. The persistent leaf prevents a second first-registration of the AID, and there is no revival: a registered identity stays live until it is convicted. See the registration guarantee for the atomic mint/insertion obligation and the model's evidence limits.",
+   "text": "Registration becomes a request against the registry: it identifies the AID, binds the inception evidence, and carries the bonds and a refund address chosen by whoever pays. It is applied in a batch by anyone. This does not require the raw inception to be stored in the request: the proposed earlier attestation would authenticate inception validity and its initial key state. Such an attestation may be issued more than once; registry admission supplies checkpoint uniqueness. Its concrete format and validation are still to be implemented. Application checks that the AID has no leaf, inserts one, and creates the checkpoint in the same transaction. The persistent leaf prevents a second first-registration of the AID, and there is no revival: a registered identity stays live until it is convicted. See the registration guarantee for the atomic mint/insertion obligation and the model's evidence limits.",
    "words": [
     {
      "end": 1.0,
@@ -59849,353 +59949,213 @@
      "text": "."
     },
     {
-     "end": 44.575,
-     "start": 44.5,
+     "end": 44.6,
+     "start": 44.525,
      "text": "The"
     },
     {
-     "end": 45.125,
-     "start": 44.575,
+     "end": 45.2,
+     "start": 44.6,
      "text": "persistent"
     },
     {
-     "end": 45.45,
-     "start": 45.125,
+     "end": 45.475,
+     "start": 45.2,
      "text": "leaf"
     },
     {
-     "end": 45.925,
-     "start": 45.45,
+     "end": 45.975,
+     "start": 45.475,
      "text": "prevents"
     },
     {
-     "end": 46.05,
-     "start": 45.925,
+     "end": 46.1,
+     "start": 45.975,
      "text": "a"
     },
     {
-     "end": 46.463,
-     "start": 46.05,
+     "end": 46.562,
+     "start": 46.1,
      "text": "second"
     },
     {
-     "end": 47.5,
-     "start": 46.463,
+     "end": 47.6,
+     "start": 46.562,
      "text": "first-registration"
     },
     {
-     "end": 47.588,
-     "start": 47.5,
+     "end": 47.688,
+     "start": 47.6,
      "text": "of"
     },
     {
-     "end": 47.737,
-     "start": 47.588,
+     "end": 47.838,
+     "start": 47.688,
      "text": "the"
     },
     {
-     "end": 48.875,
-     "start": 47.737,
+     "end": 48.7,
+     "start": 47.838,
      "text": "AID"
     },
     {
-     "end": 49.075,
-     "start": 48.875,
-     "text": "."
-    },
-    {
-     "end": 49.888,
-     "start": 49.3,
-     "text": "Revival"
-    },
-    {
-     "end": 50.05,
-     "start": 49.888,
-     "text": "is"
-    },
-    {
-     "end": 50.175,
-     "start": 50.05,
-     "text": "a"
-    },
-    {
-     "end": 50.675,
-     "start": 50.175,
-     "text": "separate"
-    },
-    {
-     "end": 50.763,
-     "start": 50.675,
+     "end": 48.838,
+     "start": 48.7,
      "text": ","
     },
     {
-     "end": 51.15,
-     "start": 50.763,
-     "text": "guarded"
-    },
-    {
-     "end": 52.025,
-     "start": 51.15,
-     "text": "operation"
-    },
-    {
-     "end": 52.125,
-     "start": 52.025,
-     "text": ":"
-    },
-    {
-     "end": 52.25,
-     "start": 52.125,
-     "text": "the"
-    },
-    {
-     "end": 52.75,
-     "start": 52.25,
-     "text": "registry"
-    },
-    {
-     "end": 53.125,
-     "start": 52.75,
-     "text": "model"
-    },
-    {
-     "end": 53.55,
-     "start": 53.125,
-     "text": "permits"
-    },
-    {
-     "end": 53.7,
-     "start": 53.55,
-     "text": "it"
-    },
-    {
-     "end": 53.9,
-     "start": 53.7,
-     "text": "from"
-    },
-    {
-     "end": 54.338,
-     "start": 53.9,
-     "text": "dormant"
-    },
-    {
-     "end": 54.812,
-     "start": 54.338,
-     "text": "k"
-    },
-    {
-     "end": 54.963,
-     "start": 54.812,
+     "end": 48.963,
+     "start": 48.838,
      "text": "and"
     },
     {
-     "end": 55.525,
-     "start": 54.963,
-     "text": "allocates"
+     "end": 49.15,
+     "start": 48.963,
+     "text": "there"
     },
     {
-     "end": 55.638,
-     "start": 55.525,
-     "text": "a"
+     "end": 49.312,
+     "start": 49.15,
+     "text": "is"
     },
     {
-     "end": 55.987,
-     "start": 55.638,
-     "text": "fresh"
+     "end": 49.575,
+     "start": 49.312,
+     "text": "no"
     },
     {
-     "end": 56.575,
-     "start": 55.987,
-     "text": "abstract"
-    },
-    {
-     "end": 57.7,
-     "start": 56.575,
-     "text": "token"
-    },
-    {
-     "end": 57.95,
-     "start": 57.7,
-     "text": "."
-    },
-    {
-     "end": 58.35,
-     "start": 58.15,
-     "text": "This"
-    },
-    {
-     "end": 58.575,
-     "start": 58.35,
-     "text": "does"
-    },
-    {
-     "end": 58.825,
-     "start": 58.575,
-     "text": "not"
-    },
-    {
-     "end": 59.5,
-     "start": 58.825,
-     "text": "specify"
-    },
-    {
-     "end": 59.612,
-     "start": 59.5,
-     "text": "a"
-    },
-    {
-     "end": 60.188,
-     "start": 59.612,
-     "text": "concrete"
-    },
-    {
-     "end": 60.963,
-     "start": 60.188,
-     "text": "asset-name"
-    },
-    {
-     "end": 61.713,
-     "start": 60.963,
-     "text": "encoding"
-    },
-    {
-     "end": 61.888,
-     "start": 61.713,
-     "text": "or"
-    },
-    {
-     "end": 62.375,
-     "start": 61.888,
-     "text": "prove"
-    },
-    {
-     "end": 62.588,
-     "start": 62.375,
-     "text": "that"
-    },
-    {
-     "end": 62.975,
-     "start": 62.588,
-     "text": "token"
-    },
-    {
-     "end": 63.325,
-     "start": 62.975,
-     "text": "bytes"
-    },
-    {
-     "end": 63.463,
-     "start": 63.325,
-     "text": "are"
-    },
-    {
-     "end": 63.912,
-     "start": 63.463,
-     "text": "minted"
-    },
-    {
-     "end": 64.225,
-     "start": 63.912,
-     "text": "only"
-    },
-    {
-     "end": 64.525,
-     "start": 64.225,
-     "text": "once"
-    },
-    {
-     "end": 64.988,
-     "start": 64.525,
-     "text": "across"
-    },
-    {
-     "end": 65.325,
-     "start": 64.988,
-     "text": "every"
-    },
-    {
-     "end": 66.575,
-     "start": 65.325,
+     "end": 50.725,
+     "start": 49.575,
      "text": "revival"
     },
     {
-     "end": 66.8,
-     "start": 66.575,
+     "end": 50.95,
+     "start": 50.725,
+     "text": ":"
+    },
+    {
+     "end": 51.237,
+     "start": 51.15,
+     "text": "a"
+    },
+    {
+     "end": 51.775,
+     "start": 51.237,
+     "text": "registered"
+    },
+    {
+     "end": 52.3,
+     "start": 51.775,
+     "text": "identity"
+    },
+    {
+     "end": 52.675,
+     "start": 52.3,
+     "text": "stays"
+    },
+    {
+     "end": 53.125,
+     "start": 52.675,
+     "text": "live"
+    },
+    {
+     "end": 53.388,
+     "start": 53.125,
+     "text": "until"
+    },
+    {
+     "end": 53.463,
+     "start": 53.388,
+     "text": "it"
+    },
+    {
+     "end": 53.6,
+     "start": 53.463,
+     "text": "is"
+    },
+    {
+     "end": 54.7,
+     "start": 53.6,
+     "text": "convicted"
+    },
+    {
+     "end": 54.9,
+     "start": 54.7,
      "text": "."
     },
     {
-     "end": 67.275,
-     "start": 67.05,
+     "end": 55.375,
+     "start": 55.15,
      "text": "See"
     },
     {
-     "end": 67.4,
-     "start": 67.275,
+     "end": 55.5,
+     "start": 55.375,
      "text": "the"
     },
     {
-     "end": 68.175,
-     "start": 67.4,
+     "end": 56.275,
+     "start": 55.5,
      "text": "registration"
     },
     {
-     "end": 68.75,
-     "start": 68.175,
+     "end": 56.85,
+     "start": 56.275,
      "text": "guarantee"
     },
     {
-     "end": 68.863,
-     "start": 68.75,
+     "end": 56.963,
+     "start": 56.85,
      "text": "for"
     },
     {
-     "end": 69.0,
-     "start": 68.863,
+     "end": 57.1,
+     "start": 56.963,
      "text": "the"
     },
     {
-     "end": 69.488,
-     "start": 69.0,
+     "end": 57.588,
+     "start": 57.1,
      "text": "atomic"
     },
     {
-     "end": 70.4,
-     "start": 69.488,
+     "end": 58.5,
+     "start": 57.588,
      "text": "mint/insertion"
     },
     {
-     "end": 71.325,
-     "start": 70.4,
+     "end": 59.425,
+     "start": 58.5,
      "text": "obligation"
     },
     {
-     "end": 71.488,
-     "start": 71.325,
+     "end": 59.588,
+     "start": 59.425,
      "text": "and"
     },
     {
-     "end": 71.575,
-     "start": 71.488,
+     "end": 59.675,
+     "start": 59.588,
      "text": "the"
     },
     {
-     "end": 72.012,
-     "start": 71.575,
+     "end": 60.112,
+     "start": 59.675,
      "text": "model's"
     },
     {
-     "end": 72.488,
-     "start": 72.012,
+     "end": 60.588,
+     "start": 60.112,
      "text": "evidence"
     },
     {
-     "end": 73.6,
-     "start": 72.488,
+     "end": 61.7,
+     "start": 60.588,
      "text": "limits"
     },
     {
-     "end": 73.8,
-     "start": 73.6,
+     "end": 61.9,
+     "start": 61.7,
      "text": "."
     }
    ]
@@ -60726,56 +60686,11 @@
    ]
   },
   "docs-architecture-identity-ops/under-the-accepted-design_1-03": {
-   "audio_sha256": "575324d0f0e52ff84df17321efbcc226772e7d8811ce30388cd91abe6aaa9034",
-   "characters": 31,
-   "cost": 1.9220000000000002e-05,
-   "duration": 2.175,
-   "index": 3,
-   "key": "c97454fc98b72f8c832a286d6b02972c39cc8e3a196f31c9d9c5892b39b612d8",
-   "page": "docs/architecture/identity-ops.md",
-   "pause_ms": 300,
-   "section": "under-the-accepted-design_1",
-   "sent_text": "an optional new refund address;",
-   "text": "an optional new refund address;",
-   "words": [
-    {
-     "end": 0.25,
-     "start": 0.175,
-     "text": "an"
-    },
-    {
-     "end": 0.6,
-     "start": 0.25,
-     "text": "optional"
-    },
-    {
-     "end": 0.775,
-     "start": 0.6,
-     "text": "new"
-    },
-    {
-     "end": 1.138,
-     "start": 0.775,
-     "text": "refund"
-    },
-    {
-     "end": 1.975,
-     "start": 1.138,
-     "text": "address"
-    },
-    {
-     "end": 2.175,
-     "start": 1.975,
-     "text": ";"
-    }
-   ]
-  },
-  "docs-architecture-identity-ops/under-the-accepted-design_1-04": {
-   "audio_sha256": "e48b8b4380138cdb7b883d0465b9eb68c37872646049a4837eabb4101781493d",
+   "audio_sha256": "3812dcb8ae863b7cdc97c4bdd3a14b150dea5ff436b10d68e7bb83c7963de20e",
    "characters": 177,
-   "cost": 0.00010974000000000002,
+   "cost": 0.00017523000000000001,
    "duration": 12.525,
-   "index": 4,
+   "index": 3,
    "key": "f33ebd151c91427f9ae6fcf128e1ecd8a0afeace839fad259403e36707c2e885",
    "page": "docs/architecture/identity-ops.md",
    "pause_ms": 300,
@@ -60965,12 +60880,12 @@
     }
    ]
   },
-  "docs-architecture-identity-ops/under-the-accepted-design_1-05": {
-   "audio_sha256": "30ae3574487823e9bfb20af93998f30f091a0edf1d394e17d1a3bc7705d51f98",
+  "docs-architecture-identity-ops/under-the-accepted-design_1-04": {
+   "audio_sha256": "a19972505af61f4d733ec7bd63efcf6929ed62d9e5b0c1e12d40955058e547d1",
    "characters": 36,
-   "cost": 2.232e-05,
+   "cost": 3.564e-05,
    "duration": 2.425,
-   "index": 5,
+   "index": 4,
    "key": "98eadfc09dfc0db853b38d699f38e35e4a6b367ac0d54c0041918ee8c6695167",
    "page": "docs/architecture/identity-ops.md",
    "pause_ms": 300,
@@ -61010,302 +60925,312 @@
     }
    ]
   },
-  "docs-architecture-identity-ops/under-the-accepted-design_1-06": {
-   "audio_sha256": "2e46a7af6bffe2efe86f52e3a7769030559d5f03fe2db4fd0b1ceb3dd6f62ffb",
-   "characters": 289,
-   "cost": 0.00017918,
-   "duration": 20.1,
-   "index": 6,
-   "key": "d7d2ca18147a06fa54ae8a035810a01cc1bfaceee1f17c2ce7db1144e0a8c641",
+  "docs-architecture-identity-ops/under-the-accepted-design_1-05": {
+   "audio_sha256": "d53e4171e225adda2154247b0cd5eb797dc36b13aebba7fb2bdd2a7f4555fc39",
+   "characters": 315,
+   "cost": 0.00031184999999999996,
+   "duration": 21.925,
+   "index": 5,
+   "key": "8f6aacb8fe21a2e001e9a6efc2b875842c16682fcfdd95a689479bcf89f249d1",
    "page": "docs/architecture/identity-ops.md",
    "pause_ms": 400,
    "section": "under-the-accepted-design_1",
-   "sent_text": "Every option other than keep, and every new address, travels in one message signed by the keys of the epoch the rotation opens (ruling D-038). A relayer landing the owner's public rotation therefore cannot park her, reset her juvenility, or move her money. Absent means keep and unchanged.",
-   "text": "Every option other than keep, and every new address, travels in one message signed by the keys of the epoch the rotation opens (ruling D-038). A relayer landing the owner's public rotation therefore cannot park her, reset her juvenility, or move her money. Absent means keep and unchanged.",
+   "sent_text": "A deposit travels in a message signed by the keys of the epoch the rotation opens (D-038). A relayer landing the owner's public rotation therefore cannot unfreeze her. Absent means keep. No rotation changes the refund address: it is chosen by whoever pays the registration and fixed for the checkpoint's whole life.",
+   "text": "A deposit travels in a message signed by the keys of the epoch the rotation opens (D-038). A relayer landing the owner's public rotation therefore cannot unfreeze her. Absent means keep. No rotation changes the refund address: it is chosen by whoever pays the registration and fixed for the checkpoint's whole life.",
    "words": [
     {
-     "end": 0.5,
-     "start": 0.225,
-     "text": "Every"
-    },
-    {
-     "end": 0.95,
-     "start": 0.5,
-     "text": "option"
-    },
-    {
-     "end": 1.25,
-     "start": 0.95,
-     "text": "other"
-    },
-    {
-     "end": 1.438,
-     "start": 1.25,
-     "text": "than"
-    },
-    {
-     "end": 1.75,
-     "start": 1.438,
-     "text": "keep"
-    },
-    {
-     "end": 1.8,
-     "start": 1.75,
-     "text": ","
-    },
-    {
-     "end": 1.925,
-     "start": 1.8,
-     "text": "and"
-    },
-    {
-     "end": 2.25,
-     "start": 1.925,
-     "text": "every"
-    },
-    {
-     "end": 2.425,
-     "start": 2.25,
-     "text": "new"
-    },
-    {
-     "end": 2.975,
-     "start": 2.425,
-     "text": "address"
-    },
-    {
-     "end": 3.062,
-     "start": 2.975,
-     "text": ","
-    },
-    {
-     "end": 3.575,
-     "start": 3.062,
-     "text": "travels"
-    },
-    {
-     "end": 3.737,
-     "start": 3.575,
-     "text": "in"
-    },
-    {
-     "end": 3.975,
-     "start": 3.737,
-     "text": "one"
-    },
-    {
-     "end": 4.463,
-     "start": 3.975,
-     "text": "message"
-    },
-    {
-     "end": 4.875,
-     "start": 4.463,
-     "text": "signed"
-    },
-    {
-     "end": 5.025,
-     "start": 4.875,
-     "text": "by"
-    },
-    {
-     "end": 5.162,
-     "start": 5.025,
-     "text": "the"
-    },
-    {
-     "end": 5.512,
-     "start": 5.162,
-     "text": "keys"
-    },
-    {
-     "end": 5.588,
-     "start": 5.512,
-     "text": "of"
-    },
-    {
-     "end": 5.725,
-     "start": 5.588,
-     "text": "the"
-    },
-    {
-     "end": 6.1,
-     "start": 5.725,
-     "text": "epoch"
-    },
-    {
-     "end": 6.2,
-     "start": 6.1,
-     "text": "the"
-    },
-    {
-     "end": 6.825,
-     "start": 6.2,
-     "text": "rotation"
-    },
-    {
-     "end": 7.488,
-     "start": 6.825,
-     "text": "opens"
-    },
-    {
-     "end": 7.575,
-     "start": 7.488,
-     "text": "("
-    },
-    {
-     "end": 7.925,
-     "start": 7.575,
-     "text": "ruling"
-    },
-    {
-     "end": 9.8,
-     "start": 7.925,
-     "text": "D-038"
-    },
-    {
-     "end": 10.05,
-     "start": 9.8,
-     "text": ")"
-    },
-    {
-     "end": 10.1,
-     "start": 10.05,
-     "text": "."
-    },
-    {
-     "end": 10.4,
-     "start": 10.325,
+     "end": 0.275,
+     "start": 0.2,
      "text": "A"
     },
     {
-     "end": 10.925,
-     "start": 10.4,
-     "text": "relayer"
+     "end": 0.85,
+     "start": 0.275,
+     "text": "deposit"
     },
     {
-     "end": 11.337,
-     "start": 10.925,
-     "text": "landing"
+     "end": 1.325,
+     "start": 0.85,
+     "text": "travels"
     },
     {
-     "end": 11.462,
-     "start": 11.337,
+     "end": 1.413,
+     "start": 1.325,
+     "text": "in"
+    },
+    {
+     "end": 1.5,
+     "start": 1.413,
+     "text": "a"
+    },
+    {
+     "end": 2.025,
+     "start": 1.5,
+     "text": "message"
+    },
+    {
+     "end": 2.45,
+     "start": 2.025,
+     "text": "signed"
+    },
+    {
+     "end": 2.6,
+     "start": 2.45,
+     "text": "by"
+    },
+    {
+     "end": 2.737,
+     "start": 2.6,
      "text": "the"
     },
     {
-     "end": 11.887,
-     "start": 11.462,
-     "text": "owner's"
+     "end": 3.088,
+     "start": 2.737,
+     "text": "keys"
     },
     {
-     "end": 12.3,
-     "start": 11.887,
-     "text": "public"
+     "end": 3.162,
+     "start": 3.088,
+     "text": "of"
     },
     {
-     "end": 12.95,
-     "start": 12.3,
+     "end": 3.3,
+     "start": 3.162,
+     "text": "the"
+    },
+    {
+     "end": 3.787,
+     "start": 3.3,
+     "text": "epoch"
+    },
+    {
+     "end": 3.9,
+     "start": 3.787,
+     "text": "the"
+    },
+    {
+     "end": 4.5,
+     "start": 3.9,
      "text": "rotation"
     },
     {
-     "end": 13.4,
-     "start": 12.95,
-     "text": "therefore"
+     "end": 5.05,
+     "start": 4.5,
+     "text": "opens"
     },
     {
-     "end": 13.788,
-     "start": 13.4,
-     "text": "cannot"
+     "end": 5.125,
+     "start": 5.05,
+     "text": "("
     },
     {
-     "end": 14.1,
-     "start": 13.788,
-     "text": "park"
+     "end": 6.85,
+     "start": 5.125,
+     "text": "D-038"
     },
     {
-     "end": 14.475,
-     "start": 14.1,
-     "text": "her"
+     "end": 7.05,
+     "start": 6.85,
+     "text": ")"
     },
     {
-     "end": 14.613,
-     "start": 14.475,
-     "text": ","
-    },
-    {
-     "end": 14.962,
-     "start": 14.613,
-     "text": "reset"
-    },
-    {
-     "end": 15.113,
-     "start": 14.962,
-     "text": "her"
-    },
-    {
-     "end": 15.9,
-     "start": 15.113,
-     "text": "juvenility"
-    },
-    {
-     "end": 16.0,
-     "start": 15.9,
-     "text": ","
-    },
-    {
-     "end": 16.15,
-     "start": 16.0,
-     "text": "or"
-    },
-    {
-     "end": 16.362,
-     "start": 16.15,
-     "text": "move"
-    },
-    {
-     "end": 16.5,
-     "start": 16.362,
-     "text": "her"
-    },
-    {
-     "end": 17.5,
-     "start": 16.5,
-     "text": "money"
-    },
-    {
-     "end": 17.75,
-     "start": 17.5,
+     "end": 7.1,
+     "start": 7.05,
      "text": "."
     },
     {
-     "end": 18.288,
-     "start": 17.95,
+     "end": 7.375,
+     "start": 7.3,
+     "text": "A"
+    },
+    {
+     "end": 7.875,
+     "start": 7.375,
+     "text": "relayer"
+    },
+    {
+     "end": 8.238,
+     "start": 7.875,
+     "text": "landing"
+    },
+    {
+     "end": 8.363,
+     "start": 8.238,
+     "text": "the"
+    },
+    {
+     "end": 8.75,
+     "start": 8.363,
+     "text": "owner's"
+    },
+    {
+     "end": 9.15,
+     "start": 8.75,
+     "text": "public"
+    },
+    {
+     "end": 9.938,
+     "start": 9.15,
+     "text": "rotation"
+    },
+    {
+     "end": 10.4,
+     "start": 9.938,
+     "text": "therefore"
+    },
+    {
+     "end": 10.775,
+     "start": 10.4,
+     "text": "cannot"
+    },
+    {
+     "end": 11.288,
+     "start": 10.775,
+     "text": "unfreeze"
+    },
+    {
+     "end": 12.025,
+     "start": 11.288,
+     "text": "her"
+    },
+    {
+     "end": 12.25,
+     "start": 12.025,
+     "text": "."
+    },
+    {
+     "end": 12.837,
+     "start": 12.45,
      "text": "Absent"
     },
     {
-     "end": 18.525,
-     "start": 18.288,
+     "end": 13.113,
+     "start": 12.837,
      "text": "means"
     },
     {
-     "end": 18.737,
-     "start": 18.525,
+     "end": 13.475,
+     "start": 13.113,
      "text": "keep"
     },
     {
-     "end": 18.837,
-     "start": 18.737,
+     "end": 13.55,
+     "start": 13.475,
+     "text": "."
+    },
+    {
+     "end": 13.75,
+     "start": 13.55,
+     "text": "No"
+    },
+    {
+     "end": 14.363,
+     "start": 13.75,
+     "text": "rotation"
+    },
+    {
+     "end": 14.788,
+     "start": 14.363,
+     "text": "changes"
+    },
+    {
+     "end": 14.875,
+     "start": 14.788,
+     "text": "the"
+    },
+    {
+     "end": 15.262,
+     "start": 14.875,
+     "text": "refund"
+    },
+    {
+     "end": 16.2,
+     "start": 15.262,
+     "text": "address"
+    },
+    {
+     "end": 16.4,
+     "start": 16.2,
+     "text": ":"
+    },
+    {
+     "end": 16.7,
+     "start": 16.6,
+     "text": "it"
+    },
+    {
+     "end": 16.862,
+     "start": 16.7,
+     "text": "is"
+    },
+    {
+     "end": 17.3,
+     "start": 16.862,
+     "text": "chosen"
+    },
+    {
+     "end": 17.5,
+     "start": 17.3,
+     "text": "by"
+    },
+    {
+     "end": 17.9,
+     "start": 17.5,
+     "text": "whoever"
+    },
+    {
+     "end": 18.25,
+     "start": 17.9,
+     "text": "pays"
+    },
+    {
+     "end": 18.35,
+     "start": 18.25,
+     "text": "the"
+    },
+    {
+     "end": 19.288,
+     "start": 18.35,
+     "text": "registration"
+    },
+    {
+     "end": 19.475,
+     "start": 19.288,
      "text": "and"
     },
     {
-     "end": 19.9,
-     "start": 18.837,
-     "text": "unchanged"
+     "end": 19.825,
+     "start": 19.475,
+     "text": "fixed"
     },
     {
-     "end": 20.1,
-     "start": 19.9,
+     "end": 19.938,
+     "start": 19.825,
+     "text": "for"
+    },
+    {
+     "end": 20.038,
+     "start": 19.938,
+     "text": "the"
+    },
+    {
+     "end": 20.575,
+     "start": 20.038,
+     "text": "checkpoint's"
+    },
+    {
+     "end": 20.8,
+     "start": 20.575,
+     "text": "whole"
+    },
+    {
+     "end": 21.725,
+     "start": 20.8,
+     "text": "life"
+    },
+    {
+     "end": 21.925,
+     "start": 21.725,
      "text": "."
     }
    ]
@@ -61351,457 +61276,17 @@
    ]
   },
   "docs-architecture-identity-ops/under-the-accepted-design_2-01": {
-   "audio_sha256": "c92c483b3e93e43ff0d45a751b8511bd3d6edc01b2aec4180833f901f2c5e5f5",
-   "characters": 423,
-   "cost": 0.00026226000000000005,
-   "duration": 29.375,
+   "audio_sha256": "27109884590a787ddbcb7f9e7c5b29b864d492559e60f7b2523daf3f5db4d5ae",
+   "characters": 318,
+   "cost": 0.00031481999999999994,
+   "duration": 21.425,
    "index": 1,
-   "key": "507524364d9b825b7dca4ba1de3d0a044fc6dd2d781bb25b76548bf8a232bf17",
+   "key": "eab4c97f2b85e10bb7cfc1fc0eb3e7ec60093a04b1c81a36abcfe32acd2c74c2",
    "page": "docs/architecture/identity-ops.md",
    "pause_ms": 400,
    "section": "under-the-accepted-design_2",
-   "sent_text": "Close is the reap: a witnessed rotation by the next keys whose signed message names the payee of the premium and the refund address (ruling D-036). The token burns; the registry leaf is parked with the hash of that key state. It needs the next keys exactly like any other rotation, so the current-key thief loses this move entirely — the only Cardano power the current keys retain is the poison, and a rotation clears that.",
-   "text": "Close is the reap: a witnessed rotation by the next keys whose signed message names the payee of the premium and the refund address (ruling D-036). The token burns; the registry leaf is parked with the hash of that key state. It needs the next keys exactly like any other rotation, so the current-key thief loses this move entirely — the only Cardano power the current keys retain is the poison, and a rotation clears that.",
-   "words": [
-    {
-     "end": 0.45,
-     "start": 0.175,
-     "text": "Close"
-    },
-    {
-     "end": 0.562,
-     "start": 0.45,
-     "text": "is"
-    },
-    {
-     "end": 0.65,
-     "start": 0.562,
-     "text": "the"
-    },
-    {
-     "end": 1.275,
-     "start": 0.65,
-     "text": "reap"
-    },
-    {
-     "end": 1.5,
-     "start": 1.275,
-     "text": ":"
-    },
-    {
-     "end": 1.812,
-     "start": 1.725,
-     "text": "a"
-    },
-    {
-     "end": 2.3,
-     "start": 1.812,
-     "text": "witnessed"
-    },
-    {
-     "end": 3.0,
-     "start": 2.3,
-     "text": "rotation"
-    },
-    {
-     "end": 3.138,
-     "start": 3.0,
-     "text": "by"
-    },
-    {
-     "end": 3.225,
-     "start": 3.138,
-     "text": "the"
-    },
-    {
-     "end": 3.525,
-     "start": 3.225,
-     "text": "next"
-    },
-    {
-     "end": 3.9,
-     "start": 3.525,
-     "text": "keys"
-    },
-    {
-     "end": 4.113,
-     "start": 3.9,
-     "text": "whose"
-    },
-    {
-     "end": 4.525,
-     "start": 4.113,
-     "text": "signed"
-    },
-    {
-     "end": 5.062,
-     "start": 4.525,
-     "text": "message"
-    },
-    {
-     "end": 5.375,
-     "start": 5.062,
-     "text": "names"
-    },
-    {
-     "end": 5.488,
-     "start": 5.375,
-     "text": "the"
-    },
-    {
-     "end": 5.925,
-     "start": 5.488,
-     "text": "payee"
-    },
-    {
-     "end": 6.012,
-     "start": 5.925,
-     "text": "of"
-    },
-    {
-     "end": 6.113,
-     "start": 6.012,
-     "text": "the"
-    },
-    {
-     "end": 6.688,
-     "start": 6.113,
-     "text": "premium"
-    },
-    {
-     "end": 6.812,
-     "start": 6.688,
-     "text": "and"
-    },
-    {
-     "end": 6.9,
-     "start": 6.812,
-     "text": "the"
-    },
-    {
-     "end": 7.4,
-     "start": 6.9,
-     "text": "refund"
-    },
-    {
-     "end": 7.963,
-     "start": 7.4,
-     "text": "address"
-    },
-    {
-     "end": 8.05,
-     "start": 7.963,
-     "text": "("
-    },
-    {
-     "end": 8.4,
-     "start": 8.05,
-     "text": "ruling"
-    },
-    {
-     "end": 10.425,
-     "start": 8.4,
-     "text": "D-036"
-    },
-    {
-     "end": 10.675,
-     "start": 10.425,
-     "text": ")"
-    },
-    {
-     "end": 10.725,
-     "start": 10.675,
-     "text": "."
-    },
-    {
-     "end": 10.975,
-     "start": 10.9,
-     "text": "The"
-    },
-    {
-     "end": 11.375,
-     "start": 10.975,
-     "text": "token"
-    },
-    {
-     "end": 11.875,
-     "start": 11.375,
-     "text": "burns"
-    },
-    {
-     "end": 11.95,
-     "start": 11.875,
-     "text": ";"
-    },
-    {
-     "end": 12.075,
-     "start": 11.95,
-     "text": "the"
-    },
-    {
-     "end": 12.575,
-     "start": 12.075,
-     "text": "registry"
-    },
-    {
-     "end": 12.85,
-     "start": 12.575,
-     "text": "leaf"
-    },
-    {
-     "end": 13.012,
-     "start": 12.85,
-     "text": "is"
-    },
-    {
-     "end": 13.363,
-     "start": 13.012,
-     "text": "parked"
-    },
-    {
-     "end": 13.488,
-     "start": 13.363,
-     "text": "with"
-    },
-    {
-     "end": 13.587,
-     "start": 13.488,
-     "text": "the"
-    },
-    {
-     "end": 13.938,
-     "start": 13.587,
-     "text": "hash"
-    },
-    {
-     "end": 14.025,
-     "start": 13.938,
-     "text": "of"
-    },
-    {
-     "end": 14.25,
-     "start": 14.025,
-     "text": "that"
-    },
-    {
-     "end": 14.45,
-     "start": 14.25,
-     "text": "key"
-    },
-    {
-     "end": 15.325,
-     "start": 14.45,
-     "text": "state"
-    },
-    {
-     "end": 15.525,
-     "start": 15.325,
-     "text": "."
-    },
-    {
-     "end": 15.812,
-     "start": 15.7,
-     "text": "It"
-    },
-    {
-     "end": 16.038,
-     "start": 15.812,
-     "text": "needs"
-    },
-    {
-     "end": 16.125,
-     "start": 16.038,
-     "text": "the"
-    },
-    {
-     "end": 16.425,
-     "start": 16.125,
-     "text": "next"
-    },
-    {
-     "end": 16.837,
-     "start": 16.425,
-     "text": "keys"
-    },
-    {
-     "end": 17.438,
-     "start": 16.837,
-     "text": "exactly"
-    },
-    {
-     "end": 17.65,
-     "start": 17.438,
-     "text": "like"
-    },
-    {
-     "end": 17.862,
-     "start": 17.65,
-     "text": "any"
-    },
-    {
-     "end": 18.1,
-     "start": 17.862,
-     "text": "other"
-    },
-    {
-     "end": 19.275,
-     "start": 18.1,
-     "text": "rotation"
-    },
-    {
-     "end": 19.475,
-     "start": 19.275,
-     "text": ","
-    },
-    {
-     "end": 19.837,
-     "start": 19.7,
-     "text": "so"
-    },
-    {
-     "end": 19.925,
-     "start": 19.837,
-     "text": "the"
-    },
-    {
-     "end": 20.438,
-     "start": 19.925,
-     "text": "current-key"
-    },
-    {
-     "end": 20.788,
-     "start": 20.438,
-     "text": "thief"
-    },
-    {
-     "end": 21.25,
-     "start": 20.788,
-     "text": "loses"
-    },
-    {
-     "end": 21.487,
-     "start": 21.25,
-     "text": "this"
-    },
-    {
-     "end": 21.85,
-     "start": 21.487,
-     "text": "move"
-    },
-    {
-     "end": 22.788,
-     "start": 21.85,
-     "text": "entirely"
-    },
-    {
-     "end": 22.875,
-     "start": 22.788,
-     "text": "—"
-    },
-    {
-     "end": 23.013,
-     "start": 22.875,
-     "text": "the"
-    },
-    {
-     "end": 23.337,
-     "start": 23.013,
-     "text": "only"
-    },
-    {
-     "end": 23.938,
-     "start": 23.337,
-     "text": "Cardano"
-    },
-    {
-     "end": 24.325,
-     "start": 23.938,
-     "text": "power"
-    },
-    {
-     "end": 24.425,
-     "start": 24.325,
-     "text": "the"
-    },
-    {
-     "end": 24.788,
-     "start": 24.425,
-     "text": "current"
-    },
-    {
-     "end": 25.125,
-     "start": 24.788,
-     "text": "keys"
-    },
-    {
-     "end": 25.675,
-     "start": 25.125,
-     "text": "retain"
-    },
-    {
-     "end": 25.825,
-     "start": 25.675,
-     "text": "is"
-    },
-    {
-     "end": 25.938,
-     "start": 25.825,
-     "text": "the"
-    },
-    {
-     "end": 27.075,
-     "start": 25.938,
-     "text": "poison"
-    },
-    {
-     "end": 27.3,
-     "start": 27.075,
-     "text": ","
-    },
-    {
-     "end": 27.562,
-     "start": 27.475,
-     "text": "and"
-    },
-    {
-     "end": 27.612,
-     "start": 27.562,
-     "text": "a"
-    },
-    {
-     "end": 28.175,
-     "start": 27.612,
-     "text": "rotation"
-    },
-    {
-     "end": 28.525,
-     "start": 28.175,
-     "text": "clears"
-    },
-    {
-     "end": 29.175,
-     "start": 28.525,
-     "text": "that"
-    },
-    {
-     "end": 29.375,
-     "start": 29.175,
-     "text": "."
-    }
-   ]
-  },
-  "docs-architecture-identity-ops/under-the-accepted-design_2-02": {
-   "audio_sha256": "a64cd46cdbacbbc25ad836902bc0464bf2a4ee11c8e9689897b4c694e362708a",
-   "characters": 200,
-   "cost": 0.000124,
-   "duration": 14.025,
-   "index": 2,
-   "key": "3025a0bae8e464fdf0d81f12b128b60c515bbc15188e1bc6d620be6d7ae3368c",
-   "page": "docs/architecture/identity-ops.md",
-   "pause_ms": 400,
-   "section": "under-the-accepted-design_2",
-   "sent_text": "There is no pause. Close is not terminal: a parked identity returns on a witnessed rotation later than the parked key state, with fresh bonds and a fresh juvenility window. Only a conviction is final.",
-   "text": "There is no pause. Close is not terminal: a parked identity returns on a witnessed rotation later than the parked key state, with fresh bonds and a fresh juvenility window. Only a conviction is final.",
+   "sent_text": "There is no close. The owner keeps her checkpoint alive — bonds, rotations, unfreezing — until it is convicted; a relying party sees a checkpoint that is either alive or convicted. The current-key thief loses the close entirely: the only Cardano power the current keys retain is the poison, and a rotation clears that.",
+   "text": "There is no close. The owner keeps her checkpoint alive — bonds, rotations, unfreezing — until it is convicted; a relying party sees a checkpoint that is either alive or convicted. The current-key thief loses the close entirely: the only Cardano power the current keys retain is the poison, and a rotation clears that.",
    "words": [
     {
      "end": 0.287,
@@ -61809,198 +61294,588 @@
      "text": "There"
     },
     {
-     "end": 0.425,
+     "end": 0.4,
      "start": 0.287,
      "text": "is"
     },
     {
-     "end": 0.625,
-     "start": 0.425,
+     "end": 0.575,
+     "start": 0.4,
      "text": "no"
     },
     {
-     "end": 1.4,
-     "start": 0.625,
-     "text": "pause"
+     "end": 1.375,
+     "start": 0.575,
+     "text": "close"
     },
     {
-     "end": 1.6,
-     "start": 1.4,
+     "end": 1.575,
+     "start": 1.375,
      "text": "."
     },
     {
-     "end": 2.037,
-     "start": 1.775,
-     "text": "Close"
+     "end": 1.875,
+     "start": 1.75,
+     "text": "The"
     },
     {
-     "end": 2.138,
-     "start": 2.037,
-     "text": "is"
+     "end": 2.2,
+     "start": 1.875,
+     "text": "owner"
     },
     {
-     "end": 2.325,
-     "start": 2.138,
-     "text": "not"
+     "end": 2.463,
+     "start": 2.2,
+     "text": "keeps"
     },
     {
-     "end": 3.175,
-     "start": 2.325,
-     "text": "terminal"
+     "end": 2.612,
+     "start": 2.463,
+     "text": "her"
     },
     {
-     "end": 3.375,
-     "start": 3.175,
-     "text": ":"
+     "end": 3.075,
+     "start": 2.612,
+     "text": "checkpoint"
     },
     {
-     "end": 3.65,
-     "start": 3.575,
-     "text": "a"
+     "end": 3.6,
+     "start": 3.075,
+     "text": "alive"
     },
     {
-     "end": 3.987,
-     "start": 3.65,
-     "text": "parked"
+     "end": 3.675,
+     "start": 3.6,
+     "text": "—"
     },
     {
-     "end": 4.575,
-     "start": 3.987,
-     "text": "identity"
-    },
-    {
-     "end": 5.15,
-     "start": 4.575,
-     "text": "returns"
-    },
-    {
-     "end": 5.287,
-     "start": 5.15,
-     "text": "on"
-    },
-    {
-     "end": 5.387,
-     "start": 5.287,
-     "text": "a"
-    },
-    {
-     "end": 5.8,
-     "start": 5.387,
-     "text": "witnessed"
-    },
-    {
-     "end": 6.438,
-     "start": 5.8,
-     "text": "rotation"
-    },
-    {
-     "end": 6.85,
-     "start": 6.438,
-     "text": "later"
-    },
-    {
-     "end": 6.963,
-     "start": 6.85,
-     "text": "than"
-    },
-    {
-     "end": 7.05,
-     "start": 6.963,
-     "text": "the"
-    },
-    {
-     "end": 7.4,
-     "start": 7.05,
-     "text": "parked"
-    },
-    {
-     "end": 7.6,
-     "start": 7.4,
-     "text": "key"
-    },
-    {
-     "end": 8.5,
-     "start": 7.6,
-     "text": "state"
-    },
-    {
-     "end": 8.725,
-     "start": 8.5,
-     "text": ","
-    },
-    {
-     "end": 9.075,
-     "start": 8.9,
-     "text": "with"
-    },
-    {
-     "end": 9.35,
-     "start": 9.075,
-     "text": "fresh"
-    },
-    {
-     "end": 9.775,
-     "start": 9.35,
+     "end": 4.15,
+     "start": 3.675,
      "text": "bonds"
     },
     {
-     "end": 9.887,
-     "start": 9.775,
-     "text": "and"
+     "end": 4.2,
+     "start": 4.15,
+     "text": ","
     },
     {
-     "end": 9.962,
-     "start": 9.887,
-     "text": "a"
+     "end": 5.0,
+     "start": 4.2,
+     "text": "rotations"
     },
     {
-     "end": 10.25,
-     "start": 9.962,
-     "text": "fresh"
+     "end": 5.088,
+     "start": 5.0,
+     "text": ","
     },
     {
-     "end": 10.85,
-     "start": 10.25,
-     "text": "juvenility"
+     "end": 5.812,
+     "start": 5.088,
+     "text": "unfreezing"
     },
     {
-     "end": 11.7,
-     "start": 10.85,
-     "text": "window"
+     "end": 5.863,
+     "start": 5.812,
+     "text": "—"
     },
     {
-     "end": 11.95,
-     "start": 11.7,
-     "text": "."
+     "end": 6.137,
+     "start": 5.863,
+     "text": "until"
     },
     {
-     "end": 12.363,
-     "start": 12.125,
-     "text": "Only"
+     "end": 6.225,
+     "start": 6.137,
+     "text": "it"
     },
     {
-     "end": 12.425,
-     "start": 12.363,
-     "text": "a"
-    },
-    {
-     "end": 12.887,
-     "start": 12.425,
-     "text": "conviction"
-    },
-    {
-     "end": 13.025,
-     "start": 12.887,
+     "end": 6.375,
+     "start": 6.225,
      "text": "is"
     },
     {
-     "end": 13.825,
-     "start": 13.025,
+     "end": 7.525,
+     "start": 6.375,
+     "text": "convicted"
+    },
+    {
+     "end": 7.75,
+     "start": 7.525,
+     "text": ";"
+    },
+    {
+     "end": 8.025,
+     "start": 7.95,
+     "text": "a"
+    },
+    {
+     "end": 8.5,
+     "start": 8.025,
+     "text": "relying"
+    },
+    {
+     "end": 8.875,
+     "start": 8.5,
+     "text": "party"
+    },
+    {
+     "end": 9.087,
+     "start": 8.875,
+     "text": "sees"
+    },
+    {
+     "end": 9.163,
+     "start": 9.087,
+     "text": "a"
+    },
+    {
+     "end": 9.75,
+     "start": 9.163,
+     "text": "checkpoint"
+    },
+    {
+     "end": 9.887,
+     "start": 9.75,
+     "text": "that"
+    },
+    {
+     "end": 10.025,
+     "start": 9.887,
+     "text": "is"
+    },
+    {
+     "end": 10.325,
+     "start": 10.025,
+     "text": "either"
+    },
+    {
+     "end": 10.825,
+     "start": 10.325,
+     "text": "alive"
+    },
+    {
+     "end": 10.975,
+     "start": 10.825,
+     "text": "or"
+    },
+    {
+     "end": 12.1,
+     "start": 10.975,
+     "text": "convicted"
+    },
+    {
+     "end": 12.325,
+     "start": 12.1,
+     "text": "."
+    },
+    {
+     "end": 12.575,
+     "start": 12.5,
+     "text": "The"
+    },
+    {
+     "end": 12.988,
+     "start": 12.575,
+     "text": "current-key"
+    },
+    {
+     "end": 13.3,
+     "start": 12.988,
+     "text": "thief"
+    },
+    {
+     "end": 13.637,
+     "start": 13.3,
+     "text": "loses"
+    },
+    {
+     "end": 13.725,
+     "start": 13.637,
+     "text": "the"
+    },
+    {
+     "end": 14.05,
+     "start": 13.725,
+     "text": "close"
+    },
+    {
+     "end": 15.175,
+     "start": 14.05,
+     "text": "entirely"
+    },
+    {
+     "end": 15.375,
+     "start": 15.175,
+     "text": ":"
+    },
+    {
+     "end": 15.675,
+     "start": 15.55,
+     "text": "the"
+    },
+    {
+     "end": 15.975,
+     "start": 15.675,
+     "text": "only"
+    },
+    {
+     "end": 16.513,
+     "start": 15.975,
+     "text": "Cardano"
+    },
+    {
+     "end": 16.9,
+     "start": 16.513,
+     "text": "power"
+    },
+    {
+     "end": 17.0,
+     "start": 16.9,
+     "text": "the"
+    },
+    {
+     "end": 17.325,
+     "start": 17.0,
+     "text": "current"
+    },
+    {
+     "end": 17.65,
+     "start": 17.325,
+     "text": "keys"
+    },
+    {
+     "end": 18.15,
+     "start": 17.65,
+     "text": "retain"
+    },
+    {
+     "end": 18.3,
+     "start": 18.15,
+     "text": "is"
+    },
+    {
+     "end": 18.413,
+     "start": 18.3,
+     "text": "the"
+    },
+    {
+     "end": 19.1,
+     "start": 18.413,
+     "text": "poison"
+    },
+    {
+     "end": 19.2,
+     "start": 19.1,
+     "text": ","
+    },
+    {
+     "end": 19.312,
+     "start": 19.2,
+     "text": "and"
+    },
+    {
+     "end": 19.375,
+     "start": 19.312,
+     "text": "a"
+    },
+    {
+     "end": 20.0,
+     "start": 19.375,
+     "text": "rotation"
+    },
+    {
+     "end": 20.375,
+     "start": 20.0,
+     "text": "clears"
+    },
+    {
+     "end": 21.2,
+     "start": 20.375,
+     "text": "that"
+    },
+    {
+     "end": 21.425,
+     "start": 21.2,
+     "text": "."
+    }
+   ]
+  },
+  "docs-architecture-identity-ops/under-the-accepted-design_2-02": {
+   "audio_sha256": "2f76f840249e42e471278e7db52895c3178218021428c9631f9191e050bc293e",
+   "characters": 281,
+   "cost": 0.00027819,
+   "duration": 18.525,
+   "index": 2,
+   "key": "5b7599296760f8d693655545581c0dc8cb05a3131a235fe59a017e4414574ace",
+   "page": "docs/architecture/identity-ops.md",
+   "pause_ms": 400,
+   "section": "under-the-accepted-design_2",
+   "sent_text": "There is no pause, no parking and no revival. Only a conviction is final. Whether an owner who stops maintaining a checkpoint should recover its bonds and pool is an open economic question: today they leave a live checkpoint only through rotation premiums, a freeze and conviction.",
+   "text": "There is no pause, no parking and no revival. Only a conviction is final. Whether an owner who stops maintaining a checkpoint should recover its bonds and pool is an open economic question: today they leave a live checkpoint only through rotation premiums, a freeze and conviction.",
+   "words": [
+    {
+     "end": 0.287,
+     "start": 0.175,
+     "text": "There"
+    },
+    {
+     "end": 0.4,
+     "start": 0.287,
+     "text": "is"
+    },
+    {
+     "end": 0.575,
+     "start": 0.4,
+     "text": "no"
+    },
+    {
+     "end": 0.9,
+     "start": 0.575,
+     "text": "pause"
+    },
+    {
+     "end": 0.95,
+     "start": 0.9,
+     "text": ","
+    },
+    {
+     "end": 1.125,
+     "start": 0.95,
+     "text": "no"
+    },
+    {
+     "end": 1.55,
+     "start": 1.125,
+     "text": "parking"
+    },
+    {
+     "end": 1.675,
+     "start": 1.55,
+     "text": "and"
+    },
+    {
+     "end": 1.85,
+     "start": 1.675,
+     "text": "no"
+    },
+    {
+     "end": 2.825,
+     "start": 1.85,
+     "text": "revival"
+    },
+    {
+     "end": 3.025,
+     "start": 2.825,
+     "text": "."
+    },
+    {
+     "end": 3.438,
+     "start": 3.2,
+     "text": "Only"
+    },
+    {
+     "end": 3.5,
+     "start": 3.438,
+     "text": "a"
+    },
+    {
+     "end": 3.963,
+     "start": 3.5,
+     "text": "conviction"
+    },
+    {
+     "end": 4.1,
+     "start": 3.963,
+     "text": "is"
+    },
+    {
+     "end": 4.9,
+     "start": 4.1,
      "text": "final"
     },
     {
-     "end": 14.025,
-     "start": 13.825,
+     "end": 5.1,
+     "start": 4.9,
+     "text": "."
+    },
+    {
+     "end": 5.588,
+     "start": 5.325,
+     "text": "Whether"
+    },
+    {
+     "end": 5.713,
+     "start": 5.588,
+     "text": "an"
+    },
+    {
+     "end": 6.075,
+     "start": 5.713,
+     "text": "owner"
+    },
+    {
+     "end": 6.225,
+     "start": 6.075,
+     "text": "who"
+    },
+    {
+     "end": 6.625,
+     "start": 6.225,
+     "text": "stops"
+    },
+    {
+     "end": 7.225,
+     "start": 6.625,
+     "text": "maintaining"
+    },
+    {
+     "end": 7.338,
+     "start": 7.225,
+     "text": "a"
+    },
+    {
+     "end": 7.938,
+     "start": 7.338,
+     "text": "checkpoint"
+    },
+    {
+     "end": 8.15,
+     "start": 7.938,
+     "text": "should"
+    },
+    {
+     "end": 8.625,
+     "start": 8.15,
+     "text": "recover"
+    },
+    {
+     "end": 8.837,
+     "start": 8.625,
+     "text": "its"
+    },
+    {
+     "end": 9.35,
+     "start": 8.837,
+     "text": "bonds"
+    },
+    {
+     "end": 9.488,
+     "start": 9.35,
+     "text": "and"
+    },
+    {
+     "end": 10.05,
+     "start": 9.488,
+     "text": "pool"
+    },
+    {
+     "end": 10.225,
+     "start": 10.05,
+     "text": "is"
+    },
+    {
+     "end": 10.387,
+     "start": 10.225,
+     "text": "an"
+    },
+    {
+     "end": 10.775,
+     "start": 10.387,
+     "text": "open"
+    },
+    {
+     "end": 11.325,
+     "start": 10.775,
+     "text": "economic"
+    },
+    {
+     "end": 12.425,
+     "start": 11.325,
+     "text": "question"
+    },
+    {
+     "end": 12.65,
+     "start": 12.425,
+     "text": ":"
+    },
+    {
+     "end": 13.15,
+     "start": 12.85,
+     "text": "today"
+    },
+    {
+     "end": 13.3,
+     "start": 13.15,
+     "text": "they"
+    },
+    {
+     "end": 13.488,
+     "start": 13.3,
+     "text": "leave"
+    },
+    {
+     "end": 13.55,
+     "start": 13.488,
+     "text": "a"
+    },
+    {
+     "end": 13.887,
+     "start": 13.55,
+     "text": "live"
+    },
+    {
+     "end": 14.488,
+     "start": 13.887,
+     "text": "checkpoint"
+    },
+    {
+     "end": 14.8,
+     "start": 14.488,
+     "text": "only"
+    },
+    {
+     "end": 15.0,
+     "start": 14.8,
+     "text": "through"
+    },
+    {
+     "end": 15.6,
+     "start": 15.0,
+     "text": "rotation"
+    },
+    {
+     "end": 16.275,
+     "start": 15.6,
+     "text": "premiums"
+    },
+    {
+     "end": 16.375,
+     "start": 16.275,
+     "text": ","
+    },
+    {
+     "end": 16.5,
+     "start": 16.375,
+     "text": "a"
+    },
+    {
+     "end": 17.0,
+     "start": 16.5,
+     "text": "freeze"
+    },
+    {
+     "end": 17.125,
+     "start": 17.0,
+     "text": "and"
+    },
+    {
+     "end": 18.325,
+     "start": 17.125,
+     "text": "conviction"
+    },
+    {
+     "end": 18.525,
+     "start": 18.325,
      "text": "."
     }
    ]
@@ -62896,17 +62771,17 @@
    ]
   },
   "docs-architecture-identity-ops/under-the-accepted-design_4-01": {
-   "audio_sha256": "fb1dcb981824828102475dd9a767785cb277fed579c81203e654365aee6a74da",
-   "characters": 278,
-   "cost": 0.00017236,
-   "duration": 20.55,
+   "audio_sha256": "a93de4fbc9056ebeca7d46265148c8af0ab64af71b37db4dbcd027eeef3ae709",
+   "characters": 282,
+   "cost": 0.00027917999999999997,
+   "duration": 20.7,
    "index": 1,
-   "key": "896d3901d5712266bed2d60ce553326dd3148a14f0e2faec74455a44d2c5026a",
+   "key": "76f83bf78387a895a40faa7203aa0d046502baadc10fac43b3656c2846aa53f0",
    "page": "docs/architecture/identity-ops.md",
    "pause_ms": 400,
    "section": "under-the-accepted-design_4",
-   "sent_text": "The same proof, a different effect. The convictor names a payee and takes D_reg in full; B and the pool go to the refund address; the checkpoint becomes Convicted, terminal; the token stays, and there is no transition out — no rotate, no poison, no close (rulings D-030, D-031).",
-   "text": "The same proof, a different effect. The convictor names a payee and takes D_reg in full; B and the pool go to the refund address; the checkpoint becomes Convicted, terminal; the token stays, and there is no transition out — no rotate, no poison, no close (rulings D-030, D-031).",
+   "sent_text": "The same proof, a different effect. The convictor names a payee and takes D_reg in full; B and the pool go to the refund address; the checkpoint becomes Convicted, terminal; the token stays, and there is no transition out — no rotate, no poison, no freeze, no top-up (D-030, D-031).",
+   "text": "The same proof, a different effect. The convictor names a payee and takes D_reg in full; B and the pool go to the refund address; the checkpoint becomes Convicted, terminal; the token stays, and there is no transition out — no rotate, no poison, no freeze, no top-up (D-030, D-031).",
    "words": [
     {
      "end": 0.275,
@@ -63094,128 +62969,138 @@
      "text": "the"
     },
     {
-     "end": 12.075,
+     "end": 12.05,
      "start": 11.675,
      "text": "token"
     },
     {
-     "end": 12.5,
-     "start": 12.075,
+     "end": 12.475,
+     "start": 12.05,
      "text": "stays"
     },
     {
-     "end": 12.55,
-     "start": 12.5,
+     "end": 12.525,
+     "start": 12.475,
      "text": ","
     },
     {
-     "end": 12.663,
-     "start": 12.55,
+     "end": 12.637,
+     "start": 12.525,
      "text": "and"
     },
     {
-     "end": 12.8,
-     "start": 12.663,
+     "end": 12.775,
+     "start": 12.637,
      "text": "there"
     },
     {
-     "end": 12.95,
-     "start": 12.8,
+     "end": 12.925,
+     "start": 12.775,
      "text": "is"
     },
     {
-     "end": 13.163,
-     "start": 12.95,
+     "end": 13.125,
+     "start": 12.925,
      "text": "no"
     },
     {
-     "end": 13.85,
-     "start": 13.163,
+     "end": 13.8,
+     "start": 13.125,
      "text": "transition"
     },
     {
-     "end": 14.125,
-     "start": 13.85,
+     "end": 14.075,
+     "start": 13.8,
      "text": "out"
     },
     {
-     "end": 14.2,
-     "start": 14.125,
+     "end": 14.15,
+     "start": 14.075,
      "text": "—"
     },
     {
-     "end": 14.425,
-     "start": 14.2,
+     "end": 14.35,
+     "start": 14.15,
      "text": "no"
     },
     {
-     "end": 14.975,
-     "start": 14.425,
+     "end": 14.875,
+     "start": 14.35,
      "text": "rotate"
     },
     {
-     "end": 15.05,
-     "start": 14.975,
+     "end": 14.95,
+     "start": 14.875,
      "text": ","
     },
     {
-     "end": 15.262,
-     "start": 15.05,
+     "end": 15.163,
+     "start": 14.95,
      "text": "no"
     },
     {
-     "end": 15.75,
-     "start": 15.262,
+     "end": 15.65,
+     "start": 15.163,
      "text": "poison"
     },
     {
-     "end": 15.825,
-     "start": 15.75,
+     "end": 15.725,
+     "start": 15.65,
      "text": ","
     },
     {
-     "end": 16.013,
-     "start": 15.825,
+     "end": 15.975,
+     "start": 15.725,
      "text": "no"
     },
     {
+     "end": 16.425,
+     "start": 15.975,
+     "text": "freeze"
+    },
+    {
      "end": 16.475,
-     "start": 16.013,
-     "text": "close"
-    },
-    {
-     "end": 16.55,
-     "start": 16.475,
-     "text": "("
-    },
-    {
-     "end": 16.975,
-     "start": 16.55,
-     "text": "rulings"
-    },
-    {
-     "end": 18.2,
-     "start": 16.975,
-     "text": "D-030"
-    },
-    {
-     "end": 18.288,
-     "start": 18.2,
+     "start": 16.425,
      "text": ","
     },
     {
-     "end": 20.175,
-     "start": 18.288,
+     "end": 16.65,
+     "start": 16.475,
+     "text": "no"
+    },
+    {
+     "end": 17.125,
+     "start": 16.65,
+     "text": "top-up"
+    },
+    {
+     "end": 17.175,
+     "start": 17.125,
+     "text": "("
+    },
+    {
+     "end": 18.4,
+     "start": 17.175,
+     "text": "D-030"
+    },
+    {
+     "end": 18.475,
+     "start": 18.4,
+     "text": ","
+    },
+    {
+     "end": 20.325,
+     "start": 18.475,
      "text": "D-031"
     },
     {
-     "end": 20.5,
-     "start": 20.175,
+     "end": 20.65,
+     "start": 20.325,
      "text": ")"
     },
     {
-     "end": 20.55,
-     "start": 20.5,
+     "end": 20.7,
+     "start": 20.65,
      "text": "."
     }
    ]
@@ -478911,311 +478796,586 @@
    ]
   },
   "docs-user-hunters/hunters-02": {
-   "audio_sha256": "1d28cbd9017844d75e43bc0b0547a0f27cd9a6b5161148a7b66c36a21f064116",
-   "characters": 290,
-   "cost": 0.0001798,
-   "duration": 18.8,
+   "audio_sha256": "9e824291222fb094993b3e98422e114ef956a0d0261973f7b98c1be64320dd24",
+   "characters": 614,
+   "cost": 0.00060786,
+   "duration": 42.025,
    "index": 2,
-   "key": "522dfe155e41699449f6b38a3b5b8bdc416bb2e6854e6c4e76e13d09244f8fcc",
+   "key": "4510f3f3f3af917a8549d45bda9ef614ba9f572dfacb5c29ceb9afb78f6a9653",
    "page": "docs/user/hunters.md",
    "pause_ms": 400,
    "section": "hunters",
-   "sent_text": "The hunter's freeze, the premium, and top-up are accepted design, not shipped. Play The pool runs dry, so Hal freezes her instead and Two hunters race. What ships today is Freeze as an ARMED role-address for lag, with a response window — a different machine, retired by the accepted design.",
-   "text": "The hunter's freeze, the premium, and top-up are accepted design, not shipped. Play The pool runs dry, so Hal freezes her instead and Two hunters race. What ships today is Freeze as an ARMED role-address for lag, with a response window — a different machine, retired by the accepted design.",
+   "sent_text": "The hunter's freeze and the controller's deposit rotation, which unfreezes, are one transaction each in this generation of the checkpoint program; ckeri freeze submits the freeze and ckeri advance --deposit the deposit rotation. The top-up transaction runs through the production scripts on a local test chain; ckeri top-up plans for preprod only and needs a manifest with a premium, which no committed manifest has until the redeployment (#356). These run on a local test chain and are not deployed to preprod; this code is not for mainnet. Play The pool runs dry, so Hal freezes her instead and Two hunters race.",
+   "text": "The hunter's freeze and the controller's deposit rotation, which unfreezes, are one transaction each in this generation of the checkpoint program; ckeri freeze submits the freeze and ckeri advance --deposit the deposit rotation. The top-up transaction runs through the production scripts on a local test chain; ckeri top-up plans for preprod only and needs a manifest with a premium, which no committed manifest has until the redeployment (#356). These run on a local test chain and are not deployed to preprod; this code is not for mainnet. Play The pool runs dry, so Hal freezes her instead and Two hunters race.",
    "words": [
     {
-     "end": 0.25,
-     "start": 0.175,
+     "end": 0.275,
+     "start": 0.2,
      "text": "The"
     },
     {
-     "end": 0.663,
-     "start": 0.25,
+     "end": 0.738,
+     "start": 0.275,
      "text": "hunter's"
     },
     {
-     "end": 1.075,
-     "start": 0.663,
+     "end": 1.25,
+     "start": 0.738,
      "text": "freeze"
     },
     {
-     "end": 1.112,
-     "start": 1.075,
-     "text": ","
-    },
-    {
-     "end": 1.2,
-     "start": 1.112,
-     "text": "the"
-    },
-    {
-     "end": 1.675,
-     "start": 1.2,
-     "text": "premium"
-    },
-    {
-     "end": 1.712,
-     "start": 1.675,
-     "text": ","
-    },
-    {
-     "end": 1.825,
-     "start": 1.712,
+     "end": 1.362,
+     "start": 1.25,
      "text": "and"
     },
     {
-     "end": 2.275,
-     "start": 1.825,
-     "text": "top-up"
+     "end": 1.45,
+     "start": 1.362,
+     "text": "the"
     },
     {
-     "end": 2.4,
-     "start": 2.275,
+     "end": 2.15,
+     "start": 1.45,
+     "text": "controller's"
+    },
+    {
+     "end": 2.725,
+     "start": 2.15,
+     "text": "deposit"
+    },
+    {
+     "end": 3.45,
+     "start": 2.725,
+     "text": "rotation"
+    },
+    {
+     "end": 3.525,
+     "start": 3.45,
+     "text": ","
+    },
+    {
+     "end": 3.75,
+     "start": 3.525,
+     "text": "which"
+    },
+    {
+     "end": 4.7,
+     "start": 3.75,
+     "text": "unfreezes"
+    },
+    {
+     "end": 4.812,
+     "start": 4.7,
+     "text": ","
+    },
+    {
+     "end": 4.988,
+     "start": 4.812,
      "text": "are"
     },
     {
-     "end": 2.9,
-     "start": 2.4,
-     "text": "accepted"
+     "end": 5.225,
+     "start": 4.988,
+     "text": "one"
     },
     {
-     "end": 3.5,
-     "start": 2.9,
-     "text": "design"
+     "end": 5.963,
+     "start": 5.225,
+     "text": "transaction"
     },
     {
-     "end": 3.6,
-     "start": 3.5,
-     "text": ","
+     "end": 6.3,
+     "start": 5.963,
+     "text": "each"
     },
     {
-     "end": 3.875,
-     "start": 3.6,
-     "text": "not"
+     "end": 6.425,
+     "start": 6.3,
+     "text": "in"
     },
     {
-     "end": 4.75,
-     "start": 3.875,
-     "text": "shipped"
+     "end": 6.662,
+     "start": 6.425,
+     "text": "this"
     },
     {
-     "end": 4.95,
-     "start": 4.75,
-     "text": "."
+     "end": 7.325,
+     "start": 6.662,
+     "text": "generation"
     },
     {
-     "end": 5.338,
-     "start": 5.15,
-     "text": "Play"
+     "end": 7.412,
+     "start": 7.325,
+     "text": "of"
     },
     {
-     "end": 5.425,
-     "start": 5.338,
-     "text": "The"
-    },
-    {
-     "end": 5.7,
-     "start": 5.425,
-     "text": "pool"
-    },
-    {
-     "end": 5.975,
-     "start": 5.7,
-     "text": "runs"
-    },
-    {
-     "end": 6.375,
-     "start": 5.975,
-     "text": "dry"
-    },
-    {
-     "end": 6.45,
-     "start": 6.375,
-     "text": ","
-    },
-    {
-     "end": 6.6,
-     "start": 6.45,
-     "text": "so"
-    },
-    {
-     "end": 6.838,
-     "start": 6.6,
-     "text": "Hal"
-    },
-    {
-     "end": 7.238,
-     "start": 6.838,
-     "text": "freezes"
-    },
-    {
-     "end": 7.375,
-     "start": 7.238,
-     "text": "her"
-    },
-    {
-     "end": 7.963,
-     "start": 7.375,
-     "text": "instead"
-    },
-    {
-     "end": 8.113,
-     "start": 7.963,
-     "text": "and"
-    },
-    {
-     "end": 8.325,
-     "start": 8.113,
-     "text": "Two"
-    },
-    {
-     "end": 8.725,
-     "start": 8.325,
-     "text": "hunters"
-    },
-    {
-     "end": 9.625,
-     "start": 8.725,
-     "text": "race"
-    },
-    {
-     "end": 9.825,
-     "start": 9.625,
-     "text": "."
-    },
-    {
-     "end": 10.2,
-     "start": 10.0,
-     "text": "What"
-    },
-    {
-     "end": 10.475,
-     "start": 10.2,
-     "text": "ships"
-    },
-    {
-     "end": 10.825,
-     "start": 10.475,
-     "text": "today"
-    },
-    {
-     "end": 10.988,
-     "start": 10.825,
-     "text": "is"
-    },
-    {
-     "end": 11.4,
-     "start": 10.988,
-     "text": "Freeze"
-    },
-    {
-     "end": 11.512,
-     "start": 11.4,
-     "text": "as"
-    },
-    {
-     "end": 11.625,
-     "start": 11.512,
-     "text": "an"
-    },
-    {
-     "end": 11.925,
-     "start": 11.625,
-     "text": "ARMED"
-    },
-    {
-     "end": 12.475,
-     "start": 11.925,
-     "text": "role-address"
-    },
-    {
-     "end": 12.6,
-     "start": 12.475,
-     "text": "for"
-    },
-    {
-     "end": 13.425,
-     "start": 12.6,
-     "text": "lag"
-    },
-    {
-     "end": 13.65,
-     "start": 13.425,
-     "text": ","
-    },
-    {
-     "end": 13.938,
-     "start": 13.825,
-     "text": "with"
-    },
-    {
-     "end": 14.0,
-     "start": 13.938,
-     "text": "a"
-    },
-    {
-     "end": 14.525,
-     "start": 14.0,
-     "text": "response"
-    },
-    {
-     "end": 15.0,
-     "start": 14.525,
-     "text": "window"
-    },
-    {
-     "end": 15.075,
-     "start": 15.0,
-     "text": "—"
-    },
-    {
-     "end": 15.175,
-     "start": 15.075,
-     "text": "a"
-    },
-    {
-     "end": 15.462,
-     "start": 15.175,
-     "text": "different"
-    },
-    {
-     "end": 16.125,
-     "start": 15.462,
-     "text": "machine"
-    },
-    {
-     "end": 16.225,
-     "start": 16.125,
-     "text": ","
-    },
-    {
-     "end": 16.75,
-     "start": 16.225,
-     "text": "retired"
-    },
-    {
-     "end": 16.913,
-     "start": 16.75,
-     "text": "by"
-    },
-    {
-     "end": 17.05,
-     "start": 16.913,
+     "end": 7.537,
+     "start": 7.412,
      "text": "the"
     },
     {
-     "end": 17.55,
-     "start": 17.05,
-     "text": "accepted"
+     "end": 8.05,
+     "start": 7.537,
+     "text": "checkpoint"
     },
     {
-     "end": 18.6,
-     "start": 17.55,
-     "text": "design"
+     "end": 9.275,
+     "start": 8.05,
+     "text": "program"
     },
     {
-     "end": 18.8,
-     "start": 18.6,
+     "end": 9.5,
+     "start": 9.275,
+     "text": ";"
+    },
+    {
+     "end": 10.212,
+     "start": 9.725,
+     "text": "ckeri"
+    },
+    {
+     "end": 10.613,
+     "start": 10.212,
+     "text": "freeze"
+    },
+    {
+     "end": 11.075,
+     "start": 10.613,
+     "text": "submits"
+    },
+    {
+     "end": 11.225,
+     "start": 11.075,
+     "text": "the"
+    },
+    {
+     "end": 11.725,
+     "start": 11.225,
+     "text": "freeze"
+    },
+    {
+     "end": 11.863,
+     "start": 11.725,
+     "text": "and"
+    },
+    {
+     "end": 12.375,
+     "start": 11.863,
+     "text": "ckeri"
+    },
+    {
+     "end": 12.875,
+     "start": 12.375,
+     "text": "advance"
+    },
+    {
+     "end": 13.375,
+     "start": 12.875,
+     "text": "deposit"
+    },
+    {
+     "end": 13.475,
+     "start": 13.375,
+     "text": "the"
+    },
+    {
+     "end": 14.0,
+     "start": 13.475,
+     "text": "deposit"
+    },
+    {
+     "end": 15.2,
+     "start": 14.0,
+     "text": "rotation"
+    },
+    {
+     "end": 15.4,
+     "start": 15.2,
+     "text": "."
+    },
+    {
+     "end": 15.65,
+     "start": 15.575,
+     "text": "The"
+    },
+    {
+     "end": 16.1,
+     "start": 15.65,
+     "text": "top-up"
+    },
+    {
+     "end": 16.913,
+     "start": 16.1,
+     "text": "transaction"
+    },
+    {
+     "end": 17.3,
+     "start": 16.913,
+     "text": "runs"
+    },
+    {
+     "end": 17.487,
+     "start": 17.3,
+     "text": "through"
+    },
+    {
+     "end": 17.575,
+     "start": 17.487,
+     "text": "the"
+    },
+    {
+     "end": 18.1,
+     "start": 17.575,
+     "text": "production"
+    },
+    {
+     "end": 18.55,
+     "start": 18.1,
+     "text": "scripts"
+    },
+    {
+     "end": 18.663,
+     "start": 18.55,
+     "text": "on"
+    },
+    {
+     "end": 18.725,
+     "start": 18.663,
+     "text": "a"
+    },
+    {
+     "end": 19.05,
+     "start": 18.725,
+     "text": "local"
+    },
+    {
+     "end": 19.325,
+     "start": 19.05,
+     "text": "test"
+    },
+    {
+     "end": 20.225,
+     "start": 19.325,
+     "text": "chain"
+    },
+    {
+     "end": 20.425,
+     "start": 20.225,
+     "text": ";"
+    },
+    {
+     "end": 21.125,
+     "start": 20.65,
+     "text": "ckeri"
+    },
+    {
+     "end": 21.575,
+     "start": 21.125,
+     "text": "top-up"
+    },
+    {
+     "end": 21.975,
+     "start": 21.575,
+     "text": "plans"
+    },
+    {
+     "end": 22.1,
+     "start": 21.975,
+     "text": "for"
+    },
+    {
+     "end": 22.575,
+     "start": 22.1,
+     "text": "preprod"
+    },
+    {
+     "end": 23.138,
+     "start": 22.575,
+     "text": "only"
+    },
+    {
+     "end": 23.275,
+     "start": 23.138,
+     "text": "and"
+    },
+    {
+     "end": 23.513,
+     "start": 23.275,
+     "text": "needs"
+    },
+    {
+     "end": 23.6,
+     "start": 23.513,
+     "text": "a"
+    },
+    {
+     "end": 24.188,
+     "start": 23.6,
+     "text": "manifest"
+    },
+    {
+     "end": 24.312,
+     "start": 24.188,
+     "text": "with"
+    },
+    {
+     "end": 24.375,
+     "start": 24.312,
+     "text": "a"
+    },
+    {
+     "end": 25.425,
+     "start": 24.375,
+     "text": "premium"
+    },
+    {
+     "end": 25.625,
+     "start": 25.425,
+     "text": ","
+    },
+    {
+     "end": 26.013,
+     "start": 25.8,
+     "text": "which"
+    },
+    {
+     "end": 26.25,
+     "start": 26.013,
+     "text": "no"
+    },
+    {
+     "end": 26.675,
+     "start": 26.25,
+     "text": "committed"
+    },
+    {
+     "end": 27.3,
+     "start": 26.675,
+     "text": "manifest"
+    },
+    {
+     "end": 27.75,
+     "start": 27.3,
+     "text": "has"
+    },
+    {
+     "end": 28.062,
+     "start": 27.75,
+     "text": "until"
+    },
+    {
+     "end": 28.15,
+     "start": 28.062,
+     "text": "the"
+    },
+    {
+     "end": 28.9,
+     "start": 28.15,
+     "text": "redeployment"
+    },
+    {
+     "end": 28.975,
+     "start": 28.9,
+     "text": "("
+    },
+    {
+     "end": 30.75,
+     "start": 28.975,
+     "text": "356"
+    },
+    {
+     "end": 30.975,
+     "start": 30.75,
+     "text": ")"
+    },
+    {
+     "end": 31.025,
+     "start": 30.975,
+     "text": "."
+    },
+    {
+     "end": 31.425,
+     "start": 31.2,
+     "text": "These"
+    },
+    {
+     "end": 31.688,
+     "start": 31.425,
+     "text": "run"
+    },
+    {
+     "end": 31.788,
+     "start": 31.688,
+     "text": "on"
+    },
+    {
+     "end": 31.85,
+     "start": 31.788,
+     "text": "a"
+    },
+    {
+     "end": 32.2,
+     "start": 31.85,
+     "text": "local"
+    },
+    {
+     "end": 32.475,
+     "start": 32.2,
+     "text": "test"
+    },
+    {
+     "end": 32.963,
+     "start": 32.475,
+     "text": "chain"
+    },
+    {
+     "end": 33.088,
+     "start": 32.963,
+     "text": "and"
+    },
+    {
+     "end": 33.175,
+     "start": 33.088,
+     "text": "are"
+    },
+    {
+     "end": 33.4,
+     "start": 33.175,
+     "text": "not"
+    },
+    {
+     "end": 33.825,
+     "start": 33.4,
+     "text": "deployed"
+    },
+    {
+     "end": 33.925,
+     "start": 33.825,
+     "text": "to"
+    },
+    {
+     "end": 34.95,
+     "start": 33.925,
+     "text": "preprod"
+    },
+    {
+     "end": 35.175,
+     "start": 34.95,
+     "text": ";"
+    },
+    {
+     "end": 35.55,
+     "start": 35.375,
+     "text": "this"
+    },
+    {
+     "end": 35.787,
+     "start": 35.55,
+     "text": "code"
+    },
+    {
+     "end": 35.925,
+     "start": 35.787,
+     "text": "is"
+    },
+    {
+     "end": 36.175,
+     "start": 35.925,
+     "text": "not"
+    },
+    {
+     "end": 36.325,
+     "start": 36.175,
+     "text": "for"
+    },
+    {
+     "end": 36.8,
+     "start": 36.325,
+     "text": "mainnet"
+    },
+    {
+     "end": 36.912,
+     "start": 36.8,
+     "text": "."
+    },
+    {
+     "end": 37.175,
+     "start": 36.912,
+     "text": "Play"
+    },
+    {
+     "end": 37.287,
+     "start": 37.175,
+     "text": "The"
+    },
+    {
+     "end": 37.6,
+     "start": 37.287,
+     "text": "pool"
+    },
+    {
+     "end": 37.912,
+     "start": 37.6,
+     "text": "runs"
+    },
+    {
+     "end": 38.325,
+     "start": 37.912,
+     "text": "dry"
+    },
+    {
+     "end": 38.4,
+     "start": 38.325,
+     "text": ","
+    },
+    {
+     "end": 38.575,
+     "start": 38.4,
+     "text": "so"
+    },
+    {
+     "end": 38.838,
+     "start": 38.575,
+     "text": "Hal"
+    },
+    {
+     "end": 39.263,
+     "start": 38.838,
+     "text": "freezes"
+    },
+    {
+     "end": 39.425,
+     "start": 39.263,
+     "text": "her"
+    },
+    {
+     "end": 40.037,
+     "start": 39.425,
+     "text": "instead"
+    },
+    {
+     "end": 40.188,
+     "start": 40.037,
+     "text": "and"
+    },
+    {
+     "end": 40.4,
+     "start": 40.188,
+     "text": "Two"
+    },
+    {
+     "end": 40.8,
+     "start": 40.4,
+     "text": "hunters"
+    },
+    {
+     "end": 41.825,
+     "start": 40.8,
+     "text": "race"
+    },
+    {
+     "end": 42.025,
+     "start": 41.825,
      "text": "."
     }
    ]
@@ -479731,17 +479891,17 @@
    ]
   },
   "docs-user-hunters/hunters-04": {
-   "audio_sha256": "6ffaef1ca1457c1854c697efcc9c7f3ae8befe3ba73105f5b0801bc0faa693db",
-   "characters": 493,
-   "cost": 0.00030566,
-   "duration": 33.025,
+   "audio_sha256": "f81b13aecece3a36fb46424e8be11b959e652f8ba7351b02f4c9e7e01c5f0a33",
+   "characters": 643,
+   "cost": 0.0006365699999999999,
+   "duration": 42.85,
    "index": 4,
-   "key": "5e0b30571097abcfe5a8083bd14128daeb92af07203b5a375b782fba30c10a06",
+   "key": "80ce89294edea11f663443eb6cfbed9675b79f06d03a4d98dd5cd979578d3eea",
    "page": "docs/user/hunters.md",
    "pause_ms": 400,
    "section": "hunters",
-   "sent_text": "When the pool cannot cover P, he freezes her instead. He presents the later rotation as evidence, takes the freeze bond B (what a hunter takes when the pool cannot pay), and leaves the datum untouched. The checkpoint is inert to everyone but the next keys: consumers reject it; a second freeze is refused; the poison (the owner's own lock on the checkpoint) still belongs to the current quorum. Alice unfreezes with a deposit rotation — the new keys refill B. Deposit is a no-op on full bonds.",
-   "text": "When the pool cannot cover P, he freezes her instead. He presents the later rotation as evidence, takes the freeze bond B (what a hunter takes when the pool cannot pay), and leaves the datum untouched. The checkpoint is inert to everyone but the next keys: consumers reject it; a second freeze is refused; the poison (the owner's own lock on the checkpoint) still belongs to the current quorum. Alice unfreezes with a deposit rotation — the new keys refill B. Deposit is a no-op on full bonds.",
+   "sent_text": "When the pool cannot cover P, he freezes her instead. He presents the later rotation as evidence, exactly as the log exports it, and takes the freeze bond B (what a hunter takes when the pool cannot pay). The datum keeps its old keys and sequence number; only the frozen flag is set, and the checkpoint then holds the minimum ADA, the deposit and the pool. ckeri freeze --aid … --kel rotation.cesr … lands it and pays the bond to the funding address. The checkpoint is inert to everyone but the next keys: consumers reject it; a second freeze is refused; the poison (the owner's own lock on the checkpoint) still belongs to the current quorum.",
+   "text": "When the pool cannot cover P, he freezes her instead. He presents the later rotation as evidence, exactly as the log exports it, and takes the freeze bond B (what a hunter takes when the pool cannot pay). The datum keeps its old keys and sequence number; only the frozen flag is set, and the checkpoint then holds the minimum ADA, the deposit and the pool. ckeri freeze --aid … --kel rotation.cesr … lands it and pays the bond to the funding address. The checkpoint is inert to everyone but the next keys: consumers reject it; a second freeze is refused; the poison (the owner's own lock on the checkpoint) still belongs to the current quorum.",
    "words": [
     {
      "end": 0.287,
@@ -479804,389 +479964,404 @@
      "text": "."
     },
     {
-     "end": 3.875,
-     "start": 3.75,
+     "end": 3.9,
+     "start": 3.775,
      "text": "He"
     },
     {
-     "end": 4.287,
-     "start": 3.875,
+     "end": 4.4,
+     "start": 3.9,
      "text": "presents"
     },
     {
-     "end": 4.375,
-     "start": 4.287,
+     "end": 4.525,
+     "start": 4.4,
      "text": "the"
     },
     {
-     "end": 4.675,
-     "start": 4.375,
+     "end": 4.9,
+     "start": 4.525,
      "text": "later"
     },
     {
-     "end": 5.275,
-     "start": 4.675,
+     "end": 5.55,
+     "start": 4.9,
      "text": "rotation"
     },
     {
-     "end": 5.438,
-     "start": 5.275,
+     "end": 5.713,
+     "start": 5.55,
      "text": "as"
     },
     {
-     "end": 6.4,
-     "start": 5.438,
+     "end": 6.325,
+     "start": 5.713,
      "text": "evidence"
     },
     {
-     "end": 6.6,
-     "start": 6.4,
+     "end": 6.412,
+     "start": 6.325,
      "text": ","
     },
     {
-     "end": 7.075,
-     "start": 6.8,
-     "text": "takes"
+     "end": 7.037,
+     "start": 6.412,
+     "text": "exactly"
     },
     {
-     "end": 7.188,
-     "start": 7.075,
+     "end": 7.2,
+     "start": 7.037,
+     "text": "as"
+    },
+    {
+     "end": 7.325,
+     "start": 7.2,
      "text": "the"
     },
     {
-     "end": 7.562,
-     "start": 7.188,
-     "text": "freeze"
+     "end": 7.625,
+     "start": 7.325,
+     "text": "log"
     },
     {
-     "end": 7.925,
-     "start": 7.562,
-     "text": "bond"
+     "end": 8.212,
+     "start": 7.625,
+     "text": "exports"
     },
     {
-     "end": 8.275,
-     "start": 7.925,
-     "text": "B"
-    },
-    {
-     "end": 8.325,
-     "start": 8.275,
-     "text": "("
-    },
-    {
-     "end": 8.438,
-     "start": 8.325,
-     "text": "what"
-    },
-    {
-     "end": 8.5,
-     "start": 8.438,
-     "text": "a"
-    },
-    {
-     "end": 8.85,
-     "start": 8.5,
-     "text": "hunter"
-    },
-    {
-     "end": 9.188,
-     "start": 8.85,
-     "text": "takes"
-    },
-    {
-     "end": 9.312,
-     "start": 9.188,
-     "text": "when"
-    },
-    {
-     "end": 9.4,
-     "start": 9.312,
-     "text": "the"
-    },
-    {
-     "end": 9.675,
-     "start": 9.4,
-     "text": "pool"
-    },
-    {
-     "end": 10.025,
-     "start": 9.675,
-     "text": "cannot"
-    },
-    {
-     "end": 10.85,
-     "start": 10.025,
-     "text": "pay"
-    },
-    {
-     "end": 11.1,
-     "start": 10.85,
-     "text": ")"
-    },
-    {
-     "end": 11.175,
-     "start": 11.1,
-     "text": ","
-    },
-    {
-     "end": 11.475,
-     "start": 11.375,
-     "text": "and"
-    },
-    {
-     "end": 11.712,
-     "start": 11.475,
-     "text": "leaves"
-    },
-    {
-     "end": 11.8,
-     "start": 11.712,
-     "text": "the"
-    },
-    {
-     "end": 12.175,
-     "start": 11.8,
-     "text": "datum"
-    },
-    {
-     "end": 13.15,
-     "start": 12.175,
-     "text": "untouched"
-    },
-    {
-     "end": 13.35,
-     "start": 13.15,
-     "text": "."
-    },
-    {
-     "end": 13.637,
-     "start": 13.525,
-     "text": "The"
-    },
-    {
-     "end": 14.175,
-     "start": 13.637,
-     "text": "checkpoint"
-    },
-    {
-     "end": 14.325,
-     "start": 14.175,
-     "text": "is"
-    },
-    {
-     "end": 14.65,
-     "start": 14.325,
-     "text": "inert"
-    },
-    {
-     "end": 14.788,
-     "start": 14.65,
-     "text": "to"
-    },
-    {
-     "end": 15.3,
-     "start": 14.788,
-     "text": "everyone"
-    },
-    {
-     "end": 15.438,
-     "start": 15.3,
-     "text": "but"
-    },
-    {
-     "end": 15.525,
-     "start": 15.438,
-     "text": "the"
-    },
-    {
-     "end": 15.825,
-     "start": 15.525,
-     "text": "next"
-    },
-    {
-     "end": 16.35,
-     "start": 15.825,
-     "text": "keys"
-    },
-    {
-     "end": 16.475,
-     "start": 16.35,
-     "text": ":"
-    },
-    {
-     "end": 17.075,
-     "start": 16.475,
-     "text": "consumers"
-    },
-    {
-     "end": 17.5,
-     "start": 17.075,
-     "text": "reject"
-    },
-    {
-     "end": 18.15,
-     "start": 17.5,
+     "end": 8.925,
+     "start": 8.212,
      "text": "it"
     },
     {
-     "end": 18.375,
-     "start": 18.15,
-     "text": ";"
+     "end": 9.15,
+     "start": 8.925,
+     "text": ","
     },
     {
-     "end": 18.663,
-     "start": 18.575,
-     "text": "a"
+     "end": 9.45,
+     "start": 9.35,
+     "text": "and"
     },
     {
-     "end": 19.025,
-     "start": 18.663,
-     "text": "second"
+     "end": 9.75,
+     "start": 9.45,
+     "text": "takes"
     },
     {
-     "end": 19.375,
-     "start": 19.025,
+     "end": 9.863,
+     "start": 9.75,
+     "text": "the"
+    },
+    {
+     "end": 10.238,
+     "start": 9.863,
      "text": "freeze"
     },
     {
-     "end": 19.525,
-     "start": 19.375,
-     "text": "is"
+     "end": 10.6,
+     "start": 10.238,
+     "text": "bond"
     },
     {
-     "end": 20.275,
-     "start": 19.525,
-     "text": "refused"
+     "end": 10.988,
+     "start": 10.6,
+     "text": "B"
     },
     {
-     "end": 20.35,
-     "start": 20.275,
-     "text": ";"
-    },
-    {
-     "end": 20.462,
-     "start": 20.35,
-     "text": "the"
-    },
-    {
-     "end": 21.025,
-     "start": 20.462,
-     "text": "poison"
-    },
-    {
-     "end": 21.075,
-     "start": 21.025,
+     "end": 11.05,
+     "start": 10.988,
      "text": "("
     },
     {
-     "end": 21.237,
-     "start": 21.075,
-     "text": "the"
+     "end": 11.163,
+     "start": 11.05,
+     "text": "what"
     },
     {
-     "end": 21.663,
-     "start": 21.237,
-     "text": "owner's"
-    },
-    {
-     "end": 21.925,
-     "start": 21.663,
-     "text": "own"
-    },
-    {
-     "end": 22.237,
-     "start": 21.925,
-     "text": "lock"
-    },
-    {
-     "end": 22.362,
-     "start": 22.237,
-     "text": "on"
-    },
-    {
-     "end": 22.462,
-     "start": 22.362,
-     "text": "the"
-    },
-    {
-     "end": 23.075,
-     "start": 22.462,
-     "text": "checkpoint"
-    },
-    {
-     "end": 23.163,
-     "start": 23.075,
-     "text": ")"
-    },
-    {
-     "end": 23.45,
-     "start": 23.163,
-     "text": "still"
-    },
-    {
-     "end": 24.0,
-     "start": 23.45,
-     "text": "belongs"
-    },
-    {
-     "end": 24.087,
-     "start": 24.0,
-     "text": "to"
-    },
-    {
-     "end": 24.175,
-     "start": 24.087,
-     "text": "the"
-    },
-    {
-     "end": 24.525,
-     "start": 24.175,
-     "text": "current"
-    },
-    {
-     "end": 25.65,
-     "start": 24.525,
-     "text": "quorum"
-    },
-    {
-     "end": 25.875,
-     "start": 25.65,
-     "text": "."
-    },
-    {
-     "end": 26.375,
-     "start": 26.075,
-     "text": "Alice"
-    },
-    {
-     "end": 27.05,
-     "start": 26.375,
-     "text": "unfreezes"
-    },
-    {
-     "end": 27.188,
-     "start": 27.05,
-     "text": "with"
-    },
-    {
-     "end": 27.25,
-     "start": 27.188,
+     "end": 11.225,
+     "start": 11.163,
      "text": "a"
     },
     {
-     "end": 27.75,
-     "start": 27.25,
+     "end": 11.575,
+     "start": 11.225,
+     "text": "hunter"
+    },
+    {
+     "end": 11.913,
+     "start": 11.575,
+     "text": "takes"
+    },
+    {
+     "end": 12.038,
+     "start": 11.913,
+     "text": "when"
+    },
+    {
+     "end": 12.125,
+     "start": 12.038,
+     "text": "the"
+    },
+    {
+     "end": 12.4,
+     "start": 12.125,
+     "text": "pool"
+    },
+    {
+     "end": 12.75,
+     "start": 12.4,
+     "text": "cannot"
+    },
+    {
+     "end": 13.4,
+     "start": 12.75,
+     "text": "pay"
+    },
+    {
+     "end": 13.775,
+     "start": 13.4,
+     "text": ")"
+    },
+    {
+     "end": 13.875,
+     "start": 13.775,
+     "text": "."
+    },
+    {
+     "end": 14.125,
+     "start": 14.05,
+     "text": "The"
+    },
+    {
+     "end": 14.5,
+     "start": 14.125,
+     "text": "datum"
+    },
+    {
+     "end": 14.762,
+     "start": 14.5,
+     "text": "keeps"
+    },
+    {
+     "end": 14.863,
+     "start": 14.762,
+     "text": "its"
+    },
+    {
+     "end": 15.1,
+     "start": 14.863,
+     "text": "old"
+    },
+    {
+     "end": 15.525,
+     "start": 15.1,
+     "text": "keys"
+    },
+    {
+     "end": 15.65,
+     "start": 15.525,
+     "text": "and"
+    },
+    {
+     "end": 16.1,
+     "start": 15.65,
+     "text": "sequence"
+    },
+    {
+     "end": 16.925,
+     "start": 16.1,
+     "text": "number"
+    },
+    {
+     "end": 17.15,
+     "start": 16.925,
+     "text": ";"
+    },
+    {
+     "end": 17.625,
+     "start": 17.35,
+     "text": "only"
+    },
+    {
+     "end": 17.737,
+     "start": 17.625,
+     "text": "the"
+    },
+    {
+     "end": 18.237,
+     "start": 17.737,
+     "text": "frozen"
+    },
+    {
+     "end": 18.65,
+     "start": 18.237,
+     "text": "flag"
+    },
+    {
+     "end": 18.788,
+     "start": 18.65,
+     "text": "is"
+    },
+    {
+     "end": 19.1,
+     "start": 18.788,
+     "text": "set"
+    },
+    {
+     "end": 19.175,
+     "start": 19.1,
+     "text": ","
+    },
+    {
+     "end": 19.288,
+     "start": 19.175,
+     "text": "and"
+    },
+    {
+     "end": 19.388,
+     "start": 19.288,
+     "text": "the"
+    },
+    {
+     "end": 19.9,
+     "start": 19.388,
+     "text": "checkpoint"
+    },
+    {
+     "end": 20.125,
+     "start": 19.9,
+     "text": "then"
+    },
+    {
+     "end": 20.475,
+     "start": 20.125,
+     "text": "holds"
+    },
+    {
+     "end": 20.612,
+     "start": 20.475,
+     "text": "the"
+    },
+    {
+     "end": 21.0,
+     "start": 20.612,
+     "text": "minimum"
+    },
+    {
+     "end": 21.45,
+     "start": 21.0,
+     "text": "ADA"
+    },
+    {
+     "end": 21.55,
+     "start": 21.45,
+     "text": ","
+    },
+    {
+     "end": 21.65,
+     "start": 21.55,
+     "text": "the"
+    },
+    {
+     "end": 22.312,
+     "start": 21.65,
      "text": "deposit"
     },
     {
-     "end": 28.55,
-     "start": 27.75,
-     "text": "rotation"
+     "end": 22.438,
+     "start": 22.312,
+     "text": "and"
+    },
+    {
+     "end": 22.538,
+     "start": 22.438,
+     "text": "the"
+    },
+    {
+     "end": 23.55,
+     "start": 22.538,
+     "text": "pool"
+    },
+    {
+     "end": 23.75,
+     "start": 23.55,
+     "text": "."
+    },
+    {
+     "end": 24.462,
+     "start": 23.975,
+     "text": "ckeri"
+    },
+    {
+     "end": 24.9,
+     "start": 24.462,
+     "text": "freeze"
+    },
+    {
+     "end": 24.975,
+     "start": 24.9,
+     "text": "--"
+    },
+    {
+     "end": 25.25,
+     "start": 24.975,
+     "text": "aid"
+    },
+    {
+     "end": 25.325,
+     "start": 25.25,
+     "text": "…"
+    },
+    {
+     "end": 25.575,
+     "start": 25.325,
+     "text": "--kel"
+    },
+    {
+     "end": 26.975,
+     "start": 25.575,
+     "text": "rotation.cesr"
+    },
+    {
+     "end": 27.05,
+     "start": 26.975,
+     "text": "…"
+    },
+    {
+     "end": 27.4,
+     "start": 27.05,
+     "text": "lands"
+    },
+    {
+     "end": 27.562,
+     "start": 27.4,
+     "text": "it"
+    },
+    {
+     "end": 27.712,
+     "start": 27.562,
+     "text": "and"
+    },
+    {
+     "end": 28.05,
+     "start": 27.712,
+     "text": "pays"
+    },
+    {
+     "end": 28.15,
+     "start": 28.05,
+     "text": "the"
+    },
+    {
+     "end": 28.525,
+     "start": 28.15,
+     "text": "bond"
     },
     {
      "end": 28.612,
-     "start": 28.55,
-     "text": "—"
+     "start": 28.525,
+     "text": "to"
     },
     {
      "end": 28.7,
@@ -480194,213 +480369,1628 @@
      "text": "the"
     },
     {
-     "end": 28.888,
+     "end": 29.075,
      "start": 28.7,
-     "text": "new"
+     "text": "funding"
     },
     {
-     "end": 29.225,
-     "start": 28.888,
-     "text": "keys"
+     "end": 30.1,
+     "start": 29.075,
+     "text": "address"
     },
     {
-     "end": 29.65,
-     "start": 29.225,
-     "text": "refill"
+     "end": 30.325,
+     "start": 30.1,
+     "text": "."
     },
     {
-     "end": 30.45,
-     "start": 29.65,
-     "text": "B."
+     "end": 30.612,
+     "start": 30.5,
+     "text": "The"
     },
     {
-     "end": 31.1,
-     "start": 30.625,
-     "text": "Deposit"
+     "end": 31.15,
+     "start": 30.612,
+     "text": "checkpoint"
     },
     {
-     "end": 31.212,
-     "start": 31.1,
+     "end": 31.3,
+     "start": 31.15,
      "text": "is"
     },
     {
-     "end": 31.275,
-     "start": 31.212,
+     "end": 31.625,
+     "start": 31.3,
+     "text": "inert"
+    },
+    {
+     "end": 31.763,
+     "start": 31.625,
+     "text": "to"
+    },
+    {
+     "end": 32.275,
+     "start": 31.763,
+     "text": "everyone"
+    },
+    {
+     "end": 32.412,
+     "start": 32.275,
+     "text": "but"
+    },
+    {
+     "end": 32.5,
+     "start": 32.412,
+     "text": "the"
+    },
+    {
+     "end": 32.8,
+     "start": 32.5,
+     "text": "next"
+    },
+    {
+     "end": 33.325,
+     "start": 32.8,
+     "text": "keys"
+    },
+    {
+     "end": 33.45,
+     "start": 33.325,
+     "text": ":"
+    },
+    {
+     "end": 34.05,
+     "start": 33.45,
+     "text": "consumers"
+    },
+    {
+     "end": 34.475,
+     "start": 34.05,
+     "text": "reject"
+    },
+    {
+     "end": 35.125,
+     "start": 34.475,
+     "text": "it"
+    },
+    {
+     "end": 35.35,
+     "start": 35.125,
+     "text": ";"
+    },
+    {
+     "end": 35.638,
+     "start": 35.55,
      "text": "a"
     },
     {
-     "end": 31.612,
-     "start": 31.275,
-     "text": "no-op"
+     "end": 36.0,
+     "start": 35.638,
+     "text": "second"
     },
     {
-     "end": 31.75,
-     "start": 31.612,
+     "end": 36.35,
+     "start": 36.0,
+     "text": "freeze"
+    },
+    {
+     "end": 36.5,
+     "start": 36.35,
+     "text": "is"
+    },
+    {
+     "end": 37.25,
+     "start": 36.5,
+     "text": "refused"
+    },
+    {
+     "end": 37.325,
+     "start": 37.25,
+     "text": ";"
+    },
+    {
+     "end": 37.438,
+     "start": 37.325,
+     "text": "the"
+    },
+    {
+     "end": 38.0,
+     "start": 37.438,
+     "text": "poison"
+    },
+    {
+     "end": 38.05,
+     "start": 38.0,
+     "text": "("
+    },
+    {
+     "end": 38.213,
+     "start": 38.05,
+     "text": "the"
+    },
+    {
+     "end": 38.638,
+     "start": 38.213,
+     "text": "owner's"
+    },
+    {
+     "end": 38.9,
+     "start": 38.638,
+     "text": "own"
+    },
+    {
+     "end": 39.213,
+     "start": 38.9,
+     "text": "lock"
+    },
+    {
+     "end": 39.338,
+     "start": 39.213,
      "text": "on"
     },
     {
-     "end": 32.0,
-     "start": 31.75,
-     "text": "full"
+     "end": 39.438,
+     "start": 39.338,
+     "text": "the"
     },
     {
-     "end": 32.825,
-     "start": 32.0,
-     "text": "bonds"
+     "end": 40.05,
+     "start": 39.438,
+     "text": "checkpoint"
     },
     {
-     "end": 33.025,
-     "start": 32.825,
+     "end": 40.138,
+     "start": 40.05,
+     "text": ")"
+    },
+    {
+     "end": 40.425,
+     "start": 40.138,
+     "text": "still"
+    },
+    {
+     "end": 40.975,
+     "start": 40.425,
+     "text": "belongs"
+    },
+    {
+     "end": 41.062,
+     "start": 40.975,
+     "text": "to"
+    },
+    {
+     "end": 41.15,
+     "start": 41.062,
+     "text": "the"
+    },
+    {
+     "end": 41.5,
+     "start": 41.15,
+     "text": "current"
+    },
+    {
+     "end": 42.625,
+     "start": 41.5,
+     "text": "quorum"
+    },
+    {
+     "end": 42.85,
+     "start": 42.625,
      "text": "."
     }
    ]
   },
   "docs-user-hunters/hunters-05": {
-   "audio_sha256": "6d967dc901ccb1eeb838c36cfbe6f5af8099ca45378ce3c0ef8e5889994ce781",
-   "characters": 113,
-   "cost": 7.006e-05,
-   "duration": 8.175,
+   "audio_sha256": "7ff8bd21d1e527b654f716d14d9843c902686772dcfe457a8c4b85f719242b20",
+   "characters": 811,
+   "cost": 0.00080289,
+   "duration": 53.5,
    "index": 5,
-   "key": "e09ac1b1edf6627922a07786b32971360d8bca28a9b3d9d4f486add5f107edb2",
+   "key": "c9d66977f14f407c85b74393c0628df36ecc8e9231a30673a0fde9ba71e7e948",
    "page": "docs/user/hunters.md",
    "pause_ms": 400,
    "section": "hunters",
-   "sent_text": "Anyone may top up the pool. No signature, no datum change. A freeze is refused while the pool covers the premium.",
-   "text": "Anyone may top up the pool. No signature, no datum change. A freeze is refused while the pool covers the premium.",
+   "sent_text": "Alice unfreezes with her next witnessed rotation, landed with the deposit option: ckeri advance --deposit … writes the exact bytes her new keys sign, an intent that names the network, the checkpoint policy, the spent output, her identifier, the new sequence number, the new epoch and the amount, and lands the rotation with those signatures. The successor is unfrozen and holds B again, so the checkpoint is consumable again; the premium is paid exactly when the pool covers it, as for any rotation. Nobody else can choose the deposit option for her rotation, and a signature for one output is worthless for another. On a checkpoint that is not frozen the intent names an amount of zero and the deposit brings nothing. See Rotate your preprod identity for the commands and The deposit intent for what is signed.",
+   "text": "Alice unfreezes with her next witnessed rotation, landed with the deposit option: ckeri advance --deposit … writes the exact bytes her new keys sign, an intent that names the network, the checkpoint policy, the spent output, her identifier, the new sequence number, the new epoch and the amount, and lands the rotation with those signatures. The successor is unfrozen and holds B again, so the checkpoint is consumable again; the premium is paid exactly when the pool covers it, as for any rotation. Nobody else can choose the deposit option for her rotation, and a signature for one output is worthless for another. On a checkpoint that is not frozen the intent names an amount of zero and the deposit brings nothing. See Rotate your preprod identity for the commands and The deposit intent for what is signed.",
    "words": [
     {
-     "end": 0.488,
-     "start": 0.175,
-     "text": "Anyone"
+     "end": 0.525,
+     "start": 0.2,
+     "text": "Alice"
     },
     {
-     "end": 0.65,
-     "start": 0.488,
-     "text": "may"
+     "end": 1.25,
+     "start": 0.525,
+     "text": "unfreezes"
     },
     {
-     "end": 0.863,
-     "start": 0.65,
-     "text": "top"
+     "end": 1.388,
+     "start": 1.25,
+     "text": "with"
     },
     {
-     "end": 0.962,
-     "start": 0.863,
-     "text": "up"
+     "end": 1.525,
+     "start": 1.388,
+     "text": "her"
     },
     {
-     "end": 1.05,
-     "start": 0.962,
-     "text": "the"
+     "end": 1.913,
+     "start": 1.525,
+     "text": "next"
     },
     {
-     "end": 1.825,
-     "start": 1.05,
-     "text": "pool"
+     "end": 2.3,
+     "start": 1.913,
+     "text": "witnessed"
     },
     {
-     "end": 2.025,
-     "start": 1.825,
-     "text": "."
+     "end": 3.175,
+     "start": 2.3,
+     "text": "rotation"
     },
     {
-     "end": 2.487,
-     "start": 2.25,
-     "text": "No"
-    },
-    {
-     "end": 3.075,
-     "start": 2.487,
-     "text": "signature"
-    },
-    {
-     "end": 3.125,
-     "start": 3.075,
+     "end": 3.312,
+     "start": 3.175,
      "text": ","
     },
     {
-     "end": 3.325,
-     "start": 3.125,
-     "text": "no"
+     "end": 3.775,
+     "start": 3.312,
+     "text": "landed"
     },
     {
-     "end": 3.763,
-     "start": 3.325,
-     "text": "datum"
+     "end": 3.912,
+     "start": 3.775,
+     "text": "with"
     },
     {
-     "end": 4.4,
-     "start": 3.763,
-     "text": "change"
-    },
-    {
-     "end": 4.537,
-     "start": 4.4,
-     "text": "."
-    },
-    {
-     "end": 4.662,
-     "start": 4.537,
-     "text": "A"
-    },
-    {
-     "end": 5.012,
-     "start": 4.662,
-     "text": "freeze"
-    },
-    {
-     "end": 5.15,
-     "start": 5.012,
-     "text": "is"
-    },
-    {
-     "end": 5.8,
-     "start": 5.15,
-     "text": "refused"
-    },
-    {
-     "end": 5.988,
-     "start": 5.8,
-     "text": "while"
-    },
-    {
-     "end": 6.088,
-     "start": 5.988,
+     "end": 4.0,
+     "start": 3.912,
      "text": "the"
     },
     {
-     "end": 6.425,
-     "start": 6.088,
-     "text": "pool"
+     "end": 4.55,
+     "start": 4.0,
+     "text": "deposit"
     },
     {
-     "end": 6.812,
-     "start": 6.425,
-     "text": "covers"
+     "end": 5.575,
+     "start": 4.55,
+     "text": "option"
+    },
+    {
+     "end": 5.775,
+     "start": 5.575,
+     "text": ":"
+    },
+    {
+     "end": 6.45,
+     "start": 5.975,
+     "text": "ckeri"
     },
     {
      "end": 6.9,
-     "start": 6.812,
+     "start": 6.45,
+     "text": "advance"
+    },
+    {
+     "end": 7.6,
+     "start": 6.9,
+     "text": "deposit"
+    },
+    {
+     "end": 7.675,
+     "start": 7.6,
+     "text": "…"
+    },
+    {
+     "end": 7.938,
+     "start": 7.675,
+     "text": "writes"
+    },
+    {
+     "end": 8.075,
+     "start": 7.938,
      "text": "the"
     },
     {
-     "end": 7.975,
-     "start": 6.9,
+     "end": 8.525,
+     "start": 8.075,
+     "text": "exact"
+    },
+    {
+     "end": 8.812,
+     "start": 8.525,
+     "text": "bytes"
+    },
+    {
+     "end": 8.925,
+     "start": 8.812,
+     "text": "her"
+    },
+    {
+     "end": 9.1,
+     "start": 8.925,
+     "text": "new"
+    },
+    {
+     "end": 9.387,
+     "start": 9.1,
+     "text": "keys"
+    },
+    {
+     "end": 10.25,
+     "start": 9.387,
+     "text": "sign"
+    },
+    {
+     "end": 10.45,
+     "start": 10.25,
+     "text": ","
+    },
+    {
+     "end": 10.75,
+     "start": 10.65,
+     "text": "an"
+    },
+    {
+     "end": 11.163,
+     "start": 10.75,
+     "text": "intent"
+    },
+    {
+     "end": 11.325,
+     "start": 11.163,
+     "text": "that"
+    },
+    {
+     "end": 11.625,
+     "start": 11.325,
+     "text": "names"
+    },
+    {
+     "end": 11.725,
+     "start": 11.625,
+     "text": "the"
+    },
+    {
+     "end": 12.225,
+     "start": 11.725,
+     "text": "network"
+    },
+    {
+     "end": 12.3,
+     "start": 12.225,
+     "text": ","
+    },
+    {
+     "end": 12.438,
+     "start": 12.3,
+     "text": "the"
+    },
+    {
+     "end": 12.9,
+     "start": 12.438,
+     "text": "checkpoint"
+    },
+    {
+     "end": 13.45,
+     "start": 12.9,
+     "text": "policy"
+    },
+    {
+     "end": 13.525,
+     "start": 13.45,
+     "text": ","
+    },
+    {
+     "end": 13.65,
+     "start": 13.525,
+     "text": "the"
+    },
+    {
+     "end": 13.95,
+     "start": 13.65,
+     "text": "spent"
+    },
+    {
+     "end": 14.925,
+     "start": 13.95,
+     "text": "output"
+    },
+    {
+     "end": 15.125,
+     "start": 14.925,
+     "text": ","
+    },
+    {
+     "end": 15.488,
+     "start": 15.325,
+     "text": "her"
+    },
+    {
+     "end": 16.25,
+     "start": 15.488,
+     "text": "identifier"
+    },
+    {
+     "end": 16.288,
+     "start": 16.25,
+     "text": ","
+    },
+    {
+     "end": 16.375,
+     "start": 16.288,
+     "text": "the"
+    },
+    {
+     "end": 16.55,
+     "start": 16.375,
+     "text": "new"
+    },
+    {
+     "end": 17.0,
+     "start": 16.55,
+     "text": "sequence"
+    },
+    {
+     "end": 17.4,
+     "start": 17.0,
+     "text": "number"
+    },
+    {
+     "end": 17.475,
+     "start": 17.4,
+     "text": ","
+    },
+    {
+     "end": 17.6,
+     "start": 17.475,
+     "text": "the"
+    },
+    {
+     "end": 17.8,
+     "start": 17.6,
+     "text": "new"
+    },
+    {
+     "end": 18.175,
+     "start": 17.8,
+     "text": "epoch"
+    },
+    {
+     "end": 18.288,
+     "start": 18.175,
+     "text": "and"
+    },
+    {
+     "end": 18.375,
+     "start": 18.288,
+     "text": "the"
+    },
+    {
+     "end": 19.275,
+     "start": 18.375,
+     "text": "amount"
+    },
+    {
+     "end": 19.475,
+     "start": 19.275,
+     "text": ","
+    },
+    {
+     "end": 19.775,
+     "start": 19.675,
+     "text": "and"
+    },
+    {
+     "end": 20.062,
+     "start": 19.775,
+     "text": "lands"
+    },
+    {
+     "end": 20.15,
+     "start": 20.062,
+     "text": "the"
+    },
+    {
+     "end": 20.712,
+     "start": 20.15,
+     "text": "rotation"
+    },
+    {
+     "end": 20.85,
+     "start": 20.712,
+     "text": "with"
+    },
+    {
+     "end": 21.075,
+     "start": 20.85,
+     "text": "those"
+    },
+    {
+     "end": 22.15,
+     "start": 21.075,
+     "text": "signatures"
+    },
+    {
+     "end": 22.35,
+     "start": 22.15,
+     "text": "."
+    },
+    {
+     "end": 22.625,
+     "start": 22.525,
+     "text": "The"
+    },
+    {
+     "end": 23.25,
+     "start": 22.625,
+     "text": "successor"
+    },
+    {
+     "end": 23.4,
+     "start": 23.25,
+     "text": "is"
+    },
+    {
+     "end": 24.2,
+     "start": 23.4,
+     "text": "unfrozen"
+    },
+    {
+     "end": 24.325,
+     "start": 24.2,
+     "text": "and"
+    },
+    {
+     "end": 24.65,
+     "start": 24.325,
+     "text": "holds"
+    },
+    {
+     "end": 24.825,
+     "start": 24.65,
+     "text": "B"
+    },
+    {
+     "end": 25.275,
+     "start": 24.825,
+     "text": "again"
+    },
+    {
+     "end": 25.375,
+     "start": 25.275,
+     "text": ","
+    },
+    {
+     "end": 25.538,
+     "start": 25.375,
+     "text": "so"
+    },
+    {
+     "end": 25.663,
+     "start": 25.538,
+     "text": "the"
+    },
+    {
+     "end": 26.25,
+     "start": 25.663,
+     "text": "checkpoint"
+    },
+    {
+     "end": 26.4,
+     "start": 26.25,
+     "text": "is"
+    },
+    {
+     "end": 27.05,
+     "start": 26.4,
+     "text": "consumable"
+    },
+    {
+     "end": 28.025,
+     "start": 27.05,
+     "text": "again"
+    },
+    {
+     "end": 28.225,
+     "start": 28.025,
+     "text": ";"
+    },
+    {
+     "end": 28.475,
+     "start": 28.4,
+     "text": "the"
+    },
+    {
+     "end": 28.975,
+     "start": 28.475,
      "text": "premium"
     },
     {
-     "end": 8.175,
-     "start": 7.975,
+     "end": 29.138,
+     "start": 28.975,
+     "text": "is"
+    },
+    {
+     "end": 29.525,
+     "start": 29.138,
+     "text": "paid"
+    },
+    {
+     "end": 30.138,
+     "start": 29.525,
+     "text": "exactly"
+    },
+    {
+     "end": 30.263,
+     "start": 30.138,
+     "text": "when"
+    },
+    {
+     "end": 30.35,
+     "start": 30.263,
+     "text": "the"
+    },
+    {
+     "end": 30.65,
+     "start": 30.35,
+     "text": "pool"
+    },
+    {
+     "end": 31.087,
+     "start": 30.65,
+     "text": "covers"
+    },
+    {
+     "end": 31.35,
+     "start": 31.087,
+     "text": "it"
+    },
+    {
+     "end": 31.462,
+     "start": 31.35,
+     "text": ","
+    },
+    {
+     "end": 31.625,
+     "start": 31.462,
+     "text": "as"
+    },
+    {
+     "end": 31.775,
+     "start": 31.625,
+     "text": "for"
+    },
+    {
+     "end": 31.975,
+     "start": 31.775,
+     "text": "any"
+    },
+    {
+     "end": 33.175,
+     "start": 31.975,
+     "text": "rotation"
+    },
+    {
+     "end": 33.375,
+     "start": 33.175,
+     "text": "."
+    },
+    {
+     "end": 33.95,
+     "start": 33.6,
+     "text": "Nobody"
+    },
+    {
+     "end": 34.225,
+     "start": 33.95,
+     "text": "else"
+    },
+    {
+     "end": 34.412,
+     "start": 34.225,
+     "text": "can"
+    },
+    {
+     "end": 34.775,
+     "start": 34.412,
+     "text": "choose"
+    },
+    {
+     "end": 34.875,
+     "start": 34.775,
+     "text": "the"
+    },
+    {
+     "end": 35.5,
+     "start": 34.875,
+     "text": "deposit"
+    },
+    {
+     "end": 35.95,
+     "start": 35.5,
+     "text": "option"
+    },
+    {
+     "end": 36.1,
+     "start": 35.95,
+     "text": "for"
+    },
+    {
+     "end": 36.275,
+     "start": 36.1,
+     "text": "her"
+    },
+    {
+     "end": 37.125,
+     "start": 36.275,
+     "text": "rotation"
+    },
+    {
+     "end": 37.225,
+     "start": 37.125,
+     "text": ","
+    },
+    {
+     "end": 37.338,
+     "start": 37.225,
+     "text": "and"
+    },
+    {
+     "end": 37.45,
+     "start": 37.338,
+     "text": "a"
+    },
+    {
+     "end": 38.0,
+     "start": 37.45,
+     "text": "signature"
+    },
+    {
+     "end": 38.188,
+     "start": 38.0,
+     "text": "for"
+    },
+    {
+     "end": 38.45,
+     "start": 38.188,
+     "text": "one"
+    },
+    {
+     "end": 38.925,
+     "start": 38.45,
+     "text": "output"
+    },
+    {
+     "end": 39.088,
+     "start": 38.925,
+     "text": "is"
+    },
+    {
+     "end": 39.6,
+     "start": 39.088,
+     "text": "worthless"
+    },
+    {
+     "end": 39.725,
+     "start": 39.6,
+     "text": "for"
+    },
+    {
+     "end": 40.775,
+     "start": 39.725,
+     "text": "another"
+    },
+    {
+     "end": 41.025,
+     "start": 40.775,
+     "text": "."
+    },
+    {
+     "end": 41.362,
+     "start": 41.225,
+     "text": "On"
+    },
+    {
+     "end": 41.463,
+     "start": 41.362,
+     "text": "a"
+    },
+    {
+     "end": 42.025,
+     "start": 41.463,
+     "text": "checkpoint"
+    },
+    {
+     "end": 42.175,
+     "start": 42.025,
+     "text": "that"
+    },
+    {
+     "end": 42.325,
+     "start": 42.175,
+     "text": "is"
+    },
+    {
+     "end": 42.588,
+     "start": 42.325,
+     "text": "not"
+    },
+    {
+     "end": 43.1,
+     "start": 42.588,
+     "text": "frozen"
+    },
+    {
+     "end": 43.25,
+     "start": 43.1,
+     "text": "the"
+    },
+    {
+     "end": 43.763,
+     "start": 43.25,
+     "text": "intent"
+    },
+    {
+     "end": 44.138,
+     "start": 43.763,
+     "text": "names"
+    },
+    {
+     "end": 44.225,
+     "start": 44.138,
+     "text": "an"
+    },
+    {
+     "end": 44.562,
+     "start": 44.225,
+     "text": "amount"
+    },
+    {
+     "end": 44.688,
+     "start": 44.562,
+     "text": "of"
+    },
+    {
+     "end": 45.375,
+     "start": 44.688,
+     "text": "zero"
+    },
+    {
+     "end": 45.513,
+     "start": 45.375,
+     "text": "and"
+    },
+    {
+     "end": 45.6,
+     "start": 45.513,
+     "text": "the"
+    },
+    {
+     "end": 46.175,
+     "start": 45.6,
+     "text": "deposit"
+    },
+    {
+     "end": 46.5,
+     "start": 46.175,
+     "text": "brings"
+    },
+    {
+     "end": 47.475,
+     "start": 46.5,
+     "text": "nothing"
+    },
+    {
+     "end": 47.675,
+     "start": 47.475,
+     "text": "."
+    },
+    {
+     "end": 48.112,
+     "start": 47.9,
+     "text": "See"
+    },
+    {
+     "end": 48.55,
+     "start": 48.112,
+     "text": "Rotate"
+    },
+    {
+     "end": 48.675,
+     "start": 48.55,
+     "text": "your"
+    },
+    {
+     "end": 49.138,
+     "start": 48.675,
+     "text": "preprod"
+    },
+    {
+     "end": 49.725,
+     "start": 49.138,
+     "text": "identity"
+    },
+    {
+     "end": 49.838,
+     "start": 49.725,
+     "text": "for"
+    },
+    {
+     "end": 49.925,
+     "start": 49.838,
+     "text": "the"
+    },
+    {
+     "end": 50.612,
+     "start": 49.925,
+     "text": "commands"
+    },
+    {
+     "end": 50.737,
+     "start": 50.612,
+     "text": "and"
+    },
+    {
+     "end": 50.825,
+     "start": 50.737,
+     "text": "The"
+    },
+    {
+     "end": 51.35,
+     "start": 50.825,
+     "text": "deposit"
+    },
+    {
+     "end": 51.825,
+     "start": 51.35,
+     "text": "intent"
+    },
+    {
+     "end": 51.95,
+     "start": 51.825,
+     "text": "for"
+    },
+    {
+     "end": 52.1,
+     "start": 51.95,
+     "text": "what"
+    },
+    {
+     "end": 52.237,
+     "start": 52.1,
+     "text": "is"
+    },
+    {
+     "end": 53.275,
+     "start": 52.237,
+     "text": "signed"
+    },
+    {
+     "end": 53.5,
+     "start": 53.275,
      "text": "."
     }
    ]
   },
   "docs-user-hunters/hunters-06": {
-   "audio_sha256": "63578df4e7bd1f63927b747d0e39c4738f4ec1ba087c8717a5c957e91c5918af",
-   "characters": 225,
-   "cost": 0.0001395,
-   "duration": 14.85,
+   "audio_sha256": "cf3f2c6daaf7ffbfd5f4efd083b799305bd14140e8f5dd20d1885c506ae634d2",
+   "characters": 605,
+   "cost": 0.00059895,
+   "duration": 41.125,
    "index": 6,
+   "key": "e6bcd565715aa0963e092924aa2ca11e3d62d908ed911169945615129147b737",
+   "page": "docs/user/hunters.md",
+   "pause_ms": 400,
+   "section": "hunters",
+   "sent_text": "Anyone may top up the pool by at least one premium, once between two rotations; nobody signs anything. The top-up sets a mark in the datum and changes nothing else. Every rotation clears the mark and a freeze keeps it. A freeze is refused while the pool covers the premium. ckeri top-up, with the identifier and the amount, builds and submits the top-up; it plans for preprod only and needs a manifest with a premium, which no committed manifest has until the redeployment (#356). It refuses an amount below the premium and a checkpoint already topped up since its last rotation before it builds anything.",
+   "text": "Anyone may top up the pool by at least one premium, once between two rotations; nobody signs anything. The top-up sets a mark in the datum and changes nothing else. Every rotation clears the mark and a freeze keeps it. A freeze is refused while the pool covers the premium. ckeri top-up, with the identifier and the amount, builds and submits the top-up; it plans for preprod only and needs a manifest with a premium, which no committed manifest has until the redeployment (#356). It refuses an amount below the premium and a checkpoint already topped up since its last rotation before it builds anything.",
+   "words": [
+    {
+     "end": 0.625,
+     "start": 0.2,
+     "text": "Anyone"
+    },
+    {
+     "end": 0.8,
+     "start": 0.625,
+     "text": "may"
+    },
+    {
+     "end": 1.038,
+     "start": 0.8,
+     "text": "top"
+    },
+    {
+     "end": 1.188,
+     "start": 1.038,
+     "text": "up"
+    },
+    {
+     "end": 1.288,
+     "start": 1.188,
+     "text": "the"
+    },
+    {
+     "end": 1.675,
+     "start": 1.288,
+     "text": "pool"
+    },
+    {
+     "end": 1.85,
+     "start": 1.675,
+     "text": "by"
+    },
+    {
+     "end": 1.95,
+     "start": 1.85,
+     "text": "at"
+    },
+    {
+     "end": 2.225,
+     "start": 1.95,
+     "text": "least"
+    },
+    {
+     "end": 2.45,
+     "start": 2.225,
+     "text": "one"
+    },
+    {
+     "end": 3.05,
+     "start": 2.45,
+     "text": "premium"
+    },
+    {
+     "end": 3.15,
+     "start": 3.05,
+     "text": ","
+    },
+    {
+     "end": 3.425,
+     "start": 3.15,
+     "text": "once"
+    },
+    {
+     "end": 3.787,
+     "start": 3.425,
+     "text": "between"
+    },
+    {
+     "end": 4.0,
+     "start": 3.787,
+     "text": "two"
+    },
+    {
+     "end": 5.35,
+     "start": 4.0,
+     "text": "rotations"
+    },
+    {
+     "end": 5.55,
+     "start": 5.35,
+     "text": ";"
+    },
+    {
+     "end": 6.162,
+     "start": 5.775,
+     "text": "nobody"
+    },
+    {
+     "end": 6.55,
+     "start": 6.162,
+     "text": "signs"
+    },
+    {
+     "end": 7.225,
+     "start": 6.55,
+     "text": "anything"
+    },
+    {
+     "end": 7.325,
+     "start": 7.225,
+     "text": "."
+    },
+    {
+     "end": 7.425,
+     "start": 7.325,
+     "text": "The"
+    },
+    {
+     "end": 7.875,
+     "start": 7.425,
+     "text": "top-up"
+    },
+    {
+     "end": 8.137,
+     "start": 7.875,
+     "text": "sets"
+    },
+    {
+     "end": 8.225,
+     "start": 8.137,
+     "text": "a"
+    },
+    {
+     "end": 8.512,
+     "start": 8.225,
+     "text": "mark"
+    },
+    {
+     "end": 8.587,
+     "start": 8.512,
+     "text": "in"
+    },
+    {
+     "end": 8.675,
+     "start": 8.587,
+     "text": "the"
+    },
+    {
+     "end": 9.15,
+     "start": 8.675,
+     "text": "datum"
+    },
+    {
+     "end": 9.288,
+     "start": 9.15,
+     "text": "and"
+    },
+    {
+     "end": 9.725,
+     "start": 9.288,
+     "text": "changes"
+    },
+    {
+     "end": 10.075,
+     "start": 9.725,
+     "text": "nothing"
+    },
+    {
+     "end": 10.975,
+     "start": 10.075,
+     "text": "else"
+    },
+    {
+     "end": 11.175,
+     "start": 10.975,
+     "text": "."
+    },
+    {
+     "end": 11.65,
+     "start": 11.375,
+     "text": "Every"
+    },
+    {
+     "end": 12.2,
+     "start": 11.65,
+     "text": "rotation"
+    },
+    {
+     "end": 12.512,
+     "start": 12.2,
+     "text": "clears"
+    },
+    {
+     "end": 12.6,
+     "start": 12.512,
+     "text": "the"
+    },
+    {
+     "end": 13.012,
+     "start": 12.6,
+     "text": "mark"
+    },
+    {
+     "end": 13.137,
+     "start": 13.012,
+     "text": "and"
+    },
+    {
+     "end": 13.212,
+     "start": 13.137,
+     "text": "a"
+    },
+    {
+     "end": 13.55,
+     "start": 13.212,
+     "text": "freeze"
+    },
+    {
+     "end": 13.887,
+     "start": 13.55,
+     "text": "keeps"
+    },
+    {
+     "end": 14.5,
+     "start": 13.887,
+     "text": "it"
+    },
+    {
+     "end": 14.7,
+     "start": 14.5,
+     "text": "."
+    },
+    {
+     "end": 14.988,
+     "start": 14.9,
+     "text": "A"
+    },
+    {
+     "end": 15.288,
+     "start": 14.988,
+     "text": "freeze"
+    },
+    {
+     "end": 15.4,
+     "start": 15.288,
+     "text": "is"
+    },
+    {
+     "end": 16.0,
+     "start": 15.4,
+     "text": "refused"
+    },
+    {
+     "end": 16.138,
+     "start": 16.0,
+     "text": "while"
+    },
+    {
+     "end": 16.225,
+     "start": 16.138,
+     "text": "the"
+    },
+    {
+     "end": 16.55,
+     "start": 16.225,
+     "text": "pool"
+    },
+    {
+     "end": 16.938,
+     "start": 16.55,
+     "text": "covers"
+    },
+    {
+     "end": 17.025,
+     "start": 16.938,
+     "text": "the"
+    },
+    {
+     "end": 17.975,
+     "start": 17.025,
+     "text": "premium"
+    },
+    {
+     "end": 18.15,
+     "start": 17.975,
+     "text": "."
+    },
+    {
+     "end": 18.85,
+     "start": 18.375,
+     "text": "ckeri"
+    },
+    {
+     "end": 19.3,
+     "start": 18.85,
+     "text": "top-up"
+    },
+    {
+     "end": 19.337,
+     "start": 19.3,
+     "text": ","
+    },
+    {
+     "end": 19.462,
+     "start": 19.337,
+     "text": "with"
+    },
+    {
+     "end": 19.612,
+     "start": 19.462,
+     "text": "the"
+    },
+    {
+     "end": 20.45,
+     "start": 19.612,
+     "text": "identifier"
+    },
+    {
+     "end": 20.562,
+     "start": 20.45,
+     "text": "and"
+    },
+    {
+     "end": 20.65,
+     "start": 20.562,
+     "text": "the"
+    },
+    {
+     "end": 21.125,
+     "start": 20.65,
+     "text": "amount"
+    },
+    {
+     "end": 21.237,
+     "start": 21.125,
+     "text": ","
+    },
+    {
+     "end": 21.65,
+     "start": 21.237,
+     "text": "builds"
+    },
+    {
+     "end": 21.775,
+     "start": 21.65,
+     "text": "and"
+    },
+    {
+     "end": 22.225,
+     "start": 21.775,
+     "text": "submits"
+    },
+    {
+     "end": 22.325,
+     "start": 22.225,
+     "text": "the"
+    },
+    {
+     "end": 23.3,
+     "start": 22.325,
+     "text": "top-up"
+    },
+    {
+     "end": 23.525,
+     "start": 23.3,
+     "text": ";"
+    },
+    {
+     "end": 23.85,
+     "start": 23.75,
+     "text": "it"
+    },
+    {
+     "end": 24.25,
+     "start": 23.85,
+     "text": "plans"
+    },
+    {
+     "end": 24.375,
+     "start": 24.25,
+     "text": "for"
+    },
+    {
+     "end": 24.888,
+     "start": 24.375,
+     "text": "preprod"
+    },
+    {
+     "end": 25.362,
+     "start": 24.888,
+     "text": "only"
+    },
+    {
+     "end": 25.5,
+     "start": 25.362,
+     "text": "and"
+    },
+    {
+     "end": 25.737,
+     "start": 25.5,
+     "text": "needs"
+    },
+    {
+     "end": 25.837,
+     "start": 25.737,
+     "text": "a"
+    },
+    {
+     "end": 26.525,
+     "start": 25.837,
+     "text": "manifest"
+    },
+    {
+     "end": 26.663,
+     "start": 26.525,
+     "text": "with"
+    },
+    {
+     "end": 26.763,
+     "start": 26.663,
+     "text": "a"
+    },
+    {
+     "end": 27.375,
+     "start": 26.763,
+     "text": "premium"
+    },
+    {
+     "end": 27.45,
+     "start": 27.375,
+     "text": ","
+    },
+    {
+     "end": 27.688,
+     "start": 27.45,
+     "text": "which"
+    },
+    {
+     "end": 27.962,
+     "start": 27.688,
+     "text": "no"
+    },
+    {
+     "end": 28.425,
+     "start": 27.962,
+     "text": "committed"
+    },
+    {
+     "end": 29.062,
+     "start": 28.425,
+     "text": "manifest"
+    },
+    {
+     "end": 29.475,
+     "start": 29.062,
+     "text": "has"
+    },
+    {
+     "end": 29.825,
+     "start": 29.475,
+     "text": "until"
+    },
+    {
+     "end": 29.925,
+     "start": 29.825,
+     "text": "the"
+    },
+    {
+     "end": 30.7,
+     "start": 29.925,
+     "text": "redeployment"
+    },
+    {
+     "end": 30.775,
+     "start": 30.7,
+     "text": "("
+    },
+    {
+     "end": 32.7,
+     "start": 30.775,
+     "text": "356"
+    },
+    {
+     "end": 32.975,
+     "start": 32.7,
+     "text": ")"
+    },
+    {
+     "end": 33.025,
+     "start": 32.975,
+     "text": "."
+    },
+    {
+     "end": 33.375,
+     "start": 33.225,
+     "text": "It"
+    },
+    {
+     "end": 34.025,
+     "start": 33.375,
+     "text": "refuses"
+    },
+    {
+     "end": 34.125,
+     "start": 34.025,
+     "text": "an"
+    },
+    {
+     "end": 34.525,
+     "start": 34.125,
+     "text": "amount"
+    },
+    {
+     "end": 34.875,
+     "start": 34.525,
+     "text": "below"
+    },
+    {
+     "end": 34.987,
+     "start": 34.875,
+     "text": "the"
+    },
+    {
+     "end": 35.612,
+     "start": 34.987,
+     "text": "premium"
+    },
+    {
+     "end": 35.737,
+     "start": 35.612,
+     "text": "and"
+    },
+    {
+     "end": 35.812,
+     "start": 35.737,
+     "text": "a"
+    },
+    {
+     "end": 36.412,
+     "start": 35.812,
+     "text": "checkpoint"
+    },
+    {
+     "end": 36.838,
+     "start": 36.412,
+     "text": "already"
+    },
+    {
+     "end": 37.162,
+     "start": 36.838,
+     "text": "topped"
+    },
+    {
+     "end": 37.375,
+     "start": 37.162,
+     "text": "up"
+    },
+    {
+     "end": 37.6,
+     "start": 37.375,
+     "text": "since"
+    },
+    {
+     "end": 37.812,
+     "start": 37.6,
+     "text": "its"
+    },
+    {
+     "end": 38.225,
+     "start": 37.812,
+     "text": "last"
+    },
+    {
+     "end": 38.875,
+     "start": 38.225,
+     "text": "rotation"
+    },
+    {
+     "end": 39.25,
+     "start": 38.875,
+     "text": "before"
+    },
+    {
+     "end": 39.375,
+     "start": 39.25,
+     "text": "it"
+    },
+    {
+     "end": 39.725,
+     "start": 39.375,
+     "text": "builds"
+    },
+    {
+     "end": 40.9,
+     "start": 39.725,
+     "text": "anything"
+    },
+    {
+     "end": 41.125,
+     "start": 40.9,
+     "text": "."
+    }
+   ]
+  },
+  "docs-user-hunters/hunters-07": {
+   "audio_sha256": "897c5a891bb14abb31f0e1e213e68704be14488d2470f70899d34904ccaed1f6",
+   "characters": 225,
+   "cost": 0.00022275,
+   "duration": 14.85,
+   "index": 7,
    "key": "0f87a876c2d0a00f1b25b3d230f2274bb8b8628ecdff630405aaf443e648b450",
    "page": "docs/user/hunters.md",
    "pause_ms": 400,
@@ -480655,257 +482245,257 @@
     }
    ]
   },
-  "docs-user-hunters/hunters-07": {
-   "audio_sha256": "2d5c4081e8d87b49175eff4454513c7e8e9217c7ae493adf27473e9fbae7d865",
-   "characters": 213,
-   "cost": 0.00013206,
-   "duration": 14.1,
-   "index": 7,
-   "key": "659903e444bb40a63cf4760f923e4d998ea69ce89c2f71ee4321cd1d907ddd54",
+  "docs-user-hunters/hunters-08": {
+   "audio_sha256": "d13b0e79166062c10b89f0617bab4acb3cd4182ef86288ac082976910045f496",
+   "characters": 219,
+   "cost": 0.00021680999999999998,
+   "duration": 14.5,
+   "index": 8,
+   "key": "565971af3effae03f5710bca1c1b7cd5682d201a3e1e69b39ac5037f062fc384",
    "page": "docs/user/hunters.md",
    "pause_ms": 400,
    "section": "hunters",
-   "sent_text": "The freeze that ships on preprod today is not this. It is freeze-for-lag: ACTIVE to ARMED, a deadline, a claim. That economy goes. The freeze that survives is what a hunter takes when the owner's pool has run dry.",
-   "text": "The freeze that ships on preprod today is not this. It is freeze-for-lag: ACTIVE to ARMED, a deadline, a claim. That economy goes. The freeze that survives is what a hunter takes when the owner's pool has run dry.",
+   "sent_text": "The earlier freeze-for-lag, ACTIVE to ARMED with a deadline and a claim, is gone: nothing arms, waits or claims. The freeze that remains is what a hunter takes when the owner's pool has run dry, in a single transaction.",
+   "text": "The earlier freeze-for-lag, ACTIVE to ARMED with a deadline and a claim, is gone: nothing arms, waits or claims. The freeze that remains is what a hunter takes when the owner's pool has run dry, in a single transaction.",
    "words": [
     {
-     "end": 0.287,
+     "end": 0.3,
      "start": 0.175,
      "text": "The"
     },
     {
-     "end": 0.637,
-     "start": 0.287,
-     "text": "freeze"
+     "end": 0.675,
+     "start": 0.3,
+     "text": "earlier"
     },
     {
-     "end": 0.812,
-     "start": 0.637,
-     "text": "that"
-    },
-    {
-     "end": 1.087,
-     "start": 0.812,
-     "text": "ships"
-    },
-    {
-     "end": 1.225,
-     "start": 1.087,
-     "text": "on"
-    },
-    {
-     "end": 1.625,
-     "start": 1.225,
-     "text": "preprod"
-    },
-    {
-     "end": 1.975,
-     "start": 1.625,
-     "text": "today"
-    },
-    {
-     "end": 2.125,
-     "start": 1.975,
-     "text": "is"
-    },
-    {
-     "end": 2.375,
-     "start": 2.125,
-     "text": "not"
-    },
-    {
-     "end": 3.15,
-     "start": 2.375,
-     "text": "this"
-    },
-    {
-     "end": 3.35,
-     "start": 3.15,
-     "text": "."
-    },
-    {
-     "end": 3.65,
-     "start": 3.525,
-     "text": "It"
-    },
-    {
-     "end": 3.8,
-     "start": 3.65,
-     "text": "is"
-    },
-    {
-     "end": 4.575,
-     "start": 3.8,
+     "end": 1.5,
+     "start": 0.675,
      "text": "freeze-for-lag"
     },
     {
-     "end": 4.65,
-     "start": 4.575,
-     "text": ":"
+     "end": 1.612,
+     "start": 1.5,
+     "text": ","
     },
     {
-     "end": 5.0,
-     "start": 4.65,
+     "end": 1.975,
+     "start": 1.612,
      "text": "ACTIVE"
     },
     {
-     "end": 5.162,
-     "start": 5.0,
+     "end": 2.112,
+     "start": 1.975,
      "text": "to"
     },
     {
-     "end": 5.55,
-     "start": 5.162,
+     "end": 2.412,
+     "start": 2.112,
      "text": "ARMED"
     },
     {
-     "end": 5.6,
-     "start": 5.55,
-     "text": ","
+     "end": 2.537,
+     "start": 2.412,
+     "text": "with"
     },
     {
-     "end": 5.713,
-     "start": 5.6,
+     "end": 2.638,
+     "start": 2.537,
      "text": "a"
     },
     {
-     "end": 6.175,
-     "start": 5.713,
+     "end": 3.15,
+     "start": 2.638,
      "text": "deadline"
     },
     {
-     "end": 6.213,
-     "start": 6.175,
-     "text": ","
+     "end": 3.263,
+     "start": 3.15,
+     "text": "and"
     },
     {
-     "end": 6.3,
-     "start": 6.213,
+     "end": 3.338,
+     "start": 3.263,
      "text": "a"
     },
     {
-     "end": 6.825,
-     "start": 6.3,
+     "end": 3.85,
+     "start": 3.338,
      "text": "claim"
     },
     {
-     "end": 6.925,
-     "start": 6.825,
-     "text": "."
+     "end": 3.95,
+     "start": 3.85,
+     "text": ","
     },
     {
-     "end": 7.125,
-     "start": 6.925,
-     "text": "That"
-    },
-    {
-     "end": 7.65,
-     "start": 7.125,
-     "text": "economy"
-    },
-    {
-     "end": 8.625,
-     "start": 7.65,
-     "text": "goes"
-    },
-    {
-     "end": 8.825,
-     "start": 8.625,
-     "text": "."
-    },
-    {
-     "end": 9.113,
-     "start": 9.0,
-     "text": "The"
-    },
-    {
-     "end": 9.45,
-     "start": 9.113,
-     "text": "freeze"
-    },
-    {
-     "end": 9.65,
-     "start": 9.45,
-     "text": "that"
-    },
-    {
-     "end": 10.387,
-     "start": 9.65,
-     "text": "survives"
-    },
-    {
-     "end": 10.538,
-     "start": 10.387,
+     "end": 4.113,
+     "start": 3.95,
      "text": "is"
     },
     {
-     "end": 10.663,
-     "start": 10.538,
+     "end": 5.075,
+     "start": 4.113,
+     "text": "gone"
+    },
+    {
+     "end": 5.3,
+     "start": 5.075,
+     "text": ":"
+    },
+    {
+     "end": 5.8,
+     "start": 5.5,
+     "text": "nothing"
+    },
+    {
+     "end": 6.075,
+     "start": 5.8,
+     "text": "arms"
+    },
+    {
+     "end": 6.125,
+     "start": 6.075,
+     "text": ","
+    },
+    {
+     "end": 6.387,
+     "start": 6.125,
+     "text": "waits"
+    },
+    {
+     "end": 6.475,
+     "start": 6.387,
+     "text": "or"
+    },
+    {
+     "end": 7.3,
+     "start": 6.475,
+     "text": "claims"
+    },
+    {
+     "end": 7.5,
+     "start": 7.3,
+     "text": "."
+    },
+    {
+     "end": 7.812,
+     "start": 7.7,
+     "text": "The"
+    },
+    {
+     "end": 8.175,
+     "start": 7.812,
+     "text": "freeze"
+    },
+    {
+     "end": 8.35,
+     "start": 8.175,
+     "text": "that"
+    },
+    {
+     "end": 8.975,
+     "start": 8.35,
+     "text": "remains"
+    },
+    {
+     "end": 9.125,
+     "start": 8.975,
+     "text": "is"
+    },
+    {
+     "end": 9.262,
+     "start": 9.125,
      "text": "what"
     },
     {
-     "end": 10.725,
-     "start": 10.663,
+     "end": 9.35,
+     "start": 9.262,
      "text": "a"
     },
     {
-     "end": 11.113,
-     "start": 10.725,
+     "end": 9.762,
+     "start": 9.35,
      "text": "hunter"
     },
     {
-     "end": 11.488,
-     "start": 11.113,
+     "end": 10.137,
+     "start": 9.762,
      "text": "takes"
     },
     {
-     "end": 11.613,
-     "start": 11.488,
+     "end": 10.262,
+     "start": 10.137,
      "text": "when"
     },
     {
-     "end": 11.738,
-     "start": 11.613,
+     "end": 10.387,
+     "start": 10.262,
      "text": "the"
     },
     {
-     "end": 12.137,
-     "start": 11.738,
+     "end": 10.788,
+     "start": 10.387,
      "text": "owner's"
     },
     {
-     "end": 12.5,
-     "start": 12.137,
+     "end": 11.15,
+     "start": 10.788,
      "text": "pool"
     },
     {
-     "end": 12.7,
-     "start": 12.5,
+     "end": 11.363,
+     "start": 11.15,
      "text": "has"
     },
     {
-     "end": 12.95,
-     "start": 12.7,
+     "end": 11.688,
+     "start": 11.363,
      "text": "run"
     },
     {
-     "end": 13.875,
-     "start": 12.95,
+     "end": 12.2,
+     "start": 11.688,
      "text": "dry"
     },
     {
-     "end": 14.1,
-     "start": 13.875,
+     "end": 12.325,
+     "start": 12.2,
+     "text": ","
+    },
+    {
+     "end": 12.45,
+     "start": 12.325,
+     "text": "in"
+    },
+    {
+     "end": 12.575,
+     "start": 12.45,
+     "text": "a"
+    },
+    {
+     "end": 13.0,
+     "start": 12.575,
+     "text": "single"
+    },
+    {
+     "end": 14.3,
+     "start": 13.0,
+     "text": "transaction"
+    },
+    {
+     "end": 14.5,
+     "start": 14.3,
      "text": "."
     }
    ]
   },
-  "docs-user-hunters/hunters-08": {
-   "audio_sha256": "b667d47df4471ff6b7eb3bdf0a6d43d478040e8c71e7f47076bb8ff5f0f2e0f2",
+  "docs-user-hunters/hunters-09": {
+   "audio_sha256": "89c2ae029d0338e381103d526951056dca1655b7c4b5b4924d9c18103dd5e600",
    "characters": 47,
-   "cost": 2.914e-05,
+   "cost": 4.6530000000000003e-05,
    "duration": 3.1,
-   "index": 8,
+   "index": 9,
    "key": "21f95e51087433767de463c161e9b32d4ddac900b8f0f1387c9b5efd5342a164",
    "page": "docs/user/hunters.md",
    "pause_ms": 400,
@@ -502371,11 +503961,211 @@
    ]
   },
   "docs-user-register-preprod-identity/register-your-identity-on-preprod-01": {
-   "audio_sha256": "1c559582f0f2ca66313f877b1c080fd44aff65866a8244a05d607164b3e0a0a4",
+   "audio_sha256": "1046d6dcdc9aa60ef4ecf876d96abb5580230e5113a4acd0a2c847e036baf109",
    "characters": 35,
-   "cost": 2.17e-05,
-   "duration": 2.125,
+   "cost": 3.4649999999999995e-05,
+   "duration": 2.175,
    "index": 1,
+   "key": "85f4509003004155c29220e65fde2caabfc9c441a87f43494ebc44c95c570039",
+   "page": "docs/user/register-preprod-identity.md",
+   "pause_ms": 400,
+   "section": "register-your-identity-on-preprod",
+   "sent_text": "The current ckeri and this manifest",
+   "text": "The current ckeri and this manifest",
+   "words": [
+    {
+     "end": 0.25,
+     "start": 0.175,
+     "text": "The"
+    },
+    {
+     "end": 0.525,
+     "start": 0.25,
+     "text": "current"
+    },
+    {
+     "end": 1.013,
+     "start": 0.525,
+     "text": "ckeri"
+    },
+    {
+     "end": 1.112,
+     "start": 1.013,
+     "text": "and"
+    },
+    {
+     "end": 1.275,
+     "start": 1.112,
+     "text": "this"
+    },
+    {
+     "end": 2.175,
+     "start": 1.275,
+     "text": "manifest"
+    }
+   ]
+  },
+  "docs-user-register-preprod-identity/register-your-identity-on-preprod-02": {
+   "audio_sha256": "146ea4f7557e375b633d92901645e6566f24dccb6a71c8070a64f60408b717fa",
+   "characters": 175,
+   "cost": 0.00017325,
+   "duration": 12.625,
+   "index": 2,
+   "key": "2a5c25e8191f3f51ba3e444ddbdedc9f483dfc32828cf0833e48049daebac80e",
+   "page": "docs/user/register-preprod-identity.md",
+   "pause_ms": 400,
+   "section": "register-your-identity-on-preprod",
+   "sent_text": "The committed preprod manifest describes the earlier deployed generation of the checkpoint program. The current ckeri cannot register against it until the redeployment (#356).",
+   "text": "The committed preprod manifest describes the earlier deployed generation of the checkpoint program. The current ckeri cannot register against it until the redeployment (#356).",
+   "words": [
+    {
+     "end": 0.275,
+     "start": 0.2,
+     "text": "The"
+    },
+    {
+     "end": 0.725,
+     "start": 0.275,
+     "text": "committed"
+    },
+    {
+     "end": 1.2,
+     "start": 0.725,
+     "text": "preprod"
+    },
+    {
+     "end": 1.938,
+     "start": 1.2,
+     "text": "manifest"
+    },
+    {
+     "end": 2.575,
+     "start": 1.938,
+     "text": "describes"
+    },
+    {
+     "end": 2.713,
+     "start": 2.575,
+     "text": "the"
+    },
+    {
+     "end": 3.2,
+     "start": 2.713,
+     "text": "earlier"
+    },
+    {
+     "end": 3.725,
+     "start": 3.2,
+     "text": "deployed"
+    },
+    {
+     "end": 4.45,
+     "start": 3.725,
+     "text": "generation"
+    },
+    {
+     "end": 4.537,
+     "start": 4.45,
+     "text": "of"
+    },
+    {
+     "end": 4.637,
+     "start": 4.537,
+     "text": "the"
+    },
+    {
+     "end": 5.125,
+     "start": 4.637,
+     "text": "checkpoint"
+    },
+    {
+     "end": 6.225,
+     "start": 5.125,
+     "text": "program"
+    },
+    {
+     "end": 6.45,
+     "start": 6.225,
+     "text": "."
+    },
+    {
+     "end": 6.75,
+     "start": 6.65,
+     "text": "The"
+    },
+    {
+     "end": 7.113,
+     "start": 6.75,
+     "text": "current"
+    },
+    {
+     "end": 7.713,
+     "start": 7.113,
+     "text": "ckeri"
+    },
+    {
+     "end": 8.1,
+     "start": 7.713,
+     "text": "cannot"
+    },
+    {
+     "end": 8.6,
+     "start": 8.1,
+     "text": "register"
+    },
+    {
+     "end": 9.05,
+     "start": 8.6,
+     "text": "against"
+    },
+    {
+     "end": 9.2,
+     "start": 9.05,
+     "text": "it"
+    },
+    {
+     "end": 9.488,
+     "start": 9.2,
+     "text": "until"
+    },
+    {
+     "end": 9.575,
+     "start": 9.488,
+     "text": "the"
+    },
+    {
+     "end": 10.363,
+     "start": 9.575,
+     "text": "redeployment"
+    },
+    {
+     "end": 10.45,
+     "start": 10.363,
+     "text": "("
+    },
+    {
+     "end": 12.35,
+     "start": 10.45,
+     "text": "356"
+    },
+    {
+     "end": 12.575,
+     "start": 12.35,
+     "text": ")"
+    },
+    {
+     "end": 12.625,
+     "start": 12.575,
+     "text": "."
+    }
+   ]
+  },
+  "docs-user-register-preprod-identity/register-your-identity-on-preprod-03": {
+   "audio_sha256": "bdb6274ed3c8a449b75ef01eaaccdb788c2c424c6d2b9c07725bcea91eb54b58",
+   "characters": 35,
+   "cost": 3.4649999999999995e-05,
+   "duration": 2.125,
+   "index": 3,
    "key": "61646169700b93fad330d1cf0800caf8d2137505f51d1285be4ea5efde4a11b8",
    "page": "docs/user/register-preprod-identity.md",
    "pause_ms": 400,
@@ -502420,18 +504210,18 @@
     }
    ]
   },
-  "docs-user-register-preprod-identity/register-your-identity-on-preprod-02": {
-   "audio_sha256": "69763667285182ac317619971a236356575dad2569eaa0d2ec1439dc141c4d08",
-   "characters": 328,
-   "cost": 0.00020336,
-   "duration": 23.425,
-   "index": 2,
-   "key": "6705da44681165be2889724499df2d8b6eb1f837ba6493b388d3bd4dde0d6f99",
+  "docs-user-register-preprod-identity/register-your-identity-on-preprod-04": {
+   "audio_sha256": "272bba290ff60b7e9117baefed4c3b8286e56662d5b7f554bd26597673fa8fef",
+   "characters": 485,
+   "cost": 0.00048014999999999993,
+   "duration": 34.425,
+   "index": 4,
+   "key": "505939f2b280d5a2860fb13d2bd05b94476fc6e4fb42ae14ef8d10f1b6191a25",
    "page": "docs/user/register-preprod-identity.md",
    "pause_ms": 400,
    "section": "register-your-identity-on-preprod",
-   "sent_text": "This page is the V1 ckeri register that ships on preprod: no uniqueness rule, no registry. The accepted design registers once through the registry (absence proof, insert, mint). Play Alice's identity appears on Cardano and the registry simulation. An identity is active, parked with the hash, or convicted. There is no withdraw.",
-   "text": "This page is the V1 ckeri register that ships on preprod: no uniqueness rule, no registry. The accepted design registers once through the registry (absence proof, insert, mint). Play Alice's identity appears on Cardano and the registry simulation. An identity is active, parked with the hash, or convicted. There is no withdraw.",
+   "sent_text": "This page is the V1 ckeri register that ships on preprod: no uniqueness rule, no registry. The accepted design registers once through the registry (absence proof, insert, mint). Play Alice's identity appears on Cardano and the registry simulation. An identity may be active, parked with its token and key state retained, in pending conviction custody, or permanently convicted after its associated Registry fold. Parking and revival leave the registry key active. There is no withdraw.",
+   "text": "This page is the V1 ckeri register that ships on preprod: no uniqueness rule, no registry. The accepted design registers once through the registry (absence proof, insert, mint). Play Alice's identity appears on Cardano and the registry simulation. An identity may be active, parked with its token and key state retained, in pending conviction custody, or permanently convicted after its associated Registry fold. Parking and revival leave the registry key active. There is no withdraw.",
    "words": [
     {
      "end": 0.363,
@@ -502669,103 +504459,228 @@
      "text": "."
     },
     {
-     "end": 18.388,
-     "start": 18.275,
+     "end": 18.35,
+     "start": 18.25,
      "text": "An"
     },
     {
-     "end": 18.925,
-     "start": 18.388,
+     "end": 18.875,
+     "start": 18.35,
      "text": "identity"
     },
     {
-     "end": 19.087,
-     "start": 18.925,
-     "text": "is"
+     "end": 19.038,
+     "start": 18.875,
+     "text": "may"
     },
     {
-     "end": 19.575,
-     "start": 19.087,
+     "end": 19.188,
+     "start": 19.038,
+     "text": "be"
+    },
+    {
+     "end": 19.725,
+     "start": 19.188,
      "text": "active"
     },
     {
-     "end": 19.625,
-     "start": 19.575,
+     "end": 19.8,
+     "start": 19.725,
      "text": ","
     },
     {
-     "end": 19.938,
-     "start": 19.625,
+     "end": 20.138,
+     "start": 19.8,
      "text": "parked"
     },
     {
-     "end": 20.062,
-     "start": 19.938,
+     "end": 20.263,
+     "start": 20.138,
      "text": "with"
     },
     {
-     "end": 20.188,
-     "start": 20.062,
-     "text": "the"
+     "end": 20.45,
+     "start": 20.263,
+     "text": "its"
     },
     {
-     "end": 20.6,
-     "start": 20.188,
-     "text": "hash"
+     "end": 20.875,
+     "start": 20.45,
+     "text": "token"
     },
     {
-     "end": 20.65,
-     "start": 20.6,
+     "end": 21.0,
+     "start": 20.875,
+     "text": "and"
+    },
+    {
+     "end": 21.225,
+     "start": 21.0,
+     "text": "key"
+    },
+    {
+     "end": 21.55,
+     "start": 21.225,
+     "text": "state"
+    },
+    {
+     "end": 22.625,
+     "start": 21.55,
+     "text": "retained"
+    },
+    {
+     "end": 22.825,
+     "start": 22.625,
      "text": ","
     },
     {
-     "end": 20.8,
-     "start": 20.65,
+     "end": 23.125,
+     "start": 23.025,
+     "text": "in"
+    },
+    {
+     "end": 23.5,
+     "start": 23.125,
+     "text": "pending"
+    },
+    {
+     "end": 24.0,
+     "start": 23.5,
+     "text": "conviction"
+    },
+    {
+     "end": 24.9,
+     "start": 24.0,
+     "text": "custody"
+    },
+    {
+     "end": 25.1,
+     "start": 24.9,
+     "text": ","
+    },
+    {
+     "end": 25.462,
+     "start": 25.3,
      "text": "or"
     },
     {
-     "end": 21.525,
-     "start": 20.8,
+     "end": 26.05,
+     "start": 25.462,
+     "text": "permanently"
+    },
+    {
+     "end": 26.775,
+     "start": 26.05,
      "text": "convicted"
     },
     {
-     "end": 21.625,
-     "start": 21.525,
+     "end": 27.087,
+     "start": 26.775,
+     "text": "after"
+    },
+    {
+     "end": 27.2,
+     "start": 27.087,
+     "text": "its"
+    },
+    {
+     "end": 27.925,
+     "start": 27.2,
+     "text": "associated"
+    },
+    {
+     "end": 28.438,
+     "start": 27.925,
+     "text": "Registry"
+    },
+    {
+     "end": 29.375,
+     "start": 28.438,
+     "text": "fold"
+    },
+    {
+     "end": 29.575,
+     "start": 29.375,
      "text": "."
     },
     {
-     "end": 21.775,
-     "start": 21.625,
+     "end": 30.15,
+     "start": 29.75,
+     "text": "Parking"
+    },
+    {
+     "end": 30.275,
+     "start": 30.15,
+     "text": "and"
+    },
+    {
+     "end": 30.888,
+     "start": 30.275,
+     "text": "revival"
+    },
+    {
+     "end": 31.188,
+     "start": 30.888,
+     "text": "leave"
+    },
+    {
+     "end": 31.275,
+     "start": 31.188,
+     "text": "the"
+    },
+    {
+     "end": 31.775,
+     "start": 31.275,
+     "text": "registry"
+    },
+    {
+     "end": 31.987,
+     "start": 31.775,
+     "text": "key"
+    },
+    {
+     "end": 32.575,
+     "start": 31.987,
+     "text": "active"
+    },
+    {
+     "end": 32.675,
+     "start": 32.575,
+     "text": "."
+    },
+    {
+     "end": 32.825,
+     "start": 32.675,
      "text": "There"
     },
     {
-     "end": 21.925,
-     "start": 21.775,
+     "end": 32.975,
+     "start": 32.825,
      "text": "is"
     },
     {
-     "end": 22.15,
-     "start": 21.925,
+     "end": 33.15,
+     "start": 32.975,
      "text": "no"
     },
     {
-     "end": 23.0,
-     "start": 22.15,
+     "end": 34.05,
+     "start": 33.15,
      "text": "withdraw"
     },
     {
-     "end": 23.425,
-     "start": 23.0,
+     "end": 34.425,
+     "start": 34.05,
      "text": "."
     }
    ]
   },
-  "docs-user-register-preprod-identity/register-your-identity-on-preprod-03": {
-   "audio_sha256": "652cefccf6ec388315fe620d9407089b452171e2027966de5524b69d2060aa77",
+  "docs-user-register-preprod-identity/register-your-identity-on-preprod-05": {
+   "audio_sha256": "baaf2d4ed1f5b0c753f887e1c872249381fd5483dba79889933d158244e4fa3c",
    "characters": 265,
-   "cost": 0.0001643,
+   "cost": 0.00026234999999999995,
    "duration": 18.125,
-   "index": 3,
+   "index": 5,
    "key": "7942e517ba00415c032880dffc33111f81479848bc0bb71b873023849815b066",
    "page": "docs/user/register-preprod-identity.md",
    "pause_ms": 400,
@@ -502995,12 +504910,12 @@
     }
    ]
   },
-  "docs-user-register-preprod-identity/register-your-identity-on-preprod-04": {
-   "audio_sha256": "54b90c8886ce6dee6ab864c844526287d6091dd513db9d9aafdfc6723860bcc1",
+  "docs-user-register-preprod-identity/register-your-identity-on-preprod-06": {
+   "audio_sha256": "8be1423de4335ba1876fd4bedc05eba88d9e180a799d7a627980a9c2c6c39ed1",
    "characters": 252,
-   "cost": 0.00015624,
+   "cost": 0.00024948,
    "duration": 17.175,
-   "index": 4,
+   "index": 6,
    "key": "a57a09d00b983c162248aee542e6670c27b03bef7bf639b072dbbcb8d7a78703",
    "page": "docs/user/register-preprod-identity.md",
    "pause_ms": 400,
@@ -503235,12 +505150,12 @@
     }
    ]
   },
-  "docs-user-register-preprod-identity/register-your-identity-on-preprod-05": {
-   "audio_sha256": "1986772c862c81a9e2e980af7a2a2b8c6461f391cfb77233940f4d5f7afe5a0d",
+  "docs-user-register-preprod-identity/register-your-identity-on-preprod-07": {
+   "audio_sha256": "11a57a8dfe4b322de66095c6201b825e0e3ed917a0e7aad61bc35fe09f781674",
    "characters": 19,
-   "cost": 1.178e-05,
+   "cost": 1.8809999999999998e-05,
    "duration": 1.925,
-   "index": 5,
+   "index": 7,
    "key": "526dd05f90771420c59d376921a8f2bf482974590bfb45e6277322b4fea972a7",
    "page": "docs/user/register-preprod-identity.md",
    "pause_ms": 400,
@@ -503275,12 +505190,12 @@
     }
    ]
   },
-  "docs-user-register-preprod-identity/register-your-identity-on-preprod-06": {
-   "audio_sha256": "8764c9f9cf87f0dadde5c211d0c49c3612f7c938e50e25333e1bc75a97384b57",
+  "docs-user-register-preprod-identity/register-your-identity-on-preprod-08": {
+   "audio_sha256": "8f57337f5d9cac559dc5babe9023bdc71abeb8c1f219bc92c28101d174ffdbb1",
    "characters": 31,
-   "cost": 1.9220000000000002e-05,
+   "cost": 3.069e-05,
    "duration": 2.3,
-   "index": 6,
+   "index": 8,
    "key": "ac5769052550bdf9517185cf498cb02cec29a6b6bf098e5e284ac1757ccb61a2",
    "page": "docs/user/register-preprod-identity.md",
    "pause_ms": 300,
@@ -503310,12 +505225,12 @@
     }
    ]
   },
-  "docs-user-register-preprod-identity/register-your-identity-on-preprod-07": {
-   "audio_sha256": "65bf18fab6bd8d6454fae1a18a294c20dfe99921cb47d57a39f5b2b0c6501213",
+  "docs-user-register-preprod-identity/register-your-identity-on-preprod-09": {
+   "audio_sha256": "7c7f958b1f033903492131d1b1d99593f8dc85b8a68cbb307de08d2f03ab6dd7",
    "characters": 76,
-   "cost": 4.712e-05,
+   "cost": 7.523999999999999e-05,
    "duration": 7.125,
-   "index": 7,
+   "index": 9,
    "key": "81236d8ded8a9152ccf102377f773b0823765ff23e7e6d2527b255bf9cfb2655",
    "page": "docs/user/register-preprod-identity.md",
    "pause_ms": 300,
@@ -503370,12 +505285,12 @@
     }
    ]
   },
-  "docs-user-register-preprod-identity/register-your-identity-on-preprod-08": {
-   "audio_sha256": "7804d98d838967c285ef11ac7f46e41933c148c59109d173abfd65ece31d6ec5",
+  "docs-user-register-preprod-identity/register-your-identity-on-preprod-10": {
+   "audio_sha256": "c9d3c417e8cdaf211f20f50e796237287e61c2bea50715220fef6f69c8e259eb",
    "characters": 57,
-   "cost": 3.5340000000000004e-05,
+   "cost": 5.642999999999999e-05,
    "duration": 4.025,
-   "index": 8,
+   "index": 10,
    "key": "c06cb98f52d58c9e8307e1f13e1ca8db084996adac266b8f8768a88bd3114b35",
    "page": "docs/user/register-preprod-identity.md",
    "pause_ms": 300,
@@ -503440,12 +505355,12 @@
     }
    ]
   },
-  "docs-user-register-preprod-identity/register-your-identity-on-preprod-09": {
-   "audio_sha256": "d1c19ce454a20b78b9f3b997be8c2bff790f37d798d84d96f5aed0f18ce87f82",
+  "docs-user-register-preprod-identity/register-your-identity-on-preprod-11": {
+   "audio_sha256": "c90a12ef93674dd41bcb36cf45a9bfbad303cbda3c6100051ed293f916a3b29f",
    "characters": 76,
-   "cost": 4.712e-05,
+   "cost": 7.523999999999999e-05,
    "duration": 6.975,
-   "index": 9,
+   "index": 11,
    "key": "21a5f308c47ea3acbd3961e480f8eb2c09d6efd582b3dc9bb8597b2f92fd80e5",
    "page": "docs/user/register-preprod-identity.md",
    "pause_ms": 300,
@@ -503520,12 +505435,12 @@
     }
    ]
   },
-  "docs-user-register-preprod-identity/register-your-identity-on-preprod-10": {
-   "audio_sha256": "566ab974cf86115f81ec3d2595be35eb4cbd14e3f92f292e4834d53b02ba92ca",
+  "docs-user-register-preprod-identity/register-your-identity-on-preprod-12": {
+   "audio_sha256": "9d77e633cf03b75dc713018f4a8c4742e06f643b24633551474b0eb80429d101",
    "characters": 163,
-   "cost": 0.00010106,
+   "cost": 0.00016136999999999998,
    "duration": 12.3,
-   "index": 10,
+   "index": 12,
    "key": "d9dd4dfd167498d0a3cc8cd8009c184ac7b6d430d326a898c1342dfb3d8aba59",
    "page": "docs/user/register-preprod-identity.md",
    "pause_ms": 400,

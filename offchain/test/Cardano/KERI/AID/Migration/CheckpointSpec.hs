@@ -127,6 +127,7 @@ sourceAtEpoch epoch =
         , lvFrozen = False
         , lvBornAt = 1800000000000
         , lvRefundTo = BS.cons 0x61 refundVkey
+        , lvToppedUp = False
         , lvKeys =
             KeyMaterial
                 { kmCurKeys = map verkeyOf [controller0, controller1, controller2]

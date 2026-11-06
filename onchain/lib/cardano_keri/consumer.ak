@@ -76,6 +76,7 @@ pub type Live {
   born_at: Int,
   refund_to: Int,
   pool: Int,
+  topped_up: Bool,
 }
 
 /// Lean `Checkpoint.State`.

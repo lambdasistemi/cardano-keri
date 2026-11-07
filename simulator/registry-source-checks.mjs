@@ -30,7 +30,7 @@ export function checkSources({surface,clauses,markdown,stories,root=ROOT}) {
     assert.deepEqual(clause.anchors.map(a=>a.declaration),actions.map(a=>'CardanoKeri.Registry.'+a),'action source coverage');
     for(const anchor of clause.anchors)assert.equal(anchor.sha256,declarations.get(anchor.declaration)?.sha256,'action declaration drift');
   }
-  assert.equal(cells,64,'whole story/fork census');
+  assert.equal(cells,63,'whole story/fork census');
   return {clauses:clauses.clauses.length,cells,definitions:declarations.size,decisionSites:surface.decisions.length};
 }
 export function loadBindings() {

@@ -30,30 +30,28 @@ theorem wellFormed_step (p : Params) (env : Env) {s s' : Sys}
     split <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | bookTermination aid booker fee b => exact wellFormed_bookTermination p hw hs
   | fold gen plugin u tx => exact wellFormed_fold p env hw hs
-  | genericRetraction u tx =>
-    change genericRetraction s u tx = .ok (f, s') at hs
-    unfold genericRetraction at hs
-    simp only [bind, Except.bind, pure, Except.pure] at hs
-    split at hs
-    · contradiction
-    · rename_i world executed
+  | returnRequests u tx =>
+    change returnRequests s u tx = .ok (f, s') at hs
+    unfold returnRequests at hs
+    cases validity : tx.transaction.transaction.validity with
+    | none => simp [validity, bind, Except.bind] at hs
+    | some interval =>
+      simp only [validity, bind, Except.bind, pure, Except.pure] at hs
       split at hs
       · contradiction
-      · rename_i after reconstructed
-        cases hs
-        exact wellFormed_recover p hw (.retraction hw.worldReachable u tx executed) reconstructed
-  | genericRejection u tx =>
-    change genericRejection s u tx = .ok (f, s') at hs
-    unfold genericRejection at hs
-    simp only [bind, Except.bind, pure, Except.pure] at hs
-    split at hs
-    · contradiction
-    · rename_i world executed
-      split at hs
-      · contradiction
-      · rename_i after reconstructed
-        cases hs
-        exact wellFormed_recover p hw (.rejection hw.worldReachable u tx executed) reconstructed
+      · split at hs
+        · contradiction
+        · split at hs
+          · contradiction
+          · split at hs
+            · contradiction
+            · rename_i world executed
+              split at hs
+              · contradiction
+              · rename_i after reconstructed
+                cases hs
+                exact wellFormed_recover p hw
+                  (.rejection hw.worldReachable u tx executed) reconstructed
 
 /-- Given any Sys for projection, or a Reach derivation from actual init/stepFn
 for the latter two; when observing the entire current system; then every

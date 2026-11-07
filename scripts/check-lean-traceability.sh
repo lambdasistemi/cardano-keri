@@ -112,7 +112,7 @@ test "$(rg -c '^AXIOMS ' "$tmp_root/axioms.log")" -eq "$declaration_count" || {
 }
 sed -n 's/^AXIOMS \([^:]*\):.*/\1/p' "$tmp_root/axioms.log" | sort | uniq -d >"$tmp_root/duplicates"
 test ! -s "$tmp_root/duplicates" || { echo 'inventory: duplicate declaration' >&2; exit 1; }
-for pair in ReviewedContracts:105 PreservedContracts:49; do
+for pair in ReviewedContracts:111 PreservedContracts:49; do
   source_name=${pair%:*}
   expected_count=${pair#*:}
   test "$(rg -c '^#check ' "retained-parking/$source_name.lean")" -eq "$expected_count"
@@ -122,4 +122,4 @@ done
 
 git -C "$repo_root" diff HEAD --check
 node "$lean_root/retained-parking/story-bindings.mjs"
-echo "retirement: retired=${#retired_modules[@]} ledger=$historical_count compiled-declarations=$declaration_count reviewed-types=105 preserved-types=49 build=pass axioms=pass"
+echo "retirement: retired=${#retired_modules[@]} ledger=$historical_count compiled-declarations=$declaration_count reviewed-types=111 preserved-types=49 build=pass axioms=pass"

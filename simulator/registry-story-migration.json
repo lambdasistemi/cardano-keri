@@ -33,28 +33,28 @@
       "id": 4,
       "slug": "duplicate-registration",
       "previousTitle": "A duplicate registration is refused and refunded",
-      "previousSourceSha256": "35ccc969e6395a2f28eda22273217cc9e3963ce6b0c3c3bf40667b6ce69cd9d4",
-      "title": "A duplicate registration is refused and refunded",
-      "disposition": "Unchanged behaviour; the close-authorization and rotation-from evidence kinds leave the environment.",
-      "authority": "#493 no owner exit"
+      "previousSourceSha256": "18aa4abe3f54ba6917473fd1f1dee5b6209d1a79a383ae6f913c5ad66a2e1b02",
+      "title": "A duplicate registration waits for its deadline and is returned",
+      "disposition": "The early lifecycle-mismatch rejection is refused until the deadline; the duplicate is returned after it, contents less tip to its refund address.",
+      "authority": "#468 request lifecycle"
     },
     {
       "id": 5,
-      "slug": "alice-retracts",
+      "slug": "alice-waits-for-the-deadline",
       "previousTitle": "Alice retracts in the recovery window",
-      "previousSourceSha256": "66380aee2fea5e429e01e70fd4711dfd66a9d47cc4c68cf7b1240819c1f4e651",
-      "title": "Alice retracts in the recovery window",
-      "disposition": "Unchanged behaviour; the close-authorization and rotation-from evidence kinds leave the environment.",
-      "authority": "#493 no owner exit"
+      "previousSourceSha256": "e31fea33f2febc6a3aaa73cacd2e63e65fa7e8ee75ba3b69f8e364148f58243b",
+      "title": "Alice cannot cancel her request before its deadline",
+      "disposition": "The owner retraction window is gone: until the deadline only a fold spends the request; at the deadline anyone, Alice included, returns it without a signature.",
+      "authority": "#468 request lifecycle"
     },
     {
       "id": 6,
       "slug": "permissionless-sweep",
       "previousTitle": "Sam rejects an expired registration",
-      "previousSourceSha256": "825e57c3bdb832791efd75fae27efe035cf78318fdadb7e32d724051ec5657e5",
-      "title": "Sam rejects an expired registration",
-      "disposition": "Unchanged behaviour; the close-authorization and rotation-from evidence kinds leave the environment.",
-      "authority": "#493 no owner exit"
+      "previousSourceSha256": "3b5f090e86a06562f6e1d80475e3aa725df80a2cd582554a7265f605ca73cdd2",
+      "title": "Sam returns an expired registration to Alice",
+      "disposition": "The expiry rejection becomes the return after the deadline; a redirected refund is refused.",
+      "authority": "#468 request lifecycle"
     },
     {
       "id": 7,
@@ -126,19 +126,19 @@
       "id": 14,
       "slug": "go-request-cannot-be-bricked",
       "previousTitle": "A pending termination has only the consuming fold exit",
-      "previousSourceSha256": "b0840544d04fefc1fa12a2fdf42c539d8e0b7c70fc1f76982e73fb8ce1b513d6",
+      "previousSourceSha256": "ecce29c3fb3a7973425dd37f289765d938d65131aa084f0d423378a29455d2b4",
       "title": "A pending termination has only the consuming fold exit",
-      "disposition": "Unchanged behaviour; the close-authorization and rotation-from evidence kinds leave the environment.",
-      "authority": "#493 no owner exit"
+      "disposition": "The retraction control is removed; returning the pending termination is refused because the return applies to registrations only.",
+      "authority": "#468 request lifecycle"
     },
     {
       "id": 15,
       "slug": "batch-and-timestamps",
       "previousTitle": "Batch inputs, timestamps and independent custody",
-      "previousSourceSha256": "92ea5d8be6a9729d021eefcf1b57e87ec44adb750b1b8fc4f3fdccb3f5b7ec6e",
+      "previousSourceSha256": "56926232f28f19e84e2919bf31c893f9583bd93d697c54da3228b5aa9609cec7",
       "title": "Batch inputs, timestamps and independent custody",
-      "disposition": "Unchanged behaviour; the close-authorization and rotation-from evidence kinds leave the environment.",
-      "authority": "#493 no owner exit"
+      "disposition": "The mixed-custody branch returns its registration after the deadline instead of retracting it.",
+      "authority": "#468 request lifecycle"
     }
   ]
 }

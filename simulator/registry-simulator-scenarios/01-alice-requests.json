@@ -18,7 +18,7 @@
     "processTime": 5,
     "registrationCost": 2,
     "registryId": 9,
-    "retractTime": 5,
+    "retractTime": 0,
     "root": [
       203,
       242,
@@ -175,7 +175,7 @@
                 "processTime": 5,
                 "registrationCost": 2,
                 "registryId": 9,
-                "retractTime": 5,
+                "retractTime": 0,
                 "root": [
                   203,
                   242,
@@ -354,7 +354,7 @@
           "processTime": 5,
           "registrationCost": 2,
           "registryId": 9,
-          "retractTime": 5,
+          "retractTime": 0,
           "root": [
             203,
             242,
@@ -386,7 +386,7 @@
       "processTime": 5,
       "registrationCost": 2,
       "registryId": 9,
-      "retractTime": 5,
+      "retractTime": 0,
       "root": [
         203,
         242,

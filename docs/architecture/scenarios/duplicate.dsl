@@ -10,12 +10,12 @@ config:
   processTime: 5
   registrationCost: 2
   registryId: 9
-  retractTime: 5
+  retractTime: 0
   root: [203, 242, 156, 228, 132, 34, 35, 37]
 id: 3884
 slug: architecture-duplicate
-story: "A duplicate registration is refused and refunded"
-narrative: "The first checkpoint and token remain intact. A second booking cannot replace the active key; an authenticated mismatch rejection returns the duplicate request value less its declared tip. Expiry is a different ground and is refused before both windows end."
+story: "A duplicate registration waits for its deadline and is returned"
+narrative: "A duplicate key cannot be folded. Until the deadline nobody may spend its request; after it anyone returns it, paying the contents less the tip to its refund address."
 params:
   D: 10
   Mc: 4
@@ -85,7 +85,7 @@ step:
             processTime: 5
             registrationCost: 2
             registryId: 9
-            retractTime: 5
+            retractTime: 0
             root: [203, 242, 156, 228, 132, 34, 35, 37]
           gen: 0
           nextToken: 0
@@ -106,7 +106,7 @@ step:
         applicationMint:
           - [{"name":"5369963716140239679","policy":7},-1]
         identity: 102
-        outputs: [{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":5,"root":[187,43,111,81,131,142,177,246]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},"request":null,"singularTags":[]},{"contents":{"applicationTags":[],"lovelace":14,"otherAssets":[],"trieReadyTags":[]},"output":{"address":111,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":711,"lovelace":14,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}]},{"contents":{"applicationTags":[],"lovelace":1,"otherAssets":[],"trieReadyTags":[]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[]}]
+        outputs: [{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":0,"root":[187,43,111,81,131,142,177,246]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},"request":null,"singularTags":[]},{"contents":{"applicationTags":[],"lovelace":14,"otherAssets":[],"trieReadyTags":[]},"output":{"address":111,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":711,"lovelace":14,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}]},{"contents":{"applicationTags":[],"lovelace":1,"otherAssets":[],"trieReadyTags":[]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[]}]
         singularMint:
           - [{"registryId":9,"token":{"name":11,"policy":8}},1]
         stateMint: []
@@ -115,7 +115,7 @@ step:
           fee: 1
           inputs: [{"approvals":0,"assets":[],"datum":"inline","datumValue":null,"lovelace":0,"ref":{"index":0,"tx":100},"role":"request","stateToken":null,"stateTokens":0},{"approvals":0,"assets":[],"datum":"inline","datumValue":null,"lovelace":0,"ref":{"index":0,"tx":101},"role":"request","stateToken":null,"stateTokens":0},{"approvals":0,"assets":[],"datum":"inline","datumValue":null,"lovelace":0,"ref":{"index":1,"tx":101},"role":"request","stateToken":null,"stateTokens":0}]
           mint: []
-          outputs: [{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":5,"root":[187,43,111,81,131,142,177,246]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},{"address":111,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":711,"lovelace":14,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0}]
+          outputs: [{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":0,"root":[187,43,111,81,131,142,177,246]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},{"address":111,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":711,"lovelace":14,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0}]
           referenceInputs: []
           refunds: []
           signers: []
@@ -126,7 +126,7 @@ step:
           - [{"name":"14272158603032493918","policy":9},-1]
       unspent:
         - [{"index":0,"tx":100},{"contents":{"applicationTags":[{"assetName":"5369963716140239679","destination":111,"edge":"insertActive","key":11,"owner":42,"policy":7,"signatures":[]}],"lovelace":17,"otherAssets":[],"trieReadyTags":[{"name":"14272158603032493918","policy":9}]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":null,"lovelace":17,"reference":null,"role":"request","stateToken":null,"stateTokens":0},"request":{"registration":{"request":{"carrierAda":14,"contents":{"applicationTags":[{"assetName":"5369963716140239679","destination":111,"edge":"insertActive","key":11,"owner":42,"policy":7,"signatures":[]}],"lovelace":17,"otherAssets":[],"trieReadyTags":[{"name":"14272158603032493918","policy":9}]},"datum":711,"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":100},"refundAddress":42,"registrationCost":2,"registryId":9,"submittedAt":1}}},"singularTags":[]}]
-        - [{"index":0,"tx":101},{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":5,"root":[203,242,156,228,132,34,35,37]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},"request":null,"singularTags":[]}]
+        - [{"index":0,"tx":101},{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":0,"root":[203,242,156,228,132,34,35,37]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},"request":null,"singularTags":[]}]
         - [{"index":1,"tx":101},{"contents":{"applicationTags":[],"lovelace":1,"otherAssets":[],"trieReadyTags":[]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[]}]
   expect:
     ok: true
@@ -153,7 +153,7 @@ step:
             processTime: 5
             registrationCost: 2
             registryId: 9
-            retractTime: 5
+            retractTime: 0
             root: [187, 43, 111, 81, 131, 142, 177, 246]
           gen: 1
           nextToken: 1
@@ -217,7 +217,7 @@ step:
             processTime: 5
             registrationCost: 2
             registryId: 9
-            retractTime: 5
+            retractTime: 0
             root: [187, 43, 111, 81, 131, 142, 177, 246]
           gen: 1
           nextToken: 1
@@ -228,42 +228,42 @@ step:
             - [11,{"known":{"s":"active"}}]
   note: "Book the registration request"
 step:
-  now: 0
+  now: 6
   actor: "anyone presenting the required evidence"
   as: Sam
   action:
-    genericRejection:
-      transaction:
-        members:
-          - [{"index":0,"tx":300},{"mismatch":{"leaf":{"known":{"s":"active"}}}}]
-        stateReference:
-          index: 0
-          tx: 301
-        transaction:
-          applicationMint:
-            - [{"name":"5369963716140239679","policy":7},-1]
-          identity: 302
-          outputs: [{"contents":{"applicationTags":[],"lovelace":16,"otherAssets":[],"trieReadyTags":[]},"output":{"address":42,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":16,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[]}]
-          singularMint: []
-          stateMint: []
-          transaction:
-            donation: 0
-            fee: 0
-            inputs: [{"approvals":0,"assets":[],"datum":"inline","datumValue":null,"lovelace":0,"ref":{"index":0,"tx":300},"role":"request","stateToken":null,"stateTokens":0}]
-            mint: []
-            outputs: [{"address":42,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":16,"reference":null,"role":"owner","stateToken":null,"stateTokens":0}]
-            referenceInputs: [{"approvals":0,"assets":[],"datum":"inline","datumValue":null,"lovelace":0,"ref":{"index":0,"tx":301},"role":"request","stateToken":null,"stateTokens":0}]
-            refunds: []
-            signers: []
-            validity:
-              lower: 2
-              upper: 3
-          trieReadyMint:
-            - [{"name":"14272158603032493918","policy":9},-1]
+    returnRequests:
       unspent:
-        - [{"index":0,"tx":300},{"contents":{"applicationTags":[{"assetName":"5369963716140239679","destination":111,"edge":"insertActive","key":11,"owner":42,"policy":7,"signatures":[]}],"lovelace":17,"otherAssets":[],"trieReadyTags":[{"name":"14272158603032493918","policy":9}]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":null,"lovelace":17,"reference":null,"role":"request","stateToken":null,"stateTokens":0},"request":{"registration":{"request":{"carrierAda":14,"contents":{"applicationTags":[{"assetName":"5369963716140239679","destination":111,"edge":"insertActive","key":11,"owner":42,"policy":7,"signatures":[]}],"lovelace":17,"otherAssets":[],"trieReadyTags":[{"name":"14272158603032493918","policy":9}]},"datum":711,"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":300},"refundAddress":42,"registrationCost":2,"registryId":9,"submittedAt":1}}},"singularTags":[]}]
-        - [{"index":0,"tx":301},{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":5,"root":[187,43,111,81,131,142,177,246]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},"request":null,"singularTags":[]}]
-        - [{"index":1,"tx":301},{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":0,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[]}]
+        - [{"tx":300,"index":0},{"output":{"role":"request","datum":"inline","address":0,"stateTokens":0,"config":null,"commitment":null,"assets":[],"lovelace":17,"reference":null,"datumValue":null,"stateToken":null},"contents":{"lovelace":17,"applicationTags":[{"signatures":[],"policy":7,"key":11,"owner":42,"destination":111,"assetName":"5369963716140239679","edge":"insertActive"}],"trieReadyTags":[{"policy":9,"name":"14272158603032493918"}],"otherAssets":[]},"singularTags":[],"request":{"registration":{"request":{"registryId":9,"key":11,"refundAddress":42,"destination":111,"submittedAt":1,"registrationCost":2,"declaredTip":1,"carrierAda":14,"reference":{"tx":300,"index":0},"contents":{"lovelace":17,"applicationTags":[{"signatures":[],"policy":7,"key":11,"owner":42,"destination":111,"assetName":"5369963716140239679","edge":"insertActive"}],"trieReadyTags":[{"policy":9,"name":"14272158603032493918"}],"otherAssets":[]},"datum":711}}}}]
+        - [{"tx":301,"index":0},{"output":{"role":"state","datum":"inline","address":null,"stateTokens":1,"config":{"registryId":9,"maxFee":1,"processTime":5,"retractTime":0,"applicationPolicy":7,"activePolicy":8,"root":[187,43,111,81,131,142,177,246],"registrationCost":2,"bookingWidth":1},"commitment":null,"assets":[],"lovelace":0,"reference":null,"datumValue":null,"stateToken":{"policy":9,"name":0}},"contents":{"lovelace":0,"applicationTags":[],"trieReadyTags":[],"otherAssets":[]},"singularTags":[],"request":null}]
+        - [{"tx":301,"index":1},{"output":{"role":"owner","datum":"none","address":0,"stateTokens":0,"config":null,"commitment":null,"assets":[],"lovelace":0,"reference":null,"datumValue":null,"stateToken":null},"contents":{"lovelace":0,"applicationTags":[],"trieReadyTags":[],"otherAssets":[]},"singularTags":[],"request":null}]
+      transaction:
+        transaction:
+          identity: 302
+          outputs: [{"output":{"role":"owner","datum":"none","address":42,"stateTokens":0,"config":null,"commitment":null,"assets":[],"lovelace":16,"reference":null,"datumValue":null,"stateToken":null},"contents":{"lovelace":16,"applicationTags":[],"trieReadyTags":[],"otherAssets":[]},"singularTags":[],"request":null}]
+          transaction:
+            inputs: [{"role":"request","datum":"inline","stateTokens":0,"approvals":0,"lovelace":0,"assets":[],"datumValue":null,"ref":{"tx":300,"index":0},"stateToken":null}]
+            outputs: [{"role":"owner","datum":"none","address":42,"stateTokens":0,"config":null,"commitment":null,"assets":[],"lovelace":16,"reference":null,"datumValue":null,"stateToken":null}]
+            mint: []
+            signers: []
+            refunds: []
+            referenceInputs: [{"role":"request","datum":"inline","stateTokens":0,"approvals":0,"lovelace":0,"assets":[],"datumValue":null,"ref":{"tx":301,"index":0},"stateToken":null}]
+            validity:
+              lower: 6
+              upper: 7
+            fee: 1
+            donation: 0
+          trieReadyMint:
+            - [{"policy":9,"name":"14272158603032493918"},-1]
+          applicationMint:
+            - [{"policy":7,"name":"5369963716140239679"},-1]
+          stateMint: []
+          singularMint: []
+        stateReference:
+          tx: 301
+          index: 0
+        members:
+          - [{"tx":300,"index":0},{"mismatch":{"leaf":{"known":{"s":"active"}}}}]
   expect:
     ok: true
     result:
@@ -288,7 +288,7 @@ step:
             processTime: 5
             registrationCost: 2
             registryId: 9
-            retractTime: 5
+            retractTime: 0
             root: [187, 43, 111, 81, 131, 142, 177, 246]
           gen: 1
           nextToken: 1
@@ -297,7 +297,7 @@ step:
           treasury: 2
           trie:
             - [11,{"known":{"s":"active"}}]
-  note: "Authenticate the current state and return the registration refund"
+  note: "After the deadline, return the duplicate citing its active key"
 fork:
   id: control-3-key-exists
   at: 3
@@ -314,7 +314,7 @@ fork:
       processTime: 5
       registrationCost: 2
       registryId: 9
-      retractTime: 5
+      retractTime: 0
       root: [187, 43, 111, 81, 131, 142, 177, 246]
     gen: 1
     nextToken: 1
@@ -335,7 +335,7 @@ fork:
           applicationMint:
             - [{"name":"5369963716140239679","policy":7},-1]
           identity: 302
-          outputs: [{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":5,"root":[187,43,111,81,131,142,177,246]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},"request":null,"singularTags":[]},{"contents":{"applicationTags":[],"lovelace":14,"otherAssets":[],"trieReadyTags":[]},"output":{"address":111,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":711,"lovelace":14,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}]},{"contents":{"applicationTags":[],"lovelace":1,"otherAssets":[],"trieReadyTags":[]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[]}]
+          outputs: [{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":0,"root":[187,43,111,81,131,142,177,246]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},"request":null,"singularTags":[]},{"contents":{"applicationTags":[],"lovelace":14,"otherAssets":[],"trieReadyTags":[]},"output":{"address":111,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":711,"lovelace":14,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}]},{"contents":{"applicationTags":[],"lovelace":1,"otherAssets":[],"trieReadyTags":[]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[]}]
           singularMint:
             - [{"registryId":9,"token":{"name":11,"policy":8}},1]
           stateMint: []
@@ -344,7 +344,7 @@ fork:
             fee: 1
             inputs: [{"approvals":0,"assets":[],"datum":"inline","datumValue":null,"lovelace":0,"ref":{"index":0,"tx":300},"role":"request","stateToken":null,"stateTokens":0},{"approvals":0,"assets":[],"datum":"inline","datumValue":null,"lovelace":0,"ref":{"index":0,"tx":301},"role":"request","stateToken":null,"stateTokens":0},{"approvals":0,"assets":[],"datum":"inline","datumValue":null,"lovelace":0,"ref":{"index":1,"tx":301},"role":"request","stateToken":null,"stateTokens":0}]
             mint: []
-            outputs: [{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":5,"root":[187,43,111,81,131,142,177,246]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},{"address":111,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":711,"lovelace":14,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0}]
+            outputs: [{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":0,"root":[187,43,111,81,131,142,177,246]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},{"address":111,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":711,"lovelace":14,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0}]
             referenceInputs: []
             refunds: []
             signers: []
@@ -355,7 +355,7 @@ fork:
             - [{"name":"14272158603032493918","policy":9},-1]
         unspent:
           - [{"index":0,"tx":300},{"contents":{"applicationTags":[{"assetName":"5369963716140239679","destination":111,"edge":"insertActive","key":11,"owner":42,"policy":7,"signatures":[]}],"lovelace":17,"otherAssets":[],"trieReadyTags":[{"name":"14272158603032493918","policy":9}]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":null,"lovelace":17,"reference":null,"role":"request","stateToken":null,"stateTokens":0},"request":{"registration":{"request":{"carrierAda":14,"contents":{"applicationTags":[{"assetName":"5369963716140239679","destination":111,"edge":"insertActive","key":11,"owner":42,"policy":7,"signatures":[]}],"lovelace":17,"otherAssets":[],"trieReadyTags":[{"name":"14272158603032493918","policy":9}]},"datum":711,"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":300},"refundAddress":42,"registrationCost":2,"registryId":9,"submittedAt":1}}},"singularTags":[]}]
-          - [{"index":0,"tx":301},{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":5,"root":[187,43,111,81,131,142,177,246]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},"request":null,"singularTags":[]}]
+          - [{"index":0,"tx":301},{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":0,"root":[187,43,111,81,131,142,177,246]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},"request":null,"singularTags":[]}]
           - [{"index":1,"tx":301},{"contents":{"applicationTags":[],"lovelace":1,"otherAssets":[],"trieReadyTags":[]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[]}]
     expect:
       ok: false
@@ -364,9 +364,9 @@ fork:
         error: key-exists
     note: "Try processing another registration of this AID"
 fork:
-  id: control-4-reject-not-expired
+  id: duplicate-return-before-deadline
   at: 3
-  title: "Try expiry rejection before both windows end"
+  title: "Try returning the duplicate before its deadline"
   expectFinal:
     bindings:
       - [11, 0]
@@ -379,7 +379,7 @@ fork:
       processTime: 5
       registrationCost: 2
       registryId: 9
-      retractTime: 5
+      retractTime: 0
       root: [187, 43, 111, 81, 131, 142, 177, 246]
     gen: 1
     nextToken: 1
@@ -389,48 +389,48 @@ fork:
     trie:
       - [11,{"known":{"s":"active"}}]
   step:
-    now: 0
+    now: 2
     actor: "anyone presenting the required evidence"
     as: Sam
     action:
-      genericRejection:
+      returnRequests:
+        unspent:
+          - [{"tx":300,"index":0},{"output":{"role":"request","datum":"inline","address":0,"stateTokens":0,"config":null,"commitment":null,"assets":[],"lovelace":17,"reference":null,"datumValue":null,"stateToken":null},"contents":{"lovelace":17,"applicationTags":[{"signatures":[],"policy":7,"key":11,"owner":42,"destination":111,"assetName":"5369963716140239679","edge":"insertActive"}],"trieReadyTags":[{"policy":9,"name":"14272158603032493918"}],"otherAssets":[]},"singularTags":[],"request":{"registration":{"request":{"registryId":9,"key":11,"refundAddress":42,"destination":111,"submittedAt":1,"registrationCost":2,"declaredTip":1,"carrierAda":14,"reference":{"tx":300,"index":0},"contents":{"lovelace":17,"applicationTags":[{"signatures":[],"policy":7,"key":11,"owner":42,"destination":111,"assetName":"5369963716140239679","edge":"insertActive"}],"trieReadyTags":[{"policy":9,"name":"14272158603032493918"}],"otherAssets":[]},"datum":711}}}}]
+          - [{"tx":301,"index":0},{"output":{"role":"state","datum":"inline","address":null,"stateTokens":1,"config":{"registryId":9,"maxFee":1,"processTime":5,"retractTime":0,"applicationPolicy":7,"activePolicy":8,"root":[187,43,111,81,131,142,177,246],"registrationCost":2,"bookingWidth":1},"commitment":null,"assets":[],"lovelace":0,"reference":null,"datumValue":null,"stateToken":{"policy":9,"name":0}},"contents":{"lovelace":0,"applicationTags":[],"trieReadyTags":[],"otherAssets":[]},"singularTags":[],"request":null}]
+          - [{"tx":301,"index":1},{"output":{"role":"owner","datum":"none","address":0,"stateTokens":0,"config":null,"commitment":null,"assets":[],"lovelace":0,"reference":null,"datumValue":null,"stateToken":null},"contents":{"lovelace":0,"applicationTags":[],"trieReadyTags":[],"otherAssets":[]},"singularTags":[],"request":null}]
         transaction:
-          members:
-            - [{"index":0,"tx":300},"expired"]
-          stateReference:
-            index: 0
-            tx: 301
           transaction:
-            applicationMint:
-              - [{"name":"5369963716140239679","policy":7},-1]
             identity: 302
-            outputs: [{"contents":{"applicationTags":[],"lovelace":16,"otherAssets":[],"trieReadyTags":[]},"output":{"address":42,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":16,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[]}]
-            singularMint: []
-            stateMint: []
+            outputs: [{"output":{"role":"owner","datum":"none","address":42,"stateTokens":0,"config":null,"commitment":null,"assets":[],"lovelace":16,"reference":null,"datumValue":null,"stateToken":null},"contents":{"lovelace":16,"applicationTags":[],"trieReadyTags":[],"otherAssets":[]},"singularTags":[],"request":null}]
             transaction:
-              donation: 0
-              fee: 0
-              inputs: [{"approvals":0,"assets":[],"datum":"inline","datumValue":null,"lovelace":0,"ref":{"index":0,"tx":300},"role":"request","stateToken":null,"stateTokens":0}]
+              inputs: [{"role":"request","datum":"inline","stateTokens":0,"approvals":0,"lovelace":0,"assets":[],"datumValue":null,"ref":{"tx":300,"index":0},"stateToken":null}]
+              outputs: [{"role":"owner","datum":"none","address":42,"stateTokens":0,"config":null,"commitment":null,"assets":[],"lovelace":16,"reference":null,"datumValue":null,"stateToken":null}]
               mint: []
-              outputs: [{"address":42,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":16,"reference":null,"role":"owner","stateToken":null,"stateTokens":0}]
-              referenceInputs: [{"approvals":0,"assets":[],"datum":"inline","datumValue":null,"lovelace":0,"ref":{"index":0,"tx":301},"role":"request","stateToken":null,"stateTokens":0}]
-              refunds: []
               signers: []
+              refunds: []
+              referenceInputs: [{"role":"request","datum":"inline","stateTokens":0,"approvals":0,"lovelace":0,"assets":[],"datumValue":null,"ref":{"tx":301,"index":0},"stateToken":null}]
               validity:
                 lower: 2
                 upper: 3
+              fee: 1
+              donation: 0
             trieReadyMint:
-              - [{"name":"14272158603032493918","policy":9},-1]
-        unspent:
-          - [{"index":0,"tx":300},{"contents":{"applicationTags":[{"assetName":"5369963716140239679","destination":111,"edge":"insertActive","key":11,"owner":42,"policy":7,"signatures":[]}],"lovelace":17,"otherAssets":[],"trieReadyTags":[{"name":"14272158603032493918","policy":9}]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"inline","datumValue":null,"lovelace":17,"reference":null,"role":"request","stateToken":null,"stateTokens":0},"request":{"registration":{"request":{"carrierAda":14,"contents":{"applicationTags":[{"assetName":"5369963716140239679","destination":111,"edge":"insertActive","key":11,"owner":42,"policy":7,"signatures":[]}],"lovelace":17,"otherAssets":[],"trieReadyTags":[{"name":"14272158603032493918","policy":9}]},"datum":711,"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":300},"refundAddress":42,"registrationCost":2,"registryId":9,"submittedAt":1}}},"singularTags":[]}]
-          - [{"index":0,"tx":301},{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":5,"root":[187,43,111,81,131,142,177,246]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},"request":null,"singularTags":[]}]
-          - [{"index":1,"tx":301},{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":0,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[]}]
+              - [{"policy":9,"name":"14272158603032493918"},-1]
+            applicationMint:
+              - [{"policy":7,"name":"5369963716140239679"},-1]
+            stateMint: []
+            singularMint: []
+          stateReference:
+            tx: 301
+            index: 0
+          members:
+            - [{"tx":300,"index":0},{"mismatch":{"leaf":{"known":{"s":"active"}}}}]
     expect:
       ok: false
-      reason: reject-not-expired
+      reason: keri-return-before-deadline
       result:
-        error: reject-not-expired
-    note: "Try expiry rejection before both windows end"
+        error: keri-return-before-deadline
+    note: "Return before the deadline"
 expectFinal:
   bindings:
     - [11, 0]
@@ -443,7 +443,7 @@ expectFinal:
     processTime: 5
     registrationCost: 2
     registryId: 9
-    retractTime: 5
+    retractTime: 0
     root: [187, 43, 111, 81, 131, 142, 177, 246]
   gen: 1
   nextToken: 1

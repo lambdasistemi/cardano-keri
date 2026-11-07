@@ -1,5 +1,5 @@
 import CardanoKeri.Registry
-import Singular.Lemmas.RetractionWitness
+import Singular.Lemmas.FoldWitnessTransaction
 
 /-! Transaction fixtures for executable registry journeys.
 These assemble model transactions; the imported judgments decide acceptance.
@@ -12,7 +12,7 @@ def p : Params := {
   hD := by decide, hFund := by decide }
 def cfg : Singular.Config := {
   root := Singular.rootOf [], minimumTip := 1,
-  processTime := 5, retractTime := 5, applicationPolicy := 7, activePolicy := 8,
+  processTime := 5, retractTime := 0, applicationPolicy := 7, activePolicy := 8,
   registryId := 9, registrationCost := 2, bookingWidth := 1 }
 def env : Env := {
   inception := fun _ => true
@@ -98,5 +98,35 @@ def foldTransaction (s : Sys) (references : List Singular.OutRef)
     applicationMint := application.map (fun tag => (Singular.applicationTagIdentity tag, -1)),
     singularMint := Singular.foldMint s.config members }
   pure (Singular.terminationWitnessUnspent world funding, transaction)
+
+/-- Return booked registrations: each refund address is paid its request's
+contents less its declared tip, the spender takes the tips as the fee, and the
+transaction reads the current registry state. No signer is present. -/
+def returnTransaction (s : Sys) (references : List Singular.OutRef) (time : Nat)
+    (ground : Singular.RejectReason := .expired) :
+    Except String (Singular.EconomicUtxo × Singular.Rejection) := do
+  let world := s.toWorld
+  let fresh := Singular.terminationWitnessFresh world
+  let bookings ← references.mapM fun ref =>
+    match s.registrations.find? (fun b => b.request.reference == ref) with
+    | some b => Except.ok b
+    | none => Except.error "fixture-registration-missing"
+  let outputs := bookings.map fun b => { Singular.foldWitnessOrdinary
+    (b.request.contents.lovelace - b.request.declaredTip) with
+    output.address := some b.request.refundAddress }
+  let transaction : Singular.EconomicTransaction := {
+    identity := fresh + 1, outputs
+    transaction := {
+      inputs := references.map Singular.foldWitnessInput
+      referenceInputs := [Singular.foldWitnessInput ⟨fresh, 0⟩]
+      outputs := outputs.map (·.output), mint := [], signers := [], refunds := [],
+      validity := some ⟨time, time + 1⟩,
+      fee := (bookings.map (·.request.declaredTip)).sum }
+    trieReadyMint := (bookings.flatMap (·.request.contents.trieReadyTags)).map (fun tag => (tag, -1))
+    applicationMint := (bookings.flatMap (·.request.contents.applicationTags)).map
+      (fun tag => (Singular.applicationTagIdentity tag, -1)) }
+  pure (Singular.terminationWitnessUnspent world 0,
+    { transaction, stateReference := ⟨fresh, 0⟩,
+      members := references.map (fun ref => (ref, ground)) })
 
 end CardanoKeri.Registry.Scenarios

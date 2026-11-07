@@ -83,9 +83,15 @@ def journey : Except String (List String) := do
       after.state.config = { mixed.state.config with root := after.state.config.root }))
   let recovery := registration after.state 14 103
   let (_, recoverable) ← execute after (.bookRegistration recovery)
-  let ru := Singular.terminationWitnessUnspent recoverable.state.toWorld 1
-  let rt := Singular.retractionWitnessTransaction recoverable.state.toWorld recovery ⟨6, 7⟩ [42] 1 1
-  let (_, recovered) ← execute recoverable (.genericRetraction ru rt)
+  let (ru, early) ← returnTransaction recoverable.state [recovery.request.reference] 5
+  check "return-before-deadline-refused" (refuses (returnRequests recoverable.state ru early))
+  let (ru, rt) ← returnTransaction recoverable.state [recovery.request.reference] 6
+  check "return-refund-and-tip" (decide
+    (rt.transaction.transaction.signers = [] ∧
+      Singular.refundPaid rt.transaction recovery.request.refundAddress =
+        recovery.request.contents.lovelace - recovery.request.declaredTip ∧
+      rt.transaction.transaction.fee = recovery.request.declaredTip))
+  let (_, recovered) ← execute recoverable (.returnRequests ru rt)
   check "recovery-preserves-pending-and-frame" (decide
     (recovered.state.terminations = recoverable.state.terminations ∧
       recovered.state.carriers = recoverable.state.carriers ∧
@@ -93,8 +99,10 @@ def journey : Except String (List String) := do
       recovered.state.config = recoverable.state.config ∧
       recovered.state.gen = recoverable.state.gen ∧
       recovered.state.trie = recoverable.state.trie ∧ recovered.state.registrations = []))
-  let noSigner := { rt with transaction.signers := [] }
-  check "recovery-no-signer-refused" (refuses (genericRetraction recoverable.state ru noSigner))
+  let redirected := { rt with transaction := { rt.transaction with
+    outputs := rt.transaction.outputs.map (fun o => { o with output.address := some 99 })
+    transaction.outputs := rt.transaction.outputs.map (fun o => { o.output with address := some 99 }) } }
+  check "return-redirected-refused" (refuses (returnRequests recoverable.state ru redirected))
   let (tu, tt) ← foldTransaction recovered.state [tb.request.reference] 20 1 1
   let (_, final) ← execute recovered (.fold recovered.state.gen cfg.applicationPolicy tu tt)
   check "both-retired-fresh-identity-live" (decide
@@ -105,7 +113,8 @@ def journey : Except String (List String) := do
       final.state.nextToken = 3 ∧ final.state.treasury = 10))
   pure ["exact binding domain", "two registrations", "two convictions", "booking carrier frame", "booking pending tail",
     "mixed registration and termination", "whole unselected custody", "exact mint supply and config frame",
-    "registration recovery alongside termination", "missing signer refusal", "remaining termination",
+    "registration return alongside termination", "return before deadline refusal",
+    "refund less tip without signer", "redirected refund refusal", "remaining termination",
     "stale generation", "wrong plugin", "wrong donation", "balanced old refund"]
 
 def main : IO Unit := do

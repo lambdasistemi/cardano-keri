@@ -1,15 +1,15 @@
 {
   "version": 3,
   "model": "CardanoKeri.Registry.stepFn",
-  "surfaceSha256": "879e3e35b038082a3e299d4c5e4b9807e7025e48c50bf20e4968f96a36a148de",
-  "storiesMarkdownSha256": "9d29c0ae2c295c60f71eef9541d3ae8b67aada769d8498cff866c2cc81a0ba0e",
+  "surfaceSha256": "d1f5886f85fa4606c0b0328b0379cc980f30558a6d0dabe885612c6e68453bf5",
+  "storiesMarkdownSha256": "2d39f8264a9f652d13b04b97fd45bb2af8c6a5c9e6626b389561e11167c1cef5",
   "clauses": [
     {
       "story": 1,
       "given": "An empty registry and a complete registration booking.",
       "when": "Alice posts its observed value, application tag, ready tag and interval.",
       "then": "The request is pending; no carrier or binding exists until a fold. A mismatched declared value is refused.",
-      "scenarioSha256": "9a9c648a9a228f4d1f662a44665cbc799b497c360f1ab4128057a050504d2a24",
+      "scenarioSha256": "70e7b5cccb0fcae56c478728a6310a70f84923bab7d934bd75a72e8ddfc901bd",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -21,7 +21,7 @@
           "branch": "trunk",
           "index": 0,
           "action": "bookRegistration",
-          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+          "expectationSha256": "b9b6712f508a25dbf764ffc127bf35afc9e3a0c2f4e9b4604707a81703a1090a"
         },
         {
           "branch": "wrong-carrier-value",
@@ -36,7 +36,7 @@
       "given": "A pending registration and valid inception evidence.",
       "when": "Hal spends the request and registry in a complete economic fold.",
       "then": "The destination receives the tagged carrier, the key becomes active, a token alias is allocated, and the generation advances.",
-      "scenarioSha256": "915e0056151ca14ac3d4466b46fc72223c467923eb22c728ff29e1fb574b81b9",
+      "scenarioSha256": "83b3099e5df7195dd0f3bb4a0def0de36fc688e376567597f89906a1ef477373",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -44,7 +44,7 @@
         },
         {
           "declaration": "CardanoKeri.Registry.fold",
-          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+          "sha256": "084a880586b6baed196058474fdbed7cf6b6973419fbe9d4e7645c1143e90ff8"
         }
       ],
       "cells": [
@@ -52,13 +52,13 @@
           "branch": "trunk",
           "index": 0,
           "action": "bookRegistration",
-          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+          "expectationSha256": "b9b6712f508a25dbf764ffc127bf35afc9e3a0c2f4e9b4604707a81703a1090a"
         },
         {
           "branch": "trunk",
           "index": 1,
           "action": "fold",
-          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+          "expectationSha256": "dbcb17fa00a6a308744a96a972a0e9b0c2522a635618d0892ef5be70f558f326"
         },
         {
           "branch": "missing-inception",
@@ -73,7 +73,7 @@
       "given": "Two folders have proposals for the same registry generation.",
       "when": "One fold succeeds before the other is attempted.",
       "then": "The first delivery remains; the stale generation is refused.",
-      "scenarioSha256": "7692de4dffe06102a4a1647f23da93133fdfb796ca8c4c3c82132bc2c593b072",
+      "scenarioSha256": "bb68838e3ab5c5f7451e2280d330e7f28ab76de4eae474f88294aa01b6a4facd",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -81,7 +81,7 @@
         },
         {
           "declaration": "CardanoKeri.Registry.fold",
-          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+          "sha256": "084a880586b6baed196058474fdbed7cf6b6973419fbe9d4e7645c1143e90ff8"
         }
       ],
       "cells": [
@@ -89,13 +89,13 @@
           "branch": "trunk",
           "index": 0,
           "action": "bookRegistration",
-          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+          "expectationSha256": "b9b6712f508a25dbf764ffc127bf35afc9e3a0c2f4e9b4604707a81703a1090a"
         },
         {
           "branch": "trunk",
           "index": 1,
           "action": "fold",
-          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+          "expectationSha256": "dbcb17fa00a6a308744a96a972a0e9b0c2522a635618d0892ef5be70f558f326"
         },
         {
           "branch": "trunk",
@@ -113,10 +113,10 @@
     },
     {
       "story": 4,
-      "given": "A key already has its first delivered carrier.",
-      "when": "A second registration is booked, attempted, then rejected with an authenticated lifecycle mismatch.",
-      "then": "Booking alone cannot replace the carrier. Processing fails; rejection removes the duplicate request and pays its refund floor to its recorded address.",
-      "scenarioSha256": "18aa4abe3f54ba6917473fd1f1dee5b6209d1a79a383ae6f913c5ad66a2e1b02",
+      "given": "A key already has its first delivered carrier, and a second registration of the same key is booked.",
+      "when": "A folder tries to process the duplicate, Sam tries to return it before its deadline, and Sam returns it after the deadline citing the active key.",
+      "then": "Booking alone cannot replace the carrier and processing fails. Nothing spends the duplicate before its deadline; after it the return removes the request and pays the contents less the tip to its refund address.",
+      "scenarioSha256": "13bebd0ff3c706039c796e71b3d3cba297e83d0777b4ba900bfb98fb30c6fd6d",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -124,11 +124,11 @@
         },
         {
           "declaration": "CardanoKeri.Registry.fold",
-          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+          "sha256": "084a880586b6baed196058474fdbed7cf6b6973419fbe9d4e7645c1143e90ff8"
         },
         {
-          "declaration": "CardanoKeri.Registry.genericRejection",
-          "sha256": "17c87772cf431e6a2ba3171350e5936c5bb0246953f0841bd4f8992b454f7b54"
+          "declaration": "CardanoKeri.Registry.returnRequests",
+          "sha256": "a29b2f47e4b4094845e41fd5b290002cc03ca492acfaf7d7be32e4c9e7486fe8"
         }
       ],
       "cells": [
@@ -136,25 +136,25 @@
           "branch": "trunk",
           "index": 0,
           "action": "bookRegistration",
-          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+          "expectationSha256": "b9b6712f508a25dbf764ffc127bf35afc9e3a0c2f4e9b4604707a81703a1090a"
         },
         {
           "branch": "trunk",
           "index": 1,
           "action": "fold",
-          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+          "expectationSha256": "dbcb17fa00a6a308744a96a972a0e9b0c2522a635618d0892ef5be70f558f326"
         },
         {
           "branch": "trunk",
           "index": 2,
           "action": "bookRegistration",
-          "expectationSha256": "5c4d53306826cc8370d56a1165b8152b34d67d84217afcf071e687728d71d2b3"
+          "expectationSha256": "6f92a07719563a857726171fa7a8c097be1e15d1bc9104324da689bc69e9beea"
         },
         {
           "branch": "trunk",
           "index": 3,
-          "action": "genericRejection",
-          "expectationSha256": "b6e2e1802e93dec11473ebd6b0a7ab7257237bb9a5070e94386447ce643e0ff2"
+          "action": "returnRequests",
+          "expectationSha256": "0daad498f9e6c2049c2d7544ace5ccdeb0c2b9e7419f1dedc3fa07deb9bce1d8"
         },
         {
           "branch": "control-3-key-exists",
@@ -163,27 +163,27 @@
           "expectationSha256": "9c7e3e066cc34d1868351ce307c6113fb83f203d9bb2e89c0060d4cf7b53351c"
         },
         {
-          "branch": "control-4-reject-not-expired",
+          "branch": "duplicate-return-before-deadline",
           "index": 0,
-          "action": "genericRejection",
-          "expectationSha256": "5f6cb329a326ea459b68ccf2d302b883973020decdc946d37124720423f2db02"
+          "action": "returnRequests",
+          "expectationSha256": "b96402fe8b305a17154498ceec314735c23f85f9cd053e1f5f0ed8980b8335f5"
         }
       ]
     },
     {
       "story": 5,
-      "given": "A pending registration with a recorded refund address and submission time.",
-      "when": "The refund owner signs a complete transaction inside the retraction window.",
-      "then": "The request is removed once and its full contents are refunded; ordinary funding pays the fee. An interval outside the window or missing signer is refused.",
-      "scenarioSha256": "e31fea33f2febc6a3aaa73cacd2e63e65fa7e8ee75ba3b69f8e364148f58243b",
+      "given": "Alice booked a registration with a recorded refund address; nobody has folded it.",
+      "when": "Alice tries to take it back inside the processing window, or with an interval that starts before the deadline, then returns it at the deadline.",
+      "then": "Both early attempts are refused: until the deadline only a fold may spend the request, the requester included. At the deadline the return needs no signature and pays the contents less the tip to the refund address.",
+      "scenarioSha256": "2b85ddb39343de0790139cf6c7ad4cbb0f603df54aa78b57c074ddf6af9513fa",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
           "sha256": "a03229d128df784de36ce440e136bd8f3fd0d7dc02fec787cbe0de257f4cddba"
         },
         {
-          "declaration": "CardanoKeri.Registry.genericRetraction",
-          "sha256": "a98899354c0cb2c4e26ac29ce1259a6a219f8ba545a90fb10a0190470f00abe8"
+          "declaration": "CardanoKeri.Registry.returnRequests",
+          "sha256": "a29b2f47e4b4094845e41fd5b290002cc03ca492acfaf7d7be32e4c9e7486fe8"
         }
       ],
       "cells": [
@@ -191,48 +191,42 @@
           "branch": "trunk",
           "index": 0,
           "action": "bookRegistration",
-          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+          "expectationSha256": "b9b6712f508a25dbf764ffc127bf35afc9e3a0c2f4e9b4604707a81703a1090a"
         },
         {
           "branch": "trunk",
           "index": 1,
-          "action": "genericRetraction",
-          "expectationSha256": "9d68c61aafaeac65b28b259668fb32a3c9767dab102f255a84efe55dc6222abd"
+          "action": "returnRequests",
+          "expectationSha256": "21ed82c66c45aa901cb1aacd1c7a9f91ff9ba7b88090088c66b4db40ab41e8bc"
         },
         {
-          "branch": "retract-without-owner",
+          "branch": "cancel-in-window",
           "index": 0,
-          "action": "genericRetraction",
-          "expectationSha256": "d73b0b1bf8300c859218d2b12c227e7f0267b554a89a705e08c176a1656b4c25"
+          "action": "returnRequests",
+          "expectationSha256": "b96402fe8b305a17154498ceec314735c23f85f9cd053e1f5f0ed8980b8335f5"
         },
         {
-          "branch": "control-1-retract-window",
+          "branch": "cancel-across-deadline",
           "index": 0,
-          "action": "genericRetraction",
-          "expectationSha256": "27fbc8924999f5fb8235d7d1df94d585c3493fa3e1eed80bc204ea557222b347"
-        },
-        {
-          "branch": "control-3-retract-window",
-          "index": 0,
-          "action": "genericRetraction",
-          "expectationSha256": "27fbc8924999f5fb8235d7d1df94d585c3493fa3e1eed80bc204ea557222b347"
+          "action": "returnRequests",
+          "expectationSha256": "b96402fe8b305a17154498ceec314735c23f85f9cd053e1f5f0ed8980b8335f5"
         }
       ]
     },
     {
       "story": 6,
-      "given": "A registration remains pending beyond its processing and retraction windows.",
-      "when": "Sam reads the current registry and submits its expiry rejection.",
-      "then": "The request is removed and the contents minus its tip reach the recorded refund address. The earlier expiry attempt is refused.",
-      "scenarioSha256": "3b5f090e86a06562f6e1d80475e3aa725df80a2cd582554a7265f605ca73cdd2",
+      "given": "A registration remains pending beyond its deadline.",
+      "when": "Sam reads the current registry and returns it, or tries to return it before the deadline, or tries to pay the refund to himself.",
+      "then": "The request is removed and the contents less its tip reach Alice's refund address; Sam keeps the tip as his fee. The early return and the redirected refund are refused.",
+      "scenarioSha256": "6ce66e35ba8e3a78842afdda57320bfdbfce64ec2c93d648348463adad51647b",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
           "sha256": "a03229d128df784de36ce440e136bd8f3fd0d7dc02fec787cbe0de257f4cddba"
         },
         {
-          "declaration": "CardanoKeri.Registry.genericRejection",
-          "sha256": "17c87772cf431e6a2ba3171350e5936c5bb0246953f0841bd4f8992b454f7b54"
+          "declaration": "CardanoKeri.Registry.returnRequests",
+          "sha256": "a29b2f47e4b4094845e41fd5b290002cc03ca492acfaf7d7be32e4c9e7486fe8"
         }
       ],
       "cells": [
@@ -240,19 +234,25 @@
           "branch": "trunk",
           "index": 0,
           "action": "bookRegistration",
-          "expectationSha256": "cbc0997938521e144ae0365fdaffca941c89874c8158e8afb4d48549b82cc453"
+          "expectationSha256": "5f3f3e08ba168f712d891f36b129362ee5b57523fb2510709d89872efbecf02c"
         },
         {
           "branch": "trunk",
           "index": 1,
-          "action": "genericRejection",
-          "expectationSha256": "9d68c61aafaeac65b28b259668fb32a3c9767dab102f255a84efe55dc6222abd"
+          "action": "returnRequests",
+          "expectationSha256": "21ed82c66c45aa901cb1aacd1c7a9f91ff9ba7b88090088c66b4db40ab41e8bc"
         },
         {
-          "branch": "reject-too-early",
+          "branch": "return-too-early",
           "index": 0,
-          "action": "genericRejection",
-          "expectationSha256": "5f6cb329a326ea459b68ccf2d302b883973020decdc946d37124720423f2db02"
+          "action": "returnRequests",
+          "expectationSha256": "b96402fe8b305a17154498ceec314735c23f85f9cd053e1f5f0ed8980b8335f5"
+        },
+        {
+          "branch": "return-redirected",
+          "index": 0,
+          "action": "returnRequests",
+          "expectationSha256": "c69b90a3f18327650a1616c3099cdd6cf9f1060506e9c4172578c75c3673537d"
         }
       ]
     },
@@ -261,7 +261,7 @@
       "given": "A pending registration has a bounded processing window.",
       "when": "Hal processes a nonempty batch within that window, or tries the empty/late alternatives.",
       "then": "The valid delivery succeeds; empty and out-of-window folds refuse without a successor state.",
-      "scenarioSha256": "1cf3f9954de34c38dfabcc1ef6db538b13d12d67ef4593b4a81db9e248318ece",
+      "scenarioSha256": "e26961289ab11cb04caa407307a484cb521096e676c5dc76f2600a8a4d0591dc",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -269,7 +269,7 @@
         },
         {
           "declaration": "CardanoKeri.Registry.fold",
-          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+          "sha256": "084a880586b6baed196058474fdbed7cf6b6973419fbe9d4e7645c1143e90ff8"
         }
       ],
       "cells": [
@@ -277,13 +277,13 @@
           "branch": "trunk",
           "index": 0,
           "action": "bookRegistration",
-          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+          "expectationSha256": "b9b6712f508a25dbf764ffc127bf35afc9e3a0c2f4e9b4604707a81703a1090a"
         },
         {
           "branch": "trunk",
           "index": 1,
           "action": "fold",
-          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+          "expectationSha256": "dbcb17fa00a6a308744a96a972a0e9b0c2522a635618d0892ef5be70f558f326"
         },
         {
           "branch": "control-1-empty-fold",
@@ -304,7 +304,7 @@
       "given": "The registry fixes its application policy.",
       "when": "A folder supplies that policy and registration evidence, or substitutes a different policy.",
       "then": "The correct fold succeeds; a substituted application policy is refused.",
-      "scenarioSha256": "2146890bad75b462d5a1bc20dfe6ef0ffbb8467741040376b8abcc3cbedeaccb",
+      "scenarioSha256": "13136fd844851079a99450cfa46f85090077416ee090d894bcc4e25a98022fb3",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -312,7 +312,7 @@
         },
         {
           "declaration": "CardanoKeri.Registry.fold",
-          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+          "sha256": "084a880586b6baed196058474fdbed7cf6b6973419fbe9d4e7645c1143e90ff8"
         }
       ],
       "cells": [
@@ -320,13 +320,13 @@
           "branch": "trunk",
           "index": 0,
           "action": "bookRegistration",
-          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+          "expectationSha256": "b9b6712f508a25dbf764ffc127bf35afc9e3a0c2f4e9b4604707a81703a1090a"
         },
         {
           "branch": "trunk",
           "index": 1,
           "action": "fold",
-          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+          "expectationSha256": "dbcb17fa00a6a308744a96a972a0e9b0c2522a635618d0892ef5be70f558f326"
         },
         {
           "branch": "no-inception",
@@ -347,7 +347,7 @@
       "given": "A live carrier retains its token, key and min-ADA, and nobody has convicted it.",
       "when": "Sam tries to book it as a termination.",
       "then": "The booking is refused because only a convicted carrier can be booked. There is no owner exit to collect, and waiting creates no sweep entitlement.",
-      "scenarioSha256": "d223a06e401efacbcf15b56a34d276595d4675b8d6e7ca1eab5d2702b9fe38b5",
+      "scenarioSha256": "2115c8d7f4a3cb6e2f496467617d867b4233d3e1c73f38d786a082f6aa770a37",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -355,7 +355,7 @@
         },
         {
           "declaration": "CardanoKeri.Registry.fold",
-          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+          "sha256": "084a880586b6baed196058474fdbed7cf6b6973419fbe9d4e7645c1143e90ff8"
         },
         {
           "declaration": "CardanoKeri.Registry.bookTermination",
@@ -367,13 +367,13 @@
           "branch": "trunk",
           "index": 0,
           "action": "bookRegistration",
-          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+          "expectationSha256": "b9b6712f508a25dbf764ffc127bf35afc9e3a0c2f4e9b4604707a81703a1090a"
         },
         {
           "branch": "trunk",
           "index": 1,
           "action": "fold",
-          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+          "expectationSha256": "dbcb17fa00a6a308744a96a972a0e9b0c2522a635618d0892ef5be70f558f326"
         },
         {
           "branch": "trunk",
@@ -388,7 +388,7 @@
       "given": "A live carrier has duplicity evidence at its current key.",
       "when": "Cora convicts it, Sam books its termination, and Hal processes that exact pending request.",
       "then": "Conviction preserves pending custody; booking moves the whole entry into the request and pays the defined premium. Only the consuming fold burns the token and permanently retires the key.",
-      "scenarioSha256": "8a10e89120cbc38d6a1ec12e5ad52d6c842e33f7a36dd7d1070b7bda38bdb789",
+      "scenarioSha256": "2289db7d7c992bc93e1d352ac707ad88ece27c846194052bb15b76df0a89ea0b",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -396,7 +396,7 @@
         },
         {
           "declaration": "CardanoKeri.Registry.fold",
-          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+          "sha256": "084a880586b6baed196058474fdbed7cf6b6973419fbe9d4e7645c1143e90ff8"
         },
         {
           "declaration": "CardanoKeri.Registry.convictCkpt",
@@ -412,37 +412,37 @@
           "branch": "trunk",
           "index": 0,
           "action": "bookRegistration",
-          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+          "expectationSha256": "b9b6712f508a25dbf764ffc127bf35afc9e3a0c2f4e9b4604707a81703a1090a"
         },
         {
           "branch": "trunk",
           "index": 1,
           "action": "fold",
-          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+          "expectationSha256": "dbcb17fa00a6a308744a96a972a0e9b0c2522a635618d0892ef5be70f558f326"
         },
         {
           "branch": "trunk",
           "index": 2,
           "action": "convictCkpt",
-          "expectationSha256": "4cd85cbe02ca5ea5b532366f16f8e8e47e117c706d2594713cef623557e71946"
+          "expectationSha256": "1257d35d95a35e0927b41ca95e6b721b59297f45670f4285e26bfe9ac2d2a29a"
         },
         {
           "branch": "trunk",
           "index": 3,
           "action": "bookTermination",
-          "expectationSha256": "ada54c6612c5269fb04e355121f3470fee11dca1e0b6b7e46aafce42fb2420bc"
+          "expectationSha256": "44a922e26ab2559de6cfc870bc0ffb7ccaab9d747cb813c12e447e0bba0c8145"
         },
         {
           "branch": "trunk",
           "index": 4,
           "action": "fold",
-          "expectationSha256": "4437e40afd302a1838c036b51e3c71eb4e85009559e01a4ab1bb45b35f9662e7"
+          "expectationSha256": "93ddfd531b9bb2b4b840d43cdd4b703e414197f25119d7beca7142cf2b06e0ff"
         },
         {
           "branch": "control-6-key-exists",
           "index": 0,
           "action": "bookRegistration",
-          "expectationSha256": "6ee074de2e0e8b28e9f600a5d08c1a81393d3bbc510c6b7a98a172c3b5bb3144"
+          "expectationSha256": "95363ea7245bd3b2260cfe5e23bfc304622b75cb925e45f913354f8cb8ac6d38"
         },
         {
           "branch": "control-6-key-exists",
@@ -455,9 +455,9 @@
     {
       "story": 14,
       "given": "A convicted carrier has been booked into pending termination custody.",
-      "when": "Other parties try local moves or generic recovery before the actual consuming fold.",
-      "then": "The pending request remains whole until the fold consumes it. Generic registration recovery is not a termination exit.",
-      "scenarioSha256": "ecce29c3fb3a7973425dd37f289765d938d65131aa084f0d423378a29455d2b4",
+      "when": "Other parties try local moves, or a return of the pending termination, before the actual consuming fold.",
+      "then": "The pending request remains whole until the fold consumes it. The return applies to registrations only; it is not a termination exit.",
+      "scenarioSha256": "6f9f69b16e9c1c9dc75f5d720f8526d6d87fd45d87fa499479fa1e5b5239490d",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -465,7 +465,7 @@
         },
         {
           "declaration": "CardanoKeri.Registry.fold",
-          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+          "sha256": "084a880586b6baed196058474fdbed7cf6b6973419fbe9d4e7645c1143e90ff8"
         },
         {
           "declaration": "CardanoKeri.Registry.convictCkpt",
@@ -476,12 +476,8 @@
           "sha256": "d4b9cc635264ae93db7cbf3ff3e4b082d45cab781c1166a723e13fd71da38b90"
         },
         {
-          "declaration": "CardanoKeri.Registry.genericRetraction",
-          "sha256": "a98899354c0cb2c4e26ac29ce1259a6a219f8ba545a90fb10a0190470f00abe8"
-        },
-        {
-          "declaration": "CardanoKeri.Registry.genericRejection",
-          "sha256": "17c87772cf431e6a2ba3171350e5936c5bb0246953f0841bd4f8992b454f7b54"
+          "declaration": "CardanoKeri.Registry.returnRequests",
+          "sha256": "a29b2f47e4b4094845e41fd5b290002cc03ca492acfaf7d7be32e4c9e7486fe8"
         }
       ],
       "cells": [
@@ -489,52 +485,46 @@
           "branch": "trunk",
           "index": 0,
           "action": "bookRegistration",
-          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+          "expectationSha256": "b9b6712f508a25dbf764ffc127bf35afc9e3a0c2f4e9b4604707a81703a1090a"
         },
         {
           "branch": "trunk",
           "index": 1,
           "action": "fold",
-          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+          "expectationSha256": "dbcb17fa00a6a308744a96a972a0e9b0c2522a635618d0892ef5be70f558f326"
         },
         {
           "branch": "trunk",
           "index": 2,
           "action": "convictCkpt",
-          "expectationSha256": "4cd85cbe02ca5ea5b532366f16f8e8e47e117c706d2594713cef623557e71946"
+          "expectationSha256": "1257d35d95a35e0927b41ca95e6b721b59297f45670f4285e26bfe9ac2d2a29a"
         },
         {
           "branch": "trunk",
           "index": 3,
           "action": "bookTermination",
-          "expectationSha256": "ada54c6612c5269fb04e355121f3470fee11dca1e0b6b7e46aafce42fb2420bc"
+          "expectationSha256": "44a922e26ab2559de6cfc870bc0ffb7ccaab9d747cb813c12e447e0bba0c8145"
         },
         {
           "branch": "trunk",
           "index": 4,
           "action": "fold",
-          "expectationSha256": "4437e40afd302a1838c036b51e3c71eb4e85009559e01a4ab1bb45b35f9662e7"
+          "expectationSha256": "93ddfd531b9bb2b4b840d43cdd4b703e414197f25119d7beca7142cf2b06e0ff"
         },
         {
-          "branch": "control-4-retract-registration-only",
+          "branch": "control-5-return-termination-refused",
           "index": 0,
-          "action": "genericRetraction",
-          "expectationSha256": "a16c7fceb934197e2b6ea2e910d7b43da5e0fe7b95a68f2b2ce9f08be73692eb"
-        },
-        {
-          "branch": "control-5-reject-termination-no-expiry",
-          "index": 0,
-          "action": "genericRejection",
-          "expectationSha256": "8900d3746cef533862a301885d82aa12cc2b47bf788b8462e12814f964a7f6bb"
+          "action": "returnRequests",
+          "expectationSha256": "710612ea1563639b40e88ee5e9a3da7d4174629cce088502fb810397ded60ea7"
         }
       ]
     },
     {
       "story": 15,
       "given": "Complete pending requests retain their own references and custody.",
-      "when": "A folder processes selected requests, or tries duplicated inputs and inconsistent timestamps; the mixed-custody branch also interleaves another registration and refund.",
-      "then": "Duplicate inputs and backdated booking refuse. Completing one identity preserves the other pending entry through the mixed fold and registration recovery; its own later consuming fold completes it.",
-      "scenarioSha256": "56926232f28f19e84e2919bf31c893f9583bd93d697c54da3228b5aa9609cec7",
+      "when": "A folder processes selected requests, or tries duplicated inputs and inconsistent timestamps; the mixed-custody branch also interleaves another registration and its return after the deadline.",
+      "then": "Duplicate inputs and backdated booking refuse. Completing one identity preserves the other pending entry through the mixed fold and the registration return; its own later consuming fold completes it.",
+      "scenarioSha256": "61ab62b44f5c682f7afeb2238a978a7060cdf38c7c1d257e5cedfa987229b0ad",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -542,7 +532,7 @@
         },
         {
           "declaration": "CardanoKeri.Registry.fold",
-          "sha256": "e1311951792c7f969e3093501089561d2f357877c009c55841a8c8e28f6c6c70"
+          "sha256": "084a880586b6baed196058474fdbed7cf6b6973419fbe9d4e7645c1143e90ff8"
         },
         {
           "declaration": "CardanoKeri.Registry.convictCkpt",
@@ -553,8 +543,8 @@
           "sha256": "d4b9cc635264ae93db7cbf3ff3e4b082d45cab781c1166a723e13fd71da38b90"
         },
         {
-          "declaration": "CardanoKeri.Registry.genericRetraction",
-          "sha256": "a98899354c0cb2c4e26ac29ce1259a6a219f8ba545a90fb10a0190470f00abe8"
+          "declaration": "CardanoKeri.Registry.returnRequests",
+          "sha256": "a29b2f47e4b4094845e41fd5b290002cc03ca492acfaf7d7be32e4c9e7486fe8"
         }
       ],
       "cells": [
@@ -562,13 +552,13 @@
           "branch": "trunk",
           "index": 0,
           "action": "bookRegistration",
-          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+          "expectationSha256": "b9b6712f508a25dbf764ffc127bf35afc9e3a0c2f4e9b4604707a81703a1090a"
         },
         {
           "branch": "trunk",
           "index": 1,
           "action": "fold",
-          "expectationSha256": "f836307060cb0731211f60c3aef94d0c6dcb71df826fc5c64b5692e113aa4d8a"
+          "expectationSha256": "dbcb17fa00a6a308744a96a972a0e9b0c2522a635618d0892ef5be70f558f326"
         },
         {
           "branch": "control-1-backdated-booking",
@@ -586,73 +576,73 @@
           "branch": "mixed-custody",
           "index": 0,
           "action": "bookRegistration",
-          "expectationSha256": "591705ea5d01731732737441a437225aca858690753e126e9f55017c9a3a48af"
+          "expectationSha256": "b9b6712f508a25dbf764ffc127bf35afc9e3a0c2f4e9b4604707a81703a1090a"
         },
         {
           "branch": "mixed-custody",
           "index": 1,
           "action": "bookRegistration",
-          "expectationSha256": "3de597f960cb4639acdad4e99d7b051aa792f0615244cea5f04af6c58a121854"
+          "expectationSha256": "aecc914b76ed41207e9317c7fc902ea80ca0d9c9f9c715a22f7381eb5ce3f559"
         },
         {
           "branch": "mixed-custody",
           "index": 2,
           "action": "fold",
-          "expectationSha256": "75f869ede4862411258f564bd15ef2564caae2faf3356e5990249609a2c6e855"
+          "expectationSha256": "c3fc2acda8a556b1607d19f9e336c4b3b4d4bb7486816c1347c18730124651de"
         },
         {
           "branch": "mixed-custody",
           "index": 3,
           "action": "convictCkpt",
-          "expectationSha256": "f2dbe3ecad500f12a81bbb95fa7637b1610a000aef0de63c1260e5068e4fe8cf"
+          "expectationSha256": "76236895310073b9696835ea014e52d94fbc4cf3c693cbb1ee372ad27d8e0007"
         },
         {
           "branch": "mixed-custody",
           "index": 4,
           "action": "convictCkpt",
-          "expectationSha256": "138b9621fe1a6a0445978153841bd799461b48e21ce6c01897206857054f6b21"
+          "expectationSha256": "0b2cc0fba312381fce752437dba0f44263d6e741cf7323f9b67945faecf19d54"
         },
         {
           "branch": "mixed-custody",
           "index": 5,
           "action": "bookTermination",
-          "expectationSha256": "ab2262f55cd2f6b77acb021ed75b01c085ab140e46fcf7f13808995e849609f5"
+          "expectationSha256": "df90434bbba044b215e02a3b9c539442d39a5625e0e77475a8646f202a8afaa4"
         },
         {
           "branch": "mixed-custody",
           "index": 6,
           "action": "bookTermination",
-          "expectationSha256": "a287aca2c9d5fb65b5c8928301dae9510518bb2b456a8a43816cc24fc7da0203"
+          "expectationSha256": "dc8c65edc324cd360d704e407d7ae6f53a766d6bf772ab6c4abcb1a42b5bcbd7"
         },
         {
           "branch": "mixed-custody",
           "index": 7,
           "action": "bookRegistration",
-          "expectationSha256": "a557fb522f1cdd0cca89f363093da616297e630c9273e1d93d8275352ac5fb44"
+          "expectationSha256": "fe79b270226dfb58632002bbdff3280057703aec913a0902da48cce56ea08243"
         },
         {
           "branch": "mixed-custody",
           "index": 8,
           "action": "fold",
-          "expectationSha256": "dc3e546024be79a690410aa3144420b3cee74dda56cc5771ae308759d1972b02"
+          "expectationSha256": "7e77325e01634ce6dafde1278740d976b0153404fac2aa933dfb3a20f9159876"
         },
         {
           "branch": "mixed-custody",
           "index": 9,
           "action": "bookRegistration",
-          "expectationSha256": "80cce7bacd72b9ecda4954f6c11dd2ab9b8b4f38d682f4cb24abe74ed71b7dcc"
+          "expectationSha256": "86b4de19694ec197011205e741e9f8ad5ae94611e6879e85538c91eb98926083"
         },
         {
           "branch": "mixed-custody",
           "index": 10,
-          "action": "genericRetraction",
-          "expectationSha256": "4f76b3dec1258681c38506fc57ee424127f921980269fdbc53174047dc58708c"
+          "action": "returnRequests",
+          "expectationSha256": "195039d432866037b3711443faa73292a07995f05a0697b9b794503d8571edfe"
         },
         {
           "branch": "mixed-custody",
           "index": 11,
           "action": "fold",
-          "expectationSha256": "8f87aa315b1ffd824e282a1cbb573b96ed89147d6c076f59e26652804a037c81"
+          "expectationSha256": "a993ea3ac1ee60e87dddcc33efcd53ddbc4569612f8b061449e87080a5d8312f"
         }
       ]
     }

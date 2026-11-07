@@ -18,7 +18,7 @@
     "processTime": 5,
     "registrationCost": 2,
     "registryId": 9,
-    "retractTime": 5,
+    "retractTime": 0,
     "root": [
       203,
       242,
@@ -175,7 +175,7 @@
                 "processTime": 5,
                 "registrationCost": 2,
                 "registryId": 9,
-                "retractTime": 5,
+                "retractTime": 0,
                 "root": [
                   203,
                   242,
@@ -298,7 +298,7 @@
                     "processTime": 5,
                     "registrationCost": 2,
                     "registryId": 9,
-                    "retractTime": 5,
+                    "retractTime": 0,
                     "root": [
                       187,
                       43,
@@ -453,7 +453,7 @@
                     "processTime": 5,
                     "registrationCost": 2,
                     "registryId": 9,
-                    "retractTime": 5,
+                    "retractTime": 0,
                     "root": [
                       187,
                       43,
@@ -629,7 +629,7 @@
                     "processTime": 5,
                     "registrationCost": 2,
                     "registryId": 9,
-                    "retractTime": 5,
+                    "retractTime": 0,
                     "root": [
                       203,
                       242,
@@ -748,7 +748,7 @@
                 "processTime": 5,
                 "registrationCost": 2,
                 "registryId": 9,
-                "retractTime": 5,
+                "retractTime": 0,
                 "root": [
                   187,
                   43,
@@ -876,7 +876,7 @@
           "processTime": 5,
           "registrationCost": 2,
           "registryId": 9,
-          "retractTime": 5,
+          "retractTime": 0,
           "root": [
             203,
             242,
@@ -1000,7 +1000,7 @@
                         "processTime": 5,
                         "registrationCost": 2,
                         "registryId": 9,
-                        "retractTime": 5,
+                        "retractTime": 0,
                         "root": [
                           187,
                           43,
@@ -1169,7 +1169,7 @@
                         "processTime": 5,
                         "registrationCost": 2,
                         "registryId": 9,
-                        "retractTime": 5,
+                        "retractTime": 0,
                         "root": [
                           187,
                           43,
@@ -1345,7 +1345,7 @@
                         "processTime": 5,
                         "registrationCost": 2,
                         "registryId": 9,
-                        "retractTime": 5,
+                        "retractTime": 0,
                         "root": [
                           203,
                           242,
@@ -1425,7 +1425,7 @@
           "processTime": 5,
           "registrationCost": 2,
           "registryId": 9,
-          "retractTime": 5,
+          "retractTime": 0,
           "root": [
             203,
             242,
@@ -1696,7 +1696,7 @@
                     "processTime": 5,
                     "registrationCost": 2,
                     "registryId": 9,
-                    "retractTime": 5,
+                    "retractTime": 0,
                     "root": [
                       203,
                       242,
@@ -1918,7 +1918,7 @@
                     "processTime": 5,
                     "registrationCost": 2,
                     "registryId": 9,
-                    "retractTime": 5,
+                    "retractTime": 0,
                     "root": [
                       203,
                       242,
@@ -2107,7 +2107,7 @@
                         "processTime": 5,
                         "registrationCost": 2,
                         "registryId": 9,
-                        "retractTime": 5,
+                        "retractTime": 0,
                         "root": [
                           248,
                           185,
@@ -2317,7 +2317,7 @@
                         "processTime": 5,
                         "registrationCost": 2,
                         "registryId": 9,
-                        "retractTime": 5,
+                        "retractTime": 0,
                         "root": [
                           248,
                           185,
@@ -2596,7 +2596,7 @@
                         "processTime": 5,
                         "registrationCost": 2,
                         "registryId": 9,
-                        "retractTime": 5,
+                        "retractTime": 0,
                         "root": [
                           203,
                           242,
@@ -2794,7 +2794,7 @@
                     "processTime": 5,
                     "registrationCost": 2,
                     "registryId": 9,
-                    "retractTime": 5,
+                    "retractTime": 0,
                     "root": [
                       248,
                       185,
@@ -2974,7 +2974,7 @@
                     "processTime": 5,
                     "registrationCost": 2,
                     "registryId": 9,
-                    "retractTime": 5,
+                    "retractTime": 0,
                     "root": [
                       248,
                       185,
@@ -3154,7 +3154,7 @@
                     "processTime": 5,
                     "registrationCost": 2,
                     "registryId": 9,
-                    "retractTime": 5,
+                    "retractTime": 0,
                     "root": [
                       248,
                       185,
@@ -3375,7 +3375,7 @@
                     "processTime": 5,
                     "registrationCost": 2,
                     "registryId": 9,
-                    "retractTime": 5,
+                    "retractTime": 0,
                     "root": [
                       248,
                       185,
@@ -3647,7 +3647,7 @@
                     "processTime": 5,
                     "registrationCost": 2,
                     "registryId": 9,
-                    "retractTime": 5,
+                    "retractTime": 0,
                     "root": [
                       248,
                       185,
@@ -3987,7 +3987,7 @@
                     "processTime": 5,
                     "registrationCost": 2,
                     "registryId": 9,
-                    "retractTime": 5,
+                    "retractTime": 0,
                     "root": [
                       248,
                       185,
@@ -4256,7 +4256,7 @@
                         "processTime": 5,
                         "registrationCost": 2,
                         "registryId": 9,
-                        "retractTime": 5,
+                        "retractTime": 0,
                         "root": [
                           248,
                           247,
@@ -4435,7 +4435,7 @@
                         "processTime": 5,
                         "registrationCost": 2,
                         "registryId": 9,
-                        "retractTime": 5,
+                        "retractTime": 0,
                         "root": [
                           248,
                           247,
@@ -4774,7 +4774,7 @@
                         "processTime": 5,
                         "registrationCost": 2,
                         "registryId": 9,
-                        "retractTime": 5,
+                        "retractTime": 0,
                         "root": [
                           248,
                           185,
@@ -4970,7 +4970,7 @@
                     "processTime": 5,
                     "registrationCost": 2,
                     "registryId": 9,
-                    "retractTime": 5,
+                    "retractTime": 0,
                     "root": [
                       248,
                       247,
@@ -5283,7 +5283,7 @@
                     "processTime": 5,
                     "registrationCost": 2,
                     "registryId": 9,
-                    "retractTime": 5,
+                    "retractTime": 0,
                     "root": [
                       248,
                       247,
@@ -5457,306 +5457,192 @@
           }
         },
         {
-          "now": 0,
+          "now": 6,
           "actor": "anyone",
           "as": "Alice",
-          "note": "The refund owner reclaims that registration with Bob’s pending entry untouched.",
+          "note": "Return the registration after its deadline",
           "action": {
-            "genericRetraction": {
-              "transaction": {
-                "applicationMint": [
-                  [
-                    {
-                      "name": "16463530648679258229",
-                      "policy": 7
-                    },
-                    -1
-                  ]
-                ],
-                "identity": 306,
-                "outputs": [
-                  {
-                    "contents": {
-                      "applicationTags": [],
-                      "lovelace": 17,
-                      "otherAssets": [],
-                      "trieReadyTags": []
-                    },
-                    "output": {
-                      "address": 42,
-                      "assets": [],
-                      "commitment": null,
-                      "config": null,
-                      "datum": "none",
-                      "datumValue": null,
-                      "lovelace": 17,
-                      "reference": null,
-                      "role": "owner",
-                      "stateToken": null,
-                      "stateTokens": 0
-                    },
-                    "request": null,
-                    "singularTags": []
-                  }
-                ],
-                "singularMint": [],
-                "stateMint": [],
-                "transaction": {
-                  "donation": 0,
-                  "fee": 1,
-                  "inputs": [
-                    {
-                      "approvals": 0,
-                      "assets": [],
-                      "datum": "inline",
-                      "datumValue": null,
-                      "lovelace": 0,
-                      "ref": {
-                        "index": 0,
-                        "tx": 103
-                      },
-                      "role": "request",
-                      "stateToken": null,
-                      "stateTokens": 0
-                    },
-                    {
-                      "approvals": 0,
-                      "assets": [],
-                      "datum": "inline",
-                      "datumValue": null,
-                      "lovelace": 0,
-                      "ref": {
-                        "index": 1,
-                        "tx": 305
-                      },
-                      "role": "request",
-                      "stateToken": null,
-                      "stateTokens": 0
-                    }
-                  ],
-                  "mint": [],
-                  "outputs": [
-                    {
-                      "address": 42,
-                      "assets": [],
-                      "commitment": null,
-                      "config": null,
-                      "datum": "none",
-                      "datumValue": null,
-                      "lovelace": 17,
-                      "reference": null,
-                      "role": "owner",
-                      "stateToken": null,
-                      "stateTokens": 0
-                    }
-                  ],
-                  "referenceInputs": [],
-                  "refunds": [],
-                  "signers": [
-                    42
-                  ],
-                  "validity": {
-                    "lower": 6,
-                    "upper": 7
-                  }
-                },
-                "trieReadyMint": [
-                  [
-                    {
-                      "name": "13729662992350352876",
-                      "policy": 9
-                    },
-                    -1
-                  ]
-                ]
-              },
+            "returnRequests": {
               "unspent": [
                 [
                   {
-                    "index": 0,
-                    "tx": 103
+                    "tx": 103,
+                    "index": 0
                   },
                   {
-                    "contents": {
-                      "applicationTags": [
-                        {
-                          "assetName": "16463530648679258229",
-                          "destination": 114,
-                          "edge": "insertActive",
-                          "key": 14,
-                          "owner": 42,
-                          "policy": 7,
-                          "signatures": []
-                        }
-                      ],
-                      "lovelace": 17,
-                      "otherAssets": [],
-                      "trieReadyTags": [
-                        {
-                          "name": "13729662992350352876",
-                          "policy": 9
-                        }
-                      ]
-                    },
                     "output": {
-                      "address": 0,
-                      "assets": [],
-                      "commitment": null,
-                      "config": null,
+                      "role": "request",
                       "datum": "inline",
-                      "datumValue": null,
+                      "address": 0,
+                      "stateTokens": 0,
+                      "config": null,
+                      "commitment": null,
+                      "assets": [],
                       "lovelace": 17,
                       "reference": null,
-                      "role": "request",
-                      "stateToken": null,
-                      "stateTokens": 0
+                      "datumValue": null,
+                      "stateToken": null
                     },
+                    "contents": {
+                      "lovelace": 17,
+                      "applicationTags": [
+                        {
+                          "signatures": [],
+                          "policy": 7,
+                          "key": 14,
+                          "owner": 42,
+                          "destination": 114,
+                          "assetName": "16463530648679258229",
+                          "edge": "insertActive"
+                        }
+                      ],
+                      "trieReadyTags": [
+                        {
+                          "policy": 9,
+                          "name": "13729662992350352876"
+                        }
+                      ],
+                      "otherAssets": []
+                    },
+                    "singularTags": [],
                     "request": {
                       "registration": {
                         "request": {
+                          "registryId": 9,
+                          "key": 14,
+                          "refundAddress": 42,
+                          "destination": 114,
+                          "submittedAt": 1,
+                          "registrationCost": 2,
+                          "declaredTip": 1,
                           "carrierAda": 14,
+                          "reference": {
+                            "tx": 103,
+                            "index": 0
+                          },
                           "contents": {
+                            "lovelace": 17,
                             "applicationTags": [
                               {
-                                "assetName": "16463530648679258229",
-                                "destination": 114,
-                                "edge": "insertActive",
+                                "signatures": [],
+                                "policy": 7,
                                 "key": 14,
                                 "owner": 42,
-                                "policy": 7,
-                                "signatures": []
+                                "destination": 114,
+                                "assetName": "16463530648679258229",
+                                "edge": "insertActive"
                               }
                             ],
-                            "lovelace": 17,
-                            "otherAssets": [],
                             "trieReadyTags": [
                               {
-                                "name": "13729662992350352876",
-                                "policy": 9
+                                "policy": 9,
+                                "name": "13729662992350352876"
                               }
-                            ]
+                            ],
+                            "otherAssets": []
                           },
-                          "datum": 714,
-                          "declaredTip": 1,
-                          "destination": 114,
-                          "key": 14,
-                          "reference": {
-                            "index": 0,
-                            "tx": 103
-                          },
-                          "refundAddress": 42,
-                          "registrationCost": 2,
-                          "registryId": 9,
-                          "submittedAt": 1
+                          "datum": 714
                         }
                       }
-                    },
-                    "singularTags": []
+                    }
                   }
                 ],
                 [
                   {
-                    "index": 0,
-                    "tx": 201
+                    "tx": 201,
+                    "index": 0
                   },
                   {
-                    "contents": {
-                      "applicationTags": [],
-                      "lovelace": 3,
-                      "otherAssets": [],
-                      "trieReadyTags": [
-                        {
-                          "name": "2457363527023764289",
-                          "policy": 9
-                        }
-                      ]
-                    },
                     "output": {
-                      "address": 0,
-                      "assets": [],
-                      "commitment": null,
-                      "config": null,
+                      "role": "request",
                       "datum": "inline",
-                      "datumValue": null,
+                      "address": 0,
+                      "stateTokens": 0,
+                      "config": null,
+                      "commitment": null,
+                      "assets": [],
                       "lovelace": 3,
                       "reference": null,
-                      "role": "request",
-                      "stateToken": null,
-                      "stateTokens": 0
+                      "datumValue": null,
+                      "stateToken": null
                     },
-                    "request": {
-                      "termination": {
-                        "request": {
-                          "carrierAda": 2,
-                          "contents": {
-                            "applicationTags": [],
-                            "lovelace": 3,
-                            "otherAssets": [],
-                            "trieReadyTags": [
-                              {
-                                "name": "2457363527023764289",
-                                "policy": 9
-                              }
-                            ]
-                          },
-                          "declaredTip": 1,
-                          "destination": 112,
-                          "key": 12,
-                          "reference": {
-                            "index": 0,
-                            "tx": 201
-                          },
-                          "refundAddress": null,
-                          "registryId": 9,
-                          "singularTags": [
-                            {
-                              "registryId": 9,
-                              "token": {
-                                "name": 12,
-                                "policy": 8
-                              }
-                            }
-                          ],
-                          "submittedAt": null
+                    "contents": {
+                      "lovelace": 3,
+                      "applicationTags": [],
+                      "trieReadyTags": [
+                        {
+                          "policy": 9,
+                          "name": "2457363527023764289"
                         }
-                      }
+                      ],
+                      "otherAssets": []
                     },
                     "singularTags": [
                       {
                         "registryId": 9,
                         "token": {
-                          "name": 12,
-                          "policy": 8
+                          "policy": 8,
+                          "name": 12
                         }
                       }
-                    ]
+                    ],
+                    "request": {
+                      "termination": {
+                        "request": {
+                          "registryId": 9,
+                          "key": 12,
+                          "destination": 112,
+                          "declaredTip": 1,
+                          "carrierAda": 2,
+                          "reference": {
+                            "tx": 201,
+                            "index": 0
+                          },
+                          "contents": {
+                            "lovelace": 3,
+                            "applicationTags": [],
+                            "trieReadyTags": [
+                              {
+                                "policy": 9,
+                                "name": "2457363527023764289"
+                              }
+                            ],
+                            "otherAssets": []
+                          },
+                          "singularTags": [
+                            {
+                              "registryId": 9,
+                              "token": {
+                                "policy": 8,
+                                "name": 12
+                              }
+                            }
+                          ],
+                          "refundAddress": null,
+                          "submittedAt": null
+                        }
+                      }
+                    }
                   }
                 ],
                 [
                   {
-                    "index": 0,
-                    "tx": 305
+                    "tx": 305,
+                    "index": 0
                   },
                   {
-                    "contents": {
-                      "applicationTags": [],
-                      "lovelace": 0,
-                      "otherAssets": [],
-                      "trieReadyTags": []
-                    },
                     "output": {
+                      "role": "state",
+                      "datum": "inline",
                       "address": null,
-                      "assets": [],
-                      "commitment": null,
+                      "stateTokens": 1,
                       "config": {
-                        "activePolicy": 8,
-                        "applicationPolicy": 7,
-                        "bookingWidth": 1,
+                        "registryId": 9,
                         "maxFee": 1,
                         "processTime": 5,
-                        "registrationCost": 2,
-                        "registryId": 9,
-                        "retractTime": 5,
+                        "retractTime": 0,
+                        "applicationPolicy": 7,
+                        "activePolicy": 8,
                         "root": [
                           248,
                           247,
@@ -5766,53 +5652,181 @@
                           97,
                           72,
                           126
-                        ]
+                        ],
+                        "registrationCost": 2,
+                        "bookingWidth": 1
                       },
-                      "datum": "inline",
-                      "datumValue": null,
+                      "commitment": null,
+                      "assets": [],
                       "lovelace": 0,
                       "reference": null,
-                      "role": "state",
+                      "datumValue": null,
                       "stateToken": {
-                        "name": 0,
-                        "policy": 9
-                      },
-                      "stateTokens": 1
+                        "policy": 9,
+                        "name": 0
+                      }
                     },
-                    "request": null,
-                    "singularTags": []
+                    "contents": {
+                      "lovelace": 0,
+                      "applicationTags": [],
+                      "trieReadyTags": [],
+                      "otherAssets": []
+                    },
+                    "singularTags": [],
+                    "request": null
                   }
                 ],
                 [
                   {
-                    "index": 1,
-                    "tx": 305
+                    "tx": 305,
+                    "index": 1
                   },
                   {
-                    "contents": {
-                      "applicationTags": [],
-                      "lovelace": 1,
-                      "otherAssets": [],
-                      "trieReadyTags": []
-                    },
                     "output": {
-                      "address": 0,
-                      "assets": [],
-                      "commitment": null,
-                      "config": null,
-                      "datum": "none",
-                      "datumValue": null,
-                      "lovelace": 1,
-                      "reference": null,
                       "role": "owner",
-                      "stateToken": null,
-                      "stateTokens": 0
+                      "datum": "none",
+                      "address": 0,
+                      "stateTokens": 0,
+                      "config": null,
+                      "commitment": null,
+                      "assets": [],
+                      "lovelace": 0,
+                      "reference": null,
+                      "datumValue": null,
+                      "stateToken": null
                     },
-                    "request": null,
-                    "singularTags": []
+                    "contents": {
+                      "lovelace": 0,
+                      "applicationTags": [],
+                      "trieReadyTags": [],
+                      "otherAssets": []
+                    },
+                    "singularTags": [],
+                    "request": null
                   }
                 ]
-              ]
+              ],
+              "transaction": {
+                "transaction": {
+                  "identity": 306,
+                  "outputs": [
+                    {
+                      "output": {
+                        "role": "owner",
+                        "datum": "none",
+                        "address": 42,
+                        "stateTokens": 0,
+                        "config": null,
+                        "commitment": null,
+                        "assets": [],
+                        "lovelace": 16,
+                        "reference": null,
+                        "datumValue": null,
+                        "stateToken": null
+                      },
+                      "contents": {
+                        "lovelace": 16,
+                        "applicationTags": [],
+                        "trieReadyTags": [],
+                        "otherAssets": []
+                      },
+                      "singularTags": [],
+                      "request": null
+                    }
+                  ],
+                  "transaction": {
+                    "inputs": [
+                      {
+                        "role": "request",
+                        "datum": "inline",
+                        "stateTokens": 0,
+                        "approvals": 0,
+                        "lovelace": 0,
+                        "assets": [],
+                        "datumValue": null,
+                        "ref": {
+                          "tx": 103,
+                          "index": 0
+                        },
+                        "stateToken": null
+                      }
+                    ],
+                    "outputs": [
+                      {
+                        "role": "owner",
+                        "datum": "none",
+                        "address": 42,
+                        "stateTokens": 0,
+                        "config": null,
+                        "commitment": null,
+                        "assets": [],
+                        "lovelace": 16,
+                        "reference": null,
+                        "datumValue": null,
+                        "stateToken": null
+                      }
+                    ],
+                    "mint": [],
+                    "signers": [],
+                    "refunds": [],
+                    "referenceInputs": [
+                      {
+                        "role": "request",
+                        "datum": "inline",
+                        "stateTokens": 0,
+                        "approvals": 0,
+                        "lovelace": 0,
+                        "assets": [],
+                        "datumValue": null,
+                        "ref": {
+                          "tx": 305,
+                          "index": 0
+                        },
+                        "stateToken": null
+                      }
+                    ],
+                    "validity": {
+                      "lower": 6,
+                      "upper": 7
+                    },
+                    "fee": 1,
+                    "donation": 0
+                  },
+                  "trieReadyMint": [
+                    [
+                      {
+                        "policy": 9,
+                        "name": "13729662992350352876"
+                      },
+                      -1
+                    ]
+                  ],
+                  "applicationMint": [
+                    [
+                      {
+                        "policy": 7,
+                        "name": "16463530648679258229"
+                      },
+                      -1
+                    ]
+                  ],
+                  "stateMint": [],
+                  "singularMint": []
+                },
+                "stateReference": {
+                  "tx": 305,
+                  "index": 0
+                },
+                "members": [
+                  [
+                    {
+                      "tx": 103,
+                      "index": 0
+                    },
+                    "expired"
+                  ]
+                ]
+              }
             }
           },
           "env": {
@@ -5947,7 +5961,7 @@
                     "processTime": 5,
                     "registrationCost": 2,
                     "registryId": 9,
-                    "retractTime": 5,
+                    "retractTime": 0,
                     "root": [
                       248,
                       247,
@@ -6092,7 +6106,7 @@
                         "processTime": 5,
                         "registrationCost": 2,
                         "registryId": 9,
-                        "retractTime": 5,
+                        "retractTime": 0,
                         "root": [
                           98,
                           213,
@@ -6216,7 +6230,7 @@
                         "processTime": 5,
                         "registrationCost": 2,
                         "registryId": 9,
-                        "retractTime": 5,
+                        "retractTime": 0,
                         "root": [
                           98,
                           213,
@@ -6374,7 +6388,7 @@
                         "processTime": 5,
                         "registrationCost": 2,
                         "registryId": 9,
-                        "retractTime": 5,
+                        "retractTime": 0,
                         "root": [
                           248,
                           247,
@@ -6565,7 +6579,7 @@
                     "processTime": 5,
                     "registrationCost": 2,
                     "registryId": 9,
-                    "retractTime": 5,
+                    "retractTime": 0,
                     "root": [
                       98,
                       213,
@@ -6652,7 +6666,7 @@
           "processTime": 5,
           "registrationCost": 2,
           "registryId": 9,
-          "retractTime": 5,
+          "retractTime": 0,
           "root": [
             98,
             213,
@@ -6728,7 +6742,7 @@
       "processTime": 5,
       "registrationCost": 2,
       "registryId": 9,
-      "retractTime": 5,
+      "retractTime": 0,
       "root": [
         187,
         43,

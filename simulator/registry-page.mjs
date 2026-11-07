@@ -137,10 +137,12 @@ const REASON_WORDS = {
   "empty-fold": "Select at least one pending request to process.",
   "key-exists": "This key is already registered and cannot be registered again.",
   "not-phase1": "The complete transaction interval must fit the registration processing window.",
-  "retract-window": "The complete transaction interval must fit the owner retraction window.",
-  "retract-owner": "The transaction lacks the refund owner’s signature.",
-  "reject-not-expired": "This registration has not reached its expiry boundary.",
-  "reject-compatible": "The current registry state is compatible with this registration; mismatch rejection does not apply.",
+  "keri-return-before-deadline": "Until its deadline only a fold may spend this registration; the return opens at the deadline.",
+  "keri-return-registration-only": "Only a booked registration can be returned; a pending termination waits for its terminating fold.",
+  "keri-return-unbalanced": "The return transaction does not balance.",
+  "keri-return-interval-missing": "A return names its complete validity interval.",
+  "reject-refund-short": "The refund address must receive the request’s contents less its declared tip.",
+  "reject-compatible": "The current registry state is compatible with this registration; cite expiry instead.",
   "fold-duplicate-input": "A transaction cannot spend the same input twice.",
   "backdated-booking": "The booking interval does not agree with the submitted timestamp."
 };
@@ -148,7 +150,7 @@ const reasonText = reason => (REASON_WORDS[reason] || reason.replaceAll('-', ' '
 function needsOf(action) {
   const t = actionTag(action);
   if (t === 'convictCkpt') return { cls: 'public', text: 'duplicity evidence at this key' };
-  if (t === 'genericRetraction') return { cls: 'keys', text: 'refund-owner signature and retraction interval' };
+  if (t === 'returnRequests') return { cls: 'public', text: 'the deadline passed; refund to the declared address, no signature' };
   return { cls: 'public', text: t === 'fold' ? 'complete batch, value, token and authorization checks' : 'complete request or transaction observations' };
 }
 
@@ -272,7 +274,7 @@ function edgeFx(n, dir, dur) {
   if(n.kind==='evidence'){pulse('tray');return;}
   if(!n.record)return;
   const r=n.record,ok=!!r.result.ok,kind=actionTag(r.action),actor='actor:'+(actorOfNode(n)||app.actor||'mallory');
-  const label = ({bookRegistration:'Register',bookTermination:'Book termination',convictCkpt:'Convict',genericRetraction:'Retract',genericRejection:'Reject',fold:'Fold'})[kind];
+  const label = ({bookRegistration:'Register',bookTermination:'Book termination',convictCkpt:'Convict',returnRequests:'Return',fold:'Fold'})[kind];
   fly(card(label,dir<0),actor,'validator',{dir,dur:dur*.5,done:()=>mark('validator',ok,ok?'accepted':r.result.error)});
   if(!ok)return;
   const f=r.result.ok.flow;
@@ -296,7 +298,7 @@ function renderHeader() {
   const sess=cur(), p=sess.params, c=sess.state.config;
   $('slot-now').textContent=fmt(sess.now??0);$('slot-input').value=fmt(sess.now??0);
   $('slot-plusw').textContent='+process ('+c.processTime+')';
-  $('pf-params').textContent='Bond '+p.D+'; retained carrier min-ADA '+p.Mc+'; request min-ADA '+p.Mr+'; tip '+p.tip+'. Processing window '+c.processTime+', retraction window '+c.retractTime+'. The proposal clock chooses transaction intervals; it does not change registry state.';
+  $('pf-params').textContent='Bond '+p.D+'; retained carrier min-ADA '+p.Mc+'; request min-ADA '+p.Mr+'; tip '+p.tip+'. Processing window '+c.processTime+'; after it anyone may return an unfolded request. The proposal clock chooses transaction intervals; it does not change registry state.';
 }
 function renderStoryBar() {
   const sel = $('story-picker');
@@ -324,7 +326,7 @@ function treeLayout() {
 }
 const shortWho = w => (w || '').split(/ — | · /)[0].split(' ')[0].slice(0, 8);
 function nodeVerb(n) {
-  if(n.record)return ({bookRegistration:'register request',bookTermination:'book termination',convictCkpt:'convict',genericRetraction:'retract',genericRejection:'reject'})[actionTag(n.record.action)]||actionTag(n.record.action);
+  if(n.record)return ({bookRegistration:'register request',bookTermination:'book termination',convictCkpt:'convict',returnRequests:'return'})[actionTag(n.record.action)]||actionTag(n.record.action);
   return n.kind==='time'?'slot '+n.session.now:n.kind==='evidence'?'evidence':'start';
 }
 function renderTree() {
@@ -389,7 +391,7 @@ function renderPots() {
     ['Active registry key','Covers live and termination-pending custody. Only a consuming termination fold retires it.'],
     ['Pending termination','Conviction retains the token and key. Booking moves whole custody to a request; another request cannot complete it.'],
     ['Retired registry key','Permanent. Its representative token was burned by the consuming fold.'],
-    ['Time windows','Registration processing: '+c.processTime+' slots after submission. Owner retraction: the following '+c.retractTime+' slots. Complete transaction bounds are checked.'],
+    ['Time windows','Registration processing: '+c.processTime+' slots after the booking. Until then only a fold spends the request; from then anyone returns it, less its tip, to its refund address. Complete transaction bounds are checked.'],
     ['Evidence table','Finite model predicates, not generated signatures or a concrete KERI proof. The local checkpoint simulator separately checks concrete duplicity.']])dl.append(h('dt',{},term),h('dd',{},body));
 }
 
@@ -457,8 +459,7 @@ function renderNext() {
   }
   moves.append(h('div', { class: 'mover' }, h('div', { class: 'lbl' }, 'Time'), h('div', { class: 'acts' },
     h('button', { type: 'button', class: 'act', dataset: { kind: 'time' }, onclick: () => moveSlot(addNat(sess.now ?? 0, 1)) }, '+1 slot'),
-    h('button', { type: 'button', class: 'act', dataset: { kind: 'time' }, onclick: () => moveSlot(addNat(sess.now ?? 0, sess.state.config.processTime)) }, `+processing window (${sess.state.config.processTime})`),
-    h('button', { type: 'button', class: 'act', dataset: { kind: 'time' }, onclick: () => moveSlot(addNat(sess.now ?? 0, sess.state.config.retractTime)) }, `+retraction window (${sess.state.config.retractTime})`))));
+    h('button', { type: 'button', class: 'act', dataset: { kind: 'time' }, onclick: () => moveSlot(addNat(sess.now ?? 0, sess.state.config.processTime)) }, `+processing window (${sess.state.config.processTime})`))));
   if (folded) moves.append(h('button', { type: 'button', class: 'ghost', id: 'unfold', onclick: () => { app.unfold = true; renderNext(); } }, folded + ' other ' + (folded > 1 ? 'people' : 'person') + ' could also move · show all'));
   const groups = new Map();
   for (const r of refusedRows) { if (!groups.has(r.why)) groups.set(r.why, []); groups.get(r.why).push(r.who + ': ' + r.label); }
@@ -474,7 +475,7 @@ function renderActForm() {
   for(const [f,label] of FIELDS[t]||[])fields.append(h('label',{},label,h('input',{type:'text',inputmode:'numeric',value:d[f],onchange:e=>{const n=parseNat(e.target.value);if(n===null){$('act-why').textContent='Enter a non-negative whole number.';return;}d[f]=n;renderActForm();}})));
   if(t==='fold') {
     const selected=d.transaction.transaction.inputs.filter(i=>i.ref).map(i=>i.ref),all=pendingOf(cur());
-    const box=h('div',{class:'batch'},h('span',{class:'lbl'},'Select complete requests to process. Rejection is a separate transaction.'));
+    const box=h('div',{class:'batch'},h('span',{class:'lbl'},'Select complete requests to process. A return after the deadline is a separate transaction.'));
     all.forEach((m,i)=>{const ref=m.booking.request.reference,on=selected.some(r=>equal(r,ref));box.append(h('label',{},m.kind+' for AID '+m.booking.request.key,h('select',{dataset:{batch:i},onchange:e=>{const refs=all.filter((x,j)=>j===i?e.target.value==='process':selected.some(r=>equal(r,x.booking.request.reference))).map(x=>x.booking.request.reference);app.pending.action=B.foldAction(cur().params,cur().state,refs,d.transaction.transaction.validity.lower);renderActForm();}},['leave','process'].map(v=>h('option',{value:v,selected:(v==='process')===on},v)))));});fields.append(box);
   }
   fields.append(h('details',{},h('summary',{},'Complete proposed transaction'),h('textarea',{rows:10,value:JSON.stringify(app.pending.action,null,2),onchange:e=>{try{const a=JSON.parse(e.target.value);dryRun(currentTree(),a);app.pending.action=a;renderActForm();}catch(error){$('act-why').textContent='Invalid transaction input: '+error.message;$('act-submit').disabled=true;}}},JSON.stringify(app.pending.action,null,2))));

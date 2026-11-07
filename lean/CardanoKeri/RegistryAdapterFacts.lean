@@ -105,4 +105,24 @@ theorem recovery_reconstruction (s : Sys) (keep : Singular.RegistrationBooking â
   rw [recovery_pool_membership]
   simp [Sys.toWorld, pure, Except.pure, bind, Except.bind]
 
+/-- Given a return transaction with no validity interval; when the adapter
+judges it; then it refuses before the imported rejection is consulted, so the
+imported missing-interval refusal is never the adapter's answer. -/
+theorem return_interval_present (s : Sys) (u : Singular.EconomicUtxo) (r : Singular.Rejection)
+    (missing : r.transaction.transaction.validity = none) :
+    returnRequests s u r = .error "keri-return-interval-missing" := by
+  simp [returnRequests, missing]
+  rfl
+
+/-- Given a return member that names a booked registration; when the imported
+rejection judges that member; then it applies the registration grounds, never
+the termination or not-pending refusals. -/
+theorem return_member_is_registration (s : Sys) (interval : Singular.Interval)
+    (member : Singular.OutRef Ã— Singular.RejectReason) (b : Singular.RegistrationBooking)
+    (found : returnedRegistration s member = some b) :
+    Singular.rejectionMemberRefusal s.toWorld interval member =
+      Singular.registrationRejectionGround s.toWorld b.request interval member.2 := by
+  unfold returnedRegistration at found
+  simp [Singular.rejectionMemberRefusal, Sys.toWorld, found]
+
 end CardanoKeri.Registry

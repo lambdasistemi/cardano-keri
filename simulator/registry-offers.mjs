@@ -24,8 +24,7 @@ export function describeAction(action) {
     case 'convictCkpt': return `convict AID ${a.aid}; retain pending custody`;
     case 'bookTermination': return `book termination of AID ${a.aid}`;
     case 'fold': return `process a batch at generation ${a.expectedGen}`;
-    case 'genericRetraction': return 'reclaim a registration with its owner signature';
-    case 'genericRejection': return 'reject a registration using the current state read';
+    case 'returnRequests': return 'return a registration after its deadline, less its tip';
     default: return 'unknown action';
   }
 }
@@ -42,7 +41,7 @@ export function offersFor(actorId, tree, nodeId = tree.cursor) {
     offer('book a registration request', B.registrationAction(params, state, aid, toWire(fresh), toWire(time)));
     keri.push({ label: 'inception verifies', row: { inception: [aid] } });
     for (const b of exact.registrations.filter(b => b.request.key === BigInt(aid))) {
-      offer(`reclaim request ${b.request.reference.tx}`, B.retractionAction(params, state, toWire(b.request.reference), toWire(time), toWire(time + 1n), [toWire(b.request.refundAddress)]));
+      offer(`return request ${b.request.reference.tx} after its deadline`, B.returnAction(params, state, toWire(b.request.reference), toWire(time), toWire(time + 1n)));
     }
   }
   if (actorId === 'hal' || actorId === 'mallory') {
@@ -61,9 +60,9 @@ export function offersFor(actorId, tree, nodeId = tree.cursor) {
   if (actorId === 'sam') {
     for (const c of state.carriers) offer(`book termination of AID ${c.aid}`, B.terminationAction(params, state, c.aid, toWire(fresh)));
     for (const b of exact.registrations) {
-      offer(`reject expired request ${b.request.reference.tx}`, B.rejectionAction(params, state, toWire(b.request.reference), toWire(time), toWire(time + 1n)));
+      offer(`return expired request ${b.request.reference.tx}`, B.returnAction(params, state, toWire(b.request.reference), toWire(time), toWire(time + 1n)));
       const leaf = exact.trie.find(([key]) => key === b.request.key)?.[1] ?? 'unknown';
-      offer(`check lifecycle mismatch for ${b.request.key}`, B.rejectionAction(params, state, toWire(b.request.reference), toWire(time), toWire(time + 1n), toWire({ mismatch: { leaf } })));
+      offer(`return duplicate request ${b.request.reference.tx} citing key ${b.request.key}`, B.returnAction(params, state, toWire(b.request.reference), toWire(time), toWire(time + 1n), toWire({ mismatch: { leaf } })));
     }
   }
   if (actorId === 'cora') for (const c of state.carriers) {

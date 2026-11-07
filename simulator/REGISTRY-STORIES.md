@@ -10,7 +10,7 @@ The authority is `CardanoKeri.Registry.stepFn` with public Singular revision `d6
 
 Evidence tables are finite model predicates, not signatures. Transaction assembly uses model fixtures and full observations, not a wallet. Registry key counters are not asserted to encode concrete checkpoint key states. Wire v3 preserves unbounded integers with JSON numbers in the safe range and canonical decimal strings outside it; arithmetic is exact. No production Aiken, Haskell, CLI transaction or deployed behavior is established by these stories.
 
-Application Flow and economic transactions have different scopes. Registry conviction has an empty application Flow; the Checkpoint model separately records its addressed bond/pool payments. Generic rejection checks refund floors; it does not itself assert ledger fee/balance acceptance. Retraction and fold check their own specified economic conditions.
+Application Flow and economic transactions have different scopes. Registry conviction has an empty application Flow; the Checkpoint model separately records its addressed bond/pool payments. A registration request is spent only by a fold until its deadline, the booking's validity upper bound plus the processing window. From the deadline anyone may return it without a signature: the return pays its refund address at least the contents less the declared tip and balances; the spender may keep the tip. There is no retraction window. A pending termination is never returned.
 
 ## 1. Alice books a registration
 
@@ -42,33 +42,33 @@ Application Flow and economic transactions have different scopes. Registry convi
 
 [Scenario](registry-simulator-scenarios/03-folders-race.json) · [Editable DSL](registry-simulator-scenarios/03-folders-race.dsl)
 
-## 4. A duplicate registration is refused and refunded
+## 4. A duplicate registration waits for its deadline and is returned
 
-**Given** A key already has its first delivered carrier.
+**Given** A key already has its first delivered carrier, and a second registration of the same key is booked.
 
-**When** A second registration is booked, attempted, then rejected with an authenticated lifecycle mismatch.
+**When** A folder tries to process the duplicate, Sam tries to return it before its deadline, and Sam returns it after the deadline citing the active key.
 
-**Then** Booking alone cannot replace the carrier. Processing fails; rejection removes the duplicate request and pays its refund floor to its recorded address.
+**Then** Booking alone cannot replace the carrier and processing fails. Nothing spends the duplicate before its deadline; after it the return removes the request and pays the contents less the tip to its refund address.
 
 [Scenario](registry-simulator-scenarios/04-duplicate-registration.json) · [Editable DSL](registry-simulator-scenarios/04-duplicate-registration.dsl)
 
-## 5. Alice retracts in the recovery window
+## 5. Alice cannot cancel her request before its deadline
 
-**Given** A pending registration with a recorded refund address and submission time.
+**Given** Alice booked a registration with a recorded refund address; nobody has folded it.
 
-**When** The refund owner signs a complete transaction inside the retraction window.
+**When** Alice tries to take it back inside the processing window, or with an interval that starts before the deadline, then returns it at the deadline.
 
-**Then** The request is removed once and its full contents are refunded; ordinary funding pays the fee. An interval outside the window or missing signer is refused.
+**Then** Both early attempts are refused: until the deadline only a fold may spend the request, the requester included. At the deadline the return needs no signature and pays the contents less the tip to the refund address.
 
-[Scenario](registry-simulator-scenarios/05-alice-retracts.json) · [Editable DSL](registry-simulator-scenarios/05-alice-retracts.dsl)
+[Scenario](registry-simulator-scenarios/05-alice-waits-for-the-deadline.json) · [Editable DSL](registry-simulator-scenarios/05-alice-waits-for-the-deadline.dsl)
 
-## 6. Sam rejects an expired registration
+## 6. Sam returns an expired registration to Alice
 
-**Given** A registration remains pending beyond its processing and retraction windows.
+**Given** A registration remains pending beyond its deadline.
 
-**When** Sam reads the current registry and submits its expiry rejection.
+**When** Sam reads the current registry and returns it, or tries to return it before the deadline, or tries to pay the refund to himself.
 
-**Then** The request is removed and the contents minus its tip reach the recorded refund address. The earlier expiry attempt is refused.
+**Then** The request is removed and the contents less its tip reach Alice's refund address; Sam keeps the tip as his fee. The early return and the redirected refund are refused.
 
 [Scenario](registry-simulator-scenarios/06-permissionless-sweep.json) · [Editable DSL](registry-simulator-scenarios/06-permissionless-sweep.dsl)
 
@@ -128,9 +128,9 @@ Retired: there is no parked state; conviction of a live carrier is story 12. The
 
 **Given** A convicted carrier has been booked into pending termination custody.
 
-**When** Other parties try local moves or generic recovery before the actual consuming fold.
+**When** Other parties try local moves, or a return of the pending termination, before the actual consuming fold.
 
-**Then** The pending request remains whole until the fold consumes it. Generic registration recovery is not a termination exit.
+**Then** The pending request remains whole until the fold consumes it. The return applies to registrations only; it is not a termination exit.
 
 [Scenario](registry-simulator-scenarios/14-go-request-cannot-be-bricked.json) · [Editable DSL](registry-simulator-scenarios/14-go-request-cannot-be-bricked.dsl)
 
@@ -138,12 +138,12 @@ Retired: there is no parked state; conviction of a live carrier is story 12. The
 
 **Given** Complete pending requests retain their own references and custody.
 
-**When** A folder processes selected requests, or tries duplicated inputs and inconsistent timestamps; the mixed-custody branch also interleaves another registration and refund.
+**When** A folder processes selected requests, or tries duplicated inputs and inconsistent timestamps; the mixed-custody branch also interleaves another registration and its return after the deadline.
 
-**Then** Duplicate inputs and backdated booking refuse. Completing one identity preserves the other pending entry through the mixed fold and registration recovery; its own later consuming fold completes it.
+**Then** Duplicate inputs and backdated booking refuse. Completing one identity preserves the other pending entry through the mixed fold and the registration return; its own later consuming fold completes it.
 
 [Scenario](registry-simulator-scenarios/15-batch-and-timestamps.json) · [Editable DSL](registry-simulator-scenarios/15-batch-and-timestamps.dsl)
 
 ## Earlier semantics
 
-The migration ledger retains each earlier source digest and the disposition of its stable ID. Dormant registry leaves, revival requests and the timed sweep of parked output were retired by the retained-output model revision; parking and revival are retired by the no-owner-exit revision. Their old expected outcomes are not counted as current passing tests. Booking premiums apply only after conviction.
+The migration ledger retains each earlier source digest and the disposition of its stable ID. Dormant registry leaves, revival requests and the timed sweep of parked output were retired by the retained-output model revision; parking and revival are retired by the no-owner-exit revision; the owner retraction window and the early lifecycle-mismatch rejection are retired by the request-lifecycle revision. Their old expected outcomes are not counted as current passing tests. Booking premiums apply only after conviction.

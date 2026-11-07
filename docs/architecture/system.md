@@ -104,8 +104,9 @@ sequenceDiagram
     L-->>R: a juvenile checkpoint, one incarnation ever
 ```
 
-Appliers race on one shared object; the loser wastes work, never safety. A
-request nobody applies within its window is retractable with a refund.
+Appliers race on one shared object; the loser wastes work, never safety. Until its deadline
+a request can only be applied; after it, anyone may return it to its refund
+address, less the tip the returner keeps.
 Conviction travels the same way as a leaf update. Rotations, poisons,
 freezes and top-ups never touch the registry.
 

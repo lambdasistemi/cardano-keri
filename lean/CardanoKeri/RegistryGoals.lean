@@ -1,6 +1,6 @@
 import CardanoKeri.Registry
 import CardanoKeri.Samaritan
-import Singular.Lemmas.RetractionFunding
+import Singular.Lemmas.Refunds
 
 /-! Exact retained-output registry contracts over actual imported execution. -/
 namespace CardanoKeri.Registry
@@ -553,67 +553,55 @@ theorem generation_cannot_be_reused (p : Params) (env : Env) {s s' : Sys}
   have after := facts.2.2.2.2.1
   omega
 
-/-- Given the actual supplied UTxO and corresponding complete imported transaction
-and actual wrapper success; when inspecting the successor; then its full World
-is the imported result and every stated carrier/termination/registry/counter
-field stays fixed. Empty coarse Flow records no added application payment;
-actual refund/fee observations belong to the transaction and imported judgment.
-No old phase-only enabling or arbitrary future-timestamp-rejection theorem is
-inherited. No assertion of broader #468 application recovery is made. A
-registration recovery alongside an untouched termination must supply the
-positive frame exhibit; attempted termination recovery is a refusal control. -/
-theorem generic_retraction_sound (s s' : Sys) (u : Singular.EconomicUtxo)
-    (tx : Singular.EconomicTransaction) (f : Flow)
-    (hs : genericRetraction s u tx = .ok (f, s')) :
-    Singular.retractionAccepted s.toWorld u tx = .ok s'.toWorld ∧
-    s'.carriers = s.carriers ∧ s'.terminations = s.terminations ∧
-    s'.config = s.config ∧ s'.trie = s.trie ∧ s'.gen = s.gen ∧
-    s'.treasury = s.treasury ∧ s'.bindings = s.bindings ∧ s'.nextToken = s.nextToken ∧
-    f = {} := by
-  unfold genericRetraction at hs
-  simp only [bind, Except.bind, pure, Except.pure] at hs
-  split at hs
-  · contradiction
-  · rename_i world executed
-    split at hs
-    · contradiction
-    · rename_i after reconstructed
-      cases hs
-      obtain ⟨projected, frames⟩ := recoverRegistrations_sound reconstructed
-      exact ⟨by simpa [projected] using executed, frames.1, frames.2.1,
-        frames.2.2.1, frames.2.2.2.1, frames.2.2.2.2.1, frames.2.2.2.2.2.1,
-        frames.2.2.2.2.2.2.1, frames.2.2.2.2.2.2.2, rfl⟩
+/-- A guard that did not throw held. -/
+theorem guard_holds {b : Bool} (h : ¬ (!b) = true) : b = true := by
+  cases b <;> simp_all
 
-/-- Given the actual supplied UTxO and corresponding complete imported transaction
-and actual wrapper success; when inspecting the successor; then its full World
-is the imported result and every stated carrier/termination/registry/counter
-field stays fixed. Empty coarse Flow records no added application payment;
-actual refund/fee observations belong to the transaction and imported judgment.
-No old phase-only enabling or arbitrary future-timestamp-rejection theorem is
-inherited. No assertion of broader #468 application recovery is made. A
-registration recovery alongside an untouched termination must supply the
-positive frame exhibit; attempted termination recovery is a refusal control. -/
-theorem generic_rejection_sound (s s' : Sys) (u : Singular.EconomicUtxo)
+/-- Given the actual supplied UTxO, a complete imported rejection transaction
+and actual return success; when inspecting the successor; then its validity
+interval exists, every member is a booked registration whose deadline the
+interval's lower bound has reached, the transaction balances, the imported
+rejection accepted exactly its full projected successor, and every carrier,
+termination, registry and counter field stays fixed. The empty coarse Flow
+records no application payment; refunds are read from the transaction. -/
+theorem return_sound (s s' : Sys) (u : Singular.EconomicUtxo)
     (tx : Singular.Rejection) (f : Flow)
-    (hs : genericRejection s u tx = .ok (f, s')) :
+    (hs : returnRequests s u tx = .ok (f, s')) :
+    (∃ interval, tx.transaction.transaction.validity = some interval ∧
+      tx.members.all (fun m => (returnedRegistration s m).isSome) = true ∧
+      tx.members.all (returnMemberReady s interval) = true) ∧
+    Singular.balanced u.ledger tx.transaction.transaction = true ∧
     Singular.rejectionAccepted s.toWorld u tx = .ok s'.toWorld ∧
     s'.carriers = s.carriers ∧ s'.terminations = s.terminations ∧
     s'.config = s.config ∧ s'.trie = s.trie ∧ s'.gen = s.gen ∧
     s'.treasury = s.treasury ∧ s'.bindings = s.bindings ∧ s'.nextToken = s.nextToken ∧
     f = {} := by
-  unfold genericRejection at hs
-  simp only [bind, Except.bind, pure, Except.pure] at hs
-  split at hs
-  · contradiction
-  · rename_i world executed
+  unfold returnRequests at hs
+  cases validity : tx.transaction.transaction.validity with
+  | none => simp [validity, bind, Except.bind] at hs
+  | some interval =>
+    simp only [validity, bind, Except.bind, pure, Except.pure] at hs
     split at hs
     · contradiction
-    · rename_i after reconstructed
-      cases hs
-      obtain ⟨projected, frames⟩ := recoverRegistrations_sound reconstructed
-      exact ⟨by simpa [projected] using executed, frames.1, frames.2.1,
-        frames.2.2.1, frames.2.2.2.1, frames.2.2.2.2.1, frames.2.2.2.2.2.1,
-        frames.2.2.2.2.2.2.1, frames.2.2.2.2.2.2.2, rfl⟩
+    · rename_i registrations
+      split at hs
+      · contradiction
+      · rename_i ready
+        split at hs
+        · contradiction
+        · rename_i balanced
+          split at hs
+          · contradiction
+          · rename_i world executed
+            split at hs
+            · contradiction
+            · rename_i after reconstructed
+              cases hs
+              obtain ⟨projected, frames⟩ := recoverRegistrations_sound reconstructed
+              exact ⟨⟨interval, rfl, guard_holds registrations, guard_holds ready⟩,
+                guard_holds balanced, by simpa [projected] using executed, frames.1,
+                frames.2.1, frames.2.2.1, frames.2.2.2.1, frames.2.2.2.2.1,
+                frames.2.2.2.2.2.1, frames.2.2.2.2.2.2.1, frames.2.2.2.2.2.2.2, rfl⟩
 
 /-- Given an accepted application registration booking, its entire imported
 World, value guard, flow and successor registration pool are determined. -/
@@ -734,11 +722,8 @@ theorem nonfold_frame (p : Params) (env : Env) {s s' : Sys}
       (bookTermination_iff p s s' aid booker fee b f).mp hs
     exact ⟨rfl, rfl, rfl⟩
   | fold gen plugin u tx => exact False.elim (hn gen plugin u tx rfl)
-  | genericRetraction u tx =>
-    obtain ⟨_, _, _, config, trie, gen, _⟩ := generic_retraction_sound s s' u tx f hs
-    exact ⟨gen, config, trie⟩
-  | genericRejection u tx =>
-    obtain ⟨_, _, _, config, trie, gen, _⟩ := generic_rejection_sound s s' u tx f hs
+  | returnRequests u tx =>
+    obtain ⟨_, _, _, _, _, config, trie, gen, _⟩ := return_sound s s' u tx f hs
     exact ⟨gen, config, trie⟩
 
 /-- Given arbitrary inputs for the inversions/refusals/frame and leaf laws, with
@@ -810,26 +795,18 @@ theorem fold_empty_refused (p : Params) (env : Env) (s : Sys) (gen plugin : Nat)
     have nonempty := (Singular.foldBatch_inv _ _ _ batch).1
     simp [he] at nonempty
 
-/-- Given actual successful recovery wrapper execution and all actual transaction
-inputs; when reading the admitted request, signature/window and addressed
-outputs; then retraction's recorded refund address receives at least the full
-held request value, its required signer and full interval checks hold, donation
-is zero, tags burn, ordinary funding covers fee and the ledger model balances.
-Rejection refund floors sum the owed amounts per recorded address, rather
-than trusting output labels or redirecting value to a processor. Its generic
-judgment does not itself establish full transaction balance/fee funding, so
-none is added to the second theorem. Actual generic outputs replace the old
-synthetic exact Flow.refunds list; no named destination is silently discarded.
-These inversion guarantees do not resurrect the old phase-only sufficient
-premises, future-timestamp rejection or named-folder reward, and do not claim
-operational application recovery/inclusion for #468. -/
-theorem rejection_refund_destinations (s s' : Sys) (u : Singular.EconomicUtxo)
+/-- Given an actual successful return; when reading the transaction's outputs
+at their actual addresses; then every refund address receives at least the sum,
+over the returned registrations it was declared for, of their contents less
+their declared tips. Outputs are credited by address, never by a label, so the
+refund cannot be redirected or reduced. -/
+theorem return_refund_floor (s s' : Sys) (u : Singular.EconomicUtxo)
     (tx : Singular.Rejection) (f : Flow)
-    (hs : genericRejection s u tx = .ok (f, s')) :
+    (hs : returnRequests s u tx = .ok (f, s')) :
     ∀ address, Singular.refundOwed
       (Singular.rejectedRequests s.toWorld tx.members) false address ≤
       Singular.refundPaid tx.transaction address := by
-  have accepted := (generic_rejection_sound s s' u tx f hs).1
+  have accepted := (return_sound s s' u tx f hs).2.2.1
   exact Singular.RefundProof.refund_floor (Singular.RefundProof.rejection_refunds accepted)
 
 /-- Given a carrier edit preserving each original holding, its generic World
@@ -872,8 +849,7 @@ theorem step_worldReachable (p : Params) (env : Env) {s s' : Sys}
     rw [projected]
     exact .termination hw b booked
   | fold gen plugin u tx => exact .fold hw u tx (fold_sound p env hs).2.2.2.1
-  | genericRetraction u tx => exact .retraction hw u tx (generic_retraction_sound s s' u tx f hs).1
-  | genericRejection u tx => exact .rejection hw u tx (generic_rejection_sound s s' u tx f hs).1
+  | returnRequests u tx => exact .rejection hw u tx (return_sound s s' u tx f hs).2.2.1
 
 /-- The actual initial/step history always projects to imported reachability.
 This claim does not stand in for the additional application invariants. -/
@@ -923,43 +899,6 @@ theorem current_sys_fold_accounting (p : Params) (env : Env) (cfg : Singular.Con
   exact Singular.Statements.fold_routes_every_amount s.toWorld s'.toWorld
     (reachable_world p env cfg hr) u tx (fold_sound p env hs).2.2.2.1
 
-/-- Given actual successful recovery wrapper execution and all actual transaction
-inputs; when reading the admitted request, signature/window and addressed
-outputs; then retraction's recorded refund address receives at least the full
-held request value, its required signer and full interval checks hold, donation
-is zero, tags burn, ordinary funding covers fee and the ledger model balances.
-Rejection refund floors sum the owed amounts per recorded address, rather
-than trusting output labels or redirecting value to a processor. Its generic
-judgment does not itself establish full transaction balance/fee funding, so
-none is added to the second theorem. Actual generic outputs replace the old
-synthetic exact Flow.refunds list; no named destination is silently discarded.
-These inversion guarantees do not resurrect the old phase-only sufficient
-premises, future-timestamp rejection or named-folder reward, and do not claim
-operational application recovery/inclusion for #468. -/
-theorem retraction_refund_and_guards (s s' : Sys) (u : Singular.EconomicUtxo)
-    (tx : Singular.EconomicTransaction) (f : Flow)
-    (hs : genericRetraction s u tx = .ok (f, s')) :
-    ∃ request : Singular.RegistrationRequest, ∃ interval : Singular.Interval,
-      Singular.retractionRequest s.toWorld tx = .ok request ∧
-      tx.transaction.signers.contains request.refundAddress = true ∧
-      tx.transaction.validity = some interval ∧ interval.valid ∧
-      request.submittedAt + s.config.processTime ≤ interval.lower ∧
-      interval.upper ≤ request.submittedAt + s.config.processTime + s.config.retractTime ∧
-      request.contents.lovelace ≤ Singular.refundPaid tx request.refundAddress ∧
-      tx.transaction.donation = 0 ∧ Singular.requestTagsBurned u tx = true ∧
-      tx.transaction.fee ≤ Singular.retractionFundingLovelace u tx request ∧
-      Singular.balanced u.ledger tx.transaction = true := by
-  have accepted := (generic_retraction_sound s s' u tx f hs).1
-  obtain ⟨_, _, request, found, signed, ⟨interval, valid, bounds, lower, upper⟩, tags, _, refunds⟩ :=
-    Singular.RefundProof.retraction_checks accepted
-  obtain ⟨request', found', _, donation, fee, balanced, _⟩ :=
-    Singular.retraction_funding_checks accepted
-  have same : request' = request := by rw [found] at found'; exact (Except.ok.inj found').symm
-  subst request'
-  have refund := Singular.RefundProof.refund_floor refunds request.refundAddress
-  refine ⟨request, interval, found, signed, valid, bounds, lower, upper, ?_,
-    donation, tags, fee, balanced⟩
-  simpa [Singular.refundOwed, Singular.refundAmount] using refund
 /-- Given actual imported registration booking success, or an actual selected
 registration in a successful adapter fold; when observing the request and
 real economic output; then the entire declared carrier budget and exact
@@ -1170,56 +1109,22 @@ theorem terminal_leaf_permanent (p : Params) (env : Env) {s s' : Sys}
       exact hf ⟨gen, plugin, u, tx, same⟩
     rw [(nonfold_frame p env hs hn).2.2]
     exact hk
-/-- Given an actual selected registration for an already active/terminal key, or
-an actual pending termination in a reachable canonical Sys; when the supplied
-actual transaction attempts registration/retraction/rejection as specified;
-then the adapter refuses. Known-key refusal preserves the arbitrary-input
-scope of the old registration refusal. Termination recovery refusal uses the
-actual admitted request kind and current reachable custody, not now<far or
-synthetic go-request timestamps. These are current source-bound generic
-protection clauses; they do not establish all application recovery guarantees
-in #468. A valid unrelated registration recovery and actual proper terminating
-fold are required positive companions. -/
-theorem termination_retraction_refused (p : Params) (env : Env) (cfg : Singular.Config)
-    {s : Sys} (_hr : Reach p env cfg s) (ref : Singular.OutRef) (e : TerminationEntry)
-    (hp : pendingAt s ref = some e) (u : Singular.EconomicUtxo)
-    (tx : Singular.EconomicTransaction)
-    (spent : Singular.inputsContainReference tx.transaction.inputs ref = true) :
-    (genericRetraction s u tx).toOption = none := by
-  cases success : genericRetraction s u tx with
-  | error message => rfl
-  | ok result =>
-    obtain ⟨flow, after⟩ := result
-    have accepted := (generic_retraction_sound s after u tx flow success).1
-    obtain ⟨_, _, request, found, _⟩ := Singular.RefundProof.retraction_checks accepted
-    have old := pending_lookup_mem s ref e hp
-    have selected : s.toWorld.terminations.any (fun b =>
-        Singular.inputsContainReference tx.transaction.inputs b.request.reference) = true := by
-      apply List.any_eq_true.mpr
-      exact ⟨e.booking, List.mem_map.mpr ⟨e, old.1, rfl⟩, by simpa [old.2] using spent⟩
-    simp [Singular.retractionRequest, selected, bind, Except.bind] at found
-
-/-- Given an actual selected registration for an already active/terminal key, or
-an actual pending termination in a reachable canonical Sys; when the supplied
-actual transaction attempts registration/retraction/rejection as specified;
-then the adapter refuses. Known-key refusal preserves the arbitrary-input
-scope of the old registration refusal. Termination recovery refusal uses the
-actual admitted request kind and current reachable custody, not now<far or
-synthetic go-request timestamps. These are current source-bound generic
-protection clauses; they do not establish all application recovery guarantees
-in #468. A valid unrelated registration recovery and actual proper terminating
-fold are required positive companions. -/
-theorem termination_rejection_refused (p : Params) (env : Env) (cfg : Singular.Config)
+/-- Given a pending termination in a reachable system and any return
+transaction naming its reference; when the return is attempted; then it is
+refused. The pending-termination output holds the convicted checkpoint's
+custody, and only the registry's terminating fold consumes it. The positive
+companion is an actual terminating fold of the same pending output. -/
+theorem termination_return_refused (p : Params) (env : Env) (cfg : Singular.Config)
     {s : Sys} (_hr : Reach p env cfg s) (ref : Singular.OutRef) (e : TerminationEntry)
     (hp : pendingAt s ref = some e) (u : Singular.EconomicUtxo)
     (tx : Singular.Rejection) (reason : Singular.RejectReason)
     (member : (ref, reason) ∈ tx.members) :
-    (genericRejection s u tx).toOption = none := by
-  cases success : genericRejection s u tx with
+    (returnRequests s u tx).toOption = none := by
+  cases success : returnRequests s u tx with
   | error message => rfl
   | ok result =>
     obtain ⟨flow, after⟩ := result
-    have accepted := (generic_rejection_sound s after u tx flow success).1
+    have accepted := (return_sound s after u tx flow success).2.2.1
     have checks := Singular.rejectionAccepted_checks accepted
     obtain ⟨interval, _, _, _, _, members, _⟩ := checks.2.2.2
     have checked := members (ref, reason) member
@@ -1274,16 +1179,9 @@ theorem generic_fold_registered_insert_impossible (s : Singular.RegistryState)
         · exact ih middle.state last later
             (generic_step_registered s action middle request.key known first) remaining
 
-/-- Given an actual selected registration for an already active/terminal key, or
-an actual pending termination in a reachable canonical Sys; when the supplied
-actual transaction attempts registration/retraction/rejection as specified;
-then the adapter refuses. Known-key refusal preserves the arbitrary-input
-scope of the old registration refusal. Termination recovery refusal uses the
-actual admitted request kind and current reachable custody, not now<far or
-synthetic go-request timestamps. These are current source-bound generic
-protection clauses; they do not establish all application recovery guarantees
-in #468. A valid unrelated registration recovery and actual proper terminating
-fold are required positive companions. -/
+/-- Given a selected registration for an already active or terminal key; when
+a fold attempts it; then the fold is refused. A duplicate key's request cannot be
+folded, so until its deadline nothing spends it; after it, the return does. -/
 theorem registered_registration_refused (p : Params) (env : Env) (s : Sys)
     (gen plugin : Nat) (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction)
     (b : Singular.RegistrationBooking)

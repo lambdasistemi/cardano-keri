@@ -24,10 +24,10 @@ function moduleBody(file, variable, dependencies, exports, override = null) {
   return `/* @@MODULE:${variable}@@ sha256=${sources[file]} */\nconst ${variable} = (() => {\n${body}\nreturn { ${exports.join(', ')} };\n})();\n/* @@MODULE:${variable}:END@@ */\n`;
 }
 const modules = [
-  ['registry-economic-core.mjs', 'E', {}, ['toInternal','toWire','canonical','equal','ModelRefusal','known','trieGet','fnv1a','rootOf','applicationName','readyTag','singularTag','ordinary','foldMembers','balanced','bookRegistration','bookTermination','foldAccepted','retractionAccepted','rejectionAccepted']],
+  ['registry-economic-core.mjs', 'E', {}, ['toInternal','toWire','canonical','equal','ModelRefusal','known','trieGet','fnv1a','rootOf','applicationName','readyTag','singularTag','ordinary','foldMembers','balanced','bookRegistration','bookTermination','foldAccepted','rejectionAccepted']],
   ['registry-wire.mjs', 'Wire', {'./registry-economic-core.mjs':'E'}, ['decodeInput','validateState','validateConfig','validateEnv','validateResult']],
   ['registry-simulator-core.mjs', 'Core', {'./registry-economic-core.mjs':'E','./registry-wire.mjs':'Wire'}, ['SCHEMA','VERSION','canonical','equal','stepFn','init','validateState','checkCell','checkCorpus','replayScenario','checkScenario','newSession','attempt','setEvidence'], option('--core','registry-simulator-core.mjs')],
-  ['registry-fixtures.mjs', 'B', {'./registry-economic-core.mjs':'E','./registry-wire.mjs':'Wire'}, ['registrationAction','terminationAction','foldAction','retractionAction','rejectionAction']],
+  ['registry-fixtures.mjs', 'B', {'./registry-economic-core.mjs':'E','./registry-wire.mjs':'Wire'}, ['registrationAction','terminationAction','foldAction','returnAction']],
   ['registry-offers.mjs', 'Offers', {'./registry-fixtures.mjs':'B','./registry-economic-core.mjs':'E','./registry-wire.mjs':'Wire'}, ['NAMES','nameOf','CAST','ACTOR_ORDER','actionTag','dataOf','describeAction','offersFor']],
   ['registry-properties.mjs', 'Properties', {'./registry-economic-core.mjs':'E'}, ['THEOREMS','properties','corpusCells','oracleIndex','oracleResult']],
 ];

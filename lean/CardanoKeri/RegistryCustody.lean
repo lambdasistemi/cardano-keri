@@ -45,13 +45,9 @@ theorem pending_record_frame (p : Params) (env : Env) {s s' : Sys}
     cases consumed : Singular.inputsContainReference tx.transaction.inputs ref with
     | false => rfl
     | true => exact False.elim (hn ⟨gen, plugin, u, tx, rfl, consumed⟩)
-  | genericRetraction u tx =>
+  | returnRequests u tx =>
     unfold pendingAt
-    rw [(generic_retraction_sound s s' u tx f hs).2.2.1]
-    exact hp
-  | genericRejection u tx =>
-    unfold pendingAt
-    rw [(generic_rejection_sound s s' u tx f hs).2.2.1]
+    rw [(return_sound s s' u tx f hs).2.2.2.2.1]
     exact hp
 
 /-- A pending lookup in a well-formed state supplies its exact alias and

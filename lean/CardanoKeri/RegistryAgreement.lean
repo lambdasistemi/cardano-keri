@@ -35,10 +35,8 @@ inductive Step (p : Params) (env : Env) : Action → Sys → Flow → Sys → Pr
       Step p env (.bookTermination aid booker fee b) s f s'
   | fold {s s' f gen plugin u tx} : fold p env s gen plugin u tx = .ok (f, s') →
       Step p env (.fold gen plugin u tx) s f s'
-  | retract {s s' f u tx} : genericRetraction s u tx = .ok (f, s') →
-      Step p env (.genericRetraction u tx) s f s'
-  | reject {s s' f u tx} : genericRejection s u tx = .ok (f, s') →
-      Step p env (.genericRejection u tx) s f s'
+  | returnRequests {s s' f u tx} : returnRequests s u tx = .ok (f, s') →
+      Step p env (.returnRequests u tx) s f s'
 
 /-- Given any action, state, and complete result, when executing the action,
 then success is equivalent to its relational constructor with that result.
@@ -52,8 +50,7 @@ theorem step_iff (p : Params) (env : Env) (a : Action) (s s' : Sys) (f : Flow) :
     | convictCkpt aid => exact .convict h
     | bookTermination aid booker fee b => exact .bookTermination h
     | fold gen plugin u tx => exact .fold h
-    | genericRetraction u tx => exact .retract h
-    | genericRejection u tx => exact .reject h
+    | returnRequests u tx => exact .returnRequests h
   · intro h
     cases h <;> assumption
 

@@ -65,7 +65,14 @@ function execute(p, env, s, action) {
     require(E.equal(toWorld(after), next), 'keri-fold-reconstruction-mismatch');
     moved = flow({ locked: members.filter(m => m.kind === 'registration').map(m => [m.booking.request.key, m.booking.request.carrierAda - p.Mc]) });
   } else {
-    const next = kind === 'genericRetraction' ? E.retractionAccepted(world, a.unspent, a.transaction) : E.rejectionAccepted(world, a.unspent, a.transaction);
+    // returnRequests: after its deadline anyone returns a booked registration.
+    const r = a.transaction, t = r.transaction.transaction;
+    require(t.validity !== null, 'keri-return-interval-missing');
+    const returned = ([ref]) => s.registrations.find(b => E.equal(b.request.reference, ref)) ?? null;
+    require(r.members.every(m => returned(m) !== null), 'keri-return-registration-only');
+    require(r.members.every(m => returned(m).request.submittedAt + s.config.processTime <= t.validity.lower), 'keri-return-before-deadline');
+    require(E.balanced(a.unspent, r.transaction), 'keri-return-unbalanced');
+    const next = E.rejectionAccepted(world, a.unspent, r);
     after = { ...s, registrations: s.registrations.filter(b => next.pending.some(old => E.equal(old, b))) };
     require(E.equal(toWorld(after), next), 'keri-recovery-reconstruction-mismatch');
   }
@@ -113,13 +120,13 @@ export function checkCorpus(doc) {
   };
   try {
     if (doc.schema !== SCHEMA || doc.version !== VERSION) throw Error('schema/version');
-    const names = ['live-until-convicted', 'mixed-custody-and-recovery', 'expired-registration', 'registration-retraction', 'seed-437', 'seed-9001'];
+    const names = ['live-until-convicted', 'mixed-custody-and-recovery', 'expired-registration', 'registration-window', 'seed-437', 'seed-9001'];
     if (!equal(doc.traces.map(t => t.name), names)) throw Error('trace roster');
     for (const trace of doc.traces) {
       if (!trace.cells.length) throw Error(`empty trace ${trace.name}`);
       chain(trace.cells, init(trace.cells[0].input.config), trace.name);
     }
-    if (doc.grid.length !== 12 || doc.boundaries.length !== 161) throw Error('boundary census');
+    if (doc.grid.length !== 12 || doc.boundaries.length !== 143) throw Error('boundary census');
     doc.grid.forEach((c, i) => inspect(c, `local[${i}]`));
     doc.boundaries.forEach((c, i) => inspect(c, `economic[${i}]`));
     if (!doc.stories.length || doc.stories.some((s, i) => !Number.isSafeInteger(s.id) || s.id < 1 || s.id > 15 || (i > 0 && s.id <= doc.stories[i - 1].id))) throw Error('story roster');
@@ -136,7 +143,7 @@ export function checkCorpus(doc) {
         if (!equal(result, fork.final)) fail(`story ${story.id}/${fork.id}: final mismatch`);
       }
     }
-    if (forks !== 19) throw Error(`fork census ${forks}`);
+    if (forks !== 18) throw Error(`fork census ${forks}`);
     if (!applied || !refused) throw Error('missing positive or refusal controls');
   } catch (error) { fail(error.message); }
   return { ok: !reasons.length, cells, applied, refused, reasons };

@@ -285,8 +285,8 @@ cannot turn it into a second registered identity.
 
 **Guarantee and conditions:** processing a registration requires an absent AID
 leaf. With Alice already registered, a duplicate request cannot create another
-checkpoint. Refunding that pending request is a separate operation with its own
-authenticated rejection ground and transaction conditions.
+checkpoint. Until the request's deadline nobody may spend it; after the deadline
+anyone may return it to its refund address.
 
 [Open the registry simulator](../simulator/registry/index.html) ·
 [Open duplicate.dsl](scenarios/duplicate.dsl)
@@ -301,15 +301,16 @@ authenticated rejection ground and transaction conditions.
 14 (bond 10 plus minimum ADA 4), registration cost 2 and tip 1. Its fold creates
 the active carrier and records the permanent binding. A second booking for AID
 11 remains pending. The **Try processing another registration of this AID**
-branch refuses with `key-exists`. The trunk instead presents the authenticated
-active-key mismatch: generic rejection returns 16 to refund address 42. The
+branch refuses with `key-exists`. After the deadline the trunk returns the
+duplicate, citing the active key: refund address 42 receives 16 (everything but
+the tip 1, which the returner keeps as its fee), with no signature. The
 final state retains the original carrier/token, treasury 2 and no pending
 registration. The full transaction, rather than the application flow summary,
 contains that refund.
 
-Try **Try expiry rejection before both windows end**. The same early validity
-interval cannot establish expiry and refuses with `reject-not-expired`. An
-authenticated mismatch and expiry are different rejection grounds. These
+Try **Try returning the duplicate before its deadline**. A return whose
+validity interval starts before the deadline refuses with
+`keri-return-before-deadline`: a duplicate is not cancelled early. These
 parameters and addresses belong to this complete Registry fixture; they do not
 inherit the Checkpoint examples' settings.
 

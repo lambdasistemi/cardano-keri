@@ -111,6 +111,36 @@
       "pause": 400
     }
   ],
+  "keris-application-on-the-public-registry": [
+    {
+      "text": "KERI's application on the public registry.",
+      "pause": 500
+    },
+    {
+      "text": "As a KERI registration requester, I book a request that the public Singular registry can fold into my checkpoint, and I know in advance what the fold or a later return does with my money. The public registry only checks the approval each request carries and that the holding holds at least the committed deposit. Everything else is KERI's application.",
+      "pause": 400
+    },
+    {
+      "text": "Each registry's genesis mints one configuration record holding the registration cost, the minimum tip, the processing time, the booking width, and no retraction window. A registry that is not KERI's gets none.",
+      "pause": 300
+    },
+    {
+      "text": "Booking reads that record and mints exactly one approval. The approval commits the registry, the identifier's key, the application address, the hash of the initial checkpoint datum, and the deposit, which is the whole carrier the checkpoint will hold. The request holds exactly the deposit, the registration cost and the minimum tip.",
+      "pause": 300
+    },
+    {
+      "text": "Until its deadline a request is spent only by a fold that delivers the committed holding with exactly the deposit. From the deadline anyone may return it, paying the refund address everything but the tip.",
+      "pause": 300
+    },
+    {
+      "text": "A fold's treasury donation is at least the registration costs of the requests it folds. A pending termination is spent only by the fold that burns its tokens.",
+      "pause": 300
+    },
+    {
+      "text": "The network is not part of any approval: the chain the transaction runs on fixes it. Vectors of the approval bytes, the configuration record, and accepted and refused transactions are published for the on-chain work.",
+      "pause": 400
+    }
+  ],
   "executable-evidence-and-limits": [
     {
       "text": "Executable evidence and limits.",

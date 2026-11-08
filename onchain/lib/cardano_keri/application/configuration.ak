@@ -36,9 +36,16 @@ use singular_state/preimage.{
 }
 use singular_state/state.{policy_delta}
 
-/// Model `parametersValid`: a KERI registry has no retraction window.
+/// Model `parametersValid`: a KERI registry has no retraction window. The Lean
+/// fields are naturals, so each integer field of the record is at least zero.
 pub fn parameters_valid(parameters: ApplicationParameters) -> Bool {
-  parameters.retract_time == 0
+  and {
+    parameters.registration_cost >= 0,
+    parameters.minimum_tip >= 0,
+    parameters.process_time >= 0,
+    parameters.booking_width >= 0,
+    parameters.retract_time == 0,
+  }
 }
 
 /// Model `configurationShape`: the parameters of the configuration record of

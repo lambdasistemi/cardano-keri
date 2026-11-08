@@ -419,7 +419,7 @@ check-checkpoint-freeze-vectors:
 
 # One mutation control per premise of the freeze: each removed check must make
 # a freeze test fail, and the harness's own controls must behave.
-check-freeze-mutants:
+check-freeze-mutants: stage-onchain
     nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/check-freeze-mutants.mjs
 
 # --- the bounded top-up (#346, #522) ---
@@ -450,7 +450,7 @@ check-topup-vectors: gen-topup-vectors
 # pool, of the rotation's cleared mark and of the freeze's kept mark: each
 # changed check must make a test fail, and the harness's own controls must
 # behave.
-check-topup-mutants:
+check-topup-mutants: stage-onchain
     nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/check-topup-mutants.mjs
 
 # --- the deposit option of Advance (#345) ---
@@ -479,7 +479,7 @@ check-deposit-vectors: gen-deposit-vectors
 
 # One mutation control per premise of the deposit option: each changed check
 # must make a deposit test fail, and the harness's own controls must behave.
-check-deposit-mutants:
+check-deposit-mutants: stage-onchain
     nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/check-deposit-mutants.mjs
 
 # Regenerate the deposit cells of the Lean corpus, for both layers.
@@ -598,8 +598,14 @@ format-onchain:
 format-check-onchain:
     cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt --check
 
+# Stage the public Singular registry package that onchain/ compiles against
+# (onchain/build/packages/singular-registry, at the pinned commit; see
+# onchain/stage-dependencies.sh). Every recipe that compiles onchain/ depends on it.
+stage-onchain:
+    bash onchain/stage-dependencies.sh
+
 # Run Aiken tests + type-check
-check-onchain:
+check-onchain: stage-onchain
     cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check
 
 # Measure the schema-layer enforcement predicate ex-units (#106 Slice 6).
@@ -607,14 +613,14 @@ check-onchain:
 # in-test, so this runs the measurement tests with `--plain-numbers` (printing
 # exact mem/cpu per test) and fails only if a measurement test fails to run/pass.
 # The headroom verdict is the re-verifiable claim in specs/106-enforcement/MEASUREMENTS.md.
-measure-enforcement:
+measure-enforcement: stage-onchain
     cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check --plain-numbers -m measure_convict
 
 # Measure the hash-proof minting policy ex-units at the three size tiers
 # (#114 S4: ~300 B class, 966 B GEDA-scale, 1024 B boundary). Same caveat as
 # measure-enforcement: an INVOCATION printing exact mem/cpu per cell, not a
 # headroom assertion — the verdict lives in specs/114-registration/MEASUREMENTS.md.
-measure-hash-proof:
+measure-hash-proof: stage-onchain
     cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken check --plain-numbers -m measure_hash_proof
 
 # #307 T307-004: focused fail-closed MPF proof-verification regressions.
@@ -624,7 +630,7 @@ measure-hash-proof:
 # surface) and that the cache metadata resolves v2.1.0. Fails closed on a
 # zero-match or wrong-title selection, any test failure, or a compilation
 # failure (empty JSON; rerun the aiken invocation in a TTY for errors).
-mpf-proof-check:
+mpf-proof-check: stage-onchain
     #!/usr/bin/env bash
     set -euo pipefail
     results="$(mktemp -d)"
@@ -675,7 +681,7 @@ mpf-proof-check:
 # Measure and mechanically gate the four checkpoint ACCEPT paths: the
 # inherited #116 conviction row plus the three #114 Register contexts. Every row must
 # pass and retain the 25%-headroom limits (10.5m memory, 7.5b CPU).
-measure-checkpoint:
+measure-checkpoint: stage-onchain
     #!/usr/bin/env bash
     set -euo pipefail
     results="$(mktemp)"
@@ -713,7 +719,7 @@ measure-checkpoint:
 # family's cost and needs its own row. Same caveat as measure-enforcement: an
 # INVOCATION printing exact mem/cpu, plus an explicit title set and 25%-headroom
 # limits over the measured maxima (517.76 K mem, 222.00 M cpu).
-measure-bounty-commitment:
+measure-bounty-commitment: stage-onchain
     #!/usr/bin/env bash
     set -euo pipefail
     results="$(mktemp)"
@@ -794,7 +800,7 @@ check-flake-lock-guard:
 # --self-test) exercises the exact code this recipe runs, not a copy of it;
 # the guard's own INV-259-ASSERT caller-presence check requires this exact
 # invocation to remain in this recipe.
-ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken check-consumer-vectors check-consumer-identity-vectors check-checkpoint-datum-vectors check-checkpoint-writer-vectors check-checkpoint-freeze-vectors check-freeze-mutants check-deposit-mutants check-checkpoint-deposit-vectors check-checkpoint-deposit-corpus ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
+ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken check-consumer-vectors check-consumer-identity-vectors check-checkpoint-datum-vectors check-checkpoint-writer-vectors check-checkpoint-freeze-vectors check-freeze-mutants check-deposit-mutants check-checkpoint-deposit-vectors check-checkpoint-deposit-corpus check-application-configuration-vectors ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
     ./scripts/check-flake-lock-guard.sh --assert-lock-unchanged
 
 # #478: clean exact-compiler build and public proposition controls, identical to CI.
@@ -805,6 +811,15 @@ check-singular-lean:
 # published Singular registry package, with interface controls; identical to CI.
 check-singular-aiken:
     cd aiken-singular-consumer && nix build --no-write-lock-file --no-link -L .#checks.x86_64-linux.aiken-singular-consumer
+
+# KERI application: regenerate the configuration-record vectors from
+# lean/application-vectors.json and the public singular_state script.
+gen-application-configuration-vectors: stage-onchain
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/application-configuration-vectors.mjs
+
+# KERI application: the committed configuration-record vectors are exactly what the Lean vectors and the public script generate; identical to CI.
+check-application-configuration-vectors: stage-onchain
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/application-configuration-vectors.mjs --check
 
 # #343: regenerate the consumer corpus vectors from simulator/consumer-corpus.json.
 gen-consumer-vectors:

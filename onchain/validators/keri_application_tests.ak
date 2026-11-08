@@ -291,6 +291,56 @@ test refuses_any_other_retract_time() {
   )
 }
 
+// ---- I7: the parameters are naturals ---------------------------------------------
+
+/// A record that differs from the perfect one by the parameters only.
+fn with_parameters(parameters: ApplicationParameters) -> Transaction {
+  Transaction { ..genesis(keri()), outputs: [record_of(keri(), parameters)] }
+}
+
+test refuses_a_negative_registration_cost() {
+  let tx = with_parameters(
+    ApplicationParameters { ..parameters(), registration_cost: -1 },
+  )
+  !mint(template, keri(), creation(keri(), 0), tx)
+}
+
+test refuses_a_negative_minimum_tip() {
+  let tx = with_parameters(
+    ApplicationParameters { ..parameters(), minimum_tip: -1 },
+  )
+  !mint(template, keri(), creation(keri(), 0), tx)
+}
+
+test refuses_a_negative_process_time() {
+  let tx = with_parameters(
+    ApplicationParameters { ..parameters(), process_time: -1 },
+  )
+  !mint(template, keri(), creation(keri(), 0), tx)
+}
+
+test refuses_a_negative_booking_width() {
+  let tx = with_parameters(
+    ApplicationParameters { ..parameters(), booking_width: -1 },
+  )
+  !mint(template, keri(), creation(keri(), 0), tx)
+}
+
+/// Zero is a natural: every field at zero (retract time is zero by the Lean rule)
+/// is accepted, so the refusals above are about the sign and nothing else.
+test accepts_parameters_at_zero() {
+  let tx = with_parameters(
+    ApplicationParameters {
+      registration_cost: 0,
+      minimum_tip: 0,
+      process_time: 0,
+      retract_time: 0,
+      booking_width: 0,
+    },
+  )
+  mint(template, keri(), creation(keri(), 0), tx)
+}
+
 // ---- I3: no configuration record for a foreign registry ----------------------
 
 /// Lean row `configuration-foreign-registry`: a registry whose state policy is

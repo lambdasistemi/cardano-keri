@@ -142,6 +142,74 @@ booking data and its other explicit transaction premises. A fold does not
 promise an automatic refund of `Mr` to the booker. Booking conservation and
 addressed self-fold accounting are different claims.
 
+## KERI's application on the public registry
+
+As a KERI registration requester, I book a request that the public Singular
+registry `singular_state(A_keri)` can fold into my checkpoint, and I know in
+advance what the fold or a later return does with my money. The public registry
+checks only that each folded request carries the registration approval its
+holding commits to, and that the holding holds at least the committed deposit.
+Everything else is KERI's application, stated in `lean/CardanoKeri/Application.lean`
+against the public model `models/singular-application-held` at the pin above.
+
+- **The configuration record.** Each registry's genesis transaction mints one
+  configuration record at the application address, holding the registration
+  cost, minimum tip, processing time, booking width and `retractTime = 0`. A
+  registry whose state policy is not `state(A_keri)` gets none
+  (`configuration_refuses_foreign_registry`, `configuration_refuses_retraction`).
+- **Booking.** The booking reads the record by reference and mints exactly one
+  registration approval. The approval commits the registry, the AID's key, the
+  application address as the holding address, the hash of the initial
+  checkpoint datum and the deposit, which is the whole carrier the checkpoint
+  will hold: at least the minimum ADA plus the registry's deposit. The request
+  holds exactly the deposit, the registration cost and the minimum tip
+  (`booking_inversion`, `booking_refuses_foreign_registry`,
+  `booking_refuses_short_deposit`, `booking_refuses_inexact_contents`).
+- **Spending a request.** Until its deadline, the booking's validity upper
+  bound plus the processing time, a request is spent only by a fold that
+  delivers the committed holding: at the application address, with the
+  committed initial datum, exactly the deposit and the one new active token.
+  From the deadline anyone may return it, paying the refund address everything
+  but the tip (`registration_spend_is_fold_or_return`,
+  `before_deadline_only_fold`, `return_pays_refund_address`,
+  `fold_refuses_inexact_holding`). With `retractTime = 0` the two windows are
+  the public model's processing and cleanup phases (`windows_are_upstream_phases`).
+- **The treasury.** A fold's ledger `treasury_donation` is at least the
+  registration costs of the requests it folds (`treasury_covers_registration_costs`,
+  `folded_cost_in_donation`). The tip is what the folder may keep.
+- **Termination custody.** A pending termination is spent only by a fold that
+  burns its termination approval and its active token while the state policy
+  runs (`termination_only_by_fold`).
+
+```mermaid
+flowchart LR
+  Genesis[Registry genesis] --> Record[Configuration record]
+  Record -. read by reference .-> Book[Booking: one approval, exact contents]
+  Book -->|by the deadline| Fold[Fold: holding holds exactly the deposit; donation covers the registration cost]
+  Book -->|from the deadline| Return[Return: refund address paid all but the tip]
+  Fold --> Checkpoint[Live checkpoint]
+```
+
+Two approvals that are the same token name the same deployment, registry seed,
+AID, holding address, initial datum hash and deposit, under the finite encoding
+and collision-freedom premises of the identity bytes (`approval_binds`). The
+network is not in any approval: a Plutus address carries no network
+identifier. It is fixed by the chain the transaction runs on, where the ledger
+refuses outputs naming another network and the registry seed exists on one
+chain only (`approval_ignores_network`); this is a declared boundary of the
+model. The request lovelace and the return's refund are the economic model's
+declared contents and refund floor when the economic tip is the minimum tip and
+the carrier is the deposit (`request_matches_economic`,
+`carrier_floor_matches_economic`); the economic model stays the authority for
+the registry, custody and termination theorems above.
+
+`lean/application-vectors.json`, printed by `lean/ApplicationDriver.lean`,
+gives the approval bytes, the configuration record and accepted and refused
+configuration creations, bookings, folds, returns and termination spends for
+the on-chain approval and checkpoint creation
+([#348](https://github.com/lambdasistemi/cardano-keri/issues/348)). The
+request datum's own byte layout is not fixed by these vectors.
+
 ## Executable evidence and limits
 
 The [Registry simulator](../simulator/registry/index.html) replays complete

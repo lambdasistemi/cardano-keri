@@ -7,7 +7,8 @@ convicted, and refuse pending outputs. Conviction starts pending termination;
 an associated consuming fold completes retirement.
 
 The project uses Lean 4.27.0 and the public Singular pin below. Checkpoint owns
-the funded lifecycle; Registry is the imported economic transport adapter.
+the funded lifecycle; Registry is the imported economic transport adapter;
+Application states KERI's application against the application-held registry model.
 The prose in each theorem comment states its complete Given/When/Then contract.
 The model is not a claim of production validator or builder conformance.
 
@@ -41,6 +42,8 @@ The traceability gate performs a clean build and checks exact contract types.
 | `RegistryRequestLifecycle.lean` | Request lifecycle: only a fold until the deadline, then a return to the refund address less the tip; duplicates wait; termination custody only through its fold |
 | `RequestLifecycleVectors.lean` | Fold and return vectors at each time boundary, emitted by `RequestLifecycleDriver.lean` into `request-lifecycle-vectors.json` and checked against the Lean |
 | `Samaritan.lean` | Booking conservation and conditional actual-fold addressed accounting |
+| `Application.lean`, `ApplicationGoals.lean` | KERI's application on Singular's application-held model: the configuration record, booking, the request spend (a fold until the deadline, a return after it), the treasury donation and the registration approval |
+| `ApplicationVectors.lean` | Approval bytes, the configuration record and accepted and refused transactions, emitted by `ApplicationDriver.lean` into `application-vectors.json` and checked against the Lean |
 
 Supporting metadata/fold/termination modules prove the intermediate list and
 projection lemmas. `RegistryReplay.lean` replays a fixed context.
@@ -63,7 +66,7 @@ the runner live in `retained-parking/`; model/subject compilation must succeed
 before a named runtime failure counts as a kill. Fabricated JavaScript checker
 failures and implementation mutants are recorded separately.
 
-The 111 changed contracts and 49 preserved live contracts are checked under
+The 130 changed contracts and 49 preserved live contracts are checked under
 explicit expected types in `retained-parking/ReviewedContracts.lean` and
 `PreservedContracts.lean`. Historical identities retain their dispositions;
 retired contracts do not count as current proofs or fresh mutation passes.

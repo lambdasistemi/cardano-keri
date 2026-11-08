@@ -1,0 +1,154 @@
+[
+ {
+  "id": "booking-foreign-registry",
+  "before": "      data.registry.policy == release.statePolicy &&",
+  "after": "      true &&",
+  "failure": "verdict-changed booking-foreign-registry",
+  "owner": "CardanoKeri.Application.booking_refuses_foreign_registry",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "configuration-foreign-registry",
+  "before": "  registry.policy == release.statePolicy &&\n  registry.name",
+  "after": "  true &&\n  registry.name",
+  "failure": "verdict-changed configuration-foreign-registry",
+  "owner": "CardanoKeri.Application.configuration_refuses_foreign_registry",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "configuration-retraction",
+  "before": "(match output.datum with | .configuration p => parametersValid p | _ => false)",
+  "after": "(match output.datum with | .configuration _ => true | _ => false)",
+  "failure": "verdict-changed configuration-with-retraction",
+  "owner": "CardanoKeri.Application.configuration_refuses_retraction",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "booking-carrier-floor",
+  "before": "      rp.Mc + rp.D ≤ data.deposit &&",
+  "after": "      true &&",
+  "failure": "verdict-changed booking-short-deposit",
+  "owner": "CardanoKeri.Application.booking_refuses_short_deposit",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "booking-contents-floor-only",
+  "before": "      output.lovelace == requestLovelace p data &&",
+  "after": "      requestLovelace p data ≤ output.lovelace &&",
+  "failure": "verdict-changed booking-one-lovelace-more",
+  "owner": "CardanoKeri.Application.booking_refuses_inexact_contents",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "booking-holding-address",
+  "before": "      data.holdingAddress == release.applicationCredential &&",
+  "after": "      true &&",
+  "failure": "verdict-changed booking-other-holding-address",
+  "owner": "CardanoKeri.Application.booking_inversion",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "booking-deadline",
+  "before": "  data.processDeadline == data.bookedAt + p.processTime &&",
+  "after": "  true &&",
+  "failure": "verdict-changed booking-wrong-deadline",
+  "owner": "CardanoKeri.Application.booking_inversion",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "booking-configuration-not-referenced",
+  "before": "configurationShape i release registry c && o.referenceInputs.contains c.reference",
+  "after": "configurationShape i release registry c",
+  "failure": "verdict-changed booking-without-configuration",
+  "owner": "CardanoKeri.Application.booking_inversion",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "booking-approval-count",
+  "before": "SingularApplicationHeld.Assets.mintQty o.assets (registrationAsset i.hash i.code release data) == 1",
+  "after": "SingularApplicationHeld.Assets.mintQty o.assets (registrationAsset i.hash i.code release data) > 0",
+  "failure": "verdict-changed booking-two-approvals",
+  "owner": "CardanoKeri.Application.booking_inversion",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "fold-deadline-one-late",
+  "before": "nonemptyInterval interval && interval.upper ≤ data.processDeadline",
+  "after": "nonemptyInterval interval && interval.upper ≤ data.processDeadline + 1",
+  "failure": "verdict-changed fold-after-deadline",
+  "owner": "CardanoKeri.Application.registration_spend_is_fold_or_return",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "fold-holding-floor-only",
+  "before": "  holding.lovelace == data.deposit &&",
+  "after": "  data.deposit ≤ holding.lovelace &&",
+  "failure": "verdict-changed fold-holding-one-more",
+  "owner": "CardanoKeri.Application.fold_refuses_inexact_holding",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "fold-datum-unchecked",
+  "before": "  holdingDatumHash i holding == some data.initialDatum &&",
+  "after": "  true &&",
+  "failure": "verdict-changed fold-other-datum",
+  "owner": "CardanoKeri.Application.registration_spend_is_fold_or_return",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "fold-treasury-one-short",
+  "before": "  requiredTreasury i release o ≤ o.donation",
+  "after": "  requiredTreasury i release o ≤ o.donation + 1",
+  "failure": "verdict-changed fold-donation-short",
+  "owner": "CardanoKeri.Application.treasury_covers_registration_costs",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "approval-not-burned",
+  "before": "SingularApplicationHeld.Assets.mintQty o.assets (registrationAsset i.hash i.code release data) == -1",
+  "after": "SingularApplicationHeld.Assets.mintQty o.assets (registrationAsset i.hash i.code release data) ≤ 0",
+  "failure": "verdict-changed fold-approval-kept",
+  "owner": "CardanoKeri.Application.registration_spend_is_fold_or_return",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "return-deadline-one-early",
+  "before": "nonemptyInterval interval && data.processDeadline ≤ interval.lower",
+  "after": "nonemptyInterval interval && data.processDeadline ≤ interval.lower + 1",
+  "failure": "verdict-changed return-straddling-deadline",
+  "owner": "CardanoKeri.Application.before_deadline_only_fold",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "return-refund-less-one",
+  "before": "(data.refundAddress, input.lovelace - p.minimumTip)",
+  "after": "(data.refundAddress, input.lovelace - p.minimumTip - 1)",
+  "failure": "verdict-changed return-refund-reduced",
+  "owner": "CardanoKeri.Application.return_pays_refund_address",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "return-refund-any-address",
+  "before": "((outputs.filter fun x => x.credential == address).map (·.lovelace)).sum",
+  "after": "(outputs.map (·.lovelace)).sum",
+  "failure": "verdict-changed return-refund-redirected",
+  "owner": "CardanoKeri.Application.return_pays_refund_address",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "termination-active-kept",
+  "before": "  SingularApplicationHeld.Assets.mintQty o.assets (activeAsset i.hash i.code registry key) == -1 &&",
+  "after": "  true &&",
+  "failure": "verdict-changed termination-fold-active-kept",
+  "owner": "CardanoKeri.Application.termination_only_by_fold",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "inputs-uncovered",
+  "before": "  inputsCovered release o && o.actions.all",
+  "after": "  true && o.actions.all",
+  "failure": "verdict-changed fold-with-unnamed-request",
+  "owner": "CardanoKeri.Application.registration_spend_is_fold_or_return",
+  "test": "ApplicationChecks"
+ }
+]

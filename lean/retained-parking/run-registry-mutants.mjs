@@ -10,7 +10,7 @@ fs.mkdirSync(campaign, { recursive: true });
 const lean = process.env.LEAN_BIN ?? 'lean';
 const upstream = path.join(repo, 'lean/.lake/packages/singular/.lake/build/lib/lean');
 const model = process.argv[3] ?? 'Registry';
-if (!['Registry', 'Checkpoint', 'Samaritan'].includes(model)) throw Error('unknown model');
+if (!['Registry', 'Checkpoint', 'Samaritan', 'Application'].includes(model)) throw Error('unknown model');
 const fullSource = fs.readFileSync(path.join(repo, `lean/CardanoKeri/${model}.lean`), 'utf8');
 // Economic mutations execute the exact definition prefix without importing
 // its proof suffix. A proof elaboration failure cannot count as a runtime kill.
@@ -18,7 +18,11 @@ const source = model === 'Samaritan'
   ? fullSource.slice(0, fullSource.indexOf('/-- Given every nonnegative')) + '\nend CardanoKeri.Samaritan\n'
   : fullSource;
 if (model === 'Samaritan' && !fullSource.includes('/-- Given every nonnegative')) throw Error('definition-prefix boundary missing');
-const fixtures = fs.readFileSync(path.join(repo, 'lean/CardanoKeri/RegistryScenarioFixtures.lean'), 'utf8');
+// The application campaign rebuilds its vectors against the mutated model and
+// checks them against the committed table.
+const fixtureModule = model === 'Application' ? 'ApplicationVectors' : 'RegistryScenarioFixtures';
+const fixtures = fs.readFileSync(path.join(repo, `lean/CardanoKeri/${fixtureModule}.lean`), 'utf8');
+const subjectArgs = model === 'Application' ? [path.join(repo, 'lean/application-vectors.json')] : [];
 const cases = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, process.argv[4] ?? `${model.toLowerCase()}-mutants.json`)));
 if (!cases.length || new Set(cases.map(c => c.id)).size !== cases.length) throw Error('invalid mutant inventory');
 const sha = text => createHash('sha256').update(text).digest('hex');
@@ -28,6 +32,14 @@ function run(c, baseline) {
   const id = baseline ? `baseline-${c.test}` : c.id;
   const dir = path.join(campaign, id);
   fs.mkdirSync(path.join(dir, 'CardanoKeri'), { recursive: true });
+  if (model === 'Application') {
+    // Every unchanged module the vectors import, compiled from the repository
+    // sources; the model and its vectors are rebuilt below from the mutated source.
+    const built = path.join(repo, 'lean/.lake/build/lib/lean/CardanoKeri');
+    for (const file of fs.readdirSync(built).filter(f => f.endsWith('.olean') && !f.startsWith('Application'))) {
+      fs.copyFileSync(path.join(built, file), path.join(dir, 'CardanoKeri', file));
+    }
+  }
   if (model === 'Checkpoint') {
     for (const dependency of ['Registry', 'Duplicity', 'DuplicityExamples']) {
       fs.copyFileSync(path.join(repo, `lean/.lake/build/lib/lean/CardanoKeri/${dependency}.olean`),
@@ -40,7 +52,7 @@ function run(c, baseline) {
     mutated = source.replace(c.before, c.after);
   }
   fs.writeFileSync(path.join(dir, `CardanoKeri/${model}.lean`), mutated);
-  fs.writeFileSync(path.join(dir, 'CardanoKeri/RegistryScenarioFixtures.lean'), fixtures);
+  fs.writeFileSync(path.join(dir, `CardanoKeri/${fixtureModule}.lean`), fixtures);
   const test = fs.readFileSync(path.join(repo, `lean/${c.test}.lean`), 'utf8');
   fs.writeFileSync(path.join(dir, 'Subject.lean'), test);
   fs.writeFileSync(path.join(dir, 'identity.json'), JSON.stringify({ registry: sha(mutated), subject: sha(test) }, null, 2));
@@ -53,12 +65,12 @@ function run(c, baseline) {
     if (result.error || result.signal) throw Error(`${id}: setup/timeout ${label}`);
     return result;
   }
-  for (const module of (model === 'Registry' ? ['Registry', 'RegistryScenarioFixtures'] : [model])) {
+  for (const module of (['Registry', 'Application'].includes(model) ? [model, fixtureModule] : [model])) {
     const r = command(`build-${module}`, ['-o', `CardanoKeri/${module}.olean`, `CardanoKeri/${module}.lean`]);
     if (r.status !== 0) throw Error(`${id}: model/fixture compilation failed; not a semantic kill`);
   }
   if (command('elaborate-subject', ['Subject.lean']).status !== 0) throw Error(`${id}: subject failed compilation; not a semantic kill`);
-  const r = command('execute', ['--run', 'Subject.lean', ...(c.args ?? [])]);
+  const r = command('execute', ['--run', 'Subject.lean', ...(c.args ?? []), ...subjectArgs]);
   if (baseline) {
     if (r.status !== 0) throw Error(`${id}: positive baseline failed`);
     results.push({ id, verdict: 'PASS', subject: c.test });

@@ -19,4 +19,5 @@ lean_lib CardanoKeriStatements where
 library owns the nested source path without introducing a second revision. -/
 lean_lib SingularApplicationHeld where
   srcDir := ".lake/packages/singular/models/singular-application-held/lean"
-  roots := #[`SingularApplicationHeld.Assets, `SingularApplicationHeld.Core]
+  roots := #[`SingularApplicationHeld.Assets, `SingularApplicationHeld.Core,
+    `SingularApplicationHeld.RequestShapes]

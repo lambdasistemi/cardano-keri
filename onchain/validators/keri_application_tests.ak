@@ -122,25 +122,18 @@ test refuses_when_the_state_token_is_minted_twice() {
 }
 
 test refuses_a_registry_not_named_from_the_seed() {
+  // A perfect genesis for a registry whose name is not the hash of the seed's
+  // preimage: the state token and the configuration token carry that name.
   let registry = RegistryIdentity {
     ..keri().registry,
     name: vectors.foreign_configuration_name,
   }
-  let tx = Transaction {
-    ..genesis(keri()),
-    mint: mint_of(
-      [
-        (registry.policy, registry.name, 1),
-        (keri().application, keri().configuration_name, 1),
-      ],
-    ),
-  }
-  let action = CreateConfiguration {
+  let deployment = Deployment {
+    ..keri(),
     registry,
-    seed: keri().seed,
-    output_index: 0,
+    configuration_name: configuration_token_name(registry),
   }
-  !mint(template, keri(), action, tx)
+  !mint(template, deployment, creation(deployment, 0), genesis(deployment))
 }
 
 test refuses_when_the_configuration_token_is_not_minted() {

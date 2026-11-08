@@ -16,6 +16,11 @@ name = "aiken-lang/merkle-patricia-forestry"
 version = "v2.1.0"
 source = "github"
 
+[[requirements]]
+name = "singular/registry"
+version = "0.0.0"
+source = "github"
+
 [[packages]]
 name = "aiken-lang/stdlib"
 version = "v2.2.0"
@@ -31,6 +36,12 @@ source = "github"
 [[packages]]
 name = "aiken-lang/merkle-patricia-forestry"
 version = "v2.1.0"
+requirements = []
+source = "github"
+
+[[packages]]
+name = "singular/registry"
+version = "0.0.0"
 requirements = []
 source = "github"
 

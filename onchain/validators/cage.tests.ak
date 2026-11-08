@@ -11,7 +11,7 @@ use cage_context.{
 use cardano/address.{from_script, from_verification_key}
 use cardano/assets.{from_asset, from_lovelace, merge, zero}
 use cardano/transaction.{NoDatum, Output, OutputReference}
-use types.{
+use token_types.{
   Burning, End, Insert, Migrating, Migration, Mint, Minting, Modify, OwnerAuth,
   RequestAction, UpdateAction,
 }

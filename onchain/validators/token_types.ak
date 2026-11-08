@@ -1,7 +1,7 @@
 use aiken/crypto.{VerificationKeyHash}
 use aiken/merkle_patricia_forestry.{Proof}
 use cardano/transaction.{OutputReference}
-use lib.{TokenId}
+use token_lib.{TokenId}
 
 pub type Mint {
   asset: OutputReference,

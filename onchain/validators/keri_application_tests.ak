@@ -28,7 +28,7 @@ use keri_application
 use keri_application_fixture.{
   Deployment, application_address, change_byte, creation, foreign_registry,
   genesis, keri, key_address, mint_of, other_application, parameters, record,
-  record_of, seed_input, token,
+  record_of, registry_deployment, seed_input, token,
 }
 use singular_state/preimage.{
   RegistryIdentity, configuration_token_name, state_token_name,
@@ -124,15 +124,12 @@ test refuses_when_the_state_token_is_minted_twice() {
 test refuses_a_registry_not_named_from_the_seed() {
   // A perfect genesis for a registry whose name is not the hash of the seed's
   // preimage: the state token and the configuration token carry that name.
-  let registry = RegistryIdentity {
-    ..keri().registry,
-    name: vectors.foreign_configuration_name,
-  }
-  let deployment = Deployment {
-    ..keri(),
-    registry,
-    configuration_name: configuration_token_name(registry),
-  }
+  let deployment = registry_deployment(
+    RegistryIdentity {
+      ..keri().registry,
+      name: vectors.foreign_configuration_name,
+    },
+  )
   !mint(template, deployment, creation(deployment, 0), genesis(deployment))
 }
 
@@ -145,6 +142,21 @@ test refuses_when_the_configuration_token_is_not_minted() {
 }
 
 test refuses_when_the_configuration_token_is_minted_twice() {
+  // The record holds the token once; only the mint says twice.
+  let tx = Transaction {
+    ..genesis(keri()),
+    mint: mint_of(
+      [
+        (keri().registry.policy, keri().registry.name, 1),
+        (keri().application, keri().configuration_name, 2),
+      ],
+    ),
+  }
+  !mint(template, keri(), creation(keri(), 0), tx)
+}
+
+test refuses_a_record_holding_the_configuration_token_twice() {
+  // The mint says once; only the record holds the token twice.
   let tx = Transaction {
     ..genesis(keri()),
     outputs: [
@@ -154,12 +166,6 @@ test refuses_when_the_configuration_token_is_minted_twice() {
         token(keri().application, keri().configuration_name, 2),
       ),
     ],
-    mint: mint_of(
-      [
-        (keri().registry.policy, keri().registry.name, 1),
-        (keri().application, keri().configuration_name, 2),
-      ],
-    ),
   }
   !mint(template, keri(), creation(keri(), 0), tx)
 }
@@ -298,21 +304,23 @@ test row_configuration_foreign_registry() {
   ) == vectors.configuration_foreign_registry
 }
 
-test refuses_the_application_policy_as_the_state_policy() {
-  let registry = RegistryIdentity {
-    ..keri().registry,
-    policy: vectors.application_policy,
-  }
-  let deployment = Deployment { ..keri(), registry }
+test refuses_an_arbitrary_state_policy() {
+  // A perfect genesis for a registry under a policy that is the state policy
+  // of no application.
+  let deployment = registry_deployment(
+    RegistryIdentity {
+      ..keri().registry,
+      policy: #"1111111111111111111111111111111111111111111111111111111111",
+    },
+  )
   !mint(template, deployment, creation(deployment, 0), genesis(deployment))
 }
 
-test refuses_the_state_policy_of_another_application_for_a_whole_registry() {
-  // The state token and the configuration token of the other registry, a
-  // perfect genesis for it, presented to KERI's application.
-  let deployment = foreign_registry()
-  let tx = genesis(deployment)
-  !mint(template, keri(), creation(deployment, 0), tx)
+test refuses_the_state_policy_of_a_third_application() {
+  let deployment = registry_deployment(
+    RegistryIdentity { ..keri().registry, policy: vectors.other_state_policy },
+  )
+  !mint(template, deployment, creation(deployment, 0), genesis(deployment))
 }
 
 test refuses_a_state_policy_computed_from_another_template() {
@@ -348,16 +356,6 @@ test refuses_a_burn_under_the_application_policy_beside_the_creation() {
         (keri().application, "extra", -1),
       ],
     ),
-  }
-  !mint(template, keri(), creation(keri(), 0), tx)
-}
-
-test refuses_a_creation_that_mints_no_configuration_token() {
-  // The record is there, the state token is minted, and the application
-  // policy mints nothing: not a creation.
-  let tx = Transaction {
-    ..genesis(keri()),
-    mint: mint_of([(keri().registry.policy, keri().registry.name, 1)]),
   }
   !mint(template, keri(), creation(keri(), 0), tx)
 }

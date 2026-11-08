@@ -15,7 +15,7 @@ use cardano/transaction.{
 use cardano_keri/application/action.{Action, CreateConfiguration}
 use cardano_keri/application/configuration_vectors as vectors
 use cardano_keri/application/held.{ApplicationParameters, Configuration}
-use singular_state/preimage.{RegistryIdentity}
+use singular_state/preimage.{RegistryIdentity, configuration_token_name}
 
 /// One deployment under test: the application policy the validator runs as,
 /// the registry its configuration record is for, and the token name of that
@@ -66,6 +66,17 @@ pub fn foreign_registry() -> Deployment {
     },
     seed: vectors.seed,
     configuration_name: vectors.foreign_configuration_name,
+  }
+}
+
+/// A deployment of KERI's application whose registry is `registry`, with the
+/// configuration token named from that registry: every value derived from the
+/// registry is recomputed, so the transaction is perfect for it.
+pub fn registry_deployment(registry: RegistryIdentity) -> Deployment {
+  Deployment {
+    ..keri(),
+    registry,
+    configuration_name: configuration_token_name(registry),
   }
 }
 

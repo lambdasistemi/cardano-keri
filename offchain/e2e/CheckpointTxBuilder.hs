@@ -166,6 +166,7 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     topUpSpendRedeemerData,
  )
 import Cardano.KERI.AID.E2E.Datum (extractDatum, mkInlineDatum, rawInlineData)
+import Cardano.KERI.AID.E2E.FoldGuard (FoldRefusal (..), foldRefusal)
 import Cardano.KERI.AID.E2E.MpfProof (prove)
 import Cardano.KERI.AID.E2E.MpfTrie qualified as Registry
 import Cardano.KERI.AID.E2E.Script (
@@ -299,7 +300,7 @@ import Cardano.Tx.Balance (
  )
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (async, cancel)
-import Control.Exception (finally)
+import Control.Exception (finally, throwIO, try)
 import Control.Monad (unless, when)
 import Data.Aeson (Value (..), eitherDecodeFileStrict, object, (.=))
 import Data.Aeson.Key qualified as Key
@@ -5141,6 +5142,8 @@ data FoldPlan = FoldPlan
     -- ^ the references of the lifecycle observer and the hash-proof policy
     , foldRegistered :: ![ByteString]
     -- ^ the keys the registry already holds
+    , foldState :: !(Maybe (TxIn, TxOut ConwayEra))
+    -- ^ the registry state output the fold spends; the chain's current one when absent
     , foldValidity :: !ValidityPlan
     , foldParty :: !Party
     }
@@ -5166,7 +5169,8 @@ buildFoldTx env plan budgets = do
     wallet <-
         withinSecs 30 (label <> ": query wallet") $
             queryUTxOs (envProvider env) (partyAddr party)
-    stateUtxo <- currentState env
+    stateUtxo <- maybe (currentState env) pure (foldState plan)
+    foldGuard (foldRegistered plan) key (snd stateUtxo)
     (feeUtxo, collateral) <- pickDisjoint wallet [proofIn]
     applicationRef <- applicationReferenceOf env
     stateRef <- stateReferenceOf env
@@ -5267,6 +5271,23 @@ buildFoldTx env plan budgets = do
         , Set.fromList [purpose | (purpose, _, _) <- purposes]
         )
 
+{- | What the builder checks before it computes anything for a fold: the request's
+key is not one the registry holds, and the keys it was given are the registry
+the chain holds (their root is the state output's datum). Either failure is
+thrown as a 'FoldRefusal' and no transaction is built.
+-}
+foldGuard :: [ByteString] -> ByteString -> TxOut ConwayEra -> IO ()
+foldGuard registered key stateOut = do
+    mapM_ throwIO (foldRefusal registered key)
+    when (rawInlineData stateOut /= Just (stateDatumData (registryRoot registered))) $
+        throwIO KeysAreNotTheRegistry
+
+-- | The root of a registry holding exactly the given keys.
+registryRoot :: [ByteString] -> ByteString
+registryRoot [] = emptyRoot
+registryRoot registered =
+    Registry.rootOf (Registry.build [(held, activeLeaf) | held <- registered])
+
 {- | The proof that a key is absent from the registry that holds the keys, and
 the root after it is inserted: the registry binds every key to the active leaf.
 -}
@@ -5328,6 +5349,7 @@ foldRegistration env references party fixture booking proof = do
                 , foldProof = proof
                 , foldReferences = references
                 , foldRegistered = []
+                , foldState = Nothing
                 , foldValidity = validity
                 , foldParty = party
                 }
@@ -5472,6 +5494,7 @@ registryJourney env = do
                     , foldProof = proof
                     , foldReferences = drop 1 references
                     , foldRegistered = [key]
+                    , foldState = Nothing
                     , foldValidity = validity
                     , foldParty = folderParty
                     }
@@ -5516,6 +5539,111 @@ registryJourney env = do
             )
     unless (isJust refunded) $
         fail "the return did not pay the refund address everything but the tip"
+    duplicateRegistrationJourney env references (checkpointUtxo checkpoint) key other
+
+{- | A second registration of a registered AID cannot be folded. A new identity
+is booked twice and the registry, which holds one key, is the state both folds
+are built against. The second fold is accepted by the scripts when built; the
+first is submitted and lands, delivering the booking's initial state although
+the fold came later; the second, submitted after that, is refused by the ledger
+because the registry state output it spends is consumed; and a fold of the same
+booking built afterwards is refused by the builder. No refusal touches a
+checkpoint or the registry's root.
+-}
+duplicateRegistrationJourney ::
+    CheckpointEnv ->
+    [(TxIn, TxOut ConwayEra)] ->
+    (TxIn, TxOut ConwayEra) ->
+    ByteString ->
+    RegistrationFixture ->
+    IO ()
+duplicateRegistrationJourney env references (heldIn, heldOut) heldKey fixture = do
+    let newKey = checkpointKey env fixture
+        secondParty = ownerParty env
+        planFor booking proof party registered state validity =
+            FoldPlan
+                { foldBooking = booking
+                , foldFixture = fixture
+                , foldProof = proof
+                , foldReferences = drop 1 references
+                , foldRegistered = registered
+                , foldState = state
+                , foldValidity = validity
+                , foldParty = party
+                }
+    firstBooking <- bookRegistration env fixture
+    secondBooking <- bookRegistration env fixture
+    firstProof <- mintHashProof env folderParty fixture
+    secondProof <- mintHashProof env secondParty fixture
+    preFold <- currentState env
+    let secondPlan = planFor secondBooking secondProof secondParty
+        secondFold registered state validity = buildFoldTx env (secondPlan registered state validity)
+    -- the second fold, built against the registry as it stands, is accepted by the scripts
+    built <- tipValidity env "second fold, built before the first lands"
+    (beforeTx, beforePurposes) <- secondFold [heldKey] (Just preFold) built Map.empty
+    beforeObserved <-
+        withinSecs 120 "second fold, built before the first lands: evaluate" $
+            evaluateTx (envProvider env) (addKeyWitness (partyKey secondParty) beforeTx)
+    beforeUnits <-
+        requireExactAllRight "second fold, built before the first lands" beforePurposes beforeObserved
+    -- the first fold, for a new key, lands
+    firstValidity <- tipValidity env "first fold"
+    firstTxId <-
+        submitTwoPassBy
+            folderParty
+            env
+            "first fold"
+            (buildFoldTx env (planFor firstBooking firstProof folderParty [heldKey] Nothing firstValidity))
+    (deliveredIn, deliveredOut) <-
+        pollOutput (envProvider env) firstTxId [0] (holdsCheckpointToken env (rfDatum fixture))
+            >>= requireJust "the delivered checkpoint of the first fold did not settle"
+    dbg ("registration fold transaction " <> show firstTxId <> " (new key)")
+    unless (extractDatum deliveredOut == Just (V2 (registeredFacts env fixture (bookingValidity firstBooking)))) $
+        fail "the delivered checkpoint does not carry the booking's initial state"
+    unless (upperPosixMs (bookingValidity firstBooking) < lowerPosixMs firstValidity) $
+        fail "the first fold did not come after its booking"
+    (_, stateAfter) <- currentState env
+    let rootAfter = stateDatumData (registryRoot [heldKey, newKey])
+    unless (rawInlineData stateAfter == Just rootAfter) $
+        fail "the registry's root is not the root of its two keys"
+    -- the second fold, built against the state the first consumed, is refused by the ledger
+    retry <- tipValidity env "second fold, submitted after the first landed"
+    (retryTx, _) <-
+        secondFold [heldKey] (Just preFold) retry (Map.map deterministicMargin beforeUnits)
+    refused <-
+        withinSecs 60 "submit the second fold" $
+            submitTx (envSubmitter env) (addKeyWitness (partyKey secondParty) retryTx)
+    case refused of
+        Submitted _ -> fail "the ledger accepted a second fold against a consumed registry state"
+        Rejected reason -> do
+            dbg ("second fold refused: " <> oneLine (B8.unpack reason))
+            unless ("BadInputsUTxO" `B8.isInfixOf` reason) $
+                fail "the second fold was refused, but not for a consumed input"
+    -- the second fold built honestly now is refused by the builder
+    now <- tipValidity env "second fold, built after the first landed"
+    asBuilt <- try (secondFold [heldKey, newKey] Nothing now Map.empty)
+    case asBuilt of
+        Left (KeyAlreadyRegistered refusedKey)
+            | refusedKey == newKey -> pure ()
+        Left refusal -> fail ("the builder refused for another reason: " <> show refusal)
+        Right _ -> fail "the builder built a fold for a registered key"
+    staleList <- try (secondFold [heldKey] Nothing now Map.empty)
+    case staleList of
+        Left KeysAreNotTheRegistry -> pure ()
+        Left refusal -> fail ("the builder refused for another reason: " <> show refusal)
+        Right _ -> fail "the builder trusted keys that are not the registry"
+    -- no refusal touched a checkpoint or the registry
+    unchanged <-
+        withinSecs 30 "query the checkpoints" $
+            queryUTxOByTxIn (envProvider env) (Set.fromList [heldIn, deliveredIn])
+    unless
+        ( Map.lookup heldIn unchanged == Just heldOut
+            && Map.lookup deliveredIn unchanged == Just deliveredOut
+        )
+        $ fail "a refused second registration changed a checkpoint"
+    (_, stateEnd) <- currentState env
+    unless (rawInlineData stateEnd == Just rootAfter) $
+        fail "a refused second registration changed the registry's root"
 
 {- | Wait until the start of the ledger tip's slot is at or after an instant,
 which may be farther away than the node's forecast reaches.

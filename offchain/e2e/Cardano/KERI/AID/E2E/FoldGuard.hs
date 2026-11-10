@@ -29,4 +29,6 @@ instance Exception FoldRefusal
 nothing when the key is new.
 -}
 foldRefusal :: [ByteString] -> ByteString -> Maybe FoldRefusal
-foldRefusal _registered _key = Nothing
+foldRefusal registered key
+    | key `elem` registered = Just (KeyAlreadyRegistered key)
+    | otherwise = Nothing

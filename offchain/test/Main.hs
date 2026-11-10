@@ -1,5 +1,6 @@
 module Main (main) where
 
+import Cardano.KERI.AID.ApplicationSpec qualified as ApplicationSpec
 import Cardano.KERI.AID.Blake3.CheckpointSpec qualified as CheckpointSpec
 import Cardano.KERI.AID.CESRSpec qualified as CESRSpec
 import Cardano.KERI.AID.Cage.MpfProofMirrorSpec qualified as MpfProofMirrorSpec
@@ -31,6 +32,7 @@ import Test.Hspec (hspec)
 
 main :: IO ()
 main = hspec $ do
+    ApplicationSpec.spec
     CheckpointSpec.spec
     Ed25519Spec.spec
     CESRSpec.spec

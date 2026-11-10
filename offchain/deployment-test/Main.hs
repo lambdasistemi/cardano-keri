@@ -10,6 +10,7 @@ import Cardano.KERI.Deployment.FreezePackageSpec qualified as FreezePackageSpec
 import Cardano.KERI.Deployment.KELSpec qualified as KELSpec
 import Cardano.KERI.Deployment.ManifestSpec qualified as ManifestSpec
 import Cardano.KERI.Deployment.RegistrationSpec qualified as RegistrationSpec
+import Cardano.KERI.Deployment.RegistryScriptsSpec qualified as RegistryScriptsSpec
 import Cardano.KERI.Deployment.ScriptAritySpec qualified as ScriptAritySpec
 import Cardano.KERI.Deployment.TopUpPackageSpec qualified as TopUpPackageSpec
 import Cardano.KERI.Deployment.TopUpTransactionSpec qualified as TopUpTransactionSpec
@@ -62,5 +63,6 @@ suite = hspec $ do
     ManifestSpec.spec
     BountyEntitlementSpec.spec
     RegistrationSpec.spec
+    RegistryScriptsSpec.spec
     ScriptAritySpec.spec
     TransactionRuntimeSpec.spec

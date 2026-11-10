@@ -61,6 +61,8 @@ library
     , text
 
   exposed-modules:
+    Cardano.KERI.AID.Application
+    Cardano.KERI.AID.Application.StateTemplate
     Cardano.KERI.AID.Blake3.Checkpoint
     Cardano.KERI.AID.Cage.Sign
     Cardano.KERI.AID.Cage.Types
@@ -177,6 +179,7 @@ library deployment
     Cardano.KERI.Deployment.Manifest
     Cardano.KERI.Deployment.Publisher
     Cardano.KERI.Deployment.Registration
+    Cardano.KERI.Deployment.Registry
     Cardano.KERI.Deployment.Script
     Cardano.KERI.Deployment.TopUp
     Cardano.KERI.Deployment.TransactionRuntime
@@ -409,6 +412,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.RegistrationSpec
     Cardano.KERI.Deployment.RegistryFixture
+    Cardano.KERI.Deployment.RegistryScriptsSpec
     Cardano.KERI.Deployment.ScriptAritySpec
     Cardano.KERI.Deployment.TopUpPackageSpec
     Cardano.KERI.Deployment.TopUpTransactionSpec
@@ -895,9 +899,11 @@ test-suite unit-tests
     , plutus-core
     , plutus-tx
     , QuickCheck
+    , serialise
     , text
 
   other-modules:
+    Cardano.KERI.AID.ApplicationSpec
     Cardano.KERI.AID.Blake3.CheckpointSpec
     Cardano.KERI.AID.Cage.MpfProofMirrorSpec
     Cardano.KERI.AID.Cage.SignSpec

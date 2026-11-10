@@ -442,3 +442,16 @@ test an_output_holding_no_active_token_is_not_advanced() fail {
 test an_output_holding_no_active_token_is_not_topped_up() fail {
   top_up_of(holding_output(without_the_token()), premium)
 }
+
+/// The minimum ADA of a checkpoint output is one number: the checkpoint
+/// validator and the registration observer hold it as a constant, and the
+/// application's floors add it to the deposit, the freeze bond and the premium.
+test the_checkpoints_minimum_ada_is_the_one_the_application_floors_add() {
+  and {
+    checkpoint_register.checkpoint_min_ada == checkpoint_min_ada,
+    observer.checkpoint_min_ada == checkpoint_min_ada,
+    observer_floor == checkpoint_min_ada + d_reg,
+    booking_floor == checkpoint_min_ada + d_reg + freeze_bond,
+    floor == booking_floor + premium,
+  }
+}

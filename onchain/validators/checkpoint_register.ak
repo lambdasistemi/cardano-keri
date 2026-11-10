@@ -62,7 +62,7 @@ pub type SpendRedeemer {
   TopUp { amount: Int }
 }
 
-const checkpoint_min_ada: Int = 2_000_000
+pub const checkpoint_min_ada: Int = 2_000_000
 
 validator checkpoint_register(
   /// The state policy of the registry whose checkpoints these are, and the

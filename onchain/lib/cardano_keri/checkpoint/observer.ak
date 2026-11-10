@@ -53,7 +53,7 @@ pub type ObserverEnvelope {
   payload: Data,
 }
 
-const checkpoint_min_ada: Int = 2_000_000
+pub const checkpoint_min_ada: Int = 2_000_000
 
 /// Validate the one action owned by the registration observer.
 pub fn validate_registration(

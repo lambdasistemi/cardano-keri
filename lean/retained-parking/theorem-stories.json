@@ -3,7 +3,7 @@
   "scope": "Current lifecycle and transport theorem source stories with complete formal binders and conclusions; no production correspondence claim",
   "singular": "d69ab005c3b710aeebf033d3c5cd08c56feb5643",
   "sources": {
-    "lean/CardanoKeri/Application.lean": "cb800811d6eb04a8b254e26626ea5bf22526a506a2e9150e7b226014507c1f6f",
+    "lean/CardanoKeri/Application.lean": "7c227d678c6090b84f94f2d678a03981d2b7c83535b4eb63389d2cfb2615d342",
     "lean/CardanoKeri/ApplicationGoals.lean": "a865d9d86cadbfc56f8c78469c68cef53a3c6107488bc65677126873c76d65e5",
     "lean/CardanoKeri/ApplicationVectors.lean": "a45317d36d7f309d8718622cd644a20063ab6d536c4f486a709d0768fc220e1a",
     "lean/CardanoKeri/Checkpoint.lean": "9a602b050c28d913b7948f20533a05708201170c40b5c2d1c456c8d86f4c1496",

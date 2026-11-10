@@ -166,6 +166,7 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     topUpSpendRedeemerData,
  )
 import Cardano.KERI.AID.E2E.Datum (extractDatum, mkInlineDatum, rawInlineData)
+import Cardano.KERI.AID.E2E.DevnetTerms (devnetTerms)
 import Cardano.KERI.AID.E2E.FoldGuard (FoldRefusal (..), foldRefusal)
 import Cardano.KERI.AID.E2E.MpfProof (prove)
 import Cardano.KERI.AID.E2E.MpfTrie qualified as Registry
@@ -173,7 +174,6 @@ import Cardano.KERI.AID.E2E.Script (
     ScriptArtifact (..),
     applyCommitmentParams,
     computeScriptHash,
-    deployedCheckpointTerms,
     deriveCommitmentFamily,
     extractCompiledCodeExact,
     loadBlueprint,
@@ -4729,20 +4729,6 @@ seedAddress (Addr network payment _) =
         )
 seedAddress other = other
 
--- | The terms of the devnet's registry: the deployed amounts and a short processing window.
-devnetTerms :: RegistryTerms
-devnetTerms =
-    RegistryTerms
-        { registryCheckpointTerms = deployedCheckpointTerms
-        , registryParameters =
-            ApplicationParameters
-                { registrationCost = 1_000_000
-                , minimumTip = 500_000
-                , processTime = 90_000
-                , bookingWidth = 5_000
-                }
-        }
-
 -- | The deposit a request commits: the fold's floor and the pool beyond it.
 requestDeposit' :: CheckpointEnv -> Integer
 requestDeposit' env =
@@ -5604,6 +5590,19 @@ duplicateRegistrationJourney env references (heldIn, heldOut) heldKey fixture = 
         fail "the first fold did not come after its booking"
     (_, stateAfter) <- currentState env
     let rootAfter = stateDatumData (registryRoot [heldKey, newKey])
+        unchangedAfter what = do
+            -- both checkpoints and the registry's root are as the first fold left them
+            held <-
+                withinSecs 30 "query the checkpoints" $
+                    queryUTxOByTxIn (envProvider env) (Set.fromList [heldIn, deliveredIn])
+            unless
+                ( Map.lookup heldIn held == Just heldOut
+                    && Map.lookup deliveredIn held == Just deliveredOut
+                )
+                $ fail ("a checkpoint changed after " <> what)
+            (_, stateNow) <- currentState env
+            unless (rawInlineData stateNow == Just rootAfter) $
+                fail ("the registry's root changed after " <> what)
     unless (rawInlineData stateAfter == Just rootAfter) $
         fail "the registry's root is not the root of its two keys"
     -- the second fold, built against the state the first consumed, is refused by the ledger
@@ -5617,8 +5616,10 @@ duplicateRegistrationJourney env references (heldIn, heldOut) heldKey fixture = 
         Submitted _ -> fail "the ledger accepted a second fold against a consumed registry state"
         Rejected reason -> do
             dbg ("second fold refused: " <> oneLine (B8.unpack reason))
-            unless ("BadInputsUTxO" `B8.isInfixOf` reason) $
-                fail "the second fold was refused, but not for a consumed input"
+            let consumed = "BadInputsUTxO (NonEmptySet (fromList [" <> show (fst preFold) <> "]))"
+            unless (B8.pack consumed `B8.isInfixOf` reason) $
+                fail "the second fold was refused, but not for the consumed registry state alone"
+    unchangedAfter "the ledger's refusal of the second fold"
     -- the second fold built honestly now is refused by the builder
     now <- tipValidity env "second fold, built after the first landed"
     asBuilt <- try (secondFold [heldKey, newKey] Nothing now Map.empty)
@@ -5627,23 +5628,13 @@ duplicateRegistrationJourney env references (heldIn, heldOut) heldKey fixture = 
             | refusedKey == newKey -> pure ()
         Left refusal -> fail ("the builder refused for another reason: " <> show refusal)
         Right _ -> fail "the builder built a fold for a registered key"
+    unchangedAfter "the builder's refusal of a registered key"
     staleList <- try (secondFold [heldKey] Nothing now Map.empty)
     case staleList of
         Left KeysAreNotTheRegistry -> pure ()
         Left refusal -> fail ("the builder refused for another reason: " <> show refusal)
         Right _ -> fail "the builder trusted keys that are not the registry"
-    -- no refusal touched a checkpoint or the registry
-    unchanged <-
-        withinSecs 30 "query the checkpoints" $
-            queryUTxOByTxIn (envProvider env) (Set.fromList [heldIn, deliveredIn])
-    unless
-        ( Map.lookup heldIn unchanged == Just heldOut
-            && Map.lookup deliveredIn unchanged == Just deliveredOut
-        )
-        $ fail "a refused second registration changed a checkpoint"
-    (_, stateEnd) <- currentState env
-    unless (rawInlineData stateEnd == Just rootAfter) $
-        fail "a refused second registration changed the registry's root"
+    unchangedAfter "the builder's refusal of keys that are not the registry"
 
 {- | Wait until the start of the ledger tip's slot is at or after an instant,
 which may be farther away than the node's forecast reaches.

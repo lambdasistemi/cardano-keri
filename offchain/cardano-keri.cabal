@@ -1110,6 +1110,7 @@ test-suite e2e-tests
     CageTxBuilder
     Cardano.KERI.AID.E2E.AssetName
     Cardano.KERI.AID.E2E.Datum
+    Cardano.KERI.AID.E2E.DevnetTerms
     Cardano.KERI.AID.E2E.FoldGuard
     Cardano.KERI.AID.E2E.Mpf
     Cardano.KERI.AID.E2E.MpfProof

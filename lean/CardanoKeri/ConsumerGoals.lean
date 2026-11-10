@@ -26,15 +26,16 @@ theorem consumableHoldingB_iff (i : Interpretation) (c : Context) (e : Environme
       authenticatedContext, consumableStateB_iff, and_assoc]
 
 /-- CI02. Given arbitrary inputs; when an output is evaluated; then acceptance
-is equivalent to exact network, resolved complete release, application
-credential, exact representative quantity one and a decoded intended-AID
-live datum, unfrozen, unpoisoned and at least bornAt+W old. Both directions
-and all eight clauses are obligations. -/
+is equivalent to exact network, resolved complete release, resolved checkpoint
+credential, the output at that checkpoint credential, exact representative
+quantity one and a decoded intended-AID live datum, unfrozen, unpoisoned and
+at least bornAt+W old. Both directions and all nine clauses are obligations. -/
 theorem consumableHolding_exact (i : Interpretation) (c : Context) (e : Environment)
     (p : Params) (now : Slot) (o : AH.ObservedOutput) :
     consumableHolding i c e p now o ↔
       e.network = c.network ∧ e.release = some c.release ∧
-      o.credential = c.release.applicationCredential ∧
+      e.checkpointCredential = some c.checkpointCredential ∧
+      o.credential = c.checkpointCredential ∧
       AH.quantity o (representativeAsset i c) = 1 ∧
       ∃ l : Live, decoded i c o = some ⟨c.aid, .present l⟩ ∧
         l.frozen = false ∧ l.poisoned = false ∧ l.bornAt + p.W ≤ now := by
@@ -76,22 +77,27 @@ theorem wrong_network_refused (i : Interpretation) (c : Context) (e : Environmen
   intro h
   exact wrong h.1.1
 
-/-- CI05. Given an unresolved or different complete PublishedRelease; when
-checking any candidate; then refuse. Equality includes applicationPolicy,
+/-- CI05. Given an unresolved or different complete PublishedRelease, or an
+unresolved or different checkpoint credential; when checking any candidate;
+then refuse. Release equality includes applicationPolicy,
 applicationCredential, stateProgram and statePolicy; version text is not
-silently treated as a published script identity. -/
+silently treated as a published script identity. The checkpoint credential is
+resolved by the integration like the release, never read from the candidate. -/
 theorem wrong_or_unknown_release_refused (i : Interpretation) (c : Context)
     (e : Environment) (p : Params) (now : Slot) (o : AH.ObservedOutput)
-    (wrong : e.release ≠ some c.release) :
+    (wrong : e.release ≠ some c.release ∨ e.checkpointCredential ≠ some c.checkpointCredential) :
     ¬ consumableHolding i c e p now o := by
   intro h
-  exact wrong h.1.2
+  rcases wrong with wrong | wrong
+  · exact wrong h.1.2.1
+  · exact wrong h.1.2.2
 
-/-- CI06. Given a wrong application credential on the actual output; when
-checking it; then refuse even if it holds the exact token and a live datum. -/
+/-- CI06. Given an actual output not at the checkpoint credential (at the
+application credential, for one); when checking it; then refuse even if it
+holds the exact token and a live datum. -/
 theorem wrong_credential_refused (i : Interpretation) (c : Context) (e : Environment)
     (p : Params) (now : Slot) (o : AH.ObservedOutput)
-    (wrong : o.credential ≠ c.release.applicationCredential) :
+    (wrong : o.credential ≠ c.checkpointCredential) :
     ¬ consumableHolding i c e p now o := by
   intro h
   exact wrong h.2.1

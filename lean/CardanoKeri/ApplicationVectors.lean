@@ -17,11 +17,13 @@ of its serialisation, as `singular_state/preimage.initial_datum_hash`.
 
 The transaction rows run the actual `Application.accepted` on fixture
 transactions: configuration creation, bookings, folds and returns of one
-request, and the spends of a pending termination. The request datum's own byte
-layout is not fixed here: the fixture decoder maps a fixture number to the
-decoded registration. The holding address is a Plutus `Address` with a script
-payment credential and no stake credential. Evidence over the listed inputs,
-not a proof over all inputs. -/
+request, the spends of a pending termination, and the spend of a delivered
+checkpoint by its own lifecycle. The request and configuration datums' own
+byte layouts are not fixed here: the fixture decoders map a fixture number to
+the decoded registration or configuration. The holding address is the
+checkpoint validator's, a Plutus `Address` with a script payment credential and
+no stake credential, another script than the application's. Evidence over the
+listed inputs, not a proof over all inputs. -/
 namespace CardanoKeri.Application.Vectors
 open Lean (Json toJson)
 open Singular SingularApplicationHeld
@@ -48,6 +50,11 @@ def release : PublishedRelease :=
   { applicationPolicy := ofBytes applicationScript,
     applicationCredential := ofBytes (scriptAddress applicationScript),
     stateProgram := ofBytes statePolicyBytes, statePolicy := ofBytes statePolicyBytes }
+
+/-- The checkpoint validator, where a fold delivers the registry's checkpoints:
+another script than the application's. -/
+def checkpointScript : List Nat := scriptHash 5
+def checkpointCredential : Nat := ofBytes (scriptAddress checkpointScript)
 
 def seed : OutRef := ⟨ofBytes seedTx, 0⟩
 def deployment : Deployment := ⟨release, seed⟩
@@ -77,14 +84,15 @@ def datumHash (raw : Nat) : Nat := pack (blake2b256 (unpack raw))
 /-! ## Requests and the fixture decoder -/
 
 def registry : TokenId := deployment.registry ⟨CardanoKeri.ConsumerIdentity.Bytes.hash,
-  CardanoKeri.ConsumerIdentity.Bytes.code, CardanoKeri.ConsumerIdentity.Bytes.keyOf, fun _ => none, datumHash⟩
+  CardanoKeri.ConsumerIdentity.Bytes.code, CardanoKeri.ConsumerIdentity.Bytes.keyOf, fun _ => none, datumHash,
+  fun _ => none⟩
 
 /-- A registry whose state policy is not `state(A_keri)`. -/
 def foreignRegistry : TokenId := ⟨ofBytes (scriptHash 9), registry.name⟩
 
 def requestData (deposit : Nat) : RegistrationData :=
   { registry, key := aidOfCesr aidE, controller := 0, refundAddress,
-    holdingAddress := release.applicationCredential, initialDatum := datumHash (initialRaw aidE),
+    holdingAddress := checkpointCredential, initialDatum := datumHash (initialRaw aidE),
     deposit, bookedAt := 10, processDeadline := 15, reclaimEnd := 15 }
 
 /-- Fixture request datums: the number a request output carries, decoded. -/
@@ -93,14 +101,28 @@ def requests : List (Nat × RegistrationData) := [
   (9002, { requestData 14 with registry := foreignRegistry }),
   (9003, requestData 13),
   (9004, { requestData 14 with holdingAddress := otherAddress }),
-  (9005, { requestData 14 with processDeadline := 16, reclaimEnd := 16 })]
+  (9005, { requestData 14 with processDeadline := 16, reclaimEnd := 16 }),
+  (9006, { requestData 14 with holdingAddress := release.applicationCredential })]
 
 def decode : DecodeApplication := fun raw =>
   (requests.find? (·.1 == raw)).map fun entry => .registration entry.2
 
+/-- The registry's configuration: the scenario parameters and the checkpoint
+validator's credential. -/
+def scenarioConfiguration : Configuration := ⟨parameters, checkpointCredential⟩
+
+/-- Fixture configuration datums: the number a configuration record carries, decoded. -/
+def configurations : List (Nat × Configuration) := [
+  (8001, scenarioConfiguration),
+  (8002, { scenarioConfiguration with parameters.retractTime := 1 }),
+  (8003, { scenarioConfiguration with checkpointCredential := release.applicationCredential })]
+
+def decodeConfiguration (raw : Nat) : Option Configuration :=
+  (configurations.find? (·.1 == raw)).map (·.2)
+
 def interpretation : Interpretation :=
   ⟨CardanoKeri.ConsumerIdentity.Bytes.hash, CardanoKeri.ConsumerIdentity.Bytes.code,
-   CardanoKeri.ConsumerIdentity.Bytes.keyOf, decode, datumHash⟩
+   CardanoKeri.ConsumerIdentity.Bytes.keyOf, decode, datumHash, decodeConfiguration⟩
 
 def i : Interpretation := interpretation
 
@@ -110,14 +132,14 @@ def approvalOf (raw : Nat) : TokenId := registrationAsset i.hash i.code release 
 
 def active : TokenId := activeAsset i.hash i.code registry (aidOfCesr aidE)
 
-def configuration (r : TokenId) (p : ApplicationParameters) : ObservedOutput :=
-  ⟨⟨50, 0⟩, release.applicationCredential, 2, .configuration p, [(configurationAsset i release r, 1)]⟩
+def configuration (r : TokenId) (raw : Nat := 8001) : ObservedOutput :=
+  ⟨⟨50, 0⟩, release.applicationCredential, 2, .application raw, [(configurationAsset i release r, 1)]⟩
 
 def request (raw lovelace : Nat) : ObservedOutput :=
   ⟨⟨60, 0⟩, release.applicationCredential, lovelace, .application raw, [(approvalOf raw, 1)]⟩
 
-def holding (lovelace datum : Nat) : ObservedOutput :=
-  ⟨⟨70, 0⟩, release.applicationCredential, lovelace, .application datum, [(active, 1)]⟩
+def holding (lovelace datum : Nat) (address : Nat := checkpointCredential) : ObservedOutput :=
+  ⟨⟨70, 0⟩, address, lovelace, .application datum, [(active, 1)]⟩
 
 def pay (address lovelace : Nat) : ObservedOutput := ⟨⟨70, 1⟩, address, lovelace, .empty, []⟩
 
@@ -134,25 +156,35 @@ structure Case where
   observation : Observation
 
 def booking (raw lovelace : Nat) (mint : Int := 1) (references : Bool := true)
-    (interval : Interval := ⟨9, 10⟩) : Observation :=
+    (interval : Interval := ⟨9, 10⟩) (record : Nat := 8001) : Observation :=
   { assets := view [] [(approvalOf raw, mint)] [release.applicationPolicy],
     inputs := [], outputs := [request raw lovelace],
     referenceInputs := if references then [⟨50, 0⟩] else [],
-    referenceOutputs := [configuration registry parameters, configuration foreignRegistry parameters],
+    referenceOutputs := [configuration registry record, configuration foreignRegistry],
     interval, donation := 0, actions := [.bookRegistration 0] }
 
 def fold (holdingLovelace : Nat) (interval : Interval := ⟨12, 15⟩) (donation : Nat := 2)
-    (datum : Nat := initialRaw aidE) (burn : Int := -1) : Observation :=
-  { assets := view [⟨60, 0⟩] [(approvalOf 9001, burn), (active, 1)] [release.statePolicy],
-    inputs := [request 9001 17], outputs := [holding holdingLovelace datum],
-    referenceInputs := [⟨50, 0⟩], referenceOutputs := [configuration registry parameters],
+    (datum : Nat := initialRaw aidE) (burn : Int := -1) (raw : Nat := 9001)
+    (address : Nat := checkpointCredential) : Observation :=
+  { assets := view [⟨60, 0⟩] [(approvalOf raw, burn), (active, 1)] [release.statePolicy],
+    inputs := [request raw 17], outputs := [holding holdingLovelace datum address],
+    referenceInputs := [⟨50, 0⟩], referenceOutputs := [configuration registry],
     interval, donation, actions := [.foldRegistration ⟨60, 0⟩ 0] }
+
+/-- A transaction of the checkpoint's own lifecycle (an advance, say) spending
+the delivered checkpoint at `address`, with no application action. The
+application's verdict only: the checkpoint validator's rules are the
+checkpoint model's. -/
+def checkpointSpend (address : Nat) : Observation :=
+  { assets := view [⟨70, 0⟩] [] [], inputs := [holding 14 (initialRaw aidE) address],
+    outputs := [holding 14 (initialRaw aidE) address], referenceInputs := [], referenceOutputs := [],
+    interval := ⟨16, 17⟩, donation := 0, actions := [] }
 
 def return_ (refund : Nat) (interval : Interval := ⟨15, 20⟩) (address : Nat := refundAddress) :
     Observation :=
   { assets := view [⟨60, 0⟩] [(approvalOf 9001, -1)] [],
     inputs := [request 9001 17], outputs := [pay address refund, pay spenderAddress (17 - refund)],
-    referenceInputs := [⟨50, 0⟩], referenceOutputs := [configuration registry parameters],
+    referenceInputs := [⟨50, 0⟩], referenceOutputs := [configuration registry],
     interval, donation := 0, actions := [.returnRegistration ⟨60, 0⟩] }
 
 def terminationApprovalAsset : TokenId :=
@@ -181,22 +213,22 @@ def foldWithUnnamed : Observation :=
     inputs := [request 9001 17, ⟨⟨61, 0⟩, release.applicationCredential, 17, .application 9001,
       [(approvalOf 9001, 1)]⟩],
     outputs := [holding 14 (initialRaw aidE)],
-    referenceInputs := [⟨50, 0⟩], referenceOutputs := [configuration registry parameters],
+    referenceInputs := [⟨50, 0⟩], referenceOutputs := [configuration registry],
     interval := ⟨12, 15⟩, donation := 2, actions := [.foldRegistration ⟨60, 0⟩ 0] }
 
-def genesis (p : ApplicationParameters) (r : TokenId) : Observation :=
+def genesis (raw : Nat) (r : TokenId) : Observation :=
   { assets := view [seed] [(r, 1), (configurationAsset i release r, 1)]
       [release.statePolicy, release.applicationPolicy],
-    inputs := [], outputs := [configuration r p], referenceInputs := [], referenceOutputs := [],
+    inputs := [], outputs := [configuration r raw], referenceInputs := [], referenceOutputs := [],
     interval := ⟨0, 1⟩, donation := 0, actions := [.createConfiguration r seed 0] }
 
 def cases : List Case := [
   ⟨"configuration-created", "the registry's genesis creates its configuration record with retractTime = 0",
-    "configuration", genesis parameters registry⟩,
+    "configuration", genesis 8001 registry⟩,
   ⟨"configuration-with-retraction", "a configuration record with retractTime = 1: refused",
-    "configuration", genesis { parameters with retractTime := 1 } registry⟩,
+    "configuration", genesis 8002 registry⟩,
   ⟨"configuration-foreign-registry", "a configuration record for a registry whose state policy is not state(A_keri): refused",
-    "configuration", genesis parameters foreignRegistry⟩,
+    "configuration", genesis 8001 foreignRegistry⟩,
   ⟨"booking", "a request holding exactly deposit 14, registration cost 2 and tip 1, reading the configuration record: accepted",
     "booking", booking 9001 17⟩,
   ⟨"booking-foreign-registry", "the same request naming a registry whose state policy is not state(A_keri): refused",
@@ -207,8 +239,12 @@ def cases : List Case := [
     "booking", booking 9001 18⟩,
   ⟨"booking-one-lovelace-less", "the request holds 16, one less than its exact contents: refused",
     "booking", booking 9001 16⟩,
-  ⟨"booking-other-holding-address", "the approval commits a holding address other than the application address: refused",
+  ⟨"booking-other-holding-address", "the approval commits a holding address other than the checkpoint validator's: refused",
     "booking", booking 9004 17⟩,
+  ⟨"booking-application-holding", "the approval commits the application address as the holding address: refused",
+    "booking", booking 9006 17⟩,
+  ⟨"booking-checkpoint-is-application", "the configuration record names the application address as the checkpoint validator and the approval commits it: refused",
+    "booking", booking 9006 17 (record := 8003)⟩,
   ⟨"booking-wrong-deadline", "the request records a deadline one after the booking bound plus the processing time: refused",
     "booking", booking 9005 17⟩,
   ⟨"booking-without-configuration", "the configuration record is not a reference input: refused",
@@ -231,6 +267,16 @@ def cases : List Case := [
     "fold", fold 14 (datum := initialRaw aidE2)⟩,
   ⟨"fold-approval-kept", "the approval is not burned: refused",
     "fold", fold 14 (burn := 0)⟩,
+  ⟨"fold-at-application-address", "the holding is delivered to the application address instead of the checkpoint validator: refused",
+    "fold", fold 14 (address := release.applicationCredential)⟩,
+  ⟨"fold-at-committed-other-address", "a request committing another address than the checkpoint validator's, folded to that address: refused",
+    "fold", fold 14 (raw := 9004) (address := otherAddress)⟩,
+  ⟨"fold-other-commitment-to-checkpoint", "a request committing another address than the checkpoint validator's, folded to the checkpoint validator: refused",
+    "fold", fold 14 (raw := 9004)⟩,
+  ⟨"checkpoint-spent-at-checkpoint-validator", "the delivered checkpoint spent by its own lifecycle at the checkpoint validator, no application action: the application does not refuse it",
+    "checkpoint", checkpointSpend checkpointCredential⟩,
+  ⟨"checkpoint-spent-at-application-address", "the same spend of a checkpoint sitting at the application address: no action names it, refused",
+    "checkpoint", checkpointSpend release.applicationCredential⟩,
   ⟨"return-at-deadline", "a return starting at the deadline paying the refund address 16, the request less the tip: accepted",
     "return", return_ 16⟩,
   ⟨"return-straddling-deadline", "a return whose validity interval starts one slot before the deadline: refused",
@@ -274,17 +320,17 @@ def row (c : Case) : Json :=
 def approvalRow (id note aid : String) (deposit : Nat) : Json :=
   let raw := initialRaw aid
   let key := aidOfCesr aid
-  let preimage := i.code (.registrationApproval registry key release.applicationCredential (datumHash raw) deposit)
+  let preimage := i.code (.registrationApproval registry key checkpointCredential (datumHash raw) deposit)
   Json.mkObj [("id", toJson id), ("note", toJson note),
     ("input", Json.mkObj [("statePolicy", toJson policyHex),
       ("seed", Json.mkObj [("transactionId", toJson txHex), ("outputIndex", toJson seed.index)]),
-      ("aid", toJson aid), ("holdingAddress", toJson (hexOf release.applicationCredential)),
+      ("aid", toJson aid), ("holdingAddress", toJson (hexOf checkpointCredential)),
       ("initialDatum", toJson (hexOf raw)), ("deposit", toJson deposit)]),
     ("registryName", toJson (hexOf registry.name)), ("key", toJson (hexOf key)),
     ("initialDatumHash", toJson (hexOf (datumHash raw))),
     ("approvalPreimage", toJson (toHex preimage)),
     ("approval", Json.mkObj [("policy", toJson (toHex applicationScript)),
-      ("name", toJson (hexOf (approval i deployment key release.applicationCredential (datumHash raw) deposit).name))])]
+      ("name", toJson (hexOf (approval i deployment key checkpointCredential (datumHash raw) deposit).name))])]
 
 def approvals : List Json := [
   approvalRow "approval" "the registration approval of a funded registration of 14 lovelace" aidE 14,
@@ -294,6 +340,7 @@ def approvals : List Json := [
 def configurationRow : Json :=
   Json.mkObj [("registryName", toJson (hexOf registry.name)),
     ("preimage", toJson (toHex (i.code (.applicationConfiguration registry)))),
+    ("checkpointCredential", toJson (hexOf scenarioConfiguration.checkpointCredential)),
     ("token", Json.mkObj [("policy", toJson (toHex applicationScript)),
       ("name", toJson (hexOf (configurationAsset i release registry).name))]),
     ("parameters", Json.mkObj [("registrationCost", toJson parameters.registrationCost),
@@ -304,9 +351,10 @@ def table : Json :=
   Json.mkObj [
     ("description", toJson ("KERI's application on the application-held Singular model: the registration " ++
       "approval bytes, the configuration record, and accepted and refused configuration creations, bookings, " ++
-      "folds, returns and termination spends.")),
+      "folds, returns and termination spends, and the spend of a delivered checkpoint.")),
     ("model", toJson "lean/CardanoKeri/Application.lean"),
     ("deposit", toJson "the approval commits the whole carrier; the holding holds exactly it"),
+    ("holding", toJson "the approval commits the checkpoint validator's credential, which the configuration record names and which is not the application's; the fold delivers there"),
     ("request", toJson "deposit + registrationCost + minimumTip"),
     ("treasury", toJson "a fold's treasury_donation is at least the registration costs it folds"),
     ("deadline", toJson "bookedAt (the booking's validity upper bound) plus processTime; retractTime = 0"),

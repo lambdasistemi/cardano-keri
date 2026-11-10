@@ -48,7 +48,7 @@ def completionIdentity (j : Journey) : Except String SingularApplicationHeld.Fol
 def fieldQueries (j : Journey) : List (String × Wire.Query) := Id.run do
   let r := j.registration
   let anchor : Wire.Query := ⟨tables r.checkpoint, context,
-    ⟨context.network, some context.release⟩, cp, 7, r.holding⟩
+    ⟨context.network, some context.release, some context.checkpointCredential⟩, cp, 7, r.holding⟩
   let active := representativeAsset interpretation context
   let holding := fun assets => { anchor with holding.assets := assets }
   let release := fun r => { anchor with environment.release := some r }
@@ -69,10 +69,14 @@ def fieldQueries (j : Journey) : List (String × Wire.Query) := Id.run do
     ("wrong-network", { anchor with environment.network := 1 }),
     ("unknown-release", { anchor with environment.release := none }),
     ("release-application-policy", release { context.release with applicationPolicy := 70 }),
-    ("release-credential", release { context.release with applicationCredential := 110 }),
+    ("release-credential", release { context.release with applicationCredential := 109 }),
     ("release-state-program", release { context.release with stateProgram := 89 }),
     ("release-state-policy", release { context.release with statePolicy := 9 }),
     ("holding-credential", { anchor with holding.credential := 112 }),
+    ("holding-at-application-credential",
+      { anchor with holding.credential := context.release.applicationCredential }),
+    ("unknown-checkpoint-credential", { anchor with environment.checkpointCredential := none }),
+    ("wrong-checkpoint-credential", { anchor with environment.checkpointCredential := some 112 }),
     ("datum-empty", { anchor with holding.datum := .empty }),
     ("datum-root", { anchor with holding.datum := .root 0 }),
     ("datum-malformed", { anchor with holding.datum := .application 999 }),
@@ -189,7 +193,7 @@ def rivalQuery (j : Journey) : Except String Wire.Query := do
   let allocation := fun r => if r == registryAsset interpretation rival then 9 else r.name + 100
   let r ← registerJoint interpretation rival allocation commit q
   pure ⟨tables j.registration.checkpoint, context,
-    ⟨context.network, some context.release⟩, cp, 7, r.holding⟩
+    ⟨context.network, some context.release, some context.checkpointCredential⟩, cp, 7, r.holding⟩
 
 /-- Real unrelated and mixed folds, beginning at this journey's actual stored
 association. The foreign fold is valid but cannot complete Alice; the mixed

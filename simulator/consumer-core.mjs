@@ -38,8 +38,8 @@ function datumValid(d) {
 function validate(q) {
   if(!record(q,['tables','context','environment','params','now','holding']))throw Error('invalid-query');
   const {tables:t,context:c,environment:e,holding:o}=q;
-  if(!record(c,['aid','network','release','seed'])||!nat(c.aid)||!nat(c.network)||!releaseValid(c.release)||!refValid(c.seed))throw Error('invalid-context');
-  if(!record(e,['network','release'])||!nat(e.network)||(e.release!==null&&!releaseValid(e.release)))throw Error('invalid-environment');
+  if(!record(c,['aid','network','release','seed','checkpointCredential'])||!nat(c.aid)||!nat(c.network)||!releaseValid(c.release)||!refValid(c.seed)||!nat(c.checkpointCredential))throw Error('invalid-context');
+  if(!record(e,['network','release','checkpointCredential'])||!nat(e.network)||(e.release!==null&&!releaseValid(e.release))||(e.checkpointCredential!==null&&!nat(e.checkpointCredential)))throw Error('invalid-environment');
   if(!nat(q.now)||validateParams(toWire(q.params)))throw Error('invalid-params-or-time');
   if(!record(o,['reference','credential','lovelace','datum','assets'])||!refValid(o.reference)||!nat(o.credential)||!nat(o.lovelace)||!datumValid(o.datum)||!pairs(o.assets,assetValid,nat))throw Error('invalid-holding');
   if(!record(t,['keys','codes','hashes','datums'])||!pairs(t.keys,nat,nat)||!pairs(t.codes,preimageValid,bytesValid)||!pairs(t.hashes,bytesValid,nat)||
@@ -60,7 +60,7 @@ export function consumerVerdict(input) {
     const expectedAsset={policy:registry.policy,name};
     const quantity=o.assets.filter(([a])=>equal(a,expectedAsset)).reduce((n,[,v])=>n+v,0n);
     const decoded=o.datum?.application?t.datums.find(([r,[raw]])=>equal(r,c.release)&&raw===o.datum.application.data)?.[1][1]:undefined;
-    const clauses={network:e.network===c.network,release:equal(e.release,c.release),credential:o.credential===c.release.applicationCredential,
+    const clauses={network:e.network===c.network,release:equal(e.release,c.release),checkpointCredential:e.checkpointCredential===c.checkpointCredential,credential:o.credential===c.checkpointCredential,
       quantity:quantity===1n,datum:decoded!==undefined,aid:decoded?.aid===c.aid};
     const lifecycle=decoded?consumable(toWire(q.params),toWire(q.now),toWire(decoded.state)):null;
     const failure=Object.entries(clauses).find(([,ok])=>!ok)?.[0];
@@ -73,7 +73,7 @@ export function executeConsumer(query) {const r=consumerVerdict(query);return r.
 export function checkConsumerCorpus(corpus) {
   if(corpus.schema!=='cardano-keri.consumer.identity'||corpus.version!==1||!corpus.fields?.length||!corpus.journey?.length||!corpus.checks?.length)throw Error('consumer-corpus-schema');
   // Fixed approved fixture census: reject truncation even when all remaining cells pass.
-  if(corpus.fields.length!==32||corpus.journey.length!==17||corpus.checks.length!==46||corpus.events?.length!==18)throw Error('consumer-corpus-roster');
+  if(corpus.fields.length!==35||corpus.journey.length!==17||corpus.checks.length!==46||corpus.events?.length!==18)throw Error('consumer-corpus-roster');
   if(!unique(corpus.checks.map(c=>c[0]))||!unique(corpus.events.map(c=>c.name)))throw Error('consumer-duplicate-control');
   const cells=[...corpus.fields,...corpus.journey.map(frame=>frame.consumer)];
   if(!unique(corpus.fields.map(c=>c.name))||!unique(corpus.journey.map(c=>c.name)))throw Error('consumer-duplicate-case');

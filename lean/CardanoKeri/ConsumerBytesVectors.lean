@@ -55,7 +55,7 @@ def context (i : Input) : Except String Context := do
   unless policy.length == 28 do throw s!"state-policy-not-28-bytes {i.statePolicy}"
   unless tx.length == 32 do throw s!"transaction-id-not-32-bytes {i.transactionId}"
   pure { network := 0, release := release (ofBytes policy), seed := ⟨ofBytes tx, i.outputIndex⟩,
-         aid := aidOfCesr i.aid }
+         aid := aidOfCesr i.aid, checkpointCredential := 4 }
 
 /-- The fixture decoder: the application datum `711` decodes to `aid` with a
 consumable live state. It never reads the asset, so a refusal below comes
@@ -68,10 +68,11 @@ def decoderFor (aid : AID) : AH.PublishedRelease → Nat → Option DecodedDatum
 
 def concrete (c : Context) : Interpretation := interpretation (decoderFor c.aid)
 
-def environment (c : Context) : Environment := { network := c.network, release := some c.release }
+def environment (c : Context) : Environment :=
+  { network := c.network, release := some c.release, checkpointCredential := some c.checkpointCredential }
 
 def holding (c : Context) (asset : Singular.TokenId) : AH.ObservedOutput :=
-  { reference := ⟨0, 0⟩, credential := c.release.applicationCredential, lovelace := 2000000,
+  { reference := ⟨0, 0⟩, credential := c.checkpointCredential, lovelace := 2000000,
     datum := .application 711, assets := [(asset, 1)] }
 
 /-- The consumer predicate on a holding carrying `asset`, under `c`. -/

@@ -110,10 +110,36 @@
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "note":
-   "the approval commits a holding address other than the application address: refused",
+   "the approval commits a holding address other than the checkpoint validator's: refused",
    "kind": "booking",
    "inputs": [],
    "id": "booking-other-holding-address",
+   "donation": 0},
+  {"verdict": "refused",
+   "validity": {"upper": 10, "lower": 9},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 17,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "note":
+   "the approval commits the application address as the holding address: refused",
+   "kind": "booking",
+   "inputs": [],
+   "id": "booking-application-holding",
+   "donation": 0},
+  {"verdict": "refused",
+   "validity": {"upper": 10, "lower": 9},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 17,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "note":
+   "the configuration record names the application address as the checkpoint validator and the approval commits it: refused",
+   "kind": "booking",
+   "inputs": [],
+   "id": "booking-checkpoint-is-application",
    "donation": 0},
   {"verdict": "refused",
    "validity": {"upper": 10, "lower": 9},
@@ -158,7 +184,7 @@
    "outputs":
    [{"lovelace": 14,
      "address":
-     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note":
    "a fold ending at the deadline, delivering exactly the deposit, donating the registration cost: accepted",
    "kind": "fold",
@@ -174,7 +200,7 @@
    "outputs":
    [{"lovelace": 14,
      "address":
-     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note": "the same fold donating 3: accepted",
    "kind": "fold",
    "inputs":
@@ -189,7 +215,7 @@
    "outputs":
    [{"lovelace": 14,
      "address":
-     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note":
    "a fold whose validity interval ends one slot after the deadline: refused",
    "kind": "fold",
@@ -205,7 +231,7 @@
    "outputs":
    [{"lovelace": 15,
      "address":
-     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note": "the holding holds the deposit plus one lovelace: refused",
    "kind": "fold",
    "inputs":
@@ -220,7 +246,7 @@
    "outputs":
    [{"lovelace": 13,
      "address":
-     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note": "the holding holds the deposit less one lovelace: refused",
    "kind": "fold",
    "inputs":
@@ -235,7 +261,7 @@
    "outputs":
    [{"lovelace": 14,
      "address":
-     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note":
    "the treasury donation is one less than the registration cost: refused",
    "kind": "fold",
@@ -251,7 +277,7 @@
    "outputs":
    [{"lovelace": 14,
      "address":
-     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note":
    "the holding carries another initial datum than the committed one: refused",
    "kind": "fold",
@@ -267,7 +293,7 @@
    "outputs":
    [{"lovelace": 14,
      "address":
-     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note": "the approval is not burned: refused",
    "kind": "fold",
    "inputs":
@@ -276,6 +302,86 @@
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "id": "fold-approval-kept",
    "donation": 2},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 14,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "note":
+   "the holding is delivered to the application address instead of the checkpoint validator: refused",
+   "kind": "fold",
+   "inputs":
+   [{"lovelace": 17,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "id": "fold-at-application-address",
+   "donation": 2},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 14,
+     "address":
+     "d8799fd8799f581c72777c81868b90959a9fa4a9aeb3b8bdc2c7ccd1d6dbe0e5eaeff4f9ffd87a80ff"}],
+   "note":
+   "a request committing another address than the checkpoint validator's, folded to that address: refused",
+   "kind": "fold",
+   "inputs":
+   [{"lovelace": 17,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "id": "fold-at-committed-other-address",
+   "donation": 2},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 14,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "note":
+   "a request committing another address than the checkpoint validator's, folded to the checkpoint validator: refused",
+   "kind": "fold",
+   "inputs":
+   [{"lovelace": 17,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "id": "fold-other-commitment-to-checkpoint",
+   "donation": 2},
+  {"verdict": "accepted",
+   "validity": {"upper": 17, "lower": 16},
+   "referenced": 0,
+   "outputs":
+   [{"lovelace": 14,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "note":
+   "the delivered checkpoint spent by its own lifecycle at the checkpoint validator, no application action: the application does not refuse it",
+   "kind": "checkpoint",
+   "inputs":
+   [{"lovelace": 14,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "id": "checkpoint-spent-at-checkpoint-validator",
+   "donation": 0},
+  {"verdict": "refused",
+   "validity": {"upper": 17, "lower": 16},
+   "referenced": 0,
+   "outputs":
+   [{"lovelace": 14,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "note":
+   "the same spend of a checkpoint sitting at the application address: no action names it, refused",
+   "kind": "checkpoint",
+   "inputs":
+   [{"lovelace": 14,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "id": "checkpoint-spent-at-application-address",
+   "donation": 0},
   {"verdict": "accepted",
    "validity": {"upper": 20, "lower": 15},
    "referenced": 1,
@@ -382,7 +488,7 @@
    "outputs":
    [{"lovelace": 14,
      "address":
-     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note":
    "a fold that also spends a second booked request no action names: refused",
    "kind": "fold",
@@ -411,8 +517,10 @@
  "model": "lean/CardanoKeri/Application.lean",
  "intervals":
  "lower bound included, upper bound excluded, as the ledger hands them to scripts",
+ "holding":
+ "the approval commits the checkpoint validator's credential, which the configuration record names and which is not the application's; the fold delivers there",
  "description":
- "KERI's application on the application-held Singular model: the registration approval bytes, the configuration record, and accepted and refused configuration creations, bookings, folds, returns and termination spends.",
+ "KERI's application on the application-held Singular model: the registration approval bytes, the configuration record, and accepted and refused configuration creations, bookings, folds, returns and termination spends, and the spend of a delivered checkpoint.",
  "deposit":
  "the approval commits the whole carrier; the holding holds exactly it",
  "deadline":
@@ -430,7 +538,9 @@
    "registrationCost": 2,
    "processTime": 5,
    "minimumTip": 1,
-   "bookingWidth": 1}},
+   "bookingWidth": 1},
+  "checkpointCredential":
+  "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"},
  "approvals":
  [{"registryName":
    "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf",
@@ -446,18 +556,18 @@
     "initialDatum":
     "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d87980d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
     "holdingAddress":
-    "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff",
+    "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff",
     "deposit": 14,
     "aid": "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"},
    "initialDatumHash":
    "1dda415ee081359af8e7c28f992fd49aa41b8e6aabb6957037e50bbbd8c6d0b1",
    "id": "approval",
    "approvalPreimage":
-   "d87c9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff58201dda415ee081359af8e7c28f992fd49aa41b8e6aabb6957037e50bbbd8c6d0b10eff",
+   "d87c9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff58201dda415ee081359af8e7c28f992fd49aa41b8e6aabb6957037e50bbbd8c6d0b10eff",
    "approval":
    {"policy": "282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
     "name":
-    "37226c2f142ccdbcb0ee19585a71a5fa040deecff13fd2a3180343e00f81d27f"}},
+    "f609e3df6b78bb83273c27a66bb7fca4b55ba5dc31c925e81ecacc4cc7550598"}},
   {"registryName":
    "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf",
    "note": "the same registration committing 15: another approval",
@@ -472,18 +582,18 @@
     "initialDatum":
     "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d87980d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
     "holdingAddress":
-    "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff",
+    "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff",
     "deposit": 15,
     "aid": "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"},
    "initialDatumHash":
    "1dda415ee081359af8e7c28f992fd49aa41b8e6aabb6957037e50bbbd8c6d0b1",
    "id": "approval-other-deposit",
    "approvalPreimage":
-   "d87c9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff58201dda415ee081359af8e7c28f992fd49aa41b8e6aabb6957037e50bbbd8c6d0b10fff",
+   "d87c9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff58201dda415ee081359af8e7c28f992fd49aa41b8e6aabb6957037e50bbbd8c6d0b10fff",
    "approval":
    {"policy": "282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
     "name":
-    "56d15663ffa1521a5ec8f05c4cf2aa52446ae2b45925e4080c0eacca28289d76"}},
+    "25f4203931b92237123b47a844d03612236713e90ecd1353256950a1e851e161"}},
   {"registryName":
    "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf",
    "note": "another AID in the same registry: another key, datum and approval",
@@ -498,15 +608,15 @@
     "initialDatum":
     "d87a9fd8799f582c4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776f0000d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d87980d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
     "holdingAddress":
-    "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff",
+    "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff",
     "deposit": 14,
     "aid": "EEBjyTcVHGUZHrR1x3wuxOxbrzH0_cGfAYJJQHME3Pwo"},
    "initialDatumHash":
    "873c829d2533029f7d981d1013e9a27b9b9f539a02a626133578cab5dca98235",
    "id": "approval-other-aid",
    "approvalPreimage":
-   "d87c9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776fd8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff5820873c829d2533029f7d981d1013e9a27b9b9f539a02a626133578cab5dca982350eff",
+   "d87c9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776fd8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff5820873c829d2533029f7d981d1013e9a27b9b9f539a02a626133578cab5dca982350eff",
    "approval":
    {"policy": "282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
     "name":
-    "5df2e175f89bbe66132fb2ea9ed513c1ff5de895acfb4781e5c8e3b9def123de"}}]}
+    "c8f92bd201627103cc21b912902e9a61ac1a77f248d682a1671ffbb69a2e8903"}}]}

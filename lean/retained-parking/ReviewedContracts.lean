@@ -343,15 +343,15 @@ namespace CardanoKeri.Registry
 end CardanoKeri.Registry
 namespace CardanoKeri.Application
 open Singular SingularApplicationHeld in
-#check (@CardanoKeri.Application.registration_spend_is_fold_or_return : ∀ (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation) (_ok : accepted i env rp release o = true) {input : ObservedOutput} {data : RegistrationData} (_mem : input ∈ o.inputs) (_atApplication : input.credential = release.applicationCredential) (_hd : decoded i.decode input = some (.registration data)), ∃ p, configurationOf i release data.registry o = some p ∧ parametersValid p = true ∧ approvalBurned i release data o = true ∧ ((∃ index holding, Action.foldRegistration input.reference index ∈ o.actions ∧ o.outputs[index]? = some holding ∧ foldWindow data o.interval = true ∧ env.inception data.key = true ∧ delivered i data holding o = true) ∨ (Action.returnRegistration input.reference ∈ o.actions ∧ returnWindow data o.interval = true ∧ input.lovelace - p.minimumTip ≤ paidTo o.outputs data.refundAddress)))
+#check (@CardanoKeri.Application.registration_spend_is_fold_or_return : ∀ (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation) (_ok : accepted i env rp release o = true) {input : ObservedOutput} {data : RegistrationData} (_mem : input ∈ o.inputs) (_atApplication : input.credential = release.applicationCredential) (_hd : decoded i.decode input = some (.registration data)), ∃ c, configurationOf i release data.registry o = some c ∧ parametersValid c.parameters = true ∧ approvalBurned i release data o = true ∧ ((∃ index holding, Action.foldRegistration input.reference index ∈ o.actions ∧ o.outputs[index]? = some holding ∧ foldWindow data o.interval = true ∧ env.inception data.key = true ∧ delivered i c data holding o = true) ∨ (Action.returnRegistration input.reference ∈ o.actions ∧ returnWindow data o.interval = true ∧ input.lovelace - c.parameters.minimumTip ≤ paidTo o.outputs data.refundAddress)))
 end CardanoKeri.Application
 namespace CardanoKeri.Application
 open Singular SingularApplicationHeld in
-#check (@CardanoKeri.Application.before_deadline_only_fold : ∀ (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation) (_ok : accepted i env rp release o = true) {input : ObservedOutput} {data : RegistrationData} (_mem : input ∈ o.inputs) (_atApplication : input.credential = release.applicationCredential) (_hd : decoded i.decode input = some (.registration data)) (_early : o.interval.lower < data.processDeadline), ∃ index holding, Action.foldRegistration input.reference index ∈ o.actions ∧ o.outputs[index]? = some holding ∧ delivered i data holding o = true)
+#check (@CardanoKeri.Application.before_deadline_only_fold : ∀ (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation) (_ok : accepted i env rp release o = true) {input : ObservedOutput} {data : RegistrationData} (_mem : input ∈ o.inputs) (_atApplication : input.credential = release.applicationCredential) (_hd : decoded i.decode input = some (.registration data)) (_early : o.interval.lower < data.processDeadline), ∃ c index holding, configurationOf i release data.registry o = some c ∧ Action.foldRegistration input.reference index ∈ o.actions ∧ o.outputs[index]? = some holding ∧ delivered i c data holding o = true)
 end CardanoKeri.Application
 namespace CardanoKeri.Application
 open Singular SingularApplicationHeld in
-#check (@CardanoKeri.Application.return_pays_refund_address : ∀ (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation) (_ok : accepted i env rp release o = true) {input : ObservedOutput} {data : RegistrationData} {p : ApplicationParameters} (_named : namedInput o input.reference = some input) (_hd : decoded i.decode input = some (.registration data)) (_hp : configurationOf i release data.registry o = some p) (_returned : Action.returnRegistration input.reference ∈ o.actions), data.processDeadline ≤ o.interval.lower ∧ input.lovelace - p.minimumTip ≤ paidTo o.outputs data.refundAddress)
+#check (@CardanoKeri.Application.return_pays_refund_address : ∀ (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation) (_ok : accepted i env rp release o = true) {input : ObservedOutput} {data : RegistrationData} {c : Configuration} (_named : namedInput o input.reference = some input) (_hd : decoded i.decode input = some (.registration data)) (_hc : configurationOf i release data.registry o = some c) (_returned : Action.returnRegistration input.reference ∈ o.actions), data.processDeadline ≤ o.interval.lower ∧ input.lovelace - c.parameters.minimumTip ≤ paidTo o.outputs data.refundAddress)
 end CardanoKeri.Application
 namespace CardanoKeri.Application
 open Singular SingularApplicationHeld in
@@ -371,11 +371,11 @@ open Singular SingularApplicationHeld in
 end CardanoKeri.Application
 namespace CardanoKeri.Application
 open Singular SingularApplicationHeld in
-#check (@CardanoKeri.Application.configuration_refuses_retraction : ∀ (i : Interpretation) (release : PublishedRelease) {registry : TokenId} (seed : OutRef) {output : ObservedOutput} (o : Observation) {p : ApplicationParameters} (_hp : output.datum = .configuration p) (_positive : p.retractTime ≠ 0), createConfiguration i release registry seed output o = false)
+#check (@CardanoKeri.Application.configuration_refuses_retraction : ∀ (i : Interpretation) (release : PublishedRelease) {registry : TokenId} (seed : OutRef) {output : ObservedOutput} (o : Observation) {c : Configuration} (_hc : configurationDatum i output = some c) (_positive : c.parameters.retractTime ≠ 0), createConfiguration i release registry seed output o = false)
 end CardanoKeri.Application
 namespace CardanoKeri.Application
 open Singular SingularApplicationHeld in
-#check (@CardanoKeri.Application.booking_inversion : ∀ (i : Interpretation) (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation) {output : ObservedOutput} (_ok : bookRegistration i rp release o output = true), ∃ data p, decoded i.decode output = some (.registration data) ∧ configurationOf i release data.registry o = some p ∧ data.registry.policy = release.statePolicy ∧ data.holdingAddress = release.applicationCredential ∧ rp.Mc + rp.D ≤ data.deposit ∧ output.lovelace = data.deposit + p.registrationCost + p.minimumTip ∧ data.bookedAt = o.interval.upper ∧ data.processDeadline = data.bookedAt + p.processTime ∧ SingularApplicationHeld.Assets.mintQty o.assets (registrationAsset i.hash i.code release data) = 1)
+#check (@CardanoKeri.Application.booking_inversion : ∀ (i : Interpretation) (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation) {output : ObservedOutput} (_ok : bookRegistration i rp release o output = true), ∃ data c, decoded i.decode output = some (.registration data) ∧ configurationOf i release data.registry o = some c ∧ data.registry.policy = release.statePolicy ∧ data.holdingAddress = c.checkpointCredential ∧ c.checkpointCredential ≠ release.applicationCredential ∧ rp.Mc + rp.D ≤ data.deposit ∧ output.lovelace = data.deposit + c.parameters.registrationCost + c.parameters.minimumTip ∧ data.bookedAt = o.interval.upper ∧ data.processDeadline = data.bookedAt + c.parameters.processTime ∧ SingularApplicationHeld.Assets.mintQty o.assets (registrationAsset i.hash i.code release data) = 1)
 end CardanoKeri.Application
 namespace CardanoKeri.Application
 open Singular SingularApplicationHeld in
@@ -387,7 +387,7 @@ open Singular SingularApplicationHeld in
 end CardanoKeri.Application
 namespace CardanoKeri.Application
 open Singular SingularApplicationHeld in
-#check (@CardanoKeri.Application.booking_refuses_inexact_contents : ∀ (i : Interpretation) (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation) {output : ObservedOutput} {data : RegistrationData} {p : ApplicationParameters} (_hd : decoded i.decode output = some (.registration data)) (_hp : configurationOf i release data.registry o = some p) (_inexact : output.lovelace ≠ requestLovelace p data), bookRegistration i rp release o output = false)
+#check (@CardanoKeri.Application.booking_refuses_inexact_contents : ∀ (i : Interpretation) (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation) {output : ObservedOutput} {data : RegistrationData} {c : Configuration} (_hd : decoded i.decode output = some (.registration data)) (_hc : configurationOf i release data.registry o = some c) (_inexact : output.lovelace ≠ requestLovelace c.parameters data), bookRegistration i rp release o output = false)
 end CardanoKeri.Application
 namespace CardanoKeri.Application
 open Singular SingularApplicationHeld in
@@ -416,4 +416,40 @@ end CardanoKeri.Application
 namespace CardanoKeri.Application
 open Singular SingularApplicationHeld in
 #check (@CardanoKeri.Application.carrier_floor_matches_economic : ∀ (rp : CardanoKeri.Registry.Params) (b : Singular.RegistrationBooking) (data : RegistrationData) (_carrier : b.request.carrierAda = data.deposit) (_tip : b.request.declaredTip = rp.tip), CardanoKeri.Registry.registrationShape rp b ↔ rp.Mc + rp.D ≤ data.deposit)
+end CardanoKeri.Application
+namespace CardanoKeri.Application
+open Singular SingularApplicationHeld in
+#check (@CardanoKeri.Application.booking_refuses_application_holding : ∀ (i : Interpretation) (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation) {output : ObservedOutput} {data : RegistrationData} (_hd : decoded i.decode output = some (.registration data)) (_atApplication : data.holdingAddress = release.applicationCredential), bookRegistration i rp release o output = false)
+end CardanoKeri.Application
+namespace CardanoKeri.Application
+open Singular SingularApplicationHeld in
+#check (@CardanoKeri.Application.booking_refuses_other_holding : ∀ (i : Interpretation) (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation) {output : ObservedOutput} {data : RegistrationData} {c : Configuration} (_hd : decoded i.decode output = some (.registration data)) (_hc : configurationOf i release data.registry o = some c) (_other : data.holdingAddress ≠ c.checkpointCredential), bookRegistration i rp release o output = false)
+end CardanoKeri.Application
+namespace CardanoKeri.Application
+open Singular SingularApplicationHeld in
+#check (@CardanoKeri.Application.delivered_credential : ∀ {i : Interpretation} {c : Configuration} {data : RegistrationData} {holding : ObservedOutput} {o : Observation} (_h : delivered i c data holding o = true), holding.credential = data.holdingAddress ∧ holding.credential = c.checkpointCredential)
+end CardanoKeri.Application
+namespace CardanoKeri.Application
+open Singular SingularApplicationHeld in
+#check (@CardanoKeri.Application.fold_delivers_to_checkpoint_validator : ∀ (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation) (_ok : accepted i env rp release o = true) {ref : OutRef} {index : Nat} (_folded : Action.foldRegistration ref index ∈ o.actions), ∃ input data c holding, namedInput o ref = some input ∧ decoded i.decode input = some (.registration data) ∧ configurationOf i release data.registry o = some c ∧ o.outputs[index]? = some holding ∧ delivered i c data holding o = true ∧ holding.credential = c.checkpointCredential ∧ holding.credential = data.holdingAddress)
+end CardanoKeri.Application
+namespace CardanoKeri.Application
+open Singular SingularApplicationHeld in
+#check (@CardanoKeri.Application.no_application_input_is_a_checkpoint : ∀ (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation) (_ok : accepted i env rp release o = true) {input : ObservedOutput} {raw : Nat} (_mem : input ∈ o.inputs) (_atApplication : input.credential = release.applicationCredential) (_held : input.datum = .application raw) (_notRequest : ∀ data, i.decode raw ≠ some (.registration data)), False)
+end CardanoKeri.Application
+namespace CardanoKeri.Application
+open Singular SingularApplicationHeld in
+#check (@CardanoKeri.Application.delivered_is_genuine : ∀ (i : Interpretation) (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) {booking fold : Observation} {request holding : ObservedOutput} {data : RegistrationData} {c : Configuration} (_booked : bookRegistration i rp release booking request = true) (_hb : decoded i.decode request = some (.registration data)) (_hdel : delivered i c data holding fold = true), genuine i release c data holding)
+end CardanoKeri.Application
+namespace CardanoKeri.Application
+open Singular SingularApplicationHeld in
+#check (@CardanoKeri.Application.before_deadline_delivers_genuine : ∀ (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) {booking o : Observation} {request input : ObservedOutput} {data : RegistrationData} (_booked : bookRegistration i rp release booking request = true) (_hb : decoded i.decode request = some (.registration data)) (_ok : accepted i env rp release o = true) (_mem : input ∈ o.inputs) (_atApplication : input.credential = release.applicationCredential) (_hd : decoded i.decode input = some (.registration data)) (_early : o.interval.lower < data.processDeadline), ∃ c index holding, configurationOf i release data.registry o = some c ∧ Action.foldRegistration input.reference index ∈ o.actions ∧ o.outputs[index]? = some holding ∧ genuine i release c data holding)
+end CardanoKeri.Application
+namespace CardanoKeri.Application
+open Singular SingularApplicationHeld in
+#check (@CardanoKeri.Application.genuine_holds_committed_datum : ∀ {i : Interpretation} {release : PublishedRelease} {c : Configuration} {data : RegistrationData} {holding : ObservedOutput} (_g : genuine i release c data holding) {d : CardanoKeri.CheckpointDatum.Data} (_committed : data.initialDatum = i.datumHash (CardanoKeri.CheckpointDatum.raw d)) (_collision : ∀ x, i.datumHash x = i.datumHash (CardanoKeri.CheckpointDatum.raw d) → x = CardanoKeri.CheckpointDatum.raw d), holding.datum = .application (CardanoKeri.CheckpointDatum.raw d))
+end CardanoKeri.Application
+namespace CardanoKeri.Application
+open Singular SingularApplicationHeld in
+#check (@CardanoKeri.Application.genuine_checkpoint_consumable_iff : ∀ {i : Interpretation} {release : PublishedRelease} {c : Configuration} {data : RegistrationData} {holding : ObservedOutput} (_g : genuine i release c data holding) (cc : CardanoKeri.ConsumerIdentity.Context) (e : CardanoKeri.ConsumerIdentity.Environment) (p : CardanoKeri.Checkpoint.Params) (now : CardanoKeri.Checkpoint.Slot) (_context : CardanoKeri.ConsumerIdentity.authenticatedContext cc e) (_credential : c.checkpointCredential = cc.checkpointCredential) (_hash : i.hash = CardanoKeri.CheckpointDatum.interpretation.hash) (_code : i.code = CardanoKeri.CheckpointDatum.interpretation.code) (_registry : data.registry = CardanoKeri.ConsumerIdentity.registryAsset CardanoKeri.CheckpointDatum.interpretation cc) (_key : data.key = CardanoKeri.CheckpointDatum.interpretation.keyOf cc.aid) {s : CardanoKeri.Checkpoint.State} {k : CardanoKeri.CheckpointDatum.KeyMaterial} {d : CardanoKeri.CheckpointDatum.Data} (_written : CardanoKeri.CheckpointDatum.datum cc.aid k s = some d) (_bytewise : k.Bytewise) (_committed : data.initialDatum = i.datumHash (CardanoKeri.CheckpointDatum.raw d)) (_collision : ∀ x, i.datumHash x = i.datumHash (CardanoKeri.CheckpointDatum.raw d) → x = CardanoKeri.CheckpointDatum.raw d), CardanoKeri.ConsumerIdentity.consumableHolding CardanoKeri.CheckpointDatum.interpretation cc e p now holding ↔ CardanoKeri.Checkpoint.consumableState p now s)
 end CardanoKeri.Application

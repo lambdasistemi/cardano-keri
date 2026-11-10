@@ -10,7 +10,7 @@ source produces** — extracted from the live `plutus-blueprint` derivation,
 never the frozen M8 baseline — and requires the reservation half of the
 entitlement family to refuse four named mutants.
 
-## The three design rules inherited from the migration evidence
+## The three design rules inherited from the register evidence
 
 **A rejection must be the validator's own.** The pinned CEK evaluator does not
 implement every Plutus builtin, and a refused builtin dispatch also stops the
@@ -54,7 +54,7 @@ exactly what it observed and no more.
 -/
 
 -- Decoding a whole applied validator exceeds the default elaboration
--- recursion depth, exactly as the S2 and migration evidence modules found.
+-- recursion depth, exactly as the S2 evidence module found.
 set_option maxRecDepth 100000
 
 #import_uplc commitmentSpend PlutusV3 single_cbor_hex "nix-generated/bounty_commitment.bounty_commitment.spend.hex"

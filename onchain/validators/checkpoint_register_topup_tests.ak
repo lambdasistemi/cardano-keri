@@ -25,28 +25,30 @@ use checkpoint_register
 use deposit_fixture
 use freeze_fixture.{
   Freeze, advance_hash, d_reg, enforcement_hash, entitlement_hash, floor_frozen,
-  floor_unfrozen, freeze_bond, freeze_redeemer, lifecycle_hash, mc,
-  migration_hash, network_id, policy, premium, spent_ref, token_value, unit,
-  v1_data,
+  floor_unfrozen, freeze_bond, freeze_redeemer, mc, network_id, policy, premium,
+  spent, spent_ref, token_value, unit, v1_data,
+}
+use registry_fixture.{
+  Nothing, OtherKey, OtherRegistryName, OtherStatePolicy, QuantityTwo,
+  RetiredRegisterToken, holding, registry_name, representative, staked,
+  state_policy, with_input_token, with_successor_address, with_successor_token,
 }
 use topup_fixture.{
   Bond, Deposit, Keep, Parts, Rotation, TopUp, base, change, eight_data, flag,
-  freeze_case, from_case, held, held_at, honest, honest_case, hp_policy,
-  inputs_after, into_case, live_of, marked_with, minting, nine_data, nine_fields,
-  other_keys, other_policy, outputs_after, payer_input, pending_data,
-  reg_evidence, register_envelope, register_with, registered_parts,
-  registered_with_pool, rotation_case, script_output, second_checkpoint_input,
-  second_checkpoint_output, signed_by, ten_data, token_name, topup_between,
-  topup_redeemer, valued_case, valued_with, with_withdrawal, within,
-  without_datum,
+  freeze_case, from_case, held, held_at, honest, honest_case, inputs_after,
+  into_case, marked_with, minting, nine_data, nine_fields, other_keys,
+  other_policy, outputs_after, payer_input, pending_data, rotation_case,
+  script_output, second_checkpoint_input, second_checkpoint_output, signed_by,
+  ten_data, token_name, topup_between, topup_redeemer, valued_case, valued_with,
+  with_withdrawal, within, without_datum,
 }
 
 // The validators are called here: a fixture module cannot import them.
 
 fn run_spend(redeemer: Data, tx: Transaction) -> Bool {
   checkpoint_register.checkpoint_register.spend(
-    migration_hash,
-    lifecycle_hash,
+    state_policy(),
+    registry_name(),
     advance_hash,
     enforcement_hash,
     entitlement_hash,
@@ -61,38 +63,9 @@ fn run_spend(redeemer: Data, tx: Transaction) -> Bool {
   )
 }
 
-fn run_mint(redeemer: Data, tx: Transaction) -> Bool {
-  checkpoint_register.checkpoint_register.mint(
-    migration_hash,
-    lifecycle_hash,
-    advance_hash,
-    enforcement_hash,
-    entitlement_hash,
-    network_id,
-    d_reg,
-    freeze_bond,
-    premium,
-    redeemer,
-    policy,
-    tx,
-  )
-}
-
 /// The spending arm alone: a top-up needs no observer.
 fn run(t: TopUp) -> Bool {
   run_spend(topup_redeemer(t.amount), t.tx)
-}
-
-fn run_register(tx: Transaction) -> Bool {
-  let register: Data = builtin.constr_data(0, [])
-  run_mint(register, tx) && checkpoint_observer.observer_lifecycle.withdraw(
-    0,
-    hp_policy,
-    d_reg,
-    register_envelope(),
-    0,
-    tx,
-  )
 }
 
 fn run_rotation(r: Rotation) -> Bool {
@@ -453,7 +426,7 @@ test topup_refuses_a_successor_holding_a_second_token_of_the_policy() fail {
   run(
     valued_with(
       from_lovelace(held(False, unit + premium))
-        |> merge(from_asset(policy, token_name(), 2)),
+        |> merge(from_asset(state_policy(), token_name(), 2)),
     ),
   )
 }
@@ -480,7 +453,7 @@ test topup_refuses_the_token_paid_to_another_output() fail {
           ),
           script_output(
             from_lovelace(2_000_000)
-              |> merge(from_asset(policy, token_name(), 1)),
+              |> merge(from_asset(state_policy(), token_name(), 1)),
             nine_data(base(False, False, True)),
           ),
         ],
@@ -508,16 +481,12 @@ test topup_refuses_the_token_leaving_the_checkpoint_address() fail {
   )
 }
 
-test topup_refuses_a_mint_under_the_policy() fail {
-  run(minting(from_asset(policy, #"b3", 1)))
-}
-
-test topup_refuses_a_burn_under_the_policy() fail {
-  run(minting(from_asset(policy, #"b3", -1)))
+test topup_refuses_a_mint_of_the_checkpoint_token() fail {
+  run(minting(from_asset(state_policy(), token_name(), 1)))
 }
 
 test topup_refuses_a_burn_of_the_checkpoint_token() fail {
-  run(minting(from_asset(policy, token_name(), -1)))
+  run(minting(from_asset(state_policy(), token_name(), -1)))
 }
 
 test topup_accepts_a_mint_under_another_policy() {
@@ -530,63 +499,6 @@ test topup_refuses_a_second_checkpoint_output() fail {
 
 test topup_refuses_a_second_checkpoint_input() fail {
   run(inputs_after([second_checkpoint_input()]))
-}
-
-// ---------------------------------------------------------------------
-// The registration: the pool starts at one premium or more
-// ---------------------------------------------------------------------
-
-test register_accepts_a_pool_of_exactly_the_premium() {
-  run_register(registered_with_pool(premium))
-}
-
-test register_accepts_a_pool_above_the_premium() {
-  run_register(registered_with_pool(premium + 1))
-}
-
-test register_accepts_a_pool_of_several_premiums() {
-  run_register(registered_with_pool(7 * unit))
-}
-
-test register_refuses_a_pool_one_below_the_premium() fail {
-  run_register(registered_with_pool(premium - 1))
-}
-
-test register_refuses_an_empty_pool() fail {
-  run_register(registered_with_pool(0))
-}
-
-test register_writes_the_mark_clear() {
-  run_register(
-    register_with(nine_data(registered_parts(False)), floor_unfrozen + premium),
-  )
-}
-
-test register_refuses_a_set_mark() fail {
-  run_register(
-    register_with(nine_data(registered_parts(True)), floor_unfrozen + premium),
-  )
-}
-
-test register_refuses_a_mark_that_is_not_a_boolean() fail {
-  run_register(
-    register_with(
-      marked_with(registered_parts(False), builtin.i_data(0)),
-      floor_unfrozen + premium,
-    ),
-  )
-}
-
-test register_refuses_a_datum_of_eight_fields() fail {
-  run_register(
-    register_with(eight_data(registered_parts(False)), floor_unfrozen + premium),
-  )
-}
-
-test register_refuses_a_datum_of_ten_fields() fail {
-  run_register(
-    register_with(ten_data(registered_parts(False)), floor_unfrozen + premium),
-  )
 }
 
 // ---------------------------------------------------------------------
@@ -717,4 +629,107 @@ test a_spend_redeemer_of_constructor_five_is_refused() fail {
     [amount],
   )
   True
+}
+
+// ---------------------------------------------------------------------
+// topup: a checkpoint is recognised by the representative asset of its AID
+// (Lean `representativeAsset`) and its successor holds the same asset, once
+// ---------------------------------------------------------------------
+
+fn topup_over(tx: Transaction) -> Bool {
+  run(TopUp { ..honest(), tx })
+}
+
+fn topup_base() -> Transaction {
+  honest().tx
+}
+
+test topup_accepts_an_input_holding_the_representative_asset() {
+  topup_over(with_input_token(topup_base(), representative(spent.cesr_aid, 1)))
+}
+
+test topup_refuses_an_input_holding_no_token() fail {
+  topup_over(
+    with_input_token(topup_base(), holding(Nothing, spent.cesr_aid, policy)),
+  )
+}
+
+test topup_refuses_an_input_holding_the_asset_of_another_state_policy() fail {
+  topup_over(
+    with_input_token(
+      topup_base(),
+      holding(OtherStatePolicy, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test topup_refuses_an_input_holding_the_asset_of_another_registry_name() fail {
+  topup_over(
+    with_input_token(
+      topup_base(),
+      holding(OtherRegistryName, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test topup_refuses_an_input_holding_the_asset_of_another_key() fail {
+  topup_over(
+    with_input_token(topup_base(), holding(OtherKey, spent.cesr_aid, policy)),
+  )
+}
+
+test topup_refuses_an_input_holding_two_of_the_representative_asset() fail {
+  topup_over(
+    with_input_token(topup_base(), holding(QuantityTwo, spent.cesr_aid, policy)),
+  )
+}
+
+test topup_accepts_a_successor_holding_the_representative_asset() {
+  topup_over(
+    with_successor_token(topup_base(), representative(spent.cesr_aid, 1)),
+  )
+}
+
+test topup_refuses_a_successor_holding_no_token() fail {
+  topup_over(
+    with_successor_token(topup_base(), holding(Nothing, spent.cesr_aid, policy)),
+  )
+}
+
+test topup_refuses_a_successor_holding_two_of_the_representative_asset() fail {
+  topup_over(
+    with_successor_token(
+      topup_base(),
+      holding(QuantityTwo, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test topup_refuses_a_successor_holding_the_asset_of_another_key() fail {
+  topup_over(
+    with_successor_token(
+      topup_base(),
+      holding(OtherKey, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test topup_refuses_a_successor_holding_the_asset_of_another_state_policy() fail {
+  topup_over(
+    with_successor_token(
+      topup_base(),
+      holding(OtherStatePolicy, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test topup_refuses_a_checkpoint_that_holds_only_the_retired_register_token() fail {
+  let retired = holding(RetiredRegisterToken, spent.cesr_aid, policy)
+  topup_over(
+    with_successor_token(with_input_token(topup_base(), retired), retired),
+  )
+}
+
+test topup_refuses_a_successor_at_a_staked_address() fail {
+  topup_over(with_successor_address(topup_base(), staked(policy)))
 }

@@ -15,6 +15,7 @@ use aiken/interval
 use cage_context.{input_at, min_ada, spend_context}
 use cardano/address.{Address, Inline, Script, VerificationKey, from_script}
 use cardano/assets.{PolicyId, from_asset, from_lovelace, merge}
+use cardano/script_context.{Minting, ScriptContext}
 use cardano/transaction.{
   InlineDatum, NoDatum, Output, OutputReference, Transaction,
 }
@@ -23,15 +24,10 @@ use cardano_keri/checkpoint/message.{deriveAidAssetName}
 use cardano_keri/checkpoint/retired_layout.{retired_layout}
 use cardano_keri/checkpoint/threshold.{Unweighted}
 use checkpoint_register
+use registry_fixture.{registry_name, representative, state_policy}
 
 const policy: PolicyId =
   #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
-
-const migration_hash: PolicyId =
-  #"dddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
-
-const lifecycle_hash: PolicyId =
-  #"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
 const advance_hash: PolicyId =
   #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -125,7 +121,9 @@ fn exit_tx() -> Transaction {
     spent_ref(),
     Output {
       address: from_script(policy),
-      value: from_lovelace(bonded) |> merge(from_asset(policy, aid_name, 1)),
+      value: from_lovelace(bonded)
+        |> merge(from_asset(policy, aid_name, 1))
+        |> merge(representative(tip().cesr_aid, 1)),
       datum: InlineDatum(retired_layout(tip())),
       reference_script: None,
     },
@@ -149,8 +147,8 @@ fn exit_tx() -> Transaction {
 
 fn run_spend(redeemer: Data, tx: Transaction) -> Bool {
   checkpoint_register.checkpoint_register.spend(
-    migration_hash,
-    lifecycle_hash,
+    state_policy(),
+    registry_name(),
     advance_hash,
     enforcement_hash,
     entitlement_hash,
@@ -166,9 +164,9 @@ fn run_spend(redeemer: Data, tx: Transaction) -> Bool {
 }
 
 fn run_mint(redeemer: Data, tx: Transaction) -> Bool {
-  checkpoint_register.checkpoint_register.mint(
-    migration_hash,
-    lifecycle_hash,
+  checkpoint_register.checkpoint_register.else(
+    state_policy(),
+    registry_name(),
     advance_hash,
     enforcement_hash,
     entitlement_hash,
@@ -176,9 +174,7 @@ fn run_mint(redeemer: Data, tx: Transaction) -> Bool {
     d_reg,
     freeze_bond,
     2_000_000,
-    redeemer,
-    policy,
-    tx,
+    ScriptContext { transaction: tx, redeemer, info: Minting(policy) },
   )
 }
 

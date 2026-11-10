@@ -18,7 +18,7 @@ use aiken/interval
 use aiken/primitive/bytearray
 use cage_context.{input_at, out_ref, spend_context}
 use cardano/address.{Script, from_script, from_verification_key}
-use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge, zero}
+use cardano/assets.{PolicyId, Value, from_lovelace, merge, zero}
 use cardano/transaction.{
   InlineDatum, NoDatum, Output, OutputReference, Transaction, Withdraw,
 }
@@ -33,6 +33,7 @@ use cardano_keri/checkpoint/observer.{
 }
 use cardano_keri/checkpoint/retired_layout.{retired_layout}
 use cardano_keri/checkpoint/threshold.{Unweighted}
+use registry_fixture.{representative}
 
 // ---------------------------------------------------------------------
 // The deployment
@@ -294,7 +295,7 @@ pub fn forged() -> AdvanceEvidence {
 // ---------------------------------------------------------------------
 
 pub fn token_value(lovelace: Int) -> Value {
-  from_lovelace(lovelace) |> merge(from_asset(policy, spent.aid_asset_name, 1))
+  from_lovelace(lovelace) |> merge(representative(spent.cesr_aid, 1))
 }
 
 pub fn paid(recipient: ByteArray, lovelace: Int) -> Output {

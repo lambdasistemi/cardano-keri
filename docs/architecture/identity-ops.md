@@ -67,7 +67,9 @@ dedicated Aiken policy performs that expensive check and mints a deterministic
 proof token. The token records one fact — *the supplied inception bytes have
 the supplied KERI AID* — and grants no identity authority.
 
-**2. Checkpoint mint.** The checkpoint transaction:
+**2. Checkpoint mint.** In the deployed generation the checkpoint transaction
+(the registry generation books, folds and returns instead, see
+[Register in a registry](../user/register-on-a-local-devnet.md)):
 
 1. uses the bare mint redeemer `Register`;
 2. includes a zero-lovelace withdrawal from the registration observer;

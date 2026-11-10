@@ -18,6 +18,7 @@ import Cardano.KERI.Deployment.Manifest (
     manifestValidationErrors,
     mkManifest,
  )
+import Cardano.KERI.Deployment.RegistryFixture (fixtureRegistry)
 import Cardano.KERI.Deployment.Script (
     Blueprint (..),
     ScriptArtifact (..),
@@ -60,7 +61,7 @@ spec :: Spec
 spec =
     aroundAll withArtifacts $ do
         describe "M1 V1 applied scripts" $ do
-            it "derives the exact five release names" $ \artifacts ->
+            it "derives the exact six release names" $ \artifacts ->
                 sort (map artifactName artifacts)
                     `shouldBe` sort
                         [ "checkpoint-register"
@@ -69,9 +70,6 @@ spec =
                         , "observer-enforcement"
                         , "observer-entitlement"
                         , "observer-lifecycle"
-                        , -- #254 A-001: the promoted migration observer is a
-                          -- v1 family component, published beside the M1 set.
-                          "observer-migration"
                         ]
             it "preserves the stock signed-reference transaction budget" $ \artifacts -> do
                 map (SBS.length . artifactProgram) artifacts
@@ -99,8 +97,11 @@ spec =
                 -- gains the TopUp arm, the registration's premium check and
                 -- the cleared-mark requirements (9_480 -> 10_370); the ceiling is
                 -- unchanged.
+                -- The checkpoint program recognises a checkpoint by the registry's
+                -- active token and no longer mints or migrates (10_370 -> 8_482);
+                -- the ceiling is unchanged.
                 programLength "observer-advance" artifacts `shouldBe` 15_710
-                programLength "checkpoint-register" artifacts `shouldBe` 10_370
+                programLength "checkpoint-register" artifacts `shouldBe` 8_482
         describe "M1 endpoint-board script" $ do
             -- Historical fact, not a live derivation: the M1 endpoint board
             -- was deployed 2026-07-29 compiled with aiken 1.1.21 (blueprint
@@ -292,7 +293,7 @@ withArtifacts action = do
     blueprint <-
         loadBlueprint path >>= either fail pure
     artifacts <-
-        either fail pure (deriveV1Scripts blueprint)
+        either fail pure (deriveV1Scripts fixtureRegistry blueprint)
     action artifacts
 
 programLength :: Text -> [ScriptArtifact] -> Int

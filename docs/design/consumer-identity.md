@@ -26,6 +26,11 @@ registry asset and the encoded AID key in its Active preimage. The active
 asset's policy is the registry's policy. These are the imported functions,
 not a second naming algorithm copied into KERI.
 
+The checkpoint validator recognises a checkpoint the same way: the spent input
+holds exactly one representative asset, the active asset of the validator's
+registry and the datum's identifier, and every successor holds that asset
+again; no arm of the validator mints or burns it.
+
 The consumer definitions live in `CardanoKeri.ConsumerIdentity`; their exact
 source identities and theorem statements are recorded in the repository's
 consumer bindings and theorem-story ledger. The preserved custody baseline is

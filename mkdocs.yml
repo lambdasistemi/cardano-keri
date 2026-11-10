@@ -94,6 +94,7 @@ nav:
       - Releases: user/releases.md
       - The M1 preprod deployment: user/m1-preprod-deployment.md
       - Register your identity: user/register-preprod-identity.md
+      - Register in a registry (book, fold, return): user/register-on-a-local-devnet.md
       - Rotate your identity: user/rotate-preprod-identity.md
       - Poison: user/poison.md
       - Close your identity checkpoint: user/close.md

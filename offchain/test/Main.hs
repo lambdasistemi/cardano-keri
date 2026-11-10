@@ -1,5 +1,6 @@
 module Main (main) where
 
+import Cardano.KERI.AID.ApplicationSpec qualified as ApplicationSpec
 import Cardano.KERI.AID.Blake3.CheckpointSpec qualified as CheckpointSpec
 import Cardano.KERI.AID.CESRSpec qualified as CESRSpec
 import Cardano.KERI.AID.Cage.MpfProofMirrorSpec qualified as MpfProofMirrorSpec
@@ -10,6 +11,7 @@ import Cardano.KERI.AID.Checkpoint.AdvanceSpec qualified as AdvanceSpec
 import Cardano.KERI.AID.Checkpoint.BountyCommitmentSpec qualified as BountyCommitmentSpec
 import Cardano.KERI.AID.Checkpoint.DatumSpec qualified as DatumSpec
 import Cardano.KERI.AID.Checkpoint.DatumV2Spec qualified as DatumV2Spec
+import Cardano.KERI.AID.Checkpoint.DeployedGenerationSpec qualified as DeployedGenerationSpec
 import Cardano.KERI.AID.Checkpoint.DepositSpec qualified as DepositSpec
 import Cardano.KERI.AID.Checkpoint.EnforcementSpec qualified as EnforcementSpec
 import Cardano.KERI.AID.Checkpoint.EntitlementSpec qualified as EntitlementSpec
@@ -25,12 +27,12 @@ import Cardano.KERI.AID.Checkpoint.TopUpSpec qualified as TopUpSpec
 import Cardano.KERI.AID.Checkpoint.ValueSpec qualified as ValueSpec
 import Cardano.KERI.AID.Checkpoint.WireSpec qualified as WireSpec
 import Cardano.KERI.AID.Ed25519Spec qualified as Ed25519Spec
-import Cardano.KERI.AID.Migration.CheckpointSpec qualified as MigrationCheckpointSpec
 import Cardano.KERI.AID.Migration.TypesSpec qualified as MigrationTypesSpec
 import Test.Hspec (hspec)
 
 main :: IO ()
 main = hspec $ do
+    ApplicationSpec.spec
     CheckpointSpec.spec
     Ed25519Spec.spec
     CESRSpec.spec
@@ -42,6 +44,7 @@ main = hspec $ do
     AdvanceSpec.spec
     DatumSpec.spec
     DatumV2Spec.spec
+    DeployedGenerationSpec.spec
     NineFieldDatumSpec.spec
     MessageSpec.spec
     Keri68OracleSpec.spec
@@ -57,4 +60,3 @@ main = hspec $ do
     ValueSpec.spec
     WireSpec.spec
     MigrationTypesSpec.spec
-    MigrationCheckpointSpec.spec

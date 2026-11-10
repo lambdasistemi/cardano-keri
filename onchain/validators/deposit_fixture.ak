@@ -42,6 +42,7 @@ use freeze_fixture.{
   keys_of, live, live_marked, mc, network_id, paid, parts, policy, premium,
   rotated, rotation, spent, spent_ref, token_value, unevidenced, unit, v2_data,
 }
+use registry_fixture.{active_name_of_key, state_policy}
 
 /// A deposit or keep Advance ready to run: the applied network, the spent
 /// output, the spend redeemer, the observer's envelope and the transaction.
@@ -91,8 +92,9 @@ fn unread_payload() -> Data {
   builtin.i_data(0)
 }
 
-const vector_asset: ByteArray =
-  #"a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5"
+fn vector_asset(f: vec.Facts) -> ByteArray {
+  active_name_of_key(f.aid)
+}
 
 fn vector_spent_keys() -> KeyMaterial {
   KeyMaterial {
@@ -183,7 +185,7 @@ pub fn vector_case(
     Output {
       address: from_script(f.policy),
       value: from_lovelace(spent_floor(s) + s.pool)
-        |> merge(from_asset(f.policy, vector_asset, 1)),
+        |> merge(from_asset(state_policy(), vector_asset(f), 1)),
       datum: InlineDatum(v2_data(vector_old(s, f))),
       reference_script: None,
     },
@@ -191,7 +193,7 @@ pub fn vector_case(
   let successor = Output {
     address: from_script(f.policy),
     value: from_lovelace(successor_value(s.pool))
-      |> merge(from_asset(f.policy, vector_asset, 1)),
+      |> merge(from_asset(state_policy(), vector_asset(f), 1)),
     datum: InlineDatum(v2_data(vector_new(s, f, new_sn, threshold))),
     reference_script: None,
   }

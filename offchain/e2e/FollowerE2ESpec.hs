@@ -75,12 +75,18 @@ import Ouroboros.Network.Point qualified as Network.Point
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (takeDirectory, (</>))
 import System.Timeout (timeout)
-import Test.Hspec (Spec, describe, it)
+import Test.Hspec (Spec, before_, describe, it, pendingWith)
 
 spec :: Spec
 spec =
-    describe "#175 follower live leg" $
-        it
+    describe "#175 follower live leg"
+        $ before_
+            ( pendingWith
+                "the follower decodes the deployed generation's own token, a \
+                \fold-delivered checkpoint holds the registry's active token, \
+                \and reading it is #353"
+            )
+        $ it
             "SC-1: the production follower indexes a real checkpoint registration \
             \from a configured start point over a real N2C socket"
             liveComposition

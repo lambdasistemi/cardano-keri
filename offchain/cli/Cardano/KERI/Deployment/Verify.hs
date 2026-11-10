@@ -44,8 +44,7 @@ import Cardano.KERI.Deployment.Manifest (
  )
 import Cardano.KERI.Deployment.Script (
     ScriptArtifact (..),
-    deriveV1Scripts,
-    loadBlueprint,
+    registryAwareDeploymentRefusal,
  )
 import Control.Monad (forM_, unless)
 import Data.Char (isHexDigit)
@@ -191,9 +190,7 @@ runBoardList settings = do
     putStr (T.unpack $ renderBoardCatalog entries)
 
 loadArtifacts :: FilePath -> IO [ScriptArtifact]
-loadArtifacts path = do
-    blueprint <- loadBlueprint path >>= either fail pure
-    either fail pure (deriveV1Scripts blueprint)
+loadArtifacts _ = fail registryAwareDeploymentRefusal
 
 verifySourceTree :: FilePath -> Text -> IO ()
 verifySourceTree repository commit = do

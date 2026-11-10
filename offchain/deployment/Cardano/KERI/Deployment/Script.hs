@@ -12,6 +12,8 @@ the resulting 'ScriptArtifact's.
 -}
 module Cardano.KERI.Deployment.Script (
     Blueprint (..),
+    RegistryIdentity (..),
+    registryAwareDeploymentRefusal,
     Validator (..),
     ScriptArtifact (..),
     loadBlueprint,
@@ -38,7 +40,14 @@ module Cardano.KERI.Deployment.Script (
     deriveBoardScript,
     deriveBoardV0Script,
     deriveBoardTargetScript,
+    CheckpointTerms (..),
+    deployedCheckpointTerms,
+    Observers (..),
+    deriveObserverScripts,
+    deriveCheckpointScript,
+    observerArtifacts,
     deriveV1Scripts,
+    requireValidator,
     boardAddress,
     checkpointAddress,
     scriptHashBytes,
@@ -51,6 +60,7 @@ module Cardano.KERI.Deployment.Script (
 ) where
 
 import Cardano.Crypto.Hash (hashToBytes)
+import Cardano.KERI.AID.Application (RegistryIdentity (..))
 import Cardano.KERI.AID.Checkpoint.BountyCommitment (
     CommitmentFamily (..),
     CommitmentParameters (..),
@@ -250,6 +260,13 @@ mkAppliedArtifact name role validator plan program
     declared = length (vParameters validator)
     supplied = length plan
 
+{- | What a command says when it would need the checkpoint validator's artifact
+and has no registry to apply it to.
+-}
+registryAwareDeploymentRefusal :: String
+registryAwareDeploymentRefusal =
+    "the checkpoint validator is applied to a registry; registry-aware deployment is #356"
+
 {- | The one lineage input a #254 successor board program takes: the single
 predecessor minting policy it accepts.  Release identity is the resulting
 hash, so no generation integer is applied.
@@ -258,19 +275,14 @@ applyPredecessorParam :: ByteString -> [Data]
 applyPredecessorParam predecessorPolicy =
     [B predecessorPolicy]
 
-{- | The exact argument plan the combined register is applied to.
-
-There is no version argument.  @checkpoint_register@ declares no version
-parameter, so the integer this plan used to lead with occupied the slot the
-ledger fills with the script context (#254 A-007).  After A-002 the plan is
-nine arguments: the five sibling observer hashes (migration, lifecycle,
-advance, enforcement, entitlement) then the four deployment integers (network,
-registration bond, freeze bond, premium).  The
-constructor still fails closed on declared-vs-supplied arity.
+{- | The exact argument plan the checkpoint validator is applied to: the registry's
+state policy and name, the three observer hashes it asks (advance, enforcement,
+entitlement), then the four deployment integers (network, registration bond,
+freeze bond, premium). The constructor still fails closed on declared-vs-supplied
+arity.
 -}
 applyCheckpointParams ::
-    ByteString ->
-    ByteString ->
+    RegistryIdentity ->
     ByteString ->
     ByteString ->
     ByteString ->
@@ -279,9 +291,9 @@ applyCheckpointParams ::
     Integer ->
     Integer ->
     [Data]
-applyCheckpointParams migrationHash lifecycleHash advanceHash enforcementHash entitlementHash network registrationBond freezeBond premium =
-    [ B migrationHash
-    , B lifecycleHash
+applyCheckpointParams registry advanceHash enforcementHash entitlementHash network registrationBond freezeBond premium =
+    [ B (registryStatePolicy registry)
+    , B (registryName registry)
     , B advanceHash
     , B enforcementHash
     , B entitlementHash
@@ -441,8 +453,63 @@ deriveCommitmentFamily blueprint = do
             , cfParameters = v1CommitmentParameters
             }
 
-deriveV1Scripts :: Blueprint -> Either String [ScriptArtifact]
-deriveV1Scripts blueprint = do
+{- | The four deployment integers the checkpoint validator and the registration
+observer are applied with: the network, the deposit (the registration bond), the
+freeze bond and the premium.
+-}
+data CheckpointTerms = CheckpointTerms
+    { termsNetwork :: !Integer
+    , termsDeposit :: !Integer
+    , termsFreezeBond :: !Integer
+    , termsPremium :: !Integer
+    }
+    deriving stock (Eq, Show)
+
+-- | The terms of the deployed M1 generation.
+deployedCheckpointTerms :: CheckpointTerms
+deployedCheckpointTerms =
+    CheckpointTerms
+        { termsNetwork = v1NetworkDiscriminator
+        , termsDeposit = v1RegistrationBond
+        , termsFreezeBond = v1FreezeBond
+        , termsPremium = v1Premium
+        }
+
+{- | The scripts a checkpoint validator is applied to: the registration proof
+policy and the four observers. None of them depends on a registry.
+-}
+data Observers = Observers
+    { observerHashProof :: !ScriptArtifact
+    , observerLifecycle :: !ScriptArtifact
+    , observerAdvance :: !ScriptArtifact
+    , observerEnforcement :: !ScriptArtifact
+    , observerEntitlement :: !ScriptArtifact
+    }
+    deriving stock (Eq, Show)
+
+-- | The artifacts of the observers, in the order a manifest lists them.
+observerArtifacts :: Observers -> [ScriptArtifact]
+observerArtifacts Observers{..} =
+    [ observerHashProof
+    , observerLifecycle
+    , observerAdvance
+    , observerEnforcement
+    , observerEntitlement
+    ]
+
+-- | A validator of the blueprint with its compiled program, by exact title.
+requireValidator ::
+    Blueprint -> Text -> Text -> Either String (Validator, SBS.ShortByteString)
+requireValidator blueprint title name =
+    maybe
+        (Left $ T.unpack name <> " compiled code not found in production blueprint")
+        Right
+        (extractValidatorExact title blueprint)
+
+-- | Apply the registration proof policy and the observers to the terms.
+deriveObserverScripts ::
+    CheckpointTerms -> Blueprint -> Either String Observers
+deriveObserverScripts terms blueprint = do
     (hashProofValidator, hashProofProgram) <-
         require "hash_proof.hash_proof.mint" "hash-proof"
     hashProof <-
@@ -465,10 +532,9 @@ deriveV1Scripts blueprint = do
             ( applyLifecycleParams
                 v1CheckpointVersion
                 (scriptHashBytes hashProofHash)
-                v1RegistrationBond
+                (termsDeposit terms)
             )
             lifecycleProgram
-    let lifecycleHash = artifactScriptHash lifecycle
     (advanceValidator, advanceProgram) <-
         require
             "checkpoint_observer.observer_advance.withdraw"
@@ -480,7 +546,6 @@ deriveV1Scripts blueprint = do
             advanceValidator
             (applyAdvanceParams v1CheckpointVersion)
             advanceProgram
-    let advanceHash = artifactScriptHash advance
     (enforcementValidator, enforcementProgram) <-
         require
             "checkpoint_observer.observer_enforcement.withdraw"
@@ -510,62 +575,60 @@ deriveV1Scripts blueprint = do
             entitlementValidator
             familyPlan
             entitlementProgram
-    let enforcementHash = artifactScriptHash enforcement
-        entitlementHash = artifactScriptHash entitlement
-    -- #254 A-001: the promoted migration observer, derived as a v1 family
-    -- component and applied to the checkpoint program by hash.  Its
-    -- predecessor pin is an applied parameter, never a redeemer field.
-    (migrationValidator, migrationProgram) <-
-        require
-            "checkpoint_observer.observer_migration.withdraw"
-            "observer-migration"
-    -- The migration observer takes no applied parameter: the source generation
-    -- is the one whose program asks, so its own hash is its release identity.
-    migration <-
-        mkAppliedArtifact
-            "observer-migration"
-            "withdrawal-observer"
-            migrationValidator
-            []
-            migrationProgram
-    let migrationHash = artifactScriptHash migration
-    (checkpointValidator, checkpointProgram) <-
-        require
-            "checkpoint_register.checkpoint_register.mint"
-            "checkpoint-register"
-    let appliedCheckpoint =
-            mkAppliedArtifact
-                "checkpoint-register"
-                "validator-and-minting-policy"
-                checkpointValidator
-                ( applyCheckpointParams
-                    (scriptHashBytes migrationHash)
-                    (scriptHashBytes lifecycleHash)
-                    (scriptHashBytes advanceHash)
-                    (scriptHashBytes enforcementHash)
-                    (scriptHashBytes entitlementHash)
-                    v1NetworkDiscriminator
-                    v1RegistrationBond
-                    v1FreezeBond
-                    v1Premium
-                )
-                checkpointProgram
-    checkpoint <- appliedCheckpoint
     pure
-        [ hashProof
-        , lifecycle
-        , advance
-        , enforcement
-        , entitlement
-        , migration
-        , checkpoint
-        ]
+        Observers
+            { observerHashProof = hashProof
+            , observerLifecycle = lifecycle
+            , observerAdvance = advance
+            , observerEnforcement = enforcement
+            , observerEntitlement = entitlement
+            }
   where
-    require title name =
-        maybe
-            (Left $ T.unpack name <> " compiled code not found in production blueprint")
-            Right
-            (extractValidatorExact title blueprint)
+    require = requireValidator blueprint
+
+-- | Apply the checkpoint validator to a registry, the observers and the terms.
+deriveCheckpointScript ::
+    CheckpointTerms ->
+    RegistryIdentity ->
+    Observers ->
+    Blueprint ->
+    Either String ScriptArtifact
+deriveCheckpointScript terms registry observers blueprint = do
+    (checkpointValidator, checkpointProgram) <-
+        requireValidator
+            blueprint
+            "checkpoint_register.checkpoint_register.spend"
+            "checkpoint-register"
+    mkAppliedArtifact
+        "checkpoint-register"
+        "validator-and-minting-policy"
+        checkpointValidator
+        ( applyCheckpointParams
+            registry
+            (scriptHashBytes (artifactScriptHash (observerAdvance observers)))
+            (scriptHashBytes (artifactScriptHash (observerEnforcement observers)))
+            (scriptHashBytes (artifactScriptHash (observerEntitlement observers)))
+            (termsNetwork terms)
+            (termsDeposit terms)
+            (termsFreezeBond terms)
+            (termsPremium terms)
+        )
+        checkpointProgram
+
+{- | The scripts of the deployed generation's terms applied to a registry: the
+observers and the checkpoint validator.
+-}
+deriveV1Scripts ::
+    RegistryIdentity -> Blueprint -> Either String [ScriptArtifact]
+deriveV1Scripts registry blueprint = do
+    observers <- deriveObserverScripts deployedCheckpointTerms blueprint
+    checkpoint <-
+        deriveCheckpointScript
+            deployedCheckpointTerms
+            registry
+            observers
+            blueprint
+    pure (observerArtifacts observers <> [checkpoint])
 
 {- | Derive the endpoint-board successor applied to its accepted predecessor.
 

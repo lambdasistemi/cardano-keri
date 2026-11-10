@@ -174,14 +174,15 @@ use checkpoint_observer
 use checkpoint_register
 use freeze_fixture.{
   Freeze, advance_hash, corpus_freeze, corpus_freeze_pending, d_reg,
-  enforcement_hash, entitlement_hash, freeze_bond, freeze_redeemer,
-  lifecycle_hash, migration_hash, network_id, premium, spent_ref,
+  enforcement_hash, entitlement_hash, freeze_bond, freeze_redeemer, network_id,
+  premium, spent_ref,
 }
+use registry_fixture.{registry_name, state_policy}
 
 fn run_spend(redeemer: Data, tx: Transaction) -> Bool {
   checkpoint_register.checkpoint_register.spend(
-    migration_hash,
-    lifecycle_hash,
+    state_policy(),
+    registry_name(),
     advance_hash,
     enforcement_hash,
     entitlement_hash,

@@ -112,7 +112,11 @@ Set `KOIOS_TOKEN` when authenticated Koios access is available. It is optional:
 anonymous status and settlement polling remain available to third parties.
 The token is read through `opt-env-conf` and is never printed in diagnostics.
 
-`register` first mints a one-shot hash proof, waits for that exact asset and
+`register` builds the registration of the deployed preprod generation until the
+preprod deployment of the registry generation
+([#356](https://github.com/lambdasistemi/cardano-keri/issues/356)); registration in a
+registry is described in [book, fold and return](register-on-a-local-devnet.md).
+It first mints a one-shot hash proof, waits for that exact asset and
 transaction, then burns it while minting the AID checkpoint token. `status`
 queries that exact token and fails closed unless the address, singleton
 quantity, inline V1 datum, AID, and 1,007 tADA escrow all agree.

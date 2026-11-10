@@ -21,7 +21,7 @@ use cardano_keri/checkpoint/datum.{
   CheckpointDatumV2, KeyMaterial, TerminationPending,
 }
 use cardano_keri/checkpoint/freeze_vectors as vec
-use cardano_keri/checkpoint/message.{deriveAidAssetName, qb64_aid}
+use cardano_keri/checkpoint/message.{qb64_aid}
 use cardano_keri/checkpoint/observer.{
   ObserverClaim, ObserverEnvelope, observe_freeze,
 }
@@ -32,18 +32,23 @@ use freeze_fixture.{
   enforcement_hash, entitlement_hash, envelope, envelope_with, floor_frozen,
   floor_unfrozen, forged, freeze_bond, freeze_redeemer, freeze_tag, freeze_tx,
   from_parts, honest_case, honest_envelope, honest_tx, hunter_pkh, into_case,
-  lifecycle_hash, live, mc, migration_hash, network_id, observing_case,
-  other_hunter_pkh, paid, parts, paying_case, pending_data, policy, premium,
-  rotated, rotation, spending_case, spent, spent_keys, spent_ref, token_value,
-  under_receipted, under_signed, unevidenced, unit, v1_data, v2_data,
+  live, mc, migration_hash, network_id, observing_case, other_hunter_pkh, paid,
+  parts, paying_case, pending_data, policy, premium, rotated, rotation,
+  spending_case, spent, spent_keys, spent_ref, token_value, under_receipted,
+  under_signed, unevidenced, unit, v1_data, v2_data,
+}
+use registry_fixture.{
+  Nothing, OtherKey, OtherRegistryName, OtherStatePolicy, QuantityTwo,
+  RetiredRegisterToken, holding, registry_name, representative, staked,
+  state_policy, with_input_token, with_successor_address, with_successor_token,
 }
 
 // The validators are called here: a fixture module cannot import them.
 
 fn run_spend(redeemer: Data, tx: Transaction) -> Bool {
   checkpoint_register.checkpoint_register.spend(
-    migration_hash,
-    lifecycle_hash,
+    state_policy(),
+    registry_name(),
     advance_hash,
     enforcement_hash,
     entitlement_hash,
@@ -696,10 +701,7 @@ test freeze_refuses_a_successor_with_a_second_token() fail {
       outputs: [
         Output {
           ..successor,
-          value: merge(
-            successor.value,
-            from_asset(policy, deriveAidAssetName(#"00"), 1),
-          ),
+          value: merge(successor.value, representative(#"00", 1)),
         },
         hunter,
       ],
@@ -762,7 +764,7 @@ test freeze_refuses_a_mint_under_the_policy() fail {
   run_freeze(
     1,
     honest_envelope(),
-    Transaction { ..tx, mint: from_asset(policy, spent.aid_asset_name, 1) },
+    Transaction { ..tx, mint: representative(spent.cesr_aid, 1) },
   )
 }
 
@@ -771,7 +773,7 @@ test freeze_refuses_a_burn_under_the_policy() fail {
   run_freeze(
     1,
     honest_envelope(),
-    Transaction { ..tx, mint: from_asset(policy, spent.aid_asset_name, -1) },
+    Transaction { ..tx, mint: representative(spent.cesr_aid, -1) },
   )
 }
 
@@ -792,4 +794,115 @@ test advance_refuses_the_freeze_action_tag() fail {
   // An Advance redeemer beside an observer envelope tagged as a freeze.
   let tx = honest_tx(1_000_000)
   run_spend(advance_redeemer(1), tx)
+}
+
+// ---------------------------------------------------------------------
+// freeze: a checkpoint is recognised by the representative asset of its AID
+// (Lean `representativeAsset`) and its successor holds the same asset, once
+// ---------------------------------------------------------------------
+
+fn freeze_over(tx: Transaction) -> Bool {
+  run_freeze(1, honest_envelope(), tx)
+}
+
+fn freeze_base() -> Transaction {
+  honest_tx(1_000_000)
+}
+
+test freeze_accepts_an_input_holding_the_representative_asset() {
+  freeze_over(
+    with_input_token(freeze_base(), representative(spent.cesr_aid, 1)),
+  )
+}
+
+test freeze_refuses_an_input_holding_no_token() fail {
+  freeze_over(
+    with_input_token(freeze_base(), holding(Nothing, spent.cesr_aid, policy)),
+  )
+}
+
+test freeze_refuses_an_input_holding_the_asset_of_another_state_policy() fail {
+  freeze_over(
+    with_input_token(
+      freeze_base(),
+      holding(OtherStatePolicy, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test freeze_refuses_an_input_holding_the_asset_of_another_registry_name() fail {
+  freeze_over(
+    with_input_token(
+      freeze_base(),
+      holding(OtherRegistryName, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test freeze_refuses_an_input_holding_the_asset_of_another_key() fail {
+  freeze_over(
+    with_input_token(freeze_base(), holding(OtherKey, spent.cesr_aid, policy)),
+  )
+}
+
+test freeze_refuses_an_input_holding_two_of_the_representative_asset() fail {
+  freeze_over(
+    with_input_token(
+      freeze_base(),
+      holding(QuantityTwo, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test freeze_accepts_a_successor_holding_the_representative_asset() {
+  freeze_over(
+    with_successor_token(freeze_base(), representative(spent.cesr_aid, 1)),
+  )
+}
+
+test freeze_refuses_a_successor_holding_no_token() fail {
+  freeze_over(
+    with_successor_token(
+      freeze_base(),
+      holding(Nothing, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test freeze_refuses_a_successor_holding_two_of_the_representative_asset() fail {
+  freeze_over(
+    with_successor_token(
+      freeze_base(),
+      holding(QuantityTwo, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test freeze_refuses_a_successor_holding_the_asset_of_another_key() fail {
+  freeze_over(
+    with_successor_token(
+      freeze_base(),
+      holding(OtherKey, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test freeze_refuses_a_successor_holding_the_asset_of_another_state_policy() fail {
+  freeze_over(
+    with_successor_token(
+      freeze_base(),
+      holding(OtherStatePolicy, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test freeze_refuses_a_checkpoint_that_holds_only_the_retired_register_token() fail {
+  let retired = holding(RetiredRegisterToken, spent.cesr_aid, policy)
+  freeze_over(
+    with_successor_token(with_input_token(freeze_base(), retired), retired),
+  )
+}
+
+test freeze_refuses_a_successor_at_a_staked_address() fail {
+  freeze_over(with_successor_address(freeze_base(), staked(policy)))
 }

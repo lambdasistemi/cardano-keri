@@ -166,8 +166,8 @@ import Cardano.KERI.Deployment.Registration qualified as Registration
 import Cardano.KERI.Deployment.Script (
     ScriptArtifact (..),
     deriveBoardV0Script,
-    deriveV1Scripts,
     loadBlueprint,
+    registryAwareDeploymentRefusal,
  )
 import Cardano.KERI.Deployment.TopUp (
     checkTopUpPackage,
@@ -2615,9 +2615,7 @@ runDeployWith openLocalScope openLiveContext settings = do
     putStrLn ("manifest: " <> deployOut settings)
 
 loadArtifacts :: FilePath -> IO [ScriptArtifact]
-loadArtifacts path = do
-    blueprint <- loadBlueprint path >>= either fail pure
-    either fail pure (deriveV1Scripts blueprint)
+loadArtifacts _ = fail registryAwareDeploymentRefusal
 
 verifySourceTree :: FilePath -> Text -> IO ()
 verifySourceTree repository commit = do

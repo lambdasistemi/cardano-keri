@@ -51,7 +51,7 @@ const fieldTakenFromSuccessor = (field) => {
   return `  expect InlineDatum(successor_data) = state_output.datum\n  expect Live { ${field}: successor_${field}, .. } = datum.read(successor_data)\n  expect successor_data == datum.write(Live { ${rebuilt} })\n`;
 };
 
-const VALUE_EXACT = '  state_output.value == (\n    from_lovelace(held) |> merge(from_asset(own_hash, aid_name, 1))\n  )\n}';
+const VALUE_EXACT = '  state_output.value == (\n    from_lovelace(held) |> merge(from_asset(registry.policy, aid_name, 1))\n  )\n}';
 
 // The Lean's premises first, then the facts the validator also checks.
 const mutants = [
@@ -66,16 +66,14 @@ const mutants = [
     from: DATUM_EXACT,
     to: fieldTakenFromSuccessor(f),
   })),
-  { name: 'successor-value-at-least', premise: 'the successor holds exactly the pool and the amount (not more)', file: REGISTER, from: VALUE_EXACT, to: '  lovelace_of(state_output.value) >= held && quantity_of(state_output.value, own_hash, aid_name) == 1\n}' },
-  { name: 'successor-value-at-most', premise: 'the successor holds exactly the pool and the amount (not less)', file: REGISTER, from: VALUE_EXACT, to: '  lovelace_of(state_output.value) <= held && quantity_of(state_output.value, own_hash, aid_name) == 1\n}' },
-  { name: 'successor-value-no-extra-asset', premise: 'the successor holds nothing but lovelace and the token', file: REGISTER, from: VALUE_EXACT, to: '  lovelace_of(state_output.value) == held && quantity_of(state_output.value, own_hash, aid_name) == 1\n}' },
+  { name: 'successor-value-at-least', premise: 'the successor holds exactly the pool and the amount (not more)', file: REGISTER, from: VALUE_EXACT, to: '  lovelace_of(state_output.value) >= held && quantity_of(state_output.value, registry.policy, aid_name) == 1\n}' },
+  { name: 'successor-value-at-most', premise: 'the successor holds exactly the pool and the amount (not less)', file: REGISTER, from: VALUE_EXACT, to: '  lovelace_of(state_output.value) <= held && quantity_of(state_output.value, registry.policy, aid_name) == 1\n}' },
+  { name: 'successor-value-no-extra-asset', premise: 'the successor holds nothing but lovelace and the token', file: REGISTER, from: VALUE_EXACT, to: '  lovelace_of(state_output.value) == held && quantity_of(state_output.value, registry.policy, aid_name) == 1\n}' },
   { name: 'successor-value-adds-the-amount', premise: 'the pool grows by the redeemer amount', file: REGISTER, from: '    marked,\n    pool + amount,\n  )', to: '    marked,\n    pool + premium,\n  )' },
-  { name: 'mints-nothing', premise: 'a top-up mints and burns nothing', file: REGISTER, from: '  expect dict.to_pairs(tokens(mint, own_hash)) == []\n  expect\n    list.length(', to: '  expect\n    list.length(' },
+  { name: 'mints-nothing', premise: 'a top-up mints and burns nothing', file: REGISTER, from: '  expect quantity_of(mint, registry.policy, aid_name) == 0\n  expect\n    list.length(', to: '  expect\n    list.length(' },
   { name: 'one-checkpoint-input', premise: 'one checkpoint input', file: REGISTER, from: '  expect\n    list.length(\n      list.filter(\n        inputs,\n        fn(input) {\n          input.output.address.payment_credential == Script(own_hash)\n        },\n      ),\n    ) == 1\n  let marked', to: '  let marked' },
   { name: 'one-checkpoint-output', premise: 'one checkpoint successor', file: REGISTER, from: '  expect [state_output] = list.filter(\n    outputs,\n    fn(output) { output.address == from_script(own_hash) },\n  )\n  expect state_output.datum == InlineDatum(datum.write(marked))', to: '  expect [state_output, ..] = list.filter(\n    outputs,\n    fn(output) { output.address == from_script(own_hash) },\n  )\n  expect state_output.datum == InlineDatum(datum.write(marked))' },
   { name: 'active-address', premise: 'the spent output is at the active checkpoint address', file: REGISTER, from: '  expect Script(own_hash) = own_input.output.address.payment_credential\n  expect own_input.output.address == role.address(own_hash, Active)\n  expect InlineDatum(old_data) = own_input.output.datum\n  let old = datum.read(old_data)\n  expect  \n      Live {\n        aid,\n        sn,\n        epoch,\n        poisoned,\n        frozen,\n        born_at,\n        refund_to,\n        topped_up: False,', to: '  expect Script(own_hash) = own_input.output.address.payment_credential\n  expect InlineDatum(old_data) = own_input.output.datum\n  let old = datum.read(old_data)\n  expect  \n      Live {\n        aid,\n        sn,\n        epoch,\n        poisoned,\n        frozen,\n        born_at,\n        refund_to,\n        topped_up: False,' },
-  { name: 'register-first-pool', premise: 'p.P <= pool0 (registration)', file: REGISTER, from: '  expect premium <= pool0\n', to: '  expect 0 <= pool0\n' },
-  { name: 'register-mark-clear', premise: 'the registered state has toppedUp = false', file: REGISTER, from: '        refund_to,\n        topped_up: False,\n        ..\n      }\n    = datum.read(datum_data)', to: '        refund_to,\n        topped_up: _,\n        ..\n      }\n    = datum.read(datum_data)' },
   { name: 'rotation-clears-mark', premise: 'every rotation sets toppedUp := false', file: REGISTER, from: '        topped_up: False,\n        keys: new_keys,\n        ..', to: '        topped_up: _,\n        keys: new_keys,\n        ..' },
   { name: 'freeze-keeps-mark', premise: 'a freeze leaves toppedUp as it was', file: REGISTER, from: '    refund_to,\n    topped_up,\n    keys,\n  }\n  expect [state_output]', to: '    refund_to,\n    topped_up: False,\n    keys,\n  }\n  expect [state_output]' },
 ];

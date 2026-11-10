@@ -11,29 +11,43 @@
 //// transaction: a booking at exactly the observer's deposit floor, folded into a
 //// holding the observer attests.
 
+use aiken/builtin
 use aiken/collection/list
-use aiken/primitive/bytearray
-use cardano/address.{Script, VerificationKey, from_verification_key}
-use cardano/assets.{add, from_lovelace}
-use cardano/transaction.{Input, NoDatum, Output, Transaction}
+use cardano/address.{Script, from_verification_key}
+use cardano/assets.{Value, from_asset, from_lovelace, lovelace_of, merge}
+use cardano/transaction.{
+  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, Withdraw,
+  placeholder,
+}
 use cardano_keri/application/action.{
   Action, FoldRegistration, ReturnRegistration, SpendAction,
 }
 use cardano_keri/application/configuration_vectors as cfg
 use cardano_keri/application/held.{RegistrationData}
 use cardano_keri/application/row_vectors as rows
-use cardano_keri/checkpoint/datum.{KeyMaterial, KeyStateView, Live}
-use cardano_keri/checkpoint/message.{qb64_aid}
-use cardano_keri/checkpoint/observer.{ObserverClaim, observe_register}
-use cardano_keri/checkpoint/registration.{proof_token_name}
+use cardano_keri/checkpoint/datum.{CheckpointDatumV2, Live}
+use cardano_keri/checkpoint/observer.{
+  ObserverClaim, ObserverEnvelope, observe_advance, observe_register,
+}
 use cardano_keri/checkpoint/registration_vectors as vec
 use checkpoint_observer
+use checkpoint_register
+use freeze_fixture.{
+  advance_hash, advance_redeemer, enforcement_hash, entitlement_hash, hunter_pkh,
+  network_id,
+}
 use keri_application
+use keri_application_connected.{
+  booking_floor, checkpoint_min_ada, connected_fold, connected_request, d_reg,
+  floor, freeze_bond, hash_proof_policy, observer_floor, premium,
+}
 use keri_application_fixture.{creation, genesis, keri, template_input}
 use keri_application_requests.{
   Booking, Fold, application, booking, booking_tx, checkpoint_hash, envelope,
-  fold, fold_tx, reference, return_tx, returned,
+  fold, fold_tx, holding_output, reference, return_tx, returned,
 }
+use registry_fixture.{active_name_of_key, registry_name, state_policy}
+use topup_fixture.{topup_redeemer}
 
 fn run_mint(
   minimum_deposit: Int,
@@ -122,115 +136,6 @@ test measure_return() {
 }
 
 // ---- the application beside the real observer -------------------------------------------
-
-const hash_proof_policy: ByteArray =
-  #"4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a"
-
-/// The deployment of the connected scenario: the checkpoint program's own numbers
-/// (`d_reg`, the freeze bond, the premium, the minimum ADA). The observer asks a
-/// holding to hold at least the minimum ADA and the deposit; a fold delivers a
-/// register carrier: that and the freeze bond and one premium. A booking commits
-/// at least the registry's minimum ADA and deposit, which is the checkpoint
-/// deposit and the freeze bond.
-const d_reg: Int = 1_000_000_000
-
-const freeze_bond: Int = 5_000_000
-
-const premium: Int = 2_000_000
-
-const checkpoint_min_ada: Int = 2_000_000
-
-const observer_floor: Int = 1_002_000_000
-
-const booking_floor: Int = 1_007_000_000
-
-const floor: Int = 1_009_000_000
-
-fn live_datum() -> Data {
-  let d = vec.pos_2key_datum
-  datum.write(
-    Live {
-      aid: qb64_aid(d.cesr_aid),
-      sn: 0,
-      epoch: 0,
-      poisoned: False,
-      frozen: False,
-      born_at: 10,
-      refund_to: bytearray.push(refund_hash(), 96),
-      topped_up: False,
-      keys: keys_of(d),
-    },
-  )
-}
-
-fn refund_hash() -> ByteArray {
-  when rows.refund_address.payment_credential is {
-    VerificationKey(hash) -> hash
-    Script(hash) -> hash
-  }
-}
-
-fn keys_of(d: KeyStateView) -> KeyMaterial {
-  KeyMaterial {
-    cur_keys: d.cur_keys,
-    cur_threshold: d.cur_threshold,
-    next_keys: d.next_keys,
-    next_threshold: d.next_threshold,
-    witnesses: d.witnesses,
-    toad: d.toad,
-  }
-}
-
-fn as_data(value: Data) -> Data {
-  value
-}
-
-/// The request of the connected scenario: the AID of the observer's inception
-/// vector, committing the datum the observer attests and a deposit at the floor.
-fn connected_request() -> RegistrationData {
-  RegistrationData {
-    ..rows.request_data(9001),
-    key: qb64_aid(vec.pos_2key_datum.cesr_aid),
-    initial_datum: live_datum(),
-    deposit: floor,
-  }
-}
-
-fn proof_name() -> ByteArray {
-  proof_token_name(
-    vec.pos_2key_evidence.event_bytes,
-    vec.pos_2key_datum.cesr_aid,
-  )
-}
-
-fn connected_fold(burn_proof: Bool) -> Fold {
-  let data = connected_request()
-  let proof_input = Input {
-    output_reference: reference(90),
-    output: Output {
-      address: from_verification_key(
-        #"0bee0bee0bee0bee0bee0bee0bee0bee0bee0bee0bee0bee0bee0bee",
-      ),
-      value: add(from_lovelace(2_000_000), hash_proof_policy, proof_name(), 1),
-      datum: NoDatum,
-      reference_script: None,
-    },
-  }
-  Fold {
-    ..fold(),
-    data,
-    request_lovelace: floor + cfg.registration_cost + cfg.minimum_tip,
-    holding_lovelace: floor,
-    holding_datum: live_datum(),
-    payload: as_data(vec.pos_2key_evidence),
-    extra_inputs: [proof_input],
-    extra_mint: if burn_proof {
-      [(hash_proof_policy, proof_name(), -1)]
-    } else {
-      []
-    },
-  }
-}
 
 fn observer_accepts(tx: Transaction) -> Bool {
   let claim = ObserverClaim {
@@ -345,4 +250,208 @@ test measure_genesis() {
     application(),
     tx,
   )
+}
+
+// ---- the checkpoint validator over what a fold delivers -----------------------------------
+
+fn run_checkpoint_spend(
+  redeemer: Data,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  checkpoint_register.checkpoint_register.spend(
+    state_policy(),
+    registry_name(),
+    advance_hash,
+    enforcement_hash,
+    entitlement_hash,
+    network_id,
+    d_reg,
+    freeze_bond,
+    premium,
+    None,
+    redeemer,
+    own_ref,
+    tx,
+  )
+}
+
+// ---------------------------------------------------------------------
+// The output a fold delivers
+// ---------------------------------------------------------------------
+
+fn delivered_ref() -> OutputReference {
+  OutputReference { transaction_id: #"71", output_index: 71 }
+}
+
+fn delivered_input(output: Output) -> Input {
+  Input { output_reference: delivered_ref(), output }
+}
+
+fn delivered() -> Output {
+  holding_output(connected_fold(True))
+}
+
+fn delivered_live(output: Output) -> CheckpointDatumV2 {
+  expect InlineDatum(data) = output.datum
+  datum.read(data)
+}
+
+/// An Advance of the checkpoint `output`: the successor is the delivered datum
+/// one sequence number and one epoch later, holding what a live, unfrozen
+/// checkpoint holds (the minimum ADA, the deposit, the bond) and the pool left
+/// after one premium, with the premium paid to the second output. The observer
+/// withdrawal carries the claim the arm requires; the observer's own verdict
+/// is its own test.
+fn advance_of(output: Output) -> Bool {
+  expect Live { aid, sn, epoch, frozen, born_at, refund_to, keys, .. } = delivered_live(
+    output,
+  )
+  let floor_unfrozen = checkpoint_min_ada + d_reg + freeze_bond
+  let pool = lovelace_of(output.value) - floor_unfrozen
+  let successor = Output {
+    address: output.address,
+    value: from_lovelace(floor_unfrozen + pool - premium)
+      |> merge(representative_of(output)),
+    datum: InlineDatum(
+      datum.write(
+        Live {
+          aid,
+          sn: sn + 1,
+          epoch: epoch + 1,
+          poisoned: False,
+          frozen,
+          born_at,
+          refund_to,
+          topped_up: False,
+          keys,
+        },
+      ),
+    ),
+    reference_script: None,
+  }
+  let payee = Output {
+    address: from_verification_key(hunter_pkh),
+    value: from_lovelace(premium),
+    datum: NoDatum,
+    reference_script: None,
+  }
+  let credential = Script(advance_hash)
+  let envelope: Data = ObserverEnvelope {
+    claim: ObserverClaim {
+      action: observe_advance,
+      checkpoint_policy: checkpoint_hash(),
+      own_ref: Some(delivered_ref()),
+    },
+    payload: builtin.i_data(0),
+  }
+  let tx = Transaction {
+    ..placeholder,
+    inputs: [delivered_input(output)],
+    outputs: [successor, payee],
+    withdrawals: [Pair(credential, 0)],
+    redeemers: [Pair(Withdraw(credential), envelope)],
+  }
+  run_checkpoint_spend(advance_redeemer(1), delivered_ref(), tx)
+}
+
+/// A TopUp of the checkpoint `output` by `amount`: the successor is the
+/// delivered datum with the top-up mark set, holding `amount` more.
+fn top_up_of(output: Output, amount: Int) -> Bool {
+  expect Live { aid, sn, epoch, poisoned, frozen, born_at, refund_to, keys, .. }
+    = delivered_live(output)
+  let successor = Output {
+    address: output.address,
+    value: from_lovelace(lovelace_of(output.value) + amount)
+      |> merge(representative_of(output)),
+    datum: InlineDatum(
+      datum.write(
+        Live {
+          aid,
+          sn,
+          epoch,
+          poisoned,
+          frozen,
+          born_at,
+          refund_to,
+          topped_up: True,
+          keys,
+        },
+      ),
+    ),
+    reference_script: None,
+  }
+  let tx = Transaction {
+    ..placeholder,
+    inputs: [delivered_input(output)],
+    outputs: [successor],
+  }
+  run_checkpoint_spend(topup_redeemer(amount), delivered_ref(), tx)
+}
+
+/// The token the delivered output holds, so a successor can hold the same.
+fn representative_of(output: Output) -> Value {
+  expect Live { aid, .. } = delivered_live(output)
+  from_asset(state_policy(), active_name_of_key(aid), 1)
+}
+
+test a_fold_over_the_connected_scenario_is_accepted() {
+  let tx = fold_tx(connected_fold(True))
+  application_accepts(tx) && observer_accepts(tx)
+}
+
+test the_output_a_fold_delivers_is_advanced() {
+  advance_of(delivered())
+}
+
+test the_output_a_fold_delivers_is_topped_up() {
+  top_up_of(delivered(), premium)
+}
+
+fn one_lovelace_below_the_checkpoints_floor() -> Fold {
+  Fold {
+    ..connected_fold(True),
+    holding_lovelace: checkpoint_min_ada + d_reg + freeze_bond - 1,
+  }
+}
+
+test a_fold_delivering_one_lovelace_below_the_checkpoints_floor_is_refused() {
+  !application_accepts(fold_tx(one_lovelace_below_the_checkpoints_floor()))
+}
+
+test an_output_one_lovelace_below_the_checkpoints_floor_is_not_advanced() fail {
+  advance_of(holding_output(one_lovelace_below_the_checkpoints_floor()))
+}
+
+test an_output_one_lovelace_below_the_checkpoints_floor_is_not_topped_up() fail {
+  top_up_of(holding_output(one_lovelace_below_the_checkpoints_floor()), premium)
+}
+
+fn without_the_token() -> Fold {
+  Fold { ..connected_fold(True), holding_active: 0, active_mint: 0 }
+}
+
+test a_fold_delivering_no_active_token_is_refused() {
+  !application_accepts(fold_tx(without_the_token()))
+}
+
+test an_output_holding_no_active_token_is_not_advanced() fail {
+  advance_of(holding_output(without_the_token()))
+}
+
+test an_output_holding_no_active_token_is_not_topped_up() fail {
+  top_up_of(holding_output(without_the_token()), premium)
+}
+
+/// The minimum ADA of a checkpoint output is one number: the checkpoint
+/// validator and the registration observer hold it as a constant, and the
+/// application's floors add it to the deposit, the freeze bond and the premium.
+test the_checkpoints_minimum_ada_is_the_one_the_application_floors_add() {
+  and {
+    checkpoint_register.checkpoint_min_ada == checkpoint_min_ada,
+    observer.checkpoint_min_ada == checkpoint_min_ada,
+    observer_floor == checkpoint_min_ada + d_reg,
+    booking_floor == checkpoint_min_ada + d_reg + freeze_bond,
+    floor == booking_floor + premium,
+  }
 }

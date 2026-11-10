@@ -40,20 +40,20 @@ as `COULD-NOT-EVALUATE` and fails the run. The mutant is deliberately built to
 be refused at the purpose dispatch, before any deposit, bond or signature work,
 so it cannot reach a builtin the evaluator lacks.
 
-__What this does not establish.__ The five policy-hash parameters applied here
-are placeholders of the correct width, not the five sibling hashes the
-deployment derives, so these runs say nothing about which observers the
-register trusts. The applied identity in the recipe's target row comes from the
+__What this does not establish.__ The five byte-string parameters applied here
+are placeholders of the correct width, not the registry and the observer hashes
+the deployment derives, so these runs say nothing about which registry or
+observers the register trusts. The applied identity in the recipe's target row comes from the
 production derivation, not from this module; the recipe binds the two by
 requiring the SHA-256 of the program extracted here to equal the SHA-256 of the
 program the derivation read.
 -/
 
 -- Decoding a whole applied validator exceeds the default elaboration
--- recursion depth, exactly as the S2 and migration evidence modules found.
+-- recursion depth, exactly as the S2 evidence module found.
 set_option maxRecDepth 100000
 
-#import_uplc checkpointRegisterMint PlutusV3 single_cbor_hex "nix-generated/checkpoint_register.checkpoint_register.mint.hex"
+#import_uplc checkpointRegisterSpend PlutusV3 single_cbor_hex "nix-generated/checkpoint_register.checkpoint_register.spend.hex"
 
 namespace KeriBlaster.RegisterArity
 
@@ -66,12 +66,15 @@ open CardanoLedgerApi.V3.Contexts (ScriptContext ScriptInfo TxInfo)
 /-- A fixed-width byte string from a literal, so widths stay visible. -/
 def label (s : String) : ByteString := { data := s }
 
-/-- The five policy hashes the register is applied to, at the exact 28-byte
-width a `PolicyId` has. They are placeholders: this module is evidence about
-arity, not about which observers the register trusts. -/
-def migrationHash : ByteString := label "s254r-migration-policy-01234"
+/-- The registry's state policy at the exact 28-byte width a `PolicyId` has,
+and its name at the 32 bytes a token name has. They are placeholders: this
+module is evidence about arity, not about which registry the register serves. -/
+def statePolicy : ByteString := label "s254r-state-policy-012345678"
 
-def lifecycleHash : ByteString := label "s254r-lifecycle-policy-01234"
+def registryName : ByteString := label "s254r-registry-name-0123456789ab"
+
+/-- The three observer hashes the register is applied to, at the exact 28-byte
+width a `PolicyId` has. Placeholders as well. -/
 
 def advanceHash : ByteString := label "s254r-advance-policy-0123456"
 
@@ -96,8 +99,8 @@ this list is what the corrected deployment applies and its length is the whole
 point of this module.
 -/
 def appliedParameters : List Data :=
-  [ Data.B migrationHash
-  , Data.B lifecycleHash
+  [ Data.B statePolicy
+  , Data.B registryName
   , Data.B advanceHash
   , Data.B enforcementHash
   , Data.B entitlementHash
@@ -138,8 +141,8 @@ def emptyTxInfo : TxInfo where
   txInfoCurrentTreasuryAmount := Data.Constr 0 []
   txInfoTreasuryDonation := Data.Constr 0 []
 
-/-- A well-formed rewarding context. `checkpoint_register` handles `mint` and
-`spend` only and closes with `else(_) { fail }`, so a rewarding purpose reaches
+/-- A well-formed rewarding context. `checkpoint_register` handles `spend`
+only and closes with `else(_) { fail }`, so a rewarding purpose reaches
 that arm and the refusal is the validator's own. -/
 def unservedPurposeContext : ScriptContext where
   scriptContextTxInfo := emptyTxInfo
@@ -149,7 +152,7 @@ def unservedPurposeContext : ScriptContext where
 /-- Run the imported program against a list of arguments. -/
 def runWith (arguments : List Data) : KeriBlaster.S2.Cek.Trace :=
   KeriBlaster.S2.Cek.runProgram
-    checkpointRegisterMint.script
+    checkpointRegisterSpend.script
     (arguments.map dataTerm)
     budget
 
@@ -198,7 +201,7 @@ def overapplicationMutant : IO Bool := do
 /-- The register-arity evidence entry point.
 
 Reached from `KeriBlaster.main` when `REGISTER_EVIDENCE` is set, so these rows
-and the S2 and migration rows come from one binary over one pinned module
+and the S2 rows come from one binary over one pinned module
 graph, and none can be produced by a copy of the checking path.
 -/
 def run : IO UInt32 := do

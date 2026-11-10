@@ -800,7 +800,7 @@ check-flake-lock-guard:
 # --self-test) exercises the exact code this recipe runs, not a copy of it;
 # the guard's own INV-259-ASSERT caller-presence check requires this exact
 # invocation to remain in this recipe.
-ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken check-consumer-vectors check-consumer-identity-vectors check-checkpoint-datum-vectors check-checkpoint-writer-vectors check-checkpoint-freeze-vectors check-freeze-mutants check-deposit-mutants check-checkpoint-deposit-vectors check-checkpoint-deposit-corpus check-application-configuration-vectors ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
+ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken check-consumer-vectors check-consumer-identity-vectors check-checkpoint-datum-vectors check-checkpoint-writer-vectors check-checkpoint-freeze-vectors check-freeze-mutants check-deposit-mutants check-checkpoint-deposit-vectors check-checkpoint-deposit-corpus check-application-configuration-vectors check-application-vectors ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
     ./scripts/check-flake-lock-guard.sh --assert-lock-unchanged
 
 # #478: clean exact-compiler build and public proposition controls, identical to CI.
@@ -820,6 +820,14 @@ gen-application-configuration-vectors: stage-onchain
 # KERI application: the committed configuration-record vectors are exactly what the Lean vectors and the public script generate; identical to CI.
 check-application-configuration-vectors: stage-onchain
     nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/application-configuration-vectors.mjs --check
+
+# KERI application: regenerate the request, booking, fold, return and approval vectors (and their tests) from lean/application-vectors.json and the public singular_state script.
+gen-application-vectors: stage-onchain
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/application-vectors.mjs
+
+# KERI application: the committed row vectors and tests are exactly what the Lean vectors and the public script generate; identical to CI.
+check-application-vectors: stage-onchain
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/application-vectors.mjs --check
 
 # #343: regenerate the consumer corpus vectors from simulator/consumer-corpus.json.
 gen-consumer-vectors:

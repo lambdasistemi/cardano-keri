@@ -17,18 +17,23 @@
 //// `cardano_keri/application/state_policy_tests`.
 
 use aiken/collection/list
+use aiken/crypto.{blake2b_256}
+use aiken/primitive/bytearray
 use cardano/assets.{add, from_lovelace}
 use cardano/transaction.{
-  InlineDatum, Input, NoDatum, OutputReference, Transaction, placeholder,
+  DatumHash, InlineDatum, Input, NoDatum, Output, OutputReference, Transaction,
+  placeholder,
 }
-use cardano_keri/application/action.{Action, CreateConfiguration}
+use cardano_keri/application/action.{Action, ReturnRegistration, SpendAction}
 use cardano_keri/application/configuration_vectors as vectors
 use cardano_keri/application/held.{ApplicationParameters, Configuration}
+use cardano_keri/application/row_vectors as rows
+use cardano_keri/application/state_policy.{state_policy}
 use keri_application
 use keri_application_fixture.{
   Deployment, application_address, change_byte, creation, foreign_registry,
   genesis, keri, key_address, mint_of, other_application, parameters, record,
-  record_of, registry_deployment, seed_input, token,
+  record_of, registry_deployment, seed_input, template_input, token,
 }
 use singular_state/preimage.{
   RegistryIdentity, configuration_token_name, state_token_name,
@@ -36,16 +41,33 @@ use singular_state/preimage.{
 
 const template: ByteArray = vectors.state_template
 
-/// Run the mint handler of the application as `deployment.application`.
+/// Run the mint handler of the application as `deployment.application`, in a
+/// transaction that also references the output publishing `template`.
 fn mint(
   template: ByteArray,
   deployment: Deployment,
   action: Action,
   tx: Transaction,
 ) -> Bool {
-  keri_application.keri_application.mint(
-    template,
+  mint_as_is(
+    deployment,
     action,
+    Transaction {
+      ..tx,
+      reference_inputs: [template_input(template), ..tx.reference_inputs],
+    },
+  )
+}
+
+/// The same, over the transaction exactly as given.
+fn mint_as_is(deployment: Deployment, action: Action, tx: Transaction) -> Bool {
+  keri_application.keri_application.mint(
+    vectors.state_template_hash,
+    rows.observer_hash,
+    rows.minimum_deposit,
+    rows.initial_floor,
+    rows.network_id,
+    [action],
     deployment.application,
     tx,
   )
@@ -58,13 +80,23 @@ fn to_data(value: Data) -> Data {
 
 /// Run the spend handler of the application over `input`.
 fn spend(
-  template: ByteArray,
+  _template: ByteArray,
   datum: Option<Data>,
-  redeemer: Data,
+  redeemer: SpendAction,
   input: OutputReference,
   tx: Transaction,
 ) -> Bool {
-  keri_application.keri_application.spend(template, datum, redeemer, input, tx)
+  keri_application.keri_application.spend(
+    vectors.state_template_hash,
+    rows.observer_hash,
+    rows.minimum_deposit,
+    rows.initial_floor,
+    rows.network_id,
+    datum,
+    redeemer,
+    input,
+    tx,
+  )
 }
 
 // ---- the perfect transactions -------------------------------------------------
@@ -162,7 +194,12 @@ test refuses_a_record_holding_the_configuration_token_twice() {
     outputs: [
       record(
         application_address(keri().application),
-        InlineDatum(Configuration { parameters: parameters() }),
+        InlineDatum(
+          Configuration {
+            parameters: parameters(),
+            checkpoint_credential: vectors.checkpoint_credential,
+          },
+        ),
         token(keri().application, keri().configuration_name, 2),
       ),
     ],
@@ -173,7 +210,12 @@ test refuses_a_record_holding_the_configuration_token_twice() {
 test refuses_a_record_holding_another_asset() {
   let output = record(
     application_address(keri().application),
-    InlineDatum(Configuration { parameters: parameters() }),
+    InlineDatum(
+      Configuration {
+        parameters: parameters(),
+        checkpoint_credential: vectors.checkpoint_credential,
+      },
+    ),
     token(keri().application, keri().configuration_name, 1)
       |> add("other", "token", 1),
   )
@@ -184,7 +226,12 @@ test refuses_a_record_holding_another_asset() {
 test refuses_a_record_outside_the_application_address() {
   let output = record(
     key_address(),
-    InlineDatum(Configuration { parameters: parameters() }),
+    InlineDatum(
+      Configuration {
+        parameters: parameters(),
+        checkpoint_credential: vectors.checkpoint_credential,
+      },
+    ),
     token(keri().application, keri().configuration_name, 1),
   )
   let tx = Transaction { ..genesis(keri()), outputs: [output] }
@@ -194,7 +241,12 @@ test refuses_a_record_outside_the_application_address() {
 test refuses_a_record_at_another_application_address() {
   let output = record(
     application_address(vectors.foreign_application_policy),
-    InlineDatum(Configuration { parameters: parameters() }),
+    InlineDatum(
+      Configuration {
+        parameters: parameters(),
+        checkpoint_credential: vectors.checkpoint_credential,
+      },
+    ),
     token(keri().application, keri().configuration_name, 1),
   )
   let tx = Transaction { ..genesis(keri()), outputs: [output] }
@@ -224,7 +276,12 @@ test refuses_a_record_whose_datum_is_not_a_configuration() {
 test refuses_a_record_carrying_another_registrys_token() {
   let output = record(
     application_address(keri().application),
-    InlineDatum(Configuration { parameters: parameters() }),
+    InlineDatum(
+      Configuration {
+        parameters: parameters(),
+        checkpoint_credential: vectors.checkpoint_credential,
+      },
+    ),
     token(keri().application, vectors.foreign_configuration_name, 1),
   )
   let tx = Transaction { ..genesis(keri()), outputs: [output] }
@@ -437,8 +494,15 @@ test refuses_to_spend_a_configuration_record() {
   let tx = Transaction { ..placeholder, inputs: [spent] }
   !spend(
     template,
-    Some(to_data(Configuration { parameters: parameters() })),
-    Void,
+    Some(
+      to_data(
+        Configuration {
+          parameters: parameters(),
+          checkpoint_credential: vectors.checkpoint_credential,
+        },
+      ),
+    ),
+    ReturnRegistration,
     record_reference(),
     tx,
   )
@@ -454,7 +518,7 @@ test refuses_to_spend_an_input_without_a_datum() {
     ),
   }
   let tx = Transaction { ..placeholder, inputs: [spent] }
-  !spend(template, None, Void, record_reference(), tx)
+  !spend(template, None, ReturnRegistration, record_reference(), tx)
 }
 
 test refuses_to_spend_in_the_transaction_that_creates_a_record() {
@@ -466,8 +530,15 @@ test refuses_to_spend_in_the_transaction_that_creates_a_record() {
   let tx = Transaction { ..tx, inputs: [spent, ..tx.inputs] }
   !spend(
     template,
-    Some(to_data(Configuration { parameters: parameters() })),
-    creation(keri(), 0),
+    Some(
+      to_data(
+        Configuration {
+          parameters: parameters(),
+          checkpoint_credential: vectors.checkpoint_credential,
+        },
+      ),
+    ),
+    ReturnRegistration,
     record_reference(),
     tx,
   )
@@ -487,4 +558,118 @@ test the_foreign_configuration_name_is_the_public_configuration_name() {
   vectors.foreign_configuration_name == configuration_token_name(
     foreign_registry().registry,
   )
+}
+
+// ---- J14: the state policy is computed from an authenticated template -------------------
+
+/// A genesis of the registry whose state policy is the one the state script
+/// built from `template` has under the application: every value derived from it
+/// is recomputed.
+fn genesis_of_template(template: ByteArray) -> Deployment {
+  registry_deployment(
+    RegistryIdentity {
+      policy: state_policy(template, keri().application),
+      name: vectors.registry_name,
+    },
+  )
+}
+
+test the_genesis_references_the_template_it_computes_the_state_policy_from() {
+  mint(template, keri(), creation(keri(), 0), genesis(keri())) && !mint_as_is(
+    keri(),
+    creation(keri(), 0),
+    genesis(keri()),
+  )
+}
+
+test refuses_a_genesis_that_references_no_template() {
+  !mint_as_is(keri(), creation(keri(), 0), genesis(keri()))
+}
+
+test refuses_a_genesis_whose_state_script_is_another_than_the_pinned_template() {
+  // The registry's state policy is that of a state script built from a template
+  // one byte different, which the transaction publishes: the application's hash
+  // pins the template, whatever the transaction publishes.
+  let other = change_byte(template, 100)
+  let deployment = genesis_of_template(other)
+  !mint(other, deployment, creation(deployment, 0), genesis(deployment))
+}
+
+test refuses_a_template_of_one_byte_more_or_less() {
+  let longer = bytearray.concat(template, #"00")
+  let shorter = bytearray.take(template, bytearray.length(template) - 1)
+  list.all(
+    [longer, shorter],
+    fn(other) {
+      let deployment = genesis_of_template(other)
+      !mint(other, deployment, creation(deployment, 0), genesis(deployment))
+    },
+  )
+}
+
+test passes_over_reference_inputs_that_are_not_the_template() {
+  // Other reference inputs of the transaction, whatever their datums, do not
+  // hide the template: the one whose hash is the parameter is the one read.
+  let tx = genesis(keri())
+  let decoy_bytes = template_input(#"01")
+  let decoy_integer = Input {
+    ..template_input(#""),
+    output: Output { ..template_input(#"").output, datum: InlineDatum(7) },
+  }
+  let decoy_hashed = Input {
+    ..template_input(#""),
+    output: Output {
+      ..template_input(#"").output,
+      datum: DatumHash(
+        #"0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+      ),
+    },
+  }
+  let with_decoys = Transaction {
+    ..tx,
+    reference_inputs: [
+      decoy_bytes,
+      decoy_integer,
+      decoy_hashed,
+      template_input(template),
+    ],
+  }
+  mint_as_is(keri(), creation(keri(), 0), with_decoys) && !mint_as_is(
+    keri(),
+    creation(keri(), 0),
+    Transaction {
+      ..tx,
+      reference_inputs: [decoy_bytes, decoy_integer, decoy_hashed],
+    },
+  )
+}
+
+test refuses_a_template_spent_instead_of_referenced() {
+  let tx = genesis(keri())
+  !mint_as_is(
+    keri(),
+    creation(keri(), 0),
+    Transaction { ..tx, inputs: [template_input(template), ..tx.inputs] },
+  )
+}
+
+test refuses_a_template_published_by_a_datum_hash() {
+  let hashed = Input {
+    ..template_input(template),
+    output: Output {
+      ..template_input(template).output,
+      datum: DatumHash(
+        #"0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+      ),
+    },
+  }
+  !mint_as_is(
+    keri(),
+    creation(keri(), 0),
+    Transaction { ..genesis(keri()), reference_inputs: [hashed] },
+  )
+}
+
+test the_template_hash_parameter_is_the_hash_of_the_template() {
+  vectors.state_template_hash == blake2b_256(template)
 }

@@ -810,9 +810,11 @@ groupBoundaries =
     ,
         ( "keri_application.keri_application"
         , Unapplied
-            "KERI application: its one parameter, the compiled singular_state \
-            \script template, is applied at deployment by a later slice; no \
-            \published deployment identity yet"
+            "KERI application: its five parameters (the hash of the compiled \
+            \singular_state script template, the lifecycle observer, the \
+            \booking floor, the fold floor and the network) are applied at \
+            \deployment by a later slice; no published deployment identity \
+            \yet"
         )
     ]
 

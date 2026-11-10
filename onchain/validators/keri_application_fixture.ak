@@ -150,9 +150,32 @@ pub fn record_of(
 ) -> Output {
   record(
     application_address(deployment.application),
-    InlineDatum(Configuration { parameters }),
+    InlineDatum(
+      Configuration {
+        parameters,
+        checkpoint_credential: vectors.checkpoint_credential,
+      },
+    ),
     token(deployment.application, deployment.configuration_name, 1),
   )
+}
+
+/// The output a deployment publishes the state script's template at: any
+/// address, the template in its inline datum; the application authenticates it by
+/// its hash.
+pub fn template_input(template: ByteArray) -> Input {
+  Input {
+    output_reference: OutputReference {
+      transaction_id: #"7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e",
+      output_index: 0,
+    },
+    output: Output {
+      address: key_address(),
+      value: from_lovelace(2_000_000),
+      datum: InlineDatum(template),
+      reference_script: None,
+    },
+  }
 }
 
 /// The perfect genesis transaction of a deployment: the seed is spent once,

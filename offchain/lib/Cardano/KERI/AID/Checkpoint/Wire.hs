@@ -76,7 +76,7 @@ advanceObserverRedeemerData checkpointPolicy spentTxId spentIndex evidence =
         , advanceEvidenceData evidence
         ]
 
-{- | The Freeze arm is spend constructor three, appended after MigrateOut so
+{- | The Freeze arm is spend constructor three, appended after the retired migration index so
 nothing renumbers; it names the output that receives the freeze bond.
 -}
 freezeSpendRedeemerData :: Integer -> Data

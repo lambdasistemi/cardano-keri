@@ -302,7 +302,7 @@ spec = describe "#136 Register observer wire" $ do
                 , enforcementProofData enforcementProof
                 ]
 
-    it "appends the Freeze arm at spend constructor three, after MigrateOut" $
+    it "appends the Freeze arm at spend constructor three, after the retired migration index" $
         freezeSpendRedeemerData 5 `shouldBe` Constr 3 [I 5]
 
     it "appends the TopUp arm at spend constructor four, after Freeze" $

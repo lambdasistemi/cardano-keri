@@ -10,6 +10,7 @@ import Cardano.KERI.AID.Checkpoint.AdvanceSpec qualified as AdvanceSpec
 import Cardano.KERI.AID.Checkpoint.BountyCommitmentSpec qualified as BountyCommitmentSpec
 import Cardano.KERI.AID.Checkpoint.DatumSpec qualified as DatumSpec
 import Cardano.KERI.AID.Checkpoint.DatumV2Spec qualified as DatumV2Spec
+import Cardano.KERI.AID.Checkpoint.DeployedGenerationSpec qualified as DeployedGenerationSpec
 import Cardano.KERI.AID.Checkpoint.DepositSpec qualified as DepositSpec
 import Cardano.KERI.AID.Checkpoint.EnforcementSpec qualified as EnforcementSpec
 import Cardano.KERI.AID.Checkpoint.EntitlementSpec qualified as EntitlementSpec
@@ -41,6 +42,7 @@ main = hspec $ do
     AdvanceSpec.spec
     DatumSpec.spec
     DatumV2Spec.spec
+    DeployedGenerationSpec.spec
     NineFieldDatumSpec.spec
     MessageSpec.spec
     Keri68OracleSpec.spec

@@ -80,7 +80,6 @@ library
     Cardano.KERI.AID.Checkpoint.Value
     Cardano.KERI.AID.Checkpoint.Wire
     Cardano.KERI.AID.Ed25519
-    Cardano.KERI.AID.Migration.Checkpoint
     Cardano.KERI.AID.Migration.Types
 
   other-modules:
@@ -169,7 +168,6 @@ library deployment
   exposed-modules:
     Cardano.KERI.Deployment.Advance
     Cardano.KERI.Deployment.AdvanceTransaction
-    Cardano.KERI.Deployment.CheckpointMigration
     Cardano.KERI.Deployment.EndpointBoard
     Cardano.KERI.Deployment.EndpointBoardManifest
     Cardano.KERI.Deployment.EndpointBoardTransaction
@@ -403,7 +401,6 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.AdvanceSpec
     Cardano.KERI.Deployment.BountyEntitlementSpec
     Cardano.KERI.Deployment.ChainIndexSpec
-    Cardano.KERI.Deployment.CheckpointMigrationSpec
     Cardano.KERI.Deployment.EndpointBoardSpec
     Cardano.KERI.Deployment.EndpointBoardTransactionSpec
     Cardano.KERI.Deployment.FreezePackageSpec
@@ -411,6 +408,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.ManifestSpec
     Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.RegistrationSpec
+    Cardano.KERI.Deployment.RegistryFixture
     Cardano.KERI.Deployment.ScriptAritySpec
     Cardano.KERI.Deployment.TopUpPackageSpec
     Cardano.KERI.Deployment.TopUpTransactionSpec
@@ -742,8 +740,11 @@ test-suite cli-tests
     Cardano.KERI.CLI.Backend.LocalSpec
     Cardano.KERI.CLI.CommandSurfaceSpec
     Cardano.KERI.CLI.ProductionSpec
+    Cardano.KERI.CLI.RegistryAwareDeploymentSpec
     Cardano.KERI.CLI.WriteCompositionBoundarySpec
+    Paths_cardano_keri
 
+  autogen-modules:  Paths_cardano_keri
   build-depends:
     , aeson
     , base
@@ -927,7 +928,6 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.ValueSpec
     Cardano.KERI.AID.Checkpoint.WireSpec
     Cardano.KERI.AID.Ed25519Spec
-    Cardano.KERI.AID.Migration.CheckpointSpec
     Cardano.KERI.AID.Migration.TypesSpec
     Paths_cardano_keri
 
@@ -1058,22 +1058,6 @@ executable gen-migration-types-vectors
     , memory        >=0.18 && <0.19
     , plutus-core
     , plutus-tx
-
--- #254 S254-1B: the sole source of the Aiken checkpoint-migration fixtures.
--- Signs with real Ed25519 keys, so its self-check can prove the authority
--- negatives are actually refused before any vector is written.
-executable gen-checkpoint-migration-vectors
-  import:           warnings
-  default-language: GHC2021
-  hs-source-dirs:   app
-  main-is:          GenCheckpointMigrationVectors.hs
-  build-depends:
-    , base
-    , bytestring
-    , cardano-crypto-class
-    , cardano-keri
-    , memory                >=0.18 && <0.19
-    , plutus-core
 
 -- #254 S254-E: the entitlement-layer parity vectors. Unlike the #271
 -- component's independent oracle, this generator imports the production

@@ -47,8 +47,10 @@ import Cardano.KERI.Deployment.Manifest (
     Reference (..),
     mkManifest,
  )
+import Cardano.KERI.Deployment.RegistryFixture (fixtureRegistry)
 import Cardano.KERI.Deployment.Script (
     Blueprint (..),
+    RegistryIdentity (..),
     ScriptArtifact (..),
     Validator (..),
     applyCommitmentParams,
@@ -161,7 +163,7 @@ data Fixture = Fixture
 
 -- | The blueprint entry the whole slice is about.
 registerTitle :: Text
-registerTitle = "checkpoint_register.checkpoint_register.mint"
+registerTitle = "checkpoint_register.checkpoint_register.spend"
 
 -- | Load the live blueprint and derive everything the deployment publishes.
 withFixture :: IO Fixture
@@ -173,7 +175,7 @@ withFixture = do
     declared <- either fail pure (declaredParameters value)
     programs <- either fail pure (compiledPrograms value)
     blueprint <- loadBlueprint path >>= either fail pure
-    artifacts <- either fail pure (deriveV1Scripts blueprint)
+    artifacts <- either fail pure (deriveV1Scripts fixtureRegistry blueprint)
     predecessor <- either fail pure (decodeHex frozenEndpointBoardPolicyId)
     board <-
         either
@@ -684,20 +686,19 @@ sha256Hex :: ByteString -> Text
 sha256Hex bytes =
     TE.decodeUtf8 (convertToBase Base16 (hash bytes :: Digest SHA256))
 
-{- | What the corrected register must be applied to: the five sibling policy
-hashes this same derivation produced, then the four deployment integers.  No
-element of this list is written down twice.
+{- | What the checkpoint validator must be applied to: the registry's state
+policy and name, the three sibling policy hashes this same derivation
+produced, then the four deployment integers.  Only the registry is written
+down, once, in the fixture both sides read.
 -}
 expectedRegisterArguments :: Fixture -> IO [Data]
 expectedRegisterArguments fixture = do
-    migration <- policyOf "observer-migration"
-    lifecycle <- policyOf "observer-lifecycle"
     advance <- policyOf "observer-advance"
     enforcement <- policyOf "observer-enforcement"
     entitlement <- policyOf "observer-entitlement"
     pure
-        [ B migration
-        , B lifecycle
+        [ B (registryStatePolicy fixtureRegistry)
+        , B (registryName fixtureRegistry)
         , B advance
         , B enforcement
         , B entitlement
@@ -771,10 +772,6 @@ groupBoundaries =
     ,
         ( "checkpoint_observer.observer_entitlement"
         , PublishedBy "observer-entitlement"
-        )
-    ,
-        ( "checkpoint_observer.observer_migration"
-        , PublishedBy "observer-migration"
         )
     ,
         ( "checkpoint_register.checkpoint_register"
@@ -934,7 +931,7 @@ reDerive ::
 reDerive fixture mutate =
     withMutatedBlueprint fixture mutate $ \path -> do
         blueprint <- loadBlueprint path
-        pure (blueprint >>= deriveV1Scripts)
+        pure (blueprint >>= deriveV1Scripts fixtureRegistry)
 
 -- | The register's declared parameter count after a mutation.
 declaredCountAfter ::

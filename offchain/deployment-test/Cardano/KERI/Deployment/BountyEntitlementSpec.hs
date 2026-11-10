@@ -32,6 +32,7 @@ import Cardano.KERI.AID.Checkpoint.BountyCommitment (
     commitMinAge,
     parametersWellFormed,
  )
+import Cardano.KERI.Deployment.RegistryFixture (fixtureRegistry)
 import Cardano.KERI.Deployment.Script (
     Blueprint (..),
     ScriptArtifact (..),
@@ -126,13 +127,14 @@ aritySpec = describe "compiled argument counts" $ do
                 "checkpoint_observer.observer_advance.withdraw"
                 blueprint
                 `shouldBe` Just 1
-    it "gives the combined register nine applied parameters" $
-        -- The five observer credentials and the four deployment integers.
+    it "gives the checkpoint validator nine applied parameters" $
+        -- The registry's state policy and name, the three observer
+        -- credentials and the four deployment integers.
         -- The constructor still fails closed on declared vs supplied arity;
         -- this row records the declaration the plan must match.
         withBlueprint $ \blueprint ->
             validatorParameterCount
-                "checkpoint_register.checkpoint_register.mint"
+                "checkpoint_register.checkpoint_register.spend"
                 blueprint
                 `shouldBe` Just 9
     it "declares no freeze window on any checkpoint program" $
@@ -142,15 +144,15 @@ aritySpec = describe "compiled argument counts" $ do
                     | validator <- validators blueprint
                     , "checkpoint_register." `T.isPrefixOf` vTitle validator
                     ]
-            -- The control is non-vacuous: the census sees the register's
-            -- mint and spend programs, so a prefix that matched nothing
+            -- The control is non-vacuous: the census sees the validator's
+            -- spend and fallback programs, so a prefix that matched nothing
             -- or a blueprint without the register would fail here.
             map vTitle checkpointPrograms
                 `shouldSatisfy` ( \titles ->
                                     all
                                         (`elem` titles)
-                                        [ "checkpoint_register.checkpoint_register.mint"
-                                        , "checkpoint_register.checkpoint_register.spend"
+                                        [ "checkpoint_register.checkpoint_register.spend"
+                                        , "checkpoint_register.checkpoint_register.else"
                                         ]
                                 )
             let offenders =
@@ -221,7 +223,7 @@ reachSpec = describe "family reaches the deployed register" $ do
         withBlueprint $ \blueprint -> do
             family <- either fail pure (deriveCommitmentFamily blueprint)
             program <- requireProgram blueprint enforcementTitle
-            artifacts <- either fail pure (deriveV1Scripts blueprint)
+            artifacts <- either fail pure (deriveV1Scripts fixtureRegistry blueprint)
             enforcement <- requireArtifact artifacts "observer-enforcement"
             artifactScriptHash enforcement
                 `shouldBe` computeScriptHash
@@ -268,7 +270,7 @@ reachSpec = describe "family reaches the deployed register" $ do
         -- The register pins the enforcement observer by hash, so a changed
         -- commitment family reaches the deployed checkpoint policy itself.
         withBlueprint $ \blueprint -> do
-            artifacts <- either fail pure (deriveV1Scripts blueprint)
+            artifacts <- either fail pure (deriveV1Scripts fixtureRegistry blueprint)
             enforcement <- requireArtifact artifacts "observer-enforcement"
             register <- requireArtifact artifacts "checkpoint-register"
             program <- requireProgram blueprint registerTitle
@@ -288,7 +290,7 @@ enforcementTitle :: Text
 enforcementTitle = "checkpoint_observer.observer_enforcement.withdraw"
 
 registerTitle :: Text
-registerTitle = "checkpoint_register.checkpoint_register.mint"
+registerTitle = "checkpoint_register.checkpoint_register.spend"
 
 withBlueprint :: (Blueprint -> IO ()) -> IO ()
 withBlueprint action = do

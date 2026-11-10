@@ -25,7 +25,6 @@ import Cardano.KERI.AID.Checkpoint.TopUpSpec qualified as TopUpSpec
 import Cardano.KERI.AID.Checkpoint.ValueSpec qualified as ValueSpec
 import Cardano.KERI.AID.Checkpoint.WireSpec qualified as WireSpec
 import Cardano.KERI.AID.Ed25519Spec qualified as Ed25519Spec
-import Cardano.KERI.AID.Migration.CheckpointSpec qualified as MigrationCheckpointSpec
 import Cardano.KERI.AID.Migration.TypesSpec qualified as MigrationTypesSpec
 import Test.Hspec (hspec)
 
@@ -57,4 +56,3 @@ main = hspec $ do
     ValueSpec.spec
     WireSpec.spec
     MigrationTypesSpec.spec
-    MigrationCheckpointSpec.spec

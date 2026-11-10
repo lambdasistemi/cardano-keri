@@ -12,6 +12,8 @@ the resulting 'ScriptArtifact's.
 -}
 module Cardano.KERI.Deployment.Script (
     Blueprint (..),
+    RegistryIdentity (..),
+    registryAwareDeploymentRefusal,
     Validator (..),
     ScriptArtifact (..),
     loadBlueprint,
@@ -250,6 +252,24 @@ mkAppliedArtifact name role validator plan program
     declared = length (vParameters validator)
     supplied = length plan
 
+{- | The registry a checkpoint validator serves: the state policy of the registry
+and the registry's name. Both are applied to the validator, so each registry
+has its own checkpoint validator, and neither is known before a seed output is
+chosen.
+-}
+data RegistryIdentity = RegistryIdentity
+    { registryStatePolicy :: !ByteString
+    , registryName :: !ByteString
+    }
+    deriving stock (Eq, Show)
+
+{- | What a command says when it would need the checkpoint validator's artifact
+and has no registry to apply it to.
+-}
+registryAwareDeploymentRefusal :: String
+registryAwareDeploymentRefusal =
+    "the checkpoint validator is applied to a registry; registry-aware deployment is #356"
+
 {- | The one lineage input a #254 successor board program takes: the single
 predecessor minting policy it accepts.  Release identity is the resulting
 hash, so no generation integer is applied.
@@ -258,19 +278,14 @@ applyPredecessorParam :: ByteString -> [Data]
 applyPredecessorParam predecessorPolicy =
     [B predecessorPolicy]
 
-{- | The exact argument plan the combined register is applied to.
-
-There is no version argument.  @checkpoint_register@ declares no version
-parameter, so the integer this plan used to lead with occupied the slot the
-ledger fills with the script context (#254 A-007).  After A-002 the plan is
-nine arguments: the five sibling observer hashes (migration, lifecycle,
-advance, enforcement, entitlement) then the four deployment integers (network,
-registration bond, freeze bond, premium).  The
-constructor still fails closed on declared-vs-supplied arity.
+{- | The exact argument plan the checkpoint validator is applied to: the registry's
+state policy and name, the three observer hashes it asks (advance, enforcement,
+entitlement), then the four deployment integers (network, registration bond,
+freeze bond, premium). The constructor still fails closed on declared-vs-supplied
+arity.
 -}
 applyCheckpointParams ::
-    ByteString ->
-    ByteString ->
+    RegistryIdentity ->
     ByteString ->
     ByteString ->
     ByteString ->
@@ -279,9 +294,9 @@ applyCheckpointParams ::
     Integer ->
     Integer ->
     [Data]
-applyCheckpointParams migrationHash lifecycleHash advanceHash enforcementHash entitlementHash network registrationBond freezeBond premium =
-    [ B migrationHash
-    , B lifecycleHash
+applyCheckpointParams registry advanceHash enforcementHash entitlementHash network registrationBond freezeBond premium =
+    [ B (registryStatePolicy registry)
+    , B (registryName registry)
     , B advanceHash
     , B enforcementHash
     , B entitlementHash
@@ -441,8 +456,9 @@ deriveCommitmentFamily blueprint = do
             , cfParameters = v1CommitmentParameters
             }
 
-deriveV1Scripts :: Blueprint -> Either String [ScriptArtifact]
-deriveV1Scripts blueprint = do
+deriveV1Scripts ::
+    RegistryIdentity -> Blueprint -> Either String [ScriptArtifact]
+deriveV1Scripts registry blueprint = do
     (hashProofValidator, hashProofProgram) <-
         require "hash_proof.hash_proof.mint" "hash-proof"
     hashProof <-
@@ -468,7 +484,6 @@ deriveV1Scripts blueprint = do
                 v1RegistrationBond
             )
             lifecycleProgram
-    let lifecycleHash = artifactScriptHash lifecycle
     (advanceValidator, advanceProgram) <-
         require
             "checkpoint_observer.observer_advance.withdraw"
@@ -512,26 +527,9 @@ deriveV1Scripts blueprint = do
             entitlementProgram
     let enforcementHash = artifactScriptHash enforcement
         entitlementHash = artifactScriptHash entitlement
-    -- #254 A-001: the promoted migration observer, derived as a v1 family
-    -- component and applied to the checkpoint program by hash.  Its
-    -- predecessor pin is an applied parameter, never a redeemer field.
-    (migrationValidator, migrationProgram) <-
-        require
-            "checkpoint_observer.observer_migration.withdraw"
-            "observer-migration"
-    -- The migration observer takes no applied parameter: the source generation
-    -- is the one whose program asks, so its own hash is its release identity.
-    migration <-
-        mkAppliedArtifact
-            "observer-migration"
-            "withdrawal-observer"
-            migrationValidator
-            []
-            migrationProgram
-    let migrationHash = artifactScriptHash migration
     (checkpointValidator, checkpointProgram) <-
         require
-            "checkpoint_register.checkpoint_register.mint"
+            "checkpoint_register.checkpoint_register.spend"
             "checkpoint-register"
     let appliedCheckpoint =
             mkAppliedArtifact
@@ -539,8 +537,7 @@ deriveV1Scripts blueprint = do
                 "validator-and-minting-policy"
                 checkpointValidator
                 ( applyCheckpointParams
-                    (scriptHashBytes migrationHash)
-                    (scriptHashBytes lifecycleHash)
+                    registry
                     (scriptHashBytes advanceHash)
                     (scriptHashBytes enforcementHash)
                     (scriptHashBytes entitlementHash)
@@ -557,7 +554,6 @@ deriveV1Scripts blueprint = do
         , advance
         , enforcement
         , entitlement
-        , migration
         , checkpoint
         ]
   where

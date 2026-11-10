@@ -43,11 +43,11 @@
    "validity": {"upper": 10, "lower": 9},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "note":
-   "a request holding exactly deposit 14, registration cost 2 and tip 1, reading the configuration record: accepted",
+   "a request holding exactly deposit 15, registration cost 2 and tip 1, reading the configuration record: accepted",
    "kind": "booking",
    "inputs": [],
    "id": "booking",
@@ -56,7 +56,7 @@
    "validity": {"upper": 10, "lower": 9},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "note":
@@ -82,10 +82,10 @@
    "validity": {"upper": 10, "lower": 9},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 18,
+   [{"lovelace": 19,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
-   "note": "the request holds 18, one more than its exact contents: refused",
+   "note": "the request holds 19, one more than its exact contents: refused",
    "kind": "booking",
    "inputs": [],
    "id": "booking-one-lovelace-more",
@@ -94,10 +94,10 @@
    "validity": {"upper": 10, "lower": 9},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 16,
+   [{"lovelace": 17,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
-   "note": "the request holds 16, one less than its exact contents: refused",
+   "note": "the request holds 17, one less than its exact contents: refused",
    "kind": "booking",
    "inputs": [],
    "id": "booking-one-lovelace-less",
@@ -106,7 +106,7 @@
    "validity": {"upper": 10, "lower": 9},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "note":
@@ -119,7 +119,7 @@
    "validity": {"upper": 10, "lower": 9},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "note":
@@ -132,7 +132,7 @@
    "validity": {"upper": 10, "lower": 9},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "note":
@@ -145,7 +145,7 @@
    "validity": {"upper": 10, "lower": 9},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "note":
@@ -158,7 +158,7 @@
    "validity": {"upper": 10, "lower": 9},
    "referenced": 0,
    "outputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "note": "the configuration record is not a reference input: refused",
@@ -170,26 +170,66 @@
    "validity": {"upper": 10, "lower": 9},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
-   "note": "two approvals of the payload minted: refused",
+   "note": "two approvals of the payload minted for one booking: refused",
    "kind": "booking",
    "inputs": [],
    "id": "booking-two-approvals",
+   "donation": 0},
+  {"verdict": "refused",
+   "validity": {"upper": 10, "lower": 9},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 18,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"},
+    {"lovelace": 18,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "note":
+   "two request outputs of one payload, both booked, two approvals minted: refused",
+   "kind": "booking",
+   "inputs": [],
+   "id": "booking-one-payload-twice",
+   "donation": 0},
+  {"verdict": "refused",
+   "validity": {"upper": 10, "lower": 9},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 18,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "note": "the same output booked twice, one approval minted: refused",
+   "kind": "booking",
+   "inputs": [],
+   "id": "booking-twice",
+   "donation": 0},
+  {"verdict": "refused",
+   "validity": {"upper": 10, "lower": 9},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 18,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "note": "an approval minted onto a request output with no booking: refused",
+   "kind": "booking",
+   "inputs": [],
+   "id": "approval-without-booking",
    "donation": 0},
   {"verdict": "accepted",
    "validity": {"upper": 15, "lower": 12},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 14,
+   [{"lovelace": 15,
      "address":
      "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note":
-   "a fold ending at the deadline, delivering exactly the deposit, donating the registration cost: accepted",
+   "a fold ending at the deadline, delivering exactly the deposit 15 in the initial state, a pool of one premium, donating the registration cost: accepted",
    "kind": "fold",
    "inputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "id": "fold-at-deadline",
@@ -198,13 +238,13 @@
    "validity": {"upper": 15, "lower": 12},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 14,
+   [{"lovelace": 15,
      "address":
      "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note": "the same fold donating 3: accepted",
    "kind": "fold",
    "inputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "id": "fold-donating-more",
@@ -213,14 +253,14 @@
    "validity": {"upper": 16, "lower": 12},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 14,
+   [{"lovelace": 15,
      "address":
      "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note":
    "a fold whose validity interval ends one slot after the deadline: refused",
    "kind": "fold",
    "inputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "id": "fold-after-deadline",
@@ -229,13 +269,13 @@
    "validity": {"upper": 15, "lower": 12},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 15,
+   [{"lovelace": 16,
      "address":
      "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note": "the holding holds the deposit plus one lovelace: refused",
    "kind": "fold",
    "inputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "id": "fold-holding-one-more",
@@ -244,13 +284,13 @@
    "validity": {"upper": 15, "lower": 12},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 13,
+   [{"lovelace": 14,
      "address":
      "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note": "the holding holds the deposit less one lovelace: refused",
    "kind": "fold",
    "inputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "id": "fold-holding-one-less",
@@ -259,14 +299,14 @@
    "validity": {"upper": 15, "lower": 12},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 14,
+   [{"lovelace": 15,
      "address":
      "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note":
    "the treasury donation is one less than the registration cost: refused",
    "kind": "fold",
    "inputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "id": "fold-donation-short",
@@ -275,14 +315,14 @@
    "validity": {"upper": 15, "lower": 12},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 14,
+   [{"lovelace": 15,
      "address":
      "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note":
-   "the holding carries another initial datum than the committed one: refused",
+   "the holding carries the initial state of the AID with other key material than the committed datum: refused",
    "kind": "fold",
    "inputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "id": "fold-other-datum",
@@ -291,13 +331,13 @@
    "validity": {"upper": 15, "lower": 12},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 14,
+   [{"lovelace": 15,
      "address":
      "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note": "the approval is not burned: refused",
    "kind": "fold",
    "inputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "id": "fold-approval-kept",
@@ -306,14 +346,33 @@
    "validity": {"upper": 15, "lower": 12},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 14,
+   [{"lovelace": 15,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "note":
+   "two requests of one payload folded into one holding, both approvals burned: refused",
+   "kind": "fold",
+   "inputs":
+   [{"lovelace": 18,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"},
+    {"lovelace": 18,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "id": "fold-one-payload-twice",
+   "donation": 4},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 15,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "note":
    "the holding is delivered to the application address instead of the checkpoint validator: refused",
    "kind": "fold",
    "inputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "id": "fold-at-application-address",
@@ -322,17 +381,171 @@
    "validity": {"upper": 15, "lower": 12},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 14,
+   [{"lovelace": 15,
      "address":
      "d8799fd8799f581c72777c81868b90959a9fa4a9aeb3b8bdc2c7ccd1d6dbe0e5eaeff4f9ffd87a80ff"}],
    "note":
    "a request committing another address than the checkpoint validator's, folded to that address: refused",
    "kind": "fold",
    "inputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "id": "fold-at-committed-other-address",
+   "donation": 2},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 15,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "note":
+   "a request committing another address than the checkpoint validator's, folded to the checkpoint validator: refused",
+   "kind": "fold",
+   "inputs":
+   [{"lovelace": 18,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "id": "fold-other-commitment-to-checkpoint",
+   "donation": 2},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 15,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "note":
+   "the request committed, and the holding carries, a checkpoint datum at sequence number 7: refused",
+   "kind": "fold",
+   "inputs":
+   [{"lovelace": 18,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "id": "fold-advanced-sequence",
+   "donation": 2},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 15,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "note": "the committed datum is at epoch 3: refused",
+   "kind": "fold",
+   "inputs":
+   [{"lovelace": 18,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "id": "fold-advanced-epoch",
+   "donation": 2},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 15,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "note": "the committed datum is poisoned: refused",
+   "kind": "fold",
+   "inputs":
+   [{"lovelace": 18,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "id": "fold-poisoned",
+   "donation": 2},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 15,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "note": "the committed datum is frozen: refused",
+   "kind": "fold",
+   "inputs":
+   [{"lovelace": 18,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "id": "fold-frozen",
+   "donation": 2},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 15,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "note": "the committed datum is topped up: refused",
+   "kind": "fold",
+   "inputs":
+   [{"lovelace": 18,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "id": "fold-topped-up",
+   "donation": 2},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 15,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "note":
+   "the committed datum is born one slot after the booking bound: refused",
+   "kind": "fold",
+   "inputs":
+   [{"lovelace": 18,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "id": "fold-born-later",
+   "donation": 2},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 15,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "note":
+   "the committed datum refunds to another address than the request names: refused",
+   "kind": "fold",
+   "inputs":
+   [{"lovelace": 18,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "id": "fold-other-refund",
+   "donation": 2},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 15,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "note": "the committed datum is a pending termination: refused",
+   "kind": "fold",
+   "inputs":
+   [{"lovelace": 18,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "id": "fold-pending-termination",
+   "donation": 2},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 15,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "note": "the committed datum is the initial datum of another AID: refused",
+   "kind": "fold",
+   "inputs":
+   [{"lovelace": 18,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "id": "fold-other-aid",
    "donation": 2},
   {"verdict": "refused",
    "validity": {"upper": 15, "lower": 12},
@@ -342,26 +555,42 @@
      "address":
      "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note":
-   "a request committing another address than the checkpoint validator's, folded to the checkpoint validator: refused",
+   "a request of deposit 14, the minimum ADA 4, the deposit 6 and the freeze bond 4, leaving a pool below one premium: refused",
    "kind": "fold",
    "inputs":
    [{"lovelace": 17,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
-   "id": "fold-other-commitment-to-checkpoint",
+   "id": "fold-pool-below-premium",
+   "donation": 2},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 15,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "note":
+   "a request whose refund address is not an address a checkpoint datum can record: refused",
+   "kind": "fold",
+   "inputs":
+   [{"lovelace": 18,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "id": "fold-unrecorded-refund",
    "donation": 2},
   {"verdict": "accepted",
    "validity": {"upper": 17, "lower": 16},
    "referenced": 0,
    "outputs":
-   [{"lovelace": 14,
+   [{"lovelace": 15,
      "address":
      "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note":
    "the delivered checkpoint spent by its own lifecycle at the checkpoint validator, no application action: the application does not refuse it",
    "kind": "checkpoint",
    "inputs":
-   [{"lovelace": 14,
+   [{"lovelace": 15,
      "address":
      "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "id": "checkpoint-spent-at-checkpoint-validator",
@@ -370,14 +599,14 @@
    "validity": {"upper": 17, "lower": 16},
    "referenced": 0,
    "outputs":
-   [{"lovelace": 14,
+   [{"lovelace": 15,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "note":
    "the same spend of a checkpoint sitting at the application address: no action names it, refused",
    "kind": "checkpoint",
    "inputs":
-   [{"lovelace": 14,
+   [{"lovelace": 15,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "id": "checkpoint-spent-at-application-address",
@@ -386,17 +615,17 @@
    "validity": {"upper": 20, "lower": 15},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 16,
+   [{"lovelace": 17,
      "address":
      "d8799fd8799f581c4d52575c61666b70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4ffd87a80ff"},
     {"lovelace": 1,
      "address":
      "d8799fd8799f581c979ca1a6abb0b5babfc4c9ced3d8dde2e7ecf1f6fb00050a0f14191effd87a80ff"}],
    "note":
-   "a return starting at the deadline paying the refund address 16, the request less the tip: accepted",
+   "a return starting at the deadline paying the refund address 17, the request less the tip: accepted",
    "kind": "return",
    "inputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "id": "return-at-deadline",
@@ -405,7 +634,7 @@
    "validity": {"upper": 20, "lower": 14},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 16,
+   [{"lovelace": 17,
      "address":
      "d8799fd8799f581c4d52575c61666b70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4ffd87a80ff"},
     {"lovelace": 1,
@@ -415,7 +644,7 @@
    "a return whose validity interval starts one slot before the deadline: refused",
    "kind": "return",
    "inputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "id": "return-straddling-deadline",
@@ -424,7 +653,7 @@
    "validity": {"upper": 20, "lower": 15},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 15,
+   [{"lovelace": 16,
      "address":
      "d8799fd8799f581c4d52575c61666b70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4ffd87a80ff"},
     {"lovelace": 2,
@@ -434,7 +663,7 @@
    "the refund address is paid one lovelace less than the request less the tip: refused",
    "kind": "return",
    "inputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "id": "return-refund-reduced",
@@ -443,7 +672,7 @@
    "validity": {"upper": 20, "lower": 15},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 16,
+   [{"lovelace": 17,
      "address":
      "d8799fd8799f581c72777c81868b90959a9fa4a9aeb3b8bdc2c7ccd1d6dbe0e5eaeff4f9ffd87a80ff"},
     {"lovelace": 1,
@@ -452,7 +681,7 @@
    "note": "the refund is paid to another address: refused",
    "kind": "return",
    "inputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "id": "return-refund-redirected",
@@ -473,6 +702,19 @@
   {"verdict": "refused",
    "validity": {"upper": 15, "lower": 12},
    "referenced": 0,
+   "outputs":
+   [{"lovelace": 4,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "note":
+   "a termination approval minted onto a pending termination with no action: refused",
+   "kind": "termination",
+   "inputs": [],
+   "id": "termination-approval-minted",
+   "donation": 0},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 0,
    "outputs": [],
    "note": "a terminating fold that does not burn the active token: refused",
    "kind": "termination",
@@ -486,17 +728,17 @@
    "validity": {"upper": 15, "lower": 12},
    "referenced": 1,
    "outputs":
-   [{"lovelace": 14,
+   [{"lovelace": 15,
      "address":
      "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note":
    "a fold that also spends a second booked request no action names: refused",
    "kind": "fold",
    "inputs":
-   [{"lovelace": 17,
+   [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"},
-    {"lovelace": 17,
+    {"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "id": "fold-with-unnamed-request",
@@ -515,12 +757,16 @@
    "donation": 0}],
  "request": "deposit + registrationCost + minimumTip",
  "model": "lean/CardanoKeri/Application.lean",
+ "mint":
+ "the mint under the application policy is exactly what the actions justify: configuration +1 per created record, approval +1 per booked output, approval -1 per fold or return, termination approval -1 per terminating fold; each booked output is booked once",
  "intervals":
  "lower bound included, upper bound excluded, as the ledger hands them to scripts",
+ "initialState":
+ "the holding's datum is the version 2 Live datum of the request's AID at sn 0, epoch 0, not poisoned, frozen or topped up, born_at = bookedAt, refund_to = the ledger bytes of the request's refund address; the pool is the deposit less Mc + D + B and is at least P",
  "holding":
  "the approval commits the checkpoint validator's credential, which the configuration record names and which is not the application's; the fold delivers there",
  "description":
- "KERI's application on the application-held Singular model: the registration approval bytes, the configuration record, and accepted and refused configuration creations, bookings, folds, returns and termination spends, and the spend of a delivered checkpoint.",
+ "KERI's application on the application-held Singular model: the registration approval bytes, the configuration record, and accepted and refused configuration creations, bookings, folds, returns and termination spends, and the spend of a delivered checkpoint; a fold delivers exactly the initial checkpoint state.",
  "deposit":
  "the approval commits the whole carrier; the holding holds exactly it",
  "deadline":
@@ -541,10 +787,11 @@
    "bookingWidth": 1},
   "checkpointCredential":
   "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"},
+ "checkpoint": {"P": 1, "Mc": 4, "D": 6, "B": 4},
  "approvals":
  [{"registryName":
    "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf",
-   "note": "the registration approval of a funded registration of 14 lovelace",
+   "note": "the registration approval of a funded registration of 15 lovelace",
    "key":
    "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550",
    "input":
@@ -554,46 +801,46 @@
      "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
      "outputIndex": 0},
     "initialDatum":
-    "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d87980d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
-    "holdingAddress":
-    "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff",
-    "deposit": 14,
-    "aid": "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"},
-   "initialDatumHash":
-   "1dda415ee081359af8e7c28f992fd49aa41b8e6aabb6957037e50bbbd8c6d0b1",
-   "id": "approval",
-   "approvalPreimage":
-   "d87c9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff58201dda415ee081359af8e7c28f992fd49aa41b8e6aabb6957037e50bbbd8c6d0b10eff",
-   "approval":
-   {"policy": "282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
-    "name":
-    "f609e3df6b78bb83273c27a66bb7fca4b55ba5dc31c925e81ecacc4cc7550598"}},
-  {"registryName":
-   "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf",
-   "note": "the same registration committing 15: another approval",
-   "key":
-   "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550",
-   "input":
-   {"statePolicy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
-    "seed":
-    {"transactionId":
-     "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
-     "outputIndex": 0},
-    "initialDatum":
-    "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d87980d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+    "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000d87980d879800a581d604d52575c61666b70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d87980d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
     "holdingAddress":
     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff",
     "deposit": 15,
     "aid": "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"},
    "initialDatumHash":
-   "1dda415ee081359af8e7c28f992fd49aa41b8e6aabb6957037e50bbbd8c6d0b1",
-   "id": "approval-other-deposit",
+   "0600c5de826967d04aef7aa9d986b5dc8be700398efb7239480083b399048c6e",
+   "id": "approval",
    "approvalPreimage":
-   "d87c9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff58201dda415ee081359af8e7c28f992fd49aa41b8e6aabb6957037e50bbbd8c6d0b10fff",
+   "d87c9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff58200600c5de826967d04aef7aa9d986b5dc8be700398efb7239480083b399048c6e0fff",
    "approval":
    {"policy": "282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
     "name":
-    "25f4203931b92237123b47a844d03612236713e90ecd1353256950a1e851e161"}},
+    "16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784"}},
+  {"registryName":
+   "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf",
+   "note": "the same registration committing 16: another approval",
+   "key":
+   "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550",
+   "input":
+   {"statePolicy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+    "seed":
+    {"transactionId":
+     "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+     "outputIndex": 0},
+    "initialDatum":
+    "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000d87980d879800a581d604d52575c61666b70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d87980d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+    "holdingAddress":
+    "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff",
+    "deposit": 16,
+    "aid": "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"},
+   "initialDatumHash":
+   "0600c5de826967d04aef7aa9d986b5dc8be700398efb7239480083b399048c6e",
+   "id": "approval-other-deposit",
+   "approvalPreimage":
+   "d87c9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff58200600c5de826967d04aef7aa9d986b5dc8be700398efb7239480083b399048c6e10ff",
+   "approval":
+   {"policy": "282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+    "name":
+    "abd4ba9461adbba96c3190a5a3fc9220f660dc0d28b7a1dbd8cf2cbd262ec6e0"}},
   {"registryName":
    "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf",
    "note": "another AID in the same registry: another key, datum and approval",
@@ -606,17 +853,17 @@
      "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
      "outputIndex": 0},
     "initialDatum":
-    "d87a9fd8799f582c4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776f0000d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d87980d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+    "d87a9fd8799f582c4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776f0000d87980d879800a581d604d52575c61666b70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d87980d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
     "holdingAddress":
     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff",
-    "deposit": 14,
+    "deposit": 15,
     "aid": "EEBjyTcVHGUZHrR1x3wuxOxbrzH0_cGfAYJJQHME3Pwo"},
    "initialDatumHash":
-   "873c829d2533029f7d981d1013e9a27b9b9f539a02a626133578cab5dca98235",
+   "64663b92795e9684fc729721f4c59913a1d75aaadd71c8c5ddaf7f191b932ae1",
    "id": "approval-other-aid",
    "approvalPreimage":
-   "d87c9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776fd8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff5820873c829d2533029f7d981d1013e9a27b9b9f539a02a626133578cab5dca982350eff",
+   "d87c9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776fd8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff582064663b92795e9684fc729721f4c59913a1d75aaadd71c8c5ddaf7f191b932ae10fff",
    "approval":
    {"policy": "282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
     "name":
-    "c8f92bd201627103cc21b912902e9a61ac1a77f248d682a1671ffbb69a2e8903"}}]}
+    "88c1f0f2bc435f053b72b40e56af1cbeadcb625a75f1427fc1e021ed3b4dedc7"}}]}

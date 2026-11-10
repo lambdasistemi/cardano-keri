@@ -3,9 +3,9 @@
   "scope": "Current lifecycle and transport theorem source stories with complete formal binders and conclusions; no production correspondence claim",
   "singular": "d69ab005c3b710aeebf033d3c5cd08c56feb5643",
   "sources": {
-    "lean/CardanoKeri/Application.lean": "cbfe974f6734f74b4b65f965a0d256b82c1c8ac26cfcb4c4d43cd2411f8721ae",
-    "lean/CardanoKeri/ApplicationGoals.lean": "a34e3041e26c8f751405c9604ed6dcb979d137af9f16c1e6c38198c8d57cbb0a",
-    "lean/CardanoKeri/ApplicationVectors.lean": "d8792ae4cf77540b7c536255db75a261f4e2a1399d8b9bf63b5ad454b21e3d80",
+    "lean/CardanoKeri/Application.lean": "cb800811d6eb04a8b254e26626ea5bf22526a506a2e9150e7b226014507c1f6f",
+    "lean/CardanoKeri/ApplicationGoals.lean": "a865d9d86cadbfc56f8c78469c68cef53a3c6107488bc65677126873c76d65e5",
+    "lean/CardanoKeri/ApplicationVectors.lean": "a45317d36d7f309d8718622cd644a20063ab6d536c4f486a709d0768fc220e1a",
     "lean/CardanoKeri/Checkpoint.lean": "9a602b050c28d913b7948f20533a05708201170c40b5c2d1c456c8d86f4c1496",
     "lean/CardanoKeri/CheckpointCertificate.lean": "a84ccbcc21b6f6e5b5669add8a4f985b59de85e17c411b03643af1ca1bf3f3b7",
     "lean/CardanoKeri/CheckpointCompletionGoals.lean": "d6861d6cddc941fe6a8dd8781398676a250748dcba70eafc6338edd9b6bccde2",
@@ -172,90 +172,188 @@
       "declaration": "CardanoKeri.Application.registration_spend_is_fold_or_return",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
       "line": 85,
-      "statement": "theorem registration_spend_is_fold_or_return (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp release o = true)\n    {input : ObservedOutput} {data : RegistrationData} (mem : input ∈ o.inputs)\n    (atApplication : input.credential = release.applicationCredential)\n    (hd : decoded i.decode input = some (.registration data)) :\n    ∃ c, configurationOf i release data.registry o = some c ∧\n      parametersValid c.parameters = true ∧\n      approvalBurned i release data o = true ∧\n      ((∃ index holding, Action.foldRegistration input.reference index ∈ o.actions ∧\n          o.outputs[index]? = some holding ∧ foldWindow data o.interval = true ∧\n          env.inception data.key = true ∧ delivered i c data holding o = true) ∨\n       (Action.returnRegistration input.reference ∈ o.actions ∧\n          returnWindow data o.interval = true ∧\n          input.lovelace - c.parameters.minimumTip ≤ paidTo o.outputs data.refundAddress))",
-      "statementSha256": "932129b47c5197925dc85fd71f6a38f57f21cb308e192d73be25f955f6f2ef17",
+      "statement": "theorem registration_spend_is_fold_or_return (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true)\n    {input : ObservedOutput} {data : RegistrationData} (mem : input ∈ o.inputs)\n    (atApplication : input.credential = release.applicationCredential)\n    (hd : decoded i.decode input = some (.registration data)) :\n    ∃ c, configurationOf i release data.registry o = some c ∧\n      parametersValid c.parameters = true ∧\n      approvalBurned i release data o = true ∧\n      ((∃ index holding, Action.foldRegistration input.reference index ∈ o.actions ∧\n          o.outputs[index]? = some holding ∧ foldWindow data o.interval = true ∧\n          env.inception data.key = true ∧ delivered i rp cp c data holding o = true) ∨\n       (Action.returnRegistration input.reference ∈ o.actions ∧\n          returnWindow data o.interval = true ∧\n          input.lovelace - c.parameters.minimumTip ≤ paidTo o.outputs data.refundAddress))",
+      "statementSha256": "f5b0e94345919ec0a5537d0a8c0217ce25a935ecafdde60e12cd28a0b4cdd2d2",
       "sourceStory": "**Every spend of a registration request is a fold in its window or a full\nreturn after it.**\nGiven a transaction the KERI application accepts, and one of its inputs at the\napplication address that decodes as a booked registration request.\nWhen that input is spent.\nThen the request's configuration record is read by reference with valid\nparameters, the request's approval is burned, and either a fold names it whose\nwhole validity interval ends by the deadline, whose key has its inception\nevidence and which delivers the committed holding (address, which is the\ncheckpoint validator's credential the record names, initial datum, exactly the\ndeposit, the one new active token); or a return names it whose whole validity\ninterval starts at the deadline or later, and the refund address is paid at\nleast the request's lovelace less the tip.",
       "story": {
-        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp release o = true)\n    {input : ObservedOutput} {data : RegistrationData} (mem : input ∈ o.inputs)\n    (atApplication : input.credential = release.applicationCredential)\n    (hd : decoded i.decode input = some (.registration data))",
+        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true)\n    {input : ObservedOutput} {data : RegistrationData} (mem : input ∈ o.inputs)\n    (atApplication : input.credential = release.applicationCredential)\n    (hd : decoded i.decode input = some (.registration data))",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
-        "then": "∃ c, configurationOf i release data.registry o = some c ∧\n      parametersValid c.parameters = true ∧\n      approvalBurned i release data o = true ∧\n      ((∃ index holding, Action.foldRegistration input.reference index ∈ o.actions ∧\n          o.outputs[index]? = some holding ∧ foldWindow data o.interval = true ∧\n          env.inception data.key = true ∧ delivered i c data holding o = true) ∨\n       (Action.returnRegistration input.reference ∈ o.actions ∧\n          returnWindow data o.interval = true ∧\n          input.lovelace - c.parameters.minimumTip ≤ paidTo o.outputs data.refundAddress))"
+        "then": "∃ c, configurationOf i release data.registry o = some c ∧\n      parametersValid c.parameters = true ∧\n      approvalBurned i release data o = true ∧\n      ((∃ index holding, Action.foldRegistration input.reference index ∈ o.actions ∧\n          o.outputs[index]? = some holding ∧ foldWindow data o.interval = true ∧\n          env.inception data.key = true ∧ delivered i rp cp c data holding o = true) ∨\n       (Action.returnRegistration input.reference ∈ o.actions ∧\n          returnWindow data o.interval = true ∧\n          input.lovelace - c.parameters.minimumTip ≤ paidTo o.outputs data.refundAddress))"
       },
-      "storySha256": "c1eb9b97a836828b995ee3f15dbc0f7cb67dbf57d39fb81334c6b94ce3bc315b"
+      "storySha256": "28ade4d381133baff3f2528ccbd0b5358181718112647148d66c7ea5778df8b9"
     },
     {
       "declaration": "CardanoKeri.Application.before_deadline_only_fold",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 173,
-      "statement": "theorem before_deadline_only_fold (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp release o = true)\n    {input : ObservedOutput} {data : RegistrationData} (mem : input ∈ o.inputs)\n    (atApplication : input.credential = release.applicationCredential)\n    (hd : decoded i.decode input = some (.registration data))\n    (early : o.interval.lower < data.processDeadline) :\n    ∃ c index holding, configurationOf i release data.registry o = some c ∧\n      Action.foldRegistration input.reference index ∈ o.actions ∧\n      o.outputs[index]? = some holding ∧ delivered i c data holding o = true",
-      "statementSha256": "82637a2c387168f3024c58767d3c0a9bb126f7a697007130738da5d3c2aea1cd",
+      "line": 174,
+      "statement": "theorem before_deadline_only_fold (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true)\n    {input : ObservedOutput} {data : RegistrationData} (mem : input ∈ o.inputs)\n    (atApplication : input.credential = release.applicationCredential)\n    (hd : decoded i.decode input = some (.registration data))\n    (early : o.interval.lower < data.processDeadline) :\n    ∃ c index holding, configurationOf i release data.registry o = some c ∧\n      Action.foldRegistration input.reference index ∈ o.actions ∧\n      o.outputs[index]? = some holding ∧ delivered i rp cp c data holding o = true",
+      "statementSha256": "b08fe7c9b52c6f8b7a98dd83097d8f1d72caa6d927114ecc14da6c9fb828ecce",
       "sourceStory": "**Until its deadline a request is spent only by a fold.**\nGiven an accepted transaction spending a booked registration request at the\napplication address, whose validity interval starts before the request's deadline.\nWhen the request is spent.\nThen a fold names it and delivers its committed holding, under the\nconfiguration record read by reference; no return can.",
       "story": {
-        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp release o = true)\n    {input : ObservedOutput} {data : RegistrationData} (mem : input ∈ o.inputs)\n    (atApplication : input.credential = release.applicationCredential)\n    (hd : decoded i.decode input = some (.registration data))\n    (early : o.interval.lower < data.processDeadline)",
+        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true)\n    {input : ObservedOutput} {data : RegistrationData} (mem : input ∈ o.inputs)\n    (atApplication : input.credential = release.applicationCredential)\n    (hd : decoded i.decode input = some (.registration data))\n    (early : o.interval.lower < data.processDeadline)",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
-        "then": "∃ c index holding, configurationOf i release data.registry o = some c ∧\n      Action.foldRegistration input.reference index ∈ o.actions ∧\n      o.outputs[index]? = some holding ∧ delivered i c data holding o = true"
+        "then": "∃ c index holding, configurationOf i release data.registry o = some c ∧\n      Action.foldRegistration input.reference index ∈ o.actions ∧\n      o.outputs[index]? = some holding ∧ delivered i rp cp c data holding o = true"
       },
-      "storySha256": "1358c79ef5a1c4c38e3003263783652a0f38e1c284deec7824c153178c7e1a4c"
+      "storySha256": "cadfeb06bc2728758fcefd22609da121260dfdafdf0f3d5b3209880a37b3d085"
     },
     {
       "declaration": "CardanoKeri.Application.return_pays_refund_address",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 196,
-      "statement": "theorem return_pays_refund_address (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp release o = true)\n    {input : ObservedOutput} {data : RegistrationData} {c : Configuration}\n    (named : namedInput o input.reference = some input)\n    (hd : decoded i.decode input = some (.registration data))\n    (hc : configurationOf i release data.registry o = some c)\n    (returned : Action.returnRegistration input.reference ∈ o.actions) :\n    data.processDeadline ≤ o.interval.lower ∧\n      input.lovelace - c.parameters.minimumTip ≤ paidTo o.outputs data.refundAddress",
-      "statementSha256": "3b54faa0a812c3f53ed6f01864771b680effd21d2cbfffdd66c72696fab7f0c8",
+      "line": 198,
+      "statement": "theorem return_pays_refund_address (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true)\n    {input : ObservedOutput} {data : RegistrationData} {c : Configuration}\n    (named : namedInput o input.reference = some input)\n    (hd : decoded i.decode input = some (.registration data))\n    (hc : configurationOf i release data.registry o = some c)\n    (returned : Action.returnRegistration input.reference ∈ o.actions) :\n    data.processDeadline ≤ o.interval.lower ∧\n      input.lovelace - c.parameters.minimumTip ≤ paidTo o.outputs data.refundAddress",
+      "statementSha256": "6c52ac316d3f0906e199f684feb5e279bbdcd066df89443ea955b78d159e80aa",
       "sourceStory": "**From its deadline a request is returned in full but the tip.**\nGiven an accepted transaction that returns a booked registration request.\nWhen the request is spent by the return.\nThen the transaction's whole validity interval starts at the deadline or\nlater, and the refund address is paid at least the request's lovelace less\nthe registry's minimum tip.",
       "story": {
-        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp release o = true)\n    {input : ObservedOutput} {data : RegistrationData} {c : Configuration}\n    (named : namedInput o input.reference = some input)\n    (hd : decoded i.decode input = some (.registration data))\n    (hc : configurationOf i release data.registry o = some c)\n    (returned : Action.returnRegistration input.reference ∈ o.actions)",
+        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true)\n    {input : ObservedOutput} {data : RegistrationData} {c : Configuration}\n    (named : namedInput o input.reference = some input)\n    (hd : decoded i.decode input = some (.registration data))\n    (hc : configurationOf i release data.registry o = some c)\n    (returned : Action.returnRegistration input.reference ∈ o.actions)",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
         "then": "data.processDeadline ≤ o.interval.lower ∧\n      input.lovelace - c.parameters.minimumTip ≤ paidTo o.outputs data.refundAddress"
       },
-      "storySha256": "fcd9f47b98fc38d3447461fab83e77fb432f0b725c72f91db2f336e0a10611f4"
+      "storySha256": "b9f230d67760f8d4d01a94d91b4e3d672d47e33cc6d7c1f2b4a6425228b949b3"
     },
     {
       "declaration": "CardanoKeri.Application.termination_only_by_fold",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 225,
-      "statement": "theorem termination_only_by_fold (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp release o = true)\n    {input : ObservedOutput} (mem : input ∈ o.inputs)\n    (atApplication : input.credential = release.applicationCredential)\n    (notRequest : ∀ data, decoded i.decode input ≠ some (.registration data)) :\n    ∃ registry key, Action.foldTermination input.reference registry key ∈ o.actions ∧\n      SingularApplicationHeld.Assets.mintQty o.assets\n        (terminationApproval i.hash i.code release registry key) = -1 ∧\n      SingularApplicationHeld.Assets.mintQty o.assets (activeAsset i.hash i.code registry key) = -1 ∧\n      o.assets.invoked.contains registry.policy = true",
-      "statementSha256": "90d9c705b84ac539537d8eceb4d791d56795b1fcd46e8f3d28b14b7db8267ff2",
+      "line": 228,
+      "statement": "theorem termination_only_by_fold (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true)\n    {input : ObservedOutput} (mem : input ∈ o.inputs)\n    (atApplication : input.credential = release.applicationCredential)\n    (notRequest : ∀ data, decoded i.decode input ≠ some (.registration data)) :\n    ∃ registry key, Action.foldTermination input.reference registry key ∈ o.actions ∧\n      SingularApplicationHeld.Assets.mintQty o.assets\n        (terminationApproval i.hash i.code release registry key) = -1 ∧\n      SingularApplicationHeld.Assets.mintQty o.assets (activeAsset i.hash i.code registry key) = -1 ∧\n      o.assets.invoked.contains registry.policy = true",
+      "statementSha256": "23c599b328a3cfbdfc2bb5a8021b62fdf565746d343a419f72284491f105a346",
       "sourceStory": "**A pending termination is spent only by its terminating fold.**\nGiven an accepted transaction and one of its inputs at the application address\nthat does not decode as a registration request (a pending termination output\ncarries no datum).\nWhen that input is spent.\nThen a terminating fold names it, burns its termination approval and its\nactive token, and the registry's state policy runs.",
       "story": {
-        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp release o = true)\n    {input : ObservedOutput} (mem : input ∈ o.inputs)\n    (atApplication : input.credential = release.applicationCredential)\n    (notRequest : ∀ data, decoded i.decode input ≠ some (.registration data))",
+        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true)\n    {input : ObservedOutput} (mem : input ∈ o.inputs)\n    (atApplication : input.credential = release.applicationCredential)\n    (notRequest : ∀ data, decoded i.decode input ≠ some (.registration data))",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
         "then": "∃ registry key, Action.foldTermination input.reference registry key ∈ o.actions ∧\n      SingularApplicationHeld.Assets.mintQty o.assets\n        (terminationApproval i.hash i.code release registry key) = -1 ∧\n      SingularApplicationHeld.Assets.mintQty o.assets (activeAsset i.hash i.code registry key) = -1 ∧\n      o.assets.invoked.contains registry.policy = true"
       },
-      "storySha256": "729991130048610b562fe28dd321762f4ddd989775d10ae4505ef12466c092ab"
+      "storySha256": "7a5f4a79e88331940ef514b49ada5c30cbecc732ade84ebce113717b4a411c13"
     },
     {
       "declaration": "CardanoKeri.Application.treasury_covers_registration_costs",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 291,
-      "statement": "theorem treasury_covers_registration_costs (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp release o = true) :\n    requiredTreasury i release o ≤ o.donation",
-      "statementSha256": "f6192cd9c48056484aef5e3c1298cdb5361b304ec9e58247bf92c77704606e90",
+      "line": 295,
+      "statement": "theorem treasury_covers_registration_costs (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true) :\n    requiredTreasury i release o ≤ o.donation",
+      "statementSha256": "59915aba74720b548f55c29024f71d837fd8a5b08625965da99547a46212b2d1",
       "sourceStory": "**A fold's treasury donation covers its registration costs.**\nGiven a transaction the KERI application accepts.\nWhen it folds registration requests.\nThen its `treasury_donation` is at least the sum of the registration costs of\nthe requests it folds.",
       "story": {
-        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp release o = true)",
+        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true)",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
         "then": "requiredTreasury i release o ≤ o.donation"
       },
-      "storySha256": "76425a09c73ab9cf32523bc2408bf94b7cd612b2d7a7c8d3f9918adfe3317861"
+      "storySha256": "52dbe47f7ed2523b6ef9678798502784ae8bd614ea535a563206717de8640d23"
     },
     {
       "declaration": "CardanoKeri.Application.folded_cost_in_donation",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 303,
-      "statement": "theorem folded_cost_in_donation (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp release o = true)\n    {ref : OutRef} {index : Nat} {input : ObservedOutput} {data : RegistrationData}\n    {p : ApplicationParameters}\n    (folded : Action.foldRegistration ref index ∈ o.actions)\n    (hs : spentRequest i release o ref = some (input, data, p)) :\n    p.registrationCost ≤ o.donation",
-      "statementSha256": "b1f9d6cb36cb65c38530a7cffe338b00c30e70fe5e2687ef2b4a18bdf2025a04",
+      "line": 308,
+      "statement": "theorem folded_cost_in_donation (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true)\n    {ref : OutRef} {index : Nat} {input : ObservedOutput} {data : RegistrationData}\n    {p : ApplicationParameters}\n    (folded : Action.foldRegistration ref index ∈ o.actions)\n    (hs : spentRequest i release o ref = some (input, data, p)) :\n    p.registrationCost ≤ o.donation",
+      "statementSha256": "5bb9b8f581e0a539ee5fcf14d85a8b78a12581b8ef44dfa4cdb5cb8383decbb2",
       "sourceStory": "**Each folded request's registration cost is in the donation.**\nGiven an accepted transaction with a fold of a request whose configuration\nrecord gives registration cost `c`.\nWhen the transaction is accepted.\nThen its treasury donation is at least `c`.",
       "story": {
-        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp release o = true)\n    {ref : OutRef} {index : Nat} {input : ObservedOutput} {data : RegistrationData}\n    {p : ApplicationParameters}\n    (folded : Action.foldRegistration ref index ∈ o.actions)\n    (hs : spentRequest i release o ref = some (input, data, p))",
+        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true)\n    {ref : OutRef} {index : Nat} {input : ObservedOutput} {data : RegistrationData}\n    {p : ApplicationParameters}\n    (folded : Action.foldRegistration ref index ∈ o.actions)\n    (hs : spentRequest i release o ref = some (input, data, p))",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
         "then": "p.registrationCost ≤ o.donation"
       },
-      "storySha256": "3c8d9f4d3903f3983c2a4375568c22df73831e7c8dab1e3ba8db2f846baac527"
+      "storySha256": "7af663db42ed21fe5cce0074c86147e8fafe66c92578622b040965790cd6177b"
+    },
+    {
+      "declaration": "CardanoKeri.Application.qty_eq_zero",
+      "path": "lean/CardanoKeri/ApplicationGoals.lean",
+      "line": 327,
+      "statement": "theorem qty_eq_zero {l : List (TokenId × Int)} {asset : TokenId} (absent : asset ∉ l.map (·.1)) :\n    ((l.filter fun entry => entry.1 == asset).map (·.2)).sum = 0",
+      "statementSha256": "0ccfe95d99654f2947462198d287256a8d1739c7ede8a096079b0c469b5d465a",
+      "sourceStory": "A token that is no entry's key has quantity zero.",
+      "story": {
+        "given": "{l : List (TokenId × Int)} {asset : TokenId} (absent : asset ∉ l.map (·.1))",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "((l.filter fun entry => entry.1 == asset).map (·.2)).sum = 0"
+      },
+      "storySha256": "11804dd2a0f5814a4d7d336b564a1b66b95a5767cf3e9c531e3a4c19910783c8"
+    },
+    {
+      "declaration": "CardanoKeri.Application.sum_nonpos",
+      "path": "lean/CardanoKeri/ApplicationGoals.lean",
+      "line": 335,
+      "statement": "theorem sum_nonpos {l : List Int} (h : ∀ x ∈ l, x ≤ 0) : l.sum ≤ 0",
+      "statementSha256": "a63e6b4a484ef162ccd83febdd45b48b605af0a12f6756696f79750010528969",
+      "sourceStory": "",
+      "story": {
+        "given": "{l : List Int} (h : ∀ x ∈ l, x ≤ 0)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "l.sum ≤ 0"
+      },
+      "storySha256": "1e826de350e3bac29d6ab221749e71fb8a1e8c68c7f88dbff50e77068bb079c3"
+    },
+    {
+      "declaration": "CardanoKeri.Application.accepted_mint_is_justified",
+      "path": "lean/CardanoKeri/ApplicationGoals.lean",
+      "line": 351,
+      "statement": "theorem accepted_mint_is_justified (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true) {asset : TokenId}\n    (policy : asset.policy = release.applicationPolicy) :\n    SingularApplicationHeld.Assets.mintQty o.assets asset = justifiedQty i release o asset",
+      "statementSha256": "e2e815ea04a01203e1f5deef52eb081d54b5d1b54748821c0923ca8950c769b1",
+      "sourceStory": "**The application mints exactly what its actions justify.**\nGiven a transaction the KERI application accepts.\nWhen its mint under the application policy is read.\nThen every token under that policy is minted in exactly the quantity the\nactions justify: one configuration token per created record, one registration\napproval per distinct booked output, one approval burned per fold or return,\none termination approval burned per terminating fold, and nothing else.",
+      "story": {
+        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true) {asset : TokenId}\n    (policy : asset.policy = release.applicationPolicy)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "SingularApplicationHeld.Assets.mintQty o.assets asset = justifiedQty i release o asset"
+      },
+      "storySha256": "3525c64ed958eae91920f592bd837efe88c2327b386288f123dc2daf9a30811c"
+    },
+    {
+      "declaration": "CardanoKeri.Application.accepted_books_once",
+      "path": "lean/CardanoKeri/ApplicationGoals.lean",
+      "line": 371,
+      "statement": "theorem accepted_books_once (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true) : (bookedOutputs o).Nodup",
+      "statementSha256": "1a528d41d6d448b521ece6af7e16aa7df3420a4b605e5b1e69d90e5330ddf5d8",
+      "sourceStory": "**Each booked output is booked once.**\nGiven a transaction the KERI application accepts.\nWhen its bookings are listed.\nThen no output is booked twice.",
+      "story": {
+        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "(bookedOutputs o).Nodup"
+      },
+      "storySha256": "aeae70ce0f3cfcfbf33fb1ae3b17d3e4b536bad3c4d5f16923f6cd73f2f6083d"
+    },
+    {
+      "declaration": "CardanoKeri.Application.justifies_burns_only",
+      "path": "lean/CardanoKeri/ApplicationGoals.lean",
+      "line": 379,
+      "statement": "theorem justifies_burns_only {i : Interpretation} {release : PublishedRelease} {o : Observation}\n    {a : Action} (notBooking : a.booking? = none)\n    (notConfiguration : ∀ registry seed index, a ≠ .createConfiguration registry seed index)\n    {entry : TokenId × Int} (mem : entry ∈ a.justifies i release o) : entry.2 ≤ 0",
+      "statementSha256": "a5205610106dd8c5966bda526f5485b3329e5b3200fcbf044d29205c7bf42c80",
+      "sourceStory": "Every action but a booking or a configuration creation justifies only burns.",
+      "story": {
+        "given": "{i : Interpretation} {release : PublishedRelease} {o : Observation}\n    {a : Action} (notBooking : a.booking? = none)\n    (notConfiguration : ∀ registry seed index, a ≠ .createConfiguration registry seed index)\n    {entry : TokenId × Int} (mem : entry ∈ a.justifies i release o)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "entry.2 ≤ 0"
+      },
+      "storySha256": "a81a9f400a33b719a807c61621b1ba428f4f06e70910ec2bd6efa93d437d4ab9"
+    },
+    {
+      "declaration": "CardanoKeri.Application.mint_without_booking_refused",
+      "path": "lean/CardanoKeri/ApplicationGoals.lean",
+      "line": 402,
+      "statement": "theorem mint_without_booking_refused (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (noBooking : ∀ a ∈ o.actions, a.booking? = none)\n    (noConfiguration : ∀ registry seed index, Action.createConfiguration registry seed index ∉ o.actions)\n    {asset : TokenId} (policy : asset.policy = release.applicationPolicy)\n    (minted : 0 < SingularApplicationHeld.Assets.mintQty o.assets asset) :\n    accepted i env rp cp release o = false",
+      "statementSha256": "544ccc3f9848c1310c17323979e1f619298126a8d882543a91bbf25f35fb0b79",
+      "sourceStory": "**No approval without a booking.**\nGiven a transaction with no booking and no configuration creation (no action at\nall, or only folds, returns and terminating folds), minting a positive quantity\nof a token under the application policy, such as a registration approval of a\npayload of the minter's choosing.\nWhen the KERI application judges it.\nThen it is refused: an approval exists only through a booking.",
+      "story": {
+        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (noBooking : ∀ a ∈ o.actions, a.booking? = none)\n    (noConfiguration : ∀ registry seed index, Action.createConfiguration registry seed index ∉ o.actions)\n    {asset : TokenId} (policy : asset.policy = release.applicationPolicy)\n    (minted : 0 < SingularApplicationHeld.Assets.mintQty o.assets asset)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "accepted i env rp cp release o = false"
+      },
+      "storySha256": "aa59f04022471b315af1feff5414092ba0cc6729b510d0472381b5b1b6499c27"
+    },
+    {
+      "declaration": "CardanoKeri.Application.duplicate_booking_refused",
+      "path": "lean/CardanoKeri/ApplicationGoals.lean",
+      "line": 427,
+      "statement": "theorem duplicate_booking_refused (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation) {index : Nat}\n    (twice : 2 ≤ (bookedOutputs o).count index) :\n    accepted i env rp cp release o = false",
+      "statementSha256": "bfe3dce17ee97f414b673ed99ef7a346974fd077ec6895822aba31aa3a281e95",
+      "sourceStory": "**A booked output is booked once.**\nGiven a transaction whose actions book the same output twice.\nWhen the KERI application judges it.\nThen it is refused.",
+      "story": {
+        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation) {index : Nat}\n    (twice : 2 ≤ (bookedOutputs o).count index)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "accepted i env rp cp release o = false"
+      },
+      "storySha256": "0e0d415631d70110845dc67fe202d5731c064912ee7e574e45585e96dfcf40b7"
     },
     {
       "declaration": "CardanoKeri.Application.configuration_refuses_foreign_registry",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 325,
+      "line": 444,
       "statement": "theorem configuration_refuses_foreign_registry (i : Interpretation) (release : PublishedRelease)\n    {registry : TokenId} (seed : OutRef) (output : ObservedOutput) (o : Observation)\n    (foreign : registry.policy ≠ release.statePolicy) :\n    createConfiguration i release registry seed output o = false",
       "statementSha256": "4271e6e0897f6e81d6567dfc795d5bd91e83c1201e642793d183390d2451196d",
       "sourceStory": "**No configuration record for a foreign registry.**\nGiven a registry whose state policy is not `state(A_keri)`.\nWhen its configuration record is created.\nThen the creation is refused, so no booking can read one.",
@@ -269,7 +367,7 @@
     {
       "declaration": "CardanoKeri.Application.configuration_refuses_retraction",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 335,
+      "line": 454,
       "statement": "theorem configuration_refuses_retraction (i : Interpretation) (release : PublishedRelease)\n    {registry : TokenId} (seed : OutRef) {output : ObservedOutput} (o : Observation)\n    {c : Configuration} (hc : configurationDatum i output = some c)\n    (positive : c.parameters.retractTime ≠ 0) :\n    createConfiguration i release registry seed output o = false",
       "statementSha256": "ff44332d21fc8925cd2bf66ddf15d8cec94d782eb6bd33b69508d4d73ce3e8ac",
       "sourceStory": "**A configuration record has no retraction window.**\nGiven a configuration record whose parameters have a positive `retractTime`.\nWhen it is created.\nThen the creation is refused.",
@@ -283,7 +381,7 @@
     {
       "declaration": "CardanoKeri.Application.booking_inversion",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 353,
+      "line": 472,
       "statement": "theorem booking_inversion (i : Interpretation) (rp : CardanoKeri.Registry.Params)\n    (release : PublishedRelease) (o : Observation) {output : ObservedOutput}\n    (ok : bookRegistration i rp release o output = true) :\n    ∃ data c, decoded i.decode output = some (.registration data) ∧\n      configurationOf i release data.registry o = some c ∧\n      data.registry.policy = release.statePolicy ∧\n      data.holdingAddress = c.checkpointCredential ∧\n      c.checkpointCredential ≠ release.applicationCredential ∧\n      rp.Mc + rp.D ≤ data.deposit ∧\n      output.lovelace = data.deposit + c.parameters.registrationCost + c.parameters.minimumTip ∧\n      data.bookedAt = o.interval.upper ∧\n      data.processDeadline = data.bookedAt + c.parameters.processTime ∧\n      SingularApplicationHeld.Assets.mintQty o.assets\n        (registrationAsset i.hash i.code release data) = 1",
       "statementSha256": "29b07df60379d315de46705d39396837bb6c2e6f7531cab610eb6ad963d50f17",
       "sourceStory": "**A booking commits the checkpoint validator and holds exactly the deposit,\nthe registration cost and the tip.**\nGiven an accepted booking of a request output.\nWhen it is booked.\nThen the request decodes to a registration of a `state(A_keri)` registry,\nwhose configuration record is read by reference; the holding address is the\ncheckpoint validator's credential the record names, which is not the\napplication credential; the deposit is at least the registry's minimum ADA\nplus its deposit; the output holds exactly the deposit, the registration cost\nand the minimum tip; the deadline is the booking's upper bound plus the\nprocessing time; and one approval of the payload is minted.",
@@ -297,7 +395,7 @@
     {
       "declaration": "CardanoKeri.Application.booking_refuses_foreign_registry",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 385,
+      "line": 504,
       "statement": "theorem booking_refuses_foreign_registry (i : Interpretation) (rp : CardanoKeri.Registry.Params)\n    (release : PublishedRelease) (o : Observation) {output : ObservedOutput}\n    {data : RegistrationData} (hd : decoded i.decode output = some (.registration data))\n    (foreign : data.registry.policy ≠ release.statePolicy) :\n    bookRegistration i rp release o output = false",
       "statementSha256": "91fc44e30636faf64efcd6fc48d1a45d5ee29056d9c5eb7bb3b9197ef061b7c2",
       "sourceStory": "**A booking names only a registry of `state(A_keri)`.**\nGiven a request output decoding to a registration that names a registry whose\nstate policy is not the release's state policy `state(A_keri)`.\nWhen it is booked.\nThen the booking is refused.",
@@ -311,7 +409,7 @@
     {
       "declaration": "CardanoKeri.Application.booking_refuses_application_holding",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 403,
+      "line": 522,
       "statement": "theorem booking_refuses_application_holding (i : Interpretation)\n    (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation)\n    {output : ObservedOutput} {data : RegistrationData}\n    (hd : decoded i.decode output = some (.registration data))\n    (atApplication : data.holdingAddress = release.applicationCredential) :\n    bookRegistration i rp release o output = false",
       "statementSha256": "15f58f3be7b62ee0c50e20d91195f8511a577737edddb8a1ca06834d09a45388",
       "sourceStory": "**A booking that commits the application address as the holding is refused.**\nGiven a registration whose committed holding address is the application\ncredential.\nWhen it is booked.\nThen the booking is refused: a checkpoint is never delivered where the\napplication's own records live.",
@@ -325,7 +423,7 @@
     {
       "declaration": "CardanoKeri.Application.booking_refuses_other_holding",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 422,
+      "line": 541,
       "statement": "theorem booking_refuses_other_holding (i : Interpretation) (rp : CardanoKeri.Registry.Params)\n    (release : PublishedRelease) (o : Observation) {output : ObservedOutput}\n    {data : RegistrationData} {c : Configuration}\n    (hd : decoded i.decode output = some (.registration data))\n    (hc : configurationOf i release data.registry o = some c)\n    (other : data.holdingAddress ≠ c.checkpointCredential) :\n    bookRegistration i rp release o output = false",
       "statementSha256": "4b850ed6504925ce8fea97920c77d389073d439b72326a86f6ba7ae3137370ec",
       "sourceStory": "**A booking that commits another holding address than the checkpoint\nvalidator's is refused.**\nGiven a registration whose configuration record names checkpoint credential\n`c.checkpointCredential`, and whose committed holding address differs from it.\nWhen it is booked.\nThen the booking is refused.",
@@ -339,7 +437,7 @@
     {
       "declaration": "CardanoKeri.Application.booking_refuses_short_deposit",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 443,
+      "line": 562,
       "statement": "theorem booking_refuses_short_deposit (i : Interpretation) (rp : CardanoKeri.Registry.Params)\n    (release : PublishedRelease) (o : Observation) {output : ObservedOutput}\n    {data : RegistrationData} (hd : decoded i.decode output = some (.registration data))\n    (short : data.deposit < rp.Mc + rp.D) :\n    bookRegistration i rp release o output = false",
       "statementSha256": "6612889c5fcdf77e71d9e2c86e22a98f1d47bbe6d7ae5283e91f16e3139b37db",
       "sourceStory": "**A booking short of the carrier floor is refused.**\nGiven a registration whose committed deposit is below the registry's minimum\nADA plus its deposit.\nWhen it is booked.\nThen the booking is refused.",
@@ -353,7 +451,7 @@
     {
       "declaration": "CardanoKeri.Application.booking_refuses_inexact_contents",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 460,
+      "line": 579,
       "statement": "theorem booking_refuses_inexact_contents (i : Interpretation) (rp : CardanoKeri.Registry.Params)\n    (release : PublishedRelease) (o : Observation) {output : ObservedOutput}\n    {data : RegistrationData} {c : Configuration}\n    (hd : decoded i.decode output = some (.registration data))\n    (hc : configurationOf i release data.registry o = some c)\n    (inexact : output.lovelace ≠ requestLovelace c.parameters data) :\n    bookRegistration i rp release o output = false",
       "statementSha256": "9cb1efe3d3ad8a127ddfaa81ca15197c1830bd4fd83acc2e5a7df6e2cd53d3e0",
       "sourceStory": "**A booking holding anything but the exact contents is refused.**\nGiven a registration whose request output does not hold exactly its deposit,\nits registry's registration cost and minimum tip.\nWhen it is booked.\nThen the booking is refused.",
@@ -367,21 +465,21 @@
     {
       "declaration": "CardanoKeri.Application.fold_refuses_inexact_holding",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 484,
-      "statement": "theorem fold_refuses_inexact_holding (i : Interpretation) (env : Env) (release : PublishedRelease)\n    (o : Observation) {ref : OutRef} {index : Nat} {input holding : ObservedOutput}\n    {data : RegistrationData} (hh : o.outputs[index]? = some holding)\n    (inexact : holding.lovelace ≠ data.deposit) :\n    spendRegistration i env release o (.foldRegistration ref index) input data = false",
-      "statementSha256": "96c3ff404a1f6f6c0e25cb2398b76416d821dd9736715077d96c0c2df73b0a49",
+      "line": 603,
+      "statement": "theorem fold_refuses_inexact_holding (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params) (release : PublishedRelease)\n    (o : Observation) {ref : OutRef} {index : Nat} {input holding : ObservedOutput}\n    {data : RegistrationData} (hh : o.outputs[index]? = some holding)\n    (inexact : holding.lovelace ≠ data.deposit) :\n    spendRegistration i env rp cp release o (.foldRegistration ref index) input data = false",
+      "statementSha256": "3ccc075314e397bbca5110df19123da7859c80d83bb6d88f5658c05e56ade952",
       "sourceStory": "**A fold delivering any other lovelace than the deposit is refused.**\nGiven a booked registration and a fold naming a holding whose lovelace differs\nfrom the committed deposit, by one lovelace more or less.\nWhen the request is spent by that fold.\nThen the spend is refused.",
       "story": {
-        "given": "(i : Interpretation) (env : Env) (release : PublishedRelease)\n    (o : Observation) {ref : OutRef} {index : Nat} {input holding : ObservedOutput}\n    {data : RegistrationData} (hh : o.outputs[index]? = some holding)\n    (inexact : holding.lovelace ≠ data.deposit)",
+        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params) (release : PublishedRelease)\n    (o : Observation) {ref : OutRef} {index : Nat} {input holding : ObservedOutput}\n    {data : RegistrationData} (hh : o.outputs[index]? = some holding)\n    (inexact : holding.lovelace ≠ data.deposit)",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
-        "then": "spendRegistration i env release o (.foldRegistration ref index) input data = false"
+        "then": "spendRegistration i env rp cp release o (.foldRegistration ref index) input data = false"
       },
-      "storySha256": "7f59b3ae15b06b52b080bfc2fb7e4cfe229d8a11995ed7be8fa5daee02ef93db"
+      "storySha256": "2ab831b228055d835edda25919033c23cf34a95282ad2cffb19608174e13229b"
     },
     {
       "declaration": "CardanoKeri.Application.windows_are_upstream_phases",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 501,
+      "line": 621,
       "statement": "theorem windows_are_upstream_phases (data : RegistrationData) (interval : Interval)\n    (noRetraction : data.reclaimEnd = data.processDeadline) :\n    (foldWindow data interval = true ↔ classifyPhase data interval = .processing) ∧\n    (returnWindow data interval = true ↔ classifyPhase data interval = .cleanup)",
       "statementSha256": "f001b24196f568d5f4cba4713ef7509afa17bbeeb7e2e3743aad760f4d99e955",
       "sourceStory": "**The two windows are the upstream processing and cleanup phases.**\nGiven a request recorded with `reclaimEnd = processDeadline`, as a KERI booking\nwith `retractTime = 0` records it.\nWhen its fold and return windows are compared with the upstream phase\nclassification.\nThen the fold window is the processing phase and the return window is the\ncleanup phase.",
@@ -395,7 +493,7 @@
     {
       "declaration": "CardanoKeri.Application.booking_no_retraction",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 515,
+      "line": 635,
       "statement": "theorem booking_no_retraction {p : ApplicationParameters} {data : RegistrationData}\n    {interval : Interval} (clock : bookingClock p data interval = true)\n    (valid : parametersValid p = true) : data.reclaimEnd = data.processDeadline",
       "statementSha256": "86ed110ef9881abf707ce71d7e197044d82818f1b89fec2de2d895af5e0153bc",
       "sourceStory": "**A KERI booking records no retraction window.**\nGiven an accepted booking under configuration parameters with `retractTime = 0`.\nWhen the request records its deadlines.\nThen the reclaim end equals the deadline.",
@@ -409,7 +507,7 @@
     {
       "declaration": "CardanoKeri.Application.approval_binds",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 540,
+      "line": 660,
       "statement": "theorem approval_binds (i : Interpretation) (d₁ d₂ : Deployment)\n    (aid₁ aid₂ : CardanoKeri.Checkpoint.AID) (a₁ a₂ h₁ h₂ dep₁ dep₂ : Nat)\n    (encoding : FiniteEncoding i.code (approvalDomain i d₁ d₂ aid₁ aid₂ a₁ a₂ h₁ h₂ dep₁ dep₂))\n    (collision : FiniteCollisionFree i.hash i.code\n      (approvalDomain i d₁ d₂ aid₁ aid₂ a₁ a₂ h₁ h₂ dep₁ dep₂))\n    (keys : ∀ x y, i.keyOf x = i.keyOf y → x = y)\n    (same : approval i d₁ aid₁ a₁ h₁ dep₁ = approval i d₂ aid₂ a₂ h₂ dep₂) :\n    d₁.release.applicationPolicy = d₂.release.applicationPolicy ∧\n    d₁.release.statePolicy = d₂.release.statePolicy ∧ d₁.seed = d₂.seed ∧\n    aid₁ = aid₂ ∧ a₁ = a₂ ∧ h₁ = h₂ ∧ dep₁ = dep₂",
       "statementSha256": "72e5edc2853eaf96ca3672aee120ea7ff955d768b05611ea97604f00ea7e2d47",
       "sourceStory": "**The approval binds the registry, the key, the holding and the deposit.**\nGiven the finite encoding and collision-freedom premises over the preimages\nof two KERI approvals and their registries' state roles, and an injective AID\nkey encoding.\nWhen the two approvals are the same token.\nThen the two deployments have the same application policy, the same state\npolicy `state(A_keri)` and the same registry seed (so the same registry name),\nand the two approvals name the same AID, holding address, initial datum hash\nand deposit.",
@@ -423,7 +521,7 @@
     {
       "declaration": "CardanoKeri.Application.approval_ignores_network",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 574,
+      "line": 694,
       "statement": "theorem approval_ignores_network (i : Interpretation)\n    (c c' : CardanoKeri.ConsumerIdentity.Context) (release : c.release = c'.release)\n    (seed : c.seed = c'.seed) (aid : CardanoKeri.Checkpoint.AID) (address datumHash deposit : Nat) :\n    approval i (.ofContext c) aid address datumHash deposit =\n      approval i (.ofContext c') aid address datumHash deposit",
       "statementSha256": "d16907fd7a9d1e03f94a025a09860de8175411039c0ad68aebd21c4527bf5907",
       "sourceStory": "**The network is outside the approval.**\nGiven two relying contexts with the same release and registry seed and any\ntwo networks.\nWhen the approval of the same AID, holding address, initial datum hash and\ndeposit is computed for each.\nThen the two approvals are the same token: the network is bound by the chain\nthe transaction runs on, not by the approval (the declared boundary).",
@@ -437,77 +535,231 @@
     {
       "declaration": "CardanoKeri.Application.delivered_credential",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 585,
-      "statement": "theorem delivered_credential {i : Interpretation} {c : Configuration} {data : RegistrationData}\n    {holding : ObservedOutput} {o : Observation} (h : delivered i c data holding o = true) :\n    holding.credential = data.holdingAddress ∧ holding.credential = c.checkpointCredential",
-      "statementSha256": "862365ecfd3f65e8fb36573b5e5ea380d0c5bd2886305138540ed6f1cc548c57",
+      "line": 705,
+      "statement": "theorem delivered_credential {i : Interpretation} {rp : CardanoKeri.Registry.Params}\n    {cp : CardanoKeri.Checkpoint.Params} {c : Configuration} {data : RegistrationData}\n    {holding : ObservedOutput} {o : Observation} (h : delivered i rp cp c data holding o = true) :\n    holding.credential = data.holdingAddress ∧ holding.credential = c.checkpointCredential",
+      "statementSha256": "54171b5abe0a4c64a445e2ce9000db36a2e8173a6a4ac3b2dccb938d8fa69206",
       "sourceStory": "A delivered holding sits at the committed holding address and at the\ncheckpoint validator's credential the configuration record names.",
       "story": {
-        "given": "{i : Interpretation} {c : Configuration} {data : RegistrationData}\n    {holding : ObservedOutput} {o : Observation} (h : delivered i c data holding o = true)",
+        "given": "{i : Interpretation} {rp : CardanoKeri.Registry.Params}\n    {cp : CardanoKeri.Checkpoint.Params} {c : Configuration} {data : RegistrationData}\n    {holding : ObservedOutput} {o : Observation} (h : delivered i rp cp c data holding o = true)",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
         "then": "holding.credential = data.holdingAddress ∧ holding.credential = c.checkpointCredential"
       },
-      "storySha256": "286e7ec0ee86b71e14a7becf3e1edc918808a13302bb6a04897c1b66ff1d569b"
+      "storySha256": "8dd39e5a9d487a4890609d910200b285a2b552519d7a63d13b72cfe92b0cc940"
     },
     {
       "declaration": "CardanoKeri.Application.fold_delivers_to_checkpoint_validator",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 598,
-      "statement": "theorem fold_delivers_to_checkpoint_validator (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp release o = true) {ref : OutRef} {index : Nat}\n    (folded : Action.foldRegistration ref index ∈ o.actions) :\n    ∃ input data c holding, namedInput o ref = some input ∧\n      decoded i.decode input = some (.registration data) ∧\n      configurationOf i release data.registry o = some c ∧\n      o.outputs[index]? = some holding ∧ delivered i c data holding o = true ∧\n      holding.credential = c.checkpointCredential ∧\n      holding.credential = data.holdingAddress",
-      "statementSha256": "4015d5161f3f785f4976507e9401dc578d02651c0fb42d625bc351b0f864d53f",
+      "line": 719,
+      "statement": "theorem fold_delivers_to_checkpoint_validator (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true) {ref : OutRef} {index : Nat}\n    (folded : Action.foldRegistration ref index ∈ o.actions) :\n    ∃ input data c holding, namedInput o ref = some input ∧\n      decoded i.decode input = some (.registration data) ∧\n      configurationOf i release data.registry o = some c ∧\n      o.outputs[index]? = some holding ∧ delivered i rp cp c data holding o = true ∧\n      holding.credential = c.checkpointCredential ∧\n      holding.credential = data.holdingAddress",
+      "statementSha256": "c9ff7fecbd8d0eb7024966e0f897eec645a13341292ad207540b9b505fbe62aa",
       "sourceStory": "**Every fold delivers its checkpoint to the checkpoint validator.**\nGiven a transaction the KERI application accepts.\nWhen it folds a registration request, naming the output it delivers.\nThen the named request is spent exactly once and decodes as a registration\nwhose configuration record is read by reference, and the delivered holding\nsits at the checkpoint validator's credential that record names, which is the\nholding address the request committed.",
       "story": {
-        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp release o = true) {ref : OutRef} {index : Nat}\n    (folded : Action.foldRegistration ref index ∈ o.actions)",
+        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true) {ref : OutRef} {index : Nat}\n    (folded : Action.foldRegistration ref index ∈ o.actions)",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
-        "then": "∃ input data c holding, namedInput o ref = some input ∧\n      decoded i.decode input = some (.registration data) ∧\n      configurationOf i release data.registry o = some c ∧\n      o.outputs[index]? = some holding ∧ delivered i c data holding o = true ∧\n      holding.credential = c.checkpointCredential ∧\n      holding.credential = data.holdingAddress"
+        "then": "∃ input data c holding, namedInput o ref = some input ∧\n      decoded i.decode input = some (.registration data) ∧\n      configurationOf i release data.registry o = some c ∧\n      o.outputs[index]? = some holding ∧ delivered i rp cp c data holding o = true ∧\n      holding.credential = c.checkpointCredential ∧\n      holding.credential = data.holdingAddress"
       },
-      "storySha256": "cd9d3af4e95a83c8d1239decded64485cd3e576b168d6423f576cebbd6eff296"
+      "storySha256": "06742dce15f5043f8378d300e09959d0699ed57ce94de92df55446efb2839464"
     },
     {
       "declaration": "CardanoKeri.Application.no_application_input_is_a_checkpoint",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 638,
-      "statement": "theorem no_application_input_is_a_checkpoint (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp release o = true)\n    {input : ObservedOutput} {raw : Nat} (mem : input ∈ o.inputs)\n    (atApplication : input.credential = release.applicationCredential)\n    (held : input.datum = .application raw)\n    (notRequest : ∀ data, i.decode raw ≠ some (.registration data)) : False",
-      "statementSha256": "a10655b67b1526a88ef7096d899a35ba7c28f7dbb85d3b300eedc7050be51fde",
+      "line": 760,
+      "statement": "theorem no_application_input_is_a_checkpoint (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true)\n    {input : ObservedOutput} {raw : Nat} (mem : input ∈ o.inputs)\n    (atApplication : input.credential = release.applicationCredential)\n    (held : input.datum = .application raw)\n    (notRequest : ∀ data, i.decode raw ≠ some (.registration data)) : False",
+      "statementSha256": "8d12f4b2e11e149b4aae96c6678d76846e792fa5ef3f230c3b48bc8c6bb212f1",
       "sourceStory": "**No input at the application address is a checkpoint.**\nGiven a transaction the KERI application accepts, and one of its inputs at the\napplication address carrying an application datum that the request decoder\ndoes not read as a registration request, as it does not read a checkpoint's\nversion 2 datum.\nWhen the transaction is accepted.\nThen there is no such input: the application spends at its address only\nregistration requests and datum-less pending terminations, never a\ncheckpoint.",
       "story": {
-        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp release o = true)\n    {input : ObservedOutput} {raw : Nat} (mem : input ∈ o.inputs)\n    (atApplication : input.credential = release.applicationCredential)\n    (held : input.datum = .application raw)\n    (notRequest : ∀ data, i.decode raw ≠ some (.registration data))",
+        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true)\n    {input : ObservedOutput} {raw : Nat} (mem : input ∈ o.inputs)\n    (atApplication : input.credential = release.applicationCredential)\n    (held : input.datum = .application raw)\n    (notRequest : ∀ data, i.decode raw ≠ some (.registration data))",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
         "then": "False"
       },
-      "storySha256": "d1af11522a01c5d62516a4fd495958a9606448c9aaca05951ba6f3cbc5cb0609"
+      "storySha256": "57b7687d5433bc583025828f3197351470b24a55d39a6dc9ba657b38f13ff9bf"
+    },
+    {
+      "declaration": "CardanoKeri.Application.initialState_is_registration",
+      "path": "lean/CardanoKeri/ApplicationGoals.lean",
+      "line": 794,
+      "statement": "theorem initialState_is_registration (rp : CardanoKeri.Registry.Params)\n    (cp : CardanoKeri.Checkpoint.Params) (cenv : CardanoKeri.Checkpoint.Env)\n    (refund : CardanoKeri.Checkpoint.Addr) (data : RegistrationData)\n    (s : CardanoKeri.Checkpoint.State) :\n    initialState rp cp refund data = some s ↔\n      ∃ pool f, initialPool rp cp data = some pool ∧\n        CardanoKeri.Checkpoint.Step cp cenv (.register refund pool) data.bookedAt .absent f s",
+      "statementSha256": "7e7e5ba16bfe98cb781189fceb2b31c5dd2205d526630a9565231db5e5f33828",
+      "sourceStory": "**The initial state is the checkpoint model's registration.**\nGiven registry and checkpoint parameters, a refund address, a registration\nrequest and any checkpoint environment.\nWhen the request's initial state is computed.\nThen it is the state `s` exactly when the deposit leaves a pool above the\nminimum ADA, the deposit and the freeze bond, and the checkpoint model's\nregistration step with that refund address and that pool, at the request's\nbooking bound, writes `s` from the absent checkpoint.",
+      "story": {
+        "given": "(rp : CardanoKeri.Registry.Params)\n    (cp : CardanoKeri.Checkpoint.Params) (cenv : CardanoKeri.Checkpoint.Env)\n    (refund : CardanoKeri.Checkpoint.Addr) (data : RegistrationData)\n    (s : CardanoKeri.Checkpoint.State)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "initialState rp cp refund data = some s ↔\n      ∃ pool f, initialPool rp cp data = some pool ∧\n        CardanoKeri.Checkpoint.Step cp cenv (.register refund pool) data.bookedAt .absent f s"
+      },
+      "storySha256": "c173a4f13e36d86822a57c4d308de5851acfc808c3fd698aa89b2bc7b1fafc31"
+    },
+    {
+      "declaration": "CardanoKeri.Application.initial_pool_arithmetic",
+      "path": "lean/CardanoKeri/ApplicationGoals.lean",
+      "line": 817,
+      "statement": "theorem initial_pool_arithmetic {floor premium deposit : Nat} (covered : floor ≤ deposit)\n    (pays : premium ≤ deposit - floor) :\n    floor + premium ≤ deposit ∧ floor + (deposit - floor) = deposit",
+      "statementSha256": "aa2b45e5351bd6d4c697d421f4796eda5ae1247d1ab373d57dea4efb546ba898",
+      "sourceStory": "The floor arithmetic of an initial pool, over plain naturals.",
+      "story": {
+        "given": "{floor premium deposit : Nat} (covered : floor ≤ deposit)\n    (pays : premium ≤ deposit - floor)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "floor + premium ≤ deposit ∧ floor + (deposit - floor) = deposit"
+      },
+      "storySha256": "2c2066624d3e5d520271f3e4dc134f5b02477243866a72c6e7055089c8cd4b58"
+    },
+    {
+      "declaration": "CardanoKeri.Application.initialState_facts",
+      "path": "lean/CardanoKeri/ApplicationGoals.lean",
+      "line": 829,
+      "statement": "theorem initialState_facts {rp : CardanoKeri.Registry.Params} {cp : CardanoKeri.Checkpoint.Params}\n    {refund : CardanoKeri.Checkpoint.Addr} {data : RegistrationData}\n    {s : CardanoKeri.Checkpoint.State} (h : initialState rp cp refund data = some s) :\n    s.datumFacts = .present ⟨0, 0, false, false, data.bookedAt, refund, 0, false⟩ ∧\n      rp.Mc + cp.D + cp.B + cp.P ≤ data.deposit ∧ s.heldValue cp rp = data.deposit",
+      "statementSha256": "b27d2f384ea2f52bf8318205629d00fbdaf45be1a6882739c69fef691f1f6456",
+      "sourceStory": "**What the initial state holds.**\nGiven a request whose initial state for refund address `refund` is `s`.\nWhen its datum facts and held value are read.\nThen its facts are live at sequence number and epoch 0, neither poisoned,\nfrozen nor topped up, born at the booking bound and refunding to `refund`; the\ndeposit covers the minimum ADA, the deposit, the freeze bond and one premium;\nand the checkpoint holds exactly the deposit.",
+      "story": {
+        "given": "{rp : CardanoKeri.Registry.Params} {cp : CardanoKeri.Checkpoint.Params}\n    {refund : CardanoKeri.Checkpoint.Addr} {data : RegistrationData}\n    {s : CardanoKeri.Checkpoint.State} (h : initialState rp cp refund data = some s)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "s.datumFacts = .present ⟨0, 0, false, false, data.bookedAt, refund, 0, false⟩ ∧\n      rp.Mc + cp.D + cp.B + cp.P ≤ data.deposit ∧ s.heldValue cp rp = data.deposit"
+      },
+      "storySha256": "e804476b8443f24e6400edb764556813a19570380436caa7b67343941b798d3e"
+    },
+    {
+      "declaration": "CardanoKeri.Application.writesInitialState_inversion",
+      "path": "lean/CardanoKeri/ApplicationGoals.lean",
+      "line": 856,
+      "statement": "theorem writesInitialState_inversion {i : Interpretation} {rp : CardanoKeri.Registry.Params}\n    {cp : CardanoKeri.Checkpoint.Params} {data : RegistrationData} {holding : ObservedOutput}\n    (h : writesInitialState i rp cp data holding = true) :\n    ∃ raw d refund s, holding.datum = .application raw ∧ i.decodeCheckpoint raw = some d ∧\n      i.refundTo data.refundAddress = some refund ∧ initialState rp cp refund data = some s ∧\n      i.keyOf d.aid = data.key ∧ d.state = s.datumFacts",
+      "statementSha256": "cb64cbe6f1083e0f00383083b0bd2dcfaf60dc1188619a84ecb97c2ecc5ab4ab",
+      "sourceStory": "A holding that writes the initial state decodes as the initial state of\nthe request's key, for the refund address the request names.",
+      "story": {
+        "given": "{i : Interpretation} {rp : CardanoKeri.Registry.Params}\n    {cp : CardanoKeri.Checkpoint.Params} {data : RegistrationData} {holding : ObservedOutput}\n    (h : writesInitialState i rp cp data holding = true)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "∃ raw d refund s, holding.datum = .application raw ∧ i.decodeCheckpoint raw = some d ∧\n      i.refundTo data.refundAddress = some refund ∧ initialState rp cp refund data = some s ∧\n      i.keyOf d.aid = data.key ∧ d.state = s.datumFacts"
+      },
+      "storySha256": "8df7eaeb3df93c3c5787c00d92e8d76acd84eee7b730b44ccbeea79cdc36a3cb"
+    },
+    {
+      "declaration": "CardanoKeri.Application.delivered_initial_state",
+      "path": "lean/CardanoKeri/ApplicationGoals.lean",
+      "line": 884,
+      "statement": "theorem delivered_initial_state {i : Interpretation} {rp : CardanoKeri.Registry.Params}\n    {cp : CardanoKeri.Checkpoint.Params} (cenv : CardanoKeri.Checkpoint.Env) {c : Configuration}\n    {data : RegistrationData} {holding : ObservedOutput} {o : Observation}\n    (h : delivered i rp cp c data holding o = true) :\n    ∃ raw d refund pool f s, holding.datum = .application raw ∧\n      i.decodeCheckpoint raw = some d ∧ i.keyOf d.aid = data.key ∧\n      i.refundTo data.refundAddress = some refund ∧\n      CardanoKeri.Checkpoint.Step cp cenv (.register refund pool) data.bookedAt .absent f s ∧\n      d.state = s.datumFacts ∧ holding.lovelace = s.heldValue cp rp ∧\n      d.state = .present ⟨0, 0, false, false, data.bookedAt, refund, 0, false⟩ ∧\n      pool = data.deposit - (rp.Mc + cp.D + cp.B) ∧ cp.P ≤ pool",
+      "statementSha256": "ecc10211f3989de7bc1191bbb3d54c5184e75484efd51372ae8ebbda975738c8",
+      "sourceStory": "**A delivered holding is exactly the initial checkpoint state.**\nGiven a holding delivered for a registration request, and any checkpoint\nenvironment.\nWhen its datum and lovelace are read.\nThen its datum decodes as a checkpoint datum of the AID whose key the request\nnames; the request's refund address has a checkpoint refund address `refund`;\nand the checkpoint model's registration step with `refund` and the pool the\ndeposit leaves above the minimum ADA, the deposit and the freeze bond, at the\nrequest's booking bound, writes from the absent checkpoint a state whose facts\nare the datum's and whose held value is the holding's lovelace: live at\nsequence number and epoch 0, neither poisoned, frozen nor topped up, born at\nthe booking bound, with a pool of at least one premium.",
+      "story": {
+        "given": "{i : Interpretation} {rp : CardanoKeri.Registry.Params}\n    {cp : CardanoKeri.Checkpoint.Params} (cenv : CardanoKeri.Checkpoint.Env) {c : Configuration}\n    {data : RegistrationData} {holding : ObservedOutput} {o : Observation}\n    (h : delivered i rp cp c data holding o = true)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "∃ raw d refund pool f s, holding.datum = .application raw ∧\n      i.decodeCheckpoint raw = some d ∧ i.keyOf d.aid = data.key ∧\n      i.refundTo data.refundAddress = some refund ∧\n      CardanoKeri.Checkpoint.Step cp cenv (.register refund pool) data.bookedAt .absent f s ∧\n      d.state = s.datumFacts ∧ holding.lovelace = s.heldValue cp rp ∧\n      d.state = .present ⟨0, 0, false, false, data.bookedAt, refund, 0, false⟩ ∧\n      pool = data.deposit - (rp.Mc + cp.D + cp.B) ∧ cp.P ≤ pool"
+      },
+      "storySha256": "ee2b0d68eae5c8f88ced1ce81a324d1e558101e2853e09e453eaf86574912b0a"
+    },
+    {
+      "declaration": "CardanoKeri.Application.fold_delivers_initial_state",
+      "path": "lean/CardanoKeri/ApplicationGoals.lean",
+      "line": 924,
+      "statement": "theorem fold_delivers_initial_state (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (cenv : CardanoKeri.Checkpoint.Env) (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true) {ref : OutRef} {index : Nat}\n    (folded : Action.foldRegistration ref index ∈ o.actions) :\n    ∃ input data holding raw d refund pool f s, namedInput o ref = some input ∧\n      decoded i.decode input = some (.registration data) ∧\n      o.outputs[index]? = some holding ∧ holding.datum = .application raw ∧\n      i.decodeCheckpoint raw = some d ∧ i.keyOf d.aid = data.key ∧\n      i.refundTo data.refundAddress = some refund ∧\n      CardanoKeri.Checkpoint.Step cp cenv (.register refund pool) data.bookedAt .absent f s ∧\n      d.state = s.datumFacts ∧ holding.lovelace = s.heldValue cp rp ∧\n      d.state = .present ⟨0, 0, false, false, data.bookedAt, refund, 0, false⟩ ∧\n      pool = data.deposit - (rp.Mc + cp.D + cp.B) ∧ cp.P ≤ pool",
+      "statementSha256": "5ee022f524448bd2f3bef7487124a5a345e9e1413b8bf83fd8c5b4a337d039a4",
+      "sourceStory": "**A fold delivers exactly the initial checkpoint state.**\nGiven a transaction the KERI application accepts, and any checkpoint\nenvironment.\nWhen it folds a registration request, naming the output it delivers.\nThen the named request is spent exactly once and decodes as a registration,\nand the delivered holding is exactly the state the checkpoint model's\nregistration step writes for it: its datum is a checkpoint datum of the AID\nwhose key the request names, live at sequence number and epoch 0, neither\npoisoned, frozen nor topped up, born at the request's booking bound and\nrefunding to the refund address the request names; its lovelace is that\nstate's held value, whose pool is the deposit less the minimum ADA, the\ndeposit and the freeze bond and covers at least one premium.",
+      "story": {
+        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (cenv : CardanoKeri.Checkpoint.Env) (release : PublishedRelease) (o : Observation)\n    (ok : accepted i env rp cp release o = true) {ref : OutRef} {index : Nat}\n    (folded : Action.foldRegistration ref index ∈ o.actions)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "∃ input data holding raw d refund pool f s, namedInput o ref = some input ∧\n      decoded i.decode input = some (.registration data) ∧\n      o.outputs[index]? = some holding ∧ holding.datum = .application raw ∧\n      i.decodeCheckpoint raw = some d ∧ i.keyOf d.aid = data.key ∧\n      i.refundTo data.refundAddress = some refund ∧\n      CardanoKeri.Checkpoint.Step cp cenv (.register refund pool) data.bookedAt .absent f s ∧\n      d.state = s.datumFacts ∧ holding.lovelace = s.heldValue cp rp ∧\n      d.state = .present ⟨0, 0, false, false, data.bookedAt, refund, 0, false⟩ ∧\n      pool = data.deposit - (rp.Mc + cp.D + cp.B) ∧ cp.P ≤ pool"
+      },
+      "storySha256": "4a35a15689332e169128d01af2e56dbbd866017b387a09773da0f19aa9195f6a"
+    },
+    {
+      "declaration": "CardanoKeri.Application.fold_spend_delivers",
+      "path": "lean/CardanoKeri/ApplicationGoals.lean",
+      "line": 944,
+      "statement": "theorem fold_spend_delivers {i : Interpretation} {env : Env} {rp : CardanoKeri.Registry.Params}\n    {cp : CardanoKeri.Checkpoint.Params} {release : PublishedRelease} {o : Observation}\n    {ref : OutRef} {index : Nat} {input : ObservedOutput} {data : RegistrationData}\n    (h : spendRegistration i env rp cp release o (.foldRegistration ref index) input data = true) :\n    ∃ c holding, o.outputs[index]? = some holding ∧ delivered i rp cp c data holding o = true",
+      "statementSha256": "17a82fc3c76896c419fb7208d1ab386ff6dcab5d4eef295667cce53fc73153b5",
+      "sourceStory": "A fold spend that is not refused delivers a holding.",
+      "story": {
+        "given": "{i : Interpretation} {env : Env} {rp : CardanoKeri.Registry.Params}\n    {cp : CardanoKeri.Checkpoint.Params} {release : PublishedRelease} {o : Observation}\n    {ref : OutRef} {index : Nat} {input : ObservedOutput} {data : RegistrationData}\n    (h : spendRegistration i env rp cp release o (.foldRegistration ref index) input data = true)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "∃ c holding, o.outputs[index]? = some holding ∧ delivered i rp cp c data holding o = true"
+      },
+      "storySha256": "c071d91a44240ccbe3a8e837562575b933f2825733b098327a841214243333b0"
+    },
+    {
+      "declaration": "CardanoKeri.Application.fold_refuses_other_state",
+      "path": "lean/CardanoKeri/ApplicationGoals.lean",
+      "line": 969,
+      "statement": "theorem fold_refuses_other_state (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation) {ref : OutRef} {index : Nat}\n    {input holding : ObservedOutput} {data : RegistrationData} {raw : Nat}\n    {d : CardanoKeri.ConsumerIdentity.DecodedDatum} {refund : CardanoKeri.Checkpoint.Addr}\n    (hh : o.outputs[index]? = some holding) (held : holding.datum = .application raw)\n    (hd : i.decodeCheckpoint raw = some d) (hr : i.refundTo data.refundAddress = some refund)\n    (other : d.state ≠ .present ⟨0, 0, false, false, data.bookedAt, refund, 0, false⟩) :\n    spendRegistration i env rp cp release o (.foldRegistration ref index) input data = false",
+      "statementSha256": "eb4edc9a82d3fbc87314ce76a1c32c0bd28fcb476ecc1601ecd111829294dbfb",
+      "sourceStory": "**A fold delivering a checkpoint in any other state is refused.**\nGiven a registration request whose refund address has the checkpoint refund\naddress `refund`, and a fold naming a holding whose datum decodes as a\ncheckpoint datum whose state is not live at sequence number and epoch 0,\nneither poisoned, frozen nor topped up, born at the request's booking bound and\nrefunding to `refund`: another sequence number, epoch, poison, freeze or top-up\nflag, birth slot or refund address, or a pending termination.\nWhen the request is spent by that fold.\nThen the spend is refused.",
+      "story": {
+        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation) {ref : OutRef} {index : Nat}\n    {input holding : ObservedOutput} {data : RegistrationData} {raw : Nat}\n    {d : CardanoKeri.ConsumerIdentity.DecodedDatum} {refund : CardanoKeri.Checkpoint.Addr}\n    (hh : o.outputs[index]? = some holding) (held : holding.datum = .application raw)\n    (hd : i.decodeCheckpoint raw = some d) (hr : i.refundTo data.refundAddress = some refund)\n    (other : d.state ≠ .present ⟨0, 0, false, false, data.bookedAt, refund, 0, false⟩)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "spendRegistration i env rp cp release o (.foldRegistration ref index) input data = false"
+      },
+      "storySha256": "d175d78e79a1bbebb38e2221f931f70482d248993ff40fdf58b7ead6e83511f0"
+    },
+    {
+      "declaration": "CardanoKeri.Application.fold_refuses_other_aid",
+      "path": "lean/CardanoKeri/ApplicationGoals.lean",
+      "line": 1000,
+      "statement": "theorem fold_refuses_other_aid (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation) {ref : OutRef} {index : Nat}\n    {input holding : ObservedOutput} {data : RegistrationData} {raw : Nat}\n    {d : CardanoKeri.ConsumerIdentity.DecodedDatum}\n    (hh : o.outputs[index]? = some holding) (held : holding.datum = .application raw)\n    (hd : i.decodeCheckpoint raw = some d) (other : i.keyOf d.aid ≠ data.key) :\n    spendRegistration i env rp cp release o (.foldRegistration ref index) input data = false",
+      "statementSha256": "430dc946c2bba5b423e67b77e46ccf7a3614512c5f510c522cf720f1b120c4a7",
+      "sourceStory": "**A fold delivering the checkpoint of another AID is refused.**\nGiven a fold naming a holding whose datum decodes as a checkpoint datum of an\nAID whose key is not the key the request names.\nWhen the request is spent by that fold.\nThen the spend is refused.",
+      "story": {
+        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation) {ref : OutRef} {index : Nat}\n    {input holding : ObservedOutput} {data : RegistrationData} {raw : Nat}\n    {d : CardanoKeri.ConsumerIdentity.DecodedDatum}\n    (hh : o.outputs[index]? = some holding) (held : holding.datum = .application raw)\n    (hd : i.decodeCheckpoint raw = some d) (other : i.keyOf d.aid ≠ data.key)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "spendRegistration i env rp cp release o (.foldRegistration ref index) input data = false"
+      },
+      "storySha256": "4e97b390388d82b853a028dab41a5b42ebadf1cf9877d49519365298df3ff5e8"
+    },
+    {
+      "declaration": "CardanoKeri.Application.fold_refuses_pool_below_premium",
+      "path": "lean/CardanoKeri/ApplicationGoals.lean",
+      "line": 1027,
+      "statement": "theorem fold_refuses_pool_below_premium (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation) {ref : OutRef} {index : Nat}\n    {input : ObservedOutput} {data : RegistrationData}\n    (short : data.deposit < rp.Mc + cp.D + cp.B + cp.P) :\n    spendRegistration i env rp cp release o (.foldRegistration ref index) input data = false",
+      "statementSha256": "8fc81048174d2bf9b7164f27e3f6980cde8490d23d87827affc11b7a756ecd41",
+      "sourceStory": "**A fold whose deposit cannot pay one premium is refused.**\nGiven a registration request whose deposit is below the minimum ADA, the\ncheckpoint deposit, the freeze bond and one premium.\nWhen the request is spent by a fold.\nThen the spend is refused: no initial state has a pool below one premium.",
+      "story": {
+        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation) {ref : OutRef} {index : Nat}\n    {input : ObservedOutput} {data : RegistrationData}\n    (short : data.deposit < rp.Mc + cp.D + cp.B + cp.P)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "spendRegistration i env rp cp release o (.foldRegistration ref index) input data = false"
+      },
+      "storySha256": "58628caa44b980d7a736453535d9ce5f2df600f10ee3410ee2dfa0d25f6bd5f9"
+    },
+    {
+      "declaration": "CardanoKeri.Application.fold_refuses_unrecorded_refund",
+      "path": "lean/CardanoKeri/ApplicationGoals.lean",
+      "line": 1046,
+      "statement": "theorem fold_refuses_unrecorded_refund (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation) {ref : OutRef} {index : Nat}\n    {input : ObservedOutput} {data : RegistrationData}\n    (unrecorded : i.refundTo data.refundAddress = none) :\n    spendRegistration i env rp cp release o (.foldRegistration ref index) input data = false",
+      "statementSha256": "16100fb71c6b40e7e4d5f2fed3132dfd82eaec8daaca1c5ef951521f3e7ed041",
+      "sourceStory": "**A fold for a refund address no checkpoint can record is refused.**\nGiven a registration request whose refund address has no checkpoint refund\naddress.\nWhen the request is spent by a fold.\nThen the spend is refused.",
+      "story": {
+        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) (o : Observation) {ref : OutRef} {index : Nat}\n    {input : ObservedOutput} {data : RegistrationData}\n    (unrecorded : i.refundTo data.refundAddress = none)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "spendRegistration i env rp cp release o (.foldRegistration ref index) input data = false"
+      },
+      "storySha256": "d4a1eb98a98973370ea61ecfbe0eb6df0e343cb9d0101454345f2339bbed38e2"
     },
     {
       "declaration": "CardanoKeri.Application.delivered_is_genuine",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 671,
-      "statement": "theorem delivered_is_genuine (i : Interpretation) (rp : CardanoKeri.Registry.Params)\n    (release : PublishedRelease) {booking fold : Observation} {request holding : ObservedOutput}\n    {data : RegistrationData} {c : Configuration}\n    (booked : bookRegistration i rp release booking request = true)\n    (hb : decoded i.decode request = some (.registration data))\n    (hdel : delivered i c data holding fold = true) :\n    genuine i release c data holding",
-      "statementSha256": "3e6f5e12f55fcce43bcca9ae04c8eeab2f6374d4be0d0c0cf80d3723b5029042",
+      "line": 1070,
+      "statement": "theorem delivered_is_genuine (i : Interpretation) (rp : CardanoKeri.Registry.Params)\n    (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) {booking fold : Observation} {request holding : ObservedOutput}\n    {data : RegistrationData} {c : Configuration}\n    (booked : bookRegistration i rp release booking request = true)\n    (hb : decoded i.decode request = some (.registration data))\n    (hdel : delivered i rp cp c data holding fold = true) :\n    genuine i release c data holding",
+      "statementSha256": "34658e6613d67cac486ce05ea7ae68ef50ea37a275f0745dc2e0b3ee5afddbc4",
       "sourceStory": "**A delivered checkpoint is genuine.**\nGiven a request booked by an accepted booking, and a fold delivering a holding\nfor it under the registry's configuration record.\nWhen the holding is inspected.\nThen it is genuine: at the checkpoint validator's credential, not the\napplication's; holding the one active token of the key under a registry of\n`state(A_keri)`; carrying the committed initial datum; holding exactly the\ncommitted deposit.",
       "story": {
-        "given": "(i : Interpretation) (rp : CardanoKeri.Registry.Params)\n    (release : PublishedRelease) {booking fold : Observation} {request holding : ObservedOutput}\n    {data : RegistrationData} {c : Configuration}\n    (booked : bookRegistration i rp release booking request = true)\n    (hb : decoded i.decode request = some (.registration data))\n    (hdel : delivered i c data holding fold = true)",
+        "given": "(i : Interpretation) (rp : CardanoKeri.Registry.Params)\n    (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) {booking fold : Observation} {request holding : ObservedOutput}\n    {data : RegistrationData} {c : Configuration}\n    (booked : bookRegistration i rp release booking request = true)\n    (hb : decoded i.decode request = some (.registration data))\n    (hdel : delivered i rp cp c data holding fold = true)",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
         "then": "genuine i release c data holding"
       },
-      "storySha256": "b65e343a6b2c5f55ef89137c1f0b3c3c4886465ad7c3fe2f7e76f5dac32cb4f9"
+      "storySha256": "54e1881de5a5d63c0d2e270d3168cb5c24508bd0d543e65442cd47f595a38674"
     },
     {
       "declaration": "CardanoKeri.Application.before_deadline_delivers_genuine",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 696,
-      "statement": "theorem before_deadline_delivers_genuine (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) {booking o : Observation}\n    {request input : ObservedOutput} {data : RegistrationData}\n    (booked : bookRegistration i rp release booking request = true)\n    (hb : decoded i.decode request = some (.registration data))\n    (ok : accepted i env rp release o = true) (mem : input ∈ o.inputs)\n    (atApplication : input.credential = release.applicationCredential)\n    (hd : decoded i.decode input = some (.registration data))\n    (early : o.interval.lower < data.processDeadline) :\n    ∃ c index holding, configurationOf i release data.registry o = some c ∧\n      Action.foldRegistration input.reference index ∈ o.actions ∧\n      o.outputs[index]? = some holding ∧ genuine i release c data holding",
-      "statementSha256": "a18886b8e227594dfbd3f98798e08a57e2085cf7b5453f14e7a3acad804a0408",
+      "line": 1096,
+      "statement": "theorem before_deadline_delivers_genuine (i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) {booking o : Observation}\n    {request input : ObservedOutput} {data : RegistrationData}\n    (booked : bookRegistration i rp release booking request = true)\n    (hb : decoded i.decode request = some (.registration data))\n    (ok : accepted i env rp cp release o = true) (mem : input ∈ o.inputs)\n    (atApplication : input.credential = release.applicationCredential)\n    (hd : decoded i.decode input = some (.registration data))\n    (early : o.interval.lower < data.processDeadline) :\n    ∃ c index holding, configurationOf i release data.registry o = some c ∧\n      Action.foldRegistration input.reference index ∈ o.actions ∧\n      o.outputs[index]? = some holding ∧ genuine i release c data holding",
+      "statementSha256": "82246964d2ba2fbf7ae1f4e412f91f9c12b9d1b3ad21c0a2ee5c662ab6f0a01f",
       "sourceStory": "**Until its deadline a booked request is spent only by delivering a\ngenuine checkpoint.**\nGiven a request booked by an accepted booking, and an accepted transaction\nspending it at the application address whose validity interval starts before\nthe request's deadline.\nWhen the request is spent.\nThen a fold names it and delivers a genuine checkpoint, at the checkpoint\nvalidator named by the registry's configuration record.",
       "story": {
-        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) {booking o : Observation}\n    {request input : ObservedOutput} {data : RegistrationData}\n    (booked : bookRegistration i rp release booking request = true)\n    (hb : decoded i.decode request = some (.registration data))\n    (ok : accepted i env rp release o = true) (mem : input ∈ o.inputs)\n    (atApplication : input.credential = release.applicationCredential)\n    (hd : decoded i.decode input = some (.registration data))\n    (early : o.interval.lower < data.processDeadline)",
+        "given": "(i : Interpretation) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)\n    (release : PublishedRelease) {booking o : Observation}\n    {request input : ObservedOutput} {data : RegistrationData}\n    (booked : bookRegistration i rp release booking request = true)\n    (hb : decoded i.decode request = some (.registration data))\n    (ok : accepted i env rp cp release o = true) (mem : input ∈ o.inputs)\n    (atApplication : input.credential = release.applicationCredential)\n    (hd : decoded i.decode input = some (.registration data))\n    (early : o.interval.lower < data.processDeadline)",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
         "then": "∃ c index holding, configurationOf i release data.registry o = some c ∧\n      Action.foldRegistration input.reference index ∈ o.actions ∧\n      o.outputs[index]? = some holding ∧ genuine i release c data holding"
       },
-      "storySha256": "7d2de1c2c6ca8b70b8babce3258d48293d2eb5978deb6cfbdd47b3cb7e64174d"
+      "storySha256": "9b66d4ac619cd0065c900d7da1f251c4e1b05f8dafcd6ef727103aa7ff5f0d98"
     },
     {
       "declaration": "CardanoKeri.Application.genuine_holds_committed_datum",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 717,
+      "line": 1118,
       "statement": "theorem genuine_holds_committed_datum {i : Interpretation} {release : PublishedRelease}\n    {c : Configuration} {data : RegistrationData} {holding : ObservedOutput}\n    (g : genuine i release c data holding) {d : CheckpointDatum.Data}\n    (committed : data.initialDatum = i.datumHash (CheckpointDatum.raw d))\n    (collision : ∀ x, i.datumHash x = i.datumHash (CheckpointDatum.raw d) →\n      x = CheckpointDatum.raw d) :\n    holding.datum = .application (CheckpointDatum.raw d)",
       "statementSha256": "ab80dc4751db893d1eb8a2f20d2f02663600256b1363d55923f2dfc329200e97",
       "sourceStory": "**A genuine checkpoint carries the version 2 datum its request committed.**\nGiven a genuine checkpoint whose request committed the hash of the raw version\n2 checkpoint datum `d`, and a datum hash with no collision on `d`.\nWhen the holding's datum is read.\nThen it is that raw datum.",
@@ -521,7 +773,7 @@
     {
       "declaration": "CardanoKeri.Application.genuine_checkpoint_consumable_iff",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 742,
+      "line": 1143,
       "statement": "theorem genuine_checkpoint_consumable_iff {i : Interpretation} {release : PublishedRelease}\n    {c : Configuration} {data : RegistrationData} {holding : ObservedOutput}\n    (g : genuine i release c data holding)\n    (cc : CardanoKeri.ConsumerIdentity.Context) (e : CardanoKeri.ConsumerIdentity.Environment)\n    (p : CardanoKeri.Checkpoint.Params) (now : CardanoKeri.Checkpoint.Slot)\n    (context : CardanoKeri.ConsumerIdentity.authenticatedContext cc e)\n    (credential : c.checkpointCredential = cc.checkpointCredential)\n    (hash : i.hash = CheckpointDatum.interpretation.hash)\n    (code : i.code = CheckpointDatum.interpretation.code)\n    (registry : data.registry =\n      CardanoKeri.ConsumerIdentity.registryAsset CheckpointDatum.interpretation cc)\n    (key : data.key = CheckpointDatum.interpretation.keyOf cc.aid)\n    {s : CardanoKeri.Checkpoint.State} {k : CheckpointDatum.KeyMaterial} {d : CheckpointDatum.Data}\n    (written : CheckpointDatum.datum cc.aid k s = some d) (bytewise : k.Bytewise)\n    (committed : data.initialDatum = i.datumHash (CheckpointDatum.raw d))\n    (collision : ∀ x, i.datumHash x = i.datumHash (CheckpointDatum.raw d) →\n      x = CheckpointDatum.raw d) :\n    CardanoKeri.ConsumerIdentity.consumableHolding CheckpointDatum.interpretation cc e p now\n        holding ↔ CardanoKeri.Checkpoint.consumableState p now s",
       "statementSha256": "8f8e73dd0bdbacd0b66f50b6b0a26733473af76d148ea7f54cb6040e080c6249",
       "sourceStory": "**A genuine checkpoint satisfies the consumer's holding clauses.**\nGiven a genuine checkpoint whose request committed the hash of the raw version\n2 datum written for the consumer's AID and a state with an output, with no\ndatum-hash collision on it; a consumer context naming the checkpoint\ncredential of the configuration record, the registry the request named and\nthe request's key for its AID, under the same hash and codec; and an\nauthenticated environment.\nWhen the consumer checks the holding with the concrete decoder.\nThen it accepts it exactly when the written state is consumable: the holding\npasses the predicate's credential, token, datum and AID clauses.",
@@ -535,7 +787,7 @@
     {
       "declaration": "CardanoKeri.Application.request_matches_economic",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 777,
+      "line": 1178,
       "statement": "theorem request_matches_economic (p : ApplicationParameters) (data : RegistrationData)\n    (r : Singular.RegistrationRequest) (cost : r.registrationCost = p.registrationCost)\n    (tip : r.declaredTip = p.minimumTip) (carrier : r.carrierAda = data.deposit) :\n    requestLovelace p data = Singular.registrationDeclaredLovelace r ∧\n    requestLovelace p data - p.minimumTip = r.registrationCost + r.carrierAda",
       "statementSha256": "1be09e004d8b7b1112ad2d1340faae96cf642ad17ceb8bb413ce29e78f8f8a6c",
       "sourceStory": "**A KERI request holds what the economic request declares.**\nGiven an economic registration request whose registration cost is the\nconfiguration record's, whose declared tip is the record's minimum tip and\nwhose carrier is the committed deposit.\nWhen the two contents are compared.\nThen the held-level request lovelace is the economic declared lovelace, and\nthe return's refund (the lovelace less the tip) is the economic registration\ncost plus the carrier.",
@@ -549,7 +801,7 @@
     {
       "declaration": "CardanoKeri.Application.carrier_floor_matches_economic",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",
-      "line": 791,
+      "line": 1192,
       "statement": "theorem carrier_floor_matches_economic (rp : CardanoKeri.Registry.Params)\n    (b : Singular.RegistrationBooking) (data : RegistrationData)\n    (carrier : b.request.carrierAda = data.deposit) (tip : b.request.declaredTip = rp.tip) :\n    CardanoKeri.Registry.registrationShape rp b ↔ rp.Mc + rp.D ≤ data.deposit",
       "statementSha256": "6a1702fa0422573e370a13cbb451522faaf9cb34460b01dd6060e1dfffd104af",
       "sourceStory": "**The KERI carrier floor is the economic one.**\nGiven an economic registration booking whose carrier is the committed deposit\nand whose declared tip is the economic tip.\nWhen the economic registration shape is read.\nThen it holds exactly when the deposit is at least the registry's minimum ADA\nplus its deposit.",

@@ -184,6 +184,23 @@ checkpoint and economic models state; the application never spends it.
   `fold_delivers_to_checkpoint_validator`, `return_pays_refund_address`,
   `fold_refuses_inexact_holding`). With `retractTime = 0` the two windows are
   the public model's processing and cleanup phases (`windows_are_upstream_phases`).
+- **The initial checkpoint state.** The delivered holding's datum is exactly
+  the state the checkpoint model's registration step writes for the request:
+  the version 2 `Live` datum of the AID whose key the request names, at
+  sequence number and epoch 0, neither poisoned, frozen nor topped up, born at
+  the booking's validity upper bound and refunding to the ledger bytes of the
+  refund address the request names; its pool, the deposit less the minimum
+  ADA, the checkpoint deposit and the freeze bond, covers at least one premium.
+  A fold delivering any other sequence number, epoch, flag, birth slot, refund
+  address, AID or a pending termination, or a pool below one premium, is
+  refused, so no fold can deliver a checkpoint that skips the juvenility window
+  or claims a key state the KEL never reached (`fold_delivers_initial_state`,
+  `delivered_initial_state`, `initialState_is_registration`,
+  `fold_refuses_other_state`, `fold_refuses_other_aid`,
+  `fold_refuses_pool_below_premium`, `fold_refuses_unrecorded_refund`). The
+  key material in the datum is pinned by the committed datum hash, not by this
+  rule. One transaction folds at most one registration request in the on-chain
+  realization; that is a declared limit of the realization, not of the model.
 - **A genuine checkpoint.** What a fold delivers for a booked request is a
   genuine checkpoint: at the checkpoint validator, not the application address;
   holding the one active token of the AID's key under a registry of
@@ -194,6 +211,18 @@ checkpoint and economic models state; the application never spends it.
   state is consumable (`genuine_checkpoint_consumable_iff`). No input the
   application spends at its own address is a checkpoint
   (`no_application_input_is_a_checkpoint`).
+- **The closed mint.** Everything a transaction mints or burns under the
+  application policy is exactly what its actions justify: one configuration
+  token per created record, one registration approval per booked output, one
+  approval burned per fold or return, one termination approval burned per
+  terminating fold. Each booked output is booked once. An approval minted
+  without a booking, a second booking of one output, or any other token under
+  the application policy is refused (`accepted_mint_is_justified`,
+  `accepted_books_once`, `mint_without_booking_refused`,
+  `duplicate_booking_refused`). No application action mints a termination
+  approval yet, so at this revision no transaction creates a pending
+  termination through the application; booking a termination on conviction is
+  [#350](https://github.com/lambdasistemi/cardano-keri/issues/350).
 - **The treasury.** A fold's ledger `treasury_donation` is at least the
   registration costs of the requests it folds (`treasury_covers_registration_costs`,
   `folded_cost_in_donation`). The tip is what the folder may keep.

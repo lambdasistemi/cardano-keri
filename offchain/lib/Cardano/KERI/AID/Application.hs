@@ -324,7 +324,7 @@ data Change = Register
     , changeHolding :: !Integer
     , changeDeposit :: !Integer
     , changeProof :: ![Data]
-    -- ^ the steps of the proof of the key's absence; empty for an empty registry
+    -- ^ the steps of the registry's insertion proof for the key; empty for an empty registry
     }
     deriving stock (Eq, Show)
 

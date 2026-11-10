@@ -40,7 +40,7 @@ flowchart LR
 | Step | Who | What the transaction does |
 |---|---|---|
 | Genesis | the registry's creator | spends a seed output; mints the registry's state token into an empty state and the configuration record, which holds the request parameters and names the checkpoint validator's credential |
-| Book | the identity's owner | mints the approval of the request and pays the request to the application address, reading the configuration record; the booking interval is as wide as the registry's booking width, and the deadline is its upper bound plus the processing time |
+| Book | the identity's owner | mints the approval of the request and pays the request to the application address, reading the configuration record; the booking interval is no wider than the registry's booking width, and the deadline is its upper bound plus the processing time |
 | Fold | any party | spends the request and the registry state; the registration observer attests the inception evidence; the state script inserts the identifier and mints its active token; the holding is delivered to the checkpoint address with the initial datum; the approval is burned and the treasury is given the registration cost |
 | Return | any party | after the deadline, spends the request, burns its approval and pays the refund address everything but the tip |
 

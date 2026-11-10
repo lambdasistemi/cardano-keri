@@ -343,10 +343,11 @@ jobs:
         with:
           name: paolino
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-      # Live-boundary smoke: starts real cardano-node devnets, preserves the #99
-      # cage positive, and proves #116 Register/Advance reach the applied
-      # production checkpoint validator and are rejected at the staging boundary.
-      - name: withDevnet cage + checkpoint staging smoke
+      # Live-boundary suite: starts real cardano-node devnets, runs the registry
+      # journey (genesis, booking, fold by another party, return) and the
+      # checkpoint journeys from fold-delivered checkpoints, plus the retained
+      # smoke and the consumer predicate.
+      - name: withDevnet registry and checkpoint journeys
         working-directory: offchain
         run: nix build --quiet --no-write-lock-file -L .#checks.x86_64-linux.e2e
 

@@ -149,6 +149,7 @@ import Cardano.KERI.AID.Checkpoint.TopUp (
  )
 import Cardano.KERI.AID.Checkpoint.Value (
     RotationSettlement (..),
+    checkpointMinAda,
     heldValue,
     rotationSettlement,
     withValue,
@@ -412,9 +413,6 @@ data ValidityPlan = ValidityPlan
     , upperPosixMs :: !Integer
     }
     deriving stock (Show, Eq)
-
-checkpointMinAda :: Integer
-checkpointMinAda = 2_000_000
 
 registrationBond :: Integer
 registrationBond = v1RegistrationBond

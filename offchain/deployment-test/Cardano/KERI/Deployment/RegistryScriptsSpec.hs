@@ -90,6 +90,14 @@ withBond :: Integer -> RegistryTerms -> RegistryTerms
 withBond bond terms =
     terms{registryCheckpointTerms = (registryCheckpointTerms terms){termsFreezeBond = bond}}
 
+withPremium :: Integer -> RegistryTerms -> RegistryTerms
+withPremium premium terms =
+    terms{registryCheckpointTerms = (registryCheckpointTerms terms){termsPremium = premium}}
+
+withNetwork :: Integer -> RegistryTerms -> RegistryTerms
+withNetwork network terms =
+    terms{registryCheckpointTerms = (registryCheckpointTerms terms){termsNetwork = network}}
+
 spec :: Spec
 spec = describe "a registry's scripts" $ do
     it "the floors are the connected scenario's: the booking floor and the fold's floor" $ do
@@ -145,6 +153,11 @@ spec = describe "a registry's scripts" $ do
         refused (withDeposit 4_999_999 connectedTerms) `shouldBe` True
         refused (withBond 4_999_999 connectedTerms) `shouldBe` True
         refused (withDeposit 5_000_000 (withBond 5_000_000 connectedTerms)) `shouldBe` False
+        refused (withPremium (-1) connectedTerms) `shouldBe` True
+        refused (withPremium 0 connectedTerms) `shouldBe` False
+        refused (withNetwork 16 connectedTerms) `shouldBe` True
+        refused (withNetwork (-1) connectedTerms) `shouldBe` True
+        refused (withNetwork 15 connectedTerms) `shouldBe` False
     it "the registry is named by the seed, and the checkpoint validator follows it" $ do
         first <- derivedWith connectedTerms (seedOf 0)
         second <- derivedWith connectedTerms (seedOf 1)

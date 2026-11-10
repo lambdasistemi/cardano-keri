@@ -97,9 +97,10 @@ registryInitialFloor terms =
 state template, the terms and the blueprint.
 
 Terms the checkpoint validator or the registration observer would refuse for
-every transaction are refused here: a deposit or a freeze bond below its
-floor makes every arm fail, so a fold the application accepts would lock its
-deposit.
+every transaction are refused here, one refusal for each precondition they hold
+on an applied parameter: a deposit or a freeze bond below its floor, a
+negative premium, a network that no address header can name. Otherwise a fold
+the application accepts would lock its deposit.
 -}
 deriveRegistryScripts ::
     ByteString ->
@@ -113,6 +114,10 @@ deriveRegistryScripts template terms seed blueprint = do
         Left "the registration deposit is below its floor: the observer refuses every registration"
     unless (freezeBondValid (termsFreezeBond checkpointTerms)) $
         Left "the freeze bond is below its floor: the checkpoint validator refuses every spend"
+    unless (termsPremium checkpointTerms >= 0) $
+        Left "the premium is negative: the checkpoint validator refuses every spend"
+    unless (termsNetwork checkpointTerms >= 0 && termsNetwork checkpointTerms <= 15) $
+        Left "the network is not a nibble of an address header: no refund address can match"
     observers <- deriveObserverScripts checkpointTerms blueprint
     (applicationValidator, applicationProgram) <-
         requireValidator

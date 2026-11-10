@@ -26,8 +26,13 @@ use deposit_fixture
 use freeze_fixture.{
   Freeze, advance_hash, d_reg, enforcement_hash, entitlement_hash, floor_frozen,
   floor_unfrozen, freeze_bond, freeze_redeemer, lifecycle_hash, mc,
-  migration_hash, network_id, policy, premium, spent_ref, token_value, unit,
-  v1_data,
+  migration_hash, network_id, policy, premium, spent, spent_ref, token_value,
+  unit, v1_data,
+}
+use registry_fixture.{
+  Nothing, OtherKey, OtherRegistryName, OtherStatePolicy, QuantityTwo,
+  RetiredRegisterToken, holding, representative, staked, state_policy,
+  with_input_token, with_successor_address, with_successor_token,
 }
 use topup_fixture.{
   Bond, Deposit, Keep, Parts, Rotation, TopUp, base, change, eight_data, flag,
@@ -453,7 +458,7 @@ test topup_refuses_a_successor_holding_a_second_token_of_the_policy() fail {
   run(
     valued_with(
       from_lovelace(held(False, unit + premium))
-        |> merge(from_asset(policy, token_name(), 2)),
+        |> merge(from_asset(state_policy(), token_name(), 2)),
     ),
   )
 }
@@ -480,7 +485,7 @@ test topup_refuses_the_token_paid_to_another_output() fail {
           ),
           script_output(
             from_lovelace(2_000_000)
-              |> merge(from_asset(policy, token_name(), 1)),
+              |> merge(from_asset(state_policy(), token_name(), 1)),
             nine_data(base(False, False, True)),
           ),
         ],
@@ -517,7 +522,7 @@ test topup_refuses_a_burn_under_the_policy() fail {
 }
 
 test topup_refuses_a_burn_of_the_checkpoint_token() fail {
-  run(minting(from_asset(policy, token_name(), -1)))
+  run(minting(from_asset(state_policy(), token_name(), -1)))
 }
 
 test topup_accepts_a_mint_under_another_policy() {
@@ -717,4 +722,107 @@ test a_spend_redeemer_of_constructor_five_is_refused() fail {
     [amount],
   )
   True
+}
+
+// ---------------------------------------------------------------------
+// topup: a checkpoint is recognised by the representative asset of its AID
+// (Lean `representativeAsset`) and its successor holds the same asset, once
+// ---------------------------------------------------------------------
+
+fn topup_over(tx: Transaction) -> Bool {
+  run(TopUp { ..honest(), tx })
+}
+
+fn topup_base() -> Transaction {
+  honest().tx
+}
+
+test topup_accepts_an_input_holding_the_representative_asset() {
+  topup_over(with_input_token(topup_base(), representative(spent.cesr_aid, 1)))
+}
+
+test topup_refuses_an_input_holding_no_token() fail {
+  topup_over(
+    with_input_token(topup_base(), holding(Nothing, spent.cesr_aid, policy)),
+  )
+}
+
+test topup_refuses_an_input_holding_the_asset_of_another_state_policy() fail {
+  topup_over(
+    with_input_token(
+      topup_base(),
+      holding(OtherStatePolicy, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test topup_refuses_an_input_holding_the_asset_of_another_registry_name() fail {
+  topup_over(
+    with_input_token(
+      topup_base(),
+      holding(OtherRegistryName, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test topup_refuses_an_input_holding_the_asset_of_another_key() fail {
+  topup_over(
+    with_input_token(topup_base(), holding(OtherKey, spent.cesr_aid, policy)),
+  )
+}
+
+test topup_refuses_an_input_holding_two_of_the_representative_asset() fail {
+  topup_over(
+    with_input_token(topup_base(), holding(QuantityTwo, spent.cesr_aid, policy)),
+  )
+}
+
+test topup_accepts_a_successor_holding_the_representative_asset() {
+  topup_over(
+    with_successor_token(topup_base(), representative(spent.cesr_aid, 1)),
+  )
+}
+
+test topup_refuses_a_successor_holding_no_token() fail {
+  topup_over(
+    with_successor_token(topup_base(), holding(Nothing, spent.cesr_aid, policy)),
+  )
+}
+
+test topup_refuses_a_successor_holding_two_of_the_representative_asset() fail {
+  topup_over(
+    with_successor_token(
+      topup_base(),
+      holding(QuantityTwo, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test topup_refuses_a_successor_holding_the_asset_of_another_key() fail {
+  topup_over(
+    with_successor_token(
+      topup_base(),
+      holding(OtherKey, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test topup_refuses_a_successor_holding_the_asset_of_another_state_policy() fail {
+  topup_over(
+    with_successor_token(
+      topup_base(),
+      holding(OtherStatePolicy, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test topup_refuses_a_checkpoint_that_holds_only_the_retired_register_token() fail {
+  let retired = holding(RetiredRegisterToken, spent.cesr_aid, policy)
+  topup_over(
+    with_successor_token(with_input_token(topup_base(), retired), retired),
+  )
+}
+
+test topup_refuses_a_successor_at_a_staked_address() fail {
+  topup_over(with_successor_address(topup_base(), staked(policy)))
 }

@@ -32,6 +32,7 @@ use freeze_fixture.{
   migration_hash, other_hunter_pkh, paid, parts, policy, premium, rotation,
   spent, token_value, under_receipted, under_signed, unevidenced, unit,
 }
+use registry_fixture.{representative}
 
 // The validators are called here: a fixture module cannot import them.
 
@@ -424,7 +425,7 @@ test deposit_that_mints_under_the_checkpoint_policy_is_refused() fail {
         new_datum(False),
         successor_value(short_pool),
         [],
-        from_asset(policy, spent.aid_asset_name, 1),
+        representative(spent.cesr_aid, 1),
         observed,
       ),
     },

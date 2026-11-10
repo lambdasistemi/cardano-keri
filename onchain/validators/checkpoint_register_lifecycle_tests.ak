@@ -54,6 +54,11 @@ use cardano_keri/checkpoint/retired_layout.{retired_layout}
 use cardano_keri/checkpoint/threshold.{Unweighted}
 use checkpoint_observer
 use checkpoint_register
+use registry_fixture.{
+  Nothing, OtherKey, OtherRegistryName, OtherStatePolicy, QuantityTwo,
+  RetiredRegisterToken, active_name, holding, representative, staked,
+  state_policy, with_input_token, with_successor_address, with_successor_token,
+}
 
 // ---------------------------------------------------------------------
 // The deployment these fixtures run under
@@ -312,6 +317,11 @@ fn v1_data(d: KeyStateView) -> Data {
 }
 
 fn token_value(lovelace: Int, name: ByteArray) -> Value {
+  from_lovelace(lovelace) |> merge(from_asset(state_policy(), name, 1))
+}
+
+/// What the retired register token held: the checkpoint policy's own token.
+fn register_value(lovelace: Int, name: ByteArray) -> Value {
   from_lovelace(lovelace) |> merge(from_asset(policy, name, 1))
 }
 
@@ -396,7 +406,7 @@ fn register_tx(
 ) -> Transaction {
   let state_output = Output {
     address: from_script(policy),
-    value: token_value(lovelace, name),
+    value: register_value(lovelace, name),
     datum: InlineDatum(datum),
     reference_script: None,
   }
@@ -845,14 +855,14 @@ fn advance_tx(
     adv_ref(),
     Output {
       address: from_script(policy),
-      value: token_value(input_lovelace, spent.aid_asset_name),
+      value: token_value(input_lovelace, active_name(spent.cesr_aid)),
       datum: InlineDatum(old),
       reference_script: None,
     },
   )
   let successor = Output {
     address: from_script(policy),
-    value: token_value(successor_lovelace, spent.aid_asset_name),
+    value: token_value(successor_lovelace, active_name(spent.cesr_aid)),
     datum: InlineDatum(new),
     reference_script: None,
   }
@@ -1305,7 +1315,7 @@ const tip: KeyStateView = enforcement_vec.fork_witnessed_convict_tip
 const wire: EnforcementEvidence = enforcement_vec.fork_witnessed_convict_wire
 
 fn tip_name() -> ByteArray {
-  deriveAidAssetName(tip.cesr_aid)
+  active_name(tip.cesr_aid)
 }
 
 /// A conviction of the checkpoint holding `input_lovelace`: the outputs are
@@ -1353,7 +1363,7 @@ fn convict_tx_naming(
     convict_ref(),
     Output {
       address: from_script(policy),
-      value: token_value(input_lovelace, deriveAidAssetName(tip_of.cesr_aid)),
+      value: token_value(input_lovelace, active_name(tip_of.cesr_aid)),
       datum: InlineDatum(input_datum),
       reference_script: None,
     },
@@ -1549,7 +1559,7 @@ test convict_refuses_a_burnt_token() fail {
       v2_data(live(tip, False, False, refund_enterprise_key())),
       floor_unfrozen + convict_pool,
       honest_payouts(),
-      from_asset(policy, tip_name(), -1),
+      from_asset(state_policy(), tip_name(), -1),
     ),
   )
 }
@@ -1752,7 +1762,7 @@ test the_burning_mint_redeemer_is_gone() fail {
       v2_data(live(tip, False, False, refund_enterprise_key())),
       floor_unfrozen + convict_pool,
       honest_payouts(),
-      from_asset(policy, tip_name(), -1),
+      from_asset(state_policy(), tip_name(), -1),
     ),
   )
 }
@@ -1800,7 +1810,7 @@ test two_rotations_cannot_share_one_payee_output() fail {
   let old_b_v1 = KeyStateView { ..adv_old_v1(), cesr_aid: spent_b.cesr_aid }
   let (input_a, successor_a) = rotation_io(
     adv_ref(),
-    spent.aid_asset_name,
+    active_name(spent.cesr_aid),
     adv_old(False, False),
     adv_new(False),
     floor_unfrozen + 3_000_000,
@@ -1808,7 +1818,7 @@ test two_rotations_cannot_share_one_payee_output() fail {
   )
   let (input_b, successor_b) = rotation_io(
     ref_b,
-    spent_b.aid_asset_name,
+    active_name(spent_b.cesr_aid),
     live(old_b_v1, False, False, refund_enterprise_key()),
     live(created_b, False, False, refund_enterprise_key()),
     floor_unfrozen + 3_000_000,
@@ -1844,7 +1854,7 @@ test two_rotations_cannot_share_one_payee_output() fail {
 test two_convictions_cannot_share_one_refund_output() fail {
   let ref_b = out_ref(seed_tx_id, 16)
   let tip_b = enforcement_vec.fork_convict_tip
-  let name_b = deriveAidAssetName(tip_b.cesr_aid)
+  let name_b = active_name(tip_b.cesr_aid)
   let base = convict_tx(
     v2_data(live(tip, False, False, refund_enterprise_key())),
     floor_unfrozen + convict_pool,
@@ -2029,7 +2039,7 @@ test enforcement_observer_refuses_a_recorded_event_that_conflicts_with_nothing()
       pending_output(
         v2_data(pending(honest_tip)),
         mc,
-        deriveAidAssetName(honest_tip.cesr_aid),
+        active_name(honest_tip.cesr_aid),
       ),
       ..honest_payouts()
     ],
@@ -2199,4 +2209,231 @@ test convict_refuses_an_observation_of_another_input() fail {
     0,
     tx,
   )
+}
+
+// ---------------------------------------------------------------------
+// advance: a checkpoint is recognised by the representative asset of its AID
+// (Lean `representativeAsset`) and its successor holds the same asset, once
+// ---------------------------------------------------------------------
+
+fn advance_over(tx: Transaction) -> Bool {
+  run_advance(1, tx)
+}
+
+fn advance_base() -> Transaction {
+  advance_tx(
+    v2_data(adv_old(False, False)),
+    v2_data(adv_new(False)),
+    floor_unfrozen + premium - 1,
+    floor_unfrozen + premium - 1,
+    [],
+  )
+}
+
+test advance_accepts_an_input_holding_the_representative_asset() {
+  advance_over(
+    with_input_token(advance_base(), representative(spent.cesr_aid, 1)),
+  )
+}
+
+test advance_refuses_an_input_holding_no_token() fail {
+  advance_over(
+    with_input_token(advance_base(), holding(Nothing, spent.cesr_aid, policy)),
+  )
+}
+
+test advance_refuses_an_input_holding_the_asset_of_another_state_policy() fail {
+  advance_over(
+    with_input_token(
+      advance_base(),
+      holding(OtherStatePolicy, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test advance_refuses_an_input_holding_the_asset_of_another_registry_name() fail {
+  advance_over(
+    with_input_token(
+      advance_base(),
+      holding(OtherRegistryName, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test advance_refuses_an_input_holding_the_asset_of_another_key() fail {
+  advance_over(
+    with_input_token(advance_base(), holding(OtherKey, spent.cesr_aid, policy)),
+  )
+}
+
+test advance_refuses_an_input_holding_two_of_the_representative_asset() fail {
+  advance_over(
+    with_input_token(
+      advance_base(),
+      holding(QuantityTwo, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test advance_accepts_a_successor_holding_the_representative_asset() {
+  advance_over(
+    with_successor_token(advance_base(), representative(spent.cesr_aid, 1)),
+  )
+}
+
+test advance_refuses_a_successor_holding_no_token() fail {
+  advance_over(
+    with_successor_token(
+      advance_base(),
+      holding(Nothing, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test advance_refuses_a_successor_holding_two_of_the_representative_asset() fail {
+  advance_over(
+    with_successor_token(
+      advance_base(),
+      holding(QuantityTwo, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test advance_refuses_a_successor_holding_the_asset_of_another_key() fail {
+  advance_over(
+    with_successor_token(
+      advance_base(),
+      holding(OtherKey, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test advance_refuses_a_successor_holding_the_asset_of_another_state_policy() fail {
+  advance_over(
+    with_successor_token(
+      advance_base(),
+      holding(OtherStatePolicy, spent.cesr_aid, policy),
+    ),
+  )
+}
+
+test advance_refuses_a_checkpoint_that_holds_only_the_retired_register_token() fail {
+  let retired = holding(RetiredRegisterToken, spent.cesr_aid, policy)
+  advance_over(
+    with_successor_token(with_input_token(advance_base(), retired), retired),
+  )
+}
+
+test advance_refuses_a_successor_at_a_staked_address() fail {
+  advance_over(with_successor_address(advance_base(), staked(policy)))
+}
+
+// ---------------------------------------------------------------------
+// convict: a checkpoint is recognised by the representative asset of its AID
+// (Lean `representativeAsset`) and its successor holds the same asset, once
+// ---------------------------------------------------------------------
+
+fn convict_over(tx: Transaction) -> Bool {
+  run_convict(1, tx)
+}
+
+fn convict_base() -> Transaction {
+  convict_tx(
+    v2_data(live(tip, False, False, refund_enterprise_key())),
+    floor_unfrozen + convict_pool,
+    [pending_output(honest_pending(), mc, tip_name()), ..honest_payouts()],
+    zero,
+  )
+}
+
+test convict_accepts_an_input_holding_the_representative_asset() {
+  convict_over(
+    with_input_token(convict_base(), representative(tip.cesr_aid, 1)),
+  )
+}
+
+test convict_refuses_an_input_holding_no_token() fail {
+  convict_over(
+    with_input_token(convict_base(), holding(Nothing, tip.cesr_aid, policy)),
+  )
+}
+
+test convict_refuses_an_input_holding_the_asset_of_another_state_policy() fail {
+  convict_over(
+    with_input_token(
+      convict_base(),
+      holding(OtherStatePolicy, tip.cesr_aid, policy),
+    ),
+  )
+}
+
+test convict_refuses_an_input_holding_the_asset_of_another_registry_name() fail {
+  convict_over(
+    with_input_token(
+      convict_base(),
+      holding(OtherRegistryName, tip.cesr_aid, policy),
+    ),
+  )
+}
+
+test convict_refuses_an_input_holding_the_asset_of_another_key() fail {
+  convict_over(
+    with_input_token(convict_base(), holding(OtherKey, tip.cesr_aid, policy)),
+  )
+}
+
+test convict_refuses_an_input_holding_two_of_the_representative_asset() fail {
+  convict_over(
+    with_input_token(convict_base(), holding(QuantityTwo, tip.cesr_aid, policy)),
+  )
+}
+
+test convict_accepts_a_successor_holding_the_representative_asset() {
+  convict_over(
+    with_successor_token(convict_base(), representative(tip.cesr_aid, 1)),
+  )
+}
+
+test convict_refuses_a_successor_holding_no_token() fail {
+  convict_over(
+    with_successor_token(convict_base(), holding(Nothing, tip.cesr_aid, policy)),
+  )
+}
+
+test convict_refuses_a_successor_holding_two_of_the_representative_asset() fail {
+  convict_over(
+    with_successor_token(
+      convict_base(),
+      holding(QuantityTwo, tip.cesr_aid, policy),
+    ),
+  )
+}
+
+test convict_refuses_a_successor_holding_the_asset_of_another_key() fail {
+  convict_over(
+    with_successor_token(
+      convict_base(),
+      holding(OtherKey, tip.cesr_aid, policy),
+    ),
+  )
+}
+
+test convict_refuses_a_successor_holding_the_asset_of_another_state_policy() fail {
+  convict_over(
+    with_successor_token(
+      convict_base(),
+      holding(OtherStatePolicy, tip.cesr_aid, policy),
+    ),
+  )
+}
+
+test convict_refuses_a_checkpoint_that_holds_only_the_retired_register_token() fail {
+  let retired = holding(RetiredRegisterToken, tip.cesr_aid, policy)
+  convict_over(
+    with_successor_token(with_input_token(convict_base(), retired), retired),
+  )
+}
+
+test convict_refuses_a_successor_at_a_staked_address() fail {
+  convict_over(with_successor_address(convict_base(), staked(policy)))
 }

@@ -43,6 +43,7 @@ use freeze_fixture.{
   premium, refund_pkh, registered_at, rotated, rotation, spent, spent_keys,
   spent_ref, token_value, unit,
 }
+use registry_fixture.{active_name, state_policy}
 
 // ---------------------------------------------------------------------
 // The version 2 live datum, built field by field
@@ -424,7 +425,7 @@ pub fn second_checkpoint_input() -> Input {
       from_lovelace(floor_unfrozen + unit)
         |> merge(
             from_asset(
-              policy,
+              state_policy(),
               #"b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
               1,
             ),
@@ -440,7 +441,7 @@ pub fn second_checkpoint_output() -> Output {
     from_lovelace(floor_unfrozen + unit)
       |> merge(
           from_asset(
-            policy,
+            state_policy(),
             #"b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
             1,
           ),
@@ -451,7 +452,7 @@ pub fn second_checkpoint_output() -> Output {
 
 /// The checkpoint token's asset name.
 pub fn token_name() -> ByteArray {
-  spent.aid_asset_name
+  active_name(spent.cesr_aid)
 }
 
 pub fn other_policy() -> PolicyId {

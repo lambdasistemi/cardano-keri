@@ -2,7 +2,7 @@
 //// (lean/CardanoKeri/ConsumerIdentity.lean) clause for clause, over a
 //// candidate holding read as a reference input.
 ////
-//// The network, release, seed and AID come from the relying contract
+//// The network, release, checkpoint credential, seed and AID come from the relying contract
 //// (`Context`, `Environment`); hash, codec, AID-to-key map and datum decoder
 //// are function parameters (the Lean `Interpretation`). Nothing is read from
 //// the candidate output except what the Lean reads: its payment credential,
@@ -15,7 +15,7 @@
 //// consumableHoldingB -> consumable_holding. A datum is "an application datum"
 //// when it is inline; the decoder says whether it decodes.
 
-use cardano/address.{Credential}
+use cardano/address.{Address, Credential}
 use cardano/assets.{AssetName, PolicyId, quantity_of}
 use cardano/transaction.{InlineDatum, Output, OutputReference}
 
@@ -39,12 +39,14 @@ pub type Context {
   release: PublishedRelease,
   seed: OutputReference,
   aid: Int,
+  checkpoint_credential: Credential,
 }
 
 /// Lean `Environment`: `release: None` is an unresolved release.
 pub type Environment {
   network: Int,
   release: Option<PublishedRelease>,
+  checkpoint_credential: Option<Credential>,
 }
 
 /// Lean `Preimage`, the two constructors the predicate uses.
@@ -142,10 +144,13 @@ pub fn decoded(decode: DecodeFn, c: Context, o: Output) -> Option<DecodedDatum> 
   }
 }
 
-/// Lean `authenticatedContextB`: the observed network is the intended one and
-/// the resolved release is exactly the intended complete release.
+/// Lean `authenticatedContextB`: the observed network is the intended one, the
+/// resolved release is exactly the intended complete release, and the resolved
+/// checkpoint credential is the intended one.
 pub fn authenticated_context(c: Context, e: Environment) -> Bool {
-  e.network == c.network && e.release == Some(c.release)
+  e.network == c.network && e.release == Some(c.release) && e.checkpoint_credential == Some(
+    c.checkpoint_credential,
+  )
 }
 
 /// Lean `Checkpoint.consumableStateB`: present, unfrozen, unpoisoned and at
@@ -173,7 +178,7 @@ pub fn representative_quantity(
 }
 
 /// Lean `consumableHoldingB`. Clauses, in the Lean order: authenticated
-/// context; application credential; total quantity of the representative
+/// context; the whole address of the checkpoint credential; total quantity of the representative
 /// asset is one; a decoded datum for the intended AID in a consumable state.
 pub fn consumable_holding(
   hash: HashFn,
@@ -188,7 +193,10 @@ pub fn consumable_holding(
 ) -> Bool {
   and {
     authenticated_context(c, e),
-    o.address.payment_credential == c.release.application_credential,
+    o.address == Address {
+      payment_credential: c.checkpoint_credential,
+      stake_credential: None,
+    },
     representative_quantity(hash, code, key_of, c, o) == 1,
     when decoded(decode, c, o) is {
       None -> False

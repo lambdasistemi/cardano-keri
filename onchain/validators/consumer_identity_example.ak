@@ -42,6 +42,7 @@ validator consumer_identity_example(context: Context, params: Params) {
     let environment = Environment {
       network: context.network,
       release: Some(context.release),
+      checkpoint_credential: Some(context.checkpoint_credential),
     }
     let now = now_of(tx)
     list.any(

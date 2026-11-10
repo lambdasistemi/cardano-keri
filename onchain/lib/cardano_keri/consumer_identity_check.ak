@@ -42,6 +42,9 @@ pub fn context_of(v: IdentityVector) -> Context {
     },
     seed: v.seed,
     aid: v.aid,
+    checkpoint_credential: Script(
+      #"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    ),
   }
 }
 

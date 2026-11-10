@@ -57,7 +57,6 @@ connectedTerms =
                 , termsFreezeBond = 5_000_000
                 , termsPremium = 2_000_000
                 }
-        , registryMinimumAda = 2_000_000
         , registryParameters =
             ApplicationParameters
                 { registrationCost = 2
@@ -137,6 +136,15 @@ spec = describe "a registry's scripts" $ do
         artifactScriptHash (scriptsCheckpoint base)
             `shouldNotBe` artifactScriptHash (scriptsCheckpoint bond)
         registryInitialFloor (withBond 6_000_000 connectedTerms) `shouldBe` 1_010_000_000
+    it "terms the validator or the observer would refuse for every transaction are refused" $ do
+        path <- getEnv "KERI_CHECKPOINT_BLUEPRINT"
+        blueprint <- loadBlueprint path >>= either fail pure
+        let derive = deriveRegistryScripts stateTemplate
+            refused terms =
+                either (const True) (const False) (derive terms (seedOf 0) blueprint)
+        refused (withDeposit 4_999_999 connectedTerms) `shouldBe` True
+        refused (withBond 4_999_999 connectedTerms) `shouldBe` True
+        refused (withDeposit 5_000_000 (withBond 5_000_000 connectedTerms)) `shouldBe` False
     it "the registry is named by the seed, and the checkpoint validator follows it" $ do
         first <- derivedWith connectedTerms (seedOf 0)
         second <- derivedWith connectedTerms (seedOf 1)

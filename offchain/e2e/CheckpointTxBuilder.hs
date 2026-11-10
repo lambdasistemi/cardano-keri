@@ -4735,7 +4735,6 @@ devnetTerms :: RegistryTerms
 devnetTerms =
     RegistryTerms
         { registryCheckpointTerms = deployedCheckpointTerms
-        , registryMinimumAda = checkpointMinAda
         , registryParameters =
             ApplicationParameters
                 { registrationCost = 1_000_000

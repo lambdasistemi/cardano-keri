@@ -28,6 +28,9 @@ import Cardano.KERI.AID.Application (
     stateProgram,
     stateTokenName,
  )
+import Cardano.KERI.AID.Checkpoint.FreezeBond (freezeBondValid)
+import Cardano.KERI.AID.Checkpoint.Registration (validRegistrationDeposit)
+import Cardano.KERI.AID.Checkpoint.Value (checkpointMinAda)
 import Cardano.KERI.Deployment.Script (
     Blueprint,
     CheckpointTerms (..),
@@ -40,6 +43,7 @@ import Cardano.KERI.Deployment.Script (
     requireValidator,
     scriptHashBytes,
  )
+import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import Data.ByteString.Short qualified as SBS
 import Data.Proxy (Proxy (..))
@@ -47,12 +51,13 @@ import PlutusCore.Data (Data (..))
 
 {- | Everything a registry's deployment is parameterised by. The checkpoint
 terms feed the registration observer, the checkpoint validator and the
-application; the minimum ADA of a checkpoint output and the five request
-parameters feed the application and its configuration record.
+application; the request parameters feed the application and its
+configuration record. The minimum ADA of a checkpoint output is not a field:
+the checkpoint validator holds it as a constant, so the application's floors
+add the library's one value of it ('checkpointMinAda').
 -}
 data RegistryTerms = RegistryTerms
     { registryCheckpointTerms :: !CheckpointTerms
-    , registryMinimumAda :: !Integer
     , registryParameters :: !ApplicationParameters
     }
     deriving stock (Eq, Show)
@@ -76,7 +81,7 @@ the checkpoint deposit and the freeze bond.
 -}
 registryMinimumDeposit :: RegistryTerms -> Integer
 registryMinimumDeposit terms =
-    registryMinimumAda terms
+    checkpointMinAda
         + termsDeposit (registryCheckpointTerms terms)
         + termsFreezeBond (registryCheckpointTerms terms)
 
@@ -90,6 +95,11 @@ registryInitialFloor terms =
 
 {- | Derive the scripts of the registry created by spending @seed@, from the
 state template, the terms and the blueprint.
+
+Terms the checkpoint validator or the registration observer would refuse for
+every transaction are refused here: a deposit or a freeze bond below its
+floor makes every arm fail, so a fold the application accepts would lock its
+deposit.
 -}
 deriveRegistryScripts ::
     ByteString ->
@@ -99,6 +109,10 @@ deriveRegistryScripts ::
     Either String RegistryScripts
 deriveRegistryScripts template terms seed blueprint = do
     let checkpointTerms = registryCheckpointTerms terms
+    unless (validRegistrationDeposit (termsDeposit checkpointTerms)) $
+        Left "the registration deposit is below its floor: the observer refuses every registration"
+    unless (freezeBondValid (termsFreezeBond checkpointTerms)) $
+        Left "the freeze bond is below its floor: the checkpoint validator refuses every spend"
     observers <- deriveObserverScripts checkpointTerms blueprint
     (applicationValidator, applicationProgram) <-
         requireValidator

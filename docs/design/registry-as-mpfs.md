@@ -155,7 +155,7 @@ stated in `lean/CardanoKeri/Application.lean` against the public model
 
 The application address holds only configuration records and requests. A
 delivered checkpoint lives at the checkpoint validator's own address, where its
-lifecycle (advance, conviction, freeze, top-up, migration) spends it as the
+lifecycle (advance, conviction, freeze, top-up) spends it as the
 checkpoint and economic models state; the application never spends it.
 
 - **The configuration record.** Each registry's genesis transaction mints one
@@ -237,7 +237,7 @@ flowchart LR
   Book -->|by the deadline| Fold[Fold: holding holds exactly the deposit; donation covers the registration cost]
   Book -->|from the deadline| Return[Return: refund address paid all but the tip]
   Fold --> Checkpoint[Genuine checkpoint at the checkpoint validator]
-  Checkpoint --> Lifecycle[Advance, conviction, freeze, top-up, migration by the checkpoint validator]
+  Checkpoint --> Lifecycle[Advance, conviction, freeze, top-up by the checkpoint validator]
 ```
 
 Two approvals that are the same token name the same deployment, registry seed,

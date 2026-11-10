@@ -14,7 +14,7 @@
 use aiken/primitive/bytearray
 use cage_context.{out_ref}
 use cardano/address.{from_verification_key}
-use cardano/assets.{from_asset, zero}
+use cardano/assets.{zero}
 use cardano/transaction.{NoDatum, Output}
 use cardano_keri/checkpoint/advance.{AdvanceEvidence}
 use cardano_keri/checkpoint/datum.{CheckpointDatumV2}
@@ -28,9 +28,9 @@ use deposit_fixture.{
 }
 use freeze_fixture.{
   Parts, advance_hash, d_reg, enforcement_hash, entitlement_hash, floor_frozen,
-  floor_unfrozen, forged, freeze_bond, from_parts, hunter_pkh, lifecycle_hash,
-  migration_hash, other_hunter_pkh, paid, parts, policy, premium, rotation,
-  spent, token_value, under_receipted, under_signed, unevidenced, unit,
+  floor_unfrozen, forged, freeze_bond, from_parts, hunter_pkh, other_hunter_pkh,
+  paid, parts, premium, rotation, spent, token_value, under_receipted,
+  under_signed, unevidenced, unit,
 }
 use registry_fixture.{registry_name, representative, state_policy}
 

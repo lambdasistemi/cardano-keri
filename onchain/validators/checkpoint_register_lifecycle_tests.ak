@@ -11,9 +11,7 @@ use aiken/builtin
 use aiken/collection/list
 use aiken/interval.{Finite, Interval, IntervalBound}
 use aiken/primitive/bytearray
-use cage_context.{
-  input_at, min_ada, mint_context, out_ref, owner_vkh, seed_tx_id, spend_context,
-}
+use cage_context.{input_at, out_ref, owner_vkh, seed_tx_id, spend_context}
 use cardano/address.{
   Address, Credential, Script, from_script, from_verification_key,
   with_delegation_key, with_delegation_script,
@@ -39,17 +37,10 @@ use cardano_keri/checkpoint/enforcement_vectors as enforcement_vec
 use cardano_keri/checkpoint/entitlement.{
   EnforcementProofV1, enforcement_evidence_digest,
 }
-use cardano_keri/checkpoint/message.{
-  SpentCheckpoint, deriveAidAssetName, qb64_aid,
-}
+use cardano_keri/checkpoint/message.{SpentCheckpoint, qb64_aid}
 use cardano_keri/checkpoint/observer.{
   ObserverClaim, ObserverEnvelope, observe_advance, observe_convict,
-  observe_register,
 }
-use cardano_keri/checkpoint/registration.{
-  RegistrationEvidence, proof_token_name,
-}
-use cardano_keri/checkpoint/registration_vectors as vec
 use cardano_keri/checkpoint/retired_layout.{retired_layout}
 use cardano_keri/checkpoint/threshold.{Unweighted}
 use checkpoint_observer
@@ -67,17 +58,8 @@ use registry_fixture.{
 
 const network_id: Int = 1
 
-const hp_policy: PolicyId =
-  #"4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a"
-
 const policy: PolicyId =
   #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
-
-const migration_hash: PolicyId =
-  #"dddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
-
-const lifecycle_hash: PolicyId =
-  #"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
 const advance_hash: PolicyId =
   #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"

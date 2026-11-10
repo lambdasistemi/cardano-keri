@@ -21,7 +21,7 @@ use cardano_keri/checkpoint/datum.{
   CheckpointDatumV2, KeyMaterial, TerminationPending,
 }
 use cardano_keri/checkpoint/freeze_vectors as vec
-use cardano_keri/checkpoint/message.{deriveAidAssetName, qb64_aid}
+use cardano_keri/checkpoint/message.{qb64_aid}
 use cardano_keri/checkpoint/observer.{
   ObserverClaim, ObserverEnvelope, observe_freeze,
 }
@@ -32,10 +32,10 @@ use freeze_fixture.{
   enforcement_hash, entitlement_hash, envelope, envelope_with, floor_frozen,
   floor_unfrozen, forged, freeze_bond, freeze_redeemer, freeze_tag, freeze_tx,
   from_parts, honest_case, honest_envelope, honest_tx, hunter_pkh, into_case,
-  lifecycle_hash, live, mc, migration_hash, network_id, observing_case,
-  other_hunter_pkh, paid, parts, paying_case, pending_data, policy, premium,
-  rotated, rotation, spending_case, spent, spent_keys, spent_ref, token_value,
-  under_receipted, under_signed, unevidenced, unit, v1_data, v2_data,
+  live, mc, migration_hash, network_id, observing_case, other_hunter_pkh, paid,
+  parts, paying_case, pending_data, policy, premium, rotated, rotation,
+  spending_case, spent, spent_keys, spent_ref, token_value, under_receipted,
+  under_signed, unevidenced, unit, v1_data, v2_data,
 }
 use registry_fixture.{
   Nothing, OtherKey, OtherRegistryName, OtherStatePolicy, QuantityTwo,

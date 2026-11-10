@@ -24,7 +24,7 @@ use cage_context.{
 use cardano/address.{Address, Script, from_script, from_verification_key}
 use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge, zero}
 use cardano/transaction.{
-  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, Withdraw,
+  InlineDatum, Input, NoDatum, Output, Transaction, Withdraw,
 }
 use cardano_keri/checkpoint/datum.{KeyMaterial}
 use cardano_keri/checkpoint/message.{deriveAidAssetName, qb64_aid}

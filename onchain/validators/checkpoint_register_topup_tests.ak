@@ -25,9 +25,8 @@ use checkpoint_register
 use deposit_fixture
 use freeze_fixture.{
   Freeze, advance_hash, d_reg, enforcement_hash, entitlement_hash, floor_frozen,
-  floor_unfrozen, freeze_bond, freeze_redeemer, lifecycle_hash, mc,
-  migration_hash, network_id, policy, premium, spent, spent_ref, token_value,
-  unit, v1_data,
+  floor_unfrozen, freeze_bond, freeze_redeemer, mc, network_id, policy, premium,
+  spent, spent_ref, token_value, unit, v1_data,
 }
 use registry_fixture.{
   Nothing, OtherKey, OtherRegistryName, OtherStatePolicy, QuantityTwo,
@@ -36,14 +35,12 @@ use registry_fixture.{
 }
 use topup_fixture.{
   Bond, Deposit, Keep, Parts, Rotation, TopUp, base, change, eight_data, flag,
-  freeze_case, from_case, held, held_at, honest, honest_case, hp_policy,
-  inputs_after, into_case, live_of, marked_with, minting, nine_data, nine_fields,
-  other_keys, other_policy, outputs_after, payer_input, pending_data,
-  reg_evidence, register_envelope, register_with, registered_parts,
-  registered_with_pool, rotation_case, script_output, second_checkpoint_input,
-  second_checkpoint_output, signed_by, ten_data, token_name, topup_between,
-  topup_redeemer, valued_case, valued_with, with_withdrawal, within,
-  without_datum,
+  freeze_case, from_case, held, held_at, honest, honest_case, inputs_after,
+  into_case, marked_with, minting, nine_data, nine_fields, other_keys,
+  other_policy, outputs_after, payer_input, pending_data, rotation_case,
+  script_output, second_checkpoint_input, second_checkpoint_output, signed_by,
+  ten_data, token_name, topup_between, topup_redeemer, valued_case, valued_with,
+  with_withdrawal, within, without_datum,
 }
 
 // The validators are called here: a fixture module cannot import them.

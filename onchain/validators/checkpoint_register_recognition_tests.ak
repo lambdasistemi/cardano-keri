@@ -17,13 +17,13 @@ use cardano/transaction.{
   InlineDatum, Input, Output, OutputReference, Transaction, Withdraw,
   placeholder,
 }
-use cardano_keri/checkpoint/datum.{CheckpointDatumV2, Live}
+use cardano_keri/checkpoint/datum.{CheckpointDatumV2}
 use cardano_keri/checkpoint/message.{deriveAidAssetName}
 use cardano_keri/checkpoint/observer.{ObserverClaim, ObserverEnvelope}
 use checkpoint_register
 use freeze_fixture.{
-  advance_hash, enforcement_hash, entitlement_hash, lifecycle_hash, live,
-  migration_hash, network_id, policy, spent, unit, v2_data,
+  advance_hash, enforcement_hash, entitlement_hash, live, migration_hash,
+  network_id, policy, spent, v2_data,
 }
 use keri_application_connected.{checkpoint_min_ada, d_reg, freeze_bond, premium}
 use registry_fixture.{registry_name, representative, state_policy}

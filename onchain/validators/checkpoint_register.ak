@@ -11,8 +11,7 @@ use aiken/collection/list
 use aiken/primitive/bytearray
 use cardano/address.{Credential, Script, from_script, from_verification_key}
 use cardano/assets.{
-  AssetName, PolicyId, from_asset, from_lovelace, lovelace_of, merge,
-  quantity_of,
+  PolicyId, from_asset, from_lovelace, lovelace_of, merge, quantity_of,
 }
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Redeemer, ScriptPurpose,

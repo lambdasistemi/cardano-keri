@@ -13,8 +13,7 @@
 
 use aiken/builtin
 use aiken/collection/list
-use aiken/primitive/bytearray
-use cardano/address.{Script, from_script, from_verification_key}
+use cardano/address.{Script, from_verification_key}
 use cardano/assets.{Value, from_asset, from_lovelace, lovelace_of, merge}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, Withdraw,
@@ -30,18 +29,17 @@ use cardano_keri/checkpoint/datum.{CheckpointDatumV2, Live}
 use cardano_keri/checkpoint/observer.{
   ObserverClaim, ObserverEnvelope, observe_advance, observe_register,
 }
-use cardano_keri/checkpoint/registration.{proof_token_name}
 use cardano_keri/checkpoint/registration_vectors as vec
 use checkpoint_observer
 use checkpoint_register
 use freeze_fixture.{
   advance_hash, advance_redeemer, enforcement_hash, entitlement_hash, hunter_pkh,
-  lifecycle_hash, migration_hash, network_id,
+  network_id,
 }
 use keri_application
 use keri_application_connected.{
   booking_floor, checkpoint_min_ada, connected_fold, connected_request, d_reg,
-  floor, freeze_bond, hash_proof_policy, observer_floor, premium, proof_name,
+  floor, freeze_bond, hash_proof_policy, observer_floor, premium,
 }
 use keri_application_fixture.{creation, genesis, keri, template_input}
 use keri_application_requests.{

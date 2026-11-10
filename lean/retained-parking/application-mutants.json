@@ -75,7 +75,7 @@
   "id": "booking-approval-count",
   "before": "SingularApplicationHeld.Assets.mintQty o.assets (registrationAsset i.hash i.code release data) == 1",
   "after": "SingularApplicationHeld.Assets.mintQty o.assets (registrationAsset i.hash i.code release data) > 0",
-  "failure": "verdict-changed booking-two-approvals",
+  "failure": "verdict-changed booking-one-payload-twice",
   "owner": "CardanoKeri.Application.booking_inversion",
   "test": "ApplicationChecks"
  },
@@ -131,7 +131,7 @@
   "id": "approval-not-burned",
   "before": "SingularApplicationHeld.Assets.mintQty o.assets (registrationAsset i.hash i.code release data) == -1",
   "after": "SingularApplicationHeld.Assets.mintQty o.assets (registrationAsset i.hash i.code release data) ≤ 0",
-  "failure": "verdict-changed fold-approval-kept",
+  "failure": "verdict-changed fold-one-payload-twice",
   "owner": "CardanoKeri.Application.registration_spend_is_fold_or_return",
   "test": "ApplicationChecks"
  },
@@ -173,6 +173,142 @@
   "after": "  true && o.actions.all",
   "failure": "verdict-changed fold-with-unnamed-request",
   "owner": "CardanoKeri.Application.registration_spend_is_fold_or_return",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "fold-initial-state-unchecked",
+  "before": "  writesInitialState i rp cp data holding &&",
+  "after": "  true &&",
+  "failure": "verdict-changed fold-advanced-sequence",
+  "owner": "CardanoKeri.Application.fold_delivers_initial_state",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "fold-initial-sequence-ignored",
+  "before": "    | some d, some s => i.keyOf d.aid == data.key && d.state == s.datumFacts",
+  "after": "    | some d, some s => i.keyOf d.aid == data.key && (match d.state with | .present l => CardanoKeri.Checkpoint.State.present { l with sn := 0 } | x => x) == s.datumFacts",
+  "failure": "verdict-changed fold-advanced-sequence",
+  "owner": "CardanoKeri.Application.fold_refuses_other_state",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "fold-initial-epoch-ignored",
+  "before": "    | some d, some s => i.keyOf d.aid == data.key && d.state == s.datumFacts",
+  "after": "    | some d, some s => i.keyOf d.aid == data.key && (match d.state with | .present l => CardanoKeri.Checkpoint.State.present { l with epoch := 0 } | x => x) == s.datumFacts",
+  "failure": "verdict-changed fold-advanced-epoch",
+  "owner": "CardanoKeri.Application.fold_refuses_other_state",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "fold-initial-poison-ignored",
+  "before": "    | some d, some s => i.keyOf d.aid == data.key && d.state == s.datumFacts",
+  "after": "    | some d, some s => i.keyOf d.aid == data.key && (match d.state with | .present l => CardanoKeri.Checkpoint.State.present { l with poisoned := false } | x => x) == s.datumFacts",
+  "failure": "verdict-changed fold-poisoned",
+  "owner": "CardanoKeri.Application.fold_refuses_other_state",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "fold-initial-freeze-ignored",
+  "before": "    | some d, some s => i.keyOf d.aid == data.key && d.state == s.datumFacts",
+  "after": "    | some d, some s => i.keyOf d.aid == data.key && (match d.state with | .present l => CardanoKeri.Checkpoint.State.present { l with frozen := false } | x => x) == s.datumFacts",
+  "failure": "verdict-changed fold-frozen",
+  "owner": "CardanoKeri.Application.fold_refuses_other_state",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "fold-initial-top-up-ignored",
+  "before": "    | some d, some s => i.keyOf d.aid == data.key && d.state == s.datumFacts",
+  "after": "    | some d, some s => i.keyOf d.aid == data.key && (match d.state with | .present l => CardanoKeri.Checkpoint.State.present { l with toppedUp := false } | x => x) == s.datumFacts",
+  "failure": "verdict-changed fold-topped-up",
+  "owner": "CardanoKeri.Application.fold_refuses_other_state",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "fold-initial-birth-ignored",
+  "before": "    | some d, some s => i.keyOf d.aid == data.key && d.state == s.datumFacts",
+  "after": "    | some d, some s => i.keyOf d.aid == data.key && (match d.state with | .present l => CardanoKeri.Checkpoint.State.present { l with bornAt := data.bookedAt } | x => x) == s.datumFacts",
+  "failure": "verdict-changed fold-born-later",
+  "owner": "CardanoKeri.Application.fold_refuses_other_state",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "fold-initial-refund-ignored",
+  "before": "    | some d, some s => i.keyOf d.aid == data.key && d.state == s.datumFacts",
+  "after": "    | some d, some s => i.keyOf d.aid == data.key && (match d.state with | .present l => CardanoKeri.Checkpoint.State.present { l with refundTo := refund } | x => x) == s.datumFacts",
+  "failure": "verdict-changed fold-other-refund",
+  "owner": "CardanoKeri.Application.fold_refuses_other_state",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "fold-initial-pending-accepted",
+  "before": "    | some d, some s => i.keyOf d.aid == data.key && d.state == s.datumFacts",
+  "after": "    | some d, some s => i.keyOf d.aid == data.key && (match d.state with | .terminationPending _ => s.datumFacts | x => x) == s.datumFacts",
+  "failure": "verdict-changed fold-pending-termination",
+  "owner": "CardanoKeri.Application.fold_refuses_other_state",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "fold-initial-aid-unchecked",
+  "before": "i.keyOf d.aid == data.key &&",
+  "after": "true &&",
+  "failure": "verdict-changed fold-other-aid",
+  "owner": "CardanoKeri.Application.fold_refuses_other_aid",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "fold-initial-premium-unchecked",
+  "before": "    if cp.P ≤ pool then",
+  "after": "    if true then",
+  "failure": "verdict-changed fold-pool-below-premium",
+  "owner": "CardanoKeri.Application.fold_refuses_pool_below_premium",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "fold-initial-refund-from-datum",
+  "before": "  | .application raw, some refund =>",
+  "after": "  | .application raw, recorded =>\n    let refund := recorded.getD (match i.decodeCheckpoint raw with\n      | some { state := .present l, .. } => l.refundTo | _ => 0)",
+  "failure": "verdict-changed fold-unrecorded-refund",
+  "owner": "CardanoKeri.Application.fold_refuses_unrecorded_refund",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "mint-closure-unchecked",
+  "before": "    mintClosed i release o && bookedOnce o",
+  "after": "    true && bookedOnce o",
+  "failure": "verdict-changed approval-without-booking",
+  "owner": "CardanoKeri.Application.mint_without_booking_refused",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "mint-configuration-unjustified",
+  "before": "  | .createConfiguration registry _ _ => [(configurationAsset i release registry, 1)]",
+  "after": "  | .createConfiguration registry _ _ => []",
+  "failure": "verdict-changed configuration-created",
+  "owner": "CardanoKeri.Application.accepted_mint_is_justified",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "mint-booking-unjustified",
+  "before": "      | some (.registration data) => [(registrationAsset i.hash i.code release data, 1)]",
+  "after": "      | some (.registration data) => []",
+  "failure": "verdict-changed booking",
+  "owner": "CardanoKeri.Application.accepted_mint_is_justified",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "mint-burn-unjustified",
+  "before": "      | some (.registration data) => [(registrationAsset i.hash i.code release data, -1)]",
+  "after": "      | some (.registration data) => []",
+  "failure": "verdict-changed fold-at-deadline",
+  "owner": "CardanoKeri.Application.accepted_mint_is_justified",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "mint-termination-burn-unjustified",
+  "before": "  | .foldTermination _ registry key => [(terminationApproval i.hash i.code release registry key, -1)]",
+  "after": "  | .foldTermination _ registry key => []",
+  "failure": "verdict-changed termination-fold",
+  "owner": "CardanoKeri.Application.accepted_mint_is_justified",
   "test": "ApplicationChecks"
  }
 ]

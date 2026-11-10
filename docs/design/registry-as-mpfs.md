@@ -152,6 +152,8 @@ carries the registration approval its holding commits to, and that the holding
 holds at least the committed deposit. Everything else is KERI's application,
 stated in `lean/CardanoKeri/Application.lean` against the public model
 `models/singular-application-held` at the pin above.
+The Lean revision, the pin, the compiler and the script hashes and sizes of this
+generation are on [the identities of this generation](../architecture/registry-identities.md).
 
 The application address holds only configuration records and requests. A
 delivered checkpoint lives at the checkpoint validator's own address, where its

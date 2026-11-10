@@ -304,7 +304,7 @@ import Control.Monad (unless, when)
 import Data.Aeson (Value (..), eitherDecodeFileStrict, object, (.=))
 import Data.Aeson.Key qualified as Key
 import Data.Aeson.KeyMap qualified as KeyMap
-import Data.ByteArray.Encoding (Base (Base16), convertFromBase)
+import Data.ByteArray.Encoding (Base (Base16), convertFromBase, convertToBase)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as B8
@@ -4940,6 +4940,19 @@ genesisRegistry env = do
         pollOutput (envProvider env) txId [1] (hasAsset (applicationPolicy env) configName)
             >>= requireJust (label <> ": the configuration record did not settle")
     dbg (label <> ": state " <> show (fst stateUtxo) <> " configuration " <> show (fst configUtxo))
+    dbg
+        ( label
+            <> ": registry identity: state policy "
+            <> hexOf (registryStatePolicy (registryIdentity env))
+            <> " name "
+            <> hexOf (registryName (registryIdentity env))
+            <> " checkpoint validator "
+            <> hexOf (scriptHashBytes (envCheckpointHash env))
+            <> " application "
+            <> hexOf (scriptHashBytes (envApplicationHash env))
+            <> " genesis transaction "
+            <> show txId
+        )
     pure
         env
             { envTemplateOutput = Just templateOut
@@ -4962,6 +4975,10 @@ redeemerMap budgets purposes =
             [ (purpose, (ledgerData redeemer, Map.findWithDefault fallback purpose budgets))
             | (purpose, redeemer, fallback) <- purposes
             ]
+
+-- | Bytes as lowercase hexadecimal text, for the lines a run prints.
+hexOf :: ByteString -> String
+hexOf = B8.unpack . convertToBase Base16
 
 -- | The registry's empty root.
 emptyRoot :: ByteString
@@ -5544,6 +5561,7 @@ productionRegisterScenarioUsingReferences env references fixture = do
             [0]
             (holdsCheckpointToken env (rfDatum fixture))
             >>= requireJust "the delivered checkpoint did not settle"
+    dbg ("registration fold transaction " <> show foldTxId)
     dbg ("fold validity " <> show validity)
     pure
         ( CheckpointInput

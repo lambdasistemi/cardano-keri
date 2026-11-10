@@ -60,6 +60,10 @@ registry state and the refund from chain state. The other checkpoint journeys
 (advance, conviction, freeze, deposit rotation, top-up) start from a checkpoint
 a fold delivered.
 
+The revisions, script hashes and sizes of this generation, and how the devnet
+registry's own identity and transaction identifiers are derived and printed, are
+on the page [the identities of this generation](../architecture/registry-identities.md).
+
 ## Limits
 
 - One request is folded per transaction.

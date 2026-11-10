@@ -29,7 +29,7 @@ def observe (initial : AH.ObservedOutput) (st : State) (serial : Nat) : Option A
 
 def query (initial : AH.ObservedOutput) (st : State) (serial now : Nat) : Wire.Query :=
   { tables := tables st (711 + serial), context,
-    environment := ⟨context.network, some context.release⟩, params := cp, now,
+    environment := ⟨context.network, some context.release, some context.checkpointCredential⟩, params := cp, now,
     holding := (observe initial st serial).getD { initial with assets := [], datum := .empty } }
 
 def snapshot (name : String) (initial : AH.ObservedOutput) (machine : Machine)

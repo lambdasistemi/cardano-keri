@@ -21,7 +21,7 @@ CESR text.
 
 One label bounds what this proves: a seeded holding, not a registration
 journey. The holdings are minted by the test-only policy
-@consumer_seed_policy@ at a test application credential; the genuine
+@consumer_seed_policy@ at a test checkpoint credential; the genuine
 registration journey belongs to #324. The pool and the bond amounts are held in
 the output's value and are not read from it (#339).
 
@@ -147,9 +147,13 @@ contextNetwork = 0
 paramsData :: PLC.Data
 paramsData = PLC.Constr 0 [PLC.I 3, PLC.I 2, PLC.I 1, PLC.I 1]
 
--- | The test application credential holdings are seeded at (28 bytes).
+-- | The test application credential the release names (28 bytes).
 applicationCredential :: ByteString
 applicationCredential = BS.replicate 28 0xaa
+
+-- | The test checkpoint credential holdings are seeded at (28 bytes).
+checkpointCredential :: ByteString
+checkpointCredential = BS.replicate 28 0xdd
 
 applicationPolicy :: ByteString
 applicationPolicy = BS.replicate 28 0xcc
@@ -535,6 +539,7 @@ withSeededWorld action = do
                     ]
                 , PLC.Constr 0 [PLC.B seedTx, PLC.I 0]
                 , PLC.I concreteAid
+                , PLC.Constr 1 [PLC.B checkpointCredential]
                 ]
         consumerProgram = applyDataArgs [contextData, paramsData] consumerCode
         consumerHash = computeScriptHash consumerProgram
@@ -646,7 +651,7 @@ assetNameOf :: ByteString -> AssetName
 assetNameOf = AssetName . SBS.toShort
 
 {- | Mint the representative tokens with the test-only policy and pay one
-holding per scenario to the test application credential, each with a
+holding per scenario to the test checkpoint credential, each with a
 datum of its kind; lock one consumer output per scenario.
 -}
 buildSeedTx ::
@@ -672,7 +677,7 @@ buildSeedTx prov seedProgram seedHash statePolicyBytes consumerProgram feeUtxo c
                     [(assetNameOf n, q) | (n, q) <- Map.toList minted]
         holding sc =
             mkBasicTxOut
-                (scriptAddr (scriptHashOf applicationCredential))
+                (scriptAddr (scriptHashOf checkpointCredential))
                 ( MaryValue
                     (Coin seededAda)
                     ( MultiAsset . Map.singleton policyId $

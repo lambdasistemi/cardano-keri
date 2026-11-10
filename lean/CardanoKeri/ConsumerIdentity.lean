@@ -27,21 +27,26 @@ structure Interpretation where
   keyOf : AID → Singular.Key
   decode : AH.PublishedRelease → Nat → Option DecodedDatum
 
-/-- Established by the relying contract, independently of the output. -/
+/-- Established by the relying contract, independently of the output. The
+checkpoint credential is the payment credential of the checkpoint validator,
+where the registry's checkpoints live; it is not the release's application
+credential. -/
 structure Context where
   network : Nat
   release : AH.PublishedRelease
   seed : Singular.OutRef
   aid : AID
+  checkpointCredential : Nat
   deriving Repr, DecidableEq
 
-/-- The actual network and the release resolved by the trusted integration.
-Neither is a field read from an unauthenticated candidate datum. `none`
-means unresolved release and fails closed. This type is an observation
-boundary, not a proof that a provider or release resolver is correct. -/
+/-- The actual network, the release and the checkpoint credential resolved by
+the trusted integration. None is a field read from an unauthenticated
+candidate datum. `none` means unresolved and fails closed. This type is an
+observation boundary, not a proof that a provider or resolver is correct. -/
 structure Environment where
   network : Nat
   release : Option AH.PublishedRelease
+  checkpointCredential : Option Nat
   deriving Repr, DecidableEq
 
 def registryAsset (i : Interpretation) (c : Context) : Singular.TokenId :=
@@ -56,16 +61,19 @@ def decoded (i : Interpretation) (c : Context) (o : AH.ObservedOutput) : Option 
   | _ => none
 
 def authenticatedContext (c : Context) (e : Environment) : Prop :=
-  e.network = c.network ∧ e.release = some c.release
+  e.network = c.network ∧ e.release = some c.release ∧
+    e.checkpointCredential = some c.checkpointCredential
 
 def authenticatedContextB (c : Context) (e : Environment) : Bool :=
-  e.network == c.network && e.release == some c.release
+  e.network == c.network && e.release == some c.release &&
+    e.checkpointCredential == some c.checkpointCredential
 
-/-- All previous lifecycle clauses survive in the unchanged predicate. -/
+/-- All previous lifecycle clauses survive in the unchanged predicate. The
+holding sits at the checkpoint validator's credential. -/
 def consumableHolding (i : Interpretation) (c : Context) (e : Environment)
     (p : Params) (now : Slot) (o : AH.ObservedOutput) : Prop :=
   authenticatedContext c e ∧
-  o.credential = c.release.applicationCredential ∧
+  o.credential = c.checkpointCredential ∧
   AH.quantity o (representativeAsset i c) = 1 ∧
   match decoded i c o with
   | none => False
@@ -74,7 +82,7 @@ def consumableHolding (i : Interpretation) (c : Context) (e : Environment)
 def consumableHoldingB (i : Interpretation) (c : Context) (e : Environment)
     (p : Params) (now : Slot) (o : AH.ObservedOutput) : Bool :=
   authenticatedContextB c e &&
-  o.credential == c.release.applicationCredential &&
+  o.credential == c.checkpointCredential &&
   AH.quantity o (representativeAsset i c) == 1 &&
   match decoded i c o with
   | none => false
@@ -111,7 +119,7 @@ which must be exactly what the state holds (`State.heldValue`), with the
 registry's minimum ADA. The economic parameters are trusted inputs. -/
 def realizesState (i : Interpretation) (c : Context) (p : Params)
     (rp : CardanoKeri.Registry.Params) (s : State) (o : AH.ObservedOutput) : Prop :=
-  o.credential = c.release.applicationCredential ∧
+  o.credential = c.checkpointCredential ∧
   AH.quantity o (representativeAsset i c) = s.representativeHeld ∧
   (decoded i c o).map DecodedDatum.facts = some ⟨c.aid, s.datumFacts⟩ ∧
   o.lovelace = s.heldValue p rp
@@ -206,7 +214,7 @@ def registrationAgreementB (i : Interpretation) (c : Context) (q : RegistrationI
   q.economicTx.outputs[q.holdingIndex]? == some eo &&
   o.reference == Singular.OutRef.mk q.economicTx.identity q.holdingIndex &&
   o.credential == q.booking.request.destination &&
-  o.credential == c.release.applicationCredential &&
+  o.credential == c.checkpointCredential &&
   eo.output.address == some q.booking.request.destination &&
   eo.output.datumValue == q.booking.request.datum &&
   eo.output.lovelace == q.booking.request.carrierAda &&

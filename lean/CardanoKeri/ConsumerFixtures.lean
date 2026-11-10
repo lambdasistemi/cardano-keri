@@ -27,8 +27,8 @@ def registryEnvironment : CardanoKeri.Registry.TraceWire.EnvTable := {
   duplicity := [11, 12, 13].flatMap fun aid => (List.range 13).map fun n => (aid, n) }
 def context : Context := {
   network := 0
-  release := { applicationPolicy := 7, applicationCredential := 111, stateProgram := 88, statePolicy := 8 },
-  seed := ⟨91, 0⟩, aid := 11 }
+  release := { applicationPolicy := 7, applicationCredential := 110, stateProgram := 88, statePolicy := 8 },
+  seed := ⟨91, 0⟩, aid := 11, checkpointCredential := 111 }
 def fixtureCodec : AH.Codec
   | .state seed => [0, seed.tx, seed.index]
   | .active registry key => [1, registry.policy, registry.name, key]

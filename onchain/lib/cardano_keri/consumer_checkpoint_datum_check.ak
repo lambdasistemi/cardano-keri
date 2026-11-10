@@ -173,7 +173,7 @@ pub fn holding(c: Context, raw: Data) -> Output {
   )
   Output {
     address: Address {
-      payment_credential: c.release.application_credential,
+      payment_credential: c.checkpoint_credential,
       stake_credential: None,
     },
     value: from_lovelace(2000000) |> assets.add(asset.policy, asset.name, 1),
@@ -195,7 +195,11 @@ pub fn consumer_accepts(c: Context, now: Int, v: DatumVector) -> Bool {
         concrete.key_of,
         decoder.decode,
         c,
-        Environment { network: c.network, release: Some(c.release) },
+        Environment {
+          network: c.network,
+          release: Some(c.release),
+          checkpoint_credential: Some(c.checkpoint_credential),
+        },
         params(),
         now,
         holding(c, raw),

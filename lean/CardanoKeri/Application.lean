@@ -1,6 +1,6 @@
 import SingularApplicationHeld.RequestShapes
 import CardanoKeri.Registry
-import CardanoKeri.Checkpoint
+import CardanoKeri.ConsumerIdentity
 
 /-! KERI's application on Singular's public application-held model.
 
@@ -13,17 +13,33 @@ fold or a return moves. This module states KERI's application `A_keri` against
 
 * The configuration record of a registry is minted once, in the registry's
   genesis transaction, at the application address, with `retractTime = 0`.
-  A registry whose state policy is not `state(A_keri)` gets none.
+  A registry whose state policy is not `state(A_keri)` gets none. Besides the
+  request parameters it records the credential of the checkpoint validator,
+  where the registry's checkpoints live.
 * Booking reads the configuration record by reference and mints one
-  registration approval. The approval commits the deposit, which is the
-  whole carrier the holding will hold; the request holds exactly the deposit,
-  the registration cost and the registry's minimum tip.
+  registration approval. The approval commits the checkpoint validator's
+  credential as the holding address, which is not the application's, and the
+  deposit, which is the whole carrier the holding will hold; the request holds
+  exactly the deposit, the registration cost and the registry's minimum tip.
 * Until its deadline a request is spent only by a fold that delivers the
-  committed holding with exactly the deposit. From the deadline anyone may
+  committed holding, at the checkpoint validator's credential, with exactly
+  the deposit, whose datum is exactly the initial state the checkpoint model's
+  registration step writes for the request's key. From the deadline anyone may
   return it, paying its refund address everything but the tip.
 * A fold's treasury donation is at least the registration costs of the
   requests it folds.
 * A pending termination is spent only by a fold that burns its active token.
+* The whole mint under the application policy is what the actions justify:
+  one configuration token per created record, one registration approval per
+  distinct booked output, one approval burned per fold or return, one
+  termination approval burned per terminating fold. Each booked output is
+  booked once. `A_keri` mints nothing else; in particular no action mints a
+  termination approval.
+
+The application address holds configuration records and requests only. A
+delivered checkpoint lives at the checkpoint validator's address, whose own
+spends (advance, conviction, freeze, top-up, migration) the checkpoint and
+economic models state; the application never spends a checkpoint.
 
 The network is not a field of any approval preimage: a Plutus address carries
 no network identifier. It is fixed by the chain the transaction runs on, where
@@ -32,16 +48,31 @@ on one chain only. This is a declared technical boundary of the model. -/
 namespace CardanoKeri.Application
 open Singular SingularApplicationHeld
 
+/-- KERI's configuration record of a registry: the upstream request
+parameters and the credential of the checkpoint validator, where a fold
+delivers the registry's checkpoints. -/
+structure Configuration where
+  parameters : ApplicationParameters
+  checkpointCredential : Nat
+  deriving Repr, DecidableEq
+
 /-- The interpretation KERI's application runs under: the upstream preimage
-codec and hash, the AID key encoding, the application datum decoder, and the
-hash an approval commits for an initial datum. All are inputs here; the
-concrete choices live with the vectors. -/
+codec and hash, the AID key encoding, the request datum decoder, the hash an
+approval commits for an initial datum, the configuration record's datum
+decoder, the checkpoint datum decoder (the AID and the state facts a version 2
+checkpoint datum carries), and the refund address a checkpoint datum records
+for a request's refund address (its ledger bytes on the chain the transaction
+runs on; `none` when no payable refund can carry it). All are inputs here;
+the concrete choices live with the vectors. -/
 structure Interpretation where
   hash : Hash
   code : Codec
   keyOf : CardanoKeri.Checkpoint.AID → Key
   decode : DecodeApplication
   datumHash : Nat → Nat
+  decodeConfiguration : Nat → Option Configuration
+  decodeCheckpoint : Nat → Option CardanoKeri.ConsumerIdentity.DecodedDatum
+  refundTo : Nat → Option CardanoKeri.Checkpoint.Addr
 
 /-- The opaque KERI processing premise the economic model already uses: the
 key has its inception evidence. A fold delivers a checkpoint only for such a key. -/
@@ -97,20 +128,24 @@ structure Observation where
 
 /-! ## The configuration record -/
 
+/-- The configuration an output's datum decodes to. -/
+def configurationDatum (i : Interpretation) (output : ObservedOutput) : Option Configuration :=
+  match output.datum with | .application raw => i.decodeConfiguration raw | _ => none
+
 /-- A configuration record of `registry`: at the application address, with a
 configuration datum and exactly its own token. -/
 def configurationShape (i : Interpretation) (release : PublishedRelease) (registry : TokenId)
     (output : ObservedOutput) : Bool :=
   output.credential == release.applicationCredential &&
-  (match output.datum with | .configuration _ => true | _ => false) &&
+  (configurationDatum i output).isSome &&
   exactAssets output [(configurationAsset i release registry, 1)]
 
-/-- The parameters of `registry`'s configuration record, read by reference. -/
+/-- The configuration of `registry`, read by reference from its record. -/
 def configurationOf (i : Interpretation) (release : PublishedRelease) (registry : TokenId)
-    (o : Observation) : Option ApplicationParameters :=
+    (o : Observation) : Option Configuration :=
   match o.referenceOutputs.find? (fun c =>
       configurationShape i release registry c && o.referenceInputs.contains c.reference) with
-  | some c => match c.datum with | .configuration p => some p | _ => none
+  | some c => configurationDatum i c
   | none => none
 
 /-- A KERI registry has no retraction window. -/
@@ -123,7 +158,7 @@ holds valid parameters. -/
 def createConfiguration (i : Interpretation) (release : PublishedRelease) (registry : TokenId)
     (seed : OutRef) (output : ObservedOutput) (o : Observation) : Bool :=
   configurationShape i release registry output &&
-  (match output.datum with | .configuration p => parametersValid p | _ => false) &&
+  (match configurationDatum i output with | some c => parametersValid c.parameters | none => false) &&
   registry.policy == release.statePolicy &&
   registry.name == i.hash (i.code (.state seed)) &&
   o.assets.spent.count seed == 1 &&
@@ -149,21 +184,23 @@ def bookingClock (p : ApplicationParameters) (data : RegistrationData) (interval
 
 /-- A KERI booking. The request names a registry whose state policy is
 `state(A_keri)` and whose configuration record is read by reference; it
-commits the checkpoint application address as the holding address and a
-deposit of at least the registry's minimum ADA plus its deposit; it holds
-exactly `requestLovelace`; exactly one approval of its payload is minted. -/
+commits as the holding address the checkpoint validator's credential that the
+record names, which is not the application credential, and a deposit of at
+least the registry's minimum ADA plus its deposit; it holds exactly
+`requestLovelace`; exactly one approval of its payload is minted. -/
 def bookRegistration (i : Interpretation) (rp : CardanoKeri.Registry.Params)
     (release : PublishedRelease) (o : Observation) (output : ObservedOutput) : Bool :=
   match decoded i.decode output with
   | some (.registration data) =>
     match configurationOf i release data.registry o with
-    | some p =>
+    | some c =>
       registrationShape .none i.hash i.code release output data &&
       data.registry.policy == release.statePolicy &&
-      data.holdingAddress == release.applicationCredential &&
+      data.holdingAddress == c.checkpointCredential &&
+      c.checkpointCredential != release.applicationCredential &&
       rp.Mc + rp.D ≤ data.deposit &&
-      output.lovelace == requestLovelace p data &&
-      bookingClock p data o.interval &&
+      output.lovelace == requestLovelace c.parameters data &&
+      bookingClock c.parameters data o.interval &&
       SingularApplicationHeld.Assets.mintQty o.assets (registrationAsset i.hash i.code release data) == 1
     | none => false
   | _ => false
@@ -174,17 +211,73 @@ def bookRegistration (i : Interpretation) (rp : CardanoKeri.Registry.Params)
 def holdingDatumHash (i : Interpretation) (holding : ObservedOutput) : Option Nat :=
   match holding.datum with | .application raw => some (i.datumHash raw) | _ => none
 
-/-- The holding a fold delivers: at the committed address, carrying the
-committed initial datum, holding exactly the committed deposit and the one
-newly minted active token of the key. -/
-def delivered (i : Interpretation) (data : RegistrationData) (holding : ObservedOutput)
-    (o : Observation) : Bool :=
+/-! ## The initial checkpoint state -/
+
+/-- The pool a request's deposit leaves above the registry's minimum ADA, the
+checkpoint deposit and the freeze bond; `none` when the deposit does not
+cover them. -/
+def initialPool (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (data : RegistrationData) : Option CardanoKeri.Checkpoint.Value :=
+  if rp.Mc + cp.D + cp.B ≤ data.deposit then some (data.deposit - (rp.Mc + cp.D + cp.B)) else none
+
+/-- The state the checkpoint model's registration step writes for a request
+(`Checkpoint.Step.register`, `initialState_is_registration`): live at
+sequence number and epoch 0, neither poisoned, frozen nor topped up, born at
+the request's booking bound, refunding to `refund`, holding the deposit's
+pool, which covers at least one premium. `none` when the pool does not. -/
+def initialState (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (refund : CardanoKeri.Checkpoint.Addr) (data : RegistrationData) :
+    Option CardanoKeri.Checkpoint.State :=
+  match initialPool rp cp data with
+  | some pool =>
+    if cp.P ≤ pool then some (.present ⟨0, 0, false, false, data.bookedAt, refund, pool, false⟩)
+    else none
+  | none => none
+
+/-- A holding's datum is exactly the initial state of the request's key: it
+decodes as a checkpoint datum of the AID whose key the request names, carrying
+the facts of the initial state for the refund address the request names. The
+pool is not a datum fact; it is the holding's lovelace above the floor. -/
+def writesInitialState (i : Interpretation) (rp : CardanoKeri.Registry.Params)
+    (cp : CardanoKeri.Checkpoint.Params) (data : RegistrationData) (holding : ObservedOutput) : Bool :=
+  match holding.datum, i.refundTo data.refundAddress with
+  | .application raw, some refund =>
+    match i.decodeCheckpoint raw, initialState rp cp refund data with
+    | some d, some s => i.keyOf d.aid == data.key && d.state == s.datumFacts
+    | _, _ => false
+  | _, _ => false
+
+/-- The holding a fold delivers: at the committed address, which is the
+checkpoint validator's credential the configuration record names, carrying the
+committed initial datum, which is exactly the initial state of the request's
+key, holding exactly the committed deposit and the one newly minted active
+token of the key. -/
+def delivered (i : Interpretation) (rp : CardanoKeri.Registry.Params)
+    (cp : CardanoKeri.Checkpoint.Params) (c : Configuration) (data : RegistrationData)
+    (holding : ObservedOutput) (o : Observation) : Bool :=
   let active := activeAsset i.hash i.code data.registry data.key
   holding.credential == data.holdingAddress &&
+  holding.credential == c.checkpointCredential &&
   holdingDatumHash i holding == some data.initialDatum &&
+  writesInitialState i rp cp data holding &&
   holding.lovelace == data.deposit &&
   quantity holding active == 1 &&
   SingularApplicationHeld.Assets.mintQty o.assets active == 1
+
+/-- A genuine checkpoint of a registration, in the terms the checkpoint
+validator and a consumer recognise it by: at the checkpoint validator's
+credential the configuration record names, which is not the application
+credential; holding the one active token of the request's key under the
+registry the request names, whose state policy is `state(A_keri)`; carrying
+the committed initial datum; holding exactly the committed deposit. -/
+def genuine (i : Interpretation) (release : PublishedRelease) (c : Configuration)
+    (data : RegistrationData) (holding : ObservedOutput) : Prop :=
+  holding.credential = c.checkpointCredential ∧
+  holding.credential ≠ release.applicationCredential ∧
+  data.registry.policy = release.statePolicy ∧
+  quantity holding (activeAsset i.hash i.code data.registry data.key) = 1 ∧
+  holdingDatumHash i holding = some data.initialDatum ∧
+  holding.lovelace = data.deposit
 
 /-- The approval the request carries is burned. -/
 def approvalBurned (i : Interpretation) (release : PublishedRelease) (data : RegistrationData)
@@ -201,15 +294,17 @@ def returnWindow (data : RegistrationData) (interval : Interval) : Bool :=
 
 /-- The spend of a booked registration request. The configuration record is
 read by reference. A fold must end by the deadline, the key must have its
-inception evidence, and the holding must be delivered. A return must start at
+inception evidence, and the holding must be delivered to the checkpoint
+validator in its initial state. A return must start at
 the deadline or later. With `retractTime = 0` the two windows are the
 upstream processing and cleanup phases (`windows_are_upstream_phases`). -/
-def spendRegistration (i : Interpretation) (env : Env) (release : PublishedRelease)
+def spendRegistration (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params)
+    (cp : CardanoKeri.Checkpoint.Params) (release : PublishedRelease)
     (o : Observation) (action : Action) (input : ObservedOutput) (data : RegistrationData) : Bool :=
   match configurationOf i release data.registry o with
   | none => false
-  | some p =>
-    parametersValid p &&
+  | some c =>
+    parametersValid c.parameters &&
     registrationShape .none i.hash i.code release input data &&
     approvalBurned i release data o &&
     match action with
@@ -217,7 +312,7 @@ def spendRegistration (i : Interpretation) (env : Env) (release : PublishedRelea
       foldWindow data o.interval &&
       env.inception data.key &&
       (match o.outputs[index]? with
-        | some holding => delivered i data holding o
+        | some holding => delivered i rp cp c data holding o
         | none => false)
     | .returnRegistration _ => returnWindow data o.interval
     | _ => false
@@ -238,7 +333,7 @@ def namedInput (o : Observation) (ref : OutRef) : Option ObservedOutput :=
 
 /-- One action. -/
 def action (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params)
-    (release : PublishedRelease) (o : Observation) : Action → Bool
+    (cp : CardanoKeri.Checkpoint.Params) (release : PublishedRelease) (o : Observation) : Action → Bool
   | .createConfiguration registry seed index => match o.outputs[index]? with
     | some output => createConfiguration i release registry seed output o
     | none => false
@@ -250,7 +345,7 @@ def action (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params)
     | none => false
   | a@(.foldRegistration ref _) | a@(.returnRegistration ref) => match namedInput o ref with
     | some input => match decoded i.decode input with
-      | some (.registration data) => spendRegistration i env release o a input data
+      | some (.registration data) => spendRegistration i env rp cp release o a input data
       | _ => false
     | none => false
 
@@ -261,8 +356,8 @@ def spentRequest (i : Interpretation) (release : PublishedRelease) (o : Observat
     Option (ObservedOutput × RegistrationData × ApplicationParameters) := do
   let input ← namedInput o ref
   let .registration data ← decoded i.decode input | none
-  let p ← configurationOf i release data.registry o
-  return (input, data, p)
+  let c ← configurationOf i release data.registry o
+  return (input, data, c.parameters)
 
 /-- Every return pays its refund address everything but the tip. -/
 def requiredRefunds (i : Interpretation) (release : PublishedRelease) (o : Observation) :
@@ -290,15 +385,67 @@ def moneyRouted (i : Interpretation) (release : PublishedRelease) (o : Observati
     ((refunds.filter fun other => other.1 == entry.1).map (·.2)).sum ≤ paidTo o.outputs entry.1) &&
   requiredTreasury i release o ≤ o.donation
 
+/-! ## The application's mint -/
+
+/-- The tokens under the application policy one action justifies, with their
+quantities: its configuration token, the approval of the request it books, the
+approval of the request it folds or returns, or the termination approval it
+burns. -/
+def Action.justifies (i : Interpretation) (release : PublishedRelease) (o : Observation) :
+    Action → List (TokenId × Int)
+  | .createConfiguration registry _ _ => [(configurationAsset i release registry, 1)]
+  | .bookRegistration index => match o.outputs[index]? with
+    | some output => match decoded i.decode output with
+      | some (.registration data) => [(registrationAsset i.hash i.code release data, 1)]
+      | _ => []
+    | none => []
+  | .foldRegistration ref _ | .returnRegistration ref => match namedInput o ref with
+    | some input => match decoded i.decode input with
+      | some (.registration data) => [(registrationAsset i.hash i.code release data, -1)]
+      | _ => []
+    | none => []
+  | .foldTermination _ registry key => [(terminationApproval i.hash i.code release registry key, -1)]
+
+/-- The output a booking books. -/
+def Action.booking? : Action → Option Nat
+  | .bookRegistration index => some index
+  | _ => none
+
+/-- The outputs the transaction books, in action order. -/
+def bookedOutputs (o : Observation) : List Nat := o.actions.filterMap Action.booking?
+
+/-- Each booked output is booked once. -/
+def bookedOnce (o : Observation) : Bool := decide (bookedOutputs o).Nodup
+
+/-- The mint the actions justify. With each booked output booked once
+(`bookedOnce`), the approvals it mints are one per distinct booked output. -/
+def justifiedMint (i : Interpretation) (release : PublishedRelease) (o : Observation) :
+    List (TokenId × Int) :=
+  o.actions.flatMap (Action.justifies i release o)
+
+/-- The quantity of `asset` the actions justify. -/
+def justifiedQty (i : Interpretation) (release : PublishedRelease) (o : Observation)
+    (asset : TokenId) : Int :=
+  (((justifiedMint i release o).filter fun entry => entry.1 == asset).map (·.2)).sum
+
+/-- The mint under the application policy is exactly the justified mint: every
+token minted or justified under it has the justified quantity. -/
+def mintClosed (i : Interpretation) (release : PublishedRelease) (o : Observation) : Bool :=
+  ((o.assets.mint.map (·.1) ++ (justifiedMint i release o).map (·.1)).filter fun asset =>
+      asset.policy == release.applicationPolicy).all fun asset =>
+    SingularApplicationHeld.Assets.mintQty o.assets asset == justifiedQty i release o asset
+
 /-- Every input at the application address is named by an action: the
-application validator runs for each one it guards. -/
+application validator runs for each one it guards. No action names a
+checkpoint: checkpoints live at the checkpoint validator's address. -/
 def inputsCovered (release : PublishedRelease) (o : Observation) : Bool :=
   o.inputs.all fun input => input.credential != release.applicationCredential ||
     o.actions.any fun a => decide (a.input? = some input.reference)
 
 /-- The application accepts a transaction. -/
 def accepted (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params)
-    (release : PublishedRelease) (o : Observation) : Bool :=
-  inputsCovered release o && o.actions.all (action i env rp release o) && moneyRouted i release o
+    (cp : CardanoKeri.Checkpoint.Params) (release : PublishedRelease) (o : Observation) : Bool :=
+  inputsCovered release o && o.actions.all (action i env rp cp release o) && moneyRouted i release o &&
+    mintClosed i release o && bookedOnce o
 
 end CardanoKeri.Application

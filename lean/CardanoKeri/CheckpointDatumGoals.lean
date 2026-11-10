@@ -997,14 +997,14 @@ theorem datum_hasOutput (aid : AID) (k : KeyMaterial) (s : State) (d : Data)
     (h : datum aid k s = some d) : s.hasOutput = true := by
   cases s <;> simp_all [datum, State.hasOutput]
 
-/-- Given a holding with the release's credential, the representative asset once and the raw
+/-- Given a holding at the checkpoint credential, the representative asset once and the raw
 version 2 datum written for the intended AID and any state with an output, pool included,
 holding exactly the lovelace that state holds; when observed through the concrete
 interpretation; then it realizes that state. -/
 theorem written_realizes (c : Context) (p : Params) (rp : CardanoKeri.Registry.Params) (s : State)
     (k : KeyMaterial) (d : Data)
     (o : AH.ObservedOutput) (hd : datum c.aid k s = some d) (hk : k.Bytewise)
-    (cred : o.credential = c.release.applicationCredential)
+    (cred : o.credential = c.checkpointCredential)
     (qty : AH.quantity o (representativeAsset interpretation c) = 1)
     (held : o.datum = .application (raw d)) (value : o.lovelace = s.heldValue p rp) :
     realizesState interpretation c p rp s o := by
@@ -1013,13 +1013,14 @@ theorem written_realizes (c : Context) (p : Params) (rp : CardanoKeri.Registry.P
   · simp [decoded, held, interpretation, Bytes.interpretation,
       decode_written c.release c.aid k s d hd hk, DecodedDatum.facts, datumFacts_idem]
 
-/-- Given an authenticated context and a holding carrying the raw version 2 datum written for
-the intended AID and any state with an output, funded pools included; when the concrete
-consumer reads it; then it is accepted exactly when the written state is consumable. -/
+/-- Given an authenticated context and a holding at the checkpoint credential carrying the raw
+version 2 datum written for the intended AID and any state with an output, funded pools
+included; when the concrete consumer reads it; then it is accepted exactly when the written
+state is consumable. -/
 theorem written_holding_iff (c : Context) (e : Environment) (p : Params) (now : Slot)
     (s : State) (k : KeyMaterial) (d : Data) (o : AH.ObservedOutput)
     (context : authenticatedContext c e) (hd : datum c.aid k s = some d) (hk : k.Bytewise)
-    (cred : o.credential = c.release.applicationCredential)
+    (cred : o.credential = c.checkpointCredential)
     (qty : AH.quantity o (representativeAsset interpretation c) = 1)
     (held : o.datum = .application (raw d)) :
     consumableHolding interpretation c e p now o ↔ consumableState p now s := by

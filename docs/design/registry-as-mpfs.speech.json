@@ -117,19 +117,23 @@
       "pause": 500
     },
     {
-      "text": "As a KERI registration requester, I book a request that the public Singular registry can fold into my checkpoint, and I know in advance what the fold or a later return does with my money. The public registry only checks the approval each request carries and that the holding holds at least the committed deposit. Everything else is KERI's application.",
+      "text": "As a KERI registration requester, I book a request that the public Singular registry can fold into my checkpoint, and I know in advance what the fold or a later return does with my money and where my checkpoint will live. The public registry only checks the approval each request carries and that the holding holds at least the committed deposit. Everything else is KERI's application.",
       "pause": 400
     },
     {
-      "text": "Each registry's genesis mints one configuration record holding the registration cost, the minimum tip, the processing time, the booking width, and no retraction window. A registry that is not KERI's gets none.",
+      "text": "The application address holds only configuration records and requests. A delivered checkpoint lives at the checkpoint validator's own address, where its lifecycle spends it: advance, conviction, freeze, top-up and migration.",
       "pause": 300
     },
     {
-      "text": "Booking reads that record and mints exactly one approval. The approval commits the registry, the identifier's key, the application address, the hash of the initial checkpoint datum, and the deposit, which is the whole carrier the checkpoint will hold. The request holds exactly the deposit, the registration cost and the minimum tip.",
+      "text": "Each registry's genesis mints one configuration record holding the registration cost, the minimum tip, the processing time, the booking width, no retraction window, and the checkpoint validator's credential. A registry that is not KERI's gets none.",
       "pause": 300
     },
     {
-      "text": "Until its deadline a request is spent only by a fold that delivers the committed holding with exactly the deposit. From the deadline anyone may return it, paying the refund address everything but the tip.",
+      "text": "Booking reads that record and mints exactly one approval. The approval commits the registry, the identifier's key, the checkpoint validator's credential as the holding address, never the application address, the hash of the initial checkpoint datum, and the deposit, which is the whole carrier the checkpoint will hold. The request holds exactly the deposit, the registration cost and the minimum tip.",
+      "pause": 300
+    },
+    {
+      "text": "Until its deadline a request is spent only by a fold that delivers the committed holding to the checkpoint validator with exactly the deposit. What it delivers is a genuine checkpoint: the registry's active token, the version 2 datum the request committed, exactly the deposit. A consumer naming the same checkpoint validator accepts it once its state is consumable. From the deadline anyone may return the request, paying the refund address everything but the tip.",
       "pause": 300
     },
     {

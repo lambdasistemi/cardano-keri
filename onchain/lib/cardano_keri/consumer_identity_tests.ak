@@ -256,13 +256,11 @@ test the_registry_name_binds_the_seed_alone() {
 // The predicate runs on the concrete bytes
 // ---------------------------------------------------------------------
 
-fn holding(t: Token, quantity: Int, aid: Int) -> Output {
-  let datum: Data = live_datum(aid, 2)
+fn holding(c: Context, t: Token, quantity: Int) -> Output {
+  let datum: Data = live_datum(c.aid, 2)
   Output {
     address: Address {
-      payment_credential: Script(
-        #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      ),
+      payment_credential: c.checkpoint_credential,
       stake_credential: None,
     },
     value: from_lovelace(3000000) |> assets.add(t.policy, t.name, quantity),
@@ -280,10 +278,14 @@ fn accepts(c: Context, t: Token, quantity: Int) -> Bool {
     bytes.key_of,
     decoder.decode,
     c,
-    Environment { network: c.network, release: Some(c.release) },
+    Environment {
+      network: c.network,
+      release: Some(c.release),
+      checkpoint_credential: Some(c.checkpoint_credential),
+    },
     Params { d: 3, b: 2, p: 1, w: 1 },
     7,
-    holding(t, quantity, c.aid),
+    holding(c, t, quantity),
   )
 }
 

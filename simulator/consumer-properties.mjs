@@ -39,8 +39,8 @@ add('CI01','consumableHoldingB_iff',c=>[...c.fields,...c.journey.map(f=>f.consum
 add('CI02','consumableHolding_exact',c=>{const r=consumerVerdict(cell(c,'positive-anchor').query);return r.ok&&Object.values(r.clauses).every(Boolean)&&r.lifecycle.ok;},c=>{cell(c,'positive-anchor').query.holding.credential++;});
 add('CI03','existing_eligibility_preserved',c=>c.journey.filter(f=>f.holding).every(f=>equal(executeConsumer(f.consumer.query).ok,consumable(f.consumer.query.params,f.now,f.system.aids[0].state).ok)),c=>{c.journey[1].consumer.query.environment.network++;});
 add('CI04','wrong_network_refused',c=>refused(c,'wrong-network'),flip('wrong-network'));
-add('CI05','wrong_or_unknown_release_refused',c=>['unknown-release','release-application-policy','release-credential','release-state-program','release-state-policy'].every(n=>refused(c,n)),flip('unknown-release'));
-add('CI06','wrong_credential_refused',c=>refused(c,'holding-credential'),flip('holding-credential'));
+add('CI05','wrong_or_unknown_release_refused',c=>['unknown-release','release-application-policy','release-credential','release-state-program','release-state-policy','unknown-checkpoint-credential','wrong-checkpoint-credential'].every(n=>refused(c,n)),flip('unknown-release'));
+add('CI06','wrong_credential_refused',c=>['holding-credential','holding-at-application-credential'].every(n=>refused(c,n)),flip('holding-credential'));
 add('CI07','wrong_quantity_refused',c=>['quantity-zero','quantity-two','duplicate-entries'].every(n=>refused(c,n)),flip('quantity-two'));
 add('CI08','wrong_asset_refused',c=>['wrong-policy','wrong-name','other-aid-token'].every(n=>refused(c,n)),flip('wrong-name'));
 add('CI09','malformed_datum_refused',c=>['datum-empty','datum-root','datum-malformed'].every(n=>refused(c,n)),flip('datum-empty'));

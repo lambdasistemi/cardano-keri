@@ -136,10 +136,11 @@ def refusedCases : List Refused :=
 def contextFor (aid : String) : Except String Context :=
   ConsumerIdentity.Bytes.Vectors.context ⟨policyHex, txHex, 0, aid⟩
 
-def environment (c : Context) : Environment := { network := c.network, release := some c.release }
+def environment (c : Context) : Environment :=
+  { network := c.network, release := some c.release, checkpointCredential := some c.checkpointCredential }
 
 def holding (c : Context) (bytes : List Nat) : AH.ObservedOutput :=
-  { reference := ⟨0, 0⟩, credential := c.release.applicationCredential, lovelace := 2000000,
+  { reference := ⟨0, 0⟩, credential := c.checkpointCredential, lovelace := 2000000,
     datum := .application (pack bytes), assets := [(representativeAsset interpretation c, 1)] }
 
 /-- The consumer predicate on a genuine holding carrying these datum bytes. -/

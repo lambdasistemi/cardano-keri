@@ -185,10 +185,12 @@ the checkpoint simulator, and unbuilt on chain.
 
 ### The consumer's predicate
 
-A treasury fixes its intended network, published release, registry seed and
-AID independently of a candidate. The reviewed holding predicate requires
-matching validated network/release, the release's application credential,
-exactly one complete expected representative asset, and a decoded application
+A treasury fixes its intended network, published release, checkpoint
+credential, registry seed and AID independently of a candidate. The reviewed
+holding predicate requires matching validated network, release and checkpoint
+credential, the output at that checkpoint credential (the checkpoint
+validator's, not the application's), exactly one complete expected
+representative asset, and a decoded application
 datum for that AID. Its unchanged lifecycle condition then requires a present,
 unfrozen, unpoisoned state at least the juvenility window old.
 

@@ -11,7 +11,7 @@ use aiken/builtin
 use aiken/collection/list
 use aiken/crypto.{blake2b_256}
 use aiken/primitive/bytearray
-use cardano/address.{Address, Credential, Script, VerificationKey}
+use cardano/address.{Address, Credential, Inline, Script, VerificationKey}
 use cardano/assets.{Value}
 use cardano/transaction.{
   DatumHash, InlineDatum, NoDatum, Output, OutputReference,
@@ -350,13 +350,39 @@ test ci05_wrong_or_unknown_release_refused() {
   )
 }
 
+test ci05_unknown_or_other_checkpoint_credential_refused() {
+  let q = base()
+  verdict(q) && refuses_all(
+    [
+      with_environment(
+        q,
+        Environment { ..q.environment, checkpoint_credential: None },
+      ),
+      with_environment(
+        q,
+        Environment {
+          ..q.environment,
+          checkpoint_credential: Some(q.context.release.application_credential),
+        },
+      ),
+      with_environment(
+        q,
+        Environment {
+          ..q.environment,
+          checkpoint_credential: Some(Script(#"aa")),
+        },
+      ),
+    ],
+  )
+}
+
 // ---------------------------------------------------------------------
-// CI06: wrong application credential, even with the token and a live datum
+// CI06: wrong checkpoint credential, even with the token and a live datum
 // ---------------------------------------------------------------------
 
 test ci06_wrong_credential_refused() {
   let q = base()
-  let good = q.context.release.application_credential
+  let good = q.context.checkpoint_credential
   let bytes = when good is {
     Script(h) -> h
     VerificationKey(h) -> h
@@ -366,7 +392,26 @@ test ci06_wrong_credential_refused() {
       with_credential(q, Script(flip_byte(bytes))),
       // same hash, other credential kind
       with_credential(q, VerificationKey(bytes)),
+      // the application's own credential is not the checkpoint validator's
+      with_credential(q, q.context.release.application_credential),
     ],
+  )
+}
+
+test ci06_a_staked_variant_of_the_checkpoint_address_is_refused() {
+  let q = base()
+  let staked = Address {
+    payment_credential: q.context.checkpoint_credential,
+    stake_credential: Some(
+      Inline(
+        VerificationKey(
+          #"0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c",
+        ),
+      ),
+    ),
+  }
+  verdict(q) && refuses_all(
+    [with_output(q, Output { ..q.output, address: staked })],
   )
 }
 
@@ -654,7 +699,7 @@ test ci16_rival_seed_token_refused() {
 // The environment is an argument of the predicate, never read from the output
 // ---------------------------------------------------------------------
 
-test authenticated_context_needs_network_and_complete_release() {
+test authenticated_context_needs_network_release_and_checkpoint_credential() {
   let q = base()
   authenticated_context(q.context, q.environment) && !authenticated_context(
     q.context,
@@ -662,5 +707,8 @@ test authenticated_context_needs_network_and_complete_release() {
   ) && !authenticated_context(
     q.context,
     Environment { ..q.environment, network: q.context.network + 1 },
+  ) && !authenticated_context(
+    q.context,
+    Environment { ..q.environment, checkpoint_credential: None },
   )
 }

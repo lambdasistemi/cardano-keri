@@ -17,7 +17,7 @@ function verdict(q){
  const r=U.consumerVerdict(q);
  put('consumer-result',r.error?'Unsupported interpretation: '+r.error:r.ok?'Treasury accepts this holding.':'Treasury refuses: '+r.verdict+'.');
  const list=el('consumer-summary');list.replaceChildren();
- for(const [label,value]of [['Network / release',r.clauses?`${r.clauses.network?'match':'mismatch'} / ${r.clauses.release?'match':'unresolved or mismatch'}`:'unsupported'],['Exact representative quantity',r.quantity??'unknown'],['Checkpoint eligibility',r.lifecycle?.verdict??'no decoded checkpoint']]){
+ for(const [label,value]of [['Network / release / checkpoint credential',r.clauses?`${r.clauses.network?'match':'mismatch'} / ${r.clauses.release?'match':'unresolved or mismatch'} / ${r.clauses.checkpointCredential?'match':'unresolved or mismatch'}`:'unsupported'],['Exact representative quantity',r.quantity??'unknown'],['Checkpoint eligibility',r.lifecycle?.verdict??'no decoded checkpoint']]){
   const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=String(value);list.append(dt,dd);
  }
  return r;

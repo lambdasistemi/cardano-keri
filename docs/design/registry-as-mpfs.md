@@ -146,34 +146,83 @@ addressed self-fold accounting are different claims.
 
 As a KERI registration requester, I book a request that the public Singular
 registry `singular_state(A_keri)` can fold into my checkpoint, and I know in
-advance what the fold or a later return does with my money. The public registry
-checks only that each folded request carries the registration approval its
-holding commits to, and that the holding holds at least the committed deposit.
-Everything else is KERI's application, stated in `lean/CardanoKeri/Application.lean`
-against the public model `models/singular-application-held` at the pin above.
+advance what the fold or a later return does with my money and where my
+checkpoint will live. The public registry checks only that each folded request
+carries the registration approval its holding commits to, and that the holding
+holds at least the committed deposit. Everything else is KERI's application,
+stated in `lean/CardanoKeri/Application.lean` against the public model
+`models/singular-application-held` at the pin above.
+
+The application address holds only configuration records and requests. A
+delivered checkpoint lives at the checkpoint validator's own address, where its
+lifecycle (advance, conviction, freeze, top-up, migration) spends it as the
+checkpoint and economic models state; the application never spends it.
 
 - **The configuration record.** Each registry's genesis transaction mints one
   configuration record at the application address, holding the registration
-  cost, minimum tip, processing time, booking width and `retractTime = 0`. A
-  registry whose state policy is not `state(A_keri)` gets none
-  (`configuration_refuses_foreign_registry`, `configuration_refuses_retraction`).
+  cost, minimum tip, processing time, booking width, `retractTime = 0` and the
+  credential of the checkpoint validator. A registry whose state policy is not
+  `state(A_keri)` gets none (`configuration_refuses_foreign_registry`,
+  `configuration_refuses_retraction`).
 - **Booking.** The booking reads the record by reference and mints exactly one
   registration approval. The approval commits the registry, the AID's key, the
-  application address as the holding address, the hash of the initial
-  checkpoint datum and the deposit, which is the whole carrier the checkpoint
-  will hold: at least the minimum ADA plus the registry's deposit. The request
-  holds exactly the deposit, the registration cost and the minimum tip
-  (`booking_inversion`, `booking_refuses_foreign_registry`,
-  `booking_refuses_short_deposit`, `booking_refuses_inexact_contents`).
+  checkpoint validator's credential from the record as the holding address
+  (never the application address), the hash of the initial checkpoint datum
+  and the deposit, which is the whole carrier the checkpoint will hold: at
+  least the minimum ADA plus the registry's deposit. The request holds exactly
+  the deposit, the registration cost and the minimum tip (`booking_inversion`,
+  `booking_refuses_foreign_registry`, `booking_refuses_application_holding`,
+  `booking_refuses_other_holding`, `booking_refuses_short_deposit`,
+  `booking_refuses_inexact_contents`).
 - **Spending a request.** Until its deadline, the booking's validity upper
   bound plus the processing time, a request is spent only by a fold that
-  delivers the committed holding: at the application address, with the
-  committed initial datum, exactly the deposit and the one new active token.
-  From the deadline anyone may return it, paying the refund address everything
-  but the tip (`registration_spend_is_fold_or_return`,
-  `before_deadline_only_fold`, `return_pays_refund_address`,
+  delivers the committed holding: at the checkpoint validator's credential the
+  record names, with the committed initial datum, exactly the deposit and the
+  one new active token. From the deadline anyone may return it, paying the
+  refund address everything but the tip
+  (`registration_spend_is_fold_or_return`, `before_deadline_only_fold`,
+  `fold_delivers_to_checkpoint_validator`, `return_pays_refund_address`,
   `fold_refuses_inexact_holding`). With `retractTime = 0` the two windows are
   the public model's processing and cleanup phases (`windows_are_upstream_phases`).
+- **The initial checkpoint state.** The delivered holding's datum is exactly
+  the state the checkpoint model's registration step writes for the request:
+  the version 2 `Live` datum of the AID whose key the request names, at
+  sequence number and epoch 0, neither poisoned, frozen nor topped up, born at
+  the booking's validity upper bound and refunding to the ledger bytes of the
+  refund address the request names; its pool, the deposit less the minimum
+  ADA, the checkpoint deposit and the freeze bond, covers at least one premium.
+  A fold delivering any other sequence number, epoch, flag, birth slot, refund
+  address, AID or a pending termination, or a pool below one premium, is
+  refused, so no fold can deliver a checkpoint that skips the juvenility window
+  or claims a key state the KEL never reached (`fold_delivers_initial_state`,
+  `delivered_initial_state`, `initialState_is_registration`,
+  `fold_refuses_other_state`, `fold_refuses_other_aid`,
+  `fold_refuses_pool_below_premium`, `fold_refuses_unrecorded_refund`). The
+  key material in the datum is pinned by the committed datum hash, not by this
+  rule. One transaction folds at most one registration request in the on-chain
+  realization; that is a declared limit of the realization, not of the model.
+- **A genuine checkpoint.** What a fold delivers for a booked request is a
+  genuine checkpoint: at the checkpoint validator, not the application address;
+  holding the one active token of the AID's key under a registry of
+  `state(A_keri)`; carrying the version 2 datum the request committed; holding
+  exactly the deposit (`delivered_is_genuine`, `before_deadline_delivers_genuine`,
+  `genuine_holds_committed_datum`). A consumer whose context names the same
+  checkpoint credential, registry and AID accepts it exactly when the written
+  state is consumable (`genuine_checkpoint_consumable_iff`). No input the
+  application spends at its own address is a checkpoint
+  (`no_application_input_is_a_checkpoint`).
+- **The closed mint.** Everything a transaction mints or burns under the
+  application policy is exactly what its actions justify: one configuration
+  token per created record, one registration approval per booked output, one
+  approval burned per fold or return, one termination approval burned per
+  terminating fold. Each booked output is booked once. An approval minted
+  without a booking, a second booking of one output, or any other token under
+  the application policy is refused (`accepted_mint_is_justified`,
+  `accepted_books_once`, `mint_without_booking_refused`,
+  `duplicate_booking_refused`). No application action mints a termination
+  approval yet, so at this revision no transaction creates a pending
+  termination through the application; booking a termination on conviction is
+  [#350](https://github.com/lambdasistemi/cardano-keri/issues/350).
 - **The treasury.** A fold's ledger `treasury_donation` is at least the
   registration costs of the requests it folds (`treasury_covers_registration_costs`,
   `folded_cost_in_donation`). The tip is what the folder may keep.
@@ -183,11 +232,12 @@ against the public model `models/singular-application-held` at the pin above.
 
 ```mermaid
 flowchart LR
-  Genesis[Registry genesis] --> Record[Configuration record]
-  Record -. read by reference .-> Book[Booking: one approval, exact contents]
+  Genesis[Registry genesis] --> Record[Configuration record: parameters and checkpoint validator]
+  Record -. read by reference .-> Book[Booking: one approval, exact contents, holding at the checkpoint validator]
   Book -->|by the deadline| Fold[Fold: holding holds exactly the deposit; donation covers the registration cost]
   Book -->|from the deadline| Return[Return: refund address paid all but the tip]
-  Fold --> Checkpoint[Live checkpoint]
+  Fold --> Checkpoint[Genuine checkpoint at the checkpoint validator]
+  Checkpoint --> Lifecycle[Advance, conviction, freeze, top-up, migration by the checkpoint validator]
 ```
 
 Two approvals that are the same token name the same deployment, registry seed,
@@ -204,11 +254,13 @@ the carrier is the deposit (`request_matches_economic`,
 the registry, custody and termination theorems above.
 
 `lean/application-vectors.json`, printed by `lean/ApplicationDriver.lean`,
-gives the approval bytes, the configuration record and accepted and refused
-configuration creations, bookings, folds, returns and termination spends for
-the on-chain approval and checkpoint creation
+gives the approval bytes, the configuration record with its checkpoint
+validator credential, and accepted and refused configuration creations,
+bookings, folds, returns, termination spends and spends of a delivered
+checkpoint for the on-chain approval and checkpoint creation
 ([#348](https://github.com/lambdasistemi/cardano-keri/issues/348)). The
-request datum's own byte layout is not fixed by these vectors.
+request and configuration datums' own byte layouts are not fixed by these
+vectors.
 
 ## Executable evidence and limits
 

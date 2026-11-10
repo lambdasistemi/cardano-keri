@@ -66,7 +66,7 @@ the runner live in `retained-parking/`; model/subject compilation must succeed
 before a named runtime failure counts as a kill. Fabricated JavaScript checker
 failures and implementation mutants are recorded separately.
 
-The 130 changed contracts and 49 preserved live contracts are checked under
+The 151 changed contracts and 49 preserved live contracts are checked under
 explicit expected types in `retained-parking/ReviewedContracts.lean` and
 `PreservedContracts.lean`. Historical identities retain their dispositions;
 retired contracts do not count as current proofs or fresh mutation passes.

@@ -30,7 +30,7 @@ fn holding(t: Token, quantity: Int, datum: Data) -> Output {
   Output {
     address: Address {
       payment_credential: Script(
-        #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        #"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       ),
       stake_credential: None,
     },

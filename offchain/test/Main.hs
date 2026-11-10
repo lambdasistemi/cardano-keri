@@ -27,12 +27,14 @@ import Cardano.KERI.AID.Checkpoint.TopUpSpec qualified as TopUpSpec
 import Cardano.KERI.AID.Checkpoint.ValueSpec qualified as ValueSpec
 import Cardano.KERI.AID.Checkpoint.WireSpec qualified as WireSpec
 import Cardano.KERI.AID.Ed25519Spec qualified as Ed25519Spec
+import Cardano.KERI.AID.FoldGuardSpec qualified as FoldGuardSpec
 import Cardano.KERI.AID.Migration.TypesSpec qualified as MigrationTypesSpec
 import Test.Hspec (hspec)
 
 main :: IO ()
 main = hspec $ do
     ApplicationSpec.spec
+    FoldGuardSpec.spec
     CheckpointSpec.spec
     Ed25519Spec.spec
     CESRSpec.spec

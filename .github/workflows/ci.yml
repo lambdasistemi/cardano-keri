@@ -309,6 +309,9 @@ jobs:
     runs-on: nixos
     steps:
       - uses: actions/checkout@v6
+        with:
+          # the identities page names the last commit that changed lean/
+          fetch-depth: 0
       - uses: cachix/cachix-action@v15
         with:
           name: paolino
@@ -332,6 +335,8 @@ jobs:
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#just --command just check-deposit-vectors
       - name: Top-up wire vectors drift
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#just --command just check-topup-vectors
+      - name: Identities page matches its derivation
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#just --command just check-identities
 
   e2e:
     name: E2E (withDevnet)

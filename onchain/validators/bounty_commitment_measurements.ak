@@ -11,7 +11,7 @@
 //// underneath. A measurement of the predicates would miss exactly what the
 //// applied program adds.
 ////
-//// Like `measure-enforcement` and `measure-checkpoint`, this is an
+//// Like `measure-enforcement`, this is an
 //// INVOCATION: Aiken cannot assert its own ex-units in-test, so
 //// `just measure-bounty-commitment` runs these with `--plain-numbers` and
 //// mechanically enforces the exact titles and the caps.

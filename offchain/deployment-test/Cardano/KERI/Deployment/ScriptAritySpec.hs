@@ -807,6 +807,13 @@ groupBoundaries =
             "test-only seeding policy (seeded holding, not a registration \
             \journey): no published deployment identity"
         )
+    ,
+        ( "keri_application.keri_application"
+        , Unapplied
+            "KERI application: its one parameter, the compiled singular_state \
+            \script template, is applied at deployment by a later slice; no \
+            \published deployment identity yet"
+        )
     ]
 
 -- | S0 groups are measured raw skeletons, not published deployment identities.

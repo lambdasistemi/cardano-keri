@@ -24,4 +24,12 @@ name = "aiken-lang/merkle-patricia-forestry"
 version = "v2.1.0"
 source = "github"
 
+# The public Singular registry package: the onchain/ project of the Singular
+# repository at the commit pinned in stage-dependencies.sh, staged by that
+# script into build/packages (it is not a GitHub release of its own).
+[[dependencies]]
+name = "singular/registry"
+version = "0.0.0"
+source = "github"
+
 [config]

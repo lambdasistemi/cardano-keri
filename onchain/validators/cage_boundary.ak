@@ -45,8 +45,8 @@ use cage_context.{
 use cardano/address.{from_script, from_verification_key}
 use cardano/assets.{from_lovelace, zero}
 use cardano/transaction.{Input, Output, OutputReference, Transaction}
-use lib.{TokenId}
-use types.{
+use token_lib.{TokenId}
+use token_types.{
   CageDatum, Modify, OwnerAuth, RequestAction, Update, UpdateAction,
   UpdateRedeemer,
 }

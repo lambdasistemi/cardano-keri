@@ -1056,6 +1056,15 @@
               rev = "v2.1.0";
               hash = "sha256-c+ZM1bvR0Zpuz5hCB+F6VWfDThagBHxgoNWHvEUQT/4=";
             };
+            # The public Singular registry package: the `onchain/` project of the
+            # Singular repository at the commit `onchain/stage-dependencies.sh`
+            # and `aiken-singular-consumer/flake.nix` pin. The same content hash.
+            aikenSingularRegistry = pkgs.fetchFromGitHub {
+              owner = "lambdasistemi";
+              repo = "singular";
+              rev = "d69ab005c3b710aeebf033d3c5cd08c56feb5643";
+              hash = "sha256-vV5/4mW4O4NwAsr8rAyTZUhH3pvqlBmsAJQIHUqTVfA=";
+            };
             # Mirrors the `[[packages]]` records `aiken build` itself writes
             # into `build/packages/packages.toml` on a real fetch — aiken
             # trusts a pre-populated cache in this shape with no network and
@@ -1077,6 +1086,12 @@
               [[packages]]
               name = "aiken-lang/merkle-patricia-forestry"
               version = "v2.1.0"
+              requirements = []
+              source = "github"
+
+              [[packages]]
+              name = "singular/registry"
+              version = "0.0.0"
               requirements = []
               source = "github"
             '';
@@ -1103,6 +1118,8 @@
                   ./work/build/packages/cardano-foundation-cardano-mpfs-onchain
                 cp -rL ${aikenMerklePatriciaForestry} \
                   ./work/build/packages/aiken-lang-merkle-patricia-forestry
+                cp -rL ${aikenSingularRegistry}/onchain \
+                  ./work/build/packages/singular-registry
                 chmod -R +w ./work/build
                 cd ./work
                 aiken build -t silent

@@ -35,8 +35,8 @@ use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge, zero}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, placeholder,
 }
-use lib.{TokenId, assetName, valueFromToken}
-use types.{CageDatum, Operation, Request, RequestDatum, State, StateDatum}
+use token_lib.{TokenId, assetName, valueFromToken}
+use token_types.{CageDatum, Operation, Request, RequestDatum, State, StateDatum}
 
 // ============================================================================
 // Shared fixture constants

@@ -11,8 +11,8 @@ use cardano/assets.{PolicyId, tokens}
 use cardano/transaction.{
   InlineDatum, Input, Output, OutputReference, Transaction, find_input,
 }
-use lib.{TokenId, assetName, quantity, tokenFromValue}
-use types.{
+use token_lib.{TokenId, assetName, quantity, tokenFromValue}
+use token_types.{
   Burning, CageDatum, Contribute, Delete, End, Insert, Migrating, Migration,
   Mint, MintRedeemer, Minting, Modify, OwnerAuth, Rejected, Request,
   RequestAction, RequestDatum, Retract, State, StateDatum, Update, UpdateAction,

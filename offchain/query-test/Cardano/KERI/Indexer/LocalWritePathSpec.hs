@@ -199,7 +199,7 @@ import System.Directory (createDirectoryIfMissing, doesDirectoryExist, listDirec
 import System.Environment (lookupEnv)
 import System.FilePath ((</>))
 import System.IO.Temp (withSystemTempDirectory)
-import Test.Hspec (Spec, describe, expectationFailure, it, shouldBe, shouldNotBe, shouldSatisfy)
+import Test.Hspec (Spec, before_, describe, expectationFailure, it, pendingWith, shouldBe, shouldNotBe, shouldSatisfy)
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck (
     Gen,
@@ -839,8 +839,11 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                         (entrypointRegister kelPath)
                         expectIncompletePhase
 
-            it
-                "runDeployWith's publish phase reaches its builder boundary having acquired exactly once"
+            -- The deploy command is refused by decision until registry-aware
+            -- deployment (#356); both examples drive its path.
+            before_ deployRefusedUntilRegistryAware
+                $ it
+                    "runDeployWith's publish phase reaches its builder boundary having acquired exactly once"
                 $ do
                     blueprintPath <- entrypointBlueprintPath
                     withBoundaryProbe
@@ -848,8 +851,9 @@ spec = describe "Cardano.KERI.Indexer.ChainQuery local write-path capabilities (
                         (entrypointDeploy blueprintPath)
                         expectCompletePhase
 
-            it
-                "runDeployWith does NOT reach its builder boundary when one funding row is withheld"
+            before_ deployRefusedUntilRegistryAware
+                $ it
+                    "runDeployWith does NOT reach its builder boundary when one funding row is withheld"
                 $ do
                     blueprintPath <- entrypointBlueprintPath
                     withBoundaryProbe
@@ -1665,6 +1669,13 @@ value. Fails closed: an unset or empty binding would make the deploy
 fixtures fail for a harness reason rather than a candidate reason, which is
 exactly the degeneracy this repair exists to remove.
 -}
+
+-- | The reason the deploy examples wait: the command refuses until #356.
+deployRefusedUntilRegistryAware :: IO ()
+deployRefusedUntilRegistryAware =
+    pendingWith
+        "the checkpoint validator is applied to a registry and the deploy command refuses until registry-aware deployment (#356)"
+
 entrypointBlueprintPath :: IO FilePath
 entrypointBlueprintPath = do
     value <- lookupEnv "KERI_CHECKPOINT_BLUEPRINT"

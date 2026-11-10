@@ -2,7 +2,7 @@
 //// simulator/checkpoint-simulator-corpus.json. DO NOT EDIT.
 //// `just check-checkpoint-topup-vectors` regenerates and rejects drift.
 ////
-//// The top-up and registration cells of the Lean corpus's boundary grid
+//// The top-up cells of the Lean corpus's boundary grid
 //// (parameters `P = 2`, `B = 5`, `D = 1000`), one test per cell. A refused cell is a
 //// `fail` test, an accepted cell passes.
 ////
@@ -12,38 +12,32 @@
 //// two oracles. A top-up is accepted exactly when the mark is clear and the
 //// amount is at least one premium; no oracle changes a verdict.
 ////
-//// Registration: from the absent state, a first pool of 1, 2 and 7 units under
-//// two oracles. A registration is accepted exactly when the first pool is at
-//// least one premium.
+//// The registration cells of the same grid (a first pool of 1, 2 and 7 units)
+//// are the registry fold's: the validator's own registration is retired, and the
+//// fold's pool rule is the application's (its rows named fold-pool-below-premium).
 ////
 //// Mapping of the Lean values onto the ledger values:
 ////   live state              a live version 2 datum with that poisoned / frozen / top-up mark
 ////   pool (Lean units)       lovelace: pool x 1,000,000 (premium 2,000,000, bond 5,000,000)
 ////   topUp x                 the redeemer's amount: x x 1,000,000 lovelace, and the
 ////                           successor holds exactly that much more
-////   register pool0          the carrier holds the floor plus pool0 x 1,000,000
 ////   termination pending     a termination-pending datum
 ////   absent, convicted       no checkpoint output to spend: 12 top-up cells, not realizable
-////                           as a transaction; a registration is realizable from
-////                           absent only (156 cells from other states not realizable)
+////                           as a transaction
 
-use aiken/builtin
 use cardano/transaction.{Transaction}
-use checkpoint_observer
 use checkpoint_register
 use freeze_fixture.{
   advance_hash, d_reg, enforcement_hash, entitlement_hash, freeze_bond,
-  lifecycle_hash, migration_hash, network_id, policy, premium, spent_ref,
+  network_id, premium, spent_ref,
 }
-use topup_fixture.{
-  TopUp, corpus_register, corpus_topup, corpus_topup_pending, hp_policy,
-  register_envelope, topup_redeemer,
-}
+use registry_fixture.{registry_name, state_policy}
+use topup_fixture.{TopUp, corpus_topup, corpus_topup_pending, topup_redeemer}
 
 fn run_spend(redeemer: Data, tx: Transaction) -> Bool {
   checkpoint_register.checkpoint_register.spend(
-    migration_hash,
-    lifecycle_hash,
+    state_policy(),
+    registry_name(),
     advance_hash,
     enforcement_hash,
     entitlement_hash,
@@ -60,31 +54,6 @@ fn run_spend(redeemer: Data, tx: Transaction) -> Bool {
 
 fn run(t: TopUp) -> Bool {
   run_spend(topup_redeemer(t.amount), t.tx)
-}
-
-fn run_register(tx: Transaction) -> Bool {
-  let register: Data = builtin.constr_data(0, [])
-  checkpoint_register.checkpoint_register.mint(
-    migration_hash,
-    lifecycle_hash,
-    advance_hash,
-    enforcement_hash,
-    entitlement_hash,
-    network_id,
-    d_reg,
-    freeze_bond,
-    premium,
-    register,
-    policy,
-    tx,
-  ) && checkpoint_observer.observer_lifecycle.withdraw(
-    0,
-    hp_policy,
-    d_reg,
-    register_envelope(),
-    0,
-    tx,
-  )
 }
 
 /// Lean grid state 1 (termination pending) x topUp(x = 5) x oracle 0: refused.
@@ -835,34 +804,4 @@ test cell_topup_present_s26_x2_e0() fail {
 /// Lean grid state 26 (live, poisoned True, frozen True, pool 3, topped up True) x topUp(x = 2) x oracle 1: refused.
 test cell_topup_present_s26_x2_e1() fail {
   run(corpus_topup(True, True, 3, True, 2))
-}
-
-/// Lean grid state 0 (absent) x register(pool0 = 7) x oracle 0: accepted.
-test cell_register_pool7_e0() {
-  run_register(corpus_register(7))
-}
-
-/// Lean grid state 0 (absent) x register(pool0 = 7) x oracle 1: accepted.
-test cell_register_pool7_e1() {
-  run_register(corpus_register(7))
-}
-
-/// Lean grid state 0 (absent) x register(pool0 = 1) x oracle 0: refused.
-test cell_register_pool1_e0() fail {
-  run_register(corpus_register(1))
-}
-
-/// Lean grid state 0 (absent) x register(pool0 = 1) x oracle 1: refused.
-test cell_register_pool1_e1() fail {
-  run_register(corpus_register(1))
-}
-
-/// Lean grid state 0 (absent) x register(pool0 = 2) x oracle 0: accepted.
-test cell_register_pool2_e0() {
-  run_register(corpus_register(2))
-}
-
-/// Lean grid state 0 (absent) x register(pool0 = 2) x oracle 1: accepted.
-test cell_register_pool2_e1() {
-  run_register(corpus_register(2))
 }

@@ -509,22 +509,6 @@ gen-migration-types-vectors:
 check-migration-types-vectors: gen-migration-types-vectors
     git diff --exit-code onchain/lib/cardano_keri/migration/types_vectors.ak
 
-# #254 S254-1B: regenerate the Aiken checkpoint-migration fixtures from
-# GenCheckpointMigrationVectors.hs. OFFLINE. The module is never hand edited.
-# The generator signs with real Ed25519 keys and refuses to emit a set whose
-# golden quorum is not accepted or whose named authority negatives are not
-# actually refused by the oracle, so a control that cannot fail never ships.
-gen-checkpoint-migration-vectors:
-    mkdir -p onchain/lib/cardano_keri/migration
-    cd offchain && nix develop --quiet --no-write-lock-file -c bash -c 'cabal update --project-file=cabal.project.devshell && cabal run -v0 -O0 --project-file=cabal.project.devshell gen-checkpoint-migration-vectors -- ../onchain/lib/cardano_keri/migration/checkpoint_vectors.ak'
-    cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/migration/checkpoint_vectors.ak
-
-# Drift check: Haskell is the sole source of the checkpoint-migration message
-# bytes and signature material, so a stale or hand-touched vector module must
-# FAIL the gate.
-check-checkpoint-migration-vectors: gen-checkpoint-migration-vectors
-    git diff --exit-code onchain/lib/cardano_keri/migration/checkpoint_vectors.ak
-
 # #271 S271-1 / #254 S254-E: the adopted component's own parity gate. One
 # Haskell computation is the sole source of every committed canonical byte
 # string, commitment hash and marker name, and the checker carries its own
@@ -547,12 +531,6 @@ gen-bounty-entitlement-vectors:
 # vector module must FAIL. The checker carries its own negative control.
 check-bounty-entitlement-vectors:
     ./scripts/check-bounty-entitlement-vectors.sh
-
-# #254 T254-108: prove the EXACT changed compiled checkpoint family, derived
-# from current source (never the frozen M8 baseline), rejects a named
-# authority mutant and a named replay mutant under the pinned CEK machine.
-checkpoint-migration-blaster:
-    cd offchain && nix run --quiet --no-write-lock-file .#checkpoint-migration-blaster
 
 # #254 T254-109: announce the corrected register's deployment identity from the
 # live blueprint, and prove under the pinned CEK machine that the exact
@@ -678,40 +656,6 @@ mpf-proof-check: stage-onchain
       echo "mpf-proof-check: 2/2 fixture tests pass; miss() surface present; cache resolves v2.1.0"
     ' _ "$results"
 
-# Measure and mechanically gate the four checkpoint ACCEPT paths: the
-# inherited #116 conviction row plus the three #114 Register contexts. Every row must
-# pass and retain the 25%-headroom limits (10.5m memory, 7.5b CPU).
-measure-checkpoint: stage-onchain
-    #!/usr/bin/env bash
-    set -euo pipefail
-    results="$(mktemp)"
-    trap 'rm -f "$results"' EXIT
-    cd onchain
-    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#jq --command bash -euo pipefail -c '
-      aiken check --plain-numbers -m measure_checkpoint | tee "$1"
-      jq -e '\''
-        [
-          "measure_checkpoint_convict_active",
-          "measure_checkpoint_register_2key",
-          "measure_checkpoint_register_witnessed",
-          "measure_checkpoint_register_7key"
-        ] as $required
-        | [.modules[].tests[] | select(.title | startswith("measure_checkpoint"))] as $tests
-        | ($tests | map(.title)) as $actual
-        | if ($actual | sort) != ($required | sort) then
-            error("checkpoint measurement title mismatch: expected \($required | sort); actual \($actual | sort)")
-          elif any($tests[]; .status != "pass") then
-            error("checkpoint measurement did not pass: \([$tests[] | select(.status != "pass") | {title, status}])")
-          elif any($tests[]; ((.execution_units? | type) != "object") or ((.execution_units.mem? | type) != "number") or ((.execution_units.cpu? | type) != "number")) then
-            error("checkpoint measurement lacks execution units: \([$tests[] | select(((.execution_units? | type) != "object") or ((.execution_units.mem? | type) != "number") or ((.execution_units.cpu? | type) != "number")) | .title])")
-          elif any($tests[]; .execution_units.mem > 10500000 or .execution_units.cpu > 7500000000) then
-            error("checkpoint measurement exceeds hard limit: \([$tests[] | select(.execution_units.mem > 10500000 or .execution_units.cpu > 7500000000) | {title, execution_units}])")
-          else
-            $tests | map({title, status, execution_units})
-          end
-      '\'' "$1"
-    ' _ "$results"
-
 # #254 S254-E: measure and mechanically gate the four applied #271
 # commitment-program ACCEPT paths. The component became part of a settlement
 # path in S254-E — a hunter opens, matures and reveals a reservation inside the
@@ -777,7 +721,7 @@ format: format-offchain format-onchain format-blake3
 format-check: format-check-offchain format-check-onchain format-check-blake3
 
 # Onchain CI gate (mirrors the Onchain job)
-ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-proof measure-checkpoint
+ci-onchain: format-check-onchain check-onchain measure-enforcement measure-hash-proof
 
 # BLAKE3 spike CI gate (mirrors the BLAKE3 job)
 ci-blake3: compiler-check-blake3 format-check-blake3 check-blake3

@@ -48,7 +48,7 @@ use keri_application_requests.{
   Booking, Fold, application, booking, booking_tx, checkpoint_hash, envelope,
   fold, fold_tx, holding_output, reference, return_tx, returned,
 }
-use registry_fixture.{active_name_of_key, state_policy}
+use registry_fixture.{active_name_of_key, registry_name, state_policy}
 use topup_fixture.{topup_redeemer}
 
 fn run_mint(
@@ -262,8 +262,8 @@ fn run_checkpoint_spend(
   tx: Transaction,
 ) -> Bool {
   checkpoint_register.checkpoint_register.spend(
-    migration_hash,
-    lifecycle_hash,
+    state_policy(),
+    registry_name(),
     advance_hash,
     enforcement_hash,
     entitlement_hash,
@@ -410,23 +410,23 @@ test the_output_a_fold_delivers_is_topped_up() {
   top_up_of(delivered(), premium)
 }
 
-fn one_lovelace_less() -> Fold {
+fn one_lovelace_below_the_checkpoints_floor() -> Fold {
   Fold {
     ..connected_fold(True),
-    holding_lovelace: connected_fold(True).holding_lovelace - 1,
+    holding_lovelace: checkpoint_min_ada + d_reg + freeze_bond - 1,
   }
 }
 
-test a_fold_delivering_one_lovelace_below_the_floor_is_refused() {
-  !application_accepts(fold_tx(one_lovelace_less()))
+test a_fold_delivering_one_lovelace_below_the_checkpoints_floor_is_refused() {
+  !application_accepts(fold_tx(one_lovelace_below_the_checkpoints_floor()))
 }
 
-test an_output_one_lovelace_below_the_floor_is_not_advanced() fail {
-  advance_of(holding_output(one_lovelace_less()))
+test an_output_one_lovelace_below_the_checkpoints_floor_is_not_advanced() fail {
+  advance_of(holding_output(one_lovelace_below_the_checkpoints_floor()))
 }
 
-test an_output_one_lovelace_below_the_floor_is_not_topped_up() fail {
-  top_up_of(holding_output(one_lovelace_less()), premium)
+test an_output_one_lovelace_below_the_checkpoints_floor_is_not_topped_up() fail {
+  top_up_of(holding_output(one_lovelace_below_the_checkpoints_floor()), premium)
 }
 
 fn without_the_token() -> Fold {

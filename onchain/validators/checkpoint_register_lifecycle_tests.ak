@@ -56,8 +56,9 @@ use checkpoint_observer
 use checkpoint_register
 use registry_fixture.{
   Nothing, OtherKey, OtherRegistryName, OtherStatePolicy, QuantityTwo,
-  RetiredRegisterToken, active_name, holding, representative, staked,
-  state_policy, with_input_token, with_successor_address, with_successor_token,
+  RetiredRegisterToken, active_name, holding, registry_name, representative,
+  staked, state_policy, with_input_token, with_successor_address,
+  with_successor_token,
 }
 
 // ---------------------------------------------------------------------
@@ -162,27 +163,10 @@ fn convict_redeemer(output_index: Int) -> Data {
   spend_data(1, [pkh, index])
 }
 
-fn run_mint(redeemer: Data, tx: Transaction) -> Bool {
-  checkpoint_register.checkpoint_register.mint(
-    migration_hash,
-    lifecycle_hash,
-    advance_hash,
-    enforcement_hash,
-    entitlement_hash,
-    network_id,
-    d_reg,
-    freeze_bond,
-    premium,
-    redeemer,
-    policy,
-    tx,
-  )
-}
-
 fn run_spend(redeemer: Data, own_ref: OutputReference, tx: Transaction) -> Bool {
   checkpoint_register.checkpoint_register.spend(
-    migration_hash,
-    lifecycle_hash,
+    state_policy(),
+    registry_name(),
     advance_hash,
     enforcement_hash,
     entitlement_hash,
@@ -320,11 +304,6 @@ fn token_value(lovelace: Int, name: ByteArray) -> Value {
   from_lovelace(lovelace) |> merge(from_asset(state_policy(), name, 1))
 }
 
-/// What the retired register token held: the checkpoint policy's own token.
-fn register_value(lovelace: Int, name: ByteArray) -> Value {
-  from_lovelace(lovelace) |> merge(from_asset(policy, name, 1))
-}
-
 fn paid(recipient: ByteArray, lovelace: Int) -> Output {
   Output {
     address: from_verification_key(recipient),
@@ -332,462 +311,6 @@ fn paid(recipient: ByteArray, lovelace: Int) -> Output {
     datum: NoDatum,
     reference_script: None,
   }
-}
-
-// ---------------------------------------------------------------------
-// V1 V2 — Register
-// ---------------------------------------------------------------------
-
-const reg_digest: ByteArray = vec.pos_2key_datum.cesr_aid
-
-const reg_evidence: RegistrationEvidence = vec.pos_2key_evidence
-
-fn proof_input(name: ByteArray) -> Input {
-  input_at(
-    out_ref(seed_tx_id, 0),
-    Output {
-      address: from_verification_key(owner_vkh),
-      value: from_lovelace(min_ada) |> merge(from_asset(hp_policy, name, 1)),
-      datum: NoDatum,
-      reference_script: None,
-    },
-  )
-}
-
-/// A validity range whose upper bound is `hi`.
-fn upto(hi: Int, inclusive: Bool) -> Interval<Int> {
-  Interval {
-    lower_bound: IntervalBound {
-      bound_type: Finite(hi - 10_000),
-      is_inclusive: True,
-    },
-    upper_bound: IntervalBound {
-      bound_type: Finite(hi),
-      is_inclusive: inclusive,
-    },
-  }
-}
-
-/// The datum a registration must write for the shared inception vector.
-fn registered(refund_to: ByteArray, born_at: Int) -> CheckpointDatumV2 {
-  Live {
-    aid: qb64_aid(reg_digest),
-    sn: 0,
-    epoch: 0,
-    poisoned: False,
-    frozen: False,
-    born_at,
-    refund_to,
-    topped_up: False,
-    keys: keys_of(vec.pos_2key_datum),
-  }
-}
-
-fn register_envelope(evidence: RegistrationEvidence) -> ObserverEnvelope {
-  ObserverEnvelope {
-    claim: ObserverClaim {
-      action: observe_register,
-      checkpoint_policy: policy,
-      own_ref: None,
-    },
-    payload: evidence,
-  }
-}
-
-/// A registration transaction. `name` is the minted token's name and
-/// `proof_name` the burnt hash-proof token's: both honest by default.
-fn register_tx(
-  datum: Data,
-  lovelace: Int,
-  name: ByteArray,
-  proof_name: ByteArray,
-  evidence: RegistrationEvidence,
-  range: Interval<Int>,
-) -> Transaction {
-  let state_output = Output {
-    address: from_script(policy),
-    value: register_value(lovelace, name),
-    datum: InlineDatum(datum),
-    reference_script: None,
-  }
-  let base = spend_context(
-    [proof_input(proof_name)],
-    [],
-    [state_output],
-    from_asset(policy, name, 1) |> merge(from_asset(hp_policy, proof_name, -1)),
-    [],
-    range,
-    0,
-  )
-  let credential = Script(lifecycle_hash)
-  let redeemer: Data = register_envelope(evidence)
-  Transaction {
-    ..base,
-    withdrawals: [Pair(credential, 0)],
-    redeemers: [Pair(Withdraw(credential), redeemer)],
-  }
-}
-
-fn run_register_tx(tx: Transaction, evidence: RegistrationEvidence) -> Bool {
-  let register: Data = builtin.constr_data(0, [])
-  run_mint(register, tx) && checkpoint_observer.observer_lifecycle.withdraw(
-    0,
-    hp_policy,
-    d_reg,
-    register_envelope(evidence),
-    0,
-    tx,
-  )
-}
-
-fn honest_name() -> ByteArray {
-  deriveAidAssetName(reg_digest)
-}
-
-fn honest_proof() -> ByteArray {
-  proof_token_name(reg_evidence.event_bytes, reg_digest)
-}
-
-fn register_with(
-  datum: CheckpointDatumV2,
-  lovelace: Int,
-  range: Interval<Int>,
-) -> Bool {
-  run_register_tx(
-    register_tx(
-      v2_data(datum),
-      lovelace,
-      honest_name(),
-      honest_proof(),
-      reg_evidence,
-      range,
-    ),
-    reg_evidence,
-  )
-}
-
-fn register_honest() -> Bool {
-  register_with(
-    registered(refund_enterprise_key(), registered_at),
-    register_carrier,
-    upto(registered_at, False),
-  )
-}
-
-test register_writes_live_with_the_lean_initial_facts() {
-  register_honest()
-}
-
-test register_accepts_an_inclusive_upper_bound() {
-  register_with(
-    registered(refund_enterprise_key(), registered_at),
-    register_carrier,
-    upto(registered_at, True),
-  )
-}
-
-test register_books_the_excess_as_the_initial_pool() {
-  register_with(
-    registered(refund_enterprise_key(), registered_at),
-    register_carrier + 17,
-    upto(registered_at, False),
-  )
-}
-
-test register_refuses_a_carrier_short_by_one_lovelace() fail {
-  register_with(
-    registered(refund_enterprise_key(), registered_at),
-    floor_unfrozen - 1,
-    upto(registered_at, False),
-  )
-}
-
-test register_refuses_born_at_other_than_the_upper_bound() fail {
-  register_with(
-    registered(refund_enterprise_key(), registered_at + 1),
-    register_carrier,
-    upto(registered_at, False),
-  )
-}
-
-test register_refuses_born_at_at_the_lower_bound() fail {
-  register_with(
-    registered(refund_enterprise_key(), registered_at - 10_000),
-    register_carrier,
-    upto(registered_at, False),
-  )
-}
-
-test register_refuses_an_unbounded_upper_bound() fail {
-  register_with(
-    registered(refund_enterprise_key(), registered_at),
-    register_carrier,
-    interval.after(registered_at - 10_000),
-  )
-}
-
-test register_refuses_a_nonzero_sn() fail {
-  let datum = registered(refund_enterprise_key(), registered_at)
-  register_with(
-    from_parts(Parts { ..parts(datum), sn: 1 }),
-    register_carrier,
-    upto(registered_at, False),
-  )
-}
-
-test register_refuses_a_nonzero_epoch() fail {
-  let datum = registered(refund_enterprise_key(), registered_at)
-  register_with(
-    from_parts(Parts { ..parts(datum), epoch: 1 }),
-    register_carrier,
-    upto(registered_at, False),
-  )
-}
-
-test register_refuses_a_poisoned_start() fail {
-  let datum = registered(refund_enterprise_key(), registered_at)
-  register_with(
-    from_parts(Parts { ..parts(datum), poisoned: True }),
-    register_carrier,
-    upto(registered_at, False),
-  )
-}
-
-test register_refuses_a_frozen_start() fail {
-  let datum = registered(refund_enterprise_key(), registered_at)
-  register_with(
-    from_parts(Parts { ..parts(datum), frozen: True }),
-    register_carrier,
-    upto(registered_at, False),
-  )
-}
-
-test register_refuses_a_termination_pending_start() fail {
-  register_with(
-    pending(vec.pos_2key_datum),
-    register_carrier,
-    upto(registered_at, False),
-  )
-}
-
-test register_refuses_keys_that_are_not_well_formed() fail {
-  let datum = registered(refund_enterprise_key(), registered_at)
-  let keys = parts(datum).keys
-  register_with(
-    from_parts(
-      Parts {
-        ..parts(datum),
-        keys: KeyMaterial { ..keys, toad: keys.toad + 5 },
-      },
-    ),
-    register_carrier,
-    upto(registered_at, False),
-  )
-}
-
-fn register_with_aid_text(text: ByteArray) -> Bool {
-  let datum = registered(refund_enterprise_key(), registered_at)
-  register_with(
-    from_parts(Parts { ..parts(datum), aid: text }),
-    register_carrier,
-    upto(registered_at, False),
-  )
-}
-
-test register_accepts_the_aid_text_the_event_carries() {
-  register_with_aid_text(qb64_aid(reg_digest))
-}
-
-test register_refuses_an_aid_text_one_character_short() fail {
-  register_with_aid_text(bytearray.drop(qb64_aid(reg_digest), 1))
-}
-
-test register_refuses_an_aid_text_one_character_long() fail {
-  register_with_aid_text(bytearray.concat(qb64_aid(reg_digest), "A"))
-}
-
-test register_refuses_an_aid_with_another_derivation_code() fail {
-  register_with_aid_text(
-    bytearray.push(bytearray.drop(qb64_aid(reg_digest), 1), 68),
-  )
-}
-
-test register_refuses_an_aid_with_a_character_outside_base64url() fail {
-  register_with_aid_text(
-    bytearray.concat(bytearray.take(qb64_aid(reg_digest), 20), "+")
-      |> bytearray.concat(bytearray.drop(qb64_aid(reg_digest), 21)),
-  )
-}
-
-test register_refuses_an_aid_whose_padding_is_not_zero() fail {
-  // The second character stands for the top bits of the byte that must be
-  // zero: 'Q' = 16 puts a one in them.
-  register_with_aid_text(
-    bytearray.take(qb64_aid(reg_digest), 1)
-      |> bytearray.concat("Q")
-      |> bytearray.concat(bytearray.drop(qb64_aid(reg_digest), 2)),
-  )
-}
-
-test register_refuses_an_aid_the_event_does_not_carry() fail {
-  // A well formed AID of another digest, with the token and the hash proof
-  // honestly derived for that other digest: only the event's `i` differs.
-  let other = enforcement_vec.fork_convict_tip.cesr_aid
-  let datum = registered(refund_enterprise_key(), registered_at)
-  run_register_tx(
-    register_tx(
-      v2_data(from_parts(Parts { ..parts(datum), aid: qb64_aid(other) })),
-      register_carrier,
-      deriveAidAssetName(other),
-      proof_token_name(reg_evidence.event_bytes, other),
-      reg_evidence,
-      upto(registered_at, False),
-    ),
-    reg_evidence,
-  )
-}
-
-test register_names_the_token_over_the_raw_digest_not_the_text() fail {
-  // The same registration with the token named over the 44 text bytes.
-  let text_name = deriveAidAssetName(qb64_aid(reg_digest))
-  expect text_name != honest_name()
-  run_register_tx(
-    register_tx(
-      v2_data(registered(refund_enterprise_key(), registered_at)),
-      register_carrier,
-      text_name,
-      honest_proof(),
-      reg_evidence,
-      upto(registered_at, False),
-    ),
-    reg_evidence,
-  )
-}
-
-test register_burns_the_hash_proof_named_over_the_raw_digest() fail {
-  let text_proof = proof_token_name(
-    reg_evidence.event_bytes,
-    qb64_aid(reg_digest),
-  )
-  expect text_proof != honest_proof()
-  run_register_tx(
-    register_tx(
-      v2_data(registered(refund_enterprise_key(), registered_at)),
-      register_carrier,
-      honest_name(),
-      text_proof,
-      reg_evidence,
-      upto(registered_at, False),
-    ),
-    reg_evidence,
-  )
-}
-
-test register_refuses_a_version_1_datum() fail {
-  let v1 = vec.pos_2key_datum
-  run_register_tx(
-    register_tx(
-      v1_data(v1),
-      register_carrier,
-      honest_name(),
-      honest_proof(),
-      reg_evidence,
-      upto(registered_at, False),
-    ),
-    reg_evidence,
-  )
-}
-
-// ---------------------------------------------------------------------
-// V2 — refund_to is a payable address, fixed for life
-// ---------------------------------------------------------------------
-
-fn register_refund(refund_to: ByteArray) -> Bool {
-  register_with(
-    registered(refund_to, registered_at),
-    register_carrier,
-    upto(registered_at, False),
-  )
-}
-
-test refund_accepts_a_base_address_of_two_keys() {
-  register_refund(
-    #"01" |> bytearray.concat(refund_pkh) |> bytearray.concat(refund_stake_pkh),
-  )
-}
-
-test refund_accepts_a_base_address_of_a_script_and_a_key() {
-  register_refund(
-    #"11" |> bytearray.concat(refund_pkh) |> bytearray.concat(refund_stake_pkh),
-  )
-}
-
-test refund_accepts_a_base_address_of_a_key_and_a_script() {
-  register_refund(
-    #"21" |> bytearray.concat(refund_pkh) |> bytearray.concat(refund_stake_pkh),
-  )
-}
-
-test refund_accepts_a_base_address_of_two_scripts() {
-  register_refund(
-    #"31" |> bytearray.concat(refund_pkh) |> bytearray.concat(refund_stake_pkh),
-  )
-}
-
-test refund_accepts_an_enterprise_script_address() {
-  register_refund(bytearray.concat(#"71", refund_pkh))
-}
-
-test refund_refuses_a_pointer_address() fail {
-  register_refund(
-    bytearray.concat(#"41", refund_pkh) |> bytearray.concat(#"010203"),
-  )
-}
-
-test refund_refuses_a_script_pointer_address() fail {
-  register_refund(
-    bytearray.concat(#"51", refund_pkh) |> bytearray.concat(#"010203"),
-  )
-}
-
-test refund_refuses_a_byron_address() fail {
-  register_refund(bytearray.concat(#"82", refund_pkh))
-}
-
-test refund_refuses_a_reward_address() fail {
-  register_refund(bytearray.concat(#"e1", refund_pkh))
-}
-
-test refund_refuses_an_address_of_the_other_network() fail {
-  register_refund(bytearray.concat(#"60", refund_pkh))
-}
-
-test refund_refuses_a_base_address_of_the_other_network() fail {
-  register_refund(
-    #"00" |> bytearray.concat(refund_pkh) |> bytearray.concat(refund_stake_pkh),
-  )
-}
-
-test refund_refuses_an_enterprise_address_one_byte_short() fail {
-  register_refund(bytearray.concat(#"61", bytearray.take(refund_pkh, 27)))
-}
-
-test refund_refuses_an_enterprise_address_one_byte_long() fail {
-  register_refund(
-    bytearray.concat(#"61", refund_pkh) |> bytearray.concat(#"00"),
-  )
-}
-
-test refund_refuses_a_base_address_one_byte_short() fail {
-  register_refund(
-    #"01"
-      |> bytearray.concat(refund_pkh)
-      |> bytearray.concat(bytearray.take(refund_stake_pkh, 27)),
-  )
-}
-
-test refund_refuses_an_empty_address() fail {
-  register_refund(#"")
 }
 
 // ---------------------------------------------------------------------
@@ -1715,21 +1238,22 @@ test convict_refuses_to_pay_the_refund_from_the_convictors_output() fail {
   )
 }
 
-test convict_refuses_a_mint_under_the_policy() fail {
-  // The accepted conviction with one other token minted under the policy.
+test convict_refuses_a_mint_of_the_checkpoints_token() fail {
+  // The accepted conviction with one more of the representative asset minted.
   run_convict(
     1,
     convict_tx(
       v2_data(live(tip, False, False, refund_enterprise_key())),
       floor_unfrozen + convict_pool,
       [pending_output(honest_pending(), mc, tip_name()), ..honest_payouts()],
-      from_asset(policy, "another", 1),
+      representative(tip.cesr_aid, 1),
     ),
   )
 }
 
-test advance_refuses_a_mint_under_the_policy() fail {
-  // The accepted paid rotation with one other token minted under the policy.
+test advance_refuses_a_mint_of_the_checkpoints_token() fail {
+  // The accepted paid rotation with one more of the representative asset
+  // minted.
   let base = advance_tx(
     v2_data(adv_old(False, False)),
     v2_data(adv_new(False)),
@@ -1737,7 +1261,10 @@ test advance_refuses_a_mint_under_the_policy() fail {
     floor_unfrozen + 1_000_000,
     [paid(hunter_pkh, premium)],
   )
-  run_advance(1, Transaction { ..base, mint: from_asset(policy, "another", 1) })
+  run_advance(
+    1,
+    Transaction { ..base, mint: representative(spent.cesr_aid, 1) },
+  )
 }
 
 test convict_refuses_a_version_1_input() fail {
@@ -1750,21 +1277,6 @@ test convict_refuses_a_termination_pending_input() fail {
   // The accepted conviction with the spent datum alone replaced by the
   // pending termination of the same key state.
   convict_unfrozen_from(honest_pending(), honest_pending(), honest_payouts())
-}
-
-test the_burning_mint_redeemer_is_gone() fail {
-  // `ConvictBurn { checkpoint_ref }`, constructor 1 of the former mint
-  // redeemer.
-  let ref: Data = convict_ref()
-  run_mint(
-    builtin.constr_data(1, [ref]),
-    convict_tx(
-      v2_data(live(tip, False, False, refund_enterprise_key())),
-      floor_unfrozen + convict_pool,
-      honest_payouts(),
-      from_asset(state_policy(), tip_name(), -1),
-    ),
-  )
 }
 
 // ---------------------------------------------------------------------
@@ -2063,49 +1575,6 @@ test convict_of_a_frozen_checkpoint_with_an_empty_pool_needs_no_refund_output() 
       [pending_output(honest_pending(), mc, tip_name()), paid(convictor, d_reg)],
       zero,
     ),
-  )
-}
-
-test register_refuses_evidence_without_the_controller_signatures() fail {
-  let unsigned = RegistrationEvidence { ..reg_evidence, ctrl_sigs: [] }
-  run_register_tx(
-    register_tx(
-      v2_data(registered(refund_enterprise_key(), registered_at)),
-      floor_unfrozen,
-      honest_name(),
-      honest_proof(),
-      unsigned,
-      upto(registered_at, False),
-    ),
-    unsigned,
-  )
-}
-
-test register_refuses_well_formed_keys_that_the_event_does_not_carry() fail {
-  let datum = registered(refund_enterprise_key(), registered_at)
-  let keys = parts(datum).keys
-  expect [_, second, ..] = keys.cur_keys
-  let other_first = #"0101010101010101010101010101010101010101010101010101010101010101"
-  expect other_first != second
-  register_with(
-    from_parts(
-      Parts {
-        ..parts(datum),
-        keys: KeyMaterial { ..keys, cur_keys: [other_first, second] },
-      },
-    ),
-    floor_unfrozen,
-    upto(registered_at, False),
-  )
-}
-
-test register_refuses_a_born_at_below_zero() fail {
-  // The upper bound and born_at agree, so only the datum's own validity can
-  // refuse it.
-  register_with(
-    registered(refund_enterprise_key(), -5),
-    floor_unfrozen,
-    upto(-5, False),
   )
 }
 

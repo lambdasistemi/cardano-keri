@@ -332,8 +332,6 @@ jobs:
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#just --command just check-deposit-vectors
       - name: Top-up wire vectors drift
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#just --command just check-topup-vectors
-      - name: Checkpoint migration vectors drift
-        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#just --command just check-checkpoint-migration-vectors
 
   e2e:
     name: E2E (withDevnet)

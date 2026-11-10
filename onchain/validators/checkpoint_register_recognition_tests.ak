@@ -12,6 +12,7 @@
 use aiken/builtin
 use cardano/address.{Script, from_script}
 use cardano/assets.{from_asset, from_lovelace, merge}
+use cardano/script_context.{Minting, ScriptContext}
 use cardano/transaction.{
   InlineDatum, Input, Output, OutputReference, Transaction, Withdraw,
   placeholder,
@@ -25,13 +26,13 @@ use freeze_fixture.{
   migration_hash, network_id, policy, spent, unit, v2_data,
 }
 use keri_application_connected.{checkpoint_min_ada, d_reg, freeze_bond, premium}
-use registry_fixture.{representative}
+use registry_fixture.{registry_name, representative, state_policy}
 use topup_fixture.{registered_with_pool}
 
 fn run_spend(redeemer: Data, own_ref: OutputReference, tx: Transaction) -> Bool {
   checkpoint_register.checkpoint_register.spend(
-    migration_hash,
-    lifecycle_hash,
+    state_policy(),
+    registry_name(),
     advance_hash,
     enforcement_hash,
     entitlement_hash,
@@ -47,9 +48,9 @@ fn run_spend(redeemer: Data, own_ref: OutputReference, tx: Transaction) -> Bool 
 }
 
 fn run_mint(redeemer: Data, tx: Transaction) -> Bool {
-  checkpoint_register.checkpoint_register.mint(
-    migration_hash,
-    lifecycle_hash,
+  checkpoint_register.checkpoint_register.else(
+    state_policy(),
+    registry_name(),
     advance_hash,
     enforcement_hash,
     entitlement_hash,
@@ -57,9 +58,7 @@ fn run_mint(redeemer: Data, tx: Transaction) -> Bool {
     d_reg,
     freeze_bond,
     premium,
-    redeemer,
-    policy,
-    tx,
+    ScriptContext { transaction: tx, redeemer, info: Minting(policy) },
   )
 }
 
@@ -127,4 +126,9 @@ fn migration_attempt() -> (OutputReference, Transaction) {
 test the_former_migration_spend_is_refused() fail {
   let (own_ref, tx) = migration_attempt()
   run_spend(former_migrate_out(), own_ref, tx)
+}
+
+test the_former_burning_mint_is_refused() fail {
+  let burn: Data = builtin.constr_data(1, [builtin.i_data(0)])
+  run_mint(burn, registered_with_pool(premium))
 }

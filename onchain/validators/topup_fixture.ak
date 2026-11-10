@@ -755,8 +755,3 @@ pub fn corpus_topup_pending(amount_units: Int) -> TopUp {
     [],
   )
 }
-
-/// The registration of a first pool of `pool0_units`.
-pub fn corpus_register(pool0_units: Int) -> Transaction {
-  registered_with_pool(pool0_units * unit)
-}

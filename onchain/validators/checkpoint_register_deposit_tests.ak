@@ -32,14 +32,14 @@ use freeze_fixture.{
   migration_hash, other_hunter_pkh, paid, parts, policy, premium, rotation,
   spent, token_value, under_receipted, under_signed, unevidenced, unit,
 }
-use registry_fixture.{representative}
+use registry_fixture.{registry_name, representative, state_policy}
 
 // The validators are called here: a fixture module cannot import them.
 
 fn run_spend(c: Case) -> Bool {
   checkpoint_register.checkpoint_register.spend(
-    migration_hash,
-    lifecycle_hash,
+    state_policy(),
+    registry_name(),
     advance_hash,
     enforcement_hash,
     entitlement_hash,

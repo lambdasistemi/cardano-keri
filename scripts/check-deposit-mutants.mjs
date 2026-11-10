@@ -202,7 +202,7 @@ const mutants = [
   {
     name: 'premium-payee-holds-no-token',
     premise: 'the premium payee output holds no checkpoint token',
-    edits: [{ file: REGISTER, from: 'quantity_of(payee.value, own_hash, aid_name) == 0 && lovelace_of(', to: 'True && lovelace_of(' }],
+    edits: [{ file: REGISTER, from: 'quantity_of(payee.value, registry.policy, aid_name) == 0 && lovelace_of(', to: 'True && lovelace_of(' }],
     killers: t(CONNECTED, 'deposit_paying_the_premium_to_an_output_with_the_token_is_refused'),
   },
   {
@@ -226,7 +226,7 @@ const mutants = [
   {
     name: 'mints-nothing',
     premise: 'a deposit mints and burns nothing under the checkpoint policy',
-    edits: [{ file: REGISTER, from: '  expect dict.to_pairs(tokens(mint, own_hash)) == []\n  expect Some(pool) = with_value(\n    checkpoint_min_ada,\n    d_reg,\n    freeze_bond,\n    old,\n    lovelace_of(own_input.output.value),\n  )\n  let paid', to: '  expect Some(pool) = with_value(\n    checkpoint_min_ada,\n    d_reg,\n    freeze_bond,\n    old,\n    lovelace_of(own_input.output.value),\n  )\n  let paid' }],
+    edits: [{ file: REGISTER, from: '  expect quantity_of(mint, registry.policy, aid_name) == 0\n  expect Some(pool) = with_value(\n    checkpoint_min_ada,\n    d_reg,\n    freeze_bond,\n    old,\n    lovelace_of(own_input.output.value),\n  )\n  let paid', to: '  expect Some(pool) = with_value(\n    checkpoint_min_ada,\n    d_reg,\n    freeze_bond,\n    old,\n    lovelace_of(own_input.output.value),\n  )\n  let paid' }],
     killers: t(CONNECTED, 'deposit_that_mints_under_the_checkpoint_policy_is_refused'),
   },
   {

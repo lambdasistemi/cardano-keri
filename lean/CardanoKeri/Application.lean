@@ -38,7 +38,7 @@ fold or a return moves. This module states KERI's application `A_keri` against
 
 The application address holds configuration records and requests only. A
 delivered checkpoint lives at the checkpoint validator's address, whose own
-spends (advance, conviction, freeze, top-up, migration) the checkpoint and
+spends (advance, conviction, freeze, top-up) the checkpoint and
 economic models state; the application never spends a checkpoint.
 
 The network is not a field of any approval preimage: a Plutus address carries

@@ -1,17 +1,18 @@
-//// #136 — the small-identity Register vertical.
+//// The registry checkpoint validator.
 ////
-//// This validator deliberately owns only checkpoint creation. Existing
-//// lifecycle spending remains in `checkpoint.ak`; keeping it out of this
-//// applied program makes a Register reference script deployable under the
-//// stock 16 KiB transaction limit.
+//// A checkpoint is the output at this validator's address that holds one
+//// token of the registry's state policy named for the checkpoint's key: the
+//// active token of the AID (Lean `ConsumerIdentity.representativeAsset`). The
+//// registry's state policy and name are applied parameters. The validator
+//// mints nothing: the registry's fold delivers the checkpoint with its token,
+//// and every spend keeps that token, once, at this address.
 
-use aiken/collection/dict
 use aiken/collection/list
-use aiken/interval.{Finite}
 use aiken/primitive/bytearray
 use cardano/address.{Credential, Script, from_script, from_verification_key}
 use cardano/assets.{
-  PolicyId, from_asset, from_lovelace, lovelace_of, merge, quantity_of, tokens,
+  AssetName, PolicyId, from_asset, from_lovelace, lovelace_of, merge,
+  quantity_of,
 }
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Redeemer, ScriptPurpose,
@@ -21,24 +22,14 @@ use cardano_keri/checkpoint/datum.{Live, TerminationPending}
 use cardano_keri/checkpoint/deposit.{deposit_authorized, required_intent}
 use cardano_keri/checkpoint/enforcement_observer.{authorized_payee}
 use cardano_keri/checkpoint/freeze_bond.{freeze_bond_valid}
-use cardano_keri/checkpoint/message.{aid_digest, deriveAidAssetName}
 use cardano_keri/checkpoint/observer.{
-  ObserverClaim, ObserverEnvelope, observe_advance, observe_convict,
-  observe_freeze, observe_migration, observe_register,
+  ObserverEnvelope, observe_advance, observe_convict, observe_freeze,
 }
 use cardano_keri/checkpoint/refund
 use cardano_keri/checkpoint/registration.{valid_registration_deposit}
 use cardano_keri/checkpoint/role.{Active}
-use cardano_keri/checkpoint/value.{held_value, registration_pool, with_value}
-
-/// Registration evidence is carried by the lifecycle observer withdrawal.
-///
-/// Constructor indices are wire surface once a generation is deployed: a
-/// deployed generation only ever appends arms. A generation that has no
-/// deployment may drop arms, which moves the later ones up.
-pub type MintRedeemer {
-  Register
-}
+use cardano_keri/checkpoint/value.{held_value, with_value}
+use singular_state/preimage.{RegistryIdentity, active_token_name}
 
 /// The bond option of an Advance (Lean `BondOp`): keep the bond state, or
 /// deposit the bond. Constructor indices are wire surface.
@@ -57,11 +48,13 @@ pub type SpendRedeemer {
   /// `.rotate sn' op payee` option.
   Advance { payee_output_index: Int, bond: BondOp }
   Convict { convictor_pkh: ByteArray, convictor_output_index: Int }
-  /// Leave this generation under its own controller quorum (#254 T254-104).
-  MigrateOut
+  /// Index two was the retired migration spend. Constructor indices are wire
+  /// surface and this generation's builders are the deployed generation's, so
+  /// the number stays taken and its arm refuses every transaction.
+  Retired
   /// Freeze a live checkpoint whose pool is below the premium, on the
   /// controller's own later witnessed rotation (#345). Appended after
-  /// `MigrateOut`: nothing renumbers. `hunter_output_index` names the output
+  /// the retired index: nothing renumbers. `hunter_output_index` names the output
   /// that receives the freeze bond.
   Freeze { hunter_output_index: Int }
   /// Add `amount`, at least one premium, to the pool of a live checkpoint
@@ -73,8 +66,11 @@ pub type SpendRedeemer {
 const checkpoint_min_ada: Int = 2_000_000
 
 validator checkpoint_register(
-  migration_hash: PolicyId,
-  lifecycle_hash: PolicyId,
+  /// The state policy of the registry whose checkpoints these are, and the
+  /// registry's name: together the registry identity the active token of an
+  /// AID is named in.
+  state_policy: PolicyId,
+  registry_name: ByteArray,
   advance_hash: PolicyId,
   enforcement_hash: PolicyId,
   /// Applied credential of `observer_entitlement`. Required beside
@@ -88,26 +84,6 @@ validator checkpoint_register(
   /// The premium (Lean `Params.P`) a rotation pays from the pool.
   premium: Int,
 ) {
-  mint(redeemer: Data, policy_id: PolicyId, tx: Transaction) {
-    expect valid_registration_deposit(d_reg)
-    expect freeze_bond_valid(freeze_bond)
-    expect premium >= 0
-    expect mint_redeemer: MintRedeemer = redeemer
-    when mint_redeemer is {
-      Register -> {
-        expect ran_register_check(lifecycle_hash, policy_id, tx)
-        validate_register(
-          network_id,
-          d_reg,
-          freeze_bond,
-          premium,
-          policy_id,
-          tx,
-        )
-      }
-    }
-  }
-
   spend(
     _datum: Option<Data>,
     redeemer: Data,
@@ -118,6 +94,10 @@ validator checkpoint_register(
     expect freeze_bond_valid(freeze_bond)
     expect premium >= 0
     expect spend_redeemer: SpendRedeemer = redeemer
+    let registry = RegistryIdentity {
+      policy: state_policy,
+      name: registry_name,
+    }
     when spend_redeemer is {
       Advance { payee_output_index, bond } -> {
         expect
@@ -129,6 +109,7 @@ validator checkpoint_register(
             tx,
           )
         validate_advance(
+          registry,
           network_id,
           d_reg,
           freeze_bond,
@@ -150,6 +131,7 @@ validator checkpoint_register(
             tx,
           )
         validate_convict(
+          registry,
           network_id,
           d_reg,
           freeze_bond,
@@ -159,11 +141,7 @@ validator checkpoint_register(
           tx,
         )
       }
-      MigrateOut -> {
-        let own = own_hash(tx, own_ref)
-        expect ran_migration_check(migration_hash, own, own_ref, tx)
-        validate_migrate_out_tokens(own, own_ref, tx)
-      }
+      Retired -> False
       Freeze { hunter_output_index } -> {
         expect
           ran_rotation_check(
@@ -174,6 +152,7 @@ validator checkpoint_register(
             tx,
           )
         validate_freeze(
+          registry,
           d_reg,
           freeze_bond,
           premium,
@@ -183,7 +162,15 @@ validator checkpoint_register(
         )
       }
       TopUp { amount } ->
-        validate_top_up(d_reg, freeze_bond, premium, amount, own_ref, tx)
+        validate_top_up(
+          registry,
+          d_reg,
+          freeze_bond,
+          premium,
+          amount,
+          own_ref,
+          tx,
+        )
     }
   }
 
@@ -192,107 +179,10 @@ validator checkpoint_register(
   }
 }
 
-/// The #254 migrate-out arm delegates its verdict to the promoted observer and
-/// keeps the token mechanics here, where they cannot be delegated without
-/// circular trust: the observer would otherwise be asserting facts about the
-/// very policy whose program is asking it.
-///
-/// This mirrors `ran_register_check` exactly, and additionally binds the named
-/// source output, so an observation of one migration can never satisfy another.
-fn ran_migration_check(
-  migration_hash: PolicyId,
-  checkpoint_policy: PolicyId,
-  source_ref: OutputReference,
-  tx: Transaction,
-) -> Bool {
-  let credential: Credential = Script(migration_hash)
-  expect
-    list.any(
-      tx.withdrawals,
-      fn(Pair(withdrawal_credential, lovelace)) {
-        withdrawal_credential == credential && lovelace == 0
-      },
-    )
-  expect
-    list.any(
-      tx.redeemers,
-      fn(Pair(purpose, redeemer)) {
-        when purpose is {
-          Withdraw(redeemer_credential) ->
-            if redeemer_credential == credential {
-              expect envelope: ObserverEnvelope = redeemer
-              let claim = envelope.claim
-              claim.action == observe_migration && claim.checkpoint_policy == checkpoint_policy && claim.own_ref == Some(
-                source_ref,
-              )
-            } else {
-              False
-            }
-          _ -> False
-        }
-      },
-    )
-  True
-}
-
-/// Exit token mechanics: exactly one token of the spent checkpoint's name is
-/// burned under this policy, and no output retains it.
-fn validate_migrate_out_tokens(
-  own: PolicyId,
-  own_ref: OutputReference,
-  tx: Transaction,
-) -> Bool {
-  let Transaction { inputs, outputs, mint, .. } = tx
-  expect Some(own_input) = find_input(inputs, own_ref)
-  expect InlineDatum(source_data) = own_input.output.datum
-  expect Live { .. } = datum.read(source_data)
-  expect [Pair(aid_name, -1)] = dict.to_pairs(tokens(mint, own))
-  expect quantity_of(own_input.output.value, own, aid_name) == 1
-  expect
-    list.all(
-      outputs,
-      fn(output) { quantity_of(output.value, own, aid_name) == 0 },
-    )
-  True
-}
-
 fn own_hash(tx: Transaction, own_ref: OutputReference) -> PolicyId {
   expect Some(own_input) = find_input(tx.inputs, own_ref)
   expect Script(hash) = own_input.output.address.payment_credential
   hash
-}
-
-fn ran_register_check(
-  lifecycle_hash: PolicyId,
-  checkpoint_policy: PolicyId,
-  tx: Transaction,
-) -> Bool {
-  let credential: Credential = Script(lifecycle_hash)
-  expect
-    list.any(
-      tx.withdrawals,
-      fn(Pair(withdrawal_credential, lovelace)) {
-        withdrawal_credential == credential && lovelace == 0
-      },
-    )
-  expect
-    list.any(
-      tx.redeemers,
-      fn(Pair(purpose, redeemer)) {
-        when purpose is {
-          Withdraw(redeemer_credential) ->
-            if redeemer_credential == credential {
-              expect envelope: ObserverEnvelope = redeemer
-              let claim = envelope.claim
-              claim.action == observe_register && claim.checkpoint_policy == checkpoint_policy && claim.own_ref == None
-            } else {
-              False
-            }
-          _ -> False
-        }
-      },
-    )
-  True
 }
 
 /// The rotation observer ran for this action over this spent output: an
@@ -404,62 +294,6 @@ fn ran_observed_enforcement(
   ) && authorized_payee(enforcement_envelope) == Some(payee_pkh)
 }
 
-fn validate_register(
-  network_id: Int,
-  d_reg: Int,
-  freeze_bond: Int,
-  premium: Int,
-  policy_id: PolicyId,
-  tx: Transaction,
-) -> Bool {
-  let Transaction { inputs, outputs, mint, validity_range, .. } = tx
-  expect [Pair(aid_name, 1)] = dict.to_pairs(tokens(mint, policy_id))
-  expect [state_output] = list.filter(
-    outputs,
-    fn(output) { output.address == from_script(policy_id) },
-  )
-  expect quantity_of(state_output.value, policy_id, aid_name) == 1
-  expect InlineDatum(datum_data) = state_output.datum
-  expect  
-      Live {
-        aid,
-        sn: 0,
-        epoch: 0,
-        poisoned: False,
-        frozen: False,
-        born_at,
-        refund_to,
-        topped_up: False,
-        ..
-      }
-    = datum.read(datum_data)
-  expect Some(digest) = aid_digest(aid)
-  expect aid_name == deriveAidAssetName(digest)
-  expect Finite(upper) = validity_range.upper_bound.bound_type
-  expect born_at == upper
-  expect refund.payable(network_id, refund_to)
-  expect
-    list.all(
-      inputs,
-      fn(input) { input.output.address.payment_credential != Script(policy_id) },
-    )
-  expect
-    state_output.value == (
-      from_lovelace(lovelace_of(state_output.value))
-        |> merge(from_asset(policy_id, aid_name, 1))
-    )
-  // The first pool is what the carrier holds above the minimum ADA, the
-  // deposit and the bond (Lean `Step.register`: `p.P ≤ pool0`).
-  expect Some(pool0) = registration_pool(
-    checkpoint_min_ada,
-    d_reg,
-    freeze_bond,
-    lovelace_of(state_output.value),
-  )
-  expect premium <= pool0
-  True
-}
-
 fn expect_exact_payout(
   outputs: List<Output>,
   output_index: Int,
@@ -475,6 +309,7 @@ fn expect_exact_payout(
 }
 
 fn validate_advance(
+  registry: RegistryIdentity,
   network_id: Int,
   d_reg: Int,
   freeze_bond: Int,
@@ -491,9 +326,8 @@ fn validate_advance(
   expect InlineDatum(old_data) = own_input.output.datum
   let old = datum.read(old_data)
   expect Live { aid, frozen, born_at, refund_to, .. } = old
-  expect [Pair(aid_name, 1)] = dict.to_pairs(
-    tokens(own_input.output.value, own_hash),
-  )
+  let aid_name = active_token_name(registry, aid)
+  expect quantity_of(own_input.output.value, registry.policy, aid_name) == 1
   expect [state_output] = list.filter(
     outputs,
     fn(output) { output.address == from_script(own_hash) },
@@ -545,7 +379,7 @@ fn validate_advance(
           ),
         )
     }
-  expect dict.to_pairs(tokens(mint, own_hash)) == []
+  expect quantity_of(mint, registry.policy, aid_name) == 0
   expect Some(pool) = with_value(
     checkpoint_min_ada,
     d_reg,
@@ -564,11 +398,11 @@ fn validate_advance(
       from_lovelace(
         held_value(checkpoint_min_ada, d_reg, freeze_bond, new, pool_after),
       )
-        |> merge(from_asset(own_hash, aid_name, 1))
+        |> merge(from_asset(registry.policy, aid_name, 1))
     )
   if paid {
     expect Some(payee) = list.at(outputs, payee_output_index)
-    quantity_of(payee.value, own_hash, aid_name) == 0 && lovelace_of(
+    quantity_of(payee.value, registry.policy, aid_name) == 0 && lovelace_of(
       payee.value,
     ) >= premium
   } else {
@@ -582,6 +416,7 @@ fn validate_advance(
 /// The freeze bond leaves to the hunter output. The rotation evidence is the
 /// observer's, bound to this output by `ran_rotation_check`.
 fn validate_freeze(
+  registry: RegistryIdentity,
   d_reg: Int,
   freeze_bond: Int,
   premium: Int,
@@ -608,9 +443,8 @@ fn validate_freeze(
         keys,
       }
     = old
-  expect [Pair(aid_name, 1)] = dict.to_pairs(
-    tokens(own_input.output.value, own_hash),
-  )
+  let aid_name = active_token_name(registry, aid)
+  expect quantity_of(own_input.output.value, registry.policy, aid_name) == 1
   expect Some(pool) = with_value(
     checkpoint_min_ada,
     d_reg,
@@ -619,7 +453,7 @@ fn validate_freeze(
     lovelace_of(own_input.output.value),
   )
   expect pool < premium
-  expect dict.to_pairs(tokens(mint, own_hash)) == []
+  expect quantity_of(mint, registry.policy, aid_name) == 0
   let frozen = Live {
     aid,
     sn,
@@ -641,10 +475,10 @@ fn validate_freeze(
       from_lovelace(
         held_value(checkpoint_min_ada, d_reg, freeze_bond, frozen, pool),
       )
-        |> merge(from_asset(own_hash, aid_name, 1))
+        |> merge(from_asset(registry.policy, aid_name, 1))
     )
   expect Some(hunter) = list.at(outputs, hunter_output_index)
-  quantity_of(hunter.value, own_hash, aid_name) == 0 && lovelace_of(
+  quantity_of(hunter.value, registry.policy, aid_name) == 0 && lovelace_of(
     hunter.value,
   ) >= freeze_bond
 }
@@ -654,6 +488,7 @@ fn validate_freeze(
 /// registration deposit, and the refund address receives the bond (unless
 /// frozen) and the pool.
 fn validate_convict(
+  registry: RegistryIdentity,
   network_id: Int,
   d_reg: Int,
   freeze_bond: Int,
@@ -669,9 +504,8 @@ fn validate_convict(
   expect InlineDatum(source_data) = own_input.output.datum
   let live = datum.read(source_data)
   expect Live { aid, sn, epoch, frozen, refund_to, .. } = live
-  expect [Pair(aid_name, 1)] = dict.to_pairs(
-    tokens(own_input.output.value, own_hash),
-  )
+  let aid_name = active_token_name(registry, aid)
+  expect quantity_of(own_input.output.value, registry.policy, aid_name) == 1
   expect Some(pool) = with_value(
     checkpoint_min_ada,
     d_reg,
@@ -679,11 +513,11 @@ fn validate_convict(
     live,
     lovelace_of(own_input.output.value),
   )
-  expect dict.to_pairs(tokens(mint, own_hash)) == []
+  expect quantity_of(mint, registry.policy, aid_name) == 0
   let terminated = TerminationPending { aid, sn, epoch }
   expect [pending_output] = list.filter(
     outputs,
-    fn(output) { quantity_of(output.value, own_hash, aid_name) > 0 },
+    fn(output) { quantity_of(output.value, registry.policy, aid_name) > 0 },
   )
   let pending_datum: Data = datum.write(terminated)
   expect and {
@@ -693,7 +527,7 @@ fn validate_convict(
         from_lovelace(
           held_value(checkpoint_min_ada, d_reg, freeze_bond, terminated, 0),
         )
-          |> merge(from_asset(own_hash, aid_name, 1))
+          |> merge(from_asset(registry.policy, aid_name, 1))
       ),
     }
   let bond_held = if frozen {
@@ -738,6 +572,7 @@ fn refund_paid(
 /// signed, no observer runs and no validity range is read. The token stays
 /// and nothing is minted or burnt under the policy.
 fn validate_top_up(
+  registry: RegistryIdentity,
   d_reg: Int,
   freeze_bond: Int,
   premium: Int,
@@ -765,9 +600,8 @@ fn validate_top_up(
       }
     = old
   expect premium <= amount
-  expect [Pair(aid_name, 1)] = dict.to_pairs(
-    tokens(own_input.output.value, own_hash),
-  )
+  let aid_name = active_token_name(registry, aid)
+  expect quantity_of(own_input.output.value, registry.policy, aid_name) == 1
   expect Some(pool) = with_value(
     checkpoint_min_ada,
     d_reg,
@@ -775,7 +609,7 @@ fn validate_top_up(
     old,
     lovelace_of(own_input.output.value),
   )
-  expect dict.to_pairs(tokens(mint, own_hash)) == []
+  expect quantity_of(mint, registry.policy, aid_name) == 0
   expect
     list.length(
       list.filter(
@@ -809,6 +643,6 @@ fn validate_top_up(
     pool + amount,
   )
   state_output.value == (
-    from_lovelace(held) |> merge(from_asset(own_hash, aid_name, 1))
+    from_lovelace(held) |> merge(from_asset(registry.policy, aid_name, 1))
   )
 }

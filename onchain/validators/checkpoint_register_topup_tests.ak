@@ -31,8 +31,8 @@ use freeze_fixture.{
 }
 use registry_fixture.{
   Nothing, OtherKey, OtherRegistryName, OtherStatePolicy, QuantityTwo,
-  RetiredRegisterToken, holding, representative, staked, state_policy,
-  with_input_token, with_successor_address, with_successor_token,
+  RetiredRegisterToken, holding, registry_name, representative, staked,
+  state_policy, with_input_token, with_successor_address, with_successor_token,
 }
 use topup_fixture.{
   Bond, Deposit, Keep, Parts, Rotation, TopUp, base, change, eight_data, flag,
@@ -50,8 +50,8 @@ use topup_fixture.{
 
 fn run_spend(redeemer: Data, tx: Transaction) -> Bool {
   checkpoint_register.checkpoint_register.spend(
-    migration_hash,
-    lifecycle_hash,
+    state_policy(),
+    registry_name(),
     advance_hash,
     enforcement_hash,
     entitlement_hash,
@@ -66,38 +66,9 @@ fn run_spend(redeemer: Data, tx: Transaction) -> Bool {
   )
 }
 
-fn run_mint(redeemer: Data, tx: Transaction) -> Bool {
-  checkpoint_register.checkpoint_register.mint(
-    migration_hash,
-    lifecycle_hash,
-    advance_hash,
-    enforcement_hash,
-    entitlement_hash,
-    network_id,
-    d_reg,
-    freeze_bond,
-    premium,
-    redeemer,
-    policy,
-    tx,
-  )
-}
-
 /// The spending arm alone: a top-up needs no observer.
 fn run(t: TopUp) -> Bool {
   run_spend(topup_redeemer(t.amount), t.tx)
-}
-
-fn run_register(tx: Transaction) -> Bool {
-  let register: Data = builtin.constr_data(0, [])
-  run_mint(register, tx) && checkpoint_observer.observer_lifecycle.withdraw(
-    0,
-    hp_policy,
-    d_reg,
-    register_envelope(),
-    0,
-    tx,
-  )
 }
 
 fn run_rotation(r: Rotation) -> Bool {
@@ -513,12 +484,8 @@ test topup_refuses_the_token_leaving_the_checkpoint_address() fail {
   )
 }
 
-test topup_refuses_a_mint_under_the_policy() fail {
-  run(minting(from_asset(policy, #"b3", 1)))
-}
-
-test topup_refuses_a_burn_under_the_policy() fail {
-  run(minting(from_asset(policy, #"b3", -1)))
+test topup_refuses_a_mint_of_the_checkpoint_token() fail {
+  run(minting(from_asset(state_policy(), token_name(), 1)))
 }
 
 test topup_refuses_a_burn_of_the_checkpoint_token() fail {
@@ -535,63 +502,6 @@ test topup_refuses_a_second_checkpoint_output() fail {
 
 test topup_refuses_a_second_checkpoint_input() fail {
   run(inputs_after([second_checkpoint_input()]))
-}
-
-// ---------------------------------------------------------------------
-// The registration: the pool starts at one premium or more
-// ---------------------------------------------------------------------
-
-test register_accepts_a_pool_of_exactly_the_premium() {
-  run_register(registered_with_pool(premium))
-}
-
-test register_accepts_a_pool_above_the_premium() {
-  run_register(registered_with_pool(premium + 1))
-}
-
-test register_accepts_a_pool_of_several_premiums() {
-  run_register(registered_with_pool(7 * unit))
-}
-
-test register_refuses_a_pool_one_below_the_premium() fail {
-  run_register(registered_with_pool(premium - 1))
-}
-
-test register_refuses_an_empty_pool() fail {
-  run_register(registered_with_pool(0))
-}
-
-test register_writes_the_mark_clear() {
-  run_register(
-    register_with(nine_data(registered_parts(False)), floor_unfrozen + premium),
-  )
-}
-
-test register_refuses_a_set_mark() fail {
-  run_register(
-    register_with(nine_data(registered_parts(True)), floor_unfrozen + premium),
-  )
-}
-
-test register_refuses_a_mark_that_is_not_a_boolean() fail {
-  run_register(
-    register_with(
-      marked_with(registered_parts(False), builtin.i_data(0)),
-      floor_unfrozen + premium,
-    ),
-  )
-}
-
-test register_refuses_a_datum_of_eight_fields() fail {
-  run_register(
-    register_with(eight_data(registered_parts(False)), floor_unfrozen + premium),
-  )
-}
-
-test register_refuses_a_datum_of_ten_fields() fail {
-  run_register(
-    register_with(ten_data(registered_parts(False)), floor_unfrozen + premium),
-  )
 }
 
 // ---------------------------------------------------------------------

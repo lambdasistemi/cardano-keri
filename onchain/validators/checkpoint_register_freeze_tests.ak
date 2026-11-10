@@ -39,16 +39,16 @@ use freeze_fixture.{
 }
 use registry_fixture.{
   Nothing, OtherKey, OtherRegistryName, OtherStatePolicy, QuantityTwo,
-  RetiredRegisterToken, holding, representative, staked, with_input_token,
-  with_successor_address, with_successor_token,
+  RetiredRegisterToken, holding, registry_name, representative, staked,
+  state_policy, with_input_token, with_successor_address, with_successor_token,
 }
 
 // The validators are called here: a fixture module cannot import them.
 
 fn run_spend(redeemer: Data, tx: Transaction) -> Bool {
   checkpoint_register.checkpoint_register.spend(
-    migration_hash,
-    lifecycle_hash,
+    state_policy(),
+    registry_name(),
     advance_hash,
     enforcement_hash,
     entitlement_hash,

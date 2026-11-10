@@ -95,7 +95,7 @@ fixture codec and hash; the concrete bytes follow in the next section.
 |---|---|
 | Hash collision freedom | Rely on BLAKE2b-256 having no collision over the identity domain; this is assumed, not proved |
 | Published scripts | Bind actual policy application and script hashes to an authenticated release manifest |
-| Network and release resolution | Obtain them independently; missing or conflicting evidence refuses |
+| Network, release and checkpoint credential resolution | Obtain them independently; missing or conflicting evidence refuses |
 | Physical value | Read the premium pool from the output's value and require at least the minimum ADA, the deposit and the freeze bond the datum says are held (see [the checkpoint output's value](#the-checkpoint-outputs-value)); the validator enforcing it on chain is the datum version 2 work ([#339](https://github.com/lambdasistemi/cardano-keri/issues/339)) |
 | Current reference and holding movement | Verify current unspentness and observation fidelity; registration Origin is immutable metadata |
 | Reduced registry identifier | Establish the explicit finite faithful mapping when separation relies on that representation |

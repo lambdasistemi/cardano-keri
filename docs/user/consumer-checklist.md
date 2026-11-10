@@ -14,11 +14,13 @@ or awaiting termination.
 
 ## Fix the intended identity first
 
-The treasury fixes its network, published KERI release, registry creation
-seed and intended AID independently of the output it is checking. A trusted
-integration supplies the actual network and resolves the complete release.
-An unknown release or a network mismatch is an error or refusal, never
-permission to adopt the candidate's values.
+The treasury fixes its network, published KERI release, the credential of the
+checkpoint validator where that release keeps its checkpoints, registry
+creation seed and intended AID independently of the output it is checking. A
+trusted integration supplies the actual network and resolves the complete
+release and the checkpoint credential. An unknown release or checkpoint
+credential, or a network mismatch, is an error or refusal, never permission to
+adopt the candidate's values.
 
 ```mermaid
 flowchart TD
@@ -39,8 +41,10 @@ executable predicate require all of the following:
 
 1. The observed network equals the intended network, and the resolved release
    equals the complete intended descriptor: application policy, application
-   credential, state program and state policy.
-2. The output uses the release's application credential.
+   credential, state program and state policy; and the resolved checkpoint
+   credential equals the intended one.
+2. The output sits at that checkpoint credential, never at the release's
+   application credential, where only configuration records and requests live.
 3. The complete expected representative asset has aggregate quantity exactly
    one in that output. Both its policy and name matter; two duplicate entries
    of quantity one count as two and fail.

@@ -8,10 +8,17 @@ fixed stand-in, never a deployed identity.
 -}
 module Cardano.KERI.Deployment.RegistryFixture (
     fixtureRegistry,
+    fixtureApplicationPolicy,
 ) where
 
 import Cardano.KERI.Deployment.Script (RegistryIdentity (..))
 import Data.ByteString qualified as BS
+
+{- | The policy of an application, fixed filler bytes: the checkpoint validator is
+applied to it. Like 'fixtureRegistry' it is never a deployed identity.
+-}
+fixtureApplicationPolicy :: BS.ByteString
+fixtureApplicationPolicy = BS.replicate 28 0x5c
 
 -- | A registry whose state policy and name are fixed filler bytes.
 fixtureRegistry :: RegistryIdentity

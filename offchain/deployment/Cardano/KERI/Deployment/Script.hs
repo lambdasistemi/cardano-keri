@@ -277,8 +277,9 @@ applyPredecessorParam predecessorPolicy =
 
 {- | The exact argument plan the checkpoint validator is applied to: the registry's
 state policy and name, the three observer hashes it asks (advance, enforcement,
-entitlement), then the four deployment integers (network, registration bond,
-freeze bond, premium). The constructor still fails closed on declared-vs-supplied
+entitlement), the four deployment integers (network, registration bond, freeze
+bond, premium), then the policy of the application whose termination approvals
+release a pending output. The constructor still fails closed on declared-vs-supplied
 arity.
 -}
 applyCheckpointParams ::
@@ -290,8 +291,9 @@ applyCheckpointParams ::
     Integer ->
     Integer ->
     Integer ->
+    ByteString ->
     [Data]
-applyCheckpointParams registry advanceHash enforcementHash entitlementHash network registrationBond freezeBond premium =
+applyCheckpointParams registry advanceHash enforcementHash entitlementHash network registrationBond freezeBond premium applicationPolicy =
     [ B (registryStatePolicy registry)
     , B (registryName registry)
     , B advanceHash
@@ -301,6 +303,7 @@ applyCheckpointParams registry advanceHash enforcementHash entitlementHash netwo
     , I registrationBond
     , I freezeBond
     , I premium
+    , B applicationPolicy
     ]
 
 applyLifecycleParams :: Integer -> ByteString -> Integer -> [Data]
@@ -586,14 +589,15 @@ deriveObserverScripts terms blueprint = do
   where
     require = requireValidator blueprint
 
--- | Apply the checkpoint validator to a registry, the observers and the terms.
+-- | Apply the checkpoint validator to a registry, the policy of its application, the observers and the terms.
 deriveCheckpointScript ::
     CheckpointTerms ->
     RegistryIdentity ->
+    ByteString ->
     Observers ->
     Blueprint ->
     Either String ScriptArtifact
-deriveCheckpointScript terms registry observers blueprint = do
+deriveCheckpointScript terms registry applicationPolicy observers blueprint = do
     (checkpointValidator, checkpointProgram) <-
         requireValidator
             blueprint
@@ -612,20 +616,22 @@ deriveCheckpointScript terms registry observers blueprint = do
             (termsDeposit terms)
             (termsFreezeBond terms)
             (termsPremium terms)
+            applicationPolicy
         )
         checkpointProgram
 
-{- | The scripts of the deployed generation's terms applied to a registry: the
-observers and the checkpoint validator.
+{- | The scripts of the deployed generation's terms applied to a registry and to
+the policy of its application: the observers and the checkpoint validator.
 -}
 deriveV1Scripts ::
-    RegistryIdentity -> Blueprint -> Either String [ScriptArtifact]
-deriveV1Scripts registry blueprint = do
+    RegistryIdentity -> ByteString -> Blueprint -> Either String [ScriptArtifact]
+deriveV1Scripts registry applicationPolicy blueprint = do
     observers <- deriveObserverScripts deployedCheckpointTerms blueprint
     checkpoint <-
         deriveCheckpointScript
             deployedCheckpointTerms
             registry
+            applicationPolicy
             observers
             blueprint
     pure (observerArtifacts observers <> [checkpoint])

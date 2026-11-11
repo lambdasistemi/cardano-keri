@@ -176,3 +176,61 @@ spec = describe "KERI's application on the public registry" $ do
         it "the spend redeemer numbers the fold 0 and the return 1" $ do
             spendActionData (FoldRegistration 0) `shouldBe` Constr 0 [I 0]
             spendActionData ReturnRegistration `shouldBe` Constr 1 []
+    describe "the termination of an identity" $ do
+        mapM_
+            ( \(name, key, preimage, approval) ->
+                it ("the approval of the Lean vector " <> name) $ do
+                    terminationApprovalName vectorRegistry (unhex key) `shouldBe` unhex approval
+                    canonicalCborData
+                        (Constr 4 [registryIdentityData vectorRegistry, B (unhex key)])
+                        `shouldBe` unhex preimage
+            )
+            terminationApprovalVectors
+        it "the approval of a key names its registry and its key" $ do
+            let key = BS.replicate 44 0x45
+            terminationApprovalName vectorRegistry key
+                `shouldNotBe` terminationApprovalName vectorRegistry (BS.replicate 44 0x46)
+            terminationApprovalName vectorRegistry key
+                `shouldNotBe` terminationApprovalName vectorRegistry{registryName = BS.replicate 32 0} key
+        it "the mint redeemer numbers the termination booking 2, after the creation 0 and the booking 1" $
+            actionData (BookTermination vectorSeed 1 vectorRegistry "key")
+                `shouldBe` Constr
+                    2
+                    [ Constr 0 [B (outputTransactionId vectorSeed), I 0]
+                    , I 1
+                    , Constr 0 [B (registryStatePolicy vectorRegistry), B (registryName vectorRegistry)]
+                    , B "key"
+                    ]
+        it "the spend redeemer numbers the termination fold 2, after the fold 0 and the return 1" $
+            spendActionData (FoldTermination vectorRegistry "key")
+                `shouldBe` Constr
+                    2
+                    [ Constr 0 [B (registryStatePolicy vectorRegistry), B (registryName vectorRegistry)]
+                    , B "key"
+                    ]
+        it "the registry's change numbers the termination 1, after the registration 0" $
+            stateSpendData vectorSeed [Terminate vectorSeed "key" [I 9]]
+                `shouldBe` Constr
+                    0
+                    [ Constr 0 [B (outputTransactionId vectorSeed), I 0]
+                    , List [Constr 1 [Constr 0 [B (outputTransactionId vectorSeed), I 0], B "key", List [I 9]]]
+                    ]
+        it "the terminal leaf is not the active one" $
+            terminalLeaf `shouldNotBe` activeLeaf
+
+-- | The termination approvals of @lean/application-vectors.json@: name, key, preimage, approval name.
+terminationApprovalVectors :: [(String, ByteString, ByteString, ByteString)]
+terminationApprovalVectors =
+    [
+        ( "termination-approval"
+        , "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"
+        , "d87d9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550ff"
+        , "f6c31cc2f07f593bb390663e06b102672674b37bd1335e38efde44dea2ec286d"
+        )
+    ,
+        ( "termination-approval-other-aid"
+        , "4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776f"
+        , "d87d9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776fff"
+        , "5c8237dc612fd2ca3bef06a4c60d7a427bc380c41e0b461645f1694e4aece4ea"
+        )
+    ]

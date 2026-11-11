@@ -10,7 +10,12 @@ the held keys, and a new key is not refused whatever the registry holds.
 -}
 module Cardano.KERI.AID.FoldGuardSpec (spec) where
 
-import Cardano.KERI.AID.E2E.FoldGuard (FoldRefusal (..), foldRefusal)
+import Cardano.KERI.AID.E2E.FoldGuard (
+    BookingRefusal (..),
+    FoldRefusal (..),
+    bookingRefusal,
+    foldRefusal,
+ )
 import Cardano.KERI.AID.E2E.Rejection (consumedInputAlone)
 import Data.ByteString (ByteString)
 import Data.List (intercalate)
@@ -29,23 +34,57 @@ held = [alice, bob, carol]
 spec :: Spec
 spec = do
     specFold
+    specTerminal
+    specBooking
     specRejection
 
 specFold :: Spec
 specFold = describe "a second registration of a registered AID cannot be folded" $ do
     it "refuses a key the registry holds, whichever place it has among the held keys" $
         mapM_
-            (\key -> foldRefusal held key `shouldBe` Just (KeyAlreadyRegistered key))
+            (\key -> foldRefusal held [] key `shouldBe` Just (KeyAlreadyRegistered key))
             held
     it "refuses the only key of a registry of one" $
-        foldRefusal [alice] alice `shouldBe` Just (KeyAlreadyRegistered alice)
+        foldRefusal [alice] [] alice `shouldBe` Just (KeyAlreadyRegistered alice)
     it "does not refuse a new key, whatever the registry holds" $ do
-        foldRefusal held dave `shouldBe` Nothing
-        foldRefusal [alice] bob `shouldBe` Nothing
+        foldRefusal held [] dave `shouldBe` Nothing
+        foldRefusal [alice] [] bob `shouldBe` Nothing
     it "does not refuse the first key of an empty registry" $
-        foldRefusal [] alice `shouldBe` Nothing
+        foldRefusal [] [] alice `shouldBe` Nothing
     it "names the key it refuses" $
-        foldRefusal [bob, alice] alice `shouldBe` Just (KeyAlreadyRegistered alice)
+        foldRefusal [bob, alice] [] alice `shouldBe` Just (KeyAlreadyRegistered alice)
+
+-- | Two identities whose registrations were terminated.
+gone :: [ByteString]
+gone = [erin, frank]
+
+erin, frank :: ByteString
+erin = "EErinAid"
+frank = "EFrankAid"
+
+specTerminal :: Spec
+specTerminal = describe "a registration of a terminal key cannot be folded" $ do
+    it "refuses a terminal key, whichever place it has among the terminated keys" $
+        mapM_
+            (\key -> foldRefusal held gone key `shouldBe` Just (KeyIsTerminal key))
+            gone
+    it "refuses a terminal key of a registry that holds no active key" $
+        foldRefusal [] [erin] erin `shouldBe` Just (KeyIsTerminal erin)
+    it "still refuses an active key beside terminated ones, and names it as active" $
+        foldRefusal held gone bob `shouldBe` Just (KeyAlreadyRegistered bob)
+    it "does not refuse a new key beside terminated ones" $
+        foldRefusal held gone dave `shouldBe` Nothing
+
+specBooking :: Spec
+specBooking = describe "the termination of a key is booked only from a pending output" $ do
+    it "does not refuse a key with a pending output, whichever place it has among the pending keys" $
+        mapM_ (\key -> bookingRefusal held key `shouldBe` Nothing) held
+    it "refuses a key with no pending output, and names it" $
+        bookingRefusal held dave `shouldBe` Just (NoPendingOutput dave)
+    it "refuses every key when no checkpoint is pending" $
+        mapM_ (\key -> bookingRefusal [] key `shouldBe` Just (NoPendingOutput key)) held
+    it "refuses a terminal key, whose active token no pending output holds" $
+        mapM_ (\key -> bookingRefusal held key `shouldBe` Just (NoPendingOutput key)) gone
 
 -- | A rejection as the node renders it: the inputs that are gone, then the failures that follow.
 rejection :: String -> [String] -> String

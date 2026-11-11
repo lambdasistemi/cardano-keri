@@ -10,23 +10,23 @@ This module executes the **exact compiled combined register** the current
 derivation, never the frozen M8 baseline. It establishes where that program's
 parameter surface actually ends.
 
-`checkpoint_register` declares nine applied parameters. Before #254 A-007 the
+`checkpoint_register` declares ten applied parameters. Before #254 A-007 the
 deployment applied one more than it declared, so the surplus argument -- a
 leftover version integer from the cut version feature -- occupied the slot the ledger fills with the
 script context, and every identity derived from it belonged to a program that
 could not settle a transaction. Two runs of the real compiled program pin the
 boundary:
 
-**At nine, the program settles.** Applied to its nine parameters and nothing
+**At ten, the program settles.** Applied to its ten parameters and nothing
 else, the machine reaches a value: what remains is a script still waiting for
 its context. That is `HALT`, and it is also this instrument's positive control
 -- a runner that could only ever print `ERROR` would prove nothing by printing
 it twice.
 
-**At ten, the program adjudicates.** A tenth argument is not absorbed as
+**At eleven, the program adjudicates.** An eleventh argument is not absorbed as
 configuration; it is consumed as the script context and judged. The mutant
 supplies a well-formed `ScriptContext` whose purpose the register does not
-serve, which reaches the validator's own `else(_) { fail }` arm. So the tenth
+serve, which reaches the validator's own `else(_) { fail }` arm. So the eleventh
 argument is script input, never a parameter, which is exactly why applying the
 version integer there was a defect rather than a cosmetic surplus.
 
@@ -82,6 +82,10 @@ def enforcementHash : ByteString := label "s254r-enforcement-policy-012"
 
 def entitlementHash : ByteString := label "s254r-entitlement-policy-012"
 
+/-- The policy of the application whose termination approvals release a pending
+output, at the 28-byte width a `PolicyId` has. A placeholder as well. -/
+def applicationPolicy : ByteString := label "s254r-application-policy-012"
+
 /-- The four deployment integers, at their real released values. -/
 def networkId : Int := 0
 
@@ -91,7 +95,7 @@ def freezeBond : Int := 5000000
 
 def premium : Int := 2000000
 
-/-- The exact nine applied parameters of the corrected register, in the order
+/-- The exact ten applied parameters of the corrected register, in the order
 `checkpoint_register` declares them.
 
 There is no version argument. The register declares no version parameter, so
@@ -108,6 +112,7 @@ def appliedParameters : List Data :=
   , Data.I registrationDeposit
   , Data.I freezeBond
   , Data.I premium
+  , Data.B applicationPolicy
   ]
 
 /-- A `Data` argument as a UPLC term. -/
@@ -169,7 +174,7 @@ def classify (trace : KeriBlaster.S2.Cek.Trace) : String :=
     else "COULD-NOT-EVALUATE"
   else "ACCEPT"
 
-/-- The parameter control: the program applied to its nine declared parameters
+/-- The parameter control: the program applied to its ten declared parameters
 and nothing else must settle on a value. -/
 def parameterControl : IO Bool := do
   let trace := runWith appliedParameters
@@ -193,7 +198,7 @@ def overapplicationMutant : IO Bool := do
   let outcome := classify trace
   IO.println s!"M8.register-mutant class=overapplication outcome={outcome}"
   if outcome != "REJECT" then
-    IO.eprintln s!"M8: the tenth argument was not refused by the program itself (outcome={outcome}, error_kind={KeriBlaster.S2.Cek.errorKind trace}, steps={trace.steps}); this is not evidence that the parameter surface ends at {appliedParameters.length}"
+    IO.eprintln s!"M8: the eleventh argument was not refused by the program itself (outcome={outcome}, error_kind={KeriBlaster.S2.Cek.errorKind trace}, steps={trace.steps}); this is not evidence that the parameter surface ends at {appliedParameters.length}"
     pure false
   else
     pure true

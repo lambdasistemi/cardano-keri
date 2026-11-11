@@ -72,6 +72,8 @@ main = do
     row "Minimum tip (lovelace)" (show (minimumTip parameters))
     row "Processing time (milliseconds)" (show (processTime parameters))
     row "Booking width (milliseconds)" (show (bookingWidth parameters))
+    row "Checkpoint minimum ADA (lovelace)" (show (registryMinimumAda devnetTerms))
+    row "Termination request carrier (lovelace)" (show (registryTerminationCarrier devnetTerms))
     row "Application script hash" (hexOf applicationHash)
     row "Application program bytes" (show (SBS.length (artifactProgram application)))
     row "State script hash" (hexOf (scriptsStateHash scripts))

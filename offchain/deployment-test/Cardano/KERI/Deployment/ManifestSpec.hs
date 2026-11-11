@@ -18,7 +18,7 @@ import Cardano.KERI.Deployment.Manifest (
     manifestValidationErrors,
     mkManifest,
  )
-import Cardano.KERI.Deployment.RegistryFixture (fixtureRegistry)
+import Cardano.KERI.Deployment.RegistryFixture (fixtureApplicationPolicy, fixtureRegistry)
 import Cardano.KERI.Deployment.Script (
     Blueprint (..),
     ScriptArtifact (..),
@@ -293,7 +293,7 @@ withArtifacts action = do
     blueprint <-
         loadBlueprint path >>= either fail pure
     artifacts <-
-        either fail pure (deriveV1Scripts fixtureRegistry blueprint)
+        either fail pure (deriveV1Scripts fixtureRegistry fixtureApplicationPolicy blueprint)
     action artifacts
 
 programLength :: Text -> [ScriptArtifact] -> Int

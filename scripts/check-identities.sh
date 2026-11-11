@@ -17,7 +17,7 @@
 # refused: a check that cannot fail proves nothing.
 set -euo pipefail
 
-rows=19
+rows=21
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 page=${1:-$root/docs/architecture/registry-identities.md}

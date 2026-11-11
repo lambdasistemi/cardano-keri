@@ -171,8 +171,9 @@ spec = describe "a registry's scripts" $ do
         refused (withNetwork 15 connectedTerms) `shouldBe` False
         refused (withMinimumAda 2_000_001 connectedTerms) `shouldBe` True
         refused (withMinimumAda 1_999_999 connectedTerms) `shouldBe` True
-        refused (withCarrier 1_000_001 connectedTerms) `shouldBe` True
-        refused (withCarrier 1_000_000 connectedTerms) `shouldBe` False
+        -- the carrier and the tip (1) fit in the minimum ADA (2_000_000) up to the boundary
+        refused (withCarrier 2_000_000 connectedTerms) `shouldBe` True
+        refused (withCarrier 1_999_999 connectedTerms) `shouldBe` False
         refused (withCarrier (-1) connectedTerms) `shouldBe` True
     it "the registry is named by the seed, and the checkpoint validator follows it" $ do
         first <- derivedWith connectedTerms (seedOf 0)

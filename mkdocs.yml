@@ -107,6 +107,7 @@ nav:
       - Follow one identity: architecture/follow-one-identity.md
       - Overview: architecture/overview.md
       - Identity Operations: architecture/identity-ops.md
+      - The identities of this generation: architecture/registry-identities.md
       - Observer Architecture: architecture/observer-architecture.md
       - System Architecture: architecture/system.md
       - Value Authorization: architecture/value-auth.md

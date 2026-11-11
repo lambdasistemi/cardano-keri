@@ -744,7 +744,7 @@ check-flake-lock-guard:
 # --self-test) exercises the exact code this recipe runs, not a copy of it;
 # the guard's own INV-259-ASSERT caller-presence check requires this exact
 # invocation to remain in this recipe.
-ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken check-consumer-vectors check-consumer-identity-vectors check-checkpoint-datum-vectors check-checkpoint-writer-vectors check-checkpoint-freeze-vectors check-freeze-mutants check-deposit-mutants check-checkpoint-deposit-vectors check-checkpoint-deposit-corpus check-application-configuration-vectors check-application-vectors ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
+ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken check-consumer-vectors check-consumer-identity-vectors check-checkpoint-datum-vectors check-checkpoint-writer-vectors check-checkpoint-freeze-vectors check-freeze-mutants check-deposit-mutants check-checkpoint-deposit-vectors check-checkpoint-deposit-corpus check-application-configuration-vectors check-application-vectors check-identities ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
     ./scripts/check-flake-lock-guard.sh --assert-lock-unchanged
 
 # #478: clean exact-compiler build and public proposition controls, identical to CI.
@@ -815,3 +815,7 @@ ci-release-scripts:
 # Exact consumer model corpus, simulator, properties and targeted JavaScript mutations.
 check-consumer-design:
     nix shell --no-write-lock-file path:./lean#lean nixpkgs#nodejs --command bash scripts/check-consumer-design.sh
+
+# The identities page states the revisions, script hashes and sizes of this generation; every value is recomputed and a difference fails; the same command as the hosted step.
+check-identities:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#bash github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#coreutils github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#diffutils github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#gnugrep github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#gnused github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#gawk github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#git --command bash scripts/check-identities.sh

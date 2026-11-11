@@ -85,13 +85,14 @@ state script to the application; the checkpoint validator to the state script,
 the registry's name (which the seed fixes) and the same amounts. One set of
 terms feeds all three, so the amounts cannot disagree.
 
-## The identity of a devnet registry, per run
+## The identity of a devnet registry, printed by each run
 
 A registry on the devnet is created by spending one seed output, which fixes
 its name; its state policy follows from the application. Every transaction of
 the journey has an identifier that depends on the transaction's contents. The
-identifiers are therefore derived by each run and printed by it; none is
-written here.
+run derives all of them and prints them. The devnet is deterministic, so every
+run prints the same values; they are not written here, and the printed lines,
+not this page, are where they are current.
 
 The hosted job named "E2E (withDevnet)", step "withDevnet registry and
 checkpoint journeys", builds the devnet check with its log shown. The lines

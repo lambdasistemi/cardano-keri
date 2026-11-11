@@ -170,6 +170,7 @@ import Cardano.KERI.AID.E2E.DevnetTerms (devnetTerms)
 import Cardano.KERI.AID.E2E.FoldGuard (FoldRefusal (..), foldRefusal)
 import Cardano.KERI.AID.E2E.MpfProof (prove)
 import Cardano.KERI.AID.E2E.MpfTrie qualified as Registry
+import Cardano.KERI.AID.E2E.Rejection (consumedInputAlone)
 import Cardano.KERI.AID.E2E.Script (
     ScriptArtifact (..),
     applyCommitmentParams,
@@ -5616,8 +5617,7 @@ duplicateRegistrationJourney env references (heldIn, heldOut) heldKey fixture = 
         Submitted _ -> fail "the ledger accepted a second fold against a consumed registry state"
         Rejected reason -> do
             dbg ("second fold refused: " <> oneLine (B8.unpack reason))
-            let consumed = "BadInputsUTxO (NonEmptySet (fromList [" <> show (fst preFold) <> "]))"
-            unless (B8.pack consumed `B8.isInfixOf` reason) $
+            unless (consumedInputAlone (show (fst preFold)) (B8.unpack reason)) $
                 fail "the second fold was refused, but not for the consumed registry state alone"
     unchangedAfter "the ledger's refusal of the second fold"
     -- the second fold built honestly now is refused by the builder

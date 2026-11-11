@@ -27,6 +27,19 @@ transaction is as it was.
 request. Its refund address is paid everything but the tip, and a return that
 pays another address is refused.
 
+**A second registration of a registered AID cannot be folded.** Dana books her
+registration twice. The first request is folded and her checkpoint appears; it
+carries the state her booking committed, although the fold came later, because
+the age of a checkpoint is fixed at booking and a delayed fold keeps it. The
+second request is refused whoever folds it. A fold built against the registry
+before the first landed is refused by the ledger, because the registry state it
+spends is already consumed. A fold built afterwards is refused by the builder,
+which does not build a fold for a key the registry already holds. Neither
+refusal changes a checkpoint or the registry's root, and a fold of a new key
+folds. That the registry holds each key once is the rule of the public
+[Singular registry](https://github.com/lambdasistemi/singular/issues/742), at
+commit `d69ab005c3b710aeebf033d3c5cd08c56feb5643`.
+
 ## The three steps
 
 ```mermaid
@@ -56,7 +69,10 @@ application from one set of terms, and nothing on chain binds the two.
 The end-to-end journey of the repository's test suite runs genesis, a booking, a
 fold by another party, a late fold (refused), a return paying another address
 (refused) and the return to the refund address, and asserts the checkpoint, the
-registry state and the refund from chain state. The other checkpoint journeys
+registry state and the refund from chain state. It then books one new identity
+twice and shows both refusals of the second registration and the fold of the
+new key that lands, reading both checkpoints and the registry's root back from
+chain after each refusal. The other checkpoint journeys
 (advance, conviction, freeze, deposit rotation, top-up) start from a checkpoint
 a fold delivered.
 
@@ -68,6 +84,7 @@ on the page [the identities of this generation](../architecture/registry-identit
 
 - One request is folded per transaction.
 - Booking does not check the premium.
+- A registration for a key whose checkpoint was terminated is not refused here: terminal-key refusal belongs to [#350](https://github.com/lambdasistemi/cardano-keri/issues/350), where termination exists.
 - No termination approval is minted yet ([#350](https://github.com/lambdasistemi/cardano-keri/issues/350)), so a convicted checkpoint's pending output waits for termination.
 - Checkpoint migration, introduced for the deployed generation, is not part of the registry generation; a new contract generation means new registrations.
 - `ckeri register`, `advance`, `freeze` and `top-up` stay on the deployed preprod generation until [#356](https://github.com/lambdasistemi/cardano-keri/issues/356).

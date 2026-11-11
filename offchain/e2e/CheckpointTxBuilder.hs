@@ -6014,16 +6014,18 @@ releaseWithoutApprovalTx env party references (pendingIn, pendingOut) budgets = 
             queryUTxOs (envProvider env) (partyAddr party)
     (feeUtxo, collateral) <- pickDisjoint wallet []
     let (feeIn, feeOut) = feeUtxo
+        MaryValue _ pendingAssets = pendingOut ^. valueTxOutL
         takenOut =
             mkBasicTxOut
                 (partyAddr party)
-                ( inject
+                ( MaryValue
                     ( Coin
                         ( unCoin (feeOut ^. coinTxOutL)
                             + unCoin (pendingOut ^. coinTxOutL)
                             - simpleFee
                         )
                     )
+                    pendingAssets
                 )
         inputs = Set.fromList [pendingIn, feeIn]
         purposes =
@@ -6138,6 +6140,21 @@ refusedExactlyAt env label party expected tx = do
     unless (Set.null (passing `Set.intersection` wanted)) $
         fail (label <> ": an expected refusal also passed")
     dbg (label <> ": refused by exactly " <> show expected)
+    submitted <-
+        withinSecs 60 (label <> ": submit") $
+            submitTx (envSubmitter env) (addKeyWitness (partyKey party) tx)
+    case submitted of
+        Submitted _ -> fail (label <> ": the ledger accepted a transaction that must be refused")
+        Rejected reason -> do
+            dbg (label <> ": rejected by the ledger: " <> oneLine (B8.unpack reason))
+            when (any (`isInfixOf` B8.unpack reason) ["BadInputsUTxO", "ExUnitsTooBigUTxO", "ValueNotConservedUTxO", "FeeTooSmallUTxO"]) $
+                fail (label <> ": the ledger refused it for a reason other than the scripts")
+
+{- | The budgets a control declares: each purpose a modest share of the transaction
+maximum, so that the transaction is not refused for declaring too much.
+-}
+modestBudgets :: Set.Set (ConwayPlutusPurpose AsIx ConwayEra) -> Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits
+modestBudgets = Map.fromSet (const (ExUnits 2_000_000 1_500_000_000))
 
 -- | What a refusal must leave untouched: the registry's root, and what sits at the validators.
 data ChainShot = ChainShot
@@ -6227,22 +6244,20 @@ terminationJourney env = do
     shotBefore <- chainShot env
 
     -- controls, each honestly built and refused by exactly the scripts of its clause
-    (releaseTx, _) <- releaseWithoutApprovalTx env booker references pending Map.empty
+    (_, releasePurposes) <- releaseWithoutApprovalTx env booker references pending Map.empty
+    (releaseTx, _) <-
+        releaseWithoutApprovalTx env booker references pending (modestBudgets releasePurposes)
     refusedExactlyAt
         env
         "a release without an approval"
         booker
         [ConwaySpending (AsIx (spendingIndex pendingIn (releaseTx ^. bodyTxL . inputsTxBodyL)))]
         releaseTx
+    let anotherApproval = Just (terminationApprovalOf env (key <> "-another"))
+    (_, otherPurposes) <-
+        bookTerminationTx env booker references pending key anotherApproval Map.empty
     (otherTx, _) <-
-        bookTerminationTx
-            env
-            booker
-            references
-            pending
-            key
-            (Just (terminationApprovalOf env (key <> "-another")))
-            Map.empty
+        bookTerminationTx env booker references pending key anotherApproval (modestBudgets otherPurposes)
     refusedExactlyAt
         env
         "a booking that mints the approval of another key"
@@ -6312,7 +6327,8 @@ terminationJourney env = do
     unchangedSince env "the second booking's refusals" afterBooking
 
     -- a burn of the approval without the terminating fold is refused by the request's spend alone
-    (burnTx, _) <- burnWithoutFoldTx env folder request Map.empty
+    (_, burnPurposes) <- burnWithoutFoldTx env folder request Map.empty
+    (burnTx, _) <- burnWithoutFoldTx env folder request (modestBudgets burnPurposes)
     refusedExactlyAt
         env
         "a burn without the terminating fold"

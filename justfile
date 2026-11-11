@@ -816,6 +816,6 @@ ci-release-scripts:
 check-consumer-design:
     nix shell --no-write-lock-file path:./lean#lean nixpkgs#nodejs --command bash scripts/check-consumer-design.sh
 
-# The identities page states the revisions, script hashes and sizes of this generation; every value is recomputed and a difference fails; identical to CI.
+# The identities page states the revisions, script hashes and sizes of this generation; every value is recomputed and a difference fails; the same command as the hosted step.
 check-identities:
-    bash scripts/check-identities.sh
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#bash github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#coreutils github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#diffutils github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#gnugrep github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#gnused github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#gawk github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#git --command bash scripts/check-identities.sh

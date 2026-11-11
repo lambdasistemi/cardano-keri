@@ -1590,11 +1590,23 @@ buildSplitTx provider owner = do
     let small = mkBasicTxOut owner (inject (Coin 20_000_000))
         seedOut = mkBasicTxOut (seedAddress owner) (inject (Coin 20_000_000))
         folderOut = mkBasicTxOut folderAddress (inject (Coin 100_000_000))
+        terminationFolderOut = mkBasicTxOut terminationFolderAddress (inject (Coin 100_000_000))
         body =
             mkBasicTxBody
                 & outputsTxBodyL
                     .~ StrictSeq.fromList
-                        [small, small, small, small, seedOut, folderOut, folderOut, folderOut, folderOut]
+                        [ small
+                        , small
+                        , small
+                        , small
+                        , seedOut
+                        , folderOut
+                        , folderOut
+                        , folderOut
+                        , folderOut
+                        , terminationFolderOut
+                        , terminationFolderOut
+                        ]
     either
         (fail . ("buildSplitTx: balance failed: " <>) . show)
         (pure . balancedTx)
@@ -4718,6 +4730,19 @@ folderAddress =
 folderParty :: Party
 folderParty = Party folderAddress folderKey
 
+{- | The party that folds a termination: neither the identity's owner, nor the
+convictor, nor the party that books it.
+-}
+terminationFolderKey :: SignKeyDSIGN Ed25519DSIGN
+terminationFolderKey = mkSignKey (BS.replicate 32 0x67)
+
+terminationFolderAddress :: Addr
+terminationFolderAddress =
+    Addr Testnet (KeyHashObj (keyHashFromSignKey terminationFolderKey)) StakeRefNull
+
+terminationFolderParty :: Party
+terminationFolderParty = Party terminationFolderAddress terminationFolderKey
+
 {- | The address that holds the seed of a registry: the wallet's payment
 credential with a stake credential, so no wallet query that lists the wallet
 by its plain address sees it, and none spends it.
@@ -6206,7 +6231,7 @@ terminationJourney env = do
             (envEnforcementReference env)
     let convictor = beneficiaryPkh storyConvictor
         booker = folderParty
-        folder = ownerParty env
+        folder = terminationFolderParty
         regFixture = rsRegistration (fsFirstRotation fixture)
     active <-
         prepareConvictActive env references checkpointRef advanceRef "TERMINATION" fixture
@@ -6357,7 +6382,7 @@ terminationJourney env = do
                     }
             )
     dbg ("termination fold transaction " <> show foldTxId)
-    terminalReadback env key request foldTxId folder folderCoinBefore
+    terminalReadback env key request foldTxId booker folder folderCoinBefore
     terminalKeyJourney env references regFixture key
 
 -- | The coin of a party's wallet.
@@ -6386,9 +6411,10 @@ terminalReadback ::
     TerminationRequest ->
     TxId ->
     Party ->
+    Party ->
     Integer ->
     IO ()
-terminalReadback env key request foldTxId folder folderCoinBefore = do
+terminalReadback env key request foldTxId booker folder folderCoinBefore = do
     let (requestIn, requestOut) = trOutput request
         tip = minimumTip (registryParameters (envTerms env))
         activeName = activeTokenName (registryIdentity env) key
@@ -6414,6 +6440,7 @@ terminalReadback env key request foldTxId folder folderCoinBefore = do
         [ ("the checkpoint validator", roleAddress env Active)
         , ("the application", applicationAddress env)
         , ("the state script", stateAddress env)
+        , ("the booker", partyAddr booker)
         , ("the folder", partyAddr folder)
         , ("the owner", envOwner env)
         ]

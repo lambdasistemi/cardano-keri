@@ -47,13 +47,14 @@ minimum ADA and the identity's active token. Carol, who is neither the identity'
 owner nor the convictor, books its termination with her own fee and no signature
 of theirs: the pending output is released into a termination request at the
 application address, which holds the registry's termination carrier and the
-tip, the active token and a termination approval. Bob, another party, folds the
-request. The registry marks the identifier terminal, the active token and the
-approval are burned, the treasury is given the request less the tip, and Bob
-keeps the tip. The journey reads these back from the chain and not from the
-builders' values: the registry's root is the tree with the identifier's
-terminal leaf, no unspent output holds the active token or the approval, and
-Bob's wallet gained exactly the tip less the fee.
+tip, the active token and a termination approval. Dave, a fourth party who is
+none of the identity's owner, the convictor and Carol, folds the request. The
+registry marks the identifier terminal, the active token and the approval are
+burned, the treasury is given the request less the tip, and Dave keeps the tip.
+The journey reads these back from the chain and not from the builders' values:
+the registry's root is the tree with the identifier's terminal leaf, no unspent
+output holds the active token or the approval, and Dave's wallet gained exactly
+the tip less the fee.
 
 **Each clause of a termination is refused by the scripts that judge it.** A
 release of the pending output with no approval minted is refused by the
@@ -113,8 +114,8 @@ chain after each refusal. The other checkpoint journeys
 (advance, conviction, freeze, deposit rotation, top-up) start from a checkpoint
 a fold delivered. The termination journey starts from the conviction journey's
 checkpoint and runs the booking, the controls and the fold described above,
-reading back the registry's root, the validators' outputs and the folder's
-wallet; what the treasury received is derived from the wallet change and the
+reading back the registry's root, the validators' outputs and the wallets of
+the booker, the folder and the owner; what the treasury received is derived from the wallet change and the
 declared fee, because the treasury cannot be read before an epoch ends.
 
 The revisions, script hashes and sizes of this generation, and how the devnet

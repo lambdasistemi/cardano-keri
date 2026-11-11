@@ -19,7 +19,7 @@
       "pause": 500
     },
     {
-      "text": "The model imports the public Singular commit d69ab005c3b710aeebf033d3c5cd08c56feb5643, tree 2979dcfc58b092313b0ce7fa0493722539b9ea65, under Lean 4.27.0. The pinned sources define the imported generic booking, economic fold and registration-recovery judgments. Public upstream requirements include registration, termination, reading and integration. The executable model pin and those product requirements are distinct evidence.",
+      "text": "The model imports the public Singular commit d69ab005c3b710aeebf033d3c5cd08c56feb5643, tree 2979dcfc58b092313b0ce7fa0493722539b9ea65, under Lean 4.27.0. The pinned sources define the imported generic booking, economic fold and rejection judgments. KERI owns its request lifecycle: until a request's deadline only a fold spends it; from the deadline anyone returns it through Registry.returnRequests, which refines the imported rejection with the deadline, registration-only and balance guards. The KERI registry is deployed with retractTime = 0, so no retraction window exists. Public upstream requirements include registration, termination, reading and integration. The executable model pin and those product requirements are distinct evidence.",
       "pause": 400
     },
     {
@@ -117,31 +117,93 @@
       "pause": 500
     },
     {
-      "text": "As a KERI registration requester, I book a request that the public Singular registry can fold into my checkpoint, and I know in advance what the fold or a later return does with my money and where my checkpoint will live. The public registry only checks the approval each request carries and that the holding holds at least the committed deposit. Everything else is KERI's application.",
+      "text": "As a KERI registration requester, I book a request that the public Singular registry singular_state(A_keri) can fold into my checkpoint, and I know in advance what the fold or a later return does with my money and where my checkpoint will live. The public registry checks only that each folded request carries the registration approval its holding commits to, and that the holding holds at least the committed deposit. Everything else is KERI's application, stated in lean/CardanoKeri/Application.lean against the public model models/singular-application-held at the pin above. The Lean revision, the pin, the compiler and the script hashes and sizes of this generation are on the identities of this generation.",
       "pause": 400
     },
     {
-      "text": "The application address holds only configuration records and requests. A delivered checkpoint lives at the checkpoint validator's own address, where its lifecycle spends it: advance, conviction, freeze, top-up and migration.",
+      "text": "The application address holds only configuration records and requests. A delivered checkpoint lives at the checkpoint validator's own address, where its lifecycle (advance, conviction, freeze, top-up) spends it as the checkpoint and economic models state; the application never spends it. The one exception is the pending output a conviction leaves there: only a termination booking releases it, as the next section shows.",
+      "pause": 400
+    },
+    {
+      "text": "The configuration record. Each registry's genesis transaction mints one configuration record at the application address, holding the registration cost, minimum tip, processing time, booking width, retractTime = 0 and the credential of the checkpoint validator. A registry whose state policy is not state(A_keri) gets none (configuration_refuses_foreign_registry, configuration_refuses_retraction).",
       "pause": 300
     },
     {
-      "text": "Each registry's genesis mints one configuration record holding the registration cost, the minimum tip, the processing time, the booking width, no retraction window, and the checkpoint validator's credential. A registry that is not KERI's gets none.",
+      "text": "Booking. The booking reads the record by reference and mints exactly one registration approval. The approval commits the registry, the AID's key, the checkpoint validator's credential from the record as the holding address (never the application address), the hash of the initial checkpoint datum and the deposit, which is the whole carrier the checkpoint will hold: at least the minimum ADA plus the registry's deposit. The request holds exactly the deposit, the registration cost and the minimum tip (booking_inversion, booking_refuses_foreign_registry, booking_refuses_application_holding, booking_refuses_other_holding, booking_refuses_short_deposit, booking_refuses_inexact_contents).",
       "pause": 300
     },
     {
-      "text": "Booking reads that record and mints exactly one approval. The approval commits the registry, the identifier's key, the checkpoint validator's credential as the holding address, never the application address, the hash of the initial checkpoint datum, and the deposit, which is the whole carrier the checkpoint will hold. The request holds exactly the deposit, the registration cost and the minimum tip.",
+      "text": "Spending a request. Until its deadline, the booking's validity upper bound plus the processing time, a request is spent only by a fold that delivers the committed holding: at the checkpoint validator's credential the record names, with the committed initial datum, exactly the deposit and the one new active token. From the deadline anyone may return it, paying the refund address everything but the tip (registration_spend_is_fold_or_return, before_deadline_only_fold, fold_delivers_to_checkpoint_validator, return_pays_refund_address, fold_refuses_inexact_holding). With retractTime = 0 the two windows are the public model's processing and cleanup phases (windows_are_upstream_phases).",
       "pause": 300
     },
     {
-      "text": "Until its deadline a request is spent only by a fold that delivers the committed holding to the checkpoint validator with exactly the deposit. What it delivers is a genuine checkpoint: the registry's active token, the version 2 datum the request committed, exactly the deposit. A consumer naming the same checkpoint validator accepts it once its state is consumable. From the deadline anyone may return the request, paying the refund address everything but the tip.",
+      "text": "The initial checkpoint state. The delivered holding's datum is exactly the state the checkpoint model's registration step writes for the request: the version 2 Live datum of the AID whose key the request names, at sequence number and epoch 0, neither poisoned, frozen nor topped up, born at the booking's validity upper bound and refunding to the ledger bytes of the refund address the request names; its pool, the deposit less the minimum ADA, the checkpoint deposit and the freeze bond, covers at least one premium. A fold delivering any other sequence number, epoch, flag, birth slot, refund address, AID or a pending termination, or a pool below one premium, is refused, so no fold can deliver a checkpoint that skips the juvenility window or claims a key state the KEL never reached (fold_delivers_initial_state, delivered_initial_state, initialState_is_registration, fold_refuses_other_state, fold_refuses_other_aid, fold_refuses_pool_below_premium, fold_refuses_unrecorded_refund). The key material in the datum is pinned by the committed datum hash, not by this rule. One transaction folds at most one registration request in the on-chain realization; that is a declared limit of the realization, not of the model.",
       "pause": 300
     },
     {
-      "text": "A fold's treasury donation is at least the registration costs of the requests it folds. A pending termination is spent only by the fold that burns its tokens.",
+      "text": "A genuine checkpoint. What a fold delivers for a booked request is a genuine checkpoint: at the checkpoint validator, not the application address; holding the one active token of the AID's key under a registry of state(A_keri); carrying the version 2 datum the request committed; holding exactly the deposit (delivered_is_genuine, before_deadline_delivers_genuine, genuine_holds_committed_datum). A consumer whose context names the same checkpoint credential, registry and AID accepts it exactly when the written state is consumable (genuine_checkpoint_consumable_iff). No input the application spends at its own address is a checkpoint (no_application_input_is_a_checkpoint).",
       "pause": 300
     },
     {
-      "text": "The network is not part of any approval: the chain the transaction runs on fixes it. Vectors of the approval bytes, the configuration record, and accepted and refused transactions are published for the on-chain work.",
+      "text": "The closed mint. Everything a transaction mints or burns under the application policy is exactly what its actions justify: one configuration token per created record, one registration approval per booked output, one termination approval per termination booking, one approval burned per fold or return, one termination approval burned per terminating fold. Each booked output is booked once. An approval minted without a booking, a second booking of one output, or any other token under the application policy is refused (accepted_mint_is_justified, accepted_books_once, mint_without_booking_refused, duplicate_booking_refused).",
+      "pause": 300
+    },
+    {
+      "text": "The treasury. A fold's ledger treasury_donation is at least the registration costs of the registration requests it folds and, for each termination request it folds, the request's lovelace less the minimum tip (treasury_covers_registration_costs, folded_cost_in_donation, termination_fold_donates). The tip is what the folder may keep.",
+      "pause": 300
+    },
+    {
+      "text": "Termination custody. A termination request has no deadline and is spent only by a fold that reads the configuration record by reference and burns its termination approval and its active token while the state policy runs (termination_only_by_fold).",
+      "pause": 300
+    }
+  ],
+  "retiring-a-convicted-identity": [
+    {
+      "text": "Retiring a convicted identity.",
+      "pause": 500
+    },
+    {
+      "text": "As a relying party, I want an identity convicted under KERI's duplicity rule to become permanently terminal in its registry, so that no checkpoint for its key can ever be served again, and I want nobody to be able to end an identity that was not convicted. As anyone watching the chain, I can carry a conviction through to the registry myself, without anyone's signature, and keep what the booking frees as my premium.",
+      "pause": 400
+    },
+    {
+      "text": "Retirement takes three transactions. A conviction, on the checkpoint validator, pays the convictor and the refund address and leaves a pending output at the checkpoint validator's address: a pending-termination datum, exactly the registry's minimum ADA and the registry's active token. A termination booking, open to anyone, spends that pending output, mints exactly one termination approval of the registry and of the key of the datum's AID, and places the termination request at the application address with an empty datum, exactly the active token and the approval, holding the economic termination carrier plus the registry's minimum tip. The booker keeps the rest of the minimum ADA, which is the economic booking premium. A terminating fold then spends the request, burns the approval and the active token, donates the request less the tip to the treasury, and the public registry makes the key terminal.",
+      "pause": 400
+    },
+    {
+      "text": "The guarantees, each a theorem of lean/CardanoKeri/ApplicationGoals.lean:",
+      "pause": 400
+    },
+    {
+      "text": "No termination without a conviction. A termination approval is minted only by a booking of exactly that registry and key, which spends, once, an output at the checkpoint validator holding exactly the minimum ADA and the key's one active token and carrying the pending-termination datum of an AID whose key it is; exactly one approval is minted. Where the checkpoint validator realizes the checkpoint model, that output's checkpoint was convicted, with duplicity evidence at its last key state (termination_approval_requires_booking, termination_approval_requires_pending, termination_approval_requires_conviction, and in the checkpoint model pending_only_by_conviction and reachable_pending_convicted).",
+      "pause": 300
+    },
+    {
+      "text": "The checkpoint validator releases a pending output only into a booking. Its one spend of a pending output requires exactly one termination approval of its key to be minted, which the application mints only in a booking (pending_released_only_into_booking).",
+      "pause": 300
+    },
+    {
+      "text": "The request is what the fold consumes. The booking places exactly the output the terminating fold accepts, holding the economic carrier plus the minimum tip (termination_booking_inversion).",
+      "pause": 300
+    },
+    {
+      "text": "The money is the economic model's. The request holds what the economic booking puts into the request and the booker keeps the economic premium (termination_booking_matches_reap); the fold's donation is the economic termination donation, the carrier (termination_donation_matches_economic).",
+      "pause": 300
+    },
+    {
+      "text": "The key retires for good. A terminating fold that is a step of the public registry's history makes the key terminal (termination_fold_retires_key); no later transaction, whatever it is, makes it anything else or mints its active token (terminal_key_permanent). A termination booking of a terminal key is refused, because no unspent output holds its active token (termination_booking_refused_for_terminal_key), and a fold registering it again is refused, because the registry's insertion requires an unknown key and mints no active token for a terminal one (registration_fold_refused_for_terminal_key).",
+      "pause": 300
+    },
+    {
+      "text": "The registry key stays active from the conviction through the booking: the pending output and then the request hold its one active token. Only the terminating fold retires it.",
+      "pause": 400
+    },
+    {
+      "text": "Two approvals that are the same token name the same deployment, registry seed, AID, holding address, initial datum hash and deposit, under the finite encoding and collision-freedom premises of the identity bytes (approval_binds). The network is not in any approval: a Plutus address carries no network identifier. It is fixed by the chain the transaction runs on, where the ledger refuses outputs naming another network and the registry seed exists on one chain only (approval_ignores_network); this is a declared boundary of the model. The request lovelace and the return's refund are the economic model's declared contents and refund floor when the economic tip is the minimum tip and the carrier is the deposit (request_matches_economic, carrier_floor_matches_economic); the economic model stays the authority for the registry, custody and termination theorems above.",
+      "pause": 400
+    },
+    {
+      "text": "lean/application-vectors.json, printed by lean/ApplicationDriver.lean, gives the approval bytes, the configuration record with its checkpoint validator credential, and accepted and refused configuration creations, bookings, folds, returns, termination spends and spends of a delivered checkpoint for the on-chain approval and checkpoint creation (#348). For the retirement of a convicted identity (#350) it adds the termination approval bytes, accepted and refused termination bookings and terminating folds, and the checkpoint validator's release verdicts. The request and configuration datums' own byte layouts are not fixed by these vectors.",
       "pause": 400
     }
   ],
@@ -165,6 +227,6 @@
   ],
   "_source": {
     "file": "registry-as-mpfs.md",
-    "sha256": "771554270a0faeb1e38c23b508aa7e55841e91d29daea99a437628067ba308c1"
+    "sha256": "9c1b6da4e201249ec25d11d0eedf03a5b7b3afcf7c0b189aa104f46a385e7acc"
   }
 }

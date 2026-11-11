@@ -18,7 +18,7 @@ import Cardano.KERI.Deployment.Manifest (
     manifestValidationErrors,
     mkManifest,
  )
-import Cardano.KERI.Deployment.RegistryFixture (fixtureRegistry)
+import Cardano.KERI.Deployment.RegistryFixture (fixtureApplicationPolicy, fixtureRegistry)
 import Cardano.KERI.Deployment.Script (
     Blueprint (..),
     ScriptArtifact (..),
@@ -100,8 +100,12 @@ spec =
                 -- The checkpoint program recognises a checkpoint by the registry's
                 -- active token and no longer mints or migrates (10_370 -> 8_482);
                 -- the ceiling is unchanged.
+                -- #350: the checkpoint program gains the Release arm and the
+                -- application's policy as a tenth applied parameter
+                -- (8_482 -> 8_957); the advance observer is unchanged and the
+                -- ceiling is too.
                 programLength "observer-advance" artifacts `shouldBe` 15_710
-                programLength "checkpoint-register" artifacts `shouldBe` 8_482
+                programLength "checkpoint-register" artifacts `shouldBe` 8_957
         describe "M1 endpoint-board script" $ do
             -- Historical fact, not a live derivation: the M1 endpoint board
             -- was deployed 2026-07-29 compiled with aiken 1.1.21 (blueprint
@@ -293,7 +297,7 @@ withArtifacts action = do
     blueprint <-
         loadBlueprint path >>= either fail pure
     artifacts <-
-        either fail pure (deriveV1Scripts fixtureRegistry blueprint)
+        either fail pure (deriveV1Scripts fixtureRegistry fixtureApplicationPolicy blueprint)
     action artifacts
 
 programLength :: Text -> [ScriptArtifact] -> Int

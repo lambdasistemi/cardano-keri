@@ -11,7 +11,7 @@ A proof failure, missing import, timeout or unrelated error is not a kill.
 | `checkpoint-mutants.json` | 5 | Pending refusal, pending keys and addressed conviction flows |
 | `registry-mutants.json` | 19 | Token/output/minimum ADA, live-booking refusal, custody tails, binding domain, generation and plugin; the return's deadline, balance and registration-only guards |
 | `samaritan-mutants.json` | 4 | Actual constructor domain, request funding, premium and external fee |
-| `application-mutants.json` | 39 | KERI's application on the application-held model: foreign registry, retraction window, carrier floor, exact request contents, holding address committed to the checkpoint validator, checkpoint validator distinct from the application, deadline, configuration reference, one approval, fold deadline, holding at the committed address and at the checkpoint validator, exact holding, initial datum, the initial checkpoint state (each of sequence number, epoch, poison, freeze, top-up, birth slot and refund address, a pending termination, the AID, one premium in the pool, a refund address a checkpoint can record), the closed application mint (unchecked, and each justified configuration token, approval, burn and termination burn dropped), treasury donation, approval burn, return deadline, refund amount and address, active burn, uncovered inputs |
+| `application-mutants.json` | 54 | KERI's application on the application-held model: foreign registry, retraction window, carrier floor, exact request contents, holding address committed to the checkpoint validator, checkpoint validator distinct from the application, deadline, configuration reference, one approval, fold deadline, holding at the committed address and at the checkpoint validator, exact holding, initial datum, the initial checkpoint state (each of sequence number, epoch, poison, freeze, top-up, birth slot and refund address, a pending termination, the AID, one premium in the pool, a refund address a checkpoint can record), the closed application mint (unchecked, and each justified configuration token, approval, burn and termination burn dropped), treasury donation, approval burn, return deadline, refund amount and address, active burn, uncovered inputs; the termination booking (the pending datum, its key, the checkpoint validator's address, the minimum ADA, the active token held, the request's shape and exact lovelace each way, the registry's state policy, one approval per booking, the justified approval), the terminating fold's configuration reference and treasury donation, and the checkpoint validator's release (pending datum, one approval) |
 
 The application campaign rebuilds `Application.lean` and its vectors from the
 mutated source and requires each committed row of `lean/application-vectors.json`
@@ -44,7 +44,7 @@ are type-interface checks. Neither category is counted as a Lean model mutant.
 
 `ReviewedContracts.lean` checks all 151 revised exact contracts and
 `PreservedContracts.lean` checks 49 preserved contracts. `theorem-stories.json`
-binds 523 lifecycle, transport and application theorem identities, their source narratives,
+binds 543 lifecycle, transport and application theorem identities, their source narratives,
 complete formal Given/Then and source hashes. `story-bindings.mjs` rejects drift;
 compilation remains the authority on the propositions and axiom closure.
 

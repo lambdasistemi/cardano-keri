@@ -23,9 +23,12 @@
 //// evidence. The third is the registry's minimum ADA plus its deposit: the least
 //// deposit a booking commits. The fourth is what a fold's holding must hold, the
 //// registry's minimum ADA, the checkpoint deposit, the freeze bond and one
-//// premium; the fifth the network the refund addresses are recorded for. A
-//// deployment sets the checkpoint's numbers equal to `checkpoint_register`'s
-//// `d_reg`, `freeze_bond` and `premium` and `network_id`.
+//// premium; the fifth the network the refund addresses are recorded for. The
+//// sixth is the registry's minimum ADA, which a convicted checkpoint's pending
+//// output holds exactly; the seventh is the carrier of a termination request,
+//// which holds it and the registry's minimum tip. A deployment sets the
+//// checkpoint's numbers equal to `checkpoint_register`'s `d_reg`, `freeze_bond`
+//// and `premium` and `network_id`.
 ////
 //// ## Invariants
 //// - `mint`: the actions of the redeemer, and nothing else, are minted; every
@@ -44,11 +47,15 @@ validator keri_application(
   minimum_deposit: Int,
   initial_floor: Int,
   network_id: Int,
+  checkpoint_minimum_ada: Int,
+  termination_carrier: Int,
 ) {
   mint(redeemer: List<Action>, policy_id: PolicyId, tx: Transaction) {
     application_mint(
       state_template_hash,
       minimum_deposit,
+      checkpoint_minimum_ada,
+      termination_carrier,
       policy_id,
       redeemer,
       tx,

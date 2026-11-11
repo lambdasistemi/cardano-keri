@@ -21,6 +21,12 @@ def main (args : List String) : IO UInt32 := do
     if (verifyApproval r).toOption.isNone then
       IO.println s!"approval-changed {id}"
       failed := true
+  let committedReleases ← IO.ofExcept (arrayOf j "releases")
+  for r in committedReleases do
+    let id ← IO.ofExcept (r.getObjValAs? String "id")
+    if (verifyRelease r).toOption.isNone then
+      IO.println s!"release-changed {id}"
+      failed := true
   if failed then return 1
-  IO.println s!"PASS application rows={committed.size} approvals={committedApprovals.size}"
+  IO.println s!"PASS application rows={committed.size} approvals={committedApprovals.size} releases={committedReleases.size}"
   return 0

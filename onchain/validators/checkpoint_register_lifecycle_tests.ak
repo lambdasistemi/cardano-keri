@@ -47,8 +47,8 @@ use checkpoint_observer
 use checkpoint_register
 use registry_fixture.{
   Nothing, OtherKey, OtherRegistryName, OtherStatePolicy, QuantityTwo,
-  RetiredRegisterToken, active_name, holding, registry_name, representative,
-  staked, state_policy, with_input_token, with_successor_address,
+  RetiredRegisterToken, active_name, application_policy, holding, registry_name,
+  representative, staked, state_policy, with_input_token, with_successor_address,
   with_successor_token,
 }
 
@@ -156,6 +156,7 @@ fn run_spend(redeemer: Data, own_ref: OutputReference, tx: Transaction) -> Bool 
     d_reg,
     freeze_bond,
     premium,
+    application_policy(),
     None,
     redeemer,
     own_ref,

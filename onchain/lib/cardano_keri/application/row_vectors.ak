@@ -47,6 +47,14 @@ pub const pointer_refund_address: Address =
     ),
   }
 
+/// The registry's minimum ADA (Lean `Mc`): a convicted checkpoint's pending output
+/// holds exactly it.
+pub const checkpoint_minimum_ada: Int = 4
+
+/// The carrier of a termination request (Lean `Mr`): the request holds it and the
+/// registry's minimum tip.
+pub const termination_carrier: Int = 2
+
 /// The registry's minimum ADA plus its deposit, the least deposit a booking
 /// commits (Lean `Mc + D`).
 pub const minimum_deposit: Int = 14
@@ -504,6 +512,92 @@ pub const lean_approvals: List<LeanApproval> =
       deposit: 15,
       preimage: #"d87c9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776fd8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff582064663b92795e9684fc729721f4c59913a1d75aaadd71c8c5ddaf7f191b932ae10fff",
       name: #"88c1f0f2bc435f053b72b40e56af1cbeadcb625a75f1427fc1e021ed3b4dedc7",
+    },
+  ]
+
+/// The termination approvals of the Lean, with its abstract state policy.
+pub type LeanTerminationApproval {
+  key: ByteArray,
+  preimage: ByteArray,
+  name: ByteArray,
+}
+
+pub const lean_termination_approvals: List<LeanTerminationApproval> =
+  [
+    LeanTerminationApproval {
+      key: #"454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550",
+      preimage: #"d87d9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550ff",
+      name: #"f6c31cc2f07f593bb390663e06b102672674b37bd1335e38efde44dea2ec286d",
+    },
+    LeanTerminationApproval {
+      key: #"4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776f",
+      preimage: #"d87d9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776fff",
+      name: #"5c8237dc612fd2ca3bef06a4c60d7a427bc380c41e0b461645f1694e4aece4ea",
+    },
+  ]
+
+/// The state policy the Lean names the registry of its release rows by.
+pub const lean_state_policy: ByteArray =
+  #"70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7"
+
+/// A pending output's datum offered to the checkpoint validator, with the
+/// mint of the transaction as (policy, name, quantity), and the Lean verdict.
+pub type LeanRelease {
+  datum: ByteArray,
+  mint: List<(ByteArray, ByteArray, Int)>,
+  released: Bool,
+}
+
+pub const lean_releases: List<LeanRelease> =
+  [
+    LeanRelease {
+      datum: #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000ffff",
+      mint: [
+        (
+          #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+          #"f6c31cc2f07f593bb390663e06b102672674b37bd1335e38efde44dea2ec286d",
+          1,
+        ),
+      ],
+      released: True,
+    },
+    LeanRelease {
+      datum: #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000ffff",
+      mint: [],
+      released: False,
+    },
+    LeanRelease {
+      datum: #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000ffff",
+      mint: [
+        (
+          #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+          #"f6c31cc2f07f593bb390663e06b102672674b37bd1335e38efde44dea2ec286d",
+          2,
+        ),
+      ],
+      released: False,
+    },
+    LeanRelease {
+      datum: #"d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000ffff",
+      mint: [
+        (
+          #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+          #"5c8237dc612fd2ca3bef06a4c60d7a427bc380c41e0b461645f1694e4aece4ea",
+          1,
+        ),
+      ],
+      released: False,
+    },
+    LeanRelease {
+      datum: #"d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000d87980d879800a581d604d52575c61666b70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d87980d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff",
+      mint: [
+        (
+          #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+          #"f6c31cc2f07f593bb390663e06b102672674b37bd1335e38efde44dea2ec286d",
+          1,
+        ),
+      ],
+      released: False,
     },
   ]
 

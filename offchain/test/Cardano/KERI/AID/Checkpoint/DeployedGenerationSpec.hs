@@ -17,6 +17,7 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     advanceSpendRedeemerData,
     convictSpendRedeemerData,
     freezeSpendRedeemerData,
+    releaseSpendRedeemerData,
     topUpSpendRedeemerData,
  )
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
@@ -47,5 +48,7 @@ spec = describe "the deployed generation's wire bytes" $ do
         hexOf (freezeSpendRedeemerData 5) `shouldBe` "d87c9f05ff"
     it "TopUp is spend constructor 4" $
         hexOf (topUpSpendRedeemerData 2000000) `shouldBe` "d87d9f1a001e8480ff"
+    it "Release is spend constructor 5, after TopUp, and carries nothing" $
+        hexOf releaseSpendRedeemerData `shouldBe` "d87e80"
     it "a changed constructor index changes the bytes (the control can fail)" $
         hexOf (Constr 2 [I 5]) `shouldSatisfy` (/= hexOf (freezeSpendRedeemerData 5))

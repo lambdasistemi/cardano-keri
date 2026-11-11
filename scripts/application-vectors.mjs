@@ -44,6 +44,7 @@ import { SUFFIX_HEAD, SUFFIX_TAIL, aiken, blake2b, compileState, concat, hex, is
 const inPath = resolve(root, 'lean/application-vectors.json');
 const rowsPath = resolve(root, 'onchain/lib/cardano_keri/application/row_vectors.ak');
 const testsPath = resolve(root, 'onchain/validators/keri_application_rows_tests.ak');
+const releaseTestsPath = resolve(root, 'onchain/validators/checkpoint_register_release_rows_tests.ak');
 
 // --- Plutus Data of the Singular preimages --------------------------------------
 const bstr = (b) => {
@@ -108,6 +109,14 @@ const generate = () => {
   if (!cpj || cpj.Mc !== Number(shortNote[1])) throw new Error('the checkpoint parameters changed shape');
   // The registry deposit is the checkpoint deposit plus the freeze bond (the vectors satisfy it; the Lean does not require it).
   if (cpj.D + cpj.B !== Number(shortNote[2])) throw new Error('the registry deposit is not the checkpoint deposit plus the freeze bond');
+  // The registry's minimum ADA (the pending output of a conviction holds exactly it) and the carrier of a
+  // termination request (Mr): applied parameters of the validator, as the Lean's model parameters. The booking
+  // rows are read against them below.
+  const checkpointMinimumAda = cpj.Mc;
+  const terminationCarrier = data.Mr;
+  if (!Number.isSafeInteger(terminationCarrier) || terminationCarrier + p.minimumTip > checkpointMinimumAda) throw new Error('Mr plus the tip exceeds the minimum ADA');
+  const termBooking = row('termination-booking');
+  if (termBooking.inputs[0].lovelace !== checkpointMinimumAda || termBooking.outputs[0].lovelace !== terminationCarrier + p.minimumTip) throw new Error('the termination booking row does not hold Mc and Mr plus the tip');
   // What a fold's holding must hold: Mc + D + B + P, the floor below which the pool is under one premium.
   const initialFloor = cpj.Mc + cpj.D + cpj.B + cpj.P;
   if (deposit !== initialFloor) throw new Error('the default deposit is not the initial floor (a pool of one premium)');
@@ -152,6 +161,24 @@ const generate = () => {
     if (hex(hash256(preimage)) !== a.approval.name) throw new Error(`approval ${a.id}: the name is not reproduced`);
     return { a, preimage };
   });
+
+  // The termination approvals, independently: the same abstract policies, bytes for bytes.
+  const termApprovals = data.terminationApprovals.map((t) => {
+    const preimage = terminationPreimage(leanRegistry, unhex(t.key));
+    if (hex(preimage) !== t.preimage) throw new Error(`termination approval ${t.id}: the preimage is not reproduced`);
+    if (hex(hash256(preimage)) !== t.approval.name) throw new Error(`termination approval ${t.id}: the name is not reproduced`);
+    if (t.approval.policy !== a0.approval.policy || t.registryName !== a0.registryName) throw new Error(`termination approval ${t.id}: another policy or registry`);
+    return t;
+  });
+  // The release verdicts: the datum is the checkpoint datum the pending output carries, the mint is
+  // read as (policy, name, quantity); the approval named is the first termination approval.
+  const releases = data.releases.map((r) => {
+    if (r.verdict !== 'released' && r.verdict !== 'kept') throw new Error(`release ${r.id}: verdict ${r.verdict}`);
+    if (!isHex(r.datum)) throw new Error(`release ${r.id}: datum`);
+    for (const m of r.mint) if (m.policy !== a0.approval.policy) throw new Error(`release ${r.id}: a mint under another policy`);
+    return r;
+  });
+  if (termApprovals.length !== 2 || releases.length !== 5) throw new Error('the termination sections changed shape');
 
   // --- the requests the rows decode ----------------------------------------------
   // datum: 'e' the AID's initial datum; a number n the n-th variant of it (see `variant` in the module); 'e2' the other AID's.
@@ -233,12 +260,32 @@ const generate = () => {
   add('return-refund-reduced', 'return', `${R}pays: [(rows.refund_address, 16), (rows.spender_address, 2)] }`, retShape([[16, 'refund'], [2, 'spender']]));
   add('return-refund-redirected', 'return', `${R}pays: [(rows.other_address, 17), (rows.spender_address, 1)] }`, retShape([[17, 'other'], [1, 'spender']]));
   const T = 'Termination { ..requests.termination(), ';
-  const termShape = { validity: [12, 15], referenced: 0, donation: 0, inputs: [[4, 'app']], outputs: [] };
-  add('termination-fold', 'termination', 'requests.termination()', termShape);
-  add('termination-approval-minted', 'minted', 'requests.termination_minted()', { validity: [12, 15], referenced: 0, donation: 0, inputs: [], outputs: [[4, 'app']] });
-  add('termination-fold-active-kept', 'termination', `${T}active_burn: 0 }`, termShape);
+  const termShape = (extra = {}) => ({ validity: [12, 15], referenced: 1, donation: 2, inputs: [[3, 'app']], outputs: [], ...extra });
+  add('termination-fold', 'termination', 'requests.termination()', termShape());
+  add('termination-fold-donation-short', 'termination', `${T}donation: 1 }`, termShape({ donation: 1 }));
+  add('termination-fold-without-configuration', 'termination', `${T}references: False }`, termShape({ referenced: 0 }));
+  add('termination-approval-minted', 'minted', 'requests.termination_minted()', { validity: [12, 15], referenced: 0, donation: 0, inputs: [], outputs: [[3, 'app']] });
+  add('termination-fold-active-kept', 'termination', `${T}active_burn: 0 }`, termShape());
   add('fold-with-unnamed-request', 'fold', `${F}second: Some((rows.request_data(9001), None)) }`, foldShape([15, 'checkpoint'], { inputs: [[18, 'app'], [18, 'app']] }));
-  add('termination-return', 'termination', `${T}redeemer: ReturnRegistration }`, termShape);
+  add('termination-return', 'termination', `${T}redeemer: ReturnRegistration, donation: 0 }`, termShape({ donation: 0 }));
+  const TB = 'TerminationBooking { ..requests.termination_booking(), ';
+  const bookTermination = (index, registry = 'requests.registry()', key = 'rows.key_e') =>
+    `BookTermination { pending: requests.pending_reference(), output_index: ${index}, registry: ${registry}, key: ${key} }`;
+  const tbShape = (extra = {}) => ({ validity: [12, 15], referenced: 1, donation: 0, inputs: [[4, 'checkpoint']], outputs: [[3, 'app'], [1, 'spender']], ...extra });
+  add('termination-booking', 'termination-booking', 'requests.termination_booking()', tbShape());
+  add('termination-booking-live-checkpoint', 'termination-booking', `${TB}pending_datum: rows.initial_datum(0) }`, tbShape());
+  add('termination-booking-other-aid', 'termination-booking', `${TB}pending_datum: requests.pending_datum_of(rows.key_e2) }`, tbShape());
+  add('termination-booking-other-key', 'termination-booking', `${TB}key: rows.key_e2, actions: [${bookTermination(0, 'requests.registry()', 'rows.key_e2')}] }`, tbShape());
+  add('termination-booking-at-other-address', 'termination-booking', `${TB}pending_address: rows.other_address }`, tbShape({ inputs: [[4, 'other']] }));
+  add('termination-booking-pending-one-more', 'termination-booking', `${TB}pending_lovelace: 5 }`, tbShape({ inputs: [[5, 'checkpoint']] }));
+  add('termination-booking-without-active-token', 'termination-booking', `${TB}pending_holds_active: False }`, tbShape());
+  add('termination-booking-request-one-more', 'termination-booking', `${TB}request_lovelace: 4 }`, tbShape({ outputs: [[4, 'app'], [1, 'spender']] }));
+  add('termination-booking-request-one-less', 'termination-booking', `${TB}request_lovelace: 2 }`, tbShape({ outputs: [[2, 'app'], [1, 'spender']] }));
+  add('termination-booking-request-datum', 'termination-booking', `${TB}request_datum: InlineDatum(rows.initial_datum(0)) }`, tbShape());
+  add('termination-booking-without-configuration', 'termination-booking', `${TB}references: False }`, tbShape({ referenced: 0 }));
+  add('termination-booking-foreign-registry', 'termination-booking', `${TB}registry: requests.foreign_registry(), actions: [${bookTermination(0, 'requests.foreign_registry()')}] }`, tbShape());
+  add('termination-booking-two-approvals', 'termination-booking', `${TB}mint: 2 }`, tbShape());
+  add('termination-booked-twice', 'termination-booking', `${TB}copies: 2, booker_lovelace: 0, mint: 2, actions: [${bookTermination(0)}, ${bookTermination(1)}] }`, tbShape({ outputs: [[3, 'app'], [3, 'app']] }));
   const configurationIds = ['configuration-created', 'configuration-with-retraction', 'configuration-foreign-registry'];
   if (spec.length + configurationIds.length !== data.rows.length) throw new Error(`the Lean vectors have ${data.rows.length} rows, this script knows ${spec.length + configurationIds.length}`);
 
@@ -319,6 +366,14 @@ pub const pointer_refund_address: Address =
     payment_credential: VerificationKey(#"${refundHash}"),
     stake_credential: Some(Pointer { slot_number: 1, transaction_index: 2, certificate_index: 3 }),
   }
+
+/// The registry's minimum ADA (Lean \`Mc\`): a convicted checkpoint's pending output
+/// holds exactly it.
+pub const checkpoint_minimum_ada: Int = ${checkpointMinimumAda}
+
+/// The carrier of a termination request (Lean \`Mr\`): the request holds it and the
+/// registry's minimum tip.
+pub const termination_carrier: Int = ${terminationCarrier}
 
 /// The registry's minimum ADA plus its deposit, the least deposit a booking
 /// commits (Lean \`Mc + D\`).
@@ -466,6 +521,42 @@ ${leanApprovals.map(({ a, preimage }) => `    LeanApproval {
     }`).join(',\n')},
   ]
 
+/// The termination approvals of the Lean, with its abstract state policy.
+pub type LeanTerminationApproval {
+  key: ByteArray,
+  preimage: ByteArray,
+  name: ByteArray,
+}
+
+pub const lean_termination_approvals: List<LeanTerminationApproval> =
+  [
+${termApprovals.map((t) => `    LeanTerminationApproval {
+      key: #"${t.key}",
+      preimage: #"${t.preimage}",
+      name: #"${t.approval.name}",
+    }`).join(',\n')},
+  ]
+
+/// The state policy the Lean names the registry of its release rows by.
+pub const lean_state_policy: ByteArray = #"${a0.input.statePolicy}"
+
+/// A pending output's datum offered to the checkpoint validator, with the
+/// mint of the transaction as (policy, name, quantity), and the Lean verdict.
+pub type LeanRelease {
+  datum: ByteArray,
+  mint: List<(ByteArray, ByteArray, Int)>,
+  released: Bool,
+}
+
+pub const lean_releases: List<LeanRelease> =
+  [
+${releases.map((r) => `    LeanRelease {
+      datum: #"${r.datum}",
+      mint: [${r.mint.map((m) => `(#"${m.policy}", #"${m.name}", ${m.quantity})`).join(', ')}],
+      released: ${r.verdict === 'released' ? 'True' : 'False'},
+    }`).join(',\n')},
+  ]
+
 /// The application policy the Lean approvals are named under.
 pub const lean_application_policy: ByteArray = #"${a0.approval.policy}"
 
@@ -479,6 +570,7 @@ pub const lean_registry_name: ByteArray = #"${a0.registryName}"
     fold: (call) => `accepts(requests.fold_tx(${call}))`,
     return: (call) => `accepts(requests.return_tx(${call}))`,
     termination: (call) => `accepts(requests.termination_tx(${call}))`,
+    'termination-booking': (call) => `accepts(requests.termination_booking_tx(${call}))`,
     minted: (call) => `accepts(${call})`,
     checkpoint: (call) => `accepts(${call})`,
   };
@@ -511,6 +603,96 @@ test ${id}_has_the_lean_preimage_and_name() {
 }
 `;
   });
+  const terminationApprovalTests = termApprovals.map((t, k) => `/// Lean termination approval \`${t.id}\`: ${t.note}. The preimage and the name are the Lean's, byte for byte.
+test ${t.id.replace(/-/g, '_')}_has_the_lean_preimage_and_name() {
+  let lean = when list.at(rows.lean_termination_approvals, ${k}) is {
+    Some(lean) -> lean
+    None -> fail
+  }
+  let registry =
+    RegistryIdentity {
+      policy: rows.lean_state_policy,
+      name: rows.lean_registry_name,
+    }
+  and {
+    termination_preimage(lean.key, registry) == lean.preimage,
+    approval_name(termination_preimage(lean.key, registry)) == lean.name,
+    approval_name(lean.preimage) == lean.name,
+  }
+}
+`);
+  const releaseTestsText = `//// Generated by scripts/application-vectors.mjs from lean/application-vectors.json. Do not edit.
+////
+//// The five release verdicts of the Lean: a pending output offered to the checkpoint
+//// validator's \`Release\` spend, with the mint of the transaction, run against the real
+//// validator applied to the Lean's own registry and application policy. The redeemer is
+//// constructor 5 with no fields.
+
+use aiken/builtin
+use aiken/cbor
+use aiken/collection/list
+use cardano/address.{from_script}
+use cardano/assets.{Value, add, from_lovelace}
+use cardano/transaction.{InlineDatum, Input, Output, Transaction, placeholder}
+use cardano_keri/application/row_vectors as rows
+use checkpoint_register
+use freeze_fixture.{
+  advance_hash, d_reg, enforcement_hash, entitlement_hash, freeze_bond,
+  network_id, policy, premium, spent_ref,
+}
+
+fn release_redeemer() -> Data {
+  builtin.constr_data(5, [])
+}
+
+fn minted(items: List<(ByteArray, ByteArray, Int)>) -> Value {
+  list.foldl(
+    items,
+    from_lovelace(0),
+    fn((policy_id, name, quantity), acc) { add(acc, policy_id, name, quantity) },
+  )
+}
+
+/// The verdict of the checkpoint validator on the Lean release row \`k\`.
+fn released(k: Int) -> Bool {
+  expect Some(lean) = list.at(rows.lean_releases, k)
+  expect Some(datum) = cbor.deserialise(lean.datum)
+  let pending =
+    Output {
+      address: from_script(policy),
+      value: from_lovelace(4),
+      datum: InlineDatum(datum),
+      reference_script: None,
+    }
+  let tx =
+    Transaction {
+      ..placeholder,
+      inputs: [Input { output_reference: spent_ref(), output: pending }],
+      mint: minted(lean.mint),
+    }
+  checkpoint_register.checkpoint_register.spend(
+    rows.lean_state_policy,
+    rows.lean_registry_name,
+    advance_hash,
+    enforcement_hash,
+    entitlement_hash,
+    network_id,
+    d_reg,
+    freeze_bond,
+    premium,
+    rows.lean_application_policy,
+    None,
+    release_redeemer(),
+    spent_ref(),
+    tx,
+  ) == lean.released
+}
+
+${releases.map((r, k) => `/// Lean release \`${r.id}\`: ${r.note}.
+test release_${r.id.replace(/-/g, '_').replace(/^release_/, '')}() {
+  released(${k})
+}`).join('\n\n')}
+`;
   const testsText = `//// Generated by scripts/application-vectors.mjs from lean/application-vectors.json
 //// and the public \`singular_state\` script. Do not edit.
 ////
@@ -527,9 +709,10 @@ test ${id}_has_the_lean_preimage_and_name() {
 
 use aiken/collection/list
 use cardano/address.{Script}
-use cardano/transaction.{OutputReference, Transaction}
+use cardano/transaction.{InlineDatum, OutputReference, Transaction}
 use cardano_keri/application/action.{
-  Action, BookRegistration, FoldRegistration, ReturnRegistration, SpendAction,
+  Action, BookRegistration, BookTermination, FoldRegistration,
+  ReturnRegistration, SpendAction,
 }
 use cardano_keri/application/configuration_vectors as cfg
 use cardano_keri/application/held.{RegistrationData}
@@ -537,9 +720,12 @@ use cardano_keri/application/registration.{registration_approval}
 use cardano_keri/application/row_vectors as rows
 use keri_application
 use keri_application_requests as requests
-use keri_application_requests.{Booking, Fold, Return, Termination}
+use keri_application_requests.{
+  Booking, Fold, Return, Termination, TerminationBooking,
+}
 use singular_state/preimage.{
   RegistryIdentity, approval_name, initial_datum_hash, registration_preimage,
+  termination_preimage,
 }
 
 fn accepts(tx: Transaction) -> Bool {
@@ -553,6 +739,8 @@ fn run_mint(actions: List<Action>, tx: Transaction) -> Bool {
     rows.minimum_deposit,
     rows.initial_floor,
     rows.network_id,
+    rows.checkpoint_minimum_ada,
+    rows.termination_carrier,
     actions,
     requests.application(),
     tx,
@@ -570,6 +758,8 @@ fn run_spend(
     rows.minimum_deposit,
     rows.initial_floor,
     rows.network_id,
+    rows.checkpoint_minimum_ada,
+    rows.termination_carrier,
     None,
     action,
     reference,
@@ -598,8 +788,9 @@ fn lean_request(lean: rows.LeanApproval) -> RegistrationData {
 
 ${tests.join('\n')}
 ${approvalTests.join('\n')}
+${terminationApprovalTests.join('\n')}
 `;
-  return { lib, testsText };
+  return { lib, testsText, releaseTestsText };
 };
 
 const format = (name, text) => {
@@ -613,8 +804,12 @@ const format = (name, text) => {
   }
 };
 
-const { lib, testsText } = generate();
-const outputs = [[rowsPath, format('row_vectors.ak', lib)], [testsPath, format('keri_application_rows_tests.ak', testsText)]];
+const { lib, testsText, releaseTestsText } = generate();
+const outputs = [
+  [rowsPath, format('row_vectors.ak', lib)],
+  [testsPath, format('keri_application_rows_tests.ak', testsText)],
+  [releaseTestsPath, format('checkpoint_register_release_rows_tests.ak', releaseTestsText)],
+];
 if (process.argv.includes('--check')) {
   let drift = false;
   for (const [path, text] of outputs) {

@@ -20,7 +20,7 @@ use cardano/transaction.{
   placeholder,
 }
 use cardano_keri/application/action.{
-  Action, FoldRegistration, ReturnRegistration, SpendAction,
+  Action, FoldRegistration, FoldTermination, ReturnRegistration, SpendAction,
 }
 use cardano_keri/application/configuration_vectors as cfg
 use cardano_keri/application/held.{RegistrationData}
@@ -44,9 +44,13 @@ use keri_application_connected.{
 use keri_application_fixture.{creation, genesis, keri, template_input}
 use keri_application_requests.{
   Booking, Fold, application, booking, booking_tx, checkpoint_hash, envelope,
-  fold, fold_tx, holding_output, reference, return_tx, returned,
+  fold, fold_tx, holding_output, pending_reference, reference, registry,
+  return_tx, returned, termination, termination_booking, termination_booking_tx,
+  termination_tx,
 }
-use registry_fixture.{active_name_of_key, registry_name, state_policy}
+use registry_fixture.{
+  active_name_of_key, application_policy, registry_name, state_policy,
+}
 use topup_fixture.{topup_redeemer}
 
 fn run_mint(
@@ -69,6 +73,8 @@ fn run_mint_with(
     minimum_deposit,
     initial_floor,
     rows.network_id,
+    rows.checkpoint_minimum_ada,
+    rows.termination_carrier,
     actions,
     application(),
     tx,
@@ -90,6 +96,8 @@ fn run_spend_with(
     rows.minimum_deposit,
     initial_floor,
     rows.network_id,
+    rows.checkpoint_minimum_ada,
+    rows.termination_carrier,
     None,
     action,
     reference(60),
@@ -123,6 +131,60 @@ test measure_fold() {
 
 test measure_fold_spend_only() {
   run_spend(FoldRegistration { holding_index: 0 }, fold_tx(fold()))
+}
+
+test measure_termination_booking_build() {
+  list.length(termination_booking_tx(termination_booking()).outputs) == 2
+}
+
+test measure_termination_booking() {
+  let b = termination_booking()
+  run_mint(rows.minimum_deposit, b.actions, termination_booking_tx(b))
+}
+
+test measure_release_build() {
+  list.length(termination_booking_tx(termination_booking()).inputs) == 1
+}
+
+test measure_release() {
+  checkpoint_register.checkpoint_register.spend(
+    state_policy(),
+    registry_name(),
+    advance_hash,
+    enforcement_hash,
+    entitlement_hash,
+    network_id,
+    d_reg,
+    freeze_bond,
+    premium,
+    application_policy(),
+    None,
+    builtin.constr_data(5, []),
+    pending_reference(),
+    termination_booking_tx(termination_booking()),
+  )
+}
+
+test measure_termination_fold_build() {
+  list.length(termination_tx(termination()).inputs) == 1
+}
+
+test measure_termination_fold() {
+  let tx = termination_tx(termination())
+  let none: List<Action> = []
+  keri_application.keri_application.spend(
+    cfg.state_template_hash,
+    rows.observer_hash,
+    rows.minimum_deposit,
+    rows.initial_floor,
+    rows.network_id,
+    rows.checkpoint_minimum_ada,
+    rows.termination_carrier,
+    None,
+    FoldTermination { registry: registry(), key: rows.key_e },
+    reference(80),
+    tx,
+  ) && run_mint(rows.minimum_deposit, none, tx)
 }
 
 test measure_return_build() {
@@ -246,6 +308,8 @@ test measure_genesis() {
     rows.minimum_deposit,
     rows.initial_floor,
     rows.network_id,
+    rows.checkpoint_minimum_ada,
+    rows.termination_carrier,
     [action],
     application(),
     tx,
@@ -269,6 +333,7 @@ fn run_checkpoint_spend(
     d_reg,
     freeze_bond,
     premium,
+    application_policy(),
     None,
     redeemer,
     own_ref,

@@ -24,7 +24,7 @@ use deposit_fixture.{Case, vector_case}
 use freeze_fixture.{
   advance_hash, d_reg, enforcement_hash, entitlement_hash, freeze_bond, premium,
 }
-use registry_fixture.{registry_name, state_policy}
+use registry_fixture.{application_policy, registry_name, state_policy}
 
 fn run_spend(c: Case) -> Bool {
   checkpoint_register.checkpoint_register.spend(
@@ -37,6 +37,7 @@ fn run_spend(c: Case) -> Bool {
     d_reg,
     freeze_bond,
     premium,
+    application_policy(),
     None,
     c.redeemer,
     c.own_ref,

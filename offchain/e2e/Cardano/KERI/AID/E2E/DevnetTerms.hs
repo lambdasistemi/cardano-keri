@@ -16,7 +16,10 @@ import Cardano.KERI.AID.Application (ApplicationParameters (..))
 import Cardano.KERI.Deployment.Registry (RegistryTerms (..))
 import Cardano.KERI.Deployment.Script (deployedCheckpointTerms)
 
--- | The terms of the devnet's registry: the deployed amounts and a short processing window.
+{- | The terms of the devnet's registry: the deployed amounts and a short processing
+window. A termination request holds its carrier and the tip, the minimum ADA of a
+checkpoint output.
+-}
 devnetTerms :: RegistryTerms
 devnetTerms =
     RegistryTerms
@@ -28,4 +31,6 @@ devnetTerms =
                 , processTime = 90_000
                 , bookingWidth = 5_000
                 }
+        , registryMinimumAda = 2_000_000
+        , registryTerminationCarrier = 1_500_000
         }

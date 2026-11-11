@@ -3,9 +3,10 @@ Module      : Cardano.KERI.Deployment.Registry
 Description : The scripts of one registry, derived from one set of terms
 
 A registry's scripts depend on each other: the application is applied to the
-registration observer and to the amounts of the deposit, the state script to
-the application, the checkpoint validator to the state script, the registry's
-name and the same amounts. This module derives all of them from one
+registration observer, to the amounts of the deposit and to the minimum ADA and
+the termination carrier, the state script to the application, the checkpoint
+validator to the state script, the registry's name, the same amounts and the
+application's policy. This module derives all of them from one
 'RegistryTerms' and one seed, in that order, so the amounts the checkpoint
 validator and the application each carry cannot disagree: no entry point takes
 them separately.
@@ -21,7 +22,7 @@ module Cardano.KERI.Deployment.Registry (
 import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
 import Cardano.Crypto.Hash.Class (digest)
 import Cardano.KERI.AID.Application (
-    ApplicationParameters,
+    ApplicationParameters (..),
     OutputReference,
     RegistryIdentity (..),
     statePolicy,
@@ -52,13 +53,19 @@ import PlutusCore.Data (Data (..))
 {- | Everything a registry's deployment is parameterised by. The checkpoint
 terms feed the registration observer, the checkpoint validator and the
 application; the request parameters feed the application and its
-configuration record. The minimum ADA of a checkpoint output is not a field:
-the checkpoint validator holds it as a constant, so the application's floors
-add the library's one value of it ('checkpointMinAda').
+configuration record. The checkpoint validator holds the minimum ADA of
+a checkpoint output as a constant ('checkpointMinAda'); the application carries
+it as an applied number, because it checks that a convicted checkpoint's pending
+output holds exactly that, and the terms must say the same value. The
+termination carrier is what a termination request holds besides the tip.
 -}
 data RegistryTerms = RegistryTerms
     { registryCheckpointTerms :: !CheckpointTerms
     , registryParameters :: !ApplicationParameters
+    , registryMinimumAda :: !Integer
+    -- ^ the application's minimum ADA of a checkpoint output
+    , registryTerminationCarrier :: !Integer
+    -- ^ what a termination request holds besides the registry's minimum tip
     }
     deriving stock (Eq, Show)
 
@@ -81,7 +88,7 @@ the checkpoint deposit and the freeze bond.
 -}
 registryMinimumDeposit :: RegistryTerms -> Integer
 registryMinimumDeposit terms =
-    checkpointMinAda
+    registryMinimumAda terms
         + termsDeposit (registryCheckpointTerms terms)
         + termsFreezeBond (registryCheckpointTerms terms)
 
@@ -118,6 +125,10 @@ deriveRegistryScripts template terms seed blueprint = do
         Left "the premium is negative: the checkpoint validator refuses every spend"
     unless (termsNetwork checkpointTerms >= 0 && termsNetwork checkpointTerms <= 15) $
         Left "the network is not a nibble of an address header: no refund address can match"
+    unless (registryMinimumAda terms == checkpointMinAda) $
+        Left "the application's minimum ADA is not the checkpoint validator's: no pending output could match it"
+    unless (registryTerminationCarrier terms >= 0 && registryTerminationCarrier terms + minimumTip (registryParameters terms) <= registryMinimumAda terms) $
+        Left "the termination carrier and the tip exceed the minimum ADA: a booking would leave the booker a negative premium"
     observers <- deriveObserverScripts checkpointTerms blueprint
     (applicationValidator, applicationProgram) <-
         requireValidator
@@ -134,6 +145,8 @@ deriveRegistryScripts template terms seed blueprint = do
             , I (registryMinimumDeposit terms)
             , I (registryInitialFloor terms)
             , I (termsNetwork checkpointTerms)
+            , I (registryMinimumAda terms)
+            , I (registryTerminationCarrier terms)
             ]
             applicationProgram
     let applicationPolicy = scriptHashBytes (artifactScriptHash application)
@@ -147,7 +160,7 @@ deriveRegistryScripts template terms seed blueprint = do
     if stateHash == statePolicy template applicationPolicy
         then pure ()
         else Left "the state script's hash is not the state policy of the application"
-    checkpoint <- deriveCheckpointScript checkpointTerms registry observers blueprint
+    checkpoint <- deriveCheckpointScript checkpointTerms registry applicationPolicy observers blueprint
     pure
         RegistryScripts
             { scriptsObservers = observers

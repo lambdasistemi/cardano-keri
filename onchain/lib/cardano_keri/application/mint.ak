@@ -27,11 +27,14 @@ use cardano/address.{Script}
 use cardano/assets.{AssetName, PolicyId, quantity_of, tokens}
 use cardano/transaction.{Transaction}
 use cardano_keri/application/action.{
-  Action, BookRegistration, CreateConfiguration,
+  Action, BookRegistration, BookTermination, CreateConfiguration,
 }
 use cardano_keri/application/configuration.{create_configuration}
 use cardano_keri/application/registration.{
   book_registration, registration_approval, registration_at,
+}
+use cardano_keri/application/termination.{
+  book_termination, termination_approval,
 }
 use singular_state/preimage.{configuration_token_name}
 
@@ -45,6 +48,8 @@ fn birth(action: Action, tx: Transaction) -> Option<AssetName> {
         Some((_, data)) -> Some(registration_approval(data))
         None -> None
       }
+    BookTermination { registry, key, .. } ->
+      Some(termination_approval(registry, key))
   }
 }
 
@@ -56,6 +61,7 @@ fn booked_once(actions: List<Action>) -> Bool {
       fn(action) {
         when action is {
           BookRegistration { output_index } -> Some(output_index)
+          BookTermination { output_index, .. } -> Some(output_index)
           _ -> None
         }
       },
@@ -74,6 +80,8 @@ fn distinct(items: List<Int>) -> Bool {
 fn action_accepted(
   state_template_hash: ByteArray,
   minimum_deposit: Int,
+  checkpoint_minimum_ada: Int,
+  termination_carrier: Int,
   application_policy: PolicyId,
   tx: Transaction,
   action: Action,
@@ -94,6 +102,17 @@ fn action_accepted(
       }
     BookRegistration { output_index } ->
       book_registration(application_policy, minimum_deposit, output_index, tx)
+    BookTermination { pending, output_index, registry, key } ->
+      book_termination(
+        application_policy,
+        checkpoint_minimum_ada,
+        termination_carrier,
+        pending,
+        output_index,
+        registry,
+        key,
+        tx,
+      )
   }
 }
 
@@ -116,8 +135,9 @@ fn consumed(
   )
 }
 
-/// Everything minted is born of an action, once; everything burned is
-/// consumed from the application address.
+/// Model `mintClosed`: each asset an action brings into being is minted as
+/// often as actions bring it into being; everything else minted under the policy
+/// is burned, and burned from the application address.
 fn accounted(
   application_policy: PolicyId,
   births: List<AssetName>,
@@ -126,7 +146,12 @@ fn accounted(
   and {
     list.all(
       births,
-      fn(name) { quantity_of(tx.mint, application_policy, name) == 1 },
+      fn(name) {
+        quantity_of(tx.mint, application_policy, name) == list.count(
+          births,
+          fn(born) { born == name },
+        )
+      },
     ),
     list.all(
       dict.to_pairs(tokens(tx.mint, application_policy)),
@@ -145,6 +170,8 @@ fn accounted(
 pub fn application_mint(
   state_template_hash: ByteArray,
   minimum_deposit: Int,
+  checkpoint_minimum_ada: Int,
+  termination_carrier: Int,
   application_policy: PolicyId,
   actions: List<Action>,
   tx: Transaction,
@@ -157,6 +184,8 @@ pub fn application_mint(
         action_accepted(
           state_template_hash,
           minimum_deposit,
+          checkpoint_minimum_ada,
+          termination_carrier,
           application_policy,
           tx,
           action,

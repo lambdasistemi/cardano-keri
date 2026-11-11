@@ -14,9 +14,10 @@
 
 use aiken/collection/list
 use cardano/address.{Script}
-use cardano/transaction.{OutputReference, Transaction}
+use cardano/transaction.{InlineDatum, OutputReference, Transaction}
 use cardano_keri/application/action.{
-  Action, BookRegistration, FoldRegistration, ReturnRegistration, SpendAction,
+  Action, BookRegistration, BookTermination, FoldRegistration,
+  ReturnRegistration, SpendAction,
 }
 use cardano_keri/application/configuration_vectors as cfg
 use cardano_keri/application/held.{RegistrationData}
@@ -24,9 +25,12 @@ use cardano_keri/application/registration.{registration_approval}
 use cardano_keri/application/row_vectors as rows
 use keri_application
 use keri_application_requests as requests
-use keri_application_requests.{Booking, Fold, Return, Termination}
+use keri_application_requests.{
+  Booking, Fold, Return, Termination, TerminationBooking,
+}
 use singular_state/preimage.{
   RegistryIdentity, approval_name, initial_datum_hash, registration_preimage,
+  termination_preimage,
 }
 
 fn accepts(tx: Transaction) -> Bool {
@@ -40,6 +44,8 @@ fn run_mint(actions: List<Action>, tx: Transaction) -> Bool {
     rows.minimum_deposit,
     rows.initial_floor,
     rows.network_id,
+    rows.checkpoint_minimum_ada,
+    rows.termination_carrier,
     actions,
     requests.application(),
     tx,
@@ -57,6 +63,8 @@ fn run_spend(
     rows.minimum_deposit,
     rows.initial_floor,
     rows.network_id,
+    rows.checkpoint_minimum_ada,
+    rows.termination_carrier,
     None,
     action,
     reference,
@@ -477,9 +485,27 @@ test row_return_refund_redirected() {
   ) == False
 }
 
-/// Lean row `termination-fold`: a pending termination spent by its terminating fold, burning its approval and active token: accepted.
+/// Lean row `termination-fold`: a termination request spent by its terminating fold, reading the configuration record, burning its approval and active token, donating 2 (the request less the tip): accepted.
 test row_termination_fold() {
   accepts(requests.termination_tx(requests.termination())) == True
+}
+
+/// Lean row `termination-fold-donation-short`: the terminating fold donates 1, one less than the request less the tip: refused.
+test row_termination_fold_donation_short() {
+  accepts(
+    requests.termination_tx(
+      Termination { ..requests.termination(), donation: 1 },
+    ),
+  ) == False
+}
+
+/// Lean row `termination-fold-without-configuration`: the configuration record is not a reference input of the terminating fold: refused.
+test row_termination_fold_without_configuration() {
+  accepts(
+    requests.termination_tx(
+      Termination { ..requests.termination(), references: False },
+    ),
+  ) == False
 }
 
 /// Lean row `termination-approval-minted`: a termination approval minted onto a pending termination with no action: refused.
@@ -509,7 +535,198 @@ test row_fold_with_unnamed_request() {
 test row_termination_return() {
   accepts(
     requests.termination_tx(
-      Termination { ..requests.termination(), redeemer: ReturnRegistration },
+      Termination {
+        ..requests.termination(),
+        redeemer: ReturnRegistration,
+        donation: 0,
+      },
+    ),
+  ) == False
+}
+
+/// Lean row `termination-booking`: anyone books the termination of a convicted checkpoint: the pending output (4 lovelace, the active token, a pending-termination datum) is spent, one termination approval is minted, the request holds 3 (Mr 2 plus the tip 1) at the application address, the booker keeps 1: accepted.
+test row_termination_booking() {
+  accepts(requests.termination_booking_tx(requests.termination_booking())) == True
+}
+
+/// Lean row `termination-booking-live-checkpoint`: the spent output carries the live datum of the AID: no conviction, refused.
+test row_termination_booking_live_checkpoint() {
+  accepts(
+    requests.termination_booking_tx(
+      TerminationBooking {
+        ..requests.termination_booking(),
+        pending_datum: rows.initial_datum(0),
+      },
+    ),
+  ) == False
+}
+
+/// Lean row `termination-booking-other-aid`: the pending datum is of another AID than the key booked: refused.
+test row_termination_booking_other_aid() {
+  accepts(
+    requests.termination_booking_tx(
+      TerminationBooking {
+        ..requests.termination_booking(),
+        pending_datum: requests.pending_datum_of(rows.key_e2),
+      },
+    ),
+  ) == False
+}
+
+/// Lean row `termination-booking-other-key`: the booking names another key than the pending output's, with the approval of that key: refused.
+test row_termination_booking_other_key() {
+  accepts(
+    requests.termination_booking_tx(
+      TerminationBooking {
+        ..requests.termination_booking(),
+        key: rows.key_e2,
+        actions: [
+          BookTermination {
+            pending: requests.pending_reference(),
+            output_index: 0,
+            registry: requests.registry(),
+            key: rows.key_e2,
+          },
+        ],
+      },
+    ),
+  ) == False
+}
+
+/// Lean row `termination-booking-at-other-address`: the pending output sits at another address than the checkpoint validator's: refused.
+test row_termination_booking_at_other_address() {
+  accepts(
+    requests.termination_booking_tx(
+      TerminationBooking {
+        ..requests.termination_booking(),
+        pending_address: rows.other_address,
+      },
+    ),
+  ) == False
+}
+
+/// Lean row `termination-booking-pending-one-more`: the pending output holds the minimum ADA plus one: refused.
+test row_termination_booking_pending_one_more() {
+  accepts(
+    requests.termination_booking_tx(
+      TerminationBooking {
+        ..requests.termination_booking(),
+        pending_lovelace: 5,
+      },
+    ),
+  ) == False
+}
+
+/// Lean row `termination-booking-without-active-token`: the pending output does not hold the active token: refused.
+test row_termination_booking_without_active_token() {
+  accepts(
+    requests.termination_booking_tx(
+      TerminationBooking {
+        ..requests.termination_booking(),
+        pending_holds_active: False,
+      },
+    ),
+  ) == False
+}
+
+/// Lean row `termination-booking-request-one-more`: the request holds 4, one more than Mr plus the tip: refused.
+test row_termination_booking_request_one_more() {
+  accepts(
+    requests.termination_booking_tx(
+      TerminationBooking {
+        ..requests.termination_booking(),
+        request_lovelace: 4,
+      },
+    ),
+  ) == False
+}
+
+/// Lean row `termination-booking-request-one-less`: the request holds 2, one less than Mr plus the tip: refused.
+test row_termination_booking_request_one_less() {
+  accepts(
+    requests.termination_booking_tx(
+      TerminationBooking {
+        ..requests.termination_booking(),
+        request_lovelace: 2,
+      },
+    ),
+  ) == False
+}
+
+/// Lean row `termination-booking-request-datum`: the request carries a datum: refused.
+test row_termination_booking_request_datum() {
+  accepts(
+    requests.termination_booking_tx(
+      TerminationBooking {
+        ..requests.termination_booking(),
+        request_datum: InlineDatum(rows.initial_datum(0)),
+      },
+    ),
+  ) == False
+}
+
+/// Lean row `termination-booking-without-configuration`: the configuration record is not a reference input: refused.
+test row_termination_booking_without_configuration() {
+  accepts(
+    requests.termination_booking_tx(
+      TerminationBooking { ..requests.termination_booking(), references: False },
+    ),
+  ) == False
+}
+
+/// Lean row `termination-booking-foreign-registry`: the booking names a registry whose state policy is not state(A_keri): refused.
+test row_termination_booking_foreign_registry() {
+  accepts(
+    requests.termination_booking_tx(
+      TerminationBooking {
+        ..requests.termination_booking(),
+        registry: requests.foreign_registry(),
+        actions: [
+          BookTermination {
+            pending: requests.pending_reference(),
+            output_index: 0,
+            registry: requests.foreign_registry(),
+            key: rows.key_e,
+          },
+        ],
+      },
+    ),
+  ) == False
+}
+
+/// Lean row `termination-booking-two-approvals`: two termination approvals minted for one booking: refused.
+test row_termination_booking_two_approvals() {
+  accepts(
+    requests.termination_booking_tx(
+      TerminationBooking { ..requests.termination_booking(), mint: 2 },
+    ),
+  ) == False
+}
+
+/// Lean row `termination-booked-twice`: the same key booked twice into two requests, two approvals minted: refused.
+test row_termination_booked_twice() {
+  accepts(
+    requests.termination_booking_tx(
+      TerminationBooking {
+        ..requests.termination_booking(),
+        copies: 2,
+        booker_lovelace: 0,
+        mint: 2,
+        actions: [
+          BookTermination {
+            pending: requests.pending_reference(),
+            output_index: 0,
+            registry: requests.registry(),
+            key: rows.key_e,
+          },
+          BookTermination {
+            pending: requests.pending_reference(),
+            output_index: 1,
+            registry: requests.registry(),
+            key: rows.key_e,
+          },
+        ],
+      },
     ),
   ) == False
 }
@@ -573,6 +790,40 @@ test approval_other_aid_has_the_lean_preimage_and_name() {
     ) == lean.preimage,
     initial_datum_hash(data.initial_datum) == lean.initial_datum_hash,
     registration_approval(data) == lean.name,
+    approval_name(lean.preimage) == lean.name,
+  }
+}
+
+/// Lean termination approval `termination-approval`: the termination approval of the AID in the registry. The preimage and the name are the Lean's, byte for byte.
+test termination_approval_has_the_lean_preimage_and_name() {
+  let lean = when list.at(rows.lean_termination_approvals, 0) is {
+    Some(lean) -> lean
+    None -> fail
+  }
+  let registry = RegistryIdentity {
+    policy: rows.lean_state_policy,
+    name: rows.lean_registry_name,
+  }
+  and {
+    termination_preimage(lean.key, registry) == lean.preimage,
+    approval_name(termination_preimage(lean.key, registry)) == lean.name,
+    approval_name(lean.preimage) == lean.name,
+  }
+}
+
+/// Lean termination approval `termination-approval-other-aid`: another AID in the same registry: another approval. The preimage and the name are the Lean's, byte for byte.
+test termination_approval_other_aid_has_the_lean_preimage_and_name() {
+  let lean = when list.at(rows.lean_termination_approvals, 1) is {
+    Some(lean) -> lean
+    None -> fail
+  }
+  let registry = RegistryIdentity {
+    policy: rows.lean_state_policy,
+    name: rows.lean_registry_name,
+  }
+  and {
+    termination_preimage(lean.key, registry) == lean.preimage,
+    approval_name(termination_preimage(lean.key, registry)) == lean.name,
     approval_name(lean.preimage) == lean.name,
   }
 }

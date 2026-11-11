@@ -32,7 +32,9 @@ use freeze_fixture.{
   paid, parts, premium, rotation, spent, token_value, under_receipted,
   under_signed, unevidenced, unit,
 }
-use registry_fixture.{registry_name, representative, state_policy}
+use registry_fixture.{
+  application_policy, registry_name, representative, state_policy,
+}
 
 // The validators are called here: a fixture module cannot import them.
 
@@ -47,6 +49,7 @@ fn run_spend(c: Case) -> Bool {
     d_reg,
     freeze_bond,
     premium,
+    application_policy(),
     None,
     c.redeemer,
     c.own_ref,

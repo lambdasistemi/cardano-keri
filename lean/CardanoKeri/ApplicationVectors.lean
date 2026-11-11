@@ -256,19 +256,71 @@ def return_ (refund : Nat) (interval : Interval := ⟨15, 20⟩) (address : Nat 
 def terminationApprovalAsset : TokenId :=
   terminationApproval i.hash i.code release registry (aidOfCesr aidE)
 
-def pending : ObservedOutput :=
-  ⟨⟨80, 0⟩, release.applicationCredential, 4, .empty, [(active, 1), (terminationApprovalAsset, 1)]⟩
+/-- The termination request a booking places: the application address, an
+empty datum, exactly the active token and the termination approval, holding
+`Mr` 2 plus the minimum tip 1. -/
+def pending (lovelace : Nat := 3) (datum : OutputDatum := .empty) : ObservedOutput :=
+  ⟨⟨80, 0⟩, release.applicationCredential, lovelace, datum, [(active, 1), (terminationApprovalAsset, 1)]⟩
 
-def terminationFold : Observation :=
+/-- A terminating fold reading the configuration record and donating the
+request less the tip. -/
+def terminationFold (donation : Nat := 2) (references : Bool := true) : Observation :=
   { assets := view [⟨80, 0⟩] [(terminationApprovalAsset, -1), (active, -1)] [release.statePolicy],
-    inputs := [pending], outputs := [], referenceInputs := [], referenceOutputs := [],
-    interval := ⟨12, 15⟩, donation := 0,
+    inputs := [pending], outputs := [], referenceInputs := if references then [⟨50, 0⟩] else [],
+    referenceOutputs := [configuration registry],
+    interval := ⟨12, 15⟩, donation,
     actions := [.foldTermination ⟨80, 0⟩ registry (aidOfCesr aidE)] }
 
 def terminationReturn : Observation :=
   { assets := view [⟨80, 0⟩] [(terminationApprovalAsset, -1)] [],
-    inputs := [pending], outputs := [], referenceInputs := [], referenceOutputs := [],
+    inputs := [pending], outputs := [], referenceInputs := [⟨50, 0⟩],
+    referenceOutputs := [configuration registry],
     interval := ⟨12, 15⟩, donation := 0, actions := [.returnRegistration ⟨80, 0⟩] }
+
+/-- The pending-termination datum of an AID at sequence number and epoch 0. -/
+def pendingDatumOf (aid : String) : Nat :=
+  CheckpointDatum.raw (checkpointData aid (.terminationPending ⟨0, 0⟩))
+
+/-- The output a conviction leaves: at the checkpoint validator, the
+pending-termination datum of the AID, exactly the minimum ADA 4 and the active
+token. -/
+def convicted (datum : Nat := pendingDatumOf aidE) (lovelace : Nat := 4)
+    (address : Nat := checkpointCredential) (assets : List (TokenId × Nat) := [(active, 1)]) :
+    ObservedOutput :=
+  ⟨⟨90, 0⟩, address, lovelace, .application datum, assets⟩
+
+/-- A termination booking: spends the convicted output, places the request,
+mints one termination approval, reads the configuration record. -/
+def terminationBooking (input : ObservedOutput := convicted) (request : ObservedOutput := pending)
+    (mint : Int := 1) (references : Bool := true) (key : Nat := aidOfCesr aidE)
+    (r : TokenId := registry) : Observation :=
+  { assets := view [input.reference] [(terminationApprovalAsset, mint)] [release.applicationPolicy],
+    inputs := [input], outputs := [request, pay spenderAddress 1],
+    referenceInputs := if references then [⟨50, 0⟩] else [],
+    referenceOutputs := [configuration registry, configuration foreignRegistry],
+    interval := ⟨12, 15⟩, donation := 0, actions := [.bookTermination input.reference 0 r key] }
+
+/-- A booking under a registry whose state policy is not `state(A_keri)`,
+consistent in every other respect: the pending output holds that registry's
+active token and the request its termination approval. -/
+def foreignTerminationBooking : Observation :=
+  let foreignActive := activeAsset i.hash i.code foreignRegistry (aidOfCesr aidE)
+  let foreignApproval := terminationApproval i.hash i.code release foreignRegistry (aidOfCesr aidE)
+  let request : ObservedOutput := { pending 3 with assets := [(foreignActive, 1), (foreignApproval, 1)] }
+  let o := terminationBooking (input := convicted (assets := [(foreignActive, 1)])) (request := request)
+    (r := foreignRegistry)
+  { o with assets := view [⟨90, 0⟩] [(foreignApproval, 1)] [release.applicationPolicy] }
+
+/-- Two bookings of the same key, two requests, two approvals minted. -/
+def terminationBookedTwice : Observation :=
+  { terminationBooking (mint := 2) with
+    outputs := [pending, pending],
+    actions := [.bookTermination ⟨90, 0⟩ 0 registry (aidOfCesr aidE),
+      .bookTermination ⟨90, 0⟩ 1 registry (aidOfCesr aidE)] }
+
+/-- The termination approval of a key other than the request's. -/
+def otherTerminationApproval : TokenId :=
+  terminationApproval i.hash i.code release registry (aidOfCesr aidE2)
 
 /-- A termination approval minted onto a pending termination with no action. -/
 def terminationApprovalMinted : Observation :=
@@ -408,8 +460,41 @@ def cases : List Case := [
     "return", return_ 16⟩,
   ⟨"return-refund-redirected", "the refund is paid to another address: refused",
     "return", return_ 17 (address := otherAddress)⟩,
-  ⟨"termination-fold", "a pending termination spent by its terminating fold, burning its approval and active token: accepted",
+  ⟨"termination-booking", "anyone books the termination of a convicted checkpoint: the pending output (4 lovelace, the active token, a pending-termination datum) is spent, one termination approval is minted, the request holds 3 (Mr 2 plus the tip 1) at the application address, the booker keeps 1: accepted",
+    "termination-booking", terminationBooking⟩,
+  ⟨"termination-booking-live-checkpoint", "the spent output carries the live datum of the AID: no conviction, refused",
+    "termination-booking", terminationBooking (input := convicted (datum := initialRaw aidE))⟩,
+  ⟨"termination-booking-other-aid", "the pending datum is of another AID than the key booked: refused",
+    "termination-booking", terminationBooking (input := convicted (datum := pendingDatumOf aidE2))⟩,
+  ⟨"termination-booking-other-key", "the booking names another key than the pending output's, with the approval of that key: refused",
+    "termination-booking", { terminationBooking (key := aidOfCesr aidE2) with
+      assets := view [⟨90, 0⟩] [(otherTerminationApproval, 1)] [release.applicationPolicy] }⟩,
+  ⟨"termination-booking-at-other-address", "the pending output sits at another address than the checkpoint validator's: refused",
+    "termination-booking", terminationBooking (input := convicted (address := otherAddress))⟩,
+  ⟨"termination-booking-pending-one-more", "the pending output holds the minimum ADA plus one: refused",
+    "termination-booking", terminationBooking (input := convicted (lovelace := 5))⟩,
+  ⟨"termination-booking-without-active-token", "the pending output does not hold the active token: refused",
+    "termination-booking", terminationBooking (input := convicted (assets := []))⟩,
+  ⟨"termination-booking-request-one-more", "the request holds 4, one more than Mr plus the tip: refused",
+    "termination-booking", terminationBooking (request := pending 4)⟩,
+  ⟨"termination-booking-request-one-less", "the request holds 2, one less than Mr plus the tip: refused",
+    "termination-booking", terminationBooking (request := pending 2)⟩,
+  ⟨"termination-booking-request-datum", "the request carries a datum: refused",
+    "termination-booking", terminationBooking (request := pending (datum := .application 1))⟩,
+  ⟨"termination-booking-without-configuration", "the configuration record is not a reference input: refused",
+    "termination-booking", terminationBooking (references := false)⟩,
+  ⟨"termination-booking-foreign-registry", "the booking names a registry whose state policy is not state(A_keri): refused",
+    "termination-booking", foreignTerminationBooking⟩,
+  ⟨"termination-booking-two-approvals", "two termination approvals minted for one booking: refused",
+    "termination-booking", terminationBooking (mint := 2)⟩,
+  ⟨"termination-booked-twice", "the same key booked twice into two requests, two approvals minted: refused",
+    "termination-booking", terminationBookedTwice⟩,
+  ⟨"termination-fold", "a termination request spent by its terminating fold, reading the configuration record, burning its approval and active token, donating 2 (the request less the tip): accepted",
     "termination", terminationFold⟩,
+  ⟨"termination-fold-donation-short", "the terminating fold donates 1, one less than the request less the tip: refused",
+    "termination", terminationFold (donation := 1)⟩,
+  ⟨"termination-fold-without-configuration", "the configuration record is not a reference input of the terminating fold: refused",
+    "termination", terminationFold (references := false)⟩,
   ⟨"termination-approval-minted", "a termination approval minted onto a pending termination with no action: refused",
     "termination", terminationApprovalMinted⟩,
   ⟨"termination-fold-active-kept", "a terminating fold that does not burn the active token: refused",
@@ -462,6 +547,50 @@ def approvals : List Json := [
   approvalRow "approval-other-deposit" "the same registration committing 16: another approval" aidE 16,
   approvalRow "approval-other-aid" "another AID in the same registry: another key, datum and approval" aidE2 15]
 
+/-! ## The checkpoint validator's release of a pending output -/
+
+structure ReleaseCase where
+  id : String
+  note : String
+  input : ObservedOutput
+  observation : Observation
+
+def releaseCases : List ReleaseCase := [
+  ⟨"release-into-booking", "the transaction mints one termination approval of the registry and of the key of the pending datum's AID: released",
+    convicted, terminationBooking⟩,
+  ⟨"release-without-approval", "no termination approval minted: kept",
+    convicted, { terminationBooking with assets := view [⟨90, 0⟩] [] [] }⟩,
+  ⟨"release-two-approvals", "two termination approvals of the key minted: kept",
+    convicted, terminationBooking (mint := 2)⟩,
+  ⟨"release-other-key-approval", "the termination approval of another key minted: kept",
+    convicted, { terminationBooking with
+      assets := view [⟨90, 0⟩] [(otherTerminationApproval, 1)] [release.applicationPolicy] }⟩,
+  ⟨"release-live-checkpoint", "a live checkpoint, with the termination approval of its key minted: kept",
+    convicted (datum := initialRaw aidE), terminationBooking⟩]
+
+def mintJson (o : Observation) : Json :=
+  Json.arr (o.assets.mint.map fun (t, q) => Json.mkObj [("policy", toJson (hexOf t.policy)),
+    ("name", toJson (hexOf t.name)), ("quantity", toJson q)]).toArray
+
+def releaseRow (c : ReleaseCase) : Json :=
+  let datum := match c.input.datum with | .application raw => hexOf raw | _ => ""
+  Json.mkObj [("id", toJson c.id), ("note", toJson c.note), ("datum", toJson datum),
+    ("mint", mintJson c.observation),
+    ("verdict", toJson (if pendingReleased i release registry c.input c.observation then "released" else "kept"))]
+
+/-- The termination approval of an AID, with every byte it is derived from. -/
+def terminationApprovalRow (id note aid : String) : Json :=
+  let key := aidOfCesr aid
+  Json.mkObj [("id", toJson id), ("note", toJson note), ("aid", toJson aid),
+    ("registryName", toJson (hexOf registry.name)), ("key", toJson (hexOf key)),
+    ("preimage", toJson (toHex (i.code (.terminationApproval registry key)))),
+    ("approval", Json.mkObj [("policy", toJson (toHex applicationScript)),
+      ("name", toJson (hexOf (terminationApproval i.hash i.code release registry key).name))])]
+
+def terminationApprovals : List Json := [
+  terminationApprovalRow "termination-approval" "the termination approval of the AID in the registry" aidE,
+  terminationApprovalRow "termination-approval-other-aid" "another AID in the same registry: another approval" aidE2]
+
 def configurationRow : Json :=
   Json.mkObj [("registryName", toJson (hexOf registry.name)),
     ("preimage", toJson (toHex (i.code (.applicationConfiguration registry)))),
@@ -487,14 +616,23 @@ def table : Json :=
       "address; the pool is the deposit less Mc + D + B and is at least P")),
     ("holding", toJson "the approval commits the checkpoint validator's credential, which the configuration record names and which is not the application's; the fold delivers there"),
     ("request", toJson "deposit + registrationCost + minimumTip"),
-    ("treasury", toJson "a fold's treasury_donation is at least the registration costs it folds"),
+    ("treasury", toJson "a fold's treasury_donation is at least the registration costs it folds and, for each termination request it folds, the request's lovelace less the minimum tip"),
+    ("termination", toJson ("a conviction leaves at the checkpoint validator a pending-termination datum, exactly Mc and the active token; " ++
+      "anyone books it: one termination approval of the registry and the key of the datum's AID is minted, and the request is placed " ++
+      "at the application address with an empty datum, exactly the active token and the approval, holding Mr plus the minimum tip; " ++
+      "the booker keeps Mc less the request; the checkpoint validator releases a pending output only when exactly one termination " ++
+      "approval of its key is minted; the request has no deadline and only the terminating fold spends it")),
+    ("Mr", toJson rp.Mr),
     ("mint", toJson ("the mint under the application policy is exactly what the actions justify: configuration +1 per " ++
-      "created record, approval +1 per booked output, approval -1 per fold or return, termination approval -1 per " ++
-      "terminating fold; each booked output is booked once")),
+      "created record, approval +1 per booked output, termination approval +1 per termination booking, approval -1 per " ++
+      "fold or return, termination approval -1 per terminating fold; each booked output is booked once and each key's " ++
+      "termination once")),
     ("deadline", toJson "bookedAt (the booking's validity upper bound) plus processTime; retractTime = 0"),
     ("intervals", toJson "lower bound included, upper bound excluded, as the ledger hands them to scripts"),
     ("configuration", configurationRow),
     ("approvals", Json.arr approvals.toArray),
+    ("terminationApprovals", Json.arr terminationApprovals.toArray),
+    ("releases", Json.arr (releaseCases.map releaseRow).toArray),
     ("rows", Json.arr (cases.map row).toArray)]
 
 /-! ## Checking a committed table -/
@@ -517,6 +655,12 @@ def verifyApproval (r : Json) : Except String Unit := do
     | throw s!"{id}: no such approval"
   unless r == a do throw s!"{id}: differs from the Lean's approval"
 
+/-- A committed release row equals the Lean's row of the same id. -/
+def verifyRelease (r : Json) : Except String Unit := do
+  let id ← r.getObjValAs? String "id"
+  let some c := releaseCases.find? (·.id == id) | throw s!"{id}: no such release"
+  unless r == releaseRow c do throw s!"{id}: differs from the Lean's release"
+
 def verifyConfiguration (r : Json) : Except String Unit := do
   unless r == configurationRow do throw "configuration differs from the Lean's"
 
@@ -538,6 +682,11 @@ def checkTable (j : Json) : Except String (Nat × Nat × Nat) := do
       if (verifyApproval changed).toOption.isSome then throw s!"a changed field survived: {changed.compress}"
       fields := fields + 1
   verifyConfiguration configuration
+  for r in ← arrayOf j "releases" do
+    verifyRelease r
+    for changed in CardanoKeri.Registry.LifecycleVectors.perturbations r do
+      if (verifyRelease changed).toOption.isSome then throw s!"a changed field survived: {changed.compress}"
+      fields := fields + 1
   for changed in CardanoKeri.Registry.LifecycleVectors.perturbations configuration do
     if (verifyConfiguration changed).toOption.isSome then throw s!"a changed field survived: {changed.compress}"
     fields := fields + 1

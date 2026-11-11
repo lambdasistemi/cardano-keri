@@ -49,6 +49,7 @@ module Cardano.KERI.AID.Application (
     Change (..),
     stateSpendData,
     activeLeaf,
+    terminalLeaf,
 
     -- * Plutus Data shared by the encoders
     addressData,
@@ -261,6 +262,11 @@ data Action
       CreateConfiguration !RegistryIdentity !OutputReference !Integer
     | -- | Book the registration held by the output at the index.
       BookRegistration !Integer
+    | {- | Book the termination of the key in the registry: the output at the
+      index is the termination request, and the reference is the convicted
+      checkpoint's pending output it spends.
+      -}
+      BookTermination !OutputReference !Integer !RegistryIdentity !ByteString
     deriving stock (Eq, Show)
 
 -- | The operation that spends an input at the application address.
@@ -269,6 +275,8 @@ data SpendAction
       FoldRegistration !Integer
     | -- | Return the request after its deadline.
       ReturnRegistration
+    | -- | Fold the pending termination of the key in the registry.
+      FoldTermination !RegistryIdentity !ByteString
     deriving stock (Eq, Show)
 
 actionData :: Action -> Data
@@ -276,11 +284,14 @@ actionData = \case
     CreateConfiguration registry seed index ->
         Constr 0 [registryIdentityData registry, outputReferenceData seed, I index]
     BookRegistration index -> Constr 1 [I index]
+    BookTermination pending index registry key ->
+        Constr 2 [outputReferenceData pending, I index, registryIdentityData registry, B key]
 
 spendActionData :: SpendAction -> Data
 spendActionData = \case
     FoldRegistration index -> Constr 0 [I index]
     ReturnRegistration -> Constr 1 []
+    FoldTermination registry key -> Constr 2 [registryIdentityData registry, B key]
 
 -- ---------------------------------------------------------
 -- The registry's state script
@@ -317,15 +328,21 @@ stateMintData = \case
     Genesis seed -> Constr 0 [outputReferenceData seed]
     Folded -> Constr 1 []
 
--- | The registration a fold folds into the state.
-data Change = Register
-    { changeRequest :: !OutputReference
-    , changeKey :: !ByteString
-    , changeHolding :: !Integer
-    , changeDeposit :: !Integer
-    , changeProof :: ![Data]
-    -- ^ the steps of the registry's insertion proof for the key; empty for an empty registry
-    }
+-- | A change a fold folds into the state: a registration or a termination.
+data Change
+    = Register
+        { changeRequest :: !OutputReference
+        , changeKey :: !ByteString
+        , changeHolding :: !Integer
+        , changeDeposit :: !Integer
+        , changeProof :: ![Data]
+        -- ^ the steps of the registry's insertion proof for the key; empty for an empty registry
+        }
+    | {- | The termination of a present key: the request that carries its
+      approval and its active token, the key, and the steps of the proof that
+      shows the key present.
+      -}
+      Terminate !OutputReference !ByteString ![Data]
     deriving stock (Eq, Show)
 
 -- | The redeemer of the state output: the seed that names the registry and the changes.
@@ -342,7 +359,13 @@ stateSpendData seed changes =
             , I deposit
             , List proof
             ]
+    changeData (Terminate request key proof) =
+        Constr 1 [outputReferenceData request, B key, List proof]
 
 -- | The leaf the registry binds to a registered key.
 activeLeaf :: ByteString
 activeLeaf = "\x01"
+
+-- | The leaf the registry binds to a terminated key.
+terminalLeaf :: ByteString
+terminalLeaf = "\x02"

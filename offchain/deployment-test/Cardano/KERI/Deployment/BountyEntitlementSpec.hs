@@ -32,7 +32,7 @@ import Cardano.KERI.AID.Checkpoint.BountyCommitment (
     commitMinAge,
     parametersWellFormed,
  )
-import Cardano.KERI.Deployment.RegistryFixture (fixtureRegistry)
+import Cardano.KERI.Deployment.RegistryFixture (fixtureApplicationPolicy, fixtureRegistry)
 import Cardano.KERI.Deployment.Script (
     Blueprint (..),
     ScriptArtifact (..),
@@ -127,16 +127,17 @@ aritySpec = describe "compiled argument counts" $ do
                 "checkpoint_observer.observer_advance.withdraw"
                 blueprint
                 `shouldBe` Just 1
-    it "gives the checkpoint validator nine applied parameters" $
+    it "gives the checkpoint validator ten applied parameters" $
         -- The registry's state policy and name, the three observer
-        -- credentials and the four deployment integers.
+        -- credentials, the four deployment integers and the application's
+        -- policy.
         -- The constructor still fails closed on declared vs supplied arity;
         -- this row records the declaration the plan must match.
         withBlueprint $ \blueprint ->
             validatorParameterCount
                 "checkpoint_register.checkpoint_register.spend"
                 blueprint
-                `shouldBe` Just 9
+                `shouldBe` Just 10
     it "declares no freeze window on any checkpoint program" $
         withBlueprint $ \blueprint -> do
             let checkpointPrograms =
@@ -223,7 +224,7 @@ reachSpec = describe "family reaches the deployed register" $ do
         withBlueprint $ \blueprint -> do
             family <- either fail pure (deriveCommitmentFamily blueprint)
             program <- requireProgram blueprint enforcementTitle
-            artifacts <- either fail pure (deriveV1Scripts fixtureRegistry blueprint)
+            artifacts <- either fail pure (deriveV1Scripts fixtureRegistry fixtureApplicationPolicy blueprint)
             enforcement <- requireArtifact artifacts "observer-enforcement"
             artifactScriptHash enforcement
                 `shouldBe` computeScriptHash
@@ -270,7 +271,7 @@ reachSpec = describe "family reaches the deployed register" $ do
         -- The register pins the enforcement observer by hash, so a changed
         -- commitment family reaches the deployed checkpoint policy itself.
         withBlueprint $ \blueprint -> do
-            artifacts <- either fail pure (deriveV1Scripts fixtureRegistry blueprint)
+            artifacts <- either fail pure (deriveV1Scripts fixtureRegistry fixtureApplicationPolicy blueprint)
             enforcement <- requireArtifact artifacts "observer-enforcement"
             register <- requireArtifact artifacts "checkpoint-register"
             program <- requireProgram blueprint registerTitle

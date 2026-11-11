@@ -26,7 +26,9 @@ use freeze_fixture.{
   network_id, policy, spent, v2_data,
 }
 use keri_application_connected.{checkpoint_min_ada, d_reg, freeze_bond, premium}
-use registry_fixture.{registry_name, representative, state_policy}
+use registry_fixture.{
+  application_policy, registry_name, representative, state_policy,
+}
 use topup_fixture.{registered_with_pool}
 
 fn run_spend(redeemer: Data, own_ref: OutputReference, tx: Transaction) -> Bool {
@@ -40,6 +42,7 @@ fn run_spend(redeemer: Data, own_ref: OutputReference, tx: Transaction) -> Bool 
     d_reg,
     freeze_bond,
     premium,
+    application_policy(),
     None,
     redeemer,
     own_ref,
@@ -58,6 +61,7 @@ fn run_mint(redeemer: Data, tx: Transaction) -> Bool {
     d_reg,
     freeze_bond,
     premium,
+    application_policy(),
     ScriptContext { transaction: tx, redeemer, info: Minting(policy) },
   )
 }

@@ -18,6 +18,7 @@ module Cardano.KERI.AID.Checkpoint.Wire (
     freezeObserverRedeemerData,
     freezeSpendRedeemerData,
     topUpSpendRedeemerData,
+    releaseSpendRedeemerData,
     registerObserverRedeemerData,
     registrationEvidenceData,
     asPlcData,
@@ -89,6 +90,13 @@ renumbers; it carries the amount added to the pool, in lovelace.
 topUpSpendRedeemerData :: Integer -> Data
 topUpSpendRedeemerData amount =
     Constr 4 [I amount]
+
+{- | The Release spend: the pending output of a convicted checkpoint is spent in
+the transaction that books its termination. Constructor five, after TopUp, so
+nothing renumbers; it carries no field.
+-}
+releaseSpendRedeemerData :: Data
+releaseSpendRedeemerData = Constr 5 []
 
 {- | The Freeze observer envelope: action two, checkpoint policy, the named
 spent output reference, and the freeze evidence.

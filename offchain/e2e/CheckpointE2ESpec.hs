@@ -21,6 +21,7 @@ import CheckpointTxBuilder (
     productionRegisterTopUpScenario,
     registryJourney,
     stagedCheckpointDevnet,
+    terminationJourney,
  )
 
 spec :: Spec
@@ -29,6 +30,11 @@ spec = describe "#136 register a small identity end to end" $ do
         it
             "books a registration, folds it with another party into a checkpoint holding the deposit, refuses a late fold and a return to another address, and returns an unfolded request after its deadline"
             registryJourney
+
+    around stagedCheckpointDevnet $ do
+        it
+            "#350 books the termination of a convicted identity with a third party's fee, folds it with another party, reads the terminal key back, and refuses each clause's violation, a second booking and a registration of the terminal key"
+            terminationJourney
 
     around stagedCheckpointDevnet $ do
         it

@@ -18,9 +18,14 @@ differs, is missing or is extra, so no value here is a stale literal.
 
 The terms are the ones the devnet journey creates its registry with: the
 deployed generation's amounts for the deposit, the freeze bond, the premium and
-the network, and a short processing window so that a journey can pass a request's
-deadline. Only the first four enter the scripts; the other four are the
-registry's request parameters, which the configuration record holds.
+the network, a short processing window so that a journey can pass a request's
+deadline, and the two numbers of a termination: the minimum ADA a checkpoint
+output holds, which a convicted checkpoint's pending output holds exactly, and
+the carrier a termination request holds beside the tip. The first four and the
+last two enter the scripts; the four between are the registry's request
+parameters, which the configuration record holds. The checkpoint validator is
+also applied to the application's policy, which is how it knows the termination
+approvals that release a pending output.
 
 The application and the state script are the same for every seed, and the
 checkpoint validator is not: it is applied to the registry's own identity, which
@@ -32,7 +37,7 @@ a derivation input, not a deployed registry.
 <!-- identities:begin -->
 | What | Value |
 |---|---|
-| Lean model revision | `12fdc460c71ca2bb1ee9991e030034abcc6f929c` |
+| Lean model revision | `f66889d32fadfbeafa41a940d9b4ad6cdd90a890` |
 | Public Singular commit | `d69ab005c3b710aeebf033d3c5cd08c56feb5643` |
 | Aiken compiler | `1.1.23` |
 | Network discriminator | `0` |
@@ -43,13 +48,15 @@ a derivation input, not a deployed registry.
 | Minimum tip (lovelace) | `500000` |
 | Processing time (milliseconds) | `90000` |
 | Booking width (milliseconds) | `5000` |
-| Application script hash | `68b4e61b57e82e583c6cc967f435e7371bb1855296ab434094f75156` |
-| Application program bytes | `9092` |
-| State script hash | `292690d0079066f2c9505aeff665de9fada8b738c141f432f2ba2253` |
+| Checkpoint minimum ADA (lovelace) | `2000000` |
+| Termination request carrier (lovelace) | `1500000` |
+| Application script hash | `1cbb18a164c1d958ef85777e5c4dc158abd2362da1d5006278d595f7` |
+| Application program bytes | `10469` |
+| State script hash | `647d0379b604e0b29f293b5c051a2d1630cb8ea8282af7b34d35dcf1` |
 | State script program bytes | `7786` |
 | Application and state script across two seeds | `the same` |
-| Checkpoint validator script hash | `ee87c60cb511d5b43a8b788e198a0bafe45b919e878dc36527acb762` |
-| Checkpoint validator program bytes | `8482` |
+| Checkpoint validator script hash | `861d63753c10dd6aab3c8f3db1e050d112c2d6ac557d8fb09ad29609` |
+| Checkpoint validator program bytes | `8957` |
 | Reference registry name | `a060e76604c811bc4f47264e86a593a4539d57e251709f83af18ad5789d6c0b3` |
 <!-- identities:end -->
 

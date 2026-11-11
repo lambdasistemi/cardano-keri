@@ -29,6 +29,15 @@ pub type Action {
   }
   /// Book the registration held by the output at `output_index`.
   BookRegistration { output_index: Int }
+  /// Book the termination of `key` in `registry`: the output at `output_index`
+  /// is the termination request, and `pending` is the convicted checkpoint's
+  /// pending output it spends.
+  BookTermination {
+    pending: OutputReference,
+    output_index: Int,
+    registry: RegistryIdentity,
+    key: ByteArray,
+  }
 }
 
 /// The operation that spends an input at the application address.

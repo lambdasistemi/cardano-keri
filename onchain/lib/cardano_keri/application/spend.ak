@@ -27,11 +27,9 @@
 
 use aiken/collection/list
 use cardano/address.{Address, Script}
-use cardano/assets.{
-  AssetName, PolicyId, flatten, lovelace_of, quantity_of, without_lovelace,
-}
+use cardano/assets.{AssetName, PolicyId, lovelace_of, quantity_of}
 use cardano/transaction.{
-  InlineDatum, NoDatum, Output, OutputReference, Spend, Transaction, find_input,
+  InlineDatum, Output, OutputReference, Spend, Transaction, find_input,
 }
 use cardano_keri/application/action.{
   FoldRegistration, FoldTermination, ReturnRegistration, SpendAction,
@@ -49,9 +47,10 @@ use cardano_keri/application/inception.{
 use cardano_keri/application/registration.{
   registration_approval, registration_shape,
 }
-use singular_state/preimage.{
-  RegistryIdentity, active_token_name, approval_name, termination_preimage,
+use cardano_keri/application/termination.{
+  termination_approval, termination_shape,
 }
+use singular_state/preimage.{RegistryIdentity, active_token_name}
 
 /// The action a redeemer carries, when it carries one.
 pub fn spend_action_of(redeemer: Data) -> Option<SpendAction> {
@@ -164,28 +163,9 @@ pub fn spend_registration(
   }
 }
 
-/// Model `terminationShape`.
-fn termination_shape(
-  application_policy: PolicyId,
-  output: Output,
-  registry: RegistryIdentity,
-  key: ByteArray,
-) -> Bool {
-  and {
-    list.length(flatten(without_lovelace(output.value))) == 2,
-    output.address.payment_credential == Script(application_policy),
-    output.datum == NoDatum,
-    quantity_of(output.value, registry.policy, active_token_name(registry, key)) == 1,
-    quantity_of(
-      output.value,
-      application_policy,
-      approval_name(termination_preimage(key, registry)),
-    ) == 1,
-  }
-}
-
-/// Model `spendTermination`: only the fold that burns the approval and the
-/// active token, with the registry's policy running.
+/// Model `spendTermination`: only the fold that reads the registry's
+/// configuration record by reference and burns the approval and the active
+/// token, with the registry's policy running.
 fn spend_termination(
   application_policy: PolicyId,
   input: Output,
@@ -194,11 +174,12 @@ fn spend_termination(
   tx: Transaction,
 ) -> Bool {
   and {
+    configuration_of(application_policy, registry, tx.reference_inputs) != None,
     termination_shape(application_policy, input, registry, key),
     quantity_of(
       tx.mint,
       application_policy,
-      approval_name(termination_preimage(key, registry)),
+      termination_approval(registry, key),
     ) == -1,
     quantity_of(tx.mint, registry.policy, active_token_name(registry, key)) == -1,
   }
@@ -287,8 +268,56 @@ fn owed(spent: Spent) -> Int {
   }
 }
 
+/// Model `terminationDonation`, summed: what the terminating folds of the
+/// transaction owe the treasury, each its request's lovelace less the minimum
+/// tip of its registry's record (never below zero). A fold whose registry has
+/// no record owes nothing here and is refused by `spend_termination`.
+fn termination_dues(application_policy: PolicyId, tx: Transaction) -> Int {
+  list.foldr(
+    tx.redeemers,
+    0,
+    fn(Pair(purpose, redeemer), total) {
+      when (purpose, spend_action_of(redeemer)) is {
+        (Spend(reference), Some(FoldTermination { registry, .. })) ->
+          when
+            (
+              find_input(tx.inputs, reference),
+              configuration_of(
+                application_policy,
+                registry,
+                tx.reference_inputs,
+              ),
+            )
+          is {
+            (Some(spent), Some(record)) ->
+              if spent.output.address.payment_credential == Script(
+                application_policy,
+              ) {
+                total + at_least_zero(
+                  lovelace_of(spent.output.value) - record.parameters.minimum_tip,
+                )
+              } else {
+                total
+              }
+            _ -> total
+          }
+        _ -> total
+      }
+    },
+  )
+}
+
+fn at_least_zero(amount: Int) -> Int {
+  if amount > 0 {
+    amount
+  } else {
+    0
+  }
+}
+
 /// Model `moneyRouted`: refunds are paid in full per address, and the treasury
-/// donation covers the registration costs of the folded requests.
+/// donation covers the registration costs of the folded requests and the
+/// termination donations of the terminating folds.
 pub fn money_routed(application_policy: PolicyId, tx: Transaction) -> Bool {
   let spent = spent_requests(application_policy, tx)
   let returns = list.filter(spent, fn(s) { s.returned })
@@ -319,7 +348,9 @@ pub fn money_routed(application_policy: PolicyId, tx: Transaction) -> Bool {
           total + s.parameters.registration_cost
         }
       },
-    ) <= when tx.treasury_donation is {
+    ) + termination_dues(application_policy, tx) <= when
+      tx.treasury_donation
+    is {
       Some(donation) -> donation
       None -> 0
     },

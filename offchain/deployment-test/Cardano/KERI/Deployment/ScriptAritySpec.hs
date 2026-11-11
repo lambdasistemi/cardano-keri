@@ -47,7 +47,7 @@ import Cardano.KERI.Deployment.Manifest (
     Reference (..),
     mkManifest,
  )
-import Cardano.KERI.Deployment.RegistryFixture (fixtureRegistry)
+import Cardano.KERI.Deployment.RegistryFixture (fixtureApplicationPolicy, fixtureRegistry)
 import Cardano.KERI.Deployment.Script (
     Blueprint (..),
     RegistryIdentity (..),
@@ -175,7 +175,7 @@ withFixture = do
     declared <- either fail pure (declaredParameters value)
     programs <- either fail pure (compiledPrograms value)
     blueprint <- loadBlueprint path >>= either fail pure
-    artifacts <- either fail pure (deriveV1Scripts fixtureRegistry blueprint)
+    artifacts <- either fail pure (deriveV1Scripts fixtureRegistry fixtureApplicationPolicy blueprint)
     predecessor <- either fail pure (decodeHex frozenEndpointBoardPolicyId)
     board <-
         either
@@ -706,6 +706,7 @@ expectedRegisterArguments fixture = do
         , I v1RegistrationBond
         , I v1FreezeBond
         , I v1Premium
+        , B fixtureApplicationPolicy
         ]
   where
     policyOf name =
@@ -931,7 +932,7 @@ reDerive ::
 reDerive fixture mutate =
     withMutatedBlueprint fixture mutate $ \path -> do
         blueprint <- loadBlueprint path
-        pure (blueprint >>= deriveV1Scripts fixtureRegistry)
+        pure (blueprint >>= deriveV1Scripts fixtureRegistry fixtureApplicationPolicy)
 
 -- | The register's declared parameter count after a mutation.
 declaredCountAfter ::

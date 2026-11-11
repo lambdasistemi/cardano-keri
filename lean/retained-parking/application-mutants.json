@@ -310,5 +310,125 @@
   "failure": "verdict-changed termination-fold",
   "owner": "CardanoKeri.Application.accepted_mint_is_justified",
   "test": "ApplicationChecks"
+ },
+ {
+  "id": "termination-booking-pending-state",
+  "before": "    | some d => i.keyOf d.aid == key && pendingState d.state",
+  "after": "    | some d => i.keyOf d.aid == key && true",
+  "failure": "verdict-changed termination-booking-live-checkpoint",
+  "owner": "CardanoKeri.Application.termination_approval_requires_conviction",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "termination-booking-key",
+  "before": "    | some d => i.keyOf d.aid == key && pendingState d.state",
+  "after": "    | some d => true && pendingState d.state",
+  "failure": "verdict-changed termination-booking-other-aid",
+  "owner": "CardanoKeri.Application.termination_approval_requires_pending",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "termination-booking-pending-address",
+  "before": "  input.credential == c.checkpointCredential &&\n  (match checkpointDatum",
+  "after": "  true &&\n  (match checkpointDatum",
+  "failure": "verdict-changed termination-booking-at-other-address",
+  "owner": "CardanoKeri.Application.termination_approval_requires_pending",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "termination-booking-pending-minimum",
+  "before": "  input.lovelace == rp.Mc &&",
+  "after": "  true &&",
+  "failure": "verdict-changed termination-booking-pending-one-more",
+  "owner": "CardanoKeri.Application.termination_approval_requires_pending",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "termination-booking-active-held",
+  "before": "  exactAssets input [(activeAsset i.hash i.code registry key, 1)]",
+  "after": "  true",
+  "failure": "verdict-changed termination-booking-without-active-token",
+  "owner": "CardanoKeri.Application.termination_approval_requires_pending",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "termination-booking-request-shape",
+  "before": "    terminationShape .none i.hash i.code release output registry key &&",
+  "after": "    true &&",
+  "failure": "verdict-changed termination-booking-request-datum",
+  "owner": "CardanoKeri.Application.termination_booking_inversion",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "termination-booking-request-floor-only",
+  "before": "    output.lovelace == terminationLovelace rp c.parameters &&",
+  "after": "    terminationLovelace rp c.parameters ≤ output.lovelace &&",
+  "failure": "verdict-changed termination-booking-request-one-more",
+  "owner": "CardanoKeri.Application.termination_booking_inversion",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "termination-booking-request-ceiling-only",
+  "before": "    output.lovelace == terminationLovelace rp c.parameters &&",
+  "after": "    output.lovelace ≤ terminationLovelace rp c.parameters &&",
+  "failure": "verdict-changed termination-booking-request-one-less",
+  "owner": "CardanoKeri.Application.termination_booking_inversion",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "termination-booking-foreign-registry",
+  "before": "    registry.policy == release.statePolicy &&\n    convictedPending",
+  "after": "    true &&\n    convictedPending",
+  "failure": "verdict-changed termination-booking-foreign-registry",
+  "owner": "CardanoKeri.Application.termination_booking_inversion",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "termination-booking-approval-count",
+  "before": "    SingularApplicationHeld.Assets.mintQty o.assets (terminationApproval i.hash i.code release registry key) == 1\n  | none => false",
+  "after": "    SingularApplicationHeld.Assets.mintQty o.assets (terminationApproval i.hash i.code release registry key) > 0\n  | none => false",
+  "failure": "verdict-changed termination-booked-twice",
+  "owner": "CardanoKeri.Application.termination_approval_requires_pending",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "mint-termination-booking-unjustified",
+  "before": "  | .bookTermination _ _ registry key => [(terminationApproval i.hash i.code release registry key, 1)]",
+  "after": "  | .bookTermination _ _ registry key => []",
+  "failure": "verdict-changed termination-booking",
+  "owner": "CardanoKeri.Application.termination_approval_requires_booking",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "termination-fold-configuration",
+  "before": "  (configurationOf i release registry o).isSome &&\n  terminationShape",
+  "after": "  true &&\n  terminationShape",
+  "failure": "verdict-changed termination-fold-without-configuration",
+  "owner": "CardanoKeri.Application.termination_only_by_fold",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "termination-donation-dropped",
+  "before": "  | .foldTermination ref registry _ => terminationDonation i release o ref registry",
+  "after": "  | .foldTermination _ _ _ => none",
+  "failure": "verdict-changed termination-fold-donation-short",
+  "owner": "CardanoKeri.Application.termination_fold_donates",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "release-pending-state",
+  "before": "  | some d => pendingState d.state &&\n    SingularApplicationHeld.Assets.mintQty o.assets",
+  "after": "  | some d => true &&\n    SingularApplicationHeld.Assets.mintQty o.assets",
+  "failure": "release-changed release-live-checkpoint",
+  "owner": "CardanoKeri.Application.pending_released_only_into_booking",
+  "test": "ApplicationChecks"
+ },
+ {
+  "id": "release-approval-count",
+  "before": "      (terminationApproval i.hash i.code release registry (i.keyOf d.aid)) == 1",
+  "after": "      (terminationApproval i.hash i.code release registry (i.keyOf d.aid)) > 0",
+  "failure": "release-changed release-two-approvals",
+  "owner": "CardanoKeri.Application.pending_released_only_into_booking",
+  "test": "ApplicationChecks"
  }
 ]

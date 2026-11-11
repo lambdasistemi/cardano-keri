@@ -64,6 +64,8 @@ connectedTerms =
                 , processTime = 5
                 , bookingWidth = 1
                 }
+        , registryMinimumAda = 2_000_000
+        , registryTerminationCarrier = 1_000_000
         }
 
 seedOf :: Integer -> OutputReference
@@ -98,6 +100,12 @@ withNetwork :: Integer -> RegistryTerms -> RegistryTerms
 withNetwork network terms =
     terms{registryCheckpointTerms = (registryCheckpointTerms terms){termsNetwork = network}}
 
+withMinimumAda :: Integer -> RegistryTerms -> RegistryTerms
+withMinimumAda minimumAda terms = terms{registryMinimumAda = minimumAda}
+
+withCarrier :: Integer -> RegistryTerms -> RegistryTerms
+withCarrier carrier terms = terms{registryTerminationCarrier = carrier}
+
 spec :: Spec
 spec = describe "a registry's scripts" $ do
     it "the floors are the connected scenario's: the booking floor and the fold's floor" $ do
@@ -116,6 +124,8 @@ spec = describe "a registry's scripts" $ do
                 , I 1_007_000_000
                 , I 1_009_000_000
                 , I 0
+                , I 2_000_000
+                , I 1_000_000
                 ]
                 applicationProgram
         artifactProgram (scriptsCheckpoint scripts)
@@ -129,6 +139,7 @@ spec = describe "a registry's scripts" $ do
                     1_000_000_000
                     5_000_000
                     2_000_000
+                    (hashOf (scriptsApplication scripts))
                 )
                 checkpointProgram
     it "the registration observer carries the same deposit" $ do
@@ -158,6 +169,12 @@ spec = describe "a registry's scripts" $ do
         refused (withNetwork 16 connectedTerms) `shouldBe` True
         refused (withNetwork (-1) connectedTerms) `shouldBe` True
         refused (withNetwork 15 connectedTerms) `shouldBe` False
+        refused (withMinimumAda 2_000_001 connectedTerms) `shouldBe` True
+        refused (withMinimumAda 1_999_999 connectedTerms) `shouldBe` True
+        -- the carrier and the tip (1) fit in the minimum ADA (2_000_000) up to the boundary
+        refused (withCarrier 2_000_000 connectedTerms) `shouldBe` True
+        refused (withCarrier 1_999_999 connectedTerms) `shouldBe` False
+        refused (withCarrier (-1) connectedTerms) `shouldBe` True
     it "the registry is named by the seed, and the checkpoint validator follows it" $ do
         first <- derivedWith connectedTerms (seedOf 0)
         second <- derivedWith connectedTerms (seedOf 1)

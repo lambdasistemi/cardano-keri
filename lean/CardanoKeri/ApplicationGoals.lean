@@ -1,6 +1,8 @@
 import CardanoKeri.Application
 import CardanoKeri.ConsumerIdentity
 import CardanoKeri.CheckpointDatumGoals
+import CardanoKeri.Samaritan
+import SingularApplicationHeld.HistoryClaims
 
 /-! The guarantees of KERI's application on the application-held model.
 Each theorem states its Given/When/Then contract in its comment. -/
@@ -109,6 +111,7 @@ theorem registration_spend_is_fold_or_return (i : Interpretation) (env : Env)
   cases a with
   | createConfiguration => simp [Action.input?] at ain
   | bookRegistration => simp [Action.input?] at ain
+  | bookTermination => simp [Action.input?] at ain
   | foldTermination ref registry key =>
     simp only [Action.input?, Option.some.injEq] at ain
     subst ain
@@ -218,13 +221,14 @@ theorem return_pays_refund_address (i : Interpretation) (env : Env)
       by simp [spentRequest_of named hd hc]⟩
   exact Nat.le_trans (le_address_sum entry) (money.1 _ entry)
 
-/-- **A pending termination is spent only by its terminating fold.**
+/-- **A termination request is spent only by its terminating fold.**
 Given an accepted transaction and one of its inputs at the application address
-that does not decode as a registration request (a pending termination output
-carries no datum).
+that does not decode as a registration request (a termination request carries
+no datum).
 When that input is spent.
-Then a terminating fold names it, burns its termination approval and its
-active token, and the registry's state policy runs. -/
+Then a terminating fold names it, reads the registry's configuration record by
+reference, burns its termination approval and its active token, and the
+registry's state policy runs. It has no deadline: no clause reads the clock. -/
 theorem termination_only_by_fold (i : Interpretation) (env : Env)
     (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
     (release : PublishedRelease) (o : Observation)
@@ -233,6 +237,7 @@ theorem termination_only_by_fold (i : Interpretation) (env : Env)
     (atApplication : input.credential = release.applicationCredential)
     (notRequest : ∀ data, decoded i.decode input ≠ some (.registration data)) :
     ∃ registry key, Action.foldTermination input.reference registry key ∈ o.actions ∧
+      (configurationOf i release registry o).isSome = true ∧
       SingularApplicationHeld.Assets.mintQty o.assets
         (terminationApproval i.hash i.code release registry key) = -1 ∧
       SingularApplicationHeld.Assets.mintQty o.assets (activeAsset i.hash i.code registry key) = -1 ∧
@@ -247,6 +252,7 @@ theorem termination_only_by_fold (i : Interpretation) (env : Env)
   cases a with
   | createConfiguration => simp [Action.input?] at ain
   | bookRegistration => simp [Action.input?] at ain
+  | bookTermination => simp [Action.input?] at ain
   | foldTermination ref registry key =>
     simp only [Action.input?, Option.some.injEq] at ain
     subst ain
@@ -256,7 +262,7 @@ theorem termination_only_by_fold (i : Interpretation) (env : Env)
       have := namedInput_unique named mem rfl
       subst this
       simp only [spendTermination, Bool.and_eq_true, beq_iff_eq] at aok
-      exact ⟨registry, key, amem, aok.1.1.2, aok.1.2, aok.2⟩
+      exact ⟨registry, key, amem, aok.1.1.1.1, aok.1.1.2, aok.1.2, aok.2⟩
     · contradiction
   | foldRegistration ref index =>
     simp only [Action.input?, Option.some.injEq] at ain
@@ -289,9 +295,10 @@ theorem termination_only_by_fold (i : Interpretation) (env : Env)
 
 /-- **A fold's treasury donation covers its registration costs.**
 Given a transaction the KERI application accepts.
-When it folds registration requests.
+When it folds registration requests and termination requests.
 Then its `treasury_donation` is at least the sum of the registration costs of
-the requests it folds. -/
+the registration requests it folds and of the lovelace less the minimum tip of
+the termination requests it folds. -/
 theorem treasury_covers_registration_costs (i : Interpretation) (env : Env)
     (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
     (release : PublishedRelease) (o : Observation)
@@ -315,10 +322,30 @@ theorem folded_cost_in_donation (i : Interpretation) (env : Env)
     (hs : spentRequest i release o ref = some (input, data, p)) :
     p.registrationCost ≤ o.donation := by
   have total := treasury_covers_registration_costs i env rp cp release o ok
-  have member : p.registrationCost ∈ (o.actions.filterMap fun a => match a with
-      | .foldRegistration ref _ => (spentRequest i release o ref).map fun (_, _, p) => p.registrationCost
-      | _ => none) :=
-    List.mem_filterMap.mpr ⟨.foldRegistration ref index, folded, by simp [hs]⟩
+  have member : p.registrationCost ∈ o.actions.filterMap (Action.treasuryDue i release o) :=
+    List.mem_filterMap.mpr ⟨.foldRegistration ref index, folded, by simp [Action.treasuryDue, hs]⟩
+  exact Nat.le_trans (le_sum_of_mem' member) total
+
+/-- **A terminating fold donates the request less the tip.**
+Given an accepted transaction with a terminating fold of a termination request
+whose registry's configuration record gives minimum tip `tip`.
+When the transaction is accepted.
+Then its treasury donation is at least the request's lovelace less `tip`: the
+folder keeps at most the tip (the economic termination donation). -/
+theorem termination_fold_donates (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (release : PublishedRelease) (o : Observation)
+    (ok : accepted i env rp cp release o = true)
+    {ref : OutRef} {registry : TokenId} {key : Key} {input : ObservedOutput} {c : Configuration}
+    (folded : Action.foldTermination ref registry key ∈ o.actions)
+    (named : namedInput o ref = some input)
+    (hc : configurationOf i release registry o = some c) :
+    input.lovelace - c.parameters.minimumTip ≤ o.donation := by
+  have total := treasury_covers_registration_costs i env rp cp release o ok
+  have member : input.lovelace - c.parameters.minimumTip ∈
+      o.actions.filterMap (Action.treasuryDue i release o) :=
+    List.mem_filterMap.mpr ⟨.foldTermination ref registry key, folded,
+      by simp [Action.treasuryDue, terminationDonation, named, hc]⟩
   exact Nat.le_trans (le_sum_of_mem' member) total
 
 /-! ## The application's mint -/
@@ -384,6 +411,7 @@ theorem justifies_burns_only {i : Interpretation} {release : PublishedRelease} {
   | createConfiguration registry seed index => exact absurd rfl (notConfiguration registry seed index)
   | bookRegistration => simp [Action.booking?] at notBooking
   | foldTermination => simp [Action.justifies] at mem; simp [mem]
+  | bookTermination => simp [Action.booking?] at notBooking
   | foldRegistration ref _ | returnRegistration ref =>
     simp only [Action.justifies] at mem
     split at mem
@@ -1195,4 +1223,475 @@ theorem carrier_floor_matches_economic (rp : CardanoKeri.Registry.Params)
     CardanoKeri.Registry.registrationShape rp b ↔ rp.Mc + rp.D ≤ data.deposit := by
   simp [CardanoKeri.Registry.registrationShape, carrier, tip]
 
-end CardanoKeri.Application
+
+/-! ## Booking a termination -/
+
+/-- The input an action names is an input of the transaction. -/
+theorem namedInput_mem {o : Observation} {ref : OutRef} {x : ObservedOutput}
+    (named : namedInput o ref = some x) : x ∈ o.inputs := by
+  unfold namedInput at named
+  split at named
+  · exact List.mem_of_find?_eq_some named
+  · contradiction
+
+/-- A token compares equal to itself. -/
+theorem token_beq_self (a : TokenId) : (a == a) = true := by
+  cases a; simp [BEq.beq, instBEqTokenId.beq]
+
+/-- An output holding exactly one unit of one asset holds one unit of it. -/
+theorem exactAssets_single {output : ObservedOutput} {asset : TokenId}
+    (h : exactAssets output [(asset, 1)] = true) : quantity output asset = 1 := by
+  unfold exactAssets at h
+  have each := List.all_eq_true.mp h asset (by simp)
+  simpa [token_beq_self] using each
+
+/-- A list of integers with a positive sum has a positive member. -/
+theorem exists_pos_of_sum_pos {l : List Int} (h : 0 < l.sum) : ∃ x ∈ l, 0 < x := by
+  apply Classical.byContradiction
+  intro none
+  have : l.sum ≤ 0 := sum_nonpos fun x hx =>
+    Int.not_lt.mp fun positive => none ⟨x, hx, positive⟩
+  omega
+
+/-- **The pending output a booking spends is a conviction's.**
+Given an output the termination booking accepts as the convicted pending
+output of `key` under a configuration record.
+When its fields are read.
+Then it sits at the checkpoint validator's credential the record names, holds
+exactly the registry's minimum ADA and one active token of the key, and
+carries the pending-termination datum of an AID whose key is `key`. -/
+theorem convictedPending_inversion {i : Interpretation} {rp : CardanoKeri.Registry.Params}
+    {c : Configuration} {registry : TokenId} {key : Key} {input : ObservedOutput}
+    (h : convictedPending i rp c registry key input = true) :
+    input.credential = c.checkpointCredential ∧ input.lovelace = rp.Mc ∧
+      quantity input (activeAsset i.hash i.code registry key) = 1 ∧
+      ∃ d k, checkpointDatum i input = some d ∧ i.keyOf d.aid = key ∧
+        d.state = .terminationPending k := by
+  unfold convictedPending at h
+  simp only [Bool.and_eq_true, beq_iff_eq] at h
+  obtain ⟨⟨⟨credential, datum⟩, lovelace⟩, assets⟩ := h
+  refine ⟨credential, lovelace, exactAssets_single assets, ?_⟩
+  split at datum
+  · rename_i d hd
+    simp only [Bool.and_eq_true, beq_iff_eq] at datum
+    obtain ⟨sameKey, pending⟩ := datum
+    cases hs : d.state with
+    | terminationPending k => exact ⟨d, k, hd, sameKey, hs⟩
+    | _ => simp [pendingState, hs] at pending
+  · contradiction
+
+/-- **A termination booking spends a convicted pending output and places the
+request the terminating fold consumes.**
+Given a transaction the KERI application accepts, with a termination booking
+of `key` under `registry` naming an input and an output.
+When the booking is read.
+Then the registry's configuration record is read by reference and its state
+policy is `state(A_keri)`; the input, spent once, is the convicted pending
+output of the key at the checkpoint validator's credential (exactly the
+minimum ADA and the active token, a pending-termination datum of an AID whose
+key is `key`); the output is the termination request the terminating fold
+accepts (`terminationShape`: the application address, an empty datum, exactly
+the active token and the termination approval) holding exactly `Mr` plus the
+minimum tip; exactly one termination approval of the registry and key is
+minted. -/
+theorem termination_booking_inversion (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (release : PublishedRelease) (o : Observation)
+    (ok : accepted i env rp cp release o = true)
+    {ref : OutRef} {index : Nat} {registry : TokenId} {key : Key}
+    (booked : Action.bookTermination ref index registry key ∈ o.actions) :
+    ∃ c input output, configurationOf i release registry o = some c ∧
+      namedInput o ref = some input ∧ o.outputs[index]? = some output ∧
+      registry.policy = release.statePolicy ∧
+      convictedPending i rp c registry key input = true ∧
+      terminationShape .none i.hash i.code release output registry key = true ∧
+      output.lovelace = terminationLovelace rp c.parameters ∧
+      SingularApplicationHeld.Assets.mintQty o.assets
+        (terminationApproval i.hash i.code release registry key) = 1 := by
+  simp only [accepted, Bool.and_eq_true] at ok
+  obtain ⟨⟨⟨⟨_, actions⟩, _⟩, _⟩, _⟩ := ok
+  have aok := List.all_eq_true.mp actions _ booked
+  simp only [action] at aok
+  split at aok
+  · rename_i input output named hout
+    unfold bookTermination at aok
+    split at aok
+    · rename_i c hc
+      simp only [Bool.and_eq_true, beq_iff_eq] at aok
+      obtain ⟨⟨⟨⟨policy, pending⟩, shape⟩, lovelace⟩, minted⟩ := aok
+      exact ⟨c, input, output, hc, named, hout, policy, pending, shape, lovelace, minted⟩
+    · contradiction
+  · contradiction
+
+/-- **No termination approval without a termination booking of that key.**
+Given a transaction the KERI application accepts that mints a positive
+quantity of the termination approval of `key` under `registry`, and that no
+other preimage hashes to that approval's name.
+When the application's mint is read.
+Then a termination booking of exactly that registry and key is among its
+actions. -/
+theorem termination_approval_requires_booking (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (release : PublishedRelease) (o : Observation)
+    (ok : accepted i env rp cp release o = true) {registry : TokenId} {key : Key}
+    (unique : ∀ p, i.hash (i.code p) = i.hash (i.code (.terminationApproval registry key)) →
+      p = .terminationApproval registry key)
+    (minted : 0 < SingularApplicationHeld.Assets.mintQty o.assets
+      (terminationApproval i.hash i.code release registry key)) :
+    ∃ ref index, Action.bookTermination ref index registry key ∈ o.actions := by
+  have justified := accepted_mint_is_justified i env rp cp release o ok
+    (asset := terminationApproval i.hash i.code release registry key) rfl
+  rw [justified] at minted
+  unfold justifiedQty justifiedMint at minted
+  obtain ⟨x, hx, positive⟩ := exists_pos_of_sum_pos minted
+  simp only [List.mem_map, List.mem_filter, List.mem_flatMap] at hx
+  obtain ⟨entry, ⟨⟨a, amem, emem⟩, same⟩, rfl⟩ := hx
+  have same := SingularApplicationHeld.Proofs.token_eq _ _ same
+  cases a with
+  | createConfiguration r seed index =>
+    simp only [Action.justifies, List.mem_singleton] at emem
+    subst emem
+    simp only [configurationAsset, terminationApproval, TokenId.mk.injEq] at same
+    exact absurd (unique _ same.2) (by simp)
+  | bookRegistration index =>
+    simp only [Action.justifies] at emem
+    split at emem
+    · split at emem
+      · simp only [List.mem_singleton] at emem
+        subst emem
+        simp only [registrationAsset, registrationApproval, terminationApproval,
+          TokenId.mk.injEq] at same
+        exact absurd (unique _ same.2) (by simp)
+      · simp at emem
+    · simp at emem
+  | bookTermination ref index r k =>
+    simp only [Action.justifies, List.mem_singleton] at emem
+    subst emem
+    simp only [terminationApproval, TokenId.mk.injEq] at same
+    have pre := unique _ same.2
+    simp only [Preimage.terminationApproval.injEq] at pre
+    obtain ⟨rfl, rfl⟩ := pre
+    exact ⟨ref, index, amem⟩
+  | foldTermination =>
+    simp only [Action.justifies, List.mem_singleton] at emem
+    subst emem; simp at positive
+  | foldRegistration ref _ | returnRegistration ref =>
+    simp only [Action.justifies] at emem
+    split at emem
+    · split at emem
+      · simp only [List.mem_singleton] at emem
+        subst emem; simp at positive
+      · simp at emem
+    · simp at emem
+
+/-- **No termination approval without a convicted pending output of that key.**
+Given a transaction the KERI application accepts that mints a positive
+quantity of the termination approval of `key` under `registry`, and that no
+other preimage hashes to that approval's name.
+When the application's mint is read.
+Then exactly one is minted, and the transaction spends, once, an output at the
+checkpoint validator's credential the registry's configuration record names
+that holds exactly the minimum ADA and the key's one active token and carries
+the pending-termination datum of an AID whose key is `key`; it places the
+termination request of the key holding exactly `Mr` plus the minimum tip. -/
+theorem termination_approval_requires_pending (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (release : PublishedRelease) (o : Observation)
+    (ok : accepted i env rp cp release o = true) {registry : TokenId} {key : Key}
+    (unique : ∀ p, i.hash (i.code p) = i.hash (i.code (.terminationApproval registry key)) →
+      p = .terminationApproval registry key)
+    (minted : 0 < SingularApplicationHeld.Assets.mintQty o.assets
+      (terminationApproval i.hash i.code release registry key)) :
+    SingularApplicationHeld.Assets.mintQty o.assets
+        (terminationApproval i.hash i.code release registry key) = 1 ∧
+      ∃ c input output d k, configurationOf i release registry o = some c ∧
+        input ∈ o.inputs ∧ input.credential = c.checkpointCredential ∧ input.lovelace = rp.Mc ∧
+        quantity input (activeAsset i.hash i.code registry key) = 1 ∧
+        checkpointDatum i input = some d ∧ i.keyOf d.aid = key ∧
+        d.state = .terminationPending k ∧
+        output ∈ o.outputs ∧ terminationShape .none i.hash i.code release output registry key = true ∧
+        output.lovelace = terminationLovelace rp c.parameters := by
+  obtain ⟨ref, index, booked⟩ :=
+    termination_approval_requires_booking i env rp cp release o ok unique minted
+  obtain ⟨c, input, output, hc, named, hout, _, pending, shape, lovelace, one⟩ :=
+    termination_booking_inversion i env rp cp release o ok booked
+  obtain ⟨credential, minimum, active, d, k, hd, sameKey, state⟩ := convictedPending_inversion pending
+  exact ⟨one, c, input, output, d, k, hc, namedInput_mem named, credential, minimum, active, hd,
+    sameKey, state, List.mem_of_getElem? hout, shape, lovelace⟩
+
+/-- **No termination approval without a conviction of that key.**
+Given a transaction the KERI application accepts that mints a positive
+quantity of the termination approval of `key` under `registry`, that no other
+preimage hashes to that approval's name, and that every checkpoint output at
+the checkpoint validator's credential carries a state the checkpoint model
+reaches from an absent checkpoint (the checkpoint validator realizes the
+checkpoint model).
+When the application's mint is read.
+Then the transaction spends the pending output of an AID whose key is `key`,
+and that AID's checkpoint was convicted: its trace has a conviction step of the
+live checkpoint at the pending key state, with duplicity evidence at that key
+state. -/
+theorem termination_approval_requires_conviction (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (cenv : CardanoKeri.Checkpoint.Env) (release : PublishedRelease) (o : Observation)
+    (ok : accepted i env rp cp release o = true) {registry : TokenId} {key : Key}
+    (unique : ∀ p, i.hash (i.code p) = i.hash (i.code (.terminationApproval registry key)) →
+      p = .terminationApproval registry key)
+    (realized : ∀ c input d, configurationOf i release registry o = some c → input ∈ o.inputs →
+      input.credential = c.checkpointCredential → checkpointDatum i input = some d →
+      CardanoKeri.Checkpoint.Reachable cp cenv d.state)
+    (minted : 0 < SingularApplicationHeld.Assets.mintQty o.assets
+      (terminationApproval i.hash i.code release registry key)) :
+    ∃ input d k, input ∈ o.inputs ∧ checkpointDatum i input = some d ∧ i.keyOf d.aid = key ∧
+      d.state = .terminationPending k ∧
+      ∃ (t : CardanoKeri.Checkpoint.Slot) (es : List (CardanoKeri.Checkpoint.Slot × CardanoKeri.Checkpoint.Action))
+        (t' : CardanoKeri.Checkpoint.Slot) (payee : CardanoKeri.Checkpoint.Addr)
+        (l : CardanoKeri.Checkpoint.Live),
+        CardanoKeri.Checkpoint.Trace cp cenv t .absent es (.terminationPending k) ∧
+        (t', CardanoKeri.Checkpoint.Action.convict payee) ∈ es ∧
+        cenv.duplicityAt l.epoch l.sn = true ∧ l.hash = k := by
+  obtain ⟨_, c, input, _, d, k, hc, mem, credential, _, _, hd, sameKey, state, _⟩ :=
+    termination_approval_requires_pending i env rp cp release o ok unique minted
+  have reach := realized c input d hc mem credential hd
+  rw [state] at reach
+  exact ⟨input, d, k, mem, hd, sameKey, state,
+    CardanoKeri.Checkpoint.reachable_pending_convicted cp cenv reach⟩
+
+/-- **The checkpoint validator releases a pending output only into a booking.**
+Given a transaction the KERI application accepts, in which the checkpoint
+validator releases a pending output of `registry` (`pendingReleased`), and that
+no other preimage hashes to the name of the termination approval of the key of
+that output's AID.
+When the transaction is read.
+Then a termination booking of the registry and of that key is among its
+actions, spending a convicted pending output of the key and placing its
+termination request. -/
+theorem pending_released_only_into_booking (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (release : PublishedRelease) (o : Observation)
+    (ok : accepted i env rp cp release o = true) {registry : TokenId} {input : ObservedOutput}
+    {d : CardanoKeri.ConsumerIdentity.DecodedDatum} (hd : checkpointDatum i input = some d)
+    (released : pendingReleased i release registry input o = true)
+    (unique : ∀ p, i.hash (i.code p) = i.hash (i.code (.terminationApproval registry (i.keyOf d.aid))) →
+      p = .terminationApproval registry (i.keyOf d.aid)) :
+    ∃ ref index c pending output, Action.bookTermination ref index registry (i.keyOf d.aid) ∈ o.actions ∧
+      configurationOf i release registry o = some c ∧ namedInput o ref = some pending ∧
+      convictedPending i rp c registry (i.keyOf d.aid) pending = true ∧
+      o.outputs[index]? = some output ∧
+      terminationShape .none i.hash i.code release output registry (i.keyOf d.aid) = true := by
+  unfold pendingReleased at released
+  rw [hd] at released
+  simp only [Bool.and_eq_true, beq_iff_eq] at released
+  obtain ⟨ref, index, booked⟩ := termination_approval_requires_booking i env rp cp release o ok unique
+    (by rw [released.2]; decide)
+  obtain ⟨c, pending, output, hc, named, hout, _, convicted, shape, _, _⟩ :=
+    termination_booking_inversion i env rp cp release o ok booked
+  exact ⟨ref, index, c, pending, output, booked, hc, named, convicted, hout, shape⟩
+
+/-! ## The money of a termination -/
+
+/-- **The booking splits the minimum ADA as the economic booking does.**
+Given the registry's economic parameters, whose tip is the configuration
+record's minimum tip, and any external booking fee.
+When a termination booking spends the pending output's minimum ADA `Mc` and
+places a request of `terminationLovelace`.
+Then the request holds what the economic booking puts into the request
+(`Samaritan.reap`), and what the booker keeps, `Mc` less the request, is the
+economic premium `Mc - Mr - tip`. -/
+theorem termination_booking_matches_reap (rp : CardanoKeri.Registry.Params)
+    (p : ApplicationParameters) (tip : rp.tip = p.minimumTip) (fee : Nat) :
+    terminationLovelace rp p = (CardanoKeri.Samaritan.reap ⟨rp.Mc, rp.Mr, rp.tip, fee, rp.hFund⟩).intoRequest ∧
+      rp.Mc - terminationLovelace rp p =
+        (CardanoKeri.Samaritan.reap ⟨rp.Mc, rp.Mr, rp.tip, fee, rp.hFund⟩).premium := by
+  refine ⟨?_, ?_⟩ <;> simp only [terminationLovelace, CardanoKeri.Samaritan.reap] <;> omega
+
+/-- **The terminating fold donates what the economic fold donates.**
+Given an economic termination booking whose request holds a booked request's
+lovelace and declares the configuration record's minimum tip.
+When the terminating fold's donation is computed.
+Then it is the economic termination donation (`FoldMember.donation`), which is
+the termination carrier `Mr`. -/
+theorem termination_donation_matches_economic (rp : CardanoKeri.Registry.Params)
+    (p : ApplicationParameters) (b : Singular.TerminationBooking)
+    (contents : b.request.contents.lovelace = terminationLovelace rp p)
+    (tip : b.request.declaredTip = p.minimumTip) :
+    terminationLovelace rp p - p.minimumTip = (Singular.FoldMember.termination b).donation ∧
+      terminationLovelace rp p - p.minimumTip = rp.Mr := by
+  refine ⟨by simp [Singular.FoldMember.donation, contents, tip], ?_⟩
+  unfold terminationLovelace
+  omega
+
+/-! ## The terminal key -/
+
+/-- **The KERI terminating fold makes the key terminal.**
+Given a transaction the KERI application accepts with a terminating fold of
+`key` under the registry `world`, which is also an accepted step of the
+public registry's history (`HistoryTransaction`) from a reachable world, with
+the history's encoding and collision-freedom premises for the key's active role.
+When the registry's leaf of the key is read after the fold.
+Then the registry's fold has a termination change of the key and leaves the
+key's leaf terminal. -/
+theorem termination_fold_retires_key (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (release : PublishedRelease) (o : Observation)
+    (ok : accepted i env rp cp release o = true) (commit : TrieCommit)
+    (before after : CandidateWorld) (fo : FoldObservation) (world : PublicRegistry) {ref : OutRef}
+    {key : Key} (folded : Action.foldTermination ref world.identity key ∈ o.actions)
+    (history : HistoryTransaction i.hash i.code commit release before after o.assets (some fo))
+    (premises : HistoryPremises i.hash i.code commit release before world key)
+    (encoding : FiniteEncoding i.code (after.domain ++ [.active world.identity key]))
+    (collision : FiniteCollisionFree i.hash i.code (after.domain ++ [.active world.identity key])) :
+    world.identity = fo.before.identity ∧ (∃ reference, Change.terminate reference key ∈ fo.changes) ∧
+      trieGet fo.after.trie key = .known .terminal := by
+  have aok := (by
+    simp only [accepted, Bool.and_eq_true] at ok
+    exact List.all_eq_true.mp ok.1.1.1.2 _ folded : action i env rp cp release o _ = true)
+  simp only [action] at aok
+  split at aok
+  · simp only [spendTermination, Bool.and_eq_true, beq_iff_eq] at aok
+    have burn : SingularApplicationHeld.Assets.mintQty o.assets
+        (activeAsset i.hash i.code world.identity key) < 0 := by rw [aok.1.2]; decide
+    obtain ⟨o', same, identity, change, terminal⟩ :=
+      HistoryStatements.burn_only_terminating_fold i.hash i.code commit release before after o.assets
+        (some fo) world key ⟨history, premises, encoding, collision, burn⟩
+    cases same
+    exact ⟨identity, change, terminal⟩
+  · contradiction
+
+/-- **A terminal key stays terminal.**
+Given a reachable public registry history in which `key` is terminal in
+`world`, and the next transaction of the history, whatever it is (a fold, the
+genesis of another registry, or a transaction that does not touch the
+registries), with the history's encoding and collision-freedom premises for
+the key's active role.
+When the registries after it are read.
+Then every registry with `world`'s identity still has the key terminal, and
+the transaction mints no active token of the key. -/
+theorem terminal_key_permanent (h : Hash) (c : Codec) (t : TrieCommit)
+    (release : PublishedRelease) (before after : CandidateWorld)
+    (view : SingularApplicationHeld.Assets.TxView) (folded : Option FoldObservation)
+    (world : PublicRegistry) (key : Key)
+    (transaction : HistoryTransaction h c t release before after view folded)
+    (premises : HistoryPremises h c t release before world key)
+    (encoding : FiniteEncoding c (after.domain ++ [.active world.identity key]))
+    (collision : FiniteCollisionFree h c (after.domain ++ [.active world.identity key]))
+    (terminal : trieGet world.trie key = .known .terminal) :
+    (∀ successor ∈ after.registries, successor.identity = world.identity →
+      trieGet successor.trie key = .known .terminal) ∧
+    SingularApplicationHeld.Assets.mintQty view (activeAsset h c world.identity key) ≤ 0 := by
+  have reachable := premises.1
+  have member := premises.2.1
+  rcases transaction with ⟨_, transaction⟩
+  cases folded with
+  | some fo =>
+    rcases transaction with ⟨rfl, foldPremises⟩
+    obtain ⟨noMint, kept⟩ := HistoryStatements.no_remint_after_terminal h c t release before after fo
+      world key ⟨foldPremises, premises, encoding, collision, terminal⟩
+    exact ⟨kept, noMint⟩
+  | none =>
+    have own : world.identity.policy = release.statePolicy := by
+      rw [(HistoryProofs.registry_identity h c t release before reachable world member).1]; rfl
+    rcases transaction with created | neutral
+    · obtain ⟨seed, inputs, outputs, registry, fee, donation, _, accepted, identity, _, _, _, _,
+        fresh, registries, domainEq⟩ := created
+      refine ⟨?_, ?_⟩
+      · intro successor mem same
+        rw [registries] at mem
+        rcases List.mem_append.mp mem with old | new
+        · rw [HistoryProofs.registry_unique h c t release before reachable successor old world member same]
+          exact terminal
+        · simp only [List.mem_singleton] at new
+          subst new
+          exact absurd (List.mem_map.mpr ⟨world, member, same.symm⟩) fresh
+      · have zero := HistoryProofs.genesis_active_zero h c t release seed view outputs
+          (after.domain ++ [.active world.identity key]) world.identity key
+          (by simp [domainEq]) (by simp) encoding collision own accepted
+        omega
+    · obtain ⟨inputs, outputs, fee, donation, _, noMint, _, registries, _⟩ := neutral
+      refine ⟨?_, ?_⟩
+      · intro successor mem same
+        rw [registries] at mem
+        rw [HistoryProofs.registry_unique h c t release before reachable successor mem world member same]
+        exact terminal
+      · have zero := Proofs.delta_at view release.statePolicy [] noMint
+          (activeAsset h c world.identity key) own
+        simp only [List.filter_nil, List.map_nil, List.sum_nil] at zero
+        omega
+
+/-- **No booking of a terminal key.**
+Given a reachable public registry history in which `key` is terminal in
+`world`, with the history's encoding and collision-freedom premises for the
+key's active role, and a transaction whose inputs are unspent outputs of that
+history.
+When the KERI application judges a termination booking of the key.
+Then it is refused: no unspent output holds the key's active token, which the
+booking's pending output must hold. -/
+theorem termination_booking_refused_for_terminal_key (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (release : PublishedRelease) (o : Observation) (commit : TrieCommit)
+    (history : CandidateWorld) (world : PublicRegistry) (key : Key)
+    (premises : HistoryPremises i.hash i.code commit release history world key)
+    (terminal : trieGet world.trie key = .known .terminal)
+    (present : ∀ input ∈ o.inputs, input ∈ history.unspent)
+    {ref : OutRef} {index : Nat} (booked : Action.bookTermination ref index world.identity key ∈ o.actions) :
+    accepted i env rp cp release o = false := by
+  cases ok : accepted i env rp cp release o
+  · rfl
+  · obtain ⟨_, input, _, _, named, _, _, pending, _⟩ :=
+      termination_booking_inversion i env rp cp release o ok booked
+    have held := (convictedPending_inversion pending).2.2.1
+    have supply := HistoryStatements.supply_in_step i.hash i.code commit release history world key premises
+    unfold SupplyAt at supply
+    rw [terminal] at supply
+    simp at supply
+    have counted : quantity input (activeAsset i.hash i.code world.identity key) ≤
+        liveActiveCount i.hash i.code world.identity key history.unspent := by
+      unfold liveActiveCount
+      exact le_sum_of_mem' (List.mem_map.mpr ⟨input, present _ (namedInput_mem named), rfl⟩)
+    omega
+
+/-- **No re-registration of a terminal key.**
+Given a reachable public registry history in which `key` is terminal in
+`world`, an accepted registry fold that is the next step of that history, with
+the history's encoding and collision-freedom premises for the key's active
+role, and a transaction the KERI application judges with the same mint.
+When the KERI application judges a fold of a registration request of the key
+under that registry.
+Then it is refused: the fold must mint the key's active token, and the
+registry mints none for a terminal key (`no_remint_after_terminal`); the
+registry's insertion requires an unknown key. -/
+theorem registration_fold_refused_for_terminal_key (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (release : PublishedRelease) (o : Observation) (commit : TrieCommit)
+    (before after : CandidateWorld) (fo : FoldObservation) (world : PublicRegistry) (key : Key)
+    (step : HistoryFoldPremises i.hash i.code commit release before after fo)
+    (premises : HistoryPremises i.hash i.code commit release before world key)
+    (encoding : FiniteEncoding i.code (after.domain ++ [.active world.identity key]))
+    (collision : FiniteCollisionFree i.hash i.code (after.domain ++ [.active world.identity key]))
+    (terminal : trieGet world.trie key = .known .terminal)
+    (sameMint : fo.assets = o.assets)
+    {ref : OutRef} {index : Nat} {input : ObservedOutput} {data : RegistrationData}
+    (folded : Action.foldRegistration ref index ∈ o.actions)
+    (named : namedInput o ref = some input)
+    (hd : decoded i.decode input = some (.registration data))
+    (registry : data.registry = world.identity) (sameKey : data.key = key) :
+    accepted i env rp cp release o = false := by
+  cases ok : accepted i env rp cp release o
+  · rfl
+  · have aok := (by
+      simp only [accepted, Bool.and_eq_true] at ok
+      exact List.all_eq_true.mp ok.1.1.1.2 _ folded : action i env rp cp release o _ = true)
+    simp only [action, named, hd, spendRegistration] at aok
+    have noMint := (HistoryStatements.no_remint_after_terminal i.hash i.code commit release before
+      after fo world key ⟨step, premises, encoding, collision, terminal⟩).1
+    rw [sameMint] at noMint
+    split at aok
+    · contradiction
+    · simp only [Bool.and_eq_true] at aok
+      have holding := aok.2.2
+      split at holding
+      · simp only [delivered, Bool.and_eq_true, beq_iff_eq] at holding
+        have one := holding.2
+        rw [registry, sameKey] at one
+        omega
+      · contradiction

@@ -15,7 +15,7 @@
     "lean/CardanoKeri/ConsumerWire.lean": "82b7088d8ada127c6ecee9ca50ef483fcf240cf31e981489006e08ec51ede4d4",
     "lean/ConsumerTraceDriver.lean": "9c076becf7a5878bf2bf606c370443d368b138a110f7b6a1e80a59248ab04581",
     "lean/lake-manifest.json": "ef13f1c22115496b001a180312413f19cb8324750104a49fe249d7e470a10590",
-    "lean/lakefile.lean": "f7bd147ae201fd8bb429a4697c007fe89525d3856ecb5c62c36c0dfb3c162293",
+    "lean/lakefile.lean": "554ac681b2b23be1a781753b370caed924d9a8936be527b3c1fc0712fb1f753a",
     "simulator/consumer-cli.mjs": "d679c03ad4cdba6eb7ba798831c65a0b7874e35a95d578eafbf895e1fe25fb36",
     "simulator/consumer-core.mjs": "ea598039e142341aa267b032924a5d6313e41b1168d77eef4e913372b195a04b",
     "simulator/consumer-corpus.json": "ff25df9f34e764677a64e56398aa5b2cd6a2e153a3492c1f10e121b1d8a3da02",

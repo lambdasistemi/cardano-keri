@@ -34,6 +34,7 @@ module CheckpointTxBuilder (
     productionRegisterFreezeThenDepositScenario,
     productionRegisterTopUpScenario,
     productionFrozenTopUpScenario,
+    terminationJourney,
     buildAdvanceTx,
 ) where
 
@@ -69,6 +70,8 @@ import Cardano.KERI.AID.Application (
     stateMintData,
     stateSpendData,
     stateTokenName,
+    terminalLeaf,
+    terminationApprovalName,
     unstakedAddress,
  )
 import Cardano.KERI.AID.Application.StateTemplate (stateTemplate)
@@ -163,11 +166,17 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     freezeObserverRedeemerData,
     freezeSpendRedeemerData,
     registerObserverRedeemerData,
+    releaseSpendRedeemerData,
     topUpSpendRedeemerData,
  )
 import Cardano.KERI.AID.E2E.Datum (extractDatum, mkInlineDatum, rawInlineData)
 import Cardano.KERI.AID.E2E.DevnetTerms (devnetTerms)
-import Cardano.KERI.AID.E2E.FoldGuard (FoldRefusal (..), foldRefusal)
+import Cardano.KERI.AID.E2E.FoldGuard (
+    BookingRefusal (..),
+    FoldRefusal (..),
+    bookingRefusal,
+    foldRefusal,
+ )
 import Cardano.KERI.AID.E2E.MpfProof (prove)
 import Cardano.KERI.AID.E2E.MpfTrie qualified as Registry
 import Cardano.KERI.AID.E2E.Rejection (consumedInputAlone)
@@ -314,7 +323,7 @@ import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Short qualified as SBS
 import Data.Foldable (toList)
 import Data.Functor ((<&>))
-import Data.List (elemIndex, find, isInfixOf, sortOn)
+import Data.List (elemIndex, find, isInfixOf, sort, sortOn)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe, isJust, listToMaybe)
 import Data.Ord (Down (..))
@@ -1581,11 +1590,23 @@ buildSplitTx provider owner = do
     let small = mkBasicTxOut owner (inject (Coin 20_000_000))
         seedOut = mkBasicTxOut (seedAddress owner) (inject (Coin 20_000_000))
         folderOut = mkBasicTxOut folderAddress (inject (Coin 100_000_000))
+        terminationFolderOut = mkBasicTxOut terminationFolderAddress (inject (Coin 100_000_000))
         body =
             mkBasicTxBody
                 & outputsTxBodyL
                     .~ StrictSeq.fromList
-                        [small, small, small, small, seedOut, folderOut, folderOut, folderOut, folderOut]
+                        [ small
+                        , small
+                        , small
+                        , small
+                        , seedOut
+                        , folderOut
+                        , folderOut
+                        , folderOut
+                        , folderOut
+                        , terminationFolderOut
+                        , terminationFolderOut
+                        ]
     either
         (fail . ("buildSplitTx: balance failed: " <>) . show)
         (pure . balancedTx)
@@ -4709,6 +4730,19 @@ folderAddress =
 folderParty :: Party
 folderParty = Party folderAddress folderKey
 
+{- | The party that folds a termination: neither the identity's owner, nor the
+convictor, nor the party that books it.
+-}
+terminationFolderKey :: SignKeyDSIGN Ed25519DSIGN
+terminationFolderKey = mkSignKey (BS.replicate 32 0x67)
+
+terminationFolderAddress :: Addr
+terminationFolderAddress =
+    Addr Testnet (KeyHashObj (keyHashFromSignKey terminationFolderKey)) StakeRefNull
+
+terminationFolderParty :: Party
+terminationFolderParty = Party terminationFolderAddress terminationFolderKey
+
 {- | The address that holds the seed of a registry: the wallet's payment
 credential with a stake credential, so no wallet query that lists the wallet
 by its plain address sees it, and none spends it.
@@ -5128,7 +5162,9 @@ data FoldPlan = FoldPlan
     , foldReferences :: ![(TxIn, TxOut ConwayEra)]
     -- ^ the references of the lifecycle observer and the hash-proof policy
     , foldRegistered :: ![ByteString]
-    -- ^ the keys the registry already holds
+    -- ^ the keys the registry already holds as active
+    , foldTerminated :: ![ByteString]
+    -- ^ the keys the registry holds as terminal, as the caller recorded them
     , foldState :: !(Maybe (TxIn, TxOut ConwayEra))
     -- ^ the registry state output the fold spends; the chain's current one when absent
     , foldValidity :: !ValidityPlan
@@ -5157,7 +5193,7 @@ buildFoldTx env plan budgets = do
         withinSecs 30 (label <> ": query wallet") $
             queryUTxOs (envProvider env) (partyAddr party)
     stateUtxo <- maybe (currentState env) pure (foldState plan)
-    foldGuard (foldRegistered plan) key (snd stateUtxo)
+    foldGuard (foldRegistered plan) (foldTerminated plan) key (snd stateUtxo)
     (feeUtxo, collateral) <- pickDisjoint wallet [proofIn]
     applicationRef <- applicationReferenceOf env
     stateRef <- stateReferenceOf env
@@ -5182,7 +5218,7 @@ buildFoldTx env plan budgets = do
                 )
                 & datumTxOutL .~ mkInlineDatum (stateDatumData newRoot)
         cost = registrationCost (registryParameters (envTerms env))
-        (proofSteps, newRoot) = registryProof (foldRegistered plan) key
+        (proofSteps, newRoot) = registryProof (foldRegistered plan) (foldTerminated plan) key
         changeCoin =
             unCoin (requestOut ^. coinTxOutL)
                 + unCoin (feeOut ^. coinTxOutL)
@@ -5263,28 +5299,30 @@ key is not one the registry holds, and the keys it was given are the registry
 the chain holds (their root is the state output's datum). Either failure is
 thrown as a 'FoldRefusal' and no transaction is built.
 -}
-foldGuard :: [ByteString] -> ByteString -> TxOut ConwayEra -> IO ()
-foldGuard registered key stateOut = do
-    mapM_ throwIO (foldRefusal registered key)
-    when (rawInlineData stateOut /= Just (stateDatumData (registryRoot registered))) $
+foldGuard :: [ByteString] -> [ByteString] -> ByteString -> TxOut ConwayEra -> IO ()
+foldGuard registered terminated key stateOut = do
+    mapM_ throwIO (foldRefusal registered terminated key)
+    when (rawInlineData stateOut /= Just (stateDatumData (registryRootOf registered terminated))) $
         throwIO KeysAreNotTheRegistry
 
 -- | The root of a registry holding exactly the given keys.
 registryRoot :: [ByteString] -> ByteString
-registryRoot [] = emptyRoot
-registryRoot registered =
-    Registry.rootOf (Registry.build [(held, activeLeaf) | held <- registered])
+registryRoot registered = registryRootOf registered []
 
 {- | The proof that a key is absent from the registry that holds the keys, and
 the root after it is inserted: the registry binds every key to the active leaf.
 -}
-registryProof :: [ByteString] -> ByteString -> ([PLC.Data], ByteString)
-registryProof registered key =
+registryProof :: [ByteString] -> [ByteString] -> ByteString -> ([PLC.Data], ByteString)
+registryProof registered terminated key =
     ( map asPlcData (prove tree key)
     , Registry.rootOf tree
     )
   where
-    tree = Registry.build [(held, activeLeaf) | held <- registered <> [key]]
+    tree =
+        Registry.build
+            ( [(held, activeLeaf) | held <- registered <> [key]]
+                <> [(held, terminalLeaf) | held <- terminated]
+            )
 
 -- | The state output of the registry, as the chain holds it now.
 currentState :: CheckpointEnv -> IO (TxIn, TxOut ConwayEra)
@@ -5336,6 +5374,7 @@ foldRegistration env references party fixture booking proof = do
                 , foldProof = proof
                 , foldReferences = references
                 , foldRegistered = []
+                , foldTerminated = []
                 , foldState = Nothing
                 , foldValidity = validity
                 , foldParty = party
@@ -5466,7 +5505,7 @@ registryJourney env = do
     unless (extractDatum checkpointOut == Just (V2 (checkpointFacts checkpoint))) $
         fail "the delivered checkpoint does not carry the initial datum of the request"
     (_, stateAfter) <- currentState env
-    unless (rawInlineData stateAfter == Just (stateDatumData (snd (registryProof [] key)))) $
+    unless (rawInlineData stateAfter == Just (stateDatumData (snd (registryProof [] [] key)))) $
         fail "the registry's root is not the root of the one registered key"
     dbg ("delivered checkpoint " <> show checkpointIn)
     -- a second identity, booked and left unfolded
@@ -5481,6 +5520,7 @@ registryJourney env = do
                     , foldProof = proof
                     , foldReferences = drop 1 references
                     , foldRegistered = [key]
+                    , foldTerminated = []
                     , foldState = Nothing
                     , foldValidity = validity
                     , foldParty = folderParty
@@ -5554,6 +5594,7 @@ duplicateRegistrationJourney env references (heldIn, heldOut) heldKey fixture = 
                 , foldProof = proof
                 , foldReferences = drop 1 references
                 , foldRegistered = registered
+                , foldTerminated = []
                 , foldState = state
                 , foldValidity = validity
                 , foldParty = party
@@ -5695,3 +5736,803 @@ productionRegisterScenarioUsingReferences env references fixture = do
             }
         , checkpointRef
         )
+
+-- ---------------------------------------------------------
+-- The termination of a convicted identity
+-- ---------------------------------------------------------
+
+{- | A termination request: the output a booking placed at the application
+address, and the key it terminates.
+-}
+data TerminationRequest = TerminationRequest
+    { trOutput :: !(TxIn, TxOut ConwayEra)
+    , trKey :: !ByteString
+    }
+
+-- | The lovelace a termination request holds: its carrier and the registry's minimum tip.
+terminationRequestLovelace :: CheckpointEnv -> Integer
+terminationRequestLovelace env =
+    registryTerminationCarrier (envTerms env)
+        + minimumTip (registryParameters (envTerms env))
+
+-- | The approval token of the termination of a key.
+terminationApprovalOf :: CheckpointEnv -> ByteString -> ByteString
+terminationApprovalOf env = terminationApprovalName (registryIdentity env)
+
+{- | The keys of the pending outputs of convicted checkpoints at the checkpoint
+validator, read from the chain: the outputs whose datum is a pending termination.
+-}
+pendingKeys :: CheckpointEnv -> IO [ByteString]
+pendingKeys env = do
+    outputs <-
+        withinSecs 30 "query the checkpoint validator's outputs" $
+            queryUTxOs (envProvider env) (roleAddress env Active)
+    pure
+        [ tpAid pendingFacts
+        | (_, out) <- outputs
+        , Just (V2 pendingFacts@TerminationPending{}) <- [extractDatum out]
+        ]
+
+{- | The booking transaction of a termination: anyone spends the pending output
+of a convicted checkpoint, mints the termination approval and places the
+request. The booker signs nothing but the spend of their own fee input. The
+mint is the given approval name, which a control changes to a name the
+checkpoint validator and the application refuse.
+-}
+bookTerminationTx ::
+    CheckpointEnv ->
+    Party ->
+    [(TxIn, TxOut ConwayEra)] ->
+    (TxIn, TxOut ConwayEra) ->
+    ByteString ->
+    Maybe ByteString ->
+    Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
+    IO (ConwayTx, Set.Set (ConwayPlutusPurpose AsIx ConwayEra))
+bookTerminationTx env party references (pendingIn, pendingOut) key approvalOverride budgets = do
+    let label = "termination booking"
+        approval = fromMaybe (terminationApprovalOf env key) approvalOverride
+        active = activeTokenName (registryIdentity env) key
+        minted = tokenValue (applicationPolicy env) approval 1
+        held = terminationRequestLovelace env
+        requestOut =
+            mkBasicTxOut
+                (applicationAddress env)
+                ( MaryValue
+                    (Coin held)
+                    (tokenValue (statePolicyId env) active 1 <> minted)
+                )
+        pendingCoin = unCoin (pendingOut ^. coinTxOutL)
+    checkpointRef <- requireJust "checkpoint_register reference is absent" (listToMaybe references)
+    applicationRef <- applicationReferenceOf env
+    configuration <- configurationOf env
+    params <-
+        withinSecs 30 (label <> ": query parameters") $
+            queryProtocolParams (envProvider env)
+    wallet <-
+        withinSecs 30 (label <> ": query wallet") $
+            queryUTxOs (envProvider env) (partyAddr party)
+    (feeUtxo, collateral) <- pickDisjoint wallet []
+    let (feeIn, feeOut) = feeUtxo
+        changeOut =
+            mkBasicTxOut
+                (partyAddr party)
+                (inject (Coin (unCoin (feeOut ^. coinTxOutL) + pendingCoin - held - simpleFee)))
+        inputs = Set.fromList [pendingIn, feeIn]
+        purposes =
+            [
+                ( ConwaySpending (AsIx (spendingIndex pendingIn inputs))
+                , releaseSpendRedeemerData
+                , scriptExUnits
+                )
+            ,
+                ( ConwayMinting (AsIx 0)
+                , List
+                    [ actionData
+                        ( BookTermination
+                            (outputReferenceOf' pendingIn)
+                            0
+                            (registryIdentity env)
+                            key
+                        )
+                    ]
+                , scriptExUnits
+                )
+            ]
+        redeemers = redeemerMap budgets purposes
+        body =
+            mkBasicTxBody
+                & inputsTxBodyL .~ inputs
+                & outputsTxBodyL .~ StrictSeq.fromList [requestOut, changeOut]
+                & feeTxBodyL .~ Coin simpleFee
+                & mintTxBodyL .~ minted
+                & collateralInputsTxBodyL .~ Set.singleton (fst collateral)
+                & referenceInputsTxBodyL
+                    .~ Set.fromList [fst configuration, fst applicationRef, fst checkpointRef]
+                & scriptIntegrityHashTxBodyL
+                    .~ computeScriptIntegrity (Set.singleton PlutusV3) params redeemers (TxDats mempty)
+    pure
+        ( mkBasicTx body & witsTxL . rdmrsTxWitsL .~ redeemers
+        , Set.fromList [purpose | (purpose, _, _) <- purposes]
+        )
+
+{- | Book the termination of a key from the chain's pending output of it: the
+builder asks for the pending outputs first and refuses a key with none.
+-}
+bookTermination ::
+    CheckpointEnv ->
+    Party ->
+    [(TxIn, TxOut ConwayEra)] ->
+    ByteString ->
+    IO TerminationRequest
+bookTermination env party references key = do
+    let label = "termination booking"
+    keys <- pendingKeys env
+    mapM_ throwIO (bookingRefusal keys key)
+    pending <- pendingOutputOf env key
+    txId <-
+        submitTwoPassBy party env label (bookTerminationTx env party references pending key Nothing)
+    dbg ("termination booking transaction " <> show txId)
+    booked <-
+        pollOutput
+            (envProvider env)
+            txId
+            [0]
+            (hasAsset (applicationPolicy env) (terminationApprovalOf env key))
+            >>= requireJust (label <> ": the termination request did not settle")
+    pure TerminationRequest{trOutput = booked, trKey = key}
+
+-- | The pending output the chain holds for a key.
+pendingOutputOf :: CheckpointEnv -> ByteString -> IO (TxIn, TxOut ConwayEra)
+pendingOutputOf env key = do
+    outputs <-
+        withinSecs 30 "query the checkpoint validator's outputs" $
+            queryUTxOs (envProvider env) (roleAddress env Active)
+    case [ found
+         | found@(_, out) <- outputs
+         , Just (V2 TerminationPending{tpAid}) <- [extractDatum out]
+         , tpAid == key
+         ] of
+        [found] -> pure found
+        _ -> fail "the chain does not hold exactly one pending output of the key"
+
+{- | The terminating fold of a termination request by a party: the registry's
+state script marks the key terminal, the application burns the approval, the
+registry burns the key's active token, and the treasury receives the request
+less the tip. The proof is the registry's for the key being terminated, which
+the registry holds as active.
+-}
+data TerminationFoldPlan = TerminationFoldPlan
+    { tfRequest :: !TerminationRequest
+    , tfActive :: ![ByteString]
+    -- ^ the keys the registry holds as active, the terminated key among them
+    , tfTerminated :: ![ByteString]
+    -- ^ the keys the registry holds as terminal
+    , tfState :: !(Maybe (TxIn, TxOut ConwayEra))
+    , tfParty :: !Party
+    }
+
+buildTerminationFoldTx ::
+    CheckpointEnv ->
+    TerminationFoldPlan ->
+    Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
+    IO (ConwayTx, Set.Set (ConwayPlutusPurpose AsIx ConwayEra))
+buildTerminationFoldTx env plan budgets = do
+    let label = "termination fold"
+        TerminationRequest{trOutput = (requestIn, requestOut), trKey = key} = tfRequest plan
+        party = tfParty plan
+        active = activeTokenName (registryIdentity env) key
+        approval = terminationApprovalOf env key
+        tip = minimumTip (registryParameters (envTerms env))
+        donation = unCoin (requestOut ^. coinTxOutL) - tip
+    params <-
+        withinSecs 30 (label <> ": query parameters") $
+            queryProtocolParams (envProvider env)
+    wallet <-
+        withinSecs 30 (label <> ": query wallet") $
+            queryUTxOs (envProvider env) (partyAddr party)
+    stateUtxo <- maybe (currentState env) pure (tfState plan)
+    when (rawInlineData (snd stateUtxo) /= Just (stateDatumData (registryRootOf (tfActive plan) (tfTerminated plan)))) $
+        throwIO KeysAreNotTheRegistry
+    (feeUtxo, collateral) <- pickDisjoint wallet []
+    applicationRef <- applicationReferenceOf env
+    stateRef <- stateReferenceOf env
+    configuration <- configurationOf env
+    let (stateIn, stateOutBefore) = stateUtxo
+        (feeIn, feeOut) = feeUtxo
+        (proofSteps, newRoot) = terminationProof (tfActive plan) (tfTerminated plan) key
+        minted =
+            tokenValue (applicationPolicy env) approval (-1)
+                <> tokenValue (statePolicyId env) active (-1)
+        stateOut =
+            mkBasicTxOut
+                (stateAddress env)
+                ( MaryValue
+                    (stateOutBefore ^. coinTxOutL)
+                    (tokenValue (statePolicyId env) (stateTokenName (registrySeed env)) 1)
+                )
+                & datumTxOutL .~ mkInlineDatum (stateDatumData newRoot)
+        changeCoin =
+            unCoin (requestOut ^. coinTxOutL)
+                + unCoin (feeOut ^. coinTxOutL)
+                - donation
+                - foldFee
+        changeOut = mkBasicTxOut (partyAddr party) (inject (Coin changeCoin))
+        inputs = Set.fromList [requestIn, stateIn, feeIn]
+        mintIx policy = fromIntegral (mintingIndex policy minted)
+        purposes =
+            [
+                ( ConwaySpending (AsIx (spendingIndex requestIn inputs))
+                , spendActionData (FoldTermination (registryIdentity env) key)
+                , scriptExUnits
+                )
+            ,
+                ( ConwaySpending (AsIx (spendingIndex stateIn inputs))
+                , stateSpendData
+                    (registrySeed env)
+                    [Terminate (outputReferenceOf' requestIn) key proofSteps]
+                , scriptExUnits
+                )
+            , (ConwayMinting (AsIx (mintIx (applicationPolicy env))), List [], scriptExUnits)
+            , (ConwayMinting (AsIx (mintIx (statePolicyId env))), stateMintData Folded, scriptExUnits)
+            ]
+        redeemers = redeemerMap budgets purposes
+        body =
+            mkBasicTxBody
+                & inputsTxBodyL .~ inputs
+                & outputsTxBodyL .~ StrictSeq.fromList [stateOut, changeOut]
+                & feeTxBodyL .~ Coin foldFee
+                & mintTxBodyL .~ minted
+                & treasuryDonationTxBodyL .~ Coin donation
+                & collateralInputsTxBodyL .~ Set.singleton (fst collateral)
+                & referenceInputsTxBodyL
+                    .~ Set.fromList [fst configuration, fst applicationRef, fst stateRef]
+                & scriptIntegrityHashTxBodyL
+                    .~ computeScriptIntegrity (Set.singleton PlutusV3) params redeemers (TxDats mempty)
+    pure
+        ( mkBasicTx body & witsTxL . rdmrsTxWitsL .~ redeemers
+        , Set.fromList [purpose | (purpose, _, _) <- purposes]
+        )
+
+{- | The root of a registry holding the given active keys and the given terminal
+keys, and the proof of a present key with the root after it is marked terminal.
+Nothing is computed for a key that is not present as active.
+-}
+terminationProof :: [ByteString] -> [ByteString] -> ByteString -> ([PLC.Data], ByteString)
+terminationProof active terminated key =
+    ( map asPlcData (prove treeBefore key)
+    , Registry.rootOf treeAfter
+    )
+  where
+    leaves marked =
+        [(held, if held == marked then terminalLeaf else activeLeaf) | held <- active]
+            <> [(held, terminalLeaf) | held <- terminated]
+    treeBefore = Registry.build ([(held, activeLeaf) | held <- active] <> [(held, terminalLeaf) | held <- terminated])
+    treeAfter = Registry.build (leaves key)
+
+-- | The root of a registry holding the given active and terminal keys.
+registryRootOf :: [ByteString] -> [ByteString] -> ByteString
+registryRootOf [] [] = emptyRoot
+registryRootOf active terminated =
+    Registry.rootOf
+        ( Registry.build
+            ([(held, activeLeaf) | held <- active] <> [(held, terminalLeaf) | held <- terminated])
+        )
+
+{- | A transaction that spends the pending output of a convicted checkpoint with
+the checkpoint validator's release and mints nothing: the control of a release
+without an approval.
+-}
+releaseWithoutApprovalTx ::
+    CheckpointEnv ->
+    Party ->
+    [(TxIn, TxOut ConwayEra)] ->
+    (TxIn, TxOut ConwayEra) ->
+    Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
+    IO (ConwayTx, Set.Set (ConwayPlutusPurpose AsIx ConwayEra))
+releaseWithoutApprovalTx env party references (pendingIn, pendingOut) budgets = do
+    let label = "release without an approval"
+    checkpointRef <- requireJust "checkpoint_register reference is absent" (listToMaybe references)
+    params <-
+        withinSecs 30 (label <> ": query parameters") $
+            queryProtocolParams (envProvider env)
+    wallet <-
+        withinSecs 30 (label <> ": query wallet") $
+            queryUTxOs (envProvider env) (partyAddr party)
+    (feeUtxo, collateral) <- pickDisjoint wallet []
+    let (feeIn, feeOut) = feeUtxo
+        MaryValue _ pendingAssets = pendingOut ^. valueTxOutL
+        takenOut =
+            mkBasicTxOut
+                (partyAddr party)
+                ( MaryValue
+                    ( Coin
+                        ( unCoin (feeOut ^. coinTxOutL)
+                            + unCoin (pendingOut ^. coinTxOutL)
+                            - simpleFee
+                        )
+                    )
+                    pendingAssets
+                )
+        inputs = Set.fromList [pendingIn, feeIn]
+        purposes =
+            [
+                ( ConwaySpending (AsIx (spendingIndex pendingIn inputs))
+                , releaseSpendRedeemerData
+                , scriptExUnits
+                )
+            ]
+        redeemers = redeemerMap budgets purposes
+        body =
+            mkBasicTxBody
+                & inputsTxBodyL .~ inputs
+                & outputsTxBodyL .~ StrictSeq.fromList [takenOut]
+                & feeTxBodyL .~ Coin simpleFee
+                & collateralInputsTxBodyL .~ Set.singleton (fst collateral)
+                & referenceInputsTxBodyL .~ Set.fromList [fst checkpointRef]
+                & scriptIntegrityHashTxBodyL
+                    .~ computeScriptIntegrity (Set.singleton PlutusV3) params redeemers (TxDats mempty)
+    pure
+        ( mkBasicTx body & witsTxL . rdmrsTxWitsL .~ redeemers
+        , Set.fromList [purpose | (purpose, _, _) <- purposes]
+        )
+
+{- | A transaction that burns the approval of a termination request while
+spending the request with the return's redeemer, not the terminating fold's:
+the control of a burn without the fold.
+-}
+burnWithoutFoldTx ::
+    CheckpointEnv ->
+    Party ->
+    TerminationRequest ->
+    Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
+    IO (ConwayTx, Set.Set (ConwayPlutusPurpose AsIx ConwayEra))
+burnWithoutFoldTx env party request budgets = do
+    let label = "burn without the fold"
+        TerminationRequest{trOutput = (requestIn, requestOut), trKey = key} = request
+        burned = tokenValue (applicationPolicy env) (terminationApprovalOf env key) (-1)
+        active = tokenValue (statePolicyId env) (activeTokenName (registryIdentity env) key) 1
+    applicationRef <- applicationReferenceOf env
+    params <-
+        withinSecs 30 (label <> ": query parameters") $
+            queryProtocolParams (envProvider env)
+    wallet <-
+        withinSecs 30 (label <> ": query wallet") $
+            queryUTxOs (envProvider env) (partyAddr party)
+    (feeUtxo, collateral) <- pickDisjoint wallet []
+    let (feeIn, feeOut) = feeUtxo
+        takenOut =
+            mkBasicTxOut
+                (partyAddr party)
+                ( MaryValue
+                    ( Coin
+                        ( unCoin (feeOut ^. coinTxOutL)
+                            + unCoin (requestOut ^. coinTxOutL)
+                            - simpleFee
+                        )
+                    )
+                    active
+                )
+        inputs = Set.fromList [requestIn, feeIn]
+        purposes =
+            [
+                ( ConwaySpending (AsIx (spendingIndex requestIn inputs))
+                , spendActionData ReturnRegistration
+                , scriptExUnits
+                )
+            , (ConwayMinting (AsIx 0), List [], scriptExUnits)
+            ]
+        redeemers = redeemerMap budgets purposes
+        body =
+            mkBasicTxBody
+                & inputsTxBodyL .~ inputs
+                & outputsTxBodyL .~ StrictSeq.fromList [takenOut]
+                & feeTxBodyL .~ Coin simpleFee
+                & mintTxBodyL .~ burned
+                & collateralInputsTxBodyL .~ Set.singleton (fst collateral)
+                & referenceInputsTxBodyL .~ Set.fromList [fst applicationRef]
+                & scriptIntegrityHashTxBodyL
+                    .~ computeScriptIntegrity (Set.singleton PlutusV3) params redeemers (TxDats mempty)
+    pure
+        ( mkBasicTx body & witsTxL . rdmrsTxWitsL .~ redeemers
+        , Set.fromList [purpose | (purpose, _, _) <- purposes]
+        )
+
+{- | Whether the node's evaluation of a transaction fails in exactly the scripts
+of the given purposes and runs every other script to success: the refusal of
+exactly those scripts, not a setup failure and not a further one.
+-}
+refusedExactlyAt ::
+    CheckpointEnv ->
+    String ->
+    Party ->
+    [ConwayPlutusPurpose AsIx ConwayEra] ->
+    ConwayTx ->
+    IO ()
+refusedExactlyAt env label party expected tx = do
+    observed <-
+        withinSecs 120 (label <> ": evaluate") $
+            evaluateTx (envProvider env) (addKeyWitness (partyKey party) tx)
+    let failing = Set.fromList [purpose | (purpose, Left _) <- Map.toList observed]
+        passing = Set.fromList [purpose | (purpose, Right _) <- Map.toList observed]
+        wanted = Set.fromList expected
+    unless (failing == wanted) $
+        fail
+            ( label
+                <> ": the scripts that refused are "
+                <> show (Set.toList failing)
+                <> ", expected "
+                <> show expected
+            )
+    unless (Set.null (passing `Set.intersection` wanted)) $
+        fail (label <> ": an expected refusal also passed")
+    dbg (label <> ": refused by exactly " <> show expected)
+    submitted <-
+        withinSecs 60 (label <> ": submit") $
+            submitTx (envSubmitter env) (addKeyWitness (partyKey party) tx)
+    case submitted of
+        Submitted _ -> fail (label <> ": the ledger accepted a transaction that must be refused")
+        Rejected reason -> do
+            dbg (label <> ": rejected by the ledger: " <> oneLine (B8.unpack reason))
+            when (any (`isInfixOf` B8.unpack reason) ["BadInputsUTxO", "ExUnitsTooBigUTxO", "ValueNotConservedUTxO", "FeeTooSmallUTxO"]) $
+                fail (label <> ": the ledger refused it for a reason other than the scripts")
+
+{- | The budgets a control declares: each purpose a modest share of the transaction
+maximum, so that the transaction is not refused for declaring too much.
+-}
+modestBudgets :: Set.Set (ConwayPlutusPurpose AsIx ConwayEra) -> Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits
+modestBudgets = Map.fromSet (const (ExUnits 2_000_000 1_500_000_000))
+
+-- | What a refusal must leave untouched: the registry's root, and what sits at the validators.
+data ChainShot = ChainShot
+    { shotRoot :: !(Maybe PLC.Data)
+    , shotCheckpoints :: ![TxIn]
+    , shotApplication :: ![TxIn]
+    }
+    deriving stock (Eq, Show)
+
+chainShot :: CheckpointEnv -> IO ChainShot
+chainShot env = do
+    (_, state) <- currentState env
+    checkpoints <-
+        withinSecs 30 "query the checkpoint validator" $
+            queryUTxOs (envProvider env) (roleAddress env Active)
+    application <-
+        withinSecs 30 "query the application" $
+            queryUTxOs (envProvider env) (applicationAddress env)
+    pure
+        ChainShot
+            { shotRoot = rawInlineData state
+            , shotCheckpoints = sort (map fst checkpoints)
+            , shotApplication = sort (map fst application)
+            }
+
+{- | The journey of a convicted identity's termination. A registered identity is
+convicted. Controls are built, evaluated and refused by exactly the scripts
+that judge the clause each one violates. A third party books the termination
+and an honest second booking of the same pending output, built before the first
+landed, is refused by the ledger as a consumed input alone. Another party folds
+the request; the registry, the validators' outputs and the treasury donation
+are read back from the chain. A booking of the terminated key is refused by the
+builder, a registration of it is booked and cannot be folded, and is returned
+after its deadline.
+-}
+terminationJourney :: CheckpointEnv -> IO ()
+terminationJourney env = do
+    fixture <- loadConvictStoryFixture
+    references <- deployRegisterReferences env
+    checkpointRef <- requireJust "checkpoint reference is absent" (listToMaybe references)
+    advanceRef <-
+        requireJust
+            "observer_advance reference was not deployed during setup"
+            (envAdvanceReference env)
+    enforcementRef <-
+        requireJust
+            "observer_enforcement reference was not deployed during setup"
+            (envEnforcementReference env)
+    let convictor = beneficiaryPkh storyConvictor
+        booker = folderParty
+        folder = terminationFolderParty
+        regFixture = rsRegistration (fsFirstRotation fixture)
+    active <-
+        prepareConvictActive env references checkpointRef advanceRef "TERMINATION" fixture
+    convictPlan <-
+        prepareLiveEntitlement
+            env
+            (checkpointUtxo active)
+            (fsConflictEvidence fixture)
+            convictor
+            (commitmentNonce "350-termination")
+    convictTxId <-
+        submitTwoPassConvict
+            env
+            "termination: Convict"
+            checkpointRef
+            enforcementRef
+            active
+            convictor
+            convictPlan
+    assertConvictSettlement env "TERMINATION" active convictor convictTxId
+    let pendingIn = TxIn convictTxId (TxIx 2)
+    pending@(_, pendingOut) <-
+        withinSecs 30 "query the pending output" (queryUTxOByTxIn (envProvider env) (Set.singleton pendingIn))
+            >>= maybe (fail "the pending output is absent") (pure . (,) pendingIn) . Map.lookup pendingIn
+    dbg ("pending output " <> show pendingIn)
+    key <- case extractDatum pendingOut of
+        Just (V2 TerminationPending{tpAid}) -> pure tpAid
+        _ -> fail "the conviction did not leave a pending termination"
+    unless (key == checkpointKey env regFixture) $
+        fail "the pending termination is not of the identity that was registered"
+    let approval = terminationApprovalOf env key
+        activeName = activeTokenName (registryIdentity env) key
+        rootBefore = stateDatumData (registryRootOf [key] [])
+    (_, stateOutBefore) <- currentState env
+    unless (rawInlineData stateOutBefore == Just rootBefore) $
+        fail "the registry's root is not the root of the one registered key"
+    shotBefore <- chainShot env
+
+    -- controls, each honestly built and refused by exactly the scripts of its clause
+    (_, releasePurposes) <- releaseWithoutApprovalTx env booker references pending Map.empty
+    (releaseTx, _) <-
+        releaseWithoutApprovalTx env booker references pending (modestBudgets releasePurposes)
+    refusedExactlyAt
+        env
+        "a release without an approval"
+        booker
+        [ConwaySpending (AsIx (spendingIndex pendingIn (releaseTx ^. bodyTxL . inputsTxBodyL)))]
+        releaseTx
+    let anotherApproval = Just (terminationApprovalOf env (key <> "-another"))
+    (_, otherPurposes) <-
+        bookTerminationTx env booker references pending key anotherApproval Map.empty
+    (otherTx, _) <-
+        bookTerminationTx env booker references pending key anotherApproval (modestBudgets otherPurposes)
+    refusedExactlyAt
+        env
+        "a booking that mints the approval of another key"
+        booker
+        [ ConwaySpending (AsIx (spendingIndex pendingIn (otherTx ^. bodyTxL . inputsTxBodyL)))
+        , ConwayMinting (AsIx 0)
+        ]
+        otherTx
+    unchangedSince env "the controls of the booking" shotBefore
+
+    -- the honest race: a second booking, built before the first lands
+    (raceDiscovery, racePurposes) <-
+        bookTerminationTx env folder references pending key Nothing Map.empty
+    raceObserved <-
+        withinSecs 120 "second booking, built before the first lands: evaluate" $
+            evaluateTx (envProvider env) (addKeyWitness (partyKey folder) raceDiscovery)
+    raceUnits <-
+        requireExactAllRight "second booking, built before the first lands" racePurposes raceObserved
+    (raceTx, _) <-
+        bookTerminationTx env folder references pending key Nothing (Map.map deterministicMargin raceUnits)
+
+    -- the booking by a third party lands, with its own fee only
+    request <- bookTermination env booker references key
+    let (requestIn, requestOut) = trOutput request
+    unless (requestOut ^. addrTxOutL == applicationAddress env) $
+        fail "the termination request is not at the application address"
+    unless (requestOut ^. datumTxOutL == Ledger.NoDatum) $
+        fail "the termination request carries a datum"
+    unless (unCoin (requestOut ^. coinTxOutL) == terminationRequestLovelace env) $
+        fail "the termination request does not hold the carrier and the tip"
+    unless (hasAsset (statePolicyId env) activeName requestOut && hasAsset (applicationPolicy env) approval requestOut) $
+        fail "the termination request does not hold the active token and the approval"
+    pendingGone <-
+        withinSecs 30 "query the pending output" $
+            queryUTxOByTxIn (envProvider env) (Set.singleton pendingIn)
+    unless (Map.null pendingGone) $
+        fail "the pending output is still unspent after its booking"
+    let shotBooked =
+            ChainShot
+                (shotRoot shotBefore)
+                (filter (/= pendingIn) (shotCheckpoints shotBefore))
+                (sort (requestIn : shotApplication shotBefore))
+    afterBooking <- chainShot env
+    unless (afterBooking == shotBooked) $
+        fail "the booking changed more than the pending output and the request"
+
+    -- the second booking is refused: by the builder, and by the ledger as a consumed input
+    secondBuilder <- try (bookTermination env folder references key)
+    case secondBuilder of
+        Left (NoPendingOutput refused) | refused == key -> pure ()
+        Left other -> fail ("the builder refused for another reason: " <> show other)
+        Right _ -> fail "the builder booked a termination twice"
+    raceResult <-
+        withinSecs 60 "submit the second booking" $
+            submitTx (envSubmitter env) (addKeyWitness (partyKey folder) raceTx)
+    case raceResult of
+        Submitted _ -> fail "the ledger accepted a second booking of a consumed pending output"
+        Rejected reason -> do
+            dbg ("second booking refused: " <> oneLine (B8.unpack reason))
+            unless
+                ( consumedInputAlone
+                    (show pendingIn)
+                    (fromIntegral (spendingIndex pendingIn (raceTx ^. bodyTxL . inputsTxBodyL)))
+                    (B8.unpack reason)
+                )
+                $ fail "the second booking was refused, but not for the consumed pending output alone"
+    unchangedSince env "the second booking's refusals" afterBooking
+
+    -- a burn of the approval without the terminating fold is refused by the request's spend alone
+    (_, burnPurposes) <- burnWithoutFoldTx env folder request Map.empty
+    (burnTx, _) <- burnWithoutFoldTx env folder request (modestBudgets burnPurposes)
+    refusedExactlyAt
+        env
+        "a burn without the terminating fold"
+        folder
+        [ConwaySpending (AsIx (spendingIndex requestIn (burnTx ^. bodyTxL . inputsTxBodyL)))]
+        burnTx
+    unchangedSince env "the burn without the fold" afterBooking
+
+    -- the terminating fold, by another party
+    folderCoinBefore <- walletCoin env folder
+    foldTxId <-
+        submitTwoPassBy
+            folder
+            env
+            "termination fold"
+            ( buildTerminationFoldTx
+                env
+                TerminationFoldPlan
+                    { tfRequest = request
+                    , tfActive = [key]
+                    , tfTerminated = []
+                    , tfState = Nothing
+                    , tfParty = folder
+                    }
+            )
+    dbg ("termination fold transaction " <> show foldTxId)
+    terminalReadback env key request foldTxId booker folder folderCoinBefore
+    terminalKeyJourney env references regFixture key
+
+-- | The coin of a party's wallet.
+walletCoin :: CheckpointEnv -> Party -> IO Integer
+walletCoin env party = do
+    wallet <-
+        withinSecs 30 "query the wallet" $
+            queryUTxOs (envProvider env) (partyAddr party)
+    pure (sum [unCoin (out ^. coinTxOutL) | (_, out) <- wallet])
+
+-- | The chain is as a shot left it.
+unchangedSince :: CheckpointEnv -> String -> ChainShot -> IO ()
+unchangedSince env what before = do
+    now <- chainShot env
+    unless (now == before) $
+        fail ("the chain changed after " <> what)
+
+{- | What the terminating fold left, read from the chain: the registry's root is
+the tree with the key's terminal leaf, no unspent output holds the key's active
+token, the approval is gone, the treasury received the request less the tip and
+the folder kept the tip.
+-}
+terminalReadback ::
+    CheckpointEnv ->
+    ByteString ->
+    TerminationRequest ->
+    TxId ->
+    Party ->
+    Party ->
+    Integer ->
+    IO ()
+terminalReadback env key request foldTxId booker folder folderCoinBefore = do
+    let (requestIn, requestOut) = trOutput request
+        tip = minimumTip (registryParameters (envTerms env))
+        activeName = activeTokenName (registryIdentity env) key
+        approval = terminationApprovalOf env key
+    settled <-
+        pollOutput
+            (envProvider env)
+            foldTxId
+            [0]
+            (\out -> rawInlineData out == Just (stateDatumData (registryRootOf [] [key])))
+    unless (isJust settled) $
+        fail "the registry's root is not the tree with the key's terminal leaf"
+    mapM_
+        ( \(what, address) -> do
+            outputs <-
+                withinSecs 30 ("query " <> what) $
+                    queryUTxOs (envProvider env) address
+            when (any (hasAsset (statePolicyId env) activeName . snd) outputs) $
+                fail ("an unspent output at " <> what <> " holds the key's active token")
+            when (any (hasAsset (applicationPolicy env) approval . snd) outputs) $
+                fail ("an unspent output at " <> what <> " holds the termination approval")
+        )
+        [ ("the checkpoint validator", roleAddress env Active)
+        , ("the application", applicationAddress env)
+        , ("the state script", stateAddress env)
+        , ("the booker", partyAddr booker)
+        , ("the folder", partyAddr folder)
+        , ("the owner", envOwner env)
+        ]
+    gone <-
+        withinSecs 30 "query the request" $
+            queryUTxOByTxIn (envProvider env) (Set.singleton requestIn)
+    unless (Map.null gone) $ fail "the termination request is still unspent after its fold"
+    folderCoinAfter <- walletCoin env folder
+    -- the ledger conserves value: what the request held, less what the folder's
+    -- wallet gained on the chain and the declared fee, is what went to the treasury
+    let donation = unCoin (requestOut ^. coinTxOutL) - (folderCoinAfter - folderCoinBefore) - foldFee
+    unless (donation == unCoin (requestOut ^. coinTxOutL) - tip) $
+        fail "the treasury donation, derived from the chain, is not the request less the tip"
+    unless (folderCoinAfter == folderCoinBefore + tip - foldFee) $
+        fail "the folder did not keep exactly the tip beyond the fee"
+    dbg ("terminal key read back from the chain: " <> show (key, foldTxId))
+
+{- | After the key is terminal: a registration of it is booked (booking reads no
+registry) and cannot be folded, the builder refusing it by name before anything
+is computed, and the request is returned after its deadline, its refund address
+paid everything but the tip; a termination booking of the key is refused by the
+builder. The chain is as it was after each refusal.
+-}
+terminalKeyJourney ::
+    CheckpointEnv ->
+    [(TxIn, TxOut ConwayEra)] ->
+    RegistrationFixture ->
+    ByteString ->
+    IO ()
+terminalKeyJourney env references fixture key = do
+    shot <- chainShot env
+    again <- bookRegistration env fixture
+    placeholder <- do
+        wallet <-
+            withinSecs 30 "query the wallet" $
+                queryUTxOs (envProvider env) (partyAddr folderParty)
+        requireJust "the folder holds no output" (listToMaybe wallet)
+    now <- tipValidity env "fold of a terminal key"
+    refused <-
+        try
+            ( buildFoldTx
+                env
+                FoldPlan
+                    { foldBooking = again
+                    , foldFixture = fixture
+                    , foldProof = placeholder
+                    , foldReferences = drop 1 references
+                    , foldRegistered = []
+                    , foldTerminated = [key]
+                    , foldState = Nothing
+                    , foldValidity = now
+                    , foldParty = folderParty
+                    }
+                Map.empty
+            )
+    case refused of
+        Left (KeyIsTerminal named) | named == key -> pure ()
+        Left other -> fail ("the builder refused for another reason: " <> show other)
+        Right _ -> fail "the builder built a fold for a terminal key"
+    bookedShot <- chainShot env
+    unless (shotRoot bookedShot == shotRoot shot) $
+        fail "the registry's root changed after the builder's refusal of a terminal key"
+    termination <- try (bookTermination env folderParty references key)
+    case termination of
+        Left (NoPendingOutput named) | named == key -> pure ()
+        Left other -> fail ("the builder refused for another reason: " <> show other)
+        Right _ -> fail "the builder booked the termination of a terminal key"
+    afterTermination <- chainShot env
+    unless (afterTermination == bookedShot) $
+        fail "the chain changed after the builder's refusal of a termination booking"
+    let deadline = requestProcessDeadline (bookingRecord again)
+    awaitChainTime env "terminal key request deadline" deadline
+    returnValidity <- tipValidity env "return of a terminal key's registration"
+    returnTxId <-
+        submitTwoPassBy
+            folderParty
+            env
+            "return of a terminal key's registration"
+            (buildReturnTx env folderParty again returnValidity (envOwner env))
+    refunded <-
+        pollOutput
+            (envProvider env)
+            returnTxId
+            [0]
+            ( \out ->
+                out ^. addrTxOutL == envOwner env
+                    && unCoin (out ^. coinTxOutL)
+                        == requestLovelace env - minimumTip (registryParameters (envTerms env))
+            )
+    unless (isJust refunded) $
+        fail "the return did not pay the refund address everything but the tip"
+    dbg ("return of a terminal key's registration " <> show returnTxId)
+    finalShot <- chainShot env
+    unless (shotRoot finalShot == shotRoot shot) $
+        fail "the registry's root changed while a terminal key's registration was booked and returned"

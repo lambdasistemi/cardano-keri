@@ -158,7 +158,9 @@ generation are on [the identities of this generation](../architecture/registry-i
 The application address holds only configuration records and requests. A
 delivered checkpoint lives at the checkpoint validator's own address, where its
 lifecycle (advance, conviction, freeze, top-up) spends it as the
-checkpoint and economic models state; the application never spends it.
+checkpoint and economic models state; the application never spends it. The one
+exception is the pending output a conviction leaves there: only a termination
+booking releases it, as the next section shows.
 
 - **The configuration record.** Each registry's genesis transaction mints one
   configuration record at the application address, holding the registration
@@ -216,21 +218,21 @@ checkpoint and economic models state; the application never spends it.
 - **The closed mint.** Everything a transaction mints or burns under the
   application policy is exactly what its actions justify: one configuration
   token per created record, one registration approval per booked output, one
-  approval burned per fold or return, one termination approval burned per
-  terminating fold. Each booked output is booked once. An approval minted
-  without a booking, a second booking of one output, or any other token under
-  the application policy is refused (`accepted_mint_is_justified`,
-  `accepted_books_once`, `mint_without_booking_refused`,
-  `duplicate_booking_refused`). No application action mints a termination
-  approval yet, so at this revision no transaction creates a pending
-  termination through the application; booking a termination on conviction is
-  [#350](https://github.com/lambdasistemi/cardano-keri/issues/350).
+  termination approval per termination booking, one approval burned per fold
+  or return, one termination approval burned per terminating fold. Each booked
+  output is booked once. An approval minted without a booking, a second
+  booking of one output, or any other token under the application policy is
+  refused (`accepted_mint_is_justified`, `accepted_books_once`,
+  `mint_without_booking_refused`, `duplicate_booking_refused`).
 - **The treasury.** A fold's ledger `treasury_donation` is at least the
-  registration costs of the requests it folds (`treasury_covers_registration_costs`,
-  `folded_cost_in_donation`). The tip is what the folder may keep.
-- **Termination custody.** A pending termination is spent only by a fold that
-  burns its termination approval and its active token while the state policy
-  runs (`termination_only_by_fold`).
+  registration costs of the registration requests it folds and, for each
+  termination request it folds, the request's lovelace less the minimum tip
+  (`treasury_covers_registration_costs`, `folded_cost_in_donation`,
+  `termination_fold_donates`). The tip is what the folder may keep.
+- **Termination custody.** A termination request has no deadline and is spent
+  only by a fold that reads the configuration record by reference and burns
+  its termination approval and its active token while the state policy runs
+  (`termination_only_by_fold`).
 
 ```mermaid
 flowchart LR
@@ -241,6 +243,93 @@ flowchart LR
   Fold --> Checkpoint[Genuine checkpoint at the checkpoint validator]
   Checkpoint --> Lifecycle[Advance, conviction, freeze, top-up by the checkpoint validator]
 ```
+
+### Retiring a convicted identity
+
+As a relying party, I want an identity convicted under KERI's duplicity rule to
+become permanently terminal in its registry, so that no checkpoint for its key
+can ever be served again, and I want nobody to be able to end an identity that
+was not convicted. As anyone watching the chain, I can carry a conviction
+through to the registry myself, without anyone's signature, and keep what the
+booking frees as my premium.
+
+Retirement takes three transactions. A conviction, on the checkpoint
+validator, pays the convictor and the refund address and leaves a pending
+output at the checkpoint validator's address: a pending-termination datum,
+exactly the registry's minimum ADA and the registry's active token. A
+termination booking, open to anyone, spends that pending output, mints exactly
+one termination approval of the registry and of the key of the datum's AID, and
+places the termination request at the application address with an empty datum,
+exactly the active token and the approval, holding the economic termination
+carrier plus the registry's minimum tip. The booker keeps the rest of the
+minimum ADA, which is the economic booking premium. A terminating fold then
+spends the request, burns the approval and the active token, donates the
+request less the tip to the treasury, and the public registry makes the key
+terminal.
+
+```mermaid
+sequenceDiagram
+  participant Convictor
+  participant Checkpoint as Checkpoint validator
+  participant Booker as Anyone (booker)
+  participant Application as KERI application
+  participant Registry as Public registry
+  Convictor->>Checkpoint: conviction with duplicity evidence
+  Checkpoint-->>Checkpoint: leaves the pending output: minimum ADA, active token
+  Booker->>Checkpoint: spend the pending output
+  Checkpoint-->>Booker: released only if one termination approval of its key is minted
+  Booker->>Application: book the termination
+  Application-->>Application: mints one approval, places the request (carrier plus tip)
+  Booker->>Registry: terminating fold of the request
+  Registry-->>Registry: burns the approval and the active token, the key becomes terminal
+```
+
+The guarantees, each a theorem of `lean/CardanoKeri/ApplicationGoals.lean`:
+
+- **No termination without a conviction.** A termination approval is minted
+  only by a booking of exactly that registry and key, which spends, once, an
+  output at the checkpoint validator holding exactly the minimum ADA and the
+  key's one active token and carrying the pending-termination datum of an AID
+  whose key it is; exactly one approval is minted. Where the checkpoint
+  validator realizes the checkpoint model, that output's checkpoint was
+  convicted, with duplicity evidence at its last key state
+  (`termination_approval_requires_booking`,
+  `termination_approval_requires_pending`,
+  `termination_approval_requires_conviction`, and in the checkpoint model
+  `pending_only_by_conviction` and `reachable_pending_convicted`).
+- **The checkpoint validator releases a pending output only into a booking.**
+  Its one spend of a pending output requires exactly one termination approval
+  of its key to be minted, which the application mints only in a booking
+  (`pending_released_only_into_booking`).
+- **The request is what the fold consumes.** The booking places exactly the
+  output the terminating fold accepts, holding the economic carrier plus the
+  minimum tip (`termination_booking_inversion`).
+- **The money is the economic model's.** The request holds what the economic
+  booking puts into the request and the booker keeps the economic premium
+  (`termination_booking_matches_reap`); the fold's donation is the economic
+  termination donation, the carrier (`termination_donation_matches_economic`).
+- **The key retires for good.** A terminating fold that is a step of the public
+  registry's history makes the key terminal (`termination_fold_retires_key`);
+  no later transaction, whatever it is, makes it anything else or mints its
+  active token (`terminal_key_permanent`). A termination booking of a terminal
+  key is refused, because no unspent output holds its active token
+  (`termination_booking_refused_for_terminal_key`), and a fold registering it
+  again is refused, because the registry's insertion requires an unknown key
+  and mints no active token for a terminal one
+  (`registration_fold_refused_for_terminal_key`).
+
+```mermaid
+stateDiagram-v2
+  [*] --> Unknown
+  Unknown --> Active: registration fold
+  Active --> Active: conviction leaves the pending output, booking places the request
+  Active --> Terminal: terminating fold burns the active token
+  Terminal --> Terminal: every later transaction, no active token minted
+```
+
+The registry key stays active from the conviction through the booking: the
+pending output and then the request hold its one active token. Only the
+terminating fold retires it.
 
 Two approvals that are the same token name the same deployment, registry seed,
 AID, holding address, initial datum hash and deposit, under the finite encoding
@@ -260,7 +349,11 @@ gives the approval bytes, the configuration record with its checkpoint
 validator credential, and accepted and refused configuration creations,
 bookings, folds, returns, termination spends and spends of a delivered
 checkpoint for the on-chain approval and checkpoint creation
-([#348](https://github.com/lambdasistemi/cardano-keri/issues/348)). The
+([#348](https://github.com/lambdasistemi/cardano-keri/issues/348)). For the
+retirement of a convicted identity
+([#350](https://github.com/lambdasistemi/cardano-keri/issues/350)) it adds the
+termination approval bytes, accepted and refused termination bookings and
+terminating folds, and the checkpoint validator's release verdicts. The
 request and configuration datums' own byte layouts are not fixed by these
 vectors.
 

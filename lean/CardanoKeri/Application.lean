@@ -28,18 +28,34 @@ fold or a return moves. This module states KERI's application `A_keri` against
   return it, paying its refund address everything but the tip.
 * A fold's treasury donation is at least the registration costs of the
   requests it folds.
-* A pending termination is spent only by a fold that burns its active token.
+* A conviction leaves the checkpoint's pending output at the checkpoint
+  validator's address: a pending-termination datum, exactly the registry's
+  minimum ADA and the registry's active token. A termination booking, open to
+  anyone, spends that output and mints exactly one termination approval of the
+  registry and of the key of the datum's AID; it places the termination
+  request at the application address with an empty datum, exactly the active
+  token and the approval, holding the economic termination carrier `Mr` plus
+  the registry's minimum tip. The booker keeps the rest of the minimum ADA.
+  The checkpoint validator releases a pending output only into such a booking
+  (`pendingReleased`).
+* A termination request has no deadline and is spent only by a fold that
+  reads the configuration record by reference and burns its approval and its
+  active token; the fold's treasury donation also covers the request's
+  lovelace less the minimum tip.
 * The whole mint under the application policy is what the actions justify:
   one configuration token per created record, one registration approval per
-  distinct booked output, one approval burned per fold or return, one
-  termination approval burned per terminating fold. Each booked output is
-  booked once. `A_keri` mints nothing else; in particular no action mints a
-  termination approval.
+  distinct booked output, one termination approval per termination booking,
+  one approval burned per fold or return, one termination approval burned per
+  terminating fold. Each booked output is booked once. `A_keri` mints
+  nothing else. A key's termination is booked at most once per transaction:
+  each booking requires exactly one approval of its key minted, and a
+  terminating fold of the key requires one burned.
 
 The application address holds configuration records and requests only. A
 delivered checkpoint lives at the checkpoint validator's address, whose own
-spends (advance, conviction, freeze, top-up) the checkpoint and
-economic models state; the application never spends a checkpoint.
+spends (advance, conviction, freeze, top-up) the checkpoint and economic models
+state, and whose pending output only a termination booking releases; the
+application never spends a checkpoint.
 
 The network is not a field of any approval preimage: a Plutus address carries
 no network identifier. It is fixed by the chain the transaction runs on, where
@@ -109,6 +125,7 @@ inductive Action where
   | foldRegistration (input : OutRef) (holding : Nat)
   | returnRegistration (input : OutRef)
   | foldTermination (input : OutRef) (registry : TokenId) (key : Key)
+  | bookTermination (pending : OutRef) (index : Nat) (registry : TokenId) (key : Key)
   deriving Repr, DecidableEq
 
 def Action.input? : Action → Option OutRef
@@ -317,14 +334,77 @@ def spendRegistration (i : Interpretation) (env : Env) (rp : CardanoKeri.Registr
     | .returnRegistration _ => returnWindow data o.interval
     | _ => false
 
-/-- The spend of a pending termination: only a fold that burns its approval
-and its active token with the state policy running. -/
+/-- The spend of a termination request: only a fold that reads the
+configuration record by reference and burns its approval and its active token
+with the state policy running. -/
 def spendTermination (i : Interpretation) (release : PublishedRelease) (o : Observation)
     (input : ObservedOutput) (registry : TokenId) (key : Key) : Bool :=
+  (configurationOf i release registry o).isSome &&
   terminationShape .none i.hash i.code release input registry key &&
   SingularApplicationHeld.Assets.mintQty o.assets (terminationApproval i.hash i.code release registry key) == -1 &&
   SingularApplicationHeld.Assets.mintQty o.assets (activeAsset i.hash i.code registry key) == -1 &&
   o.assets.invoked.contains registry.policy
+
+/-! ## Booking a termination -/
+
+/-- A checkpoint state that is a pending termination. -/
+def pendingState : CardanoKeri.Checkpoint.State → Bool
+  | .terminationPending _ => true
+  | _ => false
+
+/-- The checkpoint datum of an output: its AID and the state facts it carries. -/
+def checkpointDatum (i : Interpretation) (output : ObservedOutput) :
+    Option CardanoKeri.ConsumerIdentity.DecodedDatum :=
+  match output.datum with | .application raw => i.decodeCheckpoint raw | _ => none
+
+/-- The pending output a conviction leaves for `key` of `registry`
+(`Checkpoint.Step.convict`, `pending_holds_minimum_ada`): at the checkpoint
+validator's credential the configuration record names, carrying the
+pending-termination datum of an AID whose key is `key`, holding exactly the
+registry's minimum ADA and the one active token of the key. -/
+def convictedPending (i : Interpretation) (rp : CardanoKeri.Registry.Params) (c : Configuration)
+    (registry : TokenId) (key : Key) (input : ObservedOutput) : Bool :=
+  input.credential == c.checkpointCredential &&
+  (match checkpointDatum i input with
+    | some d => i.keyOf d.aid == key && pendingState d.state
+    | none => false) &&
+  input.lovelace == rp.Mc &&
+  exactAssets input [(activeAsset i.hash i.code registry key, 1)]
+
+/-- The exact lovelace a termination request holds: the economic termination
+carrier `Mr` and the registry's minimum tip (`Registry.bookTermination`). -/
+def terminationLovelace (rp : CardanoKeri.Registry.Params) (p : ApplicationParameters) : Nat :=
+  rp.Mr + p.minimumTip
+
+/-- A termination booking, open to anyone. The configuration record of a
+registry whose state policy is `state(A_keri)` is read by reference; the spent
+input is the convicted checkpoint's pending output for the key; the placed
+output is the termination request (`terminationShape`: the application
+address, an empty datum, exactly the active token and the termination
+approval) holding exactly `terminationLovelace`; exactly one termination
+approval of the registry and key is minted. -/
+def bookTermination (i : Interpretation) (rp : CardanoKeri.Registry.Params)
+    (release : PublishedRelease) (o : Observation) (input output : ObservedOutput)
+    (registry : TokenId) (key : Key) : Bool :=
+  match configurationOf i release registry o with
+  | some c =>
+    registry.policy == release.statePolicy &&
+    convictedPending i rp c registry key input &&
+    terminationShape .none i.hash i.code release output registry key &&
+    output.lovelace == terminationLovelace rp c.parameters &&
+    SingularApplicationHeld.Assets.mintQty o.assets (terminationApproval i.hash i.code release registry key) == 1
+  | none => false
+
+/-- The checkpoint validator's one spend of a pending output: the transaction
+mints exactly one termination approval of the registry and of the key of the
+pending datum's AID. The application policy checks the rest of the booking. -/
+def pendingReleased (i : Interpretation) (release : PublishedRelease) (registry : TokenId)
+    (input : ObservedOutput) (o : Observation) : Bool :=
+  match checkpointDatum i input with
+  | some d => pendingState d.state &&
+    SingularApplicationHeld.Assets.mintQty o.assets
+      (terminationApproval i.hash i.code release registry (i.keyOf d.aid)) == 1
+  | none => false
 
 /-- The input an action names, spent exactly once in this transaction. -/
 def namedInput (o : Observation) (ref : OutRef) : Option ObservedOutput :=
@@ -343,6 +423,9 @@ def action (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params)
   | .foldTermination ref registry key => match namedInput o ref with
     | some input => spendTermination i release o input registry key
     | none => false
+  | .bookTermination ref index registry key => match namedInput o ref, o.outputs[index]? with
+    | some input, some output => bookTermination i rp release o input output registry key
+    | _, _ => false
   | a@(.foldRegistration ref _) | a@(.returnRegistration ref) => match namedInput o ref with
     | some input => match decoded i.decode input with
       | some (.registration data) => spendRegistration i env rp cp release o a input data
@@ -367,18 +450,33 @@ def requiredRefunds (i : Interpretation) (release : PublishedRelease) (o : Obser
         (data.refundAddress, input.lovelace - p.minimumTip)
     | _ => none
 
-/-- The registration costs of the requests this transaction folds. -/
+/-- What a terminating fold owes the treasury: the request's lovelace less the
+registry's minimum tip (the economic termination donation). -/
+def terminationDonation (i : Interpretation) (release : PublishedRelease) (o : Observation)
+    (ref : OutRef) (registry : TokenId) : Option Nat := do
+  let input ← namedInput o ref
+  let c ← configurationOf i release registry o
+  return input.lovelace - c.parameters.minimumTip
+
+/-- What one action owes the treasury: a fold its request's registration cost,
+a terminating fold its termination donation. -/
+def Action.treasuryDue (i : Interpretation) (release : PublishedRelease) (o : Observation) :
+    Action → Option Nat
+  | .foldRegistration ref _ => (spentRequest i release o ref).map fun (_, _, p) => p.registrationCost
+  | .foldTermination ref registry _ => terminationDonation i release o ref registry
+  | _ => none
+
+/-- The registration costs of the requests this transaction folds, and the
+termination donations of the termination requests it folds. -/
 def requiredTreasury (i : Interpretation) (release : PublishedRelease) (o : Observation) : Nat :=
-  (o.actions.filterMap fun a => match a with
-    | .foldRegistration ref _ => (spentRequest i release o ref).map fun (_, _, p) => p.registrationCost
-    | _ => none).sum
+  (o.actions.filterMap (Action.treasuryDue i release o)).sum
 
 /-- The lovelace the transaction's outputs pay to `address`. -/
 def paidTo (outputs : List ObservedOutput) (address : Nat) : Nat :=
   ((outputs.filter fun x => x.credential == address).map (·.lovelace)).sum
 
 /-- Refunds are paid in full per address, and the treasury donation covers
-the registration costs. -/
+the registration costs and the termination donations. -/
 def moneyRouted (i : Interpretation) (release : PublishedRelease) (o : Observation) : Bool :=
   let refunds := requiredRefunds i release o
   refunds.all (fun entry =>
@@ -389,8 +487,8 @@ def moneyRouted (i : Interpretation) (release : PublishedRelease) (o : Observati
 
 /-- The tokens under the application policy one action justifies, with their
 quantities: its configuration token, the approval of the request it books, the
-approval of the request it folds or returns, or the termination approval it
-burns. -/
+termination approval it books, the approval of the request it folds or
+returns, or the termination approval it burns. -/
 def Action.justifies (i : Interpretation) (release : PublishedRelease) (o : Observation) :
     Action → List (TokenId × Int)
   | .createConfiguration registry _ _ => [(configurationAsset i release registry, 1)]
@@ -405,10 +503,11 @@ def Action.justifies (i : Interpretation) (release : PublishedRelease) (o : Obse
       | _ => []
     | none => []
   | .foldTermination _ registry key => [(terminationApproval i.hash i.code release registry key, -1)]
+  | .bookTermination _ _ registry key => [(terminationApproval i.hash i.code release registry key, 1)]
 
-/-- The output a booking books. -/
+/-- The output a booking books, a registration's or a termination's. -/
 def Action.booking? : Action → Option Nat
-  | .bookRegistration index => some index
+  | .bookRegistration index | .bookTermination _ index _ _ => some index
   | _ => none
 
 /-- The outputs the transaction books, in action order. -/

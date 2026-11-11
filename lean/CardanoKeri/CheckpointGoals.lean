@@ -64,6 +64,60 @@ theorem trace_from_pending (p : Params) (env : Env) {h : Hash} {t : Slot}
   | nil => rfl
   | cons _ step _ => exact (pending_step_impossible p env h step).elim
 
+/-- **Only a conviction enters a pending termination.**
+Given any step whose successor is a pending termination at key state `h`.
+When its action and its source are read.
+Then the source is a live checkpoint, the action is a conviction, the
+checkpoint's current key state has duplicity evidence, and `h` is that key
+state. -/
+theorem pending_only_by_conviction (p : Params) (env : Env) {a : Action} {t : Slot}
+    {s : State} {f : Flow} {h : Hash} (hs : Step p env a t s f (.terminationPending h)) :
+    ∃ (l : Live) (payee : Addr), s = .present l ∧ a = .convict payee ∧
+      env.duplicityAt l.epoch l.sn = true ∧ l.hash = h := by
+  cases hs with
+  | convict now payee hdup => exact ⟨_, payee, rfl, rfl, hdup, rfl⟩
+
+/-- **A pending termination on a trace was entered by a conviction on it.**
+Given a trace from any state that ends in a pending termination at key state `h`.
+When its steps are read.
+Then either it started in that pending termination, or one of its steps is a
+conviction of a live checkpoint whose key state is `h` and has duplicity
+evidence. -/
+theorem trace_pending_convicted (p : Params) (env : Env) {t : Slot} {s : State}
+    {es : List (Slot × Action)} {h : Hash} (tr : Trace p env t s es (.terminationPending h)) :
+    s = .terminationPending h ∨
+      ∃ (t' : Slot) (payee : Addr) (l : Live), (t', Action.convict payee) ∈ es ∧
+        env.duplicityAt l.epoch l.sn = true ∧ l.hash = h := by
+  suffices general : ∀ {t : Slot} {s final : State} {es : List (Slot × Action)},
+      Trace p env t s es final → final = .terminationPending h →
+      s = .terminationPending h ∨
+        ∃ (t' : Slot) (payee : Addr) (l : Live), (t', Action.convict payee) ∈ es ∧
+          env.duplicityAt l.epoch l.sn = true ∧ l.hash = h from general tr rfl
+  intro t s final es tr target
+  induction tr with
+  | nil => exact Or.inl target
+  | @cons t₀ t₁ s₀ s₁ s₂ a f rest _ step tail ih =>
+    rcases ih target with same | ⟨t', payee, l, mem, dup, hash⟩
+    · subst same
+      obtain ⟨l, payee, _, rfl, dup, hash⟩ := pending_only_by_conviction p env step
+      exact Or.inr ⟨t₁, payee, l, List.mem_cons_self, dup, hash⟩
+    · exact Or.inr ⟨t', payee, l, List.mem_cons_of_mem _ mem, dup, hash⟩
+
+/-- **A reachable pending termination was convicted.**
+Given a pending termination at key state `h` reachable from an absent checkpoint.
+When its trace is read.
+Then one of its steps is a conviction of the live checkpoint at key state `h`,
+with duplicity evidence at that key state. -/
+theorem reachable_pending_convicted (p : Params) (env : Env) {h : Hash}
+    (reach : Reachable p env (.terminationPending h)) :
+    ∃ (t : Slot) (es : List (Slot × Action)) (t' : Slot) (payee : Addr) (l : Live),
+      Trace p env t .absent es (.terminationPending h) ∧
+      (t', Action.convict payee) ∈ es ∧ env.duplicityAt l.epoch l.sn = true ∧ l.hash = h := by
+  obtain ⟨t, es, tr⟩ := reach
+  rcases trace_pending_convicted p env tr with absurd | ⟨t', payee, l, mem, dup, hash⟩
+  · cases absurd
+  · exact ⟨t, es, t', payee, l, tr, mem, dup, hash⟩
+
 /-- Given the complete parameters and hypotheses:
 
 (p : Params) (env : Env) (h : Hash)

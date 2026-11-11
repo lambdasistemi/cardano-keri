@@ -1,5 +1,32 @@
 {"treasury":
- "a fold's treasury_donation is at least the registration costs it folds",
+ "a fold's treasury_donation is at least the registration costs it folds and, for each termination request it folds, the request's lovelace less the minimum tip",
+ "terminationApprovals":
+ [{"registryName":
+   "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf",
+   "preimage":
+   "d87d9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550ff",
+   "note": "the termination approval of the AID in the registry",
+   "key":
+   "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550",
+   "id": "termination-approval",
+   "approval":
+   {"policy": "282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+    "name": "f6c31cc2f07f593bb390663e06b102672674b37bd1335e38efde44dea2ec286d"},
+   "aid": "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"},
+  {"registryName":
+   "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf",
+   "preimage":
+   "d87d9fd8799f581c70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f75820f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139dafff582c4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776fff",
+   "note": "another AID in the same registry: another approval",
+   "key":
+   "4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776f",
+   "id": "termination-approval-other-aid",
+   "approval":
+   {"policy": "282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+    "name": "5c8237dc612fd2ca3bef06a4c60d7a427bc380c41e0b461645f1694e4aece4ea"},
+   "aid": "EEBjyTcVHGUZHrR1x3wuxOxbrzH0_cGfAYJJQHME3Pwo"}],
+ "termination":
+ "a conviction leaves at the checkpoint validator a pending-termination datum, exactly Mc and the active token; anyone books it: one termination approval of the registry and the key of the datum's AID is minted, and the request is placed at the application address with an empty datum, exactly the active token and the approval, holding Mr plus the minimum tip; the booker keeps Mc less the request; the checkpoint validator releases a pending output only when exactly one termination approval of its key is minted; the request has no deadline and only the terminating fold spends it",
  "rows":
  [{"verdict": "accepted",
    "validity": {"upper": 1, "lower": 0},
@@ -688,22 +715,306 @@
    "donation": 0},
   {"verdict": "accepted",
    "validity": {"upper": 15, "lower": 12},
-   "referenced": 0,
-   "outputs": [],
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 3,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"},
+    {"lovelace": 1,
+     "address":
+     "d8799fd8799f581c979ca1a6abb0b5babfc4c9ced3d8dde2e7ecf1f6fb00050a0f14191effd87a80ff"}],
    "note":
-   "a pending termination spent by its terminating fold, burning its approval and active token: accepted",
-   "kind": "termination",
+   "anyone books the termination of a convicted checkpoint: the pending output (4 lovelace, the active token, a pending-termination datum) is spent, one termination approval is minted, the request holds 3 (Mr 2 plus the tip 1) at the application address, the booker keeps 1: accepted",
+   "kind": "termination-booking",
    "inputs":
    [{"lovelace": 4,
      "address":
-     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
-   "id": "termination-fold",
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "id": "termination-booking",
+   "donation": 0},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 3,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"},
+    {"lovelace": 1,
+     "address":
+     "d8799fd8799f581c979ca1a6abb0b5babfc4c9ced3d8dde2e7ecf1f6fb00050a0f14191effd87a80ff"}],
+   "note":
+   "the spent output carries the live datum of the AID: no conviction, refused",
+   "kind": "termination-booking",
+   "inputs":
+   [{"lovelace": 4,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "id": "termination-booking-live-checkpoint",
+   "donation": 0},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 3,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"},
+    {"lovelace": 1,
+     "address":
+     "d8799fd8799f581c979ca1a6abb0b5babfc4c9ced3d8dde2e7ecf1f6fb00050a0f14191effd87a80ff"}],
+   "note": "the pending datum is of another AID than the key booked: refused",
+   "kind": "termination-booking",
+   "inputs":
+   [{"lovelace": 4,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "id": "termination-booking-other-aid",
+   "donation": 0},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 3,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"},
+    {"lovelace": 1,
+     "address":
+     "d8799fd8799f581c979ca1a6abb0b5babfc4c9ced3d8dde2e7ecf1f6fb00050a0f14191effd87a80ff"}],
+   "note":
+   "the booking names another key than the pending output's, with the approval of that key: refused",
+   "kind": "termination-booking",
+   "inputs":
+   [{"lovelace": 4,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "id": "termination-booking-other-key",
+   "donation": 0},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 3,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"},
+    {"lovelace": 1,
+     "address":
+     "d8799fd8799f581c979ca1a6abb0b5babfc4c9ced3d8dde2e7ecf1f6fb00050a0f14191effd87a80ff"}],
+   "note":
+   "the pending output sits at another address than the checkpoint validator's: refused",
+   "kind": "termination-booking",
+   "inputs":
+   [{"lovelace": 4,
+     "address":
+     "d8799fd8799f581c72777c81868b90959a9fa4a9aeb3b8bdc2c7ccd1d6dbe0e5eaeff4f9ffd87a80ff"}],
+   "id": "termination-booking-at-other-address",
+   "donation": 0},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 3,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"},
+    {"lovelace": 1,
+     "address":
+     "d8799fd8799f581c979ca1a6abb0b5babfc4c9ced3d8dde2e7ecf1f6fb00050a0f14191effd87a80ff"}],
+   "note": "the pending output holds the minimum ADA plus one: refused",
+   "kind": "termination-booking",
+   "inputs":
+   [{"lovelace": 5,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "id": "termination-booking-pending-one-more",
+   "donation": 0},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 3,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"},
+    {"lovelace": 1,
+     "address":
+     "d8799fd8799f581c979ca1a6abb0b5babfc4c9ced3d8dde2e7ecf1f6fb00050a0f14191effd87a80ff"}],
+   "note": "the pending output does not hold the active token: refused",
+   "kind": "termination-booking",
+   "inputs":
+   [{"lovelace": 4,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "id": "termination-booking-without-active-token",
+   "donation": 0},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 4,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"},
+    {"lovelace": 1,
+     "address":
+     "d8799fd8799f581c979ca1a6abb0b5babfc4c9ced3d8dde2e7ecf1f6fb00050a0f14191effd87a80ff"}],
+   "note": "the request holds 4, one more than Mr plus the tip: refused",
+   "kind": "termination-booking",
+   "inputs":
+   [{"lovelace": 4,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "id": "termination-booking-request-one-more",
+   "donation": 0},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 2,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"},
+    {"lovelace": 1,
+     "address":
+     "d8799fd8799f581c979ca1a6abb0b5babfc4c9ced3d8dde2e7ecf1f6fb00050a0f14191effd87a80ff"}],
+   "note": "the request holds 2, one less than Mr plus the tip: refused",
+   "kind": "termination-booking",
+   "inputs":
+   [{"lovelace": 4,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "id": "termination-booking-request-one-less",
+   "donation": 0},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 3,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"},
+    {"lovelace": 1,
+     "address":
+     "d8799fd8799f581c979ca1a6abb0b5babfc4c9ced3d8dde2e7ecf1f6fb00050a0f14191effd87a80ff"}],
+   "note": "the request carries a datum: refused",
+   "kind": "termination-booking",
+   "inputs":
+   [{"lovelace": 4,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "id": "termination-booking-request-datum",
    "donation": 0},
   {"verdict": "refused",
    "validity": {"upper": 15, "lower": 12},
    "referenced": 0,
    "outputs":
+   [{"lovelace": 3,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"},
+    {"lovelace": 1,
+     "address":
+     "d8799fd8799f581c979ca1a6abb0b5babfc4c9ced3d8dde2e7ecf1f6fb00050a0f14191effd87a80ff"}],
+   "note": "the configuration record is not a reference input: refused",
+   "kind": "termination-booking",
+   "inputs":
    [{"lovelace": 4,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "id": "termination-booking-without-configuration",
+   "donation": 0},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 3,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"},
+    {"lovelace": 1,
+     "address":
+     "d8799fd8799f581c979ca1a6abb0b5babfc4c9ced3d8dde2e7ecf1f6fb00050a0f14191effd87a80ff"}],
+   "note":
+   "the booking names a registry whose state policy is not state(A_keri): refused",
+   "kind": "termination-booking",
+   "inputs":
+   [{"lovelace": 4,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "id": "termination-booking-foreign-registry",
+   "donation": 0},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 3,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"},
+    {"lovelace": 1,
+     "address":
+     "d8799fd8799f581c979ca1a6abb0b5babfc4c9ced3d8dde2e7ecf1f6fb00050a0f14191effd87a80ff"}],
+   "note": "two termination approvals minted for one booking: refused",
+   "kind": "termination-booking",
+   "inputs":
+   [{"lovelace": 4,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "id": "termination-booking-two-approvals",
+   "donation": 0},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs":
+   [{"lovelace": 3,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"},
+    {"lovelace": 3,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "note":
+   "the same key booked twice into two requests, two approvals minted: refused",
+   "kind": "termination-booking",
+   "inputs":
+   [{"lovelace": 4,
+     "address":
+     "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
+   "id": "termination-booked-twice",
+   "donation": 0},
+  {"verdict": "accepted",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs": [],
+   "note":
+   "a termination request spent by its terminating fold, reading the configuration record, burning its approval and active token, donating 2 (the request less the tip): accepted",
+   "kind": "termination",
+   "inputs":
+   [{"lovelace": 3,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "id": "termination-fold",
+   "donation": 2},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 1,
+   "outputs": [],
+   "note":
+   "the terminating fold donates 1, one less than the request less the tip: refused",
+   "kind": "termination",
+   "inputs":
+   [{"lovelace": 3,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "id": "termination-fold-donation-short",
+   "donation": 1},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 0,
+   "outputs": [],
+   "note":
+   "the configuration record is not a reference input of the terminating fold: refused",
+   "kind": "termination",
+   "inputs":
+   [{"lovelace": 3,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "id": "termination-fold-without-configuration",
+   "donation": 2},
+  {"verdict": "refused",
+   "validity": {"upper": 15, "lower": 12},
+   "referenced": 0,
+   "outputs":
+   [{"lovelace": 3,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "note":
@@ -714,16 +1025,16 @@
    "donation": 0},
   {"verdict": "refused",
    "validity": {"upper": 15, "lower": 12},
-   "referenced": 0,
+   "referenced": 1,
    "outputs": [],
    "note": "a terminating fold that does not burn the active token: refused",
    "kind": "termination",
    "inputs":
-   [{"lovelace": 4,
+   [{"lovelace": 3,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "id": "termination-fold-active-kept",
-   "donation": 0},
+   "donation": 2},
   {"verdict": "refused",
    "validity": {"upper": 15, "lower": 12},
    "referenced": 1,
@@ -745,20 +1056,69 @@
    "donation": 2},
   {"verdict": "refused",
    "validity": {"upper": 15, "lower": 12},
-   "referenced": 0,
+   "referenced": 1,
    "outputs": [],
    "note": "a return naming a pending termination: refused",
    "kind": "termination",
    "inputs":
-   [{"lovelace": 4,
+   [{"lovelace": 3,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
    "id": "termination-return",
    "donation": 0}],
  "request": "deposit + registrationCost + minimumTip",
+ "releases":
+ [{"verdict": "released",
+   "note":
+   "the transaction mints one termination approval of the registry and of the key of the pending datum's AID: released",
+   "mint":
+   [{"quantity": 1,
+     "policy": "282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+     "name":
+     "f6c31cc2f07f593bb390663e06b102672674b37bd1335e38efde44dea2ec286d"}],
+   "id": "release-into-booking",
+   "datum":
+   "d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000ffff"},
+  {"verdict": "kept",
+   "note": "no termination approval minted: kept",
+   "mint": [],
+   "id": "release-without-approval",
+   "datum":
+   "d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000ffff"},
+  {"verdict": "kept",
+   "note": "two termination approvals of the key minted: kept",
+   "mint":
+   [{"quantity": 2,
+     "policy": "282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+     "name":
+     "f6c31cc2f07f593bb390663e06b102672674b37bd1335e38efde44dea2ec286d"}],
+   "id": "release-two-approvals",
+   "datum":
+   "d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000ffff"},
+  {"verdict": "kept",
+   "note": "the termination approval of another key minted: kept",
+   "mint":
+   [{"quantity": 1,
+     "policy": "282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+     "name":
+     "5c8237dc612fd2ca3bef06a4c60d7a427bc380c41e0b461645f1694e4aece4ea"}],
+   "id": "release-other-key-approval",
+   "datum":
+   "d87a9fd87a9f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000ffff"},
+  {"verdict": "kept",
+   "note":
+   "a live checkpoint, with the termination approval of its key minted: kept",
+   "mint":
+   [{"quantity": 1,
+     "policy": "282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+     "name":
+     "f6c31cc2f07f593bb390663e06b102672674b37bd1335e38efde44dea2ec286d"}],
+   "id": "release-live-checkpoint",
+   "datum":
+   "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500000d87980d879800a581d604d52575c61666b70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d87980d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff"}],
  "model": "lean/CardanoKeri/Application.lean",
  "mint":
- "the mint under the application policy is exactly what the actions justify: configuration +1 per created record, approval +1 per booked output, approval -1 per fold or return, termination approval -1 per terminating fold; each booked output is booked once",
+ "the mint under the application policy is exactly what the actions justify: configuration +1 per created record, approval +1 per booked output, termination approval +1 per termination booking, approval -1 per fold or return, termination approval -1 per terminating fold; each booked output is booked once and each key's termination once",
  "intervals":
  "lower bound included, upper bound excluded, as the ledger hands them to scripts",
  "initialState":
@@ -866,4 +1226,5 @@
    "approval":
    {"policy": "282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
     "name":
-    "88c1f0f2bc435f053b72b40e56af1cbeadcb625a75f1427fc1e021ed3b4dedc7"}}]}
+    "88c1f0f2bc435f053b72b40e56af1cbeadcb625a75f1427fc1e021ed3b4dedc7"}}],
+ "Mr": 2}

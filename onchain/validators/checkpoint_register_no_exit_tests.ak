@@ -24,7 +24,9 @@ use cardano_keri/checkpoint/message.{deriveAidAssetName}
 use cardano_keri/checkpoint/retired_layout.{retired_layout}
 use cardano_keri/checkpoint/threshold.{Unweighted}
 use checkpoint_register
-use registry_fixture.{registry_name, representative, state_policy}
+use registry_fixture.{
+  application_policy, registry_name, representative, state_policy,
+}
 
 const policy: PolicyId =
   #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
@@ -156,6 +158,7 @@ fn run_spend(redeemer: Data, tx: Transaction) -> Bool {
     d_reg,
     freeze_bond,
     2_000_000,
+    application_policy(),
     None,
     redeemer,
     spent_ref(),
@@ -174,6 +177,7 @@ fn run_mint(redeemer: Data, tx: Transaction) -> Bool {
     d_reg,
     freeze_bond,
     2_000_000,
+    application_policy(),
     ScriptContext { transaction: tx, redeemer, info: Minting(policy) },
   )
 }

@@ -60,6 +60,9 @@ pub type SpendRedeemer {
   /// whose top-up mark is clear (#522). Appended after `Freeze`: nothing
   /// renumbers. Anyone may do it; the mark stays set until the next rotation.
   TopUp { amount: Int }
+  /// Release the pending output of a convicted checkpoint into the booking of its
+  /// termination (Lean `pendingReleased`). Appended after `TopUp`.
+  Release
 }
 
 pub const checkpoint_min_ada: Int = 2_000_000
@@ -82,6 +85,8 @@ validator checkpoint_register(
   freeze_bond: Int,
   /// The premium (Lean `Params.P`) a rotation pays from the pool.
   premium: Int,
+  /// The application policy the termination approvals are minted under.
+  application_policy: PolicyId,
 ) {
   spend(
     _datum: Option<Data>,
@@ -170,6 +175,7 @@ validator checkpoint_register(
           own_ref,
           tx,
         )
+      Release -> False
     }
   }
 

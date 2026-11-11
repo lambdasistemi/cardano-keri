@@ -24,6 +24,12 @@ pub fn state_policy() -> PolicyId {
   cfg.state_policy
 }
 
+/// The application policy the registry's state policy is computed from: the
+/// checkpoint validator is applied to it to know the termination approvals.
+pub fn application_policy() -> PolicyId {
+  cfg.application_policy
+}
+
 pub fn registry_name() -> ByteArray {
   cfg.registry_name
 }

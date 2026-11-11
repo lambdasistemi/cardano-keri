@@ -46,7 +46,9 @@ use keri_application_requests.{
   Booking, Fold, application, booking, booking_tx, checkpoint_hash, envelope,
   fold, fold_tx, holding_output, reference, return_tx, returned,
 }
-use registry_fixture.{active_name_of_key, registry_name, state_policy}
+use registry_fixture.{
+  active_name_of_key, application_policy, registry_name, state_policy,
+}
 use topup_fixture.{topup_redeemer}
 
 fn run_mint(
@@ -269,6 +271,7 @@ fn run_checkpoint_spend(
     d_reg,
     freeze_bond,
     premium,
+    application_policy(),
     None,
     redeemer,
     own_ref,

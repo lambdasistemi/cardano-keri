@@ -27,7 +27,7 @@ use cardano/address.{Script}
 use cardano/assets.{AssetName, PolicyId, quantity_of, tokens}
 use cardano/transaction.{Transaction}
 use cardano_keri/application/action.{
-  Action, BookRegistration, CreateConfiguration,
+  Action, BookRegistration, BookTermination, CreateConfiguration,
 }
 use cardano_keri/application/configuration.{create_configuration}
 use cardano_keri/application/registration.{
@@ -45,6 +45,7 @@ fn birth(action: Action, tx: Transaction) -> Option<AssetName> {
         Some((_, data)) -> Some(registration_approval(data))
         None -> None
       }
+    BookTermination { .. } -> None
   }
 }
 
@@ -94,6 +95,7 @@ fn action_accepted(
       }
     BookRegistration { output_index } ->
       book_registration(application_policy, minimum_deposit, output_index, tx)
+    BookTermination { .. } -> False
   }
 }
 

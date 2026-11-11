@@ -31,7 +31,7 @@ use freeze_fixture.{
   enforcement_hash, entitlement_hash, freeze_bond, freeze_redeemer, network_id,
   premium, spent_ref,
 }
-use registry_fixture.{registry_name, state_policy}
+use registry_fixture.{application_policy, registry_name, state_policy}
 
 fn run_spend(redeemer: Data, tx: Transaction) -> Bool {
   checkpoint_register.checkpoint_register.spend(
@@ -44,6 +44,7 @@ fn run_spend(redeemer: Data, tx: Transaction) -> Bool {
     d_reg,
     freeze_bond,
     premium,
+    application_policy(),
     None,
     redeemer,
     spent_ref(),

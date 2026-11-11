@@ -30,8 +30,9 @@ use freeze_fixture.{
 }
 use registry_fixture.{
   Nothing, OtherKey, OtherRegistryName, OtherStatePolicy, QuantityTwo,
-  RetiredRegisterToken, holding, registry_name, representative, staked,
-  state_policy, with_input_token, with_successor_address, with_successor_token,
+  RetiredRegisterToken, application_policy, holding, registry_name,
+  representative, staked, state_policy, with_input_token, with_successor_address,
+  with_successor_token,
 }
 use topup_fixture.{
   Bond, Deposit, Keep, Parts, Rotation, TopUp, base, change, eight_data, flag,
@@ -56,6 +57,7 @@ fn run_spend(redeemer: Data, tx: Transaction) -> Bool {
     d_reg,
     freeze_bond,
     premium,
+    application_policy(),
     None,
     redeemer,
     spent_ref(),

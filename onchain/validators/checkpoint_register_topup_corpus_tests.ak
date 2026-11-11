@@ -31,7 +31,7 @@ use freeze_fixture.{
   advance_hash, d_reg, enforcement_hash, entitlement_hash, freeze_bond,
   network_id, premium, spent_ref,
 }
-use registry_fixture.{registry_name, state_policy}
+use registry_fixture.{application_policy, registry_name, state_policy}
 use topup_fixture.{TopUp, corpus_topup, corpus_topup_pending, topup_redeemer}
 
 fn run_spend(redeemer: Data, tx: Transaction) -> Bool {
@@ -45,6 +45,7 @@ fn run_spend(redeemer: Data, tx: Transaction) -> Bool {
     d_reg,
     freeze_bond,
     premium,
+    application_policy(),
     None,
     redeemer,
     spent_ref(),

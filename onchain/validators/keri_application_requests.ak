@@ -23,7 +23,7 @@ use cardano/transaction.{
   Spend, Transaction, Withdraw, placeholder,
 }
 use cardano_keri/application/action.{
-  Action, BookRegistration, FoldRegistration, FoldTermination,
+  Action, BookRegistration, BookTermination, FoldRegistration, FoldTermination,
   ReturnRegistration, SpendAction,
 }
 use cardano_keri/application/configuration_vectors as cfg
@@ -31,6 +31,8 @@ use cardano_keri/application/held.{
   ApplicationParameters, Configuration, Registration, RegistrationData,
 }
 use cardano_keri/application/row_vectors as rows
+use cardano_keri/checkpoint/datum as checkpoint_datum
+use cardano_keri/checkpoint/datum.{TerminationPending}
 use cardano_keri/checkpoint/observer.{
   ObserverClaim, ObserverEnvelope, observe_register,
 }
@@ -519,6 +521,12 @@ pub type Termination {
   datum: transaction.Datum,
   lovelace: Int,
   registry: RegistryIdentity,
+  /// The key whose termination is folded.
+  key: ByteArray,
+  /// Whether the registry's configuration record is a reference input.
+  references: Bool,
+  /// The treasury donation of the transaction.
+  donation: Int,
 }
 
 /// Lean row `termination-fold`: a pending termination spent by its fold.
@@ -528,8 +536,11 @@ pub fn termination() -> Termination {
     active_burn: -1,
     redeemer: FoldTermination { registry: registry(), key: rows.key_e },
     datum: NoDatum,
-    lovelace: 4,
+    lovelace: 3,
     registry: registry(),
+    key: rows.key_e,
+    references: True,
+    donation: 2,
   }
 }
 
@@ -539,9 +550,9 @@ pub fn pending_output(t: Termination) -> Output {
     value: with_lovelace(
       t.lovelace,
       add(
-        token(t.registry.policy, active_token_name(t.registry, rows.key_e), 1),
+        token(t.registry.policy, active_token_name(t.registry, t.key), 1),
         application(),
-        termination_approval_of(t.registry, rows.key_e),
+        termination_approval_of(t.registry, t.key),
         1,
       ),
     ),
@@ -561,16 +572,18 @@ pub fn termination_tx(t: Termination) -> Transaction {
       [
         (
           application(),
-          termination_approval_of(t.registry, rows.key_e),
+          termination_approval_of(t.registry, t.key),
           t.approval_burn,
         ),
-        (
-          t.registry.policy,
-          active_token_name(t.registry, rows.key_e),
-          t.active_burn,
-        ),
+        (t.registry.policy, active_token_name(t.registry, t.key), t.active_burn),
       ],
     ),
+    reference_inputs: if t.references {
+      [config_input(50, registry(), cfg.checkpoint_credential)]
+    } else {
+      []
+    },
+    treasury_donation: donation_of(t.donation),
     validity_range: range(12, 15),
     redeemers: list.concat(
       [Pair(Spend(reference(80)), as_data(t.redeemer))],
@@ -580,6 +593,131 @@ pub fn termination_tx(t: Termination) -> Transaction {
         [Pair(Mint(application()), as_data(none))]
       },
     ),
+  }
+}
+
+// ---- termination booking ----------------------------------------------------------
+
+/// The pending-termination datum of the AID whose key is `aid`, as a conviction
+/// writes it.
+pub fn pending_datum_of(aid: ByteArray) -> Data {
+  checkpoint_datum.write(TerminationPending { aid, sn: 0, epoch: 0 })
+}
+
+pub type TerminationBooking {
+  /// The registry the booking names: the action, the request and the approval.
+  registry: RegistryIdentity,
+  /// The key the booking names.
+  key: ByteArray,
+  /// The key the spent pending output holds the active token of.
+  pending_key: ByteArray,
+  pending_datum: Data,
+  pending_address: Address,
+  pending_lovelace: Int,
+  pending_holds_active: Bool,
+  request_lovelace: Int,
+  request_datum: transaction.Datum,
+  /// How many termination requests the transaction places.
+  copies: Int,
+  /// What the booker keeps; no output when zero.
+  booker_lovelace: Int,
+  /// The termination approvals minted.
+  mint: Int,
+  references: Bool,
+  actions: List<Action>,
+}
+
+/// The pending output a conviction leaves.
+pub fn pending_reference() -> OutputReference {
+  reference(81)
+}
+
+/// Lean row `termination-booking`: anyone books the termination of a convicted
+/// checkpoint.
+pub fn termination_booking() -> TerminationBooking {
+  TerminationBooking {
+    registry: registry(),
+    key: rows.key_e,
+    pending_key: rows.key_e,
+    pending_datum: rows.variant(8),
+    pending_address: checkpoint_address(),
+    pending_lovelace: 4,
+    pending_holds_active: True,
+    request_lovelace: 3,
+    request_datum: NoDatum,
+    copies: 1,
+    booker_lovelace: 1,
+    mint: 1,
+    references: True,
+    actions: [
+      BookTermination {
+        pending: pending_reference(),
+        output_index: 0,
+        registry: registry(),
+        key: rows.key_e,
+      },
+    ],
+  }
+}
+
+pub fn termination_booking_tx(b: TerminationBooking) -> Transaction {
+  let pending = Output {
+    address: b.pending_address,
+    value: if b.pending_holds_active {
+      with_lovelace(
+        b.pending_lovelace,
+        token(
+          b.registry.policy,
+          active_token_name(b.registry, b.pending_key),
+          1,
+        ),
+      )
+    } else {
+      from_lovelace(b.pending_lovelace)
+    },
+    datum: InlineDatum(b.pending_datum),
+    reference_script: None,
+  }
+  let request = Output {
+    address: app_address(),
+    value: with_lovelace(
+      b.request_lovelace,
+      add(
+        token(b.registry.policy, active_token_name(b.registry, b.key), 1),
+        application(),
+        termination_approval_of(b.registry, b.key),
+        1,
+      ),
+    ),
+    datum: b.request_datum,
+    reference_script: None,
+  }
+  let booker = if b.booker_lovelace == 0 {
+    []
+  } else {
+    [
+      Output {
+        address: rows.spender_address,
+        value: from_lovelace(b.booker_lovelace),
+        datum: NoDatum,
+        reference_script: None,
+      },
+    ]
+  }
+  Transaction {
+    ..placeholder,
+    inputs: [Input { output_reference: pending_reference(), output: pending }],
+    outputs: list.concat(list.repeat(request, b.copies), booker),
+    mint: mint_of(
+      [(application(), termination_approval_of(b.registry, b.key), b.mint)],
+    ),
+    reference_inputs: if b.references {
+      [config_input(50, registry(), cfg.checkpoint_credential)]
+    } else {
+      []
+    },
+    validity_range: range(12, 15),
+    redeemers: [Pair(Mint(application()), as_data(b.actions))],
   }
 }
 

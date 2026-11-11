@@ -1,0 +1,30 @@
+# Milestone 11 (M1.2) work deleted 2026-09-07 on operator instruction.
+# Milestone RETIRED 2026-09-02 by project ruling D-021. Ledger .milestones/11/ PRESERVED.
+# Every tip recorded here; any branch is restorable with: git branch <name> <sha>
+
+## remote branches
+0cfc9c282247f2910f3c45295b8b81ba6d334275 docs/300-projection-fidelity-requirements
+0f1bf665a005f567b40cce7589fa097b8524373d ms11/r1-event-key-v2
+a8b5dabf1098d320c00398b88f1be33a2cda1298 ms11/s0-reland
+228a0cdd531faae552f94557b1c3ebd9adb467b2 ms11/s2-no-b
+
+## local branches
+0a12237b78fb5b307633d4a182b7920f85243a2b ms11/b-decoder-land
+31d746af7ccf94ef2bad83d2dc9d214b992a91a3 ms11/b-recut
+e8c06afdffd33abbf242c79aec8c95ecf9aae696 ms11/b-recut2
+337d0cdc494542cb591e69e449da72f64e01f808 ms11/b-recut3
+7c78e5f2eb433a30ab66230d78223e9d0bdb9d76 ms11/b-recut4
+2ff9d8ebe98ccfbaba5f9d08d8a181ac369243cc ms11/r1-event-key
+a19aa5b2ce4d84f3a810d7f55a9a940cc777025e ms11/r1-event-key-v2
+6312a75173186335d0470aa46b90b6caad7cb357 ms11/r1-owner1
+0f1bf665a005f567b40cce7589fa097b8524373d ms11/r1-report-repair-owner2
+a8b5dabf1098d320c00398b88f1be33a2cda1298 ms11/s0-reland
+cde292510925430e3d0161a690cffe73e9e9bb66 ms11/s1-harness-quality
+228a0cdd531faae552f94557b1c3ebd9adb467b2 ms11/s2-no-b
+8c546e16ff65e814ce533c7a333c01ec92347d16 ms11/s2-no-b-owner1
+6a8d6ef6a58dd1c7321eda67e0b4276d948f7020 ms11/s2-no-b-owner2
+9049f37929b2017666eb8fbb5a17f361d4fe8395 ms11/s2-witness-mode
+
+## PRs closed
+305 ms11/r1-event-key-v2  feat(m11): derive MPF keys from verified events
+306 docs/300-projection-fidelity-requirements  docs+spec: state projection-fidelity requirements (#300)

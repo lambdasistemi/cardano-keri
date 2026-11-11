@@ -5617,8 +5617,13 @@ duplicateRegistrationJourney env references (heldIn, heldOut) heldKey fixture = 
         Submitted _ -> fail "the ledger accepted a second fold against a consumed registry state"
         Rejected reason -> do
             dbg ("second fold refused: " <> oneLine (B8.unpack reason))
-            unless (consumedInputAlone (show (fst preFold)) (B8.unpack reason)) $
-                fail "the second fold was refused, but not for the consumed registry state alone"
+            unless
+                ( consumedInputAlone
+                    (show (fst preFold))
+                    (fromIntegral (spendingIndex (fst preFold) (retryTx ^. bodyTxL . inputsTxBodyL)))
+                    (B8.unpack reason)
+                )
+                $ fail "the second fold was refused, but not for the consumed registry state alone"
     unchangedAfter "the ledger's refusal of the second fold"
     -- the second fold built honestly now is refused by the builder
     now <- tipValidity env "second fold, built after the first landed"

@@ -11,19 +11,24 @@ module Cardano.KERI.AID.E2E.Rejection (
     renderedElements,
 ) where
 
-import Data.List (stripPrefix, tails)
+import Data.List (isPrefixOf, stripPrefix, tails)
 import Data.Maybe (listToMaybe)
 
-{- | Whether a rejection holds exactly two failures: the one input, given as it
-renders, is no longer there, and the value no longer balances, which follows from
-the missing input. Any other failure, another input, or a third element is not
-that rejection.
+{- | Whether a rejection is exactly the rejection of a transaction that spends an
+input that no longer exists, given the input as it renders and the index of its
+spend in the transaction. Four failures follow from the missing input and no
+others: the input is not there, the value no longer balances, the input cannot
+be translated for the scripts, and the redeemer of its spend has nothing to
+redeem. Another input, a further failure or a missing one is not that rejection.
 -}
-consumedInputAlone :: String -> String -> Bool
-consumedInputAlone input rendered =
+consumedInputAlone :: String -> Int -> String -> Bool
+consumedInputAlone input index rendered =
     case listToMaybe [rest | text <- tails rendered, Just rest <- [stripPrefix marker text]] of
         Just rest -> case renderedElements rest of
-            [imbalance] -> imbalanceHead `isPrefixOfString` imbalance
+            [imbalance, translation, redeemer] ->
+                imbalanceHead `isPrefixOf` imbalance
+                    && translatesMissing translation
+                    && redeemer == extraRedeemer
             _ -> False
         Nothing -> False
   where
@@ -32,7 +37,21 @@ consumedInputAlone input rendered =
             <> input
             <> "])))) :| ["
     imbalanceHead = "ConwayUtxowFailure (UtxoFailure (ValueNotConservedUTxO "
-    isPrefixOfString prefix text = stripPrefix prefix text /= Nothing
+    translationHead =
+        "ConwayUtxowFailure (UtxoFailure (UtxosFailure (CollectErrors (BadTranslation (BabbageContextError (AlonzoContextError (TranslationLogicMissingInput ("
+            <> input
+    translatesMissing translation =
+        case stripPrefix translationHead translation of
+            Just after ->
+                let (closers, tailing) = span (== ')') after
+                 in not (null closers)
+                        && " :| []" `isPrefixOf` tailing
+                        && all (== ')') (drop 6 tailing)
+            Nothing -> False
+    extraRedeemer =
+        "ConwayUtxowFailure (ExtraRedeemers (ConwaySpending (AsIx {unAsIx = "
+            <> show index
+            <> "}) :| []))"
 
 {- | The elements of a rendered list, given the text after its opening bracket:
 split at the commas outside any nesting, up to the closing bracket.

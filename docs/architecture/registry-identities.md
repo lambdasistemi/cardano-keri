@@ -90,9 +90,10 @@ terms feeds all three, so the amounts cannot disagree.
 A registry on the devnet is created by spending one seed output, which fixes
 its name; its state policy follows from the application. Every transaction of
 the journey has an identifier that depends on the transaction's contents. The
-run derives all of them and prints them. The devnet is deterministic, so every
-run prints the same values; they are not written here, and the printed lines,
-not this page, are where they are current.
+run derives all of them and prints them. The registry identity (state policy and
+name) and the genesis transaction come out the same in every run. Transaction
+identifiers after genesis differ from run to run. No value is written here; the
+printed lines, not this page, are where they are current.
 
 The hosted job named "E2E (withDevnet)", step "withDevnet registry and
 checkpoint journeys", builds the devnet check with its log shown. The lines

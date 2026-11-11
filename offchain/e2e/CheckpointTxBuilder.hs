@@ -5846,6 +5846,7 @@ bookTermination env party references key = do
     pending <- pendingOutputOf env key
     txId <-
         submitTwoPassBy party env label (bookTerminationTx env party references pending key Nothing)
+    dbg ("termination booking transaction " <> show txId)
     booked <-
         pollOutput
             (envProvider env)
@@ -6230,6 +6231,7 @@ terminationJourney env = do
     pending@(_, pendingOut) <-
         withinSecs 30 "query the pending output" (queryUTxOByTxIn (envProvider env) (Set.singleton pendingIn))
             >>= maybe (fail "the pending output is absent") (pure . (,) pendingIn) . Map.lookup pendingIn
+    dbg ("pending output " <> show pendingIn)
     key <- case extractDatum pendingOut of
         Just (V2 TerminationPending{tpAid}) -> pure tpAid
         _ -> fail "the conviction did not leave a pending termination"
@@ -6354,6 +6356,7 @@ terminationJourney env = do
                     , tfParty = folder
                     }
             )
+    dbg ("termination fold transaction " <> show foldTxId)
     terminalReadback env key request foldTxId folder folderCoinBefore
     terminalKeyJourney env references regFixture key
 
@@ -6502,6 +6505,7 @@ terminalKeyJourney env references fixture key = do
             )
     unless (isJust refunded) $
         fail "the return did not pay the refund address everything but the tip"
+    dbg ("return of a terminal key's registration " <> show returnTxId)
     finalShot <- chainShot env
     unless (shotRoot finalShot == shotRoot shot) $
         fail "the registry's root changed while a terminal key's registration was booked and returned"

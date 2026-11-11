@@ -12,6 +12,7 @@ use cardano/address.{from_script}
 use cardano/assets.{Value, from_asset, from_lovelace, merge}
 use cardano/transaction.{InlineDatum, Input, Output, Transaction, placeholder}
 use cardano_keri/application/row_vectors as rows
+use cardano_keri/checkpoint/datum
 use checkpoint_register
 use freeze_fixture.{
   advance_hash, d_reg, enforcement_hash, entitlement_hash, freeze_bond,
@@ -147,4 +148,18 @@ test the_approval_beside_another_token_is_released() {
     ),
     rows.lean_application_policy,
   )
+}
+
+test a_datum_that_is_not_a_constructor_is_no_pending_termination() {
+  and {
+    datum.pending_aid(builtin.i_data(5)) == None,
+    datum.pending_aid(builtin.b_data(#"01")) == None,
+    datum.pending_aid(builtin.list_data([])) == None,
+    datum.pending_aid(builtin.constr_data(1, [builtin.i_data(0)])) == None,
+    datum.pending_aid(builtin.constr_data(0, [])) == None,
+  }
+}
+
+test a_pending_termination_names_its_aid() {
+  datum.pending_aid(pending_datum()) == Some(key())
 }

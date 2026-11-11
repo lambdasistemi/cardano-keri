@@ -230,9 +230,17 @@ fn toad_ok(toad: Int, wit_count: Int) -> Bool {
 }
 
 /// The AID of a pending termination, read out of an inline datum: none for a
-/// live checkpoint or a datum of another shape. Unlike `read`, a live datum is
-/// no abort, so a spend can tell the two apart without failing.
+/// live checkpoint and for a datum of another shape, including one that is not
+/// a constructor. Unlike `read`, nothing aborts, so a spend can tell a pending
+/// output from any other without failing.
 pub fn pending_aid(data: Data) -> Option<ByteArray> {
+  let none: fn() -> Option<ByteArray> = fn() { None }
+  let constructor: fn() -> Option<ByteArray> = fn() { pending_aid_of(data) }
+  let read = builtin.choose_data(data, constructor, none, none, none, none)
+  read()
+}
+
+fn pending_aid_of(data: Data) -> Option<ByteArray> {
   let Pair(tag, fields) = builtin.un_constr_data(data)
   if tag == 1 {
     when fields is {

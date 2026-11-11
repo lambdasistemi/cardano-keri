@@ -615,6 +615,8 @@ pub type TerminationBooking {
   pending_address: Address,
   pending_lovelace: Int,
   pending_holds_active: Bool,
+  /// Whether the pending output also holds a token of no registry.
+  pending_extra_token: Bool,
   request_lovelace: Int,
   request_datum: transaction.Datum,
   /// How many termination requests the transaction places.
@@ -643,6 +645,7 @@ pub fn termination_booking() -> TerminationBooking {
     pending_address: checkpoint_address(),
     pending_lovelace: 4,
     pending_holds_active: True,
+    pending_extra_token: False,
     request_lovelace: 3,
     request_datum: NoDatum,
     copies: 1,
@@ -661,19 +664,20 @@ pub fn termination_booking() -> TerminationBooking {
 }
 
 pub fn termination_booking_tx(b: TerminationBooking) -> Transaction {
+  let held = if b.pending_holds_active {
+    with_lovelace(
+      b.pending_lovelace,
+      token(b.registry.policy, active_token_name(b.registry, b.pending_key), 1),
+    )
+  } else {
+    from_lovelace(b.pending_lovelace)
+  }
   let pending = Output {
     address: b.pending_address,
-    value: if b.pending_holds_active {
-      with_lovelace(
-        b.pending_lovelace,
-        token(
-          b.registry.policy,
-          active_token_name(b.registry, b.pending_key),
-          1,
-        ),
-      )
+    value: if b.pending_extra_token {
+      add(held, "no-registry", "extra", 1)
     } else {
-      from_lovelace(b.pending_lovelace)
+      held
     },
     datum: InlineDatum(b.pending_datum),
     reference_script: None,

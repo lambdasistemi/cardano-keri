@@ -109,6 +109,14 @@ const generate = () => {
   if (!cpj || cpj.Mc !== Number(shortNote[1])) throw new Error('the checkpoint parameters changed shape');
   // The registry deposit is the checkpoint deposit plus the freeze bond (the vectors satisfy it; the Lean does not require it).
   if (cpj.D + cpj.B !== Number(shortNote[2])) throw new Error('the registry deposit is not the checkpoint deposit plus the freeze bond');
+  // The registry's minimum ADA (the pending output of a conviction holds exactly it) and the carrier of a
+  // termination request (Mr): applied parameters of the validator, as the Lean's model parameters. The booking
+  // rows are read against them below.
+  const checkpointMinimumAda = cpj.Mc;
+  const terminationCarrier = data.Mr;
+  if (!Number.isSafeInteger(terminationCarrier) || terminationCarrier + p.minimumTip > checkpointMinimumAda) throw new Error('Mr plus the tip exceeds the minimum ADA');
+  const termBooking = row('termination-booking');
+  if (termBooking.inputs[0].lovelace !== checkpointMinimumAda || termBooking.outputs[0].lovelace !== terminationCarrier + p.minimumTip) throw new Error('the termination booking row does not hold Mc and Mr plus the tip');
   // What a fold's holding must hold: Mc + D + B + P, the floor below which the pool is under one premium.
   const initialFloor = cpj.Mc + cpj.D + cpj.B + cpj.P;
   if (deposit !== initialFloor) throw new Error('the default deposit is not the initial floor (a pool of one premium)');
@@ -358,6 +366,14 @@ pub const pointer_refund_address: Address =
     payment_credential: VerificationKey(#"${refundHash}"),
     stake_credential: Some(Pointer { slot_number: 1, transaction_index: 2, certificate_index: 3 }),
   }
+
+/// The registry's minimum ADA (Lean \`Mc\`): a convicted checkpoint's pending output
+/// holds exactly it.
+pub const checkpoint_minimum_ada: Int = ${checkpointMinimumAda}
+
+/// The carrier of a termination request (Lean \`Mr\`): the request holds it and the
+/// registry's minimum tip.
+pub const termination_carrier: Int = ${terminationCarrier}
 
 /// The registry's minimum ADA plus its deposit, the least deposit a booking
 /// commits (Lean \`Mc + D\`).
@@ -723,6 +739,8 @@ fn run_mint(actions: List<Action>, tx: Transaction) -> Bool {
     rows.minimum_deposit,
     rows.initial_floor,
     rows.network_id,
+    rows.checkpoint_minimum_ada,
+    rows.termination_carrier,
     actions,
     requests.application(),
     tx,
@@ -740,6 +758,8 @@ fn run_spend(
     rows.minimum_deposit,
     rows.initial_floor,
     rows.network_id,
+    rows.checkpoint_minimum_ada,
+    rows.termination_carrier,
     None,
     action,
     reference,

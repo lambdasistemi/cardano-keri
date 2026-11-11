@@ -25,7 +25,9 @@
 
 use aiken/collection/list
 use cardano/address.{Script}
-use cardano/assets.{AssetName, PolicyId, flatten, lovelace_of, without_lovelace}
+use cardano/assets.{
+  AssetName, PolicyId, flatten, lovelace_of, quantity_of, without_lovelace,
+}
 use cardano/transaction.{Output, Transaction}
 use cardano_keri/application/clock.{booking_clock}
 use cardano_keri/application/configuration.{configuration_of}
@@ -93,8 +95,8 @@ pub fn request_lovelace(
 }
 
 /// Model `bookRegistration`: the output at `index` is a request that books
-/// its registration. The approval it names is minted once by the caller's
-/// accounting (`application/mint`).
+/// its registration, and exactly one approval of its payload is minted. That
+/// nothing else is minted is the caller's accounting (`application/mint`).
 pub fn book_registration(
   application_policy: PolicyId,
   minimum_deposit: Int,
@@ -110,6 +112,11 @@ pub fn book_registration(
             registration_shape(application_policy, output, data),
             data.holding_address == address_of(record.checkpoint_credential),
             record.checkpoint_credential != Script(application_policy),
+            quantity_of(
+              tx.mint,
+              application_policy,
+              registration_approval(data),
+            ) == 1,
             minimum_deposit <= data.deposit,
             lovelace_of(output.value) == request_lovelace(
               data,

@@ -47,6 +47,14 @@ pub const pointer_refund_address: Address =
     ),
   }
 
+/// The registry's minimum ADA (Lean `Mc`): a convicted checkpoint's pending output
+/// holds exactly it.
+pub const checkpoint_minimum_ada: Int = 4
+
+/// The carrier of a termination request (Lean `Mr`): the request holds it and the
+/// registry's minimum tip.
+pub const termination_carrier: Int = 2
+
 /// The registry's minimum ADA plus its deposit, the least deposit a booking
 /// commits (Lean `Mc + D`).
 pub const minimum_deposit: Int = 14

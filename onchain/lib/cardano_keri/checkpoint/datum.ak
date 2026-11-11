@@ -228,3 +228,23 @@ fn toad_ok(toad: Int, wit_count: Int) -> Bool {
     1 <= toad && toad <= wit_count
   }
 }
+
+/// The AID of a pending termination, read out of an inline datum: none for a
+/// live checkpoint or a datum of another shape. Unlike `read`, a live datum is
+/// no abort, so a spend can tell the two apart without failing.
+pub fn pending_aid(data: Data) -> Option<ByteArray> {
+  let Pair(tag, fields) = builtin.un_constr_data(data)
+  if tag == 1 {
+    when fields is {
+      [inner] ->
+        if inner is TerminationPending { aid, .. }: CheckpointDatumV2 {
+          Some(aid)
+        } else {
+          None
+        }
+      _ -> None
+    }
+  } else {
+    None
+  }
+}

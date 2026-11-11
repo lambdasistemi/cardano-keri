@@ -17,7 +17,7 @@ use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Redeemer, ScriptPurpose,
   Transaction, Withdraw, find_input,
 }
-use cardano_keri/checkpoint/datum.{Live, TerminationPending}
+use cardano_keri/checkpoint/datum.{Live, TerminationPending, pending_aid}
 use cardano_keri/checkpoint/deposit.{deposit_authorized, required_intent}
 use cardano_keri/checkpoint/enforcement_observer.{authorized_payee}
 use cardano_keri/checkpoint/freeze_bond.{freeze_bond_valid}
@@ -28,7 +28,9 @@ use cardano_keri/checkpoint/refund
 use cardano_keri/checkpoint/registration.{valid_registration_deposit}
 use cardano_keri/checkpoint/role.{Active}
 use cardano_keri/checkpoint/value.{held_value, with_value}
-use singular_state/preimage.{RegistryIdentity, active_token_name}
+use singular_state/preimage.{
+  RegistryIdentity, active_token_name, approval_name, termination_preimage,
+}
 
 /// The bond option of an Advance (Lean `BondOp`): keep the bond state, or
 /// deposit the bond. Constructor indices are wire surface.
@@ -175,7 +177,7 @@ validator checkpoint_register(
           own_ref,
           tx,
         )
-      Release -> False
+      Release -> validate_release(registry, application_policy, own_ref, tx)
     }
   }
 
@@ -650,4 +652,28 @@ fn validate_top_up(
   state_output.value == (
     from_lovelace(held) |> merge(from_asset(registry.policy, aid_name, 1))
   )
+}
+
+/// Release the pending output of a convicted checkpoint (Lean
+/// `pendingReleased`): the transaction mints exactly one termination approval
+/// of this registry and of the key of the pending datum's AID, under the
+/// application policy. Nothing else is read: the application checks the rest
+/// of the booking.
+fn validate_release(
+  registry: RegistryIdentity,
+  application_policy: PolicyId,
+  own_ref: OutputReference,
+  tx: Transaction,
+) -> Bool {
+  expect Some(own_input) = find_input(tx.inputs, own_ref)
+  expect InlineDatum(raw) = own_input.output.datum
+  when pending_aid(raw) is {
+    Some(aid) ->
+      quantity_of(
+        tx.mint,
+        application_policy,
+        approval_name(termination_preimage(aid, registry)),
+      ) == 1
+    None -> False
+  }
 }

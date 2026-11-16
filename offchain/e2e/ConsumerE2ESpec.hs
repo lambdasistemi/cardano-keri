@@ -34,7 +34,7 @@ Each reading differs from the accepting one in one aspect. A refusal is a
 Phase-2 failure of the consumer script: its transaction passes every ledger
 rule, carries the consumer script as its only script, and the node rejects it
 when that script evaluates false. Every verdict is also checked against
-'holdingVerdict', the Lean predicate evaluated over what the chain holds.
+'failedClauses', the Lean predicate evaluated over what the chain holds.
 
 __Seeded fixture cases.__ Three cases are not reachable by any honest arm of
 the registry and stay seeded: a poisoned checkpoint (no arm writes the poison

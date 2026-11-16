@@ -389,25 +389,51 @@ is parameterised by the consumer context (network, release, checkpoint credentia
 checkpoint parameters, and it spends only if some reference input is a
 consumable holding for that context, on the concrete identity bytes and the
 datum decoder of the Lean model. The end-to-end specification
-(`ConsumerE2ESpec`) runs it on a local test chain: one transaction that
-references the eligible holding settles, and transactions that reference a
-rival registry's token, a rival seed's token, a holding of quantity two, a
-holding with termination pending, and a holding carrying a version 1 datum are
-rejected when the consumer script evaluates false. Each refusal carries no
-other script and passes the ledger rules, so the rejection is the consumer's
-own verdict. The holdings carry version 2 datums written field by field from
-the Lean layout, the AID as its qualified CESR text.
+(`ConsumerE2ESpec`) runs it on a local test chain against the checkpoints the
+production validators delivered. The consumer's context (network, application
+policy and credential, state program and policy, seed, the AID as its qualified
+CESR text, the checkpoint credential) is taken from the registry environment of
+the devnet, not declared. The maturity window `W` is the relying contract's own
+choice (Lean `T9_juvenility_is_consumer_only`: no transition of the registry
+reads it); the test uses 30 seconds. A spend that references a holding settles,
+or is rejected when the consumer script evaluates false, as the Lean predicate
+says of the output the chain holds:
+
+| Holding the consumer references | Verdict |
+|---|---|
+| the checkpoint a registration booked through the application and folded by another party delivered, read at `born_at + W` | settles |
+| the same checkpoint, read one slot before `born_at + W` | refused: juvenile |
+| the same checkpoint, read by a consumer that fixes another checkpoint credential | refused: not at the credential |
+| the same checkpoint, read by a consumer that fixes another registry seed | refused: that registry's token is not held |
+| the checkpoint a controller's honest freeze rotation left | refused: frozen |
+| the checkpoint the controller's deposit rotation then restored | settles |
+| the identity standing, then the pending output its conviction left | settles, then refused: termination pending |
+
+After the terminating fold no output at the checkpoint validator holds the
+token, so the consumer has nothing to reference. Each refusal carries no other
+script and passes the ledger rules, so the rejection is the consumer's own
+verdict; each reading also checks that the story and the Lean predicate
+evaluated over the output the chain holds name the same failing clauses, and
+that the node settles the spend exactly when none fails. The datums are the
+ones the validators wrote, version 2, the AID as its qualified CESR text.
 
 The Lean writes no datum for an absent or a convicted state
 (`CheckpointDatum.datum` is `none` for both), so a retired holding with a
 version 2 datum does not exist; those two arms of `consumable_state` stay
 covered by the Aiken predicate tests.
 
-One label bounds what this proves.
+Labels bound what this proves.
 
-- **Seeded holding, not a registration journey.** The holdings are minted by a
-  test-only policy at a test application credential. The genuine registration
-  journey belongs to #324.
+- **Seeded fixture cases.** Three cases are not reachable by any registry
+  transaction on `main` and stay seeded: a poisoned checkpoint (no transaction
+  writes the poison flag), a holding carrying a version 1 datum (the checkpoint
+  datum has no such form), and a holding carrying the representative token
+  twice (the registry mints it once). A test-only policy mints them at a test
+  checkpoint credential. They prove the consumer's decoder and quantity clauses
+  over those bytes and say nothing of a registration journey.
+- **One registry.** The refusal of another registry's holding is shown by a
+  consumer that fixes another seed and reads the genuine holding; a holding of
+  a second, honestly created registry is not built.
 
 Declared limits of the example. A script cannot observe the network or resolve
 a release, so the example's environment is the context it is parameterised with
@@ -418,8 +444,9 @@ A datum the decoder does not accept makes the consumer refuse the holding; it
 never makes the script fail. The pool and the bond amounts are held in the
 output's value and are not read from it (the datum decodes with a pool of 0;
 [#339](https://github.com/lambdasistemi/cardano-keri/issues/339)). The
-acceptance item that binds the predicate to the actual Singular-backed output
-stays open: the registration journey is still outstanding.
+datum a holding carries is read from the chain; no check ties it to the
+registration record that produced it
+([#514](https://github.com/lambdasistemi/cardano-keri/issues/514)).
 
 ### The concrete identity bytes in Aiken
 
@@ -457,13 +484,13 @@ Three executable layers check it.
   holding named by the concrete bytes and refusing every rival's.
 - **Connected.** `ConsumerE2ESpec` recomputes the names from the Lean layout,
   checks them against the vectors, and on the local test chain settles a spend
-  that references the holding so named and refuses, in the consumer script, a
-  spend that references a rival seed's holding.
+  that references the genuine holding so named and refuses, in the consumer
+  script, a spend that references it with another credential or another seed
+  fixed, and the frozen and the pending-termination checkpoints.
 
 What stays a declared test choice: the environment (the contract's own context
-stands for the trusted integration's observation) and the seeded holdings (the
-genuine registration journey belongs to
-[#324](https://github.com/lambdasistemi/cardano-keri/issues/324)). These
+stands for the trusted integration's observation) and the three seeded fixture
+cases above. These
 checks cover the vectors and the generated variations only: byte strings of
 more than 64 bytes would be serialised in chunks, which no vector reaches (a
 CESR text is 44 bytes). This code is not for mainnet.

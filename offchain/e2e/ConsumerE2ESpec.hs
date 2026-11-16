@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -14,26 +15,41 @@ concrete identity bytes and the datum decoder of the Lean model
 
 The registry name, the key and the representative name are recomputed here from
 the Lean layout, and checked against the vectors of
-@lean/consumer-identity-vectors.json@ before they name anything on chain. The
-holdings carry version 2 checkpoint datums written field by field from the
-layout of @lean/CardanoKeri/CheckpointDatum.lean@, the AID as its qualified
-CESR text.
+@lean/consumer-identity-vectors.json@ before they name anything on chain.
 
-One label bounds what this proves: a seeded holding, not a registration
-journey. The holdings are minted by the test-only policy
-@consumer_seed_policy@ at a test checkpoint credential; the genuine
-registration journey belongs to #324. The pool and the bond amounts are held in
-the output's value and are not read from it (#339).
+__The genuine journeys.__ The consumer reads checkpoints that the production
+validators produced: a registration booked through the application and folded
+by another party into the checkpoint validator's address, the same identity
+frozen by its controller's honest freeze rotation and restored by its deposit
+rotation, and the same identity convicted, its pending termination left at the
+checkpoint validator's address. The consumer's context (network, application
+policy and credential, state program and policy, seed, the AID as its qualified
+CESR text, the checkpoint credential) is taken from the devnet's registry
+environment, never declared here. The maturity window @W@ is the relying
+contract's choice (Lean @T9_juvenility_is_consumer_only@): no transition of the
+registry reads it, and 'maturityWindowMs' is a parameter of the consumer's
+program only.
 
-One accepting transaction settles. Every refusal is a Phase-2 failure of the
-consumer script: its transaction passes every ledger rule, carries no other
-script, and is rejected by the node when that script evaluates false. The
-refusals differ from the accepting transaction only in the holding they
-reference.
+Each reading differs from the accepting one in one aspect. A refusal is a
+Phase-2 failure of the consumer script: its transaction passes every ledger
+rule, carries the consumer script as its only script, and the node rejects it
+when that script evaluates false. Every verdict is also checked against
+'failedClauses', the Lean predicate evaluated over what the chain holds.
+
+__Seeded fixture cases.__ Three cases are not reachable by any honest arm of
+the registry and stay seeded: a poisoned checkpoint (no arm writes the poison
+flag), a holding carrying a version 1 datum (the checkpoint datum type has no
+such constructor), and a holding with the representative token twice (the
+registry mints the active token once). They are minted by the test-only policy
+@consumer_seed_policy@ at a test checkpoint credential, and prove only the
+consumer's decoder and quantity clauses over those bytes; they say nothing of a
+registration journey. The pool and the bond amounts are held in the output's
+value and are not read from it (#339).
 -}
 module ConsumerE2ESpec (spec) where
 
 import Control.Concurrent (threadDelay)
+import Control.Exception (IOException, catch)
 import Control.Monad (forM_, unless, when)
 import Data.Bits (shiftR)
 import Data.ByteString (ByteString)
@@ -41,8 +57,11 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as B8
 import Data.ByteString.Short qualified as SBS
 import Data.Char (digitToInt, isDigit)
-import Data.List (isInfixOf)
+import Data.IORef (IORef, modifyIORef, newIORef, readIORef, writeIORef)
+import Data.List (isInfixOf, sortOn)
 import Data.Map.Strict qualified as Map
+import Data.Maybe (fromMaybe)
+import Data.Ord (Down (..))
 import Data.Sequence.Strict qualified as StrictSeq
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -55,6 +74,8 @@ import System.IO (hPutStrLn, stderr)
 import System.Timeout (timeout)
 import Test.Hspec
 
+import Cardano.Crypto.DSIGN (SignKeyDSIGN)
+import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
 import Cardano.Crypto.Hash (hashFromBytes, hashToBytes)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
@@ -62,7 +83,7 @@ import Cardano.Ledger.Alonzo.Scripts (AsIx (..))
 import Cardano.Ledger.Alonzo.TxBody (scriptIntegrityHashTxBodyL)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.Api.Scripts.Data (Data (..))
-import Cardano.Ledger.Api.Tx (mkBasicTx, witsTxL)
+import Cardano.Ledger.Api.Tx (bodyTxL, mkBasicTx, witsTxL)
 import Cardano.Ledger.Api.Tx.Body (
     collateralInputsTxBodyL,
     feeTxBodyL,
@@ -75,14 +96,17 @@ import Cardano.Ledger.Api.Tx.Body (
  )
 import Cardano.Ledger.Api.Tx.Out (
     TxOut,
+    addrTxOutL,
     coinTxOutL,
     datumTxOutL,
     mkBasicTxOut,
+    valueTxOutL,
  )
 import Cardano.Ledger.Api.Tx.Wits (rdmrsTxWitsL, scriptTxWitsL)
 import Cardano.Ledger.BaseTypes (
     Inject (..),
     Network (..),
+    SlotNo,
     StrictMaybe (SJust, SNothing),
     TxIx (..),
  )
@@ -122,7 +146,12 @@ import Cardano.Node.Client.Submitter (SubmitResult (..), Submitter (..))
 
 import PlutusCore.Data qualified as PLC
 
-import Cardano.KERI.AID.E2E.Datum (mkInlineDatum)
+import Cardano.KERI.AID.Application (OutputReference (..))
+import Cardano.KERI.AID.Checkpoint.Datum (
+    CheckpointDatum (..),
+    CheckpointDatumV2 (..),
+ )
+import Cardano.KERI.AID.E2E.Datum (extractDatum, mkInlineDatum)
 import Cardano.KERI.AID.E2E.Mpf (blake2b256)
 import Cardano.KERI.AID.E2E.Script (
     applyDataArgs,
@@ -133,38 +162,100 @@ import Cardano.KERI.AID.E2E.Script (
     mkCageScript,
  )
 
+import CheckpointTxBuilder (
+    CheckpointEnv (..),
+    CheckpointInput (..),
+    Observer,
+    Party (..),
+    Stage (..),
+    awaitChainTime,
+    consumerParty,
+    freezeThenDepositJourney,
+    productionRegisterScenario,
+    registrySeed,
+    resolveBlueprintPath,
+    stagedCheckpointDevnet,
+    terminationJourney,
+ )
+
 type Utxo = (TxIn, TxOut ConwayEra)
 
 -- ---------------------------------------------------------------------------
--- The consumer's fixed context (declared test values)
+-- The consumer's context and parameters
 -- ---------------------------------------------------------------------------
 
--- | Network discriminator carried by the context (devnet is a testnet).
-contextNetwork :: Integer
-contextNetwork = 0
+{- | The relying contract's fixed context, the Lean @Context@: network, the
+published release (application policy and credential, state program and
+policy), the registry seed, the AID as its qualified CESR text and the
+checkpoint credential. Credentials are script hashes.
+-}
+data Context = Context
+    { cxNetwork :: Integer
+    , cxApplicationPolicy :: ByteString
+    , cxApplicationCredential :: ByteString
+    , cxStateProgram :: ByteString
+    , cxStatePolicy :: ByteString
+    , cxSeedTx :: ByteString
+    , cxSeedIndex :: Integer
+    , cxAid :: ByteString
+    , cxCheckpointCredential :: ByteString
+    }
 
--- | Checkpoint parameters: only @w@ is read; maturity is one time unit.
-paramsData :: PLC.Data
-paramsData = PLC.Constr 0 [PLC.I 3, PLC.I 2, PLC.I 1, PLC.I 1]
+contextData :: Context -> PLC.Data
+contextData cx =
+    PLC.Constr
+        0
+        [ PLC.I (cxNetwork cx)
+        , PLC.Constr
+            0
+            [ PLC.B (cxApplicationPolicy cx)
+            , PLC.Constr 1 [PLC.B (cxApplicationCredential cx)]
+            , PLC.B (cxStateProgram cx)
+            , PLC.B (cxStatePolicy cx)
+            ]
+        , PLC.Constr 0 [PLC.B (cxSeedTx cx), PLC.I (cxSeedIndex cx)]
+        , PLC.I (packBytes (cxAid cx))
+        , PLC.Constr 1 [PLC.B (cxCheckpointCredential cx)]
+        ]
 
--- | The test application credential the release names (28 bytes).
-applicationCredential :: ByteString
-applicationCredential = BS.replicate 28 0xaa
+-- | The representative asset name the Lean layout gives the context.
+representativeNameOf :: Context -> ByteString
+representativeNameOf cx =
+    concreteRepresentativeName
+        (cxStatePolicy cx)
+        (cxSeedTx cx)
+        (cxSeedIndex cx)
+        (cxAid cx)
 
--- | The test checkpoint credential holdings are seeded at (28 bytes).
-checkpointCredential :: ByteString
-checkpointCredential = BS.replicate 28 0xdd
+{- | Checkpoint parameters of a consumer: only @w@ is read, the maturity window
+in the unit of the delivered datum's birth, POSIX milliseconds. The release's
+terms carry none (Lean @T9_juvenility_is_consumer_only@).
+-}
+paramsDataFor :: Integer -> PLC.Data
+paramsDataFor w = PLC.Constr 0 [PLC.I 3, PLC.I 2, PLC.I 1, PLC.I w]
 
-applicationPolicy :: ByteString
-applicationPolicy = BS.replicate 28 0xcc
+-- ---------------------------------------------------------------------------
+-- Seeded fixture: declared test values
+-- ---------------------------------------------------------------------------
 
-stateProgram :: ByteString
-stateProgram = BS.replicate 28 0xbb
+-- | The window of the seeded consumer: one millisecond over a birth of 0.
+seededWindowMs :: Integer
+seededWindowMs = 1
 
--- | The intended registry seed, and a rival registry's seed.
-seedTx, rivalSeedTx :: ByteString
-seedTx = BS.replicate 32 0xee
-rivalSeedTx = BS.replicate 32 0xdd
+-- | The seeded consumer's context over the test-only policy's hash.
+seededContext :: ByteString -> Context
+seededContext statePolicyBytes =
+    Context
+        { cxNetwork = 0
+        , cxApplicationPolicy = BS.replicate 28 0xcc
+        , cxApplicationCredential = BS.replicate 28 0xaa
+        , cxStateProgram = BS.replicate 28 0xbb
+        , cxStatePolicy = statePolicyBytes
+        , cxSeedTx = BS.replicate 32 0xee
+        , cxSeedIndex = 0
+        , cxAid = concreteAidText
+        , cxCheckpointCredential = BS.replicate 28 0xdd
+        }
 
 -- ---------------------------------------------------------------------------
 -- Datum builders: the Lean version 2 layout, field by field
@@ -191,8 +282,8 @@ keyMaterialData =
 {- | Version 2, live: the AID's CESR text, sequence number, epoch, poisoned,
 frozen, birth slot, refund address, top-up mark, key material.
 -}
-liveDatum :: PLC.Data
-liveDatum =
+liveDatumWith :: Bool -> PLC.Data
+liveDatumWith poisoned =
     PLC.Constr
         1
         [ PLC.Constr
@@ -200,7 +291,7 @@ liveDatum =
             [ PLC.B concreteAidText
             , PLC.I 0
             , PLC.I 0
-            , boolData False
+            , boolData poisoned
             , boolData False
             , PLC.I 0
             , PLC.B (BS.pack [1, 2, 3, 4])
@@ -209,20 +300,8 @@ liveDatum =
             ]
         ]
 
-{- | Version 2, termination pending: the AID's CESR text, sequence number,
-epoch, key material.
--}
-pendingDatum :: PLC.Data
-pendingDatum =
-    PLC.Constr
-        1
-        [ PLC.Constr
-            1
-            [PLC.B concreteAidText, PLC.I 0, PLC.I 0, keyMaterialData]
-        ]
-
-{- | The version 1 layout the checkpoint validator writes today (constructor 0,
-no consumer facts), as the Lean vector @version-1@.
+{- | The version 1 layout (constructor 0, no consumer facts), as the Lean vector
+@version-1@.
 -}
 versionOneDatum :: PLC.Data
 versionOneDatum =
@@ -243,55 +322,40 @@ versionOneDatum =
         ]
 
 -- ---------------------------------------------------------------------------
--- Scenarios
+-- Seeded scenarios
 -- ---------------------------------------------------------------------------
 
-data DatumKind = LiveDatum | PendingDatum | VersionOneDatum
+data DatumKind = LiveDatum | PoisonedDatum | VersionOneDatum
 
-{- | A holding: the registry seed that names its token, how many of the token
-it carries and what datum it carries.
--}
+-- | A seeded holding: how many of the token it carries and what datum.
 data Scenario = Scenario
     { scName :: String
-    , scSeedTx :: ByteString
-    , scSeedIndex :: Integer
     , scQuantity :: Integer
     , scDatum :: DatumKind
     }
 
 accepting :: Scenario
-accepting = Scenario "the eligible holding" seedTx 0 1 LiveDatum
+accepting = Scenario "the eligible seeded holding" 1 LiveDatum
 
 refusals :: [Scenario]
 refusals =
-    [ Scenario "a rival registry's token" rivalSeedTx 0 1 LiveDatum
-    , Scenario "a rival seed's token" seedTx 1 1 LiveDatum
-    , Scenario "quantity two" seedTx 0 2 LiveDatum
-    , Scenario "a holding with termination pending" seedTx 0 1 PendingDatum
-    , Scenario "a holding carrying a version 1 datum" seedTx 0 1 VersionOneDatum
+    [ Scenario "a seeded poisoned holding" 1 PoisonedDatum
+    , Scenario "a seeded holding with the token twice" 2 LiveDatum
+    , Scenario "a seeded holding carrying a version 1 datum" 1 VersionOneDatum
     ]
 
 scenarios :: [Scenario]
 scenarios = accepting : refusals
 
 datumData :: DatumKind -> PLC.Data
-datumData LiveDatum = liveDatum
-datumData PendingDatum = pendingDatum
+datumData LiveDatum = liveDatumWith False
+datumData PoisonedDatum = liveDatumWith True
 datumData VersionOneDatum = versionOneDatum
 
 -- | Blueprint title of the consumer validator.
 consumerValidator :: Text
 consumerValidator =
     "consumer_identity_example.consumer_identity_example.spend"
-
--- | The representative asset name a holding of the scenario carries.
-representativeNameOf :: ByteString -> Scenario -> ByteString
-representativeNameOf statePolicy sc =
-    concreteRepresentativeName
-        statePolicy
-        (scSeedTx sc)
-        (scSeedIndex sc)
-        concreteAidText
 
 -- ---------------------------------------------------------------------------
 -- The concrete identity bytes, written out from the Lean layout
@@ -353,13 +417,9 @@ concreteRepresentativeName policy tx index key =
     blake2b256
         (concreteActivePreimage policy (concreteRegistryName tx index) key)
 
--- | The qualified CESR text of the intended AID (vector @transferable-aid@).
+-- | The qualified CESR text of the seeded fixture's AID (vector @transferable-aid@).
 concreteAidText :: ByteString
 concreteAidText = B8.pack "EMMcQtoqOkACLvyswJTFXUQmRbZhWt4ALjjhXzLGhr5P"
-
--- | Lean @aidOfCesr@ of that text: the AID the consumer fixes.
-concreteAid :: Integer
-concreteAid = packBytes concreteAidText
 
 -- | Bytes from hexadecimal text (the vectors' notation).
 unhex :: String -> ByteString
@@ -484,11 +544,29 @@ spec :: Spec
 spec =
     describe "#343 consumer predicate on the local chain, Lean datum decoder" $ do
         namesMatchTheLeanVectors
+        around stagedCheckpointDevnet $ do
+            it
+                "reads the checkpoint a genuine registration delivered: refused one slot before the maturity boundary, settled at it, refused by a consumer fixing another checkpoint credential or another seed"
+                registeredHoldingJourney
+            it
+                "#345 restores the bond of a frozen checkpoint with the controller's deposit rotation, refuses a deposit whose intent names another amount, and the checkpoint is consumable again; the consumer reads the genuine frozen checkpoint, refused, and the checkpoint the deposit restored, settled"
+                ( \env -> do
+                    (observer, settle) <- frozenThenRestored env
+                    freezeThenDepositJourney env observer
+                    settle
+                )
+            it
+                "#350 books the termination of a convicted identity with a third party's fee, folds it with another party, reads the terminal key back, and refuses each clause's violation, a second booking and a registration of the terminal key; the consumer reads the standing checkpoint, settled, the pending output its conviction left, refused, and no checkpoint after the terminating fold"
+                ( \env -> do
+                    (observer, settle) <- convictedReading env
+                    terminationJourney env observer
+                    settle
+                )
         aroundAll withSeededWorld $ do
-            it "settles a spend that references the eligible holding" $
+            it "seeded fixture: settles a spend that references the eligible holding" $
                 \w -> acceptingSettles w
             forM_ (zip [1 ..] refusals) $ \(ix, sc) ->
-                it ("refuses, in the consumer script, " <> scName sc) $
+                it ("seeded fixture: refuses, in the consumer script, " <> scName sc) $
                     \w -> refusalIsScriptFailure w ix sc
 
 -- ---------------------------------------------------------------------------
@@ -526,22 +604,12 @@ withSeededWorld action = do
             extractCompiledCodeExact consumerValidator bp
     let seedHash = computeScriptHash seedProgram
         statePolicyBytes = scriptHashBytes seedHash
-        contextData =
-            PLC.Constr
-                0
-                [ PLC.I contextNetwork
-                , PLC.Constr
-                    0
-                    [ PLC.B applicationPolicy
-                    , PLC.Constr 1 [PLC.B applicationCredential]
-                    , PLC.B stateProgram
-                    , PLC.B statePolicyBytes
-                    ]
-                , PLC.Constr 0 [PLC.B seedTx, PLC.I 0]
-                , PLC.I concreteAid
-                , PLC.Constr 1 [PLC.B checkpointCredential]
+        consumerProgram =
+            applyDataArgs
+                [ contextData (seededContext statePolicyBytes)
+                , paramsDataFor seededWindowMs
                 ]
-        consumerProgram = applyDataArgs [contextData, paramsData] consumerCode
+                consumerCode
         consumerHash = computeScriptHash consumerProgram
     withDevnet $ \lsq ltxs -> do
         let prov = mkN2CProvider lsq
@@ -594,11 +662,11 @@ awaitOutputs prov ins = go (40 :: Int)
 outputsOf :: TxId -> [Integer] -> [TxIn]
 outputsOf txId ixs = [TxIn txId (TxIx (fromInteger i)) | i <- ixs]
 
-submitOk :: Submitter IO -> String -> ConwayTx -> IO TxId
-submitOk sub label tx = do
+submitOk :: Submitter IO -> SignKeyDSIGN Ed25519DSIGN -> String -> ConwayTx -> IO TxId
+submitOk sub key label tx = do
     r <-
         withinSecs 60 ("submit " <> label) $
-            submitTx sub (addKeyWitness genesisSignKey tx)
+            submitTx sub (addKeyWitness key tx)
     case r of
         Submitted txId -> pure txId
         Rejected reason ->
@@ -666,23 +734,24 @@ buildSeedTx ::
 buildSeedTx prov seedProgram seedHash statePolicyBytes consumerProgram feeUtxo collUtxo = do
     pp <- queryProtocolParams prov
     let policyId = PolicyID seedHash
-        nameOf = representativeNameOf statePolicyBytes
+        seeded = seededContext statePolicyBytes
+        name = representativeNameOf seeded
         minted =
             Map.fromListWith
                 (+)
-                [(nameOf sc, scQuantity sc) | sc <- scenarios]
+                [(name, scQuantity sc) | sc <- scenarios]
         mintMA =
             MultiAsset . Map.singleton policyId $
                 Map.fromList
                     [(assetNameOf n, q) | (n, q) <- Map.toList minted]
         holding sc =
             mkBasicTxOut
-                (scriptAddr (scriptHashOf checkpointCredential))
+                (scriptAddr (scriptHashOf (cxCheckpointCredential seeded)))
                 ( MaryValue
                     (Coin seededAda)
                     ( MultiAsset . Map.singleton policyId $
                         Map.singleton
-                            (assetNameOf (nameOf sc))
+                            (assetNameOf name)
                             (scQuantity sc)
                     )
                 )
@@ -736,7 +805,7 @@ seedWorld ::
     IO World
 seedWorld prov sub seedProgram seedHash statePolicyBytes consumerProgram consumerHash = do
     splitTx <- withinSecs 60 "split" (buildSplitTx prov)
-    splitId <- submitOk sub "wallet split" splitTx
+    splitId <- submitOk sub genesisSignKey "wallet split" splitTx
     wallet <- awaitOutputs prov (outputsOf splitId [0 .. 5])
     (mintFee, mintColl, wallet') <- case wallet of
         (a : b : rest) -> pure (a, b, rest)
@@ -752,7 +821,7 @@ seedWorld prov sub seedProgram seedHash statePolicyBytes consumerProgram consume
                 consumerProgram
                 mintFee
                 mintColl
-    seedId <- submitOk sub "seeded holdings" seedTx'
+    seedId <- submitOk sub genesisSignKey "seeded holdings" seedTx'
     let n = fromIntegral (length scenarios)
     holdings <- awaitOutputs prov (outputsOf seedId [0 .. n - 1])
     locked <- awaitOutputs prov (outputsOf seedId [n .. 2 * n - 1])
@@ -772,24 +841,28 @@ seedWorld prov sub seedProgram seedHash statePolicyBytes consumerProgram consume
 -- The consumer transaction
 -- ---------------------------------------------------------------------------
 
-{- | Spend the consumer-locked output of a scenario, referencing that
-scenario's holding. Everything else is the same across scenarios.
+{- | The transaction that spends a consumer-locked output and references a
+holding, valid from a lower-bound slot with no upper bound. Everything else is
+the same across the readings of one consumer.
 -}
-buildConsumerTx :: World -> Int -> Utxo -> Utxo -> IO ConwayTx
-buildConsumerTx w ix feeUtxo collUtxo = do
-    let prov = wProvider w
-        locked = wLocked w !! ix
-        holding = wHoldings w !! ix
+spendTx ::
+    Provider IO ->
+    SBS.ShortByteString ->
+    ScriptHash ->
+    Addr ->
+    Utxo ->
+    Utxo ->
+    Utxo ->
+    TxIn ->
+    SlotNo ->
+    IO ConwayTx
+spendTx prov program programHash changeTo locked feeUtxo collUtxo holding lowerSlot = do
     pp <- queryProtocolParams prov
-    nowMs <- currentPosixMs
-    lowerSlot <-
-        withinSecs 30 "slot of the validity lower bound" $
-            posixMsCeilSlot prov (nowMs - 10_000)
     let ins = Set.fromList [fst locked, fst feeUtxo]
         change = adaOf (snd locked) + adaOf (snd feeUtxo) - consumerFee
         outs =
             StrictSeq.singleton
-                (mkBasicTxOut genesisAddr (inject (Coin change)))
+                (mkBasicTxOut changeTo (inject (Coin change)))
         redeemers =
             Redeemers $
                 Map.singleton
@@ -799,7 +872,7 @@ buildConsumerTx w ix feeUtxo collUtxo = do
         body =
             mkBasicTxBody
                 & inputsTxBodyL .~ ins
-                & referenceInputsTxBodyL .~ Set.singleton (fst holding)
+                & referenceInputsTxBodyL .~ Set.singleton holding
                 & outputsTxBodyL .~ outs
                 & feeTxBodyL .~ Coin consumerFee
                 & collateralInputsTxBodyL .~ Set.singleton (fst collUtxo)
@@ -808,10 +881,28 @@ buildConsumerTx w ix feeUtxo collUtxo = do
     pure $
         mkBasicTx body
             & witsTxL . scriptTxWitsL
-                .~ Map.singleton
-                    (wConsumerHash w)
-                    (mkCageScript (wConsumerProgram w))
+                .~ Map.singleton programHash (mkCageScript program)
             & witsTxL . rdmrsTxWitsL .~ redeemers
+
+{- | Spend the consumer-locked output of a seeded scenario, referencing that
+scenario's holding, ten seconds into the past of the chain's clock.
+-}
+buildConsumerTx :: World -> Int -> Utxo -> Utxo -> IO ConwayTx
+buildConsumerTx w ix feeUtxo collUtxo = do
+    nowMs <- currentPosixMs
+    lowerSlot <-
+        withinSecs 30 "slot of the validity lower bound" $
+            posixMsCeilSlot (wProvider w) (nowMs - 10_000)
+    spendTx
+        (wProvider w)
+        (wConsumerProgram w)
+        (wConsumerHash w)
+        genesisAddr
+        (wLocked w !! ix)
+        feeUtxo
+        collUtxo
+        (fst (wHoldings w !! ix))
+        lowerSlot
 
 acceptingSettles :: World -> IO ()
 acceptingSettles w = do
@@ -824,7 +915,7 @@ acceptingSettles w = do
     tx <-
         withinSecs 60 "build accepting spend" $
             buildConsumerTx w 0 acceptFee acceptColl
-    txId <- submitOk (wSubmitter w) "accepting spend" tx
+    txId <- submitOk (wSubmitter w) genesisSignKey "accepting spend" tx
     _ <- awaitOutputs (wProvider w) (outputsOf txId [0])
     stillLocked <-
         withinSecs 30 "query the consumer output" $
@@ -864,17 +955,31 @@ refusalIsScriptFailure w ix sc = do
     tx <-
         withinSecs 60 ("build spend for " <> scName sc) $
             buildConsumerTx w ix refuseFee refuseColl
+    refusedInScript
+        (wSubmitter w)
+        genesisSignKey
+        (wConsumerHash w)
+        (scName sc)
+        tx
+
+-- | The node rejects the transaction in Phase 2 of its only script, and not otherwise.
+refusedInScript ::
+    Submitter IO ->
+    SignKeyDSIGN Ed25519DSIGN ->
+    ScriptHash ->
+    String ->
+    ConwayTx ->
+    IO ()
+refusedInScript sub key consumerHash label tx = do
     Map.keys (tx ^. witsTxL . scriptTxWitsL)
-        `shouldBe` [wConsumerHash w]
+        `shouldBe` [consumerHash]
     r <-
-        withinSecs 60 ("submit spend for " <> scName sc) $
-            submitTx
-                (wSubmitter w)
-                (addKeyWitness genesisSignKey tx)
+        withinSecs 60 ("submit spend for " <> label) $
+            submitTx sub (addKeyWitness key tx)
     case r of
         Submitted txId ->
             expectationFailure
-                ( scName sc
+                ( label
                     <> " was accepted as "
                     <> show txId
                     <> " but must be refused"
@@ -883,18 +988,386 @@ refusalIsScriptFailure w ix sc = do
             let diagnostic = B8.unpack raw
             when (any (`isInfixOf` diagnostic) phase1Markers) $
                 expectationFailure
-                    ( scName sc
+                    ( label
                         <> " failed a ledger rule, not the script: "
                         <> diagnostic
                     )
             unless (any (`isInfixOf` diagnostic) phase2Markers) $
                 expectationFailure
-                    ( scName sc
+                    ( label
                         <> " was rejected, but not by script evaluation: "
                         <> diagnostic
                     )
             dbg
-                ( scName sc
+                ( label
                     <> " refused in the script: "
                     <> take 200 diagnostic
                 )
+
+-- ---------------------------------------------------------------------------
+-- The genuine readings
+-- ---------------------------------------------------------------------------
+
+{- | The maturity window the relying contract chooses, in POSIX milliseconds.
+
+The delivered datum's birth is the upper bound of the booking's validity, and
+the consumer's present is the lower bound of its own transaction's validity:
+both are slot starts, and the node's slots last a tenth of a second. 30 seconds
+is a multiple of the slot length, so the boundary @born_at + W@ is a slot
+start and one slot before it is exactly 100 ms younger. No reading depends on
+how long a fold takes: each is placed relative to the boundary, and the chain
+is awaited past it before the transaction is built.
+-}
+maturityWindowMs :: Integer
+maturityWindowMs = 30_000
+
+-- | A consumer: a context and the example contract applied to it.
+data Consumer = Consumer
+    { cnContext :: Context
+    , cnProgram :: SBS.ShortByteString
+    , cnHash :: ScriptHash
+    }
+
+-- | The environment of the genuine readings: the devnet's registry and the consumer's code.
+data Reader = Reader
+    { rdEnv :: CheckpointEnv
+    , rdCode :: SBS.ShortByteString
+    }
+
+reader :: CheckpointEnv -> IO Reader
+reader env = do
+    bp <- resolveBlueprintPath >>= loadBlueprint >>= either fail pure
+    code <-
+        maybe (fail (T.unpack consumerValidator <> " not in the blueprint")) pure $
+            extractCompiledCodeExact consumerValidator bp
+    pure (Reader env code)
+
+consumerOf :: Reader -> Context -> Consumer
+consumerOf rd cx =
+    let program =
+            applyDataArgs
+                [contextData cx, paramsDataFor maturityWindowMs]
+                (rdCode rd)
+     in Consumer cx program (computeScriptHash program)
+
+{- | The context of the devnet's registry for an identity. Nothing in it is a
+declared value: the release, the seed and the checkpoint credential are what
+the registry environment holds, the AID is the one the delivered datum names.
+-}
+genuineContext :: CheckpointEnv -> ByteString -> Context
+genuineContext env aid =
+    Context
+        { cxNetwork = 0
+        , cxApplicationPolicy = scriptHashBytes (envApplicationHash env)
+        , cxApplicationCredential = scriptHashBytes (envApplicationHash env)
+        , cxStateProgram = scriptHashBytes (envStateHash env)
+        , cxStatePolicy = scriptHashBytes (envStateHash env)
+        , cxSeedTx = outputTransactionId (registrySeed env)
+        , cxSeedIndex = outputIndex (registrySeed env)
+        , cxAid = aid
+        , cxCheckpointCredential = scriptHashBytes (envCheckpointHash env)
+        }
+
+-- | The clauses of the Lean @consumableHoldingB@ a holding can fail.
+data Clause
+    = AddressClause
+    | QuantityClause
+    | DatumClause
+    | FrozenClause
+    | PoisonedClause
+    | JuvenileClause
+    | PendingClause
+    deriving stock (Show, Eq)
+
+{- | The Lean @consumableHoldingB@ over what the chain holds, clause by clause:
+the whole address of the checkpoint credential, the representative token
+exactly once, a decoded datum for the AID, and a consumable state (present,
+unfrozen, unpoisoned, @born_at + W <= now@). The authenticated-context clause
+holds of the example by construction. @now@ is a value on the same side of
+every threshold as the time the script reads.
+-}
+failedClauses :: Context -> Integer -> TxOut ConwayEra -> [Clause]
+failedClauses cx now out =
+    [AddressClause | out ^. addrTxOutL /= checkpointAddress]
+        <> [QuantityClause | representativeQuantity cx out /= 1]
+        <> case extractDatum out of
+            Just (V2 facts@Live{})
+                | lvAid facts == cxAid cx ->
+                    [FrozenClause | lvFrozen facts]
+                        <> [PoisonedClause | lvPoisoned facts]
+                        <> [JuvenileClause | lvBornAt facts + maturityWindowMs > now]
+            Just (V2 facts@TerminationPending{})
+                | tpAid facts == cxAid cx -> [PendingClause]
+            _ -> [DatumClause]
+  where
+    checkpointAddress =
+        scriptAddr (scriptHashOf (cxCheckpointCredential cx))
+
+-- | The quantity of the context's representative asset in an output.
+representativeQuantity :: Context -> TxOut ConwayEra -> Integer
+representativeQuantity cx out =
+    case out ^. valueTxOutL of
+        MaryValue _ (MultiAsset assets) ->
+            fromMaybe 0 $
+                Map.lookup (PolicyID (scriptHashOf (cxStatePolicy cx))) assets
+                    >>= Map.lookup (assetNameOf (representativeNameOf cx))
+
+-- | The identifier and the birth of a checkpoint the chain holds, live.
+liveFactsOf :: CheckpointInput -> IO (ByteString, Integer)
+liveFactsOf input = case checkpointFacts input of
+    facts@Live{} -> pure (lvAid facts, lvBornAt facts)
+    _ -> fail "the checkpoint is not live"
+
+{- | The time the consumer script is to read: at or after an instant, or at or
+before it. The transaction's validity lower bound is the ceiling slot of the
+first and the floor slot of the second.
+-}
+data Clock = NotBefore Integer | NotAfter Integer
+
+clockMs :: Clock -> Integer
+clockMs (NotBefore ms) = ms
+clockMs (NotAfter ms) = ms
+
+-- | Lock one output at the consumer's address and set a collateral aside.
+lockOutput :: CheckpointEnv -> Consumer -> IO (Utxo, Utxo)
+lockOutput env consumer = do
+    let prov = envProvider env
+        wallet = partyAddr consumerParty
+    pp <- withinSecs 30 "query parameters" (queryProtocolParams prov)
+    funding <-
+        withinSecs 30 "query the consumer wallet" (queryUTxOs prov wallet)
+            >>= \utxos -> case sortOn (Down . adaOf . snd) utxos of
+                [] -> fail "the consumer wallet holds nothing"
+                (largest : _) -> pure largest
+    let locked =
+            mkBasicTxOut
+                (cageScriptAddr (cnProgram consumer) Testnet)
+                (inject (Coin lockedAda))
+        collateral = mkBasicTxOut wallet (inject (Coin 10_000_000))
+        skeleton =
+            mkBasicTx
+                ( mkBasicTxBody
+                    & outputsTxBodyL .~ StrictSeq.fromList [locked, collateral]
+                )
+    tx <- case balanceTx pp [funding] [] wallet skeleton of
+        Left err -> fail ("lockOutput: " <> show err)
+        Right r -> pure (balancedTx r)
+    txId <- submitOk (envSubmitter env) (partyKey consumerParty) "lock" tx
+    awaitOutputs prov (outputsOf txId [0, 1]) >>= \case
+        [l, c] -> pure (l, c)
+        _ -> fail "the lock transaction's outputs did not settle"
+
+{- | Read a holding with a consumer at a time, and assert three things agree:
+the story (exactly the clauses named fail), the Lean predicate over what the
+chain holds, and the node. The node settles a spend when no clause fails and
+refuses it, in Phase 2 of the consumer script alone, otherwise. The refusal's
+transaction is built exactly as the accepting one: a fresh locked output at the
+consumer's address, the same fee and collateral kinds, the same reference-input
+shape.
+-}
+readHolding ::
+    Reader ->
+    Consumer ->
+    Utxo ->
+    Clock ->
+    [Clause] ->
+    String ->
+    IO ()
+readHolding rd consumer holding clock failing label = do
+    let env = rdEnv rd
+        prov = envProvider env
+        key = partyKey consumerParty
+        predicateFailing =
+            failedClauses (cnContext consumer) (clockMs clock) (snd holding)
+    -- a validity lower bound later than the chain's tip is a ledger refusal
+    awaitChainTime env label (clockMs clock + 3_000)
+    lowerSlot <-
+        withinSecs 30 (label <> ": slot of the lower bound") $ case clock of
+            NotBefore ms -> posixMsCeilSlot prov ms
+            NotAfter ms -> posixMsToSlot prov ms
+    (locked, collateral) <- lockOutput env consumer
+    fee <-
+        withinSecs 30 (label <> ": query the consumer wallet") (queryUTxOs prov (partyAddr consumerParty))
+            >>= \wallet -> case sortOn (Down . adaOf . snd) (filter ((/= fst collateral) . fst) wallet) of
+                [] -> fail (label <> ": no fee output")
+                (u : _) -> pure u
+    tx <-
+        withinSecs 60 (label <> ": build the spend") $
+            spendTx
+                prov
+                (cnProgram consumer)
+                (cnHash consumer)
+                (partyAddr consumerParty)
+                locked
+                fee
+                collateral
+                (fst holding)
+                lowerSlot
+    let spendPurpose =
+            ConwaySpending
+                (AsIx (spendingIndex (fst locked) (tx ^. bodyTxL . inputsTxBodyL)))
+    observed <-
+        withinSecs 120 (label <> ": evaluate") $
+            evaluateTx prov (addKeyWitness key tx)
+    nodeSettles <- case Map.toList observed of
+        [(purpose, outcome)]
+            | purpose == spendPurpose -> pure (either (const False) (const True) outcome)
+        _ ->
+            fail
+                ( label
+                    <> ": the node's evaluation is not the consumer's alone: "
+                    <> take 400 (show (Map.toList observed))
+                )
+    unless (predicateFailing == failing && nodeSettles == null failing) $
+        fail
+            ( label
+                <> ": the story names "
+                <> show failing
+                <> "; the predicate over the chain's output fails "
+                <> show predicateFailing
+                <> "; the node "
+                <> if nodeSettles then "settles it" else "refuses it"
+            )
+    if nodeSettles
+        then do
+            txId <- submitOk (envSubmitter env) key label tx
+            _ <- awaitOutputs prov (outputsOf txId [0])
+            spent <-
+                withinSecs 30 (label <> ": query the locked output") $
+                    queryUTxOByTxIn prov (Set.singleton (fst locked))
+            unless (Map.null spent) $
+                fail (label <> ": the locked output was not spent")
+            dbg (label <> ": settled as " <> show txId)
+        else refusedInScript (envSubmitter env) key (cnHash consumer) label tx
+
+-- | A consumer for the identity a checkpoint names, in the devnet's registry.
+genuineConsumer :: Reader -> CheckpointInput -> IO (Consumer, Integer)
+genuineConsumer rd input = do
+    (aid, bornAt) <- liveFactsOf input
+    pure (consumerOf rd (genuineContext (rdEnv rd) aid), bornAt)
+
+{- | The readings of one journey that failed, each with its reason. A reading
+that fails is recorded and the journey goes on to the next one, so that every
+reading is judged on its own; the journey fails at its end if any did.
+-}
+type Findings = IORef [String]
+
+reading :: Findings -> String -> IO () -> IO ()
+reading findings label act =
+    act `catch` \(e :: IOException) ->
+        modifyIORef findings (<> [label <> ": " <> show e])
+
+settleFindings :: Findings -> IO ()
+settleFindings findings =
+    readIORef findings >>= \case
+        [] -> pure ()
+        failures -> fail (unlines failures)
+
+{- | A journey must hand the observer every stage its readings expect: a dropped
+hand-over fails the journey, it does not skip the reading.
+-}
+expectStages :: IORef [Stage] -> [Stage] -> IO ()
+expectStages stages expected = do
+    seen <- readIORef stages
+    let missing = filter (`notElem` seen) expected
+    unless (null missing) $
+        fail ("the journey never handed the observer " <> show missing)
+
+{- | A registration booked through the application and folded by another party:
+the checkpoint it delivered, read at the maturity boundary of its own datum.
+One slot before the boundary the holding is juvenile and refused; at it, it is
+settled. A consumer fixing another checkpoint credential refuses the same
+holding for its address alone, and one fixing another seed for the missing
+token alone.
+-}
+registeredHoldingJourney :: CheckpointEnv -> IO ()
+registeredHoldingJourney env = do
+    rd <- reader env
+    findings <- newIORef []
+    registered <- productionRegisterScenario env
+    (genuine, bornAt) <- genuineConsumer rd registered
+    let holding = checkpointUtxo registered
+        cx = cnContext genuine
+        boundary = bornAt + maturityWindowMs
+        elsewhere =
+            consumerOf
+                rd
+                cx{cxCheckpointCredential = scriptHashBytes (envApplicationHash env)}
+        rivalSeed =
+            consumerOf rd cx{cxSeedIndex = cxSeedIndex cx + 1}
+    reading findings "context-is-the-genuine-release" $
+        unless (representativeQuantity cx (snd holding) == 1) $
+            fail "the context the registry environment gives does not name the token the genuine holding carries"
+    reading findings "juvenile-holding-refused" $
+        readHolding rd genuine holding (NotAfter (boundary - 1)) [JuvenileClause] "juvenile-holding-refused: one slot before born_at + W"
+    reading findings "other-credential-refused" $
+        readHolding rd elsewhere holding (NotBefore boundary) [AddressClause] "other-credential-refused"
+    reading findings "other-registry-refused" $
+        readHolding rd rivalSeed holding (NotBefore boundary) [QuantityClause] "other-registry-refused: a consumer fixing another seed"
+    reading findings "genuine-holding-accepted-after-window" $
+        readHolding rd genuine holding (NotBefore boundary) [] "genuine-holding-accepted-after-window: at born_at + W"
+    settleFindings findings
+
+{- | The frozen checkpoint a controller's honest freeze rotation left is refused
+for its frozen mark alone, long after its maturity; the checkpoint the deposit
+rotation restored, the same identity and the same birth, is settled.
+-}
+frozenThenRestored :: CheckpointEnv -> IO (Observer, IO ())
+frozenThenRestored env = do
+    rd <- reader env
+    findings <- newIORef []
+    stages <- newIORef []
+    let observer stage checkpoint =
+            modifyIORef stages (stage :) >> case (stage, checkpoint) of
+                (Frozen, Just frozen) -> reading findings "frozen-holding-refused" $ do
+                    (consumer, bornAt) <- genuineConsumer rd frozen
+                    readHolding rd consumer (checkpointUtxo frozen) (NotBefore (bornAt + maturityWindowMs)) [FrozenClause] "frozen-holding-refused"
+                (Restored, Just restored) -> reading findings "restored-holding-accepted" $ do
+                    (consumer, bornAt) <- genuineConsumer rd restored
+                    readHolding rd consumer (checkpointUtxo restored) (NotBefore (bornAt + maturityWindowMs)) [] "restored-holding-accepted"
+                _ -> pure ()
+    pure (observer, expectStages stages [Frozen, Restored] >> settleFindings findings)
+
+{- | The standing checkpoint of an identity is settled; once convicted, the
+pending output its conviction left is refused for its pending state alone; after
+the terminating fold no output at the checkpoint validator holds the token. The
+same count over the validator's outputs finds the token once while the pending
+output stands, so an empty count after the fold is not an empty query.
+-}
+convictedReading :: CheckpointEnv -> IO (Observer, IO ())
+convictedReading env = do
+    rd <- reader env
+    findings <- newIORef []
+    stages <- newIORef []
+    seen <- newIORef Nothing
+    let known = readIORef seen >>= maybe (fail "no standing checkpoint was read") pure
+        holders consumer =
+            fmap
+                (length . filter ((> 0) . representativeQuantity (cnContext consumer) . snd))
+                . withinSecs 30 "query the checkpoint validator"
+                $ queryUTxOs (envProvider env) (scriptAddr (envCheckpointHash env))
+        observer stage checkpoint =
+            modifyIORef stages (stage :) >> case (stage, checkpoint) of
+                (Standing, Just standing) -> reading findings "standing-holding-accepted" $ do
+                    (consumer, bornAt) <- genuineConsumer rd standing
+                    writeIORef seen (Just (consumer, bornAt))
+                    readHolding rd consumer (checkpointUtxo standing) (NotBefore (bornAt + maturityWindowMs)) [] "standing-holding-accepted"
+                (Pending, Just left) -> do
+                    reading findings "pending-termination-refused" $ do
+                        (consumer, bornAt) <- known
+                        readHolding rd consumer (checkpointUtxo left) (NotBefore (bornAt + maturityWindowMs)) [PendingClause] "pending-termination-refused"
+                    reading findings "pending-output-holds-the-token" $ do
+                        (consumer, _) <- known
+                        count <- holders consumer
+                        unless (count == 1) $
+                            fail ("the pending output does not hold the representative token once: " <> show count)
+                (Terminated, Nothing) -> reading findings "terminated-key-has-no-holding" $ do
+                    (consumer, _) <- known
+                    count <- holders consumer
+                    unless (count == 0) $
+                        fail ("an output at the checkpoint validator still holds the representative token after the terminating fold: " <> show count)
+                _ -> pure ()
+    pure
+        ( observer
+        , expectStages stages [Standing, Pending, Terminated] >> settleFindings findings
+        )

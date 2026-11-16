@@ -1,10 +1,10 @@
-/* Observations of the actual associated system corpus. These eight contracts
+/* Observations of the actual associated system corpus. These ten contracts
  * require SysReach or SysStep and therefore are not lamps on a bare local Step
  * session. The caller first verifies connected replay from Sys.init against
  * the Lean certificate producer; arbitrary uploaded states carry no premise. */
 import {equal} from './registry-economic-core.mjs';
-import {stateKind,leafOf,hasOutput,actionKind} from './checkpoint-simulator-core.mjs';
-export const SYSTEM_THEOREMS=['T8_leaf_agrees_with_state','T8_edges_leave_the_leaf','T8_present_implies_registered','T8_leaf_states','T8_utxo_iff_active','T8_leaf_never_absent_again','T8_mint_once','T8_sysstep_partition'];
+import {stateKind,leafOf,hasOutput,actionKind,entitles} from './checkpoint-simulator-core.mjs';
+export const SYSTEM_THEOREMS=['T8_leaf_agrees_with_state','T8_edges_leave_the_leaf','T8_present_implies_registered','T8_leaf_states','T8_utxo_iff_active','T8_leaf_never_absent_again','T8_mint_once','T8_sysstep_partition','sys_conviction_consumes_commitment','commitment_closes_in_or_after_window'];
 const rowAt=(state,aid)=>state.aids.find(r=>equal(r.aid,aid))??{aid,state:'absent',leaf:'absent',origin:null,pending:null};
 export function systemProperties(cell,result=cell.result) {
   const kind=Object.keys(cell.command)[0],command=cell.command[kind],before=cell.input;
@@ -21,6 +21,18 @@ export function systemProperties(cell,result=cell.result) {
   row('T8_mint_once',accepted&&localKind==='register',()=>old.leaf==='absent');
   // The complete oracle result includes both value flows and every stored
   // origin/association field; success was constructed with the actual event.
-  row('T8_sysstep_partition',accepted,()=>['register','local','book','complete'].includes(kind)&&equal(result,cell.result));
+  row('T8_sysstep_partition',accepted,()=>['register','local','book','complete','openCommitment','reveal','sweep'].includes(kind)&&equal(result,cell.result));
+  // A live output that becomes a pending termination was convicted on an open
+  // commitment naming this AID, entitling its payee now; the step burnt it.
+  const convicted=accepted&&kind==='local'&&stateKind(old.state)==='present'&&stateKind(next.state)==='terminationPending';
+  row('sys_conviction_consumes_commitment',convicted,()=>{
+    const c=command.action?.convict?.commitment,payee=command.action?.convict?.payee;
+    return !!c&&before.commitments.some(o=>equal(o,c))&&equal(c.aid,command.aid)&&!after.commitments.some(o=>o.marker===c.marker)&&
+      entitles(cell.env,c,old.state.present.l,payee,command.now);
+  });
+  // A commitment that closes closes inside its window (a reveal or the conviction
+  // that revealed it) or strictly after it (a sweep), never before it is eligible.
+  const closed=accepted?before.commitments.filter(o=>!after.commitments.some(n=>n.marker===o.marker)):[];
+  row('commitment_closes_in_or_after_window',closed.length>0,()=>closed.every(o=>o.eligibleAfter<=command.now));
   return rows;
 }

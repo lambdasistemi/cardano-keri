@@ -1056,26 +1056,17 @@ the registry environment holds, the AID is the one the delivered datum names.
 -}
 genuineContext :: CheckpointEnv -> ByteString -> Context
 genuineContext env aid =
-    declared
-        Context
-            { cxNetwork = 0
-            , cxApplicationPolicy = scriptHashBytes (envApplicationHash env)
-            , cxApplicationCredential = scriptHashBytes (envApplicationHash env)
-            , cxStateProgram = scriptHashBytes (envStateHash env)
-            , cxStatePolicy = scriptHashBytes (envStateHash env)
-            , cxSeedTx = outputTransactionId (registrySeed env)
-            , cxSeedIndex = outputIndex (registrySeed env)
-            , cxAid = aid
-            , cxCheckpointCredential = scriptHashBytes (envCheckpointHash env)
-            }
-  where
-    declared cx =
-        cx
-            { cxStatePolicy = BS.replicate 28 0xbb
-            , cxSeedTx = BS.replicate 32 0xee
-            , cxSeedIndex = 0
-            , cxCheckpointCredential = BS.replicate 28 0xdd
-            }
+    Context
+        { cxNetwork = 0
+        , cxApplicationPolicy = scriptHashBytes (envApplicationHash env)
+        , cxApplicationCredential = scriptHashBytes (envApplicationHash env)
+        , cxStateProgram = scriptHashBytes (envStateHash env)
+        , cxStatePolicy = scriptHashBytes (envStateHash env)
+        , cxSeedTx = outputTransactionId (registrySeed env)
+        , cxSeedIndex = outputIndex (registrySeed env)
+        , cxAid = aid
+        , cxCheckpointCredential = scriptHashBytes (envCheckpointHash env)
+        }
 
 -- | The clauses of the Lean @consumableHoldingB@ a holding can fail.
 data Clause

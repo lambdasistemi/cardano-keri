@@ -31,10 +31,17 @@ module CheckpointTxBuilder (
     productionRegisterAdvanceScenario,
     productionRegisterConvictScenario,
     productionRegisterFreezeScenario,
-    productionRegisterFreezeThenDepositScenario,
+    freezeThenDepositJourney,
     productionRegisterTopUpScenario,
     productionFrozenTopUpScenario,
     terminationJourney,
+    Stage (..),
+    Observer,
+    Party (..),
+    consumerParty,
+    registrySeed,
+    awaitChainTime,
+    resolveBlueprintPath,
     buildAdvanceTx,
 ) where
 
@@ -1591,6 +1598,7 @@ buildSplitTx provider owner = do
         seedOut = mkBasicTxOut (seedAddress owner) (inject (Coin 20_000_000))
         folderOut = mkBasicTxOut folderAddress (inject (Coin 100_000_000))
         terminationFolderOut = mkBasicTxOut terminationFolderAddress (inject (Coin 100_000_000))
+        consumerOut = mkBasicTxOut consumerAddress (inject (Coin 300_000_000))
         body =
             mkBasicTxBody
                 & outputsTxBodyL
@@ -1606,6 +1614,7 @@ buildSplitTx provider owner = do
                         , folderOut
                         , terminationFolderOut
                         , terminationFolderOut
+                        , consumerOut
                         ]
     either
         (fail . ("buildSplitTx: balance failed: " <>) . show)
@@ -4103,6 +4112,26 @@ settledAdvance env row before created advanceTxId utxo = do
             , checkpointFacts = expected
             }
 
+{- | The points of a connected journey at which a relying contract can read the
+registry's checkpoint: the output exists on the chain, with its genuine datum,
+for as long as the journey has not spent it.
+-}
+data Stage
+    = -- | a registered checkpoint standing, before any conviction
+      Standing
+    | -- | a checkpoint the controller's rotation, presented as a freeze, froze
+      Frozen
+    | -- | a frozen checkpoint a deposit rotation restored
+      Restored
+    | -- | the output a conviction left: termination pending, no key material
+      Pending
+    | -- | after the terminating fold: the registry holds no checkpoint of the key
+      Terminated
+    deriving stock (Show, Eq)
+
+-- | What a journey hands out at a stage: the checkpoint, when one exists.
+type Observer = Stage -> Maybe CheckpointInput -> IO ()
+
 {- | #345: the connected journey register, advance, freeze, then the deposit
 rotation that restores the bond and makes the checkpoint consumable again.
 
@@ -4117,11 +4146,12 @@ holding the minimum ADA, the deposit, the bond and the pool.
 
 "Consumable again" is what the deposit decides: the settled datum is neither
 frozen nor poisoned, where the frozen output was not. The maturity window is a
-consumer's parameter over the unchanged birth slot, and no consumer transaction
-is run against the output.
+consumer's parameter over the unchanged birth slot; the journey hands the
+frozen output and the restored output to the observer, which is where a
+relying contract reads them.
 -}
-productionRegisterFreezeThenDepositScenario :: CheckpointEnv -> IO ()
-productionRegisterFreezeThenDepositScenario env = do
+freezeThenDepositJourney :: CheckpointEnv -> Observer -> IO ()
+freezeThenDepositJourney env observe = do
     fixture <- loadConvictStoryFixture
     let laterRotation = fsResponseRotation fixture
         created = rsCreated laterRotation
@@ -4164,6 +4194,7 @@ productionRegisterFreezeThenDepositScenario env = do
                 }
     when (notFrozenNorPoisoned frozenFacts) $
         fail "the frozen checkpoint is already consumable"
+    observe Frozen (Just frozen)
     let (spentTx, spentIx) = spentOutputBytes frozen
         intentAt (txBytes, ix) deposit =
             fmap
@@ -4235,6 +4266,18 @@ productionRegisterFreezeThenDepositScenario env = do
     unless (Map.null remaining) $
         fail "Deposit left the frozen checkpoint input unspent"
     dbg ("Deposit settled; tx id=" <> show depositTxId)
+    restoredFacts <- case extractDatum (snd depositUtxo) of
+        Just (V2 facts) -> pure facts
+        _ -> fail "the restored checkpoint carries no version 2 datum"
+    observe
+        Restored
+        ( Just
+            CheckpointInput
+                { checkpointUtxo = depositUtxo
+                , checkpointDatum = created
+                , checkpointFacts = restoredFacts
+                }
+        )
 
 -- | Neither frozen nor poisoned: what a deposit decides of a live checkpoint.
 notFrozenNorPoisoned :: CheckpointDatumV2 -> Bool
@@ -4729,6 +4772,19 @@ folderAddress =
 -- | The party that folds.
 folderParty :: Party
 folderParty = Party folderAddress folderKey
+
+{- | The relying contract's wallet: it funds, locks and spends the outputs of
+the consumer example, and takes no part in any registry transaction.
+-}
+consumerKey :: SignKeyDSIGN Ed25519DSIGN
+consumerKey = mkSignKey (BS.replicate 32 0x68)
+
+consumerAddress :: Addr
+consumerAddress =
+    Addr Testnet (KeyHashObj (keyHashFromSignKey consumerKey)) StakeRefNull
+
+consumerParty :: Party
+consumerParty = Party consumerAddress consumerKey
 
 {- | The party that folds a termination: neither the identity's owner, nor the
 convictor, nor the party that books it.
@@ -6214,10 +6270,11 @@ landed, is refused by the ledger as a consumed input alone. Another party folds
 the request; the registry, the validators' outputs and the treasury donation
 are read back from the chain. A booking of the terminated key is refused by the
 builder, a registration of it is booked and cannot be folded, and is returned
-after its deadline.
+after its deadline. The observer is handed the standing checkpoint before the
+conviction, the pending output the conviction left, and the terminal state.
 -}
-terminationJourney :: CheckpointEnv -> IO ()
-terminationJourney env = do
+terminationJourney :: CheckpointEnv -> Observer -> IO ()
+terminationJourney env observe = do
     fixture <- loadConvictStoryFixture
     references <- deployRegisterReferences env
     checkpointRef <- requireJust "checkpoint reference is absent" (listToMaybe references)
@@ -6235,6 +6292,7 @@ terminationJourney env = do
         regFixture = rsRegistration (fsFirstRotation fixture)
     active <-
         prepareConvictActive env references checkpointRef advanceRef "TERMINATION" fixture
+    observe Standing (Just active)
     convictPlan <-
         prepareLiveEntitlement
             env
@@ -6257,11 +6315,21 @@ terminationJourney env = do
         withinSecs 30 "query the pending output" (queryUTxOByTxIn (envProvider env) (Set.singleton pendingIn))
             >>= maybe (fail "the pending output is absent") (pure . (,) pendingIn) . Map.lookup pendingIn
     dbg ("pending output " <> show pendingIn)
-    key <- case extractDatum pendingOut of
-        Just (V2 TerminationPending{tpAid}) -> pure tpAid
+    pendingFacts <- case extractDatum pendingOut of
+        Just (V2 facts@TerminationPending{}) -> pure facts
         _ -> fail "the conviction did not leave a pending termination"
+    let key = tpAid pendingFacts
     unless (key == checkpointKey env regFixture) $
         fail "the pending termination is not of the identity that was registered"
+    observe
+        Pending
+        ( Just
+            CheckpointInput
+                { checkpointUtxo = pending
+                , checkpointDatum = checkpointDatum active
+                , checkpointFacts = pendingFacts
+                }
+        )
     let approval = terminationApprovalOf env key
         activeName = activeTokenName (registryIdentity env) key
         rootBefore = stateDatumData (registryRootOf [key] [])
@@ -6383,6 +6451,7 @@ terminationJourney env = do
             )
     dbg ("termination fold transaction " <> show foldTxId)
     terminalReadback env key request foldTxId booker folder folderCoinBefore
+    observe Terminated Nothing
     terminalKeyJourney env references regFixture key
 
 -- | The coin of a party's wallet.

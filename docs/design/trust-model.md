@@ -182,6 +182,7 @@ the checkpoint simulator, and unbuilt on chain.
 | The pool never gates a transition | an unpaid rotation is still a valid rotation |
 | A relayer cannot unfreeze the owner | a `deposit` is signed by the new epoch's keys |
 | The refund address belongs to whoever paid the registration, for the checkpoint's whole life | it is set at registration and no step changes it |
+| A conviction pays only the payee of a commitment opened beforehand over this output and this evidence | see [Who a conviction pays](#who-a-conviction-pays) |
 
 ### The consumer's predicate
 
@@ -265,6 +266,85 @@ window is bounded by juvenility and closed by any advance to the tip. The
 attacker's bonds stay the attacker's: the refund address is fixed at
 registration. Removing the residual would mean removing the relayer.
 
+### Who a conviction pays
+
+As Cora, a hunter who has found two receipted rotations at one sequence, I
+want the conviction deposit `D_reg` paid to me and not to whoever copies my
+evidence, so that looking for duplicity is worth doing.
+
+The evidence of duplicity is private until a conviction shows it, but once a
+conviction transaction is submitted anyone can read it. Without a guard, the
+producer of a block could drop Cora's transaction and include a copy that pays
+itself. The guard is a commitment made before the evidence is shown: Cora
+opens, under the release's commitment program, a commitment that names the
+checkpoint output, the digest of her evidence and herself, hidden behind a
+hash. From the next slot on, her conviction reveals it. A copier naming itself
+finds no commitment that names it; a copier who opens one after seeing the
+evidence must wait at least one slot before it can use it.
+
+```mermaid
+sequenceDiagram
+  participant C as Cora (convictor)
+  participant P as Commitment program
+  participant K as Checkpoint
+  participant M as A copier
+  C->>P: open: this output, digest of the evidence, Cora (slot t)
+  Note over P: evidence and payee hidden behind a hash
+  C->>K: convict from slot t+1, revealing the commitment and the evidence
+  K-->>C: D_reg to Cora, commitment marker burnt
+  K-->>K: bond and pool to the refund address, pending termination
+  M->>K: same evidence, paying the copier
+  K-->>M: refused: no open commitment names the copier
+```
+
+The conviction step checks the commitment it reveals; the system checks that
+the commitment is open, burns it, and keeps each commitment's own life:
+
+```mermaid
+stateDiagram-v2
+  [*] --> Open: opened with an age and a lifetime
+  Open --> Revealed: conviction or reveal, inside the window
+  Open --> Swept: sweep, strictly after the window
+  Revealed --> [*]: marker burnt, deposit to the payee
+  Swept --> [*]: marker burnt, deposit to whoever signs
+```
+
+| A conviction is accepted only when | Where the model states it |
+|---|---|
+| the checkpoint has duplicity at its current key state | the conviction step |
+| the commitment names this checkpoint output | the conviction step (`Commitment.entitles`) |
+| the commitment names the evidence the conviction shows | the conviction step |
+| the commitment names the payee the conviction pays | the conviction step |
+| the conviction's slot is after the commitment's opening slot and no later than its last slot | the conviction step |
+| the commitment is open in the release's commitment program and names this AID | the system step |
+| the conviction burns the commitment, so it entitles nothing more | the system step |
+
+Every step that spends a live output, a rotation, a poison, a freeze or a
+top-up, leaves a different output, and a commitment over the earlier output
+entitles nothing afterwards (`spent_output_commitment_entitles_nothing`). A
+convictor whose output was spent opens a new commitment over the new output.
+
+| Decision | Chosen | Rejected | Why |
+|---|---|---|---|
+| Who a conviction pays | the payee of a commitment opened beforehand | any payee the submitter names | the evidence is private until shown, and a copier would take `D_reg` |
+| Who a rotation's premium and a freeze bond pay | any payee the submitter names, a recorded limit | a commitment for them too | their evidence is already public, the commitment names its checkpoint in the clear, and hiding it would need a blinded commitment, a second transaction and a delay on every paid action |
+| How the model names the checkpoint output | the live state the output holds | an explicit output reference | no live state recurs along a checkpoint's life, so the state identifies the output |
+
+The model leaves to the implementation, and states nowhere: the hash and the
+nonce that hide the evidence and the payee, the marker's derivation from the
+opening transaction, the commitment deposit and its payouts, the payee's
+signatures, and the exact age and lifetime a release applies. It requires only
+that a commitment becomes eligible strictly after its opening slot and no
+later than it expires; the release applies an age of one slot. The model keeps
+one piece of evidence per key state, chosen by its environment, so a
+commitment over any other evidence entitles nothing in it.
+
+The theorems are in `lean/CardanoKeri/CheckpointCommitmentGoals.lean`, the
+accepted and refused cases in `lean/checkpoint-commitment-vectors.json`, and
+the checkpoint simulator plays them in story 9: Cora convicts on her
+commitment, a copier is refused, a commitment opened in the conviction's slot
+is refused, and a top-up voids Cora's commitment.
+
 ### Indexers
 
 In the redesigned consumer, an indexer locates candidates for the independently
@@ -321,4 +401,6 @@ The **Result** column marks whether the response ships today or is designed.
 | Take `D_reg` without a duplicity proof | Reject: `D_reg` is never a fee source | designed |
 | Freeze an identity whose pool pays | Reject: the freeze requires `pool < P` | designed |
 | Convict without two witnessed rotations at one sequence | Reject: the proof needs the tip's own keys and `toad` receipts on both | designed |
+| Copy a conviction and pay yourself | Reject: `D_reg` goes only to the payee of a commitment opened beforehand over this output and this evidence | designed |
+| Open a commitment and use it in the same slot | Reject: a commitment is eligible only after the slot it was opened in | designed |
 | A next-key thief with `toad` colluding witnesses convicts and takes `D_reg` | **No rejection is available** — exposure bounded by `D_reg` and by the chosen witness set | designed |

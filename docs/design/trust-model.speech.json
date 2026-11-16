@@ -237,7 +237,7 @@
       "pause": 500
     },
     {
-      "text": "A treasury fixes its intended network, published release, registry seed and AID independently of a candidate. The reviewed holding predicate requires matching validated network/release, the release's application credential, exactly one complete expected representative asset, and a decoded application datum for that AID. Its unchanged lifecycle condition then requires a present, unfrozen, unpoisoned state at least the juvenility window old.",
+      "text": "A treasury fixes its intended network, published release, checkpoint credential, registry seed and AID independently of a candidate. The reviewed holding predicate requires matching validated network, release and checkpoint credential, the output at that checkpoint credential (the checkpoint validator's, not the application's), exactly one complete expected representative asset, and a decoded application datum for that AID. Its unchanged lifecycle condition then requires a present, unfrozen, unpoisoned state at least the juvenility window old.",
       "pause": 400
     },
     {
@@ -299,6 +299,36 @@
       "pause": 400
     }
   ],
+  "who-a-conviction-pays": [
+    {
+      "text": "Who a conviction pays.",
+      "pause": 500
+    },
+    {
+      "text": "As Cora, a hunter who has found two receipted rotations at one sequence, I want the conviction deposit D_reg paid to me and not to whoever copies my evidence, so that looking for duplicity is worth doing.",
+      "pause": 400
+    },
+    {
+      "text": "The evidence of duplicity is private until a conviction shows it, but once a conviction transaction is submitted anyone can read it. Without a guard, the producer of a block could drop Cora's transaction and include a copy that pays itself. The guard is a commitment made before the evidence is shown: Cora opens, under the release's commitment program, a commitment that names the checkpoint output, the digest of her evidence and herself, hidden behind a hash. From the next slot on, her conviction reveals it. A copier naming itself finds no commitment that names it; a copier who opens one after seeing the evidence must wait at least one slot before it can use it.",
+      "pause": 400
+    },
+    {
+      "text": "The conviction step checks the commitment it reveals; the system checks that the commitment is open, burns it, and keeps each commitment's own life:",
+      "pause": 400
+    },
+    {
+      "text": "Every step that spends a live output, a rotation, a poison, a freeze or a top-up, leaves a different output, and a commitment over the earlier output entitles nothing afterwards (spent_output_commitment_entitles_nothing). A convictor whose output was spent opens a new commitment over the new output.",
+      "pause": 400
+    },
+    {
+      "text": "The model leaves to the implementation, and states nowhere: the hash and the nonce that hide the evidence and the payee, the marker's derivation from the opening transaction, the commitment deposit and its payouts, the payee's signatures, and the exact age and lifetime a release applies. It requires only that a commitment becomes eligible strictly after its opening slot and no later than it expires; the release applies an age of one slot. The model keeps one piece of evidence per key state, chosen by its environment, so a commitment over any other evidence entitles nothing in it.",
+      "pause": 400
+    },
+    {
+      "text": "The theorems are in lean/CardanoKeri/CheckpointCommitmentGoals.lean, the accepted and refused cases in lean/checkpoint-commitment-vectors.json, and the checkpoint simulator plays them in story 9: Cora convicts on her commitment, a copier is refused, a commitment opened in the conviction's slot is refused, and a top-up voids Cora's commitment.",
+      "pause": 400
+    }
+  ],
   "indexers": [
     {
       "text": "Indexers.",
@@ -355,6 +385,6 @@
   ],
   "_source": {
     "file": "trust-model.md",
-    "sha256": "6426746d078e8e55efeef910d2576bd1522cc4fe8e2d0309563eeba86ff9d3e9"
+    "sha256": "04013478390eb6b7e9504e793204a35417479a50bc8da476e46ba80658337d80"
   }
 }

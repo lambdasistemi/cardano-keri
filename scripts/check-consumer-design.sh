@@ -70,6 +70,20 @@ node scripts/checkpoint-writer-vectors.mjs --check
   rm -f -- "$generated"
   lake env lean --run CheckpointDepositDriver.lean --check checkpoint-deposit-vectors.json
 )
+# The commitment a conviction reveals (#534): the committed vectors are the
+# Lean's output, every committed row is checked against the Lean, every changed
+# field fails, and each entitling fact of the honest conviction changed alone is
+# refused.
+(
+  cd lean
+  lake build CardanoKeri.CheckpointCommitmentVectors
+  generated=$(mktemp)
+  lake env lean --run CheckpointCommitmentDriver.lean >"$generated"
+  node -e 'const fs=require("fs");if(fs.readFileSync(process.argv[1],"utf8")!==fs.readFileSync(process.argv[2],"utf8")){console.error("checkpoint-commitment-vectors.json differs from the Lean output");process.exit(1)}' \
+    checkpoint-commitment-vectors.json "$generated"
+  rm -f -- "$generated"
+  lake env lean --run CheckpointCommitmentDriver.lean --check checkpoint-commitment-vectors.json
+)
 # The registration request lifecycle (#468): the committed vectors are the
 # Lean's output, every committed row is checked against the Lean and every
 # changed field fails.

@@ -53,8 +53,8 @@
   },
   {
     "id": "CP-05",
-    "before": "      if env.duplicityAt l.epoch l.sn = true then",
-    "after": "      if true then",
+    "before": "      if env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee now then",
+    "after": "      if c.entitles env l payee now then",
     "failure": "ATOM:CP-05",
     "owner": "CardanoKeri.Checkpoint.T12_convict_exact, CardanoKeri.Checkpoint.T5_convict_enabled",
     "test": "CheckpointAtomChecks",
@@ -427,5 +427,148 @@
     ],
     "kind": "decidable-mirror",
     "detail": "a freeze that clears the top-up mark"
+  },
+  {
+    "id": "commitment-output-ignored",
+    "before": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "after": "  env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "failure": "ATOM:commitment-other-output-refused",
+    "owner": "CardanoKeri.Checkpoint.convict_refused_for_other_output, CardanoKeri.Checkpoint.spent_output_commitment_entitles_nothing",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "commitment-other-output-refused"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a commitment over another output entitles"
+  },
+  {
+    "id": "commitment-evidence-ignored",
+    "before": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "after": "  c.output = l ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "failure": "ATOM:commitment-other-evidence-refused",
+    "owner": "CardanoKeri.Checkpoint.convict_refused_for_other_evidence, CardanoKeri.Checkpoint.convict_committed_evidence_is_duplicity",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "commitment-other-evidence-refused"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a commitment over other evidence entitles"
+  },
+  {
+    "id": "commitment-payee-ignored",
+    "before": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "after": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "failure": "ATOM:commitment-other-payee-refused",
+    "owner": "CardanoKeri.Checkpoint.convict_refused_for_other_payee",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "commitment-other-payee-refused"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a commitment pays a payee it does not name"
+  },
+  {
+    "id": "commitment-maturity-ignored",
+    "before": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "after": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    now ≤ c.expiresAt",
+    "failure": "ATOM:commitment-opening-slot-refused",
+    "owner": "CardanoKeri.Checkpoint.convict_refused_before_eligible, CardanoKeri.Checkpoint.convict_refused_in_opening_slot",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "commitment-opening-slot-refused"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "an immature commitment entitles"
+  },
+  {
+    "id": "commitment-matures-in-opening-slot",
+    "before": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "after": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now + 1 ∧ now ≤ c.expiresAt",
+    "failure": "ATOM:commitment-opening-slot-refused",
+    "owner": "CardanoKeri.Checkpoint.convict_refused_in_opening_slot, CardanoKeri.Checkpoint.sys_conviction_after_opening_slot",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "commitment-opening-slot-refused"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a commitment entitles in its opening slot"
+  },
+  {
+    "id": "commitment-expiry-ignored",
+    "before": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "after": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now",
+    "failure": "ATOM:commitment-expired-refused",
+    "owner": "CardanoKeri.Checkpoint.convict_refused_after_expiry",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "commitment-expired-refused"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "an expired commitment entitles"
+  },
+  {
+    "id": "commitment-expires-a-slot-early",
+    "before": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "after": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now < c.expiresAt",
+    "failure": "ATOM:commitment-last-slot-accepted",
+    "owner": "CardanoKeri.Checkpoint.Step.convict_iff",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "commitment-last-slot-accepted"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "the last slot of the window refused"
+  },
+  {
+    "id": "conviction-ignores-commitment",
+    "before": "      if env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee now then",
+    "after": "      if env.duplicityAt l.epoch l.sn = true then",
+    "failure": "ATOM:commitment-other-payee-refused",
+    "owner": "CardanoKeri.Checkpoint.convict_requires_entitlement, CardanoKeri.Checkpoint.convict_refused_without_entitlement, CardanoKeri.Checkpoint.Step.convict_iff",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "commitment-other-payee-refused"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "conviction without an entitling commitment"
+  },
+  {
+    "id": "conviction-keeps-commitment",
+    "before": "  | some c => s.retire c.marker\n",
+    "after": "  | some c => s\n",
+    "failure": "ATOM:conviction-burns-commitment",
+    "owner": "CardanoKeri.Checkpoint.sys_conviction_consumes_commitment",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "conviction-burns-commitment"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a revealed commitment stays open after the conviction"
+  },
+  {
+    "id": "unopened-commitment-reveals",
+    "before": "  | some c => decide (s.commitments c.marker = some c ∧ c.aid = aid)",
+    "after": "  | some c => decide (c.aid = aid)",
+    "failure": "ATOM:commitment-unopened-refused",
+    "owner": "CardanoKeri.Checkpoint.sys_conviction_consumes_commitment, CardanoKeri.Checkpoint.Sys.revealOpen_iff",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "commitment-unopened-refused"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a conviction reveals a commitment that was never opened"
+  },
+  {
+    "id": "other-aid-commitment-reveals",
+    "before": "  | some c => decide (s.commitments c.marker = some c ∧ c.aid = aid)",
+    "after": "  | some c => decide (s.commitments c.marker = some c)",
+    "failure": "ATOM:commitment-other-aid-refused",
+    "owner": "CardanoKeri.Checkpoint.sys_conviction_consumes_commitment, CardanoKeri.Checkpoint.Sys.revealOpen_iff",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "commitment-other-aid-refused"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a commitment for another AID entitles this one"
   }
 ]

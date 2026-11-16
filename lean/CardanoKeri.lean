@@ -1,5 +1,7 @@
 import CardanoKeri.Checkpoint
 import CardanoKeri.CheckpointGoals
+import CardanoKeri.CheckpointCommitmentGoals
+import CardanoKeri.CheckpointCommitmentVectors
 import CardanoKeri.CheckpointValue
 import CardanoKeri.CheckpointValueGoals
 import CardanoKeri.CheckpointValueVectors

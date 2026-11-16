@@ -34,7 +34,16 @@ def live : Live := ⟨0, 0, false, false, 2, 42, 5, false⟩
 def rotatedLive : Live := ⟨1, 1, false, false, 2, 42, 4, false⟩
 def registered : Sys := Sys.init.installOrigin 11 (.present live) origin
 def rotated : Sys := registered.set 11 (.present rotatedLive)
-def pending : Sys := rotated.set 11 (.terminationPending rotatedLive.hash)
+/-- Cora's commitment: opened over the rotated output of AID 11 and the evidence
+the conviction shows at its key state, naming payee 7, its opening transaction's
+validity range ending at slot 4, eligible from slot 5, expiring at slot 20. -/
+def commitment : Commitment := {
+  aid := 11, output := rotatedLive,
+  evidence := ((Duplicity.fixture 1 1).1, (Duplicity.fixture 1 1).2),
+  payee := 7, openedAt := 4, eligibleAfter := 5, expiresAt := 20, marker := 1 }
+def committed : Sys :=
+  { rotated with commitments := fun k => if k = commitment.marker then some commitment else rotated.commitments k }
+def pending : Sys := (committed.set 11 (.terminationPending rotatedLive.hash)).retire commitment.marker
 
 def registryPending : CardanoKeri.Registry.Sys := CardanoKeri.Registry.Examples.pending
 def registryEntry : CardanoKeri.Registry.TerminationEntry := CardanoKeri.Registry.Examples.terminationEntry
@@ -89,9 +98,10 @@ SysStep p env registered rotated
 theorem rotated_step : SysStep p env registered rotated := by
   apply SysStep.local
   refine ⟨11, .rotate 1 .keep 6, 3, { hunter := some { addr := 6, pool := 1 } },
-    .present rotatedLive, ?_, ?_, rfl⟩
+    .present rotatedLive, ?_, ?_, ?_, rfl⟩
   · intro refund pool equal; cases equal
   · exact Step.rotateKeepPaid 3 1 6 (by decide) (by decide) (by decide)
+  · rfl
 
 /-- Given the complete parameters and hypotheses:
 
@@ -100,16 +110,30 @@ No additional local parameters; use the definitions in this module.
 When observe the local Checkpoint or associated system relation named by this theorem.
 Then the complete conclusion is:
 
-SysStep p env rotated pending
+SysStep p env rotated committed
 -/
-theorem pending_step : SysStep p env rotated pending := by
+theorem committed_step : SysStep p env rotated committed := by
+  apply SysStep.openCommitment
+  exact ⟨commitment, rfl, by decide, rfl⟩
+
+/-- Given the complete parameters and hypotheses:
+
+No additional local parameters; use the definitions in this module.
+
+When observe the local Checkpoint or associated system relation named by this theorem.
+Then the complete conclusion is:
+
+SysStep p env committed pending
+-/
+theorem pending_step : SysStep p env committed pending := by
   apply SysStep.local
-  refine ⟨11, .convict 7, 5,
+  refine ⟨11, .convict 7 commitment, 5,
     { refund := some { addr := 42, b := 2, pool := 4 },
       convictor := some { addr := 7, dreg := 3 } },
-    .terminationPending rotatedLive.hash, ?_, ?_, rfl⟩
+    .terminationPending rotatedLive.hash, ?_, ?_, ?_, rfl⟩
   · intro refund pool equal; cases equal
-  · exact Step.convict 5 7 (by decide)
+  · exact Step.convict 5 7 commitment (by decide) (by decide)
+  · simp [Sys.revealOpen, Sys.revealOpenB, Action.revealed, committed, commitment]
 
 
 /-- Given the complete parameters and hypotheses:
@@ -258,7 +282,8 @@ theorem connected_completion :
     (SysReach.step
       (SysReach.step
         (SysReach.step
-          (SysReach.step SysReach.init registered_step) rotated_step)
+          (SysReach.step (SysReach.step SysReach.init registered_step) rotated_step)
+            committed_step)
         pending_step) booked_step) completed_step
 
 

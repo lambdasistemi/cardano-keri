@@ -27,7 +27,11 @@ def journey : Except String Unit := do
   check "rotation-exact-key" (decide (rotated = .present ⟨1, 1, false, false, 2, 42, 4, false⟩))
   let wrongKey := { env with rotationTo := fun e sn sn' => decide (e = 2 ∧ sn = 1 ∧ sn' = 2) }
   check "wrong-key-refused" ((stepFn p wrongKey (.rotate 2 .keep 7) 4 rotated).isNone)
-  let (convictFlow, pending) ← execute rotated (.convict 8) 5
+  let commitment : Commitment := {
+    aid := 11, output := ⟨1, 1, false, false, 2, 42, 4, false⟩,
+    evidence := CardanoKeri.Duplicity.fixture 1 1, payee := 8,
+    openedAt := 4, eligibleAfter := 5, expiresAt := 20, marker := 1 }
+  let (convictFlow, pending) ← execute rotated (.convict 8 commitment) 5
   check "live-conviction-pending-key" (decide
     (pending = .terminationPending ⟨1, 1⟩ ∧ pending.hasOutput = true ∧ pending.leaf = .active))
   check "conviction-addressed-components" (decide (convictFlow = {

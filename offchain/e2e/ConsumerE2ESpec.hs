@@ -549,14 +549,14 @@ spec =
                 "reads the checkpoint a genuine registration delivered: refused one slot before the maturity boundary, settled at it, refused by a consumer fixing another checkpoint credential or another seed"
                 registeredHoldingJourney
             it
-                "#345 reads a genuine frozen checkpoint, refused, and the checkpoint a deposit restored, settled"
+                "#345 restores the bond of a frozen checkpoint with the controller's deposit rotation, refuses a deposit whose intent names another amount, and the checkpoint is consumable again; the consumer reads the genuine frozen checkpoint, refused, and the checkpoint the deposit restored, settled"
                 ( \env -> do
                     (observer, settle) <- frozenThenRestored env
                     freezeThenDepositJourney env observer
                     settle
                 )
             it
-                "#350 reads a genuine standing checkpoint, settled, the pending output its conviction left, refused, and finds no checkpoint after the terminating fold"
+                "#350 books the termination of a convicted identity with a third party's fee, folds it with another party, reads the terminal key back, and refuses each clause's violation, a second booking and a registration of the terminal key; the consumer reads the standing checkpoint, settled, the pending output its conviction left, refused, and no checkpoint after the terminating fold"
                 ( \env -> do
                     (observer, settle) <- convictedReading env
                     terminationJourney env observer
@@ -1263,6 +1263,16 @@ settleFindings findings =
         [] -> pure ()
         failures -> fail (unlines failures)
 
+{- | A journey must hand the observer every stage its readings expect: a dropped
+hand-over fails the journey, it does not skip the reading.
+-}
+expectStages :: IORef [Stage] -> [Stage] -> IO ()
+expectStages stages expected = do
+    seen <- readIORef stages
+    let missing = filter (`notElem` seen) expected
+    unless (null missing) $
+        fail ("the journey never handed the observer " <> show missing)
+
 {- | A registration booked through the application and folded by another party:
 the checkpoint it delivered, read at the maturity boundary of its own datum.
 One slot before the boundary the holding is juvenile and refused; at it, it is
@@ -1306,15 +1316,17 @@ frozenThenRestored :: CheckpointEnv -> IO (Observer, IO ())
 frozenThenRestored env = do
     rd <- reader env
     findings <- newIORef []
-    let observer stage checkpoint = case (stage, checkpoint) of
-            (Frozen, Just frozen) -> reading findings "frozen-holding-refused" $ do
-                (consumer, bornAt) <- genuineConsumer rd frozen
-                readHolding rd consumer (checkpointUtxo frozen) (NotBefore (bornAt + maturityWindowMs)) [FrozenClause] "frozen-holding-refused"
-            (Restored, Just restored) -> reading findings "restored-holding-accepted" $ do
-                (consumer, bornAt) <- genuineConsumer rd restored
-                readHolding rd consumer (checkpointUtxo restored) (NotBefore (bornAt + maturityWindowMs)) [] "restored-holding-accepted"
-            _ -> pure ()
-    pure (observer, settleFindings findings)
+    stages <- newIORef []
+    let observer stage checkpoint =
+            modifyIORef stages (stage :) >> case (stage, checkpoint) of
+                (Frozen, Just frozen) -> reading findings "frozen-holding-refused" $ do
+                    (consumer, bornAt) <- genuineConsumer rd frozen
+                    readHolding rd consumer (checkpointUtxo frozen) (NotBefore (bornAt + maturityWindowMs)) [FrozenClause] "frozen-holding-refused"
+                (Restored, Just restored) -> reading findings "restored-holding-accepted" $ do
+                    (consumer, bornAt) <- genuineConsumer rd restored
+                    readHolding rd consumer (checkpointUtxo restored) (NotBefore (bornAt + maturityWindowMs)) [] "restored-holding-accepted"
+                _ -> pure ()
+    pure (observer, expectStages stages [Frozen, Restored] >> settleFindings findings)
 
 {- | The standing checkpoint of an identity is settled; once convicted, the
 pending output its conviction left is refused for its pending state alone; after
@@ -1326,6 +1338,7 @@ convictedReading :: CheckpointEnv -> IO (Observer, IO ())
 convictedReading env = do
     rd <- reader env
     findings <- newIORef []
+    stages <- newIORef []
     seen <- newIORef Nothing
     let known = readIORef seen >>= maybe (fail "no standing checkpoint was read") pure
         holders consumer =
@@ -1333,24 +1346,28 @@ convictedReading env = do
                 (length . filter ((> 0) . representativeQuantity (cnContext consumer) . snd))
                 . withinSecs 30 "query the checkpoint validator"
                 $ queryUTxOs (envProvider env) (scriptAddr (envCheckpointHash env))
-        observer stage checkpoint = case (stage, checkpoint) of
-            (Standing, Just standing) -> reading findings "standing-holding-accepted" $ do
-                (consumer, bornAt) <- genuineConsumer rd standing
-                writeIORef seen (Just (consumer, bornAt))
-                readHolding rd consumer (checkpointUtxo standing) (NotBefore (bornAt + maturityWindowMs)) [] "standing-holding-accepted"
-            (Pending, Just left) -> do
-                reading findings "pending-termination-refused" $ do
-                    (consumer, bornAt) <- known
-                    readHolding rd consumer (checkpointUtxo left) (NotBefore (bornAt + maturityWindowMs)) [PendingClause] "pending-termination-refused"
-                reading findings "pending-output-holds-the-token" $ do
+        observer stage checkpoint =
+            modifyIORef stages (stage :) >> case (stage, checkpoint) of
+                (Standing, Just standing) -> reading findings "standing-holding-accepted" $ do
+                    (consumer, bornAt) <- genuineConsumer rd standing
+                    writeIORef seen (Just (consumer, bornAt))
+                    readHolding rd consumer (checkpointUtxo standing) (NotBefore (bornAt + maturityWindowMs)) [] "standing-holding-accepted"
+                (Pending, Just left) -> do
+                    reading findings "pending-termination-refused" $ do
+                        (consumer, bornAt) <- known
+                        readHolding rd consumer (checkpointUtxo left) (NotBefore (bornAt + maturityWindowMs)) [PendingClause] "pending-termination-refused"
+                    reading findings "pending-output-holds-the-token" $ do
+                        (consumer, _) <- known
+                        count <- holders consumer
+                        unless (count == 1) $
+                            fail ("the pending output does not hold the representative token once: " <> show count)
+                (Terminated, Nothing) -> reading findings "terminated-key-has-no-holding" $ do
                     (consumer, _) <- known
                     count <- holders consumer
-                    unless (count == 1) $
-                        fail ("the pending output does not hold the representative token once: " <> show count)
-            (Terminated, Nothing) -> reading findings "terminated-key-has-no-holding" $ do
-                (consumer, _) <- known
-                count <- holders consumer
-                unless (count == 0) $
-                    fail ("an output at the checkpoint validator still holds the representative token after the terminating fold: " <> show count)
-            _ -> pure ()
-    pure (observer, settleFindings findings)
+                    unless (count == 0) $
+                        fail ("an output at the checkpoint validator still holds the representative token after the terminating fold: " <> show count)
+                _ -> pure ()
+    pure
+        ( observer
+        , expectStages stages [Standing, Pending, Terminated] >> settleFindings findings
+        )

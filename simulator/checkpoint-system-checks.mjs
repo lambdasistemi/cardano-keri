@@ -5,7 +5,7 @@ import {newSystem,attemptSystem,checkSystemCorpus,validateCommand,replaySystem} 
 import {equal} from './registry-economic-core.mjs';
 import {SYSTEM_THEOREMS,systemProperties} from './checkpoint-system-properties.mjs';
 const corpus=JSON.parse(readFileSync(new URL('./checkpoint-system-corpus.json',import.meta.url)));
-const report=checkSystemCorpus(corpus);assert.deepEqual(report,{cells:33,accepted:22,refused:11});
+const report=checkSystemCorpus(corpus);assert.deepEqual(report,{cells:40,accepted:26,refused:14});
 const first=corpus.traces[0].cells[0],initial=newSystem(first.params,first.env);
 const registered=attemptSystem(initial,first.command).session;
 assert.equal(initial.state.aids.length,0,'mutated initial state');
@@ -39,4 +39,11 @@ for(const name of ['T8_leaf_agrees_with_state','T8_edges_leave_the_leaf','T8_pre
 // witness or a semantic mutation of the model.
 const wrongOrigin=structuredClone(first);wrongOrigin.input.aids=[{...first.result.ok.state.aids[0],leaf:'active'}];
 assert.equal(systemProperties(wrongOrigin)['T8_mint_once'].holds,false,'fabricated mint premise check');
-console.log(JSON.stringify({...report,schemaControls:malformed.length+1,immutableOrigin:true,initOnlySessions:true,systemProperties:shown.size,fabricatedCheckerControls:8}));
+// A conviction whose commitment stays open, and a reveal before its window.
+const convict=corpus.traces[0].cells.find(c=>c.name==='convict'),kept=structuredClone(convict.result);
+kept.ok.state.commitments=convict.input.commitments;
+assert.equal(systemProperties(convict,kept)['sys_conviction_consumes_commitment'].holds,false,'fabricated commitment burn check');
+const reveal=corpus.traces[3].cells.find(c=>c.name==='open-commitment');
+const early=structuredClone(reveal);early.command={reveal:{marker:1,now:4}};early.input=reveal.result.ok.state;early.result={ok:{...reveal.result.ok,state:{...reveal.result.ok.state,commitments:[]}}};
+assert.equal(systemProperties(early,early.result)['commitment_closes_in_or_after_window'].holds,false,'fabricated commitment window check');
+console.log(JSON.stringify({...report,schemaControls:malformed.length+1,immutableOrigin:true,initOnlySessions:true,systemProperties:shown.size,fabricatedCheckerControls:10}));

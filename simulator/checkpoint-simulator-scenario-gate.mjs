@@ -122,7 +122,8 @@ function checkExactNat(core, corpus) {
     for (const k of ['D', 'B', 'P', 'W']) if (core.validateParams({ ...P, [k]: v }) === null) problems.push(`params accept ${k}=${tag}`);
     const actions = [{ register: { refund: v, pool0: 1 } }, { register: { refund: 1, pool0: v } }, { rotate: { "sn'": v, op: 'keep', payee: 1 } },
       { rotate: { "sn'": 2, op: 'keep', payee: v } }, { freeze: { "sn'": v, payee: 1 } },
-      { freeze: { "sn'": 2, payee: v } }, { topUp: { x: v } }, { convict: { payee: v } }];
+      { freeze: { "sn'": 2, payee: v } }, { topUp: { x: v } }, { convict: { payee: v, commitment: core.commitmentFor(live().present.l, 3, 0) } },
+      { convict: { payee: 3, commitment: { ...core.commitmentFor(live().present.l, 3, 0), expiresAt: v } } }];
     for (const a of actions) {
       const n = core.normalizeAction(a);
       if (n.ok || n.reason !== 'invalid-nat') problems.push(`action ${JSON.stringify(a)} not refused invalid-nat (got ${n.ok ? 'ok' : n.reason})`);
@@ -153,7 +154,7 @@ function checkExactNat(core, corpus) {
     }
     for (const f of ['epoch', 'sn']) {
       const pk = pendingSt({ [f]: v });
-      refusal(`step convict on a pending state with ${f}=${tag}`, () => core.step(P, okEnv, { convict: { payee: 3 } }, 1, pk), 'invalid-nat', f);
+      refusal(`step convict on a pending state with ${f}=${tag}`, () => core.step(P, okEnv, { convict: { payee: 3, commitment: core.commitmentFor(live().present.l, 3, 0) } }, 1, pk), 'invalid-nat', f);
       refusal(`step topUp on a pending state with ${f}=${tag} (before termination-pending)`, () => core.step(P, okEnv, NOP, 1, pk), 'invalid-nat', f);
       refusal(`replay with no steps from a pending state with ${f}=${tag}`, () => core.replay(P, okEnv, 0, pk, []), 'invalid-nat', f);
       verdict(`consumable on a pending state with ${f}=${tag}`, () => core.consumable(P, 5, pk), 'invalid-nat', f);
@@ -284,7 +285,8 @@ function checkLocalSessions(core, corpus) {
       if (core.stateKind(st) === 'absent' && rnd() < 0.7) action = { register: { refund: pick([1, 4, 6]), pool0: Math.floor(rnd() * 12) } };
       else action = pick([
         { rotate: { "sn'": pick([sn + 1, sn, sn + 2]), op: pick(core.BOND_OPS), payee: pick([1, 2, 4]) } },
-        'poison', { freeze: { "sn'": sn + 1, payee: 2 } }, { topUp: { x: Math.floor(rnd() * 5) } }, { convict: { payee: 3 } },
+        'poison', { freeze: { "sn'": sn + 1, payee: 2 } }, { topUp: { x: Math.floor(rnd() * 5) } },
+        { convict: { payee: pick([3, 3, 4]), commitment: core.commitmentFor(l || { sn: 0, epoch: 0, poisoned: false, frozen: false, bornAt: 0, refundTo: 1, pool: 0, toppedUp: false }, 3, slot + pick([-1, 0, 1])) } },
         { register: { refund: 6, pool0: 1 } },
       ]);
       slot += Math.floor(rnd() * 4);
@@ -1039,7 +1041,8 @@ function fabricatedViolations(core) {
     T5_keep_needs_no_intent: () => mk({ pre: live, action: ROT(2, 'keep'), env: rotEnv, ok: false, reason: 'no-quorum' }),
     T5_poison_enabled: () => mk({ pre: live, action: 'poison', env: rows([{ quorum: [1] }]), ok: false, reason: 'no-quorum' }),
     T5_freeze_enabled: () => mk({ pre: pr(L({ pool: 1 })), action: { freeze: { "sn'": 2, payee: 2 } }, env: rotEnv, ok: false, reason: 'poisoned' }),
-    T5_convict_enabled: () => mk({ pre: live, action: { convict: { payee: 3 } }, env: dupEnv, ok: false, reason: 'no-duplicity-proof' }),
+    T5_convict_enabled: () => mk({ pre: live, action: { convict: { payee: 3, commitment: core.commitmentFor(L(), 3, 11) } }, env: dupEnv, ok: false, reason: 'no-duplicity-proof' }),
+    convict_requires_entitlement: () => mk({ pre: live, post: { terminationPending: { h: { epoch: 1, sn: 1 } } }, action: { convict: { payee: 3, commitment: core.commitmentFor(L(), 4, 11) } }, env: dupEnv, flow: { refund: pay(1, 0, 5, 10), convictor: pay(3, 1000) } }),
     T6_component_conservation: () => mk({ pre: live, post: pr(L({ pool: 17 })), action: TOP, flow: { poolIn: 1 } }),
     T6_dreg_never_a_fee: () => mk({ pre: live, post: rotated(), action: ROT(2, 'keep'), env: rotEnv, flow: { hunter: pay(2, 1, 0, 2) } }),
     T6_dreg_never_moves_between_present_states: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1, dregIn: 1 } }),
@@ -1048,7 +1051,7 @@ function fabricatedViolations(core) {
     step_from_present_keeps_refund: () => mk({ pre: live, post: pr(L({ pool: 11, refundTo: 9 })), action: TOP, flow: { poolIn: 1 } }),
     T6_refund_fixed_along_trace: () => mk({ pre: live, post: pr(L({ pool: 11, refundTo: 9 })), action: TOP, flow: { poolIn: 1 }, origin: live }),
     T6_refund_is_registration_address: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, history: [[0, { register: { refund: 6, pool0: 10 } }], [12, TOP]] }),
-    T6_conviction_refunds_registration_address: () => mk({ pre: live, post: { terminationPending: { h: { epoch: 1, sn: 1 } } }, action: { convict: { payee: 3 } }, env: dupEnv, flow: { refund: pay(1, 0, 5, 10), convictor: pay(3, 1000) }, history: [[0, { register: { refund: 6, pool0: 10 } }], [12, { convict: { payee: 3 } }]] }),
+    T6_conviction_refunds_registration_address: () => mk({ pre: live, post: { terminationPending: { h: { epoch: 1, sn: 1 } } }, action: { convict: { payee: 3, commitment: core.commitmentFor(L(), 3, 11) } }, env: dupEnv, flow: { refund: pay(1, 0, 5, 10), convictor: pay(3, 1000) }, history: [[0, { register: { refund: 6, pool0: 10 } }], [12, { convict: { payee: 3, commitment: core.commitmentFor(L(), 3, 11) } }]] }),
     T6_frozen_flips_only_by_rotation_or_freeze: () => mk({ pre: live, post: pr(L({ pool: 11, frozen: true })), action: TOP, flow: { poolIn: 1 } }),
     T6_deposit_requires_new_keys: () => mk({ pre: live, post: rotated(), action: ROT(2, 'deposit'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 2) } }),
     T6_relayer_cannot_park_age_or_close: () => mk({ pre: live, post: rotated(), action: ROT(2, 'deposit'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 2) } }),
@@ -1065,7 +1068,7 @@ function fabricatedViolations(core) {
     trace_from_pending: () => mk({ pre: { terminationPending: { h: { epoch: 1, sn: 1 } } }, post: live, action: TOP }),
     T12_convicted_terminal: () => mk({ pre: 'convicted', post: live, action: TOP, flow: { poolIn: 1 } }),
     trace_from_convicted: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, origin: 'convicted' }),
-    T12_convict_exact: () => mk({ pre: live, post: 'convicted', action: { convict: { payee: 3 } }, env: dupEnv, flow: {} }),
+    T12_convict_exact: () => mk({ pre: live, post: 'convicted', action: { convict: { payee: 3, commitment: core.commitmentFor(L(), 3, 11) } }, env: dupEnv, flow: {} }),
     T14_pool_decreases_only_by_premium: () => mk({ pre: live, post: pr(L({ pool: 9 })), action: TOP, flow: { poolIn: 1 } }),
     T14_pool_increases_only_by_topup: () => mk({ pre: live, post: rotated({ pool: 20 }), action: ROT(2, 'keep'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 2) } }),
     T15_b_leaves_only_by_freeze: () => mk({ pre: live, post: pr(L({ pool: 11, frozen: true })), action: TOP, flow: { poolIn: 1 } }),

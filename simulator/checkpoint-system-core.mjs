@@ -23,8 +23,16 @@ function certificate(c) {
 export function validateCommand(command) {
   if(!command||typeof command!=='object'||Array.isArray(command)||Object.keys(command).length!==1)throw Error('invalid-system-wire:command');
   const kind=Object.keys(command)[0],a=command[kind];
-  const keys={register:['aid','now','refund','pool','context','certificate','booking','index'],local:['aid','now','action'],book:['aid','booker','fee','history','booking'],complete:['aid','certificate']};
-  if(!own(keys,kind))throw Error('invalid-system-wire:command-kind');fields(a,keys[kind],kind);nat(a.aid,'aid');
+  const keys={register:['aid','now','refund','pool','context','certificate','booking','index'],local:['aid','now','action'],book:['aid','booker','fee','history','booking'],complete:['aid','certificate'],
+    openCommitment:['commitment'],reveal:['marker','now'],sweep:['marker','now']};
+  if(!own(keys,kind))throw Error('invalid-system-wire:command-kind');fields(a,keys[kind],kind);
+  if(kind==='openCommitment') {
+    const probe=C.normalizeAction({convict:{payee:0,commitment:a.commitment}});
+    if(!probe.ok)throw Error('invalid-system-wire:commitment:'+probe.reason+':'+probe.field);
+    return command;
+  }
+  if(kind==='reveal'||kind==='sweep') {localNat(a.marker,'marker');localNat(a.now,'now');return command;}
+  nat(a.aid,'aid');
   if(kind==='register') {
     ['now','refund','pool'].forEach(k=>localNat(a[k],k));localNat(a.index,'index');
     fields(a.context,['parameters','environment','configuration'],'context');
@@ -59,9 +67,26 @@ function localStep(p,env,action,now,state) {
 }
 const pendingAt=(state,ref)=>state.terminations.find(e=>E.equal(e.booking.request.reference,ref))??null;
 const contains=(inputs,ref)=>inputs.some(i=>E.equal(i.ref,ref));
+// The open commitments of the release's commitment program, listed by marker.
+const openAt=(state,marker)=>state.commitments.find(c=>c.marker===marker)??null;
+const withCommitments=(state,commitments)=>({...state,commitments:[...commitments].sort((x,y)=>x.marker-y.marker)});
+const retire=(state,marker)=>withCommitments(state,state.commitments.filter(c=>c.marker!==marker));
+function commitmentStep(state,kind,a) {
+  if(kind==='openCommitment') {
+    const c=a.commitment;
+    require(openAt(state,c.marker)===null,'commitment-marker-taken');
+    require(c.openedAt<c.eligibleAfter&&c.eligibleAfter<=c.expiresAt,'commitment-not-well-formed');
+    return withCommitments(state,[...state.commitments,c]);
+  }
+  const c=openAt(state,a.marker);require(c!==null,'commitment-not-open');
+  if(kind==='reveal')require(c.eligibleAfter<=a.now&&a.now<=c.expiresAt,'commitment-outside-window');
+  else require(c.expiresAt<a.now,'commitment-not-expired');
+  return retire(state,a.marker);
+}
 function transition(p,env,state,command) {
   validateCommand(command);
   const kind=Object.keys(command)[0],a=command[kind];
+  if(['openCommitment','reveal','sweep'].includes(kind))return {ok:{state:commitmentStep(state,kind,a),checkpointFlow:null,registryFlow:null}};
   const row=state.aids.find(x=>E.equal(x.aid,a.aid))??{aid:a.aid,leaf:'absent',state:'absent',origin:null,pending:null};
   let next=row,checkpointFlow=null,registryFlow=null;
   if(kind==='register') {
@@ -79,6 +104,12 @@ function transition(p,env,state,command) {
   } else if(kind==='local') {
     require(C.actionKind(a.action)!=='register','checkpoint-registration-receipt-required');
     const local=localStep(p,env,a.action,a.now,row.state);
+    // a conviction also reveals its commitment: open for this AID, then burnt
+    if(C.actionKind(a.action)==='convict') {
+      const c=a.action.convict.commitment;
+      require(E.equal(openAt(state,c.marker),c)&&E.equal(c.aid,a.aid),'checkpoint-commitment-not-open');
+      state=retire(state,c.marker);
+    }
     next={...row,state:local.state,leaf:C.leafOf(local.state)};checkpointFlow=local.flow;
   } else if(kind==='book') {
     require(C.stateKind(row.state)==='terminationPending','checkpoint-not-pending');
@@ -96,7 +127,7 @@ function transition(p,env,state,command) {
     next={...row,leaf:'retired',state:'convicted',pending:null};registryFlow=receipt.flow;
   }
   const aids=state.aids.some(x=>E.equal(x.aid,a.aid))?state.aids.map(x=>E.equal(x.aid,a.aid)?next:x):[...state.aids,next];
-  return {ok:{state:{aids},checkpointFlow,registryFlow}};
+  return {ok:{state:{...state,aids},checkpointFlow,registryFlow}};
 }
 const sessions=new WeakSet();
 function freeze(value) {if(value&&typeof value==='object'&&!Object.isFrozen(value)){Object.values(value).forEach(freeze);Object.freeze(value);}return value;}
@@ -104,7 +135,7 @@ function session(value) {const copy=freeze(structuredClone(value));sessions.add(
 export function newSystem(params,env) {
   fields(params,['D','B','P','W'],'params');fields(env,['rotationTo','depositAuthorized','quorum','duplicityAt'],'env');
   if(C.validateParams(params)||C.validateEnv(env))throw Error('invalid-system-wire:checkpoint-context');
-  return session({params,env,state:{aids:[]},records:[]});
+  return session({params,env,state:{commitments:[],aids:[]},records:[]});
 }
 export function attemptSystem(current,command) {
   if(!sessions.has(current))throw Error('system-session-must-start-at-init');

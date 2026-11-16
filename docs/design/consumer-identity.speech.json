@@ -221,7 +221,7 @@
       "pause": 400
     },
     {
-      "text": "After the terminating fold no output at the checkpoint validator holds the token, so the consumer has nothing to reference. Each refusal carries no other script and passes the ledger rules, so the rejection is the consumer's own verdict; each reading also checks that the story, the Lean predicate evaluated over the output the chain holds, and the node's verdict name the same failing clause. The datums are the ones the validators wrote, version 2, the AID as its qualified CESR text.",
+      "text": "After the terminating fold no output at the checkpoint validator holds the token, so the consumer has nothing to reference. Each refusal carries no other script and passes the ledger rules, so the rejection is the consumer's own verdict; each reading also checks that the story and the Lean predicate evaluated over the output the chain holds name the same failing clauses, and that the node settles the spend exactly when none fails. The datums are the ones the validators wrote, version 2, the AID as its qualified CESR text.",
       "pause": 400
     },
     {
@@ -333,6 +333,6 @@
   ],
   "_source": {
     "file": "consumer-identity.md",
-    "sha256": "6e8841f9b4c8e8fcfaedd988607cf594e1fe7402d5f9de1c16e233624d441273"
+    "sha256": "f1b888bbb7584a2789f4df4f06799043d12e1f4d9a70ccfcb6f5cc37a1e6c99a"
   }
 }

@@ -251901,17 +251901,17 @@
    ]
   },
   "docs-design-consumer-identity/the-connected-example-02": {
-   "audio_sha256": "5db1146f5d4174b6915d0c539e1d407183475b9125c347d5ff2e26a9a8f97f45",
-   "characters": 486,
-   "cost": 0.00048113999999999996,
-   "duration": 33.025,
+   "audio_sha256": "0f487736591f1b2fc09a7136ddc08820099bf5c9d95e1e243310178030972aca",
+   "characters": 527,
+   "cost": 0.00052173,
+   "duration": 35.7,
    "index": 2,
-   "key": "48c87c30654aabeba71a02f1ac299066d99f17e238414083ec8533b729be3f51",
+   "key": "99f9841c0af9cef78c74d22bdd55a926ec31860973becbc1ca8b52dd29694994",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
    "section": "the-connected-example",
-   "sent_text": "After the terminating fold no output at the checkpoint validator holds the token, so the consumer has nothing to reference. Each refusal carries no other script and passes the ledger rules, so the rejection is the consumer's own verdict; each reading also checks that the story, the Lean predicate evaluated over the output the chain holds, and the node's verdict name the same failing clause. The datums are the ones the validators wrote, version 2, the AID as its qualified CESR text.",
-   "text": "After the terminating fold no output at the checkpoint validator holds the token, so the consumer has nothing to reference. Each refusal carries no other script and passes the ledger rules, so the rejection is the consumer's own verdict; each reading also checks that the story, the Lean predicate evaluated over the output the chain holds, and the node's verdict name the same failing clause. The datums are the ones the validators wrote, version 2, the AID as its qualified CESR text.",
+   "sent_text": "After the terminating fold no output at the checkpoint validator holds the token, so the consumer has nothing to reference. Each refusal carries no other script and passes the ledger rules, so the rejection is the consumer's own verdict; each reading also checks that the story and the Lean predicate evaluated over the output the chain holds name the same failing clauses, and that the node settles the spend exactly when none fails. The datums are the ones the validators wrote, version 2, the AID as its qualified CESR text.",
+   "text": "After the terminating fold no output at the checkpoint validator holds the token, so the consumer has nothing to reference. Each refusal carries no other script and passes the ledger rules, so the rejection is the consumer's own verdict; each reading also checks that the story and the Lean predicate evaluated over the output the chain holds name the same failing clauses, and that the node settles the spend exactly when none fails. The datums are the ones the validators wrote, version 2, the AID as its qualified CESR text.",
    "words": [
     {
      "end": 0.488,
@@ -252129,248 +252129,283 @@
      "text": ";"
     },
     {
-     "end": 16.375,
-     "start": 16.175,
+     "end": 16.5,
+     "start": 16.225,
      "text": "each"
     },
     {
-     "end": 16.675,
-     "start": 16.375,
+     "end": 16.85,
+     "start": 16.5,
      "text": "reading"
     },
     {
-     "end": 17.0,
-     "start": 16.675,
+     "end": 17.263,
+     "start": 16.85,
      "text": "also"
     },
     {
-     "end": 17.263,
-     "start": 17.0,
+     "end": 17.6,
+     "start": 17.263,
      "text": "checks"
     },
     {
-     "end": 17.388,
-     "start": 17.263,
+     "end": 17.775,
+     "start": 17.6,
      "text": "that"
     },
     {
-     "end": 17.475,
-     "start": 17.388,
+     "end": 17.925,
+     "start": 17.775,
      "text": "the"
     },
     {
-     "end": 18.35,
-     "start": 17.475,
+     "end": 18.45,
+     "start": 17.925,
      "text": "story"
     },
     {
-     "end": 18.575,
-     "start": 18.35,
-     "text": ","
-    },
-    {
-     "end": 18.85,
-     "start": 18.75,
-     "text": "the"
-    },
-    {
-     "end": 19.15,
-     "start": 18.85,
-     "text": "Lean"
-    },
-    {
-     "end": 19.65,
-     "start": 19.15,
-     "text": "predicate"
-    },
-    {
-     "end": 20.35,
-     "start": 19.65,
-     "text": "evaluated"
-    },
-    {
-     "end": 20.562,
-     "start": 20.35,
-     "text": "over"
-    },
-    {
-     "end": 20.7,
-     "start": 20.562,
-     "text": "the"
-    },
-    {
-     "end": 21.15,
-     "start": 20.7,
-     "text": "output"
-    },
-    {
-     "end": 21.25,
-     "start": 21.15,
-     "text": "the"
-    },
-    {
-     "end": 21.525,
-     "start": 21.25,
-     "text": "chain"
-    },
-    {
-     "end": 22.45,
-     "start": 21.525,
-     "text": "holds"
-    },
-    {
-     "end": 22.65,
-     "start": 22.45,
-     "text": ","
-    },
-    {
-     "end": 22.938,
-     "start": 22.85,
+     "end": 18.562,
+     "start": 18.45,
      "text": "and"
     },
     {
-     "end": 23.025,
-     "start": 22.938,
+     "end": 18.65,
+     "start": 18.562,
      "text": "the"
     },
     {
-     "end": 23.375,
-     "start": 23.025,
-     "text": "node's"
+     "end": 18.925,
+     "start": 18.65,
+     "text": "Lean"
     },
     {
-     "end": 23.663,
-     "start": 23.375,
-     "text": "verdict"
+     "end": 19.487,
+     "start": 18.925,
+     "text": "predicate"
     },
     {
-     "end": 23.862,
-     "start": 23.663,
+     "end": 20.2,
+     "start": 19.487,
+     "text": "evaluated"
+    },
+    {
+     "end": 20.413,
+     "start": 20.2,
+     "text": "over"
+    },
+    {
+     "end": 20.55,
+     "start": 20.413,
+     "text": "the"
+    },
+    {
+     "end": 21.075,
+     "start": 20.55,
+     "text": "output"
+    },
+    {
+     "end": 21.212,
+     "start": 21.075,
+     "text": "the"
+    },
+    {
+     "end": 21.6,
+     "start": 21.212,
+     "text": "chain"
+    },
+    {
+     "end": 21.925,
+     "start": 21.6,
+     "text": "holds"
+    },
+    {
+     "end": 22.25,
+     "start": 21.925,
      "text": "name"
     },
     {
-     "end": 23.95,
-     "start": 23.862,
+     "end": 22.388,
+     "start": 22.25,
      "text": "the"
     },
     {
-     "end": 24.225,
-     "start": 23.95,
+     "end": 22.737,
+     "start": 22.388,
      "text": "same"
     },
     {
-     "end": 24.625,
-     "start": 24.225,
+     "end": 23.175,
+     "start": 22.737,
      "text": "failing"
     },
     {
-     "end": 25.525,
-     "start": 24.625,
-     "text": "clause"
+     "end": 24.45,
+     "start": 23.175,
+     "text": "clauses"
     },
     {
-     "end": 25.725,
-     "start": 25.525,
-     "text": "."
+     "end": 24.65,
+     "start": 24.45,
+     "text": ","
+    },
+    {
+     "end": 24.938,
+     "start": 24.85,
+     "text": "and"
+    },
+    {
+     "end": 25.087,
+     "start": 24.938,
+     "text": "that"
+    },
+    {
+     "end": 25.175,
+     "start": 25.087,
+     "text": "the"
+    },
+    {
+     "end": 25.538,
+     "start": 25.175,
+     "text": "node"
+    },
+    {
+     "end": 25.938,
+     "start": 25.538,
+     "text": "settles"
     },
     {
      "end": 26.025,
-     "start": 25.925,
+     "start": 25.938,
+     "text": "the"
+    },
+    {
+     "end": 26.288,
+     "start": 26.025,
+     "text": "spend"
+    },
+    {
+     "end": 26.837,
+     "start": 26.288,
+     "text": "exactly"
+    },
+    {
+     "end": 26.975,
+     "start": 26.837,
+     "text": "when"
+    },
+    {
+     "end": 27.212,
+     "start": 26.975,
+     "text": "none"
+    },
+    {
+     "end": 28.2,
+     "start": 27.212,
+     "text": "fails"
+    },
+    {
+     "end": 28.4,
+     "start": 28.2,
+     "text": "."
+    },
+    {
+     "end": 28.7,
+     "start": 28.6,
      "text": "The"
     },
     {
-     "end": 26.55,
-     "start": 26.025,
+     "end": 29.225,
+     "start": 28.7,
      "text": "datums"
     },
     {
-     "end": 26.675,
-     "start": 26.55,
+     "end": 29.35,
+     "start": 29.225,
      "text": "are"
     },
     {
-     "end": 26.8,
-     "start": 26.675,
+     "end": 29.475,
+     "start": 29.35,
      "text": "the"
     },
     {
-     "end": 27.175,
-     "start": 26.8,
+     "end": 29.85,
+     "start": 29.475,
      "text": "ones"
     },
     {
-     "end": 27.275,
-     "start": 27.175,
+     "end": 29.95,
+     "start": 29.85,
      "text": "the"
     },
     {
-     "end": 27.962,
-     "start": 27.275,
+     "end": 30.638,
+     "start": 29.95,
      "text": "validators"
     },
     {
-     "end": 28.3,
-     "start": 27.962,
+     "end": 30.975,
+     "start": 30.638,
      "text": "wrote"
     },
     {
-     "end": 28.375,
-     "start": 28.3,
+     "end": 31.05,
+     "start": 30.975,
      "text": ","
     },
     {
-     "end": 28.788,
-     "start": 28.375,
+     "end": 31.462,
+     "start": 31.05,
      "text": "version"
     },
     {
-     "end": 29.2,
-     "start": 28.788,
+     "end": 31.875,
+     "start": 31.462,
      "text": "2"
     },
     {
-     "end": 29.3,
-     "start": 29.2,
+     "end": 31.975,
+     "start": 31.875,
      "text": ","
     },
     {
-     "end": 29.462,
-     "start": 29.3,
+     "end": 32.138,
+     "start": 31.975,
      "text": "the"
     },
     {
-     "end": 30.163,
-     "start": 29.462,
+     "end": 32.838,
+     "start": 32.138,
      "text": "AID"
     },
     {
-     "end": 30.3,
-     "start": 30.163,
+     "end": 32.975,
+     "start": 32.838,
      "text": "as"
     },
     {
-     "end": 30.5,
-     "start": 30.3,
+     "end": 33.175,
+     "start": 32.975,
      "text": "its"
     },
     {
-     "end": 31.138,
-     "start": 30.5,
+     "end": 33.812,
+     "start": 33.175,
      "text": "qualified"
     },
     {
-     "end": 31.8,
-     "start": 31.138,
+     "end": 34.475,
+     "start": 33.812,
      "text": "CESR"
     },
     {
-     "end": 32.8,
-     "start": 31.8,
+     "end": 35.475,
+     "start": 34.475,
      "text": "text"
     },
     {
-     "end": 33.025,
-     "start": 32.8,
+     "end": 35.7,
+     "start": 35.475,
      "text": "."
     }
    ]
@@ -254151,17 +254186,17 @@
    ]
   },
   "docs-design-consumer-identity/the-consumer-predicate-in-aiken-01": {
-   "audio_sha256": "b2ceb5cce65b00c2e09ab0555a06f978171619cdd9b9fb9bd238fe223d052754",
-   "characters": 743,
-   "cost": 0.00073557,
-   "duration": 54.65,
+   "audio_sha256": "8436cd1d818b3d349658ec80694dba941c158926ef7e9bb9a88b74d36b022bdb",
+   "characters": 963,
+   "cost": 0.0009533699999999999,
+   "duration": 68.725,
    "index": 1,
-   "key": "f3cbb6ea0d7bfba43883c7049014a8e557b8b4ad2a22df4976767a6cbd81af9f",
+   "key": "948f20129d0bea281d31ec77dba4ebc66fc5a7c324959a65418eda2dc831ccbd",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
    "section": "the-consumer-predicate-in-aiken",
-   "sent_text": "onchain/lib/cardano_keri/consumer.ak is consumableHoldingB clause for clause, in the Lean order: authenticated network and complete release, the release's application credential, a total quantity of one for the representative asset, and a decoded datum for the intended AID in a consumable state (present, unfrozen, unpoisoned, at least W old). The registry and representative asset names follow registryAsset and representativeAsset. The network, release, seed and AID are arguments fixed by the relying contract. The hash, codec, AID-to-key map and datum decoder are four function arguments (Aiken data types cannot hold functions, so the Lean's Interpretation record becomes those four arguments); the candidate output selects none of them.",
-   "text": "onchain/lib/cardano_keri/consumer.ak is consumableHoldingB clause for clause, in the Lean order: authenticated network and complete release, the release's application credential, a total quantity of one for the representative asset, and a decoded datum for the intended AID in a consumable state (present, unfrozen, unpoisoned, at least W old). The registry and representative asset names follow registryAsset and representativeAsset. The network, release, seed and AID are arguments fixed by the relying contract. The hash, codec, AID-to-key map and datum decoder are four function arguments (Aiken data types cannot hold functions, so the Lean's Interpretation record becomes those four arguments); the candidate output selects none of them.",
+   "sent_text": "onchain/lib/cardano_keri/consumer.ak is consumableHoldingB clause for clause, in the Lean order: authenticated network, complete release and checkpoint credential, the holding at the checkpoint validator's address (its credential with no stake credential, not the application's), a total quantity of one for the representative asset, and a decoded datum for the intended AID in a consumable state (present, unfrozen, unpoisoned, at least W old). The registry and representative asset names follow registryAsset and representativeAsset. The network, release, checkpoint credential, seed and AID are arguments fixed by the relying contract; the environment carries the credential the integration resolved, and an unresolved one refuses. The hash, codec, AID-to-key map and datum decoder are four function arguments (Aiken data types cannot hold functions, so the Lean's Interpretation record becomes those four arguments); the candidate output selects none of them.",
+   "text": "onchain/lib/cardano_keri/consumer.ak is consumableHoldingB clause for clause, in the Lean order: authenticated network, complete release and checkpoint credential, the holding at the checkpoint validator's address (its credential with no stake credential, not the application's), a total quantity of one for the representative asset, and a decoded datum for the intended AID in a consumable state (present, unfrozen, unpoisoned, at least W old). The registry and representative asset names follow registryAsset and representativeAsset. The network, release, checkpoint credential, seed and AID are arguments fixed by the relying contract; the environment carries the credential the integration resolved, and an unresolved one refuses. The hash, codec, AID-to-key map and datum decoder are four function arguments (Aiken data types cannot hold functions, so the Lean's Interpretation record becomes those four arguments); the candidate output selects none of them.",
    "words": [
     {
      "end": 4.537,
@@ -254224,573 +254259,753 @@
      "text": ":"
     },
     {
-     "end": 9.75,
+     "end": 9.7,
      "start": 9.0,
      "text": "authenticated"
     },
     {
-     "end": 10.275,
-     "start": 9.75,
+     "end": 10.2,
+     "start": 9.7,
      "text": "network"
     },
     {
-     "end": 10.4,
-     "start": 10.275,
-     "text": "and"
+     "end": 10.275,
+     "start": 10.2,
+     "text": ","
     },
     {
-     "end": 10.85,
-     "start": 10.4,
+     "end": 10.7,
+     "start": 10.275,
      "text": "complete"
     },
     {
-     "end": 11.425,
-     "start": 10.85,
+     "end": 11.2,
+     "start": 10.7,
      "text": "release"
     },
     {
-     "end": 11.525,
-     "start": 11.425,
-     "text": ","
+     "end": 11.325,
+     "start": 11.2,
+     "text": "and"
     },
     {
-     "end": 11.625,
-     "start": 11.525,
-     "text": "the"
+     "end": 11.775,
+     "start": 11.325,
+     "text": "checkpoint"
     },
     {
-     "end": 12.188,
-     "start": 11.625,
-     "text": "release's"
-    },
-    {
-     "end": 12.85,
-     "start": 12.188,
-     "text": "application"
-    },
-    {
-     "end": 14.0,
-     "start": 12.85,
+     "end": 12.875,
+     "start": 11.775,
      "text": "credential"
     },
     {
-     "end": 14.2,
-     "start": 14.0,
+     "end": 13.075,
+     "start": 12.875,
      "text": ","
     },
     {
-     "end": 14.475,
-     "start": 14.4,
-     "text": "a"
-    },
-    {
-     "end": 14.85,
-     "start": 14.475,
-     "text": "total"
-    },
-    {
-     "end": 15.425,
-     "start": 14.85,
-     "text": "quantity"
-    },
-    {
-     "end": 15.587,
-     "start": 15.425,
-     "text": "of"
-    },
-    {
-     "end": 15.988,
-     "start": 15.587,
-     "text": "one"
-    },
-    {
-     "end": 16.112,
-     "start": 15.988,
-     "text": "for"
-    },
-    {
-     "end": 16.2,
-     "start": 16.112,
+     "end": 13.35,
+     "start": 13.25,
      "text": "the"
     },
     {
-     "end": 16.938,
-     "start": 16.2,
-     "text": "representative"
+     "end": 13.775,
+     "start": 13.35,
+     "text": "holding"
     },
     {
-     "end": 17.875,
-     "start": 16.938,
-     "text": "asset"
-    },
-    {
-     "end": 18.075,
-     "start": 17.875,
-     "text": ","
-    },
-    {
-     "end": 18.362,
-     "start": 18.275,
-     "text": "and"
-    },
-    {
-     "end": 18.425,
-     "start": 18.362,
-     "text": "a"
-    },
-    {
-     "end": 18.95,
-     "start": 18.425,
-     "text": "decoded"
-    },
-    {
-     "end": 19.4,
-     "start": 18.95,
-     "text": "datum"
-    },
-    {
-     "end": 19.513,
-     "start": 19.4,
-     "text": "for"
-    },
-    {
-     "end": 19.65,
-     "start": 19.513,
-     "text": "the"
-    },
-    {
-     "end": 20.188,
-     "start": 19.65,
-     "text": "intended"
-    },
-    {
-     "end": 20.938,
-     "start": 20.188,
-     "text": "AID"
-    },
-    {
-     "end": 21.038,
-     "start": 20.938,
-     "text": "in"
-    },
-    {
-     "end": 21.1,
-     "start": 21.038,
-     "text": "a"
-    },
-    {
-     "end": 21.763,
-     "start": 21.1,
-     "text": "consumable"
-    },
-    {
-     "end": 22.15,
-     "start": 21.763,
-     "text": "state"
-    },
-    {
-     "end": 22.225,
-     "start": 22.15,
-     "text": "("
-    },
-    {
-     "end": 22.7,
-     "start": 22.225,
-     "text": "present"
-    },
-    {
-     "end": 22.8,
-     "start": 22.7,
-     "text": ","
-    },
-    {
-     "end": 24.225,
-     "start": 22.8,
-     "text": "unfrozen"
-    },
-    {
-     "end": 24.45,
-     "start": 24.225,
-     "text": ","
-    },
-    {
-     "end": 25.175,
-     "start": 24.65,
-     "text": "unpoisoned"
-    },
-    {
-     "end": 25.212,
-     "start": 25.175,
-     "text": ","
-    },
-    {
-     "end": 25.288,
-     "start": 25.212,
+     "end": 13.863,
+     "start": 13.775,
      "text": "at"
     },
     {
-     "end": 25.475,
-     "start": 25.288,
-     "text": "least"
-    },
-    {
-     "end": 25.875,
-     "start": 25.475,
-     "text": "W"
-    },
-    {
-     "end": 26.575,
-     "start": 25.875,
-     "text": "old"
-    },
-    {
-     "end": 26.8,
-     "start": 26.575,
-     "text": ")"
-    },
-    {
-     "end": 26.875,
-     "start": 26.8,
-     "text": "."
-    },
-    {
-     "end": 27.175,
-     "start": 27.075,
-     "text": "The"
-    },
-    {
-     "end": 27.862,
-     "start": 27.175,
-     "text": "registry"
-    },
-    {
-     "end": 28.0,
-     "start": 27.862,
-     "text": "and"
-    },
-    {
-     "end": 28.788,
-     "start": 28.0,
-     "text": "representative"
-    },
-    {
-     "end": 29.275,
-     "start": 28.788,
-     "text": "asset"
-    },
-    {
-     "end": 29.725,
-     "start": 29.275,
-     "text": "names"
-    },
-    {
-     "end": 30.112,
-     "start": 29.725,
-     "text": "follow"
-    },
-    {
-     "end": 31.163,
-     "start": 30.112,
-     "text": "registryAsset"
-    },
-    {
-     "end": 31.3,
-     "start": 31.163,
-     "text": "and"
-    },
-    {
-     "end": 32.975,
-     "start": 31.3,
-     "text": "representativeAsset"
-    },
-    {
-     "end": 33.175,
-     "start": 32.975,
-     "text": "."
-    },
-    {
-     "end": 33.425,
-     "start": 33.35,
-     "text": "The"
-    },
-    {
-     "end": 33.825,
-     "start": 33.425,
-     "text": "network"
-    },
-    {
-     "end": 33.875,
-     "start": 33.825,
-     "text": ","
-    },
-    {
-     "end": 34.325,
-     "start": 33.875,
-     "text": "release"
-    },
-    {
-     "end": 34.425,
-     "start": 34.325,
-     "text": ","
-    },
-    {
-     "end": 34.825,
-     "start": 34.425,
-     "text": "seed"
-    },
-    {
-     "end": 34.963,
-     "start": 34.825,
-     "text": "and"
-    },
-    {
-     "end": 35.65,
-     "start": 34.963,
-     "text": "AID"
-    },
-    {
-     "end": 35.8,
-     "start": 35.65,
-     "text": "are"
-    },
-    {
-     "end": 36.338,
-     "start": 35.8,
-     "text": "arguments"
-    },
-    {
-     "end": 36.65,
-     "start": 36.338,
-     "text": "fixed"
-    },
-    {
-     "end": 36.787,
-     "start": 36.65,
-     "text": "by"
-    },
-    {
-     "end": 36.875,
-     "start": 36.787,
+     "end": 13.962,
+     "start": 13.863,
      "text": "the"
     },
     {
-     "end": 37.35,
-     "start": 36.875,
-     "text": "relying"
+     "end": 14.475,
+     "start": 13.962,
+     "text": "checkpoint"
     },
     {
-     "end": 38.5,
-     "start": 37.35,
-     "text": "contract"
+     "end": 15.188,
+     "start": 14.475,
+     "text": "validator's"
     },
     {
-     "end": 38.7,
-     "start": 38.5,
-     "text": "."
+     "end": 15.825,
+     "start": 15.188,
+     "text": "address"
     },
     {
-     "end": 38.95,
-     "start": 38.875,
-     "text": "The"
-    },
-    {
-     "end": 39.2,
-     "start": 38.95,
-     "text": "hash"
-    },
-    {
-     "end": 39.25,
-     "start": 39.2,
-     "text": ","
-    },
-    {
-     "end": 39.975,
-     "start": 39.25,
-     "text": "codec"
-    },
-    {
-     "end": 40.2,
-     "start": 39.975,
-     "text": ","
-    },
-    {
-     "end": 41.25,
-     "start": 40.425,
-     "text": "AID-to-key"
-    },
-    {
-     "end": 41.6,
-     "start": 41.25,
-     "text": "map"
-    },
-    {
-     "end": 41.725,
-     "start": 41.6,
-     "text": "and"
-    },
-    {
-     "end": 42.175,
-     "start": 41.725,
-     "text": "datum"
-    },
-    {
-     "end": 42.763,
-     "start": 42.175,
-     "text": "decoder"
-    },
-    {
-     "end": 42.95,
-     "start": 42.763,
-     "text": "are"
-    },
-    {
-     "end": 43.263,
-     "start": 42.95,
-     "text": "four"
-    },
-    {
-     "end": 43.7,
-     "start": 43.263,
-     "text": "function"
-    },
-    {
-     "end": 44.362,
-     "start": 43.7,
-     "text": "arguments"
-    },
-    {
-     "end": 44.45,
-     "start": 44.362,
+     "end": 15.9,
+     "start": 15.825,
      "text": "("
     },
     {
-     "end": 44.825,
-     "start": 44.45,
-     "text": "Aiken"
+     "end": 16.075,
+     "start": 15.9,
+     "text": "its"
     },
     {
-     "end": 45.15,
-     "start": 44.825,
-     "text": "data"
+     "end": 16.625,
+     "start": 16.075,
+     "text": "credential"
     },
     {
-     "end": 45.5,
-     "start": 45.15,
-     "text": "types"
+     "end": 16.8,
+     "start": 16.625,
+     "text": "with"
     },
     {
-     "end": 45.85,
-     "start": 45.5,
-     "text": "cannot"
+     "end": 17.05,
+     "start": 16.8,
+     "text": "no"
     },
     {
-     "end": 46.125,
-     "start": 45.85,
-     "text": "hold"
+     "end": 17.375,
+     "start": 17.05,
+     "text": "stake"
     },
     {
-     "end": 47.35,
-     "start": 46.125,
-     "text": "functions"
+     "end": 18.525,
+     "start": 17.375,
+     "text": "credential"
     },
     {
-     "end": 47.575,
-     "start": 47.35,
+     "end": 18.725,
+     "start": 18.525,
      "text": ","
     },
     {
-     "end": 47.95,
-     "start": 47.775,
-     "text": "so"
+     "end": 19.175,
+     "start": 18.95,
+     "text": "not"
     },
     {
-     "end": 48.075,
-     "start": 47.95,
+     "end": 19.325,
+     "start": 19.175,
      "text": "the"
     },
     {
-     "end": 48.475,
-     "start": 48.075,
-     "text": "Lean's"
+     "end": 20.25,
+     "start": 19.325,
+     "text": "application's"
     },
     {
-     "end": 49.3,
-     "start": 48.475,
-     "text": "Interpretation"
-    },
-    {
-     "end": 49.75,
-     "start": 49.3,
-     "text": "record"
-    },
-    {
-     "end": 50.2,
-     "start": 49.75,
-     "text": "becomes"
-    },
-    {
-     "end": 50.463,
-     "start": 50.2,
-     "text": "those"
-    },
-    {
-     "end": 50.725,
-     "start": 50.463,
-     "text": "four"
-    },
-    {
-     "end": 51.775,
-     "start": 50.725,
-     "text": "arguments"
-    },
-    {
-     "end": 51.95,
-     "start": 51.775,
+     "end": 20.3,
+     "start": 20.25,
      "text": ")"
     },
     {
-     "end": 52.0,
-     "start": 51.95,
-     "text": ";"
+     "end": 20.35,
+     "start": 20.3,
+     "text": ","
     },
     {
-     "end": 52.25,
-     "start": 52.175,
-     "text": "the"
+     "end": 20.462,
+     "start": 20.35,
+     "text": "a"
     },
     {
-     "end": 52.725,
-     "start": 52.25,
-     "text": "candidate"
+     "end": 20.875,
+     "start": 20.462,
+     "text": "total"
     },
     {
-     "end": 53.15,
-     "start": 52.725,
-     "text": "output"
+     "end": 21.425,
+     "start": 20.875,
+     "text": "quantity"
     },
     {
-     "end": 53.575,
-     "start": 53.15,
-     "text": "selects"
-    },
-    {
-     "end": 53.737,
-     "start": 53.575,
-     "text": "none"
-    },
-    {
-     "end": 53.812,
-     "start": 53.737,
+     "end": 21.575,
+     "start": 21.425,
      "text": "of"
     },
     {
-     "end": 54.475,
-     "start": 53.812,
+     "end": 21.9,
+     "start": 21.575,
+     "text": "one"
+    },
+    {
+     "end": 22.013,
+     "start": 21.9,
+     "text": "for"
+    },
+    {
+     "end": 22.1,
+     "start": 22.013,
+     "text": "the"
+    },
+    {
+     "end": 22.862,
+     "start": 22.1,
+     "text": "representative"
+    },
+    {
+     "end": 23.85,
+     "start": 22.862,
+     "text": "asset"
+    },
+    {
+     "end": 24.075,
+     "start": 23.85,
+     "text": ","
+    },
+    {
+     "end": 24.362,
+     "start": 24.275,
+     "text": "and"
+    },
+    {
+     "end": 24.425,
+     "start": 24.362,
+     "text": "a"
+    },
+    {
+     "end": 24.95,
+     "start": 24.425,
+     "text": "decoded"
+    },
+    {
+     "end": 25.4,
+     "start": 24.95,
+     "text": "datum"
+    },
+    {
+     "end": 25.513,
+     "start": 25.4,
+     "text": "for"
+    },
+    {
+     "end": 25.65,
+     "start": 25.513,
+     "text": "the"
+    },
+    {
+     "end": 26.188,
+     "start": 25.65,
+     "text": "intended"
+    },
+    {
+     "end": 26.938,
+     "start": 26.188,
+     "text": "AID"
+    },
+    {
+     "end": 27.038,
+     "start": 26.938,
+     "text": "in"
+    },
+    {
+     "end": 27.1,
+     "start": 27.038,
+     "text": "a"
+    },
+    {
+     "end": 27.763,
+     "start": 27.1,
+     "text": "consumable"
+    },
+    {
+     "end": 28.15,
+     "start": 27.763,
+     "text": "state"
+    },
+    {
+     "end": 28.225,
+     "start": 28.15,
+     "text": "("
+    },
+    {
+     "end": 28.7,
+     "start": 28.225,
+     "text": "present"
+    },
+    {
+     "end": 28.8,
+     "start": 28.7,
+     "text": ","
+    },
+    {
+     "end": 30.225,
+     "start": 28.8,
+     "text": "unfrozen"
+    },
+    {
+     "end": 30.45,
+     "start": 30.225,
+     "text": ","
+    },
+    {
+     "end": 31.175,
+     "start": 30.65,
+     "text": "unpoisoned"
+    },
+    {
+     "end": 31.212,
+     "start": 31.175,
+     "text": ","
+    },
+    {
+     "end": 31.288,
+     "start": 31.212,
+     "text": "at"
+    },
+    {
+     "end": 31.475,
+     "start": 31.288,
+     "text": "least"
+    },
+    {
+     "end": 31.875,
+     "start": 31.475,
+     "text": "W"
+    },
+    {
+     "end": 32.575,
+     "start": 31.875,
+     "text": "old"
+    },
+    {
+     "end": 32.8,
+     "start": 32.575,
+     "text": ")"
+    },
+    {
+     "end": 32.875,
+     "start": 32.8,
+     "text": "."
+    },
+    {
+     "end": 33.175,
+     "start": 33.075,
+     "text": "The"
+    },
+    {
+     "end": 33.862,
+     "start": 33.175,
+     "text": "registry"
+    },
+    {
+     "end": 34.0,
+     "start": 33.862,
+     "text": "and"
+    },
+    {
+     "end": 34.787,
+     "start": 34.0,
+     "text": "representative"
+    },
+    {
+     "end": 35.275,
+     "start": 34.787,
+     "text": "asset"
+    },
+    {
+     "end": 35.725,
+     "start": 35.275,
+     "text": "names"
+    },
+    {
+     "end": 36.112,
+     "start": 35.725,
+     "text": "follow"
+    },
+    {
+     "end": 37.162,
+     "start": 36.112,
+     "text": "registryAsset"
+    },
+    {
+     "end": 37.3,
+     "start": 37.162,
+     "text": "and"
+    },
+    {
+     "end": 38.975,
+     "start": 37.3,
+     "text": "representativeAsset"
+    },
+    {
+     "end": 39.175,
+     "start": 38.975,
+     "text": "."
+    },
+    {
+     "end": 39.475,
+     "start": 39.375,
+     "text": "The"
+    },
+    {
+     "end": 39.875,
+     "start": 39.475,
+     "text": "network"
+    },
+    {
+     "end": 39.925,
+     "start": 39.875,
+     "text": ","
+    },
+    {
+     "end": 40.375,
+     "start": 39.925,
+     "text": "release"
+    },
+    {
+     "end": 40.438,
+     "start": 40.375,
+     "text": ","
+    },
+    {
+     "end": 40.95,
+     "start": 40.438,
+     "text": "checkpoint"
+    },
+    {
+     "end": 41.625,
+     "start": 40.95,
+     "text": "credential"
+    },
+    {
+     "end": 41.75,
+     "start": 41.625,
+     "text": ","
+    },
+    {
+     "end": 42.175,
+     "start": 41.75,
+     "text": "seed"
+    },
+    {
+     "end": 42.312,
+     "start": 42.175,
+     "text": "and"
+    },
+    {
+     "end": 43.05,
+     "start": 42.312,
+     "text": "AID"
+    },
+    {
+     "end": 43.213,
+     "start": 43.05,
+     "text": "are"
+    },
+    {
+     "end": 43.787,
+     "start": 43.213,
+     "text": "arguments"
+    },
+    {
+     "end": 44.125,
+     "start": 43.787,
+     "text": "fixed"
+    },
+    {
+     "end": 44.275,
+     "start": 44.125,
+     "text": "by"
+    },
+    {
+     "end": 44.375,
+     "start": 44.275,
+     "text": "the"
+    },
+    {
+     "end": 44.85,
+     "start": 44.375,
+     "text": "relying"
+    },
+    {
+     "end": 46.075,
+     "start": 44.85,
+     "text": "contract"
+    },
+    {
+     "end": 46.3,
+     "start": 46.075,
+     "text": ";"
+    },
+    {
+     "end": 46.6,
+     "start": 46.475,
+     "text": "the"
+    },
+    {
+     "end": 47.213,
+     "start": 46.6,
+     "text": "environment"
+    },
+    {
+     "end": 47.65,
+     "start": 47.213,
+     "text": "carries"
+    },
+    {
+     "end": 47.75,
+     "start": 47.65,
+     "text": "the"
+    },
+    {
+     "end": 48.3,
+     "start": 47.75,
+     "text": "credential"
+    },
+    {
+     "end": 48.425,
+     "start": 48.3,
+     "text": "the"
+    },
+    {
+     "end": 49.125,
+     "start": 48.425,
+     "text": "integration"
+    },
+    {
+     "end": 49.875,
+     "start": 49.125,
+     "text": "resolved"
+    },
+    {
+     "end": 49.975,
+     "start": 49.875,
+     "text": ","
+    },
+    {
+     "end": 50.088,
+     "start": 49.975,
+     "text": "and"
+    },
+    {
+     "end": 50.213,
+     "start": 50.088,
+     "text": "an"
+    },
+    {
+     "end": 51.0,
+     "start": 50.213,
+     "text": "unresolved"
+    },
+    {
+     "end": 51.225,
+     "start": 51.0,
+     "text": "one"
+    },
+    {
+     "end": 52.575,
+     "start": 51.225,
+     "text": "refuses"
+    },
+    {
+     "end": 52.775,
+     "start": 52.575,
+     "text": "."
+    },
+    {
+     "end": 53.025,
+     "start": 52.95,
+     "text": "The"
+    },
+    {
+     "end": 53.275,
+     "start": 53.025,
+     "text": "hash"
+    },
+    {
+     "end": 53.325,
+     "start": 53.275,
+     "text": ","
+    },
+    {
+     "end": 54.05,
+     "start": 53.325,
+     "text": "codec"
+    },
+    {
+     "end": 54.275,
+     "start": 54.05,
+     "text": ","
+    },
+    {
+     "end": 55.325,
+     "start": 54.5,
+     "text": "AID-to-key"
+    },
+    {
+     "end": 55.675,
+     "start": 55.325,
+     "text": "map"
+    },
+    {
+     "end": 55.8,
+     "start": 55.675,
+     "text": "and"
+    },
+    {
+     "end": 56.25,
+     "start": 55.8,
+     "text": "datum"
+    },
+    {
+     "end": 56.838,
+     "start": 56.25,
+     "text": "decoder"
+    },
+    {
+     "end": 57.025,
+     "start": 56.838,
+     "text": "are"
+    },
+    {
+     "end": 57.338,
+     "start": 57.025,
+     "text": "four"
+    },
+    {
+     "end": 57.775,
+     "start": 57.338,
+     "text": "function"
+    },
+    {
+     "end": 58.438,
+     "start": 57.775,
+     "text": "arguments"
+    },
+    {
+     "end": 58.525,
+     "start": 58.438,
+     "text": "("
+    },
+    {
+     "end": 58.9,
+     "start": 58.525,
+     "text": "Aiken"
+    },
+    {
+     "end": 59.225,
+     "start": 58.9,
+     "text": "data"
+    },
+    {
+     "end": 59.575,
+     "start": 59.225,
+     "text": "types"
+    },
+    {
+     "end": 59.925,
+     "start": 59.575,
+     "text": "cannot"
+    },
+    {
+     "end": 60.2,
+     "start": 59.925,
+     "text": "hold"
+    },
+    {
+     "end": 61.425,
+     "start": 60.2,
+     "text": "functions"
+    },
+    {
+     "end": 61.65,
+     "start": 61.425,
+     "text": ","
+    },
+    {
+     "end": 62.025,
+     "start": 61.85,
+     "text": "so"
+    },
+    {
+     "end": 62.15,
+     "start": 62.025,
+     "text": "the"
+    },
+    {
+     "end": 62.55,
+     "start": 62.15,
+     "text": "Lean's"
+    },
+    {
+     "end": 63.375,
+     "start": 62.55,
+     "text": "Interpretation"
+    },
+    {
+     "end": 63.825,
+     "start": 63.375,
+     "text": "record"
+    },
+    {
+     "end": 64.275,
+     "start": 63.825,
+     "text": "becomes"
+    },
+    {
+     "end": 64.537,
+     "start": 64.275,
+     "text": "those"
+    },
+    {
+     "end": 64.8,
+     "start": 64.537,
+     "text": "four"
+    },
+    {
+     "end": 65.85,
+     "start": 64.8,
+     "text": "arguments"
+    },
+    {
+     "end": 66.025,
+     "start": 65.85,
+     "text": ")"
+    },
+    {
+     "end": 66.075,
+     "start": 66.025,
+     "text": ";"
+    },
+    {
+     "end": 66.325,
+     "start": 66.25,
+     "text": "the"
+    },
+    {
+     "end": 66.8,
+     "start": 66.325,
+     "text": "candidate"
+    },
+    {
+     "end": 67.225,
+     "start": 66.8,
+     "text": "output"
+    },
+    {
+     "end": 67.65,
+     "start": 67.225,
+     "text": "selects"
+    },
+    {
+     "end": 67.812,
+     "start": 67.65,
+     "text": "none"
+    },
+    {
+     "end": 67.887,
+     "start": 67.812,
+     "text": "of"
+    },
+    {
+     "end": 68.55,
+     "start": 67.887,
      "text": "them"
     },
     {
-     "end": 54.65,
-     "start": 54.475,
+     "end": 68.725,
+     "start": 68.55,
      "text": "."
     }
    ]

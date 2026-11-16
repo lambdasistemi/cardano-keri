@@ -412,10 +412,10 @@ says of the output the chain holds:
 After the terminating fold no output at the checkpoint validator holds the
 token, so the consumer has nothing to reference. Each refusal carries no other
 script and passes the ledger rules, so the rejection is the consumer's own
-verdict; each reading also checks that the story, the Lean predicate evaluated
-over the output the chain holds, and the node's verdict name the same failing
-clause. The datums are the ones the validators wrote, version 2, the AID as its
-qualified CESR text.
+verdict; each reading also checks that the story and the Lean predicate
+evaluated over the output the chain holds name the same failing clauses, and
+that the node settles the spend exactly when none fails. The datums are the
+ones the validators wrote, version 2, the AID as its qualified CESR text.
 
 The Lean writes no datum for an absent or a convicted state
 (`CheckpointDatum.datum` is `none` for both), so a retired holding with a

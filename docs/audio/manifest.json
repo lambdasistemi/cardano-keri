@@ -237646,11 +237646,271 @@
    ]
   },
   "docs-design-consumer-identity/identity-and-authority-03": {
-   "audio_sha256": "2946385d50bec17f35f92741b53495cfd9fd24861c748ab4f0f8418a8592618c",
+   "audio_sha256": "d02013931eb8d6a7f909087ca0c9e391e27c2e1eb13322db9d6d62c303de6a13",
+   "characters": 278,
+   "cost": 0.00027521999999999996,
+   "duration": 19.2,
+   "index": 3,
+   "key": "10e97e6d3e6668fa37d47c8b1d2551920b3259690ad12b6bd8b9a2df4b25465b",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 400,
+   "section": "identity-and-authority",
+   "sent_text": "The checkpoint validator recognises a checkpoint the same way: the spent input holds exactly one representative asset, the active asset of the validator's registry and the datum's identifier, and every successor holds that asset again; no arm of the validator mints or burns it.",
+   "text": "The checkpoint validator recognises a checkpoint the same way: the spent input holds exactly one representative asset, the active asset of the validator's registry and the datum's identifier, and every successor holds that asset again; no arm of the validator mints or burns it.",
+   "words": [
+    {
+     "end": 0.287,
+     "start": 0.175,
+     "text": "The"
+    },
+    {
+     "end": 0.775,
+     "start": 0.287,
+     "text": "checkpoint"
+    },
+    {
+     "end": 1.4,
+     "start": 0.775,
+     "text": "validator"
+    },
+    {
+     "end": 2.125,
+     "start": 1.4,
+     "text": "recognises"
+    },
+    {
+     "end": 2.237,
+     "start": 2.125,
+     "text": "a"
+    },
+    {
+     "end": 2.713,
+     "start": 2.237,
+     "text": "checkpoint"
+    },
+    {
+     "end": 2.825,
+     "start": 2.713,
+     "text": "the"
+    },
+    {
+     "end": 3.1,
+     "start": 2.825,
+     "text": "same"
+    },
+    {
+     "end": 3.9,
+     "start": 3.1,
+     "text": "way"
+    },
+    {
+     "end": 4.125,
+     "start": 3.9,
+     "text": ":"
+    },
+    {
+     "end": 4.375,
+     "start": 4.3,
+     "text": "the"
+    },
+    {
+     "end": 4.675,
+     "start": 4.375,
+     "text": "spent"
+    },
+    {
+     "end": 5.075,
+     "start": 4.675,
+     "text": "input"
+    },
+    {
+     "end": 5.4,
+     "start": 5.075,
+     "text": "holds"
+    },
+    {
+     "end": 6.037,
+     "start": 5.4,
+     "text": "exactly"
+    },
+    {
+     "end": 6.3,
+     "start": 6.037,
+     "text": "one"
+    },
+    {
+     "end": 7.012,
+     "start": 6.3,
+     "text": "representative"
+    },
+    {
+     "end": 7.975,
+     "start": 7.012,
+     "text": "asset"
+    },
+    {
+     "end": 8.175,
+     "start": 7.975,
+     "text": ","
+    },
+    {
+     "end": 8.488,
+     "start": 8.35,
+     "text": "the"
+    },
+    {
+     "end": 8.887,
+     "start": 8.488,
+     "text": "active"
+    },
+    {
+     "end": 9.375,
+     "start": 8.887,
+     "text": "asset"
+    },
+    {
+     "end": 9.462,
+     "start": 9.375,
+     "text": "of"
+    },
+    {
+     "end": 9.55,
+     "start": 9.462,
+     "text": "the"
+    },
+    {
+     "end": 10.225,
+     "start": 9.55,
+     "text": "validator's"
+    },
+    {
+     "end": 11.0,
+     "start": 10.225,
+     "text": "registry"
+    },
+    {
+     "end": 11.137,
+     "start": 11.0,
+     "text": "and"
+    },
+    {
+     "end": 11.225,
+     "start": 11.137,
+     "text": "the"
+    },
+    {
+     "end": 11.7,
+     "start": 11.225,
+     "text": "datum's"
+    },
+    {
+     "end": 13.025,
+     "start": 11.7,
+     "text": "identifier"
+    },
+    {
+     "end": 13.25,
+     "start": 13.025,
+     "text": ","
+    },
+    {
+     "end": 13.55,
+     "start": 13.45,
+     "text": "and"
+    },
+    {
+     "end": 13.85,
+     "start": 13.55,
+     "text": "every"
+    },
+    {
+     "end": 14.375,
+     "start": 13.85,
+     "text": "successor"
+    },
+    {
+     "end": 14.675,
+     "start": 14.375,
+     "text": "holds"
+    },
+    {
+     "end": 14.863,
+     "start": 14.675,
+     "text": "that"
+    },
+    {
+     "end": 15.238,
+     "start": 14.863,
+     "text": "asset"
+    },
+    {
+     "end": 16.025,
+     "start": 15.238,
+     "text": "again"
+    },
+    {
+     "end": 16.225,
+     "start": 16.025,
+     "text": ";"
+    },
+    {
+     "end": 16.625,
+     "start": 16.425,
+     "text": "no"
+    },
+    {
+     "end": 16.837,
+     "start": 16.625,
+     "text": "arm"
+    },
+    {
+     "end": 16.913,
+     "start": 16.837,
+     "text": "of"
+    },
+    {
+     "end": 17.0,
+     "start": 16.913,
+     "text": "the"
+    },
+    {
+     "end": 17.5,
+     "start": 17.0,
+     "text": "validator"
+    },
+    {
+     "end": 17.862,
+     "start": 17.5,
+     "text": "mints"
+    },
+    {
+     "end": 18.025,
+     "start": 17.862,
+     "text": "or"
+    },
+    {
+     "end": 18.413,
+     "start": 18.025,
+     "text": "burns"
+    },
+    {
+     "end": 19.0,
+     "start": 18.413,
+     "text": "it"
+    },
+    {
+     "end": 19.2,
+     "start": 19.0,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-consumer-identity/identity-and-authority-04": {
+   "audio_sha256": "713d0b665bbe283ced1239a9e2e4bd429b3694a93c023ec03c9df15b12e13ab6",
    "characters": 447,
    "cost": 0.00044253,
    "duration": 43.075,
-   "index": 3,
+   "index": 4,
    "key": "58dfe8b50f0f3f345cdd4d21789bb00bc92ea55407f74f5fa5b23b34c2dc539f",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
@@ -238416,17 +238676,17 @@
    ]
   },
   "docs-design-consumer-identity/the-bounded-registration-bridge-03": {
-   "audio_sha256": "a15ebbac66618a0b5da9e4124c8fc398a9c1d8c9672f03657c05fb4eef1ea2ae",
-   "characters": 356,
-   "cost": 0.00035244,
-   "duration": 24.075,
+   "audio_sha256": "b93c2b705ebf70384a690fd3d4c62310f4c7f7cdd3d7bbfb848b93f9918fe3e1",
+   "characters": 495,
+   "cost": 0.00049005,
+   "duration": 32.35,
    "index": 3,
-   "key": "ebadde3e14ccbf9f8adc62ee1d589e188a2dea95ccbdaf9890da39112e45a4c3",
+   "key": "df9867f6a5acf9493332d1a8a45d61f452fa6d9234a5f9dc93d62a2de977b6a5",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
    "section": "the-bounded-registration-bridge",
-   "sent_text": "moneyAgreementB compares complete spent references, input reference/value pairs, ordered output amounts, fee, donation and validity interval between the two fold observations. This does not equate physical holding lovelace with Checkpoint conviction bond, freeze bond and pool values. Those remain separate abstractions pending a real decoder and observer.",
-   "text": "moneyAgreementB compares complete spent references, input reference/value pairs, ordered output amounts, fee, donation and validity interval between the two fold observations. This does not equate physical holding lovelace with Checkpoint conviction bond, freeze bond and pool values. Those remain separate abstractions pending a real decoder and observer.",
+   "sent_text": "moneyAgreementB compares complete spent references, input reference/value pairs, ordered output amounts, fee, donation and validity interval between the two fold observations. The bridge also requires the registry's deposit to be the checkpoint's deposit plus freeze bond, and the declared carrier to be exactly the lovelace the registered checkpoint holds, so the initial pool is what the carrier holds above the minimum ADA, the deposit and the freeze bond (see the checkpoint output's value).",
+   "text": "moneyAgreementB compares complete spent references, input reference/value pairs, ordered output amounts, fee, donation and validity interval between the two fold observations. The bridge also requires the registry's deposit to be the checkpoint's deposit plus freeze bond, and the declared carrier to be exactly the lovelace the registered checkpoint holds, so the initial pool is what the carrier holds above the minimum ADA, the deposit and the freeze bond (see the checkpoint output's value).",
    "words": [
     {
      "end": 1.1,
@@ -238559,148 +238819,293 @@
      "text": "."
     },
     {
-     "end": 12.425,
+     "end": 12.337,
      "start": 12.225,
-     "text": "This"
+     "text": "The"
     },
     {
-     "end": 12.65,
-     "start": 12.425,
-     "text": "does"
+     "end": 12.762,
+     "start": 12.337,
+     "text": "bridge"
     },
     {
-     "end": 12.863,
-     "start": 12.65,
-     "text": "not"
+     "end": 13.125,
+     "start": 12.762,
+     "text": "also"
     },
     {
-     "end": 13.238,
-     "start": 12.863,
-     "text": "equate"
+     "end": 13.675,
+     "start": 13.125,
+     "text": "requires"
     },
     {
-     "end": 13.65,
-     "start": 13.238,
-     "text": "physical"
+     "end": 13.8,
+     "start": 13.675,
+     "text": "the"
     },
     {
-     "end": 14.025,
-     "start": 13.65,
-     "text": "holding"
+     "end": 14.475,
+     "start": 13.8,
+     "text": "registry's"
     },
     {
-     "end": 14.525,
-     "start": 14.025,
-     "text": "lovelace"
+     "end": 15.05,
+     "start": 14.475,
+     "text": "deposit"
     },
     {
-     "end": 14.712,
-     "start": 14.525,
-     "text": "with"
+     "end": 15.15,
+     "start": 15.05,
+     "text": "to"
     },
     {
-     "end": 15.225,
-     "start": 14.712,
-     "text": "Checkpoint"
+     "end": 15.3,
+     "start": 15.15,
+     "text": "be"
     },
     {
-     "end": 15.8,
-     "start": 15.225,
-     "text": "conviction"
+     "end": 15.438,
+     "start": 15.3,
+     "text": "the"
     },
     {
-     "end": 16.3,
-     "start": 15.8,
-     "text": "bond"
+     "end": 16.0,
+     "start": 15.438,
+     "text": "checkpoint's"
     },
     {
-     "end": 16.413,
-     "start": 16.3,
-     "text": ","
+     "end": 16.575,
+     "start": 16.0,
+     "text": "deposit"
     },
     {
-     "end": 16.788,
-     "start": 16.413,
+     "end": 16.888,
+     "start": 16.575,
+     "text": "plus"
+    },
+    {
+     "end": 17.225,
+     "start": 16.888,
      "text": "freeze"
     },
     {
-     "end": 17.288,
-     "start": 16.788,
+     "end": 18.2,
+     "start": 17.225,
      "text": "bond"
     },
     {
-     "end": 17.438,
-     "start": 17.288,
+     "end": 18.425,
+     "start": 18.2,
+     "text": ","
+    },
+    {
+     "end": 18.712,
+     "start": 18.625,
      "text": "and"
     },
     {
-     "end": 17.725,
-     "start": 17.438,
-     "text": "pool"
+     "end": 18.788,
+     "start": 18.712,
+     "text": "the"
     },
     {
-     "end": 18.925,
-     "start": 17.725,
-     "text": "values"
+     "end": 19.225,
+     "start": 18.788,
+     "text": "declared"
     },
     {
-     "end": 19.125,
-     "start": 18.925,
-     "text": "."
+     "end": 19.737,
+     "start": 19.225,
+     "text": "carrier"
     },
     {
-     "end": 19.575,
-     "start": 19.325,
-     "text": "Those"
+     "end": 19.837,
+     "start": 19.737,
+     "text": "to"
     },
     {
      "end": 19.975,
-     "start": 19.575,
-     "text": "remain"
+     "start": 19.837,
+     "text": "be"
     },
     {
-     "end": 20.362,
+     "end": 20.55,
      "start": 19.975,
-     "text": "separate"
+     "text": "exactly"
     },
     {
-     "end": 21.188,
-     "start": 20.362,
-     "text": "abstractions"
+     "end": 20.675,
+     "start": 20.55,
+     "text": "the"
     },
     {
-     "end": 21.6,
-     "start": 21.188,
-     "text": "pending"
+     "end": 21.225,
+     "start": 20.675,
+     "text": "lovelace"
     },
     {
-     "end": 21.712,
-     "start": 21.6,
-     "text": "a"
+     "end": 21.35,
+     "start": 21.225,
+     "text": "the"
     },
     {
-     "end": 22.025,
-     "start": 21.712,
-     "text": "real"
+     "end": 21.913,
+     "start": 21.35,
+     "text": "registered"
     },
     {
-     "end": 22.675,
-     "start": 22.025,
-     "text": "decoder"
+     "end": 22.425,
+     "start": 21.913,
+     "text": "checkpoint"
     },
     {
-     "end": 22.812,
-     "start": 22.675,
+     "end": 23.425,
+     "start": 22.425,
+     "text": "holds"
+    },
+    {
+     "end": 23.625,
+     "start": 23.425,
+     "text": ","
+    },
+    {
+     "end": 23.987,
+     "start": 23.825,
+     "text": "so"
+    },
+    {
+     "end": 24.125,
+     "start": 23.987,
+     "text": "the"
+    },
+    {
+     "end": 24.562,
+     "start": 24.125,
+     "text": "initial"
+    },
+    {
+     "end": 25.062,
+     "start": 24.562,
+     "text": "pool"
+    },
+    {
+     "end": 25.225,
+     "start": 25.062,
+     "text": "is"
+    },
+    {
+     "end": 25.362,
+     "start": 25.225,
+     "text": "what"
+    },
+    {
+     "end": 25.45,
+     "start": 25.362,
+     "text": "the"
+    },
+    {
+     "end": 25.875,
+     "start": 25.45,
+     "text": "carrier"
+    },
+    {
+     "end": 26.225,
+     "start": 25.875,
+     "text": "holds"
+    },
+    {
+     "end": 26.513,
+     "start": 26.225,
+     "text": "above"
+    },
+    {
+     "end": 26.6,
+     "start": 26.513,
+     "text": "the"
+    },
+    {
+     "end": 26.975,
+     "start": 26.6,
+     "text": "minimum"
+    },
+    {
+     "end": 27.8,
+     "start": 26.975,
+     "text": "ADA"
+    },
+    {
+     "end": 28.05,
+     "start": 27.8,
+     "text": ","
+    },
+    {
+     "end": 28.3,
+     "start": 28.225,
+     "text": "the"
+    },
+    {
+     "end": 28.875,
+     "start": 28.3,
+     "text": "deposit"
+    },
+    {
+     "end": 28.987,
+     "start": 28.875,
      "text": "and"
     },
     {
-     "end": 23.85,
-     "start": 22.812,
-     "text": "observer"
+     "end": 29.087,
+     "start": 28.987,
+     "text": "the"
     },
     {
-     "end": 24.075,
-     "start": 23.85,
+     "end": 29.425,
+     "start": 29.087,
+     "text": "freeze"
+    },
+    {
+     "end": 29.875,
+     "start": 29.425,
+     "text": "bond"
+    },
+    {
+     "end": 29.95,
+     "start": 29.875,
+     "text": "("
+    },
+    {
+     "end": 30.087,
+     "start": 29.95,
+     "text": "see"
+    },
+    {
+     "end": 30.175,
+     "start": 30.087,
+     "text": "the"
+    },
+    {
+     "end": 30.675,
+     "start": 30.175,
+     "text": "checkpoint"
+    },
+    {
+     "end": 31.125,
+     "start": 30.675,
+     "text": "output's"
+    },
+    {
+     "end": 31.85,
+     "start": 31.125,
+     "text": "value"
+    },
+    {
+     "end": 32.25,
+     "start": 31.85,
+     "text": ")"
+    },
+    {
+     "end": 32.35,
+     "start": 32.25,
      "text": "."
     }
    ]
@@ -242391,17 +242796,17 @@
    ]
   },
   "docs-design-consumer-identity/the-checkpoint-datum-11": {
-   "audio_sha256": "79f8ed0acad4487b44f7fbbd698945ea0fa1432992f3a8322fb1e63afe91415c",
-   "characters": 313,
-   "cost": 0.00030986999999999996,
-   "duration": 20.475,
+   "audio_sha256": "b5574d1f988c84054ed9d8d04433ff1f964e0b789c7f962e9c382e57c0916cb8",
+   "characters": 335,
+   "cost": 0.00033165,
+   "duration": 21.625,
    "index": 11,
-   "key": "272e0e04d9981db014e4f80ca892df0cdfd5540d0c7bdbb0e0a407915db16d8b",
+   "key": "895d9cd2c9ab2a2588c67169fabd247e9b2479b0b487227815cee215e9506bc2",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
    "section": "the-checkpoint-datum",
-   "sent_text": "The twenty-six consumer statements are proved for every interpretation, so they hold with this one. Their wording is unchanged; the three that compare a decoded state with an intended one, through realizesState and the registration bridge, now compare the datum's facts, so they apply to funded registrations too.",
-   "text": "The twenty-six consumer statements are proved for every interpretation, so they hold with this one. Their wording is unchanged; the three that compare a decoded state with an intended one, through realizesState and the registration bridge, now compare the datum's facts, so they apply to funded registrations too.",
+   "sent_text": "The twenty-six consumer statements are proved for every interpretation, so they hold with this one. Their wording is unchanged; the three that compare a decoded state with an intended one, through realizesState and the registration bridge, compare the datum's facts and the output's lovelace, so they apply to funded registrations too.",
+   "text": "The twenty-six consumer statements are proved for every interpretation, so they hold with this one. Their wording is unchanged; the three that compare a decoded state with an intended one, through realizesState and the registration bridge, compare the datum's facts and the output's lovelace, so they apply to funded registrations too.",
    "words": [
     {
      "end": 0.312,
@@ -242574,108 +242979,123 @@
      "text": ","
     },
     {
-     "end": 12.762,
-     "start": 12.55,
+     "end": 12.7,
+     "start": 12.525,
      "text": "through"
     },
     {
-     "end": 13.8,
-     "start": 12.762,
+     "end": 13.6,
+     "start": 12.7,
      "text": "realizesState"
     },
     {
-     "end": 13.913,
-     "start": 13.8,
+     "end": 13.712,
+     "start": 13.6,
      "text": "and"
     },
     {
-     "end": 14.0,
-     "start": 13.913,
+     "end": 13.8,
+     "start": 13.712,
      "text": "the"
     },
     {
-     "end": 14.7,
-     "start": 14.0,
+     "end": 14.5,
+     "start": 13.8,
      "text": "registration"
     },
     {
-     "end": 15.2,
-     "start": 14.7,
-     "text": "bridge"
-    },
-    {
      "end": 15.3,
-     "start": 15.2,
-     "text": ","
+     "start": 14.5,
+     "text": "bridge"
     },
     {
      "end": 15.525,
      "start": 15.3,
-     "text": "now"
-    },
-    {
-     "end": 15.887,
-     "start": 15.525,
-     "text": "compare"
-    },
-    {
-     "end": 15.975,
-     "start": 15.887,
-     "text": "the"
-    },
-    {
-     "end": 16.4,
-     "start": 15.975,
-     "text": "datum's"
-    },
-    {
-     "end": 17.4,
-     "start": 16.4,
-     "text": "facts"
-    },
-    {
-     "end": 17.6,
-     "start": 17.4,
      "text": ","
     },
     {
-     "end": 17.888,
-     "start": 17.8,
+     "end": 16.013,
+     "start": 15.7,
+     "text": "compare"
+    },
+    {
+     "end": 16.1,
+     "start": 16.013,
+     "text": "the"
+    },
+    {
+     "end": 16.525,
+     "start": 16.1,
+     "text": "datum's"
+    },
+    {
+     "end": 16.925,
+     "start": 16.525,
+     "text": "facts"
+    },
+    {
+     "end": 17.038,
+     "start": 16.925,
+     "text": "and"
+    },
+    {
+     "end": 17.125,
+     "start": 17.038,
+     "text": "the"
+    },
+    {
+     "end": 17.575,
+     "start": 17.125,
+     "text": "output's"
+    },
+    {
+     "end": 18.55,
+     "start": 17.575,
+     "text": "lovelace"
+    },
+    {
+     "end": 18.75,
+     "start": 18.55,
+     "text": ","
+    },
+    {
+     "end": 19.038,
+     "start": 18.95,
      "text": "so"
     },
     {
-     "end": 18.025,
-     "start": 17.888,
+     "end": 19.175,
+     "start": 19.038,
      "text": "they"
     },
     {
-     "end": 18.375,
-     "start": 18.025,
+     "end": 19.525,
+     "start": 19.175,
      "text": "apply"
     },
     {
-     "end": 18.475,
-     "start": 18.375,
+     "end": 19.625,
+     "start": 19.525,
      "text": "to"
     },
     {
-     "end": 18.763,
-     "start": 18.475,
+     "end": 19.913,
+     "start": 19.625,
      "text": "funded"
     },
     {
-     "end": 19.487,
-     "start": 18.763,
+     "end": 20.638,
+     "start": 19.913,
      "text": "registrations"
     },
     {
-     "end": 20.25,
-     "start": 19.487,
+     "end": 21.4,
+     "start": 20.638,
      "text": "too"
     },
     {
-     "end": 20.475,
-     "start": 20.25,
+     "end": 21.625,
+     "start": 21.4,
      "text": "."
     }
    ]
@@ -243341,17 +243761,17 @@
    ]
   },
   "docs-design-consumer-identity/the-checkpoint-datum-13": {
-   "audio_sha256": "fcbc1f4fa5e798a4bfc4515c258df0d95dbbfb6d1ba9f02ba32f257d8d1d54a6",
-   "characters": 285,
-   "cost": 0.00028214999999999995,
-   "duration": 19.35,
+   "audio_sha256": "f8c6b3bae0d46205af8b372eded273239935e40054f22b5d71d3a56e48687e3d",
+   "characters": 310,
+   "cost": 0.0003069,
+   "duration": 20.975,
    "index": 13,
-   "key": "07e1606f2be1191db9a974da7fdb670d6199df4c703c063d27898329bea3bd12",
+   "key": "fb2cd5fb19a52f360253d5f52da68e715dc3a4298517ef78ec17e28d542df661",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
    "section": "the-checkpoint-datum",
-   "sent_text": "These checks cover the listed inputs; the theorems cover all inputs. The Aiken consumer decodes version 2 (the datum decoder in Aiken); the on-chain validator does not write version 2 yet, and reading the pool and the bonds from the value is not modelled. This code is not for mainnet.",
-   "text": "These checks cover the listed inputs; the theorems cover all inputs. The Aiken consumer decodes version 2 (the datum decoder in Aiken); the on-chain validator does not write version 2 yet, and reading the pool and the bonds from the value is not modelled. This code is not for mainnet.",
+   "sent_text": "These checks cover the listed inputs; the theorems cover all inputs. The Aiken consumer decodes version 2 (the datum decoder in Aiken); the on-chain validator does not write version 2 yet. Reading the pool and the bonds from the value is modelled in the checkpoint output's value. This code is not for mainnet.",
+   "text": "These checks cover the listed inputs; the theorems cover all inputs. The Aiken consumer decodes version 2 (the datum decoder in Aiken); the on-chain validator does not write version 2 yet. Reading the pool and the bonds from the value is modelled in the checkpoint output's value. This code is not for mainnet.",
    "words": [
     {
      "end": 0.4,
@@ -243489,158 +243909,3233 @@
      "text": ";"
     },
     {
-     "end": 10.137,
-     "start": 10.0,
+     "end": 10.113,
+     "start": 9.975,
+     "text": "the"
+    },
+    {
+     "end": 10.625,
+     "start": 10.113,
+     "text": "on-chain"
+    },
+    {
+     "end": 11.275,
+     "start": 10.625,
+     "text": "validator"
+    },
+    {
+     "end": 11.475,
+     "start": 11.275,
+     "text": "does"
+    },
+    {
+     "end": 11.7,
+     "start": 11.475,
+     "text": "not"
+    },
+    {
+     "end": 11.925,
+     "start": 11.7,
+     "text": "write"
+    },
+    {
+     "end": 12.312,
+     "start": 11.925,
+     "text": "version"
+    },
+    {
+     "end": 12.525,
+     "start": 12.312,
+     "text": "2"
+    },
+    {
+     "end": 13.275,
+     "start": 12.525,
+     "text": "yet"
+    },
+    {
+     "end": 13.475,
+     "start": 13.275,
+     "text": "."
+    },
+    {
+     "end": 14.0,
+     "start": 13.675,
+     "text": "Reading"
+    },
+    {
+     "end": 14.137,
+     "start": 14.0,
+     "text": "the"
+    },
+    {
+     "end": 14.6,
+     "start": 14.137,
+     "text": "pool"
+    },
+    {
+     "end": 14.712,
+     "start": 14.6,
+     "text": "and"
+    },
+    {
+     "end": 14.8,
+     "start": 14.712,
+     "text": "the"
+    },
+    {
+     "end": 15.175,
+     "start": 14.8,
+     "text": "bonds"
+    },
+    {
+     "end": 15.312,
+     "start": 15.175,
+     "text": "from"
+    },
+    {
+     "end": 15.4,
+     "start": 15.312,
+     "text": "the"
+    },
+    {
+     "end": 15.925,
+     "start": 15.4,
+     "text": "value"
+    },
+    {
+     "end": 16.112,
+     "start": 15.925,
+     "text": "is"
+    },
+    {
+     "end": 16.638,
+     "start": 16.112,
+     "text": "modelled"
+    },
+    {
+     "end": 16.763,
+     "start": 16.638,
+     "text": "in"
+    },
+    {
+     "end": 16.862,
+     "start": 16.763,
+     "text": "the"
+    },
+    {
+     "end": 17.4,
+     "start": 16.862,
+     "text": "checkpoint"
+    },
+    {
+     "end": 17.9,
+     "start": 17.4,
+     "text": "output's"
+    },
+    {
+     "end": 18.825,
+     "start": 17.9,
+     "text": "value"
+    },
+    {
+     "end": 19.075,
+     "start": 18.825,
+     "text": "."
+    },
+    {
+     "end": 19.425,
+     "start": 19.25,
+     "text": "This"
+    },
+    {
+     "end": 19.663,
+     "start": 19.425,
+     "text": "code"
+    },
+    {
+     "end": 19.763,
+     "start": 19.663,
+     "text": "is"
+    },
+    {
+     "end": 19.95,
+     "start": 19.763,
+     "text": "not"
+    },
+    {
+     "end": 20.062,
+     "start": 19.95,
+     "text": "for"
+    },
+    {
+     "end": 20.775,
+     "start": 20.062,
+     "text": "mainnet"
+    },
+    {
+     "end": 20.975,
+     "start": 20.775,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-consumer-identity/the-checkpoint-outputs-value-00": {
+   "audio_sha256": "bda2305b59ee0faa7148a37b0a0f521f94947ad3f35619cc90d5c1dd53ad3d91",
+   "characters": 30,
+   "cost": 2.97e-05,
+   "duration": 2.075,
+   "index": 0,
+   "key": "88d586f62e6bcf519896d4c0476049aa7a5ba7fef02e4d6821b559ed5f205eb7",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 500,
+   "section": "the-checkpoint-outputs-value",
+   "sent_text": "The checkpoint output's value.",
+   "text": "The checkpoint output's value.",
+   "words": [
+    {
+     "end": 0.25,
+     "start": 0.175,
+     "text": "The"
+    },
+    {
+     "end": 0.663,
+     "start": 0.25,
+     "text": "checkpoint"
+    },
+    {
+     "end": 1.05,
+     "start": 0.663,
+     "text": "output's"
+    },
+    {
+     "end": 1.85,
+     "start": 1.05,
+     "text": "value"
+    },
+    {
+     "end": 2.075,
+     "start": 1.85,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-consumer-identity/the-checkpoint-outputs-value-01": {
+   "audio_sha256": "fd5c6b1da039995058b70645505c9ed5834bec9793bc698ce8ffdf060f74a247",
+   "characters": 410,
+   "cost": 0.00040589999999999995,
+   "duration": 27.075,
+   "index": 1,
+   "key": "7aa2adab4393181afa71601f3116acfe6b9c4efd61ae40d6cb6b098cb2a70d44",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 400,
+   "section": "the-checkpoint-outputs-value",
+   "sent_text": "A contract author holds a candidate checkpoint output and has read its datum. The datum says the checkpoint is live and its bond is not frozen, but it carries no amounts. The author wants to know the bonds are really there: the output's lovelace must be what that state holds, and a holding missing part of a bond must be refused. The model states this amount in CardanoKeri.CheckpointValue as State.heldValue.",
+   "text": "A contract author holds a candidate checkpoint output and has read its datum. The datum says the checkpoint is live and its bond is not frozen, but it carries no amounts. The author wants to know the bonds are really there: the output's lovelace must be what that state holds, and a holding missing part of a bond must be refused. The model states this amount in CardanoKeri.CheckpointValue as State.heldValue.",
+   "words": [
+    {
+     "end": 0.275,
+     "start": 0.2,
+     "text": "A"
+    },
+    {
+     "end": 0.825,
+     "start": 0.275,
+     "text": "contract"
+    },
+    {
+     "end": 1.175,
+     "start": 0.825,
+     "text": "author"
+    },
+    {
+     "end": 1.462,
+     "start": 1.175,
+     "text": "holds"
+    },
+    {
+     "end": 1.562,
+     "start": 1.462,
+     "text": "a"
+    },
+    {
+     "end": 2.188,
+     "start": 1.562,
+     "text": "candidate"
+    },
+    {
+     "end": 2.7,
+     "start": 2.188,
+     "text": "checkpoint"
+    },
+    {
+     "end": 3.325,
+     "start": 2.7,
+     "text": "output"
+    },
+    {
+     "end": 3.475,
+     "start": 3.325,
+     "text": "and"
+    },
+    {
+     "end": 3.688,
+     "start": 3.475,
+     "text": "has"
+    },
+    {
+     "end": 3.912,
+     "start": 3.688,
+     "text": "read"
+    },
+    {
+     "end": 4.1,
+     "start": 3.912,
+     "text": "its"
+    },
+    {
+     "end": 5.075,
+     "start": 4.1,
+     "text": "datum"
+    },
+    {
+     "end": 5.275,
+     "start": 5.075,
+     "text": "."
+    },
+    {
+     "end": 5.575,
+     "start": 5.475,
+     "text": "The"
+    },
+    {
+     "end": 5.975,
+     "start": 5.575,
+     "text": "datum"
+    },
+    {
+     "end": 6.225,
+     "start": 5.975,
+     "text": "says"
+    },
+    {
+     "end": 6.363,
+     "start": 6.225,
+     "text": "the"
+    },
+    {
+     "end": 6.875,
+     "start": 6.363,
+     "text": "checkpoint"
+    },
+    {
+     "end": 7.037,
+     "start": 6.875,
+     "text": "is"
+    },
+    {
+     "end": 7.5,
+     "start": 7.037,
+     "text": "live"
+    },
+    {
+     "end": 7.613,
+     "start": 7.5,
+     "text": "and"
+    },
+    {
+     "end": 7.787,
+     "start": 7.613,
+     "text": "its"
+    },
+    {
+     "end": 8.163,
+     "start": 7.787,
+     "text": "bond"
+    },
+    {
+     "end": 8.3,
+     "start": 8.163,
+     "text": "is"
+    },
+    {
+     "end": 8.562,
+     "start": 8.3,
+     "text": "not"
+    },
+    {
+     "end": 9.15,
+     "start": 8.562,
+     "text": "frozen"
+    },
+    {
+     "end": 9.225,
+     "start": 9.15,
+     "text": ","
+    },
+    {
+     "end": 9.363,
+     "start": 9.225,
+     "text": "but"
+    },
+    {
+     "end": 9.45,
+     "start": 9.363,
+     "text": "it"
+    },
+    {
+     "end": 9.863,
+     "start": 9.45,
+     "text": "carries"
+    },
+    {
+     "end": 10.1,
+     "start": 9.863,
+     "text": "no"
+    },
+    {
+     "end": 11.2,
+     "start": 10.1,
+     "text": "amounts"
+    },
+    {
+     "end": 11.4,
+     "start": 11.2,
+     "text": "."
+    },
+    {
+     "end": 11.712,
+     "start": 11.575,
+     "text": "The"
+    },
+    {
+     "end": 12.075,
+     "start": 11.712,
+     "text": "author"
+    },
+    {
+     "end": 12.3,
+     "start": 12.075,
+     "text": "wants"
+    },
+    {
+     "end": 12.4,
+     "start": 12.3,
+     "text": "to"
+    },
+    {
+     "end": 12.613,
+     "start": 12.4,
+     "text": "know"
+    },
+    {
+     "end": 12.7,
+     "start": 12.613,
+     "text": "the"
+    },
+    {
+     "end": 13.012,
+     "start": 12.7,
+     "text": "bonds"
+    },
+    {
+     "end": 13.1,
+     "start": 13.012,
+     "text": "are"
+    },
+    {
+     "end": 13.4,
+     "start": 13.1,
+     "text": "really"
+    },
+    {
+     "end": 14.175,
+     "start": 13.4,
+     "text": "there"
+    },
+    {
+     "end": 14.375,
+     "start": 14.175,
+     "text": ":"
+    },
+    {
+     "end": 14.712,
+     "start": 14.575,
+     "text": "the"
+    },
+    {
+     "end": 15.238,
+     "start": 14.712,
+     "text": "output's"
+    },
+    {
+     "end": 15.762,
+     "start": 15.238,
+     "text": "lovelace"
+    },
+    {
+     "end": 16.05,
+     "start": 15.762,
+     "text": "must"
+    },
+    {
+     "end": 16.225,
+     "start": 16.05,
+     "text": "be"
+    },
+    {
+     "end": 16.4,
+     "start": 16.225,
+     "text": "what"
+    },
+    {
+     "end": 16.65,
+     "start": 16.4,
+     "text": "that"
+    },
+    {
+     "end": 16.975,
+     "start": 16.65,
+     "text": "state"
+    },
+    {
+     "end": 17.575,
+     "start": 16.975,
+     "text": "holds"
+    },
+    {
+     "end": 17.65,
+     "start": 17.575,
+     "text": ","
+    },
+    {
+     "end": 17.763,
+     "start": 17.65,
+     "text": "and"
+    },
+    {
+     "end": 17.862,
+     "start": 17.763,
+     "text": "a"
+    },
+    {
+     "end": 18.413,
+     "start": 17.862,
+     "text": "holding"
+    },
+    {
+     "end": 18.75,
+     "start": 18.413,
+     "text": "missing"
+    },
+    {
+     "end": 18.987,
+     "start": 18.75,
+     "text": "part"
+    },
+    {
+     "end": 19.062,
+     "start": 18.987,
+     "text": "of"
+    },
+    {
+     "end": 19.163,
+     "start": 19.062,
+     "text": "a"
+    },
+    {
+     "end": 19.6,
+     "start": 19.163,
+     "text": "bond"
+    },
+    {
+     "end": 19.85,
+     "start": 19.6,
+     "text": "must"
+    },
+    {
+     "end": 20.0,
+     "start": 19.85,
+     "text": "be"
+    },
+    {
+     "end": 21.275,
+     "start": 20.0,
+     "text": "refused"
+    },
+    {
+     "end": 21.5,
+     "start": 21.275,
+     "text": "."
+    },
+    {
+     "end": 21.775,
+     "start": 21.675,
+     "text": "The"
+    },
+    {
+     "end": 22.15,
+     "start": 21.775,
+     "text": "model"
+    },
+    {
+     "end": 22.525,
+     "start": 22.15,
+     "text": "states"
+    },
+    {
+     "end": 22.725,
+     "start": 22.525,
+     "text": "this"
+    },
+    {
+     "end": 23.125,
+     "start": 22.725,
+     "text": "amount"
+    },
+    {
+     "end": 23.3,
+     "start": 23.125,
+     "text": "in"
+    },
+    {
+     "end": 24.325,
+     "start": 23.3,
+     "text": "CardanoKeri"
+    },
+    {
+     "end": 24.45,
+     "start": 24.325,
+     "text": "."
+    },
+    {
+     "end": 25.263,
+     "start": 24.45,
+     "text": "CheckpointValue"
+    },
+    {
+     "end": 25.4,
+     "start": 25.263,
+     "text": "as"
+    },
+    {
+     "end": 26.85,
+     "start": 25.4,
+     "text": "State.heldValue"
+    },
+    {
+     "end": 27.075,
+     "start": 26.85,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-consumer-identity/the-checkpoint-outputs-value-02": {
+   "audio_sha256": "80a198d8ff9d6de7c2e44be39593a037279d7233c8800774bd4f39f7f313c9db",
+   "characters": 471,
+   "cost": 0.00046628999999999996,
+   "duration": 31.325,
+   "index": 2,
+   "key": "08ae366eca517c00b759f50167c9cf921d66f4aa30939745b1517d9bcf720e4e",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 400,
+   "section": "the-checkpoint-outputs-value",
+   "sent_text": "The diagram reads in words: a registration delivers the minimum ADA, the deposit, the freeze bond and the initial pool the registrant chooses. Every later step moves exactly the amounts its flow names. A freeze pays the freeze bond to the hunter, a rotation with a deposit brings it back, and a conviction pays the deposit to the convictor and the bond and pool to the refund address. The pending output keeps only the minimum ADA, which the termination booking consumes.",
+   "text": "The diagram reads in words: a registration delivers the minimum ADA, the deposit, the freeze bond and the initial pool the registrant chooses. Every later step moves exactly the amounts its flow names. A freeze pays the freeze bond to the hunter, a rotation with a deposit brings it back, and a conviction pays the deposit to the convictor and the bond and pool to the refund address. The pending output keeps only the minimum ADA, which the termination booking consumes.",
+   "words": [
+    {
+     "end": 0.25,
+     "start": 0.175,
+     "text": "The"
+    },
+    {
+     "end": 0.75,
+     "start": 0.25,
+     "text": "diagram"
+    },
+    {
+     "end": 1.013,
+     "start": 0.75,
+     "text": "reads"
+    },
+    {
+     "end": 1.125,
+     "start": 1.013,
+     "text": "in"
+    },
+    {
+     "end": 1.9,
+     "start": 1.125,
+     "text": "words"
+    },
+    {
+     "end": 2.1,
+     "start": 1.9,
+     "text": ":"
+    },
+    {
+     "end": 2.375,
+     "start": 2.3,
+     "text": "a"
+    },
+    {
+     "end": 3.15,
+     "start": 2.375,
+     "text": "registration"
+    },
+    {
+     "end": 3.625,
+     "start": 3.15,
+     "text": "delivers"
+    },
+    {
+     "end": 3.763,
+     "start": 3.625,
+     "text": "the"
+    },
+    {
+     "end": 4.188,
+     "start": 3.763,
+     "text": "minimum"
+    },
+    {
+     "end": 4.675,
+     "start": 4.188,
+     "text": "ADA"
+    },
+    {
+     "end": 4.775,
+     "start": 4.675,
+     "text": ","
+    },
+    {
+     "end": 4.9,
+     "start": 4.775,
+     "text": "the"
+    },
+    {
+     "end": 5.575,
+     "start": 4.9,
+     "text": "deposit"
+    },
+    {
+     "end": 5.65,
+     "start": 5.575,
+     "text": ","
+    },
+    {
+     "end": 5.787,
+     "start": 5.65,
+     "text": "the"
+    },
+    {
+     "end": 6.162,
+     "start": 5.787,
+     "text": "freeze"
+    },
+    {
+     "end": 6.713,
+     "start": 6.162,
+     "text": "bond"
+    },
+    {
+     "end": 6.838,
+     "start": 6.713,
+     "text": "and"
+    },
+    {
+     "end": 6.95,
+     "start": 6.838,
+     "text": "the"
+    },
+    {
+     "end": 7.387,
+     "start": 6.95,
+     "text": "initial"
+    },
+    {
+     "end": 7.75,
+     "start": 7.387,
+     "text": "pool"
+    },
+    {
+     "end": 7.875,
+     "start": 7.75,
+     "text": "the"
+    },
+    {
+     "end": 8.413,
+     "start": 7.875,
+     "text": "registrant"
+    },
+    {
+     "end": 9.65,
+     "start": 8.413,
+     "text": "chooses"
+    },
+    {
+     "end": 9.85,
+     "start": 9.65,
+     "text": "."
+    },
+    {
+     "end": 10.325,
+     "start": 10.05,
+     "text": "Every"
+    },
+    {
+     "end": 10.625,
+     "start": 10.325,
+     "text": "later"
+    },
+    {
+     "end": 10.95,
+     "start": 10.625,
+     "text": "step"
+    },
+    {
+     "end": 11.2,
+     "start": 10.95,
+     "text": "moves"
+    },
+    {
+     "end": 11.85,
+     "start": 11.2,
+     "text": "exactly"
+    },
+    {
+     "end": 11.975,
+     "start": 11.85,
+     "text": "the"
+    },
+    {
+     "end": 12.312,
+     "start": 11.975,
+     "text": "amounts"
+    },
+    {
+     "end": 12.475,
+     "start": 12.312,
+     "text": "its"
+    },
+    {
+     "end": 12.75,
+     "start": 12.475,
+     "text": "flow"
+    },
+    {
+     "end": 13.65,
+     "start": 12.75,
+     "text": "names"
+    },
+    {
+     "end": 13.85,
+     "start": 13.65,
+     "text": "."
+    },
+    {
+     "end": 14.113,
+     "start": 14.025,
+     "text": "A"
+    },
+    {
+     "end": 14.475,
+     "start": 14.113,
+     "text": "freeze"
+    },
+    {
+     "end": 14.738,
+     "start": 14.475,
+     "text": "pays"
+    },
+    {
+     "end": 14.825,
+     "start": 14.738,
+     "text": "the"
+    },
+    {
+     "end": 15.15,
+     "start": 14.825,
+     "text": "freeze"
+    },
+    {
+     "end": 15.413,
+     "start": 15.15,
+     "text": "bond"
+    },
+    {
+     "end": 15.488,
+     "start": 15.413,
+     "text": "to"
+    },
+    {
+     "end": 15.575,
+     "start": 15.488,
+     "text": "the"
+    },
+    {
+     "end": 16.425,
+     "start": 15.575,
+     "text": "hunter"
+    },
+    {
+     "end": 16.65,
+     "start": 16.425,
+     "text": ","
+    },
+    {
+     "end": 16.9,
+     "start": 16.825,
+     "text": "a"
+    },
+    {
+     "end": 17.487,
+     "start": 16.9,
+     "text": "rotation"
+    },
+    {
+     "end": 17.587,
+     "start": 17.487,
+     "text": "with"
+    },
+    {
+     "end": 17.638,
+     "start": 17.587,
+     "text": "a"
+    },
+    {
+     "end": 18.15,
+     "start": 17.638,
+     "text": "deposit"
+    },
+    {
+     "end": 18.413,
+     "start": 18.15,
+     "text": "brings"
+    },
+    {
+     "end": 18.5,
+     "start": 18.413,
+     "text": "it"
+    },
+    {
+     "end": 19.25,
+     "start": 18.5,
+     "text": "back"
+    },
+    {
+     "end": 19.45,
+     "start": 19.25,
+     "text": ","
+    },
+    {
+     "end": 19.737,
+     "start": 19.65,
+     "text": "and"
+    },
+    {
+     "end": 19.8,
+     "start": 19.737,
+     "text": "a"
+    },
+    {
+     "end": 20.438,
+     "start": 19.8,
+     "text": "conviction"
+    },
+    {
+     "end": 20.8,
+     "start": 20.438,
+     "text": "pays"
+    },
+    {
+     "end": 20.9,
+     "start": 20.8,
+     "text": "the"
+    },
+    {
+     "end": 21.5,
+     "start": 20.9,
+     "text": "deposit"
+    },
+    {
+     "end": 21.587,
+     "start": 21.5,
+     "text": "to"
+    },
+    {
+     "end": 21.675,
+     "start": 21.587,
+     "text": "the"
+    },
+    {
+     "end": 22.5,
+     "start": 21.675,
+     "text": "convictor"
+    },
+    {
+     "end": 22.638,
+     "start": 22.5,
+     "text": "and"
+    },
+    {
+     "end": 22.737,
+     "start": 22.638,
+     "text": "the"
+    },
+    {
+     "end": 23.263,
+     "start": 22.737,
+     "text": "bond"
+    },
+    {
+     "end": 23.413,
+     "start": 23.263,
+     "text": "and"
+    },
+    {
+     "end": 23.8,
+     "start": 23.413,
+     "text": "pool"
+    },
+    {
+     "end": 23.888,
+     "start": 23.8,
+     "text": "to"
+    },
+    {
+     "end": 23.975,
+     "start": 23.888,
+     "text": "the"
+    },
+    {
+     "end": 24.388,
+     "start": 23.975,
+     "text": "refund"
+    },
+    {
+     "end": 25.45,
+     "start": 24.388,
+     "text": "address"
+    },
+    {
+     "end": 25.65,
+     "start": 25.45,
+     "text": "."
+    },
+    {
+     "end": 25.938,
+     "start": 25.825,
+     "text": "The"
+    },
+    {
+     "end": 26.35,
+     "start": 25.938,
+     "text": "pending"
+    },
+    {
+     "end": 26.8,
+     "start": 26.35,
+     "text": "output"
+    },
+    {
+     "end": 27.112,
+     "start": 26.8,
+     "text": "keeps"
+    },
+    {
+     "end": 27.425,
+     "start": 27.112,
+     "text": "only"
+    },
+    {
+     "end": 27.562,
+     "start": 27.425,
+     "text": "the"
+    },
+    {
+     "end": 27.95,
+     "start": 27.562,
+     "text": "minimum"
+    },
+    {
+     "end": 28.375,
+     "start": 27.95,
+     "text": "ADA"
+    },
+    {
+     "end": 28.475,
+     "start": 28.375,
+     "text": ","
+    },
+    {
+     "end": 28.675,
+     "start": 28.475,
+     "text": "which"
+    },
+    {
+     "end": 28.8,
+     "start": 28.675,
+     "text": "the"
+    },
+    {
+     "end": 29.5,
+     "start": 28.8,
+     "text": "termination"
+    },
+    {
+     "end": 29.85,
+     "start": 29.5,
+     "text": "booking"
+    },
+    {
+     "end": 31.125,
+     "start": 29.85,
+     "text": "consumes"
+    },
+    {
+     "end": 31.325,
+     "start": 31.125,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-consumer-identity/the-checkpoint-outputs-value-03": {
+   "audio_sha256": "36d87a8fcb6c65c1c987bdd3b4f2106881384c9b34692187d2b7c44d1d8a3e96",
+   "characters": 289,
+   "cost": 0.00028610999999999996,
+   "duration": 18.6,
+   "index": 3,
+   "key": "7c48ff9b81a6e822a3ebfea505b6938756123b4b496c51cf76d777e25a0b260e",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 400,
+   "section": "the-checkpoint-outputs-value",
+   "sent_text": "Here Mc is the registry's minimum ADA, D the deposit and B the freeze bond of the checkpoint's parameters, and pool the premium pool. The datum's facts and the lovelace together give back the whole state: the pool is the lovelace above the floor (withValue_iff, realizes_determines_state).",
+   "text": "Here Mc is the registry's minimum ADA, D the deposit and B the freeze bond of the checkpoint's parameters, and pool the premium pool. The datum's facts and the lovelace together give back the whole state: the pool is the lovelace above the floor (withValue_iff, realizes_determines_state).",
+   "words": [
+    {
+     "end": 0.425,
+     "start": 0.225,
+     "text": "Here"
+    },
+    {
+     "end": 1.013,
+     "start": 0.425,
+     "text": "Mc"
+    },
+    {
+     "end": 1.175,
+     "start": 1.013,
+     "text": "is"
+    },
+    {
+     "end": 1.3,
+     "start": 1.175,
+     "text": "the"
+    },
+    {
+     "end": 1.913,
+     "start": 1.3,
+     "text": "registry's"
+    },
+    {
+     "end": 2.325,
+     "start": 1.913,
+     "text": "minimum"
+    },
+    {
+     "end": 2.775,
+     "start": 2.325,
+     "text": "ADA"
+    },
+    {
+     "end": 2.888,
+     "start": 2.775,
+     "text": ","
+    },
+    {
+     "end": 3.15,
+     "start": 2.888,
+     "text": "D"
+    },
+    {
+     "end": 3.25,
+     "start": 3.15,
+     "text": "the"
+    },
+    {
+     "end": 3.9,
+     "start": 3.25,
+     "text": "deposit"
+    },
+    {
+     "end": 4.025,
+     "start": 3.9,
+     "text": "and"
+    },
+    {
+     "end": 4.2,
+     "start": 4.025,
+     "text": "B"
+    },
+    {
+     "end": 4.35,
+     "start": 4.2,
+     "text": "the"
+    },
+    {
+     "end": 4.738,
+     "start": 4.35,
+     "text": "freeze"
+    },
+    {
+     "end": 5.113,
+     "start": 4.738,
+     "text": "bond"
+    },
+    {
+     "end": 5.188,
+     "start": 5.113,
+     "text": "of"
+    },
+    {
+     "end": 5.287,
+     "start": 5.188,
+     "text": "the"
+    },
+    {
+     "end": 5.85,
+     "start": 5.287,
+     "text": "checkpoint's"
+    },
+    {
+     "end": 6.6,
+     "start": 5.85,
+     "text": "parameters"
+    },
+    {
+     "end": 6.675,
+     "start": 6.6,
+     "text": ","
+    },
+    {
+     "end": 6.812,
+     "start": 6.675,
+     "text": "and"
+    },
+    {
+     "end": 7.15,
+     "start": 6.812,
+     "text": "pool"
+    },
+    {
+     "end": 7.25,
+     "start": 7.15,
+     "text": "the"
+    },
+    {
+     "end": 7.762,
+     "start": 7.25,
+     "text": "premium"
+    },
+    {
+     "end": 8.85,
+     "start": 7.762,
+     "text": "pool"
+    },
+    {
+     "end": 9.05,
+     "start": 8.85,
+     "text": "."
+    },
+    {
+     "end": 9.3,
+     "start": 9.225,
+     "text": "The"
+    },
+    {
+     "end": 9.725,
+     "start": 9.3,
+     "text": "datum's"
+    },
+    {
+     "end": 10.125,
+     "start": 9.725,
+     "text": "facts"
+    },
+    {
+     "end": 10.238,
+     "start": 10.125,
+     "text": "and"
+    },
+    {
+     "end": 10.325,
+     "start": 10.238,
      "text": "the"
     },
     {
      "end": 10.75,
-     "start": 10.137,
-     "text": "on-chain"
+     "start": 10.325,
+     "text": "lovelace"
     },
     {
-     "end": 11.375,
+     "end": 11.212,
      "start": 10.75,
-     "text": "validator"
+     "text": "together"
     },
     {
-     "end": 11.575,
-     "start": 11.375,
-     "text": "does"
+     "end": 11.45,
+     "start": 11.212,
+     "text": "give"
+    },
+    {
+     "end": 11.725,
+     "start": 11.45,
+     "text": "back"
     },
     {
      "end": 11.825,
-     "start": 11.575,
-     "text": "not"
+     "start": 11.725,
+     "text": "the"
     },
     {
-     "end": 12.113,
+     "end": 12.05,
      "start": 11.825,
-     "text": "write"
+     "text": "whole"
     },
     {
-     "end": 12.562,
-     "start": 12.113,
-     "text": "version"
+     "end": 12.9,
+     "start": 12.05,
+     "text": "state"
     },
     {
-     "end": 12.812,
-     "start": 12.562,
-     "text": "2"
+     "end": 13.1,
+     "start": 12.9,
+     "text": ":"
     },
     {
-     "end": 13.15,
-     "start": 12.812,
-     "text": "yet"
+     "end": 13.387,
+     "start": 13.275,
+     "text": "the"
     },
     {
-     "end": 13.225,
-     "start": 13.15,
+     "end": 13.775,
+     "start": 13.387,
+     "text": "pool"
+    },
+    {
+     "end": 13.925,
+     "start": 13.775,
+     "text": "is"
+    },
+    {
+     "end": 14.062,
+     "start": 13.925,
+     "text": "the"
+    },
+    {
+     "end": 14.55,
+     "start": 14.062,
+     "text": "lovelace"
+    },
+    {
+     "end": 14.837,
+     "start": 14.55,
+     "text": "above"
+    },
+    {
+     "end": 14.962,
+     "start": 14.837,
+     "text": "the"
+    },
+    {
+     "end": 15.475,
+     "start": 14.962,
+     "text": "floor"
+    },
+    {
+     "end": 15.525,
+     "start": 15.475,
+     "text": "("
+    },
+    {
+     "end": 16.4,
+     "start": 15.525,
+     "text": "withValue_iff"
+    },
+    {
+     "end": 16.475,
+     "start": 16.4,
      "text": ","
     },
     {
-     "end": 13.363,
-     "start": 13.225,
+     "end": 18.35,
+     "start": 16.475,
+     "text": "realizes_determines_state"
+    },
+    {
+     "end": 18.55,
+     "start": 18.35,
+     "text": ")"
+    },
+    {
+     "end": 18.6,
+     "start": 18.55,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-consumer-identity/the-checkpoint-outputs-value-04": {
+   "audio_sha256": "e05ebc21126effcc2f7f45fe6af6cfa3734027c1d1a43ecee00460c807b84806",
+   "characters": 272,
+   "cost": 0.00026928,
+   "duration": 18.125,
+   "index": 4,
+   "key": "9cc8a7ad159969b6abc962bfda6ae8c1d496996b6ee4eecd669b5be19151d1ca",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 300,
+   "section": "the-checkpoint-outputs-value",
+   "sent_text": "Every step keeps the amounts: what the input holds plus what the step takes in equals what the output holds plus what it pays out (held_amounts_conserved, held_value_conserved); a registration holds the minimum ADA plus everything it takes in (registration_holds_carrier).",
+   "text": "Every step keeps the amounts: what the input holds plus what the step takes in equals what the output holds plus what it pays out (held_amounts_conserved, held_value_conserved); a registration holds the minimum ADA plus everything it takes in (registration_holds_carrier).",
+   "words": [
+    {
+     "end": 0.45,
+     "start": 0.175,
+     "text": "Every"
+    },
+    {
+     "end": 0.725,
+     "start": 0.45,
+     "text": "step"
+    },
+    {
+     "end": 0.962,
+     "start": 0.725,
+     "text": "keeps"
+    },
+    {
+     "end": 1.038,
+     "start": 0.962,
+     "text": "the"
+    },
+    {
+     "end": 1.825,
+     "start": 1.038,
+     "text": "amounts"
+    },
+    {
+     "end": 2.025,
+     "start": 1.825,
+     "text": ":"
+    },
+    {
+     "end": 2.338,
+     "start": 2.225,
+     "text": "what"
+    },
+    {
+     "end": 2.487,
+     "start": 2.338,
+     "text": "the"
+    },
+    {
+     "end": 2.925,
+     "start": 2.487,
+     "text": "input"
+    },
+    {
+     "end": 3.287,
+     "start": 2.925,
+     "text": "holds"
+    },
+    {
+     "end": 3.575,
+     "start": 3.287,
+     "text": "plus"
+    },
+    {
+     "end": 3.725,
+     "start": 3.575,
+     "text": "what"
+    },
+    {
+     "end": 3.825,
+     "start": 3.725,
+     "text": "the"
+    },
+    {
+     "end": 4.15,
+     "start": 3.825,
+     "text": "step"
+    },
+    {
+     "end": 4.463,
+     "start": 4.15,
+     "text": "takes"
+    },
+    {
+     "end": 4.625,
+     "start": 4.463,
+     "text": "in"
+    },
+    {
+     "end": 5.1,
+     "start": 4.625,
+     "text": "equals"
+    },
+    {
+     "end": 5.238,
+     "start": 5.1,
+     "text": "what"
+    },
+    {
+     "end": 5.387,
+     "start": 5.238,
+     "text": "the"
+    },
+    {
+     "end": 5.875,
+     "start": 5.387,
+     "text": "output"
+    },
+    {
+     "end": 6.262,
+     "start": 5.875,
+     "text": "holds"
+    },
+    {
+     "end": 6.55,
+     "start": 6.262,
+     "text": "plus"
+    },
+    {
+     "end": 6.688,
+     "start": 6.55,
+     "text": "what"
+    },
+    {
+     "end": 6.775,
+     "start": 6.688,
+     "text": "it"
+    },
+    {
+     "end": 7.1,
+     "start": 6.775,
+     "text": "pays"
+    },
+    {
+     "end": 7.45,
+     "start": 7.1,
+     "text": "out"
+    },
+    {
+     "end": 7.525,
+     "start": 7.45,
+     "text": "("
+    },
+    {
+     "end": 9.475,
+     "start": 7.525,
+     "text": "held_amounts_conserved"
+    },
+    {
+     "end": 9.7,
+     "start": 9.475,
+     "text": ","
+    },
+    {
+     "end": 11.275,
+     "start": 9.875,
+     "text": "held_value_conserved"
+    },
+    {
+     "end": 11.5,
+     "start": 11.275,
+     "text": ")"
+    },
+    {
+     "end": 11.575,
+     "start": 11.5,
+     "text": ";"
+    },
+    {
+     "end": 11.85,
+     "start": 11.775,
+     "text": "a"
+    },
+    {
+     "end": 12.675,
+     "start": 11.85,
+     "text": "registration"
+    },
+    {
+     "end": 13.05,
+     "start": 12.675,
+     "text": "holds"
+    },
+    {
+     "end": 13.188,
+     "start": 13.05,
+     "text": "the"
+    },
+    {
+     "end": 13.6,
+     "start": 13.188,
+     "text": "minimum"
+    },
+    {
+     "end": 13.887,
+     "start": 13.6,
+     "text": "ADA"
+    },
+    {
+     "end": 14.288,
+     "start": 13.887,
+     "text": "plus"
+    },
+    {
+     "end": 14.8,
+     "start": 14.288,
+     "text": "everything"
+    },
+    {
+     "end": 14.925,
+     "start": 14.8,
+     "text": "it"
+    },
+    {
+     "end": 15.275,
+     "start": 14.925,
+     "text": "takes"
+    },
+    {
+     "end": 15.637,
+     "start": 15.275,
+     "text": "in"
+    },
+    {
+     "end": 15.725,
+     "start": 15.637,
+     "text": "("
+    },
+    {
+     "end": 17.775,
+     "start": 15.725,
+     "text": "registration_holds_carrier"
+    },
+    {
+     "end": 18.075,
+     "start": 17.775,
+     "text": ")"
+    },
+    {
+     "end": 18.125,
+     "start": 18.075,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-consumer-identity/the-checkpoint-outputs-value-05": {
+   "audio_sha256": "fa6bf008a64f14e5f64f9324369bbec3e87a08972d3327bd3195c458ad497c11",
+   "characters": 230,
+   "cost": 0.00022769999999999998,
+   "duration": 14.575,
+   "index": 5,
+   "key": "c7ab860b532f450f78544000abea0cfc3f3df4b1ba85ff7b069b00064c33b6e0",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 300,
+   "section": "the-checkpoint-outputs-value",
+   "sent_text": "A conviction pays out everything the live checkpoint held except the minimum ADA, and the pending output holds exactly the minimum ADA the termination booking requires (conviction_pays_out_every_amount, pending_holds_minimum_ada).",
+   "text": "A conviction pays out everything the live checkpoint held except the minimum ADA, and the pending output holds exactly the minimum ADA the termination booking requires (conviction_pays_out_every_amount, pending_holds_minimum_ada).",
+   "words": [
+    {
+     "end": 0.325,
+     "start": 0.25,
+     "text": "A"
+    },
+    {
+     "end": 0.913,
+     "start": 0.325,
+     "text": "conviction"
+    },
+    {
+     "end": 1.225,
+     "start": 0.913,
+     "text": "pays"
+    },
+    {
+     "end": 1.462,
+     "start": 1.225,
+     "text": "out"
+    },
+    {
+     "end": 2.0,
+     "start": 1.462,
+     "text": "everything"
+    },
+    {
+     "end": 2.138,
+     "start": 2.0,
+     "text": "the"
+    },
+    {
+     "end": 2.537,
+     "start": 2.138,
+     "text": "live"
+    },
+    {
+     "end": 3.112,
+     "start": 2.537,
+     "text": "checkpoint"
+    },
+    {
+     "end": 3.45,
+     "start": 3.112,
+     "text": "held"
+    },
+    {
+     "end": 3.85,
+     "start": 3.45,
+     "text": "except"
+    },
+    {
+     "end": 3.987,
+     "start": 3.85,
+     "text": "the"
+    },
+    {
+     "end": 4.463,
+     "start": 3.987,
+     "text": "minimum"
+    },
+    {
+     "end": 5.0,
+     "start": 4.463,
+     "text": "ADA"
+    },
+    {
+     "end": 5.1,
+     "start": 5.0,
+     "text": ","
+    },
+    {
+     "end": 5.213,
+     "start": 5.1,
      "text": "and"
     },
     {
-     "end": 13.725,
-     "start": 13.363,
-     "text": "reading"
+     "end": 5.312,
+     "start": 5.213,
+     "text": "the"
     },
     {
-     "end": 13.863,
-     "start": 13.725,
+     "end": 5.725,
+     "start": 5.312,
+     "text": "pending"
+    },
+    {
+     "end": 6.188,
+     "start": 5.725,
+     "text": "output"
+    },
+    {
+     "end": 6.575,
+     "start": 6.188,
+     "text": "holds"
+    },
+    {
+     "end": 7.175,
+     "start": 6.575,
+     "text": "exactly"
+    },
+    {
+     "end": 7.312,
+     "start": 7.175,
+     "text": "the"
+    },
+    {
+     "end": 7.725,
+     "start": 7.312,
+     "text": "minimum"
+    },
+    {
+     "end": 8.025,
+     "start": 7.725,
+     "text": "ADA"
+    },
+    {
+     "end": 8.163,
+     "start": 8.025,
+     "text": "the"
+    },
+    {
+     "end": 8.875,
+     "start": 8.163,
+     "text": "termination"
+    },
+    {
+     "end": 9.25,
+     "start": 8.875,
+     "text": "booking"
+    },
+    {
+     "end": 10.025,
+     "start": 9.25,
+     "text": "requires"
+    },
+    {
+     "end": 10.075,
+     "start": 10.025,
+     "text": "("
+    },
+    {
+     "end": 11.875,
+     "start": 10.075,
+     "text": "conviction_pays_out_every_amount"
+    },
+    {
+     "end": 11.988,
+     "start": 11.875,
+     "text": ","
+    },
+    {
+     "end": 13.85,
+     "start": 11.988,
+     "text": "pending_holds_minimum_ada"
+    },
+    {
+     "end": 14.475,
+     "start": 13.85,
+     "text": ")"
+    },
+    {
+     "end": 14.575,
+     "start": 14.475,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-consumer-identity/the-checkpoint-outputs-value-06": {
+   "audio_sha256": "daa7abfe544de3ffcb1087b71ea9c29049c1e6c391b85baca1905cf856aca3fb",
+   "characters": 135,
+   "cost": 0.00013365,
+   "duration": 9.175,
+   "index": 6,
+   "key": "43cca76ffaa95c3b2431e1fd378251bab3ef6492d6a19d5fee2c04898d0a8be3",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 300,
+   "section": "the-checkpoint-outputs-value",
+   "sent_text": "A holding below the floor realizes no state with those facts, whatever its pool (short_holding_refused, missing_bond_lovelace_refused).",
+   "text": "A holding below the floor realizes no state with those facts, whatever its pool (short_holding_refused, missing_bond_lovelace_refused).",
+   "words": [
+    {
+     "end": 0.3,
+     "start": 0.225,
+     "text": "A"
+    },
+    {
+     "end": 0.725,
+     "start": 0.3,
+     "text": "holding"
+    },
+    {
+     "end": 1.075,
+     "start": 0.725,
+     "text": "below"
+    },
+    {
+     "end": 1.225,
+     "start": 1.075,
+     "text": "the"
+    },
+    {
+     "end": 1.6,
+     "start": 1.225,
+     "text": "floor"
+    },
+    {
+     "end": 2.237,
+     "start": 1.6,
+     "text": "realizes"
+    },
+    {
+     "end": 2.513,
+     "start": 2.237,
+     "text": "no"
+    },
+    {
+     "end": 2.9,
+     "start": 2.513,
+     "text": "state"
+    },
+    {
+     "end": 3.05,
+     "start": 2.9,
+     "text": "with"
+    },
+    {
+     "end": 3.338,
+     "start": 3.05,
+     "text": "those"
+    },
+    {
+     "end": 3.85,
+     "start": 3.338,
+     "text": "facts"
+    },
+    {
+     "end": 3.925,
+     "start": 3.85,
+     "text": ","
+    },
+    {
+     "end": 4.287,
+     "start": 3.925,
+     "text": "whatever"
+    },
+    {
+     "end": 4.488,
+     "start": 4.287,
+     "text": "its"
+    },
+    {
+     "end": 5.012,
+     "start": 4.488,
+     "text": "pool"
+    },
+    {
+     "end": 5.1,
+     "start": 5.012,
+     "text": "("
+    },
+    {
+     "end": 6.325,
+     "start": 5.1,
+     "text": "short_holding_refused"
+    },
+    {
+     "end": 6.4,
+     "start": 6.325,
+     "text": ","
+    },
+    {
+     "end": 8.875,
+     "start": 6.4,
+     "text": "missing_bond_lovelace_refused"
+    },
+    {
+     "end": 9.125,
+     "start": 8.875,
+     "text": ")"
+    },
+    {
+     "end": 9.175,
+     "start": 9.125,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-consumer-identity/the-checkpoint-outputs-value-07": {
+   "audio_sha256": "f3a0190296e8bea542a6b3439d2db3db8a00164cb343a803dd3d443dd8497899",
+   "characters": 291,
+   "cost": 0.00028808999999999996,
+   "duration": 22.4,
+   "index": 7,
+   "key": "7da77eee86b7bdb7e6815f96517fd6bf9f35d9052d866bcaad7f8f9dd3475b55",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 300,
+   "section": "the-checkpoint-outputs-value",
+   "sent_text": "The registry books a carrier of at least Mc + D_registry, where the registry's deposit is the checkpoint's deposit plus freeze bond; one lovelace short is refused (short_carrier_registration_refused). A successful joint registration delivers exactly Mc + D + B + pool0 (registerJoint_value).",
+   "text": "The registry books a carrier of at least Mc + D_registry, where the registry's deposit is the checkpoint's deposit plus freeze bond; one lovelace short is refused (short_carrier_registration_refused). A successful joint registration delivers exactly Mc + D + B + pool0 (registerJoint_value).",
+   "words": [
+    {
+     "end": 0.325,
+     "start": 0.225,
+     "text": "The"
+    },
+    {
+     "end": 0.85,
+     "start": 0.325,
+     "text": "registry"
+    },
+    {
+     "end": 1.087,
+     "start": 0.85,
+     "text": "books"
+    },
+    {
+     "end": 1.188,
+     "start": 1.087,
+     "text": "a"
+    },
+    {
+     "end": 1.725,
+     "start": 1.188,
+     "text": "carrier"
+    },
+    {
+     "end": 1.85,
+     "start": 1.725,
+     "text": "of"
+    },
+    {
+     "end": 2.0,
+     "start": 1.85,
+     "text": "at"
+    },
+    {
+     "end": 2.388,
+     "start": 2.0,
+     "text": "least"
+    },
+    {
+     "end": 3.062,
+     "start": 2.388,
+     "text": "Mc"
+    },
+    {
+     "end": 3.388,
+     "start": 3.062,
+     "text": "+"
+    },
+    {
+     "end": 4.225,
+     "start": 3.388,
+     "text": "D_registry"
+    },
+    {
+     "end": 4.325,
+     "start": 4.225,
+     "text": ","
+    },
+    {
+     "end": 4.475,
+     "start": 4.325,
+     "text": "where"
+    },
+    {
+     "end": 4.6,
+     "start": 4.475,
+     "text": "the"
+    },
+    {
+     "end": 5.225,
+     "start": 4.6,
+     "text": "registry's"
+    },
+    {
+     "end": 5.863,
+     "start": 5.225,
+     "text": "deposit"
+    },
+    {
+     "end": 6.025,
+     "start": 5.863,
+     "text": "is"
+    },
+    {
+     "end": 6.162,
+     "start": 6.025,
+     "text": "the"
+    },
+    {
+     "end": 6.75,
+     "start": 6.162,
+     "text": "checkpoint's"
+    },
+    {
+     "end": 7.325,
+     "start": 6.75,
+     "text": "deposit"
+    },
+    {
+     "end": 7.637,
+     "start": 7.325,
+     "text": "plus"
+    },
+    {
+     "end": 8.012,
+     "start": 7.637,
+     "text": "freeze"
+    },
+    {
+     "end": 9.15,
+     "start": 8.012,
+     "text": "bond"
+    },
+    {
+     "end": 9.375,
+     "start": 9.15,
+     "text": ";"
+    },
+    {
+     "end": 9.8,
+     "start": 9.575,
+     "text": "one"
+    },
+    {
+     "end": 10.212,
+     "start": 9.8,
+     "text": "lovelace"
+    },
+    {
+     "end": 10.55,
+     "start": 10.212,
+     "text": "short"
+    },
+    {
+     "end": 10.7,
+     "start": 10.55,
+     "text": "is"
+    },
+    {
+     "end": 11.413,
+     "start": 10.7,
+     "text": "refused"
+    },
+    {
+     "end": 11.5,
+     "start": 11.413,
+     "text": "("
+    },
+    {
+     "end": 13.675,
+     "start": 11.5,
+     "text": "short_carrier_registration_refused"
+    },
+    {
+     "end": 13.875,
+     "start": 13.675,
+     "text": ")"
+    },
+    {
+     "end": 13.925,
+     "start": 13.875,
+     "text": "."
+    },
+    {
+     "end": 14.225,
+     "start": 14.15,
+     "text": "A"
+    },
+    {
+     "end": 14.837,
+     "start": 14.225,
+     "text": "successful"
+    },
+    {
+     "end": 15.125,
+     "start": 14.837,
+     "text": "joint"
+    },
+    {
+     "end": 15.95,
+     "start": 15.125,
+     "text": "registration"
+    },
+    {
+     "end": 16.45,
+     "start": 15.95,
+     "text": "delivers"
+    },
+    {
+     "end": 17.087,
+     "start": 16.45,
+     "text": "exactly"
+    },
+    {
+     "end": 17.688,
+     "start": 17.087,
+     "text": "Mc"
+    },
+    {
+     "end": 18.013,
+     "start": 17.688,
+     "text": "+"
+    },
+    {
+     "end": 18.288,
+     "start": 18.013,
+     "text": "D"
+    },
+    {
+     "end": 18.612,
+     "start": 18.288,
+     "text": "+"
+    },
+    {
+     "end": 19.013,
+     "start": 18.612,
+     "text": "B"
+    },
+    {
+     "end": 19.337,
+     "start": 19.013,
+     "text": "+"
+    },
+    {
+     "end": 20.237,
+     "start": 19.337,
+     "text": "pool0"
+    },
+    {
+     "end": 20.325,
+     "start": 20.237,
+     "text": "("
+    },
+    {
+     "end": 21.55,
+     "start": 20.325,
+     "text": "registerJoint_value"
+    },
+    {
+     "end": 22.225,
+     "start": 21.55,
+     "text": ")"
+    },
+    {
+     "end": 22.4,
+     "start": 22.225,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-consumer-identity/the-checkpoint-outputs-value-08": {
+   "audio_sha256": "0d7726194493872c43add472ca92d246b867eb59853796ae19cf482217cfffba",
+   "characters": 653,
+   "cost": 0.00064647,
+   "duration": 44.475,
+   "index": 8,
+   "key": "e73c125e87601d5a45e09f32585eb0131bcf868887577e1c9e7f8d5cc351174a",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 400,
+   "section": "the-checkpoint-outputs-value",
+   "sent_text": "The vector table lean/checkpoint-value-vectors.json takes the seven states of the datum vectors and gives, for each, the lovelace its output holds, its floor and what a holding with those datum facts reads as at lovelace values around them: the state itself only at the lovelace it holds. It also books registration carriers with initial pools of 0, 3 and five million, refuses one carrier short by one lovelace, and records the connected registration fixture, whose carrier of 17 is the minimum ADA 4, the deposit 8, the freeze bond 2 and the pool 3. The Lean emits the table and checks the committed copy; changing any committed field fails the check.",
+   "text": "The vector table lean/checkpoint-value-vectors.json takes the seven states of the datum vectors and gives, for each, the lovelace its output holds, its floor and what a holding with those datum facts reads as at lovelace values around them: the state itself only at the lovelace it holds. It also books registration carriers with initial pools of 0, 3 and five million, refuses one carrier short by one lovelace, and records the connected registration fixture, whose carrier of 17 is the minimum ADA 4, the deposit 8, the freeze bond 2 and the pool 3. The Lean emits the table and checks the committed copy; changing any committed field fails the check.",
+   "words": [
+    {
+     "end": 0.325,
+     "start": 0.25,
+     "text": "The"
+    },
+    {
+     "end": 0.712,
+     "start": 0.325,
+     "text": "vector"
+    },
+    {
+     "end": 1.138,
+     "start": 0.712,
+     "text": "table"
+    },
+    {
+     "end": 4.213,
+     "start": 1.138,
+     "text": "lean/checkpoint-value-vectors.json"
+    },
+    {
+     "end": 4.5,
+     "start": 4.213,
+     "text": "takes"
+    },
+    {
+     "end": 4.637,
+     "start": 4.5,
+     "text": "the"
+    },
+    {
+     "end": 5.012,
+     "start": 4.637,
+     "text": "seven"
+    },
+    {
+     "end": 5.412,
+     "start": 5.012,
+     "text": "states"
+    },
+    {
+     "end": 5.488,
+     "start": 5.412,
+     "text": "of"
+    },
+    {
+     "end": 5.575,
+     "start": 5.488,
+     "text": "the"
+    },
+    {
+     "end": 5.975,
+     "start": 5.575,
+     "text": "datum"
+    },
+    {
+     "end": 6.45,
+     "start": 5.975,
+     "text": "vectors"
+    },
+    {
+     "end": 6.588,
+     "start": 6.45,
+     "text": "and"
+    },
+    {
+     "end": 7.05,
+     "start": 6.588,
+     "text": "gives"
+    },
+    {
+     "end": 7.125,
+     "start": 7.05,
+     "text": ","
+    },
+    {
+     "end": 7.3,
+     "start": 7.125,
+     "text": "for"
+    },
+    {
+     "end": 7.675,
+     "start": 7.3,
+     "text": "each"
+    },
+    {
+     "end": 7.75,
+     "start": 7.675,
+     "text": ","
+    },
+    {
+     "end": 7.887,
+     "start": 7.75,
+     "text": "the"
+    },
+    {
+     "end": 8.35,
+     "start": 7.887,
+     "text": "lovelace"
+    },
+    {
+     "end": 8.562,
+     "start": 8.35,
+     "text": "its"
+    },
+    {
+     "end": 9.05,
+     "start": 8.562,
+     "text": "output"
+    },
+    {
+     "end": 9.625,
+     "start": 9.05,
+     "text": "holds"
+    },
+    {
+     "end": 9.7,
+     "start": 9.625,
+     "text": ","
+    },
+    {
+     "end": 9.925,
+     "start": 9.7,
+     "text": "its"
+    },
+    {
+     "end": 10.4,
+     "start": 9.925,
+     "text": "floor"
+    },
+    {
+     "end": 10.525,
+     "start": 10.4,
+     "text": "and"
+    },
+    {
+     "end": 10.663,
+     "start": 10.525,
+     "text": "what"
+    },
+    {
+     "end": 10.725,
+     "start": 10.663,
+     "text": "a"
+    },
+    {
+     "end": 11.15,
+     "start": 10.725,
+     "text": "holding"
+    },
+    {
+     "end": 11.3,
+     "start": 11.15,
+     "text": "with"
+    },
+    {
+     "end": 11.55,
+     "start": 11.3,
+     "text": "those"
+    },
+    {
+     "end": 11.938,
+     "start": 11.55,
+     "text": "datum"
+    },
+    {
+     "end": 12.375,
+     "start": 11.938,
+     "text": "facts"
+    },
+    {
+     "end": 12.837,
+     "start": 12.375,
+     "text": "reads"
+    },
+    {
+     "end": 13.012,
+     "start": 12.837,
+     "text": "as"
+    },
+    {
+     "end": 13.188,
+     "start": 13.012,
+     "text": "at"
+    },
+    {
+     "end": 13.65,
+     "start": 13.188,
+     "text": "lovelace"
+    },
+    {
+     "end": 14.125,
+     "start": 13.65,
+     "text": "values"
+    },
+    {
+     "end": 14.462,
+     "start": 14.125,
+     "text": "around"
+    },
+    {
+     "end": 15.4,
+     "start": 14.462,
+     "text": "them"
+    },
+    {
+     "end": 15.625,
+     "start": 15.4,
+     "text": ":"
+    },
+    {
+     "end": 15.875,
+     "start": 15.8,
+     "text": "the"
+    },
+    {
+     "end": 16.138,
+     "start": 15.875,
+     "text": "state"
+    },
+    {
+     "end": 16.525,
+     "start": 16.138,
+     "text": "itself"
+    },
+    {
+     "end": 16.788,
+     "start": 16.525,
+     "text": "only"
+    },
+    {
+     "end": 16.862,
+     "start": 16.788,
+     "text": "at"
+    },
+    {
+     "end": 16.95,
+     "start": 16.862,
+     "text": "the"
+    },
+    {
+     "end": 17.425,
+     "start": 16.95,
+     "text": "lovelace"
+    },
+    {
+     "end": 17.525,
+     "start": 17.425,
+     "text": "it"
+    },
+    {
+     "end": 18.375,
+     "start": 17.525,
+     "text": "holds"
+    },
+    {
+     "end": 18.575,
+     "start": 18.375,
+     "text": "."
+    },
+    {
+     "end": 18.837,
+     "start": 18.75,
+     "text": "It"
+    },
+    {
+     "end": 19.175,
+     "start": 18.837,
+     "text": "also"
+    },
+    {
+     "end": 19.45,
+     "start": 19.175,
+     "text": "books"
+    },
+    {
+     "end": 20.125,
+     "start": 19.45,
+     "text": "registration"
+    },
+    {
+     "end": 20.675,
+     "start": 20.125,
+     "text": "carriers"
+    },
+    {
+     "end": 20.875,
+     "start": 20.675,
+     "text": "with"
+    },
+    {
+     "end": 21.288,
+     "start": 20.875,
+     "text": "initial"
+    },
+    {
+     "end": 21.688,
+     "start": 21.288,
+     "text": "pools"
+    },
+    {
+     "end": 21.812,
+     "start": 21.688,
+     "text": "of"
+    },
+    {
+     "end": 22.375,
+     "start": 21.812,
+     "text": "0"
+    },
+    {
+     "end": 22.525,
+     "start": 22.375,
+     "text": ","
+    },
+    {
+     "end": 22.925,
+     "start": 22.525,
+     "text": "3"
+    },
+    {
+     "end": 23.062,
+     "start": 22.925,
+     "text": "and"
+    },
+    {
+     "end": 23.425,
+     "start": 23.062,
+     "text": "five"
+    },
+    {
+     "end": 24.425,
+     "start": 23.425,
+     "text": "million"
+    },
+    {
+     "end": 24.65,
+     "start": 24.425,
+     "text": ","
+    },
+    {
+     "end": 25.3,
+     "start": 24.825,
+     "text": "refuses"
+    },
+    {
+     "end": 25.525,
+     "start": 25.3,
+     "text": "one"
+    },
+    {
+     "end": 25.938,
+     "start": 25.525,
+     "text": "carrier"
+    },
+    {
+     "end": 26.225,
+     "start": 25.938,
+     "text": "short"
+    },
+    {
+     "end": 26.375,
+     "start": 26.225,
+     "text": "by"
+    },
+    {
+     "end": 26.6,
+     "start": 26.375,
+     "text": "one"
+    },
+    {
+     "end": 27.55,
+     "start": 26.6,
+     "text": "lovelace"
+    },
+    {
+     "end": 27.75,
+     "start": 27.55,
+     "text": ","
+    },
+    {
+     "end": 28.038,
+     "start": 27.95,
+     "text": "and"
+    },
+    {
+     "end": 28.487,
+     "start": 28.038,
+     "text": "records"
+    },
+    {
+     "end": 28.575,
+     "start": 28.487,
+     "text": "the"
+    },
+    {
+     "end": 29.05,
+     "start": 28.575,
+     "text": "connected"
+    },
+    {
+     "end": 29.725,
+     "start": 29.05,
+     "text": "registration"
+    },
+    {
+     "end": 30.675,
+     "start": 29.725,
+     "text": "fixture"
+    },
+    {
+     "end": 30.9,
+     "start": 30.675,
+     "text": ","
+    },
+    {
+     "end": 31.275,
+     "start": 31.075,
+     "text": "whose"
+    },
+    {
+     "end": 31.663,
+     "start": 31.275,
+     "text": "carrier"
+    },
+    {
+     "end": 31.775,
+     "start": 31.663,
+     "text": "of"
+    },
+    {
+     "end": 32.513,
+     "start": 31.775,
+     "text": "17"
+    },
+    {
+     "end": 32.675,
+     "start": 32.513,
+     "text": "is"
+    },
+    {
+     "end": 32.812,
+     "start": 32.675,
+     "text": "the"
+    },
+    {
+     "end": 33.2,
+     "start": 32.812,
+     "text": "minimum"
+    },
+    {
+     "end": 33.487,
+     "start": 33.2,
+     "text": "ADA"
+    },
+    {
+     "end": 33.9,
+     "start": 33.487,
+     "text": "4"
+    },
+    {
+     "end": 34.0,
+     "start": 33.9,
+     "text": ","
+    },
+    {
+     "end": 34.1,
+     "start": 34.0,
+     "text": "the"
+    },
+    {
+     "end": 34.625,
+     "start": 34.1,
+     "text": "deposit"
+    },
+    {
+     "end": 35.375,
+     "start": 34.625,
+     "text": "8"
+    },
+    {
+     "end": 35.575,
+     "start": 35.375,
+     "text": ","
+    },
+    {
+     "end": 35.825,
+     "start": 35.75,
+     "text": "the"
+    },
+    {
+     "end": 36.175,
+     "start": 35.825,
+     "text": "freeze"
+    },
+    {
+     "end": 36.463,
+     "start": 36.175,
+     "text": "bond"
+    },
+    {
+     "end": 36.688,
+     "start": 36.463,
+     "text": "2"
+    },
+    {
+     "end": 36.787,
+     "start": 36.688,
+     "text": "and"
+    },
+    {
+     "end": 36.875,
+     "start": 36.787,
+     "text": "the"
+    },
+    {
+     "end": 37.162,
+     "start": 36.875,
+     "text": "pool"
+    },
+    {
+     "end": 37.925,
+     "start": 37.162,
+     "text": "3"
+    },
+    {
+     "end": 38.125,
+     "start": 37.925,
+     "text": "."
+    },
+    {
+     "end": 38.4,
+     "start": 38.3,
+     "text": "The"
+    },
+    {
+     "end": 38.65,
+     "start": 38.4,
+     "text": "Lean"
+    },
+    {
+     "end": 38.95,
+     "start": 38.65,
+     "text": "emits"
+    },
+    {
+     "end": 39.05,
+     "start": 38.95,
+     "text": "the"
+    },
+    {
+     "end": 39.562,
+     "start": 39.05,
+     "text": "table"
+    },
+    {
+     "end": 39.713,
+     "start": 39.562,
+     "text": "and"
+    },
+    {
+     "end": 40.013,
+     "start": 39.713,
+     "text": "checks"
+    },
+    {
+     "end": 40.1,
+     "start": 40.013,
+     "text": "the"
+    },
+    {
+     "end": 40.5,
+     "start": 40.1,
+     "text": "committed"
+    },
+    {
+     "end": 41.4,
+     "start": 40.5,
+     "text": "copy"
+    },
+    {
+     "end": 41.625,
+     "start": 41.4,
+     "text": ";"
+    },
+    {
+     "end": 42.175,
+     "start": 41.825,
+     "text": "changing"
+    },
+    {
+     "end": 42.375,
+     "start": 42.175,
+     "text": "any"
+    },
+    {
+     "end": 42.75,
+     "start": 42.375,
+     "text": "committed"
+    },
+    {
+     "end": 43.025,
+     "start": 42.75,
+     "text": "field"
+    },
+    {
+     "end": 43.362,
+     "start": 43.025,
+     "text": "fails"
+    },
+    {
+     "end": 43.487,
+     "start": 43.362,
+     "text": "the"
+    },
+    {
+     "end": 44.275,
+     "start": 43.487,
+     "text": "check"
+    },
+    {
+     "end": 44.475,
+     "start": 44.275,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-consumer-identity/the-checkpoint-outputs-value-09": {
+   "audio_sha256": "074544ce48326327f881e325e8fa8feea04c869ffdeb63078e67eb4c85a69c2d",
+   "characters": 390,
+   "cost": 0.0003861,
+   "duration": 27.25,
+   "index": 9,
+   "key": "15a3bd8401a937d4df784fb814f9ae128e6fb7fabf249ad4514527dbab6fa173",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 400,
+   "section": "the-checkpoint-outputs-value",
+   "sent_text": "These checks cover the listed inputs; the theorems cover all inputs. The consumer predicate itself does not read the value: a relying contract that needs the bonds checks the lovelace against the floor, and the validator that enforces the amounts on chain is the datum version 2 work (#339). How an honest owner recovers the deposit, the freeze bond or the pool is not settled by the model.",
+   "text": "These checks cover the listed inputs; the theorems cover all inputs. The consumer predicate itself does not read the value: a relying contract that needs the bonds checks the lovelace against the floor, and the validator that enforces the amounts on chain is the datum version 2 work (#339). How an honest owner recovers the deposit, the freeze bond or the pool is not settled by the model.",
+   "words": [
+    {
+     "end": 0.4,
+     "start": 0.175,
+     "text": "These"
+    },
+    {
+     "end": 0.7,
+     "start": 0.4,
+     "text": "checks"
+    },
+    {
+     "end": 0.938,
+     "start": 0.7,
+     "text": "cover"
+    },
+    {
+     "end": 1.025,
+     "start": 0.938,
+     "text": "the"
+    },
+    {
+     "end": 1.35,
+     "start": 1.025,
+     "text": "listed"
+    },
+    {
+     "end": 2.275,
+     "start": 1.35,
+     "text": "inputs"
+    },
+    {
+     "end": 2.475,
+     "start": 2.275,
+     "text": ";"
+    },
+    {
+     "end": 2.787,
+     "start": 2.675,
+     "text": "the"
+    },
+    {
+     "end": 3.388,
+     "start": 2.787,
+     "text": "theorems"
+    },
+    {
+     "end": 3.787,
+     "start": 3.388,
+     "text": "cover"
+    },
+    {
+     "end": 4.075,
+     "start": 3.787,
+     "text": "all"
+    },
+    {
+     "end": 4.825,
+     "start": 4.075,
+     "text": "inputs"
+    },
+    {
+     "end": 4.925,
+     "start": 4.825,
+     "text": "."
+    },
+    {
+     "end": 5.025,
+     "start": 4.925,
+     "text": "The"
+    },
+    {
+     "end": 5.575,
+     "start": 5.025,
+     "text": "consumer"
+    },
+    {
+     "end": 6.025,
+     "start": 5.575,
+     "text": "predicate"
+    },
+    {
+     "end": 6.5,
+     "start": 6.025,
+     "text": "itself"
+    },
+    {
+     "end": 6.7,
+     "start": 6.5,
+     "text": "does"
+    },
+    {
+     "end": 6.95,
+     "start": 6.7,
+     "text": "not"
+    },
+    {
+     "end": 7.162,
+     "start": 6.95,
+     "text": "read"
+    },
+    {
+     "end": 7.25,
+     "start": 7.162,
+     "text": "the"
+    },
+    {
+     "end": 8.175,
+     "start": 7.25,
+     "text": "value"
+    },
+    {
+     "end": 8.475,
+     "start": 8.175,
+     "text": ":"
+    },
+    {
+     "end": 8.75,
+     "start": 8.675,
+     "text": "a"
+    },
+    {
+     "end": 9.225,
+     "start": 8.75,
+     "text": "relying"
+    },
+    {
+     "end": 9.8,
+     "start": 9.225,
+     "text": "contract"
+    },
+    {
+     "end": 9.975,
+     "start": 9.8,
+     "text": "that"
+    },
+    {
+     "end": 10.25,
+     "start": 9.975,
+     "text": "needs"
+    },
+    {
+     "end": 10.35,
+     "start": 10.25,
+     "text": "the"
+    },
+    {
+     "end": 10.812,
+     "start": 10.35,
+     "text": "bonds"
+    },
+    {
+     "end": 11.125,
+     "start": 10.812,
+     "text": "checks"
+    },
+    {
+     "end": 11.25,
+     "start": 11.125,
+     "text": "the"
+    },
+    {
+     "end": 11.725,
+     "start": 11.25,
+     "text": "lovelace"
+    },
+    {
+     "end": 12.062,
+     "start": 11.725,
+     "text": "against"
+    },
+    {
+     "end": 12.163,
+     "start": 12.062,
+     "text": "the"
+    },
+    {
+     "end": 13.075,
+     "start": 12.163,
+     "text": "floor"
+    },
+    {
+     "end": 13.3,
+     "start": 13.075,
+     "text": ","
+    },
+    {
+     "end": 13.613,
+     "start": 13.525,
+     "text": "and"
+    },
+    {
+     "end": 13.7,
+     "start": 13.613,
      "text": "the"
     },
     {
      "end": 14.325,
-     "start": 13.863,
-     "text": "pool"
+     "start": 13.7,
+     "text": "validator"
     },
     {
-     "end": 14.438,
+     "end": 14.475,
      "start": 14.325,
-     "text": "and"
+     "text": "that"
     },
     {
-     "end": 14.538,
-     "start": 14.438,
+     "end": 15.125,
+     "start": 14.475,
+     "text": "enforces"
+    },
+    {
+     "end": 15.275,
+     "start": 15.125,
      "text": "the"
     },
     {
-     "end": 15.0,
-     "start": 14.538,
-     "text": "bonds"
+     "end": 15.725,
+     "start": 15.275,
+     "text": "amounts"
     },
     {
-     "end": 15.163,
-     "start": 15.0,
-     "text": "from"
+     "end": 15.938,
+     "start": 15.725,
+     "text": "on"
     },
     {
-     "end": 15.25,
-     "start": 15.163,
-     "text": "the"
+     "end": 16.438,
+     "start": 15.938,
+     "text": "chain"
     },
     {
-     "end": 15.738,
-     "start": 15.25,
-     "text": "value"
-    },
-    {
-     "end": 15.9,
-     "start": 15.738,
+     "end": 16.6,
+     "start": 16.438,
      "text": "is"
     },
     {
-     "end": 16.15,
-     "start": 15.9,
-     "text": "not"
+     "end": 16.737,
+     "start": 16.6,
+     "text": "the"
     },
     {
-     "end": 17.225,
-     "start": 16.15,
-     "text": "modelled"
+     "end": 17.15,
+     "start": 16.737,
+     "text": "datum"
     },
     {
-     "end": 17.45,
-     "start": 17.225,
+     "end": 17.587,
+     "start": 17.15,
+     "text": "version"
+    },
+    {
+     "end": 17.862,
+     "start": 17.587,
+     "text": "2"
+    },
+    {
+     "end": 18.263,
+     "start": 17.862,
+     "text": "work"
+    },
+    {
+     "end": 18.35,
+     "start": 18.263,
+     "text": "("
+    },
+    {
+     "end": 20.225,
+     "start": 18.35,
+     "text": "339"
+    },
+    {
+     "end": 20.55,
+     "start": 20.225,
+     "text": ")"
+    },
+    {
+     "end": 20.625,
+     "start": 20.55,
      "text": "."
     },
     {
-     "end": 17.8,
-     "start": 17.625,
-     "text": "This"
+     "end": 21.0,
+     "start": 20.825,
+     "text": "How"
     },
     {
-     "end": 18.038,
-     "start": 17.8,
-     "text": "code"
+     "end": 21.15,
+     "start": 21.0,
+     "text": "an"
     },
     {
-     "end": 18.138,
-     "start": 18.038,
+     "end": 21.587,
+     "start": 21.15,
+     "text": "honest"
+    },
+    {
+     "end": 21.925,
+     "start": 21.587,
+     "text": "owner"
+    },
+    {
+     "end": 22.475,
+     "start": 21.925,
+     "text": "recovers"
+    },
+    {
+     "end": 22.575,
+     "start": 22.475,
+     "text": "the"
+    },
+    {
+     "end": 23.25,
+     "start": 22.575,
+     "text": "deposit"
+    },
+    {
+     "end": 23.325,
+     "start": 23.25,
+     "text": ","
+    },
+    {
+     "end": 23.462,
+     "start": 23.325,
+     "text": "the"
+    },
+    {
+     "end": 23.812,
+     "start": 23.462,
+     "text": "freeze"
+    },
+    {
+     "end": 24.263,
+     "start": 23.812,
+     "text": "bond"
+    },
+    {
+     "end": 24.4,
+     "start": 24.263,
+     "text": "or"
+    },
+    {
+     "end": 24.538,
+     "start": 24.4,
+     "text": "the"
+    },
+    {
+     "end": 24.95,
+     "start": 24.538,
+     "text": "pool"
+    },
+    {
+     "end": 25.112,
+     "start": 24.95,
      "text": "is"
     },
     {
-     "end": 18.325,
-     "start": 18.138,
+     "end": 25.413,
+     "start": 25.112,
      "text": "not"
     },
     {
-     "end": 18.438,
-     "start": 18.325,
-     "text": "for"
+     "end": 25.825,
+     "start": 25.413,
+     "text": "settled"
     },
     {
-     "end": 19.15,
-     "start": 18.438,
-     "text": "mainnet"
+     "end": 25.987,
+     "start": 25.825,
+     "text": "by"
     },
     {
-     "end": 19.35,
-     "start": 19.15,
+     "end": 26.075,
+     "start": 25.987,
+     "text": "the"
+    },
+    {
+     "end": 27.025,
+     "start": 26.075,
+     "text": "model"
+    },
+    {
+     "end": 27.25,
+     "start": 27.025,
      "text": "."
     }
    ]
@@ -246696,17 +250191,17 @@
    ]
   },
   "docs-design-consumer-identity/the-concrete-identity-bytes-in-aiken-06": {
-   "audio_sha256": "fb96722568710e690560d3d04d36099d7be82faeb16f1fb1a75cd24e23b092b9",
-   "characters": 268,
-   "cost": 0.00026532,
-   "duration": 18.425,
+   "audio_sha256": "5258633840695647bb175e642f4621b67eefa2c8938ea1ef1bc30217ead91f35",
+   "characters": 358,
+   "cost": 0.00035442000000000004,
+   "duration": 24.575,
    "index": 6,
-   "key": "082438491a289fa440348e8c228c03bf978850717d2fa296214628e7ec39f3cd",
+   "key": "969b911c2cbd9219937c97c94ec449a21aab3a89670667ad91fee00c6fa2388b",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 300,
    "section": "the-concrete-identity-bytes-in-aiken",
-   "sent_text": "Connected. ConsumerE2ESpec recomputes the names from the Lean layout, checks them against the vectors, and on the local test chain settles a spend that references the holding so named and refuses, in the consumer script, a spend that references a rival seed's holding.",
-   "text": "Connected. ConsumerE2ESpec recomputes the names from the Lean layout, checks them against the vectors, and on the local test chain settles a spend that references the holding so named and refuses, in the consumer script, a spend that references a rival seed's holding.",
+   "sent_text": "Connected. ConsumerE2ESpec recomputes the names from the Lean layout, checks them against the vectors, and on the local test chain settles a spend that references the genuine holding so named and refuses, in the consumer script, a spend that references it with another credential or another seed fixed, and the frozen and the pending-termination checkpoints.",
+   "text": "Connected. ConsumerE2ESpec recomputes the names from the Lean layout, checks them against the vectors, and on the local test chain settles a spend that references the genuine holding so named and refuses, in the consumer script, a spend that references it with another credential or another seed fixed, and the frozen and the pending-termination checkpoints.",
    "words": [
     {
      "end": 1.0,
@@ -246824,159 +250319,224 @@
      "text": "local"
     },
     {
-     "end": 8.525,
+     "end": 8.55,
      "start": 8.087,
      "text": "test"
     },
     {
-     "end": 8.962,
-     "start": 8.525,
+     "end": 8.988,
+     "start": 8.55,
      "text": "chain"
     },
     {
-     "end": 9.35,
-     "start": 8.962,
+     "end": 9.375,
+     "start": 8.988,
      "text": "settles"
     },
     {
-     "end": 9.438,
-     "start": 9.35,
+     "end": 9.462,
+     "start": 9.375,
      "text": "a"
     },
     {
-     "end": 9.825,
-     "start": 9.438,
+     "end": 9.85,
+     "start": 9.462,
      "text": "spend"
     },
     {
-     "end": 10.025,
-     "start": 9.825,
+     "end": 10.062,
+     "start": 9.85,
      "text": "that"
     },
     {
-     "end": 10.625,
-     "start": 10.025,
+     "end": 10.7,
+     "start": 10.062,
      "text": "references"
     },
     {
-     "end": 10.725,
-     "start": 10.625,
+     "end": 10.837,
+     "start": 10.7,
      "text": "the"
     },
     {
-     "end": 11.137,
-     "start": 10.725,
+     "end": 11.35,
+     "start": 10.837,
+     "text": "genuine"
+    },
+    {
+     "end": 11.775,
+     "start": 11.35,
      "text": "holding"
     },
     {
-     "end": 11.4,
-     "start": 11.137,
+     "end": 12.062,
+     "start": 11.775,
      "text": "so"
     },
     {
-     "end": 11.887,
-     "start": 11.4,
+     "end": 12.613,
+     "start": 12.062,
      "text": "named"
     },
     {
-     "end": 12.025,
-     "start": 11.887,
+     "end": 12.75,
+     "start": 12.613,
      "text": "and"
     },
     {
-     "end": 13.425,
-     "start": 12.025,
+     "end": 14.175,
+     "start": 12.75,
      "text": "refuses"
     },
     {
-     "end": 13.625,
-     "start": 13.425,
+     "end": 14.375,
+     "start": 14.175,
      "text": ","
     },
     {
-     "end": 13.913,
-     "start": 13.825,
+     "end": 14.613,
+     "start": 14.55,
      "text": "in"
     },
     {
-     "end": 14.0,
-     "start": 13.913,
+     "end": 14.7,
+     "start": 14.613,
      "text": "the"
     },
     {
-     "end": 14.55,
-     "start": 14.0,
+     "end": 15.2,
+     "start": 14.7,
      "text": "consumer"
     },
     {
-     "end": 15.075,
-     "start": 14.55,
+     "end": 15.95,
+     "start": 15.2,
      "text": "script"
     },
     {
-     "end": 15.15,
-     "start": 15.075,
+     "end": 16.125,
+     "start": 15.95,
      "text": ","
     },
     {
-     "end": 15.25,
-     "start": 15.15,
+     "end": 16.4,
+     "start": 16.325,
      "text": "a"
     },
     {
-     "end": 15.562,
-     "start": 15.25,
+     "end": 16.737,
+     "start": 16.4,
      "text": "spend"
     },
     {
-     "end": 15.725,
-     "start": 15.562,
+     "end": 16.9,
+     "start": 16.737,
      "text": "that"
     },
     {
-     "end": 16.413,
-     "start": 15.725,
+     "end": 17.55,
+     "start": 16.9,
      "text": "references"
     },
     {
-     "end": 16.538,
-     "start": 16.413,
-     "text": "a"
+     "end": 17.7,
+     "start": 17.55,
+     "text": "it"
     },
     {
-     "end": 16.962,
-     "start": 16.538,
-     "text": "rival"
+     "end": 17.837,
+     "start": 17.7,
+     "text": "with"
     },
     {
-     "end": 17.3,
-     "start": 16.962,
-     "text": "seed's"
+     "end": 18.2,
+     "start": 17.837,
+     "text": "another"
     },
     {
-     "end": 18.225,
-     "start": 17.3,
-     "text": "holding"
+     "end": 18.925,
+     "start": 18.2,
+     "text": "credential"
     },
     {
-     "end": 18.425,
-     "start": 18.225,
+     "end": 19.125,
+     "start": 18.925,
+     "text": "or"
+    },
+    {
+     "end": 19.538,
+     "start": 19.125,
+     "text": "another"
+    },
+    {
+     "end": 19.862,
+     "start": 19.538,
+     "text": "seed"
+    },
+    {
+     "end": 20.775,
+     "start": 19.862,
+     "text": "fixed"
+    },
+    {
+     "end": 21.0,
+     "start": 20.775,
+     "text": ","
+    },
+    {
+     "end": 21.288,
+     "start": 21.2,
+     "text": "and"
+    },
+    {
+     "end": 21.388,
+     "start": 21.288,
+     "text": "the"
+    },
+    {
+     "end": 22.038,
+     "start": 21.388,
+     "text": "frozen"
+    },
+    {
+     "end": 22.163,
+     "start": 22.038,
+     "text": "and"
+    },
+    {
+     "end": 22.25,
+     "start": 22.163,
+     "text": "the"
+    },
+    {
+     "end": 23.3,
+     "start": 22.25,
+     "text": "pending-termination"
+    },
+    {
+     "end": 24.375,
+     "start": 23.3,
+     "text": "checkpoints"
+    },
+    {
+     "end": 24.575,
+     "start": 24.375,
      "text": "."
     }
    ]
   },
   "docs-design-consumer-identity/the-concrete-identity-bytes-in-aiken-07": {
-   "audio_sha256": "cc736935219c2e26bd568b31b23e6725bcba1b74c8557d54ad76ddc7da8b410a",
-   "characters": 417,
-   "cost": 0.00041283,
-   "duration": 29.625,
+   "audio_sha256": "077623af286028635a04c8065f0a0e3bb711ba8067afddd75cf21bbbd5788fee",
+   "characters": 383,
+   "cost": 0.00037917,
+   "duration": 26.675,
    "index": 7,
-   "key": "3b14070a8c35f5000f1af6dda4493d4ec0057a9672d1db76a33ea131923adfad",
+   "key": "5c1064aa3ad4dc776c54d191aeffaa770c00da5e3ab93f4a7382ee03e8432996",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
    "section": "the-concrete-identity-bytes-in-aiken",
-   "sent_text": "What stays a declared test choice: the environment (the contract's own context stands for the trusted integration's observation) and the seeded holdings (the genuine registration journey belongs to #324). These checks cover the vectors and the generated variations only: byte strings of more than 64 bytes would be serialised in chunks, which no vector reaches (a CESR text is 44 bytes). This code is not for mainnet.",
-   "text": "What stays a declared test choice: the environment (the contract's own context stands for the trusted integration's observation) and the seeded holdings (the genuine registration journey belongs to #324). These checks cover the vectors and the generated variations only: byte strings of more than 64 bytes would be serialised in chunks, which no vector reaches (a CESR text is 44 bytes). This code is not for mainnet.",
+   "sent_text": "What stays a declared test choice: the environment (the contract's own context stands for the trusted integration's observation) and the three seeded fixture cases above. These checks cover the vectors and the generated variations only: byte strings of more than 64 bytes would be serialised in chunks, which no vector reaches (a CESR text is 44 bytes). This code is not for mainnet.",
+   "text": "What stays a declared test choice: the environment (the contract's own context stands for the trusted integration's observation) and the three seeded fixture cases above. These checks cover the vectors and the generated variations only: byte strings of more than 64 bytes would be serialised in chunks, which no vector reaches (a CESR text is 44 bytes). This code is not for mainnet.",
    "words": [
     {
      "end": 0.287,
@@ -247014,363 +250574,333 @@
      "text": ":"
     },
     {
-     "end": 2.5,
-     "start": 2.375,
+     "end": 2.475,
+     "start": 2.35,
      "text": "the"
     },
     {
-     "end": 3.225,
-     "start": 2.5,
+     "end": 3.138,
+     "start": 2.475,
      "text": "environment"
     },
     {
-     "end": 3.275,
-     "start": 3.225,
+     "end": 3.175,
+     "start": 3.138,
      "text": "("
     },
     {
-     "end": 3.35,
-     "start": 3.275,
+     "end": 3.25,
+     "start": 3.175,
      "text": "the"
     },
     {
-     "end": 3.925,
-     "start": 3.35,
+     "end": 3.825,
+     "start": 3.25,
      "text": "contract's"
     },
     {
-     "end": 4.137,
-     "start": 3.925,
+     "end": 4.037,
+     "start": 3.825,
      "text": "own"
     },
     {
-     "end": 4.887,
-     "start": 4.137,
+     "end": 4.762,
+     "start": 4.037,
      "text": "context"
     },
     {
-     "end": 5.35,
-     "start": 4.887,
+     "end": 5.225,
+     "start": 4.762,
      "text": "stands"
     },
     {
-     "end": 5.475,
-     "start": 5.35,
+     "end": 5.35,
+     "start": 5.225,
      "text": "for"
     },
     {
-     "end": 5.613,
-     "start": 5.475,
+     "end": 5.488,
+     "start": 5.35,
      "text": "the"
     },
     {
-     "end": 6.1,
-     "start": 5.613,
+     "end": 5.95,
+     "start": 5.488,
      "text": "trusted"
     },
     {
-     "end": 6.912,
-     "start": 6.1,
+     "end": 6.7,
+     "start": 5.95,
      "text": "integration's"
     },
     {
-     "end": 7.875,
-     "start": 6.912,
+     "end": 7.675,
+     "start": 6.7,
      "text": "observation"
     },
     {
-     "end": 7.988,
-     "start": 7.875,
+     "end": 7.787,
+     "start": 7.675,
      "text": ")"
     },
     {
-     "end": 8.113,
-     "start": 7.988,
+     "end": 7.912,
+     "start": 7.787,
      "text": "and"
     },
     {
-     "end": 8.212,
-     "start": 8.113,
+     "end": 8.05,
+     "start": 7.912,
      "text": "the"
     },
     {
-     "end": 8.575,
-     "start": 8.212,
+     "end": 8.45,
+     "start": 8.05,
+     "text": "three"
+    },
+    {
+     "end": 8.837,
+     "start": 8.45,
      "text": "seeded"
     },
     {
-     "end": 9.225,
-     "start": 8.575,
-     "text": "holdings"
+     "end": 9.312,
+     "start": 8.837,
+     "text": "fixture"
     },
     {
-     "end": 9.275,
-     "start": 9.225,
-     "text": "("
+     "end": 9.775,
+     "start": 9.312,
+     "text": "cases"
     },
     {
-     "end": 9.387,
-     "start": 9.275,
-     "text": "the"
+     "end": 10.9,
+     "start": 9.775,
+     "text": "above"
     },
     {
-     "end": 9.9,
-     "start": 9.387,
-     "text": "genuine"
-    },
-    {
-     "end": 10.675,
-     "start": 9.9,
-     "text": "registration"
-    },
-    {
-     "end": 11.05,
-     "start": 10.675,
-     "text": "journey"
-    },
-    {
-     "end": 11.6,
-     "start": 11.05,
-     "text": "belongs"
-    },
-    {
-     "end": 11.738,
-     "start": 11.6,
-     "text": "to"
-    },
-    {
-     "end": 13.425,
-     "start": 11.738,
-     "text": "324"
-    },
-    {
-     "end": 13.975,
-     "start": 13.425,
-     "text": ")"
-    },
-    {
-     "end": 14.075,
-     "start": 13.975,
+     "end": 11.125,
+     "start": 10.9,
      "text": "."
     },
     {
-     "end": 14.488,
-     "start": 14.25,
+     "end": 11.538,
+     "start": 11.3,
      "text": "These"
     },
     {
-     "end": 14.825,
-     "start": 14.488,
+     "end": 11.875,
+     "start": 11.538,
      "text": "checks"
     },
     {
-     "end": 15.087,
-     "start": 14.825,
+     "end": 12.137,
+     "start": 11.875,
      "text": "cover"
     },
     {
-     "end": 15.175,
-     "start": 15.087,
+     "end": 12.225,
+     "start": 12.137,
      "text": "the"
     },
     {
-     "end": 15.812,
-     "start": 15.175,
+     "end": 12.863,
+     "start": 12.225,
      "text": "vectors"
     },
     {
-     "end": 15.938,
-     "start": 15.812,
+     "end": 12.988,
+     "start": 12.863,
      "text": "and"
     },
     {
-     "end": 16.038,
-     "start": 15.938,
+     "end": 13.087,
+     "start": 12.988,
      "text": "the"
     },
     {
-     "end": 16.6,
-     "start": 16.038,
+     "end": 13.65,
+     "start": 13.087,
      "text": "generated"
     },
     {
-     "end": 17.288,
-     "start": 16.6,
+     "end": 14.337,
+     "start": 13.65,
      "text": "variations"
     },
     {
-     "end": 18.225,
-     "start": 17.288,
+     "end": 15.275,
+     "start": 14.337,
      "text": "only"
     },
     {
-     "end": 18.45,
-     "start": 18.225,
+     "end": 15.5,
+     "start": 15.275,
      "text": ":"
     },
     {
-     "end": 18.95,
-     "start": 18.675,
+     "end": 16.0,
+     "start": 15.725,
      "text": "byte"
     },
     {
-     "end": 19.375,
-     "start": 18.95,
+     "end": 16.425,
+     "start": 16.0,
      "text": "strings"
     },
     {
-     "end": 19.525,
-     "start": 19.375,
+     "end": 16.575,
+     "start": 16.425,
      "text": "of"
     },
     {
-     "end": 19.75,
-     "start": 19.525,
+     "end": 16.8,
+     "start": 16.575,
      "text": "more"
     },
     {
-     "end": 19.938,
-     "start": 19.75,
+     "end": 16.987,
+     "start": 16.8,
      "text": "than"
     },
     {
-     "end": 20.638,
-     "start": 19.938,
+     "end": 17.688,
+     "start": 16.987,
      "text": "64"
     },
     {
-     "end": 21.025,
-     "start": 20.638,
+     "end": 18.075,
+     "start": 17.688,
      "text": "bytes"
     },
     {
-     "end": 21.15,
-     "start": 21.025,
+     "end": 18.2,
+     "start": 18.075,
      "text": "would"
     },
     {
-     "end": 21.325,
-     "start": 21.15,
+     "end": 18.375,
+     "start": 18.2,
      "text": "be"
     },
     {
-     "end": 22.1,
-     "start": 21.325,
+     "end": 19.15,
+     "start": 18.375,
      "text": "serialised"
     },
     {
-     "end": 22.275,
-     "start": 22.1,
+     "end": 19.325,
+     "start": 19.15,
      "text": "in"
     },
     {
-     "end": 22.775,
-     "start": 22.275,
+     "end": 19.825,
+     "start": 19.325,
      "text": "chunks"
     },
     {
-     "end": 22.85,
-     "start": 22.775,
+     "end": 19.9,
+     "start": 19.825,
      "text": ","
     },
     {
-     "end": 23.087,
-     "start": 22.85,
+     "end": 20.138,
+     "start": 19.9,
      "text": "which"
     },
     {
-     "end": 23.35,
-     "start": 23.087,
+     "end": 20.4,
+     "start": 20.138,
      "text": "no"
     },
     {
-     "end": 23.725,
-     "start": 23.35,
+     "end": 20.775,
+     "start": 20.4,
      "text": "vector"
     },
     {
-     "end": 24.275,
-     "start": 23.725,
+     "end": 21.325,
+     "start": 20.775,
      "text": "reaches"
     },
     {
-     "end": 24.35,
-     "start": 24.275,
+     "end": 21.4,
+     "start": 21.325,
      "text": "("
     },
     {
-     "end": 24.45,
-     "start": 24.35,
+     "end": 21.5,
+     "start": 21.4,
      "text": "a"
     },
     {
-     "end": 25.188,
-     "start": 24.45,
+     "end": 22.237,
+     "start": 21.5,
      "text": "CESR"
     },
     {
-     "end": 25.575,
-     "start": 25.188,
+     "end": 22.625,
+     "start": 22.237,
      "text": "text"
     },
     {
-     "end": 25.763,
-     "start": 25.575,
+     "end": 22.812,
+     "start": 22.625,
      "text": "is"
     },
     {
-     "end": 26.375,
-     "start": 25.763,
+     "end": 23.425,
+     "start": 22.812,
      "text": "44"
     },
     {
-     "end": 27.475,
-     "start": 26.375,
+     "end": 24.525,
+     "start": 23.425,
      "text": "bytes"
     },
     {
-     "end": 27.675,
-     "start": 27.475,
+     "end": 24.725,
+     "start": 24.525,
      "text": ")"
     },
     {
-     "end": 27.725,
-     "start": 27.675,
+     "end": 24.775,
+     "start": 24.725,
      "text": "."
     },
     {
-     "end": 28.075,
-     "start": 27.9,
+     "end": 25.125,
+     "start": 24.95,
      "text": "This"
     },
     {
-     "end": 28.312,
-     "start": 28.075,
+     "end": 25.362,
+     "start": 25.125,
      "text": "code"
     },
     {
-     "end": 28.413,
-     "start": 28.312,
+     "end": 25.462,
+     "start": 25.362,
      "text": "is"
     },
     {
-     "end": 28.6,
-     "start": 28.413,
+     "end": 25.65,
+     "start": 25.462,
      "text": "not"
     },
     {
-     "end": 28.712,
-     "start": 28.6,
+     "end": 25.763,
+     "start": 25.65,
      "text": "for"
     },
     {
-     "end": 29.425,
-     "start": 28.712,
+     "end": 26.475,
+     "start": 25.763,
      "text": "mainnet"
     },
     {
-     "end": 29.625,
-     "start": 29.425,
+     "end": 26.675,
+     "start": 26.475,
      "text": "."
     }
    ]
@@ -247411,17 +250941,17 @@
    ]
   },
   "docs-design-consumer-identity/the-connected-example-01": {
-   "audio_sha256": "f20840e5a13a49bfe911a39e1fcea793c0bc409e523b1b881ed7b3a9adbf7ed6",
-   "characters": 945,
-   "cost": 0.0009355499999999999,
-   "duration": 66.2,
+   "audio_sha256": "d9584f57c296fdd30a7a22b5141fbd2e77bcc352d23dcaae2bcd9b40b6690906",
+   "characters": 1049,
+   "cost": 0.00103851,
+   "duration": 73.375,
    "index": 1,
-   "key": "213f90269023a4fb59db2a1574af404a002b24275710ced9992cb46a2c19f813",
+   "key": "fe3787ff706265745a3ea459fa8e602266e54fcd1dec50f91fbe2b14ea5df8b0",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
    "section": "the-connected-example",
-   "sent_text": "consumer_identity_example is a spending validator for a relying contract. It is parameterised by the consumer context (network, release, seed, AID) and the checkpoint parameters, and it spends only if some reference input is a consumable holding for that context, on the concrete identity bytes and the datum decoder of the Lean model. The end-to-end specification (ConsumerE2ESpec) runs it on a local test chain: one transaction that references the eligible holding settles, and transactions that reference a rival registry's token, a rival seed's token, a holding of quantity two, a holding with termination pending, and a holding carrying a version 1 datum are rejected when the consumer script evaluates false. Each refusal carries no other script and passes the ledger rules, so the rejection is the consumer's own verdict. The holdings carry version 2 datums written field by field from the Lean layout, the AID as its qualified CESR text.",
-   "text": "consumer_identity_example is a spending validator for a relying contract. It is parameterised by the consumer context (network, release, seed, AID) and the checkpoint parameters, and it spends only if some reference input is a consumable holding for that context, on the concrete identity bytes and the datum decoder of the Lean model. The end-to-end specification (ConsumerE2ESpec) runs it on a local test chain: one transaction that references the eligible holding settles, and transactions that reference a rival registry's token, a rival seed's token, a holding of quantity two, a holding with termination pending, and a holding carrying a version 1 datum are rejected when the consumer script evaluates false. Each refusal carries no other script and passes the ledger rules, so the rejection is the consumer's own verdict. The holdings carry version 2 datums written field by field from the Lean layout, the AID as its qualified CESR text.",
+   "sent_text": "consumer_identity_example is a spending validator for a relying contract. It is parameterised by the consumer context (network, release, checkpoint credential, seed, AID) and the checkpoint parameters, and it spends only if some reference input is a consumable holding for that context, on the concrete identity bytes and the datum decoder of the Lean model. The end-to-end specification (ConsumerE2ESpec) runs it on a local test chain against the checkpoints the production validators delivered. The consumer's context (network, application policy and credential, state program and policy, seed, the AID as its qualified CESR text, the checkpoint credential) is taken from the registry environment of the devnet, not declared. The maturity window W is the relying contract's own choice (Lean T9_juvenility_is_consumer_only: no transition of the registry reads it); the test uses 30 seconds. A spend that references a holding settles, or is rejected when the consumer script evaluates false, as the Lean predicate says of the output the chain holds:",
+   "text": "consumer_identity_example is a spending validator for a relying contract. It is parameterised by the consumer context (network, release, checkpoint credential, seed, AID) and the checkpoint parameters, and it spends only if some reference input is a consumable holding for that context, on the concrete identity bytes and the datum decoder of the Lean model. The end-to-end specification (ConsumerE2ESpec) runs it on a local test chain against the checkpoints the production validators delivered. The consumer's context (network, application policy and credential, state program and policy, seed, the AID as its qualified CESR text, the checkpoint credential) is taken from the registry environment of the devnet, not declared. The maturity window W is the relying contract's own choice (Lean T9_juvenility_is_consumer_only: no transition of the registry reads it); the test uses 30 seconds. A spend that references a holding settles, or is rejected when the consumer script evaluates false, as the Lean predicate says of the output the chain holds:",
    "words": [
     {
      "end": 1.862,
@@ -247474,828 +251004,1383 @@
      "text": "."
     },
     {
-     "end": 5.537,
+     "end": 5.55,
      "start": 5.425,
      "text": "It"
     },
     {
-     "end": 5.675,
-     "start": 5.537,
+     "end": 5.713,
+     "start": 5.55,
      "text": "is"
     },
     {
-     "end": 6.575,
-     "start": 5.675,
+     "end": 6.65,
+     "start": 5.713,
      "text": "parameterised"
     },
     {
-     "end": 6.713,
-     "start": 6.575,
+     "end": 6.812,
+     "start": 6.65,
      "text": "by"
     },
     {
-     "end": 6.8,
-     "start": 6.713,
+     "end": 6.9,
+     "start": 6.812,
      "text": "the"
     },
     {
-     "end": 7.3,
-     "start": 6.8,
+     "end": 7.45,
+     "start": 6.9,
      "text": "consumer"
     },
     {
-     "end": 8.062,
-     "start": 7.3,
+     "end": 8.212,
+     "start": 7.45,
      "text": "context"
     },
     {
-     "end": 8.15,
-     "start": 8.062,
+     "end": 8.3,
+     "start": 8.212,
      "text": "("
     },
     {
-     "end": 8.525,
-     "start": 8.15,
+     "end": 8.8,
+     "start": 8.3,
      "text": "network"
     },
     {
-     "end": 8.575,
-     "start": 8.525,
+     "end": 8.875,
+     "start": 8.8,
      "text": ","
     },
     {
-     "end": 8.975,
-     "start": 8.575,
+     "end": 9.35,
+     "start": 8.875,
      "text": "release"
     },
     {
-     "end": 9.038,
-     "start": 8.975,
+     "end": 9.438,
+     "start": 9.35,
      "text": ","
     },
     {
-     "end": 9.925,
-     "start": 9.038,
-     "text": "seed"
-    },
-    {
-     "end": 10.15,
-     "start": 9.925,
-     "text": ","
-    },
-    {
-     "end": 10.85,
-     "start": 10.35,
-     "text": "AID"
-    },
-    {
-     "end": 10.887,
-     "start": 10.85,
-     "text": ")"
-    },
-    {
-     "end": 10.988,
-     "start": 10.887,
-     "text": "and"
-    },
-    {
-     "end": 11.075,
-     "start": 10.988,
-     "text": "the"
-    },
-    {
-     "end": 11.5,
-     "start": 11.075,
+     "end": 9.95,
+     "start": 9.438,
      "text": "checkpoint"
     },
     {
-     "end": 12.6,
-     "start": 11.5,
-     "text": "parameters"
+     "end": 11.125,
+     "start": 9.95,
+     "text": "credential"
     },
     {
-     "end": 12.8,
-     "start": 12.6,
+     "end": 11.325,
+     "start": 11.125,
      "text": ","
     },
     {
-     "end": 13.087,
-     "start": 13.0,
-     "text": "and"
+     "end": 11.75,
+     "start": 11.525,
+     "text": "seed"
     },
     {
-     "end": 13.175,
-     "start": 13.087,
-     "text": "it"
-    },
-    {
-     "end": 13.613,
-     "start": 13.175,
-     "text": "spends"
-    },
-    {
-     "end": 13.975,
-     "start": 13.613,
-     "text": "only"
-    },
-    {
-     "end": 14.137,
-     "start": 13.975,
-     "text": "if"
-    },
-    {
-     "end": 14.4,
-     "start": 14.137,
-     "text": "some"
-    },
-    {
-     "end": 14.875,
-     "start": 14.4,
-     "text": "reference"
-    },
-    {
-     "end": 15.413,
-     "start": 14.875,
-     "text": "input"
-    },
-    {
-     "end": 15.575,
-     "start": 15.413,
-     "text": "is"
-    },
-    {
-     "end": 15.65,
-     "start": 15.575,
-     "text": "a"
-    },
-    {
-     "end": 16.325,
-     "start": 15.65,
-     "text": "consumable"
-    },
-    {
-     "end": 16.725,
-     "start": 16.325,
-     "text": "holding"
-    },
-    {
-     "end": 16.85,
-     "start": 16.725,
-     "text": "for"
-    },
-    {
-     "end": 17.1,
-     "start": 16.85,
-     "text": "that"
-    },
-    {
-     "end": 18.325,
-     "start": 17.1,
-     "text": "context"
-    },
-    {
-     "end": 18.55,
-     "start": 18.325,
+     "end": 11.8,
+     "start": 11.75,
      "text": ","
     },
     {
-     "end": 18.837,
-     "start": 18.725,
-     "text": "on"
-    },
-    {
-     "end": 18.925,
-     "start": 18.837,
-     "text": "the"
-    },
-    {
-     "end": 19.438,
-     "start": 18.925,
-     "text": "concrete"
-    },
-    {
-     "end": 19.975,
-     "start": 19.438,
-     "text": "identity"
-    },
-    {
-     "end": 20.487,
-     "start": 19.975,
-     "text": "bytes"
-    },
-    {
-     "end": 20.612,
-     "start": 20.487,
-     "text": "and"
-    },
-    {
-     "end": 20.7,
-     "start": 20.612,
-     "text": "the"
-    },
-    {
-     "end": 21.075,
-     "start": 20.7,
-     "text": "datum"
-    },
-    {
-     "end": 21.625,
-     "start": 21.075,
-     "text": "decoder"
-    },
-    {
-     "end": 21.712,
-     "start": 21.625,
-     "text": "of"
-    },
-    {
-     "end": 21.8,
-     "start": 21.712,
-     "text": "the"
-    },
-    {
-     "end": 22.075,
-     "start": 21.8,
-     "text": "Lean"
-    },
-    {
-     "end": 22.975,
-     "start": 22.075,
-     "text": "model"
-    },
-    {
-     "end": 23.175,
-     "start": 22.975,
-     "text": "."
-    },
-    {
-     "end": 23.487,
-     "start": 23.35,
-     "text": "The"
-    },
-    {
-     "end": 24.1,
-     "start": 23.487,
-     "text": "end-to-end"
-    },
-    {
-     "end": 25.075,
-     "start": 24.1,
-     "text": "specification"
-    },
-    {
-     "end": 25.15,
-     "start": 25.075,
-     "text": "("
-    },
-    {
-     "end": 25.725,
-     "start": 25.15,
-     "text": "ConsumerE"
-    },
-    {
-     "end": 25.825,
-     "start": 25.725,
-     "text": "2"
-    },
-    {
-     "end": 26.35,
-     "start": 25.825,
-     "text": "ESpec"
-    },
-    {
-     "end": 26.462,
-     "start": 26.35,
-     "text": ")"
-    },
-    {
-     "end": 26.8,
-     "start": 26.462,
-     "text": "runs"
-    },
-    {
-     "end": 26.913,
-     "start": 26.8,
-     "text": "it"
-    },
-    {
-     "end": 27.038,
-     "start": 26.913,
-     "text": "on"
-    },
-    {
-     "end": 27.1,
-     "start": 27.038,
-     "text": "a"
-    },
-    {
-     "end": 27.425,
-     "start": 27.1,
-     "text": "local"
-    },
-    {
-     "end": 27.763,
-     "start": 27.425,
-     "text": "test"
-    },
-    {
-     "end": 28.725,
-     "start": 27.763,
-     "text": "chain"
-    },
-    {
-     "end": 28.95,
-     "start": 28.725,
-     "text": ":"
-    },
-    {
-     "end": 29.375,
-     "start": 29.15,
-     "text": "one"
-    },
-    {
-     "end": 30.225,
-     "start": 29.375,
-     "text": "transaction"
-    },
-    {
-     "end": 30.4,
-     "start": 30.225,
-     "text": "that"
-    },
-    {
-     "end": 31.05,
-     "start": 30.4,
-     "text": "references"
-    },
-    {
-     "end": 31.212,
-     "start": 31.05,
-     "text": "the"
-    },
-    {
-     "end": 31.7,
-     "start": 31.212,
-     "text": "eligible"
-    },
-    {
-     "end": 32.138,
-     "start": 31.7,
-     "text": "holding"
-    },
-    {
-     "end": 33.075,
-     "start": 32.138,
-     "text": "settles"
-    },
-    {
-     "end": 33.275,
-     "start": 33.075,
-     "text": ","
-    },
-    {
-     "end": 33.575,
-     "start": 33.475,
-     "text": "and"
-    },
-    {
-     "end": 34.4,
-     "start": 33.575,
-     "text": "transactions"
-    },
-    {
-     "end": 34.575,
-     "start": 34.4,
-     "text": "that"
-    },
-    {
-     "end": 35.05,
-     "start": 34.575,
-     "text": "reference"
-    },
-    {
-     "end": 35.162,
-     "start": 35.05,
-     "text": "a"
-    },
-    {
-     "end": 35.575,
-     "start": 35.162,
-     "text": "rival"
-    },
-    {
-     "end": 36.125,
-     "start": 35.575,
-     "text": "registry's"
-    },
-    {
-     "end": 36.675,
-     "start": 36.125,
-     "text": "token"
-    },
-    {
-     "end": 36.787,
-     "start": 36.675,
-     "text": ","
-    },
-    {
-     "end": 36.912,
-     "start": 36.787,
-     "text": "a"
-    },
-    {
-     "end": 37.338,
-     "start": 36.912,
-     "text": "rival"
-    },
-    {
-     "end": 37.7,
-     "start": 37.338,
-     "text": "seed's"
-    },
-    {
-     "end": 38.675,
-     "start": 37.7,
-     "text": "token"
-    },
-    {
-     "end": 38.9,
-     "start": 38.675,
-     "text": ","
-    },
-    {
-     "end": 39.175,
-     "start": 39.1,
-     "text": "a"
-    },
-    {
-     "end": 39.513,
-     "start": 39.175,
-     "text": "holding"
-    },
-    {
-     "end": 39.6,
-     "start": 39.513,
-     "text": "of"
-    },
-    {
-     "end": 40.062,
-     "start": 39.6,
-     "text": "quantity"
-    },
-    {
-     "end": 40.45,
-     "start": 40.062,
-     "text": "two"
-    },
-    {
-     "end": 40.55,
-     "start": 40.45,
-     "text": ","
-    },
-    {
-     "end": 40.65,
-     "start": 40.55,
-     "text": "a"
-    },
-    {
-     "end": 41.062,
-     "start": 40.65,
-     "text": "holding"
-    },
-    {
-     "end": 41.225,
-     "start": 41.062,
-     "text": "with"
-    },
-    {
-     "end": 41.875,
-     "start": 41.225,
-     "text": "termination"
-    },
-    {
-     "end": 42.825,
-     "start": 41.875,
-     "text": "pending"
-    },
-    {
-     "end": 43.025,
-     "start": 42.825,
-     "text": ","
-    },
-    {
-     "end": 43.312,
-     "start": 43.225,
-     "text": "and"
-    },
-    {
-     "end": 43.375,
-     "start": 43.312,
-     "text": "a"
-    },
-    {
-     "end": 43.812,
-     "start": 43.375,
-     "text": "holding"
-    },
-    {
-     "end": 44.312,
-     "start": 43.812,
-     "text": "carrying"
-    },
-    {
-     "end": 44.425,
-     "start": 44.312,
-     "text": "a"
-    },
-    {
-     "end": 44.825,
-     "start": 44.425,
-     "text": "version"
-    },
-    {
-     "end": 45.075,
-     "start": 44.825,
-     "text": "1"
-    },
-    {
-     "end": 45.588,
-     "start": 45.075,
-     "text": "datum"
-    },
-    {
-     "end": 45.75,
-     "start": 45.588,
-     "text": "are"
-    },
-    {
-     "end": 46.325,
-     "start": 45.75,
-     "text": "rejected"
-    },
-    {
-     "end": 46.463,
-     "start": 46.325,
-     "text": "when"
-    },
-    {
-     "end": 46.55,
-     "start": 46.463,
-     "text": "the"
-    },
-    {
-     "end": 47.1,
-     "start": 46.55,
-     "text": "consumer"
-    },
-    {
-     "end": 47.5,
-     "start": 47.1,
-     "text": "script"
-    },
-    {
-     "end": 48.162,
-     "start": 47.5,
-     "text": "evaluates"
-    },
-    {
-     "end": 49.2,
-     "start": 48.162,
-     "text": "false"
-    },
-    {
-     "end": 49.4,
-     "start": 49.2,
-     "text": "."
-    },
-    {
-     "end": 49.9,
-     "start": 49.625,
-     "text": "Each"
-    },
-    {
-     "end": 50.513,
-     "start": 49.9,
-     "text": "refusal"
-    },
-    {
-     "end": 50.938,
-     "start": 50.513,
-     "text": "carries"
-    },
-    {
-     "end": 51.2,
-     "start": 50.938,
-     "text": "no"
-    },
-    {
-     "end": 51.513,
-     "start": 51.2,
-     "text": "other"
-    },
-    {
-     "end": 52.0,
-     "start": 51.513,
-     "text": "script"
-    },
-    {
-     "end": 52.138,
-     "start": 52.0,
-     "text": "and"
-    },
-    {
-     "end": 52.65,
-     "start": 52.138,
-     "text": "passes"
-    },
-    {
-     "end": 52.775,
-     "start": 52.65,
-     "text": "the"
-    },
-    {
-     "end": 53.112,
-     "start": 52.775,
-     "text": "ledger"
-    },
-    {
-     "end": 53.675,
-     "start": 53.112,
-     "text": "rules"
-    },
-    {
-     "end": 53.775,
-     "start": 53.675,
-     "text": ","
-    },
-    {
-     "end": 53.95,
-     "start": 53.775,
-     "text": "so"
-    },
-    {
-     "end": 54.05,
-     "start": 53.95,
-     "text": "the"
-    },
-    {
-     "end": 54.713,
-     "start": 54.05,
-     "text": "rejection"
-    },
-    {
-     "end": 54.875,
-     "start": 54.713,
-     "text": "is"
-    },
-    {
-     "end": 54.975,
-     "start": 54.875,
-     "text": "the"
-    },
-    {
-     "end": 55.688,
-     "start": 54.975,
-     "text": "consumer's"
-    },
-    {
-     "end": 55.95,
-     "start": 55.688,
-     "text": "own"
-    },
-    {
-     "end": 57.025,
-     "start": 55.95,
-     "text": "verdict"
-    },
-    {
-     "end": 57.25,
-     "start": 57.025,
-     "text": "."
-    },
-    {
-     "end": 57.525,
-     "start": 57.45,
-     "text": "The"
-    },
-    {
-     "end": 58.0,
-     "start": 57.525,
-     "text": "holdings"
-    },
-    {
-     "end": 58.325,
-     "start": 58.0,
-     "text": "carry"
-    },
-    {
-     "end": 58.775,
-     "start": 58.325,
-     "text": "version"
-    },
-    {
-     "end": 59.062,
-     "start": 58.775,
-     "text": "2"
-    },
-    {
-     "end": 59.562,
-     "start": 59.062,
-     "text": "datums"
-    },
-    {
-     "end": 59.95,
-     "start": 59.562,
-     "text": "written"
-    },
-    {
-     "end": 60.35,
-     "start": 59.95,
-     "text": "field"
-    },
-    {
-     "end": 60.575,
-     "start": 60.35,
-     "text": "by"
-    },
-    {
-     "end": 60.975,
-     "start": 60.575,
-     "text": "field"
-    },
-    {
-     "end": 61.138,
-     "start": 60.975,
-     "text": "from"
-    },
-    {
-     "end": 61.25,
-     "start": 61.138,
-     "text": "the"
-    },
-    {
-     "end": 61.55,
-     "start": 61.25,
-     "text": "Lean"
-    },
-    {
-     "end": 62.1,
-     "start": 61.55,
-     "text": "layout"
-    },
-    {
-     "end": 62.175,
-     "start": 62.1,
-     "text": ","
-    },
-    {
-     "end": 62.338,
-     "start": 62.175,
-     "text": "the"
-    },
-    {
-     "end": 63.175,
-     "start": 62.338,
+     "end": 12.325,
+     "start": 11.8,
      "text": "AID"
     },
     {
-     "end": 63.325,
-     "start": 63.175,
+     "end": 12.363,
+     "start": 12.325,
+     "text": ")"
+    },
+    {
+     "end": 12.462,
+     "start": 12.363,
+     "text": "and"
+    },
+    {
+     "end": 12.55,
+     "start": 12.462,
+     "text": "the"
+    },
+    {
+     "end": 12.975,
+     "start": 12.55,
+     "text": "checkpoint"
+    },
+    {
+     "end": 14.125,
+     "start": 12.975,
+     "text": "parameters"
+    },
+    {
+     "end": 14.325,
+     "start": 14.125,
+     "text": ","
+    },
+    {
+     "end": 14.613,
+     "start": 14.525,
+     "text": "and"
+    },
+    {
+     "end": 14.7,
+     "start": 14.613,
+     "text": "it"
+    },
+    {
+     "end": 15.137,
+     "start": 14.7,
+     "text": "spends"
+    },
+    {
+     "end": 15.5,
+     "start": 15.137,
+     "text": "only"
+    },
+    {
+     "end": 15.663,
+     "start": 15.5,
+     "text": "if"
+    },
+    {
+     "end": 15.925,
+     "start": 15.663,
+     "text": "some"
+    },
+    {
+     "end": 16.4,
+     "start": 15.925,
+     "text": "reference"
+    },
+    {
+     "end": 16.938,
+     "start": 16.4,
+     "text": "input"
+    },
+    {
+     "end": 17.1,
+     "start": 16.938,
+     "text": "is"
+    },
+    {
+     "end": 17.175,
+     "start": 17.1,
+     "text": "a"
+    },
+    {
+     "end": 17.85,
+     "start": 17.175,
+     "text": "consumable"
+    },
+    {
+     "end": 18.25,
+     "start": 17.85,
+     "text": "holding"
+    },
+    {
+     "end": 18.375,
+     "start": 18.25,
+     "text": "for"
+    },
+    {
+     "end": 18.625,
+     "start": 18.375,
+     "text": "that"
+    },
+    {
+     "end": 19.85,
+     "start": 18.625,
+     "text": "context"
+    },
+    {
+     "end": 20.075,
+     "start": 19.85,
+     "text": ","
+    },
+    {
+     "end": 20.362,
+     "start": 20.25,
+     "text": "on"
+    },
+    {
+     "end": 20.45,
+     "start": 20.362,
+     "text": "the"
+    },
+    {
+     "end": 20.962,
+     "start": 20.45,
+     "text": "concrete"
+    },
+    {
+     "end": 21.5,
+     "start": 20.962,
+     "text": "identity"
+    },
+    {
+     "end": 22.013,
+     "start": 21.5,
+     "text": "bytes"
+    },
+    {
+     "end": 22.138,
+     "start": 22.013,
+     "text": "and"
+    },
+    {
+     "end": 22.225,
+     "start": 22.138,
+     "text": "the"
+    },
+    {
+     "end": 22.6,
+     "start": 22.225,
+     "text": "datum"
+    },
+    {
+     "end": 23.15,
+     "start": 22.6,
+     "text": "decoder"
+    },
+    {
+     "end": 23.237,
+     "start": 23.15,
+     "text": "of"
+    },
+    {
+     "end": 23.325,
+     "start": 23.237,
+     "text": "the"
+    },
+    {
+     "end": 23.6,
+     "start": 23.325,
+     "text": "Lean"
+    },
+    {
+     "end": 24.5,
+     "start": 23.6,
+     "text": "model"
+    },
+    {
+     "end": 24.7,
+     "start": 24.5,
+     "text": "."
+    },
+    {
+     "end": 25.038,
+     "start": 24.9,
+     "text": "The"
+    },
+    {
+     "end": 25.675,
+     "start": 25.038,
+     "text": "end-to-end"
+    },
+    {
+     "end": 26.65,
+     "start": 25.675,
+     "text": "specification"
+    },
+    {
+     "end": 26.7,
+     "start": 26.65,
+     "text": "("
+    },
+    {
+     "end": 27.35,
+     "start": 26.7,
+     "text": "ConsumerE"
+    },
+    {
+     "end": 27.475,
+     "start": 27.35,
+     "text": "2"
+    },
+    {
+     "end": 28.025,
+     "start": 27.475,
+     "text": "ESpec"
+    },
+    {
+     "end": 28.163,
+     "start": 28.025,
+     "text": ")"
+    },
+    {
+     "end": 28.525,
+     "start": 28.163,
+     "text": "runs"
+    },
+    {
+     "end": 28.65,
+     "start": 28.525,
+     "text": "it"
+    },
+    {
+     "end": 28.8,
+     "start": 28.65,
+     "text": "on"
+    },
+    {
+     "end": 28.9,
+     "start": 28.8,
+     "text": "a"
+    },
+    {
+     "end": 29.263,
+     "start": 28.9,
+     "text": "local"
+    },
+    {
+     "end": 29.688,
+     "start": 29.263,
+     "text": "test"
+    },
+    {
+     "end": 30.05,
+     "start": 29.688,
+     "text": "chain"
+    },
+    {
+     "end": 30.425,
+     "start": 30.05,
+     "text": "against"
+    },
+    {
+     "end": 30.538,
+     "start": 30.425,
+     "text": "the"
+    },
+    {
+     "end": 31.175,
+     "start": 30.538,
+     "text": "checkpoints"
+    },
+    {
+     "end": 31.275,
+     "start": 31.175,
+     "text": "the"
+    },
+    {
+     "end": 31.825,
+     "start": 31.275,
+     "text": "production"
+    },
+    {
+     "end": 32.525,
+     "start": 31.825,
+     "text": "validators"
+    },
+    {
+     "end": 33.775,
+     "start": 32.525,
+     "text": "delivered"
+    },
+    {
+     "end": 34.025,
+     "start": 33.775,
+     "text": "."
+    },
+    {
+     "end": 34.275,
+     "start": 34.2,
+     "text": "The"
+    },
+    {
+     "end": 34.85,
+     "start": 34.275,
+     "text": "consumer's"
+    },
+    {
+     "end": 35.5,
+     "start": 34.85,
+     "text": "context"
+    },
+    {
+     "end": 35.575,
+     "start": 35.5,
+     "text": "("
+    },
+    {
+     "end": 36.1,
+     "start": 35.575,
+     "text": "network"
+    },
+    {
+     "end": 36.175,
+     "start": 36.1,
+     "text": ","
+    },
+    {
+     "end": 36.825,
+     "start": 36.175,
+     "text": "application"
+    },
+    {
+     "end": 37.325,
+     "start": 36.825,
+     "text": "policy"
+    },
+    {
+     "end": 37.45,
+     "start": 37.325,
+     "text": "and"
+    },
+    {
+     "end": 38.575,
+     "start": 37.45,
+     "text": "credential"
+    },
+    {
+     "end": 38.775,
+     "start": 38.575,
+     "text": ","
+    },
+    {
+     "end": 39.225,
+     "start": 38.975,
+     "text": "state"
+    },
+    {
+     "end": 39.662,
+     "start": 39.225,
+     "text": "program"
+    },
+    {
+     "end": 39.775,
+     "start": 39.662,
+     "text": "and"
+    },
+    {
+     "end": 40.35,
+     "start": 39.775,
+     "text": "policy"
+    },
+    {
+     "end": 40.463,
+     "start": 40.35,
+     "text": ","
+    },
+    {
+     "end": 40.875,
+     "start": 40.463,
+     "text": "seed"
+    },
+    {
+     "end": 40.95,
+     "start": 40.875,
+     "text": ","
+    },
+    {
+     "end": 41.112,
+     "start": 40.95,
+     "text": "the"
+    },
+    {
+     "end": 41.75,
+     "start": 41.112,
+     "text": "AID"
+    },
+    {
+     "end": 41.875,
+     "start": 41.75,
      "text": "as"
     },
     {
-     "end": 63.525,
-     "start": 63.325,
+     "end": 42.075,
+     "start": 41.875,
      "text": "its"
     },
     {
-     "end": 64.2,
-     "start": 63.525,
+     "end": 42.688,
+     "start": 42.075,
      "text": "qualified"
     },
     {
-     "end": 64.9,
-     "start": 64.2,
+     "end": 43.35,
+     "start": 42.688,
      "text": "CESR"
     },
     {
-     "end": 65.95,
-     "start": 64.9,
+     "end": 44.275,
+     "start": 43.35,
      "text": "text"
     },
     {
-     "end": 66.2,
-     "start": 65.95,
+     "end": 44.5,
+     "start": 44.275,
+     "text": ","
+    },
+    {
+     "end": 44.787,
+     "start": 44.675,
+     "text": "the"
+    },
+    {
+     "end": 45.275,
+     "start": 44.787,
+     "text": "checkpoint"
+    },
+    {
+     "end": 45.975,
+     "start": 45.275,
+     "text": "credential"
+    },
+    {
+     "end": 46.062,
+     "start": 45.975,
+     "text": ")"
+    },
+    {
+     "end": 46.237,
+     "start": 46.062,
+     "text": "is"
+    },
+    {
+     "end": 46.675,
+     "start": 46.237,
+     "text": "taken"
+    },
+    {
+     "end": 46.812,
+     "start": 46.675,
+     "text": "from"
+    },
+    {
+     "end": 46.9,
+     "start": 46.812,
+     "text": "the"
+    },
+    {
+     "end": 47.4,
+     "start": 46.9,
+     "text": "registry"
+    },
+    {
+     "end": 47.987,
+     "start": 47.4,
+     "text": "environment"
+    },
+    {
+     "end": 48.062,
+     "start": 47.987,
+     "text": "of"
+    },
+    {
+     "end": 48.15,
+     "start": 48.062,
+     "text": "the"
+    },
+    {
+     "end": 49.1,
+     "start": 48.15,
+     "text": "devnet"
+    },
+    {
+     "end": 49.3,
+     "start": 49.1,
+     "text": ","
+    },
+    {
+     "end": 49.662,
+     "start": 49.5,
+     "text": "not"
+    },
+    {
+     "end": 50.45,
+     "start": 49.662,
+     "text": "declared"
+    },
+    {
+     "end": 50.65,
+     "start": 50.45,
      "text": "."
+    },
+    {
+     "end": 50.925,
+     "start": 50.85,
+     "text": "The"
+    },
+    {
+     "end": 51.475,
+     "start": 50.925,
+     "text": "maturity"
+    },
+    {
+     "end": 51.862,
+     "start": 51.475,
+     "text": "window"
+    },
+    {
+     "end": 52.412,
+     "start": 51.862,
+     "text": "W"
+    },
+    {
+     "end": 52.575,
+     "start": 52.412,
+     "text": "is"
+    },
+    {
+     "end": 52.7,
+     "start": 52.575,
+     "text": "the"
+    },
+    {
+     "end": 53.2,
+     "start": 52.7,
+     "text": "relying"
+    },
+    {
+     "end": 53.825,
+     "start": 53.2,
+     "text": "contract's"
+    },
+    {
+     "end": 54.05,
+     "start": 53.825,
+     "text": "own"
+    },
+    {
+     "end": 54.638,
+     "start": 54.05,
+     "text": "choice"
+    },
+    {
+     "end": 54.725,
+     "start": 54.638,
+     "text": "("
+    },
+    {
+     "end": 54.987,
+     "start": 54.725,
+     "text": "Lean"
+    },
+    {
+     "end": 58.05,
+     "start": 54.987,
+     "text": "T9_juvenility_is_consumer_only"
+    },
+    {
+     "end": 58.3,
+     "start": 58.05,
+     "text": ":"
+    },
+    {
+     "end": 58.725,
+     "start": 58.525,
+     "text": "no"
+    },
+    {
+     "end": 59.362,
+     "start": 58.725,
+     "text": "transition"
+    },
+    {
+     "end": 59.438,
+     "start": 59.362,
+     "text": "of"
+    },
+    {
+     "end": 59.525,
+     "start": 59.438,
+     "text": "the"
+    },
+    {
+     "end": 60.062,
+     "start": 59.525,
+     "text": "registry"
+    },
+    {
+     "end": 60.438,
+     "start": 60.062,
+     "text": "reads"
+    },
+    {
+     "end": 60.7,
+     "start": 60.438,
+     "text": "it"
+    },
+    {
+     "end": 60.75,
+     "start": 60.7,
+     "text": ")"
+    },
+    {
+     "end": 60.8,
+     "start": 60.75,
+     "text": ";"
+    },
+    {
+     "end": 60.938,
+     "start": 60.8,
+     "text": "the"
+    },
+    {
+     "end": 61.275,
+     "start": 60.938,
+     "text": "test"
+    },
+    {
+     "end": 61.638,
+     "start": 61.275,
+     "text": "uses"
+    },
+    {
+     "end": 61.975,
+     "start": 61.638,
+     "text": "30"
+    },
+    {
+     "end": 62.975,
+     "start": 61.975,
+     "text": "seconds"
+    },
+    {
+     "end": 63.175,
+     "start": 62.975,
+     "text": "."
+    },
+    {
+     "end": 63.45,
+     "start": 63.375,
+     "text": "A"
+    },
+    {
+     "end": 63.713,
+     "start": 63.45,
+     "text": "spend"
+    },
+    {
+     "end": 63.85,
+     "start": 63.713,
+     "text": "that"
+    },
+    {
+     "end": 64.45,
+     "start": 63.85,
+     "text": "references"
+    },
+    {
+     "end": 64.525,
+     "start": 64.45,
+     "text": "a"
+    },
+    {
+     "end": 64.9,
+     "start": 64.525,
+     "text": "holding"
+    },
+    {
+     "end": 65.775,
+     "start": 64.9,
+     "text": "settles"
+    },
+    {
+     "end": 65.975,
+     "start": 65.775,
+     "text": ","
+    },
+    {
+     "end": 66.338,
+     "start": 66.175,
+     "text": "or"
+    },
+    {
+     "end": 66.5,
+     "start": 66.338,
+     "text": "is"
+    },
+    {
+     "end": 67.012,
+     "start": 66.5,
+     "text": "rejected"
+    },
+    {
+     "end": 67.137,
+     "start": 67.012,
+     "text": "when"
+    },
+    {
+     "end": 67.225,
+     "start": 67.137,
+     "text": "the"
+    },
+    {
+     "end": 67.775,
+     "start": 67.225,
+     "text": "consumer"
+    },
+    {
+     "end": 68.15,
+     "start": 67.775,
+     "text": "script"
+    },
+    {
+     "end": 68.75,
+     "start": 68.15,
+     "text": "evaluates"
+    },
+    {
+     "end": 69.625,
+     "start": 68.75,
+     "text": "false"
+    },
+    {
+     "end": 69.825,
+     "start": 69.625,
+     "text": ","
+    },
+    {
+     "end": 70.188,
+     "start": 70.05,
+     "text": "as"
+    },
+    {
+     "end": 70.275,
+     "start": 70.188,
+     "text": "the"
+    },
+    {
+     "end": 70.575,
+     "start": 70.275,
+     "text": "Lean"
+    },
+    {
+     "end": 71.025,
+     "start": 70.575,
+     "text": "predicate"
+    },
+    {
+     "end": 71.312,
+     "start": 71.025,
+     "text": "says"
+    },
+    {
+     "end": 71.387,
+     "start": 71.312,
+     "text": "of"
+    },
+    {
+     "end": 71.525,
+     "start": 71.387,
+     "text": "the"
+    },
+    {
+     "end": 71.925,
+     "start": 71.525,
+     "text": "output"
+    },
+    {
+     "end": 72.025,
+     "start": 71.925,
+     "text": "the"
+    },
+    {
+     "end": 72.3,
+     "start": 72.025,
+     "text": "chain"
+    },
+    {
+     "end": 73.175,
+     "start": 72.3,
+     "text": "holds"
+    },
+    {
+     "end": 73.375,
+     "start": 73.175,
+     "text": ":"
     }
    ]
   },
   "docs-design-consumer-identity/the-connected-example-02": {
-   "audio_sha256": "5e9fb364e8e8fdc1f6d9d59286f1edcbced66fb8242e1d7b0952d8dfec758259",
+   "audio_sha256": "5db1146f5d4174b6915d0c539e1d407183475b9125c347d5ff2e26a9a8f97f45",
+   "characters": 486,
+   "cost": 0.00048113999999999996,
+   "duration": 33.025,
+   "index": 2,
+   "key": "48c87c30654aabeba71a02f1ac299066d99f17e238414083ec8533b729be3f51",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 400,
+   "section": "the-connected-example",
+   "sent_text": "After the terminating fold no output at the checkpoint validator holds the token, so the consumer has nothing to reference. Each refusal carries no other script and passes the ledger rules, so the rejection is the consumer's own verdict; each reading also checks that the story, the Lean predicate evaluated over the output the chain holds, and the node's verdict name the same failing clause. The datums are the ones the validators wrote, version 2, the AID as its qualified CESR text.",
+   "text": "After the terminating fold no output at the checkpoint validator holds the token, so the consumer has nothing to reference. Each refusal carries no other script and passes the ledger rules, so the rejection is the consumer's own verdict; each reading also checks that the story, the Lean predicate evaluated over the output the chain holds, and the node's verdict name the same failing clause. The datums are the ones the validators wrote, version 2, the AID as its qualified CESR text.",
+   "words": [
+    {
+     "end": 0.488,
+     "start": 0.225,
+     "text": "After"
+    },
+    {
+     "end": 0.587,
+     "start": 0.488,
+     "text": "the"
+    },
+    {
+     "end": 1.263,
+     "start": 0.587,
+     "text": "terminating"
+    },
+    {
+     "end": 1.638,
+     "start": 1.263,
+     "text": "fold"
+    },
+    {
+     "end": 1.913,
+     "start": 1.638,
+     "text": "no"
+    },
+    {
+     "end": 2.425,
+     "start": 1.913,
+     "text": "output"
+    },
+    {
+     "end": 2.537,
+     "start": 2.425,
+     "text": "at"
+    },
+    {
+     "end": 2.662,
+     "start": 2.537,
+     "text": "the"
+    },
+    {
+     "end": 3.175,
+     "start": 2.662,
+     "text": "checkpoint"
+    },
+    {
+     "end": 3.812,
+     "start": 3.175,
+     "text": "validator"
+    },
+    {
+     "end": 4.175,
+     "start": 3.812,
+     "text": "holds"
+    },
+    {
+     "end": 4.287,
+     "start": 4.175,
+     "text": "the"
+    },
+    {
+     "end": 4.875,
+     "start": 4.287,
+     "text": "token"
+    },
+    {
+     "end": 4.975,
+     "start": 4.875,
+     "text": ","
+    },
+    {
+     "end": 5.15,
+     "start": 4.975,
+     "text": "so"
+    },
+    {
+     "end": 5.25,
+     "start": 5.15,
+     "text": "the"
+    },
+    {
+     "end": 5.925,
+     "start": 5.25,
+     "text": "consumer"
+    },
+    {
+     "end": 6.188,
+     "start": 5.925,
+     "text": "has"
+    },
+    {
+     "end": 6.6,
+     "start": 6.188,
+     "text": "nothing"
+    },
+    {
+     "end": 6.725,
+     "start": 6.6,
+     "text": "to"
+    },
+    {
+     "end": 7.925,
+     "start": 6.725,
+     "text": "reference"
+    },
+    {
+     "end": 8.15,
+     "start": 7.925,
+     "text": "."
+    },
+    {
+     "end": 8.65,
+     "start": 8.375,
+     "text": "Each"
+    },
+    {
+     "end": 9.262,
+     "start": 8.65,
+     "text": "refusal"
+    },
+    {
+     "end": 9.688,
+     "start": 9.262,
+     "text": "carries"
+    },
+    {
+     "end": 9.95,
+     "start": 9.688,
+     "text": "no"
+    },
+    {
+     "end": 10.262,
+     "start": 9.95,
+     "text": "other"
+    },
+    {
+     "end": 10.75,
+     "start": 10.262,
+     "text": "script"
+    },
+    {
+     "end": 10.887,
+     "start": 10.75,
+     "text": "and"
+    },
+    {
+     "end": 11.4,
+     "start": 10.887,
+     "text": "passes"
+    },
+    {
+     "end": 11.525,
+     "start": 11.4,
+     "text": "the"
+    },
+    {
+     "end": 11.863,
+     "start": 11.525,
+     "text": "ledger"
+    },
+    {
+     "end": 12.425,
+     "start": 11.863,
+     "text": "rules"
+    },
+    {
+     "end": 12.525,
+     "start": 12.425,
+     "text": ","
+    },
+    {
+     "end": 12.7,
+     "start": 12.525,
+     "text": "so"
+    },
+    {
+     "end": 12.8,
+     "start": 12.7,
+     "text": "the"
+    },
+    {
+     "end": 13.462,
+     "start": 12.8,
+     "text": "rejection"
+    },
+    {
+     "end": 13.625,
+     "start": 13.462,
+     "text": "is"
+    },
+    {
+     "end": 13.725,
+     "start": 13.625,
+     "text": "the"
+    },
+    {
+     "end": 14.413,
+     "start": 13.725,
+     "text": "consumer's"
+    },
+    {
+     "end": 14.675,
+     "start": 14.413,
+     "text": "own"
+    },
+    {
+     "end": 15.775,
+     "start": 14.675,
+     "text": "verdict"
+    },
+    {
+     "end": 16.0,
+     "start": 15.775,
+     "text": ";"
+    },
+    {
+     "end": 16.375,
+     "start": 16.175,
+     "text": "each"
+    },
+    {
+     "end": 16.675,
+     "start": 16.375,
+     "text": "reading"
+    },
+    {
+     "end": 17.0,
+     "start": 16.675,
+     "text": "also"
+    },
+    {
+     "end": 17.263,
+     "start": 17.0,
+     "text": "checks"
+    },
+    {
+     "end": 17.388,
+     "start": 17.263,
+     "text": "that"
+    },
+    {
+     "end": 17.475,
+     "start": 17.388,
+     "text": "the"
+    },
+    {
+     "end": 18.35,
+     "start": 17.475,
+     "text": "story"
+    },
+    {
+     "end": 18.575,
+     "start": 18.35,
+     "text": ","
+    },
+    {
+     "end": 18.85,
+     "start": 18.75,
+     "text": "the"
+    },
+    {
+     "end": 19.15,
+     "start": 18.85,
+     "text": "Lean"
+    },
+    {
+     "end": 19.65,
+     "start": 19.15,
+     "text": "predicate"
+    },
+    {
+     "end": 20.35,
+     "start": 19.65,
+     "text": "evaluated"
+    },
+    {
+     "end": 20.562,
+     "start": 20.35,
+     "text": "over"
+    },
+    {
+     "end": 20.7,
+     "start": 20.562,
+     "text": "the"
+    },
+    {
+     "end": 21.15,
+     "start": 20.7,
+     "text": "output"
+    },
+    {
+     "end": 21.25,
+     "start": 21.15,
+     "text": "the"
+    },
+    {
+     "end": 21.525,
+     "start": 21.25,
+     "text": "chain"
+    },
+    {
+     "end": 22.45,
+     "start": 21.525,
+     "text": "holds"
+    },
+    {
+     "end": 22.65,
+     "start": 22.45,
+     "text": ","
+    },
+    {
+     "end": 22.938,
+     "start": 22.85,
+     "text": "and"
+    },
+    {
+     "end": 23.025,
+     "start": 22.938,
+     "text": "the"
+    },
+    {
+     "end": 23.375,
+     "start": 23.025,
+     "text": "node's"
+    },
+    {
+     "end": 23.663,
+     "start": 23.375,
+     "text": "verdict"
+    },
+    {
+     "end": 23.862,
+     "start": 23.663,
+     "text": "name"
+    },
+    {
+     "end": 23.95,
+     "start": 23.862,
+     "text": "the"
+    },
+    {
+     "end": 24.225,
+     "start": 23.95,
+     "text": "same"
+    },
+    {
+     "end": 24.625,
+     "start": 24.225,
+     "text": "failing"
+    },
+    {
+     "end": 25.525,
+     "start": 24.625,
+     "text": "clause"
+    },
+    {
+     "end": 25.725,
+     "start": 25.525,
+     "text": "."
+    },
+    {
+     "end": 26.025,
+     "start": 25.925,
+     "text": "The"
+    },
+    {
+     "end": 26.55,
+     "start": 26.025,
+     "text": "datums"
+    },
+    {
+     "end": 26.675,
+     "start": 26.55,
+     "text": "are"
+    },
+    {
+     "end": 26.8,
+     "start": 26.675,
+     "text": "the"
+    },
+    {
+     "end": 27.175,
+     "start": 26.8,
+     "text": "ones"
+    },
+    {
+     "end": 27.275,
+     "start": 27.175,
+     "text": "the"
+    },
+    {
+     "end": 27.962,
+     "start": 27.275,
+     "text": "validators"
+    },
+    {
+     "end": 28.3,
+     "start": 27.962,
+     "text": "wrote"
+    },
+    {
+     "end": 28.375,
+     "start": 28.3,
+     "text": ","
+    },
+    {
+     "end": 28.788,
+     "start": 28.375,
+     "text": "version"
+    },
+    {
+     "end": 29.2,
+     "start": 28.788,
+     "text": "2"
+    },
+    {
+     "end": 29.3,
+     "start": 29.2,
+     "text": ","
+    },
+    {
+     "end": 29.462,
+     "start": 29.3,
+     "text": "the"
+    },
+    {
+     "end": 30.163,
+     "start": 29.462,
+     "text": "AID"
+    },
+    {
+     "end": 30.3,
+     "start": 30.163,
+     "text": "as"
+    },
+    {
+     "end": 30.5,
+     "start": 30.3,
+     "text": "its"
+    },
+    {
+     "end": 31.138,
+     "start": 30.5,
+     "text": "qualified"
+    },
+    {
+     "end": 31.8,
+     "start": 31.138,
+     "text": "CESR"
+    },
+    {
+     "end": 32.8,
+     "start": 31.8,
+     "text": "text"
+    },
+    {
+     "end": 33.025,
+     "start": 32.8,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-consumer-identity/the-connected-example-03": {
+   "audio_sha256": "1d6610ac3733f081dc58d5840eb2c528dbe62ac40bc197e8415f293d1f479235",
    "characters": 239,
    "cost": 0.00023660999999999997,
    "duration": 16.325,
-   "index": 2,
+   "index": 3,
    "key": "d04086bd1dd4c4b73da56d3474cd1a0b2b951cc4acd0c40f1f58f6c090bccdf4",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
@@ -248535,68 +252620,63 @@
     }
    ]
   },
-  "docs-design-consumer-identity/the-connected-example-03": {
-   "audio_sha256": "2d09a6d8ffbb3e2d94ca62a4a56a71378274d0a1cd8473d688d8071b719e5564",
-   "characters": 34,
-   "cost": 3.366e-05,
-   "duration": 2.35,
-   "index": 3,
-   "key": "8a9713018b6fe1654a89a6f7b82fb3850dd26e99f5aa5a13b800faf75e6229a1",
+  "docs-design-consumer-identity/the-connected-example-04": {
+   "audio_sha256": "b786011d0ccd011e4eb62f45ff4861810ed8e8e1923cb25b8821f8a23267342e",
+   "characters": 30,
+   "cost": 2.97e-05,
+   "duration": 2.2,
+   "index": 4,
+   "key": "ada1479ccfe6fb8f006df795328e8b07ad154f951a2b4bbe37e0913f5731f903",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
    "section": "the-connected-example",
-   "sent_text": "One label bounds what this proves.",
-   "text": "One label bounds what this proves.",
+   "sent_text": "Labels bound what this proves.",
+   "text": "Labels bound what this proves.",
    "words": [
     {
-     "end": 0.387,
+     "end": 0.575,
      "start": 0.2,
-     "text": "One"
+     "text": "Labels"
     },
     {
-     "end": 0.675,
-     "start": 0.387,
-     "text": "label"
+     "end": 0.837,
+     "start": 0.575,
+     "text": "bound"
     },
     {
      "end": 0.962,
-     "start": 0.675,
-     "text": "bounds"
-    },
-    {
-     "end": 1.087,
-     "start": 0.962,
+     "start": 0.837,
      "text": "what"
     },
     {
-     "end": 1.275,
-     "start": 1.087,
+     "end": 1.15,
+     "start": 0.962,
      "text": "this"
     },
     {
-     "end": 2.15,
-     "start": 1.275,
+     "end": 2.0,
+     "start": 1.15,
      "text": "proves"
     },
     {
-     "end": 2.35,
-     "start": 2.15,
+     "end": 2.2,
+     "start": 2.0,
      "text": "."
     }
    ]
   },
-  "docs-design-consumer-identity/the-connected-example-04": {
-   "audio_sha256": "71b0553a863ec2e5a43d92dce659270ac3e8861b4a25e91db6f3df70564f8b9a",
-   "characters": 173,
-   "cost": 0.00017127,
-   "duration": 13.275,
-   "index": 4,
-   "key": "a617795778d2d7e24bba24407a5b76920bc9eab31a320e58616117e6a39bd84e",
+  "docs-design-consumer-identity/the-connected-example-05": {
+   "audio_sha256": "15d01735c5342b47d0435e086c23575091ccd2a080f77e636ef2300b46e1d606",
+   "characters": 507,
+   "cost": 0.0005019299999999999,
+   "duration": 34.275,
+   "index": 5,
+   "key": "819b1aad3a1664d48f7f2010c3cf1f7dce840e022c18777de29a86e18eb4a1f3",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 300,
    "section": "the-connected-example",
-   "sent_text": "Seeded holding, not a registration journey. The holdings are minted by a test-only policy at a test application credential. The genuine registration journey belongs to #324.",
-   "text": "Seeded holding, not a registration journey. The holdings are minted by a test-only policy at a test application credential. The genuine registration journey belongs to #324.",
+   "sent_text": "Seeded fixture cases. Three cases are not reachable by any registry transaction on main and stay seeded: a poisoned checkpoint (no transaction writes the poison flag), a holding carrying a version 1 datum (the checkpoint datum has no such form), and a holding carrying the representative token twice (the registry mints it once). A test-only policy mints them at a test checkpoint credential. They prove the consumer's decoder and quantity clauses over those bytes and say nothing of a registration journey.",
+   "text": "Seeded fixture cases. Three cases are not reachable by any registry transaction on main and stay seeded: a poisoned checkpoint (no transaction writes the poison flag), a holding carrying a version 1 datum (the checkpoint datum has no such form), and a holding carrying the representative token twice (the registry mints it once). A test-only policy mints them at a test checkpoint credential. They prove the consumer's decoder and quantity clauses over those bytes and say nothing of a registration journey.",
    "words": [
     {
      "end": 0.5,
@@ -248604,164 +252684,684 @@
      "text": "Seeded"
     },
     {
-     "end": 0.925,
+     "end": 0.875,
      "start": 0.5,
-     "text": "holding"
+     "text": "fixture"
     },
     {
-     "end": 0.975,
-     "start": 0.925,
-     "text": ","
+     "end": 1.775,
+     "start": 0.875,
+     "text": "cases"
     },
     {
-     "end": 1.138,
-     "start": 0.975,
-     "text": "not"
-    },
-    {
-     "end": 1.2,
-     "start": 1.138,
-     "text": "a"
-    },
-    {
-     "end": 1.9,
-     "start": 1.2,
-     "text": "registration"
-    },
-    {
-     "end": 2.75,
-     "start": 1.9,
-     "text": "journey"
-    },
-    {
-     "end": 2.95,
-     "start": 2.75,
+     "end": 1.975,
+     "start": 1.775,
      "text": "."
     },
     {
-     "end": 3.225,
-     "start": 3.125,
-     "text": "The"
+     "end": 2.412,
+     "start": 2.175,
+     "text": "Three"
     },
     {
-     "end": 3.775,
-     "start": 3.225,
-     "text": "holdings"
+     "end": 2.963,
+     "start": 2.412,
+     "text": "cases"
     },
     {
-     "end": 3.938,
-     "start": 3.775,
+     "end": 3.125,
+     "start": 2.963,
      "text": "are"
     },
     {
-     "end": 4.35,
-     "start": 3.938,
-     "text": "minted"
+     "end": 3.375,
+     "start": 3.125,
+     "text": "not"
     },
     {
-     "end": 4.525,
-     "start": 4.35,
+     "end": 3.825,
+     "start": 3.375,
+     "text": "reachable"
+    },
+    {
+     "end": 4.037,
+     "start": 3.825,
      "text": "by"
     },
     {
-     "end": 4.637,
-     "start": 4.525,
+     "end": 4.275,
+     "start": 4.037,
+     "text": "any"
+    },
+    {
+     "end": 4.75,
+     "start": 4.275,
+     "text": "registry"
+    },
+    {
+     "end": 5.475,
+     "start": 4.75,
+     "text": "transaction"
+    },
+    {
+     "end": 5.675,
+     "start": 5.475,
+     "text": "on"
+    },
+    {
+     "end": 6.137,
+     "start": 5.675,
+     "text": "main"
+    },
+    {
+     "end": 6.275,
+     "start": 6.137,
+     "text": "and"
+    },
+    {
+     "end": 6.613,
+     "start": 6.275,
+     "text": "stay"
+    },
+    {
+     "end": 7.575,
+     "start": 6.613,
+     "text": "seeded"
+    },
+    {
+     "end": 7.8,
+     "start": 7.575,
+     "text": ":"
+    },
+    {
+     "end": 8.05,
+     "start": 7.975,
      "text": "a"
     },
     {
-     "end": 5.25,
-     "start": 4.637,
-     "text": "test-only"
+     "end": 8.45,
+     "start": 8.05,
+     "text": "poisoned"
     },
     {
-     "end": 6.0,
-     "start": 5.25,
-     "text": "policy"
+     "end": 9.025,
+     "start": 8.45,
+     "text": "checkpoint"
     },
     {
-     "end": 6.113,
-     "start": 6.0,
-     "text": "at"
+     "end": 9.1,
+     "start": 9.025,
+     "text": "("
     },
     {
-     "end": 6.213,
-     "start": 6.113,
+     "end": 9.25,
+     "start": 9.1,
+     "text": "no"
+    },
+    {
+     "end": 9.925,
+     "start": 9.25,
+     "text": "transaction"
+    },
+    {
+     "end": 10.188,
+     "start": 9.925,
+     "text": "writes"
+    },
+    {
+     "end": 10.275,
+     "start": 10.188,
+     "text": "the"
+    },
+    {
+     "end": 10.675,
+     "start": 10.275,
+     "text": "poison"
+    },
+    {
+     "end": 11.425,
+     "start": 10.675,
+     "text": "flag"
+    },
+    {
+     "end": 11.725,
+     "start": 11.425,
+     "text": ")"
+    },
+    {
+     "end": 11.8,
+     "start": 11.725,
+     "text": ","
+    },
+    {
+     "end": 12.075,
+     "start": 12.0,
      "text": "a"
     },
     {
-     "end": 6.575,
-     "start": 6.213,
-     "text": "test"
+     "end": 12.562,
+     "start": 12.075,
+     "text": "holding"
     },
     {
-     "end": 7.2,
-     "start": 6.575,
-     "text": "application"
+     "end": 13.025,
+     "start": 12.562,
+     "text": "carrying"
     },
     {
-     "end": 8.35,
-     "start": 7.2,
-     "text": "credential"
+     "end": 13.125,
+     "start": 13.025,
+     "text": "a"
     },
     {
-     "end": 8.55,
-     "start": 8.35,
+     "end": 13.525,
+     "start": 13.125,
+     "text": "version"
+    },
+    {
+     "end": 13.775,
+     "start": 13.525,
+     "text": "1"
+    },
+    {
+     "end": 14.325,
+     "start": 13.775,
+     "text": "datum"
+    },
+    {
+     "end": 14.375,
+     "start": 14.325,
+     "text": "("
+    },
+    {
+     "end": 14.488,
+     "start": 14.375,
+     "text": "the"
+    },
+    {
+     "end": 14.975,
+     "start": 14.488,
+     "text": "checkpoint"
+    },
+    {
+     "end": 15.35,
+     "start": 14.975,
+     "text": "datum"
+    },
+    {
+     "end": 15.55,
+     "start": 15.35,
+     "text": "has"
+    },
+    {
+     "end": 15.725,
+     "start": 15.55,
+     "text": "no"
+    },
+    {
+     "end": 16.013,
+     "start": 15.725,
+     "text": "such"
+    },
+    {
+     "end": 16.95,
+     "start": 16.013,
+     "text": "form"
+    },
+    {
+     "end": 17.125,
+     "start": 16.95,
+     "text": ")"
+    },
+    {
+     "end": 17.175,
+     "start": 17.125,
+     "text": ","
+    },
+    {
+     "end": 17.462,
+     "start": 17.375,
+     "text": "and"
+    },
+    {
+     "end": 17.525,
+     "start": 17.462,
+     "text": "a"
+    },
+    {
+     "end": 17.987,
+     "start": 17.525,
+     "text": "holding"
+    },
+    {
+     "end": 18.413,
+     "start": 17.987,
+     "text": "carrying"
+    },
+    {
+     "end": 18.5,
+     "start": 18.413,
+     "text": "the"
+    },
+    {
+     "end": 19.25,
+     "start": 18.5,
+     "text": "representative"
+    },
+    {
+     "end": 19.612,
+     "start": 19.25,
+     "text": "token"
+    },
+    {
+     "end": 20.237,
+     "start": 19.612,
+     "text": "twice"
+    },
+    {
+     "end": 20.3,
+     "start": 20.237,
+     "text": "("
+    },
+    {
+     "end": 20.375,
+     "start": 20.3,
+     "text": "the"
+    },
+    {
+     "end": 20.875,
+     "start": 20.375,
+     "text": "registry"
+    },
+    {
+     "end": 21.125,
+     "start": 20.875,
+     "text": "mints"
+    },
+    {
+     "end": 21.275,
+     "start": 21.125,
+     "text": "it"
+    },
+    {
+     "end": 22.25,
+     "start": 21.275,
+     "text": "once"
+    },
+    {
+     "end": 22.45,
+     "start": 22.25,
+     "text": ")"
+    },
+    {
+     "end": 22.5,
+     "start": 22.45,
      "text": "."
     },
     {
-     "end": 8.837,
-     "start": 8.725,
-     "text": "The"
+     "end": 22.775,
+     "start": 22.7,
+     "text": "A"
     },
     {
-     "end": 9.35,
-     "start": 8.837,
-     "text": "genuine"
+     "end": 23.375,
+     "start": 22.775,
+     "text": "test-only"
     },
     {
-     "end": 10.05,
-     "start": 9.35,
+     "end": 23.862,
+     "start": 23.375,
+     "text": "policy"
+    },
+    {
+     "end": 24.15,
+     "start": 23.862,
+     "text": "mints"
+    },
+    {
+     "end": 24.388,
+     "start": 24.15,
+     "text": "them"
+    },
+    {
+     "end": 24.487,
+     "start": 24.388,
+     "text": "at"
+    },
+    {
+     "end": 24.587,
+     "start": 24.487,
+     "text": "a"
+    },
+    {
+     "end": 24.962,
+     "start": 24.587,
+     "text": "test"
+    },
+    {
+     "end": 25.425,
+     "start": 24.962,
+     "text": "checkpoint"
+    },
+    {
+     "end": 26.525,
+     "start": 25.425,
+     "text": "credential"
+    },
+    {
+     "end": 26.725,
+     "start": 26.525,
+     "text": "."
+    },
+    {
+     "end": 27.087,
+     "start": 26.925,
+     "text": "They"
+    },
+    {
+     "end": 27.425,
+     "start": 27.087,
+     "text": "prove"
+    },
+    {
+     "end": 27.525,
+     "start": 27.425,
+     "text": "the"
+    },
+    {
+     "end": 28.188,
+     "start": 27.525,
+     "text": "consumer's"
+    },
+    {
+     "end": 28.825,
+     "start": 28.188,
+     "text": "decoder"
+    },
+    {
+     "end": 28.962,
+     "start": 28.825,
+     "text": "and"
+    },
+    {
+     "end": 29.587,
+     "start": 28.962,
+     "text": "quantity"
+    },
+    {
+     "end": 30.15,
+     "start": 29.587,
+     "text": "clauses"
+    },
+    {
+     "end": 30.375,
+     "start": 30.15,
+     "text": "over"
+    },
+    {
+     "end": 30.638,
+     "start": 30.375,
+     "text": "those"
+    },
+    {
+     "end": 31.163,
+     "start": 30.638,
+     "text": "bytes"
+    },
+    {
+     "end": 31.312,
+     "start": 31.163,
+     "text": "and"
+    },
+    {
+     "end": 31.6,
+     "start": 31.312,
+     "text": "say"
+    },
+    {
+     "end": 32.075,
+     "start": 31.6,
+     "text": "nothing"
+    },
+    {
+     "end": 32.162,
+     "start": 32.075,
+     "text": "of"
+    },
+    {
+     "end": 32.25,
+     "start": 32.162,
+     "text": "a"
+    },
+    {
+     "end": 33.013,
+     "start": 32.25,
      "text": "registration"
     },
     {
-     "end": 10.575,
-     "start": 10.05,
+     "end": 34.05,
+     "start": 33.013,
      "text": "journey"
     },
     {
-     "end": 11.125,
-     "start": 10.575,
-     "text": "belongs"
-    },
-    {
-     "end": 11.262,
-     "start": 11.125,
-     "text": "to"
-    },
-    {
-     "end": 13.05,
-     "start": 11.262,
-     "text": "324"
-    },
-    {
-     "end": 13.275,
-     "start": 13.05,
+     "end": 34.275,
+     "start": 34.05,
      "text": "."
     }
    ]
   },
-  "docs-design-consumer-identity/the-connected-example-05": {
-   "audio_sha256": "6856849e7055cbbef3497726f9c5ac79e2e51287bfdf5ec33142d7ae421adc3e",
-   "characters": 764,
-   "cost": 0.00075636,
-   "duration": 52.2,
-   "index": 5,
-   "key": "624763f741854b191d0efda9e2bd4883b77ab6b1b1db224324be9211a542aad7",
+  "docs-design-consumer-identity/the-connected-example-06": {
+   "audio_sha256": "07cb272e21b09ead257b1c6100bd031e7052ada697b94ff1a8406d9c1ee7fc6b",
+   "characters": 196,
+   "cost": 0.00019403999999999998,
+   "duration": 14.275,
+   "index": 6,
+   "key": "fc5ac3a0e3468c677aaa8747cdfbc4f548c4eaf6b7d751a095e4b5a148029ed9",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 300,
+   "section": "the-connected-example",
+   "sent_text": "One registry. The refusal of another registry's holding is shown by a consumer that fixes another seed and reads the genuine holding; a holding of a second, honestly created registry is not built.",
+   "text": "One registry. The refusal of another registry's holding is shown by a consumer that fixes another seed and reads the genuine holding; a holding of a second, honestly created registry is not built.",
+   "words": [
+    {
+     "end": 0.4,
+     "start": 0.175,
+     "text": "One"
+    },
+    {
+     "end": 1.325,
+     "start": 0.4,
+     "text": "registry"
+    },
+    {
+     "end": 1.55,
+     "start": 1.325,
+     "text": "."
+    },
+    {
+     "end": 1.85,
+     "start": 1.75,
+     "text": "The"
+    },
+    {
+     "end": 2.525,
+     "start": 1.85,
+     "text": "refusal"
+    },
+    {
+     "end": 2.625,
+     "start": 2.525,
+     "text": "of"
+    },
+    {
+     "end": 3.05,
+     "start": 2.625,
+     "text": "another"
+    },
+    {
+     "end": 3.65,
+     "start": 3.05,
+     "text": "registry's"
+    },
+    {
+     "end": 4.162,
+     "start": 3.65,
+     "text": "holding"
+    },
+    {
+     "end": 4.35,
+     "start": 4.162,
+     "text": "is"
+    },
+    {
+     "end": 4.7,
+     "start": 4.35,
+     "text": "shown"
+    },
+    {
+     "end": 4.875,
+     "start": 4.7,
+     "text": "by"
+    },
+    {
+     "end": 4.975,
+     "start": 4.875,
+     "text": "a"
+    },
+    {
+     "end": 5.65,
+     "start": 4.975,
+     "text": "consumer"
+    },
+    {
+     "end": 5.863,
+     "start": 5.65,
+     "text": "that"
+    },
+    {
+     "end": 6.325,
+     "start": 5.863,
+     "text": "fixes"
+    },
+    {
+     "end": 6.75,
+     "start": 6.325,
+     "text": "another"
+    },
+    {
+     "end": 7.325,
+     "start": 6.75,
+     "text": "seed"
+    },
+    {
+     "end": 7.537,
+     "start": 7.325,
+     "text": "and"
+    },
+    {
+     "end": 7.925,
+     "start": 7.537,
+     "text": "reads"
+    },
+    {
+     "end": 8.062,
+     "start": 7.925,
+     "text": "the"
+    },
+    {
+     "end": 8.575,
+     "start": 8.062,
+     "text": "genuine"
+    },
+    {
+     "end": 9.675,
+     "start": 8.575,
+     "text": "holding"
+    },
+    {
+     "end": 9.9,
+     "start": 9.675,
+     "text": ";"
+    },
+    {
+     "end": 10.175,
+     "start": 10.1,
+     "text": "a"
+    },
+    {
+     "end": 10.538,
+     "start": 10.175,
+     "text": "holding"
+    },
+    {
+     "end": 10.613,
+     "start": 10.538,
+     "text": "of"
+    },
+    {
+     "end": 10.712,
+     "start": 10.613,
+     "text": "a"
+    },
+    {
+     "end": 11.2,
+     "start": 10.712,
+     "text": "second"
+    },
+    {
+     "end": 11.312,
+     "start": 11.2,
+     "text": ","
+    },
+    {
+     "end": 11.8,
+     "start": 11.312,
+     "text": "honestly"
+    },
+    {
+     "end": 12.3,
+     "start": 11.8,
+     "text": "created"
+    },
+    {
+     "end": 12.85,
+     "start": 12.3,
+     "text": "registry"
+    },
+    {
+     "end": 13.0,
+     "start": 12.85,
+     "text": "is"
+    },
+    {
+     "end": 13.25,
+     "start": 13.0,
+     "text": "not"
+    },
+    {
+     "end": 14.075,
+     "start": 13.25,
+     "text": "built"
+    },
+    {
+     "end": 14.275,
+     "start": 14.075,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-consumer-identity/the-connected-example-07": {
+   "audio_sha256": "a809f5ae8da55104f6131d01c9d2cbbd342fef0a26b8d8397cb389567169c1b4",
+   "characters": 744,
+   "cost": 0.00073656,
+   "duration": 51.625,
+   "index": 7,
+   "key": "71ab0035127fb8a60c44b048e93cb5963db57d272c498aabe401e60a90edfd5a",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
    "section": "the-connected-example",
-   "sent_text": "Declared limits of the example. A script cannot observe the network or resolve a release, so the example's environment is the context it is parameterised with (the trusted integration's observation). now is the lower bound of the transaction's validity interval, in the same unit as the datum's birth time and the maturity parameter; a transaction with no finite lower bound is refused. A datum the decoder does not accept makes the consumer refuse the holding; it never makes the script fail. The pool and the bond amounts are held in the output's value and are not read from it (the datum decodes with a pool of 0; #339). The acceptance item that binds the predicate to the actual Singular-backed output stays open: the registration journey is still outstanding.",
-   "text": "Declared limits of the example. A script cannot observe the network or resolve a release, so the example's environment is the context it is parameterised with (the trusted integration's observation). now is the lower bound of the transaction's validity interval, in the same unit as the datum's birth time and the maturity parameter; a transaction with no finite lower bound is refused. A datum the decoder does not accept makes the consumer refuse the holding; it never makes the script fail. The pool and the bond amounts are held in the output's value and are not read from it (the datum decodes with a pool of 0; #339). The acceptance item that binds the predicate to the actual Singular-backed output stays open: the registration journey is still outstanding.",
+   "sent_text": "Declared limits of the example. A script cannot observe the network or resolve a release, so the example's environment is the context it is parameterised with (the trusted integration's observation). now is the lower bound of the transaction's validity interval, in the same unit as the datum's birth time and the maturity parameter; a transaction with no finite lower bound is refused. A datum the decoder does not accept makes the consumer refuse the holding; it never makes the script fail. The pool and the bond amounts are held in the output's value and are not read from it (the datum decodes with a pool of 0; #339). The datum a holding carries is read from the chain; no check ties it to the registration record that produced it (#514).",
+   "text": "Declared limits of the example. A script cannot observe the network or resolve a release, so the example's environment is the context it is parameterised with (the trusted integration's observation). now is the lower bound of the transaction's validity interval, in the same unit as the datum's birth time and the maturity parameter; a transaction with no finite lower bound is refused. A datum the decoder does not accept makes the consumer refuse the holding; it never makes the script fail. The pool and the bond amounts are held in the output's value and are not read from it (the datum decodes with a pool of 0; #339). The datum a holding carries is read from the chain; no check ties it to the registration record that produced it (#514).",
    "words": [
     {
      "end": 0.55,
@@ -249359,128 +253959,148 @@
      "text": ";"
     },
     {
-     "end": 42.85,
-     "start": 41.275,
+     "end": 42.625,
+     "start": 41.25,
      "text": "339"
     },
     {
-     "end": 42.925,
-     "start": 42.85,
+     "end": 42.7,
+     "start": 42.625,
      "text": ")"
     },
     {
-     "end": 42.975,
-     "start": 42.925,
+     "end": 42.775,
+     "start": 42.7,
      "text": "."
     },
     {
-     "end": 43.125,
-     "start": 42.975,
+     "end": 42.9,
+     "start": 42.775,
      "text": "The"
     },
     {
-     "end": 43.725,
-     "start": 43.125,
-     "text": "acceptance"
+     "end": 43.275,
+     "start": 42.9,
+     "text": "datum"
     },
     {
-     "end": 44.125,
-     "start": 43.725,
-     "text": "item"
+     "end": 43.375,
+     "start": 43.275,
+     "text": "a"
     },
     {
-     "end": 44.338,
-     "start": 44.125,
-     "text": "that"
+     "end": 43.775,
+     "start": 43.375,
+     "text": "holding"
     },
     {
-     "end": 44.75,
-     "start": 44.338,
-     "text": "binds"
+     "end": 44.213,
+     "start": 43.775,
+     "text": "carries"
     },
     {
-     "end": 44.85,
-     "start": 44.75,
-     "text": "the"
-    },
-    {
-     "end": 45.35,
-     "start": 44.85,
-     "text": "predicate"
-    },
-    {
-     "end": 45.438,
-     "start": 45.35,
-     "text": "to"
-    },
-    {
-     "end": 45.588,
-     "start": 45.438,
-     "text": "the"
-    },
-    {
-     "end": 46.062,
-     "start": 45.588,
-     "text": "actual"
-    },
-    {
-     "end": 46.888,
-     "start": 46.062,
-     "text": "Singular-backed"
-    },
-    {
-     "end": 47.388,
-     "start": 46.888,
-     "text": "output"
-    },
-    {
-     "end": 47.838,
-     "start": 47.388,
-     "text": "stays"
-    },
-    {
-     "end": 48.925,
-     "start": 47.838,
-     "text": "open"
-    },
-    {
-     "end": 49.15,
-     "start": 48.925,
-     "text": ":"
-    },
-    {
-     "end": 49.4,
-     "start": 49.325,
-     "text": "the"
-    },
-    {
-     "end": 50.075,
-     "start": 49.4,
-     "text": "registration"
-    },
-    {
-     "end": 50.475,
-     "start": 50.075,
-     "text": "journey"
-    },
-    {
-     "end": 50.6,
-     "start": 50.475,
+     "end": 44.388,
+     "start": 44.213,
      "text": "is"
     },
     {
-     "end": 50.875,
-     "start": 50.6,
-     "text": "still"
+     "end": 44.65,
+     "start": 44.388,
+     "text": "read"
     },
     {
-     "end": 52.0,
-     "start": 50.875,
-     "text": "outstanding"
+     "end": 44.787,
+     "start": 44.65,
+     "text": "from"
     },
     {
-     "end": 52.2,
-     "start": 52.0,
+     "end": 44.888,
+     "start": 44.787,
+     "text": "the"
+    },
+    {
+     "end": 45.875,
+     "start": 44.888,
+     "text": "chain"
+    },
+    {
+     "end": 46.075,
+     "start": 45.875,
+     "text": ";"
+    },
+    {
+     "end": 46.537,
+     "start": 46.3,
+     "text": "no"
+    },
+    {
+     "end": 46.838,
+     "start": 46.537,
+     "text": "check"
+    },
+    {
+     "end": 47.175,
+     "start": 46.838,
+     "text": "ties"
+    },
+    {
+     "end": 47.3,
+     "start": 47.175,
+     "text": "it"
+    },
+    {
+     "end": 47.388,
+     "start": 47.3,
+     "text": "to"
+    },
+    {
+     "end": 47.475,
+     "start": 47.388,
+     "text": "the"
+    },
+    {
+     "end": 48.15,
+     "start": 47.475,
+     "text": "registration"
+    },
+    {
+     "end": 48.575,
+     "start": 48.15,
+     "text": "record"
+    },
+    {
+     "end": 48.725,
+     "start": 48.575,
+     "text": "that"
+    },
+    {
+     "end": 49.25,
+     "start": 48.725,
+     "text": "produced"
+    },
+    {
+     "end": 49.513,
+     "start": 49.25,
+     "text": "it"
+    },
+    {
+     "end": 49.6,
+     "start": 49.513,
+     "text": "("
+    },
+    {
+     "end": 51.25,
+     "start": 49.6,
+     "text": "514"
+    },
+    {
+     "end": 51.55,
+     "start": 51.25,
+     "text": ")"
+    },
+    {
+     "end": 51.625,
+     "start": 51.55,
      "text": "."
     }
    ]
@@ -250176,17 +254796,17 @@
    ]
   },
   "docs-design-consumer-identity/the-consumer-predicate-in-aiken-02": {
-   "audio_sha256": "fe3bcb2b2ce1a05c7408a932a0695b4d661e4e7c757454695c64fd7b85d882c2",
+   "audio_sha256": "cd811a08d8095ec3ddc8ed7d2379320a3b51dfdc3be324a0dc53621716512f15",
    "characters": 566,
    "cost": 0.0005603399999999999,
-   "duration": 45.775,
+   "duration": 45.8,
    "index": 2,
-   "key": "8d4c36a958295744a0a8b2df14afd29ef02b24f190599993d523d0ff0140a422",
+   "key": "18ed39addc88a8edf1a3993d60a985a9c1df9d4fa907182fd1d2d160d980e332",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
    "section": "the-consumer-predicate-in-aiken",
-   "sent_text": "Two executable layers check it. All 32 queries of simulator/consumer-corpus.json are generated by scripts/consumer-vectors.mjs into consumer_corpus_vectors.ak, one test per row carrying the row's own expected result; the four rows whose interpretation tables are incomplete or ambiguous require the predicate to fail, never to answer. Property tests (consumer_tests.ak) run each clause beside its refusal over generated variations and name the theorem they mirror (CI01 to CI16). The vectors are regenerated and compared by node scripts/consumer-vectors.mjs --check.",
-   "text": "Two executable layers check it. All 32 queries of simulator/consumer-corpus.json are generated by scripts/consumer-vectors.mjs into consumer_corpus_vectors.ak, one test per row carrying the row's own expected result; the four rows whose interpretation tables are incomplete or ambiguous require the predicate to fail, never to answer. Property tests (consumer_tests.ak) run each clause beside its refusal over generated variations and name the theorem they mirror (CI01 to CI16). The vectors are regenerated and compared by node scripts/consumer-vectors.mjs --check.",
+   "sent_text": "Two executable layers check it. All 35 queries of simulator/consumer-corpus.json are generated by scripts/consumer-vectors.mjs into consumer_corpus_vectors.ak, one test per row carrying the row's own expected result; the four rows whose interpretation tables are incomplete or ambiguous require the predicate to fail, never to answer. Property tests (consumer_tests.ak) run each clause beside its refusal over generated variations and name the theorem they mirror (CI01 to CI16). The vectors are regenerated and compared by node scripts/consumer-vectors.mjs --check.",
+   "text": "Two executable layers check it. All 35 queries of simulator/consumer-corpus.json are generated by scripts/consumer-vectors.mjs into consumer_corpus_vectors.ak, one test per row carrying the row's own expected result; the four rows whose interpretation tables are incomplete or ambiguous require the predicate to fail, never to answer. Property tests (consumer_tests.ak) run each clause beside its refusal over generated variations and name the theorem they mirror (CI01 to CI16). The vectors are regenerated and compared by node scripts/consumer-vectors.mjs --check.",
    "words": [
     {
      "end": 0.375,
@@ -250224,43 +254844,43 @@
      "text": "All"
     },
     {
-     "end": 3.562,
+     "end": 3.662,
      "start": 2.938,
-     "text": "32"
+     "text": "35"
     },
     {
-     "end": 4.075,
-     "start": 3.562,
+     "end": 4.15,
+     "start": 3.662,
      "text": "queries"
     },
     {
-     "end": 4.213,
-     "start": 4.075,
+     "end": 4.287,
+     "start": 4.15,
      "text": "of"
     },
     {
-     "end": 7.3,
-     "start": 4.213,
+     "end": 7.35,
+     "start": 4.287,
      "text": "simulator/consumer-corpus.json"
     },
     {
-     "end": 7.463,
-     "start": 7.3,
+     "end": 7.512,
+     "start": 7.35,
      "text": "are"
     },
     {
-     "end": 8.075,
-     "start": 7.463,
+     "end": 8.125,
+     "start": 7.512,
      "text": "generated"
     },
     {
-     "end": 8.288,
-     "start": 8.075,
+     "end": 8.312,
+     "start": 8.125,
      "text": "by"
     },
     {
      "end": 11.075,
-     "start": 8.288,
+     "start": 8.312,
      "text": "scripts/consumer-vectors.mjs"
     },
     {
@@ -250269,353 +254889,353 @@
      "text": "into"
     },
     {
-     "end": 14.375,
+     "end": 14.4,
      "start": 11.325,
      "text": "consumer_corpus_vectors.ak"
     },
     {
-     "end": 14.65,
-     "start": 14.375,
+     "end": 14.675,
+     "start": 14.4,
      "text": ","
     },
     {
-     "end": 15.075,
-     "start": 14.85,
+     "end": 15.1,
+     "start": 14.875,
      "text": "one"
     },
     {
-     "end": 15.35,
-     "start": 15.075,
+     "end": 15.375,
+     "start": 15.1,
      "text": "test"
     },
     {
-     "end": 15.475,
-     "start": 15.35,
+     "end": 15.5,
+     "start": 15.375,
      "text": "per"
     },
     {
-     "end": 15.75,
-     "start": 15.475,
+     "end": 15.775,
+     "start": 15.5,
      "text": "row"
     },
     {
-     "end": 16.112,
-     "start": 15.75,
+     "end": 16.138,
+     "start": 15.775,
      "text": "carrying"
     },
     {
-     "end": 16.2,
-     "start": 16.112,
+     "end": 16.225,
+     "start": 16.138,
      "text": "the"
     },
     {
-     "end": 16.6,
-     "start": 16.2,
+     "end": 16.625,
+     "start": 16.225,
      "text": "row's"
     },
     {
-     "end": 16.763,
-     "start": 16.6,
+     "end": 16.788,
+     "start": 16.625,
      "text": "own"
     },
     {
-     "end": 17.3,
-     "start": 16.763,
+     "end": 17.325,
+     "start": 16.788,
      "text": "expected"
     },
     {
-     "end": 18.25,
-     "start": 17.3,
+     "end": 18.275,
+     "start": 17.325,
      "text": "result"
     },
     {
-     "end": 18.45,
-     "start": 18.25,
+     "end": 18.475,
+     "start": 18.275,
      "text": ";"
     },
     {
-     "end": 18.763,
-     "start": 18.65,
+     "end": 18.788,
+     "start": 18.675,
      "text": "the"
     },
     {
-     "end": 19.0,
-     "start": 18.763,
+     "end": 19.025,
+     "start": 18.788,
      "text": "four"
     },
     {
-     "end": 19.375,
-     "start": 19.0,
+     "end": 19.4,
+     "start": 19.025,
      "text": "rows"
     },
     {
-     "end": 19.625,
-     "start": 19.375,
+     "end": 19.65,
+     "start": 19.4,
      "text": "whose"
     },
     {
-     "end": 20.5,
-     "start": 19.625,
+     "end": 20.525,
+     "start": 19.65,
      "text": "interpretation"
     },
     {
-     "end": 21.013,
-     "start": 20.5,
+     "end": 21.038,
+     "start": 20.525,
      "text": "tables"
     },
     {
-     "end": 21.188,
-     "start": 21.013,
+     "end": 21.212,
+     "start": 21.038,
      "text": "are"
     },
     {
-     "end": 22.025,
-     "start": 21.188,
+     "end": 22.05,
+     "start": 21.212,
      "text": "incomplete"
     },
     {
-     "end": 22.25,
-     "start": 22.025,
+     "end": 22.275,
+     "start": 22.05,
      "text": "or"
     },
     {
-     "end": 23.112,
-     "start": 22.25,
+     "end": 23.138,
+     "start": 22.275,
      "text": "ambiguous"
     },
     {
-     "end": 23.663,
-     "start": 23.112,
+     "end": 23.688,
+     "start": 23.138,
      "text": "require"
     },
     {
-     "end": 23.75,
-     "start": 23.663,
+     "end": 23.775,
+     "start": 23.688,
      "text": "the"
     },
     {
-     "end": 24.225,
-     "start": 23.75,
+     "end": 24.25,
+     "start": 23.775,
      "text": "predicate"
     },
     {
-     "end": 24.362,
-     "start": 24.225,
+     "end": 24.388,
+     "start": 24.25,
      "text": "to"
     },
     {
-     "end": 24.925,
-     "start": 24.362,
+     "end": 24.95,
+     "start": 24.388,
      "text": "fail"
     },
     {
-     "end": 25.062,
-     "start": 24.925,
+     "end": 25.087,
+     "start": 24.95,
      "text": ","
     },
     {
-     "end": 25.375,
-     "start": 25.062,
+     "end": 25.4,
+     "start": 25.087,
      "text": "never"
     },
     {
-     "end": 25.513,
-     "start": 25.375,
+     "end": 25.538,
+     "start": 25.4,
      "text": "to"
     },
     {
-     "end": 26.575,
-     "start": 25.513,
+     "end": 26.6,
+     "start": 25.538,
      "text": "answer"
     },
     {
-     "end": 26.825,
-     "start": 26.575,
+     "end": 26.85,
+     "start": 26.6,
      "text": "."
     },
     {
-     "end": 27.487,
-     "start": 27.05,
+     "end": 27.513,
+     "start": 27.075,
      "text": "Property"
     },
     {
-     "end": 27.95,
-     "start": 27.487,
+     "end": 27.975,
+     "start": 27.513,
      "text": "tests"
     },
     {
-     "end": 28.0,
-     "start": 27.95,
+     "end": 28.025,
+     "start": 27.975,
      "text": "("
     },
     {
-     "end": 29.375,
-     "start": 28.0,
+     "end": 29.4,
+     "start": 28.025,
      "text": "consumer_tests.ak"
     },
     {
-     "end": 29.462,
-     "start": 29.375,
+     "end": 29.487,
+     "start": 29.4,
      "text": ")"
     },
     {
-     "end": 29.75,
-     "start": 29.462,
+     "end": 29.775,
+     "start": 29.487,
      "text": "run"
     },
     {
-     "end": 30.038,
-     "start": 29.75,
+     "end": 30.062,
+     "start": 29.775,
      "text": "each"
     },
     {
-     "end": 30.5,
-     "start": 30.038,
+     "end": 30.525,
+     "start": 30.062,
      "text": "clause"
     },
     {
-     "end": 30.987,
-     "start": 30.5,
+     "end": 31.013,
+     "start": 30.525,
      "text": "beside"
     },
     {
-     "end": 31.175,
-     "start": 30.987,
+     "end": 31.2,
+     "start": 31.013,
      "text": "its"
     },
     {
-     "end": 31.875,
-     "start": 31.175,
+     "end": 31.9,
+     "start": 31.2,
      "text": "refusal"
     },
     {
-     "end": 32.162,
-     "start": 31.875,
+     "end": 32.188,
+     "start": 31.9,
      "text": "over"
     },
     {
-     "end": 32.8,
-     "start": 32.162,
+     "end": 32.825,
+     "start": 32.188,
      "text": "generated"
     },
     {
-     "end": 33.662,
-     "start": 32.8,
+     "end": 33.688,
+     "start": 32.825,
      "text": "variations"
     },
     {
-     "end": 33.8,
-     "start": 33.662,
+     "end": 33.825,
+     "start": 33.688,
      "text": "and"
     },
     {
-     "end": 34.062,
-     "start": 33.8,
+     "end": 34.088,
+     "start": 33.825,
      "text": "name"
     },
     {
-     "end": 34.2,
-     "start": 34.062,
+     "end": 34.225,
+     "start": 34.088,
      "text": "the"
     },
     {
-     "end": 34.675,
-     "start": 34.2,
+     "end": 34.7,
+     "start": 34.225,
      "text": "theorem"
     },
     {
-     "end": 34.888,
-     "start": 34.675,
+     "end": 34.912,
+     "start": 34.7,
      "text": "they"
     },
     {
-     "end": 35.412,
-     "start": 34.888,
+     "end": 35.438,
+     "start": 34.912,
      "text": "mirror"
     },
     {
-     "end": 35.525,
-     "start": 35.412,
+     "end": 35.55,
+     "start": 35.438,
      "text": "("
     },
     {
-     "end": 36.775,
-     "start": 35.525,
+     "end": 36.8,
+     "start": 35.55,
      "text": "CI01"
     },
     {
-     "end": 36.912,
-     "start": 36.775,
+     "end": 36.938,
+     "start": 36.8,
      "text": "to"
     },
     {
-     "end": 38.7,
-     "start": 36.912,
+     "end": 38.725,
+     "start": 36.938,
      "text": "CI16"
     },
     {
-     "end": 39.15,
-     "start": 38.7,
+     "end": 39.175,
+     "start": 38.725,
      "text": ")"
     },
     {
-     "end": 39.225,
-     "start": 39.15,
+     "end": 39.25,
+     "start": 39.175,
      "text": "."
     },
     {
-     "end": 39.5,
-     "start": 39.425,
+     "end": 39.525,
+     "start": 39.45,
      "text": "The"
     },
     {
-     "end": 39.975,
-     "start": 39.5,
+     "end": 40.0,
+     "start": 39.525,
      "text": "vectors"
     },
     {
-     "end": 40.125,
-     "start": 39.975,
+     "end": 40.15,
+     "start": 40.0,
      "text": "are"
     },
     {
-     "end": 40.9,
-     "start": 40.125,
+     "end": 40.925,
+     "start": 40.15,
      "text": "regenerated"
     },
     {
-     "end": 41.025,
-     "start": 40.9,
+     "end": 41.05,
+     "start": 40.925,
      "text": "and"
     },
     {
-     "end": 41.475,
-     "start": 41.025,
+     "end": 41.5,
+     "start": 41.05,
      "text": "compared"
     },
     {
-     "end": 41.662,
-     "start": 41.475,
+     "end": 41.688,
+     "start": 41.5,
      "text": "by"
     },
     {
-     "end": 42.025,
-     "start": 41.662,
+     "end": 42.05,
+     "start": 41.688,
      "text": "node"
     },
     {
-     "end": 44.612,
-     "start": 42.025,
+     "end": 44.638,
+     "start": 42.05,
      "text": "scripts/consumer-vectors.mjs"
     },
     {
-     "end": 45.5,
-     "start": 44.612,
+     "end": 45.525,
+     "start": 44.638,
      "text": "--check"
     },
     {
-     "end": 45.775,
-     "start": 45.5,
+     "end": 45.8,
+     "start": 45.525,
      "text": "."
     }
    ]
@@ -253556,431 +258176,516 @@
    ]
   },
   "docs-design-consumer-identity/what-the-interpretation-must-establish-03": {
-   "audio_sha256": "c2c366f3f3393a8d9a9c4cd80eb7cf89cedf728d76ffb0dae388afa8f9004714",
-   "characters": 472,
-   "cost": 0.00046728,
-   "duration": 32.175,
+   "audio_sha256": "2a045859564a66dfd2ffe38849700765134943e131c93aef44256245577b843d",
+   "characters": 559,
+   "cost": 0.00055341,
+   "duration": 37.625,
    "index": 3,
-   "key": "dad9f0e6381e6052ed1a35c52d80d24578de96d233c8d257f727068f07313ba1",
+   "key": "00040ffa2589370b7ea7dea27f54a658d7a56856a8648aa77580116c54bfc38a",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
    "section": "what-the-interpretation-must-establish",
-   "sent_text": "realizesState checks the credential, representative quantity and decoded AID and datum facts: the decoded state compared with the intended state, both with the pool set to zero, because the pool is an amount held in the value and not a fact in the datum. It has no current-reference or unspentness check. Local fixture observations are explicitly selected model interpretations, not a production observer. No checkpoint expiry or renewal behavior is supplied by the model.",
-   "text": "realizesState checks the credential, representative quantity and decoded AID and datum facts: the decoded state compared with the intended state, both with the pool set to zero, because the pool is an amount held in the value and not a fact in the datum. It has no current-reference or unspentness check. Local fixture observations are explicitly selected model interpretations, not a production observer. No checkpoint expiry or renewal behavior is supplied by the model.",
+   "sent_text": "realizesState checks the credential, representative quantity, decoded AID and datum facts, and the output's lovelace: the decoded state is compared with the intended state, both with the pool set to zero, because the pool is an amount held in the value and not a fact in the datum; the lovelace must be exactly what the intended state holds. It has no current-reference or unspentness check. Local fixture observations are explicitly selected model interpretations, not a production observer. No checkpoint expiry or renewal behavior is supplied by the model.",
+   "text": "realizesState checks the credential, representative quantity, decoded AID and datum facts, and the output's lovelace: the decoded state is compared with the intended state, both with the pool set to zero, because the pool is an amount held in the value and not a fact in the datum; the lovelace must be exactly what the intended state holds. It has no current-reference or unspentness check. Local fixture observations are explicitly selected model interpretations, not a production observer. No checkpoint expiry or renewal behavior is supplied by the model.",
    "words": [
     {
-     "end": 1.138,
-     "start": 0.225,
+     "end": 1.163,
+     "start": 0.25,
      "text": "realizesState"
     },
     {
-     "end": 1.45,
-     "start": 1.138,
+     "end": 1.5,
+     "start": 1.163,
      "text": "checks"
     },
     {
-     "end": 1.55,
-     "start": 1.45,
+     "end": 1.6,
+     "start": 1.5,
      "text": "the"
     },
     {
-     "end": 2.25,
-     "start": 1.55,
+     "end": 2.325,
+     "start": 1.6,
      "text": "credential"
     },
     {
-     "end": 2.325,
-     "start": 2.25,
+     "end": 2.4,
+     "start": 2.325,
      "text": ","
     },
     {
-     "end": 3.075,
-     "start": 2.325,
+     "end": 3.15,
+     "start": 2.4,
      "text": "representative"
     },
     {
-     "end": 3.763,
-     "start": 3.075,
+     "end": 3.8,
+     "start": 3.15,
      "text": "quantity"
     },
     {
-     "end": 3.9,
-     "start": 3.763,
-     "text": "and"
+     "end": 3.912,
+     "start": 3.8,
+     "text": ","
     },
     {
      "end": 4.463,
-     "start": 3.9,
+     "start": 3.912,
      "text": "decoded"
     },
     {
-     "end": 5.262,
+     "end": 5.287,
      "start": 4.463,
      "text": "AID"
     },
     {
-     "end": 5.4,
-     "start": 5.262,
+     "end": 5.425,
+     "start": 5.287,
      "text": "and"
     },
     {
-     "end": 5.775,
-     "start": 5.4,
+     "end": 5.812,
+     "start": 5.425,
      "text": "datum"
     },
     {
-     "end": 6.85,
-     "start": 5.775,
+     "end": 6.275,
+     "start": 5.812,
      "text": "facts"
     },
     {
-     "end": 7.05,
-     "start": 6.85,
-     "text": ":"
-    },
-    {
-     "end": 7.325,
-     "start": 7.225,
-     "text": "the"
-    },
-    {
-     "end": 7.85,
-     "start": 7.325,
-     "text": "decoded"
-    },
-    {
-     "end": 8.175,
-     "start": 7.85,
-     "text": "state"
-    },
-    {
-     "end": 8.663,
-     "start": 8.175,
-     "text": "compared"
-    },
-    {
-     "end": 8.788,
-     "start": 8.663,
-     "text": "with"
-    },
-    {
-     "end": 8.925,
-     "start": 8.788,
-     "text": "the"
-    },
-    {
-     "end": 9.45,
-     "start": 8.925,
-     "text": "intended"
-    },
-    {
-     "end": 9.9,
-     "start": 9.45,
-     "text": "state"
-    },
-    {
-     "end": 10.0,
-     "start": 9.9,
+     "end": 6.325,
+     "start": 6.275,
      "text": ","
     },
     {
-     "end": 10.288,
-     "start": 10.0,
-     "text": "both"
-    },
-    {
-     "end": 10.413,
-     "start": 10.288,
-     "text": "with"
-    },
-    {
-     "end": 10.512,
-     "start": 10.413,
-     "text": "the"
-    },
-    {
-     "end": 10.85,
-     "start": 10.512,
-     "text": "pool"
-    },
-    {
-     "end": 11.075,
-     "start": 10.85,
-     "text": "set"
-    },
-    {
-     "end": 11.2,
-     "start": 11.075,
-     "text": "to"
-    },
-    {
-     "end": 12.15,
-     "start": 11.2,
-     "text": "zero"
-    },
-    {
-     "end": 12.4,
-     "start": 12.15,
-     "text": ","
-    },
-    {
-     "end": 12.925,
-     "start": 12.575,
-     "text": "because"
-    },
-    {
-     "end": 13.062,
-     "start": 12.925,
-     "text": "the"
-    },
-    {
-     "end": 13.475,
-     "start": 13.062,
-     "text": "pool"
-    },
-    {
-     "end": 13.587,
-     "start": 13.475,
-     "text": "is"
-    },
-    {
-     "end": 13.675,
-     "start": 13.587,
-     "text": "an"
-    },
-    {
-     "end": 14.05,
-     "start": 13.675,
-     "text": "amount"
-    },
-    {
-     "end": 14.288,
-     "start": 14.05,
-     "text": "held"
-    },
-    {
-     "end": 14.363,
-     "start": 14.288,
-     "text": "in"
-    },
-    {
-     "end": 14.45,
-     "start": 14.363,
-     "text": "the"
-    },
-    {
-     "end": 15.075,
-     "start": 14.45,
-     "text": "value"
-    },
-    {
-     "end": 15.225,
-     "start": 15.075,
+     "end": 6.438,
+     "start": 6.325,
      "text": "and"
     },
     {
-     "end": 15.438,
-     "start": 15.225,
-     "text": "not"
-    },
-    {
-     "end": 15.512,
-     "start": 15.438,
-     "text": "a"
-    },
-    {
-     "end": 15.837,
-     "start": 15.512,
-     "text": "fact"
-    },
-    {
-     "end": 15.913,
-     "start": 15.837,
-     "text": "in"
-    },
-    {
-     "end": 16.0,
-     "start": 15.913,
+     "end": 6.55,
+     "start": 6.438,
      "text": "the"
     },
     {
-     "end": 16.95,
-     "start": 16.0,
-     "text": "datum"
+     "end": 7.05,
+     "start": 6.55,
+     "text": "output's"
     },
     {
-     "end": 17.15,
-     "start": 16.95,
-     "text": "."
+     "end": 8.25,
+     "start": 7.05,
+     "text": "lovelace"
     },
     {
-     "end": 17.413,
-     "start": 17.325,
-     "text": "It"
+     "end": 8.475,
+     "start": 8.25,
+     "text": ":"
     },
     {
-     "end": 17.6,
-     "start": 17.413,
-     "text": "has"
+     "end": 8.725,
+     "start": 8.65,
+     "text": "the"
     },
     {
-     "end": 17.825,
-     "start": 17.6,
-     "text": "no"
+     "end": 9.25,
+     "start": 8.725,
+     "text": "decoded"
     },
     {
-     "end": 18.525,
-     "start": 17.825,
-     "text": "current-reference"
+     "end": 9.637,
+     "start": 9.25,
+     "text": "state"
     },
     {
-     "end": 18.675,
-     "start": 18.525,
-     "text": "or"
-    },
-    {
-     "end": 19.288,
-     "start": 18.675,
-     "text": "unspentness"
-    },
-    {
-     "end": 20.05,
-     "start": 19.288,
-     "text": "check"
-    },
-    {
-     "end": 20.25,
-     "start": 20.05,
-     "text": "."
-    },
-    {
-     "end": 20.837,
-     "start": 20.475,
-     "text": "Local"
-    },
-    {
-     "end": 21.3,
-     "start": 20.837,
-     "text": "fixture"
-    },
-    {
-     "end": 22.212,
-     "start": 21.3,
-     "text": "observations"
-    },
-    {
-     "end": 22.375,
-     "start": 22.212,
-     "text": "are"
-    },
-    {
-     "end": 23.112,
-     "start": 22.375,
-     "text": "explicitly"
-    },
-    {
-     "end": 23.663,
-     "start": 23.112,
-     "text": "selected"
-    },
-    {
-     "end": 24.05,
-     "start": 23.663,
-     "text": "model"
-    },
-    {
-     "end": 25.3,
-     "start": 24.05,
-     "text": "interpretations"
-    },
-    {
-     "end": 25.4,
-     "start": 25.3,
-     "text": ","
-    },
-    {
-     "end": 25.612,
-     "start": 25.4,
-     "text": "not"
-    },
-    {
-     "end": 25.675,
-     "start": 25.612,
-     "text": "a"
-    },
-    {
-     "end": 26.225,
-     "start": 25.675,
-     "text": "production"
-    },
-    {
-     "end": 27.375,
-     "start": 26.225,
-     "text": "observer"
-    },
-    {
-     "end": 27.625,
-     "start": 27.375,
-     "text": "."
-    },
-    {
-     "end": 28.038,
-     "start": 27.825,
-     "text": "No"
-    },
-    {
-     "end": 28.462,
-     "start": 28.038,
-     "text": "checkpoint"
-    },
-    {
-     "end": 29.038,
-     "start": 28.462,
-     "text": "expiry"
-    },
-    {
-     "end": 29.175,
-     "start": 29.038,
-     "text": "or"
-    },
-    {
-     "end": 29.575,
-     "start": 29.175,
-     "text": "renewal"
-    },
-    {
-     "end": 30.237,
-     "start": 29.575,
-     "text": "behavior"
-    },
-    {
-     "end": 30.375,
-     "start": 30.237,
+     "end": 9.8,
+     "start": 9.637,
      "text": "is"
     },
     {
-     "end": 30.85,
-     "start": 30.375,
-     "text": "supplied"
+     "end": 10.188,
+     "start": 9.8,
+     "text": "compared"
     },
     {
-     "end": 31.013,
-     "start": 30.85,
-     "text": "by"
+     "end": 10.312,
+     "start": 10.188,
+     "text": "with"
     },
     {
-     "end": 31.1,
-     "start": 31.013,
+     "end": 10.387,
+     "start": 10.312,
      "text": "the"
     },
     {
-     "end": 31.975,
-     "start": 31.1,
+     "end": 10.9,
+     "start": 10.387,
+     "text": "intended"
+    },
+    {
+     "end": 11.7,
+     "start": 10.9,
+     "text": "state"
+    },
+    {
+     "end": 11.9,
+     "start": 11.7,
+     "text": ","
+    },
+    {
+     "end": 12.288,
+     "start": 12.075,
+     "text": "both"
+    },
+    {
+     "end": 12.387,
+     "start": 12.288,
+     "text": "with"
+    },
+    {
+     "end": 12.475,
+     "start": 12.387,
+     "text": "the"
+    },
+    {
+     "end": 12.725,
+     "start": 12.475,
+     "text": "pool"
+    },
+    {
+     "end": 12.925,
+     "start": 12.725,
+     "text": "set"
+    },
+    {
+     "end": 13.05,
+     "start": 12.925,
+     "text": "to"
+    },
+    {
+     "end": 13.85,
+     "start": 13.05,
+     "text": "zero"
+    },
+    {
+     "end": 14.075,
+     "start": 13.85,
+     "text": ","
+    },
+    {
+     "end": 14.6,
+     "start": 14.25,
+     "text": "because"
+    },
+    {
+     "end": 14.738,
+     "start": 14.6,
+     "text": "the"
+    },
+    {
+     "end": 15.15,
+     "start": 14.738,
+     "text": "pool"
+    },
+    {
+     "end": 15.262,
+     "start": 15.15,
+     "text": "is"
+    },
+    {
+     "end": 15.35,
+     "start": 15.262,
+     "text": "an"
+    },
+    {
+     "end": 15.725,
+     "start": 15.35,
+     "text": "amount"
+    },
+    {
+     "end": 15.962,
+     "start": 15.725,
+     "text": "held"
+    },
+    {
+     "end": 16.038,
+     "start": 15.962,
+     "text": "in"
+    },
+    {
+     "end": 16.125,
+     "start": 16.038,
+     "text": "the"
+    },
+    {
+     "end": 16.75,
+     "start": 16.125,
+     "text": "value"
+    },
+    {
+     "end": 16.9,
+     "start": 16.75,
+     "text": "and"
+    },
+    {
+     "end": 17.112,
+     "start": 16.9,
+     "text": "not"
+    },
+    {
+     "end": 17.188,
+     "start": 17.112,
+     "text": "a"
+    },
+    {
+     "end": 17.487,
+     "start": 17.188,
+     "text": "fact"
+    },
+    {
+     "end": 17.562,
+     "start": 17.487,
+     "text": "in"
+    },
+    {
+     "end": 17.65,
+     "start": 17.562,
+     "text": "the"
+    },
+    {
+     "end": 18.625,
+     "start": 17.65,
+     "text": "datum"
+    },
+    {
+     "end": 18.825,
+     "start": 18.625,
+     "text": ";"
+    },
+    {
+     "end": 19.1,
+     "start": 19.0,
+     "text": "the"
+    },
+    {
+     "end": 19.575,
+     "start": 19.1,
+     "text": "lovelace"
+    },
+    {
+     "end": 19.763,
+     "start": 19.575,
+     "text": "must"
+    },
+    {
+     "end": 19.9,
+     "start": 19.763,
+     "text": "be"
+    },
+    {
+     "end": 20.5,
+     "start": 19.9,
+     "text": "exactly"
+    },
+    {
+     "end": 20.638,
+     "start": 20.5,
+     "text": "what"
+    },
+    {
+     "end": 20.712,
+     "start": 20.638,
+     "text": "the"
+    },
+    {
+     "end": 21.2,
+     "start": 20.712,
+     "text": "intended"
+    },
+    {
+     "end": 21.5,
+     "start": 21.2,
+     "text": "state"
+    },
+    {
+     "end": 22.4,
+     "start": 21.5,
+     "text": "holds"
+    },
+    {
+     "end": 22.6,
+     "start": 22.4,
+     "text": "."
+    },
+    {
+     "end": 22.862,
+     "start": 22.775,
+     "text": "It"
+    },
+    {
+     "end": 23.05,
+     "start": 22.862,
+     "text": "has"
+    },
+    {
+     "end": 23.275,
+     "start": 23.05,
+     "text": "no"
+    },
+    {
+     "end": 23.975,
+     "start": 23.275,
+     "text": "current-reference"
+    },
+    {
+     "end": 24.125,
+     "start": 23.975,
+     "text": "or"
+    },
+    {
+     "end": 24.737,
+     "start": 24.125,
+     "text": "unspentness"
+    },
+    {
+     "end": 25.5,
+     "start": 24.737,
+     "text": "check"
+    },
+    {
+     "end": 25.7,
+     "start": 25.5,
+     "text": "."
+    },
+    {
+     "end": 26.288,
+     "start": 25.925,
+     "text": "Local"
+    },
+    {
+     "end": 26.75,
+     "start": 26.288,
+     "text": "fixture"
+    },
+    {
+     "end": 27.663,
+     "start": 26.75,
+     "text": "observations"
+    },
+    {
+     "end": 27.825,
+     "start": 27.663,
+     "text": "are"
+    },
+    {
+     "end": 28.562,
+     "start": 27.825,
+     "text": "explicitly"
+    },
+    {
+     "end": 29.112,
+     "start": 28.562,
+     "text": "selected"
+    },
+    {
+     "end": 29.5,
+     "start": 29.112,
      "text": "model"
     },
     {
-     "end": 32.175,
-     "start": 31.975,
+     "end": 30.75,
+     "start": 29.5,
+     "text": "interpretations"
+    },
+    {
+     "end": 30.85,
+     "start": 30.75,
+     "text": ","
+    },
+    {
+     "end": 31.062,
+     "start": 30.85,
+     "text": "not"
+    },
+    {
+     "end": 31.125,
+     "start": 31.062,
+     "text": "a"
+    },
+    {
+     "end": 31.675,
+     "start": 31.125,
+     "text": "production"
+    },
+    {
+     "end": 32.825,
+     "start": 31.675,
+     "text": "observer"
+    },
+    {
+     "end": 33.075,
+     "start": 32.825,
+     "text": "."
+    },
+    {
+     "end": 33.487,
+     "start": 33.275,
+     "text": "No"
+    },
+    {
+     "end": 33.912,
+     "start": 33.487,
+     "text": "checkpoint"
+    },
+    {
+     "end": 34.487,
+     "start": 33.912,
+     "text": "expiry"
+    },
+    {
+     "end": 34.625,
+     "start": 34.487,
+     "text": "or"
+    },
+    {
+     "end": 35.025,
+     "start": 34.625,
+     "text": "renewal"
+    },
+    {
+     "end": 35.688,
+     "start": 35.025,
+     "text": "behavior"
+    },
+    {
+     "end": 35.825,
+     "start": 35.688,
+     "text": "is"
+    },
+    {
+     "end": 36.3,
+     "start": 35.825,
+     "text": "supplied"
+    },
+    {
+     "end": 36.463,
+     "start": 36.3,
+     "text": "by"
+    },
+    {
+     "end": 36.55,
+     "start": 36.463,
+     "text": "the"
+    },
+    {
+     "end": 37.425,
+     "start": 36.55,
+     "text": "model"
+    },
+    {
+     "end": 37.625,
+     "start": 37.425,
      "text": "."
     }
    ]

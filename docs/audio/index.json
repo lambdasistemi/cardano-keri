@@ -8827,7 +8827,13 @@
     "index": 3,
     "name": "docs-design-consumer-identity/identity-and-authority-03",
     "pause_ms": 400,
-    "v": "2946385d50be"
+    "v": "d02013931eb8"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-consumer-identity/identity-and-authority-04",
+    "pause_ms": 400,
+    "v": "713d0b665bbe"
    }
   ],
   "the-bounded-registration-bridge": [
@@ -8853,7 +8859,7 @@
     "index": 3,
     "name": "docs-design-consumer-identity/the-bounded-registration-bridge-03",
     "pause_ms": 400,
-    "v": "a15ebbac6661"
+    "v": "b93c2b705ebf"
    },
    {
     "index": 4,
@@ -8933,7 +8939,7 @@
     "index": 11,
     "name": "docs-design-consumer-identity/the-checkpoint-datum-11",
     "pause_ms": 400,
-    "v": "79f8ed0acad4"
+    "v": "b5574d1f988c"
    },
    {
     "index": 12,
@@ -8945,7 +8951,69 @@
     "index": 13,
     "name": "docs-design-consumer-identity/the-checkpoint-datum-13",
     "pause_ms": 400,
-    "v": "fcbc1f4fa5e7"
+    "v": "f8c6b3bae0d4"
+   }
+  ],
+  "the-checkpoint-outputs-value": [
+   {
+    "index": 0,
+    "name": "docs-design-consumer-identity/the-checkpoint-outputs-value-00",
+    "pause_ms": 500,
+    "v": "bda2305b59ee"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-consumer-identity/the-checkpoint-outputs-value-01",
+    "pause_ms": 400,
+    "v": "fd5c6b1da039"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-consumer-identity/the-checkpoint-outputs-value-02",
+    "pause_ms": 400,
+    "v": "80a198d8ff9d"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-consumer-identity/the-checkpoint-outputs-value-03",
+    "pause_ms": 400,
+    "v": "36d87a8fcb6c"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-consumer-identity/the-checkpoint-outputs-value-04",
+    "pause_ms": 300,
+    "v": "e05ebc21126e"
+   },
+   {
+    "index": 5,
+    "name": "docs-design-consumer-identity/the-checkpoint-outputs-value-05",
+    "pause_ms": 300,
+    "v": "fa6bf008a64f"
+   },
+   {
+    "index": 6,
+    "name": "docs-design-consumer-identity/the-checkpoint-outputs-value-06",
+    "pause_ms": 300,
+    "v": "daa7abfe544d"
+   },
+   {
+    "index": 7,
+    "name": "docs-design-consumer-identity/the-checkpoint-outputs-value-07",
+    "pause_ms": 300,
+    "v": "f3a0190296e8"
+   },
+   {
+    "index": 8,
+    "name": "docs-design-consumer-identity/the-checkpoint-outputs-value-08",
+    "pause_ms": 400,
+    "v": "0d7726194493"
+   },
+   {
+    "index": 9,
+    "name": "docs-design-consumer-identity/the-checkpoint-outputs-value-09",
+    "pause_ms": 400,
+    "v": "074544ce4832"
    }
   ],
   "the-concrete-bytes": [
@@ -9027,13 +9095,13 @@
     "index": 6,
     "name": "docs-design-consumer-identity/the-concrete-identity-bytes-in-aiken-06",
     "pause_ms": 300,
-    "v": "fb9672256871"
+    "v": "525863384069"
    },
    {
     "index": 7,
     "name": "docs-design-consumer-identity/the-concrete-identity-bytes-in-aiken-07",
     "pause_ms": 400,
-    "v": "cc736935219c"
+    "v": "077623af2860"
    }
   ],
   "the-connected-example": [
@@ -9047,31 +9115,43 @@
     "index": 1,
     "name": "docs-design-consumer-identity/the-connected-example-01",
     "pause_ms": 400,
-    "v": "f20840e5a13a"
+    "v": "d9584f57c296"
    },
    {
     "index": 2,
     "name": "docs-design-consumer-identity/the-connected-example-02",
     "pause_ms": 400,
-    "v": "5e9fb364e8e8"
+    "v": "5db1146f5d41"
    },
    {
     "index": 3,
     "name": "docs-design-consumer-identity/the-connected-example-03",
     "pause_ms": 400,
-    "v": "2d09a6d8ffbb"
+    "v": "1d6610ac3733"
    },
    {
     "index": 4,
     "name": "docs-design-consumer-identity/the-connected-example-04",
-    "pause_ms": 300,
-    "v": "71b0553a863e"
+    "pause_ms": 400,
+    "v": "b786011d0ccd"
    },
    {
     "index": 5,
     "name": "docs-design-consumer-identity/the-connected-example-05",
+    "pause_ms": 300,
+    "v": "15d01735c534"
+   },
+   {
+    "index": 6,
+    "name": "docs-design-consumer-identity/the-connected-example-06",
+    "pause_ms": 300,
+    "v": "07cb272e21b0"
+   },
+   {
+    "index": 7,
+    "name": "docs-design-consumer-identity/the-connected-example-07",
     "pause_ms": 400,
-    "v": "6856849e7055"
+    "v": "a809f5ae8da5"
    }
   ],
   "the-consumer-predicate-in-aiken": [
@@ -9091,7 +9171,7 @@
     "index": 2,
     "name": "docs-design-consumer-identity/the-consumer-predicate-in-aiken-02",
     "pause_ms": 400,
-    "v": "fe3bcb2b2ce1"
+    "v": "cd811a08d809"
    }
   ],
   "the-datum-decoder-in-aiken": [
@@ -9167,7 +9247,7 @@
     "index": 3,
     "name": "docs-design-consumer-identity/what-the-interpretation-must-establish-03",
     "pause_ms": 400,
-    "v": "c2c366f3f339"
+    "v": "2a045859564a"
    }
   ]
  },

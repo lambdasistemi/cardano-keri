@@ -31,7 +31,17 @@ def registrationCommand (ctx : RegistryContext := context) : Except String Comma
 
 def rotatedCommand : Command := .local 11 3 (.rotate 1 .keep 7)
 def rotatedAgainCommand : Command := .local 11 4 (.rotate 2 .keep 7)
-def convictedCommand : Command := .local 11 5 (.convict 7)
+/-- The live output of AID 11 after the two rotations of the journey. -/
+def rotatedAgainLive : Live := ⟨2, 2, false, false, 2, 42, 3, false⟩
+/-- The convictor's commitment over that output and the evidence at its key state,
+naming payee 7: opened by a transaction whose validity range ends at slot 4,
+eligible from slot 5, expiring at slot 20. -/
+def commitment : Commitment := {
+  aid := 11, output := rotatedAgainLive,
+  evidence := ((Duplicity.fixture 2 2).1, (Duplicity.fixture 2 2).2),
+  payee := 7, openedAt := 4, eligibleAfter := 5, expiresAt := 20, marker := 1 }
+def openCommand : Command := .openCommitment commitment
+def convictedCommand : Command := .local 11 5 (.convict 7 commitment)
 def registryLocalHistory : List Registry.Action := [.convictCkpt 11]
 
 def advance (machine : Machine) (command : Command) : Except String Machine := do
@@ -65,7 +75,10 @@ def fixture : Except String Fixture := do
   let registered ← advance Machine.init registration
   let rotated ← advance registered rotatedCommand
   let rotatedAgain ← advance rotated rotatedAgainCommand
-  let pending ← advance rotatedAgain convictedCommand
+  unless decide (rotatedAgain.certified.state.states 11 = .present rotatedAgainLive) do
+    throw "fixture-rotated-output-differs"
+  let committed ← advance rotatedAgain openCommand
+  let pending ← advance committed convictedCommand
   let some origin := registered.certified.state.origins 11 | throw "fixture-origin-missing"
   let booking ← bookingCommand origin.registered
   let booked ← advance pending booking
@@ -95,7 +108,8 @@ def trace (name : String) (commands : List (String × Command)) : Json :=
 def traces : Except String (List Json) := do
   let f ← fixture
   let journey := [("register", f.registration), ("rotate", rotatedCommand),
-    ("rotate-again", rotatedAgainCommand), ("convict", convictedCommand), ("book", f.booking)]
+    ("rotate-again", rotatedAgainCommand), ("open-commitment", openCommand),
+    ("convict", convictedCommand), ("book", f.booking)]
   let restricted ← registrationCommand { context with environment.duplicity := [] }
   pure [
     trace "retained-associated-completion" (journey ++ [
@@ -106,7 +120,8 @@ def traces : Except String (List Json) := do
       ("mixed-fold-completes-own-request", f.mixedCompletion)]),
     trace "stored-origin-environment" [
       ("register-without-registry-duplicity", restricted), ("rotate", rotatedCommand),
-      ("rotate-again", rotatedAgainCommand), ("checkpoint-concrete-conviction", convictedCommand),
+      ("rotate-again", rotatedAgainCommand), ("open-commitment", openCommand),
+      ("checkpoint-concrete-conviction", convictedCommand),
       ("booking-history-cannot-replace-stored-environment", f.booking)],
     trace "system-premises" [
       ("bare-registration-is-not-a-system-registration", .local 11 2 (.register 42 5)),
@@ -114,7 +129,10 @@ def traces : Except String (List Json) := do
       ("duplicate-origin-refused", f.registration), ("book-live-refused", f.booking),
       ("rotate", rotatedCommand), ("rotate-again", rotatedAgainCommand),
       ("book-rotated-live-refused", f.booking),
-      ("convict", convictedCommand), ("book", f.booking),
+      ("convict-without-open-commitment-refused", convictedCommand),
+      ("open-commitment", openCommand), ("reopen-same-marker-refused", openCommand),
+      ("convict", convictedCommand), ("reveal-after-conviction-refused", .reveal 1 6),
+      ("book", f.booking),
       ("rebook-refused", f.booking), ("complete", f.completion)] ]
 
 end CardanoKeri.Checkpoint.SystemFixtures

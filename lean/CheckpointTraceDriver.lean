@@ -60,6 +60,16 @@ def runTrace (p : Params) (env : Env) : State → List (Slot × Action) → List
       let (j, s') := stepJson p env t s a
       j :: runTrace p env s' rest
 
+/-- A commitment over `output` and the evidence at its key state, naming `payee`:
+opened by a transaction whose validity range ends at `openedAt`, eligible from
+the next slot, expiring eighteen slots later. -/
+def commitmentOver (output : Live) (payee : Addr) (openedAt : Slot) : Commitment :=
+  { aid := 0, output, evidence := CardanoKeri.Duplicity.fixture output.epoch output.sn, payee,
+    openedAt, eligibleAfter := openedAt + 1, expiresAt := openedAt + 18, marker := 1 }
+
+/-- The live output after registering with refund 1 and pool 12 at slot 0 and one paid rotation. -/
+def rotatedOnce : Live := ⟨1, 1, false, false, 0, 1, 10, false⟩
+
 structure Seed where
   name : String
   env : EnvTable
@@ -89,11 +99,19 @@ def seeds : List Seed := [
               (12, .rotate 1 .keep 2), (13, .topUp 3)] },
   { name := "convict",
     env := { rotationTo := [(0, 0, 1)], depositAuthorized := [], quorum := [1], duplicityAt := [(1, 1)] },
-    steps := [(0, .register 1 12), (12, .rotate 1 .keep 2), (12, .convict 3), (12, .rotate 1 .deposit 1),
-              (12, .topUp 1), (12, .register 1 10), (12, .convict 3)] },
+    steps := [(0, .register 1 12), (12, .rotate 1 .keep 2), (12, .convict 3 (commitmentOver rotatedOnce 4 11)),
+              (12, .convict 3 (commitmentOver rotatedOnce 3 12)),
+              (12, .convict 3 (commitmentOver rotatedOnce 3 11)), (12, .rotate 1 .deposit 1),
+              (12, .topUp 1), (12, .register 1 10), (12, .convict 3 (commitmentOver rotatedOnce 3 11))] },
+  { name := "top-up-voids-commitment",
+    env := { rotationTo := [(0, 0, 1)], depositAuthorized := [], quorum := [1], duplicityAt := [(1, 1)] },
+    steps := [(0, .register 1 12), (12, .rotate 1 .keep 2), (13, .topUp 2),
+              (14, .convict 3 (commitmentOver rotatedOnce 3 12)),
+              (14, .convict 3 (commitmentOver { rotatedOnce with pool := 12, toppedUp := true } 3 13))] },
   { name := "convict-frozen",
     env := { rotationTo := [(0, 0, 1), (1, 1, 2)], depositAuthorized := [], quorum := [], duplicityAt := [(1, 1)] },
-    steps := [(0, .register 1 3), (12, .rotate 1 .keep 2), (12, .freeze 2 2), (12, .convict 3), (12, .topUp 1)] },
+    steps := [(0, .register 1 3), (12, .rotate 1 .keep 2), (12, .freeze 2 2),
+              (13, .convict 3 (commitmentOver ⟨1, 1, false, true, 0, 1, 1, false⟩ 3 12)), (13, .topUp 1)] },
   { name := "relayer-on-public-data",
     env := { rotationTo := [(0, 0, 1)], depositAuthorized := [], quorum := [0, 1], duplicityAt := [] },
     steps := [(0, .register 1 10), (12, .rotate 1 .deposit 2), (12, .rotate 1 .keep 2)] }
@@ -126,7 +144,9 @@ def gridStates (p : Params) : List State :=
 options; registrations and top-ups above the premium (`P` = 2), then at one
 below and exactly the premium. -/
 def gridActions : List Action :=
-  [.register 6 7, .poison, .topUp 5, .convict 3] ++
+  [.register 6 7, .poison, .topUp 5,
+   .convict 3 (commitmentOver ⟨1, 1, false, false, 10, 1, params.P, false⟩ 3 15),
+   .convict 3 (commitmentOver ⟨1, 1, false, false, 10, 1, params.P, false⟩ 4 15)] ++
   ([0, 1, 2].map fun sn' => Action.freeze sn' 2) ++
   ([0, 1, 2].flatMap fun sn' =>
     [BondOp.keep, .deposit].map fun op => Action.rotate sn' op 2) ++

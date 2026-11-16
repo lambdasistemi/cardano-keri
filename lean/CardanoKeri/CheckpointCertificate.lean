@@ -102,11 +102,53 @@ def localCertificate (current : CertifiedSys) (p : Params) (env : Env)
         intro refund pool equal
         subst action
         contradiction
-      let event : SysStep p env current.state (current.state.set aid state) :=
-        .local ⟨aid, action, now, flow, state, nonregister,
-          (T7_step_iff_stepFn p env).mpr executed, rfl⟩
-      pure { next := current.advance event, event, checkpointFlow := some flow }
+      if revealed : current.state.revealOpenB aid action = true then
+        let event : SysStep p env current.state ((current.state.set aid state).retireRevealed action) :=
+          .local ⟨aid, action, now, flow, state, nonregister,
+            (T7_step_iff_stepFn p env).mpr executed, revealed, rfl⟩
+        pure { next := current.advance event, event, checkpointFlow := some flow }
+      else throw "checkpoint-commitment-not-open"
   else throw "checkpoint-registration-receipt-required"
+
+/-- Open a commitment of the release's commitment program. -/
+def openCertificate (current : CertifiedSys) (p : Params) (env : Env) (c : Commitment) :
+    Except String (CertificateResult current p env) := do
+  if free : current.state.commitments c.marker = none then
+    if formed : c.wellFormed then
+      let event : SysStep p env current.state
+          { current.state with commitments := fun k => if k = c.marker then some c else current.state.commitments k } :=
+        .openCommitment ⟨c, free, formed, rfl⟩
+      pure { next := current.advance event, event }
+    else throw "commitment-not-well-formed"
+  else throw "commitment-marker-taken"
+
+/-- Reveal an open commitment without a conviction, inside its window. -/
+def revealCertificate (current : CertifiedSys) (p : Params) (env : Env) (marker : Marker) (now : Slot) :
+    Except String (CertificateResult current p env) := do
+  match found : current.state.commitments marker with
+  | none => throw "commitment-not-open"
+  | some c =>
+    if window : c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt then
+      if named : c.marker = marker then
+        let event : SysStep p env current.state (current.state.retire c.marker) :=
+          .reveal ⟨c, now, named ▸ found, window.1, window.2, rfl⟩
+        pure { next := current.advance event, event }
+      else throw "commitment-marker-mismatch"
+    else throw "commitment-outside-window"
+
+/-- Sweep an open commitment strictly after its window. -/
+def sweepCertificate (current : CertifiedSys) (p : Params) (env : Env) (marker : Marker) (now : Slot) :
+    Except String (CertificateResult current p env) := do
+  match found : current.state.commitments marker with
+  | none => throw "commitment-not-open"
+  | some c =>
+    if expired : c.expiresAt < now then
+      if named : c.marker = marker then
+        let event : SysStep p env current.state (current.state.retire c.marker) :=
+          .sweep ⟨c, now, named ▸ found, expired, rfl⟩
+        pure { next := current.advance event, event }
+      else throw "commitment-marker-mismatch"
+    else throw "commitment-not-expired"
 
 def registerCertificate (current : CertifiedSys) (p : Params) (env : Env)
     (aid : AID) (now : Slot) (refund pool : Nat)

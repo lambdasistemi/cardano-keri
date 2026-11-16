@@ -12,16 +12,18 @@ open CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint.TraceWire
 
 deriving instance Lean.ToJson for BondOp
-deriving instance Lean.ToJson for Action
 deriving instance Lean.ToJson for KeyState
 deriving instance Lean.ToJson for Live
+deriving instance Lean.ToJson for Commitment
+deriving instance Lean.ToJson for Action
 deriving instance Lean.ToJson for State
 deriving instance Lean.ToJson for Payment
 deriving instance Lean.ToJson for Flow
 deriving instance Lean.FromJson for BondOp
-deriving instance Lean.FromJson for Action
 deriving instance Lean.FromJson for KeyState
 deriving instance Lean.FromJson for Live
+deriving instance Lean.FromJson for Commitment
+deriving instance Lean.FromJson for Action
 deriving instance Lean.FromJson for State
 
 /-- `Params` carries two proofs, so its instance is written by hand. -/

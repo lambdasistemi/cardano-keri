@@ -105,7 +105,15 @@ def journey : Except String Journey := do
       events ++ [(SystemWire.cell name cp evidence machine (.local context.aid now action)).1]))
       (start, registered, 1, [firstEvent])
   let frames := frames ++ [snapshot "mature" r.holding live serial 35]
-  let pending ← advance live (.local context.aid 36 (.convict 7))
+  -- The convictor opens a commitment over the mature output and the evidence at
+  -- its key state, then convicts once it is eligible.
+  let .present output := live.certified.state.states context.aid | throw "mature-output-missing"
+  let some shown := evidence.toEnv.evidenceAt output.epoch output.sn | throw "conviction-evidence-missing"
+  let commitment : CardanoKeri.Checkpoint.Commitment := {
+    aid := context.aid, output, evidence := shown, payee := 7,
+    openedAt := 35, eligibleAfter := 36, expiresAt := 50, marker := 1 }
+  let committed ← advance live (.openCommitment commitment)
+  let pending ← advance committed (.local context.aid 36 (.convict 7 commitment))
   let history : List CardanoKeri.Registry.Action := [.convictCkpt 11]
   let before ← CardanoKeri.Registry.replay q.registryParams q.registryEnv r.after history
   let booking ← CardanoKeri.Registry.Scenarios.termination before context.aid 200
@@ -121,7 +129,8 @@ def journey : Except String Journey := do
     snapshot "termination-booked" r.holding booked (serial + 2) 37,
     snapshot "retired-after-matching-fold" r.holding terminal (serial + 3) 40]
   let events := events ++ [
-    (SystemWire.cell "convict" cp evidence live (.local context.aid 36 (.convict 7))).1,
+    (SystemWire.cell "open-commitment" cp evidence live (.openCommitment commitment)).1,
+    (SystemWire.cell "convict" cp evidence committed (.local context.aid 36 (.convict 7 commitment))).1,
     (SystemWire.cell "book" cp evidence pending (.book context.aid 7 1 history booking)).1,
     (SystemWire.cell "pending-rotation-refused" cp evidence booked (.local context.aid 38 (.rotate 11 .keep 7))).1,
     (SystemWire.cell "complete" cp evidence booked (.complete context.aid completion)).1,

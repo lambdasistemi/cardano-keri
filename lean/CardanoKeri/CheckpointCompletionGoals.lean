@@ -14,6 +14,7 @@ theorem local_event_preserves_associations (p : Params) (env : Env) {s s' : Sys}
     (h : LocalEvent p env s s') :
     s'.origins = s.origins ∧ s'.pending = s.pending := by
   obtain ⟨aid, action, now, flow, state, _, _, _, rfl⟩ := h
+  simp only [Sys.retireRevealed_origins, Sys.retireRevealed_pending]
   exact ⟨rfl, rfl⟩
 
 /-- Given exact local/booking/completion events or a valid origin-indexed receipt;
@@ -99,6 +100,15 @@ theorem sysstep_preserves_existing_origin (p : Params) (env : Env)
   | book event => rw [(booking_event_preserves_checkpoint _ _ event).2.2]; exact ho
   | complete event =>
     obtain ⟨other, association, receipt, _, rfl⟩ := event
+    exact ho
+  | openCommitment event =>
+    obtain ⟨c, _, _, rfl⟩ := event
+    exact ho
+  | reveal event =>
+    obtain ⟨c, now, _, _, _, rfl⟩ := event
+    exact ho
+  | sweep event =>
+    obtain ⟨c, now, _, _, rfl⟩ := event
     exact ho
 
 end CardanoKeri.Checkpoint

@@ -59,7 +59,8 @@ When the step's payments are compared with what the live checkpoint held.
 Then the convictor receives exactly the deposit, the refund address exactly the
 freeze bond held and the pool, and the pending output keeps none of them. -/
 theorem conviction_pays_out_every_amount (p : Params) (env : Env) {t : Slot} {l : Live}
-    {payee : Addr} {f : Flow} {s' : State} (h : Step p env (.convict payee) t (.present l) f s') :
+    {payee : Addr} {c : Commitment} {f : Flow} {s' : State}
+    (h : Step p env (.convict payee c) t (.present l) f s') :
     Payment?.total f.convictor = p.D ∧
     Payment?.total f.refund = l.bHeld p + l.pool ∧
     Payment?.total f.hunter = 0 ∧

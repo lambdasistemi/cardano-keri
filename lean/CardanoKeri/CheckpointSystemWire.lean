@@ -26,13 +26,18 @@ inductive Command where
   | book (aid booker fee : Nat) (history : List CardanoKeri.Registry.Action)
       (booking : Singular.TerminationBooking)
   | complete (aid : Nat) (certificate : FoldCertificate)
+  | openCommitment (commitment : Commitment)
+  | reveal (marker now : Nat)
+  | sweep (marker now : Nat)
   deriving ToJson, FromJson
 
 structure Machine where
   certified : CertifiedSys
   contexts : List (AID × CardanoKeri.Registry.TraceWire.EnvTable)
+  -- The markers ever opened, in order, for serialization of the open commitments.
+  commitments : List Marker := []
 
-def Machine.init : Machine := ⟨CertifiedSys.init, []⟩
+def Machine.init : Machine := ⟨CertifiedSys.init, [], []⟩
 
 def execute (machine : Machine) (p : Params) (env : Env) (command : Command) :
     Except String (Machine × Option Flow × Option CardanoKeri.Registry.Flow) := do
@@ -44,10 +49,17 @@ def execute (machine : Machine) (p : Params) (env : Env) (command : Command) :
     | .local aid now action => localCertificate current p env aid now action
     | .book aid booker fee history booking => bookCertificate current p env aid booker fee history booking
     | .complete aid certificate => completeCertificate current p env aid certificate
+    | .openCommitment c => openCertificate current p env c
+    | .reveal marker now => revealCertificate current p env marker now
+    | .sweep marker now => sweepCertificate current p env marker now
   let contexts := match command with
     | .register aid _ _ _ context _ _ _ => machine.contexts ++ [(aid, context.environment)]
     | _ => machine.contexts
-  pure (⟨result.next, contexts⟩, result.checkpointFlow, result.registryFlow)
+  let commitments := match command with
+    | .openCommitment c => if machine.commitments.contains c.marker then machine.commitments
+        else machine.commitments ++ [c.marker]
+    | _ => machine.commitments
+  pure (⟨result.next, contexts, commitments⟩, result.checkpointFlow, result.registryFlow)
 
 def originJson (environment : CardanoKeri.Registry.TraceWire.EnvTable) (origin : Origin) : Json :=
   Json.mkObj [
@@ -58,7 +70,8 @@ def originJson (environment : CardanoKeri.Registry.TraceWire.EnvTable) (origin :
 
 def stateJson (machine : Machine) : Json :=
   let s := machine.certified.state
-  Json.mkObj [("aids", Json.arr (machine.contexts.map fun (aid, environment) => Json.mkObj [
+  Json.mkObj [("commitments", Json.arr ((machine.commitments.filterMap s.commitments).map toJson).toArray),
+    ("aids", Json.arr (machine.contexts.map fun (aid, environment) => Json.mkObj [
     ("aid", toJson aid), ("leaf", toJson (s.leaves aid)), ("state", toJson (s.states aid)),
     ("origin", match s.origins aid with | none => Json.null | some origin => originJson environment origin),
     ("pending", match s.pending aid with

@@ -368726,17 +368726,17 @@
    ]
   },
   "docs-design-trust-model/who-a-conviction-pays-02": {
-   "audio_sha256": "d12a076953adb50e79f5f587e627808c2acda2c5bdcdb92d57426140bf411e2f",
-   "characters": 728,
-   "cost": 0.00072072,
-   "duration": 47.175,
+   "audio_sha256": "e9c0049ca58a17179bcc8f137aab5402a61e14ebb1cb3e0c0ba5bbda428ca944",
+   "characters": 988,
+   "cost": 0.0009781199999999999,
+   "duration": 63.7,
    "index": 2,
-   "key": "660ec3c537bffdb7032ffcd846f7d981152275da5e25d1460c5ca320294d3120",
+   "key": "4020c8806ed302af6b103d1f486f0f75ef90aa085ea3857bb3ecc758f99f5270",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,
    "section": "who-a-conviction-pays",
-   "sent_text": "The evidence of duplicity is private until a conviction shows it, but once a conviction transaction is submitted anyone can read it. Without a guard, the producer of a block could drop Cora's transaction and include a copy that pays itself. The guard is a commitment made before the evidence is shown: Cora opens, under the release's commitment program, a commitment that names the identifier, the deployment, the key state she accuses (its epoch and sequence number), the digest of her evidence and herself, hidden behind a hash. From the next slot on, her conviction reveals it. A copier naming itself finds no commitment that names it; a copier who opens one after seeing the evidence must wait one slot before it can use it.",
-   "text": "The evidence of duplicity is private until a conviction shows it, but once a conviction transaction is submitted anyone can read it. Without a guard, the producer of a block could drop Cora's transaction and include a copy that pays itself. The guard is a commitment made before the evidence is shown: Cora opens, under the release's commitment program, a commitment that names the identifier, the deployment, the key state she accuses (its epoch and sequence number), the digest of her evidence and herself, hidden behind a hash. From the next slot on, her conviction reveals it. A copier naming itself finds no commitment that names it; a copier who opens one after seeing the evidence must wait one slot before it can use it.",
+   "sent_text": "The evidence of duplicity is private until a conviction shows it, but once a conviction transaction is submitted anyone can read it. Without a guard, the producer of a block could drop Cora's transaction and include a copy that pays itself. The guard is a commitment made before the evidence is shown: Cora opens, under the release's commitment program, a commitment that names the identifier, the deployment, the key state she accuses (its epoch and sequence number), the digest of her evidence and herself, hidden behind a hash. Her conviction can reveal it from the slot after the upper bound of the validity range of the transaction that opened it. A copier naming itself finds no commitment that names it; a copier who opens one after seeing the evidence cannot use it before the slot after its own opening transaction's upper bound. The ledger includes a transaction no later than that bound, so this is never earlier than the slot after the one the copier's opening is included in.",
+   "text": "The evidence of duplicity is private until a conviction shows it, but once a conviction transaction is submitted anyone can read it. Without a guard, the producer of a block could drop Cora's transaction and include a copy that pays itself. The guard is a commitment made before the evidence is shown: Cora opens, under the release's commitment program, a commitment that names the identifier, the deployment, the key state she accuses (its epoch and sequence number), the digest of her evidence and herself, hidden behind a hash. Her conviction can reveal it from the slot after the upper bound of the validity range of the transaction that opened it. A copier naming itself finds no commitment that names it; a copier who opens one after seeing the evidence cannot use it before the slot after its own opening transaction's upper bound. The ledger includes a transaction no later than that bound, so this is never earlier than the slot after the one the copier's opening is included in.",
    "words": [
     {
      "end": 0.338,
@@ -369249,224 +369249,789 @@
      "text": "."
     },
     {
-     "end": 34.312,
+     "end": 34.35,
      "start": 34.175,
-     "text": "From"
-    },
-    {
-     "end": 34.4,
-     "start": 34.312,
-     "text": "the"
-    },
-    {
-     "end": 34.675,
-     "start": 34.4,
-     "text": "next"
+     "text": "Her"
     },
     {
      "end": 34.975,
-     "start": 34.675,
-     "text": "slot"
-    },
-    {
-     "end": 35.225,
-     "start": 34.975,
-     "text": "on"
-    },
-    {
-     "end": 35.275,
-     "start": 35.225,
-     "text": ","
-    },
-    {
-     "end": 35.425,
-     "start": 35.275,
-     "text": "her"
-    },
-    {
-     "end": 36.025,
-     "start": 35.425,
+     "start": 34.35,
      "text": "conviction"
     },
     {
-     "end": 36.537,
-     "start": 36.025,
-     "text": "reveals"
-    },
-    {
-     "end": 36.85,
-     "start": 36.537,
-     "text": "it"
-    },
-    {
-     "end": 36.963,
-     "start": 36.85,
-     "text": "."
-    },
-    {
-     "end": 37.088,
-     "start": 36.963,
-     "text": "A"
-    },
-    {
-     "end": 37.575,
-     "start": 37.088,
-     "text": "copier"
-    },
-    {
-     "end": 37.9,
-     "start": 37.575,
-     "text": "naming"
-    },
-    {
-     "end": 38.362,
-     "start": 37.9,
-     "text": "itself"
-    },
-    {
-     "end": 38.737,
-     "start": 38.362,
-     "text": "finds"
-    },
-    {
-     "end": 38.975,
-     "start": 38.737,
-     "text": "no"
-    },
-    {
-     "end": 39.525,
-     "start": 38.975,
-     "text": "commitment"
-    },
-    {
-     "end": 39.7,
-     "start": 39.525,
-     "text": "that"
-    },
-    {
-     "end": 40.088,
-     "start": 39.7,
-     "text": "names"
-    },
-    {
-     "end": 40.875,
-     "start": 40.088,
-     "text": "it"
-    },
-    {
-     "end": 41.1,
-     "start": 40.875,
-     "text": ";"
-    },
-    {
-     "end": 41.388,
-     "start": 41.3,
-     "text": "a"
-    },
-    {
-     "end": 41.9,
-     "start": 41.388,
-     "text": "copier"
-    },
-    {
-     "end": 42.062,
-     "start": 41.9,
-     "text": "who"
-    },
-    {
-     "end": 42.487,
-     "start": 42.062,
-     "text": "opens"
-    },
-    {
-     "end": 42.888,
-     "start": 42.487,
-     "text": "one"
-    },
-    {
-     "end": 43.213,
-     "start": 42.888,
-     "text": "after"
-    },
-    {
-     "end": 43.537,
-     "start": 43.213,
-     "text": "seeing"
-    },
-    {
-     "end": 43.688,
-     "start": 43.537,
-     "text": "the"
-    },
-    {
-     "end": 44.237,
-     "start": 43.688,
-     "text": "evidence"
-    },
-    {
-     "end": 44.525,
-     "start": 44.237,
-     "text": "must"
-    },
-    {
-     "end": 44.75,
-     "start": 44.525,
-     "text": "wait"
-    },
-    {
-     "end": 45.013,
-     "start": 44.75,
-     "text": "one"
-    },
-    {
-     "end": 45.425,
-     "start": 45.013,
-     "text": "slot"
-    },
-    {
-     "end": 45.763,
-     "start": 45.425,
-     "text": "before"
-    },
-    {
-     "end": 45.85,
-     "start": 45.763,
-     "text": "it"
-    },
-    {
-     "end": 46.0,
-     "start": 45.85,
+     "end": 35.15,
+     "start": 34.975,
      "text": "can"
     },
     {
-     "end": 46.237,
-     "start": 46.0,
-     "text": "use"
+     "end": 35.6,
+     "start": 35.15,
+     "text": "reveal"
     },
     {
-     "end": 46.95,
-     "start": 46.237,
+     "end": 35.75,
+     "start": 35.6,
      "text": "it"
     },
     {
-     "end": 47.175,
-     "start": 46.95,
+     "end": 35.912,
+     "start": 35.75,
+     "text": "from"
+    },
+    {
+     "end": 36.037,
+     "start": 35.912,
+     "text": "the"
+    },
+    {
+     "end": 36.487,
+     "start": 36.037,
+     "text": "slot"
+    },
+    {
+     "end": 36.787,
+     "start": 36.487,
+     "text": "after"
+    },
+    {
+     "end": 36.912,
+     "start": 36.787,
+     "text": "the"
+    },
+    {
+     "end": 37.237,
+     "start": 36.912,
+     "text": "upper"
+    },
+    {
+     "end": 37.638,
+     "start": 37.237,
+     "text": "bound"
+    },
+    {
+     "end": 37.713,
+     "start": 37.638,
+     "text": "of"
+    },
+    {
+     "end": 37.8,
+     "start": 37.713,
+     "text": "the"
+    },
+    {
+     "end": 38.312,
+     "start": 37.8,
+     "text": "validity"
+    },
+    {
+     "end": 38.825,
+     "start": 38.312,
+     "text": "range"
+    },
+    {
+     "end": 38.938,
+     "start": 38.825,
+     "text": "of"
+    },
+    {
+     "end": 39.025,
+     "start": 38.938,
+     "text": "the"
+    },
+    {
+     "end": 39.85,
+     "start": 39.025,
+     "text": "transaction"
+    },
+    {
+     "end": 40.0,
+     "start": 39.85,
+     "text": "that"
+    },
+    {
+     "end": 40.35,
+     "start": 40.0,
+     "text": "opened"
+    },
+    {
+     "end": 41.15,
+     "start": 40.35,
+     "text": "it"
+    },
+    {
+     "end": 41.375,
+     "start": 41.15,
+     "text": "."
+    },
+    {
+     "end": 41.65,
+     "start": 41.575,
+     "text": "A"
+    },
+    {
+     "end": 42.125,
+     "start": 41.65,
+     "text": "copier"
+    },
+    {
+     "end": 42.425,
+     "start": 42.125,
+     "text": "naming"
+    },
+    {
+     "end": 42.888,
+     "start": 42.425,
+     "text": "itself"
+    },
+    {
+     "end": 43.237,
+     "start": 42.888,
+     "text": "finds"
+    },
+    {
+     "end": 43.45,
+     "start": 43.237,
+     "text": "no"
+    },
+    {
+     "end": 43.912,
+     "start": 43.45,
+     "text": "commitment"
+    },
+    {
+     "end": 44.05,
+     "start": 43.912,
+     "text": "that"
+    },
+    {
+     "end": 44.438,
+     "start": 44.05,
+     "text": "names"
+    },
+    {
+     "end": 45.1,
+     "start": 44.438,
+     "text": "it"
+    },
+    {
+     "end": 45.3,
+     "start": 45.1,
+     "text": ";"
+    },
+    {
+     "end": 45.612,
+     "start": 45.525,
+     "text": "a"
+    },
+    {
+     "end": 46.125,
+     "start": 45.612,
+     "text": "copier"
+    },
+    {
+     "end": 46.287,
+     "start": 46.125,
+     "text": "who"
+    },
+    {
+     "end": 46.713,
+     "start": 46.287,
+     "text": "opens"
+    },
+    {
+     "end": 47.088,
+     "start": 46.713,
+     "text": "one"
+    },
+    {
+     "end": 47.412,
+     "start": 47.088,
+     "text": "after"
+    },
+    {
+     "end": 47.737,
+     "start": 47.412,
+     "text": "seeing"
+    },
+    {
+     "end": 47.888,
+     "start": 47.737,
+     "text": "the"
+    },
+    {
+     "end": 48.412,
+     "start": 47.888,
+     "text": "evidence"
+    },
+    {
+     "end": 48.812,
+     "start": 48.412,
+     "text": "cannot"
+    },
+    {
+     "end": 49.1,
+     "start": 48.812,
+     "text": "use"
+    },
+    {
+     "end": 49.25,
+     "start": 49.1,
+     "text": "it"
+    },
+    {
+     "end": 49.65,
+     "start": 49.25,
+     "text": "before"
+    },
+    {
+     "end": 49.787,
+     "start": 49.65,
+     "text": "the"
+    },
+    {
+     "end": 50.237,
+     "start": 49.787,
+     "text": "slot"
+    },
+    {
+     "end": 50.537,
+     "start": 50.237,
+     "text": "after"
+    },
+    {
+     "end": 50.737,
+     "start": 50.537,
+     "text": "its"
+    },
+    {
+     "end": 51.088,
+     "start": 50.737,
+     "text": "own"
+    },
+    {
+     "end": 51.55,
+     "start": 51.088,
+     "text": "opening"
+    },
+    {
+     "end": 52.412,
+     "start": 51.55,
+     "text": "transaction's"
+    },
+    {
+     "end": 52.725,
+     "start": 52.412,
+     "text": "upper"
+    },
+    {
+     "end": 53.825,
+     "start": 52.725,
+     "text": "bound"
+    },
+    {
+     "end": 54.05,
+     "start": 53.825,
+     "text": "."
+    },
+    {
+     "end": 54.325,
+     "start": 54.225,
+     "text": "The"
+    },
+    {
+     "end": 54.675,
+     "start": 54.325,
+     "text": "ledger"
+    },
+    {
+     "end": 55.088,
+     "start": 54.675,
+     "text": "includes"
+    },
+    {
+     "end": 55.15,
+     "start": 55.088,
+     "text": "a"
+    },
+    {
+     "end": 55.888,
+     "start": 55.15,
+     "text": "transaction"
+    },
+    {
+     "end": 56.1,
+     "start": 55.888,
+     "text": "no"
+    },
+    {
+     "end": 56.412,
+     "start": 56.1,
+     "text": "later"
+    },
+    {
+     "end": 56.525,
+     "start": 56.412,
+     "text": "than"
+    },
+    {
+     "end": 56.775,
+     "start": 56.525,
+     "text": "that"
+    },
+    {
+     "end": 57.65,
+     "start": 56.775,
+     "text": "bound"
+    },
+    {
+     "end": 57.85,
+     "start": 57.65,
+     "text": ","
+    },
+    {
+     "end": 58.2,
+     "start": 58.05,
+     "text": "so"
+    },
+    {
+     "end": 58.4,
+     "start": 58.2,
+     "text": "this"
+    },
+    {
+     "end": 58.562,
+     "start": 58.4,
+     "text": "is"
+    },
+    {
+     "end": 58.912,
+     "start": 58.562,
+     "text": "never"
+    },
+    {
+     "end": 59.4,
+     "start": 58.912,
+     "text": "earlier"
+    },
+    {
+     "end": 59.513,
+     "start": 59.4,
+     "text": "than"
+    },
+    {
+     "end": 59.638,
+     "start": 59.513,
+     "text": "the"
+    },
+    {
+     "end": 60.05,
+     "start": 59.638,
+     "text": "slot"
+    },
+    {
+     "end": 60.312,
+     "start": 60.05,
+     "text": "after"
+    },
+    {
+     "end": 60.425,
+     "start": 60.312,
+     "text": "the"
+    },
+    {
+     "end": 60.8,
+     "start": 60.425,
+     "text": "one"
+    },
+    {
+     "end": 60.9,
+     "start": 60.8,
+     "text": "the"
+    },
+    {
+     "end": 61.425,
+     "start": 60.9,
+     "text": "copier's"
+    },
+    {
+     "end": 61.963,
+     "start": 61.425,
+     "text": "opening"
+    },
+    {
+     "end": 62.125,
+     "start": 61.963,
+     "text": "is"
+    },
+    {
+     "end": 62.65,
+     "start": 62.125,
+     "text": "included"
+    },
+    {
+     "end": 63.475,
+     "start": 62.65,
+     "text": "in"
+    },
+    {
+     "end": 63.7,
+     "start": 63.475,
      "text": "."
     }
    ]
   },
   "docs-design-trust-model/who-a-conviction-pays-03": {
-   "audio_sha256": "7228c011ae115a53e4a690bcac56ee238840e4706bc14d134a3a33325b9a1a43",
-   "characters": 573,
-   "cost": 0.00056727,
-   "duration": 37.275,
+   "audio_sha256": "d3dedda1c48d4cd68dff8c3d3fb00be26eb829a9eb776693356ed97fbdc3d7aa",
+   "characters": 307,
+   "cost": 0.00030393,
+   "duration": 20.05,
    "index": 3,
-   "key": "5d37e4cd4ce2ccec14d46c6c0a36d2fd2e60d254ba2290f32d1e124b210c5bc3",
+   "key": "b33463f5062c361da8492efb93453de37b5be2eb6e6c1dac3bebfd9379fcda50",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,
    "section": "who-a-conviction-pays",
-   "sent_text": "The commitment names no checkpoint output. A conviction is accepted at whichever live output carries the identifier and the key state the commitment names, in the deployment it names. So a step that spends the output and keeps the key state leaves Cora's commitment as it was: a top-up by anyone, a freeze by a hunter and a poison by the owner cannot take her conviction away. A rotation changes the key state, and the commitment entitles nothing from then on. The diagram follows one commitment from its opening to the burn of its marker, beside the checkpoint it accuses:",
-   "text": "The commitment names no checkpoint output. A conviction is accepted at whichever live output carries the identifier and the key state the commitment names, in the deployment it names. So a step that spends the output and keeps the key state leaves Cora's commitment as it was: a top-up by anyone, a freeze by a hunter and a poison by the owner cannot take her conviction away. A rotation changes the key state, and the commitment entitles nothing from then on. The diagram follows one commitment from its opening to the burn of its marker, beside the checkpoint it accuses:",
+   "sent_text": "The wait is counted from that upper bound, not from the slot the opening transaction is included in. An opener who wants the shortest wait sets the bound as close to the inclusion slot as it can: with the bound at the inclusion slot the wait is one slot, and every slot by which the bound is later adds one.",
+   "text": "The wait is counted from that upper bound, not from the slot the opening transaction is included in. An opener who wants the shortest wait sets the bound as close to the inclusion slot as it can: with the bound at the inclusion slot the wait is one slot, and every slot by which the bound is later adds one.",
+   "words": [
+    {
+     "end": 0.312,
+     "start": 0.2,
+     "text": "The"
+    },
+    {
+     "end": 0.625,
+     "start": 0.312,
+     "text": "wait"
+    },
+    {
+     "end": 0.788,
+     "start": 0.625,
+     "text": "is"
+    },
+    {
+     "end": 1.225,
+     "start": 0.788,
+     "text": "counted"
+    },
+    {
+     "end": 1.4,
+     "start": 1.225,
+     "text": "from"
+    },
+    {
+     "end": 1.675,
+     "start": 1.4,
+     "text": "that"
+    },
+    {
+     "end": 1.975,
+     "start": 1.675,
+     "text": "upper"
+    },
+    {
+     "end": 2.55,
+     "start": 1.975,
+     "text": "bound"
+    },
+    {
+     "end": 2.65,
+     "start": 2.55,
+     "text": ","
+    },
+    {
+     "end": 2.875,
+     "start": 2.65,
+     "text": "not"
+    },
+    {
+     "end": 3.037,
+     "start": 2.875,
+     "text": "from"
+    },
+    {
+     "end": 3.138,
+     "start": 3.037,
+     "text": "the"
+    },
+    {
+     "end": 3.525,
+     "start": 3.138,
+     "text": "slot"
+    },
+    {
+     "end": 3.688,
+     "start": 3.525,
+     "text": "the"
+    },
+    {
+     "end": 4.125,
+     "start": 3.688,
+     "text": "opening"
+    },
+    {
+     "end": 4.9,
+     "start": 4.125,
+     "text": "transaction"
+    },
+    {
+     "end": 5.05,
+     "start": 4.9,
+     "text": "is"
+    },
+    {
+     "end": 5.575,
+     "start": 5.05,
+     "text": "included"
+    },
+    {
+     "end": 6.425,
+     "start": 5.575,
+     "text": "in"
+    },
+    {
+     "end": 6.65,
+     "start": 6.425,
+     "text": "."
+    },
+    {
+     "end": 6.988,
+     "start": 6.85,
+     "text": "An"
+    },
+    {
+     "end": 7.45,
+     "start": 6.988,
+     "text": "opener"
+    },
+    {
+     "end": 7.6,
+     "start": 7.45,
+     "text": "who"
+    },
+    {
+     "end": 7.9,
+     "start": 7.6,
+     "text": "wants"
+    },
+    {
+     "end": 8.038,
+     "start": 7.9,
+     "text": "the"
+    },
+    {
+     "end": 8.5,
+     "start": 8.038,
+     "text": "shortest"
+    },
+    {
+     "end": 8.9,
+     "start": 8.5,
+     "text": "wait"
+    },
+    {
+     "end": 9.225,
+     "start": 8.9,
+     "text": "sets"
+    },
+    {
+     "end": 9.325,
+     "start": 9.225,
+     "text": "the"
+    },
+    {
+     "end": 9.762,
+     "start": 9.325,
+     "text": "bound"
+    },
+    {
+     "end": 9.938,
+     "start": 9.762,
+     "text": "as"
+    },
+    {
+     "end": 10.25,
+     "start": 9.938,
+     "text": "close"
+    },
+    {
+     "end": 10.337,
+     "start": 10.25,
+     "text": "to"
+    },
+    {
+     "end": 10.475,
+     "start": 10.337,
+     "text": "the"
+    },
+    {
+     "end": 11.038,
+     "start": 10.475,
+     "text": "inclusion"
+    },
+    {
+     "end": 11.4,
+     "start": 11.038,
+     "text": "slot"
+    },
+    {
+     "end": 11.525,
+     "start": 11.4,
+     "text": "as"
+    },
+    {
+     "end": 11.65,
+     "start": 11.525,
+     "text": "it"
+    },
+    {
+     "end": 12.575,
+     "start": 11.65,
+     "text": "can"
+    },
+    {
+     "end": 12.8,
+     "start": 12.575,
+     "text": ":"
+    },
+    {
+     "end": 13.137,
+     "start": 13.0,
+     "text": "with"
+    },
+    {
+     "end": 13.25,
+     "start": 13.137,
+     "text": "the"
+    },
+    {
+     "end": 13.637,
+     "start": 13.25,
+     "text": "bound"
+    },
+    {
+     "end": 13.712,
+     "start": 13.637,
+     "text": "at"
+    },
+    {
+     "end": 13.85,
+     "start": 13.712,
+     "text": "the"
+    },
+    {
+     "end": 14.438,
+     "start": 13.85,
+     "text": "inclusion"
+    },
+    {
+     "end": 14.85,
+     "start": 14.438,
+     "text": "slot"
+    },
+    {
+     "end": 14.988,
+     "start": 14.85,
+     "text": "the"
+    },
+    {
+     "end": 15.325,
+     "start": 14.988,
+     "text": "wait"
+    },
+    {
+     "end": 15.488,
+     "start": 15.325,
+     "text": "is"
+    },
+    {
+     "end": 15.762,
+     "start": 15.488,
+     "text": "one"
+    },
+    {
+     "end": 16.2,
+     "start": 15.762,
+     "text": "slot"
+    },
+    {
+     "end": 16.275,
+     "start": 16.2,
+     "text": ","
+    },
+    {
+     "end": 16.413,
+     "start": 16.275,
+     "text": "and"
+    },
+    {
+     "end": 16.763,
+     "start": 16.413,
+     "text": "every"
+    },
+    {
+     "end": 17.125,
+     "start": 16.763,
+     "text": "slot"
+    },
+    {
+     "end": 17.3,
+     "start": 17.125,
+     "text": "by"
+    },
+    {
+     "end": 17.5,
+     "start": 17.3,
+     "text": "which"
+    },
+    {
+     "end": 17.625,
+     "start": 17.5,
+     "text": "the"
+    },
+    {
+     "end": 18.025,
+     "start": 17.625,
+     "text": "bound"
+    },
+    {
+     "end": 18.188,
+     "start": 18.025,
+     "text": "is"
+    },
+    {
+     "end": 18.587,
+     "start": 18.188,
+     "text": "later"
+    },
+    {
+     "end": 18.9,
+     "start": 18.587,
+     "text": "adds"
+    },
+    {
+     "end": 19.825,
+     "start": 18.9,
+     "text": "one"
+    },
+    {
+     "end": 20.05,
+     "start": 19.825,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-trust-model/who-a-conviction-pays-04": {
+   "audio_sha256": "75370b123001ee18617ff307cdbf8d1330850a44e8c4931ca881f76572144800",
+   "characters": 711,
+   "cost": 0.00070389,
+   "duration": 46.575,
+   "index": 4,
+   "key": "2962e4d0e8ad7522b54dff50f37bd1ba423d2badcc2432de29466938fc07ff22",
+   "page": "docs/design/trust-model.md",
+   "pause_ms": 400,
+   "section": "who-a-conviction-pays",
+   "sent_text": "The commitment names no checkpoint output. A conviction is accepted at whichever live output carries the identifier and the key state the commitment names, in the deployment it names. So a step that spends the output and keeps the key state leaves Cora's commitment as it was: a top-up by anyone, a freeze by a hunter and a poison by the owner cannot take her conviction away. A rotation changes the key state, and the commitment entitles nothing from then on. The diagram follows one commitment from its opening to the burn of its marker, beside the checkpoint it accuses. A commitment that has just been opened entitles nobody yet: it waits until the slot after its opening transaction's upper validity bound.",
+   "text": "The commitment names no checkpoint output. A conviction is accepted at whichever live output carries the identifier and the key state the commitment names, in the deployment it names. So a step that spends the output and keeps the key state leaves Cora's commitment as it was: a top-up by anyone, a freeze by a hunter and a poison by the owner cannot take her conviction away. A rotation changes the key state, and the commitment entitles nothing from then on. The diagram follows one commitment from its opening to the burn of its marker, beside the checkpoint it accuses. A commitment that has just been opened entitles nobody yet: it waits until the slot after its opening transaction's upper validity bound.",
    "words": [
     {
      "end": 0.25,
@@ -369999,33 +370564,153 @@
      "text": "the"
     },
     {
-     "end": 35.65,
+     "end": 35.675,
      "start": 35.112,
      "text": "checkpoint"
     },
     {
-     "end": 35.75,
-     "start": 35.65,
+     "end": 35.775,
+     "start": 35.675,
      "text": "it"
     },
     {
-     "end": 37.075,
-     "start": 35.75,
+     "end": 37.125,
+     "start": 35.775,
      "text": "accuses"
     },
     {
-     "end": 37.275,
-     "start": 37.075,
+     "end": 37.325,
+     "start": 37.125,
+     "text": "."
+    },
+    {
+     "end": 37.6,
+     "start": 37.525,
+     "text": "A"
+    },
+    {
+     "end": 38.1,
+     "start": 37.6,
+     "text": "commitment"
+    },
+    {
+     "end": 38.237,
+     "start": 38.1,
+     "text": "that"
+    },
+    {
+     "end": 38.412,
+     "start": 38.237,
+     "text": "has"
+    },
+    {
+     "end": 38.675,
+     "start": 38.412,
+     "text": "just"
+    },
+    {
+     "end": 38.888,
+     "start": 38.675,
+     "text": "been"
+    },
+    {
+     "end": 39.325,
+     "start": 38.888,
+     "text": "opened"
+    },
+    {
+     "end": 39.938,
+     "start": 39.325,
+     "text": "entitles"
+    },
+    {
+     "end": 40.4,
+     "start": 39.938,
+     "text": "nobody"
+    },
+    {
+     "end": 41.2,
+     "start": 40.4,
+     "text": "yet"
+    },
+    {
+     "end": 41.4,
+     "start": 41.2,
      "text": ":"
+    },
+    {
+     "end": 41.725,
+     "start": 41.6,
+     "text": "it"
+    },
+    {
+     "end": 42.062,
+     "start": 41.725,
+     "text": "waits"
+    },
+    {
+     "end": 42.338,
+     "start": 42.062,
+     "text": "until"
+    },
+    {
+     "end": 42.463,
+     "start": 42.338,
+     "text": "the"
+    },
+    {
+     "end": 42.9,
+     "start": 42.463,
+     "text": "slot"
+    },
+    {
+     "end": 43.188,
+     "start": 42.9,
+     "text": "after"
+    },
+    {
+     "end": 43.338,
+     "start": 43.188,
+     "text": "its"
+    },
+    {
+     "end": 43.75,
+     "start": 43.338,
+     "text": "opening"
+    },
+    {
+     "end": 44.625,
+     "start": 43.75,
+     "text": "transaction's"
+    },
+    {
+     "end": 44.95,
+     "start": 44.625,
+     "text": "upper"
+    },
+    {
+     "end": 45.375,
+     "start": 44.95,
+     "text": "validity"
+    },
+    {
+     "end": 46.35,
+     "start": 45.375,
+     "text": "bound"
+    },
+    {
+     "end": 46.575,
+     "start": 46.35,
+     "text": "."
     }
    ]
   },
-  "docs-design-trust-model/who-a-conviction-pays-04": {
-   "audio_sha256": "73af624e1c6a34d054df5dd72c98a239d527ebed35b12505c5fb847c60dd9c79",
+  "docs-design-trust-model/who-a-conviction-pays-05": {
+   "audio_sha256": "89bf690415fa1d1d127d235cb169575713651a640564b157d85e2fa809a2c23f",
    "characters": 223,
    "cost": 0.00022077,
    "duration": 13.875,
-   "index": 4,
+   "index": 5,
    "key": "d21e0d00cfa5a899734dbb000fb152f00d646963d6745a985dd086c51c4a915c",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,
@@ -370245,12 +370930,12 @@
     }
    ]
   },
-  "docs-design-trust-model/who-a-conviction-pays-05": {
-   "audio_sha256": "c7d716cc4efe5cfb0e212ec0a177c79fb3c9182104dbf561d9823d6a61e02cdc",
+  "docs-design-trust-model/who-a-conviction-pays-06": {
+   "audio_sha256": "cef43ba148b61314312240cbfc479775e1993e06b85c75c876a570399f62cc6e",
    "characters": 332,
    "cost": 0.00032868000000000003,
    "duration": 21.2,
-   "index": 5,
+   "index": 6,
    "key": "e0096babf756d13e9c1df548afe3e57647310bbbabf0e13e493a57076efcb765",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,
@@ -370540,12 +371225,12 @@
     }
    ]
   },
-  "docs-design-trust-model/who-a-conviction-pays-06": {
-   "audio_sha256": "742b246a60d7af0a10c654d2cafde3c301ab0ce4f4ae5cdceede2b93b3cf2bf2",
+  "docs-design-trust-model/who-a-conviction-pays-07": {
+   "audio_sha256": "d23e5b2c7497dae009c238a72ac9a31a9e51948d85574caf067752fc95c4bf14",
    "characters": 77,
    "cost": 7.623e-05,
    "duration": 4.8,
-   "index": 6,
+   "index": 7,
    "key": "cdc15573908df276d238628b7180f1173c172f10ef4f98707b5154427e61ea37",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,
@@ -370645,12 +371330,12 @@
     }
    ]
   },
-  "docs-design-trust-model/who-a-conviction-pays-07": {
-   "audio_sha256": "d502f15cdc1adc2f896f080d7b571f3e543313901ba19fb6b602579970e15434",
+  "docs-design-trust-model/who-a-conviction-pays-08": {
+   "audio_sha256": "ac21ce6fcf4623aa923df6db71f510c0eac5c10d53700771e4a5c9c9ce82378c",
    "characters": 136,
    "cost": 0.00013464,
    "duration": 8.675,
-   "index": 7,
+   "index": 8,
    "key": "7f865b25c5371cafd0a431186a19a29b4e8ebbec151d5afdf50804bcc91bcfb2",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,
@@ -370790,18 +371475,18 @@
     }
    ]
   },
-  "docs-design-trust-model/who-a-conviction-pays-08": {
-   "audio_sha256": "2a3184f3db796581fe5609338948a7cbbc72e297f392f9bd4390509ef2f0a891",
-   "characters": 530,
-   "cost": 0.0005246999999999999,
-   "duration": 33.95,
-   "index": 8,
-   "key": "264115049942f3dff5ff9f3cbb823b2ae2c4025ffe7ae7c587fcc62c4b8e20e9",
+  "docs-design-trust-model/who-a-conviction-pays-09": {
+   "audio_sha256": "9cb7c2af9d1f1bba06f460bbabb804e8e76386af3c308cba7b713bcf578ab6a8",
+   "characters": 726,
+   "cost": 0.0007187399999999999,
+   "duration": 46.95,
+   "index": 9,
+   "key": "171926af6655e486a3421b86acee0955dd61137c218b3f26a1b38acc0dae863e",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,
    "section": "who-a-conviction-pays",
-   "sent_text": "The model leaves to the implementation, and states nowhere: the hash and the nonce that hide the evidence and the payee, the marker's derivation from the opening transaction, the commitment deposit and its payouts, the payee's signatures, and the lifetime a release applies. It requires that a commitment is first eligible in the slot after its opening and expires no earlier than that. The model keeps one piece of evidence per key state, chosen by its environment, so a commitment over any other evidence entitles nothing in it.",
-   "text": "The model leaves to the implementation, and states nowhere: the hash and the nonce that hide the evidence and the payee, the marker's derivation from the opening transaction, the commitment deposit and its payouts, the payee's signatures, and the lifetime a release applies. It requires that a commitment is first eligible in the slot after its opening and expires no earlier than that. The model keeps one piece of evidence per key state, chosen by its environment, so a commitment over any other evidence entitles nothing in it.",
+   "sent_text": "The model leaves to the implementation, and states nowhere: the hash and the nonce that hide the evidence and the payee, the marker's derivation from the opening transaction, the commitment deposit and its payouts, the payee's signatures, and the lifetime a release applies. It requires that a commitment is first eligible in the slot after the upper bound of its opening transaction's validity range and expires no earlier than that. The slot the opening transaction is included in is not an input of the model; the ledger guarantees only that it is no later than that upper bound. The model keeps one piece of evidence per key state, chosen by its environment, so a commitment over any other evidence entitles nothing in it.",
+   "text": "The model leaves to the implementation, and states nowhere: the hash and the nonce that hide the evidence and the payee, the marker's derivation from the opening transaction, the commitment deposit and its payouts, the payee's signatures, and the lifetime a release applies. It requires that a commitment is first eligible in the slot after the upper bound of its opening transaction's validity range and expires no earlier than that. The slot the opening transaction is included in is not an input of the model; the ledger guarantees only that it is no later than that upper bound. The model keeps one piece of evidence per key state, chosen by its environment, so a commitment over any other evidence entitles nothing in it.",
    "words": [
     {
      "end": 0.25,
@@ -371054,264 +371739,449 @@
      "text": "."
     },
     {
-     "end": 17.175,
-     "start": 17.05,
+     "end": 17.2,
+     "start": 17.075,
      "text": "It"
     },
     {
-     "end": 17.825,
-     "start": 17.175,
+     "end": 17.85,
+     "start": 17.2,
      "text": "requires"
     },
     {
-     "end": 17.962,
-     "start": 17.825,
+     "end": 17.987,
+     "start": 17.85,
      "text": "that"
     },
     {
-     "end": 18.05,
-     "start": 17.962,
+     "end": 18.087,
+     "start": 17.987,
      "text": "a"
     },
     {
-     "end": 18.625,
-     "start": 18.05,
+     "end": 18.65,
+     "start": 18.087,
      "text": "commitment"
     },
     {
-     "end": 18.812,
-     "start": 18.625,
+     "end": 18.837,
+     "start": 18.65,
      "text": "is"
     },
     {
-     "end": 19.163,
-     "start": 18.812,
+     "end": 19.212,
+     "start": 18.837,
      "text": "first"
     },
     {
-     "end": 19.7,
-     "start": 19.163,
+     "end": 19.75,
+     "start": 19.212,
      "text": "eligible"
     },
     {
-     "end": 19.812,
-     "start": 19.7,
+     "end": 19.862,
+     "start": 19.75,
      "text": "in"
     },
     {
-     "end": 19.938,
-     "start": 19.812,
+     "end": 19.987,
+     "start": 19.862,
      "text": "the"
     },
     {
-     "end": 20.362,
-     "start": 19.938,
+     "end": 20.438,
+     "start": 19.987,
      "text": "slot"
     },
     {
-     "end": 20.688,
-     "start": 20.362,
+     "end": 20.737,
+     "start": 20.438,
      "text": "after"
     },
     {
-     "end": 20.85,
-     "start": 20.688,
-     "text": "its"
+     "end": 20.888,
+     "start": 20.737,
+     "text": "the"
     },
     {
-     "end": 21.5,
-     "start": 20.85,
-     "text": "opening"
+     "end": 21.2,
+     "start": 20.888,
+     "text": "upper"
+    },
+    {
+     "end": 21.562,
+     "start": 21.2,
+     "text": "bound"
     },
     {
      "end": 21.638,
-     "start": 21.5,
-     "text": "and"
-    },
-    {
-     "end": 22.288,
-     "start": 21.638,
-     "text": "expires"
-    },
-    {
-     "end": 22.55,
-     "start": 22.288,
-     "text": "no"
-    },
-    {
-     "end": 23.025,
-     "start": 22.55,
-     "text": "earlier"
-    },
-    {
-     "end": 23.175,
-     "start": 23.025,
-     "text": "than"
-    },
-    {
-     "end": 24.1,
-     "start": 23.175,
-     "text": "that"
-    },
-    {
-     "end": 24.325,
-     "start": 24.1,
-     "text": "."
-    },
-    {
-     "end": 24.575,
-     "start": 24.5,
-     "text": "The"
-    },
-    {
-     "end": 24.95,
-     "start": 24.575,
-     "text": "model"
-    },
-    {
-     "end": 25.263,
-     "start": 24.95,
-     "text": "keeps"
-    },
-    {
-     "end": 25.525,
-     "start": 25.263,
-     "text": "one"
-    },
-    {
-     "end": 25.788,
-     "start": 25.525,
-     "text": "piece"
-    },
-    {
-     "end": 25.9,
-     "start": 25.788,
+     "start": 21.562,
      "text": "of"
     },
     {
-     "end": 26.35,
-     "start": 25.9,
-     "text": "evidence"
-    },
-    {
-     "end": 26.538,
-     "start": 26.35,
-     "text": "per"
-    },
-    {
-     "end": 26.812,
-     "start": 26.538,
-     "text": "key"
-    },
-    {
-     "end": 27.25,
-     "start": 26.812,
-     "text": "state"
-    },
-    {
-     "end": 27.362,
-     "start": 27.25,
-     "text": ","
-    },
-    {
-     "end": 27.825,
-     "start": 27.362,
-     "text": "chosen"
-    },
-    {
-     "end": 28.0,
-     "start": 27.825,
-     "text": "by"
-    },
-    {
-     "end": 28.163,
-     "start": 28.0,
+     "end": 21.837,
+     "start": 21.638,
      "text": "its"
     },
     {
-     "end": 29.3,
-     "start": 28.163,
-     "text": "environment"
+     "end": 22.3,
+     "start": 21.837,
+     "text": "opening"
     },
     {
-     "end": 29.5,
-     "start": 29.3,
-     "text": ","
+     "end": 23.212,
+     "start": 22.3,
+     "text": "transaction's"
     },
     {
-     "end": 29.85,
-     "start": 29.7,
-     "text": "so"
+     "end": 23.763,
+     "start": 23.212,
+     "text": "validity"
     },
     {
-     "end": 29.925,
-     "start": 29.85,
-     "text": "a"
+     "end": 24.337,
+     "start": 23.763,
+     "text": "range"
     },
     {
-     "end": 30.45,
-     "start": 29.925,
-     "text": "commitment"
+     "end": 24.475,
+     "start": 24.337,
+     "text": "and"
     },
     {
-     "end": 30.763,
-     "start": 30.45,
-     "text": "over"
+     "end": 25.112,
+     "start": 24.475,
+     "text": "expires"
     },
     {
-     "end": 31.025,
-     "start": 30.763,
-     "text": "any"
+     "end": 25.375,
+     "start": 25.112,
+     "text": "no"
     },
     {
-     "end": 31.325,
-     "start": 31.025,
-     "text": "other"
+     "end": 25.85,
+     "start": 25.375,
+     "text": "earlier"
     },
     {
-     "end": 31.913,
-     "start": 31.325,
-     "text": "evidence"
+     "end": 26.025,
+     "start": 25.85,
+     "text": "than"
     },
     {
-     "end": 32.513,
-     "start": 31.913,
-     "text": "entitles"
+     "end": 27.025,
+     "start": 26.025,
+     "text": "that"
     },
     {
-     "end": 32.925,
-     "start": 32.513,
-     "text": "nothing"
+     "end": 27.275,
+     "start": 27.025,
+     "text": "."
     },
     {
-     "end": 33.088,
-     "start": 32.925,
+     "end": 27.562,
+     "start": 27.45,
+     "text": "The"
+    },
+    {
+     "end": 27.925,
+     "start": 27.562,
+     "text": "slot"
+    },
+    {
+     "end": 28.087,
+     "start": 27.925,
+     "text": "the"
+    },
+    {
+     "end": 28.5,
+     "start": 28.087,
+     "text": "opening"
+    },
+    {
+     "end": 29.275,
+     "start": 28.5,
+     "text": "transaction"
+    },
+    {
+     "end": 29.425,
+     "start": 29.275,
+     "text": "is"
+    },
+    {
+     "end": 30.212,
+     "start": 29.425,
+     "text": "included"
+    },
+    {
+     "end": 30.587,
+     "start": 30.212,
      "text": "in"
     },
     {
-     "end": 33.75,
-     "start": 33.088,
+     "end": 30.763,
+     "start": 30.587,
+     "text": "is"
+    },
+    {
+     "end": 31.013,
+     "start": 30.763,
+     "text": "not"
+    },
+    {
+     "end": 31.125,
+     "start": 31.013,
+     "text": "an"
+    },
+    {
+     "end": 31.487,
+     "start": 31.125,
+     "text": "input"
+    },
+    {
+     "end": 31.562,
+     "start": 31.487,
+     "text": "of"
+    },
+    {
+     "end": 31.65,
+     "start": 31.562,
+     "text": "the"
+    },
+    {
+     "end": 32.575,
+     "start": 31.65,
+     "text": "model"
+    },
+    {
+     "end": 32.775,
+     "start": 32.575,
+     "text": ";"
+    },
+    {
+     "end": 33.05,
+     "start": 32.95,
+     "text": "the"
+    },
+    {
+     "end": 33.375,
+     "start": 33.05,
+     "text": "ledger"
+    },
+    {
+     "end": 33.938,
+     "start": 33.375,
+     "text": "guarantees"
+    },
+    {
+     "end": 34.487,
+     "start": 33.938,
+     "text": "only"
+    },
+    {
+     "end": 34.65,
+     "start": 34.487,
+     "text": "that"
+    },
+    {
+     "end": 34.75,
+     "start": 34.65,
      "text": "it"
     },
     {
-     "end": 33.95,
-     "start": 33.75,
+     "end": 34.9,
+     "start": 34.75,
+     "text": "is"
+    },
+    {
+     "end": 35.125,
+     "start": 34.9,
+     "text": "no"
+    },
+    {
+     "end": 35.5,
+     "start": 35.125,
+     "text": "later"
+    },
+    {
+     "end": 35.65,
+     "start": 35.5,
+     "text": "than"
+    },
+    {
+     "end": 35.9,
+     "start": 35.65,
+     "text": "that"
+    },
+    {
+     "end": 36.2,
+     "start": 35.9,
+     "text": "upper"
+    },
+    {
+     "end": 37.125,
+     "start": 36.2,
+     "text": "bound"
+    },
+    {
+     "end": 37.325,
+     "start": 37.125,
+     "text": "."
+    },
+    {
+     "end": 37.575,
+     "start": 37.5,
+     "text": "The"
+    },
+    {
+     "end": 37.95,
+     "start": 37.575,
+     "text": "model"
+    },
+    {
+     "end": 38.263,
+     "start": 37.95,
+     "text": "keeps"
+    },
+    {
+     "end": 38.525,
+     "start": 38.263,
+     "text": "one"
+    },
+    {
+     "end": 38.787,
+     "start": 38.525,
+     "text": "piece"
+    },
+    {
+     "end": 38.9,
+     "start": 38.787,
+     "text": "of"
+    },
+    {
+     "end": 39.35,
+     "start": 38.9,
+     "text": "evidence"
+    },
+    {
+     "end": 39.537,
+     "start": 39.35,
+     "text": "per"
+    },
+    {
+     "end": 39.812,
+     "start": 39.537,
+     "text": "key"
+    },
+    {
+     "end": 40.25,
+     "start": 39.812,
+     "text": "state"
+    },
+    {
+     "end": 40.362,
+     "start": 40.25,
+     "text": ","
+    },
+    {
+     "end": 40.825,
+     "start": 40.362,
+     "text": "chosen"
+    },
+    {
+     "end": 41.0,
+     "start": 40.825,
+     "text": "by"
+    },
+    {
+     "end": 41.162,
+     "start": 41.0,
+     "text": "its"
+    },
+    {
+     "end": 42.3,
+     "start": 41.162,
+     "text": "environment"
+    },
+    {
+     "end": 42.5,
+     "start": 42.3,
+     "text": ","
+    },
+    {
+     "end": 42.85,
+     "start": 42.7,
+     "text": "so"
+    },
+    {
+     "end": 42.925,
+     "start": 42.85,
+     "text": "a"
+    },
+    {
+     "end": 43.45,
+     "start": 42.925,
+     "text": "commitment"
+    },
+    {
+     "end": 43.763,
+     "start": 43.45,
+     "text": "over"
+    },
+    {
+     "end": 44.025,
+     "start": 43.763,
+     "text": "any"
+    },
+    {
+     "end": 44.325,
+     "start": 44.025,
+     "text": "other"
+    },
+    {
+     "end": 44.912,
+     "start": 44.325,
+     "text": "evidence"
+    },
+    {
+     "end": 45.513,
+     "start": 44.912,
+     "text": "entitles"
+    },
+    {
+     "end": 45.925,
+     "start": 45.513,
+     "text": "nothing"
+    },
+    {
+     "end": 46.088,
+     "start": 45.925,
+     "text": "in"
+    },
+    {
+     "end": 46.75,
+     "start": 46.088,
+     "text": "it"
+    },
+    {
+     "end": 46.95,
+     "start": 46.75,
      "text": "."
     }
    ]
   },
-  "docs-design-trust-model/who-a-conviction-pays-09": {
-   "audio_sha256": "7775d858dc64addb108561474c1092441f755b187ecdbd017674f3d4f1acfecf",
-   "characters": 197,
-   "cost": 0.00019503,
-   "duration": 12.95,
-   "index": 9,
-   "key": "980018ef03635f8f1ec7c92309611ae2a52cd5a1de810844f613196cc1e88f1e",
+  "docs-design-trust-model/who-a-conviction-pays-10": {
+   "audio_sha256": "9e31d0427612f768f026c285241957059395cdc2f113003b8ae3836e59fbcdc5",
+   "characters": 223,
+   "cost": 0.00022077,
+   "duration": 14.35,
+   "index": 10,
+   "key": "43e1f58ce010a5aba0d9d41e2134a2dae607f41b74c59e2a73332d833cd385ca",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,
    "section": "who-a-conviction-pays",
-   "sent_text": "The validators on main still bind a commitment to the checkpoint output and do not compare the deployment. They follow this model in a later change; until then a top-up voids a commitment on chain.",
-   "text": "The validators on main still bind a commitment to the checkpoint output and do not compare the deployment. They follow this model in a later change; until then a top-up voids a commitment on chain.",
+   "sent_text": "The validators on main still bind a commitment to the checkpoint output and do not compare its deployment with the one that settles. They follow this model in a later change; until then a top-up voids a commitment on chain.",
+   "text": "The validators on main still bind a commitment to the checkpoint output and do not compare its deployment with the one that settles. They follow this model in a later change; until then a top-up voids a commitment on chain.",
    "words": [
     {
      "end": 0.3,
@@ -371324,43 +372194,43 @@
      "text": "validators"
     },
     {
-     "end": 1.175,
+     "end": 1.15,
      "start": 0.95,
      "text": "on"
     },
     {
-     "end": 1.638,
-     "start": 1.175,
+     "end": 1.612,
+     "start": 1.15,
      "text": "main"
     },
     {
-     "end": 1.938,
-     "start": 1.638,
+     "end": 1.913,
+     "start": 1.612,
      "text": "still"
     },
     {
-     "end": 2.287,
-     "start": 1.938,
+     "end": 2.263,
+     "start": 1.913,
      "text": "bind"
     },
     {
-     "end": 2.35,
-     "start": 2.287,
+     "end": 2.325,
+     "start": 2.263,
      "text": "a"
     },
     {
-     "end": 2.9,
-     "start": 2.35,
+     "end": 2.875,
+     "start": 2.325,
      "text": "commitment"
     },
     {
-     "end": 2.987,
-     "start": 2.9,
+     "end": 2.975,
+     "start": 2.875,
      "text": "to"
     },
     {
      "end": 3.112,
-     "start": 2.987,
+     "start": 2.975,
      "text": "the"
     },
     {
@@ -371369,148 +372239,173 @@
      "text": "checkpoint"
     },
     {
-     "end": 4.275,
+     "end": 4.262,
      "start": 3.625,
      "text": "output"
     },
     {
-     "end": 4.425,
-     "start": 4.275,
+     "end": 4.387,
+     "start": 4.262,
      "text": "and"
     },
     {
-     "end": 4.575,
-     "start": 4.425,
+     "end": 4.5,
+     "start": 4.387,
      "text": "do"
     },
     {
-     "end": 4.825,
-     "start": 4.575,
+     "end": 4.75,
+     "start": 4.5,
      "text": "not"
     },
     {
-     "end": 5.213,
-     "start": 4.825,
+     "end": 5.175,
+     "start": 4.75,
      "text": "compare"
     },
     {
-     "end": 5.3,
-     "start": 5.213,
-     "text": "the"
+     "end": 5.375,
+     "start": 5.175,
+     "text": "its"
     },
     {
-     "end": 6.5,
-     "start": 5.3,
+     "end": 5.975,
+     "start": 5.375,
      "text": "deployment"
     },
     {
-     "end": 6.7,
-     "start": 6.5,
+     "end": 6.125,
+     "start": 5.975,
+     "text": "with"
+    },
+    {
+     "end": 6.25,
+     "start": 6.125,
+     "text": "the"
+    },
+    {
+     "end": 6.475,
+     "start": 6.25,
+     "text": "one"
+    },
+    {
+     "end": 6.688,
+     "start": 6.475,
+     "text": "that"
+    },
+    {
+     "end": 7.875,
+     "start": 6.688,
+     "text": "settles"
+    },
+    {
+     "end": 8.1,
+     "start": 7.875,
      "text": "."
     },
     {
-     "end": 7.037,
-     "start": 6.875,
+     "end": 8.438,
+     "start": 8.275,
      "text": "They"
     },
     {
-     "end": 7.4,
-     "start": 7.037,
+     "end": 8.8,
+     "start": 8.438,
      "text": "follow"
     },
     {
-     "end": 7.637,
-     "start": 7.4,
+     "end": 9.038,
+     "start": 8.8,
      "text": "this"
     },
     {
-     "end": 8.075,
-     "start": 7.637,
+     "end": 9.475,
+     "start": 9.038,
      "text": "model"
     },
     {
-     "end": 8.2,
-     "start": 8.075,
+     "end": 9.6,
+     "start": 9.475,
      "text": "in"
     },
     {
-     "end": 8.3,
-     "start": 8.2,
+     "end": 9.7,
+     "start": 9.6,
      "text": "a"
-    },
-    {
-     "end": 8.688,
-     "start": 8.3,
-     "text": "later"
-    },
-    {
-     "end": 9.325,
-     "start": 8.688,
-     "text": "change"
-    },
-    {
-     "end": 9.425,
-     "start": 9.325,
-     "text": ";"
-    },
-    {
-     "end": 9.75,
-     "start": 9.425,
-     "text": "until"
-    },
-    {
-     "end": 9.975,
-     "start": 9.75,
-     "text": "then"
     },
     {
      "end": 10.087,
-     "start": 9.975,
+     "start": 9.7,
+     "text": "later"
+    },
+    {
+     "end": 10.725,
+     "start": 10.087,
+     "text": "change"
+    },
+    {
+     "end": 10.825,
+     "start": 10.725,
+     "text": ";"
+    },
+    {
+     "end": 11.15,
+     "start": 10.825,
+     "text": "until"
+    },
+    {
+     "end": 11.375,
+     "start": 11.15,
+     "text": "then"
+    },
+    {
+     "end": 11.488,
+     "start": 11.375,
      "text": "a"
     },
     {
-     "end": 10.6,
-     "start": 10.087,
+     "end": 12.0,
+     "start": 11.488,
      "text": "top-up"
     },
     {
-     "end": 10.913,
-     "start": 10.6,
+     "end": 12.312,
+     "start": 12.0,
      "text": "voids"
     },
     {
-     "end": 10.975,
-     "start": 10.913,
+     "end": 12.375,
+     "start": 12.312,
      "text": "a"
     },
     {
-     "end": 11.5,
-     "start": 10.975,
+     "end": 12.9,
+     "start": 12.375,
      "text": "commitment"
     },
     {
-     "end": 11.712,
-     "start": 11.5,
+     "end": 13.113,
+     "start": 12.9,
      "text": "on"
     },
     {
-     "end": 12.75,
-     "start": 11.712,
+     "end": 14.15,
+     "start": 13.113,
      "text": "chain"
     },
     {
-     "end": 12.95,
-     "start": 12.75,
+     "end": 14.35,
+     "start": 14.15,
      "text": "."
     }
    ]
   },
-  "docs-design-trust-model/who-a-conviction-pays-10": {
-   "audio_sha256": "2dcda21560674ec376bdb3945b210aa08c29a2c3c1a17c9f0ce2abfc33d440e0",
+  "docs-design-trust-model/who-a-conviction-pays-11": {
+   "audio_sha256": "f45b9034ddadbfef2974987f41884dc30805b848ce685b3325cd6e733562f006",
    "characters": 505,
    "cost": 0.00049995,
    "duration": 35.75,
-   "index": 10,
+   "index": 11,
    "key": "65ad418181ed8309beca3f3fe8facdd3c3e1e41a581e03fbe1255756a35b9bbf",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,

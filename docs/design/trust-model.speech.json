@@ -309,11 +309,15 @@
       "pause": 400
     },
     {
-      "text": "The evidence of duplicity is private until a conviction shows it, but once a conviction transaction is submitted anyone can read it. Without a guard, the producer of a block could drop Cora's transaction and include a copy that pays itself. The guard is a commitment made before the evidence is shown: Cora opens, under the release's commitment program, a commitment that names the identifier, the deployment, the key state she accuses (its epoch and sequence number), the digest of her evidence and herself, hidden behind a hash. From the next slot on, her conviction reveals it. A copier naming itself finds no commitment that names it; a copier who opens one after seeing the evidence must wait one slot before it can use it.",
+      "text": "The evidence of duplicity is private until a conviction shows it, but once a conviction transaction is submitted anyone can read it. Without a guard, the producer of a block could drop Cora's transaction and include a copy that pays itself. The guard is a commitment made before the evidence is shown: Cora opens, under the release's commitment program, a commitment that names the identifier, the deployment, the key state she accuses (its epoch and sequence number), the digest of her evidence and herself, hidden behind a hash. Her conviction can reveal it from the slot after the upper bound of the validity range of the transaction that opened it. A copier naming itself finds no commitment that names it; a copier who opens one after seeing the evidence cannot use it before the slot after its own opening transaction's upper bound. The ledger includes a transaction no later than that bound, so this is never earlier than the slot after the one the copier's opening is included in.",
       "pause": 400
     },
     {
-      "text": "The commitment names no checkpoint output. A conviction is accepted at whichever live output carries the identifier and the key state the commitment names, in the deployment it names. So a step that spends the output and keeps the key state leaves Cora's commitment as it was: a top-up by anyone, a freeze by a hunter and a poison by the owner cannot take her conviction away. A rotation changes the key state, and the commitment entitles nothing from then on. The diagram follows one commitment from its opening to the burn of its marker, beside the checkpoint it accuses:",
+      "text": "The wait is counted from that upper bound, not from the slot the opening transaction is included in. An opener who wants the shortest wait sets the bound as close to the inclusion slot as it can: with the bound at the inclusion slot the wait is one slot, and every slot by which the bound is later adds one.",
+      "pause": 400
+    },
+    {
+      "text": "The commitment names no checkpoint output. A conviction is accepted at whichever live output carries the identifier and the key state the commitment names, in the deployment it names. So a step that spends the output and keeps the key state leaves Cora's commitment as it was: a top-up by anyone, a freeze by a hunter and a poison by the owner cannot take her conviction away. A rotation changes the key state, and the commitment entitles nothing from then on. The diagram follows one commitment from its opening to the burn of its marker, beside the checkpoint it accuses. A commitment that has just been opened entitles nobody yet: it waits until the slot after its opening transaction's upper validity bound.",
       "pause": 400
     },
     {
@@ -333,11 +337,11 @@
       "pause": 400
     },
     {
-      "text": "The model leaves to the implementation, and states nowhere: the hash and the nonce that hide the evidence and the payee, the marker's derivation from the opening transaction, the commitment deposit and its payouts, the payee's signatures, and the lifetime a release applies. It requires that a commitment is first eligible in the slot after its opening and expires no earlier than that. The model keeps one piece of evidence per key state, chosen by its environment, so a commitment over any other evidence entitles nothing in it.",
+      "text": "The model leaves to the implementation, and states nowhere: the hash and the nonce that hide the evidence and the payee, the marker's derivation from the opening transaction, the commitment deposit and its payouts, the payee's signatures, and the lifetime a release applies. It requires that a commitment is first eligible in the slot after the upper bound of its opening transaction's validity range and expires no earlier than that. The slot the opening transaction is included in is not an input of the model; the ledger guarantees only that it is no later than that upper bound. The model keeps one piece of evidence per key state, chosen by its environment, so a commitment over any other evidence entitles nothing in it.",
       "pause": 400
     },
     {
-      "text": "The validators on main still bind a commitment to the checkpoint output and do not compare the deployment. They follow this model in a later change; until then a top-up voids a commitment on chain.",
+      "text": "The validators on main still bind a commitment to the checkpoint output and do not compare its deployment with the one that settles. They follow this model in a later change; until then a top-up voids a commitment on chain.",
       "pause": 400
     },
     {
@@ -401,6 +405,6 @@
   ],
   "_source": {
     "file": "trust-model.md",
-    "sha256": "ccdc90d8895a57b99813a75c338987ef32b70c3e0cae0b4235bb35574a5f1d6a"
+    "sha256": "8f2a2240cfab04661a5bad545c8f74e97245b9520ef4c10d5d23811a94f06842"
   }
 }

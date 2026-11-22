@@ -130,7 +130,7 @@ step:
         b: 0
         pool: 2
       convictor: null
-    exhibits: [T10_bonds_are_observable, T14_pool_decreases_only_by_premium, T16_payments_are_named, T1_rotate_strict, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T2_epoch_only_by_rotation, T3_epoch_local, T3_rotation_clears, T5_every_bond_option, T5_keep_is_rotated, T5_keep_needs_no_intent, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T6_relayer_cannot_park_age_or_close, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, local_progress_unless_pending_or_retired, rotation_clears_topped_up, step_from_present_keeps_refund, trace_poison_fold, trace_sn_monotone_all]
+    exhibits: [T10_bonds_are_observable, T14_pool_decreases_only_by_premium, T16_payments_are_named, T1_rotate_strict, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T2_epoch_only_by_rotation, T3_epoch_local, T3_rotation_clears, T5_every_bond_option, T5_keep_is_rotated, T5_keep_needs_no_intent, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T6_relayer_cannot_park_age_or_close, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, local_progress_unless_pending_or_retired, rotation_clears_topped_up, rotation_voids_commitment, step_from_present_keeps_refund, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 12
   who: hal
@@ -189,7 +189,7 @@ step:
         b: 5
         pool: 0
       convictor: null
-    exhibits: [T10_bonds_are_observable, T15_b_leaves_only_by_freeze, T15_freeze_makes_inert, T16_payments_are_named, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T5_freeze_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_frozen_flips_only_by_rotation_or_freeze, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, local_progress_unless_pending_or_retired, step_from_present_keeps_refund, topped_up_kept_by_poison_and_freeze, trace_poison_fold, trace_sn_monotone_all]
+    exhibits: [T10_bonds_are_observable, T15_b_leaves_only_by_freeze, T15_freeze_makes_inert, T16_payments_are_named, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T5_freeze_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_frozen_flips_only_by_rotation_or_freeze, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, commitment_survives_freeze, consumableStateB_iff, local_progress_unless_pending_or_retired, step_from_present_keeps_refund, topped_up_kept_by_poison_and_freeze, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 15
   who: friend
@@ -237,7 +237,7 @@ step:
       refund: null
       hunter: null
       convictor: null
-    exhibits: [T10_bonds_are_observable, T10_inert_without_next_keys, T14_pool_increases_only_by_topup, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, step_from_present_keeps_refund, topUp_adds_at_least_premium, topped_up_set_only_by_topUp, trace_poison_fold, trace_sn_monotone_all]
+    exhibits: [T10_bonds_are_observable, T10_inert_without_next_keys, T14_pool_increases_only_by_topup, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, commitment_survives_topUp, consumableStateB_iff, step_from_present_keeps_refund, topUp_adds_at_least_premium, topped_up_set_only_by_topUp, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 20
   who: alice
@@ -297,7 +297,7 @@ step:
         b: 0
         pool: 2
       convictor: null
-    exhibits: [T10_bonds_are_observable, T10_only_deposit_restores, T14_pool_decreases_only_by_premium, T15_b_returns_only_by_deposit, T16_payments_are_named, T1_rotate_strict, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T2_epoch_only_by_rotation, T3_epoch_local, T3_rotation_clears, T5_every_bond_option, T6_component_conservation, T6_deposit_requires_new_keys, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_frozen_flips_only_by_rotation_or_freeze, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, local_progress_unless_pending_or_retired, rotation_clears_topped_up, step_from_present_keeps_refund, topped_up_cleared_only_by_rotation, topped_up_moves_only_on_evidence, trace_poison_fold, trace_sn_monotone_all]
+    exhibits: [T10_bonds_are_observable, T10_only_deposit_restores, T14_pool_decreases_only_by_premium, T15_b_returns_only_by_deposit, T16_payments_are_named, T1_rotate_strict, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T2_epoch_only_by_rotation, T3_epoch_local, T3_rotation_clears, T5_every_bond_option, T6_component_conservation, T6_deposit_requires_new_keys, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_frozen_flips_only_by_rotation_or_freeze, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, local_progress_unless_pending_or_retired, rotation_clears_topped_up, rotation_voids_commitment, step_from_present_keeps_refund, topped_up_cleared_only_by_rotation, topped_up_moves_only_on_evidence, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 30
   who: treasury
@@ -351,7 +351,7 @@ step:
       refund: null
       hunter: null
       convictor: null
-    exhibits: [T10_bonds_are_observable, T10_current_quorum_never_restores, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T3_only_poison_sets, T4_current_key_thief_cannot_rotate_or_freeze, T4_current_quorum_only_poisons, T5_poison_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, local_progress_unless_pending_or_retired, step_from_present_keeps_refund, topped_up_kept_by_poison_and_freeze, trace_poison_fold, trace_sn_monotone_all]
+    exhibits: [T10_bonds_are_observable, T10_current_quorum_never_restores, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T3_only_poison_sets, T4_current_key_thief_cannot_rotate_or_freeze, T4_current_quorum_only_poisons, T5_poison_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, commitment_survives_poison, consumableStateB_iff, local_progress_unless_pending_or_retired, step_from_present_keeps_refund, topped_up_kept_by_poison_and_freeze, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 50
   who: treasury
@@ -369,15 +369,10 @@ step:
       payee: 3
       commitment:
         aid: 0
-        output:
-          sn: 2
+        deployment: 0
+        keyState:
           epoch: 2
-          poisoned: true
-          frozen: false
-          bornAt: 0
-          refundTo: 1
-          pool: 3
-          toppedUp: false
+          sn: 2
         evidence: [{"epoch":2,"prior":{"aid":1,"sn":1,"delegated":false,"nextKeys":[1,2],"nextThreshold":{"count":{"required":1}},"witnesses":[10]},"accepted":{"event":{"aid":1,"sn":2,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"structureVerified":true,"signatures":[{"signer":1,"event":{"aid":1,"sn":2,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}],"receipts":[{"signer":10,"event":{"aid":1,"sn":2,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}]}},{"event":{"aid":1,"sn":2,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"structureVerified":true,"signatures":[{"signer":2,"event":{"aid":1,"sn":2,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true},{"signer":3,"event":{"aid":1,"sn":2,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}],"receipts":[{"signer":11,"event":{"aid":1,"sn":2,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}]}]
         payee: 3
         openedAt: 49

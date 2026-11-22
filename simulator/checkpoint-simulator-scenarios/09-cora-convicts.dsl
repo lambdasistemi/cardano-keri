@@ -122,7 +122,7 @@ step:
         b: 0
         pool: 2
       convictor: null
-    exhibits: [T10_bonds_are_observable, T14_pool_decreases_only_by_premium, T16_payments_are_named, T1_rotate_strict, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T2_epoch_only_by_rotation, T3_epoch_local, T3_rotation_clears, T5_every_bond_option, T5_keep_is_rotated, T5_keep_needs_no_intent, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T6_relayer_cannot_park_age_or_close, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, local_progress_unless_pending_or_retired, rotation_clears_topped_up, step_from_present_keeps_refund, trace_poison_fold, trace_sn_monotone_all]
+    exhibits: [T10_bonds_are_observable, T14_pool_decreases_only_by_premium, T16_payments_are_named, T1_rotate_strict, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T2_epoch_only_by_rotation, T3_epoch_local, T3_rotation_clears, T5_every_bond_option, T5_keep_is_rotated, T5_keep_needs_no_intent, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T6_relayer_cannot_park_age_or_close, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, local_progress_unless_pending_or_retired, rotation_clears_topped_up, rotation_voids_commitment, step_from_present_keeps_refund, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 12
   who: alice
@@ -172,11 +172,11 @@ step:
       refund: null
       hunter: null
       convictor: null
-    exhibits: [T10_bonds_are_observable, T10_current_quorum_never_restores, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T3_only_poison_sets, T4_current_key_thief_cannot_rotate_or_freeze, T4_current_quorum_only_poisons, T5_poison_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, local_progress_unless_pending_or_retired, step_from_present_keeps_refund, topped_up_kept_by_poison_and_freeze, trace_poison_fold, trace_sn_monotone_all]
+    exhibits: [T10_bonds_are_observable, T10_current_quorum_never_restores, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T3_only_poison_sets, T4_current_key_thief_cannot_rotate_or_freeze, T4_current_quorum_only_poisons, T5_poison_enabled, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, commitment_survives_poison, consumableStateB_iff, local_progress_unless_pending_or_retired, step_from_present_keeps_refund, topped_up_kept_by_poison_and_freeze, trace_poison_fold, trace_sn_monotone_all]
 step:
   slot: 12
   who: cora
-  say: "Cora supplies a conflicting rotation at sequence 1. Both branches satisfy the common prior-next commitment and their signing and derived-witness thresholds. In the slot before, Cora opened a commitment over this output and this evidence naming herself; the conviction reveals it. The checkpoint enters termination-pending custody, keeping its token and key state. D goes to Cora; B and the pool return to the refund address. The registry key remains active until the later consuming fold."
+  say: "Cora supplies a conflicting rotation at sequence 1. Both branches satisfy the common prior-next commitment and their signing and derived-witness thresholds. In the slot before, Cora opened a commitment naming this key state, this evidence and herself; the poison that landed since leaves it as it was, and the conviction reveals it. The checkpoint enters termination-pending custody, keeping its token and key state. D goes to Cora; B and the pool return to the refund address. The registry key remains active until the later consuming fold."
   evidence:
     add: [{"duplicityAt":[1,1]}]
   action:
@@ -184,15 +184,10 @@ step:
       payee: 3
       commitment:
         aid: 0
-        output:
-          sn: 1
+        deployment: 0
+        keyState:
           epoch: 1
-          poisoned: true
-          frozen: false
-          bornAt: 0
-          refundTo: 1
-          pool: 10
-          toppedUp: false
+          sn: 1
         evidence: [{"epoch":1,"prior":{"aid":1,"sn":0,"delegated":false,"nextKeys":[1,2],"nextThreshold":{"count":{"required":1}},"witnesses":[10]},"accepted":{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"structureVerified":true,"signatures":[{"signer":1,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}],"receipts":[{"signer":10,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}]}},{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"structureVerified":true,"signatures":[{"signer":2,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true},{"signer":3,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}],"receipts":[{"signer":11,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}]}]
         payee: 3
         openedAt: 11
@@ -257,15 +252,10 @@ fork:
         payee: 3
         commitment:
           aid: 0
-          output:
-            sn: 1
+          deployment: 0
+          keyState:
             epoch: 1
-            poisoned: true
-            frozen: false
-            bornAt: 0
-            refundTo: 1
-            pool: 10
-            toppedUp: false
+            sn: 1
           evidence: [{"epoch":1,"prior":{"aid":1,"sn":0,"delegated":false,"nextKeys":[1,2],"nextThreshold":{"count":{"required":1}},"witnesses":[10]},"accepted":{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"structureVerified":true,"signatures":[{"signer":1,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}],"receipts":[{"signer":10,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}]}},{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"structureVerified":true,"signatures":[{"signer":2,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true},{"signer":3,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}],"receipts":[{"signer":11,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}]}]
           payee: 3
           openedAt: 11
@@ -327,15 +317,10 @@ fork:
         payee: 3
         commitment:
           aid: 0
-          output:
-            sn: 0
+          deployment: 0
+          keyState:
             epoch: 0
-            poisoned: false
-            frozen: false
-            bornAt: 0
-            refundTo: 1
-            pool: 12
-            toppedUp: false
+            sn: 0
           evidence: [{"epoch":0,"prior":{"aid":1,"sn":0,"delegated":false,"nextKeys":[1,2],"nextThreshold":{"count":{"required":1}},"witnesses":[10]},"accepted":{"event":{"aid":1,"sn":0,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"structureVerified":true,"signatures":[{"signer":1,"event":{"aid":1,"sn":0,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}],"receipts":[{"signer":10,"event":{"aid":1,"sn":0,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}]}},{"event":{"aid":1,"sn":0,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"structureVerified":true,"signatures":[{"signer":2,"event":{"aid":1,"sn":0,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true},{"signer":3,"event":{"aid":1,"sn":0,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}],"receipts":[{"signer":11,"event":{"aid":1,"sn":0,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}]}]
           payee: 3
           openedAt: 0
@@ -363,15 +348,10 @@ fork:
         payee: 4
         commitment:
           aid: 0
-          output:
-            sn: 1
+          deployment: 0
+          keyState:
             epoch: 1
-            poisoned: true
-            frozen: false
-            bornAt: 0
-            refundTo: 1
-            pool: 10
-            toppedUp: false
+            sn: 1
           evidence: [{"epoch":1,"prior":{"aid":1,"sn":0,"delegated":false,"nextKeys":[1,2],"nextThreshold":{"count":{"required":1}},"witnesses":[10]},"accepted":{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"structureVerified":true,"signatures":[{"signer":1,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}],"receipts":[{"signer":10,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}]}},{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"structureVerified":true,"signatures":[{"signer":2,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true},{"signer":3,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}],"receipts":[{"signer":11,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}]}]
           payee: 3
           openedAt: 11
@@ -399,15 +379,10 @@ fork:
         payee: 3
         commitment:
           aid: 0
-          output:
-            sn: 1
+          deployment: 0
+          keyState:
             epoch: 1
-            poisoned: true
-            frozen: false
-            bornAt: 0
-            refundTo: 1
-            pool: 10
-            toppedUp: false
+            sn: 1
           evidence: [{"epoch":1,"prior":{"aid":1,"sn":0,"delegated":false,"nextKeys":[1,2],"nextThreshold":{"count":{"required":1}},"witnesses":[10]},"accepted":{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"structureVerified":true,"signatures":[{"signer":1,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}],"receipts":[{"signer":10,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}]}},{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"structureVerified":true,"signatures":[{"signer":2,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true},{"signer":3,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}],"receipts":[{"signer":11,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}]}]
           payee: 3
           openedAt: 12
@@ -423,22 +398,22 @@ fork:
 fork:
   id: topped-up
   at: 2
-  title: "A top-up voids Cora’s commitment"
+  title: "A top-up keeps Cora’s commitment"
   step:
     slot: 12
     who: friend
-    say: "Before Cora’s conviction lands, someone tops up the pool. The top-up spends the output Cora’s commitment names and leaves a new one."
+    say: "Before Cora’s conviction lands, someone tops up the pool. The top-up changes the pool; the key state Cora’s commitment names stays."
     action:
       topUp:
         x: 2
     expect:
       ok: true
       verdict: poisoned
-      exhibits: [T10_bonds_are_observable, T14_pool_increases_only_by_topup, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T4_current_key_thief_cannot_rotate_or_freeze, T4_poisoned_blocks_quorum_and_freeze, T4_poisoned_nonrotation_inert, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, step_from_present_keeps_refund, topUp_adds_at_least_premium, topped_up_set_only_by_topUp, trace_poison_fold, trace_sn_monotone_all]
+      exhibits: [T10_bonds_are_observable, T14_pool_increases_only_by_topup, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T3_epoch_local, T4_current_key_thief_cannot_rotate_or_freeze, T4_poisoned_blocks_quorum_and_freeze, T4_poisoned_nonrotation_inert, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, commitment_survives_topUp, consumableStateB_iff, step_from_present_keeps_refund, topUp_adds_at_least_premium, topped_up_set_only_by_topUp, trace_poison_fold, trace_sn_monotone_all]
   step:
     slot: 12
     who: cora
-    say: "Cora’s commitment names the output before the top-up, so it entitles nothing now: her conviction is refused, and her evidence is public."
+    say: "Cora’s commitment names the key state, not the output the top-up spent: her conviction is accepted and D goes to her. The refund address receives B and the pool, top-up included."
     evidence:
       add: [{"duplicityAt":[1,1]}]
     action:
@@ -446,15 +421,140 @@ fork:
         payee: 3
         commitment:
           aid: 0
-          output:
-            sn: 1
+          deployment: 0
+          keyState:
             epoch: 1
-            poisoned: true
+            sn: 1
+          evidence: [{"epoch":1,"prior":{"aid":1,"sn":0,"delegated":false,"nextKeys":[1,2],"nextThreshold":{"count":{"required":1}},"witnesses":[10]},"accepted":{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"structureVerified":true,"signatures":[{"signer":1,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}],"receipts":[{"signer":10,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}]}},{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"structureVerified":true,"signatures":[{"signer":2,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true},{"signer":3,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}],"receipts":[{"signer":11,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}]}]
+          payee: 3
+          openedAt: 11
+          eligibleAfter: 12
+          expiresAt: 29
+          marker: 1
+    expect:
+      ok: true
+      state:
+        terminationPending:
+          h:
+            epoch: 1
+            sn: 1
+      flow:
+        dregIn: 0
+        bIn: 0
+        poolIn: 0
+        refund:
+          addr: 1
+          dreg: 0
+          b: 5
+          pool: 12
+        hunter: null
+        convictor:
+          addr: 3
+          dreg: 1000
+          b: 0
+          pool: 0
+      verdict: not-present
+      modelResult:
+        flow:
+          dregIn: 0
+          bIn: 0
+          poolIn: 0
+          refund:
+            addr: 1
+            dreg: 0
+            b: 5
+            pool: 12
+          hunter: null
+          convictor:
+            addr: 3
+            dreg: 1000
+            b: 0
+            pool: 0
+        state:
+          terminationPending:
+            h:
+              epoch: 1
+              sn: 1
+      exhibits: [T10_bonds_are_observable, T12_convict_exact, T16_payments_are_named, T1_sn_monotone_all, T4_current_key_thief_cannot_rotate_or_freeze, T4_poisoned_blocks_quorum_and_freeze, T4_poisoned_nonrotation_inert, T5_convict_enabled, T6_component_conservation, T6_conviction_refunds_registration_address, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, convict_requires_entitlement, pending_consumer_refused, pending_custody_observations, step_from_present_keeps_refund, topped_up_moves_only_on_evidence, trace_sn_monotone_all]
+fork:
+  id: rotated
+  at: 2
+  title: "A rotation voids Cora’s commitment"
+  step:
+    slot: 12
+    who: alice
+    say: "Before Cora’s conviction lands, Alice rotates to sequence 2. Only the holder of the next keys can do this. The checkpoint now carries another key state."
+    evidence:
+      add: [{"rotationTo":[1,1,2]}]
+    action:
+      rotate:
+        sn': 2
+        op: keep
+        payee: 2
+    expect:
+      ok: true
+      state:
+        present:
+          l:
+            sn: 2
+            epoch: 2
+            poisoned: false
             frozen: false
             bornAt: 0
             refundTo: 1
-            pool: 10
+            pool: 8
             toppedUp: false
+      flow:
+        dregIn: 0
+        bIn: 0
+        poolIn: 0
+        refund: null
+        hunter:
+          addr: 2
+          dreg: 0
+          b: 0
+          pool: 2
+        convictor: null
+      verdict: consumable
+      modelResult:
+        flow:
+          dregIn: 0
+          bIn: 0
+          poolIn: 0
+          refund: null
+          hunter:
+            addr: 2
+            dreg: 0
+            b: 0
+            pool: 2
+          convictor: null
+        state:
+          present:
+            l:
+              sn: 2
+              epoch: 2
+              poisoned: false
+              frozen: false
+              bornAt: 0
+              refundTo: 1
+              pool: 8
+              toppedUp: false
+      exhibits: [T10_bonds_are_observable, T14_pool_decreases_only_by_premium, T16_payments_are_named, T1_rotate_strict, T1_sn_monotone, T1_sn_monotone_all, T1_trace_sn_monotone, T2_epoch_only_by_rotation, T3_epoch_local, T3_only_rotation_clears, T3_rotation_clears, T4_poisoned_blocks_quorum_and_freeze, T5_every_bond_option, T5_keep_is_rotated, T5_keep_needs_no_intent, T6_component_conservation, T6_dreg_never_a_fee, T6_dreg_never_moves_between_present_states, T6_refund_fixed, T6_refund_fixed_along_trace, T6_refund_is_registration_address, T6_relayer_cannot_park_age_or_close, T7_step_iff_stepFn, T7_trace_iff_replay, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, local_progress_unless_pending_or_retired, rotation_clears_topped_up, rotation_voids_commitment, step_from_present_keeps_refund, trace_poison_fold, trace_sn_monotone_all]
+  step:
+    slot: 12
+    who: cora
+    say: "Cora’s commitment names the key state before the rotation. Even with a proof against the new key state on the table, it entitles nothing now: her conviction is refused. A conviction of the new key state needs a commitment that names it."
+    evidence:
+      add: [{"duplicityAt":[1,1]},{"duplicityAt":[2,2]}]
+    action:
+      convict:
+        payee: 3
+        commitment:
+          aid: 0
+          deployment: 0
+          keyState:
+            epoch: 1
+            sn: 1
           evidence: [{"epoch":1,"prior":{"aid":1,"sn":0,"delegated":false,"nextKeys":[1,2],"nextThreshold":{"count":{"required":1}},"witnesses":[10]},"accepted":{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"structureVerified":true,"signatures":[{"signer":1,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}],"receipts":[{"signer":10,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}]}},{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"structureVerified":true,"signatures":[{"signer":2,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true},{"signer":3,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}],"receipts":[{"signer":11,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}]}]
           payee: 3
           openedAt: 11
@@ -464,6 +564,6 @@ fork:
     expect:
       ok: false
       reason: commitment-not-entitling
-      verdict: poisoned
+      verdict: consumable
       modelResult: null
       exhibits: [T10_bonds_are_observable, T12_convict_exact, T7_step_iff_stepFn, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, consumableStateB_iff]

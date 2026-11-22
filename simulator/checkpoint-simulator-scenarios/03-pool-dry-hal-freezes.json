@@ -205,6 +205,7 @@
           "consumableStateB_iff",
           "local_progress_unless_pending_or_retired",
           "rotation_clears_topped_up",
+          "rotation_voids_commitment",
           "step_from_present_keeps_refund",
           "trace_poison_fold",
           "trace_sn_monotone_all"
@@ -330,6 +331,7 @@
           "T8_freeze_and_convict_actors_are_proof",
           "T9_juvenility_is_consumer_only",
           "at_most_one_topUp_between_rotations",
+          "commitment_survives_freeze",
           "consumableStateB_iff",
           "local_progress_unless_pending_or_retired",
           "step_from_present_keeps_refund",

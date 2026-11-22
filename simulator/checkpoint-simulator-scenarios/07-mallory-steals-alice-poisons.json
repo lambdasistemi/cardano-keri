@@ -199,6 +199,7 @@
           "consumableStateB_iff",
           "local_progress_unless_pending_or_retired",
           "rotation_clears_topped_up",
+          "rotation_voids_commitment",
           "step_from_present_keeps_refund",
           "trace_poison_fold",
           "trace_sn_monotone_all"
@@ -295,6 +296,7 @@
           "T7_trace_iff_replay",
           "T9_juvenility_is_consumer_only",
           "at_most_one_topUp_between_rotations",
+          "commitment_survives_poison",
           "consumableStateB_iff",
           "local_progress_unless_pending_or_retired",
           "step_from_present_keeps_refund",
@@ -410,6 +412,7 @@
           "consumableStateB_iff",
           "local_progress_unless_pending_or_retired",
           "rotation_clears_topped_up",
+          "rotation_voids_commitment",
           "step_from_present_keeps_refund",
           "trace_poison_fold",
           "trace_sn_monotone_all"
@@ -559,6 +562,7 @@
               "T7_trace_iff_replay",
               "T9_juvenility_is_consumer_only",
               "at_most_one_topUp_between_rotations",
+              "commitment_survives_topUp",
               "consumableStateB_iff",
               "step_from_present_keeps_refund",
               "topUp_adds_at_least_premium",

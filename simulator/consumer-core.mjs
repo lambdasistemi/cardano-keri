@@ -82,7 +82,7 @@ export function checkConsumerCorpus(corpus) {
   if(!accepted||!refused||!errors)throw Error('consumer-missing-verdict-class');
   for(const [name,passed]of corpus.checks)if(passed!==true)throw Error('consumer-control-failed:'+name);
   if(!corpus.events?.length)throw Error('consumer-missing-connected-events');
-  let session=newSystem(corpus.events[0].params,corpus.events[0].env);
+  let session=newSystem(corpus.events[0].params,corpus.events[0].env,corpus.events[0].input.deployment);
   let systemAccepted=0,systemRefused=0;
   const snapshots=new Map([[canonical(session.state),session]]);
   for(const cell of corpus.events){

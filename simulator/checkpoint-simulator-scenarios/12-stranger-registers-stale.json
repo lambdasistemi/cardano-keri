@@ -202,6 +202,7 @@
           "consumableStateB_iff",
           "local_progress_unless_pending_or_retired",
           "rotation_clears_topped_up",
+          "rotation_voids_commitment",
           "step_from_present_keeps_refund",
           "trace_poison_fold",
           "trace_sn_monotone_all"
@@ -329,6 +330,7 @@
           "consumableStateB_iff",
           "local_progress_unless_pending_or_retired",
           "rotation_clears_topped_up",
+          "rotation_voids_commitment",
           "step_from_present_keeps_refund",
           "trace_poison_fold",
           "trace_sn_monotone_all"
@@ -449,6 +451,7 @@
           "consumableStateB_iff",
           "local_progress_unless_pending_or_retired",
           "rotation_clears_topped_up",
+          "rotation_voids_commitment",
           "step_from_present_keeps_refund",
           "trace_poison_fold",
           "trace_sn_monotone_all"

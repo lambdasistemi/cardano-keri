@@ -147,7 +147,7 @@ function offersFor(actorId, tree, nodeId) {
       break;
     case 'cora':
       if (ksn > 0) ev('try a second receipted rotation at sequence ' + ksn, { duplicityAt: [ke, ksn] }, 'example branches with partial and augmented keys, each checked against its own threshold and derived witnesses');
-      // Cora's commitment, opened over the current output and the evidence at its key state
+      // Cora's commitment, naming the current key state and the evidence at it
       // in the slot before this one, so it is eligible now
       act('convict', 'convict on my commitment, D to Cora', { convict: { payee: 3,
         commitment: commitmentFor(l || { sn: 0, epoch: 0, poisoned: false, frozen: false, bornAt: 0, refundTo: 0, pool: 0, toppedUp: false }, 3, Math.max(sess.now, 1) - 1) } });

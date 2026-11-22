@@ -48,5 +48,5 @@ try {
     const rebuilt=fresh(cold);writeFileSync(join(work,'cold-rebuilt.json'),JSON.stringify(rebuilt));assert(equal(rebuilt,corpus),'cold full system output');
     console.log('PASS cold rebuild equals fresh complete output');
   }
-  console.log(JSON.stringify({...result,page,cliTraces:4,corpusSha256:sha(JSON.stringify(corpus)),sources:Object.fromEntries(sources.map(f=>[f,sha(readFileSync(join(root,f)))]))}));
+  console.log(JSON.stringify({...result,page,cliTraces:corpus.traces.length,corpusSha256:sha(JSON.stringify(corpus)),sources:Object.fromEntries(sources.map(f=>[f,sha(readFileSync(join(root,f)))]))}));
 }catch(e){console.error(e.stack);process.exitCode=1;}

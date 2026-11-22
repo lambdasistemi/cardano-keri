@@ -317,7 +317,7 @@
       "pause": 400
     },
     {
-      "text": "The commitment names no checkpoint output. A conviction is accepted at whichever live output carries the identifier and the key state the commitment names, in the deployment it names. So a step that spends the output and keeps the key state leaves Cora's commitment as it was: a top-up by anyone, a freeze by a hunter and a poison by the owner cannot take her conviction away. A rotation changes the key state, and the commitment entitles nothing from then on. The diagram follows one commitment from its opening to the burn of its marker, beside the checkpoint it accuses. A commitment that has just been opened entitles nobody yet: it waits until the slot after its opening transaction's upper validity bound.",
+      "text": "The commitment names no checkpoint output. A conviction is accepted at whichever live output carries the identifier and the key state the commitment names, in the deployment it names. So a step that spends the output and keeps the key state leaves Cora's commitment as it was: a top-up by anyone, a freeze by a hunter and a poison by the owner cannot take her conviction away. A rotation changes the key state, and the commitment entitles nothing from then on. The diagram follows one commitment from its opening to the burn of its marker, beside the checkpoint it accuses: the top-up, the freeze, the poison and the rotation on its edges are steps of that checkpoint. A commitment that has just been opened entitles nobody yet: it waits until the slot after its opening transaction's upper validity bound.",
       "pause": 400
     },
     {
@@ -405,6 +405,6 @@
   ],
   "_source": {
     "file": "trust-model.md",
-    "sha256": "8f2a2240cfab04661a5bad545c8f74e97245b9520ef4c10d5d23811a94f06842"
+    "sha256": "89068775f7eb68057007db9999efc04259302de8d6009911d35f8ea66ce8c92a"
   }
 }

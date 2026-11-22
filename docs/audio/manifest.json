@@ -370021,17 +370021,17 @@
    ]
   },
   "docs-design-trust-model/who-a-conviction-pays-04": {
-   "audio_sha256": "75370b123001ee18617ff307cdbf8d1330850a44e8c4931ca881f76572144800",
-   "characters": 711,
-   "cost": 0.00070389,
-   "duration": 46.575,
+   "audio_sha256": "3caee278c83aedc25f992c6ad28be5fd266aa6089bd4373421bcc9f2efd8788b",
+   "characters": 806,
+   "cost": 0.0007979399999999999,
+   "duration": 52.325,
    "index": 4,
-   "key": "2962e4d0e8ad7522b54dff50f37bd1ba423d2badcc2432de29466938fc07ff22",
+   "key": "3915abb554ef4d2d528329a4ebf4ec079dfd5bcbc5730ea20a07f74940a9a94b",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,
    "section": "who-a-conviction-pays",
-   "sent_text": "The commitment names no checkpoint output. A conviction is accepted at whichever live output carries the identifier and the key state the commitment names, in the deployment it names. So a step that spends the output and keeps the key state leaves Cora's commitment as it was: a top-up by anyone, a freeze by a hunter and a poison by the owner cannot take her conviction away. A rotation changes the key state, and the commitment entitles nothing from then on. The diagram follows one commitment from its opening to the burn of its marker, beside the checkpoint it accuses. A commitment that has just been opened entitles nobody yet: it waits until the slot after its opening transaction's upper validity bound.",
-   "text": "The commitment names no checkpoint output. A conviction is accepted at whichever live output carries the identifier and the key state the commitment names, in the deployment it names. So a step that spends the output and keeps the key state leaves Cora's commitment as it was: a top-up by anyone, a freeze by a hunter and a poison by the owner cannot take her conviction away. A rotation changes the key state, and the commitment entitles nothing from then on. The diagram follows one commitment from its opening to the burn of its marker, beside the checkpoint it accuses. A commitment that has just been opened entitles nobody yet: it waits until the slot after its opening transaction's upper validity bound.",
+   "sent_text": "The commitment names no checkpoint output. A conviction is accepted at whichever live output carries the identifier and the key state the commitment names, in the deployment it names. So a step that spends the output and keeps the key state leaves Cora's commitment as it was: a top-up by anyone, a freeze by a hunter and a poison by the owner cannot take her conviction away. A rotation changes the key state, and the commitment entitles nothing from then on. The diagram follows one commitment from its opening to the burn of its marker, beside the checkpoint it accuses: the top-up, the freeze, the poison and the rotation on its edges are steps of that checkpoint. A commitment that has just been opened entitles nobody yet: it waits until the slot after its opening transaction's upper validity bound.",
+   "text": "The commitment names no checkpoint output. A conviction is accepted at whichever live output carries the identifier and the key state the commitment names, in the deployment it names. So a step that spends the output and keeps the key state leaves Cora's commitment as it was: a top-up by anyone, a freeze by a hunter and a poison by the owner cannot take her conviction away. A rotation changes the key state, and the commitment entitles nothing from then on. The diagram follows one commitment from its opening to the burn of its marker, beside the checkpoint it accuses: the top-up, the freeze, the poison and the rotation on its edges are steps of that checkpoint. A commitment that has just been opened entitles nobody yet: it waits until the slot after its opening transaction's upper validity bound.",
    "words": [
     {
      "end": 0.25,
@@ -370564,143 +370564,243 @@
      "text": "the"
     },
     {
-     "end": 35.675,
+     "end": 35.65,
      "start": 35.112,
      "text": "checkpoint"
     },
     {
-     "end": 35.775,
-     "start": 35.675,
+     "end": 35.75,
+     "start": 35.65,
      "text": "it"
     },
     {
-     "end": 37.125,
-     "start": 35.775,
+     "end": 37.075,
+     "start": 35.75,
      "text": "accuses"
     },
     {
-     "end": 37.325,
-     "start": 37.125,
-     "text": "."
-    },
-    {
-     "end": 37.6,
-     "start": 37.525,
-     "text": "A"
-    },
-    {
-     "end": 38.1,
-     "start": 37.6,
-     "text": "commitment"
-    },
-    {
-     "end": 38.237,
-     "start": 38.1,
-     "text": "that"
-    },
-    {
-     "end": 38.412,
-     "start": 38.237,
-     "text": "has"
-    },
-    {
-     "end": 38.675,
-     "start": 38.412,
-     "text": "just"
-    },
-    {
-     "end": 38.888,
-     "start": 38.675,
-     "text": "been"
-    },
-    {
-     "end": 39.325,
-     "start": 38.888,
-     "text": "opened"
-    },
-    {
-     "end": 39.938,
-     "start": 39.325,
-     "text": "entitles"
-    },
-    {
-     "end": 40.4,
-     "start": 39.938,
-     "text": "nobody"
-    },
-    {
-     "end": 41.2,
-     "start": 40.4,
-     "text": "yet"
-    },
-    {
-     "end": 41.4,
-     "start": 41.2,
+     "end": 37.275,
+     "start": 37.075,
      "text": ":"
     },
     {
-     "end": 41.725,
-     "start": 41.6,
-     "text": "it"
-    },
-    {
-     "end": 42.062,
-     "start": 41.725,
-     "text": "waits"
-    },
-    {
-     "end": 42.338,
-     "start": 42.062,
-     "text": "until"
-    },
-    {
-     "end": 42.463,
-     "start": 42.338,
+     "end": 37.525,
+     "start": 37.45,
      "text": "the"
     },
     {
-     "end": 42.9,
-     "start": 42.463,
-     "text": "slot"
+     "end": 38.0,
+     "start": 37.525,
+     "text": "top-up"
     },
     {
-     "end": 43.188,
-     "start": 42.9,
-     "text": "after"
+     "end": 38.037,
+     "start": 38.0,
+     "text": ","
     },
     {
-     "end": 43.338,
-     "start": 43.188,
+     "end": 38.162,
+     "start": 38.037,
+     "text": "the"
+    },
+    {
+     "end": 38.625,
+     "start": 38.162,
+     "text": "freeze"
+    },
+    {
+     "end": 38.675,
+     "start": 38.625,
+     "text": ","
+    },
+    {
+     "end": 38.812,
+     "start": 38.675,
+     "text": "the"
+    },
+    {
+     "end": 39.35,
+     "start": 38.812,
+     "text": "poison"
+    },
+    {
+     "end": 39.463,
+     "start": 39.35,
+     "text": "and"
+    },
+    {
+     "end": 39.55,
+     "start": 39.463,
+     "text": "the"
+    },
+    {
+     "end": 40.138,
+     "start": 39.55,
+     "text": "rotation"
+    },
+    {
+     "end": 40.263,
+     "start": 40.138,
+     "text": "on"
+    },
+    {
+     "end": 40.425,
+     "start": 40.263,
      "text": "its"
     },
     {
-     "end": 43.75,
-     "start": 43.338,
+     "end": 40.838,
+     "start": 40.425,
+     "text": "edges"
+    },
+    {
+     "end": 41.013,
+     "start": 40.838,
+     "text": "are"
+    },
+    {
+     "end": 41.362,
+     "start": 41.013,
+     "text": "steps"
+    },
+    {
+     "end": 41.45,
+     "start": 41.362,
+     "text": "of"
+    },
+    {
+     "end": 41.737,
+     "start": 41.45,
+     "text": "that"
+    },
+    {
+     "end": 42.875,
+     "start": 41.737,
+     "text": "checkpoint"
+    },
+    {
+     "end": 43.075,
+     "start": 42.875,
+     "text": "."
+    },
+    {
+     "end": 43.35,
+     "start": 43.275,
+     "text": "A"
+    },
+    {
+     "end": 43.85,
+     "start": 43.35,
+     "text": "commitment"
+    },
+    {
+     "end": 43.987,
+     "start": 43.85,
+     "text": "that"
+    },
+    {
+     "end": 44.162,
+     "start": 43.987,
+     "text": "has"
+    },
+    {
+     "end": 44.425,
+     "start": 44.162,
+     "text": "just"
+    },
+    {
+     "end": 44.638,
+     "start": 44.425,
+     "text": "been"
+    },
+    {
+     "end": 45.075,
+     "start": 44.638,
+     "text": "opened"
+    },
+    {
+     "end": 45.688,
+     "start": 45.075,
+     "text": "entitles"
+    },
+    {
+     "end": 46.15,
+     "start": 45.688,
+     "text": "nobody"
+    },
+    {
+     "end": 46.95,
+     "start": 46.15,
+     "text": "yet"
+    },
+    {
+     "end": 47.15,
+     "start": 46.95,
+     "text": ":"
+    },
+    {
+     "end": 47.475,
+     "start": 47.35,
+     "text": "it"
+    },
+    {
+     "end": 47.812,
+     "start": 47.475,
+     "text": "waits"
+    },
+    {
+     "end": 48.088,
+     "start": 47.812,
+     "text": "until"
+    },
+    {
+     "end": 48.213,
+     "start": 48.088,
+     "text": "the"
+    },
+    {
+     "end": 48.65,
+     "start": 48.213,
+     "text": "slot"
+    },
+    {
+     "end": 48.938,
+     "start": 48.65,
+     "text": "after"
+    },
+    {
+     "end": 49.088,
+     "start": 48.938,
+     "text": "its"
+    },
+    {
+     "end": 49.5,
+     "start": 49.088,
      "text": "opening"
     },
     {
-     "end": 44.625,
-     "start": 43.75,
+     "end": 50.375,
+     "start": 49.5,
      "text": "transaction's"
     },
     {
-     "end": 44.95,
-     "start": 44.625,
+     "end": 50.7,
+     "start": 50.375,
      "text": "upper"
     },
     {
-     "end": 45.375,
-     "start": 44.95,
+     "end": 51.125,
+     "start": 50.7,
      "text": "validity"
     },
     {
-     "end": 46.35,
-     "start": 45.375,
+     "end": 52.1,
+     "start": 51.125,
      "text": "bound"
     },
     {
-     "end": 46.575,
-     "start": 46.35,
+     "end": 52.325,
+     "start": 52.1,
      "text": "."
     }
    ]

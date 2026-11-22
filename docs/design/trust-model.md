@@ -315,17 +315,18 @@ the key state leaves Cora's commitment as it was: a top-up by anyone, a freeze
 by a hunter and a poison by the owner cannot take her conviction away. A
 rotation changes the key state, and the commitment entitles nothing from then
 on. The diagram follows one commitment from its opening to the burn of its
-marker, beside the checkpoint it accuses. A commitment that has just been
-opened entitles nobody yet: it waits until the slot after its opening
-transaction's upper validity bound.
+marker, beside the checkpoint it accuses: the top-up, the freeze, the poison
+and the rotation on its edges are steps of that checkpoint. A commitment that
+has just been opened entitles nobody yet: it waits until the slot after its
+opening transaction's upper validity bound.
 
 ```mermaid
 stateDiagram-v2
   [*] --> Waiting: opened, with a lifetime
-  Waiting --> Entitling: the slot after the opening transaction's upper validity bound
-  Waiting --> Void: rotation of the checkpoint
-  Entitling --> Entitling: top-up, freeze or poison of the checkpoint
-  Entitling --> Void: rotation of the checkpoint
+  Waiting --> Entitling: slot after the opening's upper validity bound
+  Waiting --> Void: rotation
+  Entitling --> Entitling: top-up, freeze or poison
+  Entitling --> Void: rotation
   Entitling --> Revealed: conviction or reveal, inside the window
   Entitling --> Swept: sweep, strictly after the window
   Void --> Revealed: reveal, inside the window

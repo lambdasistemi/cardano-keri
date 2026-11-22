@@ -66,6 +66,7 @@ module Cardano.KERI.Deployment.RegistryTransactions (
     tokenValue,
     mintingIndex,
     outputReferenceOf,
+    isFundable,
     plutusAddressOf,
     scriptExUnits,
     hashProofBurnExUnits,
@@ -168,7 +169,7 @@ import Cardano.Ledger.Api.Tx.Wits (rdmrsTxWitsL, scriptTxWitsL)
 import Cardano.Ledger.BaseTypes (
     Inject (..),
     Network,
-    StrictMaybe (SJust),
+    StrictMaybe (SJust, SNothing),
     TxIx (..),
  )
 import Cardano.Ledger.Coin (Coin (..), unCoin)
@@ -1012,6 +1013,15 @@ coinOf out = unCoin (out ^. coinTxOutL)
 assetsOf :: TxOut ConwayEra -> MultiAsset
 assetsOf out = let MaryValue _ assets = out ^. valueTxOutL in assets
 
+{- | Whether an output may fund a transaction or be its collateral: it carries no
+reference script and no datum. A wallet that has deployed before holds its
+reference outputs at its own address, and spending one destroys it.
+-}
+isFundable :: TxOut ConwayEra -> Bool
+isFundable out =
+    out ^. referenceScriptTxOutL == SNothing
+        && out ^. datumTxOutL == Ledger.NoDatum
+
 hasAssets :: TxOut ConwayEra -> Bool
 hasAssets = (/= mempty) . assetsOf
 
@@ -1027,7 +1037,7 @@ data Funding = Funding
 assets first, each group largest first.
 -}
 spendOrder :: [(TxIn, TxOut ConwayEra)] -> [(TxIn, TxOut ConwayEra)]
-spendOrder = sortOn (\(_, out) -> (hasAssets out, Down (coinOf out)))
+spendOrder = sortOn (\(_, out) -> (hasAssets out, Down (coinOf out))) . filter (isFundable . snd)
 
 -- | The first outputs of the spending order, as many as the given count and every more.
 spendingSets :: Int -> [(TxIn, TxOut ConwayEra)] -> [[(TxIn, TxOut ConwayEra)]]
@@ -1048,7 +1058,7 @@ fundings excluded funds =
     , inputs <- spendingSets 0 (filter ((/= fst collateral) . fst) usable)
     ]
   where
-    usable = filter ((`notElem` excluded) . fst) funds
+    usable = filter (\(ref, out) -> ref `notElem` excluded && isFundable out) funds
 
 -- | The first attempt that builds, or the failure of the first attempt.
 firstSuccess :: [Either RegistryTransactionError a] -> Either RegistryTransactionError a

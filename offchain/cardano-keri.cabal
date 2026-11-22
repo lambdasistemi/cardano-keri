@@ -170,6 +170,7 @@ library deployment
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
+    , scientific
     , text
     , time
     , unix
@@ -188,6 +189,8 @@ library deployment
     Cardano.KERI.Deployment.Publisher
     Cardano.KERI.Deployment.Registration
     Cardano.KERI.Deployment.Registry
+    Cardano.KERI.Deployment.RegistryDeploy
+    Cardano.KERI.Deployment.RegistryFiles
     Cardano.KERI.Deployment.RegistryTransactions
     Cardano.KERI.Deployment.Script
     Cardano.KERI.Deployment.TopUp
@@ -301,12 +304,17 @@ library write-composition
     , cardano-keri:indexer
     , cardano-ledger-conway
     , cardano-ledger-core
+    , cardano-node-clients
+    , containers
     , directory
+    , memory                    >=0.18 && <0.19
     , opt-env-conf              >=0.13 && <0.16
     , text
     , time
 
-  exposed-modules:  Cardano.KERI.Deployment.CLI
+  exposed-modules:
+    Cardano.KERI.Deployment.CLI
+    Cardano.KERI.Deployment.RegistryCommand
 
 -- #266 T266-S1-04/T266-S1-05: compiled regression fixtures for the
 -- public-surface guard. These are export SHAPES -- byte-zero module
@@ -427,6 +435,9 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.ManifestSpec
     Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.RegistrationSpec
+    Cardano.KERI.Deployment.RegistryCommandSpec
+    Cardano.KERI.Deployment.RegistryDeploySpec
+    Cardano.KERI.Deployment.RegistryFilesSpec
     Cardano.KERI.Deployment.RegistryFixture
     Cardano.KERI.Deployment.RegistryScriptsSpec
     Cardano.KERI.Deployment.RegistryTransactionsSpec
@@ -773,6 +784,7 @@ test-suite cli-tests
     Cardano.KERI.CLI.CommandSurfaceSpec
     Cardano.KERI.CLI.ProductionSpec
     Cardano.KERI.CLI.RegistryAwareDeploymentSpec
+    Cardano.KERI.CLI.RegistryGroupSpec
     Cardano.KERI.CLI.WriteCompositionBoundarySpec
     Paths_cardano_keri
 
@@ -789,6 +801,7 @@ test-suite cli-tests
     , cardano-keri:cli
     , cardano-keri:deployment
     , cardano-keri:indexer
+    , cardano-keri:write-composition
     , cardano-ledger-api
     , cardano-ledger-binary
     , cardano-ledger-conway
@@ -1154,6 +1167,7 @@ test-suite e2e-tests
     ConsumerE2ESpec
     FollowerE2ESpec
     Paths_cardano_keri
+    RegistryDeployE2ESpec
 
   build-depends:
     , aeson
@@ -1187,6 +1201,7 @@ test-suite e2e-tests
     , ouroboros-network:api
     , plutus-core
     , plutus-tx
+    , process
     , text
     , time
 

@@ -1221,13 +1221,44 @@
               name = "e2e";
               # Strict PATH: the E2E executable AND the node binary it spawns
               # must both be listed so the app is self-contained.
-              runtimeInputs = [ e2eExe cardanoNode pkgs.coreutils pkgs.which ];
+              runtimeInputs = [ e2eExe cardanoNode ckeriRunner pkgs.coreutils pkgs.which ];
               text = ''
                 export E2E_GENESIS_DIR="${inputs.cardano-node-clients}/e2e-test/genesis"
                 export KERI_CAGE_BLUEPRINT="${blueprint}"
                 export KERI_CHECKPOINT_BLUEPRINT="${blueprint}"
                 cd "${inputs.cardano-node-clients}"
-                exec e2e-tests --match "#136 register a small identity end to end" --match "#343 consumer predicate on the local chain" "$@"
+                exec e2e-tests --match "#136 register a small identity end to end" --match "#343 consumer predicate on the local chain" --match "#351 ckeri registry deploy creates" "$@"
+              '';
+            };
+            # Preprod's timing for the registry deploy measurement: slots of one
+            # second and a block on average every twenty (a twentieth of the slots
+            # carry one), in a copy of the stock devnet genesis.
+            timingGenesis = pkgs.runCommand "keri-timing-genesis" {
+              nativeBuildInputs = [ pkgs.coreutils pkgs.jq ];
+            } ''
+              cp -rL ${inputs.cardano-node-clients}/e2e-test/genesis "$out"
+              chmod -R u+w "$out"
+              source=${inputs.cardano-node-clients}/e2e-test/genesis/shelley-genesis.json
+              target="$out/shelley-genesis.json"
+              ${pkgs.jq}/bin/jq '.slotLength = 1 | .activeSlotsCoeff = 0.05' "$source" > "$target.new"
+              mv "$target.new" "$target"
+              test "$(${pkgs.jq}/bin/jq -r '.slotLength' "$target")" = 1
+              test "$(${pkgs.jq}/bin/jq -r '.activeSlotsCoeff' "$target")" = 0.05
+              ${pkgs.jq}/bin/jq -S 'del(.slotLength, .activeSlotsCoeff)' "$source" > source.rest
+              ${pkgs.jq}/bin/jq -S 'del(.slotLength, .activeSlotsCoeff)' "$target" > target.rest
+              cmp source.rest target.rest
+            '';
+            # Tool, not a guarantee: the registry deploy journey at that timing.
+            # Not part of checks.e2e; `nix run .#e2e-registry-timing` measures.
+            timingRunner = pkgs.writeShellApplication {
+              name = "e2e-registry-timing";
+              runtimeInputs = [ e2eExe cardanoNode ckeriRunner pkgs.coreutils pkgs.which ];
+              text = ''
+                export E2E_GENESIS_DIR="${timingGenesis}"
+                export KERI_CAGE_BLUEPRINT="${blueprint}"
+                export KERI_CHECKPOINT_BLUEPRINT="${blueprint}"
+                cd "${inputs.cardano-node-clients}"
+                exec e2e-tests --match "#351 measurement" "$@"
               '';
             };
             cageRunner = pkgs.writeShellApplication {
@@ -1314,7 +1345,7 @@
           in {
             inherit blueprint onchainSrc ckeriRunner deploymentTestsCheck
               deploymentTestsRunner derivedControls runner followerRunner check
-              sweepRunner sweepConsistency;
+              sweepRunner sweepConsistency timingRunner;
           });
 
           # S1 exact-artifact and complete pinned-toolchain surface. This is
@@ -1892,6 +1923,7 @@
             e2e = e2eWiring.runner;
             e2e-sweep = e2eWiring.sweepRunner;
             follower-e2e = e2eWiring.followerRunner;
+            e2e-registry-timing = e2eWiring.timingRunner;
             plutus-blueprint = e2eWiring.blueprint;
             s254r-derived-controls = e2eWiring.derivedControls;
           } // pkgs.lib.optionalAttrs (blasterWiring ? runner) {
@@ -2028,6 +2060,10 @@
             follower-e2e = {
               type = "app";
               program = "${e2eWiring.followerRunner}/bin/follower-e2e";
+            };
+            e2e-registry-timing = {
+              type = "app";
+              program = "${e2eWiring.timingRunner}/bin/e2e-registry-timing";
             };
           } // pkgs.lib.optionalAttrs (blasterWiring ? runner) {
             blaster = {

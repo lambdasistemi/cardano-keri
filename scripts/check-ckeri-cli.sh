@@ -154,6 +154,45 @@ reject_write_koios_help board-post board post
 reject_write_koios_help board-update board update
 reject_write_koios_help board-retire board retire
 
+# #351: the registry group. `registry deploy` is the one command added at the
+# top: its help names every option and variable of the terms and of the node, and
+# offers nothing that means a store, a manifest, a provider or cardano-cli.
+"$ckeri" --help | grep -q "registry"
+"$ckeri" registry --help | grep -q "deploy"
+registry_deploy_help="$("$ckeri" registry deploy --help)"
+for option in \
+  network-magic blueprint node-socket funding-address signing-key-file \
+  timeout-seconds reference-lovelace release-identity-out reference-record-out \
+  registration-cost minimum-tip process-time booking-width deposit freeze-bond \
+  premium minimum-ada termination-carrier; do
+  grep -q -- "--$option" <<<"$registry_deploy_help"
+  grep -q "CKERI_$(tr 'a-z-' 'A-Z_' <<<"$option")" <<<"$registry_deploy_help"
+done
+for forbidden in --store --manifest --koios-token KOIOS_TOKEN --cardano-cli CKERI_CARDANO_CLI CKERI_STORE CKERI_MANIFEST; do
+  if grep -q -- "$forbidden" <<<"$registry_deploy_help"; then
+    printf 'registry deploy help offers %s (#351: no store, manifest, provider or cardano-cli)\n' \
+      "$forbidden" >&2
+    exit 1
+  fi
+done
+reject_retired_cardano_cli_help registry-deploy registry deploy
+reject_write_koios_help registry-deploy registry deploy
+
+# a later verb of the group, and a spelling outside the group, are not commands yet
+registry_verdict() {
+  local output
+  output="$("$ckeri" "$@" 2>&1 || true)"
+  if sed 's/\x1b\[[0-9;]*m//g' <<<"$output" | grep -qF "Unrecognised command: ${*: -1}"; then
+    echo unrecognised
+  else
+    echo recognised
+  fi
+}
+[[ "$(registry_verdict registry deploy)" == recognised ]]
+[[ "$(registry_verdict registry fold)" == unrecognised ]]
+[[ "$(registry_verdict registry register)" == unrecognised ]]
+[[ "$(registry_verdict registry-deploy)" == unrecognised ]]
+
 "$worktree/scripts/check-deploy-register-no-cli.sh"
 
 if rg -n \
@@ -332,6 +371,31 @@ require_contains \
   "ckeri: Unexpected end-of-input, expecting record key literal or }" \
   "$malformed_board_output"
 reject_contains malformed-board-manifest "pass --board-manifest" "$malformed_board_output"
+
+# option, environment and configuration file reach the command in that order
+registry_terms=(
+  --node-socket none.socket --funding-address addr_test1none
+  --signing-key-file none.skey
+  --registration-cost 1 --minimum-tip 1 --process-time 1 --booking-width 1
+  --deposit 1 --freeze-bond 1 --premium 1 --minimum-ada 1 --termination-carrier 1
+)
+printf '%s\n' \
+  'registry:' \
+  '  deploy:' \
+  '    release-identity-out: registry-config-marker/identity.json' \
+  >"$workspace/registry.yaml"
+expect_failure_path \
+  "registry-config-marker" \
+  "$ckeri" --config-file "$workspace/registry.yaml" registry deploy "${registry_terms[@]}"
+expect_failure_path \
+  "registry-environment-marker" \
+  env CKERI_RELEASE_IDENTITY_OUT=registry-environment-marker/identity.json \
+  "$ckeri" --config-file "$workspace/registry.yaml" registry deploy "${registry_terms[@]}"
+expect_failure_path \
+  "registry-option-marker" \
+  env CKERI_RELEASE_IDENTITY_OUT=registry-environment-marker/identity.json \
+  "$ckeri" --config-file "$workspace/registry.yaml" registry deploy "${registry_terms[@]}" \
+  --release-identity-out registry-option-marker/identity.json
 
 echo "ckeri opt-env-conf surface and option/environment/YAML precedence: OK"
 echo "ckeri outside-checkout manifest diagnostics: 4/4 exercised"

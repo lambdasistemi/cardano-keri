@@ -10,6 +10,7 @@ import Cardano.KERI.CLI.Backend.LocalSpec qualified as LocalSpec
 import Cardano.KERI.CLI.CommandSurfaceSpec qualified as CommandSurfaceSpec
 import Cardano.KERI.CLI.ProductionSpec qualified as ProductionSpec
 import Cardano.KERI.CLI.RegistryAwareDeploymentSpec qualified as RegistryAwareDeploymentSpec
+import Cardano.KERI.CLI.RegistryGroupSpec qualified as RegistryGroupSpec
 import Cardano.KERI.CLI.WriteCompositionBoundarySpec qualified as WriteCompositionBoundarySpec
 import Test.Hspec (hspec)
 
@@ -24,5 +25,6 @@ main = hspec $ do
     LocalRegistryStoreSpec.spec
     CommandSurfaceSpec.spec
     ProductionSpec.spec
+    RegistryGroupSpec.spec
     RegistryAwareDeploymentSpec.spec
     WriteCompositionBoundarySpec.spec

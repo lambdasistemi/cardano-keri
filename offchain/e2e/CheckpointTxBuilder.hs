@@ -28,6 +28,9 @@ module CheckpointTxBuilder (
     rejectionReachedProductionScript,
     productionRegisterScenario,
     registryJourney,
+    DeployTiming (..),
+    stagedBareDevnet,
+    registryDeployJourney,
     productionRegisterAdvanceScenario,
     productionRegisterConvictScenario,
     productionRegisterFreezeScenario,
@@ -49,6 +52,7 @@ import Cardano.Crypto.DSIGN (
     SignKeyDSIGN,
     genKeyDSIGN,
     rawSerialiseSigDSIGN,
+    rawSerialiseSignKeyDSIGN,
     signDSIGN,
  )
 import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
@@ -168,6 +172,7 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     releaseSpendRedeemerData,
     topUpSpendRedeemerData,
  )
+import Cardano.KERI.AID.Consumer qualified as Consumer
 import Cardano.KERI.AID.E2E.Datum (extractDatum, mkInlineDatum, rawInlineData)
 import Cardano.KERI.AID.E2E.DevnetTerms (devnetTerms)
 import Cardano.KERI.AID.E2E.FoldGuard (
@@ -194,6 +199,7 @@ import Cardano.KERI.AID.E2E.Script (
     v1RegistrationBond,
  )
 import Cardano.KERI.AID.Migration.Types (OutputRef (..))
+import Cardano.KERI.AID.Release qualified as Rel
 import Cardano.KERI.Deployment.KEL (InceptionExport (..))
 import Cardano.KERI.Deployment.Registry (
     RegistryScripts (..),
@@ -201,6 +207,7 @@ import Cardano.KERI.Deployment.Registry (
     deriveRegistryScripts,
     registryInitialFloor,
  )
+import Cardano.KERI.Deployment.RegistryFiles qualified as Files
 import Cardano.KERI.Deployment.RegistryTransactions (
     Booking (..),
     ValidityPlan (..),
@@ -213,6 +220,7 @@ import Cardano.KERI.Deployment.RegistryTransactions (
     tokenValue,
  )
 import Cardano.KERI.Deployment.RegistryTransactions qualified as Tx
+import Cardano.KERI.Deployment.Script (CheckpointTerms (..))
 import Cardano.Ledger.Address (
     AccountAddress (..),
     AccountId (..),
@@ -270,7 +278,7 @@ import Cardano.Ledger.Core (
     ppMaxTxSizeL,
  )
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Hashes (ScriptHash (..), extractHash)
+import Cardano.Ledger.Hashes (ScriptHash (..), extractHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Mary.Value (
     AssetName (..),
@@ -319,10 +327,11 @@ import Cardano.Tx.Balance (
     balanceTxWith,
     computeScriptIntegrity,
  )
+import Codec.Binary.Bech32 qualified as Bech32
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (async, cancel)
 import Control.Exception (finally, throwIO, try)
-import Control.Monad (unless, when)
+import Control.Monad (forM_, unless, when)
 import Data.Aeson (Value (..), eitherDecodeFileStrict, object, (.=))
 import Data.Aeson.Key qualified as Key
 import Data.Aeson.KeyMap qualified as KeyMap
@@ -336,7 +345,7 @@ import Data.Foldable (toList)
 import Data.Functor ((<&>))
 import Data.List (elemIndex, find, isInfixOf, sort, sortOn)
 import Data.Map.Strict qualified as Map
-import Data.Maybe (fromMaybe, isJust, listToMaybe)
+import Data.Maybe (fromMaybe, isJust, isNothing, listToMaybe)
 import Data.Ord (Down (..))
 import Data.Sequence.Strict qualified as StrictSeq
 import Data.Set qualified as Set
@@ -346,10 +355,13 @@ import Data.Text.Encoding qualified as Text
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Word (Word32, Word8)
 import Lens.Micro ((&), (.~), (^.))
+import Ouroboros.Network.Magic (NetworkMagic (..))
 import Paths_cardano_keri (getDataFileName)
 import PlutusCore.Data (Data (..))
 import PlutusCore.Data qualified as PLC
+import System.Directory qualified as Dir
 import System.Environment (lookupEnv)
+import System.Exit (ExitCode (..))
 import System.FilePath (takeDirectory, (</>))
 import System.IO (
     BufferMode (LineBuffering),
@@ -358,6 +370,7 @@ import System.IO (
     stderr,
     stdout,
  )
+import System.Process qualified as Proc
 import System.Timeout (timeout)
 
 data CheckpointEnv = CheckpointEnv
@@ -549,13 +562,17 @@ setupCheckpointEnv blueprintPath lsq ltxs action = do
         >>= action
 
 mkCheckpointEnv :: FilePath -> LSQChannel -> LTxSChannel -> TxIn -> IO CheckpointEnv
-mkCheckpointEnv blueprintPath lsq ltxs seed = do
+mkCheckpointEnv = mkCheckpointEnvWith devnetTerms
+
+-- | The environment of a registry with the given terms, derived from the seed.
+mkCheckpointEnvWith :: RegistryTerms -> FilePath -> LSQChannel -> LTxSChannel -> TxIn -> IO CheckpointEnv
+mkCheckpointEnvWith registryTerms blueprintPath lsq ltxs seed = do
     blueprint <- loadBlueprint blueprintPath >>= either fail pure
     registry <-
         either
             fail
             pure
-            (deriveRegistryScripts stateTemplate devnetTerms (outputReferenceOf seed) blueprint)
+            (deriveRegistryScripts stateTemplate registryTerms (outputReferenceOf seed) blueprint)
     let artifacts = observerArtifacts (scriptsObservers registry) <> [scriptsCheckpoint registry]
     hashProof <- requireArtifact "hash-proof" artifacts
     lifecycle <- requireArtifact "observer-lifecycle" artifacts
@@ -646,7 +663,7 @@ mkCheckpointEnv blueprintPath lsq ltxs seed = do
             , envHashProofHash = hashProofHash
             , envHashProofPolicy = hashProofPolicy
             , envRegistry = registry
-            , envTerms = devnetTerms
+            , envTerms = registryTerms
             , envApplicationScript = mkCageScript (artifactProgram (scriptsApplication registry))
             , envApplicationHash = artifactScriptHash (scriptsApplication registry)
             , envStateScript = mkCageScript (scriptsStateProgram registry)
@@ -2786,6 +2803,7 @@ submitTwoPassConvict env label checkpointRef enforcementRef input convictor plan
             <> "; declared="
             <> show finalBudgets
         )
+    reportCollateral (envProvider env) label signedFinal
     result <-
         withinSecs 60 ("submit unchanged " <> label) $
             submitTx (envSubmitter env) signedFinal
@@ -2945,6 +2963,7 @@ submitTwoPassBy party env label build = do
             <> " declared="
             <> show finalBudgets
         )
+    reportCollateral (envProvider env) label signedFinal
     result <-
         withinSecs 60 ("submit unchanged " <> label) $
             submitTx (envSubmitter env) signedFinal
@@ -3324,7 +3343,25 @@ submitSettling :: CheckpointEnv -> String -> ConwayTx -> IO TxId
 submitSettling env = submitSettlingBy env (ownerParty env)
 
 submitSettlingBy :: CheckpointEnv -> Party -> String -> ConwayTx -> IO TxId
-submitSettlingBy env party = submitWith (envSubmitter env) (partyKey party)
+submitSettlingBy env party label tx =
+    reportCollateral (envProvider env) label tx
+        >> submitWith (envSubmitter env) (partyKey party) label tx
+
+{- | Say what the transaction posts as collateral: the lovelace of the outputs it names, read
+from the node before it is submitted. Posted, and taken only if a script fails.
+-}
+reportCollateral :: Provider IO -> String -> ConwayTx -> IO ()
+reportCollateral provider label tx = do
+    let refs = tx ^. bodyTxL . collateralInputsTxBodyL
+    found <- withinSecs 30 (label <> ": query collateral") (queryUTxOByTxIn provider refs)
+    dbg
+        ( "collateral posted: "
+            <> label
+            <> " lovelace="
+            <> show (sum [unCoin (out ^. coinTxOutL) | out <- Map.elems found])
+            <> " outputs="
+            <> show (Set.size refs)
+        )
 
 submitWith ::
     Submitter IO ->
@@ -3746,12 +3783,16 @@ entitledSettlementValidity env label resolved = do
 node's forecast.
 -}
 tipValidity :: CheckpointEnv -> String -> IO ValidityPlan
-tipValidity env label = do
+tipValidity = tipValidityWith 25
+
+-- | A validity interval from the tip, of the given number of slots.
+tipValidityWith :: Integer -> CheckpointEnv -> String -> IO ValidityPlan
+tipValidityWith slots env label = do
     snapshot <-
         withinSecs 30 (label <> ": query settlement tip") $
             queryLedgerSnapshot (envProvider env)
     let lower = ledgerTipSlot snapshot
-        upper = SlotNo (unSlotNo lower + 25)
+        upper = SlotNo (unSlotNo lower + fromInteger slots)
     lowerMs <- slotStartPosixMs env lower
     -- Both conversions sit AT the tip and the endpoint is derived from the
     -- era's own slot length: 25 slots is inside the node's forecast but
@@ -3765,7 +3806,7 @@ tipValidity env label = do
             { lowerSlot = lower
             , upperSlot = upper
             , lowerPosixMs = lowerMs
-            , upperPosixMs = lowerMs + 25 * slotLengthMs
+            , upperPosixMs = lowerMs + slots * slotLengthMs
             }
 
 {- | Submit one authentic #271 opening and resolve the output it created.
@@ -6186,3 +6227,357 @@ terminalKeyJourney env references fixture key = do
     finalShot <- chainShot env
     unless (shotRoot finalShot == shotRoot shot) $
         fail "the registry's root changed while a terminal key's registration was booked and returned"
+
+-- ---------------------------------------------------------------------
+-- The installed command creates the registry the library books into
+-- ---------------------------------------------------------------------
+
+-- | The devnet a deployment journey runs on: the hosted one, or one with preprod's timing.
+data DeployTiming = HostedTiming | PreprodTiming
+    deriving stock (Eq, Show)
+
+{- | The terms the journey deploys with: the devnet's own, and for preprod's timing a
+booking width that holds the validity interval of its slow blocks.
+-}
+deployJourneyTerms :: DeployTiming -> RegistryTerms
+deployJourneyTerms = \case
+    HostedTiming -> devnetTerms
+    PreprodTiming ->
+        devnetTerms
+            { registryParameters = (registryParameters devnetTerms){bookingWidth = 70_000}
+            }
+
+-- | How many slots a validity interval of the journey spans.
+deploySlots :: DeployTiming -> Integer
+deploySlots = \case
+    HostedTiming -> 25
+    PreprodTiming -> 60
+
+{- | A protocol-11 devnet whose wallet is split, with its socket and channels, and no
+registry on it.
+-}
+stagedBareDevnet :: DeployTiming -> (FilePath -> LSQChannel -> LTxSChannel -> IO a) -> IO a
+stagedBareDevnet timing action = do
+    hSetBuffering stdout LineBuffering
+    hSetBuffering stderr LineBuffering
+    gDir <- genesisDir
+    withinSecs (if timing == PreprodTiming then 1_800 else 300) "deployment withDevnet+socket" $
+        withCardanoNode gDir $
+            \sock _startMs -> do
+                lsq <- newLSQChannel 16
+                ltxs <- newLTxSChannel 16
+                client <- async $ runNodeClient devnetMagic sock lsq ltxs
+                ( do
+                        enactPV11Transition lsq ltxs
+                        let provider = mkN2CProvider lsq
+                        assertPV11Enacted provider
+                        assertLivePv11Boundary provider
+                        prepareWallet provider (mkN2CSubmitter ltxs) genesisAddr
+                        action sock lsq ltxs
+                    )
+                    `finally` cancel client
+
+-- | Every path under a directory, relative to it.
+directoryTree :: FilePath -> IO [FilePath]
+directoryTree root = do
+    entries <- sort <$> Dir.listDirectory root
+    concat
+        <$> mapM
+            ( \entry -> do
+                isDirectory <- Dir.doesDirectoryExist (root </> entry)
+                below <- if isDirectory then map (entry </>) <$> directoryTree (root </> entry) else pure []
+                pure (entry : below)
+            )
+            entries
+
+-- | The output a reference of the record names, as an input.
+txInOfReference :: OutputReference -> TxIn
+txInOfReference (OutputReference transaction index) =
+    TxIn
+        (TxId (unsafeMakeSafeHash (fromMaybe (error "txInOfReference: not a hash") (hashFromBytes transaction))))
+        (TxIx (fromInteger index))
+
+-- | The signing-key envelope of a devnet key.
+signingKeyEnvelope :: SignKeyDSIGN Ed25519DSIGN -> String
+signingKeyEnvelope key =
+    "{\"type\":\"PaymentSigningKeyShelley_ed25519\",\"description\":\"devnet payment key\",\"cborHex\":\"5820"
+        <> B8.unpack (convertToBase Base16 (rawSerialiseSignKey key))
+        <> "\"}"
+  where
+    rawSerialiseSignKey = rawSerialiseSignKeyDSIGN
+
+-- | The bech32 text of a test network address.
+testAddressText :: Addr -> Either String String
+testAddressText address = do
+    hrp <- either (Left . show) Right (Bech32.humanReadablePartFromText "addr_test")
+    encoded <- either (Left . show) Right (Bech32.encode hrp (Bech32.dataPartFromBytes (serialiseAddr address)))
+    pure (Text.unpack encoded)
+
+-- | A directory of its own under the temporary directory.
+freshScratch :: String -> IO FilePath
+freshScratch name = do
+    base <- Dir.getTemporaryDirectory
+    stamp <- getPOSIXTime
+    let path = base </> (name <> "-" <> show (floor (stamp * 1_000_000) :: Integer))
+    Dir.createDirectory path
+    pure path
+
+-- | The lovelace a wallet's plain address holds, and what sits at its seed address.
+walletLovelace :: Provider IO -> Addr -> IO Integer
+walletLovelace provider address = do
+    plain <- withinSecs 30 "query wallet total" (queryUTxOs provider address)
+    hidden <- withinSecs 30 "query seed-address total" (queryUTxOs provider (seedAddress address))
+    pure (sum [unCoin (out ^. coinTxOutL) | (_, out) <- plain <> hidden])
+
+nowMs :: IO Integer
+nowMs = (\t -> floor (t * 1_000)) <$> getPOSIXTime
+
+{- | Run the installed @ckeri registry deploy@ on the devnet from an empty directory, then
+read only the two files it wrote: the registry it created is booked into by the
+library's builders with one wallet and folded by another, and the checkpoint is delivered.
+-}
+registryDeployJourney :: DeployTiming -> FilePath -> LSQChannel -> LTxSChannel -> IO ()
+registryDeployJourney timing socket lsq ltxs = do
+    blueprintPath <- resolveBlueprintPath
+    let provider = mkN2CProvider lsq
+        terms = deployJourneyTerms timing
+        params' = registryParameters terms
+        slots = deploySlots timing
+        timeoutSeconds = if timing == PreprodTiming then 1_200 else 300 :: Int
+    scratch <- freshScratch "registry-deploy"
+    let workDir = scratch </> "work"
+        keyFile = scratch </> "payment.skey"
+        identityFile = workDir </> "release-identity.json"
+        recordFile = workDir </> "reference-outputs.json"
+    Dir.createDirectory workDir
+    -- where the first deployment keeps its manifests: here they cannot be read
+    let decoys = [workDir </> "deploy" </> "preprod" </> name | name <- ["m1-manifest.json", "board-manifest.json"]]
+    mapM_ (Dir.createDirectoryIfMissing True) decoys
+    decoysBefore <- directoryTree (workDir </> "deploy")
+    writeFile keyFile (signingKeyEnvelope genesisSignKey)
+    address <- either fail pure (testAddressText genesisAddr)
+    deployerBefore <- walletLovelace provider genesisAddr
+    folderBefore <- walletLovelace provider folderAddress
+    let magic = fromIntegral (unNetworkMagic devnetMagic) :: Integer
+        term name value = [name, show (value :: Integer)]
+        args =
+            [ "registry"
+            , "deploy"
+            , "--network-magic"
+            , show magic
+            , "--blueprint"
+            , blueprintPath
+            , "--node-socket"
+            , socket
+            , "--funding-address"
+            , address
+            , "--signing-key-file"
+            , keyFile
+            , "--timeout-seconds"
+            , show timeoutSeconds
+            ]
+                <> term "--registration-cost" (registrationCost params')
+                <> term "--minimum-tip" (minimumTip params')
+                <> term "--process-time" (processTime params')
+                <> term "--booking-width" (bookingWidth params')
+                <> term "--deposit" (termsDeposit (registryCheckpointTerms terms))
+                <> term "--freeze-bond" (termsFreezeBond (registryCheckpointTerms terms))
+                <> term "--premium" (termsPremium (registryCheckpointTerms terms))
+                <> term "--minimum-ada" (registryMinimumAda terms)
+                <> term "--termination-carrier" (registryTerminationCarrier terms)
+    let runCkeri dir =
+            withinSecs (timeoutSeconds * 10) "ckeri registry deploy" $
+                Proc.readCreateProcessWithExitCode
+                    (Proc.proc "ckeri" args){Proc.cwd = Just dir}
+                    ""
+    deployStarted <- nowMs
+    (code, out, err) <- runCkeri workDir
+    deployFinished <- nowMs
+    dbg ("ckeri registry deploy stdout:\n" <> out)
+    dbg ("ckeri registry deploy stderr:\n" <> err)
+    unless (code == ExitSuccess) $
+        fail ("ckeri registry deploy failed: " <> show code)
+    listing <- sort <$> Dir.listDirectory workDir
+    decoysAfter <- directoryTree (workDir </> "deploy")
+    unless (decoysAfter == decoysBefore) $
+        fail "the command touched where the first deployment keeps its manifests"
+    unless (listing == ["deploy", "reference-outputs.json", "release-identity.json"]) $
+        fail ("the command left more or less than its two files: " <> show listing)
+    (identity, record) <-
+        Files.readDeploymentFiles identityFile recordFile >>= either (fail . show) pure
+    deployerAfter <- walletLovelace provider genesisAddr
+    -- the terms the identity carries are the terms the command was given
+    let identityTerms =
+            RegistryTerms
+                { registryCheckpointTerms =
+                    CheckpointTerms
+                        { termsNetwork = Rel.riNetwork identity
+                        , termsDeposit = Rel.riDeposit identity
+                        , termsFreezeBond = Rel.riFreezeBond identity
+                        , termsPremium = Rel.riPremium identity
+                        }
+                , registryParameters = Rel.riApplicationParameters identity
+                , registryMinimumAda = Rel.riMinimumAda identity
+                , registryTerminationCarrier = Rel.riTerminationCarrier identity
+                }
+    unless (identityTerms == terms) $
+        fail ("the identity's terms are not the terms given: " <> show identityTerms)
+    -- the library derives the registry again from the seed the identity names
+    env0 <- mkCheckpointEnvWith terms blueprintPath lsq ltxs (txInOfReference (Rel.riSeed identity))
+    let scripts = envRegistry env0
+        release = Rel.riRelease identity
+    unless
+        ( Consumer.rlApplicationPolicy release == scriptHashBytes (envApplicationHash env0)
+            && Consumer.rlStatePolicy release == scriptHashBytes (envStateHash env0)
+            && Rel.riCheckpointValidator identity == scriptHashBytes (envCheckpointHash env0)
+            && Consumer.rlStatePolicy release == scriptsStateHash scripts
+        )
+        $ fail "the release identity does not name the scripts the library derives from its seed"
+    let resolve label ref = do
+            let ix = txInOfReference ref
+            found <-
+                withinSecs 30 (label <> ": query") $
+                    queryUTxOByTxIn provider (Set.singleton ix)
+            out' <- requireJust (label <> ": the output the record names is not on the chain") (Map.lookup ix found)
+            pure (ix, out')
+        scriptReference label sref = resolve label (Files.scriptOutput sref)
+    templateOut <- resolve "template" (Files.recordTemplate record)
+    applicationRef <- scriptReference "application" (Files.recordApplication record)
+    stateRef <- scriptReference "state" (Files.recordState record)
+    lifecycleRef <- scriptReference "registration observer" (Files.recordRegistration record)
+    hashProofRef <- scriptReference "hash proof" (Files.recordHashProof record)
+    checkpointRef <- scriptReference "checkpoint validator" (Files.recordCheckpoint record)
+    configurationOut <- resolve "configuration" (Files.recordConfiguration record)
+    stateOut <- resolve "registry state" (Files.recordRegistryState record)
+    unless (snd templateOut ^. datumTxOutL == mkInlineDatum (B (scriptsTemplate scripts))) $
+        fail "the template output does not hold the state template"
+    forM_
+        [ ("application", applicationRef, envApplicationScript env0)
+        , ("state", stateRef, envStateScript env0)
+        , ("registration observer", lifecycleRef, envLifecycleScript env0)
+        , ("hash proof", hashProofRef, envHashProofScript env0)
+        , ("checkpoint validator", checkpointRef, envCheckpointScript env0)
+        ]
+        $ \(label, (_, out'), script) ->
+            unless (out' ^. referenceScriptTxOutL == SJust script) $
+                fail (label <> ": the output the record names does not hold the script")
+    unless (holdsRegistryToken env0 (stateTokenName (registrySeed env0)) (snd stateOut)) $
+        fail "the registry state output does not hold the state token"
+    unless (hasAsset (applicationPolicy env0) (configurationTokenName (registryIdentity env0)) (snd configurationOut)) $
+        fail "the configuration record does not hold the configuration token"
+    let env =
+            env0
+                { envTemplateOutput = Just templateOut
+                , envApplicationReference = Just applicationRef
+                , envStateReference = Just stateRef
+                , envConfiguration = Just configurationOut
+                }
+    -- a second registry on the same chain: the observer's credential is registered already
+    let secondDir = scratch </> "second"
+    Dir.createDirectory secondDir
+    (secondCode, secondOut, secondErr) <- runCkeri secondDir
+    dbg ("second deployment stdout:\n" <> secondOut)
+    dbg ("second deployment stderr:\n" <> secondErr)
+    unless (secondCode == ExitSuccess) $
+        fail ("the second ckeri registry deploy failed: " <> show secondCode)
+    unless ("register-observer-credential: skipped" `isInfixOf` secondOut) $
+        fail "the second deployment did not say it skipped the credential"
+    when ("registered the registration observer's reward credential;" `isInfixOf` secondOut) $
+        fail "the second deployment claims it registered the credential"
+    unless ("registered the registration observer's reward credential;" `isInfixOf` out) $
+        fail "the first deployment does not say it registered the credential"
+    (secondIdentity, secondRecord) <-
+        Files.readDeploymentFiles (secondDir </> "release-identity.json") (secondDir </> "reference-outputs.json")
+            >>= either (fail . show) pure
+    unless (isNothing (Files.recordCredentialRegistration secondRecord)) $
+        fail "the second record names a registration of the credential"
+    unless (Rel.riSeed secondIdentity /= Rel.riSeed identity) $
+        fail "the second registry was created from the first one's seed"
+    -- the payer wallet books, a distinct wallet folds
+    (fixture, _) <- loadLifecycleFixture
+    bookValidity <- tipValidityWith slots env "booking"
+    let bookRecord = registrationRecord env fixture bookValidity
+        approval' = Tx.approval bookRecord
+    bookStarted <- nowMs
+    bookId <-
+        submitTwoPassBy (ownerParty env) env "registration booking" (bookingTx env bookRecord bookValidity 0)
+    bookSubmitted <- nowMs
+    bookedOut <-
+        pollOutput (envProvider env) bookId [0] (hasAsset (applicationPolicy env) approval')
+            >>= requireJust "the booking did not settle"
+    bookSettled <- nowMs
+    let booking = Booking{bookingOutput = bookedOut, bookingRecord = bookRecord, bookingValidity = bookValidity}
+    deployerBooked <- walletLovelace provider genesisAddr
+    proofStarted <- nowMs
+    proofTx <- withinSecs 90 "build hash-proof mint" (buildHashProofMintTx env folderParty fixture)
+    proofId <- submitSettlingBy env folderParty "hash-proof mint" proofTx
+    proofSubmitted <- nowMs
+    proof <-
+        pollOutput (envProvider env) proofId [0, 1] (hasAsset (envHashProofPolicy env) (Tx.inceptionProofName fixture))
+            >>= requireJust "the hash-proof output did not settle"
+    proofSettled <- nowMs
+    foldValidity' <- tipValidityWith slots env "registration fold"
+    let key = checkpointKey env fixture
+        plan =
+            FoldRequest
+                { foldBooking = booking
+                , foldFixture = fixture
+                , foldProof = proof
+                , foldReferences = [lifecycleRef, hashProofRef]
+                , foldRegistered = []
+                , foldTerminated = []
+                , foldState = Nothing
+                , foldValidity = foldValidity'
+                , foldParty = folderParty
+                }
+    foldStarted <- nowMs
+    foldId <- submitTwoPassBy folderParty env "registration fold" (buildFoldTx env plan)
+    foldSubmitted <- nowMs
+    (checkpointIn, checkpointOut) <-
+        pollOutput (envProvider env) foldId [0] (holdsCheckpointToken env (inceptionDatum fixture))
+            >>= requireJust "the fold did not settle"
+    foldSettled <- nowMs
+    snapshot <- withinSecs 30 "tip after the fold" (queryLedgerSnapshot (envProvider env))
+    foldChainMs <- slotStartPosixMs env (ledgerTipSlot snapshot)
+    unless (checkpointOut ^. addrTxOutL == roleAddress env Active) $
+        fail "the delivered checkpoint is not at the checkpoint validator's address"
+    unless (unCoin (checkpointOut ^. coinTxOutL) == requestDeposit' env) $
+        fail "the delivered checkpoint does not hold the committed deposit"
+    unless (extractDatum checkpointOut == Just (V2 (registeredFacts env fixture bookValidity))) $
+        fail "the delivered checkpoint does not carry the initial datum of the request"
+    unless (holdsCheckpointToken env (inceptionDatum fixture) checkpointOut) $
+        fail "the delivered checkpoint does not hold the active token of its AID"
+    (_, stateAfter) <- currentState env
+    unless (rawInlineData stateAfter == Just (stateDatumData (snd (registryProof [] [] key)))) $
+        fail "the registry's root is not the root of the one registered key"
+    deployerFolded <- walletLovelace provider genesisAddr
+    folderAfter <- walletLovelace provider folderAddress
+    -- a second booking of the same identity: the price of a duplicate
+    duplicateValidity <- tipValidityWith slots env "duplicate booking"
+    let duplicateRecord = registrationRecord env fixture duplicateValidity
+    duplicateId <-
+        submitTwoPassBy (ownerParty env) env "duplicate booking" (bookingTx env duplicateRecord duplicateValidity 0)
+    _ <-
+        pollOutput (envProvider env) duplicateId [0] (hasAsset (applicationPolicy env) (Tx.approval duplicateRecord))
+            >>= requireJust "the duplicate booking did not settle"
+    deployerDuplicated <- walletLovelace provider genesisAddr
+    let deadline = requestProcessDeadline bookRecord
+        report =
+            unlines
+                [ "timing=" <> show timing
+                , "deploy: started=" <> show deployStarted <> " finished=" <> show deployFinished <> " ms=" <> show (deployFinished - deployStarted)
+                , "booking: started=" <> show bookStarted <> " submitted=" <> show bookSubmitted <> " settled=" <> show bookSettled
+                , "premint: started=" <> show proofStarted <> " submitted=" <> show proofSubmitted <> " settled=" <> show proofSettled
+                , "fold: started=" <> show foldStarted <> " submitted=" <> show foldSubmitted <> " settled=" <> show foldSettled
+                , "booking validity ms: " <> show (lowerPosixMs bookValidity) <> ".." <> show (upperPosixMs bookValidity) <> " width=" <> show (upperPosixMs bookValidity - lowerPosixMs bookValidity) <> " bookingWidth=" <> show (bookingWidth params')
+                , "fold validity ms: " <> show (lowerPosixMs foldValidity') <> ".." <> show (upperPosixMs foldValidity')
+                , "process deadline ms: " <> show deadline <> " fold settled at chain ms: " <> show foldChainMs <> " inside=" <> show (foldChainMs <= deadline && upperPosixMs foldValidity' <= deadline)
+                , "wallet deployer: before=" <> show deployerBefore <> " after-deploy=" <> show deployerAfter <> " after-booking=" <> show deployerBooked <> " after-fold=" <> show deployerFolded <> " after-duplicate=" <> show deployerDuplicated
+                , "wallet folder: before=" <> show folderBefore <> " after-fold=" <> show folderAfter
+                , "checkpoint: " <> show checkpointIn
+                ]
+    dbg report
+    lookupEnv "KERI_DEPLOY_REPORT_OUT" >>= \case
+        Just path -> writeFile path (report <> "\nckeri stdout:\n" <> out)
+        Nothing -> pure ()
+    Dir.removeDirectoryRecursive scratch

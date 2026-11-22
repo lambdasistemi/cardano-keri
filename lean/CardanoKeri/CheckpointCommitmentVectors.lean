@@ -6,13 +6,16 @@ import CardanoKeri.CheckpointDatumVectors
 
 Conviction rows run the local conviction step on one live output with a
 commitment and a payee at a slot: accepted only when the commitment names this
-output, the evidence shown at its key state and this payee, and the slot lies in
-its window. Controls change one fact of the accepted row at a time and must be
-refused. System rows run the certificate interpreter over a registered and twice
-rotated checkpoint: a conviction needs an open commitment naming its AID, burns
-it, and a commitment is revealed inside its window or swept after it. Checks run
-the actual Lean functions; they are evidence over the listed inputs, not a proof
-over all inputs. -/
+output's key state, the evidence shown there and this payee, and the slot lies in
+its window. The output's other facts (its marks, pool, birth slot and refund
+address) do not enter: a top-up, a freeze or a poison after the opening keeps the
+commitment, and a rotation voids it. Controls change one fact of the accepted row
+at a time. System rows run the certificate interpreter over a registered and twice
+rotated checkpoint: a conviction needs an open commitment naming its AID and its
+deployment, burns it, and a commitment is revealed inside its window or swept
+after it; the same journey in another deployment refuses the first deployment's
+commitment. Checks run the actual Lean functions; they are evidence over the
+listed inputs, not a proof over all inputs. -/
 namespace CardanoKeri.Checkpoint.CommitmentVectors
 open Lean (Json toJson)
 open CardanoKeri.CheckpointDatum.Vectors (natJson rows leaves mutateAt)
@@ -43,7 +46,8 @@ def envFor (rivalIsAccepted : Bool) : Env := {
   convictionRival := fun e sn => some (if rivalIsAccepted then (CardanoKeri.Duplicity.fixture e sn).1.accepted
     else (CardanoKeri.Duplicity.fixture e sn).2) }
 
-/-- The convicted output: sequence 1, epoch 1, refund address 42, pool 4. -/
+/-- The output as it stood when the commitment was opened: sequence 1, epoch 1,
+refund address 42, pool 4. -/
 def output : Live := ⟨1, 1, false, false, 3, 42, 4, false⟩
 
 structure Case where
@@ -51,7 +55,7 @@ structure Case where
   note : String
   output : Live
   rivalIsAccepted : Bool
-  committedOutput : Live
+  committedKeyState : Hash
   shown : Shown
   committedPayee : Addr
   openedAt : Slot
@@ -61,12 +65,12 @@ structure Case where
   now : Slot
 
 def Case.commitment (c : Case) : Commitment := {
-  aid := 11, deployment := SystemFixtures.deployment, keyState := c.committedOutput.hash,
+  aid := 11, deployment := SystemFixtures.deployment, keyState := c.committedKeyState,
   evidence := c.shown.evidence, payee := c.committedPayee,
   openedAt := c.openedAt, eligibleAfter := c.eligibleAfter, expiresAt := c.expiresAt, marker := 1 }
 
 def honest (id note : String) (now : Slot) : Case :=
-  ⟨id, note, output, false, output, .duplicity 1 1, 8, 5, 6, 20, 8, now⟩
+  ⟨id, note, output, false, output.hash, .duplicity 1 1, 8, 5, 6, 20, 8, now⟩
 
 def cases : List Case := [
   honest "accepted-first-eligible-slot" "the first slot after the opening slot: accepted" 6,
@@ -74,10 +78,16 @@ def cases : List Case := [
   honest "refused-opening-slot" "the slot the opening transaction's validity range ends at: refused" 5,
   honest "refused-expired" "one slot after the commitment's last slot: refused" 21,
   { honest "refused-other-payee" "the conviction pays 9, the commitment names 8: refused" 6 with payee := 9 },
-  { honest "refused-output-topped-up" "the output was topped up after the opening: refused" 6 with
+  { honest "accepted-output-topped-up" "the output was topped up after the opening: accepted" 6 with
       output := { output with pool := 5, toppedUp := true } },
+  { honest "accepted-output-frozen" "the output was frozen after the opening: accepted" 6 with
+      output := { output with frozen := true } },
+  { honest "accepted-output-poisoned" "the output was poisoned after the opening: accepted" 6 with
+      output := { output with poisoned := true } },
   { honest "refused-output-rotated" "the output was rotated after the opening: refused" 6 with
       output := { output with sn := 2, epoch := 2, pool := 3 } },
+  { honest "refused-other-key-state" "the commitment names key state (2, 2), the output carries (1, 1): refused" 6 with
+      committedKeyState := ⟨2, 2⟩ },
   { honest "refused-other-evidence" "the commitment names the evidence of another key state: refused" 6 with
       shown := .duplicity 2 2 },
   { honest "refused-no-duplicity" "the evidence shown and committed proves no duplicity: refused" 6 with
@@ -111,13 +121,18 @@ def Case.row (c : Case) : Json :=
     ("shown", (if c.rivalIsAccepted then Shown.sameEvent c.output.epoch c.output.sn
       else Shown.duplicity c.output.epoch c.output.sn).json),
     ("commitment", Json.mkObj [
-      ("output", liveJson c.committedOutput), ("evidence", c.shown.json),
+      ("aid", natJson c.commitment.aid), ("deployment", natJson c.commitment.deployment),
+      ("keyState", toJson [c.committedKeyState.epoch, c.committedKeyState.sn]),
+      ("evidence", c.shown.json),
       ("payee", natJson c.committedPayee), ("openedAt", natJson c.openedAt),
       ("eligibleAfter", natJson c.eligibleAfter), ("expiresAt", natJson c.expiresAt)]),
     ("payee", natJson c.payee), ("now", natJson c.now),
     ("outcome", outcomeJson c.run)]
 
 /-! ## System rows: the commitment program beside the checkpoint -/
+
+/-- Another deployment, holding a checkpoint for the same AID. -/
+def otherDeployment : Deployment := 22
 
 open SystemWire SystemFixtures in
 /-- Run named commands from a machine and record each outcome and the open markers after it. -/
@@ -135,11 +150,24 @@ def runCells (start : Machine) (commands : List (String × Command)) : List Json
     ([], start)).1
 
 open SystemWire SystemFixtures in
-def systemRows : Except String (List Json) := do
-  let registered ← advance (Machine.init deployment) (← registrationCommand)
+/-- The journey's checkpoint in deployment `d`: registered and rotated once, and
+the same rotated a second time. -/
+def rotatedIn (d : Deployment) : Except String (Machine × Machine) := do
+  let registered ← advance (Machine.init d) (← registrationCommand)
   let rotated ← advance registered rotatedCommand
-  let rotatedAgain ← advance rotated rotatedAgainCommand
+  pure (rotated, ← advance rotated rotatedAgainCommand)
+
+open SystemWire SystemFixtures in
+def systemRows : Except String (List Json) := do
+  let (rotatedOnce, rotatedAgain) ← rotatedIn deployment
+  let (_, elsewhere) ← rotatedIn otherDeployment
+  -- Opened while the checkpoint carries key state (1, 1), before the second rotation.
+  let earlier : Commitment := { commitment with
+    keyState := ⟨1, 1⟩, evidence := ((Duplicity.fixture 1 1).1, (Duplicity.fixture 1 1).2),
+    openedAt := 3, eligibleAfter := 4 }
+  let later : Commitment := { commitment with marker := 2 }
   let other : Commitment := { commitment with aid := 12, marker := 2 }
+  let foreign : Commitment := { commitment with deployment := otherDeployment, marker := 2 }
   let stranger : Commitment := { commitment with payee := 9, marker := 2 }
   pure [
     Json.mkObj [("id", toJson "conviction-consumes-an-open-commitment"),
@@ -157,7 +185,39 @@ def systemRows : Except String (List Json) := do
         ("open", openCommand), ("open-stranger-commitment", .openCommitment stranger),
         ("reveal-in-opening-slot", .reveal 1 4), ("reveal-first-eligible-slot", .reveal 1 5),
         ("sweep-on-last-slot", .sweep 2 20), ("sweep-after-last-slot", .sweep 2 21),
-        ("convict-after-reveal", convictedCommand)]))]]
+        ("convict-after-reveal", convictedCommand)]))],
+    Json.mkObj [("id", toJson "commitment-survives-a-top-up"),
+      ("note", toJson "a top-up after the opening leaves the commitment open and the conviction accepted"),
+      ("cells", toJson (runCells rotatedAgain [
+        ("open", openCommand), ("top-up", .local 11 5 (.topUp 1)),
+        ("second-top-up", .local 11 5 (.topUp 1)),
+        ("convict", convictedCommand)]))],
+    Json.mkObj [("id", toJson "commitment-convicts-before-a-rotation"),
+      ("note", toJson "with no rotation in between, the commitment opened at key state (1, 1) convicts"),
+      ("cells", toJson (runCells rotatedOnce [
+        ("open-before-the-rotation", .openCommitment earlier),
+        ("convict-revealing-the-earlier-commitment", .local 11 4 (.convict 7 earlier))]))],
+    Json.mkObj [("id", toJson "commitment-voided-by-a-rotation"),
+      ("note", toJson ("a rotation after the opening leaves the commitment open and entitling nothing; " ++
+        "a commitment naming the new key state convicts")),
+      ("cells", toJson (runCells rotatedOnce [
+        ("open-before-the-rotation", .openCommitment earlier), ("rotate", rotatedAgainCommand),
+        ("convict-revealing-the-earlier-commitment", .local 11 5 (.convict 7 earlier)),
+        ("open-for-the-new-key-state", .openCommitment later),
+        ("convict-revealing-the-later-commitment", .local 11 5 (.convict 7 later))]))],
+    Json.mkObj [("id", toJson "conviction-needs-this-deployment"),
+      ("note", toJson "a commitment naming another deployment is refused here although it is open and names this AID"),
+      ("cells", toJson (runCells rotatedAgain [
+        ("open-for-another-deployment", .openCommitment foreign),
+        ("convict-revealing-the-other-deployment-commitment", .local 11 5 (.convict 7 foreign)),
+        ("open", openCommand), ("convict", convictedCommand)]))],
+    Json.mkObj [("id", toJson "refused-at-another-deployment"),
+      ("note", toJson ("the same journey in another deployment: same identifier, same key state, the same " ++
+        "commitment open; the conviction is refused, and the commitment naming that deployment convicts")),
+      ("cells", toJson (runCells elsewhere [
+        ("open", openCommand), ("convict", convictedCommand),
+        ("open-for-this-deployment", .openCommitment foreign),
+        ("convict-revealing-this-deployment-commitment", .local 11 5 (.convict 7 foreign))]))]]
 
 /-! ## The table -/
 
@@ -166,11 +226,12 @@ def table : Except String Json := do
     ("description", toJson ("Vectors of the commitment a conviction reveals: the local conviction step " ++
       "with a commitment, a payee and a slot; and the system steps that open, reveal, sweep and burn " ++
       "commitments beside a checkpoint.")),
-    ("model", toJson "lean/CardanoKeri/Checkpoint.lean (Commitment.entitles, Step.convict, LocalEvent, OpenEvent, RevealEvent, SweepEvent)"),
+    ("model", toJson "lean/CardanoKeri/Checkpoint.lean (Commitment.entitles, Step.convict, Sys.revealOpen, LocalEvent, OpenEvent, RevealEvent, SweepEvent)"),
     ("rules", Json.mkObj [
-      ("conviction", toJson "accepted iff duplicity at the output's key state and the commitment names this output, the evidence shown there and this payee, and eligibleAfter <= now <= expiresAt"),
-      ("system", toJson "a conviction's commitment is open under its marker and names this AID; the conviction burns it; a reveal needs eligibleAfter <= now <= expiresAt; a sweep needs expiresAt < now")]),
+      ("conviction", toJson "accepted iff duplicity at the output's key state and the commitment names that key state, the evidence shown there and this payee, and eligibleAfter <= now <= expiresAt; no other fact of the output is read"),
+      ("system", toJson "a conviction's commitment is open under its marker and names this AID and this deployment; the conviction burns it; a commitment opens with eligibleAfter = openedAt + 1 <= expiresAt; a reveal needs eligibleAfter <= now <= expiresAt; a sweep needs expiresAt < now")]),
     ("params", Json.mkObj [("D", natJson params.D), ("B", natJson params.B), ("P", natJson params.P)]),
+    ("deployments", Json.mkObj [("this", natJson SystemFixtures.deployment), ("other", natJson otherDeployment)]),
     ("conviction", Json.arr (cases.map Case.row).toArray),
     ("system", Json.arr (← systemRows).toArray)])
 
@@ -205,7 +266,8 @@ def discriminatingControls : Except String Nat := do
   unless base.run.isSome do throw "the honest conviction is refused"
   let changed : List (String × Case) := [
     ("payee", { base with payee := base.payee + 1 }),
-    ("output", { base with output := { base.output with pool := base.output.pool + 1 } }),
+    ("key state named", { base with committedKeyState := ⟨base.committedKeyState.epoch, base.committedKeyState.sn + 1⟩ }),
+    ("key state carried", { base with output := { base.output with sn := base.output.sn + 1, epoch := base.output.epoch + 1 } }),
     ("evidence", { base with shown := .duplicity 2 2 }),
     ("before-eligible", { base with now := base.eligibleAfter - 1 }),
     ("after-expiry", { base with now := base.expiresAt + 1 }),
@@ -214,7 +276,27 @@ def discriminatingControls : Except String Nat := do
     if c.run.isSome then throw s!"changing the {name} of the honest conviction still convicts"
   pure changed.length
 
-def checkTable (j : Json) : Except String (Nat × Nat × Nat × Nat) := do
+/-- The accepted row changed in one fact of the output other than its key state at
+a time: each is still accepted and pays the same convictor. -/
+def indifferentControls : Except String Nat := do
+  let some base := cases.head? | throw "no conviction case"
+  let some (paid, _) := base.run | throw "the honest conviction is refused"
+  let changed : List (String × Live) := [
+    ("pool", { base.output with pool := base.output.pool + 1 }),
+    ("top-up mark", { base.output with toppedUp := !base.output.toppedUp }),
+    ("freeze mark", { base.output with frozen := !base.output.frozen }),
+    ("poison mark", { base.output with poisoned := !base.output.poisoned }),
+    ("birth slot", { base.output with bornAt := base.output.bornAt + 1 }),
+    ("refund address", { base.output with refundTo := base.output.refundTo + 1 })]
+  for (name, output) in changed do
+    match ({ base with output } : Case).run with
+    | none => throw s!"changing the {name} of the convicted output refuses the conviction"
+    | some (flow, _) =>
+      unless flow.convictor == paid.convictor do
+        throw s!"changing the {name} of the convicted output changes the convictor's payment"
+  pure changed.length
+
+def checkTable (j : Json) : Except String (Nat × Nat × Nat × Nat × Nat) := do
   let conviction ← rows j "conviction"
   let system ← rows j "system"
   let lean ← systemRows
@@ -223,6 +305,6 @@ def checkTable (j : Json) : Except String (Nat × Nat × Nat × Nat) := do
   for row in conviction do verifyConviction row
   for row in system do verifySystem lean row
   let fields := (← fieldControls conviction verifyConviction) + (← fieldControls system (verifySystem lean))
-  pure (conviction.size, system.size, fields, ← discriminatingControls)
+  pure (conviction.size, system.size, fields, ← discriminatingControls, ← indifferentControls)
 
 end CardanoKeri.Checkpoint.CommitmentVectors

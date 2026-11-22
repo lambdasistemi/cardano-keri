@@ -72,8 +72,9 @@ node scripts/checkpoint-writer-vectors.mjs --check
 )
 # The commitment a conviction reveals (#534): the committed vectors are the
 # Lean's output, every committed row is checked against the Lean, every changed
-# field fails, and each entitling fact of the honest conviction changed alone is
-# refused.
+# field fails, each entitling fact of the honest conviction changed alone is
+# refused, and each other fact of the convicted output changed alone leaves it
+# accepted.
 (
   cd lean
   lake build CardanoKeri.CheckpointCommitmentVectors

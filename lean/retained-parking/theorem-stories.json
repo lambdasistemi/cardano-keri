@@ -9,7 +9,7 @@
     "lean/CardanoKeri/Checkpoint.lean": "3cc6fbd7d9de62c5d42a96721442f34b2ce55216dfa9245cd008675a358607f5",
     "lean/CardanoKeri/CheckpointCertificate.lean": "dc37f17b038f987c25e507725a0586badbe850c53b47d395f73ac500f272f68c",
     "lean/CardanoKeri/CheckpointCommitmentGoals.lean": "0e2b4cc6f65e11741a596fb3b9cba580feb8e2ea18affecbd61ae1005bcd1e0b",
-    "lean/CardanoKeri/CheckpointCommitmentVectors.lean": "57d28baf8eba7b6ccb1bbdfda15d924c6b0a1fa6240e3cf16464293865dd8b6a",
+    "lean/CardanoKeri/CheckpointCommitmentVectors.lean": "850c68fa73b7e40a9791c8785d445afb766606f0711e19f517be4a108ac29f8d",
     "lean/CardanoKeri/CheckpointCompletionGoals.lean": "1d94dc229838d85cc00cd309b87308dc708b57d8da0dd595ca7a9e33e934f504",
     "lean/CardanoKeri/CheckpointDatum.lean": "9df3dc45f67dce1f6ad5d8b52d76f75fdb53833c07946ccdac2d37d719d14b3f",
     "lean/CardanoKeri/CheckpointDatumGoals.lean": "b48f733c302f61979226282bdd0559398b2a5a11a4c5b5fe88cc1d7522be063b",

@@ -49,7 +49,7 @@ common warnings
 library
   import:           warnings
   default-language: GHC2021
-  hs-source-dirs:   lib e2e
+  hs-source-dirs:   lib
   build-depends:
     , base                  >=4.18 && <5
     , bytestring            >=0.11 && <0.13
@@ -84,14 +84,13 @@ library
     Cardano.KERI.AID.Checkpoint.Value
     Cardano.KERI.AID.Checkpoint.Wire
     Cardano.KERI.AID.Consumer
-    Cardano.KERI.AID.Ed25519
-    Cardano.KERI.AID.Migration.Types
-    Cardano.KERI.AID.Release
-
-  other-modules:
+    Cardano.KERI.AID.E2E.FoldGuard
     Cardano.KERI.AID.E2E.Mpf
     Cardano.KERI.AID.E2E.MpfProof
     Cardano.KERI.AID.E2E.MpfTrie
+    Cardano.KERI.AID.Ed25519
+    Cardano.KERI.AID.Migration.Types
+    Cardano.KERI.AID.Release
 
 -- #257: provider-neutral chain-query algebra. Owns the minimal free query
 -- program, locators, promoted shared result types, watermark, and errors.
@@ -151,12 +150,14 @@ library deployment
     , cardano-crypto-class
     , cardano-keri
     , cardano-keri:chain-query
+    , cardano-ledger-allegra
     , cardano-ledger-alonzo
     , cardano-ledger-api
     , cardano-ledger-conway
     , cardano-ledger-core
     , cardano-ledger-mary
     , cardano-node-clients
+    , cardano-strict-containers
     , cardano-tx-tools:tx-build
     , cardano-tx-tools:tx-sign-core
     , containers
@@ -174,6 +175,7 @@ library deployment
     , unix
 
   exposed-modules:
+    Cardano.KERI.AID.E2E.Datum
     Cardano.KERI.Deployment.Advance
     Cardano.KERI.Deployment.AdvanceTransaction
     Cardano.KERI.Deployment.EndpointBoard
@@ -186,6 +188,7 @@ library deployment
     Cardano.KERI.Deployment.Publisher
     Cardano.KERI.Deployment.Registration
     Cardano.KERI.Deployment.Registry
+    Cardano.KERI.Deployment.RegistryTransactions
     Cardano.KERI.Deployment.Script
     Cardano.KERI.Deployment.TopUp
     Cardano.KERI.Deployment.TransactionRuntime
@@ -419,6 +422,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.RegistrationSpec
     Cardano.KERI.Deployment.RegistryFixture
     Cardano.KERI.Deployment.RegistryScriptsSpec
+    Cardano.KERI.Deployment.RegistryTransactionsSpec
     Cardano.KERI.Deployment.ScriptAritySpec
     Cardano.KERI.Deployment.TopUpPackageSpec
     Cardano.KERI.Deployment.TopUpTransactionSpec
@@ -943,7 +947,6 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.WireSpec
     Cardano.KERI.AID.ConsumerClausesSpec
     Cardano.KERI.AID.ConsumerVectorsSpec
-    Cardano.KERI.AID.E2E.FoldGuard
     Cardano.KERI.AID.E2E.Rejection
     Cardano.KERI.AID.Ed25519Spec
     Cardano.KERI.AID.FoldGuardSpec
@@ -1121,12 +1124,7 @@ test-suite e2e-tests
     CageE2ESpec
     CageTxBuilder
     Cardano.KERI.AID.E2E.AssetName
-    Cardano.KERI.AID.E2E.Datum
     Cardano.KERI.AID.E2E.DevnetTerms
-    Cardano.KERI.AID.E2E.FoldGuard
-    Cardano.KERI.AID.E2E.Mpf
-    Cardano.KERI.AID.E2E.MpfProof
-    Cardano.KERI.AID.E2E.MpfTrie
     Cardano.KERI.AID.E2E.Rejection
     Cardano.KERI.AID.E2E.Script
     Cardano.KERI.AID.E2E.Wire

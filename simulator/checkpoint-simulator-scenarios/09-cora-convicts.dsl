@@ -176,7 +176,7 @@ step:
 step:
   slot: 12
   who: cora
-  say: "Cora supplies a conflicting rotation at sequence 1. Both branches satisfy the common prior-next commitment and their signing and derived-witness thresholds. In the slot before, Cora opened a commitment naming this key state, this evidence and herself; the poison that landed since leaves it as it was, and the conviction reveals it. The checkpoint enters termination-pending custody, keeping its token and key state. D goes to Cora; B and the pool return to the refund address. The registry key remains active until the later consuming fold."
+  say: "Cora supplies a conflicting rotation at sequence 1. Both branches satisfy the common prior-next commitment and their signing and derived-witness thresholds. Cora holds a commitment naming this key state, this evidence and herself, opened by a transaction whose validity range ended in the slot before; the poison that landed since leaves it as it was, and the conviction reveals it. The checkpoint enters termination-pending custody, keeping its token and key state. D goes to Cora; B and the pool return to the refund address. The registry key remains active until the later consuming fold."
   evidence:
     add: [{"duplicityAt":[1,1]}]
   action:
@@ -371,7 +371,7 @@ fork:
   step:
     slot: 12
     who: cora
-    say: "A commitment opened in this very slot is not yet eligible: whoever sees the evidence first cannot open a commitment and convict in one block."
+    say: "A commitment whose opening transaction is valid up to this very slot is not yet eligible: whoever sees the evidence first cannot open a commitment and convict in one block."
     evidence:
       add: [{"duplicityAt":[1,1]}]
     action:

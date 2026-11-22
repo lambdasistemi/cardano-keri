@@ -47,10 +47,12 @@ have executable witnesses
 and nine have separately proved construction exclusions. This is reason-level
 coverage, not proof that every repeated branch site was executed.
 
-The associated Checkpoint system has four connected traces and 33 complete
-cells, 22 accepted and 11 refused. It includes stored-context replay, another
+The associated Checkpoint system has six connected traces and 55 complete
+cells, 39 accepted and 16 refused. It includes stored-context replay, another
 valid request that cannot complete the selected identity, and a mixed fold
-that can. Eight properties are evaluated only on actual system events.
+that can, a commitment that a rotation voids and a top-up keeps, and the same
+journey in another deployment, where the first deployment's commitment is
+refused. Thirteen properties are evaluated only on actual system events.
 
 Kernel proofs, finite model executions, compiled model mutants, JavaScript
 implementation mutants and fabricated property-checker failures are distinct.

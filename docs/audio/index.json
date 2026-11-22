@@ -12593,13 +12593,13 @@
     "index": 2,
     "name": "docs-design-trust-model/close-cannot-redirect-the-refund-02",
     "pause_ms": 400,
-    "v": "6dbd80cff106"
+    "v": "595acd0d252a"
    },
    {
     "index": 3,
     "name": "docs-design-trust-model/close-cannot-redirect-the-refund-03",
     "pause_ms": 400,
-    "v": "10fc897ed4a6"
+    "v": "abd4e3e781f4"
    }
   ],
   "current-key-theft": [
@@ -12815,7 +12815,7 @@
     "index": 3,
     "name": "docs-design-trust-model/relayers-and-hunters-03",
     "pause_ms": 400,
-    "v": "e2379461d24e"
+    "v": "80333195a542"
    }
   ],
   "residuals-of-what-ships-today": [
@@ -12913,7 +12913,7 @@
     "index": 1,
     "name": "docs-design-trust-model/the-consumers-predicate-01",
     "pause_ms": 400,
-    "v": "781238902cab"
+    "v": "d5226f8a7e10"
    },
    {
     "index": 2,
@@ -12925,7 +12925,7 @@
     "index": 3,
     "name": "docs-design-trust-model/the-consumers-predicate-03",
     "pause_ms": 400,
-    "v": "7fab273414f3"
+    "v": "d6d6b8c2d75e"
    },
    {
     "index": 4,
@@ -12983,7 +12983,7 @@
     "index": 1,
     "name": "docs-design-trust-model/the-registry-01",
     "pause_ms": 400,
-    "v": "337667ca1d38"
+    "v": "e8c99ee7fbda"
    }
   ],
   "the-sequence-never-moves-backward": [
@@ -13068,6 +13068,80 @@
     "name": "docs-design-trust-model/what-the-current-validators-guarantee-shipped-today-00",
     "pause_ms": 500,
     "v": "d3e9246d4239"
+   }
+  ],
+  "who-a-conviction-pays": [
+   {
+    "index": 0,
+    "name": "docs-design-trust-model/who-a-conviction-pays-00",
+    "pause_ms": 500,
+    "v": "81c0a6d7cc9d"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-trust-model/who-a-conviction-pays-01",
+    "pause_ms": 400,
+    "v": "595d6d2b4740"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-trust-model/who-a-conviction-pays-02",
+    "pause_ms": 400,
+    "v": "e9c0049ca58a"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-trust-model/who-a-conviction-pays-03",
+    "pause_ms": 400,
+    "v": "d3dedda1c48d"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-trust-model/who-a-conviction-pays-04",
+    "pause_ms": 400,
+    "v": "3caee278c83a"
+   },
+   {
+    "index": 5,
+    "name": "docs-design-trust-model/who-a-conviction-pays-05",
+    "pause_ms": 400,
+    "v": "89bf690415fa"
+   },
+   {
+    "index": 6,
+    "name": "docs-design-trust-model/who-a-conviction-pays-06",
+    "pause_ms": 400,
+    "v": "cef43ba148b6"
+   },
+   {
+    "index": 7,
+    "name": "docs-design-trust-model/who-a-conviction-pays-07",
+    "pause_ms": 400,
+    "v": "d23e5b2c7497"
+   },
+   {
+    "index": 8,
+    "name": "docs-design-trust-model/who-a-conviction-pays-08",
+    "pause_ms": 400,
+    "v": "ac21ce6fcf46"
+   },
+   {
+    "index": 9,
+    "name": "docs-design-trust-model/who-a-conviction-pays-09",
+    "pause_ms": 400,
+    "v": "9cb7c2af9d1f"
+   },
+   {
+    "index": 10,
+    "name": "docs-design-trust-model/who-a-conviction-pays-10",
+    "pause_ms": 400,
+    "v": "9e31d0427612"
+   },
+   {
+    "index": 11,
+    "name": "docs-design-trust-model/who-a-conviction-pays-11",
+    "pause_ms": 400,
+    "v": "f45b9034ddad"
    }
   ]
  },

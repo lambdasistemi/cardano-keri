@@ -34,10 +34,21 @@ unless they hold, and the checkpoint validator's rows are those of the first
 reference seed, a transaction id of 32 zero bytes at index 0. A reference seed is
 a derivation input, not a deployed registry.
 
+The Lean model revision in the table is the latest model, and the scripts on
+this page do not follow all of it yet. For the commitment a conviction
+reveals, the model names the identifier, the deployment and the key state it
+accuses; the validators still bind a commitment to one checkpoint output and do
+not compare its deployment with the one that settles, so on chain a top-up
+still voids a commitment that the model keeps.
+[#534](https://github.com/lambdasistemi/cardano-keri/issues/534) and
+[#508](https://github.com/lambdasistemi/cardano-keri/issues/508) are the open
+work, and [Who a conviction pays](../design/trust-model.md#who-a-conviction-pays)
+describes the model.
+
 <!-- identities:begin -->
 | What | Value |
 |---|---|
-| Lean model revision | `f66889d32fadfbeafa41a940d9b4ad6cdd90a890` |
+| Lean model revision | `5c41efd2653bf0a7479f314a97e4a224494cb2de` |
 | Public Singular commit | `d69ab005c3b710aeebf033d3c5cd08c56feb5643` |
 | Aiken compiler | `1.1.23` |
 | Network discriminator | `0` |

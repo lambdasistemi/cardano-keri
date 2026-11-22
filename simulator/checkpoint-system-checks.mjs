@@ -5,13 +5,13 @@ import {newSystem,attemptSystem,checkSystemCorpus,validateCommand,replaySystem} 
 import {equal} from './registry-economic-core.mjs';
 import {SYSTEM_THEOREMS,systemProperties} from './checkpoint-system-properties.mjs';
 const corpus=JSON.parse(readFileSync(new URL('./checkpoint-system-corpus.json',import.meta.url)));
-const report=checkSystemCorpus(corpus);assert.deepEqual(report,{cells:33,accepted:22,refused:11});
-const first=corpus.traces[0].cells[0],initial=newSystem(first.params,first.env);
+const report=checkSystemCorpus(corpus);assert.deepEqual(report,{cells:55,accepted:39,refused:16});
+const first=corpus.traces[0].cells[0],initial=newSystem(first.params,first.env,corpus.traces[0].deployment);
 const registered=attemptSystem(initial,first.command).session;
 assert.equal(initial.state.aids.length,0,'mutated initial state');
 assert.throws(()=>{registered.state.aids[0].origin.environment.duplicity.push([99,99]);},TypeError);
 assert.throws(()=>attemptSystem(structuredClone(registered),first.command),/must-start-at-init/);
-for(const trace of corpus.traces)assert(equal(replaySystem(trace.cells[0].params,trace.cells[0].env,trace.cells.map(c=>c.command)).state,trace.final));
+for(const trace of corpus.traces)assert(equal(replaySystem(trace.cells[0].params,trace.cells[0].env,trace.deployment,trace.cells.map(c=>c.command)).state,trace.final));
 const malformed=[
   x=>{x.register.context.extra=0;},
   x=>{x.register.context.environment.duplicity=[[11,-1]];},
@@ -39,4 +39,28 @@ for(const name of ['T8_leaf_agrees_with_state','T8_edges_leave_the_leaf','T8_pre
 // witness or a semantic mutation of the model.
 const wrongOrigin=structuredClone(first);wrongOrigin.input.aids=[{...first.result.ok.state.aids[0],leaf:'active'}];
 assert.equal(systemProperties(wrongOrigin)['T8_mint_once'].holds,false,'fabricated mint premise check');
-console.log(JSON.stringify({...report,schemaControls:malformed.length+1,immutableOrigin:true,initOnlySessions:true,systemProperties:shown.size,fabricatedCheckerControls:8}));
+// A conviction whose commitment stays open, and a reveal before its window.
+const convict=corpus.traces[0].cells.find(c=>c.name==='convict'),kept=structuredClone(convict.result);
+kept.ok.state.commitments=convict.input.commitments;
+assert.equal(systemProperties(convict,kept)['sys_conviction_consumes_commitment'].holds,false,'fabricated commitment burn check');
+const reveal=corpus.traces[3].cells.find(c=>c.name==='open-commitment');
+const early=structuredClone(reveal);early.command={reveal:{marker:1,now:4}};early.input=reveal.result.ok.state;early.result={ok:{...reveal.result.ok,state:{...reveal.result.ok.state,commitments:[]}}};
+assert.equal(systemProperties(early,early.result)['commitment_closes_in_or_after_window'].holds,false,'fabricated commitment window check');
+// A step that changes the deployment, a top-up that burns an open commitment, a
+// conviction accepted on a commitment of another deployment, and a conviction
+// consuming a commitment in a system of another deployment.
+const moved=structuredClone(rotated.result);moved.ok.state.deployment=rotated.input.deployment+1;
+assert.equal(systemProperties(rotated,moved)['sys_step_keeps_deployment'].holds,false,'fabricated deployment change check');
+const follows=corpus.traces.find(t=>t.name==='commitment-follows-the-key-state'),topUp=follows.cells.find(c=>c.name==='top-up');
+assert.equal(systemProperties(topUp)['sys_commitment_survives_key_state_step'].exhibited,true,'the top-up runs with a commitment open');
+const burnt=structuredClone(topUp.result);burnt.ok.state.commitments=[];
+assert.equal(systemProperties(topUp,burnt)['sys_commitment_survives_key_state_step'].holds,false,'fabricated commitment survival check');
+const elsewhere=corpus.traces.find(t=>t.name==='another-deployment'),foreign=elsewhere.cells.find(c=>c.name==='convict-with-the-other-deployment-commitment-refused');
+assert.equal(foreign.result.error,'checkpoint-commitment-not-open');
+assert.equal(systemProperties(foreign,elsewhere.cells.at(-1).result)['sys_conviction_refused_for_other_deployment'].holds,false,'fabricated other-deployment acceptance check');
+const misplaced=structuredClone(convict);misplaced.input.deployment=convict.input.deployment+1;
+assert.equal(systemProperties(misplaced)['sys_conviction_consumes_commitment'].holds,false,'fabricated commitment deployment check');
+// The same commands in the other deployment: the first deployment's commitment convicts there no more.
+const home=corpus.traces.find(t=>t.name==='another-deployment');
+assert(replaySystem(home.cells[0].params,home.cells[0].env,corpus.traces[0].deployment,home.cells.slice(0,5).map(c=>c.command)).records.at(-1).result.ok,'the refused conviction is accepted in the commitment\'s own deployment');
+console.log(JSON.stringify({...report,schemaControls:malformed.length+1,immutableOrigin:true,initOnlySessions:true,systemProperties:shown.size,fabricatedCheckerControls:14}));

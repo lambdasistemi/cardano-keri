@@ -100,7 +100,7 @@ function checkExactNat(core, corpus) {
   const EV_SHAPES = { rotationTo: [1, 1, 2], depositAuthorized: [2], quorum: [1], duplicityAt: [1, 1] };
   const EV_NAT = { rotationTo: [0, 1, 2], depositAuthorized: [0], quorum: [0], duplicityAt: [0, 1] };   // the Nat entries of each row
   // an action that consults each predicate from live(), and one that consults none
-  const CONSULTING = { rotationTo: { rotate: { "sn'": 2, op: 'keep', payee: 1 } }, depositAuthorized: { rotate: { "sn'": 2, op: 'deposit', payee: 1 } }, quorum: 'poison', duplicityAt: { convict: { payee: 1 } } };
+  const CONSULTING = { rotationTo: { rotate: { "sn'": 2, op: 'keep', payee: 1 } }, depositAuthorized: { rotate: { "sn'": 2, op: 'deposit', payee: 1 } }, quorum: 'poison', duplicityAt: { convict: { payee: 1, commitment: core.commitmentFor(live().present.l, 1, 0) } } };
   const NOP = { topUp: { x: 2 } };
   const okEnv = core.envAdd(core.envAdd(core.emptyEnv(), { quorum: [1] }), { rotationTo: [1, 1, 2] });
   const got = r => (r.ok ? 'ok' : r.reason + (r.field !== undefined ? '/' + r.field : ''));
@@ -122,7 +122,8 @@ function checkExactNat(core, corpus) {
     for (const k of ['D', 'B', 'P', 'W']) if (core.validateParams({ ...P, [k]: v }) === null) problems.push(`params accept ${k}=${tag}`);
     const actions = [{ register: { refund: v, pool0: 1 } }, { register: { refund: 1, pool0: v } }, { rotate: { "sn'": v, op: 'keep', payee: 1 } },
       { rotate: { "sn'": 2, op: 'keep', payee: v } }, { freeze: { "sn'": v, payee: 1 } },
-      { freeze: { "sn'": 2, payee: v } }, { topUp: { x: v } }, { convict: { payee: v } }];
+      { freeze: { "sn'": 2, payee: v } }, { topUp: { x: v } }, { convict: { payee: v, commitment: core.commitmentFor(live().present.l, 3, 0) } },
+      { convict: { payee: 3, commitment: { ...core.commitmentFor(live().present.l, 3, 0), expiresAt: v } } }];
     for (const a of actions) {
       const n = core.normalizeAction(a);
       if (n.ok || n.reason !== 'invalid-nat') problems.push(`action ${JSON.stringify(a)} not refused invalid-nat (got ${n.ok ? 'ok' : n.reason})`);
@@ -153,7 +154,7 @@ function checkExactNat(core, corpus) {
     }
     for (const f of ['epoch', 'sn']) {
       const pk = pendingSt({ [f]: v });
-      refusal(`step convict on a pending state with ${f}=${tag}`, () => core.step(P, okEnv, { convict: { payee: 3 } }, 1, pk), 'invalid-nat', f);
+      refusal(`step convict on a pending state with ${f}=${tag}`, () => core.step(P, okEnv, { convict: { payee: 3, commitment: core.commitmentFor(live().present.l, 3, 0) } }, 1, pk), 'invalid-nat', f);
       refusal(`step topUp on a pending state with ${f}=${tag} (before termination-pending)`, () => core.step(P, okEnv, NOP, 1, pk), 'invalid-nat', f);
       refusal(`replay with no steps from a pending state with ${f}=${tag}`, () => core.replay(P, okEnv, 0, pk, []), 'invalid-nat', f);
       verdict(`consumable on a pending state with ${f}=${tag}`, () => core.consumable(P, 5, pk), 'invalid-nat', f);
@@ -224,7 +225,7 @@ function checkExactNat(core, corpus) {
   refusal('replay of a non-pair entry', () => core.replay(P, okEnv, 0, live(), [[1, NOP, 2]]), 'invalid-action', 'list[0]');
   verdict('consumable under a zero bond', () => core.consumable({ ...P, D: 0 }, 5, live()), 'invalid-params', 'D must be positive');
   // a boundary refusal exhibits no theorem: T5 / T8 / T12 must not read a non-state as a refused-with-evidence step
-  const brec = core.attempt({ ...core.newSession(P), state: live({ sn: 2 ** 53 }), registry: [1], env: { ...core.emptyEnv(), duplicityAt: [[1, 2 ** 53]] } }, { convict: { payee: 1 } }, 0).record;
+  const brec = core.attempt({ ...core.newSession(P), state: live({ sn: 2 ** 53 }), registry: [1], env: { ...core.emptyEnv(), duplicityAt: [[1, 2 ** 53]] } }, { convict: { payee: 1, commitment: core.commitmentFor(live().present.l, 1, 0) } }, 0).record;
   const bviol = Object.keys(brec.theorems).filter(id => !brec.theorems[id].holds);
   if (bviol.length) problems.push('a boundary-refused conviction violates ' + bviol.join(','));
   if (Object.keys(brec.lamps).some(id => id !== 'T9' && brec.lamps[id].exhibited)) problems.push('a boundary-refused step exhibits ' + Object.keys(brec.lamps).filter(id => brec.lamps[id].exhibited).join(','));
@@ -284,7 +285,8 @@ function checkLocalSessions(core, corpus) {
       if (core.stateKind(st) === 'absent' && rnd() < 0.7) action = { register: { refund: pick([1, 4, 6]), pool0: Math.floor(rnd() * 12) } };
       else action = pick([
         { rotate: { "sn'": pick([sn + 1, sn, sn + 2]), op: pick(core.BOND_OPS), payee: pick([1, 2, 4]) } },
-        'poison', { freeze: { "sn'": sn + 1, payee: 2 } }, { topUp: { x: Math.floor(rnd() * 5) } }, { convict: { payee: 3 } },
+        'poison', { freeze: { "sn'": sn + 1, payee: 2 } }, { topUp: { x: Math.floor(rnd() * 5) } },
+        { convict: { payee: pick([3, 3, 4]), commitment: core.commitmentFor(l || { sn: 0, epoch: 0, poisoned: false, frozen: false, bornAt: 0, refundTo: 1, pool: 0, toppedUp: false }, 3, slot + pick([-1, 0, 1])) } },
         { register: { refund: 6, pool0: 1 } },
       ]);
       slot += Math.floor(rnd() * 4);
@@ -422,14 +424,25 @@ function duplicateIdentityProblems(names, label) {
   for (const [id, k] of n) if (k > 1) problems.push(`duplicate ${label} identity ${id}`);
   return problems;
 }
+// The commitment goals are bound by name, not exhaustively: a step-record row or a system row naming
+// one of them must be declared in CheckpointCommitmentGoals.lean. Its other theorems have no
+// simulator row, and the report counts them.
+const COMMITMENT_STEP_ROWS = ['convict_requires_entitlement', 'commitment_survives_topUp', 'commitment_survives_freeze',
+  'commitment_survives_poison', 'rotation_voids_commitment'];
 function goalsClasses(leanRoot) {
   const problems = [];
   const goals = leanFile(leanRoot, 'lean/CardanoKeri/CheckpointGoals.lean');
   const chk = leanFile(leanRoot, 'lean/CardanoKeri/Checkpoint.lean');
+  const commitment = leanFile(leanRoot, 'lean/CardanoKeri/CheckpointCommitmentGoals.lean');
+  if (commitment.error) problems.push(commitment.error);
   if (goals.error) problems.push(goals.error);
   if (chk.error) problems.push(chk.error);
-  if (problems.length) return { problems, declared: [], observable: [], proofOnly: [], inversion: [] };
-  const declared = theoremInventory(goals.text);
+  if (problems.length) return { problems, declared: [], observable: [], proofOnly: [], inversion: [], commitment: { declared: 0, bound: 0 } };
+  const commitmentDeclared = theoremInventory(commitment.text);
+  if (!commitmentDeclared.length) problems.push('commitment theorem inventory is empty');
+  for (const n of COMMITMENT_STEP_ROWS) if (!commitmentDeclared.includes(n)) problems.push('commitment theorem missing ' + n);
+  const commitmentBound = commitmentDeclared.filter(n => COMMITMENT_STEP_ROWS.includes(n) || SYSTEM_THEOREMS.includes(n));
+  const declared = [...theoremInventory(goals.text), ...commitmentBound];
   if (!declared.length) problems.push('theorem inventory is empty');
   problems.push(...duplicateIdentityProblems(declared, 'theorem'));
   if (!declared.some(n => n.includes('.'))) problems.push('theorem inventory has no dotted identity');
@@ -443,7 +456,8 @@ function goalsClasses(leanRoot) {
   for (const n of SYSTEM_THEOREMS) if (!uniqueDeclared.includes(n)) problems.push('system theorem missing ' + n);
   for (const n of inversion) if (!uniqueDeclared.includes(n)) problems.push(`proof-only identity missing ${n}`);
   for (const n of uniqueDeclared) if (/^Step\..+_iff$/.test(n) && !inversion.includes(n)) problems.push(`proof-only: ${n} does not meet the Step.<constructor>_iff join criterion`);
-  return { problems, declared: uniqueDeclared, observable, proofOnly, inversion };
+  return { problems, declared: uniqueDeclared, observable, proofOnly, inversion,
+    commitment: { declared: commitmentDeclared.length, bound: commitmentBound.length } };
 }
 
 // Exact concrete instances of the nine public inversion statements. These
@@ -460,7 +474,7 @@ function inversionClaim(core, name, p, env, now, pre, action) {
     claim(p.P <= d.pool0, { dregIn: p.D, bIn: p.B, poolIn: d.pool0 }, core.present({ sn: 0, epoch: 0,
       poisoned: false, frozen: false, bornAt: now, refundTo: d.refund, pool: d.pool0, toppedUp: false })) : null;
   if (!l) return null;
-  if (ctor === 'convict') return kind === 'convict' ? claim(bits[0],
+  if (ctor === 'convict') return kind === 'convict' ? claim(bits[0] && core.entitles(env, d.commitment, l, d.payee, now),
     { refund: pay(l.refundTo, 0, core.bHeldOf(p, l), l.pool), convictor: pay(d.payee, p.D) }, { terminationPending: { h: { epoch: l.epoch, sn: l.sn } } }) : null;
   if (ctor === 'poison') return kind === 'poison' ? claim(bits[0] && !l.poisoned, {}, core.present({ ...l, poisoned: true })) : null;
   if (ctor === 'topUp') return kind === 'topUp' ? claim(!l.toppedUp && p.P <= d.x, { poolIn: d.x }, core.present({ ...l, pool: l.pool + d.x, toppedUp: true })) : null;
@@ -625,7 +639,7 @@ function checkTheoremRows(core, leanRoot) {
   const problems = [];
   const inv = goalsClasses(leanRoot);
   problems.push(...inv.problems);
-  if (!inv.declared.length) return { problems, rows: 0, observable: 0, proofOnly: 0 };
+  if (!inv.declared.length) return { problems, rows: 0, observable: 0, proofOnly: 0, commitment: inv.commitment };
   const P = { D: 10, B: 5, P: 2, W: 3 };
   const samples = [
     core.attempt(core.newSession(P), { register: { refund: 7, pool0: 4 } }, 1).record,
@@ -634,15 +648,15 @@ function checkTheoremRows(core, leanRoot) {
   const rowNames = [...new Set(samples.flatMap(r => Object.keys(r.theorems)))];
   const listed = core.THEOREMS.flatMap(g => g.lean);
   for (const n of inv.observable) if (!rowNames.includes(n)) problems.push(`theorem ${n} is declared in the Lean but has no checker row in the step record`);
-  for (const n of rowNames) if (!inv.observable.includes(n)) problems.push(`checker row ${n} names no theorem of CheckpointGoals.lean`);
+  for (const n of rowNames) if (!inv.observable.includes(n)) problems.push(`checker row ${n} names no theorem of CheckpointGoals.lean or bound theorem of CheckpointCommitmentGoals.lean`);
   for (const n of inv.observable) { const k = listed.filter(x => x === n).length; if (k !== 1) problems.push(`theorem ${n} is listed by ${k} lamps, expected exactly one`); }
-  for (const n of listed) if (!inv.observable.includes(n)) problems.push(`lamp lists ${n}, which is not an observable theorem of CheckpointGoals.lean`);
+  for (const n of listed) if (!inv.observable.includes(n)) problems.push(`lamp lists ${n}, which is not an observable theorem of CheckpointGoals.lean or a bound theorem of CheckpointCommitmentGoals.lean`);
   for (const r of samples) for (const n of Object.keys(r.theorems)) {
     const x = r.theorems[n];
     if (!x || typeof x.exhibited !== 'boolean' || typeof x.holds !== 'boolean' || !Array.isArray(x.notes) || !Array.isArray(x.by) || x.by[0] !== n) problems.push(`checker row ${n} is not a row {exhibited, holds, notes, by: [${n}]}`);
     if (!r.lamps || !Object.keys(r.lamps).length) problems.push('a record carries no lamps');
   }
-  return { problems, rows: inv.declared.length, observable: inv.observable.length, proofOnly: inv.proofOnly.length };
+  return { problems, rows: inv.declared.length, observable: inv.observable.length, proofOnly: inv.proofOnly.length, commitment: inv.commitment };
 }
 function checkClauses(core, clausesDoc, storiesMd, scenarioTimelines, leanRoot) {
   const problems = [];
@@ -943,7 +957,9 @@ function pageSmoke(core, html) {
   let bchips = doc.querySelectorAll('#branches .branch');
   if (bchips.length < 2) problems.push(`story 9 at its poisoned fork offers ${bchips.length} continuations, expected two`);
   else {
-    bchips[bchips.length - 1].dispatchEvent(win.makeEvent('click'));
+    const noProof = bchips.find(c => /without the second rotation/i.test(c.textContent || ''));
+    if (!noProof) problems.push('story 9 at its poisoned fork offers no branch without a proof');
+    (noProof || bchips[bchips.length - 1]).dispatchEvent(win.makeEvent('click'));
     while (next && !next.disabled && guard++ < 50) next.dispatchEvent(win.makeEvent('click'));
     if (!/poisoned/i.test(($('#state-name') || {}).textContent || '')) problems.push('the branch without a proof does not stay Poisoned: ' + (($('#state-name') || {}).textContent || ''));
     if (!doc.querySelectorAll('#tree .node.no').length) problems.push('the branch without a proof draws no refused node');
@@ -1039,7 +1055,12 @@ function fabricatedViolations(core) {
     T5_keep_needs_no_intent: () => mk({ pre: live, action: ROT(2, 'keep'), env: rotEnv, ok: false, reason: 'no-quorum' }),
     T5_poison_enabled: () => mk({ pre: live, action: 'poison', env: rows([{ quorum: [1] }]), ok: false, reason: 'no-quorum' }),
     T5_freeze_enabled: () => mk({ pre: pr(L({ pool: 1 })), action: { freeze: { "sn'": 2, payee: 2 } }, env: rotEnv, ok: false, reason: 'poisoned' }),
-    T5_convict_enabled: () => mk({ pre: live, action: { convict: { payee: 3 } }, env: dupEnv, ok: false, reason: 'no-duplicity-proof' }),
+    T5_convict_enabled: () => mk({ pre: live, action: { convict: { payee: 3, commitment: core.commitmentFor(L(), 3, 11) } }, env: dupEnv, ok: false, reason: 'no-duplicity-proof' }),
+    convict_requires_entitlement: () => mk({ pre: live, post: { terminationPending: { h: { epoch: 1, sn: 1 } } }, action: { convict: { payee: 3, commitment: core.commitmentFor(L(), 4, 11) } }, env: dupEnv, flow: { refund: pay(1, 0, 5, 10), convictor: pay(3, 1000) } }),
+    commitment_survives_topUp: () => mk({ pre: live, post: pr(L({ epoch: 2, pool: 11, toppedUp: true })), action: TOP, flow: { poolIn: 1 } }),
+    commitment_survives_freeze: () => mk({ pre: pr(L({ pool: 1 })), post: pr(L({ pool: 1, frozen: true, sn: 2 })), action: { freeze: { "sn'": 2, payee: 2 } }, env: rotEnv, flow: { hunter: pay(2, 0, 5) } }),
+    commitment_survives_poison: () => mk({ pre: live, post: pr(L({ poisoned: true, epoch: 2 })), action: 'poison', env: rows([{ quorum: [1] }]) }),
+    rotation_voids_commitment: () => mk({ pre: live, post: pr(L({ pool: 8 })), action: ROT(2, 'keep'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 2) } }),
     T6_component_conservation: () => mk({ pre: live, post: pr(L({ pool: 17 })), action: TOP, flow: { poolIn: 1 } }),
     T6_dreg_never_a_fee: () => mk({ pre: live, post: rotated(), action: ROT(2, 'keep'), env: rotEnv, flow: { hunter: pay(2, 1, 0, 2) } }),
     T6_dreg_never_moves_between_present_states: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1, dregIn: 1 } }),
@@ -1048,7 +1069,7 @@ function fabricatedViolations(core) {
     step_from_present_keeps_refund: () => mk({ pre: live, post: pr(L({ pool: 11, refundTo: 9 })), action: TOP, flow: { poolIn: 1 } }),
     T6_refund_fixed_along_trace: () => mk({ pre: live, post: pr(L({ pool: 11, refundTo: 9 })), action: TOP, flow: { poolIn: 1 }, origin: live }),
     T6_refund_is_registration_address: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, history: [[0, { register: { refund: 6, pool0: 10 } }], [12, TOP]] }),
-    T6_conviction_refunds_registration_address: () => mk({ pre: live, post: { terminationPending: { h: { epoch: 1, sn: 1 } } }, action: { convict: { payee: 3 } }, env: dupEnv, flow: { refund: pay(1, 0, 5, 10), convictor: pay(3, 1000) }, history: [[0, { register: { refund: 6, pool0: 10 } }], [12, { convict: { payee: 3 } }]] }),
+    T6_conviction_refunds_registration_address: () => mk({ pre: live, post: { terminationPending: { h: { epoch: 1, sn: 1 } } }, action: { convict: { payee: 3, commitment: core.commitmentFor(L(), 3, 11) } }, env: dupEnv, flow: { refund: pay(1, 0, 5, 10), convictor: pay(3, 1000) }, history: [[0, { register: { refund: 6, pool0: 10 } }], [12, { convict: { payee: 3, commitment: core.commitmentFor(L(), 3, 11) } }]] }),
     T6_frozen_flips_only_by_rotation_or_freeze: () => mk({ pre: live, post: pr(L({ pool: 11, frozen: true })), action: TOP, flow: { poolIn: 1 } }),
     T6_deposit_requires_new_keys: () => mk({ pre: live, post: rotated(), action: ROT(2, 'deposit'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 2) } }),
     T6_relayer_cannot_park_age_or_close: () => mk({ pre: live, post: rotated(), action: ROT(2, 'deposit'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 2) } }),
@@ -1065,7 +1086,7 @@ function fabricatedViolations(core) {
     trace_from_pending: () => mk({ pre: { terminationPending: { h: { epoch: 1, sn: 1 } } }, post: live, action: TOP }),
     T12_convicted_terminal: () => mk({ pre: 'convicted', post: live, action: TOP, flow: { poolIn: 1 } }),
     trace_from_convicted: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, origin: 'convicted' }),
-    T12_convict_exact: () => mk({ pre: live, post: 'convicted', action: { convict: { payee: 3 } }, env: dupEnv, flow: {} }),
+    T12_convict_exact: () => mk({ pre: live, post: 'convicted', action: { convict: { payee: 3, commitment: core.commitmentFor(L(), 3, 11) } }, env: dupEnv, flow: {} }),
     T14_pool_decreases_only_by_premium: () => mk({ pre: live, post: pr(L({ pool: 9 })), action: TOP, flow: { poolIn: 1 } }),
     T14_pool_increases_only_by_topup: () => mk({ pre: live, post: rotated({ pool: 20 }), action: ROT(2, 'keep'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 2) } }),
     T15_b_leaves_only_by_freeze: () => mk({ pre: live, post: pr(L({ pool: 11, frozen: true })), action: TOP, flow: { poolIn: 1 } }),
@@ -1203,7 +1224,7 @@ async function runSuite(opts) {
   if (clausesDoc) {
     const tr = checkTheoremRows(core, opts.leanRoot || LEAN_ROOT);
     problems.push(...tr.problems);
-    rows.push({ item: `theorem rows: ${tr.observable} step-record / ${tr.proofOnly} inversion of ${tr.rows} CheckpointGoals.lean declarations; step-record identities match checker rows and lamps exactly`, ok: !tr.problems.length });
+    rows.push({ item: `theorem rows: ${tr.observable} step-record / ${tr.proofOnly} inversion of ${tr.rows} declarations (CheckpointGoals.lean, and ${tr.commitment.bound} of the ${tr.commitment.declared} theorems of CheckpointCommitmentGoals.lean, bound by name); step-record identities match checker rows and lamps exactly`, ok: !tr.problems.length });
     const inversions = checkInversions(core, opts.leanRoot || LEAN_ROOT, corpus);
     problems.push(...inversions.problems);
     rows.push({ item: `inversions: ${inversions.checks} iff instances; ${inversions.controls} changed-flow negative controls`, ok: !inversions.problems.length });

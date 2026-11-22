@@ -73,7 +73,7 @@ export function executeConsumer(query) {const r=consumerVerdict(query);return r.
 export function checkConsumerCorpus(corpus) {
   if(corpus.schema!=='cardano-keri.consumer.identity'||corpus.version!==1||!corpus.fields?.length||!corpus.journey?.length||!corpus.checks?.length)throw Error('consumer-corpus-schema');
   // Fixed approved fixture census: reject truncation even when all remaining cells pass.
-  if(corpus.fields.length!==35||corpus.journey.length!==17||corpus.checks.length!==46||corpus.events?.length!==18)throw Error('consumer-corpus-roster');
+  if(corpus.fields.length!==35||corpus.journey.length!==17||corpus.checks.length!==46||corpus.events?.length!==19)throw Error('consumer-corpus-roster');
   if(!unique(corpus.checks.map(c=>c[0]))||!unique(corpus.events.map(c=>c.name)))throw Error('consumer-duplicate-control');
   const cells=[...corpus.fields,...corpus.journey.map(frame=>frame.consumer)];
   if(!unique(corpus.fields.map(c=>c.name))||!unique(corpus.journey.map(c=>c.name)))throw Error('consumer-duplicate-case');
@@ -82,7 +82,7 @@ export function checkConsumerCorpus(corpus) {
   if(!accepted||!refused||!errors)throw Error('consumer-missing-verdict-class');
   for(const [name,passed]of corpus.checks)if(passed!==true)throw Error('consumer-control-failed:'+name);
   if(!corpus.events?.length)throw Error('consumer-missing-connected-events');
-  let session=newSystem(corpus.events[0].params,corpus.events[0].env);
+  let session=newSystem(corpus.events[0].params,corpus.events[0].env,corpus.events[0].input.deployment);
   let systemAccepted=0,systemRefused=0;
   const snapshots=new Map([[canonical(session.state),session]]);
   for(const cell of corpus.events){

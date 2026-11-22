@@ -29,6 +29,6 @@ export function checkSystemPage(html) {
   assert(/^Input unsupported:/.test($('system-result').textContent));assert(equal(w.CKS.snapshot().state,before));
   $('system-reset').click();assert.equal(w.CKS.snapshot().state.aids.length,0);
   assert.equal(w.__errors.length,0,w.__errors.map(e=>e.stack).join('\n'));
-  return {traces:4,cells,controls:'select/next/previous/reset/edited-command/schema-error',fullObservations:true};
+  return {traces:w.CKS.corpus.traces.length,cells,controls:'select/next/previous/reset/edited-command/schema-error',fullObservations:true};
 }
 if(process.argv[1]===new URL(import.meta.url).pathname){try{console.log(JSON.stringify(checkSystemPage(readFileSync(new URL('./checkpoint-simulator.html',import.meta.url),'utf8'))));}catch(e){console.error(e.stack);process.exitCode=1;}}

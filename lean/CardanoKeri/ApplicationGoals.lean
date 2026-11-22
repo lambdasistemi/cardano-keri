@@ -1430,7 +1430,7 @@ When the application's mint is read.
 Then the transaction spends the pending output of an AID whose key is `key`,
 and that AID's checkpoint was convicted: its trace has a conviction step of the
 live checkpoint at the pending key state, with duplicity evidence at that key
-state. -/
+state and a commitment entitling its payee at that step's slot. -/
 theorem termination_approval_requires_conviction (i : Interpretation) (env : Env)
     (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
     (cenv : CardanoKeri.Checkpoint.Env) (release : PublishedRelease) (o : Observation)
@@ -1446,10 +1446,10 @@ theorem termination_approval_requires_conviction (i : Interpretation) (env : Env
       d.state = .terminationPending k ∧
       ∃ (t : CardanoKeri.Checkpoint.Slot) (es : List (CardanoKeri.Checkpoint.Slot × CardanoKeri.Checkpoint.Action))
         (t' : CardanoKeri.Checkpoint.Slot) (payee : CardanoKeri.Checkpoint.Addr)
-        (l : CardanoKeri.Checkpoint.Live),
+        (c : CardanoKeri.Checkpoint.Commitment) (l : CardanoKeri.Checkpoint.Live),
         CardanoKeri.Checkpoint.Trace cp cenv t .absent es (.terminationPending k) ∧
-        (t', CardanoKeri.Checkpoint.Action.convict payee) ∈ es ∧
-        cenv.duplicityAt l.epoch l.sn = true ∧ l.hash = k := by
+        (t', CardanoKeri.Checkpoint.Action.convict payee c) ∈ es ∧
+        cenv.duplicityAt l.epoch l.sn = true ∧ c.entitles cenv l payee t' ∧ l.hash = k := by
   obtain ⟨_, c, input, _, d, k, hc, mem, credential, _, _, hd, sameKey, state, _⟩ :=
     termination_approval_requires_pending i env rp cp release o ok unique minted
   have reach := realized c input d hc mem credential hd

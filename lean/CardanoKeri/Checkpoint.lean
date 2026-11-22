@@ -53,6 +53,15 @@ def Env.duplicityAt (env : Env) (epoch : Epoch) (sn : Seq) : Bool :=
   | some context, some rival => CardanoKeri.Duplicity.duplicityAt epoch sn context rival
   | _, _ => false
 
+/-- The evidence a conviction shows at a key state: the authenticated first-seen
+context and the rival event. The environment supplies at most one per key state. -/
+abbrev Evidence := CardanoKeri.Duplicity.Context × CardanoKeri.Duplicity.SignedEvent
+
+def Env.evidenceAt (env : Env) (epoch : Epoch) (sn : Seq) : Option Evidence :=
+  match env.convictionContext epoch sn, env.convictionRival epoch sn with
+  | some context, some rival => some (context, rival)
+  | _, _ => none
+
 def Env.bondOpOk (env : Env) (e : Epoch) : BondOp → Bool
   | .keep => true
   | .deposit => env.depositAuthorized e
@@ -63,29 +72,6 @@ inductive Actor where
   | proof
   | anyone
   deriving DecidableEq, Repr
-
-inductive Action where
-
-  | register (refund : Addr) (pool0 : Value)
-
-  | rotate (sn' : Seq) (op : BondOp) (payee : Addr)
-
-  | poison
-
-  | freeze (sn' : Seq) (payee : Addr)
-
-  | topUp (x : Value)
-
-  | convict (payee : Addr)
-  deriving Repr
-
-def Action.actor : Action → Actor
-  | .register .. => .anyone
-  | .rotate .. => .nextKeys
-  | .poison => .currentQuorum
-  | .freeze .. => .proof
-  | .topUp .. => .anyone
-  | .convict .. => .proof
 
 structure KeyState where
   epoch : Epoch
@@ -115,6 +101,78 @@ structure Live where
   deriving Repr, DecidableEq
 
 def Live.hash (l : Live) : Hash := ⟨l.epoch, l.sn⟩
+
+/-- The marker that names one commitment of the release's commitment program. -/
+abbrev Marker := Nat
+
+/-- The deployment a checkpoint belongs to: on chain, the checkpoint program
+that holds it. -/
+abbrev Deployment := Nat
+
+/-- A bounty commitment of the release's commitment program, as a conviction
+reads it. It names the identifier and the key state it accuses (`aid` and
+`keyState`), the deployment it belongs to, the evidence the conviction will show,
+the payee, the raw upper end of the opening transaction's validity range
+(`openedAt`), the first slot it can be revealed in (`eligibleAfter`), the last
+(`expiresAt`) and its marker. It names no checkpoint output: a conviction is
+accepted at whichever live output carries that identifier and key state. On
+chain the evidence and payee are hidden behind a hash until the reveal; the model
+states them in the clear. -/
+structure Commitment where
+  aid : AID
+  deployment : Deployment
+  keyState : Hash
+  evidence : Evidence
+  payee : Addr
+  openedAt : Slot
+  eligibleAfter : Slot
+  expiresAt : Slot
+  marker : Marker
+  deriving Repr, DecidableEq
+
+/-- The commitment program opens a commitment only with an age of one slot and a
+lifetime: it is first eligible in the slot after the opening and no later than
+it expires. -/
+def Commitment.wellFormed (c : Commitment) : Prop :=
+  c.eligibleAfter = c.openedAt + 1 ∧ c.eligibleAfter ≤ c.expiresAt
+
+instance (c : Commitment) : Decidable c.wellFormed := by
+  unfold Commitment.wellFormed; infer_instance
+
+/-- The commitment `c` entitles `payee` to convict the live output `l` at `now`:
+it names `l`'s key state, the evidence the conviction shows there, this payee,
+and `now` is inside its window. The identifier and the deployment are checked by
+the system, which knows them (`Sys.revealOpen`). -/
+def Commitment.entitles (env : Env) (c : Commitment) (l : Live) (payee : Addr) (now : Slot) : Prop :=
+  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧
+    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt
+
+instance (env : Env) (c : Commitment) (l : Live) (payee : Addr) (now : Slot) :
+    Decidable (c.entitles env l payee now) := by
+  unfold Commitment.entitles; infer_instance
+
+inductive Action where
+
+  | register (refund : Addr) (pool0 : Value)
+
+  | rotate (sn' : Seq) (op : BondOp) (payee : Addr)
+
+  | poison
+
+  | freeze (sn' : Seq) (payee : Addr)
+
+  | topUp (x : Value)
+
+  | convict (payee : Addr) (commitment : Commitment)
+  deriving Repr
+
+def Action.actor : Action → Actor
+  | .register .. => .anyone
+  | .rotate .. => .nextKeys
+  | .poison => .currentQuorum
+  | .freeze .. => .proof
+  | .topUp .. => .anyone
+  | .convict .. => .proof
 
 def Live.bHeld (p : Params) (l : Live) : Value := if l.frozen then 0 else p.B
 
@@ -252,9 +310,10 @@ inductive Step (p : Params) (env : Env) : Action → Slot → State → Flow →
       Step p env (.topUp x) now (.present l) { poolIn := x }
         (.present { l with pool := l.pool + x, toppedUp := true })
 
-  | convict {l : Live} (now : Slot) (payee : Addr)
-      (hdup : env.duplicityAt l.epoch l.sn = true) :
-      Step p env (.convict payee) now (.present l)
+  | convict {l : Live} (now : Slot) (payee : Addr) (c : Commitment)
+      (hdup : env.duplicityAt l.epoch l.sn = true)
+      (hent : c.entitles env l payee now) :
+      Step p env (.convict payee c) now (.present l)
         { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },
           convictor := some { addr := payee, dreg := p.D } }
         (.terminationPending l.hash)
@@ -301,8 +360,8 @@ def stepFn (p : Params) (env : Env) (a : Action) (now : Slot) (s : State) : Opti
       if l.toppedUp = false ∧ p.P ≤ x then
         some ({ poolIn := x }, .present { l with pool := l.pool + x, toppedUp := true })
       else none
-  | .convict payee, .present l =>
-      if env.duplicityAt l.epoch l.sn = true then
+  | .convict payee c, .present l =>
+      if env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee now then
         some ({ refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },
                 convictor := some { addr := payee, dreg := p.D } },
               .terminationPending l.hash)
@@ -339,7 +398,7 @@ def poisonSinceLastRotation (es : List (Slot × Action)) : Bool :=
 
 def Action.isRotation : Action → Bool
   | .rotate .. => true
-  | .register .. | .poison | .freeze .. | .topUp _ | .convict _ => false
+  | .register .. | .poison | .freeze .. | .topUp _ | .convict .. => false
 
 /-- The number of top-ups among the actions. -/
 def topUpCount : List (Slot × Action) → Nat
@@ -394,16 +453,20 @@ structure PendingAssociation where
   entry : CardanoKeri.Registry.TerminationEntry
   booked : CardanoKeri.Registry.Sys
 
--- These associations are model state, not data chosen at completion.
+-- These associations are model state, not data chosen at completion. A system
+-- is one deployment, named by `deployment`.
 structure Sys where
+  deployment : Deployment
   leaves : AID → Leaf
   states : AID → State
   origins : AID → Option Origin
   pending : AID → Option PendingAssociation
+  -- The open commitments of the release's commitment program, by marker.
+  commitments : Marker → Option Commitment
 
-def Sys.init : Sys :=
-  { leaves := fun _ => .absent, states := fun _ => .absent,
-    origins := fun _ => none, pending := fun _ => none }
+def Sys.init (d : Deployment) : Sys :=
+  { deployment := d, leaves := fun _ => .absent, states := fun _ => .absent,
+    origins := fun _ => none, pending := fun _ => none, commitments := fun _ => none }
 
 def Sys.set (s : Sys) (aid : AID) (st : State) : Sys :=
   { s with
@@ -450,11 +513,74 @@ def RegistrationEvent (p : Params) (env : Env) (s s' : Sys) : Prop :=
     DeliveredOrigin receipt b aid origin ∧
     s' = s.installOrigin aid st origin
 
+/-- The commitment an action reveals: a conviction reveals the one it carries. -/
+def Action.revealed : Action → Option Commitment
+  | .convict _ c => some c
+  | _ => none
+
+/-- Burning a commitment's marker: the commitment is gone and entitles nothing more. -/
+def Sys.retire (s : Sys) (m : Marker) : Sys :=
+  { s with commitments := fun k => if k = m then none else s.commitments k }
+
+/-- The commitment an action reveals, if any, is open in the release's commitment
+program under its marker and names this AID and this system's deployment. -/
+def Sys.revealOpenB (s : Sys) (aid : AID) (a : Action) : Bool :=
+  match a.revealed with
+  | none => true
+  | some c => decide (s.commitments c.marker = some c ∧ c.aid = aid ∧ c.deployment = s.deployment)
+
+def Sys.revealOpen (s : Sys) (aid : AID) (a : Action) : Prop := s.revealOpenB aid a = true
+
+def Sys.retireRevealed (s : Sys) (a : Action) : Sys :=
+  match a.revealed with
+  | some c => s.retire c.marker
+  | none => s
+
+/-- Burning a revealed marker changes the commitments only: leaves, states,
+origins and pending associations are those of the system before. -/
+theorem Sys.retireRevealed_frame (s : Sys) (a : Action) :
+    (s.retireRevealed a).leaves = s.leaves ∧ (s.retireRevealed a).states = s.states ∧
+      (s.retireRevealed a).origins = s.origins ∧ (s.retireRevealed a).pending = s.pending := by
+  unfold Sys.retireRevealed; cases a.revealed <;> exact ⟨rfl, rfl, rfl, rfl⟩
+
+@[simp] theorem Sys.retireRevealed_leaves (s : Sys) (a : Action) :
+    (s.retireRevealed a).leaves = s.leaves := (s.retireRevealed_frame a).1
+@[simp] theorem Sys.retireRevealed_states (s : Sys) (a : Action) :
+    (s.retireRevealed a).states = s.states := (s.retireRevealed_frame a).2.1
+@[simp] theorem Sys.retireRevealed_origins (s : Sys) (a : Action) :
+    (s.retireRevealed a).origins = s.origins := (s.retireRevealed_frame a).2.2.1
+@[simp] theorem Sys.retireRevealed_pending (s : Sys) (a : Action) :
+    (s.retireRevealed a).pending = s.pending := (s.retireRevealed_frame a).2.2.2
+
+-- A local step of one checkpoint. A conviction also reveals its commitment in
+-- the same transaction: the commitment must be open, and its marker is burnt.
 def LocalEvent (p : Params) (env : Env) (s s' : Sys) : Prop :=
   ∃ (aid : AID) (a : Action) (now : Slot) (f : Flow) (st : State),
     (∀ refund pool0, a ≠ .register refund pool0) ∧
     Step p env a now (s.states aid) f st ∧
-    s' = s.set aid st
+    s.revealOpen aid a ∧
+    s' = (s.set aid st).retireRevealed a
+
+/-- Opening a commitment. The commitment program reads no checkpoint: it can be
+opened over any identifier, key state and deployment, whether or not a checkpoint
+carries them, and it is opened with an age of one slot and a lifetime. The
+opening transaction lands at a slot no later than `openedAt`; the payee signs it
+and locks the deposit. -/
+def OpenEvent (s s' : Sys) : Prop :=
+  ∃ c : Commitment, s.commitments c.marker = none ∧ c.wellFormed ∧
+    s' = { s with commitments := fun k => if k = c.marker then some c else s.commitments k }
+
+/-- Revealing a commitment without a conviction, inside its window: the payee
+signs and takes the deposit back. -/
+def RevealEvent (s s' : Sys) : Prop :=
+  ∃ (c : Commitment) (now : Slot), s.commitments c.marker = some c ∧
+    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt ∧ s' = s.retire c.marker
+
+/-- Sweeping an expired commitment: strictly after its window, whoever signs takes
+the deposit, and no checkpoint is touched. -/
+def SweepEvent (s s' : Sys) : Prop :=
+  ∃ (c : Commitment) (now : Slot), s.commitments c.marker = some c ∧
+    c.expiresAt < now ∧ s' = s.retire c.marker
 
 -- The request association is fixed by an actual booking in this origin's
 -- extending Registry history, while this checkpoint is already pending.
@@ -500,9 +626,12 @@ inductive SysStep (p : Params) (env : Env) : Sys → Sys → Prop where
   | local {s s' : Sys} : LocalEvent p env s s' → SysStep p env s s'
   | book {s s' : Sys} : BookingEvent s s' → SysStep p env s s'
   | complete {s s' : Sys} : CompletionEvent s s' → SysStep p env s s'
+  | openCommitment {s s' : Sys} : OpenEvent s s' → SysStep p env s s'
+  | reveal {s s' : Sys} : RevealEvent s s' → SysStep p env s s'
+  | sweep {s s' : Sys} : SweepEvent s s' → SysStep p env s s'
 
 inductive SysReach (p : Params) (env : Env) : Sys → Prop where
-  | init : SysReach p env Sys.init
+  | init (d : Deployment) : SysReach p env (Sys.init d)
   | step {s s' : Sys} : SysReach p env s → SysStep p env s s' → SysReach p env s'
 
 end CardanoKeri.Checkpoint

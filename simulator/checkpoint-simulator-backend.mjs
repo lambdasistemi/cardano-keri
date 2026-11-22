@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 import {
   newSession, addEvidence as sessionAddEvidence, removeEvidence as sessionRemoveEvidence,
   setSlot, attempt, checkScenario, liveOf, actionKind, step,
-  explain, consumable, isNat, CAST,
+  explain, consumable, isNat, CAST, commitmentFor,
 } from './checkpoint-simulator-core.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -147,7 +147,10 @@ function offersFor(actorId, tree, nodeId) {
       break;
     case 'cora':
       if (ksn > 0) ev('try a second receipted rotation at sequence ' + ksn, { duplicityAt: [ke, ksn] }, 'example branches with partial and augmented keys, each checked against its own threshold and derived witnesses');
-      act('convict', 'convict, D to Cora', { convict: { payee: 3 } });
+      // Cora's commitment, naming the current key state and the evidence at it, opened
+      // by a transaction whose validity range ended in the slot before this one, so it is eligible now
+      act('convict', 'convict on my commitment, D to Cora', { convict: { payee: 3,
+        commitment: commitmentFor(l || { sn: 0, epoch: 0, poisoned: false, frozen: false, bornAt: 0, refundTo: 0, pool: 0, toppedUp: false }, 3, Math.max(sess.now, 1) - 1) } });
       break;
     case 'mallory':
       ev('steal the current keys (sign as quorum, epoch ' + ke + ')', { quorum: [ke] }, 'with the current keys she signs at threshold');

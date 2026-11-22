@@ -7,7 +7,7 @@ const selected=()=>SYSTEM_CORPUS.traces[traceIndex];
 const text=(id,value)=>{element(id).textContent=value;};
 function rebuild() {
   const trace=selected(),first=trace.cells[0];
-  current=S.newSystem(first.params,first.env);last=null;
+  current=S.newSystem(first.params,first.env,trace.deployment);last=null;
   for(const cell of trace.cells.slice(0,cursor)) {
     const attempt=S.attemptSystem(current,cell.command);
     if(!E.equal(attempt.record.result,cell.result))throw Error('system-page-oracle:'+cell.name);
@@ -19,13 +19,14 @@ function draw() {
   const trace=selected(),cell=trace.cells[cursor];
   text('system-position',`${cursor} / ${trace.cells.length} events`);
   element('system-prev').disabled=cursor===0;element('system-next').disabled=!cell;
-  body.textContent=current.state.aids.length?current.state.aids.map(row=>{
+  const ledger=`Deployment ${current.state.deployment} · open commitments ${current.state.commitments.length?current.state.commitments.map(c=>`marker ${c.marker} (AID ${c.aid}, deployment ${c.deployment}, epoch ${c.keyState.epoch}, sequence ${c.keyState.sn})`).join("; "):"none"}\n\n`;
+  body.textContent=current.state.aids.length?ledger+current.state.aids.map(row=>{
     const kind=C.stateKind(row.state),held=C.held(current.params,row.state);
     const key=kind==='present'?row.state.present.l:row.state[kind]?.h;
     return `AID ${row.aid} · ${C.STATE_WORDS[C.stateWord(current.params,row.state)]} · registry ${row.leaf}\n`+
       `Output ${C.hasOutput(row.state)?'retained':'absent'} · representative ${C.representativeHeld(row.state)} · key ${key?`epoch ${key.epoch}, sequence ${key.sn}`:'none'}\n`+
       `Bonds D=${held.dreg}, B=${held.b}; pool=${held.pool} · origin ${row.origin?'fixed by registration receipt':'none'} · pending request ${row.pending?JSON.stringify(row.pending.reference):'none'}`;
-  }).join('\n\n'):'Sys.init: every AID is absent; no origin or pending association.';
+  }).join('\n\n'):`Sys.init of deployment ${current.state.deployment}: every AID is absent; no origin or pending association.`;
   text('system-result',last?`${last.cell?.name??'Edited command'}: ${last.result.ok?'accepted':'refused: '+last.result.error}`:'Choose Next to deliver the actual registration receipt.');
   const rows=last?.cell?P.systemProperties(last.cell,last.result):{};
   text('system-properties',Object.entries(rows).filter(([,r])=>r.exhibited).map(([n,r])=>(r.holds?'✓ ':'✗ ')+n).join('\n')||'No sampled system property is claimed before an event or for an edited command.');

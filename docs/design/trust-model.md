@@ -182,6 +182,8 @@ the checkpoint simulator, and unbuilt on chain.
 | The pool never gates a transition | an unpaid rotation is still a valid rotation |
 | A relayer cannot unfreeze the owner | a `deposit` is signed by the new epoch's keys |
 | The refund address belongs to whoever paid the registration, for the checkpoint's whole life | it is set at registration and no step changes it |
+| A conviction pays only the payee of a commitment opened beforehand over this identifier, deployment, key state and evidence | see [Who a conviction pays](#who-a-conviction-pays) |
+| A top-up, a freeze and a poison keep an open commitment; only a rotation voids it | a commitment names the key state, not the output, and only a rotation changes the key state |
 
 ### The consumer's predicate
 
@@ -265,6 +267,138 @@ window is bounded by juvenility and closed by any advance to the tip. The
 attacker's bonds stay the attacker's: the refund address is fixed at
 registration. Removing the residual would mean removing the relayer.
 
+### Who a conviction pays
+
+As Cora, a hunter who has found two receipted rotations at one sequence, I
+want the conviction deposit `D_reg` paid to me and not to whoever copies my
+evidence, so that looking for duplicity is worth doing.
+
+The evidence of duplicity is private until a conviction shows it, but once a
+conviction transaction is submitted anyone can read it. Without a guard, the
+producer of a block could drop Cora's transaction and include a copy that pays
+itself. The guard is a commitment made before the evidence is shown: Cora
+opens, under the release's commitment program, a commitment that names the
+identifier, the deployment, the key state she accuses (its epoch and sequence
+number), the digest of her evidence and herself, hidden behind a hash. Her
+conviction can reveal it from the slot after the upper bound of the validity
+range of the transaction that opened it. A copier naming itself finds no
+commitment that names it; a copier who opens one after seeing the evidence
+cannot use it before the slot after its own opening transaction's upper bound.
+The ledger includes a transaction no later than that bound, so this is never
+earlier than the slot after the one the copier's opening is included in.
+
+The wait is counted from that upper bound, not from the slot the opening
+transaction is included in. An opener who wants the shortest wait sets the
+bound as close to the inclusion slot as it can: with the bound at the
+inclusion slot the wait is one slot, and every slot by which the bound is
+later adds one.
+
+```mermaid
+sequenceDiagram
+  participant C as Cora (convictor)
+  participant P as Commitment program
+  participant K as Checkpoint
+  participant M as A copier
+  C->>P: open: identifier, deployment, key state, digest of the evidence, Cora
+  Note over P: evidence and payee hidden behind a hash, opening transaction valid up to slot u
+  C->>K: convict from slot u+1, revealing the commitment and the evidence
+  K-->>C: D_reg to Cora, commitment marker burnt
+  K-->>K: bond and pool to the refund address, pending termination
+  M->>K: same evidence, paying the copier
+  K-->>M: refused: no open commitment names the copier
+```
+
+The commitment names no checkpoint output. A conviction is accepted at
+whichever live output carries the identifier and the key state the commitment
+names, in the deployment it names. So a step that spends the output and keeps
+the key state leaves Cora's commitment as it was: a top-up by anyone, a freeze
+by a hunter and a poison by the owner cannot take her conviction away. A
+rotation changes the key state, and the commitment entitles nothing from then
+on. The diagram follows one commitment from its opening to the burn of its
+marker, beside the checkpoint it accuses: the top-up, the freeze, the poison
+and the rotation on its edges are steps of that checkpoint. A commitment that
+has just been opened entitles nobody yet: it waits until the slot after its
+opening transaction's upper validity bound.
+
+```mermaid
+stateDiagram-v2
+  [*] --> Waiting: opened, with a lifetime
+  Waiting --> Entitling: slot after the opening's upper validity bound
+  Waiting --> Void: rotation
+  Entitling --> Entitling: top-up, freeze or poison
+  Entitling --> Void: rotation
+  Entitling --> Revealed: conviction or reveal, inside the window
+  Entitling --> Swept: sweep, strictly after the window
+  Void --> Revealed: reveal, inside the window
+  Void --> Swept: sweep, strictly after the window
+  Revealed --> [*]: marker burnt, deposit to the payee
+  Swept --> [*]: marker burnt, deposit to whoever signs
+```
+
+The conviction step checks the commitment it reveals against the output it
+convicts; the system checks that the commitment is open and belongs here, and
+burns it. The table lists every condition and the step that states it.
+
+| A conviction is accepted only when | Where the model states it |
+|---|---|
+| the checkpoint has duplicity at its current key state | the conviction step |
+| the commitment names the key state this checkpoint output carries | the conviction step (`Commitment.entitles`) |
+| the commitment names the evidence the conviction shows | the conviction step |
+| the commitment names the payee the conviction pays | the conviction step |
+| the conviction's slot is after the upper bound of the validity range of the transaction that opened the commitment, and no later than the commitment's last slot | the conviction step, for a commitment as the commitment program opens it |
+| the commitment is open in the release's commitment program and names this AID | the system step (`Sys.revealOpen`) |
+| the commitment names this deployment | the system step |
+| the conviction burns the commitment, so it entitles nothing more | the system step |
+
+Two deployments can each hold a checkpoint for one identifier at one key
+state. A commitment opened for the first is refused at the second, although
+its checkpoint step would convict there too: the commitment does not name the
+second deployment (`sys_conviction_only_at_commitment_deployment`). This is
+the binding [#508](https://github.com/lambdasistemi/cardano-keri/issues/508)
+found missing.
+
+The next table gives each choice made here, what it was chosen over, and why.
+
+| Decision | Chosen | Rejected | Why |
+|---|---|---|---|
+| Who a conviction pays | the payee of a commitment opened beforehand | any payee the submitter names | the evidence is private until shown, and a copier would take `D_reg` |
+| What a commitment names | the identifier, the deployment and the key state it accuses | the checkpoint output | anyone can spend the output with a top-up, the owner with a poison and a hunter with a freeze, each leaving the convictor's commitment worthless before her conviction lands |
+| Which deployment a commitment serves | the one it names, compared at the conviction with the deployment that settles | a field the conviction does not compare: its width is checked at opening and reveal and the sweep reads it, and no program requires it to be the settling deployment | once the commitment names no output, nothing else ties it to one deployment |
+| How long a commitment waits | until the slot after the upper bound of its opening transaction's validity range | a later first slot | a longer wait delays every honest conviction, which is what the commitment exists to pay |
+| Who a rotation's premium and a freeze bond pay | any payee the submitter names, a recorded limit | a commitment for them too | their evidence is already public, the commitment names its checkpoint in the clear, and hiding it would need a blinded commitment, a second transaction and a delay on every paid action |
+
+Two limits remain and are recorded in the
+[Lean correspondence register](https://github.com/lambdasistemi/cardano-keri/issues/435).
+The table says who can use each and what it costs the convictor.
+
+| Limit | Who can use it | What happens |
+|---|---|---|
+| A rotation voids an open commitment | only the holder of the next keys | the checkpoint carries another key state, the commitment entitles nothing, and the duplicity it accused is no longer convictable at this checkpoint (`rotation_voids_commitment`) |
+| A block producer keeps the convictor's transaction out while its own commitment matures | a producer of two blocks in a row, or one with a colluder for the second | it reads the evidence in the transaction it withheld, opens its own commitment in its block with a validity range ending at that block's slot, and convicts in the next; the convictor's commitment stays valid meanwhile, and any other producer can include her conviction; nothing guarantees that one does |
+
+The model leaves to the implementation, and states nowhere: the hash and the
+nonce that hide the evidence and the payee, the marker's derivation from the
+opening transaction, the commitment deposit and its payouts, the payee's
+signatures, and the lifetime a release applies. It requires that a commitment
+is first eligible in the slot after the upper bound of its opening
+transaction's validity range and expires no earlier than that. The slot the
+opening transaction is included in is not an input of the model; the ledger
+guarantees only that it is no later than that upper bound. The model keeps one
+piece of evidence per key state, chosen by its environment, so a commitment
+over any other evidence entitles nothing in it.
+
+The validators on `main` still bind a commitment to the checkpoint output and
+do not compare its deployment with the one that settles. They follow this
+model in a later change; until then a top-up voids a commitment on chain.
+
+The theorems are in `lean/CardanoKeri/CheckpointCommitmentGoals.lean` and the
+accepted and refused cases in `lean/checkpoint-commitment-vectors.json`. The
+checkpoint simulator plays them in story 9: Cora convicts on her commitment
+after a poison, a copier is refused, a commitment opened in the conviction's
+slot is refused, a top-up keeps Cora's commitment, and a rotation voids it.
+Its associated-system panel runs the same journey in a second deployment,
+where the first deployment's commitment is refused.
+
 ### Indexers
 
 In the redesigned consumer, an indexer locates candidates for the independently
@@ -321,4 +455,10 @@ The **Result** column marks whether the response ships today or is designed.
 | Take `D_reg` without a duplicity proof | Reject: `D_reg` is never a fee source | designed |
 | Freeze an identity whose pool pays | Reject: the freeze requires `pool < P` | designed |
 | Convict without two witnessed rotations at one sequence | Reject: the proof needs the tip's own keys and `toad` receipts on both | designed |
+| Copy a conviction and pay yourself | Reject: `D_reg` goes only to the payee of a commitment opened beforehand over this identifier, deployment, key state and evidence | designed |
+| Open a commitment and use it in the same slot | Reject: a commitment is eligible only after the upper bound of its opening transaction's validity range, which is no earlier than the slot it was opened in | designed |
+| Top up, freeze or poison a checkpoint to void a hunter's commitment | No effect: the commitment names the key state, and these steps keep it | designed |
+| Use a commitment at another deployment holding the same identifier and key state | Reject: the commitment names its deployment | designed |
+| The next-key holder rotates before a conviction lands | **No rejection is available** — the rotation is valid, the open commitment entitles nothing afterwards and the earlier key state is no longer convictable here | designed |
+| A block producer withholds a conviction for two blocks and convicts on its own commitment | **No rejection is available** — exposure bounded by `D_reg`; the convictor's commitment stays valid and any other producer can include her conviction, with no guarantee that one does | designed |
 | A next-key thief with `toad` colluding witnesses convicts and takes `D_reg` | **No rejection is available** — exposure bounded by `D_reg` and by the chosen witness set | designed |

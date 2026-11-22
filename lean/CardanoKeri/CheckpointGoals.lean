@@ -68,55 +68,57 @@ theorem trace_from_pending (p : Params) (env : Env) {h : Hash} {t : Slot}
 Given any step whose successor is a pending termination at key state `h`.
 When its action and its source are read.
 Then the source is a live checkpoint, the action is a conviction, the
-checkpoint's current key state has duplicity evidence, and `h` is that key
-state. -/
+checkpoint's current key state has duplicity evidence, the conviction's
+commitment entitles its payee to convict that output at that slot, and `h` is
+that key state. -/
 theorem pending_only_by_conviction (p : Params) (env : Env) {a : Action} {t : Slot}
     {s : State} {f : Flow} {h : Hash} (hs : Step p env a t s f (.terminationPending h)) :
-    ∃ (l : Live) (payee : Addr), s = .present l ∧ a = .convict payee ∧
-      env.duplicityAt l.epoch l.sn = true ∧ l.hash = h := by
+    ∃ (l : Live) (payee : Addr) (c : Commitment), s = .present l ∧ a = .convict payee c ∧
+      env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee t ∧ l.hash = h := by
   cases hs with
-  | convict now payee hdup => exact ⟨_, payee, rfl, rfl, hdup, rfl⟩
+  | convict now payee c hdup hent => exact ⟨_, payee, c, rfl, rfl, hdup, hent, rfl⟩
 
 /-- **A pending termination on a trace was entered by a conviction on it.**
 Given a trace from any state that ends in a pending termination at key state `h`.
 When its steps are read.
 Then either it started in that pending termination, or one of its steps is a
 conviction of a live checkpoint whose key state is `h` and has duplicity
-evidence. -/
+evidence, carrying a commitment that entitles its payee at that step's slot. -/
 theorem trace_pending_convicted (p : Params) (env : Env) {t : Slot} {s : State}
     {es : List (Slot × Action)} {h : Hash} (tr : Trace p env t s es (.terminationPending h)) :
     s = .terminationPending h ∨
-      ∃ (t' : Slot) (payee : Addr) (l : Live), (t', Action.convict payee) ∈ es ∧
-        env.duplicityAt l.epoch l.sn = true ∧ l.hash = h := by
+      ∃ (t' : Slot) (payee : Addr) (c : Commitment) (l : Live), (t', Action.convict payee c) ∈ es ∧
+        env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee t' ∧ l.hash = h := by
   suffices general : ∀ {t : Slot} {s final : State} {es : List (Slot × Action)},
       Trace p env t s es final → final = .terminationPending h →
       s = .terminationPending h ∨
-        ∃ (t' : Slot) (payee : Addr) (l : Live), (t', Action.convict payee) ∈ es ∧
-          env.duplicityAt l.epoch l.sn = true ∧ l.hash = h from general tr rfl
+        ∃ (t' : Slot) (payee : Addr) (c : Commitment) (l : Live), (t', Action.convict payee c) ∈ es ∧
+          env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee t' ∧ l.hash = h from general tr rfl
   intro t s final es tr target
   induction tr with
   | nil => exact Or.inl target
   | @cons t₀ t₁ s₀ s₁ s₂ a f rest _ step tail ih =>
-    rcases ih target with same | ⟨t', payee, l, mem, dup, hash⟩
+    rcases ih target with same | ⟨t', payee, c, l, mem, dup, ent, hash⟩
     · subst same
-      obtain ⟨l, payee, _, rfl, dup, hash⟩ := pending_only_by_conviction p env step
-      exact Or.inr ⟨t₁, payee, l, List.mem_cons_self, dup, hash⟩
-    · exact Or.inr ⟨t', payee, l, List.mem_cons_of_mem _ mem, dup, hash⟩
+      obtain ⟨l, payee, c, _, rfl, dup, ent, hash⟩ := pending_only_by_conviction p env step
+      exact Or.inr ⟨t₁, payee, c, l, List.mem_cons_self, dup, ent, hash⟩
+    · exact Or.inr ⟨t', payee, c, l, List.mem_cons_of_mem _ mem, dup, ent, hash⟩
 
 /-- **A reachable pending termination was convicted.**
 Given a pending termination at key state `h` reachable from an absent checkpoint.
 When its trace is read.
 Then one of its steps is a conviction of the live checkpoint at key state `h`,
-with duplicity evidence at that key state. -/
+with duplicity evidence at that key state and a commitment entitling its payee. -/
 theorem reachable_pending_convicted (p : Params) (env : Env) {h : Hash}
     (reach : Reachable p env (.terminationPending h)) :
-    ∃ (t : Slot) (es : List (Slot × Action)) (t' : Slot) (payee : Addr) (l : Live),
+    ∃ (t : Slot) (es : List (Slot × Action)) (t' : Slot) (payee : Addr) (c : Commitment) (l : Live),
       Trace p env t .absent es (.terminationPending h) ∧
-      (t', Action.convict payee) ∈ es ∧ env.duplicityAt l.epoch l.sn = true ∧ l.hash = h := by
+      (t', Action.convict payee c) ∈ es ∧ env.duplicityAt l.epoch l.sn = true ∧
+      c.entitles env l payee t' ∧ l.hash = h := by
   obtain ⟨t, es, tr⟩ := reach
-  rcases trace_pending_convicted p env tr with absurd | ⟨t', payee, l, mem, dup, hash⟩
+  rcases trace_pending_convicted p env tr with absurd | ⟨t', payee, c, l, mem, dup, ent, hash⟩
   · cases absurd
-  · exact ⟨t, es, t', payee, l, tr, mem, dup, hash⟩
+  · exact ⟨t, es, t', payee, c, l, tr, mem, dup, ent, hash⟩
 
 /-- Given the complete parameters and hypotheses:
 
@@ -418,13 +420,14 @@ theorem T5_freeze_enabled (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : 
     ∃ (f : Flow) (l' : Live), Step p env (.freeze sn' payee) t (.present l) f (.present l') := by
   exact ⟨_, _, Step.freeze t sn' payee hev hsn hpool hb hclean⟩
 
-/-- Given Every parameter, slot, source state and payee in the exact type; the enabled statements additionally assume concrete duplicity at that source state.
+/-- Given Every parameter, slot, source state, payee and commitment in the exact type; the enabled statements additionally assume concrete duplicity at that source state and a commitment entitling the payee at that slot.
 When Execute the local conviction transition, or compare it to its complete guard in the iff statements.
 Then The exact existing component flow and concrete duplicity guard remain; the target is pending at the source hash. Both iff directions remain obligations. Enabled clauses are local applicability only, not a claim that an arbitrary economic request can be booked. -/
 theorem T5_convict_enabled (p : Params) (env : Env) (t : Slot) (l : Live) (payee : Addr)
-    (hdup : env.duplicityAt l.epoch l.sn = true) :
-    ∃ f, Step p env (.convict payee) t (.present l) f (.terminationPending l.hash) := by
-  exact ⟨_, Step.convict t payee hdup⟩
+    (c : Commitment) (hdup : env.duplicityAt l.epoch l.sn = true)
+    (hent : c.entitles env l payee t) :
+    ∃ f, Step p env (.convict payee c) t (.present l) f (.terminationPending l.hash) := by
+  exact ⟨_, Step.convict t payee c hdup hent⟩
 
 /-- **T5g.** D-038's empty message: a keep needs no signature at all — given
 the witnessed rotation it is enabled under every environment, whatever the
@@ -527,10 +530,10 @@ checkpoint registered with refund address `r`, whatever rotations, poisons,
 freezes and top-ups followed, a conviction pays the freeze bond held and the
 whole pool to exactly `r`. -/
 theorem T6_conviction_refunds_registration_address (p : Params) (env : Env) {t t0 now : Slot}
-    {r : Addr} {pool0 : Value} {rest : List (Slot × Action)} {l : Live} {payee : Addr} {f : Flow}
-    {s' : State}
+    {r : Addr} {pool0 : Value} {rest : List (Slot × Action)} {l : Live} {payee : Addr}
+    {c : Commitment} {f : Flow} {s' : State}
     (h : Trace p env t .absent ((t0, .register r pool0) :: rest) (.present l))
-    (hc : Step p env (.convict payee) now (.present l) f s') :
+    (hc : Step p env (.convict payee c) now (.present l) f s') :
     f.refund = some { addr := r, b := l.bHeld p, pool := l.pool } := by
   cases h with
   | cons hle hs htail =>
@@ -682,15 +685,16 @@ theorem T7_step_iff_stepFn (p : Params) (env : Env) {a : Action} {t : Slot} {s s
       | absent => simp [stepFn] at h
       | convicted => simp [stepFn] at h
       | terminationPending hs => simp [stepFn] at h
-    | convict payee =>
+    | convict payee c =>
       cases s with
       | present l =>
         simp only [stepFn] at h
         split at h
-        · rename_i hdup
+        · rename_i hc
+          obtain ⟨hdup, hent⟩ := hc
           simp only [Option.some.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl⟩ := h
-          exact Step.convict _ _ hdup
+          exact Step.convict _ _ _ hdup hent
         · simp at h
       | absent => simp [stepFn] at h
       | convicted => simp [stepFn] at h
@@ -741,8 +745,8 @@ theorem T8_leaf_agrees_with_state (p : Params) (env : Env) {s : Sys} (h : SysRea
       simp only [Sys.installOrigin, Sys.set]
       split <;> simp_all
     | «local» event =>
-      obtain ⟨x, a, now, f, st, _, _, rfl⟩ := event
-      simp only [Sys.set]
+      obtain ⟨x, a, now, f, st, _, _, _, rfl⟩ := event
+      simp only [Sys.retireRevealed_leaves, Sys.retireRevealed_states, Sys.set]
       split <;> simp_all
     | book event =>
       obtain ⟨x, h, origin, before, booked, booker, fee, b, f, entry,
@@ -752,6 +756,15 @@ theorem T8_leaf_agrees_with_state (p : Params) (env : Env) {s : Sys} (h : SysRea
       obtain ⟨x, assoc, receipt, _, rfl⟩ := event
       simp only [Sys.finish, Sys.set]
       split <;> simp_all
+    | openCommitment event =>
+      obtain ⟨c, _, _, rfl⟩ := event
+      exact ih
+    | reveal event =>
+      obtain ⟨c, now, _, _, _, rfl⟩ := event
+      exact ih
+    | sweep event =>
+      obtain ⟨c, now, _, _, rfl⟩ := event
+      exact ih
 
 /-- Given Arbitrary reachable Checkpoint Sys and a successful local Step on the chosen AID with every typed parameter.
 When Apply Sys.set to that local result.
@@ -829,8 +842,8 @@ theorem T8_leaf_never_absent_again (p : Params) (env : Env) {s s' : Sys} (hs : S
     obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, step, _, rfl⟩ := event
     exact key _ _ _ _ _ step
   | «local» event =>
-    obtain ⟨x, a, now, f, st, _, step, rfl⟩ := event
-    exact key _ _ _ _ _ step
+    obtain ⟨x, a, now, f, st, _, step, _, rfl⟩ := event
+    simpa only [Sys.retireRevealed_leaves] using key _ _ _ _ _ step
   | book event =>
     obtain ⟨x, h, origin, before, booked, booker, fee, b, f, entry,
       _, _, _, _, _, _, _, _, _, rfl⟩ := event
@@ -840,6 +853,15 @@ theorem T8_leaf_never_absent_again (p : Params) (env : Env) {s s' : Sys} (hs : S
     by_cases equal : aid = x
     · simp [Sys.finish, Sys.set, equal, State.leaf]
     · simp [Sys.finish, Sys.set, equal]
+  | openCommitment event =>
+    obtain ⟨c, _, _, rfl⟩ := event
+    exact ⟨id, id⟩
+  | reveal event =>
+    obtain ⟨c, now, _, _, _, rfl⟩ := event
+    exact ⟨id, id⟩
+  | sweep event =>
+    obtain ⟨c, now, _, _, rfl⟩ := event
+    exact ⟨id, id⟩
 
 /-- Given All p/env/reachable s/aid, and all action data, times, flows and successors in each quantified clause.
 When A registration succeeds.
@@ -855,22 +877,26 @@ theorem T8_mint_once (p : Params) (env : Env) {s : Sys} (h : SysReach p env s) (
 
 /-- **T8j.** A freeze and a conviction are proof-bearing: their actor is the
 evidence class — never `anyone` (D-036, D-037). -/
-theorem T8_freeze_and_convict_actors_are_proof (sn' : Seq) (payee : Addr) :
-    (Action.freeze sn' payee).actor = .proof ∧ (Action.convict payee).actor = .proof := by
+theorem T8_freeze_and_convict_actors_are_proof (sn' : Seq) (payee : Addr) (c : Commitment) :
+    (Action.freeze sn' payee).actor = .proof ∧ (Action.convict payee c).actor = .proof := by
   exact ⟨rfl, rfl⟩
 
 /-- Given Arbitrary Checkpoint parameters and environment, before/after abstract Sys and actual SysStep.
 When Classify the system transition.
-Then Exactly the fully defined RegistrationEvent, LocalEvent, BookingEvent or CompletionEvent holds. Local lifecycle clauses remain complete; registration binds the actual origin, booking fixes its pending association, and completion checks the stored context, history, hash, full entry, reference and alias. Full mixed Registry effects are separate from this focused Checkpoint observation. -/
+Then Exactly the fully defined RegistrationEvent, LocalEvent, BookingEvent, CompletionEvent, OpenEvent, RevealEvent or SweepEvent holds. Local lifecycle clauses remain complete; registration binds the actual origin, booking fixes its pending association, completion checks the stored context, history, hash, full entry, reference and alias, and the three commitment events open, reveal or sweep one commitment. Full mixed Registry effects are separate from this focused Checkpoint observation. -/
 theorem T8_sysstep_partition (p : Params) (env : Env) {s s' : Sys}
     (h : SysStep p env s s') :
     RegistrationEvent p env s s' ∨ LocalEvent p env s s' ∨
-      BookingEvent s s' ∨ CompletionEvent s s' := by
+      BookingEvent s s' ∨ CompletionEvent s s' ∨
+      OpenEvent s s' ∨ RevealEvent s s' ∨ SweepEvent s s' := by
   cases h with
   | register event => exact Or.inl event
   | «local» event => exact Or.inr (Or.inl event)
   | book event => exact Or.inr (Or.inr (Or.inl event))
-  | complete event => exact Or.inr (Or.inr (Or.inr event))
+  | complete event => exact Or.inr (Or.inr (Or.inr (Or.inl event)))
+  | openCommitment event => exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl event))))
+  | reveal event => exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl event)))))
+  | sweep event => exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr event)))))
 
 /-! ## T9 — juvenility is consumer policy -/
 
@@ -895,7 +921,7 @@ theorem T9_juvenility_is_consumer_only (p : Params) (env : Env) (W' : Nat) {a : 
     | exact Step.poison _ ‹_› ‹_›
     | exact Step.freeze _ _ _ ‹_› ‹_› ‹_› ‹_› ‹_›
     | exact Step.topUp _ _ ‹_› ‹_›
-    | exact Step.convict _ _ ‹_›
+    | exact Step.convict _ _ _ ‹_› ‹_›
 
 /-! ## T10 — a frozen checkpoint is inert to everyone but the next keys; an exited one holds no bonds or pool -/
 
@@ -952,16 +978,17 @@ theorem convicted_holds_no_bonds_or_pool (p : Params) :
 
 /-- Given All arguments and the exact successful local Checkpoint conviction premise in the statement, against the actual source live key state.
 When Invert that local conviction into explicit terminationPending at the unchanged source key state.
-Then For T12 inversions the pending target is arbitrary and must equal the actual source hash; a wrong pending-key successor is excluded by this owning equality. Every original action, addressed D/B/pool payment, concrete-context, event-validity, same-sequence and distinct-event clause in the full conclusion is preserved verbatim. The representative and generic key remain active at the combined booking boundary; no local burn or retirement is asserted. -/
+Then For T12 inversions the pending target is arbitrary and must equal the actual source hash; a wrong pending-key successor is excluded by this owning equality. The conviction's commitment entitles its payee to convict this output at this slot. Every original action, addressed D/B/pool payment, concrete-context, event-validity, same-sequence and distinct-event clause in the full conclusion is preserved verbatim. The representative and generic key remain active at the combined booking boundary; no local burn or retirement is asserted. -/
 theorem T12_convict_exact (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live} {f : Flow} {pendingKey : Hash}
     (h : Step p env a t (.present l) f (.terminationPending pendingKey)) :
     pendingKey = l.hash ∧
-    (∃ payee, a = .convict payee ∧
+    (∃ payee c, a = .convict payee c ∧
       f = { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },
-            convictor := some { addr := payee, dreg := p.D } }) ∧
+            convictor := some { addr := payee, dreg := p.D } } ∧
+      c.entitles env l payee t) ∧
     env.duplicityAt l.epoch l.sn = true := by
   cases h with
-  | convict => exact ⟨rfl, ⟨_, rfl, rfl⟩, ‹_›⟩
+  | convict _ _ _ hdup hent => exact ⟨rfl, ⟨_, _, rfl, rfl, hent⟩, hdup⟩
 
 /-! ## T14, T15 — the pool and the freeze bond -/
 
@@ -1232,20 +1259,21 @@ theorem Step.topUp_iff {p : Params} {env : Env} (l : Live) (now : Slot) (x : Val
   · rintro ⟨hfresh, hx⟩
     exact Step.topUp now x hfresh hx
 
-/-- Given Every parameter, slot, source state and payee in the exact type; the enabled statements additionally assume concrete duplicity at that source state.
+/-- Given Every parameter, slot, source state, payee and commitment in the exact type; the enabled statements additionally assume concrete duplicity at that source state and a commitment entitling the payee at that slot.
 When Execute the local conviction transition, or compare it to its complete guard in the iff statements.
 Then The exact existing component flow and concrete duplicity guard remain; the target is pending at the source hash. Both iff directions remain obligations. Enabled clauses are local applicability only, not a claim that an arbitrary economic request can be booked. -/
-theorem Step.convict_iff {p : Params} {env : Env} (l : Live) (now : Slot) (payee : Addr) :
-    Step p env (.convict payee) now (.present l)
+theorem Step.convict_iff {p : Params} {env : Env} (l : Live) (now : Slot) (payee : Addr)
+    (c : Commitment) :
+    Step p env (.convict payee c) now (.present l)
       { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },
         convictor := some { addr := payee, dreg := p.D } } (.terminationPending l.hash) ↔
-    env.duplicityAt l.epoch l.sn = true := by
+    env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee now := by
   constructor
   · intro h
     cases h with
-    | convict _ _ hdup => exact hdup
-  · intro hdup
-    exact Step.convict now payee hdup
+    | convict _ _ _ hdup hent => exact ⟨hdup, hent⟩
+  · rintro ⟨hdup, hent⟩
+    exact Step.convict now payee c hdup hent
 
 end CardanoKeri.Checkpoint
 
@@ -1331,10 +1359,10 @@ variable (p : Params) (env : Env)
     (.present { l with pool := l.pool + x, toppedUp := true }) ↔
   l.toppedUp = false ∧ p.P ≤ x)
 
-#check (Step.convict_iff : ∀ (l : Live) (now : Slot) (payee : Addr),
-  Step p env (.convict payee) now (.present l)
+#check (Step.convict_iff : ∀ (l : Live) (now : Slot) (payee : Addr) (c : Commitment),
+  Step p env (.convict payee c) now (.present l)
     { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },
       convictor := some { addr := payee, dreg := p.D } } (.terminationPending l.hash) ↔
-  env.duplicityAt l.epoch l.sn = true)
+  env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee now)
 
 end CheckpointInversionExactTypes

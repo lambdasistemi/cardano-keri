@@ -147,7 +147,7 @@ namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.pending_custody_observations : ∀ (p : Params) (h : Hash), (State.terminationPending h).hasOutput = true ∧ (State.terminationPending h).representativeHeld = 1 ∧ (State.terminationPending h).leaf = .active ∧ (State.terminationPending h).sn? = some h.sn ∧ (State.terminationPending h).dregHeld p = 0 ∧ (State.terminationPending h).bHeld p = 0 ∧ (State.terminationPending h).poolHeld = 0)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T8_sysstep_partition : ∀ (p : Params) (env : Env) {s s' : Sys} (_h : SysStep p env s s'), RegistrationEvent p env s s' ∨ LocalEvent p env s s' ∨ BookingEvent s s' ∨ CompletionEvent s s')
+#check (@CardanoKeri.Checkpoint.T8_sysstep_partition : ∀ (p : Params) (env : Env) {s s' : Sys} (_h : SysStep p env s s'), RegistrationEvent p env s s' ∨ LocalEvent p env s s' ∨ BookingEvent s s' ∨ CompletionEvent s s' ∨ OpenEvent s s' ∨ RevealEvent s s' ∨ SweepEvent s s')
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.local_event_preserves_associations : ∀ (p : Params) (env : Env) {s s' : Sys} (_h : LocalEvent p env s s'), s'.origins = s.origins ∧ s'.pending = s.pending)
@@ -204,10 +204,10 @@ namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T12_convicted_terminal : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {f : Flow} {s' : State} (_h : Step p env a t .convicted f s'), False)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T12_convict_exact : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live} {f : Flow} {pendingKey : Hash} (_h : Step p env a t (.present l) f (.terminationPending pendingKey)), pendingKey = l.hash ∧ (∃ payee, a = .convict payee ∧ f = { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool }, convictor := some { addr := payee, dreg := p.D } }) ∧ env.duplicityAt l.epoch l.sn = true)
+#check (@CardanoKeri.Checkpoint.T12_convict_exact : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live} {f : Flow} {pendingKey : Hash} (_h : Step p env a t (.present l) f (.terminationPending pendingKey)), pendingKey = l.hash ∧ (∃ payee c, a = .convict payee c ∧ f = { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool }, convictor := some { addr := payee, dreg := p.D } } ∧ c.entitles env l payee t) ∧ env.duplicityAt l.epoch l.sn = true)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.Step.convict_iff : ∀ {p : Params} {env : Env} (l : Live) (now : Slot) (payee : Addr), Step p env (.convict payee) now (.present l) { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool }, convictor := some { addr := payee, dreg := p.D } } (.terminationPending l.hash) ↔ env.duplicityAt l.epoch l.sn = true)
+#check (@CardanoKeri.Checkpoint.Step.convict_iff : ∀ {p : Params} {env : Env} (l : Live) (now : Slot) (payee : Addr) (c : Commitment), Step p env (.convict payee c) now (.present l) { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool }, convictor := some { addr := payee, dreg := p.D } } (.terminationPending l.hash) ↔ env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee now)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.convict_requires_concrete_pair : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live} {f : Flow} (_h : Step p env a t (.present l) f (.terminationPending l.hash)), ∃ context rival, env.convictionContext l.epoch l.sn = some context ∧ env.convictionRival l.epoch l.sn = some rival ∧ context.epoch = l.epoch ∧ context.accepted.event.sn = l.sn ∧ Duplicity.rotationValid context.prior context.accepted = true ∧ Duplicity.rotationValid context.prior rival = true ∧ context.accepted.event.sn = rival.event.sn ∧ context.accepted.event ≠ rival.event)
@@ -222,7 +222,7 @@ namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.Env.inception_duplicity_refused : ∀ (env : Env) (epoch : Epoch), env.duplicityAt epoch 0 = false)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T5_convict_enabled : ∀ (p : Params) (env : Env) (t : Slot) (l : Live) (payee : Addr) (_hdup : env.duplicityAt l.epoch l.sn = true), ∃ f, Step p env (.convict payee) t (.present l) f (.terminationPending l.hash))
+#check (@CardanoKeri.Checkpoint.T5_convict_enabled : ∀ (p : Params) (env : Env) (t : Slot) (l : Live) (payee : Addr) (c : Commitment) (_hdup : env.duplicityAt l.epoch l.sn = true) (_hent : c.entitles env l payee t), ∃ f, Step p env (.convict payee c) t (.present l) f (.terminationPending l.hash))
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T6_dreg_never_a_fee : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {s s' : State} {f : Flow} (_h : Step p env a t s f s'), Payment?.dreg f.hunter = 0 ∧ (Payment?.dreg f.refund ≠ 0 → Payment?.dreg f.refund = p.D ∧ s.dregHeld p = p.D ∧ s'.dregHeld p = 0) ∧ (Payment?.dreg f.convictor ≠ 0 → Payment?.dreg f.convictor = p.D ∧ s.dregHeld p = p.D ∧ ∃ l, s = .present l ∧ s' = .terminationPending l.hash))
@@ -249,7 +249,7 @@ namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T4_current_key_thief_cannot_rotate_or_freeze : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live} {f : Flow} {s' : State} (_hthief : ∀ sn', env.rotationTo l.epoch l.sn sn' = false) (_h : Step p env a t (.present l) f s'), a.actor ≠ .nextKeys ∧ (∀ sn' payee, a ≠ .freeze sn' payee))
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T8_freeze_and_convict_actors_are_proof : ∀ (sn' : Seq) (payee : Addr), (Action.freeze sn' payee).actor = .proof ∧ (Action.convict payee).actor = .proof)
+#check (@CardanoKeri.Checkpoint.T8_freeze_and_convict_actors_are_proof : ∀ (sn' : Seq) (payee : Addr) (c : Commitment), (Action.freeze sn' payee).actor = .proof ∧ (Action.convict payee c).actor = .proof)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.convicted_holds_no_bonds_or_pool : ∀ (p : Params), State.convicted.dregHeld p = 0 ∧ State.convicted.bHeld p = 0 ∧ State.convicted.poolHeld = 0)
@@ -282,7 +282,7 @@ namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T6_refund_is_registration_address : ∀ (p : Params) (env : Env) {t : Slot} {l : Live} {es : List (Slot × Action)} (_h : Trace p env t .absent es (.present l)), ∃ t0 pool0 rest, es = (t0, .register l.refundTo pool0) :: rest)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T6_conviction_refunds_registration_address : ∀ (p : Params) (env : Env) {t t0 now : Slot} {r : Addr} {pool0 : Value} {rest : List (Slot × Action)} {l : Live} {payee : Addr} {f : Flow} {s' : State} (_h : Trace p env t .absent ((t0, .register r pool0) :: rest) (.present l)) (_hc : Step p env (.convict payee) now (.present l) f s'), f.refund = some { addr := r, b := l.bHeld p, pool := l.pool })
+#check (@CardanoKeri.Checkpoint.T6_conviction_refunds_registration_address : ∀ (p : Params) (env : Env) {t t0 now : Slot} {r : Addr} {pool0 : Value} {rest : List (Slot × Action)} {l : Live} {payee : Addr} {c : Commitment} {f : Flow} {s' : State} (_h : Trace p env t .absent ((t0, .register r pool0) :: rest) (.present l)) (_hc : Step p env (.convict payee c) now (.present l) f s'), f.refund = some { addr := r, b := l.bHeld p, pool := l.pool })
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T6_relayer_cannot_park_age_or_close : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live} {f : Flow} {s' : State} (_h : Step p env a t (.present l) f s') (_hno : env.depositAuthorized (l.epoch + 1) = false) (_hact : a.actor = .nextKeys), ∃ sn' payee, a = .rotate sn' .keep payee)

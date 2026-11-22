@@ -11,7 +11,7 @@ const names={
 };
 const name=names[process.argv[2]];assert(name,'unknown subject');
 const trace=corpus.traces.find(t=>t.cells.some(c=>c.name===name));
-let current=newSystem(trace.cells[0].params,trace.cells[0].env);
+let current=newSystem(trace.cells[0].params,trace.cells[0].env,trace.deployment);
 for(const cell of trace.cells) {
   assert(equal(current.state,cell.input),'prefix disconnected');
   const next=attemptSystem(current,cell.command);

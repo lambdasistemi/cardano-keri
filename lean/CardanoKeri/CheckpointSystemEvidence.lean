@@ -55,7 +55,11 @@ theorem sysstep_snapshot_reachability (p : Params) (env : Env) {s next : Sys}
       · exact pending other association (by simpa [Sys.installOrigin, same] using found)
   | «local» event =>
     obtain ⟨aid, action, now, flow, state, _, _, _, rfl⟩ := event
-    exact ⟨origins, pending⟩
+    refine ⟨?_, ?_⟩
+    · intro other stored found
+      exact origins other stored (by simpa [Sys.set] using found)
+    · intro other association found
+      exact pending other association (by simpa [Sys.set] using found)
   | book event =>
     obtain ⟨aid, key, origin, before, booked, booker, fee, booking, flow, entry,
       _, storedOrigin, _, history, executed, _, _, _, _, rfl⟩ := event
@@ -76,6 +80,15 @@ theorem sysstep_snapshot_reachability (p : Params) (env : Env) {s next : Sys}
     by_cases same : other = aid
     · simp [Sys.finish, same] at found
     · exact pending other stored (by simpa [Sys.finish, same] using found)
+  | openCommitment event =>
+    obtain ⟨c, _, _, rfl⟩ := event
+    exact ⟨origins, pending⟩
+  | reveal event =>
+    obtain ⟨c, now, _, _, _, rfl⟩ := event
+    exact ⟨origins, pending⟩
+  | sweep event =>
+    obtain ⟨c, now, _, _, rfl⟩ := event
+    exact ⟨origins, pending⟩
 
 def PendingOrigins (s : Sys) : Prop :=
   ∀ aid association, s.pending aid = some association →
@@ -97,7 +110,8 @@ theorem sysstep_pending_origins (p : Params) (env : Env) {s next : Sys}
         (by simpa [Sys.installOrigin, same] using found)
   | «local» event =>
     obtain ⟨aid, action, now, flow, state, _, _, _, rfl⟩ := event
-    exact bound
+    intro other association found
+    simpa [Sys.set] using bound other association (by simpa [Sys.set] using found)
   | book event =>
     obtain ⟨aid, key, origin, before, booked, booker, fee, booking, flow, entry,
       _, storedOrigin, _, _, _, _, _, _, _, rfl⟩ := event
@@ -114,6 +128,15 @@ theorem sysstep_pending_origins (p : Params) (env : Env) {s next : Sys}
     by_cases same : other = aid
     · simp [Sys.finish, same] at found
     · exact bound other stored (by simpa [Sys.finish, same] using found)
+  | openCommitment event =>
+    obtain ⟨c, _, _, rfl⟩ := event
+    exact bound
+  | reveal event =>
+    obtain ⟨c, now, _, _, _, rfl⟩ := event
+    exact bound
+  | sweep event =>
+    obtain ⟨c, now, _, _, rfl⟩ := event
+    exact bound
 
 structure CertifiedSys where
   state : Sys
@@ -121,8 +144,8 @@ structure CertifiedSys where
   pending : PendingReachable state
   bound : PendingOrigins state
 
-def CertifiedSys.init : CertifiedSys := {
-  state := Sys.init
+def CertifiedSys.init (d : Deployment) : CertifiedSys := {
+  state := Sys.init d
   origins := by intro aid origin found; cases found
   pending := by intro aid association found; cases found
   bound := by intro aid association found; cases found }

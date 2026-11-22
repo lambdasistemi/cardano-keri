@@ -137,6 +137,73 @@ older V1 operator path used Koios for funding discovery; it is preserved in
 the [historical preprod cast](../demos/preprod-v1-baseline.md), not the
 requirement for the current write path.
 
+## What the follower observes, and when a read is unavailable
+
+A person who reads an answer from the follower's store, directly or through
+the [query endpoint](query-endpoint.md), needs to know how far that answer
+can be trusted and what an answer that is not given means. This section
+declares the technical boundary of the follower as it runs today.
+
+The follower observes one node. It connects to the `cardano-node` reachable
+at the configured node socket and follows that node's chain block by block,
+including the rollbacks the node announces. It does not verify the chain
+itself, does not compare it with a second node, and has no other source. What
+it stores is the node's chain, from the configured start point, restricted to
+the outputs at the addresses it is told to watch. An output created before the
+start point, or at an address that is not watched, is not seen.
+
+The follower also records the tip the node last announced. Two numbers
+describe how far an answer reaches. `as_of_slot` is the latest slot the store
+had committed inside the read's own transaction; it is null when the store has
+recorded nothing yet. `tip_lag_slots` is the distance from that slot to the
+last announced tip; it is null when no tip has been observed, or when the
+store's slot is ahead of the observed tip. A successful data answer of the
+query endpoint carries both, and both are set. The local `ckeri status` read
+opens the store without a node connection: it reports `as_of_slot` and no
+`tip_lag_slots`.
+
+```mermaid
+flowchart LR
+  N["Configured node"] -->|"blocks, rollbacks, tip"| F["Follower"]
+  F -->|"one committed transaction"| S["Store at as_of_slot"]
+  S --> G{"Readiness check"}
+  G -->|"ready: answer with as_of_slot and lag"| A["Data answer"]
+  G -->|"not ready: reason, no data"| U["503 on the data routes"]
+```
+
+The readiness check says ready only when all of these hold at once: the
+connection to the node is up, the store has a committed slot, a tip has been
+observed, the tip is not behind the store's slot, and the tip lag is **at most
+60 slots**. The limit is inclusive: a lag of exactly 60 slots is ready, and a
+lag of 61 slots is not. The follower library is configured with the same
+60-slot threshold.
+
+| What the follower sees | The readiness check says |
+| --- | --- |
+| Node connected, tip lag 0 to 60 slots | ready |
+| Node connected, tip lag 61 slots or more | not ready, the reason names the lag limit |
+| Node disconnected | not ready, whatever the store holds |
+| No committed slot yet, or no tip observed yet | not ready |
+| Store slot ahead of the observed tip | not ready |
+
+The query endpoint applies the check in two ways. `GET /ready` always answers
+with HTTP status 200 and reports `ready` as true or false with the reason. The
+data routes, `/checkpoint`, `/board` and `/watchability`, answer with HTTP
+status 503 and the readiness fields, and with no data at all, whenever the
+check says not ready. The documentation routes, `/swagger.json` and
+`/swagger-ui`, are served whether or not the check says ready.
+
+A not-ready answer is not an absence. A 503 from a data route says nothing
+about whether the output exists, and its body carries no payload, not even an
+empty one, so an empty answer cannot be mistaken for "nothing is there". Only
+a ready data answer can say that nothing was found, and then it says only that
+the store, as of its slot, holds no such output. That is weaker than "no such
+output exists": an output created in the last 60 slots may not be indexed yet,
+and an output created before the configured start point is never indexed. The
+local `ckeri status` read applies no readiness check at all. An empty answer
+from it says only that the store holds nothing as of the slot it reports, and
+it cannot say how far that slot is behind the chain.
+
 ## What it deliberately does not do
 
 - No chain-sync client, reconnect loop, or rollback engine of its own —

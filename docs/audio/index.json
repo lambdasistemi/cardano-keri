@@ -17543,7 +17543,7 @@
     "index": 2,
     "name": "docs-user-follower/the-follower-indexed-chain-state-from-a-node-socket-02",
     "pause_ms": 400,
-    "v": "8c1edfbf80f6"
+    "v": "3f0705f23e7e"
    },
    {
     "index": 3,
@@ -17596,6 +17596,50 @@
     "name": "docs-user-follower/what-it-indexes-01",
     "pause_ms": 400,
     "v": "63374a69d5df"
+   }
+  ],
+  "what-the-follower-observes-and-when-a-read-is-unavailable": [
+   {
+    "index": 0,
+    "name": "docs-user-follower/what-the-follower-observes-and-when-a-read-is-unavailable-00",
+    "pause_ms": 500,
+    "v": "e75642f38b2c"
+   },
+   {
+    "index": 1,
+    "name": "docs-user-follower/what-the-follower-observes-and-when-a-read-is-unavailable-01",
+    "pause_ms": 400,
+    "v": "d69640f7437a"
+   },
+   {
+    "index": 2,
+    "name": "docs-user-follower/what-the-follower-observes-and-when-a-read-is-unavailable-02",
+    "pause_ms": 400,
+    "v": "e8d6b1267136"
+   },
+   {
+    "index": 3,
+    "name": "docs-user-follower/what-the-follower-observes-and-when-a-read-is-unavailable-03",
+    "pause_ms": 400,
+    "v": "15c98f149469"
+   },
+   {
+    "index": 4,
+    "name": "docs-user-follower/what-the-follower-observes-and-when-a-read-is-unavailable-04",
+    "pause_ms": 400,
+    "v": "df137235eeea"
+   },
+   {
+    "index": 5,
+    "name": "docs-user-follower/what-the-follower-observes-and-when-a-read-is-unavailable-05",
+    "pause_ms": 400,
+    "v": "5289bbe5b2e3"
+   },
+   {
+    "index": 6,
+    "name": "docs-user-follower/what-the-follower-observes-and-when-a-read-is-unavailable-06",
+    "pause_ms": 400,
+    "v": "9bd8580c8e9a"
    }
   ]
  },
@@ -18182,6 +18226,12 @@
     "name": "docs-user-query-endpoint/freshness-and-provenance-what-as_of_slot-actually-promises-03",
     "pause_ms": 400,
     "v": "d72e432b8d79"
+   },
+   {
+    "index": 4,
+    "name": "docs-user-query-endpoint/freshness-and-provenance-what-as_of_slot-actually-promises-04",
+    "pause_ms": 400,
+    "v": "48da1385220d"
    }
   ],
   "get-board": [
@@ -18317,7 +18367,7 @@
     "index": 2,
     "name": "docs-user-query-endpoint/the-query-endpoint-checkpoint-answers-without-a-node-02",
     "pause_ms": 400,
-    "v": "14563145b7c9"
+    "v": "f92bb311fc90"
    },
    {
     "index": 3,

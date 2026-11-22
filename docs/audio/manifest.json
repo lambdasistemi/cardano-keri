@@ -485221,17 +485221,17 @@
    ]
   },
   "docs-user-follower/the-follower-indexed-chain-state-from-a-node-socket-02": {
-   "audio_sha256": "8c1edfbf80f6eee0c482e02f74f37517710cfefff18fdb2e753517a20012901b",
-   "characters": 593,
-   "cost": 0.00036766,
-   "duration": 41.725,
+   "audio_sha256": "3f0705f23e7e60a05920f43145b55a7958d828ef46911795ce83003ed6bec404",
+   "characters": 573,
+   "cost": 0.00056727,
+   "duration": 41.575,
    "index": 2,
-   "key": "e59ceaf0b2ae4140e235960cc49aae7a0e43b9607fbb645072d454727acf0191",
+   "key": "b314377a93766c155267f74decf05420bc4546bb730e05f68102b7573a63d17e",
    "page": "docs/user/follower.md",
    "pause_ms": 400,
    "section": "the-follower-indexed-chain-state-from-a-node-socket",
-   "sent_text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
-   "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+   "sent_text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active until it is convicted: there is no owner exit, no parking and no revival. A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+   "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active until it is convicted: there is no owner exit, no parking and no revival. A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
    "words": [
     {
      "end": 0.512,
@@ -485359,498 +485359,448 @@
      "text": "that"
     },
     {
-     "end": 10.613,
+     "end": 10.75,
      "start": 10.275,
      "text": "design"
     },
     {
-     "end": 10.712,
-     "start": 10.613,
+     "end": 10.863,
+     "start": 10.75,
      "text": "an"
     },
     {
-     "end": 11.25,
-     "start": 10.712,
+     "end": 11.425,
+     "start": 10.863,
      "text": "identity"
     },
     {
-     "end": 11.413,
-     "start": 11.25,
+     "end": 11.587,
+     "start": 11.425,
      "text": "is"
     },
     {
-     "end": 11.925,
-     "start": 11.413,
+     "end": 12.1,
+     "start": 11.587,
      "text": "active"
     },
     {
-     "end": 12.0,
-     "start": 11.925,
-     "text": ","
+     "end": 12.387,
+     "start": 12.1,
+     "text": "until"
     },
     {
-     "end": 12.337,
-     "start": 12.0,
-     "text": "parked"
+     "end": 12.462,
+     "start": 12.387,
+     "text": "it"
     },
     {
-     "end": 12.4,
-     "start": 12.337,
-     "text": "("
+     "end": 12.6,
+     "start": 12.462,
+     "text": "is"
     },
     {
-     "end": 12.562,
-     "start": 12.4,
-     "text": "no"
-    },
-    {
-     "end": 13.062,
-     "start": 12.562,
-     "text": "checkpoint"
-    },
-    {
-     "end": 13.262,
-     "start": 13.062,
-     "text": "on"
-    },
-    {
-     "end": 14.2,
-     "start": 13.262,
-     "text": "chain"
-    },
-    {
-     "end": 14.4,
-     "start": 14.2,
-     "text": ";"
-    },
-    {
-     "end": 14.7,
-     "start": 14.6,
-     "text": "the"
-    },
-    {
-     "end": 15.2,
-     "start": 14.7,
-     "text": "registry"
-    },
-    {
-     "end": 15.488,
-     "start": 15.2,
-     "text": "leaf"
-    },
-    {
-     "end": 15.8,
-     "start": 15.488,
-     "text": "keeps"
-    },
-    {
-     "end": 15.938,
-     "start": 15.8,
-     "text": "the"
-    },
-    {
-     "end": 16.312,
-     "start": 15.938,
-     "text": "hash"
-    },
-    {
-     "end": 16.388,
-     "start": 16.312,
-     "text": "of"
-    },
-    {
-     "end": 16.587,
-     "start": 16.388,
-     "text": "its"
-    },
-    {
-     "end": 17.013,
-     "start": 16.587,
-     "text": "last"
-    },
-    {
-     "end": 17.288,
-     "start": 17.013,
-     "text": "key"
-    },
-    {
-     "end": 17.725,
-     "start": 17.288,
-     "text": "state"
-    },
-    {
-     "end": 17.812,
-     "start": 17.725,
-     "text": ")"
-    },
-    {
-     "end": 17.975,
-     "start": 17.812,
-     "text": "or"
-    },
-    {
-     "end": 18.525,
-     "start": 17.975,
+     "end": 13.7,
+     "start": 12.6,
      "text": "convicted"
     },
     {
-     "end": 18.6,
-     "start": 18.525,
-     "text": "("
+     "end": 13.925,
+     "start": 13.7,
+     "text": ":"
     },
     {
-     "end": 19.125,
-     "start": 18.6,
-     "text": "terminal"
-    },
-    {
-     "end": 19.2,
-     "start": 19.125,
-     "text": ","
-    },
-    {
-     "end": 19.487,
-     "start": 19.2,
-     "text": "after"
-    },
-    {
-     "end": 19.55,
-     "start": 19.487,
-     "text": "a"
-    },
-    {
-     "end": 20.1,
-     "start": 19.55,
-     "text": "duplicity"
-    },
-    {
-     "end": 21.125,
-     "start": 20.1,
-     "text": "proof"
-    },
-    {
-     "end": 21.3,
-     "start": 21.125,
-     "text": ")"
-    },
-    {
-     "end": 21.35,
-     "start": 21.3,
-     "text": ";"
-    },
-    {
-     "end": 21.675,
-     "start": 21.525,
+     "end": 14.25,
+     "start": 14.1,
      "text": "there"
     },
     {
-     "end": 21.825,
-     "start": 21.675,
+     "end": 14.375,
+     "start": 14.25,
      "text": "is"
     },
     {
-     "end": 22.0,
-     "start": 21.825,
+     "end": 14.575,
+     "start": 14.375,
      "text": "no"
     },
     {
-     "end": 22.55,
-     "start": 22.0,
-     "text": "withdraw"
+     "end": 14.875,
+     "start": 14.575,
+     "text": "owner"
     },
     {
-     "end": 22.6,
-     "start": 22.55,
+     "end": 15.3,
+     "start": 14.875,
+     "text": "exit"
+    },
+    {
+     "end": 15.375,
+     "start": 15.3,
+     "text": ","
+    },
+    {
+     "end": 15.55,
+     "start": 15.375,
+     "text": "no"
+    },
+    {
+     "end": 16.0,
+     "start": 15.55,
+     "text": "parking"
+    },
+    {
+     "end": 16.125,
+     "start": 16.0,
+     "text": "and"
+    },
+    {
+     "end": 16.3,
+     "start": 16.125,
+     "text": "no"
+    },
+    {
+     "end": 17.3,
+     "start": 16.3,
+     "text": "revival"
+    },
+    {
+     "end": 17.5,
+     "start": 17.3,
+     "text": "."
+    },
+    {
+     "end": 17.775,
+     "start": 17.7,
+     "text": "A"
+    },
+    {
+     "end": 18.362,
+     "start": 17.775,
+     "text": "duplicity"
+    },
+    {
+     "end": 18.763,
+     "start": 18.362,
+     "text": "proof"
+    },
+    {
+     "end": 19.212,
+     "start": 18.763,
+     "text": "enters"
+    },
+    {
+     "end": 19.638,
+     "start": 19.212,
+     "text": "pending"
+    },
+    {
+     "end": 20.325,
+     "start": 19.638,
+     "text": "custody"
+    },
+    {
+     "end": 20.438,
+     "start": 20.325,
      "text": ";"
+    },
+    {
+     "end": 20.625,
+     "start": 20.438,
+     "text": "its"
+    },
+    {
+     "end": 21.4,
+     "start": 20.625,
+     "text": "associated"
+    },
+    {
+     "end": 21.95,
+     "start": 21.4,
+     "text": "Registry"
+    },
+    {
+     "end": 22.45,
+     "start": 21.95,
+     "text": "fold"
     },
     {
      "end": 22.725,
-     "start": 22.6,
-     "text": "the"
+     "start": 22.45,
+     "text": "makes"
     },
     {
-     "end": 23.025,
+     "end": 22.875,
      "start": 22.725,
-     "text": "only"
+     "text": "it"
     },
     {
      "end": 23.425,
-     "start": 23.025,
-     "text": "close"
+     "start": 22.875,
+     "text": "convicted"
     },
     {
-     "end": 23.575,
+     "end": 23.5,
      "start": 23.425,
-     "text": "is"
+     "text": "("
     },
     {
-     "end": 23.712,
-     "start": 23.575,
-     "text": "the"
+     "end": 24.6,
+     "start": 23.5,
+     "text": "terminal"
     },
     {
-     "end": 24.1,
-     "start": 23.712,
-     "text": "reap"
+     "end": 24.875,
+     "start": 24.6,
+     "text": ")"
     },
     {
-     "end": 24.2,
-     "start": 24.1,
-     "text": ","
+     "end": 24.925,
+     "start": 24.875,
+     "text": ";"
     },
     {
-     "end": 24.275,
-     "start": 24.2,
-     "text": "a"
-    },
-    {
-     "end": 24.9,
-     "start": 24.275,
-     "text": "rotation"
-    },
-    {
-     "end": 25.038,
-     "start": 24.9,
-     "text": "by"
-    },
-    {
-     "end": 25.125,
-     "start": 25.038,
-     "text": "the"
+     "end": 25.25,
+     "start": 25.1,
+     "text": "there"
     },
     {
      "end": 25.4,
-     "start": 25.125,
-     "text": "next"
+     "start": 25.25,
+     "text": "is"
     },
     {
-     "end": 26.325,
+     "end": 25.6,
      "start": 25.4,
-     "text": "keys"
+     "text": "no"
     },
     {
-     "end": 26.525,
-     "start": 26.325,
+     "end": 26.2,
+     "start": 25.6,
+     "text": "withdraw"
+    },
+    {
+     "end": 26.3,
+     "start": 26.2,
      "text": ";"
     },
     {
-     "end": 26.737,
-     "start": 26.7,
+     "end": 26.362,
+     "start": 26.3,
      "text": "a"
     },
     {
-     "end": 27.138,
-     "start": 26.737,
+     "end": 26.825,
+     "start": 26.362,
      "text": "deposit"
     },
     {
-     "end": 27.675,
-     "start": 27.138,
+     "end": 27.4,
+     "start": 26.825,
      "text": "rotation"
     },
     {
-     "end": 27.788,
-     "start": 27.675,
+     "end": 27.513,
+     "start": 27.4,
      "text": "is"
     },
     {
-     "end": 27.888,
-     "start": 27.788,
+     "end": 27.65,
+     "start": 27.513,
      "text": "the"
     },
     {
-     "end": 28.9,
-     "start": 27.888,
+     "end": 28.75,
+     "start": 27.65,
      "text": "unfreeze"
     },
     {
-     "end": 29.1,
-     "start": 28.9,
+     "end": 28.95,
+     "start": 28.75,
      "text": ";"
     },
     {
-     "end": 29.388,
-     "start": 29.3,
+     "end": 29.237,
+     "start": 29.15,
      "text": "and"
     },
     {
-     "end": 29.475,
-     "start": 29.388,
+     "end": 29.325,
+     "start": 29.237,
      "text": "the"
     },
     {
-     "end": 29.95,
-     "start": 29.475,
+     "end": 29.8,
+     "start": 29.325,
      "text": "poison"
     },
     {
-     "end": 29.987,
-     "start": 29.95,
+     "end": 29.837,
+     "start": 29.8,
      "text": ","
     },
     {
-     "end": 30.138,
-     "start": 29.987,
+     "end": 29.987,
+     "start": 29.837,
      "text": "the"
     },
     {
-     "end": 30.587,
-     "start": 30.138,
+     "end": 30.438,
+     "start": 29.987,
      "text": "owner's"
     },
     {
-     "end": 30.85,
-     "start": 30.587,
+     "end": 30.7,
+     "start": 30.438,
      "text": "own"
     },
     {
-     "end": 31.163,
-     "start": 30.85,
+     "end": 31.013,
+     "start": 30.7,
      "text": "lock"
     },
     {
-     "end": 31.263,
-     "start": 31.163,
+     "end": 31.112,
+     "start": 31.013,
      "text": "on"
     },
     {
-     "end": 31.362,
-     "start": 31.263,
+     "end": 31.212,
+     "start": 31.112,
      "text": "the"
     },
     {
-     "end": 32.0,
-     "start": 31.362,
+     "end": 31.85,
+     "start": 31.212,
      "text": "checkpoint"
     },
     {
-     "end": 32.112,
-     "start": 32.0,
+     "end": 31.962,
+     "start": 31.85,
      "text": ","
     },
     {
-     "end": 32.537,
-     "start": 32.112,
+     "end": 32.388,
+     "start": 31.962,
      "text": "lasts"
     },
     {
-     "end": 32.8,
-     "start": 32.537,
+     "end": 32.65,
+     "start": 32.388,
      "text": "one"
     },
     {
-     "end": 33.175,
-     "start": 32.8,
+     "end": 33.025,
+     "start": 32.65,
      "text": "epoch"
     },
     {
-     "end": 33.287,
-     "start": 33.175,
+     "end": 33.138,
+     "start": 33.025,
      "text": "and"
     },
     {
-     "end": 33.438,
-     "start": 33.287,
+     "end": 33.287,
+     "start": 33.138,
      "text": "is"
     },
     {
-     "end": 33.775,
-     "start": 33.438,
+     "end": 33.625,
+     "start": 33.287,
      "text": "cleared"
     },
     {
-     "end": 33.95,
-     "start": 33.775,
+     "end": 33.8,
+     "start": 33.625,
      "text": "by"
     },
     {
-     "end": 35.225,
-     "start": 33.95,
+     "end": 35.075,
+     "start": 33.8,
      "text": "rotation"
     },
     {
-     "end": 35.425,
-     "start": 35.225,
+     "end": 35.275,
+     "start": 35.075,
      "text": "."
     },
     {
-     "end": 35.85,
-     "start": 35.625,
+     "end": 35.7,
+     "start": 35.475,
      "text": "Play"
     },
     {
-     "end": 35.963,
-     "start": 35.85,
+     "end": 35.812,
+     "start": 35.7,
      "text": "the"
     },
     {
-     "end": 36.475,
-     "start": 35.963,
+     "end": 36.325,
+     "start": 35.812,
      "text": "checkpoint"
     },
     {
-     "end": 37.35,
-     "start": 36.475,
+     "end": 37.2,
+     "start": 36.325,
      "text": "simulation"
     },
     {
-     "end": 37.45,
-     "start": 37.35,
+     "end": 37.3,
+     "start": 37.2,
      "text": "."
     },
     {
-     "end": 37.688,
-     "start": 37.45,
+     "end": 37.537,
+     "start": 37.3,
      "text": "What"
     },
     {
-     "end": 38.0,
-     "start": 37.688,
+     "end": 37.85,
+     "start": 37.537,
      "text": "ships"
     },
     {
-     "end": 38.438,
-     "start": 38.0,
+     "end": 38.287,
+     "start": 37.85,
      "text": "today"
     },
     {
-     "end": 38.6,
-     "start": 38.438,
+     "end": 38.45,
+     "start": 38.287,
      "text": "is"
     },
     {
-     "end": 38.737,
-     "start": 38.6,
+     "end": 38.588,
+     "start": 38.45,
      "text": "the"
     },
     {
-     "end": 39.237,
-     "start": 38.737,
+     "end": 39.088,
+     "start": 38.588,
      "text": "V1"
     },
     {
-     "end": 39.825,
-     "start": 39.237,
+     "end": 39.675,
+     "start": 39.088,
      "text": "checkpoint"
     },
     {
-     "end": 40.0,
-     "start": 39.825,
+     "end": 39.85,
+     "start": 39.675,
      "text": "with"
     },
     {
-     "end": 40.3,
-     "start": 40.0,
+     "end": 40.15,
+     "start": 39.85,
      "text": "role"
     },
     {
-     "end": 41.525,
-     "start": 40.3,
+     "end": 41.375,
+     "start": 40.15,
      "text": "addresses"
     },
     {
-     "end": 41.725,
-     "start": 41.525,
+     "end": 41.575,
+     "start": 41.375,
      "text": "."
     }
    ]
@@ -488046,6 +487996,3191 @@
     {
      "end": 59.025,
      "start": 58.8,
+     "text": "."
+    }
+   ]
+  },
+  "docs-user-follower/what-the-follower-observes-and-when-a-read-is-unavailable-00": {
+   "audio_sha256": "e75642f38b2c46012a952437b6356d26894ddad31e02dd5cd1e6ff4c6d0e5656",
+   "characters": 59,
+   "cost": 5.841e-05,
+   "duration": 3.625,
+   "index": 0,
+   "key": "55b0dfd87728405fe82f32b5bb23a84036ffbeef440643ebbfc9b23f02d29e28",
+   "page": "docs/user/follower.md",
+   "pause_ms": 500,
+   "section": "what-the-follower-observes-and-when-a-read-is-unavailable",
+   "sent_text": "What the follower observes, and when a read is unavailable.",
+   "text": "What the follower observes, and when a read is unavailable.",
+   "words": [
+    {
+     "end": 0.287,
+     "start": 0.175,
+     "text": "What"
+    },
+    {
+     "end": 0.375,
+     "start": 0.287,
+     "text": "the"
+    },
+    {
+     "end": 0.775,
+     "start": 0.375,
+     "text": "follower"
+    },
+    {
+     "end": 1.425,
+     "start": 0.775,
+     "text": "observes"
+    },
+    {
+     "end": 1.5,
+     "start": 1.425,
+     "text": ","
+    },
+    {
+     "end": 1.612,
+     "start": 1.5,
+     "text": "and"
+    },
+    {
+     "end": 1.737,
+     "start": 1.612,
+     "text": "when"
+    },
+    {
+     "end": 1.837,
+     "start": 1.737,
+     "text": "a"
+    },
+    {
+     "end": 2.125,
+     "start": 1.837,
+     "text": "read"
+    },
+    {
+     "end": 2.275,
+     "start": 2.125,
+     "text": "is"
+    },
+    {
+     "end": 3.425,
+     "start": 2.275,
+     "text": "unavailable"
+    },
+    {
+     "end": 3.625,
+     "start": 3.425,
+     "text": "."
+    }
+   ]
+  },
+  "docs-user-follower/what-the-follower-observes-and-when-a-read-is-unavailable-01": {
+   "audio_sha256": "d69640f7437a92452d64532b5132e3c43d36c04bccf51f8eadcc8327a263d85f",
+   "characters": 267,
+   "cost": 0.00026432999999999996,
+   "duration": 16.475,
+   "index": 1,
+   "key": "6e729d27bdf95b55b382927e9784351f59de0cb3822d07ac3d09ffb3202c56c5",
+   "page": "docs/user/follower.md",
+   "pause_ms": 400,
+   "section": "what-the-follower-observes-and-when-a-read-is-unavailable",
+   "sent_text": "A person who reads an answer from the follower's store, directly or through the query endpoint, needs to know how far that answer can be trusted and what an answer that is not given means. This section declares the technical boundary of the follower as it runs today.",
+   "text": "A person who reads an answer from the follower's store, directly or through the query endpoint, needs to know how far that answer can be trusted and what an answer that is not given means. This section declares the technical boundary of the follower as it runs today.",
+   "words": [
+    {
+     "end": 0.338,
+     "start": 0.25,
+     "text": "A"
+    },
+    {
+     "end": 0.825,
+     "start": 0.338,
+     "text": "person"
+    },
+    {
+     "end": 0.988,
+     "start": 0.825,
+     "text": "who"
+    },
+    {
+     "end": 1.288,
+     "start": 0.988,
+     "text": "reads"
+    },
+    {
+     "end": 1.413,
+     "start": 1.288,
+     "text": "an"
+    },
+    {
+     "end": 1.825,
+     "start": 1.413,
+     "text": "answer"
+    },
+    {
+     "end": 1.987,
+     "start": 1.825,
+     "text": "from"
+    },
+    {
+     "end": 2.088,
+     "start": 1.987,
+     "text": "the"
+    },
+    {
+     "end": 2.588,
+     "start": 2.088,
+     "text": "follower's"
+    },
+    {
+     "end": 3.05,
+     "start": 2.588,
+     "text": "store"
+    },
+    {
+     "end": 3.125,
+     "start": 3.05,
+     "text": ","
+    },
+    {
+     "end": 3.737,
+     "start": 3.125,
+     "text": "directly"
+    },
+    {
+     "end": 3.938,
+     "start": 3.737,
+     "text": "or"
+    },
+    {
+     "end": 4.175,
+     "start": 3.938,
+     "text": "through"
+    },
+    {
+     "end": 4.312,
+     "start": 4.175,
+     "text": "the"
+    },
+    {
+     "end": 4.7,
+     "start": 4.312,
+     "text": "query"
+    },
+    {
+     "end": 5.325,
+     "start": 4.7,
+     "text": "endpoint"
+    },
+    {
+     "end": 5.438,
+     "start": 5.325,
+     "text": ","
+    },
+    {
+     "end": 5.75,
+     "start": 5.438,
+     "text": "needs"
+    },
+    {
+     "end": 5.875,
+     "start": 5.75,
+     "text": "to"
+    },
+    {
+     "end": 6.113,
+     "start": 5.875,
+     "text": "know"
+    },
+    {
+     "end": 6.375,
+     "start": 6.113,
+     "text": "how"
+    },
+    {
+     "end": 6.7,
+     "start": 6.375,
+     "text": "far"
+    },
+    {
+     "end": 6.912,
+     "start": 6.7,
+     "text": "that"
+    },
+    {
+     "end": 7.325,
+     "start": 6.912,
+     "text": "answer"
+    },
+    {
+     "end": 7.463,
+     "start": 7.325,
+     "text": "can"
+    },
+    {
+     "end": 7.613,
+     "start": 7.463,
+     "text": "be"
+    },
+    {
+     "end": 8.212,
+     "start": 7.613,
+     "text": "trusted"
+    },
+    {
+     "end": 8.35,
+     "start": 8.212,
+     "text": "and"
+    },
+    {
+     "end": 8.512,
+     "start": 8.35,
+     "text": "what"
+    },
+    {
+     "end": 8.637,
+     "start": 8.512,
+     "text": "an"
+    },
+    {
+     "end": 9.075,
+     "start": 8.637,
+     "text": "answer"
+    },
+    {
+     "end": 9.225,
+     "start": 9.075,
+     "text": "that"
+    },
+    {
+     "end": 9.387,
+     "start": 9.225,
+     "text": "is"
+    },
+    {
+     "end": 9.65,
+     "start": 9.387,
+     "text": "not"
+    },
+    {
+     "end": 9.975,
+     "start": 9.65,
+     "text": "given"
+    },
+    {
+     "end": 11.2,
+     "start": 9.975,
+     "text": "means"
+    },
+    {
+     "end": 11.425,
+     "start": 11.2,
+     "text": "."
+    },
+    {
+     "end": 11.825,
+     "start": 11.625,
+     "text": "This"
+    },
+    {
+     "end": 12.275,
+     "start": 11.825,
+     "text": "section"
+    },
+    {
+     "end": 12.775,
+     "start": 12.275,
+     "text": "declares"
+    },
+    {
+     "end": 12.913,
+     "start": 12.775,
+     "text": "the"
+    },
+    {
+     "end": 13.425,
+     "start": 12.913,
+     "text": "technical"
+    },
+    {
+     "end": 13.925,
+     "start": 13.425,
+     "text": "boundary"
+    },
+    {
+     "end": 14.012,
+     "start": 13.925,
+     "text": "of"
+    },
+    {
+     "end": 14.137,
+     "start": 14.012,
+     "text": "the"
+    },
+    {
+     "end": 14.75,
+     "start": 14.137,
+     "text": "follower"
+    },
+    {
+     "end": 14.925,
+     "start": 14.75,
+     "text": "as"
+    },
+    {
+     "end": 15.025,
+     "start": 14.925,
+     "text": "it"
+    },
+    {
+     "end": 15.35,
+     "start": 15.025,
+     "text": "runs"
+    },
+    {
+     "end": 16.225,
+     "start": 15.35,
+     "text": "today"
+    },
+    {
+     "end": 16.475,
+     "start": 16.225,
+     "text": "."
+    }
+   ]
+  },
+  "docs-user-follower/what-the-follower-observes-and-when-a-read-is-unavailable-02": {
+   "audio_sha256": "e8d6b126713689c1ec7a08d777d7c18d55f5e45df10dd88d11ef7fbd40362cb2",
+   "characters": 521,
+   "cost": 0.00051579,
+   "duration": 32.725,
+   "index": 2,
+   "key": "ed25ef08daebc5cf5e6910129a70992fb2b08e0f70be48475b1f6afaaccded3e",
+   "page": "docs/user/follower.md",
+   "pause_ms": 400,
+   "section": "what-the-follower-observes-and-when-a-read-is-unavailable",
+   "sent_text": "The follower observes one node. It connects to the cardano-node reachable at the configured node socket and follows that node's chain block by block, including the rollbacks the node announces. It does not verify the chain itself, does not compare it with a second node, and has no other source. What it stores is the node's chain, from the configured start point, restricted to the outputs at the addresses it is told to watch. An output created before the start point, or at an address that is not watched, is not seen.",
+   "text": "The follower observes one node. It connects to the cardano-node reachable at the configured node socket and follows that node's chain block by block, including the rollbacks the node announces. It does not verify the chain itself, does not compare it with a second node, and has no other source. What it stores is the node's chain, from the configured start point, restricted to the outputs at the addresses it is told to watch. An output created before the start point, or at an address that is not watched, is not seen.",
+   "words": [
+    {
+     "end": 0.25,
+     "start": 0.175,
+     "text": "The"
+    },
+    {
+     "end": 0.637,
+     "start": 0.25,
+     "text": "follower"
+    },
+    {
+     "end": 1.05,
+     "start": 0.637,
+     "text": "observes"
+    },
+    {
+     "end": 1.275,
+     "start": 1.05,
+     "text": "one"
+    },
+    {
+     "end": 2.0,
+     "start": 1.275,
+     "text": "node"
+    },
+    {
+     "end": 2.2,
+     "start": 2.0,
+     "text": "."
+    },
+    {
+     "end": 2.525,
+     "start": 2.4,
+     "text": "It"
+    },
+    {
+     "end": 2.95,
+     "start": 2.525,
+     "text": "connects"
+    },
+    {
+     "end": 3.037,
+     "start": 2.95,
+     "text": "to"
+    },
+    {
+     "end": 3.125,
+     "start": 3.037,
+     "text": "the"
+    },
+    {
+     "end": 3.95,
+     "start": 3.125,
+     "text": "cardano-node"
+    },
+    {
+     "end": 4.425,
+     "start": 3.95,
+     "text": "reachable"
+    },
+    {
+     "end": 4.537,
+     "start": 4.425,
+     "text": "at"
+    },
+    {
+     "end": 4.625,
+     "start": 4.537,
+     "text": "the"
+    },
+    {
+     "end": 5.275,
+     "start": 4.625,
+     "text": "configured"
+    },
+    {
+     "end": 5.6,
+     "start": 5.275,
+     "text": "node"
+    },
+    {
+     "end": 6.137,
+     "start": 5.6,
+     "text": "socket"
+    },
+    {
+     "end": 6.287,
+     "start": 6.137,
+     "text": "and"
+    },
+    {
+     "end": 6.725,
+     "start": 6.287,
+     "text": "follows"
+    },
+    {
+     "end": 6.95,
+     "start": 6.725,
+     "text": "that"
+    },
+    {
+     "end": 7.338,
+     "start": 6.95,
+     "text": "node's"
+    },
+    {
+     "end": 7.65,
+     "start": 7.338,
+     "text": "chain"
+    },
+    {
+     "end": 7.975,
+     "start": 7.65,
+     "text": "block"
+    },
+    {
+     "end": 8.15,
+     "start": 7.975,
+     "text": "by"
+    },
+    {
+     "end": 9.15,
+     "start": 8.15,
+     "text": "block"
+    },
+    {
+     "end": 9.4,
+     "start": 9.15,
+     "text": ","
+    },
+    {
+     "end": 10.012,
+     "start": 9.6,
+     "text": "including"
+    },
+    {
+     "end": 10.1,
+     "start": 10.012,
+     "text": "the"
+    },
+    {
+     "end": 10.625,
+     "start": 10.1,
+     "text": "rollbacks"
+    },
+    {
+     "end": 10.725,
+     "start": 10.625,
+     "text": "the"
+    },
+    {
+     "end": 10.962,
+     "start": 10.725,
+     "text": "node"
+    },
+    {
+     "end": 12.0,
+     "start": 10.962,
+     "text": "announces"
+    },
+    {
+     "end": 12.2,
+     "start": 12.0,
+     "text": "."
+    },
+    {
+     "end": 12.462,
+     "start": 12.375,
+     "text": "It"
+    },
+    {
+     "end": 12.6,
+     "start": 12.462,
+     "text": "does"
+    },
+    {
+     "end": 12.85,
+     "start": 12.6,
+     "text": "not"
+    },
+    {
+     "end": 13.35,
+     "start": 12.85,
+     "text": "verify"
+    },
+    {
+     "end": 13.488,
+     "start": 13.35,
+     "text": "the"
+    },
+    {
+     "end": 13.825,
+     "start": 13.488,
+     "text": "chain"
+    },
+    {
+     "end": 14.375,
+     "start": 13.825,
+     "text": "itself"
+    },
+    {
+     "end": 14.45,
+     "start": 14.375,
+     "text": ","
+    },
+    {
+     "end": 14.587,
+     "start": 14.45,
+     "text": "does"
+    },
+    {
+     "end": 14.8,
+     "start": 14.587,
+     "text": "not"
+    },
+    {
+     "end": 15.225,
+     "start": 14.8,
+     "text": "compare"
+    },
+    {
+     "end": 15.337,
+     "start": 15.225,
+     "text": "it"
+    },
+    {
+     "end": 15.462,
+     "start": 15.337,
+     "text": "with"
+    },
+    {
+     "end": 15.562,
+     "start": 15.462,
+     "text": "a"
+    },
+    {
+     "end": 15.9,
+     "start": 15.562,
+     "text": "second"
+    },
+    {
+     "end": 16.275,
+     "start": 15.9,
+     "text": "node"
+    },
+    {
+     "end": 16.325,
+     "start": 16.275,
+     "text": ","
+    },
+    {
+     "end": 16.45,
+     "start": 16.325,
+     "text": "and"
+    },
+    {
+     "end": 16.663,
+     "start": 16.45,
+     "text": "has"
+    },
+    {
+     "end": 16.9,
+     "start": 16.663,
+     "text": "no"
+    },
+    {
+     "end": 17.212,
+     "start": 16.9,
+     "text": "other"
+    },
+    {
+     "end": 18.3,
+     "start": 17.212,
+     "text": "source"
+    },
+    {
+     "end": 18.5,
+     "start": 18.3,
+     "text": "."
+    },
+    {
+     "end": 18.812,
+     "start": 18.7,
+     "text": "What"
+    },
+    {
+     "end": 18.925,
+     "start": 18.812,
+     "text": "it"
+    },
+    {
+     "end": 19.375,
+     "start": 18.925,
+     "text": "stores"
+    },
+    {
+     "end": 19.513,
+     "start": 19.375,
+     "text": "is"
+    },
+    {
+     "end": 19.625,
+     "start": 19.513,
+     "text": "the"
+    },
+    {
+     "end": 20.013,
+     "start": 19.625,
+     "text": "node's"
+    },
+    {
+     "end": 20.425,
+     "start": 20.013,
+     "text": "chain"
+    },
+    {
+     "end": 20.5,
+     "start": 20.425,
+     "text": ","
+    },
+    {
+     "end": 20.638,
+     "start": 20.5,
+     "text": "from"
+    },
+    {
+     "end": 20.725,
+     "start": 20.638,
+     "text": "the"
+    },
+    {
+     "end": 21.225,
+     "start": 20.725,
+     "text": "configured"
+    },
+    {
+     "end": 21.525,
+     "start": 21.225,
+     "text": "start"
+    },
+    {
+     "end": 22.375,
+     "start": 21.525,
+     "text": "point"
+    },
+    {
+     "end": 22.575,
+     "start": 22.375,
+     "text": ","
+    },
+    {
+     "end": 23.3,
+     "start": 22.775,
+     "text": "restricted"
+    },
+    {
+     "end": 23.388,
+     "start": 23.3,
+     "text": "to"
+    },
+    {
+     "end": 23.538,
+     "start": 23.388,
+     "text": "the"
+    },
+    {
+     "end": 24.013,
+     "start": 23.538,
+     "text": "outputs"
+    },
+    {
+     "end": 24.087,
+     "start": 24.013,
+     "text": "at"
+    },
+    {
+     "end": 24.225,
+     "start": 24.087,
+     "text": "the"
+    },
+    {
+     "end": 24.888,
+     "start": 24.225,
+     "text": "addresses"
+    },
+    {
+     "end": 25.0,
+     "start": 24.888,
+     "text": "it"
+    },
+    {
+     "end": 25.15,
+     "start": 25.0,
+     "text": "is"
+    },
+    {
+     "end": 25.475,
+     "start": 25.15,
+     "text": "told"
+    },
+    {
+     "end": 25.6,
+     "start": 25.475,
+     "text": "to"
+    },
+    {
+     "end": 26.45,
+     "start": 25.6,
+     "text": "watch"
+    },
+    {
+     "end": 26.675,
+     "start": 26.45,
+     "text": "."
+    },
+    {
+     "end": 27.013,
+     "start": 26.875,
+     "text": "An"
+    },
+    {
+     "end": 27.5,
+     "start": 27.013,
+     "text": "output"
+    },
+    {
+     "end": 27.925,
+     "start": 27.5,
+     "text": "created"
+    },
+    {
+     "end": 28.288,
+     "start": 27.925,
+     "text": "before"
+    },
+    {
+     "end": 28.375,
+     "start": 28.288,
+     "text": "the"
+    },
+    {
+     "end": 28.725,
+     "start": 28.375,
+     "text": "start"
+    },
+    {
+     "end": 29.15,
+     "start": 28.725,
+     "text": "point"
+    },
+    {
+     "end": 29.237,
+     "start": 29.15,
+     "text": ","
+    },
+    {
+     "end": 29.487,
+     "start": 29.237,
+     "text": "or"
+    },
+    {
+     "end": 29.587,
+     "start": 29.487,
+     "text": "at"
+    },
+    {
+     "end": 29.675,
+     "start": 29.587,
+     "text": "an"
+    },
+    {
+     "end": 30.125,
+     "start": 29.675,
+     "text": "address"
+    },
+    {
+     "end": 30.275,
+     "start": 30.125,
+     "text": "that"
+    },
+    {
+     "end": 30.425,
+     "start": 30.275,
+     "text": "is"
+    },
+    {
+     "end": 30.675,
+     "start": 30.425,
+     "text": "not"
+    },
+    {
+     "end": 31.075,
+     "start": 30.675,
+     "text": "watched"
+    },
+    {
+     "end": 31.15,
+     "start": 31.075,
+     "text": ","
+    },
+    {
+     "end": 31.3,
+     "start": 31.15,
+     "text": "is"
+    },
+    {
+     "end": 31.562,
+     "start": 31.3,
+     "text": "not"
+    },
+    {
+     "end": 32.525,
+     "start": 31.562,
+     "text": "seen"
+    },
+    {
+     "end": 32.725,
+     "start": 32.525,
+     "text": "."
+    }
+   ]
+  },
+  "docs-user-follower/what-the-follower-observes-and-when-a-read-is-unavailable-03": {
+   "audio_sha256": "15c98f149469d6e6e0b3adea3497e5ba1b0391116c5cedb85cc431609222716d",
+   "characters": 610,
+   "cost": 0.0006039,
+   "duration": 39.375,
+   "index": 3,
+   "key": "a7a994d571656c3e6aa00b34d20c02f0f6d8c3284fcb84246f1098467821fb4b",
+   "page": "docs/user/follower.md",
+   "pause_ms": 400,
+   "section": "what-the-follower-observes-and-when-a-read-is-unavailable",
+   "sent_text": "The follower also records the tip the node last announced. Two numbers describe how far an answer reaches. as_of_slot is the latest slot the store had committed inside the read's own transaction; it is null when the store has recorded nothing yet. tip_lag_slots is the distance from that slot to the last announced tip; it is null when no tip has been observed, or when the store's slot is ahead of the observed tip. A successful data answer of the query endpoint carries both, and both are set. The local ckeri status read opens the store without a node connection: it reports as_of_slot and no tip_lag_slots.",
+   "text": "The follower also records the tip the node last announced. Two numbers describe how far an answer reaches. as_of_slot is the latest slot the store had committed inside the read's own transaction; it is null when the store has recorded nothing yet. tip_lag_slots is the distance from that slot to the last announced tip; it is null when no tip has been observed, or when the store's slot is ahead of the observed tip. A successful data answer of the query endpoint carries both, and both are set. The local ckeri status read opens the store without a node connection: it reports as_of_slot and no tip_lag_slots.",
+   "words": [
+    {
+     "end": 0.25,
+     "start": 0.175,
+     "text": "The"
+    },
+    {
+     "end": 0.675,
+     "start": 0.25,
+     "text": "follower"
+    },
+    {
+     "end": 1.025,
+     "start": 0.675,
+     "text": "also"
+    },
+    {
+     "end": 1.462,
+     "start": 1.025,
+     "text": "records"
+    },
+    {
+     "end": 1.55,
+     "start": 1.462,
+     "text": "the"
+    },
+    {
+     "end": 1.8,
+     "start": 1.55,
+     "text": "tip"
+    },
+    {
+     "end": 1.9,
+     "start": 1.8,
+     "text": "the"
+    },
+    {
+     "end": 2.2,
+     "start": 1.9,
+     "text": "node"
+    },
+    {
+     "end": 2.5,
+     "start": 2.2,
+     "text": "last"
+    },
+    {
+     "end": 3.425,
+     "start": 2.5,
+     "text": "announced"
+    },
+    {
+     "end": 3.625,
+     "start": 3.425,
+     "text": "."
+    },
+    {
+     "end": 4.0,
+     "start": 3.825,
+     "text": "Two"
+    },
+    {
+     "end": 4.35,
+     "start": 4.0,
+     "text": "numbers"
+    },
+    {
+     "end": 4.8,
+     "start": 4.35,
+     "text": "describe"
+    },
+    {
+     "end": 5.012,
+     "start": 4.8,
+     "text": "how"
+    },
+    {
+     "end": 5.238,
+     "start": 5.012,
+     "text": "far"
+    },
+    {
+     "end": 5.325,
+     "start": 5.238,
+     "text": "an"
+    },
+    {
+     "end": 5.675,
+     "start": 5.325,
+     "text": "answer"
+    },
+    {
+     "end": 6.65,
+     "start": 5.675,
+     "text": "reaches"
+    },
+    {
+     "end": 6.85,
+     "start": 6.65,
+     "text": "."
+    },
+    {
+     "end": 7.7,
+     "start": 7.075,
+     "text": "as_of_slot"
+    },
+    {
+     "end": 7.85,
+     "start": 7.7,
+     "text": "is"
+    },
+    {
+     "end": 7.975,
+     "start": 7.85,
+     "text": "the"
+    },
+    {
+     "end": 8.35,
+     "start": 7.975,
+     "text": "latest"
+    },
+    {
+     "end": 8.75,
+     "start": 8.35,
+     "text": "slot"
+    },
+    {
+     "end": 8.85,
+     "start": 8.75,
+     "text": "the"
+    },
+    {
+     "end": 9.163,
+     "start": 8.85,
+     "text": "store"
+    },
+    {
+     "end": 9.3,
+     "start": 9.163,
+     "text": "had"
+    },
+    {
+     "end": 9.762,
+     "start": 9.3,
+     "text": "committed"
+    },
+    {
+     "end": 10.262,
+     "start": 9.762,
+     "text": "inside"
+    },
+    {
+     "end": 10.35,
+     "start": 10.262,
+     "text": "the"
+    },
+    {
+     "end": 10.75,
+     "start": 10.35,
+     "text": "read's"
+    },
+    {
+     "end": 10.95,
+     "start": 10.75,
+     "text": "own"
+    },
+    {
+     "end": 12.2,
+     "start": 10.95,
+     "text": "transaction"
+    },
+    {
+     "end": 12.4,
+     "start": 12.2,
+     "text": ";"
+    },
+    {
+     "end": 12.7,
+     "start": 12.6,
+     "text": "it"
+    },
+    {
+     "end": 12.863,
+     "start": 12.7,
+     "text": "is"
+    },
+    {
+     "end": 13.188,
+     "start": 12.863,
+     "text": "null"
+    },
+    {
+     "end": 13.312,
+     "start": 13.188,
+     "text": "when"
+    },
+    {
+     "end": 13.4,
+     "start": 13.312,
+     "text": "the"
+    },
+    {
+     "end": 13.712,
+     "start": 13.4,
+     "text": "store"
+    },
+    {
+     "end": 13.875,
+     "start": 13.712,
+     "text": "has"
+    },
+    {
+     "end": 14.4,
+     "start": 13.875,
+     "text": "recorded"
+    },
+    {
+     "end": 14.75,
+     "start": 14.4,
+     "text": "nothing"
+    },
+    {
+     "end": 15.5,
+     "start": 14.75,
+     "text": "yet"
+    },
+    {
+     "end": 15.7,
+     "start": 15.5,
+     "text": "."
+    },
+    {
+     "end": 16.7,
+     "start": 15.9,
+     "text": "tip_lag_slots"
+    },
+    {
+     "end": 16.85,
+     "start": 16.7,
+     "text": "is"
+    },
+    {
+     "end": 16.975,
+     "start": 16.85,
+     "text": "the"
+    },
+    {
+     "end": 17.45,
+     "start": 16.975,
+     "text": "distance"
+    },
+    {
+     "end": 17.6,
+     "start": 17.45,
+     "text": "from"
+    },
+    {
+     "end": 17.85,
+     "start": 17.6,
+     "text": "that"
+    },
+    {
+     "end": 18.288,
+     "start": 17.85,
+     "text": "slot"
+    },
+    {
+     "end": 18.388,
+     "start": 18.288,
+     "text": "to"
+    },
+    {
+     "end": 18.5,
+     "start": 18.388,
+     "text": "the"
+    },
+    {
+     "end": 18.9,
+     "start": 18.5,
+     "text": "last"
+    },
+    {
+     "end": 19.312,
+     "start": 18.9,
+     "text": "announced"
+    },
+    {
+     "end": 20.1,
+     "start": 19.312,
+     "text": "tip"
+    },
+    {
+     "end": 20.3,
+     "start": 20.1,
+     "text": ";"
+    },
+    {
+     "end": 20.6,
+     "start": 20.5,
+     "text": "it"
+    },
+    {
+     "end": 20.763,
+     "start": 20.6,
+     "text": "is"
+    },
+    {
+     "end": 21.1,
+     "start": 20.763,
+     "text": "null"
+    },
+    {
+     "end": 21.312,
+     "start": 21.1,
+     "text": "when"
+    },
+    {
+     "end": 21.587,
+     "start": 21.312,
+     "text": "no"
+    },
+    {
+     "end": 21.837,
+     "start": 21.587,
+     "text": "tip"
+    },
+    {
+     "end": 22.0,
+     "start": 21.837,
+     "text": "has"
+    },
+    {
+     "end": 22.175,
+     "start": 22.0,
+     "text": "been"
+    },
+    {
+     "end": 22.825,
+     "start": 22.175,
+     "text": "observed"
+    },
+    {
+     "end": 22.913,
+     "start": 22.825,
+     "text": ","
+    },
+    {
+     "end": 23.075,
+     "start": 22.913,
+     "text": "or"
+    },
+    {
+     "end": 23.212,
+     "start": 23.075,
+     "text": "when"
+    },
+    {
+     "end": 23.3,
+     "start": 23.212,
+     "text": "the"
+    },
+    {
+     "end": 23.712,
+     "start": 23.3,
+     "text": "store's"
+    },
+    {
+     "end": 24.125,
+     "start": 23.712,
+     "text": "slot"
+    },
+    {
+     "end": 24.275,
+     "start": 24.125,
+     "text": "is"
+    },
+    {
+     "end": 24.587,
+     "start": 24.275,
+     "text": "ahead"
+    },
+    {
+     "end": 24.663,
+     "start": 24.587,
+     "text": "of"
+    },
+    {
+     "end": 24.8,
+     "start": 24.663,
+     "text": "the"
+    },
+    {
+     "end": 25.312,
+     "start": 24.8,
+     "text": "observed"
+    },
+    {
+     "end": 26.2,
+     "start": 25.312,
+     "text": "tip"
+    },
+    {
+     "end": 26.425,
+     "start": 26.2,
+     "text": "."
+    },
+    {
+     "end": 26.7,
+     "start": 26.625,
+     "text": "A"
+    },
+    {
+     "end": 27.3,
+     "start": 26.7,
+     "text": "successful"
+    },
+    {
+     "end": 27.625,
+     "start": 27.3,
+     "text": "data"
+    },
+    {
+     "end": 28.025,
+     "start": 27.625,
+     "text": "answer"
+    },
+    {
+     "end": 28.112,
+     "start": 28.025,
+     "text": "of"
+    },
+    {
+     "end": 28.2,
+     "start": 28.112,
+     "text": "the"
+    },
+    {
+     "end": 28.55,
+     "start": 28.2,
+     "text": "query"
+    },
+    {
+     "end": 29.025,
+     "start": 28.55,
+     "text": "endpoint"
+    },
+    {
+     "end": 29.438,
+     "start": 29.025,
+     "text": "carries"
+    },
+    {
+     "end": 29.9,
+     "start": 29.438,
+     "text": "both"
+    },
+    {
+     "end": 29.975,
+     "start": 29.9,
+     "text": ","
+    },
+    {
+     "end": 30.1,
+     "start": 29.975,
+     "text": "and"
+    },
+    {
+     "end": 30.4,
+     "start": 30.1,
+     "text": "both"
+    },
+    {
+     "end": 30.538,
+     "start": 30.4,
+     "text": "are"
+    },
+    {
+     "end": 31.375,
+     "start": 30.538,
+     "text": "set"
+    },
+    {
+     "end": 31.575,
+     "start": 31.375,
+     "text": "."
+    },
+    {
+     "end": 31.825,
+     "start": 31.75,
+     "text": "The"
+    },
+    {
+     "end": 32.162,
+     "start": 31.825,
+     "text": "local"
+    },
+    {
+     "end": 32.675,
+     "start": 32.162,
+     "text": "ckeri"
+    },
+    {
+     "end": 33.188,
+     "start": 32.675,
+     "text": "status"
+    },
+    {
+     "end": 33.588,
+     "start": 33.188,
+     "text": "read"
+    },
+    {
+     "end": 33.963,
+     "start": 33.588,
+     "text": "opens"
+    },
+    {
+     "end": 34.05,
+     "start": 33.963,
+     "text": "the"
+    },
+    {
+     "end": 34.4,
+     "start": 34.05,
+     "text": "store"
+    },
+    {
+     "end": 34.713,
+     "start": 34.4,
+     "text": "without"
+    },
+    {
+     "end": 34.8,
+     "start": 34.713,
+     "text": "a"
+    },
+    {
+     "end": 35.1,
+     "start": 34.8,
+     "text": "node"
+    },
+    {
+     "end": 36.175,
+     "start": 35.1,
+     "text": "connection"
+    },
+    {
+     "end": 36.375,
+     "start": 36.175,
+     "text": ":"
+    },
+    {
+     "end": 36.638,
+     "start": 36.575,
+     "text": "it"
+    },
+    {
+     "end": 37.05,
+     "start": 36.638,
+     "text": "reports"
+    },
+    {
+     "end": 37.625,
+     "start": 37.05,
+     "text": "as_of_slot"
+    },
+    {
+     "end": 37.737,
+     "start": 37.625,
+     "text": "and"
+    },
+    {
+     "end": 37.9,
+     "start": 37.737,
+     "text": "no"
+    },
+    {
+     "end": 39.175,
+     "start": 37.9,
+     "text": "tip_lag_slots"
+    },
+    {
+     "end": 39.375,
+     "start": 39.175,
+     "text": "."
+    }
+   ]
+  },
+  "docs-user-follower/what-the-follower-observes-and-when-a-read-is-unavailable-04": {
+   "audio_sha256": "df137235eeeaeccbcfafc74f1ac8d2e7c969dbaa47a0ad28fbd69b74d2bcdaeb",
+   "characters": 393,
+   "cost": 0.00038907,
+   "duration": 27.05,
+   "index": 4,
+   "key": "92f11a0dbb040d4b7d31d556d45d5d94be8fbfee73846675bbd6da3078951f15",
+   "page": "docs/user/follower.md",
+   "pause_ms": 400,
+   "section": "what-the-follower-observes-and-when-a-read-is-unavailable",
+   "sent_text": "The readiness check says ready only when all of these hold at once: the connection to the node is up, the store has a committed slot, a tip has been observed, the tip is not behind the store's slot, and the tip lag is at most 60 slots. The limit is inclusive: a lag of exactly 60 slots is ready, and a lag of 61 slots is not. The follower library is configured with the same 60-slot threshold.",
+   "text": "The readiness check says ready only when all of these hold at once: the connection to the node is up, the store has a committed slot, a tip has been observed, the tip is not behind the store's slot, and the tip lag is at most 60 slots. The limit is inclusive: a lag of exactly 60 slots is ready, and a lag of 61 slots is not. The follower library is configured with the same 60-slot threshold.",
+   "words": [
+    {
+     "end": 0.25,
+     "start": 0.175,
+     "text": "The"
+    },
+    {
+     "end": 0.712,
+     "start": 0.25,
+     "text": "readiness"
+    },
+    {
+     "end": 1.0,
+     "start": 0.712,
+     "text": "check"
+    },
+    {
+     "end": 1.25,
+     "start": 1.0,
+     "text": "says"
+    },
+    {
+     "end": 1.5,
+     "start": 1.25,
+     "text": "ready"
+    },
+    {
+     "end": 1.9,
+     "start": 1.5,
+     "text": "only"
+    },
+    {
+     "end": 2.088,
+     "start": 1.9,
+     "text": "when"
+    },
+    {
+     "end": 2.287,
+     "start": 2.088,
+     "text": "all"
+    },
+    {
+     "end": 2.362,
+     "start": 2.287,
+     "text": "of"
+    },
+    {
+     "end": 2.575,
+     "start": 2.362,
+     "text": "these"
+    },
+    {
+     "end": 2.812,
+     "start": 2.575,
+     "text": "hold"
+    },
+    {
+     "end": 2.9,
+     "start": 2.812,
+     "text": "at"
+    },
+    {
+     "end": 3.775,
+     "start": 2.9,
+     "text": "once"
+    },
+    {
+     "end": 3.975,
+     "start": 3.775,
+     "text": ":"
+    },
+    {
+     "end": 4.225,
+     "start": 4.15,
+     "text": "the"
+    },
+    {
+     "end": 4.725,
+     "start": 4.225,
+     "text": "connection"
+    },
+    {
+     "end": 4.812,
+     "start": 4.725,
+     "text": "to"
+    },
+    {
+     "end": 4.9,
+     "start": 4.812,
+     "text": "the"
+    },
+    {
+     "end": 5.2,
+     "start": 4.9,
+     "text": "node"
+    },
+    {
+     "end": 5.35,
+     "start": 5.2,
+     "text": "is"
+    },
+    {
+     "end": 5.65,
+     "start": 5.35,
+     "text": "up"
+    },
+    {
+     "end": 5.725,
+     "start": 5.65,
+     "text": ","
+    },
+    {
+     "end": 5.85,
+     "start": 5.725,
+     "text": "the"
+    },
+    {
+     "end": 6.15,
+     "start": 5.85,
+     "text": "store"
+    },
+    {
+     "end": 6.312,
+     "start": 6.15,
+     "text": "has"
+    },
+    {
+     "end": 6.375,
+     "start": 6.312,
+     "text": "a"
+    },
+    {
+     "end": 6.787,
+     "start": 6.375,
+     "text": "committed"
+    },
+    {
+     "end": 7.7,
+     "start": 6.787,
+     "text": "slot"
+    },
+    {
+     "end": 7.9,
+     "start": 7.7,
+     "text": ","
+    },
+    {
+     "end": 8.188,
+     "start": 8.1,
+     "text": "a"
+    },
+    {
+     "end": 8.413,
+     "start": 8.188,
+     "text": "tip"
+    },
+    {
+     "end": 8.575,
+     "start": 8.413,
+     "text": "has"
+    },
+    {
+     "end": 8.75,
+     "start": 8.575,
+     "text": "been"
+    },
+    {
+     "end": 9.3,
+     "start": 8.75,
+     "text": "observed"
+    },
+    {
+     "end": 9.337,
+     "start": 9.3,
+     "text": ","
+    },
+    {
+     "end": 9.438,
+     "start": 9.337,
+     "text": "the"
+    },
+    {
+     "end": 9.7,
+     "start": 9.438,
+     "text": "tip"
+    },
+    {
+     "end": 9.85,
+     "start": 9.7,
+     "text": "is"
+    },
+    {
+     "end": 10.087,
+     "start": 9.85,
+     "text": "not"
+    },
+    {
+     "end": 10.438,
+     "start": 10.087,
+     "text": "behind"
+    },
+    {
+     "end": 10.525,
+     "start": 10.438,
+     "text": "the"
+    },
+    {
+     "end": 10.85,
+     "start": 10.525,
+     "text": "store's"
+    },
+    {
+     "end": 11.7,
+     "start": 10.85,
+     "text": "slot"
+    },
+    {
+     "end": 11.9,
+     "start": 11.7,
+     "text": ","
+    },
+    {
+     "end": 12.163,
+     "start": 12.075,
+     "text": "and"
+    },
+    {
+     "end": 12.25,
+     "start": 12.163,
+     "text": "the"
+    },
+    {
+     "end": 12.5,
+     "start": 12.25,
+     "text": "tip"
+    },
+    {
+     "end": 12.762,
+     "start": 12.5,
+     "text": "lag"
+    },
+    {
+     "end": 12.863,
+     "start": 12.762,
+     "text": "is"
+    },
+    {
+     "end": 12.938,
+     "start": 12.863,
+     "text": "at"
+    },
+    {
+     "end": 13.15,
+     "start": 12.938,
+     "text": "most"
+    },
+    {
+     "end": 13.5,
+     "start": 13.15,
+     "text": "60"
+    },
+    {
+     "end": 14.4,
+     "start": 13.5,
+     "text": "slots"
+    },
+    {
+     "end": 14.6,
+     "start": 14.4,
+     "text": "."
+    },
+    {
+     "end": 14.913,
+     "start": 14.8,
+     "text": "The"
+    },
+    {
+     "end": 15.337,
+     "start": 14.913,
+     "text": "limit"
+    },
+    {
+     "end": 15.525,
+     "start": 15.337,
+     "text": "is"
+    },
+    {
+     "end": 16.35,
+     "start": 15.525,
+     "text": "inclusive"
+    },
+    {
+     "end": 16.462,
+     "start": 16.35,
+     "text": ":"
+    },
+    {
+     "end": 16.587,
+     "start": 16.462,
+     "text": "a"
+    },
+    {
+     "end": 16.938,
+     "start": 16.587,
+     "text": "lag"
+    },
+    {
+     "end": 17.025,
+     "start": 16.938,
+     "text": "of"
+    },
+    {
+     "end": 17.625,
+     "start": 17.025,
+     "text": "exactly"
+    },
+    {
+     "end": 18.087,
+     "start": 17.625,
+     "text": "60"
+    },
+    {
+     "end": 18.55,
+     "start": 18.087,
+     "text": "slots"
+    },
+    {
+     "end": 18.712,
+     "start": 18.55,
+     "text": "is"
+    },
+    {
+     "end": 19.125,
+     "start": 18.712,
+     "text": "ready"
+    },
+    {
+     "end": 19.2,
+     "start": 19.125,
+     "text": ","
+    },
+    {
+     "end": 19.312,
+     "start": 19.2,
+     "text": "and"
+    },
+    {
+     "end": 19.375,
+     "start": 19.312,
+     "text": "a"
+    },
+    {
+     "end": 19.712,
+     "start": 19.375,
+     "text": "lag"
+    },
+    {
+     "end": 19.837,
+     "start": 19.712,
+     "text": "of"
+    },
+    {
+     "end": 20.487,
+     "start": 19.837,
+     "text": "61"
+    },
+    {
+     "end": 20.925,
+     "start": 20.487,
+     "text": "slots"
+    },
+    {
+     "end": 21.075,
+     "start": 20.925,
+     "text": "is"
+    },
+    {
+     "end": 22.025,
+     "start": 21.075,
+     "text": "not"
+    },
+    {
+     "end": 22.25,
+     "start": 22.025,
+     "text": "."
+    },
+    {
+     "end": 22.525,
+     "start": 22.425,
+     "text": "The"
+    },
+    {
+     "end": 22.95,
+     "start": 22.525,
+     "text": "follower"
+    },
+    {
+     "end": 23.525,
+     "start": 22.95,
+     "text": "library"
+    },
+    {
+     "end": 23.675,
+     "start": 23.525,
+     "text": "is"
+    },
+    {
+     "end": 24.375,
+     "start": 23.675,
+     "text": "configured"
+    },
+    {
+     "end": 24.513,
+     "start": 24.375,
+     "text": "with"
+    },
+    {
+     "end": 24.638,
+     "start": 24.513,
+     "text": "the"
+    },
+    {
+     "end": 25.0,
+     "start": 24.638,
+     "text": "same"
+    },
+    {
+     "end": 25.725,
+     "start": 25.0,
+     "text": "60-slot"
+    },
+    {
+     "end": 26.85,
+     "start": 25.725,
+     "text": "threshold"
+    },
+    {
+     "end": 27.05,
+     "start": 26.85,
+     "text": "."
+    }
+   ]
+  },
+  "docs-user-follower/what-the-follower-observes-and-when-a-read-is-unavailable-05": {
+   "audio_sha256": "5289bbe5b2e32c897b668b4305110974055894a05ca4eb0f9263c2ab0c9cac4a",
+   "characters": 423,
+   "cost": 0.00041876999999999995,
+   "duration": 31.225,
+   "index": 5,
+   "key": "784c795a304d86281559d35c65c04b1a8e7d8be335e73f54cce14d98225489e7",
+   "page": "docs/user/follower.md",
+   "pause_ms": 400,
+   "section": "what-the-follower-observes-and-when-a-read-is-unavailable",
+   "sent_text": "The query endpoint applies the check in two ways. GET /ready always answers with HTTP status 200 and reports ready as true or false with the reason. The data routes, /checkpoint, /board and /watchability, answer with HTTP status 503 and the readiness fields, and with no data at all, whenever the check says not ready. The documentation routes, /swagger.json and /swagger-ui, are served whether or not the check says ready.",
+   "text": "The query endpoint applies the check in two ways. GET /ready always answers with HTTP status 200 and reports ready as true or false with the reason. The data routes, /checkpoint, /board and /watchability, answer with HTTP status 503 and the readiness fields, and with no data at all, whenever the check says not ready. The documentation routes, /swagger.json and /swagger-ui, are served whether or not the check says ready.",
+   "words": [
+    {
+     "end": 0.25,
+     "start": 0.175,
+     "text": "The"
+    },
+    {
+     "end": 0.575,
+     "start": 0.25,
+     "text": "query"
+    },
+    {
+     "end": 0.938,
+     "start": 0.575,
+     "text": "endpoint"
+    },
+    {
+     "end": 1.337,
+     "start": 0.938,
+     "text": "applies"
+    },
+    {
+     "end": 1.425,
+     "start": 1.337,
+     "text": "the"
+    },
+    {
+     "end": 1.638,
+     "start": 1.425,
+     "text": "check"
+    },
+    {
+     "end": 1.775,
+     "start": 1.638,
+     "text": "in"
+    },
+    {
+     "end": 1.975,
+     "start": 1.775,
+     "text": "two"
+    },
+    {
+     "end": 2.85,
+     "start": 1.975,
+     "text": "ways"
+    },
+    {
+     "end": 3.05,
+     "start": 2.85,
+     "text": "."
+    },
+    {
+     "end": 3.425,
+     "start": 3.25,
+     "text": "GET"
+    },
+    {
+     "end": 3.662,
+     "start": 3.425,
+     "text": "ready"
+    },
+    {
+     "end": 4.062,
+     "start": 3.662,
+     "text": "always"
+    },
+    {
+     "end": 4.575,
+     "start": 4.062,
+     "text": "answers"
+    },
+    {
+     "end": 4.762,
+     "start": 4.575,
+     "text": "with"
+    },
+    {
+     "end": 5.762,
+     "start": 4.762,
+     "text": "HTTP"
+    },
+    {
+     "end": 6.262,
+     "start": 5.762,
+     "text": "status"
+    },
+    {
+     "end": 6.988,
+     "start": 6.262,
+     "text": "200"
+    },
+    {
+     "end": 7.113,
+     "start": 6.988,
+     "text": "and"
+    },
+    {
+     "end": 7.55,
+     "start": 7.113,
+     "text": "reports"
+    },
+    {
+     "end": 7.825,
+     "start": 7.55,
+     "text": "ready"
+    },
+    {
+     "end": 8.0,
+     "start": 7.825,
+     "text": "as"
+    },
+    {
+     "end": 8.488,
+     "start": 8.0,
+     "text": "true"
+    },
+    {
+     "end": 8.675,
+     "start": 8.488,
+     "text": "or"
+    },
+    {
+     "end": 9.1,
+     "start": 8.675,
+     "text": "false"
+    },
+    {
+     "end": 9.238,
+     "start": 9.1,
+     "text": "with"
+    },
+    {
+     "end": 9.325,
+     "start": 9.238,
+     "text": "the"
+    },
+    {
+     "end": 10.425,
+     "start": 9.325,
+     "text": "reason"
+    },
+    {
+     "end": 10.65,
+     "start": 10.425,
+     "text": "."
+    },
+    {
+     "end": 10.9,
+     "start": 10.825,
+     "text": "The"
+    },
+    {
+     "end": 11.225,
+     "start": 10.9,
+     "text": "data"
+    },
+    {
+     "end": 11.575,
+     "start": 11.225,
+     "text": "routes"
+    },
+    {
+     "end": 11.625,
+     "start": 11.575,
+     "text": ","
+    },
+    {
+     "end": 12.1,
+     "start": 11.625,
+     "text": "/checkpoint"
+    },
+    {
+     "end": 12.15,
+     "start": 12.1,
+     "text": ","
+    },
+    {
+     "end": 12.488,
+     "start": 12.15,
+     "text": "/board"
+    },
+    {
+     "end": 12.613,
+     "start": 12.488,
+     "text": "and"
+    },
+    {
+     "end": 14.2,
+     "start": 12.613,
+     "text": "/watchability"
+    },
+    {
+     "end": 14.4,
+     "start": 14.2,
+     "text": ","
+    },
+    {
+     "end": 15.0,
+     "start": 14.625,
+     "text": "answer"
+    },
+    {
+     "end": 15.188,
+     "start": 15.0,
+     "text": "with"
+    },
+    {
+     "end": 16.188,
+     "start": 15.188,
+     "text": "HTTP"
+    },
+    {
+     "end": 16.712,
+     "start": 16.188,
+     "text": "status"
+    },
+    {
+     "end": 17.837,
+     "start": 16.712,
+     "text": "503"
+    },
+    {
+     "end": 17.962,
+     "start": 17.837,
+     "text": "and"
+    },
+    {
+     "end": 18.05,
+     "start": 17.962,
+     "text": "the"
+    },
+    {
+     "end": 18.538,
+     "start": 18.05,
+     "text": "readiness"
+    },
+    {
+     "end": 19.125,
+     "start": 18.538,
+     "text": "fields"
+    },
+    {
+     "end": 19.2,
+     "start": 19.125,
+     "text": ","
+    },
+    {
+     "end": 19.312,
+     "start": 19.2,
+     "text": "and"
+    },
+    {
+     "end": 19.487,
+     "start": 19.312,
+     "text": "with"
+    },
+    {
+     "end": 19.725,
+     "start": 19.487,
+     "text": "no"
+    },
+    {
+     "end": 20.05,
+     "start": 19.725,
+     "text": "data"
+    },
+    {
+     "end": 20.175,
+     "start": 20.05,
+     "text": "at"
+    },
+    {
+     "end": 21.075,
+     "start": 20.175,
+     "text": "all"
+    },
+    {
+     "end": 21.275,
+     "start": 21.075,
+     "text": ","
+    },
+    {
+     "end": 21.788,
+     "start": 21.45,
+     "text": "whenever"
+    },
+    {
+     "end": 21.875,
+     "start": 21.788,
+     "text": "the"
+    },
+    {
+     "end": 22.125,
+     "start": 21.875,
+     "text": "check"
+    },
+    {
+     "end": 22.35,
+     "start": 22.125,
+     "text": "says"
+    },
+    {
+     "end": 22.575,
+     "start": 22.35,
+     "text": "not"
+    },
+    {
+     "end": 23.35,
+     "start": 22.575,
+     "text": "ready"
+    },
+    {
+     "end": 23.575,
+     "start": 23.35,
+     "text": "."
+    },
+    {
+     "end": 23.85,
+     "start": 23.775,
+     "text": "The"
+    },
+    {
+     "end": 24.75,
+     "start": 23.85,
+     "text": "documentation"
+    },
+    {
+     "end": 25.125,
+     "start": 24.75,
+     "text": "routes"
+    },
+    {
+     "end": 25.188,
+     "start": 25.125,
+     "text": ","
+    },
+    {
+     "end": 26.875,
+     "start": 25.188,
+     "text": "/swagger.json"
+    },
+    {
+     "end": 27.013,
+     "start": 26.875,
+     "text": "and"
+    },
+    {
+     "end": 28.2,
+     "start": 27.013,
+     "text": "/swagger-ui"
+    },
+    {
+     "end": 28.275,
+     "start": 28.2,
+     "text": ","
+    },
+    {
+     "end": 28.438,
+     "start": 28.275,
+     "text": "are"
+    },
+    {
+     "end": 28.825,
+     "start": 28.438,
+     "text": "served"
+    },
+    {
+     "end": 29.087,
+     "start": 28.825,
+     "text": "whether"
+    },
+    {
+     "end": 29.175,
+     "start": 29.087,
+     "text": "or"
+    },
+    {
+     "end": 29.4,
+     "start": 29.175,
+     "text": "not"
+    },
+    {
+     "end": 29.513,
+     "start": 29.4,
+     "text": "the"
+    },
+    {
+     "end": 29.775,
+     "start": 29.513,
+     "text": "check"
+    },
+    {
+     "end": 30.025,
+     "start": 29.775,
+     "text": "says"
+    },
+    {
+     "end": 31.0,
+     "start": 30.025,
+     "text": "ready"
+    },
+    {
+     "end": 31.225,
+     "start": 31.0,
+     "text": "."
+    }
+   ]
+  },
+  "docs-user-follower/what-the-follower-observes-and-when-a-read-is-unavailable-06": {
+   "audio_sha256": "9bd8580c8e9a7da8151be45b172778d11d6ee0ea8590774759b5a0d86ff2ed69",
+   "characters": 750,
+   "cost": 0.0007425,
+   "duration": 50.075,
+   "index": 6,
+   "key": "be23a44203109c650efef96aa0f670cff560feef64331a753aed22f5e28df732",
+   "page": "docs/user/follower.md",
+   "pause_ms": 400,
+   "section": "what-the-follower-observes-and-when-a-read-is-unavailable",
+   "sent_text": "A not-ready answer is not an absence. A 503 from a data route says nothing about whether the output exists, and its body carries no payload, not even an empty one, so an empty answer cannot be mistaken for \"nothing is there\". Only a ready data answer can say that nothing was found, and then it says only that the store, as of its slot, holds no such output. That is weaker than \"no such output exists\": an output created in the last 60 slots may not be indexed yet, and an output created before the configured start point is never indexed. The local ckeri status read applies no readiness check at all. An empty answer from it says only that the store holds nothing as of the slot it reports, and it cannot say how far that slot is behind the chain.",
+   "text": "A not-ready answer is not an absence. A 503 from a data route says nothing about whether the output exists, and its body carries no payload, not even an empty one, so an empty answer cannot be mistaken for \"nothing is there\". Only a ready data answer can say that nothing was found, and then it says only that the store, as of its slot, holds no such output. That is weaker than \"no such output exists\": an output created in the last 60 slots may not be indexed yet, and an output created before the configured start point is never indexed. The local ckeri status read applies no readiness check at all. An empty answer from it says only that the store holds nothing as of the slot it reports, and it cannot say how far that slot is behind the chain.",
+   "words": [
+    {
+     "end": 0.225,
+     "start": 0.175,
+     "text": "A"
+    },
+    {
+     "end": 0.675,
+     "start": 0.225,
+     "text": "not-ready"
+    },
+    {
+     "end": 1.025,
+     "start": 0.675,
+     "text": "answer"
+    },
+    {
+     "end": 1.175,
+     "start": 1.025,
+     "text": "is"
+    },
+    {
+     "end": 1.337,
+     "start": 1.175,
+     "text": "not"
+    },
+    {
+     "end": 1.425,
+     "start": 1.337,
+     "text": "an"
+    },
+    {
+     "end": 2.375,
+     "start": 1.425,
+     "text": "absence"
+    },
+    {
+     "end": 2.575,
+     "start": 2.375,
+     "text": "."
+    },
+    {
+     "end": 2.862,
+     "start": 2.775,
+     "text": "A"
+    },
+    {
+     "end": 3.825,
+     "start": 2.862,
+     "text": "503"
+    },
+    {
+     "end": 3.963,
+     "start": 3.825,
+     "text": "from"
+    },
+    {
+     "end": 4.05,
+     "start": 3.963,
+     "text": "a"
+    },
+    {
+     "end": 4.375,
+     "start": 4.05,
+     "text": "data"
+    },
+    {
+     "end": 4.713,
+     "start": 4.375,
+     "text": "route"
+    },
+    {
+     "end": 4.963,
+     "start": 4.713,
+     "text": "says"
+    },
+    {
+     "end": 5.35,
+     "start": 4.963,
+     "text": "nothing"
+    },
+    {
+     "end": 5.675,
+     "start": 5.35,
+     "text": "about"
+    },
+    {
+     "end": 5.938,
+     "start": 5.675,
+     "text": "whether"
+    },
+    {
+     "end": 6.075,
+     "start": 5.938,
+     "text": "the"
+    },
+    {
+     "end": 6.5,
+     "start": 6.075,
+     "text": "output"
+    },
+    {
+     "end": 7.6,
+     "start": 6.5,
+     "text": "exists"
+    },
+    {
+     "end": 7.8,
+     "start": 7.6,
+     "text": ","
+    },
+    {
+     "end": 8.087,
+     "start": 8.0,
+     "text": "and"
+    },
+    {
+     "end": 8.2,
+     "start": 8.087,
+     "text": "its"
+    },
+    {
+     "end": 8.525,
+     "start": 8.2,
+     "text": "body"
+    },
+    {
+     "end": 8.925,
+     "start": 8.525,
+     "text": "carries"
+    },
+    {
+     "end": 9.15,
+     "start": 8.925,
+     "text": "no"
+    },
+    {
+     "end": 9.675,
+     "start": 9.15,
+     "text": "payload"
+    },
+    {
+     "end": 9.75,
+     "start": 9.675,
+     "text": ","
+    },
+    {
+     "end": 9.938,
+     "start": 9.75,
+     "text": "not"
+    },
+    {
+     "end": 10.087,
+     "start": 9.938,
+     "text": "even"
+    },
+    {
+     "end": 10.2,
+     "start": 10.087,
+     "text": "an"
+    },
+    {
+     "end": 10.525,
+     "start": 10.2,
+     "text": "empty"
+    },
+    {
+     "end": 11.25,
+     "start": 10.525,
+     "text": "one"
+    },
+    {
+     "end": 11.45,
+     "start": 11.25,
+     "text": ","
+    },
+    {
+     "end": 11.788,
+     "start": 11.65,
+     "text": "so"
+    },
+    {
+     "end": 11.913,
+     "start": 11.788,
+     "text": "an"
+    },
+    {
+     "end": 12.262,
+     "start": 11.913,
+     "text": "empty"
+    },
+    {
+     "end": 12.7,
+     "start": 12.262,
+     "text": "answer"
+    },
+    {
+     "end": 13.038,
+     "start": 12.7,
+     "text": "cannot"
+    },
+    {
+     "end": 13.137,
+     "start": 13.038,
+     "text": "be"
+    },
+    {
+     "end": 13.7,
+     "start": 13.137,
+     "text": "mistaken"
+    },
+    {
+     "end": 13.85,
+     "start": 13.7,
+     "text": "for"
+    },
+    {
+     "end": 13.925,
+     "start": 13.85,
+     "text": "\""
+    },
+    {
+     "end": 14.25,
+     "start": 13.925,
+     "text": "nothing"
+    },
+    {
+     "end": 14.4,
+     "start": 14.25,
+     "text": "is"
+    },
+    {
+     "end": 15.2,
+     "start": 14.4,
+     "text": "there"
+    },
+    {
+     "end": 15.375,
+     "start": 15.2,
+     "text": "\""
+    },
+    {
+     "end": 15.425,
+     "start": 15.375,
+     "text": "."
+    },
+    {
+     "end": 15.875,
+     "start": 15.6,
+     "text": "Only"
+    },
+    {
+     "end": 15.975,
+     "start": 15.875,
+     "text": "a"
+    },
+    {
+     "end": 16.225,
+     "start": 15.975,
+     "text": "ready"
+    },
+    {
+     "end": 16.525,
+     "start": 16.225,
+     "text": "data"
+    },
+    {
+     "end": 16.95,
+     "start": 16.525,
+     "text": "answer"
+    },
+    {
+     "end": 17.15,
+     "start": 16.95,
+     "text": "can"
+    },
+    {
+     "end": 17.362,
+     "start": 17.15,
+     "text": "say"
+    },
+    {
+     "end": 17.5,
+     "start": 17.362,
+     "text": "that"
+    },
+    {
+     "end": 17.812,
+     "start": 17.5,
+     "text": "nothing"
+    },
+    {
+     "end": 17.975,
+     "start": 17.812,
+     "text": "was"
+    },
+    {
+     "end": 18.85,
+     "start": 17.975,
+     "text": "found"
+    },
+    {
+     "end": 19.05,
+     "start": 18.85,
+     "text": ","
+    },
+    {
+     "end": 19.337,
+     "start": 19.25,
+     "text": "and"
+    },
+    {
+     "end": 19.462,
+     "start": 19.337,
+     "text": "then"
+    },
+    {
+     "end": 19.55,
+     "start": 19.462,
+     "text": "it"
+    },
+    {
+     "end": 19.775,
+     "start": 19.55,
+     "text": "says"
+    },
+    {
+     "end": 20.075,
+     "start": 19.775,
+     "text": "only"
+    },
+    {
+     "end": 20.212,
+     "start": 20.075,
+     "text": "that"
+    },
+    {
+     "end": 20.337,
+     "start": 20.212,
+     "text": "the"
+    },
+    {
+     "end": 20.8,
+     "start": 20.337,
+     "text": "store"
+    },
+    {
+     "end": 20.888,
+     "start": 20.8,
+     "text": ","
+    },
+    {
+     "end": 21.075,
+     "start": 20.888,
+     "text": "as"
+    },
+    {
+     "end": 21.163,
+     "start": 21.075,
+     "text": "of"
+    },
+    {
+     "end": 21.337,
+     "start": 21.163,
+     "text": "its"
+    },
+    {
+     "end": 21.75,
+     "start": 21.337,
+     "text": "slot"
+    },
+    {
+     "end": 21.825,
+     "start": 21.75,
+     "text": ","
+    },
+    {
+     "end": 22.15,
+     "start": 21.825,
+     "text": "holds"
+    },
+    {
+     "end": 22.388,
+     "start": 22.15,
+     "text": "no"
+    },
+    {
+     "end": 22.65,
+     "start": 22.388,
+     "text": "such"
+    },
+    {
+     "end": 23.65,
+     "start": 22.65,
+     "text": "output"
+    },
+    {
+     "end": 23.85,
+     "start": 23.65,
+     "text": "."
+    },
+    {
+     "end": 24.163,
+     "start": 24.025,
+     "text": "That"
+    },
+    {
+     "end": 24.3,
+     "start": 24.163,
+     "text": "is"
+    },
+    {
+     "end": 24.65,
+     "start": 24.3,
+     "text": "weaker"
+    },
+    {
+     "end": 24.788,
+     "start": 24.65,
+     "text": "than"
+    },
+    {
+     "end": 24.825,
+     "start": 24.788,
+     "text": "\""
+    },
+    {
+     "end": 24.975,
+     "start": 24.825,
+     "text": "no"
+    },
+    {
+     "end": 25.225,
+     "start": 24.975,
+     "text": "such"
+    },
+    {
+     "end": 25.538,
+     "start": 25.225,
+     "text": "output"
+    },
+    {
+     "end": 26.475,
+     "start": 25.538,
+     "text": "exists"
+    },
+    {
+     "end": 26.65,
+     "start": 26.475,
+     "text": "\""
+    },
+    {
+     "end": 26.7,
+     "start": 26.65,
+     "text": ":"
+    },
+    {
+     "end": 27.038,
+     "start": 26.9,
+     "text": "an"
+    },
+    {
+     "end": 27.5,
+     "start": 27.038,
+     "text": "output"
+    },
+    {
+     "end": 27.913,
+     "start": 27.5,
+     "text": "created"
+    },
+    {
+     "end": 27.987,
+     "start": 27.913,
+     "text": "in"
+    },
+    {
+     "end": 28.075,
+     "start": 27.987,
+     "text": "the"
+    },
+    {
+     "end": 28.438,
+     "start": 28.075,
+     "text": "last"
+    },
+    {
+     "end": 28.8,
+     "start": 28.438,
+     "text": "60"
+    },
+    {
+     "end": 29.288,
+     "start": 28.8,
+     "text": "slots"
+    },
+    {
+     "end": 29.475,
+     "start": 29.288,
+     "text": "may"
+    },
+    {
+     "end": 29.688,
+     "start": 29.475,
+     "text": "not"
+    },
+    {
+     "end": 29.825,
+     "start": 29.688,
+     "text": "be"
+    },
+    {
+     "end": 30.3,
+     "start": 29.825,
+     "text": "indexed"
+    },
+    {
+     "end": 31.075,
+     "start": 30.3,
+     "text": "yet"
+    },
+    {
+     "end": 31.3,
+     "start": 31.075,
+     "text": ","
+    },
+    {
+     "end": 31.587,
+     "start": 31.5,
+     "text": "and"
+    },
+    {
+     "end": 31.688,
+     "start": 31.587,
+     "text": "an"
+    },
+    {
+     "end": 32.175,
+     "start": 31.688,
+     "text": "output"
+    },
+    {
+     "end": 32.625,
+     "start": 32.175,
+     "text": "created"
+    },
+    {
+     "end": 32.963,
+     "start": 32.625,
+     "text": "before"
+    },
+    {
+     "end": 33.05,
+     "start": 32.963,
+     "text": "the"
+    },
+    {
+     "end": 33.675,
+     "start": 33.05,
+     "text": "configured"
+    },
+    {
+     "end": 33.975,
+     "start": 33.675,
+     "text": "start"
+    },
+    {
+     "end": 34.4,
+     "start": 33.975,
+     "text": "point"
+    },
+    {
+     "end": 34.588,
+     "start": 34.4,
+     "text": "is"
+    },
+    {
+     "end": 34.95,
+     "start": 34.588,
+     "text": "never"
+    },
+    {
+     "end": 36.025,
+     "start": 34.95,
+     "text": "indexed"
+    },
+    {
+     "end": 36.225,
+     "start": 36.025,
+     "text": "."
+    },
+    {
+     "end": 36.475,
+     "start": 36.4,
+     "text": "The"
+    },
+    {
+     "end": 36.8,
+     "start": 36.475,
+     "text": "local"
+    },
+    {
+     "end": 37.3,
+     "start": 36.8,
+     "text": "ckeri"
+    },
+    {
+     "end": 37.737,
+     "start": 37.3,
+     "text": "status"
+    },
+    {
+     "end": 38.162,
+     "start": 37.737,
+     "text": "read"
+    },
+    {
+     "end": 38.588,
+     "start": 38.162,
+     "text": "applies"
+    },
+    {
+     "end": 38.825,
+     "start": 38.588,
+     "text": "no"
+    },
+    {
+     "end": 39.25,
+     "start": 38.825,
+     "text": "readiness"
+    },
+    {
+     "end": 39.487,
+     "start": 39.25,
+     "text": "check"
+    },
+    {
+     "end": 39.575,
+     "start": 39.487,
+     "text": "at"
+    },
+    {
+     "end": 40.35,
+     "start": 39.575,
+     "text": "all"
+    },
+    {
+     "end": 40.55,
+     "start": 40.35,
+     "text": "."
+    },
+    {
+     "end": 40.888,
+     "start": 40.75,
+     "text": "An"
+    },
+    {
+     "end": 41.287,
+     "start": 40.888,
+     "text": "empty"
+    },
+    {
+     "end": 41.7,
+     "start": 41.287,
+     "text": "answer"
+    },
+    {
+     "end": 41.9,
+     "start": 41.7,
+     "text": "from"
+    },
+    {
+     "end": 42.025,
+     "start": 41.9,
+     "text": "it"
+    },
+    {
+     "end": 42.287,
+     "start": 42.025,
+     "text": "says"
+    },
+    {
+     "end": 42.65,
+     "start": 42.287,
+     "text": "only"
+    },
+    {
+     "end": 42.8,
+     "start": 42.65,
+     "text": "that"
+    },
+    {
+     "end": 42.938,
+     "start": 42.8,
+     "text": "the"
+    },
+    {
+     "end": 43.3,
+     "start": 42.938,
+     "text": "store"
+    },
+    {
+     "end": 43.638,
+     "start": 43.3,
+     "text": "holds"
+    },
+    {
+     "end": 44.138,
+     "start": 43.638,
+     "text": "nothing"
+    },
+    {
+     "end": 44.35,
+     "start": 44.138,
+     "text": "as"
+    },
+    {
+     "end": 44.463,
+     "start": 44.35,
+     "text": "of"
+    },
+    {
+     "end": 44.588,
+     "start": 44.463,
+     "text": "the"
+    },
+    {
+     "end": 44.912,
+     "start": 44.588,
+     "text": "slot"
+    },
+    {
+     "end": 45.025,
+     "start": 44.912,
+     "text": "it"
+    },
+    {
+     "end": 46.15,
+     "start": 45.025,
+     "text": "reports"
+    },
+    {
+     "end": 46.35,
+     "start": 46.15,
+     "text": ","
+    },
+    {
+     "end": 46.638,
+     "start": 46.55,
+     "text": "and"
+    },
+    {
+     "end": 46.725,
+     "start": 46.638,
+     "text": "it"
+    },
+    {
+     "end": 47.075,
+     "start": 46.725,
+     "text": "cannot"
+    },
+    {
+     "end": 47.3,
+     "start": 47.075,
+     "text": "say"
+    },
+    {
+     "end": 47.487,
+     "start": 47.3,
+     "text": "how"
+    },
+    {
+     "end": 47.75,
+     "start": 47.487,
+     "text": "far"
+    },
+    {
+     "end": 47.963,
+     "start": 47.75,
+     "text": "that"
+    },
+    {
+     "end": 48.325,
+     "start": 47.963,
+     "text": "slot"
+    },
+    {
+     "end": 48.475,
+     "start": 48.325,
+     "text": "is"
+    },
+    {
+     "end": 48.862,
+     "start": 48.475,
+     "text": "behind"
+    },
+    {
+     "end": 48.963,
+     "start": 48.862,
+     "text": "the"
+    },
+    {
+     "end": 49.875,
+     "start": 48.963,
+     "text": "chain"
+    },
+    {
+     "end": 50.075,
+     "start": 49.875,
      "text": "."
     }
    ]
@@ -505465,6 +508600,191 @@
     }
    ]
   },
+  "docs-user-query-endpoint/freshness-and-provenance-what-as_of_slot-actually-promises-04": {
+   "audio_sha256": "48da1385220de4abb3744447678ac1e22d05d8f85161d8952d7dcb908ffb4685",
+   "characters": 175,
+   "cost": 0.00017325,
+   "duration": 10.725,
+   "index": 4,
+   "key": "29e52a3f91653936281e0164b9d5d045220b6e249db24115b144bb5afcb97243",
+   "page": "docs/user/query-endpoint.md",
+   "pause_ms": 400,
+   "section": "freshness-and-provenance-what-as_of_slot-actually-promises",
+   "sent_text": "What the follower observes, from which node, and what its 60-slot limit and a not-ready answer mean are declared in What the follower observes, and when a read is unavailable.",
+   "text": "What the follower observes, from which node, and what its 60-slot limit and a not-ready answer mean are declared in What the follower observes, and when a read is unavailable.",
+   "words": [
+    {
+     "end": 0.338,
+     "start": 0.225,
+     "text": "What"
+    },
+    {
+     "end": 0.438,
+     "start": 0.338,
+     "text": "the"
+    },
+    {
+     "end": 0.9,
+     "start": 0.438,
+     "text": "follower"
+    },
+    {
+     "end": 1.475,
+     "start": 0.9,
+     "text": "observes"
+    },
+    {
+     "end": 1.525,
+     "start": 1.475,
+     "text": ","
+    },
+    {
+     "end": 1.725,
+     "start": 1.525,
+     "text": "from"
+    },
+    {
+     "end": 2.013,
+     "start": 1.725,
+     "text": "which"
+    },
+    {
+     "end": 2.425,
+     "start": 2.013,
+     "text": "node"
+    },
+    {
+     "end": 2.5,
+     "start": 2.425,
+     "text": ","
+    },
+    {
+     "end": 2.625,
+     "start": 2.5,
+     "text": "and"
+    },
+    {
+     "end": 2.775,
+     "start": 2.625,
+     "text": "what"
+    },
+    {
+     "end": 2.963,
+     "start": 2.775,
+     "text": "its"
+    },
+    {
+     "end": 3.787,
+     "start": 2.963,
+     "text": "60-slot"
+    },
+    {
+     "end": 4.213,
+     "start": 3.787,
+     "text": "limit"
+    },
+    {
+     "end": 4.338,
+     "start": 4.213,
+     "text": "and"
+    },
+    {
+     "end": 4.438,
+     "start": 4.338,
+     "text": "a"
+    },
+    {
+     "end": 5.012,
+     "start": 4.438,
+     "text": "not-ready"
+    },
+    {
+     "end": 5.438,
+     "start": 5.012,
+     "text": "answer"
+    },
+    {
+     "end": 5.775,
+     "start": 5.438,
+     "text": "mean"
+    },
+    {
+     "end": 5.925,
+     "start": 5.775,
+     "text": "are"
+    },
+    {
+     "end": 6.525,
+     "start": 5.925,
+     "text": "declared"
+    },
+    {
+     "end": 6.637,
+     "start": 6.525,
+     "text": "in"
+    },
+    {
+     "end": 6.762,
+     "start": 6.637,
+     "text": "What"
+    },
+    {
+     "end": 6.863,
+     "start": 6.762,
+     "text": "the"
+    },
+    {
+     "end": 7.325,
+     "start": 6.863,
+     "text": "follower"
+    },
+    {
+     "end": 8.1,
+     "start": 7.325,
+     "text": "observes"
+    },
+    {
+     "end": 8.175,
+     "start": 8.1,
+     "text": ","
+    },
+    {
+     "end": 8.3,
+     "start": 8.175,
+     "text": "and"
+    },
+    {
+     "end": 8.45,
+     "start": 8.3,
+     "text": "when"
+    },
+    {
+     "end": 8.562,
+     "start": 8.45,
+     "text": "a"
+    },
+    {
+     "end": 8.9,
+     "start": 8.562,
+     "text": "read"
+    },
+    {
+     "end": 9.05,
+     "start": 8.9,
+     "text": "is"
+    },
+    {
+     "end": 10.5,
+     "start": 9.05,
+     "text": "unavailable"
+    },
+    {
+     "end": 10.725,
+     "start": 10.5,
+     "text": "."
+    }
+   ]
+  },
   "docs-user-query-endpoint/get-board-00": {
    "audio_sha256": "7e47324b76a9cce855403466e824610842b8750349d5ac7b2128bfb32aec9399",
    "characters": 11,
@@ -509111,17 +512431,17 @@
    ]
   },
   "docs-user-query-endpoint/the-query-endpoint-checkpoint-answers-without-a-node-02": {
-   "audio_sha256": "14563145b7c9468a8023c3e5561f9e60c12cde1213149666b4997118cac2e15c",
-   "characters": 593,
-   "cost": 0.00036766,
-   "duration": 41.725,
+   "audio_sha256": "f92bb311fc90a3971a4636dea22e1f447655a0cd01a7386b766fefe8e7e08094",
+   "characters": 573,
+   "cost": 0.00056727,
+   "duration": 41.575,
    "index": 2,
-   "key": "e59ceaf0b2ae4140e235960cc49aae7a0e43b9607fbb645072d454727acf0191",
+   "key": "b314377a93766c155267f74decf05420bc4546bb730e05f68102b7573a63d17e",
    "page": "docs/user/query-endpoint.md",
    "pause_ms": 400,
    "section": "the-query-endpoint-checkpoint-answers-without-a-node",
-   "sent_text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
-   "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+   "sent_text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active until it is convicted: there is no owner exit, no parking and no revival. A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+   "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active until it is convicted: there is no owner exit, no parking and no revival. A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
    "words": [
     {
      "end": 0.512,
@@ -509249,498 +512569,448 @@
      "text": "that"
     },
     {
-     "end": 10.613,
+     "end": 10.75,
      "start": 10.275,
      "text": "design"
     },
     {
-     "end": 10.712,
-     "start": 10.613,
+     "end": 10.863,
+     "start": 10.75,
      "text": "an"
     },
     {
-     "end": 11.25,
-     "start": 10.712,
+     "end": 11.425,
+     "start": 10.863,
      "text": "identity"
     },
     {
-     "end": 11.413,
-     "start": 11.25,
+     "end": 11.587,
+     "start": 11.425,
      "text": "is"
     },
     {
-     "end": 11.925,
-     "start": 11.413,
+     "end": 12.1,
+     "start": 11.587,
      "text": "active"
     },
     {
-     "end": 12.0,
-     "start": 11.925,
-     "text": ","
+     "end": 12.387,
+     "start": 12.1,
+     "text": "until"
     },
     {
-     "end": 12.337,
-     "start": 12.0,
-     "text": "parked"
+     "end": 12.462,
+     "start": 12.387,
+     "text": "it"
     },
     {
-     "end": 12.4,
-     "start": 12.337,
-     "text": "("
+     "end": 12.6,
+     "start": 12.462,
+     "text": "is"
     },
     {
-     "end": 12.562,
-     "start": 12.4,
-     "text": "no"
-    },
-    {
-     "end": 13.062,
-     "start": 12.562,
-     "text": "checkpoint"
-    },
-    {
-     "end": 13.262,
-     "start": 13.062,
-     "text": "on"
-    },
-    {
-     "end": 14.2,
-     "start": 13.262,
-     "text": "chain"
-    },
-    {
-     "end": 14.4,
-     "start": 14.2,
-     "text": ";"
-    },
-    {
-     "end": 14.7,
-     "start": 14.6,
-     "text": "the"
-    },
-    {
-     "end": 15.2,
-     "start": 14.7,
-     "text": "registry"
-    },
-    {
-     "end": 15.488,
-     "start": 15.2,
-     "text": "leaf"
-    },
-    {
-     "end": 15.8,
-     "start": 15.488,
-     "text": "keeps"
-    },
-    {
-     "end": 15.938,
-     "start": 15.8,
-     "text": "the"
-    },
-    {
-     "end": 16.312,
-     "start": 15.938,
-     "text": "hash"
-    },
-    {
-     "end": 16.388,
-     "start": 16.312,
-     "text": "of"
-    },
-    {
-     "end": 16.587,
-     "start": 16.388,
-     "text": "its"
-    },
-    {
-     "end": 17.013,
-     "start": 16.587,
-     "text": "last"
-    },
-    {
-     "end": 17.288,
-     "start": 17.013,
-     "text": "key"
-    },
-    {
-     "end": 17.725,
-     "start": 17.288,
-     "text": "state"
-    },
-    {
-     "end": 17.812,
-     "start": 17.725,
-     "text": ")"
-    },
-    {
-     "end": 17.975,
-     "start": 17.812,
-     "text": "or"
-    },
-    {
-     "end": 18.525,
-     "start": 17.975,
+     "end": 13.7,
+     "start": 12.6,
      "text": "convicted"
     },
     {
-     "end": 18.6,
-     "start": 18.525,
-     "text": "("
+     "end": 13.925,
+     "start": 13.7,
+     "text": ":"
     },
     {
-     "end": 19.125,
-     "start": 18.6,
-     "text": "terminal"
-    },
-    {
-     "end": 19.2,
-     "start": 19.125,
-     "text": ","
-    },
-    {
-     "end": 19.487,
-     "start": 19.2,
-     "text": "after"
-    },
-    {
-     "end": 19.55,
-     "start": 19.487,
-     "text": "a"
-    },
-    {
-     "end": 20.1,
-     "start": 19.55,
-     "text": "duplicity"
-    },
-    {
-     "end": 21.125,
-     "start": 20.1,
-     "text": "proof"
-    },
-    {
-     "end": 21.3,
-     "start": 21.125,
-     "text": ")"
-    },
-    {
-     "end": 21.35,
-     "start": 21.3,
-     "text": ";"
-    },
-    {
-     "end": 21.675,
-     "start": 21.525,
+     "end": 14.25,
+     "start": 14.1,
      "text": "there"
     },
     {
-     "end": 21.825,
-     "start": 21.675,
+     "end": 14.375,
+     "start": 14.25,
      "text": "is"
     },
     {
-     "end": 22.0,
-     "start": 21.825,
+     "end": 14.575,
+     "start": 14.375,
      "text": "no"
     },
     {
-     "end": 22.55,
-     "start": 22.0,
-     "text": "withdraw"
+     "end": 14.875,
+     "start": 14.575,
+     "text": "owner"
     },
     {
-     "end": 22.6,
-     "start": 22.55,
+     "end": 15.3,
+     "start": 14.875,
+     "text": "exit"
+    },
+    {
+     "end": 15.375,
+     "start": 15.3,
+     "text": ","
+    },
+    {
+     "end": 15.55,
+     "start": 15.375,
+     "text": "no"
+    },
+    {
+     "end": 16.0,
+     "start": 15.55,
+     "text": "parking"
+    },
+    {
+     "end": 16.125,
+     "start": 16.0,
+     "text": "and"
+    },
+    {
+     "end": 16.3,
+     "start": 16.125,
+     "text": "no"
+    },
+    {
+     "end": 17.3,
+     "start": 16.3,
+     "text": "revival"
+    },
+    {
+     "end": 17.5,
+     "start": 17.3,
+     "text": "."
+    },
+    {
+     "end": 17.775,
+     "start": 17.7,
+     "text": "A"
+    },
+    {
+     "end": 18.362,
+     "start": 17.775,
+     "text": "duplicity"
+    },
+    {
+     "end": 18.763,
+     "start": 18.362,
+     "text": "proof"
+    },
+    {
+     "end": 19.212,
+     "start": 18.763,
+     "text": "enters"
+    },
+    {
+     "end": 19.638,
+     "start": 19.212,
+     "text": "pending"
+    },
+    {
+     "end": 20.325,
+     "start": 19.638,
+     "text": "custody"
+    },
+    {
+     "end": 20.438,
+     "start": 20.325,
      "text": ";"
+    },
+    {
+     "end": 20.625,
+     "start": 20.438,
+     "text": "its"
+    },
+    {
+     "end": 21.4,
+     "start": 20.625,
+     "text": "associated"
+    },
+    {
+     "end": 21.95,
+     "start": 21.4,
+     "text": "Registry"
+    },
+    {
+     "end": 22.45,
+     "start": 21.95,
+     "text": "fold"
     },
     {
      "end": 22.725,
-     "start": 22.6,
-     "text": "the"
+     "start": 22.45,
+     "text": "makes"
     },
     {
-     "end": 23.025,
+     "end": 22.875,
      "start": 22.725,
-     "text": "only"
+     "text": "it"
     },
     {
      "end": 23.425,
-     "start": 23.025,
-     "text": "close"
+     "start": 22.875,
+     "text": "convicted"
     },
     {
-     "end": 23.575,
+     "end": 23.5,
      "start": 23.425,
-     "text": "is"
+     "text": "("
     },
     {
-     "end": 23.712,
-     "start": 23.575,
-     "text": "the"
+     "end": 24.6,
+     "start": 23.5,
+     "text": "terminal"
     },
     {
-     "end": 24.1,
-     "start": 23.712,
-     "text": "reap"
+     "end": 24.875,
+     "start": 24.6,
+     "text": ")"
     },
     {
-     "end": 24.2,
-     "start": 24.1,
-     "text": ","
+     "end": 24.925,
+     "start": 24.875,
+     "text": ";"
     },
     {
-     "end": 24.275,
-     "start": 24.2,
-     "text": "a"
-    },
-    {
-     "end": 24.9,
-     "start": 24.275,
-     "text": "rotation"
-    },
-    {
-     "end": 25.038,
-     "start": 24.9,
-     "text": "by"
-    },
-    {
-     "end": 25.125,
-     "start": 25.038,
-     "text": "the"
+     "end": 25.25,
+     "start": 25.1,
+     "text": "there"
     },
     {
      "end": 25.4,
-     "start": 25.125,
-     "text": "next"
+     "start": 25.25,
+     "text": "is"
     },
     {
-     "end": 26.325,
+     "end": 25.6,
      "start": 25.4,
-     "text": "keys"
+     "text": "no"
     },
     {
-     "end": 26.525,
-     "start": 26.325,
+     "end": 26.2,
+     "start": 25.6,
+     "text": "withdraw"
+    },
+    {
+     "end": 26.3,
+     "start": 26.2,
      "text": ";"
     },
     {
-     "end": 26.737,
-     "start": 26.7,
+     "end": 26.362,
+     "start": 26.3,
      "text": "a"
     },
     {
-     "end": 27.138,
-     "start": 26.737,
+     "end": 26.825,
+     "start": 26.362,
      "text": "deposit"
     },
     {
-     "end": 27.675,
-     "start": 27.138,
+     "end": 27.4,
+     "start": 26.825,
      "text": "rotation"
     },
     {
-     "end": 27.788,
-     "start": 27.675,
+     "end": 27.513,
+     "start": 27.4,
      "text": "is"
     },
     {
-     "end": 27.888,
-     "start": 27.788,
+     "end": 27.65,
+     "start": 27.513,
      "text": "the"
     },
     {
-     "end": 28.9,
-     "start": 27.888,
+     "end": 28.75,
+     "start": 27.65,
      "text": "unfreeze"
     },
     {
-     "end": 29.1,
-     "start": 28.9,
+     "end": 28.95,
+     "start": 28.75,
      "text": ";"
     },
     {
-     "end": 29.388,
-     "start": 29.3,
+     "end": 29.237,
+     "start": 29.15,
      "text": "and"
     },
     {
-     "end": 29.475,
-     "start": 29.388,
+     "end": 29.325,
+     "start": 29.237,
      "text": "the"
     },
     {
-     "end": 29.95,
-     "start": 29.475,
+     "end": 29.8,
+     "start": 29.325,
      "text": "poison"
     },
     {
-     "end": 29.987,
-     "start": 29.95,
+     "end": 29.837,
+     "start": 29.8,
      "text": ","
     },
     {
-     "end": 30.138,
-     "start": 29.987,
+     "end": 29.987,
+     "start": 29.837,
      "text": "the"
     },
     {
-     "end": 30.587,
-     "start": 30.138,
+     "end": 30.438,
+     "start": 29.987,
      "text": "owner's"
     },
     {
-     "end": 30.85,
-     "start": 30.587,
+     "end": 30.7,
+     "start": 30.438,
      "text": "own"
     },
     {
-     "end": 31.163,
-     "start": 30.85,
+     "end": 31.013,
+     "start": 30.7,
      "text": "lock"
     },
     {
-     "end": 31.263,
-     "start": 31.163,
+     "end": 31.112,
+     "start": 31.013,
      "text": "on"
     },
     {
-     "end": 31.362,
-     "start": 31.263,
+     "end": 31.212,
+     "start": 31.112,
      "text": "the"
     },
     {
-     "end": 32.0,
-     "start": 31.362,
+     "end": 31.85,
+     "start": 31.212,
      "text": "checkpoint"
     },
     {
-     "end": 32.112,
-     "start": 32.0,
+     "end": 31.962,
+     "start": 31.85,
      "text": ","
     },
     {
-     "end": 32.537,
-     "start": 32.112,
+     "end": 32.388,
+     "start": 31.962,
      "text": "lasts"
     },
     {
-     "end": 32.8,
-     "start": 32.537,
+     "end": 32.65,
+     "start": 32.388,
      "text": "one"
     },
     {
-     "end": 33.175,
-     "start": 32.8,
+     "end": 33.025,
+     "start": 32.65,
      "text": "epoch"
     },
     {
-     "end": 33.287,
-     "start": 33.175,
+     "end": 33.138,
+     "start": 33.025,
      "text": "and"
     },
     {
-     "end": 33.438,
-     "start": 33.287,
+     "end": 33.287,
+     "start": 33.138,
      "text": "is"
     },
     {
-     "end": 33.775,
-     "start": 33.438,
+     "end": 33.625,
+     "start": 33.287,
      "text": "cleared"
     },
     {
-     "end": 33.95,
-     "start": 33.775,
+     "end": 33.8,
+     "start": 33.625,
      "text": "by"
     },
     {
-     "end": 35.225,
-     "start": 33.95,
+     "end": 35.075,
+     "start": 33.8,
      "text": "rotation"
     },
     {
-     "end": 35.425,
-     "start": 35.225,
+     "end": 35.275,
+     "start": 35.075,
      "text": "."
     },
     {
-     "end": 35.85,
-     "start": 35.625,
+     "end": 35.7,
+     "start": 35.475,
      "text": "Play"
     },
     {
-     "end": 35.963,
-     "start": 35.85,
+     "end": 35.812,
+     "start": 35.7,
      "text": "the"
     },
     {
-     "end": 36.475,
-     "start": 35.963,
+     "end": 36.325,
+     "start": 35.812,
      "text": "checkpoint"
     },
     {
-     "end": 37.35,
-     "start": 36.475,
+     "end": 37.2,
+     "start": 36.325,
      "text": "simulation"
     },
     {
-     "end": 37.45,
-     "start": 37.35,
+     "end": 37.3,
+     "start": 37.2,
      "text": "."
     },
     {
-     "end": 37.688,
-     "start": 37.45,
+     "end": 37.537,
+     "start": 37.3,
      "text": "What"
     },
     {
-     "end": 38.0,
-     "start": 37.688,
+     "end": 37.85,
+     "start": 37.537,
      "text": "ships"
     },
     {
-     "end": 38.438,
-     "start": 38.0,
+     "end": 38.287,
+     "start": 37.85,
      "text": "today"
     },
     {
-     "end": 38.6,
-     "start": 38.438,
+     "end": 38.45,
+     "start": 38.287,
      "text": "is"
     },
     {
-     "end": 38.737,
-     "start": 38.6,
+     "end": 38.588,
+     "start": 38.45,
      "text": "the"
     },
     {
-     "end": 39.237,
-     "start": 38.737,
+     "end": 39.088,
+     "start": 38.588,
      "text": "V1"
     },
     {
-     "end": 39.825,
-     "start": 39.237,
+     "end": 39.675,
+     "start": 39.088,
      "text": "checkpoint"
     },
     {
-     "end": 40.0,
-     "start": 39.825,
+     "end": 39.85,
+     "start": 39.675,
      "text": "with"
     },
     {
-     "end": 40.3,
-     "start": 40.0,
+     "end": 40.15,
+     "start": 39.85,
      "text": "role"
     },
     {
-     "end": 41.525,
-     "start": 40.3,
+     "end": 41.375,
+     "start": 40.15,
      "text": "addresses"
     },
     {
-     "end": 41.725,
-     "start": 41.525,
+     "end": 41.575,
+     "start": 41.375,
      "text": "."
     }
    ]

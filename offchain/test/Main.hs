@@ -26,6 +26,8 @@ import Cardano.KERI.AID.Checkpoint.ThresholdSpec qualified as ThresholdSpec
 import Cardano.KERI.AID.Checkpoint.TopUpSpec qualified as TopUpSpec
 import Cardano.KERI.AID.Checkpoint.ValueSpec qualified as ValueSpec
 import Cardano.KERI.AID.Checkpoint.WireSpec qualified as WireSpec
+import Cardano.KERI.AID.ConsumerClausesSpec qualified as ConsumerClausesSpec
+import Cardano.KERI.AID.ConsumerVectorsSpec qualified as ConsumerVectorsSpec
 import Cardano.KERI.AID.Ed25519Spec qualified as Ed25519Spec
 import Cardano.KERI.AID.FoldGuardSpec qualified as FoldGuardSpec
 import Cardano.KERI.AID.Migration.TypesSpec qualified as MigrationTypesSpec
@@ -61,4 +63,6 @@ main = hspec $ do
     RegistrationSpec.spec
     ValueSpec.spec
     WireSpec.spec
+    ConsumerVectorsSpec.spec
+    ConsumerClausesSpec.spec
     MigrationTypesSpec.spec

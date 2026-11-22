@@ -54,10 +54,12 @@ library
     , base                  >=4.18 && <5
     , bytestring            >=0.11 && <0.13
     , cardano-crypto-class
+    , cborg
     , containers
     , memory                >=0.18 && <0.19
     , plutus-core
     , plutus-tx
+    , serialise
     , text
 
   exposed-modules:
@@ -81,6 +83,7 @@ library
     Cardano.KERI.AID.Checkpoint.TopUp
     Cardano.KERI.AID.Checkpoint.Value
     Cardano.KERI.AID.Checkpoint.Wire
+    Cardano.KERI.AID.Consumer
     Cardano.KERI.AID.Ed25519
     Cardano.KERI.AID.Migration.Types
 
@@ -934,6 +937,8 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.TopUpSpec
     Cardano.KERI.AID.Checkpoint.ValueSpec
     Cardano.KERI.AID.Checkpoint.WireSpec
+    Cardano.KERI.AID.ConsumerClausesSpec
+    Cardano.KERI.AID.ConsumerVectorsSpec
     Cardano.KERI.AID.E2E.FoldGuard
     Cardano.KERI.AID.E2E.Rejection
     Cardano.KERI.AID.Ed25519Spec

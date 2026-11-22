@@ -44,6 +44,7 @@ import Cardano.KERI.Indexer.Query.Tx (
     watchabilityTx,
  )
 import Cardano.KERI.Indexer.Query.Types (hexTxId, qb64Witness)
+import Cardano.KERI.Indexer.StoreBinding (decideLegacyOpenStore, renderStoreBindingError)
 import Cardano.Node.Client.UTxOIndexer.Indexer (withRocksDBIndexerRunner)
 import Cardano.Node.Client.UTxOIndexer.Types qualified as Indexer
 import Control.Concurrent.STM (retry)
@@ -83,29 +84,39 @@ openLocalBackend manifest boardManifest storePath = do
             { qbSourceLabel = "local"
             , qbStatus = \aidText ->
                 withRocksDBIndexerRunner storePath $ \_handle runner ->
-                    qbStatus
-                        (mkLocalBackend (QueryHandle runner checkpointAddress checkpointPolicy boardAddress retry))
-                        aidText
+                    refusedOrElse $
+                        qbStatus
+                            (mkLocalBackend (QueryHandle runner checkpointAddress checkpointPolicy boardAddress retry))
+                            aidText
             , qbBoardByWitness = \_ ->
                 pure (Left (UnsupportedCapability "board-by-witness is not exposed by the local backend in this slice"))
             , qbListCheckpoints =
                 withRocksDBIndexerRunner storePath $ \_handle runner ->
-                    qbListCheckpoints
-                        (mkLocalBackend (QueryHandle runner checkpointAddress checkpointPolicy boardAddress retry))
+                    refusedOrElse $
+                        qbListCheckpoints
+                            (mkLocalBackend (QueryHandle runner checkpointAddress checkpointPolicy boardAddress retry))
             , qbCheckpointByAid = \aidText ->
                 withRocksDBIndexerRunner storePath $ \_handle runner ->
-                    qbCheckpointByAid
-                        (mkLocalBackend (QueryHandle runner checkpointAddress checkpointPolicy boardAddress retry))
-                        aidText
+                    refusedOrElse $
+                        qbCheckpointByAid
+                            (mkLocalBackend (QueryHandle runner checkpointAddress checkpointPolicy boardAddress retry))
+                            aidText
             , qbPayerUtxos = \addressText ->
                 withRocksDBIndexerRunner storePath $ \_handle runner ->
-                    qbPayerUtxos
-                        (mkLocalBackend (QueryHandle runner checkpointAddress checkpointPolicy boardAddress retry))
-                        addressText
+                    refusedOrElse $
+                        qbPayerUtxos
+                            (mkLocalBackend (QueryHandle runner checkpointAddress checkpointPolicy boardAddress retry))
+                            addressText
             }
   where
     checkpoint = manifestCheckpoint manifest
     boardInfo = endpointBoardManifestInfo boardManifest
+    -- A version 1 read, inside the opening of the database, is refused before it
+    -- queries when the store records a release identity.
+    refusedOrElse :: IO (Either BackendError a) -> IO (Either BackendError a)
+    refusedOrElse query =
+        decideLegacyOpenStore storePath
+            >>= either (pure . Left . ConfigError . T.pack . renderStoreBindingError) (const query)
 
 localStatus :: QueryHandle cf op -> Text -> IO (Either BackendError StatusView)
 localStatus handle aidText =

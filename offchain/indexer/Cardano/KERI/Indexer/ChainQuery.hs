@@ -113,6 +113,7 @@ import Cardano.KERI.Indexer.Query.Tx (
     scanAllTx,
     watermarkPointTx,
  )
+import Cardano.KERI.Indexer.StoreBinding (StoreModeMismatch (..), decideLegacyOpenStore)
 import Cardano.Ledger.Address (serialiseAddr)
 import Cardano.Ledger.Api.Scripts.Data (Data (..), Datum (..), binaryDataToData)
 import Cardano.Ledger.Api.Tx.Out (
@@ -132,6 +133,7 @@ import Cardano.Node.Client.UTxOIndexer.Columns (Cols)
 import Cardano.Node.Client.UTxOIndexer.Indexer (withRocksDBIndexerRunner)
 import Cardano.Node.Client.UTxOIndexer.Types qualified as Indexer
 import Codec.Binary.Bech32 qualified as Bech32
+import Control.Exception (throwIO)
 import Data.Bifunctor (first)
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString (ByteString)
@@ -901,7 +903,9 @@ Constructs no dummy\/all-zero checkpoint or board identity (N-027): the
 withLocalQueryScope ::
     LocalSettings -> (forall cf op. LocalQueryScope cf op -> IO result) -> IO result
 withLocalQueryScope settings action =
-    withRocksDBIndexerRunner (localStorePath settings) $ \_handle runner ->
+    withRocksDBIndexerRunner (localStorePath settings) $ \_handle runner -> do
+        -- a version 1 operation of a store that records a release identity is refused before it queries
+        decideLegacyOpenStore (localStorePath settings) >>= either (throwIO . StoreModeMismatch) pure
         action
             LocalQueryScope
                 { localScopeRunner = runner

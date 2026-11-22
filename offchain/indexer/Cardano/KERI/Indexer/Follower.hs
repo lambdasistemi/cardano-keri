@@ -12,12 +12,15 @@ the network wrapper from 'Ouroboros.Network.Magic'.
 -}
 module Cardano.KERI.Indexer.Follower (
     mkChainSyncConfig,
+    mkReleaseChainSyncConfig,
 ) where
 
+import Cardano.KERI.AID.Release (ReleaseIdentity)
 import Cardano.KERI.Deployment.Manifest (
     CheckpointInfo (..),
     Manifest (..),
  )
+import Cardano.KERI.Indexer.Codecs (checkpointAddressOf)
 import Cardano.KERI.Indexer.Config (
     IndexerConfig (..),
     decodeAddress,
@@ -55,10 +58,22 @@ import Ouroboros.Network.Magic (
 -- | Assemble the upstream chain-sync configuration from deployment identity.
 mkChainSyncConfig :: IndexerConfig -> Manifest -> ChainSyncConfig
 mkChainSyncConfig config manifest =
+    chainSyncConfigAt config (checkpointAddress manifest)
+
+{- | The chain-sync configuration of the release-identity mode: the interest set
+is the checkpoint validator's address of the release plus the configured
+funding and board addresses.
+-}
+mkReleaseChainSyncConfig :: IndexerConfig -> ReleaseIdentity -> ChainSyncConfig
+mkReleaseChainSyncConfig config release =
+    chainSyncConfigAt config (checkpointAddressOf release)
+
+chainSyncConfigAt :: IndexerConfig -> Address -> ChainSyncConfig
+chainSyncConfigAt config checkpoint =
     let interestSet =
             IndexAddressSet $
                 Set.fromList $
-                    checkpointAddress manifest
+                    checkpoint
                         : icFundingAddrs config
                             <> maybeToList (icBoardAddr config)
      in ChainSyncConfig

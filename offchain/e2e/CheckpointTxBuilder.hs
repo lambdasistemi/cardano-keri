@@ -58,10 +58,7 @@ import Cardano.KERI.AID.Application (
     Action (..),
     ApplicationParameters (..),
     Change (..),
-    Credential (..),
-    HeldDatum (..),
     OutputReference (..),
-    PlutusAddress (..),
     RegistrationData (..),
     RegistryIdentity (..),
     SpendAction (..),
@@ -70,8 +67,6 @@ import Cardano.KERI.AID.Application (
     activeLeaf,
     activeTokenName,
     configurationTokenName,
-    heldDatumData,
-    registrationApprovalName,
     spendActionData,
     stateDatumData,
     stateMintData,
@@ -79,7 +74,6 @@ import Cardano.KERI.AID.Application (
     stateTokenName,
     terminalLeaf,
     terminationApprovalName,
-    unstakedAddress,
  )
 import Cardano.KERI.AID.Application.StateTemplate (stateTemplate)
 import Cardano.KERI.AID.Blake3.Checkpoint (blake3Hash)
@@ -148,7 +142,6 @@ import Cardano.KERI.AID.Checkpoint.Message (
  )
 import Cardano.KERI.AID.Checkpoint.Registration (
     RegistrationEvidence (..),
-    proofTokenName,
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
 import Cardano.KERI.AID.Checkpoint.TopUp (
@@ -172,7 +165,6 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     convictSpendRedeemerData,
     freezeObserverRedeemerData,
     freezeSpendRedeemerData,
-    registerObserverRedeemerData,
     releaseSpendRedeemerData,
     topUpSpendRedeemerData,
  )
@@ -182,7 +174,6 @@ import Cardano.KERI.AID.E2E.FoldGuard (
     BookingRefusal (..),
     FoldRefusal (..),
     bookingRefusal,
-    foldRefusal,
  )
 import Cardano.KERI.AID.E2E.MpfProof (prove)
 import Cardano.KERI.AID.E2E.MpfTrie qualified as Registry
@@ -203,12 +194,25 @@ import Cardano.KERI.AID.E2E.Script (
     v1RegistrationBond,
  )
 import Cardano.KERI.AID.Migration.Types (OutputRef (..))
+import Cardano.KERI.Deployment.KEL (InceptionExport (..))
 import Cardano.KERI.Deployment.Registry (
     RegistryScripts (..),
     RegistryTerms (..),
     deriveRegistryScripts,
     registryInitialFloor,
  )
+import Cardano.KERI.Deployment.RegistryTransactions (
+    Booking (..),
+    ValidityPlan (..),
+    mintingIndex,
+    outputReferenceOf,
+    redeemerMap,
+    registryProof,
+    registryRootOf,
+    scriptExUnits,
+    tokenValue,
+ )
+import Cardano.KERI.Deployment.RegistryTransactions qualified as Tx
 import Cardano.Ledger.Address (
     AccountAddress (..),
     AccountId (..),
@@ -424,14 +428,6 @@ data RejectionEvidence = RejectionEvidence
     }
     deriving stock (Show)
 
-data ValidityPlan = ValidityPlan
-    { lowerSlot :: !SlotNo
-    , upperSlot :: !SlotNo
-    , lowerPosixMs :: !Integer
-    , upperPosixMs :: !Integer
-    }
-    deriving stock (Show, Eq)
-
 registrationBond :: Integer
 registrationBond = v1RegistrationBond
 
@@ -449,15 +445,6 @@ initialPool = premium + 1_000_000
 
 scriptFee :: Integer
 scriptFee = 3_000_000
-
-scriptExUnits :: ExUnits
-scriptExUnits = ExUnits 12_000_000 7_000_000_000
-
-hashProofExUnits :: ExUnits
-hashProofExUnits = ExUnits 14_000_000 10_000_000_000
-
-hashProofBurnExUnits :: ExUnits
-hashProofBurnExUnits = ExUnits 500_000 500_000_000
 
 pollAttempts :: Int
 pollAttempts = 40
@@ -568,7 +555,7 @@ mkCheckpointEnv blueprintPath lsq ltxs seed = do
         either
             fail
             pure
-            (deriveRegistryScripts stateTemplate devnetTerms (outputReferenceOf' seed) blueprint)
+            (deriveRegistryScripts stateTemplate devnetTerms (outputReferenceOf seed) blueprint)
     let artifacts = observerArtifacts (scriptsObservers registry) <> [scriptsCheckpoint registry]
     hashProof <- requireArtifact "hash-proof" artifacts
     lifecycle <- requireArtifact "observer-lifecycle" artifacts
@@ -918,22 +905,9 @@ deployReferenceScript env label script = do
     params <-
         withinSecs 30 (label <> ": query parameters") $
             queryProtocolParams (envProvider env)
-    wallet <-
-        withinSecs 30 (label <> ": query wallet") $
-            queryUTxOs (envProvider env) (envOwner env)
-    seed <- requireJust (label <> ": no wallet UTxO") (largestFirst wallet)
-    let output =
-            mkBasicTxOut (envOwner env) (inject (Coin 100_000_000))
-                & referenceScriptTxOutL .~ SJust script
-        skeleton =
-            mkBasicTx
-                (mkBasicTxBody & outputsTxBodyL .~ StrictSeq.singleton output)
-    balanced <-
-        either
-            (fail . ((label <> ": balance failed: ") <>) . show)
-            (pure . balancedTx)
-            (balanceTx params [seed] [] (envOwner env) skeleton)
-    txId <- submitSettling env label balanced
+    payer <- payerOf env (ownerParty env)
+    tx <- unwrapBuild (Tx.publishReferenceScript params payer (Coin 100_000_000) script)
+    txId <- submitSettling env label tx
     pollOutput
         (envProvider env)
         txId
@@ -946,13 +920,13 @@ productionRegisterScenario env = do
     (fixture, _) <- loadLifecycleFixture
     productionRegisterScenarioWith env fixture
 
-productionRegisterScenarioWith :: CheckpointEnv -> RegistrationFixture -> IO CheckpointInput
+productionRegisterScenarioWith :: CheckpointEnv -> InceptionExport -> IO CheckpointInput
 productionRegisterScenarioWith env fixture =
     fst <$> productionRegisterScenarioWithReference env fixture
 
 productionRegisterScenarioWithReference ::
     CheckpointEnv ->
-    RegistrationFixture ->
+    InceptionExport ->
     IO (CheckpointInput, (TxIn, TxOut ConwayEra))
 productionRegisterScenarioWithReference env fixture = do
     referenceUtxos <- deployRegisterReferences env
@@ -1426,7 +1400,7 @@ advanceRejection :: CheckpointEnv -> IO RejectionEvidence
 advanceRejection env = do
     prepareWallet (envProvider env) (envSubmitter env) (envOwner env)
     (fixture, _) <- loadLifecycleFixture
-    staged <- stageCheckpointInput env (rfDatum fixture)
+    staged <- stageCheckpointInput env (inceptionDatum fixture)
     validity <- currentValidity env
     tx <-
         buildAdvanceTx
@@ -1621,18 +1595,8 @@ buildSplitTx provider owner = do
         (pure . balancedTx)
         (balanceTx params [input] [] owner (mkBasicTx body))
 
-data RegistrationFixture = RegistrationFixture
-    { rfDatum :: !KeyStateView
-    , rfEvidence :: !RegistrationEvidence
-    , rfRaw :: !ByteString
-    , rfAid :: !ByteString
-    , rfOffI :: !Integer
-    , rfOffD :: !Integer
-    , rfProofName :: !ByteString
-    }
-
 data RotateStoryFixture = RotateStoryFixture
-    { rsRegistration :: !RegistrationFixture
+    { rsRegistration :: !InceptionExport
     , rsCreated :: !KeyStateView
     , rsUnsignedEvidence :: !AdvanceEvidence
     , rsRotationSigners :: ![SignKeyDSIGN Ed25519DSIGN]
@@ -1650,7 +1614,7 @@ data ConvictStoryFixture = ConvictStoryFixture
 the later signed rotation that Arms it.  That keeps the live test on the real
 Register output instead of manufacturing a checkpoint-shaped input.
 -}
-loadLifecycleFixture :: IO (RegistrationFixture, EnforcementEvidence)
+loadLifecycleFixture :: IO (InceptionExport, EnforcementEvidence)
 loadLifecycleFixture = do
     path <- getDataFileName "test/keri-fixtures/fixtures/honest_2key.json"
     value <- eitherDecodeFileStrict path >>= either fail pure
@@ -1719,14 +1683,14 @@ loadRotateStoryFixture = do
         either fail pure (indexedSignaturesAt "rot_witness_receipts" family)
     let created =
             KeyStateView
-                { cdCesrAid = cdCesrAid (rfDatum registration)
+                { cdCesrAid = cdCesrAid (inceptionDatum registration)
                 , cdCurKeys = currentKeys
                 , cdCurThreshold = currentThreshold
                 , cdNextKeys = nextKeys
                 , cdNextThreshold = nextThreshold
                 , cdWitnesses = filter (`notElem` cuts) oldWitnesses <> adds
                 , cdToad = toad
-                , cdSeq = cdSeq (rfDatum registration) + 1
+                , cdSeq = cdSeq (inceptionDatum registration) + 1
                 , cdNativeSn = nativeSn
                 }
         unsignedEvidence =
@@ -1803,7 +1767,7 @@ loadConvictStoryFixture = do
         either fail pure $
             rotateStoryFrom
                 registration
-                (rfDatum registration)
+                (inceptionDatum registration)
                 firstRecord
                 firstSigners
                 inceptionSigners
@@ -1849,7 +1813,7 @@ loadConvictStoryFixture = do
             }
 
 rotateStoryFrom ::
-    RegistrationFixture ->
+    InceptionExport ->
     KeyStateView ->
     Value ->
     [SignKeyDSIGN Ed25519DSIGN] ->
@@ -1986,12 +1950,13 @@ signedRotateEvidence _env _input fixture signers receipts =
     unsigned = rsUnsignedEvidence fixture
 
 registrationFixtureFrom ::
-    Value -> [(Int, ByteString)] -> [(Int, ByteString)] -> Either String RegistrationFixture
+    Value -> [(Int, ByteString)] -> [(Int, ByteString)] -> Either String InceptionExport
 registrationFixtureFrom event signatures receipts = do
     ked <- atKey "ked" event
     offsets <- atKey "offsets" event
     raw <- textAt "raw_hex" event >>= decodeHex
-    aid <- textAt "pre" event >>= digestRaw
+    pre <- textAt "pre" event
+    aid <- digestRaw pre
     currentKeys <- textArrayAt "k" ked >>= traverse verkeyRaw
     nextKeys <- textArrayAt "n" ked >>= traverse digestRaw
     witnesses <- textArrayAt "b" ked >>= traverse verkeyRaw
@@ -2036,14 +2001,11 @@ registrationFixtureFrom event signatures receipts = do
                 , reWitReceipts = receipts
                 }
     pure
-        RegistrationFixture
-            { rfDatum = datum
-            , rfEvidence = evidence
-            , rfRaw = raw
-            , rfAid = aid
-            , rfOffI = offI
-            , rfOffD = offD
-            , rfProofName = proofTokenName raw aid
+        InceptionExport
+            { inceptionAid = pre
+            , inceptionDatum = datum
+            , inceptionEvidence = evidence
+            , inceptionDigestOffset = fromInteger offD
             }
 
 enforcementEvidenceFrom :: Value -> [(Int, ByteString)] -> Either String EnforcementEvidence
@@ -2144,80 +2106,18 @@ arrayValueOffset raw field value = do
     pure (fromIntegral (start + offset))
 
 buildHashProofMintTx ::
-    CheckpointEnv -> Party -> RegistrationFixture -> IO ConwayTx
+    CheckpointEnv -> Party -> InceptionExport -> IO ConwayTx
 buildHashProofMintTx env party fixture = do
-    unless (blake3Hash (saidBlank fixture) == rfAid fixture) $
-        fail "registration fixture does not satisfy the production hash-proof SAID binding"
     params <- withinSecs 30 "query hash-proof protocol parameters" (queryProtocolParams (envProvider env))
-    wallet <- withinSecs 30 "query hash-proof wallet" (queryUTxOs (envProvider env) (partyAddr party))
-    (seed, collateral) <- pickDisjoint wallet []
-    let (seedIn, _) = seed
-        collateralIn = fst collateral
-        assetName = AssetName (SBS.toShort (rfProofName fixture))
-        minted =
-            MultiAsset $
-                Map.singleton
-                    (envHashProofPolicy env)
-                    (Map.singleton assetName 1)
-        proofOut =
-            mkBasicTxOut
-                (partyAddr party)
-                (MaryValue (Coin 5_000_000) minted)
-        redeemers =
-            Redeemers $
-                Map.singleton
-                    (ConwayMinting (AsIx 0))
-                    ( ledgerData (hashProofRedeemerData fixture)
-                    , hashProofExUnits
-                    )
-        body =
-            mkBasicTxBody
-                & inputsTxBodyL .~ Set.singleton seedIn
-                & outputsTxBodyL .~ StrictSeq.singleton proofOut
-                & mintTxBodyL .~ minted
-                & collateralInputsTxBodyL .~ Set.singleton collateralIn
-                & scriptIntegrityHashTxBodyL
-                    .~ computeScriptIntegrity
-                        (Set.singleton PlutusV3)
-                        params
-                        redeemers
-                        (TxDats mempty)
-        tx =
-            mkBasicTx body
-                & witsTxL . scriptTxWitsL
-                    .~ Map.singleton (envHashProofHash env) (envHashProofScript env)
-                & witsTxL . rdmrsTxWitsL .~ redeemers
-    either
-        (fail . ("buildHashProofMintTx: balance failed: " <>) . show)
-        (pure . balancedTx)
-        ( balanceTxWith
-            params
-            [seed]
-            (CollateralUtxos [collateral])
-            []
-            (partyAddr party)
-            Nothing
-            tx
-        )
-
-saidBlank :: RegistrationFixture -> ByteString
-saidBlank fixture =
-    BS.take offD raw
-        <> B8.replicate 44 '#'
-        <> BS.take (offI - offD - 44) (BS.drop (offD + 44) raw)
-        <> B8.replicate 44 '#'
-        <> BS.drop (offI + 44) raw
-  where
-    raw = rfRaw fixture
-    offI = fromInteger (rfOffI fixture)
-    offD = fromInteger (rfOffD fixture)
+    payer <- payerOf env party
+    unwrapBuild (Tx.mintHashProof params (deploymentOf env) payer fixture)
 
 {- | The datum a registration writes: the fixture's key state born at the end of
 the validity interval, refunding the registering wallet.
 -}
-registeredFacts :: CheckpointEnv -> RegistrationFixture -> ValidityPlan -> CheckpointDatumV2
+registeredFacts :: CheckpointEnv -> InceptionExport -> ValidityPlan -> CheckpointDatumV2
 registeredFacts env fixture validity =
-    liveOfKeyState (serialiseAddr (envOwner env)) (upperPosixMs validity) (rfDatum fixture)
+    liveOfKeyState (serialiseAddr (envOwner env)) (upperPosixMs validity) (inceptionDatum fixture)
 
 {- | What differs between the transactions that present a rotation to the
 rotation observer: an Advance writes the rotated datum and pays the premium, a
@@ -3394,19 +3294,6 @@ slotStartPosixMs env target = do
                 then search slotAt mid hi
                 else search slotAt lo mid
 
-hashProofRedeemerData :: RegistrationFixture -> PLC.Data
-hashProofRedeemerData fixture =
-    Constr
-        0
-        [ B (rfRaw fixture)
-        , B (rfAid fixture)
-        , I (rfOffI fixture)
-        , I (rfOffD fixture)
-        ]
-
-hashProofBurnRedeemerData :: PLC.Data
-hashProofBurnRedeemerData = Constr 0 [B "", B "", I 0, I 0]
-
 ledgerData :: PLC.Data -> Ledger.Data ConwayEra
 ledgerData = Ledger.Data
 
@@ -3702,18 +3589,6 @@ requiredSignerHash bytes =
         fromMaybe
             (error "requiredSignerHash: key hash is not 28 bytes")
             (hashFromBytes bytes)
-
-{- | The minting-purpose index of one policy in a transaction's mint map.
-
-Ledger minting purposes are indexed by the policy's position in the sorted mint
-map, so a Convict burning both the checkpoint token and the commitment marker
-cannot keep the hard-coded zero the single-policy shape used.
--}
-mintingIndex :: PolicyID -> MultiAsset -> Word32
-mintingIndex policy (MultiAsset assets) =
-    case elemIndex policy (Map.keys assets) of
-        Just index -> fromIntegral index
-        Nothing -> error "mintingIndex: policy absent from the mint map"
 
 {- | The Plutus reading of a declared ledger validity interval.
 
@@ -4825,56 +4700,15 @@ requestDeposit' :: CheckpointEnv -> Integer
 requestDeposit' env =
     registryInitialFloor (envTerms env) + (initialPool - premium)
 
--- | The lovelace a booked request holds: the deposit, the cost and the tip.
-requestLovelace :: CheckpointEnv -> Integer
-requestLovelace env =
+{- | The lovelace the journeys expect a booked request to hold: the deposit they
+commit, the registration cost and the minimum tip of the devnet's own terms.
+It is not read from a builder.
+-}
+expectedRequestLovelace :: CheckpointEnv -> Integer
+expectedRequestLovelace env =
     requestDeposit' env
         + registrationCost (registryParameters (envTerms env))
         + minimumTip (registryParameters (envTerms env))
-
-applicationPolicy :: CheckpointEnv -> PolicyID
-applicationPolicy = PolicyID . envApplicationHash
-
-statePolicyId :: CheckpointEnv -> PolicyID
-statePolicyId = PolicyID . envStateHash
-
-applicationAddress :: CheckpointEnv -> Addr
-applicationAddress env =
-    Addr Testnet (ScriptHashObj (envApplicationHash env)) StakeRefNull
-
-stateAddress :: CheckpointEnv -> Addr
-stateAddress env =
-    Addr Testnet (ScriptHashObj (envStateHash env)) StakeRefNull
-
-registryIdentity :: CheckpointEnv -> RegistryIdentity
-registryIdentity = scriptsRegistry . envRegistry
-
-registrySeed :: CheckpointEnv -> OutputReference
-registrySeed = scriptsSeed . envRegistry
-
--- | The ledger reference as the registry's wire reference.
-outputReferenceOf' :: TxIn -> OutputReference
-outputReferenceOf' (TxIn (TxId safeHash) (TxIx outputIndex)) =
-    OutputReference
-        (hashToBytes (extractHash safeHash))
-        (fromIntegral outputIndex)
-
--- | The Plutus address of a ledger address with a key or script payment credential.
-plutusAddressOf :: Addr -> PlutusAddress
-plutusAddressOf (Addr _ payment stake) =
-    PlutusAddress (credentialOf payment) (stakeOf stake)
-  where
-    credentialOf = \case
-        KeyHashObj (KeyHash hash) -> KeyCredential (hashToBytes hash)
-        ScriptHashObj (ScriptHash hash) -> ScriptCredential (hashToBytes hash)
-    stakeOf = \case
-        StakeRefNull -> Nothing
-        _ -> error "plutusAddressOf: only addresses without a stake part are used"
-plutusAddressOf _ = error "plutusAddressOf: a Byron address has no Plutus address"
-
--- | A token of the registry's state policy held once by the output.
-holdsRegistryToken :: CheckpointEnv -> ByteString -> TxOut ConwayEra -> Bool
-holdsRegistryToken env = hasAsset (statePolicyId env)
 
 -- | The active token of a key state's AID: the representative asset of the checkpoint.
 checkpointToken :: CheckpointEnv -> KeyStateView -> ByteString
@@ -4885,15 +4719,32 @@ checkpointToken env view =
         Live{lvAid} -> lvAid
         TerminationPending{} -> error "checkpointToken: a key state is live"
 
+applicationPolicy :: CheckpointEnv -> PolicyID
+applicationPolicy = Tx.applicationPolicyId . deploymentOf
+
+statePolicyId :: CheckpointEnv -> PolicyID
+statePolicyId = Tx.statePolicyId . deploymentOf
+
+applicationAddress :: CheckpointEnv -> Addr
+applicationAddress = Tx.applicationAddress . deploymentOf
+
+stateAddress :: CheckpointEnv -> Addr
+stateAddress = Tx.stateAddress . deploymentOf
+
+registryIdentity :: CheckpointEnv -> RegistryIdentity
+registryIdentity = scriptsRegistry . envRegistry
+
+registrySeed :: CheckpointEnv -> OutputReference
+registrySeed = scriptsSeed . envRegistry
+
+-- | A token of the registry's state policy held once by the output.
+holdsRegistryToken :: CheckpointEnv -> ByteString -> TxOut ConwayEra -> Bool
+holdsRegistryToken env = hasAsset (statePolicyId env)
+
 -- | Whether the output holds the checkpoint of the AID: its active token.
 holdsCheckpointToken :: CheckpointEnv -> KeyStateView -> TxOut ConwayEra -> Bool
-holdsCheckpointToken env view = holdsRegistryToken env (checkpointToken env view)
-
--- | The ledger value of one token.
-tokenValue :: PolicyID -> ByteString -> Integer -> MultiAsset
-tokenValue policy name quantity =
-    MultiAsset $
-        Map.singleton policy (Map.singleton (AssetName (SBS.toShort name)) quantity)
+holdsCheckpointToken env view =
+    holdsRegistryToken env (checkpointToken env view)
 
 {- | Publish the template of the state script: an output whose inline datum is
 the template bytes, referenced by the genesis transaction.
@@ -4905,22 +4756,9 @@ publishTemplate env = do
     params <-
         withinSecs 30 (label <> ": query parameters") $
             queryProtocolParams (envProvider env)
-    wallet <-
-        withinSecs 30 (label <> ": query wallet") $
-            queryUTxOs (envProvider env) (envOwner env)
-    seed <- requireJust (label <> ": no wallet UTxO") (largestFirst wallet)
-    let output =
-            mkBasicTxOut (envOwner env) (inject (Coin 100_000_000))
-                & datumTxOutL .~ mkInlineDatum (B template)
-        skeleton =
-            mkBasicTx
-                (mkBasicTxBody & outputsTxBodyL .~ StrictSeq.singleton output)
-    balanced <-
-        either
-            (fail . ((label <> ": balance failed: ") <>) . show)
-            (pure . balancedTx)
-            (balanceTx params [seed] [] (envOwner env) skeleton)
-    txId <- submitSettling env label balanced
+    payer <- payerOf env (ownerParty env)
+    tx <- unwrapBuild (Tx.publishTemplate params payer (Coin 100_000_000) template)
+    txId <- submitSettling env label tx
     pollOutput (envProvider env) txId [0] ((== mkInlineDatum (B template)) . (^. datumTxOutL))
         >>= requireJust (label <> ": the template did not settle")
 
@@ -4942,69 +4780,29 @@ genesisRegistry env = do
             env
             "singular_state reference deployment"
             (envStateScript env)
-    wallet <-
-        withinSecs 30 (label <> ": query wallet") $
-            queryUTxOs (envProvider env) (envOwner env)
+    payer <- payerOf env (ownerParty env)
     seedUtxo <-
         withinSecs 30 (label <> ": query seed") (queryUTxOs (envProvider env) (seedAddress (envOwner env)))
             >>= requireJust (label <> ": the seed output is absent") . listToMaybe
-    (collateral, _) <- pickDisjoint wallet []
-    let seedIn = fst seedUtxo
-        collateralIn = fst collateral
-        refs = [fst templateOut, fst applicationRef, fst stateRef]
-        stateName = stateTokenName (registrySeed env)
+    let stateName = stateTokenName (registrySeed env)
         configName = configurationTokenName (registryIdentity env)
-        stateMinted = tokenValue (statePolicyId env) stateName 1
-        configMinted = tokenValue (applicationPolicy env) configName 1
-        minted = stateMinted <> configMinted
-        stateOut =
-            mkBasicTxOut
-                (stateAddress env)
-                (MaryValue (Coin recordLovelace) stateMinted)
-                & datumTxOutL .~ mkInlineDatum (stateDatumData emptyRoot)
-        configOut parameters =
-            mkBasicTxOut
-                (applicationAddress env)
-                (MaryValue (Coin recordLovelace) configMinted)
-                & datumTxOutL
-                    .~ mkInlineDatum
-                        ( heldDatumData
-                            ( Configuration
-                                parameters
-                                (ScriptCredential (scriptHashBytes (envCheckpointHash env)))
-                            )
-                        )
-        changeCoin = unCoin (snd seedUtxo ^. coinTxOutL) - 2 * recordLovelace - genesisFee
-        changeOut = mkBasicTxOut (envOwner env) (inject (Coin changeCoin))
-        inputs = Set.singleton seedIn
-        stateIx = fromIntegral (mintingIndex (statePolicyId env) minted)
+        minted =
+            tokenValue (statePolicyId env) stateName 1
+                <> tokenValue (applicationPolicy env) configName 1
         appIx = fromIntegral (mintingIndex (applicationPolicy env) minted)
         build parameters budgets = do
             params <-
                 withinSecs 30 (label <> ": query parameters") $
                     queryProtocolParams (envProvider env)
-            let purposes =
-                    [ (ConwayMinting (AsIx stateIx), stateMintData (Genesis (registrySeed env)), scriptExUnits)
-                    ,
-                        ( ConwayMinting (AsIx appIx)
-                        , List [actionData (CreateConfiguration (registryIdentity env) (registrySeed env) 1)]
-                        , scriptExUnits
-                        )
-                    ]
-                redeemers = redeemerMap budgets purposes
-                body =
-                    mkBasicTxBody
-                        & inputsTxBodyL .~ inputs
-                        & outputsTxBodyL .~ StrictSeq.fromList [stateOut, configOut parameters, changeOut]
-                        & feeTxBodyL .~ Coin genesisFee
-                        & mintTxBodyL .~ minted
-                        & collateralInputsTxBodyL .~ Set.singleton collateralIn
-                        & referenceInputsTxBodyL .~ Set.fromList refs
-                        & scriptIntegrityHashTxBodyL
-                            .~ computeScriptIntegrity (Set.singleton PlutusV3) params redeemers (TxDats mempty)
-            pure
-                ( mkBasicTx body & witsTxL . rdmrsTxWitsL .~ redeemers
-                , Set.fromList [purpose | (purpose, _, _) <- purposes]
+            unwrapBuild
+                ( Tx.createConfiguration
+                    params
+                    (deploymentOf env)
+                    [templateOut, applicationRef, stateRef]
+                    payer
+                    seedUtxo
+                    parameters
+                    budgets
                 )
     let terms = registryParameters (envTerms env)
     -- the same genesis with one fact changed, a negative registration cost, is refused
@@ -5038,76 +4836,49 @@ genesisRegistry env = do
             , envStateReference = Just stateRef
             , envConfiguration = Just configUtxo
             }
-  where
-    recordLovelace = 3_000_000
-    genesisFee = 3_000_000
-
--- | The redeemers of a set of purposes, each with its budget or the fallback.
-redeemerMap ::
-    Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
-    [(ConwayPlutusPurpose AsIx ConwayEra, PLC.Data, ExUnits)] ->
-    Redeemers ConwayEra
-redeemerMap budgets purposes =
-    Redeemers $
-        Map.fromList
-            [ (purpose, (ledgerData redeemer, Map.findWithDefault fallback purpose budgets))
-            | (purpose, redeemer, fallback) <- purposes
-            ]
 
 -- | Bytes as lowercase hexadecimal text, for the lines a run prints.
 hexOf :: ByteString -> String
 hexOf = B8.unpack . convertToBase Base16
 
--- | The registry's empty root.
-emptyRoot :: ByteString
-emptyRoot = BS.replicate 32 0
+-- | The registry a transaction is built against: this run's devnet, terms and scripts.
+deploymentOf :: CheckpointEnv -> Tx.RegistryDeployment
+deploymentOf env = Tx.RegistryDeployment Testnet (envTerms env) (envRegistry env)
 
--- | A booked request: its output and the record it carries.
-data Booking = Booking
-    { bookingOutput :: !(TxIn, TxOut ConwayEra)
-    , bookingRecord :: !RegistrationData
-    , bookingValidity :: !ValidityPlan
-    }
+-- | A party's wallet, as the outputs a library builder spends.
+payerOf :: CheckpointEnv -> Party -> IO Tx.Payer
+payerOf env party =
+    Tx.Payer (partyAddr party)
+        <$> withinSecs
+            30
+            "query the payer's wallet"
+            (queryUTxOs (envProvider env) (partyAddr party))
 
-{- | The record a request commits for a registration fixture, booked over the
-validity interval: the identity's initial live datum born at the interval's
-upper bound, the deposit, and the deadline the registry's processing time gives.
+{- | The result of a library builder, or its failure thrown: a refused fold is
+thrown as the refusal the journeys name.
+-}
+unwrapBuild :: Either Tx.RegistryTransactionError a -> IO a
+unwrapBuild = \case
+    Right result -> pure result
+    Left (Tx.FoldRefused refusal) -> throwIO refusal
+    Left failure -> fail (show failure)
+
+-- | What the registry's transactions read by reference, once its genesis has settled.
+registryReferences :: CheckpointEnv -> IO Tx.RegistryReferences
+registryReferences env =
+    Tx.RegistryReferences
+        <$> applicationReferenceOf env
+        <*> stateReferenceOf env
+        <*> configurationOf env
+
+{- | The record a request commits for an identity, booked over the validity
+interval: the devnet owner refunds and controls it, and the deposit is the
+registry's floor and the pool beyond it.
 -}
 registrationRecord ::
-    CheckpointEnv -> RegistrationFixture -> ValidityPlan -> RegistrationData
-registrationRecord env fixture validity =
-    RegistrationData
-        { requestRegistry = registryIdentity env
-        , requestKey = key
-        , requestController = ownerKeyHash
-        , requestRefundAddress = plutusAddressOf (envOwner env)
-        , requestHoldingAddress =
-            unstakedAddress (ScriptCredential (scriptHashBytes (envCheckpointHash env)))
-        , requestInitialDatum = asPlcData (V2 facts)
-        , requestDeposit = requestDeposit' env
-        , requestBookedAt = upperPosixMs validity
-        , requestProcessDeadline = upperPosixMs validity + processTime parameters
-        , requestReclaimEnd = upperPosixMs validity + processTime parameters
-        }
-  where
-    parameters = registryParameters (envTerms env)
-    facts = registeredFacts env fixture validity
-    key = case facts of
-        Live{lvAid} -> lvAid
-        TerminationPending{} -> error "registrationRecord: a fixture is live"
-    ownerKeyHash = case plutusAddressOf (envOwner env) of
-        PlutusAddress (KeyCredential hash) _ -> hash
-        _ -> error "registrationRecord: the owner holds a key"
-
--- | The approval token of a request.
-approvalOf :: RegistrationData -> ByteString
-approvalOf record =
-    registrationApprovalName
-        (requestRegistry record)
-        (requestKey record)
-        (requestHoldingAddress record)
-        (requestInitialDatum record)
-        (requestDeposit record)
+    CheckpointEnv -> InceptionExport -> ValidityPlan -> RegistrationData
+registrationRecord env =
+    Tx.registrationRecord (deploymentOf env) (envOwner env) (requestDeposit' env)
 
 -- | A reference input holding the configuration record.
 configurationOf :: CheckpointEnv -> IO (TxIn, TxOut ConwayEra)
@@ -5126,12 +4897,12 @@ stateReferenceOf env =
 deposit, the registration cost and the tip, and the application mints its
 approval.
 -}
-bookRegistration :: CheckpointEnv -> RegistrationFixture -> IO Booking
+bookRegistration :: CheckpointEnv -> InceptionExport -> IO Booking
 bookRegistration env fixture = do
     let label = "registration booking"
     validity <- tipValidity env label
     let record = registrationRecord env fixture validity
-        approval = approvalOf record
+        approval = Tx.approval record
     txId <- submitTwoPassBy (ownerParty env) env label (bookingTx env record validity 0)
     booked <-
         pollOutput (envProvider env) txId [0] (hasAsset (applicationPolicy env) approval)
@@ -5150,53 +4921,21 @@ bookingTx ::
     Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
     IO (ConwayTx, Set.Set (ConwayPlutusPurpose AsIx ConwayEra))
 bookingTx env record validity difference budgets = do
-    let label = "registration booking"
-        approval = approvalOf record
-        minted = tokenValue (applicationPolicy env) approval 1
-        held = requestLovelace env + difference
-        requestOut =
-            mkBasicTxOut
-                (applicationAddress env)
-                (MaryValue (Coin held) minted)
-                & datumTxOutL .~ mkInlineDatum (heldDatumData (Registration record))
-    applicationRef <- applicationReferenceOf env
-    configuration <- configurationOf env
     params <-
-        withinSecs 30 (label <> ": query parameters") $
+        withinSecs 30 "registration booking: query parameters" $
             queryProtocolParams (envProvider env)
-    wallet <-
-        withinSecs 30 (label <> ": query wallet") $
-            queryUTxOs (envProvider env) (envOwner env)
-    (feeUtxo, collateral) <- pickDisjoint wallet []
-    let (feeIn, feeOut) = feeUtxo
-        changeOut =
-            mkBasicTxOut
-                (envOwner env)
-                (inject (Coin (unCoin (feeOut ^. coinTxOutL) - held - simpleFee)))
-        purposes =
-            [
-                ( ConwayMinting (AsIx 0)
-                , List [actionData (BookRegistration 0)]
-                , scriptExUnits
-                )
-            ]
-        redeemers = redeemerMap budgets purposes
-        body =
-            mkBasicTxBody
-                & inputsTxBodyL .~ Set.singleton feeIn
-                & outputsTxBodyL .~ StrictSeq.fromList [requestOut, changeOut]
-                & feeTxBodyL .~ Coin simpleFee
-                & mintTxBodyL .~ minted
-                & collateralInputsTxBodyL .~ Set.singleton (fst collateral)
-                & referenceInputsTxBodyL
-                    .~ Set.fromList [fst configuration, fst applicationRef]
-                & vldtTxBodyL
-                    .~ ValidityInterval (SJust (lowerSlot validity)) (SJust (upperSlot validity))
-                & scriptIntegrityHashTxBodyL
-                    .~ computeScriptIntegrity (Set.singleton PlutusV3) params redeemers (TxDats mempty)
-    pure
-        ( mkBasicTx body & witsTxL . rdmrsTxWitsL .~ redeemers
-        , Set.fromList [purpose | (purpose, _, _) <- purposes]
+    payer <- payerOf env (ownerParty env)
+    references <- registryReferences env
+    unwrapBuild
+        ( Tx.bookRegistration
+            params
+            (deploymentOf env)
+            references
+            payer
+            record
+            validity
+            difference
+            budgets
         )
 
 simpleFee :: Integer
@@ -5205,14 +4944,13 @@ simpleFee = 3_000_000
 foldFee :: Integer
 foldFee = 4_000_000
 
-{- | The fold of a booked request into the registry by a party: the registration
-observer attests the inception, the state script inserts the key, the
-application burns the approval and the holding is delivered to the checkpoint
-address.
+{- | What a journey asks of a fold: the booking, its inception, the proof it
+burns and the party that pays. The builder resolves the registry state output
+when none is given, and the party's outputs, from the chain.
 -}
-data FoldPlan = FoldPlan
+data FoldRequest = FoldRequest
     { foldBooking :: !Booking
-    , foldFixture :: !RegistrationFixture
+    , foldFixture :: !InceptionExport
     , foldProof :: !(TxIn, TxOut ConwayEra)
     -- ^ the hash-proof output the fold burns
     , foldReferences :: ![(TxIn, TxOut ConwayEra)]
@@ -5229,156 +4967,38 @@ data FoldPlan = FoldPlan
 
 buildFoldTx ::
     CheckpointEnv ->
-    FoldPlan ->
+    FoldRequest ->
     Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
     IO (ConwayTx, Set.Set (ConwayPlutusPurpose AsIx ConwayEra))
-buildFoldTx env plan budgets = do
-    let label = "registration fold"
-        Booking{bookingOutput = (requestIn, requestOut), bookingRecord = record} = foldBooking plan
-        party = foldParty plan
-        fixture = foldFixture plan
-        (proofIn, proofOut) = foldProof plan
-        key = requestKey record
-        active = activeTokenName (registryIdentity env) key
-        approval = approvalOf record
-        proofName = rfProofName fixture
+buildFoldTx env request budgets = do
     params <-
-        withinSecs 30 (label <> ": query parameters") $
+        withinSecs 30 "registration fold: query parameters" $
             queryProtocolParams (envProvider env)
-    wallet <-
-        withinSecs 30 (label <> ": query wallet") $
-            queryUTxOs (envProvider env) (partyAddr party)
-    stateUtxo <- maybe (currentState env) pure (foldState plan)
-    foldGuard (foldRegistered plan) (foldTerminated plan) key (snd stateUtxo)
-    (feeUtxo, collateral) <- pickDisjoint wallet [proofIn]
-    applicationRef <- applicationReferenceOf env
-    stateRef <- stateReferenceOf env
-    configuration <- configurationOf env
-    let (stateIn, stateOutBefore) = stateUtxo
-        (feeIn, feeOut) = feeUtxo
-        minted =
-            tokenValue (applicationPolicy env) approval (-1)
-                <> tokenValue (statePolicyId env) active 1
-                <> tokenValue (envHashProofPolicy env) proofName (-1)
-        holding =
-            mkBasicTxOut
-                (roleAddress env Active)
-                (MaryValue (Coin (requestDeposit record)) (tokenValue (statePolicyId env) active 1))
-                & datumTxOutL .~ mkInlineDatum (requestInitialDatum record)
-        stateOut =
-            mkBasicTxOut
-                (stateAddress env)
-                ( MaryValue
-                    (stateOutBefore ^. coinTxOutL)
-                    (tokenValue (statePolicyId env) (stateTokenName (registrySeed env)) 1)
-                )
-                & datumTxOutL .~ mkInlineDatum (stateDatumData newRoot)
-        cost = registrationCost (registryParameters (envTerms env))
-        (proofSteps, newRoot) = registryProof (foldRegistered plan) (foldTerminated plan) key
-        changeCoin =
-            unCoin (requestOut ^. coinTxOutL)
-                + unCoin (feeOut ^. coinTxOutL)
-                + unCoin (proofOut ^. coinTxOutL)
-                - requestDeposit record
-                - cost
-                - foldFee
-        changeOut = mkBasicTxOut (partyAddr party) (inject (Coin changeCoin))
-        inputs = Set.fromList [requestIn, stateIn, feeIn, proofIn]
-        mintIx policy = fromIntegral (mintingIndex policy minted)
-        references = foldReferences plan
-        purposes =
-            [
-                ( ConwaySpending (AsIx (spendingIndex requestIn inputs))
-                , spendActionData (FoldRegistration 0)
-                , scriptExUnits
-                )
-            ,
-                ( ConwaySpending (AsIx (spendingIndex stateIn inputs))
-                , stateSpendData
-                    (registrySeed env)
-                    [ Register
-                        { changeRequest = outputReferenceOf' requestIn
-                        , changeKey = key
-                        , changeHolding = 0
-                        , changeDeposit = requestDeposit record
-                        , changeProof = proofSteps
-                        }
-                    ]
-                , scriptExUnits
-                )
-            , (ConwayMinting (AsIx (mintIx (applicationPolicy env))), List [], scriptExUnits)
-            , (ConwayMinting (AsIx (mintIx (statePolicyId env))), stateMintData Folded, scriptExUnits)
-            ,
-                ( ConwayMinting (AsIx (mintIx (envHashProofPolicy env)))
-                , hashProofBurnRedeemerData
-                , hashProofBurnExUnits
-                )
-            ,
-                ( ConwayRewarding (AsIx 0)
-                , registerObserverRedeemerData
-                    (policyBytes (envCheckpointPolicy env))
-                    (rfEvidence fixture)
-                , scriptExUnits
-                )
-            ]
-        redeemers = redeemerMap budgets purposes
-        body =
-            mkBasicTxBody
-                & inputsTxBodyL .~ inputs
-                & outputsTxBodyL .~ StrictSeq.fromList [holding, stateOut, changeOut]
-                & feeTxBodyL .~ Coin foldFee
-                & mintTxBodyL .~ minted
-                & withdrawalsTxBodyL
-                    .~ Withdrawals
-                        ( Map.singleton
-                            (AccountAddress Testnet (AccountId (ScriptHashObj (envLifecycleHash env))))
-                            (Coin 0)
-                        )
-                & treasuryDonationTxBodyL .~ Coin cost
-                & collateralInputsTxBodyL .~ Set.singleton (fst collateral)
-                & referenceInputsTxBodyL
-                    .~ Set.fromList
-                        (fst configuration : fst applicationRef : fst stateRef : map fst references)
-                & vldtTxBodyL
-                    .~ ValidityInterval
-                        (SJust (lowerSlot (foldValidity plan)))
-                        (SJust (upperSlot (foldValidity plan)))
-                & scriptIntegrityHashTxBodyL
-                    .~ computeScriptIntegrity (Set.singleton PlutusV3) params redeemers (TxDats mempty)
-    pure
-        ( mkBasicTx body & witsTxL . rdmrsTxWitsL .~ redeemers
-        , Set.fromList [purpose | (purpose, _, _) <- purposes]
+    payer <- payerOf env (foldParty request)
+    stateUtxo <- maybe (currentState env) pure (foldState request)
+    references <- registryReferences env
+    unwrapBuild
+        ( Tx.foldRegistration
+            params
+            (deploymentOf env)
+            references
+            Tx.FoldPlan
+                { Tx.foldBooking = foldBooking request
+                , Tx.foldInception = foldFixture request
+                , Tx.foldProof = foldProof request
+                , Tx.foldReferences = foldReferences request
+                , Tx.foldRegistered = foldRegistered request
+                , Tx.foldTerminated = foldTerminated request
+                , Tx.foldState = stateUtxo
+                , Tx.foldValidity = foldValidity request
+                , Tx.foldPayer = payer
+                }
+            budgets
         )
-
-{- | What the builder checks before it computes anything for a fold: the request's
-key is not one the registry holds, and the keys it was given are the registry
-the chain holds (their root is the state output's datum). Either failure is
-thrown as a 'FoldRefusal' and no transaction is built.
--}
-foldGuard :: [ByteString] -> [ByteString] -> ByteString -> TxOut ConwayEra -> IO ()
-foldGuard registered terminated key stateOut = do
-    mapM_ throwIO (foldRefusal registered terminated key)
-    when (rawInlineData stateOut /= Just (stateDatumData (registryRootOf registered terminated))) $
-        throwIO KeysAreNotTheRegistry
 
 -- | The root of a registry holding exactly the given keys.
 registryRoot :: [ByteString] -> ByteString
 registryRoot registered = registryRootOf registered []
-
-{- | The proof that a key is absent from the registry that holds the keys, and
-the root after it is inserted: the registry binds every key to the active leaf.
--}
-registryProof :: [ByteString] -> [ByteString] -> ByteString -> ([PLC.Data], ByteString)
-registryProof registered terminated key =
-    ( map asPlcData (prove tree key)
-    , Registry.rootOf tree
-    )
-  where
-    tree =
-        Registry.build
-            ( [(held, activeLeaf) | held <- registered <> [key]]
-                <> [(held, terminalLeaf) | held <- terminated]
-            )
 
 -- | The state output of the registry, as the chain holds it now.
 currentState :: CheckpointEnv -> IO (TxIn, TxOut ConwayEra)
@@ -5400,7 +5020,7 @@ currentState env = do
 {- | The hash-proof mint of a registration fixture, paid to a party: the
 evidence the fold burns.
 -}
-mintHashProof :: CheckpointEnv -> Party -> RegistrationFixture -> IO (TxIn, TxOut ConwayEra)
+mintHashProof :: CheckpointEnv -> Party -> InceptionExport -> IO (TxIn, TxOut ConwayEra)
 mintHashProof env party fixture = do
     proofTx <-
         withinSecs 90 "build hash-proof mint" (buildHashProofMintTx env party fixture)
@@ -5409,7 +5029,7 @@ mintHashProof env party fixture = do
         (envProvider env)
         proofTxId
         [0, 1]
-        (hasAsset (envHashProofPolicy env) (rfProofName fixture))
+        (hasAsset (envHashProofPolicy env) (Tx.inceptionProofName fixture))
         >>= requireJust "hash-proof output did not settle"
 
 -- | Fold a booked request into the registry; the party pays and signs.
@@ -5417,14 +5037,14 @@ foldRegistration ::
     CheckpointEnv ->
     [(TxIn, TxOut ConwayEra)] ->
     Party ->
-    RegistrationFixture ->
+    InceptionExport ->
     Booking ->
     (TxIn, TxOut ConwayEra) ->
     IO (TxId, ValidityPlan)
 foldRegistration env references party fixture booking proof = do
     validity <- tipValidity env "registration fold"
     let plan =
-            FoldPlan
+            FoldRequest
                 { foldBooking = booking
                 , foldFixture = fixture
                 , foldProof = proof
@@ -5450,51 +5070,21 @@ buildReturnTx ::
     Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
     IO (ConwayTx, Set.Set (ConwayPlutusPurpose AsIx ConwayEra))
 buildReturnTx env party booking validity refundTo budgets = do
-    let label = "registration return"
-        Booking{bookingOutput = (requestIn, requestOut), bookingRecord = record} = booking
-        tip = minimumTip (registryParameters (envTerms env))
-        approval = approvalOf record
-        minted = tokenValue (applicationPolicy env) approval (-1)
     params <-
-        withinSecs 30 (label <> ": query parameters") $
+        withinSecs 30 "registration return: query parameters" $
             queryProtocolParams (envProvider env)
-    wallet <-
-        withinSecs 30 (label <> ": query wallet") $
-            queryUTxOs (envProvider env) (partyAddr party)
-    (feeUtxo, collateral) <- pickDisjoint wallet []
-    applicationRef <- applicationReferenceOf env
-    configuration <- configurationOf env
-    let (feeIn, feeOut) = feeUtxo
-        refund = unCoin (requestOut ^. coinTxOutL) - tip
-        refundOut = mkBasicTxOut refundTo (inject (Coin refund))
-        changeCoin = unCoin (feeOut ^. coinTxOutL) + tip - simpleFee
-        changeOut = mkBasicTxOut (partyAddr party) (inject (Coin changeCoin))
-        inputs = Set.fromList [requestIn, feeIn]
-        purposes =
-            [
-                ( ConwaySpending (AsIx (spendingIndex requestIn inputs))
-                , spendActionData ReturnRegistration
-                , scriptExUnits
-                )
-            , (ConwayMinting (AsIx 0), List [], scriptExUnits)
-            ]
-        redeemers = redeemerMap budgets purposes
-        body =
-            mkBasicTxBody
-                & inputsTxBodyL .~ inputs
-                & outputsTxBodyL .~ StrictSeq.fromList [refundOut, changeOut]
-                & feeTxBodyL .~ Coin simpleFee
-                & mintTxBodyL .~ minted
-                & collateralInputsTxBodyL .~ Set.singleton (fst collateral)
-                & referenceInputsTxBodyL
-                    .~ Set.fromList [fst configuration, fst applicationRef]
-                & vldtTxBodyL
-                    .~ ValidityInterval (SJust (lowerSlot validity)) (SJust (upperSlot validity))
-                & scriptIntegrityHashTxBodyL
-                    .~ computeScriptIntegrity (Set.singleton PlutusV3) params redeemers (TxDats mempty)
-    pure
-        ( mkBasicTx body & witsTxL . rdmrsTxWitsL .~ redeemers
-        , Set.fromList [purpose | (purpose, _, _) <- purposes]
+    payer <- payerOf env party
+    references <- registryReferences env
+    unwrapBuild
+        ( Tx.returnRequests
+            params
+            (deploymentOf env)
+            references
+            payer
+            booking
+            validity
+            refundTo
+            budgets
         )
 
 {- | Whether the node's evaluation of a transaction fails in the script of the
@@ -5570,7 +5160,7 @@ registryJourney env = do
     let foldOf validity =
             buildFoldTx
                 env
-                FoldPlan
+                FoldRequest
                     { foldBooking = second
                     , foldFixture = other
                     , foldProof = proof
@@ -5618,7 +5208,7 @@ registryJourney env = do
             ( \out ->
                 out ^. addrTxOutL == envOwner env
                     && unCoin (out ^. coinTxOutL)
-                        == requestLovelace env - minimumTip (registryParameters (envTerms env))
+                        == expectedRequestLovelace env - minimumTip (registryParameters (envTerms env))
             )
     unless (isJust refunded) $
         fail "the return did not pay the refund address everything but the tip"
@@ -5638,13 +5228,13 @@ duplicateRegistrationJourney ::
     [(TxIn, TxOut ConwayEra)] ->
     (TxIn, TxOut ConwayEra) ->
     ByteString ->
-    RegistrationFixture ->
+    InceptionExport ->
     IO ()
 duplicateRegistrationJourney env references (heldIn, heldOut) heldKey fixture = do
     let newKey = checkpointKey env fixture
         secondParty = ownerParty env
         planFor booking proof party registered state validity =
-            FoldPlan
+            FoldRequest
                 { foldBooking = booking
                 , foldFixture = fixture
                 , foldProof = proof
@@ -5679,7 +5269,7 @@ duplicateRegistrationJourney env references (heldIn, heldOut) heldKey fixture = 
             "first fold"
             (buildFoldTx env (planFor firstBooking firstProof folderParty [heldKey] Nothing firstValidity))
     (deliveredIn, deliveredOut) <-
-        pollOutput (envProvider env) firstTxId [0] (holdsCheckpointToken env (rfDatum fixture))
+        pollOutput (envProvider env) firstTxId [0] (holdsCheckpointToken env (inceptionDatum fixture))
             >>= requireJust "the delivered checkpoint of the first fold did not settle"
     dbg ("registration fold transaction " <> show firstTxId <> " (new key)")
     unless (extractDatum deliveredOut == Just (V2 (registeredFacts env fixture (bookingValidity firstBooking)))) $
@@ -5756,7 +5346,7 @@ awaitChainTime env label instant = go (pollAttempts * 8)
                 else threadDelay 1_000_000 >> go (remaining - 1 :: Int)
 
 -- | The key a registration fixture registers: the AID's qualified text.
-checkpointKey :: CheckpointEnv -> RegistrationFixture -> ByteString
+checkpointKey :: CheckpointEnv -> InceptionExport -> ByteString
 checkpointKey env fixture =
     case registeredFacts env fixture (ValidityPlan (SlotNo 0) (SlotNo 0) 0 0) of
         Live{lvAid} -> lvAid
@@ -5766,7 +5356,7 @@ checkpointKey env fixture =
 productionRegisterScenarioUsingReferences ::
     CheckpointEnv ->
     [(TxIn, TxOut ConwayEra)] ->
-    RegistrationFixture ->
+    InceptionExport ->
     IO (CheckpointInput, (TxIn, TxOut ConwayEra))
 productionRegisterScenarioUsingReferences env references fixture = do
     checkpointRef <- requireJust "checkpoint_register reference is absent" (listToMaybe references)
@@ -5780,14 +5370,14 @@ productionRegisterScenarioUsingReferences env references fixture = do
             (envProvider env)
             foldTxId
             [0]
-            (holdsCheckpointToken env (rfDatum fixture))
+            (holdsCheckpointToken env (inceptionDatum fixture))
             >>= requireJust "the delivered checkpoint did not settle"
     dbg ("registration fold transaction " <> show foldTxId)
     dbg ("fold validity " <> show validity)
     pure
         ( CheckpointInput
             { checkpointUtxo = delivered
-            , checkpointDatum = rfDatum fixture
+            , checkpointDatum = inceptionDatum fixture
             , checkpointFacts = facts
             }
         , checkpointRef
@@ -5885,7 +5475,7 @@ bookTerminationTx env party references (pendingIn, pendingOut) key approvalOverr
                 , List
                     [ actionData
                         ( BookTermination
-                            (outputReferenceOf' pendingIn)
+                            (outputReferenceOf pendingIn)
                             0
                             (registryIdentity env)
                             key
@@ -6025,7 +5615,7 @@ buildTerminationFoldTx env plan budgets = do
                 ( ConwaySpending (AsIx (spendingIndex stateIn inputs))
                 , stateSpendData
                     (registrySeed env)
-                    [Terminate (outputReferenceOf' requestIn) key proofSteps]
+                    [Terminate (outputReferenceOf requestIn) key proofSteps]
                 , scriptExUnits
                 )
             , (ConwayMinting (AsIx (mintIx (applicationPolicy env))), List [], scriptExUnits)
@@ -6064,15 +5654,6 @@ terminationProof active terminated key =
             <> [(held, terminalLeaf) | held <- terminated]
     treeBefore = Registry.build ([(held, activeLeaf) | held <- active] <> [(held, terminalLeaf) | held <- terminated])
     treeAfter = Registry.build (leaves key)
-
--- | The root of a registry holding the given active and terminal keys.
-registryRootOf :: [ByteString] -> [ByteString] -> ByteString
-registryRootOf [] [] = emptyRoot
-registryRootOf active terminated =
-    Registry.rootOf
-        ( Registry.build
-            ([(held, activeLeaf) | held <- active] <> [(held, terminalLeaf) | held <- terminated])
-        )
 
 {- | A transaction that spends the pending output of a convicted checkpoint with
 the checkpoint validator's release and mints nothing: the control of a release
@@ -6536,7 +6117,7 @@ builder. The chain is as it was after each refusal.
 terminalKeyJourney ::
     CheckpointEnv ->
     [(TxIn, TxOut ConwayEra)] ->
-    RegistrationFixture ->
+    InceptionExport ->
     ByteString ->
     IO ()
 terminalKeyJourney env references fixture key = do
@@ -6552,7 +6133,7 @@ terminalKeyJourney env references fixture key = do
         try
             ( buildFoldTx
                 env
-                FoldPlan
+                FoldRequest
                     { foldBooking = again
                     , foldFixture = fixture
                     , foldProof = placeholder
@@ -6597,7 +6178,7 @@ terminalKeyJourney env references fixture key = do
             ( \out ->
                 out ^. addrTxOutL == envOwner env
                     && unCoin (out ^. coinTxOutL)
-                        == requestLovelace env - minimumTip (registryParameters (envTerms env))
+                        == expectedRequestLovelace env - minimumTip (registryParameters (envTerms env))
             )
     unless (isJust refunded) $
         fail "the return did not pay the refund address everything but the tip"

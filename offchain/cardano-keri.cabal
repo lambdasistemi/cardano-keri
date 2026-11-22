@@ -86,6 +86,7 @@ library
     Cardano.KERI.AID.Consumer
     Cardano.KERI.AID.Ed25519
     Cardano.KERI.AID.Migration.Types
+    Cardano.KERI.AID.Release
 
   other-modules:
     Cardano.KERI.AID.E2E.Mpf
@@ -117,6 +118,7 @@ library chain-query
     , memory                 >=0.18 && <0.19
     , microlens
     , plutus-core
+    , scientific
     , text
     , time
     , transformers
@@ -128,6 +130,7 @@ library chain-query
     Cardano.KERI.ChainQuery.PlutusJson
     Cardano.KERI.ChainQuery.Program
     Cardano.KERI.ChainQuery.Registration
+    Cardano.KERI.ChainQuery.ReleaseIdentity
     Cardano.KERI.ChainQuery.Settlement
     Cardano.KERI.ChainQuery.Types
 
@@ -896,9 +899,10 @@ test-suite unit-tests
     , bytestring
     , cardano-crypto-class
     , cardano-keri
+    , cardano-keri:chain-query
     , containers
-    , hspec                 >=2.11 && <2.12
-    , memory                >=0.18 && <0.19
+    , hspec                     >=2.11 && <2.12
+    , memory                    >=0.18 && <0.19
     , plutus-core
     , plutus-tx
     , QuickCheck
@@ -944,6 +948,8 @@ test-suite unit-tests
     Cardano.KERI.AID.Ed25519Spec
     Cardano.KERI.AID.FoldGuardSpec
     Cardano.KERI.AID.Migration.TypesSpec
+    Cardano.KERI.AID.ReleaseSpec
+    Cardano.KERI.ChainQuery.ReleaseIdentitySpec
     Paths_cardano_keri
 
   ghc-options:      -threaded -with-rtsopts=-N

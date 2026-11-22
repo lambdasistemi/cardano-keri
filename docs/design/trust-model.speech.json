@@ -309,23 +309,39 @@
       "pause": 400
     },
     {
-      "text": "The evidence of duplicity is private until a conviction shows it, but once a conviction transaction is submitted anyone can read it. Without a guard, the producer of a block could drop Cora's transaction and include a copy that pays itself. The guard is a commitment made before the evidence is shown: Cora opens, under the release's commitment program, a commitment that names the checkpoint output, the digest of her evidence and herself, hidden behind a hash. From the next slot on, her conviction reveals it. A copier naming itself finds no commitment that names it; a copier who opens one after seeing the evidence must wait at least one slot before it can use it.",
+      "text": "The evidence of duplicity is private until a conviction shows it, but once a conviction transaction is submitted anyone can read it. Without a guard, the producer of a block could drop Cora's transaction and include a copy that pays itself. The guard is a commitment made before the evidence is shown: Cora opens, under the release's commitment program, a commitment that names the identifier, the deployment, the key state she accuses (its epoch and sequence number), the digest of her evidence and herself, hidden behind a hash. From the next slot on, her conviction reveals it. A copier naming itself finds no commitment that names it; a copier who opens one after seeing the evidence must wait one slot before it can use it.",
       "pause": 400
     },
     {
-      "text": "The conviction step checks the commitment it reveals; the system checks that the commitment is open, burns it, and keeps each commitment's own life:",
+      "text": "The commitment names no checkpoint output. A conviction is accepted at whichever live output carries the identifier and the key state the commitment names, in the deployment it names. So a step that spends the output and keeps the key state leaves Cora's commitment as it was: a top-up by anyone, a freeze by a hunter and a poison by the owner cannot take her conviction away. A rotation changes the key state, and the commitment entitles nothing from then on. The diagram follows one commitment from its opening to the burn of its marker, beside the checkpoint it accuses:",
       "pause": 400
     },
     {
-      "text": "Every step that spends a live output, a rotation, a poison, a freeze or a top-up, leaves a different output, and a commitment over the earlier output entitles nothing afterwards (spent_output_commitment_entitles_nothing). A convictor whose output was spent opens a new commitment over the new output.",
+      "text": "The conviction step checks the commitment it reveals against the output it convicts; the system checks that the commitment is open and belongs here, and burns it. The table lists every condition and the step that states it.",
       "pause": 400
     },
     {
-      "text": "The model leaves to the implementation, and states nowhere: the hash and the nonce that hide the evidence and the payee, the marker's derivation from the opening transaction, the commitment deposit and its payouts, the payee's signatures, and the exact age and lifetime a release applies. It requires only that a commitment becomes eligible strictly after its opening slot and no later than it expires; the release applies an age of one slot. The model keeps one piece of evidence per key state, chosen by its environment, so a commitment over any other evidence entitles nothing in it.",
+      "text": "Two deployments can each hold a checkpoint for one identifier at one key state. A commitment opened for the first is refused at the second, although its checkpoint step would convict there too: the commitment does not name the second deployment (sys_conviction_only_at_commitment_deployment). This is the binding #508 found missing.",
       "pause": 400
     },
     {
-      "text": "The theorems are in lean/CardanoKeri/CheckpointCommitmentGoals.lean, the accepted and refused cases in lean/checkpoint-commitment-vectors.json, and the checkpoint simulator plays them in story 9: Cora convicts on her commitment, a copier is refused, a commitment opened in the conviction's slot is refused, and a top-up voids Cora's commitment.",
+      "text": "The next table gives each choice made here, what it was chosen over, and why.",
+      "pause": 400
+    },
+    {
+      "text": "Two limits remain and are recorded in the Lean correspondence register. The table says who can use each and what it costs the convictor.",
+      "pause": 400
+    },
+    {
+      "text": "The model leaves to the implementation, and states nowhere: the hash and the nonce that hide the evidence and the payee, the marker's derivation from the opening transaction, the commitment deposit and its payouts, the payee's signatures, and the lifetime a release applies. It requires that a commitment is first eligible in the slot after its opening and expires no earlier than that. The model keeps one piece of evidence per key state, chosen by its environment, so a commitment over any other evidence entitles nothing in it.",
+      "pause": 400
+    },
+    {
+      "text": "The validators on main still bind a commitment to the checkpoint output and do not compare the deployment. They follow this model in a later change; until then a top-up voids a commitment on chain.",
+      "pause": 400
+    },
+    {
+      "text": "The theorems are in lean/CardanoKeri/CheckpointCommitmentGoals.lean and the accepted and refused cases in lean/checkpoint-commitment-vectors.json. The checkpoint simulator plays them in story 9: Cora convicts on her commitment after a poison, a copier is refused, a commitment opened in the conviction's slot is refused, a top-up keeps Cora's commitment, and a rotation voids it. Its associated-system panel runs the same journey in a second deployment, where the first deployment's commitment is refused.",
       "pause": 400
     }
   ],
@@ -385,6 +401,6 @@
   ],
   "_source": {
     "file": "trust-model.md",
-    "sha256": "04013478390eb6b7e9504e793204a35417479a50bc8da476e46ba80658337d80"
+    "sha256": "ccdc90d8895a57b99813a75c338987ef32b70c3e0cae0b4235bb35574a5f1d6a"
   }
 }

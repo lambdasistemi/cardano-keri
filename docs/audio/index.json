@@ -13087,31 +13087,55 @@
     "index": 2,
     "name": "docs-design-trust-model/who-a-conviction-pays-02",
     "pause_ms": 400,
-    "v": "1759f052825b"
+    "v": "d12a076953ad"
    },
    {
     "index": 3,
     "name": "docs-design-trust-model/who-a-conviction-pays-03",
     "pause_ms": 400,
-    "v": "c4fea4b22653"
+    "v": "7228c011ae11"
    },
    {
     "index": 4,
     "name": "docs-design-trust-model/who-a-conviction-pays-04",
     "pause_ms": 400,
-    "v": "dbca43f50c61"
+    "v": "73af624e1c6a"
    },
    {
     "index": 5,
     "name": "docs-design-trust-model/who-a-conviction-pays-05",
     "pause_ms": 400,
-    "v": "f2972fbb2e1e"
+    "v": "c7d716cc4efe"
    },
    {
     "index": 6,
     "name": "docs-design-trust-model/who-a-conviction-pays-06",
     "pause_ms": 400,
-    "v": "463353ae781e"
+    "v": "742b246a60d7"
+   },
+   {
+    "index": 7,
+    "name": "docs-design-trust-model/who-a-conviction-pays-07",
+    "pause_ms": 400,
+    "v": "d502f15cdc1a"
+   },
+   {
+    "index": 8,
+    "name": "docs-design-trust-model/who-a-conviction-pays-08",
+    "pause_ms": 400,
+    "v": "2a3184f3db79"
+   },
+   {
+    "index": 9,
+    "name": "docs-design-trust-model/who-a-conviction-pays-09",
+    "pause_ms": 400,
+    "v": "7775d858dc64"
+   },
+   {
+    "index": 10,
+    "name": "docs-design-trust-model/who-a-conviction-pays-10",
+    "pause_ms": 400,
+    "v": "2dcda2156067"
    }
   ]
  },

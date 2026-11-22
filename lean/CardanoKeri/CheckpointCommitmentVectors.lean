@@ -131,9 +131,6 @@ def Case.row (c : Case) : Json :=
 
 /-! ## System rows: the commitment program beside the checkpoint -/
 
-/-- Another deployment, holding a checkpoint for the same AID. -/
-def otherDeployment : Deployment := 22
-
 open SystemWire SystemFixtures in
 /-- Run named commands from a machine and record each outcome and the open markers after it. -/
 def runCells (start : Machine) (commands : List (String × Command)) : List Json :=
@@ -161,13 +158,10 @@ open SystemWire SystemFixtures in
 def systemRows : Except String (List Json) := do
   let (rotatedOnce, rotatedAgain) ← rotatedIn deployment
   let (_, elsewhere) ← rotatedIn otherDeployment
-  -- Opened while the checkpoint carries key state (1, 1), before the second rotation.
-  let earlier : Commitment := { commitment with
-    keyState := ⟨1, 1⟩, evidence := ((Duplicity.fixture 1 1).1, (Duplicity.fixture 1 1).2),
-    openedAt := 3, eligibleAfter := 4 }
+  let earlier : Commitment := { earlierCommitment with marker := 1 }
   let later : Commitment := { commitment with marker := 2 }
   let other : Commitment := { commitment with aid := 12, marker := 2 }
-  let foreign : Commitment := { commitment with deployment := otherDeployment, marker := 2 }
+  let foreign := foreignCommitment
   let stranger : Commitment := { commitment with payee := 9, marker := 2 }
   pure [
     Json.mkObj [("id", toJson "conviction-consumes-an-open-commitment"),
@@ -231,7 +225,7 @@ def table : Except String Json := do
       ("conviction", toJson "accepted iff duplicity at the output's key state and the commitment names that key state, the evidence shown there and this payee, and eligibleAfter <= now <= expiresAt; no other fact of the output is read"),
       ("system", toJson "a conviction's commitment is open under its marker and names this AID and this deployment; the conviction burns it; a commitment opens with eligibleAfter = openedAt + 1 <= expiresAt; a reveal needs eligibleAfter <= now <= expiresAt; a sweep needs expiresAt < now")]),
     ("params", Json.mkObj [("D", natJson params.D), ("B", natJson params.B), ("P", natJson params.P)]),
-    ("deployments", Json.mkObj [("this", natJson SystemFixtures.deployment), ("other", natJson otherDeployment)]),
+    ("deployments", Json.mkObj [("this", natJson SystemFixtures.deployment), ("other", natJson SystemFixtures.otherDeployment)]),
     ("conviction", Json.arr (cases.map Case.row).toArray),
     ("system", Json.arr (← systemRows).toArray)])
 

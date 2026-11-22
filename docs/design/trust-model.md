@@ -374,7 +374,7 @@ The table says who can use each and what it costs the convictor.
 | Limit | Who can use it | What happens |
 |---|---|---|
 | A rotation voids an open commitment | only the holder of the next keys | the checkpoint carries another key state, the commitment entitles nothing, and the duplicity it accused is no longer convictable at this checkpoint (`rotation_voids_commitment`) |
-| A block producer keeps the convictor's transaction out while its own commitment matures | a producer of two blocks in a row, or one with a colluder for the second | it reads the evidence in the transaction it withheld, opens its own commitment in its block with a validity range ending at that block's slot, and convicts in the next; the convictor's commitment stays valid meanwhile and wins if any other block comes first |
+| A block producer keeps the convictor's transaction out while its own commitment matures | a producer of two blocks in a row, or one with a colluder for the second | it reads the evidence in the transaction it withheld, opens its own commitment in its block with a validity range ending at that block's slot, and convicts in the next; the convictor's commitment stays valid meanwhile, and any other producer can include her conviction; nothing guarantees that one does |
 
 The model leaves to the implementation, and states nowhere: the hash and the
 nonce that hide the evidence and the payee, the marker's derivation from the
@@ -460,5 +460,5 @@ The **Result** column marks whether the response ships today or is designed.
 | Top up, freeze or poison a checkpoint to void a hunter's commitment | No effect: the commitment names the key state, and these steps keep it | designed |
 | Use a commitment at another deployment holding the same identifier and key state | Reject: the commitment names its deployment | designed |
 | The next-key holder rotates before a conviction lands | **No rejection is available** — the rotation is valid, the open commitment entitles nothing afterwards and the earlier key state is no longer convictable here | designed |
-| A block producer withholds a conviction for two blocks and convicts on its own commitment | **No rejection is available** — exposure bounded by `D_reg`; the convictor's commitment stays valid and wins if any other block comes first | designed |
+| A block producer withholds a conviction for two blocks and convicts on its own commitment | **No rejection is available** — exposure bounded by `D_reg`; the convictor's commitment stays valid and any other producer can include her conviction, with no guarantee that one does | designed |
 | A next-key thief with `toad` colluding witnesses convicts and takes `D_reg` | **No rejection is available** — exposure bounded by `D_reg` and by the chosen witness set | designed |

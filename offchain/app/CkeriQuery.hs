@@ -1,8 +1,8 @@
 module Main (main) where
 
 import Cardano.KERI.Indexer.App (
-    QuerySettings,
-    runQueryApp,
+    ReaderSettings,
+    runReaderApp,
  )
 import OptEnvConf (
     runSettingsParser,
@@ -17,4 +17,4 @@ main = do
         runSettingsParser
             version
             "Run the KERI query endpoint: checkpoint, board, and watchability answers over HTTP"
-    runQueryApp (settings :: QuerySettings)
+    runReaderApp (settings :: ReaderSettings)

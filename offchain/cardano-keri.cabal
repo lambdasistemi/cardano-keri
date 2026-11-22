@@ -219,12 +219,18 @@ library indexer
     , chain-follower
     , containers
     , contra-tracer
+    , data-default-class
+    , directory
+    , filepath
     , http-types
     , memory
     , microlens
     , opt-env-conf
     , ouroboros-network:api
+    , plutus-core
+    , rocksdb-haskell-jprupp
     , rocksdb-kv-transactions:kv-transactions
+    , serialise
     , stm
     , text
     , wai
@@ -241,6 +247,7 @@ library indexer
     Cardano.KERI.Indexer.Query.Tx
     Cardano.KERI.Indexer.Query.Types
     Cardano.KERI.Indexer.Reads
+    Cardano.KERI.Indexer.StoreBinding
 
   other-modules:    Paths_cardano_keri
   autogen-modules:  Paths_cardano_keri
@@ -693,18 +700,24 @@ test-suite indexer-tests
     Cardano.KERI.Indexer.Query.TxSpec
     Cardano.KERI.Indexer.Query.TypesSpec
     Cardano.KERI.Indexer.ReadsSpec
+    Cardano.KERI.Indexer.ReleaseFixtures
+    Cardano.KERI.Indexer.ReleaseHoldingsSpec
+    Cardano.KERI.Indexer.ReleaseReaderSpec
     Cardano.KERI.Indexer.ResumeSpec
     Cardano.KERI.Indexer.RollbackSpec
+    Cardano.KERI.Indexer.StoreBindingSpec
     Paths_cardano_keri
 
   build-depends:
     , aeson
+    , async
     , base
     , base16-bytestring
     , bech32
     , bytestring
     , cardano-crypto-class
     , cardano-keri
+    , cardano-keri:chain-query
     , cardano-keri:deployment
     , cardano-keri:indexer
     , cardano-ledger-api
@@ -717,6 +730,8 @@ test-suite indexer-tests
     , cardano-node-clients:utxo-indexer-lib
     , chain-follower
     , containers
+    , directory
+    , filepath
     , hspec
     , http-types
     , memory
@@ -725,6 +740,7 @@ test-suite indexer-tests
     , ouroboros-network:api
     , plutus-core
     , plutus-tx
+    , process
     , QuickCheck
     , rocksdb-kv-transactions:kv-transactions
     , serialise
@@ -732,6 +748,7 @@ test-suite indexer-tests
     , temporary
     , text
     , time
+    , unix
     , wai
     , wai-extra
 
@@ -751,6 +768,7 @@ test-suite cli-tests
     Cardano.KERI.CLI.Backend.DispatchSpec
     Cardano.KERI.CLI.Backend.EndpointSpec
     Cardano.KERI.CLI.Backend.KoiosSpec
+    Cardano.KERI.CLI.Backend.LocalRegistryStoreSpec
     Cardano.KERI.CLI.Backend.LocalSpec
     Cardano.KERI.CLI.CommandSurfaceSpec
     Cardano.KERI.CLI.ProductionSpec
@@ -779,6 +797,7 @@ test-suite cli-tests
     , cardano-node-clients
     , cardano-node-clients:utxo-indexer-lib
     , containers
+    , filepath
     , hspec                                    >=2.11 && <2.12
     , http-types
     , microlens
@@ -787,6 +806,7 @@ test-suite cli-tests
     , plutus-tx
     , rocksdb-kv-transactions:kv-transactions
     , stm
+    , temporary
     , text
     , time
     , wai

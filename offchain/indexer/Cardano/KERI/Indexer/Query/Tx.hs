@@ -26,13 +26,20 @@ module Cardano.KERI.Indexer.Query.Tx (
     payerUtxosTx,
     boardTx,
     watchabilityTx,
+    HoldingsRead (..),
+    holdingsTx,
 ) where
 
+import Cardano.KERI.AID.Release (ReleaseIdentity)
 import Cardano.KERI.Deployment.EndpointBoard (BoardEntry)
 import Cardano.KERI.Indexer.Board (indexedBoardCatalog)
 import Cardano.KERI.Indexer.Codecs (
     CheckpointRecord (..),
+    Holding,
+    HoldingRefusal,
+    checkpointAddressOf,
     decodeCheckpointOutput,
+    decodeHoldingOutput,
  )
 import Cardano.Ledger.Mary.Value (PolicyID)
 import Cardano.Node.Client.UTxOIndexer.Columns (Cols (..))
@@ -228,3 +235,26 @@ watchabilityTx handle aid = do
         , indexedBoardCatalog (qhBoardAddress handle) boardEntries
         , watermark
         )
+
+{- | What one read of the release's checkpoint validator found: the store's
+chain point and every output at the address, classified or refused.
+-}
+data HoldingsRead = HoldingsRead
+    { hrPoint :: !(Maybe (SlotNo, BlockHash))
+    , hrOutputs :: ![(TxIn, Either HoldingRefusal Holding)]
+    }
+    deriving stock (Eq, Show)
+
+-- | Every output at the release's checkpoint validator, classified, and the store's chain point, in one transaction.
+holdingsTx :: ReleaseIdentity -> Transaction IO cf Cols op HoldingsRead
+holdingsTx ri = do
+    entries <- scanAddressTx (checkpointAddressOf ri)
+    point <- watermarkPointTx
+    pure
+        HoldingsRead
+            { hrPoint = point
+            , hrOutputs =
+                [ (txIn, decodeHoldingOutput ri txIn txOut)
+                | (txIn, txOut) <- entries
+                ]
+            }

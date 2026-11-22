@@ -25,31 +25,50 @@ module Cardano.KERI.Indexer.App (
     QuerySettings (..),
     runQueryAppWith,
     runQueryApp,
+    ReaderConfiguration (..),
+    ReaderSettings (..),
+    readerConfiguration,
+    runReaderAppWith,
+    runReaderApp,
 ) where
 
 import Cardano.Crypto.Hash.Class (
     hashFromBytes,
  )
+import Cardano.KERI.AID.Consumer (Release (..))
+import Cardano.KERI.AID.Release (ReleaseIdentity (..))
+import Cardano.KERI.ChainQuery.ReleaseIdentity (readReleaseIdentity)
 import Cardano.KERI.Deployment.Manifest (
     CheckpointInfo (..),
     Manifest (..),
     readManifest,
  )
+import Cardano.KERI.Indexer.Codecs (checkpointAddressOf)
 import Cardano.KERI.Indexer.Config (
     IndexerConfig (..),
     decodeAddress,
  )
 import Cardano.KERI.Indexer.Follower (
     mkChainSyncConfig,
+    mkReleaseChainSyncConfig,
  )
 import Cardano.KERI.Indexer.Query.Server (
+    ReleaseQueryHandle (..),
     mkQueryApplication,
+    mkReleaseQueryApplication,
  )
 import Cardano.KERI.Indexer.Query.Tx (
     QueryHandle (..),
  )
 import Cardano.KERI.Indexer.Reads (
     CheckpointView (..),
+ )
+import Cardano.KERI.Indexer.StoreBinding (
+    createStoreForRelease,
+    decideManifestOpen,
+    decideReleaseOpen,
+    observeStoreDirectory,
+    renderStoreBindingError,
  )
 import Cardano.Ledger.Hashes (
     ScriptHash (..),
@@ -234,7 +253,11 @@ runQueryAppWith withIndexerRunner withFollower serveApp settings = do
     manifest <- loadManifestOrDie (fsManifestPath follower)
     let chainSyncConfig = mkChainSyncConfig (fsIndexer follower) manifest
     boardAddress <- requireBoardAddress (icBoardAddr (fsIndexer follower))
-    withIndexerRunner (icStorePath (fsIndexer follower)) $ \handle runner ->
+    before <- observeStoreDirectory (icStorePath (fsIndexer follower))
+    withIndexerRunner (icStorePath (fsIndexer follower)) $ \handle runner -> do
+        -- the store is the database just opened: its configuration is decided before anything follows or serves
+        decideManifestOpen (icStorePath (fsIndexer follower)) before handle runner
+            >>= either (dieQueryConcisely . renderStoreBindingError) pure
         case mkCheckpointView handle manifest of
             Left err -> dieQueryConcisely err
             Right view ->
@@ -265,3 +288,142 @@ dieQueryConcisely message = do
 runQueryApp :: QuerySettings -> IO ()
 runQueryApp =
     runQueryAppWith withRocksDBIndexerRunner withChainSyncFollower Warp.run
+
+-- ---------------------------------------------------------------------------
+-- The reader's two configurations
+
+-- | The one configuration a reader process runs under.
+data ReaderConfiguration
+    = -- | a version 1 manifest
+      ReaderManifest !FilePath
+    | -- | a release identity file
+      ReaderRelease !FilePath
+    deriving stock (Eq, Show)
+
+{- | The settings of @ckeri-query@: the indexer's, the port, and the two
+optional configuration paths, of which exactly one must be given.
+-}
+data ReaderSettings = ReaderSettings
+    { rdIndexer :: !IndexerConfig
+    , rdManifestPath :: !(Maybe FilePath)
+    , rdReleasePath :: !(Maybe FilePath)
+    , rdPort :: !Int
+    }
+    deriving stock (Eq, Show)
+
+instance Opt.HasParser ReaderSettings where
+    settingsParser = do
+        rdIndexer <- Opt.settingsParser :: Opt.Parser IndexerConfig
+        rdManifestPath <-
+            Opt.optional $
+                pathSetting
+                    "manifest-path"
+                    "CKERI_MANIFEST_PATH"
+                    "Deployment manifest JSON path (version 1 configuration)"
+        rdReleasePath <-
+            Opt.optional $
+                pathSetting
+                    "release-identity-path"
+                    "CKERI_RELEASE_IDENTITY_PATH"
+                    "Release identity JSON path (registry configuration)"
+        rdPort <-
+            Opt.setting
+                [ Opt.reader Opt.auto
+                , Opt.option
+                , Opt.long "port"
+                , Opt.env "CKERI_PORT"
+                , Opt.value (8080 :: Int)
+                , Opt.metavar "PORT"
+                , Opt.help "HTTP listen port"
+                ]
+        pure ReaderSettings{..}
+
+pathSetting :: String -> String -> String -> Opt.Parser FilePath
+pathSetting name environment help =
+    Opt.setting
+        [ Opt.reader Opt.str
+        , Opt.option
+        , Opt.long name
+        , Opt.env environment
+        , Opt.metavar "PATH"
+        , Opt.help help
+        ]
+
+{- | The one configuration the settings name, or why they name none: the query
+service takes a version 1 manifest or a release identity, never both and never
+neither.
+-}
+readerConfiguration :: ReaderSettings -> Either String ReaderConfiguration
+readerConfiguration settings =
+    case (rdManifestPath settings, rdReleasePath settings) of
+        (Just manifest, Nothing) -> Right (ReaderManifest manifest)
+        (Nothing, Just release) -> Right (ReaderRelease release)
+        (Just _, Just _) -> Left (choice <> "both were given")
+        (Nothing, Nothing) -> Left (choice <> "neither was given")
+  where
+    choice =
+        "exactly one configuration is required: --manifest-path (a version 1 manifest) \
+        \or --release-identity-path (a release identity); "
+
+{- | The reader process under either configuration. The manifest mode is
+'runQueryAppWith' as it was; the release-identity mode follows the release's
+checkpoint validator and serves its classified checkpoints.
+-}
+runReaderAppWith ::
+    (forall a. FilePath -> (forall cf op. IndexerHandle -> RunTransaction IO cf Cols op -> IO a) -> IO a) ->
+    (Tracer IO N2CEvent -> ChainSyncConfig -> IndexerHandle -> (FollowerHandle -> IO ()) -> IO ()) ->
+    (Int -> Application -> IO ()) ->
+    ReaderSettings ->
+    IO ()
+runReaderAppWith withIndexerRunner withFollower serveApp settings =
+    case readerConfiguration settings of
+        Left message -> dieQueryConcisely message
+        Right (ReaderManifest path) ->
+            runQueryAppWith
+                withIndexerRunner
+                withFollower
+                serveApp
+                (QuerySettings (FollowerSettings (rdIndexer settings) path) (rdPort settings))
+        Right (ReaderRelease path) ->
+            runReleaseQueryAppWith withIndexerRunner withFollower serveApp (rdIndexer settings) path (rdPort settings)
+
+runReleaseQueryAppWith ::
+    (forall a. FilePath -> (forall cf op. IndexerHandle -> RunTransaction IO cf Cols op -> IO a) -> IO a) ->
+    (Tracer IO N2CEvent -> ChainSyncConfig -> IndexerHandle -> (FollowerHandle -> IO ()) -> IO ()) ->
+    (Int -> Application -> IO ()) ->
+    IndexerConfig ->
+    FilePath ->
+    Int ->
+    IO ()
+runReleaseQueryAppWith withIndexerRunner withFollower serveApp indexer releasePath port = do
+    release <-
+        readReleaseIdentity releasePath
+            >>= either (\err -> dieQueryConcisely ("invalid release identity at " <> releasePath <> ": " <> show err)) pure
+    boardAddress <- requireBoardAddress (icBoardAddr indexer)
+    policy <-
+        either dieQueryConcisely pure $
+            decodePolicyId (TE.decodeUtf8 (Base16.encode (rlStatePolicy (riRelease release))))
+    let chainSyncConfig = mkReleaseChainSyncConfig indexer release
+    -- The first release record is written only by the opener that creates the
+    -- database (create-if-missing, error-if-exists), while it holds that handle;
+    -- then the store is opened as usual and the record must match.
+    _created <- createStoreForRelease (icStorePath indexer) release
+    withIndexerRunner (icStorePath indexer) $ \handle runner -> do
+        decideReleaseOpen (icStorePath indexer) release
+            >>= either (dieQueryConcisely . renderStoreBindingError) pure
+        withFollower nullN2CTracer chainSyncConfig handle $ \fh -> do
+            link (fhAsync fh)
+            let queryHandle =
+                    QueryHandle
+                        { qhRunner = runner
+                        , qhCheckpointAddress = checkpointAddressOf release
+                        , qhCheckpointPolicy = policy
+                        , qhBoardAddress = boardAddress
+                        , qhReadiness = fhReadiness fh
+                        }
+            serveApp port (mkReleaseQueryApplication (ReleaseQueryHandle release queryHandle))
+
+-- | Production wiring of 'runReaderAppWith'.
+runReaderApp :: ReaderSettings -> IO ()
+runReaderApp =
+    runReaderAppWith withRocksDBIndexerRunner withChainSyncFollower Warp.run

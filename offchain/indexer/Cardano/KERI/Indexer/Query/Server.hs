@@ -23,23 +23,31 @@ construction (FR-4).
 -}
 module Cardano.KERI.Indexer.Query.Server (
     mkQueryApplication,
+    ReleaseQueryHandle (..),
+    mkReleaseQueryApplication,
 ) where
 
 import Cardano.KERI.AID.CESR (
     Primitive (..),
     parsePrimitive,
+    qb64Aid,
  )
-import Cardano.KERI.AID.Checkpoint.Datum (KeyStateView (..))
+import Cardano.KERI.AID.Checkpoint.Datum (KeyMaterial (..), KeyStateView (..))
+import Cardano.KERI.AID.Release (ReleaseIdentity)
 import Cardano.KERI.Deployment.EndpointBoard (
     BoardEntry (..),
     missingBoardWitnesses,
     watchabilityGrade,
  )
-import Cardano.KERI.Indexer.Codecs (CheckpointRecord (..))
+import Cardano.KERI.Indexer.Board (indexedBoardCatalog)
+import Cardano.KERI.Indexer.Codecs (CheckpointRecord (..), Holding (..), HoldingKind (..))
 import Cardano.KERI.Indexer.Query.Tx (
+    HoldingsRead (..),
     QueryHandle (..),
     boardTx,
     checkpointTx,
+    holdingsTx,
+    scanAddressTx,
     watchabilityTx,
     watermarkTx,
  )
@@ -66,7 +74,7 @@ import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BSL
 import Data.List (find)
-import Data.Maybe (fromMaybe, isNothing)
+import Data.Maybe (fromMaybe, isNothing, listToMaybe)
 import Data.Text (Text)
 import Data.Text.Encoding qualified as TE
 import Data.Word (Word64)
@@ -255,22 +263,24 @@ handleWatchability handle aidText =
                             else unavailableResponse status
 
 watchabilityDataOf :: Maybe CheckpointRecord -> [BoardEntry] -> WatchabilityData
-watchabilityDataOf Nothing _ =
+watchabilityDataOf mRecord = watchabilityDataFrom (cdWitnesses . crDatum <$> mRecord)
+
+-- | The watchability of a checkpoint with these declared witnesses ( 'Nothing' when there is no checkpoint) against a board catalog.
+watchabilityDataFrom :: Maybe [ByteString] -> [BoardEntry] -> WatchabilityData
+watchabilityDataFrom Nothing _ =
     WatchabilityData
         { wdCheckpointPresent = False
         , wdWitnessesDeclared = 0
         , wdWitnessesListed = 0
         , wdMissingWitnesses = []
         }
-watchabilityDataOf (Just record) catalog =
+watchabilityDataFrom (Just declaredWitnesses) catalog =
     WatchabilityData
         { wdCheckpointPresent = True
         , wdWitnessesDeclared = length declaredWitnesses
         , wdWitnessesListed = fst (watchabilityGrade declaredWitnesses catalog)
         , wdMissingWitnesses = missingBoardWitnesses declaredWitnesses catalog
         }
-  where
-    declaredWitnesses = cdWitnesses (crDatum record)
 
 -- ---------------------------------------------------------------------------
 -- Swagger
@@ -398,3 +408,107 @@ notFoundResponse = errorResponse status404 "not_found"
 
 internalErrorResponse :: Response
 internalErrorResponse = errorResponse status500 "internal_error"
+
+{- | The release-identity mode's handle: the release and the ordinary query
+handle built from it (the checkpoint address of the release, the state policy,
+the board address and the follower's readiness).
+-}
+data ReleaseQueryHandle cf op = ReleaseQueryHandle
+    { rqhRelease :: !ReleaseIdentity
+    , rqhQuery :: !(QueryHandle cf op)
+    }
+
+{- | The query application of the release-identity mode. It has the paths and
+response shapes of 'mkQueryApplication'; the checkpoint of an AID is the
+classified checkpoint holding of the release, and a pending termination is
+served as no checkpoint. The watchability of an AID is read from its classified checkpoint holding: the
+witnesses a live checkpoint declares against the board, and no checkpoint when
+the AID has none or its holding is a pending termination.
+-}
+mkReleaseQueryApplication :: ReleaseQueryHandle cf op -> Application
+mkReleaseQueryApplication handle request respond =
+    respond =<< routeRelease handle request
+
+routeRelease :: ReleaseQueryHandle cf op -> Request -> IO Response
+routeRelease handle request =
+    case (requestMethod request, pathInfo request) of
+        ("GET", ["checkpoint", aidText]) -> handleReleaseCheckpoint handle aidText
+        ("GET", ["watchability", aidText]) -> handleReleaseWatchability handle aidText
+        _ -> route (rqhQuery handle) request
+
+handleReleaseCheckpoint :: ReleaseQueryHandle cf op -> Text -> IO Response
+handleReleaseCheckpoint (ReleaseQueryHandle release query) aidText =
+    case decodeAidParam aidText of
+        Left _ -> pure badRequestResponse
+        Right aid -> do
+            reading <- runTransaction (qhRunner query) (holdingsTx release)
+            status <- sampleReadinessStatus query (fst <$> hrPoint reading)
+            pure $
+                if rsReady status
+                    then
+                        jsonResponse status200 $
+                            CheckpointResponse
+                                { crAid = aid
+                                , crFreshness = statusFreshness status
+                                , crCheckpoint =
+                                    listToMaybe
+                                        [ checkpoint
+                                        | (_, Right holding) <- hrOutputs reading
+                                        , holdingAid holding == qb64Aid aid
+                                        , Just checkpoint <- [checkpointDataOfHolding holding]
+                                        ]
+                                }
+                    else unavailableResponse status
+
+handleReleaseWatchability :: ReleaseQueryHandle cf op -> Text -> IO Response
+handleReleaseWatchability (ReleaseQueryHandle release query) aidText =
+    case decodeAidParam aidText of
+        Left _ -> pure badRequestResponse
+        Right aid -> do
+            (reading, catalogResult) <- runTransaction (qhRunner query) $ do
+                holdings <- holdingsTx release
+                boardEntries <- scanAddressTx (qhBoardAddress query)
+                pure (holdings, indexedBoardCatalog (qhBoardAddress query) boardEntries)
+            case catalogResult of
+                Left _ -> pure internalErrorResponse
+                Right catalog -> do
+                    status <- sampleReadinessStatus query (fst <$> hrPoint reading)
+                    pure $
+                        if rsReady status
+                            then
+                                jsonResponse status200 $
+                                    WatchabilityResponse
+                                        { wrAid = aid
+                                        , wrFreshness = statusFreshness status
+                                        , wrWatchability =
+                                            watchabilityDataFrom
+                                                ( listToMaybe
+                                                    [ kmWitnesses keys
+                                                    | (_, Right holding) <- hrOutputs reading
+                                                    , holdingAid holding == qb64Aid aid
+                                                    , HeldCheckpoint{hcKeys = keys} <- [holdingKind holding]
+                                                    ]
+                                                )
+                                                catalog
+                                        }
+                            else unavailableResponse status
+
+-- | The checkpoint a holding is, if it is one: a pending termination is none.
+checkpointDataOfHolding :: Holding -> Maybe CheckpointData
+checkpointDataOfHolding Holding{holdingTxIn, holdingSn, holdingEpoch, holdingKind} =
+    case holdingKind of
+        HeldCheckpoint{hcKeys = KeyMaterial{..}} ->
+            Just
+                CheckpointData
+                    { chkTxId = Indexer.txInId holdingTxIn
+                    , chkOutputIndex = fromIntegral (Indexer.txInIx holdingTxIn)
+                    , chkSequence = holdingEpoch
+                    , chkNativeSequence = holdingSn
+                    , chkCurrentKeys = kmCurKeys
+                    , chkCurrentThreshold = kmCurThreshold
+                    , chkNextKeyDigests = kmNextKeys
+                    , chkNextThreshold = kmNextThreshold
+                    , chkWitnesses = kmWitnesses
+                    , chkWitnessThreshold = kmToad
+                    }
+        HeldPendingTermination -> Nothing

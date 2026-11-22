@@ -292,6 +292,9 @@ jobs:
       - name: Run the ckeri command-surface and backend tests
         working-directory: offchain
         run: nix run --quiet --no-write-lock-file .#backend-check
+      - name: Run the indexer and query-service tests
+        working-directory: offchain
+        run: nix run --quiet --no-write-lock-file .#indexer-tests
       - name: Check ckeri opt-env-conf surface and precedence
         run: |
           nix build --quiet --no-write-lock-file ./offchain#ckeri

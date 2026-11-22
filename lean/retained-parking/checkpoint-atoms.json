@@ -429,22 +429,22 @@
     "detail": "a freeze that clears the top-up mark"
   },
   {
-    "id": "commitment-output-ignored",
-    "before": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "id": "commitment-key-state-ignored",
+    "before": "  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
     "after": "  env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
-    "failure": "ATOM:commitment-other-output-refused",
-    "owner": "CardanoKeri.Checkpoint.convict_refused_for_other_output, CardanoKeri.Checkpoint.spent_output_commitment_entitles_nothing",
+    "failure": "ATOM:commitment-other-key-state-refused",
+    "owner": "CardanoKeri.Checkpoint.convict_refused_for_other_key_state",
     "test": "CheckpointAtomChecks",
     "args": [
-      "commitment-other-output-refused"
+      "commitment-other-key-state-refused"
     ],
     "kind": "decidable-mirror",
-    "detail": "a commitment over another output entitles"
+    "detail": "a commitment naming another key state entitles"
   },
   {
     "id": "commitment-evidence-ignored",
-    "before": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
-    "after": "  c.output = l ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "before": "  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "after": "  c.keyState = l.hash ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
     "failure": "ATOM:commitment-other-evidence-refused",
     "owner": "CardanoKeri.Checkpoint.convict_refused_for_other_evidence, CardanoKeri.Checkpoint.convict_committed_evidence_is_duplicity",
     "test": "CheckpointAtomChecks",
@@ -456,8 +456,8 @@
   },
   {
     "id": "commitment-payee-ignored",
-    "before": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
-    "after": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "before": "  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "after": "  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
     "failure": "ATOM:commitment-other-payee-refused",
     "owner": "CardanoKeri.Checkpoint.convict_refused_for_other_payee",
     "test": "CheckpointAtomChecks",
@@ -469,8 +469,8 @@
   },
   {
     "id": "commitment-maturity-ignored",
-    "before": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
-    "after": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    now ≤ c.expiresAt",
+    "before": "  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "after": "  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    now ≤ c.expiresAt",
     "failure": "ATOM:commitment-opening-slot-refused",
     "owner": "CardanoKeri.Checkpoint.convict_refused_before_eligible, CardanoKeri.Checkpoint.convict_refused_in_opening_slot",
     "test": "CheckpointAtomChecks",
@@ -482,8 +482,8 @@
   },
   {
     "id": "commitment-matures-in-opening-slot",
-    "before": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
-    "after": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now + 1 ∧ now ≤ c.expiresAt",
+    "before": "  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "after": "  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now + 1 ∧ now ≤ c.expiresAt",
     "failure": "ATOM:commitment-opening-slot-refused",
     "owner": "CardanoKeri.Checkpoint.convict_refused_in_opening_slot, CardanoKeri.Checkpoint.sys_conviction_after_opening_slot",
     "test": "CheckpointAtomChecks",
@@ -495,8 +495,8 @@
   },
   {
     "id": "commitment-expiry-ignored",
-    "before": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
-    "after": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now",
+    "before": "  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "after": "  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now",
     "failure": "ATOM:commitment-expired-refused",
     "owner": "CardanoKeri.Checkpoint.convict_refused_after_expiry",
     "test": "CheckpointAtomChecks",
@@ -508,8 +508,8 @@
   },
   {
     "id": "commitment-expires-a-slot-early",
-    "before": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
-    "after": "  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now < c.expiresAt",
+    "before": "  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "after": "  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now < c.expiresAt",
     "failure": "ATOM:commitment-last-slot-accepted",
     "owner": "CardanoKeri.Checkpoint.Step.convict_iff",
     "test": "CheckpointAtomChecks",
@@ -547,8 +547,8 @@
   },
   {
     "id": "unopened-commitment-reveals",
-    "before": "  | some c => decide (s.commitments c.marker = some c ∧ c.aid = aid)",
-    "after": "  | some c => decide (c.aid = aid)",
+    "before": "  | some c => decide (s.commitments c.marker = some c ∧ c.aid = aid ∧ c.deployment = s.deployment)",
+    "after": "  | some c => decide (c.aid = aid ∧ c.deployment = s.deployment)",
     "failure": "ATOM:commitment-unopened-refused",
     "owner": "CardanoKeri.Checkpoint.sys_conviction_consumes_commitment, CardanoKeri.Checkpoint.Sys.revealOpen_iff",
     "test": "CheckpointAtomChecks",
@@ -560,8 +560,8 @@
   },
   {
     "id": "other-aid-commitment-reveals",
-    "before": "  | some c => decide (s.commitments c.marker = some c ∧ c.aid = aid)",
-    "after": "  | some c => decide (s.commitments c.marker = some c)",
+    "before": "  | some c => decide (s.commitments c.marker = some c ∧ c.aid = aid ∧ c.deployment = s.deployment)",
+    "after": "  | some c => decide (s.commitments c.marker = some c ∧ c.deployment = s.deployment)",
     "failure": "ATOM:commitment-other-aid-refused",
     "owner": "CardanoKeri.Checkpoint.sys_conviction_consumes_commitment, CardanoKeri.Checkpoint.Sys.revealOpen_iff",
     "test": "CheckpointAtomChecks",
@@ -570,5 +570,109 @@
     ],
     "kind": "decidable-mirror",
     "detail": "a commitment for another AID entitles this one"
+  },
+  {
+    "id": "commitment-voided-by-top-up",
+    "before": "  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "after": "  c.keyState = l.hash ∧ l.toppedUp = false ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "failure": "ATOM:commitment-survives-top-up",
+    "owner": "CardanoKeri.Checkpoint.commitment_survives_topUp, CardanoKeri.Checkpoint.sys_commitment_survives_key_state_step",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "commitment-survives-top-up"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a top-up voids an open commitment"
+  },
+  {
+    "id": "commitment-voided-by-freeze",
+    "before": "  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "after": "  c.keyState = l.hash ∧ l.frozen = false ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "failure": "ATOM:commitment-survives-freeze",
+    "owner": "CardanoKeri.Checkpoint.commitment_survives_freeze, CardanoKeri.Checkpoint.sys_commitment_survives_key_state_step",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "commitment-survives-freeze"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a freeze voids an open commitment"
+  },
+  {
+    "id": "commitment-voided-by-poison",
+    "before": "  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "after": "  c.keyState = l.hash ∧ l.poisoned = false ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "failure": "ATOM:commitment-survives-poison",
+    "owner": "CardanoKeri.Checkpoint.commitment_survives_poison, CardanoKeri.Checkpoint.sys_commitment_survives_key_state_step",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "commitment-survives-poison"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a poison voids an open commitment"
+  },
+  {
+    "id": "commitment-matures-a-slot-late",
+    "before": "  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt",
+    "after": "  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧\n    c.eligibleAfter < now ∧ now ≤ c.expiresAt",
+    "failure": "ATOM:commitment-first-eligible-slot-accepted",
+    "owner": "CardanoKeri.Checkpoint.Step.convict_iff, CardanoKeri.Checkpoint.commitment_eligible_from_next_slot",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "commitment-first-eligible-slot-accepted"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "the first eligible slot refused"
+  },
+  {
+    "id": "other-deployment-commitment-reveals",
+    "before": "  | some c => decide (s.commitments c.marker = some c ∧ c.aid = aid ∧ c.deployment = s.deployment)",
+    "after": "  | some c => decide (s.commitments c.marker = some c ∧ c.aid = aid)",
+    "failure": "ATOM:commitment-other-deployment-refused",
+    "owner": "CardanoKeri.Checkpoint.sys_conviction_refused_for_other_deployment, CardanoKeri.Checkpoint.sys_conviction_only_at_commitment_deployment, CardanoKeri.Checkpoint.Sys.revealOpen_iff",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "commitment-other-deployment-refused"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a commitment for another deployment entitles this one"
+  },
+  {
+    "id": "own-deployment-commitment-refused",
+    "before": "  | some c => decide (s.commitments c.marker = some c ∧ c.aid = aid ∧ c.deployment = s.deployment)",
+    "after": "  | some c => decide (s.commitments c.marker = some c ∧ c.aid = aid ∧ c.deployment ≠ s.deployment)",
+    "failure": "ATOM:commitment-open-accepted",
+    "owner": "CardanoKeri.Checkpoint.sys_conviction_only_at_commitment_deployment, CardanoKeri.Checkpoint.Sys.revealOpen_iff",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "commitment-open-accepted"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a commitment open for this AID and this deployment refused"
+  },
+  {
+    "id": "commitment-age-two-slots",
+    "before": "  c.eligibleAfter = c.openedAt + 1 ∧ c.eligibleAfter ≤ c.expiresAt",
+    "after": "  c.eligibleAfter = c.openedAt + 2 ∧ c.eligibleAfter ≤ c.expiresAt",
+    "failure": "ATOM:commitment-age-one-slot",
+    "owner": "CardanoKeri.Checkpoint.commitment_eligible_from_next_slot",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "commitment-age-one-slot"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a commitment opens with an age of two slots"
+  },
+  {
+    "id": "commitment-age-at-least-one-slot",
+    "before": "  c.eligibleAfter = c.openedAt + 1 ∧ c.eligibleAfter ≤ c.expiresAt",
+    "after": "  c.openedAt < c.eligibleAfter ∧ c.eligibleAfter ≤ c.expiresAt",
+    "failure": "ATOM:commitment-age-two-slots-refused",
+    "owner": "CardanoKeri.Checkpoint.commitment_eligible_from_next_slot",
+    "test": "CheckpointAtomChecks",
+    "args": [
+      "commitment-age-two-slots-refused"
+    ],
+    "kind": "decidable-mirror",
+    "detail": "a commitment opens with any age of one slot or more"
   }
 ]

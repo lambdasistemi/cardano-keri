@@ -32,13 +32,16 @@ def origin : Origin := {
 
 def live : Live := ⟨0, 0, false, false, 2, 42, 5, false⟩
 def rotatedLive : Live := ⟨1, 1, false, false, 2, 42, 4, false⟩
-def registered : Sys := Sys.init.installOrigin 11 (.present live) origin
+/-- The deployment these examples run in. -/
+def deployment : Deployment := 21
+def registered : Sys := (Sys.init deployment).installOrigin 11 (.present live) origin
 def rotated : Sys := registered.set 11 (.present rotatedLive)
-/-- Cora's commitment: opened over the rotated output of AID 11 and the evidence
-the conviction shows at its key state, naming payee 7, its opening transaction's
+/-- Cora's commitment: it names AID 11, this deployment, the key state after the
+rotation and the evidence
+the conviction shows there, naming payee 7, its opening transaction's
 validity range ending at slot 4, eligible from slot 5, expiring at slot 20. -/
 def commitment : Commitment := {
-  aid := 11, output := rotatedLive,
+  aid := 11, deployment := deployment, keyState := rotatedLive.hash,
   evidence := ((Duplicity.fixture 1 1).1, (Duplicity.fixture 1 1).2),
   payee := 7, openedAt := 4, eligibleAfter := 5, expiresAt := 20, marker := 1 }
 def committed : Sys :=
@@ -78,9 +81,9 @@ No additional local parameters; use the definitions in this module.
 When observe the local Checkpoint or associated system relation named by this theorem.
 Then the complete conclusion is:
 
-SysStep p env Sys.init registered
+SysStep p env (Sys.init deployment) registered
 -/
-theorem registered_step : SysStep p env Sys.init registered := by
+theorem registered_step : SysStep p env (Sys.init deployment) registered := by
   apply SysStep.register
   exact ⟨11, 2, 42, 5, { dregIn := 3, bIn := 2, poolIn := 5 }, .present live,
     CardanoKeri.Registry.Examples.p, CardanoKeri.Registry.Examples.env, CardanoKeri.Registry.Examples.cfg, registrationReceipt, CardanoKeri.Registry.Examples.registration, origin,
@@ -134,6 +137,7 @@ theorem pending_step : SysStep p env committed pending := by
   · intro refund pool equal; cases equal
   · exact Step.convict 5 7 commitment (by decide) (by decide)
   · simp [Sys.revealOpen, Sys.revealOpenB, Action.revealed, committed, commitment]
+    rfl
 
 
 /-- Given the complete parameters and hypotheses:
@@ -282,7 +286,7 @@ theorem connected_completion :
     (SysReach.step
       (SysReach.step
         (SysReach.step
-          (SysReach.step (SysReach.step SysReach.init registered_step) rotated_step)
+          (SysReach.step (SysReach.step (SysReach.init deployment) registered_step) rotated_step)
             committed_step)
         pending_step) booked_step) completed_step
 

@@ -60,11 +60,12 @@ def runTrace (p : Params) (env : Env) : State → List (Slot × Action) → List
       let (j, s') := stepJson p env t s a
       j :: runTrace p env s' rest
 
-/-- A commitment over `output` and the evidence at its key state, naming `payee`:
+/-- A commitment naming the key state of `output`, the evidence at it and `payee`:
 opened by a transaction whose validity range ends at `openedAt`, eligible from
 the next slot, expiring eighteen slots later. -/
 def commitmentOver (output : Live) (payee : Addr) (openedAt : Slot) : Commitment :=
-  { aid := 0, output, evidence := CardanoKeri.Duplicity.fixture output.epoch output.sn, payee,
+  { aid := 0, deployment := 0, keyState := output.hash,
+    evidence := CardanoKeri.Duplicity.fixture output.epoch output.sn, payee,
     openedAt, eligibleAfter := openedAt + 1, expiresAt := openedAt + 18, marker := 1 }
 
 /-- The live output after registering with refund 1 and pool 12 at slot 0 and one paid rotation. -/

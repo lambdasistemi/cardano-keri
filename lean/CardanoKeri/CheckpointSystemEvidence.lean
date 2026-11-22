@@ -144,8 +144,8 @@ structure CertifiedSys where
   pending : PendingReachable state
   bound : PendingOrigins state
 
-def CertifiedSys.init : CertifiedSys := {
-  state := Sys.init
+def CertifiedSys.init (d : Deployment) : CertifiedSys := {
+  state := Sys.init d
   origins := by intro aid origin found; cases found
   pending := by intro aid association found; cases found
   bound := by intro aid association found; cases found }

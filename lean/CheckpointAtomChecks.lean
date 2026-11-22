@@ -19,13 +19,19 @@ def env : Env := {
   convictionRival := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).2 }
 -- The rival is the accepted event itself: evidence is shown, but it proves no duplicity.
 def noDup : Env := { env with convictionRival := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).1.accepted }
-/-- A commitment entitling payee 8 to convict `l` at slots 6 to 20. -/
+/-- A commitment entitling payee 8 to convict the key state of `l` at slots 6 to 20,
+for AID 11 in deployment 21. -/
 def k : Commitment := {
-  aid := 11, output := l, evidence := CardanoKeri.Duplicity.fixture 1 1, payee := 8,
+  aid := 11, deployment := 21, keyState := l.hash, evidence := CardanoKeri.Duplicity.fixture 1 1, payee := 8,
   openedAt := 5, eligibleAfter := 6, expiresAt := 20, marker := 1 }
 def kNoDup : Commitment := { k with evidence := ((CardanoKeri.Duplicity.fixture 1 1).1, (CardanoKeri.Duplicity.fixture 1 1).1.accepted) }
-/-- A system holding `k` open, and the same system before it was opened. -/
-def holding : Sys := { Sys.init with commitments := fun m => if m = 1 then some k else none }
+/-- The same commitment made for deployment 22, under its own marker. -/
+def foreign : Commitment := { k with deployment := 22, marker := 2 }
+/-- A system of deployment `d` holding both `k` and `foreign` open. -/
+def holdingIn (d : Deployment) : Sys :=
+  { Sys.init d with commitments := fun m => if m = 1 then some k else if m = 2 then some foreign else none }
+/-- Deployment 21 holding both commitments open. -/
+def holding : Sys := holdingIn 21
 def noDeposit : Env := { env with depositAuthorized := fun _ => false }
 def run (e : Env) (s : State) (a : Action) := stepFn p e a 9 s
 def check (target : Option String) (id : String) (b : Bool) : Except String Unit := if target.isSome && target != some id then .ok () else if b then .ok () else .error id
@@ -91,20 +97,33 @@ def observations (target : Option String) : Except String Unit := do
     some ({ hunter := some { addr := 7, b := 2 } }, .present { toppedShort with frozen := true })))
   -- The commitment a conviction reveals.
   check "commitment-other-payee-refused" ((run env (.present l) (.convict 9 k)).isNone)
-  check "commitment-other-output-refused" ((run env (.present { l with pool := 5 }) (.convict 8 k)).isNone)
+  check "commitment-other-key-state-refused" ((run env (.present l) (.convict 8 { k with keyState := ⟨2, 2⟩ })).isNone)
+  check "commitment-survives-top-up" (match run env (.present l) (.topUp 2) with
+    | some (_, s) => (run env s (.convict 8 k)).isSome
+    | none => false)
+  check "commitment-survives-freeze" (match run env (.present short) (.freeze 2 7) with
+    | some (_, s) => (run env s (.convict 8 k)).isSome
+    | none => false)
+  check "commitment-survives-poison" (match run env (.present l) .poison with
+    | some (_, s) => (run env s (.convict 8 k)).isSome
+    | none => false)
   check "commitment-other-evidence-refused" ((run env (.present l)
     (.convict 8 { k with evidence := CardanoKeri.Duplicity.fixture 2 2 })).isNone)
   check "commitment-opening-slot-refused" ((stepFn p env (.convict 8 k) 5 (.present l)).isNone)
   check "commitment-first-eligible-slot-accepted" ((stepFn p env (.convict 8 k) 6 (.present l)).isSome)
   check "commitment-last-slot-accepted" ((stepFn p env (.convict 8 k) 20 (.present l)).isSome)
   check "commitment-expired-refused" ((stepFn p env (.convict 8 k) 21 (.present l)).isNone)
-  check "commitment-unopened-refused" (!Sys.init.revealOpenB 11 (.convict 8 k))
+  check "commitment-age-one-slot" (decide k.wellFormed)
+  check "commitment-age-two-slots-refused" (!decide ({ k with eligibleAfter := 7 } : Commitment).wellFormed)
+  check "commitment-unopened-refused" (!(Sys.init 21).revealOpenB 11 (.convict 8 k))
   check "commitment-other-aid-refused" (!holding.revealOpenB 12 (.convict 8 k))
   check "commitment-open-accepted" (holding.revealOpenB 11 (.convict 8 k))
+  check "commitment-other-deployment-refused" (!holding.revealOpenB 11 (.convict 8 foreign) &&
+    !(holdingIn 22).revealOpenB 11 (.convict 8 k))
   check "conviction-burns-commitment" (decide ((holding.retireRevealed (.convict 8 k)).commitments 1 = none))
 end CheckpointAtoms
 
 def main (args : List String) : IO Unit :=
   match CheckpointAtoms.observations args.head? with
-  | .ok () => IO.println "PASS 44 current local atom observations; CP-34 has a system successor"
+  | .ok () => IO.println "PASS 50 current local atom observations; CP-34 has a system successor"
   | .error id => throw (IO.userError ("ATOM:" ++ id))

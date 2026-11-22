@@ -61,7 +61,8 @@ structure Case where
   now : Slot
 
 def Case.commitment (c : Case) : Commitment := {
-  aid := 11, output := c.committedOutput, evidence := c.shown.evidence, payee := c.committedPayee,
+  aid := 11, deployment := SystemFixtures.deployment, keyState := c.committedOutput.hash,
+  evidence := c.shown.evidence, payee := c.committedPayee,
   openedAt := c.openedAt, eligibleAfter := c.eligibleAfter, expiresAt := c.expiresAt, marker := 1 }
 
 def honest (id note : String) (now : Slot) : Case :=
@@ -135,7 +136,7 @@ def runCells (start : Machine) (commands : List (String × Command)) : List Json
 
 open SystemWire SystemFixtures in
 def systemRows : Except String (List Json) := do
-  let registered ← advance Machine.init (← registrationCommand)
+  let registered ← advance (Machine.init deployment) (← registrationCommand)
   let rotated ← advance registered rotatedCommand
   let rotatedAgain ← advance rotated rotatedAgainCommand
   let other : Commitment := { commitment with aid := 12, marker := 2 }

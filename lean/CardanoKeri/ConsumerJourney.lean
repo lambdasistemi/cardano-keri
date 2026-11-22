@@ -86,9 +86,12 @@ def connectStateReference (reference : Singular.OutRef) (u : Singular.EconomicUt
     if input.ref == some old.1 then { input with ref := some reference } else input
   pure (mapped, { tx with transaction.inputs := inputs })
 
+/-- The checkpoint deployment the journey runs in. -/
+def deployment : CardanoKeri.Checkpoint.Deployment := 21
+
 def journey : Except String Journey := do
   let (q, r) ← run
-  let registered ← advance Machine.init (registrationCommand q)
+  let registered ← advance (Machine.init deployment) (registrationCommand q)
   unless decide (registered.certified.state.states context.aid = r.checkpoint) do throw "registration-state-disagreement"
   let some origin := registered.certified.state.origins context.aid | throw "registration-origin-missing"
   unless decide (origin.registered = r.after) && origin.token == r.origin.token &&
@@ -96,7 +99,7 @@ def journey : Except String Journey := do
     throw "registration-origin-disagreement"
   let start := [snapshot "registered-juvenile" r.holding registered 0 6,
     snapshot "registered-mature" r.holding registered 0 7]
-  let firstEvent := (SystemWire.cell "register" cp evidence Machine.init (registrationCommand q)).1
+  let firstEvent := (SystemWire.cell "register" cp evidence (Machine.init deployment) (registrationCommand q)).1
   let (frames, live, serial, events) ← localSteps.foldlM (fun (frames, machine, serial, events) (name, now, action) => do
     let next ← advance machine (.local context.aid now action)
     unless heldRepresentative interpretation context (next.certified.state.states context.aid) ==
@@ -105,12 +108,13 @@ def journey : Except String Journey := do
       events ++ [(SystemWire.cell name cp evidence machine (.local context.aid now action)).1]))
       (start, registered, 1, [firstEvent])
   let frames := frames ++ [snapshot "mature" r.holding live serial 35]
-  -- The convictor opens a commitment over the mature output and the evidence at
-  -- its key state, then convicts once it is eligible.
+  -- The convictor opens a commitment naming the AID, the deployment, the key state
+  -- of the mature output and the evidence at
+  -- it, then convicts once it is eligible.
   let .present output := live.certified.state.states context.aid | throw "mature-output-missing"
   let some shown := evidence.toEnv.evidenceAt output.epoch output.sn | throw "conviction-evidence-missing"
   let commitment : CardanoKeri.Checkpoint.Commitment := {
-    aid := context.aid, output, evidence := shown, payee := 7,
+    aid := context.aid, deployment, keyState := output.hash, evidence := shown, payee := 7,
     openedAt := 35, eligibleAfter := 36, expiresAt := 50, marker := 1 }
   let committed ← advance live (.openCommitment commitment)
   let pending ← advance committed (.local context.aid 36 (.convict 7 commitment))

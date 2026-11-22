@@ -2,7 +2,8 @@ import CardanoKeri.CheckpointCertificate
 import CardanoKeri.CheckpointTraceWire
 import CardanoKeri.RegistryTraceWire
 
-/-! Finite system-certificate interchange. A trace starts from Sys.init; callers
+/-! Finite system-certificate interchange. A trace starts from Sys.init of one
+deployment; callers
 supply commands, not a forged Sys or proof. The origin environment table is
 retained from its registration command for serialization, while execution uses
 the actual origin's stored function. Unlisted AIDs have the initial defaults. -/
@@ -37,7 +38,7 @@ structure Machine where
   -- The markers ever opened, for serialization of the open commitments by marker.
   commitments : List Marker := []
 
-def Machine.init : Machine := ⟨CertifiedSys.init, [], []⟩
+def Machine.init (d : Deployment) : Machine := ⟨CertifiedSys.init d, [], []⟩
 
 def execute (machine : Machine) (p : Params) (env : Env) (command : Command) :
     Except String (Machine × Option Flow × Option CardanoKeri.Registry.Flow) := do
@@ -70,7 +71,8 @@ def originJson (environment : CardanoKeri.Registry.TraceWire.EnvTable) (origin :
 
 def stateJson (machine : Machine) : Json :=
   let s := machine.certified.state
-  Json.mkObj [("commitments", Json.arr (((machine.commitments.mergeSort (· ≤ ·)).filterMap s.commitments).map toJson).toArray),
+  Json.mkObj [("deployment", toJson s.deployment),
+    ("commitments", Json.arr (((machine.commitments.mergeSort (· ≤ ·)).filterMap s.commitments).map toJson).toArray),
     ("aids", Json.arr (machine.contexts.map fun (aid, environment) => Json.mkObj [
     ("aid", toJson aid), ("leaf", toJson (s.leaves aid)), ("state", toJson (s.states aid)),
     ("origin", match s.origins aid with | none => Json.null | some origin => originJson environment origin),

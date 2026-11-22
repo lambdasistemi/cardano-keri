@@ -100,20 +100,28 @@ structure Live where
   toppedUp : Bool
   deriving Repr, DecidableEq
 
+def Live.hash (l : Live) : Hash := ⟨l.epoch, l.sn⟩
+
 /-- The marker that names one commitment of the release's commitment program. -/
 abbrev Marker := Nat
 
+/-- The deployment a checkpoint belongs to: on chain, the checkpoint program
+that holds it. -/
+abbrev Deployment := Nat
+
 /-- A bounty commitment of the release's commitment program, as a conviction
-reads it. It names the checkpoint output it is opened over (`aid` and `output`
-together; a step that spends the output leaves a different one), the evidence
-the conviction will show, the payee, the raw upper end of the opening
-transaction's validity range (`openedAt`), the first slot it can be revealed in
-(`eligibleAfter`), the last (`expiresAt`) and its marker. On chain the evidence
-and payee are hidden behind a hash until the reveal; the model states them in
-the clear. -/
+reads it. It names the identifier and the key state it accuses (`aid` and
+`keyState`), the deployment it belongs to, the evidence the conviction will show,
+the payee, the raw upper end of the opening transaction's validity range
+(`openedAt`), the first slot it can be revealed in (`eligibleAfter`), the last
+(`expiresAt`) and its marker. It names no checkpoint output: a conviction is
+accepted at whichever live output carries that identifier and key state. On
+chain the evidence and payee are hidden behind a hash until the reveal; the model
+states them in the clear. -/
 structure Commitment where
   aid : AID
-  output : Live
+  deployment : Deployment
+  keyState : Hash
   evidence : Evidence
   payee : Addr
   openedAt : Slot
@@ -122,19 +130,21 @@ structure Commitment where
   marker : Marker
   deriving Repr, DecidableEq
 
-/-- The commitment program opens a commitment only with an age and a lifetime:
-it is eligible strictly after the opening and no later than it expires. -/
+/-- The commitment program opens a commitment only with an age of one slot and a
+lifetime: it is first eligible in the slot after the opening and no later than
+it expires. -/
 def Commitment.wellFormed (c : Commitment) : Prop :=
-  c.openedAt < c.eligibleAfter ∧ c.eligibleAfter ≤ c.expiresAt
+  c.eligibleAfter = c.openedAt + 1 ∧ c.eligibleAfter ≤ c.expiresAt
 
 instance (c : Commitment) : Decidable c.wellFormed := by
   unfold Commitment.wellFormed; infer_instance
 
 /-- The commitment `c` entitles `payee` to convict the live output `l` at `now`:
-it names this output, the evidence the conviction shows, this payee, and `now`
-is inside its window. -/
+it names `l`'s key state, the evidence the conviction shows there, this payee,
+and `now` is inside its window. The identifier and the deployment are checked by
+the system, which knows them (`Sys.revealOpen`). -/
 def Commitment.entitles (env : Env) (c : Commitment) (l : Live) (payee : Addr) (now : Slot) : Prop :=
-  c.output = l ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧
+  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧
     c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt
 
 instance (env : Env) (c : Commitment) (l : Live) (payee : Addr) (now : Slot) :
@@ -163,8 +173,6 @@ def Action.actor : Action → Actor
   | .freeze .. => .proof
   | .topUp .. => .anyone
   | .convict .. => .proof
-
-def Live.hash (l : Live) : Hash := ⟨l.epoch, l.sn⟩
 
 def Live.bHeld (p : Params) (l : Live) : Value := if l.frozen then 0 else p.B
 
@@ -445,8 +453,10 @@ structure PendingAssociation where
   entry : CardanoKeri.Registry.TerminationEntry
   booked : CardanoKeri.Registry.Sys
 
--- These associations are model state, not data chosen at completion.
+-- These associations are model state, not data chosen at completion. A system
+-- is one deployment, named by `deployment`.
 structure Sys where
+  deployment : Deployment
   leaves : AID → Leaf
   states : AID → State
   origins : AID → Option Origin
@@ -454,8 +464,8 @@ structure Sys where
   -- The open commitments of the release's commitment program, by marker.
   commitments : Marker → Option Commitment
 
-def Sys.init : Sys :=
-  { leaves := fun _ => .absent, states := fun _ => .absent,
+def Sys.init (d : Deployment) : Sys :=
+  { deployment := d, leaves := fun _ => .absent, states := fun _ => .absent,
     origins := fun _ => none, pending := fun _ => none, commitments := fun _ => none }
 
 def Sys.set (s : Sys) (aid : AID) (st : State) : Sys :=
@@ -513,11 +523,11 @@ def Sys.retire (s : Sys) (m : Marker) : Sys :=
   { s with commitments := fun k => if k = m then none else s.commitments k }
 
 /-- The commitment an action reveals, if any, is open in the release's commitment
-program under its marker and was opened over this AID's checkpoint. -/
+program under its marker and names this AID and this system's deployment. -/
 def Sys.revealOpenB (s : Sys) (aid : AID) (a : Action) : Bool :=
   match a.revealed with
   | none => true
-  | some c => decide (s.commitments c.marker = some c ∧ c.aid = aid)
+  | some c => decide (s.commitments c.marker = some c ∧ c.aid = aid ∧ c.deployment = s.deployment)
 
 def Sys.revealOpen (s : Sys) (aid : AID) (a : Action) : Prop := s.revealOpenB aid a = true
 
@@ -552,9 +562,10 @@ def LocalEvent (p : Params) (env : Env) (s s' : Sys) : Prop :=
     s' = (s.set aid st).retireRevealed a
 
 /-- Opening a commitment. The commitment program reads no checkpoint: it can be
-opened over any output, and it is opened with an age and a lifetime. The opening
-transaction lands at a slot no later than `openedAt`; the payee signs it and
-locks the deposit. -/
+opened over any identifier, key state and deployment, whether or not a checkpoint
+carries them, and it is opened with an age of one slot and a lifetime. The
+opening transaction lands at a slot no later than `openedAt`; the payee signs it
+and locks the deposit. -/
 def OpenEvent (s s' : Sys) : Prop :=
   ∃ c : Commitment, s.commitments c.marker = none ∧ c.wellFormed ∧
     s' = { s with commitments := fun k => if k = c.marker then some c else s.commitments k }
@@ -620,7 +631,7 @@ inductive SysStep (p : Params) (env : Env) : Sys → Sys → Prop where
   | sweep {s s' : Sys} : SweepEvent s s' → SysStep p env s s'
 
 inductive SysReach (p : Params) (env : Env) : Sys → Prop where
-  | init : SysReach p env Sys.init
+  | init (d : Deployment) : SysReach p env (Sys.init d)
   | step {s s' : Sys} : SysReach p env s → SysStep p env s s' → SysReach p env s'
 
 end CardanoKeri.Checkpoint

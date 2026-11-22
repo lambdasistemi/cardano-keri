@@ -17,6 +17,8 @@ def registryEnvironment : Registry.TraceWire.EnvTable := {
   inception := [11, 12, 13]
   duplicity := [(11, 0), (11, 1), (11, 2), (12, 0)] }
 def context : RegistryContext := ⟨Registry.Scenarios.p, registryEnvironment, Registry.Scenarios.cfg⟩
+/-- The deployment the journeys run in. -/
+def deployment : Deployment := 21
 
 def applyRegistry (s : Registry.Sys) (a : Registry.Action) : Except String Registry.Sys := do
   let (_, next) ← Registry.stepFn Registry.Scenarios.p registryEnvironment.toEnv a s
@@ -33,11 +35,12 @@ def rotatedCommand : Command := .local 11 3 (.rotate 1 .keep 7)
 def rotatedAgainCommand : Command := .local 11 4 (.rotate 2 .keep 7)
 /-- The live output of AID 11 after the two rotations of the journey. -/
 def rotatedAgainLive : Live := ⟨2, 2, false, false, 2, 42, 3, false⟩
-/-- The convictor's commitment over that output and the evidence at its key state,
+/-- The convictor's commitment: it names AID 11, this deployment, the key state of
+that output and the evidence at it,
 naming payee 7: opened by a transaction whose validity range ends at slot 4,
 eligible from slot 5, expiring at slot 20. -/
 def commitment : Commitment := {
-  aid := 11, output := rotatedAgainLive,
+  aid := 11, deployment := deployment, keyState := rotatedAgainLive.hash,
   evidence := ((Duplicity.fixture 2 2).1, (Duplicity.fixture 2 2).2),
   payee := 7, openedAt := 4, eligibleAfter := 5, expiresAt := 20, marker := 1 }
 def openCommand : Command := .openCommitment commitment
@@ -72,7 +75,7 @@ structure Fixture where
 
 def fixture : Except String Fixture := do
   let registration ← registrationCommand
-  let registered ← advance Machine.init registration
+  let registered ← advance (Machine.init deployment) registration
   let rotated ← advance registered rotatedCommand
   let rotatedAgain ← advance rotated rotatedAgainCommand
   unless decide (rotatedAgain.certified.state.states 11 = .present rotatedAgainLive) do
@@ -101,8 +104,8 @@ def fixture : Except String Fixture := do
 def trace (name : String) (commands : List (String × Command)) : Json :=
   let (cells, final) := commands.foldl (fun (cells, current) (name, command) =>
     let (result, next) := cell name p evidence current command
-    (cells ++ [result], next)) ([], Machine.init)
-  Json.mkObj [("name", toJson name), ("initial", stateJson Machine.init),
+    (cells ++ [result], next)) ([], (Machine.init deployment))
+  Json.mkObj [("name", toJson name), ("initial", stateJson (Machine.init deployment)),
     ("cells", toJson cells), ("final", stateJson final)]
 
 def traces : Except String (List Json) := do

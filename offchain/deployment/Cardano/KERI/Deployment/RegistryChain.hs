@@ -33,6 +33,7 @@ module Cardano.KERI.Deployment.RegistryChain (
     Observation (..),
     bookingWindow,
     foldWindow,
+    returnWindow,
 
     -- * Refusals
     Boundary (..),
@@ -92,12 +93,14 @@ import Cardano.KERI.Deployment.Script (
 import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..), transactionId)
 import Cardano.Ledger.Address (AccountAddress, Addr)
 import Cardano.Ledger.Alonzo.PParams (ppMaxTxExUnitsL)
+import Cardano.Ledger.Alonzo.Scripts (AsIx (..))
 import Cardano.Ledger.Api.Tx (bodyTxL)
 import Cardano.Ledger.Api.Tx.Body (feeTxBodyL)
 import Cardano.Ledger.Api.Tx.Out (TxOut, valueTxOutL)
 import Cardano.Ledger.BaseTypes (Network (..), TxIx (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Core (PParams)
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..))
@@ -172,7 +175,6 @@ data Refusal
     = DeploymentDisagrees !String
     | ReferenceOutputsMissing ![TxIn]
     | AlreadyRegistered !ByteString
-    | DepositBelowFloor !Integer !Integer
     | BookingWidthBelowSlotLength !Integer !Integer
     | StaleOrUnavailableRegistryState !(Maybe ByteString)
     | RegistryHoldsKey !ByteString
@@ -186,6 +188,12 @@ data Refusal
       NoIntervalYet !Integer !Integer
     | -- | the clock reads the deadline as passed and the chain's tip does not: the clock, the deadline and the instant the tip's slot starts
       TimeEvidenceConflicts !Integer !Integer !Integer
+    | -- | neither the chain nor the clock has reached the deadline: the deadline, the instant the tip's slot starts and the clock read
+      DeadlineNotReached !Integer !Integer !Integer
+    | -- | the deadline is reached and the node's forecast shows no slot after the tip to return in: the instant the tip's slot starts
+      NoReturnSlotYet !Integer
+    | -- | the request's refund address is not an address of this network
+      RequestRefundUnreadable !TxIn
     | RequestUnavailable !TxIn
     | RequestIsNotARegistration !TxIn
     | RequestHasNoApproval !TxIn
@@ -428,6 +436,36 @@ foldWindow obs width deadline
     ahead = toInteger (unSlotNo (obsHorizonSlot obs)) - toInteger (unSlotNo clockSlot)
     slots = minimum [width `div` slotLength, whole, ahead]
 
+{- | The interval of a return, decided from one observation, or the row that refuses it.
+The interval starts at the slot the tip is in, and only the chain can say the deadline is
+reached (that slot starts at or after it); the clock alone cannot, and where it reads the
+deadline as passed and the tip does not, that is a conflict, named and not decided.
+-}
+returnWindow :: Observation -> Integer -> Integer -> Either Refusal ValidityPlan
+returnWindow obs width deadline
+    | tipStart < deadline =
+        Left
+            ( if clock >= deadline
+                then TimeEvidenceConflicts clock deadline tipStart
+                else DeadlineNotReached deadline tipStart clock
+            )
+    | slotLength <= 0 || width < slotLength = Left (BookingWidthBelowSlotLength width slotLength)
+    | slots < 1 = Left (NoReturnSlotYet tipStart)
+    | otherwise =
+        Right
+            ValidityPlan
+                { lowerSlot = tip
+                , upperSlot = tip + fromInteger slots
+                , lowerPosixMs = tipStart
+                , upperPosixMs = tipStart + slots * slotLength
+                }
+  where
+    tip = obsTipSlot obs
+    tipStart = obsTipStartMs obs
+    clock = obsClockMs obs
+    slotLength = obsSlotLengthMs obs
+    slots = min (width `div` slotLength) (toInteger (unSlotNo (obsHorizonSlot obs)) - toInteger (unSlotNo tip))
+
 -- ---------------------------------------------------------------------
 -- Transactions
 -- ---------------------------------------------------------------------
@@ -514,7 +552,7 @@ transactBudgeted rt payerAddress onAttempt build = runExceptT $ do
         throwE (PurposesDiffer (show (Map.keysSet evaluated)))
     measured <-
         Map.traverseWithKey
-            (\purpose outcome -> either (throwE . EvaluationFailed . ((show purpose <> ": ") <>) . show) pure outcome)
+            (\purpose outcome -> either (throwE . EvaluationFailed . ((purposeName purpose <> ": ") <>) . show) pure outcome)
             evaluated
     let budgets = Map.map withMargin measured
         total = foldr addUnits (ExUnits 0 0) (Map.elems budgets)
@@ -524,6 +562,13 @@ transactBudgeted rt payerAddress onAttempt build = runExceptT $ do
     when (finalExpected /= expected) $
         throwE (PurposesDiffer "the purposes changed under the measured budgets")
     settle rt onAttempt final
+
+-- | Where in a transaction the node's evaluation failed, in words: the kind of script purpose and its index.
+purposeName :: ConwayPlutusPurpose AsIx ConwayEra -> String
+purposeName = \case
+    ConwayMinting (AsIx index) -> "minting purpose " <> show index
+    ConwaySpending (AsIx index) -> "spending purpose " <> show index
+    other -> show other
 
 transactPlain ::
     RegistryRuntime ->

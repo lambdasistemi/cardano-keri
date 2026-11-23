@@ -202,6 +202,7 @@ library deployment
     Cardano.KERI.Deployment.RegistryFold
     Cardano.KERI.Deployment.RegistryRegister
     Cardano.KERI.Deployment.RegistryRequest
+    Cardano.KERI.Deployment.RegistryReturn
     Cardano.KERI.Deployment.RegistrySnapshot
     Cardano.KERI.Deployment.RegistryTransactions
     Cardano.KERI.Deployment.Script
@@ -311,6 +312,7 @@ library write-composition
   hs-source-dirs:   write-composition
   build-depends:
     , base                      >=4.18 && <5
+    , bech32
     , bytestring                >=0.11 && <0.13
     , cardano-crypto-class
     , cardano-keri
@@ -462,7 +464,10 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.RegistryFoldSpec
     Cardano.KERI.Deployment.RegistryRegisterSpec
     Cardano.KERI.Deployment.RegistryRequestSpec
+    Cardano.KERI.Deployment.RegistryReturnCommandSpec
+    Cardano.KERI.Deployment.RegistryReturnSpec
     Cardano.KERI.Deployment.RegistryScriptsSpec
+    Cardano.KERI.Deployment.RegistryShortDepositSpec
     Cardano.KERI.Deployment.RegistrySnapshotSpec
     Cardano.KERI.Deployment.RegistryTransactionsSpec
     Cardano.KERI.Deployment.ScriptAritySpec

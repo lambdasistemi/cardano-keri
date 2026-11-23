@@ -34,7 +34,9 @@ module Cardano.KERI.Deployment.RegistryTransactions (
     Booking (..),
     registrationRecord,
     registeredFacts,
+    ledgerAddressOf,
     approval,
+    holdsExactlyApproval,
     requestLovelace,
     deliveredHolding,
     inceptionProofName,
@@ -72,7 +74,7 @@ module Cardano.KERI.Deployment.RegistryTransactions (
     hashProofBurnExUnits,
 ) where
 
-import Cardano.Crypto.Hash (hashToBytes)
+import Cardano.Crypto.Hash (hashFromBytes, hashToBytes)
 import Cardano.KERI.AID.Application (
     Action (..),
     ApplicationParameters (..),
@@ -403,6 +405,11 @@ approval record =
         (requestHoldingAddress record)
         (requestInitialDatum record)
         (requestDeposit record)
+
+-- | Whether an output holds exactly the approval token the booking of a request minted, and nothing else but lovelace.
+holdsExactlyApproval :: RegistryDeployment -> RegistrationData -> TxOut ConwayEra -> Bool
+holdsExactlyApproval deployment record out = case out ^. valueTxOutL of
+    MaryValue _ assets -> assets == tokenValue (applicationPolicyId deployment) (approval record) 1
 
 -- | The lovelace a booked request holds: the deposit, the registration cost and the minimum tip.
 requestLovelace :: ApplicationParameters -> RegistrationData -> Integer
@@ -993,6 +1000,21 @@ outputReferenceOf (TxIn (TxId safeHash) (TxIx outputIndex)) =
 {- | The Plutus address of a ledger address with a key or script payment
 credential, with no stake part or a stake credential.
 -}
+
+{- | The ledger address a request's refund address stands for on a network, when it is one: a
+payment credential and an optional stake credential, each a hash of the length a ledger credential has.
+-}
+ledgerAddressOf :: Network -> PlutusAddress -> Maybe Addr
+ledgerAddressOf network (PlutusAddress payment stake) =
+    Addr network <$> credentialOf payment <*> stakeOf stake
+  where
+    credentialOf = \case
+        KeyCredential hash -> KeyHashObj . KeyHash <$> hashFromBytes hash
+        ScriptCredential hash -> ScriptHashObj . ScriptHash <$> hashFromBytes hash
+    stakeOf = \case
+        Nothing -> Just StakeRefNull
+        Just credential -> StakeRefBase <$> credentialOf credential
+
 plutusAddressOf :: Addr -> PlutusAddress
 plutusAddressOf (Addr _ payment stake) =
     PlutusAddress (credentialOf payment) (stakeOf stake)

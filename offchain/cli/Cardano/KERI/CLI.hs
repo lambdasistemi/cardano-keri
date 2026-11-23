@@ -77,10 +77,13 @@ import Cardano.KERI.Deployment.Manifest (Manifest, readManifest)
 import Cardano.KERI.Deployment.RegistryBookingCommand (
     RegistryFoldSettings,
     RegistryRegisterSettings,
+    RegistryReturnSettings,
     registryFoldSettingsParser,
     registryRegisterSettingsParser,
+    registryReturnSettingsParser,
     runRegistryFold,
     runRegistryRegister,
+    runRegistryReturn,
  )
 import Cardano.KERI.Deployment.RegistryCommand (
     RegistryDeploySettings,
@@ -116,6 +119,7 @@ data Instructions
     | RegistryDeploy !RegistryDeploySettings
     | RegistryRegister !RegistryRegisterSettings
     | RegistryFold !RegistryFoldSettings
+    | RegistryReturn !RegistryReturnSettings
 
 {- | #240: this repository's own combined board command sum -- the write
 four ("Cardano.KERI.Deployment.CLI") and the read-only \"list\"
@@ -255,6 +259,12 @@ instance Opt.HasParser Instructions where
                                 ( RegistryFold
                                     <$> Opt.subConfig "fold" registryFoldSettingsParser
                                 )
+                            , Opt.command
+                                "return"
+                                "Return a booked request after its deadline: the refund address it names is paid, the returner keeps the tip"
+                                ( RegistryReturn
+                                    <$> Opt.subConfig "return" registryReturnSettingsParser
+                                )
                             ]
                         )
                     )
@@ -276,6 +286,7 @@ runInstructions = \case
     RegistryDeploy settings -> runRegistryDeploy settings
     RegistryRegister settings -> runRegistryRegister settings
     RegistryFold settings -> runRegistryFold settings
+    RegistryReturn settings -> runRegistryReturn settings
 
 {- | Select exactly one backend (FR-5) and render its answer or its closed
 error. Checkpoint\/board manifest loading is deferred into the local\/Koios

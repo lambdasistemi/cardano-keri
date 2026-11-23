@@ -204,6 +204,39 @@ local `ckeri status` read applies no readiness check at all. An empty answer
 from it says only that the store holds nothing as of the slot it reports, and
 it cannot say how far that slot is behind the chain.
 
+## The registry reader
+
+The same follower also serves the registry design. A reader started with a release
+identity file, in place of a deployment manifest, follows the checkpoint validator of
+that release, plus the configured funding and board addresses. It classifies each
+output at the validator under that release: a live checkpoint, a pending termination,
+or an output that is none of those, which is refused. The registry service's routes
+answer from that classification. The identity route gives an AID's live holding only
+when exactly one live checkpoint of the registry is held for it. A ready service that
+holds no live checkpoint, or more than one, answers `unavailable` with its reason, and
+a service that is not ready answers that it is unavailable. Neither is a statement
+that the identity is absent.
+
+How far behind the node's tip the store may be before the registry reader stops
+answering is not a number of this project. It is a setting of the deployment, given
+when the reader is started, and it applies to every answer that reader gives from its store, `/ready` included; the documentation of the interface (`/swagger.json`) is served regardless and carries no lag. The
+reason is the network: how long a slot lasts and how often blocks arrive decide what
+lag is normal for a healthy store, so no single figure suits every network. A reader
+whose lag is within its ceiling answers; a reader beyond it, or without a connection to
+the node, or without a tip, answers that it is not ready. Each answer states its lag, and
+the ceiling in force is stated by `/ready` and by the identity route, so a relying party
+that needs a narrower tolerance applies its own to the lag it reads. The
+[ceiling is described with the query endpoint](query-endpoint.md#the-registry-services-ceiling).
+Judging whether an observation is current enough to consume is, in the model of the
+registry, the integration's: the design page records that boundary in its row
+[current reference and holding movement](../design/consumer-identity.md#what-the-interpretation-must-establish).
+
+The registry reader keeps its own store directory, which starts empty and is never the
+store of the version 1 follower, and it is served at its own endpoint. The reader
+refuses a store recorded for another release or for the other design, before it reads
+anything. The [identity route](query-endpoint.md#get-identityaid-the-registry-services-live-holding)
+describes what it answers.
+
 ## What it deliberately does not do
 
 - No chain-sync client, reconnect loop, or rollback engine of its own —

@@ -48,6 +48,7 @@ import Cardano.KERI.AID.Checkpoint.Registration (
     proofTokenName,
  )
 import Cardano.KERI.AID.Checkpoint.Wire (asPlcData)
+import Cardano.KERI.AID.E2E.Datum (mkInlineDatum)
 import Cardano.KERI.AID.E2E.MpfProof (prove)
 import Cardano.KERI.AID.E2E.MpfTrie qualified as Trie
 import Cardano.KERI.Deployment.KEL (
@@ -100,12 +101,14 @@ import Cardano.Ledger.Api.Tx.Out (
     coinTxOutL,
     datumTxOutL,
     mkBasicTxOut,
+    referenceScriptTxOutL,
     valueTxOutL,
  )
 import Cardano.Ledger.Api.Tx.Wits (rdmrsTxWitsL)
 import Cardano.Ledger.BaseTypes (
     Inject (..),
     Network (..),
+    StrictMaybe (SJust),
     TxIx (..),
     boundRational,
  )
@@ -681,6 +684,31 @@ spec = do
                 (tx, _) <-
                     built (bookRegistration pricedParameters registry references payer record interval 0 Map.empty)
                 pure tx
+        it "never take an output that carries a reference script or a datum as funding or as collateral" $ do
+            registry <- deployment
+            let script = mkCageScript (artifactProgram (scriptsApplication (deploymentScripts registry)))
+                address = walletAddress 0x50
+                carrying =
+                    [ (txIn 0x61, mkBasicTxOut address (inject (ada 9_000)) & referenceScriptTxOutL .~ SJust script)
+                    , (txIn 0x62, mkBasicTxOut address (inject (ada 8_000)) & datumTxOutL .~ mkInlineDatum (PLC.B "template"))
+                    ]
+                ordinary =
+                    [ (txIn 0x63, mkBasicTxOut address (inject (ada 2_000)))
+                    , (txIn 0x64, mkBasicTxOut address (inject (ada 1_900)))
+                    , (txIn 0x65, mkBasicTxOut address (inject (ada 15)))
+                    ]
+                payer = Payer{payerAddress = address, payerFunds = carrying <> ordinary}
+            tx <- booking payer
+            let spent = tx ^. bodyTxL . inputsTxBodyL
+                collateral = tx ^. bodyTxL . collateralInputsTxBodyL
+                carried = Set.fromList (map fst carrying)
+            Set.intersection carried spent `shouldBe` Set.empty
+            Set.intersection carried collateral `shouldBe` Set.empty
+            paysItsWay (payerFunds payer) tx `shouldBe` True
+            -- a publication takes none of them either
+            published <-
+                built (publishReferenceScript pricedParameters payer (Coin 40_000_000) script)
+            Set.intersection carried (published ^. bodyTxL . inputsTxBodyL) `shouldBe` Set.empty
         it "carry their native assets into the change" $ do
             let payer =
                     walletWith

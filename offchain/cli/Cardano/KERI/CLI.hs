@@ -74,6 +74,11 @@ import Cardano.KERI.Deployment.EndpointBoardManifest (
     readEndpointBoardManifest,
  )
 import Cardano.KERI.Deployment.Manifest (Manifest, readManifest)
+import Cardano.KERI.Deployment.RegistryCommand (
+    RegistryDeploySettings,
+    registryDeploySettingsParser,
+    runRegistryDeploy,
+ )
 import Cardano.KERI.Deployment.Verify (
     BoardListSettings,
     VerifySettings,
@@ -100,6 +105,7 @@ data Instructions
     | Checkpoint !CheckpointSettings
     | Payer !PayerSettings
     | Board !BoardCommand
+    | RegistryDeploy !RegistryDeploySettings
 
 {- | #240: this repository's own combined board command sum -- the write
 four ("Cardano.KERI.Deployment.CLI") and the read-only \"list\"
@@ -215,6 +221,21 @@ instance Opt.HasParser Instructions where
                     "board"
                     "Operate the current on-chain endpoint catalog"
                     (Board <$> Opt.subConfig "board" boardCommandParser)
+                , Opt.command
+                    "registry"
+                    "Operate a registry of the current design"
+                    ( Opt.subConfig
+                        "registry"
+                        ( Opt.commands
+                            [ Opt.command
+                                "deploy"
+                                "Create a fresh registry: publish its scripts and create it from a seed"
+                                ( RegistryDeploy
+                                    <$> Opt.subConfig "deploy" registryDeploySettingsParser
+                                )
+                            ]
+                        )
+                    )
                 ]
 
 runInstructions :: Instructions -> IO ()
@@ -230,6 +251,7 @@ runInstructions = \case
     Checkpoint settings -> runBackendCheckpointCLI settings
     Payer settings -> runBackendPayerCLI settings
     Board command -> runBoardCommand command
+    RegistryDeploy settings -> runRegistryDeploy settings
 
 {- | Select exactly one backend (FR-5) and render its answer or its closed
 error. Checkpoint\/board manifest loading is deferred into the local\/Koios

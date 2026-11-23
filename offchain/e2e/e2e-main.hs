@@ -7,6 +7,7 @@ import CageE2ESpec qualified
 import CheckpointE2ESpec qualified
 import ConsumerE2ESpec qualified
 import FollowerE2ESpec qualified
+import RegistryDeployE2ESpec qualified
 
 main :: IO ()
 main = hspec $ do
@@ -14,3 +15,4 @@ main = hspec $ do
     CheckpointE2ESpec.spec
     ConsumerE2ESpec.spec
     FollowerE2ESpec.spec
+    RegistryDeployE2ESpec.spec

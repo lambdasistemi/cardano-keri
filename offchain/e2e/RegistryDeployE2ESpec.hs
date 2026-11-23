@@ -19,6 +19,7 @@ import Test.Hspec
 
 import CheckpointTxBuilder (
     DeployTiming (..),
+    registryBookingJourney,
     registryDeployJourney,
     stagedBareDevnet,
  )
@@ -29,6 +30,10 @@ spec = do
         it
             "deploys from an empty directory with two files, books with the payer's wallet, folds with another wallet and delivers the checkpoint"
             (stagedBareDevnet HostedTiming (registryDeployJourney HostedTiming))
+    describe "#351 ckeri registry register and fold book and fold through the installed command" $
+        it
+            "deploys, books the same identity twice with one wallet, folds the first with another and delivers the checkpoint, refuses the second on the registry's own snapshot and a stale snapshot refused as stale, and refuses a third registration"
+            (stagedBareDevnet HostedTiming registryBookingJourney)
     describe "#351 measurement: the registry deploy journey at preprod's timing" $
         it
             "records the submit and settle times of the booking, the hash-proof premint and the fold"

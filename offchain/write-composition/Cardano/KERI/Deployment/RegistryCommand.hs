@@ -25,6 +25,7 @@ module Cardano.KERI.Deployment.RegistryCommand (
     runRegistryDeployWith,
     renderStep,
     renderFailure,
+    awaitFirstOutput,
 ) where
 
 import Cardano.KERI.AID.Application (ApplicationParameters (..), OutputReference (..))

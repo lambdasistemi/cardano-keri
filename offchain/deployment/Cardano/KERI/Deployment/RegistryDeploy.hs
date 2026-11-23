@@ -43,6 +43,11 @@ module Cardano.KERI.Deployment.RegistryDeploy (
     releaseIdentityOf,
     seedMinimumLovelace,
     chooseSeed,
+
+    -- * Measured budgets
+    withMargin,
+    addUnits,
+    withinUnits,
 ) where
 
 import Cardano.Crypto.Hash (hashToBytes)

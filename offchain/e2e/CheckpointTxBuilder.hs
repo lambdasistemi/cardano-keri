@@ -31,6 +31,7 @@ module CheckpointTxBuilder (
     DeployTiming (..),
     stagedBareDevnet,
     registryDeployJourney,
+    registryBookingJourney,
     productionRegisterAdvanceScenario,
     productionRegisterConvictScenario,
     productionRegisterFreezeScenario,
@@ -200,7 +201,7 @@ import Cardano.KERI.AID.E2E.Script (
  )
 import Cardano.KERI.AID.Migration.Types (OutputRef (..))
 import Cardano.KERI.AID.Release qualified as Rel
-import Cardano.KERI.Deployment.KEL (InceptionExport (..))
+import Cardano.KERI.Deployment.KEL (InceptionExport (..), parseInceptionExport)
 import Cardano.KERI.Deployment.Registry (
     RegistryScripts (..),
     RegistryTerms (..),
@@ -208,6 +209,7 @@ import Cardano.KERI.Deployment.Registry (
     registryInitialFloor,
  )
 import Cardano.KERI.Deployment.RegistryFiles qualified as Files
+import Cardano.KERI.Deployment.RegistryRequest (registrationOfOutput)
 import Cardano.KERI.Deployment.RegistryTransactions (
     Booking (..),
     ValidityPlan (..),
@@ -343,7 +345,7 @@ import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Short qualified as SBS
 import Data.Foldable (toList)
 import Data.Functor ((<&>))
-import Data.List (elemIndex, find, isInfixOf, sort, sortOn)
+import Data.List (elemIndex, find, isInfixOf, isPrefixOf, sort, sortOn)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe, isJust, isNothing, listToMaybe)
 import Data.Ord (Down (..))
@@ -2127,7 +2129,8 @@ buildHashProofMintTx ::
 buildHashProofMintTx env party fixture = do
     params <- withinSecs 30 "query hash-proof protocol parameters" (queryProtocolParams (envProvider env))
     payer <- payerOf env party
-    unwrapBuild (Tx.mintHashProof params (deploymentOf env) payer fixture)
+    validity <- tipValidity env "hash-proof mint"
+    unwrapBuild (Tx.mintHashProof params (deploymentOf env) payer fixture validity)
 
 {- | The datum a registration writes: the fixture's key state born at the end of
 the validity interval, refunding the registering wallet.
@@ -5024,7 +5027,8 @@ buildFoldTx env request budgets = do
             (deploymentOf env)
             references
             Tx.FoldPlan
-                { Tx.foldBooking = foldBooking request
+                { Tx.foldRequest = bookingOutput (foldBooking request)
+                , Tx.foldBooked = bookingRecord (foldBooking request)
                 , Tx.foldInception = foldFixture request
                 , Tx.foldProof = foldProof request
                 , Tx.foldReferences = foldReferences request
@@ -6581,3 +6585,198 @@ registryDeployJourney timing socket lsq ltxs = do
         Just path -> writeFile path (report <> "\nckeri stdout:\n" <> out)
         Nothing -> pure ()
     Dir.removeDirectoryRecursive scratch
+
+-- ---------------------------------------------------------------------
+-- The installed commands book and fold
+-- ---------------------------------------------------------------------
+
+{- | The terms of the registry the journey deploys: the demonstration terms, the
+processing time long enough for two parties to take turns.
+-}
+bookingJourneyTerms :: RegistryTerms
+bookingJourneyTerms =
+    RegistryTerms
+        { registryCheckpointTerms =
+            CheckpointTerms
+                { termsNetwork = 0
+                , termsDeposit = 50_000_000
+                , termsFreezeBond = 5_000_000
+                , termsPremium = 2_000_000
+                }
+        , registryParameters =
+            ApplicationParameters
+                { registrationCost = 1_000_000
+                , minimumTip = 500_000
+                , processTime = 180_000
+                , bookingWidth = 100_000
+                }
+        , registryMinimumAda = 2_000_000
+        , registryTerminationCarrier = 1_500_000
+        }
+
+-- | The value of the first line of a command's output that starts with a label.
+lineValue :: String -> String -> Maybe String
+lineValue label output =
+    listToMaybe [drop (length label + 2) l | l <- lines output, (label <> ": ") `isPrefixOf` l]
+
+-- | An output reference printed as @<transaction id>#<index>@.
+outputReferenceText :: String -> IO TxIn
+outputReferenceText text = case break (== '#') text of
+    (transaction, '#' : index) -> do
+        bytes <- either fail pure (convertFromBase Base16 (B8.pack transaction))
+        pure (txInOfReference (OutputReference bytes (read index)))
+    _ -> fail ("not an output reference: " <> text)
+
+{- | Run the installed @ckeri@ to deploy a registry, then book twice and fold once with
+it, from files alone: the first booking by the payer's wallet is folded by another
+wallet, the second booking of the same identity is refused by the command on the
+registry's own snapshot, and a stale snapshot is refused as stale. A direct read of
+the node says what was delivered. The same-AID race, two folds built against one
+registry state with the ledger refusing the second for its consumed registry input,
+is the library journey 'duplicateRegistrationJourney' of the protocol-11 devnet
+(@#136 register a small identity end to end@), not run again through the commands.
+-}
+registryBookingJourney :: FilePath -> LSQChannel -> LTxSChannel -> IO ()
+registryBookingJourney socket lsq ltxs = do
+    blueprintPath <- resolveBlueprintPath
+    exportPath <- getDataFileName "deployment-test/fixtures/kli-export-single.cesr"
+    exportBytes <- BS.readFile exportPath
+    export <- either fail pure (parseInceptionExport exportBytes)
+    let provider = mkN2CProvider lsq
+        terms = bookingJourneyTerms
+        params' = registryParameters terms
+        timeoutSeconds = 300 :: Int
+    scratch <- freshScratch "registry-booking"
+    let workDir = scratch </> "work"
+        payerKeyFile = scratch </> "payer.skey"
+        folderKeyFile = scratch </> "folder.skey"
+        identityFile = workDir </> "release-identity.json"
+        recordFile = workDir </> "reference-outputs.json"
+        emptySnapshot = scratch </> "empty-snapshot.json"
+        afterFirst = scratch </> "after-first-fold.json"
+    Dir.createDirectory workDir
+    writeFile payerKeyFile (signingKeyEnvelope genesisSignKey)
+    writeFile folderKeyFile (signingKeyEnvelope folderKey)
+    BS.writeFile emptySnapshot "{\"schema_version\":1,\"supplied_by\":\"the deployer\",\"active\":[],\"terminal\":[]}\n"
+    payerText <- either fail pure (testAddressText genesisAddr)
+    folderText <- either fail pure (testAddressText folderAddress)
+    let magic = fromIntegral (unNetworkMagic devnetMagic) :: Integer
+        node =
+            [ "--network-magic"
+            , show magic
+            , "--blueprint"
+            , blueprintPath
+            , "--node-socket"
+            , socket
+            , "--timeout-seconds"
+            , show timeoutSeconds
+            ]
+        term name value = [name, show (value :: Integer)]
+        deployArgs =
+            ["registry", "deploy"]
+                <> node
+                <> ["--funding-address", payerText, "--signing-key-file", payerKeyFile]
+                <> term "--registration-cost" (registrationCost params')
+                <> term "--minimum-tip" (minimumTip params')
+                <> term "--process-time" (processTime params')
+                <> term "--booking-width" (bookingWidth params')
+                <> term "--deposit" (termsDeposit (registryCheckpointTerms terms))
+                <> term "--freeze-bond" (termsFreezeBond (registryCheckpointTerms terms))
+                <> term "--premium" (termsPremium (registryCheckpointTerms terms))
+                <> term "--minimum-ada" (registryMinimumAda terms)
+                <> term "--termination-carrier" (registryTerminationCarrier terms)
+        files = ["--release-identity", identityFile, "--reference-record", recordFile, "--kli-export", exportPath]
+        registerArgs = ["registry", "register"] <> node <> ["--funding-address", payerText, "--signing-key-file", payerKeyFile] <> files
+        foldArgs snapshot request out =
+            ["registry", "fold"]
+                <> node
+                <> ["--funding-address", folderText, "--signing-key-file", folderKeyFile]
+                <> files
+                <> ["--request", request, "--snapshot", snapshot]
+                <> maybe [] (\path -> ["--snapshot-out", path]) out
+        runCkeri label args =
+            withinSecs (timeoutSeconds * 10) label $ do
+                result@(code, out, err) <-
+                    Proc.readCreateProcessWithExitCode (Proc.proc "ckeri" args){Proc.cwd = Just workDir} ""
+                dbg (label <> " exit " <> show code <> "\nstdout:\n" <> out <> "\nstderr:\n" <> err)
+                pure result
+        succeeds label args = do
+            (code, out, _) <- runCkeri label args
+            unless (code == ExitSuccess) $ fail (label <> " failed: " <> show code)
+            pure out
+        refused label args needles = do
+            before <- (,) <$> walletLovelace provider genesisAddr <*> walletLovelace provider folderAddress
+            (code, _, err) <- runCkeri label args
+            unless (code == ExitFailure 1) $ fail (label <> " did not refuse: " <> show code)
+            forM_ needles $ \needle ->
+                unless (needle `isInfixOf` err) $ fail (label <> ": the refusal does not say " <> show needle <> ": " <> err)
+            after <- (,) <$> walletLovelace provider genesisAddr <*> walletLovelace provider folderAddress
+            unless (before == after) $ fail (label <> " spent lovelace although the command refused it")
+    _ <- succeeds "ckeri registry deploy" deployArgs
+    (identity, _) <-
+        Files.readDeploymentFiles identityFile recordFile >>= either (fail . show) pure
+    env0 <- mkCheckpointEnvWith terms blueprintPath lsq ltxs (txInOfReference (Rel.riSeed identity))
+    let key = checkpointKey env0 export
+        read' ref = do
+            found <- withinSecs 30 "query output" (queryUTxOByTxIn provider (Set.singleton ref))
+            requireJust "the node holds no such output" (Map.lookup ref found)
+        booked label = do
+            out <- succeeds label registerArgs
+            dbg (label <> " stdout:\n" <> out)
+            interval <- requireJust (label <> ": no validity interval printed") (lineValue "validity-interval-ms" out)
+            let (lower, upper) = case break (== '.') interval of
+                    (a, '.' : '.' : b) -> (read a :: Integer, read b :: Integer)
+                    _ -> (0, 0)
+            deadline <- requireJust (label <> ": no deadline printed") (lineValue "deadline-ms" out)
+            left <- requireJust (label <> ": no time left printed") (lineValue "time-left-ms" out)
+            unless (lower < upper && upper - lower <= bookingWidth params') $
+                fail (label <> ": the interval is empty or wider than the booking width: " <> interval)
+            unless (read deadline == upper + processTime params') $
+                fail (label <> ": the deadline is not the interval's upper bound and the processing time")
+            unless (read left > (0 :: Integer)) $ fail (label <> ": no time left")
+            forM_ ["cannot see a terminal key or another pending booking", "the fold is where a duplicate is stopped"] $ \needle ->
+                unless (needle `isInfixOf` out) $ fail (label <> ": the output does not say " <> show needle)
+            ref <- lineValue "booking-output" out & requireJust (label <> ": no booking output printed") >>= outputReferenceText
+            output <- read' ref
+            booking <- requireJust (label <> ": the output is not a booked request") (registrationOfOutput output)
+            unless (requestKey booking == key && requestBookedAt booking == upper && requestProcessDeadline booking == read deadline) $
+                fail (label <> ": the booked request is not the one the export and the interval name")
+            unless (requestDeposit booking == 59_000_000) $
+                fail (label <> ": the deposit is not the registry's initial floor")
+            pure (ref, booking)
+    (firstRef, firstBooking) <- booked "first booking"
+    (secondRef, _) <- booked "second booking of the same identity"
+    unless (firstRef /= secondRef) $ fail "the two bookings are one output"
+    -- the first booking is folded by the other wallet, on the empty snapshot
+    foldOut <-
+        succeeds "fold of the first booking" (foldArgs emptySnapshot (requestText firstRef) (Just afterFirst))
+    unless ("snapshot-supplied-by: the deployer" `isInfixOf` foldOut) $ fail "the fold does not name the supplier"
+    holding <- requireJust "no checkpoint output printed" (lineValue "checkpoint-output" foldOut) >>= outputReferenceText
+    delivered <- read' holding
+    -- a direct node read of what the fold delivered
+    unless (delivered ^. addrTxOutL == roleAddress env0 Active) $ fail "the delivered checkpoint is not at the checkpoint validator's address"
+    unless (unCoin (delivered ^. coinTxOutL) == requestDeposit firstBooking) $ fail "the delivered checkpoint does not hold the committed deposit"
+    unless (rawInlineData delivered == Just (requestInitialDatum firstBooking)) $ fail "the delivered checkpoint does not carry the committed datum"
+    unless (holdsCheckpointToken env0 (inceptionDatum export) delivered) $ fail "the delivered checkpoint does not hold the active token"
+    stateOutputs <- withinSecs 30 "query the registry state" (queryUTxOs provider (Tx.stateAddress (deploymentOf env0)))
+    unless (any (\(_, out) -> rawInlineData out == Just (stateDatumData (registryRoot [key]))) stateOutputs) $
+        fail "the registry's root is not the root of the one registered key"
+    -- a dedicated sentence per refusal, and nothing spent by any of them
+    refused
+        "fold of the second booking on the updated snapshot"
+        (foldArgs afterFirst (requestText secondRef) Nothing)
+        ["the registry already holds this key", "refused by the command, before any transaction"]
+    refused
+        "fold of the second booking on the snapshot from before the first fold"
+        (foldArgs emptySnapshot (requestText secondRef) Nothing)
+        ["stale or unavailable registry state", "refused by the command, before any transaction"]
+    refused
+        "third registration of the identity"
+        registerArgs
+        ["already registered in this registry", "refused by the command, before any transaction"]
+    Dir.removeDirectoryRecursive scratch
+
+-- | An output reference as the commands print and take it: @<transaction id>#<index>@.
+requestText :: TxIn -> String
+requestText (TxIn (TxId safeHash) (TxIx index)) =
+    B8.unpack (convertToBase Base16 (hashToBytes (extractHash safeHash))) <> "#" <> show index

@@ -178,7 +178,41 @@ done
 reject_retired_cardano_cli_help registry-deploy registry deploy
 reject_write_koios_help registry-deploy registry deploy
 
-# a later verb of the group, and a spelling outside the group, are not commands yet
+# An option is in a help text when both its flag and its variable are, each as a whole word:
+# `--snapshot-out` and `CKERI_SNAPSHOT_OUT` do not stand for `--snapshot` and `CKERI_SNAPSHOT`.
+has_option() {
+  local option="$1" help
+  help="$(cat)"
+  grep -qE -- "--$option([^a-z-]|\$)" <<<"$help" &&
+    grep -qE "CKERI_$(tr 'a-z-' 'A-Z_' <<<"$option")([^A-Z_]|\$)" <<<"$help"
+}
+
+# #351: `registry register` and `registry fold` take the files `registry deploy` wrote and the node,
+# and none of the registry's terms; their help offers nothing that means a store, a manifest, a
+# provider or cardano-cli.
+for verb in register fold; do
+  verb_help="$("$ckeri" registry "$verb" --help)"
+  for option in \
+    network-magic blueprint node-socket funding-address signing-key-file \
+    timeout-seconds release-identity reference-record kli-export; do
+    has_option "$option" <<<"$verb_help"
+  done
+  for forbidden in --store --manifest --koios-token KOIOS_TOKEN --cardano-cli CKERI_CARDANO_CLI CKERI_STORE CKERI_MANIFEST --booking-width --process-time --registration-cost --premium; do
+    if grep -q -- "$forbidden" <<<"$verb_help"; then
+      printf 'registry %s help offers %s (#351: no store, manifest, provider, cardano-cli or registry term)\n' \
+        "$verb" "$forbidden" >&2
+      exit 1
+    fi
+  done
+  reject_retired_cardano_cli_help "registry-$verb" registry "$verb"
+  reject_write_koios_help "registry-$verb" registry "$verb"
+done
+registry_fold_help="$("$ckeri" registry fold --help)"
+for option in request snapshot snapshot-out; do
+  has_option "$option" <<<"$registry_fold_help"
+done
+
+# a spelling outside the group is not a command
 registry_verdict() {
   local output
   output="$("$ckeri" "$@" 2>&1 || true)"
@@ -189,8 +223,9 @@ registry_verdict() {
   fi
 }
 [[ "$(registry_verdict registry deploy)" == recognised ]]
-[[ "$(registry_verdict registry fold)" == unrecognised ]]
-[[ "$(registry_verdict registry register)" == unrecognised ]]
+[[ "$(registry_verdict registry fold)" == recognised ]]
+[[ "$(registry_verdict registry register)" == recognised ]]
+[[ "$(registry_verdict registry book)" == unrecognised ]]
 [[ "$(registry_verdict registry-deploy)" == unrecognised ]]
 
 "$worktree/scripts/check-deploy-register-no-cli.sh"

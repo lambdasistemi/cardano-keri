@@ -10,7 +10,7 @@ in a directory of its own: what it prints, what it writes, what it leaves
 alone. Every term it deploys with is one of its settings, and a failed
 deployment is told in words that name what landed and what did not.
 -}
-module Cardano.KERI.Deployment.RegistryCommandSpec (spec) where
+module Cardano.KERI.Deployment.RegistryCommandSpec (spec, capturing, capturingLive) where
 
 import Cardano.Crypto.Hash (hashFromBytes)
 import Cardano.KERI.AID.Application (ApplicationParameters (..), OutputReference (..))

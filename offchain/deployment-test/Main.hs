@@ -10,10 +10,17 @@ import Cardano.KERI.Deployment.FreezePackageSpec qualified as FreezePackageSpec
 import Cardano.KERI.Deployment.KELSpec qualified as KELSpec
 import Cardano.KERI.Deployment.ManifestSpec qualified as ManifestSpec
 import Cardano.KERI.Deployment.RegistrationSpec qualified as RegistrationSpec
+import Cardano.KERI.Deployment.RegistryAttemptSpec qualified as RegistryAttemptSpec
+import Cardano.KERI.Deployment.RegistryBookingCommandSpec qualified as RegistryBookingCommandSpec
 import Cardano.KERI.Deployment.RegistryCommandSpec qualified as RegistryCommandSpec
 import Cardano.KERI.Deployment.RegistryDeploySpec qualified as RegistryDeploySpec
 import Cardano.KERI.Deployment.RegistryFilesSpec qualified as RegistryFilesSpec
+import Cardano.KERI.Deployment.RegistryFoldHandoffSpec qualified as RegistryFoldHandoffSpec
+import Cardano.KERI.Deployment.RegistryFoldSpec qualified as RegistryFoldSpec
+import Cardano.KERI.Deployment.RegistryRegisterSpec qualified as RegistryRegisterSpec
+import Cardano.KERI.Deployment.RegistryRequestSpec qualified as RegistryRequestSpec
 import Cardano.KERI.Deployment.RegistryScriptsSpec qualified as RegistryScriptsSpec
+import Cardano.KERI.Deployment.RegistrySnapshotSpec qualified as RegistrySnapshotSpec
 import Cardano.KERI.Deployment.RegistryTransactionsSpec qualified as RegistryTransactionsSpec
 import Cardano.KERI.Deployment.ScriptAritySpec qualified as ScriptAritySpec
 import Cardano.KERI.Deployment.TopUpPackageSpec qualified as TopUpPackageSpec
@@ -70,6 +77,13 @@ suite = hspec $ do
     RegistryScriptsSpec.spec
     RegistryFilesSpec.spec
     RegistryDeploySpec.spec
+    RegistrySnapshotSpec.spec
+    RegistryRequestSpec.spec
+    RegistryRegisterSpec.spec
+    RegistryFoldSpec.spec
+    RegistryFoldHandoffSpec.spec
+    RegistryAttemptSpec.spec
+    RegistryBookingCommandSpec.spec
     RegistryCommandSpec.spec
     RegistryTransactionsSpec.spec
     ScriptAritySpec.spec

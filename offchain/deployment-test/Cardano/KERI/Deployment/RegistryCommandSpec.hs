@@ -16,6 +16,7 @@ import Cardano.Crypto.Hash (hashFromBytes)
 import Cardano.KERI.AID.Application (ApplicationParameters (..), OutputReference (..))
 import Cardano.KERI.ChainQuery.ReleaseIdentity (decodeReleaseIdentity)
 import Cardano.KERI.Deployment.Registry (RegistryTerms (..))
+import Cardano.KERI.Deployment.RegistryChain (RegistryRuntime (..))
 import Cardano.KERI.Deployment.RegistryCommand
 import Cardano.KERI.Deployment.RegistryDeploy
 import Cardano.KERI.Deployment.RegistryDeploySpec (
@@ -145,7 +146,7 @@ spec = describe "#351 ckeri registry deploy" $ do
                 printedAtSubmission <- newIORef []
                 let withObserver readOut opener' settings' use =
                         opener' settings' $ \(runtime, payer) -> do
-                            let transactions = runtimeTransactions runtime
+                            let transactions = rtTransactions runtime
                                 observed =
                                     transactions
                                         { trSubmit = \tx -> do
@@ -153,7 +154,7 @@ spec = describe "#351 ckeri registry deploy" $ do
                                             modifyIORef' printedAtSubmission (printed :)
                                             trSubmit transactions tx
                                         }
-                            use (runtime{runtimeTransactions = observed}, payer)
+                            use (runtime{rtTransactions = observed}, payer)
                     opener _ use = use (chainRuntime noFaults chainRef, walletAddress)
                 ((ran, out), err) <-
                     capturing stderr $

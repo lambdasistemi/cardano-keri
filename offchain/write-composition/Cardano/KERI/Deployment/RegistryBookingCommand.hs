@@ -18,8 +18,6 @@ the node's evaluation of a transaction, or by the ledger. Every transaction id
 is printed, flushed, as it settles.
 -}
 module Cardano.KERI.Deployment.RegistryBookingCommand (
-    NodeAccess (..),
-    RegistryOpener,
     RegistryRegisterSettings (..),
     registryRegisterSettingsParser,
     runRegistryRegister,
@@ -33,7 +31,6 @@ module Cardano.KERI.Deployment.RegistryBookingCommand (
     printFoldEvent,
     renderFoldStopped,
     renderRegisterFailure,
-    observeFrom,
     openRegistryNode,
     openRegistryNodeBetween,
     parseRequestReference,
@@ -43,26 +40,18 @@ import Cardano.Crypto.Hash (hashFromBytes)
 import Cardano.KERI.AID.Application (ApplicationParameters (..))
 import Cardano.KERI.AID.Release (ReleaseIdentity (..))
 import Cardano.KERI.Deployment.KEL (InceptionExport (..), parseInceptionExport)
-import Cardano.KERI.Deployment.LiveRuntime (
-    LiveConfig (..),
-    LiveContext (..),
-    decodePaymentAddress,
-    withUnlinkedLiveContext,
- )
+import Cardano.KERI.Deployment.LiveRuntime (decodePaymentAddress)
+import Cardano.KERI.Deployment.NodeSocketRuntime (Connection (..), NodeAccess (..), RegistryOpener, withNodeRuntime)
 import Cardano.KERI.Deployment.RegistryChain (
     Attempt (..),
     AttemptStatus (..),
     Boundary (..),
-    Observation (..),
     Refusal (..),
-    RegistryRuntime (..),
     SubmitError (..),
     feeOf,
     renderBoundary,
     submitBoundary,
-    whileConnected,
  )
-import Cardano.KERI.Deployment.RegistryCommand (awaitFirstOutput)
 import Cardano.KERI.Deployment.RegistryFiles (FilesError (..), ReferenceRecord, readDeploymentFiles, writeFileNew)
 import Cardano.KERI.Deployment.RegistryFold (
     FoldCause (..),
@@ -83,19 +72,12 @@ import Cardano.KERI.Deployment.RegistrySnapshot (Snapshot (..), decodeSnapshot, 
 import Cardano.KERI.Deployment.RegistryTransactions (ValidityPlan (..))
 import Cardano.KERI.Deployment.Script (loadBlueprint)
 import Cardano.KERI.Deployment.SigningKeyCheck (checkSigningKey)
-import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..), renderTransactionId, transactionId)
-import Cardano.Ledger.Address (Addr)
-import Cardano.Ledger.BaseTypes (Network (Testnet), TxIx (..))
+import Cardano.KERI.Deployment.TransactionRuntime (renderTransactionId, transactionId)
+import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Node.Client.Provider (
-    LedgerSnapshot (..),
-    Provider (..),
-    SlotNo (..),
-    posixMsToSlotH,
-    queryLedgerSnapshotH,
- )
-import Control.Exception (ErrorCall (..), IOException, catchJust, try)
+import Cardano.Node.Client.Provider (SlotNo (..))
+import Control.Exception (IOException, try)
 import Control.Monad (forM_, when)
 import Data.ByteArray.Encoding (Base (Base16), convertFromBase, convertToBase)
 import Data.ByteString (ByteString)
@@ -103,28 +85,13 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as B8
 import Data.Char (toUpper)
 import Data.IORef (newIORef, readIORef, writeIORef)
-import Data.List (isPrefixOf)
 import Data.Text (Text)
 import Data.Text qualified as T
-import Data.Time.Clock.POSIX (getPOSIXTime)
 import OptEnvConf qualified as Opt
 import System.Directory (doesPathExist)
 import System.Exit (exitFailure)
 import System.IO (Handle, hFlush, hPutStrLn, stderr, stdout)
 import System.IO.Error (isDoesNotExistError)
-
--- | How a command reaches the node and who pays.
-data NodeAccess = NodeAccess
-    { naNetworkMagic :: !Int
-    , naNodeSocket :: !FilePath
-    , naFundingAddress :: !Text
-    , naSigningKeyFile :: !FilePath
-    , naTimeoutSeconds :: !Int
-    }
-    deriving stock (Show, Eq)
-
--- | How the commands reach the node: the runtime and the paying address.
-type RegistryOpener = NodeAccess -> ((RegistryRuntime, Addr) -> IO ()) -> IO ()
 
 -- ---------------------------------------------------------------------
 -- Settings
@@ -665,34 +632,10 @@ openRegistryNodeBetween between access use = do
     checkSigningKey (naSigningKeyFile access) payer >>= either dieZero pure
     between
     begun <- newIORef False
-    opened <- try @IOException
-        $ withUnlinkedLiveContext
-            LiveConfig
-                { liveNetworkMagic = naNetworkMagic access
-                , liveNodeSocket = naNodeSocket access
-                , liveSigningKeyFile = naSigningKeyFile access
-                , liveFundingAddressText = naFundingAddress access
-                , liveTimeoutSeconds = naTimeoutSeconds access
-                }
-            (\_ -> pure ())
-        $ \context status -> do
-            -- from here the operation has begun: whatever follows is never a startup refusal
-            writeIORef begun True
-            let provider = liveProvider context
-                transactions = liveTransactionRuntime context
-            use
-                ( whileConnected
-                    status
-                    RegistryRuntime
-                        { rtNetwork = Testnet
-                        , rtUtxosAt = queryUTxOs provider
-                        , rtOutputs = queryUTxOByTxIn provider
-                        , rtTransactions = transactions{trObserve = awaitFirstOutput provider (naTimeoutSeconds access)}
-                        , rtObserve = observeNode provider
-                        , rtNowMs = clockMs
-                        }
-                , payer
-                )
+    opened <- try @IOException $ withNodeRuntime Unlinked access $ \(runtime, _) -> do
+        -- from here the operation has begun: whatever follows is never a startup refusal
+        writeIORef begun True
+        use (runtime, payer)
     case opened of
         Right result -> pure result
         Left failure -> do
@@ -704,97 +647,3 @@ openRegistryNodeBetween between access use = do
     startupRefusal failure
         | isDoesNotExistError failure = "signing-key-file-missing: " <> show failure
         | otherwise = "signing-key-startup-failed: " <> show failure
-
-{- | One observation of the node, taken from one acquisition of its state: the tip, the
-forecast horizon and every slot start come from the same chain point, and the machine's
-clock is read once, before. The horizon is the slot of the latest instant the node's
-interpreter converts, found by conversions in the same acquisition; the clock is compared
-with it by arithmetic, so a clock beyond the forecast is an observation like another.
--}
-observeNode :: Provider IO -> IO Observation
-observeNode provider = do
-    clock <- clockMs
-    withAcquired provider $ \acquired ->
-        observeFrom (ledgerTipSlot <$> queryLedgerSnapshotH acquired) (posixMsToSlotH acquired) clock
-
-clockMs :: IO Integer
-clockMs = (\t -> floor (t * 1_000)) <$> getPOSIXTime
-
-{- | An observation from the three things one acquisition gives: the tip, the node's
-conversion of an instant to a slot (it raises for an instant past its forecast), and one
-reading of the clock. The tip is read once. An instant the node cannot convert is
-treated as past its forecast.
--}
-observeFrom :: IO SlotNo -> (Integer -> IO SlotNo) -> Integer -> IO Observation
-observeFrom readTip toSlot clock = do
-    tip <- readTip
-    latest <- latestConvertible
-    horizon <- toSlot latest
-    when (horizon < tip) $
-        fail ("the node's forecast ends at slot " <> show horizon <> ", before its tip, slot " <> show tip)
-    when (tip < 2) $
-        fail ("the node's tip is slot " <> show tip <> ": a slot length cannot be measured before slot 2")
-    tipStart <- startOf latest tip
-    before <- startOf tipStart (tip - 1)
-    pure
-        Observation
-            { obsTipSlot = tip
-            , obsTipStartMs = tipStart
-            , obsSlotLengthMs = tipStart - before
-            , obsClockMs = clock
-            , obsHorizonSlot = horizon
-            }
-  where
-    -- only the pin's own refusal of an instant past its forecast is a forecast: it is a plain
-    -- error call "posixMsToSlot: <PastHorizon ...>" (N2C/Provider.hs). A timeout, a lost
-    -- connection, a cancellation or any other failure is a failed read and leaves the observation.
-    convertible instant =
-        catchJust
-            (\(ErrorCall message) -> if "posixMsToSlot: " `isPrefixOf` message then Just () else Nothing)
-            (Just <$> toSlot instant)
-            (\() -> pure Nothing)
-    limit = 40_000_000_000
-    -- the latest instant that converts: found from the clock, upwards or downwards
-    latestConvertible =
-        convertible clock >>= \case
-            Just _ -> gallopUp clock 1_000
-            Nothing -> gallopDown clock 1_000
-    gallopUp good step
-        | step > limit = pure good
-        | otherwise =
-            convertible (good + step) >>= \case
-                Just _ -> gallopUp (good + step) (step * 2)
-                Nothing -> boundary good (good + step)
-    gallopDown bad step
-        | step > limit = fail "the node converts no instant to a slot"
-        | otherwise =
-            convertible (bad - step) >>= \case
-                Just _ -> boundary (bad - step) bad
-                Nothing -> gallopDown (bad - step) (step * 2)
-    -- the last convertible instant between one that converts and one that does not
-    boundary good bad
-        | bad - good <= 1 = pure good
-        | otherwise = do
-            let middle = (good + bad) `div` 2
-            convertible middle >>= \case
-                Just _ -> boundary middle bad
-                Nothing -> boundary good middle
-    -- the instant a slot starts: the first instant that is in it, below an instant known to be in or after it
-    startOf upper slot = do
-        slotAtUpper <- toSlot upper
-        when (slotAtUpper < slot) $ fail ("slot " <> show slot <> " is after the instant asked from")
-        lower <- searchDown upper slot 1_000
-        search lower upper slot
-    -- an instant the node cannot convert, before its system start, is before every slot
-    below slot instant = maybe True (< slot) <$> convertible instant
-    searchDown from slot step
-        | step >= from = pure 0
-        | otherwise = do
-            isBelow <- below slot (from - step)
-            if isBelow then pure (from - step) else searchDown from slot (step * 2)
-    search lo hi slot
-        | lo + 1 >= hi = pure hi
-        | otherwise = do
-            let middle = (lo + hi) `div` 2
-            isBelow <- below slot middle
-            if isBelow then search middle hi slot else search lo middle slot

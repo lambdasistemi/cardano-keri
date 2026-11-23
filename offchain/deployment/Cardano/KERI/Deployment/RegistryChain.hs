@@ -4,12 +4,13 @@
 Module      : Cardano.KERI.Deployment.RegistryChain
 Description : What booking and folding read of the chain, and how they refuse
 
-A registration is booked, and later folded, against a registry that
-@ckeri registry deploy@ created. Both read the chain only through a
-'RegistryRuntime': the outputs at an address, the outputs under some references,
-the tip and the time of a slot, and the means to evaluate, sign, submit and
-observe a transaction. Nothing here opens a follower store or a manifest of the
-first deployment.
+A registry is deployed by @ckeri registry deploy@, a registration is booked by
+@ckeri registry register@ and later folded by @ckeri registry fold@. All three
+reach the chain only through a 'RegistryRuntime': the outputs at an address, the
+outputs under some references, whether a reward credential is registered, the
+tip and the time of a slot, and the means to evaluate, sign, submit and observe
+a transaction. Nothing here opens a follower store or a manifest of the first
+deployment.
 
 Every refusal says where it was made: by the command before any transaction, by
 the node's evaluation of a transaction, or by the ledger.
@@ -51,6 +52,11 @@ module Cardano.KERI.Deployment.RegistryChain (
     -- * Transactions
     transactBudgeted,
     transactPlain,
+
+    -- * Measured budgets
+    withMargin,
+    addUnits,
+    withinUnits,
 ) where
 
 import Cardano.Crypto.Hash (hashFromBytes)
@@ -65,7 +71,6 @@ import Cardano.KERI.Deployment.Registry (
     RegistryTerms (..),
     deriveRegistryScripts,
  )
-import Cardano.KERI.Deployment.RegistryDeploy (addUnits, withMargin, withinUnits)
 import Cardano.KERI.Deployment.RegistryFiles (ReferenceRecord (..), ScriptReference (..))
 import Cardano.KERI.Deployment.RegistryTransactions (
     Budgets,
@@ -85,7 +90,7 @@ import Cardano.KERI.Deployment.Script (
     scriptHashBytes,
  )
 import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..), transactionId)
-import Cardano.Ledger.Address (Addr)
+import Cardano.Ledger.Address (AccountAddress, Addr)
 import Cardano.Ledger.Alonzo.PParams (ppMaxTxExUnitsL)
 import Cardano.Ledger.Api.Tx (bodyTxL)
 import Cardano.Ledger.Api.Tx.Body (feeTxBodyL)
@@ -126,6 +131,8 @@ data RegistryRuntime = RegistryRuntime
     -- ^ the outputs the node holds at an address now
     , rtOutputs :: Set TxIn -> IO (Map TxIn (TxOut ConwayEra))
     -- ^ the outputs the node holds unspent under these references
+    , rtRewardRegistered :: AccountAddress -> IO Bool
+    -- ^ whether the node holds this reward account registered
     , rtTransactions :: !(TransactionRuntime IO)
     , rtObserve :: IO Observation
     -- ^ the tip, the clock and the forecast horizon, each read once, for one decision
@@ -530,6 +537,19 @@ transactPlain rt payerAddress onAttempt build = runExceptT $ do
     tx <- either (throwE . BuildRefused) pure (build params (Payer payerAddress funds))
     settle rt onAttempt tx
 
+-- | A measured budget with the margin a transaction declares above it.
+withMargin :: ExUnits -> ExUnits
+withMargin (ExUnits memory steps) = ExUnits (bump memory) (bump steps)
+  where
+    bump value = value + max 1 ((value + 9) `div` 10)
+
+addUnits :: ExUnits -> ExUnits -> ExUnits
+addUnits (ExUnits a b) (ExUnits c d) = ExUnits (a + c) (b + d)
+
+withinUnits :: ExUnits -> ExUnits -> Bool
+withinUnits (ExUnits memory steps) (ExUnits limitMemory limitSteps) =
+    memory <= limitMemory && steps <= limitSteps
+
 -- | The fee a transaction pays, in lovelace.
 feeOf :: ConwayTx -> Integer
 feeOf tx = let Coin fee = tx ^. bodyTxL . feeTxBodyL in fee
@@ -564,6 +584,7 @@ whileConnected status runtime =
     runtime
         { rtUtxosAt = bounded . rtUtxosAt runtime
         , rtOutputs = bounded . rtOutputs runtime
+        , rtRewardRegistered = bounded . rtRewardRegistered runtime
         , rtObserve = bounded (rtObserve runtime)
         , rtTransactions =
             transactions

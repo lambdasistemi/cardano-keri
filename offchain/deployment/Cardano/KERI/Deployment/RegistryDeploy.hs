@@ -13,7 +13,7 @@ credential, then create the registry from a seed. The seed is a wallet output
 chosen before the registry's scripts are derived, because they are derived from
 it; no publication spends it, and the genesis spends it as its one input.
 
-Nothing here talks to a node directly: a 'DeployRuntime' says how to read the
+Nothing here talks to a node directly: a 'RegistryRuntime' says how to read the
 wallet and the outputs the node holds, and how to evaluate, sign, submit and
 observe a transaction. The deployment reads chain state only through it.
 
@@ -23,7 +23,6 @@ transaction it cannot see settle is reported as uncertain.
 -}
 module Cardano.KERI.Deployment.RegistryDeploy (
     -- * What a deployment is given
-    DeployRuntime (..),
     DeployRequest (..),
 
     -- * What it does and what it reports
@@ -43,11 +42,6 @@ module Cardano.KERI.Deployment.RegistryDeploy (
     releaseIdentityOf,
     seedMinimumLovelace,
     chooseSeed,
-
-    -- * Measured budgets
-    withMargin,
-    addUnits,
-    withinUnits,
 ) where
 
 import Cardano.Crypto.Hash (hashToBytes)
@@ -67,6 +61,12 @@ import Cardano.KERI.Deployment.Registry (
     RegistryScripts (..),
     RegistryTerms (..),
     deriveRegistryScripts,
+ )
+import Cardano.KERI.Deployment.RegistryChain (
+    RegistryRuntime (..),
+    addUnits,
+    withMargin,
+    withinUnits,
  )
 import Cardano.KERI.Deployment.RegistryFiles (
     ReferenceRecord (..),
@@ -173,21 +173,6 @@ import Data.Set qualified as Set
 import Data.Text (Text)
 import Lens.Micro ((&), (.~), (^.))
 import PlutusCore.Data (Data (..))
-
--- | How a deployment reads and writes the chain.
-data DeployRuntime = DeployRuntime
-    { runtimeNetwork :: !Network
-    , runtimeWallet :: IO [(TxIn, TxOut ConwayEra)]
-    -- ^ the paying wallet's outputs, as the node holds them now
-    , runtimeOutputs :: Set TxIn -> IO (Map TxIn (TxOut ConwayEra))
-    -- ^ the outputs the node holds unspent under these references
-    , runtimeTransactions :: !(TransactionRuntime IO)
-    -- ^ protocol parameters, evaluation, signing, submission and settlement
-    , runtimeLanded :: Landed -> IO ()
-    -- ^ told of each transaction as it settles
-    , runtimeRegistered :: AccountAddress -> IO Bool
-    -- ^ whether the node holds this reward account registered
-    }
 
 -- | What a deployment is asked to create.
 data DeployRequest = DeployRequest
@@ -401,8 +386,8 @@ before the terms are accepted and the scripts derived, and the genesis is not
 built before the seed is read unspent. The wallet is read again before each
 transaction, and the seed is never among the outputs a publication may spend.
 -}
-deployRegistry :: DeployRuntime -> DeployRequest -> IO (Either DeployFailure Deployed)
-deployRegistry runtime request = do
+deployRegistry :: RegistryRuntime -> (Landed -> IO ()) -> DeployRequest -> IO (Either DeployFailure Deployed)
+deployRegistry runtime onLanded request = do
     landedRef <- newIORef []
     skippedRef <- newIORef []
     outcome <- try (run landedRef skippedRef)
@@ -422,8 +407,8 @@ deployRegistry runtime request = do
                     }
   where
     terms = requestTerms request
-    transactions = runtimeTransactions runtime
-    network = runtimeNetwork runtime
+    transactions = rtTransactions runtime
+    network = rtNetwork runtime
     payerAddress' = requestPayer request
 
     stop :: Maybe Step -> DeployError -> IO a
@@ -435,7 +420,7 @@ deployRegistry runtime request = do
 
     -- the wallet as the node holds it now, without the seed
     spendable step seedIn = do
-        wallet <- onNode step (runtimeWallet runtime)
+        wallet <- onNode step (rtUtxosAt runtime payerAddress')
         pure [output | output@(ref, out) <- wallet, ref /= seedIn, isFundable out]
 
     -- sign, submit and observe one transaction, then report it
@@ -452,7 +437,7 @@ deployRegistry runtime request = do
         either (stop (Just step) . NotObserved txId . show) pure observed
         let landed = Landed step txId (feeOf signed) (lockedBy signed) (collateralOf known signed)
         modifyIORef' landedRef (landed :)
-        runtimeLanded runtime landed
+        onLanded landed
         pure signed
 
     -- a transaction without scripts: built once, from the wallet as it stands
@@ -507,7 +492,7 @@ deployRegistry runtime request = do
         let discriminator = termsNetwork (registryCheckpointTerms terms)
         when (discriminator /= networkDiscriminator network) $
             stop Nothing (NetworkDisagrees discriminator)
-        wallet0 <- onNode Nothing (runtimeWallet runtime)
+        wallet0 <- onNode Nothing (rtUtxosAt runtime payerAddress')
         (seedIn, _) <- maybe (stop Nothing NoSeedOutput) pure (chooseSeed wallet0)
         let seedRef = outputReferenceOf seedIn
         scripts <-
@@ -520,7 +505,7 @@ deployRegistry runtime request = do
                 AccountAddress
                     network
                     (AccountId (ScriptHashObj (artifactScriptHash (observerLifecycle (scriptsObservers scripts)))))
-        alreadyRegistered <- onNode Nothing (runtimeRegistered runtime credentialAccount)
+        alreadyRegistered <- onNode Nothing (rtRewardRegistered runtime credentialAccount)
         when alreadyRegistered $ writeIORef skippedRef [RegisterObserverCredential]
         let deployment = RegistryDeployment network terms scripts
             observers = scriptsObservers scripts
@@ -583,7 +568,7 @@ deployRegistry runtime request = do
         -- the genesis: the seed is read unspent, with the outputs the genesis reads by reference
         found <-
             onNode (Just CreateRegistry) $
-                runtimeOutputs
+                rtOutputs
                     runtime
                     (Set.fromList [seedIn, templateIn, applicationIn, stateIn])
         seedOut <-
@@ -675,19 +660,6 @@ measure step expected evaluated = do
                     (Stop (Just step, EvaluationFailed (show purpose <> ": " <> show failure)))
         )
         evaluated
-
--- | A measured budget with the margin a transaction declares above it.
-withMargin :: ExUnits -> ExUnits
-withMargin (ExUnits memory steps) = ExUnits (bump memory) (bump steps)
-  where
-    bump value = value + max 1 ((value + 9) `div` 10)
-
-addUnits :: ExUnits -> ExUnits -> ExUnits
-addUnits (ExUnits a b) (ExUnits c d) = ExUnits (a + c) (b + d)
-
-withinUnits :: ExUnits -> ExUnits -> Bool
-withinUnits (ExUnits memory steps) (ExUnits limitMemory limitSteps) =
-    memory <= limitMemory && steps <= limitSteps
 
 networkDiscriminator :: Network -> Integer
 networkDiscriminator = \case

@@ -27,6 +27,7 @@ module Cardano.KERI.Deployment.RegistryDeploySpec (
     testTerms,
     newChain,
     chainRuntime,
+    deployOn,
     loadTestBlueprint,
     pricedParameters,
 ) where
@@ -48,6 +49,7 @@ import Cardano.KERI.Deployment.Registry (
     RegistryTerms (..),
     deriveRegistryScripts,
  )
+import Cardano.KERI.Deployment.RegistryChain (RegistryRuntime (..))
 import Cardano.KERI.Deployment.RegistryDeploy
 import Cardano.KERI.Deployment.RegistryFiles (ReferenceRecord (..), ScriptReference (..))
 import Cardano.KERI.Deployment.RegistryTransactions (
@@ -243,27 +245,33 @@ pricedParameters =
                 , prSteps = fromJust (boundRational (721 % 10_000_000))
                 }
 
+-- | Deploy over the chain of 'chainRuntime', recording each transaction as it is reported.
+deployOn :: Faults -> IORef Chain -> DeployRequest -> IO (Either DeployFailure Deployed)
+deployOn faults chainRef =
+    deployRegistry (chainRuntime faults chainRef) $ \landed ->
+        modifyIORef' chainRef (\c -> c{chainReported = landed : chainReported c})
+
 {- | The runtime of a deployment over a chain: reads answer from the outputs it
 holds, a submission is accepted when it spends what exists and balances, and
 the faults say what goes wrong.
 -}
-chainRuntime :: Faults -> IORef Chain -> DeployRuntime
+chainRuntime :: Faults -> IORef Chain -> RegistryRuntime
 chainRuntime faults chainRef =
-    DeployRuntime
-        { runtimeNetwork = Testnet
-        , runtimeWallet = do
+    RegistryRuntime
+        { rtNetwork = Testnet
+        , rtUtxosAt = \address -> do
             touch
             chain <- readIORef chainRef
             pure
                 [ output
                 | output@(_, out) <- Map.toList (chainOutputs chain)
-                , out ^. addrTxOutL == walletAddress
+                , out ^. addrTxOutL == address
                 ]
-        , runtimeOutputs = \wanted -> do
+        , rtOutputs = \wanted -> do
             touch
             chain <- readIORef chainRef
             pure (Map.restrictKeys (chainOutputs chain) wanted)
-        , runtimeTransactions =
+        , rtTransactions =
             TransactionRuntime
                 { trQueryProtocolParams = touch >> pure pricedParameters
                 , trEvaluate = \tx -> do
@@ -282,11 +290,11 @@ chainRuntime faults chainRef =
                     when (Just n == failObservationAt faults) $
                         throwIO (userError ("transaction not seen settled: " <> show txId))
                 }
-        , runtimeRegistered = \account -> do
+        , rtRewardRegistered = \account -> do
             touch
             Set.member account . chainRegistered <$> readIORef chainRef
-        , runtimeLanded = \landed ->
-            modifyIORef' chainRef (\c -> c{chainReported = landed : chainReported c})
+        , rtObserve = fail "a deployment reads no time"
+        , rtNowMs = fail "a deployment reads no time"
         }
   where
     touch = modifyIORef' chainRef (\c -> c{chainCalls = chainCalls c + 1})
@@ -411,7 +419,7 @@ requestFor blueprint terms =
 runOn :: Faults -> Blueprint -> RegistryTerms -> [(TxIn, TxOut ConwayEra)] -> IO (Either DeployFailure Deployed, Chain)
 runOn faults blueprint terms outputs = do
     chainRef <- newIORef (newChain outputs)
-    outcome <- deployRegistry (chainRuntime faults chainRef) (requestFor blueprint terms)
+    outcome <- deployOn faults chainRef (requestFor blueprint terms)
     chain <- readIORef chainRef
     pure (outcome, chain)
 
@@ -702,7 +710,7 @@ spec = describe "#351 deploying a registry" $ do
                         Testnet
                         (AccountId (ScriptHashObj (artifactScriptHash (observerLifecycle (scriptsObservers scripts)))))
             chainRef <- newIORef ((newChain walletOutputs){chainRegistered = Set.singleton account})
-            outcome <- deployRegistry (chainRuntime noFaults chainRef) (requestFor blueprint testTerms)
+            outcome <- deployOn noFaults chainRef (requestFor blueprint testTerms)
             chain <- readIORef chainRef
             result <- expectDeployed outcome
             map landedStep (deployedLanded result) `shouldBe` filter (/= RegisterObserverCredential) allSteps
@@ -714,8 +722,8 @@ spec = describe "#351 deploying a registry" $ do
         it "creates a second registry on the same chain, registering the credential once" $ do
             blueprint <- loadTestBlueprint
             chainRef <- newIORef (newChain (walletOutputs <> moreFunds))
-            firstOutcome <- deployRegistry (chainRuntime noFaults chainRef) (requestFor blueprint testTerms)
-            secondOutcome <- deployRegistry (chainRuntime noFaults chainRef) (requestFor blueprint testTerms)
+            firstOutcome <- deployOn noFaults chainRef (requestFor blueprint testTerms)
+            secondOutcome <- deployOn noFaults chainRef (requestFor blueprint testTerms)
             first <- expectDeployed firstOutcome
             second <- expectDeployed secondOutcome
             deployedSkipped first `shouldBe` []
@@ -735,7 +743,7 @@ spec = describe "#351 deploying a registry" $ do
                         Testnet
                         (AccountId (ScriptHashObj (artifactScriptHash (observerLifecycle (scriptsObservers scripts)))))
             chainRef <- newIORef ((newChain walletOutputs){chainRegistered = Set.singleton account})
-            outcome <- deployRegistry (chainRuntime noFaults{rejectSubmissionAt = Just 0} chainRef) (requestFor blueprint testTerms)
+            outcome <- deployOn noFaults{rejectSubmissionAt = Just 0} chainRef (requestFor blueprint testTerms)
             case outcome of
                 Left failure -> do
                     failureSkipped failure `shouldBe` [RegisterObserverCredential]

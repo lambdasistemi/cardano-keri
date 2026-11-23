@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 {- |
@@ -20,27 +19,20 @@ module Cardano.KERI.Deployment.RegistryCommand (
     RegistryDeploySettings (..),
     registryDeploySettingsParser,
     registryTermsOf,
-    RuntimeOpener,
     runRegistryDeploy,
     runRegistryDeployWith,
     renderStep,
     renderFailure,
-    awaitFirstOutput,
 ) where
 
 import Cardano.KERI.AID.Application (ApplicationParameters (..), OutputReference (..))
-import Cardano.KERI.Deployment.LiveRuntime (
-    LiveConfig (..),
-    LiveContext (..),
-    decodePaymentAddress,
-    withLiveContext,
- )
+import Cardano.KERI.Deployment.LiveRuntime (decodePaymentAddress)
+import Cardano.KERI.Deployment.NodeSocketRuntime (Connection (..), NodeAccess (..), RegistryOpener, withNodeRuntime)
 import Cardano.KERI.Deployment.Registry (RegistryTerms (..))
 import Cardano.KERI.Deployment.RegistryDeploy (
     DeployError (..),
     DeployFailure (..),
     DeployRequest (..),
-    DeployRuntime (..),
     Deployed (..),
     Landed (..),
     Step (..),
@@ -49,23 +41,14 @@ import Cardano.KERI.Deployment.RegistryDeploy (
  )
 import Cardano.KERI.Deployment.RegistryFiles (FilesError (..), checkFilesWritable, writeDeploymentFiles)
 import Cardano.KERI.Deployment.Script (CheckpointTerms (..), loadBlueprint)
-import Cardano.KERI.Deployment.TransactionRuntime (
-    TransactionRuntime (..),
-    renderTransactionId,
- )
-import Cardano.Ledger.Address (Addr)
-import Cardano.Ledger.BaseTypes (Network (Testnet), TxIx (..))
-import Cardano.Ledger.TxIn (TxId, TxIn (..))
-import Cardano.Node.Client.Provider (Provider (..))
-import Control.Concurrent (threadDelay)
-import Control.Monad (forM_, unless, when)
+import Cardano.KERI.Deployment.TransactionRuntime (renderTransactionId)
+import Cardano.Ledger.BaseTypes (TxIx (..))
+import Cardano.Ledger.TxIn (TxIn (..))
+import Control.Monad (forM_, when)
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString.Char8 qualified as B8
-import Data.Map.Strict qualified as Map
-import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as T
-import Data.Time.Clock (diffUTCTime, getCurrentTime)
 import OptEnvConf qualified as Opt
 import System.Exit (exitFailure)
 import System.IO (hFlush, hPutStrLn, stderr, stdout)
@@ -240,16 +223,13 @@ integerSetting optionName environmentName configName description defaultValue =
 -- Running
 -- ---------------------------------------------------------------------
 
--- | How the command reaches the node: the runtime of a deployment and the paying address.
-type RuntimeOpener = RegistryDeploySettings -> ((DeployRuntime, Addr) -> IO ()) -> IO ()
-
 runRegistryDeploy :: RegistryDeploySettings -> IO ()
 runRegistryDeploy = runRegistryDeployWith openNode
 
 {- | Deploy a registry through the node the opener reaches, write the two files
 and print what landed.
 -}
-runRegistryDeployWith :: RuntimeOpener -> RegistryDeploySettings -> IO ()
+runRegistryDeployWith :: RegistryOpener -> RegistryDeploySettings -> IO ()
 runRegistryDeployWith open settings = do
     hPutStrLn stderr "ckeri: not for mainnet"
     when (rdTimeoutSeconds settings <= 0) $
@@ -260,7 +240,7 @@ runRegistryDeployWith open settings = do
             (rdReleaseIdentityOut settings)
             (rdReferenceRecordOut settings)
     either (die' . renderFilesError) pure writable
-    open settings $ \(runtime, payer) -> do
+    open (nodeAccessOf settings) $ \(runtime, payer) -> do
         let request =
                 DeployRequest
                     { requestTerms = registryTermsOf settings
@@ -268,7 +248,7 @@ runRegistryDeployWith open settings = do
                     , requestPayer = payer
                     , requestReferenceLovelace = rdReferenceLovelace settings
                     }
-        outcome <- deployRegistry runtime{runtimeLanded = printLanded} request
+        outcome <- deployRegistry runtime printLanded request
         case outcome of
             Left failure -> do
                 forM_ (renderFailure failure) (hPutStrLn stderr)
@@ -388,54 +368,18 @@ renderFilesError = \case
 -- The node
 -- ---------------------------------------------------------------------
 
-openNode :: RuntimeOpener
-openNode settings use = do
-    payer <- either die' pure (decodePaymentAddress (rdFundingAddress settings))
-    withLiveContext
-        LiveConfig
-            { liveNetworkMagic = rdNetworkMagic settings
-            , liveNodeSocket = rdNodeSocket settings
-            , liveSigningKeyFile = rdSigningKeyFile settings
-            , liveFundingAddressText = rdFundingAddress settings
-            , liveTimeoutSeconds = rdTimeoutSeconds settings
-            }
-        (\_ -> pure ())
-        $ \context -> do
-            let provider = liveProvider context
-                transactions = liveTransactionRuntime context
-            use
-                ( DeployRuntime
-                    { runtimeNetwork = Testnet
-                    , runtimeWallet = queryUTxOs provider payer
-                    , runtimeOutputs = queryUTxOByTxIn provider
-                    , runtimeTransactions =
-                        transactions
-                            { trObserve =
-                                awaitFirstOutput
-                                    provider
-                                    (rdTimeoutSeconds settings)
-                            }
-                    , runtimeLanded = \_ -> pure ()
-                    , runtimeRegistered = \account -> Map.member account <$> queryRewardAccounts provider (Set.singleton account)
-                    }
-                , payer
-                )
+-- | How the settings reach the node.
+nodeAccessOf :: RegistryDeploySettings -> NodeAccess
+nodeAccessOf settings =
+    NodeAccess
+        { naNetworkMagic = rdNetworkMagic settings
+        , naNodeSocket = rdNodeSocket settings
+        , naFundingAddress = rdFundingAddress settings
+        , naSigningKeyFile = rdSigningKeyFile settings
+        , naTimeoutSeconds = rdTimeoutSeconds settings
+        }
 
--- | A transaction has settled when the node reports its first output unspent.
-awaitFirstOutput :: Provider IO -> Int -> TxId -> IO ()
-awaitFirstOutput provider timeoutSeconds txId = do
-    started <- getCurrentTime
-    let first = TxIn txId (TxIx 0)
-        loop = do
-            found <- queryUTxOByTxIn provider (Set.singleton first)
-            unless (Map.member first found) $ do
-                now <- getCurrentTime
-                when (diffUTCTime now started >= fromIntegral timeoutSeconds) $
-                    fail
-                        ( "transaction not seen settled within "
-                            <> show timeoutSeconds
-                            <> " seconds"
-                        )
-                threadDelay 1_000_000
-                loop
-    loop
+openNode :: RegistryOpener
+openNode access use = do
+    payer <- either die' pure (decodePaymentAddress (naFundingAddress access))
+    withNodeRuntime Linked access (\(runtime, _) -> use (runtime, payer))

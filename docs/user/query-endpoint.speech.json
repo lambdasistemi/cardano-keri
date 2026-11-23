@@ -9,7 +9,7 @@
       "pause": 400
     },
     {
-      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active or parked (a retained output holds its token, minimum ADA and last key state; the registry key stays active). A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active until it is convicted: there is no owner exit, no parking and no revival. A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
       "pause": 400
     },
     {
@@ -105,6 +105,10 @@
     {
       "text": "tip_lag_slots is computed by sampling the observed chain tip after that transaction commits, purely to measure lag; it never gates which data was read. When the store watermark is momentarily ahead of the sampled tip, or no tip has been observed yet, or the upstream node is disconnected, or the lag exceeds 60 slots, the service reports itself not ready rather than publish a freshness number it cannot stand behind.",
       "pause": 400
+    },
+    {
+      "text": "What the follower observes, from which node, and what its 60-slot limit and a not-ready answer mean are declared in What the follower observes, and when a read is unavailable.",
+      "pause": 400
     }
   ],
   "fail-closed-semantics": [
@@ -161,6 +165,6 @@
   ],
   "_source": {
     "file": "query-endpoint.md",
-    "sha256": "3dab276d09f0c4e53557a83d04f87c47ebba33051dacd654d3c0296e7b1db6c8"
+    "sha256": "1d3b482035f09a6b29647f16ecfc5929b1d4d405daff905782e5dd95dba34783"
   }
 }

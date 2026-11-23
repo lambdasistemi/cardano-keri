@@ -220,6 +220,10 @@ tip has been observed yet, or the upstream node is disconnected, or the lag
 exceeds 60 slots, the service reports itself not ready rather than publish a
 freshness number it cannot stand behind.
 
+What the follower observes, from which node, and what its 60-slot limit and a
+not-ready answer mean are declared in
+[What the follower observes, and when a read is unavailable](follower.md#what-the-follower-observes-and-when-a-read-is-unavailable).
+
 ## Fail-closed semantics
 
 When `/ready` would report `ready: false`, every data route (`/checkpoint`,

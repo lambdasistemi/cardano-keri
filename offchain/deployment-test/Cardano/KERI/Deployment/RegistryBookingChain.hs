@@ -84,11 +84,12 @@ import Cardano.KERI.AID.Release (ReleaseIdentity (..))
 import Cardano.KERI.Deployment.KEL (InceptionExport (..), parseInceptionExport)
 import Cardano.KERI.Deployment.Registry (deriveRegistryScripts, registryInitialFloor)
 import Cardano.KERI.Deployment.RegistryChain (Observation (..), RegistryRuntime (..), feeOf, txInOfReference, whileConnected)
-import Cardano.KERI.Deployment.RegistryDeploy (DeployRequest (..), DeployRuntime (..), Deployed (..), deployRegistry)
+import Cardano.KERI.Deployment.RegistryDeploy (DeployRequest (..), Deployed (..))
 import Cardano.KERI.Deployment.RegistryDeploySpec (
     Chain (..),
     Faults,
     chainRuntime,
+    deployOn,
     loadTestBlueprint,
     newChain,
     noFaults,
@@ -133,6 +134,7 @@ import Data.Foldable (toList)
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef, writeIORef)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromJust, fromMaybe, listToMaybe)
+import Data.Set qualified as Set
 import Data.Text qualified as T
 import GHC.Clock (getMonotonicTime)
 import GHC.Conc (STM, TVar, atomically, newTVarIO, readTVar, retry, writeTVar)
@@ -197,8 +199,9 @@ newWorld slotMs = do
     blueprint <- loadTestBlueprint
     chainRef <- newIORef (newChain (walletOutputs <> folderOutputs))
     outcome <-
-        deployRegistry
-            (chainRuntime noFaults chainRef)
+        deployOn
+            noFaults
+            chainRef
             DeployRequest
                 { requestTerms = testTerms
                 , requestBlueprint = blueprint
@@ -236,6 +239,7 @@ runtimeOfUnder faults world readRef =
         , rtOutputs = \wanted -> do
             chain <- readIORef readRef
             pure (Map.restrictKeys (chainOutputs chain) wanted)
+        , rtRewardRegistered = \account -> Set.member account . chainRegistered <$> readIORef readRef
         , rtTransactions = transactionsOf faults world
         , rtObserve = do
             modifyIORef' (worldObservations world) (+ 1)
@@ -261,7 +265,7 @@ transactionsOf faults world =
             trSign inner tx
         }
   where
-    inner = runtimeTransactions (chainRuntime faults (worldChain world))
+    inner = rtTransactions (chainRuntime faults (worldChain world))
 
 -- | The registry the deployment created, as its identity names it.
 registryOf :: World -> RegistryIdentity
@@ -403,7 +407,7 @@ bookDirectly world export = do
     (tx, _) <-
         either (fail . show) pure $
             Tx.bookRegistration pricedParameters deployment references (Tx.Payer walletAddress wallet) request validity 0 Map.empty
-    let transactions = runtimeTransactions (chainRuntime noFaults (worldChain world))
+    let transactions = rtTransactions (chainRuntime noFaults (worldChain world))
     submitted <- trSubmit transactions tx
     case submitted of
         Submitted txId -> pure (TxIn txId (TxIx 0), request)

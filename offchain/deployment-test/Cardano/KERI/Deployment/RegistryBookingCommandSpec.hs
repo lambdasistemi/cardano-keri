@@ -15,6 +15,7 @@ module Cardano.KERI.Deployment.RegistryBookingCommandSpec (spec) where
 import Cardano.Crypto.DSIGN.Class (deriveVerKeyDSIGN, rawDeserialiseSignKeyDSIGN)
 import Cardano.KERI.AID.Application (RegistrationData (..))
 import Cardano.KERI.Deployment.LiveRuntime (decodePaymentAddress)
+import Cardano.KERI.Deployment.NodeSocketRuntime
 import Cardano.KERI.Deployment.RegistryBookingChain
 import Cardano.KERI.Deployment.RegistryBookingCommand
 import Cardano.KERI.Deployment.RegistryChain (Observation (..), Refusal (..), RegistryRuntime (..), feeOf, foldWindow, whileConnected)

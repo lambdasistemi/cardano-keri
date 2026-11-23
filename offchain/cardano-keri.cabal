@@ -187,6 +187,7 @@ library deployment
     Cardano.KERI.Deployment.KEL
     Cardano.KERI.Deployment.LiveRuntime
     Cardano.KERI.Deployment.Manifest
+    Cardano.KERI.Deployment.NodeSocketRuntime
     Cardano.KERI.Deployment.Publisher
     Cardano.KERI.Deployment.Registration
     Cardano.KERI.Deployment.Registry
@@ -314,7 +315,6 @@ library write-composition
     , cardano-ledger-conway
     , cardano-ledger-core
     , cardano-node-clients
-    , containers
     , directory
     , memory                    >=0.18 && <0.19
     , opt-env-conf              >=0.13 && <0.16

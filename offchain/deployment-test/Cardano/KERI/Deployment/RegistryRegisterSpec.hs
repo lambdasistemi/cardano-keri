@@ -224,13 +224,6 @@ spec = describe "#351 booking a registration" $ around_ withinOneMinute $ do
             outcome `shouldBe` Left (RegisterRefused (BookingWidthBelowSlotLength 5_000 5_001))
             seen `shouldBe` []
             submissionsMade world >>= (`shouldBe` sent0)
-        it "a deposit below the registry's floor" $ do
-            world <- newWorld 1_000
-            export <- loadExport "kli-export-single.cesr"
-            sent0 <- submissionsMade world
-            (outcome, _) <- booked world (registerRequestOf world export){registerDeposit = Just 1_008_999_999}
-            outcome `shouldBe` Left (RegisterRefused (DepositBelowFloor 1_008_999_999 1_009_000_000))
-            submissionsMade world >>= (`shouldBe` sent0)
         it "files that do not describe the scripts the blueprint derives" $ do
             world <- newWorld 1_000
             export <- loadExport "kli-export-single.cesr"

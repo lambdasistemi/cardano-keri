@@ -55,11 +55,9 @@ import Cardano.KERI.Deployment.RegistryTransactions (
     FoldPlan (..),
     Payer (..),
     RegistryDeployment (..),
-    applicationPolicyId,
-    approval,
     foldRegistration,
+    holdsExactlyApproval,
     mintHashProof,
-    tokenValue,
  )
 import Cardano.KERI.Deployment.Script (Blueprint, Observers (..), ScriptArtifact (..))
 import Cardano.KERI.Deployment.TransactionRuntime (renderTransactionId, transactionId)
@@ -319,9 +317,6 @@ foldBookedRequest rt report input = do
 
     -- a read of the node that fails is a stop, not an escape
     node stage action = ExceptT (tryNode action <&> first (FoldNodeFailed stage . show))
-
-    holdsExactlyApproval deployment record out = case out ^. valueTxOutL of
-        MaryValue _ assets -> assets == tokenValue (applicationPolicyId deployment) (approval record) 1
 
     proofOutput deployment tx =
         find

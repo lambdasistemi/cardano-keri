@@ -147,8 +147,6 @@ booking attemptRef rt report request = runExceptT $ do
     held <- reading (rtUtxosAt rt (checkpointAddress deployment))
     when (any (holdsActive deployment key . snd) held) $
         throwE (RegisterRefused (AlreadyRegistered key))
-    when (deposit < floorDeposit) $
-        throwE (RegisterRefused (DepositBelowFloor deposit floorDeposit))
     observed <- reading (rtObserve rt)
     plan <- case bookingWindow observed width of
         Just plan -> pure plan

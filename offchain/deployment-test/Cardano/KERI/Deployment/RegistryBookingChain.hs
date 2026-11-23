@@ -39,6 +39,7 @@ module Cardano.KERI.Deployment.RegistryBookingChain (
     holdsToken,
     plantCheckpoint,
     stripApproval,
+    reshape,
     advanceClock,
     failStateReadsFrom,
     failingObservation,
@@ -49,6 +50,8 @@ module Cardano.KERI.Deployment.RegistryBookingChain (
     newStandIn,
     connectionEnds,
     Call (..),
+    handoffsCounted,
+    countHandoffsInto,
     endingAt,
     withClient,
     withinOneMinute,
@@ -465,6 +468,11 @@ proofOutputOf world tx =
         MaryValue _ (MultiAsset assets) ->
             any (\(PolicyID (ScriptHash hash)) -> hashToBytes hash == policy) (Map.keys assets)
 
+-- | Change the output the chain holds under a reference.
+reshape :: World -> TxIn -> (TxOut ConwayEra -> TxOut ConwayEra) -> IO ()
+reshape world ref change =
+    modifyIORef' (worldChain world) $ \chain -> chain{chainOutputs = Map.adjust change ref (chainOutputs chain)}
+
 {- | An output that looks like a booked request and is not one: the datum of the
 request at the application's address, holding lovelace and no approval token.
 -}
@@ -620,6 +628,23 @@ endingAt client nth afterEffect runtime = do
             }
         , reverse <$> readIORef made
         )
+
+{- | A runtime that counts every call the command makes to hand a transaction to the node, at
+the boundary the command calls: the call is counted when it is made, whatever becomes of it
+(taken, refused, or never begun because the connection had ended). Put it outermost, around
+any wrapper of the node client, so that a second call by the command shows as a second.
+-}
+handoffsCounted :: RegistryRuntime -> IO (RegistryRuntime, IO Int)
+handoffsCounted runtime = do
+    calls <- newIORef (0 :: Int)
+    pure (countHandoffsInto calls runtime, readIORef calls)
+
+-- | The same, counting into a counter the caller holds, for a runtime a command opens itself.
+countHandoffsInto :: IORef Int -> RegistryRuntime -> RegistryRuntime
+countHandoffsInto calls runtime =
+    runtime{rtTransactions = transactions{trSubmit = \tx -> modifyIORef' calls (+ 1) >> trSubmit transactions tx}}
+  where
+    transactions = rtTransactions runtime
 
 {- | The runtime over a node client that is a thread of its own, changed by what the given
 action does with that client: whatever the change does, every call of the result returns

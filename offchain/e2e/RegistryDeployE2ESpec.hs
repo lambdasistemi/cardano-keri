@@ -22,6 +22,7 @@ import CheckpointTxBuilder (
     registryBookingJourney,
     registryDeployJourney,
     stagedBareDevnet,
+    stagedBareDevnetWithin,
  )
 
 spec :: Spec
@@ -30,10 +31,10 @@ spec = do
         it
             "deploys from an empty directory with two files, books with the payer's wallet, folds with another wallet and delivers the checkpoint"
             (stagedBareDevnet HostedTiming (registryDeployJourney HostedTiming))
-    describe "#351 ckeri registry register and fold book and fold through the installed command" $
+    describe "#351 ckeri registry register and fold, then return a request after its deadline, through the installed command" $
         it
-            "deploys, books the same identity twice with one wallet, folds the first with another and delivers the checkpoint, refuses the second on the registry's own snapshot and a stale snapshot refused as stale, and refuses a third registration"
-            (stagedBareDevnet HostedTiming registryBookingJourney)
+            "deploys, books the same identity twice with one wallet, folds the first with another and delivers the checkpoint, refuses the second on the registry's own snapshot and a stale snapshot refused as stale, refuses a third registration, refuses a return before the deadline, refuses a booking below the floor at the node's evaluation and accepts it at the floor, and after the deadline a third wallet returns the second booking: the refund address receives all but the tip and the returner keeps it"
+            (stagedBareDevnetWithin 1_200 registryBookingJourney)
     describe "#351 measurement: the registry deploy journey at preprod's timing" $
         it
             "records the submit and settle times of the booking, the hash-proof premint and the fold"

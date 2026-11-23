@@ -212,6 +212,24 @@ for option in request snapshot snapshot-out; do
   has_option "$option" <<<"$registry_fold_help"
 done
 
+# `registry return` is given the request by its booking output and nothing of what the request holds:
+# no key export, no snapshot, no refund address, no amount.
+registry_return_help="$("$ckeri" registry return --help)"
+for option in \
+  network-magic blueprint node-socket funding-address signing-key-file \
+  timeout-seconds release-identity reference-record request; do
+  has_option "$option" <<<"$registry_return_help"
+done
+for forbidden in --store --manifest --koios-token KOIOS_TOKEN --cardano-cli CKERI_CARDANO_CLI CKERI_STORE CKERI_MANIFEST --booking-width --process-time --registration-cost --premium --kli-export --snapshot --refund --tip --deposit; do
+  if grep -q -- "$forbidden" <<<"$registry_return_help"; then
+    printf 'registry return help offers %s (#351: the request holds the refund address and the amounts)\n' \
+      "$forbidden" >&2
+    exit 1
+  fi
+done
+reject_retired_cardano_cli_help registry-return registry return
+reject_write_koios_help registry-return registry return
+
 # a spelling outside the group is not a command
 registry_verdict() {
   local output
@@ -225,6 +243,7 @@ registry_verdict() {
 [[ "$(registry_verdict registry deploy)" == recognised ]]
 [[ "$(registry_verdict registry fold)" == recognised ]]
 [[ "$(registry_verdict registry register)" == recognised ]]
+[[ "$(registry_verdict registry return)" == recognised ]]
 [[ "$(registry_verdict registry book)" == unrecognised ]]
 [[ "$(registry_verdict registry-deploy)" == unrecognised ]]
 

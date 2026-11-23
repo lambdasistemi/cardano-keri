@@ -30,6 +30,7 @@ module CheckpointTxBuilder (
     registryJourney,
     DeployTiming (..),
     stagedBareDevnet,
+    stagedBareDevnetWithin,
     registryDeployJourney,
     registryBookingJourney,
     productionRegisterAdvanceScenario,
@@ -207,6 +208,7 @@ import Cardano.KERI.Deployment.Registry (
     RegistryTerms (..),
     deriveRegistryScripts,
     registryInitialFloor,
+    registryMinimumDeposit,
  )
 import Cardano.KERI.Deployment.RegistryFiles qualified as Files
 import Cardano.KERI.Deployment.RegistryRequest (registrationOfOutput)
@@ -6261,11 +6263,17 @@ deploySlots = \case
 registry on it.
 -}
 stagedBareDevnet :: DeployTiming -> (FilePath -> LSQChannel -> LTxSChannel -> IO a) -> IO a
-stagedBareDevnet timing action = do
+stagedBareDevnet timing = stagedBareDevnetWithin (if timing == PreprodTiming then 1_800 else 300)
+
+{- | The same devnet, for a journey that has its own time: the seconds the whole journey may take, a
+return waiting for the deadline of a request included.
+-}
+stagedBareDevnetWithin :: Int -> (FilePath -> LSQChannel -> LTxSChannel -> IO a) -> IO a
+stagedBareDevnetWithin seconds action = do
     hSetBuffering stdout LineBuffering
     hSetBuffering stderr LineBuffering
     gDir <- genesisDir
-    withinSecs (if timing == PreprodTiming then 1_800 else 300) "deployment withDevnet+socket" $
+    withinSecs seconds "deployment withDevnet+socket" $
         withCardanoNode gDir $
             \sock _startMs -> do
                 lsq <- newLSQChannel 16
@@ -6650,6 +6658,7 @@ registryBookingJourney socket lsq ltxs = do
     let workDir = scratch </> "work"
         payerKeyFile = scratch </> "payer.skey"
         folderKeyFile = scratch </> "folder.skey"
+        returnerKeyFile = scratch </> "returner.skey"
         identityFile = workDir </> "release-identity.json"
         recordFile = workDir </> "reference-outputs.json"
         emptySnapshot = scratch </> "empty-snapshot.json"
@@ -6657,9 +6666,12 @@ registryBookingJourney socket lsq ltxs = do
     Dir.createDirectory workDir
     writeFile payerKeyFile (signingKeyEnvelope genesisSignKey)
     writeFile folderKeyFile (signingKeyEnvelope folderKey)
+    writeFile returnerKeyFile (signingKeyEnvelope terminationFolderKey)
+    multiExportPath <- getDataFileName "deployment-test/fixtures/kli-export-2-of-5.cesr"
     BS.writeFile emptySnapshot "{\"schema_version\":1,\"supplied_by\":\"the deployer\",\"active\":[],\"terminal\":[]}\n"
     payerText <- either fail pure (testAddressText genesisAddr)
     folderText <- either fail pure (testAddressText folderAddress)
+    returnerText <- either fail pure (testAddressText terminationFolderAddress)
     let magic = fromIntegral (unNetworkMagic devnetMagic) :: Integer
         node =
             [ "--network-magic"
@@ -6686,7 +6698,12 @@ registryBookingJourney socket lsq ltxs = do
                 <> term "--minimum-ada" (registryMinimumAda terms)
                 <> term "--termination-carrier" (registryTerminationCarrier terms)
         files = ["--release-identity", identityFile, "--reference-record", recordFile, "--kli-export", exportPath]
-        registerArgs = ["registry", "register"] <> node <> ["--funding-address", payerText, "--signing-key-file", payerKeyFile] <> files
+        registerArgsFor export_ = ["registry", "register"] <> node <> ["--funding-address", payerText, "--signing-key-file", payerKeyFile, "--release-identity", identityFile, "--reference-record", recordFile, "--kli-export", export_]
+        registerArgs = registerArgsFor exportPath
+        returnArgs request =
+            ["registry", "return"]
+                <> node
+                <> ["--funding-address", returnerText, "--signing-key-file", returnerKeyFile, "--release-identity", identityFile, "--reference-record", recordFile, "--request", requestText request]
         foldArgs snapshot request out =
             ["registry", "fold"]
                 <> node
@@ -6705,12 +6722,12 @@ registryBookingJourney socket lsq ltxs = do
             unless (code == ExitSuccess) $ fail (label <> " failed: " <> show code)
             pure out
         refused label args needles = do
-            before <- (,) <$> walletLovelace provider genesisAddr <*> walletLovelace provider folderAddress
+            before <- (,,) <$> walletLovelace provider genesisAddr <*> walletLovelace provider folderAddress <*> walletLovelace provider terminationFolderAddress
             (code, _, err) <- runCkeri label args
             unless (code == ExitFailure 1) $ fail (label <> " did not refuse: " <> show code)
             forM_ needles $ \needle ->
                 unless (needle `isInfixOf` err) $ fail (label <> ": the refusal does not say " <> show needle <> ": " <> err)
-            after <- (,) <$> walletLovelace provider genesisAddr <*> walletLovelace provider folderAddress
+            after <- (,,) <$> walletLovelace provider genesisAddr <*> walletLovelace provider folderAddress <*> walletLovelace provider terminationFolderAddress
             unless (before == after) $ fail (label <> " spent lovelace although the command refused it")
     _ <- succeeds "ckeri registry deploy" deployArgs
     (identity, _) <-
@@ -6774,6 +6791,68 @@ registryBookingJourney socket lsq ltxs = do
         "third registration of the identity"
         registerArgs
         ["already registered in this registry", "refused by the command, before any transaction"]
+    -- a return before the deadline is refused by the command, with nothing spent
+    refused
+        "return of the second booking before its deadline"
+        (returnArgs secondRef)
+        ["deadline-not-reached", "can be returned from", "refused by the command, before any transaction", "nothing was submitted; nothing was spent"]
+    -- a booking with a deposit below the application's minimum deposit (the floor of a booking: the registry's
+    -- minimum ADA, checkpoint deposit and freeze bond; the initial floor adds a premium and is the fold's) is not pre-empted by the command: the node's
+    -- evaluation of the application's minting purpose refuses it, and nothing is spent. Another identity
+    -- is booked, as the first identity is registered by now.
+    refused
+        "booking with a deposit one lovelace below the floor"
+        (registerArgsFor multiExportPath <> ["--request-deposit", show (registryMinimumDeposit terms - 1)])
+        ["the node's evaluation refused the booking", "the application's minting purpose", "nothing was submitted; nothing was spent"]
+    -- the control: the same booking at the floor is accepted by the node
+    controlOut <-
+        succeeds "booking at the floor, the control of the short deposit" (registerArgsFor multiExportPath <> ["--request-deposit", show (registryMinimumDeposit terms)])
+    controlRef <- lineValue "booking-output" controlOut & requireJust "the control booking printed no output" >>= outputReferenceText
+    controlOutput <- read' controlRef
+    controlBooking <- requireJust "the control booking is not a request" (registrationOfOutput controlOutput)
+    unless (requestDeposit controlBooking == registryMinimumDeposit terms) $ fail "the control booking does not commit the floor deposit"
+    -- after the deadline of the second booking a third wallet returns it: the refund address the request
+    -- names receives everything but the tip, the returner keeps the tip
+    secondOutput <- read' secondRef
+    secondBooking <- requireJust "the second booking is not a request" (registrationOfOutput secondOutput)
+    let secondDeadline = requestProcessDeadline secondBooking
+        refundExpected = unCoin (secondOutput ^. coinTxOutL) - minimumTip params'
+        returnWhenReached = do
+            (code, out, err) <- runCkeri "return of the second booking" (returnArgs secondRef)
+            now <- nowMs
+            case code of
+                ExitSuccess -> pure out
+                _
+                    | any (`isInfixOf` err) ["deadline-not-reached", "time-evidence-conflicts"]
+                    , now < secondDeadline + 180_000 ->
+                        threadDelay 3_000_000 >> returnWhenReached
+                    | otherwise -> fail ("the return was refused after its deadline: " <> err)
+    refundBefore <- walletLovelace provider genesisAddr
+    returnerBefore <- walletLovelace provider terminationFolderAddress
+    returnOut <- returnWhenReached
+    refundAfter <- walletLovelace provider genesisAddr
+    returnerAfter <- walletLovelace provider terminationFolderAddress
+    refundText <- either fail pure (testAddressText genesisAddr)
+    forM_
+        [ "refund-address: " <> refundText
+        , "refund-lovelace: " <> show refundExpected
+        , "tip-lovelace: " <> show (minimumTip params')
+        ]
+        $ \wanted -> unless (wanted `elem` lines returnOut) $ fail ("the return does not print " <> show wanted)
+    fee <- lineValue "return-fee" returnOut & requireJust "the return printed no fee"
+    refundRef <- lineValue "refund-output" returnOut & requireJust "the return printed no refund output" >>= outputReferenceText
+    refundOutput <- read' refundRef
+    -- direct reads of the node: the refund address holds what the request held less the tip, the returner the tip less its fee
+    unless (refundOutput ^. addrTxOutL == genesisAddr) $ fail "the refund output is not at the refund address the booking named"
+    unless (unCoin (refundOutput ^. coinTxOutL) == refundExpected) $ fail "the refund output does not hold the request's lovelace less the tip"
+    unless (refundAfter - refundBefore == refundExpected) $ fail "the refund address did not gain exactly the refund"
+    unless (returnerAfter - returnerBefore == minimumTip params' - read fee) $ fail "the returner did not gain exactly the tip less the fee"
+    spentRequest <- withinSecs 30 "query the returned request" (queryUTxOByTxIn provider (Set.singleton secondRef))
+    unless (Map.null spentRequest) $ fail "the returned request is still unspent"
+    refused
+        "return of a request that was returned"
+        (returnArgs secondRef)
+        ["request-unavailable", "refused by the command, before any transaction", "nothing was submitted; nothing was spent"]
     Dir.removeDirectoryRecursive scratch
 
 -- | An output reference as the commands print and take it: @<transaction id>#<index>@.

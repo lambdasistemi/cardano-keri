@@ -24,10 +24,17 @@ module Cardano.KERI.Deployment.RegistryBookingCommand (
     runRegistryRegisterWith,
     RegistryFoldSettings (..),
     registryFoldSettingsParser,
+    registryReturnSettingsParser,
     runRegistryFold,
     runRegistryFoldWith,
     runRegistryFoldReporting,
     runRegistryRegisterReporting,
+    RegistryReturnSettings (..),
+    runRegistryReturn,
+    runRegistryReturnWith,
+    runRegistryReturnReporting,
+    printReturnEvent,
+    renderReturnStopped,
     printFoldEvent,
     renderFoldStopped,
     renderRegisterFailure,
@@ -68,15 +75,24 @@ import Cardano.KERI.Deployment.RegistryRegister (
     RegisterRequest (..),
     registerRegistration,
  )
+import Cardano.KERI.Deployment.RegistryReturn (
+    ReturnCause (..),
+    ReturnEvent (..),
+    ReturnInput (..),
+    ReturnStopped (..),
+    returnBookedRequest,
+ )
 import Cardano.KERI.Deployment.RegistrySnapshot (Snapshot (..), decodeSnapshot, encodeSnapshot)
 import Cardano.KERI.Deployment.RegistryTransactions (ValidityPlan (..))
 import Cardano.KERI.Deployment.Script (loadBlueprint)
 import Cardano.KERI.Deployment.SigningKeyCheck (checkSigningKey)
 import Cardano.KERI.Deployment.TransactionRuntime (renderTransactionId, transactionId)
-import Cardano.Ledger.BaseTypes (TxIx (..))
+import Cardano.Ledger.Address (Addr, getNetwork, serialiseAddr)
+import Cardano.Ledger.BaseTypes (Network (..), TxIx (..))
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Node.Client.Provider (SlotNo (..))
+import Codec.Binary.Bech32 qualified as Bech32
 import Control.Exception (IOException, try)
 import Control.Monad (forM_, when)
 import Data.ByteArray.Encoding (Base (Base16), convertFromBase, convertToBase)
@@ -272,6 +288,11 @@ renderRegisterFailure :: RegisterFailure -> [String]
 renderRegisterFailure = \case
     RegisterRefused refusal ->
         ["ckeri: registry register " <> phrase Command <> ": " <> renderRefusal refusal, zeroSpend]
+    -- the application's own refusal of the booking, as the node's evaluation reports it: the command did not pre-empt it
+    RegisterTransaction (EvaluationFailed message) ->
+        [ "ckeri: registry register stopped, " <> phrase NodeEvaluation <> ": the node's evaluation refused the booking: the application's " <> message
+        , zeroSpend
+        ]
     RegisterTransaction failure@(SettledReportInterrupted _ message) ->
         ["ckeri: registry register settled; the command was cut short after that: " <> message]
             <> failureRow "booking" failure
@@ -492,6 +513,7 @@ attemptRows kind attempt@(Attempt txId status) = case status of
   where
     receiptOutput = \case
         "fold" -> "checkpoint-output"
+        "return" -> "refund-output"
         "booking" -> "booking-output"
         other -> other <> "-output"
 
@@ -512,6 +534,7 @@ renderSubmitFailure command premintSettled failure =
   where
     kindOf = \case
         "registry register" -> "booking"
+        "registry return" -> "return"
         _ -> "premint"
     -- what is said of where it stopped: after a settled premint nothing is "before any transaction",
     -- and a node that could not be read refused nothing
@@ -537,7 +560,6 @@ renderRefusal = \case
     DeploymentDisagrees message -> "deployment-disagrees: " <> message
     ReferenceOutputsMissing refs -> "reference-outputs-missing: " <> unwords (map renderTxIn refs)
     AlreadyRegistered key -> "already registered in this registry: the active token of " <> hex key <> " stands at the checkpoint validator's address"
-    DepositBelowFloor given floor' -> "deposit-below-floor: the request deposit " <> show given <> " is below the registry's floor " <> show floor'
     BookingWidthBelowSlotLength width slot ->
         "booking-width-below-slot-length: the registry's booking width " <> show width <> " ms is shorter than a slot of " <> show slot <> " ms"
     StaleOrUnavailableRegistryState (Just root) ->
@@ -555,6 +577,12 @@ renderRefusal = \case
         "no-interval-yet [W4]: no validity interval can be formed now: the node's forecast ends at or before the slot the machine's clock (" <> show now <> " ms) is in; the deadline is " <> show deadline <> " ms"
     NoBookingIntervalYet now ->
         "no-interval-yet: the node's forecast shows no slot to book in at the machine's clock (" <> show now <> " ms)"
+    DeadlineNotReached deadline tipStart now ->
+        "deadline-not-reached: the request's deadline is " <> show deadline <> " ms, the chain's tip slot starts at " <> show tipStart <> " ms and the machine reads " <> show now <> " ms; the request can be returned from " <> show deadline <> " ms"
+    NoReturnSlotYet tipStart ->
+        "no-return-slot-yet: the chain's tip slot starts at " <> show tipStart <> " ms, at or after the deadline, and the node's forecast shows no slot after it to return in"
+    RequestRefundUnreadable ref ->
+        "request-refund-unreadable: the refund address of " <> renderTxIn ref <> " is not an address of this network; nothing is paid to a guess"
     RequestUnavailable ref -> "request-unavailable: " <> renderTxIn ref <> " is not an output the node holds unspent"
     RequestIsNotARegistration ref -> "request-is-not-a-registration: " <> renderTxIn ref
     RequestHasNoApproval ref -> "request-has-no-approval: " <> renderTxIn ref <> " holds the datum of a request and not the approval the booking minted"
@@ -647,3 +675,141 @@ openRegistryNodeBetween between access use = do
     startupRefusal failure
         | isDoesNotExistError failure = "signing-key-file-missing: " <> show failure
         | otherwise = "signing-key-startup-failed: " <> show failure
+
+-- ---------------------------------------------------------------------
+-- return
+-- ---------------------------------------------------------------------
+
+-- | Everything @ckeri registry return@ is given: the files, the node, the request and who pays.
+data RegistryReturnSettings = RegistryReturnSettings
+    { rnNetworkMagic :: !Int
+    , rnBlueprint :: !FilePath
+    , rnNodeSocket :: !FilePath
+    , rnFundingAddress :: !Text
+    , rnSigningKeyFile :: !FilePath
+    , rnTimeoutSeconds :: !Int
+    , rnReleaseIdentity :: !FilePath
+    , rnReferenceRecord :: !FilePath
+    , rnRequest :: !Text
+    }
+    deriving stock (Show, Eq)
+
+registryReturnSettingsParser :: Opt.Parser RegistryReturnSettings
+registryReturnSettingsParser = do
+    rnNetworkMagic <- intSetting "network-magic" (Just 1) "Cardano testnet network magic"
+    rnBlueprint <- stringSetting "blueprint" "Immutable Aiken plutus.json"
+    rnNodeSocket <- stringSetting "node-socket" "Cardano node socket"
+    rnFundingAddress <- T.pack <$> stringSetting "funding-address" "Bech32 payment address that pays the return and keeps the tip"
+    rnSigningKeyFile <- stringSetting "signing-key-file" "Cardano payment signing-key envelope"
+    rnTimeoutSeconds <- intSetting "timeout-seconds" (Just 600) "Settlement timeout per transaction"
+    rnReleaseIdentity <- stringSetting "release-identity" "The release identity file registry deploy wrote"
+    rnReferenceRecord <- stringSetting "reference-record" "The reference-output record registry deploy wrote"
+    rnRequest <- T.pack <$> stringSetting "request" "The booking output to return, as <transaction id>#<index>"
+    pure RegistryReturnSettings{..}
+
+runRegistryReturn :: RegistryReturnSettings -> IO ()
+runRegistryReturn = runRegistryReturnWith openRegistryNode
+
+{- | Return a booked request through the node the opener reaches: what the request's own
+datum and output say is paid to the refund address it names, whoever runs the command.
+-}
+runRegistryReturnWith :: RegistryOpener -> RegistryReturnSettings -> IO ()
+runRegistryReturnWith = runRegistryReturnReporting (hPutStrLn stderr)
+
+-- | The same, with the writer of the final stop report given.
+runRegistryReturnReporting :: (String -> IO ()) -> RegistryOpener -> RegistryReturnSettings -> IO ()
+runRegistryReturnReporting errLine open settings = do
+    hPutStrLn stderr "ckeri: not for mainnet"
+    when (rnTimeoutSeconds settings <= 0) $ dieZero "timeout-seconds must be positive"
+    blueprint <- loadBlueprint (rnBlueprint settings) >>= either (dieZero . ("blueprint-invalid: " <>)) pure
+    (identity, record) <- readFiles (rnReleaseIdentity settings) (rnReferenceRecord settings)
+    request <- either dieZero pure (parseRequestReference (T.unpack (rnRequest settings)))
+    open (NodeAccess (rnNetworkMagic settings) (rnNodeSocket settings) (rnFundingAddress settings) (rnSigningKeyFile settings) (rnTimeoutSeconds settings)) $ \(runtime, payer) -> do
+        outcome <-
+            returnBookedRequest
+                runtime
+                (printReturnEvent stdout)
+                ReturnInput
+                    { returnBlueprint = blueprint
+                    , returnIdentity = identity
+                    , returnRecord = record
+                    , returnRequestOutput = request
+                    , returnPayerAddress = payer
+                    }
+        case outcome of
+            Left stopped -> do
+                mapM_ errLine (renderReturnStopped stopped)
+                exitFailure
+            Right _ -> pure ()
+
+-- | Print what a return reports as it happens, to a handle, each line flushed when written.
+printReturnEvent :: Handle -> ReturnEvent -> IO ()
+printReturnEvent out = \case
+    ReturnPlanned{plannedRequest = request, plannedRefundAddress = refundTo, plannedRefundLovelace = refund, plannedTipLovelace = tip, plannedPlan = plan, plannedDeadline = deadline} -> do
+        let slots (SlotNo n) = show n
+        hPutStrLn out ("return-request: " <> renderTxIn request)
+        hPutStrLn out ("refund-address: " <> renderAddress refundTo)
+        hPutStrLn out ("refund-lovelace: " <> show refund)
+        hPutStrLn out ("tip-lovelace: " <> show tip)
+        hPutStrLn out ("validity-interval-slots: " <> slots (lowerSlot plan) <> ".." <> slots (upperSlot plan))
+        hPutStrLn out ("validity-interval-ms: " <> show (lowerPosixMs plan) <> ".." <> show (upperPosixMs plan))
+        hPutStrLn out ("deadline-ms: " <> show deadline)
+        hFlush out
+    ReturnHandingOff{handingOffTransaction = txId} -> do
+        hPutStrLn out ("handing return " <> T.unpack (renderTransactionId txId) <> " to the node")
+        hFlush out
+    ReturnSettled{settledTransaction = txId, settledRefundOutput = refundOutput, settledFee = fee} -> do
+        hPutStrLn out ("return-transaction: " <> T.unpack (renderTransactionId txId))
+        hPutStrLn out ("refund-output: " <> renderTxIn refundOutput)
+        hPutStrLn out ("return-fee: " <> show fee)
+        hFlush out
+
+-- | An address as the bech32 text of its bytes, with the human-readable part of its network.
+renderAddress :: Addr -> String
+renderAddress address = case Bech32.humanReadablePartFromText prefix of
+    -- the strict encoder stops at 90 characters, and an address with a stake part is longer: the
+    -- lenient one has no such limit, and 'decodePaymentAddress' reads it back
+    Right hrp -> T.unpack (Bech32.encodeLenient hrp (Bech32.dataPartFromBytes (serialiseAddr address)))
+    Left failure -> error (show failure)
+  where
+    prefix = case getNetwork address of
+        Mainnet -> "addr"
+        Testnet -> "addr_test"
+
+{- | What a return that stopped tells the person running it: why, how far its transaction got,
+and that nothing is retried.
+-}
+renderReturnStopped :: ReturnStopped -> [String]
+renderReturnStopped stopped = body <> [zeroSpend | nothingSpent]
+  where
+    attempt = returnAttempt stopped
+    -- nothing left the command: no transaction was signed, or it was signed and never handed over
+    nothingSpent = all (\(Attempt _ status) -> status == NotHandedToNode) attempt
+    notRetried = ["not retried: no transaction is sent again by this command" | Just _ <- [attempt]]
+    body
+        | Just settled@(Attempt _ (SettledOnChain _)) <- attempt =
+            ["ckeri: registry return settled; the command was cut short after that: " <> causeText]
+                <> attemptRows "return" settled
+                <> notRetried
+        | otherwise = case returnCause stopped of
+            ReturnRefused refusal ->
+                ["ckeri: registry return " <> phrase Command <> ": " <> renderRefusal refusal] <> waitHint refusal
+            ReturnNodeFailed message ->
+                ["ckeri: registry return stopped, the node could not be read: " <> message]
+                    <> maybe [] (\held -> [attemptRow "return" held]) attempt
+                    <> notRetried
+            ReturnReportFailed message ->
+                ["ckeri: registry return stopped, the report could not be written: " <> message]
+                    <> maybe [] (\held -> [attemptRow "return" held]) attempt
+                    <> notRetried
+            ReturnTransaction failure ->
+                renderSubmitFailure "registry return" False failure <> notRetried
+    causeText = case returnCause stopped of
+        ReturnNodeFailed message -> message
+        ReturnReportFailed message -> message
+        ReturnTransaction (SettledReportInterrupted _ message) -> message
+        other -> show other
+    -- nothing was spent: running the command again after the next block is possible
+    waitHint = \case
+        NoReturnSlotYet{} -> ["the command can be run again after the next block"]
+        _ -> []

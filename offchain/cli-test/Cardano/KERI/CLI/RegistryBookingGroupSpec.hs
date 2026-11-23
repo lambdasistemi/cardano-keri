@@ -2,7 +2,7 @@
 
 {- |
 Module      : Cardano.KERI.CLI.RegistryBookingGroupSpec
-Description : @ckeri registry register@ and @ckeri registry fold@ take their files and the node, and no registry term
+Description : @ckeri registry register@, @fold@ and @return@ take their files and the node, and no registry term
 
 The production 'Instructions' parser is run with no environment and no
 configuration file, unless the example says otherwise. Each command is parsed to
@@ -17,6 +17,7 @@ import Cardano.KERI.CLI (Instructions (..))
 import Cardano.KERI.Deployment.RegistryBookingCommand (
     RegistryFoldSettings (..),
     RegistryRegisterSettings (..),
+    RegistryReturnSettings (..),
  )
 import Control.Monad (unless)
 import Data.Char (toUpper)
@@ -86,6 +87,38 @@ foldSettings =
         , rfSnapshot = "snapshot.json"
         , rfSnapshotOut = Just "next-snapshot.json"
         }
+
+returnOptions :: [(String, String)]
+returnOptions =
+    [ ("--network-magic", "42")
+    , ("--blueprint", "plutus.json")
+    , ("--node-socket", "node.socket")
+    , ("--funding-address", "addr_test1qexample")
+    , ("--signing-key-file", "payment.skey")
+    , ("--timeout-seconds", "77")
+    , ("--release-identity", "identity.json")
+    , ("--reference-record", "references.json")
+    , ("--request", "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899#3")
+    ]
+
+returnSettings :: RegistryReturnSettings
+returnSettings =
+    RegistryReturnSettings
+        { rnNetworkMagic = 42
+        , rnBlueprint = "plutus.json"
+        , rnNodeSocket = "node.socket"
+        , rnFundingAddress = "addr_test1qexample"
+        , rnSigningKeyFile = "payment.skey"
+        , rnTimeoutSeconds = 77
+        , rnReleaseIdentity = "identity.json"
+        , rnReferenceRecord = "references.json"
+        , rnRequest = "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899#3"
+        }
+
+-- | The options a return cannot run without.
+requiredReturn :: [String]
+requiredReturn =
+    ["--blueprint", "--node-socket", "--funding-address", "--signing-key-file", "--release-identity", "--reference-record", "--request"]
 
 argumentsOf :: [(String, String)] -> [String]
 argumentsOf options = concat [[name, value] | (name, value) <- options]
@@ -175,7 +208,50 @@ spec = describe "#351 ckeri registry register and ckeri registry fold: the comma
             >>= (`shouldBe` ["--request-deposit", "1"])
         unrecognisedArgs (["registry", "register"] <> argumentsOf registerOptions <> ["--snapshot", "s.json"])
             >>= (`shouldBe` ["--snapshot", "s.json"])
-    it "keeps the group to its three commands and the spelling the group gives" $ do
+    it "parses every option of return to its own setting" $ do
+        result <- parseWith [] (["registry", "return"] <> argumentsOf returnOptions)
+        case result of
+            Right (RegistryReturn settings) -> settings `shouldBe` returnSettings
+            other -> expectationFailure ("not parsed: " <> showResult other)
+    it "takes the inputs of return from the environment, and leaves the network magic and the timeout their defaults" $ do
+        let environment = [("CKERI_" <> envName name, value) | (name, value) <- returnOptions]
+        fromEnvironment <- parseWith environment ["registry", "return"]
+        case fromEnvironment of
+            Right (RegistryReturn settings) -> settings `shouldBe` returnSettings
+            other -> expectationFailure ("not parsed: " <> showResult other)
+        defaults <- parseWith [] (["registry", "return"] <> argumentsOf [o | o@(name, _) <- returnOptions, name `notElem` ["--network-magic", "--timeout-seconds"]])
+        case defaults of
+            Right (RegistryReturn settings) -> (rnNetworkMagic settings, rnTimeoutSeconds settings) `shouldBe` (1, 600)
+            other -> expectationFailure ("not parsed: " <> showResult other)
+    it "refuses each input of return that is left out, naming its environment variable" $
+        mapM_
+            ( \option -> do
+                result <- parseWith [] (["registry", "return"] <> argumentsOf [o | o@(name, _) <- returnOptions, name /= option])
+                case result of
+                    Left errors -> show errors `shouldSatisfy` (("CKERI_" <> envName option) `isInfixOf`)
+                    Right _ -> expectationFailure (option <> " was left out of return and it was parsed")
+            )
+            requiredReturn
+    it "offers return nothing that names the refund, the tip, the amounts, a key export, a snapshot, a store or a registry term: the request holds them" $
+        mapM_
+            ( \(name, value) ->
+                unrecognisedArgs (["registry", "return"] <> argumentsOf returnOptions <> [name, value])
+                    >>= (`shouldBe` [name, value])
+            )
+            [ ("--refund-address", "addr_test1qrefund")
+            , ("--refund-lovelace", "1")
+            , ("--tip", "1")
+            , ("--kli-export", "export.cesr")
+            , ("--snapshot", "snapshot.json")
+            , ("--request-deposit", "1")
+            , ("--store", "store")
+            , ("--manifest", "manifest.json")
+            , ("--booking-width", "5000")
+            , ("--process-time", "90000")
+            ]
+    it "keeps the group to its four commands" $
+        unrecognisedCmds ["registry", "return"] >>= (`shouldBe` [])
+    it "keeps the group deploy, register and fold, and the spelling the group gives" $ do
         unrecognisedCmds ["registry", "deploy"] >>= (`shouldBe` [])
         unrecognisedCmds ["registry", "register"] >>= (`shouldBe` [])
         unrecognisedCmds ["registry", "fold"] >>= (`shouldBe` [])

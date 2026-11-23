@@ -1,0 +1,4 @@
+[
+  {"tx_hash":"1111111111111111111111111111111111111111111111111111111111111111","tx_index":0,"address":"addr_test1wzs6rgdp5xs6rgdp5xs6rgdp5xs6rgdp5xs6rgdp5xs6rggqxgwml","value":"5000000","is_spent":false},
+  {"tx_hash":"2222222222222222222222222222222222222222222222222222222222222222","tx_index":1,"address":"addr_test1wzs6rgdp5xs6rgdp5xs6rgdp5xs6rgdp5xs6rgdp5xs6rggqxgwml","value":"3000000","is_spent":false}
+]

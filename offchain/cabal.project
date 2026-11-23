@@ -84,6 +84,39 @@ source-repository-package
   tag: cuddle-1.1.1.0
   --sha256: 1f4wk3kgb68bg97gfb9wycv5zkv0dsghlkf9pj64z0bpcr0wkxrc
 
+source-repository-package
+  type: git
+  location: https://github.com/lambdasistemi/singular
+  tag: 8280da7b53f992daa2c4e919cdd7177d2345bffb
+  --sha256: 1r9pykgk9x712qcnf532i2ypjqxl0y8mfxaycpf42wz91mirrv35
+  subdir: offchain
+
+source-repository-package
+  type: git
+  location: https://github.com/lambdasistemi/haskell-mts
+  tag: 13264a52b47e3a1f43a6ebeebd424a10f9e4466a
+  --sha256: 1bqgpxdy79ncsz8hyg2qyd7jnm8hqj4q8rq8mhr3iirix66c77fb
+
+source-repository-package
+  type: git
+  location: https://github.com/paolino/aiken-codegen
+  tag: 74f364c10e930ce2bf47e64b755ede4424733325
+  --sha256: 0rg5hqjix9bs9radzib1ppy09qamxkkqr0hdvc8qm907c21cy2g8
+
+source-repository-package
+  type: git
+  location: https://github.com/lambdasistemi/contra-tracer-contrib
+  tag: f0518e871391133efa10dab5b20a36da7b673389
+  --sha256: 0193m530mx6pgp1d8ms9q91bhr3hqzcg92dirz6j7lw25mx2j3ns
+
+source-repository-package
+  type: git
+  location: https://github.com/lambdasistemi/github-release-check
+  tag: d90131112a4d6c048d1809adaffdefed92e8e841
+  --sha256: 0ad6yi431w8h5i3x9x661b99frcgvd39gm4164y8cx1ihpsjixn3
+
+allow-newer: mts:containers
+
 -- Pin Cardano and Ouroboros packages for the cardano-node 10.7.0 line
 -- (matches cardano-node-clients' constraint set for binary
 -- interoperability with the pinned cardano-node runtime input).

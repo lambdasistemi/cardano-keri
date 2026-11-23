@@ -15,6 +15,7 @@ run against the encoder side).
 -}
 module Cardano.KERI.Indexer.Query.SwaggerDriftSpec (spec) where
 
+import Cardano.KERI.AID.Checkpoint.Datum (KeyMaterial (..))
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
 import Cardano.KERI.Indexer.Query.Types (
     BoardData (..),
@@ -24,6 +25,13 @@ import Cardano.KERI.Indexer.Query.Types (
     CheckpointData (..),
     CheckpointResponse (..),
     Freshness (..),
+    IdentityConsumer (..),
+    IdentityHolding (..),
+    IdentityLiveResponse (..),
+    IdentityNotReady (..),
+    IdentityRegistry (..),
+    IdentityRelease (..),
+    IdentityUnavailableResponse (..),
     ReadyResponse (..),
     UnavailableResponse (..),
     WatchabilityData (..),
@@ -48,8 +56,14 @@ import Test.Hspec (
 
 spec :: Spec
 spec = describe "docs/assets/swagger/query-api.json field-set drift (#176 PROVE-LIST 8)" $ do
-    it "ReadyResponse matches components.schemas.ReadyResponse" $
-        checkTopLevel "ReadyResponse" sampleReadyResponse
+    it "ReadyResponse of the registry mode matches components.schemas.ReadyResponse" $
+        checkTopLevel "ReadyResponse" sampleReadyResponse{readyMaxTipLagSlots = Just 17}
+
+    it "ReadyResponse of the manifest mode is that without its optional ceiling" $ do
+        swagger <- loadSwagger
+        declared <- schemaPropertyKeys swagger "ReadyResponse"
+        actual <- encodedKeys sampleReadyResponse
+        actual `shouldBe` Set.delete "max_tip_lag_slots" declared
 
     it "UnavailableResponse matches components.schemas.UnavailableResponse" $
         checkTopLevel "UnavailableResponse" sampleUnavailableResponse
@@ -77,6 +91,35 @@ spec = describe "docs/assets/swagger/query-api.json field-set drift (#176 PROVE-
 
     it "WatchabilityData (nested) matches components.schemas.WatchabilityData" $
         checkTopLevel "WatchabilityData" sampleWatchabilityData
+
+    it "IdentityLiveResponse (top level) matches components.schemas.IdentityLiveResponse" $
+        checkTopLevel "IdentityLiveResponse" sampleIdentityLiveResponse
+
+    it "IdentityUnavailableResponse matches components.schemas.IdentityUnavailableResponse" $
+        checkTopLevel "IdentityUnavailableResponse" sampleIdentityUnavailableResponse
+
+    it "IdentityNotReady matches components.schemas.IdentityNotReadyResponse" $
+        checkTopLevel "IdentityNotReadyResponse" (IdentityNotReady sampleUnavailableResponse 17 sampleIdentityRegistry sampleIdentityRelease)
+
+    it "IdentityRegistry (nested) matches components.schemas.IdentityRegistry" $
+        checkTopLevel "IdentityRegistry" sampleIdentityRegistry
+
+    it "IdentityRelease (nested) matches components.schemas.IdentityRelease" $
+        checkTopLevel "IdentityRelease" sampleIdentityRelease
+
+    it "IdentityHolding (nested) matches components.schemas.IdentityHolding" $
+        checkTopLevel "IdentityHolding" sampleIdentityHolding
+
+    it "the key state of an IdentityHolding matches components.schemas.IdentityKeyState" $
+        case toJSON sampleIdentityHolding of
+            Object holding | Just keyState <- KeyMap.lookup "key_state" holding -> checkTopLevel "IdentityKeyState" keyState
+            other -> expectationFailure ("no key_state in " <> show other)
+
+    it "IdentityConsumer, evaluated, matches components.schemas.IdentityConsumerEvaluated" $
+        checkTopLevel "IdentityConsumerEvaluated" (ConsumerEvaluated True [])
+
+    it "IdentityConsumer, not evaluated, matches components.schemas.IdentityConsumerNotEvaluated" $
+        checkTopLevel "IdentityConsumerNotEvaluated" (ConsumerNotEvaluated "why")
 
 -- ---------------------------------------------------------------------------
 -- The check
@@ -134,6 +177,7 @@ sampleReadyResponse =
         , readyFreshness = sampleFreshness
         , readyUpstream = "connected"
         , readyReason = Nothing
+        , readyMaxTipLagSlots = Nothing
         }
 
 sampleUnavailableResponse :: UnavailableResponse
@@ -217,6 +261,47 @@ sampleWatchabilityResponse =
         , wrFreshness = sampleFreshness
         , wrWatchability = sampleWatchabilityData
         }
+
+sampleIdentityRegistry :: IdentityRegistry
+sampleIdentityRegistry = IdentityRegistry sampleBytes sampleBytes sampleBytes 0
+
+sampleIdentityRelease :: IdentityRelease
+sampleIdentityRelease = IdentityRelease sampleBytes sampleBytes sampleBytes sampleBytes
+
+sampleIdentityHolding :: IdentityHolding
+sampleIdentityHolding =
+    IdentityHolding
+        { ihTxId = sampleBytes
+        , ihOutputIndex = 0
+        , ihSn = 0
+        , ihEpoch = 0
+        , ihPoisoned = False
+        , ihFrozen = False
+        , ihToppedUp = False
+        , ihBornAt = 0
+        , ihRefundAddress = sampleBytes
+        , ihDeposit = 0
+        , ihFreezeBond = 0
+        , ihPool = 0
+        , ihLovelace = 0
+        , ihKeys = KeyMaterial [sampleBytes] (Unweighted 1) [sampleBytes] (Unweighted 1) [sampleBytes] 0
+        }
+
+sampleIdentityLiveResponse :: IdentityLiveResponse
+sampleIdentityLiveResponse =
+    IdentityLiveResponse
+        { ilrAid = "sample"
+        , ilrFreshness = sampleFreshness
+        , ilrMaxTipLagSlots = 17
+        , ilrBlockHash = sampleBytes
+        , ilrRegistry = sampleIdentityRegistry
+        , ilrRelease = sampleIdentityRelease
+        , ilrHolding = sampleIdentityHolding
+        , ilrConsumer = ConsumerEvaluated True []
+        }
+
+sampleIdentityUnavailableResponse :: IdentityUnavailableResponse
+sampleIdentityUnavailableResponse = IdentityUnavailableResponse "sample" sampleFreshness 17 sampleBytes sampleIdentityRegistry sampleIdentityRelease "why"
 
 sampleBytes :: ByteString
 sampleBytes = "\NUL"

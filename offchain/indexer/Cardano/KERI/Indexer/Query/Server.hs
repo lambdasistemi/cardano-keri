@@ -27,13 +27,15 @@ module Cardano.KERI.Indexer.Query.Server (
     mkReleaseQueryApplication,
 ) where
 
+import Cardano.KERI.AID.Application (OutputReference (..), RegistryIdentity (..))
 import Cardano.KERI.AID.CESR (
     Primitive (..),
     parsePrimitive,
     qb64Aid,
  )
 import Cardano.KERI.AID.Checkpoint.Datum (KeyMaterial (..), KeyStateView (..))
-import Cardano.KERI.AID.Release (ReleaseIdentity)
+import Cardano.KERI.AID.Consumer (Release (..))
+import Cardano.KERI.AID.Release (ReleaseIdentity (..), registryIdentityOf)
 import Cardano.KERI.Deployment.EndpointBoard (
     BoardEntry (..),
     missingBoardWitnesses,
@@ -41,6 +43,16 @@ import Cardano.KERI.Deployment.EndpointBoard (
  )
 import Cardano.KERI.Indexer.Board (indexedBoardCatalog)
 import Cardano.KERI.Indexer.Codecs (CheckpointRecord (..), Holding (..), HoldingKind (..))
+import Cardano.KERI.Indexer.Identity (
+    Consumer (..),
+    IdentityAnswer (..),
+    IdentityRead (..),
+    LiveHolding (..),
+    answerIdentity,
+    consumerOf,
+    identityTx,
+    unavailableText,
+ )
 import Cardano.KERI.Indexer.Query.Tx (
     HoldingsRead (..),
     QueryHandle (..),
@@ -59,6 +71,13 @@ import Cardano.KERI.Indexer.Query.Types (
     CheckpointData (..),
     CheckpointResponse (..),
     Freshness (..),
+    IdentityConsumer (..),
+    IdentityHolding (..),
+    IdentityLiveResponse (..),
+    IdentityNotReady (..),
+    IdentityRegistry (..),
+    IdentityRelease (..),
+    IdentityUnavailableResponse (..),
     ReadyResponse (..),
     UnavailableResponse (..),
     WatchabilityData (..),
@@ -72,10 +91,12 @@ import Control.Concurrent.STM (atomically)
 import Data.Aeson (ToJSON, encode, object, (.=))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
+import Data.ByteString.Char8 qualified as BC
 import Data.ByteString.Lazy qualified as BSL
 import Data.List (find)
 import Data.Maybe (fromMaybe, isNothing, listToMaybe)
 import Data.Text (Text)
+import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Data.Word (Word64)
 import Database.KV.Transaction (RunTransaction (..))
@@ -93,6 +114,7 @@ import Network.Wai (
     Request,
     Response,
     pathInfo,
+    queryString,
     requestMethod,
     responseLBS,
  )
@@ -101,16 +123,26 @@ import Paths_cardano_keri (getDataFileName)
 -- | The complete #176 Slice 1 WAI application.
 mkQueryApplication :: QueryHandle cf op -> Application
 mkQueryApplication handle request respond =
-    respond =<< route handle request
+    respond =<< route (sampleReadinessStatus handle) Nothing handle request
 
-route :: QueryHandle cf op -> Request -> IO Response
-route handle request =
+{- | How a service judges whether it is ready, given the watermark of the response it
+has just composed: the manifest service by the fixed threshold, the registry service
+by the ceiling it was started with.
+-}
+type Gate = Maybe SlotNo -> IO ReadinessStatus
+
+{- | The routes shared by both modes, judged by this gate; /ready reports the ceiling
+in force when there is one.
+-}
+route :: Gate -> Maybe Integer -> QueryHandle cf op -> Request -> IO Response
+route gate limit handle request =
     case (requestMethod request, pathInfo request) of
-        ("GET", ["ready"]) -> handleReady handle
-        ("GET", ["checkpoint", aidText]) -> handleCheckpoint handle aidText
-        ("GET", ["board"]) -> handleBoardList handle
-        ("GET", ["board", witnessText]) -> handleBoard handle witnessText
-        ("GET", ["watchability", aidText]) -> handleWatchability handle aidText
+        ("GET", ["ready"]) -> handleReady gate limit handle
+        ("GET", ["checkpoint", aidText]) -> handleCheckpoint gate handle aidText
+        ("GET", ["board"]) -> handleBoardList gate handle
+        ("GET", ["board", witnessText]) -> handleBoard gate handle witnessText
+        ("GET", ["watchability", aidText]) -> handleWatchability gate handle aidText
+        ("GET", ["identity", _]) -> pure identityNotServedResponse
         ("GET", ["swagger.json"]) -> swaggerJsonResponse
         ("GET", ["swagger-ui"]) -> pure swaggerUiResponse
         _ -> pure notFoundResponse
@@ -118,10 +150,10 @@ route handle request =
 -- ---------------------------------------------------------------------------
 -- /ready
 
-handleReady :: QueryHandle cf op -> IO Response
-handleReady handle = do
+handleReady :: Gate -> Maybe Integer -> QueryHandle cf op -> IO Response
+handleReady gate limit handle = do
     watermark <- runTransaction (qhRunner handle) watermarkTx
-    status <- sampleReadinessStatus handle watermark
+    status <- gate watermark
     pure $
         jsonResponse status200 $
             ReadyResponse
@@ -129,18 +161,19 @@ handleReady handle = do
                 , readyFreshness = statusFreshness status
                 , readyUpstream = rsUpstream status
                 , readyReason = rsReason status
+                , readyMaxTipLagSlots = limit
                 }
 
 -- ---------------------------------------------------------------------------
 -- /checkpoint/{aid}
 
-handleCheckpoint :: QueryHandle cf op -> Text -> IO Response
-handleCheckpoint handle aidText =
+handleCheckpoint :: Gate -> QueryHandle cf op -> Text -> IO Response
+handleCheckpoint gate handle aidText =
     case decodeAidParam aidText of
         Left _ -> pure badRequestResponse
         Right aid -> do
             (mRecord, watermark) <- runTransaction (qhRunner handle) (checkpointTx handle aid)
-            status <- sampleReadinessStatus handle watermark
+            status <- gate watermark
             pure $
                 if rsReady status
                     then
@@ -173,8 +206,8 @@ checkpointDataOf record =
 -- ---------------------------------------------------------------------------
 -- /board/{witness_key}
 
-handleBoard :: QueryHandle cf op -> Text -> IO Response
-handleBoard handle witnessText =
+handleBoard :: Gate -> QueryHandle cf op -> Text -> IO Response
+handleBoard gate handle witnessText =
     case decodeWitnessKeyParam witnessText of
         Left _ -> pure badRequestResponse
         Right witnessKey -> do
@@ -182,7 +215,7 @@ handleBoard handle witnessText =
             case catalogResult of
                 Left _ -> pure internalErrorResponse
                 Right catalog -> do
-                    status <- sampleReadinessStatus handle watermark
+                    status <- gate watermark
                     pure $
                         if rsReady status
                             then
@@ -213,13 +246,13 @@ boardDataOf entry =
 -- ---------------------------------------------------------------------------
 -- /board
 
-handleBoardList :: QueryHandle cf op -> IO Response
-handleBoardList handle = do
+handleBoardList :: Gate -> QueryHandle cf op -> IO Response
+handleBoardList gate handle = do
     (catalogResult, watermark) <- runTransaction (qhRunner handle) (boardTx handle)
     case catalogResult of
         Left _ -> pure internalErrorResponse
         Right catalog -> do
-            status <- sampleReadinessStatus handle watermark
+            status <- gate watermark
             pure $
                 if rsReady status
                     then
@@ -240,8 +273,8 @@ boardListEntryOf entry =
 -- ---------------------------------------------------------------------------
 -- /watchability/{aid}
 
-handleWatchability :: QueryHandle cf op -> Text -> IO Response
-handleWatchability handle aidText =
+handleWatchability :: Gate -> QueryHandle cf op -> Text -> IO Response
+handleWatchability gate handle aidText =
     case decodeAidParam aidText of
         Left _ -> pure badRequestResponse
         Right aid -> do
@@ -250,7 +283,7 @@ handleWatchability handle aidText =
             case catalogResult of
                 Left _ -> pure internalErrorResponse
                 Right catalog -> do
-                    status <- sampleReadinessStatus handle watermark
+                    status <- gate watermark
                     pure $
                         if rsReady status
                             then
@@ -333,8 +366,41 @@ sampleReadinessStatus handle watermark = do
     readiness <- atomically (qhReadiness handle)
     pure (computeReadinessStatus watermark readiness)
 
+-- | The same, against the ceiling of the registry mode.
+sampleReadinessAgainst :: Integer -> QueryHandle cf op -> Maybe SlotNo -> IO ReadinessStatus
+sampleReadinessAgainst limit handle watermark = do
+    readiness <- atomically (qhReadiness handle)
+    pure (computeReadinessStatusAgainst (Just limit) watermark readiness)
+
+{- | The verdict of the version 1 routes: a lag of at most the fixed threshold of
+sixty slots is ready.
+-}
 computeReadinessStatus :: Maybe SlotNo -> Readiness -> ReadinessStatus
-computeReadinessStatus watermark readiness =
+computeReadinessStatus =
+    readinessStatus
+        (<= 60)
+        (const "tip lag exceeds the 60-slot freshness threshold")
+
+{- | The verdict of a read that answers within a ceiling given by its deployment
+(none: the read applies no ceiling of its own, and only an unknown standing makes
+it not ready). A lag above the ceiling says the lag and the ceiling.
+-}
+computeReadinessStatusAgainst :: Maybe Integer -> Maybe SlotNo -> Readiness -> ReadinessStatus
+computeReadinessStatusAgainst limit =
+    readinessStatus
+        (\lag -> maybe True (toInteger lag <=) limit)
+        ( \lag ->
+            "tip lag "
+                <> T.pack (show lag)
+                <> " exceeds the ceiling "
+                <> maybe "none" (T.pack . show) limit
+        )
+
+{- | The shared computation: whether the upstream is connected, the standing is
+known, and the lag is within the limit, with the reason when it is not.
+-}
+readinessStatus :: (Word64 -> Bool) -> (Word64 -> Text) -> Maybe SlotNo -> Readiness -> ReadinessStatus
+readinessStatus within beyond watermark readiness =
     ReadinessStatus
         { rsReady = ready
         , rsAsOfSlot = slotWord <$> watermark
@@ -353,22 +419,36 @@ computeReadinessStatus watermark readiness =
         watermarkWord <- slotWord <$> watermark
         tipWord <- slotWord <$> tip
         if tipWord >= watermarkWord then Just (tipWord - watermarkWord) else Nothing
-    ready = upstreamConnected && maybe False (<= 60) tipLag
+    ready = upstreamConnected && maybe False within tipLag
     reason
         | ready = Nothing
         | not upstreamConnected = Just "upstream disconnected"
         | isNothing watermark = Just "store has no watermark yet"
         | isNothing tip = Just "no tip observed yet"
-        | isNothing tipLag = Just "store watermark is ahead of the observed tip"
-        | otherwise = Just "tip lag exceeds the 60-slot freshness threshold"
+        | otherwise = case tipLag of
+            Nothing -> Just "store watermark is ahead of the observed tip"
+            Just lag -> Just (beyond lag)
 
 unavailableResponse :: ReadinessStatus -> Response
-unavailableResponse status =
+unavailableResponse = jsonResponse status503 . notReadyBody
+
+notReadyBody :: ReadinessStatus -> UnavailableResponse
+notReadyBody status =
+    UnavailableResponse
+        { unavailableFreshness = statusFreshness status
+        , unavailableUpstream = rsUpstream status
+        , unavailableReason = fromMaybe "unavailable" (rsReason status)
+        }
+
+-- | The 503 of the identity route: the body of the other data routes, saying besides that it is unavailable.
+identityNotReadyResponse :: ReleaseIdentity -> Integer -> ReadinessStatus -> Response
+identityNotReadyResponse release limit status =
     jsonResponse status503 $
-        UnavailableResponse
-            { unavailableFreshness = statusFreshness status
-            , unavailableUpstream = rsUpstream status
-            , unavailableReason = fromMaybe "unavailable" (rsReason status)
+        IdentityNotReady
+            { inrBody = notReadyBody status
+            , inrMaxTipLagSlots = limit
+            , inrRegistry = identityRegistryOf release
+            , inrRelease = identityReleaseOf release
             }
 
 -- ---------------------------------------------------------------------------
@@ -406,6 +486,13 @@ badRequestResponse = errorResponse status400 "malformed_identifier"
 notFoundResponse :: Response
 notFoundResponse = errorResponse status404 "not_found"
 
+-- | The identity route is the registry service's: the manifest mode says so.
+identityNotServedResponse :: Response
+identityNotServedResponse =
+    errorResponse
+        status404
+        "the identity route is served in release mode only; this service runs in manifest mode"
+
 internalErrorResponse :: Response
 internalErrorResponse = errorResponse status500 "internal_error"
 
@@ -416,6 +503,8 @@ the board address and the follower's readiness).
 data ReleaseQueryHandle cf op = ReleaseQueryHandle
     { rqhRelease :: !ReleaseIdentity
     , rqhQuery :: !(QueryHandle cf op)
+    , rqhMaxTipLagSlots :: !Integer
+    -- ^ The deployment's ceiling on the tip lag, in slots, of every route of the registry mode.
     }
 
 {- | The query application of the release-identity mode. It has the paths and
@@ -434,15 +523,16 @@ routeRelease handle request =
     case (requestMethod request, pathInfo request) of
         ("GET", ["checkpoint", aidText]) -> handleReleaseCheckpoint handle aidText
         ("GET", ["watchability", aidText]) -> handleReleaseWatchability handle aidText
-        _ -> route (rqhQuery handle) request
+        ("GET", ["identity", aidText]) -> handleReleaseIdentity handle aidText request
+        _ -> route (sampleReadinessAgainst (rqhMaxTipLagSlots handle) (rqhQuery handle)) (Just (rqhMaxTipLagSlots handle)) (rqhQuery handle) request
 
 handleReleaseCheckpoint :: ReleaseQueryHandle cf op -> Text -> IO Response
-handleReleaseCheckpoint (ReleaseQueryHandle release query) aidText =
+handleReleaseCheckpoint (ReleaseQueryHandle release query limit) aidText =
     case decodeAidParam aidText of
         Left _ -> pure badRequestResponse
         Right aid -> do
             reading <- runTransaction (qhRunner query) (holdingsTx release)
-            status <- sampleReadinessStatus query (fst <$> hrPoint reading)
+            status <- sampleReadinessAgainst limit query (fst <$> hrPoint reading)
             pure $
                 if rsReady status
                     then
@@ -461,7 +551,7 @@ handleReleaseCheckpoint (ReleaseQueryHandle release query) aidText =
                     else unavailableResponse status
 
 handleReleaseWatchability :: ReleaseQueryHandle cf op -> Text -> IO Response
-handleReleaseWatchability (ReleaseQueryHandle release query) aidText =
+handleReleaseWatchability (ReleaseQueryHandle release query limit) aidText =
     case decodeAidParam aidText of
         Left _ -> pure badRequestResponse
         Right aid -> do
@@ -472,7 +562,7 @@ handleReleaseWatchability (ReleaseQueryHandle release query) aidText =
             case catalogResult of
                 Left _ -> pure internalErrorResponse
                 Right catalog -> do
-                    status <- sampleReadinessStatus query (fst <$> hrPoint reading)
+                    status <- sampleReadinessAgainst limit query (fst <$> hrPoint reading)
                     pure $
                         if rsReady status
                             then
@@ -512,3 +602,121 @@ checkpointDataOfHolding Holding{holdingTxIn, holdingSn, holdingEpoch, holdingKin
                     , chkWitnessThreshold = kmToad
                     }
         HeldPendingTermination -> Nothing
+
+{- | @GET \/identity\/{aid}@ in the release-identity mode: the AID's checked live
+holding at the store's chain point, with the consumer result beside it, or
+@unavailable@ with its reason. One store transaction reads the holdings and the
+chain point; readiness is sampled after it, and a service that is not ready
+answers the same 503 as the other data routes. A malformed AID, or a
+@window_ms@ or @now_ms@ that is not a non-negative integer, is a 400.
+-}
+handleReleaseIdentity :: ReleaseQueryHandle cf op -> Text -> Request -> IO Response
+handleReleaseIdentity (ReleaseQueryHandle release query limit) aidText request =
+    case (decodeAidParam aidText, consumerParameters request) of
+        (Left _, _) -> pure badRequestResponse
+        (_, Left ()) -> pure malformedParameterResponse
+        (Right aid, Right parameters) -> do
+            reading <- runTransaction (qhRunner query) (identityTx release aid)
+            status <- sampleReadinessAgainst limit query (fst <$> irPoint reading)
+            pure $ case (rsReady status, irPoint reading) of
+                (True, Just (_, Indexer.BlockHash blockHash)) ->
+                    case answerIdentity reading of
+                        Live live ->
+                            jsonResponse status200 $
+                                identityLiveResponse release limit aid (statusFreshness status) blockHash parameters live
+                        NotLive why ->
+                            jsonResponse status200 $
+                                IdentityUnavailableResponse
+                                    { iuAid = TE.decodeUtf8 (qb64Aid aid)
+                                    , iuFreshness = statusFreshness status
+                                    , iuMaxTipLagSlots = limit
+                                    , iuBlockHash = blockHash
+                                    , iuRegistry = identityRegistryOf release
+                                    , iuRelease = identityReleaseOf release
+                                    , iuReason = unavailableText why
+                                    }
+                _ -> identityNotReadyResponse release limit status
+
+{- | The two optional parameters of the consumer result: both, or neither, or a
+refusal when one of them is present and no non-negative integer. A lone one
+leaves the result not evaluated.
+-}
+consumerParameters :: Request -> Either () (Maybe (Integer, Integer))
+consumerParameters request = do
+    window <- parameter "window_ms"
+    now <- parameter "now_ms"
+    pure ((,) <$> window <*> now)
+  where
+    parameter name = case lookup name (queryString request) of
+        Nothing -> Right Nothing
+        Just Nothing -> Left ()
+        Just (Just value) -> case BC.readInteger value of
+            Just (n, rest) | BS.null rest, n >= 0 -> Right (Just n)
+            _ -> Left ()
+
+malformedParameterResponse :: Response
+malformedParameterResponse = errorResponse status400 "malformed_parameter"
+
+identityLiveResponse ::
+    ReleaseIdentity ->
+    Integer ->
+    ByteString ->
+    Freshness ->
+    ByteString ->
+    Maybe (Integer, Integer) ->
+    LiveHolding ->
+    IdentityLiveResponse
+identityLiveResponse release limit aid freshness blockHash parameters live =
+    IdentityLiveResponse
+        { ilrAid = TE.decodeUtf8 (qb64Aid aid)
+        , ilrFreshness = freshness
+        , ilrMaxTipLagSlots = limit
+        , ilrBlockHash = blockHash
+        , ilrRegistry = identityRegistryOf release
+        , ilrRelease = identityReleaseOf release
+        , ilrHolding =
+            IdentityHolding
+                { ihTxId = Indexer.txInId (lhTxIn live)
+                , ihOutputIndex = fromIntegral (Indexer.txInIx (lhTxIn live))
+                , ihSn = lhSn live
+                , ihEpoch = lhEpoch live
+                , ihPoisoned = lhPoisoned live
+                , ihFrozen = lhFrozen live
+                , ihToppedUp = lhToppedUp live
+                , ihBornAt = lhBornAt live
+                , ihRefundAddress = lhRefund live
+                , ihDeposit = lhDeposit live
+                , ihFreezeBond = lhFreezeBond live
+                , ihPool = lhPool live
+                , ihLovelace = lhLovelace live
+                , ihKeys = lhKeys live
+                }
+        , ilrConsumer = case consumerOf release aid parameters live of
+            NotEvaluated reason -> ConsumerNotEvaluated reason
+            Evaluated failed -> ConsumerEvaluated (null failed) (map (T.pack . show) failed)
+        }
+
+-- | The registry a release names, as the identity answers give it.
+identityRegistryOf :: ReleaseIdentity -> IdentityRegistry
+identityRegistryOf release =
+    IdentityRegistry
+        { irgStatePolicy = registryStatePolicy registry
+        , irgStateTokenName = registryName registry
+        , irgSeedTxId = seedTx
+        , irgSeedOutputIndex = seedIndex
+        }
+  where
+    registry = registryIdentityOf release
+    OutputReference seedTx seedIndex = riSeed release
+
+-- | The four identities of the release, as the identity answers give them.
+identityReleaseOf :: ReleaseIdentity -> IdentityRelease
+identityReleaseOf release =
+    IdentityRelease
+        { irlApplicationPolicy = rlApplicationPolicy application
+        , irlApplicationCredential = rlApplicationCredential application
+        , irlStateProgram = rlStateProgram application
+        , irlStatePolicy = rlStatePolicy application
+        }
+  where
+    application = riRelease release

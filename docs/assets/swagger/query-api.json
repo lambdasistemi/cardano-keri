@@ -11,7 +11,7 @@
         "summary": "Service readiness and freshness",
         "responses": {
           "200": {
-            "description": "Always 200. `ready` is true only when the store has a transactional watermark, upstream is connected, a tip is known, and tip_lag_slots <= 60.",
+            "description": "Answers with success whatever the readiness. `ready` is true only when the store has a transactional watermark, upstream is connected, a tip is known, and the tip lag is within the service's limit. In manifest mode the limit is a fixed 60 slots. In registry mode the limit is the configured ceiling, which this answer reports as `max_tip_lag_slots`.",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/ReadyResponse" }
@@ -44,7 +44,7 @@
           },
           "400": { "description": "Malformed CESR AID" },
           "503": {
-            "description": "Not ready: disconnected, cold, impossible tip, or lag over 60",
+            "description": "Not ready: disconnected, cold, impossible tip, or a tip lag above the limit. In manifest mode the limit is a fixed 60 slots. In registry mode the limit is the configured ceiling, which /ready reports as max_tip_lag_slots",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/UnavailableResponse" }
@@ -68,7 +68,7 @@
           },
           "500": { "description": "The current board catalog contains a forged or malformed record; the whole view fails closed" },
           "503": {
-            "description": "Not ready: disconnected, cold, impossible tip, or lag over 60",
+            "description": "Not ready: disconnected, cold, impossible tip, or a tip lag above the limit. In manifest mode the limit is a fixed 60 slots. In registry mode the limit is the configured ceiling, which /ready reports as max_tip_lag_slots",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/UnavailableResponse" }
@@ -102,7 +102,7 @@
           "400": { "description": "Malformed CESR witness key" },
           "500": { "description": "The current board catalog contains a forged or malformed record; the whole view fails closed" },
           "503": {
-            "description": "Not ready: disconnected, cold, impossible tip, or lag over 60",
+            "description": "Not ready: disconnected, cold, impossible tip, or a tip lag above the limit. In manifest mode the limit is a fixed 60 slots. In registry mode the limit is the configured ceiling, which /ready reports as max_tip_lag_slots",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/UnavailableResponse" }
@@ -136,7 +136,7 @@
           "400": { "description": "Malformed CESR AID" },
           "500": { "description": "The current board catalog contains a forged or malformed record; the whole view fails closed" },
           "503": {
-            "description": "Not ready: disconnected, cold, impossible tip, or lag over 60",
+            "description": "Not ready: disconnected, cold, impossible tip, or a tip lag above the limit. In manifest mode the limit is a fixed 60 slots. In registry mode the limit is the configured ceiling, which /ready reports as max_tip_lag_slots",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/UnavailableResponse" }
@@ -145,7 +145,62 @@
           }
         }
       }
+    },
+    "/identity/{aid}": {
+      "get": {
+        "summary": "The checked live holding of an AID in the registry, or why none is given (registry service only)",
+        "description": "Served by the registry service, which follows one release of the registry. The service started from a deployment manifest answers 404 and names its mode. A live answer is given exactly when the store holds exactly one live checkpoint of the registry for the AID; every other case of a ready service answers unavailable with a reason, never a not-found answer and never an empty success. The consumer result is the published predicate over the same holding, reported beside it and never changing the status; it is evaluated only when both window_ms and now_ms are given. The service answers from the holding only while its tip lag is at most the ceiling it was started with, a setting of the deployment; every body, and the not-ready answer, carries that ceiling beside the lag.",
+        "parameters": [
+          {
+            "name": "aid",
+            "in": "path",
+            "required": true,
+            "description": "Self-addressing CESR E-code identifier",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "window_ms",
+            "in": "query",
+            "required": false,
+            "description": "Maturity window in milliseconds, the unit of born_at; a non-negative integer",
+            "schema": { "type": "integer", "minimum": 0 }
+          },
+          {
+            "name": "now_ms",
+            "in": "query",
+            "required": false,
+            "description": "The relying party's time in milliseconds, the unit of born_at; a non-negative integer",
+            "schema": { "type": "integer", "minimum": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A live holding, or unavailable with the reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/IdentityLiveResponse" },
+                    { "$ref": "#/components/schemas/IdentityUnavailableResponse" }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "description": "Malformed CESR AID, or a window_ms or now_ms that is not a non-negative integer" },
+          "404": { "description": "The service runs in manifest mode and does not serve the identity route" },
+          "503": {
+            "description": "Not ready: disconnected, cold, impossible tip, or a tip lag above the ceiling the service was started with",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/IdentityNotReadyResponse" }
+              }
+            }
+          }
+        }
+      }
     }
+
   },
   "components": {
     "schemas": {
@@ -157,7 +212,8 @@
           "as_of_slot": { "type": ["integer", "null"] },
           "tip_lag_slots": { "type": ["integer", "null"] },
           "upstream": { "type": "string", "enum": ["connected", "disconnected"] },
-          "reason": { "type": ["string", "null"] }
+          "reason": { "type": ["string", "null"] },
+          "max_tip_lag_slots": { "type": "integer", "minimum": 0, "description": "Present only in the answer of the registry service: the ceiling in force, the largest tip lag in slots the service was started to answer within, set per deployment. A manifest service never sends it" }
         }
       },
       "UnavailableResponse": {
@@ -313,7 +369,135 @@
           "tip_lag_slots": { "type": "integer" },
           "watchability": { "$ref": "#/components/schemas/WatchabilityData" }
         }
+      },
+      "IdentityRegistry": {
+        "type": "object",
+        "required": ["state_policy", "state_token_name", "seed"],
+        "properties": {
+          "state_policy": { "type": "string", "description": "Lowercase hex" },
+          "state_token_name": { "type": "string", "description": "Lowercase hex" },
+          "seed": {
+            "type": "object",
+            "required": ["tx_id", "output_index"],
+            "properties": {
+              "tx_id": { "type": "string", "description": "Lowercase hex" },
+              "output_index": { "type": "integer" }
+            }
+          }
+        }
+      },
+      "IdentityRelease": {
+        "type": "object",
+        "required": ["application_policy", "application_credential", "state_program", "state_policy"],
+        "properties": {
+          "application_policy": { "type": "string", "description": "Lowercase hex" },
+          "application_credential": { "type": "string", "description": "Lowercase hex" },
+          "state_program": { "type": "string", "description": "Lowercase hex" },
+          "state_policy": { "type": "string", "description": "Lowercase hex" }
+        }
+      },
+      "IdentityKeyState": {
+        "type": "object",
+        "required": ["current_keys", "current_threshold", "next_key_digests", "next_threshold", "witnesses", "witness_threshold"],
+        "properties": {
+          "current_keys": { "type": "array", "items": { "type": "string" } },
+          "current_threshold": { "$ref": "#/components/schemas/Threshold" },
+          "next_key_digests": { "type": "array", "items": { "type": "string" } },
+          "next_threshold": { "$ref": "#/components/schemas/Threshold" },
+          "witnesses": { "type": "array", "items": { "type": "string" } },
+          "witness_threshold": { "type": "integer" }
+        }
+      },
+      "IdentityHolding": {
+        "type": "object",
+        "required": ["tx_id", "output_index", "sn", "epoch", "poisoned", "frozen", "topped_up", "born_at", "refund_address", "deposit", "freeze_bond", "pool", "lovelace", "key_state"],
+        "properties": {
+          "tx_id": { "type": "string", "description": "Lowercase hex" },
+          "output_index": { "type": "integer" },
+          "sn": { "type": "integer" },
+          "epoch": { "type": "integer" },
+          "poisoned": { "type": "boolean" },
+          "frozen": { "type": "boolean" },
+          "topped_up": { "type": "boolean" },
+          "born_at": { "type": "integer", "description": "Milliseconds" },
+          "refund_address": { "type": "string", "description": "Lowercase hex of the committed refund address" },
+          "deposit": { "type": "integer" },
+          "freeze_bond": { "type": "integer" },
+          "pool": { "type": "integer" },
+          "lovelace": { "type": "integer" },
+          "key_state": { "$ref": "#/components/schemas/IdentityKeyState" }
+        }
+      },
+      "IdentityConsumerEvaluated": {
+        "type": "object",
+        "required": ["evaluated", "consumable", "failed_clauses"],
+        "properties": {
+          "evaluated": { "type": "boolean", "enum": [true] },
+          "consumable": { "type": "boolean" },
+          "failed_clauses": { "type": "array", "items": { "type": "string" }, "description": "The names of the clauses of the published predicate the holding fails" }
+        }
+      },
+      "IdentityConsumerNotEvaluated": {
+        "type": "object",
+        "required": ["evaluated", "reason"],
+        "properties": {
+          "evaluated": { "type": "boolean", "enum": [false] },
+          "reason": { "type": "string" }
+        }
+      },
+      "IdentityLiveResponse": {
+        "type": "object",
+        "required": ["status", "aid", "as_of_slot", "tip_lag_slots", "max_tip_lag_slots", "block_hash", "registry", "release", "holding", "consumer"],
+        "properties": {
+          "status": { "type": "string", "enum": ["live"] },
+          "aid": { "type": "string" },
+          "as_of_slot": { "type": "integer" },
+          "tip_lag_slots": { "type": "integer" },
+          "max_tip_lag_slots": { "type": "integer", "minimum": 0, "description": "The ceiling in force: the largest tip lag, in slots, the service was started to answer within. It is set per deployment when the service starts" },
+          "block_hash": { "type": "string", "description": "Lowercase hex of the block of the chain point the holding was read at" },
+          "registry": { "$ref": "#/components/schemas/IdentityRegistry" },
+          "release": { "$ref": "#/components/schemas/IdentityRelease" },
+          "holding": { "$ref": "#/components/schemas/IdentityHolding" },
+          "consumer": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/IdentityConsumerEvaluated" },
+              { "$ref": "#/components/schemas/IdentityConsumerNotEvaluated" }
+            ]
+          }
+        }
+      },
+      "IdentityNotReadyResponse": {
+        "type": "object",
+        "required": ["status", "ready", "as_of_slot", "tip_lag_slots", "max_tip_lag_slots", "upstream", "reason", "error", "registry", "release"],
+        "properties": {
+          "status": { "type": "string", "enum": ["unavailable"] },
+          "ready": { "type": "boolean", "enum": [false] },
+          "as_of_slot": { "type": ["integer", "null"] },
+          "tip_lag_slots": { "type": ["integer", "null"] },
+          "max_tip_lag_slots": { "type": "integer", "minimum": 0, "description": "The ceiling in force: the largest tip lag, in slots, the service was started to answer within. It is set per deployment when the service starts" },
+          "upstream": { "type": "string", "enum": ["connected", "disconnected"] },
+          "reason": { "type": "string" },
+          "error": { "type": "string", "enum": ["service_unavailable"] },
+          "registry": { "$ref": "#/components/schemas/IdentityRegistry" },
+          "release": { "$ref": "#/components/schemas/IdentityRelease" }
+        }
+      },
+      "IdentityUnavailableResponse": {
+        "type": "object",
+        "required": ["status", "aid", "as_of_slot", "tip_lag_slots", "max_tip_lag_slots", "block_hash", "registry", "release", "reason"],
+        "properties": {
+          "status": { "type": "string", "enum": ["unavailable"] },
+          "aid": { "type": "string" },
+          "as_of_slot": { "type": "integer" },
+          "tip_lag_slots": { "type": "integer" },
+          "max_tip_lag_slots": { "type": "integer", "minimum": 0, "description": "The ceiling in force: the largest tip lag, in slots, the service was started to answer within. It is set per deployment when the service starts" },
+          "block_hash": { "type": "string", "description": "Lowercase hex of the block of the chain point the store was read at" },
+          "registry": { "$ref": "#/components/schemas/IdentityRegistry" },
+          "release": { "$ref": "#/components/schemas/IdentityRelease" },
+          "reason": { "type": "string" }
+        }
       }
+
     }
   }
 }

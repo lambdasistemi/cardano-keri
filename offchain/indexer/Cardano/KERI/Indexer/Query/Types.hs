@@ -30,6 +30,15 @@ module Cardano.KERI.Indexer.Query.Types (
     WatchabilityResponse (..),
     WatchabilityData (..),
 
+    -- * Identity
+    IdentityLiveResponse (..),
+    IdentityNotReady (..),
+    IdentityUnavailableResponse (..),
+    IdentityRegistry (..),
+    IdentityRelease (..),
+    IdentityHolding (..),
+    IdentityConsumer (..),
+
     -- * Rendering helpers
     qb64Witness,
     hexBytes,
@@ -40,16 +49,18 @@ import Cardano.KERI.AID.CESR (
     qb64Aid,
     qb64Verkey,
  )
+import Cardano.KERI.AID.Checkpoint.Datum (KeyMaterial (..))
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
     Weight (..),
  )
 import Data.Aeson (
     ToJSON (..),
-    Value,
+    Value (..),
     object,
     (.=),
  )
+import Data.Aeson.KeyMap qualified as KeyMap
 import Data.ByteArray.Encoding (
     Base (Base64URLUnpadded),
     convertToBase,
@@ -74,18 +85,22 @@ data ReadyResponse = ReadyResponse
     , readyFreshness :: !Freshness
     , readyUpstream :: !Text
     , readyReason :: !(Maybe Text)
+    , readyMaxTipLagSlots :: !(Maybe Integer)
+    -- ^ the ceiling in force, in the registry mode
     }
     deriving stock (Eq, Show)
 
 instance ToJSON ReadyResponse where
-    toJSON ReadyResponse{readyReady, readyFreshness, readyUpstream, readyReason} =
+    toJSON ReadyResponse{readyReady, readyFreshness, readyUpstream, readyReason, readyMaxTipLagSlots} =
         object
-            [ "ready" .= readyReady
-            , "as_of_slot" .= freshAsOfSlot readyFreshness
-            , "tip_lag_slots" .= freshTipLagSlots readyFreshness
-            , "upstream" .= readyUpstream
-            , "reason" .= readyReason
-            ]
+            ( [ "ready" .= readyReady
+              , "as_of_slot" .= freshAsOfSlot readyFreshness
+              , "tip_lag_slots" .= freshTipLagSlots readyFreshness
+              , "upstream" .= readyUpstream
+              , "reason" .= readyReason
+              ]
+                <> ["max_tip_lag_slots" .= limit | Just limit <- [readyMaxTipLagSlots]]
+            )
 
 {- | Exact HTTP 503 body for a data route when readiness fails closed. Never
 carries @checkpoint@\/@board@\/@watchability@ — not even @null@.
@@ -337,3 +352,190 @@ qb64TextDigest key = toJSON (TE.decodeUtf8 (qb64Aid key))
 
 qb64TextAid :: ByteString -> Text
 qb64TextAid = TE.decodeUtf8 . qb64Aid
+
+-- ---------------------------------------------------------------------------
+-- GET /identity/{aid}
+
+{- | The registry the live holding belongs to: the state policy and the name of
+the state token the seed names, and the seed itself.
+-}
+data IdentityRegistry = IdentityRegistry
+    { irgStatePolicy :: !ByteString
+    , irgStateTokenName :: !ByteString
+    , irgSeedTxId :: !ByteString
+    , irgSeedOutputIndex :: !Integer
+    }
+    deriving stock (Eq, Show)
+
+instance ToJSON IdentityRegistry where
+    toJSON IdentityRegistry{..} =
+        object
+            [ "state_policy" .= hexBytes irgStatePolicy
+            , "state_token_name" .= hexBytes irgStateTokenName
+            , "seed"
+                .= object
+                    [ "tx_id" .= hexBytes irgSeedTxId
+                    , "output_index" .= irgSeedOutputIndex
+                    ]
+            ]
+
+-- | The four identities of the release of the application.
+data IdentityRelease = IdentityRelease
+    { irlApplicationPolicy :: !ByteString
+    , irlApplicationCredential :: !ByteString
+    , irlStateProgram :: !ByteString
+    , irlStatePolicy :: !ByteString
+    }
+    deriving stock (Eq, Show)
+
+instance ToJSON IdentityRelease where
+    toJSON IdentityRelease{..} =
+        object
+            [ "application_policy" .= hexBytes irlApplicationPolicy
+            , "application_credential" .= hexBytes irlApplicationCredential
+            , "state_program" .= hexBytes irlStateProgram
+            , "state_policy" .= hexBytes irlStatePolicy
+            ]
+
+-- | The checked live holding: the facts of the datum and the amounts the output holds.
+data IdentityHolding = IdentityHolding
+    { ihTxId :: !ByteString
+    , ihOutputIndex :: !Int
+    , ihSn :: !Integer
+    , ihEpoch :: !Integer
+    , ihPoisoned :: !Bool
+    , ihFrozen :: !Bool
+    , ihToppedUp :: !Bool
+    , ihBornAt :: !Integer
+    , ihRefundAddress :: !ByteString
+    , ihDeposit :: !Integer
+    , ihFreezeBond :: !Integer
+    , ihPool :: !Integer
+    , ihLovelace :: !Integer
+    , ihKeys :: !KeyMaterial
+    }
+    deriving stock (Eq, Show)
+
+instance ToJSON IdentityHolding where
+    toJSON IdentityHolding{ihKeys = KeyMaterial{..}, ..} =
+        object
+            [ "tx_id" .= hexTxId ihTxId
+            , "output_index" .= ihOutputIndex
+            , "sn" .= ihSn
+            , "epoch" .= ihEpoch
+            , "poisoned" .= ihPoisoned
+            , "frozen" .= ihFrozen
+            , "topped_up" .= ihToppedUp
+            , "born_at" .= ihBornAt
+            , "refund_address" .= hexBytes ihRefundAddress
+            , "deposit" .= ihDeposit
+            , "freeze_bond" .= ihFreezeBond
+            , "pool" .= ihPool
+            , "lovelace" .= ihLovelace
+            , "key_state"
+                .= object
+                    [ "current_keys" .= map qb64TextVerkey kmCurKeys
+                    , "current_threshold" .= thresholdToJson kmCurThreshold
+                    , "next_key_digests" .= map qb64TextDigest kmNextKeys
+                    , "next_threshold" .= thresholdToJson kmNextThreshold
+                    , "witnesses" .= map qb64TextWitness kmWitnesses
+                    , "witness_threshold" .= kmToad
+                    ]
+            ]
+
+{- | The consumer result beside the holding: not evaluated with its reason, or
+evaluated with the failed clauses by name.
+-}
+data IdentityConsumer
+    = ConsumerNotEvaluated !Text
+    | ConsumerEvaluated !Bool ![Text]
+    deriving stock (Eq, Show)
+
+instance ToJSON IdentityConsumer where
+    toJSON = \case
+        ConsumerNotEvaluated reason ->
+            object ["evaluated" .= False, "reason" .= reason]
+        ConsumerEvaluated consumable failed ->
+            object
+                [ "evaluated" .= True
+                , "consumable" .= consumable
+                , "failed_clauses" .= failed
+                ]
+
+-- | Exact @GET \/identity\/{aid}@ HTTP 200 body of a live holding.
+data IdentityLiveResponse = IdentityLiveResponse
+    { ilrAid :: !Text
+    , ilrFreshness :: !Freshness
+    , ilrMaxTipLagSlots :: !Integer
+    , ilrBlockHash :: !ByteString
+    , ilrRegistry :: !IdentityRegistry
+    , ilrRelease :: !IdentityRelease
+    , ilrHolding :: !IdentityHolding
+    , ilrConsumer :: !IdentityConsumer
+    }
+    deriving stock (Eq, Show)
+
+instance ToJSON IdentityLiveResponse where
+    toJSON IdentityLiveResponse{..} =
+        object
+            [ "status" .= ("live" :: Text)
+            , "aid" .= ilrAid
+            , "as_of_slot" .= freshAsOfSlot ilrFreshness
+            , "tip_lag_slots" .= freshTipLagSlots ilrFreshness
+            , "max_tip_lag_slots" .= ilrMaxTipLagSlots
+            , "block_hash" .= hexBytes ilrBlockHash
+            , "registry" .= ilrRegistry
+            , "release" .= ilrRelease
+            , "holding" .= ilrHolding
+            , "consumer" .= ilrConsumer
+            ]
+
+-- | Exact @GET \/identity\/{aid}@ HTTP 200 body when there is no live holding to give.
+data IdentityUnavailableResponse = IdentityUnavailableResponse
+    { iuAid :: !Text
+    , iuFreshness :: !Freshness
+    , iuMaxTipLagSlots :: !Integer
+    , iuBlockHash :: !ByteString
+    , iuRegistry :: !IdentityRegistry
+    , iuRelease :: !IdentityRelease
+    , iuReason :: !Text
+    }
+    deriving stock (Eq, Show)
+
+instance ToJSON IdentityUnavailableResponse where
+    toJSON IdentityUnavailableResponse{..} =
+        object
+            [ "status" .= ("unavailable" :: Text)
+            , "aid" .= iuAid
+            , "as_of_slot" .= freshAsOfSlot iuFreshness
+            , "tip_lag_slots" .= freshTipLagSlots iuFreshness
+            , "max_tip_lag_slots" .= iuMaxTipLagSlots
+            , "block_hash" .= hexBytes iuBlockHash
+            , "registry" .= iuRegistry
+            , "release" .= iuRelease
+            , "reason" .= iuReason
+            ]
+
+{- | The 503 body of @GET \/identity\/{aid}@: the body of the other data routes
+(the readiness fields, the reason and the error tag), which says besides that the
+identity is unavailable. The registry and the release the service
+follows are given besides, so a reader can tell whose answer it is.
+-}
+data IdentityNotReady = IdentityNotReady
+    { inrBody :: !UnavailableResponse
+    , inrMaxTipLagSlots :: !Integer
+    , inrRegistry :: !IdentityRegistry
+    , inrRelease :: !IdentityRelease
+    }
+    deriving stock (Eq, Show)
+
+instance ToJSON IdentityNotReady where
+    toJSON IdentityNotReady{..} = case toJSON inrBody of
+        Object fields ->
+            Object
+                ( KeyMap.insert "status" (toJSON ("unavailable" :: Text)) $
+                    KeyMap.insert "max_tip_lag_slots" (toJSON inrMaxTipLagSlots) $
+                        KeyMap.insert "registry" (toJSON inrRegistry) $
+                            KeyMap.insert "release" (toJSON inrRelease) fields
+                )
+        other -> other

@@ -1,0 +1,5 @@
+[
+  {"tx_hash":"1111111111111111111111111111111111111111111111111111111111111111","block_height":3999000,"block_hash":"9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c","absolute_slot":68000000,"valid_contract":true,"inputs":[],"outputs":[
+    {"tx_hash":"2222222222222222222222222222222222222222222222222222222222222222","tx_index":0,"payment_addr":{"bech32":"addr_test1wzs6rgdp5xs6rgdp5xs6rgdp5xs6rgdp5xs6rgdp5xs6rggqxgwml","cred":"00"},"value":"5000000","stake_addr":null,"datum_hash":null,"inline_datum":null,"reference_script":null,"asset_list":[]}
+  ]}
+]

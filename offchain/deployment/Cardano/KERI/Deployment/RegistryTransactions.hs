@@ -609,15 +609,17 @@ bookRegistration parameters deployment references payer record validity differen
         pure (built, purposeSet purposes)
 
 {- | The hash-proof mint of an inception, paid to a party: the evidence the fold
-burns. The inception must hash to its own identifier at the offsets it carries.
+burns, valid over the given interval. The inception must hash to its own identifier
+at the offsets it carries.
 -}
 mintHashProof ::
     PParams ConwayEra ->
     RegistryDeployment ->
     Payer ->
     InceptionExport ->
+    ValidityPlan ->
     Either RegistryTransactionError ConwayTx
-mintHashProof parameters deployment payer export = do
+mintHashProof parameters deployment payer export validity = do
     if blake3Hash saidBlank == aid
         then Right ()
         else Left InceptionDoesNotBindItsIdentifier
@@ -663,6 +665,7 @@ mintHashProof parameters deployment payer export = do
                             & outputsTxBodyL .~ StrictSeq.singleton proofOut
                             & mintTxBodyL .~ minted
                             & collateralInputsTxBodyL .~ Set.singleton (fst (fundingCollateral funding))
+                            & vldtTxBodyL .~ validityOf validity
                             & scriptIntegrityHashTxBodyL
                                 .~ computeScriptIntegrity (Set.singleton PlutusV3) parameters redeemers (TxDats mempty)
                         )
@@ -680,7 +683,10 @@ application burns the approval and the holding is delivered to the checkpoint
 address.
 -}
 data FoldPlan = FoldPlan
-    { foldBooking :: !Booking
+    { foldRequest :: !(TxIn, TxOut ConwayEra)
+    -- ^ the booked request the fold spends
+    , foldBooked :: !RegistrationData
+    -- ^ the record the request holds
     , foldInception :: !InceptionExport
     , foldProof :: !(TxIn, TxOut ConwayEra)
     -- ^ the hash-proof output the fold burns
@@ -711,7 +717,8 @@ foldRegistration parameters deployment references plan budgets = do
     foldGuard (foldRegistered plan) (foldTerminated plan) key (snd (foldState plan))
     firstFunded budgets (fundings [proofIn] (payerFunds (foldPayer plan))) attempt
   where
-    Booking{bookingOutput = (requestIn, _), bookingRecord = record} = foldBooking plan
+    (requestIn, _) = foldRequest plan
+    record = foldBooked plan
     (proofIn, _) = foldProof plan
     (stateIn, stateOutBefore) = foldState plan
     key = requestKey record
@@ -740,7 +747,7 @@ foldRegistration parameters deployment references plan budgets = do
             <> foldReferences plan
     attempt chosen funding = do
         let spent =
-                [bookingOutput (foldBooking plan), foldState plan, foldProof plan]
+                [foldRequest plan, foldState plan, foldProof plan]
                     <> fundingInputs funding
             inputs = Set.fromList (map fst spent)
             mintIx policy = fromIntegral (mintingIndex policy minted)

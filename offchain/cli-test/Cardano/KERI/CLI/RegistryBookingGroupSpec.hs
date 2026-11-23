@@ -1,0 +1,240 @@
+{-# LANGUAGE NumericUnderscores #-}
+
+{- |
+Module      : Cardano.KERI.CLI.RegistryBookingGroupSpec
+Description : @ckeri registry register@ and @ckeri registry fold@ take their files and the node, and no registry term
+
+The production 'Instructions' parser is run with no environment and no
+configuration file, unless the example says otherwise. Each command is parsed to
+the settings it names, each option to its own field; an input left out is
+refused by the name of its environment variable; the options that would mean a
+store, a manifest, a provider or a registry term are not offered; and the group
+keeps its deploy command and its spelling.
+-}
+module Cardano.KERI.CLI.RegistryBookingGroupSpec (spec) where
+
+import Cardano.KERI.CLI (Instructions (..))
+import Cardano.KERI.Deployment.RegistryBookingCommand (
+    RegistryFoldSettings (..),
+    RegistryRegisterSettings (..),
+ )
+import Control.Monad (unless)
+import Data.Char (toUpper)
+import Data.List (isInfixOf)
+import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty qualified as NE
+import OptEnvConf qualified as Opt
+import OptEnvConf.Args (parseArgs)
+import OptEnvConf.Capability (allCapabilities)
+import OptEnvConf.EnvMap qualified as EnvMap
+import OptEnvConf.Error (ParseError (..), ParseErrorMessage (..))
+import OptEnvConf.Run (runParserOn)
+import Test.Hspec (Spec, describe, expectationFailure, it, shouldBe, shouldSatisfy)
+
+nodeOptions :: [(String, String)]
+nodeOptions =
+    [ ("--network-magic", "42")
+    , ("--blueprint", "plutus.json")
+    , ("--node-socket", "node.socket")
+    , ("--funding-address", "addr_test1qexample")
+    , ("--signing-key-file", "payment.skey")
+    , ("--timeout-seconds", "77")
+    , ("--release-identity", "identity.json")
+    , ("--reference-record", "references.json")
+    , ("--kli-export", "export.cesr")
+    ]
+
+registerOptions :: [(String, String)]
+registerOptions = nodeOptions <> [("--request-deposit", "1009000005")]
+
+foldOptions :: [(String, String)]
+foldOptions =
+    nodeOptions
+        <> [ ("--request", "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899#3")
+           , ("--snapshot", "snapshot.json")
+           , ("--snapshot-out", "next-snapshot.json")
+           ]
+
+registerSettings :: RegistryRegisterSettings
+registerSettings =
+    RegistryRegisterSettings
+        { rgNetworkMagic = 42
+        , rgBlueprint = "plutus.json"
+        , rgNodeSocket = "node.socket"
+        , rgFundingAddress = "addr_test1qexample"
+        , rgSigningKeyFile = "payment.skey"
+        , rgTimeoutSeconds = 77
+        , rgReleaseIdentity = "identity.json"
+        , rgReferenceRecord = "references.json"
+        , rgKliExport = "export.cesr"
+        , rgDeposit = Just 1_009_000_005
+        }
+
+foldSettings :: RegistryFoldSettings
+foldSettings =
+    RegistryFoldSettings
+        { rfNetworkMagic = 42
+        , rfBlueprint = "plutus.json"
+        , rfNodeSocket = "node.socket"
+        , rfFundingAddress = "addr_test1qexample"
+        , rfSigningKeyFile = "payment.skey"
+        , rfTimeoutSeconds = 77
+        , rfReleaseIdentity = "identity.json"
+        , rfReferenceRecord = "references.json"
+        , rfKliExport = "export.cesr"
+        , rfRequest = "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899#3"
+        , rfSnapshot = "snapshot.json"
+        , rfSnapshotOut = Just "next-snapshot.json"
+        }
+
+argumentsOf :: [(String, String)] -> [String]
+argumentsOf options = concat [[name, value] | (name, value) <- options]
+
+-- | The options a command cannot run without.
+requiredRegister, requiredFold :: [String]
+requiredRegister =
+    ["--blueprint", "--node-socket", "--funding-address", "--signing-key-file", "--release-identity", "--reference-record", "--kli-export"]
+requiredFold = requiredRegister <> ["--request", "--snapshot"]
+
+spec :: Spec
+spec = describe "#351 ckeri registry register and ckeri registry fold: the command surface" $ do
+    it "parses every option of register to its own setting" $ do
+        result <- parseWith [] (["registry", "register"] <> argumentsOf registerOptions)
+        case result of
+            Right (RegistryRegister settings) -> settings `shouldBe` registerSettings
+            other -> expectationFailure ("not parsed: " <> showResult other)
+    it "parses every option of fold to its own setting" $ do
+        result <- parseWith [] (["registry", "fold"] <> argumentsOf foldOptions)
+        case result of
+            Right (RegistryFold settings) -> settings `shouldBe` foldSettings
+            other -> expectationFailure ("not parsed: " <> showResult other)
+    it "leaves the optional settings out: the request deposit, the next snapshot, the network magic and the timeout take their defaults" $ do
+        let without names = [o | o@(name, _) <- nodeOptions, name `notElem` names]
+        registered <- parseWith [] (["registry", "register"] <> argumentsOf (without ["--network-magic", "--timeout-seconds"]))
+        case registered of
+            Right (RegistryRegister settings) -> do
+                rgDeposit settings `shouldBe` Nothing
+                rgNetworkMagic settings `shouldBe` 1
+                rgTimeoutSeconds settings `shouldBe` 600
+            other -> expectationFailure ("not parsed: " <> showResult other)
+        folded <-
+            parseWith
+                []
+                ( ["registry", "fold"]
+                    <> argumentsOf (without [] <> [("--request", "aa#0"), ("--snapshot", "s.json")])
+                )
+        case folded of
+            Right (RegistryFold settings) -> rfSnapshotOut settings `shouldBe` Nothing
+            other -> expectationFailure ("not parsed: " <> showResult other)
+    it "takes every input from the environment as well as from options" $ do
+        let environment = [("CKERI_" <> envName name, value) | (name, value) <- foldOptions]
+        result <- parseWith environment ["registry", "fold"]
+        case result of
+            Right (RegistryFold settings) -> settings `shouldBe` foldSettings
+            other -> expectationFailure ("not parsed: " <> showResult other)
+    it "refuses each input that is left out, naming its environment variable" $ do
+        mapM_
+            ( \option -> do
+                result <-
+                    parseWith [] (["registry", "register"] <> argumentsOf [o | o@(name, _) <- registerOptions, name /= option])
+                case result of
+                    Left errors -> show errors `shouldSatisfy` (("CKERI_" <> envName option) `isInfixOf`)
+                    Right _ -> expectationFailure (option <> " was left out of register and it was parsed")
+            )
+            requiredRegister
+        mapM_
+            ( \option -> do
+                result <-
+                    parseWith [] (["registry", "fold"] <> argumentsOf [o | o@(name, _) <- foldOptions, name /= option])
+                case result of
+                    Left errors -> show errors `shouldSatisfy` (("CKERI_" <> envName option) `isInfixOf`)
+                    Right _ -> expectationFailure (option <> " was left out of fold and it was parsed")
+            )
+            requiredFold
+    it "offers no option that means a store, a manifest, a provider or a registry term" $
+        mapM_
+            ( \command ->
+                mapM_
+                    ( \(name, value) ->
+                        unrecognisedArgs (["registry", command] <> argumentsOf (optionsOf command) <> [name, value])
+                            >>= (`shouldBe` [name, value])
+                    )
+                    [ ("--store", "store")
+                    , ("--manifest", "manifest.json")
+                    , ("--koios-token", "token")
+                    , ("--cardano-cli", "cli")
+                    , ("--booking-width", "5000")
+                    , ("--process-time", "90000")
+                    , ("--registration-cost", "1000000")
+                    , ("--premium", "2000000")
+                    ]
+            )
+            ["register", "fold"]
+    it "offers a deposit to the request of register only, and a snapshot to fold only" $ do
+        unrecognisedArgs (["registry", "fold"] <> argumentsOf foldOptions <> ["--request-deposit", "1"])
+            >>= (`shouldBe` ["--request-deposit", "1"])
+        unrecognisedArgs (["registry", "register"] <> argumentsOf registerOptions <> ["--snapshot", "s.json"])
+            >>= (`shouldBe` ["--snapshot", "s.json"])
+    it "keeps the group to its three commands and the spelling the group gives" $ do
+        unrecognisedCmds ["registry", "deploy"] >>= (`shouldBe` [])
+        unrecognisedCmds ["registry", "register"] >>= (`shouldBe` [])
+        unrecognisedCmds ["registry", "fold"] >>= (`shouldBe` [])
+        unrecognisedCmds ["register-registry"] >>= (`shouldBe` ["register-registry"])
+        unrecognisedCmds ["registry", "book"] >>= (`shouldBe` ["book"])
+    it "keeps the first deployment's register and the verbs it has as they were: it parses with its own options, and offers none of the new ones" $ do
+        unrecognisedCmds ["register"] >>= (`shouldBe` [])
+        firstParsed <- parseWith [] firstRegister
+        case firstParsed of
+            Right (Register _) -> pure ()
+            other -> expectationFailure ("the first deployment's register is not parsed: " <> showResult other)
+        unrecognisedArgs (firstRegister <> ["--snapshot", "s.json"]) >>= (`shouldBe` ["--snapshot", "s.json"])
+        unrecognisedArgs (firstRegister <> ["--kli-export", "e.cesr"]) >>= (`shouldBe` ["--kli-export", "e.cesr"])
+  where
+    optionsOf command = if command == "register" then registerOptions else foldOptions
+    firstRegister =
+        ["register", "--kel", "k.cesr", "--payer", "payer.skey", "--node-socket", "n", "--funding-address", "a", "--store", "s"]
+    envName option = map (\c -> if c == '-' then '_' else toUpper c) (drop 2 option)
+    showResult = either show (const "parsed to another command")
+
+parseWith :: [(String, String)] -> [String] -> IO (Either (NonEmpty ParseError) Instructions)
+parseWith environment args =
+    runParserOn
+        allCapabilities
+        Nothing
+        (Opt.settingsParser :: Opt.Parser Instructions)
+        (parseArgs args)
+        (EnvMap.parse environment)
+        Nothing
+
+{- | The options the parser did not recognise. Any other parse error fails the
+example: an invocation that is wrong for another reason proves nothing.
+-}
+unrecognisedArgs :: [String] -> IO [String]
+unrecognisedArgs args = do
+    result <- parseWith [] args
+    case result of
+        Right _ -> pure []
+        Left errors -> do
+            let others = [e | e <- NE.toList errors, not (isUnrecognised e)]
+            unless (null others) $
+                expectationFailure ("the invocation fails for another reason: " <> show others)
+            pure
+                ( concat
+                    [ NE.toList names
+                    | ParseError{parseErrorMessage = ParseErrorUnrecognised names} <- NE.toList errors
+                    ]
+                )
+  where
+    isUnrecognised ParseError{parseErrorMessage = message} = case message of
+        ParseErrorUnrecognised _ -> True
+        _ -> False
+
+unrecognisedCmds :: [String] -> IO [String]
+unrecognisedCmds args = do
+    result <- parseWith [] args
+    pure $ either names (const []) result
+  where
+    names errors =
+        [ name
+        | ParseError{parseErrorMessage = ParseErrorUnrecognisedCommand name _} <- NE.toList errors
+        ]

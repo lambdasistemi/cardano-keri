@@ -74,6 +74,14 @@ import Cardano.KERI.Deployment.EndpointBoardManifest (
     readEndpointBoardManifest,
  )
 import Cardano.KERI.Deployment.Manifest (Manifest, readManifest)
+import Cardano.KERI.Deployment.RegistryBookingCommand (
+    RegistryFoldSettings,
+    RegistryRegisterSettings,
+    registryFoldSettingsParser,
+    registryRegisterSettingsParser,
+    runRegistryFold,
+    runRegistryRegister,
+ )
 import Cardano.KERI.Deployment.RegistryCommand (
     RegistryDeploySettings,
     registryDeploySettingsParser,
@@ -106,6 +114,8 @@ data Instructions
     | Payer !PayerSettings
     | Board !BoardCommand
     | RegistryDeploy !RegistryDeploySettings
+    | RegistryRegister !RegistryRegisterSettings
+    | RegistryFold !RegistryFoldSettings
 
 {- | #240: this repository's own combined board command sum -- the write
 four ("Cardano.KERI.Deployment.CLI") and the read-only \"list\"
@@ -233,6 +243,18 @@ instance Opt.HasParser Instructions where
                                 ( RegistryDeploy
                                     <$> Opt.subConfig "deploy" registryDeploySettingsParser
                                 )
+                            , Opt.command
+                                "register"
+                                "Book a registration in a registry created by registry deploy"
+                                ( RegistryRegister
+                                    <$> Opt.subConfig "register" registryRegisterSettingsParser
+                                )
+                            , Opt.command
+                                "fold"
+                                "Fold a booked registration into the registry, on a snapshot of its keys"
+                                ( RegistryFold
+                                    <$> Opt.subConfig "fold" registryFoldSettingsParser
+                                )
                             ]
                         )
                     )
@@ -252,6 +274,8 @@ runInstructions = \case
     Payer settings -> runBackendPayerCLI settings
     Board command -> runBoardCommand command
     RegistryDeploy settings -> runRegistryDeploy settings
+    RegistryRegister settings -> runRegistryRegister settings
+    RegistryFold settings -> runRegistryFold settings
 
 {- | Select exactly one backend (FR-5) and render its answer or its closed
 error. Checkpoint\/board manifest loading is deferred into the local\/Koios

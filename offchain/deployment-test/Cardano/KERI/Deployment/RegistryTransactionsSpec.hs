@@ -78,6 +78,7 @@ import Cardano.Ledger.Address (
     Withdrawals (..),
     serialiseAddr,
  )
+import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.PParams (ppPricesL)
 import Cardano.Ledger.Alonzo.Scripts (AsIx (..), Prices (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
@@ -94,6 +95,7 @@ import Cardano.Ledger.Api.Tx.Body (
     mintTxBodyL,
     outputsTxBodyL,
     treasuryDonationTxBodyL,
+    vldtTxBodyL,
     withdrawalsTxBodyL,
  )
 import Cardano.Ledger.Api.Tx.Out (
@@ -525,7 +527,10 @@ spec = do
                 `shouldBe` Coin (requestLovelace (registryParameters terms) record)
             datumOf (snd requestOut) `shouldBe` Just (heldDatumData (Registration record))
             -- the hash proof the fold burns
-            proofTx <- built (mintHashProof pricedParameters registry folder export)
+            proofTx <- built (mintHashProof pricedParameters registry folder export interval)
+            -- valid over the interval it is given, so a fold can cap it at the request's deadline
+            proofTx ^. bodyTxL . vldtTxBodyL
+                `shouldBe` ValidityInterval (SJust (lowerSlot interval)) (SJust (upperSlot interval))
             let evidence = inceptionEvidence export
                 proofName =
                     proofTokenName (reEventBytes evidence) (cdCesrAid (inceptionDatum export))
@@ -537,7 +542,8 @@ spec = do
             let key = requestKey record
                 foldPlan =
                     FoldPlan
-                        { foldBooking = Booking requestOut record interval
+                        { foldRequest = requestOut
+                        , foldBooked = record
                         , foldInception = export
                         , foldProof = outputAt proofTx 0
                         , foldReferences = observerReferences

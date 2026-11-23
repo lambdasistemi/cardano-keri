@@ -21,6 +21,7 @@ module Cardano.KERI.Deployment.LiveRuntime (
     LiveConfig (..),
     LiveContext (..),
     withLiveContext,
+    withUnlinkedLiveContext,
     resolveManifestReferences,
     resolveBoardReference,
     resolveOutput,
@@ -78,14 +79,15 @@ import Cardano.Node.Client.Provider (Provider (..))
 import Cardano.Node.Client.Submitter (Submitter (..))
 import Cardano.Tx.Sign.Core (decodePaymentSigningKey)
 import Codec.Binary.Bech32 qualified as Bech32
-import Control.Concurrent.Async (Async, async, cancel, link)
-import Control.Exception (bracket, throwIO)
+import Control.Concurrent.Async (Async, async, cancel, link, pollSTM)
+import Control.Exception (SomeException, bracket, throwIO, toException)
 import Control.Monad (unless, when)
 import Data.Aeson (Value)
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor (first)
 import Data.ByteArray.Encoding (Base (Base16), convertFromBase)
 import Data.ByteString qualified as BS
+import Data.Either (fromLeft)
 import Data.List (find)
 import Data.Map.Strict qualified as Map
 import Data.Set qualified as Set
@@ -93,6 +95,7 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Data.Word (Word16)
+import GHC.Conc (STM)
 import Ouroboros.Network.Magic (NetworkMagic (..))
 
 data LiveConfig = LiveConfig
@@ -114,6 +117,7 @@ data LiveContext = LiveContext
 data LiveResources = LiveResources
     { resourceContext :: !LiveContext
     , resourceClient :: !(Async ())
+    , resourceStatus :: STM (Maybe SomeException)
     }
 
 {- | Open one multiplexed LSQ\/LocalTxSubmission connection for an
@@ -123,7 +127,21 @@ operation. @observeTransaction@ is the post-submit settlement capability
 component owns no concrete-provider dependency.
 -}
 withLiveContext :: LiveConfig -> (TxId -> IO ()) -> (LiveContext -> IO a) -> IO a
-withLiveContext config observeTransaction action = do
+withLiveContext config observeTransaction action =
+    withLiveContextAs True config observeTransaction (const . action)
+
+{- | The same, with the node client not linked to the calling thread: when the connection
+ends nothing is delivered to that thread. The end is seen in the status the action is given
+('Nothing' while the client runs, the reason once it has ended), which a call of the node
+waits on as well as on its reply.
+-}
+withUnlinkedLiveContext ::
+    LiveConfig -> (TxId -> IO ()) -> (LiveContext -> STM (Maybe SomeException) -> IO a) -> IO a
+withUnlinkedLiveContext = withLiveContextAs False
+
+withLiveContextAs ::
+    Bool -> LiveConfig -> (TxId -> IO ()) -> (LiveContext -> STM (Maybe SomeException) -> IO a) -> IO a
+withLiveContextAs linked config observeTransaction action = do
     when (liveTimeoutSeconds config <= 0) $
         fail "timeout-seconds must be positive"
     fundingAddress <-
@@ -141,12 +159,12 @@ withLiveContext config observeTransaction action = do
         AddrBootstrap{} ->
             fail "funding address must be a Shelley testnet address"
     bracket
-        (openResources config fundingAddress keyEnvelope observeTransaction)
+        (openResources linked config fundingAddress keyEnvelope observeTransaction)
         (cancel . resourceClient)
-        (action . resourceContext)
+        (\resources -> action (resourceContext resources) (resourceStatus resources))
 
-openResources :: LiveConfig -> Addr -> Value -> (TxId -> IO ()) -> IO LiveResources
-openResources config fundingAddress keyEnvelope observeTransaction = do
+openResources :: Bool -> LiveConfig -> Addr -> Value -> (TxId -> IO ()) -> IO LiveResources
+openResources linked config fundingAddress keyEnvelope observeTransaction = do
     lsq <- newLSQChannel 16
     ltxs <- newLTxSChannel 16
     client <-
@@ -160,7 +178,7 @@ openResources config fundingAddress keyEnvelope observeTransaction = do
             case connectionResult of
                 Left exception -> throwIO exception
                 Right () -> fail "node-to-client connection closed unexpectedly"
-    link client
+    when linked (link client)
     let provider = mkN2CProvider lsq
         submitter = mkN2CSubmitter ltxs
         runtime =
@@ -178,7 +196,12 @@ openResources config fundingAddress keyEnvelope observeTransaction = do
                 , liveFundingAddress = fundingAddress
                 , liveConfig = config
                 }
-    pure LiveResources{resourceContext = context, resourceClient = client}
+    pure
+        LiveResources
+            { resourceContext = context
+            , resourceClient = client
+            , resourceStatus = fmap (fromLeft (toException (userError "node-to-client connection closed"))) <$> pollSTM client
+            }
 
 resolveManifestReferences ::
     LiveContext ->

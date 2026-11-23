@@ -1227,7 +1227,7 @@
                 export KERI_CAGE_BLUEPRINT="${blueprint}"
                 export KERI_CHECKPOINT_BLUEPRINT="${blueprint}"
                 cd "${inputs.cardano-node-clients}"
-                exec e2e-tests --match "#136 register a small identity end to end" --match "#343 consumer predicate on the local chain" --match "#351 ckeri registry deploy creates" "$@"
+                exec e2e-tests --match "#136 register a small identity end to end" --match "#343 consumer predicate on the local chain" --match "#351 ckeri registry deploy creates" --match "#351 ckeri registry register and fold" "$@"
               '';
             };
             # Preprod's timing for the registry deploy measurement: slots of one

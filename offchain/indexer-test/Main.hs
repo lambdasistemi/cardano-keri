@@ -5,6 +5,7 @@ import Cardano.KERI.Indexer.AtomicitySpec qualified as AtomicitySpec
 import Cardano.KERI.Indexer.BoardSpec qualified as BoardSpec
 import Cardano.KERI.Indexer.CodecsSpec qualified as CodecsSpec
 import Cardano.KERI.Indexer.FollowerSpec qualified as FollowerSpec
+import Cardano.KERI.Indexer.IdentityReadSpec qualified as IdentityReadSpec
 import Cardano.KERI.Indexer.Query.ServerSpec qualified as QueryServerSpec
 import Cardano.KERI.Indexer.Query.SwaggerDriftSpec qualified as QuerySwaggerDriftSpec
 import Cardano.KERI.Indexer.Query.TxSpec qualified as QueryTxSpec
@@ -36,6 +37,7 @@ suite = hspec $ do
     BoardSpec.spec
     CodecsSpec.spec
     FollowerSpec.spec
+    IdentityReadSpec.spec
     QueryServerSpec.spec
     QuerySwaggerDriftSpec.spec
     QueryTxSpec.spec

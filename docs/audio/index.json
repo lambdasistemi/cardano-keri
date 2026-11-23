@@ -17552,6 +17552,32 @@
     "v": "3a9ac71360ff"
    }
   ],
+  "the-registry-reader": [
+   {
+    "index": 0,
+    "name": "docs-user-follower/the-registry-reader-00",
+    "pause_ms": 500,
+    "v": "59a23b6feb1a"
+   },
+   {
+    "index": 1,
+    "name": "docs-user-follower/the-registry-reader-01",
+    "pause_ms": 400,
+    "v": "ef3b9c8049a3"
+   },
+   {
+    "index": 2,
+    "name": "docs-user-follower/the-registry-reader-02",
+    "pause_ms": 400,
+    "v": "4d2b7d6c1141"
+   },
+   {
+    "index": 3,
+    "name": "docs-user-follower/the-registry-reader-03",
+    "pause_ms": 400,
+    "v": "e565fa6eb358"
+   }
+  ],
   "what-it-deliberately-does-not-do": [
    {
     "index": 0,
@@ -18282,6 +18308,62 @@
     "v": "14061d77fe4c"
    }
   ],
+  "get-identityaid-the-registry-services-live-holding": [
+   {
+    "index": 0,
+    "name": "docs-user-query-endpoint/get-identityaid-the-registry-services-live-holding-00",
+    "pause_ms": 500,
+    "v": "db9cc2c25566"
+   },
+   {
+    "index": 1,
+    "name": "docs-user-query-endpoint/get-identityaid-the-registry-services-live-holding-01",
+    "pause_ms": 400,
+    "v": "0f668f677f49"
+   },
+   {
+    "index": 2,
+    "name": "docs-user-query-endpoint/get-identityaid-the-registry-services-live-holding-02",
+    "pause_ms": 400,
+    "v": "6270ab35a1b7"
+   },
+   {
+    "index": 3,
+    "name": "docs-user-query-endpoint/get-identityaid-the-registry-services-live-holding-03",
+    "pause_ms": 400,
+    "v": "0e2c4a7e1f6b"
+   },
+   {
+    "index": 4,
+    "name": "docs-user-query-endpoint/get-identityaid-the-registry-services-live-holding-04",
+    "pause_ms": 400,
+    "v": "f614e8569fb8"
+   },
+   {
+    "index": 5,
+    "name": "docs-user-query-endpoint/get-identityaid-the-registry-services-live-holding-05",
+    "pause_ms": 400,
+    "v": "980ba16a7c94"
+   },
+   {
+    "index": 6,
+    "name": "docs-user-query-endpoint/get-identityaid-the-registry-services-live-holding-06",
+    "pause_ms": 400,
+    "v": "a01eb47f1b29"
+   },
+   {
+    "index": 7,
+    "name": "docs-user-query-endpoint/get-identityaid-the-registry-services-live-holding-07",
+    "pause_ms": 400,
+    "v": "333db09ab6f8"
+   },
+   {
+    "index": 8,
+    "name": "docs-user-query-endpoint/get-identityaid-the-registry-services-live-holding-08",
+    "pause_ms": 400,
+    "v": "e8dee60690c8"
+   }
+  ],
   "get-ready": [
    {
     "index": 0,
@@ -18300,6 +18382,12 @@
     "name": "docs-user-query-endpoint/get-ready-02",
     "pause_ms": 400,
     "v": "ccfd75937f7d"
+   },
+   {
+    "index": 3,
+    "name": "docs-user-query-endpoint/get-ready-03",
+    "pause_ms": 400,
+    "v": "a4ed6faca93c"
    }
   ],
   "get-watchabilityaid": [
@@ -18380,6 +18468,38 @@
     "name": "docs-user-query-endpoint/the-query-endpoint-checkpoint-answers-without-a-node-04",
     "pause_ms": 400,
     "v": "ca8a07165956"
+   }
+  ],
+  "the-registry-services-ceiling": [
+   {
+    "index": 0,
+    "name": "docs-user-query-endpoint/the-registry-services-ceiling-00",
+    "pause_ms": 500,
+    "v": "7d9d6092c8a2"
+   },
+   {
+    "index": 1,
+    "name": "docs-user-query-endpoint/the-registry-services-ceiling-01",
+    "pause_ms": 400,
+    "v": "5d55dc33ee04"
+   },
+   {
+    "index": 2,
+    "name": "docs-user-query-endpoint/the-registry-services-ceiling-02",
+    "pause_ms": 400,
+    "v": "dbdac817354d"
+   },
+   {
+    "index": 3,
+    "name": "docs-user-query-endpoint/the-registry-services-ceiling-03",
+    "pause_ms": 400,
+    "v": "4c5cdaaa15d9"
+   },
+   {
+    "index": 4,
+    "name": "docs-user-query-endpoint/the-registry-services-ceiling-04",
+    "pause_ms": 400,
+    "v": "b0289f36fded"
    }
   ],
   "what-this-endpoint-does-not-do": [

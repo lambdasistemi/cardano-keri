@@ -109,6 +109,7 @@ import Data.Bifunctor (
     first,
  )
 import Data.ByteString.Base16 qualified as Base16
+import Data.Char (isDigit)
 import Data.Text (
     Text,
  )
@@ -308,6 +309,8 @@ data ReaderSettings = ReaderSettings
     , rdManifestPath :: !(Maybe FilePath)
     , rdReleasePath :: !(Maybe FilePath)
     , rdPort :: !Int
+    , rdMaxTipLagSlots :: !(Maybe String)
+    -- ^ The ceiling on the tip lag of the identity read, as given.
     }
     deriving stock (Eq, Show)
 
@@ -336,6 +339,16 @@ instance Opt.HasParser ReaderSettings where
                 , Opt.metavar "PORT"
                 , Opt.help "HTTP listen port"
                 ]
+        rdMaxTipLagSlots <-
+            Opt.optional $
+                Opt.setting
+                    [ Opt.reader Opt.str
+                    , Opt.option
+                    , Opt.long "max-tip-lag-slots"
+                    , Opt.env "CKERI_MAX_TIP_LAG_SLOTS"
+                    , Opt.metavar "SLOTS"
+                    , Opt.help "Release identity mode: the largest tip lag, in slots, the identity read answers within; a setting of the deployment, with no default"
+                    ]
         pure ReaderSettings{..}
 
 pathSetting :: String -> String -> String -> Opt.Parser FilePath
@@ -365,6 +378,20 @@ readerConfiguration settings =
         "exactly one configuration is required: --manifest-path (a version 1 manifest) \
         \or --release-identity-path (a release identity); "
 
+{- | The maximum tip lag of the identity read, in slots, as the settings give it: a
+setting of the deployment with no default, so the release-identity mode refuses to
+start without it or with anything but a non-negative whole number. The manifest
+mode never asks for it.
+-}
+maxTipLagSlotsOf :: ReaderSettings -> Either String Integer
+maxTipLagSlotsOf settings = case rdMaxTipLagSlots settings of
+    Nothing -> Left (named <> " is required in release-identity mode: the largest tip lag, in slots, the identity read answers within")
+    Just given
+        | not (null given) && all isDigit given -> Right (read given)
+        | otherwise -> Left (named <> " must be a non-negative whole number of slots, got " <> show given)
+  where
+    named = "--max-tip-lag-slots (CKERI_MAX_TIP_LAG_SLOTS)"
+
 {- | The reader process under either configuration. The manifest mode is
 'runQueryAppWith' as it was; the release-identity mode follows the release's
 checkpoint validator and serves its classified checkpoints.
@@ -385,7 +412,9 @@ runReaderAppWith withIndexerRunner withFollower serveApp settings =
                 serveApp
                 (QuerySettings (FollowerSettings (rdIndexer settings) path) (rdPort settings))
         Right (ReaderRelease path) ->
-            runReleaseQueryAppWith withIndexerRunner withFollower serveApp (rdIndexer settings) path (rdPort settings)
+            do
+                limit <- either dieQueryConcisely pure (maxTipLagSlotsOf settings)
+                runReleaseQueryAppWith withIndexerRunner withFollower serveApp (rdIndexer settings) path (rdPort settings) limit
 
 runReleaseQueryAppWith ::
     (forall a. FilePath -> (forall cf op. IndexerHandle -> RunTransaction IO cf Cols op -> IO a) -> IO a) ->
@@ -394,8 +423,9 @@ runReleaseQueryAppWith ::
     IndexerConfig ->
     FilePath ->
     Int ->
+    Integer ->
     IO ()
-runReleaseQueryAppWith withIndexerRunner withFollower serveApp indexer releasePath port = do
+runReleaseQueryAppWith withIndexerRunner withFollower serveApp indexer releasePath port limit = do
     release <-
         readReleaseIdentity releasePath
             >>= either (\err -> dieQueryConcisely ("invalid release identity at " <> releasePath <> ": " <> show err)) pure
@@ -421,7 +451,7 @@ runReleaseQueryAppWith withIndexerRunner withFollower serveApp indexer releasePa
                         , qhBoardAddress = boardAddress
                         , qhReadiness = fhReadiness fh
                         }
-            serveApp port (mkReleaseQueryApplication (ReleaseQueryHandle release queryHandle))
+            serveApp port (mkReleaseQueryApplication (ReleaseQueryHandle release queryHandle limit))
 
 -- | Production wiring of 'runReaderAppWith'.
 runReaderApp :: ReaderSettings -> IO ()

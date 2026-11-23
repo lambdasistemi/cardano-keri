@@ -19,6 +19,8 @@ module Cardano.KERI.Indexer.Codecs (
     HoldingRefusal (..),
     checkpointAddressOf,
     decodeHoldingOutput,
+    Observation (..),
+    observeOutput,
 ) where
 
 import Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
@@ -253,6 +255,65 @@ checkpointAddressOf ri =
             (error "checkpointAddressOf: the checkpoint validator is not a 28-byte hash")
             (hashFromBytes (riCheckpointValidator ri))
 
+{- | What the store holds of one output, before any release is asked: the
+network of its address, its lovelace, and the observed output of the consumer
+predicate (its payment credential, every asset entry and the bytes of its
+inline datum), with the datum as Plutus data. The one construction of an
+'ObservedOutput' from a stored output: the classification and the consumer
+result both use it.
+-}
+data Observation = Observation
+    { obsNetwork :: !Integer
+    , obsLovelace :: !Integer
+    , obsOutput :: !ObservedOutput
+    , obsDatum :: !(Maybe PLC.Data)
+    }
+    deriving stock (Eq, Show)
+
+{- | Observe one stored output: refused when its bytes are no Conway output or
+its address is a bootstrap address.
+-}
+observeOutput :: Indexer.TxOut -> Either HoldingRefusal Observation
+observeOutput (Indexer.TxOut rawTxOut) = do
+    ledgerTxOut <-
+        first
+            (OutputUndecodable . show)
+            ( decodeFull
+                (eraProtVerLow @ConwayEra)
+                (BSL.fromStrict rawTxOut) ::
+                Either DecoderError (TxOut ConwayEra)
+            )
+    let MaryValue (Coin lovelace) (MultiAsset policies) = ledgerTxOut ^. valueTxOutL
+        assets =
+            [ (hashToBytes policyHash, SBS.fromShort name, quantity)
+            | (PolicyID (ScriptHash policyHash), byName) <- Map.toList policies
+            , (AssetName name, quantity) <- Map.toList byName
+            ]
+    (network, credential) <- case ledgerTxOut ^. addrTxOutL of
+        Addr net payment _ -> Right (networkNumber net, ledgerCredential payment)
+        AddrBootstrap _ -> Left NotAtCheckpointValidator
+    let plutusDatum = case ledgerTxOut ^. datumTxOutL of
+            Datum binaryDatum -> let Data d = binaryDataToData binaryDatum in Just d
+            _ -> Nothing
+    pure
+        Observation
+            { obsNetwork = network
+            , obsLovelace = lovelace
+            , obsOutput =
+                ObservedOutput
+                    { ooCredential = credential
+                    , ooAssets = assets
+                    , ooDatum = BSL.toStrict . serialise <$> plutusDatum
+                    }
+            , obsDatum = plutusDatum
+            }
+  where
+    networkNumber Testnet = 0
+    networkNumber Mainnet = 1
+    ledgerCredential = \case
+        Ledger.ScriptHashObj (ScriptHash h) -> ScriptCredential (hashToBytes h)
+        Ledger.KeyHashObj (KeyHash h) -> KeyCredential (hashToBytes h)
+
 {- | Classify one output of the store under a release identity. The checks run
 in this order and the first that fails is the refusal: the network, the
 checkpoint validator, the datum, the key material, the representative asset
@@ -264,42 +325,21 @@ decodeHoldingOutput ::
     TxIn ->
     Indexer.TxOut ->
     Either HoldingRefusal Holding
-decodeHoldingOutput ri txIn (Indexer.TxOut rawTxOut) = do
-    ledgerTxOut <-
-        first
-            (OutputUndecodable . show)
-            ( decodeFull
-                (eraProtVerLow @ConwayEra)
-                (BSL.fromStrict rawTxOut) ::
-                Either DecoderError (TxOut ConwayEra)
-            )
+decodeHoldingOutput ri txIn txOut = do
+    Observation{obsNetwork = network, obsLovelace = lovelace, obsOutput = observed, obsDatum} <-
+        observeOutput txOut
     let environment = releaseEnvironment ri
-        MaryValue (Coin lovelace) (MultiAsset policies) = ledgerTxOut ^. valueTxOutL
-        assets =
-            [ (hashToBytes policyHash, SBS.fromShort name, quantity)
-            | (PolicyID (ScriptHash policyHash), byName) <- Map.toList policies
-            , (AssetName name, quantity) <- Map.toList byName
-            ]
-    (network, credential) <- case ledgerTxOut ^. addrTxOutL of
-        Addr net payment _ -> Right (networkNumber net, ledgerCredential payment)
-        AddrBootstrap _ -> Left NotAtCheckpointValidator
+        credential = ooCredential observed
+        assets = ooAssets observed
     when (network /= envNetwork environment) $
         Left (WrongNetwork network (envNetwork environment))
     when (Just credential /= envCheckpointCredential environment) $
         Left NotAtCheckpointValidator
-    plutusDatum <- case ledgerTxOut ^. datumTxOutL of
-        Datum binaryDatum -> let Data d = binaryDataToData binaryDatum in Right d
-        _ -> Left MalformedDatum
+    plutusDatum <- maybe (Left MalformedDatum) Right obsDatum
     let datumBytes = BSL.toStrict (serialise plutusDatum)
     decoded <- maybe (Left MalformedDatum) Right (decodeCheckpoint datumBytes)
     let context = releaseContext ri (dcAid decoded)
         (statePolicyBytes, _) = representativeAsset context
-        observed =
-            ObservedOutput
-                { ooCredential = credential
-                , ooAssets = assets
-                , ooDatum = Just datumBytes
-                }
         quantity = representativeQuantity context observed
         stateTokens = [() | (p, _, _) <- assets, p == statePolicyBytes]
     -- The Lean decode admitted the datum by shape; the fields it does not
@@ -362,12 +402,6 @@ decodeHoldingOutput ri txIn (Indexer.TxOut rawTxOut) = do
             , holdingLovelace = lovelace
             , holdingKind = kind pool
             }
-  where
-    networkNumber Testnet = 0
-    networkNumber Mainnet = 1
-    ledgerCredential = \case
-        Ledger.ScriptHashObj (ScriptHash h) -> ScriptCredential (hashToBytes h)
-        Ledger.KeyHashObj (KeyHash h) -> KeyCredential (hashToBytes h)
 
 {- | The fields of a live datum the consumer decoder does not return: the refund
 address, the top-up mark and the key material, read from the Plutus data as the

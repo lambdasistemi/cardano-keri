@@ -253,6 +253,7 @@ library indexer
     Cardano.KERI.Indexer.Codecs
     Cardano.KERI.Indexer.Config
     Cardano.KERI.Indexer.Follower
+    Cardano.KERI.Indexer.Identity
     Cardano.KERI.Indexer.Query.Server
     Cardano.KERI.Indexer.Query.Tx
     Cardano.KERI.Indexer.Query.Types
@@ -728,6 +729,7 @@ test-suite indexer-tests
     Cardano.KERI.Indexer.BoardSpec
     Cardano.KERI.Indexer.CodecsSpec
     Cardano.KERI.Indexer.FollowerSpec
+    Cardano.KERI.Indexer.IdentityReadSpec
     Cardano.KERI.Indexer.Query.ServerSpec
     Cardano.KERI.Indexer.Query.SwaggerDriftSpec
     Cardano.KERI.Indexer.Query.TxSpec

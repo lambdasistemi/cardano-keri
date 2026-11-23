@@ -35,6 +35,7 @@ https://ckeri.dev.plutimus.com
 | `GET` | `/board` | no (503 when not ready) | Complete authenticated endpoint-board catalog |
 | `GET` | `/board/{witness_key}` | no (503 when not ready) | Authenticated endpoint-board record for a witness key |
 | `GET` | `/watchability/{aid}` | no (503 when not ready) | Whether a checkpoint's declared witnesses are all listed on the board |
+| `GET` | `/identity/{aid}` | no (503 when not ready) | The checked live holding of an AID in the registry, or `unavailable` with the reason; served by the registry service only |
 | `GET` | `/swagger.json` | yes | Machine-readable OpenAPI document |
 | `GET` | `/swagger-ui` | yes | Interactive Swagger UI over `/swagger.json` |
 
@@ -66,6 +67,10 @@ a transactional watermark, the upstream node connection is up, a chain tip is
 known, and `tip_lag_slots <= 60`. `reason` explains why the service is not
 ready when it isn't (for example `"upstream disconnected"` or `"tip lag
 exceeds the 60-slot freshness threshold"`); it is `null` when ready.
+
+A service started from a release identity answers by the ceiling it was started with,
+not by that threshold, and `/ready` then also carries that ceiling as
+`max_tip_lag_slots`; see [the registry service's ceiling](#the-registry-services-ceiling).
 
 ## `GET /checkpoint/{aid}`
 
@@ -196,6 +201,194 @@ never `null`: with no current checkpoint it reports
 `"checkpoint_present": false`, zero counts, and an empty
 `missing_witnesses` list rather than omitting the field.
 
+## `GET /identity/{aid}`: the registry service's live holding
+
+A relying party that pays an identity wants one answer: is this AID's holding
+in the registry live right now, and may I consume it? The registry service
+answers that question, and only that question. It gives either the AID's
+**checked live holding** at a stated chain point, or `unavailable` with the
+reason. It claims nothing else: it never answers that an identity is
+terminated, was never registered, or is awaiting termination.
+
+This route belongs to the registry service, the instance started from a
+release identity file instead of a deployment manifest. The registry service
+is a separate process. It has its own endpoint, and its own store directory
+that starts empty and is distinct from the store of the version 1 service. A
+store that the other mode created is refused when the service opens it, naming
+the mismatch. A service started from a deployment manifest does not serve this
+route and answers HTTP 404 with an error that names its manifest mode.
+
+```mermaid
+flowchart TD
+  R["Request for an AID"] -->|"malformed AID or parameter"| B["400"]
+  R -->|"service ready?"| S{"Node connected, tip lag within the service's ceiling"}
+  S -->|"no"| U503["503: status unavailable, reason, freshness"]
+  S -->|"yes"| C{"Live checkpoints held for the AID"}
+  C -->|"exactly one"| L["200: status live, the holding"]
+  C -->|"none, or more than one"| U200["200: status unavailable, reason"]
+```
+
+A live answer carries the holding's facts and amounts, the identity of the
+registry and of the release, the output reference, the chain point the holding
+was read at and the freshness. The holding, its amounts and the chain point come
+from one store transaction; the tip lag is measured against the tip sampled after
+it, as for the other data routes:
+
+The numbers in the examples below show the shape of an answer, not a real holding.
+
+```console
+$ curl -s 'https://registry.example/identity/E...?window_ms=300000&now_ms=1700000300000' | jq
+```
+
+```json
+{
+  "status": "live",
+  "aid": "E...",
+  "as_of_slot": 129921673,
+  "tip_lag_slots": 0,
+  "max_tip_lag_slots": 25,
+  "block_hash": "9a1c...",
+  "registry": {
+    "state_policy": "64...",
+    "state_token_name": "5c...",
+    "seed": { "tx_id": "65...", "output_index": 3 }
+  },
+  "release": {
+    "application_policy": "61...",
+    "application_credential": "62...",
+    "state_program": "63...",
+    "state_policy": "64..."
+  },
+  "holding": {
+    "tx_id": "ccf1...",
+    "output_index": 0,
+    "sn": 5,
+    "epoch": 2,
+    "poisoned": false,
+    "frozen": false,
+    "topped_up": true,
+    "born_at": 1700000000000,
+    "refund_address": "70...",
+    "deposit": 8000000,
+    "freeze_bond": 2000000,
+    "pool": 3,
+    "lovelace": 12000003,
+    "key_state": {
+      "current_keys": ["D...", "D..."],
+      "current_threshold": { "type": "unweighted", "value": 1 },
+      "next_key_digests": ["E..."],
+      "next_threshold": { "type": "unweighted", "value": 1 },
+      "witnesses": [],
+      "witness_threshold": 0
+    }
+  },
+  "consumer": { "evaluated": true, "consumable": true, "failed_clauses": [] }
+}
+```
+
+The consumer result is reported beside the holding and never changes
+`status`. It is the verdict of the published consumer predicate over the same
+holding, for the release's context and the AID, at the maturity window and the
+time the caller supplies in `window_ms` and `now_ms`, both in milliseconds, the
+unit of `born_at`. `consumable` is true when the holding passes every clause,
+and `failed_clauses` names each clause it fails, such as `CheckpointFrozen`,
+`CheckpointPoisoned` or `CheckpointJuvenile`. A holding that is frozen still
+has `status: "live"`; whether to consume it is the consumer result's answer.
+Without both parameters the answer says it was not evaluated and why:
+
+```json
+{ "evaluated": false, "reason": "the consumer result is evaluated only when both window_ms and now_ms are given" }
+```
+
+Every other case of a ready service answers HTTP 200 with `status:
+"unavailable"` and a reason, never a 404 and never an empty success. The
+service holds either no live checkpoint of the registry for the AID, or more
+than one. The body names the registry and the release the service follows and the
+chain point the store was read at, so a reader can tell whose answer it is:
+
+```json
+{
+  "status": "unavailable",
+  "aid": "E...",
+  "as_of_slot": 129921673,
+  "tip_lag_slots": 0,
+  "max_tip_lag_slots": 25,
+  "block_hash": "9a1c...",
+  "registry": { "state_policy": "64...", "state_token_name": "5c...", "seed": { "tx_id": "65...", "output_index": 3 } },
+  "release": { "application_policy": "61...", "application_credential": "62...", "state_program": "63...", "state_policy": "64..." },
+  "reason": "the store holds no live checkpoint of this registry for this AID"
+}
+```
+
+A service that is not ready answers HTTP 503, as the other data routes do,
+and the body says it is unavailable besides carrying the readiness fields, the reason
+of [fail-closed semantics](#fail-closed-semantics), and the registry and the release
+the service follows:
+
+```json
+{
+  "status": "unavailable",
+  "ready": false,
+  "as_of_slot": 129921603,
+  "tip_lag_slots": 26,
+  "max_tip_lag_slots": 25,
+  "upstream": "connected",
+  "reason": "tip lag 26 exceeds the ceiling 25",
+  "error": "service_unavailable",
+  "registry": { "state_policy": "64...", "state_token_name": "5c...", "seed": { "tx_id": "65...", "output_index": 3 } },
+  "release": { "application_policy": "61...", "application_credential": "62...", "state_program": "63...", "state_policy": "64..." }
+}
+```
+
+Readiness and the identity answer are two separate questions. The limit is the
+[ceiling of the registry service](#the-registry-services-ceiling): a service whose node
+is connected, whose tip and store point are known and whose tip lag is at most its
+ceiling is ready, and one more slot makes it not ready, and it answers HTTP 503. A ready service answers `live` only when exactly one classified live
+checkpoint of the registry is held for the AID; with none, or with two, it answers
+HTTP 200 with `status: "unavailable"`. A malformed AID, or a `window_ms` or `now_ms`
+that is not a non-negative integer, is HTTP 400.
+
+## The registry service's ceiling
+
+The registry service is started with the largest tip lag, in slots, that it answers
+within. The setting has no default: it is `--max-tip-lag-slots`, or the variable
+`CKERI_MAX_TIP_LAG_SLOTS`, a non-negative whole number, and the service refuses to
+start without it, or with anything else, before it opens its store. It is a setting
+of the deployment because the lag that is acceptable depends on the network: how long
+a slot lasts and how often blocks arrive decide how far behind the tip a healthy
+store is. The project fixes no number.
+
+The ceiling governs every route this service answers from its store: `/ready`,
+`/checkpoint/{aid}`, `/watchability/{aid}`, both `/board` forms and
+`/identity/{aid}`. A lag up to and including the ceiling is answered. A larger lag,
+a node that is not connected, no observed tip and a store that has recorded nothing
+are each the not-ready answer of that route: HTTP 503 with the readiness fields for
+the data routes, and `ready: false` for `/ready`. The reason for a lag names the lag
+and the ceiling.
+
+The service says which ceiling it applied. `/ready` carries `max_tip_lag_slots`,
+and so do the live body, the unavailable body and the 503 body of the identity route,
+beside `as_of_slot` and `tip_lag_slots`. The 400 error body carries neither, and the
+other routes keep their shapes. The numbers in the example
+below show the shape of an answer, not a recommended ceiling:
+
+```json
+{
+  "ready": false,
+  "as_of_slot": 129921603,
+  "tip_lag_slots": 26,
+  "max_tip_lag_slots": 25,
+  "upstream": "connected",
+  "reason": "tip lag 26 exceeds the ceiling 25"
+}
+```
+
+A relying party that needs a fresher answer than the deployment gives reads the
+`tip_lag_slots` of each answer and applies its own tolerance to it. A service has one
+ceiling, and the ceiling of the party that reads it is its own. The service started
+from a deployment manifest keeps its fixed threshold, described above, and does not
+read this setting.
+
 ## Freshness and provenance — what `as_of_slot` actually promises
 
 Every data response carries `as_of_slot` and `tip_lag_slots` beside its
@@ -268,6 +461,8 @@ flag and a `CKERI_*` environment variable.
 | `--start-slot` / `--start-block-hash` | `CKERI_START_SLOT` / `CKERI_START_BLOCK_HASH` | origin | Follower start point |
 | `--store-path` | `CKERI_STORE_PATH` | — | RocksDB indexer directory |
 | `--manifest-path` | `CKERI_MANIFEST_PATH` | — | Deployment manifest JSON path |
+| `--release-identity-path` | `CKERI_RELEASE_IDENTITY_PATH` | — | Release identity JSON path; the registry service, given in place of the manifest |
+| `--max-tip-lag-slots` | `CKERI_MAX_TIP_LAG_SLOTS` | none | Registry service only, and required there: the [ceiling](#the-registry-services-ceiling); not read in manifest mode |
 | `--board-address` | `CKERI_BOARD_ADDRESS` | — | Endpoint-board address; **mandatory for `ckeri-query`** |
 | `--port` | `CKERI_PORT` | `8080` | HTTP listen port |
 

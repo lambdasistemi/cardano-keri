@@ -348,7 +348,7 @@ spec = describe "Cardano.KERI.Indexer.StoreBinding" $ do
                                 withRocksDBIndexerRunner
                                 (\_ _ _ _ -> writeIORef proceeded True)
                                 (\_ _ -> pure ())
-                                (ReaderSettings baseConfig{icStorePath = store, icBoardAddr = Just (Indexer.Address (BS.replicate 29 0x21))} Nothing (Just pipe) 8080)
+                                (ReaderSettings baseConfig{icStorePath = store, icBoardAddr = Just (Indexer.Address (BS.replicate 29 0x21))} Nothing (Just pipe) 8080 (Just "1000000"))
                 threadDelay 300000
                 legacyCommand store >>= (`shouldBe` Right ())
                 BS.hPut writer (encodeReleaseIdentity testRelease)
@@ -417,7 +417,7 @@ spec = describe "Cardano.KERI.Indexer.StoreBinding" $ do
                                 withRocksDBIndexerRunner
                                 (\_ _ _ _ -> pure ())
                                 (\_ _ -> pure ())
-                                (ReaderSettings baseConfig{icStorePath = store, icBoardAddr = Just (Indexer.Address (BS.replicate 29 0x21))} Nothing (Just releasePath) 8080)
+                                (ReaderSettings baseConfig{icStorePath = store, icBoardAddr = Just (Indexer.Address (BS.replicate 29 0x21))} Nothing (Just releasePath) 8080 (Just "1000000"))
                 held store $ do
                     (busy, stderrText) <- start
                     case busy of
@@ -468,7 +468,7 @@ spec = describe "Cardano.KERI.Indexer.StoreBinding" $ do
                                     withRocksDBIndexerRunner
                                     (\_ _ _ _ -> writeIORef proceeded True)
                                     (\_ _ -> writeIORef proceeded True)
-                                    (ReaderSettings baseConfig{icStorePath = store, icBoardAddr = Just (Indexer.Address (BS.replicate 29 0x21))} manifest release 8080)
+                                    (ReaderSettings baseConfig{icStorePath = store, icBoardAddr = Just (Indexer.Address (BS.replicate 29 0x21))} manifest release 8080 (Just "1000000"))
                         case outcome of
                             Left e | show e == show (ExitFailure 1) -> pure ()
                             other -> expectationFailure ("expected exit 1, got " <> show other)
@@ -568,7 +568,7 @@ startRegistry opener dir store release = do
                 opener
                 (\_ _ _ _ -> writeIORef proceeded True)
                 (\_ _ -> pure ())
-                (ReaderSettings baseConfig{icStorePath = store, icBoardAddr = Just (Indexer.Address (BS.replicate 29 0x21))} Nothing (Just path) 8080)
+                (ReaderSettings baseConfig{icStorePath = store, icBoardAddr = Just (Indexer.Address (BS.replicate 29 0x21))} Nothing (Just path) 8080 (Just "1000000"))
     reached <- readIORef proceeded
     pure (reached, either (Left . show) Right outcome, text)
 

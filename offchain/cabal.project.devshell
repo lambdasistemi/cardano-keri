@@ -134,7 +134,8 @@ allow-newer: mts:containers
 -- (matches cardano-node-clients' constraint set for binary
 -- interoperability with the pinned cardano-node runtime input).
 constraints:
-    cardano-ledger-allegra == 1.9.0.0
+    contra-tracer-contrib +iohk
+  , cardano-ledger-allegra == 1.9.0.0
   , cardano-ledger-alonzo == 1.15.0.0
   , cardano-ledger-api == 1.13.0.0
   , cardano-ledger-babbage == 1.13.0.0

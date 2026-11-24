@@ -39,4 +39,5 @@ import CardanoKeri.CheckpointDepositGoals
 import CardanoKeri.CheckpointDepositVectors
 import CardanoKeri.Application
 import CardanoKeri.ApplicationGoals
+import CardanoKeri.ApplicationCustodyHistory
 import CardanoKeri.ApplicationVectors

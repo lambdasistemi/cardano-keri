@@ -4,6 +4,7 @@
   "singular": "d69ab005c3b710aeebf033d3c5cd08c56feb5643",
   "sources": {
     "lean/CardanoKeri/Application.lean": "ad4db776a0e810fab34d1131354ca8b3a166abfc78e2fb4f0573200fa804c102",
+    "lean/CardanoKeri/ApplicationCustodyHistory.lean": "2197f8a4cc9ecfe5200a58d25550a805551a462c1b66ce87ec35a24bb4f6ec94",
     "lean/CardanoKeri/ApplicationGoals.lean": "5367c8d28e828dfc480dcd1898e112c081440d84fbe859a7450df4bb5a11766a",
     "lean/CardanoKeri/ApplicationVectors.lean": "073d713d9c86e6bee45751c38c031456ff0e363e0f16acf6cb5c6894479f98f6",
     "lean/CardanoKeri/Checkpoint.lean": "d82c06b8cfb953c5640c8ce32573a07bc728bf898168f22610416b8a561339fe",
@@ -62,6 +63,90 @@
     "lean/CardanoKeri/Samaritan.lean": "6a1bfd7b2b83d7497f68ef50480a47b155a1c7cf4ee1837a5a72c231570cedbb"
   },
   "rows": [
+    {
+      "declaration": "CardanoKeri.Application.Custody.carrier_reachable",
+      "path": "lean/CardanoKeri/ApplicationCustodyHistory.lean",
+      "line": 65,
+      "statement": "theorem carrier_reachable {p env i token aid edges s w out}\n    (path : CarrierHistory p env i token aid edges s w out) : SysReach p env s",
+      "statementSha256": "b6967fcc3fa3d03f7baa3629b85b7a785f704744b5372f3c924dca13722a2716",
+      "sourceStory": "Given an observed carrier history, when its current system is read, then\nit is reachable by actual system transitions from the deployment.",
+      "story": {
+        "given": "{p env i token aid edges s w out}\n    (path : CarrierHistory p env i token aid edges s w out)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "SysReach p env s"
+      },
+      "storySha256": "79d4aece5986b6f33a8117d359e81daaa472715102d9379fdafaa308048d922b"
+    },
+    {
+      "declaration": "CardanoKeri.Application.Custody.carrier_unspent",
+      "path": "lean/CardanoKeri/ApplicationCustodyHistory.lean",
+      "line": 76,
+      "statement": "theorem carrier_unspent {p env i token aid edges s w out}\n    (path : CarrierHistory p env i token aid edges s w out) :\n    out ∈ w.unspent ∧ quantity out token = 1",
+      "statementSha256": "68cb17b996035fdcf65f6d00b8cf38f3d67047dfd8caafa19a915b5a3f981eea",
+      "sourceStory": "Given a carrier history, when the current holding is read from its ledger\nworld, then that very output remains unspent and carries one active token.",
+      "story": {
+        "given": "{p env i token aid edges s w out}\n    (path : CarrierHistory p env i token aid edges s w out)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "out ∈ w.unspent ∧ quantity out token = 1"
+      },
+      "storySha256": "88fa3ea3ddad9984fe96061176c188a2b4846fd2bd0ce15d20b4fa7735730c51"
+    },
+    {
+      "declaration": "CardanoKeri.Application.Custody.pending_output_producer",
+      "path": "lean/CardanoKeri/ApplicationCustodyHistory.lean",
+      "line": 91,
+      "statement": "theorem pending_output_producer {p env i token aid edges s w out key}\n    (path : CarrierHistory p env i token aid edges s w out)\n    (pending : checkpointDatum i out = some ⟨aid, .terminationPending key⟩) :\n    ∃ before after, (before, after, out) ∈ edges ∧ ConvictionEdge p env aid key before after",
+      "statementSha256": "553fa2463b71c8b60f7c5770cb2eef1fc5279f9d239f6b10a0fdbb806682b303",
+      "sourceStory": "Given a carrier history, when its current output decodes as pending, then\nthis exact output was created by a conviction edge of this identifier at\nthe decoded key state.",
+      "story": {
+        "given": "{p env i token aid edges s w out key}\n    (path : CarrierHistory p env i token aid edges s w out)\n    (pending : checkpointDatum i out = some ⟨aid, .terminationPending key⟩)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "∃ before after, (before, after, out) ∈ edges ∧ ConvictionEdge p env aid key before after"
+      },
+      "storySha256": "5b2287c60696a43842704d28077b7db98e9346858df051504d4a7e21997543c7"
+    },
+    {
+      "declaration": "CardanoKeri.Application.Custody.carrier_identifier",
+      "path": "lean/CardanoKeri/ApplicationCustodyHistory.lean",
+      "line": 109,
+      "statement": "private theorem carrier_identifier {p env i token aid edges s w out}\n    (path : CarrierHistory p env i token aid edges s w out) :\n    ∃ st, checkpointDatum i out = some ⟨aid, st⟩",
+      "statementSha256": "caaba27c75b3db74fd34dd78b4671adcd57f626642f26a71828e3b3e25e08114",
+      "sourceStory": "",
+      "story": {
+        "given": "{p env i token aid edges s w out}\n    (path : CarrierHistory p env i token aid edges s w out)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "∃ st, checkpointDatum i out = some ⟨aid, st⟩"
+      },
+      "storySha256": "aa8efb074d8ffab93094121f44fb21f39c0690bc001443d3b29268664c8070d2"
+    },
+    {
+      "declaration": "CardanoKeri.Application.Custody.sole_holder",
+      "path": "lean/CardanoKeri/ApplicationCustodyHistory.lean",
+      "line": 117,
+      "statement": "private theorem sole_holder {outputs : List ObservedOutput} {token : TokenId} {x y : ObservedOutput}\n    (one : (outputs.map (fun o => quantity o token)).sum ≤ 1)\n    (mx : x ∈ outputs) (my : y ∈ outputs) (qx : quantity x token = 1)\n    (qy : quantity y token = 1) : x = y",
+      "statementSha256": "ac609670ed943c2bb341fe16d5169b667f43028cc0672cc2fb941e852b2249e6",
+      "sourceStory": "",
+      "story": {
+        "given": "{outputs : List ObservedOutput} {token : TokenId} {x y : ObservedOutput}\n    (one : (outputs.map (fun o => quantity o token)).sum ≤ 1)\n    (mx : x ∈ outputs) (my : y ∈ outputs) (qx : quantity x token = 1)\n    (qy : quantity y token = 1)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "x = y"
+      },
+      "storySha256": "41c1db5fdde21b2713854c8f825be6ab7bd3d47fcc3a6a1baaae08f0476f6ac3"
+    },
+    {
+      "declaration": "CardanoKeri.Application.Custody.approval_spends_conviction_output",
+      "path": "lean/CardanoKeri/ApplicationCustodyHistory.lean",
+      "line": 148,
+      "statement": "theorem approval_spends_conviction_output\n    {p env} {i : Interpretation} {aid edges s world next carrier}\n    (registry : PublicRegistry) (release : PublishedRelease) (commit : TrieCommit)\n    (history : HistoryPremises i.hash i.code commit release world registry (i.keyOf aid))\n    (path : CarrierHistory p env i (activeAsset i.hash i.code registry.identity (i.keyOf aid))\n      aid edges s world carrier)\n    (tx : Transaction world next) (aenv : Application.Env) (rp : Registry.Params)\n    (ok : accepted i aenv rp p release tx.observation = true)\n    (unique : ∀ preimage, i.hash (i.code preimage) =\n      i.hash (i.code (.terminationApproval registry.identity (i.keyOf aid))) →\n      preimage = .terminationApproval registry.identity (i.keyOf aid))\n    (minted : 0 < SingularApplicationHeld.Assets.mintQty tx.observation.assets\n      (terminationApproval i.hash i.code release registry.identity (i.keyOf aid))) :\n    ∃ index key before after,\n      Application.Action.bookTermination carrier.reference index registry.identity (i.keyOf aid) ∈ tx.observation.actions ∧\n      namedInput tx.observation carrier.reference = some carrier ∧\n      checkpointDatum i carrier = some ⟨aid, .terminationPending key⟩ ∧\n      (before, after, carrier) ∈ edges ∧ ConvictionEdge p env aid key before after",
+      "statementSha256": "6395235fd7a94aca4af3b776a435270e7f6bd566175cfc89e6a56f49e1b46aea",
+      "sourceStory": "Given a reachable public registry and an observed checkpoint history of\nits active token, when a ledger transaction accepted by the application mints\nthe key's termination approval, then its booking spends the exact output\ncreated in that history by the conviction of this identifier and key state.\nThe ledger supplies the UTxO transition and the public encoding premises give\nthe active-token supply bound. The mint checks the named pending input.",
+      "story": {
+        "given": "{p env} {i : Interpretation} {aid edges s world next carrier}\n    (registry : PublicRegistry) (release : PublishedRelease) (commit : TrieCommit)\n    (history : HistoryPremises i.hash i.code commit release world registry (i.keyOf aid))\n    (path : CarrierHistory p env i (activeAsset i.hash i.code registry.identity (i.keyOf aid))\n      aid edges s world carrier)\n    (tx : Transaction world next) (aenv : Application.Env) (rp : Registry.Params)\n    (ok : accepted i aenv rp p release tx.observation = true)\n    (unique : ∀ preimage, i.hash (i.code preimage) =\n      i.hash (i.code (.terminationApproval registry.identity (i.keyOf aid))) →\n      preimage = .terminationApproval registry.identity (i.keyOf aid))\n    (minted : 0 < SingularApplicationHeld.Assets.mintQty tx.observation.assets\n      (terminationApproval i.hash i.code release registry.identity (i.keyOf aid)))",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "∃ index key before after,\n      Application.Action.bookTermination carrier.reference index registry.identity (i.keyOf aid) ∈ tx.observation.actions ∧\n      namedInput tx.observation carrier.reference = some carrier ∧\n      checkpointDatum i carrier = some ⟨aid, .terminationPending key⟩ ∧\n      (before, after, carrier) ∈ edges ∧ ConvictionEdge p env aid key before after"
+      },
+      "storySha256": "9547d3fbcd20128e561d60635ccb0b9a4d92545457accbce63e9a7f7758e1975"
+    },
     {
       "declaration": "CardanoKeri.Application.filter_one_eq",
       "path": "lean/CardanoKeri/ApplicationGoals.lean",

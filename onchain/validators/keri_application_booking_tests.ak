@@ -24,7 +24,7 @@ use cardano_keri/checkpoint/registration.{RegistrationEvidence}
 use keri_application
 use keri_application_booking_fixture.{
   Observation, bookings_tx, observation, observation_with, observed,
-  other_request, unobserved,
+  other_request, requests_tx, unobserved,
 }
 use keri_application_requests as requests
 use keri_application_requests.{
@@ -230,6 +230,36 @@ test two_bookings_with_evidence_for_one_are_refused() {
   ) && !accepts(observed(tx, observation([1])))
 }
 
+/// Two requests of the application sit among the outputs and the transaction books
+/// one of them: the observation lists the request the booking names, not the other.
+/// Each refusal is the accepted neighbour with one index changed, so a mint that
+/// only counted the entries or only checked that the outputs they name exist
+/// would accept them.
+test an_observation_names_the_request_the_booking_books() {
+  let two = [(rows.request_data(9001), 18), (other_request(), 18)]
+  let first = requests_tx(two, [0])
+  let second = requests_tx(two, [1])
+  accepts(shown(first, observation([0]))) && !accepts(
+    shown(first, observation([1])),
+  ) && accepts(shown(second, observation([1]))) && !accepts(
+    shown(second, observation([0])),
+  )
+}
+
+/// The other request is real but no booking of the transaction names it: listing
+/// it beside the booked one is refused, as is listing it alone; with both booked,
+/// listing both is accepted and listing either alone is refused.
+test an_observation_listing_a_second_real_request_no_booking_names_is_refused() {
+  let two = [(rows.request_data(9001), 18), (other_request(), 18)]
+  let one = requests_tx(two, [0])
+  let both = requests_tx(two, [0, 1])
+  accepts(shown(one, observation([0]))) && !accepts(
+    shown(one, observation([0, 1])),
+  ) && accepts(shown(both, observation([0, 1]))) && !accepts(
+    shown(both, observation([0])),
+  ) && !accepts(shown(both, observation([1])))
+}
+
 /// An entry no booking names is refused: the observation certifies exactly what
 /// the transaction books.
 test an_entry_no_booking_names_is_refused() {
@@ -269,7 +299,7 @@ fn bare_fold() -> Fold {
 }
 
 /// The model does not forbid a fold that still carries an observation: it reads
-/// none, so a stray booking claim changes nothing (a question in the statements).
+/// none, so a stray booking claim changes nothing.
 test a_fold_carrying_a_stray_observation_is_accepted() {
   accepts(fold_tx(bare_fold())) && accepts(
     fold_tx(

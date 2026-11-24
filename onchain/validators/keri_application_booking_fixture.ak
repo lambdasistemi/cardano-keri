@@ -15,7 +15,7 @@ use aiken/builtin
 use aiken/collection/list
 use cardano/address.{Script}
 use cardano/transaction.{Mint, Transaction, Withdraw, placeholder}
-use cardano_keri/application/action.{Action, BookRegistration}
+use cardano_keri/application/action.{BookRegistration}
 use cardano_keri/application/configuration_vectors as cfg
 use cardano_keri/application/held.{RegistrationData}
 use cardano_keri/application/row_vectors as rows
@@ -91,6 +91,16 @@ pub fn observed(tx: Transaction, o: Observation) -> Transaction {
 
 /// A transaction booking each request, in order, at the output of its index.
 pub fn bookings_tx(requests: List<(RegistrationData, Int)>) -> Transaction {
+  requests_tx(requests, list.range(0, list.length(requests) - 1))
+}
+
+/// A transaction creating each request, in order, at the output of its index,
+/// and booking only those at the indices `booked`: the others sit at the
+/// application address as requests no booking of this transaction mints.
+pub fn requests_tx(
+  requests: List<(RegistrationData, Int)>,
+  booked: List<Int>,
+) -> Transaction {
   Transaction {
     ..placeholder,
     outputs: list.map(
@@ -99,23 +109,27 @@ pub fn bookings_tx(requests: List<(RegistrationData, Int)>) -> Transaction {
     ),
     mint: mint_of(
       list.map(
-        requests,
-        fn((data, _)) { (application(), approval_of(data), 1) },
+        booked,
+        fn(index) {
+          expect Some((data, _)) = list.at(requests, index)
+          (application(), approval_of(data), 1)
+        },
       ),
     ),
     reference_inputs: [config_input(50, registry(), cfg.checkpoint_credential)],
     validity_range: range(9, 10),
     redeemers: [
-      Pair(Mint(application()), as_data(actions_for(list.length(requests)))),
+      Pair(
+        Mint(application()),
+        as_data(
+          list.map(
+            booked,
+            fn(index) { BookRegistration { output_index: index } },
+          ),
+        ),
+      ),
     ],
   }
-}
-
-fn actions_for(count: Int) -> List<Action> {
-  list.map(
-    list.range(0, count - 1),
-    fn(index) { BookRegistration { output_index: index } },
-  )
 }
 
 /// The second request of the scenario: the other AID, with its own initial datum.

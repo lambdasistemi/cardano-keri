@@ -275,7 +275,7 @@ test a_booking_at_the_registrys_floor_is_accepted_when_the_pool_is_not_asked_for
 
 test a_booking_between_the_floors_is_refused_and_its_fold_would_leave_no_premium() {
   // A request between the registry's floor and the initial floor leaves a pool
-  // under one premium: the booking refuses it (a decided refusal), and a fold of
+  // under one premium: the booking refuses it, and a fold of
   // such a request, which no booking mints, still delivers what it commits.
   let between = booking_at(booking_floor)
   run_mint_with(booking_floor, floor, between.actions, booking_tx(between)) == False

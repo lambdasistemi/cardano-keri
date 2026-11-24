@@ -8,6 +8,7 @@
 //// is a transaction one difference away from the accepted one beside it, so a test
 //// that fails for any other reason is red for that reason.
 
+use aiken/builtin
 use aiken/collection/list
 use aiken/primitive/bytearray
 use cardano/address.{from_verification_key}
@@ -196,6 +197,23 @@ test the_application_and_the_real_observer_accept_a_booking() {
 test the_application_and_the_real_observer_accept_two_bookings_in_one_transaction() {
   let tx = booking_of([first(), second()], [(0, first()), (1, second())])
   application_accepts(tx) && observer_accepts(tx)
+}
+
+/// The entries of one observation may come in any order: each carries the index of
+/// its request and that request's own evidence.
+test the_application_and_the_real_observer_accept_the_entries_in_any_order() {
+  let tx = booking_of([first(), second()], [(1, second()), (0, first())])
+  application_accepts(tx) && observer_accepts(tx)
+}
+
+/// An entry whose evidence is the other request's, the indices swapped relative to
+/// the evidence: the application, which does not read the evidence, still sees the
+/// right indices; the observer reads each request's key from its own output and
+/// refuses evidence of another inception.
+test the_observer_refuses_each_evidence_listed_against_the_other_request() fail {
+  observer_accepts(
+    booking_of([first(), second()], [(0, second()), (1, first())]),
+  )
 }
 
 /// One observation lists what it attests: with the evidence of the first only,
@@ -413,6 +431,41 @@ test a_booking_commits_the_initial_state_of_its_key() {
       ),
     ),
   )
+}
+
+/// The initial datum of the first inception with its key material replaced by
+/// something no key material is: the facts the application reads are intact.
+fn malformed_keys_datum() -> Data {
+  builtin.constr_data(
+    1,
+    [
+      builtin.constr_data(
+        0,
+        [
+          builtin.b_data(initial_aid()),
+          builtin.i_data(0),
+          builtin.i_data(0),
+          builtin.constr_data(0, []),
+          builtin.constr_data(0, []),
+          builtin.i_data(10),
+          builtin.b_data(initial_refund()),
+          builtin.constr_data(0, []),
+          builtin.i_data(0),
+        ],
+      ),
+    ],
+  )
+}
+
+/// The application reads the facts of a datum; the key material is the observer's:
+/// a datum whose keys the checkpoint codec refuses is booked by the application's
+/// own rules and is never attested (the next test).
+test the_application_reads_only_the_facts_of_the_datum() {
+  application_accepts(with_datum(malformed_keys_datum()))
+}
+
+test the_observer_never_attests_a_datum_whose_keys_the_codec_refuses() fail {
+  observer_accepts(with_datum(malformed_keys_datum()))
 }
 
 test a_booking_commits_the_refund_address_of_its_request() {

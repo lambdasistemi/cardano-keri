@@ -3735,7 +3735,7 @@ wire();
 render();
 if (/[?&]selftest=1/.test(location.search)) runSelftest();
 /* @@SYSTEM@@ */
-/* System source bindings: {"checkpoint-simulator-core.mjs":"4100deb9cf3f788dd767582e9833115de33a1c56a0f81d06a0e1c825363ce2b8","registry-economic-core.mjs":"2ec8e4cafd4ee445cd6e0a2388223e72d5d6c8449e3492fd31a8e7637dc07dde","registry-wire.mjs":"bee64dff8e639f90411c3c2125b55adc64916bdff7cc1f7db2ad39215707c196","registry-simulator-core.mjs":"4b843c9e116869713fbc6f6ee70baa1e3676d8ecdcdf136e56fdcd5f110d717e","checkpoint-system-core.mjs":"a92376f95bb9dab2398f88b8b3cfd9290e3f6e9e36123ce8e45e037e0ae68f5b","checkpoint-system-properties.mjs":"7b46c03179b0ed8b663b4e0ad51839b07490ef6b9c172891fdc131ae2b501a5d","consumer-core.mjs":"bccce2d993e2ff81237773ab82184eeb17858946c386b8104bcb00ef6277b21b","consumer-properties.mjs":"2e74b39206dba2784b6660cc1b816ad8ac0695d5f872b40b71bdf8d16fa96d7b","checkpoint-system-corpus.json":"768c9b71456010bc4d2d57159666b676776c6998f0206cf44413e8bdd22c693c","checkpoint-system-page.mjs":"9bd23878f12f171394892d03792da1baa9dc418e8e465fa803cf1ec39ea84c91","consumer-corpus.json":"8e9b5db862a37e78395fdb7e5674fdaac8dc9e50fc7c3151702663f1d4516e16","consumer-page.mjs":"3046edbb705dc58c5c0dc32875b520259afec38c5bb914ef44a86e8b567a46b4"} */
+/* System source bindings: {"checkpoint-simulator-core.mjs":"4100deb9cf3f788dd767582e9833115de33a1c56a0f81d06a0e1c825363ce2b8","registry-economic-core.mjs":"2ec8e4cafd4ee445cd6e0a2388223e72d5d6c8449e3492fd31a8e7637dc07dde","checkpoint-conviction.mjs":"12452710a6929617b9516010c8d4ce9d82d2d0e43dac50d6e08f679c02e4f9f0","registry-wire.mjs":"46eb54fa87c8f6638f6f3afe9baa5570f0afb21d0d8f63cff80ee1883f721631","registry-simulator-core.mjs":"df1dc6ca3f2a421b7c9b06b5c1bcbfeadc773a0cb19f129d7c8d31dbfa5ff68c","checkpoint-system-core.mjs":"a92376f95bb9dab2398f88b8b3cfd9290e3f6e9e36123ce8e45e037e0ae68f5b","checkpoint-system-properties.mjs":"7b46c03179b0ed8b663b4e0ad51839b07490ef6b9c172891fdc131ae2b501a5d","consumer-core.mjs":"bccce2d993e2ff81237773ab82184eeb17858946c386b8104bcb00ef6277b21b","consumer-properties.mjs":"2e74b39206dba2784b6660cc1b816ad8ac0695d5f872b40b71bdf8d16fa96d7b","checkpoint-system-corpus.json":"768c9b71456010bc4d2d57159666b676776c6998f0206cf44413e8bdd22c693c","checkpoint-system-page.mjs":"9bd23878f12f171394892d03792da1baa9dc418e8e465fa803cf1ec39ea84c91","consumer-corpus.json":"8e9b5db862a37e78395fdb7e5674fdaac8dc9e50fc7c3151702663f1d4516e16","consumer-page.mjs":"3046edbb705dc58c5c0dc32875b520259afec38c5bb914ef44a86e8b567a46b4"} */
 (()=>{
 const C={
   hasOutput, representativeHeld,
@@ -3980,6 +3980,61 @@ function rejectionAccepted(w, u, rejection) {
 }
 
 return {toInternal,toWire,canonical,equal,ModelRefusal,known,trieGet,fnv1a,rootOf,applicationName,readyTag,singularTag,ordinary,foldMembers,balanced,bookRegistration,bookTermination,foldAccepted,rejectionAccepted};})();
+const Judgment=(()=>{
+// Decoded enforcement evidence. The simulator's finite signature table
+// verifies exactly the key and message used by the Lean fixture verifier.
+const { equal, toInternal, toWire }=E;
+function verifiedPositions(keys, bytes, signatures) {
+  const positions = new Set();
+  for (const [index, signature] of signatures) {
+    const key = keys[index];
+    if (key !== undefined && equal([...key, ...bytes], signature)) positions.add(BigInt(index));
+  }
+  return positions;
+}
+
+function thresholdMet(threshold, positions) {
+  if (threshold.unweighted) return BigInt(threshold.unweighted.m) <= BigInt(positions.size);
+  let offset = 0n;
+  return threshold.weighted.clauses.every(clause => {
+    let numerator = 0n, denominator = 1n;
+    for (const [n, d] of clause) {
+      if (positions.has(offset)) {
+        numerator = numerator * BigInt(d) + BigInt(n) * denominator;
+        denominator *= BigInt(d);
+      }
+      offset++;
+    }
+    return denominator <= numerator;
+  });
+}
+
+function acceptsComparison({tip, rival}) {
+  const keys = tip.keys;
+  return rival.rotation && equal(tip.aid, rival.aid) && equal(tip.sn, rival.sn) &&
+    equal(keys.curKeys, rival.revealedKeys) &&
+    thresholdMet(keys.curThreshold, verifiedPositions(keys.curKeys, rival.bytes, rival.signatures)) &&
+    BigInt(keys.toad) <= BigInt(verifiedPositions(keys.witnesses, rival.bytes, rival.receipts).size) &&
+    !equal([keys.curThreshold, keys.nextKeys, keys.nextThreshold, keys.toad],
+      [rival.threshold, rival.nextKeys, rival.nextThreshold, rival.toad]);
+}
+
+// CheckpointConviction.Fixtures.comparison and Registry.Scenarios.convictionFixture.
+function convictionFixture(identifier, epoch, sequence) {
+  const [aid, e, sn] = toInternal([identifier, epoch, sequence]);
+  const one = {unweighted: {m: 1n}}, keys = [[aid]], bytes = [aid, e, sn, 1n];
+  return toWire({
+    output: {tx: 105n + (aid > 11n ? aid - 11n : 0n), index: 0n},
+    comparison: {
+      tip: {aid, epoch: e, sn, keys: {curKeys: keys, curThreshold: one, nextKeys: keys,
+        nextThreshold: one, witnesses: [], toad: 0n}},
+      rival: {bytes, rotation: sn !== 0n, aid, sn, revealedKeys: keys, threshold: one,
+        nextKeys: [[aid + 1n]], nextThreshold: one, toad: 0n, signatures: [[0n, [aid, ...bytes]]], receipts: []}
+    }
+  });
+}
+
+return {acceptsComparison,convictionFixture};})();
 const W=(()=>{
 /* Version 3 interchange validation. This is the simulator's input boundary,
  * separate from the model's semantic refusals. Nat/Int are exact and complete
@@ -4038,11 +4093,20 @@ const economicOutput = record({ output, contents, singularTags: list(singular), 
 const economicTx = record({ transaction: tx, identity: nat, outputs: list(economicOutput), trieReadyMint: list(pair(token, integer)), applicationMint: list(pair(token, integer)), stateMint: list(pair(token, integer)), singularMint: list(pair(singular, integer)) });
 const utxo = list(pair(ref, economicOutput));
 const rejection = record({ transaction: economicTx, stateReference: ref, members: list(pair(ref, variant({ mismatch: record({ leaf }) }, ['expired']))) });
-const carrier = record({ ...fields('aid token k minAda'), original: holding, st: enumeration(['live', 'terminationPending']) });
-const payload = record({ ...fields('aid token keyState booker bookingFee'), original: holding, spend });
+const carrier = record({ ...fields('aid token minAda'), original: holding, pendingSpend: option(spend) });
+const payload = record({ ...fields('aid token booker bookingFee'), original: holding, spend });
 const sys = record({ ...fields('gen treasury nextToken'), config, trie: list(pair(nat, leaf)), carriers: list(carrier), registrations: list(regBooking), terminations: list(record({ booking: termBooking, payload })), bindings: list(pair(nat, nat)) });
 const params = record(fields('D tip Mc Mr'));
-const env = record({ inception: list(nat), duplicity: list(pair(nat, nat)) });
+const threshold = variant({ unweighted: record({m: integer}), weighted: record({clauses: list(list(pair(integer, integer)))}) });
+const keys = list(list(nat));
+const signatures = list(pair(nat, list(nat)));
+const keyMaterial = record({curKeys: keys, curThreshold: threshold, nextKeys: keys, nextThreshold: threshold,
+  witnesses: keys, toad: integer});
+const tip = record({...fields('aid epoch sn'), keys: keyMaterial});
+const rival = record({...fields('aid sn'), bytes: list(nat), rotation: (x, p) => typeof x === 'boolean' ? x : error(p),
+  revealedKeys: keys, threshold, nextKeys: keys, nextThreshold: threshold, toad: integer, signatures, receipts: signatures});
+const conviction = record({output: ref, comparison: record({tip, rival})});
+const env = record({ inception: list(nat), convictions: list(conviction) });
 const action = variant({
   bookRegistration: record({ booking: regBooking }), convictCkpt: record(fields('aid')),
   bookTermination: record({ ...fields('aid booker fee'), booking: localBooking }),
@@ -4078,6 +4142,7 @@ const R=(()=>{
  * imported transaction judgments are in registry-economic-core.mjs. This is a
  * model simulator, with finite evidence tables, not production authorization.
  * Wire v3 carries whole states/transactions and exact integers. */
+const { acceptsComparison }=Judgment;
 
 const { decodeInput, validateState, validateConfig, validateEnv, validateResult }=W;
 const SCHEMA = 'cardano-keri.registry.trace';
@@ -4108,18 +4173,20 @@ function execute(p, env, s, action) {
     require(E.equal(toWorld(after), next), 'keri-registration-reconstruction-mismatch'); moved = flow({ deposited: b.request.contents.lovelace });
   } else if (['convictCkpt', 'bookTermination'].includes(kind)) {
     const c = carrierAt(s, a.aid); require(c !== null, 'keri-carrier-missing');
-    const evidence = (name, second) => env[name].some(([aid, value]) => aid === a.aid && value === second);
     if (kind === 'convictCkpt') {
-      require(c.st !== 'terminationPending' && evidence('duplicity', c.k), 'keri-conviction-refused');
-      after = { ...s, carriers: s.carriers.map(old => old.aid === a.aid ? { ...old, st: 'terminationPending' } : old) };
+      const observed = env.convictions.find(row => row.comparison.tip.aid === a.aid);
+      require(c.pendingSpend === null && observed && acceptsComparison(observed.comparison), 'keri-conviction-refused');
+      const {epoch, sn} = observed.comparison.tip;
+      const pendingSpend = {reference: observed.output, aid: a.aid, position: {epoch, sn}};
+      after = { ...s, carriers: s.carriers.map(old => old.aid === a.aid ? { ...old, pendingSpend } : old) };
     } else {
-      require(c.st === 'terminationPending', 'keri-conviction-required');
       const b = a.booking, r = b.request;
-      require(r.key === a.aid && r.destination === c.original.output && E.equal(b.custodyInputs, [c.original]) && c.minAda === p.Mc && r.carrierAda === p.Mr && r.declaredTip === p.tip && r.contents.lovelace === p.Mr + p.tip, 'keri-termination-binding-mismatch');
       const { pendingReference, position, ...publicBooking } = b;
       const spend = { reference: pendingReference, aid: r.key, position };
+      require(E.equal(c.pendingSpend, spend), 'keri-conviction-required');
+      require(r.key === a.aid && r.destination === c.original.output && E.equal(b.custodyInputs, [c.original]) && c.minAda === p.Mc && r.carrierAda === p.Mr && r.declaredTip === p.tip && r.contents.lovelace === p.Mr + p.tip, 'keri-termination-binding-mismatch');
       const next = E.bookTermination(world, publicBooking);
-      after = { ...s, carriers: s.carriers.filter(old => old.aid !== a.aid), terminations: [{ booking: publicBooking, payload: { spend, aid: a.aid, token: c.token, keyState: c.k, original: c.original, booker: a.booker, bookingFee: a.fee } }, ...s.terminations] };
+      after = { ...s, carriers: s.carriers.filter(old => old.aid !== a.aid), terminations: [{ booking: publicBooking, payload: { spend, aid: a.aid, token: c.token, original: c.original, booker: a.booker, bookingFee: a.fee } }, ...s.terminations] };
       require(E.equal(toWorld(after), next), 'keri-termination-reconstruction-mismatch');
       moved = flow({ premium: [a.booker, p.Mc - p.Mr - p.tip], bookingFee: a.fee, intoRequest: p.Mr + p.tip });
     }
@@ -4134,7 +4201,7 @@ function execute(p, env, s, action) {
         require(E.equal(e.booking, b), 'keri-termination-metadata-mismatch');
       } else {
         require(s.registrations.some(old => E.equal(old, b)), 'keri-registration-metadata-missing');
-        const c = { aid: b.request.key, token: after.nextToken, original: { key: b.request.key, kind: 'active', output: b.request.destination, datum: b.request.datum }, k: 0n, st: 'live', minAda: p.Mc };
+        const c = { aid: b.request.key, token: after.nextToken, original: { key: b.request.key, kind: 'active', output: b.request.destination, datum: b.request.datum }, pendingSpend: null, minAda: p.Mc };
         after = { ...after, carriers: [c, ...after.carriers], bindings: [[c.aid, c.token], ...after.bindings], nextToken: after.nextToken + 1n };
       }
     }

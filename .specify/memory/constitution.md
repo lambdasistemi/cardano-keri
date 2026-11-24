@@ -1,26 +1,29 @@
 <!--
 Sync impact report
-Version: 1.1.0 -> 2.0.0
-Amended: 2026-09-11
-Authority: the operator's instruction of 2026-09-11 that implementation must
-never diverge from the accepted Lean, that a model error is escalated as user
-stories and the Lean rewritten before code is touched, and that the rule
-applies to previously merged work. Mirrors the Singular constitution 1.0.0
-(lambdasistemi/singular, merged 2026-09-11), adapted to this repository.
-Added principles: VII Lean is the behavioral authority; VIII model errors and
-ambiguity require user stories; IX verify the whole claimed behavior;
-X acceptance preserves evidence and gaps; XI apply the rule to previous work.
-Amended: principle VI gains the precedence note (where a corollary and the
-accepted Lean disagree, the Lean governs and the disagreement is escalated),
-and its "no tombstones, ever" corollary becomes "tombstones are allowed under
-conformance" by the operator's ruling of 2026-09-11 on register entry 1;
-Development Workflow corrects "linear history via rebase merge" to merge
-commits, which is the standing rule; Governance names the register.
-Synchronized: AGENTS.md (new), CLAUDE.md (link), .github/pull_request_template.md
-(new section), docs/index.md (start-here bullet).
+Version: 2.0.0 -> 2.1.0
+Amended: 2026-11-24
+Authority: the operator's instructions of 2026-11-24, given when the
+registration model was found to prove the inception in the fold instead of
+in the booking: "it's the application mint the take the burden of proving the
+inception"; "The folder is supposed to be COMPLETELY ignorant of the
+application"; "I believe fold is only a singular command"; "so the folder is
+a singular role"; "as stated in the singular decisions, there is no
+communication between roles aside the chain"; "there is no L2 mechanics in
+cardano-keri"; "we have to stay consistent with singular and capitalize the
+efforts on that CLI"; "make those points part of the constitution".
+Added principles: XII roles meet only on the chain; XIII consistent with
+Singular.
+Amended: none of principles I to XI.
+Synchronized: AGENTS.md (two paragraphs), .github/pull_request_template.md
+(one checklist line).
 Spec Kit templates: plan-template.md gates already defer to this file; no
 migration required.
-Open escalations at amendment time: issue #435, the Lean correspondence register.
+Open escalations at amendment time: issue #435, the Lean correspondence
+register; issue #559, the first correction under principle XII (the Lean and
+the validators on main prove the inception in the fold).
+Previous amendment: 1.1.0 -> 2.0.0 on 2026-09-11 (principles VII to XI, the
+operator's instruction of 2026-09-11; mirrors the Singular constitution
+1.0.0).
 -->
 
 # cardano-keri Constitution
@@ -216,6 +219,57 @@ repair with its evidence, or an explicit ruling followed by the model-first
 alignment of principle VIII. Publishing this amendment resolves none of the
 entries already in the register.
 
+### XII. Roles Meet Only on the Chain (NON-NEGOTIABLE)
+The parties of the protocol are roles: the controller who registers and
+operates an identity, the folder who processes a registry's pending requests,
+the hunter who relays a rotation or a freeze, the convictor, whoever returns
+an expired request, and the relying party who reads. **There is no
+communication between roles aside from the chain.** A step performed by one
+role MUST NOT depend on anything another role hands over off chain: no file,
+event, proof, datum, list or message. Whatever a later step needs from an
+earlier one is on chain, put there by the transaction of the role that knows
+it.
+
+- **No layer-two mechanics.** This repository defines no off-chain protocol
+  between parties: no channel, queue, negotiation or agreement whose result
+  the chain is later asked to settle. Every step of the protocol is a
+  transaction the validators judge by themselves.
+- **The application mint carries the burden of proof.** Everything the
+  application has to validate about a request is validated when the
+  controller books, before the approval is minted: the inception first, with
+  its signatures and receipts, the refund binding, the bonds and the complete
+  initial datum. A request on chain is already admitted and carries what its
+  processing delivers.
+- **The folder is a role of the registry.** The folder belongs to Singular,
+  not to this application, and is completely ignorant of it: a folder holds
+  the registry's identity, the public chain and its own wallet, and nothing of
+  KERI. The fold is Singular's. This repository contributes only an
+  application adapter, which recognises a pending request, spends it and burns
+  its approval from public chain data; `ckeri` wraps Singular's fold and holds
+  no fold logic of its own.
+- **Evidence a role gathers by itself is not a message between roles.** Events
+  of a KERI log that a hunter or a convictor obtains from the log's public
+  witnesses are that role's own input. Where a step relies on such evidence,
+  the model MUST declare it as a premise and name the transaction and the
+  role that discharge it. A premise left opaque with no such declaration is a
+  fault of the model.
+
+A model, a validator, a builder or a command that makes one role wait on
+another outside the chain violates this principle even when every check
+passes. Where the accepted Lean disagrees with it, the disagreement is an
+escalation under principle VIII and the Lean is corrected first; the first
+such correction is
+[issue #559](https://github.com/lambdasistemi/cardano-keri/issues/559).
+
+### XIII. Consistent with Singular
+The registry, its folder, its wallet and its ledger provider are Singular's.
+This repository MUST stay consistent with the Singular command line and build
+on its code instead of beside it: the same wallet, the same ledger-provider
+interface, the same fold, the same rules for time and for settlement. What a
+KERI user needs and Singular lacks is built in Singular. A difference from
+Singular is a decision recorded in the register with its reason, never a
+default.
+
 ## Constraints
 
 - On-chain: Aiken, Plutus v3; state anchored in MPFS tries
@@ -247,7 +301,7 @@ entries already in the register.
 
 This constitution gates all spec/plan/tasks decisions: a plan that
 violates a principle is reworked, not excepted. It records the operator's
-instruction of 2026-09-11 and supersedes conflicting repository guidance and
+instructions of 2026-09-11 and 2026-11-24 and supersedes conflicting repository guidance and
 prior owner interpretations; an agent or reviewer cannot grant itself an
 exception, and only a later explicit ruling amends it. Amendments are made
 by PR stating the authority, the rationale, the affected principles and the
@@ -257,4 +311,4 @@ expanded principle, a patch for a clarification. Per-issue specs defer to
 this document on conflict. The open escalations live in the
 [Lean correspondence register](https://github.com/lambdasistemi/cardano-keri/issues/435).
 
-**Version**: 2.0.0 | **Ratified**: 2026-07-07 | **Last Amended**: 2026-09-11
+**Version**: 2.1.0 | **Ratified**: 2026-07-07 | **Last Amended**: 2026-11-24

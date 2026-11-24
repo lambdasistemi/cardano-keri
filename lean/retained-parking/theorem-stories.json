@@ -4,6 +4,7 @@
   "singular": "d69ab005c3b710aeebf033d3c5cd08c56feb5643",
   "sources": {
     "lean/CardanoKeri/Application.lean": "ad4db776a0e810fab34d1131354ca8b3a166abfc78e2fb4f0573200fa804c102",
+    "lean/CardanoKeri/ApplicationCustodyExample.lean": "1ffa3264d74d54256bd57852ecf8941970a8e71199102f6ca2f3526b1a1ca1d5",
     "lean/CardanoKeri/ApplicationCustodyHistory.lean": "2197f8a4cc9ecfe5200a58d25550a805551a462c1b66ce87ec35a24bb4f6ec94",
     "lean/CardanoKeri/ApplicationGoals.lean": "5367c8d28e828dfc480dcd1898e112c081440d84fbe859a7450df4bb5a11766a",
     "lean/CardanoKeri/ApplicationVectors.lean": "073d713d9c86e6bee45751c38c031456ff0e363e0f16acf6cb5c6894479f98f6",
@@ -66,6 +67,146 @@
     "lean/CardanoKeri/Samaritan.lean": "6a1bfd7b2b83d7497f68ef50480a47b155a1c7cf4ee1837a5a72c231570cedbb"
   },
   "rows": [
+    {
+      "declaration": "CardanoKeri.Application.Custody.Examples.genesisLedger",
+      "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
+      "line": 120,
+      "statement": "private theorem genesisLedger : ValidLedger initWorld genesisWorld openObs",
+      "statementSha256": "ab27eb99468e62c0c7787662117ec91c6622b08ae5c05b1cf2c006ca71b74c65",
+      "sourceStory": "",
+      "story": {
+        "given": "No additional local parameters; use the definitions in this module.",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "ValidLedger initWorld genesisWorld openObs"
+      },
+      "storySha256": "47e16c15ea420816ebc2c0eba64e7c65284a508122d1ec707d84ea23b629818f"
+    },
+    {
+      "declaration": "CardanoKeri.Application.Custody.Examples.regLedger",
+      "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
+      "line": 122,
+      "statement": "private theorem regLedger : ValidLedger genesisWorld requestWorld regObs",
+      "statementSha256": "02ad70fe3d107888be2565a2b772695c2d54697e27299b33f92f4595a4875014",
+      "sourceStory": "",
+      "story": {
+        "given": "No additional local parameters; use the definitions in this module.",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "ValidLedger genesisWorld requestWorld regObs"
+      },
+      "storySha256": "554fff1ffa1f8a5c752d7a33fc65ff70b70816af20ef8591b5431b32ed141926"
+    },
+    {
+      "declaration": "CardanoKeri.Application.Custody.Examples.neutral",
+      "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
+      "line": 142,
+      "statement": "private theorem neutral {before after : CandidateWorld} (past : Reach before)\n    (tx : Transaction before after)\n    (mint : policyDelta tx.observation.assets release.statePolicy [] = true)\n    (untouched : ∀ r ∈ before.registries, r.state.reference ∉ tx.observation.assets.spent)\n    (registries : after.registries = before.registries) (domain : after.domain = before.domain) :\n    Reach after",
+      "statementSha256": "28432e15eb664e6f05090fc21bc83b6208e8af30bca209db02b6ed5c1e7941df",
+      "sourceStory": "",
+      "story": {
+        "given": "{before after : CandidateWorld} (past : Reach before)\n    (tx : Transaction before after)\n    (mint : policyDelta tx.observation.assets release.statePolicy [] = true)\n    (untouched : ∀ r ∈ before.registries, r.state.reference ∉ tx.observation.assets.spent)\n    (registries : after.registries = before.registries) (domain : after.domain = before.domain)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "Reach after"
+      },
+      "storySha256": "e309e4e792d1148d35fa7aa660947be7c1ec1396fd2fe958abb602e8f40aa32a"
+    },
+    {
+      "declaration": "CardanoKeri.Application.Custody.Examples.publicHistory",
+      "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
+      "line": 150,
+      "statement": "private theorem publicHistory : Reach convictionWorld",
+      "statementSha256": "c0724c16c9cd594ff6c9804302bae09ff63535fa55da86955c0ca44723f9d448",
+      "sourceStory": "",
+      "story": {
+        "given": "No additional local parameters; use the definitions in this module.",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "Reach convictionWorld"
+      },
+      "storySha256": "a1188b8e55563d947efc7d9572c306174b10fbe8eb11518737fbe388d62a4b6f"
+    },
+    {
+      "declaration": "CardanoKeri.Application.Custody.Examples.history",
+      "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
+      "line": 163,
+      "statement": "private theorem history : HistoryPremises i.hash i.code commit release convictionWorld registry1 11",
+      "statementSha256": "9e4428817c336354733dee4393192fe93794e52ceac74a2f1955b0da074be27e",
+      "sourceStory": "",
+      "story": {
+        "given": "No additional local parameters; use the definitions in this module.",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "HistoryPremises i.hash i.code commit release convictionWorld registry1 11"
+      },
+      "storySha256": "da8e95122c50a9bb407dfe1b4704b56f5b42bd0330ff0fbc76f39566876128b2"
+    },
+    {
+      "declaration": "CardanoKeri.Application.Custody.Examples.namedApproval",
+      "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
+      "line": 174,
+      "statement": "private theorem namedApproval (preimage : Preimage)\n    (same : i.hash (i.code preimage) = i.hash (i.code target)) : preimage = target",
+      "statementSha256": "5318287fdaa2084a568c4b9db87308914a562db0486be9a1284f606d38beb76e",
+      "sourceStory": "",
+      "story": {
+        "given": "(preimage : Preimage)\n    (same : i.hash (i.code preimage) = i.hash (i.code target))",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "preimage = target"
+      },
+      "storySha256": "17b84d2a107deead9cbc9d4b8fe32196af1de8d1d6d6f070e5abf1e2e5430736"
+    },
+    {
+      "declaration": "CardanoKeri.Application.Custody.Examples.registeredPath",
+      "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
+      "line": 187,
+      "statement": "private theorem registeredPath : CarrierHistory p env i active 11 startEdges registered foldWorld carrier",
+      "statementSha256": "b73e83db3a97df3119675c71f339ae39019cd4cc3fd9b8c896ef2a166f75d960",
+      "sourceStory": "",
+      "story": {
+        "given": "No additional local parameters; use the definitions in this module.",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "CarrierHistory p env i active 11 startEdges registered foldWorld carrier"
+      },
+      "storySha256": "bf1b39ffc5e9fd30e1c36d6ad97dcead5fd76838b81b96eb0c24101b3b8385a1"
+    },
+    {
+      "declaration": "CardanoKeri.Application.Custody.Examples.rotatedPath",
+      "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
+      "line": 195,
+      "statement": "private theorem rotatedPath : CarrierHistory p env i active 11 rotationEdges rotated advancedWorld advanced",
+      "statementSha256": "77b6437fcc6b04083a63dbcd5591577323b6136f292045e2453dc2bce34e8d06",
+      "sourceStory": "",
+      "story": {
+        "given": "No additional local parameters; use the definitions in this module.",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "CarrierHistory p env i active 11 rotationEdges rotated advancedWorld advanced"
+      },
+      "storySha256": "a4732c745cc34127f3e19abfdc7219987edbb86824ccb4e18943f81ac9196e8d"
+    },
+    {
+      "declaration": "CardanoKeri.Application.Custody.Examples.pendingPath",
+      "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
+      "line": 201,
+      "statement": "private theorem pendingPath : CarrierHistory p env i active 11 convictionEdges pending convictionWorld convicted",
+      "statementSha256": "94023c8baf493ae62db1c617ecb3b9c50dc2776b538ba27b0c4f02bea60868a7",
+      "sourceStory": "",
+      "story": {
+        "given": "No additional local parameters; use the definitions in this module.",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "CarrierHistory p env i active 11 convictionEdges pending convictionWorld convicted"
+      },
+      "storySha256": "39055b68578a935931ea976ce9afb93d555a962fab956fe3c2a3fefe2eff4687"
+    },
+    {
+      "declaration": "CardanoKeri.Application.Custody.Examples.witnessed_termination_booking",
+      "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
+      "line": 211,
+      "statement": "theorem witnessed_termination_booking :\n    namedInput bookObs convicted.reference = some convicted ∧\n    checkpointDatum i convicted = some ⟨11, .terminationPending rotatedLive.hash⟩ ∧\n    (committed, pending, convicted) ∈ convictionEdges ∧\n    ConvictionEdge p env 11 rotatedLive.hash committed pending",
+      "statementSha256": "e7cf776cc12120d979644101c0cd4033d4b07f3c0217f7349419299043cc3d2c",
+      "sourceStory": "Given the public genesis, registration, rotation, commitment and conviction\nabove, when the application mints the termination approval, then it spends\nthe output created by that conviction at the rotated position.",
+      "story": {
+        "given": "No additional local parameters; use the definitions in this module.",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "namedInput bookObs convicted.reference = some convicted ∧\n    checkpointDatum i convicted = some ⟨11, .terminationPending rotatedLive.hash⟩ ∧\n    (committed, pending, convicted) ∈ convictionEdges ∧\n    ConvictionEdge p env 11 rotatedLive.hash committed pending"
+      },
+      "storySha256": "a72aaf17737dcd9e6d44ce0d3db713c647a79a2b49846ecdbe35e429c0fa8251"
+    },
     {
       "declaration": "CardanoKeri.Application.Custody.carrier_reachable",
       "path": "lean/CardanoKeri/ApplicationCustodyHistory.lean",

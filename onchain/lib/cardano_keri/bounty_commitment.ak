@@ -36,7 +36,12 @@ use cardano/transaction.{
 pub const commitment_domain: ByteArray = "cardano-keri/bounty-commitment"
 
 /// Canonical schema version of the wire shapes in this module.
-pub const commitment_schema: Int = 1
+///
+/// Version 2 is the layout whose scope names the identifier, the epoch and the
+/// sequence number it accuses; version 1 named a checkpoint output reference.
+/// The version is inside every commitment preimage, and a scope of any other
+/// version is refused (`ScopeSchema`).
+pub const commitment_schema: Int = 2
 
 /// Mandated minimum commitment age: one network slot.
 pub const commit_min_age: Int = 1
@@ -58,6 +63,9 @@ pub const marker_width: Int = 32
 
 /// Cardano verification-key hash width.
 pub const pkh_width: Int = 28
+
+/// Identifier width: the text of a CESR identifier, as a checkpoint carries it.
+pub const aid_width: Int = 44
 
 /// Enforcement evidence digest width.
 pub const digest_width: Int = 32
@@ -82,12 +90,23 @@ pub type BountyScope {
   schema: Int,
   network: Int,
   checkpoint_policy: PolicyId,
-  checkpoint_ref: OutputReference,
+  aid: ByteArray,
+  epoch: Int,
+  sn: Int,
   action: BountyAction,
   marker: AssetName,
   commit_upper: Int,
   eligible_after: Int,
   expires_at: Int,
+}
+
+/// Where a conviction is settled: the checkpoint program that settles it and the
+/// identifier, epoch and sequence number of the spent checkpoint it settles at.
+pub type ConvictionTarget {
+  checkpoint_policy: PolicyId,
+  aid: ByteArray,
+  epoch: Int,
+  sn: Int,
 }
 
 /// `DAT-271-PREIMAGE`. Its canonical serialization is frozen protocol
@@ -174,7 +193,8 @@ pub type ScopeError {
   ScopeSchema
   ScopeNetwork
   ScopeCheckpointPolicyWidth
-  ScopeCheckpointRefWidth
+  ScopeAidWidth
+  ScopeKeyState
   ScopeMarkerWidth
   ScopeAge
   ScopeLifetime
@@ -200,7 +220,9 @@ pub type CommitmentVerdict {
 pub type EntitlementError {
   EntitlementDigestWidth
   EntitlementNonceWidth
-  EntitlementCheckpoint
+  EntitlementDeployment
+  EntitlementAid
+  EntitlementKeyState
   EntitlementMarker
   EntitlementHash
 }
@@ -280,8 +302,10 @@ pub fn scope_well_formed(
     ScopeInvalid(ScopeNetwork)
   } else if bytearray.length(scope.checkpoint_policy) != pkh_width {
     ScopeInvalid(ScopeCheckpointPolicyWidth)
-  } else if bytearray.length(scope.checkpoint_ref.transaction_id) != digest_width || scope.checkpoint_ref.output_index < 0 {
-    ScopeInvalid(ScopeCheckpointRefWidth)
+  } else if bytearray.length(scope.aid) != aid_width {
+    ScopeInvalid(ScopeAidWidth)
+  } else if scope.epoch < 0 || scope.sn < 0 {
+    ScopeInvalid(ScopeKeyState)
   } else if bytearray.length(scope.marker) != marker_width {
     ScopeInvalid(ScopeMarkerWidth)
   } else if scope.eligible_after != scope.commit_upper + parameters.commit_min_age {
@@ -320,12 +344,19 @@ pub fn commitment_well_formed(
 /// nonce, so independently changing any scope field, the payee, the digest,
 /// or the nonce breaks the match.
 ///
+/// It compares the scope with where the conviction is settled: the checkpoint
+/// program, the identifier, and the epoch and sequence number of the spent
+/// checkpoint. Nothing else about the checkpoint output is read, so a top-up or a
+/// freeze of it leaves the commitment entitled (a datum marked poisoned is read
+/// the same), and a rotation, which moves the epoch or the sequence number,
+/// voids it.
+///
 /// It deliberately does **not** claim the digest is the digest of actual
-/// evidence, and it touches no checkpoint state: that coupling is the
-/// enforcement observer's obligation (`DATA-INV-271-02`, S254-E).
+/// evidence: that coupling is the enforcement observer's obligation
+/// (`DATA-INV-271-02`, S254-E).
 pub fn entitlement_matches(
   commitment: BountyCommitment,
-  checkpoint_ref: OutputReference,
+  target: ConvictionTarget,
   evidence_digest: ByteArray,
   nonce: ByteArray,
 ) -> EntitlementVerdict {
@@ -334,8 +365,12 @@ pub fn entitlement_matches(
     EntitlementInvalid(EntitlementDigestWidth)
   } else if bytearray.length(nonce) < nonce_min_width {
     EntitlementInvalid(EntitlementNonceWidth)
-  } else if scope.checkpoint_ref != checkpoint_ref {
-    EntitlementInvalid(EntitlementCheckpoint)
+  } else if scope.checkpoint_policy != target.checkpoint_policy {
+    EntitlementInvalid(EntitlementDeployment)
+  } else if scope.aid != target.aid {
+    EntitlementInvalid(EntitlementAid)
+  } else if scope.epoch != target.epoch || scope.sn != target.sn {
+    EntitlementInvalid(EntitlementKeyState)
   } else if marker != scope.marker {
     EntitlementInvalid(EntitlementMarker)
   } else if commitment_hash(

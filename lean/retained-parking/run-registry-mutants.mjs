@@ -39,27 +39,11 @@ function run(c, baseline) {
   const id = baseline ? `baseline-${c.test}` : c.id;
   const dir = path.join(campaign, id);
   fs.mkdirSync(path.join(dir, 'CardanoKeri'), { recursive: true });
-  if (vectorCampaign) {
-    // Every unchanged module the vectors import, compiled from the repository
-    // sources; the model and its vectors are rebuilt below from the mutated source.
-    const built = path.join(repo, 'lean/.lake/build/lib/lean/CardanoKeri');
-    for (const file of fs.readdirSync(built).filter(f => f.endsWith('.olean') && !f.startsWith(model))) {
-      fs.copyFileSync(path.join(built, file), path.join(dir, 'CardanoKeri', file));
-    }
-  }
-  if (model === 'Checkpoint') {
-    for (const dependency of ['Registry', 'Duplicity', 'DuplicityExamples', 'CheckpointEventHistory', 'CheckpointConviction']) {
-      fs.copyFileSync(path.join(repo, `lean/.lake/build/lib/lean/CardanoKeri/${dependency}.olean`),
-        path.join(dir, `CardanoKeri/${dependency}.olean`));
-    }
-  }
   let mutated = source;
   if (!baseline) {
     if (source.split(c.before).length !== 2) throw Error(`${id}: source match must be unique`);
     mutated = source.replace(c.before, c.after);
   }
-  fs.writeFileSync(path.join(dir, `CardanoKeri/${model}.lean`), mutated);
-  fs.writeFileSync(path.join(dir, `CardanoKeri/${fixtureModule}.lean`), fixtures);
   const test = fs.readFileSync(path.join(repo, `lean/${c.test}.lean`), 'utf8');
   fs.writeFileSync(path.join(dir, 'Subject.lean'), test);
   fs.writeFileSync(path.join(dir, 'identity.json'), JSON.stringify({ registry: sha(mutated), subject: sha(test) }, null, 2));
@@ -72,10 +56,31 @@ function run(c, baseline) {
     if (result.error || result.signal) throw Error(`${id}: setup/timeout ${label}`);
     return result;
   }
-  for (const module of (model === 'Registry' || vectorCampaign ? [model, fixtureModule] : [model])) {
-    const r = command(`build-${module}`, ['-o', `CardanoKeri/${module}.olean`, `CardanoKeri/${module}.lean`]);
-    if (r.status !== 0) throw Error(`${id}: model/fixture compilation failed; not a semantic kill`);
+  // Lean resolves the package from the scratch directory. Stage the actual
+  // project import closure there, rebuilding any importer of a changed module.
+  const staged = new Map();
+  const imports = text => [...text.matchAll(/^import (CardanoKeri\.[\w.]+)\s*$/gm)].map(match => match[1]);
+  function stage(module) {
+    if (staged.has(module)) return staged.get(module);
+    const rel = module.replaceAll('.', '/');
+    const name = module.slice('CardanoKeri.'.length);
+    const input = name === model ? mutated : fs.readFileSync(path.join(repo, 'lean', rel + '.lean'), 'utf8');
+    const dependencies = imports(input).map(stage);
+    const rebuild = name === model || name === fixtureModule || dependencies.includes(true);
+    fs.mkdirSync(path.dirname(path.join(dir, rel)), {recursive:true});
+    if (rebuild) {
+      fs.writeFileSync(path.join(dir, rel + '.lean'), input);
+      if (command('build-' + name, ['-o', rel + '.olean', rel + '.lean']).status !== 0)
+        throw Error(id + ': failed to compile ' + module + '; no semantic result');
+    } else {
+      fs.copyFileSync(path.join(repo, 'lean/.lake/build/lib/lean', rel + '.olean'), path.join(dir, rel + '.olean'),
+        fs.constants.COPYFILE_FICLONE);
+    }
+    staged.set(module, rebuild);
+    return rebuild;
   }
+  for (const dependency of imports(test)) stage(dependency);
+  if (!staged.get('CardanoKeri.' + model)) throw Error(id + ': subject does not import the mutated model');
   if (command('elaborate-subject', ['Subject.lean']).status !== 0) throw Error(`${id}: subject failed compilation; not a semantic kill`);
   const r = command('execute', ['--run', 'Subject.lean', ...(c.args ?? []), ...subjectArgs]);
   if (baseline) {

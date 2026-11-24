@@ -40,7 +40,7 @@ structure Machine where
 
 def Machine.init (d : Deployment) : Machine := ⟨CertifiedSys.init d, [], []⟩
 
-def execute (machine : Machine) (p : Params) (env : Env) (command : Command) :
+def execute (machine : Machine) (p : Params) (env : SystemEnv) (command : Command) :
     Except String (Machine × Option Flow × Option CardanoKeri.Registry.Flow) := do
   let current := machine.certified
   let result ← match command with
@@ -83,9 +83,16 @@ def stateJson (machine : Machine) : Json :=
         ("reference", toJson association.reference), ("entry", toJson association.entry),
         ("booked", toJson association.booked)])]).toArray)]
 
-def cell (name : String) (p : Params) (table : EnvTable) (machine : Machine)
+/-- Each row supplies the evidence of one identifier. An unlisted identity has
+no witnessed rotation, deposit signature, poison quorum or conviction pair. -/
+abbrev EvidenceTable := List (AID × EnvTable)
+
+def evidenceFor (table : EvidenceTable) (aid : AID) : Env :=
+  ((table.lookup aid).getD ⟨[], [], [], []⟩).toEnv
+
+def cell (name : String) (p : Params) (table : EvidenceTable) (machine : Machine)
     (command : Command) : Json × Machine :=
-  let (result, next) := match execute machine p table.toEnv command with
+  let (result, next) := match execute machine p (evidenceFor table) command with
     | .error why => (Json.mkObj [("error", toJson why)], machine)
     | .ok (next, flow, registryFlow) =>
       (Json.mkObj [("ok", Json.mkObj [("state", stateJson next),

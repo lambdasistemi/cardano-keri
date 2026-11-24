@@ -58,10 +58,10 @@ namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T6_frozen_flips_only_by_rotation_or_freeze : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live} {f : Flow} (_h : Step p env a t (.present l) f (.present l')) (_hne : l'.frozen ≠ l.frozen), a.actor = .nextKeys ∨ (∃ sn' payee, a = .freeze sn' payee))
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T8_leaf_agrees_with_state : ∀ (p : Params) (env : Env) {s : Sys} (_h : SysReach p env s) (aid : AID), s.leaves aid = (s.states aid).leaf)
+#check (@CardanoKeri.Checkpoint.T8_leaf_agrees_with_state : ∀ (p : Params) (env : SystemEnv) {s : Sys} (_h : SysReach p env s) (aid : AID), s.leaves aid = (s.states aid).leaf)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T8_present_implies_registered : ∀ (p : Params) (env : Env) {s : Sys} (_h : SysReach p env s) (aid : AID) (_hne : s.states aid ≠ .absent), s.leaves aid ≠ .absent)
+#check (@CardanoKeri.Checkpoint.T8_present_implies_registered : ∀ (p : Params) (env : SystemEnv) {s : Sys} (_h : SysReach p env s) (aid : AID) (_hne : s.states aid ≠ .absent), s.leaves aid ≠ .absent)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T9_juvenility_is_consumer_only : ∀ (p : Params) (env : Env) (W' : Nat) {a : Action} {t : Slot} {s s' : State} {f : Flow}, Step p env a t s f s' ↔ Step { p with W := W' } env a t s f s')

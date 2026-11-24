@@ -35,6 +35,7 @@ inductive BondOp where
   | deposit
   deriving DecidableEq, Repr
 
+/-- Evidence presented for one checkpoint. -/
 structure Env where
 
   rotationTo : Epoch → Seq → Seq → Bool
@@ -47,6 +48,12 @@ structure Env where
   convictionContext : Epoch → Seq → Option CardanoKeri.Duplicity.Context
 
   convictionRival : Epoch → Seq → Option CardanoKeri.Duplicity.SignedEvent
+
+/-- The checkpoint spend selects its identifier before consulting any evidence.
+A rotation relayer or a hunter supplies the witnessed event for that identifier.
+A deposit additionally carries its successor-key intent. For a poison spend
+the controller supplies that identifier’s current-key threshold authorization. -/
+abbrev SystemEnv := AID → Env
 
 def Env.duplicityAt (env : Env) (epoch : Epoch) (sn : Seq) : Bool :=
   match env.convictionContext epoch sn, env.convictionRival epoch sn with
@@ -517,12 +524,12 @@ instance (p : Params) (rp : CardanoKeri.Registry.Params) (b : Singular.Registrat
 
 -- Registration is the only event that creates an origin. Existing ordinary
 -- local operations preserve the already stored origin/pending map.
-def RegistrationEvent (p : Params) (env : Env) (s s' : Sys) : Prop :=
+def RegistrationEvent (p : Params) (env : SystemEnv) (s s' : Sys) : Prop :=
   ∃ (aid : AID) (now : Slot) (refund : Addr) (pool0 : Value) (f : Flow) (st : State)
     (rp : CardanoKeri.Registry.Params) (re : CardanoKeri.Registry.Env) (cfg : Singular.Config)
     (receipt : CardanoKeri.Registry.FoldReceipt rp re cfg) (b : Singular.RegistrationBooking) (origin : Origin),
     s.leaves aid = .absent ∧ s.origins aid = none ∧
-    Step p env (.register refund pool0) now (s.states aid) f st ∧
+    Step p (env aid) (.register refund pool0) now (s.states aid) f st ∧
     DeliveredOrigin receipt b aid origin ∧ BookedFacts p rp b now refund pool0 ∧
     s' = s.installOrigin aid st origin
 
@@ -530,7 +537,7 @@ def RegistrationEvent (p : Params) (env : Env) (s s' : Sys) : Prop :=
 the same booking and receipt identify the stored origin and the new live state.
 Its birth time and refund address are the booked ones. Its pool accounts for
 all carrier value above minimum ADA and the two checkpoint bonds. -/
-theorem registration_installs_booked_facts {p : Params} {env : Env} {s s' : Sys}
+theorem registration_installs_booked_facts {p : Params} {env : SystemEnv} {s s' : Sys}
     (event : RegistrationEvent p env s s') :
     ∃ aid origin rp re cfg, ∃ (receipt : CardanoKeri.Registry.FoldReceipt rp re cfg)
       (booking : Singular.RegistrationBooking) (live : Live),
@@ -586,12 +593,38 @@ theorem Sys.retireRevealed_frame (s : Sys) (a : Action) :
 
 -- A local step of one checkpoint. A conviction also reveals its commitment in
 -- the same transaction: the commitment must be open, and its marker is burnt.
-def LocalEvent (p : Params) (env : Env) (s s' : Sys) : Prop :=
+def LocalEvent (p : Params) (env : SystemEnv) (s s' : Sys) : Prop :=
   ∃ (aid : AID) (a : Action) (now : Slot) (f : Flow) (st : State),
     (∀ refund pool0, a ≠ .register refund pool0) ∧
-    Step p env a now (s.states aid) f st ∧
+    Step p (env aid) a now (s.states aid) f st ∧
     s.revealOpen aid a ∧
     s' = (s.set aid st).retireRevealed a
+
+/-- The identity and key-state evidence required by a local action. A deposit
+uses the keys of the new epoch. Freeze, like keep, relays a witnessed rotation. -/
+def Action.authorizedFor (a : Action) (env : SystemEnv) (aid : AID) (s : State) : Prop :=
+  match a, s with
+  | .rotate target .keep _, .present l | .freeze target _, .present l =>
+    (env aid).rotationTo l.epoch l.sn target = true
+  | .rotate target .deposit _, .present l =>
+    (env aid).rotationTo l.epoch l.sn target = true ∧
+    (env aid).depositAuthorized (l.epoch + 1) = true
+  | .poison, .present l => (env aid).quorum l.epoch = true
+  | .rotate .., _ | .freeze .., _ | .poison, _ => False
+  | _, _ => True
+
+/-- Given a local system event, when it updates a checkpoint, then the very
+action and identifier producing the successor have that identifier's required
+rotation, deposit or poison authorization for its prior live state. -/
+theorem local_event_uses_own_authorization {p : Params} {env : SystemEnv} {s s' : Sys}
+    (event : LocalEvent p env s s') :
+    ∃ aid a now flow st, Step p (env aid) a now (s.states aid) flow st ∧
+      a.authorizedFor env aid (s.states aid) ∧ s.revealOpen aid a ∧
+      s' = (s.set aid st).retireRevealed a := by
+  obtain ⟨aid, a, now, flow, st, _, step, opened, installed⟩ := event
+  refine ⟨aid, a, now, flow, st, step, ?_, opened, installed⟩
+  generalize h : s.states aid = before at step ⊢
+  cases step <;> simp_all [Action.authorizedFor]
 
 /-- Opening a commitment. The commitment program reads no checkpoint: it can be
 opened over any identifier, key state and deployment, whether or not a checkpoint
@@ -653,7 +686,7 @@ def CompletionEvent (s s' : Sys) : Prop :=
       association.origin.environment association.origin.configuration),
     ReceiptMatches s aid association receipt ∧ s' = s.finish aid
 
-inductive SysStep (p : Params) (env : Env) : Sys → Sys → Prop where
+inductive SysStep (p : Params) (env : SystemEnv) : Sys → Sys → Prop where
   | register {s s' : Sys} : RegistrationEvent p env s s' → SysStep p env s s'
   | local {s s' : Sys} : LocalEvent p env s s' → SysStep p env s s'
   | book {s s' : Sys} : BookingEvent s s' → SysStep p env s s'
@@ -662,7 +695,7 @@ inductive SysStep (p : Params) (env : Env) : Sys → Sys → Prop where
   | reveal {s s' : Sys} : RevealEvent s s' → SysStep p env s s'
   | sweep {s s' : Sys} : SweepEvent s s' → SysStep p env s s'
 
-inductive SysReach (p : Params) (env : Env) : Sys → Prop where
+inductive SysReach (p : Params) (env : SystemEnv) : Sys → Prop where
   | init (d : Deployment) : SysReach p env (Sys.init d)
   | step {s s' : Sys} : SysReach p env s → SysStep p env s s' → SysReach p env s'
 

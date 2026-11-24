@@ -34,7 +34,7 @@ theorem delivered_origin_reachable {rp : CardanoKeri.Registry.Params}
 /-- Given reachable stored origins and pending booking snapshots, when any
 actual Checkpoint system event occurs, then both sets of stored snapshots
 remain reachable under their own unchanged Registry contexts. -/
-theorem sysstep_snapshot_reachability (p : Params) (env : Env) {s next : Sys}
+theorem sysstep_snapshot_reachability (p : Params) (env : SystemEnv) {s next : Sys}
     (origins : OriginsReachable s) (pending : PendingReachable s)
     (step : SysStep p env s next) : OriginsReachable next ∧ PendingReachable next := by
   cases step with
@@ -97,7 +97,7 @@ def PendingOrigins (s : Sys) : Prop :=
 /-- Given pending associations that name their stored origins, when an actual
 system event occurs, then every remaining or newly booked association still
 names the origin stored at that same AID. -/
-theorem sysstep_pending_origins (p : Params) (env : Env) {s next : Sys}
+theorem sysstep_pending_origins (p : Params) (env : SystemEnv) {s next : Sys}
     (bound : PendingOrigins s) (step : SysStep p env s next) : PendingOrigins next := by
   cases step with
   | register event =>
@@ -150,7 +150,7 @@ def CertifiedSys.init (d : Deployment) : CertifiedSys := {
   pending := by intro aid association found; cases found
   bound := by intro aid association found; cases found }
 
-def CertifiedSys.advance (current : CertifiedSys) {p : Params} {env : Env} {next : Sys}
+def CertifiedSys.advance (current : CertifiedSys) {p : Params} {env : SystemEnv} {next : Sys}
     (step : SysStep p env current.state next) : CertifiedSys := {
   state := next
   origins := (sysstep_snapshot_reachability p env current.origins current.pending step).1

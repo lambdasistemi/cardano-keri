@@ -148,10 +148,10 @@ namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.pending_custody_observations : ∀ (p : Params) (h : Hash), (State.terminationPending h).hasOutput = true ∧ (State.terminationPending h).representativeHeld = 1 ∧ (State.terminationPending h).leaf = .active ∧ (State.terminationPending h).sn? = some h.sn ∧ (State.terminationPending h).dregHeld p = 0 ∧ (State.terminationPending h).bHeld p = 0 ∧ (State.terminationPending h).poolHeld = 0)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T8_sysstep_partition : ∀ (p : Params) (env : Env) {s s' : Sys} (_h : SysStep p env s s'), RegistrationEvent p env s s' ∨ LocalEvent p env s s' ∨ BookingEvent s s' ∨ CompletionEvent s s' ∨ OpenEvent s s' ∨ RevealEvent s s' ∨ SweepEvent s s')
+#check (@CardanoKeri.Checkpoint.T8_sysstep_partition : ∀ (p : Params) (env : SystemEnv) {s s' : Sys} (_h : SysStep p env s s'), RegistrationEvent p env s s' ∨ LocalEvent p env s s' ∨ BookingEvent s s' ∨ CompletionEvent s s' ∨ OpenEvent s s' ∨ RevealEvent s s' ∨ SweepEvent s s')
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.local_event_preserves_associations : ∀ (p : Params) (env : Env) {s s' : Sys} (_h : LocalEvent p env s s'), s'.origins = s.origins ∧ s'.pending = s.pending)
+#check (@CardanoKeri.Checkpoint.local_event_preserves_associations : ∀ (p : Params) (env : SystemEnv) {s s' : Sys} (_h : LocalEvent p env s s'), s'.origins = s.origins ∧ s'.pending = s.pending)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.booking_event_preserves_checkpoint : ∀ (s s' : Sys) (_h : BookingEvent s s'), s'.states = s.states ∧ s'.leaves = s.leaves ∧ s'.origins = s.origins)
@@ -166,7 +166,7 @@ namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.completion_uses_recorded_pending_key : ∀ (s s' : Sys) (_h : CompletionEvent s s'), ∃ aid association, s.pending aid = some association ∧ s.origins aid = some association.origin ∧ s.states aid = .terminationPending association.keyState ∧ s'.states aid = .convicted ∧ s'.pending aid = none ∧ s'.origins = s.origins)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.sysstep_preserves_existing_origin : ∀ (p : Params) (env : Env) {s s' : Sys} (_hs : SysStep p env s s') (aid : AID) (origin : Origin) (_ho : s.origins aid = some origin), s'.origins aid = some origin)
+#check (@CardanoKeri.Checkpoint.sysstep_preserves_existing_origin : ∀ (p : Params) (env : SystemEnv) {s s' : Sys} (_hs : SysStep p env s s') (aid : AID) (origin : Origin) (_ho : s.origins aid = some origin), s'.origins aid = some origin)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Registry.Examples
 #check (@CardanoKeri.Registry.Examples.W5_connected_termination : ∃ registered pending booked retired, ∃ (b : Singular.TerminationBooking) (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction) (f : Flow), RegistrationJourney registered ∧ convictCkpt env registered 11 = .ok ({}, pending) ∧ carrierAt pending 11 = some { liveCarrier with st := .terminationPending } ∧ Singular.trieGet pending.trie 11 = .known .active ∧ b.request.reference = ⟨200, 0⟩ ∧ bookTermination p pending 11 7 1 b = .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, booked) ∧ Singular.worldSingularSupply booked.toWorld 11 = 1 ∧ fold p booked booked.gen cfg.applicationPolicy u tx = .ok (f, retired) ∧ Singular.trieGet retired.trie 11 = .known .terminal ∧ Singular.worldSingularSupply retired.toWorld 11 = 0 ∧ tx.transaction.donation = 2 ∧ Singular.foldCarrierLovelace tx.outputs = 0 ∧ pendingAt retired ⟨200, 0⟩ = none)
@@ -175,16 +175,16 @@ namespace CardanoKeri.Registry.Examples
 #check (@CardanoKeri.Registry.Examples.phantom_binding_not_wellFormed : ¬ WellFormed p { Sys.init cfg with bindings := [(11, 0)], nextToken := 1 })
 end CardanoKeri.Registry.Examples
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T8_edges_leave_the_leaf : ∀ (p : Params) (env : Env) {s : Sys} {aid : AID} {a : Action} {now : Slot} {f : Flow} {st' : State} (_hs : SysReach p env s) (_hstep : Step p env a now (s.states aid) f st'), (s.set aid st').leaves = s.leaves ↔ a.touchesLeaf = false)
+#check (@CardanoKeri.Checkpoint.T8_edges_leave_the_leaf : ∀ (p : Params) (env : SystemEnv) {s : Sys} {aid : AID} {a : Action} {now : Slot} {f : Flow} {st' : State} (_hs : SysReach p env s) (_hstep : Step p (env aid) a now (s.states aid) f st'), (s.set aid st').leaves = s.leaves ↔ a.touchesLeaf = false)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T8_leaf_states : ∀ (p : Params) (env : Env) {s : Sys} (_h : SysReach p env s) (aid : AID), (s.leaves aid = .active ↔ (∃ l, s.states aid = .present l) ∨ (∃ pending, s.states aid = .terminationPending pending)) ∧ (s.leaves aid = .retired → s.states aid = .convicted))
+#check (@CardanoKeri.Checkpoint.T8_leaf_states : ∀ (p : Params) (env : SystemEnv) {s : Sys} (_h : SysReach p env s) (aid : AID), (s.leaves aid = .active ↔ (∃ l, s.states aid = .present l) ∨ (∃ pending, s.states aid = .terminationPending pending)) ∧ (s.leaves aid = .retired → s.states aid = .convicted))
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T8_utxo_iff_active : ∀ (p : Params) (env : Env) {s : Sys} (_h : SysReach p env s) (aid : AID), (s.states aid).hasOutput = true ↔ s.leaves aid = .active)
+#check (@CardanoKeri.Checkpoint.T8_utxo_iff_active : ∀ (p : Params) (env : SystemEnv) {s : Sys} (_h : SysReach p env s) (aid : AID), (s.states aid).hasOutput = true ↔ s.leaves aid = .active)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T8_mint_once : ∀ (p : Params) (env : Env) {s : Sys} (_h : SysReach p env s) (aid : AID), ∀ refund pool0 now f st', Step p env (.register refund pool0) now (s.states aid) f st' → s.leaves aid = .absent)
+#check (@CardanoKeri.Checkpoint.T8_mint_once : ∀ (p : Params) (env : SystemEnv) {s : Sys} (_h : SysReach p env s) (aid : AID), ∀ refund pool0 now f st', Step p (env aid) (.register refund pool0) now (s.states aid) f st' → s.leaves aid = .absent)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T6_component_conservation : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {s s' : State} {f : Flow} (_h : Step p env a t s f s'), s.dregHeld p + f.dregIn = s'.dregHeld p + Payment?.dreg f.refund + Payment?.dreg f.hunter + Payment?.dreg f.convictor ∧ s.bHeld p + f.bIn = s'.bHeld p + Payment?.b f.refund + Payment?.b f.hunter + Payment?.b f.convictor ∧ s.poolHeld + f.poolIn = s'.poolHeld + Payment?.pool f.refund + Payment?.pool f.hunter + Payment?.pool f.convictor)
@@ -229,7 +229,7 @@ namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T6_dreg_never_a_fee : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {s s' : State} {f : Flow} (_h : Step p env a t s f s'), Payment?.dreg f.hunter = 0 ∧ (Payment?.dreg f.refund ≠ 0 → Payment?.dreg f.refund = p.D ∧ s.dregHeld p = p.D ∧ s'.dregHeld p = 0) ∧ (Payment?.dreg f.convictor ≠ 0 → Payment?.dreg f.convictor = p.D ∧ s.dregHeld p = p.D ∧ ∃ l, s = .present l ∧ s' = .terminationPending l.hash))
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T8_leaf_never_absent_again : ∀ (p : Params) (env : Env) {s s' : Sys} (_hs : SysReach p env s) (_h : SysStep p env s s') (aid : AID), (s.leaves aid ≠ .absent → s'.leaves aid ≠ .absent) ∧ (s.leaves aid = .retired → s'.leaves aid = .retired))
+#check (@CardanoKeri.Checkpoint.T8_leaf_never_absent_again : ∀ (p : Params) (env : SystemEnv) {s s' : Sys} (_hs : SysReach p env s) (_h : SysStep p env s s') (aid : AID), (s.leaves aid ≠ .absent → s'.leaves aid ≠ .absent) ∧ (s.leaves aid = .retired → s'.leaves aid = .retired))
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T6_dreg_enters_only_at_birth : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {s s' : State} {f : Flow} (_h : Step p env a t s f s') (_hin : f.dregIn ≠ 0), (∃ refund pool0, a = .register refund pool0 ∧ s = .absent) ∧ f.dregIn = p.D ∧ f.bIn = p.B ∧ ∃ l', s' = .present l' ∧ l'.frozen = false ∧ l'.bornAt = t)

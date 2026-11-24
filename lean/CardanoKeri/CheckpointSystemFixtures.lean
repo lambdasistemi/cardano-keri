@@ -13,6 +13,8 @@ def evidence : EnvTable := {
   depositAuthorized := []
   quorum := []
   duplicityAt := [(0, 0), (1, 1), (2, 2)] }
+def byIdentifier : EvidenceTable := [(11, evidence)]
+
 def registryEnvironment : Registry.TraceWire.EnvTable := {
   inception := [11, 12, 13]
   duplicity := [(11, 0), (11, 1), (11, 2), (12, 0)] }
@@ -57,7 +59,7 @@ def convictedCommand : Command := .local 11 5 (.convict 7 commitment)
 def registryLocalHistory : List Registry.Action := [.convictCkpt 11]
 
 def advance (machine : Machine) (command : Command) : Except String Machine := do
-  let (next, _, _) ← execute machine p evidence.toEnv command
+  let (next, _, _) ← execute machine p (evidenceFor byIdentifier) command
   pure next
 
 def bookingCommand (registered : Registry.Sys) : Except String Command := do
@@ -110,12 +112,40 @@ def fixture : Except String Fixture := do
     registration, registered, pending, booking, booked, completion,
     otherHistory, otherCompletion, mixedCompletion }
 
-def trace (name : String) (commands : List (String × Command)) (d : Deployment := deployment) : Json :=
+def trace (name : String) (commands : List (String × Command)) (d : Deployment := deployment) (table : EvidenceTable := byIdentifier) : Json :=
   let (cells, final) := commands.foldl (fun (cells, current) (name, command) =>
-    let (result, next) := cell name p evidence current command
+    let (result, next) := cell name p table current command
     (cells ++ [result], next)) ([], (Machine.init d))
   Json.mkObj [("name", toJson name), ("deployment", toJson d), ("initial", stateJson (Machine.init d)),
     ("cells", toJson cells), ("final", stateJson final)]
+
+/-- Two identifiers in a single fold of the same registry. The certificates point
+to different holdings of that transaction. Both are at epoch and sequence zero. -/
+def authorizationTrace : Except String Json := do
+  let initial := Registry.Sys.init context.configuration
+  let first := Registry.Scenarios.registration initial 11 100 5
+  let second := Registry.Scenarios.registration initial 12 101 5
+  let history := [Registry.Action.bookRegistration first, .bookRegistration second]
+  let booked ← Registry.replay context.parameters context.environment.toEnv initial history
+  let (u, tx) ← Registry.Scenarios.foldTransaction booked
+    [first.request.reference, second.request.reference] 2 1 1
+  let register := fun (b : Singular.RegistrationBooking) => do
+    let some index := tx.outputs.findIdx? (fun o =>
+      o.singularTags == [booked.config.singularTag b.request.key]) | throw "missing registered holding"
+    pure (Command.register b.request.key 1 42 5 context ⟨history, u, tx⟩ b index)
+  let a ← register first
+  let b ← register second
+  let table : EvidenceTable := [
+    (11, ⟨[(0,0,1), (0,0,2)], [1], [0], []⟩),
+    (12, ⟨[(0,0,1)], [], [], []⟩)]
+  pure (trace "identity-bound-authorizations" [
+    ("register-first", a), ("register-second", b),
+    ("foreign-rotation-refused", .local 12 3 (.rotate 2 .keep 7)),
+    ("foreign-poison-refused", .local 12 3 .poison),
+    ("foreign-deposit-refused-with-own-rotation", .local 12 3 (.rotate 1 .deposit 7)),
+    ("own-poison", .local 11 3 .poison),
+    ("own-deposit", .local 11 4 (.rotate 1 .deposit 7)),
+    ("own-keep", .local 12 4 (.rotate 1 .keep 7))] (table := table))
 
 def traces : Except String (List Json) := do
   let f ← fixture
@@ -123,6 +153,9 @@ def traces : Except String (List Json) := do
     ("rotate-again", rotatedAgainCommand), ("open-commitment", openCommand),
     ("convict", convictedCommand), ("book", f.booking)]
   let restricted ← registrationCommand { context with environment.duplicity := [] }
+  let .register aid now refund pool ctx cert b index := f.registration | throw "registration fixture required"
+  let registration := fun t r v => Command.register aid t r v ctx cert b index
+  let authorizations ← authorizationTrace
   pure [
     trace "retained-associated-completion" (journey ++ [
       ("pending-refuses-local-rotation", .local 11 6 (.rotate 3 .keep 7)), ("complete", f.completion),
@@ -158,6 +191,12 @@ def traces : Except String (List Json) := do
       ("open-commitment", openCommand),
       ("convict-with-the-other-deployment-commitment-refused", convictedCommand),
       ("open-commitment-for-this-deployment", .openCommitment foreignCommitment),
-      ("convict", .local 11 5 (.convict 7 foreignCommitment))] ]
+      ("convict", .local 11 5 (.convict 7 foreignCommitment))],
+    trace "registered-booking-facts" [
+      ("different-birth-refused", registration (now+1) refund pool),
+      ("different-refund-refused", registration now (refund+1) pool),
+      ("different-pool-refused", registration now refund (pool+1)),
+      ("booked-facts-accepted", f.registration)],
+    authorizations ]
 
 end CardanoKeri.Checkpoint.SystemFixtures

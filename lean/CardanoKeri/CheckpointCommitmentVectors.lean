@@ -135,7 +135,7 @@ open SystemWire SystemFixtures in
 /-- Run named commands from a machine and record each outcome and the open markers after it. -/
 def runCells (start : Machine) (commands : List (String × Command)) : List Json :=
   (commands.foldl (fun (cells, machine) (name, command) =>
-    match execute machine SystemFixtures.p SystemFixtures.evidence.toEnv command with
+    match execute machine SystemFixtures.p (evidenceFor SystemFixtures.byIdentifier) command with
     | .error why => (cells ++ [Json.mkObj [("name", toJson name), ("outcome", toJson why)]], machine)
     | .ok (next, _, _) =>
       let state := next.certified.state

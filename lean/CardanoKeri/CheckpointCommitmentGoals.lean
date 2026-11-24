@@ -355,7 +355,7 @@ Given a reachable system.
 When an open commitment is read under marker `m`.
 Then its marker is `m`, and it is first eligible in the slot after its opening and no later
 than it expires. -/
-theorem ledger_well_formed (p : Params) (env : Env) {s : Sys} (h : SysReach p env s) :
+theorem ledger_well_formed (p : Params) (env : SystemEnv) {s : Sys} (h : SysReach p env s) :
     ∀ m c, s.commitments m = some c → c.marker = m ∧ c.wellFormed := by
   induction h with
   | init d => intro m c found; cases found
@@ -413,12 +413,12 @@ commitment `c`: before the step `c` was open under its marker and named that AID
 and the system's deployment,
 `c` entitles `payee` to convict `l` at that slot, and after the step `c` is no
 longer open (its marker is burnt, so it entitles no second conviction). -/
-theorem sys_conviction_consumes_commitment (p : Params) (env : Env) {s s' : Sys}
+theorem sys_conviction_consumes_commitment (p : Params) (env : SystemEnv) {s s' : Sys}
     (h : SysStep p env s s') {aid : AID} {l : Live} {k : Hash}
     (hlive : s.states aid = .present l) (hpending : s'.states aid = .terminationPending k) :
     ∃ (payee : Addr) (c : Commitment) (now : Slot),
       s.commitments c.marker = some c ∧ c.aid = aid ∧ c.deployment = s.deployment ∧
-      c.entitles env l payee now ∧ s'.commitments c.marker = none := by
+      c.entitles (env aid) l payee now ∧ s'.commitments c.marker = none := by
   cases h with
   | register event =>
     obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, step, _, _, rfl⟩ := event
@@ -434,7 +434,7 @@ theorem sys_conviction_consumes_commitment (p : Params) (env : Env) {s s' : Sys}
       simp [Sys.set] at hpending
       subst hpending
       rw [hlive] at step
-      obtain ⟨l', payee, c, hl, rfl, _, hent, _⟩ := pending_only_by_conviction p env step
+      obtain ⟨l', payee, c, hl, rfl, _, hent, _⟩ := pending_only_by_conviction p _ step
       cases hl
       obtain ⟨hopen, haid, hdep⟩ := (Sys.revealOpen_iff _ _ _).mp opened c rfl
       refine ⟨payee, c, now, hopen, haid, hdep, hent, ?_⟩
@@ -467,11 +467,11 @@ When the commitment that step reveals is read.
 Then the conviction's slot is strictly after the upper end of the commitment's
 opening transaction's validity range, so the opening transaction cannot share the
 conviction's slot. -/
-theorem sys_conviction_after_opening_slot (p : Params) (env : Env) {s s' : Sys}
+theorem sys_conviction_after_opening_slot (p : Params) (env : SystemEnv) {s s' : Sys}
     (reach : SysReach p env s) (h : SysStep p env s s') {aid : AID} {l : Live} {k : Hash}
     (hlive : s.states aid = .present l) (hpending : s'.states aid = .terminationPending k) :
     ∃ (payee : Addr) (c : Commitment) (now : Slot),
-      s.commitments c.marker = some c ∧ c.entitles env l payee now ∧ c.openedAt < now := by
+      s.commitments c.marker = some c ∧ c.entitles (env aid) l payee now ∧ c.openedAt < now := by
   obtain ⟨payee, c, now, hopen, _, _, hent, _⟩ :=
     sys_conviction_consumes_commitment p env h hlive hpending
   have formed := (ledger_well_formed p env reach c.marker c hopen).2
@@ -483,7 +483,7 @@ after which nothing is open under `m`.
 When the step is read.
 Then it happened at a slot inside `c`'s window (a reveal, or the conviction that
 revealed `c`) or strictly after it (a sweep); never before `c` was eligible. -/
-theorem commitment_closes_in_or_after_window (p : Params) (env : Env) {s s' : Sys}
+theorem commitment_closes_in_or_after_window (p : Params) (env : SystemEnv) {s s' : Sys}
     (reach : SysReach p env s) (h : SysStep p env s s') {m : Marker} {c : Commitment}
     (hopen : s.commitments m = some c) (hclosed : s'.commitments m = none) :
     ∃ now : Slot, (c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt) ∨ c.expiresAt < now := by
@@ -505,7 +505,7 @@ theorem commitment_closes_in_or_after_window (p : Params) (env : Env) {s s' : Sy
           obtain ⟨ropen, _⟩ := (Sys.revealOpen_iff _ _ _).mp opened r rfl
           rw [← same, hopen] at ropen
           cases ropen
-          obtain ⟨_, _, _, hent⟩ := convict_requires_entitlement p env step
+          obtain ⟨_, _, _, hent⟩ := convict_requires_entitlement p _ step
           exact ⟨now, Or.inl ⟨hent.2.2.2.1, hent.2.2.2.2⟩⟩
         | register | rotate | poison | freeze | topUp => cases hr
       · simp [same, hopen] at hclosed
@@ -546,7 +546,7 @@ theorem commitment_closes_in_or_after_window (p : Params) (env : Env) {s s' : Sy
 Given any system step.
 When the deployment is read before and after it.
 Then it is the same. -/
-theorem sys_step_keeps_deployment (p : Params) (env : Env) {s s' : Sys} (h : SysStep p env s s') :
+theorem sys_step_keeps_deployment (p : Params) (env : SystemEnv) {s s' : Sys} (h : SysStep p env s s') :
     s'.deployment = s.deployment := by
   cases h with
   | register event =>
@@ -582,13 +582,13 @@ a commitment `c` is considered.
 Then the step opened and burnt no commitment, the system's premise on `c` holds
 after the step exactly when it held before, and `c` entitles a payee at `l'`
 exactly when it did at `l`. -/
-theorem sys_commitment_survives_key_state_step (p : Params) (env : Env) {s s' : Sys}
+theorem sys_commitment_survives_key_state_step (p : Params) (env : SystemEnv) {s s' : Sys}
     (h : SysStep p env s s') {aid : AID} {l l' : Live}
     (hlive : s.states aid = .present l) (hlive' : s'.states aid = .present l')
     (hspent : l' ≠ l) (hkey : l'.hash = l.hash) (c : Commitment) (payee : Addr) (now : Slot) :
     s'.commitments = s.commitments ∧
       (s'.revealOpen aid (.convict payee c) ↔ s.revealOpen aid (.convict payee c)) ∧
-      (c.entitles env l' payee now ↔ c.entitles env l payee now) := by
+      (c.entitles (env aid) l' payee now ↔ c.entitles (env aid) l payee now) := by
   have hdep := sys_step_keeps_deployment p env h
   have hcomm : s'.commitments = s.commitments := by
     cases h with
@@ -626,7 +626,7 @@ theorem sys_commitment_survives_key_state_step (p : Params) (env : Env) {s s' : 
       obtain ⟨d, t, _, _, rfl⟩ := event
       simp [Sys.retire, hlive] at hlive'
       exact absurd hlive'.symm hspent
-  refine ⟨hcomm, ?_, Commitment.entitles_same_key_state env c hkey payee now⟩
+  refine ⟨hcomm, ?_, Commitment.entitles_same_key_state (env aid) c hkey payee now⟩
   simp [Sys.revealOpen, Sys.revealOpenB, Action.revealed, hcomm, hdep]
 
 /-- **A commitment naming another deployment is refused.**

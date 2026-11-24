@@ -263,7 +263,7 @@ when inspecting that AID afterward; then the exact stored origin and its
 reduced-to-full configuration binding remain. No changing current output
 reference or datum is inferred from stable origin provenance. -/
 theorem system_preserves_identity_binding (i : Interpretation) (c : Context)
-    (abstractRegistry : Singular.TokenId → Nat) (p : Params) (env : Env)
+    (abstractRegistry : Singular.TokenId → Nat) (p : Params) (env : SystemEnv)
     (s s' : Sys) (origin : Origin) (bound : originBinding i c abstractRegistry origin)
     (stored : s.origins c.aid = some origin) (step : SysStep p env s s') :
     s'.origins c.aid = some origin ∧ originBinding i c abstractRegistry origin := by

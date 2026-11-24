@@ -11,9 +11,9 @@ set_option maxRecDepth 10000
 set_option maxHeartbeats 2000000
 
 def p : Params := { D := 3, B := 2, P := 1, W := 5, hD := by decide, hB := by decide }
-def env : Env := {
-  rotationTo := fun epoch sn next => (epoch == 0 && sn == 0 && next == 1) ||
-    (epoch == 1 && sn == 1 && next == 2),
+def env (aid : AID) : Env := {
+  rotationTo := fun epoch sn next => aid == 11 && ((epoch == 0 && sn == 0 && next == 1) ||
+    (epoch == 1 && sn == 1 && next == 2)),
   depositAuthorized := fun _ => false,
   quorum := fun _ => false,
   convictionContext := fun epoch sn => some (Duplicity.fixture epoch sn).1,

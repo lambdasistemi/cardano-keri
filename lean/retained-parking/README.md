@@ -37,8 +37,9 @@ Set `LEAN_BIN` to the project's pinned compiler if it is not on PATH. Each run
 records exact sources, commands, model/subject compilation, exits and bound
 failures. Finite mutation coverage does not prove that no other fault survives.
 
-The two `run-system-implementation-mutants.mjs` cases alter the JavaScript
-certificate adapter: consuming another request and replacing the stored context.
+The `run-system-implementation-mutants.mjs` cases alter the JavaScript
+certificate adapter. They cover the consumed request, stored context, booked
+time, refund and pool, and the subject of rotation, deposit and poison evidence.
 They are implementation mutants. The separate foreign-context receipt controls
 are type-interface checks. Neither category is counted as a Lean model mutant.
 

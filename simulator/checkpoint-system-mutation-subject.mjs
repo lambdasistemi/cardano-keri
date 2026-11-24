@@ -1,4 +1,4 @@
-/* Runtime subject for two implementation mutations. The unchanged commands
+/* Runtime subject for implementation mutations. The unchanged commands
  * come from actual Lean certificate execution, including accepted prefixes. */
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -8,6 +8,12 @@ const corpus=JSON.parse(readFileSync(new URL('./checkpoint-system-corpus.json',i
 const names={
   'own-request':'other-valid-fold-cannot-complete-this-request',
   'stored-context':'booking-history-cannot-replace-stored-environment',
+  'booked-birth':'different-birth-refused',
+  'booked-refund':'different-refund-refused',
+  'booked-pool':'different-pool-refused',
+  'subject-rotation':'foreign-rotation-refused',
+  'subject-quorum':'foreign-poison-refused',
+  'subject-deposit':'foreign-deposit-refused-with-own-rotation',
 };
 const name=names[process.argv[2]];assert(name,'unknown subject');
 const trace=corpus.traces.find(t=>t.cells.some(c=>c.name===name));

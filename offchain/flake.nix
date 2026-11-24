@@ -562,8 +562,10 @@
             ps.cardano-keri.components.sublibs.chain-query-koios
             ps.cardano-keri.components.sublibs.cli
             ps.cardano-keri.components.sublibs.deployment
+            ps.cardano-keri.components.sublibs.deployment-koios
             ps.cardano-keri.components.sublibs.indexer
             ps.cardano-keri.components.sublibs.public-surface-fixtures
+            ps.cardano-keri.components.sublibs.registry-commands
             ps.cardano-keri.components.sublibs.write-composition
           ]);
           surfaceGhcLibdir =

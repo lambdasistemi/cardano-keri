@@ -34,15 +34,25 @@ use singular_state/preimage.{
 }
 
 fn accepts(tx: Transaction) -> Bool {
-  requests.accepts(run_mint, run_spend, tx)
+  accepts_at(rows.initial_floor, tx)
 }
 
-fn run_mint(actions: List<Action>, tx: Transaction) -> Bool {
+/// The application with another initial floor (the Lean's checkpoint parameters
+/// of the row `booking-below-registry-floor`).
+fn accepts_at(initial_floor: Int, tx: Transaction) -> Bool {
+  requests.accepts(
+    fn(actions, t) { run_mint(initial_floor, actions, t) },
+    run_spend,
+    tx,
+  )
+}
+
+fn run_mint(initial_floor: Int, actions: List<Action>, tx: Transaction) -> Bool {
   keri_application.keri_application.mint(
     cfg.state_template_hash,
     rows.observer_hash,
     rows.minimum_deposit,
-    rows.initial_floor,
+    initial_floor,
     rows.network_id,
     rows.checkpoint_minimum_ada,
     rows.termination_carrier,
@@ -217,6 +227,128 @@ test row_approval_without_booking() {
   accepts(requests.booking_tx(Booking { ..requests.booking(), actions: [] })) == False
 }
 
+/// Lean row `booking-without-inception-evidence`: the booking of a key that has no inception evidence: refused.
+test row_booking_without_inception_evidence() {
+  accepts(requests.booking_tx(Booking { ..requests.booking(), claim: None })) == False
+}
+
+/// Lean row `booking-advanced-sequence`: the request commits a checkpoint datum at sequence number 7: refused.
+test row_booking_advanced_sequence() {
+  accepts(
+    requests.booking_tx(
+      Booking { ..requests.booking(), data: rows.request_data(9011) },
+    ),
+  ) == False
+}
+
+/// Lean row `booking-advanced-epoch`: the committed datum is at epoch 3: refused.
+test row_booking_advanced_epoch() {
+  accepts(
+    requests.booking_tx(
+      Booking { ..requests.booking(), data: rows.request_data(9012) },
+    ),
+  ) == False
+}
+
+/// Lean row `booking-poisoned`: the committed datum is poisoned: refused.
+test row_booking_poisoned() {
+  accepts(
+    requests.booking_tx(
+      Booking { ..requests.booking(), data: rows.request_data(9013) },
+    ),
+  ) == False
+}
+
+/// Lean row `booking-frozen`: the committed datum is frozen: refused.
+test row_booking_frozen() {
+  accepts(
+    requests.booking_tx(
+      Booking { ..requests.booking(), data: rows.request_data(9014) },
+    ),
+  ) == False
+}
+
+/// Lean row `booking-topped-up`: the committed datum is topped up: refused.
+test row_booking_topped_up() {
+  accepts(
+    requests.booking_tx(
+      Booking { ..requests.booking(), data: rows.request_data(9015) },
+    ),
+  ) == False
+}
+
+/// Lean row `booking-born-later`: the committed datum is born one slot after the booking bound: refused.
+test row_booking_born_later() {
+  accepts(
+    requests.booking_tx(
+      Booking { ..requests.booking(), data: rows.request_data(9016) },
+    ),
+  ) == False
+}
+
+/// Lean row `booking-other-refund`: the committed datum refunds to another address than the request names: refused.
+test row_booking_other_refund() {
+  accepts(
+    requests.booking_tx(
+      Booking { ..requests.booking(), data: rows.request_data(9017) },
+    ),
+  ) == False
+}
+
+/// Lean row `booking-pending-termination`: the committed datum is a pending termination: refused.
+test row_booking_pending_termination() {
+  accepts(
+    requests.booking_tx(
+      Booking { ..requests.booking(), data: rows.request_data(9018) },
+    ),
+  ) == False
+}
+
+/// Lean row `booking-other-aid`: the committed datum is the initial datum of another AID: refused.
+test row_booking_other_aid() {
+  accepts(
+    requests.booking_tx(
+      Booking { ..requests.booking(), data: rows.request_data(9019) },
+    ),
+  ) == False
+}
+
+/// Lean row `booking-pool-below-premium`: a request of deposit 14, the minimum ADA 4, the deposit 6 and the freeze bond 4, leaving a pool below one premium: refused.
+test row_booking_pool_below_premium() {
+  accepts(
+    requests.booking_tx(
+      Booking {
+        ..requests.booking(),
+        data: rows.request_data(9007),
+        lovelace: 17,
+      },
+    ),
+  ) == False
+}
+
+/// Lean row `booking-unrecorded-refund`: a request whose refund address is not an address a checkpoint datum can record: refused.
+test row_booking_unrecorded_refund() {
+  accepts(
+    requests.booking_tx(
+      Booking { ..requests.booking(), data: rows.request_data(9008) },
+    ),
+  ) == False
+}
+
+/// Lean row `booking-below-registry-floor`: the same deposit of 13 under checkpoint parameters whose own floor it covers (deposit 4, freeze bond 4, one premium): one below the registry's minimum ADA 4 plus deposit 10, refused.
+test row_booking_below_registry_floor() {
+  accepts_at(
+    rows.initial_floor - 2,
+    requests.booking_tx(
+      Booking {
+        ..requests.booking(),
+        data: rows.request_data(9003),
+        lovelace: 16,
+      },
+    ),
+  ) == False
+}
+
 /// Lean row `fold-at-deadline`: a fold ending at the deadline, delivering exactly the deposit 15 in the initial state, a pool of one premium, donating the registration cost: accepted.
 test row_fold_at_deadline() {
   accepts(requests.fold_tx(requests.fold())) == True
@@ -283,7 +415,7 @@ test row_fold_at_application_address() {
   ) == False
 }
 
-/// Lean row `fold-at-committed-other-address`: a request committing another address than the checkpoint validator's, folded to that address: refused.
+/// Lean row `fold-at-committed-other-address`: a request committing another address than the checkpoint validator's, which no booking mints, folded to that address: the spend compares the holding with the committed address only, accepted.
 test row_fold_at_committed_other_address() {
   accepts(
     requests.fold_tx(
@@ -293,7 +425,7 @@ test row_fold_at_committed_other_address() {
         holding_address: rows.other_address,
       },
     ),
-  ) == False
+  ) == True
 }
 
 /// Lean row `fold-other-commitment-to-checkpoint`: a request committing another address than the checkpoint validator's, folded to the checkpoint validator: refused.
@@ -303,8 +435,8 @@ test row_fold_other_commitment_to_checkpoint() {
   ) == False
 }
 
-/// Lean row `fold-advanced-sequence`: the request committed, and the holding carries, a checkpoint datum at sequence number 7: refused.
-test row_fold_advanced_sequence() {
+/// Lean row `fold-committed-datum-not-initial`: a request committing a checkpoint datum at sequence number 7, which no booking mints, folded delivering that datum: the spend validates no datum, accepted.
+test row_fold_committed_datum_not_initial() {
   accepts(
     requests.fold_tx(
       Fold {
@@ -313,131 +445,67 @@ test row_fold_advanced_sequence() {
         holding_datum: rows.variant(1),
       },
     ),
-  ) == False
+  ) == True
 }
 
-/// Lean row `fold-advanced-epoch`: the committed datum is at epoch 3: refused.
-test row_fold_advanced_epoch() {
+/// Lean row `fold-without-inception-evidence`: the fold at the deadline when the key has no inception evidence: a fold reads none, accepted.
+test row_fold_without_inception_evidence() {
+  accepts(requests.fold_tx(requests.fold())) == True
+}
+
+/// Lean row `fold-built-by-singular-client`: the fold the Singular client builds from the public registry and the booked request alone, with the configuration record read by reference and the registration cost donated out of the folder's own output: accepted.
+test row_fold_built_by_singular_client() {
   accepts(
     requests.fold_tx(
       Fold {
         ..requests.fold(),
-        data: rows.request_data(9012),
-        holding_datum: rows.variant(2),
+        redeemer: FoldRegistration { holding_index: 1 },
+        before: [requests.pay(rows.folder_address, 2)],
+        after: [requests.pay(rows.spender_address, 5)],
+        extra_inputs: [
+          requests.plain_input(91, rows.folder_address, 2),
+          requests.plain_input(92, rows.spender_address, 5),
+        ],
+      },
+    ),
+  ) == True
+}
+
+/// Lean row `fold-built-by-singular-client-no-donation`: the same fold donating nothing, as the client builds it: refused.
+test row_fold_built_by_singular_client_no_donation() {
+  accepts(
+    requests.fold_tx(
+      Fold {
+        ..requests.fold(),
+        redeemer: FoldRegistration { holding_index: 1 },
+        before: [requests.pay(rows.folder_address, 2)],
+        after: [requests.pay(rows.spender_address, 7)],
+        extra_inputs: [
+          requests.plain_input(91, rows.folder_address, 2),
+          requests.plain_input(92, rows.spender_address, 5),
+        ],
+        donation: 0,
       },
     ),
   ) == False
 }
 
-/// Lean row `fold-poisoned`: the committed datum is poisoned: refused.
-test row_fold_poisoned() {
+/// Lean row `fold-built-by-singular-client-no-record`: the same fold without the configuration record as a reference input, as the client builds it: refused.
+test row_fold_built_by_singular_client_no_record() {
   accepts(
     requests.fold_tx(
       Fold {
         ..requests.fold(),
-        data: rows.request_data(9013),
-        holding_datum: rows.variant(3),
+        redeemer: FoldRegistration { holding_index: 1 },
+        before: [requests.pay(rows.folder_address, 2)],
+        after: [requests.pay(rows.spender_address, 5)],
+        extra_inputs: [
+          requests.plain_input(91, rows.folder_address, 2),
+          requests.plain_input(92, rows.spender_address, 5),
+        ],
+        references: False,
       },
     ),
-  ) == False
-}
-
-/// Lean row `fold-frozen`: the committed datum is frozen: refused.
-test row_fold_frozen() {
-  accepts(
-    requests.fold_tx(
-      Fold {
-        ..requests.fold(),
-        data: rows.request_data(9014),
-        holding_datum: rows.variant(4),
-      },
-    ),
-  ) == False
-}
-
-/// Lean row `fold-topped-up`: the committed datum is topped up: refused.
-test row_fold_topped_up() {
-  accepts(
-    requests.fold_tx(
-      Fold {
-        ..requests.fold(),
-        data: rows.request_data(9015),
-        holding_datum: rows.variant(5),
-      },
-    ),
-  ) == False
-}
-
-/// Lean row `fold-born-later`: the committed datum is born one slot after the booking bound: refused.
-test row_fold_born_later() {
-  accepts(
-    requests.fold_tx(
-      Fold {
-        ..requests.fold(),
-        data: rows.request_data(9016),
-        holding_datum: rows.variant(6),
-      },
-    ),
-  ) == False
-}
-
-/// Lean row `fold-other-refund`: the committed datum refunds to another address than the request names: refused.
-test row_fold_other_refund() {
-  accepts(
-    requests.fold_tx(
-      Fold {
-        ..requests.fold(),
-        data: rows.request_data(9017),
-        holding_datum: rows.variant(7),
-      },
-    ),
-  ) == False
-}
-
-/// Lean row `fold-pending-termination`: the committed datum is a pending termination: refused.
-test row_fold_pending_termination() {
-  accepts(
-    requests.fold_tx(
-      Fold {
-        ..requests.fold(),
-        data: rows.request_data(9018),
-        holding_datum: rows.variant(8),
-      },
-    ),
-  ) == False
-}
-
-/// Lean row `fold-other-aid`: the committed datum is the initial datum of another AID: refused.
-test row_fold_other_aid() {
-  accepts(
-    requests.fold_tx(
-      Fold {
-        ..requests.fold(),
-        data: rows.request_data(9019),
-        holding_datum: rows.initial_datum(1),
-      },
-    ),
-  ) == False
-}
-
-/// Lean row `fold-pool-below-premium`: a request of deposit 14, the minimum ADA 4, the deposit 6 and the freeze bond 4, leaving a pool below one premium: refused.
-test row_fold_pool_below_premium() {
-  accepts(
-    requests.fold_tx(
-      Fold {
-        ..requests.fold(),
-        data: rows.request_data(9007),
-        request_lovelace: 17,
-        holding_lovelace: 14,
-      },
-    ),
-  ) == False
-}
-
-/// Lean row `fold-unrecorded-refund`: a request whose refund address is not an address a checkpoint datum can record: refused.
-test row_fold_unrecorded_refund() {
-  accepts(
-    requests.fold_tx(Fold { ..requests.fold(), data: rows.request_data(9008) }),
   ) == False
 }
 
@@ -453,6 +521,11 @@ test row_checkpoint_spent_at_application_address() {
 
 /// Lean row `return-at-deadline`: a return starting at the deadline paying the refund address 17, the request less the tip: accepted.
 test row_return_at_deadline() {
+  accepts(requests.return_tx(requests.returned())) == True
+}
+
+/// Lean row `return-without-inception-evidence`: the same return when the key has no inception evidence: a return reads none, accepted.
+test row_return_without_inception_evidence() {
   accepts(requests.return_tx(requests.returned())) == True
 }
 

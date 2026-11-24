@@ -75,6 +75,15 @@ pub const spender_address: Address =
     stake_credential: None,
   }
 
+/// The folder of the fold the Singular client builds.
+pub const folder_address: Address =
+  Address {
+    payment_credential: VerificationKey(
+      #"70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+    ),
+    stake_credential: None,
+  }
+
 pub const other_address: Address =
   Address {
     payment_credential: VerificationKey(

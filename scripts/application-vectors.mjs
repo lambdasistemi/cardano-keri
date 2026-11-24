@@ -86,6 +86,8 @@ const generate = () => {
   const appAddr = `d8799fd87a9f581c${appPolicy}ffd87a80ff`;
   const checkpointAddr = cfg.checkpointCredential;
   if (!scriptRe.test(checkpointAddr)) throw new Error('the checkpoint credential is not a script address without a stake credential');
+  const folderHash = row('fold-built-by-singular-client').inputs[0].address;
+  if (!/^[0-9a-f]{56}$/.test(folderHash)) throw new Error('the folder of the client fold is not a bare key hash');
   const refundAddr = row('return-at-deadline').outputs[0].address;
   const spenderAddr = row('return-at-deadline').outputs[1].address;
   const otherAddr = row('return-refund-redirected').outputs[0].address;
@@ -224,8 +226,24 @@ const generate = () => {
   add('booking-one-payload-twice', 'booking', `${B}mint: 2, copies: 2, actions: [BookRegistration { output_index: 0 }, BookRegistration { output_index: 1 }] }`, bookShape(18, { outputs: [[18, 'app'], [18, 'app']] }));
   add('booking-twice', 'booking', `${B}actions: [BookRegistration { output_index: 0 }, BookRegistration { output_index: 0 }] }`, bookShape(18));
   add('approval-without-booking', 'booking', `${B}actions: [] }`, bookShape(18));
+  add('booking-without-inception-evidence', 'booking', `${B}claim: None }`, bookShape(18));
+  // The datum a booking commits, one fact at a time (the requests 9011 to 9019, 9007 and 9008).
+  const bookVariant = (id, raw) => add(id, 'booking', `${B}data: rows.request_data(${raw}) }`, bookShape(18));
+  bookVariant('booking-advanced-sequence', 9011);
+  bookVariant('booking-advanced-epoch', 9012);
+  bookVariant('booking-poisoned', 9013);
+  bookVariant('booking-frozen', 9014);
+  bookVariant('booking-topped-up', 9015);
+  bookVariant('booking-born-later', 9016);
+  bookVariant('booking-other-refund', 9017);
+  bookVariant('booking-pending-termination', 9018);
+  bookVariant('booking-other-aid', 9019);
+  add('booking-pool-below-premium', 'booking', `${B}data: rows.request_data(9007), lovelace: 17 }`, bookShape(17));
+  add('booking-unrecorded-refund', 'booking', `${B}data: rows.request_data(9008) }`, bookShape(18));
+  // The deposit 13 covers an initial floor of 13 (Mc + D + B + P of another checkpoint's parameters) and is one
+  // below the registry's minimum deposit: refused by the registry's floor alone.
+  add('booking-below-registry-floor', 'booking-floor', `${B}data: rows.request_data(9003), lovelace: 16 }`, bookShape(16));
   const foldShape = (out, extra = {}) => ({ validity: [12, 15], referenced: 1, donation: 2, inputs: [[18, 'app']], outputs: [out], ...extra });
-  const foldVariant = (id, raw, k) => add(id, 'fold', `${F}data: rows.request_data(${raw}), holding_datum: rows.variant(${k}) }`, foldShape([15, 'checkpoint']));
   add('fold-at-deadline', 'fold', 'requests.fold()', foldShape([15, 'checkpoint']));
   add('fold-donating-more', 'fold', `${F}donation: 3 }`, foldShape([15, 'checkpoint'], { donation: 3 }));
   add('fold-after-deadline', 'fold', `${F}upper: 16 }`, foldShape([15, 'checkpoint'], { validity: [12, 16] }));
@@ -238,17 +256,14 @@ const generate = () => {
   add('fold-at-application-address', 'fold', `${F}holding_address: requests.app_address() }`, foldShape([15, 'app']));
   add('fold-at-committed-other-address', 'fold', `${F}data: rows.request_data(9004), holding_address: rows.other_address }`, foldShape([15, 'other']));
   add('fold-other-commitment-to-checkpoint', 'fold', `${F}data: rows.request_data(9004) }`, foldShape([15, 'checkpoint']));
-  foldVariant('fold-advanced-sequence', 9011, 1);
-  foldVariant('fold-advanced-epoch', 9012, 2);
-  foldVariant('fold-poisoned', 9013, 3);
-  foldVariant('fold-frozen', 9014, 4);
-  foldVariant('fold-topped-up', 9015, 5);
-  foldVariant('fold-born-later', 9016, 6);
-  foldVariant('fold-other-refund', 9017, 7);
-  foldVariant('fold-pending-termination', 9018, 8);
-  add('fold-other-aid', 'fold', `${F}data: rows.request_data(9019), holding_datum: rows.initial_datum(1) }`, foldShape([15, 'checkpoint']));
-  add('fold-pool-below-premium', 'fold', `${F}data: rows.request_data(9007), request_lovelace: 17, holding_lovelace: 14 }`, foldShape([14, 'checkpoint'], { inputs: [[17, 'app']] }));
-  add('fold-unrecorded-refund', 'fold', `${F}data: rows.request_data(9008) }`, foldShape([15, 'checkpoint']));
+  add('fold-committed-datum-not-initial', 'fold', `${F}data: rows.request_data(9011), holding_datum: rows.variant(1) }`, foldShape([15, 'checkpoint']));
+  add('fold-without-inception-evidence', 'fold', 'requests.fold()', foldShape([15, 'checkpoint']));
+  // The fold the Singular client builds: the folder's own input and output, the holding at index 1, a spender's change.
+  const clientShape = (spenderBack, extra = {}) => ({ validity: [12, 15], referenced: 1, donation: 2, inputs: [[2, folderHash], [18, 'app'], [5, 'spender']], outputs: [[2, folderHash], [15, 'checkpoint'], [spenderBack, 'spender']], ...extra });
+  const client = (change, extra) => `${F}redeemer: FoldRegistration { holding_index: 1 }, before: [requests.pay(rows.folder_address, 2)], after: [requests.pay(rows.spender_address, ${change})], extra_inputs: [requests.plain_input(91, rows.folder_address, 2), requests.plain_input(92, rows.spender_address, 5)]${extra} }`;
+  add('fold-built-by-singular-client', 'fold', client(5, ''), clientShape(5));
+  add('fold-built-by-singular-client-no-donation', 'fold', client(7, ', donation: 0'), clientShape(7, { donation: 0 }));
+  add('fold-built-by-singular-client-no-record', 'fold', client(5, ', references: False'), clientShape(5, { referenced: 0 }));
   add('checkpoint-spent-at-checkpoint-validator', 'checkpoint', 'requests.checkpoint_spend(requests.checkpoint_address())',
     { validity: [16, 17], referenced: 0, donation: 0, inputs: [[15, 'checkpoint']], outputs: [[15, 'checkpoint']] });
   add('checkpoint-spent-at-application-address', 'checkpoint', 'requests.checkpoint_spend(requests.app_address())',
@@ -256,6 +271,7 @@ const generate = () => {
   const R = 'Return { ..requests.returned(), ';
   const retShape = (outs, extra = {}) => ({ validity: [15, 20], referenced: 1, donation: 0, inputs: [[18, 'app']], outputs: outs, ...extra });
   add('return-at-deadline', 'return', 'requests.returned()', retShape([[17, 'refund'], [1, 'spender']]));
+  add('return-without-inception-evidence', 'return', 'requests.returned()', retShape([[17, 'refund'], [1, 'spender']]));
   add('return-straddling-deadline', 'return', `${R}lower: 14 }`, retShape([[17, 'refund'], [1, 'spender']], { validity: [14, 20] }));
   add('return-refund-reduced', 'return', `${R}pays: [(rows.refund_address, 16), (rows.spender_address, 2)] }`, retShape([[16, 'refund'], [2, 'spender']]));
   add('return-refund-redirected', 'return', `${R}pays: [(rows.other_address, 17), (rows.spender_address, 1)] }`, retShape([[17, 'other'], [1, 'spender']]));
@@ -291,7 +307,7 @@ const generate = () => {
 
   for (const s of spec) {
     const r = row(s.id);
-    if (r.kind !== (s.kind === 'minted' ? 'termination' : s.kind)) throw new Error(`row ${s.id}: kind ${r.kind}`);
+    if (r.kind !== (s.kind === 'minted' ? 'termination' : s.kind === 'booking-floor' ? 'booking' : s.kind)) throw new Error(`row ${s.id}: kind ${r.kind}`);
     const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     if (!same([r.validity.lower, r.validity.upper], s.shape.validity)) throw new Error(`row ${s.id}: validity`);
     if (r.referenced !== s.shape.referenced || r.donation !== s.shape.donation) throw new Error(`row ${s.id}: references or donation`);
@@ -382,6 +398,10 @@ pub const minimum_deposit: Int = ${minimumDeposit}
 pub const refund_address: Address = ${keyAddr(refundAddr)}
 
 pub const spender_address: Address = ${keyAddr(spenderAddr)}
+
+/// The folder of the fold the Singular client builds.
+pub const folder_address: Address =
+  Address { payment_credential: VerificationKey(#"${folderHash}"), stake_credential: None }
 
 pub const other_address: Address = ${keyAddr(otherAddr)}
 
@@ -567,6 +587,7 @@ pub const lean_registry_name: ByteArray = #"${a0.registryName}"
   // --- the row tests -------------------------------------------------------------
   const runner = {
     booking: (call) => `accepts(requests.booking_tx(${call}))`,
+    'booking-floor': (call) => `accepts_at(rows.initial_floor - 2, requests.booking_tx(${call}))`,
     fold: (call) => `accepts(requests.fold_tx(${call}))`,
     return: (call) => `accepts(requests.return_tx(${call}))`,
     termination: (call) => `accepts(requests.termination_tx(${call}))`,
@@ -729,15 +750,21 @@ use singular_state/preimage.{
 }
 
 fn accepts(tx: Transaction) -> Bool {
-  requests.accepts(run_mint, run_spend, tx)
+  accepts_at(rows.initial_floor, tx)
 }
 
-fn run_mint(actions: List<Action>, tx: Transaction) -> Bool {
+/// The application with another initial floor (the Lean's checkpoint parameters
+/// of the row \`booking-below-registry-floor\`).
+fn accepts_at(initial_floor: Int, tx: Transaction) -> Bool {
+  requests.accepts(fn(actions, t) { run_mint(initial_floor, actions, t) }, run_spend, tx)
+}
+
+fn run_mint(initial_floor: Int, actions: List<Action>, tx: Transaction) -> Bool {
   keri_application.keri_application.mint(
     cfg.state_template_hash,
     rows.observer_hash,
     rows.minimum_deposit,
-    rows.initial_floor,
+    initial_floor,
     rows.network_id,
     rows.checkpoint_minimum_ada,
     rows.termination_carrier,

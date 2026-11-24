@@ -1,4 +1,5 @@
 import CardanoKeri.CheckpointCompletionGoals
+import CardanoKeri.ConcreteConvictionGoals
 
 namespace CardanoKeri.Checkpoint
 
@@ -28,7 +29,7 @@ def ConvictionEdge (p : Params) (env : SystemEnv) (aid : AID) (key : KeyState)
   ∃ live now payee commitment flow,
     before.states aid = .present live ∧ live.hash = key ∧
     Step p (env aid) (.convict payee commitment) now (.present live) flow (.terminationPending key) ∧
-    before.revealOpen aid (.convict payee commitment) ∧
+    (before.revealOpen aid (.convict payee commitment) ∧ before.comparisonMatchesWriter (env aid) aid = true) ∧
     after = (before.set aid (.terminationPending key)).retireRevealed (.convict payee commitment)
 
 private theorem pending_step_origin {p : Params} {env : SystemEnv} {before after : Sys}
@@ -54,7 +55,8 @@ private theorem pending_step_origin {p : Params} {env : SystemEnv} {before after
       subst st
       obtain ⟨l, payee, c, wasLive, rfl, _, _, atKey⟩ := pending_only_by_conviction _ _ executed
       rw [wasLive] at executed
-      exact Or.inr ⟨l, now, payee, c, flow, wasLive, atKey, executed, opened.1, rfl⟩
+      exact Or.inr ⟨l, now, payee, c, flow, wasLive, atKey, executed, ⟨opened.1, by
+        simpa [Sys.localWriter] using opened.2⟩, by simp⟩
     · exact Or.inl (by simpa [Sys.set, same] using pending)
   | book event =>
     rw [(booking_event_preserves_checkpoint _ _ event).1] at pending
@@ -115,6 +117,7 @@ private theorem local_writer_authenticated {s : Sys} {env : Env} {aid action his
     (prior : WritersAuthenticated s) (stored : (s.localWriter env aid action).join = some history) :
     history.authenticated aid = true := by
   cases action <;> simp [Sys.localWriter] at stored
+  case convict => split at stored <;> contradiction
   case rotate sn op payee =>
     cases found : s.rotationHistory env aid sn <;> simp [found] at stored
     subst history
@@ -317,5 +320,43 @@ theorem conviction_spends_authenticated_writer {p env before after aid key}
       history.epoch = key.epoch ∧ history.writer.event.sn = key.sn := by
   obtain ⟨live, _, _, _, _, present, rfl, _⟩ := edge
   exact live_has_authenticated_writer reach present
+
+/-- Given a conviction edge with a reachable source, when its comparison is
+read, then the checkpoint's stored authenticated writer agrees with every
+spent key field and the observer accepted the rival at that exact position. -/
+theorem conviction_compares_authenticated_writer {p env before after aid key}
+    (reach : SysReach p env before) (edge : ConvictionEdge p env aid key before after) :
+    ∃ writer comparison, before.writers aid = some writer ∧ writer.authenticated aid = true ∧
+      (env aid).comparison key.epoch key.sn = some comparison ∧
+      (env aid).keyReads.matches aid writer comparison.tip = true ∧
+      comparison.tip.epoch = key.epoch ∧ comparison.tip.sn = key.sn ∧
+      CheckpointConviction.accepts (env aid).verifyRival comparison.tip comparison.rival = true := by
+  obtain ⟨writer, stored, authenticated, _, _⟩ := conviction_spends_authenticated_writer reach edge
+  obtain ⟨live, now, payee, c, flow, present, rfl, step, ⟨_, matched⟩, _⟩ := edge
+  obtain ⟨comparison, selected, epoch, sn, accepted⟩ := conviction_has_spent_tip_comparison _ _ step
+  exact ⟨writer, comparison, stored, authenticated, selected,
+    by simpa [Sys.comparisonMatchesWriter, stored, present, selected] using matched, epoch, sn, accepted⟩
+
+/-- Given a reachable conviction after rotation and consistent decoding of
+the observed comparison, when KERI judges those two events, then duplicity
+holds exactly when the rival passes the same predecessor's rotation rules. -/
+theorem rotated_conviction_iff_rival_valid {p env before after aid key previous writer comparison}
+    (reach : SysReach p env before) (edge : ConvictionEdge p env aid key before after)
+    (stored : before.writers aid = some (.rotation previous writer))
+    (selected : (env aid).comparison key.epoch key.sn = some comparison)
+    (reads : ComparisonReads) (tip : reads.tipOf (.rotation previous writer) = comparison.tip)
+    (encode : Duplicity.Content → ForwardFields)
+    (fields : reads.FieldsAgree (.rotation previous writer) comparison.rival encode) :
+    let rival := reads.rivalOf comparison.tip comparison.rival
+    Duplicity.duplicityAt key.epoch key.sn ⟨previous.epoch + 1, previous.predecessor, writer⟩ rival = true ↔
+      Duplicity.rotationValid previous.predecessor rival = true := by
+  obtain ⟨_, observed, _, _, found, _, epoch, sn, accepted⟩ := conviction_compares_authenticated_writer reach edge
+  rw [selected] at found
+  cases found
+  let actual := { reads with verify := (env aid).verifyRival }
+  have judged := accepted_rotated_tip_iff_rival_valid reach stored actual comparison.rival encode
+    ⟨fields.epoch, fields.writerPosition, fields.rivalPosition, fields.writerFields, fields.rivalFields⟩
+    (by simpa [actual, tip] using accepted)
+  simpa [actual, tip, epoch, sn] using judged
 
 end CardanoKeri.Checkpoint

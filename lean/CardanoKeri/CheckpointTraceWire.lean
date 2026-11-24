@@ -77,6 +77,7 @@ structure EnvTable where
   writers : WriterTable := {}
 
 def EnvTable.toEnv (t : EnvTable) (aid : Nat := 0) : Env where
+  keyReads := ⟨(fun | [key] => some key | _ => none), (fun | [key] => some key | _ => none)⟩
   verifyRival := CardanoKeri.CheckpointConviction.Fixtures.verify
   comparison := fun e sn => if t.duplicityAt.contains (e, sn) then
     some (CardanoKeri.CheckpointConviction.Fixtures.comparison aid e sn) else none

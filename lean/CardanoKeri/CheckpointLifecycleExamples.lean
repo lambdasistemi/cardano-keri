@@ -20,6 +20,7 @@ def env (aid : AID) : Env := {
     some (Duplicity.writerFixture aid 0 .inception, []) else none,
   rotationWriter := fun subject _ _ target => if subject == aid then
     some (Duplicity.writerFixture aid target .rotation) else none,
+  keyReads := ⟨(fun | [key] => some key | _ => none), (fun | [key] => some key | _ => none)⟩
   verifyRival := CardanoKeri.CheckpointConviction.Fixtures.verify,
   comparison := fun e sn => some (CardanoKeri.CheckpointConviction.Fixtures.comparison aid e sn),
   convictionContext := fun epoch sn => some (Duplicity.fixture epoch sn).1,

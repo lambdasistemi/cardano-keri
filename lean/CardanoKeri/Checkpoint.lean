@@ -59,6 +59,7 @@ structure Env where
   -- the same checkpoint transaction. Signature verification is a primitive.
   comparison : Epoch → Seq → Option CheckpointConviction.Comparison := fun _ _ => none
   verifyRival : CheckpointConviction.Verify := fun _ _ _ => false
+  keyReads : KeyReads := ⟨fun _ => none, fun _ => none⟩
 
   -- A history reader can independently evaluate the KERI two-event definition.
   convictionContext : Epoch → Seq → Option CardanoKeri.Duplicity.Context
@@ -640,10 +641,25 @@ def Sys.rotationHistory (s : Sys) (env : Env) (aid : AID) (sn : Seq) : Option Ev
     | none => none
   | _, _ => none
 
+/-- At the conviction spend the retained writer supplies the identity,
+position and established keys of the first event. The observer takes the
+raw material from the spent datum and the rival from the redeemer. -/
+def Sys.comparisonMatchesWriter (s : Sys) (env : Env) (aid : AID) : Bool :=
+  match s.writers aid, s.states aid with
+  | some writer, .present live =>
+    ((env.comparison live.epoch live.sn).map (fun comparison =>
+      env.keyReads.matches aid writer comparison.tip)).getD false
+  | _, _ => false
+
 def Sys.localWriter (s : Sys) (env : Env) (aid : AID) : Action → Option (Option EventHistory)
   | .rotate sn _ _ => (s.rotationHistory env aid sn).map some
   | .freeze sn _ => (s.rotationHistory env aid sn).map (fun _ => none)
+  | .convict .. => if s.comparisonMatchesWriter env aid then some none else none
   | _ => some none
+
+@[simp] theorem Sys.conviction_keeps_writer (s : Sys) (env : Env) (aid payee : Nat) (c : Commitment) :
+    (s.localWriter env aid (.convict payee c)).join = none := by
+  simp [Sys.localWriter]; split <;> rfl
 
 -- A local step of one checkpoint. A conviction also reveals its commitment in
 -- the same transaction: the commitment must be open, and its marker is burnt.

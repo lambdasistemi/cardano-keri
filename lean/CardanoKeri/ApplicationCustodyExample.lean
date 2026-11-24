@@ -294,4 +294,22 @@ theorem economic_entry_for_rotated_checkpoint :
     pendingPath bookingTx aenv rp (by decide) (ref := convicted.reference) (localBooking := termination)
     rfl registry_booked
 
+/-- Given the public history ending at the rotated checkpoint, when its
+conviction spends that state, then its accepted comparison uses the
+authenticated writer and native position of the produced pending carrier. -/
+theorem rotated_booking_compares_its_writer :
+    ∃ writer comparison, committed.writers 11 = some writer ∧ writer.authenticated 11 = true ∧
+      (env 11).comparison 1 1 = some comparison ∧
+      (env 11).keyReads.matches 11 writer comparison.tip = true ∧
+      comparison.tip.epoch = 1 ∧ comparison.tip.sn = 1 ∧
+      CheckpointConviction.accepts (env 11).verifyRival comparison.tip comparison.rival = true := by
+  have reach : SysReach p env committed := .step (.step (.step (.init deployment) registered_step) rotated_step) committed_step
+  exact conviction_compares_authenticated_writer reach witnessed_termination_booking.2.2.2
+
+-- The comparison still has its signatures. A next-key commitment which
+-- cannot be read as the writer's established identity loses the system spend.
+example :
+    let bad := {env 11 with keyReads.nextCommitment := fun _ => none}
+    bad.acceptsRival 1 1 = true ∧ committed.comparisonMatchesWriter bad 11 = false ∧
+      (committed.localWriter bad 11 (.convict 7 commitment)).isNone = true := by decide
 end CardanoKeri.Application.Custody.Examples

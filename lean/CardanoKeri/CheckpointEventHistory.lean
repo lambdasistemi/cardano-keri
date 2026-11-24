@@ -80,6 +80,35 @@ theorem rotated_duplicity_iff_rival_valid {aid : Nat} {previous : EventHistory}
   exact ⟨fun h => h.2.2.2.1,
     fun h => ⟨rfl, rfl, (stored_rotation_valid accepted).2, h, samePosition, conflict⟩⟩
 
+/-- The advance and enforcement observers interpret verification keys and
+next-key commitments in the same identity domain used by the authenticated
+history. A digest opening is a cryptographic assumption. Interpretation is
+required only for bytes actually read from the checkpoint. -/
+structure KeyReads where
+  verificationKey : List Nat → Option Nat
+  nextCommitment : List Nat → Option Nat
+
+private def thresholdRead : CheckpointDatum.Threshold → Option Duplicity.Threshold
+  | .unweighted n => Duplicity.Threshold.count <$> n.toNat?
+  | .weighted clauses => do
+    let weights ← clauses.mapM fun clause => clause.mapM fun (n, d) => do
+      return Duplicity.Weight.key ⟨← n.toNat?, ← d.toNat?⟩
+    return .weighted weights
+
+/-- The complete key material in the spent datum must describe the actual
+writer. The established witnesses are reconstructed from the inception and
+the rotations in order, including cuts and additions. -/
+def KeyReads.matches (reads : KeyReads) (aid : Nat) (history : EventHistory)
+    (tip : CheckpointConviction.Tip) : Bool :=
+  let event := history.writer.event
+  tip.aid == aid && tip.aid == event.aid && tip.epoch == history.epoch && tip.sn == event.sn &&
+    tip.keys.curKeys.mapM reads.verificationKey == some event.keys &&
+    thresholdRead tip.keys.curThreshold == some event.threshold &&
+    tip.keys.nextKeys.mapM reads.nextCommitment == some event.nextKeys &&
+    thresholdRead tip.keys.nextThreshold == some event.nextThreshold &&
+    tip.keys.witnesses.mapM reads.verificationKey == some history.predecessor.witnesses &&
+    tip.keys.toad == (event.witnessThreshold : Int)
+
 /-- The correspondence of decoded histories with the raw key representation
 and indexed cryptographic observations. The enforcement observer reads the tip
 from its named input and binds the rival's fields to the presented event bytes

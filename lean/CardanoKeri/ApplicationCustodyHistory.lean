@@ -113,14 +113,15 @@ theorem pending_output_producer {p env i token aid edges s w out key}
   | register _ _ _ _ _ _ _ _ datum =>
     rw [datum.2] at pending
     simp [State.datumFacts] at pending
-  | @spend edges before after w w' old out action now flow state _ _ _ _ datum _ executed opened _ updated _ =>
+  | @spend edges before after w w' old out action now flow state _ _ _ _ datum _ executed opened writer updated _ =>
     subst after
     rw [datum.2] at pending
     have target : state = .terminationPending key := by cases state <;> simp_all [State.datumFacts]
     subst state
     obtain ⟨live, payee, c, wasLive, rfl, _, _, atKey⟩ := pending_only_by_conviction _ _ executed
     rw [wasLive] at executed
-    exact ⟨_, _, List.mem_cons_self, live, now, payee, c, flow, wasLive, atKey, executed, opened, rfl⟩
+    exact ⟨_, _, List.mem_cons_self, live, now, payee, c, flow, wasLive, atKey, executed,
+      ⟨opened, by simpa [Sys.localWriter] using writer⟩, by simp⟩
   | retain _ _ _ _ _ ih => exact ih pending
 
 private theorem carrier_identifier {p env i token aid edges s w out}

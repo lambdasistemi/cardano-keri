@@ -174,11 +174,11 @@ No additional local parameters; use the definitions in this module.
 When observe the local Checkpoint or associated system relation named by this theorem.
 Then the complete conclusion is:
 
-CardanoKeri.Registry.fold CardanoKeri.Registry.Examples.p CardanoKeri.Registry.Examples.env registryBooked 1 CardanoKeri.Registry.Examples.cfg.applicationPolicy
+CardanoKeri.Registry.fold CardanoKeri.Registry.Examples.p registryBooked 1 CardanoKeri.Registry.Examples.cfg.applicationPolicy
       CardanoKeri.Registry.Examples.terminationUnspent CardanoKeri.Registry.Examples.terminationTransaction = .ok ({}, CardanoKeri.Registry.Examples.retired)
 -/
 theorem registry_folded :
-    CardanoKeri.Registry.fold CardanoKeri.Registry.Examples.p CardanoKeri.Registry.Examples.env registryBooked 1 CardanoKeri.Registry.Examples.cfg.applicationPolicy
+    CardanoKeri.Registry.fold CardanoKeri.Registry.Examples.p registryBooked 1 CardanoKeri.Registry.Examples.cfg.applicationPolicy
       CardanoKeri.Registry.Examples.terminationUnspent CardanoKeri.Registry.Examples.terminationTransaction = .ok ({}, CardanoKeri.Registry.Examples.retired) :=
   CardanoKeri.Registry.Examples.termination_folded
 
@@ -329,11 +329,11 @@ No additional local parameters; use the definitions in this module.
 When observe the local Checkpoint or associated system relation named by this theorem.
 Then the complete conclusion is:
 
-CardanoKeri.Registry.fold CardanoKeri.Registry.Examples.p CardanoKeri.Registry.Examples.env otherBooked 1 CardanoKeri.Registry.Examples.cfg.applicationPolicy otherUnspent otherTransaction =
+CardanoKeri.Registry.fold CardanoKeri.Registry.Examples.p otherBooked 1 CardanoKeri.Registry.Examples.cfg.applicationPolicy otherUnspent otherTransaction =
       .ok ({}, CardanoKeri.Registry.Examples.retired)
 -/
 theorem other_folded :
-    CardanoKeri.Registry.fold CardanoKeri.Registry.Examples.p CardanoKeri.Registry.Examples.env otherBooked 1 CardanoKeri.Registry.Examples.cfg.applicationPolicy otherUnspent otherTransaction =
+    CardanoKeri.Registry.fold CardanoKeri.Registry.Examples.p otherBooked 1 CardanoKeri.Registry.Examples.cfg.applicationPolicy otherUnspent otherTransaction =
       .ok ({}, CardanoKeri.Registry.Examples.retired) := by
   simp +decide [otherTermination, otherEntry, otherBooked, otherUnspent, otherTransaction, registryPending, registryEntry,
     Singular.foldMemberRefusal,

@@ -26,14 +26,14 @@ theorem remove_absent {α : Type} {rs : List (Nat × α)} {id : Nat}
 
 /-- Each constructor records the full successful result of its action. -/
 inductive Step (p : Params) (env : Env) : Action → Sys → Flow → Sys → Prop where
-  | bookRegistration {s s' f b} : bookRegistration p s b = .ok (f, s') →
+  | bookRegistration {s s' f b} : bookRegistration p env s b = .ok (f, s') →
       Step p env (.bookRegistration b) s f s'
   | convict {s s' f aid} : convictCkpt env s aid = .ok (f, s') →
       Step p env (.convictCkpt aid) s f s'
   | bookTermination {s s' f aid booker fee b} :
       bookTermination p s aid booker fee b = .ok (f, s') →
       Step p env (.bookTermination aid booker fee b) s f s'
-  | fold {s s' f gen plugin u tx} : fold p env s gen plugin u tx = .ok (f, s') →
+  | fold {s s' f gen plugin u tx} : fold p s gen plugin u tx = .ok (f, s') →
       Step p env (.fold gen plugin u tx) s f s'
   | returnRequests {s s' f u tx} : returnRequests s u tx = .ok (f, s') →
       Step p env (.returnRequests u tx) s f s'

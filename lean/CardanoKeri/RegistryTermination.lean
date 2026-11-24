@@ -54,13 +54,13 @@ theorem consumed_pending_member (p : Params) {s : Sys} (hw : WellFormed p s)
   exact ⟨input, member, by simp [reference, lookup]⟩
 
 /-- A consumed reference cannot survive the exact pending-store filter. -/
-theorem fold_pending_consumed (p : Params) (env : Env) {s s' : Sys}
+theorem fold_pending_consumed (p : Params) {s s' : Sys}
     {gen plugin : Nat} {u : Singular.EconomicUtxo} {tx : Singular.EconomicTransaction}
-    {f : Flow} (hs : fold p env s gen plugin u tx = .ok (f, s')) (ref : Singular.OutRef)
+    {f : Flow} (hs : fold p s gen plugin u tx = .ok (f, s')) (ref : Singular.OutRef)
     (consumed : Singular.inputsContainReference tx.transaction.inputs ref = true) :
     pendingAt s' ref = none := by
   unfold pendingAt
-  rw [(fold_sound p env hs).2.2.2.2.2.2]
+  rw [(fold_sound p hs).2.2.2.2.2]
   apply List.find?_eq_none.mpr
   intro e member
   have kept := (List.mem_filter.mp member).2
@@ -115,15 +115,15 @@ theorem installMembers_binding_other (p : Params) (before acc after : Sys)
 
 /-- A successful fold preserves every existing alias exactly, including the
 alias of a key whose token this fold permanently retires. -/
-theorem fold_old_binding (p : Params) (env : Env) {s s' : Sys} (hw : WellFormed p s)
+theorem fold_old_binding (p : Params) {s s' : Sys} (hw : WellFormed p s)
     {gen plugin : Nat} {u : Singular.EconomicUtxo} {tx : Singular.EconomicTransaction}
-    {f : Flow} (hs : fold p env s gen plugin u tx = .ok (f, s'))
+    {f : Flow} (hs : fold p s gen plugin u tx = .ok (f, s'))
     (aid token : Nat) (old : bindingAt s aid = some token) : bindingAt s' aid = some token := by
-  obtain ⟨_, _, _, world, _, reconstructed⟩ := (fold_iff p env s s' gen plugin u tx f).mp hs
+  obtain ⟨_, _, world, _, reconstructed⟩ := (fold_iff p s s' gen plugin u tx f).mp hs
   obtain ⟨acc, installed, _, bindings, _⟩ := foldResult_installer p reconstructed
   have same := installMembers_binding_other p s s acc _ installed aid (by
     intro b selected equal
-    have fresh := fold_registration_binding_fresh p env hw hs b selected
+    have fresh := fold_registration_binding_fresh p hw hs b selected
     rw [equal, old] at fresh
     contradiction)
   have after : bindingAt s' aid = bindingAt acc aid := by simp [bindingAt, bindings]

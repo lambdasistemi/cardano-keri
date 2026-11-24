@@ -79,9 +79,9 @@ is one lovelace short of the minimum ADA plus the deposit and freeze bond.
 When the registry books it.
 Then the booking is refused for its value. -/
 theorem short_carrier_registration_refused (rp : CardanoKeri.Registry.Params)
-    (s : CardanoKeri.Registry.Sys) (b : Singular.RegistrationBooking)
+    (env : CardanoKeri.Registry.Env) (s : CardanoKeri.Registry.Sys) (b : Singular.RegistrationBooking)
     (short : b.request.carrierAda + 1 = rp.Mc + rp.D) :
-    CardanoKeri.Registry.bookRegistration rp s b = .error "keri-registration-value-mismatch" := by
+    CardanoKeri.Registry.bookRegistration rp env s b = .error "keri-registration-value-mismatch" := by
   have refused : ¬ CardanoKeri.Registry.registrationShape rp b := by
     rintro ⟨carrier, _⟩; omega
   simp [CardanoKeri.Registry.bookRegistration, refused, bind, Except.bind]

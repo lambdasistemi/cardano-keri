@@ -121,14 +121,14 @@ theorem authorization_step (p : Params) (env : Env) (cfg : Singular.Config)
         simpa [key] using history.1 c (List.mem_of_find?_eq_some lookup) pending
       · exact history.2 e old
   | fold gen plugin u tx =>
-    obtain ⟨_, _, _, world, _, reconstructed⟩ := (fold_iff p env s s' gen plugin u tx f).mp hs
+    obtain ⟨_, _, world, _, reconstructed⟩ := (fold_iff p s s' gen plugin u tx f).mp hs
     obtain ⟨acc, installed, carriers, _, _⟩ := foldResult_installer p reconstructed
     refine ⟨?_, ?_⟩
     · intro c member pending
       rw [carriers] at member
       exact history.1 c (installMembers_pending_old p s s acc _ installed c member pending) pending
     · intro e member
-      rw [(fold_sound p env hs).2.2.2.2.2.2] at member
+      rw [(fold_sound p hs).2.2.2.2.2] at member
       exact history.2 e (List.mem_filter.mp member).1
   | returnRequests u tx =>
     have facts := return_sound s s' u tx f hs

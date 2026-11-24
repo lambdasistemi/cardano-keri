@@ -135,7 +135,7 @@ def datumHash (raw : Nat) : Nat := pack (blake2b256 (unpack raw))
 
 def registry : TokenId := deployment.registry ⟨CardanoKeri.ConsumerIdentity.Bytes.hash,
   CardanoKeri.ConsumerIdentity.Bytes.code, CardanoKeri.ConsumerIdentity.Bytes.keyOf, fun _ => none, datumHash,
-  fun _ => none, fun _ => none, fun _ => none⟩
+  fun _ => none, fun _ => none, fun _ => none, fun _ => none⟩
 
 /-- A registry whose state policy is not `state(A_keri)`. -/
 def foreignRegistry : TokenId := ⟨ofBytes (scriptHash 9), registry.name⟩
@@ -171,6 +171,18 @@ def requests : List (Nat × RegistrationData) := [
 def decode : DecodeApplication := fun raw =>
   (requests.find? (·.1 == raw)).map fun entry => .registration entry.2
 
+/-- Fixture published datums: the initial checkpoint datum each request's own
+datum publishes. A request committing another datum publishes that datum. -/
+def published : List (Nat × Nat) := [
+  (9001, initialRaw aidE), (9002, initialRaw aidE), (9003, initialRaw aidE),
+  (9004, initialRaw aidE), (9005, initialRaw aidE), (9006, initialRaw aidE),
+  (9007, initialRaw aidE), (9008, initialRaw aidE),
+  (9011, advancedRaw), (9012, epochRaw), (9013, poisonedRaw), (9014, frozenRaw),
+  (9015, toppedUpRaw), (9016, bornLaterRaw), (9017, otherRefundRaw), (9018, pendingRaw),
+  (9019, initialRaw aidE2)]
+
+def publishedDatum (raw : Nat) : Option Nat := (published.find? (·.1 == raw)).map (·.2)
+
 /-- The registry's configuration: the scenario parameters and the checkpoint
 validator's credential. -/
 def scenarioConfiguration : Configuration := ⟨parameters, checkpointCredential⟩
@@ -187,7 +199,7 @@ def decodeConfiguration (raw : Nat) : Option Configuration :=
 def interpretation : Interpretation :=
   ⟨CardanoKeri.ConsumerIdentity.Bytes.hash, CardanoKeri.ConsumerIdentity.Bytes.code,
    CardanoKeri.ConsumerIdentity.Bytes.keyOf, decode, datumHash, decodeConfiguration,
-   CheckpointDatum.decode release, refundTo⟩
+   CheckpointDatum.decode release, refundTo, publishedDatum⟩
 
 def i : Interpretation := interpretation
 

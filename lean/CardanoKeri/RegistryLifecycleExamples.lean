@@ -24,8 +24,8 @@ def RegistrationJourney (registered : Sys) : Prop :=
     (f0 f1 : Flow),
     b.request.key = 11 ∧ b.request.destination = 111 ∧ b.request.datum = some 777 ∧
     b.request.reference = ⟨100, 0⟩ ∧ b.request.contents.lovelace = 17 ∧
-    bookRegistration p (Sys.init cfg) b = .ok (f0, booked) ∧
-    fold p env booked 0 cfg.applicationPolicy u tx = .ok (f1, registered)
+    bookRegistration p env (Sys.init cfg) b = .ok (f0, booked) ∧
+    fold p booked 0 cfg.applicationPolicy u tx = .ok (f1, registered)
 def registrationTag : Singular.Approval :=
   { policy := cfg.applicationPolicy, edge := .insertActive, key := 11,
     owner := 42, destination := 111,
@@ -101,16 +101,16 @@ No additional local parameters; use the definitions in this module.
 When observe the Registry transition, projection or custody relation named by this theorem.
 Then the complete conclusion is:
 
-bookRegistration p (Sys.init cfg) registration =
+bookRegistration p env (Sys.init cfg) registration =
       .ok ({ deposited := 17 }, registrationBooked)
 -/
 theorem registration_booked :
-    bookRegistration p (Sys.init cfg) registration =
+    bookRegistration p env (Sys.init cfg) registration =
       .ok ({ deposited := 17 }, registrationBooked) := by
   simp [bookRegistration, registrationShape, Singular.book,
     Singular.registrationBookingRefusal, Singular.registrationContentsShape,
     Singular.registrationApplicationTagValid, Singular.registrationDeclaredLovelace,
-    registration, registrationRequest, registrationTag, cfg, p, Sys.init, Sys.toWorld,
+    registration, registrationRequest, registrationTag, cfg, p, env, Sys.init, Sys.toWorld,
     registrationBooked, Singular.Interval.valid, Singular.Interval.width,
     Singular.RegistrationRequest.trieReadyTag, Singular.RegistrationRequest.operation,
     bind, Except.bind, pure, Except.pure]
@@ -121,11 +121,11 @@ No additional local parameters; use the definitions in this module.
 When observe the Registry transition, projection or custody relation named by this theorem.
 Then the complete conclusion is:
 
-fold p env registrationBooked 0 cfg.applicationPolicy registrationUnspent registrationTransaction =
+fold p registrationBooked 0 cfg.applicationPolicy registrationUnspent registrationTransaction =
       .ok ({ locked := [(11, 10)] }, registered)
 -/
 theorem registration_folded :
-    fold p env registrationBooked 0 cfg.applicationPolicy registrationUnspent registrationTransaction =
+    fold p registrationBooked 0 cfg.applicationPolicy registrationUnspent registrationTransaction =
       .ok ({ locked := [(11, 10)] }, registered) := by
   simp +decide [
     Singular.foldMemberRefusal,
@@ -232,11 +232,11 @@ No additional local parameters; use the definitions in this module.
 When observe the Registry transition, projection or custody relation named by this theorem.
 Then the complete conclusion is:
 
-fold p env terminationBooked 1 cfg.applicationPolicy terminationUnspent terminationTransaction =
+fold p terminationBooked 1 cfg.applicationPolicy terminationUnspent terminationTransaction =
       .ok ({}, retired)
 -/
 theorem termination_folded :
-    fold p env terminationBooked 1 cfg.applicationPolicy terminationUnspent terminationTransaction =
+    fold p terminationBooked 1 cfg.applicationPolicy terminationUnspent terminationTransaction =
       .ok ({}, retired) := by
   simp +decide [
     Singular.foldMemberRefusal,
@@ -400,7 +400,7 @@ Then the complete conclusion is:
       bookTermination p pending 11 7 1 b =
         .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, booked) ∧
       Singular.worldSingularSupply booked.toWorld 11 = 1 ∧
-      fold p env booked booked.gen cfg.applicationPolicy u tx = .ok (f, retired) ∧
+      fold p booked booked.gen cfg.applicationPolicy u tx = .ok (f, retired) ∧
       Singular.trieGet retired.trie 11 = .known .terminal ∧
       Singular.worldSingularSupply retired.toWorld 11 = 0 ∧
       tx.transaction.donation = 2 ∧ Singular.foldCarrierLovelace tx.outputs = 0 ∧
@@ -418,7 +418,7 @@ theorem W5_connected_termination :
       bookTermination p pending 11 7 1 b =
         .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, booked) ∧
       Singular.worldSingularSupply booked.toWorld 11 = 1 ∧
-      fold p env booked booked.gen cfg.applicationPolicy u tx = .ok (f, retired) ∧
+      fold p booked booked.gen cfg.applicationPolicy u tx = .ok (f, retired) ∧
       Singular.trieGet retired.trie 11 = .known .terminal ∧
       Singular.worldSingularSupply retired.toWorld 11 = 0 ∧
       tx.transaction.donation = 2 ∧ Singular.foldCarrierLovelace tx.outputs = 0 ∧

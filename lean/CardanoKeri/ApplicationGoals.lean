@@ -78,12 +78,12 @@ application address that decodes as a booked registration request.
 When that input is spent.
 Then the request's configuration record is read by reference with valid
 parameters, the request's approval is burned, and either a fold names it whose
-whole validity interval ends by the deadline, whose key has its inception
-evidence and which delivers the committed holding (address, which is the
-checkpoint validator's credential the record names, initial datum, exactly the
-deposit, the one new active token); or a return names it whose whole validity
-interval starts at the deadline or later, and the refund address is paid at
-least the request's lovelace less the tip. -/
+whole validity interval ends by the deadline and which delivers what the
+approval commits (the committed address, a datum of the committed hash,
+exactly the deposit, the one new active token); or a return names it whose
+whole validity interval starts at the deadline or later, and the refund
+address is paid at least the request's lovelace less the tip. No clause reads
+the inception evidence: the booking did (`booking_inversion`). -/
 theorem registration_spend_is_fold_or_return (i : Interpretation) (env : Env)
     (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
     (release : PublishedRelease) (o : Observation)
@@ -96,7 +96,7 @@ theorem registration_spend_is_fold_or_return (i : Interpretation) (env : Env)
       approvalBurned i release data o = true ∧
       ((∃ index holding, Action.foldRegistration input.reference index ∈ o.actions ∧
           o.outputs[index]? = some holding ∧ foldWindow data o.interval = true ∧
-          env.inception data.key = true ∧ delivered i rp cp c data holding o = true) ∨
+          delivered i data holding o = true) ∨
        (Action.returnRegistration input.reference ∈ o.actions ∧
           returnWindow data o.interval = true ∧
           input.lovelace - c.parameters.minimumTip ≤ paidTo o.outputs data.refundAddress)) := by
@@ -138,10 +138,10 @@ theorem registration_spend_is_fold_or_return (i : Interpretation) (env : Env)
       · contradiction
       · rename_i p hp
         simp only [Bool.and_eq_true] at aok
-        obtain ⟨⟨⟨valid, _⟩, burned⟩, ⟨window, inception⟩, holding⟩ := aok
+        obtain ⟨⟨⟨valid, _⟩, burned⟩, window, holding⟩ := aok
         split at holding
         · rename_i h hh
-          exact ⟨p, hp, valid, burned, Or.inl ⟨index, h, amem, hh, window, inception, holding⟩⟩
+          exact ⟨p, hp, valid, burned, Or.inl ⟨index, h, amem, hh, window, holding⟩⟩
         · contradiction
     · contradiction
   | returnRegistration ref =>
@@ -172,8 +172,8 @@ theorem registration_spend_is_fold_or_return (i : Interpretation) (env : Env)
 Given an accepted transaction spending a booked registration request at the
 application address, whose validity interval starts before the request's deadline.
 When the request is spent.
-Then a fold names it and delivers its committed holding, under the
-configuration record read by reference; no return can. -/
+Then a fold names it and delivers what its approval commits, with the
+registry's configuration record read by reference; no return can. -/
 theorem before_deadline_only_fold (i : Interpretation) (env : Env)
     (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
     (release : PublishedRelease) (o : Observation)
@@ -184,10 +184,10 @@ theorem before_deadline_only_fold (i : Interpretation) (env : Env)
     (early : o.interval.lower < data.processDeadline) :
     ∃ c index holding, configurationOf i release data.registry o = some c ∧
       Action.foldRegistration input.reference index ∈ o.actions ∧
-      o.outputs[index]? = some holding ∧ delivered i rp cp c data holding o = true := by
+      o.outputs[index]? = some holding ∧ delivered i data holding o = true := by
   obtain ⟨c, hc, _, _, spend⟩ :=
     registration_spend_is_fold_or_return i env rp cp release o ok mem atApplication hd
-  rcases spend with ⟨index, holding, amem, hh, _, _, hdel⟩ | ⟨_, window, _⟩
+  rcases spend with ⟨index, holding, amem, hh, _, hdel⟩ | ⟨_, window, _⟩
   · exact ⟨c, index, holding, hc, amem, hh, hdel⟩
   · simp only [returnWindow, Bool.and_eq_true, decide_eq_true_eq] at window
     omega
@@ -462,6 +462,144 @@ theorem duplicate_booking_refused (i : Interpretation) (env : Env)
   · have once := List.nodup_iff_count.mp (accepted_books_once i env rp cp release o h) index
     omega
 
+/-! ## The initial checkpoint state -/
+
+/-- **The initial state is the checkpoint model's registration.**
+Given registry and checkpoint parameters, a refund address, a registration
+request and any checkpoint environment.
+When the request's initial state is computed.
+Then it is the state `s` exactly when the deposit leaves a pool above the
+minimum ADA, the deposit and the freeze bond, and the checkpoint model's
+registration step with that refund address and that pool, at the request's
+booking bound, writes `s` from the absent checkpoint. -/
+theorem initialState_is_registration (rp : CardanoKeri.Registry.Params)
+    (cp : CardanoKeri.Checkpoint.Params) (cenv : CardanoKeri.Checkpoint.Env)
+    (refund : CardanoKeri.Checkpoint.Addr) (data : RegistrationData)
+    (s : CardanoKeri.Checkpoint.State) :
+    initialState rp cp refund data = some s ↔
+      ∃ pool f, initialPool rp cp data = some pool ∧
+        CardanoKeri.Checkpoint.Step cp cenv (.register refund pool) data.bookedAt .absent f s := by
+  unfold initialState
+  constructor
+  · intro h
+    split at h
+    · rename_i pool hp
+      split at h
+      · rename_i hP
+        cases h
+        exact ⟨pool, _, hp, CardanoKeri.Checkpoint.Step.register _ _ _ hP⟩
+      · contradiction
+    · contradiction
+  · rintro ⟨pool, f, hp, step⟩
+    cases step with
+    | register _ _ _ hpool => simp [hp, hpool]
+
+/-- The floor arithmetic of an initial pool, over plain naturals. -/
+theorem initial_pool_arithmetic {floor premium deposit : Nat} (covered : floor ≤ deposit)
+    (pays : premium ≤ deposit - floor) :
+    floor + premium ≤ deposit ∧ floor + (deposit - floor) = deposit := by
+  omega
+
+/-- **What the initial state holds.**
+Given a request whose initial state for refund address `refund` is `s`.
+When its datum facts and held value are read.
+Then its facts are live at sequence number and epoch 0, neither poisoned,
+frozen nor topped up, born at the booking bound and refunding to `refund`; the
+deposit covers the minimum ADA, the deposit, the freeze bond and one premium;
+and the checkpoint holds exactly the deposit. -/
+theorem initialState_facts {rp : CardanoKeri.Registry.Params} {cp : CardanoKeri.Checkpoint.Params}
+    {refund : CardanoKeri.Checkpoint.Addr} {data : RegistrationData}
+    {s : CardanoKeri.Checkpoint.State} (h : initialState rp cp refund data = some s) :
+    s.datumFacts = .present ⟨0, 0, false, false, data.bookedAt, refund, 0, false⟩ ∧
+      rp.Mc + cp.D + cp.B + cp.P ≤ data.deposit ∧ s.heldValue cp rp = data.deposit := by
+  unfold initialState at h
+  cases hp : initialPool rp cp data with
+  | none => simp [hp] at h
+  | some pool =>
+    simp only [hp] at h
+    by_cases hP : cp.P ≤ pool
+    · simp only [hP, if_true, Option.some.injEq] at h
+      subst h
+      unfold initialPool at hp
+      by_cases floor : rp.Mc + cp.D + cp.B ≤ data.deposit
+      · simp only [floor, if_true, Option.some.injEq] at hp
+        subst hp
+        have arithmetic := initial_pool_arithmetic floor hP
+        refine ⟨rfl, arithmetic.1, ?_⟩
+        rw [CardanoKeri.Checkpoint.present_held_value]
+        simp only [Bool.false_eq_true, if_false]
+        exact arithmetic.2
+      · simp [floor] at hp
+    · simp [hP] at h
+
+/-- A raw datum that is the initial state decodes as the initial state of the
+request's key, for the refund address the request names. -/
+theorem initialStateDatum_inversion {i : Interpretation} {rp : CardanoKeri.Registry.Params}
+    {cp : CardanoKeri.Checkpoint.Params} {data : RegistrationData} {raw : Nat}
+    (h : initialStateDatum i rp cp data raw = true) :
+    ∃ d refund s, i.decodeCheckpoint raw = some d ∧
+      i.refundTo data.refundAddress = some refund ∧ initialState rp cp refund data = some s ∧
+      i.keyOf d.aid = data.key ∧ d.state = s.datumFacts := by
+  unfold initialStateDatum at h
+  split at h
+  · rename_i refund hr
+    split at h
+    · rename_i d s hd hs
+      simp only [Bool.and_eq_true, beq_iff_eq] at h
+      exact ⟨d, refund, s, hd, hr, hs, h.1, h.2⟩
+    · contradiction
+  · contradiction
+
+/-- A holding that writes the initial state decodes as the initial state of
+the request's key, for the refund address the request names. -/
+theorem writesInitialState_inversion {i : Interpretation} {rp : CardanoKeri.Registry.Params}
+    {cp : CardanoKeri.Checkpoint.Params} {data : RegistrationData} {holding : ObservedOutput}
+    (h : writesInitialState i rp cp data holding = true) :
+    ∃ raw d refund s, holding.datum = .application raw ∧ i.decodeCheckpoint raw = some d ∧
+      i.refundTo data.refundAddress = some refund ∧ initialState rp cp refund data = some s ∧
+      i.keyOf d.aid = data.key ∧ d.state = s.datumFacts := by
+  unfold writesInitialState at h
+  split at h
+  · rename_i raw held
+    obtain ⟨d, refund, s, rest⟩ := initialStateDatum_inversion h
+    exact ⟨raw, d, refund, s, held, rest⟩
+  · contradiction
+
+/-- **What a datum that is the initial state says.**
+Given a raw datum that is the initial state of a registration request, and any
+checkpoint environment.
+When it is decoded.
+Then it is a checkpoint datum of the AID whose key the request names; the
+request's refund address has a checkpoint refund address `refund`; and the
+checkpoint model's registration step with `refund` and the pool the deposit
+leaves above the minimum ADA, the deposit and the freeze bond, at the request's
+booking bound, writes from the absent checkpoint a state whose facts are the
+datum's and whose held value is the deposit: live at sequence number and epoch
+0, neither poisoned, frozen nor topped up, born at the booking bound, with a
+pool of at least one premium. -/
+theorem initialStateDatum_is_registration {i : Interpretation} {rp : CardanoKeri.Registry.Params}
+    {cp : CardanoKeri.Checkpoint.Params} (cenv : CardanoKeri.Checkpoint.Env)
+    {data : RegistrationData} {raw : Nat} (h : initialStateDatum i rp cp data raw = true) :
+    ∃ d refund pool f s, i.decodeCheckpoint raw = some d ∧ i.keyOf d.aid = data.key ∧
+      i.refundTo data.refundAddress = some refund ∧
+      CardanoKeri.Checkpoint.Step cp cenv (.register refund pool) data.bookedAt .absent f s ∧
+      d.state = s.datumFacts ∧ data.deposit = s.heldValue cp rp ∧
+      d.state = .present ⟨0, 0, false, false, data.bookedAt, refund, 0, false⟩ ∧
+      pool = data.deposit - (rp.Mc + cp.D + cp.B) ∧ cp.P ≤ pool := by
+  obtain ⟨d, refund, s, hd, hr, hs, key, facts⟩ := initialStateDatum_inversion h
+  obtain ⟨pool, f, hp, step⟩ := (initialState_is_registration rp cp cenv refund data s).mp hs
+  obtain ⟨written, floor, value⟩ := initialState_facts hs
+  have pool_eq : pool = data.deposit - (rp.Mc + cp.D + cp.B) := by
+    unfold initialPool at hp
+    split at hp
+    · cases hp; rfl
+    · contradiction
+  refine ⟨d, refund, pool, f, s, hd, key, hr, step, facts, value.symm, facts.trans written,
+    pool_eq, ?_⟩
+  have arithmetic : rp.Mc + cp.D + cp.B + cp.P ≤ data.deposit := floor
+  rw [pool_eq]
+  exact Nat.le_sub_of_add_le (by rw [Nat.add_comm]; exact arithmetic)
+
 /-! ## Booking -/
 
 
@@ -486,8 +624,7 @@ theorem configuration_refuses_retraction (i : Interpretation) (release : Publish
     createConfiguration i release registry seed output o = false := by
   simp [createConfiguration, hc, parametersValid, positive]
 
-/-- **A booking commits the checkpoint validator and holds exactly the deposit,
-the registration cost and the tip.**
+/-- **A booking validates everything KERI validates about a registration.**
 Given an accepted booking of a request output.
 When it is booked.
 Then the request decodes to a registration of a `state(A_keri)` registry,
@@ -496,10 +633,13 @@ checkpoint validator's credential the record names, which is not the
 application credential; the deposit is at least the registry's minimum ADA
 plus its deposit; the output holds exactly the deposit, the registration cost
 and the minimum tip; the deadline is the booking's upper bound plus the
-processing time; and one approval of the payload is minted. -/
-theorem booking_inversion (i : Interpretation) (rp : CardanoKeri.Registry.Params)
-    (release : PublishedRelease) (o : Observation) {output : ObservedOutput}
-    (ok : bookRegistration i rp release o output = true) :
+processing time; one approval of the payload is minted; the request's key has
+its inception evidence; and the request's own datum publishes a datum that has
+the committed hash and is exactly the initial state of the request's key. -/
+theorem booking_inversion (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params)
+    (cp : CardanoKeri.Checkpoint.Params) (release : PublishedRelease) (o : Observation)
+    {output : ObservedOutput}
+    (ok : bookRegistration i env rp cp release o output = true) :
     ∃ data c, decoded i.decode output = some (.registration data) ∧
       configurationOf i release data.registry o = some c ∧
       data.registry.policy = release.statePolicy ∧
@@ -510,7 +650,11 @@ theorem booking_inversion (i : Interpretation) (rp : CardanoKeri.Registry.Params
       data.bookedAt = o.interval.upper ∧
       data.processDeadline = data.bookedAt + c.parameters.processTime ∧
       SingularApplicationHeld.Assets.mintQty o.assets
-        (registrationAsset i.hash i.code release data) = 1 := by
+        (registrationAsset i.hash i.code release data) = 1 ∧
+      env.inception data.key = true ∧
+      ∃ published, publishedDatum i output = some published ∧
+        i.datumHash published = data.initialDatum ∧
+        initialStateDatum i rp cp data published = true := by
   unfold bookRegistration at ok
   split at ok
   · rename_i data hd
@@ -518,25 +662,53 @@ theorem booking_inversion (i : Interpretation) (rp : CardanoKeri.Registry.Params
     · rename_i c hc
       simp only [Bool.and_eq_true, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq,
         bookingClock] at ok
-      obtain ⟨⟨⟨⟨⟨⟨⟨_, policy⟩, address⟩, distinct⟩, floor⟩, exact⟩,
-        ⟨⟨⟨⟨_, booked⟩, _⟩, deadline⟩, _⟩⟩, minted⟩ := ok
-      exact ⟨data, c, hd, hc, policy, address, distinct, floor, exact, booked, deadline, minted⟩
+      obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨_, policy⟩, address⟩, distinct⟩, floor⟩, exact⟩,
+        ⟨⟨⟨⟨_, booked⟩, _⟩, deadline⟩, _⟩⟩, evidence⟩, publishes⟩, minted⟩ := ok
+      unfold publishesInitialState at publishes
+      split at publishes
+      · rename_i published hp
+        simp only [Bool.and_eq_true, beq_iff_eq] at publishes
+        exact ⟨data, c, hd, hc, policy, address, distinct, floor, exact, booked, deadline, minted,
+          evidence, published, hp, publishes.1, publishes.2⟩
+      · contradiction
     · contradiction
   · contradiction
+
+/-- **A booking for a key without inception evidence is refused.**
+Given a request output decoding to a registration whose key has no inception
+evidence.
+When it is booked.
+Then the booking is refused: no approval is minted for it, so there is no
+request to fold. -/
+theorem booking_refuses_missing_inception (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (release : PublishedRelease) (o : Observation) {output : ObservedOutput}
+    {data : RegistrationData} (hd : decoded i.decode output = some (.registration data))
+    (missing : env.inception data.key = false) :
+    bookRegistration i env rp cp release o output = false := by
+  cases h : bookRegistration i env rp cp release o output
+  · rfl
+  · obtain ⟨d, _, hd', _, _, _, _, _, _, _, _, _, evidence, _⟩ :=
+      booking_inversion i env rp cp release o h
+    rw [hd] at hd'
+    cases hd'
+    rw [missing] at evidence
+    contradiction
 
 /-- **A booking names only a registry of `state(A_keri)`.**
 Given a request output decoding to a registration that names a registry whose
 state policy is not the release's state policy `state(A_keri)`.
 When it is booked.
 Then the booking is refused. -/
-theorem booking_refuses_foreign_registry (i : Interpretation) (rp : CardanoKeri.Registry.Params)
+theorem booking_refuses_foreign_registry (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
     (release : PublishedRelease) (o : Observation) {output : ObservedOutput}
     {data : RegistrationData} (hd : decoded i.decode output = some (.registration data))
     (foreign : data.registry.policy ≠ release.statePolicy) :
-    bookRegistration i rp release o output = false := by
-  cases h : bookRegistration i rp release o output
+    bookRegistration i env rp cp release o output = false := by
+  cases h : bookRegistration i env rp cp release o output
   · rfl
-  · obtain ⟨d, _, hd', _, policy, _⟩ := booking_inversion i rp release o h
+  · obtain ⟨d, _, hd', _, policy, _⟩ := booking_inversion i env rp cp release o h
     rw [hd] at hd'
     cases hd'
     exact absurd policy foreign
@@ -547,15 +719,16 @@ credential.
 When it is booked.
 Then the booking is refused: a checkpoint is never delivered where the
 application's own records live. -/
-theorem booking_refuses_application_holding (i : Interpretation)
-    (rp : CardanoKeri.Registry.Params) (release : PublishedRelease) (o : Observation)
+theorem booking_refuses_application_holding (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (release : PublishedRelease) (o : Observation)
     {output : ObservedOutput} {data : RegistrationData}
     (hd : decoded i.decode output = some (.registration data))
     (atApplication : data.holdingAddress = release.applicationCredential) :
-    bookRegistration i rp release o output = false := by
-  cases h : bookRegistration i rp release o output
+    bookRegistration i env rp cp release o output = false := by
+  cases h : bookRegistration i env rp cp release o output
   · rfl
-  · obtain ⟨d, _, hd', _, _, address, distinct, _⟩ := booking_inversion i rp release o h
+  · obtain ⟨d, _, hd', _, _, address, distinct, _⟩ := booking_inversion i env rp cp release o h
     rw [hd] at hd'
     cases hd'
     exact absurd (address.symm.trans atApplication) distinct
@@ -566,16 +739,17 @@ Given a registration whose configuration record names checkpoint credential
 `c.checkpointCredential`, and whose committed holding address differs from it.
 When it is booked.
 Then the booking is refused. -/
-theorem booking_refuses_other_holding (i : Interpretation) (rp : CardanoKeri.Registry.Params)
+theorem booking_refuses_other_holding (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
     (release : PublishedRelease) (o : Observation) {output : ObservedOutput}
     {data : RegistrationData} {c : Configuration}
     (hd : decoded i.decode output = some (.registration data))
     (hc : configurationOf i release data.registry o = some c)
     (other : data.holdingAddress ≠ c.checkpointCredential) :
-    bookRegistration i rp release o output = false := by
-  cases h : bookRegistration i rp release o output
+    bookRegistration i env rp cp release o output = false := by
+  cases h : bookRegistration i env rp cp release o output
   · rfl
-  · obtain ⟨d, q, hd', hq, _, address, _⟩ := booking_inversion i rp release o h
+  · obtain ⟨d, q, hd', hq, _, address, _⟩ := booking_inversion i env rp cp release o h
     rw [hd] at hd'
     cases hd'
     rw [hc] at hq
@@ -587,14 +761,15 @@ Given a registration whose committed deposit is below the registry's minimum
 ADA plus its deposit.
 When it is booked.
 Then the booking is refused. -/
-theorem booking_refuses_short_deposit (i : Interpretation) (rp : CardanoKeri.Registry.Params)
+theorem booking_refuses_short_deposit (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
     (release : PublishedRelease) (o : Observation) {output : ObservedOutput}
     {data : RegistrationData} (hd : decoded i.decode output = some (.registration data))
     (short : data.deposit < rp.Mc + rp.D) :
-    bookRegistration i rp release o output = false := by
-  cases h : bookRegistration i rp release o output
+    bookRegistration i env rp cp release o output = false := by
+  cases h : bookRegistration i env rp cp release o output
   · rfl
-  · obtain ⟨d, _, hd', _, _, _, _, floor, _⟩ := booking_inversion i rp release o h
+  · obtain ⟨d, _, hd', _, _, _, _, floor, _⟩ := booking_inversion i env rp cp release o h
     rw [hd] at hd'
     cases hd'
     omega
@@ -604,21 +779,206 @@ Given a registration whose request output does not hold exactly its deposit,
 its registry's registration cost and minimum tip.
 When it is booked.
 Then the booking is refused. -/
-theorem booking_refuses_inexact_contents (i : Interpretation) (rp : CardanoKeri.Registry.Params)
+theorem booking_refuses_inexact_contents (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
     (release : PublishedRelease) (o : Observation) {output : ObservedOutput}
     {data : RegistrationData} {c : Configuration}
     (hd : decoded i.decode output = some (.registration data))
     (hc : configurationOf i release data.registry o = some c)
     (inexact : output.lovelace ≠ requestLovelace c.parameters data) :
-    bookRegistration i rp release o output = false := by
-  cases h : bookRegistration i rp release o output
+    bookRegistration i env rp cp release o output = false := by
+  cases h : bookRegistration i env rp cp release o output
   · rfl
-  · obtain ⟨d, q, hd', hq, _, _, _, _, exact, _⟩ := booking_inversion i rp release o h
+  · obtain ⟨d, q, hd', hq, _, _, _, _, exact, _⟩ := booking_inversion i env rp cp release o h
     rw [hd] at hd'
     cases hd'
     rw [hc] at hq
     cases hq
     exact absurd exact inexact
+
+/-! ## The initial datum a booking publishes -/
+
+/-- The published datum of a booked request, with what the booking checked of it. -/
+theorem booking_publishes {i : Interpretation} {env : Env} {rp : CardanoKeri.Registry.Params}
+    {cp : CardanoKeri.Checkpoint.Params} {release : PublishedRelease} {o : Observation}
+    {output : ObservedOutput} {data : RegistrationData}
+    (ok : bookRegistration i env rp cp release o output = true)
+    (hd : decoded i.decode output = some (.registration data)) :
+    ∃ published, publishedDatum i output = some published ∧
+      i.datumHash published = data.initialDatum ∧
+      initialStateDatum i rp cp data published = true := by
+  obtain ⟨d, _, hd', _, _, _, _, _, _, _, _, _, _, publishes⟩ :=
+    booking_inversion i env rp cp release o ok
+  rw [hd] at hd'
+  cases hd'
+  exact publishes
+
+/-- **A booking that publishes no initial datum is refused.**
+Given a request output decoding to a registration whose own datum publishes no
+initial checkpoint datum.
+When it is booked.
+Then the booking is refused: a folder could not learn from the chain what to
+deliver. -/
+theorem booking_refuses_unpublished_datum (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (release : PublishedRelease) (o : Observation) {output : ObservedOutput}
+    {data : RegistrationData} (hd : decoded i.decode output = some (.registration data))
+    (unpublished : publishedDatum i output = none) :
+    bookRegistration i env rp cp release o output = false := by
+  cases h : bookRegistration i env rp cp release o output
+  · rfl
+  · obtain ⟨published, hp, _⟩ := booking_publishes h hd
+    rw [unpublished] at hp
+    cases hp
+
+/-- **A booking whose published datum is not the committed one is refused.**
+Given a request output decoding to a registration, publishing a datum whose
+hash is not the initial-datum hash the request commits.
+When it is booked.
+Then the booking is refused: the datum a folder reads is the datum the
+approval binds. -/
+theorem booking_refuses_other_published_datum (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (release : PublishedRelease) (o : Observation) {output : ObservedOutput}
+    {data : RegistrationData} {raw : Nat}
+    (hd : decoded i.decode output = some (.registration data))
+    (published : publishedDatum i output = some raw)
+    (other : i.datumHash raw ≠ data.initialDatum) :
+    bookRegistration i env rp cp release o output = false := by
+  cases h : bookRegistration i env rp cp release o output
+  · rfl
+  · obtain ⟨raw', hp, hash, _⟩ := booking_publishes h hd
+    rw [published] at hp
+    cases hp
+    exact absurd hash other
+
+/-- **A booking publishing a checkpoint in any other state is refused.**
+Given a registration request whose refund address has the checkpoint refund
+address `refund`, publishing a datum that decodes as a checkpoint datum whose
+state is not live at sequence number and epoch 0, neither poisoned, frozen nor
+topped up, born at the request's booking bound and refunding to `refund`:
+another sequence number, epoch, poison, freeze or top-up flag, birth slot or
+refund address, or a pending termination.
+When it is booked.
+Then the booking is refused. On main the fold refused it
+(`fold_refuses_other_state`); the datum is now validated once, before the
+approval exists. -/
+theorem booking_refuses_other_state (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (release : PublishedRelease) (o : Observation) {output : ObservedOutput}
+    {data : RegistrationData} {raw : Nat}
+    {d : CardanoKeri.ConsumerIdentity.DecodedDatum} {refund : CardanoKeri.Checkpoint.Addr}
+    (hd : decoded i.decode output = some (.registration data))
+    (published : publishedDatum i output = some raw)
+    (hdec : i.decodeCheckpoint raw = some d) (hr : i.refundTo data.refundAddress = some refund)
+    (other : d.state ≠ .present ⟨0, 0, false, false, data.bookedAt, refund, 0, false⟩) :
+    bookRegistration i env rp cp release o output = false := by
+  cases h : bookRegistration i env rp cp release o output
+  · rfl
+  · obtain ⟨raw', hp, _, initial⟩ := booking_publishes h hd
+    rw [published] at hp
+    cases hp
+    obtain ⟨d', refund', s, hd', hr', hs, _, facts⟩ := initialStateDatum_inversion initial
+    have written := facts.trans (initialState_facts hs).1
+    rw [hdec] at hd'
+    cases hd'
+    rw [hr] at hr'
+    cases hr'
+    exact absurd written other
+
+/-- **A booking publishing the checkpoint of another AID is refused.**
+Given a registration request publishing a datum that decodes as a checkpoint
+datum of an AID whose key is not the key the request names.
+When it is booked.
+Then the booking is refused. On main the fold refused it
+(`fold_refuses_other_aid`). -/
+theorem booking_refuses_other_aid (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (release : PublishedRelease) (o : Observation) {output : ObservedOutput}
+    {data : RegistrationData} {raw : Nat} {d : CardanoKeri.ConsumerIdentity.DecodedDatum}
+    (hd : decoded i.decode output = some (.registration data))
+    (published : publishedDatum i output = some raw)
+    (hdec : i.decodeCheckpoint raw = some d) (other : i.keyOf d.aid ≠ data.key) :
+    bookRegistration i env rp cp release o output = false := by
+  cases h : bookRegistration i env rp cp release o output
+  · rfl
+  · obtain ⟨raw', hp, _, initial⟩ := booking_publishes h hd
+    rw [published] at hp
+    cases hp
+    obtain ⟨d', _, _, hd', _, _, key, _⟩ := initialStateDatum_inversion initial
+    rw [hdec] at hd'
+    cases hd'
+    exact absurd key other
+
+/-- **A booking whose deposit cannot pay one premium is refused.**
+Given a registration request whose deposit is below the minimum ADA, the
+checkpoint deposit, the freeze bond and one premium.
+When it is booked.
+Then the booking is refused: no initial state has a pool below one premium.
+On main such a request was booked and its fold refused
+(`fold_refuses_pool_below_premium`), so it waited for its deadline to be
+returned. -/
+theorem booking_refuses_pool_below_premium (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (release : PublishedRelease) (o : Observation) {output : ObservedOutput}
+    {data : RegistrationData} (hd : decoded i.decode output = some (.registration data))
+    (short : data.deposit < rp.Mc + cp.D + cp.B + cp.P) :
+    bookRegistration i env rp cp release o output = false := by
+  cases h : bookRegistration i env rp cp release o output
+  · rfl
+  · obtain ⟨_, _, _, initial⟩ := booking_publishes h hd
+    obtain ⟨_, _, _, _, _, hs, _⟩ := initialStateDatum_inversion initial
+    have := (initialState_facts hs).2.1
+    omega
+
+/-- **A booking for a refund address no checkpoint can record is refused.**
+Given a registration request whose refund address has no checkpoint refund
+address.
+When it is booked.
+Then the booking is refused. On main the fold refused it
+(`fold_refuses_unrecorded_refund`). -/
+theorem booking_refuses_unrecorded_refund (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (release : PublishedRelease) (o : Observation) {output : ObservedOutput}
+    {data : RegistrationData} (hd : decoded i.decode output = some (.registration data))
+    (unrecorded : i.refundTo data.refundAddress = none) :
+    bookRegistration i env rp cp release o output = false := by
+  cases h : bookRegistration i env rp cp release o output
+  · rfl
+  · obtain ⟨_, _, _, initial⟩ := booking_publishes h hd
+    obtain ⟨_, _, _, _, hr, _⟩ := initialStateDatum_inversion initial
+    rw [unrecorded] at hr
+    cases hr
+
+/-- **A booked request publishes exactly the initial checkpoint state.**
+Given an accepted booking of a request, and any checkpoint environment.
+When the request's own datum is read.
+Then it publishes a datum of the committed hash that is a checkpoint datum of
+the AID whose key the request names, for the checkpoint refund address
+`refund` of the request's refund address; and the checkpoint model's
+registration step with `refund` and the pool the deposit leaves above the
+minimum ADA, the deposit and the freeze bond, at the request's booking bound,
+writes from the absent checkpoint a state whose facts are the datum's and
+whose held value is the committed deposit: live at sequence number and epoch
+0, neither poisoned, frozen nor topped up, born at the booking bound, with a
+pool of at least one premium. -/
+theorem booked_publishes_initial_state {i : Interpretation} {env : Env}
+    {rp : CardanoKeri.Registry.Params} {cp : CardanoKeri.Checkpoint.Params}
+    (cenv : CardanoKeri.Checkpoint.Env) {release : PublishedRelease} {booking : Observation}
+    {request : ObservedOutput} {data : RegistrationData}
+    (booked : bookRegistration i env rp cp release booking request = true)
+    (hb : decoded i.decode request = some (.registration data)) :
+    ∃ raw d refund pool f s, publishedDatum i request = some raw ∧
+      i.datumHash raw = data.initialDatum ∧
+      i.decodeCheckpoint raw = some d ∧ i.keyOf d.aid = data.key ∧
+      i.refundTo data.refundAddress = some refund ∧
+      CardanoKeri.Checkpoint.Step cp cenv (.register refund pool) data.bookedAt .absent f s ∧
+      d.state = s.datumFacts ∧ data.deposit = s.heldValue cp rp ∧
+      d.state = .present ⟨0, 0, false, false, data.bookedAt, refund, 0, false⟩ ∧
+      pool = data.deposit - (rp.Mc + cp.D + cp.B) ∧ cp.P ≤ pool := by
+  obtain ⟨raw, hp, hash, initial⟩ := booking_publishes booked hb
+  obtain ⟨d, refund, pool, f, s, rest⟩ := initialStateDatum_is_registration cenv initial
+  exact ⟨raw, d, refund, pool, f, s, hp, hash, rest⟩
 
 
 /-! ## The fold's holding -/
@@ -628,16 +988,47 @@ Given a booked registration and a fold naming a holding whose lovelace differs
 from the committed deposit, by one lovelace more or less.
 When the request is spent by that fold.
 Then the spend is refused. -/
-theorem fold_refuses_inexact_holding (i : Interpretation) (env : Env)
-    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params) (release : PublishedRelease)
+theorem fold_refuses_inexact_holding (i : Interpretation) (release : PublishedRelease)
     (o : Observation) {ref : OutRef} {index : Nat} {input holding : ObservedOutput}
     {data : RegistrationData} (hh : o.outputs[index]? = some holding)
     (inexact : holding.lovelace ≠ data.deposit) :
-    spendRegistration i env rp cp release o (.foldRegistration ref index) input data = false := by
+    spendRegistration i release o (.foldRegistration ref index) input data = false := by
   unfold spendRegistration
   split
   · rfl
   · simp [hh, delivered, inexact]
+
+/-- **A fold delivering a datum of another hash is refused.**
+Given a fold naming a holding whose datum does not have the initial-datum hash
+the request commits: no application datum, or one of another hash.
+When the request is spent by that fold.
+Then the spend is refused: a fold delivers the datum the approval binds, which
+the request publishes. -/
+theorem fold_refuses_other_datum (i : Interpretation) (release : PublishedRelease)
+    (o : Observation) {ref : OutRef} {index : Nat} {input holding : ObservedOutput}
+    {data : RegistrationData} (hh : o.outputs[index]? = some holding)
+    (other : holdingDatumHash i holding ≠ some data.initialDatum) :
+    spendRegistration i release o (.foldRegistration ref index) input data = false := by
+  unfold spendRegistration
+  split
+  · rfl
+  · simp [hh, delivered, other]
+
+/-- **A fold delivering to another address than the committed one is refused.**
+Given a fold naming a holding that is not at the holding address the request
+commits.
+When the request is spent by that fold.
+Then the spend is refused. -/
+theorem fold_refuses_other_address (i : Interpretation) (release : PublishedRelease)
+    (o : Observation) {ref : OutRef} {index : Nat} {input holding : ObservedOutput}
+    {data : RegistrationData} (hh : o.outputs[index]? = some holding)
+    (other : holding.credential ≠ data.holdingAddress) :
+    spendRegistration i release o (.foldRegistration ref index) input data = false := by
+  unfold spendRegistration
+  split
+  · rfl
+  · simp [hh, delivered, other]
+
 
 /-- **The two windows are the upstream processing and cleanup phases.**
 Given a request recorded with `reclaimEnd = processDeadline`, as a KERI booking
@@ -728,33 +1119,43 @@ theorem approval_ignores_network (i : Interpretation)
 
 /-! ## Where the checkpoint lives -/
 
-/-- A delivered holding sits at the committed holding address and at the
-checkpoint validator's credential the configuration record names. -/
-theorem delivered_credential {i : Interpretation} {rp : CardanoKeri.Registry.Params}
-    {cp : CardanoKeri.Checkpoint.Params} {c : Configuration} {data : RegistrationData}
-    {holding : ObservedOutput} {o : Observation} (h : delivered i rp cp c data holding o = true) :
-    holding.credential = data.holdingAddress ∧ holding.credential = c.checkpointCredential := by
+/-- A delivered holding sits at the committed holding address. -/
+theorem delivered_credential {i : Interpretation} {data : RegistrationData}
+    {holding : ObservedOutput} {o : Observation} (h : delivered i data holding o = true) :
+    holding.credential = data.holdingAddress := by
   simp only [delivered, Bool.and_eq_true, beq_iff_eq] at h
-  exact ⟨h.1.1.1.1.1.1, h.1.1.1.1.1.2⟩
+  exact h.1.1.1.1
 
-/-- **Every fold delivers its checkpoint to the checkpoint validator.**
+/-- A fold spend that is not refused delivers a holding. -/
+theorem fold_spend_delivers {i : Interpretation} {release : PublishedRelease} {o : Observation}
+    {ref : OutRef} {index : Nat} {input : ObservedOutput} {data : RegistrationData}
+    (h : spendRegistration i release o (.foldRegistration ref index) input data = true) :
+    ∃ holding, o.outputs[index]? = some holding ∧ delivered i data holding o = true := by
+  unfold spendRegistration at h
+  split at h
+  · contradiction
+  · simp only [Bool.and_eq_true] at h
+    obtain ⟨_, _, holding⟩ := h
+    split at holding
+    · rename_i x hx
+      exact ⟨x, hx, holding⟩
+    · contradiction
+
+/-- **Every fold delivers what its request's approval commits.**
 Given a transaction the KERI application accepts.
 When it folds a registration request, naming the output it delivers.
-Then the named request is spent exactly once and decodes as a registration
-whose configuration record is read by reference, and the delivered holding
-sits at the checkpoint validator's credential that record names, which is the
-holding address the request committed. -/
-theorem fold_delivers_to_checkpoint_validator (i : Interpretation) (env : Env)
+Then the named request is spent exactly once and decodes as a registration,
+and the delivered holding is at the committed address, carries a datum of the
+committed hash, and holds exactly the committed deposit and the one new
+active token of the key. -/
+theorem fold_delivers_committed (i : Interpretation) (env : Env)
     (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
     (release : PublishedRelease) (o : Observation)
     (ok : accepted i env rp cp release o = true) {ref : OutRef} {index : Nat}
     (folded : Action.foldRegistration ref index ∈ o.actions) :
-    ∃ input data c holding, namedInput o ref = some input ∧
+    ∃ input data holding, namedInput o ref = some input ∧
       decoded i.decode input = some (.registration data) ∧
-      configurationOf i release data.registry o = some c ∧
-      o.outputs[index]? = some holding ∧ delivered i rp cp c data holding o = true ∧
-      holding.credential = c.checkpointCredential ∧
-      holding.credential = data.holdingAddress := by
+      o.outputs[index]? = some holding ∧ delivered i data holding o = true := by
   simp only [accepted, Bool.and_eq_true] at ok
   have aok := List.all_eq_true.mp ok.1.1.1.2 _ folded
   simp only [action] at aok
@@ -762,19 +1163,47 @@ theorem fold_delivers_to_checkpoint_validator (i : Interpretation) (env : Env)
   · rename_i input named
     split at aok
     · rename_i data hd
-      unfold spendRegistration at aok
-      split at aok
-      · contradiction
-      · rename_i c hc
-        simp only [Bool.and_eq_true] at aok
-        obtain ⟨_, _, holding⟩ := aok
-        split at holding
-        · rename_i h hh
-          have cred := delivered_credential holding
-          exact ⟨input, data, c, h, named, hd, hc, hh, holding, cred.2, cred.1⟩
-        · contradiction
+      obtain ⟨holding, hh, hdel⟩ := fold_spend_delivers aok
+      exact ⟨input, data, holding, named, hd, hh, hdel⟩
     · contradiction
   · contradiction
+
+/-- **Every fold delivers its checkpoint to the checkpoint validator.**
+Given a request booked by an accepted booking, and a transaction the KERI
+application accepts that folds a request of the same registration data, naming
+the output it delivers.
+When the delivered holding is inspected.
+Then it sits at the holding address the request committed, which is the
+checkpoint validator's credential named by the configuration record the
+booking read, and is not the application's. On main the fold compared the
+holding with the record it read itself; the address is now validated once, at
+the booking, and the fold delivers to the committed address. -/
+theorem fold_delivers_to_checkpoint_validator (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (release : PublishedRelease) {booking o : Observation} {request input : ObservedOutput}
+    {data : RegistrationData}
+    (booked : bookRegistration i env rp cp release booking request = true)
+    (hb : decoded i.decode request = some (.registration data))
+    (ok : accepted i env rp cp release o = true) {ref : OutRef} {index : Nat}
+    (folded : Action.foldRegistration ref index ∈ o.actions)
+    (named : namedInput o ref = some input)
+    (hd : decoded i.decode input = some (.registration data)) :
+    ∃ c holding, configurationOf i release data.registry booking = some c ∧
+      o.outputs[index]? = some holding ∧ delivered i data holding o = true ∧
+      holding.credential = c.checkpointCredential ∧
+      holding.credential = data.holdingAddress ∧
+      holding.credential ≠ release.applicationCredential := by
+  obtain ⟨input', data', holding, named', hd', hh, hdel⟩ :=
+    fold_delivers_committed i env rp cp release o ok folded
+  rw [named] at named'
+  cases named'
+  rw [hd] at hd'
+  cases hd'
+  obtain ⟨d, c, hb', hc, _, address, distinct, _⟩ := booking_inversion i env rp cp release booking booked
+  rw [hb] at hb'
+  cases hb'
+  have cred := delivered_credential hdel
+  exact ⟨c, holding, hc, hh, hdel, cred.trans address, cred, by rw [cred, address]; exact distinct⟩
 
 /-- **No input at the application address is a checkpoint.**
 Given a transaction the KERI application accepts, and one of its inputs at the
@@ -809,307 +1238,164 @@ theorem no_application_input_is_a_checkpoint (i : Interpretation) (env : Env)
       none_beq_flip] at aok
   · contradiction
 
-/-! ## The initial checkpoint state -/
+/-! ## The checkpoint a fold delivers -/
 
-/-- **The initial state is the checkpoint model's registration.**
-Given registry and checkpoint parameters, a refund address, a registration
-request and any checkpoint environment.
-When the request's initial state is computed.
-Then it is the state `s` exactly when the deposit leaves a pool above the
-minimum ADA, the deposit and the freeze bond, and the checkpoint model's
-registration step with that refund address and that pool, at the request's
-booking bound, writes `s` from the absent checkpoint. -/
-theorem initialState_is_registration (rp : CardanoKeri.Registry.Params)
-    (cp : CardanoKeri.Checkpoint.Params) (cenv : CardanoKeri.Checkpoint.Env)
-    (refund : CardanoKeri.Checkpoint.Addr) (data : RegistrationData)
-    (s : CardanoKeri.Checkpoint.State) :
-    initialState rp cp refund data = some s ↔
-      ∃ pool f, initialPool rp cp data = some pool ∧
-        CardanoKeri.Checkpoint.Step cp cenv (.register refund pool) data.bookedAt .absent f s := by
-  unfold initialState
-  constructor
-  · intro h
-    split at h
-    · rename_i pool hp
-      split at h
-      · rename_i hP
-        cases h
-        exact ⟨pool, _, hp, CardanoKeri.Checkpoint.Step.register _ _ _ hP⟩
-      · contradiction
-    · contradiction
-  · rintro ⟨pool, f, hp, step⟩
-    cases step with
-    | register _ _ _ hpool => simp [hp, hpool]
-
-/-- The floor arithmetic of an initial pool, over plain naturals. -/
-theorem initial_pool_arithmetic {floor premium deposit : Nat} (covered : floor ≤ deposit)
-    (pays : premium ≤ deposit - floor) :
-    floor + premium ≤ deposit ∧ floor + (deposit - floor) = deposit := by
-  omega
-
-/-- **What the initial state holds.**
-Given a request whose initial state for refund address `refund` is `s`.
-When its datum facts and held value are read.
-Then its facts are live at sequence number and epoch 0, neither poisoned,
-frozen nor topped up, born at the booking bound and refunding to `refund`; the
-deposit covers the minimum ADA, the deposit, the freeze bond and one premium;
-and the checkpoint holds exactly the deposit. -/
-theorem initialState_facts {rp : CardanoKeri.Registry.Params} {cp : CardanoKeri.Checkpoint.Params}
-    {refund : CardanoKeri.Checkpoint.Addr} {data : RegistrationData}
-    {s : CardanoKeri.Checkpoint.State} (h : initialState rp cp refund data = some s) :
-    s.datumFacts = .present ⟨0, 0, false, false, data.bookedAt, refund, 0, false⟩ ∧
-      rp.Mc + cp.D + cp.B + cp.P ≤ data.deposit ∧ s.heldValue cp rp = data.deposit := by
-  unfold initialState at h
-  cases hp : initialPool rp cp data with
-  | none => simp [hp] at h
-  | some pool =>
-    simp only [hp] at h
-    by_cases hP : cp.P ≤ pool
-    · simp only [hP, if_true, Option.some.injEq] at h
-      subst h
-      unfold initialPool at hp
-      by_cases floor : rp.Mc + cp.D + cp.B ≤ data.deposit
-      · simp only [floor, if_true, Option.some.injEq] at hp
-        subst hp
-        have arithmetic := initial_pool_arithmetic floor hP
-        refine ⟨rfl, arithmetic.1, ?_⟩
-        rw [CardanoKeri.Checkpoint.present_held_value]
-        simp only [Bool.false_eq_true, if_false]
-        exact arithmetic.2
-      · simp [floor] at hp
-    · simp [hP] at h
-
-/-- A holding that writes the initial state decodes as the initial state of
-the request's key, for the refund address the request names. -/
-theorem writesInitialState_inversion {i : Interpretation} {rp : CardanoKeri.Registry.Params}
-    {cp : CardanoKeri.Checkpoint.Params} {data : RegistrationData} {holding : ObservedOutput}
-    (h : writesInitialState i rp cp data holding = true) :
-    ∃ raw d refund s, holding.datum = .application raw ∧ i.decodeCheckpoint raw = some d ∧
-      i.refundTo data.refundAddress = some refund ∧ initialState rp cp refund data = some s ∧
-      i.keyOf d.aid = data.key ∧ d.state = s.datumFacts := by
-  unfold writesInitialState at h
-  split at h
-  · rename_i raw refund held hr
-    split at h
-    · rename_i d s hd hs
-      simp only [Bool.and_eq_true, beq_iff_eq] at h
-      exact ⟨raw, d, refund, s, held, hd, hr, hs, h.1, h.2⟩
-    · contradiction
+/-- A holding delivered for a booked request carries the datum the request
+publishes, when no other datum has its hash. -/
+theorem delivered_holds_published {i : Interpretation} {env : Env}
+    {rp : CardanoKeri.Registry.Params} {cp : CardanoKeri.Checkpoint.Params}
+    {release : PublishedRelease} {booking fold : Observation}
+    {request holding : ObservedOutput} {data : RegistrationData} {raw : Nat}
+    (booked : bookRegistration i env rp cp release booking request = true)
+    (hb : decoded i.decode request = some (.registration data))
+    (published : publishedDatum i request = some raw)
+    (collision : ∀ x, i.datumHash x = i.datumHash raw → x = raw)
+    (h : delivered i data holding fold = true) :
+    holding.datum = .application raw := by
+  obtain ⟨raw', hp, hash, _⟩ := booking_publishes booked hb
+  rw [published] at hp
+  cases hp
+  simp only [delivered, Bool.and_eq_true, beq_iff_eq] at h
+  have datum := h.1.1.1.2
+  unfold holdingDatumHash at datum
+  split at datum
+  · rename_i x held
+    simp only [Option.some.injEq] at datum
+    rw [held, collision x (datum.trans hash.symm)]
   · contradiction
 
 /-- **A delivered holding is exactly the initial checkpoint state.**
-Given a holding delivered for a registration request, and any checkpoint
-environment.
-When its datum and lovelace are read.
-Then its datum decodes as a checkpoint datum of the AID whose key the request
+Given a request booked by an accepted booking and publishing the datum `raw`,
+a holding delivered for it by a fold, no other datum with the hash of `raw`,
+and any checkpoint environment.
+When the holding's datum and lovelace are read.
+Then its datum is `raw`, a checkpoint datum of the AID whose key the request
 names; the request's refund address has a checkpoint refund address `refund`;
 and the checkpoint model's registration step with `refund` and the pool the
 deposit leaves above the minimum ADA, the deposit and the freeze bond, at the
 request's booking bound, writes from the absent checkpoint a state whose facts
 are the datum's and whose held value is the holding's lovelace: live at
 sequence number and epoch 0, neither poisoned, frozen nor topped up, born at
-the booking bound, with a pool of at least one premium. -/
-theorem delivered_initial_state {i : Interpretation} {rp : CardanoKeri.Registry.Params}
-    {cp : CardanoKeri.Checkpoint.Params} (cenv : CardanoKeri.Checkpoint.Env) {c : Configuration}
-    {data : RegistrationData} {holding : ObservedOutput} {o : Observation}
-    (h : delivered i rp cp c data holding o = true) :
-    ∃ raw d refund pool f s, holding.datum = .application raw ∧
+the booking bound, with a pool of at least one premium. On main the fold
+checked the datum itself; the booking now does, and the fold delivers the
+datum of the committed hash. -/
+theorem delivered_initial_state {i : Interpretation} {env : Env}
+    {rp : CardanoKeri.Registry.Params} {cp : CardanoKeri.Checkpoint.Params}
+    (cenv : CardanoKeri.Checkpoint.Env) {release : PublishedRelease} {booking fold : Observation}
+    {request holding : ObservedOutput} {data : RegistrationData} {raw : Nat}
+    (booked : bookRegistration i env rp cp release booking request = true)
+    (hb : decoded i.decode request = some (.registration data))
+    (published : publishedDatum i request = some raw)
+    (collision : ∀ x, i.datumHash x = i.datumHash raw → x = raw)
+    (h : delivered i data holding fold = true) :
+    ∃ d refund pool f s, holding.datum = .application raw ∧
       i.decodeCheckpoint raw = some d ∧ i.keyOf d.aid = data.key ∧
       i.refundTo data.refundAddress = some refund ∧
       CardanoKeri.Checkpoint.Step cp cenv (.register refund pool) data.bookedAt .absent f s ∧
       d.state = s.datumFacts ∧ holding.lovelace = s.heldValue cp rp ∧
       d.state = .present ⟨0, 0, false, false, data.bookedAt, refund, 0, false⟩ ∧
       pool = data.deposit - (rp.Mc + cp.D + cp.B) ∧ cp.P ≤ pool := by
+  have held := delivered_holds_published booked hb published collision h
+  obtain ⟨raw', d, refund, pool, f, s, hp, _, hd, key, hr, step, facts, value, written, pool_eq, premium⟩ :=
+    booked_publishes_initial_state cenv booked hb
+  rw [published] at hp
+  cases hp
   simp only [delivered, Bool.and_eq_true, beq_iff_eq] at h
-  obtain ⟨⟨⟨⟨_, initial⟩, lovelace⟩, _⟩, _⟩ := h
-  obtain ⟨raw, d, refund, s, held, hd, hr, hs, key, facts⟩ := writesInitialState_inversion initial
-  obtain ⟨pool, f, hp, step⟩ := (initialState_is_registration rp cp cenv refund data s).mp hs
-  obtain ⟨written, floor, value⟩ := initialState_facts hs
-  have pool_eq : pool = data.deposit - (rp.Mc + cp.D + cp.B) := by
-    unfold initialPool at hp
-    split at hp
-    · cases hp; rfl
-    · contradiction
-  refine ⟨raw, d, refund, pool, f, s, held, hd, key, hr, step, facts, ?_, facts.trans written,
-    pool_eq, ?_⟩
-  · rw [lovelace, value]
-  · have arithmetic : rp.Mc + cp.D + cp.B + cp.P ≤ data.deposit := floor
-    rw [pool_eq]
-    exact Nat.le_sub_of_add_le (by rw [Nat.add_comm]; exact arithmetic)
+  exact ⟨d, refund, pool, f, s, held, hd, key, hr, step, facts, h.1.1.2.trans value, written,
+    pool_eq, premium⟩
+
+/-- **A delivered holding writes the initial state.**
+Given a request booked by an accepted booking and publishing the datum `raw`,
+a holding delivered for it, and no other datum with the hash of `raw`.
+When the holding is tested for the initial state of the request's key.
+Then it writes it. -/
+theorem delivered_writes_initial_state {i : Interpretation} {env : Env}
+    {rp : CardanoKeri.Registry.Params} {cp : CardanoKeri.Checkpoint.Params}
+    {release : PublishedRelease} {booking fold : Observation}
+    {request holding : ObservedOutput} {data : RegistrationData} {raw : Nat}
+    (booked : bookRegistration i env rp cp release booking request = true)
+    (hb : decoded i.decode request = some (.registration data))
+    (published : publishedDatum i request = some raw)
+    (collision : ∀ x, i.datumHash x = i.datumHash raw → x = raw)
+    (h : delivered i data holding fold = true) :
+    writesInitialState i rp cp data holding = true := by
+  have held := delivered_holds_published booked hb published collision h
+  obtain ⟨raw', hp, _, initial⟩ := booking_publishes booked hb
+  rw [published] at hp
+  cases hp
+  simp [writesInitialState, held, initial]
 
 /-- **A fold delivers exactly the initial checkpoint state.**
-Given a transaction the KERI application accepts, and any checkpoint
-environment.
-When it folds a registration request, naming the output it delivers.
-Then the named request is spent exactly once and decodes as a registration,
-and the delivered holding is exactly the state the checkpoint model's
-registration step writes for it: its datum is a checkpoint datum of the AID
-whose key the request names, live at sequence number and epoch 0, neither
-poisoned, frozen nor topped up, born at the request's booking bound and
-refunding to the refund address the request names; its lovelace is that
-state's held value, whose pool is the deposit less the minimum ADA, the
-deposit and the freeze bond and covers at least one premium. -/
+Given a request booked by an accepted booking and publishing the datum `raw`,
+no other datum with the hash of `raw`, any checkpoint environment, and a
+transaction the KERI application accepts that folds a request of the same
+registration data, naming the output it delivers.
+When the delivered holding is read.
+Then it is exactly the state the checkpoint model's registration step writes
+for the request: its datum is `raw`, a checkpoint datum of the AID whose key
+the request names, live at sequence number and epoch 0, neither poisoned,
+frozen nor topped up, born at the request's booking bound and refunding to
+the refund address the request names; its lovelace is that state's held
+value, whose pool is the deposit less the minimum ADA, the deposit and the
+freeze bond and covers at least one premium. -/
 theorem fold_delivers_initial_state (i : Interpretation) (env : Env)
     (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
-    (cenv : CardanoKeri.Checkpoint.Env) (release : PublishedRelease) (o : Observation)
+    (cenv : CardanoKeri.Checkpoint.Env) (release : PublishedRelease) {booking o : Observation}
+    {request input : ObservedOutput} {data : RegistrationData} {raw : Nat}
+    (booked : bookRegistration i env rp cp release booking request = true)
+    (hb : decoded i.decode request = some (.registration data))
+    (published : publishedDatum i request = some raw)
+    (collision : ∀ x, i.datumHash x = i.datumHash raw → x = raw)
     (ok : accepted i env rp cp release o = true) {ref : OutRef} {index : Nat}
-    (folded : Action.foldRegistration ref index ∈ o.actions) :
-    ∃ input data holding raw d refund pool f s, namedInput o ref = some input ∧
-      decoded i.decode input = some (.registration data) ∧
-      o.outputs[index]? = some holding ∧ holding.datum = .application raw ∧
+    (folded : Action.foldRegistration ref index ∈ o.actions)
+    (named : namedInput o ref = some input)
+    (hd : decoded i.decode input = some (.registration data)) :
+    ∃ holding d refund pool f s, o.outputs[index]? = some holding ∧
+      holding.datum = .application raw ∧
       i.decodeCheckpoint raw = some d ∧ i.keyOf d.aid = data.key ∧
       i.refundTo data.refundAddress = some refund ∧
       CardanoKeri.Checkpoint.Step cp cenv (.register refund pool) data.bookedAt .absent f s ∧
       d.state = s.datumFacts ∧ holding.lovelace = s.heldValue cp rp ∧
       d.state = .present ⟨0, 0, false, false, data.bookedAt, refund, 0, false⟩ ∧
       pool = data.deposit - (rp.Mc + cp.D + cp.B) ∧ cp.P ≤ pool := by
-  obtain ⟨input, data, c, holding, named, hd, _, hh, hdel, _⟩ :=
-    fold_delivers_to_checkpoint_validator i env rp cp release o ok folded
-  obtain ⟨raw, d, refund, pool, f, s, rest⟩ := delivered_initial_state cenv hdel
-  exact ⟨input, data, holding, raw, d, refund, pool, f, s, named, hd, hh, rest⟩
-
-/-- A fold spend that is not refused delivers a holding. -/
-theorem fold_spend_delivers {i : Interpretation} {env : Env} {rp : CardanoKeri.Registry.Params}
-    {cp : CardanoKeri.Checkpoint.Params} {release : PublishedRelease} {o : Observation}
-    {ref : OutRef} {index : Nat} {input : ObservedOutput} {data : RegistrationData}
-    (h : spendRegistration i env rp cp release o (.foldRegistration ref index) input data = true) :
-    ∃ c holding, o.outputs[index]? = some holding ∧ delivered i rp cp c data holding o = true := by
-  unfold spendRegistration at h
-  split at h
-  · contradiction
-  · rename_i c _
-    simp only [Bool.and_eq_true] at h
-    obtain ⟨_, _, holding⟩ := h
-    split at holding
-    · rename_i x hx
-      exact ⟨c, x, hx, holding⟩
-    · contradiction
-
-/-- **A fold delivering a checkpoint in any other state is refused.**
-Given a registration request whose refund address has the checkpoint refund
-address `refund`, and a fold naming a holding whose datum decodes as a
-checkpoint datum whose state is not live at sequence number and epoch 0,
-neither poisoned, frozen nor topped up, born at the request's booking bound and
-refunding to `refund`: another sequence number, epoch, poison, freeze or top-up
-flag, birth slot or refund address, or a pending termination.
-When the request is spent by that fold.
-Then the spend is refused. -/
-theorem fold_refuses_other_state (i : Interpretation) (env : Env)
-    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
-    (release : PublishedRelease) (o : Observation) {ref : OutRef} {index : Nat}
-    {input holding : ObservedOutput} {data : RegistrationData} {raw : Nat}
-    {d : CardanoKeri.ConsumerIdentity.DecodedDatum} {refund : CardanoKeri.Checkpoint.Addr}
-    (hh : o.outputs[index]? = some holding) (held : holding.datum = .application raw)
-    (hd : i.decodeCheckpoint raw = some d) (hr : i.refundTo data.refundAddress = some refund)
-    (other : d.state ≠ .present ⟨0, 0, false, false, data.bookedAt, refund, 0, false⟩) :
-    spendRegistration i env rp cp release o (.foldRegistration ref index) input data = false := by
-  cases h : spendRegistration i env rp cp release o (.foldRegistration ref index) input data
-  · rfl
-  · obtain ⟨c, x, hx, hdel⟩ := fold_spend_delivers h
-    rw [hh] at hx
-    cases hx
-    simp only [delivered, Bool.and_eq_true] at hdel
-    obtain ⟨raw', d', refund', s, held', hd', hr', hs, _, facts⟩ :=
-      writesInitialState_inversion hdel.1.1.1.2
-    have written := facts.trans (initialState_facts hs).1
-    rw [held] at held'
-    cases held'
-    rw [hd] at hd'
-    cases hd'
-    rw [hr] at hr'
-    cases hr'
-    exact absurd written other
-
-/-- **A fold delivering the checkpoint of another AID is refused.**
-Given a fold naming a holding whose datum decodes as a checkpoint datum of an
-AID whose key is not the key the request names.
-When the request is spent by that fold.
-Then the spend is refused. -/
-theorem fold_refuses_other_aid (i : Interpretation) (env : Env)
-    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
-    (release : PublishedRelease) (o : Observation) {ref : OutRef} {index : Nat}
-    {input holding : ObservedOutput} {data : RegistrationData} {raw : Nat}
-    {d : CardanoKeri.ConsumerIdentity.DecodedDatum}
-    (hh : o.outputs[index]? = some holding) (held : holding.datum = .application raw)
-    (hd : i.decodeCheckpoint raw = some d) (other : i.keyOf d.aid ≠ data.key) :
-    spendRegistration i env rp cp release o (.foldRegistration ref index) input data = false := by
-  cases h : spendRegistration i env rp cp release o (.foldRegistration ref index) input data
-  · rfl
-  · obtain ⟨c, x, hx, hdel⟩ := fold_spend_delivers h
-    rw [hh] at hx
-    cases hx
-    simp only [delivered, Bool.and_eq_true] at hdel
-    obtain ⟨raw', d', _, _, held', hd', _, _, key, _⟩ :=
-      writesInitialState_inversion hdel.1.1.1.2
-    rw [held] at held'
-    cases held'
-    rw [hd] at hd'
-    cases hd'
-    exact absurd key other
-
-/-- **A fold whose deposit cannot pay one premium is refused.**
-Given a registration request whose deposit is below the minimum ADA, the
-checkpoint deposit, the freeze bond and one premium.
-When the request is spent by a fold.
-Then the spend is refused: no initial state has a pool below one premium. -/
-theorem fold_refuses_pool_below_premium (i : Interpretation) (env : Env)
-    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
-    (release : PublishedRelease) (o : Observation) {ref : OutRef} {index : Nat}
-    {input : ObservedOutput} {data : RegistrationData}
-    (short : data.deposit < rp.Mc + cp.D + cp.B + cp.P) :
-    spendRegistration i env rp cp release o (.foldRegistration ref index) input data = false := by
-  cases h : spendRegistration i env rp cp release o (.foldRegistration ref index) input data
-  · rfl
-  · obtain ⟨c, x, _, hdel⟩ := fold_spend_delivers h
-    simp only [delivered, Bool.and_eq_true] at hdel
-    obtain ⟨_, _, _, _, _, _, _, hs, _⟩ := writesInitialState_inversion hdel.1.1.1.2
-    have := (initialState_facts hs).2.1
-    omega
-
-/-- **A fold for a refund address no checkpoint can record is refused.**
-Given a registration request whose refund address has no checkpoint refund
-address.
-When the request is spent by a fold.
-Then the spend is refused. -/
-theorem fold_refuses_unrecorded_refund (i : Interpretation) (env : Env)
-    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
-    (release : PublishedRelease) (o : Observation) {ref : OutRef} {index : Nat}
-    {input : ObservedOutput} {data : RegistrationData}
-    (unrecorded : i.refundTo data.refundAddress = none) :
-    spendRegistration i env rp cp release o (.foldRegistration ref index) input data = false := by
-  cases h : spendRegistration i env rp cp release o (.foldRegistration ref index) input data
-  · rfl
-  · obtain ⟨c, x, _, hdel⟩ := fold_spend_delivers h
-    simp only [delivered, Bool.and_eq_true] at hdel
-    obtain ⟨_, _, _, _, _, _, hr, _⟩ := writesInitialState_inversion hdel.1.1.1.2
-    rw [unrecorded] at hr
-    cases hr
+  obtain ⟨input', data', holding, named', hd', hh, hdel⟩ :=
+    fold_delivers_committed i env rp cp release o ok folded
+  rw [named] at named'
+  cases named'
+  rw [hd] at hd'
+  cases hd'
+  obtain ⟨d, refund, pool, f, s, rest⟩ :=
+    delivered_initial_state cenv booked hb published collision hdel
+  exact ⟨holding, d, refund, pool, f, s, hh, rest⟩
 
 /-! ## A genuine checkpoint -/
 
 /-- **A delivered checkpoint is genuine.**
-Given a request booked by an accepted booking, and a fold delivering a holding
-for it under the registry's configuration record.
+Given a request booked by an accepted booking that read the configuration
+record `c`, and a fold delivering a holding for it.
 When the holding is inspected.
-Then it is genuine: at the checkpoint validator's credential, not the
-application's; holding the one active token of the key under a registry of
+Then it is genuine: at the checkpoint validator's credential `c` names, not
+the application's; holding the one active token of the key under a registry of
 `state(A_keri)`; carrying the committed initial datum; holding exactly the
 committed deposit. -/
-theorem delivered_is_genuine (i : Interpretation) (rp : CardanoKeri.Registry.Params)
+theorem delivered_is_genuine (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params)
     (cp : CardanoKeri.Checkpoint.Params)
     (release : PublishedRelease) {booking fold : Observation} {request holding : ObservedOutput}
     {data : RegistrationData} {c : Configuration}
-    (booked : bookRegistration i rp release booking request = true)
+    (booked : bookRegistration i env rp cp release booking request = true)
     (hb : decoded i.decode request = some (.registration data))
-    (hdel : delivered i rp cp c data holding fold = true) :
+    (hc : configurationOf i release data.registry booking = some c)
+    (hdel : delivered i data holding fold = true) :
     genuine i release c data holding := by
-  obtain ⟨d, _, hd', _, policy, address, distinct, _⟩ :=
-    booking_inversion i rp release booking booked
+  obtain ⟨d, c', hd', hc', policy, address, distinct, _⟩ :=
+    booking_inversion i env rp cp release booking booked
   rw [hb] at hd'
   cases hd'
+  rw [hc] at hc'
+  cases hc'
   simp only [delivered, Bool.and_eq_true, beq_iff_eq] at hdel
-  obtain ⟨⟨⟨⟨⟨⟨atAddress, atCheckpoint⟩, datum⟩, _⟩, lovelace⟩, quantity⟩, _⟩ := hdel
-  refine ⟨atCheckpoint, ?_, policy, quantity, datum, lovelace⟩
+  obtain ⟨⟨⟨⟨atAddress, datum⟩, lovelace⟩, quantity⟩, _⟩ := hdel
+  refine ⟨atAddress.trans address, ?_, policy, quantity, datum, lovelace⟩
   rw [atAddress, address]
   exact distinct
 
@@ -1120,23 +1406,27 @@ spending it at the application address whose validity interval starts before
 the request's deadline.
 When the request is spent.
 Then a fold names it and delivers a genuine checkpoint, at the checkpoint
-validator named by the registry's configuration record. -/
+validator named by the configuration record the booking read. -/
 theorem before_deadline_delivers_genuine (i : Interpretation) (env : Env)
     (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
     (release : PublishedRelease) {booking o : Observation}
     {request input : ObservedOutput} {data : RegistrationData}
-    (booked : bookRegistration i rp release booking request = true)
+    (booked : bookRegistration i env rp cp release booking request = true)
     (hb : decoded i.decode request = some (.registration data))
     (ok : accepted i env rp cp release o = true) (mem : input ∈ o.inputs)
     (atApplication : input.credential = release.applicationCredential)
     (hd : decoded i.decode input = some (.registration data))
     (early : o.interval.lower < data.processDeadline) :
-    ∃ c index holding, configurationOf i release data.registry o = some c ∧
+    ∃ c index holding, configurationOf i release data.registry booking = some c ∧
       Action.foldRegistration input.reference index ∈ o.actions ∧
       o.outputs[index]? = some holding ∧ genuine i release c data holding := by
-  obtain ⟨c, index, holding, hc, amem, hh, hdel⟩ :=
+  obtain ⟨_, index, holding, _, amem, hh, hdel⟩ :=
     before_deadline_only_fold i env rp cp release o ok mem atApplication hd early
-  exact ⟨c, index, holding, hc, amem, hh, delivered_is_genuine i rp cp release booked hb hdel⟩
+  obtain ⟨d, c, hd', hc, _⟩ := booking_inversion i env rp cp release booking booked
+  rw [hb] at hd'
+  cases hd'
+  exact ⟨c, index, holding, hc, amem, hh,
+    delivered_is_genuine i env rp cp release booked hb hc hdel⟩
 
 /-- **A genuine checkpoint carries the version 2 datum its request committed.**
 Given a genuine checkpoint whose request committed the hash of the raw version
@@ -1695,3 +1985,213 @@ theorem registration_fold_refused_for_terminal_key (i : Interpretation) (env : E
         rw [registry, sameKey] at one
         omega
       · contradiction
+
+/-! ## The inception evidence -/
+
+/-- **An accepted transaction books only keys with inception evidence.**
+Given a transaction the KERI application accepts, one of whose actions books
+the registration held by an output.
+When that output's registration data is read.
+Then its key has its inception evidence. -/
+theorem accepted_booking_has_inception (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (release : PublishedRelease) (o : Observation)
+    (ok : accepted i env rp cp release o = true) {index : Nat} {output : ObservedOutput}
+    {data : RegistrationData} (booked : Action.bookRegistration index ∈ o.actions)
+    (ho : o.outputs[index]? = some output)
+    (hd : decoded i.decode output = some (.registration data)) :
+    env.inception data.key = true := by
+  simp only [accepted, Bool.and_eq_true] at ok
+  have aok := List.all_eq_true.mp ok.1.1.1.2 _ booked
+  simp only [action, ho] at aok
+  obtain ⟨d, _, hd', _, _, _, _, _, _, _, _, _, evidence, _⟩ :=
+    booking_inversion i env rp cp release o aok
+  rw [hd] at hd'
+  cases hd'
+  exact evidence
+
+/-- **No registration approval without inception evidence.**
+Given a transaction the KERI application accepts that mints a positive
+quantity of the registration approval of a payload (registry, key, holding
+address, initial-datum hash, deposit), and that no other preimage hashes to
+that approval's name.
+When the application's mint is read.
+Then one of its actions books an output whose registration data has exactly
+that payload, and the key has its inception evidence: an approval exists only
+for a key whose inception was shown when it was booked. -/
+theorem registration_approval_requires_inception (i : Interpretation) (env : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (release : PublishedRelease) (o : Observation)
+    (ok : accepted i env rp cp release o = true) {data : RegistrationData}
+    (unique : ∀ p, i.hash (i.code p) = i.hash (i.code (.registrationApproval data.registry
+        data.key data.holdingAddress data.initialDatum data.deposit)) →
+      p = .registrationApproval data.registry data.key data.holdingAddress data.initialDatum
+        data.deposit)
+    (minted : 0 < SingularApplicationHeld.Assets.mintQty o.assets
+      (registrationAsset i.hash i.code release data)) :
+    ∃ index output booked, Action.bookRegistration index ∈ o.actions ∧
+      o.outputs[index]? = some output ∧
+      decoded i.decode output = some (.registration booked) ∧
+      booked.registry = data.registry ∧ booked.key = data.key ∧
+      booked.holdingAddress = data.holdingAddress ∧ booked.initialDatum = data.initialDatum ∧
+      booked.deposit = data.deposit ∧ env.inception data.key = true := by
+  have justified := accepted_mint_is_justified i env rp cp release o ok
+    (asset := registrationAsset i.hash i.code release data) rfl
+  rw [justified] at minted
+  unfold justifiedQty justifiedMint at minted
+  obtain ⟨x, hx, positive⟩ := exists_pos_of_sum_pos minted
+  simp only [List.mem_map, List.mem_filter, List.mem_flatMap] at hx
+  obtain ⟨entry, ⟨⟨a, amem, emem⟩, same⟩, rfl⟩ := hx
+  have same := SingularApplicationHeld.Proofs.token_eq _ _ same
+  cases a with
+  | createConfiguration r seed index =>
+    simp only [Action.justifies, List.mem_singleton] at emem
+    subst emem
+    simp only [configurationAsset, registrationAsset, registrationApproval,
+      TokenId.mk.injEq] at same
+    exact absurd (unique _ same.2) (by simp)
+  | bookRegistration index =>
+    simp only [Action.justifies] at emem
+    split at emem
+    · rename_i output ho
+      split at emem
+      · rename_i booked hd
+        simp only [List.mem_singleton] at emem
+        subst emem
+        simp only [registrationAsset, registrationApproval, TokenId.mk.injEq] at same
+        have pre := unique _ same.2
+        simp only [Preimage.registrationApproval.injEq] at pre
+        obtain ⟨registry, key, address, datum, deposit⟩ := pre
+        have evidence := accepted_booking_has_inception i env rp cp release o ok amem ho hd
+        exact ⟨index, output, booked, amem, ho, hd, registry, key, address, datum, deposit,
+          key ▸ evidence⟩
+      · simp at emem
+    · simp at emem
+  | bookTermination ref index r k =>
+    simp only [Action.justifies, List.mem_singleton] at emem
+    subst emem
+    simp only [terminationApproval, registrationAsset, registrationApproval,
+      TokenId.mk.injEq] at same
+    exact absurd (unique _ same.2) (by simp)
+  | foldTermination =>
+    simp only [Action.justifies, List.mem_singleton] at emem
+    subst emem; simp at positive
+  | foldRegistration ref _ | returnRegistration ref =>
+    simp only [Action.justifies] at emem
+    split at emem
+    · split at emem
+      · simp only [List.mem_singleton] at emem
+        subst emem; simp at positive
+      · simp at emem
+    · simp at emem
+
+/-- **Only a booking reads the inception evidence.**
+Given two environments, and a transaction none of whose actions books a
+registration: folds, returns, terminating folds, termination bookings,
+configuration creations.
+When the KERI application judges it under each environment.
+Then the two verdicts are the same: a fold or a return of a booked request is
+accepted or refused whatever inception evidence exists. -/
+theorem only_booking_reads_inception (i : Interpretation) (env env' : Env)
+    (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
+    (release : PublishedRelease) (o : Observation)
+    (noBooking : ∀ index, Action.bookRegistration index ∉ o.actions) :
+    accepted i env rp cp release o = accepted i env' rp cp release o := by
+  have each : ∀ a ∈ o.actions,
+      action i env rp cp release o a = action i env' rp cp release o a := by
+    intro a amem
+    cases a with
+    | bookRegistration index => exact absurd amem (noBooking index)
+    | _ => rfl
+  have same : o.actions.all (action i env rp cp release o) =
+      o.actions.all (action i env' rp cp release o) := by
+    rw [Bool.eq_iff_iff]
+    simp only [List.all_eq_true]
+    constructor <;> intro h a amem
+    · rw [← each a amem]; exact h a amem
+    · rw [each a amem]; exact h a amem
+  simp only [accepted, same]
+
+/-! ## What a folder needs -/
+
+/-- An accepted booking's request has the registration shape. -/
+theorem booking_shape {i : Interpretation} {env : Env} {rp : CardanoKeri.Registry.Params}
+    {cp : CardanoKeri.Checkpoint.Params} {release : PublishedRelease} {o : Observation}
+    {output : ObservedOutput} {data : RegistrationData}
+    (ok : bookRegistration i env rp cp release o output = true)
+    (hd : decoded i.decode output = some (.registration data)) :
+    registrationShape .none i.hash i.code release output data = true := by
+  unfold bookRegistration at ok
+  rw [hd] at ok
+  simp only at ok
+  split at ok
+  · simp only [Bool.and_eq_true] at ok
+    exact ok.1.1.1.1.1.1.1.1.1
+  · contradiction
+
+/-- **A folder builds the holding from the request on chain.**
+Given a request booked by an accepted booking and publishing the datum `raw`,
+and a transaction minting the one active token of the request's key.
+When the holding is built from the request alone: the committed address, the
+published datum, the committed deposit, the one active token.
+Then it is what the fold must deliver. -/
+theorem holdingFor_delivered {i : Interpretation} {env : Env}
+    {rp : CardanoKeri.Registry.Params} {cp : CardanoKeri.Checkpoint.Params}
+    {release : PublishedRelease} {booking : Observation} {request : ObservedOutput}
+    {data : RegistrationData} {raw : Nat}
+    (booked : bookRegistration i env rp cp release booking request = true)
+    (hb : decoded i.decode request = some (.registration data))
+    (published : publishedDatum i request = some raw)
+    (o : Observation) (reference : OutRef)
+    (minted : SingularApplicationHeld.Assets.mintQty o.assets
+      (activeAsset i.hash i.code data.registry data.key) = 1) :
+    delivered i data (holdingFor i reference data raw) o = true := by
+  obtain ⟨raw', hp, hash, _⟩ := booking_publishes booked hb
+  rw [published] at hp
+  cases hp
+  simp [delivered, holdingFor, holdingDatumHash, hash, quantity, minted]
+
+/-- **A fold takes everything it needs from the chain.**
+Given a request booked by an accepted booking and publishing the datum `raw`;
+and a transaction that reads the registry's configuration record by reference
+with valid parameters, burns the request's approval, ends by the request's
+deadline, places at an output the holding built from the request alone, and
+mints the one active token of the request's key.
+When the request is spent by a fold naming that output.
+Then the application accepts the spend. The folder is given nothing by the
+controller: no inception evidence, no datum, no file. What it reads beside the
+request is the registry's configuration record (see
+`fold_refuses_unread_record`). -/
+theorem fold_spend_from_chain {i : Interpretation} {env : Env}
+    {rp : CardanoKeri.Registry.Params} {cp : CardanoKeri.Checkpoint.Params}
+    {release : PublishedRelease} {booking o : Observation} {request : ObservedOutput}
+    {data : RegistrationData} {raw : Nat} {c : Configuration} {index : Nat}
+    (booked : bookRegistration i env rp cp release booking request = true)
+    (hb : decoded i.decode request = some (.registration data))
+    (published : publishedDatum i request = some raw) (reference : OutRef)
+    (record : configurationOf i release data.registry o = some c)
+    (valid : parametersValid c.parameters = true)
+    (burned : approvalBurned i release data o = true)
+    (window : foldWindow data o.interval = true)
+    (placed : o.outputs[index]? = some (holdingFor i reference data raw))
+    (minted : SingularApplicationHeld.Assets.mintQty o.assets
+      (activeAsset i.hash i.code data.registry data.key) = 1) :
+    spendRegistration i release o (.foldRegistration request.reference index) request data =
+      true := by
+  have shape := booking_shape booked hb
+  have hdel := holdingFor_delivered booked hb published o reference minted
+  simp [spendRegistration, record, valid, shape, burned, window, placed, hdel]
+
+/-- **A spend that does not read the registry's configuration record is refused.**
+Given a transaction that does not read by reference the configuration record
+of the registry a request names.
+When the request is spent, by a fold or by a return.
+Then the spend is refused. This is one of the two things a KERI fold asks of a
+folder beyond the request itself; the other is the treasury donation
+(`treasury_covers_registration_costs`). -/
+theorem fold_refuses_unread_record (i : Interpretation) (release : PublishedRelease)
+    (o : Observation) (a : Action) (input : ObservedOutput) {data : RegistrationData}
+    (unread : configurationOf i release data.registry o = none) :
+    spendRegistration i release o a input data = false := by
+  simp [spendRegistration, unread]
+

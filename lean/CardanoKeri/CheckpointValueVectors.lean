@@ -68,7 +68,7 @@ def booking (r : Registration) : Singular.RegistrationBooking :=
 
 def registrationRow (r : Registration) : Json :=
   let b := booking r
-  let outcome := match CardanoKeri.Registry.bookRegistration registry
+  let outcome := match CardanoKeri.Registry.bookRegistration registry CardanoKeri.Registry.Scenarios.env
       (CardanoKeri.Registry.Sys.init CardanoKeri.Registry.Scenarios.cfg) b with
     | .ok _ => Json.mkObj [("booked", toJson true),
         ("pool", natJson (b.request.carrierAda - registry.Mc - params.D - params.B))]

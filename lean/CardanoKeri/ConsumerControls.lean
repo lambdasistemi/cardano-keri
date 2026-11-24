@@ -92,14 +92,14 @@ def fieldQueries (j : Journey) : List (String × Wire.Query) := Id.run do
 def terminalControls (j : Journey) : Except String (List (String × Bool)) := do
   let full ← completionIdentity j
   let some association := j.booked.certified.state.pending context.aid | throw "association-missing"
-  let (_, after) ← CardanoKeri.Registry.fold j.input.registryParams j.input.registryEnv
+  let (_, after) ← CardanoKeri.Registry.fold j.input.registryParams
     association.booked association.booked.gen association.booked.config.applicationPolicy
     j.completion.unspent j.completion.transaction
   let rebook := CardanoKeri.Registry.Scenarios.registration after context.aid 300
   let reRegistered := do
-    let (_, booked) ← CardanoKeri.Registry.bookRegistration j.input.registryParams after rebook
+    let (_, booked) ← CardanoKeri.Registry.bookRegistration j.input.registryParams j.input.registryEnv after rebook
     let (u, tx) ← S.foldTransaction booked [rebook.request.reference] 42 1 1
-    CardanoKeri.Registry.fold j.input.registryParams j.input.registryEnv booked booked.gen
+    CardanoKeri.Registry.fold j.input.registryParams booked booked.gen
       booked.config.applicationPolicy u tx
   pure [
     ("terminal-full-fold-executed", true),
@@ -217,7 +217,7 @@ def associationEvents (j : Journey) : Except String (List Json) := do
   let foreign : Command := .complete context.aid ⟨history, fu, ft⟩
   let mixed : Command := .complete context.aid ⟨history, mu, mt⟩
   -- Execute the valid economic foreign fold independently before checking the association refusal.
-  let _ ← CardanoKeri.Registry.fold j.input.registryParams j.input.registryEnv s4 s4.gen s4.config.applicationPolicy fu ft
+  let _ ← CardanoKeri.Registry.fold j.input.registryParams s4 s4.gen s4.config.applicationPolicy fu ft
   unless (advance j.booked foreign).toOption.isNone do throw "foreign-completion-accepted"
   let terminal ← advance j.booked mixed
   unless decide (terminal.certified.state.states context.aid = .convicted) do throw "mixed-completion-not-terminal"

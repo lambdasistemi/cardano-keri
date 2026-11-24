@@ -50,7 +50,7 @@ def commit : SingularApplicationHeld.TrieCommit := List.length
 def inputFor (context : Context) : Except String RegistrationInput := do
   let initial := CardanoKeri.Registry.Sys.init S.cfg
   let booking := S.registration initial 11 100 3
-  let (_, booked) ← R.bookRegistration S.p initial booking
+  let (_, booked) ← R.bookRegistration S.p registryEnvironment.toEnv initial booking
   let (u, tx) ← S.foldTransaction booked [booking.request.reference] 2 1 1
   let registry := registryAsset interpretation context
   let active := representativeAsset interpretation context

@@ -46,11 +46,11 @@ def journey : Except String (List String) := do
   let c := registration twoBooked.state 13 102
   let (_, mixed) ← execute twoBooked (.bookRegistration c)
   let (mu, mt) ← foldTransaction mixed.state [c.request.reference, ta.request.reference] 2 1 1
-  check "wrong-generation-refused" (refuses (fold p env mixed.state 0 cfg.applicationPolicy mu mt))
-  check "wrong-plugin-refused" (refuses (fold p env mixed.state mixed.state.gen 999 mu mt))
+  check "wrong-generation-refused" (refuses (fold p mixed.state 0 cfg.applicationPolicy mu mt))
+  check "wrong-plugin-refused" (refuses (fold p mixed.state mixed.state.gen 999 mu mt))
   let wrongDonation := { mt with transaction.donation := mt.transaction.donation + 1 }
   check "wrong-donation-refused" (refuses
-    (fold p env mixed.state mixed.state.gen cfg.applicationPolicy mu wrongDonation))
+    (fold p mixed.state mixed.state.gen cfg.applicationPolicy mu wrongDonation))
   let oldRefundOutputs := mt.outputs.map fun o =>
     if Singular.foldOrdinary o then
       { o with
@@ -63,7 +63,7 @@ def journey : Except String (List String) := do
     transaction.donation := mt.transaction.donation - p.Mr }
   check "old-refund-balanced" (Singular.balanced mu.ledger oldRefund.transaction)
   check "old-refund-refused" (refuses
-    (fold p env mixed.state mixed.state.gen cfg.applicationPolicy mu oldRefund))
+    (fold p mixed.state mixed.state.gen cfg.applicationPolicy mu oldRefund))
   let (mixedFlow, after) ← execute mixed (.fold mixed.state.gen cfg.applicationPolicy mu mt)
   check "mixed-flow" (decide (mixedFlow = { locked := [(13, 10)] }))
   check "mixed-keeps-whole-pending" (decide

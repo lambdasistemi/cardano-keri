@@ -29,7 +29,7 @@ theorem wellFormed_step (p : Params) (env : Env) {s s' : Sys}
     intro old
     split <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | bookTermination aid booker fee b => exact wellFormed_bookTermination p hw hs
-  | fold gen plugin u tx => exact wellFormed_fold p env hw hs
+  | fold gen plugin u tx => exact wellFormed_fold p hw hs
   | returnRequests u tx =>
     change returnRequests s u tx = .ok (f, s') at hs
     unfold returnRequests at hs

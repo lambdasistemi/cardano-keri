@@ -45,6 +45,10 @@ transaction of these scripts produces one. [Who a
 conviction pays](../design/trust-model.md#who-a-conviction-pays) describes the
 model.
 
+For a registration the scripts do not follow it yet. The model validates a
+registration when it is booked, and a fold delivers what was approved; these
+scripts still prove the inception at the fold.
+
 <!-- identities:begin -->
 | What | Value |
 |---|---|

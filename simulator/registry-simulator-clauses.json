@@ -310,7 +310,7 @@
       "given": "The registry fixes its application policy.",
       "when": "A folder supplies that policy, with or without inception evidence at hand, or substitutes a different policy.",
       "then": "The correct fold succeeds; a substituted application policy is refused.",
-      "scenarioSha256": "b24e45b928d78693c972fe5ea58b47a34d1ad3600b465d01378ad2597eb13b94",
+      "scenarioSha256": "9986bf930c7b9a1e08a605b6bfd4d2f7f857791dee6d0c394255ce37199f801f",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",

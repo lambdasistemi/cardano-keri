@@ -31,12 +31,14 @@ module Cardano.KERI.AID.Checkpoint.BountyCommitment (
     commitDepositFloor,
     markerWidth,
     pkhWidth,
+    aidWidth,
     digestWidth,
     nonceMinWidth,
 
     -- * Wire types
     BountyAction (..),
     BountyScope (..),
+    ConvictionTarget (..),
     BountyCommitmentPreimage (..),
     BountyCommitment (..),
     BountyRevealV1 (..),
@@ -131,9 +133,14 @@ foreign domain can never collide with this family's hashes.
 commitmentDomain :: ByteString
 commitmentDomain = "cardano-keri/bounty-commitment"
 
--- | Canonical schema version of the wire shapes in this module.
+{- | Canonical schema version of the wire shapes in this module.
+
+Version 2 is the layout whose scope names the identifier, the epoch and the
+sequence number it accuses; version 1 named a checkpoint output reference.  A
+scope of any other version is refused.
+-}
 commitmentSchema :: Integer
-commitmentSchema = 1
+commitmentSchema = 2
 
 -- | Mandated minimum commitment age: one network slot.
 commitMinAge :: Integer
@@ -159,6 +166,10 @@ markerWidth = 32
 -- | Cardano verification-key hash width.
 pkhWidth :: Int
 pkhWidth = 28
+
+-- | Identifier width: the text of a CESR identifier, as a checkpoint carries it.
+aidWidth :: Int
+aidWidth = 44
 
 -- | Enforcement evidence digest width.
 digestWidth :: Int
@@ -187,12 +198,26 @@ data BountyScope = BountyScope
     , bsSchema :: !Integer
     , bsNetwork :: !Integer
     , bsCheckpointPolicy :: !ByteString
-    , bsCheckpointRef :: !OutputRef
+    , bsAid :: !ByteString
+    , bsEpoch :: !Integer
+    , bsSn :: !Integer
     , bsAction :: !BountyAction
     , bsMarker :: !ByteString
     , bsCommitUpper :: !Integer
     , bsEligibleAfter :: !Integer
     , bsExpiresAt :: !Integer
+    }
+    deriving stock (Show, Eq)
+
+{- | Where a conviction is settled: the checkpoint program that settles it and
+the identifier, epoch and sequence number of the spent checkpoint it settles
+at.
+-}
+data ConvictionTarget = ConvictionTarget
+    { ctCheckpointPolicy :: !ByteString
+    , ctAid :: !ByteString
+    , ctEpoch :: !Integer
+    , ctSn :: !Integer
     }
     deriving stock (Show, Eq)
 
@@ -298,7 +323,9 @@ instance ToData BountyScope where
                 , I bsSchema
                 , I bsNetwork
                 , B bsCheckpointPolicy
-                , asData bsCheckpointRef
+                , B bsAid
+                , I bsEpoch
+                , I bsSn
                 , asData bsAction
                 , B bsMarker
                 , I bsCommitUpper
@@ -314,16 +341,17 @@ instance FromData BountyScope where
                 , I schema
                 , I network
                 , B policy
-                , ref
+                , B aid
+                , I epoch
+                , I sn
                 , action
                 , B marker
                 , I upper
                 , I eligible
                 , I expires
                 ] ->
-                BountyScope domain schema network policy
-                    <$> fromData ref
-                    <*> fromData action
+                BountyScope domain schema network policy aid epoch sn
+                    <$> fromData action
                     <*> pure marker
                     <*> pure upper
                     <*> pure eligible
@@ -462,7 +490,8 @@ data ScopeError
     | ScopeSchema
     | ScopeNetwork
     | ScopeCheckpointPolicyWidth
-    | ScopeCheckpointRefWidth
+    | ScopeAidWidth
+    | ScopeKeyState
     | ScopeMarkerWidth
     | ScopeAge
     | ScopeLifetime
@@ -492,7 +521,9 @@ data CommitmentVerdict
 data EntitlementError
     = EntitlementDigestWidth
     | EntitlementNonceWidth
-    | EntitlementCheckpoint
+    | EntitlementDeployment
+    | EntitlementAid
+    | EntitlementKeyState
     | EntitlementMarker
     | EntitlementHash
     deriving stock (Show, Eq)
@@ -565,9 +596,8 @@ scopeWellFormed parameters BountyScope{..}
     | bsNetwork /= cpNetwork parameters = ScopeInvalid ScopeNetwork
     | BS.length bsCheckpointPolicy /= pkhWidth =
         ScopeInvalid ScopeCheckpointPolicyWidth
-    | BS.length (orTransactionId bsCheckpointRef) /= digestWidth
-        || orOutputIndex bsCheckpointRef < 0 =
-        ScopeInvalid ScopeCheckpointRefWidth
+    | BS.length bsAid /= aidWidth = ScopeInvalid ScopeAidWidth
+    | bsEpoch < 0 || bsSn < 0 = ScopeInvalid ScopeKeyState
     | BS.length bsMarker /= markerWidth = ScopeInvalid ScopeMarkerWidth
     | bsEligibleAfter /= bsCommitUpper + cpCommitMinAge parameters =
         ScopeInvalid ScopeAge
@@ -597,23 +627,34 @@ hash from the committed scope and payee plus the supplied digest and nonce, so
 independently changing any scope field, the payee, the digest, or the nonce
 breaks the match.
 
+It compares the scope with where the conviction is settled: the checkpoint
+program, the identifier, and the epoch and sequence number of the spent
+checkpoint.  Nothing else about the checkpoint output is read, so a top-up or a
+freeze of it leaves the commitment entitled (a datum marked poisoned is read
+the same), and a rotation, which moves the epoch or the sequence number,
+voids it.
+
 It deliberately does __not__ claim the digest is the digest of actual
-evidence, and it touches no checkpoint state: that coupling is the enforcement
-observer's obligation (@DATA-INV-271-02@, S254-E).
+evidence: that coupling is the enforcement observer's obligation
+(@DATA-INV-271-02@, S254-E).
 -}
 entitlementMatches ::
     BountyCommitment ->
-    OutputRef ->
+    ConvictionTarget ->
     ByteString ->
     ByteString ->
     EntitlementVerdict
-entitlementMatches commitment checkpointRef evidenceDigest nonce
+entitlementMatches commitment target evidenceDigest nonce
     | BS.length evidenceDigest /= digestWidth =
         EntitlementInvalid EntitlementDigestWidth
     | BS.length nonce < nonceMinWidth =
         EntitlementInvalid EntitlementNonceWidth
-    | bsCheckpointRef scope /= checkpointRef =
-        EntitlementInvalid EntitlementCheckpoint
+    | bsCheckpointPolicy scope /= ctCheckpointPolicy target =
+        EntitlementInvalid EntitlementDeployment
+    | bsAid scope /= ctAid target =
+        EntitlementInvalid EntitlementAid
+    | bsEpoch scope /= ctEpoch target || bsSn scope /= ctSn target =
+        EntitlementInvalid EntitlementKeyState
     | bcMarker commitment /= bsMarker scope =
         EntitlementInvalid EntitlementMarker
     | recomputed /= bcHash commitment = EntitlementInvalid EntitlementHash
@@ -806,10 +847,10 @@ prepareBountyCommitment ::
     OutputRef ->
     -- | the declared opening validity range
     SlotRange ->
-    -- | checkpoint policy this reservation is scoped to
-    ByteString ->
-    -- | the exact checkpoint output being reserved against
-    OutputRef ->
+    {- | the checkpoint program, identifier, epoch and sequence number this
+    reservation accuses
+    -}
+    ConvictionTarget ->
     -- | the opaque enforcement evidence digest
     ByteString ->
     -- | the fixed future beneficiary
@@ -822,8 +863,7 @@ prepareBountyCommitment
     policy
     seedRef
     range
-    checkpointPolicy
-    checkpointRef
+    target
     evidenceDigest
     payeePkh
     nonce = do
@@ -840,8 +880,10 @@ prepareBountyCommitment
                     { bsDomain = commitmentDomain
                     , bsSchema = commitmentSchema
                     , bsNetwork = cpNetwork parameters
-                    , bsCheckpointPolicy = checkpointPolicy
-                    , bsCheckpointRef = checkpointRef
+                    , bsCheckpointPolicy = ctCheckpointPolicy target
+                    , bsAid = ctAid target
+                    , bsEpoch = ctEpoch target
+                    , bsSn = ctSn target
                     , bsAction = ConvictEntitlement
                     , bsMarker = marker
                     , bsCommitUpper = commitUpper

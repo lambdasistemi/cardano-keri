@@ -64,7 +64,7 @@ canonicalize() {
 same() {
     canonicalize "$1" >"$work/a.txt"
     canonicalize "$2" >"$work/b.txt"
-    cmp -s "$work/a.txt" "$work/b.txt"
+    [[ "$(<"$work/a.txt")" == "$(<"$work/b.txt")" ]]
 }
 
 vectors=$(grep -c '^pub const ' "$committed")
@@ -75,7 +75,7 @@ fi
 
 if ! same "$committed" "$work/regenerated.ak"; then
     echo "bounty-commitment-vectors: FAIL committed module drifted from the Haskell oracle" >&2
-    diff -u "$committed" "$work/regenerated.ak" >&2 || true
+    git diff --no-index -- "$committed" "$work/regenerated.ak" >&2 || true
     exit 1
 fi
 
@@ -115,7 +115,7 @@ if [[ "$verbose" -eq 1 ]]; then
     echo "bounty-commitment-vectors: oracle offchain/$generator"
     echo "bounty-commitment-vectors: committed $committed"
     echo "bounty-commitment-vectors: negative control corrupted commitment_hash and was rejected:"
-    diff -u "$committed" "$corrupt" | sed -n '4,8p' || true
+    git diff --no-index -- "$committed" "$corrupt" | sed -n '4,8p' || true
 fi
 
 echo "bounty-commitment-vectors: PASS vectors=$vectors negative-control=PASS"

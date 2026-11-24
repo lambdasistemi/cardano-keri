@@ -712,18 +712,21 @@ const commit_nonce: ByteArray =
   #"6e6f6e63656e6f6e63656e6f6e63656e6f6e63656e6f6e63656e6f6e6365000f"
 
 fn commitment_for(
-  checkpoint_ref: OutputReference,
+  spent_datum: Data,
   action: BountyAction,
   payee_pkh: ByteArray,
   evidence: EnforcementEvidence,
 ) -> BountyCommitment {
   let marker = marker_name(commit_seed_ref)
+  expect Live { aid, epoch, sn, .. } = datum.read(spent_datum)
   let scope = BountyScope {
     domain: commitment_domain,
     schema: commitment_schema,
     network: network_id,
     checkpoint_policy: policy,
-    checkpoint_ref,
+    aid,
+    epoch,
+    sn,
     action,
     marker,
     commit_upper: 0,
@@ -898,7 +901,7 @@ fn convict_tx_naming(
       ],
     },
     commit_policy,
-    commitment_for(named, ConvictEntitlement, convictor, wire_of),
+    commitment_for(input_datum, ConvictEntitlement, convictor, wire_of),
   )
 }
 
@@ -1486,6 +1489,34 @@ test convict_refuses_paired_observers_with_different_reveals() fail {
   spend_with_two_envelopes(honest, changed)
 }
 
+// The settlement of a conviction rests on the claim naming the program the spent
+// checkpoint sits at: the entitlement observer compares a reservation's
+// deployment with it. Both observers carry the same envelope below, so only the
+// checkpoint program can refuse a claim that is not about this input.
+test convict_refuses_a_claim_naming_another_program() fail {
+  let honest = convict_envelope(wire)
+  let claiming = ObserverEnvelope {
+    claim: ObserverClaim {
+      ..honest.claim,
+      checkpoint_policy: #"f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0",
+    },
+    payload: honest.payload,
+  }
+  spend_with_two_envelopes(claiming, claiming)
+}
+
+test convict_refuses_a_claim_naming_another_input() fail {
+  let honest = convict_envelope(wire)
+  let claiming = ObserverEnvelope {
+    claim: ObserverClaim {
+      ..honest.claim,
+      own_ref: Some(out_ref(seed_tx_id, 78)),
+    },
+    payload: honest.payload,
+  }
+  spend_with_two_envelopes(claiming, claiming)
+}
+
 test convict_refuses_paired_observers_with_different_evidence() fail {
   let honest = convict_envelope(wire)
   expect proof: EnforcementProofV1 = honest.payload
@@ -1627,8 +1658,8 @@ test advance_refuses_an_observation_of_another_input() fail {
 }
 
 // The accepted conviction with one input added at the checkpoint address that
-// holds no token and declares the same live checkpoint; both observers name it
-// and its reservation is scoped to it.
+// holds no token and declares the same live checkpoint; both observers name it,
+// and the checkpoint program refuses an observation of an input it does not spend.
 test convict_refuses_an_observation_of_another_input() fail {
   let decoy_ref = out_ref(seed_tx_id, 78)
   let decoy = decoy_input(

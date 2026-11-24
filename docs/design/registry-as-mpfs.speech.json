@@ -27,7 +27,7 @@
       "pause": 400
     },
     {
-      "text": "At a rotated checkpoint, concluding KERI duplicity from this spend also requires the rival to be valid under the predecessor’s rotation rules. Whether every rival accepted by the checkpoint meets that requirement remains open.",
+      "text": "At a rotated checkpoint, concluding KERI duplicity from this spend also requires the rival to be valid under the predecessor’s rotation rules. Whether every rival accepted by the checkpoint meets that requirement remains open in this model, and #573 will discharge it by checking the rival against the previous event’s commitments.",
       "pause": 400
     }
   ],
@@ -249,6 +249,6 @@
   ],
   "_source": {
     "file": "registry-as-mpfs.md",
-    "sha256": "0fc15237ebde26e740009fa72cfcf2c6296e30410665c397ef537ea35ee46f6e"
+    "sha256": "4a4b23cd9789f02893afb9c5bdcd2916ac87289069987a58729f1d898a7d17ec"
   }
 }

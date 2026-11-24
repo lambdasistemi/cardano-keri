@@ -350446,17 +350446,17 @@
    ]
   },
   "docs-design-registry-as-mpfs/where-the-registry-is-built-03": {
-   "audio_sha256": "785df19efcb970cb2afbafd55818cb01c19327096a0a6a3ac2f4ae4ead82cb98",
-   "characters": 237,
-   "cost": 0.00023462999999999997,
-   "duration": 15.0,
+   "audio_sha256": "4aa50dbc5f2ec4f0bb82b5c0092894877d5df60b93ecd9ba47161d7652f038ed",
+   "characters": 342,
+   "cost": 0.00033858,
+   "duration": 22.3,
    "index": 3,
-   "key": "cd862562c3123e9ca46bf5e35403476dac825ce65beb41891297ddaa97a862d3",
+   "key": "adba97ddc3c5990366fece9890830381c1f929d9d1085c0cf7dec0776293dfd7",
    "page": "docs/design/registry-as-mpfs.md",
    "pause_ms": 400,
    "section": "where-the-registry-is-built",
-   "sent_text": "At a rotated checkpoint, concluding [KERI](/kˈɛɹi/) duplicity from this spend also requires the rival to be valid under the predecessor’s rotation rules. Whether every rival accepted by the checkpoint meets that requirement remains open.",
-   "text": "At a rotated checkpoint, concluding KERI duplicity from this spend also requires the rival to be valid under the predecessor’s rotation rules. Whether every rival accepted by the checkpoint meets that requirement remains open.",
+   "sent_text": "At a rotated checkpoint, concluding [KERI](/kˈɛɹi/) duplicity from this spend also requires the rival to be valid under the predecessor’s rotation rules. Whether every rival accepted by the checkpoint meets that requirement remains open in this model, and #573 will discharge it by checking the rival against the previous event’s commitments.",
+   "text": "At a rotated checkpoint, concluding KERI duplicity from this spend also requires the rival to be valid under the predecessor’s rotation rules. Whether every rival accepted by the checkpoint meets that requirement remains open in this model, and #573 will discharge it by checking the rival against the previous event’s commitments.",
    "words": [
     {
      "end": 0.312,
@@ -350579,68 +350579,158 @@
      "text": "."
     },
     {
-     "end": 9.863,
+     "end": 9.887,
      "start": 9.525,
      "text": "Whether"
     },
     {
-     "end": 10.212,
-     "start": 9.863,
+     "end": 10.262,
+     "start": 9.887,
      "text": "every"
     },
     {
-     "end": 10.65,
-     "start": 10.212,
+     "end": 10.7,
+     "start": 10.262,
      "text": "rival"
     },
     {
-     "end": 11.175,
-     "start": 10.65,
+     "end": 11.25,
+     "start": 10.7,
      "text": "accepted"
     },
     {
-     "end": 11.35,
-     "start": 11.175,
+     "end": 11.425,
+     "start": 11.25,
      "text": "by"
     },
     {
-     "end": 11.488,
-     "start": 11.35,
+     "end": 11.562,
+     "start": 11.425,
      "text": "the"
     },
     {
-     "end": 12.0,
-     "start": 11.488,
+     "end": 12.075,
+     "start": 11.562,
      "text": "checkpoint"
     },
     {
-     "end": 12.488,
-     "start": 12.0,
+     "end": 12.562,
+     "start": 12.075,
      "text": "meets"
     },
     {
-     "end": 12.675,
-     "start": 12.488,
+     "end": 12.75,
+     "start": 12.562,
      "text": "that"
     },
     {
-     "end": 13.375,
-     "start": 12.675,
+     "end": 13.475,
+     "start": 12.75,
      "text": "requirement"
     },
     {
-     "end": 13.85,
-     "start": 13.375,
+     "end": 13.975,
+     "start": 13.475,
      "text": "remains"
     },
     {
-     "end": 14.8,
-     "start": 13.85,
+     "end": 14.35,
+     "start": 13.975,
      "text": "open"
     },
     {
-     "end": 15.0,
-     "start": 14.8,
+     "end": 14.475,
+     "start": 14.35,
+     "text": "in"
+    },
+    {
+     "end": 14.675,
+     "start": 14.475,
+     "text": "this"
+    },
+    {
+     "end": 15.6,
+     "start": 14.675,
+     "text": "model"
+    },
+    {
+     "end": 15.825,
+     "start": 15.6,
+     "text": ","
+    },
+    {
+     "end": 16.15,
+     "start": 16.05,
+     "text": "and"
+    },
+    {
+     "end": 17.475,
+     "start": 16.15,
+     "text": "573"
+    },
+    {
+     "end": 17.65,
+     "start": 17.475,
+     "text": "will"
+    },
+    {
+     "end": 18.2,
+     "start": 17.65,
+     "text": "discharge"
+    },
+    {
+     "end": 18.35,
+     "start": 18.2,
+     "text": "it"
+    },
+    {
+     "end": 18.575,
+     "start": 18.35,
+     "text": "by"
+    },
+    {
+     "end": 18.938,
+     "start": 18.575,
+     "text": "checking"
+    },
+    {
+     "end": 19.062,
+     "start": 18.938,
+     "text": "the"
+    },
+    {
+     "end": 19.562,
+     "start": 19.062,
+     "text": "rival"
+    },
+    {
+     "end": 19.938,
+     "start": 19.562,
+     "text": "against"
+    },
+    {
+     "end": 20.025,
+     "start": 19.938,
+     "text": "the"
+    },
+    {
+     "end": 20.525,
+     "start": 20.025,
+     "text": "previous"
+    },
+    {
+     "end": 20.85,
+     "start": 20.525,
+     "text": "event’s"
+    },
+    {
+     "end": 22.1,
+     "start": 20.85,
+     "text": "commitments"
+    },
+    {
+     "end": 22.3,
+     "start": 22.1,
      "text": "."
     }
    ]
@@ -373571,17 +373661,17 @@
    ]
   },
   "docs-design-trust-model/the-projection-law-04": {
-   "audio_sha256": "8c25ec3d9c530cb3ef38f5de23c77f7a91e4da85ed41a84eb301ea264703bf4f",
-   "characters": 962,
-   "cost": 0.0009523799999999998,
-   "duration": 60.625,
+   "audio_sha256": "6ddd63e3848b0bf026ae8a405eb66502d468e5cbc4e55ff6b3a9a499a240c0bb",
+   "characters": 1067,
+   "cost": 0.0010563299999999999,
+   "duration": 67.95,
    "index": 4,
-   "key": "1231427e30a8d4d1a27696e31cec12c0db992203cde26fc57babe207d1e94533",
+   "key": "e6420d6ed92e7a9a8dcfb6c4a0f9691bb5f5b48a5b42091e0181d0a9c88f8a5d",
    "page": "docs/design/trust-model.md",
    "pause_ms": 300,
    "section": "the-projection-law",
-   "sent_text": "Proven duplicity cannot be unseen: two receipted rotations at one sequence are a fact of the record for ever, and [KERI](/kˈɛɹi/) has no event that un-duplicates an identifier. What [KERI](/kˈɛɹi/) leaves to each validator is the trust decision, which it may take either way (the review's reading of the specification's own text). This project's selected policy is that conviction is terminal. The checkpoint spend compares one conflicting rival with the spent tip. When it accepts, the conviction bond is seized. Once the fold retires the leaf, it never reopens. At a rotated checkpoint, a finding of [KERI](/kˈɛɹi/) duplicity also requires the rival to be valid under the predecessor’s rotation rules. Whether every accepted rival meets that requirement remains open. The reasons are ours, not [KERI](/kˈɛɹi/)'s: a bond that could be recovered would not deter, and inventing a recovery event [KERI](/kˈɛɹi/) lacks would be the chain originating identity state.",
-   "text": "Proven duplicity cannot be unseen: two receipted rotations at one sequence are a fact of the record for ever, and KERI has no event that un-duplicates an identifier. What KERI leaves to each validator is the trust decision, which it may take either way (the review's reading of the specification's own text). This project's selected policy is that conviction is terminal. The checkpoint spend compares one conflicting rival with the spent tip. When it accepts, the conviction bond is seized. Once the fold retires the leaf, it never reopens. At a rotated checkpoint, a finding of KERI duplicity also requires the rival to be valid under the predecessor’s rotation rules. Whether every accepted rival meets that requirement remains open. The reasons are ours, not KERI's: a bond that could be recovered would not deter, and inventing a recovery event KERI lacks would be the chain originating identity state.",
+   "sent_text": "Proven duplicity cannot be unseen: two receipted rotations at one sequence are a fact of the record for ever, and [KERI](/kˈɛɹi/) has no event that un-duplicates an identifier. What [KERI](/kˈɛɹi/) leaves to each validator is the trust decision, which it may take either way (the review's reading of the specification's own text). This project's selected policy is that conviction is terminal. The checkpoint spend compares one conflicting rival with the spent tip. When it accepts, the conviction bond is seized. Once the fold retires the leaf, it never reopens. At a rotated checkpoint, a finding of [KERI](/kˈɛɹi/) duplicity also requires the rival to be valid under the predecessor’s rotation rules. Whether every accepted rival meets that requirement remains open in this model, and #573 will discharge it by checking the rival against the previous event’s commitments. The reasons are ours, not [KERI](/kˈɛɹi/)'s: a bond that could be recovered would not deter, and inventing a recovery event [KERI](/kˈɛɹi/) lacks would be the chain originating identity state.",
+   "text": "Proven duplicity cannot be unseen: two receipted rotations at one sequence are a fact of the record for ever, and KERI has no event that un-duplicates an identifier. What KERI leaves to each validator is the trust decision, which it may take either way (the review's reading of the specification's own text). This project's selected policy is that conviction is terminal. The checkpoint spend compares one conflicting rival with the spent tip. When it accepts, the conviction bond is seized. Once the fold retires the leaf, it never reopens. At a rotated checkpoint, a finding of KERI duplicity also requires the rival to be valid under the predecessor’s rotation rules. Whether every accepted rival meets that requirement remains open in this model, and #573 will discharge it by checking the rival against the previous event’s commitments. The reasons are ours, not KERI's: a bond that could be recovered would not deter, and inventing a recovery event KERI lacks would be the chain originating identity state.",
    "words": [
     {
      "end": 0.463,
@@ -374214,218 +374304,308 @@
      "text": "Whether"
     },
     {
-     "end": 45.825,
+     "end": 45.85,
      "start": 45.513,
      "text": "every"
     },
     {
-     "end": 46.362,
-     "start": 45.825,
+     "end": 46.388,
+     "start": 45.85,
      "text": "accepted"
     },
     {
-     "end": 46.775,
-     "start": 46.362,
+     "end": 46.8,
+     "start": 46.388,
      "text": "rival"
     },
     {
-     "end": 47.2,
-     "start": 46.775,
+     "end": 47.25,
+     "start": 46.8,
      "text": "meets"
     },
     {
-     "end": 47.362,
-     "start": 47.2,
+     "end": 47.425,
+     "start": 47.25,
      "text": "that"
     },
     {
-     "end": 47.975,
-     "start": 47.362,
+     "end": 48.1,
+     "start": 47.425,
      "text": "requirement"
     },
     {
-     "end": 48.425,
-     "start": 47.975,
+     "end": 48.575,
+     "start": 48.1,
      "text": "remains"
     },
     {
-     "end": 49.325,
-     "start": 48.425,
+     "end": 48.95,
+     "start": 48.575,
      "text": "open"
     },
     {
-     "end": 49.525,
-     "start": 49.325,
-     "text": "."
+     "end": 49.062,
+     "start": 48.95,
+     "text": "in"
     },
     {
-     "end": 49.775,
-     "start": 49.7,
-     "text": "The"
+     "end": 49.25,
+     "start": 49.062,
+     "text": "this"
     },
     {
      "end": 50.15,
-     "start": 49.775,
-     "text": "reasons"
+     "start": 49.25,
+     "text": "model"
     },
     {
-     "end": 50.287,
+     "end": 50.375,
      "start": 50.15,
-     "text": "are"
+     "text": ","
     },
     {
-     "end": 50.6,
-     "start": 50.287,
-     "text": "ours"
-    },
-    {
-     "end": 50.638,
+     "end": 50.7,
      "start": 50.6,
-     "text": ","
-    },
-    {
-     "end": 50.825,
-     "start": 50.638,
-     "text": "not"
-    },
-    {
-     "end": 51.2,
-     "start": 50.825,
-     "text": "KERI"
-    },
-    {
-     "end": 51.675,
-     "start": 51.2,
-     "text": "'s"
-    },
-    {
-     "end": 51.875,
-     "start": 51.675,
-     "text": ":"
-    },
-    {
-     "end": 52.125,
-     "start": 52.05,
-     "text": "a"
-    },
-    {
-     "end": 52.412,
-     "start": 52.125,
-     "text": "bond"
-    },
-    {
-     "end": 52.513,
-     "start": 52.412,
-     "text": "that"
-    },
-    {
-     "end": 52.612,
-     "start": 52.513,
-     "text": "could"
-    },
-    {
-     "end": 52.7,
-     "start": 52.612,
-     "text": "be"
-    },
-    {
-     "end": 53.225,
-     "start": 52.7,
-     "text": "recovered"
-    },
-    {
-     "end": 53.35,
-     "start": 53.225,
-     "text": "would"
-    },
-    {
-     "end": 53.575,
-     "start": 53.35,
-     "text": "not"
-    },
-    {
-     "end": 54.5,
-     "start": 53.575,
-     "text": "deter"
-    },
-    {
-     "end": 54.75,
-     "start": 54.5,
-     "text": ","
-    },
-    {
-     "end": 55.037,
-     "start": 54.95,
      "text": "and"
     },
     {
-     "end": 55.6,
-     "start": 55.037,
-     "text": "inventing"
+     "end": 52.025,
+     "start": 50.7,
+     "text": "573"
     },
     {
-     "end": 55.675,
-     "start": 55.6,
-     "text": "a"
+     "end": 52.2,
+     "start": 52.025,
+     "text": "will"
     },
     {
-     "end": 56.175,
-     "start": 55.675,
-     "text": "recovery"
+     "end": 52.75,
+     "start": 52.2,
+     "text": "discharge"
     },
     {
-     "end": 56.487,
-     "start": 56.175,
-     "text": "event"
+     "end": 52.9,
+     "start": 52.75,
+     "text": "it"
     },
     {
-     "end": 56.825,
-     "start": 56.487,
-     "text": "KERI"
+     "end": 53.125,
+     "start": 52.9,
+     "text": "by"
     },
     {
-     "end": 57.275,
-     "start": 56.825,
-     "text": "lacks"
+     "end": 53.487,
+     "start": 53.125,
+     "text": "checking"
     },
     {
-     "end": 57.4,
-     "start": 57.275,
-     "text": "would"
-    },
-    {
-     "end": 57.55,
-     "start": 57.4,
-     "text": "be"
-    },
-    {
-     "end": 57.7,
-     "start": 57.55,
+     "end": 53.612,
+     "start": 53.487,
      "text": "the"
     },
     {
+     "end": 54.112,
+     "start": 53.612,
+     "text": "rival"
+    },
+    {
+     "end": 54.487,
+     "start": 54.112,
+     "text": "against"
+    },
+    {
+     "end": 54.575,
+     "start": 54.487,
+     "text": "the"
+    },
+    {
+     "end": 55.075,
+     "start": 54.575,
+     "text": "previous"
+    },
+    {
+     "end": 55.4,
+     "start": 55.075,
+     "text": "event’s"
+    },
+    {
+     "end": 56.65,
+     "start": 55.4,
+     "text": "commitments"
+    },
+    {
+     "end": 56.85,
+     "start": 56.65,
+     "text": "."
+    },
+    {
+     "end": 57.1,
+     "start": 57.025,
+     "text": "The"
+    },
+    {
+     "end": 57.475,
+     "start": 57.1,
+     "text": "reasons"
+    },
+    {
+     "end": 57.612,
+     "start": 57.475,
+     "text": "are"
+    },
+    {
+     "end": 57.925,
+     "start": 57.612,
+     "text": "ours"
+    },
+    {
+     "end": 57.963,
+     "start": 57.925,
+     "text": ","
+    },
+    {
      "end": 58.15,
-     "start": 57.7,
+     "start": 57.963,
+     "text": "not"
+    },
+    {
+     "end": 58.525,
+     "start": 58.15,
+     "text": "KERI"
+    },
+    {
+     "end": 59.0,
+     "start": 58.525,
+     "text": "'s"
+    },
+    {
+     "end": 59.2,
+     "start": 59.0,
+     "text": ":"
+    },
+    {
+     "end": 59.45,
+     "start": 59.375,
+     "text": "a"
+    },
+    {
+     "end": 59.737,
+     "start": 59.45,
+     "text": "bond"
+    },
+    {
+     "end": 59.838,
+     "start": 59.737,
+     "text": "that"
+    },
+    {
+     "end": 59.938,
+     "start": 59.838,
+     "text": "could"
+    },
+    {
+     "end": 60.025,
+     "start": 59.938,
+     "text": "be"
+    },
+    {
+     "end": 60.55,
+     "start": 60.025,
+     "text": "recovered"
+    },
+    {
+     "end": 60.675,
+     "start": 60.55,
+     "text": "would"
+    },
+    {
+     "end": 60.9,
+     "start": 60.675,
+     "text": "not"
+    },
+    {
+     "end": 61.825,
+     "start": 60.9,
+     "text": "deter"
+    },
+    {
+     "end": 62.075,
+     "start": 61.825,
+     "text": ","
+    },
+    {
+     "end": 62.362,
+     "start": 62.275,
+     "text": "and"
+    },
+    {
+     "end": 62.925,
+     "start": 62.362,
+     "text": "inventing"
+    },
+    {
+     "end": 63.0,
+     "start": 62.925,
+     "text": "a"
+    },
+    {
+     "end": 63.5,
+     "start": 63.0,
+     "text": "recovery"
+    },
+    {
+     "end": 63.812,
+     "start": 63.5,
+     "text": "event"
+    },
+    {
+     "end": 64.15,
+     "start": 63.812,
+     "text": "KERI"
+    },
+    {
+     "end": 64.6,
+     "start": 64.15,
+     "text": "lacks"
+    },
+    {
+     "end": 64.725,
+     "start": 64.6,
+     "text": "would"
+    },
+    {
+     "end": 64.875,
+     "start": 64.725,
+     "text": "be"
+    },
+    {
+     "end": 65.025,
+     "start": 64.875,
+     "text": "the"
+    },
+    {
+     "end": 65.475,
+     "start": 65.025,
      "text": "chain"
     },
     {
-     "end": 58.938,
-     "start": 58.15,
+     "end": 66.262,
+     "start": 65.475,
      "text": "originating"
     },
     {
-     "end": 59.5,
-     "start": 58.938,
+     "end": 66.825,
+     "start": 66.262,
      "text": "identity"
     },
     {
-     "end": 60.425,
-     "start": 59.5,
+     "end": 67.75,
+     "start": 66.825,
      "text": "state"
     },
     {
-     "end": 60.625,
-     "start": 60.425,
+     "end": 67.95,
+     "start": 67.75,
      "text": "."
     }
    ]

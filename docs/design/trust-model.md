@@ -40,7 +40,9 @@ Two consequences that shape the whole trust boundary:
   it accepts, the conviction bond is seized. Once the fold retires the leaf,
   it never reopens. At a rotated checkpoint, a finding of KERI duplicity also
   requires the rival to be valid under the predecessor’s rotation rules.
-  Whether every accepted rival meets that requirement remains open. The reasons
+  Whether every accepted rival meets that requirement remains open in this model,
+  and [#573](https://github.com/lambdasistemi/cardano-keri/issues/573)
+  will discharge it by checking the rival against the previous event’s commitments. The reasons
   are ours, not KERI's: a bond that could be recovered would not deter, and
   inventing a recovery event KERI lacks would be the chain originating identity
   state.

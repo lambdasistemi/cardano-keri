@@ -35,7 +35,7 @@
       "pause": 300
     },
     {
-      "text": "Proven duplicity cannot be unseen: two receipted rotations at one sequence are a fact of the record for ever, and KERI has no event that un-duplicates an identifier. What KERI leaves to each validator is the trust decision, which it may take either way (the review's reading of the specification's own text). This project's selected policy is that conviction is terminal. The checkpoint spend compares one conflicting rival with the spent tip. When it accepts, the conviction bond is seized. Once the fold retires the leaf, it never reopens. At a rotated checkpoint, a finding of KERI duplicity also requires the rival to be valid under the predecessor’s rotation rules. Whether every accepted rival meets that requirement remains open. The reasons are ours, not KERI's: a bond that could be recovered would not deter, and inventing a recovery event KERI lacks would be the chain originating identity state.",
+      "text": "Proven duplicity cannot be unseen: two receipted rotations at one sequence are a fact of the record for ever, and KERI has no event that un-duplicates an identifier. What KERI leaves to each validator is the trust decision, which it may take either way (the review's reading of the specification's own text). This project's selected policy is that conviction is terminal. The checkpoint spend compares one conflicting rival with the spent tip. When it accepts, the conviction bond is seized. Once the fold retires the leaf, it never reopens. At a rotated checkpoint, a finding of KERI duplicity also requires the rival to be valid under the predecessor’s rotation rules. Whether every accepted rival meets that requirement remains open in this model, and #573 will discharge it by checking the rival against the previous event’s commitments. The reasons are ours, not KERI's: a bond that could be recovered would not deter, and inventing a recovery event KERI lacks would be the chain originating identity state.",
       "pause": 300
     }
   ],
@@ -409,6 +409,6 @@
   ],
   "_source": {
     "file": "trust-model.md",
-    "sha256": "bfe1ec274584586f276453aa7418f6627ac898eb4284a3b88636ef2b74f2235e"
+    "sha256": "3b6c97e6a346ee328b58763a11f90ae34227af700c19b3028925ba2b04a1ab53"
   }
 }

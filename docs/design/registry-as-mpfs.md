@@ -50,7 +50,9 @@ flowchart TD
 
 At a rotated checkpoint, concluding KERI duplicity from this spend also
 requires the rival to be valid under the predecessor’s rotation rules. Whether
-every rival accepted by the checkpoint meets that requirement remains open.
+every rival accepted by the checkpoint meets that requirement remains open in
+this model, and [#573](https://github.com/lambdasistemi/cardano-keri/issues/573)
+will discharge it by checking the rival against the previous event’s commitments.
 
 ## The machine (`Registry.lean`)
 

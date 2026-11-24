@@ -90,6 +90,30 @@ structure ComparisonReads where
   rivalOf : CheckpointConviction.Tip → CheckpointConviction.Rival → SignedEvent
   verify : CheckpointConviction.Verify
 
+/-- The decoded representation of the four fields compared for conflict. -/
+abbrev ForwardFields :=
+  CheckpointDatum.Threshold × List (List Nat) × CheckpointDatum.Threshold × Int
+
+def tipFields (tip : CheckpointConviction.Tip) : ForwardFields :=
+  (tip.keys.curThreshold, tip.keys.nextKeys, tip.keys.nextThreshold, tip.keys.toad)
+
+def rivalFields (rival : CheckpointConviction.Rival) : ForwardFields :=
+  (rival.threshold, rival.nextKeys, rival.nextThreshold, rival.toad)
+
+/-- The spent tip and the presented rival must be decoded consistently with
+the stored writer and signed message. The advance writes the accepted fields
+and the enforcement observer reads those fields from its named input and
+the rival bytes. This is a technical representation obligation. None of
+these equalities asserts that the rival meets a signature threshold. -/
+structure ComparisonReads.FieldsAgree (reads : ComparisonReads)
+    (history : EventHistory) (rival : CheckpointConviction.Rival)
+    (encode : Content → ForwardFields) : Prop where
+  epoch : (reads.tipOf history).epoch = history.epoch
+  writerPosition : (reads.tipOf history).sn = history.writer.event.sn
+  rivalPosition : (reads.rivalOf (reads.tipOf history) rival).event.sn = rival.sn
+  writerFields : tipFields (reads.tipOf history) = encode history.writer.event
+  rivalFields : rivalFields rival = encode (reads.rivalOf (reads.tipOf history) rival).event
+
 /-- Open conformance obligation at an authenticated inception. -/
 def InceptionRefusal (reads : ComparisonReads) : Prop :=
   ∀ aid event witnesses rival, (EventHistory.inception event witnesses).authenticated aid = true →

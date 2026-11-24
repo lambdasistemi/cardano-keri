@@ -19,13 +19,13 @@
     "lean/CardanoKeri/CheckpointDeposit.lean": "6ce03d0e88ee7cc55de194df185f067995e9b8d943f2478282934e691db13a68",
     "lean/CardanoKeri/CheckpointDepositGoals.lean": "c6ddf3b2434e365b59bdccfd2bc074b60208d63b3358141f147d8ac0fcf1055f",
     "lean/CardanoKeri/CheckpointDepositVectors.lean": "9c5d960ce08b2a47dbe0cbaf74411017b39b9ff048d7869b7708fce1e165d615",
-    "lean/CardanoKeri/CheckpointEventHistory.lean": "4c4832ec59fd7281aaa401eda06f8cee79baa6d17bff2ede17fd470c972ce32d",
+    "lean/CardanoKeri/CheckpointEventHistory.lean": "b22d0f188dd3de74ae9ab2aac5029842150f335477fef44eb6ee3307c49b0d27",
     "lean/CardanoKeri/CheckpointGoals.lean": "24f42b585377b5ede77967d0a2037c736a6388f09e31f0a3141a88f6d07bab9e",
     "lean/CardanoKeri/CheckpointLifecycleExamples.lean": "e7589d24cdcb2c2d1be7328e9f7591ae0c56de040ff634a8df0c039a3c4f2b41",
     "lean/CardanoKeri/CheckpointReceiptCheck.lean": "b8e503afc6b39c864d5670b5b746ada934e519beb2c45b291be66d811e1085d8",
     "lean/CardanoKeri/CheckpointSystemEvidence.lean": "537d2183603c1f5ffab2178d743b03652647a3ca22cae5cb4e38c8780bccf7da",
     "lean/CardanoKeri/CheckpointSystemFixtures.lean": "65e0aed9ae24d559b763cab32330965ea218ba0a5d467c4ae1fc382e8853b12a",
-    "lean/CardanoKeri/CheckpointSystemHistory.lean": "f079554f024eea71743f4e36c8bb79a6a64405f0c1a2dfb13dcbb12623d09843",
+    "lean/CardanoKeri/CheckpointSystemHistory.lean": "bcd1a04c9556e0119bef0e1bc887bdf5e0b99b73c644c9d91024132a73e518be",
     "lean/CardanoKeri/CheckpointSystemWire.lean": "873076099e01a074fbc58048017fd5c448c61101e4bb6624688b4feeb2f6d165",
     "lean/CardanoKeri/CheckpointTraceWire.lean": "fe6f88cef07f4e172bc792fe2975b09eae10f202910a72e3b39ae803cf9a4aaf",
     "lean/CardanoKeri/CheckpointValue.lean": "cd552eca0212b31142d4ed2d29ca6dd8897febddeeb7ac3dbb1154bfb22efbed",
@@ -4993,6 +4993,20 @@
         "then": "history.authenticated aid = true"
       },
       "storySha256": "b8f1e689a9548f9f8340579d200c80493ced93622f402f88b714f29f2e27e015"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.accepted_rotated_tip_iff_rival_valid",
+      "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
+      "line": 174,
+      "statement": "theorem accepted_rotated_tip_iff_rival_valid {p env s aid previous writer}\n    (reachable : SysReach p env s) (stored : s.writers aid = some (.rotation previous writer))\n    (reads : ComparisonReads) (rival : CheckpointConviction.Rival)\n    (encode : Duplicity.Content → ForwardFields)\n    (fields : reads.FieldsAgree (.rotation previous writer) rival encode)\n    (accepted : CheckpointConviction.accepts reads.verify (reads.tipOf (.rotation previous writer)) rival = true) :\n    let tip",
+      "statementSha256": "f73a62e9cbb7f157007d893167ffb65e31008adab2bd68d2a6db764083b54b0b",
+      "sourceStory": "Given the authenticated writer installed in a reachable system and a\nconsistent reading of the tip and rival, when the spent-tip comparison\naccepts, then KERI duplicity for these two events holds exactly when the\nrival is valid against that writer's actual predecessor.",
+      "story": {
+        "given": "{p env s aid previous writer}\n    (reachable : SysReach p env s) (stored : s.writers aid = some (.rotation previous writer))\n    (reads : ComparisonReads) (rival : CheckpointConviction.Rival)\n    (encode : Duplicity.Content → ForwardFields)\n    (fields : reads.FieldsAgree (.rotation previous writer) rival encode)\n    (accepted : CheckpointConviction.accepts reads.verify (reads.tipOf (.rotation previous writer)) rival = true)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "let tip"
+      },
+      "storySha256": "177a76553c4b34cc614f9d04e490305243f94c59da66cf5496fb0a0fab1438a6"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.present_held_amounts",

@@ -167,4 +167,30 @@ theorem reachable_writer_authenticated {p : Params} {env : SystemEnv} {s : Sys}
     | reveal event => obtain ⟨_, _, _, _, _, rfl⟩ := event; exact prior
     | sweep event => obtain ⟨_, _, _, _, rfl⟩ := event; exact prior
 
+/-- Given the authenticated writer installed in a reachable system and a
+consistent reading of the tip and rival, when the spent-tip comparison
+accepts, then KERI duplicity for these two events holds exactly when the
+rival is valid against that writer's actual predecessor. -/
+theorem accepted_rotated_tip_iff_rival_valid {p env s aid previous writer}
+    (reachable : SysReach p env s) (stored : s.writers aid = some (.rotation previous writer))
+    (reads : ComparisonReads) (rival : CheckpointConviction.Rival)
+    (encode : Duplicity.Content → ForwardFields)
+    (fields : reads.FieldsAgree (.rotation previous writer) rival encode)
+    (accepted : CheckpointConviction.accepts reads.verify (reads.tipOf (.rotation previous writer)) rival = true) :
+    let tip := reads.tipOf (.rotation previous writer)
+    let signed := reads.rivalOf tip rival
+    Duplicity.duplicityAt tip.epoch tip.sn ⟨previous.epoch + 1, previous.predecessor, writer⟩ signed = true ↔
+      Duplicity.rotationValid previous.predecessor signed = true := by
+  let history := EventHistory.rotation previous writer
+  let tip := reads.tipOf history
+  let signed := reads.rivalOf tip rival
+  obtain ⟨_, _, sameSn, _, _, _, conflict⟩ := CheckpointConviction.accepted_rival _ _ _ accepted
+  have same : writer.event.sn = signed.event.sn := fields.writerPosition.symm.trans (sameSn.trans fields.rivalPosition.symm)
+  have different : writer.event ≠ signed.event := by
+    intro equality
+    exact conflict (fields.writerFields.trans ((congrArg encode equality).trans fields.rivalFields.symm))
+  change Duplicity.duplicityAt tip.epoch tip.sn _ signed = true ↔ _
+  rw [show tip.epoch = previous.epoch + 1 from fields.epoch, show tip.sn = writer.event.sn from fields.writerPosition]
+  exact rotated_duplicity_iff_rival_valid (reachable_writer_authenticated reachable stored) same different
+
 end CardanoKeri.Checkpoint

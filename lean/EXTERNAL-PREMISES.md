@@ -34,3 +34,16 @@ At enforcement the checkpoint observer reads the spent tip and rival
 tip and signed content with those bytes belongs to `ComparisonReads`.
 `InceptionRefusal` and `RotatedRivalValidity` state open conformance
 obligations. Authentication of the stored writer alone discharges neither.
+
+For the custody proof, the ledger supplies the spending inputs, transaction
+identity, output indices and UTxO changes at every observed step. A reader
+must establish the completeness of that history. The checkpoint spend reads
+its old holding and writes the new datum and active token
+(`validators/checkpoint_register.ak` 508–538). The termination booker spends
+the named pending input and places the approval at the request output
+(`application/termination.ak` 76–92 and 107–144). Public registry history
+and the assumed finite encoding and collision freedom supply the one-token
+bound. Under these premises, `Custody.approval_spends_conviction_output`
+identifies the minted approval's input and the exact checkpoint edge that
+created it. A bare economic registry replay does not supply the observed
+carrier history or the checkpoint's native key state.

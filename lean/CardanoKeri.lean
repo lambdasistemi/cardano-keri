@@ -18,6 +18,7 @@ import CardanoKeri.RegistryLifecycleExamples
 import CardanoKeri.Samaritan
 import CardanoKeri.SingularBinding
 import CardanoKeri.CheckpointCompletionGoals
+import CardanoKeri.CheckpointSystemHistory
 import CardanoKeri.CheckpointLifecycleExamples
 import CardanoKeri.CheckpointSystemFixtures
 import CardanoKeri.ConsumerIdentity

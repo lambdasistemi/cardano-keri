@@ -23,6 +23,7 @@
     "lean/CardanoKeri/CheckpointReceiptCheck.lean": "b8e503afc6b39c864d5670b5b746ada934e519beb2c45b291be66d811e1085d8",
     "lean/CardanoKeri/CheckpointSystemEvidence.lean": "537d2183603c1f5ffab2178d743b03652647a3ca22cae5cb4e38c8780bccf7da",
     "lean/CardanoKeri/CheckpointSystemFixtures.lean": "ff86d9d595fe22fc964c8928cab42b329c23898e70f07c3cd63ba4f59dc0d391",
+    "lean/CardanoKeri/CheckpointSystemHistory.lean": "6c6dd8669a654d686360a0b998e29681adf425e989ac3030314cb319811c8e62",
     "lean/CardanoKeri/CheckpointSystemWire.lean": "2a4d9b12b301b7ff6d824c9158d046b4393fd35e5e00f93c1f8d7b2b0d7f4bb0",
     "lean/CardanoKeri/CheckpointTraceWire.lean": "1c8ddfea2de0e3c7c0db6d82dd630863fae4abe502627b5bce4bf80a1e1904d8",
     "lean/CardanoKeri/CheckpointValue.lean": "cd552eca0212b31142d4ed2d29ca6dd8897febddeeb7ac3dbb1154bfb22efbed",
@@ -4763,6 +4764,48 @@
         "then": "PendingOrigins next"
       },
       "storySha256": "9f1950e418b622a9a2f5f1a87959ba315deea7bbf52b92745224a1f5dc0db273"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.reachable_has_system_history",
+      "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
+      "line": 15,
+      "statement": "theorem reachable_has_system_history {p : Params} {env : SystemEnv} {s : Sys}\n    (reachable : SysReach p env s) : ∃ deployment edges, SystemHistory p env deployment edges s",
+      "statementSha256": "5ddc0bc426ce7cc23694c6ecab196e61cc52c8c2f8ca61430ded064466b00ad2",
+      "sourceStory": "Given a reachable system, when its past is retained, then it has a\nhistory from initialization containing precisely accepted system steps.",
+      "story": {
+        "given": "{p : Params} {env : SystemEnv} {s : Sys}\n    (reachable : SysReach p env s)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "∃ deployment edges, SystemHistory p env deployment edges s"
+      },
+      "storySha256": "14b7dea64923a6c7d644b30282d96a03aeabb8ecbecba5cd5d306775bb4a23db"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.pending_step_origin",
+      "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
+      "line": 34,
+      "statement": "private theorem pending_step_origin {p : Params} {env : SystemEnv} {before after : Sys}\n    {aid : AID} {key : KeyState} (step : SysStep p env before after)\n    (pending : after.states aid = .terminationPending key) :\n    before.states aid = .terminationPending key ∨ ConvictionEdge p env aid key before after",
+      "statementSha256": "9bfa576b83104ddbaaae899593fbd9353117009f2f0f8124ab2688ed28ff54a6",
+      "sourceStory": "",
+      "story": {
+        "given": "{p : Params} {env : SystemEnv} {before after : Sys}\n    {aid : AID} {key : KeyState} (step : SysStep p env before after)\n    (pending : after.states aid = .terminationPending key)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "before.states aid = .terminationPending key ∨ ConvictionEdge p env aid key before after"
+      },
+      "storySha256": "2c3b49cc0fdda14a27e929fc3abe8bad85636ab707a74f3a0e7756c9c328db79"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.pending_conviction_in_system_history",
+      "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
+      "line": 81,
+      "statement": "theorem pending_conviction_in_system_history {p : Params} {env : SystemEnv}\n    {d : Deployment} {edges : List (Sys × Sys)} {s : Sys} {aid : AID} {key : KeyState}\n    (history : SystemHistory p env d edges s) (pending : s.states aid = .terminationPending key) :\n    ∃ before after, (before, after) ∈ edges ∧ ConvictionEdge p env aid key before after",
+      "statementSha256": "9abf9523b7a747adf5adae07a125b6f6e7f22b0651c344e5ae9841eb74e9f07c",
+      "sourceStory": "Given an execution from system initialization, when an identifier is\npending at a particular key state, then an edge of that very execution\nconvicted the same identifier's live checkpoint at that exact key state.",
+      "story": {
+        "given": "{p : Params} {env : SystemEnv}\n    {d : Deployment} {edges : List (Sys × Sys)} {s : Sys} {aid : AID} {key : KeyState}\n    (history : SystemHistory p env d edges s) (pending : s.states aid = .terminationPending key)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "∃ before after, (before, after) ∈ edges ∧ ConvictionEdge p env aid key before after"
+      },
+      "storySha256": "0d4163cd1623c2827e35797e60e757c2f40811e71bf0d8ccf0970b75d2c4d0fe"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.present_held_amounts",

@@ -52,7 +52,7 @@ scripts still prove the inception at the fold.
 <!-- identities:begin -->
 | What | Value |
 |---|---|
-| Lean model revision | `9181f2f98b90c8291275c07cc077a9dfc0b932bf` |
+| Lean model revision | `acc0861a4b86caa77e280d74b8a6c5788f7b6888` |
 | Public Singular commit | `d69ab005c3b710aeebf033d3c5cd08c56feb5643` |
 | Aiken compiler | `1.1.23` |
 | Network discriminator | `0` |

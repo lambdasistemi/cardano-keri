@@ -19,6 +19,7 @@ module Cardano.KERI.AID.Checkpoint.Wire (
     freezeSpendRedeemerData,
     topUpSpendRedeemerData,
     releaseSpendRedeemerData,
+    bookingObserverRedeemerData,
     registerObserverRedeemerData,
     registrationEvidenceData,
     asPlcData,
@@ -46,6 +47,28 @@ registerObserverRedeemerData checkpointPolicy evidence =
         0
         [ Constr 0 [I 0, B checkpointPolicy, Constr 1 []]
         , registrationEvidenceData evidence
+        ]
+
+{- | The lifecycle observer's @ObserverEnvelope@ for a booking of the
+application: a claim containing action five, the application policy (the
+script the requests sit at), and no input reference, followed by the evidence
+of every request the transaction books, each with the index of its output
+among the transaction's outputs. The indices are distinct and are exactly the
+outputs the application's mint books.
+-}
+bookingObserverRedeemerData ::
+    ByteString -> [(Integer, RegistrationEvidence)] -> Data
+bookingObserverRedeemerData applicationPolicy requests =
+    Constr
+        0
+        [ Constr 0 [I 5, B applicationPolicy, Constr 1 []]
+        , Constr
+            0
+            [ List
+                [ Constr 0 [I index, registrationEvidenceData evidence]
+                | (index, evidence) <- requests
+                ]
+            ]
         ]
 
 {- | The checkpoint validator's @Advance@ arm is constructor index zero. It

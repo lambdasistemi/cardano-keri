@@ -61,12 +61,12 @@ model.
 | Booking width (milliseconds) | `5000` |
 | Checkpoint minimum ADA (lovelace) | `2000000` |
 | Termination request carrier (lovelace) | `1500000` |
-| Application script hash | `1cbb18a164c1d958ef85777e5c4dc158abd2362da1d5006278d595f7` |
-| Application program bytes | `10469` |
-| State script hash | `647d0379b604e0b29f293b5c051a2d1630cb8ea8282af7b34d35dcf1` |
+| Application script hash | `7f7266ed5eaba933d34c15c22cd18b116698c1ed56b6320fb17b6165` |
+| Application program bytes | `10853` |
+| State script hash | `61c0f6ca58e3cf190977affeade4aca004bf52c7633024b31a2d4e1c` |
 | State script program bytes | `7786` |
 | Application and state script across two seeds | `the same` |
-| Checkpoint validator script hash | `782098c5fc650f957a089befb4157dc221b3621dbd5b47d850beced4` |
+| Checkpoint validator script hash | `a69c9dac0c927f5a29a80caa99bf608f4b539014311019e80bfa3a72` |
 | Checkpoint validator program bytes | `8957` |
 | Reference registry name | `a060e76604c811bc4f47264e86a593a4539d57e251709f83af18ad5789d6c0b3` |
 <!-- identities:end -->

@@ -23,13 +23,16 @@
 
 use aiken/cbor
 use aiken/crypto.{blake2b_256}
-use cardano/transaction.{OutputReference, Transaction}
+use cardano/address.{Script}
+use cardano/transaction.{InlineDatum, Transaction, find_input}
 use cardano_keri/bounty_commitment.{
   BountyAction, BountyCommitment, BountyCommitmentV1, BountyRevealV1,
-  CommitmentFamily, ConvictEntitlement, EntitlementValid, EntitlementVerdict,
-  at_or_after, at_or_before, burns_exactly_one,
+  CommitmentFamily, ConvictEntitlement, ConvictionTarget, EntitlementValid,
+  EntitlementVerdict, at_or_after, at_or_before, burns_exactly_one,
   entitlement_matches as commitment_entitlement_matches, own_commitment,
 }
+use cardano_keri/checkpoint/datum.{Live}
+use cardano_keri/checkpoint/datum as checkpoint_datum
 use cardano_keri/checkpoint/enforcement.{EnforcementEvidence}
 use cardano_keri/checkpoint/observer.{ObserverEnvelope, observe_convict}
 
@@ -78,13 +81,13 @@ pub fn enforcement_evidence_digest(evidence: EnforcementEvidence) -> ByteArray {
 /// any scope field, the payee, the evidence, or the nonce breaks the match.
 pub fn entitlement_matches(
   commitment: BountyCommitment,
-  checkpoint_ref: OutputReference,
+  target: ConvictionTarget,
   evidence: EnforcementEvidence,
   nonce: ByteArray,
 ) -> EntitlementVerdict {
   commitment_entitlement_matches(
     commitment,
-    checkpoint_ref,
+    target,
     enforcement_evidence_digest(evidence),
     nonce,
   )
@@ -135,7 +138,7 @@ fn validate_entitled_enforcement(
   evidence: EnforcementEvidence,
   payee: ByteArray,
   reveal: BountyRevealV1,
-  checkpoint_ref: OutputReference,
+  target: ConvictionTarget,
   tx: Transaction,
 ) -> Bool {
   when own_commitment(family.parameters, reveal.commitment_ref, tx) is {
@@ -146,7 +149,7 @@ fn validate_entitled_enforcement(
         // The pin comes FIRST: nothing below can authorize a settlement out of
         // a reservation that never belonged to this release's family.
         policy == family.policy,
-        entitlement_matches(commitment, checkpoint_ref, evidence, reveal.nonce) == EntitlementValid,
+        entitlement_matches(commitment, target, evidence, reveal.nonce) == EntitlementValid,
         payee_pkh == payee,
         at_or_after(tx.validity_range, scope.eligible_after),
         at_or_before(tx.validity_range, scope.expires_at),
@@ -164,17 +167,10 @@ pub fn validate_convict_entitlement(
   evidence: EnforcementEvidence,
   convictor: ByteArray,
   reveal: BountyRevealV1,
-  checkpoint_ref: OutputReference,
+  target: ConvictionTarget,
   tx: Transaction,
 ) -> Bool {
-  validate_entitled_enforcement(
-    family,
-    evidence,
-    convictor,
-    reveal,
-    checkpoint_ref,
-    tx,
-  )
+  validate_entitled_enforcement(family, evidence, convictor, reveal, target, tx)
 }
 
 /// The entitlement half of the A-002 two-observer split.
@@ -204,11 +200,26 @@ pub fn validate_entitlement_observation(
   let ObserverEnvelope { claim, payload } = envelope
   expect proof: EnforcementProofV1 = payload
   let EnforcementProofV1 { evidence, payee_pkh, reveal } = proof
-  // The checkpoint reference comes from the claim the checkpoint program
-  // independently checks against its own consumed output, never from the
-  // payload, so an envelope cannot name one checkpoint to the register and
-  // another to its own reservation.
+  // The spent checkpoint comes from the claim the checkpoint program
+  // independently checks against its own consumed output and its own script
+  // hash, never from the payload, so an envelope cannot name one checkpoint to
+  // the register and another to its own reservation. What a conviction is
+  // settled at is read off that input: the program it sits at, and the
+  // identifier, epoch and sequence number of its datum. Nothing else of the
+  // output matters, so a top-up or a freeze leaves a reservation entitled and a
+  // rotation voids it.
   expect Some(own_ref) = claim.own_ref
   expect claim.action == observe_convict
-  validate_convict_entitlement(family, evidence, payee_pkh, reveal, own_ref, tx)
+  expect Some(own_input) = find_input(tx.inputs, own_ref)
+  expect Script(deployment) = own_input.output.address.payment_credential
+  expect deployment == claim.checkpoint_policy
+  expect InlineDatum(spent) = own_input.output.datum
+  expect Live { aid, epoch, sn, .. } = checkpoint_datum.read(spent)
+  let target = ConvictionTarget {
+    checkpoint_policy: deployment,
+    aid,
+    epoch,
+    sn,
+  }
+  validate_convict_entitlement(family, evidence, payee_pkh, reveal, target, tx)
 }

@@ -97,6 +97,7 @@ import Cardano.KERI.AID.Checkpoint.BountyCommitment (
     CommitmentFamily (..),
     CommitmentParameters (..),
     CommitmentPayout (..),
+    ConvictionTarget (..),
     ResolvedCommitment (..),
     SlotRange (..),
     atOrAfter,
@@ -1272,7 +1273,7 @@ productionRegisterConvictScenario env = do
             plan <-
                 prepareLiveEntitlement
                     env
-                    (checkpointUtxo active)
+                    active
                     payload
                     convictor
                     (commitmentNonce nonceLabel)
@@ -1295,7 +1296,7 @@ productionRegisterConvictScenario env = do
     activePlan <-
         prepareLiveEntitlement
             env
-            (checkpointUtxo active)
+            active
             conflict
             convictor
             (commitmentNonce "151-active-conflict")
@@ -3814,6 +3815,22 @@ tipValidityWith slots env label = do
             , upperPosixMs = lowerMs + slots * slotLengthMs
             }
 
+{- | Where a conviction of this checkpoint is settled: the checkpoint program
+and the identifier, epoch and sequence number its datum carries.
+-}
+convictionTargetOf ::
+    CheckpointEnv -> String -> CheckpointInput -> IO ConvictionTarget
+convictionTargetOf env label input = case checkpointFacts input of
+    Live{lvAid, lvEpoch, lvSn} ->
+        pure
+            ConvictionTarget
+                { ctCheckpointPolicy = policyBytes (envCheckpointPolicy env)
+                , ctAid = lvAid
+                , ctEpoch = lvEpoch
+                , ctSn = lvSn
+                }
+    _ -> fail (label <> ": the checkpoint is not live")
+
 {- | Submit one authentic #271 opening and resolve the output it created.
 
 Everything the transaction carries comes from 'prepareBountyCommitment': the
@@ -3825,7 +3842,7 @@ eligibility and expiry — so this harness cannot choose a maturity boundary.
 openLiveReservation ::
     CheckpointEnv ->
     String ->
-    (TxIn, TxOut ConwayEra) ->
+    CheckpointInput ->
     EnforcementEvidence ->
     ByteString ->
     ByteString ->
@@ -3843,8 +3860,11 @@ openLiveReservation env label checkpointInput evidence payee nonce = do
         withinSecs 30 (label <> ": query opening wallet") $
             queryUTxOs (envProvider env) (envOwner env)
     (seed, collateral) <-
-        pickDisjoint wallet [fst commitmentRef, fst checkpointInput]
+        pickDisjoint
+            wallet
+            [fst commitmentRef, fst (checkpointUtxo checkpointInput)]
     opening <- openingValidity env
+    target <- convictionTargetOf env label checkpointInput
     let family = envCommitmentFamily env
     plan <-
         either
@@ -3855,8 +3875,7 @@ openLiveReservation env label checkpointInput evidence payee nonce = do
                 (cfPolicy family)
                 (outputRefOf (fst seed))
                 (declaredSlotRange opening)
-                (policyBytes (envCheckpointPolicy env))
-                (outputRefOf (fst checkpointInput))
+                target
                 (enforcementEvidenceDigest evidence)
                 payee
                 nonce
@@ -3937,7 +3956,7 @@ and no negative row fails on an entitlement mismatch it never meant to test.
 -}
 prepareLiveEntitlement ::
     CheckpointEnv ->
-    (TxIn, TxOut ConwayEra) ->
+    CheckpointInput ->
     EnforcementEvidence ->
     ByteString ->
     ByteString ->
@@ -3946,6 +3965,7 @@ prepareLiveEntitlement env checkpointInput evidence payee nonce = do
     resolved <-
         openLiveReservation env label checkpointInput evidence payee nonce
     validity <- entitledSettlementValidity env label resolved
+    target <- convictionTargetOf env label checkpointInput
     plan <-
         either
             (fail . ((label <> ": reveal could not be planned: ") <>) . show)
@@ -3954,7 +3974,8 @@ prepareLiveEntitlement env checkpointInput evidence payee nonce = do
                 (envCommitmentFamily env)
                 resolved
                 evidence
-                (outputRefOf (fst checkpointInput))
+                (outputRefOf (fst (checkpointUtxo checkpointInput)))
+                target
                 nonce
                 settlementRefundIndex
                 (declaredSlotRange validity)
@@ -3964,7 +3985,7 @@ prepareLiveEntitlement env checkpointInput evidence payee nonce = do
             <> " matured: reservation="
             <> show (eepCommitmentRef plan)
             <> "; checkpoint="
-            <> show (fst checkpointInput)
+            <> show (fst (checkpointUtxo checkpointInput))
             <> "; payee="
             <> show (eepBountyPayee plan)
         )
@@ -5924,7 +5945,7 @@ terminationJourney env observe = do
     convictPlan <-
         prepareLiveEntitlement
             env
-            (checkpointUtxo active)
+            active
             (fsConflictEvidence fixture)
             convictor
             (commitmentNonce "350-termination")

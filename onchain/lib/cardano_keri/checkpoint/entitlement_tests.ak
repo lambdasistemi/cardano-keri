@@ -10,6 +10,7 @@
 //// and changes only that. A rejection that could also be explained by a
 //// malformed fixture proves nothing about the rule.
 
+use aiken/builtin
 use aiken/cbor
 use aiken/collection/list
 use aiken/crypto.{blake2b_256}
@@ -23,11 +24,13 @@ use cardano/transaction.{
 use cardano_keri/bounty_commitment.{
   BountyAction, BountyCommitment, BountyCommitmentV1, BountyRevealV1,
   BountyScope, CommitmentFamily, CommitmentParameters, ConvictEntitlement,
-  EntitlementCheckpoint, EntitlementDigestWidth, EntitlementHash,
-  EntitlementInvalid, EntitlementMarker, EntitlementNonceWidth, EntitlementValid,
-  EntitlementVerdict, commitment_domain, commitment_hash, commitment_preimage,
-  commitment_schema, marker_name,
+  ConvictionTarget, EntitlementAid, EntitlementDeployment,
+  EntitlementDigestWidth, EntitlementHash, EntitlementInvalid,
+  EntitlementKeyState, EntitlementMarker, EntitlementNonceWidth,
+  EntitlementValid, EntitlementVerdict, commitment_domain, commitment_hash,
+  commitment_preimage, commitment_schema, marker_name,
 }
+use cardano_keri/checkpoint/datum.{CheckpointDatumV2, KeyMaterial, Live}
 use cardano_keri/checkpoint/enforcement.{EnforcementEvidence}
 use cardano_keri/checkpoint/enforcement_vectors as vec
 use cardano_keri/checkpoint/entitlement.{
@@ -104,6 +107,14 @@ const checkpoint_ref: OutputReference =
     output_index: 1,
   }
 
+/// The output a step of the checkpoint produces: another transaction, so the
+/// reference is not the one the commitment was opened against.
+const successor_ref: OutputReference =
+  OutputReference {
+    transaction_id: #"5555555555555555555555555555555555555555555555555555555555555555",
+    output_index: 0,
+  }
+
 const other_checkpoint_ref: OutputReference =
   OutputReference {
     transaction_id: #"3333333333333333333333333333333333333333333333333333333333333333",
@@ -118,17 +129,91 @@ const commitment_ref: OutputReference =
 
 const evidence: EnforcementEvidence = vec.fork_witnessed_convict_wire
 
+/// The deployment, the identifier and the key state of the honest spent
+/// checkpoint: the key state a conviction is settled at.
+fn honest_target() -> ConvictionTarget {
+  ConvictionTarget {
+    checkpoint_policy,
+    aid: ev.aid,
+    epoch: ev.epoch,
+    sn: ev.sn,
+  }
+}
+
+/// A live checkpoint datum of the honest identifier at the given key state.
+fn live_datum(epoch: Int, sn: Int) -> CheckpointDatumV2 {
+  marked_datum(epoch, sn, False, False, False)
+}
+
+/// The same, carrying the given poison, freeze and top-up marks.
+fn marked_datum(
+  epoch: Int,
+  sn: Int,
+  poisoned: Bool,
+  frozen: Bool,
+  topped_up: Bool,
+) -> CheckpointDatumV2 {
+  Live {
+    aid: ev.aid,
+    sn,
+    epoch,
+    poisoned,
+    frozen,
+    born_at: 0,
+    refund_to: #"",
+    topped_up,
+    keys: KeyMaterial {
+      cur_keys: [],
+      cur_threshold: Unweighted(1),
+      next_keys: [],
+      next_threshold: Unweighted(1),
+      witnesses: [],
+      toad: 0,
+    },
+  }
+}
+
+/// The checkpoint the commitment was opened against: at `script`, carrying
+/// `spent`.
+fn spent_checkpoint(script: PolicyId, spent: CheckpointDatumV2) -> Input {
+  spent_checkpoint_at(checkpoint_ref, script, spent)
+}
+
+/// A checkpoint output of its own: the reference it sits at is the one the
+/// conviction spends and the claim names.
+fn spent_checkpoint_at(
+  ref: OutputReference,
+  script: PolicyId,
+  spent: CheckpointDatumV2,
+) -> Input {
+  Input {
+    output_reference: ref,
+    output: Output {
+      address: from_script(script),
+      value: from_lovelace(2_000_000),
+      datum: InlineDatum(datum.write(spent)),
+      reference_script: None,
+    },
+  }
+}
+
+fn honest_spent() -> Input {
+  spent_checkpoint(checkpoint_policy, live_datum(ev.epoch, ev.sn))
+}
+
 // ---------------------------------------------------------------------
 // Fixture builders
 // ---------------------------------------------------------------------
 
-fn scope_for(action: BountyAction, ref: OutputReference) -> BountyScope {
+fn scope_for(action: BountyAction, at: ConvictionTarget) -> BountyScope {
   BountyScope {
     domain: commitment_domain,
     schema: commitment_schema,
     network: network_id,
-    checkpoint_policy,
-    checkpoint_ref: ref,
+    checkpoint_policy: at.checkpoint_policy,
+    aid: at.aid,
+    epoch: at.epoch,
+    sn: at.sn,
     action,
     marker: marker_name(seed_ref),
     commit_upper: 0,
@@ -155,7 +240,7 @@ fn commitment_over(
 /// this actual evidence, this payee.
 fn honest_commitment() -> BountyCommitment {
   commitment_over(
-    scope_for(ConvictEntitlement, checkpoint_ref),
+    scope_for(ConvictEntitlement, honest_target()),
     enforcement_evidence_digest(evidence),
     hunter,
     nonce,
@@ -194,10 +279,21 @@ fn settlement_tx(
   lower: Int,
   upper: Int,
 ) -> Transaction {
+  settlement_tx_spending(script, commitment, lower, upper, honest_spent())
+}
+
+/// The same settlement, spending the given checkpoint.
+fn settlement_tx_spending(
+  script: PolicyId,
+  commitment: BountyCommitment,
+  lower: Int,
+  upper: Int,
+  spent: Input,
+) -> Transaction {
   let BountyCommitmentV1 { marker, payee_pkh, .. } = commitment
   Transaction {
     ..placeholder,
-    inputs: [commitment_input(script, commitment)],
+    inputs: [commitment_input(script, commitment), spent],
     outputs: [payout(payee_pkh, applied_deposit)],
     mint: from_asset(script, marker, -1),
     validity_range: interval.between(lower, upper),
@@ -217,10 +313,10 @@ fn convict_verdict(
   e: EnforcementEvidence,
   payee: ByteArray,
   r: BountyRevealV1,
-  ref: OutputReference,
+  at: ConvictionTarget,
   tx: Transaction,
 ) -> Bool {
-  validate_convict_entitlement(f, e, payee, r, ref, tx)
+  validate_convict_entitlement(f, e, payee, r, at, tx)
 }
 
 /// Every rejection below is measured against this. If this row ever stops
@@ -232,7 +328,7 @@ test entitlement_honest_convict_settlement_accepts() {
     evidence,
     hunter,
     reveal(),
-    checkpoint_ref,
+    honest_target(),
     honest_tx(),
   )
 }
@@ -255,10 +351,10 @@ test entitlement_counterfeit_policy_rejects_and_unpinned_mutant_accepts() {
       evidence,
       hunter,
       reveal(),
-      checkpoint_ref,
+      honest_target(),
       tx,
     ),
-    !convict_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx),
+    !convict_verdict(family, evidence, hunter, reveal(), honest_target(), tx),
   }
 }
 
@@ -278,7 +374,7 @@ test entitlement_absent_commitment_rejects() {
     evidence,
     hunter,
     absent,
-    checkpoint_ref,
+    honest_target(),
     honest_tx(),
   )
 }
@@ -291,7 +387,7 @@ test entitlement_substituted_payee_rejects() {
     evidence,
     attacker,
     reveal(),
-    checkpoint_ref,
+    honest_target(),
     honest_tx(),
   )
 }
@@ -317,13 +413,13 @@ test entitlement_inexact_deposit_rejects() {
       },
     ],
   }
-  !convict_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx)
+  !convict_verdict(family, evidence, hunter, reveal(), honest_target(), tx)
 }
 
 /// Without the burn the reservation could settle again.
 test entitlement_unburned_marker_rejects() {
   let tx = Transaction { ..honest_tx(), mint: zero }
-  !convict_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx)
+  !convict_verdict(family, evidence, hunter, reveal(), honest_target(), tx)
 }
 
 // ---------------------------------------------------------------------
@@ -343,21 +439,26 @@ test entitlement_mutated_evidence_rejects() {
     mutated,
     hunter,
     reveal(),
-    checkpoint_ref,
+    honest_target(),
     honest_tx(),
   )
 }
 
-/// A reservation opened over a different checkpoint cannot settle this one.
-test entitlement_foreign_checkpoint_rejects() {
-  !convict_verdict(
-    family,
-    evidence,
-    hunter,
-    reveal(),
-    other_checkpoint_ref,
-    honest_tx(),
-  )
+/// A reservation opened for another deployment, identifier or key state cannot
+/// settle this one; each is refused where the honest neighbour is accepted.
+test entitlement_foreign_key_state_rejects() {
+  let settle = fn(at: ConvictionTarget) {
+    convict_verdict(family, evidence, hunter, reveal(), at, honest_tx())
+  }
+  and {
+    settle(honest_target()),
+    !settle(
+      ConvictionTarget { ..honest_target(), checkpoint_policy: foreign_policy },
+    ),
+    !settle(ConvictionTarget { ..honest_target(), aid: flip_last(ev.aid) }),
+    !settle(ConvictionTarget { ..honest_target(), epoch: ev.epoch + 1 }),
+    !settle(ConvictionTarget { ..honest_target(), sn: ev.sn + 1 }),
+  }
 }
 
 /// The nonce is inside the hashed preimage, so guessing it wrong breaks the
@@ -368,13 +469,20 @@ test entitlement_wrong_nonce_rejects() {
     nonce: other_nonce,
     refund_index: 0,
   }
-  !convict_verdict(family, evidence, hunter, wrong, checkpoint_ref, honest_tx())
+  !convict_verdict(
+    family,
+    evidence,
+    hunter,
+    wrong,
+    honest_target(),
+    honest_tx(),
+  )
 }
 
 /// The pure matcher agrees with the settlement rule about the honest case, so
 /// the rows above are not passing because the matcher is inert.
 test entitlement_matches_accepts_the_honest_preimage() {
-  entitlement_matches(honest_commitment(), checkpoint_ref, evidence, nonce) == EntitlementValid
+  entitlement_matches(honest_commitment(), honest_target(), evidence, nonce) == EntitlementValid
 }
 
 // ---------------------------------------------------------------------
@@ -390,14 +498,14 @@ test entitlement_same_slot_reveal_rejects() {
     0,
     applied_lifetime,
   )
-  !convict_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx)
+  !convict_verdict(family, evidence, hunter, reveal(), honest_target(), tx)
 }
 
 /// One slot of age is enough — the boundary is admitted, not merely the
 /// interior, so the row above pins an exact edge rather than a vague gap.
 test entitlement_exactly_one_slot_of_age_accepts() {
   let tx = settlement_tx(commit_policy, honest_commitment(), 1, 1)
-  convict_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx)
+  convict_verdict(family, evidence, hunter, reveal(), honest_target(), tx)
 }
 
 /// Past `expires_at` the reservation is dead.
@@ -408,7 +516,7 @@ test entitlement_expired_reveal_rejects() {
     applied_lifetime + 1,
     applied_lifetime + 2,
   )
-  !convict_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx)
+  !convict_verdict(family, evidence, hunter, reveal(), honest_target(), tx)
 }
 
 /// The last admissible slot is admitted.
@@ -419,7 +527,7 @@ test entitlement_reveal_at_exact_expiry_accepts() {
     1,
     applied_lifetime,
   )
-  convict_verdict(family, evidence, hunter, reveal(), checkpoint_ref, tx)
+  convict_verdict(family, evidence, hunter, reveal(), honest_target(), tx)
 }
 
 // ---------------------------------------------------------------------
@@ -460,13 +568,29 @@ fn enforcement_envelope(
   e: EnforcementEvidence,
   r: BountyRevealV1,
 ) -> ObserverEnvelope {
+  envelope_claiming(checkpoint_policy, action, own_ref, payee, e, r)
+}
+
+/// The same envelope, whose claim names `claimed` as the settling program.
+fn envelope_claiming(
+  claimed: PolicyId,
+  action: Int,
+  own_ref: OutputReference,
+  payee: ByteArray,
+  e: EnforcementEvidence,
+  r: BountyRevealV1,
+) -> ObserverEnvelope {
   let proof: Data = EnforcementProofV1 {
     evidence: e,
     payee_pkh: payee,
     reveal: r,
   }
   ObserverEnvelope {
-    claim: ObserverClaim { action, checkpoint_policy, own_ref: Some(own_ref) },
+    claim: ObserverClaim {
+      action,
+      checkpoint_policy: claimed,
+      own_ref: Some(own_ref),
+    },
     payload: proof,
   }
 }
@@ -570,21 +694,170 @@ test s254_e_entitlement_observer_wrong_nonce_rejects() {
   }
 }
 
-/// INV-271-SCOPE. The observer takes its checkpoint reference from the claim's
-/// `own_ref`, so a reservation opened over a different checkpoint cannot settle
-/// this one.
-test s254_e_entitlement_observer_foreign_checkpoint_rejects() {
-  let foreign = enforcement_envelope(
-    observe_convict,
-    other_checkpoint_ref,
+// ---------------------------------------------------------------------
+// commitment-names-key-state — the observer reads the key state, the
+// identifier and the deployment off the spent checkpoint
+//
+// Each row is named after the row of `lean/checkpoint-commitment-vectors.json`
+// it executes, and each pairs the refused case with its accepted neighbour in
+// one assertion so that a dispatch refusing everything cannot pass.
+// ---------------------------------------------------------------------
+
+/// A reservation opened over the given deployment, identifier and key state.
+fn commitment_naming(at: ConvictionTarget) -> BountyCommitment {
+  commitment_over(
+    scope_for(ConvictEntitlement, at),
+    enforcement_evidence_digest(evidence),
     hunter,
-    evidence,
-    reveal(),
+    nonce,
   )
+}
+
+/// The conviction of `spent` settled through the entitlement observer with the
+/// given reservation, inside its window.
+fn settles(commitment: BountyCommitment, spent: Input) -> Bool {
+  observed(
+    enforcement_envelope(
+      observe_convict,
+      spent.output_reference,
+      hunter,
+      evidence,
+      reveal(),
+    ),
+    settlement_tx_spending(
+      commit_policy,
+      commitment,
+      1,
+      applied_lifetime,
+      spent,
+    ),
+  )
+}
+
+/// The output a rotation produced, at a reference of its own.
+fn spent_at(epoch: Int, sn: Int) -> Input {
+  spent_checkpoint_at(successor_ref, checkpoint_policy, live_datum(epoch, sn))
+}
+
+/// An output whose datum carries the given marks, at a reference of its own.
+fn spent_marked(poisoned: Bool, frozen: Bool, topped_up: Bool) -> Input {
+  spent_checkpoint_at(
+    successor_ref,
+    checkpoint_policy,
+    marked_datum(ev.epoch, ev.sn, poisoned, frozen, topped_up),
+  )
+}
+
+/// Lean vector row `accepted-output-topped-up`.
+test accepted_output_topped_up() {
   and {
-    observed(honest_convict_envelope(), honest_tx()),
-    !observed(foreign, honest_tx()),
+    settles(honest_commitment(), honest_spent()),
+    settles(honest_commitment(), spent_marked(False, False, True)),
   }
+}
+
+/// Lean vector row `accepted-output-frozen`.
+test accepted_output_frozen() {
+  settles(honest_commitment(), spent_marked(False, True, False))
+}
+
+/// Lean vector row `accepted-output-poisoned`.
+test accepted_output_poisoned() {
+  settles(honest_commitment(), spent_marked(True, False, False))
+}
+
+/// Lean vector rows `refused-output-rotated` and `commitment-voided-by-a-rotation`:
+/// a rotation moves the epoch or the sequence number, the earlier reservation
+/// entitles nobody at the rotated output, and a reservation naming the new key
+/// state does.
+test refused_output_rotated() {
+  let rotated = ConvictionTarget {
+    ..honest_target(),
+    epoch: ev.epoch + 1,
+    sn: ev.sn + 1,
+  }
+  and {
+    settles(honest_commitment(), honest_spent()),
+    !settles(honest_commitment(), spent_at(ev.epoch + 1, ev.sn + 1)),
+    !settles(honest_commitment(), spent_at(ev.epoch + 1, ev.sn)),
+    !settles(honest_commitment(), spent_at(ev.epoch, ev.sn + 1)),
+    settles(commitment_naming(rotated), spent_at(ev.epoch + 1, ev.sn + 1)),
+  }
+}
+
+/// Lean vector row `refused-other-key-state`.
+test refused_other_key_state() {
+  let other = ConvictionTarget { ..honest_target(), epoch: ev.epoch + 1 }
+  and {
+    settles(honest_commitment(), honest_spent()),
+    !settles(commitment_naming(other), honest_spent()),
+    !settles(
+      commitment_naming(ConvictionTarget { ..honest_target(), sn: ev.sn + 1 }),
+      honest_spent(),
+    ),
+  }
+}
+
+/// Lean vector row `convict-revealing-the-other-aid-commitment`.
+test convict_revealing_the_other_aid_commitment() {
+  let other = ConvictionTarget { ..honest_target(), aid: flip_last(ev.aid) }
+  and {
+    settles(honest_commitment(), honest_spent()),
+    !settles(commitment_naming(other), honest_spent()),
+  }
+}
+
+/// Lean vector rows `refused-at-another-deployment` and
+/// `conviction-needs-this-deployment`: the scope's checkpoint policy must be
+/// the program the spent checkpoint sits at.
+test refused_at_another_deployment() {
+  let other = ConvictionTarget {
+    ..honest_target(),
+    checkpoint_policy: foreign_policy,
+  }
+  and {
+    settles(honest_commitment(), honest_spent()),
+    !settles(commitment_naming(other), honest_spent()),
+    // the checkpoint program settling is the foreign one: the claim names it,
+    // as the checkpoint program requires, and the honest reservation names the
+    // other program
+    !settles_claiming(foreign_policy, honest_commitment(), foreign_spent()),
+    settles_claiming(foreign_policy, commitment_naming(other), foreign_spent()),
+  }
+}
+
+fn foreign_spent() -> Input {
+  spent_checkpoint(foreign_policy, live_datum(ev.epoch, ev.sn))
+}
+
+fn settles_claiming(
+  claimed: PolicyId,
+  commitment: BountyCommitment,
+  spent: Input,
+) -> Bool {
+  observed(
+    envelope_claiming(
+      claimed,
+      observe_convict,
+      spent.output_reference,
+      hunter,
+      evidence,
+      reveal(),
+    ),
+    settlement_tx_spending(
+      commit_policy,
+      commitment,
+      1,
+      applied_lifetime,
+      spent,
+    ),
+  )
+}
+
+/// A claim that names a program other than the one the spent checkpoint sits at
+/// is no observation of it.
+test refused_a_claim_naming_another_program() fail {
+  settles_claiming(foreign_policy, honest_commitment(), honest_spent())
 }
 
 /// INV-271-AGE. The boundary is pinned on both sides: one slot of age is
@@ -637,6 +910,7 @@ test s254_e_entitlement_observer_value_legs_reject() {
           reference_script: None,
         },
       },
+      honest_spent(),
     ],
   }
   and {
@@ -868,12 +1142,31 @@ test entitlement_vectors_shapes_agree() {
 test entitlement_vectors_verdicts_agree() {
   let commitment = parity_commitment()
   let evidence_payload = parity_evidence()
-  let checkpoint = parity_checkpoint_ref()
-  let other_checkpoint = OutputReference {
-    transaction_id: ev.checkpoint_txid,
-    output_index: ev.other_checkpoint_index,
+  let checkpoint = parity_target()
+  let verdict_at = fn(at: ConvictionTarget) {
+    verdict_tag(entitlement_matches(commitment, at, evidence_payload, ev.nonce))
   }
   and {
+    // The expected tags are the model's refusals, written here by hand: the
+    // generated constants must agree with them, never the reverse.
+    verdict_at(
+      ConvictionTarget {
+        ..checkpoint,
+        checkpoint_policy: flip_last(ev.checkpoint_policy),
+      },
+    ) == 4,
+    verdict_at(ConvictionTarget { ..checkpoint, aid: flip_last(ev.aid) }) == 7,
+    verdict_at(ConvictionTarget { ..checkpoint, epoch: ev.epoch + 1 }) == 8,
+    verdict_at(ConvictionTarget { ..checkpoint, sn: ev.sn + 1 }) == 8,
+    verdict_at(
+      ConvictionTarget {
+        ..checkpoint,
+        checkpoint_policy: flip_last(ev.checkpoint_policy),
+      },
+    ) == ev.verdict_other_deployment,
+    verdict_at(ConvictionTarget { ..checkpoint, aid: flip_last(ev.aid) }) == ev.verdict_other_aid,
+    verdict_at(ConvictionTarget { ..checkpoint, epoch: ev.epoch + 1 }) == ev.verdict_other_epoch,
+    verdict_at(ConvictionTarget { ..checkpoint, sn: ev.sn + 1 }) == ev.verdict_other_sn,
     verdict_tag(
       entitlement_matches(commitment, checkpoint, evidence_payload, ev.nonce),
     ) == ev.verdict_honest,
@@ -885,14 +1178,6 @@ test entitlement_vectors_verdicts_agree() {
         ev.short_nonce,
       ),
     ) == ev.verdict_short_nonce,
-    verdict_tag(
-      entitlement_matches(
-        commitment,
-        other_checkpoint,
-        evidence_payload,
-        ev.nonce,
-      ),
-    ) == ev.verdict_other_checkpoint,
     verdict_tag(
       entitlement_matches(
         BountyCommitmentV1 { ..commitment, marker: ev.other_marker },
@@ -937,8 +1222,10 @@ test entitlement_vectors_verdict_set_is_not_constant() {
   and {
     ev.verdict_honest == 0,
     ev.verdict_short_nonce != ev.verdict_honest,
-    ev.verdict_other_checkpoint != ev.verdict_short_nonce,
-    ev.verdict_marker_left_scope != ev.verdict_other_checkpoint,
+    ev.verdict_other_deployment != ev.verdict_short_nonce,
+    ev.verdict_marker_left_scope != ev.verdict_other_deployment,
+    ev.verdict_other_aid != ev.verdict_other_deployment,
+    ev.verdict_other_epoch != ev.verdict_other_aid,
     ev.verdict_substituted_evidence != ev.verdict_marker_left_scope,
   }
 }
@@ -981,10 +1268,12 @@ fn flip_last(value: ByteArray) -> ByteArray {
   }
 }
 
-fn parity_checkpoint_ref() -> OutputReference {
-  OutputReference {
-    transaction_id: ev.checkpoint_txid,
-    output_index: ev.checkpoint_index,
+fn parity_target() -> ConvictionTarget {
+  ConvictionTarget {
+    checkpoint_policy: ev.checkpoint_policy,
+    aid: ev.aid,
+    epoch: ev.epoch,
+    sn: ev.sn,
   }
 }
 
@@ -994,7 +1283,9 @@ fn parity_scope() -> BountyScope {
     schema: commitment_schema,
     network: ev.network,
     checkpoint_policy: ev.checkpoint_policy,
-    checkpoint_ref: parity_checkpoint_ref(),
+    aid: ev.aid,
+    epoch: ev.epoch,
+    sn: ev.sn,
     action: ConvictEntitlement,
     marker: ev.marker,
     commit_upper: ev.commit_upper,
@@ -1052,8 +1343,69 @@ fn verdict_tag(verdict: EntitlementVerdict) -> Int {
     EntitlementValid -> 0
     EntitlementInvalid(EntitlementDigestWidth) -> 1
     EntitlementInvalid(EntitlementNonceWidth) -> 2
-    EntitlementInvalid(EntitlementCheckpoint) -> 4
+    EntitlementInvalid(EntitlementDeployment) -> 4
+    EntitlementInvalid(EntitlementAid) -> 7
+    EntitlementInvalid(EntitlementKeyState) -> 8
     EntitlementInvalid(EntitlementMarker) -> 5
     EntitlementInvalid(EntitlementHash) -> 6
+  }
+}
+
+// ---------------------------------------------------------------------
+// scope-layout-versioned — the output a commitment names is no longer what decides
+// ---------------------------------------------------------------------
+
+/// A commitment of the retired layout: its scope names the output `ref`, where
+/// the identifier and the key state now sit.
+fn retired_commitment_naming(ref: OutputReference) -> Data {
+  builtin.constr_data(
+    0,
+    [
+      builtin.constr_data(
+        0,
+        [
+          builtin.b_data(commitment_domain),
+          builtin.i_data(1),
+          builtin.i_data(network_id),
+          builtin.b_data(checkpoint_policy),
+          builtin.constr_data(
+            0,
+            [
+              builtin.b_data(ref.transaction_id),
+              builtin.i_data(ref.output_index),
+            ],
+          ),
+          builtin.constr_data(0, []),
+          builtin.b_data(marker_name(seed_ref)),
+          builtin.i_data(0),
+          builtin.i_data(1),
+          builtin.i_data(applied_lifetime),
+        ],
+      ),
+      builtin.b_data(hunter),
+      builtin.b_data(honest_commitment().hash),
+      builtin.b_data(marker_name(seed_ref)),
+    ],
+  )
+}
+
+/// A reservation of the retired layout whose scope names the very output the
+/// conviction spends is not a reservation of this release: the output it names
+/// decides nothing, and the layout is refused whole.
+test refused_a_commitment_of_the_retired_layout_naming_the_spent_output() {
+  let retired = Input {
+    output_reference: commitment_ref,
+    output: Output {
+      address: from_script(commit_policy),
+      value: from_lovelace(applied_deposit)
+        |> merge(from_asset(commit_policy, marker_name(seed_ref), 1)),
+      datum: InlineDatum(retired_commitment_naming(checkpoint_ref)),
+      reference_script: None,
+    },
+  }
+  let tx = Transaction { ..honest_tx(), inputs: [retired, honest_spent()] }
+  and {
+    observed(honest_convict_envelope(), honest_tx()),
+    !observed(honest_convict_envelope(), tx),
   }
 }

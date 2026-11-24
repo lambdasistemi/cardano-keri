@@ -378671,226 +378671,241 @@
    ]
   },
   "docs-design-trust-model/who-a-conviction-pays-05": {
-   "audio_sha256": "89bf690415fa1d1d127d235cb169575713651a640564b157d85e2fa809a2c23f",
-   "characters": 223,
-   "cost": 0.00022077,
-   "duration": 13.875,
+   "audio_sha256": "fd447fbdd778f2889d082238a6c429c6bfae5c6a470fc7c214574c614403307d",
+   "characters": 267,
+   "cost": 0.00026432999999999996,
+   "duration": 15.85,
    "index": 5,
-   "key": "d21e0d00cfa5a899734dbb000fb152f00d646963d6745a985dd086c51c4a915c",
+   "key": "91c4e67f7a7a2dc71aff6f38d27b573a775f83ebe3294abf076a36276c040dd3",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,
    "section": "who-a-conviction-pays",
-   "sent_text": "The conviction step checks the commitment it reveals against the output it convicts; the system checks that the commitment is open and belongs here, and burns it. The table lists every condition and the step that states it.",
-   "text": "The conviction step checks the commitment it reveals against the output it convicts; the system checks that the commitment is open and belongs here, and burns it. The table lists every condition and the step that states it.",
+   "sent_text": "At the checkpoint spend, the observer compares the committed rival with the spent tip. The system binds the tip to the event that wrote the checkpoint and burns the open commitment. The witness assumptions describe what remains to establish [KERI](/kˈɛɹi/) duplicity.",
+   "text": "At the checkpoint spend, the observer compares the committed rival with the spent tip. The system binds the tip to the event that wrote the checkpoint and burns the open commitment. The witness assumptions describe what remains to establish KERI duplicity.",
    "words": [
     {
-     "end": 0.25,
+     "end": 0.287,
      "start": 0.175,
-     "text": "The"
+     "text": "At"
     },
     {
-     "end": 0.825,
-     "start": 0.25,
-     "text": "conviction"
-    },
-    {
-     "end": 1.225,
-     "start": 0.825,
-     "text": "step"
-    },
-    {
-     "end": 1.55,
-     "start": 1.225,
-     "text": "checks"
-    },
-    {
-     "end": 1.65,
-     "start": 1.55,
+     "end": 0.387,
+     "start": 0.287,
      "text": "the"
     },
     {
-     "end": 2.2,
-     "start": 1.65,
-     "text": "commitment"
+     "end": 0.9,
+     "start": 0.387,
+     "text": "checkpoint"
     },
     {
-     "end": 2.325,
-     "start": 2.2,
-     "text": "it"
+     "end": 1.3,
+     "start": 0.9,
+     "text": "spend"
     },
     {
-     "end": 2.85,
-     "start": 2.325,
-     "text": "reveals"
-    },
-    {
-     "end": 3.188,
-     "start": 2.85,
-     "text": "against"
-    },
-    {
-     "end": 3.325,
-     "start": 3.188,
-     "text": "the"
-    },
-    {
-     "end": 3.775,
-     "start": 3.325,
-     "text": "output"
-    },
-    {
-     "end": 3.9,
-     "start": 3.775,
-     "text": "it"
-    },
-    {
-     "end": 5.05,
-     "start": 3.9,
-     "text": "convicts"
-    },
-    {
-     "end": 5.25,
-     "start": 5.05,
-     "text": ";"
-    },
-    {
-     "end": 5.525,
-     "start": 5.425,
-     "text": "the"
-    },
-    {
-     "end": 5.938,
-     "start": 5.525,
-     "text": "system"
-    },
-    {
-     "end": 6.275,
-     "start": 5.938,
-     "text": "checks"
-    },
-    {
-     "end": 6.412,
-     "start": 6.275,
-     "text": "that"
-    },
-    {
-     "end": 6.5,
-     "start": 6.412,
-     "text": "the"
-    },
-    {
-     "end": 7.0,
-     "start": 6.5,
-     "text": "commitment"
-    },
-    {
-     "end": 7.162,
-     "start": 7.0,
-     "text": "is"
-    },
-    {
-     "end": 7.637,
-     "start": 7.162,
-     "text": "open"
-    },
-    {
-     "end": 7.762,
-     "start": 7.637,
-     "text": "and"
-    },
-    {
-     "end": 8.275,
-     "start": 7.762,
-     "text": "belongs"
-    },
-    {
-     "end": 8.55,
-     "start": 8.275,
-     "text": "here"
-    },
-    {
-     "end": 8.625,
-     "start": 8.55,
+     "end": 1.337,
+     "start": 1.3,
      "text": ","
     },
     {
-     "end": 8.75,
-     "start": 8.625,
-     "text": "and"
-    },
-    {
-     "end": 9.137,
-     "start": 8.75,
-     "text": "burns"
-    },
-    {
-     "end": 9.825,
-     "start": 9.137,
-     "text": "it"
-    },
-    {
-     "end": 10.025,
-     "start": 9.825,
-     "text": "."
-    },
-    {
-     "end": 10.275,
-     "start": 10.2,
-     "text": "The"
-    },
-    {
-     "end": 10.675,
-     "start": 10.275,
-     "text": "table"
-    },
-    {
-     "end": 10.962,
-     "start": 10.675,
-     "text": "lists"
-    },
-    {
-     "end": 11.275,
-     "start": 10.962,
-     "text": "every"
-    },
-    {
-     "end": 11.962,
-     "start": 11.275,
-     "text": "condition"
-    },
-    {
-     "end": 12.087,
-     "start": 11.962,
-     "text": "and"
-    },
-    {
-     "end": 12.175,
-     "start": 12.087,
+     "end": 1.475,
+     "start": 1.337,
      "text": "the"
     },
     {
-     "end": 12.462,
-     "start": 12.175,
-     "text": "step"
+     "end": 2.0,
+     "start": 1.475,
+     "text": "observer"
     },
     {
-     "end": 12.625,
-     "start": 12.462,
+     "end": 2.5,
+     "start": 2.0,
+     "text": "compares"
+    },
+    {
+     "end": 2.6,
+     "start": 2.5,
+     "text": "the"
+    },
+    {
+     "end": 3.05,
+     "start": 2.6,
+     "text": "committed"
+    },
+    {
+     "end": 3.55,
+     "start": 3.05,
+     "text": "rival"
+    },
+    {
+     "end": 3.688,
+     "start": 3.55,
+     "text": "with"
+    },
+    {
+     "end": 3.775,
+     "start": 3.688,
+     "text": "the"
+    },
+    {
+     "end": 4.137,
+     "start": 3.775,
+     "text": "spent"
+    },
+    {
+     "end": 5.0,
+     "start": 4.137,
+     "text": "tip"
+    },
+    {
+     "end": 5.225,
+     "start": 5.0,
+     "text": "."
+    },
+    {
+     "end": 5.537,
+     "start": 5.425,
+     "text": "The"
+    },
+    {
+     "end": 6.0,
+     "start": 5.537,
+     "text": "system"
+    },
+    {
+     "end": 6.4,
+     "start": 6.0,
+     "text": "binds"
+    },
+    {
+     "end": 6.537,
+     "start": 6.4,
+     "text": "the"
+    },
+    {
+     "end": 6.8,
+     "start": 6.537,
+     "text": "tip"
+    },
+    {
+     "end": 6.887,
+     "start": 6.8,
+     "text": "to"
+    },
+    {
+     "end": 7.025,
+     "start": 6.887,
+     "text": "the"
+    },
+    {
+     "end": 7.425,
+     "start": 7.025,
+     "text": "event"
+    },
+    {
+     "end": 7.625,
+     "start": 7.425,
      "text": "that"
     },
     {
-     "end": 13.012,
-     "start": 12.625,
-     "text": "states"
+     "end": 7.838,
+     "start": 7.625,
+     "text": "wrote"
     },
     {
-     "end": 13.675,
-     "start": 13.012,
-     "text": "it"
+     "end": 7.938,
+     "start": 7.838,
+     "text": "the"
     },
     {
-     "end": 13.875,
-     "start": 13.675,
+     "end": 8.587,
+     "start": 7.938,
+     "text": "checkpoint"
+    },
+    {
+     "end": 8.762,
+     "start": 8.587,
+     "text": "and"
+    },
+    {
+     "end": 9.175,
+     "start": 8.762,
+     "text": "burns"
+    },
+    {
+     "end": 9.325,
+     "start": 9.175,
+     "text": "the"
+    },
+    {
+     "end": 9.65,
+     "start": 9.325,
+     "text": "open"
+    },
+    {
+     "end": 10.725,
+     "start": 9.65,
+     "text": "commitment"
+    },
+    {
+     "end": 10.925,
+     "start": 10.725,
+     "text": "."
+    },
+    {
+     "end": 11.175,
+     "start": 11.1,
+     "text": "The"
+    },
+    {
+     "end": 11.525,
+     "start": 11.175,
+     "text": "witness"
+    },
+    {
+     "end": 12.2,
+     "start": 11.525,
+     "text": "assumptions"
+    },
+    {
+     "end": 12.775,
+     "start": 12.2,
+     "text": "describe"
+    },
+    {
+     "end": 12.925,
+     "start": 12.775,
+     "text": "what"
+    },
+    {
+     "end": 13.45,
+     "start": 12.925,
+     "text": "remains"
+    },
+    {
+     "end": 13.6,
+     "start": 13.45,
+     "text": "to"
+    },
+    {
+     "end": 14.15,
+     "start": 13.6,
+     "text": "establish"
+    },
+    {
+     "end": 14.475,
+     "start": 14.15,
+     "text": "KERI"
+    },
+    {
+     "end": 15.65,
+     "start": 14.475,
+     "text": "duplicity"
+    },
+    {
+     "end": 15.85,
+     "start": 15.65,
      "text": "."
     }
    ]

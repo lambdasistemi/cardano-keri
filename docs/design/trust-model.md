@@ -339,13 +339,15 @@ stateDiagram-v2
   Swept --> [*]: marker burnt, deposit to whoever signs
 ```
 
-The conviction step checks the commitment it reveals against the output it
-convicts; the system checks that the commitment is open and belongs here, and
-burns it. The table lists every condition and the step that states it.
+At the checkpoint spend, the observer compares the committed rival with the
+spent tip. The system binds the tip to the event that wrote the checkpoint
+and burns the open commitment. The [witness assumptions](#keri-witnesses)
+describe what remains to establish KERI duplicity.
 
 | A conviction is accepted only when | Where the model states it |
 |---|---|
-| the checkpoint has duplicity at its current key state | the conviction step |
+| the rival names the same identifier and sequence, reveals the spent keys, meets the spent signing and witness thresholds, and conflicts on a forward field | the checkpoint spend (`Env.acceptsRival`) |
+| the spent position and key material match the authenticated writer for this identifier | the system step (`Sys.comparisonMatchesWriter`) |
 | the commitment names the key state this checkpoint output carries | the conviction step (`Commitment.entitles`) |
 | the commitment names the evidence the conviction shows | the conviction step |
 | the commitment names the payee the conviction pays | the conviction step |

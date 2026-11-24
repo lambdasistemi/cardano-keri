@@ -321,7 +321,7 @@
       "pause": 400
     },
     {
-      "text": "The conviction step checks the commitment it reveals against the output it convicts; the system checks that the commitment is open and belongs here, and burns it. The table lists every condition and the step that states it.",
+      "text": "At the checkpoint spend, the observer compares the committed rival with the spent tip. The system binds the tip to the event that wrote the checkpoint and burns the open commitment. The witness assumptions describe what remains to establish KERI duplicity.",
       "pause": 400
     },
     {
@@ -409,6 +409,6 @@
   ],
   "_source": {
     "file": "trust-model.md",
-    "sha256": "528dfcb672b3dbc903b34d3cea3ca21591e2318c94868971cc6798ae39f9f702"
+    "sha256": "716774e5850dbda4db884e3bde81e3247718195f80d4c503633ac7c6c99527d0"
   }
 }

@@ -44,6 +44,7 @@ The traceability gate performs a clean build and checks exact contract types.
 | `Samaritan.lean` | Booking conservation and conditional actual-fold addressed accounting |
 | `Application.lean`, `ApplicationGoals.lean` | KERI's application on Singular's application-held model: the configuration record, booking, the request spend (a fold until the deadline, a return after it), the treasury donation and the registration approval |
 | `ApplicationVectors.lean` | Approval bytes, the configuration record and accepted and refused transactions, emitted by `ApplicationDriver.lean` into `application-vectors.json` and checked against the Lean |
+| `ReaderStatus.lean`, `ReaderStatusGoals.lean` | What a reader answers about one identifier at one chain point: the evidence it holds (the holders of the representative asset and the registry's history), the replay of the history to the key's leaf, the five outcomes, the classifier and its relation, and the answer against the registry's history and the checkpoint system |
 
 Supporting metadata/fold/termination modules prove the intermediate list and
 projection lemmas. `RegistryReplay.lean` replays a fixed context.

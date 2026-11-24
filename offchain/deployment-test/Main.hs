@@ -27,6 +27,7 @@ import Cardano.KERI.Deployment.RegistryScriptsSpec qualified as RegistryScriptsS
 import Cardano.KERI.Deployment.RegistryShortDepositSpec qualified as RegistryShortDepositSpec
 import Cardano.KERI.Deployment.RegistrySnapshotSpec qualified as RegistrySnapshotSpec
 import Cardano.KERI.Deployment.RegistryTransactionsSpec qualified as RegistryTransactionsSpec
+import Cardano.KERI.Deployment.RegistryVaultSpec qualified as RegistryVaultSpec
 import Cardano.KERI.Deployment.ScriptAritySpec qualified as ScriptAritySpec
 import Cardano.KERI.Deployment.TopUpPackageSpec qualified as TopUpPackageSpec
 import Cardano.KERI.Deployment.TopUpTransactionSpec qualified as TopUpTransactionSpec
@@ -96,5 +97,6 @@ suite = hspec $ do
     RegistryBookingCommandSpec.spec
     RegistryCommandSpec.spec
     RegistryTransactionsSpec.spec
+    RegistryVaultSpec.spec
     ScriptAritySpec.spec
     TransactionRuntimeSpec.spec

@@ -118,6 +118,15 @@ spec = describe "MOD-240-WRITE-COMPOSITION component boundary (INV-240-NOPROVIDE
             Left reason -> expectationFailure reason
             Right lib -> hasForbiddenDependency (dependencyTokens lib) `shouldBe` False
 
+    it "#553 holds Singular's command-line library in the key-source library alone: the write component names no edge to it, so none of its modules can be imported by a write module" $ do
+        gpd <- parseCabalFile >>= either fail pure
+        keySource <- either fail pure (namedLibrary "key-source" gpd)
+        writeLib <- either fail pure (namedLibrary "write-composition" gpd)
+        -- positive control: the method sees the edge where it is
+        any ("registry-cli" `isInfixOf`) (dependencyTokens keySource) `shouldBe` True
+        any ("registry-cli" `isInfixOf`) (dependencyTokens writeLib) `shouldBe` False
+        any ("key-source" `isInfixOf`) (dependencyTokens writeLib) `shouldBe` True
+
     it "receives the existing write command module (Cardano.KERI.Deployment.CLI)" $ do
         gpd <- parseCabalFile >>= either fail pure
         case namedLibrary "write-composition" gpd of

@@ -27,8 +27,9 @@ module Cardano.KERI.Deployment.RegistryCommand (
 
 import Cardano.KERI.AID.Application (ApplicationParameters (..), OutputReference (..))
 import Cardano.KERI.Deployment.LiveRuntime (decodePaymentAddress)
-import Cardano.KERI.Deployment.NodeSocketRuntime (Connection (..), NodeAccess (..), RegistryOpener, withNodeRuntime)
+import Cardano.KERI.Deployment.NodeSocketRuntime (Connection (..), KeySource, NodeAccess (..), RegistryOpener, withNodeRuntime)
 import Cardano.KERI.Deployment.Registry (RegistryTerms (..))
+import Cardano.KERI.Deployment.RegistryBookingCommand (openKey)
 import Cardano.KERI.Deployment.RegistryDeploy (
     DeployError (..),
     DeployFailure (..),
@@ -40,6 +41,7 @@ import Cardano.KERI.Deployment.RegistryDeploy (
     deployRegistry,
  )
 import Cardano.KERI.Deployment.RegistryFiles (FilesError (..), checkFilesWritable, writeDeploymentFiles)
+import Cardano.KERI.Deployment.RegistryKeySource (passphraseFdSetting, signingKeyFileSetting, vaultSetting)
 import Cardano.KERI.Deployment.Script (CheckpointTerms (..), loadBlueprint)
 import Cardano.KERI.Deployment.TransactionRuntime (renderTransactionId)
 import Cardano.Ledger.BaseTypes (TxIx (..))
@@ -59,7 +61,9 @@ data RegistryDeploySettings = RegistryDeploySettings
     , rdBlueprint :: !FilePath
     , rdNodeSocket :: !FilePath
     , rdFundingAddress :: !Text
-    , rdSigningKeyFile :: !FilePath
+    , rdSigningKeyFile :: !(Maybe FilePath)
+    , rdVault :: !(Maybe FilePath)
+    , rdPassphraseFd :: !(Maybe Int)
     , rdTimeoutSeconds :: !Int
     , rdReferenceLovelace :: !(Maybe Integer)
     , rdReleaseIdentityOut :: !FilePath
@@ -116,13 +120,9 @@ registryDeploySettingsParser = do
                 "funding-address"
                 "Bech32 payment address that pays the deployment"
                 Nothing
-    rdSigningKeyFile <-
-        stringSetting
-            "signing-key-file"
-            "CKERI_SIGNING_KEY_FILE"
-            "signing-key-file"
-            "Cardano payment signing-key envelope"
-            Nothing
+    rdSigningKeyFile <- signingKeyFileSetting
+    rdVault <- vaultSetting
+    rdPassphraseFd <- passphraseFdSetting
     rdTimeoutSeconds <-
         intSetting
             "timeout-seconds"
@@ -232,6 +232,7 @@ and print what landed.
 runRegistryDeployWith :: RegistryOpener -> RegistryDeploySettings -> IO ()
 runRegistryDeployWith open settings = do
     hPutStrLn stderr "ckeri: not for mainnet"
+    key <- openKey "deploy" (rdNetworkMagic settings) (rdSigningKeyFile settings) (rdVault settings) (rdPassphraseFd settings)
     when (rdTimeoutSeconds settings <= 0) $
         die' "timeout-seconds must be positive"
     blueprint <- loadBlueprint (rdBlueprint settings) >>= either die' pure
@@ -240,7 +241,7 @@ runRegistryDeployWith open settings = do
             (rdReleaseIdentityOut settings)
             (rdReferenceRecordOut settings)
     either (die' . renderFilesError) pure writable
-    open (nodeAccessOf settings) $ \(runtime, payer) -> do
+    open (nodeAccessOf settings key) $ \(runtime, payer) -> do
         let request =
                 DeployRequest
                     { requestTerms = registryTermsOf settings
@@ -369,13 +370,13 @@ renderFilesError = \case
 -- ---------------------------------------------------------------------
 
 -- | How the settings reach the node.
-nodeAccessOf :: RegistryDeploySettings -> NodeAccess
-nodeAccessOf settings =
+nodeAccessOf :: RegistryDeploySettings -> KeySource -> NodeAccess
+nodeAccessOf settings key =
     NodeAccess
         { naNetworkMagic = rdNetworkMagic settings
         , naNodeSocket = rdNodeSocket settings
         , naFundingAddress = rdFundingAddress settings
-        , naSigningKeyFile = rdSigningKeyFile settings
+        , naSigningKey = key
         , naTimeoutSeconds = rdTimeoutSeconds settings
         }
 

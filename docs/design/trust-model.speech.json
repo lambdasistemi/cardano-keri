@@ -277,7 +277,7 @@
       "pause": 400
     },
     {
-      "text": "A colluding quorum at or above toad can do one thing worse than lying about liveness: it can receipt two rotations at one sequence. That is exactly the duplicity a conviction proves, and it is why the conviction's exposure is bounded by D_reg and by the witness set the controller chose.",
+      "text": "A colluding witness quorum can receipt two rotations at one sequence. When the checkpoint is spent for conviction, its observer compares one rival with the spent tip and checks the signatures and receipts under that tip's thresholds. For a rotated checkpoint, concluding KERI duplicity also requires the rival to validate against the predecessor under the rival's own rules. That implication and refusal at a never-rotated checkpoint remain open. The pending output records the checkpoint spend. The termination booker consumes that output and the fold processes the booked request.",
       "pause": 400
     }
   ],
@@ -409,6 +409,6 @@
   ],
   "_source": {
     "file": "trust-model.md",
-    "sha256": "e6095f7ea83309b9cd2147c293416310df3cc20109025c7206184814d4c1436b"
+    "sha256": "528dfcb672b3dbc903b34d3cea3ca21591e2318c94868971cc6798ae39f9f702"
   }
 }

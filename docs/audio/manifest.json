@@ -368116,17 +368116,17 @@
    ]
   },
   "docs-design-trust-model/keri-witnesses-03": {
-   "audio_sha256": "35c458091067d7f10962e0a3c04b43e43be770ff4a472a858112bb90960174c8",
-   "characters": 287,
-   "cost": 0.00017794000000000002,
-   "duration": 18.975,
+   "audio_sha256": "85e17c274f17814af5996a55756bf262fe2244e0050085910ffa4d4c0d008fda",
+   "characters": 593,
+   "cost": 0.00058707,
+   "duration": 38.275,
    "index": 3,
-   "key": "bfde2028d53935b924586eadc038ef2c17c5e4244ec276fc2fd1cf359ca8d1a3",
+   "key": "53a3876973d1bfd23692a7e2390d7169608ab121b48b772cdec43124997b7fd9",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,
    "section": "keri-witnesses",
-   "sent_text": "A colluding quorum at or above toad can do one thing worse than lying about liveness: it can receipt two rotations at one sequence. That is exactly the duplicity a conviction proves, and it is why the conviction's exposure is bounded by D_reg and by the witness set the controller chose.",
-   "text": "A colluding quorum at or above toad can do one thing worse than lying about liveness: it can receipt two rotations at one sequence. That is exactly the duplicity a conviction proves, and it is why the conviction's exposure is bounded by D_reg and by the witness set the controller chose.",
+   "sent_text": "A colluding witness quorum can receipt two rotations at one sequence. When the checkpoint is spent for conviction, its observer compares one rival with the spent tip and checks the signatures and receipts under that tip's thresholds. For a rotated checkpoint, concluding [KERI](/kˈɛɹi/) duplicity also requires the rival to validate against the predecessor under the rival's own rules. That implication and refusal at a never-rotated checkpoint remain open. The pending output records the checkpoint spend. The termination booker consumes that output and the fold processes the booked request.",
+   "text": "A colluding witness quorum can receipt two rotations at one sequence. When the checkpoint is spent for conviction, its observer compares one rival with the spent tip and checks the signatures and receipts under that tip's thresholds. For a rotated checkpoint, concluding KERI duplicity also requires the rival to validate against the predecessor under the rival's own rules. That implication and refusal at a never-rotated checkpoint remain open. The pending output records the checkpoint spend. The termination booker consumes that output and the fold processes the booked request.",
    "words": [
     {
      "end": 0.275,
@@ -368139,268 +368139,473 @@
      "text": "colluding"
     },
     {
-     "end": 1.163,
+     "end": 1.075,
      "start": 0.725,
-     "text": "quorum"
-    },
-    {
-     "end": 1.375,
-     "start": 1.163,
-     "text": "at"
-    },
-    {
-     "end": 1.5,
-     "start": 1.375,
-     "text": "or"
-    },
-    {
-     "end": 1.812,
-     "start": 1.5,
-     "text": "above"
-    },
-    {
-     "end": 2.338,
-     "start": 1.812,
-     "text": "toad"
-    },
-    {
-     "end": 2.525,
-     "start": 2.338,
-     "text": "can"
-    },
-    {
-     "end": 2.713,
-     "start": 2.525,
-     "text": "do"
-    },
-    {
-     "end": 2.975,
-     "start": 2.713,
-     "text": "one"
-    },
-    {
-     "end": 3.213,
-     "start": 2.975,
-     "text": "thing"
-    },
-    {
-     "end": 3.575,
-     "start": 3.213,
-     "text": "worse"
-    },
-    {
-     "end": 3.75,
-     "start": 3.575,
-     "text": "than"
-    },
-    {
-     "end": 4.075,
-     "start": 3.75,
-     "text": "lying"
-    },
-    {
-     "end": 4.375,
-     "start": 4.075,
-     "text": "about"
-    },
-    {
-     "end": 5.5,
-     "start": 4.375,
-     "text": "liveness"
-    },
-    {
-     "end": 5.7,
-     "start": 5.5,
-     "text": ":"
-    },
-    {
-     "end": 5.938,
-     "start": 5.875,
-     "text": "it"
-    },
-    {
-     "end": 6.037,
-     "start": 5.938,
-     "text": "can"
-    },
-    {
-     "end": 6.375,
-     "start": 6.037,
-     "text": "receipt"
-    },
-    {
-     "end": 6.575,
-     "start": 6.375,
-     "text": "two"
-    },
-    {
-     "end": 7.175,
-     "start": 6.575,
-     "text": "rotations"
-    },
-    {
-     "end": 7.275,
-     "start": 7.175,
-     "text": "at"
-    },
-    {
-     "end": 7.5,
-     "start": 7.275,
-     "text": "one"
-    },
-    {
-     "end": 8.425,
-     "start": 7.5,
-     "text": "sequence"
-    },
-    {
-     "end": 8.625,
-     "start": 8.425,
-     "text": "."
-    },
-    {
-     "end": 8.95,
-     "start": 8.8,
-     "text": "That"
-    },
-    {
-     "end": 9.075,
-     "start": 8.95,
-     "text": "is"
-    },
-    {
-     "end": 9.637,
-     "start": 9.075,
-     "text": "exactly"
-    },
-    {
-     "end": 9.725,
-     "start": 9.637,
-     "text": "the"
-    },
-    {
-     "end": 10.325,
-     "start": 9.725,
-     "text": "duplicity"
-    },
-    {
-     "end": 10.4,
-     "start": 10.325,
-     "text": "a"
-    },
-    {
-     "end": 10.925,
-     "start": 10.4,
-     "text": "conviction"
-    },
-    {
-     "end": 11.825,
-     "start": 10.925,
-     "text": "proves"
-    },
-    {
-     "end": 12.025,
-     "start": 11.825,
-     "text": ","
-    },
-    {
-     "end": 12.375,
-     "start": 12.25,
-     "text": "and"
-    },
-    {
-     "end": 12.5,
-     "start": 12.375,
-     "text": "it"
-    },
-    {
-     "end": 12.663,
-     "start": 12.5,
-     "text": "is"
-    },
-    {
-     "end": 12.9,
-     "start": 12.663,
-     "text": "why"
-    },
-    {
-     "end": 13.0,
-     "start": 12.9,
-     "text": "the"
-    },
-    {
-     "end": 13.625,
-     "start": 13.0,
-     "text": "conviction's"
-    },
-    {
-     "end": 14.275,
-     "start": 13.625,
-     "text": "exposure"
-    },
-    {
-     "end": 14.438,
-     "start": 14.275,
-     "text": "is"
-    },
-    {
-     "end": 14.875,
-     "start": 14.438,
-     "text": "bounded"
-    },
-    {
-     "end": 15.087,
-     "start": 14.875,
-     "text": "by"
-    },
-    {
-     "end": 15.9,
-     "start": 15.087,
-     "text": "D_reg"
-    },
-    {
-     "end": 16.05,
-     "start": 15.9,
-     "text": "and"
-    },
-    {
-     "end": 16.225,
-     "start": 16.05,
-     "text": "by"
-    },
-    {
-     "end": 16.362,
-     "start": 16.225,
-     "text": "the"
-    },
-    {
-     "end": 16.837,
-     "start": 16.362,
      "text": "witness"
     },
     {
-     "end": 17.062,
-     "start": 16.837,
-     "text": "set"
+     "end": 1.538,
+     "start": 1.075,
+     "text": "quorum"
     },
     {
-     "end": 17.15,
-     "start": 17.062,
+     "end": 1.7,
+     "start": 1.538,
+     "text": "can"
+    },
+    {
+     "end": 2.088,
+     "start": 1.7,
+     "text": "receipt"
+    },
+    {
+     "end": 2.3,
+     "start": 2.088,
+     "text": "two"
+    },
+    {
+     "end": 3.05,
+     "start": 2.3,
+     "text": "rotations"
+    },
+    {
+     "end": 3.15,
+     "start": 3.05,
+     "text": "at"
+    },
+    {
+     "end": 3.375,
+     "start": 3.15,
+     "text": "one"
+    },
+    {
+     "end": 4.375,
+     "start": 3.375,
+     "text": "sequence"
+    },
+    {
+     "end": 4.575,
+     "start": 4.375,
+     "text": "."
+    },
+    {
+     "end": 4.863,
+     "start": 4.75,
+     "text": "When"
+    },
+    {
+     "end": 4.95,
+     "start": 4.863,
      "text": "the"
     },
     {
-     "end": 17.7,
-     "start": 17.15,
-     "text": "controller"
+     "end": 5.387,
+     "start": 4.95,
+     "text": "checkpoint"
     },
     {
-     "end": 18.775,
-     "start": 17.7,
-     "text": "chose"
+     "end": 5.475,
+     "start": 5.387,
+     "text": "is"
     },
     {
-     "end": 18.975,
-     "start": 18.775,
+     "end": 5.75,
+     "start": 5.475,
+     "text": "spent"
+    },
+    {
+     "end": 5.875,
+     "start": 5.75,
+     "text": "for"
+    },
+    {
+     "end": 6.95,
+     "start": 5.875,
+     "text": "conviction"
+    },
+    {
+     "end": 7.15,
+     "start": 6.95,
+     "text": ","
+    },
+    {
+     "end": 7.525,
+     "start": 7.375,
+     "text": "its"
+    },
+    {
+     "end": 8.05,
+     "start": 7.525,
+     "text": "observer"
+    },
+    {
+     "end": 8.538,
+     "start": 8.05,
+     "text": "compares"
+    },
+    {
+     "end": 8.775,
+     "start": 8.538,
+     "text": "one"
+    },
+    {
+     "end": 9.225,
+     "start": 8.775,
+     "text": "rival"
+    },
+    {
+     "end": 9.363,
+     "start": 9.225,
+     "text": "with"
+    },
+    {
+     "end": 9.45,
+     "start": 9.363,
+     "text": "the"
+    },
+    {
+     "end": 9.837,
+     "start": 9.45,
+     "text": "spent"
+    },
+    {
+     "end": 10.262,
+     "start": 9.837,
+     "text": "tip"
+    },
+    {
+     "end": 10.413,
+     "start": 10.262,
+     "text": "and"
+    },
+    {
+     "end": 10.725,
+     "start": 10.413,
+     "text": "checks"
+    },
+    {
+     "end": 10.863,
+     "start": 10.725,
+     "text": "the"
+    },
+    {
+     "end": 11.55,
+     "start": 10.863,
+     "text": "signatures"
+    },
+    {
+     "end": 11.675,
+     "start": 11.55,
+     "text": "and"
+    },
+    {
+     "end": 12.225,
+     "start": 11.675,
+     "text": "receipts"
+    },
+    {
+     "end": 12.475,
+     "start": 12.225,
+     "text": "under"
+    },
+    {
+     "end": 12.762,
+     "start": 12.475,
+     "text": "that"
+    },
+    {
+     "end": 13.075,
+     "start": 12.762,
+     "text": "tip's"
+    },
+    {
+     "end": 14.425,
+     "start": 13.075,
+     "text": "thresholds"
+    },
+    {
+     "end": 14.625,
+     "start": 14.425,
+     "text": "."
+    },
+    {
+     "end": 14.913,
+     "start": 14.8,
+     "text": "For"
+    },
+    {
+     "end": 14.975,
+     "start": 14.913,
+     "text": "a"
+    },
+    {
+     "end": 15.425,
+     "start": 14.975,
+     "text": "rotated"
+    },
+    {
+     "end": 16.375,
+     "start": 15.425,
+     "text": "checkpoint"
+    },
+    {
+     "end": 16.575,
+     "start": 16.375,
+     "text": ","
+    },
+    {
+     "end": 17.337,
+     "start": 16.775,
+     "text": "concluding"
+    },
+    {
+     "end": 17.675,
+     "start": 17.337,
+     "text": "KERI"
+    },
+    {
+     "end": 18.438,
+     "start": 17.675,
+     "text": "duplicity"
+    },
+    {
+     "end": 18.8,
+     "start": 18.438,
+     "text": "also"
+    },
+    {
+     "end": 19.375,
+     "start": 18.8,
+     "text": "requires"
+    },
+    {
+     "end": 19.513,
+     "start": 19.375,
+     "text": "the"
+    },
+    {
+     "end": 19.95,
+     "start": 19.513,
+     "text": "rival"
+    },
+    {
+     "end": 20.075,
+     "start": 19.95,
+     "text": "to"
+    },
+    {
+     "end": 20.625,
+     "start": 20.075,
+     "text": "validate"
+    },
+    {
+     "end": 20.987,
+     "start": 20.625,
+     "text": "against"
+    },
+    {
+     "end": 21.075,
+     "start": 20.987,
+     "text": "the"
+    },
+    {
+     "end": 21.888,
+     "start": 21.075,
+     "text": "predecessor"
+    },
+    {
+     "end": 22.138,
+     "start": 21.888,
+     "text": "under"
+    },
+    {
+     "end": 22.225,
+     "start": 22.138,
+     "text": "the"
+    },
+    {
+     "end": 22.688,
+     "start": 22.225,
+     "text": "rival's"
+    },
+    {
+     "end": 22.95,
+     "start": 22.688,
+     "text": "own"
+    },
+    {
+     "end": 24.1,
+     "start": 22.95,
+     "text": "rules"
+    },
+    {
+     "end": 24.325,
+     "start": 24.1,
+     "text": "."
+    },
+    {
+     "end": 24.65,
+     "start": 24.5,
+     "text": "That"
+    },
+    {
+     "end": 25.4,
+     "start": 24.65,
+     "text": "implication"
+    },
+    {
+     "end": 25.525,
+     "start": 25.4,
+     "text": "and"
+    },
+    {
+     "end": 26.263,
+     "start": 25.525,
+     "text": "refusal"
+    },
+    {
+     "end": 26.362,
+     "start": 26.263,
+     "text": "at"
+    },
+    {
+     "end": 26.462,
+     "start": 26.362,
+     "text": "a"
+    },
+    {
+     "end": 27.312,
+     "start": 26.462,
+     "text": "never-rotated"
+    },
+    {
+     "end": 27.938,
+     "start": 27.312,
+     "text": "checkpoint"
+    },
+    {
+     "end": 28.375,
+     "start": 27.938,
+     "text": "remain"
+    },
+    {
+     "end": 29.3,
+     "start": 28.375,
+     "text": "open"
+    },
+    {
+     "end": 29.5,
+     "start": 29.3,
+     "text": "."
+    },
+    {
+     "end": 29.75,
+     "start": 29.675,
+     "text": "The"
+    },
+    {
+     "end": 30.125,
+     "start": 29.75,
+     "text": "pending"
+    },
+    {
+     "end": 30.525,
+     "start": 30.125,
+     "text": "output"
+    },
+    {
+     "end": 30.962,
+     "start": 30.525,
+     "text": "records"
+    },
+    {
+     "end": 31.05,
+     "start": 30.962,
+     "text": "the"
+    },
+    {
+     "end": 31.5,
+     "start": 31.05,
+     "text": "checkpoint"
+    },
+    {
+     "end": 32.35,
+     "start": 31.5,
+     "text": "spend"
+    },
+    {
+     "end": 32.55,
+     "start": 32.35,
+     "text": "."
+    },
+    {
+     "end": 32.8,
+     "start": 32.725,
+     "text": "The"
+    },
+    {
+     "end": 33.475,
+     "start": 32.8,
+     "text": "termination"
+    },
+    {
+     "end": 33.8,
+     "start": 33.475,
+     "text": "booker"
+    },
+    {
+     "end": 34.425,
+     "start": 33.8,
+     "text": "consumes"
+    },
+    {
+     "end": 34.662,
+     "start": 34.425,
+     "text": "that"
+    },
+    {
+     "end": 35.25,
+     "start": 34.662,
+     "text": "output"
+    },
+    {
+     "end": 35.362,
+     "start": 35.25,
+     "text": "and"
+    },
+    {
+     "end": 35.463,
+     "start": 35.362,
+     "text": "the"
+    },
+    {
+     "end": 35.912,
+     "start": 35.463,
+     "text": "fold"
+    },
+    {
+     "end": 36.55,
+     "start": 35.912,
+     "text": "processes"
+    },
+    {
+     "end": 36.65,
+     "start": 36.55,
+     "text": "the"
+    },
+    {
+     "end": 36.925,
+     "start": 36.65,
+     "text": "booked"
+    },
+    {
+     "end": 38.05,
+     "start": 36.925,
+     "text": "request"
+    },
+    {
+     "end": 38.275,
+     "start": 38.05,
      "text": "."
     }
    ]

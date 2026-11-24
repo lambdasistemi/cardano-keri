@@ -244,10 +244,14 @@ is served at the consumer's risk: `toad` is on the consumer surface precisely
 so an application requiring public KERI acceptance can reject such identities
 by policy.
 
-A colluding quorum at or above `toad` can do one thing worse than lying about
-liveness: it can receipt two rotations at one sequence. That is exactly the
-duplicity a conviction proves, and it is why the conviction's exposure is
-bounded by `D_reg` and by the witness set the controller chose.
+A colluding witness quorum can receipt two rotations at one sequence. When
+the checkpoint is spent for conviction, its observer compares one rival
+with the spent tip and checks the signatures and receipts under that tip's
+thresholds. For a rotated checkpoint, concluding KERI duplicity also
+requires the rival to validate against the predecessor under the rival's own
+rules. That implication and refusal at a never-rotated checkpoint remain
+open. The pending output records the checkpoint spend. The termination
+booker consumes that output and the fold processes the booked request.
 
 ### Relayers and hunters
 

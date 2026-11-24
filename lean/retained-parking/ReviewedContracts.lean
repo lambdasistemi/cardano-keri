@@ -5,8 +5,9 @@ names have an underscore prefix. This file holds the contracts revised by the
 retained-output, no-owner-exit, fixed-refund or request-lifecycle revision, and
 the contracts of KERI's application on the application-held model; the
 dispositions of removed and changed contracts are in
-`lean/NO-OWNER-EXIT-DISPOSITIONS.md`, `lean/FIXED-REFUND-DISPOSITIONS.md` and
-`lean/REQUEST-LIFECYCLE-DISPOSITIONS.md`. -/
+`lean/NO-OWNER-EXIT-DISPOSITIONS.md`, `lean/FIXED-REFUND-DISPOSITIONS.md`,
+`lean/REQUEST-LIFECYCLE-DISPOSITIONS.md` and
+`lean/INCEPTION-AT-BOOKING-DISPOSITIONS.md`. -/
 set_option pp.universes true
 namespace CardanoKeri.Samaritan
 #check (@CardanoKeri.Samaritan.reap_conserves : ∀ (r : Reap), (reap r).intoRequest + (reap r).premium = r.Mc)

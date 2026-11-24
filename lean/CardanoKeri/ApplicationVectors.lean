@@ -246,6 +246,17 @@ def withoutEvidence : List String :=
 /-- Whether the key of the fixture AID has its inception evidence in a case. -/
 def Case.evidence (c : Case) : Bool := !withoutEvidence.contains c.id
 
+/-- The cases judged under checkpoint parameters whose own floor is lower than
+the registry's: deposit 4, freeze bond 4 and one premium, 13 with the minimum
+ADA. They isolate the registry's floor from the initial state's. -/
+def lowerCheckpointFloor : List String := ["booking-below-registry-floor"]
+
+/-- The checkpoint parameters a case is judged under. -/
+def Case.checkpoint (c : Case) : CardanoKeri.Checkpoint.Params :=
+  if lowerCheckpointFloor.contains c.id then
+    { D := 4, B := 4, P := 1, W := 10, hD := by decide, hB := by decide }
+  else cp
+
 def booking (raw lovelace : Nat) (mint : Int := 1) (references : Bool := true)
     (interval : Interval := ⟨9, 10⟩) (record : Nat := 8001) : Observation :=
   { assets := view [] [(approvalOf raw, mint)] [release.applicationPolicy],
@@ -406,6 +417,8 @@ def cases : List Case := [
     "booking", booking 9002 18⟩,
   ⟨"booking-short-deposit", "a deposit of 13, one below the minimum ADA 4 plus the deposit 10: refused",
     "booking", booking 9003 16⟩,
+  ⟨"booking-below-registry-floor", "the same deposit of 13 under checkpoint parameters whose own floor it covers (deposit 4, freeze bond 4, one premium): one below the registry's minimum ADA 4 plus deposit 10, refused",
+    "booking", booking 9003 16⟩,
   ⟨"booking-one-lovelace-more", "the request holds 19, one more than its exact contents: refused",
     "booking", booking 9001 19⟩,
   ⟨"booking-one-lovelace-less", "the request holds 17, one less than its exact contents: refused",
@@ -547,7 +560,7 @@ def cases : List Case := [
 def hexOf (n : Nat) : String := toHex (unpack n)
 
 def verdict (c : Case) : String :=
-  if accepted i ⟨fun _ => c.evidence⟩ rp cp release c.observation then "accepted" else "refused"
+  if accepted i ⟨fun _ => c.evidence⟩ rp c.checkpoint release c.observation then "accepted" else "refused"
 
 def intervalJson (x : Interval) : Json :=
   Json.mkObj [("lower", toJson x.lower), ("upper", toJson x.upper)]

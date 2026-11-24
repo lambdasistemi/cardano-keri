@@ -72,7 +72,9 @@ explicit expected types in `retained-parking/ReviewedContracts.lean` and
 retired contracts do not count as current proofs or fresh mutation passes.
 `NO-OWNER-EXIT-DISPOSITIONS.md` records each statement the owner-exit removal
 retired, changed or replaced; `REQUEST-LIFECYCLE-DISPOSITIONS.md` does the same
-for the request lifecycle, which replaced the retraction and the early rejection.
+for the request lifecycle, which replaced the retraction and the early rejection;
+`INCEPTION-AT-BOOKING-DISPOSITIONS.md` for the move of a registration's
+validation from the fold to the booking.
 The pre-D-036 retirement ledger remains `traceability.csv`.
 
 Read [the Registry design](../docs/design/registry-as-mpfs.md) for model limits

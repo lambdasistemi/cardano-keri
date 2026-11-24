@@ -115,6 +115,20 @@
    "validity": {"upper": 10, "lower": 9},
    "referenced": 1,
    "outputs":
+   [{"lovelace": 16,
+     "address":
+     "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
+   "note":
+   "the same deposit of 13 under checkpoint parameters whose own floor it covers (deposit 4, freeze bond 4, one premium): one below the registry's minimum ADA 4 plus deposit 10, refused",
+   "kind": "booking",
+   "inputs": [],
+   "inceptionEvidence": true,
+   "id": "booking-below-registry-floor",
+   "donation": 0},
+  {"verdict": "refused",
+   "validity": {"upper": 10, "lower": 9},
+   "referenced": 1,
+   "outputs":
    [{"lovelace": 19,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],

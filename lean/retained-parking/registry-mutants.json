@@ -25,10 +25,10 @@
   },
   {
     "id": "registration-no-inception",
-    "before": "if !registrationsAuthorized env members then",
-    "after": "if !registrationsAuthorized env members && false then",
+    "before": "  if !env.inception b.request.key then throw \"keri-inception-refused\"",
+    "after": "  if !env.inception b.request.key && false then throw \"keri-inception-refused\"",
     "failure": "missing-inception",
-    "owner": "CardanoKeri.Registry.fold_iff",
+    "owner": "CardanoKeri.Registry.booking_refuses_missing_inception",
     "test": "RegistryRetentionChecks"
   },
   {

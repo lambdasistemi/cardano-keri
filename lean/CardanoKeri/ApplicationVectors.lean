@@ -26,7 +26,9 @@ transactions: configuration creation, bookings, folds and returns of one
 request, the spends of a pending termination, and the spend of a delivered
 checkpoint by its own lifecycle. The request and configuration datums' own
 byte layouts are not fixed here: the fixture decoders map a fixture number to
-the decoded registration or configuration. The holding address is the
+the decoded registration or configuration, and a fixture table gives the
+initial checkpoint datum each request publishes. Three rows run with no
+inception evidence for the fixture key; every other row runs with it. The holding address is the
 checkpoint validator's, a Plutus `Address` with a script payment credential and
 no stake credential, another script than the application's. Evidence over the
 listed inputs, not a proof over all inputs. -/
@@ -166,20 +168,24 @@ def requests : List (Nat × RegistrationData) := [
   (9016, committing bornLaterRaw),
   (9017, committing otherRefundRaw),
   (9018, committing pendingRaw),
-  (9019, committing (initialRaw aidE2))]
+  (9019, committing (initialRaw aidE2)),
+  (9020, requestData 15),
+  (9021, requestData 15)]
 
 def decode : DecodeApplication := fun raw =>
   (requests.find? (·.1 == raw)).map fun entry => .registration entry.2
 
 /-- Fixture published datums: the initial checkpoint datum each request's own
-datum publishes. A request committing another datum publishes that datum. -/
+datum publishes. A request committing another datum publishes that datum.
+Request 9020 publishes none; request 9021 commits the initial datum and
+publishes the initial state with other key material, a datum of another hash. -/
 def published : List (Nat × Nat) := [
   (9001, initialRaw aidE), (9002, initialRaw aidE), (9003, initialRaw aidE),
   (9004, initialRaw aidE), (9005, initialRaw aidE), (9006, initialRaw aidE),
   (9007, initialRaw aidE), (9008, initialRaw aidE),
   (9011, advancedRaw), (9012, epochRaw), (9013, poisonedRaw), (9014, frozenRaw),
   (9015, toppedUpRaw), (9016, bornLaterRaw), (9017, otherRefundRaw), (9018, pendingRaw),
-  (9019, initialRaw aidE2)]
+  (9019, initialRaw aidE2), (9021, otherKeysRaw)]
 
 def publishedDatum (raw : Nat) : Option Nat := (published.find? (·.1 == raw)).map (·.2)
 
@@ -231,6 +237,14 @@ structure Case where
   note : String
   kind : String
   observation : Observation
+
+/-- The cases in which the key of the fixture AID has no inception evidence. -/
+def withoutEvidence : List String :=
+  ["fold-without-inception-evidence", "booking-without-inception-evidence",
+   "return-without-inception-evidence"]
+
+/-- Whether the key of the fixture AID has its inception evidence in a case. -/
+def Case.evidence (c : Case) : Bool := !withoutEvidence.contains c.id
 
 def booking (raw lovelace : Nat) (mint : Int := 1) (references : Bool := true)
     (interval : Interval := ⟨9, 10⟩) (record : Nat := 8001) : Observation :=
@@ -434,37 +448,49 @@ def cases : List Case := [
     "fold", foldOnePayloadTwice⟩,
   ⟨"fold-at-application-address", "the holding is delivered to the application address instead of the checkpoint validator: refused",
     "fold", fold 15 (address := release.applicationCredential)⟩,
-  ⟨"fold-at-committed-other-address", "a request committing another address than the checkpoint validator's, folded to that address: refused",
+  ⟨"fold-at-committed-other-address", "a request committing another address than the checkpoint validator's, which no booking mints, folded to that address: the spend compares the holding with the committed address only, accepted",
     "fold", fold 15 (raw := 9004) (address := otherAddress)⟩,
   ⟨"fold-other-commitment-to-checkpoint", "a request committing another address than the checkpoint validator's, folded to the checkpoint validator: refused",
     "fold", fold 15 (raw := 9004)⟩,
-  ⟨"fold-advanced-sequence", "the request committed, and the holding carries, a checkpoint datum at sequence number 7: refused",
+  ⟨"fold-committed-datum-not-initial", "a request committing a checkpoint datum at sequence number 7, which no booking mints, folded delivering that datum: the spend validates no datum, accepted",
     "fold", fold 15 (raw := 9011) (datum := advancedRaw)⟩,
-  ⟨"fold-advanced-epoch", "the committed datum is at epoch 3: refused",
-    "fold", fold 15 (raw := 9012) (datum := epochRaw)⟩,
-  ⟨"fold-poisoned", "the committed datum is poisoned: refused",
-    "fold", fold 15 (raw := 9013) (datum := poisonedRaw)⟩,
-  ⟨"fold-frozen", "the committed datum is frozen: refused",
-    "fold", fold 15 (raw := 9014) (datum := frozenRaw)⟩,
-  ⟨"fold-topped-up", "the committed datum is topped up: refused",
-    "fold", fold 15 (raw := 9015) (datum := toppedUpRaw)⟩,
-  ⟨"fold-born-later", "the committed datum is born one slot after the booking bound: refused",
-    "fold", fold 15 (raw := 9016) (datum := bornLaterRaw)⟩,
-  ⟨"fold-other-refund", "the committed datum refunds to another address than the request names: refused",
-    "fold", fold 15 (raw := 9017) (datum := otherRefundRaw)⟩,
-  ⟨"fold-pending-termination", "the committed datum is a pending termination: refused",
-    "fold", fold 15 (raw := 9018) (datum := pendingRaw)⟩,
-  ⟨"fold-other-aid", "the committed datum is the initial datum of another AID: refused",
-    "fold", fold 15 (raw := 9019) (datum := initialRaw aidE2)⟩,
-  ⟨"fold-pool-below-premium", "a request of deposit 14, the minimum ADA 4, the deposit 6 and the freeze bond 4, leaving a pool below one premium: refused",
-    "fold", fold 14 (raw := 9007)⟩,
-  ⟨"fold-unrecorded-refund", "a request whose refund address is not an address a checkpoint datum can record: refused",
-    "fold", fold 15 (raw := 9008)⟩,
+  ⟨"fold-without-inception-evidence", "the fold at the deadline when the key has no inception evidence: a fold reads none, accepted",
+    "fold", fold 15⟩,
+  ⟨"booking-without-inception-evidence", "the booking of a key that has no inception evidence: refused",
+    "booking", booking 9001 18⟩,
+  ⟨"booking-unpublished-datum", "the request publishes no initial checkpoint datum: refused",
+    "booking", booking 9020 18⟩,
+  ⟨"booking-published-other-hash", "the request commits the initial datum and publishes the initial state with other key material, a datum of another hash: refused",
+    "booking", booking 9021 18⟩,
+  ⟨"booking-advanced-sequence", "the request commits and publishes a checkpoint datum at sequence number 7: refused",
+    "booking", booking 9011 18⟩,
+  ⟨"booking-advanced-epoch", "the published datum is at epoch 3: refused",
+    "booking", booking 9012 18⟩,
+  ⟨"booking-poisoned", "the published datum is poisoned: refused",
+    "booking", booking 9013 18⟩,
+  ⟨"booking-frozen", "the published datum is frozen: refused",
+    "booking", booking 9014 18⟩,
+  ⟨"booking-topped-up", "the published datum is topped up: refused",
+    "booking", booking 9015 18⟩,
+  ⟨"booking-born-later", "the published datum is born one slot after the booking bound: refused",
+    "booking", booking 9016 18⟩,
+  ⟨"booking-other-refund", "the published datum refunds to another address than the request names: refused",
+    "booking", booking 9017 18⟩,
+  ⟨"booking-pending-termination", "the published datum is a pending termination: refused",
+    "booking", booking 9018 18⟩,
+  ⟨"booking-other-aid", "the published datum is the initial datum of another AID: refused",
+    "booking", booking 9019 18⟩,
+  ⟨"booking-pool-below-premium", "a request of deposit 14, the minimum ADA 4, the deposit 6 and the freeze bond 4, leaving a pool below one premium: refused",
+    "booking", booking 9007 17⟩,
+  ⟨"booking-unrecorded-refund", "a request whose refund address is not an address a checkpoint datum can record: refused",
+    "booking", booking 9008 18⟩,
   ⟨"checkpoint-spent-at-checkpoint-validator", "the delivered checkpoint spent by its own lifecycle at the checkpoint validator, no application action: the application does not refuse it",
     "checkpoint", checkpointSpend checkpointCredential⟩,
   ⟨"checkpoint-spent-at-application-address", "the same spend of a checkpoint sitting at the application address: no action names it, refused",
     "checkpoint", checkpointSpend release.applicationCredential⟩,
   ⟨"return-at-deadline", "a return starting at the deadline paying the refund address 17, the request less the tip: accepted",
+    "return", return_ 17⟩,
+  ⟨"return-without-inception-evidence", "the same return when the key has no inception evidence: a return reads none, accepted",
     "return", return_ 17⟩,
   ⟨"return-straddling-deadline", "a return whose validity interval starts one slot before the deadline: refused",
     "return", return_ 17 (interval := ⟨14, 20⟩)⟩,
@@ -520,8 +546,8 @@ def cases : List Case := [
 
 def hexOf (n : Nat) : String := toHex (unpack n)
 
-def verdict (o : Observation) : String :=
-  if accepted i env rp cp release o then "accepted" else "refused"
+def verdict (c : Case) : String :=
+  if accepted i ⟨fun _ => c.evidence⟩ rp cp release c.observation then "accepted" else "refused"
 
 def intervalJson (x : Interval) : Json :=
   Json.mkObj [("lower", toJson x.lower), ("upper", toJson x.upper)]
@@ -536,7 +562,8 @@ def row (c : Case) : Json :=
     ("inputs", Json.arr (o.inputs.map outputJson).toArray),
     ("outputs", Json.arr (o.outputs.map outputJson).toArray),
     ("referenced", toJson (o.referenceInputs.length)),
-    ("verdict", toJson (verdict o))]
+    ("inceptionEvidence", toJson c.evidence),
+    ("verdict", toJson (verdict c))]
 
 /-- The approval of an AID, with every byte it is derived from. -/
 def approvalRow (id note aid : String) (deposit : Nat) : Json :=

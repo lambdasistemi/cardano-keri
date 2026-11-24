@@ -48,7 +48,7 @@ describes the model.
 <!-- identities:begin -->
 | What | Value |
 |---|---|
-| Lean model revision | `a29c88c4b27e5b92fdde81907ceb12154b0702df` |
+| Lean model revision | `6cef9c26531dd70fa24e2621bdd753d34702c8c2` |
 | Public Singular commit | `d69ab005c3b710aeebf033d3c5cd08c56feb5643` |
 | Aiken compiler | `1.1.23` |
 | Network discriminator | `0` |

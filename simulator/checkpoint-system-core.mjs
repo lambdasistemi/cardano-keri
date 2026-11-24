@@ -83,6 +83,119 @@ function commitmentStep(state,kind,a) {
   else require(c.expiresAt<a.now,'commitment-not-expired');
   return retire(state,a.marker);
 }
+function validateWriterTable(table) {
+  const invalid = () => { throw Error('invalid-system-wire:writer'); };
+  const list = (xs, check) => { if (!Array.isArray(xs)) invalid(); xs.forEach(check); };
+  const integer = x => localNat(x, 'writer');
+  const bool = x => { if (typeof x !== 'boolean') invalid(); };
+  function fraction(f) {
+    fields(f, ['numerator','denominator'], 'fraction');
+    integer(f.numerator);
+    integer(f.denominator);
+  }
+  function threshold(t) {
+    if (t?.count) {
+      fields(t, ['count'], 'threshold');
+      fields(t.count, ['required'], 'count');
+      integer(t.count.required);
+      return;
+    }
+    fields(t, ['weighted'], 'threshold');
+    fields(t.weighted, ['clauses'], 'weighted');
+    list(t.weighted.clauses, clause => list(clause, term => {
+      if (term?.key) {
+        fields(term, ['key'], 'weight');
+        fields(term.key, ['weight'], 'key');
+        fraction(term.key.weight);
+      } else {
+        fields(term, ['group'], 'weight');
+        fields(term.group, ['weight','members'], 'group');
+        fraction(term.group.weight);
+        list(term.group.members, fraction);
+      }
+    }));
+  }
+  function content(e) {
+    fields(e, ['aid','sn','kind','priorDigest','keys','threshold','nextKeys','nextThreshold',
+      'cuts','adds','witnessThreshold','extension'], 'event');
+    if (!['inception','rotation','interaction','delegatedInception','delegatedRotation'].includes(e.kind)) invalid();
+    for (const k of ['aid','sn','priorDigest','witnessThreshold']) integer(e[k]);
+    for (const k of ['keys','nextKeys','cuts','adds','extension']) list(e[k], integer);
+    threshold(e.threshold);
+    threshold(e.nextThreshold);
+  }
+  function signature(sig) {
+    fields(sig, ['signer','event','verified'], 'signature');
+    integer(sig.signer);
+    content(sig.event);
+    bool(sig.verified);
+  }
+  function signed(s) {
+    fields(s, ['event','structureVerified','signatures','receipts'], 'signed-event');
+    content(s.event);
+    bool(s.structureVerified);
+    list(s.signatures, signature);
+    list(s.receipts, signature);
+  }
+  fields(table, ['inceptions','rotations'], 'writers');
+  list(table.inceptions, row => {
+    fields(row, ['aid','datum','signed','witnesses'], 'inception-row');
+    integer(row.aid);
+    integer(row.datum);
+    signed(row.signed);
+    list(row.witnesses, integer);
+  });
+  list(table.rotations, row => {
+    fields(row, ['aid','epoch','sn','signed'], 'rotation-row');
+    integer(row.aid);
+    integer(row.epoch);
+    integer(row.sn);
+    signed(row.signed);
+  });
+}
+
+function inceptionWriter(writers, aid, datum) {
+  const row = writers.inceptions.find(r => E.equal(r.aid, aid) && E.equal(r.datum, datum));
+  require(row, 'checkpoint-inception-writer-mismatch');
+  const {signed, witnesses} = row;
+  const e = signed.event;
+  const receipts = C.verifiedSigners(e, signed.receipts);
+  require(E.equal(e.aid, aid) && e.sn === 0 && e.kind === 'inception' && signed.structureVerified &&
+    e.keys.length > 0 && new Set(e.keys).size === e.keys.length &&
+    new Set(witnesses).size === witnesses.length &&
+    C.thresholdSatisfied(e.threshold, e.keys, C.verifiedSigners(e, signed.signatures)) &&
+    (e.witnessThreshold === 0 ? signed.receipts.length === 0 :
+      witnesses.filter(w => receipts.includes(w)).length >= e.witnessThreshold),
+    'checkpoint-inception-writer-mismatch');
+  return {inception: {event: signed, witnesses}};
+}
+
+function rotationWriter(writers, row, action) {
+  const kind = C.actionKind(action);
+  if (kind !== 'rotate' && kind !== 'freeze') return row.writer;
+  const target = action[kind]["sn'"];
+  const live = row.state.present.l;
+  const rotations = [];
+  let history = row.writer;
+  while (history?.rotation) {
+    rotations.push(history.rotation.event.event);
+    history = history.rotation.previous;
+  }
+  require(history?.inception && live.epoch === rotations.length, 'checkpoint-rotation-writer-mismatch');
+  let last = history.inception.event.event;
+  let witnesses = history.inception.witnesses;
+  for (const e of rotations.reverse()) {
+    witnesses = C.derivedWitnesses({witnesses}, e);
+    last = e;
+  }
+  const next = writers.rotations.find(r => E.equal(r.aid, row.aid) && r.epoch === live.epoch &&
+    r.sn === live.sn && r.signed.event.sn === target);
+  const prior = {aid: last.aid, sn: last.sn, delegated: false,
+    nextKeys: last.nextKeys, nextThreshold: last.nextThreshold, witnesses};
+  require(last.sn === live.sn && next && C.rotationValid(prior, next.signed), 'checkpoint-rotation-writer-mismatch');
+  return kind === 'freeze' ? row.writer : {rotation: {previous: row.writer, event: next.signed}};
+}
+
 export function evidenceFor(table, aid) {
   return table.find(([subject]) => E.equal(subject, aid))?.[1] ??
     {rotationTo: [], depositAuthorized: [], quorum: [], duplicityAt: []};
@@ -91,7 +204,7 @@ function transition(p,table,state,command) {
   validateCommand(command);
   const kind=Object.keys(command)[0],a=command[kind];
   if(['openCommitment','reveal','sweep'].includes(kind))return {ok:{state:commitmentStep(state,kind,a),checkpointFlow:null,registryFlow:null}};
-  const env = evidenceFor(table, a.aid);
+  const {writers = {inceptions: [], rotations: []}, ...env} = evidenceFor(table, a.aid);
   const row=state.aids.find(x=>E.equal(x.aid,a.aid))??{aid:a.aid,leaf:'absent',state:'absent',origin:null,pending:null};
   let next=row,checkpointFlow=null,registryFlow=null;
   if(kind==='register') {
@@ -109,18 +222,20 @@ function transition(p,table,state,command) {
     const world={registry:{config:before.config,trie:before.trie,held:before.carriers.map(c=>c.original)},pending:before.registrations,terminations:before.terminations.map(e=>e.booking),treasury:before.treasury};
     const selected=E.foldMembers(world,tx).some(m=>m.kind==='registration'&&E.equal(m.booking,a.booking));
     require(selected&&E.equal(a.booking.request.key,a.aid)&&E.equal(output.singularTags,[E.singularTag(E.toInternal(receipt.before.config),E.toInternal(a.aid))])&&E.equal(output.output.address,a.booking.request.destination)&&E.equal(output.output.datumValue,a.booking.request.datum)&&E.equal(output.output.lovelace,a.booking.request.carrierAda),'checkpoint-registration-delivery-mismatch');
-    const origin={...a.context,registered:receipt.state,token:binding[1],registrationRef:a.booking.request.reference,carrierRef:{tx:receipt.transaction.identity,index:a.index}};
-    next={aid:a.aid,leaf:C.leafOf(local.state),state:local.state,origin,pending:null};checkpointFlow=local.flow;registryFlow=receipt.flow;
+    const writer = inceptionWriter(writers, a.aid, a.booking.request.datum);
+    const origin={inception:writer,...a.context,registered:receipt.state,token:binding[1],registrationRef:a.booking.request.reference,carrierRef:{tx:receipt.transaction.identity,index:a.index}};
+    next={aid:a.aid,leaf:C.leafOf(local.state),state:local.state,origin,writer,pending:null};checkpointFlow=local.flow;registryFlow=receipt.flow;
   } else if(kind==='local') {
     require(C.actionKind(a.action)!=='register','checkpoint-registration-receipt-required');
     const local=localStep(p,env,a.action,a.now,row.state);
+    const writer = rotationWriter(writers, row, a.action);
     // a conviction also reveals its commitment: open, for this AID and this deployment, then burnt
     if(C.actionKind(a.action)==='convict') {
       const c=a.action.convict.commitment;
       require(E.equal(openAt(state,c.marker),c)&&E.equal(c.aid,a.aid)&&c.deployment===state.deployment,'checkpoint-commitment-not-open');
       state=retire(state,c.marker);
     }
-    next={...row,state:local.state,leaf:C.leafOf(local.state)};checkpointFlow=local.flow;
+    next={...row,writer,state:local.state,leaf:C.leafOf(local.state)};checkpointFlow=local.flow;
   } else if(kind==='book') {
     require(C.stateKind(row.state)==='terminationPending','checkpoint-not-pending');
     require(row.origin!==null,'checkpoint-origin-missing');require(row.pending===null,'checkpoint-already-associated');
@@ -149,8 +264,10 @@ export function newSystem(params,env,deployment) {
     if (!Array.isArray(pair) || pair.length !== 2) throw Error('invalid-system-wire:evidence-row');
     const [aid, evidence] = pair;
     nat(aid, 'evidence-aid');
-    fields(evidence, ['rotationTo','depositAuthorized','quorum','duplicityAt'], 'env');
-    if (C.validateEnv(evidence)) throw Error('invalid-system-wire:checkpoint-context');
+    const {writers, ...local} = evidence;
+    if (writers !== undefined) validateWriterTable(writers);
+    fields(local, ['rotationTo','depositAuthorized','quorum','duplicityAt'], 'env');
+    if (C.validateEnv(local)) throw Error('invalid-system-wire:checkpoint-context');
   }
   localNat(deployment,'deployment');
   return session({params,env,state:{deployment,commitments:[],aids:[]},records:[]});
@@ -164,7 +281,7 @@ export function attemptSystem(current,command) {
 }
 export function replaySystem(params,env,deployment,commands) {return commands.reduce((s,c)=>attemptSystem(s,c).session,newSystem(params,env,deployment));}
 export function checkSystemCorpus(corpus) {
-  if(corpus.schema!=='cardano-keri.checkpoint.system'||corpus.version!==2||corpus.traces.length!==8)throw Error('system-corpus-schema/roster');
+  if(corpus.schema!=='cardano-keri.checkpoint.system'||corpus.version!==3||corpus.traces.length!==8)throw Error('system-corpus-schema/roster');
   let cells=0,accepted=0,refused=0;
   for(const trace of corpus.traces) {
     if(!trace.cells.length)throw Error('empty-system-trace');

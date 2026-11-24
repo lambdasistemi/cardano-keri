@@ -80,4 +80,18 @@ for (const cell of scopeTrace.cells.filter(cell => cell.name.startsWith('foreign
   const fabricated = {ok: {state: cell.input}};
   assert.equal(systemProperties(cell, fabricated).local_event_uses_own_authorization.holds, false, cell.name);
 }
+const writerControl = (change, commands) => {
+  const env = structuredClone(first.env);
+  change(env[0][1].writers);
+  return replaySystem(first.params, env, corpus.traces[0].deployment, commands).records.at(-1).result;
+};
+const registrationOnly = [first.command];
+const firstRotation = [first.command, rotated.command];
+assert.equal(writerControl(w => w.inceptions[0].datum++, registrationOnly).error, 'checkpoint-inception-writer-mismatch');
+assert.equal(writerControl(w => w.inceptions[0].signed.signatures = [], registrationOnly).error, 'checkpoint-inception-writer-mismatch');
+assert.equal(writerControl(w => w.rotations = [], firstRotation).error, 'checkpoint-rotation-writer-mismatch');
+assert.equal(writerControl(w => w.rotations[0].signed.signatures = [], firstRotation).error, 'checkpoint-rotation-writer-mismatch');
+const observed = writerControl(() => {}, firstRotation).ok.state.aids[0];
+assert.deepEqual(observed.writer.rotation.previous, observed.origin.inception);
+assert.equal(observed.writer.rotation.event.event.sn, observed.state.present.l.sn);
 console.log(JSON.stringify({...report,schemaControls:malformed.length+1,immutableOrigin:true,initOnlySessions:true,systemProperties:shown.size,fabricatedCheckerControls:21}));

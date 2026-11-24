@@ -338,6 +338,10 @@ jobs:
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#just --command just check-deposit-vectors
       - name: Top-up wire vectors drift
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#just --command just check-topup-vectors
+      - name: Bounty commitment vectors drift
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#bash github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#coreutils github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#gnugrep github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#gnused github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#gawk github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#git --command bash scripts/check-bounty-commitment-vectors.sh
+      - name: Bounty entitlement vectors drift
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#bash github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#coreutils github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#gnugrep github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#gnused github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#gawk github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#git --command bash scripts/check-bounty-entitlement-vectors.sh
       - name: Identities page matches its derivation
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#bash github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#coreutils github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#diffutils github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#gnugrep github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#gnused github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#gawk github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#git --command bash scripts/check-identities.sh
 

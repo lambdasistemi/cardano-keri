@@ -7,7 +7,7 @@
 //// The rows of the Lean vectors are in the generated `keri_application_rows_tests`;
 //// the tests here are the requirements the rows do not state: what the booking's
 //// observation must name, and what a fold may carry. A refusal is a transaction
-//// one defect away from the accepted one beside it.
+//// one difference away from the accepted one beside it.
 
 use aiken/cbor
 use aiken/collection/list

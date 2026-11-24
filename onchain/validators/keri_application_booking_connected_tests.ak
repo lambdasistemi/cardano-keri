@@ -5,7 +5,7 @@
 //// hash-proof token in an input and burned, the registration predicate over the
 //// event bytes and signatures); the application decides which requests the
 //// observation names and the initial state each request commits. Every refusal
-//// is a transaction one defect away from the accepted one beside it, so a test
+//// is a transaction one difference away from the accepted one beside it, so a test
 //// that fails for any other reason is red for that reason.
 
 use aiken/collection/list
@@ -208,9 +208,9 @@ test two_bookings_with_the_evidence_of_one_are_refused() {
   )
 }
 
-/// The observer is shown a booking it accepts, with one defect at a time below.
+/// The observer is shown a booking it accepts, with one difference at a time below.
 /// A refusal of the observer is the script failing: each refusal is a `fail`
-/// test over the transaction of the control beside it, one defect away.
+/// test over the transaction of the control beside it, one difference away.
 test the_observer_accepts_the_booking_it_is_shown() {
   observer_accepts(single())
 }

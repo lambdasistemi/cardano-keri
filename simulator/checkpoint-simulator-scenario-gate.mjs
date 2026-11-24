@@ -225,10 +225,14 @@ function checkExactNat(core, corpus) {
   refusal('replay of a non-pair entry', () => core.replay(P, okEnv, 0, live(), [[1, NOP, 2]]), 'invalid-action', 'list[0]');
   verdict('consumable under a zero bond', () => core.consumable({ ...P, D: 0 }, 5, live()), 'invalid-params', 'D must be positive');
   // a boundary refusal exhibits no theorem: T5 / T8 / T12 must not read a non-state as a refused-with-evidence step
-  const brec = core.attempt({ ...core.newSession(P), state: live({ sn: 2 ** 53 }), registry: [1], env: { ...core.emptyEnv(), duplicityAt: [[1, 2 ** 53]] } }, { convict: { payee: 1, commitment: core.commitmentFor(live().present.l, 1, 0) } }, 0).record;
-  const bviol = Object.keys(brec.theorems).filter(id => !brec.theorems[id].holds);
-  if (bviol.length) problems.push('a boundary-refused conviction violates ' + bviol.join(','));
-  if (Object.keys(brec.lamps).some(id => id !== 'T9' && brec.lamps[id].exhibited)) problems.push('a boundary-refused step exhibits ' + Object.keys(brec.lamps).filter(id => brec.lamps[id].exhibited).join(','));
+  const brec = call(() => core.attempt({ ...core.newSession(P), state: live({ sn: 2 ** 53 }), registry: [1], env: { ...core.emptyEnv(), duplicityAt: [[1, 2 ** 53]] } }, { convict: { payee: 1, commitment: core.commitmentFor(live().present.l, 1, 0) } }, 0).record);
+  if (!brec.theorems || !brec.lamps) {
+    problems.push("boundary conviction produced no theorem report: " + got(brec));
+  } else {
+    const bviol = Object.keys(brec.theorems).filter(id => !brec.theorems[id].holds);
+    if (bviol.length) problems.push('a boundary-refused conviction violates ' + bviol.join(','));
+    if (Object.keys(brec.lamps).some(id => id !== 'T9' && brec.lamps[id].exhibited)) problems.push('a boundary-refused step exhibits ' + Object.keys(brec.lamps).filter(id => brec.lamps[id].exhibited).join(','));
+  }
   // arithmetic at the bound: refused by name, never rounded
   const M = core.MAX_NAT;
   const hp = { D: 1, B: 1, P: 0, W: 0 };
@@ -1299,7 +1303,7 @@ async function selftest(work) {
   const leanScratch = (name, file, needle, repl) => {
     const root = join(work, name);
     mkdirSync(join(root, 'lean', 'CardanoKeri'), { recursive: true });
-    for (const f of ['Checkpoint.lean', 'CheckpointGoals.lean']) {
+    for (const f of ['Checkpoint.lean', 'CheckpointGoals.lean', 'CheckpointCommitmentGoals.lean']) {
       let s = readFileSync(join(LEAN_ROOT, 'lean', 'CardanoKeri', f), 'utf8');
       if (f === file) {
         if (!s.includes(needle)) throw new Error(`selftest ${name}: needle not found: ${needle.slice(0, 80)}`);
@@ -1315,7 +1319,7 @@ async function selftest(work) {
   const leanDups = (name, edits) => {
     const root = join(work, name);
     mkdirSync(join(root, 'lean', 'CardanoKeri'), { recursive: true });
-    for (const f of ['Checkpoint.lean', 'CheckpointGoals.lean']) {
+    for (const f of ['Checkpoint.lean', 'CheckpointGoals.lean', 'CheckpointCommitmentGoals.lean']) {
       let s = readFileSync(join(LEAN_ROOT, 'lean', 'CardanoKeri', f), 'utf8');
       const e = edits.find(x => x.file === f);
       if (e) {
@@ -1449,7 +1453,7 @@ async function selftest(work) {
     { name: 'a clause the story does not contain', expect: /clause «that the pool is below `Q`» does not occur in the story/,
       make: () => withClauses('clauses-absent.json', j => { const c = j.clauses.find(c => c.story === 3 && /below `P`/.test(c.clause)); c.clause = 'that the pool is below `Q`'; }) },
     { name: 'a Step guard hypothesis renamed in the Lean (scratch copy: hpool → hpoolx) that no refusal name claims', expect: /Step\.freeze\/hpoolx .* is a guard the refusal names do not claim|Step\.freeze .* has no binder hpool/,
-      make: () => { const root = join(work, 'lean-root'); mkdirSync(join(root, 'lean', 'CardanoKeri'), { recursive: true }); for (const f of ['Checkpoint.lean', 'CheckpointGoals.lean']) { let s = readFileSync(join(LEAN_ROOT, 'lean', 'CardanoKeri', f), 'utf8'); if (f === 'Checkpoint.lean') { if (!s.includes('(hpool : l.pool < p.P)')) throw new Error('selftest: hpool binder not found'); s = s.replace('(hpool : l.pool < p.P)', '(hpoolx : l.pool < p.P)'); } writeFileSync(join(root, 'lean', 'CardanoKeri', f), s); } return { leanRoot: root, skipBuild: true }; } },
+      make: () => { const root = join(work, 'lean-root'); mkdirSync(join(root, 'lean', 'CardanoKeri'), { recursive: true }); for (const f of ['Checkpoint.lean', 'CheckpointGoals.lean', 'CheckpointCommitmentGoals.lean']) { let s = readFileSync(join(LEAN_ROOT, 'lean', 'CardanoKeri', f), 'utf8'); if (f === 'Checkpoint.lean') { if (!s.includes('(hpool : l.pool < p.P)')) throw new Error('selftest: hpool binder not found'); s = s.replace('(hpool : l.pool < p.P)', '(hpoolx : l.pool < p.P)'); } writeFileSync(join(root, 'lean', 'CardanoKeri', f), s); } return { leanRoot: root, skipBuild: true }; } },
     { name: 'a distinctive scenario step dropped (conviction from a poisoned state)', expect: /distinctive clause «convict-from-poisoned».*not exercised/,
       make: () => ({ scenarios: scenariosCopy(d => { const f = join(d, '09-cora-convicts.json'); const sc = JSON.parse(readFileSync(f, 'utf8')); const i = sc.steps.findIndex(s => s.action === 'poison'); if (i < 0) throw new Error('poison control missing'); sc.steps.splice(i, 1); sc.steps.forEach(s => { delete s.expect.exhibits; delete s.expect.verdict; }); writeFileSync(f, JSON.stringify(sc)); }), skipBuild: true }) },
   ];

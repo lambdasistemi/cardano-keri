@@ -35,10 +35,10 @@
     "lean/CardanoKeri/ConsumerFixtures.lean": "4a7a28c517b4eeb7448ffb66b5cf8f5b69e3eef2e6e4fbd56f1836340e1918d9",
     "lean/CardanoKeri/ConsumerGoals.lean": "e7c41b2760a5afd4a9ee910720f714758e040c1d901d09e2bdda491d37d36537",
     "lean/CardanoKeri/ConsumerIdentity.lean": "8abd7916cf7129bc16067e68432a6a42b51389322f4eaa10d3df651276d49033",
-    "lean/CardanoKeri/ConsumerJourney.lean": "77a375e09637f020823923605c5802b7f31471547e3b82ebd36af7a7b4fc73e7",
+    "lean/CardanoKeri/ConsumerJourney.lean": "6b0128addf84c4003efdb8473c0dba5dfa315e88a1c6d64cd4994c9d1588f757",
     "lean/CardanoKeri/ConsumerWire.lean": "82b7088d8ada127c6ecee9ca50ef483fcf240cf31e981489006e08ec51ede4d4",
     "lean/CardanoKeri/ReaderStatus.lean": "f0ef5697905f98527f328a99661cd603dbb3bc6ffb71f8ac1bbc3f485fb766a1",
-    "lean/CardanoKeri/ReaderStatusGoals.lean": "485bccef81dc46b42787a33ab0a7426233cbc79326ebe296d8feead727cb9f9c",
+    "lean/CardanoKeri/ReaderStatusGoals.lean": "1e03bca874ec7f405372633817e4cd0c840c77c4783640466cf03aa3a624a582",
     "lean/CardanoKeri/ReaderStatusVectors.lean": "09c4a31f2584dfaacad8d2863a942e48c820132bbc4a49743859ddc8a9b88e3b",
     "lean/CardanoKeri/Registry.lean": "22d86c6f572e9e4c427b792420bd740cfe1ad4a6cbcf7a8e181924816c50b167",
     "lean/CardanoKeri/RegistryAdapterFacts.lean": "212cb4a5a5710404e3b5c52733feb127720f9141f5deb379e4e50ce6345ea425",
@@ -5793,13 +5793,13 @@
       "line": 619,
       "statement": "theorem honest_history_does_not_refute_itself (h : HistoryObservation)\n    (actual : List (List KeyChange)) (members : Singular.Trie)\n    (replayed : replay actual = some members) (part : h.folds.Sublist actual)\n    (whole : h.complete = true → h.folds = actual) : ¬ RefutesItself h",
       "statementSha256": "bd96a6c5d84a7aee536e98f96bbb2778432954c7b9293cda492d80b75e791f99",
-      "sourceStory": "**An honest history never refutes itself.**\nGiven a history that replays from the registry's creation, and a history\nobservation that holds some of its folds, in order, and all of them when it\nsays it is complete.\nWhen the observation is asked whether it refutes itself.\nThen it does not: the folds of a real registry, with or without gaps, replay\nfrom the registry that preceded them.",
+      "sourceStory": "**An honest history never refutes itself.**\nGiven a history that replays from the registry's creation, and a history\nobservation that holds some of its folds, in order, and all of them when it\nsays it is complete.\nWhen the observation is asked whether it refutes itself.\nThen it does not: some members make the observed folds replay. They need not\nbe the members the registry had before the first observed fold.",
       "story": {
         "given": "(h : HistoryObservation)\n    (actual : List (List KeyChange)) (members : Singular.Trie)\n    (replayed : replay actual = some members) (part : h.folds.Sublist actual)\n    (whole : h.complete = true → h.folds = actual)",
         "when": "Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.",
         "then": "¬ RefutesItself h"
       },
-      "storySha256": "e4651ce9d8c22af781d8cac87477440cd70aa94b1878e0ca853459f553a25535"
+      "storySha256": "1502cb16c7bceeea05e48adc4f44e90a6acf82a02dd22716f767eaea9f9937fe"
     },
     {
       "declaration": "CardanoKeri.ReaderStatus.authenticatedContextB_iff",

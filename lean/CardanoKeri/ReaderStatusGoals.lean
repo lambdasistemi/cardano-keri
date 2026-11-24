@@ -614,8 +614,8 @@ Given a history that replays from the registry's creation, and a history
 observation that holds some of its folds, in order, and all of them when it
 says it is complete.
 When the observation is asked whether it refutes itself.
-Then it does not: the folds of a real registry, with or without gaps, replay
-from the registry that preceded them. -/
+Then it does not: some members make the observed folds replay. They need not
+be the members the registry had before the first observed fold. -/
 theorem honest_history_does_not_refute_itself (h : HistoryObservation)
     (actual : List (List KeyChange)) (members : Singular.Trie)
     (replayed : replay actual = some members) (part : h.folds.Sublist actual)

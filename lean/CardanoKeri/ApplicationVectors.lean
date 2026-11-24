@@ -27,7 +27,7 @@ request, the spends of a pending termination, and the spend of a delivered
 checkpoint by its own lifecycle. The request and configuration datums' own
 byte layouts are not fixed here: the fixture decoders map a fixture number to
 the decoded registration or configuration, and a fixture table gives the
-initial checkpoint datum each request publishes. Three rows run with no
+initial checkpoint datum each request carries is in its decoded data. Three rows run with no
 inception evidence for the fixture key; every other row runs with it. The holding address is the
 checkpoint validator's, a Plutus `Address` with a script payment credential and
 no stake credential, another script than the application's. Evidence over the
@@ -133,22 +133,31 @@ def otherKeysRaw : Nat :=
 /-- BLAKE2b-256 of an initial datum's serialisation. -/
 def datumHash (raw : Nat) : Nat := pack (blake2b256 (unpack raw))
 
+/-- The byte encoding of the application's preimages. A registration approval
+names its initial datum by the datum's hash: the request carries the datum
+itself, and the encoding hashes it. Every other preimage is the consumer's. -/
+def approvalCode : Codec := fun preimage =>
+  CardanoKeri.ConsumerIdentity.Bytes.code (match preimage with
+    | .registrationApproval r key address datum deposit =>
+      .registrationApproval r key address (datumHash datum) deposit
+    | other => other)
+
 /-! ## Requests and the fixture decoder -/
 
 def registry : TokenId := deployment.registry ⟨CardanoKeri.ConsumerIdentity.Bytes.hash,
-  CardanoKeri.ConsumerIdentity.Bytes.code, CardanoKeri.ConsumerIdentity.Bytes.keyOf, fun _ => none, datumHash,
-  fun _ => none, fun _ => none, fun _ => none, fun _ => none⟩
+  CardanoKeri.ConsumerIdentity.Bytes.code, CardanoKeri.ConsumerIdentity.Bytes.keyOf, fun _ => none,
+  fun _ => none, fun _ => none, fun _ => none⟩
 
 /-- A registry whose state policy is not `state(A_keri)`. -/
 def foreignRegistry : TokenId := ⟨ofBytes (scriptHash 9), registry.name⟩
 
 def requestData (deposit : Nat) : RegistrationData :=
   { registry, key := aidOfCesr aidE, controller := 0, refundAddress,
-    holdingAddress := checkpointCredential, initialDatum := datumHash (initialRaw aidE),
+    holdingAddress := checkpointCredential, initialDatum := initialRaw aidE,
     deposit, bookedAt := 10, processDeadline := 15, reclaimEnd := 15 }
 
-/-- A request committing the hash of another checkpoint datum. -/
-def committing (raw : Nat) : RegistrationData := { requestData 15 with initialDatum := datumHash raw }
+/-- A request committing another checkpoint datum. -/
+def committing (raw : Nat) : RegistrationData := { requestData 15 with initialDatum := raw }
 
 /-- Fixture request datums: the number a request output carries, decoded. -/
 def requests : List (Nat × RegistrationData) := [
@@ -168,26 +177,10 @@ def requests : List (Nat × RegistrationData) := [
   (9016, committing bornLaterRaw),
   (9017, committing otherRefundRaw),
   (9018, committing pendingRaw),
-  (9019, committing (initialRaw aidE2)),
-  (9020, requestData 15),
-  (9021, requestData 15)]
+  (9019, committing (initialRaw aidE2))]
 
 def decode : DecodeApplication := fun raw =>
   (requests.find? (·.1 == raw)).map fun entry => .registration entry.2
-
-/-- Fixture published datums: the initial checkpoint datum each request's own
-datum publishes. A request committing another datum publishes that datum.
-Request 9020 publishes none; request 9021 commits the initial datum and
-publishes the initial state with other key material, a datum of another hash. -/
-def published : List (Nat × Nat) := [
-  (9001, initialRaw aidE), (9002, initialRaw aidE), (9003, initialRaw aidE),
-  (9004, initialRaw aidE), (9005, initialRaw aidE), (9006, initialRaw aidE),
-  (9007, initialRaw aidE), (9008, initialRaw aidE),
-  (9011, advancedRaw), (9012, epochRaw), (9013, poisonedRaw), (9014, frozenRaw),
-  (9015, toppedUpRaw), (9016, bornLaterRaw), (9017, otherRefundRaw), (9018, pendingRaw),
-  (9019, initialRaw aidE2), (9021, otherKeysRaw)]
-
-def publishedDatum (raw : Nat) : Option Nat := (published.find? (·.1 == raw)).map (·.2)
 
 /-- The registry's configuration: the scenario parameters and the checkpoint
 validator's credential. -/
@@ -203,9 +196,9 @@ def decodeConfiguration (raw : Nat) : Option Configuration :=
   (configurations.find? (·.1 == raw)).map (·.2)
 
 def interpretation : Interpretation :=
-  ⟨CardanoKeri.ConsumerIdentity.Bytes.hash, CardanoKeri.ConsumerIdentity.Bytes.code,
-   CardanoKeri.ConsumerIdentity.Bytes.keyOf, decode, datumHash, decodeConfiguration,
-   CheckpointDatum.decode release, refundTo, publishedDatum⟩
+  ⟨CardanoKeri.ConsumerIdentity.Bytes.hash, approvalCode,
+   CardanoKeri.ConsumerIdentity.Bytes.keyOf, decode, decodeConfiguration,
+   CheckpointDatum.decode release, refundTo⟩
 
 def i : Interpretation := interpretation
 
@@ -273,6 +266,33 @@ def fold (holdingLovelace : Nat) (interval : Interval := ⟨12, 15⟩) (donation
     outputs := [holding holdingLovelace datum address],
     referenceInputs := [⟨50, 0⟩], referenceOutputs := [configuration registry],
     interval, donation, actions := [.foldRegistration ⟨60, 0⟩ 0] }
+
+/-! ## The fold the Singular client builds -/
+
+/-- The fixture's trie commitment. -/
+def commit : TrieCommit := fun trie => trie.length
+
+/-- The public registry before its first fold: its state output at the state
+script, holding the state token and the commitment of the empty trie. -/
+def publicRegistry : PublicRegistry :=
+  { identity := registry, seed,
+    state := ⟨⟨40, 0⟩, release.statePolicy, 2, .root (commit []), [(registry, 1)]⟩, trie := [] }
+
+/-- The folder's own input and the layout of its transaction. -/
+def funding : FoldFunding :=
+  { ordinaryInput := ⟨⟨41, 0⟩, spenderAddress, 5, .empty, []⟩, processorAddress := spenderAddress,
+    transactionId := 71, interval := ⟨12, 15⟩, fee := 1 }
+
+/-- The fold the upstream client builds for the booked request 9001, from the
+public registry and the request alone. -/
+def clientFold : FoldObservation :=
+  buildFold i.hash i.code commit release publicRegistry
+    [.registration (request 9001 18) (dataOf 9001)] funding
+
+/-- That fold as KERI's application observes it, with what the adapter adds:
+the configuration record read by reference and the treasury donation. -/
+def clientFoldAdapted (donation : Nat := 2) : Observation :=
+  adapted clientFold (configuration registry) donation
 
 /-- A transaction of the checkpoint's own lifecycle (an advance, say) spending
 the delivered checkpoint at `address`, with no application action. The
@@ -467,31 +487,33 @@ def cases : List Case := [
     "fold", fold 15 (raw := 9004)⟩,
   ⟨"fold-committed-datum-not-initial", "a request committing a checkpoint datum at sequence number 7, which no booking mints, folded delivering that datum: the spend validates no datum, accepted",
     "fold", fold 15 (raw := 9011) (datum := advancedRaw)⟩,
+  ⟨"fold-built-by-singular-client", "the fold the Singular client builds from the public registry and the booked request alone, with the configuration record read by reference and the registration cost donated: accepted",
+    "fold", clientFoldAdapted⟩,
+  ⟨"fold-built-by-singular-client-no-donation", "the same fold donating nothing, as the client builds it: refused",
+    "fold", clientFoldAdapted 0⟩,
+  ⟨"fold-built-by-singular-client-no-record", "the same fold without the configuration record as a reference input, as the client builds it: refused",
+    "fold", { clientFoldAdapted with referenceInputs := [] }⟩,
   ⟨"fold-without-inception-evidence", "the fold at the deadline when the key has no inception evidence: a fold reads none, accepted",
     "fold", fold 15⟩,
   ⟨"booking-without-inception-evidence", "the booking of a key that has no inception evidence: refused",
     "booking", booking 9001 18⟩,
-  ⟨"booking-unpublished-datum", "the request publishes no initial checkpoint datum: refused",
-    "booking", booking 9020 18⟩,
-  ⟨"booking-published-other-hash", "the request commits the initial datum and publishes the initial state with other key material, a datum of another hash: refused",
-    "booking", booking 9021 18⟩,
-  ⟨"booking-advanced-sequence", "the request commits and publishes a checkpoint datum at sequence number 7: refused",
+  ⟨"booking-advanced-sequence", "the request commits a checkpoint datum at sequence number 7: refused",
     "booking", booking 9011 18⟩,
-  ⟨"booking-advanced-epoch", "the published datum is at epoch 3: refused",
+  ⟨"booking-advanced-epoch", "the committed datum is at epoch 3: refused",
     "booking", booking 9012 18⟩,
-  ⟨"booking-poisoned", "the published datum is poisoned: refused",
+  ⟨"booking-poisoned", "the committed datum is poisoned: refused",
     "booking", booking 9013 18⟩,
-  ⟨"booking-frozen", "the published datum is frozen: refused",
+  ⟨"booking-frozen", "the committed datum is frozen: refused",
     "booking", booking 9014 18⟩,
-  ⟨"booking-topped-up", "the published datum is topped up: refused",
+  ⟨"booking-topped-up", "the committed datum is topped up: refused",
     "booking", booking 9015 18⟩,
-  ⟨"booking-born-later", "the published datum is born one slot after the booking bound: refused",
+  ⟨"booking-born-later", "the committed datum is born one slot after the booking bound: refused",
     "booking", booking 9016 18⟩,
-  ⟨"booking-other-refund", "the published datum refunds to another address than the request names: refused",
+  ⟨"booking-other-refund", "the committed datum refunds to another address than the request names: refused",
     "booking", booking 9017 18⟩,
-  ⟨"booking-pending-termination", "the published datum is a pending termination: refused",
+  ⟨"booking-pending-termination", "the committed datum is a pending termination: refused",
     "booking", booking 9018 18⟩,
-  ⟨"booking-other-aid", "the published datum is the initial datum of another AID: refused",
+  ⟨"booking-other-aid", "the committed datum is the initial datum of another AID: refused",
     "booking", booking 9019 18⟩,
   ⟨"booking-pool-below-premium", "a request of deposit 14, the minimum ADA 4, the deposit 6 and the freeze bond 4, leaving a pool below one premium: refused",
     "booking", booking 9007 17⟩,
@@ -582,7 +604,7 @@ def row (c : Case) : Json :=
 def approvalRow (id note aid : String) (deposit : Nat) : Json :=
   let raw := initialRaw aid
   let key := aidOfCesr aid
-  let preimage := i.code (.registrationApproval registry key checkpointCredential (datumHash raw) deposit)
+  let preimage := i.code (.registrationApproval registry key checkpointCredential raw deposit)
   Json.mkObj [("id", toJson id), ("note", toJson note),
     ("input", Json.mkObj [("statePolicy", toJson policyHex),
       ("seed", Json.mkObj [("transactionId", toJson txHex), ("outputIndex", toJson seed.index)]),
@@ -592,7 +614,7 @@ def approvalRow (id note aid : String) (deposit : Nat) : Json :=
     ("initialDatumHash", toJson (hexOf (datumHash raw))),
     ("approvalPreimage", toJson (toHex preimage)),
     ("approval", Json.mkObj [("policy", toJson (toHex applicationScript)),
-      ("name", toJson (hexOf (approval i deployment key checkpointCredential (datumHash raw) deposit).name))])]
+      ("name", toJson (hexOf (approval i deployment key checkpointCredential raw deposit).name))])]
 
 def approvals : List Json := [
   approvalRow "approval" "the registration approval of a funded registration of 15 lovelace" aidE 15,
@@ -685,6 +707,14 @@ def table : Json :=
     ("approvals", Json.arr approvals.toArray),
     ("terminationApprovals", Json.arr terminationApprovals.toArray),
     ("releases", Json.arr (releaseCases.map releaseRow).toArray),
+    ("clientFold", Json.mkObj [
+      ("note", toJson ("the fold SingularApplicationHeld.buildFold builds for request 9001 from the public registry and the request: " ++
+        "the public registry's own fold judgement on it, and the holding it places at output 1")),
+      ("registryAccepts", toJson (SingularApplicationHeld.fold .none i.hash i.code commit release clientFold)),
+      ("holding", match clientFold.outputs[1]? with
+        | some holding => Json.mkObj [("address", toJson (hexOf holding.credential)), ("lovelace", toJson holding.lovelace),
+            ("carriesTheRequestsInitialDatum", toJson (decide (holding.datum = .application (dataOf 9001).initialDatum)))]
+        | none => Json.null)]),
     ("rows", Json.arr (cases.map row).toArray)]
 
 /-! ## Checking a committed table -/

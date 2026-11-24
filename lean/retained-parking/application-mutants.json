@@ -105,7 +105,7 @@
   },
   {
     "id": "fold-datum-unchecked",
-    "before": "  holdingDatumHash i holding == some data.initialDatum &&",
+    "before": "  decide (holding.datum = .application data.initialDatum) &&",
     "after": "  true &&",
     "failure": "verdict-changed fold-other-datum",
     "owner": "CardanoKeri.Application.fold_refuses_other_datum",
@@ -169,7 +169,7 @@
   },
   {
     "id": "booking-initial-state-unchecked",
-    "before": "      publishesInitialState i rp cp data output &&",
+    "before": "      initialStateDatum i rp cp data data.initialDatum &&",
     "after": "      true &&",
     "failure": "verdict-changed booking-advanced-sequence",
     "owner": "CardanoKeri.Application.booking_inversion",
@@ -429,22 +429,6 @@
     "after": "      true &&",
     "failure": "verdict-changed booking-without-inception-evidence",
     "owner": "CardanoKeri.Application.booking_refuses_missing_inception",
-    "test": "ApplicationChecks"
-  },
-  {
-    "id": "booking-published-hash-unchecked",
-    "before": "  | some raw => i.datumHash raw == data.initialDatum && initialStateDatum i rp cp data raw",
-    "after": "  | some raw => initialStateDatum i rp cp data raw",
-    "failure": "verdict-changed booking-published-other-hash",
-    "owner": "CardanoKeri.Application.booking_refuses_other_published_datum",
-    "test": "ApplicationChecks"
-  },
-  {
-    "id": "booking-unpublished-accepted",
-    "before": "initialStateDatum i rp cp data raw\n  | none => false",
-    "after": "initialStateDatum i rp cp data raw\n  | none => true",
-    "failure": "verdict-changed booking-unpublished-datum",
-    "owner": "CardanoKeri.Application.booking_refuses_unpublished_datum",
     "test": "ApplicationChecks"
   }
 ]

@@ -1,4 +1,4 @@
-import SingularApplicationHeld.RequestShapes
+import SingularApplicationHeld.Client
 import CardanoKeri.Registry
 import CardanoKeri.ConsumerIdentity
 
@@ -19,10 +19,13 @@ fold or a return moves. This module states KERI's application `A_keri` against
 * Booking reads the configuration record by reference and mints one
   registration approval. Everything KERI validates about a registration it
   validates here, before the approval exists: the key has its inception
-  evidence, and the request's own datum publishes the initial checkpoint datum
-  the approval commits by hash, which is exactly the initial state the
-  checkpoint model's registration step writes for the request's key. A fold or
-  a return shows no evidence and validates no datum.
+  evidence, and the initial datum the request carries and the approval commits
+  is exactly the initial state the checkpoint model's registration step writes
+  for the request's key. A fold or a return shows no evidence and validates no
+  datum. The request's `initialDatum` is the datum itself, as in the upstream
+  model: its client copies the field into the holding. That an approval's name
+  commits the datum by its hash is the byte encoding of the approval preimage
+  (`Interpretation.code`), not a second reading of the field.
   The approval commits the checkpoint validator's
   credential as the holding address, which is not the application's, and the
   deposit, which is the whole carrier the holding will hold; the request holds
@@ -30,8 +33,9 @@ fold or a return moves. This module states KERI's application `A_keri` against
 * Until its deadline a request is spent only by a fold that delivers what the
   approval commits: a holding at the committed address, carrying the committed
   datum, with exactly the deposit and the one new active token. The folder
-  takes all of it from the request on chain: the address and the deposit from
-  its data, the datum from what it publishes. From the deadline anyone may
+  takes all of it from the request's data on chain: the address, the datum and
+  the deposit. It is the fold the upstream client builds
+  (`SingularApplicationHeld.buildFold`, `public_fold_accepted`). From the deadline anyone may
   return it, paying its refund address everything but the tip.
 * A fold's treasury donation is at least the registration costs of the
   requests it folds.
@@ -80,26 +84,21 @@ structure Configuration where
   deriving Repr, DecidableEq
 
 /-- The interpretation KERI's application runs under: the upstream preimage
-codec and hash, the AID key encoding, the request datum decoder, the hash an
-approval commits for an initial datum, the configuration record's datum
-decoder, the checkpoint datum decoder (the AID and the state facts a version 2
-checkpoint datum carries), the refund address a checkpoint datum records
-for a request's refund address (its ledger bytes on the chain the transaction
-runs on; `none` when no payable refund can carry it), and the initial
-checkpoint datum a request's own datum publishes (its raw bytes, whether the
-request carries them whole or they are rebuilt from fields it carries; `none`
-when it publishes none). All are inputs here;
+codec and hash, the AID key encoding, the request datum decoder, the
+configuration record's datum decoder, the checkpoint datum decoder (the AID
+and the state facts a version 2 checkpoint datum carries), and the refund
+address a checkpoint datum records for a request's refund address (its ledger
+bytes on the chain the transaction runs on; `none` when no payable refund can
+carry it). All are inputs here;
 the concrete choices live with the vectors. -/
 structure Interpretation where
   hash : Hash
   code : Codec
   keyOf : CardanoKeri.Checkpoint.AID → Key
   decode : DecodeApplication
-  datumHash : Nat → Nat
   decodeConfiguration : Nat → Option Configuration
   decodeCheckpoint : Nat → Option CardanoKeri.ConsumerIdentity.DecodedDatum
   refundTo : Nat → Option CardanoKeri.Checkpoint.Addr
-  publishedDatum : Nat → Option Nat
 
 /-- The opaque KERI premise the economic model already uses: the key has its
 inception evidence. A booking mints an approval only for such a key; no other
@@ -126,8 +125,8 @@ def configurationAsset (i : Interpretation) (release : PublishedRelease) (regist
 /-- The registration approval KERI mints for an AID of a deployment. The
 network is not an argument: see the module note. -/
 def approval (i : Interpretation) (d : Deployment) (aid : CardanoKeri.Checkpoint.AID)
-    (address datumHash deposit : Nat) : TokenId :=
-  registrationApproval i.hash i.code d.release (d.registry i) (i.keyOf aid) address datumHash deposit
+    (address datum deposit : Nat) : TokenId :=
+  registrationApproval i.hash i.code d.release (d.registry i) (i.keyOf aid) address datum deposit
 
 /-- The application's operations, each naming the output it creates or the
 input it spends. -/
@@ -254,28 +253,13 @@ def bookingClock (p : ApplicationParameters) (data : RegistrationData) (interval
   data.processDeadline == data.bookedAt + p.processTime &&
   data.reclaimEnd == data.processDeadline + p.retractTime
 
-/-- The initial checkpoint datum a request output publishes in its own datum. -/
-def publishedDatum (i : Interpretation) (output : ObservedOutput) : Option Nat :=
-  match output.datum with | .application raw => i.publishedDatum raw | _ => none
-
-/-- The request publishes the initial checkpoint datum its approval commits:
-the published datum has the committed hash and is exactly the initial state
-of the request's key. A folder reads the datum it must deliver from the
-request on chain, and the delivered checkpoint is in its initial state
-because the booking checked it. -/
-def publishesInitialState (i : Interpretation) (rp : CardanoKeri.Registry.Params)
-    (cp : CardanoKeri.Checkpoint.Params) (data : RegistrationData) (output : ObservedOutput) : Bool :=
-  match publishedDatum i output with
-  | some raw => i.datumHash raw == data.initialDatum && initialStateDatum i rp cp data raw
-  | none => false
-
 /-- A KERI booking. The request names a registry whose state policy is
 `state(A_keri)` and whose configuration record is read by reference; it
 commits as the holding address the checkpoint validator's credential that the
 record names, which is not the application credential, and a deposit of at
 least the registry's minimum ADA plus its deposit; it holds exactly
 `requestLovelace`; its key has its inception evidence; it publishes the
-initial checkpoint datum it commits, which is the initial state of its key;
+its initial datum is exactly the initial state of its key;
 exactly one approval of its payload is minted. -/
 def bookRegistration (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params)
     (cp : CardanoKeri.Checkpoint.Params) (release : PublishedRelease) (o : Observation)
@@ -292,38 +276,26 @@ def bookRegistration (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry
       output.lovelace == requestLovelace c.parameters data &&
       bookingClock c.parameters data o.interval &&
       env.inception data.key &&
-      publishesInitialState i rp cp data output &&
+      initialStateDatum i rp cp data data.initialDatum &&
       SingularApplicationHeld.Assets.mintQty o.assets (registrationAsset i.hash i.code release data) == 1
     | none => false
   | _ => false
 
 /-! ## Spending a request -/
 
-/-- The initial datum hash of a holding, when it carries an application datum. -/
-def holdingDatumHash (i : Interpretation) (holding : ObservedOutput) : Option Nat :=
-  match holding.datum with | .application raw => some (i.datumHash raw) | _ => none
-
 /-- The holding a fold delivers is what the approval commits: at the committed
-address, carrying a datum of the committed hash, holding exactly the committed
-deposit and the one newly minted active token of the key. Nothing here is
-KERI's: the address, the hash and the deposit are the request's data, and the
-datum is the one the request publishes. -/
+address, carrying the committed datum, holding exactly the committed deposit
+and the one newly minted active token of the key. Nothing here is KERI's: the
+address, the datum and the deposit are the request's data, and the holding the
+upstream client builds from them satisfies it (`public_holding_delivered`). -/
 def delivered (i : Interpretation) (data : RegistrationData)
     (holding : ObservedOutput) (o : Observation) : Bool :=
   let active := activeAsset i.hash i.code data.registry data.key
   holding.credential == data.holdingAddress &&
-  holdingDatumHash i holding == some data.initialDatum &&
+  decide (holding.datum = .application data.initialDatum) &&
   holding.lovelace == data.deposit &&
   quantity holding active == 1 &&
   SingularApplicationHeld.Assets.mintQty o.assets active == 1
-
-/-- The holding a folder builds for a request from the chain alone: the
-committed address, the published datum, the committed deposit, the one active
-token of the key. -/
-def holdingFor (i : Interpretation) (reference : OutRef) (data : RegistrationData)
-    (published : Nat) : ObservedOutput :=
-  ⟨reference, data.holdingAddress, data.deposit, .application published,
-    [(activeAsset i.hash i.code data.registry data.key, 1)]⟩
 
 /-- A genuine checkpoint of a registration, in the terms the checkpoint
 validator and a consumer recognise it by: at the checkpoint validator's
@@ -337,7 +309,7 @@ def genuine (i : Interpretation) (release : PublishedRelease) (c : Configuration
   holding.credential ≠ release.applicationCredential ∧
   data.registry.policy = release.statePolicy ∧
   quantity holding (activeAsset i.hash i.code data.registry data.key) = 1 ∧
-  holdingDatumHash i holding = some data.initialDatum ∧
+  holding.datum = .application data.initialDatum ∧
   holding.lovelace = data.deposit
 
 /-- The approval the request carries is burned. -/
@@ -588,5 +560,21 @@ def accepted (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params)
     (cp : CardanoKeri.Checkpoint.Params) (release : PublishedRelease) (o : Observation) : Bool :=
   inputsCovered release o && o.actions.all (action i env rp cp release o) && moneyRouted i release o &&
     mintClosed i release o && bookedOnce o
+
+/-! ## The fold the Singular client builds -/
+
+/-- What KERI's adapter adds to the fold the upstream client builds
+(`SingularApplicationHeld.buildFold`), as the application validator observes
+it: the registry's configuration record read by reference, the treasury
+donation, and the application's redeemers, one per change of the registry's
+own redeemer and naming the same input and holding. Nothing else is added:
+the inputs, the outputs, the mint and the validity interval are the client's. -/
+def adapted (fold : FoldObservation) (record : ObservedOutput) (donation : Nat) : Observation :=
+  { assets := fold.assets, inputs := fold.spentOutputs, outputs := fold.outputs,
+    referenceInputs := [record.reference], referenceOutputs := [record],
+    interval := fold.interval, donation,
+    actions := fold.changes.map fun change => match change with
+      | .register reference _ holding _ => .foldRegistration reference holding
+      | .terminate reference key => .foldTermination reference fold.before.identity key }
 
 end CardanoKeri.Application

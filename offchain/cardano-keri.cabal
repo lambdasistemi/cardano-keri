@@ -27,6 +27,7 @@ data-files:
   deployment-test/fixtures/*.cesr
   deployment-test/fixtures/koios/*.cbor
   deployment-test/fixtures/koios/*.json
+  deployment-test/fixtures/koios-recorded/*.json
   deployment-test/fixtures/register-preflight-board-manifest.json
   deployment-test/fixtures/register-preflight-m1-manifest.json
   docs/assets/swagger/query-api.json

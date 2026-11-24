@@ -30,7 +30,7 @@ const mutations=[
  ['poisoned','consumableStateB','l.poisoned == false','true','poisoned','checkpoint'],
  ['juvenility','consumableStateB','decide (l.bornAt + p.W ≤ now)','true','maturity-minus-one','checkpoint'],
  ['maturity-boundary','consumableStateB','decide (l.bornAt + p.W ≤ now)','decide (l.bornAt + p.W < now)','positive-anchor','checkpoint'],
- ['pending','consumableStateB','| .terminationPending _ => false','| .terminationPending _ => true','termination-booked','checkpoint'],
+ ['pending','consumableStateB','| .terminationPending _ => false','| .terminationPending _ => true','termination-pending','checkpoint'],
  ['terminal','consumableStateB','| .absent | .convicted => false','| .absent | .convicted => true','terminal-datum','checkpoint'],
  ['key','representativeAsset','(i.keyOf c.aid)','(i.keyOf (c.aid + 1))','positive-anchor'],
  ['registry','representativeAsset','(registryAsset i c)','{ policy := c.release.statePolicy, name := 0 }','positive-anchor'],

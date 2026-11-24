@@ -48,7 +48,7 @@ function run(c, baseline) {
     }
   }
   if (model === 'Checkpoint') {
-    for (const dependency of ['Registry', 'Duplicity', 'DuplicityExamples']) {
+    for (const dependency of ['Registry', 'Duplicity', 'DuplicityExamples', 'CheckpointEventHistory', 'CheckpointConviction']) {
       fs.copyFileSync(path.join(repo, `lean/.lake/build/lib/lean/CardanoKeri/${dependency}.olean`),
         path.join(dir, `CardanoKeri/${dependency}.olean`));
     }

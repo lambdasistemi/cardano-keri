@@ -28,6 +28,8 @@ module Cardano.KERI.AID.Consumer (
 
     -- * The observed output
     ObservedOutput (..),
+    OutputDatum (..),
+    inlineDatumBytes,
 
     -- * The representative asset
     representativeAsset,
@@ -91,15 +93,31 @@ data Environment = Environment
     deriving stock (Eq, Show)
 
 {- | An observed output: its payment credential, the quantity of every asset
-(policy, name, quantity; an asset may be listed more than once) and the bytes
-of its inline datum, if it has one.
+(policy, name, quantity; an asset may be listed more than once) and the form
+of its datum.
 -}
 data ObservedOutput = ObservedOutput
     { ooCredential :: !Credential
     , ooAssets :: ![(ByteString, ByteString, Integer)]
-    , ooDatum :: !(Maybe ByteString)
+    , ooDatum :: !OutputDatum
     }
     deriving stock (Eq, Show)
+
+{- | The form of the datum of an output as the ledger carries it: none (the
+Lean @empty@), the hash of a datum held elsewhere, or inline datum bytes. The
+three are different ledger forms and stay different here.
+-}
+data OutputDatum
+    = DatumAbsent
+    | DatumByHash !ByteString
+    | DatumInline !ByteString
+    deriving stock (Eq, Show)
+
+-- | The bytes of an inline datum, the only form a datum is decoded from.
+inlineDatumBytes :: OutputDatum -> Maybe ByteString
+inlineDatumBytes = \case
+    DatumInline bytes -> Just bytes
+    _ -> Nothing
 
 {- | The representative asset of an identity: (policy, name). The policy is the
 release's state policy; the name is the active token name of the registry
@@ -248,7 +266,7 @@ consumableHolding window now env cx out =
            | ooCredential out /= cxCheckpointCredential cx
            ]
         <> [RepresentativeQuantityNotOne | representativeQuantity cx out /= 1]
-        <> case ooDatum out >>= decodeCheckpoint of
+        <> case inlineDatumBytes (ooDatum out) >>= decodeCheckpoint of
             Nothing -> [DatumNotDecodedForAid]
             Just decoded ->
                 [DatumNotDecodedForAid | dcAid decoded /= cxAid cx]

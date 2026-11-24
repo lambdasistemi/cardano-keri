@@ -93,6 +93,7 @@ library
     Cardano.KERI.AID.E2E.MpfTrie
     Cardano.KERI.AID.Ed25519
     Cardano.KERI.AID.Migration.Types
+    Cardano.KERI.AID.Reader
     Cardano.KERI.AID.Release
 
 -- #257: provider-neutral chain-query algebra. Owns the minimal free query
@@ -836,6 +837,7 @@ test-suite indexer-tests
     Cardano.KERI.Indexer.ReleaseFixtures
     Cardano.KERI.Indexer.ReleaseHoldingsSpec
     Cardano.KERI.Indexer.ReleaseReaderSpec
+    Cardano.KERI.Indexer.RequestHolderSpec
     Cardano.KERI.Indexer.ResumeSpec
     Cardano.KERI.Indexer.RollbackSpec
     Cardano.KERI.Indexer.StoreBindingSpec
@@ -1062,6 +1064,7 @@ test-suite unit-tests
     , cardano-keri
     , cardano-keri:chain-query
     , containers
+    , directory
     , hspec                     >=2.11 && <2.12
     , memory                    >=0.18 && <0.19
     , plutus-core
@@ -1109,6 +1112,7 @@ test-suite unit-tests
     Cardano.KERI.AID.FoldGuardSpec
     Cardano.KERI.AID.Migration.TypesSpec
     Cardano.KERI.AID.ReleaseSpec
+    Cardano.KERI.AID.RequestShapeSpec
     Cardano.KERI.ChainQuery.ReleaseIdentitySpec
     Paths_cardano_keri
 

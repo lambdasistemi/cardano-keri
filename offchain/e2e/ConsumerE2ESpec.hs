@@ -156,6 +156,7 @@ import Cardano.KERI.AID.Consumer (
     Context (..),
     Environment (..),
     ObservedOutput (..),
+    OutputDatum (..),
     Release (..),
     consumableHolding,
     representativeAsset,
@@ -957,7 +958,7 @@ observedOutput out =
                 | (PolicyID policy, byName) <- Map.toList assets
                 , (AssetName name, quantity) <- Map.toList byName
                 ]
-        , ooDatum = canonicalCborData <$> rawInlineData out
+        , ooDatum = maybe DatumAbsent (DatumInline . canonicalCborData) (rawInlineData out)
         }
 
 -- | The identifier and the birth of a checkpoint the chain holds, live.

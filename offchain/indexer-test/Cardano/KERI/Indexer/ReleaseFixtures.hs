@@ -20,6 +20,7 @@ module Cardano.KERI.Indexer.ReleaseFixtures (
     pendingFacts,
     datumOf,
     outputAt,
+    outputWithDatum,
     txInAt,
     frozenLive,
     liveWith,
@@ -167,9 +168,17 @@ quantity) and this inline datum, as the store holds it.
 -}
 outputAt :: Addr -> Integer -> [(ByteString, ByteString, Integer)] -> Maybe PLC.Data -> Indexer.TxOut
 outputAt addr lovelace assets datum =
+    outputWithDatum addr lovelace assets (maybe NoDatum (Datum . dataToBinaryData . Data) datum)
+
+{- | An output at an address with this lovelace, these assets and this datum in
+any form the ledger carries: none, a hash or inline.
+-}
+outputWithDatum ::
+    Addr -> Integer -> [(ByteString, ByteString, Integer)] -> Datum ConwayEra -> Indexer.TxOut
+outputWithDatum addr lovelace assets datum =
     Indexer.TxOut $
         serialize' (eraProtVerLow @ConwayEra) $
-            base & datumTxOutL .~ maybe NoDatum (Datum . dataToBinaryData . Data) datum
+            base & datumTxOutL .~ datum
   where
     base :: TxOut ConwayEra
     base = mkBasicTxOut addr (MaryValue (Coin lovelace) (MultiAsset policies))

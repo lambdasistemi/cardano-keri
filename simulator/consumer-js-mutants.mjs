@@ -21,7 +21,7 @@ const mutations=[
  ['frozen','consumable(toWire(q.params),toWire(q.now),toWire(decoded.state))',"consumable(toWire(q.params),toWire(q.now),toWire(decoded.state?.present?{present:{l:{...decoded.state.present.l,frozen:false}}}:decoded.state))",'frozen'],
  ['poisoned','consumable(toWire(q.params),toWire(q.now),toWire(decoded.state))',"consumable(toWire(q.params),toWire(q.now),toWire(decoded.state?.present?{present:{l:{...decoded.state.present.l,poisoned:false}}}:decoded.state))",'poisoned'],
  ['age','consumable(toWire(q.params),toWire(q.now),toWire(decoded.state))',"consumable({...toWire(q.params),W:0},toWire(q.now),toWire(decoded.state))",'maturity-minus-one'],
- ['pending','const ok=!failure&&lifecycle.ok','const ok=!failure','termination-booked'],
+ ['pending','const ok=!failure&&lifecycle.ok','const ok=!failure','termination-pending'],
  ['terminal','const ok=!failure&&lifecycle.ok','const ok=!failure','terminal-datum'],
  ['seed-transaction','statePreimage={state:{seed:c.seed}}','statePreimage={state:{seed:{...c.seed,tx:0n}}}','positive-anchor'],
  ['seed-index','statePreimage={state:{seed:c.seed}}','statePreimage={state:{seed:{...c.seed,index:1n}}}','positive-anchor'],

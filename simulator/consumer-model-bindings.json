@@ -19,7 +19,7 @@
     "simulator/consumer-cli.mjs": "d679c03ad4cdba6eb7ba798831c65a0b7874e35a95d578eafbf895e1fe25fb36",
     "simulator/consumer-core.mjs": "2df661f27ff4b149e3c0d118ceb2ebbcde2c62fec2f7644542ffd7618f40397a",
     "simulator/consumer-corpus.json": "801060f01debd1027deb329875bbe5a9b796117573cb86f54cad1904e8848ad5",
-    "simulator/consumer-properties.mjs": "5d02121b9e0b441fd36244f45e2c3730cef1cfe8c9d9ded4a5552947cdf33809"
+    "simulator/consumer-properties.mjs": "2e74b39206dba2784b6660cc1b816ad8ac0695d5f872b40b71bdf8d16fa96d7b"
   },
   "properties": [
     {

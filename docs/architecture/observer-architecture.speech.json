@@ -143,7 +143,7 @@
       "pause": 500
     },
     {
-      "text": "This section describes the shipped V1 flow. The M1 architecture shows the inception evidence when the registration is booked, leaving registry absence and checkpoint creation at the registration fold. The existing hash-proof token below is not that full inception evidence.",
+      "text": "This section describes the shipped V1 flow. The M1 architecture shows, in the model, the inception evidence when the registration is booked, leaving registry absence and checkpoint creation at the registration fold. The existing hash-proof token below is not that full inception evidence.",
       "pause": 400
     },
     {
@@ -223,6 +223,6 @@
   ],
   "_source": {
     "file": "observer-architecture.md",
-    "sha256": "afa17aab2b175b7ac9fcc63586cfc8e530e1e402609b89632393862145ed3d0d"
+    "sha256": "34af3e0786c586517e4a09cee7761eeb2d41c051a12fc0c28b13379e4803bb62"
   }
 }

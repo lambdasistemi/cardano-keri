@@ -45671,11 +45671,271 @@
    ]
   },
   "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-02": {
-   "audio_sha256": "e27d598e2a616dc18383be80feb818ea9e4fc5e832d8eaa2ac434fabed305af7",
+   "audio_sha256": "e5e5a73a3afa43081387f74133c2a260c5e9e6d5481c5b74bddecc1ca31c69c4",
+   "characters": 263,
+   "cost": 0.00026037,
+   "duration": 16.075,
+   "index": 2,
+   "key": "832e0a8e798a108b58b5c669030b230f3a450686fe9c9b94d1814514b55960d6",
+   "page": "docs/architecture/follow-one-identity.md",
+   "pause_ms": 400,
+   "section": "the-booking-shows-the-inception-the-fold-shows-nothing",
+   "sent_text": "This is the model's rule. On main the validators and the commands still prove the inception at the fold; they change with the code that follows the model. The model's statement that Singular's client can fold a [KERI](/kˈɛɹi/) request is for one request per fold.",
+   "text": "This is the model's rule. On main the validators and the commands still prove the inception at the fold; they change with the code that follows the model. The model's statement that Singular's client can fold a KERI request is for one request per fold.",
+   "words": [
+    {
+     "end": 0.35,
+     "start": 0.175,
+     "text": "This"
+    },
+    {
+     "end": 0.463,
+     "start": 0.35,
+     "text": "is"
+    },
+    {
+     "end": 0.55,
+     "start": 0.463,
+     "text": "the"
+    },
+    {
+     "end": 0.95,
+     "start": 0.55,
+     "text": "model's"
+    },
+    {
+     "end": 1.65,
+     "start": 0.95,
+     "text": "rule"
+    },
+    {
+     "end": 1.85,
+     "start": 1.65,
+     "text": "."
+    },
+    {
+     "end": 2.2,
+     "start": 2.05,
+     "text": "On"
+    },
+    {
+     "end": 2.438,
+     "start": 2.2,
+     "text": "main"
+    },
+    {
+     "end": 2.525,
+     "start": 2.438,
+     "text": "the"
+    },
+    {
+     "end": 3.25,
+     "start": 2.525,
+     "text": "validators"
+    },
+    {
+     "end": 3.362,
+     "start": 3.25,
+     "text": "and"
+    },
+    {
+     "end": 3.45,
+     "start": 3.362,
+     "text": "the"
+    },
+    {
+     "end": 4.1,
+     "start": 3.45,
+     "text": "commands"
+    },
+    {
+     "end": 4.412,
+     "start": 4.1,
+     "text": "still"
+    },
+    {
+     "end": 4.713,
+     "start": 4.412,
+     "text": "prove"
+    },
+    {
+     "end": 4.85,
+     "start": 4.713,
+     "text": "the"
+    },
+    {
+     "end": 5.4,
+     "start": 4.85,
+     "text": "inception"
+    },
+    {
+     "end": 5.488,
+     "start": 5.4,
+     "text": "at"
+    },
+    {
+     "end": 5.588,
+     "start": 5.488,
+     "text": "the"
+    },
+    {
+     "end": 6.55,
+     "start": 5.588,
+     "text": "fold"
+    },
+    {
+     "end": 6.75,
+     "start": 6.55,
+     "text": ";"
+    },
+    {
+     "end": 7.05,
+     "start": 6.925,
+     "text": "they"
+    },
+    {
+     "end": 7.338,
+     "start": 7.05,
+     "text": "change"
+    },
+    {
+     "end": 7.438,
+     "start": 7.338,
+     "text": "with"
+    },
+    {
+     "end": 7.525,
+     "start": 7.438,
+     "text": "the"
+    },
+    {
+     "end": 7.812,
+     "start": 7.525,
+     "text": "code"
+    },
+    {
+     "end": 7.95,
+     "start": 7.812,
+     "text": "that"
+    },
+    {
+     "end": 8.312,
+     "start": 7.95,
+     "text": "follows"
+    },
+    {
+     "end": 8.4,
+     "start": 8.312,
+     "text": "the"
+    },
+    {
+     "end": 9.225,
+     "start": 8.4,
+     "text": "model"
+    },
+    {
+     "end": 9.425,
+     "start": 9.225,
+     "text": "."
+    },
+    {
+     "end": 9.725,
+     "start": 9.625,
+     "text": "The"
+    },
+    {
+     "end": 10.125,
+     "start": 9.725,
+     "text": "model's"
+    },
+    {
+     "end": 10.625,
+     "start": 10.125,
+     "text": "statement"
+    },
+    {
+     "end": 10.837,
+     "start": 10.625,
+     "text": "that"
+    },
+    {
+     "end": 11.413,
+     "start": 10.837,
+     "text": "Singular's"
+    },
+    {
+     "end": 11.9,
+     "start": 11.413,
+     "text": "client"
+    },
+    {
+     "end": 12.113,
+     "start": 11.9,
+     "text": "can"
+    },
+    {
+     "end": 12.438,
+     "start": 12.113,
+     "text": "fold"
+    },
+    {
+     "end": 12.5,
+     "start": 12.438,
+     "text": "a"
+    },
+    {
+     "end": 12.825,
+     "start": 12.5,
+     "text": "KERI"
+    },
+    {
+     "end": 13.525,
+     "start": 12.825,
+     "text": "request"
+    },
+    {
+     "end": 13.7,
+     "start": 13.525,
+     "text": "is"
+    },
+    {
+     "end": 13.863,
+     "start": 13.7,
+     "text": "for"
+    },
+    {
+     "end": 14.125,
+     "start": 13.863,
+     "text": "one"
+    },
+    {
+     "end": 14.625,
+     "start": 14.125,
+     "text": "request"
+    },
+    {
+     "end": 14.837,
+     "start": 14.625,
+     "text": "per"
+    },
+    {
+     "end": 15.85,
+     "start": 14.837,
+     "text": "fold"
+    },
+    {
+     "end": 16.075,
+     "start": 15.85,
+     "text": "."
+    }
+   ]
+  },
+  "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-03": {
+   "audio_sha256": "a43fd9ed09371c41a1210d96d361617be07f6715da39a36c33032dc60f5b8ba0",
    "characters": 110,
    "cost": 0.00010889999999999999,
    "duration": 7.025,
-   "index": 2,
+   "index": 3,
    "key": "051d0deb13069382cb01d8a3b5dda5905d16cc5a4457997ef861459340d0a0a9",
    "page": "docs/architecture/follow-one-identity.md",
    "pause_ms": 400,
@@ -45780,12 +46040,12 @@
     }
    ]
   },
-  "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-03": {
-   "audio_sha256": "221337968c397d705a954abc86a7452cb667abc89b08790f56dd040cb652ff72",
+  "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-04": {
+   "audio_sha256": "6a9a6bc2717df971f75e33cdb4885ac3212769cae45c6304603965207c3a8f81",
    "characters": 561,
    "cost": 0.00055539,
    "duration": 36.35,
-   "index": 3,
+   "index": 4,
    "key": "a64b8dc42b0f6be90096e200ffdcd095f0043d21361241611f65337aed2c474d",
    "page": "docs/architecture/follow-one-identity.md",
    "pause_ms": 400,
@@ -46320,12 +46580,12 @@
     }
    ]
   },
-  "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-04": {
-   "audio_sha256": "5aa0135013aa93aa227e1a83a91546821f41f564b3bf48fd26f3405c786b3989",
+  "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-05": {
+   "audio_sha256": "0515fdeffd50a36f2b10fee985894e1da790d95594622ab655f7c987208d7034",
    "characters": 166,
    "cost": 0.00016434000000000002,
    "duration": 11.525,
-   "index": 4,
+   "index": 5,
    "key": "449a30c4a49516e328087d10ddb3d877e751127fabec7b776d90174d3b212f55",
    "page": "docs/architecture/follow-one-identity.md",
    "pause_ms": 400,
@@ -46490,12 +46750,12 @@
     }
    ]
   },
-  "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-05": {
-   "audio_sha256": "16ec2c788cb1b4e004479b7edf6d54c8883b0a41c80c82c7c5f8603959b61aa6",
+  "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-06": {
+   "audio_sha256": "89049a94f2d9f4b4921b98d80b50a54e28799e53ee20b4179770921ea3e89f4c",
    "characters": 95,
    "cost": 9.405e-05,
    "duration": 6.65,
-   "index": 5,
+   "index": 6,
    "key": "9d69a2800c1cb8c058cddee836bb62be6ef0246e2dff10ba4c26dd1bc91696c9",
    "page": "docs/architecture/follow-one-identity.md",
    "pause_ms": 400,
@@ -59221,17 +59481,17 @@
    ]
   },
   "docs-architecture-identity-ops/under-the-accepted-design-01": {
-   "audio_sha256": "9272fbcd86128a27f879cf15808dcbbebba4d8606447f1669d9791e5b3b117ea",
-   "characters": 797,
-   "cost": 0.00078903,
-   "duration": 53.5,
+   "audio_sha256": "2c4acc59c2c912429282faa45f341ecb2daa759f472fb47eb061f9b977a78198",
+   "characters": 875,
+   "cost": 0.0008662499999999999,
+   "duration": 58.65,
    "index": 1,
-   "key": "a776ec807569bbd3ed221d3dce87d5ea3d397582e1459f2112ac8f84ac378531",
+   "key": "a7ee8e73c79eae226c4fe315d6ac0bc270ceb6d87dee5370f760da0d32acb88b",
    "page": "docs/architecture/identity-ops.md",
    "pause_ms": 400,
    "section": "under-the-accepted-design",
-   "sent_text": "Registration becomes a request against the registry: it identifies the AID, binds the inception evidence, and carries the bonds and a refund address chosen by whoever pays. It is applied in a batch by anyone, who needs nothing from the controller: the booking has already shown the inception evidence and published the initial key state. An identifier may be booked more than once; registry admission supplies checkpoint uniqueness. Application checks that the AID has no leaf, inserts one, and creates the checkpoint in the same transaction. The persistent leaf prevents a second first-registration of the AID, and there is no revival: a registered identity stays live until it is convicted. See the registration guarantee for the atomic mint/insertion obligation and the model's evidence limits.",
-   "text": "Registration becomes a request against the registry: it identifies the AID, binds the inception evidence, and carries the bonds and a refund address chosen by whoever pays. It is applied in a batch by anyone, who needs nothing from the controller: the booking has already shown the inception evidence and published the initial key state. An identifier may be booked more than once; registry admission supplies checkpoint uniqueness. Application checks that the AID has no leaf, inserts one, and creates the checkpoint in the same transaction. The persistent leaf prevents a second first-registration of the AID, and there is no revival: a registered identity stays live until it is convicted. See the registration guarantee for the atomic mint/insertion obligation and the model's evidence limits.",
+   "sent_text": "Registration becomes a request against the registry: it identifies the AID, binds the inception evidence, and carries the bonds and a refund address chosen by whoever pays. It is folded by anyone, who needs nothing from the controller: in the model the booking has already shown the inception evidence and carries the initial key state. On main the fold still proves the inception, until the code follows the model. An identifier may be booked more than once; registry admission supplies checkpoint uniqueness. Application checks that the AID has no leaf, inserts one, and creates the checkpoint in the same transaction. The persistent leaf prevents a second first-registration of the AID, and there is no revival: a registered identity stays live until it is convicted. See the registration guarantee for the atomic mint/insertion obligation and the model's evidence limits.",
+   "text": "Registration becomes a request against the registry: it identifies the AID, binds the inception evidence, and carries the bonds and a refund address chosen by whoever pays. It is folded by anyone, who needs nothing from the controller: in the model the booking has already shown the inception evidence and carries the initial key state. On main the fold still proves the inception, until the code follows the model. An identifier may be booked more than once; registry admission supplies checkpoint uniqueness. Application checks that the AID has no leaf, inserts one, and creates the checkpoint in the same transaction. The persistent leaf prevents a second first-registration of the AID, and there is no revival: a registered identity stays live until it is convicted. See the registration guarantee for the atomic mint/insertion obligation and the model's evidence limits.",
    "words": [
     {
      "end": 1.0,
@@ -59394,543 +59654,623 @@
      "text": "It"
     },
     {
-     "end": 12.675,
+     "end": 12.7,
      "start": 12.55,
      "text": "is"
     },
     {
-     "end": 13.137,
-     "start": 12.675,
-     "text": "applied"
+     "end": 13.05,
+     "start": 12.7,
+     "text": "folded"
     },
     {
-     "end": 13.212,
-     "start": 13.137,
-     "text": "in"
-    },
-    {
-     "end": 13.275,
-     "start": 13.212,
-     "text": "a"
-    },
-    {
-     "end": 13.6,
-     "start": 13.275,
-     "text": "batch"
-    },
-    {
-     "end": 13.8,
-     "start": 13.6,
+     "end": 13.25,
+     "start": 13.05,
      "text": "by"
     },
     {
-     "end": 14.4,
-     "start": 13.8,
+     "end": 13.8,
+     "start": 13.25,
      "text": "anyone"
     },
     {
-     "end": 14.475,
-     "start": 14.4,
+     "end": 13.875,
+     "start": 13.8,
      "text": ","
     },
     {
-     "end": 14.6,
-     "start": 14.475,
+     "end": 14.0,
+     "start": 13.875,
      "text": "who"
     },
     {
-     "end": 14.887,
-     "start": 14.6,
+     "end": 14.288,
+     "start": 14.0,
      "text": "needs"
     },
     {
-     "end": 15.3,
-     "start": 14.887,
+     "end": 14.7,
+     "start": 14.288,
      "text": "nothing"
     },
     {
-     "end": 15.438,
-     "start": 15.3,
+     "end": 14.837,
+     "start": 14.7,
      "text": "from"
     },
     {
-     "end": 15.525,
-     "start": 15.438,
+     "end": 14.925,
+     "start": 14.837,
      "text": "the"
     },
     {
-     "end": 16.725,
-     "start": 15.525,
+     "end": 16.1,
+     "start": 14.925,
      "text": "controller"
     },
     {
-     "end": 16.95,
-     "start": 16.725,
+     "end": 16.325,
+     "start": 16.1,
      "text": ":"
     },
     {
-     "end": 17.2,
-     "start": 17.125,
-     "text": "the"
-    },
-    {
-     "end": 17.575,
-     "start": 17.2,
-     "text": "booking"
-    },
-    {
-     "end": 17.788,
-     "start": 17.575,
-     "text": "has"
-    },
-    {
-     "end": 18.188,
-     "start": 17.788,
-     "text": "already"
-    },
-    {
-     "end": 18.487,
-     "start": 18.188,
-     "text": "shown"
-    },
-    {
-     "end": 18.625,
-     "start": 18.487,
-     "text": "the"
-    },
-    {
-     "end": 19.2,
-     "start": 18.625,
-     "text": "inception"
-    },
-    {
-     "end": 19.788,
-     "start": 19.2,
-     "text": "evidence"
-    },
-    {
-     "end": 19.925,
-     "start": 19.788,
-     "text": "and"
-    },
-    {
-     "end": 20.35,
-     "start": 19.925,
-     "text": "published"
-    },
-    {
-     "end": 20.5,
-     "start": 20.35,
-     "text": "the"
-    },
-    {
-     "end": 20.925,
-     "start": 20.5,
-     "text": "initial"
-    },
-    {
-     "end": 21.175,
-     "start": 20.925,
-     "text": "key"
-    },
-    {
-     "end": 22.075,
-     "start": 21.175,
-     "text": "state"
-    },
-    {
-     "end": 22.275,
-     "start": 22.075,
-     "text": "."
-    },
-    {
-     "end": 22.587,
-     "start": 22.475,
-     "text": "An"
-    },
-    {
-     "end": 23.4,
-     "start": 22.587,
-     "text": "identifier"
-    },
-    {
-     "end": 23.575,
-     "start": 23.4,
-     "text": "may"
-    },
-    {
-     "end": 23.737,
-     "start": 23.575,
-     "text": "be"
-    },
-    {
-     "end": 24.038,
-     "start": 23.737,
-     "text": "booked"
-    },
-    {
-     "end": 24.275,
-     "start": 24.038,
-     "text": "more"
-    },
-    {
-     "end": 24.45,
-     "start": 24.275,
-     "text": "than"
-    },
-    {
-     "end": 24.95,
-     "start": 24.45,
-     "text": "once"
-    },
-    {
-     "end": 25.062,
-     "start": 24.95,
-     "text": ";"
-    },
-    {
-     "end": 25.575,
-     "start": 25.062,
-     "text": "registry"
-    },
-    {
-     "end": 26.125,
-     "start": 25.575,
-     "text": "admission"
-    },
-    {
-     "end": 26.638,
-     "start": 26.125,
-     "text": "supplies"
-    },
-    {
-     "end": 27.138,
-     "start": 26.638,
-     "text": "checkpoint"
-    },
-    {
-     "end": 28.325,
-     "start": 27.138,
-     "text": "uniqueness"
-    },
-    {
-     "end": 28.525,
-     "start": 28.325,
-     "text": "."
-    },
-    {
-     "end": 29.413,
-     "start": 28.725,
-     "text": "Application"
-    },
-    {
-     "end": 29.75,
-     "start": 29.413,
-     "text": "checks"
-    },
-    {
-     "end": 29.888,
-     "start": 29.75,
-     "text": "that"
-    },
-    {
-     "end": 30.038,
-     "start": 29.888,
-     "text": "the"
-    },
-    {
-     "end": 30.7,
-     "start": 30.038,
-     "text": "AID"
-    },
-    {
-     "end": 30.962,
-     "start": 30.7,
-     "text": "has"
-    },
-    {
-     "end": 31.237,
-     "start": 30.962,
-     "text": "no"
-    },
-    {
-     "end": 31.675,
-     "start": 31.237,
-     "text": "leaf"
-    },
-    {
-     "end": 31.75,
-     "start": 31.675,
-     "text": ","
-    },
-    {
-     "end": 32.25,
-     "start": 31.75,
-     "text": "inserts"
-    },
-    {
-     "end": 32.575,
-     "start": 32.25,
-     "text": "one"
-    },
-    {
-     "end": 32.65,
-     "start": 32.575,
-     "text": ","
-    },
-    {
-     "end": 32.787,
-     "start": 32.65,
-     "text": "and"
-    },
-    {
-     "end": 33.2,
-     "start": 32.787,
-     "text": "creates"
-    },
-    {
-     "end": 33.312,
-     "start": 33.2,
-     "text": "the"
-    },
-    {
-     "end": 33.875,
-     "start": 33.312,
-     "text": "checkpoint"
-    },
-    {
-     "end": 33.963,
-     "start": 33.875,
+     "end": 16.612,
+     "start": 16.525,
      "text": "in"
     },
     {
-     "end": 34.062,
-     "start": 33.963,
+     "end": 16.7,
+     "start": 16.612,
      "text": "the"
     },
     {
-     "end": 34.4,
-     "start": 34.062,
-     "text": "same"
+     "end": 17.075,
+     "start": 16.7,
+     "text": "model"
     },
     {
-     "end": 35.725,
-     "start": 34.4,
-     "text": "transaction"
-    },
-    {
-     "end": 35.925,
-     "start": 35.725,
-     "text": "."
-    },
-    {
-     "end": 36.2,
-     "start": 36.125,
-     "text": "The"
-    },
-    {
-     "end": 36.8,
-     "start": 36.2,
-     "text": "persistent"
-    },
-    {
-     "end": 37.075,
-     "start": 36.8,
-     "text": "leaf"
-    },
-    {
-     "end": 37.575,
-     "start": 37.075,
-     "text": "prevents"
-    },
-    {
-     "end": 37.7,
-     "start": 37.575,
-     "text": "a"
-    },
-    {
-     "end": 38.162,
-     "start": 37.7,
-     "text": "second"
-    },
-    {
-     "end": 39.2,
-     "start": 38.162,
-     "text": "first-registration"
-    },
-    {
-     "end": 39.287,
-     "start": 39.2,
-     "text": "of"
-    },
-    {
-     "end": 39.438,
-     "start": 39.287,
+     "end": 17.175,
+     "start": 17.075,
      "text": "the"
     },
     {
-     "end": 40.3,
-     "start": 39.438,
-     "text": "AID"
+     "end": 17.55,
+     "start": 17.175,
+     "text": "booking"
     },
     {
-     "end": 40.438,
-     "start": 40.3,
-     "text": ","
+     "end": 17.763,
+     "start": 17.55,
+     "text": "has"
     },
     {
-     "end": 40.562,
-     "start": 40.438,
-     "text": "and"
+     "end": 18.175,
+     "start": 17.763,
+     "text": "already"
     },
     {
-     "end": 40.75,
-     "start": 40.562,
-     "text": "there"
+     "end": 18.525,
+     "start": 18.175,
+     "text": "shown"
     },
     {
-     "end": 40.912,
-     "start": 40.75,
-     "text": "is"
-    },
-    {
-     "end": 41.175,
-     "start": 40.912,
-     "text": "no"
-    },
-    {
-     "end": 42.325,
-     "start": 41.175,
-     "text": "revival"
-    },
-    {
-     "end": 42.55,
-     "start": 42.325,
-     "text": ":"
-    },
-    {
-     "end": 42.838,
-     "start": 42.75,
-     "text": "a"
-    },
-    {
-     "end": 43.375,
-     "start": 42.838,
-     "text": "registered"
-    },
-    {
-     "end": 43.9,
-     "start": 43.375,
-     "text": "identity"
-    },
-    {
-     "end": 44.275,
-     "start": 43.9,
-     "text": "stays"
-    },
-    {
-     "end": 44.725,
-     "start": 44.275,
-     "text": "live"
-    },
-    {
-     "end": 44.987,
-     "start": 44.725,
-     "text": "until"
-    },
-    {
-     "end": 45.062,
-     "start": 44.987,
-     "text": "it"
-    },
-    {
-     "end": 45.2,
-     "start": 45.062,
-     "text": "is"
-    },
-    {
-     "end": 46.3,
-     "start": 45.2,
-     "text": "convicted"
-    },
-    {
-     "end": 46.5,
-     "start": 46.3,
-     "text": "."
-    },
-    {
-     "end": 46.975,
-     "start": 46.75,
-     "text": "See"
-    },
-    {
-     "end": 47.1,
-     "start": 46.975,
+     "end": 18.675,
+     "start": 18.525,
      "text": "the"
     },
     {
-     "end": 47.875,
-     "start": 47.1,
-     "text": "registration"
+     "end": 19.25,
+     "start": 18.675,
+     "text": "inception"
     },
     {
-     "end": 48.45,
-     "start": 47.875,
-     "text": "guarantee"
-    },
-    {
-     "end": 48.562,
-     "start": 48.45,
-     "text": "for"
-    },
-    {
-     "end": 48.7,
-     "start": 48.562,
-     "text": "the"
-    },
-    {
-     "end": 49.188,
-     "start": 48.7,
-     "text": "atomic"
-    },
-    {
-     "end": 50.1,
-     "start": 49.188,
-     "text": "mint/insertion"
-    },
-    {
-     "end": 51.025,
-     "start": 50.1,
-     "text": "obligation"
-    },
-    {
-     "end": 51.188,
-     "start": 51.025,
-     "text": "and"
-    },
-    {
-     "end": 51.275,
-     "start": 51.188,
-     "text": "the"
-    },
-    {
-     "end": 51.713,
-     "start": 51.275,
-     "text": "model's"
-    },
-    {
-     "end": 52.188,
-     "start": 51.713,
+     "end": 19.812,
+     "start": 19.25,
      "text": "evidence"
     },
     {
-     "end": 53.3,
-     "start": 52.188,
+     "end": 19.962,
+     "start": 19.812,
+     "text": "and"
+    },
+    {
+     "end": 20.4,
+     "start": 19.962,
+     "text": "carries"
+    },
+    {
+     "end": 20.55,
+     "start": 20.4,
+     "text": "the"
+    },
+    {
+     "end": 20.962,
+     "start": 20.55,
+     "text": "initial"
+    },
+    {
+     "end": 21.237,
+     "start": 20.962,
+     "text": "key"
+    },
+    {
+     "end": 22.175,
+     "start": 21.237,
+     "text": "state"
+    },
+    {
+     "end": 22.4,
+     "start": 22.175,
+     "text": "."
+    },
+    {
+     "end": 22.725,
+     "start": 22.575,
+     "text": "On"
+    },
+    {
+     "end": 23.038,
+     "start": 22.725,
+     "text": "main"
+    },
+    {
+     "end": 23.138,
+     "start": 23.038,
+     "text": "the"
+    },
+    {
+     "end": 23.5,
+     "start": 23.138,
+     "text": "fold"
+    },
+    {
+     "end": 23.788,
+     "start": 23.5,
+     "text": "still"
+    },
+    {
+     "end": 24.163,
+     "start": 23.788,
+     "text": "proves"
+    },
+    {
+     "end": 24.3,
+     "start": 24.163,
+     "text": "the"
+    },
+    {
+     "end": 25.0,
+     "start": 24.3,
+     "text": "inception"
+    },
+    {
+     "end": 25.075,
+     "start": 25.0,
+     "text": ","
+    },
+    {
+     "end": 25.312,
+     "start": 25.075,
+     "text": "until"
+    },
+    {
+     "end": 25.4,
+     "start": 25.312,
+     "text": "the"
+    },
+    {
+     "end": 25.788,
+     "start": 25.4,
+     "text": "code"
+    },
+    {
+     "end": 26.225,
+     "start": 25.788,
+     "text": "follows"
+    },
+    {
+     "end": 26.325,
+     "start": 26.225,
+     "text": "the"
+    },
+    {
+     "end": 27.225,
+     "start": 26.325,
+     "text": "model"
+    },
+    {
+     "end": 27.425,
+     "start": 27.225,
+     "text": "."
+    },
+    {
+     "end": 27.737,
+     "start": 27.625,
+     "text": "An"
+    },
+    {
+     "end": 28.55,
+     "start": 27.737,
+     "text": "identifier"
+    },
+    {
+     "end": 28.725,
+     "start": 28.55,
+     "text": "may"
+    },
+    {
+     "end": 28.888,
+     "start": 28.725,
+     "text": "be"
+    },
+    {
+     "end": 29.188,
+     "start": 28.888,
+     "text": "booked"
+    },
+    {
+     "end": 29.425,
+     "start": 29.188,
+     "text": "more"
+    },
+    {
+     "end": 29.6,
+     "start": 29.425,
+     "text": "than"
+    },
+    {
+     "end": 30.1,
+     "start": 29.6,
+     "text": "once"
+    },
+    {
+     "end": 30.212,
+     "start": 30.1,
+     "text": ";"
+    },
+    {
+     "end": 30.725,
+     "start": 30.212,
+     "text": "registry"
+    },
+    {
+     "end": 31.275,
+     "start": 30.725,
+     "text": "admission"
+    },
+    {
+     "end": 31.788,
+     "start": 31.275,
+     "text": "supplies"
+    },
+    {
+     "end": 32.287,
+     "start": 31.788,
+     "text": "checkpoint"
+    },
+    {
+     "end": 33.475,
+     "start": 32.287,
+     "text": "uniqueness"
+    },
+    {
+     "end": 33.675,
+     "start": 33.475,
+     "text": "."
+    },
+    {
+     "end": 34.562,
+     "start": 33.875,
+     "text": "Application"
+    },
+    {
+     "end": 34.9,
+     "start": 34.562,
+     "text": "checks"
+    },
+    {
+     "end": 35.037,
+     "start": 34.9,
+     "text": "that"
+    },
+    {
+     "end": 35.188,
+     "start": 35.037,
+     "text": "the"
+    },
+    {
+     "end": 35.85,
+     "start": 35.188,
+     "text": "AID"
+    },
+    {
+     "end": 36.112,
+     "start": 35.85,
+     "text": "has"
+    },
+    {
+     "end": 36.388,
+     "start": 36.112,
+     "text": "no"
+    },
+    {
+     "end": 36.825,
+     "start": 36.388,
+     "text": "leaf"
+    },
+    {
+     "end": 36.9,
+     "start": 36.825,
+     "text": ","
+    },
+    {
+     "end": 37.4,
+     "start": 36.9,
+     "text": "inserts"
+    },
+    {
+     "end": 37.725,
+     "start": 37.4,
+     "text": "one"
+    },
+    {
+     "end": 37.8,
+     "start": 37.725,
+     "text": ","
+    },
+    {
+     "end": 37.938,
+     "start": 37.8,
+     "text": "and"
+    },
+    {
+     "end": 38.35,
+     "start": 37.938,
+     "text": "creates"
+    },
+    {
+     "end": 38.463,
+     "start": 38.35,
+     "text": "the"
+    },
+    {
+     "end": 39.025,
+     "start": 38.463,
+     "text": "checkpoint"
+    },
+    {
+     "end": 39.112,
+     "start": 39.025,
+     "text": "in"
+    },
+    {
+     "end": 39.213,
+     "start": 39.112,
+     "text": "the"
+    },
+    {
+     "end": 39.55,
+     "start": 39.213,
+     "text": "same"
+    },
+    {
+     "end": 40.875,
+     "start": 39.55,
+     "text": "transaction"
+    },
+    {
+     "end": 41.075,
+     "start": 40.875,
+     "text": "."
+    },
+    {
+     "end": 41.35,
+     "start": 41.275,
+     "text": "The"
+    },
+    {
+     "end": 41.95,
+     "start": 41.35,
+     "text": "persistent"
+    },
+    {
+     "end": 42.225,
+     "start": 41.95,
+     "text": "leaf"
+    },
+    {
+     "end": 42.725,
+     "start": 42.225,
+     "text": "prevents"
+    },
+    {
+     "end": 42.85,
+     "start": 42.725,
+     "text": "a"
+    },
+    {
+     "end": 43.312,
+     "start": 42.85,
+     "text": "second"
+    },
+    {
+     "end": 44.35,
+     "start": 43.312,
+     "text": "first-registration"
+    },
+    {
+     "end": 44.438,
+     "start": 44.35,
+     "text": "of"
+    },
+    {
+     "end": 44.588,
+     "start": 44.438,
+     "text": "the"
+    },
+    {
+     "end": 45.45,
+     "start": 44.588,
+     "text": "AID"
+    },
+    {
+     "end": 45.588,
+     "start": 45.45,
+     "text": ","
+    },
+    {
+     "end": 45.713,
+     "start": 45.588,
+     "text": "and"
+    },
+    {
+     "end": 45.9,
+     "start": 45.713,
+     "text": "there"
+    },
+    {
+     "end": 46.062,
+     "start": 45.9,
+     "text": "is"
+    },
+    {
+     "end": 46.325,
+     "start": 46.062,
+     "text": "no"
+    },
+    {
+     "end": 47.475,
+     "start": 46.325,
+     "text": "revival"
+    },
+    {
+     "end": 47.7,
+     "start": 47.475,
+     "text": ":"
+    },
+    {
+     "end": 47.987,
+     "start": 47.9,
+     "text": "a"
+    },
+    {
+     "end": 48.525,
+     "start": 47.987,
+     "text": "registered"
+    },
+    {
+     "end": 49.05,
+     "start": 48.525,
+     "text": "identity"
+    },
+    {
+     "end": 49.425,
+     "start": 49.05,
+     "text": "stays"
+    },
+    {
+     "end": 49.875,
+     "start": 49.425,
+     "text": "live"
+    },
+    {
+     "end": 50.138,
+     "start": 49.875,
+     "text": "until"
+    },
+    {
+     "end": 50.213,
+     "start": 50.138,
+     "text": "it"
+    },
+    {
+     "end": 50.35,
+     "start": 50.213,
+     "text": "is"
+    },
+    {
+     "end": 51.45,
+     "start": 50.35,
+     "text": "convicted"
+    },
+    {
+     "end": 51.65,
+     "start": 51.45,
+     "text": "."
+    },
+    {
+     "end": 52.125,
+     "start": 51.9,
+     "text": "See"
+    },
+    {
+     "end": 52.25,
+     "start": 52.125,
+     "text": "the"
+    },
+    {
+     "end": 53.025,
+     "start": 52.25,
+     "text": "registration"
+    },
+    {
+     "end": 53.6,
+     "start": 53.025,
+     "text": "guarantee"
+    },
+    {
+     "end": 53.713,
+     "start": 53.6,
+     "text": "for"
+    },
+    {
+     "end": 53.85,
+     "start": 53.713,
+     "text": "the"
+    },
+    {
+     "end": 54.338,
+     "start": 53.85,
+     "text": "atomic"
+    },
+    {
+     "end": 55.25,
+     "start": 54.338,
+     "text": "mint/insertion"
+    },
+    {
+     "end": 56.175,
+     "start": 55.25,
+     "text": "obligation"
+    },
+    {
+     "end": 56.338,
+     "start": 56.175,
+     "text": "and"
+    },
+    {
+     "end": 56.425,
+     "start": 56.338,
+     "text": "the"
+    },
+    {
+     "end": 56.862,
+     "start": 56.425,
+     "text": "model's"
+    },
+    {
+     "end": 57.338,
+     "start": 56.862,
+     "text": "evidence"
+    },
+    {
+     "end": 58.45,
+     "start": 57.338,
      "text": "limits"
     },
     {
-     "end": 53.5,
-     "start": 53.3,
+     "end": 58.65,
+     "start": 58.45,
      "text": "."
     }
    ]
@@ -66406,17 +66746,17 @@
    ]
   },
   "docs-architecture-observer-architecture/registrations-premint-fact-token-01": {
-   "audio_sha256": "33baae98c225708d006d1286412778d48387488f503e94c3d83da79ce0df6515",
-   "characters": 273,
-   "cost": 0.00027026999999999997,
-   "duration": 18.675,
+   "audio_sha256": "1cbcb777379d9f8bcc41847232c471eaf01684a3560c5a8e2d726e8f8e73bde8",
+   "characters": 288,
+   "cost": 0.00028512,
+   "duration": 19.5,
    "index": 1,
-   "key": "5703d94f8015a9fe9043a2017430310c9eb082e0c447fa80bfbd5784be8d7f51",
+   "key": "ff85e6469cfee6306f2584cebb4d68fb507da72c9f20a3234634b3ff9a0f387a",
    "page": "docs/architecture/observer-architecture.md",
    "pause_ms": 400,
    "section": "registrations-premint-fact-token",
-   "sent_text": "This section describes the shipped V1 flow. The M1 architecture shows the inception evidence when the registration is booked, leaving registry absence and checkpoint creation at the registration fold. The existing hash-proof token below is not that full inception evidence.",
-   "text": "This section describes the shipped V1 flow. The M1 architecture shows the inception evidence when the registration is booked, leaving registry absence and checkpoint creation at the registration fold. The existing hash-proof token below is not that full inception evidence.",
+   "sent_text": "This section describes the shipped V1 flow. The M1 architecture shows, in the model, the inception evidence when the registration is booked, leaving registry absence and checkpoint creation at the registration fold. The existing hash-proof token below is not that full inception evidence.",
+   "text": "This section describes the shipped V1 flow. The M1 architecture shows, in the model, the inception evidence when the registration is booked, leaving registry absence and checkpoint creation at the registration fold. The existing hash-proof token below is not that full inception evidence.",
    "words": [
     {
      "end": 0.325,
@@ -66459,183 +66799,208 @@
      "text": "."
     },
     {
-     "end": 3.438,
+     "end": 3.412,
      "start": 3.275,
      "text": "The"
     },
     {
-     "end": 4.025,
-     "start": 3.438,
+     "end": 3.875,
+     "start": 3.412,
      "text": "M1"
     },
     {
-     "end": 4.825,
-     "start": 4.025,
+     "end": 4.488,
+     "start": 3.875,
      "text": "architecture"
     },
     {
-     "end": 5.175,
-     "start": 4.825,
+     "end": 4.8,
+     "start": 4.488,
      "text": "shows"
     },
     {
-     "end": 5.325,
-     "start": 5.175,
-     "text": "the"
-    },
-    {
-     "end": 5.925,
-     "start": 5.325,
-     "text": "inception"
-    },
-    {
-     "end": 6.425,
-     "start": 5.925,
-     "text": "evidence"
-    },
-    {
-     "end": 6.562,
-     "start": 6.425,
-     "text": "when"
-    },
-    {
-     "end": 6.65,
-     "start": 6.562,
-     "text": "the"
-    },
-    {
-     "end": 7.45,
-     "start": 6.65,
-     "text": "registration"
-    },
-    {
-     "end": 7.613,
-     "start": 7.45,
-     "text": "is"
-    },
-    {
-     "end": 8.5,
-     "start": 7.613,
-     "text": "booked"
-    },
-    {
-     "end": 8.7,
-     "start": 8.5,
+     "end": 4.838,
+     "start": 4.8,
      "text": ","
     },
     {
-     "end": 9.225,
-     "start": 8.9,
-     "text": "leaving"
+     "end": 4.912,
+     "start": 4.838,
+     "text": "in"
     },
     {
-     "end": 9.725,
-     "start": 9.225,
-     "text": "registry"
-    },
-    {
-     "end": 10.337,
-     "start": 9.725,
-     "text": "absence"
-    },
-    {
-     "end": 10.488,
-     "start": 10.337,
-     "text": "and"
-    },
-    {
-     "end": 10.95,
-     "start": 10.488,
-     "text": "checkpoint"
-    },
-    {
-     "end": 11.587,
-     "start": 10.95,
-     "text": "creation"
-    },
-    {
-     "end": 11.688,
-     "start": 11.587,
-     "text": "at"
-    },
-    {
-     "end": 11.775,
-     "start": 11.688,
+     "end": 5.0,
+     "start": 4.912,
      "text": "the"
     },
     {
-     "end": 12.488,
-     "start": 11.775,
-     "text": "registration"
+     "end": 5.825,
+     "start": 5.0,
+     "text": "model"
     },
     {
-     "end": 13.425,
-     "start": 12.488,
-     "text": "fold"
+     "end": 6.025,
+     "start": 5.825,
+     "text": ","
     },
     {
-     "end": 13.65,
-     "start": 13.425,
-     "text": "."
+     "end": 6.325,
+     "start": 6.2,
+     "text": "the"
     },
     {
-     "end": 13.95,
-     "start": 13.825,
-     "text": "The"
-    },
-    {
-     "end": 14.45,
-     "start": 13.95,
-     "text": "existing"
-    },
-    {
-     "end": 14.975,
-     "start": 14.45,
-     "text": "hash-proof"
-    },
-    {
-     "end": 15.3,
-     "start": 14.975,
-     "text": "token"
-    },
-    {
-     "end": 15.9,
-     "start": 15.3,
-     "text": "below"
-    },
-    {
-     "end": 16.075,
-     "start": 15.9,
-     "text": "is"
-    },
-    {
-     "end": 16.3,
-     "start": 16.075,
-     "text": "not"
-    },
-    {
-     "end": 16.55,
-     "start": 16.3,
-     "text": "that"
-    },
-    {
-     "end": 16.85,
-     "start": 16.55,
-     "text": "full"
-    },
-    {
-     "end": 17.425,
-     "start": 16.85,
+     "end": 6.9,
+     "start": 6.325,
      "text": "inception"
     },
     {
-     "end": 18.475,
-     "start": 17.425,
+     "end": 7.425,
+     "start": 6.9,
      "text": "evidence"
     },
     {
-     "end": 18.675,
-     "start": 18.475,
+     "end": 7.562,
+     "start": 7.425,
+     "text": "when"
+    },
+    {
+     "end": 7.65,
+     "start": 7.562,
+     "text": "the"
+    },
+    {
+     "end": 8.375,
+     "start": 7.65,
+     "text": "registration"
+    },
+    {
+     "end": 8.538,
+     "start": 8.375,
+     "text": "is"
+    },
+    {
+     "end": 9.325,
+     "start": 8.538,
+     "text": "booked"
+    },
+    {
+     "end": 9.525,
+     "start": 9.325,
+     "text": ","
+    },
+    {
+     "end": 10.05,
+     "start": 9.725,
+     "text": "leaving"
+    },
+    {
+     "end": 10.55,
+     "start": 10.05,
+     "text": "registry"
+    },
+    {
+     "end": 11.163,
+     "start": 10.55,
+     "text": "absence"
+    },
+    {
+     "end": 11.312,
+     "start": 11.163,
+     "text": "and"
+    },
+    {
+     "end": 11.775,
+     "start": 11.312,
+     "text": "checkpoint"
+    },
+    {
+     "end": 12.413,
+     "start": 11.775,
+     "text": "creation"
+    },
+    {
+     "end": 12.512,
+     "start": 12.413,
+     "text": "at"
+    },
+    {
+     "end": 12.6,
+     "start": 12.512,
+     "text": "the"
+    },
+    {
+     "end": 13.312,
+     "start": 12.6,
+     "text": "registration"
+    },
+    {
+     "end": 14.25,
+     "start": 13.312,
+     "text": "fold"
+    },
+    {
+     "end": 14.475,
+     "start": 14.25,
+     "text": "."
+    },
+    {
+     "end": 14.775,
+     "start": 14.65,
+     "text": "The"
+    },
+    {
+     "end": 15.275,
+     "start": 14.775,
+     "text": "existing"
+    },
+    {
+     "end": 15.8,
+     "start": 15.275,
+     "text": "hash-proof"
+    },
+    {
+     "end": 16.125,
+     "start": 15.8,
+     "text": "token"
+    },
+    {
+     "end": 16.725,
+     "start": 16.125,
+     "text": "below"
+    },
+    {
+     "end": 16.9,
+     "start": 16.725,
+     "text": "is"
+    },
+    {
+     "end": 17.125,
+     "start": 16.9,
+     "text": "not"
+    },
+    {
+     "end": 17.375,
+     "start": 17.125,
+     "text": "that"
+    },
+    {
+     "end": 17.675,
+     "start": 17.375,
+     "text": "full"
+    },
+    {
+     "end": 18.25,
+     "start": 17.675,
+     "text": "inception"
+    },
+    {
+     "end": 19.3,
+     "start": 18.25,
+     "text": "evidence"
+    },
+    {
+     "end": 19.5,
+     "start": 19.3,
      "text": "."
     }
    ]
@@ -70601,17 +70966,17 @@
    ]
   },
   "docs-architecture-overview/architecture-overview-04": {
-   "audio_sha256": "8991be1d3633518b7f0dfa3436fb096403c648003f7dab8fe69b26e8d2d53e32",
-   "characters": 545,
-   "cost": 0.00053955,
-   "duration": 35.45,
+   "audio_sha256": "e7197792789bfab170d768cae7df01a541361ee68e95d23b338a42e871b71a41",
+   "characters": 623,
+   "cost": 0.00061677,
+   "duration": 40.575,
    "index": 4,
-   "key": "19825ef442c1a15458151f9d7445959405d3d55ea56d7a68ae20312d1ac7eba4",
+   "key": "456985b993e9a8541f270148112b8c6965788c5d61e0b78d7e067a36ea7f4a22",
    "page": "docs/architecture/overview.md",
    "pause_ms": 400,
    "section": "architecture-overview",
-   "sent_text": "The transaction architecture — thin checkpoint, reference observers, zero-lovelace withdrawal, blake three premint — is shipped on main today. In the M1 registration flow below the controller shows the inception when booking the registration, and the fold checks no [KERI](/kˈɛɹi/) evidence. The model states it this way; the validators and the commands follow it. How lifecycle state is represented also changes: today it is role addresses, in the accepted design it is one bit plus the checkpoint's own value. Both are described below, marked.",
-   "text": "The transaction architecture — thin checkpoint, reference observers, zero-lovelace withdrawal, BLAKE3 premint — is shipped on main today. In the M1 registration flow below the controller shows the inception when booking the registration, and the fold checks no KERI evidence. The model states it this way; the validators and the commands follow it. How lifecycle state is represented also changes: today it is role addresses, in the accepted design it is one bit plus the checkpoint's own value. Both are described below, marked.",
+   "sent_text": "The transaction architecture — thin checkpoint, reference observers, zero-lovelace withdrawal, blake three premint — is shipped on main today. The M1 registration flow below is the model's rule, not yet the code's: the controller shows the inception when booking the registration, and the fold checks no [KERI](/kˈɛɹi/) evidence. On main the validators and the commands still prove the inception at the fold, until the code follows the model. How lifecycle state is represented also changes: today it is role addresses, in the accepted design it is one bit plus the checkpoint's own value. Both are described below, marked.",
+   "text": "The transaction architecture — thin checkpoint, reference observers, zero-lovelace withdrawal, BLAKE3 premint — is shipped on main today. The M1 registration flow below is the model's rule, not yet the code's: the controller shows the inception when booking the registration, and the fold checks no KERI evidence. On main the validators and the commands still prove the inception at the fold, until the code follows the model. How lifecycle state is represented also changes: today it is role addresses, in the accepted design it is one bit plus the checkpoint's own value. Both are described below, marked.",
    "words": [
     {
      "end": 0.275,
@@ -70730,372 +71095,452 @@
     },
     {
      "end": 9.512,
-     "start": 9.425,
-     "text": "In"
-    },
-    {
-     "end": 9.7,
-     "start": 9.512,
-     "text": "the"
-    },
-    {
-     "end": 10.425,
-     "start": 9.7,
-     "text": "M1"
-    },
-    {
-     "end": 11.225,
-     "start": 10.425,
-     "text": "registration"
-    },
-    {
-     "end": 11.6,
-     "start": 11.225,
-     "text": "flow"
-    },
-    {
-     "end": 11.95,
-     "start": 11.6,
-     "text": "below"
-    },
-    {
-     "end": 12.05,
-     "start": 11.95,
-     "text": "the"
-    },
-    {
-     "end": 12.788,
-     "start": 12.05,
-     "text": "controller"
-    },
-    {
-     "end": 13.15,
-     "start": 12.788,
-     "text": "shows"
-    },
-    {
-     "end": 13.3,
-     "start": 13.15,
-     "text": "the"
-    },
-    {
-     "end": 13.95,
-     "start": 13.3,
-     "text": "inception"
-    },
-    {
-     "end": 14.163,
-     "start": 13.95,
-     "text": "when"
-    },
-    {
-     "end": 14.512,
-     "start": 14.163,
-     "text": "booking"
-    },
-    {
-     "end": 14.6,
-     "start": 14.512,
-     "text": "the"
-    },
-    {
-     "end": 15.975,
-     "start": 14.6,
-     "text": "registration"
-    },
-    {
-     "end": 16.175,
-     "start": 15.975,
-     "text": ","
-    },
-    {
-     "end": 16.438,
-     "start": 16.35,
-     "text": "and"
-    },
-    {
-     "end": 16.525,
-     "start": 16.438,
-     "text": "the"
-    },
-    {
-     "end": 16.775,
-     "start": 16.525,
-     "text": "fold"
-    },
-    {
-     "end": 17.075,
-     "start": 16.775,
-     "text": "checks"
-    },
-    {
-     "end": 17.275,
-     "start": 17.075,
-     "text": "no"
-    },
-    {
-     "end": 17.575,
-     "start": 17.275,
-     "text": "KERI"
-    },
-    {
-     "end": 18.525,
-     "start": 17.575,
-     "text": "evidence"
-    },
-    {
-     "end": 18.725,
-     "start": 18.525,
-     "text": "."
-    },
-    {
-     "end": 19.0,
-     "start": 18.9,
+     "start": 9.375,
      "text": "The"
     },
     {
-     "end": 19.375,
-     "start": 19.0,
-     "text": "model"
+     "end": 10.025,
+     "start": 9.512,
+     "text": "M1"
     },
     {
-     "end": 19.725,
-     "start": 19.375,
-     "text": "states"
+     "end": 10.738,
+     "start": 10.025,
+     "text": "registration"
     },
     {
-     "end": 19.85,
-     "start": 19.725,
-     "text": "it"
+     "end": 11.025,
+     "start": 10.738,
+     "text": "flow"
     },
     {
-     "end": 20.1,
-     "start": 19.85,
-     "text": "this"
-    },
-    {
-     "end": 20.475,
-     "start": 20.1,
-     "text": "way"
-    },
-    {
-     "end": 20.575,
-     "start": 20.475,
-     "text": ";"
-    },
-    {
-     "end": 20.675,
-     "start": 20.575,
-     "text": "the"
-    },
-    {
-     "end": 21.375,
-     "start": 20.675,
-     "text": "validators"
-    },
-    {
-     "end": 21.487,
-     "start": 21.375,
-     "text": "and"
-    },
-    {
-     "end": 21.575,
-     "start": 21.487,
-     "text": "the"
-    },
-    {
-     "end": 22.038,
-     "start": 21.575,
-     "text": "commands"
-    },
-    {
-     "end": 22.425,
-     "start": 22.038,
-     "text": "follow"
-    },
-    {
-     "end": 23.05,
-     "start": 22.425,
-     "text": "it"
-    },
-    {
-     "end": 23.25,
-     "start": 23.05,
-     "text": "."
-    },
-    {
-     "end": 23.575,
-     "start": 23.425,
-     "text": "How"
-    },
-    {
-     "end": 24.15,
-     "start": 23.575,
-     "text": "lifecycle"
-    },
-    {
-     "end": 24.525,
-     "start": 24.15,
-     "text": "state"
-    },
-    {
-     "end": 24.675,
-     "start": 24.525,
-     "text": "is"
-    },
-    {
-     "end": 25.275,
-     "start": 24.675,
-     "text": "represented"
-    },
-    {
-     "end": 25.625,
-     "start": 25.275,
-     "text": "also"
-    },
-    {
-     "end": 26.65,
-     "start": 25.625,
-     "text": "changes"
-    },
-    {
-     "end": 26.85,
-     "start": 26.65,
-     "text": ":"
-    },
-    {
-     "end": 27.4,
-     "start": 27.05,
-     "text": "today"
-    },
-    {
-     "end": 27.525,
-     "start": 27.4,
-     "text": "it"
-    },
-    {
-     "end": 27.688,
-     "start": 27.525,
-     "text": "is"
-    },
-    {
-     "end": 28.0,
-     "start": 27.688,
-     "text": "role"
-    },
-    {
-     "end": 28.725,
-     "start": 28.0,
-     "text": "addresses"
-    },
-    {
-     "end": 28.8,
-     "start": 28.725,
-     "text": ","
-    },
-    {
-     "end": 28.888,
-     "start": 28.8,
-     "text": "in"
-    },
-    {
-     "end": 29.025,
-     "start": 28.888,
-     "text": "the"
-    },
-    {
-     "end": 29.525,
-     "start": 29.025,
-     "text": "accepted"
-    },
-    {
-     "end": 30.112,
-     "start": 29.525,
-     "text": "design"
-    },
-    {
-     "end": 30.25,
-     "start": 30.112,
-     "text": "it"
-    },
-    {
-     "end": 30.425,
-     "start": 30.25,
-     "text": "is"
-    },
-    {
-     "end": 30.7,
-     "start": 30.425,
-     "text": "one"
-    },
-    {
-     "end": 30.925,
-     "start": 30.7,
-     "text": "bit"
-    },
-    {
-     "end": 31.2,
-     "start": 30.925,
-     "text": "plus"
-    },
-    {
-     "end": 31.312,
-     "start": 31.2,
-     "text": "the"
-    },
-    {
-     "end": 31.875,
-     "start": 31.312,
-     "text": "checkpoint's"
-    },
-    {
-     "end": 32.075,
-     "start": 31.875,
-     "text": "own"
-    },
-    {
-     "end": 33.025,
-     "start": 32.075,
-     "text": "value"
-    },
-    {
-     "end": 33.275,
-     "start": 33.025,
-     "text": "."
-    },
-    {
-     "end": 33.662,
-     "start": 33.45,
-     "text": "Both"
-    },
-    {
-     "end": 33.737,
-     "start": 33.662,
-     "text": "are"
-    },
-    {
-     "end": 34.138,
-     "start": 33.737,
-     "text": "described"
-    },
-    {
-     "end": 34.425,
-     "start": 34.138,
+     "end": 11.512,
+     "start": 11.025,
      "text": "below"
     },
     {
-     "end": 34.475,
-     "start": 34.425,
+     "end": 11.675,
+     "start": 11.512,
+     "text": "is"
+    },
+    {
+     "end": 11.775,
+     "start": 11.675,
+     "text": "the"
+    },
+    {
+     "end": 12.212,
+     "start": 11.775,
+     "text": "model's"
+    },
+    {
+     "end": 12.65,
+     "start": 12.212,
+     "text": "rule"
+    },
+    {
+     "end": 12.75,
+     "start": 12.65,
      "text": ","
     },
     {
-     "end": 35.25,
-     "start": 34.475,
+     "end": 12.975,
+     "start": 12.75,
+     "text": "not"
+    },
+    {
+     "end": 13.163,
+     "start": 12.975,
+     "text": "yet"
+    },
+    {
+     "end": 13.25,
+     "start": 13.163,
+     "text": "the"
+    },
+    {
+     "end": 14.25,
+     "start": 13.25,
+     "text": "code's"
+    },
+    {
+     "end": 14.45,
+     "start": 14.25,
+     "text": ":"
+    },
+    {
+     "end": 14.725,
+     "start": 14.65,
+     "text": "the"
+    },
+    {
+     "end": 15.363,
+     "start": 14.725,
+     "text": "controller"
+    },
+    {
+     "end": 15.7,
+     "start": 15.363,
+     "text": "shows"
+    },
+    {
+     "end": 15.85,
+     "start": 15.7,
+     "text": "the"
+    },
+    {
+     "end": 16.5,
+     "start": 15.85,
+     "text": "inception"
+    },
+    {
+     "end": 16.712,
+     "start": 16.5,
+     "text": "when"
+    },
+    {
+     "end": 17.038,
+     "start": 16.712,
+     "text": "booking"
+    },
+    {
+     "end": 17.125,
+     "start": 17.038,
+     "text": "the"
+    },
+    {
+     "end": 18.125,
+     "start": 17.125,
+     "text": "registration"
+    },
+    {
+     "end": 18.225,
+     "start": 18.125,
+     "text": ","
+    },
+    {
+     "end": 18.337,
+     "start": 18.225,
+     "text": "and"
+    },
+    {
+     "end": 18.438,
+     "start": 18.337,
+     "text": "the"
+    },
+    {
+     "end": 18.812,
+     "start": 18.438,
+     "text": "fold"
+    },
+    {
+     "end": 19.212,
+     "start": 18.812,
+     "text": "checks"
+    },
+    {
+     "end": 19.45,
+     "start": 19.212,
+     "text": "no"
+    },
+    {
+     "end": 19.75,
+     "start": 19.45,
+     "text": "KERI"
+    },
+    {
+     "end": 20.9,
+     "start": 19.75,
+     "text": "evidence"
+    },
+    {
+     "end": 21.1,
+     "start": 20.9,
+     "text": "."
+    },
+    {
+     "end": 21.475,
+     "start": 21.3,
+     "text": "On"
+    },
+    {
+     "end": 21.775,
+     "start": 21.475,
+     "text": "main"
+    },
+    {
+     "end": 21.875,
+     "start": 21.775,
+     "text": "the"
+    },
+    {
+     "end": 22.625,
+     "start": 21.875,
+     "text": "validators"
+    },
+    {
+     "end": 22.737,
+     "start": 22.625,
+     "text": "and"
+    },
+    {
+     "end": 22.825,
+     "start": 22.737,
+     "text": "the"
+    },
+    {
+     "end": 23.462,
+     "start": 22.825,
+     "text": "commands"
+    },
+    {
+     "end": 23.763,
+     "start": 23.462,
+     "text": "still"
+    },
+    {
+     "end": 24.1,
+     "start": 23.763,
+     "text": "prove"
+    },
+    {
+     "end": 24.25,
+     "start": 24.1,
+     "text": "the"
+    },
+    {
+     "end": 24.825,
+     "start": 24.25,
+     "text": "inception"
+    },
+    {
+     "end": 24.913,
+     "start": 24.825,
+     "text": "at"
+    },
+    {
+     "end": 25.038,
+     "start": 24.913,
+     "text": "the"
+    },
+    {
+     "end": 25.675,
+     "start": 25.038,
+     "text": "fold"
+    },
+    {
+     "end": 25.775,
+     "start": 25.675,
+     "text": ","
+    },
+    {
+     "end": 26.062,
+     "start": 25.775,
+     "text": "until"
+    },
+    {
+     "end": 26.188,
+     "start": 26.062,
+     "text": "the"
+    },
+    {
+     "end": 26.587,
+     "start": 26.188,
+     "text": "code"
+    },
+    {
+     "end": 27.025,
+     "start": 26.587,
+     "text": "follows"
+    },
+    {
+     "end": 27.125,
+     "start": 27.025,
+     "text": "the"
+    },
+    {
+     "end": 28.15,
+     "start": 27.125,
+     "text": "model"
+    },
+    {
+     "end": 28.375,
+     "start": 28.15,
+     "text": "."
+    },
+    {
+     "end": 28.7,
+     "start": 28.55,
+     "text": "How"
+    },
+    {
+     "end": 29.275,
+     "start": 28.7,
+     "text": "lifecycle"
+    },
+    {
+     "end": 29.65,
+     "start": 29.275,
+     "text": "state"
+    },
+    {
+     "end": 29.8,
+     "start": 29.65,
+     "text": "is"
+    },
+    {
+     "end": 30.4,
+     "start": 29.8,
+     "text": "represented"
+    },
+    {
+     "end": 30.75,
+     "start": 30.4,
+     "text": "also"
+    },
+    {
+     "end": 31.775,
+     "start": 30.75,
+     "text": "changes"
+    },
+    {
+     "end": 31.975,
+     "start": 31.775,
+     "text": ":"
+    },
+    {
+     "end": 32.525,
+     "start": 32.175,
+     "text": "today"
+    },
+    {
+     "end": 32.65,
+     "start": 32.525,
+     "text": "it"
+    },
+    {
+     "end": 32.812,
+     "start": 32.65,
+     "text": "is"
+    },
+    {
+     "end": 33.125,
+     "start": 32.812,
+     "text": "role"
+    },
+    {
+     "end": 33.85,
+     "start": 33.125,
+     "text": "addresses"
+    },
+    {
+     "end": 33.925,
+     "start": 33.85,
+     "text": ","
+    },
+    {
+     "end": 34.013,
+     "start": 33.925,
+     "text": "in"
+    },
+    {
+     "end": 34.15,
+     "start": 34.013,
+     "text": "the"
+    },
+    {
+     "end": 34.65,
+     "start": 34.15,
+     "text": "accepted"
+    },
+    {
+     "end": 35.237,
+     "start": 34.65,
+     "text": "design"
+    },
+    {
+     "end": 35.375,
+     "start": 35.237,
+     "text": "it"
+    },
+    {
+     "end": 35.55,
+     "start": 35.375,
+     "text": "is"
+    },
+    {
+     "end": 35.825,
+     "start": 35.55,
+     "text": "one"
+    },
+    {
+     "end": 36.05,
+     "start": 35.825,
+     "text": "bit"
+    },
+    {
+     "end": 36.325,
+     "start": 36.05,
+     "text": "plus"
+    },
+    {
+     "end": 36.438,
+     "start": 36.325,
+     "text": "the"
+    },
+    {
+     "end": 37.0,
+     "start": 36.438,
+     "text": "checkpoint's"
+    },
+    {
+     "end": 37.2,
+     "start": 37.0,
+     "text": "own"
+    },
+    {
+     "end": 38.15,
+     "start": 37.2,
+     "text": "value"
+    },
+    {
+     "end": 38.4,
+     "start": 38.15,
+     "text": "."
+    },
+    {
+     "end": 38.787,
+     "start": 38.575,
+     "text": "Both"
+    },
+    {
+     "end": 38.862,
+     "start": 38.787,
+     "text": "are"
+    },
+    {
+     "end": 39.263,
+     "start": 38.862,
+     "text": "described"
+    },
+    {
+     "end": 39.55,
+     "start": 39.263,
+     "text": "below"
+    },
+    {
+     "end": 39.6,
+     "start": 39.55,
+     "text": ","
+    },
+    {
+     "end": 40.375,
+     "start": 39.6,
      "text": "marked"
     },
     {
-     "end": 35.45,
-     "start": 35.25,
+     "end": 40.575,
+     "start": 40.375,
      "text": "."
     }
    ]
@@ -71711,17 +72156,17 @@
    ]
   },
   "docs-architecture-overview/m1-registration-flow-01": {
-   "audio_sha256": "7623d40e8008724df22165dd142f19ec8539c36ff595f9cccd72d09d30c5726a",
-   "characters": 493,
-   "cost": 0.00048806999999999995,
-   "duration": 31.95,
+   "audio_sha256": "8d4c7a2ddff8d77b118240effa7e0701ecb77f15792e5d613dcf90bc8e8a4f3e",
+   "characters": 522,
+   "cost": 0.00051678,
+   "duration": 33.925,
    "index": 1,
-   "key": "9a2f5980fce31e57ef6ff9874e1b4dcf765a7a763981e047f7b91bcc148f0aaa",
+   "key": "b15746ae71a239ee07413d5361d57bda66d6d25c4b2cfc9c7e7f3d6a524001f7",
    "page": "docs/architecture/overview.md",
    "pause_ms": 400,
    "section": "m1-registration-flow",
-   "sent_text": "A folder reads everything it needs from the chain: the holding address and the deposit from the request's data, the initial datum from what the request publishes. The controller, who holds the inception event, shows it once, when booking. A booking is repeatable; checkpoint uniqueness is enforced by registry admission. There is no revival: an identity is alive until it is convicted. The registration guarantees explain the model boundaries and link the playable duplicate-registration case.",
-   "text": "A folder reads everything it needs from the chain: the holding address and the deposit from the request's data, the initial datum from what the request publishes. The controller, who holds the inception event, shows it once, when booking. A booking is repeatable; checkpoint uniqueness is enforced by registry admission. There is no revival: an identity is alive until it is convicted. The registration guarantees explain the model boundaries and link the playable duplicate-registration case.",
+   "sent_text": "A folder reads everything it needs from the chain: the holding address, the initial datum and the deposit are the request's own data. The model states this for Singular's fold of one request. The controller, who holds the inception event, shows it once, when booking. A booking is repeatable; checkpoint uniqueness is enforced by registry admission. There is no revival: an identity is alive until it is convicted. The registration guarantees explain the model boundaries and link the playable duplicate-registration case.",
+   "text": "A folder reads everything it needs from the chain: the holding address, the initial datum and the deposit are the request's own data. The model states this for Singular's fold of one request. The controller, who holds the inception event, shows it once, when booking. A booking is repeatable; checkpoint uniqueness is enforced by registry admission. There is no revival: an identity is alive until it is convicted. The registration guarantees explain the model boundaries and link the playable duplicate-registration case.",
    "words": [
     {
      "end": 0.262,
@@ -71774,39 +72219,44 @@
      "text": ":"
     },
     {
-     "end": 3.45,
-     "start": 3.35,
+     "end": 3.4,
+     "start": 3.325,
      "text": "the"
     },
     {
-     "end": 3.8,
-     "start": 3.45,
+     "end": 3.75,
+     "start": 3.4,
      "text": "holding"
     },
     {
-     "end": 4.363,
-     "start": 3.8,
+     "end": 4.225,
+     "start": 3.75,
      "text": "address"
     },
     {
-     "end": 4.488,
-     "start": 4.363,
-     "text": "and"
+     "end": 4.275,
+     "start": 4.225,
+     "text": ","
     },
     {
-     "end": 4.575,
-     "start": 4.488,
+     "end": 4.425,
+     "start": 4.275,
      "text": "the"
     },
     {
-     "end": 5.225,
-     "start": 4.575,
-     "text": "deposit"
+     "end": 4.825,
+     "start": 4.425,
+     "text": "initial"
+    },
+    {
+     "end": 5.275,
+     "start": 4.825,
+     "text": "datum"
     },
     {
      "end": 5.387,
-     "start": 5.225,
-     "text": "from"
+     "start": 5.275,
+     "text": "and"
     },
     {
      "end": 5.475,
@@ -71814,348 +72264,378 @@
      "text": "the"
     },
     {
-     "end": 6.062,
+     "end": 6.137,
      "start": 5.475,
+     "text": "deposit"
+    },
+    {
+     "end": 6.262,
+     "start": 6.137,
+     "text": "are"
+    },
+    {
+     "end": 6.35,
+     "start": 6.262,
+     "text": "the"
+    },
+    {
+     "end": 6.9,
+     "start": 6.35,
      "text": "request's"
     },
     {
-     "end": 6.575,
-     "start": 6.062,
+     "end": 7.1,
+     "start": 6.9,
+     "text": "own"
+    },
+    {
+     "end": 7.975,
+     "start": 7.1,
      "text": "data"
     },
     {
-     "end": 6.675,
-     "start": 6.575,
-     "text": ","
-    },
-    {
-     "end": 6.825,
-     "start": 6.675,
-     "text": "the"
-    },
-    {
-     "end": 7.25,
-     "start": 6.825,
-     "text": "initial"
-    },
-    {
-     "end": 7.7,
-     "start": 7.25,
-     "text": "datum"
-    },
-    {
-     "end": 7.9,
-     "start": 7.7,
-     "text": "from"
-    },
-    {
-     "end": 8.05,
-     "start": 7.9,
-     "text": "what"
-    },
-    {
-     "end": 8.15,
-     "start": 8.05,
-     "text": "the"
-    },
-    {
-     "end": 8.6,
-     "start": 8.15,
-     "text": "request"
-    },
-    {
-     "end": 9.9,
-     "start": 8.6,
-     "text": "publishes"
-    },
-    {
-     "end": 10.1,
-     "start": 9.9,
+     "end": 8.225,
+     "start": 7.975,
      "text": "."
     },
     {
-     "end": 10.35,
-     "start": 10.275,
+     "end": 8.475,
+     "start": 8.4,
      "text": "The"
     },
     {
-     "end": 10.975,
-     "start": 10.35,
+     "end": 8.85,
+     "start": 8.475,
+     "text": "model"
+    },
+    {
+     "end": 9.225,
+     "start": 8.85,
+     "text": "states"
+    },
+    {
+     "end": 9.475,
+     "start": 9.225,
+     "text": "this"
+    },
+    {
+     "end": 9.637,
+     "start": 9.475,
+     "text": "for"
+    },
+    {
+     "end": 10.2,
+     "start": 9.637,
+     "text": "Singular's"
+    },
+    {
+     "end": 10.512,
+     "start": 10.2,
+     "text": "fold"
+    },
+    {
+     "end": 10.625,
+     "start": 10.512,
+     "text": "of"
+    },
+    {
+     "end": 10.85,
+     "start": 10.625,
+     "text": "one"
+    },
+    {
+     "end": 11.875,
+     "start": 10.85,
+     "text": "request"
+    },
+    {
+     "end": 12.075,
+     "start": 11.875,
+     "text": "."
+    },
+    {
+     "end": 12.325,
+     "start": 12.25,
+     "text": "The"
+    },
+    {
+     "end": 12.95,
+     "start": 12.325,
      "text": "controller"
     },
     {
-     "end": 11.012,
-     "start": 10.975,
+     "end": 12.988,
+     "start": 12.95,
      "text": ","
     },
     {
-     "end": 11.15,
-     "start": 11.012,
+     "end": 13.125,
+     "start": 12.988,
      "text": "who"
     },
     {
-     "end": 11.438,
-     "start": 11.15,
+     "end": 13.413,
+     "start": 13.125,
      "text": "holds"
     },
     {
-     "end": 11.575,
-     "start": 11.438,
+     "end": 13.55,
+     "start": 13.413,
      "text": "the"
     },
     {
-     "end": 12.125,
-     "start": 11.575,
+     "end": 14.1,
+     "start": 13.55,
      "text": "inception"
     },
     {
-     "end": 12.525,
-     "start": 12.125,
+     "end": 14.5,
+     "start": 14.1,
      "text": "event"
     },
     {
-     "end": 12.613,
-     "start": 12.525,
+     "end": 14.587,
+     "start": 14.5,
      "text": ","
     },
     {
-     "end": 12.925,
-     "start": 12.613,
+     "end": 14.9,
+     "start": 14.587,
      "text": "shows"
     },
     {
-     "end": 13.05,
-     "start": 12.925,
+     "end": 15.025,
+     "start": 14.9,
      "text": "it"
     },
     {
-     "end": 13.375,
-     "start": 13.05,
+     "end": 15.35,
+     "start": 15.025,
      "text": "once"
     },
     {
-     "end": 13.413,
-     "start": 13.375,
+     "end": 15.387,
+     "start": 15.35,
      "text": ","
     },
     {
-     "end": 13.6,
-     "start": 13.413,
+     "end": 15.575,
+     "start": 15.387,
      "text": "when"
     },
     {
-     "end": 14.55,
-     "start": 13.6,
+     "end": 16.525,
+     "start": 15.575,
      "text": "booking"
     },
     {
-     "end": 14.75,
-     "start": 14.55,
+     "end": 16.725,
+     "start": 16.525,
      "text": "."
     },
     {
-     "end": 15.038,
-     "start": 14.95,
+     "end": 17.013,
+     "start": 16.925,
      "text": "A"
     },
     {
-     "end": 15.475,
-     "start": 15.038,
+     "end": 17.45,
+     "start": 17.013,
      "text": "booking"
     },
     {
-     "end": 15.625,
-     "start": 15.475,
+     "end": 17.6,
+     "start": 17.45,
      "text": "is"
     },
     {
-     "end": 16.325,
-     "start": 15.625,
+     "end": 18.3,
+     "start": 17.6,
      "text": "repeatable"
     },
     {
-     "end": 16.438,
-     "start": 16.325,
+     "end": 18.413,
+     "start": 18.3,
      "text": ";"
     },
     {
-     "end": 16.925,
-     "start": 16.438,
+     "end": 18.9,
+     "start": 18.413,
      "text": "checkpoint"
     },
     {
-     "end": 17.562,
-     "start": 16.925,
+     "end": 19.538,
+     "start": 18.9,
      "text": "uniqueness"
     },
     {
-     "end": 17.725,
-     "start": 17.562,
+     "end": 19.7,
+     "start": 19.538,
      "text": "is"
     },
     {
-     "end": 18.325,
-     "start": 17.725,
+     "end": 20.3,
+     "start": 19.7,
      "text": "enforced"
     },
     {
-     "end": 18.5,
-     "start": 18.325,
+     "end": 20.475,
+     "start": 20.3,
      "text": "by"
     },
     {
-     "end": 18.975,
-     "start": 18.5,
+     "end": 20.95,
+     "start": 20.475,
      "text": "registry"
     },
     {
-     "end": 20.05,
-     "start": 18.975,
+     "end": 22.025,
+     "start": 20.95,
      "text": "admission"
     },
     {
-     "end": 20.25,
-     "start": 20.05,
+     "end": 22.225,
+     "start": 22.025,
      "text": "."
-    },
-    {
-     "end": 20.575,
-     "start": 20.425,
-     "text": "There"
-    },
-    {
-     "end": 20.737,
-     "start": 20.575,
-     "text": "is"
-    },
-    {
-     "end": 20.975,
-     "start": 20.737,
-     "text": "no"
-    },
-    {
-     "end": 21.6,
-     "start": 20.975,
-     "text": "revival"
-    },
-    {
-     "end": 21.7,
-     "start": 21.6,
-     "text": ":"
-    },
-    {
-     "end": 21.812,
-     "start": 21.7,
-     "text": "an"
-    },
-    {
-     "end": 22.4,
-     "start": 21.812,
-     "text": "identity"
     },
     {
      "end": 22.55,
      "start": 22.4,
+     "text": "There"
+    },
+    {
+     "end": 22.712,
+     "start": 22.55,
      "text": "is"
     },
     {
-     "end": 23.038,
-     "start": 22.55,
-     "text": "alive"
-    },
-    {
-     "end": 23.337,
-     "start": 23.038,
-     "text": "until"
-    },
-    {
-     "end": 23.425,
-     "start": 23.337,
-     "text": "it"
+     "end": 22.95,
+     "start": 22.712,
+     "text": "no"
     },
     {
      "end": 23.575,
-     "start": 23.425,
+     "start": 22.95,
+     "text": "revival"
+    },
+    {
+     "end": 23.675,
+     "start": 23.575,
+     "text": ":"
+    },
+    {
+     "end": 23.788,
+     "start": 23.675,
+     "text": "an"
+    },
+    {
+     "end": 24.375,
+     "start": 23.788,
+     "text": "identity"
+    },
+    {
+     "end": 24.525,
+     "start": 24.375,
      "text": "is"
     },
     {
-     "end": 24.725,
-     "start": 23.575,
+     "end": 25.013,
+     "start": 24.525,
+     "text": "alive"
+    },
+    {
+     "end": 25.312,
+     "start": 25.013,
+     "text": "until"
+    },
+    {
+     "end": 25.4,
+     "start": 25.312,
+     "text": "it"
+    },
+    {
+     "end": 25.55,
+     "start": 25.4,
+     "text": "is"
+    },
+    {
+     "end": 26.7,
+     "start": 25.55,
      "text": "convicted"
     },
     {
-     "end": 24.95,
-     "start": 24.725,
+     "end": 26.925,
+     "start": 26.7,
      "text": "."
     },
     {
-     "end": 25.25,
-     "start": 25.15,
+     "end": 27.225,
+     "start": 27.125,
      "text": "The"
     },
     {
-     "end": 26.0,
-     "start": 25.25,
+     "end": 27.975,
+     "start": 27.225,
      "text": "registration"
     },
     {
-     "end": 26.65,
-     "start": 26.0,
+     "end": 28.625,
+     "start": 27.975,
      "text": "guarantees"
     },
     {
-     "end": 27.225,
-     "start": 26.65,
+     "end": 29.2,
+     "start": 28.625,
      "text": "explain"
     },
     {
-     "end": 27.325,
-     "start": 27.225,
+     "end": 29.3,
+     "start": 29.2,
      "text": "the"
     },
     {
-     "end": 27.7,
-     "start": 27.325,
+     "end": 29.675,
+     "start": 29.3,
      "text": "model"
     },
     {
-     "end": 28.413,
-     "start": 27.7,
+     "end": 30.388,
+     "start": 29.675,
      "text": "boundaries"
     },
     {
-     "end": 28.587,
-     "start": 28.413,
+     "end": 30.562,
+     "start": 30.388,
      "text": "and"
     },
     {
-     "end": 28.875,
-     "start": 28.587,
+     "end": 30.85,
+     "start": 30.562,
      "text": "link"
     },
     {
-     "end": 29.013,
-     "start": 28.875,
+     "end": 30.987,
+     "start": 30.85,
      "text": "the"
     },
     {
-     "end": 29.587,
-     "start": 29.013,
+     "end": 31.562,
+     "start": 30.987,
      "text": "playable"
     },
     {
-     "end": 30.725,
-     "start": 29.587,
+     "end": 32.7,
+     "start": 31.562,
      "text": "duplicate-registration"
     },
     {
-     "end": 31.725,
-     "start": 30.725,
+     "end": 33.7,
+     "start": 32.7,
      "text": "case"
     },
     {
-     "end": 31.95,
-     "start": 31.725,
+     "end": 33.925,
+     "start": 33.7,
      "text": "."
     }
    ]

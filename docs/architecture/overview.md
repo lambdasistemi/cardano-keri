@@ -12,9 +12,10 @@ below.
 !!! abstract "Where this page stands"
     The transaction architecture — thin checkpoint, reference observers,
     zero-lovelace withdrawal, BLAKE3 premint — is **shipped on `main` today**.
-    In the M1 registration flow below the controller shows the inception when
-    booking the registration, and the fold checks no KERI evidence. The model
-    states it this way; the validators and the commands follow it.
+    The M1 registration flow below is the **model's rule, not yet the code's**:
+    the controller shows the inception when booking the registration, and the
+    fold checks no KERI evidence. On `main` the validators and the commands
+    still prove the inception at the fold, until the code follows the model.
     How lifecycle state is *represented* also changes: today it is role addresses, in the
     [accepted design](../index.md#the-accepted-design) it is one
     bit plus the checkpoint's own value. Both are described below, marked.
@@ -55,12 +56,12 @@ flowchart TD
 | Boundary | Guarantee | Enforcement responsibility |
 |---|---|---|
 | Booking | The key has its inception evidence, and the request publishes the initial checkpoint datum its approval commits, which is exactly the initial state of that key. Booking one identifier twice is allowed. | KERI's application, when it mints the approval: no approval exists without the evidence. |
-| First registration | If the AID has never been registered, create its registry entry and checkpoint together. A second booked request of the same AID cannot be folded and is returned after its deadline. | The registry verifies absence and insertion and delivers what the approval commits: the address, the datum, the deposit and the new token. The fold validates nothing of KERI's and needs nothing from the controller. |
+| First registration | If the AID has never been registered, create its registry entry and checkpoint together. A second booked request of the same AID cannot be folded; from its deadline anyone may return it to its refund address, less the tip. Nothing returns it by itself. | The registry verifies absence and insertion and delivers what the approval commits: the address, the datum, the deposit and the new token. The fold validates nothing of KERI's and needs nothing from the controller. |
 | Consumer use | Only an eligible checkpoint may supply keys to the application. | The consumer validates the checkpoint and applies its own authorization rules. A booked request and an active registry leaf alone do not authorize use. |
 
-A folder reads everything it needs from the chain: the holding address and the
-deposit from the request's data, the initial datum from what the request
-publishes. The controller, who holds the inception event, shows it once, when
+A folder reads everything it needs from the chain: the holding address, the
+initial datum and the deposit are the request's own data. The model states
+this for Singular's fold of one request. The controller, who holds the inception event, shows it once, when
 booking. **A booking is repeatable; checkpoint uniqueness is enforced by
 registry admission.** There is no revival: an identity is alive until it is
 convicted.

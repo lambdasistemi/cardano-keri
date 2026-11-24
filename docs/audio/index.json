@@ -1519,25 +1519,31 @@
     "index": 2,
     "name": "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-02",
     "pause_ms": 400,
-    "v": "e27d598e2a61"
+    "v": "e5e5a73a3afa"
    },
    {
     "index": 3,
     "name": "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-03",
     "pause_ms": 400,
-    "v": "221337968c39"
+    "v": "a43fd9ed0937"
    },
    {
     "index": 4,
     "name": "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-04",
     "pause_ms": 400,
-    "v": "5aa0135013aa"
+    "v": "6a9a6bc2717d"
    },
    {
     "index": 5,
     "name": "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-05",
     "pause_ms": 400,
-    "v": "16ec2c788cb1"
+    "v": "0515fdeffd50"
+   },
+   {
+    "index": 6,
+    "name": "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-06",
+    "pause_ms": 400,
+    "v": "89049a94f2d9"
    }
   ],
   "the-parts-alice-depends-on": [
@@ -2071,7 +2077,7 @@
     "index": 1,
     "name": "docs-architecture-identity-ops/under-the-accepted-design-01",
     "pause_ms": 400,
-    "v": "9272fbcd8612"
+    "v": "2c4acc59c2c9"
    },
    {
     "index": 2,
@@ -2343,7 +2349,7 @@
     "index": 1,
     "name": "docs-architecture-observer-architecture/registrations-premint-fact-token-01",
     "pause_ms": 400,
-    "v": "33baae98c225"
+    "v": "1cbcb777379d"
    },
    {
     "index": 2,
@@ -2599,7 +2605,7 @@
     "index": 4,
     "name": "docs-architecture-overview/architecture-overview-04",
     "pause_ms": 400,
-    "v": "8991be1d3633"
+    "v": "e7197792789b"
    }
   ],
   "current-boundary-and-future-planes": [
@@ -2641,7 +2647,7 @@
     "index": 1,
     "name": "docs-architecture-overview/m1-registration-flow-01",
     "pause_ms": 400,
-    "v": "7623d40e8008"
+    "v": "8d4c7a2ddff8"
    }
   ],
   "permissionless-does-not-mean-unauthenticated": [

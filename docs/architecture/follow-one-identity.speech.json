@@ -77,6 +77,10 @@
       "pause": 400
     },
     {
+      "text": "This is the model's rule. On main the validators and the commands still prove the inception at the fold; they change with the code that follows the model. The model's statement that Singular's client can fold a KERI request is for one request per fold.",
+      "pause": 400
+    },
+    {
       "text": "The architecture diagram shows the booking, the booked request, the fold and the consumer boundaries together.",
       "pause": 400
     },
@@ -281,6 +285,6 @@
   ],
   "_source": {
     "file": "follow-one-identity.md",
-    "sha256": "09035f197b8b099933796b4213e064fd9c0177e1af80d06faa9c4bbb7841e3ff"
+    "sha256": "4f2716333dca6000801f8751766856214a4fba7681603059a667a8ef599b57f1"
   }
 }

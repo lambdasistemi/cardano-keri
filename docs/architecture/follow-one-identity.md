@@ -77,7 +77,7 @@ output the certified request names, in the folding transaction
 | Responsibility | Required check |
 |---|---|
 | MPFS insertion | The AID key is absent and the insertion produces the correct registry root. Generic MPFS does not interpret KERI inception evidence. |
-| KERI admission, at the booking | The inception evidence authorizes the projected key state before the approval is minted. The fold then delivers the checkpoint output the approval commits, with its required value, and the inserted leaf identifies it. |
+| KERI admission, at the booking | Required of the validator: before the approval is minted, the inception evidence must cover the AID and the key state the initial datum declares. The model states the evidence as one fact of the key and does not state that binding. On `main` this check still runs at the fold. The fold then delivers the checkpoint output the approval commits, with its required value, and the inserted leaf identifies it. |
 | Mint authorization | The quantity-one checkpoint mint is bound to that same admitted registration and inserted leaf; minting cannot bypass that registration boundary. |
 
 These are **required implementation obligations**. The Registry's
@@ -100,13 +100,18 @@ A folder then needs nothing from the controller.** Booking the same identifier
 twice is allowed. The registry supplies uniqueness when a fold admits the
 first request and creates the checkpoint.
 
+This is the model's rule. On `main` the validators and the commands still
+prove the inception at the fold; they change with the code that follows the
+model. The model's statement that Singular's client can fold a KERI request
+is for one request per fold.
+
 The [architecture diagram](overview.md#m1-registration-flow) shows the booking,
 the booked request, the fold and the consumer boundaries together.
 
 | Stage | Guarantee | What it does not establish |
 |---|---|---|
 | Booking, by the controller | The key has its inception evidence, and the request publishes the initial checkpoint datum its approval commits: exactly the initial state of that key, born at the booking, with the refund address the request names and a deposit that covers the bonds and one premium. No approval is minted otherwise. | Registry absence, a checkpoint, or a reservation of the AID. |
-| Booked request | Carries the approval, the published initial datum and the funding. Everything a fold needs is in it or in the registry. | Successful admission. A request for an already registered AID stays unfolded and is returned after its deadline. |
+| Booked request | Carries the approval, the published initial datum and the funding. Everything a fold needs is in it or in the registry. | Successful admission. A request for an already registered AID stays unfolded; from its deadline anyone may return it to its refund address, less the tip. Nothing returns it by itself. |
 | Registration fold, by anyone | Proves registry absence, inserts the leaf and delivers what the approval commits: the address, the datum, exactly the deposit and the new token. | Any KERI validation. The fold reads no inception evidence and validates no datum; the booking did both. |
 
 The evidence must cover the **AID and the initial key state together**, under

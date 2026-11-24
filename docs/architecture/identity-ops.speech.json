@@ -139,7 +139,7 @@
       "pause": 500
     },
     {
-      "text": "Registration becomes a request against the registry: it identifies the AID, binds the inception evidence, and carries the bonds and a refund address chosen by whoever pays. It is applied in a batch by anyone, who needs nothing from the controller: the booking has already shown the inception evidence and published the initial key state. An identifier may be booked more than once; registry admission supplies checkpoint uniqueness. Application checks that the AID has no leaf, inserts one, and creates the checkpoint in the same transaction. The persistent leaf prevents a second first-registration of the AID, and there is no revival: a registered identity stays live until it is convicted. See the registration guarantee for the atomic mint/insertion obligation and the model's evidence limits.",
+      "text": "Registration becomes a request against the registry: it identifies the AID, binds the inception evidence, and carries the bonds and a refund address chosen by whoever pays. It is folded by anyone, who needs nothing from the controller: in the model the booking has already shown the inception evidence and carries the initial key state. On main the fold still proves the inception, until the code follows the model. An identifier may be booked more than once; registry admission supplies checkpoint uniqueness. Application checks that the AID has no leaf, inserts one, and creates the checkpoint in the same transaction. The persistent leaf prevents a second first-registration of the AID, and there is no revival: a registered identity stays live until it is convicted. See the registration guarantee for the atomic mint/insertion obligation and the model's evidence limits.",
       "pause": 400
     },
     {
@@ -419,6 +419,6 @@
   ],
   "_source": {
     "file": "identity-ops.md",
-    "sha256": "b7608cbf2b0899d63a903750ebf22974e2c0607355c4eb0ccbf61b859bd545fe"
+    "sha256": "7a9b866b4ac287dae902bbf08a0bdf4e7650b0871065d06e8bcf7768c1526b6b"
   }
 }

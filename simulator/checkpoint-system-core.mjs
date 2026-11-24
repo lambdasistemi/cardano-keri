@@ -63,8 +63,8 @@ function replayFold(context,start,c) {
   const result=registryStep(context,before,{fold:{expectedGen:before.gen,expectedPlugin:before.config.applicationPolicy,unspent:c.unspent,transaction:c.transaction}});
   return {before,...result,transaction:c.transaction};
 }
-function localStep(p,env,action,now,state) {
-  const result=C.step(p,env,action,now,state);
+function localStep(p,env,action,now,state,aid) {
+  const result=C.step(p,env,action,now,state,aid);
   if(!result.ok&&['invalid-nat','invalid-params','invalid-state','invalid-action','invalid-evidence'].includes(result.reason))throw Error('unsupported-checkpoint-input:'+result.reason+':'+result.field);
   require(result.ok,'checkpoint-local-refused');return result;
 }
@@ -173,24 +173,46 @@ function inceptionWriter(writers, aid, datum) {
   return {inception: {event: signed, witnesses}};
 }
 
-function rotationWriter(writers, row, action) {
-  const kind = C.actionKind(action);
-  if (kind !== 'rotate' && kind !== 'freeze') return row.writer;
-  const target = action[kind]["sn'"];
-  const live = row.state.present.l;
+function readWriter(writer) {
   const rotations = [];
-  let history = row.writer;
+  let history = writer;
   while (history?.rotation) {
     rotations.push(history.rotation.event.event);
     history = history.rotation.previous;
   }
-  require(history?.inception && live.epoch === rotations.length, 'checkpoint-rotation-writer-mismatch');
+  require(history?.inception, 'checkpoint-rotation-writer-mismatch');
   let last = history.inception.event.event;
   let witnesses = history.inception.witnesses;
   for (const e of rotations.reverse()) {
     witnesses = C.derivedWitnesses({witnesses}, e);
     last = e;
   }
+  return {last, witnesses, epoch: rotations.length};
+}
+
+// The trace driver decodes a key or a next-key commitment from a singleton list.
+function matchesWriter(aid, writer, tip) {
+  const {last, witnesses, epoch} = readWriter(writer);
+  const keys = tip.keys;
+  const singletonKeys = values => values.map(value => [value]);
+  function threshold(value) {
+    if (value.unweighted) return {count: {required: value.unweighted.m}};
+    return {weighted: {clauses: value.weighted.clauses.map(clause => clause.map(([numerator, denominator]) =>
+      ({key: {weight: {numerator, denominator}}})))}};
+  }
+  return E.equal(tip.aid, aid) && E.equal(tip.aid, last.aid) && tip.epoch === epoch && tip.sn === last.sn &&
+    E.equal(keys.curKeys, singletonKeys(last.keys)) && E.equal(threshold(keys.curThreshold), last.threshold) &&
+    E.equal(keys.nextKeys, singletonKeys(last.nextKeys)) && E.equal(threshold(keys.nextThreshold), last.nextThreshold) &&
+    E.equal(keys.witnesses, singletonKeys(witnesses)) && E.equal(keys.toad, last.witnessThreshold);
+}
+
+function rotationWriter(writers, row, action) {
+  const kind = C.actionKind(action);
+  if (kind !== 'rotate' && kind !== 'freeze') return row.writer;
+  const target = action[kind]["sn'"];
+  const live = row.state.present.l;
+  const {last, witnesses, epoch} = readWriter(row.writer);
+  require(live.epoch === epoch, 'checkpoint-rotation-writer-mismatch');
   const next = writers.rotations.find(r => E.equal(r.aid, row.aid) && r.epoch === live.epoch &&
     r.sn === live.sn && r.signed.event.sn === target);
   const prior = {aid: last.aid, sn: last.sn, delegated: false,
@@ -212,7 +234,7 @@ function transition(p,table,state,command) {
   let next=row,checkpointFlow=null,registryFlow=null;
   if(kind==='register') {
     require(row.leaf==='absent','checkpoint-registration-leaf');require(row.origin===null,'checkpoint-origin-already-bound');
-    const local=localStep(p,env,{register:{refund:a.refund,pool0:a.pool}},a.now,row.state);
+    const local=localStep(p,env,{register:{refund:a.refund,pool0:a.pool}},a.now,row.state,a.aid);
     const receipt=replayFold(a.context,R.init(a.context.configuration),a.certificate);
     const binding=receipt.state.bindings.find(([aid])=>E.equal(aid,a.aid));require(!!binding,'checkpoint-registration-alias-missing');
     const output=receipt.transaction.outputs[a.index];require(!!output,'checkpoint-registration-output-missing');
@@ -227,18 +249,22 @@ function transition(p,table,state,command) {
     require(selected&&E.equal(a.booking.request.key,a.aid)&&E.equal(output.singularTags,[E.singularTag(E.toInternal(receipt.before.config),E.toInternal(a.aid))])&&E.equal(output.output.address,a.booking.request.destination)&&E.equal(output.output.datumValue,a.booking.request.datum)&&E.equal(output.output.lovelace,a.booking.request.carrierAda),'checkpoint-registration-delivery-mismatch');
     const writer = inceptionWriter(writers, a.aid, a.booking.request.datum);
     const origin={inception:writer,...a.context,registered:receipt.state,token:binding[1],registrationRef:a.booking.request.reference,carrierRef:{tx:receipt.transaction.identity,index:a.index}};
-    next={aid:a.aid,leaf:C.leafOf(local.state),state:local.state,origin,writer,pending:null};checkpointFlow=local.flow;registryFlow=receipt.flow;
+    next={aid:a.aid,leaf:C.leafOf(local.state),state:local.state,origin,writer,conviction:null,pending:null};checkpointFlow=local.flow;registryFlow=receipt.flow;
   } else if(kind==='local') {
     require(C.actionKind(a.action)!=='register','checkpoint-registration-receipt-required');
-    const local=localStep(p,env,a.action,a.now,row.state);
+    const local=localStep(p,env,a.action,a.now,row.state,a.aid);
     const writer = rotationWriter(writers, row, a.action);
+    let conviction = null;
     // a conviction also reveals its commitment: open, for this AID and this deployment, then burnt
     if(C.actionKind(a.action)==='convict') {
+      const {epoch, sn} = row.state.present.l;
+      conviction = C.observedSpend(env, a.aid, epoch, sn);
+      require(conviction && matchesWriter(a.aid, writer, conviction.comparison.tip), 'checkpoint-rotation-writer-mismatch');
       const c=a.action.convict.commitment;
       require(E.equal(openAt(state,c.marker),c)&&E.equal(c.aid,a.aid)&&c.deployment===state.deployment,'checkpoint-commitment-not-open');
       state=retire(state,c.marker);
     }
-    next={...row,writer,state:local.state,leaf:C.leafOf(local.state)};checkpointFlow=local.flow;
+    next={...row,writer,conviction,state:local.state,leaf:C.leafOf(local.state)};checkpointFlow=local.flow;
   } else if(kind==='book') {
     require(C.stateKind(row.state)==='terminationPending','checkpoint-not-pending');
     require(row.origin!==null,'checkpoint-origin-missing');require(row.pending===null,'checkpoint-already-associated');
@@ -247,6 +273,9 @@ function transition(p,table,state,command) {
     const entry=pendingAt(result.state,a.booking.request.reference);require(entry!==null,'checkpoint-booking-entry-missing');
     const {pendingReference, position, ...publicBooking} = a.booking;
     const expectedSpend = {reference: pendingReference, aid: a.aid, position: row.state.terminationPending.h};
+    const economicConviction = context.environment.convictions.find(c => E.equal(c.comparison.tip.aid, a.aid));
+    require(row.conviction && E.equal(row.conviction.output, pendingReference) &&
+      E.equal(row.conviction, economicConviction), 'checkpoint-booking-binding');
     require(E.equal(entry.booking,publicBooking)&&E.equal(entry.payload.aid,a.aid)&&E.equal(entry.payload.token,row.origin.token)&&E.equal(entry.payload.spend,expectedSpend),'checkpoint-booking-binding');
     next={...row,pending:{origin:row.origin,keyState:row.state.terminationPending.h,reference:a.booking.request.reference,entry,booked:result.state}};registryFlow=result.flow;
   } else {
@@ -254,7 +283,7 @@ function transition(p,table,state,command) {
     const receipt=replayFold(contextOf(association.origin),association.booked,a.certificate);
     const entry=pendingAt(receipt.before,association.reference);
     require(E.equal(row.state,{terminationPending:{h:association.keyState}})&&E.equal(receipt.before.config,{...association.origin.registered.config,root:receipt.before.config.root})&&E.equal(entry,association.entry)&&entry!==null&&E.equal(entry.payload.aid,a.aid)&&E.equal(entry.payload.token,association.origin.token)&&contains(receipt.transaction.transaction.inputs,association.reference),'checkpoint-receipt-mismatch');
-    next={...row,leaf:'retired',state:'convicted',pending:null};registryFlow=receipt.flow;
+    next={...row,leaf:'retired',state:'convicted',conviction:null,pending:null};registryFlow=receipt.flow;
   }
   next={...next,status:statusOf(next.state)};
   const aids=state.aids.some(x=>E.equal(x.aid,a.aid))?state.aids.map(x=>E.equal(x.aid,a.aid)?next:x):[...state.aids,next];
@@ -287,7 +316,7 @@ export function attemptSystem(current,command) {
 }
 export function replaySystem(params,env,deployment,commands) {return commands.reduce((s,c)=>attemptSystem(s,c).session,newSystem(params,env,deployment));}
 export function checkSystemCorpus(corpus) {
-  if(corpus.schema!=='cardano-keri.checkpoint.system'||corpus.version!==3||corpus.traces.length!==8)throw Error('system-corpus-schema/roster');
+  if(corpus.schema!=='cardano-keri.checkpoint.system'||corpus.version!==3||corpus.traces.length!==10)throw Error('system-corpus-schema/roster');
   let cells=0,accepted=0,refused=0;
   for(const trace of corpus.traces) {
     if(!trace.cells.length)throw Error('empty-system-trace');

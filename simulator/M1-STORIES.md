@@ -34,7 +34,7 @@ pins):
 - **AID**, **KEL**, **inception**, **rotation**: [autonomic identifier](https://trustoverip.github.io/kswg-keri-specification/#autonomic-identifier-aid), [labelling key events in a KEL](https://trustoverip.github.io/kswg-keri-specification/#labelling-key-events-in-a-kel), the [inception](https://trustoverip.github.io/kswg-keri-specification/#inception-event-message-body) and [rotation](https://trustoverip.github.io/kswg-keri-specification/#rotation-event-message-body) event bodies.
 - **Current keys**, **next keys**: [pre-rotation](https://trustoverip.github.io/kswg-keri-specification/#pre-rotation) and [rotation using pre-rotation](https://trustoverip.github.io/kswg-keri-specification/#rotation-using-pre-rotation). Whoever reveals the committed next keys rotates; that is control.
 - **Witnesses**, **toad**, **receipts**: [witness designation](https://trustoverip.github.io/kswg-keri-specification/#witness-designation), [witnessing policy](https://trustoverip.github.io/kswg-keri-specification/#witnessing-policy), [receipt messages](https://trustoverip.github.io/kswg-keri-specification/#receipt-messages), [KERI's algorithm for witness agreement](https://trustoverip.github.io/kswg-keri-specification/#keris-algorithm-for-witness-agreement-kawa).
-- **Duplicity**: [duplicity](https://trustoverip.github.io/kswg-keri-specification/#duplicity), two differing events at one sequence number. What Cora proves.
+- **Duplicity**: [duplicity](https://trustoverip.github.io/kswg-keri-specification/#duplicity), two differing events at one sequence number. The checkpoint separately compares the committed rival with its spent tip.
 - **First-seen**: [first-seen policy](https://trustoverip.github.io/kswg-keri-specification/#first-seen-policy), a witness-local observation the chain never reconstructs.
 
 The words below are ours:
@@ -210,19 +210,12 @@ on chain and take its conviction bond.*
 - **Before**: `Present`, any bonded or poisoned state.
 - **Action**: a transaction carrying the second rotation with its receipts,
   naming Cora as payee.
-- **The chain checks**: the second rotation is at the tip's sequence,
-  satisfies the common prior-next threshold, satisfies its own current threshold,
-  carries receipts from its own derived witness threshold, and differs
-  in complete content from the accepted rotation. Both ordinary rotations
-  validate against authenticated predecessor context.
+- **The chain checks**: the rival rotation names the spent sequence, names the spent identifier, reveals the spent keys, meets the spent signing threshold, meets the spent witness threshold, and differs on a forward field.
 - **After**: `terminationPending`, retaining the representative and key state.
   `D_reg` goes to Cora and `B` plus pool to the refund
   address. The whole booked request remains pending until its associated
   consuming Registry fold burns the representative and marks the key retired.
-- **Why final**: no KERI event un-duplicates an identifier, so the chain
-  invents no recovery. Only a holder of the pre-committed keys could have
-  signed the second rotation, and only colluding witnesses could have
-  receipted both.
+- **Conformance**: at a rotated tip, the KERI conclusion also requires the rival to validate against the predecessor under its own rules. That obligation and refusal at a never-rotated tip remain open.
 - **Local limit**: no local action leaves pending custody. The connected
   system player shows booking and actual fold completion.
 

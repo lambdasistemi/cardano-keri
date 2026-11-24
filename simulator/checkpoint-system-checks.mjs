@@ -5,16 +5,16 @@ import {newSystem,attemptSystem,checkSystemCorpus,validateCommand,replaySystem} 
 import {equal} from './registry-economic-core.mjs';
 import {SYSTEM_THEOREMS,systemProperties} from './checkpoint-system-properties.mjs';
 const corpus=JSON.parse(readFileSync(new URL('./checkpoint-system-corpus.json',import.meta.url)));
-const report=checkSystemCorpus(corpus);assert.deepEqual(report,{cells:67,accepted:45,refused:22});
+const report=checkSystemCorpus(corpus);assert.deepEqual(report,{cells:79,accepted:55,refused:24});
 const first=corpus.traces[0].cells[0],initial=newSystem(first.params,first.env,corpus.traces[0].deployment);
 const registered=attemptSystem(initial,first.command).session;
 assert.equal(initial.state.aids.length,0,'mutated initial state');
-assert.throws(()=>{registered.state.aids[0].origin.environment.duplicity.push([99,99]);},TypeError);
+assert.throws(()=>{registered.state.aids[0].origin.environment.convictions.push({});},TypeError);
 assert.throws(()=>attemptSystem(structuredClone(registered),first.command),/must-start-at-init/);
 for(const trace of corpus.traces)assert(equal(replaySystem(trace.cells[0].params,trace.cells[0].env,trace.deployment,trace.cells.map(c=>c.command)).state,trace.final));
 const malformed=[
   x=>{x.register.context.extra=0;},
-  x=>{x.register.context.environment.duplicity=[[11,-1]];},
+  x=>{x.register.context.environment.convictions[0].output.index=-1;},
   x=>{x.register.context.parameters.Mr=5;},
   x=>{x.register.certificate.transaction.extra=true;},
   x=>{x.register.certificate.history[0].bookRegistration.booking.request.contents.lovelace=0.5;},
@@ -26,9 +26,9 @@ for(const mutate of malformed){const command=structuredClone(first.command);muta
 const injected=structuredClone(corpus.traces[0].cells.find(c=>c.name==='complete').command);
 injected.complete.environment=first.command.register.context.environment;
 assert.throws(()=>validateCommand(injected),/invalid-system-wire/,'completion cannot replace stored context');
-const other=corpus.traces[1].cells.find(c=>c.name==='other-valid-fold-cannot-complete-this-request');
+const other=corpus.traces.find(t=>t.name==='same-context-other-request').cells.find(c=>c.name==='other-valid-fold-cannot-complete-this-request');
 assert.equal(other.result.error,'checkpoint-receipt-mismatch');
-const stored=corpus.traces[2].cells.at(-1);assert.equal(stored.result.error,'keri-conviction-refused');
+const stored=corpus.traces.find(t=>t.name==='stored-origin-environment').cells.at(-1);assert.equal(stored.result.error,'keri-conviction-refused');
 const shown=new Set();
 for(const trace of corpus.traces)for(const cell of trace.cells)for(const[name,row]of Object.entries(systemProperties(cell))){assert(row.holds,name+': '+cell.name);if(row.exhibited)shown.add(name);}
 assert.deepEqual([...shown].sort(),SYSTEM_THEOREMS.slice().sort(),'system property premise census');
@@ -43,7 +43,7 @@ assert.equal(systemProperties(wrongOrigin)['T8_mint_once'].holds,false,'fabricat
 const convict=corpus.traces[0].cells.find(c=>c.name==='convict'),kept=structuredClone(convict.result);
 kept.ok.state.commitments=convict.input.commitments;
 assert.equal(systemProperties(convict,kept)['sys_conviction_consumes_commitment'].holds,false,'fabricated commitment burn check');
-const reveal=corpus.traces[3].cells.find(c=>c.name==='open-commitment');
+const reveal=corpus.traces.find(t=>t.name==='system-premises').cells.find(c=>c.name==='open-commitment');
 const early=structuredClone(reveal);early.command={reveal:{marker:1,now:4}};early.input=reveal.result.ok.state;early.result={ok:{...reveal.result.ok,state:{...reveal.result.ok.state,commitments:[]}}};
 assert.equal(systemProperties(early,early.result)['commitment_closes_in_or_after_window'].holds,false,'fabricated commitment window check');
 // A step that changes the deployment, a top-up that burns an open commitment, a
@@ -94,4 +94,26 @@ assert.equal(writerControl(w => w.rotations[0].signed.signatures = [], firstRota
 const observed = writerControl(() => {}, firstRotation).ok.state.aids[0];
 assert.deepEqual(observed.writer.rotation.previous, observed.origin.inception);
 assert.equal(observed.writer.rotation.event.event.sn, observed.state.present.l.sn);
+// Each change describes an accepted last rotation. The conviction must still
+// match that writer, including the witnesses accumulated along its history.
+const journey = corpus.traces.find(trace => trace.name === 'retained-associated-completion');
+const comparedPrefix = journey.cells.slice(0, journey.cells.findIndex(cell => cell.name === 'convict') + 1);
+const writerChanges = {
+  'current keys': event => event.keys.push(19),
+  'current threshold': event => { event.threshold = {weighted: {clauses: [[{key: {weight: {numerator:1,denominator:1}}}]]}}; },
+  'next keys': event => { event.nextKeys = [19]; },
+  'next threshold': event => { event.nextThreshold = {count: {required: 2}}; },
+  witnesses: event => { event.adds = [19]; },
+  'witness threshold': event => { event.adds = [19]; event.witnessThreshold = 1; }
+};
+for (const [field, change] of Object.entries(writerChanges)) {
+  const evidence = structuredClone(first.env);
+  const signed = evidence[0][1].writers.rotations.at(-1).signed;
+  change(signed.event);
+  for (const signature of signed.signatures) signature.event = signed.event;
+  if (signed.event.witnessThreshold > 0) signed.receipts = [{signer:19,event:signed.event,verified:true}];
+  const replay = replaySystem(first.params, evidence, journey.deployment, comparedPrefix.map(cell => cell.command));
+  assert(replay.records.slice(0, -1).every(record => record.result.ok), field + ': changed writer must be reachable');
+  assert.equal(replay.records.at(-1).result.error, 'checkpoint-rotation-writer-mismatch', field);
+}
 console.log(JSON.stringify({...report,schemaControls:malformed.length+1,immutableOrigin:true,initOnlySessions:true,systemProperties:shown.size,fabricatedCheckerControls:21}));

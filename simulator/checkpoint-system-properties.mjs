@@ -50,7 +50,7 @@ export function systemProperties(cell,result=cell.result) {
     const c=command.action?.convict?.commitment,payee=command.action?.convict?.payee;
     return !!c&&before.commitments.some(o=>equal(o,c))&&equal(c.aid,command.aid)&&c.deployment===before.deployment&&
       !after.commitments.some(o=>o.marker===c.marker)&&
-      entitles(evidenceFor(cell.env,command.aid),c,old.state.present.l,payee,command.now);
+      entitles(evidenceFor(cell.env,command.aid),c,old.state.present.l,payee,command.now,command.aid);
   });
   // A commitment that closes closes inside its window (a reveal or the conviction
   // that revealed it) or strictly after it (a sweep), never before it is eligible.
@@ -65,7 +65,7 @@ export function systemProperties(cell,result=cell.result) {
   const kept=accepted&&kind==='local'&&!!was&&!!now&&!equal(was,now)&&was.epoch===now.epoch&&was.sn===now.sn&&before.commitments.length>0;
   row('sys_commitment_survives_key_state_step',kept,()=>equal(after.commitments,before.commitments)&&
     before.commitments.every(o=>[o.eligibleAfter,o.expiresAt,command.now].every(t=>
-      entitles(evidenceFor(cell.env,command.aid),o,now,o.payee,t)===entitles(evidenceFor(cell.env,command.aid),o,was,o.payee,t))));
+      entitles(evidenceFor(cell.env,command.aid),o,now,o.payee,t,command.aid)===entitles(evidenceFor(cell.env,command.aid),o,was,o.payee,t,command.aid))));
   // A conviction revealing a commitment that names another deployment is refused.
   const revealed=kind==='local'&&actionKind(command.action)==='convict'?command.action.convict.commitment:null;
   row('sys_conviction_refused_for_other_deployment',!!revealed&&revealed.deployment!==before.deployment,()=>!accepted);

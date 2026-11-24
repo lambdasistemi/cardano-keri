@@ -504,7 +504,7 @@
 </main>
 <pre id="selftest-out" hidden></pre>
 <script>
-/* Source bindings: {"registry-economic-core.mjs":"2ec8e4cafd4ee445cd6e0a2388223e72d5d6c8449e3492fd31a8e7637dc07dde","checkpoint-conviction.mjs":"12452710a6929617b9516010c8d4ce9d82d2d0e43dac50d6e08f679c02e4f9f0","registry-wire.mjs":"46eb54fa87c8f6638f6f3afe9baa5570f0afb21d0d8f63cff80ee1883f721631","registry-simulator-core.mjs":"df1dc6ca3f2a421b7c9b06b5c1bcbfeadc773a0cb19f129d7c8d31dbfa5ff68c","registry-fixtures.mjs":"4a36a4667f0aea5209d9b559581567be49e67a7df5dad4040e7f53e96364fc1c","registry-offers.mjs":"2dc713c8b108857e3431de9f9f11d45c94dbed00b2454f3b08ed4ebe078096ea","registry-properties.mjs":"c58970d9d7187a7a33ddb05402a258b438f96b06e13decc181c634b7331e5b37","registry-simulator-backend.mjs":"cf46e2d5e0781e98f9e87eb49b9c53648f0cdcc0b48b9493d4bfe0cd72ea7c76","scenario-dsl.mjs":"f99480d4eb074ac42c308d8c2d61fbaac782ceac1037971689ae45ac5a607922","registry-page.mjs":"f49b270c16d350fc9f4b8cd9de0cbae03016f923cf3dd8e6be1c8e4c0f17780a","registry-page-template.html":"ee28020afc2b66437de9db42f3e8c9d60049b22e91bea940ed2a24c4d05abae5"} */
+/* Source bindings: {"registry-economic-core.mjs":"2ec8e4cafd4ee445cd6e0a2388223e72d5d6c8449e3492fd31a8e7637dc07dde","checkpoint-conviction.mjs":"12452710a6929617b9516010c8d4ce9d82d2d0e43dac50d6e08f679c02e4f9f0","registry-wire.mjs":"8b2e46b5d64f496878a70748e87181332adedbe0aa9ad39efaead6a9cc3f1345","registry-simulator-core.mjs":"df1dc6ca3f2a421b7c9b06b5c1bcbfeadc773a0cb19f129d7c8d31dbfa5ff68c","registry-fixtures.mjs":"4a36a4667f0aea5209d9b559581567be49e67a7df5dad4040e7f53e96364fc1c","registry-offers.mjs":"2dc713c8b108857e3431de9f9f11d45c94dbed00b2454f3b08ed4ebe078096ea","registry-properties.mjs":"c58970d9d7187a7a33ddb05402a258b438f96b06e13decc181c634b7331e5b37","registry-simulator-backend.mjs":"cf46e2d5e0781e98f9e87eb49b9c53648f0cdcc0b48b9493d4bfe0cd72ea7c76","scenario-dsl.mjs":"f99480d4eb074ac42c308d8c2d61fbaac782ceac1037971689ae45ac5a607922","registry-page.mjs":"f49b270c16d350fc9f4b8cd9de0cbae03016f923cf3dd8e6be1c8e4c0f17780a","registry-page-template.html":"ee28020afc2b66437de9db42f3e8c9d60049b22e91bea940ed2a24c4d05abae5"} */
 'use strict';
 /* @@MODULE:E@@ sha256=2ec8e4cafd4ee445cd6e0a2388223e72d5d6c8449e3492fd31a8e7637dc07dde */
 const E = (() => {
@@ -801,7 +801,7 @@ return { acceptsComparison, convictionFixture };
 })();
 /* @@MODULE:Judgment:END@@ */
 
-/* @@MODULE:Wire@@ sha256=46eb54fa87c8f6638f6f3afe9baa5570f0afb21d0d8f63cff80ee1883f721631 */
+/* @@MODULE:Wire@@ sha256=8b2e46b5d64f496878a70748e87181332adedbe0aa9ad39efaead6a9cc3f1345 */
 const Wire = (() => {
 /* Version 3 interchange validation. This is the simulator's input boundary,
  * separate from the model's semantic refusals. Nat/Int are exact and complete
@@ -893,6 +893,7 @@ const validateParams = value => {
   if(p.D===0n||p.Mr+p.tip>p.Mc)error('params.proofs');
   return toWire(p);
 };
+const validateRival = value => toWire(rival(toInternal(value), 'rival'));
 const validateAction = value => toWire(action(toInternal(value),'action'));
 const validateRegistrationBooking = value => toWire(regBooking(toInternal(value),'registration'));
 const validateTerminationBooking = value => toWire(localBooking(toInternal(value),'termination'));

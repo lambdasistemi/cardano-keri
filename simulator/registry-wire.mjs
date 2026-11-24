@@ -88,6 +88,7 @@ export const validateParams = value => {
   if(p.D===0n||p.Mr+p.tip>p.Mc)error('params.proofs');
   return toWire(p);
 };
+export const validateRival = value => toWire(rival(toInternal(value), 'rival'));
 export const validateAction = value => toWire(action(toInternal(value),'action'));
 export const validateRegistrationBooking = value => toWire(regBooking(toInternal(value),'registration'));
 export const validateTerminationBooking = value => toWire(localBooking(toInternal(value),'termination'));

@@ -442,7 +442,8 @@ function goalsClasses(leanRoot) {
   if (!commitmentDeclared.length) problems.push('commitment theorem inventory is empty');
   for (const n of COMMITMENT_STEP_ROWS) if (!commitmentDeclared.includes(n)) problems.push('commitment theorem missing ' + n);
   const commitmentBound = commitmentDeclared.filter(n => COMMITMENT_STEP_ROWS.includes(n) || SYSTEM_THEOREMS.includes(n));
-  const declared = [...theoremInventory(goals.text), ...commitmentBound];
+  const checkpointBound = theoremInventory(chk.text).filter(n => SYSTEM_THEOREMS.includes(n));
+  const declared = [...theoremInventory(goals.text), ...commitmentBound, ...checkpointBound];
   if (!declared.length) problems.push('theorem inventory is empty');
   problems.push(...duplicateIdentityProblems(declared, 'theorem'));
   if (!declared.some(n => n.includes('.'))) problems.push('theorem inventory has no dotted identity');
@@ -1081,6 +1082,9 @@ function fabricatedViolations(core) {
     T10_inert_without_next_keys: () => mk({ pre: frozen, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 } }),
     T10_only_deposit_restores: () => mk({ pre: frozen, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 } }),
     T10_current_quorum_never_restores: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, actor: 'currentQuorum', flow: { poolIn: 1 } }),
+    pending_only_by_conviction: () => mk({ pre: live, action: TOP, post: {terminationPending:{h:{epoch:1,sn:1}}} }),
+    trace_pending_convicted: () => mk({ pre: live, origin: live, action: TOP, post: {terminationPending:{h:{epoch:1,sn:1}}} }),
+    reachable_pending_convicted: () => mk({ pre: 'absent', origin: 'absent', action: {register:{refund:1,pool0:10}}, post: {terminationPending:{h:{epoch:1,sn:1}}} }),
     pending_step_impossible: () => mk({ pre: { terminationPending: { h: { epoch: 1, sn: 1 } } }, post: live, action: TOP }),
     pending_has_no_local_exit: () => mk({ pre: { terminationPending: { h: { epoch: 1, sn: 1 } } }, post: live, action: TOP }),
     trace_from_pending: () => mk({ pre: { terminationPending: { h: { epoch: 1, sn: 1 } } }, post: live, action: TOP }),
@@ -1354,7 +1358,7 @@ async function selftest(work) {
     { name: 'core effect changed: a paid rotation pays the premium to the refund address, not to the payee', expect: /flow mismatch|theorem VIOLATED: .*T(16|7)/,
       make: () => ({ core: mutant('m-rotate-payee', [["      if (p.P <= l.pool) return some({ bIn, hunter: payment(payee, 0, 0, p.P) }, present({ ...next, pool: l.pool - p.P }));", "      if (p.P <= l.pool) return some({ bIn, hunter: payment(l.refundTo, 0, 0, p.P) }, present({ ...next, pool: l.pool - p.P }));"]]), skipBuild: true }) },
     { name: 'core guard flipped: a checkpoint is convicted without a proof against its key state', expect: /expected ok=false, got ok=true|theorem VIOLATED: .*T(12|5|7)/,
-      make: () => ({ core: mutant('m-convict', [["      if (!envDuplicityAt(env, l.epoch, l.sn)) return refuse('no-duplicity-proof');\n", ""]]), skipBuild: true }) },
+      make: () => ({ core: mutant('m-convict', [["      if (!envAcceptsRival(env, l.epoch, l.sn, aid)) return refuse('no-duplicity-proof');\n", ""]]), skipBuild: true }) },
     { name: 'core guard flipped: pending custody takes a local step', expect: /expected reason «termination-pending»|expected ok=false, got ok=true|theorem VIOLATED: .*pending/,
       make: () => ({ core: mutant('m-pending-local', [["  if (sk === 'terminationPending') return refuse('termination-pending');\n", "  if (sk === 'terminationPending') return refuse('absent-needs-register');\n"]]), skipBuild: true }) },
     { name: 'core effect changed: a deposit restarts juvenility (D-040 says it does not)', expect: /live datum mismatch|theorem VIOLATED: .*T(5|10|7)/,
@@ -1476,6 +1480,8 @@ async function selftest(work) {
 }
 
 const work = mkdtempSync(join(tmpdir(), 'ck-scenario-gate-'));
+for (const dependency of ['checkpoint-conviction.mjs', 'registry-economic-core.mjs', 'registry-wire.mjs'])
+  cpSync(join(HERE, dependency), join(work, dependency));
 let code = 1;
 try {
   if (process.argv.includes('--clauses-md')) {

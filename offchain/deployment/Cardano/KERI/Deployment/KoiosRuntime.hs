@@ -14,6 +14,7 @@ module Cardano.KERI.Deployment.KoiosRuntime (
     KoiosFailure (..),
     koiosReads,
     evaluateLocally,
+    wholeAnswers,
 ) where
 
 import Cardano.KERI.Deployment.RegistryChain (Observation (..))

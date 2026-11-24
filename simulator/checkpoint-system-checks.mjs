@@ -64,6 +64,11 @@ assert.equal(systemProperties(misplaced)['sys_conviction_consumes_commitment'].h
 const home=corpus.traces.find(t=>t.name==='another-deployment');
 assert(replaySystem(home.cells[0].params,home.cells[0].env,corpus.traces[0].deployment,home.cells.slice(0,5).map(c=>c.command)).records.at(-1).result.ok,'the refused conviction is accepted in the commitment\'s own deployment');
 const bookedFacts = 'registration_installs_booked_facts';
+const differentBonds = {...first.params, B: first.params.B + 1};
+const differentDeploymentTerms = newSystem(differentBonds, first.env, corpus.traces[0].deployment);
+const bondResult = attemptSystem(differentDeploymentTerms, first.command).record.result;
+assert.equal(bondResult.error, 'checkpoint-registration-facts-mismatch');
+assert.equal(systemProperties({...first, params: differentBonds})[bookedFacts].holds, false);
 for (const field of ['bornAt', 'refundTo', 'pool']) {
   const changed = structuredClone(first.result);
   changed.ok.state.aids[0].state.present.l[field]++;
@@ -75,4 +80,4 @@ for (const cell of scopeTrace.cells.filter(cell => cell.name.startsWith('foreign
   const fabricated = {ok: {state: cell.input}};
   assert.equal(systemProperties(cell, fabricated).local_event_uses_own_authorization.holds, false, cell.name);
 }
-console.log(JSON.stringify({...report,schemaControls:malformed.length+1,immutableOrigin:true,initOnlySessions:true,systemProperties:shown.size,fabricatedCheckerControls:20}));
+console.log(JSON.stringify({...report,schemaControls:malformed.length+1,immutableOrigin:true,initOnlySessions:true,systemProperties:shown.size,fabricatedCheckerControls:21}));

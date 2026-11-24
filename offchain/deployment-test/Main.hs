@@ -9,6 +9,7 @@ import Cardano.KERI.Deployment.EndpointBoardTransactionSpec qualified as Endpoin
 import Cardano.KERI.Deployment.FreezePackageSpec qualified as FreezePackageSpec
 import Cardano.KERI.Deployment.KELSpec qualified as KELSpec
 import Cardano.KERI.Deployment.KoiosReadsSpec qualified as KoiosReadsSpec
+import Cardano.KERI.Deployment.KoiosSettlementSpec qualified as KoiosSettlementSpec
 import Cardano.KERI.Deployment.ManifestSpec qualified as ManifestSpec
 import Cardano.KERI.Deployment.RegistrationSpec qualified as RegistrationSpec
 import Cardano.KERI.Deployment.RegistryAttemptSpec qualified as RegistryAttemptSpec
@@ -76,6 +77,7 @@ suite = hspec $ do
     TopUpTransactionSpec.spec
     KELSpec.spec
     KoiosReadsSpec.spec
+    KoiosSettlementSpec.spec
     ManifestSpec.spec
     BountyEntitlementSpec.spec
     RegistrationSpec.spec

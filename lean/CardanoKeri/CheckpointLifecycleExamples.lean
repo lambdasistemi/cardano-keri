@@ -22,7 +22,7 @@ def env (aid : AID) : Env := {
     some (Duplicity.writerFixture aid target .rotation) else none,
   keyReads := ⟨(fun | [key] => some key | _ => none), (fun | [key] => some key | _ => none)⟩
   verifyRival := CardanoKeri.CheckpointConviction.Fixtures.verify,
-  comparison := fun e sn => some (CardanoKeri.CheckpointConviction.Fixtures.comparison aid e sn),
+  convictionSpend := fun e sn => some ⟨⟨105 + (aid - 11), 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison aid e sn⟩,
   convictionContext := fun epoch sn => some (Duplicity.fixture epoch sn).1,
   convictionRival := fun epoch sn => some (Duplicity.fixture epoch sn).2 }
 
@@ -54,7 +54,7 @@ def commitment : Commitment := {
   payee := 7, openedAt := 4, eligibleAfter := 5, expiresAt := 20, marker := 1 }
 def committed : Sys :=
   { rotated with commitments := fun k => if k = commitment.marker then some commitment else rotated.commitments k }
-def pending : Sys := (committed.set 11 (.terminationPending rotatedLive.hash)).retire commitment.marker
+def pending : Sys := (committed.set 11 (.terminationPending rotatedLive.hash) none ((env 11).convictionSpend 1 1)).retire commitment.marker
 
 def registryPending : CardanoKeri.Registry.Sys := CardanoKeri.Registry.Examples.pending
 def registryEntry : CardanoKeri.Registry.TerminationEntry := CardanoKeri.Registry.Examples.terminationEntry
@@ -233,6 +233,12 @@ def completionReceipt : CardanoKeri.Registry.FoldReceipt CardanoKeri.Registry.Ex
   unspent := CardanoKeri.Registry.Examples.terminationUnspent, transaction := CardanoKeri.Registry.Examples.terminationTransaction,
   flow := {}, reachable := registry_booked_reachable, executed := registry_folded }
 
+/-- The observed booking associates the request with the prior checkpoint spend. -/
+theorem booked_event : BookingEvent pending booked := by
+  exact ⟨11, rotatedLive.hash, origin, registryPending, registryBooked, 7, 1,
+    CardanoKeri.Registry.Examples.termination, { premium := some (7, 1), intoRequest := 3, bookingFee := 1 },
+    registryEntry, rfl, rfl, rfl, origin_history, registry_booked, rfl, rfl, rfl, ⟨rfl, rfl, by decide⟩, rfl⟩
+
 /-- Given the complete parameters and hypotheses:
 
 No additional local parameters; use the definitions in this module.
@@ -242,11 +248,7 @@ Then the complete conclusion is:
 
 SysStep p env pending booked
 -/
-theorem booked_step : SysStep p env pending booked := by
-  apply SysStep.book
-  exact ⟨11, rotatedLive.hash, origin, registryPending, registryBooked, 7, 1,
-    CardanoKeri.Registry.Examples.termination, { premium := some (7, 1), intoRequest := 3, bookingFee := 1 },
-    registryEntry, rfl, rfl, rfl, origin_history, registry_booked, rfl, rfl, rfl, ⟨rfl, rfl⟩, rfl⟩
+theorem booked_step : SysStep p env pending booked := .book booked_event
 
 /-- Given the complete parameters and hypotheses:
 

@@ -16,11 +16,11 @@ def env : Env := {
   depositAuthorized := fun e => decide (e = 2)
   quorum := fun _ => true
   verifyRival := CardanoKeri.CheckpointConviction.Fixtures.verify,
-  comparison := fun e sn => some (CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn),
+  convictionSpend := fun e sn => some ⟨⟨105, 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn⟩,
   convictionContext := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).1
   convictionRival := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).2 }
 -- The rival is the accepted event itself: evidence is shown, but it proves no duplicity.
-def noDup : Env := { env with comparison := fun e sn => some (CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn true) }
+def noDup : Env := { env with convictionSpend := fun e sn => some ⟨⟨105, 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn true⟩ }
 /-- A commitment entitling payee 8 to convict the key state of `l` at slots 6 to 20,
 for AID 11 in deployment 21. -/
 def k : Commitment := {

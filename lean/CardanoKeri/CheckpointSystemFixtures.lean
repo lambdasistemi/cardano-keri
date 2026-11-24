@@ -154,6 +154,15 @@ def traces : Except String (List Json) := do
     ("rotate-again", rotatedAgainCommand), ("open-commitment", openCommand),
     ("convict", convictedCommand), ("book", f.booking)]
   let restricted ← registrationCommand { context with environment.convictions := [] }
+  let row := Registry.Scenarios.convictionFixture 11 2 2
+  let otherRival := {row with comparison.rival.nextKeys := [[888]]}
+  let rivalOrigin ← registrationCommand {context with environment.convictions := [otherRival]}
+  let otherOutput := {row with output.index := row.output.index + 1}
+  let outputOrigin ← registrationCommand {context with environment.convictions := [otherOutput]}
+  let .book subject booker fee history booking := f.booking | throw "termination booking required"
+  let otherBooking := Command.book subject booker fee history {booking with pendingReference := otherOutput.output}
+  let sharedPrefix := [("rotate", rotatedCommand), ("rotate-again", rotatedAgainCommand),
+    ("open-commitment", openCommand), ("convict", convictedCommand)]
   let .register aid now refund pool ctx cert b index := f.registration | throw "registration fixture required"
   let registration := fun t r v => Command.register aid t r v ctx cert b index
   let authorizations ← authorizationTrace
@@ -161,6 +170,10 @@ def traces : Except String (List Json) := do
     trace "retained-associated-completion" (journey ++ [
       ("pending-refuses-local-rotation", .local 11 6 (.rotate 3 .keep 7)), ("complete", f.completion),
       ("repeat-completion-refused", f.completion), ("retired-registration-refused", f.registration)]),
+    trace "booking-compares-the-earlier-rival" ([("register", rivalOrigin)] ++ sharedPrefix ++
+      [("different-economic-rival-refused", f.booking)]),
+    trace "booking-compares-the-producing-outpoint" ([("register", outputOrigin)] ++ sharedPrefix ++
+      [("different-economic-output-refused", otherBooking)]),
     trace "same-context-other-request" (journey ++ [
       ("other-valid-fold-cannot-complete-this-request", f.otherCompletion),
       ("mixed-fold-completes-own-request", f.mixedCompletion)]),

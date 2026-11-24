@@ -57,7 +57,7 @@ structure Env where
 
   -- The enforcement observer decodes the spent active datum and the rival in
   -- the same checkpoint transaction. Signature verification is a primitive.
-  comparison : Epoch → Seq → Option CheckpointConviction.Comparison := fun _ _ => none
+  convictionSpend : Epoch → Seq → Option Registry.Conviction := fun _ _ => none
   verifyRival : CheckpointConviction.Verify := fun _ _ _ => false
   keyReads : KeyReads := ⟨fun _ => none, fun _ => none⟩
 
@@ -71,6 +71,10 @@ structure Env where
   -- rotation presented for the spent identifier and the proposed successor.
   inceptionWriter : AID → Nat → Option (Duplicity.SignedEvent × List Nat) := fun _ _ => none
   rotationWriter : AID → Epoch → Seq → Seq → Option Duplicity.SignedEvent := fun _ _ _ _ => none
+
+/-- The comparison and the indexed output are reads of one conviction transaction. -/
+def Env.comparison (env : Env) (epoch : Epoch) (sn : Seq) :=
+  (env.convictionSpend epoch sn).map Registry.Conviction.comparison
 
 def Env.initialHistory (env : Env) (aid : AID) (datum : Option Nat) : Option EventHistory :=
   match datum with
@@ -503,16 +507,26 @@ structure Sys where
   -- The open commitments of the release's commitment program, by marker.
   commitments : Marker → Option Commitment
   writers : AID → Option EventHistory
+  -- Historical observation of the producing spend while the carrier is pending.
+  convictions : AID → Option Registry.Conviction := fun _ => none
 
 def Sys.init (d : Deployment) : Sys :=
   { deployment := d, leaves := fun _ => .absent, states := fun _ => .absent,
     origins := fun _ => none, pending := fun _ => none, commitments := fun _ => none, writers := fun _ => none }
 
-def Sys.set (s : Sys) (aid : AID) (st : State) (writer : Option EventHistory := none) : Sys :=
+def Sys.set (s : Sys) (aid : AID) (st : State) (writer : Option EventHistory := none)
+    (spend : Option Registry.Conviction := none) : Sys :=
   { s with
     leaves := fun a => if a = aid then st.leaf else s.leaves a,
     states := fun a => if a = aid then st else s.states a,
+    convictions := fun a => if a = aid then spend else s.convictions a,
     writers := fun a => if a = aid then writer.orElse (fun _ => s.writers a) else s.writers a }
+
+/-- Only the local transition producing a pending carrier records a conviction. -/
+def State.producingSpend (state : State) (env : Env) : Option Registry.Conviction :=
+  match state with
+  | .terminationPending key => env.convictionSpend key.epoch key.sn
+  | _ => none
 
 def Sys.installOrigin (s : Sys) (aid : AID) (st : State) (origin : Origin) : Sys :=
   { s.set aid st (some origin.inception) with
@@ -617,6 +631,11 @@ theorem Sys.retireRevealed_frame (s : Sys) (a : Action) :
       (s.retireRevealed a).origins = s.origins ∧ (s.retireRevealed a).pending = s.pending := by
   unfold Sys.retireRevealed; cases a.revealed <;> exact ⟨rfl, rfl, rfl, rfl⟩
 
+@[simp] theorem Sys.retireRevealed_convictions (s : Sys) (a : Action) :
+    (s.retireRevealed a).convictions = s.convictions := by
+  unfold Sys.retireRevealed
+  cases a.revealed <;> rfl
+
 @[simp] theorem Sys.retireRevealed_leaves (s : Sys) (a : Action) :
     (s.retireRevealed a).leaves = s.leaves := (s.retireRevealed_frame a).1
 @[simp] theorem Sys.retireRevealed_states (s : Sys) (a : Action) :
@@ -668,7 +687,7 @@ def LocalEvent (p : Params) (env : SystemEnv) (s s' : Sys) : Prop :=
     (∀ refund pool0, a ≠ .register refund pool0) ∧
     Step p (env aid) a now (s.states aid) f st ∧
     (s.revealOpen aid a ∧ (s.localWriter (env aid) aid a).isSome = true) ∧
-    s' = (s.set aid st (s.localWriter (env aid) aid a).join).retireRevealed a
+    s' = (s.set aid st (s.localWriter (env aid) aid a).join (st.producingSpend (env aid))).retireRevealed a
 
 /-- The identity and key-state evidence required by a local action. A deposit
 uses the keys of the new epoch. Freeze, like keep, relays a witnessed rotation. -/
@@ -690,7 +709,7 @@ theorem local_event_uses_own_authorization {p : Params} {env : SystemEnv} {s s' 
     (event : LocalEvent p env s s') :
     ∃ aid a now flow st, Step p (env aid) a now (s.states aid) flow st ∧
       a.authorizedFor env aid (s.states aid) ∧ s.revealOpen aid a ∧
-      s' = (s.set aid st (s.localWriter (env aid) aid a).join).retireRevealed a := by
+      s' = (s.set aid st (s.localWriter (env aid) aid a).join (st.producingSpend (env aid))).retireRevealed a := by
   obtain ⟨aid, a, now, flow, st, _, step, opened, installed⟩ := event
   refine ⟨aid, a, now, flow, st, step, ?_, opened.1, installed⟩
   generalize h : s.states aid = before at step ⊢
@@ -717,6 +736,14 @@ def SweepEvent (s s' : Sys) : Prop :=
   ∃ (c : Commitment) (now : Slot), s.commitments c.marker = some c ∧
     c.expiresAt < now ∧ s' = s.retire c.marker
 
+/-- A certificate presents two projections of the earlier spend. Compare their
+ledger outpoint and full observer evidence before associating the histories.
+The termination mint itself only spends the named pending output. -/
+def bookingSharesConviction (s : Sys) (aid : AID) (origin : Origin) (ref : Singular.OutRef) : Bool :=
+  match s.convictions aid with
+  | some observed => decide (observed.output = ref ∧ origin.environment.conviction aid = some observed)
+  | none => false
+
 -- The request association is fixed by an actual booking in this origin's
 -- extending Registry history, while this checkpoint is already pending.
 def BookingEvent (s s' : Sys) : Prop :=
@@ -730,7 +757,8 @@ def BookingEvent (s s' : Sys) : Prop :=
     CardanoKeri.Registry.bookTermination origin.parameters before aid booker fee b = .ok (f, booked) ∧
     CardanoKeri.Registry.pendingAt booked b.request.reference = some entry ∧
     entry.booking = b ∧ entry.payload.aid = aid ∧ (entry.payload.token = origin.token ∧
-      entry.payload.spend = ⟨b.pendingReference, aid, h⟩) ∧
+      entry.payload.spend = ⟨b.pendingReference, aid, h⟩ ∧
+      bookingSharesConviction s aid origin b.pendingReference = true) ∧
     s' = s.associate aid {
       origin := origin, keyState := h, reference := b.request.reference,
       entry := entry, booked := booked }

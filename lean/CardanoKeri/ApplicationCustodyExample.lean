@@ -202,7 +202,7 @@ private theorem registeredPath : CarrierHistory p env i active 11 startEdges reg
 /-- Given the registered holding, when the signed advance is paid, then its successor output is the next carrier in the history. -/
 private theorem rotatedPath : CarrierHistory p env i active 11 rotationEdges rotated advancedWorld advanced := by
   exact .spend registeredPath advanceTx (action := .rotate 1 .keep 6) (now := 3)
-    (state := .present rotatedLive) rfl ⟨rfl,rfl⟩ ⟨rfl,rfl⟩
+    (state := .present rotatedLive) rfl ⟨⟨rfl,rfl⟩, by intro key h; cases h⟩ ⟨rfl,rfl⟩
     (by intro refund pool equal; cases equal)
     (Step.rotateKeepPaid 3 1 6 (by decide) (by decide) (by decide)) rfl (by decide) rfl
 
@@ -210,7 +210,7 @@ private theorem rotatedPath : CarrierHistory p env i active 11 rotationEdges rot
 private theorem pendingPath : CarrierHistory p env i active 11 convictionEdges pending convictionWorld convicted := by
   have pledged := CarrierHistory.retain rotatedPath pledgeTx (by decide) committed_step (by rfl)
   exact .spend pledged convictionTx (action := .convict 7 commitment) (now := 5)
-    (state := .terminationPending rotatedLive.hash) rfl ⟨rfl,rfl⟩ ⟨rfl,rfl⟩
+    (state := .terminationPending rotatedLive.hash) rfl ⟨⟨rfl,rfl⟩, by intro key h; cases h; rfl⟩ ⟨rfl,rfl⟩
     (by intro refund pool equal; cases equal)
     (Step.convict 5 7 commitment (by decide) (by decide)) (by rfl) rfl rfl
 
@@ -305,6 +305,20 @@ theorem rotated_booking_compares_its_writer :
       CheckpointConviction.accepts (env 11).verifyRival comparison.tip comparison.rival = true := by
   have reach : SysReach p env committed := .step (.step (.step (.init deployment) registered_step) rotated_step) committed_step
   exact conviction_compares_authenticated_writer reach witnessed_termination_booking.2.2.2
+
+/-- Given the public carrier after rotation, when the termination request is
+booked, the economic and checkpoint histories identify the same comparison
+and the same indexed pending output created by the earlier conviction. -/
+theorem witnessed_shared_conviction :
+    ∃ observed before after, (before, after, convicted) ∈ convictionEdges ∧
+      ConvictionEdge p env 11 association.keyState before after ∧
+      (env 11).convictionSpend association.keyState.epoch association.keyState.sn = some observed ∧
+      association.origin.environment.conviction 11 = some observed ∧ observed.output = convicted.reference ∧
+      association.entry.payload.spend = ⟨convicted.reference, 11, association.keyState⟩ ∧
+      Registry.ConvictionOrigin association.origin.parameters association.origin.environment
+        association.origin.configuration 11 association.entry.payload.token
+        (some association.entry.payload.spend) association.entry.payload.original :=
+  booked_carrier_shares_observation pendingPath booked_event rfl rfl
 
 -- The comparison still has its signatures. A next-key commitment which
 -- cannot be read as the writer's established identity loses the system spend.

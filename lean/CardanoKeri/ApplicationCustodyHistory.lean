@@ -48,12 +48,14 @@ inductive CarrierHistory (p : Checkpoint.Params) (env : SystemEnv) (i : Interpre
   | spend {edges before after w w' old out action now flow state}
       (past : CarrierHistory p env i token aid edges before w old)
       (tx : Transaction w w') (input : namedInput tx.observation old.reference = some old)
-      (created : tx.creates out) (datum : Carries i token aid out state)
+      (created : tx.creates out ∧ ∀ key, state = .terminationPending key →
+        ((env aid).convictionSpend key.epoch key.sn).map Registry.Conviction.output = some out.reference)
+      (datum : Carries i token aid out state)
       (ordinary : ∀ refund pool, action ≠ .register refund pool)
       (executed : Step p (env aid) action now (before.states aid) flow state)
       (openMarker : before.revealOpen aid action)
       (writer : (before.localWriter (env aid) aid action).isSome = true)
-      (updated : after = (before.set aid state (before.localWriter (env aid) aid action).join).retireRevealed action) :
+      (updated : after = (before.set aid state (before.localWriter (env aid) aid action).join (state.producingSpend (env aid))).retireRevealed action) :
       CarrierHistory p env i token aid ((before, after, out) :: edges) after w' out
   | retain {edges before after w w' out} (past : CarrierHistory p env i token aid edges before w out)
       (tx : Transaction w w') (unspent : out.reference ∉ tx.observation.assets.spent)
@@ -97,7 +99,7 @@ theorem carrier_unspent {p env i token aid edges s w out}
   | register _ _ _ _ _ tx _ created datum =>
     exact ⟨tx.ledger.nextUnspent ▸ List.mem_append_right _ (List.mem_of_getElem? created.1), datum.1⟩
   | spend _ tx _ created datum _ _ _ _ _ _ =>
-    exact ⟨tx.ledger.nextUnspent ▸ List.mem_append_right _ (List.mem_of_getElem? created.1), datum.1⟩
+    exact ⟨tx.ledger.nextUnspent ▸ List.mem_append_right _ (List.mem_of_getElem? created.1.1), datum.1⟩
   | retain _ tx survives _ _ ih =>
     rw [tx.ledger.nextUnspent]
     exact ⟨List.mem_append_left _ (List.mem_filter.mpr ⟨ih.1, by simpa using survives⟩), ih.2⟩
@@ -105,24 +107,67 @@ theorem carrier_unspent {p env i token aid edges s w out}
 /-- Given a carrier history, when its current output decodes as pending, then
 this exact output was created by a conviction edge of this identifier at
 the decoded key state. -/
-theorem pending_output_producer {p env i token aid edges s w out key}
+theorem pending_output_observation {p env i token aid edges s w out key}
     (path : CarrierHistory p env i token aid edges s w out)
     (pending : checkpointDatum i out = some ⟨aid, .terminationPending key⟩) :
-    ∃ before after, (before, after, out) ∈ edges ∧ ConvictionEdge p env aid key before after := by
+    ∃ before after, (before, after, out) ∈ edges ∧ ConvictionEdge p env aid key before after ∧
+      ((env aid).convictionSpend key.epoch key.sn).map Registry.Conviction.output = some out.reference := by
   induction path with
   | register _ _ _ _ _ _ _ _ datum =>
     rw [datum.2] at pending
     simp [State.datumFacts] at pending
-  | @spend edges before after w w' old out action now flow state _ _ _ _ datum _ executed opened writer updated _ =>
+  | @spend edges before after w w' old out action now flow state _ _ _ created datum _ executed opened writer updated _ =>
     subst after
     rw [datum.2] at pending
     have target : state = .terminationPending key := by cases state <;> simp_all [State.datumFacts]
     subst state
     obtain ⟨live, payee, c, wasLive, rfl, _, _, atKey⟩ := pending_only_by_conviction _ _ executed
     rw [wasLive] at executed
-    exact ⟨_, _, List.mem_cons_self, live, now, payee, c, flow, wasLive, atKey, executed,
-      ⟨opened, by simpa [Sys.localWriter] using writer⟩, by simp⟩
+    exact ⟨_, _, List.mem_cons_self, ⟨live, now, payee, c, flow, wasLive, atKey, executed,
+      ⟨opened, by simpa [Sys.localWriter] using writer⟩, by simp [State.producingSpend]⟩, created.2 _ rfl⟩
   | retain _ _ _ _ _ ih => exact ih pending
+
+/-- Given the decoded pending output of a carrier history, its exact producer is a conviction. -/
+theorem pending_output_producer {p env i token aid edges s w out key}
+    (path : CarrierHistory p env i token aid edges s w out)
+    (pending : checkpointDatum i out = some ⟨aid, .terminationPending key⟩) :
+    ∃ before after, (before, after, out) ∈ edges ∧ ConvictionEdge p env aid key before after := by
+  obtain ⟨before, after, member, edge, _⟩ := pending_output_observation path pending
+  exact ⟨before, after, member, edge⟩
+
+private theorem carrier_datum {p env i token aid edges s w out}
+    (path : CarrierHistory p env i token aid edges s w out) :
+    checkpointDatum i out = some ⟨aid, (s.states aid).datumFacts⟩ := by
+  induction path with
+  | register _ _ _ _ state _ _ _ datum => rw [state]; exact datum.2
+  | spend _ _ _ _ datum _ _ _ _ updated _ =>
+    rw [updated, Sys.retireRevealed_states]
+    simpa [Sys.set] using datum.2
+  | retain _ _ _ _ frame ih => rwa [frame]
+
+/-- Given a pending carrier and its new booking association, when the record
+is read, the economic conviction used the exact observation of the checkpoint
+edge that created this output. The receipt names the same outpoint and position. -/
+theorem booked_carrier_shares_observation {p env i token aid edges s next w out association}
+    (path : CarrierHistory p env i token aid edges s w out)
+    (book : BookingEvent s next) (empty : s.pending aid = none)
+    (installed : next.pending aid = some association) :
+    ∃ observed before after, (before, after, out) ∈ edges ∧
+      ConvictionEdge p env aid association.keyState before after ∧
+      (env aid).convictionSpend association.keyState.epoch association.keyState.sn = some observed ∧
+      association.origin.environment.conviction aid = some observed ∧ observed.output = out.reference ∧
+      association.entry.payload.spend = ⟨out.reference, aid, association.keyState⟩ ∧
+      Registry.ConvictionOrigin association.origin.parameters association.origin.environment
+        association.origin.configuration aid association.entry.payload.token
+        (some association.entry.payload.spend) association.entry.payload.original := by
+  obtain ⟨_, _, history⟩ := reachable_has_system_history (carrier_reachable path)
+  obtain ⟨pending, observed, _, _, _, _, read, economic, receipt, authorized⟩ :=
+    booking_uses_producing_spend history book empty installed
+  have datum := carrier_datum path
+  rw [pending] at datum
+  obtain ⟨before, after, member, edge, reference⟩ := pending_output_observation path datum
+  simp [read] at reference
+  exact ⟨observed, before, after, member, edge, read, economic, reference, by rwa [reference] at receipt, authorized⟩
 
 private theorem carrier_identifier {p env i token aid edges s w out}
     (path : CarrierHistory p env i token aid edges s w out) :

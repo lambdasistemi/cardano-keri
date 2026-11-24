@@ -45,8 +45,8 @@ the named pending input and places the approval at the request output
 and the assumed finite encoding and collision freedom supply the one-token
 bound. Under these premises, `Custody.approval_spends_conviction_output`
 identifies the minted approval's input and the exact checkpoint edge that
-created it. A bare economic registry replay does not supply the observed
-carrier history or the checkpoint's native key state.
+created it. A bare economic registry replay records its decoded observations. A reader
+establishes the carrier history by following the active token through the ledger.
 
 The termination booker supplies the pending reference and the request index in
 the mint transaction. The ledger identifies the transaction that created each
@@ -54,5 +54,14 @@ output. `Transaction.bookingSpend` reads the request at that index, matches its
 reference and lovelace, and uses the configured checkpoint credential and the
 named input to recover its native position. With the public registry history
 and the observed carrier history, `booking_receipt_provenance` identifies both
-the producing conviction and its authenticated live writer. The ordinary
-economic entry still carries the scalar copied from its registry carrier.
+the producing conviction and its authenticated live writer. The economic entry stores the input reference, identifier, epoch and sequence.
+
+At the checkpoint spend, the observer reads the rival and the spent keys.
+The ledger assigns the transaction and index of its pending output.
+`Env.convictionSpend` represents these reads together. The system retains
+the record as history, and the carrier path checks the index and creating
+transaction against its actual output. The booking certificate compares that
+record with the economic history of the same spend. The termination mint
+reads the pending input, and the Singular folder processes the admitted
+request under its existing custody rule. See
+`Custody.booked_carrier_shares_observation` for the joined history.

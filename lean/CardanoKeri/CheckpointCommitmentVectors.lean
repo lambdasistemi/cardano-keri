@@ -43,7 +43,7 @@ a rival equal to the accepted event, which proves nothing. -/
 def envFor (rivalIsAccepted : Bool) : Env := {
   rotationTo := fun _ _ _ => false, depositAuthorized := fun _ => false, quorum := fun _ => false,
   verifyRival := CardanoKeri.CheckpointConviction.Fixtures.verify,
-  comparison := fun e sn => some (CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn rivalIsAccepted),
+  convictionSpend := fun e sn => some ⟨⟨105, 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn rivalIsAccepted⟩,
   convictionContext := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).1,
   convictionRival := fun e sn => some (if rivalIsAccepted then (CardanoKeri.Duplicity.fixture e sn).1.accepted
     else (CardanoKeri.Duplicity.fixture e sn).2) }

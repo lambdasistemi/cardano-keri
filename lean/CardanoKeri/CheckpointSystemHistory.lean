@@ -1,4 +1,5 @@
-import CardanoKeri.CheckpointCompletionGoals
+import CardanoKeri.CheckpointSystemEvidence
+import CardanoKeri.RegistryAuthorization
 import CardanoKeri.ConcreteConvictionGoals
 
 namespace CardanoKeri.Checkpoint
@@ -30,12 +31,12 @@ def ConvictionEdge (p : Params) (env : SystemEnv) (aid : AID) (key : KeyState)
     before.states aid = .present live ∧ live.hash = key ∧
     Step p (env aid) (.convict payee commitment) now (.present live) flow (.terminationPending key) ∧
     (before.revealOpen aid (.convict payee commitment) ∧ before.comparisonMatchesWriter (env aid) aid = true) ∧
-    after = (before.set aid (.terminationPending key)).retireRevealed (.convict payee commitment)
+    after = (before.set aid (.terminationPending key) none ((env aid).convictionSpend key.epoch key.sn)).retireRevealed (.convict payee commitment)
 
 private theorem pending_step_origin {p : Params} {env : SystemEnv} {before after : Sys}
     {aid : AID} {key : KeyState} (step : SysStep p env before after)
     (pending : after.states aid = .terminationPending key) :
-    before.states aid = .terminationPending key ∨ ConvictionEdge p env aid key before after := by
+    (before.states aid = .terminationPending key ∧ after.convictions aid = before.convictions aid) ∨ ConvictionEdge p env aid key before after := by
   cases step with
   | register event =>
     obtain ⟨subject, now, refund, pool, flow, st, rp, re, cfg, receipt, booking, origin,
@@ -46,7 +47,7 @@ private theorem pending_step_origin {p : Params} {env : SystemEnv} {before after
       subst st
       obtain ⟨_, _, _, _, impossible, _⟩ := pending_only_by_conviction _ _ registered
       contradiction
-    · exact Or.inl (by simpa [Sys.installOrigin, Sys.set, same] using pending)
+    · exact Or.inl ⟨by simpa [Sys.installOrigin, Sys.set, same] using pending, by simp [Sys.installOrigin, Sys.set, same]⟩
   | «local» event =>
     obtain ⟨subject, action, now, flow, st, _, executed, opened, rfl⟩ := event
     by_cases same : aid = subject
@@ -56,41 +57,97 @@ private theorem pending_step_origin {p : Params} {env : SystemEnv} {before after
       obtain ⟨l, payee, c, wasLive, rfl, _, _, atKey⟩ := pending_only_by_conviction _ _ executed
       rw [wasLive] at executed
       exact Or.inr ⟨l, now, payee, c, flow, wasLive, atKey, executed, ⟨opened.1, by
-        simpa [Sys.localWriter] using opened.2⟩, by simp⟩
-    · exact Or.inl (by simpa [Sys.set, same] using pending)
+        simpa [Sys.localWriter] using opened.2⟩, by simp [State.producingSpend]⟩
+    · exact Or.inl ⟨by simpa [Sys.set, same] using pending, by simp [Sys.set, same]⟩
   | book event =>
-    rw [(booking_event_preserves_checkpoint _ _ event).1] at pending
-    exact Or.inl pending
+    obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, rfl⟩ := event
+    exact Or.inl ⟨pending, rfl⟩
   | complete event =>
     obtain ⟨subject, association, receipt, matching, rfl⟩ := event
     by_cases same : aid = subject
     · subst subject
       simp [Sys.finish, Sys.set] at pending
-    · exact Or.inl (by simpa [Sys.finish, Sys.set, same] using pending)
+    · exact Or.inl ⟨by simpa [Sys.finish, Sys.set, same] using pending, by simp [Sys.finish, Sys.set, same]⟩
   | openCommitment event =>
     obtain ⟨c, _, _, rfl⟩ := event
-    exact Or.inl pending
+    exact Or.inl ⟨pending, rfl⟩
   | reveal event =>
     obtain ⟨c, now, _, _, _, rfl⟩ := event
-    exact Or.inl pending
+    exact Or.inl ⟨pending, rfl⟩
   | sweep event =>
     obtain ⟨c, now, _, _, rfl⟩ := event
-    exact Or.inl pending
+    exact Or.inl ⟨pending, rfl⟩
 
 /-- Given an execution from system initialization, when an identifier is
 pending at a particular key state, then an edge of that very execution
 convicted the same identifier's live checkpoint at that exact key state. -/
-theorem pending_conviction_in_system_history {p : Params} {env : SystemEnv}
+theorem pending_spend_in_system_history {p : Params} {env : SystemEnv}
     {d : Deployment} {edges : List (Sys × Sys)} {s : Sys} {aid : AID} {key : KeyState}
     (history : SystemHistory p env d edges s) (pending : s.states aid = .terminationPending key) :
-    ∃ before after, (before, after) ∈ edges ∧ ConvictionEdge p env aid key before after := by
+    ∃ before after, (before, after) ∈ edges ∧ ConvictionEdge p env aid key before after ∧
+      s.convictions aid = (env aid).convictionSpend key.epoch key.sn := by
   induction history with
   | init => cases pending
   | step previous step ih =>
     rcases pending_step_origin step pending with inherited | produced
-    · obtain ⟨before, after, mem, edge⟩ := ih inherited
-      exact ⟨before, after, List.mem_cons_of_mem _ mem, edge⟩
-    · exact ⟨_, _, List.mem_cons_self, produced⟩
+    · obtain ⟨before, after, mem, edge, same⟩ := ih inherited.1
+      exact ⟨before, after, List.mem_cons_of_mem _ mem, edge, inherited.2.trans same⟩
+    · refine ⟨_, _, List.mem_cons_self, produced, ?_⟩
+      obtain ⟨_, _, _, _, _, _, _, _, _, rfl⟩ := produced
+      simp [Sys.set]
+
+
+/-- Given a pending state on a system path, a conviction in that path produced it. -/
+theorem pending_conviction_in_system_history {p env d edges s aid key}
+    (history : SystemHistory p env d edges s) (pending : s.states aid = .terminationPending key) :
+    ∃ before after, (before, after) ∈ edges ∧ ConvictionEdge p env aid key before after := by
+  obtain ⟨before, after, member, edge, _⟩ := pending_spend_in_system_history history pending
+  exact ⟨before, after, member, edge⟩
+
+private theorem history_snapshots {p env d edges s} (history : SystemHistory p env d edges s) :
+    OriginsReachable s ∧ PendingReachable s := by
+  induction history with
+  | init => exact ⟨(CertifiedSys.init _).origins, (CertifiedSys.init _).pending⟩
+  | step _ step ih => exact sysstep_snapshot_reachability p env ih.1 ih.2 step
+
+/-- Given the actual system path to a booking, when the economic entry is
+associated, its origin and the producing checkpoint edge read the same
+indexed output and the same full comparison, including the rival evidence. -/
+theorem booking_uses_producing_spend {p env d edges s next aid association}
+    (history : SystemHistory p env d edges s) (book : BookingEvent s next)
+    (empty : s.pending aid = none) (installed : next.pending aid = some association) :
+    s.states aid = .terminationPending association.keyState ∧
+    ∃ observed before after,
+      (before, after) ∈ edges ∧ ConvictionEdge p env aid association.keyState before after ∧
+      (env aid).convictionSpend association.keyState.epoch association.keyState.sn = some observed ∧
+      association.origin.environment.conviction aid = some observed ∧
+      association.entry.payload.spend = ⟨observed.output, aid, association.keyState⟩ ∧
+      Registry.ConvictionOrigin association.origin.parameters association.origin.environment
+        association.origin.configuration aid association.entry.payload.token
+        (some association.entry.payload.spend) association.entry.payload.original := by
+  obtain ⟨subject, key, origin, prior, booked, booker, fee, b, flow, entry,
+    pending, stored, _, extension, placement, lookup, _, identifier, ⟨_, receipt, shared⟩, rfl⟩ := book
+  have same : aid = subject := by
+    by_cases h : aid = subject
+    · exact h
+    · simp [Sys.associate, h, empty] at installed
+  cases same
+  simp [Sys.associate] at installed
+  subst association
+  obtain ⟨before, after, member, edge, read⟩ := pending_spend_in_system_history history pending
+  refine ⟨pending, ?_⟩
+  unfold bookingSharesConviction at shared
+  cases found : s.convictions aid with
+  | none => simp [found] at shared
+  | some observed =>
+    simp only [found, decide_eq_true_eq] at shared
+    refine ⟨observed, before, after, member, edge,
+      read.symm.trans found, shared.2, ?_, ?_⟩
+    · simpa [shared.1] using receipt
+    · have priorReach := extension.reachable ((history_snapshots history).1 aid origin stored)
+      have bookedReach := Registry.Reach.next priorReach (action := .bookTermination aid booker fee b) placement
+      have authorized := (Registry.reachable_authorization _ _ _ bookedReach).2 entry (List.mem_of_find?_eq_some lookup)
+      simpa [identifier] using authorized
 
 private def WritersAuthenticated (s : Sys) : Prop :=
   ∀ aid history, s.writers aid = some history → history.authenticated aid = true

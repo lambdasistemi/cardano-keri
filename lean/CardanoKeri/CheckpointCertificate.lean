@@ -77,7 +77,8 @@ def bookCertificate (current : CertifiedSys) (p : Params) (env : SystemEnv)
             | none => throw "checkpoint-booking-entry-missing"
             | some entry =>
               if fields : entry.booking = booking ∧ entry.payload.aid = aid ∧ (entry.payload.token = origin.token ∧
-                  entry.payload.spend = ⟨booking.pendingReference, aid, key⟩) then
+                  entry.payload.spend = ⟨booking.pendingReference, aid, key⟩ ∧
+                  bookingSharesConviction current.state aid origin booking.pendingReference = true) then
                 let association : PendingAssociation := {
                   origin, keyState := key, reference := booking.request.reference, entry, booked }
                 let event : SysStep p env current.state (current.state.associate aid association) :=
@@ -106,7 +107,7 @@ def localCertificate (current : CertifiedSys) (p : Params) (env : SystemEnv)
       let writer := current.state.localWriter (env aid) aid action
       if authorized : writer.isSome = true then
         if revealed : current.state.revealOpenB aid action = true then
-          let event : SysStep p env current.state ((current.state.set aid state writer.join).retireRevealed action) :=
+          let event : SysStep p env current.state ((current.state.set aid state writer.join (state.producingSpend (env aid))).retireRevealed action) :=
             .local ⟨aid, action, now, flow, state, nonregister,
               (T7_step_iff_stepFn p (env aid)).mpr executed, ⟨revealed, authorized⟩, rfl⟩
           pure { next := current.advance event, event, checkpointFlow := some flow }

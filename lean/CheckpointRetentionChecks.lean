@@ -9,7 +9,7 @@ def env : Env := {
   depositAuthorized := fun _ => false
   quorum := fun _ => true
   verifyRival := CardanoKeri.CheckpointConviction.Fixtures.verify,
-  comparison := fun e sn => some (CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn),
+  convictionSpend := fun e sn => some ⟨⟨105, 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn⟩,
   convictionContext := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).1
   convictionRival := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).2 }
 

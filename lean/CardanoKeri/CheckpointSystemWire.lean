@@ -81,7 +81,7 @@ def stateJson (machine : Machine) : Json :=
     ("aid", toJson aid), ("leaf", toJson (s.leaves aid)), ("state", toJson (s.states aid)),
     ("status", toJson (CardanoKeri.ReaderStatus.lifecycleStatus (s.states aid)).word),
     ("origin", match s.origins aid with | none => Json.null | some origin => originJson environment origin),
-    ("writer", toJson (s.writers aid)),
+    ("writer", toJson (s.writers aid)), ("conviction", toJson (s.convictions aid)),
     ("pending", match s.pending aid with
       | none => Json.null
       | some association => Json.mkObj [

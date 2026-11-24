@@ -11,7 +11,8 @@
     "lean/CardanoKeri/CheckpointCommitmentGoals.lean": "55b4f312f2609db8f047fa94e4a03ec30154d930bc0dceb1e91bb6a9e3076ac1",
     "lean/CardanoKeri/CheckpointCommitmentVectors.lean": "98d3312c37ab278c3cce744eb1e6ee2344f738f4d93ad176bed95d94d0f4cdfc",
     "lean/CardanoKeri/CheckpointCompletionGoals.lean": "8d2ba4195fc0ce06d9f646717ad426b4b7d088bf180d3966707900ad5437c4d4",
-    "lean/CardanoKeri/CheckpointDatum.lean": "9df3dc45f67dce1f6ad5d8b52d76f75fdb53833c07946ccdac2d37d719d14b3f",
+    "lean/CardanoKeri/CheckpointConviction.lean": "622108072259eaa1320b80034395538ffd9e5b36ec0f028f465671ca99a6e95b",
+    "lean/CardanoKeri/CheckpointDatum.lean": "b113d3d3ec649b6bae2da213a739c4677107b1cb34e753b07e125bfe72505e43",
     "lean/CardanoKeri/CheckpointDatumGoals.lean": "b48f733c302f61979226282bdd0559398b2a5a11a4c5b5fe88cc1d7522be063b",
     "lean/CardanoKeri/CheckpointDatumVectors.lean": "10031e9ac66c13285895373f86716ea099d9118a3c09b9fe3cfa9c2032d95169",
     "lean/CardanoKeri/CheckpointDeposit.lean": "6ce03d0e88ee7cc55de194df185f067995e9b8d943f2478282934e691db13a68",
@@ -1850,6 +1851,20 @@
         "then": "s'.origins aid = some origin"
       },
       "storySha256": "8c2ce5e2c03de87c6292cf074b34dcc71d85885b98caca0c2c6b8129fd9957de"
+    },
+    {
+      "declaration": "CardanoKeri.CheckpointConviction.accepted_rival",
+      "path": "lean/CardanoKeri/CheckpointConviction.lean",
+      "line": 99,
+      "statement": "theorem accepted_rival (verify : Verify) (tip : Tip) (rival : Rival)\n    (accepted : accepts verify tip rival = true) :\n    rival.rotation = true ∧ tip.aid = rival.aid ∧ tip.sn = rival.sn ∧\n    tip.keys.curKeys = rival.revealedKeys ∧\n    thresholdMet tip.keys.curThreshold\n      (verifiedPositions verify tip.keys.curKeys rival.bytes rival.signatures) = true ∧\n    tip.keys.toad ≤ ((verifiedPositions verify tip.keys.witnesses rival.bytes rival.receipts).length : Int) ∧\n    (tip.keys.curThreshold, tip.keys.nextKeys, tip.keys.nextThreshold, tip.keys.toad) ≠\n      (rival.threshold, rival.nextKeys, rival.nextThreshold, rival.toad)",
+      "statementSha256": "3536ddebcce0bb434098e6a9f7285cb68271965e225b1865dce9032f3d1bb8eb",
+      "sourceStory": "Given a spent tip and a rival, when the enforcement comparison succeeds,\nthen the rival is a rotation for the same identifier and native sequence,\nreveals exactly the spent keys, meets both thresholds under the spent tip,\nand disagrees with at least one of its four forward fields.",
+      "story": {
+        "given": "(verify : Verify) (tip : Tip) (rival : Rival)\n    (accepted : accepts verify tip rival = true)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "rival.rotation = true ∧ tip.aid = rival.aid ∧ tip.sn = rival.sn ∧\n    tip.keys.curKeys = rival.revealedKeys ∧\n    thresholdMet tip.keys.curThreshold\n      (verifiedPositions verify tip.keys.curKeys rival.bytes rival.signatures) = true ∧\n    tip.keys.toad ≤ ((verifiedPositions verify tip.keys.witnesses rival.bytes rival.receipts).length : Int) ∧\n    (tip.keys.curThreshold, tip.keys.nextKeys, tip.keys.nextThreshold, tip.keys.toad) ≠\n      (rival.threshold, rival.nextKeys, rival.nextThreshold, rival.toad)"
+      },
+      "storySha256": "cf90a3d1172a67738b1c5fc83ff5700b9dc10b1c23d600c5fd56e1f8a748965a"
     },
     {
       "declaration": "CardanoKeri.CheckpointDatum.fuel_succ",

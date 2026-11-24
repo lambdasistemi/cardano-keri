@@ -5,7 +5,7 @@
 //// `Data`); a checkpoint later reads the same bytes with the codec of
 //// `checkpoint/datum`. Every datum vector of the repository (the consumer
 //// vectors, which hold the writer's accepted and refused datums and the
-//// malformed bytes) is run through both, and each falls in one class:
+//// bytes that are no datum) is run through both, and each falls in one class:
 ////
 //// - both read it as a live datum, and agree on the AID, the sequence number,
 ////   the epoch, the flags, `born_at`, `refund_to` and the top-up mark;

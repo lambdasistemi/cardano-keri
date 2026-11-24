@@ -435,7 +435,7 @@ test a_booking_commits_the_initial_state_of_its_key() {
 
 /// The initial datum of the first inception with its key material replaced by
 /// something no key material is: the facts the application reads are intact.
-fn malformed_keys_datum() -> Data {
+fn unreadable_keys_datum() -> Data {
   builtin.constr_data(
     1,
     [
@@ -461,11 +461,11 @@ fn malformed_keys_datum() -> Data {
 /// a datum whose keys the checkpoint codec refuses is booked by the application's
 /// own rules and is never attested (the next test).
 test the_application_reads_only_the_facts_of_the_datum() {
-  application_accepts(with_datum(malformed_keys_datum()))
+  application_accepts(with_datum(unreadable_keys_datum()))
 }
 
 test the_observer_never_attests_a_datum_whose_keys_the_codec_refuses() fail {
-  observer_accepts(with_datum(malformed_keys_datum()))
+  observer_accepts(with_datum(unreadable_keys_datum()))
 }
 
 test a_booking_commits_the_refund_address_of_its_request() {

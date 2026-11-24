@@ -240,11 +240,13 @@ exceed the transaction-size limit. See
 BLAKE3 fact token, sizes and costs — including the three bytes of headroom on
 `observer_advance` that make every datum decision a measured one.
 
-For the proposed registration flow, the heavy inception admission moves to the
-earlier attestation transaction. The fold must still authenticate that result
-and couple registry insertion, checkpoint mint and output validation. This
+In the registry's registration flow, as the model states it, the inception
+admission is checked when the request is booked. The fold checks no inception
+evidence; it still couples registry insertion, the checkpoint mint and the
+delivery of what the approval commits. This
 changes where registration evidence is checked; it does not remove those checks
-or change rotation evidence into inception attestations.
+or change rotation evidence into inception attestations. On `main` the fold
+still authenticates the inception.
 
 ## Permissionless does not mean unauthenticated
 

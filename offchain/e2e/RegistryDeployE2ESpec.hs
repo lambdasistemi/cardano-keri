@@ -19,6 +19,7 @@ import Test.Hspec
 
 import CheckpointTxBuilder (
     DeployTiming (..),
+    FoldKey (..),
     registryBookingJourney,
     registryDeployJourney,
     stagedBareDevnet,
@@ -34,7 +35,11 @@ spec = do
     describe "#351 ckeri registry register and fold, then return a request after its deadline, through the installed command" $
         it
             "deploys, books the same identity twice with one wallet, folds the first with another and delivers the checkpoint, refuses the second on the registry's own snapshot and a stale snapshot refused as stale, refuses a third registration, refuses a return before the deadline, refuses a booking below the floor at the node's evaluation and accepts it at the floor, and after the deadline a third wallet returns the second booking: the refund address receives all but the tip and the returner keeps it"
-            (stagedBareDevnetWithin 1_200 registryBookingJourney)
+            (stagedBareDevnetWithin 1_200 (registryBookingJourney FoldWithKeyFile))
+    describe "#553 ckeri registry fold signed with a wallet vault, through the installed command" $
+        it
+            "runs the registry journey with the folds signed from a vault made by the code of singular, the passphrase on descriptor 0, and refuses a vault the passphrase does not open with nothing spent"
+            (stagedBareDevnetWithin 1_200 (registryBookingJourney FoldWithVault))
     describe "#351 measurement: the registry deploy journey at preprod's timing" $
         it
             "records the submit and settle times of the booking, the hash-proof premint and the fold"

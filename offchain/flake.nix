@@ -562,8 +562,10 @@
             ps.cardano-keri.components.sublibs.chain-query-koios
             ps.cardano-keri.components.sublibs.cli
             ps.cardano-keri.components.sublibs.deployment
+            ps.cardano-keri.components.sublibs.deployment-koios
             ps.cardano-keri.components.sublibs.indexer
             ps.cardano-keri.components.sublibs.public-surface-fixtures
+            ps.cardano-keri.components.sublibs.registry-commands
             ps.cardano-keri.components.sublibs.write-composition
           ]);
           surfaceGhcLibdir =
@@ -1230,7 +1232,9 @@
                 e2e-tests --match "#136 register a small identity end to end" --match "#343 consumer predicate on the local chain" --match "#351 ckeri registry deploy creates" "$@"
                 # The registry journey runs on its own, and the runner fails when its selection matches no
                 # example: a renamed journey cannot be skipped without this job going red.
-                exec e2e-tests --fail-on=empty --match "#351 ckeri registry register and fold" "$@"
+                e2e-tests --fail-on=empty --match "#351 ckeri registry register and fold" "$@"
+                # The same journey with the folds signed from a wallet vault: it also fails when it runs no example.
+                exec e2e-tests --fail-on=empty --match "#553 ckeri registry fold signed with a wallet vault" "$@"
               '';
             };
             # Preprod's timing for the registry deploy measurement: slots of one

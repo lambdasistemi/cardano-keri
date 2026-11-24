@@ -230,6 +230,55 @@ done
 reject_retired_cardano_cli_help registry-return registry return
 reject_write_koios_help registry-return registry return
 
+# #553: the four registry commands sign with a wallet vault, the supported way, beside the key file that
+# stays accepted. The descriptor is a command-line option alone: no variable of ours carries it, and the
+# passphrase variable is the one `singular` has.
+for verb in deploy register fold return; do
+  vault_help="$("$ckeri" registry "$verb" --help)"
+  has_option vault <<<"$vault_help"
+  grep -qE -- "--passphrase-fd([^a-z-]|\$)" <<<"$vault_help"
+  grep -q "supported way" <<<"$vault_help"
+  grep -q "SINGULAR_PASSPHRASE" <<<"$vault_help"
+  if grep -q "CKERI_PASSPHRASE_FD" <<<"$vault_help"; then
+    printf 'registry %s help offers CKERI_PASSPHRASE_FD (#553: the descriptor is an option alone)\n' "$verb" >&2
+    exit 1
+  fi
+done
+# the installed commands refuse a missing or doubled key source by name before they read any file: every file
+# they are given is a named pipe that this script holds open and keeps empty, so a command that reads one
+# never ends, and `timeout` says so
+unreadable="$outside/unreadable"
+mkdir "$unreadable"
+for name in blueprint identity record export snapshot vault key; do
+  mkfifo "$unreadable/$name"
+done
+exec 7<>"$unreadable/blueprint" 8<>"$unreadable/identity" 9<>"$unreadable/record" 10<>"$unreadable/export" \
+  11<>"$unreadable/snapshot" 12<>"$unreadable/vault" 13<>"$unreadable/key"
+if timeout 2 cat "$unreadable/vault" >/dev/null 2>&1; then
+  echo 'a named pipe that is held open ended a read here: the refusal checks below would prove nothing (#553)' >&2
+  exit 1
+fi
+for verb in register fold return; do
+  case "$verb" in
+    fold) verb_arguments=(--request "$(printf 'a%.0s' {1..64})#0" --snapshot "$unreadable/snapshot" --kli-export "$unreadable/export") ;;
+    register) verb_arguments=(--kli-export "$unreadable/export") ;;
+    return) verb_arguments=(--request "$(printf 'a%.0s' {1..64})#0") ;;
+  esac
+  for key_arguments in "" "--signing-key-file $unreadable/key --vault $unreadable/vault --passphrase-fd 0"; do
+    # shellcheck disable=SC2086
+    refused="$(cd "$outside" && timeout 20 "$ckeri" registry "$verb" --network-magic 42 --blueprint "$unreadable/blueprint" \
+      --node-socket absent.socket --funding-address addr_test1unused \
+      --release-identity "$unreadable/identity" --reference-record "$unreadable/record" \
+      "${verb_arguments[@]}" $key_arguments 2>&1 </dev/null || true)"
+    if [[ -z "$key_arguments" ]]; then wanted="key-source-neither"; else wanted="key-source-both"; fi
+    grep -q "$wanted" <<<"$refused"
+    if grep -qE "unreadable" <<<"$refused"; then
+      printf 'registry %s read a file before it refused the key source (#553)\n' "$verb" >&2
+      exit 1
+    fi
+  done
+done
+
 # a spelling outside the group is not a command
 registry_verdict() {
   local output

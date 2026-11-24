@@ -59,6 +59,7 @@ import Cardano.KERI.AID.Checkpoint.BountyCommitment (
     CommitmentFamily (..),
     CommitmentParameters (..),
     CommitmentPayout (..),
+    ConvictionTarget (..),
     EntitlementError (..),
     EntitlementVerdict (..),
     ResolvedCommitment (..),
@@ -136,14 +137,14 @@ scope field, the payee, the evidence, or the nonce breaks the match.
 -}
 entitlementMatches ::
     BountyCommitment ->
-    OutputRef ->
+    ConvictionTarget ->
     EnforcementEvidence ->
     ByteString ->
     EntitlementVerdict
-entitlementMatches commitment checkpointRef evidence =
+entitlementMatches commitment target evidence =
     Component.entitlementMatches
         commitment
-        checkpointRef
+        target
         (enforcementEvidenceDigest evidence)
 
 -- ---------------------------------------------------------
@@ -209,8 +210,8 @@ validateConvictEntitlement ::
     -- | the payee this settlement is about to pay
     ByteString ->
     BountyRevealV1 ->
-    -- | the checkpoint output being settled
-    OutputRef ->
+    -- | where the conviction is settled
+    ConvictionTarget ->
     SettlementContext ->
     Bool
 validateConvictEntitlement
@@ -218,7 +219,7 @@ validateConvictEntitlement
     evidence
     payee
     reveal
-    checkpointRef
+    target
     context =
         case resolveCommitment family reveal context of
             Nothing -> False
@@ -229,7 +230,7 @@ validateConvictEntitlement
                 policy == cfPolicy family
                     && entitlementMatches
                         commitment
-                        checkpointRef
+                        target
                         evidence
                         (brNonce reveal)
                         == EntitlementValid
@@ -293,6 +294,10 @@ validate, and the payee is the one the reservation already named.
 data EntitledEnforcementPlan = EntitledEnforcementPlan
     { eepCheckpointRef :: !OutputRef
     -- ^ the checkpoint output being settled
+    , eepTarget :: !ConvictionTarget
+    {- ^ where the conviction is settled: that output's program, identifier,
+    epoch and sequence number
+    -}
     , eepCommitmentRef :: !OutputRef
     -- ^ the reservation input being revealed and retired
     , eepPolicy :: !ByteString
@@ -351,6 +356,10 @@ prepareEntitledEnforcement ::
     EnforcementEvidence ->
     -- | the checkpoint output being settled
     OutputRef ->
+    {- | where the conviction is settled: that output's program, identifier,
+    epoch and sequence number
+    -}
+    ConvictionTarget ->
     -- | the reveal nonce
     ByteString ->
     -- | the output index the deposit refund sits at
@@ -363,6 +372,7 @@ prepareEntitledEnforcement
     resolved
     evidence
     checkpointRef
+    target
     nonce
     refundIndex
     range = do
@@ -376,7 +386,7 @@ prepareEntitledEnforcement
             else Left EnforcementForeignPolicy
         case entitlementMatches
             commitment
-            checkpointRef
+            target
             evidence
             nonce of
             EntitlementInvalid reason ->
@@ -399,6 +409,7 @@ prepareEntitledEnforcement
         pure
             EntitledEnforcementPlan
                 { eepCheckpointRef = checkpointRef
+                , eepTarget = target
                 , eepCommitmentRef = rcRef resolved
                 , eepPolicy = policy
                 , eepReveal = reveal

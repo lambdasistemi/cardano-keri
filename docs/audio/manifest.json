@@ -77321,22 +77321,22 @@
    ]
   },
   "docs-architecture-overview/transaction-architecture-04": {
-   "audio_sha256": "9b2f6d18cdb10d6dd0989f7989a6821597123633e1a4d14fbb9ac4a8ac24e6fd",
-   "characters": 368,
-   "cost": 0.00022815999999999998,
-   "duration": 24.25,
+   "audio_sha256": "627166a58aa24aa40f2a4d626a238897e0ffb769ef81df5f08a50095ec4c2332",
+   "characters": 460,
+   "cost": 0.00045539999999999996,
+   "duration": 29.075,
    "index": 4,
-   "key": "a2d5dd126e10dce3323efdfeb06986f889715f0985a9537406270f73d24697f8",
+   "key": "a2b5037a23db7038fc5a60fb85d9617ee03f4b0d3eea41298d9e7cea37dc0adc",
    "page": "docs/architecture/overview.md",
    "pause_ms": 400,
    "section": "transaction-architecture",
-   "sent_text": "For the proposed registration flow, the heavy inception admission moves to the earlier attestation transaction. The fold must still authenticate that result and couple registry insertion, checkpoint mint and output validation. This changes where registration evidence is checked; it does not remove those checks or change rotation evidence into inception attestations.",
-   "text": "For the proposed registration flow, the heavy inception admission moves to the earlier attestation transaction. The fold must still authenticate that result and couple registry insertion, checkpoint mint and output validation. This changes where registration evidence is checked; it does not remove those checks or change rotation evidence into inception attestations.",
+   "sent_text": "In the registry's registration flow, as the model states it, the inception admission is checked when the request is booked. The fold checks no inception evidence; it still couples registry insertion, the checkpoint mint and the delivery of what the approval commits. This changes where registration evidence is checked; it does not remove those checks or change rotation evidence into inception attestations. On main the fold still authenticates the inception.",
+   "text": "In the registry's registration flow, as the model states it, the inception admission is checked when the request is booked. The fold checks no inception evidence; it still couples registry insertion, the checkpoint mint and the delivery of what the approval commits. This changes where registration evidence is checked; it does not remove those checks or change rotation evidence into inception attestations. On main the fold still authenticates the inception.",
    "words": [
     {
      "end": 0.312,
-     "start": 0.2,
-     "text": "For"
+     "start": 0.225,
+     "text": "In"
     },
     {
      "end": 0.4,
@@ -77346,7 +77346,7 @@
     {
      "end": 0.975,
      "start": 0.4,
-     "text": "proposed"
+     "text": "registry's"
     },
     {
      "end": 1.763,
@@ -77359,263 +77359,373 @@
      "text": "flow"
     },
     {
-     "end": 2.3,
+     "end": 2.338,
      "start": 2.225,
      "text": ","
     },
     {
-     "end": 2.438,
-     "start": 2.3,
+     "end": 2.525,
+     "start": 2.338,
+     "text": "as"
+    },
+    {
+     "end": 2.625,
+     "start": 2.525,
      "text": "the"
     },
     {
-     "end": 2.75,
-     "start": 2.438,
-     "text": "heavy"
+     "end": 3.013,
+     "start": 2.625,
+     "text": "model"
     },
     {
-     "end": 3.3,
-     "start": 2.75,
-     "text": "inception"
+     "end": 3.425,
+     "start": 3.013,
+     "text": "states"
     },
     {
-     "end": 3.888,
-     "start": 3.3,
-     "text": "admission"
-    },
-    {
-     "end": 4.275,
-     "start": 3.888,
-     "text": "moves"
-    },
-    {
-     "end": 4.387,
-     "start": 4.275,
-     "text": "to"
-    },
-    {
-     "end": 4.537,
-     "start": 4.387,
-     "text": "the"
-    },
-    {
-     "end": 5.025,
-     "start": 4.537,
-     "text": "earlier"
-    },
-    {
-     "end": 5.825,
-     "start": 5.025,
-     "text": "attestation"
-    },
-    {
-     "end": 7.15,
-     "start": 5.825,
-     "text": "transaction"
-    },
-    {
-     "end": 7.35,
-     "start": 7.15,
-     "text": "."
-    },
-    {
-     "end": 7.662,
-     "start": 7.55,
-     "text": "The"
-    },
-    {
-     "end": 8.075,
-     "start": 7.662,
-     "text": "fold"
-    },
-    {
-     "end": 8.325,
-     "start": 8.075,
-     "text": "must"
-    },
-    {
-     "end": 8.613,
-     "start": 8.325,
-     "text": "still"
-    },
-    {
-     "end": 9.325,
-     "start": 8.613,
-     "text": "authenticate"
-    },
-    {
-     "end": 9.55,
-     "start": 9.325,
-     "text": "that"
-    },
-    {
-     "end": 10.087,
-     "start": 9.55,
-     "text": "result"
-    },
-    {
-     "end": 10.238,
-     "start": 10.087,
-     "text": "and"
-    },
-    {
-     "end": 10.6,
-     "start": 10.238,
-     "text": "couple"
-    },
-    {
-     "end": 11.075,
-     "start": 10.6,
-     "text": "registry"
-    },
-    {
-     "end": 11.825,
-     "start": 11.075,
-     "text": "insertion"
-    },
-    {
-     "end": 11.938,
-     "start": 11.825,
-     "text": ","
-    },
-    {
-     "end": 12.5,
-     "start": 11.938,
-     "text": "checkpoint"
-    },
-    {
-     "end": 12.863,
-     "start": 12.5,
-     "text": "mint"
-    },
-    {
-     "end": 13.012,
-     "start": 12.863,
-     "text": "and"
-    },
-    {
-     "end": 13.5,
-     "start": 13.012,
-     "text": "output"
-    },
-    {
-     "end": 14.875,
-     "start": 13.5,
-     "text": "validation"
-    },
-    {
-     "end": 15.075,
-     "start": 14.875,
-     "text": "."
-    },
-    {
-     "end": 15.462,
-     "start": 15.25,
-     "text": "This"
-    },
-    {
-     "end": 15.9,
-     "start": 15.462,
-     "text": "changes"
-    },
-    {
-     "end": 16.05,
-     "start": 15.9,
-     "text": "where"
-    },
-    {
-     "end": 16.675,
-     "start": 16.05,
-     "text": "registration"
-    },
-    {
-     "end": 17.125,
-     "start": 16.675,
-     "text": "evidence"
-    },
-    {
-     "end": 17.288,
-     "start": 17.125,
-     "text": "is"
-    },
-    {
-     "end": 18.1,
-     "start": 17.288,
-     "text": "checked"
-    },
-    {
-     "end": 18.3,
-     "start": 18.1,
-     "text": ";"
-    },
-    {
-     "end": 18.587,
-     "start": 18.5,
+     "end": 3.6,
+     "start": 3.425,
      "text": "it"
     },
     {
-     "end": 18.775,
-     "start": 18.587,
-     "text": "does"
+     "end": 3.675,
+     "start": 3.6,
+     "text": ","
     },
     {
-     "end": 19.025,
-     "start": 18.775,
-     "text": "not"
+     "end": 3.825,
+     "start": 3.675,
+     "text": "the"
     },
     {
-     "end": 19.45,
-     "start": 19.025,
-     "text": "remove"
-    },
-    {
-     "end": 19.712,
-     "start": 19.45,
-     "text": "those"
-    },
-    {
-     "end": 20.163,
-     "start": 19.712,
-     "text": "checks"
-    },
-    {
-     "end": 20.337,
-     "start": 20.163,
-     "text": "or"
-    },
-    {
-     "end": 20.7,
-     "start": 20.337,
-     "text": "change"
-    },
-    {
-     "end": 21.275,
-     "start": 20.7,
-     "text": "rotation"
-    },
-    {
-     "end": 21.8,
-     "start": 21.275,
-     "text": "evidence"
-    },
-    {
-     "end": 22.075,
-     "start": 21.8,
-     "text": "into"
-    },
-    {
-     "end": 22.625,
-     "start": 22.075,
+     "end": 4.375,
+     "start": 3.825,
      "text": "inception"
     },
     {
-     "end": 24.05,
-     "start": 22.625,
+     "end": 4.925,
+     "start": 4.375,
+     "text": "admission"
+    },
+    {
+     "end": 5.1,
+     "start": 4.925,
+     "text": "is"
+    },
+    {
+     "end": 5.525,
+     "start": 5.1,
+     "text": "checked"
+    },
+    {
+     "end": 5.662,
+     "start": 5.525,
+     "text": "when"
+    },
+    {
+     "end": 5.75,
+     "start": 5.662,
+     "text": "the"
+    },
+    {
+     "end": 6.275,
+     "start": 5.75,
+     "text": "request"
+    },
+    {
+     "end": 6.438,
+     "start": 6.275,
+     "text": "is"
+    },
+    {
+     "end": 7.425,
+     "start": 6.438,
+     "text": "booked"
+    },
+    {
+     "end": 7.65,
+     "start": 7.425,
+     "text": "."
+    },
+    {
+     "end": 7.9,
+     "start": 7.825,
+     "text": "The"
+    },
+    {
+     "end": 8.175,
+     "start": 7.9,
+     "text": "fold"
+    },
+    {
+     "end": 8.475,
+     "start": 8.175,
+     "text": "checks"
+    },
+    {
+     "end": 8.637,
+     "start": 8.475,
+     "text": "no"
+    },
+    {
+     "end": 9.175,
+     "start": 8.637,
+     "text": "inception"
+    },
+    {
+     "end": 10.125,
+     "start": 9.175,
+     "text": "evidence"
+    },
+    {
+     "end": 10.325,
+     "start": 10.125,
+     "text": ";"
+    },
+    {
+     "end": 10.65,
+     "start": 10.525,
+     "text": "it"
+    },
+    {
+     "end": 10.938,
+     "start": 10.65,
+     "text": "still"
+    },
+    {
+     "end": 11.363,
+     "start": 10.938,
+     "text": "couples"
+    },
+    {
+     "end": 11.875,
+     "start": 11.363,
+     "text": "registry"
+    },
+    {
+     "end": 12.55,
+     "start": 11.875,
+     "text": "insertion"
+    },
+    {
+     "end": 12.625,
+     "start": 12.55,
+     "text": ","
+    },
+    {
+     "end": 12.762,
+     "start": 12.625,
+     "text": "the"
+    },
+    {
+     "end": 13.275,
+     "start": 12.762,
+     "text": "checkpoint"
+    },
+    {
+     "end": 13.637,
+     "start": 13.275,
+     "text": "mint"
+    },
+    {
+     "end": 13.762,
+     "start": 13.637,
+     "text": "and"
+    },
+    {
+     "end": 13.85,
+     "start": 13.762,
+     "text": "the"
+    },
+    {
+     "end": 14.425,
+     "start": 13.85,
+     "text": "delivery"
+    },
+    {
+     "end": 14.575,
+     "start": 14.425,
+     "text": "of"
+    },
+    {
+     "end": 14.725,
+     "start": 14.575,
+     "text": "what"
+    },
+    {
+     "end": 14.875,
+     "start": 14.725,
+     "text": "the"
+    },
+    {
+     "end": 15.35,
+     "start": 14.875,
+     "text": "approval"
+    },
+    {
+     "end": 16.475,
+     "start": 15.35,
+     "text": "commits"
+    },
+    {
+     "end": 16.675,
+     "start": 16.475,
+     "text": "."
+    },
+    {
+     "end": 17.062,
+     "start": 16.85,
+     "text": "This"
+    },
+    {
+     "end": 17.5,
+     "start": 17.062,
+     "text": "changes"
+    },
+    {
+     "end": 17.65,
+     "start": 17.5,
+     "text": "where"
+    },
+    {
+     "end": 18.275,
+     "start": 17.65,
+     "text": "registration"
+    },
+    {
+     "end": 18.725,
+     "start": 18.275,
+     "text": "evidence"
+    },
+    {
+     "end": 18.888,
+     "start": 18.725,
+     "text": "is"
+    },
+    {
+     "end": 19.7,
+     "start": 18.888,
+     "text": "checked"
+    },
+    {
+     "end": 19.9,
+     "start": 19.7,
+     "text": ";"
+    },
+    {
+     "end": 20.188,
+     "start": 20.1,
+     "text": "it"
+    },
+    {
+     "end": 20.375,
+     "start": 20.188,
+     "text": "does"
+    },
+    {
+     "end": 20.625,
+     "start": 20.375,
+     "text": "not"
+    },
+    {
+     "end": 21.05,
+     "start": 20.625,
+     "text": "remove"
+    },
+    {
+     "end": 21.312,
+     "start": 21.05,
+     "text": "those"
+    },
+    {
+     "end": 21.763,
+     "start": 21.312,
+     "text": "checks"
+    },
+    {
+     "end": 21.938,
+     "start": 21.763,
+     "text": "or"
+    },
+    {
+     "end": 22.3,
+     "start": 21.938,
+     "text": "change"
+    },
+    {
+     "end": 22.875,
+     "start": 22.3,
+     "text": "rotation"
+    },
+    {
+     "end": 23.4,
+     "start": 22.875,
+     "text": "evidence"
+    },
+    {
+     "end": 23.675,
+     "start": 23.4,
+     "text": "into"
+    },
+    {
+     "end": 24.225,
+     "start": 23.675,
+     "text": "inception"
+    },
+    {
+     "end": 25.65,
+     "start": 24.225,
      "text": "attestations"
     },
     {
-     "end": 24.25,
-     "start": 24.05,
+     "end": 25.85,
+     "start": 25.65,
+     "text": "."
+    },
+    {
+     "end": 26.138,
+     "start": 26.025,
+     "text": "On"
+    },
+    {
+     "end": 26.362,
+     "start": 26.138,
+     "text": "main"
+    },
+    {
+     "end": 26.45,
+     "start": 26.362,
+     "text": "the"
+    },
+    {
+     "end": 26.8,
+     "start": 26.45,
+     "text": "fold"
+    },
+    {
+     "end": 27.087,
+     "start": 26.8,
+     "text": "still"
+    },
+    {
+     "end": 27.712,
+     "start": 27.087,
+     "text": "authenticates"
+    },
+    {
+     "end": 27.812,
+     "start": 27.712,
+     "text": "the"
+    },
+    {
+     "end": 28.875,
+     "start": 27.812,
+     "text": "inception"
+    },
+    {
+     "end": 29.075,
+     "start": 28.875,
      "text": "."
     }
    ]
@@ -323031,17 +323141,17 @@
    ]
   },
   "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-01": {
-   "audio_sha256": "14003601fad48a6aa29d4f80793ae989ae3571c37942e07da8757ca87c5d2b1b",
-   "characters": 733,
-   "cost": 0.0007256699999999999,
-   "duration": 47.075,
+   "audio_sha256": "87cf62de03644bf12d59998344239008914c8bd045f3b412c0c09dd6b30e9fbe",
+   "characters": 940,
+   "cost": 0.0009305999999999999,
+   "duration": 60.225,
    "index": 1,
-   "key": "6acce550b8b82da304a1a32d35ab59410e1399167d37f9abb7913481312c9bb4",
+   "key": "148804cffdb1b6e8034b3d6913aa1f6400a974e4aec6f5433f504d94f8324a51",
    "page": "docs/design/registry-as-mpfs.md",
    "pause_ms": 400,
    "section": "keris-application-on-the-public-registry",
-   "sent_text": "As a [KERI](/kˈɛɹi/) registration requester, I book a request that the public Singular registry singular_state(A_keri) can fold into my checkpoint, and I know in advance what the fold or a later return does with my money and where my checkpoint will live. The public registry checks only that each folded request carries the registration approval its holding commits to, and that the holding holds at least the committed deposit. Everything else is [KERI](/kˈɛɹi/)'s application, stated in lean/CardanoKeri/Application.lean against the public model models/singular-application-held at the pin above. The Lean revision, the pin, the compiler and the script hashes and sizes of this generation are on the identities of this generation.",
-   "text": "As a KERI registration requester, I book a request that the public Singular registry singular_state(A_keri) can fold into my checkpoint, and I know in advance what the fold or a later return does with my money and where my checkpoint will live. The public registry checks only that each folded request carries the registration approval its holding commits to, and that the holding holds at least the committed deposit. Everything else is KERI's application, stated in lean/CardanoKeri/Application.lean against the public model models/singular-application-held at the pin above. The Lean revision, the pin, the compiler and the script hashes and sizes of this generation are on the identities of this generation.",
+   "sent_text": "As a [KERI](/kˈɛɹi/) registration requester, I book a request that the public Singular registry singular_state(A_keri) can fold into my checkpoint, and I know in advance what the fold or a later return does with my money and where my checkpoint will live. The public registry checks only that each folded request carries the registration approval its holding commits to, and that the holding holds at least the committed deposit. Everything else is [KERI](/kˈɛɹi/)'s application, stated in lean/CardanoKeri/Application.lean against the public model models/singular-application-held at the pin above. This section states the model's rule. On main the validators still check the inception and the initial state at the fold, and the fold command still supplies the inception, until the code follows the model. The Lean revision, the pin, the compiler and the script hashes and sizes of this generation are on the identities of this generation.",
+   "text": "As a KERI registration requester, I book a request that the public Singular registry singular_state(A_keri) can fold into my checkpoint, and I know in advance what the fold or a later return does with my money and where my checkpoint will live. The public registry checks only that each folded request carries the registration approval its holding commits to, and that the holding holds at least the committed deposit. Everything else is KERI's application, stated in lean/CardanoKeri/Application.lean against the public model models/singular-application-held at the pin above. This section states the model's rule. On main the validators still check the inception and the initial state at the fold, and the fold command still supplies the inception, until the code follows the model. The Lean revision, the pin, the compiler and the script hashes and sizes of this generation are on the identities of this generation.",
    "words": [
     {
      "end": 0.363,
@@ -323519,133 +323629,328 @@
      "text": "."
     },
     {
-     "end": 38.625,
+     "end": 38.7,
      "start": 38.55,
+     "text": "This"
+    },
+    {
+     "end": 39.1,
+     "start": 38.7,
+     "text": "section"
+    },
+    {
+     "end": 39.438,
+     "start": 39.1,
+     "text": "states"
+    },
+    {
+     "end": 39.525,
+     "start": 39.438,
+     "text": "the"
+    },
+    {
+     "end": 39.925,
+     "start": 39.525,
+     "text": "model's"
+    },
+    {
+     "end": 40.675,
+     "start": 39.925,
+     "text": "rule"
+    },
+    {
+     "end": 40.875,
+     "start": 40.675,
+     "text": "."
+    },
+    {
+     "end": 41.2,
+     "start": 41.05,
+     "text": "On"
+    },
+    {
+     "end": 41.525,
+     "start": 41.2,
+     "text": "main"
+    },
+    {
+     "end": 41.625,
+     "start": 41.525,
+     "text": "the"
+    },
+    {
+     "end": 42.3,
+     "start": 41.625,
+     "text": "validators"
+    },
+    {
+     "end": 42.588,
+     "start": 42.3,
+     "text": "still"
+    },
+    {
+     "end": 42.85,
+     "start": 42.588,
+     "text": "check"
+    },
+    {
+     "end": 43.0,
+     "start": 42.85,
+     "text": "the"
+    },
+    {
+     "end": 43.75,
+     "start": 43.0,
+     "text": "inception"
+    },
+    {
+     "end": 43.888,
+     "start": 43.75,
+     "text": "and"
+    },
+    {
+     "end": 44.0,
+     "start": 43.888,
+     "text": "the"
+    },
+    {
+     "end": 44.438,
+     "start": 44.0,
+     "text": "initial"
+    },
+    {
+     "end": 44.737,
+     "start": 44.438,
+     "text": "state"
+    },
+    {
+     "end": 44.812,
+     "start": 44.737,
+     "text": "at"
+    },
+    {
+     "end": 44.912,
+     "start": 44.812,
+     "text": "the"
+    },
+    {
+     "end": 45.875,
+     "start": 44.912,
+     "text": "fold"
+    },
+    {
+     "end": 46.1,
+     "start": 45.875,
+     "text": ","
+    },
+    {
+     "end": 46.388,
+     "start": 46.3,
+     "text": "and"
+    },
+    {
+     "end": 46.487,
+     "start": 46.388,
+     "text": "the"
+    },
+    {
+     "end": 46.825,
+     "start": 46.487,
+     "text": "fold"
+    },
+    {
+     "end": 47.35,
+     "start": 46.825,
+     "text": "command"
+    },
+    {
+     "end": 47.625,
+     "start": 47.35,
+     "text": "still"
+    },
+    {
+     "end": 48.175,
+     "start": 47.625,
+     "text": "supplies"
+    },
+    {
+     "end": 48.325,
+     "start": 48.175,
+     "text": "the"
+    },
+    {
+     "end": 49.025,
+     "start": 48.325,
+     "text": "inception"
+    },
+    {
+     "end": 49.125,
+     "start": 49.025,
+     "text": ","
+    },
+    {
+     "end": 49.388,
+     "start": 49.125,
+     "text": "until"
+    },
+    {
+     "end": 49.487,
+     "start": 49.388,
+     "text": "the"
+    },
+    {
+     "end": 49.862,
+     "start": 49.487,
+     "text": "code"
+    },
+    {
+     "end": 50.3,
+     "start": 49.862,
+     "text": "follows"
+    },
+    {
+     "end": 50.4,
+     "start": 50.3,
+     "text": "the"
+    },
+    {
+     "end": 51.325,
+     "start": 50.4,
+     "text": "model"
+    },
+    {
+     "end": 51.525,
+     "start": 51.325,
+     "text": "."
+    },
+    {
+     "end": 51.775,
+     "start": 51.7,
      "text": "The"
     },
     {
-     "end": 38.838,
-     "start": 38.625,
+     "end": 51.987,
+     "start": 51.775,
      "text": "Lean"
     },
     {
-     "end": 39.25,
-     "start": 38.838,
+     "end": 52.4,
+     "start": 51.987,
      "text": "revision"
     },
     {
-     "end": 39.287,
-     "start": 39.25,
+     "end": 52.438,
+     "start": 52.4,
      "text": ","
     },
     {
-     "end": 39.375,
-     "start": 39.287,
+     "end": 52.525,
+     "start": 52.438,
      "text": "the"
     },
     {
-     "end": 40.125,
-     "start": 39.375,
+     "end": 53.275,
+     "start": 52.525,
      "text": "pin"
     },
     {
-     "end": 40.35,
-     "start": 40.125,
+     "end": 53.5,
+     "start": 53.275,
      "text": ","
     },
     {
-     "end": 40.625,
-     "start": 40.55,
+     "end": 53.775,
+     "start": 53.7,
      "text": "the"
     },
     {
-     "end": 41.287,
-     "start": 40.625,
+     "end": 54.438,
+     "start": 53.775,
      "text": "compiler"
     },
     {
-     "end": 41.412,
-     "start": 41.287,
+     "end": 54.562,
+     "start": 54.438,
      "text": "and"
     },
     {
-     "end": 41.513,
-     "start": 41.412,
+     "end": 54.662,
+     "start": 54.562,
      "text": "the"
     },
     {
-     "end": 41.925,
-     "start": 41.513,
+     "end": 55.075,
+     "start": 54.662,
      "text": "script"
     },
     {
-     "end": 42.475,
-     "start": 41.925,
+     "end": 55.625,
+     "start": 55.075,
      "text": "hashes"
     },
     {
-     "end": 42.625,
-     "start": 42.475,
+     "end": 55.775,
+     "start": 55.625,
      "text": "and"
     },
     {
-     "end": 43.15,
-     "start": 42.625,
+     "end": 56.3,
+     "start": 55.775,
      "text": "sizes"
     },
     {
-     "end": 43.25,
-     "start": 43.15,
+     "end": 56.4,
+     "start": 56.3,
      "text": "of"
     },
     {
-     "end": 43.463,
-     "start": 43.25,
+     "end": 56.612,
+     "start": 56.4,
      "text": "this"
     },
     {
-     "end": 44.213,
-     "start": 43.463,
+     "end": 57.362,
+     "start": 56.612,
      "text": "generation"
     },
     {
-     "end": 44.375,
-     "start": 44.213,
+     "end": 57.525,
+     "start": 57.362,
      "text": "are"
     },
     {
-     "end": 44.537,
-     "start": 44.375,
+     "end": 57.688,
+     "start": 57.525,
      "text": "on"
     },
     {
-     "end": 44.662,
-     "start": 44.537,
+     "end": 57.812,
+     "start": 57.688,
      "text": "the"
     },
     {
-     "end": 45.325,
-     "start": 44.662,
+     "end": 58.475,
+     "start": 57.812,
      "text": "identities"
     },
     {
-     "end": 45.425,
-     "start": 45.325,
+     "end": 58.575,
+     "start": 58.475,
      "text": "of"
     },
     {
-     "end": 45.625,
-     "start": 45.425,
+     "end": 58.775,
+     "start": 58.575,
      "text": "this"
     },
     {
-     "end": 46.875,
-     "start": 45.625,
+     "end": 60.025,
+     "start": 58.775,
      "text": "generation"
     },
     {
-     "end": 47.075,
-     "start": 46.875,
+     "end": 60.225,
+     "start": 60.025,
      "text": "."
     }
    ]
@@ -324346,17 +324651,17 @@
    ]
   },
   "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-04": {
-   "audio_sha256": "428c53cd0da16c7a4730e9dbd9645c7444dc22c74947a4703cfd8a82049ec363",
-   "characters": 689,
-   "cost": 0.00068211,
-   "duration": 44.525,
+   "audio_sha256": "57e9f597f428810bd3a8e34ed1330528b68e11fc68edaea7c89ef2a28ac74d32",
+   "characters": 848,
+   "cost": 0.00083952,
+   "duration": 54.85,
    "index": 4,
-   "key": "daeb9a6b1697659a39d381bde7045b3a2b51e20e4784e976638bec27469da623",
+   "key": "e1bb6326a4e4c7e7f93b7be3555dd0808d070931bfc78276675c82c900014043",
    "page": "docs/design/registry-as-mpfs.md",
    "pause_ms": 300,
    "section": "keris-application-on-the-public-registry",
-   "sent_text": "Booking. The booking reads the record by reference and mints exactly one registration approval. The approval commits the registry, the AID's key, the checkpoint validator's credential from the record as the holding address (never the application address), the hash of the initial checkpoint datum and the deposit, which is the whole carrier the checkpoint will hold: at least the minimum ADA plus the registry's deposit. The request holds exactly the deposit, the registration cost and the minimum tip (booking_inversion, booking_refuses_foreign_registry, booking_refuses_application_holding, booking_refuses_other_holding, booking_refuses_short_deposit, booking_refuses_inexact_contents).",
-   "text": "Booking. The booking reads the record by reference and mints exactly one registration approval. The approval commits the registry, the AID's key, the checkpoint validator's credential from the record as the holding address (never the application address), the hash of the initial checkpoint datum and the deposit, which is the whole carrier the checkpoint will hold: at least the minimum ADA plus the registry's deposit. The request holds exactly the deposit, the registration cost and the minimum tip (booking_inversion, booking_refuses_foreign_registry, booking_refuses_application_holding, booking_refuses_other_holding, booking_refuses_short_deposit, booking_refuses_inexact_contents).",
+   "sent_text": "Booking. The booking reads the record by reference and mints exactly one registration approval, and only for a key that has its inception evidence. The approval commits the registry, the AID's key, the checkpoint validator's credential from the record as the holding address (never the application address), the hash of the initial checkpoint datum and the deposit, which is the whole carrier the checkpoint will hold: at least the minimum ADA plus the registry's deposit. The request carries that datum itself and holds exactly the deposit, the registration cost and the minimum tip (booking_inversion, booking_refuses_missing_inception, registration_approval_requires_inception, booking_refuses_foreign_registry, booking_refuses_application_holding, booking_refuses_other_holding, booking_refuses_short_deposit, booking_refuses_inexact_contents).",
+   "text": "Booking. The booking reads the record by reference and mints exactly one registration approval, and only for a key that has its inception evidence. The approval commits the registry, the AID's key, the checkpoint validator's credential from the record as the holding address (never the application address), the hash of the initial checkpoint datum and the deposit, which is the whole carrier the checkpoint will hold: at least the minimum ADA plus the registry's deposit. The request carries that datum itself and holds exactly the deposit, the registration cost and the minimum tip (booking_inversion, booking_refuses_missing_inception, registration_approval_requires_inception, booking_refuses_foreign_registry, booking_refuses_application_holding, booking_refuses_other_holding, booking_refuses_short_deposit, booking_refuses_inexact_contents).",
    "words": [
     {
      "end": 0.975,
@@ -324399,18 +324704,18 @@
      "text": "by"
     },
     {
-     "end": 3.638,
+     "end": 3.612,
      "start": 3.013,
      "text": "reference"
     },
     {
-     "end": 3.775,
-     "start": 3.638,
+     "end": 3.75,
+     "start": 3.612,
      "text": "and"
     },
     {
      "end": 4.05,
-     "start": 3.775,
+     "start": 3.75,
      "text": "mints"
     },
     {
@@ -324434,443 +324739,543 @@
      "text": "approval"
     },
     {
-     "end": 6.875,
+     "end": 6.9,
      "start": 6.675,
-     "text": "."
-    },
-    {
-     "end": 7.15,
-     "start": 7.05,
-     "text": "The"
-    },
-    {
-     "end": 7.6,
-     "start": 7.15,
-     "text": "approval"
-    },
-    {
-     "end": 7.887,
-     "start": 7.6,
-     "text": "commits"
-    },
-    {
-     "end": 7.975,
-     "start": 7.887,
-     "text": "the"
-    },
-    {
-     "end": 8.55,
-     "start": 7.975,
-     "text": "registry"
-    },
-    {
-     "end": 8.625,
-     "start": 8.55,
      "text": ","
     },
     {
-     "end": 8.775,
-     "start": 8.625,
-     "text": "the"
-    },
-    {
-     "end": 9.363,
-     "start": 8.775,
-     "text": "AID's"
-    },
-    {
-     "end": 10.1,
-     "start": 9.363,
-     "text": "key"
-    },
-    {
-     "end": 10.35,
-     "start": 10.1,
-     "text": ","
-    },
-    {
-     "end": 10.663,
-     "start": 10.55,
-     "text": "the"
-    },
-    {
-     "end": 11.175,
-     "start": 10.663,
-     "text": "checkpoint"
-    },
-    {
-     "end": 11.85,
-     "start": 11.175,
-     "text": "validator's"
-    },
-    {
-     "end": 12.4,
-     "start": 11.85,
-     "text": "credential"
-    },
-    {
-     "end": 12.562,
-     "start": 12.4,
-     "text": "from"
-    },
-    {
-     "end": 12.65,
-     "start": 12.562,
-     "text": "the"
-    },
-    {
-     "end": 13.188,
-     "start": 12.65,
-     "text": "record"
-    },
-    {
-     "end": 13.35,
-     "start": 13.188,
-     "text": "as"
-    },
-    {
-     "end": 13.45,
-     "start": 13.35,
-     "text": "the"
-    },
-    {
-     "end": 13.825,
-     "start": 13.45,
-     "text": "holding"
-    },
-    {
-     "end": 14.438,
-     "start": 13.825,
-     "text": "address"
-    },
-    {
-     "end": 14.55,
-     "start": 14.438,
-     "text": "("
-    },
-    {
-     "end": 14.788,
-     "start": 14.55,
-     "text": "never"
-    },
-    {
-     "end": 14.925,
-     "start": 14.788,
-     "text": "the"
-    },
-    {
-     "end": 15.575,
-     "start": 14.925,
-     "text": "application"
-    },
-    {
-     "end": 16.675,
-     "start": 15.575,
-     "text": "address"
-    },
-    {
-     "end": 16.9,
-     "start": 16.675,
-     "text": ")"
-    },
-    {
-     "end": 16.95,
-     "start": 16.9,
-     "text": ","
-    },
-    {
-     "end": 17.225,
-     "start": 17.125,
-     "text": "the"
-    },
-    {
-     "end": 17.538,
-     "start": 17.225,
-     "text": "hash"
-    },
-    {
-     "end": 17.612,
-     "start": 17.538,
-     "text": "of"
-    },
-    {
-     "end": 17.75,
-     "start": 17.612,
-     "text": "the"
-    },
-    {
-     "end": 18.125,
-     "start": 17.75,
-     "text": "initial"
-    },
-    {
-     "end": 18.575,
-     "start": 18.125,
-     "text": "checkpoint"
-    },
-    {
-     "end": 19.038,
-     "start": 18.575,
-     "text": "datum"
-    },
-    {
-     "end": 19.163,
-     "start": 19.038,
+     "end": 7.188,
+     "start": 7.1,
      "text": "and"
     },
     {
-     "end": 19.237,
-     "start": 19.163,
+     "end": 7.475,
+     "start": 7.188,
+     "text": "only"
+    },
+    {
+     "end": 7.588,
+     "start": 7.475,
+     "text": "for"
+    },
+    {
+     "end": 7.688,
+     "start": 7.588,
+     "text": "a"
+    },
+    {
+     "end": 8.025,
+     "start": 7.688,
+     "text": "key"
+    },
+    {
+     "end": 8.175,
+     "start": 8.025,
+     "text": "that"
+    },
+    {
+     "end": 8.4,
+     "start": 8.175,
+     "text": "has"
+    },
+    {
+     "end": 8.562,
+     "start": 8.4,
+     "text": "its"
+    },
+    {
+     "end": 9.1,
+     "start": 8.562,
+     "text": "inception"
+    },
+    {
+     "end": 10.075,
+     "start": 9.1,
+     "text": "evidence"
+    },
+    {
+     "end": 10.275,
+     "start": 10.075,
+     "text": "."
+    },
+    {
+     "end": 10.55,
+     "start": 10.45,
+     "text": "The"
+    },
+    {
+     "end": 11.0,
+     "start": 10.55,
+     "text": "approval"
+    },
+    {
+     "end": 11.288,
+     "start": 11.0,
+     "text": "commits"
+    },
+    {
+     "end": 11.375,
+     "start": 11.288,
      "text": "the"
     },
     {
-     "end": 20.3,
-     "start": 19.237,
-     "text": "deposit"
+     "end": 11.95,
+     "start": 11.375,
+     "text": "registry"
     },
     {
-     "end": 20.5,
+     "end": 12.025,
+     "start": 11.95,
+     "text": ","
+    },
+    {
+     "end": 12.175,
+     "start": 12.025,
+     "text": "the"
+    },
+    {
+     "end": 12.762,
+     "start": 12.175,
+     "text": "AID's"
+    },
+    {
+     "end": 13.5,
+     "start": 12.762,
+     "text": "key"
+    },
+    {
+     "end": 13.75,
+     "start": 13.5,
+     "text": ","
+    },
+    {
+     "end": 14.062,
+     "start": 13.95,
+     "text": "the"
+    },
+    {
+     "end": 14.575,
+     "start": 14.062,
+     "text": "checkpoint"
+    },
+    {
+     "end": 15.25,
+     "start": 14.575,
+     "text": "validator's"
+    },
+    {
+     "end": 15.8,
+     "start": 15.25,
+     "text": "credential"
+    },
+    {
+     "end": 15.962,
+     "start": 15.8,
+     "text": "from"
+    },
+    {
+     "end": 16.05,
+     "start": 15.962,
+     "text": "the"
+    },
+    {
+     "end": 16.587,
+     "start": 16.05,
+     "text": "record"
+    },
+    {
+     "end": 16.75,
+     "start": 16.587,
+     "text": "as"
+    },
+    {
+     "end": 16.85,
+     "start": 16.75,
+     "text": "the"
+    },
+    {
+     "end": 17.225,
+     "start": 16.85,
+     "text": "holding"
+    },
+    {
+     "end": 17.837,
+     "start": 17.225,
+     "text": "address"
+    },
+    {
+     "end": 17.95,
+     "start": 17.837,
+     "text": "("
+    },
+    {
+     "end": 18.188,
+     "start": 17.95,
+     "text": "never"
+    },
+    {
+     "end": 18.325,
+     "start": 18.188,
+     "text": "the"
+    },
+    {
+     "end": 18.975,
+     "start": 18.325,
+     "text": "application"
+    },
+    {
+     "end": 20.075,
+     "start": 18.975,
+     "text": "address"
+    },
+    {
+     "end": 20.3,
+     "start": 20.075,
+     "text": ")"
+    },
+    {
+     "end": 20.35,
      "start": 20.3,
      "text": ","
     },
     {
-     "end": 20.837,
-     "start": 20.675,
-     "text": "which"
+     "end": 20.625,
+     "start": 20.525,
+     "text": "the"
     },
     {
      "end": 20.938,
-     "start": 20.837,
-     "text": "is"
+     "start": 20.625,
+     "text": "hash"
     },
     {
-     "end": 21.025,
+     "end": 21.013,
      "start": 20.938,
+     "text": "of"
+    },
+    {
+     "end": 21.15,
+     "start": 21.013,
      "text": "the"
     },
     {
-     "end": 21.25,
-     "start": 21.025,
-     "text": "whole"
+     "end": 21.525,
+     "start": 21.15,
+     "text": "initial"
     },
     {
-     "end": 21.675,
-     "start": 21.25,
-     "text": "carrier"
-    },
-    {
-     "end": 21.775,
-     "start": 21.675,
-     "text": "the"
-    },
-    {
-     "end": 22.188,
-     "start": 21.775,
+     "end": 21.975,
+     "start": 21.525,
      "text": "checkpoint"
     },
     {
-     "end": 22.3,
-     "start": 22.188,
-     "text": "will"
+     "end": 22.438,
+     "start": 21.975,
+     "text": "datum"
     },
     {
-     "end": 23.1,
-     "start": 22.3,
-     "text": "hold"
-    },
-    {
-     "end": 23.3,
-     "start": 23.1,
-     "text": ":"
-    },
-    {
-     "end": 23.6,
-     "start": 23.5,
-     "text": "at"
-    },
-    {
-     "end": 23.837,
-     "start": 23.6,
-     "text": "least"
-    },
-    {
-     "end": 23.925,
-     "start": 23.837,
-     "text": "the"
-    },
-    {
-     "end": 24.312,
-     "start": 23.925,
-     "text": "minimum"
-    },
-    {
-     "end": 24.712,
-     "start": 24.312,
-     "text": "ADA"
-    },
-    {
-     "end": 25.0,
-     "start": 24.712,
-     "text": "plus"
-    },
-    {
-     "end": 25.1,
-     "start": 25.0,
-     "text": "the"
-    },
-    {
-     "end": 25.675,
-     "start": 25.1,
-     "text": "registry's"
-    },
-    {
-     "end": 26.75,
-     "start": 25.675,
-     "text": "deposit"
-    },
-    {
-     "end": 26.95,
-     "start": 26.75,
-     "text": "."
-    },
-    {
-     "end": 27.188,
-     "start": 27.125,
-     "text": "The"
-    },
-    {
-     "end": 27.587,
-     "start": 27.188,
-     "text": "request"
-    },
-    {
-     "end": 27.837,
-     "start": 27.587,
-     "text": "holds"
-    },
-    {
-     "end": 28.362,
-     "start": 27.837,
-     "text": "exactly"
-    },
-    {
-     "end": 28.438,
-     "start": 28.362,
-     "text": "the"
-    },
-    {
-     "end": 29.45,
-     "start": 28.438,
-     "text": "deposit"
-    },
-    {
-     "end": 29.65,
-     "start": 29.45,
-     "text": ","
-    },
-    {
-     "end": 29.9,
-     "start": 29.825,
-     "text": "the"
-    },
-    {
-     "end": 30.612,
-     "start": 29.9,
-     "text": "registration"
-    },
-    {
-     "end": 31.075,
-     "start": 30.612,
-     "text": "cost"
-    },
-    {
-     "end": 31.188,
-     "start": 31.075,
+     "end": 22.562,
+     "start": 22.438,
      "text": "and"
     },
     {
-     "end": 31.275,
-     "start": 31.188,
+     "end": 22.638,
+     "start": 22.562,
      "text": "the"
     },
     {
-     "end": 31.663,
-     "start": 31.275,
+     "end": 23.7,
+     "start": 22.638,
+     "text": "deposit"
+    },
+    {
+     "end": 23.9,
+     "start": 23.7,
+     "text": ","
+    },
+    {
+     "end": 24.237,
+     "start": 24.075,
+     "text": "which"
+    },
+    {
+     "end": 24.337,
+     "start": 24.237,
+     "text": "is"
+    },
+    {
+     "end": 24.425,
+     "start": 24.337,
+     "text": "the"
+    },
+    {
+     "end": 24.65,
+     "start": 24.425,
+     "text": "whole"
+    },
+    {
+     "end": 25.075,
+     "start": 24.65,
+     "text": "carrier"
+    },
+    {
+     "end": 25.175,
+     "start": 25.075,
+     "text": "the"
+    },
+    {
+     "end": 25.587,
+     "start": 25.175,
+     "text": "checkpoint"
+    },
+    {
+     "end": 25.7,
+     "start": 25.587,
+     "text": "will"
+    },
+    {
+     "end": 26.5,
+     "start": 25.7,
+     "text": "hold"
+    },
+    {
+     "end": 26.7,
+     "start": 26.5,
+     "text": ":"
+    },
+    {
+     "end": 27.0,
+     "start": 26.9,
+     "text": "at"
+    },
+    {
+     "end": 27.237,
+     "start": 27.0,
+     "text": "least"
+    },
+    {
+     "end": 27.325,
+     "start": 27.237,
+     "text": "the"
+    },
+    {
+     "end": 27.712,
+     "start": 27.325,
      "text": "minimum"
     },
     {
-     "end": 32.037,
-     "start": 31.663,
+     "end": 28.112,
+     "start": 27.712,
+     "text": "ADA"
+    },
+    {
+     "end": 28.4,
+     "start": 28.112,
+     "text": "plus"
+    },
+    {
+     "end": 28.5,
+     "start": 28.4,
+     "text": "the"
+    },
+    {
+     "end": 29.075,
+     "start": 28.5,
+     "text": "registry's"
+    },
+    {
+     "end": 30.15,
+     "start": 29.075,
+     "text": "deposit"
+    },
+    {
+     "end": 30.35,
+     "start": 30.15,
+     "text": "."
+    },
+    {
+     "end": 30.6,
+     "start": 30.525,
+     "text": "The"
+    },
+    {
+     "end": 31.075,
+     "start": 30.6,
+     "text": "request"
+    },
+    {
+     "end": 31.475,
+     "start": 31.075,
+     "text": "carries"
+    },
+    {
+     "end": 31.65,
+     "start": 31.475,
+     "text": "that"
+    },
+    {
+     "end": 32.0,
+     "start": 31.65,
+     "text": "datum"
+    },
+    {
+     "end": 32.588,
+     "start": 32.0,
+     "text": "itself"
+    },
+    {
+     "end": 32.725,
+     "start": 32.588,
+     "text": "and"
+    },
+    {
+     "end": 33.025,
+     "start": 32.725,
+     "text": "holds"
+    },
+    {
+     "end": 33.588,
+     "start": 33.025,
+     "text": "exactly"
+    },
+    {
+     "end": 33.675,
+     "start": 33.588,
+     "text": "the"
+    },
+    {
+     "end": 34.775,
+     "start": 33.675,
+     "text": "deposit"
+    },
+    {
+     "end": 34.975,
+     "start": 34.775,
+     "text": ","
+    },
+    {
+     "end": 35.225,
+     "start": 35.15,
+     "text": "the"
+    },
+    {
+     "end": 35.938,
+     "start": 35.225,
+     "text": "registration"
+    },
+    {
+     "end": 36.4,
+     "start": 35.938,
+     "text": "cost"
+    },
+    {
+     "end": 36.513,
+     "start": 36.4,
+     "text": "and"
+    },
+    {
+     "end": 36.6,
+     "start": 36.513,
+     "text": "the"
+    },
+    {
+     "end": 36.987,
+     "start": 36.6,
+     "text": "minimum"
+    },
+    {
+     "end": 37.362,
+     "start": 36.987,
      "text": "tip"
     },
     {
-     "end": 32.125,
-     "start": 32.037,
+     "end": 37.45,
+     "start": 37.362,
      "text": "("
     },
     {
-     "end": 33.425,
-     "start": 32.125,
+     "end": 38.75,
+     "start": 37.45,
      "text": "booking_inversion"
     },
     {
-     "end": 33.625,
-     "start": 33.425,
+     "end": 38.95,
+     "start": 38.75,
      "text": ","
     },
     {
-     "end": 35.475,
-     "start": 33.8,
+     "end": 41.0,
+     "start": 39.15,
+     "text": "booking_refuses_missing_inception"
+    },
+    {
+     "end": 41.1,
+     "start": 41.0,
+     "text": ","
+    },
+    {
+     "end": 43.75,
+     "start": 41.1,
+     "text": "registration_approval_requires_inception"
+    },
+    {
+     "end": 43.95,
+     "start": 43.75,
+     "text": ","
+    },
+    {
+     "end": 45.8,
+     "start": 44.125,
      "text": "booking_refuses_foreign_registry"
     },
     {
-     "end": 35.588,
-     "start": 35.475,
+     "end": 45.912,
+     "start": 45.8,
      "text": ","
     },
     {
-     "end": 37.9,
-     "start": 35.588,
+     "end": 48.225,
+     "start": 45.912,
      "text": "booking_refuses_application_holding"
     },
     {
-     "end": 38.1,
-     "start": 37.9,
+     "end": 48.425,
+     "start": 48.225,
      "text": ","
     },
     {
-     "end": 39.7,
-     "start": 38.275,
+     "end": 50.025,
+     "start": 48.6,
      "text": "booking_refuses_other_holding"
     },
     {
-     "end": 39.8,
-     "start": 39.7,
+     "end": 50.125,
+     "start": 50.025,
      "text": ","
     },
     {
-     "end": 41.825,
-     "start": 39.8,
+     "end": 52.15,
+     "start": 50.125,
      "text": "booking_refuses_short_deposit"
     },
     {
-     "end": 42.025,
-     "start": 41.825,
+     "end": 52.35,
+     "start": 52.15,
      "text": ","
     },
     {
-     "end": 44.225,
-     "start": 42.2,
+     "end": 54.55,
+     "start": 52.525,
      "text": "booking_refuses_inexact_contents"
     },
     {
-     "end": 44.45,
-     "start": 44.225,
+     "end": 54.775,
+     "start": 54.55,
      "text": ")"
     },
     {
-     "end": 44.525,
-     "start": 44.45,
+     "end": 54.85,
+     "start": 54.775,
      "text": "."
     }
    ]
@@ -325411,17 +325816,452 @@
    ]
   },
   "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-06": {
-   "audio_sha256": "d4bab2f7b4672b27d76c26309c5e6632573e76d136a5a844ad42b7a751ce869d",
-   "characters": 1222,
-   "cost": 0.00120978,
-   "duration": 82.45,
+   "audio_sha256": "39338b33e7eecd27b2663fb8aed96acc4b1730ec1bdb88a87c42aaa5e8e2600c",
+   "characters": 517,
+   "cost": 0.00051183,
+   "duration": 33.4,
    "index": 6,
-   "key": "f91d14ba69aa9f1f9292c6691b1562f2a0800dd69a416c473a174256fb97bb6d",
+   "key": "9f8880f729c7ad66b2e8941ae46fbf528f8792733721e91db952d2c754ab333d",
    "page": "docs/design/registry-as-mpfs.md",
    "pause_ms": 300,
    "section": "keris-application-on-the-public-registry",
-   "sent_text": "The initial checkpoint state. The delivered holding's datum is exactly the state the checkpoint model's registration step writes for the request: the version 2 Live datum of the AID whose key the request names, at sequence number and epoch 0, neither poisoned, frozen nor topped up, born at the booking's validity upper bound and refunding to the ledger bytes of the refund address the request names; its pool, the deposit less the minimum ADA, the checkpoint deposit and the freeze bond, covers at least one premium. A fold delivering any other sequence number, epoch, flag, birth slot, refund address, AID or a pending termination, or a pool below one premium, is refused, so no fold can deliver a checkpoint that skips the juvenility window or claims a key state the KEL never reached (fold_delivers_initial_state, delivered_initial_state, initialState_is_registration, fold_refuses_other_state, fold_refuses_other_aid, fold_refuses_pool_below_premium, fold_refuses_unrecorded_refund). The key material in the datum is pinned by the committed datum hash, not by this rule. One transaction folds at most one registration request in the on-chain realization; that is a declared limit of the realization, not of the model.",
-   "text": "The initial checkpoint state. The delivered holding's datum is exactly the state the checkpoint model's registration step writes for the request: the version 2 Live datum of the AID whose key the request names, at sequence number and epoch 0, neither poisoned, frozen nor topped up, born at the booking's validity upper bound and refunding to the ledger bytes of the refund address the request names; its pool, the deposit less the minimum ADA, the checkpoint deposit and the freeze bond, covers at least one premium. A fold delivering any other sequence number, epoch, flag, birth slot, refund address, AID or a pending termination, or a pool below one premium, is refused, so no fold can deliver a checkpoint that skips the juvenility window or claims a key state the KEL never reached (fold_delivers_initial_state, delivered_initial_state, initialState_is_registration, fold_refuses_other_state, fold_refuses_other_aid, fold_refuses_pool_below_premium, fold_refuses_unrecorded_refund). The key material in the datum is pinned by the committed datum hash, not by this rule. One transaction folds at most one registration request in the on-chain realization; that is a declared limit of the realization, not of the model.",
+   "sent_text": "What a folder supplies. Nothing of [KERI](/kˈɛɹi/)'s. A fold or a return reads no inception evidence (only_booking_reads_inception). The fold that Singular's client builds from the registry and one booked request is accepted once [KERI](/kˈɛɹi/)'s adapter adds three things, all computed from the chain: the configuration record read by reference, the treasury donation of the registration cost, and the application's redeemer naming the request and its new holding (public_fold_accepted, fold_refuses_unread_record).",
+   "text": "What a folder supplies. Nothing of KERI's. A fold or a return reads no inception evidence (only_booking_reads_inception). The fold that Singular's client builds from the registry and one booked request is accepted once KERI's adapter adds three things, all computed from the chain: the configuration record read by reference, the treasury donation of the registration cost, and the application's redeemer naming the request and its new holding (public_fold_accepted, fold_refuses_unread_record).",
+   "words": [
+    {
+     "end": 0.287,
+     "start": 0.175,
+     "text": "What"
+    },
+    {
+     "end": 0.35,
+     "start": 0.287,
+     "text": "a"
+    },
+    {
+     "end": 0.725,
+     "start": 0.35,
+     "text": "folder"
+    },
+    {
+     "end": 1.65,
+     "start": 0.725,
+     "text": "supplies"
+    },
+    {
+     "end": 1.85,
+     "start": 1.65,
+     "text": "."
+    },
+    {
+     "end": 2.438,
+     "start": 2.075,
+     "text": "Nothing"
+    },
+    {
+     "end": 2.562,
+     "start": 2.438,
+     "text": "of"
+    },
+    {
+     "end": 3.025,
+     "start": 2.562,
+     "text": "KERI"
+    },
+    {
+     "end": 3.15,
+     "start": 3.025,
+     "text": "'s"
+    },
+    {
+     "end": 3.237,
+     "start": 3.15,
+     "text": "."
+    },
+    {
+     "end": 3.362,
+     "start": 3.237,
+     "text": "A"
+    },
+    {
+     "end": 3.862,
+     "start": 3.362,
+     "text": "fold"
+    },
+    {
+     "end": 4.0,
+     "start": 3.862,
+     "text": "or"
+    },
+    {
+     "end": 4.075,
+     "start": 4.0,
+     "text": "a"
+    },
+    {
+     "end": 4.5,
+     "start": 4.075,
+     "text": "return"
+    },
+    {
+     "end": 4.838,
+     "start": 4.5,
+     "text": "reads"
+    },
+    {
+     "end": 5.1,
+     "start": 4.838,
+     "text": "no"
+    },
+    {
+     "end": 5.688,
+     "start": 5.1,
+     "text": "inception"
+    },
+    {
+     "end": 6.225,
+     "start": 5.688,
+     "text": "evidence"
+    },
+    {
+     "end": 6.275,
+     "start": 6.225,
+     "text": "("
+    },
+    {
+     "end": 8.125,
+     "start": 6.275,
+     "text": "only_booking_reads_inception"
+    },
+    {
+     "end": 8.375,
+     "start": 8.125,
+     "text": ")"
+    },
+    {
+     "end": 8.45,
+     "start": 8.375,
+     "text": "."
+    },
+    {
+     "end": 8.762,
+     "start": 8.65,
+     "text": "The"
+    },
+    {
+     "end": 9.15,
+     "start": 8.762,
+     "text": "fold"
+    },
+    {
+     "end": 9.363,
+     "start": 9.15,
+     "text": "that"
+    },
+    {
+     "end": 9.962,
+     "start": 9.363,
+     "text": "Singular's"
+    },
+    {
+     "end": 10.4,
+     "start": 9.962,
+     "text": "client"
+    },
+    {
+     "end": 10.8,
+     "start": 10.4,
+     "text": "builds"
+    },
+    {
+     "end": 10.962,
+     "start": 10.8,
+     "text": "from"
+    },
+    {
+     "end": 11.05,
+     "start": 10.962,
+     "text": "the"
+    },
+    {
+     "end": 11.738,
+     "start": 11.05,
+     "text": "registry"
+    },
+    {
+     "end": 11.887,
+     "start": 11.738,
+     "text": "and"
+    },
+    {
+     "end": 12.212,
+     "start": 11.887,
+     "text": "one"
+    },
+    {
+     "end": 12.5,
+     "start": 12.212,
+     "text": "booked"
+    },
+    {
+     "end": 13.137,
+     "start": 12.5,
+     "text": "request"
+    },
+    {
+     "end": 13.3,
+     "start": 13.137,
+     "text": "is"
+    },
+    {
+     "end": 13.837,
+     "start": 13.3,
+     "text": "accepted"
+    },
+    {
+     "end": 14.137,
+     "start": 13.837,
+     "text": "once"
+    },
+    {
+     "end": 14.475,
+     "start": 14.137,
+     "text": "KERI"
+    },
+    {
+     "end": 14.55,
+     "start": 14.475,
+     "text": "'s"
+    },
+    {
+     "end": 15.05,
+     "start": 14.55,
+     "text": "adapter"
+    },
+    {
+     "end": 15.363,
+     "start": 15.05,
+     "text": "adds"
+    },
+    {
+     "end": 15.637,
+     "start": 15.363,
+     "text": "three"
+    },
+    {
+     "end": 16.775,
+     "start": 15.637,
+     "text": "things"
+    },
+    {
+     "end": 17.0,
+     "start": 16.775,
+     "text": ","
+    },
+    {
+     "end": 17.375,
+     "start": 17.2,
+     "text": "all"
+    },
+    {
+     "end": 17.825,
+     "start": 17.375,
+     "text": "computed"
+    },
+    {
+     "end": 17.962,
+     "start": 17.825,
+     "text": "from"
+    },
+    {
+     "end": 18.062,
+     "start": 17.962,
+     "text": "the"
+    },
+    {
+     "end": 18.85,
+     "start": 18.062,
+     "text": "chain"
+    },
+    {
+     "end": 19.05,
+     "start": 18.85,
+     "text": ":"
+    },
+    {
+     "end": 19.3,
+     "start": 19.225,
+     "text": "the"
+    },
+    {
+     "end": 20.125,
+     "start": 19.3,
+     "text": "configuration"
+    },
+    {
+     "end": 20.525,
+     "start": 20.125,
+     "text": "record"
+    },
+    {
+     "end": 20.775,
+     "start": 20.525,
+     "text": "read"
+    },
+    {
+     "end": 20.95,
+     "start": 20.775,
+     "text": "by"
+    },
+    {
+     "end": 21.925,
+     "start": 20.95,
+     "text": "reference"
+    },
+    {
+     "end": 22.125,
+     "start": 21.925,
+     "text": ","
+    },
+    {
+     "end": 22.375,
+     "start": 22.3,
+     "text": "the"
+    },
+    {
+     "end": 22.8,
+     "start": 22.375,
+     "text": "treasury"
+    },
+    {
+     "end": 23.35,
+     "start": 22.8,
+     "text": "donation"
+    },
+    {
+     "end": 23.438,
+     "start": 23.35,
+     "text": "of"
+    },
+    {
+     "end": 23.525,
+     "start": 23.438,
+     "text": "the"
+    },
+    {
+     "end": 24.2,
+     "start": 23.525,
+     "text": "registration"
+    },
+    {
+     "end": 25.0,
+     "start": 24.2,
+     "text": "cost"
+    },
+    {
+     "end": 25.225,
+     "start": 25.0,
+     "text": ","
+    },
+    {
+     "end": 25.513,
+     "start": 25.425,
+     "text": "and"
+    },
+    {
+     "end": 25.6,
+     "start": 25.513,
+     "text": "the"
+    },
+    {
+     "end": 26.425,
+     "start": 25.6,
+     "text": "application's"
+    },
+    {
+     "end": 26.975,
+     "start": 26.425,
+     "text": "redeemer"
+    },
+    {
+     "end": 27.312,
+     "start": 26.975,
+     "text": "naming"
+    },
+    {
+     "end": 27.4,
+     "start": 27.312,
+     "text": "the"
+    },
+    {
+     "end": 28.013,
+     "start": 27.4,
+     "text": "request"
+    },
+    {
+     "end": 28.138,
+     "start": 28.013,
+     "text": "and"
+    },
+    {
+     "end": 28.337,
+     "start": 28.138,
+     "text": "its"
+    },
+    {
+     "end": 28.55,
+     "start": 28.337,
+     "text": "new"
+    },
+    {
+     "end": 29.112,
+     "start": 28.55,
+     "text": "holding"
+    },
+    {
+     "end": 29.2,
+     "start": 29.112,
+     "text": "("
+    },
+    {
+     "end": 30.925,
+     "start": 29.2,
+     "text": "public_fold_accepted"
+    },
+    {
+     "end": 31.15,
+     "start": 30.925,
+     "text": ","
+    },
+    {
+     "end": 32.975,
+     "start": 31.325,
+     "text": "fold_refuses_unread_record"
+    },
+    {
+     "end": 33.3,
+     "start": 32.975,
+     "text": ")"
+    },
+    {
+     "end": 33.4,
+     "start": 33.3,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-07": {
+   "audio_sha256": "904b10f6990a37a786a2441b5ed639411cafb93cd961b67242aeb0d20925a948",
+   "characters": 1767,
+   "cost": 0.0017493299999999997,
+   "duration": 116.4,
+   "index": 7,
+   "key": "1dca1168fbb238e49647370c3fe0c0ddbd2b73c0d5fd6f9e9d4b524c9e72333e",
+   "page": "docs/design/registry-as-mpfs.md",
+   "pause_ms": 300,
+   "section": "keris-application-on-the-public-registry",
+   "sent_text": "The initial checkpoint state. The booking is refused unless the initial datum the request carries is exactly the state the checkpoint model's registration step writes for the request: the version 2 Live datum of the AID whose key the request names, at sequence number and epoch 0, neither poisoned, frozen nor topped up, born at the booking's validity upper bound and refunding to the ledger bytes of the refund address the request names; its pool, the deposit less the minimum ADA, the checkpoint deposit and the freeze bond, covers at least one premium. A booking committing any other sequence number, epoch, flag, birth slot, refund address, AID or a pending termination, a refund address no checkpoint can record, or a pool below one premium, is refused (booking_initial_state, booked_initial_state, initialState_is_registration, booking_refuses_other_state, booking_refuses_other_aid, booking_refuses_pool_below_premium, booking_refuses_unrecorded_refund). A fold validates none of this again: it delivers the committed datum, and a holding with another datum or at another address is refused (fold_delivers_committed, fold_refuses_other_datum, fold_refuses_other_address). So the delivered checkpoint is the initial state, and no fold can deliver a checkpoint that skips the juvenility window or claims a key state the KEL never reached (fold_delivers_initial_state, delivered_initial_state). The key material in the datum is pinned by the committed datum hash, not by this rule: the model states the inception evidence as one fact of the key, and the validator must check that the key material is the inception's. One transaction folds at most one registration request in the on-chain realization; that is a declared limit of the realization, not of the model.",
+   "text": "The initial checkpoint state. The booking is refused unless the initial datum the request carries is exactly the state the checkpoint model's registration step writes for the request: the version 2 Live datum of the AID whose key the request names, at sequence number and epoch 0, neither poisoned, frozen nor topped up, born at the booking's validity upper bound and refunding to the ledger bytes of the refund address the request names; its pool, the deposit less the minimum ADA, the checkpoint deposit and the freeze bond, covers at least one premium. A booking committing any other sequence number, epoch, flag, birth slot, refund address, AID or a pending termination, a refund address no checkpoint can record, or a pool below one premium, is refused (booking_initial_state, booked_initial_state, initialState_is_registration, booking_refuses_other_state, booking_refuses_other_aid, booking_refuses_pool_below_premium, booking_refuses_unrecorded_refund). A fold validates none of this again: it delivers the committed datum, and a holding with another datum or at another address is refused (fold_delivers_committed, fold_refuses_other_datum, fold_refuses_other_address). So the delivered checkpoint is the initial state, and no fold can deliver a checkpoint that skips the juvenility window or claims a key state the KEL never reached (fold_delivers_initial_state, delivered_initial_state). The key material in the datum is pinned by the committed datum hash, not by this rule: the model states the inception evidence as one fact of the key, and the validator must check that the key material is the inception's. One transaction folds at most one registration request in the on-chain realization; that is a declared limit of the realization, not of the model.",
    "words": [
     {
      "end": 0.262,
@@ -325449,1058 +326289,1503 @@
      "text": "."
     },
     {
-     "end": 2.3,
-     "start": 2.225,
+     "end": 2.35,
+     "start": 2.25,
      "text": "The"
     },
     {
-     "end": 2.8,
-     "start": 2.3,
-     "text": "delivered"
+     "end": 2.725,
+     "start": 2.35,
+     "text": "booking"
     },
     {
-     "end": 3.325,
-     "start": 2.8,
-     "text": "holding's"
-    },
-    {
-     "end": 3.838,
-     "start": 3.325,
-     "text": "datum"
-    },
-    {
-     "end": 4.0,
-     "start": 3.838,
+     "end": 2.875,
+     "start": 2.725,
      "text": "is"
     },
     {
-     "end": 4.6,
-     "start": 4.0,
-     "text": "exactly"
-    },
-    {
-     "end": 4.738,
-     "start": 4.6,
-     "text": "the"
-    },
-    {
-     "end": 5.125,
-     "start": 4.738,
-     "text": "state"
-    },
-    {
-     "end": 5.262,
-     "start": 5.125,
-     "text": "the"
-    },
-    {
-     "end": 5.8,
-     "start": 5.262,
-     "text": "checkpoint"
-    },
-    {
-     "end": 6.225,
-     "start": 5.8,
-     "text": "model's"
-    },
-    {
-     "end": 6.988,
-     "start": 6.225,
-     "text": "registration"
-    },
-    {
-     "end": 7.387,
-     "start": 6.988,
-     "text": "step"
-    },
-    {
-     "end": 7.725,
-     "start": 7.387,
-     "text": "writes"
-    },
-    {
-     "end": 7.838,
-     "start": 7.725,
-     "text": "for"
-    },
-    {
-     "end": 7.925,
-     "start": 7.838,
-     "text": "the"
-    },
-    {
-     "end": 9.125,
-     "start": 7.925,
-     "text": "request"
-    },
-    {
-     "end": 9.35,
-     "start": 9.125,
-     "text": ":"
-    },
-    {
-     "end": 9.6,
-     "start": 9.525,
-     "text": "the"
-    },
-    {
-     "end": 9.962,
-     "start": 9.6,
-     "text": "version"
-    },
-    {
-     "end": 10.225,
-     "start": 9.962,
-     "text": "2"
-    },
-    {
-     "end": 10.5,
-     "start": 10.225,
-     "text": "Live"
-    },
-    {
-     "end": 10.837,
-     "start": 10.5,
-     "text": "datum"
-    },
-    {
-     "end": 10.913,
-     "start": 10.837,
-     "text": "of"
-    },
-    {
-     "end": 11.062,
-     "start": 10.913,
-     "text": "the"
-    },
-    {
-     "end": 11.762,
-     "start": 11.062,
-     "text": "AID"
-    },
-    {
-     "end": 12.0,
-     "start": 11.762,
-     "text": "whose"
-    },
-    {
-     "end": 12.188,
-     "start": 12.0,
-     "text": "key"
-    },
-    {
-     "end": 12.275,
-     "start": 12.188,
-     "text": "the"
-    },
-    {
-     "end": 12.7,
-     "start": 12.275,
-     "text": "request"
-    },
-    {
-     "end": 13.625,
-     "start": 12.7,
-     "text": "names"
-    },
-    {
-     "end": 13.825,
-     "start": 13.625,
-     "text": ","
-    },
-    {
-     "end": 14.15,
-     "start": 14.025,
-     "text": "at"
-    },
-    {
-     "end": 14.613,
-     "start": 14.15,
-     "text": "sequence"
-    },
-    {
-     "end": 15.025,
-     "start": 14.613,
-     "text": "number"
-    },
-    {
-     "end": 15.15,
-     "start": 15.025,
-     "text": "and"
-    },
-    {
-     "end": 15.45,
-     "start": 15.15,
-     "text": "epoch"
-    },
-    {
-     "end": 15.85,
-     "start": 15.45,
-     "text": "0"
-    },
-    {
-     "end": 15.925,
-     "start": 15.85,
-     "text": ","
-    },
-    {
-     "end": 16.225,
-     "start": 15.925,
-     "text": "neither"
-    },
-    {
-     "end": 16.8,
-     "start": 16.225,
-     "text": "poisoned"
-    },
-    {
-     "end": 16.913,
-     "start": 16.8,
-     "text": ","
-    },
-    {
-     "end": 17.4,
-     "start": 16.913,
-     "text": "frozen"
-    },
-    {
-     "end": 17.625,
-     "start": 17.4,
-     "text": "nor"
-    },
-    {
-     "end": 17.925,
-     "start": 17.625,
-     "text": "topped"
-    },
-    {
-     "end": 18.625,
-     "start": 17.925,
-     "text": "up"
-    },
-    {
-     "end": 18.85,
-     "start": 18.625,
-     "text": ","
-    },
-    {
-     "end": 19.35,
-     "start": 19.05,
-     "text": "born"
-    },
-    {
-     "end": 19.438,
-     "start": 19.35,
-     "text": "at"
-    },
-    {
-     "end": 19.538,
-     "start": 19.438,
-     "text": "the"
-    },
-    {
-     "end": 20.025,
-     "start": 19.538,
-     "text": "booking's"
-    },
-    {
-     "end": 20.562,
-     "start": 20.025,
-     "text": "validity"
-    },
-    {
-     "end": 20.875,
-     "start": 20.562,
-     "text": "upper"
-    },
-    {
-     "end": 21.438,
-     "start": 20.875,
-     "text": "bound"
-    },
-    {
-     "end": 21.575,
-     "start": 21.438,
-     "text": "and"
-    },
-    {
-     "end": 22.2,
-     "start": 21.575,
-     "text": "refunding"
-    },
-    {
-     "end": 22.325,
-     "start": 22.2,
-     "text": "to"
-    },
-    {
-     "end": 22.462,
-     "start": 22.325,
-     "text": "the"
-    },
-    {
-     "end": 22.8,
-     "start": 22.462,
-     "text": "ledger"
-    },
-    {
-     "end": 23.138,
-     "start": 22.8,
-     "text": "bytes"
-    },
-    {
-     "end": 23.212,
-     "start": 23.138,
-     "text": "of"
-    },
-    {
-     "end": 23.325,
-     "start": 23.212,
-     "text": "the"
-    },
-    {
-     "end": 23.938,
-     "start": 23.325,
-     "text": "refund"
-    },
-    {
-     "end": 24.325,
-     "start": 23.938,
-     "text": "address"
-    },
-    {
-     "end": 24.425,
-     "start": 24.325,
-     "text": "the"
-    },
-    {
-     "end": 24.875,
-     "start": 24.425,
-     "text": "request"
-    },
-    {
-     "end": 25.975,
-     "start": 24.875,
-     "text": "names"
-    },
-    {
-     "end": 26.2,
-     "start": 25.975,
-     "text": ";"
-    },
-    {
-     "end": 26.612,
-     "start": 26.425,
-     "text": "its"
-    },
-    {
-     "end": 27.0,
-     "start": 26.612,
-     "text": "pool"
-    },
-    {
-     "end": 27.038,
-     "start": 27.0,
-     "text": ","
-    },
-    {
-     "end": 27.125,
-     "start": 27.038,
-     "text": "the"
-    },
-    {
-     "end": 27.675,
-     "start": 27.125,
-     "text": "deposit"
-    },
-    {
-     "end": 27.9,
-     "start": 27.675,
-     "text": "less"
-    },
-    {
-     "end": 28.038,
-     "start": 27.9,
-     "text": "the"
-    },
-    {
-     "end": 28.438,
-     "start": 28.038,
-     "text": "minimum"
-    },
-    {
-     "end": 28.9,
-     "start": 28.438,
-     "text": "ADA"
-    },
-    {
-     "end": 29.0,
-     "start": 28.9,
-     "text": ","
-    },
-    {
-     "end": 29.138,
-     "start": 29.0,
-     "text": "the"
-    },
-    {
-     "end": 29.65,
-     "start": 29.138,
-     "text": "checkpoint"
-    },
-    {
-     "end": 30.25,
-     "start": 29.65,
-     "text": "deposit"
-    },
-    {
-     "end": 30.362,
-     "start": 30.25,
-     "text": "and"
-    },
-    {
-     "end": 30.462,
-     "start": 30.362,
-     "text": "the"
-    },
-    {
-     "end": 30.812,
-     "start": 30.462,
-     "text": "freeze"
-    },
-    {
-     "end": 31.275,
-     "start": 30.812,
-     "text": "bond"
-    },
-    {
-     "end": 31.35,
-     "start": 31.275,
-     "text": ","
-    },
-    {
-     "end": 31.75,
-     "start": 31.35,
-     "text": "covers"
-    },
-    {
-     "end": 31.875,
-     "start": 31.75,
-     "text": "at"
-    },
-    {
-     "end": 32.15,
-     "start": 31.875,
-     "text": "least"
-    },
-    {
-     "end": 32.375,
-     "start": 32.15,
-     "text": "one"
-    },
-    {
-     "end": 33.55,
-     "start": 32.375,
-     "text": "premium"
-    },
-    {
-     "end": 33.75,
-     "start": 33.55,
-     "text": "."
-    },
-    {
-     "end": 34.037,
-     "start": 33.95,
-     "text": "A"
-    },
-    {
-     "end": 34.4,
-     "start": 34.037,
-     "text": "fold"
-    },
-    {
-     "end": 34.825,
-     "start": 34.4,
-     "text": "delivering"
-    },
-    {
-     "end": 35.05,
-     "start": 34.825,
-     "text": "any"
-    },
-    {
-     "end": 35.325,
-     "start": 35.05,
-     "text": "other"
-    },
-    {
-     "end": 35.775,
-     "start": 35.325,
-     "text": "sequence"
-    },
-    {
-     "end": 36.25,
-     "start": 35.775,
-     "text": "number"
-    },
-    {
-     "end": 36.362,
-     "start": 36.25,
-     "text": ","
-    },
-    {
-     "end": 36.775,
-     "start": 36.362,
-     "text": "epoch"
-    },
-    {
-     "end": 36.862,
-     "start": 36.775,
-     "text": ","
-    },
-    {
-     "end": 37.3,
-     "start": 36.862,
-     "text": "flag"
-    },
-    {
-     "end": 37.35,
-     "start": 37.3,
-     "text": ","
-    },
-    {
-     "end": 37.662,
-     "start": 37.35,
-     "text": "birth"
-    },
-    {
-     "end": 38.05,
-     "start": 37.662,
-     "text": "slot"
-    },
-    {
-     "end": 38.138,
-     "start": 38.05,
-     "text": ","
-    },
-    {
-     "end": 38.537,
-     "start": 38.138,
-     "text": "refund"
-    },
-    {
-     "end": 39.6,
-     "start": 38.537,
-     "text": "address"
-    },
-    {
-     "end": 39.825,
-     "start": 39.6,
-     "text": ","
-    },
-    {
-     "end": 40.688,
-     "start": 40.025,
-     "text": "AID"
-    },
-    {
-     "end": 40.812,
-     "start": 40.688,
-     "text": "or"
-    },
-    {
-     "end": 40.875,
-     "start": 40.812,
-     "text": "a"
-    },
-    {
-     "end": 41.275,
-     "start": 40.875,
-     "text": "pending"
-    },
-    {
-     "end": 41.925,
-     "start": 41.275,
-     "text": "termination"
-    },
-    {
-     "end": 41.975,
-     "start": 41.925,
-     "text": ","
-    },
-    {
-     "end": 42.088,
-     "start": 41.975,
-     "text": "or"
-    },
-    {
-     "end": 42.188,
-     "start": 42.088,
-     "text": "a"
-    },
-    {
-     "end": 42.525,
-     "start": 42.188,
-     "text": "pool"
-    },
-    {
-     "end": 42.825,
-     "start": 42.525,
-     "text": "below"
-    },
-    {
-     "end": 43.05,
-     "start": 42.825,
-     "text": "one"
-    },
-    {
-     "end": 43.575,
-     "start": 43.05,
-     "text": "premium"
-    },
-    {
-     "end": 43.675,
-     "start": 43.575,
-     "text": ","
-    },
-    {
-     "end": 43.825,
-     "start": 43.675,
-     "text": "is"
-    },
-    {
-     "end": 45.0,
-     "start": 43.825,
+     "end": 3.638,
+     "start": 2.875,
      "text": "refused"
     },
     {
-     "end": 45.225,
-     "start": 45.0,
-     "text": ","
+     "end": 4.0,
+     "start": 3.638,
+     "text": "unless"
     },
     {
-     "end": 45.65,
-     "start": 45.475,
-     "text": "so"
-    },
-    {
-     "end": 45.862,
-     "start": 45.65,
-     "text": "no"
-    },
-    {
-     "end": 46.275,
-     "start": 45.862,
-     "text": "fold"
-    },
-    {
-     "end": 46.425,
-     "start": 46.275,
-     "text": "can"
-    },
-    {
-     "end": 46.85,
-     "start": 46.425,
-     "text": "deliver"
-    },
-    {
-     "end": 46.963,
-     "start": 46.85,
-     "text": "a"
-    },
-    {
-     "end": 47.55,
-     "start": 46.963,
-     "text": "checkpoint"
-    },
-    {
-     "end": 47.763,
-     "start": 47.55,
-     "text": "that"
-    },
-    {
-     "end": 48.175,
-     "start": 47.763,
-     "text": "skips"
-    },
-    {
-     "end": 48.312,
-     "start": 48.175,
+     "end": 4.15,
+     "start": 4.0,
      "text": "the"
     },
     {
-     "end": 48.963,
-     "start": 48.312,
-     "text": "juvenility"
+     "end": 4.6,
+     "start": 4.15,
+     "text": "initial"
     },
     {
-     "end": 49.55,
-     "start": 48.963,
-     "text": "window"
-    },
-    {
-     "end": 49.763,
-     "start": 49.55,
-     "text": "or"
-    },
-    {
-     "end": 50.162,
-     "start": 49.763,
-     "text": "claims"
-    },
-    {
-     "end": 50.263,
-     "start": 50.162,
-     "text": "a"
-    },
-    {
-     "end": 50.562,
-     "start": 50.263,
-     "text": "key"
-    },
-    {
-     "end": 50.95,
-     "start": 50.562,
-     "text": "state"
-    },
-    {
-     "end": 51.088,
-     "start": 50.95,
-     "text": "the"
-    },
-    {
-     "end": 51.775,
-     "start": 51.088,
-     "text": "KEL"
-    },
-    {
-     "end": 52.138,
-     "start": 51.775,
-     "text": "never"
-    },
-    {
-     "end": 52.662,
-     "start": 52.138,
-     "text": "reached"
-    },
-    {
-     "end": 52.75,
-     "start": 52.662,
-     "text": "("
-    },
-    {
-     "end": 54.875,
-     "start": 52.75,
-     "text": "fold_delivers_initial_state"
-    },
-    {
-     "end": 55.1,
-     "start": 54.875,
-     "text": ","
-    },
-    {
-     "end": 56.475,
-     "start": 55.3,
-     "text": "delivered_initial_state"
-    },
-    {
-     "end": 56.55,
-     "start": 56.475,
-     "text": ","
-    },
-    {
-     "end": 58.3,
-     "start": 56.55,
-     "text": "initialState_is_registration"
-    },
-    {
-     "end": 58.412,
-     "start": 58.3,
-     "text": ","
-    },
-    {
-     "end": 60.375,
-     "start": 58.412,
-     "text": "fold_refuses_other_state"
-    },
-    {
-     "end": 60.6,
-     "start": 60.375,
-     "text": ","
-    },
-    {
-     "end": 61.95,
-     "start": 60.775,
-     "text": "fold_refuses_other_aid"
-    },
-    {
-     "end": 62.062,
-     "start": 61.95,
-     "text": ","
-    },
-    {
-     "end": 64.2,
-     "start": 62.062,
-     "text": "fold_refuses_pool_below_premium"
-    },
-    {
-     "end": 64.4,
-     "start": 64.2,
-     "text": ","
-    },
-    {
-     "end": 66.65,
-     "start": 64.575,
-     "text": "fold_refuses_unrecorded_refund"
-    },
-    {
-     "end": 66.875,
-     "start": 66.65,
-     "text": ")"
-    },
-    {
-     "end": 66.95,
-     "start": 66.875,
-     "text": "."
-    },
-    {
-     "end": 67.238,
-     "start": 67.125,
-     "text": "The"
-    },
-    {
-     "end": 67.45,
-     "start": 67.238,
-     "text": "key"
-    },
-    {
-     "end": 67.963,
-     "start": 67.45,
-     "text": "material"
-    },
-    {
-     "end": 68.037,
-     "start": 67.963,
-     "text": "in"
-    },
-    {
-     "end": 68.125,
-     "start": 68.037,
-     "text": "the"
-    },
-    {
-     "end": 68.588,
-     "start": 68.125,
+     "end": 5.0,
+     "start": 4.6,
      "text": "datum"
     },
     {
-     "end": 68.762,
-     "start": 68.588,
-     "text": "is"
-    },
-    {
-     "end": 69.15,
-     "start": 68.762,
-     "text": "pinned"
-    },
-    {
-     "end": 69.312,
-     "start": 69.15,
-     "text": "by"
-    },
-    {
-     "end": 69.4,
-     "start": 69.312,
+     "end": 5.1,
+     "start": 5.0,
      "text": "the"
     },
     {
-     "end": 69.85,
-     "start": 69.4,
-     "text": "committed"
-    },
-    {
-     "end": 70.225,
-     "start": 69.85,
-     "text": "datum"
-    },
-    {
-     "end": 70.725,
-     "start": 70.225,
-     "text": "hash"
-    },
-    {
-     "end": 70.825,
-     "start": 70.725,
-     "text": ","
-    },
-    {
-     "end": 71.05,
-     "start": 70.825,
-     "text": "not"
-    },
-    {
-     "end": 71.225,
-     "start": 71.05,
-     "text": "by"
-    },
-    {
-     "end": 71.45,
-     "start": 71.225,
-     "text": "this"
-    },
-    {
-     "end": 72.35,
-     "start": 71.45,
-     "text": "rule"
-    },
-    {
-     "end": 72.55,
-     "start": 72.35,
-     "text": "."
-    },
-    {
-     "end": 72.975,
-     "start": 72.75,
-     "text": "One"
-    },
-    {
-     "end": 73.7,
-     "start": 72.975,
-     "text": "transaction"
-    },
-    {
-     "end": 74.15,
-     "start": 73.7,
-     "text": "folds"
-    },
-    {
-     "end": 74.25,
-     "start": 74.15,
-     "text": "at"
-    },
-    {
-     "end": 74.562,
-     "start": 74.25,
-     "text": "most"
-    },
-    {
-     "end": 74.825,
-     "start": 74.562,
-     "text": "one"
-    },
-    {
-     "end": 75.5,
-     "start": 74.825,
-     "text": "registration"
-    },
-    {
-     "end": 76.125,
-     "start": 75.5,
+     "end": 5.55,
+     "start": 5.1,
      "text": "request"
     },
     {
-     "end": 76.213,
-     "start": 76.125,
-     "text": "in"
+     "end": 6.088,
+     "start": 5.55,
+     "text": "carries"
     },
     {
-     "end": 76.363,
-     "start": 76.213,
-     "text": "the"
-    },
-    {
-     "end": 76.95,
-     "start": 76.363,
-     "text": "on-chain"
-    },
-    {
-     "end": 78.25,
-     "start": 76.95,
-     "text": "realization"
-    },
-    {
-     "end": 78.45,
-     "start": 78.25,
-     "text": ";"
-    },
-    {
-     "end": 78.875,
-     "start": 78.65,
-     "text": "that"
-    },
-    {
-     "end": 78.988,
-     "start": 78.875,
+     "end": 6.25,
+     "start": 6.088,
      "text": "is"
     },
     {
-     "end": 79.05,
-     "start": 78.988,
-     "text": "a"
+     "end": 6.85,
+     "start": 6.25,
+     "text": "exactly"
     },
     {
-     "end": 79.55,
-     "start": 79.05,
-     "text": "declared"
-    },
-    {
-     "end": 79.875,
-     "start": 79.55,
-     "text": "limit"
-    },
-    {
-     "end": 79.963,
-     "start": 79.875,
-     "text": "of"
-    },
-    {
-     "end": 80.05,
-     "start": 79.963,
+     "end": 6.988,
+     "start": 6.85,
      "text": "the"
     },
     {
-     "end": 80.875,
-     "start": 80.05,
-     "text": "realization"
+     "end": 7.375,
+     "start": 6.988,
+     "text": "state"
+    },
+    {
+     "end": 7.512,
+     "start": 7.375,
+     "text": "the"
+    },
+    {
+     "end": 8.05,
+     "start": 7.512,
+     "text": "checkpoint"
+    },
+    {
+     "end": 8.475,
+     "start": 8.05,
+     "text": "model's"
+    },
+    {
+     "end": 9.25,
+     "start": 8.475,
+     "text": "registration"
+    },
+    {
+     "end": 9.587,
+     "start": 9.25,
+     "text": "step"
+    },
+    {
+     "end": 9.95,
+     "start": 9.587,
+     "text": "writes"
+    },
+    {
+     "end": 10.062,
+     "start": 9.95,
+     "text": "for"
+    },
+    {
+     "end": 10.15,
+     "start": 10.062,
+     "text": "the"
+    },
+    {
+     "end": 11.4,
+     "start": 10.15,
+     "text": "request"
+    },
+    {
+     "end": 11.65,
+     "start": 11.4,
+     "text": ":"
+    },
+    {
+     "end": 11.9,
+     "start": 11.825,
+     "text": "the"
+    },
+    {
+     "end": 12.262,
+     "start": 11.9,
+     "text": "version"
+    },
+    {
+     "end": 12.525,
+     "start": 12.262,
+     "text": "2"
+    },
+    {
+     "end": 12.8,
+     "start": 12.525,
+     "text": "Live"
+    },
+    {
+     "end": 13.137,
+     "start": 12.8,
+     "text": "datum"
+    },
+    {
+     "end": 13.212,
+     "start": 13.137,
+     "text": "of"
+    },
+    {
+     "end": 13.363,
+     "start": 13.212,
+     "text": "the"
+    },
+    {
+     "end": 14.062,
+     "start": 13.363,
+     "text": "AID"
+    },
+    {
+     "end": 14.3,
+     "start": 14.062,
+     "text": "whose"
+    },
+    {
+     "end": 14.488,
+     "start": 14.3,
+     "text": "key"
+    },
+    {
+     "end": 14.575,
+     "start": 14.488,
+     "text": "the"
+    },
+    {
+     "end": 15.0,
+     "start": 14.575,
+     "text": "request"
+    },
+    {
+     "end": 15.925,
+     "start": 15.0,
+     "text": "names"
+    },
+    {
+     "end": 16.125,
+     "start": 15.925,
+     "text": ","
+    },
+    {
+     "end": 16.45,
+     "start": 16.325,
+     "text": "at"
+    },
+    {
+     "end": 16.913,
+     "start": 16.45,
+     "text": "sequence"
+    },
+    {
+     "end": 17.325,
+     "start": 16.913,
+     "text": "number"
+    },
+    {
+     "end": 17.45,
+     "start": 17.325,
+     "text": "and"
+    },
+    {
+     "end": 17.75,
+     "start": 17.45,
+     "text": "epoch"
+    },
+    {
+     "end": 18.15,
+     "start": 17.75,
+     "text": "0"
+    },
+    {
+     "end": 18.225,
+     "start": 18.15,
+     "text": ","
+    },
+    {
+     "end": 18.525,
+     "start": 18.225,
+     "text": "neither"
+    },
+    {
+     "end": 19.1,
+     "start": 18.525,
+     "text": "poisoned"
+    },
+    {
+     "end": 19.212,
+     "start": 19.1,
+     "text": ","
+    },
+    {
+     "end": 19.7,
+     "start": 19.212,
+     "text": "frozen"
+    },
+    {
+     "end": 19.925,
+     "start": 19.7,
+     "text": "nor"
+    },
+    {
+     "end": 20.225,
+     "start": 19.925,
+     "text": "topped"
+    },
+    {
+     "end": 20.925,
+     "start": 20.225,
+     "text": "up"
+    },
+    {
+     "end": 21.15,
+     "start": 20.925,
+     "text": ","
+    },
+    {
+     "end": 21.65,
+     "start": 21.35,
+     "text": "born"
+    },
+    {
+     "end": 21.737,
+     "start": 21.65,
+     "text": "at"
+    },
+    {
+     "end": 21.837,
+     "start": 21.737,
+     "text": "the"
+    },
+    {
+     "end": 22.325,
+     "start": 21.837,
+     "text": "booking's"
+    },
+    {
+     "end": 22.862,
+     "start": 22.325,
+     "text": "validity"
+    },
+    {
+     "end": 23.175,
+     "start": 22.862,
+     "text": "upper"
+    },
+    {
+     "end": 23.737,
+     "start": 23.175,
+     "text": "bound"
+    },
+    {
+     "end": 23.875,
+     "start": 23.737,
+     "text": "and"
+    },
+    {
+     "end": 24.5,
+     "start": 23.875,
+     "text": "refunding"
+    },
+    {
+     "end": 24.625,
+     "start": 24.5,
+     "text": "to"
+    },
+    {
+     "end": 24.763,
+     "start": 24.625,
+     "text": "the"
+    },
+    {
+     "end": 25.1,
+     "start": 24.763,
+     "text": "ledger"
+    },
+    {
+     "end": 25.438,
+     "start": 25.1,
+     "text": "bytes"
+    },
+    {
+     "end": 25.513,
+     "start": 25.438,
+     "text": "of"
+    },
+    {
+     "end": 25.625,
+     "start": 25.513,
+     "text": "the"
+    },
+    {
+     "end": 26.237,
+     "start": 25.625,
+     "text": "refund"
+    },
+    {
+     "end": 26.625,
+     "start": 26.237,
+     "text": "address"
+    },
+    {
+     "end": 26.725,
+     "start": 26.625,
+     "text": "the"
+    },
+    {
+     "end": 27.175,
+     "start": 26.725,
+     "text": "request"
+    },
+    {
+     "end": 28.275,
+     "start": 27.175,
+     "text": "names"
+    },
+    {
+     "end": 28.5,
+     "start": 28.275,
+     "text": ";"
+    },
+    {
+     "end": 28.913,
+     "start": 28.725,
+     "text": "its"
+    },
+    {
+     "end": 29.3,
+     "start": 28.913,
+     "text": "pool"
+    },
+    {
+     "end": 29.337,
+     "start": 29.3,
+     "text": ","
+    },
+    {
+     "end": 29.425,
+     "start": 29.337,
+     "text": "the"
+    },
+    {
+     "end": 29.975,
+     "start": 29.425,
+     "text": "deposit"
+    },
+    {
+     "end": 30.2,
+     "start": 29.975,
+     "text": "less"
+    },
+    {
+     "end": 30.337,
+     "start": 30.2,
+     "text": "the"
+    },
+    {
+     "end": 30.737,
+     "start": 30.337,
+     "text": "minimum"
+    },
+    {
+     "end": 31.2,
+     "start": 30.737,
+     "text": "ADA"
+    },
+    {
+     "end": 31.3,
+     "start": 31.2,
+     "text": ","
+    },
+    {
+     "end": 31.438,
+     "start": 31.3,
+     "text": "the"
+    },
+    {
+     "end": 31.95,
+     "start": 31.438,
+     "text": "checkpoint"
+    },
+    {
+     "end": 32.55,
+     "start": 31.95,
+     "text": "deposit"
+    },
+    {
+     "end": 32.662,
+     "start": 32.55,
+     "text": "and"
+    },
+    {
+     "end": 32.763,
+     "start": 32.662,
+     "text": "the"
+    },
+    {
+     "end": 33.112,
+     "start": 32.763,
+     "text": "freeze"
+    },
+    {
+     "end": 33.575,
+     "start": 33.112,
+     "text": "bond"
+    },
+    {
+     "end": 33.65,
+     "start": 33.575,
+     "text": ","
+    },
+    {
+     "end": 34.05,
+     "start": 33.65,
+     "text": "covers"
+    },
+    {
+     "end": 34.175,
+     "start": 34.05,
+     "text": "at"
+    },
+    {
+     "end": 34.45,
+     "start": 34.175,
+     "text": "least"
+    },
+    {
+     "end": 34.675,
+     "start": 34.45,
+     "text": "one"
+    },
+    {
+     "end": 35.85,
+     "start": 34.675,
+     "text": "premium"
+    },
+    {
+     "end": 36.05,
+     "start": 35.85,
+     "text": "."
+    },
+    {
+     "end": 36.325,
+     "start": 36.25,
+     "text": "A"
+    },
+    {
+     "end": 36.675,
+     "start": 36.325,
+     "text": "booking"
+    },
+    {
+     "end": 37.075,
+     "start": 36.675,
+     "text": "committing"
+    },
+    {
+     "end": 37.263,
+     "start": 37.075,
+     "text": "any"
+    },
+    {
+     "end": 37.525,
+     "start": 37.263,
+     "text": "other"
+    },
+    {
+     "end": 37.975,
+     "start": 37.525,
+     "text": "sequence"
+    },
+    {
+     "end": 38.45,
+     "start": 37.975,
+     "text": "number"
+    },
+    {
+     "end": 38.562,
+     "start": 38.45,
+     "text": ","
+    },
+    {
+     "end": 38.975,
+     "start": 38.562,
+     "text": "epoch"
+    },
+    {
+     "end": 39.062,
+     "start": 38.975,
+     "text": ","
+    },
+    {
+     "end": 39.5,
+     "start": 39.062,
+     "text": "flag"
+    },
+    {
+     "end": 39.55,
+     "start": 39.5,
+     "text": ","
+    },
+    {
+     "end": 39.862,
+     "start": 39.55,
+     "text": "birth"
+    },
+    {
+     "end": 40.25,
+     "start": 39.862,
+     "text": "slot"
+    },
+    {
+     "end": 40.338,
+     "start": 40.25,
+     "text": ","
+    },
+    {
+     "end": 40.737,
+     "start": 40.338,
+     "text": "refund"
+    },
+    {
+     "end": 41.8,
+     "start": 40.737,
+     "text": "address"
+    },
+    {
+     "end": 42.025,
+     "start": 41.8,
+     "text": ","
+    },
+    {
+     "end": 43.0,
+     "start": 42.225,
+     "text": "AID"
+    },
+    {
+     "end": 43.15,
+     "start": 43.0,
+     "text": "or"
+    },
+    {
+     "end": 43.225,
+     "start": 43.15,
+     "text": "a"
+    },
+    {
+     "end": 43.625,
+     "start": 43.225,
+     "text": "pending"
+    },
+    {
+     "end": 44.35,
+     "start": 43.625,
+     "text": "termination"
+    },
+    {
+     "end": 44.463,
+     "start": 44.35,
+     "text": ","
+    },
+    {
+     "end": 44.588,
+     "start": 44.463,
+     "text": "a"
+    },
+    {
+     "end": 45.013,
+     "start": 44.588,
+     "text": "refund"
+    },
+    {
+     "end": 45.362,
+     "start": 45.013,
+     "text": "address"
+    },
+    {
+     "end": 45.612,
+     "start": 45.362,
+     "text": "no"
+    },
+    {
+     "end": 46.125,
+     "start": 45.612,
+     "text": "checkpoint"
+    },
+    {
+     "end": 46.25,
+     "start": 46.125,
+     "text": "can"
+    },
+    {
+     "end": 47.275,
+     "start": 46.25,
+     "text": "record"
+    },
+    {
+     "end": 47.5,
+     "start": 47.275,
+     "text": ","
+    },
+    {
+     "end": 47.787,
+     "start": 47.7,
+     "text": "or"
+    },
+    {
+     "end": 47.888,
+     "start": 47.787,
+     "text": "a"
+    },
+    {
+     "end": 48.225,
+     "start": 47.888,
+     "text": "pool"
+    },
+    {
+     "end": 48.55,
+     "start": 48.225,
+     "text": "below"
+    },
+    {
+     "end": 48.775,
+     "start": 48.55,
+     "text": "one"
+    },
+    {
+     "end": 49.275,
+     "start": 48.775,
+     "text": "premium"
+    },
+    {
+     "end": 49.362,
+     "start": 49.275,
+     "text": ","
+    },
+    {
+     "end": 49.525,
+     "start": 49.362,
+     "text": "is"
+    },
+    {
+     "end": 50.225,
+     "start": 49.525,
+     "text": "refused"
+    },
+    {
+     "end": 50.275,
+     "start": 50.225,
+     "text": "("
+    },
+    {
+     "end": 51.225,
+     "start": 50.275,
+     "text": "booking_initial_state"
+    },
+    {
+     "end": 51.3,
+     "start": 51.225,
+     "text": ","
+    },
+    {
+     "end": 52.775,
+     "start": 51.3,
+     "text": "booked_initial_state"
+    },
+    {
+     "end": 52.975,
+     "start": 52.775,
+     "text": ","
+    },
+    {
+     "end": 54.85,
+     "start": 53.175,
+     "text": "initialState_is_registration"
+    },
+    {
+     "end": 54.925,
+     "start": 54.85,
+     "text": ","
+    },
+    {
+     "end": 56.325,
+     "start": 54.925,
+     "text": "booking_refuses_other_state"
+    },
+    {
+     "end": 56.412,
+     "start": 56.325,
+     "text": ","
+    },
+    {
+     "end": 58.25,
+     "start": 56.412,
+     "text": "booking_refuses_other_aid"
+    },
+    {
+     "end": 58.475,
+     "start": 58.25,
+     "text": ","
+    },
+    {
+     "end": 60.525,
+     "start": 58.675,
+     "text": "booking_refuses_pool_below_premium"
+    },
+    {
+     "end": 60.625,
+     "start": 60.525,
+     "text": ","
+    },
+    {
+     "end": 62.85,
+     "start": 60.625,
+     "text": "booking_refuses_unrecorded_refund"
+    },
+    {
+     "end": 63.1,
+     "start": 62.85,
+     "text": ")"
+    },
+    {
+     "end": 63.15,
+     "start": 63.1,
+     "text": "."
+    },
+    {
+     "end": 63.412,
+     "start": 63.325,
+     "text": "A"
+    },
+    {
+     "end": 63.75,
+     "start": 63.412,
+     "text": "fold"
+    },
+    {
+     "end": 64.3,
+     "start": 63.75,
+     "text": "validates"
+    },
+    {
+     "end": 64.438,
+     "start": 64.3,
+     "text": "none"
+    },
+    {
+     "end": 64.512,
+     "start": 64.438,
+     "text": "of"
+    },
+    {
+     "end": 64.7,
+     "start": 64.512,
+     "text": "this"
+    },
+    {
+     "end": 65.475,
+     "start": 64.7,
+     "text": "again"
+    },
+    {
+     "end": 65.675,
+     "start": 65.475,
+     "text": ":"
+    },
+    {
+     "end": 65.95,
+     "start": 65.875,
+     "text": "it"
+    },
+    {
+     "end": 66.363,
+     "start": 65.95,
+     "text": "delivers"
+    },
+    {
+     "end": 66.45,
+     "start": 66.363,
+     "text": "the"
+    },
+    {
+     "end": 66.825,
+     "start": 66.45,
+     "text": "committed"
+    },
+    {
+     "end": 67.65,
+     "start": 66.825,
+     "text": "datum"
+    },
+    {
+     "end": 67.85,
+     "start": 67.65,
+     "text": ","
+    },
+    {
+     "end": 68.137,
+     "start": 68.05,
+     "text": "and"
+    },
+    {
+     "end": 68.2,
+     "start": 68.137,
+     "text": "a"
+    },
+    {
+     "end": 68.65,
+     "start": 68.2,
+     "text": "holding"
+    },
+    {
+     "end": 68.787,
+     "start": 68.65,
+     "text": "with"
+    },
+    {
+     "end": 69.15,
+     "start": 68.787,
+     "text": "another"
+    },
+    {
+     "end": 69.675,
+     "start": 69.15,
+     "text": "datum"
+    },
+    {
+     "end": 69.963,
+     "start": 69.675,
+     "text": "or"
+    },
+    {
+     "end": 70.1,
+     "start": 69.963,
+     "text": "at"
+    },
+    {
+     "end": 70.525,
+     "start": 70.1,
+     "text": "another"
+    },
+    {
+     "end": 71.062,
+     "start": 70.525,
+     "text": "address"
+    },
+    {
+     "end": 71.225,
+     "start": 71.062,
+     "text": "is"
+    },
+    {
+     "end": 71.988,
+     "start": 71.225,
+     "text": "refused"
+    },
+    {
+     "end": 72.075,
+     "start": 71.988,
+     "text": "("
+    },
+    {
+     "end": 73.75,
+     "start": 72.075,
+     "text": "fold_delivers_committed"
+    },
+    {
+     "end": 73.975,
+     "start": 73.75,
+     "text": ","
+    },
+    {
+     "end": 75.425,
+     "start": 74.15,
+     "text": "fold_refuses_other_datum"
+    },
+    {
+     "end": 75.537,
+     "start": 75.425,
+     "text": ","
+    },
+    {
+     "end": 77.25,
+     "start": 75.537,
+     "text": "fold_refuses_other_address"
+    },
+    {
+     "end": 77.55,
+     "start": 77.25,
+     "text": ")"
+    },
+    {
+     "end": 77.625,
+     "start": 77.55,
+     "text": "."
+    },
+    {
+     "end": 77.938,
+     "start": 77.825,
+     "text": "So"
+    },
+    {
+     "end": 78.025,
+     "start": 77.938,
+     "text": "the"
+    },
+    {
+     "end": 78.425,
+     "start": 78.025,
+     "text": "delivered"
+    },
+    {
+     "end": 79.012,
+     "start": 78.425,
+     "text": "checkpoint"
+    },
+    {
+     "end": 79.137,
+     "start": 79.012,
+     "text": "is"
+    },
+    {
+     "end": 79.25,
+     "start": 79.137,
+     "text": "the"
+    },
+    {
+     "end": 79.625,
+     "start": 79.25,
+     "text": "initial"
+    },
+    {
+     "end": 80.425,
+     "start": 79.625,
+     "text": "state"
+    },
+    {
+     "end": 80.625,
+     "start": 80.425,
+     "text": ","
     },
     {
      "end": 80.975,
      "start": 80.875,
-     "text": ","
+     "text": "and"
     },
     {
-     "end": 81.213,
+     "end": 81.188,
      "start": 80.975,
-     "text": "not"
+     "text": "no"
     },
     {
-     "end": 81.287,
-     "start": 81.213,
-     "text": "of"
+     "end": 81.625,
+     "start": 81.188,
+     "text": "fold"
     },
     {
-     "end": 81.375,
-     "start": 81.287,
+     "end": 81.775,
+     "start": 81.625,
+     "text": "can"
+    },
+    {
+     "end": 82.2,
+     "start": 81.775,
+     "text": "deliver"
+    },
+    {
+     "end": 82.312,
+     "start": 82.2,
+     "text": "a"
+    },
+    {
+     "end": 82.9,
+     "start": 82.312,
+     "text": "checkpoint"
+    },
+    {
+     "end": 83.113,
+     "start": 82.9,
+     "text": "that"
+    },
+    {
+     "end": 83.525,
+     "start": 83.113,
+     "text": "skips"
+    },
+    {
+     "end": 83.662,
+     "start": 83.525,
      "text": "the"
     },
     {
-     "end": 82.25,
-     "start": 81.375,
+     "end": 84.338,
+     "start": 83.662,
+     "text": "juvenility"
+    },
+    {
+     "end": 84.912,
+     "start": 84.338,
+     "text": "window"
+    },
+    {
+     "end": 85.113,
+     "start": 84.912,
+     "text": "or"
+    },
+    {
+     "end": 85.512,
+     "start": 85.113,
+     "text": "claims"
+    },
+    {
+     "end": 85.613,
+     "start": 85.512,
+     "text": "a"
+    },
+    {
+     "end": 85.912,
+     "start": 85.613,
+     "text": "key"
+    },
+    {
+     "end": 86.3,
+     "start": 85.912,
+     "text": "state"
+    },
+    {
+     "end": 86.438,
+     "start": 86.3,
+     "text": "the"
+    },
+    {
+     "end": 87.125,
+     "start": 86.438,
+     "text": "KEL"
+    },
+    {
+     "end": 87.488,
+     "start": 87.125,
+     "text": "never"
+    },
+    {
+     "end": 88.012,
+     "start": 87.488,
+     "text": "reached"
+    },
+    {
+     "end": 88.1,
+     "start": 88.012,
+     "text": "("
+    },
+    {
+     "end": 90.225,
+     "start": 88.1,
+     "text": "fold_delivers_initial_state"
+    },
+    {
+     "end": 90.45,
+     "start": 90.225,
+     "text": ","
+    },
+    {
+     "end": 92.05,
+     "start": 90.625,
+     "text": "delivered_initial_state"
+    },
+    {
+     "end": 92.325,
+     "start": 92.05,
+     "text": ")"
+    },
+    {
+     "end": 92.425,
+     "start": 92.325,
+     "text": "."
+    },
+    {
+     "end": 92.713,
+     "start": 92.6,
+     "text": "The"
+    },
+    {
+     "end": 92.925,
+     "start": 92.713,
+     "text": "key"
+    },
+    {
+     "end": 93.438,
+     "start": 92.925,
+     "text": "material"
+    },
+    {
+     "end": 93.512,
+     "start": 93.438,
+     "text": "in"
+    },
+    {
+     "end": 93.6,
+     "start": 93.512,
+     "text": "the"
+    },
+    {
+     "end": 94.062,
+     "start": 93.6,
+     "text": "datum"
+    },
+    {
+     "end": 94.238,
+     "start": 94.062,
+     "text": "is"
+    },
+    {
+     "end": 94.625,
+     "start": 94.238,
+     "text": "pinned"
+    },
+    {
+     "end": 94.787,
+     "start": 94.625,
+     "text": "by"
+    },
+    {
+     "end": 94.875,
+     "start": 94.787,
+     "text": "the"
+    },
+    {
+     "end": 95.325,
+     "start": 94.875,
+     "text": "committed"
+    },
+    {
+     "end": 95.7,
+     "start": 95.325,
+     "text": "datum"
+    },
+    {
+     "end": 96.2,
+     "start": 95.7,
+     "text": "hash"
+    },
+    {
+     "end": 96.3,
+     "start": 96.2,
+     "text": ","
+    },
+    {
+     "end": 96.525,
+     "start": 96.3,
+     "text": "not"
+    },
+    {
+     "end": 96.7,
+     "start": 96.525,
+     "text": "by"
+    },
+    {
+     "end": 96.925,
+     "start": 96.7,
+     "text": "this"
+    },
+    {
+     "end": 97.85,
+     "start": 96.925,
+     "text": "rule"
+    },
+    {
+     "end": 98.05,
+     "start": 97.85,
+     "text": ":"
+    },
+    {
+     "end": 98.3,
+     "start": 98.225,
+     "text": "the"
+    },
+    {
+     "end": 98.675,
+     "start": 98.3,
      "text": "model"
     },
     {
-     "end": 82.45,
-     "start": 82.25,
+     "end": 99.05,
+     "start": 98.675,
+     "text": "states"
+    },
+    {
+     "end": 99.2,
+     "start": 99.05,
+     "text": "the"
+    },
+    {
+     "end": 99.775,
+     "start": 99.2,
+     "text": "inception"
+    },
+    {
+     "end": 100.325,
+     "start": 99.775,
+     "text": "evidence"
+    },
+    {
+     "end": 100.512,
+     "start": 100.325,
+     "text": "as"
+    },
+    {
+     "end": 100.787,
+     "start": 100.512,
+     "text": "one"
+    },
+    {
+     "end": 101.088,
+     "start": 100.787,
+     "text": "fact"
+    },
+    {
+     "end": 101.162,
+     "start": 101.088,
+     "text": "of"
+    },
+    {
+     "end": 101.262,
+     "start": 101.162,
+     "text": "the"
+    },
+    {
+     "end": 102.05,
+     "start": 101.262,
+     "text": "key"
+    },
+    {
+     "end": 102.275,
+     "start": 102.05,
+     "text": ","
+    },
+    {
+     "end": 102.562,
+     "start": 102.475,
+     "text": "and"
+    },
+    {
+     "end": 102.65,
+     "start": 102.562,
+     "text": "the"
+    },
+    {
+     "end": 103.275,
+     "start": 102.65,
+     "text": "validator"
+    },
+    {
+     "end": 103.537,
+     "start": 103.275,
+     "text": "must"
+    },
+    {
+     "end": 103.825,
+     "start": 103.537,
+     "text": "check"
+    },
+    {
+     "end": 103.963,
+     "start": 103.825,
+     "text": "that"
+    },
+    {
+     "end": 104.05,
+     "start": 103.963,
+     "text": "the"
+    },
+    {
+     "end": 104.25,
+     "start": 104.05,
+     "text": "key"
+    },
+    {
+     "end": 104.838,
+     "start": 104.25,
+     "text": "material"
+    },
+    {
+     "end": 104.963,
+     "start": 104.838,
+     "text": "is"
+    },
+    {
+     "end": 105.1,
+     "start": 104.963,
+     "text": "the"
+    },
+    {
+     "end": 106.3,
+     "start": 105.1,
+     "text": "inception's"
+    },
+    {
+     "end": 106.5,
+     "start": 106.3,
+     "text": "."
+    },
+    {
+     "end": 106.925,
+     "start": 106.7,
+     "text": "One"
+    },
+    {
+     "end": 107.65,
+     "start": 106.925,
+     "text": "transaction"
+    },
+    {
+     "end": 108.1,
+     "start": 107.65,
+     "text": "folds"
+    },
+    {
+     "end": 108.2,
+     "start": 108.1,
+     "text": "at"
+    },
+    {
+     "end": 108.512,
+     "start": 108.2,
+     "text": "most"
+    },
+    {
+     "end": 108.775,
+     "start": 108.512,
+     "text": "one"
+    },
+    {
+     "end": 109.45,
+     "start": 108.775,
+     "text": "registration"
+    },
+    {
+     "end": 110.075,
+     "start": 109.45,
+     "text": "request"
+    },
+    {
+     "end": 110.162,
+     "start": 110.075,
+     "text": "in"
+    },
+    {
+     "end": 110.312,
+     "start": 110.162,
+     "text": "the"
+    },
+    {
+     "end": 110.9,
+     "start": 110.312,
+     "text": "on-chain"
+    },
+    {
+     "end": 112.2,
+     "start": 110.9,
+     "text": "realization"
+    },
+    {
+     "end": 112.4,
+     "start": 112.2,
+     "text": ";"
+    },
+    {
+     "end": 112.825,
+     "start": 112.6,
+     "text": "that"
+    },
+    {
+     "end": 112.938,
+     "start": 112.825,
+     "text": "is"
+    },
+    {
+     "end": 113.0,
+     "start": 112.938,
+     "text": "a"
+    },
+    {
+     "end": 113.5,
+     "start": 113.0,
+     "text": "declared"
+    },
+    {
+     "end": 113.825,
+     "start": 113.5,
+     "text": "limit"
+    },
+    {
+     "end": 113.912,
+     "start": 113.825,
+     "text": "of"
+    },
+    {
+     "end": 114.0,
+     "start": 113.912,
+     "text": "the"
+    },
+    {
+     "end": 114.825,
+     "start": 114.0,
+     "text": "realization"
+    },
+    {
+     "end": 114.925,
+     "start": 114.825,
+     "text": ","
+    },
+    {
+     "end": 115.162,
+     "start": 114.925,
+     "text": "not"
+    },
+    {
+     "end": 115.238,
+     "start": 115.162,
+     "text": "of"
+    },
+    {
+     "end": 115.325,
+     "start": 115.238,
+     "text": "the"
+    },
+    {
+     "end": 116.2,
+     "start": 115.325,
+     "text": "model"
+    },
+    {
+     "end": 116.4,
+     "start": 116.2,
      "text": "."
     }
    ]
   },
-  "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-07": {
-   "audio_sha256": "ecd5c3c468857d1e8b6b479732593f884e1984bbd7a03e19f8676bcccee4cc64",
+  "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-08": {
+   "audio_sha256": "69bb8c9e2ea18acd521deb248d95adb9fa328bc1e8039d2b4d6c8637c1f46999",
    "characters": 676,
    "cost": 0.00066924,
    "duration": 45.275,
-   "index": 7,
+   "index": 8,
    "key": "63df0e9a6cfd4c9986cd15ea975da9eb6e6b288c959bf275df41b2d518cf0570",
    "page": "docs/design/registry-as-mpfs.md",
    "pause_ms": 300,
@@ -327040,12 +328325,12 @@
     }
    ]
   },
-  "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-08": {
-   "audio_sha256": "090b0f7df289a2942bd8cbac2991f2aa5e9e132d200e95779095b96f5f40e96b",
+  "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-09": {
+   "audio_sha256": "6f6fa108907040d6a824ba66e0ea3841d3cd829f8a0657be55feb04103c38745",
    "characters": 627,
    "cost": 0.00062073,
    "duration": 43.175,
-   "index": 8,
+   "index": 9,
    "key": "7fb563806946b44f2472b4bd272af2623ada025cc060c4ea092fba54783d16d1",
    "page": "docs/design/registry-as-mpfs.md",
    "pause_ms": 300,
@@ -327550,12 +328835,12 @@
     }
    ]
   },
-  "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-09": {
-   "audio_sha256": "24ba36871674b8b5ce92dcb158fc4e4def763720cc90b8e303960b2266ee373e",
+  "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-10": {
+   "audio_sha256": "8674ef1f068563b2eef091eb50ccd14d96596d40151d32d3d45e35149d84ef5f",
    "characters": 334,
    "cost": 0.00033066,
    "duration": 22.375,
-   "index": 9,
+   "index": 10,
    "key": "e15ae09e2222293e7cc0d014bcb0c3f809accc957e81f63bfcf24b02d511dd1a",
    "page": "docs/design/registry-as-mpfs.md",
    "pause_ms": 300,
@@ -327825,12 +329110,12 @@
     }
    ]
   },
-  "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-10": {
-   "audio_sha256": "8b7d79557cd168f95670b0e695b9d4b9c0ed31522d6e990b3f5080ee1c48961e",
+  "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-11": {
+   "audio_sha256": "5990d0ea988e7fa36304ce6bc7aaceaa099d069fa44ac8b144c79871a58200eb",
    "characters": 247,
    "cost": 0.00024452999999999996,
    "duration": 16.725,
-   "index": 10,
+   "index": 11,
    "key": "ae318751716f698e49711e27402b5082fd5be6776894a7aa657a11c5554ab442",
    "page": "docs/design/registry-as-mpfs.md",
    "pause_ms": 300,

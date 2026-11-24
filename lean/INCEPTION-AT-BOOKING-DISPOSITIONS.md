@@ -94,13 +94,18 @@ donation (row `fold-built-by-singular-client-no-donation`). With the donation
 taken out of the folder's own output it is one balanced transaction that the
 public registry accepts (`clientFold.withTheDonation`) and KERI's application
 accepts (row `fold-built-by-singular-client`). Neither judgement reads the
-balance. Without the configuration record the application refuses it. Whether
-a KERI fold keeps the donation and the record is not decided here.
+balance. Without the configuration record the application refuses it.
+
+A KERI fold keeps three things the upstream client's fold does not have: the
+configuration record read by reference, the treasury donation of the
+registration cost, and the application's redeemer that names the request it
+folds and its new holding. They are the work of KERI's adapter, which computes all three from the
+chain; the folder supplies nothing. A fold without any one of them is refused
+(rows `fold-built-by-singular-client-no-record`,
+`fold-built-by-singular-client-no-donation`, `fold-with-unnamed-request`).
 
 ## Limits
 
 The evidence is an opaque fact of the key. The model states neither the
 signatures and receipts of an inception nor that the key material written in
-the initial datum is the inception's. The fold still reads the registry's
-configuration record and the transaction still donates the registration
-costs.
+the initial datum is the inception's; the validator must check both.

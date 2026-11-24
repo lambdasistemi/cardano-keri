@@ -34,21 +34,25 @@ unless they hold, and the checkpoint validator's rows are those of the first
 reference seed, a transaction id of 32 zero bytes at index 0. A reference seed is
 a derivation input, not a deployed registry.
 
-The Lean model revision in the table is the latest model, and the scripts on
-this page do not follow all of it yet. For the commitment a conviction
-reveals, the model names the identifier, the deployment and the key state it
-accuses; the validators still bind a commitment to one checkpoint output and do
-not compare its deployment with the one that settles, so on chain a top-up
-still voids a commitment that the model keeps.
-[#534](https://github.com/lambdasistemi/cardano-keri/issues/534) and
-[#508](https://github.com/lambdasistemi/cardano-keri/issues/508) are the open
-work, and [Who a conviction pays](../design/trust-model.md#who-a-conviction-pays)
-describes the model.
+The Lean model revision in the table is the latest model. For the commitment a
+conviction reveals, the scripts on this page follow it: the commitment names the
+identifier, the deployment and the key state it accuses, the validators compare
+all three with the checkpoint that settles, a top-up or a freeze of that
+checkpoint leaves the commitment entitled, and a rotation voids it. The
+entitlement reads the identifier and key state of the checkpoint, so a
+checkpoint whose datum is marked poisoned is treated the same, but no
+transaction of these scripts produces one. [Who a
+conviction pays](../design/trust-model.md#who-a-conviction-pays) describes the
+model.
+
+For a registration the scripts do not follow it yet. The model validates a
+registration when it is booked, and a fold delivers what was approved; these
+scripts still prove the inception at the fold.
 
 <!-- identities:begin -->
 | What | Value |
 |---|---|
-| Lean model revision | `007befd6d6be5fca64008af3cdba67d73cce8487` |
+| Lean model revision | `f3f09da75e77f0dc87e143be2b9fb43219a936d4` |
 | Public Singular commit | `d69ab005c3b710aeebf033d3c5cd08c56feb5643` |
 | Aiken compiler | `1.1.23` |
 | Network discriminator | `0` |
@@ -66,7 +70,7 @@ describes the model.
 | State script hash | `647d0379b604e0b29f293b5c051a2d1630cb8ea8282af7b34d35dcf1` |
 | State script program bytes | `7786` |
 | Application and state script across two seeds | `the same` |
-| Checkpoint validator script hash | `861d63753c10dd6aab3c8f3db1e050d112c2d6ac557d8fb09ad29609` |
+| Checkpoint validator script hash | `782098c5fc650f957a089befb4157dc221b3621dbd5b47d850beced4` |
 | Checkpoint validator program bytes | `8957` |
 | Reference registry name | `a060e76604c811bc4f47264e86a593a4539d57e251709f83af18ad5789d6c0b3` |
 <!-- identities:end -->

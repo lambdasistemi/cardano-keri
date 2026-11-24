@@ -22,6 +22,8 @@ module Cardano.KERI.Deployment.LiveRuntime (
     LiveContext (..),
     withLiveContext,
     withUnlinkedLiveContext,
+    withLiveContextEnvelope,
+    withUnlinkedLiveContextEnvelope,
     resolveManifestReferences,
     resolveBoardReference,
     resolveOutput,
@@ -139,15 +141,39 @@ withUnlinkedLiveContext ::
     LiveConfig -> (TxId -> IO ()) -> (LiveContext -> STM (Maybe SomeException) -> IO a) -> IO a
 withUnlinkedLiveContext = withLiveContextAs False
 
+{- | The same as 'withLiveContext', signing with the envelope of a key already opened: the
+configuration's key file is not read, and a command never gives the envelope a path.
+-}
+withLiveContextEnvelope :: Value -> LiveConfig -> (TxId -> IO ()) -> (LiveContext -> IO a) -> IO a
+withLiveContextEnvelope envelope config observeTransaction action =
+    withLiveContextFrom True (pure envelope) config observeTransaction (const . action)
+
+-- | The same as 'withUnlinkedLiveContext', signing with the envelope of a key already opened.
+withUnlinkedLiveContextEnvelope ::
+    Value -> LiveConfig -> (TxId -> IO ()) -> (LiveContext -> STM (Maybe SomeException) -> IO a) -> IO a
+withUnlinkedLiveContextEnvelope envelope = withLiveContextFrom False (pure envelope)
+
 withLiveContextAs ::
     Bool -> LiveConfig -> (TxId -> IO ()) -> (LiveContext -> STM (Maybe SomeException) -> IO a) -> IO a
-withLiveContextAs linked config observeTransaction action = do
+withLiveContextAs linked config = withLiveContextFrom linked (readKeyEnvelope (liveSigningKeyFile config)) config
+
+-- | The envelope a key file holds, or the failure that says why it cannot be read.
+readKeyEnvelope :: FilePath -> IO Value
+readKeyEnvelope path = do
+    keyEnvelopeResult <- Aeson.eitherDecodeFileStrict' path
+    either fail pure (keyEnvelopeResult :: Either String Value)
+
+{- | The live context over the key the loader gives: the loader runs after the timeout and the
+funding address are checked, where the key file has always been read.
+-}
+withLiveContextFrom ::
+    Bool -> IO Value -> LiveConfig -> (TxId -> IO ()) -> (LiveContext -> STM (Maybe SomeException) -> IO a) -> IO a
+withLiveContextFrom linked loadKey config observeTransaction action = do
     when (liveTimeoutSeconds config <= 0) $
         fail "timeout-seconds must be positive"
     fundingAddress <-
         either fail pure (decodePaymentAddress $ liveFundingAddressText config)
-    keyEnvelopeResult <- Aeson.eitherDecodeFileStrict' (liveSigningKeyFile config)
-    keyEnvelope <- either fail pure (keyEnvelopeResult :: Either String Value)
+    keyEnvelope <- loadKey
     signingKey <- either (fail . show) pure (decodePaymentSigningKey keyEnvelope)
     case fundingAddress of
         Addr _ (KeyHashObj actualKeyHash) _ -> do

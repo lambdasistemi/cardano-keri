@@ -73,7 +73,7 @@ commitmentDomain :: ByteString
 commitmentDomain = "cardano-keri/bounty-commitment"
 
 commitmentSchema :: Integer
-commitmentSchema = 1
+commitmentSchema = 2
 
 commitMinAge :: Integer
 commitMinAge = 1
@@ -99,7 +99,9 @@ data Scope = Scope
     , scSchema :: Integer
     , scNetwork :: Integer
     , scCheckpointPolicy :: ByteString
-    , scCheckpointRef :: Data
+    , scAid :: ByteString
+    , scEpoch :: Integer
+    , scSn :: Integer
     , scAction :: Data
     , scMarker :: ByteString
     , scCommitUpper :: Integer
@@ -115,7 +117,9 @@ scopeData s =
         , I (scSchema s)
         , I (scNetwork s)
         , B (scCheckpointPolicy s)
-        , scCheckpointRef s
+        , B (scAid s)
+        , I (scEpoch s)
+        , I (scSn s)
         , scAction s
         , B (scMarker s)
         , I (scCommitUpper s)
@@ -200,14 +204,17 @@ otherMarker = markerName otherSeedRef
 checkpointPolicy :: ByteString
 checkpointPolicy = BS.replicate 28 0xc1
 
-checkpointTxId :: ByteString
-checkpointTxId = BS.replicate 32 0xc2
+-- | The identifier the commitment accuses: a 44-character text identifier.
+aid :: ByteString
+aid = "E" <> BS.replicate 43 0x41
 
-checkpointIndex :: Integer
-checkpointIndex = 3
+-- | The epoch of the key state the commitment accuses.
+epoch :: Integer
+epoch = 2
 
-checkpointRef :: Data
-checkpointRef = outRef checkpointTxId checkpointIndex
+-- | The sequence number of the key state the commitment accuses.
+sn :: Integer
+sn = 5
 
 payee :: ByteString
 payee = BS.replicate 28 0x9a
@@ -255,7 +262,9 @@ scope =
         , scSchema = commitmentSchema
         , scNetwork = 42
         , scCheckpointPolicy = checkpointPolicy
-        , scCheckpointRef = checkpointRef
+        , scAid = aid
+        , scEpoch = epoch
+        , scSn = sn
         , scAction = convictAction
         , scMarker = marker
         , scCommitUpper = commitUpper
@@ -298,16 +307,9 @@ mutants =
         ( "mut_checkpoint_policy"
         , withScope (\s -> s{scCheckpointPolicy = flipLast checkpointPolicy})
         )
-    ,
-        ( "mut_checkpoint_txid"
-        , withScope
-            (\s -> s{scCheckpointRef = outRef (flipLast checkpointTxId) checkpointIndex})
-        )
-    ,
-        ( "mut_checkpoint_index"
-        , withScope
-            (\s -> s{scCheckpointRef = outRef checkpointTxId (checkpointIndex + 1)})
-        )
+    , ("mut_aid", withScope (\s -> s{scAid = flipLast aid}))
+    , ("mut_epoch", withScope (\s -> s{scEpoch = epoch + 1}))
+    , ("mut_sn", withScope (\s -> s{scSn = sn + 1}))
     , ("mut_marker", withScope (\s -> s{scMarker = otherMarker}))
     ,
         ( "mut_window"
@@ -352,9 +354,10 @@ output =
           , intConst "refund_index" refundIndex
           , intConst "payout_index" payoutIndex
           , intConst "seed_index" seedIndex
-          , intConst "checkpoint_index" checkpointIndex
           , byteConst "seed_txid" seedTxId
-          , byteConst "checkpoint_txid" checkpointTxId
+          , byteConst "aid" aid
+          , intConst "epoch" epoch
+          , intConst "sn" sn
           , byteConst "checkpoint_policy" checkpointPolicy
           , byteConst "payee" payee
           , byteConst "recipient" recipient
@@ -364,7 +367,6 @@ output =
           , byteConst "other_marker" otherMarker
           , byteConst "commitment_hash" canonicalHash
           , byteConst "golden_seed_ref" (canonical seedRef)
-          , byteConst "golden_checkpoint_ref" (canonical checkpointRef)
           , byteConst "golden_action_convict" (canonical convictAction)
           , byteConst "golden_scope" (canonical (scopeData scope))
           , byteConst "golden_preimage" (canonical (preimageData preimage))

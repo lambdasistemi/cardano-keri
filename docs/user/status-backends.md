@@ -14,10 +14,14 @@
 
 
 The production `ckeri status` command can read one AID from a local follower
-store, the hosted ckeri.dev endpoint, or Koios. Backend selection is part of
+store, a `ckeri-query` endpoint, or Koios. Backend selection is part of
 the next release: the installed v0.1.1 binary predates this interface. The
 acceptance record for this change uses a freshly built production-package
 candidate, not the older installed release.
+
+No hosted service of the earlier design is available. The endpoint backend
+reads a `ckeri-query` that the reader runs themselves; see
+[Configuration](query-endpoint.md#configuration).
 
 ## Retained query commands
 
@@ -26,7 +30,7 @@ use the same backend selection and freshness rules:
 
 ```console
 ckeri status --aid E... --backend local --store /path/to/follower-store
-ckeri status --aid E... --endpoint https://ckeri.dev.plutimus.com
+ckeri status --aid E... --endpoint http://localhost:8080
 ckeri status --aid E... --backend koios
 ```
 
@@ -43,7 +47,7 @@ For example:
 ckeri list --backend local --store /path/to/follower-store \
   --manifest /absolute/path/to/m1-manifest.json \
   --board-manifest /absolute/path/to/board-manifest.json
-ckeri checkpoint --aid E... --endpoint https://ckeri.dev.plutimus.com
+ckeri checkpoint --aid E... --endpoint http://localhost:8080
 ckeri payer --address addr_test1... --backend koios \
   --manifest /absolute/path/to/m1-manifest.json \
   --board-manifest /absolute/path/to/board-manifest.json
@@ -68,7 +72,7 @@ for another backend is rejected; it is never silently ignored.
 
 Backend availability is explicit:
 
-| Capability | Local store | Hosted endpoint | Koios |
+| Capability | Local store | Endpoint | Koios |
 | --- | --- | --- | --- |
 | `status` | supported | supported | supported |
 | `list` | supported | unsupported: the #176 endpoint has no listing route | supported |
@@ -113,6 +117,8 @@ commit `0a8ed57`. All three returned success:
 | Local | `local` | 129885696 | `unknown` |
 | Endpoint | `https://ckeri.dev.plutimus.com` | 130014782 | 0 |
 | Koios | `https://preprod.koios.rest/api/v1` | 129619971 | 394811 |
+
+The hosted service that the endpoint run used is no longer available.
 
 The concise, CI-validated provenance record is
 `deploy/preprod/m1-backend-status-acceptance.txt`. It records UTC time,

@@ -80,7 +80,7 @@ A host creates an `IndexerConfig`, passes it with the deployment `Manifest` to
 with the upstream indexer, and supplies both to
 `withChainSyncFollower`.
 [`cardano-keri#188`](https://github.com/lambdasistemi/cardano-keri/issues/188)
-built exactly this composition into a runnable proof; the hosted `ckeri-query`
+built exactly this composition into a runnable proof; the `ckeri-query`
 service (#176) and the packaged `ckeri status` command's local backend (#177)
 are its production consumers today.
 
@@ -253,7 +253,7 @@ describes what it answers.
 - No standalone interactive process of its own: the temporary follower
   executable and its interactive local-store prompt existed only while
   story #175/#188 needed a runnable proof and have been retired now that the
-  packaged `ckeri status` command and the hosted `ckeri-query` service (#176)
+  packaged `ckeri status` command and the `ckeri-query` service (#176)
   are the production surfaces reading this store.
 
 ## Proof: the live composition smoke

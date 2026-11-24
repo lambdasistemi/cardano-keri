@@ -487651,17 +487651,17 @@
    ]
   },
   "docs-user-follower/configuring-the-library-01": {
-   "audio_sha256": "54f927404db7d822ef456029fd9ce8755eac2507ffcf99d9d6621c85958e389d",
-   "characters": 438,
-   "cost": 0.00027156,
-   "duration": 33.05,
+   "audio_sha256": "377b0f6349beb964cfda74ccc587d23e432eb1164be85a361747b8d32e05c293",
+   "characters": 431,
+   "cost": 0.00042668999999999997,
+   "duration": 32.65,
    "index": 1,
-   "key": "e17e80730616d29cd85fb03e6cd832acb8bf313daded566a712b8fedc67f7f69",
+   "key": "ecdc4a85e84b27646eae431c62018d85fdb885feac5a0a1207197ba4515ff3d2",
    "page": "docs/user/follower.md",
    "pause_ms": 400,
    "section": "configuring-the-library",
-   "sent_text": "A host creates an IndexerConfig, passes it with the deployment Manifest to Cardano.[KERI](/kˈɛɹi/).Indexer.Follower.mkChainSyncConfig, opens the configured store with the upstream indexer, and supplies both to withChainSyncFollower. cardano-keri#188 built exactly this composition into a runnable proof; the hosted ckeri-query service (#176) and the packaged ckeri status command's local backend (#177) are its production consumers today.",
-   "text": "A host creates an IndexerConfig, passes it with the deployment Manifest to Cardano.KERI.Indexer.Follower.mkChainSyncConfig, opens the configured store with the upstream indexer, and supplies both to withChainSyncFollower. cardano-keri#188 built exactly this composition into a runnable proof; the hosted ckeri-query service (#176) and the packaged ckeri status command's local backend (#177) are its production consumers today.",
+   "sent_text": "A host creates an IndexerConfig, passes it with the deployment Manifest to Cardano.[KERI](/kˈɛɹi/).Indexer.Follower.mkChainSyncConfig, opens the configured store with the upstream indexer, and supplies both to withChainSyncFollower. cardano-keri#188 built exactly this composition into a runnable proof; the ckeri-query service (#176) and the packaged ckeri status command's local backend (#177) are its production consumers today.",
+   "text": "A host creates an IndexerConfig, passes it with the deployment Manifest to Cardano.KERI.Indexer.Follower.mkChainSyncConfig, opens the configured store with the upstream indexer, and supplies both to withChainSyncFollower. cardano-keri#188 built exactly this composition into a runnable proof; the ckeri-query service (#176) and the packaged ckeri status command's local backend (#177) are its production consumers today.",
    "words": [
     {
      "end": 0.35,
@@ -487884,123 +487884,118 @@
      "text": ";"
     },
     {
-     "end": 22.125,
+     "end": 22.163,
      "start": 22.05,
      "text": "the"
     },
     {
-     "end": 22.538,
-     "start": 22.125,
-     "text": "hosted"
-    },
-    {
-     "end": 23.538,
-     "start": 22.538,
+     "end": 23.087,
+     "start": 22.163,
      "text": "ckeri-query"
     },
     {
-     "end": 24.05,
-     "start": 23.538,
+     "end": 23.6,
+     "start": 23.087,
      "text": "service"
     },
     {
-     "end": 24.1,
-     "start": 24.05,
+     "end": 23.65,
+     "start": 23.6,
      "text": "("
     },
     {
-     "end": 25.375,
-     "start": 24.1,
+     "end": 24.9,
+     "start": 23.65,
      "text": "176"
     },
     {
-     "end": 25.45,
-     "start": 25.375,
+     "end": 24.975,
+     "start": 24.9,
      "text": ")"
     },
     {
-     "end": 25.562,
-     "start": 25.45,
+     "end": 25.087,
+     "start": 24.975,
      "text": "and"
     },
     {
-     "end": 25.663,
-     "start": 25.562,
+     "end": 25.188,
+     "start": 25.087,
      "text": "the"
     },
     {
-     "end": 26.212,
-     "start": 25.663,
+     "end": 25.763,
+     "start": 25.188,
      "text": "packaged"
     },
     {
-     "end": 26.725,
-     "start": 26.212,
+     "end": 26.275,
+     "start": 25.763,
      "text": "ckeri"
     },
     {
-     "end": 27.237,
-     "start": 26.725,
+     "end": 26.812,
+     "start": 26.275,
      "text": "status"
     },
     {
-     "end": 27.775,
-     "start": 27.237,
+     "end": 27.325,
+     "start": 26.812,
      "text": "command's"
     },
     {
-     "end": 28.125,
-     "start": 27.775,
+     "end": 27.675,
+     "start": 27.325,
      "text": "local"
     },
     {
-     "end": 28.812,
-     "start": 28.125,
+     "end": 28.362,
+     "start": 27.675,
      "text": "backend"
     },
     {
-     "end": 28.875,
-     "start": 28.812,
+     "end": 28.425,
+     "start": 28.362,
      "text": "("
     },
     {
-     "end": 30.075,
-     "start": 28.875,
+     "end": 29.7,
+     "start": 28.425,
      "text": "177"
     },
     {
-     "end": 30.188,
-     "start": 30.075,
+     "end": 29.812,
+     "start": 29.7,
      "text": ")"
     },
     {
-     "end": 30.325,
-     "start": 30.188,
+     "end": 29.938,
+     "start": 29.812,
      "text": "are"
     },
     {
-     "end": 30.525,
-     "start": 30.325,
+     "end": 30.1,
+     "start": 29.938,
      "text": "its"
     },
     {
-     "end": 31.05,
-     "start": 30.525,
+     "end": 30.65,
+     "start": 30.1,
      "text": "production"
     },
     {
-     "end": 31.663,
-     "start": 31.05,
+     "end": 31.288,
+     "start": 30.65,
      "text": "consumers"
     },
     {
-     "end": 32.725,
-     "start": 31.663,
+     "end": 32.35,
+     "start": 31.288,
      "text": "today"
     },
     {
-     "end": 33.05,
-     "start": 32.725,
+     "end": 32.65,
+     "start": 32.35,
      "text": "."
     }
    ]
@@ -496751,17 +496746,17 @@
    ]
   },
   "docs-user-follower/what-it-deliberately-does-not-do-04": {
-   "audio_sha256": "bfcbd3cfc7a2ea9a2bbbb56464b580f056b03b61c40f122ebd3c0db94c187b06",
-   "characters": 332,
-   "cost": 0.00020584000000000002,
-   "duration": 22.975,
+   "audio_sha256": "7141c5a159fbcb63eee76b5092189449c6d589ed4607c654d6abceae34a8dc59",
+   "characters": 325,
+   "cost": 0.00032174999999999993,
+   "duration": 22.925,
    "index": 4,
-   "key": "5b8d813c54a1dc0e22a1884744505835bd5b82d2d2f8b904822a93928584a0a3",
+   "key": "27fe0e6c55b01dbcc82182d103912fbb17422b39a0914b5ab64863c4602b49a3",
    "page": "docs/user/follower.md",
    "pause_ms": 300,
    "section": "what-it-deliberately-does-not-do",
-   "sent_text": "No standalone interactive process of its own: the temporary follower executable and its interactive local-store prompt existed only while story #175/#188 needed a runnable proof and have been retired now that the packaged ckeri status command and the hosted ckeri-query service (#176) are the production surfaces reading this store.",
-   "text": "No standalone interactive process of its own: the temporary follower executable and its interactive local-store prompt existed only while story #175/#188 needed a runnable proof and have been retired now that the packaged ckeri status command and the hosted ckeri-query service (#176) are the production surfaces reading this store.",
+   "sent_text": "No standalone interactive process of its own: the temporary follower executable and its interactive local-store prompt existed only while story #175/#188 needed a runnable proof and have been retired now that the packaged ckeri status command and the ckeri-query service (#176) are the production surfaces reading this store.",
+   "text": "No standalone interactive process of its own: the temporary follower executable and its interactive local-store prompt existed only while story #175/#188 needed a runnable proof and have been retired now that the packaged ckeri status command and the ckeri-query service (#176) are the production surfaces reading this store.",
    "words": [
     {
      "end": 0.4,
@@ -496809,223 +496804,218 @@
      "text": "the"
     },
     {
-     "end": 4.05,
+     "end": 4.062,
      "start": 3.55,
      "text": "temporary"
     },
     {
-     "end": 4.45,
-     "start": 4.05,
+     "end": 4.475,
+     "start": 4.062,
      "text": "follower"
     },
     {
-     "end": 5.213,
-     "start": 4.45,
+     "end": 5.238,
+     "start": 4.475,
      "text": "executable"
     },
     {
-     "end": 5.338,
-     "start": 5.213,
+     "end": 5.363,
+     "start": 5.238,
      "text": "and"
     },
     {
-     "end": 5.475,
-     "start": 5.338,
+     "end": 5.5,
+     "start": 5.363,
      "text": "its"
     },
     {
-     "end": 6.1,
-     "start": 5.475,
+     "end": 6.125,
+     "start": 5.5,
      "text": "interactive"
     },
     {
-     "end": 6.787,
-     "start": 6.1,
+     "end": 6.812,
+     "start": 6.125,
      "text": "local-store"
     },
     {
-     "end": 7.15,
-     "start": 6.787,
+     "end": 7.175,
+     "start": 6.812,
      "text": "prompt"
     },
     {
-     "end": 7.688,
-     "start": 7.15,
+     "end": 7.713,
+     "start": 7.175,
      "text": "existed"
     },
     {
-     "end": 8.125,
-     "start": 7.688,
+     "end": 8.15,
+     "start": 7.713,
      "text": "only"
     },
     {
-     "end": 8.35,
-     "start": 8.125,
+     "end": 8.375,
+     "start": 8.15,
      "text": "while"
     },
     {
-     "end": 8.7,
-     "start": 8.35,
+     "end": 8.725,
+     "start": 8.375,
      "text": "story"
     },
     {
-     "end": 11.663,
-     "start": 8.7,
+     "end": 11.738,
+     "start": 8.725,
      "text": "175/#188"
     },
     {
-     "end": 11.962,
-     "start": 11.663,
+     "end": 12.038,
+     "start": 11.738,
      "text": "needed"
     },
     {
-     "end": 12.05,
-     "start": 11.962,
+     "end": 12.125,
+     "start": 12.038,
      "text": "a"
     },
     {
-     "end": 12.45,
-     "start": 12.05,
+     "end": 12.525,
+     "start": 12.125,
      "text": "runnable"
     },
     {
-     "end": 13.087,
-     "start": 12.45,
+     "end": 13.137,
+     "start": 12.525,
      "text": "proof"
     },
     {
-     "end": 13.212,
-     "start": 13.087,
+     "end": 13.262,
+     "start": 13.137,
      "text": "and"
     },
     {
-     "end": 13.312,
-     "start": 13.212,
+     "end": 13.363,
+     "start": 13.262,
      "text": "have"
     },
     {
-     "end": 13.45,
-     "start": 13.312,
+     "end": 13.5,
+     "start": 13.363,
      "text": "been"
     },
     {
-     "end": 14.0,
-     "start": 13.45,
+     "end": 14.05,
+     "start": 13.5,
      "text": "retired"
     },
     {
-     "end": 14.25,
-     "start": 14.0,
+     "end": 14.325,
+     "start": 14.05,
      "text": "now"
     },
     {
-     "end": 14.363,
-     "start": 14.25,
+     "end": 14.462,
+     "start": 14.325,
      "text": "that"
     },
     {
-     "end": 14.462,
-     "start": 14.363,
+     "end": 14.562,
+     "start": 14.462,
      "text": "the"
     },
     {
-     "end": 14.988,
-     "start": 14.462,
+     "end": 15.087,
+     "start": 14.562,
      "text": "packaged"
     },
     {
-     "end": 15.5,
-     "start": 14.988,
+     "end": 15.6,
+     "start": 15.087,
      "text": "ckeri"
     },
     {
-     "end": 15.925,
-     "start": 15.5,
+     "end": 16.025,
+     "start": 15.6,
      "text": "status"
     },
     {
-     "end": 16.45,
-     "start": 15.925,
+     "end": 16.55,
+     "start": 16.025,
      "text": "command"
     },
     {
-     "end": 16.562,
-     "start": 16.45,
+     "end": 16.663,
+     "start": 16.55,
      "text": "and"
     },
     {
-     "end": 16.65,
-     "start": 16.562,
+     "end": 16.763,
+     "start": 16.663,
      "text": "the"
     },
     {
-     "end": 17.05,
-     "start": 16.65,
-     "text": "hosted"
-    },
-    {
-     "end": 17.888,
-     "start": 17.05,
+     "end": 17.638,
+     "start": 16.763,
      "text": "ckeri-query"
     },
     {
-     "end": 18.712,
-     "start": 17.888,
+     "end": 18.462,
+     "start": 17.638,
      "text": "service"
     },
     {
-     "end": 18.8,
-     "start": 18.712,
+     "end": 18.55,
+     "start": 18.462,
      "text": "("
     },
     {
-     "end": 19.925,
-     "start": 18.8,
+     "end": 19.725,
+     "start": 18.55,
      "text": "176"
     },
     {
-     "end": 20.025,
-     "start": 19.925,
+     "end": 19.85,
+     "start": 19.725,
      "text": ")"
     },
     {
-     "end": 20.112,
-     "start": 20.025,
+     "end": 19.938,
+     "start": 19.85,
      "text": "are"
     },
     {
-     "end": 20.2,
-     "start": 20.112,
+     "end": 20.025,
+     "start": 19.938,
      "text": "the"
     },
     {
-     "end": 20.725,
-     "start": 20.2,
+     "end": 20.562,
+     "start": 20.025,
      "text": "production"
     },
     {
-     "end": 21.225,
-     "start": 20.725,
+     "end": 21.15,
+     "start": 20.562,
      "text": "surfaces"
     },
     {
-     "end": 21.525,
-     "start": 21.225,
+     "end": 21.45,
+     "start": 21.15,
      "text": "reading"
     },
     {
-     "end": 21.7,
-     "start": 21.525,
+     "end": 21.625,
+     "start": 21.45,
      "text": "this"
     },
     {
-     "end": 22.75,
-     "start": 21.7,
+     "end": 22.675,
+     "start": 21.625,
      "text": "store"
     },
     {
-     "end": 22.975,
-     "start": 22.75,
+     "end": 22.925,
+     "start": 22.675,
      "text": "."
     }
    ]
@@ -526406,451 +526396,571 @@
    ]
   },
   "docs-user-query-endpoint/the-query-endpoint-checkpoint-answers-without-a-node-03": {
-   "audio_sha256": "156abf163d73036ec22e88973fa3e0be77bc038150dec1ad8a4901f721b69802",
-   "characters": 421,
-   "cost": 0.00026102,
-   "duration": 29.7,
+   "audio_sha256": "cbc4233d081c6e7cae45c8ecb84f455e7ab73a52e6ab7dd70d4af219ea8c2cf3",
+   "characters": 434,
+   "cost": 0.00042965999999999995,
+   "duration": 30.45,
    "index": 3,
-   "key": "24082644b169e30a0525392a5e2a0fe932b9cad71bbb6009344863b8a401fb62",
+   "key": "2a026ff408b620577bdb70655b586357904695b2f63885069f3b3bb36305c459",
    "page": "docs/user/query-endpoint.md",
    "pause_ms": 400,
    "section": "the-query-endpoint-checkpoint-answers-without-a-node",
-   "sent_text": "ckeri-query is a hosted, read-only HTTP service that answers checkpoint, board, and watchability questions about M1 identities directly from the indexed chain state. A person with only curl — no Cardano node, no local RocksDB store, no Koios key — can ask the public endpoint whether an AID's checkpoint is current and get back an answer that says exactly which indexed chain slot it came from and how stale that slot is.",
-   "text": "ckeri-query is a hosted, read-only HTTP service that answers checkpoint, board, and watchability questions about M1 identities directly from the indexed chain state. A person with only curl — no Cardano node, no local RocksDB store, no Koios key — can ask the public endpoint whether an AID's checkpoint is current and get back an answer that says exactly which indexed chain slot it came from and how stale that slot is.",
+   "sent_text": "ckeri-query is a read-only HTTP service that answers checkpoint, board, and watchability questions about M1 identities directly from the indexed chain state. A person with only curl — no Cardano node on the asking side, no local RocksDB store, no Koios key — can ask a running ckeri-query whether an AID's checkpoint is current and get back an answer that says exactly which indexed chain slot it came from and how stale that slot is.",
+   "text": "ckeri-query is a read-only HTTP service that answers checkpoint, board, and watchability questions about M1 identities directly from the indexed chain state. A person with only curl — no Cardano node on the asking side, no local RocksDB store, no Koios key — can ask a running ckeri-query whether an AID's checkpoint is current and get back an answer that says exactly which indexed chain slot it came from and how stale that slot is.",
    "words": [
     {
-     "end": 1.225,
-     "start": 0.3,
+     "end": 1.237,
+     "start": 0.275,
      "text": "ckeri-query"
     },
     {
-     "end": 1.35,
-     "start": 1.225,
+     "end": 1.375,
+     "start": 1.237,
      "text": "is"
     },
     {
-     "end": 1.462,
-     "start": 1.35,
+     "end": 1.487,
+     "start": 1.375,
      "text": "a"
     },
     {
-     "end": 2.0,
-     "start": 1.462,
-     "text": "hosted"
-    },
-    {
-     "end": 2.088,
-     "start": 2.0,
-     "text": ","
-    },
-    {
-     "end": 2.763,
-     "start": 2.088,
+     "end": 2.062,
+     "start": 1.487,
      "text": "read-only"
     },
     {
-     "end": 3.675,
-     "start": 2.763,
+     "end": 3.05,
+     "start": 2.062,
      "text": "HTTP"
     },
     {
-     "end": 4.175,
-     "start": 3.675,
+     "end": 3.525,
+     "start": 3.05,
      "text": "service"
     },
     {
-     "end": 4.363,
-     "start": 4.175,
+     "end": 3.713,
+     "start": 3.525,
      "text": "that"
     },
     {
-     "end": 4.9,
-     "start": 4.363,
+     "end": 4.25,
+     "start": 3.713,
      "text": "answers"
     },
     {
-     "end": 5.55,
-     "start": 4.9,
+     "end": 4.9,
+     "start": 4.25,
      "text": "checkpoint"
     },
     {
-     "end": 5.637,
-     "start": 5.55,
+     "end": 4.988,
+     "start": 4.9,
      "text": ","
     },
     {
-     "end": 6.075,
-     "start": 5.637,
+     "end": 5.4,
+     "start": 4.988,
      "text": "board"
     },
     {
-     "end": 6.125,
-     "start": 6.075,
+     "end": 5.45,
+     "start": 5.4,
      "text": ","
     },
     {
-     "end": 6.25,
-     "start": 6.125,
+     "end": 5.575,
+     "start": 5.45,
      "text": "and"
     },
     {
-     "end": 6.925,
-     "start": 6.25,
+     "end": 6.3,
+     "start": 5.575,
      "text": "watchability"
     },
     {
-     "end": 7.5,
-     "start": 6.925,
+     "end": 6.875,
+     "start": 6.3,
      "text": "questions"
     },
     {
-     "end": 7.838,
-     "start": 7.5,
+     "end": 7.213,
+     "start": 6.875,
      "text": "about"
     },
     {
-     "end": 8.462,
-     "start": 7.838,
+     "end": 7.775,
+     "start": 7.213,
      "text": "M1"
     },
     {
-     "end": 9.15,
-     "start": 8.462,
+     "end": 8.45,
+     "start": 7.775,
      "text": "identities"
     },
     {
-     "end": 9.675,
-     "start": 9.15,
+     "end": 8.975,
+     "start": 8.45,
      "text": "directly"
     },
     {
-     "end": 9.837,
-     "start": 9.675,
+     "end": 9.137,
+     "start": 8.975,
      "text": "from"
     },
     {
-     "end": 9.95,
-     "start": 9.837,
+     "end": 9.25,
+     "start": 9.137,
      "text": "the"
     },
     {
-     "end": 10.462,
-     "start": 9.95,
+     "end": 9.762,
+     "start": 9.25,
      "text": "indexed"
     },
     {
-     "end": 10.788,
-     "start": 10.462,
+     "end": 10.087,
+     "start": 9.762,
      "text": "chain"
     },
     {
-     "end": 11.875,
-     "start": 10.788,
+     "end": 11.175,
+     "start": 10.087,
      "text": "state"
     },
     {
-     "end": 12.1,
-     "start": 11.875,
+     "end": 11.4,
+     "start": 11.175,
      "text": "."
     },
     {
-     "end": 12.375,
-     "start": 12.3,
+     "end": 11.675,
+     "start": 11.6,
      "text": "A"
     },
     {
-     "end": 12.812,
-     "start": 12.375,
+     "end": 12.125,
+     "start": 11.675,
      "text": "person"
     },
     {
-     "end": 12.95,
-     "start": 12.812,
+     "end": 12.275,
+     "start": 12.125,
      "text": "with"
     },
     {
-     "end": 13.262,
-     "start": 12.95,
+     "end": 12.587,
+     "start": 12.275,
      "text": "only"
     },
     {
-     "end": 13.75,
-     "start": 13.262,
+     "end": 13.1,
+     "start": 12.587,
      "text": "curl"
     },
     {
-     "end": 13.825,
-     "start": 13.75,
+     "end": 13.175,
+     "start": 13.1,
      "text": "—"
     },
     {
-     "end": 14.0,
-     "start": 13.825,
+     "end": 13.375,
+     "start": 13.175,
      "text": "no"
     },
     {
-     "end": 14.5,
-     "start": 14.0,
+     "end": 13.875,
+     "start": 13.375,
      "text": "Cardano"
     },
     {
-     "end": 14.9,
-     "start": 14.5,
+     "end": 14.163,
+     "start": 13.875,
      "text": "node"
     },
     {
-     "end": 14.975,
-     "start": 14.9,
-     "text": ","
+     "end": 14.262,
+     "start": 14.163,
+     "text": "on"
     },
     {
-     "end": 15.175,
-     "start": 14.975,
-     "text": "no"
-    },
-    {
-     "end": 15.5,
-     "start": 15.175,
-     "text": "local"
-    },
-    {
-     "end": 16.075,
-     "start": 15.5,
-     "text": "RocksDB"
-    },
-    {
-     "end": 16.975,
-     "start": 16.075,
-     "text": "store"
-    },
-    {
-     "end": 17.2,
-     "start": 16.975,
-     "text": ","
-    },
-    {
-     "end": 17.737,
-     "start": 17.5,
-     "text": "no"
-    },
-    {
-     "end": 18.188,
-     "start": 17.737,
-     "text": "Koios"
-    },
-    {
-     "end": 18.5,
-     "start": 18.188,
-     "text": "key"
-    },
-    {
-     "end": 18.575,
-     "start": 18.5,
-     "text": "—"
-    },
-    {
-     "end": 18.763,
-     "start": 18.575,
-     "text": "can"
-    },
-    {
-     "end": 19.1,
-     "start": 18.763,
-     "text": "ask"
-    },
-    {
-     "end": 19.2,
-     "start": 19.1,
+     "end": 14.375,
+     "start": 14.262,
      "text": "the"
     },
     {
-     "end": 19.6,
-     "start": 19.2,
-     "text": "public"
+     "end": 14.812,
+     "start": 14.375,
+     "text": "asking"
     },
     {
-     "end": 20.15,
-     "start": 19.6,
-     "text": "endpoint"
+     "end": 15.275,
+     "start": 14.812,
+     "text": "side"
     },
     {
-     "end": 20.45,
-     "start": 20.15,
+     "end": 15.375,
+     "start": 15.275,
+     "text": ","
+    },
+    {
+     "end": 15.575,
+     "start": 15.375,
+     "text": "no"
+    },
+    {
+     "end": 15.9,
+     "start": 15.575,
+     "text": "local"
+    },
+    {
+     "end": 16.475,
+     "start": 15.9,
+     "text": "RocksDB"
+    },
+    {
+     "end": 17.45,
+     "start": 16.475,
+     "text": "store"
+    },
+    {
+     "end": 17.675,
+     "start": 17.45,
+     "text": ","
+    },
+    {
+     "end": 18.212,
+     "start": 17.975,
+     "text": "no"
+    },
+    {
+     "end": 18.663,
+     "start": 18.212,
+     "text": "Koios"
+    },
+    {
+     "end": 18.975,
+     "start": 18.663,
+     "text": "key"
+    },
+    {
+     "end": 19.05,
+     "start": 18.975,
+     "text": "—"
+    },
+    {
+     "end": 19.175,
+     "start": 19.05,
+     "text": "can"
+    },
+    {
+     "end": 19.45,
+     "start": 19.175,
+     "text": "ask"
+    },
+    {
+     "end": 19.562,
+     "start": 19.45,
+     "text": "a"
+    },
+    {
+     "end": 19.938,
+     "start": 19.562,
+     "text": "running"
+    },
+    {
+     "end": 20.925,
+     "start": 19.938,
+     "text": "ckeri-query"
+    },
+    {
+     "end": 21.225,
+     "start": 20.925,
      "text": "whether"
     },
     {
-     "end": 20.612,
-     "start": 20.45,
+     "end": 21.4,
+     "start": 21.225,
      "text": "an"
     },
     {
-     "end": 21.312,
-     "start": 20.612,
+     "end": 22.112,
+     "start": 21.4,
      "text": "AID's"
     },
     {
-     "end": 21.85,
-     "start": 21.312,
+     "end": 22.65,
+     "start": 22.112,
      "text": "checkpoint"
     },
     {
-     "end": 22.013,
-     "start": 21.85,
+     "end": 22.812,
+     "start": 22.65,
      "text": "is"
     },
     {
-     "end": 22.462,
-     "start": 22.013,
+     "end": 23.25,
+     "start": 22.812,
      "text": "current"
     },
     {
-     "end": 22.6,
-     "start": 22.462,
+     "end": 23.375,
+     "start": 23.25,
      "text": "and"
     },
     {
-     "end": 22.775,
-     "start": 22.6,
+     "end": 23.55,
+     "start": 23.375,
      "text": "get"
     },
     {
-     "end": 23.038,
-     "start": 22.775,
+     "end": 23.812,
+     "start": 23.55,
      "text": "back"
     },
     {
-     "end": 23.163,
-     "start": 23.038,
+     "end": 23.938,
+     "start": 23.812,
      "text": "an"
     },
     {
-     "end": 23.575,
-     "start": 23.163,
+     "end": 24.35,
+     "start": 23.938,
      "text": "answer"
     },
     {
-     "end": 23.788,
-     "start": 23.575,
+     "end": 24.562,
+     "start": 24.35,
      "text": "that"
     },
     {
-     "end": 24.075,
-     "start": 23.788,
+     "end": 24.875,
+     "start": 24.562,
      "text": "says"
     },
     {
-     "end": 24.675,
-     "start": 24.075,
+     "end": 25.475,
+     "start": 24.875,
      "text": "exactly"
     },
     {
-     "end": 24.913,
-     "start": 24.675,
+     "end": 25.712,
+     "start": 25.475,
      "text": "which"
     },
     {
-     "end": 25.487,
-     "start": 24.913,
+     "end": 26.263,
+     "start": 25.712,
      "text": "indexed"
     },
     {
-     "end": 25.837,
-     "start": 25.487,
+     "end": 26.587,
+     "start": 26.263,
      "text": "chain"
     },
     {
-     "end": 26.225,
-     "start": 25.837,
+     "end": 27.0,
+     "start": 26.587,
      "text": "slot"
     },
     {
-     "end": 26.35,
-     "start": 26.225,
+     "end": 27.125,
+     "start": 27.0,
      "text": "it"
     },
     {
-     "end": 26.663,
-     "start": 26.35,
+     "end": 27.438,
+     "start": 27.125,
      "text": "came"
     },
     {
-     "end": 27.087,
-     "start": 26.663,
+     "end": 27.888,
+     "start": 27.438,
      "text": "from"
     },
     {
-     "end": 27.225,
-     "start": 27.087,
+     "end": 28.025,
+     "start": 27.888,
      "text": "and"
     },
     {
-     "end": 27.462,
-     "start": 27.225,
+     "end": 28.237,
+     "start": 28.025,
      "text": "how"
     },
     {
-     "end": 27.875,
-     "start": 27.462,
+     "end": 28.6,
+     "start": 28.237,
      "text": "stale"
     },
     {
-     "end": 28.112,
-     "start": 27.875,
+     "end": 28.837,
+     "start": 28.6,
      "text": "that"
     },
     {
-     "end": 28.487,
-     "start": 28.112,
+     "end": 29.212,
+     "start": 28.837,
      "text": "slot"
     },
     {
-     "end": 29.475,
-     "start": 28.487,
+     "end": 30.225,
+     "start": 29.212,
      "text": "is"
     },
     {
-     "end": 29.7,
-     "start": 29.475,
+     "end": 30.45,
+     "start": 30.225,
      "text": "."
     }
    ]
   },
   "docs-user-query-endpoint/the-query-endpoint-checkpoint-answers-without-a-node-04": {
-   "audio_sha256": "ca8a071659561cf8c3c6a89d17d9f61721eeaf32d559cc6fe7a1858720ac69a2",
-   "characters": 27,
-   "cost": 1.6740000000000002e-05,
-   "duration": 2.0,
+   "audio_sha256": "269355355e925f9927910df70dbd7bced9c0d49a55b79bddf56359b0abf349cc",
+   "characters": 154,
+   "cost": 0.00015246,
+   "duration": 10.9,
    "index": 4,
-   "key": "0cf57383f712f19e820e1b95470fcc719d4f38bf3f328dea127baf5d2ddae992",
+   "key": "702ff50d48a9a71df1b50e822a43511234e9433adca5b08107f25ed96f38f553",
    "page": "docs/user/query-endpoint.md",
    "pause_ms": 400,
    "section": "the-query-endpoint-checkpoint-answers-without-a-node",
-   "sent_text": "The production instance is:",
-   "text": "The production instance is:",
+   "sent_text": "No hosted service of the earlier design is available. A reader runs ckeri-query themselves; see Configuration. The examples below assume the default port:",
+   "text": "No hosted service of the earlier design is available. A reader runs ckeri-query themselves; see Configuration. The examples below assume the default port:",
    "words": [
     {
-     "end": 0.25,
-     "start": 0.175,
-     "text": "The"
+     "end": 0.4,
+     "start": 0.2,
+     "text": "No"
     },
     {
-     "end": 0.688,
-     "start": 0.25,
-     "text": "production"
+     "end": 0.775,
+     "start": 0.4,
+     "text": "hosted"
     },
     {
-     "end": 1.15,
-     "start": 0.688,
-     "text": "instance"
+     "end": 1.188,
+     "start": 0.775,
+     "text": "service"
     },
     {
-     "end": 1.8,
-     "start": 1.15,
+     "end": 1.263,
+     "start": 1.188,
+     "text": "of"
+    },
+    {
+     "end": 1.375,
+     "start": 1.263,
+     "text": "the"
+    },
+    {
+     "end": 1.75,
+     "start": 1.375,
+     "text": "earlier"
+    },
+    {
+     "end": 2.325,
+     "start": 1.75,
+     "text": "design"
+    },
+    {
+     "end": 2.5,
+     "start": 2.325,
      "text": "is"
     },
     {
-     "end": 2.0,
-     "start": 1.8,
+     "end": 3.525,
+     "start": 2.5,
+     "text": "available"
+    },
+    {
+     "end": 3.725,
+     "start": 3.525,
+     "text": "."
+    },
+    {
+     "end": 4.0,
+     "start": 3.925,
+     "text": "A"
+    },
+    {
+     "end": 4.35,
+     "start": 4.0,
+     "text": "reader"
+    },
+    {
+     "end": 4.625,
+     "start": 4.35,
+     "text": "runs"
+    },
+    {
+     "end": 5.45,
+     "start": 4.625,
+     "text": "ckeri-query"
+    },
+    {
+     "end": 6.125,
+     "start": 5.45,
+     "text": "themselves"
+    },
+    {
+     "end": 6.238,
+     "start": 6.125,
+     "text": ";"
+    },
+    {
+     "end": 6.45,
+     "start": 6.238,
+     "text": "see"
+    },
+    {
+     "end": 7.85,
+     "start": 6.45,
+     "text": "Configuration"
+    },
+    {
+     "end": 8.05,
+     "start": 7.85,
+     "text": "."
+    },
+    {
+     "end": 8.325,
+     "start": 8.225,
+     "text": "The"
+    },
+    {
+     "end": 8.875,
+     "start": 8.325,
+     "text": "examples"
+    },
+    {
+     "end": 9.2,
+     "start": 8.875,
+     "text": "below"
+    },
+    {
+     "end": 9.512,
+     "start": 9.2,
+     "text": "assume"
+    },
+    {
+     "end": 9.587,
+     "start": 9.512,
+     "text": "the"
+    },
+    {
+     "end": 9.95,
+     "start": 9.587,
+     "text": "default"
+    },
+    {
+     "end": 10.7,
+     "start": 9.95,
+     "text": "port"
+    },
+    {
+     "end": 10.9,
+     "start": 10.7,
      "text": ":"
     }
    ]
@@ -528681,17 +528791,17 @@
    ]
   },
   "docs-user-query-endpoint/what-this-endpoint-does-not-do-01": {
-   "audio_sha256": "d5f7396cc4103a532d73834fdbf21ec788126a25e0090bcd9f4ba1ec1302e300",
-   "characters": 323,
-   "cost": 0.00020026,
-   "duration": 25.5,
+   "audio_sha256": "4f6fdfba2f840a6e441daafa15183111f2d3cfc0c06087c44debd07d8ba252af",
+   "characters": 314,
+   "cost": 0.00031086,
+   "duration": 25.375,
    "index": 1,
-   "key": "6693943c8151e769f5e89419bd690f3363ab2e57f6f54d12ae846bb81740b8b8",
+   "key": "dd5f6d21d8d6bca36f4474192c4d44d1df9c2c5d008a3f7288605e3174e39edd",
    "page": "docs/user/query-endpoint.md",
    "pause_ms": 400,
    "section": "what-this-endpoint-does-not-do",
-   "sent_text": "ckeri status --aid E... --endpoint https://ckeri.dev.plutimus.com now consumes this contract through the production CLI, delivered by #177. It validates the checkpoint and watchability responses, including their echoed identity and shared freshness envelope, and fails closed without falling back to a local store or Koios.",
-   "text": "ckeri status --aid E... --endpoint https://ckeri.dev.plutimus.com now consumes this contract through the production CLI, delivered by #177. It validates the checkpoint and watchability responses, including their echoed identity and shared freshness envelope, and fails closed without falling back to a local store or Koios.",
+   "sent_text": "ckeri status --aid E... --endpoint http://localhost:8080 now consumes this contract through the production CLI, delivered by #177. It validates the checkpoint and watchability responses, including their echoed identity and shared freshness envelope, and fails closed without falling back to a local store or Koios.",
+   "text": "ckeri status --aid E... --endpoint http://localhost:8080 now consumes this contract through the production CLI, delivered by #177. It validates the checkpoint and watchability responses, including their echoed identity and shared freshness envelope, and fails closed without falling back to a local store or Koios.",
    "words": [
     {
      "end": 0.625,
@@ -528734,223 +528844,223 @@
      "text": "endpoint"
     },
     {
-     "end": 7.375,
+     "end": 6.912,
      "start": 2.963,
-     "text": "https://ckeri.dev.plutimus.com"
+     "text": "http://localhost:8080"
     },
     {
-     "end": 7.575,
-     "start": 7.375,
+     "end": 7.225,
+     "start": 6.912,
      "text": "now"
     },
     {
-     "end": 8.125,
-     "start": 7.575,
+     "end": 7.8,
+     "start": 7.225,
      "text": "consumes"
     },
     {
-     "end": 8.325,
-     "start": 8.125,
+     "end": 8.0,
+     "start": 7.8,
      "text": "this"
     },
     {
-     "end": 8.9,
-     "start": 8.325,
+     "end": 8.625,
+     "start": 8.0,
      "text": "contract"
     },
     {
-     "end": 9.1,
-     "start": 8.9,
+     "end": 8.825,
+     "start": 8.625,
      "text": "through"
     },
     {
-     "end": 9.2,
-     "start": 9.1,
+     "end": 8.925,
+     "start": 8.825,
      "text": "the"
     },
     {
-     "end": 9.762,
-     "start": 9.2,
+     "end": 9.5,
+     "start": 8.925,
      "text": "production"
     },
     {
-     "end": 10.5,
-     "start": 9.762,
+     "end": 10.3,
+     "start": 9.5,
      "text": "CLI"
     },
     {
-     "end": 10.575,
-     "start": 10.5,
+     "end": 10.4,
+     "start": 10.3,
      "text": ","
     },
     {
-     "end": 11.075,
-     "start": 10.575,
+     "end": 10.9,
+     "start": 10.4,
      "text": "delivered"
     },
     {
-     "end": 11.25,
-     "start": 11.075,
+     "end": 11.1,
+     "start": 10.9,
      "text": "by"
     },
     {
-     "end": 13.175,
-     "start": 11.25,
+     "end": 13.05,
+     "start": 11.1,
      "text": "177"
     },
     {
-     "end": 13.55,
-     "start": 13.175,
+     "end": 13.425,
+     "start": 13.05,
      "text": "."
     },
     {
-     "end": 13.85,
-     "start": 13.725,
+     "end": 13.725,
+     "start": 13.6,
      "text": "It"
     },
     {
-     "end": 14.425,
-     "start": 13.85,
+     "end": 14.3,
+     "start": 13.725,
      "text": "validates"
     },
     {
-     "end": 14.538,
-     "start": 14.425,
+     "end": 14.413,
+     "start": 14.3,
      "text": "the"
     },
     {
-     "end": 15.125,
-     "start": 14.538,
+     "end": 15.0,
+     "start": 14.413,
      "text": "checkpoint"
     },
     {
-     "end": 15.25,
-     "start": 15.125,
+     "end": 15.125,
+     "start": 15.0,
      "text": "and"
     },
     {
-     "end": 15.9,
-     "start": 15.25,
+     "end": 15.775,
+     "start": 15.125,
      "text": "watchability"
     },
     {
-     "end": 17.075,
-     "start": 15.9,
+     "end": 16.95,
+     "start": 15.775,
      "text": "responses"
     },
     {
-     "end": 17.275,
-     "start": 17.075,
+     "end": 17.15,
+     "start": 16.95,
      "text": ","
     },
     {
-     "end": 17.925,
-     "start": 17.475,
+     "end": 17.8,
+     "start": 17.35,
      "text": "including"
     },
     {
-     "end": 18.138,
-     "start": 17.925,
+     "end": 18.013,
+     "start": 17.8,
      "text": "their"
     },
     {
-     "end": 18.487,
-     "start": 18.138,
+     "end": 18.362,
+     "start": 18.013,
      "text": "echoed"
     },
     {
-     "end": 19.25,
-     "start": 18.487,
+     "end": 19.125,
+     "start": 18.362,
      "text": "identity"
     },
     {
-     "end": 19.413,
-     "start": 19.25,
+     "end": 19.288,
+     "start": 19.125,
      "text": "and"
     },
     {
-     "end": 19.725,
-     "start": 19.413,
+     "end": 19.6,
+     "start": 19.288,
      "text": "shared"
     },
     {
-     "end": 20.175,
-     "start": 19.725,
+     "end": 20.05,
+     "start": 19.6,
      "text": "freshness"
     },
     {
-     "end": 21.1,
-     "start": 20.175,
+     "end": 20.975,
+     "start": 20.05,
      "text": "envelope"
     },
     {
-     "end": 21.325,
-     "start": 21.1,
+     "end": 21.2,
+     "start": 20.975,
      "text": ","
     },
     {
-     "end": 21.625,
-     "start": 21.525,
+     "end": 21.5,
+     "start": 21.4,
      "text": "and"
     },
     {
-     "end": 21.975,
-     "start": 21.625,
+     "end": 21.85,
+     "start": 21.5,
      "text": "fails"
     },
     {
-     "end": 22.362,
-     "start": 21.975,
+     "end": 22.237,
+     "start": 21.85,
      "text": "closed"
     },
     {
-     "end": 22.7,
-     "start": 22.362,
+     "end": 22.575,
+     "start": 22.237,
      "text": "without"
     },
     {
-     "end": 23.025,
-     "start": 22.7,
+     "end": 22.9,
+     "start": 22.575,
      "text": "falling"
     },
     {
-     "end": 23.3,
-     "start": 23.025,
+     "end": 23.175,
+     "start": 22.9,
      "text": "back"
     },
     {
-     "end": 23.388,
-     "start": 23.3,
+     "end": 23.263,
+     "start": 23.175,
      "text": "to"
     },
     {
-     "end": 23.45,
-     "start": 23.388,
+     "end": 23.325,
+     "start": 23.263,
      "text": "a"
     },
     {
-     "end": 23.775,
-     "start": 23.45,
+     "end": 23.65,
+     "start": 23.325,
      "text": "local"
     },
     {
-     "end": 24.15,
-     "start": 23.775,
+     "end": 24.025,
+     "start": 23.65,
      "text": "store"
     },
     {
-     "end": 24.3,
-     "start": 24.15,
+     "end": 24.175,
+     "start": 24.025,
      "text": "or"
     },
     {
-     "end": 25.3,
-     "start": 24.3,
+     "end": 25.175,
+     "start": 24.175,
      "text": "Koios"
     },
     {
-     "end": 25.5,
-     "start": 25.3,
+     "end": 25.375,
+     "start": 25.175,
      "text": "."
     }
    ]
@@ -543626,17 +543736,17 @@
    ]
   },
   "docs-user-status-backends/query-identity-status-through-three-backends-02": {
-   "audio_sha256": "0b8f9db1ae3ba1df6341c9e9e06551336485f00656bdebbcdaadd4bf9a179fbd",
-   "characters": 593,
-   "cost": 0.00036766,
-   "duration": 41.725,
+   "audio_sha256": "876201947ef741176b5812fe37c979946356d4f0d86e9c2df914526d7603f9ad",
+   "characters": 573,
+   "cost": 0.00056727,
+   "duration": 41.575,
    "index": 2,
-   "key": "e59ceaf0b2ae4140e235960cc49aae7a0e43b9607fbb645072d454727acf0191",
+   "key": "b314377a93766c155267f74decf05420bc4546bb730e05f68102b7573a63d17e",
    "page": "docs/user/status-backends.md",
    "pause_ms": 400,
    "section": "query-identity-status-through-three-backends",
-   "sent_text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
-   "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active, parked (no checkpoint on chain; the registry leaf keeps the hash of its last key state) or convicted (terminal, after a duplicity proof); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+   "sent_text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active until it is convicted: there is no owner exit, no parking and no revival. A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+   "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active until it is convicted: there is no owner exit, no parking and no revival. A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
    "words": [
     {
      "end": 0.512,
@@ -543764,514 +543874,464 @@
      "text": "that"
     },
     {
-     "end": 10.613,
+     "end": 10.75,
      "start": 10.275,
      "text": "design"
     },
     {
-     "end": 10.712,
-     "start": 10.613,
+     "end": 10.863,
+     "start": 10.75,
      "text": "an"
     },
     {
-     "end": 11.25,
-     "start": 10.712,
+     "end": 11.425,
+     "start": 10.863,
      "text": "identity"
     },
     {
-     "end": 11.413,
-     "start": 11.25,
+     "end": 11.587,
+     "start": 11.425,
      "text": "is"
     },
     {
-     "end": 11.925,
-     "start": 11.413,
+     "end": 12.1,
+     "start": 11.587,
      "text": "active"
     },
     {
-     "end": 12.0,
-     "start": 11.925,
-     "text": ","
+     "end": 12.387,
+     "start": 12.1,
+     "text": "until"
     },
     {
-     "end": 12.337,
-     "start": 12.0,
-     "text": "parked"
+     "end": 12.462,
+     "start": 12.387,
+     "text": "it"
     },
     {
-     "end": 12.4,
-     "start": 12.337,
-     "text": "("
+     "end": 12.6,
+     "start": 12.462,
+     "text": "is"
     },
     {
-     "end": 12.562,
-     "start": 12.4,
-     "text": "no"
-    },
-    {
-     "end": 13.062,
-     "start": 12.562,
-     "text": "checkpoint"
-    },
-    {
-     "end": 13.262,
-     "start": 13.062,
-     "text": "on"
-    },
-    {
-     "end": 14.2,
-     "start": 13.262,
-     "text": "chain"
-    },
-    {
-     "end": 14.4,
-     "start": 14.2,
-     "text": ";"
-    },
-    {
-     "end": 14.7,
-     "start": 14.6,
-     "text": "the"
-    },
-    {
-     "end": 15.2,
-     "start": 14.7,
-     "text": "registry"
-    },
-    {
-     "end": 15.488,
-     "start": 15.2,
-     "text": "leaf"
-    },
-    {
-     "end": 15.8,
-     "start": 15.488,
-     "text": "keeps"
-    },
-    {
-     "end": 15.938,
-     "start": 15.8,
-     "text": "the"
-    },
-    {
-     "end": 16.312,
-     "start": 15.938,
-     "text": "hash"
-    },
-    {
-     "end": 16.388,
-     "start": 16.312,
-     "text": "of"
-    },
-    {
-     "end": 16.587,
-     "start": 16.388,
-     "text": "its"
-    },
-    {
-     "end": 17.013,
-     "start": 16.587,
-     "text": "last"
-    },
-    {
-     "end": 17.288,
-     "start": 17.013,
-     "text": "key"
-    },
-    {
-     "end": 17.725,
-     "start": 17.288,
-     "text": "state"
-    },
-    {
-     "end": 17.812,
-     "start": 17.725,
-     "text": ")"
-    },
-    {
-     "end": 17.975,
-     "start": 17.812,
-     "text": "or"
-    },
-    {
-     "end": 18.525,
-     "start": 17.975,
+     "end": 13.7,
+     "start": 12.6,
      "text": "convicted"
     },
     {
-     "end": 18.6,
-     "start": 18.525,
-     "text": "("
+     "end": 13.925,
+     "start": 13.7,
+     "text": ":"
     },
     {
-     "end": 19.125,
-     "start": 18.6,
-     "text": "terminal"
-    },
-    {
-     "end": 19.2,
-     "start": 19.125,
-     "text": ","
-    },
-    {
-     "end": 19.487,
-     "start": 19.2,
-     "text": "after"
-    },
-    {
-     "end": 19.55,
-     "start": 19.487,
-     "text": "a"
-    },
-    {
-     "end": 20.1,
-     "start": 19.55,
-     "text": "duplicity"
-    },
-    {
-     "end": 21.125,
-     "start": 20.1,
-     "text": "proof"
-    },
-    {
-     "end": 21.3,
-     "start": 21.125,
-     "text": ")"
-    },
-    {
-     "end": 21.35,
-     "start": 21.3,
-     "text": ";"
-    },
-    {
-     "end": 21.675,
-     "start": 21.525,
+     "end": 14.25,
+     "start": 14.1,
      "text": "there"
     },
     {
-     "end": 21.825,
-     "start": 21.675,
+     "end": 14.375,
+     "start": 14.25,
      "text": "is"
     },
     {
-     "end": 22.0,
-     "start": 21.825,
+     "end": 14.575,
+     "start": 14.375,
      "text": "no"
     },
     {
-     "end": 22.55,
-     "start": 22.0,
-     "text": "withdraw"
+     "end": 14.875,
+     "start": 14.575,
+     "text": "owner"
     },
     {
-     "end": 22.6,
-     "start": 22.55,
+     "end": 15.3,
+     "start": 14.875,
+     "text": "exit"
+    },
+    {
+     "end": 15.375,
+     "start": 15.3,
+     "text": ","
+    },
+    {
+     "end": 15.55,
+     "start": 15.375,
+     "text": "no"
+    },
+    {
+     "end": 16.0,
+     "start": 15.55,
+     "text": "parking"
+    },
+    {
+     "end": 16.125,
+     "start": 16.0,
+     "text": "and"
+    },
+    {
+     "end": 16.3,
+     "start": 16.125,
+     "text": "no"
+    },
+    {
+     "end": 17.3,
+     "start": 16.3,
+     "text": "revival"
+    },
+    {
+     "end": 17.5,
+     "start": 17.3,
+     "text": "."
+    },
+    {
+     "end": 17.775,
+     "start": 17.7,
+     "text": "A"
+    },
+    {
+     "end": 18.362,
+     "start": 17.775,
+     "text": "duplicity"
+    },
+    {
+     "end": 18.763,
+     "start": 18.362,
+     "text": "proof"
+    },
+    {
+     "end": 19.212,
+     "start": 18.763,
+     "text": "enters"
+    },
+    {
+     "end": 19.638,
+     "start": 19.212,
+     "text": "pending"
+    },
+    {
+     "end": 20.325,
+     "start": 19.638,
+     "text": "custody"
+    },
+    {
+     "end": 20.438,
+     "start": 20.325,
      "text": ";"
+    },
+    {
+     "end": 20.625,
+     "start": 20.438,
+     "text": "its"
+    },
+    {
+     "end": 21.4,
+     "start": 20.625,
+     "text": "associated"
+    },
+    {
+     "end": 21.95,
+     "start": 21.4,
+     "text": "Registry"
+    },
+    {
+     "end": 22.45,
+     "start": 21.95,
+     "text": "fold"
     },
     {
      "end": 22.725,
-     "start": 22.6,
-     "text": "the"
+     "start": 22.45,
+     "text": "makes"
     },
     {
-     "end": 23.025,
+     "end": 22.875,
      "start": 22.725,
-     "text": "only"
+     "text": "it"
     },
     {
      "end": 23.425,
-     "start": 23.025,
-     "text": "close"
+     "start": 22.875,
+     "text": "convicted"
     },
     {
-     "end": 23.575,
+     "end": 23.5,
      "start": 23.425,
-     "text": "is"
+     "text": "("
     },
     {
-     "end": 23.712,
-     "start": 23.575,
-     "text": "the"
+     "end": 24.6,
+     "start": 23.5,
+     "text": "terminal"
     },
     {
-     "end": 24.1,
-     "start": 23.712,
-     "text": "reap"
+     "end": 24.875,
+     "start": 24.6,
+     "text": ")"
     },
     {
-     "end": 24.2,
-     "start": 24.1,
-     "text": ","
+     "end": 24.925,
+     "start": 24.875,
+     "text": ";"
     },
     {
-     "end": 24.275,
-     "start": 24.2,
-     "text": "a"
-    },
-    {
-     "end": 24.9,
-     "start": 24.275,
-     "text": "rotation"
-    },
-    {
-     "end": 25.038,
-     "start": 24.9,
-     "text": "by"
-    },
-    {
-     "end": 25.125,
-     "start": 25.038,
-     "text": "the"
+     "end": 25.25,
+     "start": 25.1,
+     "text": "there"
     },
     {
      "end": 25.4,
-     "start": 25.125,
-     "text": "next"
+     "start": 25.25,
+     "text": "is"
     },
     {
-     "end": 26.325,
+     "end": 25.6,
      "start": 25.4,
-     "text": "keys"
+     "text": "no"
     },
     {
-     "end": 26.525,
-     "start": 26.325,
+     "end": 26.2,
+     "start": 25.6,
+     "text": "withdraw"
+    },
+    {
+     "end": 26.3,
+     "start": 26.2,
      "text": ";"
     },
     {
-     "end": 26.737,
-     "start": 26.7,
+     "end": 26.362,
+     "start": 26.3,
      "text": "a"
     },
     {
-     "end": 27.138,
-     "start": 26.737,
+     "end": 26.825,
+     "start": 26.362,
      "text": "deposit"
     },
     {
-     "end": 27.675,
-     "start": 27.138,
+     "end": 27.4,
+     "start": 26.825,
      "text": "rotation"
     },
     {
-     "end": 27.788,
-     "start": 27.675,
+     "end": 27.513,
+     "start": 27.4,
      "text": "is"
     },
     {
-     "end": 27.888,
-     "start": 27.788,
+     "end": 27.65,
+     "start": 27.513,
      "text": "the"
     },
     {
-     "end": 28.9,
-     "start": 27.888,
+     "end": 28.75,
+     "start": 27.65,
      "text": "unfreeze"
     },
     {
-     "end": 29.1,
-     "start": 28.9,
+     "end": 28.95,
+     "start": 28.75,
      "text": ";"
     },
     {
-     "end": 29.388,
-     "start": 29.3,
+     "end": 29.237,
+     "start": 29.15,
      "text": "and"
     },
     {
-     "end": 29.475,
-     "start": 29.388,
+     "end": 29.325,
+     "start": 29.237,
      "text": "the"
     },
     {
-     "end": 29.95,
-     "start": 29.475,
+     "end": 29.8,
+     "start": 29.325,
      "text": "poison"
     },
     {
-     "end": 29.987,
-     "start": 29.95,
+     "end": 29.837,
+     "start": 29.8,
      "text": ","
     },
     {
-     "end": 30.138,
-     "start": 29.987,
+     "end": 29.987,
+     "start": 29.837,
      "text": "the"
     },
     {
-     "end": 30.587,
-     "start": 30.138,
+     "end": 30.438,
+     "start": 29.987,
      "text": "owner's"
     },
     {
-     "end": 30.85,
-     "start": 30.587,
+     "end": 30.7,
+     "start": 30.438,
      "text": "own"
     },
     {
-     "end": 31.163,
-     "start": 30.85,
+     "end": 31.013,
+     "start": 30.7,
      "text": "lock"
     },
     {
-     "end": 31.263,
-     "start": 31.163,
+     "end": 31.112,
+     "start": 31.013,
      "text": "on"
     },
     {
-     "end": 31.362,
-     "start": 31.263,
+     "end": 31.212,
+     "start": 31.112,
      "text": "the"
     },
     {
-     "end": 32.0,
-     "start": 31.362,
+     "end": 31.85,
+     "start": 31.212,
      "text": "checkpoint"
     },
     {
-     "end": 32.112,
-     "start": 32.0,
+     "end": 31.962,
+     "start": 31.85,
      "text": ","
     },
     {
-     "end": 32.537,
-     "start": 32.112,
+     "end": 32.388,
+     "start": 31.962,
      "text": "lasts"
     },
     {
-     "end": 32.8,
-     "start": 32.537,
+     "end": 32.65,
+     "start": 32.388,
      "text": "one"
     },
     {
-     "end": 33.175,
-     "start": 32.8,
+     "end": 33.025,
+     "start": 32.65,
      "text": "epoch"
     },
     {
-     "end": 33.287,
-     "start": 33.175,
+     "end": 33.138,
+     "start": 33.025,
      "text": "and"
     },
     {
-     "end": 33.438,
-     "start": 33.287,
+     "end": 33.287,
+     "start": 33.138,
      "text": "is"
     },
     {
-     "end": 33.775,
-     "start": 33.438,
+     "end": 33.625,
+     "start": 33.287,
      "text": "cleared"
     },
     {
-     "end": 33.95,
-     "start": 33.775,
+     "end": 33.8,
+     "start": 33.625,
      "text": "by"
     },
     {
-     "end": 35.225,
-     "start": 33.95,
+     "end": 35.075,
+     "start": 33.8,
      "text": "rotation"
     },
     {
-     "end": 35.425,
-     "start": 35.225,
+     "end": 35.275,
+     "start": 35.075,
      "text": "."
     },
     {
-     "end": 35.85,
-     "start": 35.625,
+     "end": 35.7,
+     "start": 35.475,
      "text": "Play"
     },
     {
-     "end": 35.963,
-     "start": 35.85,
+     "end": 35.812,
+     "start": 35.7,
      "text": "the"
     },
     {
-     "end": 36.475,
-     "start": 35.963,
+     "end": 36.325,
+     "start": 35.812,
      "text": "checkpoint"
     },
     {
-     "end": 37.35,
-     "start": 36.475,
+     "end": 37.2,
+     "start": 36.325,
      "text": "simulation"
     },
     {
-     "end": 37.45,
-     "start": 37.35,
+     "end": 37.3,
+     "start": 37.2,
      "text": "."
     },
     {
-     "end": 37.688,
-     "start": 37.45,
+     "end": 37.537,
+     "start": 37.3,
      "text": "What"
     },
     {
-     "end": 38.0,
-     "start": 37.688,
+     "end": 37.85,
+     "start": 37.537,
      "text": "ships"
     },
     {
-     "end": 38.438,
-     "start": 38.0,
+     "end": 38.287,
+     "start": 37.85,
      "text": "today"
     },
     {
-     "end": 38.6,
-     "start": 38.438,
+     "end": 38.45,
+     "start": 38.287,
      "text": "is"
     },
     {
-     "end": 38.737,
-     "start": 38.6,
+     "end": 38.588,
+     "start": 38.45,
      "text": "the"
     },
     {
-     "end": 39.237,
-     "start": 38.737,
+     "end": 39.088,
+     "start": 38.588,
      "text": "V1"
     },
     {
-     "end": 39.825,
-     "start": 39.237,
+     "end": 39.675,
+     "start": 39.088,
      "text": "checkpoint"
     },
     {
-     "end": 40.0,
-     "start": 39.825,
+     "end": 39.85,
+     "start": 39.675,
      "text": "with"
     },
     {
-     "end": 40.3,
-     "start": 40.0,
+     "end": 40.15,
+     "start": 39.85,
      "text": "role"
     },
     {
-     "end": 41.525,
-     "start": 40.3,
+     "end": 41.375,
+     "start": 40.15,
      "text": "addresses"
     },
     {
-     "end": 41.725,
-     "start": 41.525,
+     "end": 41.575,
+     "start": 41.375,
      "text": "."
     }
    ]
   },
   "docs-user-status-backends/query-identity-status-through-three-backends-03": {
-   "audio_sha256": "e2993ad1fe521e253cd4c332c28841bc1a565b675453cfadd8a654d552dbf367",
-   "characters": 344,
-   "cost": 0.00021328,
-   "duration": 24.85,
+   "audio_sha256": "d87fecb7981d014d022dee4149464fce6c5742252e4ffc4da45fd9ede9d162bb",
+   "characters": 337,
+   "cost": 0.00033362999999999996,
+   "duration": 24.175,
    "index": 3,
-   "key": "2a15e64867c8f69368b7afa4786654d1b40125768e56fe7f546c282694e231ab",
+   "key": "e80617001508c4f53880e514e1843e707a2468f6f5feff530b88c144eeb1ab7f",
    "page": "docs/user/status-backends.md",
    "pause_ms": 400,
    "section": "query-identity-status-through-three-backends",
-   "sent_text": "The production ckeri status command can read one AID from a local follower store, the hosted ckeri.dev endpoint, or Koios. Backend selection is part of the next release: the installed v0.1.1 binary predates this interface. The acceptance record for this change uses a freshly built production-package candidate, not the older installed release.",
-   "text": "The production ckeri status command can read one AID from a local follower store, the hosted ckeri.dev endpoint, or Koios. Backend selection is part of the next release: the installed v0.1.1 binary predates this interface. The acceptance record for this change uses a freshly built production-package candidate, not the older installed release.",
+   "sent_text": "The production ckeri status command can read one AID from a local follower store, a ckeri-query endpoint, or Koios. Backend selection is part of the next release: the installed v0.1.1 binary predates this interface. The acceptance record for this change uses a freshly built production-package candidate, not the older installed release.",
+   "text": "The production ckeri status command can read one AID from a local follower store, a ckeri-query endpoint, or Koios. Backend selection is part of the next release: the installed v0.1.1 binary predates this interface. The acceptance record for this change uses a freshly built production-package candidate, not the older installed release.",
    "words": [
     {
      "end": 0.275,
@@ -544284,288 +544344,423 @@
      "text": "production"
     },
     {
-     "end": 1.288,
+     "end": 1.275,
      "start": 0.75,
      "text": "ckeri"
     },
     {
-     "end": 1.75,
-     "start": 1.288,
+     "end": 1.725,
+     "start": 1.275,
      "text": "status"
     },
     {
-     "end": 2.325,
-     "start": 1.75,
+     "end": 2.3,
+     "start": 1.725,
      "text": "command"
     },
     {
-     "end": 2.525,
-     "start": 2.325,
+     "end": 2.5,
+     "start": 2.3,
      "text": "can"
     },
     {
-     "end": 2.763,
-     "start": 2.525,
+     "end": 2.737,
+     "start": 2.5,
      "text": "read"
     },
     {
-     "end": 3.062,
-     "start": 2.763,
+     "end": 3.037,
+     "start": 2.737,
      "text": "one"
     },
     {
-     "end": 3.825,
-     "start": 3.062,
+     "end": 3.8,
+     "start": 3.037,
      "text": "AID"
     },
     {
-     "end": 3.987,
-     "start": 3.825,
+     "end": 3.963,
+     "start": 3.8,
      "text": "from"
     },
     {
-     "end": 4.075,
-     "start": 3.987,
+     "end": 4.05,
+     "start": 3.963,
      "text": "a"
     },
     {
-     "end": 4.412,
-     "start": 4.075,
+     "end": 4.387,
+     "start": 4.05,
      "text": "local"
     },
     {
-     "end": 4.875,
-     "start": 4.412,
+     "end": 4.85,
+     "start": 4.387,
      "text": "follower"
     },
     {
      "end": 5.325,
-     "start": 4.875,
+     "start": 4.85,
      "text": "store"
     },
     {
-     "end": 5.4,
+     "end": 5.438,
      "start": 5.325,
      "text": ","
     },
     {
-     "end": 5.5,
-     "start": 5.4,
-     "text": "the"
-    },
-    {
-     "end": 5.912,
-     "start": 5.5,
-     "text": "hosted"
-    },
-    {
-     "end": 7.075,
-     "start": 5.912,
-     "text": "ckeri.dev"
-    },
-    {
-     "end": 7.575,
-     "start": 7.075,
-     "text": "endpoint"
-    },
-    {
-     "end": 7.65,
-     "start": 7.575,
-     "text": ","
-    },
-    {
-     "end": 7.812,
-     "start": 7.65,
-     "text": "or"
-    },
-    {
-     "end": 9.05,
-     "start": 7.812,
-     "text": "Koios"
-    },
-    {
-     "end": 9.275,
-     "start": 9.05,
-     "text": "."
-    },
-    {
-     "end": 9.85,
-     "start": 9.475,
-     "text": "Backend"
-    },
-    {
-     "end": 10.462,
-     "start": 9.85,
-     "text": "selection"
-    },
-    {
-     "end": 10.637,
-     "start": 10.462,
-     "text": "is"
-    },
-    {
-     "end": 10.913,
-     "start": 10.637,
-     "text": "part"
-    },
-    {
-     "end": 10.988,
-     "start": 10.913,
-     "text": "of"
-    },
-    {
-     "end": 11.113,
-     "start": 10.988,
-     "text": "the"
-    },
-    {
-     "end": 11.475,
-     "start": 11.113,
-     "text": "next"
-    },
-    {
-     "end": 12.125,
-     "start": 11.475,
-     "text": "release"
-    },
-    {
-     "end": 12.225,
-     "start": 12.125,
-     "text": ":"
-    },
-    {
-     "end": 12.375,
-     "start": 12.225,
-     "text": "the"
-    },
-    {
-     "end": 12.962,
-     "start": 12.375,
-     "text": "installed"
-    },
-    {
-     "end": 14.275,
-     "start": 12.962,
-     "text": "v0.1.1"
-    },
-    {
-     "end": 14.75,
-     "start": 14.275,
-     "text": "binary"
-    },
-    {
-     "end": 15.275,
-     "start": 14.75,
-     "text": "predates"
-    },
-    {
-     "end": 15.475,
-     "start": 15.275,
-     "text": "this"
-    },
-    {
-     "end": 16.675,
-     "start": 15.475,
-     "text": "interface"
-    },
-    {
-     "end": 16.875,
-     "start": 16.675,
-     "text": "."
-    },
-    {
-     "end": 17.2,
-     "start": 17.075,
-     "text": "The"
-    },
-    {
-     "end": 17.812,
-     "start": 17.2,
-     "text": "acceptance"
-    },
-    {
-     "end": 18.225,
-     "start": 17.812,
-     "text": "record"
-    },
-    {
-     "end": 18.35,
-     "start": 18.225,
-     "text": "for"
-    },
-    {
-     "end": 18.562,
-     "start": 18.35,
-     "text": "this"
-    },
-    {
-     "end": 19.038,
-     "start": 18.562,
-     "text": "change"
-    },
-    {
-     "end": 19.475,
-     "start": 19.038,
-     "text": "uses"
-    },
-    {
-     "end": 19.6,
-     "start": 19.475,
+     "end": 5.562,
+     "start": 5.438,
      "text": "a"
     },
     {
-     "end": 20.1,
-     "start": 19.6,
-     "text": "freshly"
+     "end": 6.425,
+     "start": 5.562,
+     "text": "ckeri-query"
     },
     {
-     "end": 20.375,
-     "start": 20.1,
-     "text": "built"
+     "end": 6.925,
+     "start": 6.425,
+     "text": "endpoint"
     },
     {
-     "end": 21.3,
-     "start": 20.375,
-     "text": "production-package"
-    },
-    {
-     "end": 22.0,
-     "start": 21.3,
-     "text": "candidate"
-    },
-    {
-     "end": 22.1,
-     "start": 22.0,
+     "end": 7.0,
+     "start": 6.925,
      "text": ","
     },
     {
-     "end": 22.312,
-     "start": 22.1,
-     "text": "not"
+     "end": 7.162,
+     "start": 7.0,
+     "text": "or"
     },
     {
-     "end": 22.462,
-     "start": 22.312,
+     "end": 8.4,
+     "start": 7.162,
+     "text": "Koios"
+    },
+    {
+     "end": 8.6,
+     "start": 8.4,
+     "text": "."
+    },
+    {
+     "end": 9.175,
+     "start": 8.8,
+     "text": "Backend"
+    },
+    {
+     "end": 9.788,
+     "start": 9.175,
+     "text": "selection"
+    },
+    {
+     "end": 9.962,
+     "start": 9.788,
+     "text": "is"
+    },
+    {
+     "end": 10.238,
+     "start": 9.962,
+     "text": "part"
+    },
+    {
+     "end": 10.312,
+     "start": 10.238,
+     "text": "of"
+    },
+    {
+     "end": 10.438,
+     "start": 10.312,
      "text": "the"
     },
     {
-     "end": 22.875,
-     "start": 22.462,
-     "text": "older"
+     "end": 10.8,
+     "start": 10.438,
+     "text": "next"
     },
     {
-     "end": 23.475,
-     "start": 22.875,
-     "text": "installed"
-    },
-    {
-     "end": 24.65,
-     "start": 23.475,
+     "end": 11.45,
+     "start": 10.8,
      "text": "release"
     },
     {
-     "end": 24.85,
-     "start": 24.65,
+     "end": 11.55,
+     "start": 11.45,
+     "text": ":"
+    },
+    {
+     "end": 11.7,
+     "start": 11.55,
+     "text": "the"
+    },
+    {
+     "end": 12.288,
+     "start": 11.7,
+     "text": "installed"
+    },
+    {
+     "end": 13.6,
+     "start": 12.288,
+     "text": "v0.1.1"
+    },
+    {
+     "end": 14.075,
+     "start": 13.6,
+     "text": "binary"
+    },
+    {
+     "end": 14.6,
+     "start": 14.075,
+     "text": "predates"
+    },
+    {
+     "end": 14.8,
+     "start": 14.6,
+     "text": "this"
+    },
+    {
+     "end": 16.0,
+     "start": 14.8,
+     "text": "interface"
+    },
+    {
+     "end": 16.2,
+     "start": 16.0,
+     "text": "."
+    },
+    {
+     "end": 16.525,
+     "start": 16.4,
+     "text": "The"
+    },
+    {
+     "end": 17.138,
+     "start": 16.525,
+     "text": "acceptance"
+    },
+    {
+     "end": 17.55,
+     "start": 17.138,
+     "text": "record"
+    },
+    {
+     "end": 17.675,
+     "start": 17.55,
+     "text": "for"
+    },
+    {
+     "end": 17.888,
+     "start": 17.675,
+     "text": "this"
+    },
+    {
+     "end": 18.362,
+     "start": 17.888,
+     "text": "change"
+    },
+    {
+     "end": 18.8,
+     "start": 18.362,
+     "text": "uses"
+    },
+    {
+     "end": 18.925,
+     "start": 18.8,
+     "text": "a"
+    },
+    {
+     "end": 19.425,
+     "start": 18.925,
+     "text": "freshly"
+    },
+    {
+     "end": 19.7,
+     "start": 19.425,
+     "text": "built"
+    },
+    {
+     "end": 20.625,
+     "start": 19.7,
+     "text": "production-package"
+    },
+    {
+     "end": 21.325,
+     "start": 20.625,
+     "text": "candidate"
+    },
+    {
+     "end": 21.425,
+     "start": 21.325,
+     "text": ","
+    },
+    {
+     "end": 21.638,
+     "start": 21.425,
+     "text": "not"
+    },
+    {
+     "end": 21.788,
+     "start": 21.638,
+     "text": "the"
+    },
+    {
+     "end": 22.2,
+     "start": 21.788,
+     "text": "older"
+    },
+    {
+     "end": 22.8,
+     "start": 22.2,
+     "text": "installed"
+    },
+    {
+     "end": 23.975,
+     "start": 22.8,
+     "text": "release"
+    },
+    {
+     "end": 24.175,
+     "start": 23.975,
+     "text": "."
+    }
+   ]
+  },
+  "docs-user-status-backends/query-identity-status-through-three-backends-04": {
+   "audio_sha256": "a00b6d717c3b56c17e2d9aba8074895fffdcdf6d61eb1dbf9a04fb82fac2bf61",
+   "characters": 146,
+   "cost": 0.00014454,
+   "duration": 10.475,
+   "index": 4,
+   "key": "ad4a0ba10b78e59ecfce1d019b838f84fd81b1335899f646cc26c0460542caff",
+   "page": "docs/user/status-backends.md",
+   "pause_ms": 400,
+   "section": "query-identity-status-through-three-backends",
+   "sent_text": "No hosted service of the earlier design is available. The endpoint backend reads a ckeri-query that the reader runs themselves; see Configuration.",
+   "text": "No hosted service of the earlier design is available. The endpoint backend reads a ckeri-query that the reader runs themselves; see Configuration.",
+   "words": [
+    {
+     "end": 0.4,
+     "start": 0.2,
+     "text": "No"
+    },
+    {
+     "end": 0.775,
+     "start": 0.4,
+     "text": "hosted"
+    },
+    {
+     "end": 1.188,
+     "start": 0.775,
+     "text": "service"
+    },
+    {
+     "end": 1.263,
+     "start": 1.188,
+     "text": "of"
+    },
+    {
+     "end": 1.375,
+     "start": 1.263,
+     "text": "the"
+    },
+    {
+     "end": 1.75,
+     "start": 1.375,
+     "text": "earlier"
+    },
+    {
+     "end": 2.325,
+     "start": 1.75,
+     "text": "design"
+    },
+    {
+     "end": 2.5,
+     "start": 2.325,
+     "text": "is"
+    },
+    {
+     "end": 3.525,
+     "start": 2.5,
+     "text": "available"
+    },
+    {
+     "end": 3.725,
+     "start": 3.525,
+     "text": "."
+    },
+    {
+     "end": 4.037,
+     "start": 3.9,
+     "text": "The"
+    },
+    {
+     "end": 4.45,
+     "start": 4.037,
+     "text": "endpoint"
+    },
+    {
+     "end": 4.988,
+     "start": 4.45,
+     "text": "backend"
+    },
+    {
+     "end": 5.262,
+     "start": 4.988,
+     "text": "reads"
+    },
+    {
+     "end": 5.363,
+     "start": 5.262,
+     "text": "a"
+    },
+    {
+     "end": 6.375,
+     "start": 5.363,
+     "text": "ckeri-query"
+    },
+    {
+     "end": 6.512,
+     "start": 6.375,
+     "text": "that"
+    },
+    {
+     "end": 6.6,
+     "start": 6.512,
+     "text": "the"
+    },
+    {
+     "end": 6.95,
+     "start": 6.6,
+     "text": "reader"
+    },
+    {
+     "end": 7.25,
+     "start": 6.95,
+     "text": "runs"
+    },
+    {
+     "end": 8.425,
+     "start": 7.25,
+     "text": "themselves"
+    },
+    {
+     "end": 8.625,
+     "start": 8.425,
+     "text": ";"
+    },
+    {
+     "end": 9.0,
+     "start": 8.825,
+     "text": "see"
+    },
+    {
+     "end": 10.275,
+     "start": 9.0,
+     "text": "Configuration"
+    },
+    {
+     "end": 10.475,
+     "start": 10.275,
      "text": "."
     }
    ]
@@ -544766,11 +544961,91 @@
    ]
   },
   "docs-user-status-backends/recorded-acceptance-journey-02": {
-   "audio_sha256": "ab8303519a4131f58c2bfe711f0dc2f928697527265a6aa7fe478e8806656a65",
-   "characters": 398,
-   "cost": 0.00024676,
-   "duration": 33.7,
+   "audio_sha256": "8abccaf66d579db6e2df0a0829f9ad09a41d2357ab5d2f6a021494f5b58309bc",
+   "characters": 69,
+   "cost": 6.830999999999999e-05,
+   "duration": 4.775,
    "index": 2,
+   "key": "1ee73067c803685800f9cc30f6e883db3435d9f6c347173059d87fadac988e04",
+   "page": "docs/user/status-backends.md",
+   "pause_ms": 400,
+   "section": "recorded-acceptance-journey",
+   "sent_text": "The hosted service that the endpoint run used is no longer available.",
+   "text": "The hosted service that the endpoint run used is no longer available.",
+   "words": [
+    {
+     "end": 0.25,
+     "start": 0.175,
+     "text": "The"
+    },
+    {
+     "end": 0.688,
+     "start": 0.25,
+     "text": "hosted"
+    },
+    {
+     "end": 1.15,
+     "start": 0.688,
+     "text": "service"
+    },
+    {
+     "end": 1.288,
+     "start": 1.15,
+     "text": "that"
+    },
+    {
+     "end": 1.438,
+     "start": 1.288,
+     "text": "the"
+    },
+    {
+     "end": 1.875,
+     "start": 1.438,
+     "text": "endpoint"
+    },
+    {
+     "end": 2.125,
+     "start": 1.875,
+     "text": "run"
+    },
+    {
+     "end": 2.7,
+     "start": 2.125,
+     "text": "used"
+    },
+    {
+     "end": 2.888,
+     "start": 2.7,
+     "text": "is"
+    },
+    {
+     "end": 3.1,
+     "start": 2.888,
+     "text": "no"
+    },
+    {
+     "end": 3.5,
+     "start": 3.1,
+     "text": "longer"
+    },
+    {
+     "end": 4.575,
+     "start": 3.5,
+     "text": "available"
+    },
+    {
+     "end": 4.775,
+     "start": 4.575,
+     "text": "."
+    }
+   ]
+  },
+  "docs-user-status-backends/recorded-acceptance-journey-03": {
+   "audio_sha256": "7d3eb5c9cc661375306bc7c97cc8e236e8debbed18e861b8fc6cffc0ef639d05",
+   "characters": 398,
+   "cost": 0.00039401999999999997,
+   "duration": 33.7,
+   "index": 3,
    "key": "180affd35b9210050b7e9911d0ef530724c0f39a70479b2b3d04da9b5c4d4e38",
    "page": "docs/user/status-backends.md",
    "pause_ms": 400,
@@ -545095,12 +545370,12 @@
     }
    ]
   },
-  "docs-user-status-backends/recorded-acceptance-journey-03": {
-   "audio_sha256": "ab4295d3cc93d38b0b7e7f527fd16600b47be7ae5d802d1ce75aa141ae87d2c7",
+  "docs-user-status-backends/recorded-acceptance-journey-04": {
+   "audio_sha256": "e6791c38b6227a75c1417e9526c0b767299e9193299f429f0f48156d6c46800a",
    "characters": 196,
-   "cost": 0.00012152000000000002,
+   "cost": 0.00019403999999999998,
    "duration": 17.525,
-   "index": 3,
+   "index": 4,
    "key": "9ef54a59746bad98a5d3c8da2bb628cd8e15ad5d5fc48386a2e48f18a3d2fea6",
    "page": "docs/user/status-backends.md",
    "pause_ms": 400,

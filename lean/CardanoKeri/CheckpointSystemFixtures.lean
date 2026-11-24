@@ -136,9 +136,11 @@ def authorizationTrace : Except String Json := do
     pure (Command.register b.request.key 1 42 5 context ⟨history, u, tx⟩ b index)
   let a ← register first
   let b ← register second
+  -- Both candidate events for 12 are available. Only its first target has
+  -- a rotation authorization, so the foreign row is the sole changed guard.
   let table : EvidenceTable := [
     (11, ⟨[(0,0,1), (0,0,2)], [1], [0], [], WriterTable.fixture 11 711 [(0,0,1), (0,0,2)]⟩),
-    (12, ⟨[(0,0,1)], [], [], [], WriterTable.fixture 12 712 [(0,0,1)]⟩)]
+    (12, ⟨[(0,0,1)], [], [], [], WriterTable.fixture 12 712 [(0,0,1), (0,0,2)]⟩)]
   pure (trace "identity-bound-authorizations" [
     ("register-first", a), ("register-second", b),
     ("foreign-rotation-refused", .local 12 3 (.rotate 2 .keep 7)),

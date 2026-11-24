@@ -8,6 +8,8 @@ const corpus=JSON.parse(readFileSync(new URL('./checkpoint-system-corpus.json',i
 const names={
   'own-request':'other-valid-fold-cannot-complete-this-request',
   'stored-context':'booking-history-cannot-replace-stored-environment',
+  'compared-rival':'different-economic-rival-refused',
+  'producing-output':'different-economic-output-refused',
   'booked-birth':'different-birth-refused',
   'booked-refund':'different-refund-refused',
   'booked-pool':'different-pool-refused',

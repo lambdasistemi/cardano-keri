@@ -9,7 +9,7 @@
       "pause": 400
     },
     {
-      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active or parked (a retained output holds its token, minimum ADA and last key state; the registry key stays active). A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active until it is convicted: there is no owner exit, no parking and no revival. A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
       "pause": 400
     },
     {
@@ -143,7 +143,7 @@
       "pause": 500
     },
     {
-      "text": "This section describes the shipped V1 flow. The proposed M1 architecture moves inception admission into a repeatable attestation, leaving registry absence and checkpoint creation at the registration fold. The existing hash-proof token below is not that full inception attestation.",
+      "text": "This section describes the shipped V1 flow. The M1 architecture shows the inception evidence when the registration is booked, leaving registry absence and checkpoint creation at the registration fold. The existing hash-proof token below is not that full inception evidence.",
       "pause": 400
     },
     {
@@ -223,6 +223,6 @@
   ],
   "_source": {
     "file": "observer-architecture.md",
-    "sha256": "2166b88c3938fc1760308b66b31ded0b17f574c8f01ec98633dfa6b613dd8237"
+    "sha256": "afa17aab2b175b7ac9fcc63586cfc8e530e1e402609b89632393862145ed3d0d"
   }
 }

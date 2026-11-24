@@ -12,9 +12,9 @@ below.
 !!! abstract "Where this page stands"
     The transaction architecture — thin checkpoint, reference observers,
     zero-lovelace withdrawal, BLAKE3 premint — is **shipped on `main` today**.
-    The proposed M1 registration flow below moves full inception admission
-    into an earlier, repeatable attestation. That evidence boundary is not
-    implemented; the existing BLAKE3 token proves a narrower fact.
+    In the M1 registration flow below the controller shows the inception when
+    booking the registration, and the fold checks no KERI evidence. The model
+    states it this way; the validators and the commands follow it.
     How lifecycle state is *represented* also changes: today it is role addresses, in the
     [accepted design](../index.md#the-accepted-design) it is one
     bit plus the checkpoint's own value. Both are described below, marked.
@@ -26,7 +26,7 @@ output) carrying one AID-derived token and an inline datum with its current key
 state. Registration must establish both valid initial state and uniqueness;
 these are separate guarantees.
 
-### Proposed M1 registration flow
+### M1 registration flow
 
 ```mermaid
 ---
@@ -35,36 +35,35 @@ config:
 ---
 flowchart TD
     ICP["KERI inception<br/>signatures + receipts"]
-    AT["Validate inception<br/>bind AID + initial keys"]
-    FACT["Repeatable attestation<br/>valid inception hash"]
-    REQ["Registration request<br/>AID + state binding<br/>funding"]
+    BOOK["Booking, by the controller<br/>show the inception evidence<br/>publish the initial datum"]
+    REQ["Booked request<br/>approval + initial datum<br/>funding"]
     ROOT["Registry absence proof<br/>no leaf for this AID"]
-    FOLD["Atomic registration fold<br/>check evidence + funding<br/>insert leaf + mint checkpoint"]
+    FOLD["Registration fold, by anyone<br/>no KERI evidence<br/>insert leaf + deliver checkpoint"]
     LEAF["Registry entry<br/>AID → active token"]
     CK["Unique checkpoint<br/>initial key state + bonds"]
     APP["Consumer validator<br/>checkpoint eligibility<br/>application authorization"]
 
-    ICP --> AT --> FACT
-    FACT -->|"carrier to be specified"| REQ
-    REQ --> FOLD
-    ROOT --> FOLD
-    FOLD --> LEAF
-    FOLD --> CK
+    ICP -->|"shown once"| BOOK
+    BOOK -->|"mints the approval"| REQ
+    REQ -->|"read from the chain"| FOLD
+    ROOT -->|"absence"| FOLD
+    FOLD -->|"inserts"| LEAF
+    FOLD -->|"delivers"| CK
     CK -->|"reference input"| APP
 ```
 
 | Boundary | Guarantee | Enforcement responsibility |
 |---|---|---|
-| Inception attestation | This hash identifies a valid inception and authenticates its initial key state. Multiple attestations of the same inception are allowed. | The designated attestation policy establishes the inception checks, including signatures and witness receipts. |
-| First registration | If the AID has never been registered, create its registry entry and checkpoint together. Another attestation cannot authorize a second registration. | MPFS verifies absence and insertion; KERI admission and mint validation bind that insertion to the authenticated checkpoint and required funding in the same transaction. |
-| Consumer use | Only an eligible checkpoint may supply keys to the application. | The consumer validates the checkpoint and applies its own authorization rules. Attestation possession and an active registry leaf alone do not authorize use. |
+| Booking | The key has its inception evidence, and the request publishes the initial checkpoint datum its approval commits, which is exactly the initial state of that key. Booking one identifier twice is allowed. | KERI's application, when it mints the approval: no approval exists without the evidence. |
+| First registration | If the AID has never been registered, create its registry entry and checkpoint together. A second booked request of the same AID cannot be folded and is returned after its deadline. | The registry verifies absence and insertion and delivers what the approval commits: the address, the datum, the deposit and the new token. The fold validates nothing of KERI's and needs nothing from the controller. |
+| Consumer use | Only an eligible checkpoint may supply keys to the application. | The consumer validates the checkpoint and applies its own authorization rules. A booked request and an active registry leaf alone do not authorize use. |
 
-The request need not carry the raw inception if the attestation authenticates
-the initial key-state projection as well as the AID. The concrete evidence
-carrier, reference or consumption rules, and transaction budgets remain to be
-specified and measured. **Attestation is repeatable; checkpoint uniqueness is
-enforced by registry admission.** There is no revival: an identity is alive
-until it is convicted.
+A folder reads everything it needs from the chain: the holding address and the
+deposit from the request's data, the initial datum from what the request
+publishes. The controller, who holds the inception event, shows it once, when
+booking. **A booking is repeatable; checkpoint uniqueness is enforced by
+registry admission.** There is no revival: an identity is alive until it is
+convicted.
 The [registration guarantees](follow-one-identity.md#what-registration-guarantees)
 explain the model boundaries and link the playable duplicate-registration case.
 

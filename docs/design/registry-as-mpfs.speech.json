@@ -37,7 +37,7 @@
       "pause": 400
     },
     {
-      "text": "The coarse Registry predicates are inception and duplicity. They are declared abstractions, not cryptographic verification or a proof that they equal Checkpoint's concrete evidence predicates. In particular, the Registry flow does not summarize the Checkpoint conviction's bond and pool distribution.",
+      "text": "The coarse Registry predicates are inception and duplicity. A registration booking reads inception and no other step does: a fold or a return of a booked request needs no evidence from the identity's controller. They are declared abstractions, not cryptographic verification or a proof that they equal Checkpoint's concrete evidence predicates. In particular, the Registry flow does not summarize the Checkpoint conviction's bond and pool distribution.",
       "pause": 400
     },
     {
@@ -227,6 +227,6 @@
   ],
   "_source": {
     "file": "registry-as-mpfs.md",
-    "sha256": "9c1b6da4e201249ec25d11d0eedf03a5b7b3afcf7c0b189aa104f46a385e7acc"
+    "sha256": "18bee4bfb17530536d2febcc8d8a820ada35067461620309275e5f2363727a4b"
   }
 }

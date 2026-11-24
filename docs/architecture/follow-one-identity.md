@@ -50,15 +50,15 @@ to the other.
 
 **In the registry model, a successful first registration creates one registry
 entry and its matching checkpoint together. A second registration of the same
-AID is refused.** This guarantee depends on valid inception evidence, an absent
-registry key and a successful fold. Merely submitting a request establishes none
-of those outcomes.
+AID is refused.** This guarantee depends on valid inception evidence, shown when the
+request is booked, an absent registry key and a successful fold. A booked
+request has shown its evidence and establishes neither of the other two.
 
 | Moment | What is established | What is still absent |
 |---|---|---|
 | Alice fixes her KERI inception | The inception determines the AID. Witness receipts concern this event. | A registry entry and checkpoint NFT need not exist. |
-| Someone contributes a registration request | The inbox holds a pending request and its funding. | Submission alone creates no checkpoint NFT or active leaf. |
-| A fold successfully processes that request | The model admits the inception, requires no existing leaf, inserts `AID → active token`, creates the matching checkpoint and locks the bond. | There is no separately successful insertion if the coupled registration fails. |
+| Alice books a registration request | The booking shows her inception evidence and publishes the initial checkpoint datum; only then is the approval minted. The inbox holds the pending request and its funding. | A booked request alone creates no checkpoint NFT or active leaf. |
+| Anyone folds that request | The fold needs no evidence from Alice: it requires no existing leaf, inserts `AID → active token`, creates the matching checkpoint and locks the bond. | There is no separately successful insertion if the coupled registration fails. |
 
 The [duplicate-registration example](#4-the-registry-refuses-a-duplicate-follow-the-money)
 exposes both sides: Alice's fold creates the checkpoint; Mallory can submit a
@@ -77,13 +77,13 @@ output the certified request names, in the folding transaction
 | Responsibility | Required check |
 |---|---|
 | MPFS insertion | The AID key is absent and the insertion produces the correct registry root. Generic MPFS does not interpret KERI inception evidence. |
-| KERI admission and checkpoint validation | The inception evidence authorizes the projected key state, and the inserted leaf identifies the matching checkpoint output and its required value. |
+| KERI admission, at the booking | The inception evidence authorizes the projected key state before the approval is minted. The fold then delivers the checkpoint output the approval commits, with its required value, and the inserted leaf identifies it. |
 | Mint authorization | The quantity-one checkpoint mint is bound to that same admitted registration and inserted leaf; minting cannot bypass that registration boundary. |
 
 These are **required implementation obligations**. The Registry's
-`fold` invokes the imported economic judgment and installs the resulting carriers; its `Env.inception` predicate
-assumes the cryptographic answer. It does not specify the exact division of
-checks between the KERI plugin, checkpoint minting policy and registration
+`bookRegistration` reads the `Env.inception` predicate, which assumes the cryptographic answer; `fold` invokes the
+imported economic judgment, installs the resulting carriers and reads no evidence. The model does not specify how the booking's evidence is
+divided between the application's mint, the checkpoint minting policy and the registration
 observers. The concrete script interfaces and asset-name encoding must be
 verified separately before this becomes an implementation guarantee.
 
@@ -93,46 +93,37 @@ checkpoint NFT and grants no identity authority. KERI witnesses receipt the
 inception event, not the Cardano NFT. See
 [Identity Operations](identity-ops.md#register) for the V1 transaction path.
 
-### Proposed: attest inception before requesting registration
+### The booking shows the inception; the fold shows nothing
 
-**The attestation says: “This hash identifies a valid KERI inception.” It
-does not say: “This AID has never been registered.”** Multiple attestations
-of the same inception are allowed. The registry supplies uniqueness when it
-admits registration and creates the checkpoint.
+**The controller, who holds the inception event, proves it once, when booking.
+A folder then needs nothing from the controller.** Booking the same identifier
+twice is allowed. The registry supplies uniqueness when a fold admits the
+first request and creates the checkpoint.
 
-This is the proposed evidence boundary for the current design; it is not yet implemented or
-represented as a separate action in the simulators. The
-[architecture diagram](overview.md#proposed-m1-registration-flow) shows the
-attestation, request, atomic fold and consumer boundaries together.
+The [architecture diagram](overview.md#m1-registration-flow) shows the booking,
+the booked request, the fold and the consumer boundaries together.
 
 | Stage | Guarantee | What it does not establish |
 |---|---|---|
-| Earlier attestation transaction | Under the designated attestation policy, this AID hashes a valid inception with authenticated initial key state. Issuing another attestation for the same inception is allowed. | Registry absence, a checkpoint, or current authority after subsequent rotations. |
-| Registration request | Carries the AID, compact authenticated evidence and funding needed for later processing. | Successful admission or a reservation of the AID. |
-| Successful registration fold | Verifies the attestation and its binding to the initial checkpoint state, proves registry absence, and atomically inserts the leaf and mints the checkpoint. | Permission to register again using another copy of the attestation. |
+| Booking, by the controller | The key has its inception evidence, and the request publishes the initial checkpoint datum its approval commits: exactly the initial state of that key, born at the booking, with the refund address the request names and a deposit that covers the bonds and one premium. No approval is minted otherwise. | Registry absence, a checkpoint, or a reservation of the AID. |
+| Booked request | Carries the approval, the published initial datum and the funding. Everything a fold needs is in it or in the registry. | Successful admission. A request for an already registered AID stays unfolded and is returned after its deadline. |
+| Registration fold, by anyone | Proves registry absence, inserts the leaf and delivers what the approval commits: the address, the datum, exactly the deposit and the new token. | Any KERI validation. The fold reads no inception evidence and validates no datum; the booking did both. |
 
-To remove the full inception from the request and fold, the earlier validation
-must establish the required inception admission checks, including signatures
-and witness receipts. The attestation must authenticate both the **AID and the
-initial key-state projection**, under a pinned validation policy. Otherwise a
-request could pair a valid inception hash with unrelated checkpoint keys.
-An unauthenticated datum placed beside an attestation token is not enough.
-Registration-time fields such as the refund address, birth slot and bonds are
-still checked at the fold.
+The evidence must cover the **AID and the initial key state together**, under
+a pinned validation policy. Otherwise a booking could pair a valid inception
+with unrelated checkpoint keys. The model states the evidence as one fact of
+the key and leaves its content (signatures, witness receipts, the keys written
+in the datum) to the validator that realizes it; that limit is recorded in the
+[Lean correspondence register](https://github.com/lambdasistemi/cardano-keri/issues/435).
+Registration-time fields such as the refund address, the birth slot and the
+bonds are checked at the booking, with the rest of the initial datum.
 
-The existing V1 BLAKE3 proof token supplies only the hash relationship; it does
-not by itself certify inception admission. Extending that boundary requires a
-concrete attestation format and validation rules. Whether a fold references or
-consumes the attestation is still to be specified; **single-use attestation is
-not the source of checkpoint uniqueness**. Even with two valid attestations and
-two pending requests, only the first successful registration can satisfy the
-registry absence check.
+**A booking is not the source of checkpoint uniqueness.** Even with two booked
+requests of one AID, only the first successful fold can satisfy the registry
+absence check.
 
 The [duplicate scenario](#4-the-registry-refuses-a-duplicate-follow-the-money)
-already demonstrates that registration boundary using an assumed inception
-fact. It does not execute the proposed attestation validation. Moving this work
-earlier can keep the raw inception out of the shared fold, but transaction size
-and execution-budget feasibility still need measurement.
+demonstrates that registration boundary using an assumed inception fact.
 
 ### What does `active token` promise?
 

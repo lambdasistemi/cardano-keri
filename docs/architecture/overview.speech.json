@@ -17,7 +17,7 @@
       "pause": 400
     },
     {
-      "text": "The transaction architecture — thin checkpoint, reference observers, zero-lovelace withdrawal, BLAKE3 premint — is shipped on main today. The proposed M1 registration flow below moves full inception admission into an earlier, repeatable attestation. That evidence boundary is not implemented; the existing BLAKE3 token proves a narrower fact. How lifecycle state is represented also changes: today it is role addresses, in the accepted design it is one bit plus the checkpoint's own value. Both are described below, marked.",
+      "text": "The transaction architecture — thin checkpoint, reference observers, zero-lovelace withdrawal, BLAKE3 premint — is shipped on main today. In the M1 registration flow below the controller shows the inception when booking the registration, and the fold checks no KERI evidence. The model states it this way; the validators and the commands follow it. How lifecycle state is represented also changes: today it is role addresses, in the accepted design it is one bit plus the checkpoint's own value. Both are described below, marked.",
       "pause": 400
     }
   ],
@@ -31,13 +31,13 @@
       "pause": 400
     }
   ],
-  "proposed-m1-registration-flow": [
+  "m1-registration-flow": [
     {
-      "text": "Proposed M1 registration flow.",
+      "text": "M1 registration flow.",
       "pause": 500
     },
     {
-      "text": "The request need not carry the raw inception if the attestation authenticates the initial key-state projection as well as the AID. The concrete evidence carrier, reference or consumption rules, and transaction budgets remain to be specified and measured. Attestation is repeatable; checkpoint uniqueness is enforced by registry admission. There is no revival: an identity is alive until it is convicted. The registration guarantees explain the model boundaries and link the playable duplicate-registration case.",
+      "text": "A folder reads everything it needs from the chain: the holding address and the deposit from the request's data, the initial datum from what the request publishes. The controller, who holds the inception event, shows it once, when booking. A booking is repeatable; checkpoint uniqueness is enforced by registry admission. There is no revival: an identity is alive until it is convicted. The registration guarantees explain the model boundaries and link the playable duplicate-registration case.",
       "pause": 400
     }
   ],
@@ -231,6 +231,6 @@
   ],
   "_source": {
     "file": "overview.md",
-    "sha256": "a954aa9d9700825cf2b5a5d0a602729e89a2123b51c43cfaf8fecbbd056e31a1"
+    "sha256": "16f094398f5c254e013e91e354ceaea728137e5ecb4c38b026f2a4d1ae9ac362"
   }
 }

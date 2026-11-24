@@ -89,7 +89,7 @@
       "pause": 400
     },
     {
-      "text": "2. Checkpoint mint. The checkpoint transaction:",
+      "text": "2. Checkpoint mint. In the deployed generation the checkpoint transaction (the registry generation books, folds and returns instead, see Register in a registry):",
       "pause": 400
     },
     {
@@ -139,7 +139,7 @@
       "pause": 500
     },
     {
-      "text": "Registration becomes a request against the registry: it identifies the AID, binds the inception evidence, and carries the bonds and a refund address chosen by whoever pays. It is applied in a batch by anyone. This does not require the raw inception to be stored in the request: the proposed earlier attestation would authenticate inception validity and its initial key state. Such an attestation may be issued more than once; registry admission supplies checkpoint uniqueness. Its concrete format and validation are still to be implemented. Application checks that the AID has no leaf, inserts one, and creates the checkpoint in the same transaction. The persistent leaf prevents a second first-registration of the AID, and there is no revival: a registered identity stays live until it is convicted. See the registration guarantee for the atomic mint/insertion obligation and the model's evidence limits.",
+      "text": "Registration becomes a request against the registry: it identifies the AID, binds the inception evidence, and carries the bonds and a refund address chosen by whoever pays. It is applied in a batch by anyone, who needs nothing from the controller: the booking has already shown the inception evidence and published the initial key state. An identifier may be booked more than once; registry admission supplies checkpoint uniqueness. Application checks that the AID has no leaf, inserts one, and creates the checkpoint in the same transaction. The persistent leaf prevents a second first-registration of the AID, and there is no revival: a registered identity stays live until it is convicted. See the registration guarantee for the atomic mint/insertion obligation and the model's evidence limits.",
       "pause": 400
     },
     {
@@ -379,7 +379,7 @@
       "pause": 500
     },
     {
-      "text": "Top-up adds value to the pool, at least one premium at a time and only once between two rotations. No signature, anyone. It is how a friend, an employer or a consortium pays for an identity's maintenance. A top-up spends the checkpoint output, so a stream of tiny ones could keep the controller's own rotation and the hunters' transactions from landing; the datum therefore carries a top-up mark that a top-up sets and every rotation clears, and a second top-up before the next rotation is refused. Registration asks for the same minimum: the first pool is at least P.",
+      "text": "Top-up adds value to the pool, at least one premium P at a time and only once between two rotations. No signature, anyone. It is how a friend, an employer or a consortium pays for an identity's maintenance. A top-up spends the checkpoint output, so a stream of tiny ones could keep the controller's own rotation and the hunters' transactions from landing; the datum therefore carries a top-up mark that a top-up sets and every rotation clears, and a second top-up before the next rotation is refused. Registration asks for the same minimum: the first pool is at least P.",
       "pause": 400
     }
   ],
@@ -419,6 +419,6 @@
   ],
   "_source": {
     "file": "identity-ops.md",
-    "sha256": "77ac6c504def2e6d707e8f40f2079308a6639fe0582ed7b4285ac116afb8ed8a"
+    "sha256": "b7608cbf2b0899d63a903750ebf22974e2c0607355c4eb0ccbf61b859bd545fe"
   }
 }

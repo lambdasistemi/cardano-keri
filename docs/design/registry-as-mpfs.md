@@ -58,14 +58,14 @@ entry retains the complete generic booking and the original carrier metadata.
 
 | Action | Given | When | Then |
 | --- | --- | --- | --- |
-| Registration booking | A complete generic booking with carrier value at least `Mc + D` (minimum ADA, then the checkpoint's deposit and freeze bond, then the initial pool the registrant chooses) and the configured tip | `bookRegistration` accepts; a carrier one lovelace short is refused | The request is pending; no carrier has been created yet. |
-| Registration fold | Reachable state, the matching generation/plugin, KERI inception and an accepted imported economic transaction | `fold` consumes the booking | A carrier and permanent AID/token binding are installed with the committed holding. |
+| Registration booking | The key's KERI inception evidence, and a complete generic booking with carrier value at least `Mc + D` (minimum ADA, then the checkpoint's deposit and freeze bond, then the initial pool the registrant chooses) and the configured tip | `bookRegistration` accepts; a carrier one lovelace short is refused, and so is a key without its inception evidence | The request is pending; no carrier has been created yet. Every pending request belongs to a key whose inception was shown. |
+| Registration fold | Reachable state, the matching generation/plugin and an accepted imported economic transaction. No inception evidence: the booking showed it | `fold` consumes the booking | A carrier and permanent AID/token binding are installed with the committed holding. |
 | Convict carrier | A live carrier and duplicity against its key counter | `convictCkpt` accepts | Retain a termination-pending carrier and the active registry key. |
 | Book termination | That pending carrier and an exactly matching generic booking | `bookTermination` accepts | Move custody into the whole pending entry; retain its token/key/original holding association. |
 | Complete termination | A reachable pending entry and accepted consuming fold | `fold` consumes that request | Remove that pending entry, burn its active token and retire its key. Unconsumed entries remain whole. |
 | Registration return | A booked registration that was not folded, a transaction whose whole validity interval starts at or after the request's deadline (booking validity upper bound plus the processing window), and an accepted imported rejection | `returnRequests` accepts, with no signature; before the deadline it refuses, and a pending termination is never a member | The refund address receives at least the contents less the declared tip; only the returned registrations leave the pool and all other custody is unchanged. |
 
-The coarse Registry predicates are `inception` and `duplicity`. They are declared abstractions, not cryptographic verification
+The coarse Registry predicates are `inception` and `duplicity`. A registration booking reads `inception` and no other step does: a fold or a return of a booked request needs no evidence from the identity's controller. They are declared abstractions, not cryptographic verification
 or a proof that they equal Checkpoint's concrete evidence predicates. In
 particular, the Registry flow does not summarize the Checkpoint conviction's
 bond and pool distribution.

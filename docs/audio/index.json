@@ -1373,7 +1373,7 @@
     "index": 2,
     "name": "docs-architecture-follow-one-identity/4-the-registry-refuses-a-duplicate-follow-the-money-02",
     "pause_ms": 400,
-    "v": "0e8b4d9f86b2"
+    "v": "851e4a4263a0"
    },
    {
     "index": 3,
@@ -1391,13 +1391,13 @@
     "index": 5,
     "name": "docs-architecture-follow-one-identity/4-the-registry-refuses-a-duplicate-follow-the-money-05",
     "pause_ms": 400,
-    "v": "1a01306ce0e7"
+    "v": "39ea45180313"
    },
    {
     "index": 6,
     "name": "docs-architecture-follow-one-identity/4-the-registry-refuses-a-duplicate-follow-the-money-06",
     "pause_ms": 400,
-    "v": "1a52bd0eb113"
+    "v": "f3761f828e0c"
    },
    {
     "index": 7,
@@ -1435,7 +1435,7 @@
     "index": 4,
     "name": "docs-architecture-follow-one-identity/follow-one-identity-04",
     "pause_ms": 400,
-    "v": "c7da74b14aff"
+    "v": "05b57702df68"
    }
   ],
   "from-the-model-to-a-running-system": [
@@ -1502,42 +1502,42 @@
     "v": "a5460663198f"
    }
   ],
-  "proposed-attest-inception-before-requesting-registration": [
+  "the-booking-shows-the-inception-the-fold-shows-nothing": [
    {
     "index": 0,
-    "name": "docs-architecture-follow-one-identity/proposed-attest-inception-before-requesting-registration-00",
+    "name": "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-00",
     "pause_ms": 500,
-    "v": "c684ca615e79"
+    "v": "e798034d24d9"
    },
    {
     "index": 1,
-    "name": "docs-architecture-follow-one-identity/proposed-attest-inception-before-requesting-registration-01",
+    "name": "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-01",
     "pause_ms": 400,
-    "v": "820f42b03625"
+    "v": "a36e164c2806"
    },
    {
     "index": 2,
-    "name": "docs-architecture-follow-one-identity/proposed-attest-inception-before-requesting-registration-02",
+    "name": "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-02",
     "pause_ms": 400,
-    "v": "1c0ca49fe61b"
+    "v": "e27d598e2a61"
    },
    {
     "index": 3,
-    "name": "docs-architecture-follow-one-identity/proposed-attest-inception-before-requesting-registration-03",
+    "name": "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-03",
     "pause_ms": 400,
-    "v": "1b8a6da2ba5c"
+    "v": "221337968c39"
    },
    {
     "index": 4,
-    "name": "docs-architecture-follow-one-identity/proposed-attest-inception-before-requesting-registration-04",
+    "name": "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-04",
     "pause_ms": 400,
-    "v": "17b46d10c12d"
+    "v": "5aa0135013aa"
    },
    {
     "index": 5,
-    "name": "docs-architecture-follow-one-identity/proposed-attest-inception-before-requesting-registration-05",
+    "name": "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-05",
     "pause_ms": 400,
-    "v": "a187ca12699d"
+    "v": "16ec2c788cb1"
    }
   ],
   "the-parts-alice-depends-on": [
@@ -1571,25 +1571,19 @@
     "index": 1,
     "name": "docs-architecture-follow-one-identity/what-does-active-token-promise-01",
     "pause_ms": 400,
-    "v": "faa8b7fa3265"
+    "v": "c2fd82e711a1"
    },
    {
     "index": 2,
     "name": "docs-architecture-follow-one-identity/what-does-active-token-promise-02",
     "pause_ms": 400,
-    "v": "83ee5537d504"
+    "v": "5526f074fb7f"
    },
    {
     "index": 3,
     "name": "docs-architecture-follow-one-identity/what-does-active-token-promise-03",
     "pause_ms": 400,
-    "v": "66eab36b0d45"
-   },
-   {
-    "index": 4,
-    "name": "docs-architecture-follow-one-identity/what-does-active-token-promise-04",
-    "pause_ms": 400,
-    "v": "a825e75111d2"
+    "v": "605f4c399c7c"
    }
   ],
   "what-must-enforce-the-guarantee-on-cardano": [
@@ -1609,7 +1603,7 @@
     "index": 2,
     "name": "docs-architecture-follow-one-identity/what-must-enforce-the-guarantee-on-cardano-02",
     "pause_ms": 400,
-    "v": "e1fa23d8e829"
+    "v": "b0e2c5126a5e"
    },
    {
     "index": 3,
@@ -1629,7 +1623,7 @@
     "index": 1,
     "name": "docs-architecture-follow-one-identity/what-registration-guarantees-01",
     "pause_ms": 400,
-    "v": "f2f5b331da74"
+    "v": "7a3a62c6570f"
    },
    {
     "index": 2,
@@ -1781,7 +1775,7 @@
     "index": 3,
     "name": "docs-architecture-identity-ops/shipped-today-03",
     "pause_ms": 400,
-    "v": "bbdf72c1abf8"
+    "v": "6a018df31881"
    },
    {
     "index": 4,
@@ -2063,7 +2057,7 @@
     "index": 1,
     "name": "docs-architecture-identity-ops/top-up-new-in-the-accepted-design-01",
     "pause_ms": 400,
-    "v": "66264466ae35"
+    "v": "271d879f9dd8"
    }
   ],
   "under-the-accepted-design": [
@@ -2077,7 +2071,7 @@
     "index": 1,
     "name": "docs-architecture-identity-ops/under-the-accepted-design-01",
     "pause_ms": 400,
-    "v": "c355662ef6c6"
+    "v": "9272fbcd8612"
    },
    {
     "index": 2,
@@ -2285,7 +2279,7 @@
     "index": 2,
     "name": "docs-architecture-observer-architecture/observer-architecture-02",
     "pause_ms": 400,
-    "v": "a29b5a63799e"
+    "v": "e7ef693ca8f9"
    },
    {
     "index": 3,
@@ -2349,7 +2343,7 @@
     "index": 1,
     "name": "docs-architecture-observer-architecture/registrations-premint-fact-token-01",
     "pause_ms": 400,
-    "v": "44cca41e1044"
+    "v": "33baae98c225"
    },
    {
     "index": 2,
@@ -2605,7 +2599,7 @@
     "index": 4,
     "name": "docs-architecture-overview/architecture-overview-04",
     "pause_ms": 400,
-    "v": "5c71bfe4a943"
+    "v": "8991be1d3633"
    }
   ],
   "current-boundary-and-future-planes": [
@@ -2636,6 +2630,20 @@
     "v": "0566be249822"
    }
   ],
+  "m1-registration-flow": [
+   {
+    "index": 0,
+    "name": "docs-architecture-overview/m1-registration-flow-00",
+    "pause_ms": 500,
+    "v": "feb35cb0a931"
+   },
+   {
+    "index": 1,
+    "name": "docs-architecture-overview/m1-registration-flow-01",
+    "pause_ms": 400,
+    "v": "7623d40e8008"
+   }
+  ],
   "permissionless-does-not-mean-unauthenticated": [
    {
     "index": 0,
@@ -2653,7 +2661,7 @@
     "index": 2,
     "name": "docs-architecture-overview/permissionless-does-not-mean-unauthenticated-02",
     "pause_ms": 400,
-    "v": "7b1f2a0751b6"
+    "v": "3510c0279c0c"
    },
    {
     "index": 3,
@@ -2665,21 +2673,7 @@
     "index": 4,
     "name": "docs-architecture-overview/permissionless-does-not-mean-unauthenticated-04",
     "pause_ms": 400,
-    "v": "69a3a47bc515"
-   }
-  ],
-  "proposed-m1-registration-flow": [
-   {
-    "index": 0,
-    "name": "docs-architecture-overview/proposed-m1-registration-flow-00",
-    "pause_ms": 500,
-    "v": "e81072bc95ee"
-   },
-   {
-    "index": 1,
-    "name": "docs-architecture-overview/proposed-m1-registration-flow-01",
-    "pause_ms": 400,
-    "v": "73087e9382e5"
+    "v": "f018654abeec"
    }
   ],
   "related-pages": [
@@ -2899,7 +2893,7 @@
     "index": 2,
     "name": "docs-architecture-overview/uniqueness-the-one-shared-object-02",
     "pause_ms": 400,
-    "v": "c061284c18ae"
+    "v": "0c4afc7808f4"
    },
    {
     "index": 3,
@@ -11474,202 +11468,242 @@
   ]
  },
  "docs/design/registry-as-mpfs.md": {
-  "building-against-the-public-singular-lean-library": [
+  "booking-and-fold-economics": [
    {
     "index": 0,
-    "name": "docs-design-registry-as-mpfs/building-against-the-public-singular-lean-library-00",
+    "name": "docs-design-registry-as-mpfs/booking-and-fold-economics-00",
     "pause_ms": 500,
-    "v": "a4635822e499"
+    "v": "677e40cab8b4"
    },
    {
     "index": 1,
-    "name": "docs-design-registry-as-mpfs/building-against-the-public-singular-lean-library-01",
+    "name": "docs-design-registry-as-mpfs/booking-and-fold-economics-01",
     "pause_ms": 400,
-    "v": "40fc2b7419c4"
+    "v": "a01b31638bb4"
    },
    {
     "index": 2,
-    "name": "docs-design-registry-as-mpfs/building-against-the-public-singular-lean-library-02",
-    "pause_ms": 400,
-    "v": "77335d7c7b6e"
-   }
-  ],
-  "canonical-identity-and-exact-token": [
-   {
-    "index": 0,
-    "name": "docs-design-registry-as-mpfs/canonical-identity-and-exact-token-00",
-    "pause_ms": 500,
-    "v": "a01e1ac553d3"
-   },
-   {
-    "index": 1,
-    "name": "docs-design-registry-as-mpfs/canonical-identity-and-exact-token-01",
-    "pause_ms": 400,
-    "v": "eb817bb0efbd"
-   },
-   {
-    "index": 2,
-    "name": "docs-design-registry-as-mpfs/canonical-identity-and-exact-token-02",
-    "pause_ms": 400,
-    "v": "4e52f4fd0cc7"
+    "name": "docs-design-registry-as-mpfs/booking-and-fold-economics-02",
+    "pause_ms": 300,
+    "v": "48279ac684ce"
    },
    {
     "index": 3,
-    "name": "docs-design-registry-as-mpfs/canonical-identity-and-exact-token-03",
-    "pause_ms": 400,
-    "v": "798d4258b11c"
-   }
-  ],
-  "keri-changes-remain-pending": [
-   {
-    "index": 0,
-    "name": "docs-design-registry-as-mpfs/keri-changes-remain-pending-00",
-    "pause_ms": 500,
-    "v": "d4e673c76fda"
-   },
-   {
-    "index": 1,
-    "name": "docs-design-registry-as-mpfs/keri-changes-remain-pending-01",
-    "pause_ms": 400,
-    "v": "c52e906ee4c8"
-   },
-   {
-    "index": 2,
-    "name": "docs-design-registry-as-mpfs/keri-changes-remain-pending-02",
-    "pause_ms": 400,
-    "v": "ede78c84a5d2"
-   },
-   {
-    "index": 3,
-    "name": "docs-design-registry-as-mpfs/keri-changes-remain-pending-03",
-    "pause_ms": 400,
-    "v": "a188f6899a71"
+    "name": "docs-design-registry-as-mpfs/booking-and-fold-economics-03",
+    "pause_ms": 300,
+    "v": "d7693577a0d3"
    },
    {
     "index": 4,
-    "name": "docs-design-registry-as-mpfs/keri-changes-remain-pending-04",
-    "pause_ms": 400,
-    "v": "66ac905f065b"
+    "name": "docs-design-registry-as-mpfs/booking-and-fold-economics-04",
+    "pause_ms": 300,
+    "v": "f973314e6219"
    },
    {
     "index": 5,
-    "name": "docs-design-registry-as-mpfs/keri-changes-remain-pending-05",
+    "name": "docs-design-registry-as-mpfs/booking-and-fold-economics-05",
     "pause_ms": 400,
-    "v": "fd59bb7d92a7"
-   }
-  ],
-  "pluggability-and-the-permissioning-divergence-cagelean": [
-   {
-    "index": 0,
-    "name": "docs-design-registry-as-mpfs/pluggability-and-the-permissioning-divergence-cagelean-00",
-    "pause_ms": 500,
-    "v": "0018d6b575c7"
-   },
-   {
-    "index": 1,
-    "name": "docs-design-registry-as-mpfs/pluggability-and-the-permissioning-divergence-cagelean-01",
-    "pause_ms": 400,
-    "v": "574e3c314481"
-   },
-   {
-    "index": 2,
-    "name": "docs-design-registry-as-mpfs/pluggability-and-the-permissioning-divergence-cagelean-02",
-    "pause_ms": 400,
-    "v": "5fe6cbf5b89c"
-   },
-   {
-    "index": 3,
-    "name": "docs-design-registry-as-mpfs/pluggability-and-the-permissioning-divergence-cagelean-03",
-    "pause_ms": 300,
-    "v": "a4dc29e05754"
-   },
-   {
-    "index": 4,
-    "name": "docs-design-registry-as-mpfs/pluggability-and-the-permissioning-divergence-cagelean-04",
-    "pause_ms": 300,
-    "v": "7b1787f27965"
-   },
-   {
-    "index": 5,
-    "name": "docs-design-registry-as-mpfs/pluggability-and-the-permissioning-divergence-cagelean-05",
-    "pause_ms": 300,
-    "v": "62f774138a5a"
+    "v": "147b308c32a8"
    },
    {
     "index": 6,
-    "name": "docs-design-registry-as-mpfs/pluggability-and-the-permissioning-divergence-cagelean-06",
+    "name": "docs-design-registry-as-mpfs/booking-and-fold-economics-06",
     "pause_ms": 400,
-    "v": "de8ffeecc1f6"
-   },
-   {
-    "index": 7,
-    "name": "docs-design-registry-as-mpfs/pluggability-and-the-permissioning-divergence-cagelean-07",
-    "pause_ms": 400,
-    "v": "5e1df7eab1f8"
-   },
-   {
-    "index": 8,
-    "name": "docs-design-registry-as-mpfs/pluggability-and-the-permissioning-divergence-cagelean-08",
-    "pause_ms": 300,
-    "v": "7be712d11fd7"
-   },
-   {
-    "index": 9,
-    "name": "docs-design-registry-as-mpfs/pluggability-and-the-permissioning-divergence-cagelean-09",
-    "pause_ms": 300,
-    "v": "221622c486c0"
-   },
-   {
-    "index": 10,
-    "name": "docs-design-registry-as-mpfs/pluggability-and-the-permissioning-divergence-cagelean-10",
-    "pause_ms": 300,
-    "v": "68a3124722cc"
-   },
-   {
-    "index": 11,
-    "name": "docs-design-registry-as-mpfs/pluggability-and-the-permissioning-divergence-cagelean-11",
-    "pause_ms": 300,
-    "v": "102eeda9a20d"
-   },
-   {
-    "index": 12,
-    "name": "docs-design-registry-as-mpfs/pluggability-and-the-permissioning-divergence-cagelean-12",
-    "pause_ms": 400,
-    "v": "beb056b96ba5"
+    "v": "585336d3806a"
    }
   ],
-  "the-good-samaritan-samaritanlean": [
+  "checkpoint-and-the-associated-system": [
    {
     "index": 0,
-    "name": "docs-design-registry-as-mpfs/the-good-samaritan-samaritanlean-00",
+    "name": "docs-design-registry-as-mpfs/checkpoint-and-the-associated-system-00",
     "pause_ms": 500,
-    "v": "4f77eadcbce2"
+    "v": "e15c9060e6bb"
    },
    {
     "index": 1,
-    "name": "docs-design-registry-as-mpfs/the-good-samaritan-samaritanlean-01",
+    "name": "docs-design-registry-as-mpfs/checkpoint-and-the-associated-system-01",
     "pause_ms": 400,
-    "v": "052f3a5c6c44"
-   }
-  ],
-  "the-invariant-and-the-theorems": [
-   {
-    "index": 0,
-    "name": "docs-design-registry-as-mpfs/the-invariant-and-the-theorems-00",
-    "pause_ms": 500,
-    "v": "ceec941b912c"
-   },
-   {
-    "index": 1,
-    "name": "docs-design-registry-as-mpfs/the-invariant-and-the-theorems-01",
-    "pause_ms": 400,
-    "v": "ae9fdeb548b4"
+    "v": "a554b5bf443f"
    },
    {
     "index": 2,
-    "name": "docs-design-registry-as-mpfs/the-invariant-and-the-theorems-02",
+    "name": "docs-design-registry-as-mpfs/checkpoint-and-the-associated-system-02",
     "pause_ms": 400,
-    "v": "f6b4b213bbcc"
+    "v": "e1d543941eb0"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-registry-as-mpfs/checkpoint-and-the-associated-system-03",
+    "pause_ms": 400,
+    "v": "679bcbd3d49a"
+   }
+  ],
+  "executable-evidence-and-limits": [
+   {
+    "index": 0,
+    "name": "docs-design-registry-as-mpfs/executable-evidence-and-limits-00",
+    "pause_ms": 500,
+    "v": "2d49752cc32b"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-registry-as-mpfs/executable-evidence-and-limits-01",
+    "pause_ms": 400,
+    "v": "ebaf1afa840a"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-registry-as-mpfs/executable-evidence-and-limits-02",
+    "pause_ms": 400,
+    "v": "849fc18fcf31"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-registry-as-mpfs/executable-evidence-and-limits-03",
+    "pause_ms": 400,
+    "v": "1a296d38e280"
+   }
+  ],
+  "keris-application-on-the-public-registry": [
+   {
+    "index": 0,
+    "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-00",
+    "pause_ms": 500,
+    "v": "89853fbad156"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-01",
+    "pause_ms": 400,
+    "v": "14003601fad4"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-02",
+    "pause_ms": 400,
+    "v": "85d33b8adacd"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-03",
+    "pause_ms": 300,
+    "v": "b75cb7fb58e7"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-04",
+    "pause_ms": 300,
+    "v": "428c53cd0da1"
+   },
+   {
+    "index": 5,
+    "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-05",
+    "pause_ms": 300,
+    "v": "70b007dd05ca"
+   },
+   {
+    "index": 6,
+    "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-06",
+    "pause_ms": 300,
+    "v": "d4bab2f7b467"
+   },
+   {
+    "index": 7,
+    "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-07",
+    "pause_ms": 300,
+    "v": "ecd5c3c46885"
+   },
+   {
+    "index": 8,
+    "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-08",
+    "pause_ms": 300,
+    "v": "090b0f7df289"
+   },
+   {
+    "index": 9,
+    "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-09",
+    "pause_ms": 300,
+    "v": "24ba36871674"
+   },
+   {
+    "index": 10,
+    "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-10",
+    "pause_ms": 300,
+    "v": "8b7d79557cd1"
+   }
+  ],
+  "retiring-a-convicted-identity": [
+   {
+    "index": 0,
+    "name": "docs-design-registry-as-mpfs/retiring-a-convicted-identity-00",
+    "pause_ms": 500,
+    "v": "efd9a49b0936"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-registry-as-mpfs/retiring-a-convicted-identity-01",
+    "pause_ms": 400,
+    "v": "df2183e8c7d4"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-registry-as-mpfs/retiring-a-convicted-identity-02",
+    "pause_ms": 400,
+    "v": "3e202c3aa686"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-registry-as-mpfs/retiring-a-convicted-identity-03",
+    "pause_ms": 400,
+    "v": "6d3cbff97666"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-registry-as-mpfs/retiring-a-convicted-identity-04",
+    "pause_ms": 300,
+    "v": "2664bab8bdbe"
+   },
+   {
+    "index": 5,
+    "name": "docs-design-registry-as-mpfs/retiring-a-convicted-identity-05",
+    "pause_ms": 300,
+    "v": "6c2b34415242"
+   },
+   {
+    "index": 6,
+    "name": "docs-design-registry-as-mpfs/retiring-a-convicted-identity-06",
+    "pause_ms": 300,
+    "v": "21f056ac6a5c"
+   },
+   {
+    "index": 7,
+    "name": "docs-design-registry-as-mpfs/retiring-a-convicted-identity-07",
+    "pause_ms": 300,
+    "v": "0495f225fc5e"
+   },
+   {
+    "index": 8,
+    "name": "docs-design-registry-as-mpfs/retiring-a-convicted-identity-08",
+    "pause_ms": 300,
+    "v": "3f6cdfd2bd81"
+   },
+   {
+    "index": 9,
+    "name": "docs-design-registry-as-mpfs/retiring-a-convicted-identity-09",
+    "pause_ms": 400,
+    "v": "e79b6ea8361a"
+   },
+   {
+    "index": 10,
+    "name": "docs-design-registry-as-mpfs/retiring-a-convicted-identity-10",
+    "pause_ms": 400,
+    "v": "eb08c31e457e"
+   },
+   {
+    "index": 11,
+    "name": "docs-design-registry-as-mpfs/retiring-a-convicted-identity-11",
+    "pause_ms": 400,
+    "v": "153fcf9ec43a"
    }
   ],
   "the-machine-registrylean": [
@@ -11683,201 +11717,65 @@
     "index": 1,
     "name": "docs-design-registry-as-mpfs/the-machine-registrylean-01",
     "pause_ms": 400,
-    "v": "bd357bca89e0"
+    "v": "8ac3b32328d0"
    },
    {
     "index": 2,
     "name": "docs-design-registry-as-mpfs/the-machine-registrylean-02",
     "pause_ms": 400,
-    "v": "ec8de086c938"
+    "v": "bddb6b70bc36"
    },
    {
     "index": 3,
     "name": "docs-design-registry-as-mpfs/the-machine-registrylean-03",
     "pause_ms": 400,
-    "v": "1aabdb0c7eb5"
-   },
-   {
-    "index": 4,
-    "name": "docs-design-registry-as-mpfs/the-machine-registrylean-04",
-    "pause_ms": 400,
-    "v": "daed28441fdc"
+    "v": "a3a51c563adf"
    }
   ],
-  "the-plugins-contract-derived": [
+  "the-registry-and-retained-identity-outputs": [
    {
     "index": 0,
-    "name": "docs-design-registry-as-mpfs/the-plugins-contract-derived-00",
+    "name": "docs-design-registry-as-mpfs/the-registry-and-retained-identity-outputs-00",
     "pause_ms": 500,
-    "v": "9737596115f1"
+    "v": "c9afdbf0836b"
    },
    {
     "index": 1,
-    "name": "docs-design-registry-as-mpfs/the-plugins-contract-derived-01",
+    "name": "docs-design-registry-as-mpfs/the-registry-and-retained-identity-outputs-01",
     "pause_ms": 400,
-    "v": "0db39aeae58d"
-   }
-  ],
-  "the-registry-as-an-mpfs-instance": [
-   {
-    "index": 0,
-    "name": "docs-design-registry-as-mpfs/the-registry-as-an-mpfs-instance-00",
-    "pause_ms": 500,
-    "v": "24e85cd72754"
-   },
-   {
-    "index": 1,
-    "name": "docs-design-registry-as-mpfs/the-registry-as-an-mpfs-instance-01",
-    "pause_ms": 400,
-    "v": "610bf6511a0c"
+    "v": "1a369c2464e7"
    },
    {
     "index": 2,
-    "name": "docs-design-registry-as-mpfs/the-registry-as-an-mpfs-instance-02",
+    "name": "docs-design-registry-as-mpfs/the-registry-and-retained-identity-outputs-02",
     "pause_ms": 400,
-    "v": "429efc815e35"
-   },
-   {
-    "index": 3,
-    "name": "docs-design-registry-as-mpfs/the-registry-as-an-mpfs-instance-03",
-    "pause_ms": 400,
-    "v": "3f95eb014d64"
-   },
-   {
-    "index": 4,
-    "name": "docs-design-registry-as-mpfs/the-registry-as-an-mpfs-instance-04",
-    "pause_ms": 400,
-    "v": "c8963fd43871"
+    "v": "1d12237224d4"
    }
   ],
-  "the-rulings-verbatim-2026-09-0203": [
+  "what-registration-guarantees": [
    {
     "index": 0,
-    "name": "docs-design-registry-as-mpfs/the-rulings-verbatim-2026-09-0203-00",
+    "name": "docs-design-registry-as-mpfs/what-registration-guarantees-00",
     "pause_ms": 500,
-    "v": "00b98a4355d6"
+    "v": "610632ba54b6"
    },
    {
     "index": 1,
-    "name": "docs-design-registry-as-mpfs/the-rulings-verbatim-2026-09-0203-01",
+    "name": "docs-design-registry-as-mpfs/what-registration-guarantees-01",
     "pause_ms": 400,
-    "v": "1bf789546515"
+    "v": "3d292aa8d0da"
    },
    {
     "index": 2,
-    "name": "docs-design-registry-as-mpfs/the-rulings-verbatim-2026-09-0203-02",
-    "pause_ms": 300,
-    "v": "a8670345163e"
+    "name": "docs-design-registry-as-mpfs/what-registration-guarantees-02",
+    "pause_ms": 400,
+    "v": "bc3a0c8f5fd5"
    },
    {
     "index": 3,
-    "name": "docs-design-registry-as-mpfs/the-rulings-verbatim-2026-09-0203-03",
-    "pause_ms": 300,
-    "v": "fc18921f4856"
-   },
-   {
-    "index": 4,
-    "name": "docs-design-registry-as-mpfs/the-rulings-verbatim-2026-09-0203-04",
-    "pause_ms": 300,
-    "v": "8e2320c1ec87"
-   },
-   {
-    "index": 5,
-    "name": "docs-design-registry-as-mpfs/the-rulings-verbatim-2026-09-0203-05",
-    "pause_ms": 300,
-    "v": "e23f1deb9e2e"
-   },
-   {
-    "index": 6,
-    "name": "docs-design-registry-as-mpfs/the-rulings-verbatim-2026-09-0203-06",
-    "pause_ms": 300,
-    "v": "7bb05636cb7f"
-   },
-   {
-    "index": 7,
-    "name": "docs-design-registry-as-mpfs/the-rulings-verbatim-2026-09-0203-07",
-    "pause_ms": 300,
-    "v": "6c4db647b263"
-   },
-   {
-    "index": 8,
-    "name": "docs-design-registry-as-mpfs/the-rulings-verbatim-2026-09-0203-08",
-    "pause_ms": 300,
-    "v": "6889a475f210"
-   },
-   {
-    "index": 9,
-    "name": "docs-design-registry-as-mpfs/the-rulings-verbatim-2026-09-0203-09",
-    "pause_ms": 300,
-    "v": "eae2fb546ece"
-   },
-   {
-    "index": 10,
-    "name": "docs-design-registry-as-mpfs/the-rulings-verbatim-2026-09-0203-10",
-    "pause_ms": 300,
-    "v": "4201906418c4"
-   },
-   {
-    "index": 11,
-    "name": "docs-design-registry-as-mpfs/the-rulings-verbatim-2026-09-0203-11",
-    "pause_ms": 300,
-    "v": "6a364d86a79e"
-   },
-   {
-    "index": 12,
-    "name": "docs-design-registry-as-mpfs/the-rulings-verbatim-2026-09-0203-12",
-    "pause_ms": 300,
-    "v": "53f1aaefc608"
-   }
-  ],
-  "what-the-model-decides-that-the-lean-did-not-and-what-it-does-not-say": [
-   {
-    "index": 0,
-    "name": "docs-design-registry-as-mpfs/what-the-model-decides-that-the-lean-did-not-and-what-it-does-not-say-00",
-    "pause_ms": 500,
-    "v": "1eb1565e3305"
-   },
-   {
-    "index": 1,
-    "name": "docs-design-registry-as-mpfs/what-the-model-decides-that-the-lean-did-not-and-what-it-does-not-say-01",
-    "pause_ms": 300,
-    "v": "7fd7dbf0dc0f"
-   },
-   {
-    "index": 2,
-    "name": "docs-design-registry-as-mpfs/what-the-model-decides-that-the-lean-did-not-and-what-it-does-not-say-02",
-    "pause_ms": 300,
-    "v": "3c64f4be5550"
-   },
-   {
-    "index": 3,
-    "name": "docs-design-registry-as-mpfs/what-the-model-decides-that-the-lean-did-not-and-what-it-does-not-say-03",
-    "pause_ms": 300,
-    "v": "620ec23f4902"
-   },
-   {
-    "index": 4,
-    "name": "docs-design-registry-as-mpfs/what-the-model-decides-that-the-lean-did-not-and-what-it-does-not-say-04",
-    "pause_ms": 300,
-    "v": "fa2d89572c65"
-   },
-   {
-    "index": 5,
-    "name": "docs-design-registry-as-mpfs/what-the-model-decides-that-the-lean-did-not-and-what-it-does-not-say-05",
-    "pause_ms": 300,
-    "v": "4b1227fb45db"
-   },
-   {
-    "index": 6,
-    "name": "docs-design-registry-as-mpfs/what-the-model-decides-that-the-lean-did-not-and-what-it-does-not-say-06",
-    "pause_ms": 300,
-    "v": "7b0a2d243f8e"
-   },
-   {
-    "index": 7,
-    "name": "docs-design-registry-as-mpfs/what-the-model-decides-that-the-lean-did-not-and-what-it-does-not-say-07",
-    "pause_ms": 300,
-    "v": "f7bdb39f4741"
+    "name": "docs-design-registry-as-mpfs/what-registration-guarantees-03",
+    "pause_ms": 400,
+    "v": "5f520b72edac"
    }
   ],
   "where-the-registry-is-built": [
@@ -11891,45 +11789,13 @@
     "index": 1,
     "name": "docs-design-registry-as-mpfs/where-the-registry-is-built-01",
     "pause_ms": 400,
-    "v": "876d4bc8a31d"
+    "v": "5baf53ea9964"
    },
    {
     "index": 2,
     "name": "docs-design-registry-as-mpfs/where-the-registry-is-built-02",
     "pause_ms": 400,
-    "v": "c4cb9e8e1adb"
-   },
-   {
-    "index": 3,
-    "name": "docs-design-registry-as-mpfs/where-the-registry-is-built-03",
-    "pause_ms": 400,
-    "v": "6862b2093c63"
-   }
-  ],
-  "why-a-cage-and-why-the-leaf-carries-state": [
-   {
-    "index": 0,
-    "name": "docs-design-registry-as-mpfs/why-a-cage-and-why-the-leaf-carries-state-00",
-    "pause_ms": 500,
-    "v": "e2480f71731f"
-   },
-   {
-    "index": 1,
-    "name": "docs-design-registry-as-mpfs/why-a-cage-and-why-the-leaf-carries-state-01",
-    "pause_ms": 400,
-    "v": "ec7c0c7110b8"
-   },
-   {
-    "index": 2,
-    "name": "docs-design-registry-as-mpfs/why-a-cage-and-why-the-leaf-carries-state-02",
-    "pause_ms": 400,
-    "v": "b873fa938fdd"
-   },
-   {
-    "index": 3,
-    "name": "docs-design-registry-as-mpfs/why-a-cage-and-why-the-leaf-carries-state-03",
-    "pause_ms": 400,
-    "v": "ace1844a6e55"
+    "v": "c26648e4ae07"
    }
   ]
  },

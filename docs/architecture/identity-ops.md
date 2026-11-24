@@ -97,12 +97,12 @@ their epoch.
 
 Registration becomes a **request** against the registry: it identifies the AID,
 binds the inception evidence, and carries the bonds and a refund address chosen
-by whoever pays. It is applied in a batch by anyone. This does not require the
-raw inception to be stored in the request: the proposed
-[earlier attestation](follow-one-identity.md#proposed-attest-inception-before-requesting-registration)
-would authenticate inception validity and its initial key state. Such an
-attestation may be issued more than once; registry admission supplies checkpoint
-uniqueness. Its concrete format and validation are still to be implemented.
+by whoever pays. It is applied in a batch by anyone, who needs nothing from
+the controller: the
+[booking](follow-one-identity.md#the-booking-shows-the-inception-the-fold-shows-nothing)
+has already shown the inception evidence and published the initial key state.
+An identifier may be booked more than once; registry admission supplies checkpoint
+uniqueness.
 Application checks that the AID has **no leaf**,
 inserts one, and creates the checkpoint in the same transaction. The persistent
 leaf prevents a second first-registration of the AID, and there is no revival:

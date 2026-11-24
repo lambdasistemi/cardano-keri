@@ -107,6 +107,17 @@ theorem accepted_rival (verify : Verify) (tip : Tip) (rival : Rival)
       (rival.threshold, rival.nextKeys, rival.nextThreshold, rival.toad) := by
   simpa only [accepts, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, and_assoc] using accepted
 
+/-- The convictor presents one rival. The checkpoint observer reads the tip
+from the input and verifies this evidence at the native position being spent. -/
+structure Comparison where
+  tip : Tip
+  rival : Rival
+  deriving Repr, DecidableEq, Lean.ToJson, Lean.FromJson
+
+def Comparison.acceptsAt (comparison : Comparison) (verify : Verify) (epoch sn : Nat) : Bool :=
+  comparison.tip.epoch == epoch && comparison.tip.sn == sn &&
+    accepts verify comparison.tip comparison.rival
+
 namespace Examples
 
 -- An ordinary rotation after inception, with two controllers and one witness.

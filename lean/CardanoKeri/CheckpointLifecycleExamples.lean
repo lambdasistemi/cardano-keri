@@ -20,6 +20,8 @@ def env (aid : AID) : Env := {
     some (Duplicity.writerFixture aid 0 .inception, []) else none,
   rotationWriter := fun subject _ _ target => if subject == aid then
     some (Duplicity.writerFixture aid target .rotation) else none,
+  verifyRival := CardanoKeri.CheckpointConviction.Fixtures.verify,
+  comparison := fun e sn => some (CardanoKeri.CheckpointConviction.Fixtures.comparison aid e sn),
   convictionContext := fun epoch sn => some (Duplicity.fixture epoch sn).1,
   convictionRival := fun epoch sn => some (Duplicity.fixture epoch sn).2 }
 
@@ -47,7 +49,7 @@ the conviction shows there, naming payee 7, its opening transaction's
 validity range ending at slot 4, eligible from slot 5, expiring at slot 20. -/
 def commitment : Commitment := {
   aid := 11, deployment := deployment, keyState := rotatedLive.hash,
-  evidence := ((Duplicity.fixture 1 1).1, (Duplicity.fixture 1 1).2),
+  evidence := (CardanoKeri.CheckpointConviction.Fixtures.comparison 11 1 1).rival,
   payee := 7, openedAt := 4, eligibleAfter := 5, expiresAt := 20, marker := 1 }
 def committed : Sys :=
   { rotated with commitments := fun k => if k = commitment.marker then some commitment else rotated.commitments k }
@@ -444,4 +446,18 @@ theorem stored_context_conviction_refused :
     CardanoKeri.Registry.convictCkpt { CardanoKeri.Registry.Examples.env with duplicity := fun _ _ => false } CardanoKeri.Registry.Examples.registered 11 =
       .error "keri-conviction-refused" := by rfl
 
+
+/-- Given the reachable rotated checkpoint and its open commitment, when the
+convictor supplies the same observed rival with no separate two-event history
+lookup, then the local spend enters pending at the rotated position. -/
+theorem rotated_spend_uses_one_rival :
+    let localEnv := { env 11 with convictionContext := fun _ _ => none, convictionRival := fun _ _ => none }
+    stepFn p localEnv (.convict 7 commitment) 5 (.present rotatedLive) =
+      some ({ refund := some { addr := 42, b := 2, pool := 4 }, convictor := some { addr := 7, dreg := 3 } },
+        .terminationPending rotatedLive.hash) := by decide
+
+-- Keep the original commitment and two-event reader while removing the
+-- enforcement observer's successful signature read.
+example : stepFn p { env 11 with verifyRival := fun _ _ _ => false } (.convict 7 commitment) 5
+    (.present rotatedLive) = none := by decide
 end CardanoKeri.Checkpoint.Examples

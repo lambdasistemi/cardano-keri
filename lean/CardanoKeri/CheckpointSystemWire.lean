@@ -94,7 +94,7 @@ no witnessed rotation, deposit signature, poison quorum or conviction pair. -/
 abbrev EvidenceTable := List (AID × EnvTable)
 
 def evidenceFor (table : EvidenceTable) (aid : AID) : Env :=
-  ((table.lookup aid).getD ⟨[], [], [], [], {}⟩).toEnv
+  ((table.lookup aid).getD ⟨[], [], [], [], {}⟩).toEnv aid
 
 def cell (name : String) (p : Params) (table : EvidenceTable) (machine : Machine)
     (command : Command) : Json × Machine :=

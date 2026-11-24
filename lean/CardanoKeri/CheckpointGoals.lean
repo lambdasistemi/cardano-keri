@@ -74,7 +74,7 @@ that key state. -/
 theorem pending_only_by_conviction (p : Params) (env : Env) {a : Action} {t : Slot}
     {s : State} {f : Flow} {h : Hash} (hs : Step p env a t s f (.terminationPending h)) :
     ∃ (l : Live) (payee : Addr) (c : Commitment), s = .present l ∧ a = .convict payee c ∧
-      env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee t ∧ l.hash = h := by
+      env.acceptsRival l.epoch l.sn = true ∧ c.entitles env l payee t ∧ l.hash = h := by
   cases hs with
   | convict now payee c hdup hent => exact ⟨_, payee, c, rfl, rfl, hdup, hent, rfl⟩
 
@@ -88,12 +88,12 @@ theorem trace_pending_convicted (p : Params) (env : Env) {t : Slot} {s : State}
     {es : List (Slot × Action)} {h : Hash} (tr : Trace p env t s es (.terminationPending h)) :
     s = .terminationPending h ∨
       ∃ (t' : Slot) (payee : Addr) (c : Commitment) (l : Live), (t', Action.convict payee c) ∈ es ∧
-        env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee t' ∧ l.hash = h := by
+        env.acceptsRival l.epoch l.sn = true ∧ c.entitles env l payee t' ∧ l.hash = h := by
   suffices general : ∀ {t : Slot} {s final : State} {es : List (Slot × Action)},
       Trace p env t s es final → final = .terminationPending h →
       s = .terminationPending h ∨
         ∃ (t' : Slot) (payee : Addr) (c : Commitment) (l : Live), (t', Action.convict payee c) ∈ es ∧
-          env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee t' ∧ l.hash = h from general tr rfl
+          env.acceptsRival l.epoch l.sn = true ∧ c.entitles env l payee t' ∧ l.hash = h from general tr rfl
   intro t s final es tr target
   induction tr with
   | nil => exact Or.inl target
@@ -113,7 +113,7 @@ theorem reachable_pending_convicted (p : Params) (env : Env) {h : Hash}
     (reach : Reachable p env (.terminationPending h)) :
     ∃ (t : Slot) (es : List (Slot × Action)) (t' : Slot) (payee : Addr) (c : Commitment) (l : Live),
       Trace p env t .absent es (.terminationPending h) ∧
-      (t', Action.convict payee c) ∈ es ∧ env.duplicityAt l.epoch l.sn = true ∧
+      (t', Action.convict payee c) ∈ es ∧ env.acceptsRival l.epoch l.sn = true ∧
       c.entitles env l payee t' ∧ l.hash = h := by
   obtain ⟨t, es, tr⟩ := reach
   rcases trace_pending_convicted p env tr with absurd | ⟨t', payee, c, l, mem, dup, ent, hash⟩
@@ -424,7 +424,7 @@ theorem T5_freeze_enabled (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : 
 When Execute the local conviction transition, or compare it to its complete guard in the iff statements.
 Then The exact existing component flow and concrete duplicity guard remain; the target is pending at the source hash. Both iff directions remain obligations. Enabled clauses are local applicability only, not a claim that an arbitrary economic request can be booked. -/
 theorem T5_convict_enabled (p : Params) (env : Env) (t : Slot) (l : Live) (payee : Addr)
-    (c : Commitment) (hdup : env.duplicityAt l.epoch l.sn = true)
+    (c : Commitment) (hdup : env.acceptsRival l.epoch l.sn = true)
     (hent : c.entitles env l payee t) :
     ∃ f, Step p env (.convict payee c) t (.present l) f (.terminationPending l.hash) := by
   exact ⟨_, Step.convict t payee c hdup hent⟩
@@ -986,7 +986,7 @@ theorem T12_convict_exact (p : Params) (env : Env) {a : Action} {t : Slot} {l : 
       f = { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },
             convictor := some { addr := payee, dreg := p.D } } ∧
       c.entitles env l payee t) ∧
-    env.duplicityAt l.epoch l.sn = true := by
+    env.acceptsRival l.epoch l.sn = true := by
   cases h with
   | convict _ _ _ hdup hent => exact ⟨rfl, ⟨_, _, rfl, rfl, hent⟩, hdup⟩
 
@@ -1267,7 +1267,7 @@ theorem Step.convict_iff {p : Params} {env : Env} (l : Live) (now : Slot) (payee
     Step p env (.convict payee c) now (.present l)
       { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },
         convictor := some { addr := payee, dreg := p.D } } (.terminationPending l.hash) ↔
-    env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee now := by
+    env.acceptsRival l.epoch l.sn = true ∧ c.entitles env l payee now := by
   constructor
   · intro h
     cases h with
@@ -1363,6 +1363,6 @@ variable (p : Params) (env : Env)
   Step p env (.convict payee c) now (.present l)
     { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },
       convictor := some { addr := payee, dreg := p.D } } (.terminationPending l.hash) ↔
-  env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee now)
+  env.acceptsRival l.epoch l.sn = true ∧ c.entitles env l payee now)
 
 end CheckpointInversionExactTypes

@@ -205,13 +205,13 @@ namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T12_convicted_terminal : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {f : Flow} {s' : State} (_h : Step p env a t .convicted f s'), False)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T12_convict_exact : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live} {f : Flow} {pendingKey : Hash} (_h : Step p env a t (.present l) f (.terminationPending pendingKey)), pendingKey = l.hash ∧ (∃ payee c, a = .convict payee c ∧ f = { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool }, convictor := some { addr := payee, dreg := p.D } } ∧ c.entitles env l payee t) ∧ env.duplicityAt l.epoch l.sn = true)
+#check (@CardanoKeri.Checkpoint.T12_convict_exact : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live} {f : Flow} {pendingKey : Hash} (_h : Step p env a t (.present l) f (.terminationPending pendingKey)), pendingKey = l.hash ∧ (∃ payee c, a = .convict payee c ∧ f = { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool }, convictor := some { addr := payee, dreg := p.D } } ∧ c.entitles env l payee t) ∧ env.acceptsRival l.epoch l.sn = true)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.Step.convict_iff : ∀ {p : Params} {env : Env} (l : Live) (now : Slot) (payee : Addr) (c : Commitment), Step p env (.convict payee c) now (.present l) { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool }, convictor := some { addr := payee, dreg := p.D } } (.terminationPending l.hash) ↔ env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee now)
+#check (@CardanoKeri.Checkpoint.Step.convict_iff : ∀ {p : Params} {env : Env} (l : Live) (now : Slot) (payee : Addr) (c : Commitment), Step p env (.convict payee c) now (.present l) { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool }, convictor := some { addr := payee, dreg := p.D } } (.terminationPending l.hash) ↔ env.acceptsRival l.epoch l.sn = true ∧ c.entitles env l payee now)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.convict_requires_concrete_pair : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live} {f : Flow} (_h : Step p env a t (.present l) f (.terminationPending l.hash)), ∃ context rival, env.convictionContext l.epoch l.sn = some context ∧ env.convictionRival l.epoch l.sn = some rival ∧ context.epoch = l.epoch ∧ context.accepted.event.sn = l.sn ∧ Duplicity.rotationValid context.prior context.accepted = true ∧ Duplicity.rotationValid context.prior rival = true ∧ context.accepted.event.sn = rival.event.sn ∧ context.accepted.event ≠ rival.event)
+#check (@CardanoKeri.Checkpoint.conviction_has_spent_tip_comparison : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live} {f : Flow} {key : KeyState}, Step p env a t (.present l) f (.terminationPending key) → ∃ comparison, env.comparison l.epoch l.sn = some comparison ∧ comparison.tip.epoch = l.epoch ∧ comparison.tip.sn = l.sn ∧ CardanoKeri.CheckpointConviction.accepts env.verifyRival comparison.tip comparison.rival = true)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.old_pair_cannot_convict_new_target : ∀ (epoch sn next : Nat) (context : Duplicity.Context) (rival : Duplicity.SignedEvent) (_old : Duplicity.duplicityAt epoch sn context rival = true) (_later : sn < next), Duplicity.duplicityAt epoch next context rival = false)
@@ -223,7 +223,7 @@ namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.Env.inception_duplicity_refused : ∀ (env : Env) (epoch : Epoch), env.duplicityAt epoch 0 = false)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T5_convict_enabled : ∀ (p : Params) (env : Env) (t : Slot) (l : Live) (payee : Addr) (c : Commitment) (_hdup : env.duplicityAt l.epoch l.sn = true) (_hent : c.entitles env l payee t), ∃ f, Step p env (.convict payee c) t (.present l) f (.terminationPending l.hash))
+#check (@CardanoKeri.Checkpoint.T5_convict_enabled : ∀ (p : Params) (env : Env) (t : Slot) (l : Live) (payee : Addr) (c : Commitment) (_hdup : env.acceptsRival l.epoch l.sn = true) (_hent : c.entitles env l payee t), ∃ f, Step p env (.convict payee c) t (.present l) f (.terminationPending l.hash))
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T6_dreg_never_a_fee : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {s s' : State} {f : Flow} (_h : Step p env a t s f s'), Payment?.dreg f.hunter = 0 ∧ (Payment?.dreg f.refund ≠ 0 → Payment?.dreg f.refund = p.D ∧ s.dregHeld p = p.D ∧ s'.dregHeld p = 0) ∧ (Payment?.dreg f.convictor ≠ 0 → Payment?.dreg f.convictor = p.D ∧ s.dregHeld p = p.D ∧ ∃ l, s = .present l ∧ s' = .terminationPending l.hash))

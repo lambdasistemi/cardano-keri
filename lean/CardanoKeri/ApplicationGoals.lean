@@ -1640,7 +1640,7 @@ theorem termination_approval_requires_conviction (i : Interpretation) (env : Env
         (c : CardanoKeri.Checkpoint.Commitment) (l : CardanoKeri.Checkpoint.Live),
         CardanoKeri.Checkpoint.Trace cp cenv t .absent es (.terminationPending k) ∧
         (t', CardanoKeri.Checkpoint.Action.convict payee c) ∈ es ∧
-        cenv.duplicityAt l.epoch l.sn = true ∧ c.entitles cenv l payee t' ∧ l.hash = k := by
+        cenv.acceptsRival l.epoch l.sn = true ∧ c.entitles cenv l payee t' ∧ l.hash = k := by
   obtain ⟨_, c, input, _, d, k, hc, mem, credential, _, _, hd, sameKey, state, _⟩ :=
     termination_approval_requires_pending i env rp cp release o ok unique minted
   have reach := realized c input d hc mem credential hd

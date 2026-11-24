@@ -65,7 +65,7 @@ opened by a transaction whose validity range ends at `openedAt`, eligible from
 the next slot, expiring eighteen slots later. -/
 def commitmentAt (epoch : Epoch) (sn : Seq) (payee : Addr) (openedAt : Slot) : Commitment :=
   { aid := 0, deployment := 0, keyState := ⟨epoch, sn⟩,
-    evidence := CardanoKeri.Duplicity.fixture epoch sn, payee,
+    evidence := (CardanoKeri.CheckpointConviction.Fixtures.comparison 0 epoch sn).rival, payee,
     openedAt, eligibleAfter := openedAt + 1, expiresAt := openedAt + 18, marker := 1 }
 
 structure Seed where

@@ -44,8 +44,8 @@ relaying the later rotation supplies its public event, signatures and receipts
 to the checkpoint observer. For deposit, the controller additionally signs the
 spend-bound intent with the successor keys. For poison, the controller presents
 the current-key quorum in the modeled poison spend. For conviction, the
-convictor supplies authenticated first-seen context and a rival from public
-KERI history to the modeled conviction spend. -/
+convictor presents one rival. The enforcement observer checks it against the
+spent tip. The separate two-event read serves the KERI conformance question. -/
 structure Env where
 
   rotationTo : Epoch → Seq → Seq → Bool
@@ -55,6 +55,12 @@ structure Env where
 
   quorum : Epoch → Bool
 
+  -- The enforcement observer decodes the spent active datum and the rival in
+  -- the same checkpoint transaction. Signature verification is a primitive.
+  comparison : Epoch → Seq → Option CheckpointConviction.Comparison := fun _ _ => none
+  verifyRival : CheckpointConviction.Verify := fun _ _ _ => false
+
+  -- A history reader can independently evaluate the KERI two-event definition.
   convictionContext : Epoch → Seq → Option CardanoKeri.Duplicity.Context
 
   convictionRival : Epoch → Seq → Option CardanoKeri.Duplicity.SignedEvent
@@ -85,14 +91,18 @@ def Env.duplicityAt (env : Env) (epoch : Epoch) (sn : Seq) : Bool :=
   | some context, some rival => CardanoKeri.Duplicity.duplicityAt epoch sn context rival
   | _, _ => false
 
-/-- The evidence a conviction shows at a key state: the authenticated first-seen
-context and the rival event. The environment supplies at most one per key state. -/
-abbrev Evidence := CardanoKeri.Duplicity.Context × CardanoKeri.Duplicity.SignedEvent
+/-- The local enforcement decision checks the spent native position. -/
+def Env.acceptsRival (env : Env) (epoch : Epoch) (sn : Seq) : Bool :=
+  ((env.comparison epoch sn).map (fun c => c.acceptsAt env.verifyRival epoch sn)).getD false
 
-def Env.evidenceAt (env : Env) (epoch : Epoch) (sn : Seq) : Option Evidence :=
-  match env.convictionContext epoch sn, env.convictionRival epoch sn with
-  | some context, some rival => some (context, rival)
-  | _, _ => none
+/-- The commitment binds the decoded observer evidence for one rival. The
+wire offsets and canonical encoding of the complete evidence digest are
+technical representation obligations of the enforcement observer. -/
+abbrev Evidence := CheckpointConviction.Rival
+
+def Env.evidenceAt (env : Env) (aid : AID) (epoch : Epoch) (sn : Seq) : Option Evidence := do
+  let comparison ← env.comparison epoch sn
+  if comparison.rival.aid = aid then some comparison.rival else none
 
 def Env.bondOpOk (env : Env) (e : Epoch) : BondOp → Bool
   | .keep => true
@@ -171,7 +181,7 @@ it names `l`'s key state, the evidence the conviction shows there, this payee,
 and `now` is inside its window. The identifier and the deployment are checked by
 the system, which knows them (`Sys.revealOpen`). -/
 def Commitment.entitles (env : Env) (c : Commitment) (l : Live) (payee : Addr) (now : Slot) : Prop :=
-  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧
+  c.keyState = l.hash ∧ env.evidenceAt c.aid l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧
     c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt
 
 instance (env : Env) (c : Commitment) (l : Live) (payee : Addr) (now : Slot) :
@@ -338,7 +348,7 @@ inductive Step (p : Params) (env : Env) : Action → Slot → State → Flow →
         (.present { l with pool := l.pool + x, toppedUp := true })
 
   | convict {l : Live} (now : Slot) (payee : Addr) (c : Commitment)
-      (hdup : env.duplicityAt l.epoch l.sn = true)
+      (hdup : env.acceptsRival l.epoch l.sn = true)
       (hent : c.entitles env l payee now) :
       Step p env (.convict payee c) now (.present l)
         { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },
@@ -388,7 +398,7 @@ def stepFn (p : Params) (env : Env) (a : Action) (now : Slot) (s : State) : Opti
         some ({ poolIn := x }, .present { l with pool := l.pool + x, toppedUp := true })
       else none
   | .convict payee c, .present l =>
-      if env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee now then
+      if env.acceptsRival l.epoch l.sn = true ∧ c.entitles env l payee now then
         some ({ refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },
                 convictor := some { addr := payee, dreg := p.D } },
               .terminationPending l.hash)

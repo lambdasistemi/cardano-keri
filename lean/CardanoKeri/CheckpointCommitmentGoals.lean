@@ -39,7 +39,7 @@ the environment shows at `l`'s key state and `payee`, and the slot lies in its
 window. -/
 theorem convict_requires_entitlement (p : Params) (env : Env) {payee : Addr} {c : Commitment}
     {t : Slot} {s s' : State} {f : Flow} (h : Step p env (.convict payee c) t s f s') :
-    ∃ l, s = .present l ∧ env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee t := by
+    ∃ l, s = .present l ∧ env.acceptsRival l.epoch l.sn = true ∧ c.entitles env l payee t := by
   cases h with
   | convict _ _ _ hdup hent => exact ⟨_, rfl, hdup, hent⟩
 
@@ -83,7 +83,7 @@ the output's key state.
 When the conviction is attempted with any payee at any slot.
 Then it is refused. -/
 theorem convict_refused_for_other_evidence (p : Params) (env : Env) {l : Live} {payee : Addr}
-    {c : Commitment} {t : Slot} (hother : env.evidenceAt l.epoch l.sn ≠ some c.evidence) :
+    {c : Commitment} {t : Slot} (hother : env.evidenceAt c.aid l.epoch l.sn ≠ some c.evidence) :
     ∀ f s', ¬ Step p env (.convict payee c) t (.present l) f s' :=
   (convict_refused_without_entitlement p env (fun h => hother h.2.1)).1
 
@@ -128,25 +128,28 @@ theorem convict_refused_in_opening_slot (p : Params) (env : Env) {l : Live} {pay
   convict_refused_before_eligible p env
     (Nat.not_le.mp fun h => Nat.not_lt.mpr hsame ((commitment_eligible_from_next_slot hformed t).mp h))
 
-/-- **The committed evidence is the duplicity proved.**
-Given a conviction of a live output `l` revealing commitment `c`.
-When the commitment's evidence is read.
-Then that evidence, as a context and a rival, proves duplicity at `l`'s key state. -/
-theorem convict_committed_evidence_is_duplicity (p : Params) (env : Env) {payee : Addr}
+/-- Given a local conviction, when the commitment is revealed, then its
+evidence is the very rival whose comparison the enforcement observer accepts.
+The tip and the rival both name the commitment's identifier. -/
+theorem conviction_checks_committed_rival (p : Params) (env : Env) {payee : Addr}
     {c : Commitment} {t : Slot} {l : Live} {f : Flow} {s' : State}
     (h : Step p env (.convict payee c) t (.present l) f s') :
-    CardanoKeri.Duplicity.duplicityAt l.epoch l.sn c.evidence.1 c.evidence.2 = true := by
-  obtain ⟨_, hl, hdup, hent⟩ := convict_requires_entitlement p env h
+    ∃ comparison, env.comparison l.epoch l.sn = some comparison ∧
+      comparison.tip.aid = c.aid ∧ comparison.tip.epoch = l.epoch ∧ comparison.tip.sn = l.sn ∧
+      comparison.rival = c.evidence ∧ CheckpointConviction.accepts env.verifyRival comparison.tip c.evidence = true := by
+  obtain ⟨_, hl, accepted, entitled⟩ := convict_requires_entitlement p env h
   cases hl
-  have hev := hent.2.1
-  unfold Env.duplicityAt at hdup
-  unfold Env.evidenceAt at hev
-  revert hdup hev
-  cases env.convictionContext l.epoch l.sn <;> cases env.convictionRival l.epoch l.sn <;>
-    simp
-  intro hdup hev
-  rw [← hev]
-  exact hdup
+  have read := entitled.2.1
+  cases found : env.comparison l.epoch l.sn with
+  | none => simp [Env.acceptsRival, found] at accepted
+  | some comparison =>
+    simp only [Env.acceptsRival, found, Option.map_some, Option.getD_some,
+      CheckpointConviction.Comparison.acceptsAt, Bool.and_eq_true, beq_iff_eq] at accepted
+    by_cases named : comparison.rival.aid = c.aid
+    · simp [Env.evidenceAt, found, named] at read
+      obtain ⟨_, aid, _⟩ := CheckpointConviction.accepted_rival _ _ _ accepted.2
+      exact ⟨_, rfl, aid.trans named, accepted.1.1, accepted.1.2, read, read ▸ accepted.2⟩
+    · simp [Env.evidenceAt, found, named] at read
 
 /-! ## A commitment follows the key state, not the output -/
 

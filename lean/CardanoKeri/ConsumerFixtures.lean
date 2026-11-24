@@ -22,7 +22,7 @@ def evidence : TraceWire.EnvTable := {
   quorum := List.range 13
   duplicityAt := (List.range 13).map fun n => (n, n)
   writers := TraceWire.WriterTable.fixture 11 711 ((List.range 12).map fun n => (n, n, n + 1)) }
-def ce : Env := evidence.toEnv
+def ce : Env := evidence.toEnv 11
 def registryEnvironment : CardanoKeri.Registry.TraceWire.EnvTable := {
   inception := [11, 12, 13],
   duplicity := [11, 12, 13].flatMap fun aid => (List.range 13).map fun n => (aid, n) }

@@ -15,16 +15,18 @@ def env : Env := {
   rotationTo := fun e sn next => decide (e = 1 ∧ sn = 1 ∧ next = 2)
   depositAuthorized := fun e => decide (e = 2)
   quorum := fun _ => true
+  verifyRival := CardanoKeri.CheckpointConviction.Fixtures.verify,
+  comparison := fun e sn => some (CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn),
   convictionContext := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).1
   convictionRival := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).2 }
 -- The rival is the accepted event itself: evidence is shown, but it proves no duplicity.
-def noDup : Env := { env with convictionRival := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).1.accepted }
+def noDup : Env := { env with comparison := fun e sn => some (CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn true) }
 /-- A commitment entitling payee 8 to convict the key state of `l` at slots 6 to 20,
 for AID 11 in deployment 21. -/
 def k : Commitment := {
-  aid := 11, deployment := 21, keyState := l.hash, evidence := CardanoKeri.Duplicity.fixture 1 1, payee := 8,
+  aid := 11, deployment := 21, keyState := l.hash, evidence := (CardanoKeri.CheckpointConviction.Fixtures.comparison 11 1 1).rival, payee := 8,
   openedAt := 5, eligibleAfter := 6, expiresAt := 20, marker := 1 }
-def kNoDup : Commitment := { k with evidence := ((CardanoKeri.Duplicity.fixture 1 1).1, (CardanoKeri.Duplicity.fixture 1 1).1.accepted) }
+def kNoDup : Commitment := { k with evidence := (CardanoKeri.CheckpointConviction.Fixtures.comparison 11 1 1 true).rival }
 /-- The same commitment made for deployment 22, under its own marker. -/
 def foreign : Commitment := { k with deployment := 22, marker := 2 }
 /-- A system of deployment `d` holding both `k` and `foreign` open. -/
@@ -108,7 +110,7 @@ def observations (target : Option String) : Except String Unit := do
     | some (_, s) => (run env s (.convict 8 k)).isSome
     | none => false)
   check "commitment-other-evidence-refused" ((run env (.present l)
-    (.convict 8 { k with evidence := CardanoKeri.Duplicity.fixture 2 2 })).isNone)
+    (.convict 8 { k with evidence := (CardanoKeri.CheckpointConviction.Fixtures.comparison 11 2 2).rival })).isNone)
   check "commitment-opening-slot-refused" ((stepFn p env (.convict 8 k) 5 (.present l)).isNone)
   check "commitment-first-eligible-slot-accepted" ((stepFn p env (.convict 8 k) 6 (.present l)).isSome)
   check "commitment-last-slot-accepted" ((stepFn p env (.convict 8 k) 20 (.present l)).isSome)

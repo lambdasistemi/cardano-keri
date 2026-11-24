@@ -31,8 +31,8 @@ inductive Shown where
   deriving DecidableEq, Repr
 
 def Shown.evidence : Shown → Evidence
-  | .duplicity e sn => CardanoKeri.Duplicity.fixture e sn
-  | .sameEvent e sn => ((CardanoKeri.Duplicity.fixture e sn).1, (CardanoKeri.Duplicity.fixture e sn).1.accepted)
+  | .duplicity e sn => (CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn).rival
+  | .sameEvent e sn => (CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn true).rival
 
 def Shown.json : Shown → Json
   | .duplicity e sn => Json.mkObj [("duplicity", toJson [e, sn])]
@@ -42,6 +42,8 @@ def Shown.json : Shown → Json
 a rival equal to the accepted event, which proves nothing. -/
 def envFor (rivalIsAccepted : Bool) : Env := {
   rotationTo := fun _ _ _ => false, depositAuthorized := fun _ => false, quorum := fun _ => false,
+  verifyRival := CardanoKeri.CheckpointConviction.Fixtures.verify,
+  comparison := fun e sn => some (CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn rivalIsAccepted),
   convictionContext := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).1,
   convictionRival := fun e sn => some (if rivalIsAccepted then (CardanoKeri.Duplicity.fixture e sn).1.accepted
     else (CardanoKeri.Duplicity.fixture e sn).2) }

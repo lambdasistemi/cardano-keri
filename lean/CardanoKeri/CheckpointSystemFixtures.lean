@@ -44,7 +44,7 @@ naming payee 7: opened by a transaction whose validity range ends at slot 4,
 eligible from slot 5, expiring at slot 20. -/
 def commitment : Commitment := {
   aid := 11, deployment := deployment, keyState := rotatedAgainLive.hash,
-  evidence := ((Duplicity.fixture 2 2).1, (Duplicity.fixture 2 2).2),
+  evidence := (CardanoKeri.CheckpointConviction.Fixtures.comparison 11 2 2).rival,
   payee := 7, openedAt := 4, eligibleAfter := 5, expiresAt := 20, marker := 1 }
 /-- Another deployment, holding a checkpoint for the same AID. -/
 def otherDeployment : Deployment := 22
@@ -53,7 +53,7 @@ def foreignCommitment : Commitment := { commitment with deployment := otherDeplo
 /-- A commitment opened one rotation earlier, while the checkpoint carries key state
 (1, 1): its opening transaction's validity range ends at slot 3. -/
 def earlierCommitment : Commitment := { commitment with
-  keyState := ⟨1, 1⟩, evidence := ((Duplicity.fixture 1 1).1, (Duplicity.fixture 1 1).2),
+  keyState := ⟨1, 1⟩, evidence := (CardanoKeri.CheckpointConviction.Fixtures.comparison 11 1 1).rival,
   openedAt := 3, eligibleAfter := 4, marker := 2 }
 def openCommand : Command := .openCommitment commitment
 def convictedCommand : Command := .local 11 5 (.convict 7 commitment)

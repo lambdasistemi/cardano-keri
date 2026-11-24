@@ -140,7 +140,7 @@ def journey : Except String Journey := do
   -- of the mature output and the evidence at
   -- it, then convicts once it is eligible.
   let .present output := live.certified.state.states context.aid | throw "mature-output-missing"
-  let some shown := evidence.toEnv.evidenceAt output.epoch output.sn | throw "conviction-evidence-missing"
+  let some shown := (evidence.toEnv context.aid).evidenceAt context.aid output.epoch output.sn | throw "conviction-evidence-missing"
   let commitment : CardanoKeri.Checkpoint.Commitment := {
     aid := context.aid, deployment, keyState := output.hash, evidence := shown, payee := 7,
     openedAt := 35, eligibleAfter := 36, expiresAt := 50, marker := 1 }

@@ -190,6 +190,7 @@ library deployment
     Cardano.KERI.Deployment.Freeze
     Cardano.KERI.Deployment.KEL
     Cardano.KERI.Deployment.KoiosRuntime
+    Cardano.KERI.Deployment.KoiosSettlement
     Cardano.KERI.Deployment.LiveRuntime
     Cardano.KERI.Deployment.Manifest
     Cardano.KERI.Deployment.NodeSocketRuntime
@@ -450,6 +451,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.FreezePackageSpec
     Cardano.KERI.Deployment.KELSpec
     Cardano.KERI.Deployment.KoiosReadsSpec
+    Cardano.KERI.Deployment.KoiosSettlementSpec
     Cardano.KERI.Deployment.ManifestSpec
     Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.RegistrationSpec

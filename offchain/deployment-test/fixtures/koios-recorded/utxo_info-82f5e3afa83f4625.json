@@ -1,0 +1,70 @@
+{
+    "answer": {
+        "body": "[{\"tx_hash\":\"5c98bb45cc3e0879a63aa5807dff7f3809ae934ccbcac54f547c189bb4e8701c\",\"tx_index\":0,\"address\":\"addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d\",\"value\":\"100000000\",\"stake_address\":null,\"payment_cred\":\"8883cdb714313b7ac38246c1dd8d6fc3f804f153c1f1c4ca38561ba0\",\"epoch_no\":303,\"block_height\":4989276,\"block_time\":1785249311,\"datum_hash\":null,\"inline_datum\":null,\"reference_script\":null,\"asset_list\":null,\"is_spent\":false}, \n {\"tx_hash\":\"c1ebe8b9a69160a04a9e490d4ab1149882f945774fba0cffac2dec7e6886b26f\",\"tx_index\":0,\"address\":\"addr_test1vzyg8ndhzscnk7krsfrvrhvddlplsp8320qlr3x28ptphgqlxnx9d\",\"value\":\"100000000\",\"stake_address\":null,\"payment_cred\":\"8883cdb714313b7ac38246c1dd8d6fc3f804f153c1f1c4ca38561ba0\",\"epoch_no\":303,\"block_height\":4989278,\"block_time\":1785249354,\"datum_hash\":null,\"inline_datum\":null,\"reference_script\":null,\"asset_list\":null,\"is_spent\":false}]",
+        "headers": [
+            [
+                "date",
+                "Tue, 24 Nov 2026 03:23:23 GMT"
+            ],
+            [
+                "content-range",
+                "0-1/*"
+            ],
+            [
+                "content-type",
+                "application/json; charset=utf-8"
+            ],
+            [
+                "transfer-encoding",
+                "chunked"
+            ],
+            [
+                "content-encoding",
+                "gzip"
+            ],
+            [
+                "access-control-allow-origin",
+                "*"
+            ],
+            [
+                "vary",
+                "Origin"
+            ],
+            [
+                "access-control-allow-headers",
+                "Content-Type, Accept, Authorization"
+            ],
+            [
+                "access-control-allow-methods",
+                "GET, HEAD, OPTIONS, POST, PATCH"
+            ],
+            [
+                "access-control-max-age",
+                "600"
+            ],
+            [
+                "x-frame-options",
+                "DENY"
+            ]
+        ],
+        "status": 200
+    },
+    "recorded_at": "2026-11-24T03:23:23.812697495Z",
+    "request": {
+        "body": {
+            "json": {
+                "_extended": false,
+                "_utxo_refs": [
+                    "5c98bb45cc3e0879a63aa5807dff7f3809ae934ccbcac54f547c189bb4e8701c#0",
+                    "c1ebe8b9a69160a04a9e490d4ab1149882f945774fba0cffac2dec7e6886b26f#0"
+                ]
+            }
+        },
+        "call": "utxo_info",
+        "method": "POST",
+        "path": "/utxo_info",
+        "query": []
+    },
+    "schema_revision": "v1.4.2",
+    "sha256": "49b79ab363187754b7b6cf0150d95e6064f7fd0933e2b1b2932c6efca0e27a8f"
+}

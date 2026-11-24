@@ -1,5 +1,6 @@
 import CardanoKeri.ConsumerFixtures
 import CardanoKeri.ConsumerWire
+import CardanoKeri.ReaderStatus
 
 /-! Connected model journey, beginning with actual genesis and both registration
 folds. Local holding observations use an explicit finite datum interpretation;
@@ -18,27 +19,54 @@ def tables (st : State) (raw : Nat := 711) : Wire.Tables :=
     hashes := domain.map fun p => (interpretation.code p, interpretation.hash (interpretation.code p))
     datums := [(context.release, raw, ⟨context.aid, st⟩)] }
 
+/-- The termination request a booking places: at the application's
+credential, with an empty datum, holding the representative asset and the
+termination approval of the registry and key, at the reference the booking
+records. -/
+def requestHolding (reference : Singular.OutRef) (lovelace : Nat) : AH.ObservedOutput :=
+  { reference, credential := context.release.applicationCredential, lovelace, datum := .empty,
+    assets := [(representativeAsset interpretation context, 1),
+      (SingularApplicationHeld.terminationApproval interpretation.hash interpretation.code
+        context.release (registryAsset interpretation context)
+        (interpretation.keyOf context.aid), 1)] }
+
 /-- Chosen observation interpretation for current model states. References and
 raw datum numbers are fresh fixture labels, not derived ledger artifacts.
-No holding is created for absent or terminal states. -/
-def observe (initial : AH.ObservedOutput) (st : State) (serial : Nat) : Option AH.ObservedOutput :=
+Once the termination is booked the holding is the termination request, at the
+reference the system records for the booking: the booking spends the
+checkpoint. No holding is created for absent or terminal states. -/
+def observe (initial : AH.ObservedOutput) (st : State) (pending : Option PendingAssociation)
+    (serial : Nat) : Option AH.ObservedOutput :=
   if serial == 0 then some initial
-  else if st.hasOutput then some { initial with
-    reference := ⟨1000 + serial, 0⟩, datum := .application (711 + serial) }
-  else none
+  else match pending with
+    | some association => some (requestHolding association.reference initial.lovelace)
+    | none =>
+      if st.hasOutput then some { initial with
+        reference := ⟨1000 + serial, 0⟩, datum := .application (711 + serial) }
+      else none
 
-def query (initial : AH.ObservedOutput) (st : State) (serial now : Nat) : Wire.Query :=
+def query (initial : AH.ObservedOutput) (st : State) (pending : Option PendingAssociation)
+    (serial now : Nat) : Wire.Query :=
   { tables := tables st (711 + serial), context,
     environment := ⟨context.network, some context.release, some context.checkpointCredential⟩, params := cp, now,
-    holding := (observe initial st serial).getD { initial with assets := [], datum := .empty } }
+    holding := (observe initial st pending serial).getD { initial with assets := [], datum := .empty } }
 
 def snapshot (name : String) (initial : AH.ObservedOutput) (machine : Machine)
     (serial now : Nat) : Json :=
   let st := machine.certified.state.states context.aid
+  let pending := machine.certified.state.pending context.aid
   Json.mkObj [("name", toJson name), ("now", toJson now),
-    ("system", stateJson machine), ("holding", toJson (observe initial st serial)),
+    ("system", stateJson machine), ("holding", toJson (observe initial st pending serial)),
     ("logicalAsset", toJson (heldRepresentative interpretation context st)),
-    ("consumer", Wire.cell name (query initial st serial now))]
+    ("consumer", Wire.cell name (query initial st pending serial now))]
+
+/-- What a reader answers from the holders alone at one frame. -/
+def readerAnswer (holders : List AH.ObservedOutput) : ReaderStatus.Status :=
+  ReaderStatus.classify interpretation context
+    { point := 0,
+      environment := ⟨context.network, some context.release, some context.checkpointCredential⟩,
+      holding := some { point := 0, asset := representativeAsset interpretation context, holders },
+      history := none }
 
 def registrationCommand (q : RegistrationInput) : Command :=
   .register context.aid q.now q.refund q.pool
@@ -123,6 +151,15 @@ def journey : Except String Journey := do
   let booking ← CardanoKeri.Registry.Scenarios.termination before context.aid 200
   let booked ← advance pending (.book context.aid 7 1 history booking)
   let some association := booked.certified.state.pending context.aid | throw "association-missing"
+  -- The booked frame shows the request the booking placed, and a reader answers
+  -- pending termination from it and names it.
+  let some shownBooked := observe r.holding (booked.certified.state.states context.aid)
+    (some association) (serial + 2) | throw "booked-holding-missing"
+  unless shownBooked.reference == association.reference do throw "booked-holding-is-not-the-booked-request"
+  unless decide (ReaderStatus.custodyOf interpretation context shownBooked = .request) do
+    throw "booked-holding-is-not-a-termination-request"
+  unless decide (readerAnswer [shownBooked] = .pendingTermination) do
+    throw "booked-holding-is-not-answered-pending-termination"
   let (u, tx) ← S.foldTransaction association.booked [booking.request.reference] 40 1 1
   let (u, tx) ← connectStateReference q.fullFold.after.state.reference u tx
   let completion : FoldCertificate := ⟨[], u, tx⟩

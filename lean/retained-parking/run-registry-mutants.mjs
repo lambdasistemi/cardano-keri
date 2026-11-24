@@ -10,7 +10,13 @@ fs.mkdirSync(campaign, { recursive: true });
 const lean = process.env.LEAN_BIN ?? 'lean';
 const upstream = path.join(repo, 'lean/.lake/packages/singular/.lake/build/lib/lean');
 const model = process.argv[3] ?? 'Registry';
-if (!['Registry', 'Checkpoint', 'Samaritan', 'Application'].includes(model)) throw Error('unknown model');
+if (!['Registry', 'Checkpoint', 'Samaritan', 'Application', 'ReaderStatus'].includes(model)) throw Error('unknown model');
+// Models whose campaign rebuilds a vector module against the mutated model
+// and checks the committed table: the vector module, the table, the manifest.
+const vectorCampaigns = {
+  Application: ['ApplicationVectors', 'application-vectors.json', 'application-mutants.json'],
+  ReaderStatus: ['ReaderStatusVectors', 'reader-status-vectors.json', 'reader-status-mutants.json'] };
+const vectorCampaign = vectorCampaigns[model];
 const fullSource = fs.readFileSync(path.join(repo, `lean/CardanoKeri/${model}.lean`), 'utf8');
 // Economic mutations execute the exact definition prefix without importing
 // its proof suffix. A proof elaboration failure cannot count as a runtime kill.
@@ -20,10 +26,11 @@ const source = model === 'Samaritan'
 if (model === 'Samaritan' && !fullSource.includes('/-- Given every nonnegative')) throw Error('definition-prefix boundary missing');
 // The application campaign rebuilds its vectors against the mutated model and
 // checks them against the committed table.
-const fixtureModule = model === 'Application' ? 'ApplicationVectors' : 'RegistryScenarioFixtures';
+const fixtureModule = vectorCampaign ? vectorCampaign[0] : 'RegistryScenarioFixtures';
 const fixtures = fs.readFileSync(path.join(repo, `lean/CardanoKeri/${fixtureModule}.lean`), 'utf8');
-const subjectArgs = model === 'Application' ? [path.join(repo, 'lean/application-vectors.json')] : [];
-const cases = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, process.argv[4] ?? `${model.toLowerCase()}-mutants.json`)));
+const subjectArgs = vectorCampaign ? [path.join(repo, 'lean', vectorCampaign[1])] : [];
+const cases = JSON.parse(fs.readFileSync(path.join(import.meta.dirname,
+  process.argv[4] ?? (vectorCampaign ? vectorCampaign[2] : `${model.toLowerCase()}-mutants.json`))));
 if (!cases.length || new Set(cases.map(c => c.id)).size !== cases.length) throw Error('invalid mutant inventory');
 const sha = text => createHash('sha256').update(text).digest('hex');
 fs.writeFileSync(path.join(campaign, 'source.json'), JSON.stringify({ model, fullSource: sha(fullSource), executedSource: sha(source), fixtures: sha(fixtures), manifest: sha(JSON.stringify(cases)) }, null, 2));
@@ -32,11 +39,11 @@ function run(c, baseline) {
   const id = baseline ? `baseline-${c.test}` : c.id;
   const dir = path.join(campaign, id);
   fs.mkdirSync(path.join(dir, 'CardanoKeri'), { recursive: true });
-  if (model === 'Application') {
+  if (vectorCampaign) {
     // Every unchanged module the vectors import, compiled from the repository
     // sources; the model and its vectors are rebuilt below from the mutated source.
     const built = path.join(repo, 'lean/.lake/build/lib/lean/CardanoKeri');
-    for (const file of fs.readdirSync(built).filter(f => f.endsWith('.olean') && !f.startsWith('Application'))) {
+    for (const file of fs.readdirSync(built).filter(f => f.endsWith('.olean') && !f.startsWith(model))) {
       fs.copyFileSync(path.join(built, file), path.join(dir, 'CardanoKeri', file));
     }
   }
@@ -65,7 +72,7 @@ function run(c, baseline) {
     if (result.error || result.signal) throw Error(`${id}: setup/timeout ${label}`);
     return result;
   }
-  for (const module of (['Registry', 'Application'].includes(model) ? [model, fixtureModule] : [model])) {
+  for (const module of (model === 'Registry' || vectorCampaign ? [model, fixtureModule] : [model])) {
     const r = command(`build-${module}`, ['-o', `CardanoKeri/${module}.olean`, `CardanoKeri/${module}.lean`]);
     if (r.status !== 0) throw Error(`${id}: model/fixture compilation failed; not a semantic kill`);
   }

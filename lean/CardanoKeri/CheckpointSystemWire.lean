@@ -1,4 +1,5 @@
 import CardanoKeri.CheckpointCertificate
+import CardanoKeri.ReaderStatus
 import CardanoKeri.CheckpointTraceWire
 import CardanoKeri.RegistryTraceWire
 
@@ -6,7 +7,10 @@ import CardanoKeri.RegistryTraceWire
 deployment; callers
 supply commands, not a forged Sys or proof. The origin environment table is
 retained from its registration command for serialization, while execution uses
-the actual origin's stored function. Unlisted AIDs have the initial defaults. -/
+the actual origin's stored function. Unlisted AIDs have the initial defaults.
+Each listed AID carries the status its lifecycle state warrants
+(`ReaderStatus.lifecycleStatus`): what a reader answers on complete evidence
+that realizes the system. -/
 namespace CardanoKeri.Checkpoint.SystemWire
 open Lean
 open CardanoKeri.Checkpoint.TraceWire
@@ -75,6 +79,7 @@ def stateJson (machine : Machine) : Json :=
     ("commitments", Json.arr (((machine.commitments.mergeSort (· ≤ ·)).filterMap s.commitments).map toJson).toArray),
     ("aids", Json.arr (machine.contexts.map fun (aid, environment) => Json.mkObj [
     ("aid", toJson aid), ("leaf", toJson (s.leaves aid)), ("state", toJson (s.states aid)),
+    ("status", toJson (CardanoKeri.ReaderStatus.lifecycleStatus (s.states aid)).word),
     ("origin", match s.origins aid with | none => Json.null | some origin => originJson environment origin),
     ("writer", toJson (s.writers aid)),
     ("pending", match s.pending aid with

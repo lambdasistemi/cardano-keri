@@ -23,10 +23,11 @@ function draw() {
   body.textContent=current.state.aids.length?ledger+current.state.aids.map(row=>{
     const kind=C.stateKind(row.state),held=C.held(current.params,row.state);
     const key=kind==='present'?row.state.present.l:row.state[kind]?.h;
-    return `AID ${row.aid} · ${C.STATE_WORDS[C.stateWord(current.params,row.state)]} · registry ${row.leaf}\n`+
+    const place=kind==='terminationPending'?(row.pending?', asset with the termination request':', asset at the convicted checkpoint'):'';
+    return `AID ${row.aid} · ${C.STATE_WORDS[C.stateWord(current.params,row.state)]} · registry ${row.leaf} · reader answers ${row.status.replaceAll('-',' ')}${place}\n`+
       `Output ${C.hasOutput(row.state)?'retained':'absent'} · representative ${C.representativeHeld(row.state)} · key ${key?`epoch ${key.epoch}, sequence ${key.sn}`:'none'}\n`+
       `Bonds D=${held.dreg}, B=${held.b}; pool=${held.pool} · origin ${row.origin?'fixed by registration receipt':'none'} · pending request ${row.pending?JSON.stringify(row.pending.reference):'none'}`;
-  }).join('\n\n'):`Sys.init of deployment ${current.state.deployment}: every AID is absent; no origin or pending association.`;
+  }).join('\n\n'):`Sys.init of deployment ${current.state.deployment}: every AID is absent, so a reader answers never registered for each; no origin or pending association.`;
   text('system-result',last?`${last.cell?.name??'Edited command'}: ${last.result.ok?'accepted':'refused: '+last.result.error}`:'Choose Next to deliver the actual registration receipt.');
   const rows=last?.cell?P.systemProperties(last.cell,last.result):{};
   text('system-properties',Object.entries(rows).filter(([,r])=>r.exhibited).map(([n,r])=>(r.holds?'✓ ':'✗ ')+n).join('\n')||'No sampled system property is claimed before an event or for an edited command.');

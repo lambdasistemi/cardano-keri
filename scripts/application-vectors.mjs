@@ -86,14 +86,20 @@ const generate = () => {
   const appAddr = `d8799fd87a9f581c${appPolicy}ffd87a80ff`;
   const checkpointAddr = cfg.checkpointCredential;
   if (!scriptRe.test(checkpointAddr)) throw new Error('the checkpoint credential is not a script address without a stake credential');
-  const folderHash = row('fold-built-by-singular-client').inputs[0].address;
-  if (!/^[0-9a-f]{56}$/.test(folderHash)) throw new Error('the folder of the client fold is not a bare key hash');
+  // The registry's state input and output of the client fold: the first input and the first output of the Lean row,
+  // at the registry's state script (the Lean writes its credential bare).
+  const registryHex = row('fold-built-by-singular-client').inputs[0].address;
+  if (!/^[0-9a-f]{56}$/.test(registryHex)) throw new Error('the registry of the client fold is not a bare credential');
+  for (const id of ['fold-built-by-singular-client', 'fold-built-by-singular-client-no-donation', 'fold-built-by-singular-client-no-record']) {
+    const r = row(id);
+    if (r.inputs[0].address !== registryHex || r.outputs[0].address !== registryHex || r.inputs[0].lovelace !== 2 || r.outputs[0].lovelace !== 2) throw new Error(`row ${id}: the registry state pair is not the first input and the first output`);
+  }
   const refundAddr = row('return-at-deadline').outputs[0].address;
   const spenderAddr = row('return-at-deadline').outputs[1].address;
   const otherAddr = row('return-refund-redirected').outputs[0].address;
   for (const a of [refundAddr, spenderAddr, otherAddr]) if (!addressRe.test(a)) throw new Error('a payee is not a key address without a stake credential');
   if (new Set([appAddr, checkpointAddr, refundAddr, spenderAddr, otherAddr]).size !== 5) throw new Error('the five addresses of the scenario are not distinct');
-  const roles = { app: appAddr, checkpoint: checkpointAddr, refund: refundAddr, spender: spenderAddr, other: otherAddr };
+  const roles = { app: appAddr, checkpoint: checkpointAddr, refund: refundAddr, spender: spenderAddr, other: otherAddr, registry: registryHex };
 
   // --- the scenario's numbers, read from the Lean rows ---------------------------
   const approvals = byId(data.approvals);
@@ -268,8 +274,8 @@ const generate = () => {
   add('fold-committed-datum-not-initial', 'fold', `${F}data: rows.request_data(9011), holding_datum: rows.variant(1) }`, foldShape([15, 'checkpoint']));
   add('fold-without-inception-evidence', 'fold', 'requests.fold()', foldShape([15, 'checkpoint']));
   // The fold the Singular client builds: the folder's own input and output, the holding at index 1, a spender's change.
-  const clientShape = (spenderBack, extra = {}) => ({ validity: [12, 15], referenced: 1, donation: 2, inputs: [[2, folderHash], [18, 'app'], [5, 'spender']], outputs: [[2, folderHash], [15, 'checkpoint'], [spenderBack, 'spender']], ...extra });
-  const client = (change, extra) => `${F}registry_pair: True, redeemer: FoldRegistration { holding_index: 1 }, before: [requests.pay(rows.folder_address, 2)], after: [requests.pay(rows.spender_address, ${change})], extra_inputs: [requests.plain_input(91, rows.folder_address, 2), requests.plain_input(92, rows.spender_address, 5)]${extra} }`;
+  const clientShape = (spenderBack, extra = {}) => ({ validity: [12, 15], referenced: 1, donation: 2, inputs: [[2, 'registry'], [18, 'app'], [5, 'spender']], outputs: [[2, 'registry'], [15, 'checkpoint'], [spenderBack, 'spender']], ...extra });
+  const client = (change, extra) => `${F}redeemer: FoldRegistration { holding_index: 1 }, inputs_before: [requests.state_input(91)], before: [requests.state_successor()], after: [requests.pay(rows.spender_address, ${change})], extra_inputs: [requests.plain_input(92, rows.spender_address, 5)]${extra} }`;
   add('fold-built-by-singular-client', 'fold', client(5, ''), clientShape(5));
   add('fold-built-by-singular-client-no-donation', 'fold', client(7, ', donation: 0'), clientShape(7, { donation: 0 }));
   add('fold-built-by-singular-client-no-record', 'fold', client(5, ', references: False'), clientShape(5, { referenced: 0 }));
@@ -421,9 +427,6 @@ pub const refund_address: Address = ${keyAddr(refundAddr)}
 
 pub const spender_address: Address = ${keyAddr(spenderAddr)}
 
-/// The folder of the fold the Singular client builds.
-pub const folder_address: Address =
-  Address { payment_credential: VerificationKey(#"${folderHash}"), stake_credential: None }
 
 pub const other_address: Address = ${keyAddr(otherAddr)}
 
@@ -620,6 +623,27 @@ pub const lean_registry_name: ByteArray = #"${a0.registryName}"
   const tests = spec.map((s) => `/// Lean row \`${s.id}\`: ${row(s.id).note}.
 test row_${s.id.replace(/-/g, '_')}() {
   ${runner[s.kind](s.call)} == ${flag(row(s.id).verdict === 'accepted')}
+}
+`);
+  // The client fold keeps the Lean's order and count: the registry's typed successor is output 0 (its state input is
+  // input 0), the holding output 1, the spender's change output 2. A direct check on each generated transaction.
+  const orderTests = spec.filter((x) => x.id.startsWith('fold-built-by-singular-client')).map((x) => `/// The transaction of the Lean row ${x.id} has the Lean's outputs in the Lean's order: the registry's successor at index 0, the holding at 1, the change at 2.
+test order_${x.id.replace(/-/g, '_')}() {
+  let tx = requests.fold_tx(${x.call})
+  and {
+    list.length(tx.outputs) == 3,
+    list.at(tx.outputs, 0) == Some(requests.state_successor()),
+    when list.at(tx.outputs, 1) is {
+      Some(holding) -> holding.address == held.address_of(cfg.checkpoint_credential)
+      None -> False
+    },
+    when list.at(tx.outputs, 2) is {
+      Some(change) -> change.address == rows.spender_address
+      None -> False
+    },
+    list.at(tx.inputs, 0) == Some(requests.state_input(91)),
+    list.length(tx.inputs) == 3,
+  }
 }
 `);
   const approvalTests = leanApprovals.map(({ a }, k) => {
@@ -836,6 +860,7 @@ fn lean_request(lean: rows.LeanApproval) -> RegistrationData {
 }
 
 ${tests.join('\n')}
+${orderTests.join('\n')}
 ${approvalTests.join('\n')}
 ${terminationApprovalTests.join('\n')}
 `;

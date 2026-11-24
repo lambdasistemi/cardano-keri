@@ -459,14 +459,11 @@ test row_fold_built_by_singular_client() {
     requests.fold_tx(
       Fold {
         ..requests.fold(),
-        registry_pair: True,
         redeemer: FoldRegistration { holding_index: 1 },
-        before: [requests.pay(rows.folder_address, 2)],
+        inputs_before: [requests.state_input(91)],
+        before: [requests.state_successor()],
         after: [requests.pay(rows.spender_address, 5)],
-        extra_inputs: [
-          requests.plain_input(91, rows.folder_address, 2),
-          requests.plain_input(92, rows.spender_address, 5),
-        ],
+        extra_inputs: [requests.plain_input(92, rows.spender_address, 5)],
       },
     ),
   ) == True
@@ -478,14 +475,11 @@ test row_fold_built_by_singular_client_no_donation() {
     requests.fold_tx(
       Fold {
         ..requests.fold(),
-        registry_pair: True,
         redeemer: FoldRegistration { holding_index: 1 },
-        before: [requests.pay(rows.folder_address, 2)],
+        inputs_before: [requests.state_input(91)],
+        before: [requests.state_successor()],
         after: [requests.pay(rows.spender_address, 7)],
-        extra_inputs: [
-          requests.plain_input(91, rows.folder_address, 2),
-          requests.plain_input(92, rows.spender_address, 5),
-        ],
+        extra_inputs: [requests.plain_input(92, rows.spender_address, 5)],
         donation: 0,
       },
     ),
@@ -498,14 +492,11 @@ test row_fold_built_by_singular_client_no_record() {
     requests.fold_tx(
       Fold {
         ..requests.fold(),
-        registry_pair: True,
         redeemer: FoldRegistration { holding_index: 1 },
-        before: [requests.pay(rows.folder_address, 2)],
+        inputs_before: [requests.state_input(91)],
+        before: [requests.state_successor()],
         after: [requests.pay(rows.spender_address, 5)],
-        extra_inputs: [
-          requests.plain_input(91, rows.folder_address, 2),
-          requests.plain_input(92, rows.spender_address, 5),
-        ],
+        extra_inputs: [requests.plain_input(92, rows.spender_address, 5)],
         references: False,
       },
     ),
@@ -805,6 +796,95 @@ test row_termination_booked_twice() {
       },
     ),
   ) == False
+}
+
+/// The transaction of the Lean row fold-built-by-singular-client has the Lean's outputs in the Lean's order: the registry's successor at index 0, the holding at 1, the change at 2.
+test order_fold_built_by_singular_client() {
+  let tx = requests.fold_tx(
+    Fold {
+      ..requests.fold(),
+      redeemer: FoldRegistration { holding_index: 1 },
+      inputs_before: [requests.state_input(91)],
+      before: [requests.state_successor()],
+      after: [requests.pay(rows.spender_address, 5)],
+      extra_inputs: [requests.plain_input(92, rows.spender_address, 5)],
+    },
+  )
+  and {
+    list.length(tx.outputs) == 3,
+    list.at(tx.outputs, 0) == Some(requests.state_successor()),
+    when list.at(tx.outputs, 1) is {
+      Some(holding) ->
+        holding.address == held.address_of(cfg.checkpoint_credential)
+      None -> False
+    },
+    when list.at(tx.outputs, 2) is {
+      Some(change) -> change.address == rows.spender_address
+      None -> False
+    },
+    list.at(tx.inputs, 0) == Some(requests.state_input(91)),
+    list.length(tx.inputs) == 3,
+  }
+}
+
+/// The transaction of the Lean row fold-built-by-singular-client-no-donation has the Lean's outputs in the Lean's order: the registry's successor at index 0, the holding at 1, the change at 2.
+test order_fold_built_by_singular_client_no_donation() {
+  let tx = requests.fold_tx(
+    Fold {
+      ..requests.fold(),
+      redeemer: FoldRegistration { holding_index: 1 },
+      inputs_before: [requests.state_input(91)],
+      before: [requests.state_successor()],
+      after: [requests.pay(rows.spender_address, 7)],
+      extra_inputs: [requests.plain_input(92, rows.spender_address, 5)],
+      donation: 0,
+    },
+  )
+  and {
+    list.length(tx.outputs) == 3,
+    list.at(tx.outputs, 0) == Some(requests.state_successor()),
+    when list.at(tx.outputs, 1) is {
+      Some(holding) ->
+        holding.address == held.address_of(cfg.checkpoint_credential)
+      None -> False
+    },
+    when list.at(tx.outputs, 2) is {
+      Some(change) -> change.address == rows.spender_address
+      None -> False
+    },
+    list.at(tx.inputs, 0) == Some(requests.state_input(91)),
+    list.length(tx.inputs) == 3,
+  }
+}
+
+/// The transaction of the Lean row fold-built-by-singular-client-no-record has the Lean's outputs in the Lean's order: the registry's successor at index 0, the holding at 1, the change at 2.
+test order_fold_built_by_singular_client_no_record() {
+  let tx = requests.fold_tx(
+    Fold {
+      ..requests.fold(),
+      redeemer: FoldRegistration { holding_index: 1 },
+      inputs_before: [requests.state_input(91)],
+      before: [requests.state_successor()],
+      after: [requests.pay(rows.spender_address, 5)],
+      extra_inputs: [requests.plain_input(92, rows.spender_address, 5)],
+      references: False,
+    },
+  )
+  and {
+    list.length(tx.outputs) == 3,
+    list.at(tx.outputs, 0) == Some(requests.state_successor()),
+    when list.at(tx.outputs, 1) is {
+      Some(holding) ->
+        holding.address == held.address_of(cfg.checkpoint_credential)
+      None -> False
+    },
+    when list.at(tx.outputs, 2) is {
+      Some(change) -> change.address == rows.spender_address
+      None -> False
+    },
+    list.at(tx.inputs, 0) == Some(requests.state_input(91)),
+    list.length(tx.inputs) == 3,
+  }
 }
 
 /// Lean approval `approval`: the registration approval of a funded registration of 15 lovelace. The preimage and the name are the Lean's, byte for byte.

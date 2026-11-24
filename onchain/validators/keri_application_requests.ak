@@ -416,10 +416,8 @@ pub type Fold {
   after: List<Output>,
   /// Whether the configuration record is a reference input.
   references: Bool,
-  /// Whether the transaction carries the registry's own state pair: the state
-  /// input the public registry's fold spends and the successor it creates, as the
-  /// Singular client builds the fold. The application reads neither.
-  registry_pair: Bool,
+  /// Inputs a client puts before the request (the registry's state input).
+  inputs_before: List<Input>,
 }
 
 /// Lean row `fold-at-deadline`: a perfect fold: it shows no evidence.
@@ -447,7 +445,7 @@ pub fn fold() -> Fold {
     before: [],
     after: [],
     references: True,
-    registry_pair: False,
+    inputs_before: [],
   }
 }
 
@@ -476,6 +474,11 @@ pub fn state_output(root: Int) -> Output {
 /// before the fold.
 pub fn state_input(index: Int) -> Input {
   Input { output_reference: reference(index), output: state_output(1) }
+}
+
+/// The registry's state output the fold creates: the root after the fold.
+pub fn state_successor() -> Output {
+  state_output(2)
 }
 
 /// A plain output paying `lovelace` to `address`.
@@ -545,24 +548,13 @@ pub fn fold_tx(f: Fold) -> Transaction {
   Transaction {
     ..placeholder,
     inputs: list.concat(
-      [request_input(0, f.data, f.request_lovelace), ..second_inputs],
+      f.inputs_before,
       list.concat(
+        [request_input(0, f.data, f.request_lovelace), ..second_inputs],
         f.extra_inputs,
-        if f.registry_pair {
-          [state_input(95)]
-        } else {
-          []
-        },
       ),
     ),
-    outputs: list.concat(
-      list.concat(f.before, [holding_output(f), ..f.after]),
-      if f.registry_pair {
-        [state_output(2)]
-      } else {
-        []
-      },
-    ),
+    outputs: list.concat(f.before, [holding_output(f), ..f.after]),
     mint: burns,
     reference_inputs: if f.references {
       [config_input(50, f.data.registry, cfg.checkpoint_credential)]

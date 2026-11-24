@@ -65,7 +65,7 @@ def advance (machine : Machine) (command : Command) : Except String Machine := d
 
 def bookingCommand (registered : Registry.Sys) : Except String Command := do
   let before ← Registry.replay Registry.Scenarios.p registryEnvironment.toEnv registered registryLocalHistory
-  let booking ← Registry.Scenarios.termination before 11 200
+  let booking ← Registry.Scenarios.termination before 11 200 ⟨105, 0⟩ rotatedAgainLive.hash
   pure (.book 11 7 1 registryLocalHistory booking)
 
 def completionCommand (booked : Registry.Sys) (history : List Registry.Action := [])

@@ -279,7 +279,7 @@ in either store, second booking of the same carrier, and a tail-drop mutant
 that otherwise still admits both bookings. Full concrete Checkpoint evidence
 controls are exercised separately from the whole-record preservation claim. -/
 theorem booking_keeps_active_supply (p : Params) (env : Env) (cfg : Singular.Config)
-    {s s' : Sys} {aid booker fee : Nat} {b : Singular.TerminationBooking} {f : Flow}
+    {s s' : Sys} {aid booker fee : Nat} {b : CardanoKeri.Registry.TerminationBooking} {f : Flow}
     (hr : Reach p env cfg s)
     (hs : bookTermination p s aid booker fee b = .ok (f, s')) :
     Singular.trieGet s'.trie aid = .known .active ∧
@@ -292,7 +292,7 @@ theorem booking_keeps_active_supply (p : Params) (env : Env) (cfg : Singular.Con
     (bookTermination_iff p s s' aid booker fee b f).mp hs
   subst s'
   let entry : TerminationEntry := { booking := b, payload := {
-    aid := aid, token := c.token, keyState := c.k, original := c.original,
+    spend := b.spend, aid := aid, token := c.token, keyState := c.k, original := c.original,
     booker := booker, bookingFee := fee } }
   have found : pendingAt { s with
       carriers := s.carriers.filter (fun old => old.aid != aid),

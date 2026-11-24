@@ -405,7 +405,7 @@ checkpoint, in pending termination, can be booked for retirement. There is no
 owner exit that books a live checkpoint. Reachable witness: the registered
 live carrier of `RegistryLifecycleExamples`. -/
 theorem live_cannot_book (p : Params) (s : Sys) (aid booker fee : Nat)
-    (b : Singular.TerminationBooking) (c : Carrier)
+    (b : CardanoKeri.Registry.TerminationBooking) (c : Carrier)
     (hc : carrierAt s aid = some c) (hp : c.st = .live) :
     bookTermination p s aid booker fee b = .error "keri-conviction-required" := by
   simp [bookTermination, hc, hp, bind, Except.bind]
@@ -643,7 +643,7 @@ in either store, second booking of the same carrier, and a tail-drop mutant
 that otherwise still admits both bookings. Full concrete Checkpoint evidence
 controls are exercised separately from the whole-record preservation claim. -/
 theorem bookTermination_iff (p : Params) (s s' : Sys) (aid booker fee : Nat)
-    (b : Singular.TerminationBooking) (f : Flow) :
+    (b : CardanoKeri.Registry.TerminationBooking) (f : Flow) :
     bookTermination p s aid booker fee b = .ok (f, s') ↔
       ∃ c world, carrierAt s aid = some c ∧ c.st = .terminationPending ∧
         b.request.key = aid ∧ b.request.destination = c.original.output ∧
@@ -654,7 +654,7 @@ theorem bookTermination_iff (p : Params) (s s' : Sys) (aid booker fee : Nat)
         s' = { s with
           carriers := s.carriers.filter (fun old => old.aid != aid),
           terminations := { booking := b, payload := {
-            aid := aid, token := c.token, keyState := c.k, original := c.original,
+            spend := b.spend, aid := aid, token := c.token, keyState := c.k, original := c.original,
             booker := booker, bookingFee := fee } } :: s.terminations } ∧
         s'.toWorld = world ∧
         f = {
@@ -692,6 +692,19 @@ theorem bookTermination_iff (p : Params) (s s' : Sys) (aid booker fee : Nat)
       booked, rfl, projected, rfl⟩
     simp [bookTermination, hc, state, key, dest, custody, mc, mr, tip, held,
       booked, projected, bind, Except.bind, pure, Except.pure]
+
+/-- Given an admitted termination booking, when the booker places its request,
+then looking up that request returns the public booking and the exact local
+input reference, identifier and native position admitted with it. -/
+theorem booking_stores_spend {p s after aid booker fee b f}
+    (booked : bookTermination p s aid booker fee b = .ok (f, after)) :
+    ∃ entry, pendingAt after b.request.reference = some entry ∧
+      entry.booking = b.toTerminationBooking ∧ entry.payload.spend = b.spend ∧
+      entry.payload.spend.aid = aid := by
+  obtain ⟨c, world, _, _, key, _, _, _, _, _, _, _, rfl, _, _⟩ :=
+    (bookTermination_iff p s after aid booker fee b f).mp booked
+  refine ⟨⟨b, ⟨b.spend, aid, c.token, c.k, c.original, booker, fee⟩⟩, ?_, rfl, rfl, key⟩
+  simp [pendingAt]
 
 /-- Given an actual reachable/executed FoldReceipt and exact Completes relation;
 when using it for a Checkpoint focused completion; then actual imported
@@ -979,7 +992,7 @@ in either store, second booking of the same carrier, and a tail-drop mutant
 that otherwise still admits both bookings. Full concrete Checkpoint evidence
 controls are exercised separately from the whole-record preservation claim. -/
 theorem booking_keeps_prior_pending (p : Params) {s s' : Sys}
-    {aid booker fee : Nat} {b : Singular.TerminationBooking} {f : Flow}
+    {aid booker fee : Nat} {b : CardanoKeri.Registry.TerminationBooking} {f : Flow}
     (hs : bookTermination p s aid booker fee b = .ok (f, s'))
     {ref : Singular.OutRef} {e : TerminationEntry}
     (hp : pendingAt s ref = some e) :

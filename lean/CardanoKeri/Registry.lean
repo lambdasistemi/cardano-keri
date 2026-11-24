@@ -1,5 +1,6 @@
 import Singular.Statements.FoldAccounting
 import Singular.Statements.FoldTermination
+import CardanoKeri.PendingSpend
 
 /-! Registry adapter: a checkpoint is live until convicted; there is no owner exit. Generic booking and fold economics execute the pinned Singular model. Local evidence remains the named coarse Registry abstraction. -/
 namespace CardanoKeri.Registry
@@ -36,7 +37,20 @@ structure Carrier where
   minAda : Nat
   deriving DecidableEq
 
+/-- The booker observes one pending input in the same transaction that creates
+the Singular request. The public fold consumes the generic booking. -/
+structure TerminationBooking extends Singular.TerminationBooking where
+  pendingReference : Singular.OutRef
+  position : Checkpoint.KeyState
+  deriving Repr, DecidableEq, Lean.ToJson, Lean.FromJson
+
+instance : Coe TerminationBooking Singular.TerminationBooking := ⟨TerminationBooking.toTerminationBooking⟩
+
+def TerminationBooking.spend (b : TerminationBooking) : Application.PendingSpend :=
+  ⟨b.pendingReference, b.request.key, b.position⟩
+
 structure TerminationPayload where
+  spend : Application.PendingSpend
   aid : Nat
   token : Nat
   keyState : Nat
@@ -132,7 +146,7 @@ def convictCkpt (env : Env) (s : Sys) (aid : Nat) : Except String Result := do
   pure ({}, { s with carriers := carriers })
 
 def bookTermination (p : Params) (s : Sys)
-    (aid booker fee : Nat) (b : Singular.TerminationBooking) : Except String Result := do
+    (aid booker fee : Nat) (b : TerminationBooking) : Except String Result := do
   let some c := carrierAt s aid | throw "keri-carrier-missing"
   if c.st != .terminationPending then throw "keri-conviction-required"
   if ¬ (b.request.key = aid ∧ b.request.destination = c.original.output ∧
@@ -142,7 +156,7 @@ def bookTermination (p : Params) (s : Sys)
     throw "keri-termination-binding-mismatch"
   let world ← Singular.bookTermination s.toWorld b
   let e : TerminationEntry := { booking := b, payload := {
-    aid := aid, token := c.token, keyState := c.k, original := c.original,
+    spend := b.spend, aid := aid, token := c.token, keyState := c.k, original := c.original,
     booker := booker, bookingFee := fee } }
   let after := { s with
     carriers := s.carriers.filter (fun old => old.aid != aid),
@@ -251,7 +265,7 @@ def returnRequests (s : Sys) (u : Singular.EconomicUtxo) (r : Singular.Rejection
 inductive Action where
   | bookRegistration (booking : Singular.RegistrationBooking)
   | convictCkpt (aid : Nat)
-  | bookTermination (aid booker fee : Nat) (booking : Singular.TerminationBooking)
+  | bookTermination (aid booker fee : Nat) (booking : TerminationBooking)
   | fold (expectedGen expectedPlugin : Nat)
       (unspent : Singular.EconomicUtxo) (transaction : Singular.EconomicTransaction)
   | returnRequests (unspent : Singular.EconomicUtxo) (transaction : Singular.Rejection)

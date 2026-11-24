@@ -29,7 +29,7 @@ inductive Command where
       (certificate : FoldCertificate) (booking : Singular.RegistrationBooking) (index : Nat)
   | local (aid now : Nat) (action : Action)
   | book (aid booker fee : Nat) (history : List CardanoKeri.Registry.Action)
-      (booking : Singular.TerminationBooking)
+      (booking : CardanoKeri.Registry.TerminationBooking)
   | complete (aid : Nat) (certificate : FoldCertificate)
   | openCommitment (commitment : Commitment)
   | reveal (marker now : Nat)

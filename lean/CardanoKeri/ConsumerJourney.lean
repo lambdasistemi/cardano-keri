@@ -98,7 +98,7 @@ structure Journey where
   pending : Machine
   booked : Machine
   terminal : Machine
-  booking : Singular.TerminationBooking
+  booking : CardanoKeri.Registry.TerminationBooking
   completion : FoldCertificate
   frames : List Json
   events : List Json
@@ -148,7 +148,7 @@ def journey : Except String Journey := do
   let pending ← advance committed (.local context.aid 36 (.convict 7 commitment))
   let history : List CardanoKeri.Registry.Action := [.convictCkpt 11]
   let before ← CardanoKeri.Registry.replay q.registryParams q.registryEnv r.after history
-  let booking ← CardanoKeri.Registry.Scenarios.termination before context.aid 200
+  let booking ← CardanoKeri.Registry.Scenarios.termination before context.aid 200 ⟨105, 0⟩ output.hash
   let booked ← advance pending (.book context.aid 7 1 history booking)
   let some association := booked.certified.state.pending context.aid | throw "association-missing"
   -- The booked frame shows the request the booking placed, and a reader answers

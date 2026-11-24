@@ -278,4 +278,20 @@ private def readdress (ref : Singular.OutRef) : Singular.TerminationBooking :=
 example : ({bookingTx with identity := 201} : Transaction convictionWorld bookingWorld).bookingSpend
     i release rp rid termination convicted.reference = none := by decide
 
+/-- Given the public registration, rotation and conviction, when the observed
+mint books the economic request, its stored receipt is for the pending output
+at 105#0 and the authenticated writer at epoch one and sequence one. -/
+theorem economic_entry_for_rotated_checkpoint :
+    bookingTx.economicBooking i release rp rid termination convicted.reference = some termination ∧
+    ∃ entry source target, Registry.pendingAt registryBooked termination.request.reference = some entry ∧
+      entry.booking = termination.toTerminationBooking ∧ entry.payload.spend.reference = convicted.reference ∧
+      entry.payload.spend.aid = 11 ∧
+      checkpointDatum i convicted = some ⟨entry.payload.spend.aid, .terminationPending entry.payload.spend.position⟩ ∧
+      (source, target, convicted) ∈ convictionEdges ∧
+      ConvictionEdge p env entry.payload.spend.aid entry.payload.spend.position source target := by
+  refine ⟨rfl, ?_⟩
+  exact economic_entry_traces_to_conviction registry1 release commit termination.toTerminationBooking history
+    pendingPath bookingTx aenv rp (by decide) (ref := convicted.reference) (localBooking := termination)
+    rfl registry_booked
+
 end CardanoKeri.Application.Custody.Examples

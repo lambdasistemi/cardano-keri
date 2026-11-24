@@ -255,6 +255,18 @@ def Transaction.bookingSpend {world next : CandidateWorld} (tx : Transaction wor
     readPendingSpend i rp cfg registry key input
   else none
 
+/-- Project a booking observed at the application mint into the economic
+transition. The request and its named pending input belong to this one
+transaction. The public folder only needs the embedded Singular booking. -/
+def Transaction.economicBooking {world next : CandidateWorld} (tx : Transaction world next)
+    (i : Interpretation) (release : PublishedRelease) (rp : Registry.Params)
+    (registry : Singular.TokenId) (b : Singular.TerminationBooking) (ref : Singular.OutRef) :
+    Option Registry.TerminationBooking := do
+  let spent ← tx.bookingSpend i release rp registry b ref
+  if spent.aid = b.request.key then
+    some { toTerminationBooking := b, pendingReference := spent.reference, position := spent.position }
+  else none
+
 /-- Given an accepted mint, a public registry history and its observed carrier,
 when the economic booking's indexed request and the mint's named input produce
 a receipt, then the receipt names this exact input, identifier and native key
@@ -303,6 +315,44 @@ theorem booking_receipt_provenance {p env} {i : Interpretation} {edges s world n
   exact ⟨request, before, after, ⟨by rwa [outputRef], by rwa [outputRef]⟩, outputRef,
     named, sameRef, rfl, datum, member, edge,
     conviction_spends_authenticated_writer (carrier_edge_source_reachable path member) edge⟩
+
+/-- Given a public carrier history, when an accepted mint supplies the
+economic booking and that booking succeeds, then the stored payload names
+the exact output produced by conviction, its identifier and native position.
+The mint reads the pending datum and the folder sees the original request. -/
+theorem economic_entry_traces_to_conviction {p env} {i : Interpretation} {edges s world next carrier}
+    (registry : PublicRegistry) (release : PublishedRelease) (commit : TrieCommit)
+    (b : Singular.TerminationBooking) {ref localBooking before booked booker fee flow}
+    (history : HistoryPremises i.hash i.code commit release world registry (i.keyOf b.request.key))
+    (path : CarrierHistory p env i (activeAsset i.hash i.code registry.identity (i.keyOf b.request.key))
+      b.request.key edges s world carrier)
+    (tx : Transaction world next) (aenv : Application.Env) (rp : Registry.Params)
+    (ok : accepted i aenv rp p release tx.observation = true)
+    (read : tx.economicBooking i release rp registry.identity b ref = some localBooking)
+    (placed : Registry.bookTermination rp before b.request.key booker fee localBooking = .ok (flow, booked)) :
+    ∃ entry source target, Registry.pendingAt booked b.request.reference = some entry ∧
+      entry.booking = b ∧ entry.payload.spend.reference = carrier.reference ∧
+      entry.payload.spend.aid = b.request.key ∧
+      checkpointDatum i carrier = some ⟨entry.payload.spend.aid, .terminationPending entry.payload.spend.position⟩ ∧
+      (source, target, carrier) ∈ edges ∧
+      ConvictionEdge p env entry.payload.spend.aid entry.payload.spend.position source target := by
+  unfold Transaction.economicBooking at read
+  cases found : tx.bookingSpend i release rp registry.identity b ref with
+  | none => simp [found] at read
+  | some spent =>
+    by_cases key : spent.aid = b.request.key
+    · simp [found, key] at read
+      subst localBooking
+      obtain ⟨entry, lookup, generic, payload, _⟩ := Registry.booking_stores_spend placed
+      obtain ⟨_, source, target, _, _, _, reference, _, datum, member, edge, _⟩ :=
+        booking_receipt_provenance registry release commit b history path tx aenv rp ok found
+      have same : entry.payload.spend = spent := by
+        rw [payload]
+        cases spent
+        simp_all [Registry.TerminationBooking.spend]
+      exact ⟨entry, source, target, lookup, generic, same ▸ reference, same ▸ key,
+        same ▸ datum, member, same ▸ edge⟩
+    · simp [found, key] at read
 
 end Custody
 end CardanoKeri.Application

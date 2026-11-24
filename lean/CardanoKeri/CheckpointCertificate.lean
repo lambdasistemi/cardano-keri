@@ -60,7 +60,7 @@ def completeCertificate (current : CertifiedSys) (p : Params) (env : SystemEnv)
 
 def bookCertificate (current : CertifiedSys) (p : Params) (env : SystemEnv)
     (aid booker fee : Nat) (history : List CardanoKeri.Registry.Action)
-    (booking : Singular.TerminationBooking) : Except String (CertificateResult current p env) := do
+    (booking : CardanoKeri.Registry.TerminationBooking) : Except String (CertificateResult current p env) := do
   match state : current.state.states aid with
   | .terminationPending key =>
     match stored : current.state.origins aid with
@@ -76,7 +76,8 @@ def bookCertificate (current : CertifiedSys) (p : Params) (env : SystemEnv)
             match found : CardanoKeri.Registry.pendingAt booked booking.request.reference with
             | none => throw "checkpoint-booking-entry-missing"
             | some entry =>
-              if fields : entry.booking = booking ∧ entry.payload.aid = aid ∧ entry.payload.token = origin.token then
+              if fields : entry.booking = booking ∧ entry.payload.aid = aid ∧ (entry.payload.token = origin.token ∧
+                  entry.payload.spend = ⟨booking.pendingReference, aid, key⟩) then
                 let association : PendingAssociation := {
                   origin, keyState := key, reference := booking.request.reference, entry, booked }
                 let event : SysStep p env current.state (current.state.associate aid association) :=

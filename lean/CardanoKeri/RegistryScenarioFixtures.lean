@@ -47,7 +47,8 @@ def registration (s : Sys) (aid reference : Nat) (pool0 : Nat := 0) : Singular.R
     trieReadyTagsMinted := request.contents.trieReadyTags,
     applicationTagsMinted := [tag] }
 
-def termination (s : Sys) (aid reference : Nat) : Except String Singular.TerminationBooking := do
+def termination (s : Sys) (aid reference : Nat)
+    (pendingReference : Singular.OutRef := ⟨105, 0⟩) (position : Checkpoint.KeyState := ⟨1, 1⟩) : Except String CardanoKeri.Registry.TerminationBooking := do
   let some carrier := carrierAt s aid | throw "fixture-carrier-missing"
   let bare : Singular.TerminationRequest := {
     reference := ⟨reference, 0⟩, registryId := s.config.registryId, key := aid,
@@ -56,7 +57,7 @@ def termination (s : Sys) (aid reference : Nat) : Except String Singular.Termina
     contents := { lovelace := p.Mr + p.tip, trieReadyTags := [], applicationTags := [] } }
   let request := { bare with contents.trieReadyTags := [bare.trieReadyTag s.config] }
   pure {
-    request, custodyInputs := [carrier.original],
+    pendingReference, position, request, custodyInputs := [carrier.original],
     trieReadyTagsMinted := request.contents.trieReadyTags }
 
 /-- Build a finite mixed batch with explicit ordinary funding and fee.

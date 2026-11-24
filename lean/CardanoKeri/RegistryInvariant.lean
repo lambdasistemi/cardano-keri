@@ -65,7 +65,7 @@ theorem wellFormed_bookRegistration (p : Params) {env : Env} {s s' : Sys} (hw : 
 /-- Actual termination booking moves one convicted carrier into the complete
 pending store while preserving all prior records, aliases and active leaves. -/
 theorem wellFormed_bookTermination (p : Params) {s s' : Sys} (hw : WellFormed p s)
-    {aid booker fee : Nat} {b : Singular.TerminationBooking} {f : Flow}
+    {aid booker fee : Nat} {b : CardanoKeri.Registry.TerminationBooking} {f : Flow}
     (hs : bookTermination p s aid booker fee b = .ok (f, s')) : WellFormed p s' := by
   obtain ⟨c, world, lookup, _, key, destination, custody, mc, mr, tip, held,
     booked, successor, projected, _⟩ := (bookTermination_iff p s s' aid booker fee b f).mp hs

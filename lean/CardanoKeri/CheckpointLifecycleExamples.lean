@@ -243,7 +243,7 @@ theorem booked_step : SysStep p env pending booked := by
   apply SysStep.book
   exact ⟨11, rotatedLive.hash, origin, registryPending, registryBooked, 7, 1,
     CardanoKeri.Registry.Examples.termination, { premium := some (7, 1), intoRequest := 3, bookingFee := 1 },
-    registryEntry, rfl, rfl, rfl, origin_history, registry_booked, rfl, rfl, rfl, rfl, rfl⟩
+    registryEntry, rfl, rfl, rfl, origin_history, registry_booked, rfl, rfl, rfl, ⟨rfl, rfl⟩, rfl⟩
 
 /-- Given the complete parameters and hypotheses:
 
@@ -296,7 +296,7 @@ theorem connected_completion :
 
 
 -- A second actual history at the same context/AID/alias, with a different request.
-def otherTermination : Singular.TerminationBooking := {
+def otherTermination : CardanoKeri.Registry.TerminationBooking := {
   CardanoKeri.Registry.Examples.termination with request := { CardanoKeri.Registry.Examples.termination.request with reference := ⟨201, 0⟩ } }
 def otherEntry : CardanoKeri.Registry.TerminationEntry := { registryEntry with booking := otherTermination }
 def otherBooked : CardanoKeri.Registry.Sys := { registryPending with carriers := [], terminations := [otherEntry] }

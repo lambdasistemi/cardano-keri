@@ -105,11 +105,6 @@ inductive Actor where
   | anyone
   deriving DecidableEq, Repr
 
-structure KeyState where
-  epoch : Epoch
-  sn : Seq
-  deriving Repr, DecidableEq
-
 abbrev Hash := KeyState
 
 structure Live where
@@ -701,14 +696,15 @@ def SweepEvent (s s' : Sys) : Prop :=
 def BookingEvent (s s' : Sys) : Prop :=
   ∃ (aid : AID) (h : Hash) (origin : Origin)
     (before booked : CardanoKeri.Registry.Sys)
-    (booker fee : Nat) (b : Singular.TerminationBooking) (f : CardanoKeri.Registry.Flow)
+    (booker fee : Nat) (b : CardanoKeri.Registry.TerminationBooking) (f : CardanoKeri.Registry.Flow)
     (entry : CardanoKeri.Registry.TerminationEntry),
     s.states aid = .terminationPending h ∧ s.origins aid = some origin ∧
     s.pending aid = none ∧
     CardanoKeri.Registry.History origin.parameters origin.environment origin.registered before ∧
     CardanoKeri.Registry.bookTermination origin.parameters before aid booker fee b = .ok (f, booked) ∧
     CardanoKeri.Registry.pendingAt booked b.request.reference = some entry ∧
-    entry.booking = b ∧ entry.payload.aid = aid ∧ entry.payload.token = origin.token ∧
+    entry.booking = b ∧ entry.payload.aid = aid ∧ (entry.payload.token = origin.token ∧
+      entry.payload.spend = ⟨b.pendingReference, aid, h⟩) ∧
     s' = s.associate aid {
       origin := origin, keyState := h, reference := b.request.reference,
       entry := entry, booked := booked }

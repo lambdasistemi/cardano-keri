@@ -379,16 +379,6 @@ def checkpointDatum (i : Interpretation) (output : ObservedOutput) :
     Option CardanoKeri.ConsumerIdentity.DecodedDatum :=
   match output.datum with | .application raw => i.decodeCheckpoint raw | _ => none
 
-/-- The termination booker spends this UTxO. Its reference is supplied by the
-ledger and its identifier and native position are in the pending datum written
-by the checkpoint spend (checkpoint_register.ak 508–538). The application
-reads them at admission (application/termination.ak 76–92). -/
-structure PendingSpend where
-  reference : OutRef
-  aid : Checkpoint.AID
-  position : Checkpoint.KeyState
-  deriving Repr, DecidableEq
-
 /-- The pending input admitted at booking. Read the native position from the
 named input after checking its credential, minimum ADA, active asset, key and
 pending datum. The application needs no conviction evidence at this mint. -/

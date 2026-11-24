@@ -76,12 +76,13 @@ def terminationRequest : Singular.TerminationRequest :=
     declaredTip := 1, carrierAda := 2, singularTags := [cfg.singularTag 11],
     contents := { lovelace := 3, trieReadyTags := [], applicationTags := [] } }
   { bare with contents := { bare.contents with trieReadyTags := [bare.trieReadyTag cfg] } }
-def termination : Singular.TerminationBooking := {
+def termination : CardanoKeri.Registry.TerminationBooking := {
+  pendingReference := ⟨105, 0⟩, position := ⟨1, 1⟩,
   request := terminationRequest, custodyInputs := [liveCarrier.original],
   trieReadyTagsMinted := terminationRequest.contents.trieReadyTags }
 def terminationEntry : TerminationEntry := {
   booking := termination, payload := {
-    aid := 11, token := 0, keyState := 0, original := liveCarrier.original,
+    spend := termination.spend, aid := 11, token := 0, keyState := 0, original := liveCarrier.original,
     booker := 7, bookingFee := 1 } }
 def terminationBooked : Sys := {
   pending with carriers := [], terminations := [terminationEntry] }
@@ -390,7 +391,7 @@ When observe the Registry transition, projection or custody relation named by th
 Then the complete conclusion is:
 
 ∃ registered pending booked retired,
-      ∃ (b : Singular.TerminationBooking) (u : Singular.EconomicUtxo)
+      ∃ (b : CardanoKeri.Registry.TerminationBooking) (u : Singular.EconomicUtxo)
         (tx : Singular.EconomicTransaction) (f : Flow),
       RegistrationJourney registered ∧
       convictCkpt env registered 11 = .ok ({}, pending) ∧
@@ -408,7 +409,7 @@ Then the complete conclusion is:
 -/
 theorem W5_connected_termination :
     ∃ registered pending booked retired,
-      ∃ (b : Singular.TerminationBooking) (u : Singular.EconomicUtxo)
+      ∃ (b : CardanoKeri.Registry.TerminationBooking) (u : Singular.EconomicUtxo)
         (tx : Singular.EconomicTransaction) (f : Flow),
       RegistrationJourney registered ∧
       convictCkpt env registered 11 = .ok ({}, pending) ∧

@@ -193,4 +193,124 @@ theorem accepted_rotated_tip_iff_rival_valid {p env s aid previous writer}
   rw [show tip.epoch = previous.epoch + 1 from fields.epoch, show tip.sn = writer.event.sn from fields.writerPosition]
   exact rotated_duplicity_iff_rival_valid (reachable_writer_authenticated reachable stored) same different
 
+private def WriterAt (writer : Option EventHistory) (position : KeyState) : Prop :=
+  ∃ history, writer = some history ∧ history.epoch = position.epoch ∧
+    history.writer.event.sn = position.sn
+
+private def LiveWriters (s : Sys) : Prop :=
+  ∀ aid live, s.states aid = .present live → WriterAt (s.writers aid) live.hash
+
+private theorem set_live_writers {s : Sys} {aid state writer} (old : LiveWriters s)
+    (here : ∀ live, state = .present live →
+      WriterAt (writer.orElse (fun _ => s.writers aid)) live.hash) :
+    LiveWriters (s.set aid state writer) := by
+  intro other live found
+  by_cases same : other = aid
+  · subst other
+    simpa [Sys.set] using here live (by simpa [Sys.set] using found)
+  · simpa [Sys.set, same] using old other live (by simpa [Sys.set, same] using found)
+
+private theorem inception_position {env : Env} {aid datum history}
+    (found : env.initialHistory aid datum = some history) : WriterAt (some history) ⟨0, 0⟩ := by
+  unfold Env.initialHistory at found
+  split at found <;> try contradiction
+  split at found <;> try contradiction
+  dsimp only at found
+  split at found <;> try contradiction
+  rename_i valid
+  cases found
+  refine ⟨_, rfl, rfl, ?_⟩
+  simp only [EventHistory.authenticated, inceptionWrites, Bool.and_eq_true, beq_iff_eq] at valid
+  exact valid.1.1.1.1.1.1.1.2
+
+private theorem rotation_position {s : Sys} {env aid sn history live}
+    (present : s.states aid = .present live) (found : s.rotationHistory env aid sn = some history) :
+    WriterAt (some history) ⟨live.epoch + 1, sn⟩ := by
+  unfold Sys.rotationHistory at found
+  rw [present] at found
+  cases prev : s.writers aid <;> simp only [prev] at found <;> try contradiction
+  split at found <;> try contradiction
+  split at found <;> try contradiction
+  rename_i valid
+  cases found
+  simp only [Bool.and_eq_true, beq_iff_eq] at valid
+  exact ⟨_, rfl, congrArg (· + 1) valid.1.1.1, valid.1.2⟩
+
+private theorem local_position {p env s aid action now flow state} (old : LiveWriters s)
+    (ordinary : ∀ refund pool, action ≠ .register refund pool)
+    (executed : Step p env action now (s.states aid) flow state)
+    (writer : (s.localWriter env aid action).isSome = true) :
+    ∀ live, state = .present live →
+      WriterAt ((s.localWriter env aid action).join.orElse (fun _ => s.writers aid)) live.hash := by
+  generalize src : s.states aid = st at executed
+  cases executed <;> intro live target
+  case register => exact False.elim (ordinary _ _ rfl)
+  case convict => cases target
+  all_goals cases target
+  case poison | topUp =>
+    have kept := old aid _ src
+    exact kept
+  case freeze =>
+    simp only [Sys.localWriter] at *
+    generalize found : s.rotationHistory env aid _ = result at writer ⊢
+    have kept := old aid _ src
+    cases result <;> exact kept
+  all_goals
+    simp only [Sys.localWriter] at *
+    generalize found : s.rotationHistory env aid _ = result at writer ⊢
+    cases result with
+    | none => simp at writer
+    | some h => have atPosition := rotation_position src found; exact atPosition
+
+private theorem reachable_live_writers {p env s} (reach : SysReach p env s) : LiveWriters s := by
+  induction reach with
+  | init => intro aid live absent; cases absent
+  | @step before _ _ step old =>
+    cases step with
+    | register event =>
+      obtain ⟨aid, now, refund, pool, flow, st, rp, re, cfg, receipt, b, origin,
+        _, _, executed, _, facts, rfl⟩ := event
+      apply set_live_writers old
+      intro live target
+      generalize src : before.states aid = prior at executed
+      cases executed
+      cases target
+      exact inception_position facts.2
+    | «local» event =>
+      obtain ⟨aid, action, now, flow, st, ordinary, executed, checked, rfl⟩ := event
+      have valid := set_live_writers old (local_position old ordinary executed checked.2)
+      unfold Sys.retireRevealed
+      cases action.revealed <;> exact valid
+    | book event =>
+      obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, rfl⟩ := event
+      exact old
+    | complete event =>
+      obtain ⟨_, _, _, _, rfl⟩ := event
+      apply set_live_writers old
+      intro _ impossible
+      cases impossible
+    | openCommitment event => obtain ⟨_, _, _, rfl⟩ := event; exact old
+    | reveal event => obtain ⟨_, _, _, _, _, rfl⟩ := event; exact old
+    | sweep event => obtain ⟨_, _, _, _, rfl⟩ := event; exact old
+
+/-- Given a reachable system, when an identifier has a live checkpoint, then
+its stored writer exists, authenticates back to that identifier's inception,
+and has exactly the epoch and native sequence of this live output. -/
+theorem live_has_authenticated_writer {p env s aid live} (reach : SysReach p env s)
+    (present : s.states aid = .present live) :
+    ∃ history, s.writers aid = some history ∧ history.authenticated aid = true ∧
+      history.epoch = live.epoch ∧ history.writer.event.sn = live.sn := by
+  obtain ⟨history, stored, epoch, sn⟩ := reachable_live_writers reach aid live present
+  exact ⟨history, stored, reachable_writer_authenticated reach stored, epoch, sn⟩
+
+/-- Given a reachable system and the conviction edge for one key state,
+when its live input is spent, then its stored writer authenticates under
+the selected identifier and has the native position named by that edge. -/
+theorem conviction_spends_authenticated_writer {p env before after aid key}
+    (reach : SysReach p env before) (edge : ConvictionEdge p env aid key before after) :
+    ∃ history, before.writers aid = some history ∧ history.authenticated aid = true ∧
+      history.epoch = key.epoch ∧ history.writer.event.sn = key.sn := by
+  obtain ⟨live, _, _, _, _, present, rfl, _⟩ := edge
+  exact live_has_authenticated_writer reach present
+
 end CardanoKeri.Checkpoint

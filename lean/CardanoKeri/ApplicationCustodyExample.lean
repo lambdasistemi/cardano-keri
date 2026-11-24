@@ -251,7 +251,9 @@ theorem economic_booking_reads_rotated_position :
       nativeReceipt.reference = convicted.reference ∧ nativeReceipt.aid = termination.request.key ∧
       checkpointDatum i convicted = some ⟨nativeReceipt.aid, .terminationPending nativeReceipt.position⟩ ∧
       (before, after, convicted) ∈ convictionEdges ∧
-      ConvictionEdge p env nativeReceipt.aid nativeReceipt.position before after := by
+      ConvictionEdge p env nativeReceipt.aid nativeReceipt.position before after ∧
+      ∃ writer, before.writers nativeReceipt.aid = some writer ∧ writer.authenticated nativeReceipt.aid = true ∧
+        writer.epoch = nativeReceipt.position.epoch ∧ writer.writer.event.sn = nativeReceipt.position.sn := by
   refine ⟨registry_booked, rfl, ?_⟩
   exact booking_receipt_provenance registry1 release commit termination history pendingPath bookingTx
     aenv rp (by decide) (ref := convicted.reference) (receipt := nativeReceipt) rfl

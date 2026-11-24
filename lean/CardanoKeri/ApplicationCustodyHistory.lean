@@ -71,6 +71,23 @@ theorem carrier_reachable {p env i token aid edges s w out}
     exact .step ih (.local ⟨_, _, _, _, _, ordinary, executed, ⟨opened, writer⟩, rfl⟩)
   | retain _ _ _ event _ ih => exact .step ih event
 
+/-- Given an observed carrier path, when a producer is selected from its
+edge list, then the producer's source system is reachable. -/
+theorem carrier_edge_source_reachable {p env i token aid edges s w out before after produced}
+    (path : CarrierHistory p env i token aid edges s w out)
+    (member : (before, after, produced) ∈ edges) : SysReach p env before := by
+  induction path with
+  | register reachable _ _ _ _ _ _ _ _ =>
+    simp only [List.mem_singleton] at member
+    cases member
+    exact reachable
+  | spend past _ _ _ _ _ _ _ _ _ ih =>
+    rcases List.mem_cons.mp member with eq | earlier
+    · cases eq
+      exact carrier_reachable past
+    · exact ih earlier
+  | retain _ _ _ _ _ ih => exact ih member
+
 /-- Given a carrier history, when the current holding is read from its ledger
 world, then that very output remains unspent and carries one active token. -/
 theorem carrier_unspent {p env i token aid edges s w out}
@@ -258,7 +275,9 @@ theorem booking_receipt_provenance {p env} {i : Interpretation} {edges s world n
       receipt.reference = carrier.reference ∧ receipt.aid = b.request.key ∧
       checkpointDatum i carrier = some ⟨receipt.aid, .terminationPending receipt.position⟩ ∧
       (before, after, carrier) ∈ edges ∧
-      ConvictionEdge p env receipt.aid receipt.position before after := by
+      ConvictionEdge p env receipt.aid receipt.position before after ∧
+      ∃ writer, before.writers receipt.aid = some writer ∧ writer.authenticated receipt.aid = true ∧
+        writer.epoch = receipt.position.epoch ∧ writer.writer.event.sn = receipt.position.sn := by
   unfold Transaction.bookingSpend at read
   simp only [bind, Option.bind] at read
   split at read <;> try contradiction
@@ -282,7 +301,8 @@ theorem booking_receipt_provenance {p env} {i : Interpretation} {edges s world n
   rw [decoded] at read
   cases read
   exact ⟨request, before, after, ⟨by rwa [outputRef], by rwa [outputRef]⟩, outputRef,
-    named, sameRef, rfl, datum, member, edge⟩
+    named, sameRef, rfl, datum, member, edge,
+    conviction_spends_authenticated_writer (carrier_edge_source_reachable path member) edge⟩
 
 end Custody
 end CardanoKeri.Application

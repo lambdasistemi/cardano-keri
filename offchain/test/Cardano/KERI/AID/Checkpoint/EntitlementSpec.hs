@@ -27,6 +27,7 @@ import Cardano.KERI.AID.Checkpoint.BountyCommitment (
     CommitmentFamily (..),
     CommitmentParameters (..),
     CommitmentPayout (..),
+    ConvictionTarget (..),
     EntitlementError (..),
     EntitlementVerdict (..),
     ResolvedCommitment (..),
@@ -144,15 +145,31 @@ evidenceMutants =
 matcherSpec :: Spec
 matcherSpec = describe "matching against actual evidence" $ do
     it "accepts the reservation opened over THIS evidence" $
-        entitlementMatches commitment checkpointRef evidence nonce
+        entitlementMatches commitment target evidence nonce
             `shouldBe` EntitlementValid
     it "refuses a reservation opened over a different payload" $
         entitlementMatches
             commitment
-            checkpointRef
+            target
             perturbedEvidence
             nonce
             `shouldBe` EntitlementInvalid EntitlementHash
+    it "refuses a reservation opened for another deployment" $
+        entitlementMatches
+            commitment
+            target{ctCheckpointPolicy = flipLast checkpointPolicy}
+            evidence
+            nonce
+            `shouldBe` EntitlementInvalid EntitlementDeployment
+    it "refuses a reservation opened over another identifier" $
+        entitlementMatches commitment target{ctAid = flipLast aid} evidence nonce
+            `shouldBe` EntitlementInvalid EntitlementAid
+    it "refuses a reservation voided by a rotation of the epoch" $
+        entitlementMatches commitment target{ctEpoch = epoch + 1} evidence nonce
+            `shouldBe` EntitlementInvalid EntitlementKeyState
+    it "refuses a reservation voided by a rotation of the sequence number" $
+        entitlementMatches commitment target{ctSn = sn + 1} evidence nonce
+            `shouldBe` EntitlementInvalid EntitlementKeyState
 
 -- ---------------------------------------------------------
 -- The shared settlement rule
@@ -188,22 +205,24 @@ settlementSpec = describe "shared settlement rule" $ do
             payee
             context{scCommitmentInputs = []}
             `shouldBe` False
-    it "refuses a settlement against another checkpoint" $
-        validateConvictEntitlement
-            family
-            evidence
-            payee
-            reveal
-            otherCheckpointRef
-            context
+    it "refuses a settlement at another deployment" $
+        settledAt target{ctCheckpointPolicy = flipLast checkpointPolicy}
             `shouldBe` False
+    it "refuses a settlement of another identifier" $
+        settledAt target{ctAid = flipLast aid} `shouldBe` False
+    it "refuses a settlement after a rotation of the epoch" $
+        settledAt target{ctEpoch = epoch + 1} `shouldBe` False
+    it "refuses a settlement after a rotation of the sequence number" $
+        settledAt target{ctSn = sn + 1} `shouldBe` False
+    it "settles at whichever output carries the same key state" $
+        settledAt target `shouldBe` True
     it "refuses a substituted nonce" $
         validateConvictEntitlement
             family
             evidence
             payee
             reveal{brNonce = BS.replicate 32 0x12}
-            checkpointRef
+            target
             context
             `shouldBe` False
     it "refuses a reveal naming some other reservation's input" $
@@ -212,7 +231,7 @@ settlementSpec = describe "shared settlement rule" $ do
             evidence
             payee
             reveal{brCommitmentRef = otherCheckpointRef}
-            checkpointRef
+            target
             context
             `shouldBe` False
     it "accepts a reveal at exactly the maturity boundary" $
@@ -244,10 +263,12 @@ settlementSpec = describe "shared settlement rule" $ do
             `shouldBe` False
   where
     convictIn range = entitled family payee context{scValidity = range}
+    settledAt at =
+        validateConvictEntitlement family evidence payee reveal at context
 
 entitled :: CommitmentFamily -> ByteString -> SettlementContext -> Bool
 entitled fam beneficiary =
-    validateConvictEntitlement fam evidence beneficiary reveal checkpointRef
+    validateConvictEntitlement fam evidence beneficiary reveal target
 
 -- ---------------------------------------------------------
 -- Calibration: consent is not entitlement
@@ -318,7 +339,7 @@ builderSpec = describe "prepareEntitledEnforcement" $ do
                     (epEvidence (eepProof plan))
                     (eepBountyPayee plan)
                     (eepReveal plan)
-                    (eepCheckpointRef plan)
+                    (eepTarget plan)
                     context{scPolicyMint = [eepBurn plan]}
             )
             built
@@ -341,12 +362,30 @@ builderSpec = describe "prepareEntitledEnforcement" $ do
             resolved
             perturbedEvidence
             checkpointRef
+            target
             nonce
             1
             settlementRange
             `shouldBe` Left (EnforcementNotEntitled EntitlementHash)
+    it "builds the reveal at an output of its own, whatever the reservation was opened against" $ do
+        fmap eepCheckpointRef atSuccessor `shouldBe` Right successorRef
+        fmap eepTarget atSuccessor `shouldBe` Right target
+    it "refuses to build at an output that carries another key state" $
+        buildAt successorRef target{ctEpoch = epoch + 1}
+            `shouldBe` Left (EnforcementNotEntitled EntitlementKeyState)
   where
     built = buildWith family resolved settlementRange
+    atSuccessor = buildAt successorRef target
+    buildAt ref at =
+        prepareEntitledEnforcement
+            family
+            resolved
+            evidence
+            ref
+            at
+            nonce
+            1
+            settlementRange
 
 buildWith ::
     CommitmentFamily ->
@@ -359,6 +398,7 @@ buildWith fam candidate =
         candidate
         evidence
         checkpointRef
+        target
         nonce
         1
 
@@ -411,6 +451,28 @@ checkpointRef = OutputRef (BS.replicate 32 0xc2) 3
 otherCheckpointRef :: OutputRef
 otherCheckpointRef = OutputRef (BS.replicate 32 0xc2) 4
 
+-- | The output a step of the checkpoint produced: another transaction.
+successorRef :: OutputRef
+successorRef = OutputRef (BS.replicate 32 0x55) 0
+
+aid :: ByteString
+aid = "E" <> BS.replicate 43 0x41
+
+epoch :: Integer
+epoch = 2
+
+sn :: Integer
+sn = 5
+
+target :: ConvictionTarget
+target =
+    ConvictionTarget
+        { ctCheckpointPolicy = checkpointPolicy
+        , ctAid = aid
+        , ctEpoch = epoch
+        , ctSn = sn
+        }
+
 marker :: ByteString
 marker = markerName seedRef
 
@@ -430,7 +492,9 @@ scope =
         , bsSchema = commitmentSchema
         , bsNetwork = cpNetwork parameters
         , bsCheckpointPolicy = checkpointPolicy
-        , bsCheckpointRef = checkpointRef
+        , bsAid = aid
+        , bsEpoch = epoch
+        , bsSn = sn
         , bsAction = ConvictEntitlement
         , bsMarker = marker
         , bsCommitUpper = 1000

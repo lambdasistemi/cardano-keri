@@ -28,6 +28,7 @@ import Cardano.KERI.AID.Checkpoint.BountyCommitment (
     CommitmentParameters (..),
     CommitmentPayout (..),
     CommitmentVerdict (..),
+    ConvictionTarget (..),
     EntitlementError (..),
     EntitlementVerdict (..),
     ExpiredCommitmentSweepV1 (..),
@@ -72,12 +73,16 @@ import Data.ByteString (
     ByteString,
  )
 import Data.ByteString qualified as BS
+import PlutusCore.Data (Data (..))
+import PlutusTx.Builtins.Internal (BuiltinData (..))
+import PlutusTx.IsData.Class (fromBuiltinData, toBuiltinData)
 import Test.Hspec (
     Spec,
     describe,
     it,
     shouldBe,
     shouldNotBe,
+    shouldSatisfy,
  )
 
 spec :: Spec
@@ -135,6 +140,15 @@ scopeSpec :: Spec
 scopeSpec = describe "scope well-formedness" $ do
     it "accepts the honest scope" $
         scopeWellFormed parameters scope `shouldBe` ScopeValid
+    it "names its layout with a version above the retired one" $
+        commitmentSchema `shouldSatisfy` (> 1)
+    it "reads no scope of the retired layout" $
+        ( fromBuiltinData (BuiltinData retiredLayoutScope) ::
+            Maybe BountyScope
+        )
+            `shouldBe` Nothing
+    it "reads back the scope it writes" $
+        fromBuiltinData (toBuiltinData scope) `shouldBe` Just scope
     mapM_ scopeRejection scopeMutants
 
 scopeRejection :: (String, BountyScope, ScopeError) -> Spec
@@ -161,17 +175,24 @@ scopeMutants =
         , ScopeCheckpointPolicyWidth
         )
     ,
-        ( "a mis-sized checkpoint transaction id"
-        , scope
-            { bsCheckpointRef =
-                checkpointRef{orTransactionId = BS.replicate 31 0xc2}
-            }
-        , ScopeCheckpointRefWidth
+        ( "a mis-sized identifier"
+        , scope{bsAid = BS.replicate 43 0x41}
+        , ScopeAidWidth
         )
     ,
-        ( "a negative checkpoint output index"
-        , scope{bsCheckpointRef = checkpointRef{orOutputIndex = -1}}
-        , ScopeCheckpointRefWidth
+        ( "a negative epoch"
+        , scope{bsEpoch = -1}
+        , ScopeKeyState
+        )
+    ,
+        ( "a negative sequence number"
+        , scope{bsSn = -1}
+        , ScopeKeyState
+        )
+    ,
+        ( "a commitment of the retired layout version"
+        , scope{bsSchema = 1}
+        , ScopeSchema
         )
     ,
         ( "a mis-sized marker"
@@ -226,46 +247,59 @@ commitmentSpec = describe "commitment datum well-formedness" $ do
 matcherSpec :: Spec
 matcherSpec = describe "standalone entitlement matching" $ do
     it "accepts the reservation it was opened as" $
-        matches commitment checkpointRef digest nonce
+        matches commitment target digest nonce
             `shouldBe` EntitlementValid
     it "rejects a digest that is not 32 bytes" $
         matches
             commitment
-            checkpointRef
+            target
             (BS.replicate 31 0xed)
             nonce
             `shouldBe` EntitlementInvalid EntitlementDigestWidth
     it "rejects a nonce below the minimum width" $
         matches
             commitment
-            checkpointRef
+            target
             digest
             (BS.replicate 31 0x11)
             `shouldBe` EntitlementInvalid EntitlementNonceWidth
-    it "rejects a reservation opened over another checkpoint" $
-        matches commitment otherCheckpointRef digest nonce
-            `shouldBe` EntitlementInvalid EntitlementCheckpoint
+    it "rejects a reservation opened for another deployment" $
+        matches
+            commitment
+            target{ctCheckpointPolicy = flipLast checkpointPolicy}
+            digest
+            nonce
+            `shouldBe` EntitlementInvalid EntitlementDeployment
+    it "rejects a reservation opened over another identifier" $
+        matches commitment target{ctAid = flipLast aid} digest nonce
+            `shouldBe` EntitlementInvalid EntitlementAid
+    it "rejects a reservation opened at another epoch" $
+        matches commitment target{ctEpoch = epoch + 1} digest nonce
+            `shouldBe` EntitlementInvalid EntitlementKeyState
+    it "rejects a reservation opened at another sequence number" $
+        matches commitment target{ctSn = sn + 1} digest nonce
+            `shouldBe` EntitlementInvalid EntitlementKeyState
     it "rejects a datum whose marker left its scope" $
         matches
             commitment{bcMarker = markerName otherSeedRef}
-            checkpointRef
+            target
             digest
             nonce
             `shouldBe` EntitlementInvalid EntitlementMarker
     it "rejects a substituted evidence digest" $
         matches
             commitment
-            checkpointRef
+            target
             (flipLast digest)
             nonce
             `shouldBe` EntitlementInvalid EntitlementHash
     it "rejects a substituted nonce" $
-        matches commitment checkpointRef digest otherNonce
+        matches commitment target digest otherNonce
             `shouldBe` EntitlementInvalid EntitlementHash
     it "rejects a substituted payee, hash unchanged" $
         matches
             commitment{bcPayeePkh = attacker}
-            checkpointRef
+            target
             digest
             nonce
             `shouldBe` EntitlementInvalid EntitlementHash
@@ -360,7 +394,7 @@ openBuilderSpec = describe "prepareBountyCommitment" $ do
             ( \built ->
                 entitlementMatches
                     (bcplDatum built)
-                    checkpointRef
+                    target
                     digest
                     nonce
             )
@@ -389,8 +423,7 @@ openBuilderSpec = describe "prepareBountyCommitment" $ do
             commitmentPolicy
             seedRef
             openRange
-            checkpointPolicy
-            checkpointRef
+            target
             digest
             beneficiary
             nonce
@@ -405,8 +438,7 @@ openWith params range =
         commitmentPolicy
         seedRef
         range
-        checkpointPolicy
-        checkpointRef
+        target
         digest
         payee
         nonce
@@ -486,14 +518,45 @@ seedRef = OutputRef (BS.replicate 32 0x5e) 7
 otherSeedRef :: OutputRef
 otherSeedRef = OutputRef (BS.replicate 32 0x5e) 8
 
+{- | A scope as the retired layout wrote it: a checkpoint output reference
+where the identifier and key state now sit.
+-}
+retiredLayoutScope :: Data
+retiredLayoutScope =
+    Constr
+        0
+        [ B commitmentDomain
+        , I 1
+        , I (cpNetwork parameters)
+        , B checkpointPolicy
+        , Constr 0 [B (BS.replicate 32 0xc2), I 3]
+        , Constr 0 []
+        , B (markerName seedRef)
+        , I 1000
+        , I (1000 + cpCommitMinAge parameters)
+        , I (1000 + cpCommitmentLifetime parameters)
+        ]
+
 commitmentRef :: OutputRef
 commitmentRef = OutputRef (BS.replicate 32 0x0c) 0
 
-checkpointRef :: OutputRef
-checkpointRef = OutputRef (BS.replicate 32 0xc2) 3
+aid :: ByteString
+aid = "E" <> BS.replicate 43 0x41
 
-otherCheckpointRef :: OutputRef
-otherCheckpointRef = OutputRef (BS.replicate 32 0xc2) 4
+epoch :: Integer
+epoch = 2
+
+sn :: Integer
+sn = 5
+
+target :: ConvictionTarget
+target =
+    ConvictionTarget
+        { ctCheckpointPolicy = checkpointPolicy
+        , ctAid = aid
+        , ctEpoch = epoch
+        , ctSn = sn
+        }
 
 payee :: ByteString
 payee = BS.replicate 28 0x9a
@@ -520,7 +583,9 @@ scope =
         , bsSchema = commitmentSchema
         , bsNetwork = cpNetwork parameters
         , bsCheckpointPolicy = checkpointPolicy
-        , bsCheckpointRef = checkpointRef
+        , bsAid = aid
+        , bsEpoch = epoch
+        , bsSn = sn
         , bsAction = ConvictEntitlement
         , bsMarker = markerName seedRef
         , bsCommitUpper = 1000

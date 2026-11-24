@@ -7,28 +7,31 @@
 //// `offchain/app/GenBountyCommitmentVectors.hs`; nothing here re-derives a
 //// vector on the Aiken side, so a single-sided change breaks a test.
 
+use aiken/builtin
 use aiken/cbor
 use aiken/interval.{
   Finite, Interval, IntervalBound, IntervalBoundType, NegativeInfinity,
   PositiveInfinity,
 }
 use aiken/primitive/bytearray
-use cardano/transaction.{OutputReference}
+use cardano/transaction.{InlineDatum, OutputReference}
 use cardano_keri/bounty_commitment.{
   BountyCommitment, BountyCommitmentPreimage, BountyCommitmentV1, BountyRevealV1,
   BountyScope, CommitmentHashWidth, CommitmentInvalid, CommitmentMarkerBinding,
   CommitmentParameters, CommitmentPayeeWidth, CommitmentValid,
-  ConvictEntitlement, EntitlementCheckpoint, EntitlementDigestWidth,
-  EntitlementHash, EntitlementInvalid, EntitlementMarker, EntitlementNonceWidth,
-  EntitlementValid, ExpiredCommitmentSweepV1, Open, ParametersAge,
-  ParametersDeposit, ParametersInvalid, ParametersLifetime, ParametersValid,
-  Retire, Reveal, ScopeAge, ScopeCheckpointPolicyWidth, ScopeCheckpointRefWidth,
-  ScopeDomain, ScopeInvalid, ScopeLifetime, ScopeMarkerWidth, ScopeNetwork,
-  ScopeSchema, ScopeValid, Sweep, at_or_after, at_or_before,
-  commit_deposit_floor, commit_min_age, commitment_domain, commitment_hash,
-  commitment_preimage, commitment_schema, commitment_well_formed,
-  entitlement_matches, marker_name, non_empty, parameters_well_formed, raw_upper,
-  scope_well_formed, strictly_after,
+  ConvictEntitlement, ConvictionTarget, EntitlementAid, EntitlementDeployment,
+  EntitlementDigestWidth, EntitlementHash, EntitlementInvalid,
+  EntitlementKeyState, EntitlementMarker, EntitlementNonceWidth,
+  EntitlementValid, EntitlementVerdict, ExpiredCommitmentSweepV1, Open,
+  ParametersAge, ParametersDeposit, ParametersInvalid, ParametersLifetime,
+  ParametersValid, Retire, Reveal, ScopeAge, ScopeAidWidth,
+  ScopeCheckpointPolicyWidth, ScopeDomain, ScopeInvalid, ScopeKeyState,
+  ScopeLifetime, ScopeMarkerWidth, ScopeNetwork, ScopeSchema, ScopeValid, Sweep,
+  at_or_after, at_or_before, commit_deposit_floor, commit_min_age,
+  commitment_domain, commitment_hash, commitment_preimage, commitment_schema,
+  commitment_well_formed, entitlement_matches, inline_commitment, marker_name,
+  non_empty, parameters_well_formed, raw_upper, scope_well_formed,
+  strictly_after,
 }
 use cardano_keri/bounty_commitment_vectors as vec
 
@@ -52,11 +55,14 @@ pub fn other_seed_ref() -> OutputReference {
   }
 }
 
-/// The checkpoint the entitlement is scoped to.
-pub fn checkpoint_ref() -> OutputReference {
-  OutputReference {
-    transaction_id: vec.checkpoint_txid,
-    output_index: vec.checkpoint_index,
+/// Where the conviction is settled: the deployment, the identifier and the key
+/// state the canonical commitment accuses.
+pub fn target() -> ConvictionTarget {
+  ConvictionTarget {
+    checkpoint_policy: vec.checkpoint_policy,
+    aid: vec.aid,
+    epoch: vec.epoch,
+    sn: vec.sn,
   }
 }
 
@@ -104,7 +110,9 @@ pub fn scope() -> BountyScope {
     schema: vec.schema,
     network: vec.network,
     checkpoint_policy: vec.checkpoint_policy,
-    checkpoint_ref: checkpoint_ref(),
+    aid: vec.aid,
+    epoch: vec.epoch,
+    sn: vec.sn,
     action: ConvictEntitlement,
     marker: vec.marker,
     commit_upper: vec.commit_upper,
@@ -196,10 +204,7 @@ test bounty_commitment_generated_boundary_derives_from_the_example_lifetime() {
 }
 
 test bounty_commitment_reference_cbor_matches_haskell() {
-  and {
-    cbor.serialise(seed_ref()) == vec.golden_seed_ref,
-    cbor.serialise(checkpoint_ref()) == vec.golden_checkpoint_ref,
-  }
+  cbor.serialise(seed_ref()) == vec.golden_seed_ref
 }
 
 test bounty_commitment_action_cbor_matches_haskell() {
@@ -290,29 +295,14 @@ test bounty_commitment_scope_checkpoint_binds() {
       vec.mut_checkpoint_policy,
     ),
     moved(
-      with_scope(
-        BountyScope {
-          ..scope(),
-          checkpoint_ref: OutputReference {
-            transaction_id: flip_last(vec.checkpoint_txid),
-            output_index: vec.checkpoint_index,
-          },
-        },
-      ),
-      vec.mut_checkpoint_txid,
+      with_scope(BountyScope { ..scope(), aid: flip_last(vec.aid) }),
+      vec.mut_aid,
     ),
     moved(
-      with_scope(
-        BountyScope {
-          ..scope(),
-          checkpoint_ref: OutputReference {
-            transaction_id: vec.checkpoint_txid,
-            output_index: vec.checkpoint_index + 1,
-          },
-        },
-      ),
-      vec.mut_checkpoint_index,
+      with_scope(BountyScope { ..scope(), epoch: vec.epoch + 1 }),
+      vec.mut_epoch,
     ),
+    moved(with_scope(BountyScope { ..scope(), sn: vec.sn + 1 }), vec.mut_sn),
   }
 }
 
@@ -538,16 +528,15 @@ test bounty_commitment_scope_well_formedness_is_exact() {
       parameters(),
       BountyScope { ..scope(), checkpoint_policy: #"c1c1" },
     ) == ScopeInvalid(ScopeCheckpointPolicyWidth),
-    scope_well_formed(
-      parameters(),
-      BountyScope {
-        ..scope(),
-        checkpoint_ref: OutputReference {
-          transaction_id: #"c2c2",
-          output_index: vec.checkpoint_index,
-        },
-      },
-    ) == ScopeInvalid(ScopeCheckpointRefWidth),
+    scope_well_formed(parameters(), BountyScope { ..scope(), aid: #"4141" }) == ScopeInvalid(
+      ScopeAidWidth,
+    ),
+    scope_well_formed(parameters(), BountyScope { ..scope(), epoch: -1 }) == ScopeInvalid(
+      ScopeKeyState,
+    ),
+    scope_well_formed(parameters(), BountyScope { ..scope(), sn: -1 }) == ScopeInvalid(
+      ScopeKeyState,
+    ),
     scope_well_formed(parameters(), BountyScope { ..scope(), marker: #"0f82" }) == ScopeInvalid(
       ScopeMarkerWidth,
     ),
@@ -788,25 +777,41 @@ test bounty_commitment_boundary_predicates_reject_empty_ranges() {
 // ---------------------------------------------------------------------
 
 test bounty_commitment_entitlement_matches_the_honest_opening() {
-  entitlement_matches(
-    commitment(),
-    checkpoint_ref(),
-    vec.evidence_digest,
-    vec.nonce,
-  ) == EntitlementValid
+  entitlement_matches(commitment(), target(), vec.evidence_digest, vec.nonce) == EntitlementValid
 }
 
 test bounty_commitment_entitlement_rejects_substituted_context() {
   and {
     entitlement_matches(
       commitment(),
-      other_seed_ref(),
+      ConvictionTarget {
+        ..target(),
+        checkpoint_policy: flip_last(vec.checkpoint_policy),
+      },
       vec.evidence_digest,
       vec.nonce,
-    ) == EntitlementInvalid(EntitlementCheckpoint),
+    ) == EntitlementInvalid(EntitlementDeployment),
+    entitlement_matches(
+      commitment(),
+      ConvictionTarget { ..target(), aid: flip_last(vec.aid) },
+      vec.evidence_digest,
+      vec.nonce,
+    ) == EntitlementInvalid(EntitlementAid),
+    entitlement_matches(
+      commitment(),
+      ConvictionTarget { ..target(), epoch: vec.epoch + 1 },
+      vec.evidence_digest,
+      vec.nonce,
+    ) == EntitlementInvalid(EntitlementKeyState),
+    entitlement_matches(
+      commitment(),
+      ConvictionTarget { ..target(), sn: vec.sn + 1 },
+      vec.evidence_digest,
+      vec.nonce,
+    ) == EntitlementInvalid(EntitlementKeyState),
     entitlement_matches(
       BountyCommitmentV1 { ..commitment(), marker: vec.other_marker },
-      checkpoint_ref(),
+      target(),
       vec.evidence_digest,
       vec.nonce,
     ) == EntitlementInvalid(EntitlementMarker),
@@ -817,25 +822,22 @@ test bounty_commitment_entitlement_rejects_substituted_secrets() {
   and {
     entitlement_matches(
       commitment(),
-      checkpoint_ref(),
+      target(),
       flip_last(vec.evidence_digest),
       vec.nonce,
     ) == EntitlementInvalid(EntitlementHash),
     entitlement_matches(
       commitment(),
-      checkpoint_ref(),
+      target(),
       vec.evidence_digest,
       flip_last(vec.nonce),
     ) == EntitlementInvalid(EntitlementHash),
-    entitlement_matches(commitment(), checkpoint_ref(), #"eded", vec.nonce) == EntitlementInvalid(
+    entitlement_matches(commitment(), target(), #"eded", vec.nonce) == EntitlementInvalid(
       EntitlementDigestWidth,
     ),
-    entitlement_matches(
-      commitment(),
-      checkpoint_ref(),
-      vec.evidence_digest,
-      #"1111",
-    ) == EntitlementInvalid(EntitlementNonceWidth),
+    entitlement_matches(commitment(), target(), vec.evidence_digest, #"1111") == EntitlementInvalid(
+      EntitlementNonceWidth,
+    ),
   }
 }
 
@@ -845,8 +847,130 @@ test bounty_commitment_entitlement_cannot_be_satisfied_by_the_payee_alone() {
   // membership is not part of this verdict at all.
   entitlement_matches(
     BountyCommitmentV1 { ..commitment(), payee_pkh: flip_last(vec.payee) },
-    checkpoint_ref(),
+    target(),
     vec.evidence_digest,
     vec.nonce,
   ) == EntitlementInvalid(EntitlementHash)
+}
+
+// ---------------------------------------------------------------------
+// scope-layout-versioned — the layout that names a checkpoint output is retired
+// ---------------------------------------------------------------------
+
+/// A scope as the retired layout wrote it: a checkpoint output reference where
+/// the identifier, the epoch and the sequence number now sit.
+fn retired_layout_scope() -> Data {
+  builtin.constr_data(
+    0,
+    [
+      builtin.b_data(vec.domain),
+      builtin.i_data(1),
+      builtin.i_data(vec.network),
+      builtin.b_data(vec.checkpoint_policy),
+      builtin.constr_data(
+        0,
+        [
+          builtin.b_data(
+            #"c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2",
+          ),
+          builtin.i_data(3),
+        ],
+      ),
+      builtin.constr_data(0, []),
+      builtin.b_data(vec.marker),
+      builtin.i_data(vec.commit_upper),
+      builtin.i_data(vec.eligible_after),
+      builtin.i_data(vec.expires_at),
+    ],
+  )
+}
+
+fn retired_layout_commitment() -> Data {
+  builtin.constr_data(
+    0,
+    [
+      retired_layout_scope(),
+      builtin.b_data(vec.payee),
+      builtin.b_data(vec.commitment_hash),
+      builtin.b_data(vec.marker),
+    ],
+  )
+}
+
+test bounty_commitment_layout_version_follows_the_retired_one() {
+  commitment_schema > 1
+}
+
+test bounty_commitment_retired_layout_version_is_refused() {
+  scope_well_formed(parameters(), BountyScope { ..scope(), schema: 1 }) == ScopeInvalid(
+    ScopeSchema,
+  )
+}
+
+test bounty_commitment_current_layout_version_is_accepted() {
+  scope_well_formed(
+    parameters(),
+    BountyScope { ..scope(), schema: commitment_schema },
+  ) == ScopeValid
+}
+
+test bounty_commitment_reads_no_commitment_of_the_retired_layout() {
+  inline_commitment(InlineDatum(retired_layout_commitment())) == None
+}
+
+test bounty_commitment_reads_the_commitment_it_writes() {
+  let written: Data = commitment()
+  inline_commitment(InlineDatum(written)) == Some(commitment())
+}
+
+// ---------------------------------------------------------------------
+// commitment-names-key-state — the vector rows of the model, by name
+// ---------------------------------------------------------------------
+
+fn matches_at(at: ConvictionTarget) -> EntitlementVerdict {
+  entitlement_matches(commitment(), at, vec.evidence_digest, vec.nonce)
+}
+
+/// Lean vector row `refused-other-key-state`.
+test refused_other_key_state() {
+  and {
+    matches_at(ConvictionTarget { ..target(), epoch: vec.epoch + 1 }) == EntitlementInvalid(
+      EntitlementKeyState,
+    ),
+    matches_at(ConvictionTarget { ..target(), sn: vec.sn + 1 }) == EntitlementInvalid(
+      EntitlementKeyState,
+    ),
+  }
+}
+
+/// Lean vector row `refused-output-rotated`: a rotation moves the epoch or the
+/// sequence number, and a rotation moves both together or either alone.
+test refused_output_rotated() {
+  matches_at(
+    ConvictionTarget { ..target(), epoch: vec.epoch + 1, sn: vec.sn + 1 },
+  ) == EntitlementInvalid(EntitlementKeyState)
+}
+
+/// Lean vector row `convict-revealing-the-other-aid-commitment`.
+test convict_revealing_the_other_aid_commitment() {
+  matches_at(ConvictionTarget { ..target(), aid: flip_last(vec.aid) }) == EntitlementInvalid(
+    EntitlementAid,
+  )
+}
+
+/// Lean vector row `refused-at-another-deployment`.
+test refused_at_another_deployment() {
+  matches_at(
+    ConvictionTarget {
+      ..target(),
+      checkpoint_policy: flip_last(vec.checkpoint_policy),
+    },
+  ) == EntitlementInvalid(EntitlementDeployment)
+}
+
+/// The key state is the whole of what the commitment names about the output:
+/// the same identifier, epoch and sequence number at the same deployment is
+/// entitled, whatever else the output carries (Lean `commitment_survives_*`).
+test accepted_at_the_same_key_state() {
+  matches_at(target()) == EntitlementValid
 }

@@ -360761,17 +360761,17 @@
    ]
   },
   "docs-design-trust-model/the-registry-01": {
-   "audio_sha256": "e8c99ee7fbdad14fae1db8fe8a8bb08eb886136f77a7d46a1329536dfb5d19e5",
-   "characters": 346,
-   "cost": 0.00034254,
-   "duration": 24.4,
+   "audio_sha256": "77fbde5b6a8e755da22a25b7843dcf9a2bd0b79114e8eab24d9a5c1996352b67",
+   "characters": 334,
+   "cost": 0.00033066,
+   "duration": 22.275,
    "index": 1,
-   "key": "f431ff155fa41a2ba1c5b5033f499c1d898cad95b2334bb8f36c62d568c46164",
+   "key": "30c9f415a6e05c95944843680566dfb51111657152b88a8c0b910d1a0ce87be2",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,
    "section": "the-registry",
-   "sent_text": "Registration and terminal completion use actual registry folds. Rotations, poison, freezing, top-ups and conviction are local Checkpoint transitions. Pending custody remains until its recorded request is consumed by a matching fold. The consumer authenticates the holding against its fixed registry identity; it need not spend the registry state.",
-   "text": "Registration and terminal completion use actual registry folds. Rotations, poison, freezing, top-ups and conviction are local Checkpoint transitions. Pending custody remains until its recorded request is consumed by a matching fold. The consumer authenticates the holding against its fixed registry identity; it need not spend the registry state.",
+   "sent_text": "Registration and terminal completion use actual registry folds. In a proved system registration, the checkpoint is born at the booking time and carries the booked refund address. The initial pool is exactly what remains of the delivered carrier after minimum ADA and both bonds. A folder obtains these facts from the booking on chain.",
+   "text": "Registration and terminal completion use actual registry folds. In a proved system registration, the checkpoint is born at the booking time and carries the booked refund address. The initial pool is exactly what remains of the delivered carrier after minimum ADA and both bonds. A folder obtains these facts from the booking on chain.",
    "words": [
     {
      "end": 1.075,
@@ -360819,238 +360819,713 @@
      "text": "."
     },
     {
-     "end": 5.775,
-     "start": 5.025,
-     "text": "Rotations"
+     "end": 5.15,
+     "start": 5.05,
+     "text": "In"
     },
     {
-     "end": 5.838,
-     "start": 5.775,
-     "text": ","
-    },
-    {
-     "end": 6.375,
-     "start": 5.838,
-     "text": "poison"
-    },
-    {
-     "end": 6.463,
-     "start": 6.375,
-     "text": ","
-    },
-    {
-     "end": 7.075,
-     "start": 6.463,
-     "text": "freezing"
-    },
-    {
-     "end": 7.188,
-     "start": 7.075,
-     "text": ","
-    },
-    {
-     "end": 7.7,
-     "start": 7.188,
-     "text": "top-ups"
-    },
-    {
-     "end": 7.825,
-     "start": 7.7,
-     "text": "and"
-    },
-    {
-     "end": 8.425,
-     "start": 7.825,
-     "text": "conviction"
-    },
-    {
-     "end": 8.575,
-     "start": 8.425,
-     "text": "are"
-    },
-    {
-     "end": 8.913,
-     "start": 8.575,
-     "text": "local"
-    },
-    {
-     "end": 9.375,
-     "start": 8.913,
-     "text": "Checkpoint"
-    },
-    {
-     "end": 10.725,
-     "start": 9.375,
-     "text": "transitions"
-    },
-    {
-     "end": 10.925,
-     "start": 10.725,
-     "text": "."
-    },
-    {
-     "end": 11.5,
-     "start": 11.125,
-     "text": "Pending"
-    },
-    {
-     "end": 11.975,
-     "start": 11.5,
-     "text": "custody"
-    },
-    {
-     "end": 12.575,
-     "start": 11.975,
-     "text": "remains"
-    },
-    {
-     "end": 12.913,
-     "start": 12.575,
-     "text": "until"
-    },
-    {
-     "end": 13.1,
-     "start": 12.913,
-     "text": "its"
-    },
-    {
-     "end": 13.625,
-     "start": 13.1,
-     "text": "recorded"
-    },
-    {
-     "end": 14.262,
-     "start": 13.625,
-     "text": "request"
-    },
-    {
-     "end": 14.425,
-     "start": 14.262,
-     "text": "is"
-    },
-    {
-     "end": 15.05,
-     "start": 14.425,
-     "text": "consumed"
-    },
-    {
-     "end": 15.225,
-     "start": 15.05,
-     "text": "by"
-    },
-    {
-     "end": 15.325,
-     "start": 15.225,
+     "end": 5.262,
+     "start": 5.15,
      "text": "a"
     },
     {
-     "end": 15.762,
-     "start": 15.325,
-     "text": "matching"
+     "end": 5.713,
+     "start": 5.262,
+     "text": "proved"
     },
     {
-     "end": 16.75,
-     "start": 15.762,
-     "text": "fold"
+     "end": 6.125,
+     "start": 5.713,
+     "text": "system"
     },
     {
-     "end": 16.975,
-     "start": 16.75,
+     "end": 7.0,
+     "start": 6.125,
+     "text": "registration"
+    },
+    {
+     "end": 7.075,
+     "start": 7.0,
+     "text": ","
+    },
+    {
+     "end": 7.213,
+     "start": 7.075,
+     "text": "the"
+    },
+    {
+     "end": 7.725,
+     "start": 7.213,
+     "text": "checkpoint"
+    },
+    {
+     "end": 7.887,
+     "start": 7.725,
+     "text": "is"
+    },
+    {
+     "end": 8.188,
+     "start": 7.887,
+     "text": "born"
+    },
+    {
+     "end": 8.262,
+     "start": 8.188,
+     "text": "at"
+    },
+    {
+     "end": 8.35,
+     "start": 8.262,
+     "text": "the"
+    },
+    {
+     "end": 8.7,
+     "start": 8.35,
+     "text": "booking"
+    },
+    {
+     "end": 9.113,
+     "start": 8.7,
+     "text": "time"
+    },
+    {
+     "end": 9.262,
+     "start": 9.113,
+     "text": "and"
+    },
+    {
+     "end": 9.7,
+     "start": 9.262,
+     "text": "carries"
+    },
+    {
+     "end": 9.837,
+     "start": 9.7,
+     "text": "the"
+    },
+    {
+     "end": 10.212,
+     "start": 9.837,
+     "text": "booked"
+    },
+    {
+     "end": 10.675,
+     "start": 10.212,
+     "text": "refund"
+    },
+    {
+     "end": 11.8,
+     "start": 10.675,
+     "text": "address"
+    },
+    {
+     "end": 12.025,
+     "start": 11.8,
      "text": "."
     },
     {
-     "end": 17.225,
-     "start": 17.15,
+     "end": 12.35,
+     "start": 12.225,
      "text": "The"
     },
     {
-     "end": 17.9,
-     "start": 17.225,
-     "text": "consumer"
+     "end": 12.762,
+     "start": 12.35,
+     "text": "initial"
     },
     {
-     "end": 18.65,
-     "start": 17.9,
-     "text": "authenticates"
+     "end": 13.163,
+     "start": 12.762,
+     "text": "pool"
     },
     {
-     "end": 18.75,
-     "start": 18.65,
+     "end": 13.325,
+     "start": 13.163,
+     "text": "is"
+    },
+    {
+     "end": 13.95,
+     "start": 13.325,
+     "text": "exactly"
+    },
+    {
+     "end": 14.15,
+     "start": 13.95,
+     "text": "what"
+    },
+    {
+     "end": 14.712,
+     "start": 14.15,
+     "text": "remains"
+    },
+    {
+     "end": 14.788,
+     "start": 14.712,
+     "text": "of"
+    },
+    {
+     "end": 14.875,
+     "start": 14.788,
      "text": "the"
     },
     {
-     "end": 19.263,
-     "start": 18.75,
-     "text": "holding"
+     "end": 15.387,
+     "start": 14.875,
+     "text": "delivered"
     },
     {
-     "end": 19.612,
-     "start": 19.263,
-     "text": "against"
+     "end": 15.938,
+     "start": 15.387,
+     "text": "carrier"
     },
     {
-     "end": 19.812,
-     "start": 19.612,
-     "text": "its"
+     "end": 16.312,
+     "start": 15.938,
+     "text": "after"
     },
     {
-     "end": 20.15,
-     "start": 19.812,
-     "text": "fixed"
+     "end": 16.7,
+     "start": 16.312,
+     "text": "minimum"
     },
     {
-     "end": 20.663,
-     "start": 20.15,
-     "text": "registry"
+     "end": 17.112,
+     "start": 16.7,
+     "text": "ADA"
     },
     {
-     "end": 21.8,
-     "start": 20.663,
-     "text": "identity"
+     "end": 17.25,
+     "start": 17.112,
+     "text": "and"
     },
     {
-     "end": 22.0,
-     "start": 21.8,
-     "text": ";"
+     "end": 17.55,
+     "start": 17.25,
+     "text": "both"
     },
     {
-     "end": 22.288,
-     "start": 22.2,
+     "end": 18.675,
+     "start": 17.55,
+     "text": "bonds"
+    },
+    {
+     "end": 18.9,
+     "start": 18.675,
+     "text": "."
+    },
+    {
+     "end": 19.163,
+     "start": 19.075,
+     "text": "A"
+    },
+    {
+     "end": 19.575,
+     "start": 19.163,
+     "text": "folder"
+    },
+    {
+     "end": 19.987,
+     "start": 19.575,
+     "text": "obtains"
+    },
+    {
+     "end": 20.175,
+     "start": 19.987,
+     "text": "these"
+    },
+    {
+     "end": 20.487,
+     "start": 20.175,
+     "text": "facts"
+    },
+    {
+     "end": 20.612,
+     "start": 20.487,
+     "text": "from"
+    },
+    {
+     "end": 20.7,
+     "start": 20.612,
+     "text": "the"
+    },
+    {
+     "end": 21.013,
+     "start": 20.7,
+     "text": "booking"
+    },
+    {
+     "end": 21.212,
+     "start": 21.013,
+     "text": "on"
+    },
+    {
+     "end": 22.075,
+     "start": 21.212,
+     "text": "chain"
+    },
+    {
+     "end": 22.275,
+     "start": 22.075,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-trust-model/the-registry-02": {
+   "audio_sha256": "c54485f32f5b58dd57df94f8d046edaea3fe2d76f5185e0559d207c3f5e1f3b0",
+   "characters": 531,
+   "cost": 0.00052569,
+   "duration": 36.2,
+   "index": 2,
+   "key": "c8b918449fd482819c3c821dc6853592f3749b36c4247c0072c2411d2c02cd6a",
+   "page": "docs/design/trust-model.md",
+   "pause_ms": 400,
+   "section": "the-registry",
+   "sent_text": "A local rotation, deposit or poison step reads the authorization for the identifier it changes. Two checkpoints at the same sequence and epoch can have different authorizations. The modeled poison spend requires the current keys of that identifier. Rotations, poison, freezing, top-ups and conviction are local Checkpoint transitions. Pending custody remains until its recorded request is consumed by a matching fold. The consumer authenticates the holding against its fixed registry identity; it need not spend the registry state.",
+   "text": "A local rotation, deposit or poison step reads the authorization for the identifier it changes. Two checkpoints at the same sequence and epoch can have different authorizations. The modeled poison spend requires the current keys of that identifier. Rotations, poison, freezing, top-ups and conviction are local Checkpoint transitions. Pending custody remains until its recorded request is consumed by a matching fold. The consumer authenticates the holding against its fixed registry identity; it need not spend the registry state.",
+   "words": [
+    {
+     "end": 0.275,
+     "start": 0.2,
+     "text": "A"
+    },
+    {
+     "end": 0.65,
+     "start": 0.275,
+     "text": "local"
+    },
+    {
+     "end": 1.425,
+     "start": 0.65,
+     "text": "rotation"
+    },
+    {
+     "end": 1.5,
+     "start": 1.425,
+     "text": ","
+    },
+    {
+     "end": 2.162,
+     "start": 1.5,
+     "text": "deposit"
+    },
+    {
+     "end": 2.338,
+     "start": 2.162,
+     "text": "or"
+    },
+    {
+     "end": 2.775,
+     "start": 2.338,
+     "text": "poison"
+    },
+    {
+     "end": 3.175,
+     "start": 2.775,
+     "text": "step"
+    },
+    {
+     "end": 3.513,
+     "start": 3.175,
+     "text": "reads"
+    },
+    {
+     "end": 3.65,
+     "start": 3.513,
+     "text": "the"
+    },
+    {
+     "end": 4.475,
+     "start": 3.65,
+     "text": "authorization"
+    },
+    {
+     "end": 4.588,
+     "start": 4.475,
+     "text": "for"
+    },
+    {
+     "end": 4.738,
+     "start": 4.588,
+     "text": "the"
+    },
+    {
+     "end": 5.4,
+     "start": 4.738,
+     "text": "identifier"
+    },
+    {
+     "end": 5.537,
+     "start": 5.4,
      "text": "it"
     },
     {
-     "end": 22.462,
-     "start": 22.288,
-     "text": "need"
+     "end": 6.725,
+     "start": 5.537,
+     "text": "changes"
     },
     {
-     "end": 22.663,
-     "start": 22.462,
-     "text": "not"
+     "end": 6.925,
+     "start": 6.725,
+     "text": "."
     },
     {
-     "end": 22.862,
-     "start": 22.663,
-     "text": "spend"
+     "end": 7.338,
+     "start": 7.125,
+     "text": "Two"
     },
     {
-     "end": 22.95,
-     "start": 22.862,
+     "end": 7.863,
+     "start": 7.338,
+     "text": "checkpoints"
+    },
+    {
+     "end": 7.938,
+     "start": 7.863,
+     "text": "at"
+    },
+    {
+     "end": 8.038,
+     "start": 7.938,
      "text": "the"
     },
     {
-     "end": 23.425,
-     "start": 22.95,
+     "end": 8.387,
+     "start": 8.038,
+     "text": "same"
+    },
+    {
+     "end": 8.9,
+     "start": 8.387,
+     "text": "sequence"
+    },
+    {
+     "end": 9.025,
+     "start": 8.9,
+     "text": "and"
+    },
+    {
+     "end": 9.425,
+     "start": 9.025,
+     "text": "epoch"
+    },
+    {
+     "end": 9.575,
+     "start": 9.425,
+     "text": "can"
+    },
+    {
+     "end": 9.8,
+     "start": 9.575,
+     "text": "have"
+    },
+    {
+     "end": 10.1,
+     "start": 9.8,
+     "text": "different"
+    },
+    {
+     "end": 11.55,
+     "start": 10.1,
+     "text": "authorizations"
+    },
+    {
+     "end": 11.75,
+     "start": 11.55,
+     "text": "."
+    },
+    {
+     "end": 12.025,
+     "start": 11.925,
+     "text": "The"
+    },
+    {
+     "end": 12.425,
+     "start": 12.025,
+     "text": "modeled"
+    },
+    {
+     "end": 12.85,
+     "start": 12.425,
+     "text": "poison"
+    },
+    {
+     "end": 13.275,
+     "start": 12.85,
+     "text": "spend"
+    },
+    {
+     "end": 13.825,
+     "start": 13.275,
+     "text": "requires"
+    },
+    {
+     "end": 13.95,
+     "start": 13.825,
+     "text": "the"
+    },
+    {
+     "end": 14.312,
+     "start": 13.95,
+     "text": "current"
+    },
+    {
+     "end": 14.775,
+     "start": 14.312,
+     "text": "keys"
+    },
+    {
+     "end": 14.875,
+     "start": 14.775,
+     "text": "of"
+    },
+    {
+     "end": 15.125,
+     "start": 14.875,
+     "text": "that"
+    },
+    {
+     "end": 16.425,
+     "start": 15.125,
+     "text": "identifier"
+    },
+    {
+     "end": 16.625,
+     "start": 16.425,
+     "text": "."
+    },
+    {
+     "end": 17.575,
+     "start": 16.825,
+     "text": "Rotations"
+    },
+    {
+     "end": 17.638,
+     "start": 17.575,
+     "text": ","
+    },
+    {
+     "end": 18.175,
+     "start": 17.638,
+     "text": "poison"
+    },
+    {
+     "end": 18.263,
+     "start": 18.175,
+     "text": ","
+    },
+    {
+     "end": 18.875,
+     "start": 18.263,
+     "text": "freezing"
+    },
+    {
+     "end": 18.987,
+     "start": 18.875,
+     "text": ","
+    },
+    {
+     "end": 19.5,
+     "start": 18.987,
+     "text": "top-ups"
+    },
+    {
+     "end": 19.625,
+     "start": 19.5,
+     "text": "and"
+    },
+    {
+     "end": 20.225,
+     "start": 19.625,
+     "text": "conviction"
+    },
+    {
+     "end": 20.375,
+     "start": 20.225,
+     "text": "are"
+    },
+    {
+     "end": 20.712,
+     "start": 20.375,
+     "text": "local"
+    },
+    {
+     "end": 21.175,
+     "start": 20.712,
+     "text": "Checkpoint"
+    },
+    {
+     "end": 22.525,
+     "start": 21.175,
+     "text": "transitions"
+    },
+    {
+     "end": 22.725,
+     "start": 22.525,
+     "text": "."
+    },
+    {
+     "end": 23.3,
+     "start": 22.925,
+     "text": "Pending"
+    },
+    {
+     "end": 23.775,
+     "start": 23.3,
+     "text": "custody"
+    },
+    {
+     "end": 24.375,
+     "start": 23.775,
+     "text": "remains"
+    },
+    {
+     "end": 24.712,
+     "start": 24.375,
+     "text": "until"
+    },
+    {
+     "end": 24.9,
+     "start": 24.712,
+     "text": "its"
+    },
+    {
+     "end": 25.425,
+     "start": 24.9,
+     "text": "recorded"
+    },
+    {
+     "end": 26.062,
+     "start": 25.425,
+     "text": "request"
+    },
+    {
+     "end": 26.225,
+     "start": 26.062,
+     "text": "is"
+    },
+    {
+     "end": 26.85,
+     "start": 26.225,
+     "text": "consumed"
+    },
+    {
+     "end": 27.025,
+     "start": 26.85,
+     "text": "by"
+    },
+    {
+     "end": 27.125,
+     "start": 27.025,
+     "text": "a"
+    },
+    {
+     "end": 27.562,
+     "start": 27.125,
+     "text": "matching"
+    },
+    {
+     "end": 28.55,
+     "start": 27.562,
+     "text": "fold"
+    },
+    {
+     "end": 28.775,
+     "start": 28.55,
+     "text": "."
+    },
+    {
+     "end": 29.025,
+     "start": 28.95,
+     "text": "The"
+    },
+    {
+     "end": 29.7,
+     "start": 29.025,
+     "text": "consumer"
+    },
+    {
+     "end": 30.45,
+     "start": 29.7,
+     "text": "authenticates"
+    },
+    {
+     "end": 30.55,
+     "start": 30.45,
+     "text": "the"
+    },
+    {
+     "end": 31.062,
+     "start": 30.55,
+     "text": "holding"
+    },
+    {
+     "end": 31.413,
+     "start": 31.062,
+     "text": "against"
+    },
+    {
+     "end": 31.612,
+     "start": 31.413,
+     "text": "its"
+    },
+    {
+     "end": 31.95,
+     "start": 31.612,
+     "text": "fixed"
+    },
+    {
+     "end": 32.463,
+     "start": 31.95,
      "text": "registry"
     },
     {
-     "end": 24.2,
-     "start": 23.425,
+     "end": 33.6,
+     "start": 32.463,
+     "text": "identity"
+    },
+    {
+     "end": 33.8,
+     "start": 33.6,
+     "text": ";"
+    },
+    {
+     "end": 34.088,
+     "start": 34.0,
+     "text": "it"
+    },
+    {
+     "end": 34.263,
+     "start": 34.088,
+     "text": "need"
+    },
+    {
+     "end": 34.463,
+     "start": 34.263,
+     "text": "not"
+    },
+    {
+     "end": 34.662,
+     "start": 34.463,
+     "text": "spend"
+    },
+    {
+     "end": 34.75,
+     "start": 34.662,
+     "text": "the"
+    },
+    {
+     "end": 35.225,
+     "start": 34.75,
+     "text": "registry"
+    },
+    {
+     "end": 36.0,
+     "start": 35.225,
      "text": "state"
     },
     {
-     "end": 24.4,
-     "start": 24.2,
+     "end": 36.2,
+     "start": 36.0,
      "text": "."
     }
    ]

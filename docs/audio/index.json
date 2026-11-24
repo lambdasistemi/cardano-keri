@@ -12861,7 +12861,13 @@
     "index": 1,
     "name": "docs-design-trust-model/the-registry-01",
     "pause_ms": 400,
-    "v": "e8c99ee7fbda"
+    "v": "77fbde5b6a8e"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-trust-model/the-registry-02",
+    "pause_ms": 400,
+    "v": "c54485f32f5b"
    }
   ],
   "the-sequence-never-moves-backward": [

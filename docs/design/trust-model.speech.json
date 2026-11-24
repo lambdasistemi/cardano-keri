@@ -369,7 +369,11 @@
       "pause": 500
     },
     {
-      "text": "Registration and terminal completion use actual registry folds. Rotations, poison, freezing, top-ups and conviction are local Checkpoint transitions. Pending custody remains until its recorded request is consumed by a matching fold. The consumer authenticates the holding against its fixed registry identity; it need not spend the registry state.",
+      "text": "Registration and terminal completion use actual registry folds. In a proved system registration, the checkpoint is born at the booking time and carries the booked refund address. The initial pool is exactly what remains of the delivered carrier after minimum ADA and both bonds. A folder obtains these facts from the booking on chain.",
+      "pause": 400
+    },
+    {
+      "text": "A local rotation, deposit or poison step reads the authorization for the identifier it changes. Two checkpoints at the same sequence and epoch can have different authorizations. The modeled poison spend requires the current keys of that identifier. Rotations, poison, freezing, top-ups and conviction are local Checkpoint transitions. Pending custody remains until its recorded request is consumed by a matching fold. The consumer authenticates the holding against its fixed registry identity; it need not spend the registry state.",
       "pause": 400
     }
   ],
@@ -405,6 +409,6 @@
   ],
   "_source": {
     "file": "trust-model.md",
-    "sha256": "d3dca6dc3e7887eed6a920b2f5188b8264ef11c493145f6f42e97f8e11d95d74"
+    "sha256": "e6095f7ea83309b9cd2147c293416310df3cc20109025c7206184814d4c1436b"
   }
 }

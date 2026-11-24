@@ -411,7 +411,16 @@ not match. An unavailable indexer affects liveness only.
 
 ### The registry
 
-Registration and terminal completion use actual registry folds. Rotations,
+Registration and terminal completion use actual registry folds. In a proved
+system registration, the checkpoint is born at the booking time and carries
+the booked refund address. The initial pool is exactly what remains of the
+delivered carrier after minimum ADA and both bonds. A folder obtains these
+facts from the booking on chain.
+
+A local rotation, deposit or poison step reads the authorization for the
+identifier it changes. Two checkpoints at the same sequence and epoch can
+have different authorizations. The modeled poison spend requires the current
+keys of that identifier. Rotations,
 poison, freezing, top-ups and conviction are local Checkpoint
 transitions. Pending custody remains until its recorded request is consumed
 by a matching fold. The consumer authenticates the holding against its fixed

@@ -259131,17 +259131,17 @@
    ]
   },
   "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-03": {
-   "audio_sha256": "2dedd3ab2cb577f4511d8578246762d547a66c21472ac29ddc7f5d813d7c1726",
-   "characters": 732,
-   "cost": 0.0007246799999999999,
-   "duration": 48.925,
+   "audio_sha256": "de62f8d0034516b90e2d0049b4b8adf25ea40f56dfae2ee85b74c15dd5f6188a",
+   "characters": 861,
+   "cost": 0.00085239,
+   "duration": 57.675,
    "index": 3,
-   "key": "c144a886f7b14c538f7c33929331ceebedb5f2e6ddf326475c89d7ad7c4a7de1",
+   "key": "db46665abf7f9aca2c6ba1132ce210680ebfaf13db50ebc4a289d5afa67b1d39",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
    "section": "what-a-reader-answers-about-an-identifier",
-   "sent_text": "The leaf of the identifier's key is not observed. It is replayed from the history. The registry starts with no member. Each fold's changes are applied in order: a registration binds a key the registry does not know as active, and a termination makes an active key terminal. After the replay the key reads unknown exactly when no change of any fold names it, and terminal exactly when some fold terminates it (replayed_leaf). Only a complete history establishes a leaf. A history that starts late or misses a fold establishes none, and neither does one whose replay meets a change no accepted fold makes: a second registration of a key, the termination of a key that is not active, or a fold with no change (history_not_established).",
-   "text": "The leaf of the identifier's key is not observed. It is replayed from the history. The registry starts with no member. Each fold's changes are applied in order: a registration binds a key the registry does not know as active, and a termination makes an active key terminal. After the replay the key reads unknown exactly when no change of any fold names it, and terminal exactly when some fold terminates it (replayed_leaf). Only a complete history establishes a leaf. A history that starts late or misses a fold establishes none, and neither does one whose replay meets a change no accepted fold makes: a second registration of a key, the termination of a key that is not active, or a fold with no change (history_not_established).",
+   "sent_text": "The leaf of the identifier's key is not observed. It is replayed from the history. The registry starts with no member. Each fold's changes are applied in order: a registration binds a key the registry does not know as active, and a termination makes an active key terminal. After the replay the key reads unknown exactly when no change of any fold names it, and terminal exactly when some fold terminates it (replayed_leaf). Only a complete history establishes a leaf. A history that starts late or misses a fold establishes none (history_not_established). A complete history whose replay meets a change no accepted fold makes, a second registration of a key, the termination of a key that is not active, or a fold with no change, is broken: it is the history of no registry, and the answer is unavailable whatever the holders show (broken_history_unavailable).",
+   "text": "The leaf of the identifier's key is not observed. It is replayed from the history. The registry starts with no member. Each fold's changes are applied in order: a registration binds a key the registry does not know as active, and a termination makes an active key terminal. After the replay the key reads unknown exactly when no change of any fold names it, and terminal exactly when some fold terminates it (replayed_leaf). Only a complete history establishes a leaf. A history that starts late or misses a fold establishes none (history_not_established). A complete history whose replay meets a change no accepted fold makes, a second registration of a key, the termination of a key that is not active, or a fold with no change, is broken: it is the history of no registry, and the answer is unavailable whatever the holders show (broken_history_unavailable).",
    "words": [
     {
      "end": 0.275,
@@ -259604,273 +259604,933 @@
      "text": "A"
     },
     {
-     "end": 31.825,
+     "end": 31.875,
      "start": 31.4,
      "text": "history"
     },
     {
-     "end": 31.975,
-     "start": 31.825,
+     "end": 32.05,
+     "start": 31.875,
      "text": "that"
     },
     {
-     "end": 32.35,
-     "start": 31.975,
+     "end": 32.438,
+     "start": 32.05,
      "text": "starts"
     },
     {
-     "end": 32.65,
-     "start": 32.35,
+     "end": 32.787,
+     "start": 32.438,
      "text": "late"
     },
     {
-     "end": 32.8,
-     "start": 32.65,
+     "end": 32.95,
+     "start": 32.787,
      "text": "or"
     },
     {
-     "end": 33.15,
-     "start": 32.8,
+     "end": 33.325,
+     "start": 32.95,
      "text": "misses"
     },
     {
-     "end": 33.263,
-     "start": 33.15,
+     "end": 33.438,
+     "start": 33.325,
      "text": "a"
     },
     {
-     "end": 33.7,
-     "start": 33.263,
+     "end": 33.963,
+     "start": 33.438,
      "text": "fold"
     },
     {
-     "end": 34.4,
-     "start": 33.7,
+     "end": 34.7,
+     "start": 33.963,
      "text": "establishes"
     },
     {
-     "end": 35.225,
-     "start": 34.4,
+     "end": 35.075,
+     "start": 34.7,
      "text": "none"
     },
     {
-     "end": 35.425,
-     "start": 35.225,
-     "text": ","
-    },
-    {
-     "end": 35.725,
-     "start": 35.625,
-     "text": "and"
-    },
-    {
-     "end": 36.0,
-     "start": 35.725,
-     "text": "neither"
-    },
-    {
-     "end": 36.225,
-     "start": 36.0,
-     "text": "does"
-    },
-    {
-     "end": 36.5,
-     "start": 36.225,
-     "text": "one"
-    },
-    {
-     "end": 36.725,
-     "start": 36.5,
-     "text": "whose"
-    },
-    {
-     "end": 37.237,
-     "start": 36.725,
-     "text": "replay"
-    },
-    {
-     "end": 37.487,
-     "start": 37.237,
-     "text": "meets"
-    },
-    {
-     "end": 37.588,
-     "start": 37.487,
-     "text": "a"
-    },
-    {
-     "end": 38.125,
-     "start": 37.588,
-     "text": "change"
-    },
-    {
-     "end": 38.4,
-     "start": 38.125,
-     "text": "no"
-    },
-    {
-     "end": 38.938,
-     "start": 38.4,
-     "text": "accepted"
-    },
-    {
-     "end": 39.3,
-     "start": 38.938,
-     "text": "fold"
-    },
-    {
-     "end": 40.175,
-     "start": 39.3,
-     "text": "makes"
-    },
-    {
-     "end": 40.375,
-     "start": 40.175,
-     "text": ":"
-    },
-    {
-     "end": 40.662,
-     "start": 40.575,
-     "text": "a"
-    },
-    {
-     "end": 41.0,
-     "start": 40.662,
-     "text": "second"
-    },
-    {
-     "end": 41.713,
-     "start": 41.0,
-     "text": "registration"
-    },
-    {
-     "end": 41.787,
-     "start": 41.713,
-     "text": "of"
-    },
-    {
-     "end": 41.888,
-     "start": 41.787,
-     "text": "a"
-    },
-    {
-     "end": 42.35,
-     "start": 41.888,
-     "text": "key"
-    },
-    {
-     "end": 42.45,
-     "start": 42.35,
-     "text": ","
-    },
-    {
-     "end": 42.55,
-     "start": 42.45,
-     "text": "the"
-    },
-    {
-     "end": 43.213,
-     "start": 42.55,
-     "text": "termination"
-    },
-    {
-     "end": 43.287,
-     "start": 43.213,
-     "text": "of"
-    },
-    {
-     "end": 43.388,
-     "start": 43.287,
-     "text": "a"
-    },
-    {
-     "end": 43.725,
-     "start": 43.388,
-     "text": "key"
-    },
-    {
-     "end": 43.875,
-     "start": 43.725,
-     "text": "that"
-    },
-    {
-     "end": 44.025,
-     "start": 43.875,
-     "text": "is"
-    },
-    {
-     "end": 44.287,
-     "start": 44.025,
-     "text": "not"
-    },
-    {
-     "end": 45.325,
-     "start": 44.287,
-     "text": "active"
-    },
-    {
-     "end": 45.55,
-     "start": 45.325,
-     "text": ","
-    },
-    {
-     "end": 45.838,
-     "start": 45.75,
-     "text": "or"
-    },
-    {
-     "end": 45.938,
-     "start": 45.838,
-     "text": "a"
-    },
-    {
-     "end": 46.263,
-     "start": 45.938,
-     "text": "fold"
-    },
-    {
-     "end": 46.425,
-     "start": 46.263,
-     "text": "with"
-    },
-    {
-     "end": 46.638,
-     "start": 46.425,
-     "text": "no"
-    },
-    {
-     "end": 47.037,
-     "start": 46.638,
-     "text": "change"
-    },
-    {
-     "end": 47.075,
-     "start": 47.037,
+     "end": 35.125,
+     "start": 35.075,
      "text": "("
     },
     {
-     "end": 48.65,
-     "start": 47.075,
+     "end": 36.875,
+     "start": 35.125,
      "text": "history_not_established"
     },
     {
-     "end": 48.85,
-     "start": 48.65,
+     "end": 37.075,
+     "start": 36.875,
      "text": ")"
     },
     {
-     "end": 48.925,
-     "start": 48.85,
+     "end": 37.125,
+     "start": 37.075,
+     "text": "."
+    },
+    {
+     "end": 37.4,
+     "start": 37.325,
+     "text": "A"
+    },
+    {
+     "end": 37.825,
+     "start": 37.4,
+     "text": "complete"
+    },
+    {
+     "end": 38.3,
+     "start": 37.825,
+     "text": "history"
+    },
+    {
+     "end": 38.5,
+     "start": 38.3,
+     "text": "whose"
+    },
+    {
+     "end": 38.925,
+     "start": 38.5,
+     "text": "replay"
+    },
+    {
+     "end": 39.162,
+     "start": 38.925,
+     "text": "meets"
+    },
+    {
+     "end": 39.263,
+     "start": 39.162,
+     "text": "a"
+    },
+    {
+     "end": 39.787,
+     "start": 39.263,
+     "text": "change"
+    },
+    {
+     "end": 40.05,
+     "start": 39.787,
+     "text": "no"
+    },
+    {
+     "end": 40.588,
+     "start": 40.05,
+     "text": "accepted"
+    },
+    {
+     "end": 40.95,
+     "start": 40.588,
+     "text": "fold"
+    },
+    {
+     "end": 41.8,
+     "start": 40.95,
+     "text": "makes"
+    },
+    {
+     "end": 42.0,
+     "start": 41.8,
+     "text": ","
+    },
+    {
+     "end": 42.287,
+     "start": 42.2,
+     "text": "a"
+    },
+    {
+     "end": 42.625,
+     "start": 42.287,
+     "text": "second"
+    },
+    {
+     "end": 43.338,
+     "start": 42.625,
+     "text": "registration"
+    },
+    {
+     "end": 43.412,
+     "start": 43.338,
+     "text": "of"
+    },
+    {
+     "end": 43.513,
+     "start": 43.412,
+     "text": "a"
+    },
+    {
+     "end": 43.975,
+     "start": 43.513,
+     "text": "key"
+    },
+    {
+     "end": 44.075,
+     "start": 43.975,
+     "text": ","
+    },
+    {
+     "end": 44.175,
+     "start": 44.075,
+     "text": "the"
+    },
+    {
+     "end": 44.838,
+     "start": 44.175,
+     "text": "termination"
+    },
+    {
+     "end": 44.912,
+     "start": 44.838,
+     "text": "of"
+    },
+    {
+     "end": 45.013,
+     "start": 44.912,
+     "text": "a"
+    },
+    {
+     "end": 45.35,
+     "start": 45.013,
+     "text": "key"
+    },
+    {
+     "end": 45.5,
+     "start": 45.35,
+     "text": "that"
+    },
+    {
+     "end": 45.65,
+     "start": 45.5,
+     "text": "is"
+    },
+    {
+     "end": 45.912,
+     "start": 45.65,
+     "text": "not"
+    },
+    {
+     "end": 46.95,
+     "start": 45.912,
+     "text": "active"
+    },
+    {
+     "end": 47.175,
+     "start": 46.95,
+     "text": ","
+    },
+    {
+     "end": 47.438,
+     "start": 47.35,
+     "text": "or"
+    },
+    {
+     "end": 47.5,
+     "start": 47.438,
+     "text": "a"
+    },
+    {
+     "end": 47.787,
+     "start": 47.5,
+     "text": "fold"
+    },
+    {
+     "end": 47.9,
+     "start": 47.787,
+     "text": "with"
+    },
+    {
+     "end": 48.075,
+     "start": 47.9,
+     "text": "no"
+    },
+    {
+     "end": 48.35,
+     "start": 48.075,
+     "text": "change"
+    },
+    {
+     "end": 48.388,
+     "start": 48.35,
+     "text": ","
+    },
+    {
+     "end": 48.525,
+     "start": 48.388,
+     "text": "is"
+    },
+    {
+     "end": 49.45,
+     "start": 48.525,
+     "text": "broken"
+    },
+    {
+     "end": 49.65,
+     "start": 49.45,
+     "text": ":"
+    },
+    {
+     "end": 49.975,
+     "start": 49.875,
+     "text": "it"
+    },
+    {
+     "end": 50.125,
+     "start": 49.975,
+     "text": "is"
+    },
+    {
+     "end": 50.25,
+     "start": 50.125,
+     "text": "the"
+    },
+    {
+     "end": 50.775,
+     "start": 50.25,
+     "text": "history"
+    },
+    {
+     "end": 50.938,
+     "start": 50.775,
+     "text": "of"
+    },
+    {
+     "end": 51.213,
+     "start": 50.938,
+     "text": "no"
+    },
+    {
+     "end": 51.9,
+     "start": 51.213,
+     "text": "registry"
+    },
+    {
+     "end": 51.975,
+     "start": 51.9,
+     "text": ","
+    },
+    {
+     "end": 52.088,
+     "start": 51.975,
+     "text": "and"
+    },
+    {
+     "end": 52.213,
+     "start": 52.088,
+     "text": "the"
+    },
+    {
+     "end": 52.662,
+     "start": 52.213,
+     "text": "answer"
+    },
+    {
+     "end": 52.838,
+     "start": 52.662,
+     "text": "is"
+    },
+    {
+     "end": 53.625,
+     "start": 52.838,
+     "text": "unavailable"
+    },
+    {
+     "end": 54.025,
+     "start": 53.625,
+     "text": "whatever"
+    },
+    {
+     "end": 54.125,
+     "start": 54.025,
+     "text": "the"
+    },
+    {
+     "end": 54.65,
+     "start": 54.125,
+     "text": "holders"
+    },
+    {
+     "end": 55.138,
+     "start": 54.65,
+     "text": "show"
+    },
+    {
+     "end": 55.225,
+     "start": 55.138,
+     "text": "("
+    },
+    {
+     "end": 57.375,
+     "start": 55.225,
+     "text": "broken_history_unavailable"
+    },
+    {
+     "end": 57.625,
+     "start": 57.375,
+     "text": ")"
+    },
+    {
+     "end": 57.675,
+     "start": 57.625,
      "text": "."
     }
    ]
   },
   "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-04": {
-   "audio_sha256": "5d47b36d378a3e22dcbe352867440d05f87e3a88905f834cd87a729d2389d8ee",
+   "audio_sha256": "7a0819c4fd5bcaad7959638d3b01fa820fc75aefd33dc7d5caec3d524cf8f2f3",
+   "characters": 591,
+   "cost": 0.00058509,
+   "duration": 39.525,
+   "index": 4,
+   "key": "f2e6f910b5ee0f4fca348bf985405b270b8c752bc877e6c6a3acb4b941d415e6",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 400,
+   "section": "what-a-reader-answers-about-an-identifier",
+   "sent_text": "One observation suffices. A recognised holder decides active or pending termination when the history is missing or incomplete, because the asset exists only while the leaf is active: on a reachable chain the holder a reader names is the only one, and the leaf is active (holder_decides_alone). A complete history decides terminal or never registered when the holders are not established, because the replayed leaf is the registry's and no output holds the asset under either leaf (history_decides_alone). A gap in the observation an answer does not need does not make the answer unavailable.",
+   "text": "One observation suffices. A recognised holder decides active or pending termination when the history is missing or incomplete, because the asset exists only while the leaf is active: on a reachable chain the holder a reader names is the only one, and the leaf is active (holder_decides_alone). A complete history decides terminal or never registered when the holders are not established, because the replayed leaf is the registry's and no output holds the asset under either leaf (history_decides_alone). A gap in the observation an answer does not need does not make the answer unavailable.",
+   "words": [
+    {
+     "end": 0.338,
+     "start": 0.175,
+     "text": "One"
+    },
+    {
+     "end": 0.975,
+     "start": 0.338,
+     "text": "observation"
+    },
+    {
+     "end": 2.025,
+     "start": 0.975,
+     "text": "suffices"
+    },
+    {
+     "end": 2.225,
+     "start": 2.025,
+     "text": "."
+    },
+    {
+     "end": 2.5,
+     "start": 2.425,
+     "text": "A"
+    },
+    {
+     "end": 3.175,
+     "start": 2.5,
+     "text": "recognised"
+    },
+    {
+     "end": 3.575,
+     "start": 3.175,
+     "text": "holder"
+    },
+    {
+     "end": 4.125,
+     "start": 3.575,
+     "text": "decides"
+    },
+    {
+     "end": 4.713,
+     "start": 4.125,
+     "text": "active"
+    },
+    {
+     "end": 4.887,
+     "start": 4.713,
+     "text": "or"
+    },
+    {
+     "end": 5.3,
+     "start": 4.887,
+     "text": "pending"
+    },
+    {
+     "end": 6.075,
+     "start": 5.3,
+     "text": "termination"
+    },
+    {
+     "end": 6.213,
+     "start": 6.075,
+     "text": "when"
+    },
+    {
+     "end": 6.3,
+     "start": 6.213,
+     "text": "the"
+    },
+    {
+     "end": 6.8,
+     "start": 6.3,
+     "text": "history"
+    },
+    {
+     "end": 6.963,
+     "start": 6.8,
+     "text": "is"
+    },
+    {
+     "end": 7.55,
+     "start": 6.963,
+     "text": "missing"
+    },
+    {
+     "end": 7.725,
+     "start": 7.55,
+     "text": "or"
+    },
+    {
+     "end": 9.05,
+     "start": 7.725,
+     "text": "incomplete"
+    },
+    {
+     "end": 9.25,
+     "start": 9.05,
+     "text": ","
+    },
+    {
+     "end": 9.712,
+     "start": 9.425,
+     "text": "because"
+    },
+    {
+     "end": 9.837,
+     "start": 9.712,
+     "text": "the"
+    },
+    {
+     "end": 10.163,
+     "start": 9.837,
+     "text": "asset"
+    },
+    {
+     "end": 10.637,
+     "start": 10.163,
+     "text": "exists"
+    },
+    {
+     "end": 10.95,
+     "start": 10.637,
+     "text": "only"
+    },
+    {
+     "end": 11.137,
+     "start": 10.95,
+     "text": "while"
+    },
+    {
+     "end": 11.225,
+     "start": 11.137,
+     "text": "the"
+    },
+    {
+     "end": 11.488,
+     "start": 11.225,
+     "text": "leaf"
+    },
+    {
+     "end": 11.637,
+     "start": 11.488,
+     "text": "is"
+    },
+    {
+     "end": 12.625,
+     "start": 11.637,
+     "text": "active"
+    },
+    {
+     "end": 12.825,
+     "start": 12.625,
+     "text": ":"
+    },
+    {
+     "end": 13.137,
+     "start": 13.025,
+     "text": "on"
+    },
+    {
+     "end": 13.225,
+     "start": 13.137,
+     "text": "a"
+    },
+    {
+     "end": 13.688,
+     "start": 13.225,
+     "text": "reachable"
+    },
+    {
+     "end": 14.075,
+     "start": 13.688,
+     "text": "chain"
+    },
+    {
+     "end": 14.175,
+     "start": 14.075,
+     "text": "the"
+    },
+    {
+     "end": 14.575,
+     "start": 14.175,
+     "text": "holder"
+    },
+    {
+     "end": 14.675,
+     "start": 14.575,
+     "text": "a"
+    },
+    {
+     "end": 15.025,
+     "start": 14.675,
+     "text": "reader"
+    },
+    {
+     "end": 15.462,
+     "start": 15.025,
+     "text": "names"
+    },
+    {
+     "end": 15.625,
+     "start": 15.462,
+     "text": "is"
+    },
+    {
+     "end": 15.788,
+     "start": 15.625,
+     "text": "the"
+    },
+    {
+     "end": 16.15,
+     "start": 15.788,
+     "text": "only"
+    },
+    {
+     "end": 16.525,
+     "start": 16.15,
+     "text": "one"
+    },
+    {
+     "end": 16.625,
+     "start": 16.525,
+     "text": ","
+    },
+    {
+     "end": 16.737,
+     "start": 16.625,
+     "text": "and"
+    },
+    {
+     "end": 16.862,
+     "start": 16.737,
+     "text": "the"
+    },
+    {
+     "end": 17.225,
+     "start": 16.862,
+     "text": "leaf"
+    },
+    {
+     "end": 17.4,
+     "start": 17.225,
+     "text": "is"
+    },
+    {
+     "end": 17.95,
+     "start": 17.4,
+     "text": "active"
+    },
+    {
+     "end": 18.025,
+     "start": 17.95,
+     "text": "("
+    },
+    {
+     "end": 19.75,
+     "start": 18.025,
+     "text": "holder_decides_alone"
+    },
+    {
+     "end": 20.025,
+     "start": 19.75,
+     "text": ")"
+    },
+    {
+     "end": 20.1,
+     "start": 20.025,
+     "text": "."
+    },
+    {
+     "end": 20.375,
+     "start": 20.3,
+     "text": "A"
+    },
+    {
+     "end": 20.825,
+     "start": 20.375,
+     "text": "complete"
+    },
+    {
+     "end": 21.325,
+     "start": 20.825,
+     "text": "history"
+    },
+    {
+     "end": 21.862,
+     "start": 21.325,
+     "text": "decides"
+    },
+    {
+     "end": 22.525,
+     "start": 21.862,
+     "text": "terminal"
+    },
+    {
+     "end": 22.737,
+     "start": 22.525,
+     "text": "or"
+    },
+    {
+     "end": 23.075,
+     "start": 22.737,
+     "text": "never"
+    },
+    {
+     "end": 23.675,
+     "start": 23.075,
+     "text": "registered"
+    },
+    {
+     "end": 23.812,
+     "start": 23.675,
+     "text": "when"
+    },
+    {
+     "end": 23.9,
+     "start": 23.812,
+     "text": "the"
+    },
+    {
+     "end": 24.35,
+     "start": 23.9,
+     "text": "holders"
+    },
+    {
+     "end": 24.5,
+     "start": 24.35,
+     "text": "are"
+    },
+    {
+     "end": 24.712,
+     "start": 24.5,
+     "text": "not"
+    },
+    {
+     "end": 25.95,
+     "start": 24.712,
+     "text": "established"
+    },
+    {
+     "end": 26.175,
+     "start": 25.95,
+     "text": ","
+    },
+    {
+     "end": 26.75,
+     "start": 26.375,
+     "text": "because"
+    },
+    {
+     "end": 26.875,
+     "start": 26.75,
+     "text": "the"
+    },
+    {
+     "end": 27.425,
+     "start": 26.875,
+     "text": "replayed"
+    },
+    {
+     "end": 27.75,
+     "start": 27.425,
+     "text": "leaf"
+    },
+    {
+     "end": 27.9,
+     "start": 27.75,
+     "text": "is"
+    },
+    {
+     "end": 28.038,
+     "start": 27.9,
+     "text": "the"
+    },
+    {
+     "end": 28.812,
+     "start": 28.038,
+     "text": "registry's"
+    },
+    {
+     "end": 28.95,
+     "start": 28.812,
+     "text": "and"
+    },
+    {
+     "end": 29.212,
+     "start": 28.95,
+     "text": "no"
+    },
+    {
+     "end": 29.712,
+     "start": 29.212,
+     "text": "output"
+    },
+    {
+     "end": 30.013,
+     "start": 29.712,
+     "text": "holds"
+    },
+    {
+     "end": 30.163,
+     "start": 30.013,
+     "text": "the"
+    },
+    {
+     "end": 30.65,
+     "start": 30.163,
+     "text": "asset"
+    },
+    {
+     "end": 30.925,
+     "start": 30.65,
+     "text": "under"
+    },
+    {
+     "end": 31.237,
+     "start": 30.925,
+     "text": "either"
+    },
+    {
+     "end": 31.7,
+     "start": 31.237,
+     "text": "leaf"
+    },
+    {
+     "end": 31.75,
+     "start": 31.7,
+     "text": "("
+    },
+    {
+     "end": 33.45,
+     "start": 31.75,
+     "text": "history_decides_alone"
+    },
+    {
+     "end": 33.725,
+     "start": 33.45,
+     "text": ")"
+    },
+    {
+     "end": 33.775,
+     "start": 33.725,
+     "text": "."
+    },
+    {
+     "end": 34.062,
+     "start": 33.975,
+     "text": "A"
+    },
+    {
+     "end": 34.388,
+     "start": 34.062,
+     "text": "gap"
+    },
+    {
+     "end": 34.463,
+     "start": 34.388,
+     "text": "in"
+    },
+    {
+     "end": 34.575,
+     "start": 34.463,
+     "text": "the"
+    },
+    {
+     "end": 35.35,
+     "start": 34.575,
+     "text": "observation"
+    },
+    {
+     "end": 35.513,
+     "start": 35.35,
+     "text": "an"
+    },
+    {
+     "end": 35.95,
+     "start": 35.513,
+     "text": "answer"
+    },
+    {
+     "end": 36.15,
+     "start": 35.95,
+     "text": "does"
+    },
+    {
+     "end": 36.4,
+     "start": 36.15,
+     "text": "not"
+    },
+    {
+     "end": 36.838,
+     "start": 36.4,
+     "text": "need"
+    },
+    {
+     "end": 37.05,
+     "start": 36.838,
+     "text": "does"
+    },
+    {
+     "end": 37.275,
+     "start": 37.05,
+     "text": "not"
+    },
+    {
+     "end": 37.487,
+     "start": 37.275,
+     "text": "make"
+    },
+    {
+     "end": 37.625,
+     "start": 37.487,
+     "text": "the"
+    },
+    {
+     "end": 38.025,
+     "start": 37.625,
+     "text": "answer"
+    },
+    {
+     "end": 39.325,
+     "start": 38.025,
+     "text": "unavailable"
+    },
+    {
+     "end": 39.525,
+     "start": 39.325,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-05": {
+   "audio_sha256": "08e3e50a937fd666c2686e938230cf754e2772ae3bfa51ecd6e4e4ab65b6bbaa",
    "characters": 249,
    "cost": 0.00024650999999999997,
    "duration": 16.85,
-   "index": 4,
+   "index": 5,
    "key": "f990d30e8bb532f1fabbfdb2e223e4fffdb6394d93c01d8ffb217bea695e19bd",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
@@ -260105,12 +260765,12 @@
     }
    ]
   },
-  "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-05": {
-   "audio_sha256": "3e43a2a97aa40cc922df69647026804b2f70b6e617615011603c06803ba56fad",
+  "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-06": {
+   "audio_sha256": "030c5fd28f469cd53aa9f636880d8f0d1aa0b7451e5ce943ee65f477a2bde892",
    "characters": 84,
    "cost": 8.315999999999998e-05,
    "duration": 5.8,
-   "index": 5,
+   "index": 6,
    "key": "b4d5837805e634e7e8a6f7c6461e8911cc1df14cecee9ff163f8ee93a9a1ed1f",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
@@ -260200,12 +260860,12 @@
     }
    ]
   },
-  "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-06": {
-   "audio_sha256": "0d4f1208a546b7111feec97ba1ac8427d3e166d4567245fd5b5c18b83f88c9c3",
+  "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-07": {
+   "audio_sha256": "2bc5315744c5aa6c5ccd7896b1ec614789b4b618c2698e2807cb4f0e396e918c",
    "characters": 282,
    "cost": 0.00027917999999999997,
    "duration": 19.475,
-   "index": 6,
+   "index": 7,
    "key": "bcaa5942b34245221baad02b86f1145208db6696d6783c7b2186047abeb5c628",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
@@ -260435,18 +261095,18 @@
     }
    ]
   },
-  "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-07": {
-   "audio_sha256": "9ea0487ca6e8b69df84bc9514150f99fa5511d340bba97194514ba946f13fafd",
-   "characters": 520,
-   "cost": 0.0005147999999999999,
-   "duration": 32.825,
-   "index": 7,
-   "key": "877490d619f7287085312ba38b6002f90ba1a2ebd8657046dafef1c913660fde",
+  "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-08": {
+   "audio_sha256": "6a04f10a5566954043345fb375855b0c0188a3a8ec086270830b07409062da4f",
+   "characters": 666,
+   "cost": 0.0006593399999999999,
+   "duration": 42.1,
+   "index": 8,
+   "key": "02d249dc6135bf1fab3607aa7f67ef04df729d88eec47ecfa1feec1eccca7603",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
    "section": "what-a-reader-answers-about-an-identifier",
-   "sent_text": "Pending termination covers both stages after a conviction. Before the termination is booked the holder is the convicted checkpoint; after it, the termination request at the application's credential, which carries no datum. The answer names the holder, and the custody it read says which of the two it is (pending_termination_custody). In the checkpoint system the identifier's state is pending termination on both sides of the booking, and the reader answers pending termination for both (booked_termination_is_pending).",
-   "text": "Pending termination covers both stages after a conviction. Before the termination is booked the holder is the convicted checkpoint; after it, the termination request at the application's credential, which carries no datum. The answer names the holder, and the custody it read says which of the two it is (pending_termination_custody). In the checkpoint system the identifier's state is pending termination on both sides of the booking, and the reader answers pending termination for both (booked_termination_is_pending).",
+   "sent_text": "Pending termination covers both stages after a conviction. Before the termination is booked the holder is the convicted checkpoint; after it, the termination request at the application's credential, which carries no datum. The answer names the holder, and the custody it read says which of the two it is (pending_termination_custody). In the checkpoint system the identifier's state is pending termination on both sides of the booking, and the reader answers pending termination for both. After the booking the holder it names is the request the booking placed: its reference is the one the system records for the pending termination (booked_termination_is_pending).",
+   "text": "Pending termination covers both stages after a conviction. Before the termination is booked the holder is the convicted checkpoint; after it, the termination request at the application's credential, which carries no datum. The answer names the holder, and the custody it read says which of the two it is (pending_termination_custody). In the checkpoint system the identifier's state is pending termination on both sides of the booking, and the reader answers pending termination for both. After the booking the holder it names is the request the booking placed: its reference is the one the system records for the pending termination (booked_termination_is_pending).",
    "words": [
     {
      "end": 0.55,
@@ -260829,73 +261489,208 @@
      "text": ","
     },
     {
-     "end": 28.038,
-     "start": 27.95,
+     "end": 28.013,
+     "start": 27.925,
      "text": "and"
     },
     {
-     "end": 28.125,
-     "start": 28.038,
+     "end": 28.1,
+     "start": 28.013,
      "text": "the"
     },
     {
-     "end": 28.487,
-     "start": 28.125,
+     "end": 28.462,
+     "start": 28.1,
      "text": "reader"
     },
     {
-     "end": 28.962,
-     "start": 28.487,
+     "end": 28.938,
+     "start": 28.462,
      "text": "answers"
     },
     {
-     "end": 29.375,
-     "start": 28.962,
+     "end": 29.35,
+     "start": 28.938,
      "text": "pending"
     },
     {
-     "end": 30.075,
-     "start": 29.375,
+     "end": 30.025,
+     "start": 29.35,
      "text": "termination"
     },
     {
-     "end": 30.225,
-     "start": 30.075,
+     "end": 30.15,
+     "start": 30.025,
      "text": "for"
     },
     {
-     "end": 30.625,
-     "start": 30.225,
+     "end": 30.975,
+     "start": 30.15,
      "text": "both"
     },
     {
-     "end": 30.7,
-     "start": 30.625,
+     "end": 31.175,
+     "start": 30.975,
+     "text": "."
+    },
+    {
+     "end": 31.638,
+     "start": 31.375,
+     "text": "After"
+    },
+    {
+     "end": 31.725,
+     "start": 31.638,
+     "text": "the"
+    },
+    {
+     "end": 32.075,
+     "start": 31.725,
+     "text": "booking"
+    },
+    {
+     "end": 32.175,
+     "start": 32.075,
+     "text": "the"
+    },
+    {
+     "end": 32.525,
+     "start": 32.175,
+     "text": "holder"
+    },
+    {
+     "end": 32.65,
+     "start": 32.525,
+     "text": "it"
+    },
+    {
+     "end": 33.175,
+     "start": 32.65,
+     "text": "names"
+    },
+    {
+     "end": 33.35,
+     "start": 33.175,
+     "text": "is"
+    },
+    {
+     "end": 33.45,
+     "start": 33.35,
+     "text": "the"
+    },
+    {
+     "end": 33.912,
+     "start": 33.45,
+     "text": "request"
+    },
+    {
+     "end": 34.0,
+     "start": 33.912,
+     "text": "the"
+    },
+    {
+     "end": 34.35,
+     "start": 34.0,
+     "text": "booking"
+    },
+    {
+     "end": 35.275,
+     "start": 34.35,
+     "text": "placed"
+    },
+    {
+     "end": 35.5,
+     "start": 35.275,
+     "text": ":"
+    },
+    {
+     "end": 35.875,
+     "start": 35.7,
+     "text": "its"
+    },
+    {
+     "end": 36.438,
+     "start": 35.875,
+     "text": "reference"
+    },
+    {
+     "end": 36.6,
+     "start": 36.438,
+     "text": "is"
+    },
+    {
+     "end": 36.737,
+     "start": 36.6,
+     "text": "the"
+    },
+    {
+     "end": 37.05,
+     "start": 36.737,
+     "text": "one"
+    },
+    {
+     "end": 37.188,
+     "start": 37.05,
+     "text": "the"
+    },
+    {
+     "end": 37.638,
+     "start": 37.188,
+     "text": "system"
+    },
+    {
+     "end": 38.15,
+     "start": 37.638,
+     "text": "records"
+    },
+    {
+     "end": 38.263,
+     "start": 38.15,
+     "text": "for"
+    },
+    {
+     "end": 38.388,
+     "start": 38.263,
+     "text": "the"
+    },
+    {
+     "end": 38.825,
+     "start": 38.388,
+     "text": "pending"
+    },
+    {
+     "end": 39.737,
+     "start": 38.825,
+     "text": "termination"
+    },
+    {
+     "end": 39.825,
+     "start": 39.737,
      "text": "("
     },
     {
-     "end": 32.6,
-     "start": 30.7,
+     "end": 41.85,
+     "start": 39.825,
      "text": "booked_termination_is_pending"
     },
     {
-     "end": 32.775,
-     "start": 32.6,
+     "end": 42.05,
+     "start": 41.85,
      "text": ")"
     },
     {
-     "end": 32.825,
-     "start": 32.775,
+     "end": 42.1,
+     "start": 42.05,
      "text": "."
     }
    ]
   },
-  "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-08": {
-   "audio_sha256": "0f12dbd631d29d8986c75e8b2a7196c5e7084919a60988ebd61892915cb57d39",
+  "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-09": {
+   "audio_sha256": "eb62a313608081257e36045e0b26cbe9f387fa9a5e013cdb83962bf4fd2d3a30",
    "characters": 548,
    "cost": 0.0005425199999999999,
    "duration": 38.375,
-   "index": 8,
+   "index": 9,
    "key": "dccff035e8be6c2a55b13a4123aea1fe2691c363870c44ccc6601c618883af71",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
@@ -261365,12 +262160,12 @@
     }
    ]
   },
-  "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-09": {
-   "audio_sha256": "a776d4e53595af05c17030c9647cd55f3c14d29afe1ed95cdccc00d1ff728af6",
+  "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-10": {
+   "audio_sha256": "7629f27ac986b0575cc48db2c619b9bf77f934adb96597f3590cee56a84b26e0",
    "characters": 712,
    "cost": 0.00070488,
    "duration": 48.0,
-   "index": 9,
+   "index": 10,
    "key": "d75e2eb41f4ea7ab572764ab280fbac97784159825ffba65b16302a0a72c97fe",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
@@ -262010,12 +262805,12 @@
     }
    ]
   },
-  "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-10": {
-   "audio_sha256": "acacad958e07e9defd63873225c5b229e80365baa9b3264e07456348e0118d21",
+  "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-11": {
+   "audio_sha256": "2b8b11a8f472cd8a7e39333ec2a8e977c2df54f6a9f2f34d4e301c0b12428e6a",
    "characters": 437,
    "cost": 0.00043263,
    "duration": 29.15,
-   "index": 10,
+   "index": 11,
    "key": "50bdbbd50f5e7d69f1c92056ff568ef62da232107f52f62210bafd1bc5c39bce",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
@@ -262440,12 +263235,12 @@
     }
    ]
   },
-  "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-11": {
-   "audio_sha256": "437bead14bd215d6981f4b130f092566daddeb84ca8e10d4357eef3d0a981e4e",
+  "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-12": {
+   "audio_sha256": "4ae2e0cc32f3d957416c7f060a1cc6e287a3411bb8c20ef58cefc89c2769dd57",
    "characters": 493,
    "cost": 0.00048806999999999995,
    "duration": 32.6,
-   "index": 11,
+   "index": 12,
    "key": "5d238932019493e01cf2a14cb240497288d9f4d2876e954cf7b091ae3f33e30b",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
@@ -262850,18 +263645,18 @@
     }
    ]
   },
-  "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-12": {
-   "audio_sha256": "eeaabf820c8dda9204ee2f9f4e17eac4a0acf4903737366aff596f0712a4529a",
-   "characters": 790,
-   "cost": 0.0007821,
-   "duration": 52.5,
-   "index": 12,
-   "key": "ad34e20397f47e088144248351db1335ed56b596b610830f26e80b7420186dec",
+  "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-13": {
+   "audio_sha256": "9c7d06ef69d4de6daac879da251105305ce300ea6ccd4ee82260dab7b6a746e1",
+   "characters": 1116,
+   "cost": 0.00110484,
+   "duration": 73.375,
+   "index": 13,
+   "key": "8ed5de28fb2bfa2ceaed21d9b49bd40a37821ddce9537d843308d16f16d6be5a",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
    "section": "what-a-reader-answers-about-an-identifier",
-   "sent_text": "The answer is stated against the two models of the system. Against the public registry's history, with its complete unspent set and every registry's members, a status the reader gives on faithful evidence is one the chain state warrants (status_is_warranted), the four statuses exclude one another on every reachable state (warrants_exclusive), and faithful evidence with both observations gets the status the state warrants (warranted_status_is_answered). Against the checkpoint system, with the lifecycle state of every identifier, evidence that realizes a reachable system gets the status of the identifier's state: never registered for absent, active for live, pending termination for pending termination, terminal for convicted (lifecycle_status_is_answered, status_follows_lifecycle).",
-   "text": "The answer is stated against the two models of the system. Against the public registry's history, with its complete unspent set and every registry's members, a status the reader gives on faithful evidence is one the chain state warrants (status_is_warranted), the four statuses exclude one another on every reachable state (warrants_exclusive), and faithful evidence with both observations gets the status the state warrants (warranted_status_is_answered). Against the checkpoint system, with the lifecycle state of every identifier, evidence that realizes a reachable system gets the status of the identifier's state: never registered for absent, active for live, pending termination for pending termination, terminal for convicted (lifecycle_status_is_answered, status_follows_lifecycle).",
+   "sent_text": "The answer is stated against the two models of the system. Against the public registry's history, with its complete unspent set and every registry's members, a status the reader gives on faithful evidence is one the chain state warrants (status_is_warranted), and faithful evidence with both observations gets the status the state warrants (warranted_status_is_answered). The four statuses exclude one another on every reachable state (warrants_exclusive). That exclusion rests on the two identity assumptions of this page, a faithful finite encoding and collision freedom, taken over the preimages the history holds and the identifier's active preimage. Both are named in each statement. Without them two keys could share an asset name, and a holder would say nothing about a leaf. Against the checkpoint system, with the lifecycle state of every identifier, evidence that realizes a reachable system gets the status of the identifier's state: never registered for absent, active for live, pending termination for pending termination, terminal for convicted (lifecycle_status_is_answered, status_follows_lifecycle).",
+   "text": "The answer is stated against the two models of the system. Against the public registry's history, with its complete unspent set and every registry's members, a status the reader gives on faithful evidence is one the chain state warrants (status_is_warranted), and faithful evidence with both observations gets the status the state warrants (warranted_status_is_answered). The four statuses exclude one another on every reachable state (warrants_exclusive). That exclusion rests on the two identity assumptions of this page, a faithful finite encoding and collision freedom, taken over the preimages the history holds and the identifier's active preimage. Both are named in each statement. Without them two keys could share an asset name, and a holder would say nothing about a leaf. Against the checkpoint system, with the lifecycle state of every identifier, evidence that realizes a reachable system gets the status of the identifier's state: never registered for absent, active for live, pending termination for pending termination, terminal for convicted (lifecycle_status_is_answered, status_follows_lifecycle).",
    "words": [
     {
      "end": 0.312,
@@ -263094,1098 +263889,1533 @@
      "text": ","
     },
     {
-     "end": 17.163,
-     "start": 17.05,
-     "text": "the"
-    },
-    {
-     "end": 17.4,
-     "start": 17.163,
-     "text": "four"
-    },
-    {
-     "end": 18.025,
-     "start": 17.4,
-     "text": "statuses"
-    },
-    {
-     "end": 18.5,
-     "start": 18.025,
-     "text": "exclude"
-    },
-    {
-     "end": 18.675,
-     "start": 18.5,
-     "text": "one"
-    },
-    {
-     "end": 19.075,
-     "start": 18.675,
-     "text": "another"
-    },
-    {
-     "end": 19.288,
-     "start": 19.075,
-     "text": "on"
-    },
-    {
-     "end": 19.625,
-     "start": 19.288,
-     "text": "every"
-    },
-    {
-     "end": 20.087,
-     "start": 19.625,
-     "text": "reachable"
-    },
-    {
-     "end": 20.587,
-     "start": 20.087,
-     "text": "state"
-    },
-    {
-     "end": 20.675,
-     "start": 20.587,
-     "text": "("
-    },
-    {
-     "end": 22.2,
-     "start": 20.675,
-     "text": "warrants_exclusive"
-    },
-    {
-     "end": 22.4,
-     "start": 22.2,
-     "text": ")"
-    },
-    {
-     "end": 22.45,
-     "start": 22.4,
-     "text": ","
-    },
-    {
-     "end": 22.812,
-     "start": 22.675,
+     "end": 17.237,
+     "start": 17.1,
      "text": "and"
     },
     {
-     "end": 23.312,
-     "start": 22.812,
+     "end": 17.737,
+     "start": 17.237,
      "text": "faithful"
     },
     {
-     "end": 23.8,
-     "start": 23.312,
+     "end": 18.225,
+     "start": 17.737,
      "text": "evidence"
     },
     {
-     "end": 23.975,
-     "start": 23.8,
+     "end": 18.4,
+     "start": 18.225,
      "text": "with"
     },
     {
-     "end": 24.275,
-     "start": 23.975,
+     "end": 18.7,
+     "start": 18.4,
      "text": "both"
     },
     {
-     "end": 25.125,
-     "start": 24.275,
+     "end": 19.55,
+     "start": 18.7,
      "text": "observations"
     },
     {
-     "end": 25.375,
-     "start": 25.125,
+     "end": 19.8,
+     "start": 19.55,
      "text": "gets"
     },
     {
-     "end": 25.513,
-     "start": 25.375,
+     "end": 19.938,
+     "start": 19.8,
      "text": "the"
     },
     {
-     "end": 26.05,
-     "start": 25.513,
+     "end": 20.475,
+     "start": 19.938,
      "text": "status"
     },
     {
-     "end": 26.175,
-     "start": 26.05,
+     "end": 20.6,
+     "start": 20.475,
      "text": "the"
     },
     {
-     "end": 26.513,
-     "start": 26.175,
+     "end": 20.938,
+     "start": 20.6,
      "text": "state"
     },
     {
-     "end": 27.125,
-     "start": 26.513,
+     "end": 21.55,
+     "start": 20.938,
      "text": "warrants"
     },
     {
-     "end": 27.2,
-     "start": 27.125,
+     "end": 21.625,
+     "start": 21.55,
      "text": "("
     },
     {
-     "end": 29.075,
-     "start": 27.2,
+     "end": 23.5,
+     "start": 21.625,
      "text": "warranted_status_is_answered"
     },
     {
-     "end": 29.425,
-     "start": 29.075,
+     "end": 23.85,
+     "start": 23.5,
      "text": ")"
     },
     {
-     "end": 29.5,
-     "start": 29.425,
+     "end": 23.925,
+     "start": 23.85,
      "text": "."
     },
     {
-     "end": 30.062,
-     "start": 29.7,
-     "text": "Against"
+     "end": 24.212,
+     "start": 24.1,
+     "text": "The"
     },
     {
-     "end": 30.163,
-     "start": 30.062,
-     "text": "the"
+     "end": 24.45,
+     "start": 24.212,
+     "text": "four"
     },
     {
-     "end": 30.65,
-     "start": 30.163,
-     "text": "checkpoint"
+     "end": 25.075,
+     "start": 24.45,
+     "text": "statuses"
     },
     {
-     "end": 31.2,
-     "start": 30.65,
-     "text": "system"
+     "end": 25.55,
+     "start": 25.075,
+     "text": "exclude"
     },
     {
-     "end": 31.275,
-     "start": 31.2,
-     "text": ","
+     "end": 25.725,
+     "start": 25.55,
+     "text": "one"
     },
     {
-     "end": 31.413,
-     "start": 31.275,
-     "text": "with"
+     "end": 26.125,
+     "start": 25.725,
+     "text": "another"
     },
     {
-     "end": 31.525,
-     "start": 31.413,
-     "text": "the"
+     "end": 26.337,
+     "start": 26.125,
+     "text": "on"
     },
     {
-     "end": 32.162,
-     "start": 31.525,
-     "text": "lifecycle"
-    },
-    {
-     "end": 32.55,
-     "start": 32.162,
-     "text": "state"
-    },
-    {
-     "end": 32.713,
-     "start": 32.55,
-     "text": "of"
-    },
-    {
-     "end": 33.062,
-     "start": 32.713,
+     "end": 26.675,
+     "start": 26.337,
      "text": "every"
     },
     {
-     "end": 34.375,
-     "start": 33.062,
-     "text": "identifier"
-    },
-    {
-     "end": 34.575,
-     "start": 34.375,
-     "text": ","
-    },
-    {
-     "end": 35.25,
-     "start": 34.775,
-     "text": "evidence"
-    },
-    {
-     "end": 35.45,
-     "start": 35.25,
-     "text": "that"
-    },
-    {
-     "end": 36.1,
-     "start": 35.45,
-     "text": "realizes"
-    },
-    {
-     "end": 36.2,
-     "start": 36.1,
-     "text": "a"
-    },
-    {
-     "end": 36.662,
-     "start": 36.2,
+     "end": 27.138,
+     "start": 26.675,
      "text": "reachable"
     },
     {
-     "end": 37.3,
-     "start": 36.662,
-     "text": "system"
-    },
-    {
-     "end": 37.575,
-     "start": 37.3,
-     "text": "gets"
-    },
-    {
-     "end": 37.713,
-     "start": 37.575,
-     "text": "the"
-    },
-    {
-     "end": 38.225,
-     "start": 37.713,
-     "text": "status"
-    },
-    {
-     "end": 38.312,
-     "start": 38.225,
-     "text": "of"
-    },
-    {
-     "end": 38.463,
-     "start": 38.312,
-     "text": "the"
-    },
-    {
-     "end": 39.2,
-     "start": 38.463,
-     "text": "identifier's"
-    },
-    {
-     "end": 40.15,
-     "start": 39.2,
+     "end": 27.663,
+     "start": 27.138,
      "text": "state"
     },
     {
-     "end": 40.35,
-     "start": 40.15,
-     "text": ":"
-    },
-    {
-     "end": 40.85,
-     "start": 40.55,
-     "text": "never"
-    },
-    {
-     "end": 41.35,
-     "start": 40.85,
-     "text": "registered"
-    },
-    {
-     "end": 41.475,
-     "start": 41.35,
-     "text": "for"
-    },
-    {
-     "end": 42.0,
-     "start": 41.475,
-     "text": "absent"
-    },
-    {
-     "end": 42.075,
-     "start": 42.0,
-     "text": ","
-    },
-    {
-     "end": 42.45,
-     "start": 42.075,
-     "text": "active"
-    },
-    {
-     "end": 42.575,
-     "start": 42.45,
-     "text": "for"
-    },
-    {
-     "end": 43.4,
-     "start": 42.575,
-     "text": "live"
-    },
-    {
-     "end": 43.6,
-     "start": 43.4,
-     "text": ","
-    },
-    {
-     "end": 44.15,
-     "start": 43.775,
-     "text": "pending"
-    },
-    {
-     "end": 44.825,
-     "start": 44.15,
-     "text": "termination"
-    },
-    {
-     "end": 44.95,
-     "start": 44.825,
-     "text": "for"
-    },
-    {
-     "end": 45.35,
-     "start": 44.95,
-     "text": "pending"
-    },
-    {
-     "end": 46.55,
-     "start": 45.35,
-     "text": "termination"
-    },
-    {
-     "end": 46.725,
-     "start": 46.55,
-     "text": ","
-    },
-    {
-     "end": 47.4,
-     "start": 46.925,
-     "text": "terminal"
-    },
-    {
-     "end": 47.525,
-     "start": 47.4,
-     "text": "for"
-    },
-    {
-     "end": 48.125,
-     "start": 47.525,
-     "text": "convicted"
-    },
-    {
-     "end": 48.2,
-     "start": 48.125,
+     "end": 27.75,
+     "start": 27.663,
      "text": "("
     },
     {
-     "end": 50.075,
-     "start": 48.2,
-     "text": "lifecycle_status_is_answered"
+     "end": 29.25,
+     "start": 27.75,
+     "text": "warrants_exclusive"
     },
     {
-     "end": 50.188,
-     "start": 50.075,
-     "text": ","
-    },
-    {
-     "end": 52.25,
-     "start": 50.188,
-     "text": "status_follows_lifecycle"
-    },
-    {
-     "end": 52.45,
-     "start": 52.25,
+     "end": 29.475,
+     "start": 29.25,
      "text": ")"
     },
     {
-     "end": 52.5,
-     "start": 52.45,
+     "end": 29.525,
+     "start": 29.475,
+     "text": "."
+    },
+    {
+     "end": 29.837,
+     "start": 29.7,
+     "text": "That"
+    },
+    {
+     "end": 30.425,
+     "start": 29.837,
+     "text": "exclusion"
+    },
+    {
+     "end": 30.763,
+     "start": 30.425,
+     "text": "rests"
+    },
+    {
+     "end": 30.862,
+     "start": 30.763,
+     "text": "on"
+    },
+    {
+     "end": 30.987,
+     "start": 30.862,
+     "text": "the"
+    },
+    {
+     "end": 31.3,
+     "start": 30.987,
+     "text": "two"
+    },
+    {
+     "end": 31.85,
+     "start": 31.3,
+     "text": "identity"
+    },
+    {
+     "end": 32.388,
+     "start": 31.85,
+     "text": "assumptions"
+    },
+    {
+     "end": 32.463,
+     "start": 32.388,
+     "text": "of"
+    },
+    {
+     "end": 32.65,
+     "start": 32.463,
+     "text": "this"
+    },
+    {
+     "end": 33.55,
+     "start": 32.65,
+     "text": "page"
+    },
+    {
+     "end": 33.775,
+     "start": 33.55,
+     "text": ","
+    },
+    {
+     "end": 34.037,
+     "start": 33.95,
+     "text": "a"
+    },
+    {
+     "end": 34.475,
+     "start": 34.037,
+     "text": "faithful"
+    },
+    {
+     "end": 34.875,
+     "start": 34.475,
+     "text": "finite"
+    },
+    {
+     "end": 35.362,
+     "start": 34.875,
+     "text": "encoding"
+    },
+    {
+     "end": 35.475,
+     "start": 35.362,
+     "text": "and"
+    },
+    {
+     "end": 35.925,
+     "start": 35.475,
+     "text": "collision"
+    },
+    {
+     "end": 36.775,
+     "start": 35.925,
+     "text": "freedom"
+    },
+    {
+     "end": 36.975,
+     "start": 36.775,
+     "text": ","
+    },
+    {
+     "end": 37.463,
+     "start": 37.175,
+     "text": "taken"
+    },
+    {
+     "end": 37.662,
+     "start": 37.463,
+     "text": "over"
+    },
+    {
+     "end": 37.75,
+     "start": 37.662,
+     "text": "the"
+    },
+    {
+     "end": 38.4,
+     "start": 37.75,
+     "text": "preimages"
+    },
+    {
+     "end": 38.5,
+     "start": 38.4,
+     "text": "the"
+    },
+    {
+     "end": 38.925,
+     "start": 38.5,
+     "text": "history"
+    },
+    {
+     "end": 39.513,
+     "start": 38.925,
+     "text": "holds"
+    },
+    {
+     "end": 39.638,
+     "start": 39.513,
+     "text": "and"
+    },
+    {
+     "end": 39.763,
+     "start": 39.638,
+     "text": "the"
+    },
+    {
+     "end": 40.575,
+     "start": 39.763,
+     "text": "identifier's"
+    },
+    {
+     "end": 41.0,
+     "start": 40.575,
+     "text": "active"
+    },
+    {
+     "end": 42.075,
+     "start": 41.0,
+     "text": "preimage"
+    },
+    {
+     "end": 42.3,
+     "start": 42.075,
+     "text": "."
+    },
+    {
+     "end": 42.825,
+     "start": 42.5,
+     "text": "Both"
+    },
+    {
+     "end": 42.975,
+     "start": 42.825,
+     "text": "are"
+    },
+    {
+     "end": 43.375,
+     "start": 42.975,
+     "text": "named"
+    },
+    {
+     "end": 43.525,
+     "start": 43.375,
+     "text": "in"
+    },
+    {
+     "end": 43.775,
+     "start": 43.525,
+     "text": "each"
+    },
+    {
+     "end": 44.375,
+     "start": 43.775,
+     "text": "statement"
+    },
+    {
+     "end": 44.45,
+     "start": 44.375,
+     "text": "."
+    },
+    {
+     "end": 44.8,
+     "start": 44.45,
+     "text": "Without"
+    },
+    {
+     "end": 45.088,
+     "start": 44.8,
+     "text": "them"
+    },
+    {
+     "end": 45.338,
+     "start": 45.088,
+     "text": "two"
+    },
+    {
+     "end": 45.725,
+     "start": 45.338,
+     "text": "keys"
+    },
+    {
+     "end": 45.912,
+     "start": 45.725,
+     "text": "could"
+    },
+    {
+     "end": 46.188,
+     "start": 45.912,
+     "text": "share"
+    },
+    {
+     "end": 46.312,
+     "start": 46.188,
+     "text": "an"
+    },
+    {
+     "end": 46.775,
+     "start": 46.312,
+     "text": "asset"
+    },
+    {
+     "end": 47.2,
+     "start": 46.775,
+     "text": "name"
+    },
+    {
+     "end": 47.275,
+     "start": 47.2,
+     "text": ","
+    },
+    {
+     "end": 47.388,
+     "start": 47.275,
+     "text": "and"
+    },
+    {
+     "end": 47.45,
+     "start": 47.388,
+     "text": "a"
+    },
+    {
+     "end": 47.85,
+     "start": 47.45,
+     "text": "holder"
+    },
+    {
+     "end": 48.025,
+     "start": 47.85,
+     "text": "would"
+    },
+    {
+     "end": 48.3,
+     "start": 48.025,
+     "text": "say"
+    },
+    {
+     "end": 48.7,
+     "start": 48.3,
+     "text": "nothing"
+    },
+    {
+     "end": 49.0,
+     "start": 48.7,
+     "text": "about"
+    },
+    {
+     "end": 49.1,
+     "start": 49.0,
+     "text": "a"
+    },
+    {
+     "end": 50.15,
+     "start": 49.1,
+     "text": "leaf"
+    },
+    {
+     "end": 50.375,
+     "start": 50.15,
+     "text": "."
+    },
+    {
+     "end": 50.938,
+     "start": 50.575,
+     "text": "Against"
+    },
+    {
+     "end": 51.037,
+     "start": 50.938,
+     "text": "the"
+    },
+    {
+     "end": 51.525,
+     "start": 51.037,
+     "text": "checkpoint"
+    },
+    {
+     "end": 52.075,
+     "start": 51.525,
+     "text": "system"
+    },
+    {
+     "end": 52.15,
+     "start": 52.075,
+     "text": ","
+    },
+    {
+     "end": 52.287,
+     "start": 52.15,
+     "text": "with"
+    },
+    {
+     "end": 52.4,
+     "start": 52.287,
+     "text": "the"
+    },
+    {
+     "end": 53.037,
+     "start": 52.4,
+     "text": "lifecycle"
+    },
+    {
+     "end": 53.425,
+     "start": 53.037,
+     "text": "state"
+    },
+    {
+     "end": 53.588,
+     "start": 53.425,
+     "text": "of"
+    },
+    {
+     "end": 53.938,
+     "start": 53.588,
+     "text": "every"
+    },
+    {
+     "end": 55.25,
+     "start": 53.938,
+     "text": "identifier"
+    },
+    {
+     "end": 55.45,
+     "start": 55.25,
+     "text": ","
+    },
+    {
+     "end": 56.125,
+     "start": 55.65,
+     "text": "evidence"
+    },
+    {
+     "end": 56.325,
+     "start": 56.125,
+     "text": "that"
+    },
+    {
+     "end": 56.975,
+     "start": 56.325,
+     "text": "realizes"
+    },
+    {
+     "end": 57.075,
+     "start": 56.975,
+     "text": "a"
+    },
+    {
+     "end": 57.537,
+     "start": 57.075,
+     "text": "reachable"
+    },
+    {
+     "end": 58.175,
+     "start": 57.537,
+     "text": "system"
+    },
+    {
+     "end": 58.45,
+     "start": 58.175,
+     "text": "gets"
+    },
+    {
+     "end": 58.588,
+     "start": 58.45,
+     "text": "the"
+    },
+    {
+     "end": 59.1,
+     "start": 58.588,
+     "text": "status"
+    },
+    {
+     "end": 59.188,
+     "start": 59.1,
+     "text": "of"
+    },
+    {
+     "end": 59.338,
+     "start": 59.188,
+     "text": "the"
+    },
+    {
+     "end": 60.075,
+     "start": 59.338,
+     "text": "identifier's"
+    },
+    {
+     "end": 61.025,
+     "start": 60.075,
+     "text": "state"
+    },
+    {
+     "end": 61.225,
+     "start": 61.025,
+     "text": ":"
+    },
+    {
+     "end": 61.725,
+     "start": 61.425,
+     "text": "never"
+    },
+    {
+     "end": 62.225,
+     "start": 61.725,
+     "text": "registered"
+    },
+    {
+     "end": 62.35,
+     "start": 62.225,
+     "text": "for"
+    },
+    {
+     "end": 62.875,
+     "start": 62.35,
+     "text": "absent"
+    },
+    {
+     "end": 62.95,
+     "start": 62.875,
+     "text": ","
+    },
+    {
+     "end": 63.325,
+     "start": 62.95,
+     "text": "active"
+    },
+    {
+     "end": 63.45,
+     "start": 63.325,
+     "text": "for"
+    },
+    {
+     "end": 64.275,
+     "start": 63.45,
+     "text": "live"
+    },
+    {
+     "end": 64.475,
+     "start": 64.275,
+     "text": ","
+    },
+    {
+     "end": 65.025,
+     "start": 64.65,
+     "text": "pending"
+    },
+    {
+     "end": 65.7,
+     "start": 65.025,
+     "text": "termination"
+    },
+    {
+     "end": 65.825,
+     "start": 65.7,
+     "text": "for"
+    },
+    {
+     "end": 66.225,
+     "start": 65.825,
+     "text": "pending"
+    },
+    {
+     "end": 67.425,
+     "start": 66.225,
+     "text": "termination"
+    },
+    {
+     "end": 67.6,
+     "start": 67.425,
+     "text": ","
+    },
+    {
+     "end": 68.275,
+     "start": 67.8,
+     "text": "terminal"
+    },
+    {
+     "end": 68.4,
+     "start": 68.275,
+     "text": "for"
+    },
+    {
+     "end": 69.0,
+     "start": 68.4,
+     "text": "convicted"
+    },
+    {
+     "end": 69.075,
+     "start": 69.0,
+     "text": "("
+    },
+    {
+     "end": 70.95,
+     "start": 69.075,
+     "text": "lifecycle_status_is_answered"
+    },
+    {
+     "end": 71.062,
+     "start": 70.95,
+     "text": ","
+    },
+    {
+     "end": 73.125,
+     "start": 71.062,
+     "text": "status_follows_lifecycle"
+    },
+    {
+     "end": 73.325,
+     "start": 73.125,
+     "text": ")"
+    },
+    {
+     "end": 73.375,
+     "start": 73.325,
      "text": "."
     }
    ]
   },
-  "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-13": {
-   "audio_sha256": "63c439efb1c8266e39cf0c244b85888889fc4747e120641c2e097c89d18be93e",
-   "characters": 806,
-   "cost": 0.0007979399999999999,
-   "duration": 56.2,
-   "index": 13,
-   "key": "ef9d4566a759de590e494ed3817ef3a8efb9c040ec215d9304fe3a1036314b8e",
+  "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-14": {
+   "audio_sha256": "0be1074d74541e4fb1a37f2ef649ba81d157deec0c02732192722fb26e76afe0",
+   "characters": 944,
+   "cost": 0.00093456,
+   "duration": 65.425,
+   "index": 14,
+   "key": "40c6fd98afdc283ce18b5a0ae3602b02b3a4fb87d000bf2caf8892ddc72b9c58",
    "page": "docs/design/consumer-identity.md",
    "pause_ms": 400,
    "section": "what-a-reader-answers-about-an-identifier",
-   "sent_text": "lean/reader-status-vectors.json carries 51 rows on the concrete identity bytes and the version 2 datum: for each, the evidence, the status, the custody read, the leaf replayed, the holder named and the consumer's verdict on it. Sixteen rows end in a status and thirty-five in unavailable; nine of those are histories that establish nothing. ReaderStatusDriver.lean --check recomputes every row from its own committed evidence and requires every changed field to fail; --run answers one scenario read from standard input. Forty-one single-site changes of the classifier and of the replay are each detected by the row bound to them (lean/retained-parking/reader-status-mutants.json). These are model checks. A reader implementation needs its own two layers of tests against these vectors and against a chain.",
-   "text": "lean/reader-status-vectors.json carries 51 rows on the concrete identity bytes and the version 2 datum: for each, the evidence, the status, the custody read, the leaf replayed, the holder named and the consumer's verdict on it. Sixteen rows end in a status and thirty-five in unavailable; nine of those are histories that establish nothing. ReaderStatusDriver.lean --check recomputes every row from its own committed evidence and requires every changed field to fail; --run answers one scenario read from standard input. Forty-one single-site changes of the classifier and of the replay are each detected by the row bound to them (lean/retained-parking/reader-status-mutants.json). These are model checks. A reader implementation needs its own two layers of tests against these vectors and against a chain.",
+   "sent_text": "lean/reader-status-vectors.json carries 56 rows on the concrete identity bytes and the version 2 datum: for each, the evidence, the status, the custody read, the leaf replayed, the holder named and the consumer's verdict on it. Nineteen rows end in a status and thirty-seven in unavailable. Three of the nineteen answer from the holder beside a history that is not complete; seven of the thirty-seven hold a complete history that fails its replay, two of them beside a holder. ReaderStatusDriver.lean --check recomputes every row from its own committed evidence and requires every changed field to fail; --run answers one scenario read from standard input. Forty-three single-site changes of the classifier and of the replay are each detected by the row bound to them (lean/retained-parking/reader-status-mutants.json). These are model checks. A reader implementation needs its own two layers of tests against these vectors and against a chain.",
+   "text": "lean/reader-status-vectors.json carries 56 rows on the concrete identity bytes and the version 2 datum: for each, the evidence, the status, the custody read, the leaf replayed, the holder named and the consumer's verdict on it. Nineteen rows end in a status and thirty-seven in unavailable. Three of the nineteen answer from the holder beside a history that is not complete; seven of the thirty-seven hold a complete history that fails its replay, two of them beside a holder. ReaderStatusDriver.lean --check recomputes every row from its own committed evidence and requires every changed field to fail; --run answers one scenario read from standard input. Forty-three single-site changes of the classifier and of the replay are each detected by the row bound to them (lean/retained-parking/reader-status-mutants.json). These are model checks. A reader implementation needs its own two layers of tests against these vectors and against a chain.",
    "words": [
     {
-     "end": 3.112,
+     "end": 3.088,
      "start": 0.25,
      "text": "lean/reader-status-vectors.json"
     },
     {
-     "end": 3.537,
-     "start": 3.112,
+     "end": 3.513,
+     "start": 3.088,
      "text": "carries"
     },
     {
-     "end": 4.075,
-     "start": 3.537,
-     "text": "51"
+     "end": 4.15,
+     "start": 3.513,
+     "text": "56"
     },
     {
-     "end": 4.488,
-     "start": 4.075,
+     "end": 4.562,
+     "start": 4.15,
      "text": "rows"
     },
     {
-     "end": 4.588,
-     "start": 4.488,
+     "end": 4.662,
+     "start": 4.562,
      "text": "on"
     },
     {
-     "end": 4.675,
-     "start": 4.588,
+     "end": 4.75,
+     "start": 4.662,
      "text": "the"
     },
     {
-     "end": 5.188,
-     "start": 4.675,
+     "end": 5.262,
+     "start": 4.75,
      "text": "concrete"
     },
     {
-     "end": 5.7,
-     "start": 5.188,
+     "end": 5.775,
+     "start": 5.262,
      "text": "identity"
     },
     {
-     "end": 6.188,
-     "start": 5.7,
+     "end": 6.262,
+     "start": 5.775,
      "text": "bytes"
     },
     {
-     "end": 6.312,
-     "start": 6.188,
+     "end": 6.387,
+     "start": 6.262,
      "text": "and"
     },
     {
-     "end": 6.4,
-     "start": 6.312,
+     "end": 6.475,
+     "start": 6.387,
      "text": "the"
     },
     {
-     "end": 6.812,
-     "start": 6.4,
+     "end": 6.887,
+     "start": 6.475,
      "text": "version"
     },
     {
-     "end": 7.025,
-     "start": 6.812,
+     "end": 7.1,
+     "start": 6.887,
      "text": "2"
     },
     {
-     "end": 8.125,
-     "start": 7.025,
+     "end": 8.175,
+     "start": 7.1,
      "text": "datum"
     },
     {
-     "end": 8.375,
-     "start": 8.125,
+     "end": 8.425,
+     "start": 8.175,
      "text": ":"
     },
     {
-     "end": 8.725,
-     "start": 8.575,
+     "end": 8.775,
+     "start": 8.625,
      "text": "for"
     },
     {
-     "end": 9.025,
-     "start": 8.725,
+     "end": 9.075,
+     "start": 8.775,
      "text": "each"
     },
     {
-     "end": 9.075,
-     "start": 9.025,
+     "end": 9.125,
+     "start": 9.075,
      "text": ","
     },
     {
-     "end": 9.238,
-     "start": 9.075,
+     "end": 9.288,
+     "start": 9.125,
      "text": "the"
-    },
-    {
-     "end": 9.8,
-     "start": 9.238,
-     "text": "evidence"
     },
     {
      "end": 9.85,
-     "start": 9.8,
-     "text": ","
-    },
-    {
-     "end": 9.988,
-     "start": 9.85,
-     "text": "the"
-    },
-    {
-     "end": 10.525,
-     "start": 9.988,
-     "text": "status"
-    },
-    {
-     "end": 10.575,
-     "start": 10.525,
-     "text": ","
-    },
-    {
-     "end": 10.7,
-     "start": 10.575,
-     "text": "the"
-    },
-    {
-     "end": 11.225,
-     "start": 10.7,
-     "text": "custody"
-    },
-    {
-     "end": 11.55,
-     "start": 11.225,
-     "text": "read"
-    },
-    {
-     "end": 11.6,
-     "start": 11.55,
-     "text": ","
-    },
-    {
-     "end": 11.725,
-     "start": 11.6,
-     "text": "the"
-    },
-    {
-     "end": 12.0,
-     "start": 11.725,
-     "text": "leaf"
-    },
-    {
-     "end": 12.65,
-     "start": 12.0,
-     "text": "replayed"
-    },
-    {
-     "end": 12.725,
-     "start": 12.65,
-     "text": ","
-    },
-    {
-     "end": 12.825,
-     "start": 12.725,
-     "text": "the"
-    },
-    {
-     "end": 13.225,
-     "start": 12.825,
-     "text": "holder"
-    },
-    {
-     "end": 13.688,
-     "start": 13.225,
-     "text": "named"
-    },
-    {
-     "end": 13.812,
-     "start": 13.688,
-     "text": "and"
-    },
-    {
-     "end": 13.9,
-     "start": 13.812,
-     "text": "the"
-    },
-    {
-     "end": 14.538,
-     "start": 13.9,
-     "text": "consumer's"
-    },
-    {
-     "end": 14.938,
-     "start": 14.538,
-     "text": "verdict"
-    },
-    {
-     "end": 15.125,
-     "start": 14.938,
-     "text": "on"
-    },
-    {
-     "end": 15.875,
-     "start": 15.125,
-     "text": "it"
-    },
-    {
-     "end": 16.1,
-     "start": 15.875,
-     "text": "."
-    },
-    {
-     "end": 16.725,
-     "start": 16.3,
-     "text": "Sixteen"
-    },
-    {
-     "end": 17.038,
-     "start": 16.725,
-     "text": "rows"
-    },
-    {
-     "end": 17.35,
-     "start": 17.038,
-     "text": "end"
-    },
-    {
-     "end": 17.438,
-     "start": 17.35,
-     "text": "in"
-    },
-    {
-     "end": 17.5,
-     "start": 17.438,
-     "text": "a"
-    },
-    {
-     "end": 17.975,
-     "start": 17.5,
-     "text": "status"
-    },
-    {
-     "end": 18.1,
-     "start": 17.975,
-     "text": "and"
-    },
-    {
-     "end": 18.775,
-     "start": 18.1,
-     "text": "thirty-five"
-    },
-    {
-     "end": 18.925,
-     "start": 18.775,
-     "text": "in"
-    },
-    {
-     "end": 20.1,
-     "start": 18.925,
-     "text": "unavailable"
-    },
-    {
-     "end": 20.3,
-     "start": 20.1,
-     "text": ";"
-    },
-    {
-     "end": 20.688,
-     "start": 20.5,
-     "text": "nine"
-    },
-    {
-     "end": 20.775,
-     "start": 20.688,
-     "text": "of"
-    },
-    {
-     "end": 21.05,
-     "start": 20.775,
-     "text": "those"
-    },
-    {
-     "end": 21.15,
-     "start": 21.05,
-     "text": "are"
-    },
-    {
-     "end": 21.612,
-     "start": 21.15,
-     "text": "histories"
-    },
-    {
-     "end": 21.712,
-     "start": 21.612,
-     "text": "that"
-    },
-    {
-     "end": 22.225,
-     "start": 21.712,
-     "text": "establish"
-    },
-    {
-     "end": 23.125,
-     "start": 22.225,
-     "text": "nothing"
-    },
-    {
-     "end": 23.325,
-     "start": 23.125,
-     "text": "."
-    },
-    {
-     "end": 25.025,
-     "start": 23.575,
-     "text": "ReaderStatusDriver.lean"
-    },
-    {
-     "end": 25.413,
-     "start": 25.025,
-     "text": "--check"
-    },
-    {
-     "end": 26.087,
-     "start": 25.413,
-     "text": "recomputes"
-    },
-    {
-     "end": 26.438,
-     "start": 26.087,
-     "text": "every"
-    },
-    {
-     "end": 26.775,
-     "start": 26.438,
-     "text": "row"
-    },
-    {
-     "end": 26.913,
-     "start": 26.775,
-     "text": "from"
-    },
-    {
-     "end": 27.087,
-     "start": 26.913,
-     "text": "its"
-    },
-    {
-     "end": 27.4,
-     "start": 27.087,
-     "text": "own"
-    },
-    {
-     "end": 27.85,
-     "start": 27.4,
-     "text": "committed"
-    },
-    {
-     "end": 28.462,
-     "start": 27.85,
+     "start": 9.288,
      "text": "evidence"
     },
     {
-     "end": 28.587,
-     "start": 28.462,
-     "text": "and"
+     "end": 9.9,
+     "start": 9.85,
+     "text": ","
     },
     {
-     "end": 29.212,
-     "start": 28.587,
-     "text": "requires"
+     "end": 10.038,
+     "start": 9.9,
+     "text": "the"
     },
     {
-     "end": 29.562,
-     "start": 29.212,
-     "text": "every"
+     "end": 10.575,
+     "start": 10.038,
+     "text": "status"
     },
     {
-     "end": 30.062,
-     "start": 29.562,
-     "text": "changed"
+     "end": 10.625,
+     "start": 10.575,
+     "text": ","
     },
     {
-     "end": 30.45,
-     "start": 30.062,
-     "text": "field"
+     "end": 10.75,
+     "start": 10.625,
+     "text": "the"
     },
     {
-     "end": 30.587,
-     "start": 30.45,
-     "text": "to"
+     "end": 11.275,
+     "start": 10.75,
+     "text": "custody"
     },
     {
-     "end": 31.65,
-     "start": 30.587,
-     "text": "fail"
-    },
-    {
-     "end": 31.85,
-     "start": 31.65,
-     "text": ";"
-    },
-    {
-     "end": 32.275,
-     "start": 32.05,
-     "text": "run"
-    },
-    {
-     "end": 32.688,
-     "start": 32.275,
-     "text": "answers"
-    },
-    {
-     "end": 32.95,
-     "start": 32.688,
-     "text": "one"
-    },
-    {
-     "end": 33.475,
-     "start": 32.95,
-     "text": "scenario"
-    },
-    {
-     "end": 33.75,
-     "start": 33.475,
+     "end": 11.6,
+     "start": 11.275,
      "text": "read"
     },
     {
-     "end": 33.925,
-     "start": 33.75,
-     "text": "from"
+     "end": 11.65,
+     "start": 11.6,
+     "text": ","
     },
     {
-     "end": 34.287,
-     "start": 33.925,
-     "text": "standard"
-    },
-    {
-     "end": 35.2,
-     "start": 34.287,
-     "text": "input"
-    },
-    {
-     "end": 35.4,
-     "start": 35.2,
-     "text": "."
-    },
-    {
-     "end": 36.225,
-     "start": 35.675,
-     "text": "Forty-one"
-    },
-    {
-     "end": 36.888,
-     "start": 36.225,
-     "text": "single-site"
-    },
-    {
-     "end": 37.425,
-     "start": 36.888,
-     "text": "changes"
-    },
-    {
-     "end": 37.513,
-     "start": 37.425,
-     "text": "of"
-    },
-    {
-     "end": 37.6,
-     "start": 37.513,
+     "end": 11.775,
+     "start": 11.65,
      "text": "the"
     },
     {
-     "end": 38.513,
-     "start": 37.6,
-     "text": "classifier"
+     "end": 12.05,
+     "start": 11.775,
+     "text": "leaf"
     },
     {
-     "end": 38.638,
-     "start": 38.513,
+     "end": 12.7,
+     "start": 12.05,
+     "text": "replayed"
+    },
+    {
+     "end": 12.775,
+     "start": 12.7,
+     "text": ","
+    },
+    {
+     "end": 12.875,
+     "start": 12.775,
+     "text": "the"
+    },
+    {
+     "end": 13.275,
+     "start": 12.875,
+     "text": "holder"
+    },
+    {
+     "end": 13.738,
+     "start": 13.275,
+     "text": "named"
+    },
+    {
+     "end": 13.863,
+     "start": 13.738,
      "text": "and"
     },
     {
-     "end": 38.713,
-     "start": 38.638,
-     "text": "of"
-    },
-    {
-     "end": 38.825,
-     "start": 38.713,
+     "end": 13.95,
+     "start": 13.863,
      "text": "the"
     },
     {
-     "end": 39.388,
-     "start": 38.825,
-     "text": "replay"
+     "end": 14.587,
+     "start": 13.95,
+     "text": "consumer's"
     },
     {
-     "end": 39.562,
-     "start": 39.388,
-     "text": "are"
+     "end": 14.988,
+     "start": 14.587,
+     "text": "verdict"
     },
     {
-     "end": 39.85,
-     "start": 39.562,
-     "text": "each"
+     "end": 15.175,
+     "start": 14.988,
+     "text": "on"
     },
     {
-     "end": 40.35,
-     "start": 39.85,
-     "text": "detected"
+     "end": 15.925,
+     "start": 15.175,
+     "text": "it"
     },
     {
-     "end": 40.525,
-     "start": 40.35,
-     "text": "by"
-    },
-    {
-     "end": 40.662,
-     "start": 40.525,
-     "text": "the"
-    },
-    {
-     "end": 40.963,
-     "start": 40.662,
-     "text": "row"
-    },
-    {
-     "end": 41.375,
-     "start": 40.963,
-     "text": "bound"
-    },
-    {
-     "end": 41.5,
-     "start": 41.375,
-     "text": "to"
-    },
-    {
-     "end": 41.862,
-     "start": 41.5,
-     "text": "them"
-    },
-    {
-     "end": 41.95,
-     "start": 41.862,
-     "text": "("
-    },
-    {
-     "end": 47.425,
-     "start": 41.95,
-     "text": "lean/retained-parking/reader-status-mutants.json"
-    },
-    {
-     "end": 47.775,
-     "start": 47.425,
-     "text": ")"
-    },
-    {
-     "end": 47.85,
-     "start": 47.775,
+     "end": 16.15,
+     "start": 15.925,
      "text": "."
     },
     {
-     "end": 48.4,
-     "start": 48.075,
-     "text": "These"
+     "end": 16.8,
+     "start": 16.35,
+     "text": "Nineteen"
     },
     {
-     "end": 48.562,
-     "start": 48.4,
-     "text": "are"
+     "end": 17.112,
+     "start": 16.8,
+     "text": "rows"
     },
     {
-     "end": 48.975,
-     "start": 48.562,
-     "text": "model"
+     "end": 17.425,
+     "start": 17.112,
+     "text": "end"
     },
     {
-     "end": 49.55,
-     "start": 48.975,
-     "text": "checks"
+     "end": 17.513,
+     "start": 17.425,
+     "text": "in"
     },
     {
-     "end": 49.662,
-     "start": 49.55,
-     "text": "."
-    },
-    {
-     "end": 49.787,
-     "start": 49.662,
-     "text": "A"
-    },
-    {
-     "end": 50.138,
-     "start": 49.787,
-     "text": "reader"
-    },
-    {
-     "end": 50.987,
-     "start": 50.138,
-     "text": "implementation"
-    },
-    {
-     "end": 51.3,
-     "start": 50.987,
-     "text": "needs"
-    },
-    {
-     "end": 51.513,
-     "start": 51.3,
-     "text": "its"
-    },
-    {
-     "end": 51.838,
-     "start": 51.513,
-     "text": "own"
-    },
-    {
-     "end": 52.088,
-     "start": 51.838,
-     "text": "two"
-    },
-    {
-     "end": 52.513,
-     "start": 52.088,
-     "text": "layers"
-    },
-    {
-     "end": 52.638,
-     "start": 52.513,
-     "text": "of"
-    },
-    {
-     "end": 53.1,
-     "start": 52.638,
-     "text": "tests"
-    },
-    {
-     "end": 53.45,
-     "start": 53.1,
-     "text": "against"
-    },
-    {
-     "end": 53.675,
-     "start": 53.45,
-     "text": "these"
-    },
-    {
-     "end": 54.287,
-     "start": 53.675,
-     "text": "vectors"
-    },
-    {
-     "end": 54.425,
-     "start": 54.287,
-     "text": "and"
-    },
-    {
-     "end": 54.812,
-     "start": 54.425,
-     "text": "against"
-    },
-    {
-     "end": 54.912,
-     "start": 54.812,
+     "end": 17.575,
+     "start": 17.513,
      "text": "a"
     },
     {
-     "end": 55.975,
-     "start": 54.912,
+     "end": 18.1,
+     "start": 17.575,
+     "text": "status"
+    },
+    {
+     "end": 18.237,
+     "start": 18.1,
+     "text": "and"
+    },
+    {
+     "end": 18.95,
+     "start": 18.237,
+     "text": "thirty-seven"
+    },
+    {
+     "end": 19.1,
+     "start": 18.95,
+     "text": "in"
+    },
+    {
+     "end": 20.3,
+     "start": 19.1,
+     "text": "unavailable"
+    },
+    {
+     "end": 20.5,
+     "start": 20.3,
+     "text": "."
+    },
+    {
+     "end": 20.975,
+     "start": 20.7,
+     "text": "Three"
+    },
+    {
+     "end": 21.062,
+     "start": 20.975,
+     "text": "of"
+    },
+    {
+     "end": 21.15,
+     "start": 21.062,
+     "text": "the"
+    },
+    {
+     "end": 21.737,
+     "start": 21.15,
+     "text": "nineteen"
+    },
+    {
+     "end": 22.15,
+     "start": 21.737,
+     "text": "answer"
+    },
+    {
+     "end": 22.288,
+     "start": 22.15,
+     "text": "from"
+    },
+    {
+     "end": 22.375,
+     "start": 22.288,
+     "text": "the"
+    },
+    {
+     "end": 22.8,
+     "start": 22.375,
+     "text": "holder"
+    },
+    {
+     "end": 23.237,
+     "start": 22.8,
+     "text": "beside"
+    },
+    {
+     "end": 23.3,
+     "start": 23.237,
+     "text": "a"
+    },
+    {
+     "end": 23.938,
+     "start": 23.3,
+     "text": "history"
+    },
+    {
+     "end": 24.1,
+     "start": 23.938,
+     "text": "that"
+    },
+    {
+     "end": 24.25,
+     "start": 24.1,
+     "text": "is"
+    },
+    {
+     "end": 24.5,
+     "start": 24.25,
+     "text": "not"
+    },
+    {
+     "end": 25.55,
+     "start": 24.5,
+     "text": "complete"
+    },
+    {
+     "end": 25.75,
+     "start": 25.55,
+     "text": ";"
+    },
+    {
+     "end": 26.325,
+     "start": 26.0,
+     "text": "seven"
+    },
+    {
+     "end": 26.413,
+     "start": 26.325,
+     "text": "of"
+    },
+    {
+     "end": 26.513,
+     "start": 26.413,
+     "text": "the"
+    },
+    {
+     "end": 27.337,
+     "start": 26.513,
+     "text": "thirty-seven"
+    },
+    {
+     "end": 27.612,
+     "start": 27.337,
+     "text": "hold"
+    },
+    {
+     "end": 27.675,
+     "start": 27.612,
+     "text": "a"
+    },
+    {
+     "end": 28.15,
+     "start": 27.675,
+     "text": "complete"
+    },
+    {
+     "end": 28.65,
+     "start": 28.15,
+     "text": "history"
+    },
+    {
+     "end": 28.862,
+     "start": 28.65,
+     "text": "that"
+    },
+    {
+     "end": 29.25,
+     "start": 28.862,
+     "text": "fails"
+    },
+    {
+     "end": 29.45,
+     "start": 29.25,
+     "text": "its"
+    },
+    {
+     "end": 30.025,
+     "start": 29.45,
+     "text": "replay"
+    },
+    {
+     "end": 30.163,
+     "start": 30.025,
+     "text": ","
+    },
+    {
+     "end": 30.425,
+     "start": 30.163,
+     "text": "two"
+    },
+    {
+     "end": 30.55,
+     "start": 30.425,
+     "text": "of"
+    },
+    {
+     "end": 30.775,
+     "start": 30.55,
+     "text": "them"
+    },
+    {
+     "end": 31.163,
+     "start": 30.775,
+     "text": "beside"
+    },
+    {
+     "end": 31.225,
+     "start": 31.163,
+     "text": "a"
+    },
+    {
+     "end": 32.225,
+     "start": 31.225,
+     "text": "holder"
+    },
+    {
+     "end": 32.45,
+     "start": 32.225,
+     "text": "."
+    },
+    {
+     "end": 34.15,
+     "start": 32.7,
+     "text": "ReaderStatusDriver.lean"
+    },
+    {
+     "end": 34.537,
+     "start": 34.15,
+     "text": "--check"
+    },
+    {
+     "end": 35.213,
+     "start": 34.537,
+     "text": "recomputes"
+    },
+    {
+     "end": 35.562,
+     "start": 35.213,
+     "text": "every"
+    },
+    {
+     "end": 35.9,
+     "start": 35.562,
+     "text": "row"
+    },
+    {
+     "end": 36.037,
+     "start": 35.9,
+     "text": "from"
+    },
+    {
+     "end": 36.213,
+     "start": 36.037,
+     "text": "its"
+    },
+    {
+     "end": 36.525,
+     "start": 36.213,
+     "text": "own"
+    },
+    {
+     "end": 36.975,
+     "start": 36.525,
+     "text": "committed"
+    },
+    {
+     "end": 37.588,
+     "start": 36.975,
+     "text": "evidence"
+    },
+    {
+     "end": 37.713,
+     "start": 37.588,
+     "text": "and"
+    },
+    {
+     "end": 38.338,
+     "start": 37.713,
+     "text": "requires"
+    },
+    {
+     "end": 38.688,
+     "start": 38.338,
+     "text": "every"
+    },
+    {
+     "end": 39.188,
+     "start": 38.688,
+     "text": "changed"
+    },
+    {
+     "end": 39.575,
+     "start": 39.188,
+     "text": "field"
+    },
+    {
+     "end": 39.713,
+     "start": 39.575,
+     "text": "to"
+    },
+    {
+     "end": 40.775,
+     "start": 39.713,
+     "text": "fail"
+    },
+    {
+     "end": 40.975,
+     "start": 40.775,
+     "text": ";"
+    },
+    {
+     "end": 41.4,
+     "start": 41.175,
+     "text": "run"
+    },
+    {
+     "end": 41.812,
+     "start": 41.4,
+     "text": "answers"
+    },
+    {
+     "end": 42.075,
+     "start": 41.812,
+     "text": "one"
+    },
+    {
+     "end": 42.6,
+     "start": 42.075,
+     "text": "scenario"
+    },
+    {
+     "end": 42.875,
+     "start": 42.6,
+     "text": "read"
+    },
+    {
+     "end": 43.05,
+     "start": 42.875,
+     "text": "from"
+    },
+    {
+     "end": 43.412,
+     "start": 43.05,
+     "text": "standard"
+    },
+    {
+     "end": 44.325,
+     "start": 43.412,
+     "text": "input"
+    },
+    {
+     "end": 44.525,
+     "start": 44.325,
+     "text": "."
+    },
+    {
+     "end": 45.4,
+     "start": 44.8,
+     "text": "Forty-three"
+    },
+    {
+     "end": 46.088,
+     "start": 45.4,
+     "text": "single-site"
+    },
+    {
+     "end": 46.625,
+     "start": 46.088,
+     "text": "changes"
+    },
+    {
+     "end": 46.713,
+     "start": 46.625,
+     "text": "of"
+    },
+    {
+     "end": 46.8,
+     "start": 46.713,
+     "text": "the"
+    },
+    {
+     "end": 47.713,
+     "start": 46.8,
+     "text": "classifier"
+    },
+    {
+     "end": 47.838,
+     "start": 47.713,
+     "text": "and"
+    },
+    {
+     "end": 47.912,
+     "start": 47.838,
+     "text": "of"
+    },
+    {
+     "end": 48.025,
+     "start": 47.912,
+     "text": "the"
+    },
+    {
+     "end": 48.588,
+     "start": 48.025,
+     "text": "replay"
+    },
+    {
+     "end": 48.763,
+     "start": 48.588,
+     "text": "are"
+    },
+    {
+     "end": 49.05,
+     "start": 48.763,
+     "text": "each"
+    },
+    {
+     "end": 49.575,
+     "start": 49.05,
+     "text": "detected"
+    },
+    {
+     "end": 49.75,
+     "start": 49.575,
+     "text": "by"
+    },
+    {
+     "end": 49.888,
+     "start": 49.75,
+     "text": "the"
+    },
+    {
+     "end": 50.188,
+     "start": 49.888,
+     "text": "row"
+    },
+    {
+     "end": 50.6,
+     "start": 50.188,
+     "text": "bound"
+    },
+    {
+     "end": 50.725,
+     "start": 50.6,
+     "text": "to"
+    },
+    {
+     "end": 51.088,
+     "start": 50.725,
+     "text": "them"
+    },
+    {
+     "end": 51.175,
+     "start": 51.088,
+     "text": "("
+    },
+    {
+     "end": 56.625,
+     "start": 51.175,
+     "text": "lean/retained-parking/reader-status-mutants.json"
+    },
+    {
+     "end": 57.0,
+     "start": 56.625,
+     "text": ")"
+    },
+    {
+     "end": 57.075,
+     "start": 57.0,
+     "text": "."
+    },
+    {
+     "end": 57.625,
+     "start": 57.3,
+     "text": "These"
+    },
+    {
+     "end": 57.787,
+     "start": 57.625,
+     "text": "are"
+    },
+    {
+     "end": 58.2,
+     "start": 57.787,
+     "text": "model"
+    },
+    {
+     "end": 58.775,
+     "start": 58.2,
+     "text": "checks"
+    },
+    {
+     "end": 58.888,
+     "start": 58.775,
+     "text": "."
+    },
+    {
+     "end": 59.013,
+     "start": 58.888,
+     "text": "A"
+    },
+    {
+     "end": 59.362,
+     "start": 59.013,
+     "text": "reader"
+    },
+    {
+     "end": 60.213,
+     "start": 59.362,
+     "text": "implementation"
+    },
+    {
+     "end": 60.525,
+     "start": 60.213,
+     "text": "needs"
+    },
+    {
+     "end": 60.737,
+     "start": 60.525,
+     "text": "its"
+    },
+    {
+     "end": 61.062,
+     "start": 60.737,
+     "text": "own"
+    },
+    {
+     "end": 61.312,
+     "start": 61.062,
+     "text": "two"
+    },
+    {
+     "end": 61.737,
+     "start": 61.312,
+     "text": "layers"
+    },
+    {
+     "end": 61.862,
+     "start": 61.737,
+     "text": "of"
+    },
+    {
+     "end": 62.325,
+     "start": 61.862,
+     "text": "tests"
+    },
+    {
+     "end": 62.675,
+     "start": 62.325,
+     "text": "against"
+    },
+    {
+     "end": 62.9,
+     "start": 62.675,
+     "text": "these"
+    },
+    {
+     "end": 63.513,
+     "start": 62.9,
+     "text": "vectors"
+    },
+    {
+     "end": 63.65,
+     "start": 63.513,
+     "text": "and"
+    },
+    {
+     "end": 64.037,
+     "start": 63.65,
+     "text": "against"
+    },
+    {
+     "end": 64.137,
+     "start": 64.037,
+     "text": "a"
+    },
+    {
+     "end": 65.2,
+     "start": 64.137,
      "text": "chain"
     },
     {
-     "end": 56.2,
-     "start": 55.975,
+     "end": 65.425,
+     "start": 65.2,
      "text": "."
     }
    ]

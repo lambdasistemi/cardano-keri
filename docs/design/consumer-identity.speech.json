@@ -327,7 +327,11 @@
       "pause": 400
     },
     {
-      "text": "The leaf of the identifier's key is not observed. It is replayed from the history. The registry starts with no member. Each fold's changes are applied in order: a registration binds a key the registry does not know as active, and a termination makes an active key terminal. After the replay the key reads unknown exactly when no change of any fold names it, and terminal exactly when some fold terminates it (replayed_leaf). Only a complete history establishes a leaf. A history that starts late or misses a fold establishes none, and neither does one whose replay meets a change no accepted fold makes: a second registration of a key, the termination of a key that is not active, or a fold with no change (history_not_established).",
+      "text": "The leaf of the identifier's key is not observed. It is replayed from the history. The registry starts with no member. Each fold's changes are applied in order: a registration binds a key the registry does not know as active, and a termination makes an active key terminal. After the replay the key reads unknown exactly when no change of any fold names it, and terminal exactly when some fold terminates it (replayed_leaf). Only a complete history establishes a leaf. A history that starts late or misses a fold establishes none (history_not_established). A complete history whose replay meets a change no accepted fold makes, a second registration of a key, the termination of a key that is not active, or a fold with no change, is broken: it is the history of no registry, and the answer is unavailable whatever the holders show (broken_history_unavailable).",
+      "pause": 400
+    },
+    {
+      "text": "One observation suffices. A recognised holder decides active or pending termination when the history is missing or incomplete, because the asset exists only while the leaf is active: on a reachable chain the holder a reader names is the only one, and the leaf is active (holder_decides_alone). A complete history decides terminal or never registered when the holders are not established, because the replayed leaf is the registry's and no output holds the asset under either leaf (history_decides_alone). A gap in the observation an answer does not need does not make the answer unavailable.",
       "pause": 400
     },
     {
@@ -343,7 +347,7 @@
       "pause": 400
     },
     {
-      "text": "Pending termination covers both stages after a conviction. Before the termination is booked the holder is the convicted checkpoint; after it, the termination request at the application's credential, which carries no datum. The answer names the holder, and the custody it read says which of the two it is (pending_termination_custody). In the checkpoint system the identifier's state is pending termination on both sides of the booking, and the reader answers pending termination for both (booked_termination_is_pending).",
+      "text": "Pending termination covers both stages after a conviction. Before the termination is booked the holder is the convicted checkpoint; after it, the termination request at the application's credential, which carries no datum. The answer names the holder, and the custody it read says which of the two it is (pending_termination_custody). In the checkpoint system the identifier's state is pending termination on both sides of the booking, and the reader answers pending termination for both. After the booking the holder it names is the request the booking placed: its reference is the one the system records for the pending termination (booked_termination_is_pending).",
       "pause": 400
     },
     {
@@ -363,11 +367,11 @@
       "pause": 400
     },
     {
-      "text": "The answer is stated against the two models of the system. Against the public registry's history, with its complete unspent set and every registry's members, a status the reader gives on faithful evidence is one the chain state warrants (status_is_warranted), the four statuses exclude one another on every reachable state (warrants_exclusive), and faithful evidence with both observations gets the status the state warrants (warranted_status_is_answered). Against the checkpoint system, with the lifecycle state of every identifier, evidence that realizes a reachable system gets the status of the identifier's state: never registered for absent, active for live, pending termination for pending termination, terminal for convicted (lifecycle_status_is_answered, status_follows_lifecycle).",
+      "text": "The answer is stated against the two models of the system. Against the public registry's history, with its complete unspent set and every registry's members, a status the reader gives on faithful evidence is one the chain state warrants (status_is_warranted), and faithful evidence with both observations gets the status the state warrants (warranted_status_is_answered). The four statuses exclude one another on every reachable state (warrants_exclusive). That exclusion rests on the two identity assumptions of this page, a faithful finite encoding and collision freedom, taken over the preimages the history holds and the identifier's active preimage. Both are named in each statement. Without them two keys could share an asset name, and a holder would say nothing about a leaf. Against the checkpoint system, with the lifecycle state of every identifier, evidence that realizes a reachable system gets the status of the identifier's state: never registered for absent, active for live, pending termination for pending termination, terminal for convicted (lifecycle_status_is_answered, status_follows_lifecycle).",
       "pause": 400
     },
     {
-      "text": "lean/reader-status-vectors.json carries 51 rows on the concrete identity bytes and the version 2 datum: for each, the evidence, the status, the custody read, the leaf replayed, the holder named and the consumer's verdict on it. Sixteen rows end in a status and thirty-five in unavailable; nine of those are histories that establish nothing. ReaderStatusDriver.lean --check recomputes every row from its own committed evidence and requires every changed field to fail; --run answers one scenario read from standard input. Forty-one single-site changes of the classifier and of the replay are each detected by the row bound to them (lean/retained-parking/reader-status-mutants.json). These are model checks. A reader implementation needs its own two layers of tests against these vectors and against a chain.",
+      "text": "lean/reader-status-vectors.json carries 56 rows on the concrete identity bytes and the version 2 datum: for each, the evidence, the status, the custody read, the leaf replayed, the holder named and the consumer's verdict on it. Nineteen rows end in a status and thirty-seven in unavailable. Three of the nineteen answer from the holder beside a history that is not complete; seven of the thirty-seven hold a complete history that fails its replay, two of them beside a holder. ReaderStatusDriver.lean --check recomputes every row from its own committed evidence and requires every changed field to fail; --run answers one scenario read from standard input. Forty-three single-site changes of the classifier and of the replay are each detected by the row bound to them (lean/retained-parking/reader-status-mutants.json). These are model checks. A reader implementation needs its own two layers of tests against these vectors and against a chain.",
       "pause": 400
     }
   ],
@@ -391,6 +395,6 @@
   ],
   "_source": {
     "file": "consumer-identity.md",
-    "sha256": "8f4713d97e8eb8e7d0c15e030b4e750768c78d3f1038524c759e19b3b917e9e3"
+    "sha256": "9d58d802e110e7c2a30532f739d8252afe21cff2e413ad52622ee46d181c3937"
   }
 }

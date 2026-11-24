@@ -438,5 +438,29 @@
     "failure": "verdict-changed fold-without-inception-evidence",
     "owner": "CardanoKeri.Application.only_booking_reads_inception",
     "test": "ApplicationChecks"
+  },
+  {
+    "id": "termination-receipt-spent-reference",
+    "before": "some ⟨input.reference, aid, position⟩",
+    "after": "some ⟨⟨input.reference.tx, 0⟩, aid, position⟩",
+    "failure": "pending-receipt-changed",
+    "owner": "CardanoKeri.Application.Custody.booking_receipt_provenance",
+    "test": "ApplicationPendingReadChecks"
+  },
+  {
+    "id": "termination-receipt-spent-identifier",
+    "before": "some ⟨input.reference, aid, position⟩",
+    "after": "some ⟨input.reference, aid + 1, position⟩",
+    "failure": "pending-receipt-changed",
+    "owner": "CardanoKeri.Application.Custody.booking_receipt_provenance",
+    "test": "ApplicationPendingReadChecks"
+  },
+  {
+    "id": "termination-receipt-native-position",
+    "before": "some ⟨input.reference, aid, position⟩",
+    "after": "some ⟨input.reference, aid, ⟨position.sn, position.epoch⟩⟩",
+    "failure": "pending-receipt-changed",
+    "owner": "CardanoKeri.Application.Custody.booking_receipt_provenance",
+    "test": "ApplicationPendingReadChecks"
   }
 ]

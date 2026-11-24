@@ -40,6 +40,7 @@ module Cardano.KERI.Deployment.RegistryBookingCommand (
     renderRegisterFailure,
     openRegistryNode,
     openRegistryNodeBetween,
+    openKey,
     parseRequestReference,
 ) where
 
@@ -48,7 +49,7 @@ import Cardano.KERI.AID.Application (ApplicationParameters (..))
 import Cardano.KERI.AID.Release (ReleaseIdentity (..))
 import Cardano.KERI.Deployment.KEL (InceptionExport (..), parseInceptionExport)
 import Cardano.KERI.Deployment.LiveRuntime (decodePaymentAddress)
-import Cardano.KERI.Deployment.NodeSocketRuntime (Connection (..), NodeAccess (..), RegistryOpener, withNodeRuntime)
+import Cardano.KERI.Deployment.NodeSocketRuntime (Connection (..), KeySource (..), NodeAccess (..), RegistryOpener, withNodeRuntime)
 import Cardano.KERI.Deployment.RegistryChain (
     Attempt (..),
     AttemptStatus (..),
@@ -69,6 +70,7 @@ import Cardano.KERI.Deployment.RegistryFold (
     FoldStopped (..),
     foldBookedRequest,
  )
+import Cardano.KERI.Deployment.RegistryKeySource (passphraseFdSetting, renderKeySourceRefusal, resolveKeySource, signingKeyFileSetting, vaultSetting)
 import Cardano.KERI.Deployment.RegistryRegister (
     RegisterEvent (..),
     RegisterFailure (..),
@@ -85,7 +87,7 @@ import Cardano.KERI.Deployment.RegistryReturn (
 import Cardano.KERI.Deployment.RegistrySnapshot (Snapshot (..), decodeSnapshot, encodeSnapshot)
 import Cardano.KERI.Deployment.RegistryTransactions (ValidityPlan (..))
 import Cardano.KERI.Deployment.Script (loadBlueprint)
-import Cardano.KERI.Deployment.SigningKeyCheck (checkSigningKey)
+import Cardano.KERI.Deployment.SigningKeyCheck (checkSigningEnvelope, checkSigningKey)
 import Cardano.KERI.Deployment.TransactionRuntime (renderTransactionId, transactionId)
 import Cardano.Ledger.Address (Addr, getNetwork, serialiseAddr)
 import Cardano.Ledger.BaseTypes (Network (..), TxIx (..))
@@ -119,7 +121,9 @@ data RegistryRegisterSettings = RegistryRegisterSettings
     , rgBlueprint :: !FilePath
     , rgNodeSocket :: !FilePath
     , rgFundingAddress :: !Text
-    , rgSigningKeyFile :: !FilePath
+    , rgSigningKeyFile :: !(Maybe FilePath)
+    , rgVault :: !(Maybe FilePath)
+    , rgPassphraseFd :: !(Maybe Int)
     , rgTimeoutSeconds :: !Int
     , rgReleaseIdentity :: !FilePath
     , rgReferenceRecord :: !FilePath
@@ -134,7 +138,9 @@ data RegistryFoldSettings = RegistryFoldSettings
     , rfBlueprint :: !FilePath
     , rfNodeSocket :: !FilePath
     , rfFundingAddress :: !Text
-    , rfSigningKeyFile :: !FilePath
+    , rfSigningKeyFile :: !(Maybe FilePath)
+    , rfVault :: !(Maybe FilePath)
+    , rfPassphraseFd :: !(Maybe Int)
     , rfTimeoutSeconds :: !Int
     , rfReleaseIdentity :: !FilePath
     , rfReferenceRecord :: !FilePath
@@ -151,7 +157,9 @@ registryRegisterSettingsParser = do
     rgBlueprint <- stringSetting "blueprint" "Immutable Aiken plutus.json"
     rgNodeSocket <- stringSetting "node-socket" "Cardano node socket"
     rgFundingAddress <- T.pack <$> stringSetting "funding-address" "Bech32 payment address that pays the booking and is the refund address"
-    rgSigningKeyFile <- stringSetting "signing-key-file" "Cardano payment signing-key envelope"
+    rgSigningKeyFile <- signingKeyFileSetting
+    rgVault <- vaultSetting
+    rgPassphraseFd <- passphraseFdSetting
     rgTimeoutSeconds <- intSetting "timeout-seconds" (Just 600) "Settlement timeout per transaction"
     rgReleaseIdentity <- stringSetting "release-identity" "The release identity file registry deploy wrote"
     rgReferenceRecord <- stringSetting "reference-record" "The reference-output record registry deploy wrote"
@@ -167,7 +175,9 @@ registryFoldSettingsParser = do
     rfBlueprint <- stringSetting "blueprint" "Immutable Aiken plutus.json"
     rfNodeSocket <- stringSetting "node-socket" "Cardano node socket"
     rfFundingAddress <- T.pack <$> stringSetting "funding-address" "Bech32 payment address that pays the fold: not the controller's"
-    rfSigningKeyFile <- stringSetting "signing-key-file" "Cardano payment signing-key envelope"
+    rfSigningKeyFile <- signingKeyFileSetting
+    rfVault <- vaultSetting
+    rfPassphraseFd <- passphraseFdSetting
     rfTimeoutSeconds <- intSetting "timeout-seconds" (Just 600) "Settlement timeout per transaction"
     rfReleaseIdentity <- stringSetting "release-identity" "The release identity file registry deploy wrote"
     rfReferenceRecord <- stringSetting "reference-record" "The reference-output record registry deploy wrote"
@@ -238,6 +248,7 @@ the writer, which is how a test reaches the instants inside that report.
 runRegistryRegisterReporting :: (String -> IO ()) -> RegistryOpener -> RegistryRegisterSettings -> IO ()
 runRegistryRegisterReporting errLine open settings = do
     hPutStrLn stderr "ckeri: not for mainnet"
+    key <- openKey "register" (rgNetworkMagic settings) (rgSigningKeyFile settings) (rgVault settings) (rgPassphraseFd settings)
     when (rgTimeoutSeconds settings <= 0) $ dieZero "timeout-seconds must be positive"
     blueprint <- loadBlueprint (rgBlueprint settings) >>= either (dieZero . ("blueprint-invalid: " <>)) pure
     (identity, record) <- readFiles (rgReleaseIdentity settings) (rgReferenceRecord settings)
@@ -245,7 +256,7 @@ runRegistryRegisterReporting errLine open settings = do
     putStrLn
         "ckeri: this checks the registry's checkpoint address only: it cannot see a terminal key or another pending booking of this identity; the fold is where a duplicate is stopped"
     hFlush stdout
-    open (NodeAccess (rgNetworkMagic settings) (rgNodeSocket settings) (rgFundingAddress settings) (rgSigningKeyFile settings) (rgTimeoutSeconds settings)) $ \(runtime, payer) -> do
+    open (NodeAccess (rgNetworkMagic settings) (rgNodeSocket settings) (rgFundingAddress settings) key (rgTimeoutSeconds settings)) $ \(runtime, payer) -> do
         outcome <-
             registerRegistration
                 runtime
@@ -328,6 +339,7 @@ runRegistryFoldWith = runRegistryFoldReporting (hPutStrLn stderr)
 runRegistryFoldReporting :: (String -> IO ()) -> RegistryOpener -> RegistryFoldSettings -> IO ()
 runRegistryFoldReporting errLine open settings = do
     hPutStrLn stderr "ckeri: not for mainnet"
+    key <- openKey "fold" (rfNetworkMagic settings) (rfSigningKeyFile settings) (rfVault settings) (rfPassphraseFd settings)
     when (rfTimeoutSeconds settings <= 0) $ dieZero "timeout-seconds must be positive"
     blueprint <- loadBlueprint (rfBlueprint settings) >>= either (dieZero . ("blueprint-invalid: " <>)) pure
     (identity, record) <- readFiles (rfReleaseIdentity settings) (rfReferenceRecord settings)
@@ -343,7 +355,7 @@ runRegistryFoldReporting errLine open settings = do
         when taken $ dieZero ("file-exists: " <> path <> " is already there; it is not overwritten")
     putStrLn ("snapshot-supplied-by: " <> T.unpack (snapshotSuppliedBy snapshot))
     hFlush stdout
-    open (NodeAccess (rfNetworkMagic settings) (rfNodeSocket settings) (rfFundingAddress settings) (rfSigningKeyFile settings) (rfTimeoutSeconds settings)) $ \(runtime, payer) -> do
+    open (NodeAccess (rfNetworkMagic settings) (rfNodeSocket settings) (rfFundingAddress settings) key (rfTimeoutSeconds settings)) $ \(runtime, payer) -> do
         outcome <-
             foldBookedRequest
                 runtime
@@ -657,7 +669,7 @@ openRegistryNodeBetween :: IO () -> RegistryOpener
 openRegistryNodeBetween between access use = do
     payer <- either dieZero pure (decodePaymentAddress (naFundingAddress access))
     -- the signing key is checked by name before the node is opened: nothing can have been submitted
-    checkSigningKey (naSigningKeyFile access) payer >>= either dieZero pure
+    checkKey (naSigningKey access) payer >>= either dieZero pure
     between
     begun <- newIORef False
     opened <- try @IOException $ withNodeRuntime Unlinked access $ \(runtime, _) -> do
@@ -686,7 +698,9 @@ data RegistryReturnSettings = RegistryReturnSettings
     , rnBlueprint :: !FilePath
     , rnNodeSocket :: !FilePath
     , rnFundingAddress :: !Text
-    , rnSigningKeyFile :: !FilePath
+    , rnSigningKeyFile :: !(Maybe FilePath)
+    , rnVault :: !(Maybe FilePath)
+    , rnPassphraseFd :: !(Maybe Int)
     , rnTimeoutSeconds :: !Int
     , rnReleaseIdentity :: !FilePath
     , rnReferenceRecord :: !FilePath
@@ -700,7 +714,9 @@ registryReturnSettingsParser = do
     rnBlueprint <- stringSetting "blueprint" "Immutable Aiken plutus.json"
     rnNodeSocket <- stringSetting "node-socket" "Cardano node socket"
     rnFundingAddress <- T.pack <$> stringSetting "funding-address" "Bech32 payment address that pays the return and keeps the tip"
-    rnSigningKeyFile <- stringSetting "signing-key-file" "Cardano payment signing-key envelope"
+    rnSigningKeyFile <- signingKeyFileSetting
+    rnVault <- vaultSetting
+    rnPassphraseFd <- passphraseFdSetting
     rnTimeoutSeconds <- intSetting "timeout-seconds" (Just 600) "Settlement timeout per transaction"
     rnReleaseIdentity <- stringSetting "release-identity" "The release identity file registry deploy wrote"
     rnReferenceRecord <- stringSetting "reference-record" "The reference-output record registry deploy wrote"
@@ -720,11 +736,12 @@ runRegistryReturnWith = runRegistryReturnReporting (hPutStrLn stderr)
 runRegistryReturnReporting :: (String -> IO ()) -> RegistryOpener -> RegistryReturnSettings -> IO ()
 runRegistryReturnReporting errLine open settings = do
     hPutStrLn stderr "ckeri: not for mainnet"
+    key <- openKey "return" (rnNetworkMagic settings) (rnSigningKeyFile settings) (rnVault settings) (rnPassphraseFd settings)
     when (rnTimeoutSeconds settings <= 0) $ dieZero "timeout-seconds must be positive"
     blueprint <- loadBlueprint (rnBlueprint settings) >>= either (dieZero . ("blueprint-invalid: " <>)) pure
     (identity, record) <- readFiles (rnReleaseIdentity settings) (rnReferenceRecord settings)
     request <- either dieZero pure (parseRequestReference (T.unpack (rnRequest settings)))
-    open (NodeAccess (rnNetworkMagic settings) (rnNodeSocket settings) (rnFundingAddress settings) (rnSigningKeyFile settings) (rnTimeoutSeconds settings)) $ \(runtime, payer) -> do
+    open (NodeAccess (rnNetworkMagic settings) (rnNodeSocket settings) (rnFundingAddress settings) key (rnTimeoutSeconds settings)) $ \(runtime, payer) -> do
         outcome <-
             returnBookedRequest
                 runtime
@@ -813,3 +830,17 @@ renderReturnStopped stopped = body <> [zeroSpend | nothingSpent]
     waitHint = \case
         NoReturnSlotYet{} -> ["the command can be run again after the next block"]
         _ -> []
+
+{- | The key the settings name, or the stop before any transaction: the refusal is made by
+the command, and nothing was submitted.
+-}
+openKey :: String -> Int -> Maybe FilePath -> Maybe FilePath -> Maybe Int -> IO KeySource
+openKey verb magic file vault descriptor =
+    resolveKeySource magic file vault descriptor
+        >>= either (\refusal -> dieZero ("registry " <> verb <> " " <> phrase Command <> ": " <> renderKeySourceRefusal refusal)) pure
+
+-- | The check of the signing key, by name, before the node is opened.
+checkKey :: KeySource -> Addr -> IO (Either String ())
+checkKey = \case
+    KeyFile path -> checkSigningKey path
+    KeyEnvelope envelope -> pure . checkSigningEnvelope envelope

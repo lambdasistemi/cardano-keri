@@ -32,6 +32,7 @@ module CheckpointTxBuilder (
     stagedBareDevnet,
     stagedBareDevnetWithin,
     registryDeployJourney,
+    FoldKey (..),
     registryBookingJourney,
     productionRegisterAdvanceScenario,
     productionRegisterConvictScenario,
@@ -364,6 +365,8 @@ import Ouroboros.Network.Magic (NetworkMagic (..))
 import Paths_cardano_keri (getDataFileName)
 import PlutusCore.Data (Data (..))
 import PlutusCore.Data qualified as PLC
+import Singular.CLI.Passphrase (mkPassphrase)
+import Singular.CLI.Vault (VaultRefusal (..), createVaultFile, renderVaultRefusal, sealVault, vaultWorkFactor)
 import System.Directory qualified as Dir
 import System.Environment (lookupEnv)
 import System.Exit (ExitCode (..))
@@ -6665,8 +6668,15 @@ registry state with the ledger refusing the second for its consumed registry inp
 is the library journey 'duplicateRegistrationJourney' of the protocol-11 devnet
 (@#136 register a small identity end to end@), not run again through the commands.
 -}
-registryBookingJourney :: FilePath -> LSQChannel -> LTxSChannel -> IO ()
-registryBookingJourney socket lsq ltxs = do
+
+{- | Which key signs the folds of the journey: the key file, as the journey always did, or a wallet vault made
+here by the code of the @singular@ command line, its passphrase given to the installed command on descriptor 0.
+-}
+data FoldKey = FoldWithKeyFile | FoldWithVault
+    deriving stock (Eq, Show)
+
+registryBookingJourney :: FoldKey -> FilePath -> LSQChannel -> LTxSChannel -> IO ()
+registryBookingJourney foldKey socket lsq ltxs = do
     blueprintPath <- resolveBlueprintPath
     exportPath <- getDataFileName "deployment-test/fixtures/kli-export-single.cesr"
     exportBytes <- BS.readFile exportPath
@@ -6679,6 +6689,8 @@ registryBookingJourney socket lsq ltxs = do
     let workDir = scratch </> "work"
         payerKeyFile = scratch </> "payer.skey"
         folderKeyFile = scratch </> "folder.skey"
+        folderVaultFile = scratch </> "folder.vault"
+        otherVaultFile = scratch </> "other.vault"
         returnerKeyFile = scratch </> "returner.skey"
         identityFile = workDir </> "release-identity.json"
         recordFile = workDir </> "reference-outputs.json"
@@ -6686,7 +6698,14 @@ registryBookingJourney socket lsq ltxs = do
         afterFirst = scratch </> "after-first-fold.json"
     Dir.createDirectory workDir
     writeFile payerKeyFile (signingKeyEnvelope genesisSignKey)
-    writeFile folderKeyFile (signingKeyEnvelope folderKey)
+    -- the vault variant seals the folder's key from memory: no plaintext file of it is ever written
+    when (foldKey == FoldWithKeyFile) $ writeFile folderKeyFile (signingKeyEnvelope folderKey)
+    -- the check that no output holds a passphrase is shown to see one
+    when (foldKey == FoldWithVault && not (printsAPassphrase ("opened with " <> folderPassphrase))) $
+        fail "the check that no output holds a passphrase does not see one"
+    when (foldKey == FoldWithVault) $ do
+        sealFolderVault folderVaultFile folderPassphrase
+        sealFolderVault otherVaultFile otherPassphrase
     writeFile returnerKeyFile (signingKeyEnvelope terminationFolderKey)
     multiExportPath <- getDataFileName "deployment-test/fixtures/kli-export-2-of-5.cesr"
     BS.writeFile emptySnapshot "{\"schema_version\":1,\"supplied_by\":\"the deployer\",\"active\":[],\"terminal\":[]}\n"
@@ -6725,18 +6744,23 @@ registryBookingJourney socket lsq ltxs = do
             ["registry", "return"]
                 <> node
                 <> ["--funding-address", returnerText, "--signing-key-file", returnerKeyFile, "--release-identity", identityFile, "--reference-record", recordFile, "--request", requestText request]
+        foldKeyArguments = case foldKey of
+            FoldWithKeyFile -> ["--signing-key-file", folderKeyFile]
+            FoldWithVault -> ["--vault", folderVaultFile, "--passphrase-fd", "0"]
         foldArgs snapshot request out =
             ["registry", "fold"]
                 <> node
-                <> ["--funding-address", folderText, "--signing-key-file", folderKeyFile]
+                <> ["--funding-address", folderText]
+                <> foldKeyArguments
                 <> files
                 <> ["--request", request, "--snapshot", snapshot]
                 <> maybe [] (\path -> ["--snapshot-out", path]) out
         runCkeri label args =
             withinSecs (timeoutSeconds * 10) label $ do
                 result@(code, out, err) <-
-                    Proc.readCreateProcessWithExitCode (Proc.proc "ckeri" args){Proc.cwd = Just workDir} ""
+                    Proc.readCreateProcessWithExitCode (Proc.proc "ckeri" args){Proc.cwd = Just workDir} (if "--passphrase-fd" `elem` args then folderPassphrase <> "\n" else "")
                 dbg (label <> " exit " <> show code <> "\nstdout:\n" <> out <> "\nstderr:\n" <> err)
+                when (printsAPassphrase (out <> err)) $ fail (label <> ": the output of the command holds a passphrase")
                 pure result
         succeeds label args = do
             (code, out, _) <- runCkeri label args
@@ -6799,6 +6823,12 @@ registryBookingJourney socket lsq ltxs = do
     stateOutputs <- withinSecs 30 "query the registry state" (queryUTxOs provider (Tx.stateAddress (deploymentOf env0)))
     unless (any (\(_, out) -> rawInlineData out == Just (stateDatumData (registryRoot [key]))) stateOutputs) $
         fail "the registry's root is not the root of the one registered key"
+    -- a vault the passphrase on descriptor 0 does not open: Singular's own refusal, before any transaction
+    when (foldKey == FoldWithVault) $
+        refused
+            "fold with a vault that the given passphrase does not open"
+            (map (\argument -> if argument == folderVaultFile then otherVaultFile else argument) (foldArgs emptySnapshot (requestText secondRef) Nothing))
+            [renderVaultRefusal VaultNotOpened, "refused by the command, before any transaction", "nothing was submitted; nothing was spent"]
     -- a dedicated sentence per refusal, and nothing spent by any of them
     refused
         "fold of the second booking on the updated snapshot"
@@ -6875,6 +6905,24 @@ registryBookingJourney socket lsq ltxs = do
         (returnArgs secondRef)
         ["request-unavailable", "refused by the command, before any transaction", "nothing was submitted; nothing was spent"]
     Dir.removeDirectoryRecursive scratch
+
+-- | Whether a text holds one of the passphrases of the vault journey.
+printsAPassphrase :: String -> Bool
+printsAPassphrase text = any (`isInfixOf` text) [folderPassphrase, otherPassphrase]
+
+{- | The throwaway passphrases of the two vaults the vault journey makes of the folder's devnet key: the second is
+not the one given on descriptor 0.
+-}
+folderPassphrase, otherPassphrase :: String
+folderPassphrase = "devnet-folder-passphrase"
+otherPassphrase = "devnet-other-passphrase"
+
+-- | A vault of the folder's key under a passphrase, made by the code of the @singular@ command line.
+sealFolderVault :: FilePath -> String -> IO ()
+sealFolderVault path passphrase = do
+    pass <- either (fail . show) pure (mkPassphrase (B8.pack passphrase))
+    bytes <- sealVault vaultWorkFactor pass folderKey >>= either (fail . renderVaultRefusal) pure
+    createVaultFile path bytes >>= either (fail . renderVaultRefusal) pure
 
 -- | An output reference as the commands print and take it: @<transaction id>#<index>@.
 requestText :: TxIn -> String

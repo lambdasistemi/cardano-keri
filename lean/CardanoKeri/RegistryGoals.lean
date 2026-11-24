@@ -908,7 +908,7 @@ real economic output; then the entire declared carrier budget and exact
 unique tagged destination output follow, with unchanged opaque datum and no
 hidden tags/assets. This proves neither a Cardano minimum nor the full changing
 serialized Checkpoint datum. `Examples.registration_folded` supplies the connected registration witness. `RegistryBoundaryDriver` executes complete delivery controls. -/
-theorem registration_posted_value (p : Params) {s s' : Sys}
+theorem registration_posted_value (p : Params) {env : Env} {s s' : Sys}
     {b : Singular.RegistrationBooking} {f : Flow}
     (hs : bookRegistration p env s b = .ok (f, s')) :
     p.Mc + p.D ≤ b.request.carrierAda ∧ b.request.declaredTip = p.tip ∧

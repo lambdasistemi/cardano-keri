@@ -11,10 +11,12 @@ def refused {α : Type} : Except String α → Bool
 
 def retention : Except String Unit := do
   let b := registration start.state 11 100
+  check "missing-inception" (refused (bookRegistration p { env with inception := fun _ => false }
+    start.state b))
   let (_, booked) ← execute start (.bookRegistration b)
   let (u, tx) ← foldTransaction booked.state [b.request.reference] 2 1 1
-  check "missing-inception" (refused (fold p { env with inception := fun _ => false }
-    booked.state 0 cfg.applicationPolicy u tx))
+  check "fold-reads-no-inception" (!refused (stepFn p { env with inception := fun _ => false }
+    (.fold 0 cfg.applicationPolicy u tx) booked.state))
   let (_, live) ← execute booked (.fold 0 cfg.applicationPolicy u tx)
   let some original := carrierAt live.state 11 | throw "live-carrier-missing"
   check "registration-carrier-binding" (decide

@@ -10,7 +10,7 @@ const stories={
  'poisoned':'Poison blocks consumer use while the output remains held.',
  'mature':'After its rotations the checkpoint is live and mature; the treasury can use it. There is no owner exit: it stays live until it is convicted.',
  'termination-pending':'Conviction makes the checkpoint ineligible. Its representative is still in pending custody.',
- 'termination-booked':'The actual termination booking is associated with this origin. Booking alone does not retire it.',
+ 'termination-booked':'The termination is booked. The booking spends the checkpoint: the representative now sits with the termination request, at the application credential with no datum, and the treasury refuses that output. Booking alone does not retire the identity.',
  'retired-after-matching-fold':'The matching economic fold is consumed by system completion. The full identity fold burns the active asset. Re-registration and later local rotations are refused.'
 };
 function verdict(q){

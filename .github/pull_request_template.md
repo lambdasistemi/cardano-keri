@@ -42,6 +42,8 @@ this repository. Every claim must be checkable by that reader.
       evidence, or the reason runtime behavior is unchanged, are recorded above.
 - [ ] No unresolved model error, ambiguity, contradiction or missing required
       evidence is being accepted as a passing affected behavior.
+- [ ] No step of one role depends on anything another role hands over off
+      chain, and a folder needs nothing of this application (principle XII).
 
 ## Limits
 

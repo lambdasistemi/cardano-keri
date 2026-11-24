@@ -8952,6 +8952,12 @@
     "name": "docs-design-consumer-identity/the-checkpoint-datum-13",
     "pause_ms": 400,
     "v": "f8c6b3bae0d4"
+   },
+   {
+    "index": 14,
+    "name": "docs-design-consumer-identity/the-checkpoint-datum-14",
+    "pause_ms": 400,
+    "v": "544d131bb231"
    }
   ],
   "the-checkpoint-outputs-value": [
@@ -9222,6 +9228,122 @@
     "name": "docs-design-consumer-identity/the-datum-decoder-in-aiken-07",
     "pause_ms": 400,
     "v": "5db36f988dfa"
+   }
+  ],
+  "what-a-reader-answers-about-an-identifier": [
+   {
+    "index": 0,
+    "name": "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-00",
+    "pause_ms": 500,
+    "v": "39fb3d608c86"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-01",
+    "pause_ms": 400,
+    "v": "9813d8a00506"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-02",
+    "pause_ms": 400,
+    "v": "dd38ceefd3c8"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-03",
+    "pause_ms": 400,
+    "v": "62c2f142b9f6"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-04",
+    "pause_ms": 400,
+    "v": "10808d5d030e"
+   },
+   {
+    "index": 5,
+    "name": "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-05",
+    "pause_ms": 400,
+    "v": "3debb769ec26"
+   },
+   {
+    "index": 6,
+    "name": "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-06",
+    "pause_ms": 400,
+    "v": "6cb53c1b1eab"
+   },
+   {
+    "index": 7,
+    "name": "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-07",
+    "pause_ms": 400,
+    "v": "b102d371df29"
+   },
+   {
+    "index": 8,
+    "name": "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-08",
+    "pause_ms": 400,
+    "v": "047db6bdb420"
+   },
+   {
+    "index": 9,
+    "name": "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-09",
+    "pause_ms": 400,
+    "v": "8c307d10a470"
+   },
+   {
+    "index": 10,
+    "name": "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-10",
+    "pause_ms": 400,
+    "v": "c2d581c3d538"
+   },
+   {
+    "index": 11,
+    "name": "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-11",
+    "pause_ms": 400,
+    "v": "2286079967f1"
+   },
+   {
+    "index": 12,
+    "name": "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-12",
+    "pause_ms": 400,
+    "v": "7f97db55eb75"
+   },
+   {
+    "index": 13,
+    "name": "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-13",
+    "pause_ms": 400,
+    "v": "938c888c4add"
+   },
+   {
+    "index": 14,
+    "name": "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-14",
+    "pause_ms": 400,
+    "v": "aa9f5d6f33c7"
+   },
+   {
+    "index": 15,
+    "name": "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-15",
+    "pause_ms": 400,
+    "v": "e69632847a8d"
+   },
+   {
+    "index": 16,
+    "name": "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-16",
+    "pause_ms": 400,
+    "v": "c92506683c94"
+   },
+   {
+    "index": 17,
+    "name": "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-17",
+    "pause_ms": 400,
+    "v": "faf853d94dff"
+   },
+   {
+    "index": 18,
+    "name": "docs-design-consumer-identity/what-a-reader-answers-about-an-identifier-18",
+    "pause_ms": 400,
+    "v": "72e94b3de830"
    }
   ],
   "what-the-interpretation-must-establish": [

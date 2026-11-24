@@ -98,6 +98,19 @@ node scripts/checkpoint-writer-vectors.mjs --check
   rm -f -- "$generated"
   lake env lean --run RequestLifecycleDriver.lean --check request-lifecycle-vectors.json
 )
+# The reader's status (#353): the committed vectors are the Lean's output,
+# every committed row's own evidence gets its committed answer, every changed
+# field fails and each of the five statuses has a row.
+(
+  cd lean
+  lake build CardanoKeri.ReaderStatusVectors
+  generated=$(mktemp)
+  lake env lean --run ReaderStatusDriver.lean >"$generated"
+  node -e 'const fs=require("fs");if(fs.readFileSync(process.argv[1],"utf8")!==fs.readFileSync(process.argv[2],"utf8")){console.error("reader-status-vectors.json differs from the Lean output");process.exit(1)}' \
+    reader-status-vectors.json "$generated"
+  rm -f -- "$generated"
+  lake env lean --run ReaderStatusDriver.lean --check reader-status-vectors.json
+)
 # KERI's application on the application-held model (#526): the committed
 # vectors (approval bytes, configuration record, bookings, folds, returns and
 # termination spends) are the Lean's output, every committed row is checked

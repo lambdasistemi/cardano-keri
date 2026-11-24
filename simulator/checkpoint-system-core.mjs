@@ -46,6 +46,9 @@ export function validateCommand(command) {
   } else certificate(a.certificate);
   return command;
 }
+// The status the lifecycle state of an identifier warrants (ReaderStatus.lifecycleStatus):
+// what a reader answers on complete evidence that realizes the system.
+export const statusOf=state=>({absent:'never-registered',present:'active',terminationPending:'pending-termination',convicted:'terminal'})[C.stateKind(state)];
 const contextOf=origin=>({parameters:origin.parameters,environment:origin.environment,configuration:origin.configuration});
 function registryStep(context,state,action) {
   const r=R.stepFn(context.parameters,context.environment,action,state);
@@ -87,7 +90,7 @@ function transition(p,env,state,command) {
   validateCommand(command);
   const kind=Object.keys(command)[0],a=command[kind];
   if(['openCommitment','reveal','sweep'].includes(kind))return {ok:{state:commitmentStep(state,kind,a),checkpointFlow:null,registryFlow:null}};
-  const row=state.aids.find(x=>E.equal(x.aid,a.aid))??{aid:a.aid,leaf:'absent',state:'absent',origin:null,pending:null};
+  const row=state.aids.find(x=>E.equal(x.aid,a.aid))??{aid:a.aid,leaf:'absent',state:'absent',status:statusOf('absent'),origin:null,pending:null};
   let next=row,checkpointFlow=null,registryFlow=null;
   if(kind==='register') {
     require(row.leaf==='absent','checkpoint-registration-leaf');require(row.origin===null,'checkpoint-origin-already-bound');
@@ -126,6 +129,7 @@ function transition(p,env,state,command) {
     require(E.equal(row.state,{terminationPending:{h:association.keyState}})&&E.equal(receipt.before.config,{...association.origin.registered.config,root:receipt.before.config.root})&&E.equal(entry,association.entry)&&entry!==null&&E.equal(entry.payload.aid,a.aid)&&E.equal(entry.payload.token,association.origin.token)&&contains(receipt.transaction.transaction.inputs,association.reference),'checkpoint-receipt-mismatch');
     next={...row,leaf:'retired',state:'convicted',pending:null};registryFlow=receipt.flow;
   }
+  next={...next,status:statusOf(next.state)};
   const aids=state.aids.some(x=>E.equal(x.aid,a.aid))?state.aids.map(x=>E.equal(x.aid,a.aid)?next:x):[...state.aids,next];
   return {ok:{state:{...state,aids},checkpointFlow,registryFlow}};
 }

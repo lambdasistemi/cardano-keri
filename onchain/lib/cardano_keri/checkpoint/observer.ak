@@ -3,15 +3,18 @@
 //// Register is a small state-machine command. Its heavy KERI inception
 //// evidence is carried by a zero-lovelace withdrawal observer, which checks
 //// the hash-proof input and burn before running the unchanged registration
-//// predicate. Advance uses its own observer family: the checkpoint keeps the
+//// predicate. A booking of the application shows the same inception for each
+//// request it books, through one withdrawal that lists them. Advance uses its
+//// own observer family: the checkpoint keeps the
 //// value/state mechanics while this module runs the unchanged heavy rotation
 //// predicate over the named OLD input and unique NEW successor.
 
 use aiken/collection/dict
 use aiken/collection/list
-use cardano/address.{from_script}
+use cardano/address.{Script, from_script}
 use cardano/assets.{PolicyId, lovelace_of, quantity_of, tokens}
 use cardano/transaction.{InlineDatum, OutputReference, Transaction, find_input}
+use cardano_keri/application/held.{Registration, held_datum}
 use cardano_keri/checkpoint/advance.{
   AdvanceEvidence, AdvancePredicateValid, advance_predicate,
 }
@@ -37,6 +40,10 @@ pub const observe_advance: Int = 1
 /// two-step freeze's and has been unused since it was removed.
 pub const observe_freeze: Int = 2
 
+/// The stable action tag for the booking of a registration: the inception of each
+/// key whose request the transaction books. Tag 3 is not reused.
+pub const observe_book: Int = 5
+
 /// The stable action tag for Convict.
 pub const observe_convict: Int = 4
 
@@ -55,31 +62,35 @@ pub type ObserverEnvelope {
 
 pub const checkpoint_min_ada: Int = 2_000_000
 
-/// Validate the one action owned by the registration observer.
-pub fn validate_registration(
+/// The inception evidence of one request a booking transaction books: the index
+/// of its output among the transaction's outputs and the evidence of its key.
+pub type BookedRequest {
+  request_index: Int,
+  evidence: RegistrationEvidence,
+}
+
+/// The payload of the booking claim: every request the transaction books.
+pub type BookingEvidence {
+  requests: List<BookedRequest>,
+}
+
+/// The inception of the key a checkpoint datum declares, shown by `evidence`
+/// over `lovelace`: the hash-proof token of the event is in an input and the
+/// registration predicate holds over the key state the datum declares, read as
+/// the inception (sequence number and epoch zero). It returns the name of the
+/// hash-proof token the transaction must burn.
+fn inception_proof(
   hash_proof_policy: PolicyId,
   d_reg: Int,
-  envelope: ObserverEnvelope,
+  datum_data: Data,
+  lovelace: Int,
+  evidence: RegistrationEvidence,
   tx: Transaction,
-) -> Bool {
-  let ObserverEnvelope { claim, payload } = envelope
-  expect claim.action == observe_register
-  expect claim.own_ref == None
-  expect evidence: RegistrationEvidence = payload
-  let Transaction { inputs, outputs, mint, .. } = tx
-  let policy_id = claim.checkpoint_policy
-  let active = from_script(policy_id)
-  expect [state_output] = list.filter(
-    outputs,
-    fn(output) { output.address == active },
-  )
-  expect InlineDatum(datum_data) = state_output.datum
+) -> ByteArray {
   let registered = datum.read(datum_data)
   expect datum_v2_well_formed(registered) == DatumValid
   expect Live { aid, keys, .. } = registered
   expect Some(digest) = aid_digest(aid)
-  // The event's own predicate runs over the key state the datum declares,
-  // read as the inception: sequence number and epoch zero.
   let d = KeyStateView {
     cesr_aid: digest,
     cur_keys: keys.cur_keys,
@@ -94,20 +105,106 @@ pub fn validate_registration(
   let proof_name = proof_token_name(evidence.event_bytes, digest)
   expect
     list.any(
-      inputs,
+      tx.inputs,
       fn(input) {
         quantity_of(input.output.value, hash_proof_policy, proof_name) == 1
       },
     )
-  expect [Pair(burned_name, burned_qty)] = dict.to_pairs(
-    tokens(mint, hash_proof_policy),
-  )
-  expect burned_name == proof_name
-  expect burned_qty == -1
   let ctx = DeploymentContext { min_ada: checkpoint_min_ada, d_reg }
-  expect
-    registration_predicate(ctx, d, lovelace_of(state_output.value), evidence) == RegistrationValid
-  True
+  expect registration_predicate(ctx, d, lovelace, evidence) == RegistrationValid
+  proof_name
+}
+
+/// Validate the one action owned by the registration observer.
+pub fn validate_registration(
+  hash_proof_policy: PolicyId,
+  d_reg: Int,
+  envelope: ObserverEnvelope,
+  tx: Transaction,
+) -> Bool {
+  let ObserverEnvelope { claim, payload } = envelope
+  expect claim.action == observe_register
+  expect claim.own_ref == None
+  expect evidence: RegistrationEvidence = payload
+  let policy_id = claim.checkpoint_policy
+  let active = from_script(policy_id)
+  expect [state_output] = list.filter(
+    tx.outputs,
+    fn(output) { output.address == active },
+  )
+  expect InlineDatum(datum_data) = state_output.datum
+  let proof_name = inception_proof(
+    hash_proof_policy,
+    d_reg,
+    datum_data,
+    lovelace_of(state_output.value),
+    evidence,
+    tx,
+  )
+  expect [Pair(burned_name, burned_qty)] = dict.to_pairs(
+    tokens(tx.mint, hash_proof_policy),
+  )
+  burned_name == proof_name && burned_qty == -1
+}
+
+/// Validate the inception of every key whose request the booking transaction
+/// books. Each listed request is an output at the application the claim names,
+/// carrying a registration request; its key's inception is shown over its
+/// initial datum and the deposit it commits, and the transaction burns exactly
+/// the hash-proof token of each listed request. Which requests the transaction
+/// books, and that the datum is the initial state, are the application's.
+pub fn validate_booking(
+  hash_proof_policy: PolicyId,
+  d_reg: Int,
+  envelope: ObserverEnvelope,
+  tx: Transaction,
+) -> Bool {
+  let ObserverEnvelope { claim, payload } = envelope
+  expect claim.action == observe_book
+  expect claim.own_ref == None
+  expect booking: BookingEvidence = payload
+  let proofs = list.map(
+    booking.requests,
+    fn(booked) {
+      expect Some(output) = list.at(tx.outputs, booked.request_index)
+      expect
+        output.address.payment_credential == Script(claim.checkpoint_policy)
+      expect Some(Registration { registration }) = held_datum(output)
+      inception_proof(
+        hash_proof_policy,
+        d_reg,
+        registration.initial_datum,
+        registration.deposit,
+        booked.evidence,
+        tx,
+      )
+    },
+  )
+  burns_exactly(hash_proof_policy, proofs, tx)
+}
+
+/// The transaction burns each hash-proof token as often as it is listed, and
+/// nothing else under the policy.
+fn burns_exactly(
+  hash_proof_policy: PolicyId,
+  proofs: List<ByteArray>,
+  tx: Transaction,
+) -> Bool {
+  and {
+    list.all(
+      proofs,
+      fn(name) {
+        quantity_of(tx.mint, hash_proof_policy, name) == 0 - list.count(
+          proofs,
+          fn(listed) { listed == name },
+        )
+      },
+    ),
+    list.all(
+      dict.to_pairs(tokens(tx.mint, hash_proof_policy)),
+      fn(Pair(name, quantity)) { list.has(proofs, name) && quantity < 0 },
+    ),
+  }
 }
 
 /// Validate a genuine rotation against the named live input and successor.

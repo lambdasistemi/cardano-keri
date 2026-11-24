@@ -34,7 +34,7 @@ use cardano_keri/application/row_vectors as rows
 use cardano_keri/checkpoint/datum as checkpoint_datum
 use cardano_keri/checkpoint/datum.{TerminationPending}
 use cardano_keri/checkpoint/observer.{
-  ObserverClaim, ObserverEnvelope, observe_register,
+  ObserverClaim, ObserverEnvelope, observe_book,
 }
 use singular_state/preimage.{
   RegistryIdentity, active_token_name, approval_name, configuration_token_name,
@@ -275,6 +275,44 @@ pub fn envelope(claim: ObserverClaim, payload: Data) -> Data {
   value
 }
 
+// ---- the booking observation ---------------------------------------------------
+
+/// The claim of a booking: the application policy is the script the requests sit
+/// at, no output is spent.
+pub fn booking_claim() -> ObserverClaim {
+  ObserverClaim {
+    action: observe_book,
+    checkpoint_policy: application(),
+    own_ref: None,
+  }
+}
+
+/// One entry of the payload: the request at `index` and its key's evidence. The
+/// payload is built as raw Plutus Data (constructor 0 holding the list of
+/// constructor 0 entries `request_index, evidence`), never with the types of the
+/// code under test, so a change of the code's own idea of the shape is a change of
+/// the transaction these tests build.
+pub fn booked_entry(index: Int, evidence: Data) -> Data {
+  builtin.constr_data(0, [builtin.i_data(index), evidence])
+}
+
+/// The payload of the booking claim.
+pub fn booking_payload(entries: List<Data>) -> Data {
+  builtin.constr_data(0, [builtin.list_data(entries)])
+}
+
+/// What the application never reads: the evidence the observer reads.
+pub fn unread_evidence() -> Data {
+  builtin.i_data(0)
+}
+
+/// The payload of a perfect booking of the requests at `indices`.
+pub fn payload_of(indices: List<Int>) -> Data {
+  booking_payload(
+    list.map(indices, fn(index) { booked_entry(index, unread_evidence()) }),
+  )
+}
+
 // ---- booking ------------------------------------------------------------------
 
 pub type Booking {
@@ -288,6 +326,11 @@ pub type Booking {
   actions: List<Action>,
   /// How many identical request outputs the transaction creates.
   copies: Int,
+  /// The claim of the lifecycle observer's withdrawal; None leaves the
+  /// withdrawal out.
+  claim: Option<ObserverClaim>,
+  /// The payload of the observer envelope: the requests it lists.
+  payload: Data,
 }
 
 /// Lean row `booking`: a perfect booking.
@@ -302,6 +345,8 @@ pub fn booking() -> Booking {
     checkpoint: cfg.checkpoint_credential,
     actions: [BookRegistration { output_index: 0 }],
     copies: 1,
+    claim: Some(booking_claim()),
+    payload: payload_of([0]),
   }
 }
 
@@ -318,7 +363,23 @@ pub fn booking_tx(b: Booking) -> Transaction {
       []
     },
     validity_range: range(b.lower, b.upper),
-    redeemers: [Pair(Mint(application()), as_data(b.actions))],
+    withdrawals: when b.claim is {
+      Some(_) -> [Pair(Script(rows.observer_hash), 0)]
+      None -> []
+    },
+    redeemers: list.concat(
+      [Pair(Mint(application()), as_data(b.actions))],
+      when b.claim is {
+        Some(claim) ->
+          [
+            Pair(
+              Withdraw(Script(rows.observer_hash)),
+              envelope(claim, b.payload),
+            ),
+          ]
+        None -> []
+      },
+    ),
   }
 }
 
@@ -336,8 +397,8 @@ pub type Fold {
   lower: Int,
   upper: Int,
   donation: Int,
-  /// The claim of the registration observer's withdrawal; None leaves the
-  /// withdrawal out.
+  /// The claim of an observer withdrawal a fold does not need and does not read;
+  /// None leaves the withdrawal out.
   claim: Option<ObserverClaim>,
   withdrawn: Int,
   redeemer: SpendAction,
@@ -349,17 +410,14 @@ pub type Fold {
   /// its burn, for a transaction the real observer runs over).
   extra_inputs: List<Input>,
   extra_mint: List<(PolicyId, AssetName, Int)>,
+  /// Outputs a client puts before and after the holding (the folder's own change).
+  before: List<Output>,
+  after: List<Output>,
+  /// Whether the configuration record is a reference input.
+  references: Bool,
 }
 
-pub fn attestation() -> ObserverClaim {
-  ObserverClaim {
-    action: observe_register,
-    checkpoint_policy: checkpoint_hash(),
-    own_ref: None,
-  }
-}
-
-/// Lean row `fold-at-deadline`: a perfect fold.
+/// Lean row `fold-at-deadline`: a perfect fold: it shows no evidence.
 pub fn fold() -> Fold {
   let data = rows.request_data(9001)
   Fold {
@@ -374,14 +432,32 @@ pub fn fold() -> Fold {
     lower: 12,
     upper: 15,
     donation: 2,
-    claim: Some(attestation()),
+    claim: None,
     withdrawn: 0,
     redeemer: FoldRegistration { holding_index: 0 },
     second: None,
     payload: builtin.i_data(0),
     extra_inputs: [],
     extra_mint: [],
+    before: [],
+    after: [],
+    references: True,
   }
+}
+
+/// A plain output paying `lovelace` to `address`.
+pub fn pay(address: Address, lovelace: Int) -> Output {
+  Output {
+    address,
+    value: from_lovelace(lovelace),
+    datum: NoDatum,
+    reference_script: None,
+  }
+}
+
+/// A plain input holding `lovelace` at `address`.
+pub fn plain_input(index: Int, address: Address, lovelace: Int) -> Input {
+  Input { output_reference: reference(index), output: pay(address, lovelace) }
 }
 
 pub fn holding_output(f: Fold) -> Output {
@@ -439,11 +515,13 @@ pub fn fold_tx(f: Fold) -> Transaction {
       [request_input(0, f.data, f.request_lovelace), ..second_inputs],
       f.extra_inputs,
     ),
-    outputs: [holding_output(f)],
+    outputs: list.concat(f.before, [holding_output(f), ..f.after]),
     mint: burns,
-    reference_inputs: [
-      config_input(50, f.data.registry, cfg.checkpoint_credential),
-    ],
+    reference_inputs: if f.references {
+      [config_input(50, f.data.registry, cfg.checkpoint_credential)]
+    } else {
+      []
+    },
     validity_range: range(f.lower, f.upper),
     treasury_donation: donation_of(f.donation),
     withdrawals,

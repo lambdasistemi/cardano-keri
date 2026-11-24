@@ -21,12 +21,10 @@ use cardano_keri/application/held.{RegistrationData}
 use cardano_keri/application/row_vectors as rows
 use cardano_keri/checkpoint/observer.{ObserverClaim}
 use keri_application_requests.{
-  application, approval_of, config_input, envelope, mint_of, range, registry,
-  request_output,
+  application, approval_of, booked_entry, booking_claim, booking_payload,
+  config_input, envelope, mint_of, range, registry, request_output,
+  unread_evidence,
 }
-
-/// The stable action tag of the booking claim (the interface of the booking).
-pub const observe_book: Int = 5
 
 pub fn as_data(value: Data) -> Data {
   value
@@ -34,29 +32,21 @@ pub fn as_data(value: Data) -> Data {
 
 // ---- the observation ----------------------------------------------------------
 
-/// The claim of a booking: the application policy is the script the requests sit
-/// at, no output is spent.
-pub fn booking_claim() -> ObserverClaim {
-  ObserverClaim {
-    action: observe_book,
-    checkpoint_policy: application(),
-    own_ref: None,
+/// The transaction without the lifecycle observer's withdrawal and redeemer.
+pub fn unobserved(tx: Transaction) -> Transaction {
+  Transaction {
+    ..tx,
+    withdrawals: [],
+    redeemers: list.filter(
+      tx.redeemers,
+      fn(Pair(purpose, _)) {
+        when purpose is {
+          Withdraw(_) -> False
+          _ -> True
+        }
+      },
+    ),
   }
-}
-
-/// One entry of the payload: the request at `index` and its key's evidence.
-pub fn booked_entry(index: Int, evidence: Data) -> Data {
-  builtin.constr_data(0, [builtin.i_data(index), evidence])
-}
-
-/// The payload of the booking claim.
-pub fn booking_payload(entries: List<Data>) -> Data {
-  builtin.constr_data(0, [builtin.list_data(entries)])
-}
-
-/// What the application never reads: the evidence the observer reads.
-pub fn unread_evidence() -> Data {
-  builtin.i_data(0)
 }
 
 pub type Observation {

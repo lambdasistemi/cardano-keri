@@ -21,19 +21,22 @@ use cardano_keri/application/held.{RegistrationData}
 use cardano_keri/application/row_vectors as rows
 use cardano_keri/checkpoint/datum.{KeyStateView, Live}
 use cardano_keri/checkpoint/message.{qb64_aid}
+use cardano_keri/checkpoint/observer.{ObserverClaim}
 use cardano_keri/checkpoint/registration.{RegistrationEvidence}
 use cardano_keri/checkpoint/registration_vectors as vec
 use checkpoint_observer
 use keri_application
 use keri_application_booking_fixture.{
-  as_data, booked_entry, bookings_tx, observation_with, observed,
+  Observation, as_data, bookings_tx, observation_with, observed, unobserved,
 }
 use keri_application_connected.{
   booking_floor, connected_fold, connected_request_of, d_reg, floor,
   hash_proof_policy, keys_of, observer_floor, proof_name_of, refund_hash,
 }
 use keri_application_requests as requests
-use keri_application_requests.{Fold, fold_tx, reference, request_output}
+use keri_application_requests.{
+  Fold, booked_entry, booking_claim, fold_tx, reference, request_output,
+}
 
 // ---- the two handlers -----------------------------------------------------------
 
@@ -205,42 +208,73 @@ test two_bookings_with_the_evidence_of_one_are_refused() {
   )
 }
 
-test the_observer_refuses_a_booking_that_burns_no_hash_proof() {
+/// The observer is shown a booking it accepts, with one defect at a time below.
+/// A refusal of the observer is the script failing: each refusal is a `fail`
+/// test over the transaction of the control beside it, one defect away.
+test the_observer_accepts_the_booking_it_is_shown() {
+  observer_accepts(single())
+}
+
+test the_observer_refuses_a_booking_that_burns_no_hash_proof() fail {
   let tx = single()
-  let unburned = Transaction {
-    ..tx,
-    mint: assets.merge(
-      requests.mint_of([]),
-      assets.from_asset(
+  observer_accepts(
+    Transaction {
+      ..tx,
+      mint: assets.from_asset(
         requests.application(),
         requests.approval_of(connected_request_of(first().state)),
         1,
       ),
+    },
+  )
+}
+
+/// The evidence of the key's inception is what the observer verifies: the
+/// controller's signatures over the event bytes, here dropped, leave the
+/// threshold unsatisfied (the proof token, which the event bytes name, is intact).
+test the_observer_refuses_evidence_whose_signatures_are_missing() fail {
+  let unsigned = RegistrationEvidence { ..first().evidence, ctrl_sigs: [] }
+  observer_accepts(
+    booking_of(
+      [first()],
+      [(0, Inception { state: first().state, evidence: unsigned })],
     ),
-  }
-  observer_accepts(tx) && !observer_accepts(unburned)
+  )
 }
 
-test the_observer_refuses_a_booking_whose_proof_token_is_not_spent() {
+/// A booking claim names no spent output: the observer's claim is read by the
+/// application, and the observer holds the same line.
+test the_observer_refuses_a_claim_naming_a_spent_output() fail {
+  let tx = unobserved(single())
+  observer_accepts(
+    observed(
+      tx,
+      Observation {
+        ..observation_with([entry(0, first())]),
+        claim: ObserverClaim { ..booking_claim(), own_ref: Some(reference(60)) },
+      },
+    ),
+  )
+}
+
+test the_observer_refuses_a_booking_that_burns_another_proof_token() fail {
   let tx = single()
-  observer_accepts(tx) && !observer_accepts(Transaction { ..tx, inputs: [] })
+  observer_accepts(
+    Transaction { ..tx, mint: add(tx.mint, hash_proof_policy, #"ff", -1) },
+  )
 }
 
-test the_observer_refuses_evidence_of_another_inception() {
-  let tx = single()
-  let other = booking_of([first()], [(0, second())])
-  observer_accepts(tx) && !observer_accepts(other)
+test the_observer_refuses_a_booking_whose_proof_token_is_not_spent() fail {
+  observer_accepts(Transaction { ..single(), inputs: [] })
 }
 
-test the_observer_refuses_a_request_below_its_deposit_floor() {
-  let at = observer_request(observer_floor)
-  let below = observer_request(observer_floor - 1)
-  observer_accepts(at) && !observer_accepts(below)
+test the_observer_refuses_evidence_of_another_inception() fail {
+  observer_accepts(booking_of([first()], [(0, second())]))
 }
 
 /// The observer reads the deposit the request commits: a booking at exactly the
 /// observer's floor is the observer's to accept (the application's own floor is
-/// its own test).
+/// its own test), one lovelace below is refused.
 fn observer_request(deposit: Int) -> Transaction {
   let tx = single()
   let data = RegistrationData { ..connected_request_of(first().state), deposit }
@@ -250,22 +284,29 @@ fn observer_request(deposit: Int) -> Transaction {
   }
 }
 
-test the_observer_refuses_an_index_that_is_no_request() {
-  let tx = single()
-  let beyond = booking_of([first()], [(5, first())])
-  observer_accepts(tx) && !observer_accepts(beyond)
+test the_observer_accepts_a_request_at_its_deposit_floor() {
+  observer_accepts(observer_request(observer_floor))
 }
 
-test the_observer_refuses_a_request_at_another_address() {
+test the_observer_refuses_a_request_below_its_deposit_floor() fail {
+  observer_accepts(observer_request(observer_floor - 1))
+}
+
+test the_observer_refuses_an_index_that_is_no_request() fail {
+  observer_accepts(booking_of([first()], [(5, first())]))
+}
+
+test the_observer_refuses_a_request_at_another_address() fail {
   let tx = single()
   expect [request] = tx.outputs
-  let elsewhere = Transaction {
-    ..tx,
-    outputs: [
-      Output { ..request, address: from_verification_key(refund_hash()) },
-    ],
-  }
-  observer_accepts(tx) && !observer_accepts(elsewhere)
+  observer_accepts(
+    Transaction {
+      ..tx,
+      outputs: [
+        Output { ..request, address: from_verification_key(refund_hash()) },
+      ],
+    },
+  )
 }
 
 // ---- booking-initial-state, at the real scale ------------------------------------

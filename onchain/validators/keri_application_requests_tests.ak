@@ -34,16 +34,15 @@ use cardano_keri/application/held.{Configuration, RegistrationData}
 use cardano_keri/application/registration.{registration_approval}
 use cardano_keri/application/row_vectors as rows
 use cardano_keri/checkpoint/datum.{Live}
-use cardano_keri/checkpoint/observer.{ObserverClaim, observe_advance}
 use keri_application
 use keri_application_fixture.{template_input}
 use keri_application_requests.{
   Booking, Fold, Return, Termination, active_of, app_address, application,
-  approval_of, attestation, booking, booking_tx, checkpoint_address,
-  checkpoint_spend, config_input, config_output, fold, fold_tx, foreign_registry,
-  holding_output, mint_of, pending_output, range, reference, registry,
-  request_input, request_output, returned, termination, termination_approval_of,
-  termination_tx,
+  approval_of, booking, booking_claim, booking_tx, checkpoint_address,
+  checkpoint_spend, config_input, config_output, envelope, fold, fold_tx,
+  foreign_registry, holding_output, mint_of, payload_of, pending_output, range,
+  reference, registry, request_input, request_output, returned, termination,
+  termination_approval_of, termination_tx,
 }
 use singular_state/preimage.{
   RegistryIdentity, active_token_name, configuration_token_name,
@@ -295,12 +294,14 @@ test a_booking_below_the_minimum_deposit_by_one_is_refused() {
   )
 }
 
-test a_booking_at_the_minimum_deposit_is_accepted() {
+test a_booking_at_the_minimum_deposit_alone_is_refused_for_its_pool() {
+  // The registry's minimum deposit is met; the pool the deposit leaves does not
+  // cover one premium (the initial floor is one lovelace above it).
   let data = RegistrationData {
     ..booking().data,
     deposit: rows.minimum_deposit,
   }
-  books(
+  books(booking()) && rows.minimum_deposit < rows.initial_floor && !books(
     Booking {
       ..booking(),
       data,
@@ -586,37 +587,6 @@ test a_fold_whose_holding_address_has_a_stake_credential_is_refused() {
   refused_fold(Fold { ..fold(), holding_address: staked })
 }
 
-test a_fold_delivering_to_a_staked_address_beside_an_unstaked_decoy_is_refused() {
-  // The request commits a staked variant of the checkpoint address and the
-  // holding sits there; an unstaked decoy at the bare address carries the
-  // evidence the observer would attest. The holding is not the attested output.
-  let f = fold()
-  let staked = Address {
-    ..checkpoint_address(),
-    stake_credential: Some(
-      Inline(
-        VerificationKey(
-          #"0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c",
-        ),
-      ),
-    ),
-  }
-  let g = Fold {
-    ..f,
-    data: RegistrationData { ..f.data, holding_address: staked },
-    holding_address: staked,
-  }
-  let decoy = Output {
-    address: checkpoint_address(),
-    value: from_lovelace(1_009_000_000),
-    datum: InlineDatum(rows.initial_datum(1)),
-    reference_script: None,
-  }
-  folds(f) && !accepts(
-    Transaction { ..fold_tx(g), outputs: [holding_output(g), decoy] },
-  )
-}
-
 test a_fold_of_a_request_burning_its_approval_twice_is_refused() {
   refused_fold(Fold { ..fold(), burn: -2 })
 }
@@ -666,130 +636,10 @@ test a_fold_of_a_request_with_a_retraction_window_record_is_refused() {
   )
 }
 
-test a_fold_of_a_request_whose_record_names_another_checkpoint_validator_is_refused() {
-  let f = fold()
-  let other = Script(
-    #"0a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425",
+test a_booking_committing_something_that_is_not_a_checkpoint_datum_is_refused() {
+  refused_booking(
+    booking_committing(booking().data, builtin.constr_data(7, [])),
   )
-  folds(f) && !accepts(
-    Transaction {
-      ..fold_tx(f),
-      reference_inputs: [config_input(50, registry(), other)],
-    },
-  )
-}
-
-// J5, the inception evidence
-
-test a_fold_without_the_observer_withdrawal_is_refused() {
-  refused_fold(Fold { ..fold(), claim: None })
-}
-
-test a_fold_whose_observer_claim_is_another_action_is_refused() {
-  refused_fold(
-    Fold {
-      ..fold(),
-      claim: Some(ObserverClaim { ..attestation(), action: observe_advance }),
-    },
-  )
-}
-
-test a_fold_whose_observer_claim_names_another_policy_is_refused() {
-  refused_fold(
-    Fold {
-      ..fold(),
-      claim: Some(
-        ObserverClaim { ..attestation(), checkpoint_policy: rows.observer_hash },
-      ),
-    },
-  )
-}
-
-test a_fold_whose_observer_claim_names_a_spent_output_is_refused() {
-  refused_fold(
-    Fold {
-      ..fold(),
-      claim: Some(
-        ObserverClaim { ..attestation(), own_ref: Some(reference(60)) },
-      ),
-    },
-  )
-}
-
-test a_fold_whose_observer_withdrawal_pays_lovelace_is_refused() {
-  refused_fold(Fold { ..fold(), withdrawn: 1 })
-}
-
-test a_fold_whose_observer_withdrawal_is_another_observers_is_refused() {
-  let f = fold()
-  let tx = fold_tx(f)
-  let other = Script(
-    #"0a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425",
-  )
-  folds(f) && !accepts(
-    Transaction {
-      ..tx,
-      withdrawals: [Pair(other, 0)],
-      redeemers: list.map(
-        tx.redeemers,
-        fn(Pair(purpose, redeemer)) {
-          when purpose is {
-            Withdraw(_) -> Pair(Withdraw(other), redeemer)
-            _ -> Pair(purpose, redeemer)
-          }
-        },
-      ),
-    },
-  )
-}
-
-test a_fold_whose_observer_redeemer_is_not_an_envelope_is_refused() {
-  let f = fold()
-  let tx = fold_tx(f)
-  folds(f) && !accepts(
-    Transaction {
-      ..tx,
-      redeemers: list.map(
-        tx.redeemers,
-        fn(Pair(purpose, redeemer)) {
-          when purpose is {
-            Withdraw(_) -> Pair(purpose, builtin.i_data(0))
-            _ -> Pair(purpose, redeemer)
-          }
-        },
-      ),
-    },
-  )
-}
-
-test a_fold_whose_holding_datum_is_for_another_aid_is_refused() {
-  // The request commits the datum of another AID than its key: approval and
-  // holding agree with each other, not with the key.
-  let f = fold()
-  let data = RegistrationData { ..f.data, initial_datum: rows.initial_datum(1) }
-  refused_fold(Fold { ..f, data, holding_datum: rows.initial_datum(1) })
-}
-
-test a_fold_whose_committed_datum_is_not_a_checkpoint_datum_is_refused() {
-  let f = fold()
-  let not_a_datum = builtin.constr_data(7, [])
-  let data = RegistrationData { ..f.data, initial_datum: not_a_datum }
-  refused_fold(Fold { ..f, data, holding_datum: not_a_datum })
-}
-
-test a_fold_whose_committed_datum_is_a_pending_datum_is_refused() {
-  let f = fold()
-  let pending = builtin.constr_data(
-    1,
-    [
-      builtin.constr_data(
-        1,
-        [rows.key_e |> builtin.b_data, builtin.i_data(4), builtin.i_data(2)],
-      ),
-    ],
-  )
-  let data = RegistrationData { ..f.data, initial_datum: pending }
-  refused_fold(Fold { ..f, data, holding_datum: pending })
 }
 
 // J6: the windows
@@ -1371,6 +1221,7 @@ test a_booking_and_a_fold_in_one_transaction_are_accepted_together() {
       booked_at: 15,
       process_deadline: 20,
       reclaim_end: 20,
+      initial_datum: initial_datum_born_at(15),
     },
   }
   let both_here = Transaction {
@@ -1384,6 +1235,16 @@ test a_booking_and_a_fold_in_one_transaction_are_accepted_together() {
         (application(), approval_of(booked_here.data), 1),
         (application(), approval_of(f.data), -1),
         (f.data.registry.policy, active_of(f.data), 1),
+      ],
+    ),
+    withdrawals: [Pair(Script(rows.observer_hash), 0)],
+    redeemers: list.concat(
+      both.redeemers,
+      [
+        Pair(
+          Withdraw(Script(rows.observer_hash)),
+          envelope(booking_claim(), payload_of([1])),
+        ),
       ],
     ),
   }
@@ -1464,27 +1325,6 @@ test the_fields_the_approval_does_not_name_do_not_change_it() {
   )
 }
 
-test a_fold_at_a_key_credential_checkpoint_is_refused() {
-  // The record names a key credential as the checkpoint validator: no
-  // observer attests an output there.
-  let f = fold()
-  let key_credential = VerificationKey(
-    #"0a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425",
-  )
-  let address = Address {
-    payment_credential: key_credential,
-    stake_credential: None,
-  }
-  let data = RegistrationData { ..f.data, holding_address: address }
-  let g = Fold { ..f, data, holding_address: address }
-  folds(f) && !accepts(
-    Transaction {
-      ..fold_tx(g),
-      reference_inputs: [config_input(50, registry(), key_credential)],
-    },
-  )
-}
-
 // ---- J13: a fold delivers exactly the initial checkpoint state -----------------------------
 
 /// The initial datum of the AID with another refund record: bytes of the ledger
@@ -1507,39 +1347,60 @@ fn initial_datum_refunding_to(refund_to: ByteArray) -> Data {
   )
 }
 
-/// A fold of the request `data` whose holding carries `holding_datum`, which the
-/// request commits (so the datum hash and the approval are the datum's own).
-fn fold_committing(data: RegistrationData, holding_datum: Data) -> Fold {
-  let committed = RegistrationData { ..data, initial_datum: holding_datum }
-  Fold { ..fold(), data: committed, holding_datum }
-}
-
-test a_fold_delivering_the_initial_state_is_accepted_and_each_other_state_is_refused() {
-  folds(fold()) && list.all(
-    [1, 2, 3, 4, 5, 6, 7, 8],
-    fn(which) {
-      let datum = rows.variant(which)
-      !folds(fold_committing(fold().data, datum))
+/// The initial datum of the AID born at slot `born_at`.
+fn initial_datum_born_at(born_at: Int) -> Data {
+  expect  
+      Live { aid, sn, epoch, poisoned, frozen, refund_to, topped_up, keys, .. }
+    = datum.read(rows.initial_datum(0))
+  datum.write(
+    Live {
+      aid,
+      sn,
+      epoch,
+      poisoned,
+      frozen,
+      born_at,
+      refund_to,
+      topped_up,
+      keys,
     },
   )
 }
 
-test a_fold_whose_datum_is_born_at_another_slot_than_the_booking_bound_is_refused() {
-  let f = fold()
-  refused_fold(
-    Fold {
-      ..f,
-      data: RegistrationData { ..f.data, booked_at: f.data.booked_at - 1 },
-    },
+/// A booking of the request `data` committing `datum`, holding exactly what its
+/// deposit, the registration cost and the minimum tip make.
+fn booking_committing(data: RegistrationData, datum: Data) -> Booking {
+  let committed = RegistrationData { ..data, initial_datum: datum }
+  Booking {
+    ..booking(),
+    data: committed,
+    lovelace: committed.deposit + cfg.registration_cost + cfg.minimum_tip,
+  }
+}
+
+test a_booking_whose_datum_is_born_at_another_slot_than_the_booking_bound_is_refused() {
+  // The booking bound moves one slot later with its deadline; the datum stays
+  // born at the earlier bound.
+  let b = booking()
+  let later = RegistrationData {
+    ..b.data,
+    booked_at: b.data.booked_at + 1,
+    process_deadline: b.data.process_deadline + 1,
+    reclaim_end: b.data.reclaim_end + 1,
+  }
+  refused_booking(
+    Booking { ..b, data: later, lower: b.lower + 1, upper: b.upper + 1 },
   )
 }
 
-test a_fold_whose_datum_records_the_refund_on_another_network_is_refused() {
+test a_booking_whose_datum_records_the_refund_on_another_network_is_refused() {
   // The datum records the refund address for network 1; the chain is network 0.
-  let f = fold()
   let other_network = bytearray.push(refund_hash(), 97)
-  refused_fold(
-    fold_committing(f.data, initial_datum_refunding_to(other_network)),
+  refused_booking(
+    booking_committing(
+      booking().data,
+      initial_datum_refunding_to(other_network),
+    ),
   )
 }
 
@@ -1550,22 +1411,23 @@ fn refund_hash() -> ByteArray {
   }
 }
 
-test a_fold_whose_request_refunds_to_a_script_is_accepted_when_the_datum_records_it() {
-  let f = fold()
+test a_booking_whose_request_refunds_to_a_script_is_accepted_when_the_datum_records_it() {
   let script_refund = Address {
     payment_credential: Script(refund_hash()),
     stake_credential: None,
   }
-  let data = RegistrationData { ..f.data, refund_address: script_refund }
+  let data = RegistrationData {
+    ..booking().data,
+    refund_address: script_refund,
+  }
   let recorded = bytearray.push(refund_hash(), 112)
   let key_recorded = bytearray.push(refund_hash(), 96)
-  folds(fold_committing(data, initial_datum_refunding_to(recorded))) && !folds(
-    fold_committing(data, initial_datum_refunding_to(key_recorded)),
+  books(booking_committing(data, initial_datum_refunding_to(recorded))) && !books(
+    booking_committing(data, initial_datum_refunding_to(key_recorded)),
   )
 }
 
-test a_fold_whose_request_refunds_to_a_staked_address_needs_the_base_address_bytes() {
-  let f = fold()
+test a_booking_whose_request_refunds_to_a_staked_address_needs_the_base_address_bytes() {
   let stake = VerificationKey(
     #"0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c",
   )
@@ -1573,44 +1435,42 @@ test a_fold_whose_request_refunds_to_a_staked_address_needs_the_base_address_byt
     payment_credential: VerificationKey(refund_hash()),
     stake_credential: Some(Inline(stake)),
   }
-  let data = RegistrationData { ..f.data, refund_address: staked }
+  let data = RegistrationData { ..booking().data, refund_address: staked }
   let base_bytes = bytearray.concat(
     refund_hash(),
     #"0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c",
   )
   let recorded = bytearray.push(base_bytes, 0)
-  folds(fold_committing(data, initial_datum_refunding_to(recorded))) && !folds(
-    fold_committing(
+  books(booking_committing(data, initial_datum_refunding_to(recorded))) && !books(
+    booking_committing(
       data,
       initial_datum_refunding_to(bytearray.push(refund_hash(), 96)),
     ),
   )
 }
 
-test a_fold_leaving_a_pool_of_exactly_one_premium_is_accepted_and_one_less_is_refused() {
-  // The default fold holds the initial floor: the pool is one premium. A deposit
-  // one lovelace less leaves the pool under the premium.
-  let f = fold()
-  let data = RegistrationData { ..f.data, deposit: rows.initial_floor - 1 }
-  folds(f) && rows.initial_floor == f.data.deposit && !folds(
-    Fold {
-      ..f,
+test a_booking_leaving_a_pool_of_exactly_one_premium_is_accepted_and_one_less_is_refused() {
+  // The default booking commits the initial floor: the pool is one premium. A
+  // deposit one lovelace less leaves the pool under the premium.
+  let b = booking()
+  let data = RegistrationData { ..b.data, deposit: rows.initial_floor - 1 }
+  books(b) && rows.initial_floor == b.data.deposit && !books(
+    Booking {
+      ..b,
       data,
-      request_lovelace: data.deposit + cfg.registration_cost + cfg.minimum_tip,
-      holding_lovelace: data.deposit,
+      lovelace: data.deposit + cfg.registration_cost + cfg.minimum_tip,
     },
   )
 }
 
-test a_fold_leaving_a_larger_pool_is_accepted() {
-  let f = fold()
-  let data = RegistrationData { ..f.data, deposit: rows.initial_floor + 7 }
-  folds(
-    Fold {
-      ..f,
+test a_booking_leaving_a_larger_pool_is_accepted() {
+  let b = booking()
+  let data = RegistrationData { ..b.data, deposit: rows.initial_floor + 7 }
+  books(
+    Booking {
+      ..b,
       data,
-      request_lovelace: data.deposit + cfg.registration_cost + cfg.minimum_tip,
-      holding_lovelace: data.deposit,
+      lovelace: data.deposit + cfg.registration_cost + cfg.minimum_tip,
     },
   )
 }
@@ -1643,7 +1503,12 @@ test two_bookings_of_two_requests_mint_two_approvals() {
           ],
         ),
       ),
+      Pair(
+        Withdraw(Script(rows.observer_hash)),
+        envelope(booking_claim(), payload_of([0, 1])),
+      ),
     ],
+    withdrawals: [Pair(Script(rows.observer_hash), 0)],
   }
   books(b) && accepts(both)
 }
@@ -1696,8 +1561,16 @@ test an_approval_minted_beside_a_fold_with_no_booking_is_refused() {
 test a_request_committing_other_key_material_is_the_requests_own_datum() {
   // The key material of the datum is pinned by the committed hash and read by the
   // observer, not by the initial-state rule: a request that commits a datum with
-  // other keys is folded into exactly that datum.
-  folds(fold_committing(fold().data, rows.variant(9)))
+  // other keys is booked, and folded into exactly that datum.
+  let datum = rows.variant(9)
+  let f = fold()
+  books(booking_committing(booking().data, datum)) && folds(
+    Fold {
+      ..f,
+      data: RegistrationData { ..f.data, initial_datum: datum },
+      holding_datum: datum,
+    },
+  )
 }
 
 test a_booking_of_a_registry_whose_record_is_another_applications_is_refused() {
@@ -1868,40 +1741,4 @@ test refunds_to_two_addresses_are_owed_separately() {
       outputs: [pay(rows.refund_address, 17), pay(rows.spender_address, 17)],
     },
   )
-}
-
-test a_claim_carried_by_another_withdrawal_does_not_attest_for_the_observer() {
-  // The observer's own withdrawal carries a registration claim for another
-  // checkpoint program; another script's withdrawal carries the right claim.
-  // The observation that ran is not the one the fold needs.
-  let f = fold()
-  let tx = fold_tx(f)
-  let other = Script(
-    #"0a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425",
-  )
-  let wrong_claim = ObserverClaim {
-    ..attestation(),
-    checkpoint_policy: rows.observer_hash,
-  }
-  let swapped = Transaction {
-    ..tx,
-    withdrawals: [Pair(Script(rows.observer_hash), 0), Pair(other, 0)],
-    redeemers: list.concat(
-      list.filter(
-        tx.redeemers,
-        fn(Pair(purpose, _)) { !is_withdrawal(purpose) },
-      ),
-      [
-        Pair(
-          Withdraw(Script(rows.observer_hash)),
-          keri_application_requests.envelope(wrong_claim, builtin.i_data(0)),
-        ),
-        Pair(
-          Withdraw(other),
-          keri_application_requests.envelope(attestation(), builtin.i_data(0)),
-        ),
-      ],
-    ),
-  }
-  folds(f) && !accepts(swapped)
 }

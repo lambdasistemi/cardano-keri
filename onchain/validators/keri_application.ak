@@ -52,6 +52,9 @@ validator keri_application(
 ) {
   mint(redeemer: List<Action>, policy_id: PolicyId, tx: Transaction) {
     application_mint(
+      lifecycle_observer,
+      initial_floor,
+      network_id,
       state_template_hash,
       minimum_deposit,
       checkpoint_minimum_ada,
@@ -68,14 +71,7 @@ validator keri_application(
     own_reference: OutputReference,
     tx: Transaction,
   ) {
-    application_spend(
-      lifecycle_observer,
-      initial_floor,
-      network_id,
-      redeemer,
-      own_reference,
-      tx,
-    )
+    application_spend(redeemer, own_reference, tx)
   }
 
   else(_) {

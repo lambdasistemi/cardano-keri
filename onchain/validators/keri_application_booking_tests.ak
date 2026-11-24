@@ -4,23 +4,32 @@
 //// The observation here is the claim of the lifecycle observer's withdrawal and
 //// the requests it names; the inception it attests is the observer's own
 //// verdict (`keri_application_booking_connected_tests` runs the real observer).
-//// Each test name is the Lean row it follows (`lean/application-vectors.json`)
-//// where one exists. A refusal is a transaction one defect away from the
-//// accepted row beside it.
+//// The rows of the Lean vectors are in the generated `keri_application_rows_tests`;
+//// the tests here are the requirements the rows do not state: what the booking's
+//// observation must name, and what a fold may carry. A refusal is a transaction
+//// one defect away from the accepted one beside it.
 
-use cardano/transaction.{OutputReference, Transaction}
+use aiken/cbor
+use aiken/collection/list
+use cardano/address.{Script}
+use cardano/transaction.{OutputReference, Transaction, Withdraw}
 use cardano_keri/application/action.{Action, BookRegistration, SpendAction}
 use cardano_keri/application/configuration_vectors as cfg
 use cardano_keri/application/row_vectors as rows
-use cardano_keri/checkpoint/observer.{ObserverClaim, observe_register}
+use cardano_keri/checkpoint/observer.{
+  BookedRequest, BookingEvidence, ObserverClaim, ObserverEnvelope, observe_book,
+  observe_register,
+}
+use cardano_keri/checkpoint/registration.{RegistrationEvidence}
 use keri_application
 use keri_application_booking_fixture.{
-  Observation, booked_entry, booking_claim, booking_payload, bookings_tx,
-  observation, observation_with, observed, other_request, unread_evidence,
+  Observation, bookings_tx, observation, observation_with, observed,
+  other_request, unobserved,
 }
 use keri_application_requests as requests
 use keri_application_requests.{
-  Booking, Fold, booking, booking_tx, fold, fold_tx, reference,
+  Booking, Fold, booked_entry, booking, booking_claim, booking_payload,
+  booking_tx, envelope, fold, fold_tx, payload_of, reference, unread_evidence,
 }
 
 fn run_mint(actions: List<Action>, tx: Transaction) -> Bool {
@@ -63,27 +72,22 @@ fn accepts(tx: Transaction) -> Bool {
   requests.accepts(run_mint, run_spend, tx)
 }
 
+/// The transaction with only the observation given.
+fn shown(tx: Transaction, o: Observation) -> Transaction {
+  observed(unobserved(tx), o)
+}
+
 fn booked(b: Booking) -> Bool {
-  accepts(observed(booking_tx(b), observation([0])))
+  accepts(shown(booking_tx(b), observation([0])))
 }
 
 // ---- booking-requires-inception ---------------------------------------------
-
-/// Lean row `booking`: a perfect booking, its inception shown.
-test row_booking() {
-  booked(booking())
-}
-
-/// Lean row `booking-without-inception-evidence`: no observation, refused.
-test row_booking_without_inception_evidence() {
-  booked(booking()) && !accepts(booking_tx(booking()))
-}
 
 /// The observation is the lifecycle observer's: another credential's withdrawal
 /// shows no inception.
 test a_withdrawal_of_another_credential_is_no_observation() {
   booked(booking()) && !accepts(
-    observed(
+    shown(
       booking_tx(booking()),
       Observation {
         ..observation([0]),
@@ -96,10 +100,59 @@ test a_withdrawal_of_another_credential_is_no_observation() {
 /// The withdrawal pays nothing.
 test a_withdrawal_paying_lovelace_is_no_observation() {
   booked(booking()) && !accepts(
-    observed(
+    shown(
       booking_tx(booking()),
       Observation { ..observation([0]), withdrawn: 1 },
     ),
+  )
+}
+
+/// The observer's redeemer is an envelope: any other Data is no observation.
+test a_redeemer_that_is_not_an_envelope_is_no_observation() {
+  let tx = booking_tx(booking())
+  booked(booking()) && !accepts(
+    Transaction {
+      ..tx,
+      redeemers: list.map(
+        tx.redeemers,
+        fn(Pair(purpose, redeemer)) {
+          when purpose is {
+            Withdraw(_) -> Pair(purpose, unread_evidence())
+            _ -> Pair(purpose, redeemer)
+          }
+        },
+      ),
+    },
+  )
+}
+
+/// The observer's own withdrawal carries a claim for another application while
+/// another script's withdrawal carries the right claim: the observation that ran
+/// is not the one the booking needs.
+test a_claim_carried_by_another_withdrawal_does_not_attest() {
+  let tx = unobserved(booking_tx(booking()))
+  let other = Script(
+    #"0a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425",
+  )
+  let wrong = ObserverClaim {
+    ..booking_claim(),
+    checkpoint_policy: rows.observer_hash,
+  }
+  booked(booking()) && !accepts(
+    Transaction {
+      ..tx,
+      withdrawals: [Pair(Script(rows.observer_hash), 0), Pair(other, 0)],
+      redeemers: list.concat(
+        tx.redeemers,
+        [
+          Pair(
+            Withdraw(Script(rows.observer_hash)),
+            envelope(wrong, payload_of([0])),
+          ),
+          Pair(Withdraw(other), envelope(booking_claim(), payload_of([0]))),
+        ],
+      ),
+    },
   )
 }
 
@@ -109,7 +162,7 @@ test a_withdrawal_paying_lovelace_is_no_observation() {
 /// checkpoint's own register attests another thing.
 test the_registration_claim_is_not_a_booking_claim() {
   booked(booking()) && !accepts(
-    observed(
+    shown(
       booking_tx(booking()),
       Observation {
         ..observation([0]),
@@ -123,7 +176,7 @@ test the_registration_claim_is_not_a_booking_claim() {
 /// script attests nothing here.
 test a_claim_naming_another_application_is_no_observation() {
   booked(booking()) && !accepts(
-    observed(
+    shown(
       booking_tx(booking()),
       Observation {
         ..observation([0]),
@@ -139,7 +192,7 @@ test a_claim_naming_another_application_is_no_observation() {
 /// A booking spends no output of the observer's: the claim names none.
 test a_claim_naming_a_spent_output_is_no_observation() {
   booked(booking()) && !accepts(
-    observed(
+    shown(
       booking_tx(booking()),
       Observation {
         ..observation([0]),
@@ -152,16 +205,12 @@ test a_claim_naming_a_spent_output_is_no_observation() {
 /// An observation over one request beside the mint of another is refused: the
 /// request the observation lists is not the one the mint books.
 test an_observation_of_another_request_is_refused() {
-  booked(booking()) && !accepts(
-    observed(booking_tx(booking()), observation([1])),
-  )
+  booked(booking()) && !accepts(shown(booking_tx(booking()), observation([1])))
 }
 
 /// An observation that lists no request shows no inception.
 test an_observation_listing_no_request_is_refused() {
-  booked(booking()) && !accepts(
-    observed(booking_tx(booking()), observation([])),
-  )
+  booked(booking()) && !accepts(shown(booking_tx(booking()), observation([])))
 }
 
 /// One withdrawal carries every request the transaction books: both listed,
@@ -201,102 +250,22 @@ test a_request_listed_twice_is_refused() {
 /// A payload that is not a list of entries is no observation.
 test a_payload_that_is_not_the_booking_evidence_is_refused() {
   booked(booking()) && !accepts(
-    observed(
+    shown(
       booking_tx(booking()),
       Observation { ..observation([0]), payload: unread_evidence() },
     ),
   ) && !accepts(
-    observed(
+    shown(
       booking_tx(booking()),
       observation_with([booking_payload([booked_entry(0, unread_evidence())])]),
     ),
   )
 }
 
-// ---- booking-initial-state --------------------------------------------------
-
-fn books_request(raw: Int, lovelace: Int) -> Bool {
-  accepts(
-    observed(
-      booking_tx(
-        Booking { ..booking(), data: rows.request_data(raw), lovelace },
-      ),
-      observation([0]),
-    ),
-  )
-}
-
-/// Lean row `booking-advanced-sequence`.
-test row_booking_advanced_sequence() {
-  booked(booking()) && !books_request(9011, 18)
-}
-
-/// Lean row `booking-advanced-epoch`.
-test row_booking_advanced_epoch() {
-  booked(booking()) && !books_request(9012, 18)
-}
-
-/// Lean row `booking-poisoned`.
-test row_booking_poisoned() {
-  booked(booking()) && !books_request(9013, 18)
-}
-
-/// Lean row `booking-frozen`.
-test row_booking_frozen() {
-  booked(booking()) && !books_request(9014, 18)
-}
-
-/// Lean row `booking-topped-up`.
-test row_booking_topped_up() {
-  booked(booking()) && !books_request(9015, 18)
-}
-
-/// Lean row `booking-born-later`.
-test row_booking_born_later() {
-  booked(booking()) && !books_request(9016, 18)
-}
-
-/// Lean row `booking-other-refund`.
-test row_booking_other_refund() {
-  booked(booking()) && !books_request(9017, 18)
-}
-
-/// Lean row `booking-pending-termination`.
-test row_booking_pending_termination() {
-  booked(booking()) && !books_request(9018, 18)
-}
-
-/// Lean row `booking-other-aid`: the datum of another AID than the request's key.
-test row_booking_other_aid() {
-  booked(booking()) && !books_request(9019, 18)
-}
-
-// ---- booking-checks-awaiting-decision ---------------------------------------
-// The two refusals the model proposes and the statements list as awaiting a
-// decision; built as the model states them.
-
-/// Lean row `booking-pool-below-premium`: a deposit that leaves a pool below one
-/// premium (14 against the initial floor 15).
-test row_booking_pool_below_premium() {
-  booked(booking()) && !books_request(9007, 17)
-}
-
-/// Lean row `booking-unrecorded-refund`: a refund address no checkpoint datum
-/// can record.
-test row_booking_unrecorded_refund() {
-  booked(booking()) && !books_request(9008, 18)
-}
-
 // ---- fold-reads-no-evidence --------------------------------------------------
 
 fn bare_fold() -> Fold {
   Fold { ..fold(), claim: None }
-}
-
-/// Lean row `fold-without-inception-evidence`: a fold carries no observation, no
-/// proof; accepted.
-test row_fold_without_inception_evidence() {
-  accepts(fold_tx(bare_fold()))
 }
 
 /// The model does not forbid a fold that still carries an observation: it reads
@@ -313,69 +282,64 @@ test a_fold_carrying_a_stray_observation_is_accepted() {
   )
 }
 
-// ---- fold-delivers-initial-state --------------------------------------------
+// ---- the wire: the Haskell encoder and the validator read the same bytes -----------
 
-/// Lean row `fold-committed-datum-not-initial`: the fold delivers the committed
-/// datum, whatever it is: the booking validated it, the fold validates none.
-test row_fold_committed_datum_not_initial() {
-  accepts(fold_tx(bare_fold())) && accepts(
-    fold_tx(
-      Fold {
-        ..bare_fold(),
-        data: rows.request_data(9011),
-        holding_datum: rows.variant(1),
-      },
-    ),
-  )
-}
-
-/// Lean row `fold-at-committed-other-address`: the fold compares the holding with
-/// the address the approval commits and nothing else.
-test row_fold_at_committed_other_address() {
-  accepts(fold_tx(bare_fold())) && accepts(
-    fold_tx(
-      Fold {
-        ..bare_fold(),
-        data: rows.request_data(9004),
-        holding_address: rows.other_address,
-      },
-    ),
-  )
-}
-
-/// The holding carries the committed datum itself and exactly the deposit: a
-/// fold delivering another datum or one lovelace more is refused as before.
-test row_fold_other_datum_and_amounts_stay_refused() {
-  accepts(fold_tx(bare_fold())) && !accepts(
-    fold_tx(Fold { ..bare_fold(), holding_datum: rows.variant(9) }),
-  ) && !accepts(fold_tx(Fold { ..bare_fold(), holding_lovelace: 16 })) && !accepts(
-    fold_tx(Fold { ..bare_fold(), holding_lovelace: 14 }),
-  )
-}
-
-// ---- kept-as-main -------------------------------------------------------------
-
-/// The treasury donation of a fold covers the registration cost, as on main.
-test row_fold_donation_short_stays_refused() {
-  accepts(fold_tx(bare_fold())) && !accepts(
-    fold_tx(Fold { ..bare_fold(), donation: 1 }),
-  )
-}
-
-/// The action list of a booking still books each output once.
-test row_booking_twice_stays_refused() {
-  booked(booking()) && !accepts(
-    observed(
-      booking_tx(
-        Booking {
-          ..booking(),
-          actions: [
-            BookRegistration { output_index: 0 },
-            BookRegistration { output_index: 0 },
-          ],
-        },
+/// The evidence of the wire example, field for field the one the Haskell wire
+/// specification builds (`Cardano.KERI.AID.Checkpoint.WireSpec`).
+fn wire_evidence() -> RegistrationEvidence {
+  RegistrationEvidence {
+    event_bytes: "icp",
+    off_t: 1,
+    off_i: 2,
+    off_s: 3,
+    off_k: [4],
+    off_kt: 5,
+    off_n: [6],
+    off_nt: 7,
+    off_b: [8],
+    off_bt: 9,
+    ctrl_sigs: [
+      (
+        0,
+        #"a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
       ),
-      observation([0]),
-    ),
-  )
+    ],
+    wit_receipts: [
+      (
+        1,
+        #"b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1",
+      ),
+    ],
+  }
+}
+
+/// The booking envelope of the application policy `c0..c0` listing the request at
+/// output 3 with the evidence above, in the types of the code under test.
+fn wire_envelope() -> Data {
+  let envelope: Data = ObserverEnvelope {
+    claim: ObserverClaim {
+      action: observe_book,
+      checkpoint_policy: #"c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0",
+      own_ref: None,
+    },
+    payload: BookingEvidence {
+      requests: [BookedRequest { request_index: 3, evidence: wire_evidence() }],
+    },
+  }
+  envelope
+}
+
+/// The bytes the Haskell encoder `bookingObserverRedeemerData` must produce for
+/// the same envelope (`WireSpec` asserts the same string).
+test the_booking_envelope_has_the_bytes_the_haskell_encoder_writes() {
+  cbor.serialise(wire_envelope()) == #"d8799fd8799f05581cc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0d87a80ffd8799f9fd8799f03d8799f436963700102039f04ff059f06ff079f08ff099f9f005840a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1ffff9f9f015840b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1ffffffffffffff"
+}
+
+/// The payload these tests build as raw Data is the one the code under test reads.
+test the_fixtures_payload_is_the_payload_the_observer_decodes() {
+  let evidence: Data = wire_evidence()
+  let typed: Data = BookingEvidence {
+    requests: [BookedRequest { request_index: 3, evidence: wire_evidence() }],
+  }
+  booking_payload([booked_entry(3, evidence)]) == typed
 }

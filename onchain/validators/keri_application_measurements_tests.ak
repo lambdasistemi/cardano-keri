@@ -248,9 +248,9 @@ fn booking_at(deposit: Int) -> Booking {
   }
 }
 
-test a_booking_at_the_registrys_floor_is_accepted_and_one_below_is_refused() {
-  let at = booking_at(booking_floor)
-  let below = booking_at(booking_floor - 1)
+test a_booking_at_the_initial_floor_is_accepted_and_one_below_is_refused() {
+  let at = booking_at(floor)
+  let below = booking_at(floor - 1)
   run_mint_with(booking_floor, floor, at.actions, booking_tx(at)) && !run_mint_with(
     booking_floor,
     floor,
@@ -259,23 +259,26 @@ test a_booking_at_the_registrys_floor_is_accepted_and_one_below_is_refused() {
   )
 }
 
-test a_booking_between_the_floors_is_bookable_but_not_foldable() {
-  // The model's declared limit: booking checks the registry's floor, a fold the
-  // checkpoint's initial floor, one premium above it. A request between them is
-  // accepted at booking; its fold leaves a pool under one premium.
-  let between = booking_at(booking_floor)
-  let f = connected_fold(True)
-  let data = RegistrationData { ..f.data, deposit: booking_floor }
-  run_mint_with(booking_floor, floor, between.actions, booking_tx(between)) && !application_accepts(
-    fold_tx(
-      Fold {
-        ..f,
-        data,
-        request_lovelace: booking_floor + cfg.registration_cost + cfg.minimum_tip,
-        holding_lovelace: booking_floor,
-      },
-    ),
+test a_booking_at_the_registrys_floor_is_accepted_when_the_pool_is_not_asked_for() {
+  // The registry's floor is the minimum ADA plus the deposit and the freeze
+  // bond: with no pool asked for (an initial floor at it), a booking at it is
+  // accepted and one lovelace below is refused.
+  let at = booking_at(booking_floor)
+  let below = booking_at(booking_floor - 1)
+  run_mint_with(booking_floor, booking_floor, at.actions, booking_tx(at)) && !run_mint_with(
+    booking_floor,
+    booking_floor,
+    below.actions,
+    booking_tx(below),
   )
+}
+
+test a_booking_between_the_floors_is_refused_and_its_fold_would_leave_no_premium() {
+  // A request between the registry's floor and the initial floor leaves a pool
+  // under one premium: the booking refuses it (a decided refusal), and a fold of
+  // such a request, which no booking mints, still delivers what it commits.
+  let between = booking_at(booking_floor)
+  run_mint_with(booking_floor, floor, between.actions, booking_tx(between)) == False
 }
 
 test the_deployment_floors_are_the_checkpoint_programs_numbers() {

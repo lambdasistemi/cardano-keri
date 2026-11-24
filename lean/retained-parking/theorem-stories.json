@@ -39,6 +39,7 @@
     "lean/CardanoKeri/ConsumerWire.lean": "82b7088d8ada127c6ecee9ca50ef483fcf240cf31e981489006e08ec51ede4d4",
     "lean/CardanoKeri/ReaderStatus.lean": "ad2d03f3f0ec702206e543e53da679c9962d0e7440fcddc4668b7b88e3f0cbde",
     "lean/CardanoKeri/ReaderStatusGoals.lean": "49c9b4762409f1e488d01f716f60cd17723ab3c353690ec5cde588ff9d3b453b",
+    "lean/CardanoKeri/ReaderStatusVectors.lean": "807c1d9f107b00dd0ccf071874483145b12ce118da9bed6b9a4d61206a533654",
     "lean/CardanoKeri/Registry.lean": "22d86c6f572e9e4c427b792420bd740cfe1ad4a6cbcf7a8e181924816c50b167",
     "lean/CardanoKeri/RegistryAdapterFacts.lean": "212cb4a5a5710404e3b5c52733feb127720f9141f5deb379e4e50ce6345ea425",
     "lean/CardanoKeri/RegistryAgreement.lean": "486c868bbda3d062f2996cbd7086151a29597e245cfaaf6138760bf043e0667c",

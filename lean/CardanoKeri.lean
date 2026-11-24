@@ -40,3 +40,4 @@ import CardanoKeri.ApplicationGoals
 import CardanoKeri.ApplicationVectors
 import CardanoKeri.ReaderStatus
 import CardanoKeri.ReaderStatusGoals
+import CardanoKeri.ReaderStatusVectors

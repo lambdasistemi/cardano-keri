@@ -244080,6 +244080,231 @@
     }
    ]
   },
+  "docs-design-consumer-identity/the-checkpoint-datum-14": {
+   "audio_sha256": "544d131bb2313b056a7cb6763ec4c216082f3e0d0abd73b5ed88926992aa6247",
+   "characters": 239,
+   "cost": 0.00023660999999999997,
+   "duration": 17.275,
+   "index": 14,
+   "key": "384bb7a6fb7ea36b2ec3ff5e23d6fe8269850a2459874fba64aa5300cd03a36c",
+   "page": "docs/design/consumer-identity.md",
+   "pause_ms": 400,
+   "section": "the-checkpoint-datum",
+   "sent_text": "The correspondence between the Haskell library and this model is stated over datums the ledger admits: the model accepts one unbroken 65-byte string that the ledger and the library refuse (see entry 16 of the Lean correspondence register).",
+   "text": "The correspondence between the Haskell library and this model is stated over datums the ledger admits: the model accepts one unbroken 65-byte string that the ledger and the library refuse (see entry 16 of the Lean correspondence register).",
+   "words": [
+    {
+     "end": 0.275,
+     "start": 0.2,
+     "text": "The"
+    },
+    {
+     "end": 1.1,
+     "start": 0.275,
+     "text": "correspondence"
+    },
+    {
+     "end": 1.413,
+     "start": 1.1,
+     "text": "between"
+    },
+    {
+     "end": 1.5,
+     "start": 1.413,
+     "text": "the"
+    },
+    {
+     "end": 2.025,
+     "start": 1.5,
+     "text": "Haskell"
+    },
+    {
+     "end": 2.662,
+     "start": 2.025,
+     "text": "library"
+    },
+    {
+     "end": 2.787,
+     "start": 2.662,
+     "text": "and"
+    },
+    {
+     "end": 3.013,
+     "start": 2.787,
+     "text": "this"
+    },
+    {
+     "end": 3.487,
+     "start": 3.013,
+     "text": "model"
+    },
+    {
+     "end": 3.638,
+     "start": 3.487,
+     "text": "is"
+    },
+    {
+     "end": 4.05,
+     "start": 3.638,
+     "text": "stated"
+    },
+    {
+     "end": 4.3,
+     "start": 4.05,
+     "text": "over"
+    },
+    {
+     "end": 4.85,
+     "start": 4.3,
+     "text": "datums"
+    },
+    {
+     "end": 4.975,
+     "start": 4.85,
+     "text": "the"
+    },
+    {
+     "end": 5.3,
+     "start": 4.975,
+     "text": "ledger"
+    },
+    {
+     "end": 6.425,
+     "start": 5.3,
+     "text": "admits"
+    },
+    {
+     "end": 6.625,
+     "start": 6.425,
+     "text": ":"
+    },
+    {
+     "end": 6.95,
+     "start": 6.85,
+     "text": "the"
+    },
+    {
+     "end": 7.325,
+     "start": 6.95,
+     "text": "model"
+    },
+    {
+     "end": 7.812,
+     "start": 7.325,
+     "text": "accepts"
+    },
+    {
+     "end": 8.163,
+     "start": 7.812,
+     "text": "one"
+    },
+    {
+     "end": 8.875,
+     "start": 8.163,
+     "text": "unbroken"
+    },
+    {
+     "end": 9.962,
+     "start": 8.875,
+     "text": "65-byte"
+    },
+    {
+     "end": 10.4,
+     "start": 9.962,
+     "text": "string"
+    },
+    {
+     "end": 10.575,
+     "start": 10.4,
+     "text": "that"
+    },
+    {
+     "end": 10.712,
+     "start": 10.575,
+     "text": "the"
+    },
+    {
+     "end": 11.137,
+     "start": 10.712,
+     "text": "ledger"
+    },
+    {
+     "end": 11.262,
+     "start": 11.137,
+     "text": "and"
+    },
+    {
+     "end": 11.375,
+     "start": 11.262,
+     "text": "the"
+    },
+    {
+     "end": 11.95,
+     "start": 11.375,
+     "text": "library"
+    },
+    {
+     "end": 12.712,
+     "start": 11.95,
+     "text": "refuse"
+    },
+    {
+     "end": 12.825,
+     "start": 12.712,
+     "text": "("
+    },
+    {
+     "end": 13.113,
+     "start": 12.825,
+     "text": "see"
+    },
+    {
+     "end": 13.55,
+     "start": 13.113,
+     "text": "entry"
+    },
+    {
+     "end": 14.275,
+     "start": 13.55,
+     "text": "16"
+    },
+    {
+     "end": 14.363,
+     "start": 14.275,
+     "text": "of"
+    },
+    {
+     "end": 14.475,
+     "start": 14.363,
+     "text": "the"
+    },
+    {
+     "end": 14.825,
+     "start": 14.475,
+     "text": "Lean"
+    },
+    {
+     "end": 15.65,
+     "start": 14.825,
+     "text": "correspondence"
+    },
+    {
+     "end": 16.65,
+     "start": 15.65,
+     "text": "register"
+    },
+    {
+     "end": 17.175,
+     "start": 16.65,
+     "text": ")"
+    },
+    {
+     "end": 17.275,
+     "start": 17.175,
+     "text": "."
+    }
+   ]
+  },
   "docs-design-consumer-identity/the-checkpoint-outputs-value-00": {
    "audio_sha256": "bda2305b59ee0faa7148a37b0a0f521f94947ad3f35619cc90d5c1dd53ad3d91",
    "characters": 30,

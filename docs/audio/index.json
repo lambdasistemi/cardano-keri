@@ -8952,6 +8952,12 @@
     "name": "docs-design-consumer-identity/the-checkpoint-datum-13",
     "pause_ms": 400,
     "v": "f8c6b3bae0d4"
+   },
+   {
+    "index": 14,
+    "name": "docs-design-consumer-identity/the-checkpoint-datum-14",
+    "pause_ms": 400,
+    "v": "544d131bb231"
    }
   ],
   "the-checkpoint-outputs-value": [

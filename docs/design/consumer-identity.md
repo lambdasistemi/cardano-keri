@@ -268,6 +268,11 @@ version 2 yet. Reading the pool and the bonds from the value is modelled in
 [the checkpoint output's value](#the-checkpoint-outputs-value). This code is
 not for mainnet.
 
+The correspondence between the Haskell library and this model is stated over
+datums the ledger admits: the model accepts one unbroken 65-byte string that
+the ledger and the library refuse (see entry 16 of the
+[Lean correspondence register](https://github.com/lambdasistemi/cardano-keri/issues/435)).
+
 ## The checkpoint output's value
 
 A contract author holds a candidate checkpoint output and has read its datum.

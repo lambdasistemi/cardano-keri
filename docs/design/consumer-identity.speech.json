@@ -153,6 +153,10 @@
     {
       "text": "These checks cover the listed inputs; the theorems cover all inputs. The Aiken consumer decodes version 2 (the datum decoder in Aiken); the on-chain validator does not write version 2 yet. Reading the pool and the bonds from the value is modelled in the checkpoint output's value. This code is not for mainnet.",
       "pause": 400
+    },
+    {
+      "text": "The correspondence between the Haskell library and this model is stated over datums the ledger admits: the model accepts one unbroken 65-byte string that the ledger and the library refuse (see entry 16 of the Lean correspondence register).",
+      "pause": 400
     }
   ],
   "the-checkpoint-outputs-value": [
@@ -407,6 +411,6 @@
   ],
   "_source": {
     "file": "consumer-identity.md",
-    "sha256": "bfb1e01b0c0c4ebe1d356f16c14c68c61ce14097be675826f2cbefd97abbe8b3"
+    "sha256": "5a69972d73d235bfd3fdc2890af568c16dcf979352fb1a905b5619f5329889f7"
   }
 }

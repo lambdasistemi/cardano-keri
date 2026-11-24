@@ -76,8 +76,8 @@ const nonce: ByteArray =
 const seed_txid: ByteArray =
   #"5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
 
-const checkpoint_txid: ByteArray =
-  #"c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2"
+const aid: ByteArray =
+  #"4541414141414141414141414141414141414141414141414141414141414141414141414141414141414141"
 
 const commitment_txid: ByteArray =
   #"0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c"
@@ -106,7 +106,9 @@ fn scope() -> BountyScope {
     schema: commitment_schema,
     network: network_id,
     checkpoint_policy,
-    checkpoint_ref: out_ref(checkpoint_txid, 3),
+    aid,
+    epoch: 2,
+    sn: 5,
     action: ConvictEntitlement,
     marker: marker(),
     commit_upper,

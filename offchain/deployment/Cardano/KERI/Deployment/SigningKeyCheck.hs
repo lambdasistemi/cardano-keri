@@ -11,9 +11,11 @@ one can be told nothing was submitted and nothing was spent.
 -}
 module Cardano.KERI.Deployment.SigningKeyCheck (
     checkSigningKey,
+    checkSigningEnvelope,
 ) where
 
-import Cardano.Crypto.DSIGN.Class (deriveVerKeyDSIGN)
+import Cardano.Crypto.DSIGN.Class (SignKeyDSIGN, deriveVerKeyDSIGN)
+import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (VKey (..), hashKey)
@@ -36,9 +38,21 @@ checkSigningKey path address = do
                 Right (Left parseFailure) -> pure (Left ("signing-key-file-invalid: " <> path <> ": " <> parseFailure))
                 Right (Right (envelope :: Value)) -> pure $ case decodePaymentSigningKey envelope of
                     Left failure -> Left ("signing-key-file-invalid: " <> path <> ": " <> show failure)
-                    Right signingKey -> case address of
-                        Addr _ (KeyHashObj actual) _
-                            | actual == hashKey (VKey (deriveVerKeyDSIGN signingKey)) -> Right ()
-                            | otherwise -> Left "signing-key-does-not-match-address: the funding address is not the address of the signing key"
-                        Addr _ ScriptHashObj{} _ -> Left "funding-address-invalid: the funding address must use a payment key credential"
-                        AddrBootstrap{} -> Left "funding-address-invalid: the funding address must be a Shelley testnet address"
+                    Right signingKey -> signingKeyOf signingKey address
+
+{- | The same check of a key already opened: its envelope holds a payment key, and it is the key of
+the funding address. Left names the refusal.
+-}
+checkSigningEnvelope :: Value -> Addr -> Either String ()
+checkSigningEnvelope envelope address = case decodePaymentSigningKey envelope of
+    Left failure -> Left ("signing-key-invalid: " <> show failure)
+    Right signingKey -> signingKeyOf signingKey address
+
+-- | The funding address is the address of the key.
+signingKeyOf :: SignKeyDSIGN Ed25519DSIGN -> Addr -> Either String ()
+signingKeyOf signingKey = \case
+    Addr _ (KeyHashObj actual) _
+        | actual == hashKey (VKey (deriveVerKeyDSIGN signingKey)) -> Right ()
+        | otherwise -> Left "signing-key-does-not-match-address: the funding address is not the address of the signing key"
+    Addr _ ScriptHashObj{} _ -> Left "funding-address-invalid: the funding address must use a payment key credential"
+    AddrBootstrap{} -> Left "funding-address-invalid: the funding address must be a Shelley testnet address"

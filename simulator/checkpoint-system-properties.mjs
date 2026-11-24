@@ -6,7 +6,7 @@ import {equal} from './registry-economic-core.mjs';
 import {stateKind,leafOf,hasOutput,actionKind,entitles} from './checkpoint-simulator-core.mjs';
 export const SYSTEM_THEOREMS=['T8_leaf_agrees_with_state','T8_edges_leave_the_leaf','T8_present_implies_registered','T8_leaf_states','T8_utxo_iff_active','T8_leaf_never_absent_again','T8_mint_once','T8_sysstep_partition','sys_conviction_consumes_commitment','commitment_closes_in_or_after_window',
   'sys_step_keeps_deployment','sys_commitment_survives_key_state_step','sys_conviction_refused_for_other_deployment'];
-const rowAt=(state,aid)=>state.aids.find(r=>equal(r.aid,aid))??{aid,state:'absent',leaf:'absent',origin:null,pending:null};
+const rowAt=(state,aid)=>state.aids.find(r=>equal(r.aid,aid))??{aid,state:'absent',leaf:'absent',status:'never-registered',origin:null,pending:null};
 export function systemProperties(cell,result=cell.result) {
   const kind=Object.keys(cell.command)[0],command=cell.command[kind],before=cell.input;
   const after=result.ok?.state??before,old=rowAt(before,command.aid),next=rowAt(after,command.aid),accepted=!!result.ok;

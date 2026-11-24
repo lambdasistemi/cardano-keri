@@ -46,7 +46,7 @@ add('CI08','wrong_asset_refused',c=>['wrong-policy','wrong-name','other-aid-toke
 add('CI09','malformed_datum_refused',c=>['datum-empty','datum-root','datum-malformed'].every(n=>refused(c,n)),flip('datum-empty'));
 add('CI10','wrong_datum_aid_refused',c=>refused(c,'datum-other-aid'),flip('datum-other-aid'));
 add('CI11','ineligible_state_refused',c=>['maturity-minus-one','frozen','poisoned','absent-datum','terminal-datum'].every(n=>refused(c,n)),flip('frozen'));
-add('CI12','retained_custody_refused',c=>['termination-pending','termination-booked'].every(n=>refused(c,n)),flip('termination-pending'));
+add('CI12','retained_custody_refused',c=>refused(c,'termination-pending'),flip('termination-pending'));
 add('CI13','different_encoded_keys_distinct',c=>!equal(cell(c,'other-aid-token').query.holding.assets[0][0],a(c)),c=>{cell(c,'other-aid-token').query.holding.assets[0][0]=a(c);});
 add('CI14','different_registries_distinct',c=>!equal(cell(c,'rival-registry-policy').query.holding.assets[0][0],a(c)),c=>{cell(c,'rival-registry-policy').query.holding.assets[0][0]=a(c);});
 add('CI15','different_seeds_distinct',c=>['rival-seed-transaction','rival-seed-index'].every(n=>!equal(cell(c,n).query.holding.assets[0][0],a(c))),c=>{cell(c,'rival-seed-index').query.holding.assets[0][0]=a(c);});

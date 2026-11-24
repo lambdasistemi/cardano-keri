@@ -10,6 +10,7 @@ import Cardano.KERI.Deployment.FreezePackageSpec qualified as FreezePackageSpec
 import Cardano.KERI.Deployment.KELSpec qualified as KELSpec
 import Cardano.KERI.Deployment.KoiosReadsSpec qualified as KoiosReadsSpec
 import Cardano.KERI.Deployment.KoiosSettlementSpec qualified as KoiosSettlementSpec
+import Cardano.KERI.Deployment.KoiosSubmissionSpec qualified as KoiosSubmissionSpec
 import Cardano.KERI.Deployment.ManifestSpec qualified as ManifestSpec
 import Cardano.KERI.Deployment.RegistrationSpec qualified as RegistrationSpec
 import Cardano.KERI.Deployment.RegistryAttemptSpec qualified as RegistryAttemptSpec
@@ -79,6 +80,7 @@ suite = hspec $ do
     KELSpec.spec
     KoiosReadsSpec.spec
     KoiosSettlementSpec.spec
+    KoiosSubmissionSpec.spec
     ManifestSpec.spec
     BountyEntitlementSpec.spec
     RegistrationSpec.spec

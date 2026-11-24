@@ -230,12 +230,14 @@ library deployment-koios
     , containers
     , microlens
     , singular-registry
+    , singular-registry:koios-http
     , singular-registry:local-services
     , text
 
   exposed-modules:
     Cardano.KERI.Deployment.KoiosRuntime
     Cardano.KERI.Deployment.KoiosSettlement
+    Cardano.KERI.Deployment.KoiosSubmission
 
 library indexer
   import:           warnings
@@ -519,6 +521,8 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.KELSpec
     Cardano.KERI.Deployment.KoiosReadsSpec
     Cardano.KERI.Deployment.KoiosSettlementSpec
+    Cardano.KERI.Deployment.KoiosStandIn
+    Cardano.KERI.Deployment.KoiosSubmissionSpec
     Cardano.KERI.Deployment.ManifestSpec
     Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.RegistrationSpec
@@ -571,6 +575,7 @@ test-suite deployment-tests
     , cardano-node-clients
     , cardano-slotting
     , cardano-tx-tools:tx-build
+    , case-insensitive
     , containers
     , crypton
     , directory
@@ -579,6 +584,7 @@ test-suite deployment-tests
     , hinotify
     , hspec                             >=2.11   && <2.12
     , http-conduit
+    , http-types
     , memory                            >=0.18   && <0.19
     , microlens
     , network
@@ -586,12 +592,15 @@ test-suite deployment-tests
     , plutus-core
     , plutus-ledger-api
     , singular-registry
+    , singular-registry:koios-http
     , singular-registry:local-services
     , singular-registry:registry-cli
     , temporary
     , text
     , time
     , unix
+    , wai
+    , warp
 
   ghc-options:      -threaded
   autogen-modules:  Paths_cardano_keri

@@ -3885,7 +3885,7 @@
           "now": 0,
           "actor": "anyone",
           "as": "Cora",
-          "note": "Cora proves duplicity at Alice’s current key.",
+          "note": "Cora presents one conflicting rival. Alice’s checkpoint spend accepts the comparison with its spent tip and creates her pending termination output.",
           "action": {
             "convictCkpt": {
               "aid": 11
@@ -4283,7 +4283,7 @@
           "now": 0,
           "actor": "anyone",
           "as": "Cora",
-          "note": "Cora proves duplicity at Bob’s current key.",
+          "note": "Cora presents one conflicting rival. Bob’s checkpoint spend accepts the comparison with its spent tip and creates his pending termination output.",
           "action": {
             "convictCkpt": {
               "aid": 12

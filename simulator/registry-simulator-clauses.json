@@ -530,7 +530,7 @@
       "given": "Complete pending requests retain their own references and custody.",
       "when": "A folder processes selected requests, or tries duplicated inputs and inconsistent timestamps; the mixed-custody branch also interleaves another registration and its return after the deadline.",
       "then": "Duplicate inputs and backdated booking refuse. Completing one identity preserves the other pending entry through the mixed fold and the registration return; its own later consuming fold completes it.",
-      "scenarioSha256": "b14cb6224294be0829132ee499af0f2a45d9ffee83dc0bf1b97f1d6dfdc4d370",
+      "scenarioSha256": "01ba7731d750dd4da6b5ca992a8965318ec44b32a4ce275a9f0e5d3532c87f7d",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",

@@ -568,7 +568,7 @@ fork:
             trie:
               - [12,{"known":{"s":"active"}}]
               - [11,{"known":{"s":"active"}}]
-    note: "Cora proves duplicity at Alice’s current key."
+    note: "Cora presents one conflicting rival. Alice’s checkpoint spend accepts the comparison with its spent tip and creates her pending termination output."
   step:
     env:
       inception: [11, 12, 13, 14, 15]
@@ -614,7 +614,7 @@ fork:
             trie:
               - [12,{"known":{"s":"active"}}]
               - [11,{"known":{"s":"active"}}]
-    note: "Cora proves duplicity at Bob’s current key."
+    note: "Cora presents one conflicting rival. Bob’s checkpoint spend accepts the comparison with its spent tip and creates his pending termination output."
   step:
     env:
       inception: [11, 12, 13, 14, 15]

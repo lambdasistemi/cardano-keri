@@ -833,6 +833,7 @@ test-suite indexer-tests
     Cardano.KERI.Indexer.Query.SwaggerDriftSpec
     Cardano.KERI.Indexer.Query.TxSpec
     Cardano.KERI.Indexer.Query.TypesSpec
+    Cardano.KERI.Indexer.ReaderVerdictSpec
     Cardano.KERI.Indexer.ReadsSpec
     Cardano.KERI.Indexer.ReleaseFixtures
     Cardano.KERI.Indexer.ReleaseHoldingsSpec
@@ -1111,6 +1112,8 @@ test-suite unit-tests
     Cardano.KERI.AID.Ed25519Spec
     Cardano.KERI.AID.FoldGuardSpec
     Cardano.KERI.AID.Migration.TypesSpec
+    Cardano.KERI.AID.ReaderCorpus
+    Cardano.KERI.AID.ReaderStatusSpec
     Cardano.KERI.AID.ReleaseSpec
     Cardano.KERI.AID.RequestShapeSpec
     Cardano.KERI.ChainQuery.ReleaseIdentitySpec

@@ -27,11 +27,7 @@ module Cardano.KERI.Indexer.RequestHolderSpec (
 ) where
 
 import Cardano.Crypto.Hash.Class (hashFromBytes)
-import Cardano.KERI.AID.Application (
-    ApplicationParameters (..),
-    terminationApprovalName,
- )
-import Cardano.KERI.AID.CESR (qb64Aid)
+import Cardano.KERI.AID.Application (terminationApprovalName)
 import Cardano.KERI.AID.Consumer (
     Context (..),
     ObservedOutput (..),
@@ -43,19 +39,22 @@ import Cardano.KERI.AID.Reader (requestShape, terminationApproval)
 import Cardano.KERI.AID.Release (
     ReleaseIdentity (..),
     registryIdentityOf,
-    releaseContext,
  )
 import Cardano.KERI.Indexer.Codecs (
     HoldingRefusal (..),
-    Observation (..),
     decodeHoldingOutput,
-    observeOutput,
  )
 import Cardano.KERI.Indexer.ReleaseFixtures (
+    applicationAddr,
+    bookedRequest,
+    contextFor,
     datumOf,
     liveFacts,
+    observedOutput,
     otherRegistry,
     outputWithDatum,
+    requestAssets,
+    requestLovelace,
     scriptHashOf,
     testRelease,
     txInAt,
@@ -78,40 +77,8 @@ rawAid, otherRaw :: ByteString
 rawAid = BS.replicate 32 0x51
 otherRaw = BS.replicate 32 0x52
 
-contextFor :: ReleaseIdentity -> ByteString -> Context
-contextFor ri raw = releaseContext ri (qb64Aid raw)
-
-applicationAddr :: ReleaseIdentity -> Addr
-applicationAddr ri =
-    Addr
-        (if riNetwork ri == 0 then Testnet else Mainnet)
-        (ScriptHashObj (scriptHashOf (rlApplicationCredential (riRelease ri))))
-        StakeRefNull
-
--- | The lovelace a booking places on a request: the termination carrier and the tip.
-requestLovelace :: ReleaseIdentity -> Integer
-requestLovelace ri = riTerminationCarrier ri + minimumTip (riApplicationParameters ri)
-
--- | The two assets of a request of an identity, named by the producer.
-requestAssets :: Context -> [(ByteString, ByteString, Integer)]
-requestAssets context =
-    [ let (p, n) = representativeAsset context in (p, n, 1)
-    , let (p, n) = terminationApproval context in (p, n, 1)
-    ]
-
--- | The output a booking transaction places for an identity.
-honest :: ReleaseIdentity -> Context -> Indexer.TxOut
-honest ri context =
-    outputWithDatum (applicationAddr ri) (requestLovelace ri) (requestAssets context) NoDatum
-
--- | The observed output of a ledger output, through the store's boundary.
-observed :: Indexer.TxOut -> ObservedOutput
-observed txOut = case observeOutput txOut of
-    Right observation -> obsOutput observation
-    Left refusal -> error ("the observation refused a built output: " <> show refusal)
-
 recognised :: Context -> Indexer.TxOut -> Bool
-recognised context = requestShape context . observed
+recognised context = requestShape context . observedOutput
 
 spec :: Spec
 spec = describe "request holder (ledger outputs through the observation boundary)" $ do
@@ -123,17 +90,17 @@ spec = describe "request holder (ledger outputs through the observation boundary
         refused name out = it ("refuses " <> name) $ recognised context out `shouldBe` False
 
     describe "the booked request" $ do
-        it "is recognised" $ recognised context (honest ri context) `shouldBe` True
+        it "is recognised" $ recognised context (bookedRequest ri context) `shouldBe` True
         it "names the approval of the registry and the key, derived by the application vectors' function" $
             approval
                 `shouldBe` ( rlApplicationPolicy (riRelease ri)
                            , terminationApprovalName (registryIdentityOf ri) (cxAid context)
                            )
         it "is observed with no datum, at the application script credential" $ do
-            let out = observed (honest ri context)
+            let out = observedOutput (bookedRequest ri context)
             ooDatum out `shouldBe` DatumAbsent
         it "is not a holding of the checkpoint validator" $
-            void (decodeHoldingOutput ri (txInAt 1) (honest ri context))
+            void (decodeHoldingOutput ri (txInAt 1) (bookedRequest ri context))
                 `shouldBe` Left NotAtCheckpointValidator
         it "is recognised whatever lovelace it holds" $
             mapM_
@@ -224,9 +191,9 @@ spec = describe "request holder (ledger outputs through the observation boundary
 
     describe "the identity" $ do
         it "does not recognise the request of another identifier" $
-            recognised (contextFor ri otherRaw) (honest ri context) `shouldBe` False
+            recognised (contextFor ri otherRaw) (bookedRequest ri context) `shouldBe` False
         it "does not recognise the request of another registry" $
-            recognised (contextFor otherRegistry rawAid) (honest ri context) `shouldBe` False
+            recognised (contextFor otherRegistry rawAid) (bookedRequest ri context) `shouldBe` False
         it "recognises each identifier's own request and no other's, over three identifiers" $ do
             let raws = [rawAid, otherRaw, BS.replicate 32 0x53]
             mapM_
@@ -235,7 +202,7 @@ spec = describe "request holder (ledger outputs through the observation boundary
                         ( \(j, b) ->
                             ( i :: Int
                             , j
-                            , recognised (contextFor ri a) (honest ri (contextFor ri b))
+                            , recognised (contextFor ri a) (bookedRequest ri (contextFor ri b))
                             )
                                 `shouldBe` (i, j, i == j)
                         )

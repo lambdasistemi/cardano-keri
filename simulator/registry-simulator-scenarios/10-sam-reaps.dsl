@@ -196,6 +196,12 @@ step:
           singularTags: [{"registryId":9,"token":{"name":11,"policy":8}}]
           submittedAt: null
         trieReadyTagsMinted: [{"name":"5600603241348410377","policy":9}]
+        pendingReference:
+          tx: 105
+          index: 0
+        position:
+          epoch: 1
+          sn: 1
       fee: 1
   expect:
     ok: false

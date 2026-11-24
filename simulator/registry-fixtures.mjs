@@ -43,7 +43,7 @@ export function terminationAction(params, state, aidValue, referenceValue, booke
     declaredTip: p.tip, carrierAda: p.Mr, singularTags: [singularTag(s.config, aid)], refundAddress: null, submittedAt: null,
     contents: { lovelace: p.Mr + p.tip, applicationTags: [], trieReadyTags: [], otherAssets: [] } };
   request.contents.trieReadyTags = [readyTag(s.config, request, 'termination')];
-  return toWire({ bookTermination: { aid, booker, fee, booking: { request, custodyInputs: [carrier.original], trieReadyTagsMinted: request.contents.trieReadyTags } } });
+  return toWire({ bookTermination: { aid, booker, fee, booking: { pendingReference: {tx: 105n, index: 0n}, position: {epoch: 1n, sn: 1n}, request, custodyInputs: [carrier.original], trieReadyTagsMinted: request.contents.trieReadyTags } } });
 }
 export function foldAction(params, state, referenceValues, timeValue = 2, fundingValue = 1, feeValue = 1) {
   const [, s] = prepare(params, state), refs = referenceValues.map(ref => ({ tx: nat(ref.tx), index: nat(ref.index) }));

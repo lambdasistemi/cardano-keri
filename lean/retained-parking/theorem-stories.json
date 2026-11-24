@@ -3,13 +3,13 @@
   "scope": "Current lifecycle and transport theorem source stories with complete formal binders and conclusions; no production correspondence claim",
   "singular": "d69ab005c3b710aeebf033d3c5cd08c56feb5643",
   "sources": {
-    "lean/CardanoKeri/Application.lean": "f2294ad2d9608e1870d89ef53a58169fcea7a63eced47c984a72c5f4f74f8588",
-    "lean/CardanoKeri/ApplicationCustodyExample.lean": "bfb139bd82633c8c798344eca5a2215c33611db14df11140d5ef8d48c10c1532",
-    "lean/CardanoKeri/ApplicationCustodyHistory.lean": "2f61067b3c292623c78e0761804264b9904b11604312d674e2fafe542773355d",
+    "lean/CardanoKeri/Application.lean": "53d228c3e9ad3d6c37b120177cdf9cd0540c80d8c309eb3f74657fabf3d8fdf5",
+    "lean/CardanoKeri/ApplicationCustodyExample.lean": "a74d13fd8eb873b37310171ba24f670763f21ec8e82552667dcef01353b728b0",
+    "lean/CardanoKeri/ApplicationCustodyHistory.lean": "09130e196c54018759a0f3b5255369ff6eba3db8590a4b9e6756b61274bb0831",
     "lean/CardanoKeri/ApplicationGoals.lean": "c0cc5a97ac734efda3cfeb29ee2d69a5683f0196c68fcec168b03c30f1419745",
     "lean/CardanoKeri/ApplicationVectors.lean": "073d713d9c86e6bee45751c38c031456ff0e363e0f16acf6cb5c6894479f98f6",
-    "lean/CardanoKeri/Checkpoint.lean": "d82c06b8cfb953c5640c8ce32573a07bc728bf898168f22610416b8a561339fe",
-    "lean/CardanoKeri/CheckpointCertificate.lean": "164fd28729bd55d9f44f86a9c19b40893cc8beebfe60fdbf090f55f41fe3d110",
+    "lean/CardanoKeri/Checkpoint.lean": "614588d944b8bb40dc9712b89ce593c331a45a909bc52a9e4d60a83f16b4a81a",
+    "lean/CardanoKeri/CheckpointCertificate.lean": "59c61e82e3935d69d69cdf0d3cd5f0daef3b349e4cbc03e795d46d14c2fb3207",
     "lean/CardanoKeri/CheckpointCommitmentGoals.lean": "a231b740519325547db6b57980ddc8c5f065d6ba0f588938a5e8ab8d95bda078",
     "lean/CardanoKeri/CheckpointCommitmentVectors.lean": "98d3312c37ab278c3cce744eb1e6ee2344f738f4d93ad176bed95d94d0f4cdfc",
     "lean/CardanoKeri/CheckpointCompletionGoals.lean": "8d2ba4195fc0ce06d9f646717ad426b4b7d088bf180d3966707900ad5437c4d4",
@@ -22,13 +22,13 @@
     "lean/CardanoKeri/CheckpointDepositVectors.lean": "9c5d960ce08b2a47dbe0cbaf74411017b39b9ff048d7869b7708fce1e165d615",
     "lean/CardanoKeri/CheckpointEventHistory.lean": "b22d0f188dd3de74ae9ab2aac5029842150f335477fef44eb6ee3307c49b0d27",
     "lean/CardanoKeri/CheckpointGoals.lean": "24f42b585377b5ede77967d0a2037c736a6388f09e31f0a3141a88f6d07bab9e",
-    "lean/CardanoKeri/CheckpointLifecycleExamples.lean": "e7589d24cdcb2c2d1be7328e9f7591ae0c56de040ff634a8df0c039a3c4f2b41",
+    "lean/CardanoKeri/CheckpointLifecycleExamples.lean": "f035d137a6f672c8f065e2406f70f54a94844da2e89a2bf8db204c000e2b97a7",
     "lean/CardanoKeri/CheckpointReceiptCheck.lean": "b8e503afc6b39c864d5670b5b746ada934e519beb2c45b291be66d811e1085d8",
     "lean/CardanoKeri/CheckpointSystemEvidence.lean": "537d2183603c1f5ffab2178d743b03652647a3ca22cae5cb4e38c8780bccf7da",
-    "lean/CardanoKeri/CheckpointSystemFixtures.lean": "65e0aed9ae24d559b763cab32330965ea218ba0a5d467c4ae1fc382e8853b12a",
+    "lean/CardanoKeri/CheckpointSystemFixtures.lean": "e41e58ad5b042821340e433ce831f128144d3a3def20f111b105601e2b1ad5e4",
     "lean/CardanoKeri/CheckpointSystemHistory.lean": "aff482be915576d9bb748733be9c5358d532c3aa6d92ba07115dcf466bd884c1",
-    "lean/CardanoKeri/CheckpointSystemWire.lean": "873076099e01a074fbc58048017fd5c448c61101e4bb6624688b4feeb2f6d165",
-    "lean/CardanoKeri/CheckpointTraceWire.lean": "fe6f88cef07f4e172bc792fe2975b09eae10f202910a72e3b39ae803cf9a4aaf",
+    "lean/CardanoKeri/CheckpointSystemWire.lean": "5a8230469823cf08e481495f93429e2f84dcfb953ed89347ba84556004f3fdc6",
+    "lean/CardanoKeri/CheckpointTraceWire.lean": "39599ba334bbe30a5e679c69c79053879b6e8c44fece1914becb765dbf22d1c2",
     "lean/CardanoKeri/CheckpointValue.lean": "cd552eca0212b31142d4ed2d29ca6dd8897febddeeb7ac3dbb1154bfb22efbed",
     "lean/CardanoKeri/CheckpointValueGoals.lean": "d95d7cf5370eee2ca7a6e277156671654cbd68008b72b646615546fcbc77f4a5",
     "lean/CardanoKeri/CheckpointValueVectors.lean": "221ff951f435eb21c1f35ed6df6078c2e0b691a02c743069cff23cf15e282aed",
@@ -40,28 +40,28 @@
     "lean/CardanoKeri/ConsumerFixtures.lean": "005a0b66a375669447141f2c726270d9ecc5ce09dabc180168f51663d82638b4",
     "lean/CardanoKeri/ConsumerGoals.lean": "6ce115569b597c55056671633aad903151a8349479c47a4d08f9fd0b82227788",
     "lean/CardanoKeri/ConsumerIdentity.lean": "2c1fe9311f7a3c460dfcbd90d915ea17a9aae83199ab842247e6ef991a7e9f26",
-    "lean/CardanoKeri/ConsumerJourney.lean": "78ee040bfc87311f1c5fb64e44d1333d709cb0119f894b11d5e22859c809c70a",
+    "lean/CardanoKeri/ConsumerJourney.lean": "e7a982e8dad86e472d9010cbdac953a805991df8e641353ec9868d0e49cc9907",
     "lean/CardanoKeri/ConsumerWire.lean": "82b7088d8ada127c6ecee9ca50ef483fcf240cf31e981489006e08ec51ede4d4",
     "lean/CardanoKeri/ReaderStatus.lean": "f0ef5697905f98527f328a99661cd603dbb3bc6ffb71f8ac1bbc3f485fb766a1",
     "lean/CardanoKeri/ReaderStatusGoals.lean": "085c2bb5b74130efcd28157ee87b0b4309a7a548b288e93e19df5a0215290b5e",
     "lean/CardanoKeri/ReaderStatusVectors.lean": "09c4a31f2584dfaacad8d2863a942e48c820132bbc4a49743859ddc8a9b88e3b",
-    "lean/CardanoKeri/Registry.lean": "1620f908c114af81d447263dd2a0c48677ed34c40b33e0b3f3bc8076528df82c",
+    "lean/CardanoKeri/Registry.lean": "3e142e3f28870b410d63ed98544bdf0b846bd3ca3d8f4130c9fe1fc6e3d5f762",
     "lean/CardanoKeri/RegistryAdapterFacts.lean": "212cb4a5a5710404e3b5c52733feb127720f9141f5deb379e4e50ce6345ea425",
     "lean/CardanoKeri/RegistryAgreement.lean": "a36f748cac760c93a3c5b122713181527886cee34c3555fc9f7daa7ee2a6fdba",
     "lean/CardanoKeri/RegistryAuthorization.lean": "316aa8c7001bafbbdcf43055119f587839f45a5d4b525752c4125f84809962b9",
     "lean/CardanoKeri/RegistryBurns.lean": "6c84f8e5cb5d38136f39ece7a1cfd0129d6732dba5fc0b74f43cfd59648663f3",
     "lean/CardanoKeri/RegistryCompleteness.lean": "629d11eeffda1af3d367c9333e3c7ef4e15f4f9fdb5b5cab9a8994a1b105dc52",
-    "lean/CardanoKeri/RegistryCustody.lean": "a8994c4f1ca70c912c837901c64b927f12511926477b28c1c6f836355aa7c150",
+    "lean/CardanoKeri/RegistryCustody.lean": "8319d77db301a13164a3e3d42f65b5d700af1d565ce868f59fa6953abce888f1",
     "lean/CardanoKeri/RegistryFold.lean": "4f4e2a055c0011277868ed48e224807edb0fc66b49dfe501b02a455445b33b2a",
-    "lean/CardanoKeri/RegistryGoals.lean": "a7f41c9396d931199c9bb5386bdc81b734a66e501bd5a8250c835e80cd3a58e2",
+    "lean/CardanoKeri/RegistryGoals.lean": "082ccff44671bebd07a2b80e92d79da059b74ccc3235f579f55cca484cc03e39",
     "lean/CardanoKeri/RegistryInception.lean": "47b2343fae6dc3d8eaf79aa0063cf2fe21985af6e039bddfe13c806240a4f3d3",
-    "lean/CardanoKeri/RegistryInvariant.lean": "e4816dc730d6a9994fc55369568a0a188124c92ae40c347287df0555bb2c172a",
-    "lean/CardanoKeri/RegistryLifecycleExamples.lean": "cbeacb664cee81582aecd2d57cb72af9ddee672e492daf3f3786f5342c76614f",
+    "lean/CardanoKeri/RegistryInvariant.lean": "6046b2b3bddceb4a471aa5105db03d4419779082b235952ff5b5f0ac673a8fd2",
+    "lean/CardanoKeri/RegistryLifecycleExamples.lean": "14511871d8c30946b18f60ad8afee9b50cfdf24df5d4cde2e659850d807d543e",
     "lean/CardanoKeri/RegistryMetadata.lean": "59db598868b8a06372b93ede1bfc48009b4558cd10e196d323c35b3826213973",
     "lean/CardanoKeri/RegistryReach.lean": "c855e68aa2965b3aa8cab39025f28affeb20099a7d59d60b86624ebd6983a1ed",
     "lean/CardanoKeri/RegistryReplay.lean": "9b3bfde641498235e5945b9e4475b3d5e436533af2a3cc9827474cb14c904d6a",
     "lean/CardanoKeri/RegistryRequestLifecycle.lean": "d0771f3b92614b6834a949bacc0ad6abcc22d8d6f59cefd4f58e2703f7001d95",
-    "lean/CardanoKeri/RegistryScenarioFixtures.lean": "639edc893488ab826100c811e2fb7ac1ac96e90b48777da3667b6a5ead835ecd",
+    "lean/CardanoKeri/RegistryScenarioFixtures.lean": "3776cd2f66c2a8af6aaa574f497524f297bb99f0a390005e6544158556e34af3",
     "lean/CardanoKeri/RegistryTermination.lean": "5c9b9fd0f221d194be42ff5d3236fd3d48c8a3fd35f045aa39d0605a7d4d4660",
     "lean/CardanoKeri/RegistryTraceWire.lean": "d471d1405308fef18432f063ddfe2c972ffb65673e84434b43895b537981a07c",
     "lean/CardanoKeri/Samaritan.lean": "6a1bfd7b2b83d7497f68ef50480a47b155a1c7cf4ee1837a5a72c231570cedbb"
@@ -222,6 +222,20 @@
       "storySha256": "34dd9187b19469263a0e726860cd780980f222c8eefe6b4b8b0de43e6c7804b4"
     },
     {
+      "declaration": "CardanoKeri.Application.Custody.Examples.economic_entry_for_rotated_checkpoint",
+      "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
+      "line": 284,
+      "statement": "theorem economic_entry_for_rotated_checkpoint :\n    bookingTx.economicBooking i release rp rid termination convicted.reference = some termination ∧\n    ∃ entry source target, Registry.pendingAt registryBooked termination.request.reference = some entry ∧\n      entry.booking = termination.toTerminationBooking ∧ entry.payload.spend.reference = convicted.reference ∧\n      entry.payload.spend.aid = 11 ∧\n      checkpointDatum i convicted = some ⟨entry.payload.spend.aid, .terminationPending entry.payload.spend.position⟩ ∧\n      (source, target, convicted) ∈ convictionEdges ∧\n      ConvictionEdge p env entry.payload.spend.aid entry.payload.spend.position source target",
+      "statementSha256": "decd1ec96669e2612cc5345ec84dc72c5721cb55cf507e1dce49c30aa9a10d9b",
+      "sourceStory": "Given the public registration, rotation and conviction, when the observed\nmint books the economic request, its stored receipt is for the pending output\nat 105#0 and the authenticated writer at epoch one and sequence one.",
+      "story": {
+        "given": "No additional local parameters; use the definitions in this module.",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "bookingTx.economicBooking i release rp rid termination convicted.reference = some termination ∧\n    ∃ entry source target, Registry.pendingAt registryBooked termination.request.reference = some entry ∧\n      entry.booking = termination.toTerminationBooking ∧ entry.payload.spend.reference = convicted.reference ∧\n      entry.payload.spend.aid = 11 ∧\n      checkpointDatum i convicted = some ⟨entry.payload.spend.aid, .terminationPending entry.payload.spend.position⟩ ∧\n      (source, target, convicted) ∈ convictionEdges ∧\n      ConvictionEdge p env entry.payload.spend.aid entry.payload.spend.position source target"
+      },
+      "storySha256": "e771d28281ecd189954ed945fb5d2326a09195ef8f60be9e31bd26c92ac1c1c2"
+    },
+    {
       "declaration": "CardanoKeri.Application.Custody.carrier_reachable",
       "path": "lean/CardanoKeri/ApplicationCustodyHistory.lean",
       "line": 65,
@@ -336,7 +350,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.booking_receipt_provenance",
       "path": "lean/CardanoKeri/ApplicationCustodyHistory.lean",
-      "line": 263,
+      "line": 275,
       "statement": "theorem booking_receipt_provenance {p env} {i : Interpretation} {edges s world next carrier}\n    (registry : PublicRegistry) (release : PublishedRelease) (commit : TrieCommit)\n    (b : Singular.TerminationBooking) {ref receipt}\n    (history : HistoryPremises i.hash i.code commit release world registry (i.keyOf b.request.key))\n    (path : CarrierHistory p env i (activeAsset i.hash i.code registry.identity (i.keyOf b.request.key))\n      b.request.key edges s world carrier)\n    (tx : Transaction world next) (aenv : Application.Env) (rp : Registry.Params)\n    (ok : accepted i aenv rp p release tx.observation = true)\n    (read : tx.bookingSpend i release rp registry.identity b ref = some receipt) :\n    ∃ request before after,\n      tx.creates request ∧ request.reference = b.request.reference ∧\n      namedInput tx.observation receipt.reference = some carrier ∧\n      receipt.reference = carrier.reference ∧ receipt.aid = b.request.key ∧\n      checkpointDatum i carrier = some ⟨receipt.aid, .terminationPending receipt.position⟩ ∧\n      (before, after, carrier) ∈ edges ∧\n      ConvictionEdge p env receipt.aid receipt.position before after ∧\n      ∃ writer, before.writers receipt.aid = some writer ∧ writer.authenticated receipt.aid = true ∧\n        writer.epoch = receipt.position.epoch ∧ writer.writer.event.sn = receipt.position.sn",
       "statementSha256": "77bf17ccf2c1a5e4ef4a7043d296d9b6121afeaa296e35250539d5f1950aa371",
       "sourceStory": "Given an accepted mint, a public registry history and its observed carrier,\nwhen the economic booking's indexed request and the mint's named input produce\na receipt, then the receipt names this exact input, identifier and native key\nstate. The conviction produced it, and the mint transaction created the\nrequest at the economic booking's reference.",
@@ -346,6 +360,20 @@
         "then": "∃ request before after,\n      tx.creates request ∧ request.reference = b.request.reference ∧\n      namedInput tx.observation receipt.reference = some carrier ∧\n      receipt.reference = carrier.reference ∧ receipt.aid = b.request.key ∧\n      checkpointDatum i carrier = some ⟨receipt.aid, .terminationPending receipt.position⟩ ∧\n      (before, after, carrier) ∈ edges ∧\n      ConvictionEdge p env receipt.aid receipt.position before after ∧\n      ∃ writer, before.writers receipt.aid = some writer ∧ writer.authenticated receipt.aid = true ∧\n        writer.epoch = receipt.position.epoch ∧ writer.writer.event.sn = receipt.position.sn"
       },
       "storySha256": "fc3822a03677cfbf4a6fd935c1e95bad3145373abe8495f1fea4433310894bb2"
+    },
+    {
+      "declaration": "CardanoKeri.Application.Custody.economic_entry_traces_to_conviction",
+      "path": "lean/CardanoKeri/ApplicationCustodyHistory.lean",
+      "line": 323,
+      "statement": "theorem economic_entry_traces_to_conviction {p env} {i : Interpretation} {edges s world next carrier}\n    (registry : PublicRegistry) (release : PublishedRelease) (commit : TrieCommit)\n    (b : Singular.TerminationBooking) {ref localBooking before booked booker fee flow}\n    (history : HistoryPremises i.hash i.code commit release world registry (i.keyOf b.request.key))\n    (path : CarrierHistory p env i (activeAsset i.hash i.code registry.identity (i.keyOf b.request.key))\n      b.request.key edges s world carrier)\n    (tx : Transaction world next) (aenv : Application.Env) (rp : Registry.Params)\n    (ok : accepted i aenv rp p release tx.observation = true)\n    (read : tx.economicBooking i release rp registry.identity b ref = some localBooking)\n    (placed : Registry.bookTermination rp before b.request.key booker fee localBooking = .ok (flow, booked)) :\n    ∃ entry source target, Registry.pendingAt booked b.request.reference = some entry ∧\n      entry.booking = b ∧ entry.payload.spend.reference = carrier.reference ∧\n      entry.payload.spend.aid = b.request.key ∧\n      checkpointDatum i carrier = some ⟨entry.payload.spend.aid, .terminationPending entry.payload.spend.position⟩ ∧\n      (source, target, carrier) ∈ edges ∧\n      ConvictionEdge p env entry.payload.spend.aid entry.payload.spend.position source target",
+      "statementSha256": "3e0bed1c5ae93a93af1d1654cc106c853b027ebbe070bba638bee9a75ce4f91b",
+      "sourceStory": "Given a public carrier history, when an accepted mint supplies the\neconomic booking and that booking succeeds, then the stored payload names\nthe exact output produced by conviction, its identifier and native position.\nThe mint reads the pending datum and the folder sees the original request.",
+      "story": {
+        "given": "{p env} {i : Interpretation} {edges s world next carrier}\n    (registry : PublicRegistry) (release : PublishedRelease) (commit : TrieCommit)\n    (b : Singular.TerminationBooking) {ref localBooking before booked booker fee flow}\n    (history : HistoryPremises i.hash i.code commit release world registry (i.keyOf b.request.key))\n    (path : CarrierHistory p env i (activeAsset i.hash i.code registry.identity (i.keyOf b.request.key))\n      b.request.key edges s world carrier)\n    (tx : Transaction world next) (aenv : Application.Env) (rp : Registry.Params)\n    (ok : accepted i aenv rp p release tx.observation = true)\n    (read : tx.economicBooking i release rp registry.identity b ref = some localBooking)\n    (placed : Registry.bookTermination rp before b.request.key booker fee localBooking = .ok (flow, booked))",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "∃ entry source target, Registry.pendingAt booked b.request.reference = some entry ∧\n      entry.booking = b ∧ entry.payload.spend.reference = carrier.reference ∧\n      entry.payload.spend.aid = b.request.key ∧\n      checkpointDatum i carrier = some ⟨entry.payload.spend.aid, .terminationPending entry.payload.spend.position⟩ ∧\n      (source, target, carrier) ∈ edges ∧\n      ConvictionEdge p env entry.payload.spend.aid entry.payload.spend.position source target"
+      },
+      "storySha256": "8b2cd8bc4b63c2d363f7154e5c1f36d72fe0adcbb869a890869c969fefc534a8"
     },
     {
       "declaration": "CardanoKeri.Application.filter_one_eq",
@@ -1610,7 +1638,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.registration_installs_booked_facts",
       "path": "lean/CardanoKeri/Checkpoint.lean",
-      "line": 569,
+      "line": 564,
       "statement": "theorem registration_installs_booked_facts {p : Params} {env : SystemEnv} {s s' : Sys}\n    (event : RegistrationEvent p env s s') :\n    ∃ aid origin rp re cfg, ∃ (receipt : CardanoKeri.Registry.FoldReceipt rp re cfg)\n      (booking : Singular.RegistrationBooking) (live : Live),\n      DeliveredOrigin receipt booking aid origin ∧ s'.origins aid = some origin ∧\n      s'.states aid = .present live ∧ live.bornAt = booking.request.submittedAt ∧\n      live.refundTo = booking.request.refundAddress ∧ rp.D = p.D + p.B ∧\n      booking.request.carrierAda = rp.Mc + rp.D + live.pool",
       "statementSha256": "605b8938ea3710238f18046583ebd5080eeff2ff2a095c5b12e50988e7fbbdc5",
       "sourceStory": "Given a system registration, when its delivered holding is installed, then\nthe same booking and receipt identify the stored origin and the new live state.\nIts birth time and refund address are the booked ones. Its pool accounts for\nall carrier value above minimum ADA and the two checkpoint bonds.",
@@ -1624,7 +1652,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Sys.retireRevealed_frame",
       "path": "lean/CardanoKeri/Checkpoint.lean",
-      "line": 609,
+      "line": 604,
       "statement": "theorem Sys.retireRevealed_frame (s : Sys) (a : Action) :\n    (s.retireRevealed a).leaves = s.leaves ∧ (s.retireRevealed a).states = s.states ∧\n      (s.retireRevealed a).origins = s.origins ∧ (s.retireRevealed a).pending = s.pending",
       "statementSha256": "24144a9a077cd3d5c27bc015f35d0415ba02344068e2424a09305622cf31231a",
       "sourceStory": "Burning a revealed marker changes the commitments only: leaves, states,\norigins and pending associations are those of the system before.",
@@ -1638,7 +1666,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.local_event_uses_own_authorization",
       "path": "lean/CardanoKeri/Checkpoint.lean",
-      "line": 668,
+      "line": 663,
       "statement": "theorem local_event_uses_own_authorization {p : Params} {env : SystemEnv} {s s' : Sys}\n    (event : LocalEvent p env s s') :\n    ∃ aid a now flow st, Step p (env aid) a now (s.states aid) flow st ∧\n      a.authorizedFor env aid (s.states aid) ∧ s.revealOpen aid a ∧\n      s' = (s.set aid st (s.localWriter (env aid) aid a).join).retireRevealed a",
       "statementSha256": "1724dbe0ede3335ba45dfc5160e4ce1ba441f808e322e2a7f76a9b6c9582d38b",
       "sourceStory": "Given a local system event, when it updates a checkpoint, then the very\naction and identifier producing the successor have that identifier's required\nrotation, deposit or poison authorization for its prior live state.",
@@ -8485,15 +8513,15 @@
       "declaration": "CardanoKeri.Registry.booking_keeps_active_supply",
       "path": "lean/CardanoKeri/RegistryCustody.lean",
       "line": 281,
-      "statement": "theorem booking_keeps_active_supply (p : Params) (env : Env) (cfg : Singular.Config)\n    {s s' : Sys} {aid booker fee : Nat} {b : Singular.TerminationBooking} {f : Flow}\n    (hr : Reach p env cfg s)\n    (hs : bookTermination p s aid booker fee b = .ok (f, s')) :\n    Singular.trieGet s'.trie aid = .known .active ∧\n    Singular.worldSingularSupply s'.toWorld aid = 1 ∧\n    carrierAt s' aid = none ∧\n    ∃ e, pendingAt s' b.request.reference = some e ∧ e.booking = b ∧\n      e.payload.aid = aid ∧ bindingAt s' aid = some e.payload.token",
-      "statementSha256": "34b44b92cfed216564ca4a01a28d0ab492301ac0159892742f50adf16d9716b7",
+      "statement": "theorem booking_keeps_active_supply (p : Params) (env : Env) (cfg : Singular.Config)\n    {s s' : Sys} {aid booker fee : Nat} {b : CardanoKeri.Registry.TerminationBooking} {f : Flow}\n    (hr : Reach p env cfg s)\n    (hs : bookTermination p s aid booker fee b = .ok (f, s')) :\n    Singular.trieGet s'.trie aid = .known .active ∧\n    Singular.worldSingularSupply s'.toWorld aid = 1 ∧\n    carrierAt s' aid = none ∧\n    ∃ e, pendingAt s' b.request.reference = some e ∧ e.booking = b ∧\n      e.payload.aid = aid ∧ bindingAt s' aid = some e.payload.token",
+      "statementSha256": "0c6046381fa2c38305199990bdab34873e6cd68fa0faa2a0e19c66f8d334aa64",
       "sourceStory": "Given the exact inputs and actual success, plus actual Reach history where\nstated; when booking the convicted carrier or inspecting a reachable pending\nrecord; then the iff includes every application field constraint, actual\nimported admission and complete successor, premium, request and external fee\nobservation. Each reachable booked payload has a real prior reachable KERI\nconviction at its retained key, using the existing opaque premise. This is\nnot a proof that the opaque predicate equals concrete Checkpoint duplicity.\nAll earlier pending records survive wholly; actual supply remains one and\ncustody moves exactly once. Required refusals: live without prior\nconviction, invalid coarse proof, wrong holding/key/token, duplicate reference\nin either store, second booking of the same carrier, and a tail-drop mutant\nthat otherwise still admits both bookings. Full concrete Checkpoint evidence\ncontrols are exercised separately from the whole-record preservation claim.",
       "story": {
-        "given": "(p : Params) (env : Env) (cfg : Singular.Config)\n    {s s' : Sys} {aid booker fee : Nat} {b : Singular.TerminationBooking} {f : Flow}\n    (hr : Reach p env cfg s)\n    (hs : bookTermination p s aid booker fee b = .ok (f, s'))",
+        "given": "(p : Params) (env : Env) (cfg : Singular.Config)\n    {s s' : Sys} {aid booker fee : Nat} {b : CardanoKeri.Registry.TerminationBooking} {f : Flow}\n    (hr : Reach p env cfg s)\n    (hs : bookTermination p s aid booker fee b = .ok (f, s'))",
         "when": "Observe the Registry transition, projection or custody relation named by this theorem.",
         "then": "Singular.trieGet s'.trie aid = .known .active ∧\n    Singular.worldSingularSupply s'.toWorld aid = 1 ∧\n    carrierAt s' aid = none ∧\n    ∃ e, pendingAt s' b.request.reference = some e ∧ e.booking = b ∧\n      e.payload.aid = aid ∧ bindingAt s' aid = some e.payload.token"
       },
-      "storySha256": "b9a1288b9d2d60d317df464c26b976a8f2fc7742b87b7bdd71670440224fb631"
+      "storySha256": "b03e7d8c549719930ee5f2ce20cd97fac9ba9ea9f5fd520f0135313428a76a3f"
     },
     {
       "declaration": "CardanoKeri.Registry.generic_registration_keys_unique",
@@ -9031,15 +9059,15 @@
       "declaration": "CardanoKeri.Registry.live_cannot_book",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
       "line": 407,
-      "statement": "theorem live_cannot_book (p : Params) (s : Sys) (aid booker fee : Nat)\n    (b : Singular.TerminationBooking) (c : Carrier)\n    (hc : carrierAt s aid = some c) (hp : c.st = .live) :\n    bookTermination p s aid booker fee b = .error \"keri-conviction-required\"",
-      "statementSha256": "bd857bf1e42cb0c9cb699d87a1b417e54f6f9a0ce9c34a65e6b472d7b909f225",
+      "statement": "theorem live_cannot_book (p : Params) (s : Sys) (aid booker fee : Nat)\n    (b : CardanoKeri.Registry.TerminationBooking) (c : Carrier)\n    (hc : carrierAt s aid = some c) (hp : c.st = .live) :\n    bookTermination p s aid booker fee b = .error \"keri-conviction-required\"",
+      "statementSha256": "f3733186e253fc5c936034d93478c5370628850f03271f08b9fead20c75b49f4",
       "sourceStory": "Given any registry state whose carrier for the identifier is live, that is\nalive and not convicted, and any booker, fee and termination booking.\nWhen anyone books the termination of that identifier.\nThen the booking is refused with `keri-conviction-required`: only a convicted\ncheckpoint, in pending termination, can be booked for retirement. There is no\nowner exit that books a live checkpoint. Reachable witness: the registered\nlive carrier of `RegistryLifecycleExamples`.",
       "story": {
-        "given": "(p : Params) (s : Sys) (aid booker fee : Nat)\n    (b : Singular.TerminationBooking) (c : Carrier)\n    (hc : carrierAt s aid = some c) (hp : c.st = .live)",
+        "given": "(p : Params) (s : Sys) (aid booker fee : Nat)\n    (b : CardanoKeri.Registry.TerminationBooking) (c : Carrier)\n    (hc : carrierAt s aid = some c) (hp : c.st = .live)",
         "when": "Observe the Registry transition, projection or custody relation named by this theorem.",
         "then": "bookTermination p s aid booker fee b = .error \"keri-conviction-required\""
       },
-      "storySha256": "b062d8db131f3209dcba82ad4170935ad924cdada0e13423a626d50903b417c0"
+      "storySha256": "7c17c9d726fda0ed4676a5bbeee4185e6767a1ec84c4373e945b30be99ea0cd5"
     },
     {
       "declaration": "CardanoKeri.Registry.pending_lookup_mem",
@@ -9185,20 +9213,34 @@
       "declaration": "CardanoKeri.Registry.bookTermination_iff",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
       "line": 645,
-      "statement": "theorem bookTermination_iff (p : Params) (s s' : Sys) (aid booker fee : Nat)\n    (b : Singular.TerminationBooking) (f : Flow) :\n    bookTermination p s aid booker fee b = .ok (f, s') ↔\n      ∃ c world, carrierAt s aid = some c ∧ c.st = .terminationPending ∧\n        b.request.key = aid ∧ b.request.destination = c.original.output ∧\n        b.custodyInputs = [c.original] ∧ c.minAda = p.Mc ∧\n        b.request.carrierAda = p.Mr ∧ b.request.declaredTip = p.tip ∧\n        b.request.contents.lovelace = p.Mr + p.tip ∧\n        Singular.bookTermination s.toWorld b = .ok world ∧\n        s' = { s with\n          carriers := s.carriers.filter (fun old => old.aid != aid),\n          terminations := { booking := b, payload := {\n            aid := aid, token := c.token, keyState := c.k, original := c.original,\n            booker := booker, bookingFee := fee } } :: s.terminations } ∧\n        s'.toWorld = world ∧\n        f = {\n          premium := some (booker, p.Mc - p.Mr - p.tip),\n          bookingFee := fee, intoRequest := p.Mr + p.tip }",
-      "statementSha256": "8d1833f535254f04d9828fdba46bba36957ebc9d6434ee9fff88d21f69117bf2",
+      "statement": "theorem bookTermination_iff (p : Params) (s s' : Sys) (aid booker fee : Nat)\n    (b : CardanoKeri.Registry.TerminationBooking) (f : Flow) :\n    bookTermination p s aid booker fee b = .ok (f, s') ↔\n      ∃ c world, carrierAt s aid = some c ∧ c.st = .terminationPending ∧\n        b.request.key = aid ∧ b.request.destination = c.original.output ∧\n        b.custodyInputs = [c.original] ∧ c.minAda = p.Mc ∧\n        b.request.carrierAda = p.Mr ∧ b.request.declaredTip = p.tip ∧\n        b.request.contents.lovelace = p.Mr + p.tip ∧\n        Singular.bookTermination s.toWorld b = .ok world ∧\n        s' = { s with\n          carriers := s.carriers.filter (fun old => old.aid != aid),\n          terminations := { booking := b, payload := {\n            spend := b.spend, aid := aid, token := c.token, keyState := c.k, original := c.original,\n            booker := booker, bookingFee := fee } } :: s.terminations } ∧\n        s'.toWorld = world ∧\n        f = {\n          premium := some (booker, p.Mc - p.Mr - p.tip),\n          bookingFee := fee, intoRequest := p.Mr + p.tip }",
+      "statementSha256": "c13dbdc45fa94ea4db618fdfc185f752531ff38826c19e255be29dae0c6ee97e",
       "sourceStory": "Given the exact inputs and actual success, plus actual Reach history where\nstated; when booking the convicted carrier or inspecting a reachable pending\nrecord; then the iff includes every application field constraint, actual\nimported admission and complete successor, premium, request and external fee\nobservation. Each reachable booked payload has a real prior reachable KERI\nconviction at its retained key, using the existing opaque premise. This is\nnot a proof that the opaque predicate equals concrete Checkpoint duplicity.\nAll earlier pending records survive wholly; actual supply remains one and\ncustody moves exactly once. Required refusals: live without prior\nconviction, invalid coarse proof, wrong holding/key/token, duplicate reference\nin either store, second booking of the same carrier, and a tail-drop mutant\nthat otherwise still admits both bookings. Full concrete Checkpoint evidence\ncontrols are exercised separately from the whole-record preservation claim.",
       "story": {
-        "given": "(p : Params) (s s' : Sys) (aid booker fee : Nat)\n    (b : Singular.TerminationBooking) (f : Flow)",
+        "given": "(p : Params) (s s' : Sys) (aid booker fee : Nat)\n    (b : CardanoKeri.Registry.TerminationBooking) (f : Flow)",
         "when": "Observe the Registry transition, projection or custody relation named by this theorem.",
-        "then": "bookTermination p s aid booker fee b = .ok (f, s') ↔\n      ∃ c world, carrierAt s aid = some c ∧ c.st = .terminationPending ∧\n        b.request.key = aid ∧ b.request.destination = c.original.output ∧\n        b.custodyInputs = [c.original] ∧ c.minAda = p.Mc ∧\n        b.request.carrierAda = p.Mr ∧ b.request.declaredTip = p.tip ∧\n        b.request.contents.lovelace = p.Mr + p.tip ∧\n        Singular.bookTermination s.toWorld b = .ok world ∧\n        s' = { s with\n          carriers := s.carriers.filter (fun old => old.aid != aid),\n          terminations := { booking := b, payload := {\n            aid := aid, token := c.token, keyState := c.k, original := c.original,\n            booker := booker, bookingFee := fee } } :: s.terminations } ∧\n        s'.toWorld = world ∧\n        f = {\n          premium := some (booker, p.Mc - p.Mr - p.tip),\n          bookingFee := fee, intoRequest := p.Mr + p.tip }"
+        "then": "bookTermination p s aid booker fee b = .ok (f, s') ↔\n      ∃ c world, carrierAt s aid = some c ∧ c.st = .terminationPending ∧\n        b.request.key = aid ∧ b.request.destination = c.original.output ∧\n        b.custodyInputs = [c.original] ∧ c.minAda = p.Mc ∧\n        b.request.carrierAda = p.Mr ∧ b.request.declaredTip = p.tip ∧\n        b.request.contents.lovelace = p.Mr + p.tip ∧\n        Singular.bookTermination s.toWorld b = .ok world ∧\n        s' = { s with\n          carriers := s.carriers.filter (fun old => old.aid != aid),\n          terminations := { booking := b, payload := {\n            spend := b.spend, aid := aid, token := c.token, keyState := c.k, original := c.original,\n            booker := booker, bookingFee := fee } } :: s.terminations } ∧\n        s'.toWorld = world ∧\n        f = {\n          premium := some (booker, p.Mc - p.Mr - p.tip),\n          bookingFee := fee, intoRequest := p.Mr + p.tip }"
       },
-      "storySha256": "5ed5bac5ca475f5f7a3c3d339af39484e6661e15132c56d1a44f8d7706ea59ef"
+      "storySha256": "11404723959b8d66db27cbb517df6e632edb4f83966ccd9ef601729ec1bf8a08"
+    },
+    {
+      "declaration": "CardanoKeri.Registry.booking_stores_spend",
+      "path": "lean/CardanoKeri/RegistryGoals.lean",
+      "line": 699,
+      "statement": "theorem booking_stores_spend {p s after aid booker fee b f}\n    (booked : bookTermination p s aid booker fee b = .ok (f, after)) :\n    ∃ entry, pendingAt after b.request.reference = some entry ∧\n      entry.booking = b.toTerminationBooking ∧ entry.payload.spend = b.spend ∧\n      entry.payload.spend.aid = aid",
+      "statementSha256": "60aa4b4aa08389b4b0ff4d6889510f344a92a80c78a89913e12e54263f11a739",
+      "sourceStory": "Given an admitted termination booking, when the booker places its request,\nthen looking up that request returns the public booking and the exact local\ninput reference, identifier and native position admitted with it.",
+      "story": {
+        "given": "{p s after aid booker fee b f}\n    (booked : bookTermination p s aid booker fee b = .ok (f, after))",
+        "when": "Observe the Registry transition, projection or custody relation named by this theorem.",
+        "then": "∃ entry, pendingAt after b.request.reference = some entry ∧\n      entry.booking = b.toTerminationBooking ∧ entry.payload.spend = b.spend ∧\n      entry.payload.spend.aid = aid"
+      },
+      "storySha256": "8e94abd57cb4020d8b0298047088721ad079824ee03cbafd9cd9177916ca268c"
     },
     {
       "declaration": "CardanoKeri.Registry.completion_not_unselected",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 703,
+      "line": 716,
       "statement": "theorem completion_not_unselected (p : Params) (env : Env) (cfg : Singular.Config)\n    (r : FoldReceipt p env cfg) (ref : Singular.OutRef) (aid token : Nat)\n    (hu : Singular.inputsContainReference r.transaction.transaction.inputs ref = false) :\n    ¬ Completes r ref aid token",
       "statementSha256": "8816ceeb9f05c8bc971b25d2aea6985ddfd9d8764d84025e65b0e33b138bf523",
       "sourceStory": "Given an actual reachable/executed FoldReceipt and exact Completes relation;\nwhen using it for a Checkpoint focused completion; then actual imported\nacceptance, exact removal/retirement/supply/alias effects hold. If its tx did\nnot consume the reference, that receipt cannot complete it. Wrong AID or alias\nmust fail the full lookup binding; unrelated receipt and wrong pending-key\ncontrols are distinct. Full transactions remain authoritative over all their\nmembers; this receipt cannot stand for an unexecuted proposed fold.",
@@ -9212,7 +9254,7 @@
     {
       "declaration": "CardanoKeri.Registry.nonfold_frame",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 712,
+      "line": 725,
       "statement": "theorem nonfold_frame (p : Params) (env : Env) {s s' : Sys}\n    {action : Action} {f : Flow} (hs : stepFn p env action s = .ok (f, s'))\n    (hn : ∀ gen plugin u tx, action ≠ .fold gen plugin u tx) :\n    s'.gen = s.gen ∧ s'.config = s.config ∧ s'.trie = s.trie",
       "statementSha256": "67f7f75eddcbe721b8ad36cfeb0053b6af0c1b269d7b02b18801e86131556897",
       "sourceStory": "A successful action other than fold preserves the whole registry config,\ntrie and generation. The premise classifies the action, not its result.",
@@ -9226,7 +9268,7 @@
     {
       "declaration": "CardanoKeri.Registry.config_and_generation_frame",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 742,
+      "line": 755,
       "statement": "theorem config_and_generation_frame (p : Params) (env : Env) {s s' : Sys}\n    {action : Action} {f : Flow} (hs : stepFn p env action s = .ok (f, s')) :\n    s'.config = { s.config with root := s'.config.root } ∧\n    (s'.gen = s.gen ∨ s'.gen = s.gen + 1) ∧\n    ((∀ gen plugin u tx, action ≠ .fold gen plugin u tx) →\n      s'.gen = s.gen ∧ s'.config = s.config ∧ s'.trie = s.trie)",
       "statementSha256": "ae9b34c9105a3f26bda09afaa74160b1b07ecde7ad6b361e5c4bc221539a565e",
       "sourceStory": "Given arbitrary inputs for the inversions/refusals/frame and leaf laws, with\nonly the actual success or exact guard premises stated; when invoking the\nactual adapter; then both directions of its complete fold definition hold,\nstale generation/wrong plugin/empty actual members refuse, generations cannot\nbe reused, every config field other than root is fixed, nonfolds preserve\nwhole registry/gen, registered keys stay registered and terminal keys stay\nterminal. The last two preserve the original arbitrary-Sys domain rather than\nadding Reach merely for proof convenience. Stronger no-carrier/no-pending\ncustody consequences appropriately require reachable-state consistency.\n`RegistryJourneyChecks` executes accepted generations and stale-generation/plugin controls.",
@@ -9240,7 +9282,7 @@
     {
       "declaration": "CardanoKeri.Registry.leaf_change_requires_fold",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 767,
+      "line": 780,
       "statement": "theorem leaf_change_requires_fold (p : Params) (env : Env) {s s' : Sys}\n    {action : Action} {f : Flow} (hs : stepFn p env action s = .ok (f, s'))\n    (aid : Nat) (changed : Singular.trieGet s'.trie aid ≠ Singular.trieGet s.trie aid) :\n    ∃ gen plugin u tx, action = .fold gen plugin u tx",
       "statementSha256": "5050d3099ed3ff68c8d0c4a1df828d7647c336cb3ee87347ff6684d20942ea80",
       "sourceStory": "Given an actual transition and changed leaf, or a reachable already-retired\nkey, or the exact lookup/state premises of the refusals; when taking/attempting\nthe action; then only an actual fold can change a leaf, retirement cannot be\nre-registered, and unconvicted live booking is not admitted. An absent carrier after booking is separately refused\nby carrier-missing. No far-slot convention protects termination; its actual\nstate and the generic request kind do. Positive registered/convicted/booked/folded\ntraces must accompany these refusals.",
@@ -9254,7 +9296,7 @@
     {
       "declaration": "CardanoKeri.Registry.fold_empty_refused",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 788,
+      "line": 801,
       "statement": "theorem fold_empty_refused (p : Params) (s : Sys) (gen plugin : Nat)\n    (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction)\n    (he : Singular.foldMembers s.toWorld tx = []) :\n    (fold p s gen plugin u tx).toOption = none",
       "statementSha256": "b26afc43182a07a277ab2a9fa8393d1d07a5af211aff2eee84cb4d8388778bf4",
       "sourceStory": "Given arbitrary inputs for the inversions/refusals/frame and leaf laws, with\nonly the actual success or exact guard premises stated; when invoking the\nactual adapter; then both directions of its complete fold definition hold,\nstale generation/wrong plugin/empty actual members refuse, generations cannot\nbe reused, every config field other than root is fixed, nonfolds preserve\nwhole registry/gen, registered keys stay registered and terminal keys stay\nterminal. The last two preserve the original arbitrary-Sys domain rather than\nadding Reach merely for proof convenience. Stronger no-carrier/no-pending\ncustody consequences appropriately require reachable-state consistency.\n`RegistryJourneyChecks` executes accepted generations and stale-generation/plugin controls.",
@@ -9268,7 +9310,7 @@
     {
       "declaration": "CardanoKeri.Registry.return_refund_floor",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 806,
+      "line": 819,
       "statement": "theorem return_refund_floor (s s' : Sys) (u : Singular.EconomicUtxo)\n    (tx : Singular.Rejection) (f : Flow)\n    (hs : returnRequests s u tx = .ok (f, s')) :\n    ∀ address, Singular.refundOwed\n      (Singular.rejectedRequests s.toWorld tx.members) false address ≤\n      Singular.refundPaid tx.transaction address",
       "statementSha256": "cf79ae631ca417caf4b51b4b1c6cbc21eabb3e60746acc0fdff9b4a3b53d666d",
       "sourceStory": "Given an actual successful return; when reading the transaction's outputs\nat their actual addresses; then every refund address receives at least the sum,\nover the returned registrations it was declared for, of their contents less\ntheir declared tips. Outputs are credited by address, never by a label, so the\nrefund cannot be redirected or reduced.",
@@ -9282,7 +9324,7 @@
     {
       "declaration": "CardanoKeri.Registry.carrier_edit_world",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 817,
+      "line": 830,
       "statement": "theorem carrier_edit_world (s : Sys) (edit : Carrier → Carrier)\n    (same : ∀ c, (edit c).original = c.original) :\n    ({ s with carriers := s.carriers.map edit } : Sys).toWorld = s.toWorld",
       "statementSha256": "916b9d76806e2c7ca4ee3a8b9c3100f74e010f198d2ae4b1d749041d5916528a",
       "sourceStory": "Given a carrier edit preserving each original holding, its generic World\nprojection is exactly unchanged; application key and state stay local.",
@@ -9296,7 +9338,7 @@
     {
       "declaration": "CardanoKeri.Registry.local_actions_world",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 829,
+      "line": 842,
       "statement": "theorem local_actions_world (p : Params) (env : Env) {s s' : Sys}\n    {action : Action} {f : Flow}\n    (localAction : ∃ aid, action = .convictCkpt aid)\n    (hs : stepFn p env action s = .ok (f, s')) : s'.toWorld = s.toWorld",
       "statementSha256": "6433027152e8b4e62aece02b05e02a7919614e83addc8df1fb199f2f37c05247",
       "sourceStory": "Given any actual local action success, its generic World remains the\nsame. No generic token movement is attributed to these internal edits.",
@@ -9310,7 +9352,7 @@
     {
       "declaration": "CardanoKeri.Registry.step_worldReachable",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 841,
+      "line": 854,
       "statement": "theorem step_worldReachable (p : Params) (env : Env) {s s' : Sys}\n    (hw : Singular.WorldReachable s.toWorld) {action : Action} {f : Flow}\n    (hs : stepFn p env action s = .ok (f, s')) : Singular.WorldReachable s'.toWorld",
       "statementSha256": "d01e371a1e018ddefce54e3420ea833a0aa199b7842ce3fe46b9d3e65ef54a7c",
       "sourceStory": "Each actual application transition transports generic reachability;\nlocal transitions use equality of the complete projection.",
@@ -9324,7 +9366,7 @@
     {
       "declaration": "CardanoKeri.Registry.reachable_world",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 859,
+      "line": 872,
       "statement": "theorem reachable_world (p : Params) (env : Env) (cfg : Singular.Config)\n    {s : Sys} (hr : Reach p env cfg s) : Singular.WorldReachable s.toWorld",
       "statementSha256": "b88de1e9bdf236ee8c4d98d663f417a9026c3f6ce041ad3ea714d93442fb7413",
       "sourceStory": "The actual initial/step history always projects to imported reachability.\nThis claim does not stand in for the additional application invariants.",
@@ -9338,7 +9380,7 @@
     {
       "declaration": "CardanoKeri.Registry.reachable_config",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 867,
+      "line": 880,
       "statement": "theorem reachable_config (p : Params) (env : Env) (cfg : Singular.Config)\n    {s : Sys} (hr : Reach p env cfg s) :\n    s.config = { cfg with root := s.config.root }",
       "statementSha256": "1637d7d0d31db995ecf5f209c8c7524d2e05912e79699cd7a8974ad5690dc201",
       "sourceStory": "Every actual history from this configuration preserves all its fields\nexcept the root. The initial configuration remains the receipt's index.",
@@ -9352,7 +9394,7 @@
     {
       "declaration": "CardanoKeri.Registry.current_sys_fold_accounting",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 885,
+      "line": 898,
       "statement": "theorem current_sys_fold_accounting (p : Params) (env : Env) (cfg : Singular.Config)\n    {s s' : Sys} (hr : Reach p env cfg s) {gen plugin : Nat}\n    {u : Singular.EconomicUtxo} {tx : Singular.EconomicTransaction} {f : Flow}\n    (hs : fold p s gen plugin u tx = .ok (f, s')) :\n    Singular.balanced u.ledger tx.transaction = true ∧\n    Singular.foldStateLovelace (Singular.economicSpent u tx) =\n      Singular.foldStateLovelace tx.outputs ∧\n    tx.transaction.donation =\n      (Singular.foldObligations (Singular.foldMembers s.toWorld tx)).donation ∧\n    Singular.foldCarrierLovelace tx.outputs =\n      (Singular.foldObligations (Singular.foldMembers s.toWorld tx)).carriers ∧\n    Singular.foldOrdinaryLovelace tx.outputs + tx.transaction.fee =\n      Singular.foldOrdinaryLovelace (Singular.economicSpent u tx) +\n        (Singular.foldObligations (Singular.foldMembers s.toWorld tx)).tips ∧\n    tx.transaction.fee ≤ Singular.foldOrdinaryLovelace (Singular.economicSpent u tx) ∧\n    s'.treasury = s.treasury + tx.transaction.donation ∧\n    Singular.requestTagsBurned u tx = true",
       "statementSha256": "b8b9ffff27543f1e6b5bbf881400b149b55188cd6935c2cbdd494fa618589878",
       "sourceStory": "Given the actual reachable canonical Sys and successful adapter execution;\nwhen observing any accepted fold, including mixed members; then all eight\nactual economic clauses hold with that Sys's own World, actual UTxO and tx.\nThis is the instantiation of `Samaritan.imported_fold_accounting`, not an unconstrained imported\nWorld theorem. The conjunction must not be shortened to just donation or\nmint. Registration carrier and addressed optional self-fold observations\nremain their separately named clauses and premises.",
@@ -9366,7 +9408,7 @@
     {
       "declaration": "CardanoKeri.Registry.registration_posted_value",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 911,
+      "line": 924,
       "statement": "theorem registration_posted_value (p : Params) {env : Env} {s s' : Sys}\n    {b : Singular.RegistrationBooking} {f : Flow}\n    (hs : bookRegistration p env s b = .ok (f, s')) :\n    p.Mc + p.D ≤ b.request.carrierAda ∧ b.request.declaredTip = p.tip ∧\n    b.request.contents.lovelace = b.request.registrationCost + p.tip + b.request.carrierAda ∧\n    f = { deposited := b.request.contents.lovelace }",
       "statementSha256": "93501467166f9d711a299e2612c4d3265f2263423f2226028e884190632bac70",
       "sourceStory": "Given actual imported registration booking success, or an actual selected\nregistration in a successful adapter fold; when observing the request and\nreal economic output; then the entire declared carrier budget and exact\nunique tagged destination output follow, with unchanged opaque datum and no\nhidden tags/assets. This proves neither a Cardano minimum nor the full changing\nserialized Checkpoint datum. `Examples.registration_folded` supplies the connected registration witness. `RegistryBoundaryDriver` executes complete delivery controls.",
@@ -9380,7 +9422,7 @@
     {
       "declaration": "CardanoKeri.Registry.registration_delivery",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 945,
+      "line": 958,
       "statement": "theorem registration_delivery (p : Params) {s s' : Sys}\n    {gen plugin : Nat} {u : Singular.EconomicUtxo}\n    {tx : Singular.EconomicTransaction} {f : Flow}\n    (hs : fold p s gen plugin u tx = .ok (f, s'))\n    (b : Singular.RegistrationBooking)\n    (selected : Singular.FoldMember.registration b ∈ Singular.foldMembers s.toWorld tx) :\n    ∃ output : Singular.EconomicOutput,\n      tx.outputs.filter (fun o => o.singularTags.contains (s.config.singularTag b.request.key)) = [output] ∧\n      output.output.address = some b.request.destination ∧\n      output.output.datumValue = b.request.datum ∧\n      output.output.datum = Singular.datumFormOf b.request.datum ∧\n      output.output.lovelace = b.request.carrierAda ∧\n      output.singularTags = [s.config.singularTag b.request.key] ∧\n      output.output.stateTokens = 0 ∧ output.request = none ∧\n      output.contents.trieReadyTags = [] ∧ output.contents.applicationTags = [] ∧\n      Singular.foldBareValue output = true",
       "statementSha256": "ec25e7929bbb34c4b9f17866652680f90c641778967ca0b698aa02d6761a3dca",
       "sourceStory": "Given actual imported registration booking success, or an actual selected\nregistration in a successful adapter fold; when observing the request and\nreal economic output; then the entire declared carrier budget and exact\nunique tagged destination output follow, with unchanged opaque datum and no\nhidden tags/assets. This proves neither a Cardano minimum nor the full changing\nserialized Checkpoint datum. `Examples.registration_folded` supplies the connected registration witness. `RegistryBoundaryDriver` executes complete delivery controls.",
@@ -9394,21 +9436,21 @@
     {
       "declaration": "CardanoKeri.Registry.booking_keeps_prior_pending",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 981,
-      "statement": "theorem booking_keeps_prior_pending (p : Params) {s s' : Sys}\n    {aid booker fee : Nat} {b : Singular.TerminationBooking} {f : Flow}\n    (hs : bookTermination p s aid booker fee b = .ok (f, s'))\n    {ref : Singular.OutRef} {e : TerminationEntry}\n    (hp : pendingAt s ref = some e) :\n    ref ≠ b.request.reference ∧ pendingAt s' ref = some e ∧\n    s'.config = s.config ∧ s'.trie = s.trie ∧ s'.gen = s.gen ∧\n    s'.registrations = s.registrations ∧ s'.treasury = s.treasury ∧\n    s'.bindings = s.bindings ∧ s'.nextToken = s.nextToken",
-      "statementSha256": "7d85cebfec622247664479501ec5edd8b69df9341f8e791dbec816dd69688146",
+      "line": 994,
+      "statement": "theorem booking_keeps_prior_pending (p : Params) {s s' : Sys}\n    {aid booker fee : Nat} {b : CardanoKeri.Registry.TerminationBooking} {f : Flow}\n    (hs : bookTermination p s aid booker fee b = .ok (f, s'))\n    {ref : Singular.OutRef} {e : TerminationEntry}\n    (hp : pendingAt s ref = some e) :\n    ref ≠ b.request.reference ∧ pendingAt s' ref = some e ∧\n    s'.config = s.config ∧ s'.trie = s.trie ∧ s'.gen = s.gen ∧\n    s'.registrations = s.registrations ∧ s'.treasury = s.treasury ∧\n    s'.bindings = s.bindings ∧ s'.nextToken = s.nextToken",
+      "statementSha256": "a2d3cf23104b4e2142d33ebe8bd96e21fbef3667b83767854a55ba9ce61d51f5",
       "sourceStory": "Given the exact inputs and actual success, plus actual Reach history where\nstated; when booking the convicted carrier or inspecting a reachable pending\nrecord; then the iff includes every application field constraint, actual\nimported admission and complete successor, premium, request and external fee\nobservation. Each reachable booked payload has a real prior reachable KERI\nconviction at its retained key, using the existing opaque premise. This is\nnot a proof that the opaque predicate equals concrete Checkpoint duplicity.\nAll earlier pending records survive wholly; actual supply remains one and\ncustody moves exactly once. Required refusals: live without prior\nconviction, invalid coarse proof, wrong holding/key/token, duplicate reference\nin either store, second booking of the same carrier, and a tail-drop mutant\nthat otherwise still admits both bookings. Full concrete Checkpoint evidence\ncontrols are exercised separately from the whole-record preservation claim.",
       "story": {
-        "given": "(p : Params) {s s' : Sys}\n    {aid booker fee : Nat} {b : Singular.TerminationBooking} {f : Flow}\n    (hs : bookTermination p s aid booker fee b = .ok (f, s'))\n    {ref : Singular.OutRef} {e : TerminationEntry}\n    (hp : pendingAt s ref = some e)",
+        "given": "(p : Params) {s s' : Sys}\n    {aid booker fee : Nat} {b : CardanoKeri.Registry.TerminationBooking} {f : Flow}\n    (hs : bookTermination p s aid booker fee b = .ok (f, s'))\n    {ref : Singular.OutRef} {e : TerminationEntry}\n    (hp : pendingAt s ref = some e)",
         "when": "Observe the Registry transition, projection or custody relation named by this theorem.",
         "then": "ref ≠ b.request.reference ∧ pendingAt s' ref = some e ∧\n    s'.config = s.config ∧ s'.trie = s.trie ∧ s'.gen = s.gen ∧\n    s'.registrations = s.registrations ∧ s'.treasury = s.treasury ∧\n    s'.bindings = s.bindings ∧ s'.nextToken = s.nextToken"
       },
-      "storySha256": "890ba5050a8b1ab9c006d93fc40221ea79778d0cc7a046b7c153782672d90232"
+      "storySha256": "35db98c7b4b15bac0b7106dbcd2561e917035ae54b4bc04d5c9cfd6e5a70ad1e"
     },
     {
       "declaration": "CardanoKeri.Registry.generic_step_registered",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 1009,
+      "line": 1022,
       "statement": "theorem generic_step_registered (s : Singular.RegistryState) (a : Singular.Action)\n    (t : Singular.Result) (aid : Nat)\n    (hk : Singular.trieGet s.trie aid = .known .active ∨\n      Singular.trieGet s.trie aid = .known .terminal)\n    (hs : Singular.step s a = .ok t) :\n    Singular.trieGet t.state.trie aid = .known .active ∨\n      Singular.trieGet t.state.trie aid = .known .terminal",
       "statementSha256": "e6f0cd08443c6a260bf06d2be559d236f5e0dfb1d6937d8141587821f214f1d4",
       "sourceStory": "An admitted imported step cannot erase an already registered key. This\nhelper retains the arbitrary-state domain of the adapter's leaf contract.",
@@ -9422,7 +9464,7 @@
     {
       "declaration": "CardanoKeri.Registry.generic_foldActions_registered",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 1030,
+      "line": 1043,
       "statement": "theorem generic_foldActions_registered (s : Singular.RegistryState)\n    (batch : List Singular.Action) (t : Singular.Result) (aid : Nat)\n    (hk : Singular.trieGet s.trie aid = .known .active ∨\n      Singular.trieGet s.trie aid = .known .terminal)\n    (hs : Singular.foldActions s batch = .ok t) :\n    Singular.trieGet t.state.trie aid = .known .active ∨\n      Singular.trieGet t.state.trie aid = .known .terminal",
       "statementSha256": "e70da683e333cc8f8ecd9c838d6c11bcf0fd4014b4e5a5bff8a6e2c84a394cb7",
       "sourceStory": "The imported sequential fold inherits permanent registration one actual\nstep at a time, including batches mixing both supported operations.",
@@ -9436,7 +9478,7 @@
     {
       "declaration": "CardanoKeri.Registry.registered_key_permanent",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 1064,
+      "line": 1077,
       "statement": "theorem registered_key_permanent (p : Params) (env : Env) {s s' : Sys}\n    {action : Action} {f : Flow} (hs : stepFn p env action s = .ok (f, s')) (aid : Nat)\n    (hk : Singular.trieGet s.trie aid = .known .active ∨\n          Singular.trieGet s.trie aid = .known .terminal) :\n    Singular.trieGet s'.trie aid = .known .active ∨\n    Singular.trieGet s'.trie aid = .known .terminal",
       "statementSha256": "263f7ad6af0bc9e21c9f188d48cb1cb9e9163e6ee11437ba3743d49b9e1aa93d",
       "sourceStory": "Given arbitrary inputs for the inversions/refusals/frame and leaf laws, with\nonly the actual success or exact guard premises stated; when invoking the\nactual adapter; then both directions of its complete fold definition hold,\nstale generation/wrong plugin/empty actual members refuse, generations cannot\nbe reused, every config field other than root is fixed, nonfolds preserve\nwhole registry/gen, registered keys stay registered and terminal keys stay\nterminal. The last two preserve the original arbitrary-Sys domain rather than\nadding Reach merely for proof convenience. Stronger no-carrier/no-pending\ncustody consequences appropriately require reachable-state consistency.\n`RegistryJourneyChecks` executes accepted generations and stale-generation/plugin controls.",
@@ -9450,7 +9492,7 @@
     {
       "declaration": "CardanoKeri.Registry.terminal_leaf_permanent",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 1096,
+      "line": 1109,
       "statement": "theorem terminal_leaf_permanent (p : Params) (env : Env) {s s' : Sys}\n    {action : Action} {f : Flow} (hs : stepFn p env action s = .ok (f, s')) (aid : Nat)\n    (hk : Singular.trieGet s.trie aid = .known .terminal) :\n    Singular.trieGet s'.trie aid = .known .terminal",
       "statementSha256": "d6885892e43f0ea8034f65cc4156732131f8c0fd15e83e9dab5b7fa3b3d96c70",
       "sourceStory": "Given arbitrary inputs for the inversions/refusals/frame and leaf laws, with\nonly the actual success or exact guard premises stated; when invoking the\nactual adapter; then both directions of its complete fold definition hold,\nstale generation/wrong plugin/empty actual members refuse, generations cannot\nbe reused, every config field other than root is fixed, nonfolds preserve\nwhole registry/gen, registered keys stay registered and terminal keys stay\nterminal. The last two preserve the original arbitrary-Sys domain rather than\nadding Reach merely for proof convenience. Stronger no-carrier/no-pending\ncustody consequences appropriately require reachable-state consistency.\n`RegistryJourneyChecks` executes accepted generations and stale-generation/plugin controls.",
@@ -9464,7 +9506,7 @@
     {
       "declaration": "CardanoKeri.Registry.termination_return_refused",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 1120,
+      "line": 1133,
       "statement": "theorem termination_return_refused (p : Params) (env : Env) (cfg : Singular.Config)\n    {s : Sys} (_hr : Reach p env cfg s) (ref : Singular.OutRef) (e : TerminationEntry)\n    (hp : pendingAt s ref = some e) (u : Singular.EconomicUtxo)\n    (tx : Singular.Rejection) (reason : Singular.RejectReason)\n    (member : (ref, reason) ∈ tx.members) :\n    (returnRequests s u tx).toOption = none",
       "statementSha256": "a8cd6ad6efe3ca77ba1eb53a9b2d53477b1a81dd45cc6466fecd8a5bf2dba8c7",
       "sourceStory": "Given a pending termination in a reachable system and any return\ntransaction naming its reference; when the return is attempted; then it is\nrefused. The pending-termination output holds the convicted checkpoint's\ncustody, and only the registry's terminating fold consumes it. The positive\ncompanion is an actual terminating fold of the same pending output.",
@@ -9478,7 +9520,7 @@
     {
       "declaration": "CardanoKeri.Registry.generic_insert_unknown",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 1150,
+      "line": 1163,
       "statement": "theorem generic_insert_unknown (s : Singular.RegistryState) (a : Singular.Action)\n    (t : Singular.Result) (hs : Singular.step s a = .ok t)\n    (edge : a.edge = .insertActive) : Singular.trieGet s.trie a.key = .unknown",
       "statementSha256": "152a806c4db4b879b43d460089492999ce0508936c1417077b0136fb8a4fde23",
       "sourceStory": "An admitted imported insertion can only start at an unknown leaf.",
@@ -9492,7 +9534,7 @@
     {
       "declaration": "CardanoKeri.Registry.generic_fold_registered_insert_impossible",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 1161,
+      "line": 1174,
       "statement": "theorem generic_fold_registered_insert_impossible (s : Singular.RegistryState)\n    (batch : List Singular.Action) (t : Singular.Result) (request : Singular.Action)\n    (member : request ∈ batch) (edge : request.edge = .insertActive)\n    (known : Singular.trieGet s.trie request.key = .known .active ∨\n      Singular.trieGet s.trie request.key = .known .terminal)\n    (hs : Singular.foldActions s batch = .ok t) : False",
       "statementSha256": "94f91121d38df8b1e3d5885cc274ffc69752f4c0ec31c6ecec66c3a2e5a214ee",
       "sourceStory": "Any selected insertion of an already registered key contradicts an\nadmitted imported batch, even if other members run before that insertion.",
@@ -9506,7 +9548,7 @@
     {
       "declaration": "CardanoKeri.Registry.registered_registration_refused",
       "path": "lean/CardanoKeri/RegistryGoals.lean",
-      "line": 1188,
+      "line": 1201,
       "statement": "theorem registered_registration_refused (p : Params) (s : Sys)\n    (gen plugin : Nat) (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction)\n    (b : Singular.RegistrationBooking)\n    (selected : Singular.FoldMember.registration b ∈ Singular.foldMembers s.toWorld tx)\n    (known : Singular.trieGet s.trie b.request.key = .known .active ∨\n      Singular.trieGet s.trie b.request.key = .known .terminal) :\n    (fold p s gen plugin u tx).toOption = none",
       "statementSha256": "24eb1e6e2950501d27ff38ff7f4cb82792f42a6f0f15e42f944909373ae3f0a1",
       "sourceStory": "Given a selected registration for an already active or terminal key; when\na fold attempts it; then the fold is refused. A duplicate key's request cannot be\nfolded, so until its deadline nothing spends it; after it, the return does.",
@@ -9675,20 +9717,20 @@
       "declaration": "CardanoKeri.Registry.wellFormed_bookTermination",
       "path": "lean/CardanoKeri/RegistryInvariant.lean",
       "line": 67,
-      "statement": "theorem wellFormed_bookTermination (p : Params) {s s' : Sys} (hw : WellFormed p s)\n    {aid booker fee : Nat} {b : Singular.TerminationBooking} {f : Flow}\n    (hs : bookTermination p s aid booker fee b = .ok (f, s')) : WellFormed p s'",
-      "statementSha256": "f5c2b8aa456d8dece9eb85aa1b430baf3f29529763d442bc857ae441fbf812ab",
+      "statement": "theorem wellFormed_bookTermination (p : Params) {s s' : Sys} (hw : WellFormed p s)\n    {aid booker fee : Nat} {b : CardanoKeri.Registry.TerminationBooking} {f : Flow}\n    (hs : bookTermination p s aid booker fee b = .ok (f, s')) : WellFormed p s'",
+      "statementSha256": "83fac609d247d5872375eff0e6256639fe506f97187d78c7008a7eb23e27801b",
       "sourceStory": "Actual termination booking moves one convicted carrier into the complete\npending store while preserving all prior records, aliases and active leaves.",
       "story": {
-        "given": "(p : Params) {s s' : Sys} (hw : WellFormed p s)\n    {aid booker fee : Nat} {b : Singular.TerminationBooking} {f : Flow}\n    (hs : bookTermination p s aid booker fee b = .ok (f, s'))",
+        "given": "(p : Params) {s s' : Sys} (hw : WellFormed p s)\n    {aid booker fee : Nat} {b : CardanoKeri.Registry.TerminationBooking} {f : Flow}\n    (hs : bookTermination p s aid booker fee b = .ok (f, s'))",
         "when": "Observe the Registry transition, projection or custody relation named by this theorem.",
         "then": "WellFormed p s'"
       },
-      "storySha256": "24eb007856a5e7a17c365b4dd50ec828439931177debaaaaa6de800770bcc1ff"
+      "storySha256": "f2a43709525d3ee302767f800e251ad993060f54b3a2a192446dad638b9224e7"
     },
     {
       "declaration": "CardanoKeri.Registry.Examples.registration_booked",
       "path": "lean/CardanoKeri/RegistryLifecycleExamples.lean",
-      "line": 107,
+      "line": 108,
       "statement": "theorem registration_booked :\n    bookRegistration p env (Sys.init cfg) registration =\n      .ok ({ deposited := 17 }, registrationBooked)",
       "statementSha256": "3006e1f9aa33a8666d7d428b8013cbc0c2556506941868ee829ad2cc94c959be",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the Registry transition, projection or custody relation named by this theorem.\nThen the complete conclusion is:\n\nbookRegistration p env (Sys.init cfg) registration =\n      .ok ({ deposited := 17 }, registrationBooked)",
@@ -9702,7 +9744,7 @@
     {
       "declaration": "CardanoKeri.Registry.Examples.registration_folded",
       "path": "lean/CardanoKeri/RegistryLifecycleExamples.lean",
-      "line": 127,
+      "line": 128,
       "statement": "theorem registration_folded :\n    fold p registrationBooked 0 cfg.applicationPolicy registrationUnspent registrationTransaction =\n      .ok ({ locked := [(11, 10)] }, registered)",
       "statementSha256": "31faf96d988c7954f450389d8fdada8c86ce7b566322145ac3c4340038cef573",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the Registry transition, projection or custody relation named by this theorem.\nThen the complete conclusion is:\n\nfold p registrationBooked 0 cfg.applicationPolicy registrationUnspent registrationTransaction =\n      .ok ({ locked := [(11, 10)] }, registered)",
@@ -9716,7 +9758,7 @@
     {
       "declaration": "CardanoKeri.Registry.Examples.conviction_success",
       "path": "lean/CardanoKeri/RegistryLifecycleExamples.lean",
-      "line": 205,
+      "line": 206,
       "statement": "theorem conviction_success :\n    convictCkpt env registered 11 = .ok ({}, pending)",
       "statementSha256": "bc4fdbba208547a439849c30913b6a41588584083b6582d3447d1f3a08abd22f",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the Registry transition, projection or custody relation named by this theorem.\nThen the complete conclusion is:\n\nconvictCkpt env registered 11 = .ok ({}, pending)",
@@ -9730,7 +9772,7 @@
     {
       "declaration": "CardanoKeri.Registry.Examples.termination_booked",
       "path": "lean/CardanoKeri/RegistryLifecycleExamples.lean",
-      "line": 217,
+      "line": 218,
       "statement": "theorem termination_booked :\n    bookTermination p pending 11 7 1 termination =\n      .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, terminationBooked)",
       "statementSha256": "e82974e0613a96f65733a730061a73e95d4b3605c9ab3b5ba32b7ea8dde0d03f",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the Registry transition, projection or custody relation named by this theorem.\nThen the complete conclusion is:\n\nbookTermination p pending 11 7 1 termination =\n      .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, terminationBooked)",
@@ -9744,7 +9786,7 @@
     {
       "declaration": "CardanoKeri.Registry.Examples.termination_folded",
       "path": "lean/CardanoKeri/RegistryLifecycleExamples.lean",
-      "line": 238,
+      "line": 239,
       "statement": "theorem termination_folded :\n    fold p terminationBooked 1 cfg.applicationPolicy terminationUnspent terminationTransaction =\n      .ok ({}, retired)",
       "statementSha256": "69b698a123ebcb3dab4048d1bf7da7078b765780044c834f21856381fd3de566",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the Registry transition, projection or custody relation named by this theorem.\nThen the complete conclusion is:\n\nfold p terminationBooked 1 cfg.applicationPolicy terminationUnspent terminationTransaction =\n      .ok ({}, retired)",
@@ -9758,7 +9800,7 @@
     {
       "declaration": "CardanoKeri.Registry.Examples.registration_journey",
       "path": "lean/CardanoKeri/RegistryLifecycleExamples.lean",
-      "line": 324,
+      "line": 325,
       "statement": "theorem registration_journey : RegistrationJourney registered",
       "statementSha256": "2d70dc5f32f55c9bc863edf8b1f236b057f461f03eb5479e962c257a5304db88",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the Registry transition, projection or custody relation named by this theorem.\nThen the complete conclusion is:\n\nRegistrationJourney registered",
@@ -9772,7 +9814,7 @@
     {
       "declaration": "CardanoKeri.Registry.Examples.registration_booked_reachable",
       "path": "lean/CardanoKeri/RegistryLifecycleExamples.lean",
-      "line": 337,
+      "line": 338,
       "statement": "theorem registration_booked_reachable : Reach p env cfg registrationBooked",
       "statementSha256": "95597572644a2793e08138845a508b88849a25f9729484a9c4c18be197212210",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the Registry transition, projection or custody relation named by this theorem.\nThen the complete conclusion is:\n\nReach p env cfg registrationBooked",
@@ -9786,7 +9828,7 @@
     {
       "declaration": "CardanoKeri.Registry.Examples.registered_reachable",
       "path": "lean/CardanoKeri/RegistryLifecycleExamples.lean",
-      "line": 348,
+      "line": 349,
       "statement": "theorem registered_reachable : Reach p env cfg registered",
       "statementSha256": "c3ab1e6dd6ba4b69270d99f3bc3561804c3186e635f46a30cdb47aaa40f18793",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the Registry transition, projection or custody relation named by this theorem.\nThen the complete conclusion is:\n\nReach p env cfg registered",
@@ -9800,7 +9842,7 @@
     {
       "declaration": "CardanoKeri.Registry.Examples.pending_reachable",
       "path": "lean/CardanoKeri/RegistryLifecycleExamples.lean",
-      "line": 360,
+      "line": 361,
       "statement": "theorem pending_reachable : Reach p env cfg pending",
       "statementSha256": "389999494850d3987d50a9e08c703d46b5faa8327611d56720802e5bea517e34",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the Registry transition, projection or custody relation named by this theorem.\nThen the complete conclusion is:\n\nReach p env cfg pending",
@@ -9814,7 +9856,7 @@
     {
       "declaration": "CardanoKeri.Registry.Examples.termination_booked_reachable",
       "path": "lean/CardanoKeri/RegistryLifecycleExamples.lean",
-      "line": 371,
+      "line": 372,
       "statement": "theorem termination_booked_reachable : Reach p env cfg terminationBooked",
       "statementSha256": "6eaa32ac6e8dda48e511bbef61a2edecd5e6603ca4003e631fcdcafd972d55c9",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the Registry transition, projection or custody relation named by this theorem.\nThen the complete conclusion is:\n\nReach p env cfg terminationBooked",
@@ -9828,7 +9870,7 @@
     {
       "declaration": "CardanoKeri.Registry.Examples.retired_reachable",
       "path": "lean/CardanoKeri/RegistryLifecycleExamples.lean",
-      "line": 382,
+      "line": 383,
       "statement": "theorem retired_reachable : Reach p env cfg retired",
       "statementSha256": "d5e0b25b6059232c0de68ce90d2896dbb9f4bb225c048c24619d1601b3f29fa4",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the Registry transition, projection or custody relation named by this theorem.\nThen the complete conclusion is:\n\nReach p env cfg retired",
@@ -9842,21 +9884,21 @@
     {
       "declaration": "CardanoKeri.Registry.Examples.W5_connected_termination",
       "path": "lean/CardanoKeri/RegistryLifecycleExamples.lean",
-      "line": 409,
-      "statement": "theorem W5_connected_termination :\n    ∃ registered pending booked retired,\n      ∃ (b : Singular.TerminationBooking) (u : Singular.EconomicUtxo)\n        (tx : Singular.EconomicTransaction) (f : Flow),\n      RegistrationJourney registered ∧\n      convictCkpt env registered 11 = .ok ({}, pending) ∧\n      carrierAt pending 11 = some { liveCarrier with st := .terminationPending } ∧\n      Singular.trieGet pending.trie 11 = .known .active ∧\n      b.request.reference = ⟨200, 0⟩ ∧\n      bookTermination p pending 11 7 1 b =\n        .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, booked) ∧\n      Singular.worldSingularSupply booked.toWorld 11 = 1 ∧\n      fold p booked booked.gen cfg.applicationPolicy u tx = .ok (f, retired) ∧\n      Singular.trieGet retired.trie 11 = .known .terminal ∧\n      Singular.worldSingularSupply retired.toWorld 11 = 0 ∧\n      tx.transaction.donation = 2 ∧ Singular.foldCarrierLovelace tx.outputs = 0 ∧\n      pendingAt retired ⟨200, 0⟩ = none",
-      "statementSha256": "18aa2731ad2bc7b68798fff73282df3f96d253a8492fafe46fbff77fcd631bf8",
-      "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the Registry transition, projection or custody relation named by this theorem.\nThen the complete conclusion is:\n\n∃ registered pending booked retired,\n      ∃ (b : Singular.TerminationBooking) (u : Singular.EconomicUtxo)\n        (tx : Singular.EconomicTransaction) (f : Flow),\n      RegistrationJourney registered ∧\n      convictCkpt env registered 11 = .ok ({}, pending) ∧\n      carrierAt pending 11 = some { liveCarrier with st := .terminationPending } ∧\n      Singular.trieGet pending.trie 11 = .known .active ∧\n      b.request.reference = ⟨200, 0⟩ ∧\n      bookTermination p pending 11 7 1 b =\n        .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, booked) ∧\n      Singular.worldSingularSupply booked.toWorld 11 = 1 ∧\n      fold p booked booked.gen cfg.applicationPolicy u tx = .ok (f, retired) ∧\n      Singular.trieGet retired.trie 11 = .known .terminal ∧\n      Singular.worldSingularSupply retired.toWorld 11 = 0 ∧\n      tx.transaction.donation = 2 ∧ Singular.foldCarrierLovelace tx.outputs = 0 ∧\n      pendingAt retired ⟨200, 0⟩ = none",
+      "line": 410,
+      "statement": "theorem W5_connected_termination :\n    ∃ registered pending booked retired,\n      ∃ (b : CardanoKeri.Registry.TerminationBooking) (u : Singular.EconomicUtxo)\n        (tx : Singular.EconomicTransaction) (f : Flow),\n      RegistrationJourney registered ∧\n      convictCkpt env registered 11 = .ok ({}, pending) ∧\n      carrierAt pending 11 = some { liveCarrier with st := .terminationPending } ∧\n      Singular.trieGet pending.trie 11 = .known .active ∧\n      b.request.reference = ⟨200, 0⟩ ∧\n      bookTermination p pending 11 7 1 b =\n        .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, booked) ∧\n      Singular.worldSingularSupply booked.toWorld 11 = 1 ∧\n      fold p booked booked.gen cfg.applicationPolicy u tx = .ok (f, retired) ∧\n      Singular.trieGet retired.trie 11 = .known .terminal ∧\n      Singular.worldSingularSupply retired.toWorld 11 = 0 ∧\n      tx.transaction.donation = 2 ∧ Singular.foldCarrierLovelace tx.outputs = 0 ∧\n      pendingAt retired ⟨200, 0⟩ = none",
+      "statementSha256": "88a7645a24f9d1c7e1ac502b65b0b07c6feab8a3536ce3be938ec957becdf132",
+      "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the Registry transition, projection or custody relation named by this theorem.\nThen the complete conclusion is:\n\n∃ registered pending booked retired,\n      ∃ (b : CardanoKeri.Registry.TerminationBooking) (u : Singular.EconomicUtxo)\n        (tx : Singular.EconomicTransaction) (f : Flow),\n      RegistrationJourney registered ∧\n      convictCkpt env registered 11 = .ok ({}, pending) ∧\n      carrierAt pending 11 = some { liveCarrier with st := .terminationPending } ∧\n      Singular.trieGet pending.trie 11 = .known .active ∧\n      b.request.reference = ⟨200, 0⟩ ∧\n      bookTermination p pending 11 7 1 b =\n        .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, booked) ∧\n      Singular.worldSingularSupply booked.toWorld 11 = 1 ∧\n      fold p booked booked.gen cfg.applicationPolicy u tx = .ok (f, retired) ∧\n      Singular.trieGet retired.trie 11 = .known .terminal ∧\n      Singular.worldSingularSupply retired.toWorld 11 = 0 ∧\n      tx.transaction.donation = 2 ∧ Singular.foldCarrierLovelace tx.outputs = 0 ∧\n      pendingAt retired ⟨200, 0⟩ = none",
       "story": {
         "given": "No additional local parameters; use the definitions in this module.",
         "when": "Observe the Registry transition, projection or custody relation named by this theorem.",
-        "then": "∃ registered pending booked retired,\n      ∃ (b : Singular.TerminationBooking) (u : Singular.EconomicUtxo)\n        (tx : Singular.EconomicTransaction) (f : Flow),\n      RegistrationJourney registered ∧\n      convictCkpt env registered 11 = .ok ({}, pending) ∧\n      carrierAt pending 11 = some { liveCarrier with st := .terminationPending } ∧\n      Singular.trieGet pending.trie 11 = .known .active ∧\n      b.request.reference = ⟨200, 0⟩ ∧\n      bookTermination p pending 11 7 1 b =\n        .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, booked) ∧\n      Singular.worldSingularSupply booked.toWorld 11 = 1 ∧\n      fold p booked booked.gen cfg.applicationPolicy u tx = .ok (f, retired) ∧\n      Singular.trieGet retired.trie 11 = .known .terminal ∧\n      Singular.worldSingularSupply retired.toWorld 11 = 0 ∧\n      tx.transaction.donation = 2 ∧ Singular.foldCarrierLovelace tx.outputs = 0 ∧\n      pendingAt retired ⟨200, 0⟩ = none"
+        "then": "∃ registered pending booked retired,\n      ∃ (b : CardanoKeri.Registry.TerminationBooking) (u : Singular.EconomicUtxo)\n        (tx : Singular.EconomicTransaction) (f : Flow),\n      RegistrationJourney registered ∧\n      convictCkpt env registered 11 = .ok ({}, pending) ∧\n      carrierAt pending 11 = some { liveCarrier with st := .terminationPending } ∧\n      Singular.trieGet pending.trie 11 = .known .active ∧\n      b.request.reference = ⟨200, 0⟩ ∧\n      bookTermination p pending 11 7 1 b =\n        .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, booked) ∧\n      Singular.worldSingularSupply booked.toWorld 11 = 1 ∧\n      fold p booked booked.gen cfg.applicationPolicy u tx = .ok (f, retired) ∧\n      Singular.trieGet retired.trie 11 = .known .terminal ∧\n      Singular.worldSingularSupply retired.toWorld 11 = 0 ∧\n      tx.transaction.donation = 2 ∧ Singular.foldCarrierLovelace tx.outputs = 0 ∧\n      pendingAt retired ⟨200, 0⟩ = none"
       },
-      "storySha256": "e963023006e299f4b51c19c54ff493bdfac7fed73ea794402986f19feee88c71"
+      "storySha256": "ec26654e2a75e6dae969263f519c5ec269a5f6147d2ec1f8f4df5d70ff39aa43"
     },
     {
       "declaration": "CardanoKeri.Registry.Examples.W6_live_booking_refused",
       "path": "lean/CardanoKeri/RegistryLifecycleExamples.lean",
-      "line": 438,
+      "line": 439,
       "statement": "theorem W6_live_booking_refused :\n    Reach p env cfg registered ∧ carrierAt registered 11 = some liveCarrier ∧\n      liveCarrier.st = .live ∧\n      bookTermination p registered 11 7 1 termination = .error \"keri-conviction-required\" ∧\n      minAdaAt registered 11 = 4 ∧ Singular.trieGet registered.trie 11 = .known .active",
       "statementSha256": "906bc13192e120e0ce108fe386f1c941b3189687b96c8abf3b0ea7f36e132d0e",
       "sourceStory": "Given the registered checkpoint of this module: reachable, its carrier live\n(alive, not convicted).\nWhen a booker presents the termination booking of this module for it.\nThen the booking is refused with `keri-conviction-required`, and the carrier,\nits minimum ADA and its active registry key are all still there. This is the\nreachable witness of `live_cannot_book`: there is no owner exit, so a live\ncheckpoint cannot be booked for retirement.",
@@ -9870,7 +9912,7 @@
     {
       "declaration": "CardanoKeri.Registry.Examples.phantom_binding_not_wellFormed",
       "path": "lean/CardanoKeri/RegistryLifecycleExamples.lean",
-      "line": 454,
+      "line": 455,
       "statement": "theorem phantom_binding_not_wellFormed :\n    ¬ WellFormed p { Sys.init cfg with bindings := [(11, 0)], nextToken := 1 }",
       "statementSha256": "9711a440a60f1f6276f7da9f5bbfbb8b0d03a0cc4f1dc011667f49dad8818909",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the Registry transition, projection or custody relation named by this theorem.\nThen the complete conclusion is:\n\n¬ WellFormed p { Sys.init cfg with bindings := [(11, 0)], nextToken := 1 }",

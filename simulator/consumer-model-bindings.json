@@ -2,7 +2,7 @@
   "version": 1,
   "singular": "d69ab005c3b710aeebf033d3c5cd08c56feb5643",
   "sources": {
-    "lean/CardanoKeri/Checkpoint.lean": "d82c06b8cfb953c5640c8ce32573a07bc728bf898168f22610416b8a561339fe",
+    "lean/CardanoKeri/Checkpoint.lean": "614588d944b8bb40dc9712b89ce593c331a45a909bc52a9e4d60a83f16b4a81a",
     "lean/CardanoKeri/CheckpointSystemEvidence.lean": "537d2183603c1f5ffab2178d743b03652647a3ca22cae5cb4e38c8780bccf7da",
     "lean/CardanoKeri/ConsumerBytes.lean": "9d7f752d59e32acb6c77bda9e5f6e9a146f09e9de7983ea10456c7225739d712",
     "lean/CardanoKeri/ConsumerBytesGoals.lean": "4822023b95c0a3ed0f99b5ee09784e5beb3700582611a80f867defc35cbcdae4",
@@ -11,14 +11,14 @@
     "lean/CardanoKeri/ConsumerFixtures.lean": "005a0b66a375669447141f2c726270d9ecc5ce09dabc180168f51663d82638b4",
     "lean/CardanoKeri/ConsumerGoals.lean": "6ce115569b597c55056671633aad903151a8349479c47a4d08f9fd0b82227788",
     "lean/CardanoKeri/ConsumerIdentity.lean": "2c1fe9311f7a3c460dfcbd90d915ea17a9aae83199ab842247e6ef991a7e9f26",
-    "lean/CardanoKeri/ConsumerJourney.lean": "78ee040bfc87311f1c5fb64e44d1333d709cb0119f894b11d5e22859c809c70a",
+    "lean/CardanoKeri/ConsumerJourney.lean": "e7a982e8dad86e472d9010cbdac953a805991df8e641353ec9868d0e49cc9907",
     "lean/CardanoKeri/ConsumerWire.lean": "82b7088d8ada127c6ecee9ca50ef483fcf240cf31e981489006e08ec51ede4d4",
     "lean/ConsumerTraceDriver.lean": "6724a86a83d665b3a53338e9c88b51f33996a0967382e7a71063cbd6f6800846",
     "lean/lake-manifest.json": "ef13f1c22115496b001a180312413f19cb8324750104a49fe249d7e470a10590",
     "lean/lakefile.lean": "554ac681b2b23be1a781753b370caed924d9a8936be527b3c1fc0712fb1f753a",
     "simulator/consumer-cli.mjs": "d679c03ad4cdba6eb7ba798831c65a0b7874e35a95d578eafbf895e1fe25fb36",
     "simulator/consumer-core.mjs": "bccce2d993e2ff81237773ab82184eeb17858946c386b8104bcb00ef6277b21b",
-    "simulator/consumer-corpus.json": "18dd83ff7ae89bfd68c172b18a66c7750ec8b8bede9416beb6076fb8f27ad260",
+    "simulator/consumer-corpus.json": "8e9b5db862a37e78395fdb7e5674fdaac8dc9e50fc7c3151702663f1d4516e16",
     "simulator/consumer-properties.mjs": "2e74b39206dba2784b6660cc1b816ad8ac0695d5f872b40b71bdf8d16fa96d7b"
   },
   "properties": [

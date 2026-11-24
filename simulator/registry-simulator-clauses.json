@@ -1,7 +1,7 @@
 {
   "version": 3,
   "model": "CardanoKeri.Registry.stepFn",
-  "surfaceSha256": "8110227c8fdd36de1083faf5c3a570c24f2d77e3b50eaeae7984d66a18dfdbfc",
+  "surfaceSha256": "6ca8f9308d5c08062999be51ff11c391dd3a2a594300278f79cc5522a52bf544",
   "storiesMarkdownSha256": "9ea46247d1a4de752112090796cccda70a3066fc9b5a629beaa674023ebad376",
   "clauses": [
     {
@@ -353,7 +353,7 @@
       "given": "A live carrier retains its token, key and min-ADA, and nobody has convicted it.",
       "when": "Sam tries to book it as a termination.",
       "then": "The booking is refused because only a convicted carrier can be booked. There is no owner exit to collect, and waiting creates no sweep entitlement.",
-      "scenarioSha256": "2115c8d7f4a3cb6e2f496467617d867b4233d3e1c73f38d786a082f6aa770a37",
+      "scenarioSha256": "73b5ebc9e45f8e352a2ea9f45501480156f5b82095812636d0d8ca0b5f957835",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -365,7 +365,7 @@
         },
         {
           "declaration": "CardanoKeri.Registry.bookTermination",
-          "sha256": "c7dfc3b8ae597c39d8b3021c6ee927c258be919f7a37dd63d2580fea01a9dda1"
+          "sha256": "3c781ff27418a17e7ad89374ea82229cef72399602034e72d0d879a5c3f455a4"
         }
       ],
       "cells": [
@@ -394,7 +394,7 @@
       "given": "A live carrier has duplicity evidence at its current key.",
       "when": "Cora convicts it, Sam books its termination, and Hal processes that exact pending request.",
       "then": "Conviction preserves pending custody; booking moves the whole entry into the request and pays the defined premium. Only the consuming fold burns the token and permanently retires the key.",
-      "scenarioSha256": "2289db7d7c992bc93e1d352ac707ad88ece27c846194052bb15b76df0a89ea0b",
+      "scenarioSha256": "8d45a684309f6e9c72b143e3e4eadf74ca9ed4dc89e5ddf638674adb1a727163",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -410,7 +410,7 @@
         },
         {
           "declaration": "CardanoKeri.Registry.bookTermination",
-          "sha256": "c7dfc3b8ae597c39d8b3021c6ee927c258be919f7a37dd63d2580fea01a9dda1"
+          "sha256": "3c781ff27418a17e7ad89374ea82229cef72399602034e72d0d879a5c3f455a4"
         }
       ],
       "cells": [
@@ -436,7 +436,7 @@
           "branch": "trunk",
           "index": 3,
           "action": "bookTermination",
-          "expectationSha256": "44a922e26ab2559de6cfc870bc0ffb7ccaab9d747cb813c12e447e0bba0c8145"
+          "expectationSha256": "164eff9ecc7781dc0e469a717921e1186a1853562b7b13dfa47af00d8ce55687"
         },
         {
           "branch": "trunk",
@@ -463,7 +463,7 @@
       "given": "A convicted carrier has been booked into pending termination custody.",
       "when": "Other parties try local moves, or a return of the pending termination, before the actual consuming fold.",
       "then": "The pending request remains whole until the fold consumes it. The return applies to registrations only; it is not a termination exit.",
-      "scenarioSha256": "6f9f69b16e9c1c9dc75f5d720f8526d6d87fd45d87fa499479fa1e5b5239490d",
+      "scenarioSha256": "f462bed6a1640a61d746db2038c91190fd21f4fbb2e17a57f63809d512ea6c99",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -479,7 +479,7 @@
         },
         {
           "declaration": "CardanoKeri.Registry.bookTermination",
-          "sha256": "c7dfc3b8ae597c39d8b3021c6ee927c258be919f7a37dd63d2580fea01a9dda1"
+          "sha256": "3c781ff27418a17e7ad89374ea82229cef72399602034e72d0d879a5c3f455a4"
         },
         {
           "declaration": "CardanoKeri.Registry.returnRequests",
@@ -509,7 +509,7 @@
           "branch": "trunk",
           "index": 3,
           "action": "bookTermination",
-          "expectationSha256": "44a922e26ab2559de6cfc870bc0ffb7ccaab9d747cb813c12e447e0bba0c8145"
+          "expectationSha256": "164eff9ecc7781dc0e469a717921e1186a1853562b7b13dfa47af00d8ce55687"
         },
         {
           "branch": "trunk",
@@ -530,7 +530,7 @@
       "given": "Complete pending requests retain their own references and custody.",
       "when": "A folder processes selected requests, or tries duplicated inputs and inconsistent timestamps; the mixed-custody branch also interleaves another registration and its return after the deadline.",
       "then": "Duplicate inputs and backdated booking refuse. Completing one identity preserves the other pending entry through the mixed fold and the registration return; its own later consuming fold completes it.",
-      "scenarioSha256": "61ab62b44f5c682f7afeb2238a978a7060cdf38c7c1d257e5cedfa987229b0ad",
+      "scenarioSha256": "6ba89e6b9df07b2959850946f427b5d283bce16d338415c5c0e44909fc60f77c",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -546,7 +546,7 @@
         },
         {
           "declaration": "CardanoKeri.Registry.bookTermination",
-          "sha256": "c7dfc3b8ae597c39d8b3021c6ee927c258be919f7a37dd63d2580fea01a9dda1"
+          "sha256": "3c781ff27418a17e7ad89374ea82229cef72399602034e72d0d879a5c3f455a4"
         },
         {
           "declaration": "CardanoKeri.Registry.returnRequests",
@@ -612,37 +612,37 @@
           "branch": "mixed-custody",
           "index": 5,
           "action": "bookTermination",
-          "expectationSha256": "df90434bbba044b215e02a3b9c539442d39a5625e0e77475a8646f202a8afaa4"
+          "expectationSha256": "fee1d49b2a3ab76c603536ba0a37fb0f883999f533fc8372bfc02c66f40df4b9"
         },
         {
           "branch": "mixed-custody",
           "index": 6,
           "action": "bookTermination",
-          "expectationSha256": "dc8c65edc324cd360d704e407d7ae6f53a766d6bf772ab6c4abcb1a42b5bcbd7"
+          "expectationSha256": "d2c7ce1d6d5cb0afe27bdff431f384a540d16a569c82b4c6918eaeba8fbf86cc"
         },
         {
           "branch": "mixed-custody",
           "index": 7,
           "action": "bookRegistration",
-          "expectationSha256": "fe79b270226dfb58632002bbdff3280057703aec913a0902da48cce56ea08243"
+          "expectationSha256": "8d95efa572b062f8f73dd1115201f19096de48ccdaf4dfb221e73fbb38cab20d"
         },
         {
           "branch": "mixed-custody",
           "index": 8,
           "action": "fold",
-          "expectationSha256": "7e77325e01634ce6dafde1278740d976b0153404fac2aa933dfb3a20f9159876"
+          "expectationSha256": "f88427cb2082c89ca6b93bc305de8a22e0d15952ef99daa5635aa30bbe659014"
         },
         {
           "branch": "mixed-custody",
           "index": 9,
           "action": "bookRegistration",
-          "expectationSha256": "86b4de19694ec197011205e741e9f8ad5ae94611e6879e85538c91eb98926083"
+          "expectationSha256": "42097be3c55da0f982b1896578e76fd99a2ea9a5bb280dd64466ad0a0ee1dd11"
         },
         {
           "branch": "mixed-custody",
           "index": 10,
           "action": "returnRequests",
-          "expectationSha256": "195039d432866037b3711443faa73292a07995f05a0697b9b794503d8571edfe"
+          "expectationSha256": "91a296bcbecaa131d26df24a62a7df664e6b99414e8fe1615b42063daf1b4d8e"
         },
         {
           "branch": "mixed-custody",

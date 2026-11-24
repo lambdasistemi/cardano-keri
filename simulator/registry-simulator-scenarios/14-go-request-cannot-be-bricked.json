@@ -933,7 +933,15 @@
                 "name": "5600603241348410377",
                 "policy": 9
               }
-            ]
+            ],
+            "pendingReference": {
+              "tx": 105,
+              "index": 0
+            },
+            "position": {
+              "epoch": 1,
+              "sn": 1
+            }
           },
           "fee": 1
         }
@@ -1058,6 +1066,17 @@
                       "key": 11,
                       "kind": "active",
                       "output": 111
+                    },
+                    "spend": {
+                      "aid": 11,
+                      "position": {
+                        "epoch": 1,
+                        "sn": 1
+                      },
+                      "reference": {
+                        "index": 0,
+                        "tx": 105
+                      }
                     },
                     "token": 0
                   }
@@ -2007,6 +2026,17 @@
                 "key": 11,
                 "kind": "active",
                 "output": 111
+              },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
               },
               "token": 0
             }

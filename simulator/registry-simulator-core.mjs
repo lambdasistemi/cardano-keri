@@ -40,8 +40,10 @@ function execute(p, env, s, action) {
       require(c.st === 'terminationPending', 'keri-conviction-required');
       const b = a.booking, r = b.request;
       require(r.key === a.aid && r.destination === c.original.output && E.equal(b.custodyInputs, [c.original]) && c.minAda === p.Mc && r.carrierAda === p.Mr && r.declaredTip === p.tip && r.contents.lovelace === p.Mr + p.tip, 'keri-termination-binding-mismatch');
-      const next = E.bookTermination(world, b);
-      after = { ...s, carriers: s.carriers.filter(old => old.aid !== a.aid), terminations: [{ booking: b, payload: { aid: a.aid, token: c.token, keyState: c.k, original: c.original, booker: a.booker, bookingFee: a.fee } }, ...s.terminations] };
+      const { pendingReference, position, ...publicBooking } = b;
+      const spend = { reference: pendingReference, aid: r.key, position };
+      const next = E.bookTermination(world, publicBooking);
+      after = { ...s, carriers: s.carriers.filter(old => old.aid !== a.aid), terminations: [{ booking: publicBooking, payload: { spend, aid: a.aid, token: c.token, keyState: c.k, original: c.original, booker: a.booker, bookingFee: a.fee } }, ...s.terminations] };
       require(E.equal(toWorld(after), next), 'keri-termination-reconstruction-mismatch');
       moved = flow({ premium: [a.booker, p.Mc - p.Mr - p.tip], bookingFee: a.fee, intoRequest: p.Mr + p.tip });
     }

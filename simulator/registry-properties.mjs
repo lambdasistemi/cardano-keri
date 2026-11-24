@@ -28,7 +28,9 @@ export function properties(record) {
     equal(after, { ...before, st: 'terminationPending' }) && getLeaf(n, a.aid) === 'active');
   check('booking-custody', kind === 'bookTermination' && before?.st === 'terminationPending', () => {
     const e = entry(n, a.booking.request.reference);
-    return !after && !!e && equal(e, { booking: a.booking, payload: { aid: a.aid, token: before.token, keyState: before.k, original: before.original, booker: a.booker, bookingFee: a.fee } }) &&
+    const {pendingReference, position, ...booking} = a.booking;
+    const spend = {reference: pendingReference, aid: a.aid, position};
+    return !after && !!e && equal(e, { booking, payload: { spend, aid: a.aid, token: before.token, keyState: before.k, original: before.original, booker: a.booker, bookingFee: a.fee } }) &&
       equal(f.premium, [a.booker, p.Mc - p.Mr - p.tip]) && f.intoRequest === p.Mr + p.tip && f.bookingFee === a.fee && getLeaf(n, a.aid) === 'active';
   });
   const consumed = kind === 'fold' ? a.transaction.transaction.inputs.map(i => i.ref) : [];

@@ -718,6 +718,12 @@ fork:
             singularTags: [{"registryId":9,"token":{"name":11,"policy":8}}]
             submittedAt: null
           trieReadyTagsMinted: [{"name":"5600603241348410377","policy":9}]
+          pendingReference:
+            tx: 105
+            index: 0
+          position:
+            epoch: 1
+            sn: 1
         fee: 1
     expect:
       ok: true
@@ -749,7 +755,7 @@ fork:
             gen: 1
             nextToken: 2
             registrations: []
-            terminations: [{"booking":{"custodyInputs":[{"datum":711,"key":11,"kind":"active","output":111}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"5600603241348410377","policy":9}]},"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":200},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"5600603241348410377","policy":9}]},"payload":{"aid":11,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":711,"key":11,"kind":"active","output":111},"token":0}}]
+            terminations: [{"booking":{"custodyInputs":[{"datum":711,"key":11,"kind":"active","output":111}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"5600603241348410377","policy":9}]},"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":200},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"5600603241348410377","policy":9}]},"payload":{"aid":11,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":711,"key":11,"kind":"active","output":111},"spend":{"aid":11,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":0}}]
             treasury: 4
             trie:
               - [12,{"known":{"s":"active"}}]
@@ -795,6 +801,12 @@ fork:
             singularTags: [{"registryId":9,"token":{"name":12,"policy":8}}]
             submittedAt: null
           trieReadyTagsMinted: [{"name":"2457363527023764289","policy":9}]
+          pendingReference:
+            tx: 105
+            index: 0
+          position:
+            epoch: 1
+            sn: 1
         fee: 1
     expect:
       ok: true
@@ -826,7 +838,7 @@ fork:
             gen: 1
             nextToken: 2
             registrations: []
-            terminations: [{"booking":{"custodyInputs":[{"datum":712,"key":12,"kind":"active","output":112}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"2457363527023764289","policy":9}]},"declaredTip":1,"destination":112,"key":12,"reference":{"index":0,"tx":201},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":12,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"2457363527023764289","policy":9}]},"payload":{"aid":12,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":712,"key":12,"kind":"active","output":112},"token":1}},{"booking":{"custodyInputs":[{"datum":711,"key":11,"kind":"active","output":111}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"5600603241348410377","policy":9}]},"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":200},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"5600603241348410377","policy":9}]},"payload":{"aid":11,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":711,"key":11,"kind":"active","output":111},"token":0}}]
+            terminations: [{"booking":{"custodyInputs":[{"datum":712,"key":12,"kind":"active","output":112}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"2457363527023764289","policy":9}]},"declaredTip":1,"destination":112,"key":12,"reference":{"index":0,"tx":201},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":12,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"2457363527023764289","policy":9}]},"payload":{"aid":12,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":712,"key":12,"kind":"active","output":112},"spend":{"aid":12,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":1}},{"booking":{"custodyInputs":[{"datum":711,"key":11,"kind":"active","output":111}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"5600603241348410377","policy":9}]},"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":200},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"5600603241348410377","policy":9}]},"payload":{"aid":11,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":711,"key":11,"kind":"active","output":111},"spend":{"aid":11,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":0}}]
             treasury: 4
             trie:
               - [12,{"known":{"s":"active"}}]
@@ -904,7 +916,7 @@ fork:
             gen: 1
             nextToken: 2
             registrations: [{"applicationTagsMinted":[{"assetName":"3378713363565182131","destination":113,"edge":"insertActive","key":13,"owner":42,"policy":7,"signatures":[]}],"interval":{"lower":0,"upper":1},"request":{"carrierAda":14,"contents":{"applicationTags":[{"assetName":"3378713363565182131","destination":113,"edge":"insertActive","key":13,"owner":42,"policy":7,"signatures":[]}],"lovelace":17,"otherAssets":[],"trieReadyTags":[{"name":"15697965816598438058","policy":9}]},"datum":713,"declaredTip":1,"destination":113,"key":13,"reference":{"index":0,"tx":102},"refundAddress":42,"registrationCost":2,"registryId":9,"submittedAt":1},"trieReadyTagsMinted":[{"name":"15697965816598438058","policy":9}]}]
-            terminations: [{"booking":{"custodyInputs":[{"datum":712,"key":12,"kind":"active","output":112}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"2457363527023764289","policy":9}]},"declaredTip":1,"destination":112,"key":12,"reference":{"index":0,"tx":201},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":12,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"2457363527023764289","policy":9}]},"payload":{"aid":12,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":712,"key":12,"kind":"active","output":112},"token":1}},{"booking":{"custodyInputs":[{"datum":711,"key":11,"kind":"active","output":111}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"5600603241348410377","policy":9}]},"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":200},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"5600603241348410377","policy":9}]},"payload":{"aid":11,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":711,"key":11,"kind":"active","output":111},"token":0}}]
+            terminations: [{"booking":{"custodyInputs":[{"datum":712,"key":12,"kind":"active","output":112}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"2457363527023764289","policy":9}]},"declaredTip":1,"destination":112,"key":12,"reference":{"index":0,"tx":201},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":12,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"2457363527023764289","policy":9}]},"payload":{"aid":12,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":712,"key":12,"kind":"active","output":112},"spend":{"aid":12,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":1}},{"booking":{"custodyInputs":[{"datum":711,"key":11,"kind":"active","output":111}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"5600603241348410377","policy":9}]},"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":200},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"5600603241348410377","policy":9}]},"payload":{"aid":11,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":711,"key":11,"kind":"active","output":111},"spend":{"aid":11,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":0}}]
             treasury: 4
             trie:
               - [12,{"known":{"s":"active"}}]
@@ -992,7 +1004,7 @@ fork:
             gen: 2
             nextToken: 3
             registrations: []
-            terminations: [{"booking":{"custodyInputs":[{"datum":712,"key":12,"kind":"active","output":112}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"2457363527023764289","policy":9}]},"declaredTip":1,"destination":112,"key":12,"reference":{"index":0,"tx":201},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":12,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"2457363527023764289","policy":9}]},"payload":{"aid":12,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":712,"key":12,"kind":"active","output":112},"token":1}}]
+            terminations: [{"booking":{"custodyInputs":[{"datum":712,"key":12,"kind":"active","output":112}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"2457363527023764289","policy":9}]},"declaredTip":1,"destination":112,"key":12,"reference":{"index":0,"tx":201},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":12,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"2457363527023764289","policy":9}]},"payload":{"aid":12,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":712,"key":12,"kind":"active","output":112},"spend":{"aid":12,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":1}}]
             treasury: 8
             trie:
               - [11,{"known":{"s":"terminal"}}]
@@ -1072,7 +1084,7 @@ fork:
             gen: 2
             nextToken: 3
             registrations: [{"applicationTagsMinted":[{"assetName":"16463530648679258229","destination":114,"edge":"insertActive","key":14,"owner":42,"policy":7,"signatures":[]}],"interval":{"lower":0,"upper":1},"request":{"carrierAda":14,"contents":{"applicationTags":[{"assetName":"16463530648679258229","destination":114,"edge":"insertActive","key":14,"owner":42,"policy":7,"signatures":[]}],"lovelace":17,"otherAssets":[],"trieReadyTags":[{"name":"13729662992350352876","policy":9}]},"datum":714,"declaredTip":1,"destination":114,"key":14,"reference":{"index":0,"tx":103},"refundAddress":42,"registrationCost":2,"registryId":9,"submittedAt":1},"trieReadyTagsMinted":[{"name":"13729662992350352876","policy":9}]}]
-            terminations: [{"booking":{"custodyInputs":[{"datum":712,"key":12,"kind":"active","output":112}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"2457363527023764289","policy":9}]},"declaredTip":1,"destination":112,"key":12,"reference":{"index":0,"tx":201},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":12,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"2457363527023764289","policy":9}]},"payload":{"aid":12,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":712,"key":12,"kind":"active","output":112},"token":1}}]
+            terminations: [{"booking":{"custodyInputs":[{"datum":712,"key":12,"kind":"active","output":112}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"2457363527023764289","policy":9}]},"declaredTip":1,"destination":112,"key":12,"reference":{"index":0,"tx":201},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":12,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"2457363527023764289","policy":9}]},"payload":{"aid":12,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":712,"key":12,"kind":"active","output":112},"spend":{"aid":12,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":1}}]
             treasury: 8
             trie:
               - [11,{"known":{"s":"terminal"}}]
@@ -1160,7 +1172,7 @@ fork:
             gen: 2
             nextToken: 3
             registrations: []
-            terminations: [{"booking":{"custodyInputs":[{"datum":712,"key":12,"kind":"active","output":112}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"2457363527023764289","policy":9}]},"declaredTip":1,"destination":112,"key":12,"reference":{"index":0,"tx":201},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":12,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"2457363527023764289","policy":9}]},"payload":{"aid":12,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":712,"key":12,"kind":"active","output":112},"token":1}}]
+            terminations: [{"booking":{"custodyInputs":[{"datum":712,"key":12,"kind":"active","output":112}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"2457363527023764289","policy":9}]},"declaredTip":1,"destination":112,"key":12,"reference":{"index":0,"tx":201},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":12,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"2457363527023764289","policy":9}]},"payload":{"aid":12,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":712,"key":12,"kind":"active","output":112},"spend":{"aid":12,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":1}}]
             treasury: 8
             trie:
               - [11,{"known":{"s":"terminal"}}]

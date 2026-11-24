@@ -5,8 +5,8 @@
     "path": "lean/CardanoKeri/RegistryAdapterFacts.lean",
     "sha256": "212cb4a5a5710404e3b5c52733feb127720f9141f5deb379e4e50ce6345ea425"
   },
-  "surfaceSha256": "867e3c49d2953c4e33cb3594da1ba40e7d8b42286d9071bd0ac088e6ce3beef1",
-  "corpusSha256": "2e1e004ba8e682eb9340da9d1dfd38e0f6d43bd990c592c6bed171e34309e6a1",
+  "surfaceSha256": "b07c00d6d7ad6270046e4f34370ef0308b6dbe92323b56e0ec7474925a78777e",
+  "corpusSha256": "487fbf4152cdf1d22c1c396ca3e553e2972efc43572a467efe18d5f70703417b",
   "rows": [
     {
       "reason": "approval-mismatch",
@@ -139,12 +139,12 @@
         {
           "index": 349,
           "name": "termination-refund",
-          "sha256": "80ff5260a3d8b7dc588fb7726d9fa231cb47c1147c69acde4bf5600867d773d4"
+          "sha256": "1138f075febbbaecb6336514b8e0d2eb1cbb84b01f5ca19d41c85c0fbbf80925"
         },
         {
           "index": 350,
           "name": "termination-clock",
-          "sha256": "0b65f2820cebfd03452724c4ba7bc5546890b59f9ae472ff3abdf0a8856b68b0"
+          "sha256": "581f5781bfae25d54e6cf9e5585f62fd2c752048866892ef72effa432a27fa4d"
         }
       ]
     },
@@ -190,7 +190,7 @@
         {
           "index": 310,
           "name": "fold-empty",
-          "sha256": "5bb7c25d6305da04cef54cbf26ca641035305236a8f18a89caccb728df32edfa"
+          "sha256": "48a7c0140746c67514326f360feb6c87b6c5ed9f96f7a41981daffe5084594cb"
         },
         {
           "index": 406,
@@ -256,7 +256,7 @@
         {
           "index": 20,
           "name": "wrong-donation",
-          "sha256": "2c038d7c935d8a2ea237d4abcd246414c644547319529b39c3f0ca73f66bf10d"
+          "sha256": "1ab34f54aec21ddac4e1b271c1d59f145daf4fc51ae2e30f4a1b0c758543d35e"
         },
         {
           "index": 288,
@@ -266,7 +266,7 @@
         {
           "index": 323,
           "name": "fold-donation",
-          "sha256": "a58d50eb2da6547ffdcbac129188de6675cc3269b1de557a162fa74787842077"
+          "sha256": "bc37b65458ebd61abecb3ac41599840ad84f0ab0bf9f99d86ef0115a8c7c88a6"
         }
       ]
     },
@@ -289,7 +289,7 @@
         {
           "index": 307,
           "name": "fold-duplicate-input",
-          "sha256": "dc08412b0d9394b484b4bd212ea1f140a2ac443a36cd84d5d1948ecafeebac3e"
+          "sha256": "1cd14a281fd3f5bbe54b6004ee7aa0b7b7a0f58f31563caefc51fd489c1efb79"
         },
         {
           "index": 448,
@@ -317,7 +317,7 @@
         {
           "index": 324,
           "name": "fold-fee-funding",
-          "sha256": "ec6a406d6e1b0efc9f7b19c18c2438c7539b993c6f6cd83fa7e1343d5e17003e"
+          "sha256": "9d0bef81b2afaa1823f137d2014732f0d2791f230d463b03e181cc0f4f593f2e"
         }
       ]
     },
@@ -345,12 +345,12 @@
         {
           "index": 321,
           "name": "fold-state-mint",
-          "sha256": "713f95bb1213fe974bd3fc6dcbec9e98736acee4cee4643d86057176179ea569"
+          "sha256": "e961bc0c8059877560bad3f9d15b7860d640137f4007bae6420eda6cc8a1d836"
         },
         {
           "index": 322,
           "name": "fold-foreign-asset",
-          "sha256": "de9c12309387f7eea60e03bce4a883a952bbccc58c32c3aa13dac3fbacf556e3"
+          "sha256": "aa5a2e6da465b4743d671696ad9f65d69702ba5e6e8f472c75a05a659257b08d"
         }
       ]
     },
@@ -373,7 +373,7 @@
         {
           "index": 308,
           "name": "fold-overlap",
-          "sha256": "78f903102c81a9ba3839b0a02613de0087e96db1f00bfc45bcc3a8e1d175df44"
+          "sha256": "4105b0990903293364161927cee0c292bd852a502a59008a0e183584f5433ccb"
         }
       ]
     },
@@ -396,7 +396,7 @@
         {
           "index": 313,
           "name": "fold-interval-empty",
-          "sha256": "a1dbe9ddcd6009cd7ec436e12b1e423379a1be26fbc3671d1e5e6e3ff3106eb1"
+          "sha256": "6ed5d4bae9e26a62c8521a007dbd7b999cd9cbf1440336226594cb05f6b73e24"
         }
       ]
     },
@@ -419,7 +419,7 @@
         {
           "index": 312,
           "name": "fold-interval-missing",
-          "sha256": "fb0e25a8cf6ba2b7bc6769c22817e0ad77106a79b2cc721a3e66d925c885603e"
+          "sha256": "3e45c2ddf58d2334309eda858d5faae0d412a22f0b638cbc20debcebaee45ad0"
         }
       ]
     },
@@ -442,7 +442,7 @@
         {
           "index": 320,
           "name": "fold-singular-mint",
-          "sha256": "0b89a2fa2e23640b4992ae75ea547090e86f43c966a0637488e066c68bcc5007"
+          "sha256": "59091cbdc16191a4347d02041747637e5ea84a9d4d4622a4549f57eaef51fa15"
         }
       ]
     },
@@ -490,22 +490,22 @@
         {
           "index": 326,
           "name": "fold-state-token",
-          "sha256": "96e8d7010cbc29a836c5cbcfc45769f3af2e57c62a5c21d2de74b62900aaf111"
+          "sha256": "dfde756f568d6641094cae1fed113cab430ceb40789d520d570ffa2fb95591c7"
         },
         {
           "index": 327,
           "name": "fold-state-root",
-          "sha256": "ca52295df1702514ec805a514c2151c98015c85410d90fb7613e166c5d660bfd"
+          "sha256": "502ca8ce34157ebb8843d75a7306a4193188f7db389b3629deefefa12f8aed09"
         },
         {
           "index": 328,
           "name": "fold-state-config",
-          "sha256": "6a1871f9862060bebbcc168382ca74892af3615fa939eae3946f2c50880bd698"
+          "sha256": "fc299730d2ca185a21dff93aa626d81575d45984e6f9da544766193f3f35ca9f"
         },
         {
           "index": 339,
           "name": "fold-wrong-input-state",
-          "sha256": "1b6780212ed0f683235d62dc31f26d4dd5f988af69d973ee7da98b601b6912a6"
+          "sha256": "7322fdf0e9f5051ff1e57c02fdffe9dfee4b4702d8a17c6261546b2261dc9056"
         }
       ]
     },
@@ -528,7 +528,7 @@
         {
           "index": 311,
           "name": "fold-state-missing",
-          "sha256": "370b5fa730305de1769ea2349d99c648db43211ec856249b2570361136d8c5cf"
+          "sha256": "222ea16cc024a081039bbb7c83edeea65ec1726d43bf1570accb1974e185422e"
         }
       ]
     },
@@ -551,7 +551,7 @@
         {
           "index": 329,
           "name": "fold-state-value",
-          "sha256": "b9cf5a3bf71d713f3fd00a948e122b2039cc035fdac522857b90c69d330ee433"
+          "sha256": "aa183bcaed9132595bf0eb4d781cf7d29d4af33fc483139df5cf082c7fc0f454"
         }
       ]
     },
@@ -579,7 +579,7 @@
         {
           "index": 318,
           "name": "fold-ready-burn",
-          "sha256": "1d3eca9b1d191b0f97a82e3e800a7eee47948010bbcf3c2c8d6df3f3a282f7b3"
+          "sha256": "65ef8e40c33913dac8064845c914fca8eb9fcfe4a909775670d1351d04aa0a67"
         }
       ]
     },
@@ -602,7 +602,7 @@
         {
           "index": 325,
           "name": "fold-unbalanced",
-          "sha256": "286ce48f83fccd1301309435db7da4524a48aadcd75bb46c6c46d82054ce7e90"
+          "sha256": "2465ee82ceb7e1b681c940948b333dc67c7cf4692922b2a1c747115987511469"
         }
       ]
     },
@@ -625,7 +625,7 @@
         {
           "index": 335,
           "name": "fold-unrecognized-funding",
-          "sha256": "23065a2d3c2db6039acbfe1985a6110089e11e3276123c84cb7a63623181aa16"
+          "sha256": "78c36902a52c2e7c5b6d0d83fb5cf2ee513c77a656740cb0e198bba3b6fb1d9a"
         }
       ]
     },
@@ -648,12 +648,12 @@
         {
           "index": 346,
           "name": "termination-wrong-registry",
-          "sha256": "1ad7c3dd515598d9c1c49c7b3e32e6e99ad9ede3f25e07a043e97471659a5a94"
+          "sha256": "ca6f046f3c4af116592b40c8212e34aeb1628c337dbc5c4fb6fd8d7c192a725f"
         },
         {
           "index": 347,
           "name": "termination-singular-tag",
-          "sha256": "98c5745c94723443236b18db5c1f829fcc96d8d524af4d2ed0d8457de01d0da7"
+          "sha256": "883b90e56b74944e0b02614e2f4cf5c0c61b52eec098ed69a3110f622c26b105"
         }
       ]
     },
@@ -686,7 +686,7 @@
         {
           "index": 348,
           "name": "termination-ready-tag",
-          "sha256": "63336b0729b43d3b65d1369b6627e6aa1bc827c8e2bad1ecdac4912771a44d3b"
+          "sha256": "39d791cc34d10132f5264ad052842e630d4043b6d4363309af0ee5b9d591d825"
         }
       ]
     },
@@ -1455,7 +1455,7 @@
         {
           "index": 396,
           "name": "termination-missing-carrier",
-          "sha256": "8b8c65fcc344d00d69a5bcad43c24d2f479b241b386aa4c59d87aa452d130a97"
+          "sha256": "cb925be398eead8c8e4ec1216b1c7b72566d722065f5d026ee1c22f77f90d5ce"
         }
       ]
     },
@@ -1826,17 +1826,17 @@
         {
           "index": 2,
           "name": "live-termination-booking-refused",
-          "sha256": "96cd030050f44b1e332ebb9b178dad2e9f2b53eaf85db8212b69ca0ff6844fc9"
+          "sha256": "501a617b3036f07cf5780232998ac25f4801dac4864ca5300ce9251035a4c4ff"
         },
         {
           "index": 395,
           "name": "termination-requires-conviction",
-          "sha256": "a732bdaec77145c40669603c6299a99b8275e922497021bd0efc583170e3b6dd"
+          "sha256": "85b201233008ea8f766bd7ad6c70905dd0e0225c6b4d8733f697a9a530010fb7"
         },
         {
           "index": 431,
           "name": "Try booking a live, unconvicted carrier for termination",
-          "sha256": "7794644a8498460a19e9de4a543e75ebffbb6d2fb805a63a3e24f52e8b1b3c8e"
+          "sha256": "51807472341d6dda0411a8a75b573501024eef93c909f71241f267ecba2478bf"
         }
       ]
     },
@@ -1854,7 +1854,7 @@
         {
           "index": 391,
           "name": "fold-carrier-reconstruction",
-          "sha256": "1bdb3d9de5ed1cd83776634d6083dd0c1f3883c1297faba902fd9c6a88bbf79c"
+          "sha256": "9ce4ced26d87f710c43d12a2339d60447d4b92cdf8f67abe310ca9a2365e793f"
         }
       ]
     },
@@ -1872,7 +1872,7 @@
         {
           "index": 18,
           "name": "stale-generation",
-          "sha256": "bef70be1ef97a66112ac0801873df51a749257a718655cab5f93b32608db00d1"
+          "sha256": "4c205a13e975309df029e4a2ebe1da1d1b2dcaa9c66c0a17a9bed0a401217536"
         },
         {
           "index": 405,
@@ -1918,7 +1918,7 @@
         {
           "index": 19,
           "name": "wrong-plugin",
-          "sha256": "23203186fb1d29ccd42b360a112bcc38034529dd35c7e2fa072c9a5a110055ae"
+          "sha256": "c0158777b2a831141e1551744424122056cf5a8d8b0e52fc7127c4d6cf75b6a1"
         },
         {
           "index": 428,
@@ -2008,7 +2008,7 @@
         {
           "index": 23,
           "name": "return-before-deadline",
-          "sha256": "7df576418860d26fe1685e20b71bcdf5d18a48bc33ea4f86f0a52375ab3f0e84"
+          "sha256": "5d81fd3510e8a49ee93ab3c8be561cf3fd7e4141fd8ef7e0fef603b09702cbd0"
         },
         {
           "index": 27,
@@ -2089,12 +2089,12 @@
         {
           "index": 389,
           "name": "termination-mismatch-not-recoverable",
-          "sha256": "44886c3081554c4dafe10540c8c6b9536fc1965321b48ac702058d4022842709"
+          "sha256": "5b47c5e5403fe29e40db2f6147d5612aa5cd375fd082487efe55cbdd211a3ea4"
         },
         {
           "index": 444,
           "name": "Return the pending termination as if it were a registration",
-          "sha256": "99c6bba73e2491567881d0e4ca65eb3e86eadec23283a22a2195cb29176bab35"
+          "sha256": "d817c799b7521b8cb5fb89c8d28d86f39e0e6011dc6482716222259043767ac1"
         }
       ]
     },
@@ -2130,22 +2130,22 @@
         {
           "index": 342,
           "name": "termination-carrier",
-          "sha256": "196fd86f495b414971433ff7022acfc09afb007e1bc9cb3e83b941c38f536cb1"
+          "sha256": "9016c9d92dd470b6d65cdcaf5c537db030f6c76d5a4a45b18cfb84586dc4f3f8"
         },
         {
           "index": 343,
           "name": "termination-destination",
-          "sha256": "9e5a8a91d3b7eab5764c30f059efe959d7241a5d14d147d50857221ce2e15f25"
+          "sha256": "51b00890f1f60be078515b483aed15355d366122aaf3daed69a3a1715dcb1f76"
         },
         {
           "index": 344,
           "name": "termination-original-datum",
-          "sha256": "bbf45a696ff3d87d97166616fd5988fdc59b0c1ae3e0c4c2dba83a4095531506"
+          "sha256": "1ef76e9d8b04c8f9df572c868975a585aa7c8636f1e1d9e47bafbc0adc7cadfe"
         },
         {
           "index": 345,
           "name": "termination-value",
-          "sha256": "74941aa1859e8e1467e67b69a0d8c63dbb88afa77513471fb1246afffe08e389"
+          "sha256": "ba06a4dd58ea820710ff528e447d80d3d2a1fc952c41af76832ac202539adc97"
         }
       ]
     },
@@ -2189,7 +2189,7 @@
         {
           "index": 390,
           "name": "termination-carrier-reconstruction",
-          "sha256": "cc829b2ddf122491a81a22f0bc1d51efffcef3a4c949d7d00250576d4b39fe19"
+          "sha256": "472f04835a705c6bfac8f45e14bc578a2bfb344a3613a8507f45afde85389ece"
         }
       ]
     },
@@ -2235,7 +2235,7 @@
         {
           "index": 385,
           "name": "termination-key-unknown",
-          "sha256": "35a82af027c9bfd42f8706716154b9f3aa361d9809fe973145eb106ba080f7cd"
+          "sha256": "9077c73cc0527fd14c01657fe2edb4e4ee659316d00f537b5eb1ece3cab9678b"
         }
       ]
     },
@@ -2284,7 +2284,7 @@
         {
           "index": 386,
           "name": "termination-key-absent",
-          "sha256": "64d9c505dca33a2057436b5d0eba9536fbf7cd83e268880a8a4cb8fe8b9d1a37"
+          "sha256": "d1100698d4bd38a631ec292af2373d1be186bac47f1d15c0a7beac51947a6ff8"
         }
       ]
     },
@@ -2340,7 +2340,7 @@
         {
           "index": 317,
           "name": "fold-output-observation",
-          "sha256": "e9e81f035a3e86edbb417ce886dcf9ead76378c95ce1c4e3d386ee89e1b68c1a"
+          "sha256": "4d74d7726d2b063e5b2f5b49ac2ba6fb3af03bac5b92cc7991b0301c6a5e0b41"
         }
       ]
     },
@@ -2871,7 +2871,7 @@
         {
           "index": 338,
           "name": "fold-wrong-request-observation",
-          "sha256": "7437312424bf2abcf2e24cfc466c678ae32dc8ff3c9ef9ad04b1655ab7e33525"
+          "sha256": "63085659319d6aafe6000fb0e0afb9c807ee3722548b9f2d2a0dd5f3b7feba61"
         }
       ]
     },
@@ -2889,7 +2889,7 @@
         {
           "index": 393,
           "name": "termination-without-active-leaf",
-          "sha256": "f0835b08933f421981547d25f379310f6102fbf7c5625f18b319abebef73700d"
+          "sha256": "c47b116cf95722c9f2eaac58a50518dcbe54fc9d996ecb589953e8f0264f0de7"
         }
       ]
     },
@@ -2917,12 +2917,12 @@
         {
           "index": 309,
           "name": "fold-missing-input",
-          "sha256": "4d1db84d0e4868e74cd4b2df0f607f767ef298c9aef3e9371d460ef9fb24bdff"
+          "sha256": "878005462fe6fc833f15145c71921b1d614d4c33ed56ccb6db7900f3c0c6cd1d"
         },
         {
           "index": 337,
           "name": "fold-missing-request-observation",
-          "sha256": "0b4d0c35da45fc5576d4acbd7afb05734af620a3cb67b557c57b1273b69ae342"
+          "sha256": "ec0fa14770823f0f6377f989dbb4ee0363aaf105d5de013032a06b51dddc35d2"
         }
       ]
     },
@@ -2940,7 +2940,7 @@
         {
           "index": 387,
           "name": "termination-key-retired",
-          "sha256": "5c31b383c250967b24ef8b4e11b3ab1498cb6f0ccd489b57548f95bdf92dfe6b"
+          "sha256": "b4b28bc31f82dac398952751a95cc9f1875bcf77a623154bf2b9ee8293c821a9"
         }
       ]
     },
@@ -2963,7 +2963,7 @@
         {
           "index": 388,
           "name": "termination-missing-custody",
-          "sha256": "22a0e78a0e92f6c1201af48de634383183947df16e88363f20cbd5d4c3089635"
+          "sha256": "30f661de1861aa191c649a3cc9c8b8318cde1046fc23c8aebc42addfd16938aa"
         }
       ]
     },
@@ -2986,7 +2986,7 @@
         {
           "index": 336,
           "name": "fold-stale-transaction-id",
-          "sha256": "ab5fdbafd39dbaa9754a904e1467d59080ba5e7f0a149610fa30a37e766cbf66"
+          "sha256": "ddc83eaac993207e5295626dd50ae634b7303dd45cc79006b3d8981e65c5bc4e"
         }
       ]
     },
@@ -3009,7 +3009,7 @@
         {
           "index": 334,
           "name": "fold-duplicate-utxo",
-          "sha256": "b3ddb7229af000b3d9d5313aa765350037c00221fba015eea8fa0e5b508e8965"
+          "sha256": "6da3ded50754f4cedfb3a1392804fae7d0586d67da52488b3dd5e673a42360db"
         }
       ]
     }

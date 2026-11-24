@@ -245,7 +245,9 @@ function transition(p,table,state,command) {
     const context=contextOf(row.origin),before=registryReplay(context,row.origin.registered,a.history);
     const result=registryStep(context,before,{bookTermination:{aid:a.aid,booker:a.booker,fee:a.fee,booking:a.booking}});
     const entry=pendingAt(result.state,a.booking.request.reference);require(entry!==null,'checkpoint-booking-entry-missing');
-    require(E.equal(entry.booking,a.booking)&&E.equal(entry.payload.aid,a.aid)&&E.equal(entry.payload.token,row.origin.token),'checkpoint-booking-binding');
+    const {pendingReference, position, ...publicBooking} = a.booking;
+    const expectedSpend = {reference: pendingReference, aid: a.aid, position: row.state.terminationPending.h};
+    require(E.equal(entry.booking,publicBooking)&&E.equal(entry.payload.aid,a.aid)&&E.equal(entry.payload.token,row.origin.token)&&E.equal(entry.payload.spend,expectedSpend),'checkpoint-booking-binding');
     next={...row,pending:{origin:row.origin,keyState:row.state.terminationPending.h,reference:a.booking.request.reference,entry,booked:result.state}};registryFlow=result.flow;
   } else {
     const association=row.pending;require(association!==null,'checkpoint-association-missing');

@@ -2104,6 +2104,14 @@
                     "output": 111
                   }
                 ],
+                "pendingReference": {
+                  "index": 0,
+                  "tx": 105
+                },
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
                 "request": {
                   "carrierAda": 2,
                   "contents": {
@@ -2686,6 +2694,14 @@
                     "output": 111
                   }
                 ],
+                "pendingReference": {
+                  "index": 0,
+                  "tx": 105
+                },
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
                 "request": {
                   "carrierAda": 2,
                   "contents": {
@@ -2959,6 +2975,17 @@
                         "key": 11,
                         "kind": "active",
                         "output": 111
+                      },
+                      "spend": {
+                        "aid": 11,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
                       },
                       "token": 0
                     }
@@ -3487,6 +3514,17 @@
                     "key": 11,
                     "kind": "active",
                     "output": 111
+                  },
+                  "spend": {
+                    "aid": 11,
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
+                    "reference": {
+                      "index": 0,
+                      "tx": 105
+                    }
                   },
                   "token": 0
                 }
@@ -6552,6 +6590,14 @@
                     "output": 111
                   }
                 ],
+                "pendingReference": {
+                  "index": 0,
+                  "tx": 105
+                },
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
                 "request": {
                   "carrierAda": 2,
                   "contents": {
@@ -6880,6 +6926,17 @@
                         "kind": "active",
                         "output": 111
                       },
+                      "spend": {
+                        "aid": 11,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
+                      },
                       "token": 0
                     }
                   }
@@ -6921,6 +6978,14 @@
                     "output": 112
                   }
                 ],
+                "pendingReference": {
+                  "index": 0,
+                  "tx": 105
+                },
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
                 "request": {
                   "carrierAda": 2,
                   "contents": {
@@ -7122,6 +7187,17 @@
                     "kind": "active",
                     "output": 111
                   },
+                  "spend": {
+                    "aid": 11,
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
+                    "reference": {
+                      "index": 0,
+                      "tx": 105
+                    }
+                  },
                   "token": 0
                 }
               }
@@ -7287,6 +7363,17 @@
                         "kind": "active",
                         "output": 112
                       },
+                      "spend": {
+                        "aid": 12,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
+                      },
                       "token": 1
                     }
                   },
@@ -7350,6 +7437,17 @@
                         "key": 11,
                         "kind": "active",
                         "output": 111
+                      },
+                      "spend": {
+                        "aid": 11,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
                       },
                       "token": 0
                     }
@@ -7586,6 +7684,17 @@
                     "kind": "active",
                     "output": 112
                   },
+                  "spend": {
+                    "aid": 12,
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
+                    "reference": {
+                      "index": 0,
+                      "tx": 105
+                    }
+                  },
                   "token": 1
                 }
               },
@@ -7649,6 +7758,17 @@
                     "key": 11,
                     "kind": "active",
                     "output": 111
+                  },
+                  "spend": {
+                    "aid": 11,
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
+                    "reference": {
+                      "index": 0,
+                      "tx": 105
+                    }
                   },
                   "token": 0
                 }
@@ -7872,6 +7992,17 @@
                         "kind": "active",
                         "output": 112
                       },
+                      "spend": {
+                        "aid": 12,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
+                      },
                       "token": 1
                     }
                   },
@@ -7935,6 +8066,17 @@
                         "key": 11,
                         "kind": "active",
                         "output": 111
+                      },
+                      "spend": {
+                        "aid": 11,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
                       },
                       "token": 0
                     }
@@ -8780,6 +8922,17 @@
                     "kind": "active",
                     "output": 112
                   },
+                  "spend": {
+                    "aid": 12,
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
+                    "reference": {
+                      "index": 0,
+                      "tx": 105
+                    }
+                  },
                   "token": 1
                 }
               },
@@ -8843,6 +8996,17 @@
                     "key": 11,
                     "kind": "active",
                     "output": 111
+                  },
+                  "spend": {
+                    "aid": 11,
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
+                    "reference": {
+                      "index": 0,
+                      "tx": 105
+                    }
                   },
                   "token": 0
                 }
@@ -9696,6 +9860,17 @@
                     "kind": "active",
                     "output": 112
                   },
+                  "spend": {
+                    "aid": 12,
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
+                    "reference": {
+                      "index": 0,
+                      "tx": 105
+                    }
+                  },
                   "token": 1
                 }
               },
@@ -9759,6 +9934,17 @@
                     "key": 11,
                     "kind": "active",
                     "output": 111
+                  },
+                  "spend": {
+                    "aid": 11,
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
+                    "reference": {
+                      "index": 0,
+                      "tx": 105
+                    }
                   },
                   "token": 0
                 }
@@ -10612,6 +10798,17 @@
                     "kind": "active",
                     "output": 112
                   },
+                  "spend": {
+                    "aid": 12,
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
+                    "reference": {
+                      "index": 0,
+                      "tx": 105
+                    }
+                  },
                   "token": 1
                 }
               },
@@ -10675,6 +10872,17 @@
                     "key": 11,
                     "kind": "active",
                     "output": 111
+                  },
+                  "spend": {
+                    "aid": 11,
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
+                    "reference": {
+                      "index": 0,
+                      "tx": 105
+                    }
                   },
                   "token": 0
                 }
@@ -11528,6 +11736,17 @@
                     "kind": "active",
                     "output": 112
                   },
+                  "spend": {
+                    "aid": 12,
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
+                    "reference": {
+                      "index": 0,
+                      "tx": 105
+                    }
+                  },
                   "token": 1
                 }
               },
@@ -11591,6 +11810,17 @@
                     "key": 11,
                     "kind": "active",
                     "output": 111
+                  },
+                  "spend": {
+                    "aid": 11,
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
+                    "reference": {
+                      "index": 0,
+                      "tx": 105
+                    }
                   },
                   "token": 0
                 }
@@ -11787,6 +12017,17 @@
                         "key": 12,
                         "kind": "active",
                         "output": 112
+                      },
+                      "spend": {
+                        "aid": 12,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
                       },
                       "token": 1
                     }
@@ -12049,6 +12290,17 @@
                     "kind": "active",
                     "output": 112
                   },
+                  "spend": {
+                    "aid": 12,
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
+                    "reference": {
+                      "index": 0,
+                      "tx": 105
+                    }
+                  },
                   "token": 1
                 }
               }
@@ -12307,6 +12559,17 @@
                         "key": 12,
                         "kind": "active",
                         "output": 112
+                      },
+                      "spend": {
+                        "aid": 12,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
                       },
                       "token": 1
                     }
@@ -12933,6 +13196,17 @@
                     "key": 12,
                     "kind": "active",
                     "output": 112
+                  },
+                  "spend": {
+                    "aid": 12,
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
+                    "reference": {
+                      "index": 0,
+                      "tx": 105
+                    }
                   },
                   "token": 1
                 }
@@ -13568,6 +13842,17 @@
                     "kind": "active",
                     "output": 112
                   },
+                  "spend": {
+                    "aid": 12,
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
+                    "reference": {
+                      "index": 0,
+                      "tx": 105
+                    }
+                  },
                   "token": 1
                 }
               }
@@ -13766,6 +14051,17 @@
                         "key": 12,
                         "kind": "active",
                         "output": 112
+                      },
+                      "spend": {
+                        "aid": 12,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
                       },
                       "token": 1
                     }
@@ -14332,6 +14628,17 @@
                     "key": 12,
                     "kind": "active",
                     "output": 112
+                  },
+                  "spend": {
+                    "aid": 12,
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
+                    "reference": {
+                      "index": 0,
+                      "tx": 105
+                    }
                   },
                   "token": 1
                 }
@@ -73986,6 +74293,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -74577,6 +74895,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -75103,6 +75432,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -75586,6 +75926,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -76053,6 +76404,17 @@
                 "key": 11,
                 "kind": "active",
                 "output": 111
+              },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
               },
               "token": 0
             }
@@ -76550,6 +76912,17 @@
                 "key": 11,
                 "kind": "active",
                 "output": 111
+              },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
               },
               "token": 0
             }
@@ -77058,6 +77431,17 @@
                 "key": 11,
                 "kind": "active",
                 "output": 111
+              },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
               },
               "token": 0
             }
@@ -77570,6 +77954,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -78080,6 +78475,17 @@
                 "key": 11,
                 "kind": "active",
                 "output": 111
+              },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
               },
               "token": 0
             }
@@ -78658,6 +79064,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -79235,6 +79652,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -79763,6 +80191,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -80265,6 +80704,17 @@
                 "key": 11,
                 "kind": "active",
                 "output": 111
+              },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
               },
               "token": 0
             }
@@ -80776,6 +81226,17 @@
                 "key": 11,
                 "kind": "active",
                 "output": 111
+              },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
               },
               "token": 0
             }
@@ -81343,6 +81804,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -81861,6 +82333,17 @@
                 "key": 11,
                 "kind": "active",
                 "output": 111
+              },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
               },
               "token": 0
             }
@@ -82381,6 +82864,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -82891,6 +83385,17 @@
                 "key": 11,
                 "kind": "active",
                 "output": 111
+              },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
               },
               "token": 0
             }
@@ -83403,6 +83908,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -83913,6 +84429,17 @@
                 "key": 11,
                 "kind": "active",
                 "output": 111
+              },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
               },
               "token": 0
             }
@@ -84425,6 +84952,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -84917,6 +85455,17 @@
                 "key": 11,
                 "kind": "active",
                 "output": 111
+              },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
               },
               "token": 0
             }
@@ -85429,6 +85978,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -85940,6 +86500,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -86450,6 +87021,17 @@
                 "key": 11,
                 "kind": "active",
                 "output": 111
+              },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
               },
               "token": 0
             }
@@ -87028,6 +87610,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -87605,6 +88198,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -88181,6 +88785,17 @@
                 "key": 11,
                 "kind": "active",
                 "output": 111
+              },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
               },
               "token": 0
             }
@@ -88837,6 +89452,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -89356,6 +89982,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -89867,6 +90504,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -90299,6 +90947,17 @@
                 "key": 11,
                 "kind": "active",
                 "output": 111
+              },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
               },
               "token": 0
             }
@@ -90811,6 +91470,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -91322,6 +91992,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -91815,6 +92496,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -91922,6 +92614,14 @@
                 "output": 111
               }
             ],
+            "pendingReference": {
+              "index": 0,
+              "tx": 105
+            },
+            "position": {
+              "epoch": 1,
+              "sn": 1
+            },
             "request": {
               "carrierAda": 2,
               "contents": {
@@ -92171,6 +92871,17 @@
                     "kind": "active",
                     "output": 111
                   },
+                  "spend": {
+                    "aid": 11,
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
+                    "reference": {
+                      "index": 0,
+                      "tx": 105
+                    }
+                  },
                   "token": 0
                 }
               }
@@ -92204,6 +92915,14 @@
                 "output": 111
               }
             ],
+            "pendingReference": {
+              "index": 0,
+              "tx": 105
+            },
+            "position": {
+              "epoch": 1,
+              "sn": 1
+            },
             "request": {
               "carrierAda": 3,
               "contents": {
@@ -92352,6 +93071,14 @@
                 "output": 111
               }
             ],
+            "pendingReference": {
+              "index": 0,
+              "tx": 105
+            },
+            "position": {
+              "epoch": 1,
+              "sn": 1
+            },
             "request": {
               "carrierAda": 2,
               "contents": {
@@ -92500,6 +93227,14 @@
                 "output": 111
               }
             ],
+            "pendingReference": {
+              "index": 0,
+              "tx": 105
+            },
+            "position": {
+              "epoch": 1,
+              "sn": 1
+            },
             "request": {
               "carrierAda": 2,
               "contents": {
@@ -92648,6 +93383,14 @@
                 "output": 111
               }
             ],
+            "pendingReference": {
+              "index": 0,
+              "tx": 105
+            },
+            "position": {
+              "epoch": 1,
+              "sn": 1
+            },
             "request": {
               "carrierAda": 2,
               "contents": {
@@ -92796,6 +93539,14 @@
                 "output": 111
               }
             ],
+            "pendingReference": {
+              "index": 0,
+              "tx": 105
+            },
+            "position": {
+              "epoch": 1,
+              "sn": 1
+            },
             "request": {
               "carrierAda": 2,
               "contents": {
@@ -92944,6 +93695,14 @@
                 "output": 111
               }
             ],
+            "pendingReference": {
+              "index": 0,
+              "tx": 105
+            },
+            "position": {
+              "epoch": 1,
+              "sn": 1
+            },
             "request": {
               "carrierAda": 2,
               "contents": {
@@ -93092,6 +93851,14 @@
                 "output": 111
               }
             ],
+            "pendingReference": {
+              "index": 0,
+              "tx": 105
+            },
+            "position": {
+              "epoch": 1,
+              "sn": 1
+            },
             "request": {
               "carrierAda": 2,
               "contents": {
@@ -93235,6 +94002,14 @@
                 "output": 111
               }
             ],
+            "pendingReference": {
+              "index": 0,
+              "tx": 105
+            },
+            "position": {
+              "epoch": 1,
+              "sn": 1
+            },
             "request": {
               "carrierAda": 2,
               "contents": {
@@ -93383,6 +94158,14 @@
                 "output": 111
               }
             ],
+            "pendingReference": {
+              "index": 0,
+              "tx": 105
+            },
+            "position": {
+              "epoch": 1,
+              "sn": 1
+            },
             "request": {
               "carrierAda": 2,
               "contents": {
@@ -108372,6 +109155,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -108873,6 +109667,17 @@
                 "key": 11,
                 "kind": "active",
                 "output": 111
+              },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
               },
               "token": 0
             }
@@ -109385,6 +110190,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -109889,6 +110705,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -110275,6 +111102,17 @@
                 "kind": "active",
                 "output": 111
               },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
               "token": 0
             }
           }
@@ -110307,6 +111145,14 @@
                 "output": 111
               }
             ],
+            "pendingReference": {
+              "index": 0,
+              "tx": 105
+            },
+            "position": {
+              "epoch": 1,
+              "sn": 1
+            },
             "request": {
               "carrierAda": 2,
               "contents": {
@@ -110951,6 +111797,17 @@
                 "key": 11,
                 "kind": "active",
                 "output": 111
+              },
+              "spend": {
+                "aid": 11,
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
+                "reference": {
+                  "index": 0,
+                  "tx": 105
+                }
               },
               "token": 0
             }
@@ -111660,6 +112517,14 @@
                 "output": 111
               }
             ],
+            "pendingReference": {
+              "index": 0,
+              "tx": 105
+            },
+            "position": {
+              "epoch": 1,
+              "sn": 1
+            },
             "request": {
               "carrierAda": 2,
               "contents": {
@@ -111986,6 +112851,14 @@
                 "output": 111
               }
             ],
+            "pendingReference": {
+              "index": 0,
+              "tx": 105
+            },
+            "position": {
+              "epoch": 1,
+              "sn": 1
+            },
             "request": {
               "carrierAda": 2,
               "contents": {
@@ -112134,6 +113007,14 @@
                 "output": 111
               }
             ],
+            "pendingReference": {
+              "index": 0,
+              "tx": 105
+            },
+            "position": {
+              "epoch": 1,
+              "sn": 1
+            },
             "request": {
               "carrierAda": 2,
               "contents": {
@@ -128971,6 +129852,14 @@
                     "output": 111
                   }
                 ],
+                "pendingReference": {
+                  "index": 0,
+                  "tx": 105
+                },
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
                 "request": {
                   "carrierAda": 2,
                   "contents": {
@@ -130322,6 +131211,14 @@
                     "output": 111
                   }
                 ],
+                "pendingReference": {
+                  "index": 0,
+                  "tx": 105
+                },
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
                 "request": {
                   "carrierAda": 2,
                   "contents": {
@@ -130595,6 +131492,17 @@
                         "key": 11,
                         "kind": "active",
                         "output": 111
+                      },
+                      "spend": {
+                        "aid": 11,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
                       },
                       "token": 0
                     }
@@ -131123,6 +132031,17 @@
                     "key": 11,
                     "kind": "active",
                     "output": 111
+                  },
+                  "spend": {
+                    "aid": 11,
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
+                    "reference": {
+                      "index": 0,
+                      "tx": 105
+                    }
                   },
                   "token": 0
                 }
@@ -133386,6 +134305,14 @@
                     "output": 111
                   }
                 ],
+                "pendingReference": {
+                  "index": 0,
+                  "tx": 105
+                },
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                },
                 "request": {
                   "carrierAda": 2,
                   "contents": {
@@ -133659,6 +134586,17 @@
                         "key": 11,
                         "kind": "active",
                         "output": 111
+                      },
+                      "spend": {
+                        "aid": 11,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
                       },
                       "token": 0
                     }
@@ -134187,6 +135125,17 @@
                     "key": 11,
                     "kind": "active",
                     "output": 111
+                  },
+                  "spend": {
+                    "aid": 11,
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
+                    "reference": {
+                      "index": 0,
+                      "tx": 105
+                    }
                   },
                   "token": 0
                 }
@@ -134839,6 +135788,17 @@
                         "kind": "active",
                         "output": 111
                       },
+                      "spend": {
+                        "aid": 11,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
+                      },
                       "token": 0
                     }
                   }
@@ -134959,6 +135919,17 @@
                     "key": 11,
                     "kind": "active",
                     "output": 111
+                  },
+                  "spend": {
+                    "aid": 11,
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
+                    "reference": {
+                      "index": 0,
+                      "tx": 105
+                    }
                   },
                   "token": 0
                 }
@@ -139036,6 +140007,14 @@
                         "output": 111
                       }
                     ],
+                    "pendingReference": {
+                      "index": 0,
+                      "tx": 105
+                    },
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
                     "request": {
                       "carrierAda": 2,
                       "contents": {
@@ -139364,6 +140343,17 @@
                             "kind": "active",
                             "output": 111
                           },
+                          "spend": {
+                            "aid": 11,
+                            "position": {
+                              "epoch": 1,
+                              "sn": 1
+                            },
+                            "reference": {
+                              "index": 0,
+                              "tx": 105
+                            }
+                          },
                           "token": 0
                         }
                       }
@@ -139405,6 +140395,14 @@
                         "output": 112
                       }
                     ],
+                    "pendingReference": {
+                      "index": 0,
+                      "tx": 105
+                    },
+                    "position": {
+                      "epoch": 1,
+                      "sn": 1
+                    },
                     "request": {
                       "carrierAda": 2,
                       "contents": {
@@ -139606,6 +140604,17 @@
                         "kind": "active",
                         "output": 111
                       },
+                      "spend": {
+                        "aid": 11,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
+                      },
                       "token": 0
                     }
                   }
@@ -139771,6 +140780,17 @@
                             "kind": "active",
                             "output": 112
                           },
+                          "spend": {
+                            "aid": 12,
+                            "position": {
+                              "epoch": 1,
+                              "sn": 1
+                            },
+                            "reference": {
+                              "index": 0,
+                              "tx": 105
+                            }
+                          },
                           "token": 1
                         }
                       },
@@ -139834,6 +140854,17 @@
                             "key": 11,
                             "kind": "active",
                             "output": 111
+                          },
+                          "spend": {
+                            "aid": 11,
+                            "position": {
+                              "epoch": 1,
+                              "sn": 1
+                            },
+                            "reference": {
+                              "index": 0,
+                              "tx": 105
+                            }
                           },
                           "token": 0
                         }
@@ -140070,6 +141101,17 @@
                         "kind": "active",
                         "output": 112
                       },
+                      "spend": {
+                        "aid": 12,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
+                      },
                       "token": 1
                     }
                   },
@@ -140133,6 +141175,17 @@
                         "key": 11,
                         "kind": "active",
                         "output": 111
+                      },
+                      "spend": {
+                        "aid": 11,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
                       },
                       "token": 0
                     }
@@ -140356,6 +141409,17 @@
                             "kind": "active",
                             "output": 112
                           },
+                          "spend": {
+                            "aid": 12,
+                            "position": {
+                              "epoch": 1,
+                              "sn": 1
+                            },
+                            "reference": {
+                              "index": 0,
+                              "tx": 105
+                            }
+                          },
                           "token": 1
                         }
                       },
@@ -140419,6 +141483,17 @@
                             "key": 11,
                             "kind": "active",
                             "output": 111
+                          },
+                          "spend": {
+                            "aid": 11,
+                            "position": {
+                              "epoch": 1,
+                              "sn": 1
+                            },
+                            "reference": {
+                              "index": 0,
+                              "tx": 105
+                            }
                           },
                           "token": 0
                         }
@@ -141264,6 +142339,17 @@
                         "kind": "active",
                         "output": 112
                       },
+                      "spend": {
+                        "aid": 12,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
+                      },
                       "token": 1
                     }
                   },
@@ -141327,6 +142413,17 @@
                         "key": 11,
                         "kind": "active",
                         "output": 111
+                      },
+                      "spend": {
+                        "aid": 11,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
                       },
                       "token": 0
                     }
@@ -141523,6 +142620,17 @@
                             "key": 12,
                             "kind": "active",
                             "output": 112
+                          },
+                          "spend": {
+                            "aid": 12,
+                            "position": {
+                              "epoch": 1,
+                              "sn": 1
+                            },
+                            "reference": {
+                              "index": 0,
+                              "tx": 105
+                            }
                           },
                           "token": 1
                         }
@@ -141785,6 +142893,17 @@
                         "kind": "active",
                         "output": 112
                       },
+                      "spend": {
+                        "aid": 12,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
+                      },
                       "token": 1
                     }
                   }
@@ -142043,6 +143162,17 @@
                             "key": 12,
                             "kind": "active",
                             "output": 112
+                          },
+                          "spend": {
+                            "aid": 12,
+                            "position": {
+                              "epoch": 1,
+                              "sn": 1
+                            },
+                            "reference": {
+                              "index": 0,
+                              "tx": 105
+                            }
                           },
                           "token": 1
                         }
@@ -142670,6 +143800,17 @@
                         "kind": "active",
                         "output": 112
                       },
+                      "spend": {
+                        "aid": 12,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
+                      },
                       "token": 1
                     }
                   }
@@ -142868,6 +144009,17 @@
                             "key": 12,
                             "kind": "active",
                             "output": 112
+                          },
+                          "spend": {
+                            "aid": 12,
+                            "position": {
+                              "epoch": 1,
+                              "sn": 1
+                            },
+                            "reference": {
+                              "index": 0,
+                              "tx": 105
+                            }
                           },
                           "token": 1
                         }
@@ -143434,6 +144586,17 @@
                         "key": 12,
                         "kind": "active",
                         "output": 112
+                      },
+                      "spend": {
+                        "aid": 12,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
                       },
                       "token": 1
                     }

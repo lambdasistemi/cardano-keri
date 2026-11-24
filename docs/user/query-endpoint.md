@@ -13,17 +13,19 @@
     What ships today is the V1 checkpoint with role addresses.
 
 
-`ckeri-query` is a hosted, read-only HTTP service that answers checkpoint,
-board, and watchability questions about M1 identities directly from the
-indexed chain state. A person with only `curl` — no Cardano node, no local
-RocksDB store, no Koios key — can ask the public endpoint whether an AID's
+`ckeri-query` is a read-only HTTP service that answers checkpoint, board, and
+watchability questions about M1 identities directly from the indexed chain
+state. A person with only `curl` — no Cardano node on the asking side, no local
+RocksDB store, no Koios key — can ask a running `ckeri-query` whether an AID's
 checkpoint is current and get back an answer that says exactly which indexed
 chain slot it came from and how stale that slot is.
 
-The production instance is:
+No hosted service of the earlier design is available. A reader runs
+`ckeri-query` themselves; see [Configuration](#configuration). The examples
+below assume the default port:
 
 ```text
-https://ckeri.dev.plutimus.com
+http://localhost:8080
 ```
 
 ## Routes
@@ -59,7 +61,7 @@ Always returns HTTP 200 with this exact shape:
 ```
 
 ```console
-$ curl -s https://ckeri.dev.plutimus.com/ready | jq
+$ curl -s http://localhost:8080/ready | jq
 ```
 
 `ready` is `true` only when all of the following hold at once: the store has
@@ -75,7 +77,7 @@ not by that threshold, and `/ready` then also carries that ceiling as
 ## `GET /checkpoint/{aid}`
 
 ```console
-$ curl -s https://ckeri.dev.plutimus.com/checkpoint/E... | jq
+$ curl -s http://localhost:8080/checkpoint/E... | jq
 ```
 
 ```json
@@ -117,7 +119,7 @@ preserves its actual weighted or unweighted shape: an unweighted threshold is
 ## `GET /board/{witness_key}`
 
 ```console
-$ curl -s https://ckeri.dev.plutimus.com/board/B... | jq
+$ curl -s http://localhost:8080/board/B... | jq
 ```
 
 ```json
@@ -146,7 +148,7 @@ untrusted catalog. Koios is not part of this serving path.
 ## `GET /board`
 
 ```console
-$ curl -s https://ckeri.dev.plutimus.com/board | jq
+$ curl -s http://localhost:8080/board | jq
 ```
 
 ```json
@@ -177,7 +179,7 @@ closed with HTTP 500 rather than returning a partial catalog.
 ## `GET /watchability/{aid}`
 
 ```console
-$ curl -s https://ckeri.dev.plutimus.com/watchability/E... | jq
+$ curl -s http://localhost:8080/watchability/E... | jq
 ```
 
 ```json
@@ -425,8 +427,8 @@ readiness fields, plus an explicit error tag — never a stale or partial
 payload:
 
 ```console
-$ curl -si https://ckeri.dev.plutimus.com/checkpoint/E... 
-HTTP/2 503
+$ curl -si http://localhost:8080/checkpoint/E... 
+HTTP/1.1 503 Service Unavailable
 content-type: application/json
 ```
 
@@ -494,7 +496,7 @@ reads.
 
 ## What this endpoint does not do
 
-`ckeri status --aid E... --endpoint https://ckeri.dev.plutimus.com` now
+`ckeri status --aid E... --endpoint http://localhost:8080` now
 consumes this contract through the production CLI, delivered by
 [#177](https://github.com/lambdasistemi/cardano-keri/issues/177). It validates
 the checkpoint and watchability responses, including their echoed identity

@@ -13,11 +13,11 @@
       "pause": 400
     },
     {
-      "text": "ckeri-query is a hosted, read-only HTTP service that answers checkpoint, board, and watchability questions about M1 identities directly from the indexed chain state. A person with only curl — no Cardano node, no local RocksDB store, no Koios key — can ask the public endpoint whether an AID's checkpoint is current and get back an answer that says exactly which indexed chain slot it came from and how stale that slot is.",
+      "text": "ckeri-query is a read-only HTTP service that answers checkpoint, board, and watchability questions about M1 identities directly from the indexed chain state. A person with only curl — no Cardano node on the asking side, no local RocksDB store, no Koios key — can ask a running ckeri-query whether an AID's checkpoint is current and get back an answer that says exactly which indexed chain slot it came from and how stale that slot is.",
       "pause": 400
     },
     {
-      "text": "The production instance is:",
+      "text": "No hosted service of the earlier design is available. A reader runs ckeri-query themselves; see Configuration. The examples below assume the default port:",
       "pause": 400
     }
   ],
@@ -223,12 +223,12 @@
       "pause": 500
     },
     {
-      "text": "ckeri status --aid E... --endpoint https://ckeri.dev.plutimus.com now consumes this contract through the production CLI, delivered by #177. It validates the checkpoint and watchability responses, including their echoed identity and shared freshness envelope, and fails closed without falling back to a local store or Koios.",
+      "text": "ckeri status --aid E... --endpoint http://localhost:8080 now consumes this contract through the production CLI, delivered by #177. It validates the checkpoint and watchability responses, including their echoed identity and shared freshness envelope, and fails closed without falling back to a local store or Koios.",
       "pause": 400
     }
   ],
   "_source": {
     "file": "query-endpoint.md",
-    "sha256": "be09cd62d968f0ef6c2005f68f178723719c656f90b7bf1578e4eca08a0bb917"
+    "sha256": "7aabe135f97a1c454f7c5921490637f71a64252eb73f934e1735002ad6273945"
   }
 }

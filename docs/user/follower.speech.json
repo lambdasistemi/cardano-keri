@@ -55,7 +55,7 @@
       "pause": 500
     },
     {
-      "text": "A host creates an IndexerConfig, passes it with the deployment Manifest to Cardano.KERI.Indexer.Follower.mkChainSyncConfig, opens the configured store with the upstream indexer, and supplies both to withChainSyncFollower. cardano-keri#188 built exactly this composition into a runnable proof; the hosted ckeri-query service (#176) and the packaged ckeri status command's local backend (#177) are its production consumers today.",
+      "text": "A host creates an IndexerConfig, passes it with the deployment Manifest to Cardano.KERI.Indexer.Follower.mkChainSyncConfig, opens the configured store with the upstream indexer, and supplies both to withChainSyncFollower. cardano-keri#188 built exactly this composition into a runnable proof; the ckeri-query service (#176) and the packaged ckeri status command's local backend (#177) are its production consumers today.",
       "pause": 400
     },
     {
@@ -179,7 +179,7 @@
       "pause": 300
     },
     {
-      "text": "No standalone interactive process of its own: the temporary follower executable and its interactive local-store prompt existed only while story #175/#188 needed a runnable proof and have been retired now that the packaged ckeri status command and the hosted ckeri-query service (#176) are the production surfaces reading this store.",
+      "text": "No standalone interactive process of its own: the temporary follower executable and its interactive local-store prompt existed only while story #175/#188 needed a runnable proof and have been retired now that the packaged ckeri status command and the ckeri-query service (#176) are the production surfaces reading this store.",
       "pause": 300
     }
   ],
@@ -203,6 +203,6 @@
   ],
   "_source": {
     "file": "follower.md",
-    "sha256": "793977aedc9367a6071621969d2fbdf759df13ec149a5beb8a98ae1e37786be7"
+    "sha256": "8f24868b3e1e4b687b1fe30ca9b88e78cbf77846740704b47d416fc29e83e271"
   }
 }

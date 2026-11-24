@@ -9,11 +9,15 @@
       "pause": 400
     },
     {
-      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active or parked (a retained output holds its token, minimum ADA and last key state; the registry key stays active). A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active until it is convicted: there is no owner exit, no parking and no revival. A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
       "pause": 400
     },
     {
-      "text": "The production ckeri status command can read one AID from a local follower store, the hosted ckeri.dev endpoint, or Koios. Backend selection is part of the next release: the installed v0.1.1 binary predates this interface. The acceptance record for this change uses a freshly built production-package candidate, not the older installed release.",
+      "text": "The production ckeri status command can read one AID from a local follower store, a ckeri-query endpoint, or Koios. Backend selection is part of the next release: the installed v0.1.1 binary predates this interface. The acceptance record for this change uses a freshly built production-package candidate, not the older installed release.",
+      "pause": 400
+    },
+    {
+      "text": "No hosted service of the earlier design is available. The endpoint backend reads a ckeri-query that the reader runs themselves; see Configuration.",
       "pause": 400
     }
   ],
@@ -99,6 +103,10 @@
       "pause": 400
     },
     {
+      "text": "The hosted service that the endpoint run used is no longer available.",
+      "pause": 400
+    },
+    {
       "text": "The concise, CI-validated provenance record is deploy/preprod/m1-backend-status-acceptance.txt. It records UTC time, operator, host, /tmp working directory, exact binary and SHA-256, exact commands, source-store/copy hashes, raw filenames, raw hashes, exit status, and result. Ticket-runtime raw files remain direct stdout-and-stderr capture bytes and are reconciled separately by the Slice 2 gate.",
       "pause": 400
     },
@@ -123,6 +131,6 @@
   ],
   "_source": {
     "file": "status-backends.md",
-    "sha256": "f1b87519d0adbbafd0126cd760bfb02e3edf6b683164b8ddd121eadc132c93cb"
+    "sha256": "34685df4629dffab4bb663e6b999cb2574596c2ef90dd6087f73ed3792d12d81"
   }
 }

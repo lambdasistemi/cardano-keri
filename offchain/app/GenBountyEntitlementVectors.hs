@@ -41,6 +41,7 @@ import Cardano.KERI.AID.Checkpoint.BountyCommitment (
     BountyScope (..),
     CommitmentFamily (..),
     CommitmentParameters (..),
+    ConvictionTarget (..),
     EntitlementError (..),
     EntitlementVerdict (..),
     commitDepositFloor,
@@ -125,11 +126,25 @@ otherSeedRef = OutputRef (BS.replicate 32 0x5e) 8
 commitmentRef :: OutputRef
 commitmentRef = OutputRef (BS.replicate 32 0x0c) 0
 
-checkpointRef :: OutputRef
-checkpointRef = OutputRef (BS.replicate 32 0xc2) 3
+-- | The identifier, epoch and sequence number of the spent checkpoint.
+aid :: ByteString
+aid = "E" <> BS.replicate 43 0x41
 
-otherCheckpointRef :: OutputRef
-otherCheckpointRef = OutputRef (BS.replicate 32 0xc2) 4
+epoch :: Integer
+epoch = 2
+
+sn :: Integer
+sn = 5
+
+-- | The honest target: this deployment, this identifier, this key state.
+target :: ConvictionTarget
+target =
+    ConvictionTarget
+        { ctCheckpointPolicy = checkpointPolicy
+        , ctAid = aid
+        , ctEpoch = epoch
+        , ctSn = sn
+        }
 
 marker :: ByteString
 marker = markerName seedRef
@@ -156,7 +171,9 @@ scope =
         , bsSchema = commitmentSchema
         , bsNetwork = cpNetwork parameters
         , bsCheckpointPolicy = checkpointPolicy
-        , bsCheckpointRef = checkpointRef
+        , bsAid = aid
+        , bsEpoch = epoch
+        , bsSn = sn
         , bsAction = ConvictEntitlement
         , bsMarker = marker
         , bsCommitUpper = commitUpper
@@ -294,7 +311,9 @@ verdictTag = \case
     EntitlementValid -> 0
     EntitlementInvalid EntitlementDigestWidth -> 1
     EntitlementInvalid EntitlementNonceWidth -> 2
-    EntitlementInvalid EntitlementCheckpoint -> 4
+    EntitlementInvalid EntitlementDeployment -> 4
+    EntitlementInvalid EntitlementAid -> 7
+    EntitlementInvalid EntitlementKeyState -> 8
     EntitlementInvalid EntitlementMarker -> 5
     EntitlementInvalid EntitlementHash -> 6
 
@@ -308,20 +327,36 @@ vectors rather than to a row that could never fire.
 -}
 verdictRows :: [(String, EntitlementVerdict)]
 verdictRows =
-    [ ("honest", matches commitment checkpointRef evidence nonce)
+    [ ("honest", matches commitment target evidence nonce)
     ,
         ( "short_nonce"
-        , matches commitment checkpointRef evidence shortNonce
+        , matches commitment target evidence shortNonce
         )
     ,
-        ( "other_checkpoint"
-        , matches commitment otherCheckpointRef evidence nonce
+        ( "other_deployment"
+        , matches
+            commitment
+            target{ctCheckpointPolicy = flipLast checkpointPolicy}
+            evidence
+            nonce
+        )
+    ,
+        ( "other_aid"
+        , matches commitment target{ctAid = flipLast aid} evidence nonce
+        )
+    ,
+        ( "other_epoch"
+        , matches commitment target{ctEpoch = epoch + 1} evidence nonce
+        )
+    ,
+        ( "other_sn"
+        , matches commitment target{ctSn = sn + 1} evidence nonce
         )
     ,
         ( "marker_left_scope"
         , matches
             commitment{bcMarker = markerName otherSeedRef}
-            checkpointRef
+            target
             evidence
             nonce
         )
@@ -329,7 +364,7 @@ verdictRows =
         ( "substituted_evidence"
         , matches
             commitment
-            checkpointRef
+            target
             evidence{eneEventBytes = flipLast eventBytes}
             nonce
         )
@@ -337,7 +372,7 @@ verdictRows =
         ( "substituted_nonce"
         , matches
             commitment
-            checkpointRef
+            target
             evidence
             (flipLast nonce)
         )
@@ -345,7 +380,7 @@ verdictRows =
         ( "substituted_payee"
         , matches
             commitment{bcPayeePkh = BS.replicate 28 0xaa}
-            checkpointRef
+            target
             evidence
             nonce
         )
@@ -398,11 +433,11 @@ output
               , intConst "seed_index" (orOutputIndex seedRef)
               , intConst "other_seed_index" (orOutputIndex otherSeedRef)
               , intConst "commitment_index" (orOutputIndex commitmentRef)
-              , intConst "checkpoint_index" (orOutputIndex checkpointRef)
-              , intConst "other_checkpoint_index" (orOutputIndex otherCheckpointRef)
+              , intConst "epoch" epoch
+              , intConst "sn" sn
               , byteConst "seed_txid" (orTransactionId seedRef)
               , byteConst "commitment_txid" (orTransactionId commitmentRef)
-              , byteConst "checkpoint_txid" (orTransactionId checkpointRef)
+              , byteConst "aid" aid
               , byteConst "commitment_policy" commitmentPolicy
               , byteConst "checkpoint_policy" checkpointPolicy
               , byteConst "payee" payee

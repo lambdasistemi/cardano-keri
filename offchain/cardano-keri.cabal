@@ -27,6 +27,7 @@ data-files:
   deployment-test/fixtures/*.cesr
   deployment-test/fixtures/koios/*.cbor
   deployment-test/fixtures/koios/*.json
+  deployment-test/fixtures/koios-recorded/*.json
   deployment-test/fixtures/register-preflight-board-manifest.json
   deployment-test/fixtures/register-preflight-m1-manifest.json
   docs/assets/swagger/query-api.json
@@ -146,9 +147,9 @@ library deployment
   build-depends:
     , aeson
     , async
-    , base                              >=4.18 && <5
+    , base                           >=4.18 && <5
     , bech32
-    , bytestring                        >=0.11 && <0.13
+    , bytestring                     >=0.11 && <0.13
     , cardano-crypto-class
     , cardano-keri
     , cardano-keri:chain-query
@@ -166,15 +167,13 @@ library deployment
     , crypton
     , directory
     , filepath
-    , memory                            >=0.18 && <0.19
+    , memory                         >=0.18 && <0.19
     , microlens
     , ouroboros-network:api
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
     , scientific
-    , singular-registry
-    , singular-registry:local-services
     , text
     , time
     , transformers
@@ -189,8 +188,6 @@ library deployment
     Cardano.KERI.Deployment.EndpointBoardTransaction
     Cardano.KERI.Deployment.Freeze
     Cardano.KERI.Deployment.KEL
-    Cardano.KERI.Deployment.KoiosRuntime
-    Cardano.KERI.Deployment.KoiosSettlement
     Cardano.KERI.Deployment.LiveRuntime
     Cardano.KERI.Deployment.Manifest
     Cardano.KERI.Deployment.NodeSocketRuntime
@@ -210,6 +207,35 @@ library deployment
     Cardano.KERI.Deployment.SigningKeyCheck
     Cardano.KERI.Deployment.TopUp
     Cardano.KERI.Deployment.TransactionRuntime
+
+-- The Koios instance of the registry runtime: its reads and its settlement.
+-- It alone holds the dependency on Singular's main library, which carries
+-- the Koios client, so "deployment" and everything that reaches only
+-- "deployment" stays free of a provider. "write-composition" does not depend
+-- on this component and the boundary check refuses the edge.
+library deployment-koios
+  import:           warnings
+  visibility:       public
+  default-language: GHC2021
+  hs-source-dirs:   deployment-koios
+  build-depends:
+    , aeson
+    , base                              >=4.18 && <5
+    , cardano-keri:deployment
+    , cardano-ledger-allegra
+    , cardano-ledger-api
+    , cardano-ledger-conway
+    , cardano-ledger-core
+    , cardano-node-clients
+    , containers
+    , microlens
+    , singular-registry
+    , singular-registry:local-services
+    , text
+
+  exposed-modules:
+    Cardano.KERI.Deployment.KoiosRuntime
+    Cardano.KERI.Deployment.KoiosSettlement
 
 library indexer
   import:           warnings
@@ -313,26 +339,66 @@ library write-composition
   hs-source-dirs:   write-composition
   build-depends:
     , base                      >=4.18 && <5
-    , bech32
     , bytestring                >=0.11 && <0.13
-    , cardano-crypto-class
     , cardano-keri
     , cardano-keri:chain-query
     , cardano-keri:deployment
     , cardano-keri:indexer
     , cardano-ledger-conway
     , cardano-ledger-core
-    , cardano-node-clients
     , directory
-    , memory                    >=0.18 && <0.19
     , opt-env-conf              >=0.13 && <0.16
     , text
     , time
 
+  exposed-modules:  Cardano.KERI.Deployment.CLI
+
+-- The registry commands of the new design (`registry deploy | register |
+-- fold | return`). They are not write-composition's: that component keeps
+-- the earlier design's writes and its no-provider boundary, and these
+-- commands may reach the ledger provider. Nothing in write-composition
+-- depends on this component.
+library registry-commands
+  import:           warnings
+  visibility:       public
+  default-language: GHC2021
+  hs-source-dirs:   registry-commands
+  build-depends:
+    , base                     >=4.18 && <5
+    , bech32
+    , bytestring               >=0.11 && <0.13
+    , cardano-crypto-class
+    , cardano-keri
+    , cardano-keri:deployment
+    , cardano-keri:key-source
+    , cardano-ledger-core
+    , cardano-node-clients
+    , directory
+    , memory                   >=0.18 && <0.19
+    , opt-env-conf             >=0.13 && <0.16
+    , text
+
   exposed-modules:
-    Cardano.KERI.Deployment.CLI
     Cardano.KERI.Deployment.RegistryBookingCommand
     Cardano.KERI.Deployment.RegistryCommand
+
+-- The wallet-vault key source of the registry commands. It alone holds the
+-- dependency on Singular's command-line library: it exports the key-opening
+-- entry and the settings that name a key source, and nothing of Singular's
+-- modules, so no write module can import them.
+library key-source
+  import:           warnings
+  visibility:       private
+  default-language: GHC2021
+  hs-source-dirs:   registry-commands/key-source
+  build-depends:
+    , aeson
+    , base                            >=4.18 && <5
+    , cardano-keri:deployment
+    , opt-env-conf                    >=0.13 && <0.16
+    , singular-registry:registry-cli
+
+  exposed-modules:  Cardano.KERI.Deployment.RegistryKeySource
 
 -- #266 T266-S1-04/T266-S1-05: compiled regression fixtures for the
 -- public-surface guard. These are export SHAPES -- byte-zero module
@@ -390,6 +456,7 @@ library cli
     , cardano-keri:chain-query-koios
     , cardano-keri:deployment
     , cardano-keri:indexer
+    , cardano-keri:registry-commands
     , cardano-keri:write-composition
     , cardano-node-clients:utxo-indexer-lib
     , directory
@@ -472,6 +539,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.RegistryShortDepositSpec
     Cardano.KERI.Deployment.RegistrySnapshotSpec
     Cardano.KERI.Deployment.RegistryTransactionsSpec
+    Cardano.KERI.Deployment.RegistryVaultSpec
     Cardano.KERI.Deployment.ScriptAritySpec
     Cardano.KERI.Deployment.TopUpPackageSpec
     Cardano.KERI.Deployment.TopUpTransactionSpec
@@ -490,6 +558,8 @@ test-suite deployment-tests
     , cardano-keri:chain-query
     , cardano-keri:chain-query-koios
     , cardano-keri:deployment
+    , cardano-keri:deployment-koios
+    , cardano-keri:registry-commands
     , cardano-keri:write-composition
     , cardano-ledger-allegra
     , cardano-ledger-alonzo
@@ -506,6 +576,7 @@ test-suite deployment-tests
     , directory
     , filepath
     , ghc-lib-parser                    >=9.12.3 && <9.13
+    , hinotify
     , hspec                             >=2.11   && <2.12
     , http-conduit
     , memory                            >=0.18   && <0.19
@@ -516,6 +587,7 @@ test-suite deployment-tests
     , plutus-ledger-api
     , singular-registry
     , singular-registry:local-services
+    , singular-registry:registry-cli
     , temporary
     , text
     , time
@@ -827,6 +899,7 @@ test-suite cli-tests
     Cardano.KERI.CLI.RegistryAwareDeploymentSpec
     Cardano.KERI.CLI.RegistryBookingGroupSpec
     Cardano.KERI.CLI.RegistryGroupSpec
+    Cardano.KERI.CLI.RegistryVaultGroupSpec
     Cardano.KERI.CLI.WriteCompositionBoundarySpec
     Paths_cardano_keri
 
@@ -843,7 +916,7 @@ test-suite cli-tests
     , cardano-keri:cli
     , cardano-keri:deployment
     , cardano-keri:indexer
-    , cardano-keri:write-composition
+    , cardano-keri:registry-commands
     , cardano-ledger-api
     , cardano-ledger-binary
     , cardano-ledger-conway
@@ -1244,6 +1317,7 @@ test-suite e2e-tests
     , plutus-core
     , plutus-tx
     , process
+    , singular-registry:registry-cli
     , text
     , time
 

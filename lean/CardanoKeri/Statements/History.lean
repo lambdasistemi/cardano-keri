@@ -67,7 +67,9 @@ abbrev Said := Nat
 /-- Registry identifiers (the `ri` of an ACDC, the `i` of a `vcp`). -/
 abbrev RegistryId := Nat
 
-/-- Deployment parameters of the verifier family. -/
+/-- The verifier deployment fixes the witness floor. When a presenter submits
+a seal walk, the verifier compares the covering leaf's witness threshold with
+that floor. An independent reader supplies its own verifier policy. -/
 structure Params where
   /-- The toad floor: an issuer whose witness threshold is below it has no
   branch binding and is refused (the stated residual of #391). -/
@@ -247,8 +249,10 @@ structure KelEvent where
   seals : List Seal
   deriving DecidableEq, Repr
 
-/-- The evidence the walk verifies, abstracted at the cryptographic
-boundary. -/
+/-- The presenter supplies the event, controller signatures and witness
+receipts when a transaction consumes a seal walk. The verifier checks them
+over the same event bytes under the covering key state. A reader verifying
+the walk independently must perform these checks itself. -/
 structure Env where
   /-- `signed ep ev`: the indexed controller signatures over the raw event
   bytes meet the threshold of key state `ep`. -/
@@ -315,7 +319,9 @@ def TelEvent.wellFormed (t : TelEvent) : Bool :=
   | .iss => t.s == 0
   | .rev => t.s == 1
 
-/-- The TEL side of the environment: the SAID the hash-proof token recomputes. -/
+/-- The presenter supplies the TEL event for the seal walk. The hash-proof
+token attests its recomputed SAID and the verifier compares it with the seal.
+A reader performing this check independently recomputes the event digest. -/
 structure TelEnv extends Env where
   digest : TelEvent → Digest
 

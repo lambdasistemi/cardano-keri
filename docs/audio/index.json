@@ -17401,7 +17401,7 @@
     "index": 1,
     "name": "docs-user-follower/configuring-the-library-01",
     "pause_ms": 400,
-    "v": "54f927404db7"
+    "v": "377b0f6349be"
    },
    {
     "index": 2,
@@ -17607,7 +17607,7 @@
     "index": 4,
     "name": "docs-user-follower/what-it-deliberately-does-not-do-04",
     "pause_ms": 300,
-    "v": "bfcbd3cfc7a2"
+    "v": "7141c5a159fb"
    }
   ],
   "what-it-indexes": [
@@ -18461,13 +18461,13 @@
     "index": 3,
     "name": "docs-user-query-endpoint/the-query-endpoint-checkpoint-answers-without-a-node-03",
     "pause_ms": 400,
-    "v": "156abf163d73"
+    "v": "cbc4233d081c"
    },
    {
     "index": 4,
     "name": "docs-user-query-endpoint/the-query-endpoint-checkpoint-answers-without-a-node-04",
     "pause_ms": 400,
-    "v": "ca8a07165956"
+    "v": "269355355e92"
    }
   ],
   "the-registry-services-ceiling": [
@@ -18513,7 +18513,7 @@
     "index": 1,
     "name": "docs-user-query-endpoint/what-this-endpoint-does-not-do-01",
     "pause_ms": 400,
-    "v": "d5f7396cc410"
+    "v": "4f6fdfba2f84"
    }
   ]
  },
@@ -19129,13 +19129,19 @@
     "index": 2,
     "name": "docs-user-status-backends/query-identity-status-through-three-backends-02",
     "pause_ms": 400,
-    "v": "0b8f9db1ae3b"
+    "v": "876201947ef7"
    },
    {
     "index": 3,
     "name": "docs-user-status-backends/query-identity-status-through-three-backends-03",
     "pause_ms": 400,
-    "v": "e2993ad1fe52"
+    "v": "d87fecb7981d"
+   },
+   {
+    "index": 4,
+    "name": "docs-user-status-backends/query-identity-status-through-three-backends-04",
+    "pause_ms": 400,
+    "v": "a00b6d717c3b"
    }
   ],
   "recorded-acceptance-journey": [
@@ -19155,13 +19161,19 @@
     "index": 2,
     "name": "docs-user-status-backends/recorded-acceptance-journey-02",
     "pause_ms": 400,
-    "v": "ab8303519a41"
+    "v": "8abccaf66d57"
    },
    {
     "index": 3,
     "name": "docs-user-status-backends/recorded-acceptance-journey-03",
     "pause_ms": 400,
-    "v": "ab4295d3cc93"
+    "v": "7d3eb5c9cc66"
+   },
+   {
+    "index": 4,
+    "name": "docs-user-status-backends/recorded-acceptance-journey-04",
+    "pause_ms": 400,
+    "v": "e6791c38b622"
    }
   ],
   "retained-query-commands": [

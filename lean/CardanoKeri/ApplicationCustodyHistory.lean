@@ -139,6 +139,56 @@ private theorem sole_holder {outputs : List ObservedOutput} {token : TokenId} {x
       omega
     · exact ih (by omega) mx my
 
+/-- Given a reachable registry and an observed carrier history, when an admitted
+booking names an input and request index, then the mint reads the precise
+reference, AID and native position of the output produced by the conviction
+in that history. The result applies to the particular booking action selected. -/
+theorem booking_spends_conviction_output
+    {p env} {i : Interpretation} {aid edges s world next carrier}
+    (registry : PublicRegistry) (release : PublishedRelease) (commit : TrieCommit)
+    (history : HistoryPremises i.hash i.code commit release world registry (i.keyOf aid))
+    (path : CarrierHistory p env i (activeAsset i.hash i.code registry.identity (i.keyOf aid))
+      aid edges s world carrier)
+    (tx : Transaction world next) (aenv : Application.Env) (rp : Registry.Params)
+    (ok : accepted i aenv rp p release tx.observation = true)
+    {ref : Singular.OutRef} {index : Nat}
+    (booked : Application.Action.bookTermination ref index registry.identity (i.keyOf aid) ∈
+      tx.observation.actions) :
+    ∃ cfg key before after, ref = carrier.reference ∧
+      configurationOf i release registry.identity tx.observation = some cfg ∧
+      namedInput tx.observation ref = some carrier ∧
+      readPendingSpend i rp cfg registry.identity (i.keyOf aid) carrier =
+        some ⟨ref, aid, key⟩ ∧
+      checkpointDatum i carrier = some ⟨aid, .terminationPending key⟩ ∧
+      (before, after, carrier) ∈ edges ∧ ConvictionEdge p env aid key before after := by
+  obtain ⟨cfg, input, request, configured, named, _, _, pending, _⟩ :=
+    termination_booking_inversion i aenv rp p release _ ok booked
+  obtain ⟨_, _, holds, d, key, decoded, _, state⟩ := convictedPending_inversion pending
+  obtain ⟨unspent, token⟩ := carrier_unspent path
+  have same := sole_holder (HistoryStatements.one_live_token _ _ _ _ _ _ _ history)
+    (tx.ledger.inputsPresent _ (namedInput_mem named)) unspent holds token
+  subst input
+  have reference : carrier.reference = ref := by
+    unfold namedInput at named
+    split at named
+    · simpa using List.find?_some named
+    · contradiction
+  subst ref
+  obtain ⟨st, observed⟩ := carrier_identifier path
+  rw [observed] at decoded
+  cases decoded
+  have pendingDatum : checkpointDatum i carrier = some ⟨aid, .terminationPending key⟩ := by
+    change st = .terminationPending key at state
+    rwa [← state]
+  obtain ⟨before, after, member, edge⟩ := pending_output_producer path pendingDatum
+  have read := pending
+  unfold convictedPending readPendingSpend at read
+  rw [pendingDatum] at read
+  refine ⟨cfg, key, before, after, rfl, configured, named, ?_, pendingDatum, member, edge⟩
+  unfold readPendingSpend
+  rw [pendingDatum]
+  split at read <;> simp_all
+
 /-- Given a reachable public registry and an observed checkpoint history of
 its active token, when a ledger transaction accepted by the application mints
 the key's termination approval, then its booking spends the exact output
@@ -164,27 +214,75 @@ theorem approval_spends_conviction_output
       checkpointDatum i carrier = some ⟨aid, .terminationPending key⟩ ∧
       (before, after, carrier) ∈ edges ∧ ConvictionEdge p env aid key before after := by
   obtain ⟨ref, index, booked⟩ := termination_approval_requires_booking i aenv rp p release _ ok unique minted
-  obtain ⟨cfg, input, request, _, named, _, _, pending, _⟩ :=
-    termination_booking_inversion i aenv rp p release _ ok booked
-  obtain ⟨_, _, holds, d, key, decoded, _, state⟩ := convictedPending_inversion pending
-  obtain ⟨unspent, token⟩ := carrier_unspent path
-  have same := sole_holder (HistoryStatements.one_live_token _ _ _ _ _ _ _ history)
-    (tx.ledger.inputsPresent _ (namedInput_mem named)) unspent holds token
-  subst input
-  have reference : carrier.reference = ref := by
-    unfold namedInput at named
-    split at named
-    · simpa using List.find?_some named
-    · contradiction
-  subst ref
-  obtain ⟨st, observed⟩ := carrier_identifier path
-  rw [observed] at decoded
-  cases decoded
-  have pendingDatum : checkpointDatum i carrier = some ⟨aid, .terminationPending key⟩ := by
-    change st = .terminationPending key at state
-    rwa [← state]
-  obtain ⟨before, after, member, edge⟩ := pending_output_producer path pendingDatum
-  exact ⟨index, key, before, after, booked, named, pendingDatum, member, edge⟩
+  obtain ⟨_, key, before, after, rfl, _, named, _, datum, member, edge⟩ :=
+    booking_spends_conviction_output registry release commit history path tx aenv rp ok booked
+  exact ⟨index, key, before, after, booked, named, datum, member, edge⟩
+
+/-- The application's projection of one economic booking. The registry names
+the created request by its transaction and output index. The booker's action
+names the spent input. Both are read in this transaction, along with the
+lovelace and checkpoint credential recorded by the economic booking. The public
+fold still consumes its usual request. -/
+def Transaction.bookingSpend {world next : CandidateWorld} (tx : Transaction world next)
+    (i : Interpretation) (release : PublishedRelease) (rp : Registry.Params)
+    (registry : Singular.TokenId) (b : Singular.TerminationBooking) (ref : Singular.OutRef) :
+    Option PendingSpend := do
+  let request := b.request
+  let output ← tx.observation.outputs[request.reference.index]?
+  let input ← namedInput tx.observation ref
+  let cfg ← configurationOf i release registry tx.observation
+  let key := i.keyOf request.key
+  if request.reference.tx = tx.identity ∧ output.reference = request.reference ∧
+      Application.Action.bookTermination ref request.reference.index registry key ∈ tx.observation.actions ∧
+      output.lovelace = request.contents.lovelace ∧ input.credential = request.destination then
+    readPendingSpend i rp cfg registry key input
+  else none
+
+/-- Given an accepted mint, a public registry history and its observed carrier,
+when the economic booking's indexed request and the mint's named input produce
+a receipt, then the receipt names this exact input, identifier and native key
+state. The conviction produced it, and the mint transaction created the
+request at the economic booking's reference. -/
+theorem booking_receipt_provenance {p env} {i : Interpretation} {edges s world next carrier}
+    (registry : PublicRegistry) (release : PublishedRelease) (commit : TrieCommit)
+    (b : Singular.TerminationBooking) {ref receipt}
+    (history : HistoryPremises i.hash i.code commit release world registry (i.keyOf b.request.key))
+    (path : CarrierHistory p env i (activeAsset i.hash i.code registry.identity (i.keyOf b.request.key))
+      b.request.key edges s world carrier)
+    (tx : Transaction world next) (aenv : Application.Env) (rp : Registry.Params)
+    (ok : accepted i aenv rp p release tx.observation = true)
+    (read : tx.bookingSpend i release rp registry.identity b ref = some receipt) :
+    ∃ request before after,
+      tx.creates request ∧ request.reference = b.request.reference ∧
+      namedInput tx.observation receipt.reference = some carrier ∧
+      receipt.reference = carrier.reference ∧ receipt.aid = b.request.key ∧
+      checkpointDatum i carrier = some ⟨receipt.aid, .terminationPending receipt.position⟩ ∧
+      (before, after, carrier) ∈ edges ∧
+      ConvictionEdge p env receipt.aid receipt.position before after := by
+  unfold Transaction.bookingSpend at read
+  simp only [bind, Option.bind] at read
+  split at read <;> try contradiction
+  rename_i request selected
+  dsimp only at read
+  split at read <;> try contradiction
+  rename_i spent named
+  dsimp only at read
+  split at read <;> try contradiction
+  rename_i cfg configured
+  dsimp only at read
+  split at read <;> try contradiction
+  rename_i fields
+  obtain ⟨txId, outputRef, action, _, _⟩ := fields
+  obtain ⟨cfg', key, before, after, sameRef, config, input, decoded, datum, member, edge⟩ :=
+    booking_spends_conviction_output registry release commit history path tx aenv rp ok action
+  rw [named] at input
+  rw [configured] at config
+  cases input
+  cases config
+  rw [decoded] at read
+  cases read
+  exact ⟨request, before, after, ⟨by rwa [outputRef], by rwa [outputRef]⟩, outputRef,
+    named, sameRef, rfl, datum, member, edge⟩
 
 end Custody
 end CardanoKeri.Application

@@ -236,4 +236,32 @@ theorem witnessed_termination_booking :
 #guard !accepted i aenv rp p release
   {bookObs with actions := [.bookTermination advanced.reference 0 rid 11]}
 
+private def nativeReceipt : PendingSpend := ⟨convicted.reference, 11, rotatedLive.hash⟩
+
+/-- Given the registered carrier has rotated and entered pending termination,
+when the booker pays the fee and places the economic request, then the
+application receipt reads the rotated position from the spent output. Both
+the economic booking and the mint succeed for this request reference. -/
+theorem economic_booking_reads_rotated_position :
+    Registry.bookTermination rp registryPending 11 7 bookingTx.fee termination =
+      .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, registryBooked) ∧
+    bookingTx.bookingSpend i release rp rid termination convicted.reference = some nativeReceipt ∧
+    ∃ request before after, bookingTx.creates request ∧ request.reference = termination.request.reference ∧
+      namedInput bookObs nativeReceipt.reference = some convicted ∧
+      nativeReceipt.reference = convicted.reference ∧ nativeReceipt.aid = termination.request.key ∧
+      checkpointDatum i convicted = some ⟨nativeReceipt.aid, .terminationPending nativeReceipt.position⟩ ∧
+      (before, after, convicted) ∈ convictionEdges ∧
+      ConvictionEdge p env nativeReceipt.aid nativeReceipt.position before after := by
+  refine ⟨registry_booked, rfl, ?_⟩
+  exact booking_receipt_provenance registry1 release commit termination history pendingPath bookingTx
+    aenv rp (by decide) (ref := convicted.reference) (receipt := nativeReceipt) rfl
+
+-- Changing the creating transaction while keeping the output index, or
+-- selecting a different output of the actual transaction, loses the receipt.
+private def readdress (ref : Singular.OutRef) : Singular.TerminationBooking :=
+  {termination with request := {termination.request with reference := ref}}
+#guard (bookingTx.bookingSpend i release rp rid (readdress ⟨201, 0⟩) convicted.reference).isNone
+#guard (bookingTx.bookingSpend i release rp rid (readdress ⟨200, 1⟩) convicted.reference).isNone
+#guard (bookingTx.bookingSpend i release rp rid termination advanced.reference).isNone
+
 end CardanoKeri.Application.Custody.Examples

@@ -1462,18 +1462,14 @@ theorem convictedPending_inversion {i : Interpretation} {rp : CardanoKeri.Regist
       quantity input (activeAsset i.hash i.code registry key) = 1 ∧
       ∃ d k, checkpointDatum i input = some d ∧ i.keyOf d.aid = key ∧
         d.state = .terminationPending k := by
-  unfold convictedPending at h
-  simp only [Bool.and_eq_true, beq_iff_eq] at h
-  obtain ⟨⟨⟨credential, datum⟩, lovelace⟩, assets⟩ := h
-  refine ⟨credential, lovelace, exactAssets_single assets, ?_⟩
-  split at datum
-  · rename_i d hd
-    simp only [Bool.and_eq_true, beq_iff_eq] at datum
-    obtain ⟨sameKey, pending⟩ := datum
-    cases hs : d.state with
-    | terminationPending k => exact ⟨d, k, hd, sameKey, hs⟩
-    | _ => simp [pendingState, hs] at pending
-  · contradiction
+  unfold convictedPending readPendingSpend at h
+  split at h <;> try contradiction
+  rename_i aid position datum
+  split at h <;> try contradiction
+  rename_i accepted
+  simp only [Bool.and_eq_true, beq_iff_eq] at accepted
+  obtain ⟨⟨⟨credential, lovelace⟩, assets⟩, sameKey⟩ := accepted
+  exact ⟨credential, lovelace, exactAssets_single assets, _, position, datum, sameKey, rfl⟩
 
 /-- **A termination booking spends a convicted pending output and places the
 request the terminating fold consumes.**

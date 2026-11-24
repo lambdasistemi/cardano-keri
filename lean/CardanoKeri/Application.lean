@@ -379,19 +379,32 @@ def checkpointDatum (i : Interpretation) (output : ObservedOutput) :
     Option CardanoKeri.ConsumerIdentity.DecodedDatum :=
   match output.datum with | .application raw => i.decodeCheckpoint raw | _ => none
 
-/-- The pending output a conviction leaves for `key` of `registry`
-(`Checkpoint.Step.convict`, `pending_holds_minimum_ada`): at the checkpoint
-validator's credential the configuration record names, carrying the
-pending-termination datum of an AID whose key is `key`, holding exactly the
-registry's minimum ADA and the one active token of the key. -/
-def convictedPending (i : Interpretation) (rp : CardanoKeri.Registry.Params) (c : Configuration)
+/-- The termination booker spends this UTxO. Its reference is supplied by the
+ledger and its identifier and native position are in the pending datum written
+by the checkpoint spend (checkpoint_register.ak 508–538). The application
+reads them at admission (application/termination.ak 76–92). -/
+structure PendingSpend where
+  reference : OutRef
+  aid : Checkpoint.AID
+  position : Checkpoint.KeyState
+  deriving Repr, DecidableEq
+
+/-- The pending input admitted at booking. Read the native position from the
+named input after checking its credential, minimum ADA, active asset, key and
+pending datum. The application needs no conviction evidence at this mint. -/
+def readPendingSpend (i : Interpretation) (rp : Registry.Params) (c : Configuration)
+    (registry : TokenId) (key : Key) (input : ObservedOutput) : Option PendingSpend :=
+  match checkpointDatum i input with
+  | some ⟨aid, .terminationPending position⟩ =>
+    if input.credential == c.checkpointCredential && input.lovelace == rp.Mc &&
+        exactAssets input [(activeAsset i.hash i.code registry key, 1)] && i.keyOf aid == key then
+      some ⟨input.reference, aid, position⟩
+    else none
+  | _ => none
+
+def convictedPending (i : Interpretation) (rp : Registry.Params) (c : Configuration)
     (registry : TokenId) (key : Key) (input : ObservedOutput) : Bool :=
-  input.credential == c.checkpointCredential &&
-  (match checkpointDatum i input with
-    | some d => i.keyOf d.aid == key && pendingState d.state
-    | none => false) &&
-  input.lovelace == rp.Mc &&
-  exactAssets input [(activeAsset i.hash i.code registry key, 1)]
+  (readPendingSpend i rp c registry key input).isSome
 
 /-- The exact lovelace a termination request holds: the economic termination
 carrier `Mr` and the registry's minimum tip (`Registry.bookTermination`). -/

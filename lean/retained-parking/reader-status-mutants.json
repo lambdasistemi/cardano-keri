@@ -1,30 +1,147 @@
 [
  {
   "id": "context-unchecked",
-  "before": "  if authenticatedContextB c ev.environment && !brokenHistory i c ev then",
-  "after": "  if !brokenHistory i c ev then",
+  "before": "  if authenticatedContextB c ev.environment then",
+  "after": "  if true then",
   "failure": "answer-changed wrong-network",
   "owner": "CardanoKeri.ReaderStatus.unauthenticated_unavailable",
   "test": "ReaderStatusChecks",
   "detail": "a status without an authenticated context"
  },
  {
-  "id": "broken-history-ignored",
-  "before": "  if authenticatedContextB c ev.environment && !brokenHistory i c ev then",
-  "after": "  if authenticatedContextB c ev.environment then",
+  "id": "live-beside-a-refusing-history",
+  "before": "  | .live _, true, _ => .active",
+  "after": "  | .live _, _, _ => .active",
   "failure": "answer-changed live-holder-broken-history",
-  "owner": "CardanoKeri.ReaderStatus.broken_history_unavailable",
+  "owner": "CardanoKeri.ReaderStatus.broken_history_unavailable, CardanoKeri.ReaderStatus.holder_against_history_unavailable",
   "test": "ReaderStatusChecks",
-  "detail": "a holder decides beside a history that fails its replay"
+  "detail": "a live holder decides beside a history that fails its replay"
  },
  {
-  "id": "incomplete-history-read-as-broken",
-  "before": "    decide (h.point = ev.point ∧ h.registry = registryAsset i c ∧ h.complete = true) &&",
-  "after": "    decide (h.point = ev.point ∧ h.registry = registryAsset i c) &&",
-  "failure": "answer-changed active-incomplete-history-unreplayable",
-  "owner": "CardanoKeri.ReaderStatus.history_not_established, CardanoKeri.ReaderStatus.holder_decides_alone",
+  "id": "convicted-beside-a-refusing-history",
+  "before": "  | .convicted _, true, _ => .pendingTermination",
+  "after": "  | .convicted _, _, _ => .pendingTermination",
+  "failure": "answer-changed convicted-holder-incomplete-history-with-an-empty-fold",
+  "owner": "CardanoKeri.ReaderStatus.broken_history_unavailable, CardanoKeri.ReaderStatus.holder_against_history_unavailable",
   "test": "ReaderStatusChecks",
-  "detail": "an incomplete history that does not replay refuses the holder"
+  "detail": "the convicted checkpoint decides beside a history no registry could have"
+ },
+ {
+  "id": "request-beside-a-refusing-history",
+  "before": "  | .request, true, _ => .pendingTermination",
+  "after": "  | .request, _, _ => .pendingTermination",
+  "failure": "answer-changed request-holder-incomplete-history-with-an-empty-fold",
+  "owner": "CardanoKeri.ReaderStatus.broken_history_unavailable, CardanoKeri.ReaderStatus.holder_against_history_unavailable",
+  "test": "ReaderStatusChecks",
+  "detail": "the termination request decides beside a history no registry could have"
+ },
+ {
+  "id": "incomplete-history-never-contradicts-the-holder",
+  "before": "        admitsActive h.complete (i.keyOf c.aid) h.folds",
+  "after": "        (!h.complete || admitsActive h.complete (i.keyOf c.aid) h.folds)",
+  "failure": "answer-changed live-holder-incomplete-history-terminating-the-key",
+  "owner": "CardanoKeri.ReaderStatus.incomplete_history_refusing_unavailable, CardanoKeri.ReaderStatus.incomplete_admits_active_iff",
+  "test": "ReaderStatusChecks",
+  "detail": "a holder decides beside an incomplete history that terminates its key"
+ },
+ {
+  "id": "self-refuting-history-ignored",
+  "before": "    !refutesItself h &&",
+  "after": "    true &&",
+  "failure": "answer-changed live-holder-broken-history-of-another-registry",
+  "owner": "CardanoKeri.ReaderStatus.broken_history_unavailable, CardanoKeri.ReaderStatus.refutesItself_iff",
+  "test": "ReaderStatusChecks",
+  "detail": "a holder decides beside a history no registry could have, named for another registry"
+ },
+ {
+  "id": "incomplete-history-never-refutes-itself",
+  "before": "  (replayFrom (if h.complete then [] else presupposed h.folds.flatten) h.folds).isNone",
+  "after": "  h.complete && (replayFrom (if h.complete then [] else presupposed h.folds.flatten) h.folds).isNone",
+  "failure": "answer-changed live-holder-broken-history-observed-elsewhere",
+  "owner": "CardanoKeri.ReaderStatus.broken_history_unavailable, CardanoKeri.ReaderStatus.refutesItself_iff, CardanoKeri.ReaderStatus.unreplayable_iff",
+  "test": "ReaderStatusChecks",
+  "detail": "an incomplete history is never read as refuting itself"
+ },
+ {
+  "id": "complete-history-replayed-from-any-registry",
+  "before": "  (replayFrom (if h.complete then [] else presupposed h.folds.flatten) h.folds).isNone",
+  "after": "  (replayFrom (presupposed h.folds.flatten) h.folds).isNone",
+  "failure": "answer-changed request-holder-broken-complete-history-observed-elsewhere",
+  "owner": "CardanoKeri.ReaderStatus.refutesItself_iff, CardanoKeri.ReaderStatus.broken_history_unavailable",
+  "test": "ReaderStatusChecks",
+  "detail": "a history that says it is complete replayed from a registry that is not empty"
+ },
+ {
+  "id": "incomplete-history-replayed-from-creation",
+  "before": "  if complete then [] else",
+  "after": "  if complete || true then [] else",
+  "failure": "answer-changed active-incomplete-history-starting-late",
+  "owner": "CardanoKeri.ReaderStatus.part_of_history_admits_active, CardanoKeri.ReaderStatus.incomplete_history_is_a_gap",
+  "test": "ReaderStatusChecks",
+  "detail": "an incomplete history that does not replay from the creation refuses the holder"
+ },
+ {
+  "id": "key-not-presupposed-active",
+  "before": "    else Singular.trieSet (presupposed changes) key (.known .active)",
+  "after": "    else presupposed changes",
+  "failure": "answer-changed active-incomplete-history",
+  "owner": "CardanoKeri.ReaderStatus.incomplete_admits_active_iff, CardanoKeri.ReaderStatus.part_of_history_admits_active",
+  "test": "ReaderStatusChecks",
+  "detail": "an incomplete history that does not name the key refuses its holder"
+ },
+ {
+  "id": "key-presupposed-active-before-its-registration",
+  "before": "    if changes.any (fun change => decide (change.key = key)) then presupposed changes",
+  "after": "    if false then presupposed changes",
+  "failure": "answer-changed active-incomplete-history-registering-the-key",
+  "owner": "CardanoKeri.ReaderStatus.incomplete_admits_active_iff, CardanoKeri.ReaderStatus.admitsActive_iff",
+  "test": "ReaderStatusChecks",
+  "detail": "an incomplete history that holds the registration of the key refuses its holder"
+ },
+ {
+  "id": "termination-not-presupposed",
+  "before": "  | .terminate key :: rest => Singular.trieSet (presupposed rest) key (.known .active)",
+  "after": "  | .terminate _ :: rest => presupposed rest",
+  "failure": "answer-changed active-incomplete-history-starting-late",
+  "owner": "CardanoKeri.ReaderStatus.presupposed_reads, CardanoKeri.ReaderStatus.part_of_history_admits_active",
+  "test": "ReaderStatusChecks",
+  "detail": "a termination of a key registered before the history starts refuses the holder"
+ },
+ {
+  "id": "registration-over-a-presupposed-key",
+  "before": "  | .register key :: rest => Singular.trieErase (presupposed rest) key",
+  "after": "  | .register _ :: rest => presupposed rest",
+  "failure": "answer-changed active-incomplete-history-registering-the-key",
+  "owner": "CardanoKeri.ReaderStatus.presupposed_reads, CardanoKeri.ReaderStatus.part_of_history_admits_active",
+  "test": "ReaderStatusChecks",
+  "detail": "a key registered and then terminated inside the history refuses the holder"
+ },
+ {
+  "id": "admitted-without-the-active-key",
+  "before": "  | some members => decide (Singular.trieGet members key = .known .active)",
+  "after": "  | some _ => true",
+  "failure": "answer-changed live-holder-incomplete-history-terminating-the-key",
+  "owner": "CardanoKeri.ReaderStatus.incomplete_history_refusing_unavailable, CardanoKeri.ReaderStatus.incomplete_admits_active_iff",
+  "test": "ReaderStatusChecks",
+  "detail": "a holder decides beside a history that terminates its key"
+ },
+ {
+  "id": "refusal-point-unchecked",
+  "before": "      (if h.point = ev.point ∧ h.registry = registryAsset i c then",
+  "after": "      (if h.registry = registryAsset i c then",
+  "failure": "answer-changed active-history-observed-elsewhere",
+  "owner": "CardanoKeri.ReaderStatus.history_not_established",
+  "test": "ReaderStatusChecks",
+  "detail": "a history through another point refuses the holder"
+ },
+ {
+  "id": "refusal-registry-unchecked",
+  "before": "      (if h.point = ev.point ∧ h.registry = registryAsset i c then",
+  "after": "      (if h.point = ev.point then",
+  "failure": "answer-changed active-history-of-another-registry",
+  "owner": "CardanoKeri.ReaderStatus.history_not_established",
+  "test": "ReaderStatusChecks",
+  "detail": "the history of another registry refuses the holder"
  },
  {
   "id": "holding-point-unchecked",
@@ -67,7 +184,7 @@
   "before": "    if h.point = ev.point ∧ h.registry = registryAsset i c ∧ h.complete = true then",
   "after": "    if h.point = ev.point ∧ h.registry = registryAsset i c then",
   "failure": "answer-changed history-starting-late",
-  "owner": "CardanoKeri.ReaderStatus.history_not_established, CardanoKeri.ReaderStatus.neverRegistered_iff",
+  "owner": "CardanoKeri.ReaderStatus.establishedLeaf_eq_some_iff, CardanoKeri.ReaderStatus.neverRegistered_iff",
   "test": "ReaderStatusChecks",
   "detail": "a history that starts late decides"
  },
@@ -76,7 +193,7 @@
   "before": "    if Singular.trieGet members key = .unknown then",
   "after": "    if true then",
   "failure": "answer-changed history-registering-twice",
-  "owner": "CardanoKeri.ReaderStatus.applyChange_exact, CardanoKeri.ReaderStatus.history_not_established",
+  "owner": "CardanoKeri.ReaderStatus.applyChange_exact, CardanoKeri.ReaderStatus.broken_history_unavailable",
   "test": "ReaderStatusChecks",
   "detail": "a registration of a key the registry already knows replayed"
  },
@@ -85,7 +202,7 @@
   "before": "    if Singular.trieGet members key = .known .active then",
   "after": "    if true then",
   "failure": "answer-changed history-terminating-an-unregistered-key",
-  "owner": "CardanoKeri.ReaderStatus.applyChange_exact, CardanoKeri.ReaderStatus.history_not_established",
+  "owner": "CardanoKeri.ReaderStatus.applyChange_exact, CardanoKeri.ReaderStatus.broken_history_unavailable",
   "test": "ReaderStatusChecks",
   "detail": "a termination of a key that is not active replayed"
  },
@@ -94,7 +211,7 @@
   "before": "  if changes.isEmpty then none else changes.foldlM applyChange members",
   "after": "  changes.foldlM applyChange members",
   "failure": "answer-changed history-with-an-empty-fold",
-  "owner": "CardanoKeri.ReaderStatus.applyFold_of_accepted, CardanoKeri.ReaderStatus.history_not_established",
+  "owner": "CardanoKeri.ReaderStatus.applyFold_of_accepted, CardanoKeri.ReaderStatus.replayFrom_iff, CardanoKeri.ReaderStatus.broken_history_unavailable",
   "test": "ReaderStatusChecks",
   "detail": "a fold without a change replayed"
  },
@@ -189,9 +306,9 @@
   "detail": "an established empty set read as no observation"
  },
  {
-  "id": "active-needs-leaf",
-  "before": "  | .live _, none => .active",
-  "after": "  | .live _, none => .unavailable",
+  "id": "active-refused",
+  "before": "  | .live _, true, _ => .active",
+  "after": "  | .live _, true, _ => .unavailable",
   "failure": "answer-changed active-holding-only",
   "owner": "CardanoKeri.ReaderStatus.active_iff",
   "test": "ReaderStatusChecks",
@@ -199,8 +316,8 @@
  },
  {
   "id": "active-with-leaf-refused",
-  "before": "  | .live _, some (.known .active) => .active",
-  "after": "  | .live _, some (.known .active) => .unavailable",
+  "before": "  | .live _, true, _ => .active",
+  "after": "  | .live _, true, some (.known .active) => .unavailable\n  | .live _, true, _ => .active",
   "failure": "answer-changed active-with-history",
   "owner": "CardanoKeri.ReaderStatus.active_iff",
   "test": "ReaderStatusChecks",
@@ -208,8 +325,8 @@
  },
  {
   "id": "convicted-read-active",
-  "before": "  | .convicted _, none => .pendingTermination",
-  "after": "  | .convicted _, none => .active",
+  "before": "  | .convicted _, true, _ => .pendingTermination",
+  "after": "  | .convicted _, true, _ => .active",
   "failure": "answer-changed pending-convicted",
   "owner": "CardanoKeri.ReaderStatus.pendingTermination_iff, CardanoKeri.ReaderStatus.active_iff",
   "test": "ReaderStatusChecks",
@@ -217,8 +334,8 @@
  },
  {
   "id": "convicted-with-leaf-read-active",
-  "before": "  | .convicted _, some (.known .active) => .pendingTermination",
-  "after": "  | .convicted _, some (.known .active) => .active",
+  "before": "  | .convicted _, true, _ => .pendingTermination",
+  "after": "  | .convicted _, true, some (.known .active) => .active\n  | .convicted _, true, _ => .pendingTermination",
   "failure": "answer-changed pending-convicted-with-history",
   "owner": "CardanoKeri.ReaderStatus.pendingTermination_iff, CardanoKeri.ReaderStatus.active_iff",
   "test": "ReaderStatusChecks",
@@ -226,8 +343,8 @@
  },
  {
   "id": "request-unanswered",
-  "before": "  | .request, none => .pendingTermination",
-  "after": "  | .request, none => .unavailable",
+  "before": "  | .request, true, _ => .pendingTermination",
+  "after": "  | .request, true, _ => .unavailable",
   "failure": "answer-changed pending-requested",
   "owner": "CardanoKeri.ReaderStatus.pendingTermination_iff",
   "test": "ReaderStatusChecks",
@@ -235,8 +352,8 @@
  },
  {
   "id": "request-with-leaf-unanswered",
-  "before": "  | .request, some (.known .active) => .pendingTermination",
-  "after": "  | .request, some (.known .active) => .unavailable",
+  "before": "  | .request, true, _ => .pendingTermination",
+  "after": "  | .request, true, some (.known .active) => .unavailable\n  | .request, true, _ => .pendingTermination",
   "failure": "answer-changed pending-requested-with-history",
   "owner": "CardanoKeri.ReaderStatus.pendingTermination_iff",
   "test": "ReaderStatusChecks",
@@ -244,17 +361,17 @@
  },
  {
   "id": "terminal-needs-holding",
-  "before": "  | .notEstablished, some (.known .terminal) => .terminal",
-  "after": "  | .notEstablished, some (.known .terminal) => .unavailable",
+  "before": "  | .notEstablished, _, some (.known .terminal) => .terminal",
+  "after": "  | .notEstablished, _, some (.known .terminal) => .unavailable",
   "failure": "answer-changed terminal-history-only",
-  "owner": "CardanoKeri.ReaderStatus.terminal_iff",
+  "owner": "CardanoKeri.ReaderStatus.terminal_iff, CardanoKeri.ReaderStatus.history_decides_alone",
   "test": "ReaderStatusChecks",
   "detail": "terminal refused without a holding observation"
  },
  {
   "id": "terminal-read-never-registered",
-  "before": "  | .absent, some (.known .terminal) => .terminal",
-  "after": "  | .absent, some (.known .terminal) => .neverRegistered",
+  "before": "  | .absent, _, some (.known .terminal) => .terminal",
+  "after": "  | .absent, _, some (.known .terminal) => .neverRegistered",
   "failure": "answer-changed terminal-history-and-no-holder",
   "owner": "CardanoKeri.ReaderStatus.terminal_iff, CardanoKeri.ReaderStatus.neverRegistered_iff",
   "test": "ReaderStatusChecks",
@@ -262,17 +379,17 @@
  },
  {
   "id": "never-registered-needs-holding",
-  "before": "  | .notEstablished, some .unknown => .neverRegistered",
-  "after": "  | .notEstablished, some .unknown => .unavailable",
+  "before": "  | .notEstablished, _, some .unknown => .neverRegistered",
+  "after": "  | .notEstablished, _, some .unknown => .unavailable",
   "failure": "answer-changed never-registered-history-only",
-  "owner": "CardanoKeri.ReaderStatus.neverRegistered_iff",
+  "owner": "CardanoKeri.ReaderStatus.neverRegistered_iff, CardanoKeri.ReaderStatus.history_decides_alone",
   "test": "ReaderStatusChecks",
   "detail": "never registered refused without a holding observation"
  },
  {
   "id": "never-registered-read-terminal",
-  "before": "  | .absent, some .unknown => .neverRegistered",
-  "after": "  | .absent, some .unknown => .terminal",
+  "before": "  | .absent, _, some .unknown => .neverRegistered",
+  "after": "  | .absent, _, some .unknown => .terminal",
   "failure": "answer-changed never-registered-history-and-no-holder",
   "owner": "CardanoKeri.ReaderStatus.neverRegistered_iff, CardanoKeri.ReaderStatus.terminal_iff",
   "test": "ReaderStatusChecks",
@@ -280,8 +397,8 @@
  },
  {
   "id": "missing-token-terminal",
-  "before": "  | _, _ => .unavailable",
-  "after": "  | .absent, none => .terminal\n  | _, _ => .unavailable",
+  "before": "  | _, _, _ => .unavailable",
+  "after": "  | .absent, _, none => .terminal\n  | _, _, _ => .unavailable",
   "failure": "answer-changed missing-token-alone",
   "owner": "CardanoKeri.ReaderStatus.missing_token_alone_unavailable, CardanoKeri.ReaderStatus.terminal_iff",
   "test": "ReaderStatusChecks",
@@ -289,8 +406,8 @@
  },
  {
   "id": "missing-token-never-registered",
-  "before": "  | _, _ => .unavailable",
-  "after": "  | .absent, none => .neverRegistered\n  | _, _ => .unavailable",
+  "before": "  | _, _, _ => .unavailable",
+  "after": "  | .absent, _, none => .neverRegistered\n  | _, _, _ => .unavailable",
   "failure": "answer-changed missing-token-alone",
   "owner": "CardanoKeri.ReaderStatus.missing_token_alone_unavailable, CardanoKeri.ReaderStatus.neverRegistered_iff",
   "test": "ReaderStatusChecks",
@@ -298,8 +415,8 @@
  },
  {
   "id": "no-evidence-never-registered",
-  "before": "  | _, _ => .unavailable",
-  "after": "  | .notEstablished, none => .neverRegistered\n  | _, _ => .unavailable",
+  "before": "  | _, _, _ => .unavailable",
+  "after": "  | .notEstablished, _, none => .neverRegistered\n  | _, _, _ => .unavailable",
   "failure": "answer-changed no-evidence",
   "owner": "CardanoKeri.ReaderStatus.no_observation_unavailable",
   "test": "ReaderStatusChecks",
@@ -307,8 +424,8 @@
  },
  {
   "id": "live-against-terminal-leaf",
-  "before": "  | _, _ => .unavailable",
-  "after": "  | .live _, some (.known .terminal) => .active\n  | _, _ => .unavailable",
+  "before": "  | _, _, _ => .unavailable",
+  "after": "  | .live _, false, some (.known .terminal) => .active\n  | _, _, _ => .unavailable",
   "failure": "answer-changed live-holder-terminal-history",
   "owner": "CardanoKeri.ReaderStatus.holder_against_leaf_unavailable",
   "test": "ReaderStatusChecks",
@@ -316,8 +433,8 @@
  },
  {
   "id": "live-against-unknown-leaf",
-  "before": "  | _, _ => .unavailable",
-  "after": "  | .live _, some .unknown => .active\n  | _, _ => .unavailable",
+  "before": "  | _, _, _ => .unavailable",
+  "after": "  | .live _, false, some .unknown => .active\n  | _, _, _ => .unavailable",
   "failure": "answer-changed live-holder-unregistered-history",
   "owner": "CardanoKeri.ReaderStatus.holder_against_leaf_unavailable",
   "test": "ReaderStatusChecks",
@@ -325,8 +442,8 @@
  },
  {
   "id": "convicted-against-terminal-leaf",
-  "before": "  | _, _ => .unavailable",
-  "after": "  | .convicted _, some (.known .terminal) => .terminal\n  | _, _ => .unavailable",
+  "before": "  | _, _, _ => .unavailable",
+  "after": "  | .convicted _, _, some (.known .terminal) => .terminal\n  | _, _, _ => .unavailable",
   "failure": "answer-changed convicted-holder-terminal-history",
   "owner": "CardanoKeri.ReaderStatus.holder_against_leaf_unavailable, CardanoKeri.ReaderStatus.terminal_iff",
   "test": "ReaderStatusChecks",
@@ -334,8 +451,8 @@
  },
  {
   "id": "request-against-terminal-leaf",
-  "before": "  | _, _ => .unavailable",
-  "after": "  | .request, some (.known .terminal) => .terminal\n  | _, _ => .unavailable",
+  "before": "  | _, _, _ => .unavailable",
+  "after": "  | .request, _, some (.known .terminal) => .terminal\n  | _, _, _ => .unavailable",
   "failure": "answer-changed request-holder-terminal-history",
   "owner": "CardanoKeri.ReaderStatus.holder_against_leaf_unavailable, CardanoKeri.ReaderStatus.terminal_iff",
   "test": "ReaderStatusChecks",
@@ -343,8 +460,8 @@
  },
  {
   "id": "active-leaf-alone",
-  "before": "  | _, _ => .unavailable",
-  "after": "  | .notEstablished, some (.known .active) => .active\n  | _, _ => .unavailable",
+  "before": "  | _, _, _ => .unavailable",
+  "after": "  | .notEstablished, _, some (.known .active) => .active\n  | _, _, _ => .unavailable",
   "failure": "answer-changed registered-history-only",
   "owner": "CardanoKeri.ReaderStatus.active_leaf_without_holder_unavailable, CardanoKeri.ReaderStatus.active_iff",
   "test": "ReaderStatusChecks",
@@ -352,8 +469,8 @@
  },
  {
   "id": "active-leaf-no-holder",
-  "before": "  | _, _ => .unavailable",
-  "after": "  | .absent, some (.known .active) => .pendingTermination\n  | _, _ => .unavailable",
+  "before": "  | _, _, _ => .unavailable",
+  "after": "  | .absent, _, some (.known .active) => .pendingTermination\n  | _, _, _ => .unavailable",
   "failure": "answer-changed registered-history-and-no-holder",
   "owner": "CardanoKeri.ReaderStatus.active_leaf_without_holder_unavailable",
   "test": "ReaderStatusChecks",
@@ -361,8 +478,8 @@
  },
  {
   "id": "inconsistent-read-active",
-  "before": "  | _, _ => .unavailable",
-  "after": "  | .inconsistent, none => .active\n  | _, _ => .unavailable",
+  "before": "  | _, _, _ => .unavailable",
+  "after": "  | .inconsistent, _, none => .active\n  | _, _, _ => .unavailable",
   "failure": "answer-changed holder-quantity-two",
   "owner": "CardanoKeri.ReaderStatus.unrecognised_holder_unavailable, CardanoKeri.ReaderStatus.two_holders_unavailable",
   "test": "ReaderStatusChecks",

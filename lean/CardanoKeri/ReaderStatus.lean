@@ -18,14 +18,25 @@ answers for.
   and the history of the registry, every fold from its creation through the
   point. An observation names the chain point and the asset, or the registry,
   it is about. One made at another point, or about another asset or registry,
-  establishes nothing for this question.
+  establishes nothing for this question; a history that refutes itself is a
+  contradiction whatever it names.
+* The history holds, of each fold, what the replay reads: the keys it
+  registers and the keys it terminates, in order.
 * The leaf of the identifier's key is not observed: it is replayed. The
   registry starts with no member; each fold's changes are applied in order, a
   registration binding an unknown key as active and a termination making an
   active key terminal. Only a complete history establishes a leaf: one that
-  starts late or misses a fold establishes none. A complete history whose
-  replay meets a change no accepted fold makes is broken: it contradicts
-  itself, and the answer is unavailable whatever the holders show.
+  starts late or misses a fold establishes none.
+* A history refutes itself when no members before the supplied folds make
+  them replay: the empty registry for a history that says it is complete, any
+  members for an incomplete one. A fold with no change, a key registered
+  twice and a complete history that starts with a termination are such
+  histories. It is the history of no registry, whatever point and registry it
+  names, and the answer beside it is unavailable.
+* A history of the identifier's registry through the asked point refuses a
+  holder when no such members make it replay and leave the key active: a
+  complete history that does not read the key active, and an incomplete one
+  that holds the key's termination.
 * A chain point is an identity. The model compares points for equality only:
   there is no order, no distance and no age. An observation that is absent,
   stale, failed or incomplete is an observation that is not established.
@@ -33,11 +44,11 @@ answers for.
 The statuses and what decides them:
 
 * **active**: exactly one holder, a live checkpoint of the identifier. The
-  history must not be broken and the leaf, when established, must read active.
+  history, when the reader holds one, must not refuse the holder.
 * **pending termination**: exactly one holder, the convicted checkpoint of the
   identifier or, once the termination is booked, its termination request. The
-  custody the reader reads says which of the two holds the asset. The history
-  must not be broken and the leaf, when established, must read active.
+  custody the reader reads says which of the two holds the asset. The history,
+  when the reader holds one, must not refuse the holder.
 * **terminal**: the leaf established terminal. The holders, when established,
   must be none.
 * **never registered**: the leaf established unknown. The holders, when
@@ -46,9 +57,10 @@ The statuses and what decides them:
   observation, or observations that contradict each other or themselves.
 
 One observation suffices. A recognised holder decides active or pending
-termination when the history is missing or incomplete, and a complete history
-decides terminal or never registered when the holders are not established. A
-gap in the observation an answer does not need does not make it unavailable.
+termination when the history is missing, or is incomplete and does not refuse
+it, and a complete history decides terminal or never registered when the
+holders are not established. A gap in the observation an answer does not need
+does not make it unavailable; a history that refuses the holder does.
 
 Eligibility is not a status. An active identity may be young, frozen or
 poisoned; the consumer predicate decides that, per output.
@@ -89,15 +101,34 @@ structure HoldingObservation where
   holders : List AH.ObservedOutput
   deriving Repr, DecidableEq
 
+/-- One change of a fold, as the replay reads it: the key it registers or the
+key it terminates. A fold's transaction carries more (the request it spends,
+the output it delivers); the reader's history holds none of it. -/
+inductive KeyChange where
+  | register (key : Singular.Key)
+  | terminate (key : Singular.Key)
+  deriving Repr, DecidableEq
+
+/-- The key a change names. -/
+def KeyChange.key : KeyChange → Singular.Key
+  | .register key => key
+  | .terminate key => key
+
+/-- The change the replay reads of a change of the registry's fold. -/
+def KeyChange.of : SingularApplicationHeld.Change → KeyChange
+  | .register _ key _ _ => .register key
+  | .terminate _ key => .terminate key
+
 /-- The history of `registry` through `point`: the changes of each of its
-folds, in order from its creation. `complete` says the reader followed the
-registry from its creation through the point without a gap; a history that
-starts late or misses a fold is not complete. -/
+folds, in order. `complete` says the reader followed the registry from its
+creation through the point without a gap: the folds are then all of them. A
+history that starts late or misses a fold is not complete: its folds are some
+of them. -/
 structure HistoryObservation where
   point : ChainPoint
   registry : Singular.TokenId
   complete : Bool
-  folds : List (List SingularApplicationHeld.Change)
+  folds : List (List KeyChange)
   deriving Repr, DecidableEq
 
 /-- What the reader holds when it answers for `point`. `none` is an
@@ -114,24 +145,25 @@ structure Evidence where
 /-- One change as an accepted fold makes it: a registration binds a key the
 registry does not know as active, and a termination makes an active key
 terminal. No accepted fold makes any other change. -/
-def applyChange (members : Singular.Trie) (change : SingularApplicationHeld.Change) :
-    Option Singular.Trie :=
-  match change with
-  | .register _ key _ _ =>
+def applyChange (members : Singular.Trie) : KeyChange → Option Singular.Trie
+  | .register key =>
     if Singular.trieGet members key = .unknown then
-      some (SingularApplicationHeld.targetTrie members change) else none
-  | .terminate _ key =>
+      some (Singular.trieSet members key (.known .active)) else none
+  | .terminate key =>
     if Singular.trieGet members key = .known .active then
-      some (SingularApplicationHeld.targetTrie members change) else none
+      some (Singular.trieSet members key (.known .terminal)) else none
 
 /-- The changes of one fold, in order. A fold makes at least one change. -/
-def applyFold (members : Singular.Trie) (changes : List SingularApplicationHeld.Change) :
-    Option Singular.Trie :=
+def applyFold (members : Singular.Trie) (changes : List KeyChange) : Option Singular.Trie :=
   if changes.isEmpty then none else changes.foldlM applyChange members
 
+/-- The members after the supplied folds, from the members before them. -/
+def replayFrom (start : Singular.Trie) (folds : List (List KeyChange)) : Option Singular.Trie :=
+  folds.foldlM applyFold start
+
 /-- The registry's members after every fold, from its creation with none. -/
-def replay (folds : List (List SingularApplicationHeld.Change)) : Option Singular.Trie :=
-  folds.foldlM applyFold []
+def replay (folds : List (List KeyChange)) : Option Singular.Trie :=
+  replayFrom [] folds
 
 /-! ## The relation -/
 
@@ -171,17 +203,32 @@ def TerminationRequest (i : Interpretation) (c : Context) (o : AH.ObservedOutput
   SingularApplicationHeld.terminationShape .none i.hash i.code c.release o
     (registryAsset i c) (i.keyOf c.aid) = true
 
-/-- The evidence holds a complete history of the identifier's registry through
-the asked point whose replay fails: some fold makes a change no accepted fold
-makes. Such a history is not the history of any registry. -/
-def BrokenHistory (i : Interpretation) (c : Context) (ev : Evidence) : Prop :=
-  ∃ h, ev.history = some h ∧ h.point = ev.point ∧ h.registry = registryAsset i c ∧
-    h.complete = true ∧ replay h.folds = none
+/-- A history admits an active key: some members before the supplied folds
+make them replay and leave the key active. For a complete history the members
+before are none: the registry's creation. -/
+def AdmitsActive (complete : Bool) (key : Singular.Key) (folds : List (List KeyChange)) : Prop :=
+  ∃ start members, (complete = true → start = []) ∧ replayFrom start folds = some members ∧
+    Singular.trieGet members key = .known .active
 
-/-- The history does not contradict a holder: it is not broken, and it
-establishes no leaf or the leaf it establishes reads active. -/
+/-- A history refutes itself: no members before its folds, none when it says
+it is complete, make them replay. It is the history of no registry, whatever
+point and registry it names. -/
+def RefutesItself (h : HistoryObservation) : Prop :=
+  ∀ start, (h.complete = true → start = []) → replayFrom start h.folds = none
+
+/-- The history does not refuse a holder: the reader holds none, or the one it
+holds does not refute itself and, when it is of the identifier's registry
+through the asked point, admits the identifier's key active. A holder exists
+only while the key is active, so a history that does not admit it contradicts
+every holder. -/
 def HistoryAllowsHolder (i : Interpretation) (c : Context) (ev : Evidence) : Prop :=
-  ¬ BrokenHistory i c ev ∧ ∀ leaf, LeafAt i c ev leaf → leaf = .known .active
+  ∀ h, ev.history = some h → ¬ RefutesItself h ∧
+    (h.point = ev.point → h.registry = registryAsset i c →
+      AdmitsActive h.complete (i.keyOf c.aid) h.folds)
+
+/-- The evidence holds a history that refutes itself. -/
+def BrokenHistory (ev : Evidence) : Prop :=
+  ∃ h, ev.history = some h ∧ RefutesItself h
 
 /-- The holding observation does not show a holder: it is not established, or
 it shows none. -/
@@ -269,33 +316,60 @@ def establishedLeaf (i : Interpretation) (c : Context) (ev : Evidence) : Option 
       (replay h.folds).map fun members => Singular.trieGet members (i.keyOf c.aid)
     else none
 
-/-- The evidence holds a broken history: a complete history of the
-identifier's registry through the asked point whose replay fails. -/
-def brokenHistory (i : Interpretation) (c : Context) (ev : Evidence) : Bool :=
-  match ev.history with
-  | none => false
-  | some h =>
-    decide (h.point = ev.point ∧ h.registry = registryAsset i c ∧ h.complete = true) &&
-      (replay h.folds).isNone
+/-- The members a list of changes presupposes before it: a key whose first
+change is a termination was active, and nothing is presupposed of a key whose
+first change is a registration. -/
+def presupposed : List KeyChange → Singular.Trie
+  | [] => []
+  | .register key :: rest => Singular.trieErase (presupposed rest) key
+  | .terminate key :: rest => Singular.trieSet (presupposed rest) key (.known .active)
 
-/-- The table: custody against leaf. -/
-def verdict : Custody → Option Singular.Leaf → Status
-  | .live _, none => .active
-  | .live _, some (.known .active) => .active
-  | .convicted _, none => .pendingTermination
-  | .convicted _, some (.known .active) => .pendingTermination
-  | .request, none => .pendingTermination
-  | .request, some (.known .active) => .pendingTermination
-  | .notEstablished, some (.known .terminal) => .terminal
-  | .absent, some (.known .terminal) => .terminal
-  | .notEstablished, some .unknown => .neverRegistered
-  | .absent, some .unknown => .neverRegistered
-  | _, _ => .unavailable
+/-- The members to replay a history from when asking whether it admits the key
+active: none for a complete history; for an incomplete one what its changes
+presuppose, with the key itself active when no change names it. -/
+def admissionStart (complete : Bool) (key : Singular.Key) (changes : List KeyChange) :
+    Singular.Trie :=
+  if complete then [] else
+    if changes.any (fun change => decide (change.key = key)) then presupposed changes
+    else Singular.trieSet (presupposed changes) key (.known .active)
+
+/-- The history admits the key active, executable. -/
+def admitsActive (complete : Bool) (key : Singular.Key) (folds : List (List KeyChange)) : Bool :=
+  match replayFrom (admissionStart complete key folds.flatten) folds with
+  | some members => decide (Singular.trieGet members key = .known .active)
+  | none => false
+
+/-- The history refutes itself, executable: replayed from no member when it
+says it is complete, and otherwise from the members its changes presuppose. -/
+def refutesItself (h : HistoryObservation) : Bool :=
+  (replayFrom (if h.complete then [] else presupposed h.folds.flatten) h.folds).isNone
+
+/-- The history does not refuse a holder, executable. -/
+def historyAdmitsHolder (i : Interpretation) (c : Context) (ev : Evidence) : Bool :=
+  match ev.history with
+  | none => true
+  | some h =>
+    !refutesItself h &&
+      (if h.point = ev.point ∧ h.registry = registryAsset i c then
+        admitsActive h.complete (i.keyOf c.aid) h.folds
+      else true)
+
+/-- The table. A holder decides when the history does not refuse it; with no
+holder the replayed leaf decides. -/
+def verdict : Custody → Bool → Option Singular.Leaf → Status
+  | .live _, true, _ => .active
+  | .convicted _, true, _ => .pendingTermination
+  | .request, true, _ => .pendingTermination
+  | .notEstablished, _, some (.known .terminal) => .terminal
+  | .absent, _, some (.known .terminal) => .terminal
+  | .notEstablished, _, some .unknown => .neverRegistered
+  | .absent, _, some .unknown => .neverRegistered
+  | _, _, _ => .unavailable
 
 /-- The reader's answer, executable. -/
 def classify (i : Interpretation) (c : Context) (ev : Evidence) : Status :=
-  if authenticatedContextB c ev.environment && !brokenHistory i c ev then
-    verdict (holdingCustody i c ev) (establishedLeaf i c ev)
+  if authenticatedContextB c ev.environment then
+    verdict (holdingCustody i c ev) (historyAdmitsHolder i c ev) (establishedLeaf i c ev)
   else .unavailable
 
 /-- The output an answer of active or pending termination rests on: the one
@@ -322,20 +396,21 @@ def holdersIn (i : Interpretation) (c : Context) (world : SingularApplicationHel
 /-- The folds of one registry along a history of the public registry model,
 in order from the registry's creation. The constructors are those of
 `SingularApplicationHeld.CandidateReachable`, with the same premises: an
-accepted fold of this registry adds its changes, and every other transaction
+accepted fold of this registry adds its changes, as the replay reads them, and
+every other transaction
 (the creation of a registry, a fold of another registry, a transaction that
 touches no registry) leaves the list as it is. -/
 inductive RegistryFolds (hash : AH.Hash) (code : AH.Codec)
     (commit : SingularApplicationHeld.TrieCommit) (release : AH.PublishedRelease)
     (identity : Singular.TokenId) :
-    SingularApplicationHeld.CandidateWorld → List (List SingularApplicationHeld.Change) → Prop where
+    SingularApplicationHeld.CandidateWorld → List (List KeyChange) → Prop where
   | initial (outputs : List AH.ObservedOutput)
       (unique : (outputs.map (·.reference)).Nodup)
       (noOwnAssets : ∀ output ∈ outputs,
         ∀ asset ∈ SingularApplicationHeld.assetSupport [output], asset.policy ≠ release.statePolicy) :
       RegistryFolds hash code commit release identity ⟨[], outputs, [], []⟩ []
   | genesis {before after : SingularApplicationHeld.CandidateWorld}
-      {folds : List (List SingularApplicationHeld.Change)}
+      {folds : List (List KeyChange)}
       (history : RegistryFolds hash code commit release identity before folds)
       (seed : Singular.OutRef) (view : SingularApplicationHeld.Assets.TxView)
       (inputs outputs : List AH.ObservedOutput)
@@ -355,7 +430,7 @@ inductive RegistryFolds (hash : AH.Hash) (code : AH.Codec)
       (domain : after.domain = before.domain ++ [.state seed]) :
       RegistryFolds hash code commit release identity after folds
   | fold {before after : SingularApplicationHeld.CandidateWorld}
-      {folds : List (List SingularApplicationHeld.Change)}
+      {folds : List (List KeyChange)}
       (history : RegistryFolds hash code commit release identity before folds)
       (observation : SingularApplicationHeld.FoldObservation)
       (ledger : SingularApplicationHeld.LedgerObservationCorrespondence before after
@@ -368,9 +443,10 @@ inductive RegistryFolds (hash : AH.Hash) (code : AH.Codec)
       (domain : after.domain = before.domain ++
         observation.changes.flatMap (SingularApplicationHeld.changePreimages observation)) :
       RegistryFolds hash code commit release identity after
-        (if observation.before.identity = identity then folds ++ [observation.changes] else folds)
+        (if observation.before.identity = identity then
+          folds ++ [observation.changes.map KeyChange.of] else folds)
   | neutral {before after : SingularApplicationHeld.CandidateWorld}
-      {folds : List (List SingularApplicationHeld.Change)}
+      {folds : List (List KeyChange)}
       (history : RegistryFolds hash code commit release identity before folds)
       (view : SingularApplicationHeld.Assets.TxView) (inputs outputs : List AH.ObservedOutput)
       (fee donation : Nat)
@@ -390,9 +466,8 @@ def FaithfulHolders (i : Interpretation) (c : Context)
 
 /-- A complete history the evidence holds of the identifier's registry through
 the asked point is that registry's history in the world: the registry was
-created, and the folds are its folds, in order. A history that is absent,
-incomplete, at another point or of another registry is faithful to every
-world. -/
+created, and the folds are its folds, in order. Nothing is asked here of a
+history that is absent, incomplete, at another point or of another registry. -/
 def FaithfulHistory (i : Interpretation) (c : Context)
     (commit : SingularApplicationHeld.TrieCommit)
     (world : SingularApplicationHeld.CandidateWorld) (ev : Evidence) : Prop :=

@@ -8,6 +8,634 @@ its Given/When/Then contract in its comment. -/
 namespace CardanoKeri.ReaderStatus
 open CardanoKeri.Checkpoint CardanoKeri.ConsumerIdentity
 
+/-! ## The replay -/
+
+/-- Given a change and the members it is applied to; when the replay applies
+it; then a registration succeeds exactly when its key is unknown and binds it
+active, and a termination exactly when its key is active and makes it
+terminal. -/
+theorem applyChange_exact (members next : Singular.Trie) (change : KeyChange) :
+    applyChange members change = some next ↔
+      match change with
+      | .register key => Singular.trieGet members key = .unknown ∧
+          next = Singular.trieSet members key (.known .active)
+      | .terminate key => Singular.trieGet members key = .known .active ∧
+          next = Singular.trieSet members key (.known .terminal) := by
+  cases change with
+  | register key =>
+    by_cases unknown : Singular.trieGet members key = .unknown
+    · simp [applyChange, unknown, eq_comm]
+    · simp [applyChange, unknown]
+  | terminate key =>
+    by_cases active : Singular.trieGet members key = .known .active
+    · simp [applyChange, active, eq_comm]
+    · simp [applyChange, active]
+
+/-- Given a change the replay applies; when another key is read afterwards;
+then its leaf is unchanged. -/
+theorem applyChange_frame (members next : Singular.Trie) (change : KeyChange)
+    (key : Singular.Key) (applied : applyChange members change = some next)
+    (other : change.key ≠ key) :
+    Singular.trieGet next key = Singular.trieGet members key := by
+  cases change with
+  | register changeKey =>
+    obtain ⟨_, rfl⟩ := (applyChange_exact members next _).mp applied
+    exact Singular.trieGet_set_of_ne _ _ _ _ (Ne.symm other)
+  | terminate changeKey =>
+    obtain ⟨_, rfl⟩ := (applyChange_exact members next _).mp applied
+    exact Singular.trieGet_set_of_ne _ _ _ _ (Ne.symm other)
+
+/-- Given a list of changes the replay applies in order and a key.
+When the key's leaf is read afterwards.
+Then it is unknown exactly when it was unknown before and no change names the
+key, and terminal exactly when it was terminal before or some change is a
+termination of the key. -/
+theorem changes_leaf (changes : List KeyChange) (members next : Singular.Trie)
+    (key : Singular.Key) (applied : changes.foldlM applyChange members = some next) :
+    (Singular.trieGet next key = .unknown ↔
+      Singular.trieGet members key = .unknown ∧ ∀ change ∈ changes, change.key ≠ key) ∧
+    (Singular.trieGet next key = .known .terminal ↔
+      Singular.trieGet members key = .known .terminal ∨ KeyChange.terminate key ∈ changes) := by
+  induction changes generalizing members with
+  | nil =>
+    simp only [List.foldlM_nil, Option.pure_def, Option.some.injEq] at applied
+    subst applied
+    simp
+  | cons change rest ih =>
+    simp only [List.foldlM_cons, Option.bind_eq_bind] at applied
+    cases first : applyChange members change with
+    | none => simp [first] at applied
+    | some middle =>
+      simp only [first, Option.bind_some] at applied
+      obtain ⟨unknownIff, terminalIff⟩ := ih middle applied
+      by_cases same : change.key = key
+      · cases change with
+        | register changeKey =>
+          simp only [KeyChange.key] at same
+          subst same
+          obtain ⟨law, target⟩ := (applyChange_exact members middle _).mp first
+          have read : Singular.trieGet middle changeKey = .known .active := by
+            rw [target]; exact Singular.trieGet_set_eq _ _ _
+          constructor
+          · rw [unknownIff, read]
+            simp [KeyChange.key]
+          · rw [terminalIff, read, law]
+            simp
+        | terminate changeKey =>
+          simp only [KeyChange.key] at same
+          subst same
+          obtain ⟨law, target⟩ := (applyChange_exact members middle _).mp first
+          have read : Singular.trieGet middle changeKey = .known .terminal := by
+            rw [target]; exact Singular.trieGet_set_eq _ _ _
+          constructor
+          · rw [unknownIff, read]
+            simp [KeyChange.key]
+          · rw [terminalIff, read, law]
+            exact ⟨fun _ => Or.inr List.mem_cons_self, fun _ => Or.inl rfl⟩
+      · have frame := applyChange_frame members middle change key first same
+        constructor
+        · rw [unknownIff, frame]
+          simp [same]
+        · rw [terminalIff, frame]
+          have notHere : KeyChange.terminate key ≠ change := by
+            rintro rfl
+            exact same rfl
+          constructor
+          · rintro (terminal | member)
+            · exact Or.inl terminal
+            · exact Or.inr (List.mem_cons_of_mem _ member)
+          · rintro (terminal | member)
+            · exact Or.inl terminal
+            · rcases List.mem_cons.mp member with here | later
+              · exact (notHere here).elim
+              · exact Or.inr later
+
+/-- **Replaying folds is replaying their changes end to end, when no fold is
+empty.**
+Given folds, the members before them and members.
+When the replay from those members is compared with applying every change of
+every fold in order.
+Then the replay gives the members exactly when no fold is without a change
+and the changes, end to end, give them. -/
+theorem replayFrom_iff (folds : List (List KeyChange)) (start members : Singular.Trie) :
+    replayFrom start folds = some members ↔
+      (∀ changes ∈ folds, changes ≠ []) ∧
+      folds.flatten.foldlM applyChange start = some members := by
+  unfold replayFrom
+  induction folds generalizing start with
+  | nil => simp
+  | cons changes rest ih =>
+    simp only [List.foldlM_cons, Option.bind_eq_bind, List.flatten_cons, List.foldlM_append,
+      List.mem_cons, forall_eq_or_imp]
+    by_cases empty : changes = []
+    · subst empty
+      simp [applyFold]
+    · have fold : applyFold start changes = changes.foldlM applyChange start := by
+        simp [applyFold, empty]
+      rw [fold]
+      cases first : changes.foldlM applyChange start with
+      | none => simp
+      | some middle => simp [ih middle, empty]
+
+/-- **Never registered means no change of the key; terminal means its
+termination.**
+Given a history the replay accepts from the registry's creation, and a key.
+When the key's leaf is read in the replayed members.
+Then it is unknown exactly when no change of any fold names the key, and
+terminal exactly when some fold terminates the key. -/
+theorem replayed_leaf (folds : List (List KeyChange)) (members : Singular.Trie)
+    (key : Singular.Key) (replayed : replay folds = some members) :
+    (Singular.trieGet members key = .unknown ↔ ∀ change ∈ folds.flatten, change.key ≠ key) ∧
+    (Singular.trieGet members key = .known .terminal ↔
+      KeyChange.terminate key ∈ folds.flatten) := by
+  have leaves := changes_leaf folds.flatten [] members key
+    ((replayFrom_iff folds [] members).mp replayed).2
+  have empty : Singular.trieGet ([] : Singular.Trie) key = .unknown := rfl
+  simpa [empty] using leaves
+
+/-- Whether a change is a registration. -/
+def KeyChange.registers : KeyChange → Bool
+  | .register _ => true
+  | .terminate _ => false
+
+/-- The changes a list makes to one key, in order: `true` for a registration,
+`false` for a termination. -/
+def kindsOf (key : Singular.Key) (changes : List KeyChange) : List Bool :=
+  (changes.filter fun change => decide (change.key = key)).map KeyChange.registers
+
+/-- A sequence of changes to one key is possible from a leaf: a registration
+from unknown, then a termination from active, and nothing after. -/
+def validFrom : Singular.Leaf → List Bool → Bool
+  | _, [] => true
+  | .unknown, true :: rest => validFrom (.known .active) rest
+  | .known .active, false :: rest => validFrom (.known .terminal) rest
+  | _, _ => false
+
+/-- The leaf a sequence of changes to one key leaves. -/
+def leafAfter : Singular.Leaf → List Bool → Singular.Leaf
+  | leaf, [] => leaf
+  | _, true :: rest => leafAfter (.known .active) rest
+  | _, false :: rest => leafAfter (.known .terminal) rest
+
+/-- The leaf a sequence of changes to one key presupposes before it: active
+when it starts with a termination, unknown otherwise. -/
+def startOf : List Bool → Singular.Leaf
+  | false :: _ => .known .active
+  | _ => .unknown
+
+/-- The sequences of changes one key can go through in any history: none, a
+registration, a termination, or a registration then a termination. -/
+def Shape (kinds : List Bool) : Prop :=
+  kinds = [] ∨ kinds = [true] ∨ kinds = [false] ∨ kinds = [true, false]
+
+/-- Given a change and a key; when the changes to that key are listed; then
+the change is first among them if it names the key, and absent otherwise. -/
+theorem kindsOf_cons (key : Singular.Key) (change : KeyChange) (rest : List KeyChange) :
+    kindsOf key (change :: rest) =
+      if change.key = key then change.registers :: kindsOf key rest else kindsOf key rest := by
+  by_cases same : change.key = key <;> simp [kindsOf, same]
+
+/-- Given changes the replay applies in order from some members, and a key.
+When the changes to that key are read.
+Then they are a possible sequence from the key's leaf before, and the key's
+leaf after is the one that sequence leaves. -/
+theorem changes_follow_kinds (changes : List KeyChange) (members next : Singular.Trie)
+    (key : Singular.Key) (applied : changes.foldlM applyChange members = some next) :
+    validFrom (Singular.trieGet members key) (kindsOf key changes) = true ∧
+    Singular.trieGet next key = leafAfter (Singular.trieGet members key) (kindsOf key changes) := by
+  induction changes generalizing members with
+  | nil =>
+    simp only [List.foldlM_nil, Option.pure_def, Option.some.injEq] at applied
+    subst applied
+    simp [kindsOf, validFrom, leafAfter]
+  | cons change rest ih =>
+    simp only [List.foldlM_cons, Option.bind_eq_bind] at applied
+    cases first : applyChange members change with
+    | none => simp [first] at applied
+    | some middle =>
+      simp only [first, Option.bind_some] at applied
+      obtain ⟨valid, final⟩ := ih middle applied
+      rw [kindsOf_cons]
+      by_cases same : change.key = key
+      · rw [if_pos same]
+        cases change with
+        | register changeKey =>
+          simp only [KeyChange.key] at same
+          subst same
+          obtain ⟨law, target⟩ := (applyChange_exact members middle _).mp first
+          have read : Singular.trieGet middle changeKey = .known .active := by
+            rw [target]; exact Singular.trieGet_set_eq _ _ _
+          rw [read] at valid final
+          rw [law]
+          exact ⟨by simpa [KeyChange.registers, validFrom] using valid,
+            by simpa [KeyChange.registers, leafAfter] using final⟩
+        | terminate changeKey =>
+          simp only [KeyChange.key] at same
+          subst same
+          obtain ⟨law, target⟩ := (applyChange_exact members middle _).mp first
+          have read : Singular.trieGet middle changeKey = .known .terminal := by
+            rw [target]; exact Singular.trieGet_set_eq _ _ _
+          rw [read] at valid final
+          rw [law]
+          exact ⟨by simpa [KeyChange.registers, validFrom] using valid,
+            by simpa [KeyChange.registers, leafAfter] using final⟩
+      · rw [if_neg same, ← applyChange_frame members middle change key first same]
+        exact ⟨valid, final⟩
+
+/-- Given changes and members such that, for every key, the changes to that
+key are a possible sequence from its leaf; when the replay applies the changes
+in order; then it succeeds. -/
+theorem changes_replay_of_valid (changes : List KeyChange) (members : Singular.Trie)
+    (valid : ∀ key, validFrom (Singular.trieGet members key) (kindsOf key changes) = true) :
+    ∃ next, changes.foldlM applyChange members = some next := by
+  induction changes generalizing members with
+  | nil => exact ⟨members, rfl⟩
+  | cons change rest ih =>
+    have here := valid change.key
+    rw [kindsOf_cons, if_pos rfl] at here
+    cases change with
+    | register key =>
+      simp only [KeyChange.key, KeyChange.registers] at here
+      have unknown : Singular.trieGet members key = .unknown := by
+        cases leaf : Singular.trieGet members key with
+        | unknown => rfl
+        | known state => rw [leaf] at here; cases state <;> simp [validFrom] at here
+      have first : applyChange members (.register key) =
+          some (Singular.trieSet members key (.known .active)) := by
+        simp [applyChange, unknown]
+      have later : ∀ k, validFrom
+          (Singular.trieGet (Singular.trieSet members key (.known .active)) k)
+          (kindsOf k rest) = true := by
+        intro k
+        by_cases same : key = k
+        · subst same
+          rw [Singular.trieGet_set_eq]
+          rw [unknown] at here
+          simpa [validFrom] using here
+        · have other := valid k
+          rw [kindsOf_cons, if_neg (by simpa [KeyChange.key] using same)] at other
+          rw [Singular.trieGet_set_of_ne _ _ _ _ (Ne.symm same)]
+          exact other
+      obtain ⟨next, applied⟩ := ih _ later
+      exact ⟨next, by simp [List.foldlM_cons, first, applied]⟩
+    | terminate key =>
+      simp only [KeyChange.key, KeyChange.registers] at here
+      have active : Singular.trieGet members key = .known .active := by
+        cases leaf : Singular.trieGet members key with
+        | unknown => rw [leaf] at here; simp [validFrom] at here
+        | known state => rw [leaf] at here; cases state <;> simp [validFrom] at here ⊢
+      have first : applyChange members (.terminate key) =
+          some (Singular.trieSet members key (.known .terminal)) := by
+        simp [applyChange, active]
+      have later : ∀ k, validFrom
+          (Singular.trieGet (Singular.trieSet members key (.known .terminal)) k)
+          (kindsOf k rest) = true := by
+        intro k
+        by_cases same : key = k
+        · subst same
+          rw [Singular.trieGet_set_eq]
+          rw [active] at here
+          simpa [validFrom] using here
+        · have other := valid k
+          rw [kindsOf_cons, if_neg (by simpa [KeyChange.key] using same)] at other
+          rw [Singular.trieGet_set_of_ne _ _ _ _ (Ne.symm same)]
+          exact other
+      obtain ⟨next, applied⟩ := ih _ later
+      exact ⟨next, by simp [List.foldlM_cons, first, applied]⟩
+
+/-- Given changes and a key; when the members the changes presuppose are read
+at the key; then the leaf is the one the changes to that key presuppose:
+active when the first is a termination, unknown otherwise. -/
+theorem presupposed_reads (changes : List KeyChange) (key : Singular.Key) :
+    Singular.trieGet (presupposed changes) key = startOf (kindsOf key changes) := by
+  induction changes with
+  | nil => rfl
+  | cons change rest ih =>
+    rw [kindsOf_cons]
+    cases change with
+    | register changeKey =>
+      by_cases same : changeKey = key
+      · subst same
+        simp [presupposed, KeyChange.key, KeyChange.registers, startOf]
+      · rw [if_neg (by simpa [KeyChange.key] using same), ← ih]
+        exact Singular.trieGet_erase_of_ne _ _ _ (Ne.symm same)
+    | terminate changeKey =>
+      by_cases same : changeKey = key
+      · subst same
+        simp [presupposed, KeyChange.key, KeyChange.registers, startOf]
+      · rw [if_neg (by simpa [KeyChange.key] using same), ← ih]
+        exact Singular.trieGet_set_of_ne _ _ _ _ (Ne.symm same)
+
+/-- Given a sequence of changes to one key that is possible from some leaf;
+when its shape is read; then it is none, a registration, a termination, or a
+registration then a termination. -/
+theorem shape_of_valid (leaf : Singular.Leaf) (kinds : List Bool)
+    (valid : validFrom leaf kinds = true) : Shape kinds := by
+  rcases kinds with _ | ⟨first, _ | ⟨second, _ | ⟨third, rest⟩⟩⟩
+  · exact Or.inl rfl
+  · cases first
+    · exact Or.inr (Or.inr (Or.inl rfl))
+    · exact Or.inr (Or.inl rfl)
+  · rcases leaf with _ | ⟨_ | _ | _⟩ <;> cases first <;> cases second <;>
+      simp [validFrom, Shape] at valid ⊢
+  · rcases leaf with _ | ⟨_ | _ | _⟩ <;> cases first <;> cases second <;> cases third <;>
+      simp [validFrom] at valid
+
+/-- Given a sequence of changes to one key of one of the four shapes; when it
+is read from the leaf it presupposes; then it is possible. -/
+theorem shape_valid (kinds : List Bool) (shape : Shape kinds) :
+    validFrom (startOf kinds) kinds = true := by
+  rcases shape with rfl | rfl | rfl | rfl <;> rfl
+
+/-- Given a list of lists and some of them, in order; when both are laid end
+to end; then the part is some of the whole, in order. -/
+theorem flatten_sublist {α : Type} {part whole : List (List α)} (sub : part.Sublist whole) :
+    part.flatten.Sublist whole.flatten := by
+  induction sub with
+  | slnil => exact .slnil
+  | cons a _ ih =>
+    rw [List.flatten_cons]
+    exact ih.trans (List.sublist_append_right _ _)
+  | cons₂ a _ ih =>
+    rw [List.flatten_cons, List.flatten_cons]
+    exact List.Sublist.append_left ih a
+
+/-- Given some of the elements of a one-element list, in order; when they are
+read; then they are none or that element. -/
+theorem sublist_single {α : Type} (b : α) (s : List α) (sub : s.Sublist [b]) :
+    s = [] ∨ s = [b] := by
+  cases sub with
+  | cons _ inner => exact Or.inl (List.sublist_nil.mp inner)
+  | cons₂ _ inner => exact Or.inr (by rw [List.sublist_nil.mp inner])
+
+/-- Given a sequence of one of the four shapes and a part of it, in order;
+when the part's shape is read; then it is one of the four shapes too. -/
+theorem shape_sublist (kinds part : List Bool) (shape : Shape kinds)
+    (sublist : part.Sublist kinds) : Shape part := by
+  have single := @sublist_single Bool
+  rcases shape with rfl | rfl | rfl | rfl
+  · exact Or.inl (List.sublist_nil.mp sublist)
+  · rcases single _ _ sublist with rfl | rfl
+    · exact Or.inl rfl
+    · exact Or.inr (Or.inl rfl)
+  · rcases single _ _ sublist with rfl | rfl
+    · exact Or.inl rfl
+    · exact Or.inr (Or.inr (Or.inl rfl))
+  · cases sublist with
+    | cons _ inner =>
+      rcases single _ _ inner with rfl | rfl
+      · exact Or.inl rfl
+      · exact Or.inr (Or.inr (Or.inl rfl))
+    | cons₂ _ inner =>
+      rcases single _ _ inner with rfl | rfl
+      · exact Or.inr (Or.inl rfl)
+      · exact Or.inr (Or.inr (Or.inr rfl))
+
+/-- Given folds none of which is empty, whose changes to every key have one
+of the four shapes, and whose changes to one key are none or one
+registration.
+When the folds are replayed from the members an incomplete history is checked
+from.
+Then the replay succeeds and leaves that key active. -/
+theorem admission_start_replays (folds : List (List KeyChange)) (key : Singular.Key)
+    (nonempty : ∀ changes ∈ folds, changes ≠ [])
+    (shapes : ∀ k, Shape (kindsOf k folds.flatten))
+    (registered : kindsOf key folds.flatten = [] ∨ kindsOf key folds.flatten = [true]) :
+    ∃ members, replayFrom (admissionStart false key folds.flatten) folds = some members ∧
+      Singular.trieGet members key = .known .active := by
+  have named : (folds.flatten.any fun change => decide (change.key = key)) = true ↔
+      kindsOf key folds.flatten ≠ [] := by
+    simp [kindsOf, List.filter_eq_nil_iff]
+  rcases registered with untouched | once
+  · have start : admissionStart false key folds.flatten =
+        Singular.trieSet (presupposed folds.flatten) key (.known .active) := by
+      have unnamed : (folds.flatten.any fun change => decide (change.key = key)) = false :=
+        Bool.eq_false_iff.mpr fun any => named.mp any untouched
+      simp [admissionStart, unnamed]
+    have valid : ∀ k, validFrom (Singular.trieGet (admissionStart false key folds.flatten) k)
+        (kindsOf k folds.flatten) = true := by
+      intro k
+      rw [start]
+      by_cases same : key = k
+      · subst same
+        rw [Singular.trieGet_set_eq, untouched]
+        rfl
+      · rw [Singular.trieGet_set_of_ne _ _ _ _ (Ne.symm same), presupposed_reads]
+        exact shape_valid _ (shapes k)
+    obtain ⟨members, flat⟩ := changes_replay_of_valid folds.flatten _ valid
+    refine ⟨members, (replayFrom_iff folds _ members).mpr ⟨nonempty, flat⟩, ?_⟩
+    rw [(changes_follow_kinds folds.flatten _ members key flat).2, start,
+      Singular.trieGet_set_eq, untouched]
+    rfl
+  · have start : admissionStart false key folds.flatten = presupposed folds.flatten := by
+      have isNamed : (folds.flatten.any fun change => decide (change.key = key)) = true :=
+        named.mpr (by rw [once]; simp)
+      simp [admissionStart, isNamed]
+    have valid : ∀ k, validFrom (Singular.trieGet (admissionStart false key folds.flatten) k)
+        (kindsOf k folds.flatten) = true := by
+      intro k
+      rw [start, presupposed_reads]
+      exact shape_valid _ (shapes k)
+    obtain ⟨members, flat⟩ := changes_replay_of_valid folds.flatten _ valid
+    refine ⟨members, (replayFrom_iff folds _ members).mpr ⟨nonempty, flat⟩, ?_⟩
+    rw [(changes_follow_kinds folds.flatten _ members key flat).2, start, presupposed_reads, once]
+    rfl
+
+/-- **What an incomplete history admits.**
+Given the folds of an incomplete history and a key.
+When the rule is read on the changes themselves.
+Then the history admits the key active exactly when no fold is without a
+change, the changes to every key are none, a registration, a termination, or
+a registration then a termination, and the changes to the key itself are none
+or one registration. -/
+theorem incomplete_admits_active_iff (key : Singular.Key) (folds : List (List KeyChange)) :
+    AdmitsActive false key folds ↔
+      (∀ changes ∈ folds, changes ≠ []) ∧ (∀ k, Shape (kindsOf k folds.flatten)) ∧
+      (kindsOf key folds.flatten = [] ∨ kindsOf key folds.flatten = [true]) := by
+  constructor
+  · rintro ⟨start, members, _, replayed, active⟩
+    obtain ⟨nonempty, flat⟩ := (replayFrom_iff folds start members).mp replayed
+    have follow := fun k => changes_follow_kinds folds.flatten start members k flat
+    have shapes : ∀ k, Shape (kindsOf k folds.flatten) := fun k =>
+      shape_of_valid _ _ (follow k).1
+    refine ⟨nonempty, shapes, ?_⟩
+    have final := (follow key).2
+    rw [active] at final
+    rcases shapes key with shape | shape | shape | shape
+    · exact Or.inl shape
+    · exact Or.inr shape
+    · rw [shape] at final; simp [leafAfter] at final
+    · rw [shape] at final; simp [leafAfter] at final
+  · rintro ⟨nonempty, shapes, registered⟩
+    obtain ⟨members, replayed, active⟩ :=
+      admission_start_replays folds key nonempty shapes registered
+    exact ⟨_, members, by simp, replayed, active⟩
+
+/-- Given folds none of which is without a change and whose changes to every
+key have one of the four shapes; when they are replayed from the members
+their changes presuppose; then the replay succeeds. -/
+theorem replays_of_shapes (folds : List (List KeyChange))
+    (nonempty : ∀ changes ∈ folds, changes ≠ [])
+    (shapes : ∀ k, Shape (kindsOf k folds.flatten)) :
+    ∃ members, replayFrom (presupposed folds.flatten) folds = some members := by
+  have valid : ∀ k, validFrom (Singular.trieGet (presupposed folds.flatten) k)
+      (kindsOf k folds.flatten) = true := fun k => by
+    rw [presupposed_reads]
+    exact shape_valid _ (shapes k)
+  obtain ⟨members, flat⟩ := changes_replay_of_valid folds.flatten _ valid
+  exact ⟨members, (replayFrom_iff folds _ members).mpr ⟨nonempty, flat⟩⟩
+
+/-- **What a history refutes by itself.**
+Given folds.
+When every choice of members before them is considered.
+Then none make the folds replay exactly when some fold is without a change,
+or the changes to some key are not none, a registration, a termination, or a
+registration then a termination: a key registered twice, terminated twice, or
+registered after its termination. -/
+theorem unreplayable_iff (folds : List (List KeyChange)) :
+    (∀ start, replayFrom start folds = none) ↔
+      (∃ changes ∈ folds, changes = []) ∨ ∃ k, ¬ Shape (kindsOf k folds.flatten) := by
+  constructor
+  · intro failed
+    apply Classical.byContradiction
+    intro sound
+    obtain ⟨members, replayed⟩ := replays_of_shapes folds
+      (fun changes member empty => sound (Or.inl ⟨changes, member, empty⟩))
+      (fun k => Classical.byContradiction fun bad => sound (Or.inr ⟨k, bad⟩))
+    rw [failed] at replayed
+    contradiction
+  · rintro bad start
+    cases replayed : replayFrom start folds with
+    | none => rfl
+    | some members =>
+      obtain ⟨nonempty, flat⟩ := (replayFrom_iff folds start members).mp replayed
+      rcases bad with ⟨changes, member, empty⟩ | ⟨k, shape⟩
+      · exact absurd empty (nonempty changes member)
+      · exact absurd
+          (shape_of_valid _ _ (changes_follow_kinds folds.flatten start members k flat).1) shape
+
+/-- **The executable check of a history that refutes itself is the rule.**
+Given a history.
+When the executable check is compared with the rule.
+Then the check holds exactly when no members before the folds, none when the
+history says it is complete, make them replay. -/
+theorem refutesItself_iff (h : HistoryObservation) :
+    refutesItself h = true ↔ RefutesItself h := by
+  unfold refutesItself RefutesItself
+  cases h.complete with
+  | true =>
+    simp only [↓reduceIte, Option.isNone_iff_eq_none]
+    constructor
+    · intro failed start origin
+      rw [origin trivial]
+      exact failed
+    · intro failed
+      exact failed [] fun _ => rfl
+  | false =>
+    simp only [Bool.false_eq_true, ↓reduceIte, Option.isNone_iff_eq_none]
+    constructor
+    · intro failed start _
+      cases replayed : replayFrom start h.folds with
+      | none => rfl
+      | some members =>
+        obtain ⟨nonempty, flat⟩ := (replayFrom_iff h.folds start members).mp replayed
+        obtain ⟨members', replayed'⟩ := replays_of_shapes h.folds nonempty fun k =>
+          shape_of_valid _ _ (changes_follow_kinds h.folds.flatten start members k flat).1
+        rw [failed] at replayed'
+        contradiction
+    · intro failed
+      exact failed _ (by simp)
+
+/-- **The executable check is the rule.**
+Given a history's completeness, a key and its folds.
+When the executable check is compared with the rule.
+Then the check accepts exactly when some members before the supplied folds,
+none for a complete history, make them replay and leave the key active. -/
+theorem admitsActive_iff (complete : Bool) (key : Singular.Key) (folds : List (List KeyChange)) :
+    admitsActive complete key folds = true ↔ AdmitsActive complete key folds := by
+  constructor
+  · intro admitted
+    unfold admitsActive at admitted
+    cases replayed : replayFrom (admissionStart complete key folds.flatten) folds with
+    | none => simp [replayed] at admitted
+    | some members =>
+      simp only [replayed, decide_eq_true_eq] at admitted
+      refine ⟨admissionStart complete key folds.flatten, members, ?_, replayed, admitted⟩
+      intro isComplete
+      simp [admissionStart, isComplete]
+  · rintro ⟨start, members, origin, replayed, active⟩
+    cases complete with
+    | true =>
+      have empty := origin rfl
+      subst empty
+      simp [admitsActive, admissionStart, replayed, active]
+    | false =>
+      obtain ⟨nonempty, shapes, registered⟩ :=
+        (incomplete_admits_active_iff key folds).mp ⟨start, members, origin, replayed, active⟩
+      obtain ⟨members', replayed', active'⟩ :=
+        admission_start_replays folds key nonempty shapes registered
+      simp [admitsActive, replayed', active']
+
+/-- **A part of a real history never refuses a holder.**
+Given a history that replays from the registry's creation and leaves a key
+active, and some of its folds, in order: a history that starts late, or
+misses folds anywhere.
+When the part is asked whether it admits the key active.
+Then it does: an honest incomplete history is a gap, never a contradiction
+of a genuine holder. -/
+theorem part_of_history_admits_active (actual part : List (List KeyChange))
+    (members : Singular.Trie) (key : Singular.Key) (replayed : replay actual = some members)
+    (active : Singular.trieGet members key = .known .active) (some_ : part.Sublist actual) :
+    AdmitsActive false key part := by
+  obtain ⟨nonempty, flat⟩ := (replayFrom_iff actual [] members).mp replayed
+  have follow := fun k => changes_follow_kinds actual.flatten [] members k flat
+  have kindsPart : ∀ k, (kindsOf k part.flatten).Sublist (kindsOf k actual.flatten) := fun k =>
+    ((flatten_sublist some_).filter _).map _
+  have shapes : ∀ k, Shape (kindsOf k part.flatten) := fun k =>
+    shape_sublist _ _ (shape_of_valid _ _ (follow k).1) (kindsPart k)
+  have once : kindsOf key actual.flatten = [true] := by
+    have final := (follow key).2
+    have valid := (follow key).1
+    have empty : Singular.trieGet ([] : Singular.Trie) key = .unknown := rfl
+    rw [active, empty] at final
+    rw [empty] at valid
+    rcases shape_of_valid _ _ valid with shape | shape | shape | shape
+    · rw [shape] at final; simp [leafAfter] at final
+    · exact shape
+    · rw [shape] at valid; simp [validFrom] at valid
+    · rw [shape] at final; simp [leafAfter] at final
+  have registered : kindsOf key part.flatten = [] ∨ kindsOf key part.flatten = [true] :=
+    sublist_single true _ (once ▸ kindsPart key)
+  exact (incomplete_admits_active_iff key part).mpr
+    ⟨fun changes member => nonempty changes (some_.subset member), shapes, registered⟩
+
+/-- **An honest history never refutes itself.**
+Given a history that replays from the registry's creation, and a history
+observation that holds some of its folds, in order, and all of them when it
+says it is complete.
+When the observation is asked whether it refutes itself.
+Then it does not: the folds of a real registry, with or without gaps, replay
+from the registry that preceded them. -/
+theorem honest_history_does_not_refute_itself (h : HistoryObservation)
+    (actual : List (List KeyChange)) (members : Singular.Trie)
+    (replayed : replay actual = some members) (part : h.folds.Sublist actual)
+    (whole : h.complete = true → h.folds = actual) : ¬ RefutesItself h := by
+  intro refutes
+  cases complete : h.complete with
+  | true =>
+    have failed : replay h.folds = none := refutes [] fun _ => rfl
+    rw [whole complete, replayed] at failed
+    contradiction
+  | false =>
+    obtain ⟨nonempty, flat⟩ := (replayFrom_iff actual [] members).mp replayed
+    obtain ⟨members', replayed'⟩ := replays_of_shapes h.folds
+      (fun changes member => nonempty changes (part.subset member))
+      (fun k => shape_sublist _ _
+        (shape_of_valid _ _ (changes_follow_kinds actual.flatten [] members k flat).1)
+        (((flatten_sublist part).filter _).map _))
+    rw [refutes _ (by simp [complete])] at replayed'
+    contradiction
+
 /-! ## The classifier and its relation -/
 
 /-- Given any context and environment; when the Boolean and the proposition of
@@ -207,59 +835,74 @@ theorem noHolderSeen_iff (i : Interpretation) (c : Context) (ev : Evidence) :
       · exact absurd reading (custodyOf_exact i c o).2.2.2.2
       · contradiction
 
-/-- Given any evidence; when the classifier reads the history as broken; then
-the evidence holds a complete history of the identifier's registry through
-the asked point whose replay fails, and conversely. -/
-theorem brokenHistory_iff (i : Interpretation) (c : Context) (ev : Evidence) :
-    brokenHistory i c ev = true ↔ BrokenHistory i c ev := by
-  unfold brokenHistory BrokenHistory
+/-- Given any evidence; when the classifier reads the history as not refusing
+a holder; then the reader holds no history of the identifier's registry
+through the asked point, or the one it holds admits the identifier's key
+active, and conversely. -/
+theorem historyAdmitsHolder_iff (i : Interpretation) (c : Context) (ev : Evidence) :
+    historyAdmitsHolder i c ev = true ↔ HistoryAllowsHolder i c ev := by
+  unfold historyAdmitsHolder HistoryAllowsHolder
   cases found : ev.history with
   | none => simp
   | some h =>
-    by_cases guard : h.point = ev.point ∧ h.registry = registryAsset i c ∧ h.complete = true
-    · obtain ⟨point, registry, complete⟩ := guard
-      cases replayed : replay h.folds <;> simp [point, registry, complete, replayed]
-    · simp only [guard, decide_false, Bool.false_and, Bool.false_eq_true, false_iff, not_exists,
-        not_and]
-      intro x same point registry complete
-      cases same
-      exact absurd ⟨point, registry, complete⟩ guard
+    dsimp only
+    have sound : (!refutesItself h) = true ↔ ¬ RefutesItself h := by
+      rw [← refutesItself_iff]
+      simp
+    by_cases guard : h.point = ev.point ∧ h.registry = registryAsset i c
+    · rw [if_pos guard, Bool.and_eq_true, sound, admitsActive_iff]
+      constructor
+      · rintro ⟨intact, admits⟩ h' same
+        cases same
+        exact ⟨intact, fun _ _ => admits⟩
+      · intro allows
+        exact ⟨(allows h rfl).1, (allows h rfl).2 guard.1 guard.2⟩
+    · rw [if_neg guard, Bool.and_true, sound]
+      constructor
+      · intro intact h' same
+        cases same
+        exact ⟨intact, fun point registry => absurd ⟨point, registry⟩ guard⟩
+      · intro allows
+        exact (allows h rfl).1
 
-/-- Given evidence whose history establishes a leaf; when the history is
-read; then it is not broken: its replay succeeded. -/
-theorem leafAt_not_broken (i : Interpretation) (c : Context) (ev : Evidence) (leaf : Singular.Leaf)
-    (established : LeafAt i c ev leaf) : ¬ BrokenHistory i c ev := by
-  rintro ⟨h, found, _, _, _, failed⟩
-  obtain ⟨h', members, found', _, _, _, replayed, _⟩ := established
-  rw [found] at found'
-  cases found'
-  rw [failed] at replayed
-  contradiction
-
-/-- Given any evidence; when the history does not contradict a holder; then
-the classifier reads the history as not broken and reads no leaf or the
-active leaf, and conversely. -/
-theorem historyAllowsHolder_iff (i : Interpretation) (c : Context) (ev : Evidence) :
-    HistoryAllowsHolder i c ev ↔
-      brokenHistory i c ev = false ∧
-      (establishedLeaf i c ev = none ∨ establishedLeaf i c ev = some (.known .active)) := by
-  have sound : ¬ BrokenHistory i c ev ↔ brokenHistory i c ev = false := by
-    rw [← brokenHistory_iff, Bool.not_eq_true]
+/-- Given evidence whose history establishes a leaf; when the history is asked
+whether it refuses a holder; then it does not exactly when that leaf reads
+active. -/
+theorem leaf_allows_holder_iff (i : Interpretation) (c : Context) (ev : Evidence)
+    (leaf : Singular.Leaf) (established : LeafAt i c ev leaf) :
+    HistoryAllowsHolder i c ev ↔ leaf = .known .active := by
+  obtain ⟨h, members, found, point, registry, complete, replayed, read⟩ := established
   constructor
-  · rintro ⟨intact, allows⟩
-    refine ⟨sound.mp intact, ?_⟩
-    cases found : establishedLeaf i c ev with
-    | none => exact Or.inl rfl
-    | some leaf =>
-      rw [allows leaf ((establishedLeaf_eq_some_iff i c ev leaf).mp found)]
-      exact Or.inr rfl
-  · rintro ⟨intact, reading⟩
-    refine ⟨sound.mpr intact, fun leaf at_ => ?_⟩
-    rcases reading with reading | reading
-    · exact absurd at_ ((establishedLeaf_eq_none_iff i c ev).mp reading leaf)
-    · have same := (establishedLeaf_eq_some_iff i c ev leaf).mpr at_
-      rw [reading] at same
-      exact (Option.some.inj same).symm
+  · intro allows
+    obtain ⟨start, members', origin, replayed', active⟩ := (allows h found).2 point registry
+    have empty := origin complete
+    subst empty
+    have same : members' = members := Option.some.inj (replayed'.symm.trans replayed)
+    rw [← read, ← same]
+    exact active
+  · rintro rfl h' found'
+    rw [found] at found'
+    cases found'
+    refine ⟨fun refutes => ?_, fun _ _ => ⟨[], members, fun _ => rfl, replayed, read⟩⟩
+    have failed : replay h.folds = none := refutes [] fun _ => rfl
+    rw [replayed] at failed
+    contradiction
+
+/-- Given evidence whose history refutes itself; when it is read; then it
+refuses every holder and establishes no leaf. -/
+theorem broken_history_refuses (i : Interpretation) (c : Context) (ev : Evidence)
+    (broken : BrokenHistory ev) :
+    ¬ HistoryAllowsHolder i c ev ∧ ∀ leaf, ¬ LeafAt i c ev leaf := by
+  obtain ⟨h, found, failed⟩ := broken
+  constructor
+  · intro allows
+    exact (allows h found).1 failed
+  · rintro leaf ⟨h', members, found', _, _, complete, replayed, _⟩
+    rw [found] at found'
+    cases found'
+    have none : replay h.folds = none := failed [] fun _ => rfl
+    rw [none] at replayed
+    contradiction
 
 /-- Given evidence whose classifier custody is one recognised holder form;
 when the evidence is read; then it establishes exactly one holder, of that
@@ -287,37 +930,36 @@ theorem holdingCustody_single (i : Interpretation) (c : Context) (ev : Evidence)
 returns that status. -/
 theorem decides_classify (i : Interpretation) (c : Context) (ev : Evidence) (status : Status)
     (decided : Decides i c ev status) : classify i c ev = status := by
-  have intact : ∀ leaf, LeafAt i c ev leaf → brokenHistory i c ev = false := fun leaf at_ =>
-    Bool.eq_false_iff.mpr fun broken =>
-      leafAt_not_broken i c ev leaf at_ ((brokenHistory_iff i c ev).mp broken)
   unfold classify
   cases decided with
   | @active o l context holders live allows =>
-    obtain ⟨sound, reading⟩ := (historyAllowsHolder_iff i c ev).mp allows
-    rw [(authenticatedContextB_iff c ev.environment).mpr context, sound,
+    rw [(authenticatedContextB_iff c ev.environment).mpr context,
+      (historyAdmitsHolder_iff i c ev).mpr allows,
       holdingCustody_of_holders i c ev [o] holders, holdersCustody,
       ((custodyOf_exact i c o).1 l).mpr live]
-    rcases reading with leaf | leaf <;> simp [leaf, verdict]
+    simp [verdict]
   | @convicted o h context holders convicted allows =>
-    obtain ⟨sound, reading⟩ := (historyAllowsHolder_iff i c ev).mp allows
-    rw [(authenticatedContextB_iff c ev.environment).mpr context, sound,
+    rw [(authenticatedContextB_iff c ev.environment).mpr context,
+      (historyAdmitsHolder_iff i c ev).mpr allows,
       holdingCustody_of_holders i c ev [o] holders, holdersCustody,
       ((custodyOf_exact i c o).2.1 h).mpr convicted]
-    rcases reading with leaf | leaf <;> simp [leaf, verdict]
+    simp [verdict]
   | @requested o context holders request allows =>
-    obtain ⟨sound, reading⟩ := (historyAllowsHolder_iff i c ev).mp allows
-    rw [(authenticatedContextB_iff c ev.environment).mpr context, sound,
+    rw [(authenticatedContextB_iff c ev.environment).mpr context,
+      (historyAdmitsHolder_iff i c ev).mpr allows,
       holdingCustody_of_holders i c ev [o] holders, holdersCustody,
       (custodyOf_exact i c o).2.2.1.mpr request]
-    rcases reading with leaf | leaf <;> simp [leaf, verdict]
+    simp [verdict]
   | terminal context leaf none =>
-    rw [(authenticatedContextB_iff c ev.environment).mpr context, intact _ leaf,
+    rw [(authenticatedContextB_iff c ev.environment).mpr context,
       (establishedLeaf_eq_some_iff i c ev _).mpr leaf]
-    rcases (noHolderSeen_iff i c ev).mp none with custody | custody <;> simp [custody, verdict]
+    rcases (noHolderSeen_iff i c ev).mp none with custody | custody <;>
+      cases historyAdmitsHolder i c ev <;> simp [custody, verdict]
   | neverRegistered context leaf none =>
-    rw [(authenticatedContextB_iff c ev.environment).mpr context, intact _ leaf,
+    rw [(authenticatedContextB_iff c ev.environment).mpr context,
       (establishedLeaf_eq_some_iff i c ev _).mpr leaf]
-    rcases (noHolderSeen_iff i c ev).mp none with custody | custody <;> simp [custody, verdict]
+    rcases (noHolderSeen_iff i c ev).mp none with custody | custody <;>
+      cases historyAdmitsHolder i c ev <;> simp [custody, verdict]
 
 /-- Given a classifier result that is a status other than unavailable; when
 the evidence is read; then the evidence decides that status. -/
@@ -325,42 +967,44 @@ theorem classify_decides (i : Interpretation) (c : Context) (ev : Evidence) (sta
     (result : classify i c ev = status) (available : status ≠ .unavailable) :
     Decides i c ev status := by
   unfold classify at result
-  by_cases guard : (authenticatedContextB c ev.environment && !brokenHistory i c ev) = true
-  · have parts := guard
-    simp only [Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true] at parts
-    obtain ⟨context, sound⟩ := parts
-    have authenticated := (authenticatedContextB_iff c ev.environment).mp context
-    simp only [guard, ↓reduceIte] at result
+  by_cases context : authenticatedContextB c ev.environment = true
+  · have authenticated := (authenticatedContextB_iff c ev.environment).mp context
+    simp only [context, ↓reduceIte] at result
     generalize custody : holdingCustody i c ev = k at result
+    generalize admitted : historyAdmitsHolder i c ev = admits at result
     generalize leaf : establishedLeaf i c ev = found at result
-    have allows : found = none ∨ found = some (.known .active) → HistoryAllowsHolder i c ev :=
-      fun reading => (historyAllowsHolder_iff i c ev).mpr ⟨sound, leaf ▸ reading⟩
+    have allows : admits = true → HistoryAllowsHolder i c ev :=
+      fun yes => (historyAdmitsHolder_iff i c ev).mp (admitted.trans yes)
     have unseen : k = .notEstablished ∨ k = .absent → NoHolderSeen i c ev :=
       fun reading => (noHolderSeen_iff i c ev).mpr (custody ▸ reading)
     cases k with
     | live l =>
       obtain ⟨o, holders, form⟩ := holdingCustody_single i c ev _ custody (Or.inl ⟨l, rfl⟩)
       have live := ((custodyOf_exact i c o).1 l).mp form
-      rcases found with _ | ⟨_ | ⟨_ | _ | _⟩⟩ <;> simp only [verdict] at result <;> subst result
+      cases admits <;> rcases found with _ | ⟨_ | ⟨_ | _ | _⟩⟩ <;>
+        simp only [verdict] at result <;> subst result
       all_goals first
         | exact absurd rfl available
-        | exact .active authenticated holders live (allows (by simp))
+        | exact .active authenticated holders live (allows rfl)
     | convicted h =>
       obtain ⟨o, holders, form⟩ := holdingCustody_single i c ev _ custody (Or.inr (Or.inl ⟨h, rfl⟩))
       have convicted := ((custodyOf_exact i c o).2.1 h).mp form
-      rcases found with _ | ⟨_ | ⟨_ | _ | _⟩⟩ <;> simp only [verdict] at result <;> subst result
+      cases admits <;> rcases found with _ | ⟨_ | ⟨_ | _ | _⟩⟩ <;>
+        simp only [verdict] at result <;> subst result
       all_goals first
         | exact absurd rfl available
-        | exact .convicted authenticated holders convicted (allows (by simp))
+        | exact .convicted authenticated holders convicted (allows rfl)
     | request =>
       obtain ⟨o, holders, form⟩ := holdingCustody_single i c ev _ custody (Or.inr (Or.inr rfl))
       have request := (custodyOf_exact i c o).2.2.1.mp form
-      rcases found with _ | ⟨_ | ⟨_ | _ | _⟩⟩ <;> simp only [verdict] at result <;> subst result
+      cases admits <;> rcases found with _ | ⟨_ | ⟨_ | _ | _⟩⟩ <;>
+        simp only [verdict] at result <;> subst result
       all_goals first
         | exact absurd rfl available
-        | exact .requested authenticated holders request (allows (by simp))
+        | exact .requested authenticated holders request (allows rfl)
     | notEstablished =>
-      rcases found with _ | ⟨_ | ⟨_ | _ | _⟩⟩ <;> simp only [verdict] at result <;> subst result
+      cases admits <;> rcases found with _ | ⟨_ | ⟨_ | _ | _⟩⟩ <;>
+        simp only [verdict] at result <;> subst result
       all_goals first
         | exact absurd rfl available
         | exact .terminal authenticated ((establishedLeaf_eq_some_iff i c ev _).mp leaf)
@@ -368,7 +1012,8 @@ theorem classify_decides (i : Interpretation) (c : Context) (ev : Evidence) (sta
         | exact .neverRegistered authenticated ((establishedLeaf_eq_some_iff i c ev _).mp leaf)
             (unseen (by simp))
     | absent =>
-      rcases found with _ | ⟨_ | ⟨_ | _ | _⟩⟩ <;> simp only [verdict] at result <;> subst result
+      cases admits <;> rcases found with _ | ⟨_ | ⟨_ | _ | _⟩⟩ <;>
+        simp only [verdict] at result <;> subst result
       all_goals first
         | exact absurd rfl available
         | exact .terminal authenticated ((establishedLeaf_eq_some_iff i c ev _).mp leaf)
@@ -376,9 +1021,10 @@ theorem classify_decides (i : Interpretation) (c : Context) (ev : Evidence) (sta
         | exact .neverRegistered authenticated ((establishedLeaf_eq_some_iff i c ev _).mp leaf)
             (unseen (by simp))
     | inconsistent =>
-      rcases found with _ | ⟨_ | ⟨_ | _ | _⟩⟩ <;> simp only [verdict] at result <;> subst result
+      cases admits <;> rcases found with _ | ⟨_ | ⟨_ | _ | _⟩⟩ <;>
+        simp only [verdict] at result <;> subst result
       all_goals exact absurd rfl available
-  · simp only [guard, Bool.false_eq_true, ↓reduceIte] at result
+  · simp only [context, Bool.false_eq_true, ↓reduceIte] at result
     exact absurd result.symm available
 
 /-- **The classifier is the relation.**
@@ -447,8 +1093,9 @@ When the reader answers active.
 Then the context is authenticated, the evidence establishes exactly one holder
 of the representative asset at the asked point, that holder is at the
 checkpoint credential, holds the asset exactly once and carries a live datum
-of the identifier, and the history establishes no leaf or the leaf it
-establishes reads active; and conversely such evidence is answered active. -/
+of the identifier, and the history, when the reader holds one of the
+identifier's registry through the asked point, admits the identifier's key
+active; and conversely such evidence is answered active. -/
 theorem active_iff (i : Interpretation) (c : Context) (ev : Evidence) :
     classify i c ev = .active ↔
       authenticatedContext c ev.environment ∧
@@ -468,9 +1115,9 @@ Then the context is authenticated, the evidence establishes exactly one holder
 of the representative asset at the asked point, that holder is the convicted
 checkpoint of the identifier (at the checkpoint credential, the asset exactly
 once, a pending-termination datum of the identifier) or the termination
-request of the identifier's key, and the history establishes no leaf or the
-leaf it establishes reads active; and conversely such evidence is answered
-pending termination. -/
+request of the identifier's key, and the history, when the reader holds one
+of the identifier's registry through the asked point, admits the identifier's
+key active; and conversely such evidence is answered pending termination. -/
 theorem pendingTermination_iff (i : Interpretation) (c : Context) (ev : Evidence) :
     classify i c ev = .pendingTermination ↔
       authenticatedContext c ev.environment ∧
@@ -700,53 +1347,147 @@ theorem holding_observed_elsewhere (i : Interpretation) (c : Context) (ev : Evid
     simp [holdingCustody, found, guard]
   have cleared : holdingCustody i c { ev with holding := none } = .notEstablished := rfl
   have sameLeaf : establishedLeaf i c { ev with holding := none } = establishedLeaf i c ev := rfl
-  have sameHistory : brokenHistory i c { ev with holding := none } = brokenHistory i c ev := rfl
+  have sameHistory :
+      historyAdmitsHolder i c { ev with holding := none } = historyAdmitsHolder i c ev := rfl
   simp only [classify, unread, cleared, sameLeaf, sameHistory]
 
-/-- **A history that is not this registry's complete history establishes
-nothing.**
+/-- **A history of another point or another registry establishes nothing,
+unless it refutes itself.**
 Given a history observation made at another chain point than the asked one,
-or of another registry than the identifier's, or not complete (it starts
-late or misses a fold).
+or of another registry than the identifier's, that does not refute itself.
+When the reader answers.
+Then the answer is the one it gives with no history at all. -/
+theorem history_not_established (i : Interpretation) (c : Context) (ev : Evidence)
+    (h : HistoryObservation) (found : ev.history = some h)
+    (elsewhere : h.point ≠ ev.point ∨ h.registry ≠ registryAsset i c)
+    (sound : ¬ RefutesItself h) :
+    classify i c ev = classify i c { ev with history := none } := by
+  have guard : ¬ (h.point = ev.point ∧ h.registry = registryAsset i c) := by
+    rintro ⟨point, registry⟩
+    rcases elsewhere with other | other <;> contradiction
+  have guardLeaf :
+      ¬ (h.point = ev.point ∧ h.registry = registryAsset i c ∧ h.complete = true) :=
+    fun all => guard ⟨all.1, all.2.1⟩
+  have unread : establishedLeaf i c ev = none := by
+    simp [establishedLeaf, found, guardLeaf]
+  have admitted : historyAdmitsHolder i c ev = true :=
+    (historyAdmitsHolder_iff i c ev).mpr fun h' same => by
+      rw [found] at same
+      cases same
+      exact ⟨sound, fun point registry => absurd ⟨point, registry⟩ guard⟩
+  have cleared : establishedLeaf i c { ev with history := none } = none := rfl
+  have clearedAdmitted : historyAdmitsHolder i c { ev with history := none } = true := rfl
+  have same : holdingCustody i c { ev with history := none } = holdingCustody i c ev := rfl
+  simp only [classify, unread, admitted, cleared, clearedAdmitted, same]
+
+/-- **An honest partial history never refuses a holder.**
+Given a registry's history that replays from its creation and leaves the
+identifier's key active, and evidence whose history observation is incomplete
+and holds some of those folds, in order, whatever point and registry it
+names.
+When the history is asked whether it refuses a holder.
+Then it does not: it does not refute itself and it admits the key active. -/
+theorem honest_partial_history_allows_holder (i : Interpretation) (c : Context) (ev : Evidence)
+    (h : HistoryObservation) (actual : List (List KeyChange)) (members : Singular.Trie)
+    (found : ev.history = some h) (incomplete : h.complete = false)
+    (replayed : replay actual = some members)
+    (active : Singular.trieGet members (i.keyOf c.aid) = .known .active)
+    (part : h.folds.Sublist actual) : HistoryAllowsHolder i c ev := by
+  intro h' same
+  rw [found] at same
+  cases same
+  exact ⟨honest_history_does_not_refute_itself h actual members replayed part
+      (fun complete => by rw [incomplete] at complete; contradiction),
+    fun _ _ => incomplete ▸
+      part_of_history_admits_active actual h.folds members (i.keyOf c.aid) replayed active part⟩
+
+/-- **An incomplete history that does not refuse the holder is a gap.**
+Given an incomplete history (it starts late or misses a fold) that does not
+refuse a holder: some members before its folds make them replay and leave the
+identifier's key active.
 When the reader answers.
 Then the answer is the one it gives with no history at all: the gap does not
 make the answer unavailable when the holders decide it. -/
-theorem history_not_established (i : Interpretation) (c : Context) (ev : Evidence)
-    (h : HistoryObservation) (found : ev.history = some h)
-    (gap : h.point ≠ ev.point ∨ h.registry ≠ registryAsset i c ∨ h.complete = false) :
+theorem incomplete_history_is_a_gap (i : Interpretation) (c : Context) (ev : Evidence)
+    (h : HistoryObservation) (found : ev.history = some h) (incomplete : h.complete = false)
+    (allows : HistoryAllowsHolder i c ev) :
     classify i c ev = classify i c { ev with history := none } := by
-  have guard : ¬ (h.point = ev.point ∧ h.registry = registryAsset i c ∧ h.complete = true) := by
-    rintro ⟨point, registry, complete⟩
-    rcases gap with other | other | other
-    · contradiction
-    · contradiction
-    · rw [complete] at other; contradiction
   have unread : establishedLeaf i c ev = none := by
-    simp [establishedLeaf, found, guard]
-  have sound : brokenHistory i c ev = false := by
-    simp [brokenHistory, found, guard]
+    simp [establishedLeaf, found, incomplete]
+  have admitted := (historyAdmitsHolder_iff i c ev).mpr allows
   have cleared : establishedLeaf i c { ev with history := none } = none := rfl
-  have clearedSound : brokenHistory i c { ev with history := none } = false := rfl
+  have clearedAdmitted : historyAdmitsHolder i c { ev with history := none } = true := rfl
   have same : holdingCustody i c { ev with history := none } = holdingCustody i c ev := rfl
-  simp only [classify, unread, sound, cleared, clearedSound, same]
+  simp only [classify, unread, admitted, cleared, clearedAdmitted, same]
 
-/-- **A broken history is a contradiction, whatever the holders show.**
-Given evidence that holds a complete history of the identifier's registry
-through the asked point whose replay fails: some fold registers a key the
-registry already knows, or terminates a key that is not active, or makes no
-change.
+/-- **An incomplete history that refuses the holder is a contradiction.**
+Given an incomplete history of the identifier's registry through the asked
+point that no members before its folds make replay with the identifier's key
+left active: a fold makes no change, a key's changes are impossible in any
+registry, or the identifier's key is terminated in it.
 When the reader answers.
-Then the answer is unavailable, with or without a holder. -/
-theorem broken_history_unavailable (i : Interpretation) (c : Context) (ev : Evidence)
-    (broken : BrokenHistory i c ev) : classify i c ev = .unavailable := by
+Then the answer is unavailable, whatever the holders show. -/
+theorem incomplete_history_refusing_unavailable (i : Interpretation) (c : Context)
+    (ev : Evidence) (h : HistoryObservation) (found : ev.history = some h)
+    (point : h.point = ev.point) (registry : h.registry = registryAsset i c)
+    (incomplete : h.complete = false)
+    (refuses : ¬ AdmitsActive false (i.keyOf c.aid) h.folds) :
+    classify i c ev = .unavailable := by
+  have noLeaf : ∀ leaf, ¬ LeafAt i c ev leaf := by
+    rintro leaf ⟨h', _, found', _, _, complete, _, _⟩
+    rw [found] at found'
+    cases found'
+    rw [incomplete] at complete
+    contradiction
+  have refused : ¬ HistoryAllowsHolder i c ev := fun allows =>
+    refuses (incomplete ▸ (allows h found).2 point registry)
   rw [unavailable_iff]
   intro status decided
   cases decided with
-  | active _ _ _ allows => exact allows.1 broken
-  | convicted _ _ _ allows => exact allows.1 broken
-  | requested _ _ _ allows => exact allows.1 broken
-  | terminal _ leaf _ => exact leafAt_not_broken i c ev _ leaf broken
-  | neverRegistered _ leaf _ => exact leafAt_not_broken i c ev _ leaf broken
+  | active _ _ _ allows => exact refused allows
+  | convicted _ _ _ allows => exact refused allows
+  | requested _ _ _ allows => exact refused allows
+  | terminal _ leaf _ => exact noLeaf _ leaf
+  | neverRegistered _ leaf _ => exact noLeaf _ leaf
+
+/-- **A history that refutes itself is a contradiction, whatever the holders
+show and whatever it names.**
+Given evidence that holds a history that no members before its folds make
+replay, none when it says it is complete: some fold makes no change, or
+registers a key the registry knows, or terminates a key that is not active.
+When the reader answers.
+Then the answer is unavailable: with or without a holder, complete or not,
+and whatever chain point and registry the history names. -/
+theorem broken_history_unavailable (i : Interpretation) (c : Context) (ev : Evidence)
+    (broken : BrokenHistory ev) : classify i c ev = .unavailable := by
+  obtain ⟨refused, noLeaf⟩ := broken_history_refuses i c ev broken
+  rw [unavailable_iff]
+  intro status decided
+  cases decided with
+  | active _ _ _ allows => exact refused allows
+  | convicted _ _ _ allows => exact refused allows
+  | requested _ _ _ allows => exact refused allows
+  | terminal _ leaf _ => exact noLeaf _ leaf
+  | neverRegistered _ leaf _ => exact noLeaf _ leaf
+
+/-- **A holder against the history is inconsistent.**
+Given evidence that establishes at least one holder of the representative
+asset and holds a history that refuses a holder.
+When the reader answers.
+Then the answer is unavailable. -/
+theorem holder_against_history_unavailable (i : Interpretation) (c : Context) (ev : Evidence)
+    (o : AH.ObservedOutput) (rest : List AH.ObservedOutput)
+    (holders : HoldersAt i c ev (o :: rest)) (refuses : ¬ HistoryAllowsHolder i c ev) :
+    classify i c ev = .unavailable := by
+  have unseen : ¬ NoHolderSeen i c ev := fun none => by cases none _ holders
+  rw [unavailable_iff]
+  intro status decided
+  cases decided with
+  | active _ _ _ allows => exact refuses allows
+  | convicted _ _ _ allows => exact refuses allows
+  | requested _ _ _ allows => exact refuses allows
+  | terminal _ _ none => exact unseen none
+  | neverRegistered _ _ none => exact unseen none
 
 /-- **Two holders are inconsistent.**
 Given evidence that establishes two or more outputs holding the
@@ -829,16 +1570,9 @@ Then the answer is unavailable. -/
 theorem holder_against_leaf_unavailable (i : Interpretation) (c : Context) (ev : Evidence)
     (o : AH.ObservedOutput) (rest : List AH.ObservedOutput) (leaf : Singular.Leaf)
     (holders : HoldersAt i c ev (o :: rest)) (established : LeafAt i c ev leaf)
-    (inactive : leaf ≠ .known .active) : classify i c ev = .unavailable := by
-  have unseen : ¬ NoHolderSeen i c ev := fun none => by cases none _ holders
-  rw [unavailable_iff]
-  intro status decided
-  cases decided with
-  | active _ _ _ allows => exact inactive (allows.2 leaf established)
-  | convicted _ _ _ allows => exact inactive (allows.2 leaf established)
-  | requested _ _ _ allows => exact inactive (allows.2 leaf established)
-  | terminal _ _ none => exact unseen none
-  | neverRegistered _ _ none => exact unseen none
+    (inactive : leaf ≠ .known .active) : classify i c ev = .unavailable :=
+  holder_against_history_unavailable i c ev o rest holders fun allows =>
+    inactive ((leaf_allows_holder_iff i c ev leaf established).mp allows)
 
 /-- **A registered key decides nothing without its holder.**
 Given evidence whose history reads the identifier's key active, and that
@@ -863,8 +1597,9 @@ theorem active_leaf_without_holder_unavailable (i : Interpretation) (c : Context
 
 /-- **An eligible holding is active.**
 Given an output the consumer predicate accepts, that the evidence establishes
-as the one holder of the representative asset, with a history that
-establishes no leaf or whose leaf reads active.
+as the one holder of the representative asset, with no history of the
+identifier's registry through the asked point or one that admits the
+identifier's key active.
 When the reader answers.
 Then the answer is active. -/
 theorem eligible_holder_is_active (i : Interpretation) (c : Context) (ev : Evidence)
@@ -925,158 +1660,18 @@ theorem pending_or_terminal_holder_refused (i : Interpretation) (c : Context) (e
   exact ⟨refused, Bool.eq_false_iff.mpr fun accepted =>
     refused ((consumableHoldingB_iff i c ev.environment p now o).mp accepted)⟩
 
-/-! ## The replay -/
-
-/-- Given a change and the members it is applied to; when the replay applies
-it; then a registration succeeds exactly when its key is unknown and a
-termination exactly when its key is active, and the result is the registry's
-own successor for that change. -/
-theorem applyChange_exact (members next : Singular.Trie)
-    (change : SingularApplicationHeld.Change) :
-    applyChange members change = some next ↔
-      next = SingularApplicationHeld.targetTrie members change ∧
-      match change with
-      | .register _ key _ _ => Singular.trieGet members key = .unknown
-      | .terminate _ key => Singular.trieGet members key = .known .active := by
-  cases change with
-  | register reference key index deposit =>
-    by_cases unknown : Singular.trieGet members key = .unknown
-    · simp [applyChange, unknown, eq_comm]
-    · simp [applyChange, unknown]
-  | terminate reference key =>
-    by_cases active : Singular.trieGet members key = .known .active
-    · simp [applyChange, active, eq_comm]
-    · simp [applyChange, active]
-
-/-- Given a change the replay applies; when another key is read afterwards;
-then its leaf is unchanged. -/
-theorem applyChange_frame (members next : Singular.Trie)
-    (change : SingularApplicationHeld.Change) (key : Singular.Key)
-    (applied : applyChange members change = some next) (other : change.key ≠ key) :
-    Singular.trieGet next key = Singular.trieGet members key := by
-  obtain ⟨rfl, _⟩ := (applyChange_exact members next change).mp applied
-  cases change <;>
-    exact Singular.trieGet_set_of_ne _ _ _ _ (Ne.symm other)
-
-/-- Given a list of changes the replay applies in order and a key.
-When the key's leaf is read afterwards.
-Then it is unknown exactly when it was unknown before and no change names the
-key, and terminal exactly when it was terminal before or some change is a
-termination of the key. -/
-theorem changes_leaf (changes : List SingularApplicationHeld.Change)
-    (members next : Singular.Trie) (key : Singular.Key)
-    (applied : changes.foldlM applyChange members = some next) :
-    (Singular.trieGet next key = .unknown ↔
-      Singular.trieGet members key = .unknown ∧ ∀ change ∈ changes, change.key ≠ key) ∧
-    (Singular.trieGet next key = .known .terminal ↔
-      Singular.trieGet members key = .known .terminal ∨
-      ∃ reference, SingularApplicationHeld.Change.terminate reference key ∈ changes) := by
-  induction changes generalizing members with
-  | nil =>
-    simp only [List.foldlM_nil, Option.pure_def, Option.some.injEq] at applied
-    subst applied
-    simp
-  | cons change rest ih =>
-    simp only [List.foldlM_cons, Option.bind_eq_bind] at applied
-    cases first : applyChange members change with
-    | none => simp [first] at applied
-    | some middle =>
-      simp only [first, Option.bind_some] at applied
-      obtain ⟨unknownIff, terminalIff⟩ := ih middle applied
-      obtain ⟨target, law⟩ := (applyChange_exact members middle change).mp first
-      by_cases same : change.key = key
-      · cases change with
-        | register reference changeKey index deposit =>
-          simp only [SingularApplicationHeld.Change.key] at same
-          subst same
-          have read : Singular.trieGet middle changeKey = .known .active := by
-            rw [target]; exact Singular.trieGet_set_eq _ _ _
-          simp only at law
-          constructor
-          · rw [unknownIff, read]
-            simp [SingularApplicationHeld.Change.key]
-          · rw [terminalIff, read, law]
-            simp
-        | terminate reference changeKey =>
-          simp only [SingularApplicationHeld.Change.key] at same
-          subst same
-          have read : Singular.trieGet middle changeKey = .known .terminal := by
-            rw [target]; exact Singular.trieGet_set_eq _ _ _
-          simp only at law
-          constructor
-          · rw [unknownIff, read]
-            simp [SingularApplicationHeld.Change.key]
-          · rw [terminalIff, read, law]
-            exact ⟨fun _ => Or.inr ⟨reference, List.mem_cons_self⟩, fun _ => Or.inl rfl⟩
-      · have frame := applyChange_frame members middle change key first same
-        constructor
-        · rw [unknownIff, frame]
-          simp [same]
-        · rw [terminalIff, frame]
-          have notHere : ∀ reference,
-              SingularApplicationHeld.Change.terminate reference key ≠ change := by
-            rintro reference rfl
-            exact same rfl
-          constructor
-          · rintro (terminal | ⟨reference, member⟩)
-            · exact Or.inl terminal
-            · exact Or.inr ⟨reference, List.mem_cons_of_mem _ member⟩
-          · rintro (terminal | ⟨reference, member⟩)
-            · exact Or.inl terminal
-            · rcases List.mem_cons.mp member with here | later
-              · exact (notHere reference here).elim
-              · exact Or.inr ⟨reference, later⟩
-
-/-- Given a history the replay accepts; when its folds are laid end to end;
-then applying every change in that order from no member gives the same
-members. -/
-theorem replay_flat (folds : List (List SingularApplicationHeld.Change))
-    (members : Singular.Trie) (replayed : replay folds = some members) :
-    folds.flatten.foldlM applyChange [] = some members := by
-  unfold replay at replayed
-  generalize ([] : Singular.Trie) = start at replayed ⊢
-  induction folds generalizing start with
-  | nil => simpa using replayed
-  | cons changes rest ih =>
-    simp only [List.foldlM_cons, Option.bind_eq_bind] at replayed
-    cases first : applyFold start changes with
-    | none => simp [first] at replayed
-    | some middle =>
-      simp only [first, Option.bind_some] at replayed
-      have applied : changes.foldlM applyChange start = some middle := by
-        unfold applyFold at first
-        split at first
-        · contradiction
-        · exact first
-      simp only [List.flatten_cons, List.foldlM_append, applied, Option.bind_eq_bind,
-        Option.bind_some]
-      exact ih middle replayed
-
-/-- **Never registered means no change of the key; terminal means its
-termination.**
-Given a history the replay accepts and a key.
-When the key's leaf is read in the replayed members.
-Then it is unknown exactly when no change of any fold names the key, and
-terminal exactly when some fold terminates the key. -/
-theorem replayed_leaf (folds : List (List SingularApplicationHeld.Change))
-    (members : Singular.Trie) (key : Singular.Key) (replayed : replay folds = some members) :
-    (Singular.trieGet members key = .unknown ↔ ∀ change ∈ folds.flatten, change.key ≠ key) ∧
-    (Singular.trieGet members key = .known .terminal ↔
-      ∃ reference, SingularApplicationHeld.Change.terminate reference key ∈ folds.flatten) := by
-  have leaves := changes_leaf folds.flatten [] members key (replay_flat folds members replayed)
-  have empty : Singular.trieGet ([] : Singular.Trie) key = .unknown := rfl
-  simpa [empty] using leaves
+/-! ## The replay follows the registry's folds -/
 
 /-- **A replayed leaf is unknown, active or terminal.**
 Given a history the replay accepts and a key.
 When the key's leaf is read in the replayed members.
 Then it is never the known absent leaf, which no registration and no
 termination writes. -/
-theorem replayed_leaf_never_absent (folds : List (List SingularApplicationHeld.Change))
+theorem replayed_leaf_never_absent (folds : List (List KeyChange))
     (members : Singular.Trie) (key : Singular.Key) (replayed : replay folds = some members) :
     Singular.trieGet members key ≠ .known .absent := by
-  have flat := replay_flat folds members replayed
-  have kept : ∀ (changes : List SingularApplicationHeld.Change) (start next : Singular.Trie),
+  have flat := ((replayFrom_iff folds [] members).mp replayed).2
+  have kept : ∀ (changes : List KeyChange) (start next : Singular.Trie),
       changes.foldlM applyChange start = some next →
       Singular.trieGet start key ≠ .known .absent → Singular.trieGet next key ≠ .known .absent := by
     intro changes
@@ -1095,17 +1690,18 @@ theorem replayed_leaf_never_absent (folds : List (List SingularApplicationHeld.C
         simp only [first, Option.bind_some] at applied
         apply ih middle next applied
         by_cases same : change.key = key
-        · obtain ⟨target, _⟩ := (applyChange_exact start middle change).mp first
-          cases change with
-          | register reference changeKey index deposit =>
-            simp only [SingularApplicationHeld.Change.key] at same
+        · cases change with
+          | register changeKey =>
+            simp only [KeyChange.key] at same
             subst same
-            rw [target, SingularApplicationHeld.targetTrie, Singular.trieGet_set_eq]
+            obtain ⟨_, target⟩ := (applyChange_exact start middle _).mp first
+            rw [target, Singular.trieGet_set_eq]
             simp
-          | terminate reference changeKey =>
-            simp only [SingularApplicationHeld.Change.key] at same
+          | terminate changeKey =>
+            simp only [KeyChange.key] at same
             subst same
-            rw [target, SingularApplicationHeld.targetTrie, Singular.trieGet_set_eq]
+            obtain ⟨_, target⟩ := (applyChange_exact start middle _).mp first
+            rw [target, Singular.trieGet_set_eq]
             simp
         · rw [applyChange_frame start middle change key first same]
           exact present
@@ -1114,34 +1710,33 @@ theorem replayed_leaf_never_absent (folds : List (List SingularApplicationHeld.C
 /-- Given a history the replay accepts and one more fold; when the longer
 history is replayed; then it is the replay of the shorter one followed by the
 changes of the new fold. -/
-theorem replay_append (folds : List (List SingularApplicationHeld.Change))
-    (changes : List SingularApplicationHeld.Change) :
+theorem replay_append (folds : List (List KeyChange)) (changes : List KeyChange) :
     replay (folds ++ [changes]) = (replay folds).bind fun members => applyFold members changes := by
-  simp [replay, List.foldlM_append]
+  simp [replay, replayFrom, List.foldlM_append]
 
 /-- Given an accepted change of the registry's fold; when the replay applies
-the same change to the same members; then it gives the same successor. -/
+what it reads of that change to the same members; then it gives the same
+successor. -/
 theorem applyChange_of_accepted (hash : AH.Hash) (code : AH.Codec) (release : AH.PublishedRelease)
     (members next : Singular.Trie) (change : SingularApplicationHeld.Change)
     (observation : SingularApplicationHeld.FoldObservation)
     (accepted : SingularApplicationHeld.change .none hash code release members change observation
-      = .ok next) : applyChange members change = some next := by
+      = .ok next) : applyChange members (KeyChange.of change) = some next := by
   have target := SingularApplicationHeld.Proofs.change_success hash code release members next
     change observation accepted
   have law := SingularApplicationHeld.HistoryProofs.change_key_law hash code release members next
     change observation accepted
   rw [applyChange_exact]
-  refine ⟨target, ?_⟩
-  cases change <;> exact law.1
+  cases change <;> exact ⟨law.1, target⟩
 
 /-- Given an accepted batch of changes of the registry's fold; when the replay
-applies the same changes in order; then it gives the same members. -/
+applies what it reads of them in order; then it gives the same members. -/
 theorem applyChanges_of_accepted (hash : AH.Hash) (code : AH.Codec) (release : AH.PublishedRelease)
     (observation : SingularApplicationHeld.FoldObservation)
     (changes : List SingularApplicationHeld.Change) (members next : Singular.Trie)
     (accepted : changes.foldlM (fun trie change =>
       SingularApplicationHeld.change .none hash code release trie change observation) members
-      = .ok next) : changes.foldlM applyChange members = some next := by
+      = .ok next) : (changes.map KeyChange.of).foldlM applyChange members = some next := by
   induction changes generalizing members with
   | nil =>
     simp only [List.foldlM_nil, pure, Except.pure, Except.ok.injEq] at accepted
@@ -1152,21 +1747,22 @@ theorem applyChanges_of_accepted (hash : AH.Hash) (code : AH.Codec) (release : A
     | error why => simp [first] at accepted
     | ok middle =>
       simp only [first] at accepted
-      simp only [List.foldlM_cons, Option.bind_eq_bind,
+      simp only [List.map_cons, List.foldlM_cons, Option.bind_eq_bind,
         applyChange_of_accepted hash code release members middle change observation first,
         Option.bind_some]
       exact ih middle accepted
 
 /-- **The replay follows the registry's fold.**
 Given a fold the public registry accepts.
-When the replay applies the fold's changes to the registry's members before
-it.
+When the replay applies what it reads of the fold's changes to the registry's
+members before it.
 Then it gives the registry's members after it. -/
 theorem applyFold_of_accepted (hash : AH.Hash) (code : AH.Codec)
     (commit : SingularApplicationHeld.TrieCommit) (release : AH.PublishedRelease)
     (observation : SingularApplicationHeld.FoldObservation)
     (accepted : SingularApplicationHeld.fold .none hash code commit release observation = true) :
-    applyFold observation.before.trie observation.changes = some observation.after.trie := by
+    applyFold observation.before.trie (observation.changes.map KeyChange.of) =
+      some observation.after.trie := by
   have result := (SingularApplicationHeld.Proofs.fold_result hash code commit release observation
     accepted).1
   have conditions := accepted
@@ -1202,7 +1798,7 @@ without them; then it is a reachable history of the public registry model. -/
 theorem registryFolds_reachable (hash : AH.Hash) (code : AH.Codec)
     (commit : SingularApplicationHeld.TrieCommit) (release : AH.PublishedRelease)
     (identity : Singular.TokenId) (world : SingularApplicationHeld.CandidateWorld)
-    (folds : List (List SingularApplicationHeld.Change))
+    (folds : List (List KeyChange))
     (history : RegistryFolds hash code commit release identity world folds) :
     SingularApplicationHeld.CandidateReachable hash code commit release world := by
   induction history with
@@ -1247,7 +1843,7 @@ fold before its creation. -/
 theorem no_folds_before_creation (hash : AH.Hash) (code : AH.Codec)
     (commit : SingularApplicationHeld.TrieCommit) (release : AH.PublishedRelease)
     (identity : Singular.TokenId) (world : SingularApplicationHeld.CandidateWorld)
-    (folds : List (List SingularApplicationHeld.Change))
+    (folds : List (List KeyChange))
     (history : RegistryFolds hash code commit release identity world folds)
     (absent : identity ∉ world.registries.map (·.identity)) : folds = [] := by
   induction history with
@@ -1287,7 +1883,7 @@ the history's world. -/
 theorem registry_members_are_replayed (hash : AH.Hash) (code : AH.Codec)
     (commit : SingularApplicationHeld.TrieCommit) (release : AH.PublishedRelease)
     (identity : Singular.TokenId) (world : SingularApplicationHeld.CandidateWorld)
-    (folds : List (List SingularApplicationHeld.Change))
+    (folds : List (List KeyChange))
     (history : RegistryFolds hash code commit release identity world folds) :
     ∀ registry ∈ world.registries, registry.identity = identity →
       replay folds = some registry.trie := by
@@ -1738,8 +2334,7 @@ theorem warranted_status_is_answered (i : Interpretation) (c : Context)
       HoldersAt i c ev [o] ∧ HistoryAllowsHolder i c ev := by
     intro o unspent held
     obtain ⟨active, single⟩ := only o unspent held
-    refine ⟨single ▸ at_, leafAt_not_broken i c ev _ leafAt, fun other otherAt => ?_⟩
-    rw [leafAt_unique i c ev _ _ otherAt leafAt, active]
+    exact ⟨single ▸ at_, (leaf_allows_holder_iff i c ev _ leafAt).mpr active⟩
   have unseen : Singular.trieGet registry.trie (i.keyOf c.aid) ≠ .known .active →
       NoHolderSeen i c ev := fun inactive other otherAt => by
     rw [holdersAt_unique i c ev _ _ otherAt at_, census.2 inactive]
@@ -1969,8 +2564,8 @@ theorem lifecycle_status_is_answered (i : Interpretation) (c : Context) (p : Par
   unfold holdersRealize at realized
   have allows : (s.states c.aid).leaf = .active → HistoryAllowsHolder i c ev := by
     intro active
-    refine ⟨leafAt_not_broken i c ev _ leafAt, fun other otherAt => ?_⟩
-    rw [leafAt_unique i c ev _ _ otherAt leafAt, leafEq, active]
+    refine (leaf_allows_holder_iff i c ev _ leafAt).mpr ?_
+    rw [leafEq, active]
     rfl
   have unseen : holders = [] → NoHolderSeen i c ev :=
     fun empty other otherAt => (holdersAt_unique i c ev _ _ otherAt at_).trans empty
@@ -2051,7 +2646,7 @@ theorem lifecycle_pending_or_terminal_not_consumable (p : Params) (now : Slot) (
 /-- Evidence in which no output holds the identifier's representative asset
 and the registry's complete history through `point` is `folds`. -/
 def missingTokenEvidence (i : Interpretation) (c : Context) (point : ChainPoint)
-    (e : Environment) (folds : List (List SingularApplicationHeld.Change)) : Evidence :=
+    (e : Environment) (folds : List (List KeyChange)) : Evidence :=
   { point, environment := e,
     holding := some { point, asset := representativeAsset i c, holders := [] },
     history := some { point, registry := registryAsset i c, complete := true, folds } }
@@ -2069,10 +2664,9 @@ holding observations are equal, and the answers differ: never registered at
 creation, terminal after the fold. Only the history tells them apart. -/
 theorem missing_token_fits_two_lifecycles (i : Interpretation) (c : Context)
     (rp : CardanoKeri.Registry.Params) (point : ChainPoint) (e : Environment)
-    (registration termination : Singular.OutRef)
     (context : authenticatedContext c e) (identifier : c.aid = 11) :
-    let registered : List (List SingularApplicationHeld.Change) :=
-      [[.register registration (i.keyOf c.aid) 0 0], [.terminate termination (i.keyOf c.aid)]]
+    let registered : List (List KeyChange) :=
+      [[.register (i.keyOf c.aid)], [.terminate (i.keyOf c.aid)]]
     SysReach Examples.p Examples.env (Sys.init Examples.deployment) ∧
     SysReach Examples.p Examples.env Examples.completed ∧
     Realizes i c Examples.p rp (Sys.init Examples.deployment)
@@ -2086,11 +2680,11 @@ theorem missing_token_fits_two_lifecycles (i : Interpretation) (c : Context)
   obtain ⟨reach, state, leaf, _, _⟩ := Examples.connected_completion
   have empty : Singular.trieGet ([] : Singular.Trie) (i.keyOf c.aid) = .unknown := rfl
   have unknown : establishedLeaf i c (missingTokenEvidence i c point e []) = some .unknown := by
-    simp [establishedLeaf, missingTokenEvidence, replay, empty]
+    simp [establishedLeaf, missingTokenEvidence, replay, replayFrom, empty]
   have terminal : establishedLeaf i c (missingTokenEvidence i c point e registered) =
       some (.known .terminal) := by
-    simp [establishedLeaf, missingTokenEvidence, registered, replay, applyFold, applyChange,
-      SingularApplicationHeld.targetTrie, empty, Singular.trieGet_set_eq]
+    simp [establishedLeaf, missingTokenEvidence, registered, replay, replayFrom, applyFold,
+      applyChange, empty, Singular.trieGet_set_eq]
   have holdersSeen : ∀ folds, ∃ holders,
       HoldersAt i c (missingTokenEvidence i c point e folds) holders :=
     fun _ => ⟨[], _, rfl, rfl, rfl, rfl⟩

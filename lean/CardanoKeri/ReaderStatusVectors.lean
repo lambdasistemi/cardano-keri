@@ -79,17 +79,14 @@ def elsewhere : ChainPoint := 6990
 def holdingAt (c : Context) (holders : List AH.ObservedOutput) : HoldingObservation :=
   { point := here, asset := representativeAsset i c, holders }
 
-/-- A registration of `key`, from the request `n`. -/
-def registers (key : Singular.Key) (n : Nat) : SingularApplicationHeld.Change :=
-  .register ⟨pack (txId (40 + n)), 0⟩ key 1 5000000
+/-- A registration of `key`. -/
+def registers (key : Singular.Key) : KeyChange := .register key
 
-/-- A termination of `key`, from the request `n`. -/
-def terminates (key : Singular.Key) (n : Nat) : SingularApplicationHeld.Change :=
-  .terminate ⟨pack (txId (60 + n)), 1⟩ key
+/-- A termination of `key`. -/
+def terminates (key : Singular.Key) : KeyChange := .terminate key
 
 /-- A complete history of `c`'s registry through the asked point. -/
-def historyAt (c : Context) (folds : List (List SingularApplicationHeld.Change)) :
-    HistoryObservation :=
+def historyAt (c : Context) (folds : List (List KeyChange)) : HistoryObservation :=
   { point := here, registry := registryAsset i c, complete := true, folds }
 
 structure Case where
@@ -114,13 +111,14 @@ def cases : Except String (List Case) := do
   let k2 := i.keyOf other.aid
   let k3 := i.keyOf third.aid
   -- Histories of the registry: the other identifier registered first in each.
-  let unknownHistory := [[registers k2 1], [terminates k2 4]]
-  let activeHistory := [[registers k2 1], [registers k 2]]
-  let terminalHistory := [[registers k2 1], [registers k 2], [registers k3 7, terminates k 3]]
+  let unknownHistory := [[registers k2], [terminates k2]]
+  let activeHistory := [[registers k2], [registers k]]
+  let terminalHistory := [[registers k2], [registers k], [registers k3, terminates k]]
   let ev (holding : Option HoldingObservation) (history : Option HistoryObservation) : Evidence :=
     { point := here, environment := environment c, holding, history }
   let held (os : List AH.ObservedOutput) := some (holdingAt c os)
-  let told (folds : List (List SingularApplicationHeld.Change)) := some (historyAt c folds)
+  let told (folds : List (List KeyChange)) := some (historyAt c folds)
+  let part (folds : List (List KeyChange)) := some { historyAt c folds with complete := false }
   let row (id note : String) (evidence : Evidence) (now : Slot := 200) : Case :=
     { id, note, now, evidence }
   pure [
@@ -145,11 +143,19 @@ def cases : Except String (List Case) := do
     row "pending-requested-with-history" "the termination request holds the asset and the history registers the key"
       (ev (held [request]) (told activeHistory)),
     row "active-incomplete-history" "a live checkpoint and a history that misses the fold that registered the key: the holder decides alone"
-      (ev (held [live]) (some { historyAt c [[registers k2 1]] with complete := false })),
-    row "active-incomplete-history-unreplayable" "a live checkpoint and a history that starts after the registration, so its first fold terminates a key it never saw registered: not complete, so a gap and not a contradiction"
-      (ev (held [live]) (some { historyAt c [[terminates k2 4]] with complete := false })),
+      (ev (held [live]) (some { historyAt c [[registers k2]] with complete := false })),
+    row "active-incomplete-history-starting-late" "a live checkpoint and a history that starts after the registrations, so its first fold terminates another key it never saw registered: a registry before it makes it replay, so a gap and not a contradiction"
+      (ev (held [live]) (part [[terminates k2]])),
+    row "active-incomplete-history-registering-the-key" "a live checkpoint and an incomplete history that holds the key's registration and another key's registration and termination"
+      (ev (held [live]) (part [[registers k2], [registers k, terminates k2]])),
+    row "active-history-of-another-registry" "a live checkpoint and the complete history of another registry that terminates the key: it replays, and establishes nothing here"
+      (ev (held [live]) (some { historyAt c terminalHistory with registry := registryAsset i rival })),
+    row "active-incomplete-history-observed-elsewhere" "a live checkpoint here and an incomplete history through another point that terminates the key: it replays, and establishes nothing here"
+      (ev (held [live]) (some { historyAt c [[terminates k]] with point := elsewhere, complete := false })),
+    row "pending-convicted-incomplete-history" "the convicted checkpoint and an incomplete history that terminates another key"
+      (ev (held [convicted]) (part [[terminates k3], [registers k2]])),
     row "pending-requested-incomplete-history" "the termination request and a history that is not complete: the holder decides alone"
-      (ev (held [request]) (some { historyAt c [[registers k2 1]] with complete := false })),
+      (ev (held [request]) (some { historyAt c [[registers k2]] with complete := false })),
     row "terminal-history-and-no-holder" "the history registers the key and a later fold terminates it beside another registration; no output holds the asset"
       (ev (held []) (told terminalHistory)),
     row "terminal-history-only" "the history terminates the key; no holding observation"
@@ -183,23 +189,47 @@ def cases : Except String (List Case) := do
     row "history-of-another-registry" "no holder here and the history of another registry that terminates the key"
       (ev (held []) (some { historyAt c terminalHistory with registry := registryAsset i rival })),
     row "history-starting-late" "no holder here and a history that misses the fold that registered the key: not complete"
-      (ev (held []) (some { historyAt c [[registers k2 1]] with complete := false })),
+      (ev (held []) (some { historyAt c [[registers k2]] with complete := false })),
     row "history-missing-a-fold" "no holder here and a history without the fold that terminated the key: not complete"
       (ev (held []) (some { historyAt c activeHistory with complete := false })),
     row "history-terminating-an-unregistered-key" "no holder here and a history whose first fold terminates the key: no accepted fold does that"
-      (ev (held []) (told [[registers k2 1], [terminates k 3]])),
+      (ev (held []) (told [[registers k2], [terminates k]])),
     row "history-registering-twice" "no holder here and a history that registers the key twice before terminating it"
-      (ev (held []) (told [[registers k 2], [registers k 5], [terminates k 3]])),
+      (ev (held []) (told [[registers k], [registers k], [terminates k]])),
     row "history-terminating-twice" "no holder here and a history that terminates the key twice"
-      (ev (held []) (told [[registers k 2], [terminates k 3], [terminates k 6]])),
+      (ev (held []) (told [[registers k], [terminates k], [terminates k]])),
     row "history-registering-a-terminal-key" "a history that registers the key again after terminating it"
-      (ev (held []) (told [[registers k 2], [terminates k 3], [registers k 5]])),
+      (ev (held []) (told [[registers k], [terminates k], [registers k]])),
     row "history-with-an-empty-fold" "no holder here and a history with a fold that makes no change"
-      (ev (held []) (told [[registers k 2], [], [terminates k 3]])),
+      (ev (held []) (told [[registers k], [], [terminates k]])),
     row "live-holder-broken-history" "a live checkpoint beside a complete history whose replay fails: a contradiction, whatever the holder shows"
-      (ev (held [live]) (told [[registers k2 1], [terminates k 3]])),
+      (ev (held [live]) (told [[registers k2], [terminates k]])),
     row "request-holder-broken-history" "the termination request beside a complete history that registers the key twice"
-      (ev (held [request]) (told [[registers k 2], [registers k 5]])),
+      (ev (held [request]) (told [[registers k], [registers k]])),
+    row "live-holder-incomplete-history-with-an-empty-fold" "a live checkpoint beside an incomplete history of one fold that makes no change: no registry before it makes it replay"
+      (ev (held [live]) (part [[]])),
+    row "request-holder-incomplete-history-with-an-empty-fold" "the termination request beside an incomplete history with a fold that makes no change"
+      (ev (held [request]) (part [[registers k2], []])),
+    row "convicted-holder-incomplete-history-with-an-empty-fold" "the convicted checkpoint beside an incomplete history with a fold that makes no change"
+      (ev (held [convicted]) (part [[], [registers k2]])),
+    row "live-holder-incomplete-history-registering-twice" "a live checkpoint beside an incomplete history whose one fold registers another key twice"
+      (ev (held [live]) (part [[registers k2, registers k2]])),
+    row "live-holder-incomplete-history-terminating-twice" "a live checkpoint beside an incomplete history that terminates another key twice"
+      (ev (held [live]) (part [[terminates k2], [terminates k2]])),
+    row "live-holder-incomplete-history-registering-a-terminated-key" "a live checkpoint beside an incomplete history that registers another key after terminating it"
+      (ev (held [live]) (part [[terminates k2], [registers k2]])),
+    row "live-holder-incomplete-history-terminating-the-key" "a live checkpoint beside an incomplete history that terminates the identifier's key: the two contradict"
+      (ev (held [live]) (part [[terminates k]])),
+    row "request-holder-incomplete-history-terminating-the-key" "the termination request beside an incomplete history that registers and terminates the identifier's key"
+      (ev (held [request]) (part [[registers k], [terminates k]])),
+    row "incomplete-history-with-an-empty-fold-and-no-holder" "no holder here and an incomplete history with a fold that makes no change"
+      (ev (held []) (part [[]])),
+    row "live-holder-broken-history-of-another-registry" "a live checkpoint and the complete history of another registry with a fold that makes no change: no registry has that history, whatever it names"
+      (ev (held [live]) (some { historyAt c [[]] with registry := registryAsset i rival })),
+    row "live-holder-broken-history-observed-elsewhere" "a live checkpoint here and an incomplete history through another point whose fold registers a key twice"
+      (ev (held [live]) (some { historyAt c [[registers k2, registers k2]] with point := elsewhere, complete := false })),
+    row "request-holder-broken-complete-history-observed-elsewhere" "the termination request here and a history through another point that says it is complete and starts with a termination"
+      (ev (held [request]) (some { historyAt c [[terminates k2]] with point := elsewhere })),
     row "two-holders" "two outputs hold the asset"
       (ev (held [live, { live with reference := ⟨pack (txId 4), 0⟩ }]) none),
     row "holder-quantity-two" "the one holder holds the asset twice"
@@ -295,12 +325,9 @@ def environmentJson (e : Environment) : Json := Json.mkObj [
   ("network", natJson e.network), ("release", optionJson releaseJson e.release),
   ("checkpointCredential", optionJson (fun n => hexJson (unpack n)) e.checkpointCredential)]
 
-def changeJson : SingularApplicationHeld.Change → Json
-  | .register reference key index deposit => Json.mkObj [("register", Json.mkObj [
-      ("requestReference", referenceJson reference), ("key", hexJson (unpack key)),
-      ("holdingIndex", natJson index), ("approvedDeposit", natJson deposit)])]
-  | .terminate reference key => Json.mkObj [("terminate", Json.mkObj [
-      ("requestReference", referenceJson reference), ("key", hexJson (unpack key))])]
+def changeJson : KeyChange → Json
+  | .register key => Json.mkObj [("register", hexJson (unpack key))]
+  | .terminate key => Json.mkObj [("terminate", hexJson (unpack key))]
 
 def evidenceJson (ev : Evidence) : Json := Json.mkObj [
   ("point", natJson ev.point), ("environment", environmentJson ev.environment),
@@ -322,8 +349,8 @@ the holder it names and the consumer predicate's verdict on that holder. -/
 def answerJson (c : Context) (now : Slot) (ev : Evidence) : Json := Json.mkObj [
   ("status", statusJson (classify i c ev)),
   ("custody", custodyJson (holdingCustody i c ev)),
-  ("leaf", if brokenHistory i c ev then toJson "broken"
-    else optionJson leafJson (establishedLeaf i c ev)),
+  ("leaf", optionJson leafJson (establishedLeaf i c ev)),
+  ("admitsHolder", toJson (historyAdmitsHolder i c ev)),
   ("holder", optionJson (fun o => referenceJson o.reference) (holder i c ev)),
   ("eligible", optionJson (fun o => toJson (consumableHoldingB i c ev.environment params now o))
     (holder i c ev))]
@@ -347,8 +374,9 @@ def table : Except String Json := do
     ("layout", Json.mkObj [
       ("point", toJson "the identity of a chain point; compared for equality only, never ordered or subtracted"),
       ("holding", toJson "null when not established; otherwise every unspent output holding the named asset at the named point"),
-      ("history", toJson "null when the reader holds none; otherwise the named registry's folds through the named point, in order from its creation, each fold the list of its changes (register or terminate, with the request reference and the key); complete is false for a history that starts late or misses a fold"),
-      ("answer.leaf", toJson "the leaf of the identifier's key replayed from a complete history: unknown, active or terminal; broken when a complete history fails its replay, which makes the answer unavailable; null when no leaf is established"),
+      ("history", toJson "null when the reader holds none; otherwise the named registry's folds through the named point, in order, each fold the list of its changes (register or terminate, with the key); complete is true when the folds are all of them from the registry's creation, false for a history that starts late or misses a fold"),
+      ("answer.leaf", toJson "the leaf of the identifier's key replayed from a complete history: unknown, active or terminal; null when no leaf is established"),
+      ("answer.admitsHolder", toJson "false when the history of the registry through the point refuses a holder: no members before its folds, none for a complete history, make them replay and leave the key active; true otherwise, and with no such history"),
       ("datum", toJson "empty, or the inline datum bytes of an application datum"),
       ("answer.custody", toJson "not-established, absent, live with the datum facts, convicted with the key state, request or inconsistent"),
       ("answer.holder", toJson "the reference of the one recognised holder, or null"),
@@ -407,11 +435,10 @@ def outputOf (j : Json) : Except String AH.ObservedOutput := do
   pure { reference := ← referenceOf j ["reference"], credential := ← bytesOf j ["credential"],
          lovelace := ← natOf j ["lovelace"], datum := ← datumOf (← field j ["datum"]), assets }
 
-def changeOf (j : Json) : Except String SingularApplicationHeld.Change := do
+def changeOf (j : Json) : Except String KeyChange := do
   match j.getObjVal? "register", j.getObjVal? "terminate" with
-  | .ok r, .error _ => pure (.register (← referenceOf r ["requestReference"]) (← bytesOf r ["key"])
-      (← natOf r ["holdingIndex"]) (← natOf r ["approvedDeposit"]))
-  | .error _, .ok t => pure (.terminate (← referenceOf t ["requestReference"]) (← bytesOf t ["key"]))
+  | .ok _, .error _ => pure (.register (← bytesOf j ["register"]))
+  | .error _, .ok _ => pure (.terminate (← bytesOf j ["terminate"]))
   | _, _ => throw "change-neither-register-nor-terminate"
 
 def evidenceOf (j : Json) : Except String Evidence := do

@@ -320,6 +320,33 @@ theorem witnessed_shared_conviction :
         (some association.entry.payload.spend) association.entry.payload.original :=
   booked_carrier_shares_observation pendingPath booked_event rfl rfl
 
+/-- Given the registered, rotated and convicted AID 11, when the fold consumes
+request 200#0, it records the terminal leaf and the consumed entry traces
+to the accepted comparison which produced pending output 105#0. -/
+theorem witnessed_terminal_fold :
+    Registry.pendingAt completionReceipt.before association.reference = some association.entry ∧
+    Singular.inputsContainReference completionReceipt.transaction.transaction.inputs association.reference = true ∧
+    Registry.pendingAt completionReceipt.after association.reference = none ∧
+    Singular.trieGet completionReceipt.after.trie 11 = .known .terminal ∧
+    ∃ observed source target, (source, target) ∈ [(pending, booked), (committed, pending),
+      (rotated, committed), (registered, rotated), (Sys.init deployment, registered)] ∧
+      ConvictionEdge p env 11 association.keyState source target ∧
+      (env 11).convictionSpend association.keyState.epoch association.keyState.sn = some observed ∧
+      association.origin.environment.conviction 11 = some observed ∧
+      association.entry.payload.spend = ⟨observed.output, 11, association.keyState⟩ ∧
+      CheckpointConviction.accepts (env 11).verifyRival observed.comparison.tip observed.comparison.rival = true := by
+  exact terminal_fold_traces_to_conviction (aid := 11) (association := association)
+    (.step (.step (.step (.step (.step .init registered_step) rotated_step)
+      committed_step) pending_step) booked_step) completionReceipt receipt_matches
+
+-- The public journey also instantiates the universal leaf-change inversion.
+example : ∃ a r, ReceiptMatches booked 11 a r ∧ completed = booked.finish 11 ∧
+    RecordedConviction p env [(pending, booked), (committed, pending), (rotated, committed),
+      (registered, rotated), (Sys.init deployment, registered)] 11 a r := by
+  exact newly_retired_leaf_has_recorded_fold
+    (.step (.step (.step (.step (.step .init registered_step) rotated_step)
+      committed_step) pending_step) booked_step) completed_step (by decide) rfl
+
 -- The comparison still has its signatures. A next-key commitment which
 -- cannot be read as the writer's established identity loses the system spend.
 example :

@@ -9,8 +9,8 @@ A theorem about an accepted transaction can depend on evidence that Lean treats 
 | `decode`, `decodeConfiguration`, `decodeCheckpoint`, `refundTo` | The controller's booking mint decodes the request, referenced configuration and initial datum, including the refund address. At termination booking the booker spends the pending holding and the policy reads its key. The folder and returner spend public requests and the application verifies their outputs. |
 | `Registry.Params` and `Checkpoint.Params` | The deployer fixes the amounts in the published scripts. Registration checks both positive checkpoint bonds, the carrier, the chosen pool and the minimum tip. Termination booking checks the smaller request carrier and its funding. A relay or freeze spends the checkpoint under the premium and bond schedule. The relying party's consuming transaction checks the waiting period against its validity time. Positivity and funding bounds restrict the modeled deployment. |
 | `SystemEnv`, local `rotationTo` | The party submitting a keep or deposit rotation, or a hunter submitting a freeze, supplies the later witnessed rotation for the identifier of the input. The checkpoint observer checks its event, controller signatures and witness receipts. Public witnesses are a source the submitting party may consult itself. |
-| `depositAuthorized`, `Observed`, `ReadsDeposit`, `Verify` | At the deposit spend the successor keys sign the deposit intent. The observer derives the identifier, spent reference, network, policy, sequence, epoch and amount from the transaction and validates the indexed signatures. The transfer-refusal theorem requires an actual contributing signature and its stated threshold assumptions. |
-| `quorum` for poison | In the modeled poison spend the controller presents the current-key quorum for the spent identifier. The current validator has no poison spend. |
+| `depositAuthorized`, `Observed`, `ReadsDeposit`, `Verify` | The scoped lifecycle lookup is a Boolean. Its concrete correspondence is a hypothesis of `ReadsDeposit`. At the deposit spend the successor keys sign the deposit intent. The observer derives the identifier, spent reference, network, policy, sequence, epoch and amount from the transaction and validates the indexed signatures. The transfer-refusal theorem requires an actual contributing signature and its stated threshold assumptions. |
+| `quorum` for poison | The scoped lifecycle lookup is a Boolean. In the modeled poison spend the controller presents the current-key quorum for the spent identifier. The current validator has no poison spend. |
 | Conviction inputs | In the spent-tip comparison the convictor supplies a rival from public KERI history. The enforcement observer takes the first record and both verification key lists from the named active input, decodes the rival and verifies its signatures and receipts. In the off-chain two-event comparison a history reader authenticates a predecessor and the first-seen event. A registry fold processes a public termination request. |
 | Commitment opening and reveal | The opener submits the marker, bounded opening interval, deposit and commitment. The commitment program checks the opening. The revealer supplies the opening data and nonce, signs and presents the commitment input, and the entitlement observer checks the applicable window and bindings. An expired commitment is spent by the sweeper. |
 | Application deployment and public transaction views | The deployer publishes the release, seed and configuration. The controller, folder or returner submits its own funding and transaction. The ledger supplies spent and referenced outputs, validity bounds, mint, fee, donation and signatures to the validators. For the fold income result, the folder's ordinary input and output destinations must actually satisfy the named routing hypotheses. |
@@ -65,3 +65,12 @@ record with the economic history of the same spend. The termination mint
 reads the pending input, and the Singular folder processes the admitted
 request under its existing custody rule. See
 `Custody.booked_carrier_shares_observation` for the joined history.
+
+
+For a recorded termination, `ReceiptMatches` identifies the stored association,
+the pending entry immediately before the fold and its actual consumed input.
+The folder submits the public fold. The ledger supplies its inputs and outputs.
+The system proof follows the association through intervening events to its
+booking and the earlier conviction. A reader must supply a faithful path from
+deployment. Acceptance of the earlier spent-tip comparison is the conclusion
+about evidence that the recorded leaf supports.

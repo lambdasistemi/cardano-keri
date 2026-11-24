@@ -149,6 +149,138 @@ theorem booking_uses_producing_spend {p env d edges s next aid association}
       have authorized := (Registry.reachable_authorization _ _ _ bookedReach).2 entry (List.mem_of_find?_eq_some lookup)
       simpa [identifier] using authorized
 
+private theorem pending_association_source {p env s next aid association}
+    (step : SysStep p env s next) (found : next.pending aid = some association) :
+    s.pending aid = some association ∨ (BookingEvent s next ∧ s.pending aid = none) := by
+  cases step with
+  | register event =>
+    obtain ⟨subject, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, rfl⟩ := event
+    by_cases same : aid = subject
+    · simp [Sys.installOrigin, same] at found
+    · exact .inl (by simpa [Sys.installOrigin, same] using found)
+  | «local» event => exact .inl (by rwa [(local_event_preserves_associations _ _ event).2] at found)
+  | book event =>
+    have h := event
+    obtain ⟨subject, _, _, _, _, _, _, _, _, _, _, _, empty, _, _, _, _, _, _, rfl⟩ := h
+    by_cases same : aid = subject
+    · exact .inr ⟨event, same ▸ empty⟩
+    · exact .inl (by simpa [Sys.associate, same] using found)
+  | complete event =>
+    obtain ⟨subject, _, _, _, rfl⟩ := event
+    by_cases same : aid = subject
+    · simp [Sys.finish, same] at found
+    · exact .inl (by simpa [Sys.finish, same] using found)
+  | openCommitment e => obtain ⟨_, _, _, rfl⟩ := e; exact .inl found
+  | reveal e => obtain ⟨_, _, _, _, _, rfl⟩ := e; exact .inl found
+  | sweep e => obtain ⟨_, _, _, _, rfl⟩ := e; exact .inl found
+
+private theorem associated_spend_in_history {p env d edges s aid association}
+    (history : SystemHistory p env d edges s) (stored : s.pending aid = some association) :
+    ∃ observed before after, (before, after) ∈ edges ∧
+      ConvictionEdge p env aid association.keyState before after ∧
+      (env aid).convictionSpend association.keyState.epoch association.keyState.sn = some observed ∧
+      association.origin.environment.conviction aid = some observed ∧
+      association.entry.payload.spend = ⟨observed.output, aid, association.keyState⟩ := by
+  induction history with
+  | init => cases stored
+  | step past step ih =>
+    rcases pending_association_source step stored with prior | ⟨book, empty⟩
+    · obtain ⟨observed, before, after, member, rest⟩ := ih prior
+      exact ⟨observed, before, after, List.mem_cons_of_mem _ member, rest⟩
+    · obtain ⟨_, observed, before, after, member, edge, localRead, economic, payload, _⟩ :=
+        booking_uses_producing_spend past book empty stored
+      exact ⟨observed, before, after, List.mem_cons_of_mem _ member, edge, localRead, economic, payload⟩
+
+/-- The executed fold consumed the stored request and recorded the terminal
+leaf. Its pending receipt identifies the full observation at a checkpoint
+conviction in this system prefix. -/
+def RecordedConviction (p : Params) (env : SystemEnv) (edges : List (Sys × Sys))
+    (aid : AID) (association : PendingAssociation)
+    (receipt : Registry.FoldReceipt association.origin.parameters association.origin.environment
+      association.origin.configuration) : Prop :=
+    Registry.pendingAt receipt.before association.reference = some association.entry ∧
+    Singular.inputsContainReference receipt.transaction.transaction.inputs association.reference = true ∧
+    Registry.pendingAt receipt.after association.reference = none ∧
+    Singular.trieGet receipt.after.trie aid = .known .terminal ∧
+    ∃ observed source target, (source, target) ∈ edges ∧
+      ConvictionEdge p env aid association.keyState source target ∧
+      (env aid).convictionSpend association.keyState.epoch association.keyState.sn = some observed ∧
+      association.origin.environment.conviction aid = some observed ∧
+      association.entry.payload.spend = ⟨observed.output, aid, association.keyState⟩ ∧
+      CheckpointConviction.accepts (env aid).verifyRival observed.comparison.tip observed.comparison.rival = true
+
+/-- Given a system history and its matching executed retirement fold, when the
+registry consumes this identifier's request, the exact entry at the spent
+reference names the output, position and rival of a conviction in the same
+history. The fold removes the request and records the terminal leaf. -/
+theorem terminal_fold_traces_to_conviction {p env d edges s aid} {association : PendingAssociation}
+    (history : SystemHistory p env d edges s)
+    (receipt : Registry.FoldReceipt association.origin.parameters association.origin.environment
+      association.origin.configuration) (matching : ReceiptMatches s aid association receipt) :
+    RecordedConviction p env edges aid association receipt := by
+  obtain ⟨stored, _, _, _, _, exactEntry, completes⟩ := matching
+  obtain ⟨_, removed, _, retired, _, _⟩ := Registry.completion_receipt_effects _ _ _ _ _ _ _ completes
+  obtain ⟨_, _, _, _, consumed⟩ := completes
+  obtain ⟨observed, source, target, member, edge, read, economic, payload⟩ :=
+    associated_spend_in_history history stored
+  refine ⟨exactEntry, consumed, removed, retired, observed, source, target, member, edge, read, economic, payload, ?_⟩
+  obtain ⟨live, _, _, _, _, _, position, executed, _⟩ := edge
+  obtain ⟨comparison, selected, _, _, accepted⟩ := conviction_has_spent_tip_comparison _ _ executed
+  have raw : (env aid).comparison live.epoch live.sn = some observed.comparison := by
+    change ((env aid).convictionSpend live.hash.epoch live.hash.sn).map _ = _
+    rw [position, read]
+    rfl
+  rw [raw] at selected
+  cases selected
+  exact accepted
+
+/-- Given a system path and any next step that newly records conviction for
+an identifier, that very step completed an executed fold for the identifier.
+The consumed registry entry identifies its earlier accepted checkpoint spend. -/
+theorem newly_retired_leaf_has_recorded_fold {p env d edges s next aid}
+    (history : SystemHistory p env d edges s) (step : SysStep p env s next)
+    (wasLive : s.leaves aid ≠ .retired) (retired : next.leaves aid = .retired) :
+    ∃ (association : PendingAssociation)
+      (receipt : Registry.FoldReceipt association.origin.parameters association.origin.environment
+        association.origin.configuration),
+      ReceiptMatches s aid association receipt ∧ next = s.finish aid ∧
+      RecordedConviction p env edges aid association receipt := by
+  have reach : SysReach p env s := by
+    clear step wasLive retired
+    induction history with
+    | init => exact .init _
+    | step _ event ih => exact .step ih event
+  have prior : s.states aid ≠ .convicted := by
+    intro convicted
+    exact wasLive ((T8_leaf_agrees_with_state p env reach aid).trans (by rw [convicted]; rfl))
+  have terminal := (T8_leaf_states p env (.step reach step) aid).2 retired
+  have localTarget {action time start flow state subject}
+      (executed : Step p (env subject) action time start flow state) : state ≠ .convicted := by
+    cases executed <;> simp
+  have outside {subject st} :
+      (if aid = subject then st else s.states aid) = .convicted → st ≠ .convicted → False := by
+    by_cases same : aid = subject <;> simp [same, prior]
+  cases step with
+  | register event =>
+    obtain ⟨subject, _, _, _, _, st, _, _, _, _, _, _, _, _, executed, _, _, rfl⟩ := event
+    exact False.elim (outside (subject := subject) (st := st) terminal (localTarget executed))
+  | «local» event =>
+    obtain ⟨subject, _, _, _, st, _, executed, _, rfl⟩ := event
+    rw [Sys.retireRevealed_states] at terminal
+    exact False.elim (outside (subject := subject) (st := st) terminal (localTarget executed))
+  | book event =>
+    rw [(booking_event_preserves_checkpoint _ _ event).1] at terminal
+    exact False.elim (prior terminal)
+  | complete event =>
+    obtain ⟨subject, association, receipt, matching, rfl⟩ := event
+    by_cases same : aid = subject
+    · cases same
+      exact ⟨association, receipt, matching, rfl, terminal_fold_traces_to_conviction history receipt matching⟩
+    · exact False.elim (prior (by simpa [Sys.finish, Sys.set, same] using terminal))
+  | openCommitment e => obtain ⟨_, _, _, rfl⟩ := e; exact False.elim (prior terminal)
+  | reveal e => obtain ⟨_, _, _, _, _, rfl⟩ := e; exact False.elim (prior terminal)
+  | sweep e => obtain ⟨_, _, _, _, rfl⟩ := e; exact False.elim (prior terminal)
+
 private def WritersAuthenticated (s : Sys) : Prop :=
   ∀ aid history, s.writers aid = some history → history.authenticated aid = true
 

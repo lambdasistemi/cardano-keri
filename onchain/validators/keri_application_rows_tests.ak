@@ -229,7 +229,15 @@ test row_approval_without_booking() {
 
 /// Lean row `booking-without-inception-evidence`: the booking of a key that has no inception evidence: refused.
 test row_booking_without_inception_evidence() {
-  accepts(requests.booking_tx(Booking { ..requests.booking(), claim: None })) == False
+  accepts(
+    requests.booking_tx(
+      Booking {
+        ..requests.booking(),
+        data: rows.request_data(9001),
+        claim: None,
+      },
+    ),
+  ) == False
 }
 
 /// Lean row `booking-advanced-sequence`: the request commits a checkpoint datum at sequence number 7: refused.
@@ -459,6 +467,7 @@ test row_fold_built_by_singular_client() {
     requests.fold_tx(
       Fold {
         ..requests.fold(),
+        registry_pair: True,
         redeemer: FoldRegistration { holding_index: 1 },
         before: [requests.pay(rows.folder_address, 2)],
         after: [requests.pay(rows.spender_address, 5)],
@@ -477,6 +486,7 @@ test row_fold_built_by_singular_client_no_donation() {
     requests.fold_tx(
       Fold {
         ..requests.fold(),
+        registry_pair: True,
         redeemer: FoldRegistration { holding_index: 1 },
         before: [requests.pay(rows.folder_address, 2)],
         after: [requests.pay(rows.spender_address, 7)],
@@ -496,6 +506,7 @@ test row_fold_built_by_singular_client_no_record() {
     requests.fold_tx(
       Fold {
         ..requests.fold(),
+        registry_pair: True,
         redeemer: FoldRegistration { holding_index: 1 },
         before: [requests.pay(rows.folder_address, 2)],
         after: [requests.pay(rows.spender_address, 5)],

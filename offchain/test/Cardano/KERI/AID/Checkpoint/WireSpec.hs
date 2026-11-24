@@ -36,7 +36,7 @@ import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString qualified as BS
 import PlutusCore.Data (Data (..))
 import PlutusTx.Builtins.Internal (BuiltinByteString (..), BuiltinData (..), serialiseData)
-import Test.Hspec (Spec, describe, it, shouldBe)
+import Test.Hspec (Spec, describe, it, shouldBe, shouldNotBe)
 
 evidence :: RegistrationEvidence
 evidence =
@@ -53,6 +53,24 @@ evidence =
         , reOffBt = 9
         , reCtrlSigs = [(0, BS.replicate 64 0xa1)]
         , reWitReceipts = [(1, BS.replicate 64 0xb1)]
+        }
+
+-- | A second request's evidence: every field differs from 'evidence'.
+otherEvidence :: RegistrationEvidence
+otherEvidence =
+    RegistrationEvidence
+        { reEventBytes = "icq"
+        , reOffT = 11
+        , reOffI = 12
+        , reOffS = 13
+        , reOffK = [14, 15]
+        , reOffKt = 16
+        , reOffN = [17]
+        , reOffNt = 18
+        , reOffB = []
+        , reOffBt = 19
+        , reCtrlSigs = [(1, BS.replicate 64 0xa2), (2, BS.replicate 64 0xb2)]
+        , reWitReceipts = []
         }
 
 advanceEvidence :: AdvanceEvidence
@@ -171,8 +189,8 @@ spec = describe "#136 Register observer wire" $ do
                 , registrationEvidenceData evidence
                 ]
 
-    it "nests the booking claim and lists each booked request with its evidence" $
-        bookingObserverRedeemerData (BS.replicate 28 0xc0) [(3, evidence), (5, evidence)]
+    it "nests the booking claim and keeps each booked request with its own evidence" $
+        bookingObserverRedeemerData (BS.replicate 28 0xc0) [(3, evidence), (5, otherEvidence)]
             `shouldBe` Constr
                 0
                 [ Constr 0 [I 5, B (BS.replicate 28 0xc0), Constr 1 []]
@@ -180,19 +198,26 @@ spec = describe "#136 Register observer wire" $ do
                     0
                     [ List
                         [ Constr 0 [I 3, registrationEvidenceData evidence]
-                        , Constr 0 [I 5, registrationEvidenceData evidence]
+                        , Constr 0 [I 5, registrationEvidenceData otherEvidence]
                         ]
                     ]
                 ]
 
-    it "writes, for one booked request, the bytes the validators' own types write for the same envelope" $
+    it "does not move the evidence of a request to another request's index" $
+        bookingObserverRedeemerData (BS.replicate 28 0xc0) [(3, evidence), (5, otherEvidence)]
+            `shouldNotBe` bookingObserverRedeemerData (BS.replicate 28 0xc0) [(3, otherEvidence), (5, evidence)]
+
+    it "writes, for two booked requests with distinct evidence, the bytes the validators' own types write for the same envelope" $
         let BuiltinByteString bytes =
                 serialiseData
                     ( BuiltinData
-                        (bookingObserverRedeemerData (BS.replicate 28 0xc0) [(3, evidence)])
+                        ( bookingObserverRedeemerData
+                            (BS.replicate 28 0xc0)
+                            [(3, evidence), (5, otherEvidence)]
+                        )
                     )
          in convertToBase Base16 bytes
-                `shouldBe` ("d8799fd8799f05581cc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0d87a80ffd8799f9fd8799f03d8799f436963700102039f04ff059f06ff079f08ff099f9f005840a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1ffff9f9f015840b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1ffffffffffffff" :: BS.ByteString)
+                `shouldBe` ("d8799fd8799f05581cc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0d87a80ffd8799f9fd8799f03d8799f436963700102039f04ff059f06ff079f08ff099f9f005840a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1ffff9f9f015840b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1ffffffffd8799f05d8799f436963710b0c0d9f0e0fff109f11ff1280139f9f015840a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2ff9f025840b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2ffff80ffffffffff" :: BS.ByteString)
 
     it "encodes the Advance arm at spend constructor zero with its payee output index and the keep option" $
         advanceSpendRedeemerData 4 Keep

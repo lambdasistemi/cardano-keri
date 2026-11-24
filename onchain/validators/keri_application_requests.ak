@@ -14,6 +14,7 @@ use aiken/builtin
 use aiken/collection/dict
 use aiken/collection/list
 use aiken/interval.{Finite, Interval, IntervalBound}
+use aiken/primitive/bytearray
 use cardano/address.{Address, Credential, Script, from_script}
 use cardano/assets.{
   AssetName, PolicyId, Value, add, from_lovelace, tokens, zero,
@@ -415,6 +416,10 @@ pub type Fold {
   after: List<Output>,
   /// Whether the configuration record is a reference input.
   references: Bool,
+  /// Whether the transaction carries the registry's own state pair: the state
+  /// input the public registry's fold spends and the successor it creates, as the
+  /// Singular client builds the fold. The application reads neither.
+  registry_pair: Bool,
 }
 
 /// Lean row `fold-at-deadline`: a perfect fold: it shows no evidence.
@@ -442,7 +447,35 @@ pub fn fold() -> Fold {
     before: [],
     after: [],
     references: True,
+    registry_pair: False,
   }
+}
+
+/// The registry's state script address: its policy is the state script's hash.
+pub fn state_address() -> Address {
+  from_script(registry().policy)
+}
+
+/// The registry's state output holding the registry's token and the root `root`
+/// of its tree (as a datum of one byte string of 32 bytes).
+pub fn state_output(root: Int) -> Output {
+  Output {
+    address: state_address(),
+    value: with_lovelace(2, token(registry().policy, registry().name, 1)),
+    datum: InlineDatum(
+      builtin.constr_data(
+        0,
+        [builtin.b_data(bytearray.from_int_big_endian(root, 32))],
+      ),
+    ),
+    reference_script: None,
+  }
+}
+
+/// The registry's state input the fold spends: the state output of the root
+/// before the fold.
+pub fn state_input(index: Int) -> Input {
+  Input { output_reference: reference(index), output: state_output(1) }
 }
 
 /// A plain output paying `lovelace` to `address`.
@@ -513,9 +546,23 @@ pub fn fold_tx(f: Fold) -> Transaction {
     ..placeholder,
     inputs: list.concat(
       [request_input(0, f.data, f.request_lovelace), ..second_inputs],
-      f.extra_inputs,
+      list.concat(
+        f.extra_inputs,
+        if f.registry_pair {
+          [state_input(95)]
+        } else {
+          []
+        },
+      ),
     ),
-    outputs: list.concat(f.before, [holding_output(f), ..f.after]),
+    outputs: list.concat(
+      list.concat(f.before, [holding_output(f), ..f.after]),
+      if f.registry_pair {
+        [state_output(2)]
+      } else {
+        []
+      },
+    ),
     mint: burns,
     reference_inputs: if f.references {
       [config_input(50, f.data.registry, cfg.checkpoint_credential)]

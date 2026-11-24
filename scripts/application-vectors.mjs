@@ -210,7 +210,16 @@ const generate = () => {
   const B = 'Booking { ..requests.booking(), ';
   const F = 'Fold { ..requests.fold(), ';
   const spec = [];
-  const add = (id, kind, call, shape) => spec.push({ id, kind, call, shape });
+  const add = (id, kind, call, shape) => {
+    // A booking row names its inception evidence in the Lean: the call is derived from the flag, never typed here.
+    if (kind === 'booking' || kind === 'booking-floor') {
+      const without = row(id).inceptionEvidence === false;
+      const typed = call.includes('claim: None');
+      if (without && !typed) call = call === 'requests.booking()' ? 'Booking { ..requests.booking(), claim: None }' : call.replace(/ \}$/, ', claim: None }');
+      if (!without && typed) throw new Error(`row ${id}: the call drops the observation of a row that has inception evidence`);
+    }
+    spec.push({ id, kind, call, shape });
+  };
   const bookShape = (lov, extra = {}) => ({ validity: [9, 10], referenced: 1, donation: 0, inputs: [], outputs: [[lov, 'app']], ...extra });
   add('booking', 'booking', 'requests.booking()', bookShape(18));
   add('booking-foreign-registry', 'booking', `${B}data: rows.request_data(9002) }`, bookShape(18));
@@ -226,7 +235,7 @@ const generate = () => {
   add('booking-one-payload-twice', 'booking', `${B}mint: 2, copies: 2, actions: [BookRegistration { output_index: 0 }, BookRegistration { output_index: 1 }] }`, bookShape(18, { outputs: [[18, 'app'], [18, 'app']] }));
   add('booking-twice', 'booking', `${B}actions: [BookRegistration { output_index: 0 }, BookRegistration { output_index: 0 }] }`, bookShape(18));
   add('approval-without-booking', 'booking', `${B}actions: [] }`, bookShape(18));
-  add('booking-without-inception-evidence', 'booking', `${B}claim: None }`, bookShape(18));
+  add('booking-without-inception-evidence', 'booking', 'requests.booking()', bookShape(18));
   // The datum a booking commits, one fact at a time (the requests 9011 to 9019, 9007 and 9008).
   const bookVariant = (id, raw) => add(id, 'booking', `${B}data: rows.request_data(${raw}) }`, bookShape(18));
   bookVariant('booking-advanced-sequence', 9011);
@@ -260,7 +269,7 @@ const generate = () => {
   add('fold-without-inception-evidence', 'fold', 'requests.fold()', foldShape([15, 'checkpoint']));
   // The fold the Singular client builds: the folder's own input and output, the holding at index 1, a spender's change.
   const clientShape = (spenderBack, extra = {}) => ({ validity: [12, 15], referenced: 1, donation: 2, inputs: [[2, folderHash], [18, 'app'], [5, 'spender']], outputs: [[2, folderHash], [15, 'checkpoint'], [spenderBack, 'spender']], ...extra });
-  const client = (change, extra) => `${F}redeemer: FoldRegistration { holding_index: 1 }, before: [requests.pay(rows.folder_address, 2)], after: [requests.pay(rows.spender_address, ${change})], extra_inputs: [requests.plain_input(91, rows.folder_address, 2), requests.plain_input(92, rows.spender_address, 5)]${extra} }`;
+  const client = (change, extra) => `${F}registry_pair: True, redeemer: FoldRegistration { holding_index: 1 }, before: [requests.pay(rows.folder_address, 2)], after: [requests.pay(rows.spender_address, ${change})], extra_inputs: [requests.plain_input(91, rows.folder_address, 2), requests.plain_input(92, rows.spender_address, 5)]${extra} }`;
   add('fold-built-by-singular-client', 'fold', client(5, ''), clientShape(5));
   add('fold-built-by-singular-client-no-donation', 'fold', client(7, ', donation: 0'), clientShape(7, { donation: 0 }));
   add('fold-built-by-singular-client-no-record', 'fold', client(5, ', references: False'), clientShape(5, { referenced: 0 }));
@@ -304,6 +313,19 @@ const generate = () => {
   add('termination-booked-twice', 'termination-booking', `${TB}copies: 2, booker_lovelace: 0, mint: 2, actions: [${bookTermination(0)}, ${bookTermination(1)}] }`, tbShape({ outputs: [[3, 'app'], [3, 'app']] }));
   const configurationIds = ['configuration-created', 'configuration-with-retraction', 'configuration-foreign-registry'];
   if (spec.length + configurationIds.length !== data.rows.length) throw new Error(`the Lean vectors have ${data.rows.length} rows, this script knows ${spec.length + configurationIds.length}`);
+
+  // A fold and a return read no evidence: the row without it is the row with it, verdict and shape.
+  for (const [withEvidence, without] of [['fold-at-deadline', 'fold-without-inception-evidence'], ['return-at-deadline', 'return-without-inception-evidence']]) {
+    const a = row(withEvidence), b = row(without);
+    if (a.inceptionEvidence !== true || b.inceptionEvidence !== false) throw new Error(`rows ${withEvidence} and ${without}: the evidence flags changed`);
+    const strip = ({ id, note, inceptionEvidence, ...rest }) => rest;
+    if (JSON.stringify(strip(a)) !== JSON.stringify(strip(b))) throw new Error(`rows ${withEvidence} and ${without} differ in more than the evidence flag`);
+  }
+  // The client fold: the public registry judges the same transaction the application judges, with the donation of the row.
+  const cf = data.clientFold;
+  const clientRow = row('fold-built-by-singular-client');
+  if (!cf.withTheDonation.registryAccepts || !cf.withTheDonation.balances || cf.withTheDonation.donation !== clientRow.donation) throw new Error('the client fold judgement of the public registry changed');
+  if (clientRow.inceptionEvidence !== true) throw new Error('the client fold row names no inception evidence');
 
   for (const s of spec) {
     const r = row(s.id);

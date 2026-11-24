@@ -314,7 +314,7 @@ test a_fold_carrying_a_stray_observation_is_accepted() {
 
 // ---- the wire: the Haskell encoder and the validator read the same bytes -----------
 
-/// The evidence of the wire example, field for field the one the Haskell wire
+/// The evidence of the first wire request, field for field the one the Haskell wire
 /// specification builds (`Cardano.KERI.AID.Checkpoint.WireSpec`).
 fn wire_evidence() -> RegistrationEvidence {
   RegistrationEvidence {
@@ -343,8 +343,37 @@ fn wire_evidence() -> RegistrationEvidence {
   }
 }
 
+/// The evidence of the second wire request: every field differs from the first's, so
+/// an encoder that attached evidence to the wrong request changes the bytes.
+fn other_wire_evidence() -> RegistrationEvidence {
+  RegistrationEvidence {
+    event_bytes: "icq",
+    off_t: 11,
+    off_i: 12,
+    off_s: 13,
+    off_k: [14, 15],
+    off_kt: 16,
+    off_n: [17],
+    off_nt: 18,
+    off_b: [],
+    off_bt: 19,
+    ctrl_sigs: [
+      (
+        1,
+        #"a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+      ),
+      (
+        2,
+        #"b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+      ),
+    ],
+    wit_receipts: [],
+  }
+}
+
 /// The booking envelope of the application policy `c0..c0` listing the request at
-/// output 3 with the evidence above, in the types of the code under test.
+/// output 3 with the first evidence and the request at output 5 with the second, in
+/// the types of the code under test.
 fn wire_envelope() -> Data {
   let envelope: Data = ObserverEnvelope {
     claim: ObserverClaim {
@@ -353,7 +382,10 @@ fn wire_envelope() -> Data {
       own_ref: None,
     },
     payload: BookingEvidence {
-      requests: [BookedRequest { request_index: 3, evidence: wire_evidence() }],
+      requests: [
+        BookedRequest { request_index: 3, evidence: wire_evidence() },
+        BookedRequest { request_index: 5, evidence: other_wire_evidence() },
+      ],
     },
   }
   envelope
@@ -362,7 +394,7 @@ fn wire_envelope() -> Data {
 /// The bytes the Haskell encoder `bookingObserverRedeemerData` must produce for
 /// the same envelope (`WireSpec` asserts the same string).
 test the_booking_envelope_has_the_bytes_the_haskell_encoder_writes() {
-  cbor.serialise(wire_envelope()) == #"d8799fd8799f05581cc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0d87a80ffd8799f9fd8799f03d8799f436963700102039f04ff059f06ff079f08ff099f9f005840a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1ffff9f9f015840b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1ffffffffffffff"
+  cbor.serialise(wire_envelope()) == #"d8799fd8799f05581cc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0d87a80ffd8799f9fd8799f03d8799f436963700102039f04ff059f06ff079f08ff099f9f005840a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1ffff9f9f015840b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1ffffffffd8799f05d8799f436963710b0c0d9f0e0fff109f11ff1280139f9f015840a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2ff9f025840b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2ffff80ffffffffff"
 }
 
 /// The payload these tests build as raw Data is the one the code under test reads.

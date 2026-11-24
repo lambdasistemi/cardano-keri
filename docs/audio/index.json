@@ -11651,7 +11651,7 @@
     "index": 1,
     "name": "docs-design-registry-as-mpfs/checkpoint-and-the-associated-system-01",
     "pause_ms": 400,
-    "v": "a554b5bf443f"
+    "v": "6c1a0786fd67"
    },
    {
     "index": 2,
@@ -11709,7 +11709,7 @@
     "index": 2,
     "name": "docs-design-registry-as-mpfs/following-the-spent-checkpoint-back-to-its-writer-02",
     "pause_ms": 400,
-    "v": "b2d2517e35ba"
+    "v": "748b120c998a"
    }
   ],
   "keris-application-on-the-public-registry": [
@@ -11815,7 +11815,7 @@
     "index": 4,
     "name": "docs-design-registry-as-mpfs/retiring-a-convicted-identity-04",
     "pause_ms": 300,
-    "v": "2664bab8bdbe"
+    "v": "c71221f65139"
    },
    {
     "index": 5,
@@ -11871,19 +11871,19 @@
     "index": 1,
     "name": "docs-design-registry-as-mpfs/the-machine-registrylean-01",
     "pause_ms": 400,
-    "v": "8ac3b32328d0"
+    "v": "d67a589ac247"
    },
    {
     "index": 2,
     "name": "docs-design-registry-as-mpfs/the-machine-registrylean-02",
     "pause_ms": 400,
-    "v": "bddb6b70bc36"
+    "v": "6d269e1374d4"
    },
    {
     "index": 3,
     "name": "docs-design-registry-as-mpfs/the-machine-registrylean-03",
     "pause_ms": 400,
-    "v": "a3a51c563adf"
+    "v": "b6e4eef42cae"
    }
   ],
   "the-registry-and-retained-identity-outputs": [
@@ -12971,7 +12971,7 @@
     "index": 1,
     "name": "docs-design-trust-model/the-projection-law-01",
     "pause_ms": 400,
-    "v": "2869cf4f2815"
+    "v": "187df64c5680"
    },
    {
     "index": 2,

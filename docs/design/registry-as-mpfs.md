@@ -53,28 +53,30 @@ flowchart TD
 `Sys` contains the generation, imported configuration and trie, carriers,
 registration bookings, complete termination entries, treasury, permanent
 AID/token bindings and next token counter. A carrier stores its original
-holding, AID, token, key counter, local state and minimum ADA. A termination
-entry retains the complete generic booking and the original carrier metadata.
+holding, AID, token and minimum ADA. A live carrier gains a pending receipt
+when the checkpoint spend convicts it. The termination entry retains that
+receipt, the complete booking and the original carrier metadata.
 
 | Action | Given | When | Then |
 | --- | --- | --- | --- |
 | Registration booking | The key's KERI inception evidence, and a complete generic booking with carrier value at least `Mc + D` (minimum ADA, then the checkpoint's deposit and freeze bond, then the initial pool the registrant chooses) and the configured tip | `bookRegistration` accepts; a carrier one lovelace short is refused, and so is a key without its inception evidence | The request is pending; no carrier has been created yet. Every pending request belongs to a key whose inception was shown. |
 | Registration fold | Reachable state, the matching generation/plugin and an accepted imported economic transaction. No inception evidence: the booking showed it | `fold` consumes the booking | A carrier and permanent AID/token binding are installed with the committed holding. |
-| Convict carrier | A live carrier and duplicity against its key counter | `convictCkpt` accepts | Retain a termination-pending carrier and the active registry key. |
+| Convict carrier | A live carrier and an observation of its checkpoint spend with an accepted rival | `convictCkpt` accepts | Retain a termination-pending carrier and the active registry key. |
 | Book termination | That pending carrier and an exactly matching generic booking | `bookTermination` accepts | Move custody into the whole pending entry; retain its token/key/original holding association. |
 | Complete termination | A reachable pending entry and accepted consuming fold | `fold` consumes that request | Remove that pending entry, burn its active token and retire its key. Unconsumed entries remain whole. |
 | Registration return | A booked registration that was not folded, a transaction whose whole validity interval starts at or after the request's deadline (booking validity upper bound plus the processing window), and an accepted imported rejection | `returnRequests` accepts, with no signature; before the deadline it refuses, and a pending termination is never a member | The refund address receives at least the contents less the declared tip; only the returned registrations leave the pool and all other custody is unchanged. |
 
-The coarse Registry predicates are `inception` and `duplicity`. A registration booking reads `inception` and no other step does: a fold or a return of a booked request needs no evidence from the identity's controller. They are declared abstractions, not cryptographic verification
-or a proof that they equal Checkpoint's concrete evidence predicates. In
-particular, the Registry flow does not summarize the Checkpoint conviction's
-bond and pool distribution.
+Only registration booking reads `Env.inception`. At conviction, `Env.pendingSpend`
+reads the observed spend for the carrier’s AID. It checks that the tip names
+that AID and that the rival passes the checkpoint comparison. The resulting
+receipt identifies the pending output by transaction and index and records
+the tip’s epoch and sequence number. The checkpoint model accounts for the
+bond and pool payments at that spend.
 
 `Carrier.original` is the stable imported holding descriptor retained as
 provenance. It does not prove equality with the complete serialized, evolving
-Checkpoint datum or a current ledger output reference. The separate coarse
-key counter and concrete Checkpoint key-state encoding are not universally
-equated by this adapter.
+Checkpoint datum or a current ledger output reference. At booking, `bookTermination` compares the request’s pending reference,
+AID, epoch and sequence number with the receipt on the carrier.
 
 ## What registration guarantees
 
@@ -98,7 +100,7 @@ canonical registry selection and transaction validity extensions remain in
 
 ## Checkpoint and the associated system
 
-`Checkpoint.lean` owns the funded local lifecycle: concrete duplicity,
+`Checkpoint.lean` owns the funded local lifecycle, including the spent-tip comparison,
 rotation and signed intent, conviction/freeze bonds, pool, refund address,
 poison, freeze and juvenility. There is no `close` and no `reopen`: a
 checkpoint leaves the live states only by conviction. The proved
@@ -297,7 +299,7 @@ sequenceDiagram
   participant Booker as Anyone (booker)
   participant Application as KERI application
   participant Registry as Public registry
-  Convictor->>Checkpoint: conviction with duplicity evidence
+  Convictor->>Checkpoint: conviction with the committed rival
   Checkpoint-->>Checkpoint: leaves the pending output: minimum ADA, active token
   Booker->>Checkpoint: spend the pending output
   Checkpoint-->>Booker: released only if one termination approval of its key is minted
@@ -315,7 +317,7 @@ The guarantees, each a theorem of `lean/CardanoKeri/ApplicationGoals.lean`:
   key's one active token and carrying the pending-termination datum of an AID
   whose key it is; exactly one approval is minted. Where the checkpoint
   validator realizes the checkpoint model, that output's checkpoint was
-  convicted, with duplicity evidence at its last key state
+  convicted by comparing the committed rival with its spent tip
   (`termination_approval_requires_booking`,
   `termination_approval_requires_pending`,
   `termination_approval_requires_conviction`, and in the checkpoint model
@@ -395,9 +397,10 @@ In the Lean example, identifier 11 rotates to epoch 1, sequence 1. Its
 conviction creates output 0 of transaction 105. Transaction 200 spends that
 output and places the termination request at index 0. Choosing the registration
 output, the rotation output or a different request reference loses the
-correspondence. The ordinary economic replay still stores zero for the key
-state. Agreement between the checkpoint comparison and KERI duplicity remains
-open at inception and for a rival's validity after rotation.
+correspondence. The economic entry records output 105#0, identifier 11,
+epoch 1 and sequence 1 (`economic_entry_for_rotated_checkpoint`).
+Conformance to KERI duplicity remains open at inception and depends on the
+rival’s validity against the predecessor after rotation.
 
 ## Executable evidence and limits
 

@@ -33,15 +33,15 @@
       "pause": 500
     },
     {
-      "text": "Sys contains the generation, imported configuration and trie, carriers, registration bookings, complete termination entries, treasury, permanent AID/token bindings and next token counter. A carrier stores its original holding, AID, token, key counter, local state and minimum ADA. A termination entry retains the complete generic booking and the original carrier metadata.",
+      "text": "Sys contains the generation, imported configuration and trie, carriers, registration bookings, complete termination entries, treasury, permanent AID/token bindings and next token counter. A carrier stores its original holding, AID, token and minimum ADA. A live carrier gains a pending receipt when the checkpoint spend convicts it. The termination entry retains that receipt, the complete booking and the original carrier metadata.",
       "pause": 400
     },
     {
-      "text": "The coarse Registry predicates are inception and duplicity. A registration booking reads inception and no other step does: a fold or a return of a booked request needs no evidence from the identity's controller. They are declared abstractions, not cryptographic verification or a proof that they equal Checkpoint's concrete evidence predicates. In particular, the Registry flow does not summarize the Checkpoint conviction's bond and pool distribution.",
+      "text": "Only registration booking reads Env.inception. At conviction, Env.pendingSpend reads the observed spend for the carrier’s AID. It checks that the tip names that AID and that the rival passes the checkpoint comparison. The resulting receipt identifies the pending output by transaction and index and records the tip’s epoch and sequence number. The checkpoint model accounts for the bond and pool payments at that spend.",
       "pause": 400
     },
     {
-      "text": "Carrier.original is the stable imported holding descriptor retained as provenance. It does not prove equality with the complete serialized, evolving Checkpoint datum or a current ledger output reference. The separate coarse key counter and concrete Checkpoint key-state encoding are not universally equated by this adapter.",
+      "text": "Carrier.original is the stable imported holding descriptor retained as provenance. It does not prove equality with the complete serialized, evolving Checkpoint datum or a current ledger output reference. At booking, bookTermination compares the request’s pending reference, AID, epoch and sequence number with the receipt on the carrier.",
       "pause": 400
     }
   ],
@@ -69,7 +69,7 @@
       "pause": 500
     },
     {
-      "text": "Checkpoint.lean owns the funded local lifecycle: concrete duplicity, rotation and signed intent, conviction/freeze bonds, pool, refund address, poison, freeze and juvenility. There is no close and no reopen: a checkpoint leaves the live states only by conviction. The proved consumableStateB mirror refuses pending and convicted states.",
+      "text": "Checkpoint.lean owns the funded local lifecycle, including the spent-tip comparison, rotation and signed intent, conviction/freeze bonds, pool, refund address, poison, freeze and juvenility. There is no close and no reopen: a checkpoint leaves the live states only by conviction. The proved consumableStateB mirror refuses pending and convicted states.",
       "pause": 400
     },
     {
@@ -179,7 +179,7 @@
       "pause": 400
     },
     {
-      "text": "No termination without a conviction. A termination approval is minted only by a booking of exactly that registry and key, which spends, once, an output at the checkpoint validator holding exactly the minimum ADA and the key's one active token and carrying the pending-termination datum of an AID whose key it is; exactly one approval is minted. Where the checkpoint validator realizes the checkpoint model, that output's checkpoint was convicted, with duplicity evidence at its last key state (termination_approval_requires_booking, termination_approval_requires_pending, termination_approval_requires_conviction, and in the checkpoint model pending_only_by_conviction and reachable_pending_convicted).",
+      "text": "No termination without a conviction. A termination approval is minted only by a booking of exactly that registry and key, which spends, once, an output at the checkpoint validator holding exactly the minimum ADA and the key's one active token and carrying the pending-termination datum of an AID whose key it is; exactly one approval is minted. Where the checkpoint validator realizes the checkpoint model, that output's checkpoint was convicted by comparing the committed rival with its spent tip (termination_approval_requires_booking, termination_approval_requires_pending, termination_approval_requires_conviction, and in the checkpoint model pending_only_by_conviction and reachable_pending_convicted).",
       "pause": 300
     },
     {
@@ -221,7 +221,7 @@
       "pause": 400
     },
     {
-      "text": "In the Lean example, identifier 11 rotates to epoch 1, sequence 1. Its conviction creates output 0 of transaction 105. Transaction 200 spends that output and places the termination request at index 0. Choosing the registration output, the rotation output or a different request reference loses the correspondence. The ordinary economic replay still stores zero for the key state. Agreement between the checkpoint comparison and KERI duplicity remains open at inception and for a rival's validity after rotation.",
+      "text": "In the Lean example, identifier 11 rotates to epoch 1, sequence 1. Its conviction creates output 0 of transaction 105. Transaction 200 spends that output and places the termination request at index 0. Choosing the registration output, the rotation output or a different request reference loses the correspondence. The economic entry records output 105#0, identifier 11, epoch 1 and sequence 1 (economic_entry_for_rotated_checkpoint). Conformance to KERI duplicity remains open at inception and depends on the rival’s validity against the predecessor after rotation.",
       "pause": 400
     }
   ],
@@ -245,6 +245,6 @@
   ],
   "_source": {
     "file": "registry-as-mpfs.md",
-    "sha256": "4bdcb5dc2bb1f630212c5a43fa270af3ada6b2e25e0bc58940cff07a1d0d0220"
+    "sha256": "f679c19d5308e5c608f3ee674b459de95b35336a6884926119c1afc3d28b1949"
   }
 }

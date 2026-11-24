@@ -23,7 +23,7 @@
       "pause": 500
     },
     {
-      "text": "One rule sits above everything else on this page: the chain projects the KEL and never originates identity state. Every arrow points one way. The design is built only against what a controller and its witnesses already publish; the chain never asks KERI for anything, and never pronounces a verdict KERI itself would not. Where KERI says a verdict is formed is validator roles and event locality.",
+      "text": "One rule sits above everything else on this page: the chain projects the KEL and never originates identity state. Every arrow points one way. The design is built only against what a controller and its witnesses already publish. A terminal conviction requires agreement with KERI duplicity. The witness assumptions describe the two outstanding conditions for that agreement. KERI describes where a verdict is formed in validator roles and event locality.",
       "pause": 400
     },
     {
@@ -409,6 +409,6 @@
   ],
   "_source": {
     "file": "trust-model.md",
-    "sha256": "716774e5850dbda4db884e3bde81e3247718195f80d4c503633ac7c6c99527d0"
+    "sha256": "7783e33900ff70b3b26155a2083a14b9bdcefcf7a530eb33844e227f622f5441"
   }
 }

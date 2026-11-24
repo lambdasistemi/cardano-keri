@@ -20,8 +20,9 @@ itself. It verifies the event evidence supplied in a transaction.
 One rule sits above everything else on this page: **the chain projects the
 KEL and never originates identity state.** Every arrow points one way. The
 design is built only against what a controller and its witnesses already
-publish; the chain never asks KERI for anything, and never pronounces a
-verdict KERI itself would not. Where KERI says a verdict is formed is
+publish. A terminal conviction requires agreement with KERI duplicity. The
+[witness assumptions](#keri-witnesses) describe the two outstanding conditions
+for that agreement. KERI describes where a verdict is formed in
 [validator roles and event locality](https://trustoverip.github.io/kswg-keri-specification/#validator-roles-and-event-locality).
 
 Two consequences that shape the whole trust boundary:
@@ -467,9 +468,9 @@ The **Result** column marks whether the response ships today or is designed.
 | Anyone, the controllers included, moves the refund address after registration | Reject: no step changes the refund address | designed |
 | One stolen member key of a multisig poisons the identity | Reject: the poison is evaluated at the current threshold | designed |
 | Authorize a payment from a poisoned checkpoint | Reject: the consumer requires an unpoisoned state | designed |
-| Take `D_reg` without a duplicity proof | Reject: `D_reg` is never a fee source | designed |
+| Take `D_reg` without an accepted checkpoint conviction | Reject: `D_reg` is never a fee source | designed |
 | Freeze an identity whose pool pays | Reject: the freeze requires `pool < P` | designed |
-| Convict without two witnessed rotations at one sequence | Reject: the proof needs the tip's own keys and `toad` receipts on both | designed |
+| Convict with a rival that falls short of the spent tip’s thresholds | The checkpoint refuses the rival if it lacks the required controller signatures or witness receipts | designed |
 | Copy a conviction and pay yourself | Reject: `D_reg` goes only to the payee of a commitment opened beforehand over this identifier, deployment, key state and evidence | designed |
 | Open a commitment and use it in the same slot | Reject: a commitment is eligible only after the upper bound of its opening transaction's validity range, which is no earlier than the slot it was opened in | designed |
 | Top up, freeze or poison a checkpoint to void a hunter's commitment | No effect: the commitment names the key state, and these steps keep it | designed |

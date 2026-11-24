@@ -23,8 +23,9 @@ open CardanoKeri.ConsumerIdentity.Bytes.Vectors (field str)
 
 def params : Params := { D := 3, B := 2, P := 1, W := 5, hD := by decide, hB := by decide }
 
-/-- Which evidence a fixture selector names: the concrete duplicity fixture at a key
-state, or the same context with the accepted event as its own rival (no duplicity). -/
+/-- The two fixture selectors encode a rival whose forward fields conflict
+with the spent tip, or one whose forward fields agree with it. The JSON
+selector names are retained for existing vector readers. -/
 inductive Shown where
   | duplicity (epoch sn : Nat)
   | sameEvent (epoch sn : Nat)
@@ -38,8 +39,8 @@ def Shown.json : Shown → Json
   | .duplicity e sn => Json.mkObj [("duplicity", toJson [e, sn])]
   | .sameEvent e sn => Json.mkObj [("sameEvent", toJson [e, sn])]
 
-/-- The environment shows the duplicity fixture at every key state, or (`sameEvent`)
-a rival equal to the accepted event, which proves nothing. -/
+/-- The spend reads the selected tip and rival. The separate predecessor and
+event lookups serve the KERI reader. -/
 def envFor (rivalIsAccepted : Bool) : Env := {
   rotationTo := fun _ _ _ => false, depositAuthorized := fun _ => false, quorum := fun _ => false,
   verifyRival := CardanoKeri.CheckpointConviction.Fixtures.verify,
@@ -92,7 +93,7 @@ def cases : List Case := [
       committedKeyState := ⟨2, 2⟩ },
   { honest "refused-other-evidence" "the commitment names the evidence of another key state: refused" 6 with
       shown := .duplicity 2 2 },
-  { honest "refused-no-duplicity" "the evidence shown and committed proves no duplicity: refused" 6 with
+  { honest "refused-no-duplicity" "the committed rival and spent tip agree on their forward fields: refused" 6 with
       rivalIsAccepted := true, shown := .sameEvent 1 1 }]
 
 def liveJson (l : Live) : Json :=
@@ -224,7 +225,7 @@ def table : Except String Json := do
       "commitments beside a checkpoint.")),
     ("model", toJson "lean/CardanoKeri/Checkpoint.lean (Commitment.entitles, Step.convict, Sys.revealOpen, LocalEvent, OpenEvent, RevealEvent, SweepEvent)"),
     ("rules", Json.mkObj [
-      ("conviction", toJson "accepted iff duplicity at the output's key state and the commitment names that key state, the evidence shown there and this payee, and eligibleAfter <= now <= expiresAt; no other fact of the output is read"),
+      ("conviction", toJson "the spent-tip comparison must accept the rival at the live epoch and sequence. The commitment must name that position, the evidence read for its identifier and this payee, with eligibleAfter <= now <= expiresAt"),
       ("system", toJson "a conviction's commitment is open under its marker and names this AID and this deployment; the conviction burns it; a commitment opens with eligibleAfter = openedAt + 1 <= expiresAt; a reveal needs eligibleAfter <= now <= expiresAt; a sweep needs expiresAt < now")]),
     ("params", Json.mkObj [("D", natJson params.D), ("B", natJson params.B), ("P", natJson params.P)]),
     ("deployments", Json.mkObj [("this", natJson SystemFixtures.deployment), ("other", natJson SystemFixtures.otherDeployment)]),

@@ -1,12 +1,30 @@
 [
  {
   "id": "context-unchecked",
-  "before": "  if authenticatedContextB c ev.environment then",
-  "after": "  if true then",
+  "before": "  if authenticatedContextB c ev.environment && !brokenHistory i c ev then",
+  "after": "  if !brokenHistory i c ev then",
   "failure": "answer-changed wrong-network",
   "owner": "CardanoKeri.ReaderStatus.unauthenticated_unavailable",
   "test": "ReaderStatusChecks",
   "detail": "a status without an authenticated context"
+ },
+ {
+  "id": "broken-history-ignored",
+  "before": "  if authenticatedContextB c ev.environment && !brokenHistory i c ev then",
+  "after": "  if authenticatedContextB c ev.environment then",
+  "failure": "answer-changed live-holder-broken-history",
+  "owner": "CardanoKeri.ReaderStatus.broken_history_unavailable",
+  "test": "ReaderStatusChecks",
+  "detail": "a holder decides beside a history that fails its replay"
+ },
+ {
+  "id": "incomplete-history-read-as-broken",
+  "before": "    decide (h.point = ev.point ∧ h.registry = registryAsset i c ∧ h.complete = true) &&",
+  "after": "    decide (h.point = ev.point ∧ h.registry = registryAsset i c) &&",
+  "failure": "answer-changed active-incomplete-history-unreplayable",
+  "owner": "CardanoKeri.ReaderStatus.history_not_established, CardanoKeri.ReaderStatus.holder_decides_alone",
+  "test": "ReaderStatusChecks",
+  "detail": "an incomplete history that does not replay refuses the holder"
  },
  {
   "id": "holding-point-unchecked",

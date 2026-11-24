@@ -144,6 +144,12 @@ def cases : Except String (List Case) := do
       (ev (held [request]) none),
     row "pending-requested-with-history" "the termination request holds the asset and the history registers the key"
       (ev (held [request]) (told activeHistory)),
+    row "active-incomplete-history" "a live checkpoint and a history that misses the fold that registered the key: the holder decides alone"
+      (ev (held [live]) (some { historyAt c [[registers k2 1]] with complete := false })),
+    row "active-incomplete-history-unreplayable" "a live checkpoint and a history that starts after the registration, so its first fold terminates a key it never saw registered: not complete, so a gap and not a contradiction"
+      (ev (held [live]) (some { historyAt c [[terminates k2 4]] with complete := false })),
+    row "pending-requested-incomplete-history" "the termination request and a history that is not complete: the holder decides alone"
+      (ev (held [request]) (some { historyAt c [[registers k2 1]] with complete := false })),
     row "terminal-history-and-no-holder" "the history registers the key and a later fold terminates it beside another registration; no output holds the asset"
       (ev (held []) (told terminalHistory)),
     row "terminal-history-only" "the history terminates the key; no holding observation"
@@ -190,6 +196,10 @@ def cases : Except String (List Case) := do
       (ev (held []) (told [[registers k 2], [terminates k 3], [registers k 5]])),
     row "history-with-an-empty-fold" "no holder here and a history with a fold that makes no change"
       (ev (held []) (told [[registers k 2], [], [terminates k 3]])),
+    row "live-holder-broken-history" "a live checkpoint beside a complete history whose replay fails: a contradiction, whatever the holder shows"
+      (ev (held [live]) (told [[registers k2 1], [terminates k 3]])),
+    row "request-holder-broken-history" "the termination request beside a complete history that registers the key twice"
+      (ev (held [request]) (told [[registers k 2], [registers k 5]])),
     row "two-holders" "two outputs hold the asset"
       (ev (held [live, { live with reference := ⟨pack (txId 4), 0⟩ }]) none),
     row "holder-quantity-two" "the one holder holds the asset twice"
@@ -312,7 +322,8 @@ the holder it names and the consumer predicate's verdict on that holder. -/
 def answerJson (c : Context) (now : Slot) (ev : Evidence) : Json := Json.mkObj [
   ("status", statusJson (classify i c ev)),
   ("custody", custodyJson (holdingCustody i c ev)),
-  ("leaf", optionJson leafJson (establishedLeaf i c ev)),
+  ("leaf", if brokenHistory i c ev then toJson "broken"
+    else optionJson leafJson (establishedLeaf i c ev)),
   ("holder", optionJson (fun o => referenceJson o.reference) (holder i c ev)),
   ("eligible", optionJson (fun o => toJson (consumableHoldingB i c ev.environment params now o))
     (holder i c ev))]
@@ -337,7 +348,7 @@ def table : Except String Json := do
       ("point", toJson "the identity of a chain point; compared for equality only, never ordered or subtracted"),
       ("holding", toJson "null when not established; otherwise every unspent output holding the named asset at the named point"),
       ("history", toJson "null when the reader holds none; otherwise the named registry's folds through the named point, in order from its creation, each fold the list of its changes (register or terminate, with the request reference and the key); complete is false for a history that starts late or misses a fold"),
-      ("answer.leaf", toJson "the leaf of the identifier's key replayed from a complete history: unknown, active or terminal; null when no leaf is established"),
+      ("answer.leaf", toJson "the leaf of the identifier's key replayed from a complete history: unknown, active or terminal; broken when a complete history fails its replay, which makes the answer unavailable; null when no leaf is established"),
       ("datum", toJson "empty, or the inline datum bytes of an application datum"),
       ("answer.custody", toJson "not-established, absent, live with the datum facts, convicted with the key state, request or inconsistent"),
       ("answer.holder", toJson "the reference of the one recognised holder, or null"),

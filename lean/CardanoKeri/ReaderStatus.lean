@@ -23,8 +23,9 @@ answers for.
   registry starts with no member; each fold's changes are applied in order, a
   registration binding an unknown key as active and a termination making an
   active key terminal. Only a complete history establishes a leaf: one that
-  starts late or misses a fold establishes none, and so does one whose replay
-  meets a change no accepted fold makes.
+  starts late or misses a fold establishes none. A complete history whose
+  replay meets a change no accepted fold makes is broken: it contradicts
+  itself, and the answer is unavailable whatever the holders show.
 * A chain point is an identity. The model compares points for equality only:
   there is no order, no distance and no age. An observation that is absent,
   stale, failed or incomplete is an observation that is not established.
@@ -32,17 +33,22 @@ answers for.
 The statuses and what decides them:
 
 * **active**: exactly one holder, a live checkpoint of the identifier. The
-  leaf, when established, must read active.
+  history must not be broken and the leaf, when established, must read active.
 * **pending termination**: exactly one holder, the convicted checkpoint of the
   identifier or, once the termination is booked, its termination request. The
-  custody the reader reads says which of the two holds the asset. The leaf,
-  when established, must read active.
+  custody the reader reads says which of the two holds the asset. The history
+  must not be broken and the leaf, when established, must read active.
 * **terminal**: the leaf established terminal. The holders, when established,
   must be none.
 * **never registered**: the leaf established unknown. The holders, when
   established, must be none.
 * **unavailable**: everything else: an unauthenticated context, no deciding
-  observation, or observations that contradict each other.
+  observation, or observations that contradict each other or themselves.
+
+One observation suffices. A recognised holder decides active or pending
+termination when the history is missing or incomplete, and a complete history
+decides terminal or never registered when the holders are not established. A
+gap in the observation an answer does not need does not make it unavailable.
 
 Eligibility is not a status. An active identity may be young, frozen or
 poisoned; the consumer predicate decides that, per output.
@@ -165,10 +171,17 @@ def TerminationRequest (i : Interpretation) (c : Context) (o : AH.ObservedOutput
   SingularApplicationHeld.terminationShape .none i.hash i.code c.release o
     (registryAsset i c) (i.keyOf c.aid) = true
 
-/-- The history does not contradict an active leaf: it establishes no leaf, or
-the leaf it establishes reads active. -/
-def LeafAllowsActive (i : Interpretation) (c : Context) (ev : Evidence) : Prop :=
-  ∀ leaf, LeafAt i c ev leaf → leaf = .known .active
+/-- The evidence holds a complete history of the identifier's registry through
+the asked point whose replay fails: some fold makes a change no accepted fold
+makes. Such a history is not the history of any registry. -/
+def BrokenHistory (i : Interpretation) (c : Context) (ev : Evidence) : Prop :=
+  ∃ h, ev.history = some h ∧ h.point = ev.point ∧ h.registry = registryAsset i c ∧
+    h.complete = true ∧ replay h.folds = none
+
+/-- The history does not contradict a holder: it is not broken, and it
+establishes no leaf or the leaf it establishes reads active. -/
+def HistoryAllowsHolder (i : Interpretation) (c : Context) (ev : Evidence) : Prop :=
+  ¬ BrokenHistory i c ev ∧ ∀ leaf, LeafAt i c ev leaf → leaf = .known .active
 
 /-- The holding observation does not show a holder: it is not established, or
 it shows none. -/
@@ -179,13 +192,13 @@ def NoHolderSeen (i : Interpretation) (c : Context) (ev : Evidence) : Prop :=
 inductive Decides (i : Interpretation) (c : Context) (ev : Evidence) : Status → Prop where
   | active {o : AH.ObservedOutput} {l : Live} :
       authenticatedContext c ev.environment → HoldersAt i c ev [o] → LiveCheckpoint i c o l →
-      LeafAllowsActive i c ev → Decides i c ev .active
+      HistoryAllowsHolder i c ev → Decides i c ev .active
   | convicted {o : AH.ObservedOutput} {h : Hash} :
       authenticatedContext c ev.environment → HoldersAt i c ev [o] →
-      ConvictedCheckpoint i c o h → LeafAllowsActive i c ev → Decides i c ev .pendingTermination
+      ConvictedCheckpoint i c o h → HistoryAllowsHolder i c ev → Decides i c ev .pendingTermination
   | requested {o : AH.ObservedOutput} :
       authenticatedContext c ev.environment → HoldersAt i c ev [o] → TerminationRequest i c o →
-      LeafAllowsActive i c ev → Decides i c ev .pendingTermination
+      HistoryAllowsHolder i c ev → Decides i c ev .pendingTermination
   | terminal :
       authenticatedContext c ev.environment → LeafAt i c ev (.known .terminal) →
       NoHolderSeen i c ev → Decides i c ev .terminal
@@ -256,6 +269,15 @@ def establishedLeaf (i : Interpretation) (c : Context) (ev : Evidence) : Option 
       (replay h.folds).map fun members => Singular.trieGet members (i.keyOf c.aid)
     else none
 
+/-- The evidence holds a broken history: a complete history of the
+identifier's registry through the asked point whose replay fails. -/
+def brokenHistory (i : Interpretation) (c : Context) (ev : Evidence) : Bool :=
+  match ev.history with
+  | none => false
+  | some h =>
+    decide (h.point = ev.point ∧ h.registry = registryAsset i c ∧ h.complete = true) &&
+      (replay h.folds).isNone
+
 /-- The table: custody against leaf. -/
 def verdict : Custody → Option Singular.Leaf → Status
   | .live _, none => .active
@@ -272,7 +294,7 @@ def verdict : Custody → Option Singular.Leaf → Status
 
 /-- The reader's answer, executable. -/
 def classify (i : Interpretation) (c : Context) (ev : Evidence) : Status :=
-  if authenticatedContextB c ev.environment then
+  if authenticatedContextB c ev.environment && !brokenHistory i c ev then
     verdict (holdingCustody i c ev) (establishedLeaf i c ev)
   else .unavailable
 
@@ -360,19 +382,32 @@ inductive RegistryFolds (hash : AH.Hash) (code : AH.Codec)
       (domain : after.domain = before.domain) :
       RegistryFolds hash code commit release identity after folds
 
-/-- Evidence faithful to a world of the registry's history: the holders it
-establishes are the world's holders, and a complete history it holds of the
-identifier's registry is that registry's history in the world, the registry
-created and every one of its folds, in order. An observation that is not
-established is faithful to every world. -/
-structure Faithful (i : Interpretation) (c : Context)
+/-- The holders the evidence establishes are the world's holders. An
+observation that is not established is faithful to every world. -/
+def FaithfulHolders (i : Interpretation) (c : Context)
+    (world : SingularApplicationHeld.CandidateWorld) (ev : Evidence) : Prop :=
+  ∀ holders, HoldersAt i c ev holders → holders = holdersIn i c world
+
+/-- A complete history the evidence holds of the identifier's registry through
+the asked point is that registry's history in the world: the registry was
+created, and the folds are its folds, in order. A history that is absent,
+incomplete, at another point or of another registry is faithful to every
+world. -/
+def FaithfulHistory (i : Interpretation) (c : Context)
     (commit : SingularApplicationHeld.TrieCommit)
-    (world : SingularApplicationHeld.CandidateWorld) (ev : Evidence) : Prop where
-  holders : ∀ holders, HoldersAt i c ev holders → holders = holdersIn i c world
-  history : ∀ h, ev.history = some h → h.point = ev.point → h.registry = registryAsset i c →
+    (world : SingularApplicationHeld.CandidateWorld) (ev : Evidence) : Prop :=
+  ∀ h, ev.history = some h → h.point = ev.point → h.registry = registryAsset i c →
     h.complete = true →
     registryAsset i c ∈ world.registries.map (·.identity) ∧
     RegistryFolds i.hash i.code commit c.release (registryAsset i c) world h.folds
+
+/-- Evidence faithful to a world of the registry's history: both of its
+observations are. -/
+structure Faithful (i : Interpretation) (c : Context)
+    (commit : SingularApplicationHeld.TrieCommit)
+    (world : SingularApplicationHeld.CandidateWorld) (ev : Evidence) : Prop where
+  holders : FaithfulHolders i c world ev
+  history : FaithfulHistory i c commit world ev
 
 /-- What a world warrants about the identifier, each status by the one fact
 that decides it: an unspent live checkpoint, an unspent convicted checkpoint or
@@ -401,8 +436,9 @@ def registryLeaf : Leaf → Singular.Leaf
   | .retired => .known .terminal
 
 /-- The holders that realize the lifecycle state of the identifier: none for a
-state without an output; the termination request once the termination is
-booked; otherwise the one checkpoint output that realizes the state
+state without an output; once the termination is booked, the termination
+request the booking placed, at the reference the system's pending association
+records; otherwise the one checkpoint output that realizes the state
 (`ConsumerIdentity.realizesState`). -/
 def holdersRealize (i : Interpretation) (c : Context) (p : Params)
     (rp : CardanoKeri.Registry.Params) (s : Sys) (holders : List AH.ObservedOutput) : Prop :=
@@ -410,8 +446,9 @@ def holdersRealize (i : Interpretation) (c : Context) (p : Params)
   | .absent | .convicted => holders = []
   | .present l => ∃ o, holders = [o] ∧ realizesState i c p rp (.present l) o
   | .terminationPending h => ∃ o, holders = [o] ∧
-      if (s.pending c.aid).isSome = true then TerminationRequest i c o
-      else realizesState i c p rp (.terminationPending h) o
+      match s.pending c.aid with
+      | some association => TerminationRequest i c o ∧ o.reference = association.reference
+      | none => realizesState i c p rp (.terminationPending h) o
 
 /-- Evidence that realizes a checkpoint system at the context's identifier: the
 holders it establishes realize the identifier's lifecycle state and the leaf

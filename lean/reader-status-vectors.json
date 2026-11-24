@@ -668,6 +668,219 @@
     "custody": "request"}},
   {"now": 200,
    "note":
+   "a live checkpoint and a history that misses the fold that registered the key: the holder decides alone",
+   "id": "active-incomplete-history",
+   "evidence":
+   {"point": 7001,
+    "holding":
+    {"point": 7001,
+     "holders":
+     [{"reference":
+       {"transactionId":
+        "0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a",
+        "outputIndex": 0},
+       "lovelace": 5000000,
+       "datum":
+       {"application":
+        "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500703d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d87980d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff"},
+       "credential": "44494e53585d62676c71767b80858a8f94999ea3a8adb2b7bcc1c6cb",
+       "assets":
+       [{"quantity": 1,
+         "policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+         "name":
+         "866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8"}]}],
+     "asset":
+     {"policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+      "name":
+      "866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8"}},
+    "history":
+    {"registry":
+     {"policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+      "name":
+      "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf"},
+     "point": 7001,
+     "folds":
+     [[{"register":
+        {"requestReference":
+         {"transactionId":
+          "15181b1e2124272a2d303336393c3f4245484b4e5154575a5d606366696c6f72",
+          "outputIndex": 0},
+         "key":
+         "4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776f",
+         "holdingIndex": 1,
+         "approvedDeposit": 5000000}}]],
+     "complete": false},
+    "environment":
+    {"release":
+     {"stateProgram":
+      "33383d42474c51565b60656a6f74797e83888d92979ca1a6abb0b5ba",
+      "statePolicy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+      "applicationPolicy":
+      "11161b20252a2f34393e43484d52575c61666b70757a7f84898e9398",
+      "applicationCredential":
+      "22272c31363b40454a4f54595e63686d72777c81868b90959a9fa4a9"},
+     "network": 0,
+     "checkpointCredential":
+     "44494e53585d62676c71767b80858a8f94999ea3a8adb2b7bcc1c6cb"}},
+   "answer":
+   {"status": "active",
+    "leaf": null,
+    "holder":
+    {"transactionId":
+     "0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a",
+     "outputIndex": 0},
+    "eligible": true,
+    "custody":
+    {"live":
+     {"toppedUp": false,
+      "sn": 7,
+      "refundTo":
+      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
+      "poisoned": false,
+      "frozen": false,
+      "epoch": 3,
+      "bornAt": 100}}}},
+  {"now": 200,
+   "note":
+   "a live checkpoint and a history that starts after the registration, so its first fold terminates a key it never saw registered: not complete, so a gap and not a contradiction",
+   "id": "active-incomplete-history-unreplayable",
+   "evidence":
+   {"point": 7001,
+    "holding":
+    {"point": 7001,
+     "holders":
+     [{"reference":
+       {"transactionId":
+        "0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a",
+        "outputIndex": 0},
+       "lovelace": 5000000,
+       "datum":
+       {"application":
+        "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500703d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d87980d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff"},
+       "credential": "44494e53585d62676c71767b80858a8f94999ea3a8adb2b7bcc1c6cb",
+       "assets":
+       [{"quantity": 1,
+         "policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+         "name":
+         "866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8"}]}],
+     "asset":
+     {"policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+      "name":
+      "866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8"}},
+    "history":
+    {"registry":
+     {"policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+      "name":
+      "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf"},
+     "point": 7001,
+     "folds":
+     [[{"terminate":
+        {"requestReference":
+         {"transactionId":
+          "404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9d",
+          "outputIndex": 1},
+         "key":
+         "4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776f"}}]],
+     "complete": false},
+    "environment":
+    {"release":
+     {"stateProgram":
+      "33383d42474c51565b60656a6f74797e83888d92979ca1a6abb0b5ba",
+      "statePolicy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+      "applicationPolicy":
+      "11161b20252a2f34393e43484d52575c61666b70757a7f84898e9398",
+      "applicationCredential":
+      "22272c31363b40454a4f54595e63686d72777c81868b90959a9fa4a9"},
+     "network": 0,
+     "checkpointCredential":
+     "44494e53585d62676c71767b80858a8f94999ea3a8adb2b7bcc1c6cb"}},
+   "answer":
+   {"status": "active",
+    "leaf": null,
+    "holder":
+    {"transactionId":
+     "0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a",
+     "outputIndex": 0},
+    "eligible": true,
+    "custody":
+    {"live":
+     {"toppedUp": false,
+      "sn": 7,
+      "refundTo":
+      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
+      "poisoned": false,
+      "frozen": false,
+      "epoch": 3,
+      "bornAt": 100}}}},
+  {"now": 200,
+   "note":
+   "the termination request and a history that is not complete: the holder decides alone",
+   "id": "pending-requested-incomplete-history",
+   "evidence":
+   {"point": 7001,
+    "holding":
+    {"point": 7001,
+     "holders":
+     [{"reference":
+       {"transactionId":
+        "272a2d303336393c3f4245484b4e5154575a5d606366696c6f7275787b7e8184",
+        "outputIndex": 1},
+       "lovelace": 2000000,
+       "datum": "empty",
+       "credential": "22272c31363b40454a4f54595e63686d72777c81868b90959a9fa4a9",
+       "assets":
+       [{"quantity": 1,
+         "policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+         "name":
+         "866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8"},
+        {"quantity": 1,
+         "policy": "11161b20252a2f34393e43484d52575c61666b70757a7f84898e9398",
+         "name":
+         "f6c31cc2f07f593bb390663e06b102672674b37bd1335e38efde44dea2ec286d"}]}],
+     "asset":
+     {"policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+      "name":
+      "866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8"}},
+    "history":
+    {"registry":
+     {"policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+      "name":
+      "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf"},
+     "point": 7001,
+     "folds":
+     [[{"register":
+        {"requestReference":
+         {"transactionId":
+          "15181b1e2124272a2d303336393c3f4245484b4e5154575a5d606366696c6f72",
+          "outputIndex": 0},
+         "key":
+         "4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776f",
+         "holdingIndex": 1,
+         "approvedDeposit": 5000000}}]],
+     "complete": false},
+    "environment":
+    {"release":
+     {"stateProgram":
+      "33383d42474c51565b60656a6f74797e83888d92979ca1a6abb0b5ba",
+      "statePolicy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+      "applicationPolicy":
+      "11161b20252a2f34393e43484d52575c61666b70757a7f84898e9398",
+      "applicationCredential":
+      "22272c31363b40454a4f54595e63686d72777c81868b90959a9fa4a9"},
+     "network": 0,
+     "checkpointCredential":
+     "44494e53585d62676c71767b80858a8f94999ea3a8adb2b7bcc1c6cb"}},
+   "answer":
+   {"status": "pending-termination",
+    "leaf": null,
+    "holder":
+    {"transactionId":
+     "272a2d303336393c3f4245484b4e5154575a5d606366696c6f7275787b7e8184",
+     "outputIndex": 1},
+    "eligible": false,
+    "custody": "request"}},
+  {"now": 200,
+   "note":
    "the history registers the key and a later fold terminates it beside another registration; no output holds the asset",
    "id": "terminal-history-and-no-holder",
    "evidence":
@@ -1691,7 +1904,7 @@
      "44494e53585d62676c71767b80858a8f94999ea3a8adb2b7bcc1c6cb"}},
    "answer":
    {"status": "unavailable",
-    "leaf": null,
+    "leaf": "broken",
     "holder": null,
     "eligible": null,
     "custody": "absent"}},
@@ -1755,7 +1968,7 @@
      "44494e53585d62676c71767b80858a8f94999ea3a8adb2b7bcc1c6cb"}},
    "answer":
    {"status": "unavailable",
-    "leaf": null,
+    "leaf": "broken",
     "holder": null,
     "eligible": null,
     "custody": "absent"}},
@@ -1816,7 +2029,7 @@
      "44494e53585d62676c71767b80858a8f94999ea3a8adb2b7bcc1c6cb"}},
    "answer":
    {"status": "unavailable",
-    "leaf": null,
+    "leaf": "broken",
     "holder": null,
     "eligible": null,
     "custody": "absent"}},
@@ -1879,7 +2092,7 @@
      "44494e53585d62676c71767b80858a8f94999ea3a8adb2b7bcc1c6cb"}},
    "answer":
    {"status": "unavailable",
-    "leaf": null,
+    "leaf": "broken",
     "holder": null,
     "eligible": null,
     "custody": "absent"}},
@@ -1934,10 +2147,161 @@
      "44494e53585d62676c71767b80858a8f94999ea3a8adb2b7bcc1c6cb"}},
    "answer":
    {"status": "unavailable",
-    "leaf": null,
+    "leaf": "broken",
     "holder": null,
     "eligible": null,
     "custody": "absent"}},
+  {"now": 200,
+   "note":
+   "a live checkpoint beside a complete history whose replay fails: a contradiction, whatever the holder shows",
+   "id": "live-holder-broken-history",
+   "evidence":
+   {"point": 7001,
+    "holding":
+    {"point": 7001,
+     "holders":
+     [{"reference":
+       {"transactionId":
+        "0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a",
+        "outputIndex": 0},
+       "lovelace": 5000000,
+       "datum":
+       {"application":
+        "d87a9fd8799f582c454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c47687235500703d87980d87980186458390104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9d87980d8799f9f58201f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ffd8799f01ff9f58203e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb02091017ffd8799f01ff8000ffffff"},
+       "credential": "44494e53585d62676c71767b80858a8f94999ea3a8adb2b7bcc1c6cb",
+       "assets":
+       [{"quantity": 1,
+         "policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+         "name":
+         "866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8"}]}],
+     "asset":
+     {"policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+      "name":
+      "866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8"}},
+    "history":
+    {"registry":
+     {"policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+      "name":
+      "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf"},
+     "point": 7001,
+     "folds":
+     [[{"register":
+        {"requestReference":
+         {"transactionId":
+          "15181b1e2124272a2d303336393c3f4245484b4e5154575a5d606366696c6f72",
+          "outputIndex": 0},
+         "key":
+         "4545426a795463564847555a4872523178337775784f7862727a48305f63476641594a4a51484d453350776f",
+         "holdingIndex": 1,
+         "approvedDeposit": 5000000}}],
+      [{"terminate":
+        {"requestReference":
+         {"transactionId":
+          "3336393c3f4245484b4e5154575a5d606366696c6f7275787b7e8184878a8d90",
+          "outputIndex": 1},
+         "key":
+         "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550"}}]],
+     "complete": true},
+    "environment":
+    {"release":
+     {"stateProgram":
+      "33383d42474c51565b60656a6f74797e83888d92979ca1a6abb0b5ba",
+      "statePolicy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+      "applicationPolicy":
+      "11161b20252a2f34393e43484d52575c61666b70757a7f84898e9398",
+      "applicationCredential":
+      "22272c31363b40454a4f54595e63686d72777c81868b90959a9fa4a9"},
+     "network": 0,
+     "checkpointCredential":
+     "44494e53585d62676c71767b80858a8f94999ea3a8adb2b7bcc1c6cb"}},
+   "answer":
+   {"status": "unavailable",
+    "leaf": "broken",
+    "holder": null,
+    "eligible": null,
+    "custody":
+    {"live":
+     {"toppedUp": false,
+      "sn": 7,
+      "refundTo":
+      "0104070a0d101316191c1f2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6a9",
+      "poisoned": false,
+      "frozen": false,
+      "epoch": 3,
+      "bornAt": 100}}}},
+  {"now": 200,
+   "note":
+   "the termination request beside a complete history that registers the key twice",
+   "id": "request-holder-broken-history",
+   "evidence":
+   {"point": 7001,
+    "holding":
+    {"point": 7001,
+     "holders":
+     [{"reference":
+       {"transactionId":
+        "272a2d303336393c3f4245484b4e5154575a5d606366696c6f7275787b7e8184",
+        "outputIndex": 1},
+       "lovelace": 2000000,
+       "datum": "empty",
+       "credential": "22272c31363b40454a4f54595e63686d72777c81868b90959a9fa4a9",
+       "assets":
+       [{"quantity": 1,
+         "policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+         "name":
+         "866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8"},
+        {"quantity": 1,
+         "policy": "11161b20252a2f34393e43484d52575c61666b70757a7f84898e9398",
+         "name":
+         "f6c31cc2f07f593bb390663e06b102672674b37bd1335e38efde44dea2ec286d"}]}],
+     "asset":
+     {"policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+      "name":
+      "866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8"}},
+    "history":
+    {"registry":
+     {"policy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+      "name":
+      "f89522d53ec5d471859825a00c59836263130e8cc4a59015a944371049139daf"},
+     "point": 7001,
+     "folds":
+     [[{"register":
+        {"requestReference":
+         {"transactionId":
+          "2225282b2e3134373a3d404346494c4f5255585b5e6164676a6d707376797c7f",
+          "outputIndex": 0},
+         "key":
+         "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550",
+         "holdingIndex": 1,
+         "approvedDeposit": 5000000}}],
+      [{"register":
+        {"requestReference":
+         {"transactionId":
+          "494c4f5255585b5e6164676a6d707376797c7f8285888b8e9194979a9da0a3a6",
+          "outputIndex": 0},
+         "key":
+         "454d4d6351746f714f6b41434c767973774a54465855516d52625a68577434414c6a6a68587a4c4768723550",
+         "holdingIndex": 1,
+         "approvedDeposit": 5000000}}]],
+     "complete": true},
+    "environment":
+    {"release":
+     {"stateProgram":
+      "33383d42474c51565b60656a6f74797e83888d92979ca1a6abb0b5ba",
+      "statePolicy": "70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+      "applicationPolicy":
+      "11161b20252a2f34393e43484d52575c61666b70757a7f84898e9398",
+      "applicationCredential":
+      "22272c31363b40454a4f54595e63686d72777c81868b90959a9fa4a9"},
+     "network": 0,
+     "checkpointCredential":
+     "44494e53585d62676c71767b80858a8f94999ea3a8adb2b7bcc1c6cb"}},
+   "answer":
+   {"status": "unavailable",
+    "leaf": "broken",
+    "holder": null,
+    "eligible": null,
+    "custody": "request"}},
   {"now": 200,
    "note": "two outputs hold the asset",
    "id": "two-holders",
@@ -2964,7 +3328,7 @@
   "null when the reader holds none; otherwise the named registry's folds through the named point, in order from its creation, each fold the list of its changes (register or terminate, with the request reference and the key); complete is false for a history that starts late or misses a fold",
   "datum": "empty, or the inline datum bytes of an application datum",
   "answer.leaf":
-  "the leaf of the identifier's key replayed from a complete history: unknown, active or terminal; null when no leaf is established",
+  "the leaf of the identifier's key replayed from a complete history: unknown, active or terminal; broken when a complete history fails its replay, which makes the answer unavailable; null when no leaf is established",
   "answer.holder": "the reference of the one recognised holder, or null",
   "answer.eligible":
   "the consumer predicate on that holder at the row's slot, or null",

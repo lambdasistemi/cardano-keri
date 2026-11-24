@@ -37,9 +37,9 @@
     "lean/CardanoKeri/ConsumerIdentity.lean": "8abd7916cf7129bc16067e68432a6a42b51389322f4eaa10d3df651276d49033",
     "lean/CardanoKeri/ConsumerJourney.lean": "77a375e09637f020823923605c5802b7f31471547e3b82ebd36af7a7b4fc73e7",
     "lean/CardanoKeri/ConsumerWire.lean": "82b7088d8ada127c6ecee9ca50ef483fcf240cf31e981489006e08ec51ede4d4",
-    "lean/CardanoKeri/ReaderStatus.lean": "ad2d03f3f0ec702206e543e53da679c9962d0e7440fcddc4668b7b88e3f0cbde",
-    "lean/CardanoKeri/ReaderStatusGoals.lean": "49c9b4762409f1e488d01f716f60cd17723ab3c353690ec5cde588ff9d3b453b",
-    "lean/CardanoKeri/ReaderStatusVectors.lean": "807c1d9f107b00dd0ccf071874483145b12ce118da9bed6b9a4d61206a533654",
+    "lean/CardanoKeri/ReaderStatus.lean": "ab97865667dbf6de421cbef5ccf205dd586d3ff8705188c136b499f36efd0ff3",
+    "lean/CardanoKeri/ReaderStatusGoals.lean": "a00ffbc1703dcf719b0ea82a0c0328a3dadeaec291edd0427d27cc5f4141c83c",
+    "lean/CardanoKeri/ReaderStatusVectors.lean": "60c43806ea513f1d25d6a0b3506744b208973ed8015d7aaa736fa0ed951c5673",
     "lean/CardanoKeri/Registry.lean": "22d86c6f572e9e4c427b792420bd740cfe1ad4a6cbcf7a8e181924816c50b167",
     "lean/CardanoKeri/RegistryAdapterFacts.lean": "212cb4a5a5710404e3b5c52733feb127720f9141f5deb379e4e50ce6345ea425",
     "lean/CardanoKeri/RegistryAgreement.lean": "486c868bbda3d062f2996cbd7086151a29597e245cfaaf6138760bf043e0667c",
@@ -5620,23 +5620,51 @@
       "storySha256": "744dea1aec8e8079be79dceffba4ad4a986faabb5885925401d17d71c4c3e13a"
     },
     {
-      "declaration": "CardanoKeri.ReaderStatus.leafAllowsActive_iff",
+      "declaration": "CardanoKeri.ReaderStatus.brokenHistory_iff",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 212,
-      "statement": "theorem leafAllowsActive_iff (i : Interpretation) (c : Context) (ev : Evidence) :\n    LeafAllowsActive i c ev ↔\n      establishedLeaf i c ev = none ∨ establishedLeaf i c ev = some (.known .active)",
-      "statementSha256": "ddb7654575e7c59acf5a5d50bfb2851920521de50724b8d807c640d60f3dbcb7",
-      "sourceStory": "Given any evidence; when the history does not contradict an active leaf;\nthen the classifier reads no leaf or the active leaf, and conversely.",
+      "line": 213,
+      "statement": "theorem brokenHistory_iff (i : Interpretation) (c : Context) (ev : Evidence) :\n    brokenHistory i c ev = true ↔ BrokenHistory i c ev",
+      "statementSha256": "5509f25a8d0dd6c06ff6742c75397571811e0590da84c953d7e6f7531d6430ec",
+      "sourceStory": "Given any evidence; when the classifier reads the history as broken; then\nthe evidence holds a complete history of the identifier's registry through\nthe asked point whose replay fails, and conversely.",
       "story": {
         "given": "(i : Interpretation) (c : Context) (ev : Evidence)",
         "when": "Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.",
-        "then": "LeafAllowsActive i c ev ↔\n      establishedLeaf i c ev = none ∨ establishedLeaf i c ev = some (.known .active)"
+        "then": "brokenHistory i c ev = true ↔ BrokenHistory i c ev"
       },
-      "storySha256": "e6a31a0be2f6608df4f174d796aafd10838c46facf220d55c7b83ea3c4b6400b"
+      "storySha256": "0bdc8264145f70ae8b399d1daf6f87e4a9a68e40c817fbd245a873936ee13a9f"
+    },
+    {
+      "declaration": "CardanoKeri.ReaderStatus.leafAt_not_broken",
+      "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
+      "line": 230,
+      "statement": "theorem leafAt_not_broken (i : Interpretation) (c : Context) (ev : Evidence) (leaf : Singular.Leaf)\n    (established : LeafAt i c ev leaf) : ¬ BrokenHistory i c ev",
+      "statementSha256": "f548fc5d71c686938bbcc18a7ec7a0f02f40b666ddc5c388b45945bf5702396d",
+      "sourceStory": "Given evidence whose history establishes a leaf; when the history is\nread; then it is not broken: its replay succeeded.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context) (ev : Evidence) (leaf : Singular.Leaf)\n    (established : LeafAt i c ev leaf)",
+        "when": "Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.",
+        "then": "¬ BrokenHistory i c ev"
+      },
+      "storySha256": "0412e010fb37662cc76313c88049de08385d9771de0a7dacb888835237896477"
+    },
+    {
+      "declaration": "CardanoKeri.ReaderStatus.historyAllowsHolder_iff",
+      "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
+      "line": 242,
+      "statement": "theorem historyAllowsHolder_iff (i : Interpretation) (c : Context) (ev : Evidence) :\n    HistoryAllowsHolder i c ev ↔\n      brokenHistory i c ev = false ∧\n      (establishedLeaf i c ev = none ∨ establishedLeaf i c ev = some (.known .active))",
+      "statementSha256": "219e4dfb567560a7264c0cb3b91252d8867edfe2d6d6d48ee7a14a3aaa204206",
+      "sourceStory": "Given any evidence; when the history does not contradict a holder; then\nthe classifier reads the history as not broken and reads no leaf or the\nactive leaf, and conversely.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context) (ev : Evidence)",
+        "when": "Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.",
+        "then": "HistoryAllowsHolder i c ev ↔\n      brokenHistory i c ev = false ∧\n      (establishedLeaf i c ev = none ∨ establishedLeaf i c ev = some (.known .active))"
+      },
+      "storySha256": "09737acd91e457a1e458ce931303112b0fe879350eeecb1ffc0e8cee7536a599"
     },
     {
       "declaration": "CardanoKeri.ReaderStatus.holdingCustody_single",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 231,
+      "line": 267,
       "statement": "theorem holdingCustody_single (i : Interpretation) (c : Context) (ev : Evidence) (k : Custody)\n    (reading : holdingCustody i c ev = k)\n    (form : (∃ l, k = .live l) ∨ (∃ h, k = .convicted h) ∨ k = .request) :\n    ∃ o, HoldersAt i c ev [o] ∧ custodyOf i c o = k",
       "statementSha256": "dc8ea2e6e296f6ea8f67e5952571f891ca8c08b8e1198e0fa5fb5979f9208228",
       "sourceStory": "Given evidence whose classifier custody is one recognised holder form;\nwhen the evidence is read; then it establishes exactly one holder, of that\nform.",
@@ -5650,7 +5678,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.decides_classify",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 252,
+      "line": 288,
       "statement": "theorem decides_classify (i : Interpretation) (c : Context) (ev : Evidence) (status : Status)\n    (decided : Decides i c ev status) : classify i c ev = status",
       "statementSha256": "08b1073e953613d84dadcef2f5657ee5566641e21d82af5ef5073fadae3496ee",
       "sourceStory": "Given evidence that decides a status; when the classifier runs; then it\nreturns that status.",
@@ -5664,7 +5692,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.classify_decides",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 279,
+      "line": 324,
       "statement": "theorem classify_decides (i : Interpretation) (c : Context) (ev : Evidence) (status : Status)\n    (result : classify i c ev = status) (available : status ≠ .unavailable) :\n    Decides i c ev status",
       "statementSha256": "29ac33e061c2917e3740255c00f5b867e3f6f7a6792bdab2db1610daa1be17f7",
       "sourceStory": "Given a classifier result that is a status other than unavailable; when\nthe evidence is read; then the evidence decides that status.",
@@ -5678,7 +5706,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.classify_iff_answers",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 342,
+      "line": 390,
       "statement": "theorem classify_iff_answers (i : Interpretation) (c : Context) (ev : Evidence) (status : Status) :\n    classify i c ev = status ↔ Answers i c ev status",
       "statementSha256": "2661945688ca1e92605d0932153af6c7ce32bd2e56981d5d11fe17da9d667f3a",
       "sourceStory": "**The classifier is the relation.**\nGiven any interpretation, context, evidence and status.\nWhen the executable classifier and the relation are compared.\nThen the classifier returns the status exactly when the relation gives it as\nthe reader's answer: the status the evidence decides, or unavailable when it\ndecides none.",
@@ -5692,7 +5720,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.exactly_one_answer",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 363,
+      "line": 411,
       "statement": "theorem exactly_one_answer (i : Interpretation) (c : Context) (ev : Evidence) :\n    ∃ status, Answers i c ev status ∧ ∀ other, Answers i c ev other → other = status",
       "statementSha256": "7e0f848b775f17fd0c1a40953d735e3c6a57fbc5c8bf29ab94992f6cce5e3a68",
       "sourceStory": "**Exactly one outcome.**\nGiven any interpretation, context and evidence.\nWhen the reader answers.\nThen exactly one of the five outcomes is its answer.",
@@ -5706,7 +5734,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.decides_unique",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 372,
+      "line": 420,
       "statement": "theorem decides_unique (i : Interpretation) (c : Context) (ev : Evidence) (s t : Status)\n    (first : Decides i c ev s) (second : Decides i c ev t) : s = t",
       "statementSha256": "20b247e1e41135217d6c2363f52a222941d201cb5f681c768ebca48d00c5d4c0",
       "sourceStory": "**The statuses exclude one another on every evidence value.**\nGiven evidence that decides two statuses.\nWhen they are compared.\nThen they are the same status.",
@@ -5720,7 +5748,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.classify_eq_iff_decides",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 380,
+      "line": 428,
       "statement": "theorem classify_eq_iff_decides (i : Interpretation) (c : Context) (ev : Evidence)\n    (status : Status) (available : status ≠ .unavailable) :\n    classify i c ev = status ↔ Decides i c ev status",
       "statementSha256": "12f729a54425d20a3806d58cecfad0eb39c38757f64293bc7525f6e99c810578",
       "sourceStory": "Given a status other than unavailable; when the classifier's result is\ncompared with what the evidence decides; then they agree.",
@@ -5734,7 +5762,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.unavailable_iff",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 387,
+      "line": 435,
       "statement": "theorem unavailable_iff (i : Interpretation) (c : Context) (ev : Evidence) :\n    classify i c ev = .unavailable ↔ ∀ status, ¬ Decides i c ev status",
       "statementSha256": "ec8ef247b949b09acb62f9edb531fafe9a2813d41cbcb31acdd6b8ca8db64e3a",
       "sourceStory": "Given any evidence; when the classifier answers unavailable; then the\nevidence decides no status, and conversely.",
@@ -5748,35 +5776,35 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.active_iff",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 404,
-      "statement": "theorem active_iff (i : Interpretation) (c : Context) (ev : Evidence) :\n    classify i c ev = .active ↔\n      authenticatedContext c ev.environment ∧\n      (∃ o l, HoldersAt i c ev [o] ∧ LiveCheckpoint i c o l) ∧ LeafAllowsActive i c ev",
-      "statementSha256": "d6b72fd451d3e33f1fc133a8d24dd014e2af391573b29670682814f8e713f99a",
+      "line": 452,
+      "statement": "theorem active_iff (i : Interpretation) (c : Context) (ev : Evidence) :\n    classify i c ev = .active ↔\n      authenticatedContext c ev.environment ∧\n      (∃ o l, HoldersAt i c ev [o] ∧ LiveCheckpoint i c o l) ∧ HistoryAllowsHolder i c ev",
+      "statementSha256": "2b9d6addabd5d840ccf5e7564f0d98a2286bf471bcc614b9bcbfef39a95cdf9c",
       "sourceStory": "**Active needs the live checkpoint.**\nGiven any evidence.\nWhen the reader answers active.\nThen the context is authenticated, the evidence establishes exactly one holder\nof the representative asset at the asked point, that holder is at the\ncheckpoint credential, holds the asset exactly once and carries a live datum\nof the identifier, and the history establishes no leaf or the leaf it\nestablishes reads active; and conversely such evidence is answered active.",
       "story": {
         "given": "(i : Interpretation) (c : Context) (ev : Evidence)",
         "when": "Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.",
-        "then": "classify i c ev = .active ↔\n      authenticatedContext c ev.environment ∧\n      (∃ o l, HoldersAt i c ev [o] ∧ LiveCheckpoint i c o l) ∧ LeafAllowsActive i c ev"
+        "then": "classify i c ev = .active ↔\n      authenticatedContext c ev.environment ∧\n      (∃ o l, HoldersAt i c ev [o] ∧ LiveCheckpoint i c o l) ∧ HistoryAllowsHolder i c ev"
       },
-      "storySha256": "9e89cf2350f40adae9aab67f3a7508af2104978c89d01edbca1daccc0e64186d"
+      "storySha256": "e1495d59e0ec65a2e90b90ec58c9ac8a073d607d0fa4d5a64d751a4a3b343790"
     },
     {
       "declaration": "CardanoKeri.ReaderStatus.pendingTermination_iff",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 426,
-      "statement": "theorem pendingTermination_iff (i : Interpretation) (c : Context) (ev : Evidence) :\n    classify i c ev = .pendingTermination ↔\n      authenticatedContext c ev.environment ∧\n      (∃ o, HoldersAt i c ev [o] ∧\n        ((∃ h, ConvictedCheckpoint i c o h) ∨ TerminationRequest i c o)) ∧\n      LeafAllowsActive i c ev",
-      "statementSha256": "51265720016ebbda4a9ccb176d6f8a61dd13d2fd9c03fbf45321c21cdd220bc9",
+      "line": 474,
+      "statement": "theorem pendingTermination_iff (i : Interpretation) (c : Context) (ev : Evidence) :\n    classify i c ev = .pendingTermination ↔\n      authenticatedContext c ev.environment ∧\n      (∃ o, HoldersAt i c ev [o] ∧\n        ((∃ h, ConvictedCheckpoint i c o h) ∨ TerminationRequest i c o)) ∧\n      HistoryAllowsHolder i c ev",
+      "statementSha256": "2befe17ef3e6900db63e63066b7353272db1dfdce12598475f104f9bd20f50a7",
       "sourceStory": "**Pending termination for the convicted checkpoint.**\nGiven any evidence.\nWhen the reader answers pending termination.\nThen the context is authenticated, the evidence establishes exactly one holder\nof the representative asset at the asked point, that holder is the convicted\ncheckpoint of the identifier (at the checkpoint credential, the asset exactly\nonce, a pending-termination datum of the identifier) or the termination\nrequest of the identifier's key, and the history establishes no leaf or the\nleaf it establishes reads active; and conversely such evidence is answered\npending termination.",
       "story": {
         "given": "(i : Interpretation) (c : Context) (ev : Evidence)",
         "when": "Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.",
-        "then": "classify i c ev = .pendingTermination ↔\n      authenticatedContext c ev.environment ∧\n      (∃ o, HoldersAt i c ev [o] ∧\n        ((∃ h, ConvictedCheckpoint i c o h) ∨ TerminationRequest i c o)) ∧\n      LeafAllowsActive i c ev"
+        "then": "classify i c ev = .pendingTermination ↔\n      authenticatedContext c ev.environment ∧\n      (∃ o, HoldersAt i c ev [o] ∧\n        ((∃ h, ConvictedCheckpoint i c o h) ∨ TerminationRequest i c o)) ∧\n      HistoryAllowsHolder i c ev"
       },
-      "storySha256": "23afd30f154a4ec540a2ce62ae5fab1c4b5ef28121fac4bbebd5500dfbad7481"
+      "storySha256": "d1bed6ba10e8c1d3761dab7bce9a182ef4e8bb43526626f8a4873a0d626c59c4"
     },
     {
       "declaration": "CardanoKeri.ReaderStatus.terminal_iff",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 453,
+      "line": 501,
       "statement": "theorem terminal_iff (i : Interpretation) (c : Context) (ev : Evidence) :\n    classify i c ev = .terminal ↔\n      authenticatedContext c ev.environment ∧ LeafAt i c ev (.known .terminal) ∧\n      NoHolderSeen i c ev",
       "statementSha256": "03d9d05d52cdab78884404af362386a7e557457ac77c3e2cb16707bff76bf914",
       "sourceStory": "**Terminal only from the terminal leaf.**\nGiven any evidence.\nWhen the reader answers terminal.\nThen the context is authenticated, the evidence holds a complete history of\nthe identifier's registry through the asked point whose replay reads the\nidentifier's key terminal, and the holding observation is not established or\nshows no holder; and conversely such evidence is answered terminal. No other\nevidence gives terminal: not a missing token, and no observation of a burn,\nwhich the evidence does not contain.",
@@ -5790,7 +5818,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.neverRegistered_iff",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 472,
+      "line": 520,
       "statement": "theorem neverRegistered_iff (i : Interpretation) (c : Context) (ev : Evidence) :\n    classify i c ev = .neverRegistered ↔\n      authenticatedContext c ev.environment ∧ LeafAt i c ev .unknown ∧ NoHolderSeen i c ev",
       "statementSha256": "337cd558b375b45a8d274bc4cdb72c53470e1ce2e1d062ef9144b08edc8b606b",
       "sourceStory": "**Never registered only from the unknown leaf.**\nGiven any evidence.\nWhen the reader answers never registered.\nThen the context is authenticated, the evidence holds a complete history of\nthe identifier's registry through the asked point whose replay reads the\nidentifier's key unknown, and the holding observation is not established or\nshows no holder; and conversely such evidence is answered never registered.",
@@ -5804,7 +5832,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.holder_eq_some_iff",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 488,
+      "line": 536,
       "statement": "theorem holder_eq_some_iff (i : Interpretation) (c : Context) (ev : Evidence)\n    (o : AH.ObservedOutput) :\n    holder i c ev = some o ↔\n      (classify i c ev = .active ∨ classify i c ev = .pendingTermination) ∧\n      HoldersAt i c ev [o]",
       "statementSha256": "10f043443c23ae9cd5f7d139a5ed73336cdcfbd20b28c067c6503f285fce416c",
       "sourceStory": "**The holder the answer names.**\nGiven any evidence and output.\nWhen the reader names that output as the holder.\nThen the answer is active or pending termination and the evidence\nestablishes that output as the one holder, and conversely.",
@@ -5818,7 +5846,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.pending_termination_custody",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 525,
+      "line": 573,
       "statement": "theorem pending_termination_custody (i : Interpretation) (c : Context) (ev : Evidence)\n    (pending : classify i c ev = .pendingTermination) :\n    ∃ o, holder i c ev = some o ∧\n      ((∃ h, holdingCustody i c ev = .convicted h ∧ ConvictedCheckpoint i c o h ∧\n          ¬ TerminationRequest i c o) ∨\n       (holdingCustody i c ev = .request ∧ TerminationRequest i c o ∧\n          ∀ h, ¬ ConvictedCheckpoint i c o h))",
       "statementSha256": "51fa6c83b355c5504f02f58a5c8057e7ff2919bf938254dd50e85daf2ea75342",
       "sourceStory": "**Pending termination names the checkpoint or the request.**\nGiven evidence answered pending termination.\nWhen the custody the reader read is inspected.\nThen the answer names one holder, and the custody says which of the two it\nis: the convicted checkpoint, with its key state, or the termination request.\nThe two never coincide.",
@@ -5832,7 +5860,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.holdersAt_unique",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 552,
+      "line": 600,
       "statement": "theorem holdersAt_unique (i : Interpretation) (c : Context) (ev : Evidence)\n    (first second : List AH.ObservedOutput) (a : HoldersAt i c ev first)\n    (b : HoldersAt i c ev second) : first = second",
       "statementSha256": "7e0367404cafcfac93cbf61ad69d1f2f429db4b199e24a401ab78c9a2e6e34e7",
       "sourceStory": "Given evidence that establishes a set of holders; when another set is\nestablished by the same evidence; then the two are the same set.",
@@ -5846,7 +5874,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.leafAt_unique",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 563,
+      "line": 611,
       "statement": "theorem leafAt_unique (i : Interpretation) (c : Context) (ev : Evidence)\n    (first second : Singular.Leaf) (a : LeafAt i c ev first) (b : LeafAt i c ev second) :\n    first = second",
       "statementSha256": "1c76922c128c79a4f4c8448d8023996c2c337e06c6bef6e7811e265517fa2c31",
       "sourceStory": "Given evidence that establishes a leaf; when another leaf is established\nby the same evidence; then the two are the same leaf.",
@@ -5860,7 +5888,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.unauthenticated_unavailable",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 574,
+      "line": 622,
       "statement": "theorem unauthenticated_unavailable (i : Interpretation) (c : Context) (ev : Evidence)\n    (wrong : ¬ authenticatedContext c ev.environment) : classify i c ev = .unavailable",
       "statementSha256": "4055c92e3bf7166499b23953187bb96dff429607dd024fb866ebadcb746e3aa8",
       "sourceStory": "**An unauthenticated context is unavailable.**\nGiven an environment whose network differs from the context's, or whose\nrelease or checkpoint credential is unresolved or differs.\nWhen the reader answers on any evidence.\nThen the answer is unavailable.",
@@ -5874,7 +5902,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.no_observation_unavailable",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 585,
+      "line": 633,
       "statement": "theorem no_observation_unavailable (i : Interpretation) (c : Context) (ev : Evidence)\n    (noHolders : ∀ holders, ¬ HoldersAt i c ev holders) (noLeaf : ∀ leaf, ¬ LeafAt i c ev leaf) :\n    classify i c ev = .unavailable",
       "statementSha256": "85b730dc2e85369bddd014744b38670be8fd5e766f81374c52242a70df820d21",
       "sourceStory": "**No observation, no status.**\nGiven evidence with no holding observation established at the asked point\nand no history that establishes a leaf.\nWhen the reader answers.\nThen the answer is unavailable.",
@@ -5888,7 +5916,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.missing_token_alone_unavailable",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 602,
+      "line": 650,
       "statement": "theorem missing_token_alone_unavailable (i : Interpretation) (c : Context) (ev : Evidence)\n    (missing : HoldersAt i c ev []) (noLeaf : ∀ leaf, ¬ LeafAt i c ev leaf) :\n    classify i c ev = .unavailable",
       "statementSha256": "5a25406d81975410147e0fca3950f3d5fc8897281c55122e12cb6bfc1b15761d",
       "sourceStory": "**A missing token alone decides nothing.**\nGiven evidence that establishes that no output holds the representative asset\nand establishes no leaf.\nWhen the reader answers.\nThen the answer is unavailable: neither terminal nor never registered.",
@@ -5902,7 +5930,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.missing_token_leaf_decides",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 621,
+      "line": 669,
       "statement": "theorem missing_token_leaf_decides (i : Interpretation) (c : Context) (ev : Evidence)\n    (context : authenticatedContext c ev.environment) (missing : HoldersAt i c ev []) :\n    (classify i c ev = .terminal ↔ LeafAt i c ev (.known .terminal)) ∧\n    (classify i c ev = .neverRegistered ↔ LeafAt i c ev .unknown) ∧\n    classify i c ev ≠ .active ∧ classify i c ev ≠ .pendingTermination",
       "statementSha256": "2f010ec205ee187064b3a1345ee70ba1277f9d783cd25bb9a6105b30d5fd0a53",
       "sourceStory": "**With a missing token the leaf decides.**\nGiven an authenticated context and evidence that establishes that no output\nholds the representative asset.\nWhen the reader answers.\nThen the answer is terminal exactly when the established leaf reads terminal,\nnever registered exactly when it reads unknown, and never active or pending\ntermination.",
@@ -5916,7 +5944,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.holding_observed_elsewhere",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 644,
+      "line": 692,
       "statement": "theorem holding_observed_elsewhere (i : Interpretation) (c : Context) (ev : Evidence)\n    (h : HoldingObservation) (found : ev.holding = some h)\n    (elsewhere : h.point ≠ ev.point ∨ h.asset ≠ representativeAsset i c) :\n    classify i c ev = classify i c { ev with holding := none }",
       "statementSha256": "e94a0407223b5ad5cc5c207dfb575b093ec3572c6faf5ed0b1a2d337b74e5a03",
       "sourceStory": "**A holding observation made elsewhere establishes nothing.**\nGiven a holding observation made at another chain point than the asked one,\nor about another asset than the identifier's representative asset.\nWhen the reader answers.\nThen the answer is the one it gives with no holding observation at all.",
@@ -5930,21 +5958,35 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.history_not_established",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 661,
-      "statement": "theorem history_not_established (i : Interpretation) (c : Context) (ev : Evidence)\n    (h : HistoryObservation) (found : ev.history = some h)\n    (broken : h.point ≠ ev.point ∨ h.registry ≠ registryAsset i c ∨ h.complete = false ∨\n      replay h.folds = none) :\n    classify i c ev = classify i c { ev with history := none }",
-      "statementSha256": "6eac3ca1eadd2ff92722d85e340b24d4c004c6116dd68a56ab8d693eca5cc9c7",
-      "sourceStory": "**A history that is not this registry's complete history establishes\nnothing.**\nGiven a history observation made at another chain point than the asked one,\nor of another registry than the identifier's, or not complete (it starts\nlate or misses a fold), or whose replay meets a change no accepted fold\nmakes.\nWhen the reader answers.\nThen the answer is the one it gives with no history at all.",
+      "line": 714,
+      "statement": "theorem history_not_established (i : Interpretation) (c : Context) (ev : Evidence)\n    (h : HistoryObservation) (found : ev.history = some h)\n    (gap : h.point ≠ ev.point ∨ h.registry ≠ registryAsset i c ∨ h.complete = false) :\n    classify i c ev = classify i c { ev with history := none }",
+      "statementSha256": "b3d8555e91ef452a984357fdcf29da30b9381faf02865e7d13d99609f1c44459",
+      "sourceStory": "**A history that is not this registry's complete history establishes\nnothing.**\nGiven a history observation made at another chain point than the asked one,\nor of another registry than the identifier's, or not complete (it starts\nlate or misses a fold).\nWhen the reader answers.\nThen the answer is the one it gives with no history at all: the gap does not\nmake the answer unavailable when the holders decide it.",
       "story": {
-        "given": "(i : Interpretation) (c : Context) (ev : Evidence)\n    (h : HistoryObservation) (found : ev.history = some h)\n    (broken : h.point ≠ ev.point ∨ h.registry ≠ registryAsset i c ∨ h.complete = false ∨\n      replay h.folds = none)",
+        "given": "(i : Interpretation) (c : Context) (ev : Evidence)\n    (h : HistoryObservation) (found : ev.history = some h)\n    (gap : h.point ≠ ev.point ∨ h.registry ≠ registryAsset i c ∨ h.complete = false)",
         "when": "Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.",
         "then": "classify i c ev = classify i c { ev with history := none }"
       },
-      "storySha256": "c752a870bd11015f0c309ee88256fba6507ade7eb679ed3c245fc8c6313e5fb2"
+      "storySha256": "0d2ed40ba4487e0deede8dacd7da00706ad5494a541b493652b4f0f95554b1c6"
+    },
+    {
+      "declaration": "CardanoKeri.ReaderStatus.broken_history_unavailable",
+      "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
+      "line": 740,
+      "statement": "theorem broken_history_unavailable (i : Interpretation) (c : Context) (ev : Evidence)\n    (broken : BrokenHistory i c ev) : classify i c ev = .unavailable",
+      "statementSha256": "1167f6440f57f9236819463bba64ac4525bddabe3c51e983d0cae98316439fcd",
+      "sourceStory": "**A broken history is a contradiction, whatever the holders show.**\nGiven evidence that holds a complete history of the identifier's registry\nthrough the asked point whose replay fails: some fold registers a key the\nregistry already knows, or terminates a key that is not active, or makes no\nchange.\nWhen the reader answers.\nThen the answer is unavailable, with or without a holder.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context) (ev : Evidence)\n    (broken : BrokenHistory i c ev)",
+        "when": "Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.",
+        "then": "classify i c ev = .unavailable"
+      },
+      "storySha256": "68ab1579e833c3475418f2780b279a431df3db8214f4cefa2003aa8ecc1b26e2"
     },
     {
       "declaration": "CardanoKeri.ReaderStatus.two_holders_unavailable",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 686,
+      "line": 756,
       "statement": "theorem two_holders_unavailable (i : Interpretation) (c : Context) (ev : Evidence)\n    (o o' : AH.ObservedOutput) (rest : List AH.ObservedOutput)\n    (holders : HoldersAt i c ev (o :: o' :: rest)) : classify i c ev = .unavailable",
       "statementSha256": "0302ce071882a7fcf3e86a476e2d6849136faa67ca002cf79f6520cc0d12d578",
       "sourceStory": "**Two holders are inconsistent.**\nGiven evidence that establishes two or more outputs holding the\nrepresentative asset.\nWhen the reader answers.\nThen the answer is unavailable.",
@@ -5958,7 +6000,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.unrecognised_holder_unavailable",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 704,
+      "line": 774,
       "statement": "theorem unrecognised_holder_unavailable (i : Interpretation) (c : Context) (ev : Evidence)\n    (o : AH.ObservedOutput) (holders : HoldersAt i c ev [o])\n    (notLive : ∀ l, ¬ LiveCheckpoint i c o l) (notConvicted : ∀ h, ¬ ConvictedCheckpoint i c o h)\n    (notRequest : ¬ TerminationRequest i c o) : classify i c ev = .unavailable",
       "statementSha256": "3003d37d78e1334fb2312c49f7fb153f62d5493b343a0c0e3e98d604604b104c",
       "sourceStory": "**A holder the reader does not recognise is inconsistent.**\nGiven evidence that establishes one holder that is neither a live checkpoint\nof the identifier, nor its convicted checkpoint, nor its termination request.\nWhen the reader answers.\nThen the answer is unavailable.",
@@ -5972,7 +6014,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.not_a_checkpoint",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 732,
+      "line": 802,
       "statement": "theorem not_a_checkpoint (i : Interpretation) (c : Context) (o : AH.ObservedOutput)\n    (bad : o.credential ≠ c.checkpointCredential ∨\n      AH.quantity o (representativeAsset i c) ≠ 1 ∨ decoded i c o = none ∨\n      (∃ d, decoded i c o = some d ∧ d.aid ≠ c.aid) ∨\n      (∃ d, decoded i c o = some d ∧ d.state.hasOutput = false)) :\n    (∀ l, ¬ LiveCheckpoint i c o l) ∧ (∀ h, ¬ ConvictedCheckpoint i c o h)",
       "statementSha256": "bdb3787f8aa862ad76f0315d4035b571188eab65864ad6a646ee5446f543dd24",
       "sourceStory": "**What is not a checkpoint of the identifier.**\nGiven an output at another credential than the checkpoint's, or holding the\nrepresentative asset in another quantity than one, or whose datum does not\ndecode, or decodes for another identifier, or decodes to a state without an\noutput.\nWhen its form is read.\nThen it is neither a live checkpoint nor the convicted checkpoint of the\nidentifier.",
@@ -5986,7 +6028,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.holder_against_leaf_unavailable",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 759,
+      "line": 829,
       "statement": "theorem holder_against_leaf_unavailable (i : Interpretation) (c : Context) (ev : Evidence)\n    (o : AH.ObservedOutput) (rest : List AH.ObservedOutput) (leaf : Singular.Leaf)\n    (holders : HoldersAt i c ev (o :: rest)) (established : LeafAt i c ev leaf)\n    (inactive : leaf ≠ .known .active) : classify i c ev = .unavailable",
       "statementSha256": "d88916253cd8ae89409c0e863ac7850475a7ca0f471d603ada8c806a40438883",
       "sourceStory": "**A holder against the leaf is inconsistent.**\nGiven evidence that establishes at least one holder of the representative\nasset and establishes a leaf that does not read active.\nWhen the reader answers.\nThen the answer is unavailable.",
@@ -6000,7 +6042,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.active_leaf_without_holder_unavailable",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 780,
+      "line": 850,
       "statement": "theorem active_leaf_without_holder_unavailable (i : Interpretation) (c : Context) (ev : Evidence)\n    (established : LeafAt i c ev (.known .active))\n    (noSingle : ∀ o, ¬ HoldersAt i c ev [o]) : classify i c ev = .unavailable",
       "statementSha256": "a4c7d9a9091f6eb0967e01d380555591e6becd41ec0d2a19ad5ceab9d092bd28",
       "sourceStory": "**A registered key decides nothing without its holder.**\nGiven evidence whose history reads the identifier's key active, and that\nestablishes no single holder of the representative asset.\nWhen the reader answers.\nThen the answer is unavailable: the history says the key was registered and\nnot terminated, and does not say whether its checkpoint is live or\nconvicted.",
@@ -6014,21 +6056,21 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.eligible_holder_is_active",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 800,
-      "statement": "theorem eligible_holder_is_active (i : Interpretation) (c : Context) (ev : Evidence)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput)\n    (eligible : consumableHolding i c ev.environment p now o) (holders : HoldersAt i c ev [o])\n    (allows : LeafAllowsActive i c ev) : classify i c ev = .active",
-      "statementSha256": "64576cd4838c7f3c145f09173ad2e4d256463479af1b8922b5cdce0527a106c2",
+      "line": 870,
+      "statement": "theorem eligible_holder_is_active (i : Interpretation) (c : Context) (ev : Evidence)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput)\n    (eligible : consumableHolding i c ev.environment p now o) (holders : HoldersAt i c ev [o])\n    (allows : HistoryAllowsHolder i c ev) : classify i c ev = .active",
+      "statementSha256": "ce443f4c4f8140cd43e0cf9ac7d64d1313e897f7029b9686d889a5610e8deda5",
       "sourceStory": "**An eligible holding is active.**\nGiven an output the consumer predicate accepts, that the evidence establishes\nas the one holder of the representative asset, with a history that\nestablishes no leaf or whose leaf reads active.\nWhen the reader answers.\nThen the answer is active.",
       "story": {
-        "given": "(i : Interpretation) (c : Context) (ev : Evidence)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput)\n    (eligible : consumableHolding i c ev.environment p now o) (holders : HoldersAt i c ev [o])\n    (allows : LeafAllowsActive i c ev)",
+        "given": "(i : Interpretation) (c : Context) (ev : Evidence)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput)\n    (eligible : consumableHolding i c ev.environment p now o) (holders : HoldersAt i c ev [o])\n    (allows : HistoryAllowsHolder i c ev)",
         "when": "Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.",
         "then": "classify i c ev = .active"
       },
-      "storySha256": "c557882060a36d430cca1b23b6f632e71ac2b0416f6fe2294f286cefbc0680f1"
+      "storySha256": "e082d99b9f31f71f756430ebba134519a6ddab3326f214edfd1193c7a00f7c8a"
     },
     {
       "declaration": "CardanoKeri.ReaderStatus.active_holder_eligibility",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 816,
+      "line": 886,
       "statement": "theorem active_holder_eligibility (i : Interpretation) (c : Context) (e : Environment)\n    (p : Params) (now : Slot) (o : AH.ObservedOutput) (l : Live)\n    (context : authenticatedContext c e) (live : LiveCheckpoint i c o l) :\n    consumableHolding i c e p now o ↔\n      l.frozen = false ∧ l.poisoned = false ∧ l.bornAt + p.W ≤ now",
       "statementSha256": "a85aa96b47e2bd8c46fa4d1b53f53cfa37f6c7560258e8ef267314ffa545fd4c",
       "sourceStory": "**An active identity may be ineligible.**\nGiven an authenticated context and a live checkpoint of the identifier with\nstate `l`.\nWhen the consumer predicate judges that output at `now`.\nThen it accepts exactly when the checkpoint is not frozen, not poisoned and at\nleast the juvenility window old. A young, a frozen and a poisoned checkpoint\nare each an active identity the consumer refuses.",
@@ -6042,7 +6084,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.pending_or_terminal_holder_refused",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 830,
+      "line": 900,
       "statement": "theorem pending_or_terminal_holder_refused (i : Interpretation) (c : Context) (ev : Evidence)\n    (p : Params) (now : Slot) (holders : List AH.ObservedOutput)\n    (status : classify i c ev = .pendingTermination ∨ classify i c ev = .terminal)\n    (established : HoldersAt i c ev holders) :\n    ∀ o ∈ holders, ¬ consumableHolding i c ev.environment p now o ∧\n      consumableHoldingB i c ev.environment p now o = false",
       "statementSha256": "b3113bdd61c213fb00beb0b836c6e7efbe299a20d1fc273c793ccf212aff65f7",
       "sourceStory": "**A pending-termination or terminal identity never satisfies the consumer\npredicate, at the outputs the evidence shows.**\nGiven evidence answered pending termination or terminal, and the holders it\nestablishes.\nWhen the consumer predicate judges any of those holders at any time.\nThen it refuses, as a proposition and as a Boolean.",
@@ -6056,7 +6098,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.applyChange_exact",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 864,
+      "line": 934,
       "statement": "theorem applyChange_exact (members next : Singular.Trie)\n    (change : SingularApplicationHeld.Change) :\n    applyChange members change = some next ↔\n      next = SingularApplicationHeld.targetTrie members change ∧\n      match change with\n      | .register _ key _ _ => Singular.trieGet members key = .unknown\n      | .terminate _ key => Singular.trieGet members key = .known .active",
       "statementSha256": "b14ce6746327dd5ef4602be752b980fc88b62aa869dbd55951a9e85ab03e06a9",
       "sourceStory": "Given a change and the members it is applied to; when the replay applies\nit; then a registration succeeds exactly when its key is unknown and a\ntermination exactly when its key is active, and the result is the registry's\nown successor for that change.",
@@ -6070,7 +6112,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.applyChange_frame",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 883,
+      "line": 953,
       "statement": "theorem applyChange_frame (members next : Singular.Trie)\n    (change : SingularApplicationHeld.Change) (key : Singular.Key)\n    (applied : applyChange members change = some next) (other : change.key ≠ key) :\n    Singular.trieGet next key = Singular.trieGet members key",
       "statementSha256": "e60ef15100753509585e7462c5749e244c403a85ad2f456fd248cd62ed6daea5",
       "sourceStory": "Given a change the replay applies; when another key is read afterwards;\nthen its leaf is unchanged.",
@@ -6084,7 +6126,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.changes_leaf",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 896,
+      "line": 966,
       "statement": "theorem changes_leaf (changes : List SingularApplicationHeld.Change)\n    (members next : Singular.Trie) (key : Singular.Key)\n    (applied : changes.foldlM applyChange members = some next) :\n    (Singular.trieGet next key = .unknown ↔\n      Singular.trieGet members key = .unknown ∧ ∀ change ∈ changes, change.key ≠ key) ∧\n    (Singular.trieGet next key = .known .terminal ↔\n      Singular.trieGet members key = .known .terminal ∨\n      ∃ reference, SingularApplicationHeld.Change.terminate reference key ∈ changes)",
       "statementSha256": "50be9bafadafeb63ae497a3bb8a7d7aab79b1544ba3c43db0344c018d3e4d612",
       "sourceStory": "Given a list of changes the replay applies in order and a key.\nWhen the key's leaf is read afterwards.\nThen it is unknown exactly when it was unknown before and no change names the\nkey, and terminal exactly when it was terminal before or some change is a\ntermination of the key.",
@@ -6098,7 +6140,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.replay_flat",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 963,
+      "line": 1033,
       "statement": "theorem replay_flat (folds : List (List SingularApplicationHeld.Change))\n    (members : Singular.Trie) (replayed : replay folds = some members) :\n    folds.flatten.foldlM applyChange [] = some members",
       "statementSha256": "29d9df7371f22556130816ec39384fde3bffff90a4e546d72b902016049aa689",
       "sourceStory": "Given a history the replay accepts; when its folds are laid end to end;\nthen applying every change in that order from no member gives the same\nmembers.",
@@ -6112,7 +6154,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.replayed_leaf",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 991,
+      "line": 1061,
       "statement": "theorem replayed_leaf (folds : List (List SingularApplicationHeld.Change))\n    (members : Singular.Trie) (key : Singular.Key) (replayed : replay folds = some members) :\n    (Singular.trieGet members key = .unknown ↔ ∀ change ∈ folds.flatten, change.key ≠ key) ∧\n    (Singular.trieGet members key = .known .terminal ↔\n      ∃ reference, SingularApplicationHeld.Change.terminate reference key ∈ folds.flatten)",
       "statementSha256": "163b89a6fd2959e8be517b7ef93dd8dd713c4e2a4c775a3f9a0d16444f133a68",
       "sourceStory": "**Never registered means no change of the key; terminal means its\ntermination.**\nGiven a history the replay accepts and a key.\nWhen the key's leaf is read in the replayed members.\nThen it is unknown exactly when no change of any fold names the key, and\nterminal exactly when some fold terminates the key.",
@@ -6126,7 +6168,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.replayed_leaf_never_absent",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1005,
+      "line": 1075,
       "statement": "theorem replayed_leaf_never_absent (folds : List (List SingularApplicationHeld.Change))\n    (members : Singular.Trie) (key : Singular.Key) (replayed : replay folds = some members) :\n    Singular.trieGet members key ≠ .known .absent",
       "statementSha256": "21767bc03a629349cbba904ec68a57f66a250f9bc2ab443ff4dc302afd0fff46",
       "sourceStory": "**A replayed leaf is unknown, active or terminal.**\nGiven a history the replay accepts and a key.\nWhen the key's leaf is read in the replayed members.\nThen it is never the known absent leaf, which no registration and no\ntermination writes.",
@@ -6140,7 +6182,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.replay_append",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1047,
+      "line": 1117,
       "statement": "theorem replay_append (folds : List (List SingularApplicationHeld.Change))\n    (changes : List SingularApplicationHeld.Change) :\n    replay (folds ++ [changes]) = (replay folds).bind fun members => applyFold members changes",
       "statementSha256": "99895f39a320913ba1235623de76f015a0dcdfcf42585ffbbb4146cff9a33d9a",
       "sourceStory": "Given a history the replay accepts and one more fold; when the longer\nhistory is replayed; then it is the replay of the shorter one followed by the\nchanges of the new fold.",
@@ -6154,7 +6196,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.applyChange_of_accepted",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1054,
+      "line": 1124,
       "statement": "theorem applyChange_of_accepted (hash : AH.Hash) (code : AH.Codec) (release : AH.PublishedRelease)\n    (members next : Singular.Trie) (change : SingularApplicationHeld.Change)\n    (observation : SingularApplicationHeld.FoldObservation)\n    (accepted : SingularApplicationHeld.change .none hash code release members change observation\n      = .ok next) : applyChange members change = some next",
       "statementSha256": "0155a544c3bab85b2b59e340d258d0821a38151a889a33c61989eba0c948a4f1",
       "sourceStory": "Given an accepted change of the registry's fold; when the replay applies\nthe same change to the same members; then it gives the same successor.",
@@ -6168,7 +6210,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.applyChanges_of_accepted",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1069,
+      "line": 1139,
       "statement": "theorem applyChanges_of_accepted (hash : AH.Hash) (code : AH.Codec) (release : AH.PublishedRelease)\n    (observation : SingularApplicationHeld.FoldObservation)\n    (changes : List SingularApplicationHeld.Change) (members next : Singular.Trie)\n    (accepted : changes.foldlM (fun trie change =>\n      SingularApplicationHeld.change .none hash code release trie change observation) members\n      = .ok next) : changes.foldlM applyChange members = some next",
       "statementSha256": "d5db202ab7ff12fa4cb19a3264ce671ac0fff36a4629ac3add7e630c0752e650",
       "sourceStory": "Given an accepted batch of changes of the registry's fold; when the replay\napplies the same changes in order; then it gives the same members.",
@@ -6182,7 +6224,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.applyFold_of_accepted",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1095,
+      "line": 1165,
       "statement": "theorem applyFold_of_accepted (hash : AH.Hash) (code : AH.Codec)\n    (commit : SingularApplicationHeld.TrieCommit) (release : AH.PublishedRelease)\n    (observation : SingularApplicationHeld.FoldObservation)\n    (accepted : SingularApplicationHeld.fold .none hash code commit release observation = true) :\n    applyFold observation.before.trie observation.changes = some observation.after.trie",
       "statementSha256": "f580cf5de88e994be115d1e92afb5238b561a5c98d9ad9f11fd5b6fc450bd244",
       "sourceStory": "**The replay follows the registry's fold.**\nGiven a fold the public registry accepts.\nWhen the replay applies the fold's changes to the registry's members before\nit.\nThen it gives the registry's members after it.",
@@ -6196,7 +6238,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.tokenId_beq_self",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1115,
+      "line": 1185,
       "statement": "theorem tokenId_beq_self (a : Singular.TokenId) : (a == a) = true",
       "statementSha256": "6de1a40a9638bc1346ce390d17bc3d7682d661a4f4196ce2b15a5a577c04fa8a",
       "sourceStory": "A registry identity compares equal to itself.",
@@ -6210,7 +6252,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.fold_keeps_identity",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1120,
+      "line": 1190,
       "statement": "theorem fold_keeps_identity (hash : AH.Hash) (code : AH.Codec)\n    (commit : SingularApplicationHeld.TrieCommit) (release : AH.PublishedRelease)\n    (observation : SingularApplicationHeld.FoldObservation)\n    (accepted : SingularApplicationHeld.fold .none hash code commit release observation = true) :\n    observation.after.identity = observation.before.identity",
       "statementSha256": "d73968eab22c7b137c4e64cf33fff826cac9f98c4f6ea1723a786b38d8c2fe12",
       "sourceStory": "Given a fold the public registry accepts; when the registry's identity is\nread after it; then it is the identity before it.",
@@ -6224,7 +6266,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.registryFolds_reachable",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1132,
+      "line": 1202,
       "statement": "theorem registryFolds_reachable (hash : AH.Hash) (code : AH.Codec)\n    (commit : SingularApplicationHeld.TrieCommit) (release : AH.PublishedRelease)\n    (identity : Singular.TokenId) (world : SingularApplicationHeld.CandidateWorld)\n    (folds : List (List SingularApplicationHeld.Change))\n    (history : RegistryFolds hash code commit release identity world folds) :\n    SingularApplicationHeld.CandidateReachable hash code commit release world",
       "statementSha256": "acd1d21546a07ed1ed82a70a046b7a593326e26002379ab0fc709c43adab5456",
       "sourceStory": "Given the folds of a registry along a history; when the history is read\nwithout them; then it is a reachable history of the public registry model.",
@@ -6238,7 +6280,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.reachable_has_registryFolds",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1154,
+      "line": 1224,
       "statement": "theorem reachable_has_registryFolds (hash : AH.Hash) (code : AH.Codec)\n    (commit : SingularApplicationHeld.TrieCommit) (release : AH.PublishedRelease)\n    (identity : Singular.TokenId) (world : SingularApplicationHeld.CandidateWorld)\n    (reachable : SingularApplicationHeld.CandidateReachable hash code commit release world) :\n    ∃ folds, RegistryFolds hash code commit release identity world folds",
       "statementSha256": "fea7e4a0f21cddc83c8ab06a1155462040f2d84183bf0f0a466035c1e3b222df",
       "sourceStory": "Given a reachable history of the public registry model and any registry\nidentity; when the registry's folds along the history are asked for; then\nthere is such a list: the relation adds the folds to the history and removes\nno history.",
@@ -6252,7 +6294,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.no_folds_before_creation",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1177,
+      "line": 1247,
       "statement": "theorem no_folds_before_creation (hash : AH.Hash) (code : AH.Codec)\n    (commit : SingularApplicationHeld.TrieCommit) (release : AH.PublishedRelease)\n    (identity : Singular.TokenId) (world : SingularApplicationHeld.CandidateWorld)\n    (folds : List (List SingularApplicationHeld.Change))\n    (history : RegistryFolds hash code commit release identity world folds)\n    (absent : identity ∉ world.registries.map (·.identity)) : folds = []",
       "statementSha256": "c0368967fa3fbef82a7494f4871f5dafa26c9b42c96f558dd1e3abf1141fd9b3",
       "sourceStory": "Given the folds of a registry along a history in whose world the registry\ndoes not exist; when they are read; then there are none: a registry has no\nfold before its creation.",
@@ -6266,7 +6308,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.registry_members_are_replayed",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1217,
+      "line": 1287,
       "statement": "theorem registry_members_are_replayed (hash : AH.Hash) (code : AH.Codec)\n    (commit : SingularApplicationHeld.TrieCommit) (release : AH.PublishedRelease)\n    (identity : Singular.TokenId) (world : SingularApplicationHeld.CandidateWorld)\n    (folds : List (List SingularApplicationHeld.Change))\n    (history : RegistryFolds hash code commit release identity world folds) :\n    ∀ registry ∈ world.registries, registry.identity = identity →\n      replay folds = some registry.trie",
       "statementSha256": "c2665ab410f6a7757c5f455741baf493212b46e059865d3a51c865503f25deaf",
       "sourceStory": "**Replaying a registry's folds gives the registry's members.**\nGiven the folds of a registry along a history of the public registry model.\nWhen they are replayed from no member.\nThen the replay succeeds and gives exactly the members of that registry in\nthe history's world.",
@@ -6280,35 +6322,35 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.replayed_leaf_is_registry_leaf",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1271,
-      "statement": "theorem replayed_leaf_is_registry_leaf (i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry) (ev : Evidence) (leaf : Singular.Leaf)\n    (faithful : Faithful i c commit world ev) (member : registry ∈ world.registries)\n    (named : registry.identity = registryAsset i c) (established : LeafAt i c ev leaf) :\n    leaf = Singular.trieGet registry.trie (i.keyOf c.aid)",
-      "statementSha256": "66eae0238910a4bd5c313ef8e36ce3c0ffe27fde936ba95c03bca2eaab3763d4",
+      "line": 1341,
+      "statement": "theorem replayed_leaf_is_registry_leaf (i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry) (ev : Evidence) (leaf : Singular.Leaf)\n    (faithful : FaithfulHistory i c commit world ev) (member : registry ∈ world.registries)\n    (named : registry.identity = registryAsset i c) (established : LeafAt i c ev leaf) :\n    leaf = Singular.trieGet registry.trie (i.keyOf c.aid)",
+      "statementSha256": "5ac7809fa7c86ca664e536379ef49ae3d0773d33d3369fa7e0224beda517c32d",
       "sourceStory": "**The replayed leaf is the registry's leaf.**\nGiven a world of the registry's history, the context's registry in it, and\nevidence faithful to the world.\nWhen the evidence establishes a leaf for the identifier's key by replaying\nits history.\nThen that leaf is the leaf of the key in the registry.",
       "story": {
-        "given": "(i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry) (ev : Evidence) (leaf : Singular.Leaf)\n    (faithful : Faithful i c commit world ev) (member : registry ∈ world.registries)\n    (named : registry.identity = registryAsset i c) (established : LeafAt i c ev leaf)",
+        "given": "(i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry) (ev : Evidence) (leaf : Singular.Leaf)\n    (faithful : FaithfulHistory i c commit world ev) (member : registry ∈ world.registries)\n    (named : registry.identity = registryAsset i c) (established : LeafAt i c ev leaf)",
         "when": "Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.",
         "then": "leaf = Singular.trieGet registry.trie (i.keyOf c.aid)"
       },
-      "storySha256": "a7b528e4a51a020d2b23b9f502d16a37d4431e1716ec40c83966ca9386a9fcb5"
+      "storySha256": "8c6d223a3224ad8d7a451d117fdf2cf46ca453a42ba283b3a1d4fc51b78aa682"
     },
     {
       "declaration": "CardanoKeri.ReaderStatus.complete_history_establishes_the_leaf",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1291,
-      "statement": "theorem complete_history_establishes_the_leaf (i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (ev : Evidence) (h : HistoryObservation) (faithful : Faithful i c commit world ev)\n    (found : ev.history = some h) (point : h.point = ev.point)\n    (registryOf : h.registry = registryAsset i c) (complete : h.complete = true) :\n    ∃ registry ∈ world.registries, registry.identity = registryAsset i c ∧\n      LeafAt i c ev (Singular.trieGet registry.trie (i.keyOf c.aid))",
-      "statementSha256": "99505df162b784ee194802fa454254beb26a975ade765fd14936b83294133575",
+      "line": 1361,
+      "statement": "theorem complete_history_establishes_the_leaf (i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (ev : Evidence) (h : HistoryObservation) (faithful : FaithfulHistory i c commit world ev)\n    (found : ev.history = some h) (point : h.point = ev.point)\n    (registryOf : h.registry = registryAsset i c) (complete : h.complete = true) :\n    ∃ registry ∈ world.registries, registry.identity = registryAsset i c ∧\n      LeafAt i c ev (Singular.trieGet registry.trie (i.keyOf c.aid))",
+      "statementSha256": "e85b0a047d80acedd876853ddc13448cc264d66702038a25044717cda8ecad42",
       "sourceStory": "**A complete faithful history always establishes the leaf.**\nGiven evidence faithful to a world that holds a complete history of the\nidentifier's registry through the asked point.\nWhen the history is replayed.\nThen the registry exists in the world, the replay succeeds, and the evidence\nestablishes the leaf of the identifier's key in that registry.",
       "story": {
-        "given": "(i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (ev : Evidence) (h : HistoryObservation) (faithful : Faithful i c commit world ev)\n    (found : ev.history = some h) (point : h.point = ev.point)\n    (registryOf : h.registry = registryAsset i c) (complete : h.complete = true)",
+        "given": "(i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (ev : Evidence) (h : HistoryObservation) (faithful : FaithfulHistory i c commit world ev)\n    (found : ev.history = some h) (point : h.point = ev.point)\n    (registryOf : h.registry = registryAsset i c) (complete : h.complete = true)",
         "when": "Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.",
         "then": "∃ registry ∈ world.registries, registry.identity = registryAsset i c ∧\n      LeafAt i c ev (Singular.trieGet registry.trie (i.keyOf c.aid))"
       },
-      "storySha256": "8b16abfc0f36c6a67dc5aeb8a27d4b1410dc038d06d5b31784322239d8dd4a86"
+      "storySha256": "b8ed26353c0188e6f9aa910419c85bc0c6a31a3cc1e1a1bfcb94cc68d21a743e"
     },
     {
       "declaration": "CardanoKeri.ReaderStatus.no_positive_of_sum_zero",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1315,
+      "line": 1390,
       "statement": "theorem no_positive_of_sum_zero {α : Type} (xs : List α) (f : α → Nat)\n    (zero : (xs.map f).sum = 0) : xs.filter (fun x => decide (0 < f x)) = []",
       "statementSha256": "03d02e4559b02f591fafb32bddca6c67e53f74d5fe17acd8abea1c0655f7adf9",
       "sourceStory": "Given a list and a count per element whose total is zero; when the\nelements with a positive count are selected; then there are none.",
@@ -6322,7 +6364,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.single_positive_of_sum_one",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1327,
+      "line": 1402,
       "statement": "theorem single_positive_of_sum_one {α : Type} (xs : List α) (f : α → Nat)\n    (one : (xs.map f).sum = 1) :\n    ∃ x, xs.filter (fun x => decide (0 < f x)) = [x] ∧ f x = 1",
       "statementSha256": "c0f8c36b2c48330e0b0abcc9ce6233bda623fbd911427af7c87d5555567c80b4",
       "sourceStory": "Given a list and a count per element whose total is one; when the elements\nwith a positive count are selected; then there is exactly one, with count one.",
@@ -6336,7 +6378,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.mem_holdersIn",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1344,
+      "line": 1419,
       "statement": "theorem mem_holdersIn (i : Interpretation) (c : Context)\n    (world : SingularApplicationHeld.CandidateWorld) (o : AH.ObservedOutput) :\n    o ∈ holdersIn i c world ↔\n      o ∈ world.unspent ∧ 0 < AH.quantity o (representativeAsset i c)",
       "statementSha256": "39e5d16a6d9513fb718644ea486d2631f1c74342980d2a4f1660feea9f0a0b48",
       "sourceStory": "Given a world; when an output is among the holders of the identifier's\nrepresentative asset; then it is unspent in the world and holds a positive\nquantity of the asset, and conversely.",
@@ -6350,7 +6392,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.request_holds_asset",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1352,
+      "line": 1427,
       "statement": "theorem request_holds_asset (i : Interpretation) (c : Context) (o : AH.ObservedOutput)\n    (request : TerminationRequest i c o) : 0 < AH.quantity o (representativeAsset i c)",
       "statementSha256": "6af57759c3395fa248d6374ce1307e83d260b1273d969411d6047c2b9547b49a",
       "sourceStory": "Given a termination request of the identifier's key; when its assets are\nread; then it holds a positive quantity of the representative asset.",
@@ -6364,21 +6406,21 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.holders_follow_leaf",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1378,
-      "statement": "theorem holders_follow_leaf (i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (premises : SingularApplicationHeld.HistoryPremises i.hash i.code commit c.release world\n      registry (i.keyOf c.aid))\n    (named : registry.identity = registryAsset i c) :\n    (Singular.trieGet registry.trie (i.keyOf c.aid) = .known .active →\n      ∃ o, holdersIn i c world = [o] ∧ AH.quantity o (representativeAsset i c) = 1) ∧\n    (Singular.trieGet registry.trie (i.keyOf c.aid) ≠ .known .active →\n      holdersIn i c world = [])",
-      "statementSha256": "1f46ae622ce9cc92ba1b2edec9099ecab118617d39e910d4e054a949d13e75c5",
+      "line": 1453,
+      "statement": "theorem holders_follow_leaf (i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)\n    (member : registry ∈ world.registries)\n    (encoding : AH.FiniteEncoding i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (collision : AH.FiniteCollisionFree i.hash i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (named : registry.identity = registryAsset i c) :\n    (Singular.trieGet registry.trie (i.keyOf c.aid) = .known .active →\n      ∃ o, holdersIn i c world = [o] ∧ AH.quantity o (representativeAsset i c) = 1) ∧\n    (Singular.trieGet registry.trie (i.keyOf c.aid) ≠ .known .active →\n      holdersIn i c world = [])",
+      "statementSha256": "8397e57413abd21a9f53a76c65d685df6b6997ed722bc1c144187f013440a6a6",
       "sourceStory": "**The supply follows the leaf.**\nGiven a reachable world of the registry's history, the context's registry in\nit and the history's finite encoding and collision premises.\nWhen the unspent outputs holding the identifier's representative asset are\nlisted.\nThen an active leaf has exactly one holder, holding the asset exactly once,\nand every other leaf (unknown, terminal) has none. A missing token therefore\nfits a key that was never registered and a key that is terminal alike.",
       "story": {
-        "given": "(i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (premises : SingularApplicationHeld.HistoryPremises i.hash i.code commit c.release world\n      registry (i.keyOf c.aid))\n    (named : registry.identity = registryAsset i c)",
+        "given": "(i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)\n    (member : registry ∈ world.registries)\n    (encoding : AH.FiniteEncoding i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (collision : AH.FiniteCollisionFree i.hash i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (named : registry.identity = registryAsset i c)",
         "when": "Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.",
         "then": "(Singular.trieGet registry.trie (i.keyOf c.aid) = .known .active →\n      ∃ o, holdersIn i c world = [o] ∧ AH.quantity o (representativeAsset i c) = 1) ∧\n    (Singular.trieGet registry.trie (i.keyOf c.aid) ≠ .known .active →\n      holdersIn i c world = [])"
       },
-      "storySha256": "cdfe5258d4d2ca1a4ea9b425be3c1d448b712dba091ca729e67aa7eb64f9a0f4"
+      "storySha256": "73dd48b7bbd25d1b245a50b9aa65b484672a96ca8a377b3f248f2c44f143483b"
     },
     {
       "declaration": "CardanoKeri.ReaderStatus.status_is_warranted",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1408,
+      "line": 1487,
       "statement": "theorem status_is_warranted (i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry) (ev : Evidence) (status : Status)\n    (member : registry ∈ world.registries) (named : registry.identity = registryAsset i c)\n    (faithful : Faithful i c commit world ev) (answer : classify i c ev = status)\n    (available : status ≠ .unavailable) : Warrants i c world registry status",
       "statementSha256": "5b97b77bca7e25b1f750e14586a1bd6eb893a268b7cbfb302ba02c06968c99d3",
       "sourceStory": "**A status is never wrong.**\nGiven a world of the registry's history, the context's registry in it and\nevidence faithful to the world.\nWhen the reader answers a status other than unavailable.\nThen the world warrants that status: an unspent live checkpoint for active,\nan unspent convicted checkpoint or termination request for pending\ntermination, the terminal leaf for terminal, the unknown leaf for never\nregistered.",
@@ -6392,77 +6434,105 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.holder_is_the_only_one",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1427,
-      "statement": "theorem holder_is_the_only_one (i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (premises : SingularApplicationHeld.HistoryPremises i.hash i.code commit c.release world\n      registry (i.keyOf c.aid))\n    (named : registry.identity = registryAsset i c) (o : AH.ObservedOutput)\n    (unspent : o ∈ world.unspent) (held : 0 < AH.quantity o (representativeAsset i c)) :\n    Singular.trieGet registry.trie (i.keyOf c.aid) = .known .active ∧\n      holdersIn i c world = [o]",
-      "statementSha256": "bf3291566cb50dd1161e019d91ef21fe6a6559d03213c4cebf5dc015d50805d8",
+      "line": 1506,
+      "statement": "theorem holder_is_the_only_one (i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)\n    (member : registry ∈ world.registries)\n    (encoding : AH.FiniteEncoding i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (collision : AH.FiniteCollisionFree i.hash i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (named : registry.identity = registryAsset i c) (o : AH.ObservedOutput)\n    (unspent : o ∈ world.unspent) (held : 0 < AH.quantity o (representativeAsset i c)) :\n    Singular.trieGet registry.trie (i.keyOf c.aid) = .known .active ∧\n      holdersIn i c world = [o]",
+      "statementSha256": "4ac8b3a4176c2fd3521980d001197b668da3f62d003c91b32e6b57feca317c89",
       "sourceStory": "Given a reachable world and an unspent output that holds a positive\nquantity of the identifier's representative asset; when the leaf and the\nholders are read; then the leaf is active and that output is the only holder.",
       "story": {
-        "given": "(i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (premises : SingularApplicationHeld.HistoryPremises i.hash i.code commit c.release world\n      registry (i.keyOf c.aid))\n    (named : registry.identity = registryAsset i c) (o : AH.ObservedOutput)\n    (unspent : o ∈ world.unspent) (held : 0 < AH.quantity o (representativeAsset i c))",
+        "given": "(i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)\n    (member : registry ∈ world.registries)\n    (encoding : AH.FiniteEncoding i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (collision : AH.FiniteCollisionFree i.hash i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (named : registry.identity = registryAsset i c) (o : AH.ObservedOutput)\n    (unspent : o ∈ world.unspent) (held : 0 < AH.quantity o (representativeAsset i c))",
         "when": "Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.",
         "then": "Singular.trieGet registry.trie (i.keyOf c.aid) = .known .active ∧\n      holdersIn i c world = [o]"
       },
-      "storySha256": "a00f128e8c32680c50223f236e78f3b1f27362035343916366f0097cf89dba25"
+      "storySha256": "0804900db4d0a8c966b70e4eab656ea32bc0ea044144d43c9b00456eea28a875"
+    },
+    {
+      "declaration": "CardanoKeri.ReaderStatus.holder_decides_alone",
+      "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
+      "line": 1542,
+      "statement": "theorem holder_decides_alone (i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)\n    (member : registry ∈ world.registries)\n    (encoding : AH.FiniteEncoding i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (collision : AH.FiniteCollisionFree i.hash i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (named : registry.identity = registryAsset i c) (ev : Evidence)\n    (faithful : FaithfulHolders i c world ev)\n    (answer : classify i c ev = .active ∨ classify i c ev = .pendingTermination) :\n    Singular.trieGet registry.trie (i.keyOf c.aid) = .known .active ∧\n    ∃ o, holder i c ev = some o ∧ o ∈ world.unspent ∧ holdersIn i c world = [o]",
+      "statementSha256": "0aaa800eba2ee3f31e478a2a0075b724db79b92ed09c093111a632fec48430b2",
+      "sourceStory": "**A holder decides alone.**\nGiven a reachable world of the registry's history, the context's registry in\nit, a faithful finite encoding and collision freedom over the history's\npreimages and the identifier's active preimage, and evidence whose\nestablished holders are the world's holders, whatever its history: missing,\nincomplete, of another point, or not the registry's at all.\nWhen the reader answers active or pending termination.\nThen the registry's leaf of the identifier's key is active, and the holder\nthe answer names is unspent in the world and is the only output holding the\nasset. The holder alone warrants the answer: the asset exists only while the\nleaf is active.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)\n    (member : registry ∈ world.registries)\n    (encoding : AH.FiniteEncoding i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (collision : AH.FiniteCollisionFree i.hash i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (named : registry.identity = registryAsset i c) (ev : Evidence)\n    (faithful : FaithfulHolders i c world ev)\n    (answer : classify i c ev = .active ∨ classify i c ev = .pendingTermination)",
+        "when": "Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.",
+        "then": "Singular.trieGet registry.trie (i.keyOf c.aid) = .known .active ∧\n    ∃ o, holder i c ev = some o ∧ o ∈ world.unspent ∧ holdersIn i c world = [o]"
+      },
+      "storySha256": "cede1d89aa6c19544b996bd77b7bb5fedea4b5c23c99dabe5d5cd846d5f64ab8"
+    },
+    {
+      "declaration": "CardanoKeri.ReaderStatus.history_decides_alone",
+      "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
+      "line": 1582,
+      "statement": "theorem history_decides_alone (i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)\n    (member : registry ∈ world.registries)\n    (encoding : AH.FiniteEncoding i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (collision : AH.FiniteCollisionFree i.hash i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (named : registry.identity = registryAsset i c) (ev : Evidence)\n    (faithful : FaithfulHistory i c commit world ev)\n    (answer : classify i c ev = .terminal ∨ classify i c ev = .neverRegistered) :\n    holdersIn i c world = [] ∧\n    (classify i c ev = .terminal →\n      Singular.trieGet registry.trie (i.keyOf c.aid) = .known .terminal) ∧\n    (classify i c ev = .neverRegistered →\n      Singular.trieGet registry.trie (i.keyOf c.aid) = .unknown)",
+      "statementSha256": "a6f2fcb6aad63bdd50a398be3d7ee5e77b8fe3f2f2596e90359839faa6606c67",
+      "sourceStory": "**A complete history decides alone.**\nGiven a reachable world of the registry's history, the context's registry in\nit, a faithful finite encoding and collision freedom over the history's\npreimages and the identifier's active preimage, and evidence whose complete\nhistory is the registry's history in the world, whatever its holding\nobservation: missing, failed, or of another point.\nWhen the reader answers terminal or never registered.\nThen the registry's leaf of the identifier's key is terminal, or unknown,\nas answered, and no unspent output of the world holds the asset. The history\nalone warrants the answer.",
+      "story": {
+        "given": "(i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)\n    (member : registry ∈ world.registries)\n    (encoding : AH.FiniteEncoding i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (collision : AH.FiniteCollisionFree i.hash i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (named : registry.identity = registryAsset i c) (ev : Evidence)\n    (faithful : FaithfulHistory i c commit world ev)\n    (answer : classify i c ev = .terminal ∨ classify i c ev = .neverRegistered)",
+        "when": "Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.",
+        "then": "holdersIn i c world = [] ∧\n    (classify i c ev = .terminal →\n      Singular.trieGet registry.trie (i.keyOf c.aid) = .known .terminal) ∧\n    (classify i c ev = .neverRegistered →\n      Singular.trieGet registry.trie (i.keyOf c.aid) = .unknown)"
+      },
+      "storySha256": "45ae84e30d9e6253f139c7bb92a583aad25914a4870c2ee343cee85184f2850d"
     },
     {
       "declaration": "CardanoKeri.ReaderStatus.warrants_exclusive",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1453,
-      "statement": "theorem warrants_exclusive (i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (premises : SingularApplicationHeld.HistoryPremises i.hash i.code commit c.release world\n      registry (i.keyOf c.aid))\n    (named : registry.identity = registryAsset i c) (s t : Status)\n    (first : Warrants i c world registry s) (second : Warrants i c world registry t) : s = t",
-      "statementSha256": "bd399d33fba8df6268a60433ad5cd009f5a763e72aeb6789cf591cf72219aa26",
-      "sourceStory": "**The four statuses exclude one another on reachable states.**\nGiven a reachable world of the registry's history, the context's registry in\nit and the history's finite encoding and collision premises.\nWhen the world warrants two statuses.\nThen they are the same status.",
+      "line": 1622,
+      "statement": "theorem warrants_exclusive (i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)\n    (member : registry ∈ world.registries)\n    (encoding : AH.FiniteEncoding i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (collision : AH.FiniteCollisionFree i.hash i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (named : registry.identity = registryAsset i c) (s t : Status)\n    (first : Warrants i c world registry s) (second : Warrants i c world registry t) : s = t",
+      "statementSha256": "eca6857ec07634eb259b8fc6a837d21dc4829d00cc0f9f7389006e2f66722d39",
+      "sourceStory": "**The four statuses exclude one another on reachable states.**\nGiven a reachable world of the registry's history, the context's registry in\nit, and the model's two identity assumptions over the history's preimages and\nthe identifier's active preimage: a faithful finite encoding and collision\nfreedom. Both are named in the statement; without them a world can warrant\ntwo statuses, because two keys can share an asset name.\nWhen the world warrants two statuses.\nThen they are the same status.",
       "story": {
-        "given": "(i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (premises : SingularApplicationHeld.HistoryPremises i.hash i.code commit c.release world\n      registry (i.keyOf c.aid))\n    (named : registry.identity = registryAsset i c) (s t : Status)\n    (first : Warrants i c world registry s) (second : Warrants i c world registry t)",
+        "given": "(i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)\n    (member : registry ∈ world.registries)\n    (encoding : AH.FiniteEncoding i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (collision : AH.FiniteCollisionFree i.hash i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (named : registry.identity = registryAsset i c) (s t : Status)\n    (first : Warrants i c world registry s) (second : Warrants i c world registry t)",
         "when": "Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.",
         "then": "s = t"
       },
-      "storySha256": "cdea2d1b81787ffa59821b1045bebed5c39265aee960e8732aae01ef6c3a09ca"
+      "storySha256": "3eb5964f45453e5cf007d15f2efbd5a88c1f29eef414cdfd52e0dee631b8e25d"
     },
     {
       "declaration": "CardanoKeri.ReaderStatus.warranted_status_is_answered",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1542,
-      "statement": "theorem warranted_status_is_answered (i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (premises : SingularApplicationHeld.HistoryPremises i.hash i.code commit c.release world\n      registry (i.keyOf c.aid))\n    (named : registry.identity = registryAsset i c) (ev : Evidence) (status : Status)\n    (context : authenticatedContext c ev.environment)\n    (faithful : Faithful i c commit world ev)\n    (holdersSeen : ∃ holders, HoldersAt i c ev holders) (leafSeen : ∃ leaf, LeafAt i c ev leaf)\n    (warranted : Warrants i c world registry status) : classify i c ev = status",
-      "statementSha256": "49f370e99e4ed6374aad5ed5027885495f8726021042fafb7144646a7473e7d1",
+      "line": 1715,
+      "statement": "theorem warranted_status_is_answered (i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)\n    (member : registry ∈ world.registries)\n    (encoding : AH.FiniteEncoding i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (collision : AH.FiniteCollisionFree i.hash i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (named : registry.identity = registryAsset i c) (ev : Evidence) (status : Status)\n    (context : authenticatedContext c ev.environment)\n    (faithful : Faithful i c commit world ev)\n    (holdersSeen : ∃ holders, HoldersAt i c ev holders) (leafSeen : ∃ leaf, LeafAt i c ev leaf)\n    (warranted : Warrants i c world registry status) : classify i c ev = status",
+      "statementSha256": "253e746c30536c932bb96c0c197287bce428c4ed7d0ae076369fbb635ed43101",
       "sourceStory": "**Faithful and complete evidence gets the status the state warrants.**\nGiven a reachable world of the registry's history, the context's registry in\nit, the history's finite encoding and collision premises, an authenticated\ncontext, and evidence faithful to the world that establishes both the holders\nand the leaf at the asked point.\nWhen the world warrants a status.\nThen the reader answers that status.",
       "story": {
-        "given": "(i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (premises : SingularApplicationHeld.HistoryPremises i.hash i.code commit c.release world\n      registry (i.keyOf c.aid))\n    (named : registry.identity = registryAsset i c) (ev : Evidence) (status : Status)\n    (context : authenticatedContext c ev.environment)\n    (faithful : Faithful i c commit world ev)\n    (holdersSeen : ∃ holders, HoldersAt i c ev holders) (leafSeen : ∃ leaf, LeafAt i c ev leaf)\n    (warranted : Warrants i c world registry status)",
+        "given": "(i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)\n    (member : registry ∈ world.registries)\n    (encoding : AH.FiniteEncoding i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (collision : AH.FiniteCollisionFree i.hash i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (named : registry.identity = registryAsset i c) (ev : Evidence) (status : Status)\n    (context : authenticatedContext c ev.environment)\n    (faithful : Faithful i c commit world ev)\n    (holdersSeen : ∃ holders, HoldersAt i c ev holders) (leafSeen : ∃ leaf, LeafAt i c ev leaf)\n    (warranted : Warrants i c world registry status)",
         "when": "Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.",
         "then": "classify i c ev = status"
       },
-      "storySha256": "b91b538ecfdf31f43a9913b2e1ba0b6bef9da6c10eac6526ca8c1924ab295309"
+      "storySha256": "e452df2fd4ca156d03c92543d74764501a78d6b0c9d0409d71c85dfe2a8b1626"
     },
     {
       "declaration": "CardanoKeri.ReaderStatus.pending_or_terminal_never_consumable",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1597,
-      "statement": "theorem pending_or_terminal_never_consumable (i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (premises : SingularApplicationHeld.HistoryPremises i.hash i.code commit c.release world\n      registry (i.keyOf c.aid))\n    (named : registry.identity = registryAsset i c) (e : Environment) (p : Params) (now : Slot)\n    (warranted : Warrants i c world registry .pendingTermination ∨\n      Warrants i c world registry .terminal) :\n    ∀ o ∈ world.unspent, ¬ consumableHolding i c e p now o ∧\n      consumableHoldingB i c e p now o = false",
-      "statementSha256": "5de4d7909f812a4937abfd6d901ae32f48917647122ebd9448c3ecac0d6bf499",
+      "line": 1774,
+      "statement": "theorem pending_or_terminal_never_consumable (i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)\n    (member : registry ∈ world.registries)\n    (encoding : AH.FiniteEncoding i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (collision : AH.FiniteCollisionFree i.hash i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (named : registry.identity = registryAsset i c) (e : Environment) (p : Params) (now : Slot)\n    (warranted : Warrants i c world registry .pendingTermination ∨\n      Warrants i c world registry .terminal) :\n    ∀ o ∈ world.unspent, ¬ consumableHolding i c e p now o ∧\n      consumableHoldingB i c e p now o = false",
+      "statementSha256": "32aaab8d1f2befed7507bc2c44b327a9a947f738f254de7e7c22652e4305586e",
       "sourceStory": "**A pending-termination or terminal identity never satisfies the consumer\npredicate.**\nGiven a reachable world of the registry's history, the context's registry in\nit and the history's finite encoding and collision premises, where the world\nwarrants pending termination or terminal.\nWhen the consumer predicate judges any unspent output of that world, under\nany environment and parameters, at any time.\nThen it refuses, as a proposition and as a Boolean.",
       "story": {
-        "given": "(i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (premises : SingularApplicationHeld.HistoryPremises i.hash i.code commit c.release world\n      registry (i.keyOf c.aid))\n    (named : registry.identity = registryAsset i c) (e : Environment) (p : Params) (now : Slot)\n    (warranted : Warrants i c world registry .pendingTermination ∨\n      Warrants i c world registry .terminal)",
+        "given": "(i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)\n    (member : registry ∈ world.registries)\n    (encoding : AH.FiniteEncoding i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (collision : AH.FiniteCollisionFree i.hash i.code\n      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))\n    (named : registry.identity = registryAsset i c) (e : Environment) (p : Params) (now : Slot)\n    (warranted : Warrants i c world registry .pendingTermination ∨\n      Warrants i c world registry .terminal)",
         "when": "Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.",
         "then": "∀ o ∈ world.unspent, ¬ consumableHolding i c e p now o ∧\n      consumableHoldingB i c e p now o = false"
       },
-      "storySha256": "3d0a04e255a43d9b4bb039e1b200df2a6ffd1f257ab743cb77304adcd8cfedca"
+      "storySha256": "4ab8f38d6bd56de3c6d362fc82f54399dc15fe7f6085748ea31d42fd6b174738"
     },
     {
       "declaration": "CardanoKeri.ReaderStatus.burn_is_the_terminating_fold",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1629,
-      "statement": "theorem burn_is_the_terminating_fold (i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit)\n    (before after : SingularApplicationHeld.CandidateWorld)\n    (view : SingularApplicationHeld.Assets.TxView)\n    (folded : Option SingularApplicationHeld.FoldObservation)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (transaction : SingularApplicationHeld.HistoryTransaction i.hash i.code commit c.release\n      before after view folded)\n    (premises : SingularApplicationHeld.HistoryPremises i.hash i.code commit c.release before\n      registry (i.keyOf c.aid))\n    (named : registry.identity = registryAsset i c)\n    (encoding : AH.FiniteEncoding i.code\n      (after.domain ++ [.active registry.identity (i.keyOf c.aid)]))\n    (collision : AH.FiniteCollisionFree i.hash i.code\n      (after.domain ++ [.active registry.identity (i.keyOf c.aid)]))\n    (burn : SingularApplicationHeld.Assets.mintQty view (representativeAsset i c) < 0) :\n    ∃ o, folded = some o ∧ registryAsset i c = o.before.identity ∧\n      (∃ reference, SingularApplicationHeld.Change.terminate reference (i.keyOf c.aid) ∈\n        o.changes) ∧\n      Singular.trieGet o.after.trie (i.keyOf c.aid) = .known .terminal",
-      "statementSha256": "2cfd839201e7f41523a6fbad37e8964044255426da4d4537d80ec1053f3585c8",
+      "line": 1810,
+      "statement": "theorem burn_is_the_terminating_fold (i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit)\n    (before after : SingularApplicationHeld.CandidateWorld)\n    (view : SingularApplicationHeld.Assets.TxView)\n    (folded : Option SingularApplicationHeld.FoldObservation)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (transaction : SingularApplicationHeld.HistoryTransaction i.hash i.code commit c.release\n      before after view folded)\n    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release before)\n    (member : registry ∈ before.registries)\n    (encodingBefore : AH.FiniteEncoding i.code\n      (SingularApplicationHeld.historyDomain before registry (i.keyOf c.aid)))\n    (collisionBefore : AH.FiniteCollisionFree i.hash i.code\n      (SingularApplicationHeld.historyDomain before registry (i.keyOf c.aid)))\n    (named : registry.identity = registryAsset i c)\n    (encoding : AH.FiniteEncoding i.code\n      (after.domain ++ [.active registry.identity (i.keyOf c.aid)]))\n    (collision : AH.FiniteCollisionFree i.hash i.code\n      (after.domain ++ [.active registry.identity (i.keyOf c.aid)]))\n    (burn : SingularApplicationHeld.Assets.mintQty view (representativeAsset i c) < 0) :\n    ∃ o, folded = some o ∧ registryAsset i c = o.before.identity ∧\n      (∃ reference, SingularApplicationHeld.Change.terminate reference (i.keyOf c.aid) ∈\n        o.changes) ∧\n      Singular.trieGet o.after.trie (i.keyOf c.aid) = .known .terminal",
+      "statementSha256": "f923842b72849da271217083071ea051f44035e0418e2c190cfd28dd6c15f5c2",
       "sourceStory": "**A burn of the identifier's asset is the terminating fold of its registry\nand key.**\nGiven a reachable world of the registry's history, its next transaction (a\ngenesis, a fold or an application-only transaction), the context's registry\nin the world before, the finite encoding and collision premises before and\nafter, and that the transaction burns the identifier's representative asset.\nWhen the transaction is read.\nThen it is a fold of the context's registry that terminates the identifier's\nkey, and the key's leaf after it is terminal. The terminal leaf is what\nrecords the termination; no other transaction burns the asset.",
       "story": {
-        "given": "(i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit)\n    (before after : SingularApplicationHeld.CandidateWorld)\n    (view : SingularApplicationHeld.Assets.TxView)\n    (folded : Option SingularApplicationHeld.FoldObservation)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (transaction : SingularApplicationHeld.HistoryTransaction i.hash i.code commit c.release\n      before after view folded)\n    (premises : SingularApplicationHeld.HistoryPremises i.hash i.code commit c.release before\n      registry (i.keyOf c.aid))\n    (named : registry.identity = registryAsset i c)\n    (encoding : AH.FiniteEncoding i.code\n      (after.domain ++ [.active registry.identity (i.keyOf c.aid)]))\n    (collision : AH.FiniteCollisionFree i.hash i.code\n      (after.domain ++ [.active registry.identity (i.keyOf c.aid)]))\n    (burn : SingularApplicationHeld.Assets.mintQty view (representativeAsset i c) < 0)",
+        "given": "(i : Interpretation) (c : Context)\n    (commit : SingularApplicationHeld.TrieCommit)\n    (before after : SingularApplicationHeld.CandidateWorld)\n    (view : SingularApplicationHeld.Assets.TxView)\n    (folded : Option SingularApplicationHeld.FoldObservation)\n    (registry : SingularApplicationHeld.PublicRegistry)\n    (transaction : SingularApplicationHeld.HistoryTransaction i.hash i.code commit c.release\n      before after view folded)\n    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release before)\n    (member : registry ∈ before.registries)\n    (encodingBefore : AH.FiniteEncoding i.code\n      (SingularApplicationHeld.historyDomain before registry (i.keyOf c.aid)))\n    (collisionBefore : AH.FiniteCollisionFree i.hash i.code\n      (SingularApplicationHeld.historyDomain before registry (i.keyOf c.aid)))\n    (named : registry.identity = registryAsset i c)\n    (encoding : AH.FiniteEncoding i.code\n      (after.domain ++ [.active registry.identity (i.keyOf c.aid)]))\n    (collision : AH.FiniteCollisionFree i.hash i.code\n      (after.domain ++ [.active registry.identity (i.keyOf c.aid)]))\n    (burn : SingularApplicationHeld.Assets.mintQty view (representativeAsset i c) < 0)",
         "when": "Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.",
         "then": "∃ o, folded = some o ∧ registryAsset i c = o.before.identity ∧\n      (∃ reference, SingularApplicationHeld.Change.terminate reference (i.keyOf c.aid) ∈\n        o.changes) ∧\n      Singular.trieGet o.after.trie (i.keyOf c.aid) = .known .terminal"
       },
-      "storySha256": "91cbb1196a211b0788a816ca93df3f6d98ae3c52c2066d3e072f08fee4af9187"
+      "storySha256": "bab07143a884a73788c6b0ef0482ef26c67f2bfd220c49b59dd3bf2d7a5aeccc"
     },
     {
       "declaration": "CardanoKeri.ReaderStatus.realized_present_is_live",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1666,
+      "line": 1852,
       "statement": "theorem realized_present_is_live (i : Interpretation) (c : Context) (p : Params)\n    (rp : CardanoKeri.Registry.Params) (l : Live) (o : AH.ObservedOutput)\n    (realized : realizesState i c p rp (.present l) o) :\n    ∃ l', LiveCheckpoint i c o l' ∧ { l' with pool := 0 } = { l with pool := 0 }",
       "statementSha256": "4c286143e470a625301f9608d1ad40ba667f799a541b37a74e112c5a378e69fe",
       "sourceStory": "Given a checkpoint output that realizes a live state; when its form is\nread; then it is a live checkpoint of the identifier whose datum facts are\nthat state's.",
@@ -6476,7 +6546,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.realized_pending_is_convicted",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1684,
+      "line": 1870,
       "statement": "theorem realized_pending_is_convicted (i : Interpretation) (c : Context) (p : Params)\n    (rp : CardanoKeri.Registry.Params) (h : Hash) (o : AH.ObservedOutput)\n    (realized : realizesState i c p rp (.terminationPending h) o) :\n    ConvictedCheckpoint i c o h",
       "statementSha256": "fe7dd8e4111ca98e11198043948b336cc26c2888a2a800b0b5f3ec6124989b2c",
       "sourceStory": "Given a checkpoint output that realizes a pending-termination state; when\nits form is read; then it is the convicted checkpoint of the identifier with\nthat state's key state.",
@@ -6490,7 +6560,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.status_follows_lifecycle",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1706,
+      "line": 1892,
       "statement": "theorem status_follows_lifecycle (i : Interpretation) (c : Context) (p : Params) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (s : Sys) (ev : Evidence) (status : Status)\n    (reach : SysReach p env s) (realizes : Realizes i c p rp s ev)\n    (answer : classify i c ev = status) (available : status ≠ .unavailable) :\n    status = lifecycleStatus (s.states c.aid)",
       "statementSha256": "da5a32c6aecb562e706b3dec2c89de26a31d75a8b9973cca270cdb72d2869294",
       "sourceStory": "**A status never contradicts the lifecycle.**\nGiven a reachable checkpoint system and evidence that realizes it at the\ncontext's identifier.\nWhen the reader answers a status other than unavailable.\nThen it is the status of the identifier's lifecycle state: never registered\nfor absent, active for live, pending termination for pending termination,\nterminal for convicted.",
@@ -6504,7 +6574,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.lifecycle_status_is_answered",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1772,
+      "line": 1958,
       "statement": "theorem lifecycle_status_is_answered (i : Interpretation) (c : Context) (p : Params) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (s : Sys) (ev : Evidence)\n    (reach : SysReach p env s) (realizes : Realizes i c p rp s ev)\n    (context : authenticatedContext c ev.environment)\n    (holdersSeen : ∃ holders, HoldersAt i c ev holders) (leafSeen : ∃ leaf, LeafAt i c ev leaf) :\n    classify i c ev = lifecycleStatus (s.states c.aid)",
       "statementSha256": "a13fb219800055542effc9405facdf2a00d53ba8dd2bdbff7748db577c47e9ba",
       "sourceStory": "**Realized and complete evidence gets the lifecycle's status.**\nGiven a reachable checkpoint system, an authenticated context and evidence\nthat realizes the system at the context's identifier and establishes both the\nholders and the leaf at the asked point.\nWhen the reader answers.\nThen the answer is the status of the identifier's lifecycle state.",
@@ -6518,21 +6588,21 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.booked_termination_is_pending",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1821,
-      "statement": "theorem booked_termination_is_pending (i : Interpretation) (c : Context) (p : Params) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (s : Sys) (ev : Evidence) (h : Hash)\n    (reach : SysReach p env s) (realizes : Realizes i c p rp s ev)\n    (context : authenticatedContext c ev.environment)\n    (holdersSeen : ∃ holders, HoldersAt i c ev holders) (leafSeen : ∃ leaf, LeafAt i c ev leaf)\n    (state : s.states c.aid = .terminationPending h) :\n    classify i c ev = .pendingTermination ∧\n    ((s.pending c.aid).isSome = true → holdingCustody i c ev = .request) ∧\n    ((s.pending c.aid).isSome = false → holdingCustody i c ev = .convicted h)",
-      "statementSha256": "b2bf3121be771aae2d7b86c915934770fb75851422b4619a9d13581bb7f913d8",
-      "sourceStory": "**The booked termination is pending termination, held by the request.**\nGiven a reachable checkpoint system in which the identifier is pending\ntermination with key state `h`, an authenticated context, and evidence that\nrealizes the system and establishes both the holders and the leaf.\nWhen the reader answers.\nThen the answer is pending termination both before and after the termination\nis booked. Before the booking the custody it reads is the convicted\ncheckpoint with key state `h`; after it, the termination request.",
+      "line": 2011,
+      "statement": "theorem booked_termination_is_pending (i : Interpretation) (c : Context) (p : Params) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (s : Sys) (ev : Evidence) (h : Hash)\n    (reach : SysReach p env s) (realizes : Realizes i c p rp s ev)\n    (context : authenticatedContext c ev.environment)\n    (holdersSeen : ∃ holders, HoldersAt i c ev holders) (leafSeen : ∃ leaf, LeafAt i c ev leaf)\n    (state : s.states c.aid = .terminationPending h) :\n    classify i c ev = .pendingTermination ∧\n    (∀ association, s.pending c.aid = some association →\n      holdingCustody i c ev = .request ∧\n      ∃ o, holder i c ev = some o ∧ o.reference = association.reference) ∧\n    (s.pending c.aid = none → holdingCustody i c ev = .convicted h)",
+      "statementSha256": "46159ee9d7920aa0e5d8e9a65f72255c110161c35c814bc47adf57d12bebb4a4",
+      "sourceStory": "**The booked termination is pending termination, held by the booked\nrequest.**\nGiven a reachable checkpoint system in which the identifier is pending\ntermination with key state `h`, an authenticated context, and evidence that\nrealizes the system and establishes both the holders and the leaf.\nWhen the reader answers.\nThen the answer is pending termination both before and after the termination\nis booked. Before the booking the custody it reads is the convicted\ncheckpoint with key state `h`. After it the custody is the termination\nrequest, and the holder the answer names is the request the booking placed:\nits reference is the one the system's pending association records.",
       "story": {
         "given": "(i : Interpretation) (c : Context) (p : Params) (env : Env)\n    (rp : CardanoKeri.Registry.Params) (s : Sys) (ev : Evidence) (h : Hash)\n    (reach : SysReach p env s) (realizes : Realizes i c p rp s ev)\n    (context : authenticatedContext c ev.environment)\n    (holdersSeen : ∃ holders, HoldersAt i c ev holders) (leafSeen : ∃ leaf, LeafAt i c ev leaf)\n    (state : s.states c.aid = .terminationPending h)",
         "when": "Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.",
-        "then": "classify i c ev = .pendingTermination ∧\n    ((s.pending c.aid).isSome = true → holdingCustody i c ev = .request) ∧\n    ((s.pending c.aid).isSome = false → holdingCustody i c ev = .convicted h)"
+        "then": "classify i c ev = .pendingTermination ∧\n    (∀ association, s.pending c.aid = some association →\n      holdingCustody i c ev = .request ∧\n      ∃ o, holder i c ev = some o ∧ o.reference = association.reference) ∧\n    (s.pending c.aid = none → holdingCustody i c ev = .convicted h)"
       },
-      "storySha256": "772cfc0fb6d67ce2e98eadcc7d3950b4249ef017ac04f1981cc190e8ff744a84"
+      "storySha256": "9e08624818fa9b7055b168e5e5da4831f43bf8354016025327f120397d4ebd00"
     },
     {
       "declaration": "CardanoKeri.ReaderStatus.lifecycle_pending_or_terminal_not_consumable",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1853,
+      "line": 2046,
       "statement": "theorem lifecycle_pending_or_terminal_not_consumable (p : Params) (now : Slot) (st : State)\n    (status : lifecycleStatus st = .pendingTermination ∨ lifecycleStatus st = .terminal) :\n    ¬ consumableState p now st ∧ consumableStateB p now st = false",
       "statementSha256": "4add6cb9ff78e52d332dceea537b192a334154df1a8cfcc4eec96dd7959a6930",
       "sourceStory": "**The lifecycle refuses the consumer where the status says so.**\nGiven a lifecycle state whose status is pending termination or terminal.\nWhen the lifecycle eligibility is evaluated at any time.\nThen it refuses, as a proposition and as a Boolean; with\n`existing_eligibility_preserved`, so does the consumer predicate on every\noutput that realizes the state.",
@@ -6546,7 +6616,7 @@
     {
       "declaration": "CardanoKeri.ReaderStatus.missing_token_fits_two_lifecycles",
       "path": "lean/CardanoKeri/ReaderStatusGoals.lean",
-      "line": 1877,
+      "line": 2070,
       "statement": "theorem missing_token_fits_two_lifecycles (i : Interpretation) (c : Context)\n    (rp : CardanoKeri.Registry.Params) (point : ChainPoint) (e : Environment)\n    (registration termination : Singular.OutRef)\n    (context : authenticatedContext c e) (identifier : c.aid = 11) :\n    let registered : List (List SingularApplicationHeld.Change)",
       "statementSha256": "db5cf1427835bbeb680bf592489ddeeaa5fd4589e600c24572c4e5c983c1f643",
       "sourceStory": "**A missing token fits two reachable lifecycles.**\nGiven the connected lifecycle example, a context for its identifier 11 with an\nauthenticated environment, and two evidence values with the same holding\nobservation, no holder, that differ only in the history: no fold, and a fold\nthat registers the identifier's key followed by a fold that terminates it.\nWhen each is read against the system it realizes: the system at its creation,\nand the same system after identifier 11 was registered, convicted, booked and\nfolded.\nThen both systems are reachable, each evidence realizes its system, the\nholding observations are equal, and the answers differ: never registered at\ncreation, terminal after the fold. Only the history tells them apart.",

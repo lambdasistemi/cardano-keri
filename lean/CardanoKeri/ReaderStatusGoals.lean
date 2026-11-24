@@ -207,19 +207,55 @@ theorem noHolderSeen_iff (i : Interpretation) (c : Context) (ev : Evidence) :
       · exact absurd reading (custodyOf_exact i c o).2.2.2.2
       · contradiction
 
-/-- Given any evidence; when the history does not contradict an active leaf;
-then the classifier reads no leaf or the active leaf, and conversely. -/
-theorem leafAllowsActive_iff (i : Interpretation) (c : Context) (ev : Evidence) :
-    LeafAllowsActive i c ev ↔
-      establishedLeaf i c ev = none ∨ establishedLeaf i c ev = some (.known .active) := by
+/-- Given any evidence; when the classifier reads the history as broken; then
+the evidence holds a complete history of the identifier's registry through
+the asked point whose replay fails, and conversely. -/
+theorem brokenHistory_iff (i : Interpretation) (c : Context) (ev : Evidence) :
+    brokenHistory i c ev = true ↔ BrokenHistory i c ev := by
+  unfold brokenHistory BrokenHistory
+  cases found : ev.history with
+  | none => simp
+  | some h =>
+    by_cases guard : h.point = ev.point ∧ h.registry = registryAsset i c ∧ h.complete = true
+    · obtain ⟨point, registry, complete⟩ := guard
+      cases replayed : replay h.folds <;> simp [point, registry, complete, replayed]
+    · simp only [guard, decide_false, Bool.false_and, Bool.false_eq_true, false_iff, not_exists,
+        not_and]
+      intro x same point registry complete
+      cases same
+      exact absurd ⟨point, registry, complete⟩ guard
+
+/-- Given evidence whose history establishes a leaf; when the history is
+read; then it is not broken: its replay succeeded. -/
+theorem leafAt_not_broken (i : Interpretation) (c : Context) (ev : Evidence) (leaf : Singular.Leaf)
+    (established : LeafAt i c ev leaf) : ¬ BrokenHistory i c ev := by
+  rintro ⟨h, found, _, _, _, failed⟩
+  obtain ⟨h', members, found', _, _, _, replayed, _⟩ := established
+  rw [found] at found'
+  cases found'
+  rw [failed] at replayed
+  contradiction
+
+/-- Given any evidence; when the history does not contradict a holder; then
+the classifier reads the history as not broken and reads no leaf or the
+active leaf, and conversely. -/
+theorem historyAllowsHolder_iff (i : Interpretation) (c : Context) (ev : Evidence) :
+    HistoryAllowsHolder i c ev ↔
+      brokenHistory i c ev = false ∧
+      (establishedLeaf i c ev = none ∨ establishedLeaf i c ev = some (.known .active)) := by
+  have sound : ¬ BrokenHistory i c ev ↔ brokenHistory i c ev = false := by
+    rw [← brokenHistory_iff, Bool.not_eq_true]
   constructor
-  · intro allows
+  · rintro ⟨intact, allows⟩
+    refine ⟨sound.mp intact, ?_⟩
     cases found : establishedLeaf i c ev with
     | none => exact Or.inl rfl
     | some leaf =>
       rw [allows leaf ((establishedLeaf_eq_some_iff i c ev leaf).mp found)]
       exact Or.inr rfl
-  · rintro (reading | reading) leaf at_
+  · rintro ⟨intact, reading⟩
+    refine ⟨sound.mpr intact, fun leaf at_ => ?_⟩
+    rcases reading with reading | reading
     · exact absurd at_ ((establishedLeaf_eq_none_iff i c ev).mp reading leaf)
     · have same := (establishedLeaf_eq_some_iff i c ev leaf).mpr at_
       rw [reading] at same
@@ -251,26 +287,35 @@ theorem holdingCustody_single (i : Interpretation) (c : Context) (ev : Evidence)
 returns that status. -/
 theorem decides_classify (i : Interpretation) (c : Context) (ev : Evidence) (status : Status)
     (decided : Decides i c ev status) : classify i c ev = status := by
+  have intact : ∀ leaf, LeafAt i c ev leaf → brokenHistory i c ev = false := fun leaf at_ =>
+    Bool.eq_false_iff.mpr fun broken =>
+      leafAt_not_broken i c ev leaf at_ ((brokenHistory_iff i c ev).mp broken)
   unfold classify
   cases decided with
   | @active o l context holders live allows =>
-    rw [(authenticatedContextB_iff c ev.environment).mpr context,
-      holdingCustody_of_holders i c ev [o] holders, holdersCustody, ((custodyOf_exact i c o).1 l).mpr live]
-    rcases (leafAllowsActive_iff i c ev).mp allows with leaf | leaf <;> simp [leaf, verdict]
+    obtain ⟨sound, reading⟩ := (historyAllowsHolder_iff i c ev).mp allows
+    rw [(authenticatedContextB_iff c ev.environment).mpr context, sound,
+      holdingCustody_of_holders i c ev [o] holders, holdersCustody,
+      ((custodyOf_exact i c o).1 l).mpr live]
+    rcases reading with leaf | leaf <;> simp [leaf, verdict]
   | @convicted o h context holders convicted allows =>
-    rw [(authenticatedContextB_iff c ev.environment).mpr context,
-      holdingCustody_of_holders i c ev [o] holders, holdersCustody, ((custodyOf_exact i c o).2.1 h).mpr convicted]
-    rcases (leafAllowsActive_iff i c ev).mp allows with leaf | leaf <;> simp [leaf, verdict]
+    obtain ⟨sound, reading⟩ := (historyAllowsHolder_iff i c ev).mp allows
+    rw [(authenticatedContextB_iff c ev.environment).mpr context, sound,
+      holdingCustody_of_holders i c ev [o] holders, holdersCustody,
+      ((custodyOf_exact i c o).2.1 h).mpr convicted]
+    rcases reading with leaf | leaf <;> simp [leaf, verdict]
   | @requested o context holders request allows =>
-    rw [(authenticatedContextB_iff c ev.environment).mpr context,
-      holdingCustody_of_holders i c ev [o] holders, holdersCustody, (custodyOf_exact i c o).2.2.1.mpr request]
-    rcases (leafAllowsActive_iff i c ev).mp allows with leaf | leaf <;> simp [leaf, verdict]
+    obtain ⟨sound, reading⟩ := (historyAllowsHolder_iff i c ev).mp allows
+    rw [(authenticatedContextB_iff c ev.environment).mpr context, sound,
+      holdingCustody_of_holders i c ev [o] holders, holdersCustody,
+      (custodyOf_exact i c o).2.2.1.mpr request]
+    rcases reading with leaf | leaf <;> simp [leaf, verdict]
   | terminal context leaf none =>
-    rw [(authenticatedContextB_iff c ev.environment).mpr context,
+    rw [(authenticatedContextB_iff c ev.environment).mpr context, intact _ leaf,
       (establishedLeaf_eq_some_iff i c ev _).mpr leaf]
     rcases (noHolderSeen_iff i c ev).mp none with custody | custody <;> simp [custody, verdict]
   | neverRegistered context leaf none =>
-    rw [(authenticatedContextB_iff c ev.environment).mpr context,
+    rw [(authenticatedContextB_iff c ev.environment).mpr context, intact _ leaf,
       (establishedLeaf_eq_some_iff i c ev _).mpr leaf]
     rcases (noHolderSeen_iff i c ev).mp none with custody | custody <;> simp [custody, verdict]
 
@@ -280,13 +325,16 @@ theorem classify_decides (i : Interpretation) (c : Context) (ev : Evidence) (sta
     (result : classify i c ev = status) (available : status ≠ .unavailable) :
     Decides i c ev status := by
   unfold classify at result
-  by_cases context : authenticatedContextB c ev.environment = true
-  · have authenticated := (authenticatedContextB_iff c ev.environment).mp context
-    simp only [context, ↓reduceIte] at result
+  by_cases guard : (authenticatedContextB c ev.environment && !brokenHistory i c ev) = true
+  · have parts := guard
+    simp only [Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true] at parts
+    obtain ⟨context, sound⟩ := parts
+    have authenticated := (authenticatedContextB_iff c ev.environment).mp context
+    simp only [guard, ↓reduceIte] at result
     generalize custody : holdingCustody i c ev = k at result
     generalize leaf : establishedLeaf i c ev = found at result
-    have allows : found = none ∨ found = some (.known .active) → LeafAllowsActive i c ev :=
-      fun reading => (leafAllowsActive_iff i c ev).mpr (leaf ▸ reading)
+    have allows : found = none ∨ found = some (.known .active) → HistoryAllowsHolder i c ev :=
+      fun reading => (historyAllowsHolder_iff i c ev).mpr ⟨sound, leaf ▸ reading⟩
     have unseen : k = .notEstablished ∨ k = .absent → NoHolderSeen i c ev :=
       fun reading => (noHolderSeen_iff i c ev).mpr (custody ▸ reading)
     cases k with
@@ -330,7 +378,7 @@ theorem classify_decides (i : Interpretation) (c : Context) (ev : Evidence) (sta
     | inconsistent =>
       rcases found with _ | ⟨_ | ⟨_ | _ | _⟩⟩ <;> simp only [verdict] at result <;> subst result
       all_goals exact absurd rfl available
-  · simp only [context, Bool.false_eq_true, ↓reduceIte] at result
+  · simp only [guard, Bool.false_eq_true, ↓reduceIte] at result
     exact absurd result.symm available
 
 /-- **The classifier is the relation.**
@@ -404,7 +452,7 @@ establishes reads active; and conversely such evidence is answered active. -/
 theorem active_iff (i : Interpretation) (c : Context) (ev : Evidence) :
     classify i c ev = .active ↔
       authenticatedContext c ev.environment ∧
-      (∃ o l, HoldersAt i c ev [o] ∧ LiveCheckpoint i c o l) ∧ LeafAllowsActive i c ev := by
+      (∃ o l, HoldersAt i c ev [o] ∧ LiveCheckpoint i c o l) ∧ HistoryAllowsHolder i c ev := by
   rw [classify_eq_iff_decides i c ev .active (by simp)]
   constructor
   · intro decided
@@ -428,7 +476,7 @@ theorem pendingTermination_iff (i : Interpretation) (c : Context) (ev : Evidence
       authenticatedContext c ev.environment ∧
       (∃ o, HoldersAt i c ev [o] ∧
         ((∃ h, ConvictedCheckpoint i c o h) ∨ TerminationRequest i c o)) ∧
-      LeafAllowsActive i c ev := by
+      HistoryAllowsHolder i c ev := by
   rw [classify_eq_iff_decides i c ev .pendingTermination (by simp)]
   constructor
   · intro decided
@@ -648,35 +696,57 @@ theorem holding_observed_elsewhere (i : Interpretation) (c : Context) (ev : Evid
   have guard : ¬ (h.point = ev.point ∧ h.asset = representativeAsset i c) := by
     rintro ⟨point, asset⟩
     rcases elsewhere with other | other <;> contradiction
-  simp [classify, holdingCustody, establishedLeaf, found, guard]
+  have unread : holdingCustody i c ev = .notEstablished := by
+    simp [holdingCustody, found, guard]
+  have cleared : holdingCustody i c { ev with holding := none } = .notEstablished := rfl
+  have sameLeaf : establishedLeaf i c { ev with holding := none } = establishedLeaf i c ev := rfl
+  have sameHistory : brokenHistory i c { ev with holding := none } = brokenHistory i c ev := rfl
+  simp only [classify, unread, cleared, sameLeaf, sameHistory]
 
 /-- **A history that is not this registry's complete history establishes
 nothing.**
 Given a history observation made at another chain point than the asked one,
 or of another registry than the identifier's, or not complete (it starts
-late or misses a fold), or whose replay meets a change no accepted fold
-makes.
+late or misses a fold).
 When the reader answers.
-Then the answer is the one it gives with no history at all. -/
+Then the answer is the one it gives with no history at all: the gap does not
+make the answer unavailable when the holders decide it. -/
 theorem history_not_established (i : Interpretation) (c : Context) (ev : Evidence)
     (h : HistoryObservation) (found : ev.history = some h)
-    (broken : h.point ≠ ev.point ∨ h.registry ≠ registryAsset i c ∨ h.complete = false ∨
-      replay h.folds = none) :
+    (gap : h.point ≠ ev.point ∨ h.registry ≠ registryAsset i c ∨ h.complete = false) :
     classify i c ev = classify i c { ev with history := none } := by
+  have guard : ¬ (h.point = ev.point ∧ h.registry = registryAsset i c ∧ h.complete = true) := by
+    rintro ⟨point, registry, complete⟩
+    rcases gap with other | other | other
+    · contradiction
+    · contradiction
+    · rw [complete] at other; contradiction
   have unread : establishedLeaf i c ev = none := by
-    unfold establishedLeaf
-    rw [found]
-    by_cases guard : h.point = ev.point ∧ h.registry = registryAsset i c ∧ h.complete = true
-    · obtain ⟨point, registry, complete⟩ := guard
-      rcases broken with other | other | other | other
-      · contradiction
-      · contradiction
-      · rw [complete] at other; contradiction
-      · simp [point, registry, complete, other]
-    · simp [guard]
+    simp [establishedLeaf, found, guard]
+  have sound : brokenHistory i c ev = false := by
+    simp [brokenHistory, found, guard]
   have cleared : establishedLeaf i c { ev with history := none } = none := rfl
+  have clearedSound : brokenHistory i c { ev with history := none } = false := rfl
   have same : holdingCustody i c { ev with history := none } = holdingCustody i c ev := rfl
-  simp only [classify, unread, cleared, same]
+  simp only [classify, unread, sound, cleared, clearedSound, same]
+
+/-- **A broken history is a contradiction, whatever the holders show.**
+Given evidence that holds a complete history of the identifier's registry
+through the asked point whose replay fails: some fold registers a key the
+registry already knows, or terminates a key that is not active, or makes no
+change.
+When the reader answers.
+Then the answer is unavailable, with or without a holder. -/
+theorem broken_history_unavailable (i : Interpretation) (c : Context) (ev : Evidence)
+    (broken : BrokenHistory i c ev) : classify i c ev = .unavailable := by
+  rw [unavailable_iff]
+  intro status decided
+  cases decided with
+  | active _ _ _ allows => exact allows.1 broken
+  | convicted _ _ _ allows => exact allows.1 broken
+  | requested _ _ _ allows => exact allows.1 broken
+  | terminal _ leaf _ => exact leafAt_not_broken i c ev _ leaf broken
+  | neverRegistered _ leaf _ => exact leafAt_not_broken i c ev _ leaf broken
 
 /-- **Two holders are inconsistent.**
 Given evidence that establishes two or more outputs holding the
@@ -764,9 +834,9 @@ theorem holder_against_leaf_unavailable (i : Interpretation) (c : Context) (ev :
   rw [unavailable_iff]
   intro status decided
   cases decided with
-  | active _ _ _ allows => exact inactive (allows leaf established)
-  | convicted _ _ _ allows => exact inactive (allows leaf established)
-  | requested _ _ _ allows => exact inactive (allows leaf established)
+  | active _ _ _ allows => exact inactive (allows.2 leaf established)
+  | convicted _ _ _ allows => exact inactive (allows.2 leaf established)
+  | requested _ _ _ allows => exact inactive (allows.2 leaf established)
   | terminal _ _ none => exact unseen none
   | neverRegistered _ _ none => exact unseen none
 
@@ -800,7 +870,7 @@ Then the answer is active. -/
 theorem eligible_holder_is_active (i : Interpretation) (c : Context) (ev : Evidence)
     (p : Params) (now : Slot) (o : AH.ObservedOutput)
     (eligible : consumableHolding i c ev.environment p now o) (holders : HoldersAt i c ev [o])
-    (allows : LeafAllowsActive i c ev) : classify i c ev = .active := by
+    (allows : HistoryAllowsHolder i c ev) : classify i c ev = .active := by
   obtain ⟨network, release, resolved, credential, quantity, l, datum, _⟩ :=
     (consumableHolding_exact i c ev.environment p now o).mp eligible
   exact (active_iff i c ev).mpr ⟨⟨network, release, resolved⟩,
@@ -1271,11 +1341,11 @@ Then that leaf is the leaf of the key in the registry. -/
 theorem replayed_leaf_is_registry_leaf (i : Interpretation) (c : Context)
     (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)
     (registry : SingularApplicationHeld.PublicRegistry) (ev : Evidence) (leaf : Singular.Leaf)
-    (faithful : Faithful i c commit world ev) (member : registry ∈ world.registries)
+    (faithful : FaithfulHistory i c commit world ev) (member : registry ∈ world.registries)
     (named : registry.identity = registryAsset i c) (established : LeafAt i c ev leaf) :
     leaf = Singular.trieGet registry.trie (i.keyOf c.aid) := by
   obtain ⟨h, members, found, point, registryOf, complete, replayed, read⟩ := established
-  obtain ⟨_, folds⟩ := faithful.history h found point registryOf complete
+  obtain ⟨_, folds⟩ := faithful h found point registryOf complete
   have actual := registry_members_are_replayed i.hash i.code commit c.release (registryAsset i c)
     world h.folds folds registry member named
   rw [replayed] at actual
@@ -1290,12 +1360,12 @@ Then the registry exists in the world, the replay succeeds, and the evidence
 establishes the leaf of the identifier's key in that registry. -/
 theorem complete_history_establishes_the_leaf (i : Interpretation) (c : Context)
     (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)
-    (ev : Evidence) (h : HistoryObservation) (faithful : Faithful i c commit world ev)
+    (ev : Evidence) (h : HistoryObservation) (faithful : FaithfulHistory i c commit world ev)
     (found : ev.history = some h) (point : h.point = ev.point)
     (registryOf : h.registry = registryAsset i c) (complete : h.complete = true) :
     ∃ registry ∈ world.registries, registry.identity = registryAsset i c ∧
       LeafAt i c ev (Singular.trieGet registry.trie (i.keyOf c.aid)) := by
-  obtain ⟨exists_, folds⟩ := faithful.history h found point registryOf complete
+  obtain ⟨exists_, folds⟩ := faithful h found point registryOf complete
   obtain ⟨registry, member, named⟩ := List.mem_map.mp exists_
   have actual := registry_members_are_replayed i.hash i.code commit c.release (registryAsset i c)
     world h.folds folds registry member named
@@ -1307,8 +1377,13 @@ The public registry's history model has the complete unspent set and every
 registry's leaves, and proves that the supply of a key's active asset is one
 exactly while the key's leaf is active
 (`SingularApplicationHeld.HistoryStatements.supply_in_step`). The premises of
-that theorem are the premises here: a reachable world, the context's registry
-in it, and the finite encoding and collision premises over its history. -/
+that theorem are the premises here, each named in every statement: a
+reachable world, the context's registry in it, and the two identity
+assumptions the consumer statements already take, a faithful finite encoding
+(`FiniteEncoding`) and collision freedom (`FiniteCollisionFree`), over the
+preimages the history holds and the identifier's active preimage
+(`historyDomain`). Without them two keys could share an asset name, and no
+count of holders would say anything about a leaf. -/
 
 /-- Given a list and a count per element whose total is zero; when the
 elements with a positive count are selected; then there are none. -/
@@ -1378,15 +1453,19 @@ fits a key that was never registered and a key that is terminal alike. -/
 theorem holders_follow_leaf (i : Interpretation) (c : Context)
     (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)
     (registry : SingularApplicationHeld.PublicRegistry)
-    (premises : SingularApplicationHeld.HistoryPremises i.hash i.code commit c.release world
-      registry (i.keyOf c.aid))
+    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)
+    (member : registry ∈ world.registries)
+    (encoding : AH.FiniteEncoding i.code
+      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))
+    (collision : AH.FiniteCollisionFree i.hash i.code
+      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))
     (named : registry.identity = registryAsset i c) :
     (Singular.trieGet registry.trie (i.keyOf c.aid) = .known .active →
       ∃ o, holdersIn i c world = [o] ∧ AH.quantity o (representativeAsset i c) = 1) ∧
     (Singular.trieGet registry.trie (i.keyOf c.aid) ≠ .known .active →
       holdersIn i c world = []) := by
   have supply := SingularApplicationHeld.HistoryStatements.supply_in_step i.hash i.code commit
-    c.release world registry (i.keyOf c.aid) premises
+    c.release world registry (i.keyOf c.aid) ⟨reachable, member, encoding, collision⟩
   unfold SingularApplicationHeld.SupplyAt SingularApplicationHeld.liveActiveCount at supply
   rw [named] at supply
   constructor
@@ -1418,8 +1497,8 @@ theorem status_is_warranted (i : Interpretation) (c : Context)
   | active _ holders live _ => exact ⟨_, _, unspent _ holders, live⟩
   | convicted _ holders convicted _ => exact ⟨_, unspent _ holders, Or.inl ⟨_, convicted⟩⟩
   | requested _ holders request _ => exact ⟨_, unspent _ holders, Or.inr request⟩
-  | terminal _ leaf _ => exact (leafOf _ faithful member named leaf).symm
-  | neverRegistered _ leaf _ => exact (leafOf _ faithful member named leaf).symm
+  | terminal _ leaf _ => exact (leafOf _ faithful.history member named leaf).symm
+  | neverRegistered _ leaf _ => exact (leafOf _ faithful.history member named leaf).symm
 
 /-- Given a reachable world and an unspent output that holds a positive
 quantity of the identifier's representative asset; when the leaf and the
@@ -1427,13 +1506,17 @@ holders are read; then the leaf is active and that output is the only holder. -/
 theorem holder_is_the_only_one (i : Interpretation) (c : Context)
     (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)
     (registry : SingularApplicationHeld.PublicRegistry)
-    (premises : SingularApplicationHeld.HistoryPremises i.hash i.code commit c.release world
-      registry (i.keyOf c.aid))
+    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)
+    (member : registry ∈ world.registries)
+    (encoding : AH.FiniteEncoding i.code
+      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))
+    (collision : AH.FiniteCollisionFree i.hash i.code
+      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))
     (named : registry.identity = registryAsset i c) (o : AH.ObservedOutput)
     (unspent : o ∈ world.unspent) (held : 0 < AH.quantity o (representativeAsset i c)) :
     Singular.trieGet registry.trie (i.keyOf c.aid) = .known .active ∧
       holdersIn i c world = [o] := by
-  have census := holders_follow_leaf i c commit world registry premises named
+  have census := holders_follow_leaf i c commit world registry reachable member encoding collision named
   have member := (mem_holdersIn i c world o).mpr ⟨unspent, held⟩
   have active : Singular.trieGet registry.trie (i.keyOf c.aid) = .known .active := by
     apply Classical.byContradiction
@@ -1445,19 +1528,109 @@ theorem holder_is_the_only_one (i : Interpretation) (c : Context)
   rw [single, List.mem_singleton.mp member]
   exact ⟨active, rfl⟩
 
+/-- **A holder decides alone.**
+Given a reachable world of the registry's history, the context's registry in
+it, a faithful finite encoding and collision freedom over the history's
+preimages and the identifier's active preimage, and evidence whose
+established holders are the world's holders, whatever its history: missing,
+incomplete, of another point, or not the registry's at all.
+When the reader answers active or pending termination.
+Then the registry's leaf of the identifier's key is active, and the holder
+the answer names is unspent in the world and is the only output holding the
+asset. The holder alone warrants the answer: the asset exists only while the
+leaf is active. -/
+theorem holder_decides_alone (i : Interpretation) (c : Context)
+    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)
+    (registry : SingularApplicationHeld.PublicRegistry)
+    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)
+    (member : registry ∈ world.registries)
+    (encoding : AH.FiniteEncoding i.code
+      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))
+    (collision : AH.FiniteCollisionFree i.hash i.code
+      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))
+    (named : registry.identity = registryAsset i c) (ev : Evidence)
+    (faithful : FaithfulHolders i c world ev)
+    (answer : classify i c ev = .active ∨ classify i c ev = .pendingTermination) :
+    Singular.trieGet registry.trie (i.keyOf c.aid) = .known .active ∧
+    ∃ o, holder i c ev = some o ∧ o ∈ world.unspent ∧ holdersIn i c world = [o] := by
+  have single : ∃ o, HoldersAt i c ev [o] ∧ 0 < AH.quantity o (representativeAsset i c) := by
+    rcases answer with active | pending
+    · obtain ⟨_, ⟨o, l, holders, live⟩, _⟩ := (active_iff i c ev).mp active
+      exact ⟨o, holders, by rw [live.2.1]; decide⟩
+    · obtain ⟨_, ⟨o, holders, form⟩, _⟩ := (pendingTermination_iff i c ev).mp pending
+      refine ⟨o, holders, ?_⟩
+      rcases form with ⟨h, convicted⟩ | request
+      · rw [convicted.2.1]; decide
+      · exact request_holds_asset i c o request
+  obtain ⟨o, holders, held⟩ := single
+  have unspent : o ∈ world.unspent :=
+    ((mem_holdersIn i c world o).mp (faithful _ holders ▸ List.mem_singleton.mpr rfl)).1
+  obtain ⟨active, only⟩ := holder_is_the_only_one i c commit world registry reachable member
+    encoding collision named o unspent held
+  exact ⟨active, o, (holder_eq_some_iff i c ev o).mpr ⟨answer, holders⟩, unspent, only⟩
+
+/-- **A complete history decides alone.**
+Given a reachable world of the registry's history, the context's registry in
+it, a faithful finite encoding and collision freedom over the history's
+preimages and the identifier's active preimage, and evidence whose complete
+history is the registry's history in the world, whatever its holding
+observation: missing, failed, or of another point.
+When the reader answers terminal or never registered.
+Then the registry's leaf of the identifier's key is terminal, or unknown,
+as answered, and no unspent output of the world holds the asset. The history
+alone warrants the answer. -/
+theorem history_decides_alone (i : Interpretation) (c : Context)
+    (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)
+    (registry : SingularApplicationHeld.PublicRegistry)
+    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)
+    (member : registry ∈ world.registries)
+    (encoding : AH.FiniteEncoding i.code
+      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))
+    (collision : AH.FiniteCollisionFree i.hash i.code
+      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))
+    (named : registry.identity = registryAsset i c) (ev : Evidence)
+    (faithful : FaithfulHistory i c commit world ev)
+    (answer : classify i c ev = .terminal ∨ classify i c ev = .neverRegistered) :
+    holdersIn i c world = [] ∧
+    (classify i c ev = .terminal →
+      Singular.trieGet registry.trie (i.keyOf c.aid) = .known .terminal) ∧
+    (classify i c ev = .neverRegistered →
+      Singular.trieGet registry.trie (i.keyOf c.aid) = .unknown) := by
+  have census := holders_follow_leaf i c commit world registry reachable member encoding collision
+    named
+  have leafOf := replayed_leaf_is_registry_leaf i c commit world registry ev
+  have terminal : classify i c ev = .terminal →
+      Singular.trieGet registry.trie (i.keyOf c.aid) = .known .terminal := fun status =>
+    (leafOf _ faithful member named ((terminal_iff i c ev).mp status).2.1).symm
+  have unknown : classify i c ev = .neverRegistered →
+      Singular.trieGet registry.trie (i.keyOf c.aid) = .unknown := fun status =>
+    (leafOf _ faithful member named ((neverRegistered_iff i c ev).mp status).2.1).symm
+  refine ⟨?_, terminal, unknown⟩
+  apply census.2
+  rcases answer with status | status
+  · rw [terminal status]; simp
+  · rw [unknown status]; simp
+
 /-- **The four statuses exclude one another on reachable states.**
 Given a reachable world of the registry's history, the context's registry in
-it and the history's finite encoding and collision premises.
+it, and the model's two identity assumptions over the history's preimages and
+the identifier's active preimage: a faithful finite encoding and collision
+freedom. Both are named in the statement; without them a world can warrant
+two statuses, because two keys can share an asset name.
 When the world warrants two statuses.
 Then they are the same status. -/
 theorem warrants_exclusive (i : Interpretation) (c : Context)
     (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)
     (registry : SingularApplicationHeld.PublicRegistry)
-    (premises : SingularApplicationHeld.HistoryPremises i.hash i.code commit c.release world
-      registry (i.keyOf c.aid))
+    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)
+    (member : registry ∈ world.registries)
+    (encoding : AH.FiniteEncoding i.code
+      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))
+    (collision : AH.FiniteCollisionFree i.hash i.code
+      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))
     (named : registry.identity = registryAsset i c) (s t : Status)
     (first : Warrants i c world registry s) (second : Warrants i c world registry t) : s = t := by
-  have only := holder_is_the_only_one i c commit world registry premises named
+  have only := holder_is_the_only_one i c commit world registry reachable member encoding collision named
   -- The facts each status rests on, as the leaf and the holders they force.
   have live : Warrants i c world registry .active →
       ∃ o l, LiveCheckpoint i c o l ∧ holdersIn i c world = [o] ∧
@@ -1542,8 +1715,12 @@ Then the reader answers that status. -/
 theorem warranted_status_is_answered (i : Interpretation) (c : Context)
     (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)
     (registry : SingularApplicationHeld.PublicRegistry)
-    (premises : SingularApplicationHeld.HistoryPremises i.hash i.code commit c.release world
-      registry (i.keyOf c.aid))
+    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)
+    (member : registry ∈ world.registries)
+    (encoding : AH.FiniteEncoding i.code
+      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))
+    (collision : AH.FiniteCollisionFree i.hash i.code
+      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))
     (named : registry.identity = registryAsset i c) (ev : Evidence) (status : Status)
     (context : authenticatedContext c ev.environment)
     (faithful : Faithful i c commit world ev)
@@ -1552,16 +1729,16 @@ theorem warranted_status_is_answered (i : Interpretation) (c : Context)
   obtain ⟨holders, at_⟩ := holdersSeen
   obtain ⟨leaf, leafAt⟩ := leafSeen
   have holdersEq := faithful.holders _ at_
-  have leafEq := replayed_leaf_is_registry_leaf i c commit world registry ev leaf faithful
-    premises.2.1 named leafAt
+  have leafEq := replayed_leaf_is_registry_leaf i c commit world registry ev leaf
+    faithful.history member named leafAt
   subst holdersEq leafEq
-  have only := holder_is_the_only_one i c commit world registry premises named
-  have census := holders_follow_leaf i c commit world registry premises named
+  have only := holder_is_the_only_one i c commit world registry reachable member encoding collision named
+  have census := holders_follow_leaf i c commit world registry reachable member encoding collision named
   have allows : ∀ o, o ∈ world.unspent → 0 < AH.quantity o (representativeAsset i c) →
-      HoldersAt i c ev [o] ∧ LeafAllowsActive i c ev := by
+      HoldersAt i c ev [o] ∧ HistoryAllowsHolder i c ev := by
     intro o unspent held
     obtain ⟨active, single⟩ := only o unspent held
-    refine ⟨single ▸ at_, fun other otherAt => ?_⟩
+    refine ⟨single ▸ at_, leafAt_not_broken i c ev _ leafAt, fun other otherAt => ?_⟩
     rw [leafAt_unique i c ev _ _ otherAt leafAt, active]
   have unseen : Singular.trieGet registry.trie (i.keyOf c.aid) ≠ .known .active →
       NoHolderSeen i c ev := fun inactive other otherAt => by
@@ -1597,8 +1774,12 @@ Then it refuses, as a proposition and as a Boolean. -/
 theorem pending_or_terminal_never_consumable (i : Interpretation) (c : Context)
     (commit : SingularApplicationHeld.TrieCommit) (world : SingularApplicationHeld.CandidateWorld)
     (registry : SingularApplicationHeld.PublicRegistry)
-    (premises : SingularApplicationHeld.HistoryPremises i.hash i.code commit c.release world
-      registry (i.keyOf c.aid))
+    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release world)
+    (member : registry ∈ world.registries)
+    (encoding : AH.FiniteEncoding i.code
+      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))
+    (collision : AH.FiniteCollisionFree i.hash i.code
+      (SingularApplicationHeld.historyDomain world registry (i.keyOf c.aid)))
     (named : registry.identity = registryAsset i c) (e : Environment) (p : Params) (now : Slot)
     (warranted : Warrants i c world registry .pendingTermination ∨
       Warrants i c world registry .terminal) :
@@ -1611,8 +1792,8 @@ theorem pending_or_terminal_never_consumable (i : Interpretation) (c : Context)
       (consumableHolding_exact i c e p now o).mp eligible
     have live : Warrants i c world registry .active := ⟨o, l, unspent, credential, quantity, datum⟩
     rcases warranted with pending | terminal
-    · cases warrants_exclusive i c commit world registry premises named _ _ live pending
-    · cases warrants_exclusive i c commit world registry premises named _ _ live terminal
+    · cases warrants_exclusive i c commit world registry reachable member encoding collision named _ _ live pending
+    · cases warrants_exclusive i c commit world registry reachable member encoding collision named _ _ live terminal
   exact ⟨refused, Bool.eq_false_iff.mpr fun accepted =>
     refused ((consumableHoldingB_iff i c e p now o).mp accepted)⟩
 
@@ -1634,8 +1815,12 @@ theorem burn_is_the_terminating_fold (i : Interpretation) (c : Context)
     (registry : SingularApplicationHeld.PublicRegistry)
     (transaction : SingularApplicationHeld.HistoryTransaction i.hash i.code commit c.release
       before after view folded)
-    (premises : SingularApplicationHeld.HistoryPremises i.hash i.code commit c.release before
-      registry (i.keyOf c.aid))
+    (reachable : SingularApplicationHeld.CandidateReachable i.hash i.code commit c.release before)
+    (member : registry ∈ before.registries)
+    (encodingBefore : AH.FiniteEncoding i.code
+      (SingularApplicationHeld.historyDomain before registry (i.keyOf c.aid)))
+    (collisionBefore : AH.FiniteCollisionFree i.hash i.code
+      (SingularApplicationHeld.historyDomain before registry (i.keyOf c.aid)))
     (named : registry.identity = registryAsset i c)
     (encoding : AH.FiniteEncoding i.code
       (after.domain ++ [.active registry.identity (i.keyOf c.aid)]))
@@ -1648,7 +1833,8 @@ theorem burn_is_the_terminating_fold (i : Interpretation) (c : Context)
       Singular.trieGet o.after.trie (i.keyOf c.aid) = .known .terminal := by
   have upstream := SingularApplicationHeld.HistoryStatements.burn_only_terminating_fold i.hash
     i.code commit c.release before after view folded registry (i.keyOf c.aid)
-    ⟨transaction, premises, encoding, collision, by rw [named]; exact burn⟩
+    ⟨transaction, ⟨reachable, member, encodingBefore, collisionBefore⟩, encoding, collision,
+      by rw [named]; exact burn⟩
   rw [named] at upstream
   exact upstream
 
@@ -1741,7 +1927,7 @@ theorem status_follows_lifecycle (i : Interpretation) (c : Context) (p : Params)
       cases same
       refine Or.inr ⟨h, rfl, ?_⟩
       split at form
-      · exact Or.inr form
+      · exact Or.inr form.1
       · exact Or.inl ⟨h, realized_pending_is_convicted i c p rp h o form⟩
   cases classify_decides i c ev status answer available with
   | active _ holders live _ =>
@@ -1781,8 +1967,9 @@ theorem lifecycle_status_is_answered (i : Interpretation) (c : Context) (p : Par
   have leafEq : leaf = registryLeaf (s.states c.aid).leaf := agrees ▸ realizes.leaf leaf leafAt
   have realized := realizes.holders _ at_
   unfold holdersRealize at realized
-  have allows : (s.states c.aid).leaf = .active → LeafAllowsActive i c ev := by
-    intro active other otherAt
+  have allows : (s.states c.aid).leaf = .active → HistoryAllowsHolder i c ev := by
+    intro active
+    refine ⟨leafAt_not_broken i c ev _ leafAt, fun other otherAt => ?_⟩
     rw [leafAt_unique i c ev _ _ otherAt leafAt, leafEq, active]
     rfl
   have unseen : holders = [] → NoHolderSeen i c ev :=
@@ -1806,18 +1993,21 @@ theorem lifecycle_status_is_answered (i : Interpretation) (c : Context) (p : Par
     simp only [state] at realized
     obtain ⟨o, rfl, form⟩ := realized
     split at form
-    · exact .requested context at_ form (allows (by simp [state, State.leaf]))
+    · exact .requested context at_ form.1 (allows (by simp [state, State.leaf]))
     · exact .convicted context at_ (realized_pending_is_convicted i c p rp h o form)
         (allows (by simp [state, State.leaf]))
 
-/-- **The booked termination is pending termination, held by the request.**
+/-- **The booked termination is pending termination, held by the booked
+request.**
 Given a reachable checkpoint system in which the identifier is pending
 termination with key state `h`, an authenticated context, and evidence that
 realizes the system and establishes both the holders and the leaf.
 When the reader answers.
 Then the answer is pending termination both before and after the termination
 is booked. Before the booking the custody it reads is the convicted
-checkpoint with key state `h`; after it, the termination request. -/
+checkpoint with key state `h`. After it the custody is the termination
+request, and the holder the answer names is the request the booking placed:
+its reference is the one the system's pending association records. -/
 theorem booked_termination_is_pending (i : Interpretation) (c : Context) (p : Params) (env : Env)
     (rp : CardanoKeri.Registry.Params) (s : Sys) (ev : Evidence) (h : Hash)
     (reach : SysReach p env s) (realizes : Realizes i c p rp s ev)
@@ -1825,8 +2015,10 @@ theorem booked_termination_is_pending (i : Interpretation) (c : Context) (p : Pa
     (holdersSeen : ∃ holders, HoldersAt i c ev holders) (leafSeen : ∃ leaf, LeafAt i c ev leaf)
     (state : s.states c.aid = .terminationPending h) :
     classify i c ev = .pendingTermination ∧
-    ((s.pending c.aid).isSome = true → holdingCustody i c ev = .request) ∧
-    ((s.pending c.aid).isSome = false → holdingCustody i c ev = .convicted h) := by
+    (∀ association, s.pending c.aid = some association →
+      holdingCustody i c ev = .request ∧
+      ∃ o, holder i c ev = some o ∧ o.reference = association.reference) ∧
+    (s.pending c.aid = none → holdingCustody i c ev = .convicted h) := by
   have answered := lifecycle_status_is_answered i c p env rp s ev reach realizes context
     holdersSeen leafSeen
   rw [state] at answered
@@ -1837,10 +2029,11 @@ theorem booked_termination_is_pending (i : Interpretation) (c : Context) (p : Pa
   obtain ⟨o, rfl, form⟩ := realized
   have custody : holdingCustody i c ev = custodyOf i c o := by
     rw [holdingCustody_of_holders i c ev [o] at_, holdersCustody]
-  refine ⟨answered, fun booked => ?_, fun unbooked => ?_⟩
-  · rw [if_pos booked] at form
-    exact custody.trans ((custodyOf_exact i c o).2.2.1.mpr form)
-  · rw [if_neg (by simp [unbooked])] at form
+  refine ⟨answered, fun association booked => ?_, fun unbooked => ?_⟩
+  · rw [booked] at form
+    exact ⟨custody.trans ((custodyOf_exact i c o).2.2.1.mpr form.1), o,
+      (holder_eq_some_iff i c ev o).mpr ⟨Or.inr answered, at_⟩, form.2⟩
+  · rw [unbooked] at form
     exact custody.trans (((custodyOf_exact i c o).2.1 h).mpr
       (realized_pending_is_convicted i c p rp h o form))
 

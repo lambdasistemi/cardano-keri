@@ -6,14 +6,14 @@ const read=f=>readFileSync(new URL(f,import.meta.url),'utf8');
 export function systemBundle() {
   const sources={},names={
     './checkpoint-simulator-core.mjs':'C','./registry-economic-core.mjs':'E',
-    './registry-wire.mjs':'W','./registry-simulator-core.mjs':'R',
+    './checkpoint-conviction.mjs':'Judgment','./registry-wire.mjs':'W','./registry-simulator-core.mjs':'R',
     './checkpoint-system-core.mjs':'S','./checkpoint-system-properties.mjs':'P','./consumer-core.mjs':'U','./consumer-properties.mjs':'V',
   };
   let script='(()=>{\n';
   const core=read('checkpoint-simulator-core.mjs');sources['checkpoint-simulator-core.mjs']=hash(core);
   const exports=core.match(/export \{([\s\S]*?)\};/)[1];
   script+=`const C={${exports}};\n`;
-  for(const file of ['registry-economic-core.mjs','registry-wire.mjs','registry-simulator-core.mjs','checkpoint-system-core.mjs','checkpoint-system-properties.mjs','consumer-core.mjs','consumer-properties.mjs']) {
+  for(const file of ['registry-economic-core.mjs','checkpoint-conviction.mjs','registry-wire.mjs','registry-simulator-core.mjs','checkpoint-system-core.mjs','checkpoint-system-properties.mjs','consumer-core.mjs','consumer-properties.mjs']) {
     const raw=read(file);sources[file]=hash(raw);const exported=[];
     for(const m of raw.matchAll(/^export (?:function|class|const) ([A-Za-z_]\w*)/gm))exported.push(m[1]);
     for(const m of raw.matchAll(/^export (?:const )?\{([^}]+)\}/gm))exported.push(...m[1].split(',').map(x=>x.trim()));

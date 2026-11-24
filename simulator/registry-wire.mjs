@@ -55,11 +55,20 @@ const economicOutput = record({ output, contents, singularTags: list(singular), 
 const economicTx = record({ transaction: tx, identity: nat, outputs: list(economicOutput), trieReadyMint: list(pair(token, integer)), applicationMint: list(pair(token, integer)), stateMint: list(pair(token, integer)), singularMint: list(pair(singular, integer)) });
 const utxo = list(pair(ref, economicOutput));
 const rejection = record({ transaction: economicTx, stateReference: ref, members: list(pair(ref, variant({ mismatch: record({ leaf }) }, ['expired']))) });
-const carrier = record({ ...fields('aid token k minAda'), original: holding, st: enumeration(['live', 'terminationPending']) });
-const payload = record({ ...fields('aid token keyState booker bookingFee'), original: holding, spend });
+const carrier = record({ ...fields('aid token minAda'), original: holding, pendingSpend: option(spend) });
+const payload = record({ ...fields('aid token booker bookingFee'), original: holding, spend });
 const sys = record({ ...fields('gen treasury nextToken'), config, trie: list(pair(nat, leaf)), carriers: list(carrier), registrations: list(regBooking), terminations: list(record({ booking: termBooking, payload })), bindings: list(pair(nat, nat)) });
 const params = record(fields('D tip Mc Mr'));
-const env = record({ inception: list(nat), duplicity: list(pair(nat, nat)) });
+const threshold = variant({ unweighted: record({m: integer}), weighted: record({clauses: list(list(pair(integer, integer)))}) });
+const keys = list(list(nat));
+const signatures = list(pair(nat, list(nat)));
+const keyMaterial = record({curKeys: keys, curThreshold: threshold, nextKeys: keys, nextThreshold: threshold,
+  witnesses: keys, toad: integer});
+const tip = record({...fields('aid epoch sn'), keys: keyMaterial});
+const rival = record({...fields('aid sn'), bytes: list(nat), rotation: (x, p) => typeof x === 'boolean' ? x : error(p),
+  revealedKeys: keys, threshold, nextKeys: keys, nextThreshold: threshold, toad: integer, signatures, receipts: signatures});
+const conviction = record({output: ref, comparison: record({tip, rival})});
+const env = record({ inception: list(nat), convictions: list(conviction) });
 const action = variant({
   bookRegistration: record({ booking: regBooking }), convictCkpt: record(fields('aid')),
   bookTermination: record({ ...fields('aid booker fee'), booking: localBooking }),

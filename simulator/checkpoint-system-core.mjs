@@ -83,10 +83,15 @@ function commitmentStep(state,kind,a) {
   else require(c.expiresAt<a.now,'commitment-not-expired');
   return retire(state,a.marker);
 }
-function transition(p,env,state,command) {
+export function evidenceFor(table, aid) {
+  return table.find(([subject]) => E.equal(subject, aid))?.[1] ??
+    {rotationTo: [], depositAuthorized: [], quorum: [], duplicityAt: []};
+}
+function transition(p,table,state,command) {
   validateCommand(command);
   const kind=Object.keys(command)[0],a=command[kind];
   if(['openCommitment','reveal','sweep'].includes(kind))return {ok:{state:commitmentStep(state,kind,a),checkpointFlow:null,registryFlow:null}};
+  const env = evidenceFor(table, a.aid);
   const row=state.aids.find(x=>E.equal(x.aid,a.aid))??{aid:a.aid,leaf:'absent',state:'absent',origin:null,pending:null};
   let next=row,checkpointFlow=null,registryFlow=null;
   if(kind==='register') {
@@ -95,6 +100,11 @@ function transition(p,env,state,command) {
     const receipt=replayFold(a.context,R.init(a.context.configuration),a.certificate);
     const binding=receipt.state.bindings.find(([aid])=>E.equal(aid,a.aid));require(!!binding,'checkpoint-registration-alias-missing');
     const output=receipt.transaction.outputs[a.index];require(!!output,'checkpoint-registration-output-missing');
+    const booking = E.toInternal(a.booking.request);
+    const registry = E.toInternal(a.context.parameters);
+    require(booking.submittedAt === BigInt(a.now) && booking.refundAddress === BigInt(a.refund) &&
+      registry.D === BigInt(p.D) + BigInt(p.B) && booking.carrierAda === registry.Mc + registry.D + BigInt(a.pool),
+      'checkpoint-registration-facts-mismatch');
     const before=E.toInternal(receipt.before),tx=E.toInternal(receipt.transaction);
     const world={registry:{config:before.config,trie:before.trie,held:before.carriers.map(c=>c.original)},pending:before.registrations,terminations:before.terminations.map(e=>e.booking),treasury:before.treasury};
     const selected=E.foldMembers(world,tx).some(m=>m.kind==='registration'&&E.equal(m.booking,a.booking));
@@ -133,8 +143,15 @@ const sessions=new WeakSet();
 function freeze(value) {if(value&&typeof value==='object'&&!Object.isFrozen(value)){Object.values(value).forEach(freeze);Object.freeze(value);}return value;}
 function session(value) {const copy=freeze(structuredClone(value));sessions.add(copy);return copy;}
 export function newSystem(params,env,deployment) {
-  fields(params,['D','B','P','W'],'params');fields(env,['rotationTo','depositAuthorized','quorum','duplicityAt'],'env');
-  if(C.validateParams(params)||C.validateEnv(env))throw Error('invalid-system-wire:checkpoint-context');
+  fields(params,['D','B','P','W'],'params');
+  if (C.validateParams(params) || !Array.isArray(env)) throw Error('invalid-system-wire:checkpoint-context');
+  for (const pair of env) {
+    if (!Array.isArray(pair) || pair.length !== 2) throw Error('invalid-system-wire:evidence-row');
+    const [aid, evidence] = pair;
+    nat(aid, 'evidence-aid');
+    fields(evidence, ['rotationTo','depositAuthorized','quorum','duplicityAt'], 'env');
+    if (C.validateEnv(evidence)) throw Error('invalid-system-wire:checkpoint-context');
+  }
   localNat(deployment,'deployment');
   return session({params,env,state:{deployment,commitments:[],aids:[]},records:[]});
 }
@@ -147,7 +164,7 @@ export function attemptSystem(current,command) {
 }
 export function replaySystem(params,env,deployment,commands) {return commands.reduce((s,c)=>attemptSystem(s,c).session,newSystem(params,env,deployment));}
 export function checkSystemCorpus(corpus) {
-  if(corpus.schema!=='cardano-keri.checkpoint.system'||corpus.version!==1||corpus.traces.length!==6)throw Error('system-corpus-schema/roster');
+  if(corpus.schema!=='cardano-keri.checkpoint.system'||corpus.version!==2||corpus.traces.length!==8)throw Error('system-corpus-schema/roster');
   let cells=0,accepted=0,refused=0;
   for(const trace of corpus.traces) {
     if(!trace.cells.length)throw Error('empty-system-trace');

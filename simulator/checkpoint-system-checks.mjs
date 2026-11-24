@@ -5,7 +5,7 @@ import {newSystem,attemptSystem,checkSystemCorpus,validateCommand,replaySystem} 
 import {equal} from './registry-economic-core.mjs';
 import {SYSTEM_THEOREMS,systemProperties} from './checkpoint-system-properties.mjs';
 const corpus=JSON.parse(readFileSync(new URL('./checkpoint-system-corpus.json',import.meta.url)));
-const report=checkSystemCorpus(corpus);assert.deepEqual(report,{cells:55,accepted:39,refused:16});
+const report=checkSystemCorpus(corpus);assert.deepEqual(report,{cells:67,accepted:45,refused:22});
 const first=corpus.traces[0].cells[0],initial=newSystem(first.params,first.env,corpus.traces[0].deployment);
 const registered=attemptSystem(initial,first.command).session;
 assert.equal(initial.state.aids.length,0,'mutated initial state');
@@ -63,4 +63,16 @@ assert.equal(systemProperties(misplaced)['sys_conviction_consumes_commitment'].h
 // The same commands in the other deployment: the first deployment's commitment convicts there no more.
 const home=corpus.traces.find(t=>t.name==='another-deployment');
 assert(replaySystem(home.cells[0].params,home.cells[0].env,corpus.traces[0].deployment,home.cells.slice(0,5).map(c=>c.command)).records.at(-1).result.ok,'the refused conviction is accepted in the commitment\'s own deployment');
-console.log(JSON.stringify({...report,schemaControls:malformed.length+1,immutableOrigin:true,initOnlySessions:true,systemProperties:shown.size,fabricatedCheckerControls:14}));
+const bookedFacts = 'registration_installs_booked_facts';
+for (const field of ['bornAt', 'refundTo', 'pool']) {
+  const changed = structuredClone(first.result);
+  changed.ok.state.aids[0].state.present.l[field]++;
+  assert.equal(systemProperties(first, changed)[bookedFacts].holds, false, field);
+}
+const scopeTrace = corpus.traces.find(trace => trace.name === 'identity-bound-authorizations');
+for (const cell of scopeTrace.cells.filter(cell => cell.name.startsWith('foreign-'))) {
+  assert.equal(cell.result.error, 'checkpoint-local-refused', cell.name);
+  const fabricated = {ok: {state: cell.input}};
+  assert.equal(systemProperties(cell, fabricated).local_event_uses_own_authorization.holds, false, cell.name);
+}
+console.log(JSON.stringify({...report,schemaControls:malformed.length+1,immutableOrigin:true,initOnlySessions:true,systemProperties:shown.size,fabricatedCheckerControls:20}));

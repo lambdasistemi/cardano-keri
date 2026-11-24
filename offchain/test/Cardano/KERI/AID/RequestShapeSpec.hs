@@ -33,20 +33,22 @@ import Cardano.KERI.AID.Reader (
     requestShape,
     terminationApproval,
  )
+import Cardano.KERI.AID.ReaderCorpus (
+    Corpus (..),
+    Holding (..),
+    Row (..),
+    fixtureName,
+    loadCorpus,
+    rowNamed,
+ )
 import Control.Monad (when)
-import Data.Aeson (Value (..), eitherDecodeFileStrict)
-import Data.Aeson.Key qualified as K
-import Data.Aeson.KeyMap qualified as KM
-import Data.ByteArray.Encoding (Base (Base16), convertFromBase)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as BC
-import Data.Foldable (toList)
 import Data.List (nub, sort)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as T
-import Data.Text.Encoding qualified as TE
 import Paths_cardano_keri (getDataFileName)
 import System.Directory (doesFileExist)
 import Test.Hspec (
@@ -57,172 +59,6 @@ import Test.Hspec (
     shouldBe,
     shouldSatisfy,
  )
-
--- ---------------------------------------------------------
--- The corpus
--- ---------------------------------------------------------
-
--- | What a row observes of the holders of the asset.
-data Holding = Holding
-    { hoPoint :: Integer
-    , hoAsset :: (ByteString, ByteString)
-    , hoHolders :: [ObservedOutput]
-    }
-
--- | The cells of a row the request shape reads.
-data Row = Row
-    { rowId :: Text
-    , rowPoint :: Integer
-    , rowHolding :: Maybe Holding
-    , rowCustody :: Text
-    }
-
-data Corpus = Corpus
-    { cpContext :: Context
-    , cpDerivedApproval :: (ByteString, ByteString)
-    , cpDerivedRegistry :: (ByteString, ByteString)
-    , cpDerivedRepresentative :: (ByteString, ByteString)
-    , cpDerivedKey :: ByteString
-    , cpRows :: [Row]
-    }
-
-fixtureName :: FilePath
-fixtureName = "test/keri-fixtures/fixtures/reader-status-vectors.json"
-
-loadCorpus :: IO Corpus
-loadCorpus = do
-    path <- getDataFileName fixtureName
-    value <- eitherDecodeFileStrict path >>= either fail pure
-    either fail pure (corpusOf value)
-
-corpusOf :: Value -> Either String Corpus
-corpusOf top = do
-    context <- field "context" top
-    release <- field "release" context
-    networkValue <- field "network" context
-    network <- integer networkValue
-    seed <- field "seed" context
-    seedTx <- field "transactionId" seed >>= hex
-    seedIx <- field "outputIndex" seed >>= integer
-    aid <- field "aid" context >>= text
-    checkpoint <- field "checkpointCredential" context >>= hex
-    stateProgram <- field "stateProgram" release >>= hex
-    statePolicy <- field "statePolicy" release >>= hex
-    applicationPolicy <- field "applicationPolicy" release >>= hex
-    applicationCredential <- field "applicationCredential" release >>= hex
-    derived <- field "derived" top
-    approval <- field "terminationApproval" derived >>= assetOf
-    registry <- field "registryAsset" derived >>= assetOf
-    representative <- field "representativeAsset" derived >>= assetOf
-    key <- field "key" derived >>= hex
-    rows <- field "rows" top >>= array >>= traverse rowOf
-    pure
-        Corpus
-            { cpContext =
-                Context
-                    { cxNetwork = network
-                    , cxRelease =
-                        Release
-                            { rlApplicationPolicy = applicationPolicy
-                            , rlApplicationCredential = applicationCredential
-                            , rlStateProgram = stateProgram
-                            , rlStatePolicy = statePolicy
-                            }
-                    , cxSeed = OutputReference seedTx seedIx
-                    , cxAid = TE.encodeUtf8 aid
-                    , cxCheckpointCredential = ScriptCredential checkpoint
-                    }
-            , cpDerivedApproval = approval
-            , cpDerivedRegistry = registry
-            , cpDerivedRepresentative = representative
-            , cpDerivedKey = key
-            , cpRows = rows
-            }
-
-rowOf :: Value -> Either String Row
-rowOf value = do
-    identifier <- field "id" value >>= text
-    evidence <- field "evidence" value
-    point <- field "point" evidence >>= integer
-    holding <- case KM.lookup (K.fromText "holding") (object evidence) of
-        Nothing -> Left "evidence.holding is missing"
-        Just Null -> Right Nothing
-        Just observed -> Just <$> holdingOf observed
-    answer <- field "answer" value
-    custody <- field "custody" answer >>= custodyWord
-    pure Row{rowId = identifier, rowPoint = point, rowHolding = holding, rowCustody = custody}
-  where
-    object (Object o) = o
-    object _ = KM.empty
-
-holdingOf :: Value -> Either String Holding
-holdingOf observed = do
-    point <- field "point" observed >>= integer
-    asset <- field "asset" observed >>= assetOf
-    holders <- field "holders" observed >>= array >>= traverse holderOf
-    pure Holding{hoPoint = point, hoAsset = asset, hoHolders = holders}
-
-holderOf :: Value -> Either String ObservedOutput
-holderOf output = do
-    credential <- field "credential" output >>= hex
-    assets <- field "assets" output >>= array >>= traverse entryOf
-    datum <- field "datum" output >>= datumOf
-    pure
-        ObservedOutput
-            { ooCredential = ScriptCredential credential
-            , ooAssets = assets
-            , ooDatum = datum
-            }
-  where
-    entryOf entry = do
-        policy <- field "policy" entry >>= hex
-        name <- field "name" entry >>= hex
-        quantity <- field "quantity" entry >>= integer
-        pure (policy, name, quantity)
-
--- | The custody word of an answer: a word, or an object keyed by the word that carries its facts.
-custodyWord :: Value -> Either String Text
-custodyWord = \case
-    String t -> Right t
-    Object o | [(key, _)] <- KM.toList o -> Right (K.toText key)
-    _ -> Left "custody: neither a word nor a one-key object"
-
--- | The corpus writes @"empty"@ or @{"application": <inline datum bytes>}@.
-datumOf :: Value -> Either String OutputDatum
-datumOf = \case
-    String "empty" -> Right DatumAbsent
-    Object o -> case KM.lookup (K.fromText "application") o of
-        Just bytes -> DatumInline <$> hex bytes
-        Nothing -> Left "datum: the object names no application datum"
-    _ -> Left "datum: neither empty nor an application datum"
-
-assetOf :: Value -> Either String (ByteString, ByteString)
-assetOf value = (,) <$> (field "policy" value >>= hex) <*> (field "name" value >>= hex)
-
-field :: Text -> Value -> Either String Value
-field name = \case
-    Object o -> maybe (Left ("missing " <> T.unpack name)) Right (KM.lookup (K.fromText name) o)
-    _ -> Left ("not an object at " <> T.unpack name)
-
-array :: Value -> Either String [Value]
-array = \case
-    Array items -> Right (toList items)
-    _ -> Left "not an array"
-
-text :: Value -> Either String Text
-text = \case
-    String t -> Right t
-    _ -> Left "not a string"
-
-integer :: Value -> Either String Integer
-integer = \case
-    Number n -> Right (truncate n)
-    _ -> Left "not a number"
-
-hex :: Value -> Either String ByteString
-hex value = do
-    t <- text value
-    convertFromBase Base16 (TE.encodeUtf8 t)
 
 -- ---------------------------------------------------------
 -- The selection the component is driven over
@@ -250,12 +86,6 @@ namedRows =
     , "request-with-datum"
     , "request-at-another-credential"
     ]
-
-rowNamed :: Corpus -> Text -> Row
-rowNamed corpus identifier =
-    case [r | r <- cpRows corpus, rowId r == identifier] of
-        [row] -> row
-        found -> error ("the corpus holds " <> show (length found) <> " rows named " <> T.unpack identifier)
 
 -- ---------------------------------------------------------
 -- Controls on the corpus' own positive holder

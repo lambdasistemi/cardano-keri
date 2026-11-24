@@ -39,6 +39,9 @@ module Cardano.KERI.AID.Consumer (
     DecodedCheckpoint (..),
     decodeCheckpoint,
 
+    -- * The authentication
+    authenticated,
+
     -- * The verdict
     Clause (..),
     consumableHolding,
@@ -285,6 +288,11 @@ stateClauses window now = \case
             <> [CheckpointJuvenile | dcBornAt + window > now]
     DecodedPending{} -> [CheckpointTerminationPending]
 
+{- | The Lean @authenticatedContextB@: the environment resolves the context's
+network, its release and its checkpoint credential, each as a whole. An
+unresolved release or checkpoint credential never authenticates. The consumer
+predicate and the reader's status share this one definition.
+-}
 authenticated :: Environment -> Context -> Bool
 authenticated env cx =
     envNetwork env == cxNetwork cx

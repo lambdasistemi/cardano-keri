@@ -31,6 +31,7 @@ import Cardano.KERI.AID.ConsumerVectorsSpec qualified as ConsumerVectorsSpec
 import Cardano.KERI.AID.Ed25519Spec qualified as Ed25519Spec
 import Cardano.KERI.AID.FoldGuardSpec qualified as FoldGuardSpec
 import Cardano.KERI.AID.Migration.TypesSpec qualified as MigrationTypesSpec
+import Cardano.KERI.AID.ReaderStatusSpec qualified as ReaderStatusSpec
 import Cardano.KERI.AID.ReleaseSpec qualified as ReleaseSpec
 import Cardano.KERI.AID.RequestShapeSpec qualified as RequestShapeSpec
 import Cardano.KERI.ChainQuery.ReleaseIdentitySpec qualified as ReleaseIdentitySpec
@@ -70,5 +71,6 @@ main = hspec $ do
     ConsumerClausesSpec.spec
     ReleaseSpec.spec
     RequestShapeSpec.spec
+    ReaderStatusSpec.spec
     ReleaseIdentitySpec.spec
     MigrationTypesSpec.spec

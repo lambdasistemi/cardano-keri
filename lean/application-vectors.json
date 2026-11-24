@@ -505,11 +505,11 @@
     {"lovelace": 15,
      "address":
      "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"},
-    {"lovelace": 7,
+    {"lovelace": 5,
      "address":
      "d8799fd8799f581c979ca1a6abb0b5babfc4c9ced3d8dde2e7ecf1f6fb00050a0f14191effd87a80ff"}],
    "note":
-   "the fold the Singular client builds from the public registry and the booked request alone, with the configuration record read by reference and the registration cost donated: accepted",
+   "the fold the Singular client builds from the public registry and the booked request alone, with the configuration record read by reference and the registration cost donated out of the folder's own output: accepted",
    "kind": "fold",
    "inputs":
    [{"lovelace": 2,
@@ -558,7 +558,7 @@
     {"lovelace": 15,
      "address":
      "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"},
-    {"lovelace": 7,
+    {"lovelace": 5,
      "address":
      "d8799fd8799f581c979ca1a6abb0b5babfc4c9ced3d8dde2e7ecf1f6fb00050a0f14191effd87a80ff"}],
    "note":
@@ -1343,14 +1343,15 @@
   "checkpointCredential":
   "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"},
  "clientFold":
- {"registryAccepts": true,
+ {"withTheDonation": {"registryAccepts": true, "donation": 2, "balances": true},
   "note":
-  "the fold SingularApplicationHeld.buildFold builds for request 9001 from the public registry and the request: the public registry's own fold judgement on it, and the holding it places at output 1",
+  "the fold SingularApplicationHeld.buildFold builds for request 9001 from the public registry and the request. asBuilt: the public registry's own fold judgement and the balance of the transaction as the client builds it, which donates nothing. withTheDonation: the same for the transaction of the row fold-built-by-singular-client, where the folder's own output gives up the donation; it is one transaction, judged by the public registry here and by KERI's application in that row. Neither judgement reads the balance; the ledger does",
   "holding":
   {"lovelace": 15,
    "carriesTheRequestsInitialDatum": true,
    "address":
-   "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}},
+   "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"},
+  "asBuilt": {"registryAccepts": true, "balances": true}},
  "checkpoint": {"P": 1, "Mc": 4, "D": 6, "B": 4},
  "approvals":
  [{"registryName":

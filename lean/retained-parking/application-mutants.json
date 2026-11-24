@@ -430,5 +430,13 @@
     "failure": "verdict-changed booking-without-inception-evidence",
     "owner": "CardanoKeri.Application.booking_refuses_missing_inception",
     "test": "ApplicationChecks"
+  },
+  {
+    "id": "fold-reads-inception",
+    "before": "      | some (.registration data) => spendRegistration i release o a input data",
+    "after": "      | some (.registration data) => env.inception data.key && spendRegistration i release o a input data",
+    "failure": "verdict-changed fold-without-inception-evidence",
+    "owner": "CardanoKeri.Application.only_booking_reads_inception",
+    "test": "ApplicationChecks"
   }
 ]

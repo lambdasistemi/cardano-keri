@@ -68,18 +68,34 @@ deadline. It is now refused when booked.
 | `registry-mutants.json` `registration-no-inception` (the fold's guard) | retargeted | the booking's guard; killed by the retention check's refused booking |
 | `application-mutants.json` `fold-checkpoint-validator` | retired | the fold no longer compares the holding with the configuration record; `booking-holding-address` covers the address |
 | `application-mutants.json` `fold-initial-state-unchecked` and the eleven `fold-initial-…` cases | retargeted | the same mutations of the same definitions, killed by booking rows (`booking-initial-…`) |
-| new | added | `booking-inception-unchecked` |
+| new | added | `booking-inception-unchecked`, `fold-reads-inception` (both ledgers), `booking-evidence-of-another-field` (registry) |
 
-Not expressible as a source mutation: the evidence read again at the fold. The
-fold's spend takes no evidence environment, so such a mutant does not compile,
-and a compilation failure is not a kill. `only_booking_reads_inception` and the
-vector rows `fold-without-inception-evidence` and
-`return-without-inception-evidence` state it instead.
+The evidence read again at the fold is a mutant of the dispatch, where the
+environment is still in scope: `fold-reads-inception` in both ledgers guards
+the spend of a request (application) and the fold step (registry) with the
+evidence again. They are killed by the vector row
+`fold-without-inception-evidence` and by the retention control
+`fold-reads-no-inception`. Inside `spendRegistration` and `Registry.fold` the
+same mutation does not compile, because neither takes an environment.
 
-The fold the upstream client builds is a row of the vectors
-(`fold-built-by-singular-client`), with the public registry's own judgement
-on the same transaction (`clientFold.registryAccepts`); the same fold without
-the donation or without the configuration record is refused.
+The invariant that every pending request has its evidence has its own control,
+`pending-requests-have-evidence`: under an environment where a request's
+refund address has evidence and its key has none, whatever the booking step
+leaves pending must be of a key with evidence. The registry mutant
+`booking-evidence-of-another-field` keeps a guard at the booking but reads the
+evidence of the refund address; the single refused booking does not see it,
+and that control kills it. No step other than the booking adds a pending
+request, so there is no second place to corrupt the pool from.
+
+The fold the upstream client builds is in the vectors twice. As the client
+builds it, it donates nothing: the public registry accepts it
+(`clientFold.asBuilt`) and KERI's application refuses it for the missing
+donation (row `fold-built-by-singular-client-no-donation`). With the donation
+taken out of the folder's own output it is one balanced transaction that the
+public registry accepts (`clientFold.withTheDonation`) and KERI's application
+accepts (row `fold-built-by-singular-client`). Neither judgement reads the
+balance. Without the configuration record the application refuses it. Whether
+a KERI fold keeps the donation and the record is not decided here.
 
 ## Limits
 

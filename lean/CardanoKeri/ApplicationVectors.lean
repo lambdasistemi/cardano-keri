@@ -289,10 +289,22 @@ def clientFold : FoldObservation :=
   buildFold i.hash i.code commit release publicRegistry
     [.registration (request 9001 18) (dataOf 9001)] funding
 
+/-- The client's fold made to balance with a treasury donation: the folder's
+own output, the last one, gives up the donation. Nothing else differs from
+what the client builds. -/
+def donatingFold (donation : Nat := 2) : FoldObservation :=
+  let last := clientFold.outputs.length - 1
+  { clientFold with
+    outputs := clientFold.outputs.mapIdx fun index output =>
+      if index == last then { output with lovelace := output.lovelace - donation } else output,
+    donation }
+
 /-- That fold as KERI's application observes it, with what the adapter adds:
-the configuration record read by reference and the treasury donation. -/
+the configuration record read by reference and the treasury donation. With a
+donation it is the balanced transaction (`donatingFold`); with none it is the
+fold exactly as the client builds it. -/
 def clientFoldAdapted (donation : Nat := 2) : Observation :=
-  adapted clientFold (configuration registry) donation
+  adapted (donatingFold donation) (configuration registry) donation
 
 /-- A transaction of the checkpoint's own lifecycle (an advance, say) spending
 the delivered checkpoint at `address`, with no application action. The
@@ -487,7 +499,7 @@ def cases : List Case := [
     "fold", fold 15 (raw := 9004)⟩,
   ⟨"fold-committed-datum-not-initial", "a request committing a checkpoint datum at sequence number 7, which no booking mints, folded delivering that datum: the spend validates no datum, accepted",
     "fold", fold 15 (raw := 9011) (datum := advancedRaw)⟩,
-  ⟨"fold-built-by-singular-client", "the fold the Singular client builds from the public registry and the booked request alone, with the configuration record read by reference and the registration cost donated: accepted",
+  ⟨"fold-built-by-singular-client", "the fold the Singular client builds from the public registry and the booked request alone, with the configuration record read by reference and the registration cost donated out of the folder's own output: accepted",
     "fold", clientFoldAdapted⟩,
   ⟨"fold-built-by-singular-client-no-donation", "the same fold donating nothing, as the client builds it: refused",
     "fold", clientFoldAdapted 0⟩,
@@ -708,9 +720,18 @@ def table : Json :=
     ("terminationApprovals", Json.arr terminationApprovals.toArray),
     ("releases", Json.arr (releaseCases.map releaseRow).toArray),
     ("clientFold", Json.mkObj [
-      ("note", toJson ("the fold SingularApplicationHeld.buildFold builds for request 9001 from the public registry and the request: " ++
-        "the public registry's own fold judgement on it, and the holding it places at output 1")),
-      ("registryAccepts", toJson (SingularApplicationHeld.fold .none i.hash i.code commit release clientFold)),
+      ("note", toJson ("the fold SingularApplicationHeld.buildFold builds for request 9001 from the public registry and the request. " ++
+        "asBuilt: the public registry's own fold judgement and the balance of the transaction as the client builds it, which donates nothing. " ++
+        "withTheDonation: the same for the transaction of the row fold-built-by-singular-client, where the folder's own output gives up " ++
+        "the donation; it is one transaction, judged by the public registry here and by KERI's application in that row. " ++
+        "Neither judgement reads the balance; the ledger does")),
+      ("asBuilt", Json.mkObj [
+        ("registryAccepts", toJson (SingularApplicationHeld.fold .none i.hash i.code commit release clientFold)),
+        ("balances", toJson (observedBalance clientFold.spentOutputs clientFold.outputs clientFold.fee clientFold.donation))]),
+      ("withTheDonation", Json.mkObj [
+        ("donation", toJson (donatingFold).donation),
+        ("registryAccepts", toJson (SingularApplicationHeld.fold .none i.hash i.code commit release donatingFold)),
+        ("balances", toJson (observedBalance (donatingFold).spentOutputs (donatingFold).outputs (donatingFold).fee (donatingFold).donation))]),
       ("holding", match clientFold.outputs[1]? with
         | some holding => Json.mkObj [("address", toJson (hexOf holding.credential)), ("lovelace", toJson holding.lovelace),
             ("carriesTheRequestsInitialDatum", toJson (decide (holding.datum = .application (dataOf 9001).initialDatum)))]

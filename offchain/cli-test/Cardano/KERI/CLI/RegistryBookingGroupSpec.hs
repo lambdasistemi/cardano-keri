@@ -63,7 +63,9 @@ registerSettings =
         , rgBlueprint = "plutus.json"
         , rgNodeSocket = "node.socket"
         , rgFundingAddress = "addr_test1qexample"
-        , rgSigningKeyFile = "payment.skey"
+        , rgSigningKeyFile = Just "payment.skey"
+        , rgVault = Nothing
+        , rgPassphraseFd = Nothing
         , rgTimeoutSeconds = 77
         , rgReleaseIdentity = "identity.json"
         , rgReferenceRecord = "references.json"
@@ -78,7 +80,9 @@ foldSettings =
         , rfBlueprint = "plutus.json"
         , rfNodeSocket = "node.socket"
         , rfFundingAddress = "addr_test1qexample"
-        , rfSigningKeyFile = "payment.skey"
+        , rfSigningKeyFile = Just "payment.skey"
+        , rfVault = Nothing
+        , rfPassphraseFd = Nothing
         , rfTimeoutSeconds = 77
         , rfReleaseIdentity = "identity.json"
         , rfReferenceRecord = "references.json"
@@ -108,7 +112,9 @@ returnSettings =
         , rnBlueprint = "plutus.json"
         , rnNodeSocket = "node.socket"
         , rnFundingAddress = "addr_test1qexample"
-        , rnSigningKeyFile = "payment.skey"
+        , rnSigningKeyFile = Just "payment.skey"
+        , rnVault = Nothing
+        , rnPassphraseFd = Nothing
         , rnTimeoutSeconds = 77
         , rnReleaseIdentity = "identity.json"
         , rnReferenceRecord = "references.json"
@@ -118,7 +124,7 @@ returnSettings =
 -- | The options a return cannot run without.
 requiredReturn :: [String]
 requiredReturn =
-    ["--blueprint", "--node-socket", "--funding-address", "--signing-key-file", "--release-identity", "--reference-record", "--request"]
+    ["--blueprint", "--node-socket", "--funding-address", "--release-identity", "--reference-record", "--request"]
 
 argumentsOf :: [(String, String)] -> [String]
 argumentsOf options = concat [[name, value] | (name, value) <- options]
@@ -126,7 +132,7 @@ argumentsOf options = concat [[name, value] | (name, value) <- options]
 -- | The options a command cannot run without.
 requiredRegister, requiredFold :: [String]
 requiredRegister =
-    ["--blueprint", "--node-socket", "--funding-address", "--signing-key-file", "--release-identity", "--reference-record", "--kli-export"]
+    ["--blueprint", "--node-socket", "--funding-address", "--release-identity", "--reference-record", "--kli-export"]
 requiredFold = requiredRegister <> ["--request", "--snapshot"]
 
 spec :: Spec

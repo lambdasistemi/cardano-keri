@@ -370,7 +370,7 @@ theorem registerJoint_sound (i : Interpretation) (c : Context)
   repeat first | split at accepted | contradiction
   all_goals try { change Except.error _ = Except.ok _ at accepted; contradiction }
   cases accepted
-  rename_i _ created hc _ book hb _ folded hf hff _ cpFlow st hcp _ o ho _ eo heo hag _ token ht
+  rename_i _ created hc _ book hb _ folded hf hff _ cpFlow st hcp _ o ho _ eo heo hag _ token ht _ writer hw
   have full : SingularApplicationHeld.fold .none i.hash i.code commit c.release q.fullFold = true := by simpa using hff
   have agree : registrationAgreementB i c q created book.2 folded.2 st o eo = true := by simpa using hag
   refine ⟨hc, hb, hf, full, hcp, agree, ?_⟩
@@ -463,9 +463,10 @@ theorem registerJoint_complete (i : Interpretation) (c : Context)
     (fullOutput : q.fullFold.outputs[q.holdingIndex]? = some o)
     (economicOutput : q.economicTx.outputs[q.holdingIndex]? = some eo)
     (agreement : registrationAgreementB i c q created booked after st o eo = true)
-    (binding : CardanoKeri.Registry.bindingAt after c.aid = some token) :
+    (binding : CardanoKeri.Registry.bindingAt after c.aid = some token)
+    (writer : EventHistory) (written : q.checkpointEnv.initialHistory c.aid q.booking.request.datum = some writer) :
     ∃ r, registerJoint i c abstractRegistry commit q = .ok r := by
   simp [registerJoint, genesis, book, fold, fullFold, registration, fullOutput,
-    economicOutput, agreement, binding, bind, Except.bind, pure, Except.pure]
+    economicOutput, agreement, binding, written, bind, Except.bind, pure, Except.pure]
 
 end CardanoKeri.ConsumerIdentity

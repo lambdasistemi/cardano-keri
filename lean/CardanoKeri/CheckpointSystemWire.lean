@@ -67,7 +67,7 @@ def originJson (environment : CardanoKeri.Registry.TraceWire.EnvTable) (origin :
     ("parameters", toJson origin.parameters), ("environment", toJson environment),
     ("configuration", toJson origin.configuration), ("registered", toJson origin.registered),
     ("token", toJson origin.token), ("registrationRef", toJson origin.registrationRef),
-    ("carrierRef", toJson origin.carrierRef)]
+    ("carrierRef", toJson origin.carrierRef), ("inception", toJson origin.inception)]
 
 def stateJson (machine : Machine) : Json :=
   let s := machine.certified.state
@@ -76,6 +76,7 @@ def stateJson (machine : Machine) : Json :=
     ("aids", Json.arr (machine.contexts.map fun (aid, environment) => Json.mkObj [
     ("aid", toJson aid), ("leaf", toJson (s.leaves aid)), ("state", toJson (s.states aid)),
     ("origin", match s.origins aid with | none => Json.null | some origin => originJson environment origin),
+    ("writer", toJson (s.writers aid)),
     ("pending", match s.pending aid with
       | none => Json.null
       | some association => Json.mkObj [
@@ -88,7 +89,7 @@ no witnessed rotation, deposit signature, poison quorum or conviction pair. -/
 abbrev EvidenceTable := List (AID × EnvTable)
 
 def evidenceFor (table : EvidenceTable) (aid : AID) : Env :=
-  ((table.lookup aid).getD ⟨[], [], [], []⟩).toEnv
+  ((table.lookup aid).getD ⟨[], [], [], [], {}⟩).toEnv
 
 def cell (name : String) (p : Params) (table : EvidenceTable) (machine : Machine)
     (command : Command) : Json × Machine :=
@@ -98,7 +99,8 @@ def cell (name : String) (p : Params) (table : EvidenceTable) (machine : Machine
       (Json.mkObj [("ok", Json.mkObj [("state", stateJson next),
         ("checkpointFlow", toJson flow), ("registryFlow", toJson registryFlow)])], next)
   (CardanoKeri.Registry.TraceWire.exactJson (Json.mkObj [
-    ("name", toJson name), ("params", toJson p), ("env", toJson table),
+    ("name", toJson name), ("params", toJson p), ("env", toJson (table.map fun (aid, evidence) =>
+      (aid, (toJson evidence).setObjVal! "writers" (toJson evidence.writers)))),
     ("input", stateJson machine), ("command", toJson command), ("result", result)]), next)
 
 end CardanoKeri.Checkpoint.SystemWire

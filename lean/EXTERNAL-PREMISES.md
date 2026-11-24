@@ -18,3 +18,19 @@ A theorem about an accepted transaction can depend on evidence that Lean treats 
 | Finite encoding, hash collision freedom, approval-preimage uniqueness, signature binding | The approval, conviction and consumer calculations check concrete names and signatures. No transaction establishes the cryptographic assumptions over all inputs in a theorem's domain. Faithful key, datum and registry mappings are obligations of the interpretation used by the proof. |
 | Realized checkpoint inputs and public history | The termination booker consumes the pending carrier. A theorem about what preceded it requires the reader to establish that the input belongs to the proved history. Receipt replay checks the supplied prefix and actual model steps. It cannot establish the completeness or freshness of a provider's ledger view. |
 | Seal walk, TEL digest, delegation event digest and credential policy | In the statements models the presenter supplies the event and receipts for the consuming seal walk. A delegation certificate minter supplies the child event and the approval walk. At credential admission the presenter supplies the chain and seal walks, and the verifier supplies its root, schemas, link predicates, depth, witness floor and freshness policy. A relying-party read has no transaction and the reader establishes this context independently. |
+
+The registration observer reads the signed inception and initial witness list from
+the same admitted datum. `Env.inceptionWriter aid datum` models that joint read
+(`checkpoint/observer.ak` 65–111 and `checkpoint/registration.ak` 310–352,
+363–410). At an advance, `Env.rotationWriter` reads the proposed signed event
+for the spent identifier and position (`checkpoint/observer.ak` 121–158,
+214–231). The system computes the preceding keys and witnesses from the installed
+history. Signature verification, opening key digests, binding witness data to
+the bytes and verifying the prior digest remain interpretation obligations of
+the decoded model. The chain-to-bytes correspondence has no proof here.
+
+At enforcement the checkpoint observer reads the spent tip and rival
+(`checkpoint/enforcement_observer.ak` 68–94). The agreement of the decoded
+tip and signed content with those bytes belongs to `ComparisonReads`.
+`InceptionRefusal` and `RotatedRivalValidity` state open conformance
+obligations. Authentication of the stored writer alone discharges neither.

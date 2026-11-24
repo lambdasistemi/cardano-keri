@@ -20,7 +20,8 @@ def evidence : TraceWire.EnvTable := {
   rotationTo := (List.range 12).map fun n => (n, n, n + 1)
   depositAuthorized := List.range 13
   quorum := List.range 13
-  duplicityAt := (List.range 13).map fun n => (n, n) }
+  duplicityAt := (List.range 13).map fun n => (n, n)
+  writers := TraceWire.WriterTable.fixture 11 711 ((List.range 12).map fun n => (n, n, n + 1)) }
 def ce : Env := evidence.toEnv
 def registryEnvironment : CardanoKeri.Registry.TraceWire.EnvTable := {
   inception := [11, 12, 13],

@@ -1,4 +1,4 @@
-import CardanoKeri.Duplicity
+import CardanoKeri.CheckpointEventHistory
 import CardanoKeri.Registry
 
 /-! Checkpoint lifecycle: alive until convicted, then explicit pending termination.
@@ -58,6 +58,21 @@ structure Env where
   convictionContext : Epoch → Seq → Option CardanoKeri.Duplicity.Context
 
   convictionRival : Epoch → Seq → Option CardanoKeri.Duplicity.SignedEvent
+
+  -- The registration observer reads the identified inception from the event
+  -- and datum admitted at booking. The advance observer reads the signed
+  -- rotation presented for the spent identifier and the proposed successor.
+  inceptionWriter : AID → Nat → Option (Duplicity.SignedEvent × List Nat) := fun _ _ => none
+  rotationWriter : AID → Epoch → Seq → Seq → Option Duplicity.SignedEvent := fun _ _ _ _ => none
+
+def Env.initialHistory (env : Env) (aid : AID) (datum : Option Nat) : Option EventHistory :=
+  match datum with
+  | none => none
+  | some raw => match env.inceptionWriter aid raw with
+    | none => none
+    | some (event, witnesses) =>
+      let history := EventHistory.inception event witnesses
+      if history.authenticated aid then some history else none
 
 /-- The checkpoint spend selects its identifier before consulting any evidence.
 A rotation relayer or a hunter supplies the witnessed event for that identifier.
@@ -462,6 +477,7 @@ structure Origin where
   token : Nat
   registrationRef : Singular.OutRef
   carrierRef : Singular.OutRef
+  inception : EventHistory
 
 structure PendingAssociation where
   origin : Origin
@@ -480,18 +496,20 @@ structure Sys where
   pending : AID → Option PendingAssociation
   -- The open commitments of the release's commitment program, by marker.
   commitments : Marker → Option Commitment
+  writers : AID → Option EventHistory
 
 def Sys.init (d : Deployment) : Sys :=
   { deployment := d, leaves := fun _ => .absent, states := fun _ => .absent,
-    origins := fun _ => none, pending := fun _ => none, commitments := fun _ => none }
+    origins := fun _ => none, pending := fun _ => none, commitments := fun _ => none, writers := fun _ => none }
 
-def Sys.set (s : Sys) (aid : AID) (st : State) : Sys :=
+def Sys.set (s : Sys) (aid : AID) (st : State) (writer : Option EventHistory := none) : Sys :=
   { s with
     leaves := fun a => if a = aid then st.leaf else s.leaves a,
-    states := fun a => if a = aid then st else s.states a }
+    states := fun a => if a = aid then st else s.states a,
+    writers := fun a => if a = aid then writer.orElse (fun _ => s.writers a) else s.writers a }
 
 def Sys.installOrigin (s : Sys) (aid : AID) (st : State) (origin : Origin) : Sys :=
-  { s.set aid st with
+  { s.set aid st (some origin.inception) with
     origins := fun a => if a = aid then some origin else s.origins a,
     pending := fun a => if a = aid then none else s.pending a }
 
@@ -540,7 +558,8 @@ def RegistrationEvent (p : Params) (env : SystemEnv) (s s' : Sys) : Prop :=
     (receipt : CardanoKeri.Registry.FoldReceipt rp re cfg) (b : Singular.RegistrationBooking) (origin : Origin),
     s.leaves aid = .absent ∧ s.origins aid = none ∧
     Step p (env aid) (.register refund pool0) now (s.states aid) f st ∧
-    DeliveredOrigin receipt b aid origin ∧ BookedFacts p rp b now refund pool0 ∧
+    DeliveredOrigin receipt b aid origin ∧ (BookedFacts p rp b now refund pool0 ∧
+      (env aid).initialHistory aid b.request.datum = some origin.inception) ∧
     s' = s.installOrigin aid st origin
 
 /-- Given a system registration, when its delivered holding is installed, then
@@ -560,7 +579,7 @@ theorem registration_installs_booked_facts {p : Params} {env : SystemEnv} {s s' 
   generalize h : s.states aid = before at step
   cases step
   exact ⟨aid, origin, rp, re, cfg, receipt, booking, ⟨0, 0, false, false, now, refund, pool, false⟩, delivered,
-    by simp [Sys.installOrigin], by simp [Sys.installOrigin, Sys.set], facts⟩
+    by simp [Sys.installOrigin], by simp [Sys.installOrigin, Sys.set], facts.1⟩
 
 /-- The commitment an action reveals: a conviction reveals the one it carries. -/
 def Action.revealed : Action → Option Commitment
@@ -601,14 +620,34 @@ theorem Sys.retireRevealed_frame (s : Sys) (a : Action) :
 @[simp] theorem Sys.retireRevealed_pending (s : Sys) (a : Action) :
     (s.retireRevealed a).pending = s.pending := (s.retireRevealed_frame a).2.2.2
 
+/-- An advance reads the event for this spent writer. Freeze verifies the
+same evidence but retains the old key state. A missing or mismatched event
+refuses the local certificate before a new history can be installed. -/
+def Sys.rotationHistory (s : Sys) (env : Env) (aid : AID) (sn : Seq) : Option EventHistory :=
+  match s.writers aid, s.states aid with
+  | some previous, .present live =>
+    match env.rotationWriter aid live.epoch live.sn sn with
+    | some event =>
+      if previous.epoch == live.epoch && previous.writer.event.sn == live.sn &&
+          event.event.sn == sn && Duplicity.rotationValid previous.predecessor event then
+        some (.rotation previous event)
+      else none
+    | none => none
+  | _, _ => none
+
+def Sys.localWriter (s : Sys) (env : Env) (aid : AID) : Action → Option (Option EventHistory)
+  | .rotate sn _ _ => (s.rotationHistory env aid sn).map some
+  | .freeze sn _ => (s.rotationHistory env aid sn).map (fun _ => none)
+  | _ => some none
+
 -- A local step of one checkpoint. A conviction also reveals its commitment in
 -- the same transaction: the commitment must be open, and its marker is burnt.
 def LocalEvent (p : Params) (env : SystemEnv) (s s' : Sys) : Prop :=
   ∃ (aid : AID) (a : Action) (now : Slot) (f : Flow) (st : State),
     (∀ refund pool0, a ≠ .register refund pool0) ∧
     Step p (env aid) a now (s.states aid) f st ∧
-    s.revealOpen aid a ∧
-    s' = (s.set aid st).retireRevealed a
+    (s.revealOpen aid a ∧ (s.localWriter (env aid) aid a).isSome = true) ∧
+    s' = (s.set aid st (s.localWriter (env aid) aid a).join).retireRevealed a
 
 /-- The identity and key-state evidence required by a local action. A deposit
 uses the keys of the new epoch. Freeze, like keep, relays a witnessed rotation. -/
@@ -630,9 +669,9 @@ theorem local_event_uses_own_authorization {p : Params} {env : SystemEnv} {s s' 
     (event : LocalEvent p env s s') :
     ∃ aid a now flow st, Step p (env aid) a now (s.states aid) flow st ∧
       a.authorizedFor env aid (s.states aid) ∧ s.revealOpen aid a ∧
-      s' = (s.set aid st).retireRevealed a := by
+      s' = (s.set aid st (s.localWriter (env aid) aid a).join).retireRevealed a := by
   obtain ⟨aid, a, now, flow, st, _, step, opened, installed⟩ := event
-  refine ⟨aid, a, now, flow, st, step, ?_, opened, installed⟩
+  refine ⟨aid, a, now, flow, st, step, ?_, opened.1, installed⟩
   generalize h : s.states aid = before at step ⊢
   cases step <;> simp_all [Action.authorizedFor]
 

@@ -257,7 +257,7 @@ def storyJson (sc : Json) : Except String Json := do
   let story ← sc.getObjValAs? Nat "story"
   let p ← paramsOfJson (← sc.getObjVal? "params")
   let steps ← (← sc.getObjVal? "steps").getArr?
-  let init : StoryFold := ⟨p, ⟨[], [], [], []⟩, .absent, 0, []⟩
+  let init : StoryFold := ⟨p, ⟨[], [], [], [], {}⟩, .absent, 0, []⟩
   let trunk ← foldSteps init steps.toList (fun i => toJson i)
   let forks := match sc.getObjVal? "forks" with
     | .ok (Json.arr fs) => fs.toList

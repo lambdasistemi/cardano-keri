@@ -16,6 +16,10 @@ def env (aid : AID) : Env := {
     (epoch == 1 && sn == 1 && next == 2)),
   depositAuthorized := fun _ => false,
   quorum := fun _ => false,
+  inceptionWriter := fun subject raw => if subject == aid && raw == 777 then
+    some (Duplicity.writerFixture aid 0 .inception, []) else none,
+  rotationWriter := fun subject _ _ target => if subject == aid then
+    some (Duplicity.writerFixture aid target .rotation) else none,
   convictionContext := fun epoch sn => some (Duplicity.fixture epoch sn).1,
   convictionRival := fun epoch sn => some (Duplicity.fixture epoch sn).2 }
 
@@ -28,7 +32,7 @@ def registrationReceipt : CardanoKeri.Registry.FoldReceipt CardanoKeri.Registry.
 def origin : Origin := {
   parameters := CardanoKeri.Registry.Examples.p, environment := CardanoKeri.Registry.Examples.env, configuration := CardanoKeri.Registry.Examples.cfg,
   registered := CardanoKeri.Registry.Examples.registered, token := 0, registrationRef := ⟨100, 0⟩,
-  carrierRef := ⟨102, 1⟩ }
+  carrierRef := ⟨102, 1⟩, inception := .inception (Duplicity.writerFixture 11 0 .inception) [] }
 
 def live : Live := ⟨0, 0, false, false, 1, 42, 5, false⟩
 def rotatedLive : Live := ⟨1, 1, false, false, 1, 42, 4, false⟩
@@ -36,6 +40,7 @@ def rotatedLive : Live := ⟨1, 1, false, false, 1, 42, 4, false⟩
 def deployment : Deployment := 21
 def registered : Sys := (Sys.init deployment).installOrigin 11 (.present live) origin
 def rotated : Sys := registered.set 11 (.present rotatedLive)
+  (some (.rotation origin.inception (Duplicity.writerFixture 11 1 .rotation)))
 /-- Cora's commitment: it names AID 11, this deployment, the key state after the
 rotation and the evidence
 the conviction shows there, naming payee 7, its opening transaction's
@@ -87,7 +92,7 @@ theorem registered_step : SysStep p env (Sys.init deployment) registered := by
   apply SysStep.register
   exact ⟨11, 1, 42, 5, { dregIn := 3, bIn := 2, poolIn := 5 }, .present live,
     CardanoKeri.Registry.Examples.p, CardanoKeri.Registry.Examples.env, CardanoKeri.Registry.Examples.cfg, registrationReceipt, CardanoKeri.Registry.Examples.registration, origin,
-    rfl, rfl, Step.register 1 42 5 (by decide), delivered_origin, by decide, rfl⟩
+    rfl, rfl, Step.register 1 42 5 (by decide), delivered_origin, ⟨by decide, by decide⟩, rfl⟩
 
 /-- Given the complete parameters and hypotheses:
 
@@ -104,7 +109,7 @@ theorem rotated_step : SysStep p env registered rotated := by
     .present rotatedLive, ?_, ?_, ?_, rfl⟩
   · intro refund pool equal; cases equal
   · exact Step.rotateKeepPaid 3 1 6 (by decide) (by decide) (by decide)
-  · rfl
+  · exact ⟨rfl, by decide⟩
 
 /-- Given the complete parameters and hypotheses:
 
@@ -136,8 +141,7 @@ theorem pending_step : SysStep p env committed pending := by
     .terminationPending rotatedLive.hash, ?_, ?_, ?_, rfl⟩
   · intro refund pool equal; cases equal
   · exact Step.convict 5 7 commitment (by decide) (by decide)
-  · simp [Sys.revealOpen, Sys.revealOpenB, Action.revealed, committed, commitment]
-    rfl
+  · exact ⟨by unfold Sys.revealOpen; decide, rfl⟩
 
 
 /-- Given the complete parameters and hypotheses:

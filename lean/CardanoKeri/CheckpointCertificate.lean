@@ -102,12 +102,15 @@ def localCertificate (current : CertifiedSys) (p : Params) (env : SystemEnv)
         intro refund pool equal
         subst action
         contradiction
-      if revealed : current.state.revealOpenB aid action = true then
-        let event : SysStep p env current.state ((current.state.set aid state).retireRevealed action) :=
-          .local ⟨aid, action, now, flow, state, nonregister,
-            (T7_step_iff_stepFn p (env aid)).mpr executed, revealed, rfl⟩
-        pure { next := current.advance event, event, checkpointFlow := some flow }
-      else throw "checkpoint-commitment-not-open"
+      let writer := current.state.localWriter (env aid) aid action
+      if authorized : writer.isSome = true then
+        if revealed : current.state.revealOpenB aid action = true then
+          let event : SysStep p env current.state ((current.state.set aid state writer.join).retireRevealed action) :=
+            .local ⟨aid, action, now, flow, state, nonregister,
+              (T7_step_iff_stepFn p (env aid)).mpr executed, ⟨revealed, authorized⟩, rfl⟩
+          pure { next := current.advance event, event, checkpointFlow := some flow }
+        else throw "checkpoint-commitment-not-open"
+      else throw "checkpoint-rotation-writer-mismatch"
   else throw "checkpoint-registration-receipt-required"
 
 /-- Open a commitment of the release's commitment program. -/
@@ -178,20 +181,23 @@ def registerCertificate (current : CertifiedSys) (p : Params) (env : SystemEnv)
                 output.output.address = some booking.request.destination ∧
                 output.output.datumValue = booking.request.datum ∧
                 output.output.lovelace = booking.request.carrierAda then
-              let origin : Origin := {
-                parameters := rp, environment := re, configuration := cfg,
-                registered := receipt.after, token, registrationRef := booking.request.reference,
-                carrierRef := ⟨receipt.transaction.identity, index⟩ }
-              have delivered : DeliveredOrigin receipt booking aid origin := by
-                exact ⟨fields.1, fields.2.1, rfl, rfl, rfl, rfl, rfl, alias,
-                  index, output, outputFound, rfl, fields.2.2.1, fields.2.2.2.1,
-                  fields.2.2.2.2.1, fields.2.2.2.2.2⟩
-              let event : SysStep p env current.state (current.state.installOrigin aid state origin) :=
-                .register ⟨aid, now, refund, pool, flow, state, rp, re, cfg, receipt, booking, origin,
-                  absent, unbound, (T7_step_iff_stepFn p (env aid)).mpr executed, delivered, Decidable.of_not_not booked, rfl⟩
-              pure {
-                next := current.advance event, event, checkpointFlow := some flow,
-                registryFlow := some receipt.flow }
+              match initial : (env aid).initialHistory aid booking.request.datum with
+              | none => throw "checkpoint-inception-writer-mismatch"
+              | some inception => do
+                let origin : Origin := {
+                  parameters := rp, environment := re, configuration := cfg,
+                  registered := receipt.after, token, inception, registrationRef := booking.request.reference,
+                  carrierRef := ⟨receipt.transaction.identity, index⟩ }
+                have delivered : DeliveredOrigin receipt booking aid origin := by
+                  exact ⟨fields.1, fields.2.1, rfl, rfl, rfl, rfl, rfl, alias,
+                    index, output, outputFound, rfl, fields.2.2.1, fields.2.2.2.1,
+                    fields.2.2.2.2.1, fields.2.2.2.2.2⟩
+                let event : SysStep p env current.state (current.state.installOrigin aid state origin) :=
+                  .register ⟨aid, now, refund, pool, flow, state, rp, re, cfg, receipt, booking, origin,
+                    absent, unbound, (T7_step_iff_stepFn p (env aid)).mpr executed, delivered, ⟨Decidable.of_not_not booked, initial⟩, rfl⟩
+                pure {
+                  next := current.advance event, event, checkpointFlow := some flow,
+                  registryFlow := some receipt.flow }
             else throw "checkpoint-registration-delivery-mismatch"
     else throw "checkpoint-origin-already-bound"
   else throw "checkpoint-registration-leaf"

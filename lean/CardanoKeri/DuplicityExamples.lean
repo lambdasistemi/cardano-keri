@@ -9,6 +9,12 @@ def sign (event : Content) (keys : List Nat) : List Signature :=
 def signed (event : Content) (keys witnesses : List Nat) : SignedEvent :=
   ⟨event, true, sign event keys, sign event witnesses⟩
 
+/-- An ordinary history fixture with one controller throughout and no witnesses.
+Each event carries its own full signed content; a successor can use the one
+committed key from the preceding event. -/
+def writerFixture (aid sn : Nat) (kind : EventKind) : SignedEvent :=
+  signed ⟨aid, sn, kind, 0, [aid], .count 1, [aid], .count 1, [], [], 0, []⟩ [aid] []
+
 /-- A concrete partial/augmented sibling pair; row (epoch,sn) selects this
 fixture in the lifecycle simulator. Zero sequence deliberately fails validation. -/
 def fixture (epoch sn : Nat) : Context × SignedEvent :=

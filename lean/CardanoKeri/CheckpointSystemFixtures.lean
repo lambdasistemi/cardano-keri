@@ -12,7 +12,8 @@ def evidence : EnvTable := {
   rotationTo := [(0, 0, 1), (1, 1, 2)]
   depositAuthorized := []
   quorum := []
-  duplicityAt := [(0, 0), (1, 1), (2, 2)] }
+  duplicityAt := [(0, 0), (1, 1), (2, 2)]
+  writers := WriterTable.fixture 11 711 [(0, 0, 1), (1, 1, 2)] }
 def byIdentifier : EvidenceTable := [(11, evidence)]
 
 def registryEnvironment : Registry.TraceWire.EnvTable := {
@@ -136,8 +137,8 @@ def authorizationTrace : Except String Json := do
   let a ← register first
   let b ← register second
   let table : EvidenceTable := [
-    (11, ⟨[(0,0,1), (0,0,2)], [1], [0], []⟩),
-    (12, ⟨[(0,0,1)], [], [], []⟩)]
+    (11, ⟨[(0,0,1), (0,0,2)], [1], [0], [], WriterTable.fixture 11 711 [(0,0,1), (0,0,2)]⟩),
+    (12, ⟨[(0,0,1)], [], [], [], WriterTable.fixture 12 712 [(0,0,1)]⟩)]
   pure (trace "identity-bound-authorizations" [
     ("register-first", a), ("register-second", b),
     ("foreign-rotation-refused", .local 12 3 (.rotate 2 .keep 7)),

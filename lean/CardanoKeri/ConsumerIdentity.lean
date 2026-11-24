@@ -265,10 +265,12 @@ def registerJoint (i : Interpretation) (c : Context)
   if !registrationAgreementB i c q created booked after st o eo then
     throw "registration-correspondence-mismatch"
   let some token := CardanoKeri.Registry.bindingAt after c.aid | throw "origin-binding-missing"
+  let some inception := q.checkpointEnv.initialHistory c.aid q.booking.request.datum
+    | throw "checkpoint-inception-writer-mismatch"
   let origin : Origin := {
     parameters := q.registryParams, environment := q.registryEnv,
     configuration := q.configuration, registered := after,
-    token := token, registrationRef := q.booking.request.reference,
+    token := token, inception, registrationRef := q.booking.request.reference,
     carrierRef := ⟨q.economicTx.identity, q.holdingIndex⟩ }
   pure {
     created := created, booked := booked, after := after,

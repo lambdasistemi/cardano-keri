@@ -436,7 +436,7 @@ theorem sys_conviction_consumes_commitment (p : Params) (env : SystemEnv) {s s' 
       rw [hlive] at step
       obtain ⟨l', payee, c, hl, rfl, _, hent, _⟩ := pending_only_by_conviction p _ step
       cases hl
-      obtain ⟨hopen, haid, hdep⟩ := (Sys.revealOpen_iff _ _ _).mp opened c rfl
+      obtain ⟨hopen, haid, hdep⟩ := (Sys.revealOpen_iff _ _ _).mp opened.1 c rfl
       refine ⟨payee, c, now, hopen, haid, hdep, hent, ?_⟩
       simp [Sys.retireRevealed, Action.revealed, Sys.retire]
     · simp [Sys.set, same, hlive] at hpending
@@ -502,7 +502,7 @@ theorem commitment_closes_in_or_after_window (p : Params) (env : SystemEnv) {s s
       · cases a with
         | convict payee r' =>
           cases hr
-          obtain ⟨ropen, _⟩ := (Sys.revealOpen_iff _ _ _).mp opened r rfl
+          obtain ⟨ropen, _⟩ := (Sys.revealOpen_iff _ _ _).mp opened.1 r rfl
           rw [← same, hopen] at ropen
           cases ropen
           obtain ⟨_, _, _, hent⟩ := convict_requires_entitlement p _ step

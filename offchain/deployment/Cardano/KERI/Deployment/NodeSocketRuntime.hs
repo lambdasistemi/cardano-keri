@@ -17,6 +17,8 @@ ends, and each call of the node that needs it fails and says so.
 -}
 module Cardano.KERI.Deployment.NodeSocketRuntime (
     NodeAccess (..),
+    KeySource (..),
+    keySourceEnvelope,
     RegistryOpener,
     Connection (..),
     withNodeRuntime,
@@ -28,7 +30,9 @@ import Cardano.KERI.Deployment.LiveRuntime (
     LiveContext (..),
     rewardAccountRegistered,
     withLiveContext,
+    withLiveContextEnvelope,
     withUnlinkedLiveContext,
+    withUnlinkedLiveContextEnvelope,
  )
 import Cardano.KERI.Deployment.RegistryChain (Observation (..), RegistryRuntime (..), whileConnected)
 import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..))
@@ -43,8 +47,9 @@ import Cardano.Node.Client.Provider (
     queryLedgerSnapshotH,
  )
 import Control.Concurrent (threadDelay)
-import Control.Exception (ErrorCall (..), catchJust)
+import Control.Exception (ErrorCall (..), IOException, catchJust, try)
 import Control.Monad (unless, when)
+import Data.Aeson (Value, eitherDecodeFileStrict')
 import Data.List (isPrefixOf)
 import Data.Map.Strict qualified as Map
 import Data.Set qualified as Set
@@ -52,15 +57,37 @@ import Data.Text (Text)
 import Data.Time.Clock (diffUTCTime, getCurrentTime)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 
+{- | Where the signing key comes from: a key file the live context reads, or the
+envelope of a key that was already opened. The envelope is never shown.
+-}
+data KeySource
+    = KeyFile !FilePath
+    | KeyEnvelope !Value
+    deriving stock (Eq)
+
+instance Show KeySource where
+    showsPrec precedence = \case
+        KeyFile path -> showParen (precedence > 10) (showString "KeyFile " . showsPrec 11 path)
+        KeyEnvelope _ -> showString "KeyEnvelope <signing key>"
+
 -- | How a command reaches the node and who pays.
 data NodeAccess = NodeAccess
     { naNetworkMagic :: !Int
     , naNodeSocket :: !FilePath
     , naFundingAddress :: !Text
-    , naSigningKeyFile :: !FilePath
+    , naSigningKey :: !KeySource
     , naTimeoutSeconds :: !Int
     }
     deriving stock (Show, Eq)
+
+{- | The envelope of the key a source names: what a key file holds, read as the
+live context reads it, or the opened envelope itself.
+-}
+keySourceEnvelope :: KeySource -> IO (Either String Value)
+keySourceEnvelope = \case
+    KeyEnvelope envelope -> pure (Right envelope)
+    KeyFile path ->
+        either (Left . show) id <$> try @IOException (eitherDecodeFileStrict' path)
 
 -- | How the commands reach the node: the runtime and the paying address.
 type RegistryOpener = NodeAccess -> ((RegistryRuntime, Addr) -> IO ()) -> IO ()
@@ -72,17 +99,23 @@ data Connection = Linked | Unlinked
 duration of an action. The connection is opened and closed around it.
 -}
 withNodeRuntime :: Connection -> NodeAccess -> ((RegistryRuntime, Addr) -> IO a) -> IO a
-withNodeRuntime connection access use = case connection of
-    Linked -> withLiveContext config (\_ -> pure ()) $ \context ->
-        use (runtimeOf context, liveFundingAddress context)
-    Unlinked -> withUnlinkedLiveContext config (\_ -> pure ()) $ \context status ->
-        use (whileConnected status (runtimeOf context), liveFundingAddress context)
+withNodeRuntime connection access use = case naSigningKey access of
+    KeyEnvelope envelope -> case connection of
+        Linked -> withLiveContextEnvelope envelope (config "") (\_ -> pure ()) $ \context ->
+            use (runtimeOf context, liveFundingAddress context)
+        Unlinked -> withUnlinkedLiveContextEnvelope envelope (config "") (\_ -> pure ()) $ \context status ->
+            use (whileConnected status (runtimeOf context), liveFundingAddress context)
+    KeyFile path -> case connection of
+        Linked -> withLiveContext (config path) (\_ -> pure ()) $ \context ->
+            use (runtimeOf context, liveFundingAddress context)
+        Unlinked -> withUnlinkedLiveContext (config path) (\_ -> pure ()) $ \context status ->
+            use (whileConnected status (runtimeOf context), liveFundingAddress context)
   where
-    config =
+    config path =
         LiveConfig
             { liveNetworkMagic = naNetworkMagic access
             , liveNodeSocket = naNodeSocket access
-            , liveSigningKeyFile = naSigningKeyFile access
+            , liveSigningKeyFile = path
             , liveFundingAddressText = naFundingAddress access
             , liveTimeoutSeconds = naTimeoutSeconds access
             }

@@ -321,6 +321,7 @@ library write-composition
     , cardano-keri:chain-query
     , cardano-keri:deployment
     , cardano-keri:indexer
+    , cardano-keri:key-source
     , cardano-ledger-conway
     , cardano-ledger-core
     , cardano-node-clients
@@ -334,6 +335,24 @@ library write-composition
     Cardano.KERI.Deployment.CLI
     Cardano.KERI.Deployment.RegistryBookingCommand
     Cardano.KERI.Deployment.RegistryCommand
+
+-- The wallet-vault key source of the registry commands. It alone holds the
+-- dependency on Singular's command-line library: it exports the key-opening
+-- entry and the settings that name a key source, and nothing of Singular's
+-- modules, so no write module can import them.
+library key-source
+  import:           warnings
+  visibility:       private
+  default-language: GHC2021
+  hs-source-dirs:   write-composition/key-source
+  build-depends:
+    , aeson
+    , base                            >=4.18 && <5
+    , cardano-keri:deployment
+    , opt-env-conf                    >=0.13 && <0.16
+    , singular-registry:registry-cli
+
+  exposed-modules:  Cardano.KERI.Deployment.RegistryKeySource
 
 -- #266 T266-S1-04/T266-S1-05: compiled regression fixtures for the
 -- public-surface guard. These are export SHAPES -- byte-zero module
@@ -473,6 +492,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.RegistryShortDepositSpec
     Cardano.KERI.Deployment.RegistrySnapshotSpec
     Cardano.KERI.Deployment.RegistryTransactionsSpec
+    Cardano.KERI.Deployment.RegistryVaultSpec
     Cardano.KERI.Deployment.ScriptAritySpec
     Cardano.KERI.Deployment.TopUpPackageSpec
     Cardano.KERI.Deployment.TopUpTransactionSpec
@@ -507,6 +527,7 @@ test-suite deployment-tests
     , directory
     , filepath
     , ghc-lib-parser                    >=9.12.3 && <9.13
+    , hinotify
     , hspec                             >=2.11   && <2.12
     , http-conduit
     , memory                            >=0.18   && <0.19
@@ -517,6 +538,7 @@ test-suite deployment-tests
     , plutus-ledger-api
     , singular-registry
     , singular-registry:local-services
+    , singular-registry:registry-cli
     , temporary
     , text
     , time
@@ -828,6 +850,7 @@ test-suite cli-tests
     Cardano.KERI.CLI.RegistryAwareDeploymentSpec
     Cardano.KERI.CLI.RegistryBookingGroupSpec
     Cardano.KERI.CLI.RegistryGroupSpec
+    Cardano.KERI.CLI.RegistryVaultGroupSpec
     Cardano.KERI.CLI.WriteCompositionBoundarySpec
     Paths_cardano_keri
 
@@ -1245,6 +1268,7 @@ test-suite e2e-tests
     , plutus-core
     , plutus-tx
     , process
+    , singular-registry:registry-cli
     , text
     , time
 

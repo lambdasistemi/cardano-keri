@@ -3735,7 +3735,7 @@ wire();
 render();
 if (/[?&]selftest=1/.test(location.search)) runSelftest();
 /* @@SYSTEM@@ */
-/* System source bindings: {"checkpoint-simulator-core.mjs":"4100deb9cf3f788dd767582e9833115de33a1c56a0f81d06a0e1c825363ce2b8","registry-economic-core.mjs":"2ec8e4cafd4ee445cd6e0a2388223e72d5d6c8449e3492fd31a8e7637dc07dde","registry-wire.mjs":"6b7542417d9b1a122f544bda108dc69988cec47ccfeb341ce0ebc5ca46cf30ef","registry-simulator-core.mjs":"9c8d8d1cfb17ed42dc466496dd9ae582bcf21c2785b0940fc74341a713279076","checkpoint-system-core.mjs":"44b65554ecf47bd53ad5a828497ec7cd2988dd99b48d0c02dd6bd384fd8b3b4f","checkpoint-system-properties.mjs":"00760fe628d83b6b260e851a26b52ce70f1444059ac19dccf4034dcb0383882d","consumer-core.mjs":"2df661f27ff4b149e3c0d118ceb2ebbcde2c62fec2f7644542ffd7618f40397a","consumer-properties.mjs":"5d02121b9e0b441fd36244f45e2c3730cef1cfe8c9d9ded4a5552947cdf33809","checkpoint-system-corpus.json":"1ec1f9f73818a274b3b60462ae1d3700beba5c0b424565502829f08c774fc1f0","checkpoint-system-page.mjs":"deb583810d5d80f89a9ee9c5c3673063625198b1c53c20c2dbd4773a35e053d6","consumer-corpus.json":"1f4eda8203550810af06a001b7370ed2eabf04410c52dcefbcac000d5916d655","consumer-page.mjs":"eda17f993564adf8ec36fd69caa84d29e470b1636a0fd51526c4aaf34aa481d7"} */
+/* System source bindings: {"checkpoint-simulator-core.mjs":"4100deb9cf3f788dd767582e9833115de33a1c56a0f81d06a0e1c825363ce2b8","registry-economic-core.mjs":"2ec8e4cafd4ee445cd6e0a2388223e72d5d6c8449e3492fd31a8e7637dc07dde","registry-wire.mjs":"6b7542417d9b1a122f544bda108dc69988cec47ccfeb341ce0ebc5ca46cf30ef","registry-simulator-core.mjs":"2dabe47d319e1f21ff8a7f590279a836c8bd5f0d12cf6f13b191878bd02be7d2","checkpoint-system-core.mjs":"44b65554ecf47bd53ad5a828497ec7cd2988dd99b48d0c02dd6bd384fd8b3b4f","checkpoint-system-properties.mjs":"00760fe628d83b6b260e851a26b52ce70f1444059ac19dccf4034dcb0383882d","consumer-core.mjs":"2df661f27ff4b149e3c0d118ceb2ebbcde2c62fec2f7644542ffd7618f40397a","consumer-properties.mjs":"5d02121b9e0b441fd36244f45e2c3730cef1cfe8c9d9ded4a5552947cdf33809","checkpoint-system-corpus.json":"1ec1f9f73818a274b3b60462ae1d3700beba5c0b424565502829f08c774fc1f0","checkpoint-system-page.mjs":"deb583810d5d80f89a9ee9c5c3673063625198b1c53c20c2dbd4773a35e053d6","consumer-corpus.json":"1f4eda8203550810af06a001b7370ed2eabf04410c52dcefbcac000d5916d655","consumer-page.mjs":"eda17f993564adf8ec36fd69caa84d29e470b1636a0fd51526c4aaf34aa481d7"} */
 (()=>{
 const C={
   hasOutput, representativeHeld,
@@ -4098,6 +4098,7 @@ function execute(p, env, s, action) {
   if (kind === 'bookRegistration') {
     const b = a.booking;
     require(b.request.carrierAda >= p.Mc + p.D && b.request.declaredTip === p.tip, 'keri-registration-value-mismatch');
+    require(env.inception.includes(b.request.key), 'keri-inception-refused');
     const next = E.bookRegistration(world, b);
     after = { ...s, registrations: [b, ...s.registrations] };
     require(E.equal(toWorld(after), next), 'keri-registration-reconstruction-mismatch'); moved = flow({ deposited: b.request.contents.lovelace });
@@ -4120,7 +4121,6 @@ function execute(p, env, s, action) {
     require(a.expectedGen === s.gen, 'keri-generation-mismatch');
     require(a.expectedPlugin === s.config.applicationPolicy, 'keri-plugin-mismatch');
     const members = E.foldMembers(world, a.transaction);
-    require(members.every(m => m.kind !== 'registration' || env.inception.includes(m.booking.request.key)), 'keri-inception-refused');
     const next = E.foldAccepted(world, a.unspent, a.transaction);
     for (const { kind, booking: b } of members) {
       if (kind === 'termination') {
@@ -4198,7 +4198,7 @@ function checkCorpus(doc) {
       if (!trace.cells.length) throw Error(`empty trace ${trace.name}`);
       chain(trace.cells, init(trace.cells[0].input.config), trace.name);
     }
-    if (doc.grid.length !== 12 || doc.boundaries.length !== 143) throw Error('boundary census');
+    if (doc.grid.length !== 12 || doc.boundaries.length !== 144) throw Error('boundary census');
     doc.grid.forEach((c, i) => inspect(c, `local[${i}]`));
     doc.boundaries.forEach((c, i) => inspect(c, `economic[${i}]`));
     if (!doc.stories.length || doc.stories.some((s, i) => !Number.isSafeInteger(s.id) || s.id < 1 || s.id > 15 || (i > 0 && s.id <= doc.stories[i - 1].id))) throw Error('story roster');
@@ -4215,7 +4215,7 @@ function checkCorpus(doc) {
         if (!equal(result, fork.final)) fail(`story ${story.id}/${fork.id}: final mismatch`);
       }
     }
-    if (forks !== 18) throw Error(`fork census ${forks}`);
+    if (forks !== 19) throw Error(`fork census ${forks}`);
     if (!applied || !refused) throw Error('missing positive or refusal controls');
   } catch (error) { fail(error.message); }
   return { ok: !reasons.length, cells, applied, refused, reasons };

@@ -133,7 +133,7 @@ const REASON_WORDS = {
   "keri-carrier-missing": "This identity has no retained carrier at this point.",
   "keri-generation-mismatch": "This proposal names a registry generation that has already moved.",
   "keri-plugin-mismatch": "The proposed application policy differs from the registry configuration.",
-  "keri-inception-refused": "An inception in this batch lacks the required evidence.",
+  "keri-inception-refused": "The key of this registration lacks its inception evidence.",
   "empty-fold": "Select at least one pending request to process.",
   "key-exists": "This key is already registered and cannot be registered again.",
   "not-phase1": "The complete transaction interval must fit the registration processing window.",

@@ -15,7 +15,7 @@ config:
 id: 1
 slug: alice-requests
 story: "Alice books a registration"
-narrative: "The request holds registration cost, tip, retained output value and bond. Booking leaves the registry unchanged."
+narrative: "The request holds registration cost, tip, retained output value and bond. Booking shows the inception evidence and leaves the registry unchanged."
 params:
   D: 10
   Mc: 4
@@ -159,6 +159,68 @@ fork:
       result:
         error: keri-registration-value-mismatch
     note: "Try a request with the wrong carrier allocation"
+fork:
+  id: missing-inception
+  at: 0
+  title: "Try booking without inception evidence"
+  env:
+    inception: []
+    duplicity: []
+  expectFinal:
+    gen: 0
+    config:
+      registryId: 9
+      maxFee: 1
+      processTime: 5
+      retractTime: 0
+      applicationPolicy: 7
+      activePolicy: 8
+      root: [203, 242, 156, 228, 132, 34, 35, 37]
+      registrationCost: 2
+      bookingWidth: 1
+    trie: []
+    carriers: []
+    registrations: []
+    terminations: []
+    treasury: 0
+    bindings: []
+    nextToken: 0
+  step:
+    now: 0
+    actor: "anyone presenting the required evidence"
+    as: Alice
+    action:
+      bookRegistration:
+        booking:
+          applicationTagsMinted: [{"assetName":"5369963716140239679","destination":111,"edge":"insertActive","key":11,"owner":42,"policy":7,"signatures":[]}]
+          interval:
+            lower: 0
+            upper: 1
+          request:
+            carrierAda: 14
+            contents:
+              applicationTags: [{"assetName":"5369963716140239679","destination":111,"edge":"insertActive","key":11,"owner":42,"policy":7,"signatures":[]}]
+              lovelace: 17
+              otherAssets: []
+              trieReadyTags: [{"name":"14272158603032493918","policy":9}]
+            datum: 711
+            declaredTip: 1
+            destination: 111
+            key: 11
+            reference:
+              index: 0
+              tx: 100
+            refundAddress: 42
+            registrationCost: 2
+            registryId: 9
+            submittedAt: 1
+          trieReadyTagsMinted: [{"name":"14272158603032493918","policy":9}]
+    expect:
+      ok: false
+      reason: keri-inception-refused
+      result:
+        error: keri-inception-refused
+    note: "Try booking without inception evidence"
 expectFinal:
   bindings: []
   carriers: []

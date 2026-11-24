@@ -1,19 +1,19 @@
 {
   "version": 3,
   "model": "CardanoKeri.Registry.stepFn",
-  "surfaceSha256": "d1f5886f85fa4606c0b0328b0379cc980f30558a6d0dabe885612c6e68453bf5",
-  "storiesMarkdownSha256": "2d39f8264a9f652d13b04b97fd45bb2af8c6a5c9e6626b389561e11167c1cef5",
+  "surfaceSha256": "8110227c8fdd36de1083faf5c3a570c24f2d77e3b50eaeae7984d66a18dfdbfc",
+  "storiesMarkdownSha256": "9ea46247d1a4de752112090796cccda70a3066fc9b5a629beaa674023ebad376",
   "clauses": [
     {
       "story": 1,
-      "given": "An empty registry and a complete registration booking.",
+      "given": "An empty registry, Alice's inception evidence and a complete registration booking.",
       "when": "Alice posts its observed value, application tag, ready tag and interval.",
-      "then": "The request is pending; no carrier or binding exists until a fold. A mismatched declared value is refused.",
-      "scenarioSha256": "70e7b5cccb0fcae56c478728a6310a70f84923bab7d934bd75a72e8ddfc901bd",
+      "then": "The request is pending; no carrier or binding exists until a fold. A mismatched declared value is refused, and so is a booking without inception evidence.",
+      "scenarioSha256": "3a079fef9c44006ea8db3900dc9a1b9226a446d51543e88d5e9ad4d4ad3cb8c2",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
-          "sha256": "a03229d128df784de36ce440e136bd8f3fd0d7dc02fec787cbe0de257f4cddba"
+          "sha256": "41429778bfb248a19649fd720dc616c0a45c753dcf2b0e9373a031980e401f18"
         }
       ],
       "cells": [
@@ -28,23 +28,29 @@
           "index": 0,
           "action": "bookRegistration",
           "expectationSha256": "56dd15647284b1d43bb131f7e297192f0790168710f8d793e271934f00783642"
+        },
+        {
+          "branch": "missing-inception",
+          "index": 0,
+          "action": "bookRegistration",
+          "expectationSha256": "e19c8e20325c04a56709afae747746ec4ff88af2f72f488f2f0db420ed4e74cc"
         }
       ]
     },
     {
       "story": 2,
-      "given": "A pending registration and valid inception evidence.",
+      "given": "A pending registration, whose inception evidence was shown when it was booked.",
       "when": "Hal spends the request and registry in a complete economic fold.",
-      "then": "The destination receives the tagged carrier, the key becomes active, a token alias is allocated, and the generation advances.",
-      "scenarioSha256": "83b3099e5df7195dd0f3bb4a0def0de36fc688e376567597f89906a1ef477373",
+      "then": "The destination receives the tagged carrier, the key becomes active, a token alias is allocated, and the generation advances. The fold succeeds the same with no inception evidence at hand.",
+      "scenarioSha256": "8d9c8fc3f79d27fc333903da1919649b33a68631692be20646dad6d4f2451735",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
-          "sha256": "a03229d128df784de36ce440e136bd8f3fd0d7dc02fec787cbe0de257f4cddba"
+          "sha256": "41429778bfb248a19649fd720dc616c0a45c753dcf2b0e9373a031980e401f18"
         },
         {
           "declaration": "CardanoKeri.Registry.fold",
-          "sha256": "084a880586b6baed196058474fdbed7cf6b6973419fbe9d4e7645c1143e90ff8"
+          "sha256": "6840d06ca96fef061815192dd165547c5f6bcd21cb6f22705e8087a466de64a4"
         }
       ],
       "cells": [
@@ -61,10 +67,10 @@
           "expectationSha256": "dbcb17fa00a6a308744a96a972a0e9b0c2522a635618d0892ef5be70f558f326"
         },
         {
-          "branch": "missing-inception",
+          "branch": "no-evidence-at-the-fold",
           "index": 0,
           "action": "fold",
-          "expectationSha256": "e19c8e20325c04a56709afae747746ec4ff88af2f72f488f2f0db420ed4e74cc"
+          "expectationSha256": "8a2b5899f685911269652c92999757111a4336d1489a93c1a46916fd47a7a5cf"
         }
       ]
     },
@@ -77,11 +83,11 @@
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
-          "sha256": "a03229d128df784de36ce440e136bd8f3fd0d7dc02fec787cbe0de257f4cddba"
+          "sha256": "41429778bfb248a19649fd720dc616c0a45c753dcf2b0e9373a031980e401f18"
         },
         {
           "declaration": "CardanoKeri.Registry.fold",
-          "sha256": "084a880586b6baed196058474fdbed7cf6b6973419fbe9d4e7645c1143e90ff8"
+          "sha256": "6840d06ca96fef061815192dd165547c5f6bcd21cb6f22705e8087a466de64a4"
         }
       ],
       "cells": [
@@ -120,11 +126,11 @@
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
-          "sha256": "a03229d128df784de36ce440e136bd8f3fd0d7dc02fec787cbe0de257f4cddba"
+          "sha256": "41429778bfb248a19649fd720dc616c0a45c753dcf2b0e9373a031980e401f18"
         },
         {
           "declaration": "CardanoKeri.Registry.fold",
-          "sha256": "084a880586b6baed196058474fdbed7cf6b6973419fbe9d4e7645c1143e90ff8"
+          "sha256": "6840d06ca96fef061815192dd165547c5f6bcd21cb6f22705e8087a466de64a4"
         },
         {
           "declaration": "CardanoKeri.Registry.returnRequests",
@@ -179,7 +185,7 @@
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
-          "sha256": "a03229d128df784de36ce440e136bd8f3fd0d7dc02fec787cbe0de257f4cddba"
+          "sha256": "41429778bfb248a19649fd720dc616c0a45c753dcf2b0e9373a031980e401f18"
         },
         {
           "declaration": "CardanoKeri.Registry.returnRequests",
@@ -222,7 +228,7 @@
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
-          "sha256": "a03229d128df784de36ce440e136bd8f3fd0d7dc02fec787cbe0de257f4cddba"
+          "sha256": "41429778bfb248a19649fd720dc616c0a45c753dcf2b0e9373a031980e401f18"
         },
         {
           "declaration": "CardanoKeri.Registry.returnRequests",
@@ -265,11 +271,11 @@
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
-          "sha256": "a03229d128df784de36ce440e136bd8f3fd0d7dc02fec787cbe0de257f4cddba"
+          "sha256": "41429778bfb248a19649fd720dc616c0a45c753dcf2b0e9373a031980e401f18"
         },
         {
           "declaration": "CardanoKeri.Registry.fold",
-          "sha256": "084a880586b6baed196058474fdbed7cf6b6973419fbe9d4e7645c1143e90ff8"
+          "sha256": "6840d06ca96fef061815192dd165547c5f6bcd21cb6f22705e8087a466de64a4"
         }
       ],
       "cells": [
@@ -302,17 +308,17 @@
     {
       "story": 8,
       "given": "The registry fixes its application policy.",
-      "when": "A folder supplies that policy and registration evidence, or substitutes a different policy.",
+      "when": "A folder supplies that policy, with or without inception evidence at hand, or substitutes a different policy.",
       "then": "The correct fold succeeds; a substituted application policy is refused.",
-      "scenarioSha256": "13136fd844851079a99450cfa46f85090077416ee090d894bcc4e25a98022fb3",
+      "scenarioSha256": "b24e45b928d78693c972fe5ea58b47a34d1ad3600b465d01378ad2597eb13b94",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
-          "sha256": "a03229d128df784de36ce440e136bd8f3fd0d7dc02fec787cbe0de257f4cddba"
+          "sha256": "41429778bfb248a19649fd720dc616c0a45c753dcf2b0e9373a031980e401f18"
         },
         {
           "declaration": "CardanoKeri.Registry.fold",
-          "sha256": "084a880586b6baed196058474fdbed7cf6b6973419fbe9d4e7645c1143e90ff8"
+          "sha256": "6840d06ca96fef061815192dd165547c5f6bcd21cb6f22705e8087a466de64a4"
         }
       ],
       "cells": [
@@ -329,10 +335,10 @@
           "expectationSha256": "dbcb17fa00a6a308744a96a972a0e9b0c2522a635618d0892ef5be70f558f326"
         },
         {
-          "branch": "no-inception",
+          "branch": "no-evidence-at-the-fold",
           "index": 0,
           "action": "fold",
-          "expectationSha256": "e19c8e20325c04a56709afae747746ec4ff88af2f72f488f2f0db420ed4e74cc"
+          "expectationSha256": "8a2b5899f685911269652c92999757111a4336d1489a93c1a46916fd47a7a5cf"
         },
         {
           "branch": "control-1-keri-plugin-mismatch",
@@ -351,15 +357,15 @@
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
-          "sha256": "a03229d128df784de36ce440e136bd8f3fd0d7dc02fec787cbe0de257f4cddba"
+          "sha256": "41429778bfb248a19649fd720dc616c0a45c753dcf2b0e9373a031980e401f18"
         },
         {
           "declaration": "CardanoKeri.Registry.fold",
-          "sha256": "084a880586b6baed196058474fdbed7cf6b6973419fbe9d4e7645c1143e90ff8"
+          "sha256": "6840d06ca96fef061815192dd165547c5f6bcd21cb6f22705e8087a466de64a4"
         },
         {
           "declaration": "CardanoKeri.Registry.bookTermination",
-          "sha256": "d4b9cc635264ae93db7cbf3ff3e4b082d45cab781c1166a723e13fd71da38b90"
+          "sha256": "c7dfc3b8ae597c39d8b3021c6ee927c258be919f7a37dd63d2580fea01a9dda1"
         }
       ],
       "cells": [
@@ -392,11 +398,11 @@
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
-          "sha256": "a03229d128df784de36ce440e136bd8f3fd0d7dc02fec787cbe0de257f4cddba"
+          "sha256": "41429778bfb248a19649fd720dc616c0a45c753dcf2b0e9373a031980e401f18"
         },
         {
           "declaration": "CardanoKeri.Registry.fold",
-          "sha256": "084a880586b6baed196058474fdbed7cf6b6973419fbe9d4e7645c1143e90ff8"
+          "sha256": "6840d06ca96fef061815192dd165547c5f6bcd21cb6f22705e8087a466de64a4"
         },
         {
           "declaration": "CardanoKeri.Registry.convictCkpt",
@@ -404,7 +410,7 @@
         },
         {
           "declaration": "CardanoKeri.Registry.bookTermination",
-          "sha256": "d4b9cc635264ae93db7cbf3ff3e4b082d45cab781c1166a723e13fd71da38b90"
+          "sha256": "c7dfc3b8ae597c39d8b3021c6ee927c258be919f7a37dd63d2580fea01a9dda1"
         }
       ],
       "cells": [
@@ -461,11 +467,11 @@
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
-          "sha256": "a03229d128df784de36ce440e136bd8f3fd0d7dc02fec787cbe0de257f4cddba"
+          "sha256": "41429778bfb248a19649fd720dc616c0a45c753dcf2b0e9373a031980e401f18"
         },
         {
           "declaration": "CardanoKeri.Registry.fold",
-          "sha256": "084a880586b6baed196058474fdbed7cf6b6973419fbe9d4e7645c1143e90ff8"
+          "sha256": "6840d06ca96fef061815192dd165547c5f6bcd21cb6f22705e8087a466de64a4"
         },
         {
           "declaration": "CardanoKeri.Registry.convictCkpt",
@@ -473,7 +479,7 @@
         },
         {
           "declaration": "CardanoKeri.Registry.bookTermination",
-          "sha256": "d4b9cc635264ae93db7cbf3ff3e4b082d45cab781c1166a723e13fd71da38b90"
+          "sha256": "c7dfc3b8ae597c39d8b3021c6ee927c258be919f7a37dd63d2580fea01a9dda1"
         },
         {
           "declaration": "CardanoKeri.Registry.returnRequests",
@@ -528,11 +534,11 @@
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
-          "sha256": "a03229d128df784de36ce440e136bd8f3fd0d7dc02fec787cbe0de257f4cddba"
+          "sha256": "41429778bfb248a19649fd720dc616c0a45c753dcf2b0e9373a031980e401f18"
         },
         {
           "declaration": "CardanoKeri.Registry.fold",
-          "sha256": "084a880586b6baed196058474fdbed7cf6b6973419fbe9d4e7645c1143e90ff8"
+          "sha256": "6840d06ca96fef061815192dd165547c5f6bcd21cb6f22705e8087a466de64a4"
         },
         {
           "declaration": "CardanoKeri.Registry.convictCkpt",
@@ -540,7 +546,7 @@
         },
         {
           "declaration": "CardanoKeri.Registry.bookTermination",
-          "sha256": "d4b9cc635264ae93db7cbf3ff3e4b082d45cab781c1166a723e13fd71da38b90"
+          "sha256": "c7dfc3b8ae597c39d8b3021c6ee927c258be919f7a37dd63d2580fea01a9dda1"
         },
         {
           "declaration": "CardanoKeri.Registry.returnRequests",

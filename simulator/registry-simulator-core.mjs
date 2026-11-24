@@ -26,6 +26,7 @@ function execute(p, env, s, action) {
   if (kind === 'bookRegistration') {
     const b = a.booking;
     require(b.request.carrierAda >= p.Mc + p.D && b.request.declaredTip === p.tip, 'keri-registration-value-mismatch');
+    require(env.inception.includes(b.request.key), 'keri-inception-refused');
     const next = E.bookRegistration(world, b);
     after = { ...s, registrations: [b, ...s.registrations] };
     require(E.equal(toWorld(after), next), 'keri-registration-reconstruction-mismatch'); moved = flow({ deposited: b.request.contents.lovelace });
@@ -48,7 +49,6 @@ function execute(p, env, s, action) {
     require(a.expectedGen === s.gen, 'keri-generation-mismatch');
     require(a.expectedPlugin === s.config.applicationPolicy, 'keri-plugin-mismatch');
     const members = E.foldMembers(world, a.transaction);
-    require(members.every(m => m.kind !== 'registration' || env.inception.includes(m.booking.request.key)), 'keri-inception-refused');
     const next = E.foldAccepted(world, a.unspent, a.transaction);
     for (const { kind, booking: b } of members) {
       if (kind === 'termination') {
@@ -126,7 +126,7 @@ export function checkCorpus(doc) {
       if (!trace.cells.length) throw Error(`empty trace ${trace.name}`);
       chain(trace.cells, init(trace.cells[0].input.config), trace.name);
     }
-    if (doc.grid.length !== 12 || doc.boundaries.length !== 143) throw Error('boundary census');
+    if (doc.grid.length !== 12 || doc.boundaries.length !== 144) throw Error('boundary census');
     doc.grid.forEach((c, i) => inspect(c, `local[${i}]`));
     doc.boundaries.forEach((c, i) => inspect(c, `economic[${i}]`));
     if (!doc.stories.length || doc.stories.some((s, i) => !Number.isSafeInteger(s.id) || s.id < 1 || s.id > 15 || (i > 0 && s.id <= doc.stories[i - 1].id))) throw Error('story roster');
@@ -143,7 +143,7 @@ export function checkCorpus(doc) {
         if (!equal(result, fork.final)) fail(`story ${story.id}/${fork.id}: final mismatch`);
       }
     }
-    if (forks !== 18) throw Error(`fork census ${forks}`);
+    if (forks !== 19) throw Error(`fork census ${forks}`);
     if (!applied || !refused) throw Error('missing positive or refusal controls');
   } catch (error) { fail(error.message); }
   return { ok: !reasons.length, cells, applied, refused, reasons };

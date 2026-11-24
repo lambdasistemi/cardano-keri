@@ -14,21 +14,21 @@ Application Flow and economic transactions have different scopes. Registry convi
 
 ## 1. Alice books a registration
 
-**Given** An empty registry and a complete registration booking.
+**Given** An empty registry, Alice's inception evidence and a complete registration booking.
 
 **When** Alice posts its observed value, application tag, ready tag and interval.
 
-**Then** The request is pending; no carrier or binding exists until a fold. A mismatched declared value is refused.
+**Then** The request is pending; no carrier or binding exists until a fold. A mismatched declared value is refused, and so is a booking without inception evidence.
 
 [Scenario](registry-simulator-scenarios/01-alice-requests.json) · [Editable DSL](registry-simulator-scenarios/01-alice-requests.dsl)
 
 ## 2. Hal delivers the first checkpoint
 
-**Given** A pending registration and valid inception evidence.
+**Given** A pending registration, whose inception evidence was shown when it was booked.
 
 **When** Hal spends the request and registry in a complete economic fold.
 
-**Then** The destination receives the tagged carrier, the key becomes active, a token alias is allocated, and the generation advances.
+**Then** The destination receives the tagged carrier, the key becomes active, a token alias is allocated, and the generation advances. The fold succeeds the same with no inception evidence at hand.
 
 [Scenario](registry-simulator-scenarios/02-hal-folds.json) · [Editable DSL](registry-simulator-scenarios/02-hal-folds.dsl)
 
@@ -86,7 +86,7 @@ Application Flow and economic transactions have different scopes. Registry convi
 
 **Given** The registry fixes its application policy.
 
-**When** A folder supplies that policy and registration evidence, or substitutes a different policy.
+**When** A folder supplies that policy, with or without inception evidence at hand, or substitutes a different policy.
 
 **Then** The correct fold succeeds; a substituted application policy is refused.
 

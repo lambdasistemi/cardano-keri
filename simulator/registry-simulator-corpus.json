@@ -54085,6 +54085,115 @@
     },
     {
       "action": {
+        "bookRegistration": {
+          "booking": {
+            "applicationTagsMinted": [
+              {
+                "assetName": "5369963716140239679",
+                "destination": 111,
+                "edge": "insertActive",
+                "key": 11,
+                "owner": 42,
+                "policy": 7,
+                "signatures": []
+              }
+            ],
+            "interval": {
+              "lower": 0,
+              "upper": 1
+            },
+            "request": {
+              "carrierAda": 14,
+              "contents": {
+                "applicationTags": [
+                  {
+                    "assetName": "5369963716140239679",
+                    "destination": 111,
+                    "edge": "insertActive",
+                    "key": 11,
+                    "owner": 42,
+                    "policy": 7,
+                    "signatures": []
+                  }
+                ],
+                "lovelace": 17,
+                "otherAssets": [],
+                "trieReadyTags": [
+                  {
+                    "name": "14272158603032493918",
+                    "policy": 9
+                  }
+                ]
+              },
+              "datum": 711,
+              "declaredTip": 1,
+              "destination": 111,
+              "key": 11,
+              "reference": {
+                "index": 0,
+                "tx": 100
+              },
+              "refundAddress": 42,
+              "registrationCost": 2,
+              "registryId": 9,
+              "submittedAt": 1
+            },
+            "trieReadyTagsMinted": [
+              {
+                "name": "14272158603032493918",
+                "policy": 9
+              }
+            ]
+          }
+        }
+      },
+      "env": {
+        "duplicity": [],
+        "inception": []
+      },
+      "input": {
+        "bindings": [],
+        "carriers": [],
+        "config": {
+          "activePolicy": 8,
+          "applicationPolicy": 7,
+          "bookingWidth": 1,
+          "maxFee": 1,
+          "processTime": 5,
+          "registrationCost": 2,
+          "registryId": 9,
+          "retractTime": 0,
+          "root": [
+            203,
+            242,
+            156,
+            228,
+            132,
+            34,
+            35,
+            37
+          ]
+        },
+        "gen": 0,
+        "nextToken": 0,
+        "registrations": [],
+        "terminations": [],
+        "treasury": 0,
+        "trie": []
+      },
+      "name": "registration-missing-inception",
+      "params": {
+        "D": 10,
+        "Mc": 4,
+        "Mr": 2,
+        "tip": 1
+      },
+      "result": {
+        "error": "keri-inception-refused"
+      }
+    },
+    {
+      "action": {
         "fold": {
           "expectedGen": 0,
           "expectedPlugin": 7,
@@ -73297,7 +73406,7 @@
         "treasury": 0,
         "trie": []
       },
-      "name": "fold-missing-inception",
+      "name": "fold-without-inception-evidence",
       "params": {
         "D": 10,
         "Mc": 4,
@@ -73305,7 +73414,92 @@
         "tip": 1
       },
       "result": {
-        "error": "keri-inception-refused"
+        "ok": {
+          "flow": {
+            "bondReturn": null,
+            "bookingFee": 0,
+            "deposited": 0,
+            "intoRequest": 0,
+            "locked": [
+              [
+                11,
+                10
+              ]
+            ],
+            "premium": null
+          },
+          "observations": [
+            {
+              "aid": 11,
+              "binding": 0,
+              "leaf": {
+                "known": {
+                  "s": "active"
+                }
+              },
+              "minAda": 4,
+              "supply": 1
+            }
+          ],
+          "state": {
+            "bindings": [
+              [
+                11,
+                0
+              ]
+            ],
+            "carriers": [
+              {
+                "aid": 11,
+                "k": 0,
+                "minAda": 4,
+                "original": {
+                  "datum": 711,
+                  "key": 11,
+                  "kind": "active",
+                  "output": 111
+                },
+                "st": "live",
+                "token": 0
+              }
+            ],
+            "config": {
+              "activePolicy": 8,
+              "applicationPolicy": 7,
+              "bookingWidth": 1,
+              "maxFee": 1,
+              "processTime": 5,
+              "registrationCost": 2,
+              "registryId": 9,
+              "retractTime": 0,
+              "root": [
+                187,
+                43,
+                111,
+                81,
+                131,
+                142,
+                177,
+                246
+              ]
+            },
+            "gen": 1,
+            "nextToken": 1,
+            "registrations": [],
+            "terminations": [],
+            "treasury": 2,
+            "trie": [
+              [
+                11,
+                {
+                  "known": {
+                    "s": "active"
+                  }
+                }
+              ]
+            ]
+          }
+        }
       }
     },
     {
@@ -91637,7 +91831,7 @@
           ]
         ]
       },
-      "name": "fold-missing-inception",
+      "name": "fold-without-inception-evidence",
       "params": {
         "D": 10,
         "Mc": 4,
@@ -112609,6 +112803,151 @@
             "trie": []
           },
           "id": "wrong-carrier-value"
+        },
+        {
+          "at": 0,
+          "cells": [
+            {
+              "action": {
+                "bookRegistration": {
+                  "booking": {
+                    "applicationTagsMinted": [
+                      {
+                        "assetName": "5369963716140239679",
+                        "destination": 111,
+                        "edge": "insertActive",
+                        "key": 11,
+                        "owner": 42,
+                        "policy": 7,
+                        "signatures": []
+                      }
+                    ],
+                    "interval": {
+                      "lower": 0,
+                      "upper": 1
+                    },
+                    "request": {
+                      "carrierAda": 14,
+                      "contents": {
+                        "applicationTags": [
+                          {
+                            "assetName": "5369963716140239679",
+                            "destination": 111,
+                            "edge": "insertActive",
+                            "key": 11,
+                            "owner": 42,
+                            "policy": 7,
+                            "signatures": []
+                          }
+                        ],
+                        "lovelace": 17,
+                        "otherAssets": [],
+                        "trieReadyTags": [
+                          {
+                            "name": "14272158603032493918",
+                            "policy": 9
+                          }
+                        ]
+                      },
+                      "datum": 711,
+                      "declaredTip": 1,
+                      "destination": 111,
+                      "key": 11,
+                      "reference": {
+                        "index": 0,
+                        "tx": 100
+                      },
+                      "refundAddress": 42,
+                      "registrationCost": 2,
+                      "registryId": 9,
+                      "submittedAt": 1
+                    },
+                    "trieReadyTagsMinted": [
+                      {
+                        "name": "14272158603032493918",
+                        "policy": 9
+                      }
+                    ]
+                  }
+                }
+              },
+              "env": {
+                "duplicity": [],
+                "inception": []
+              },
+              "input": {
+                "bindings": [],
+                "carriers": [],
+                "config": {
+                  "activePolicy": 8,
+                  "applicationPolicy": 7,
+                  "bookingWidth": 1,
+                  "maxFee": 1,
+                  "processTime": 5,
+                  "registrationCost": 2,
+                  "registryId": 9,
+                  "retractTime": 0,
+                  "root": [
+                    203,
+                    242,
+                    156,
+                    228,
+                    132,
+                    34,
+                    35,
+                    37
+                  ]
+                },
+                "gen": 0,
+                "nextToken": 0,
+                "registrations": [],
+                "terminations": [],
+                "treasury": 0,
+                "trie": []
+              },
+              "name": "Try booking without inception evidence",
+              "params": {
+                "D": 10,
+                "Mc": 4,
+                "Mr": 2,
+                "tip": 1
+              },
+              "result": {
+                "error": "keri-inception-refused"
+              }
+            }
+          ],
+          "final": {
+            "bindings": [],
+            "carriers": [],
+            "config": {
+              "activePolicy": 8,
+              "applicationPolicy": 7,
+              "bookingWidth": 1,
+              "maxFee": 1,
+              "processTime": 5,
+              "registrationCost": 2,
+              "registryId": 9,
+              "retractTime": 0,
+              "root": [
+                203,
+                242,
+                156,
+                228,
+                132,
+                34,
+                35,
+                37
+              ]
+            },
+            "gen": 0,
+            "nextToken": 0,
+            "registrations": [],
+            "terminations": [],
+            "treasury": 0,
+            "trie": []
+          },
+          "id": "missing-inception"
         }
       ],
       "id": 1,
@@ -114110,7 +114449,7 @@
                 "treasury": 0,
                 "trie": []
               },
-              "name": "Try processing without inception evidence",
+              "name": "Process with no inception evidence at hand",
               "params": {
                 "D": 10,
                 "Mc": 4,
@@ -114118,13 +114457,117 @@
                 "tip": 1
               },
               "result": {
-                "error": "keri-inception-refused"
+                "ok": {
+                  "flow": {
+                    "bondReturn": null,
+                    "bookingFee": 0,
+                    "deposited": 0,
+                    "intoRequest": 0,
+                    "locked": [
+                      [
+                        11,
+                        10
+                      ]
+                    ],
+                    "premium": null
+                  },
+                  "observations": [
+                    {
+                      "aid": 11,
+                      "binding": 0,
+                      "leaf": {
+                        "known": {
+                          "s": "active"
+                        }
+                      },
+                      "minAda": 4,
+                      "supply": 1
+                    }
+                  ],
+                  "state": {
+                    "bindings": [
+                      [
+                        11,
+                        0
+                      ]
+                    ],
+                    "carriers": [
+                      {
+                        "aid": 11,
+                        "k": 0,
+                        "minAda": 4,
+                        "original": {
+                          "datum": 711,
+                          "key": 11,
+                          "kind": "active",
+                          "output": 111
+                        },
+                        "st": "live",
+                        "token": 0
+                      }
+                    ],
+                    "config": {
+                      "activePolicy": 8,
+                      "applicationPolicy": 7,
+                      "bookingWidth": 1,
+                      "maxFee": 1,
+                      "processTime": 5,
+                      "registrationCost": 2,
+                      "registryId": 9,
+                      "retractTime": 0,
+                      "root": [
+                        187,
+                        43,
+                        111,
+                        81,
+                        131,
+                        142,
+                        177,
+                        246
+                      ]
+                    },
+                    "gen": 1,
+                    "nextToken": 1,
+                    "registrations": [],
+                    "terminations": [],
+                    "treasury": 2,
+                    "trie": [
+                      [
+                        11,
+                        {
+                          "known": {
+                            "s": "active"
+                          }
+                        }
+                      ]
+                    ]
+                  }
+                }
               }
             }
           ],
           "final": {
-            "bindings": [],
-            "carriers": [],
+            "bindings": [
+              [
+                11,
+                0
+              ]
+            ],
+            "carriers": [
+              {
+                "aid": 11,
+                "k": 0,
+                "minAda": 4,
+                "original": {
+                  "datum": 711,
+                  "key": 11,
+                  "kind": "active",
+                  "output": 111
+                },
+                "st": "live",
+                "token": 0
+              }
+            ],
             "config": {
               "activePolicy": 8,
               "applicationPolicy": 7,
@@ -114135,84 +114578,33 @@
               "registryId": 9,
               "retractTime": 0,
               "root": [
-                203,
-                242,
-                156,
-                228,
-                132,
-                34,
-                35,
-                37
+                187,
+                43,
+                111,
+                81,
+                131,
+                142,
+                177,
+                246
               ]
             },
-            "gen": 0,
-            "nextToken": 0,
-            "registrations": [
-              {
-                "applicationTagsMinted": [
-                  {
-                    "assetName": "5369963716140239679",
-                    "destination": 111,
-                    "edge": "insertActive",
-                    "key": 11,
-                    "owner": 42,
-                    "policy": 7,
-                    "signatures": []
-                  }
-                ],
-                "interval": {
-                  "lower": 0,
-                  "upper": 1
-                },
-                "request": {
-                  "carrierAda": 14,
-                  "contents": {
-                    "applicationTags": [
-                      {
-                        "assetName": "5369963716140239679",
-                        "destination": 111,
-                        "edge": "insertActive",
-                        "key": 11,
-                        "owner": 42,
-                        "policy": 7,
-                        "signatures": []
-                      }
-                    ],
-                    "lovelace": 17,
-                    "otherAssets": [],
-                    "trieReadyTags": [
-                      {
-                        "name": "14272158603032493918",
-                        "policy": 9
-                      }
-                    ]
-                  },
-                  "datum": 711,
-                  "declaredTip": 1,
-                  "destination": 111,
-                  "key": 11,
-                  "reference": {
-                    "index": 0,
-                    "tx": 100
-                  },
-                  "refundAddress": 42,
-                  "registrationCost": 2,
-                  "registryId": 9,
-                  "submittedAt": 1
-                },
-                "trieReadyTagsMinted": [
-                  {
-                    "name": "14272158603032493918",
-                    "policy": 9
-                  }
-                ]
-              }
-            ],
+            "gen": 1,
+            "nextToken": 1,
+            "registrations": [],
             "terminations": [],
-            "treasury": 0,
-            "trie": []
+            "treasury": 2,
+            "trie": [
+              [
+                11,
+                {
+                  "known": {
+                    "s": "active"
+                  }
+                }
+              ]
+            ]
           },
-          "id": "missing-inception"
+          "id": "no-evidence-at-the-fold"
         }
       ],
       "id": 2,
@@ -126821,7 +127213,7 @@
                 "treasury": 0,
                 "trie": []
               },
-              "name": "Try processing without inception evidence",
+              "name": "Process with no inception evidence at hand",
               "params": {
                 "D": 10,
                 "Mc": 4,
@@ -126829,13 +127221,117 @@
                 "tip": 1
               },
               "result": {
-                "error": "keri-inception-refused"
+                "ok": {
+                  "flow": {
+                    "bondReturn": null,
+                    "bookingFee": 0,
+                    "deposited": 0,
+                    "intoRequest": 0,
+                    "locked": [
+                      [
+                        11,
+                        10
+                      ]
+                    ],
+                    "premium": null
+                  },
+                  "observations": [
+                    {
+                      "aid": 11,
+                      "binding": 0,
+                      "leaf": {
+                        "known": {
+                          "s": "active"
+                        }
+                      },
+                      "minAda": 4,
+                      "supply": 1
+                    }
+                  ],
+                  "state": {
+                    "bindings": [
+                      [
+                        11,
+                        0
+                      ]
+                    ],
+                    "carriers": [
+                      {
+                        "aid": 11,
+                        "k": 0,
+                        "minAda": 4,
+                        "original": {
+                          "datum": 711,
+                          "key": 11,
+                          "kind": "active",
+                          "output": 111
+                        },
+                        "st": "live",
+                        "token": 0
+                      }
+                    ],
+                    "config": {
+                      "activePolicy": 8,
+                      "applicationPolicy": 7,
+                      "bookingWidth": 1,
+                      "maxFee": 1,
+                      "processTime": 5,
+                      "registrationCost": 2,
+                      "registryId": 9,
+                      "retractTime": 0,
+                      "root": [
+                        187,
+                        43,
+                        111,
+                        81,
+                        131,
+                        142,
+                        177,
+                        246
+                      ]
+                    },
+                    "gen": 1,
+                    "nextToken": 1,
+                    "registrations": [],
+                    "terminations": [],
+                    "treasury": 2,
+                    "trie": [
+                      [
+                        11,
+                        {
+                          "known": {
+                            "s": "active"
+                          }
+                        }
+                      ]
+                    ]
+                  }
+                }
               }
             }
           ],
           "final": {
-            "bindings": [],
-            "carriers": [],
+            "bindings": [
+              [
+                11,
+                0
+              ]
+            ],
+            "carriers": [
+              {
+                "aid": 11,
+                "k": 0,
+                "minAda": 4,
+                "original": {
+                  "datum": 711,
+                  "key": 11,
+                  "kind": "active",
+                  "output": 111
+                },
+                "st": "live",
+                "token": 0
+              }
+            ],
             "config": {
               "activePolicy": 8,
               "applicationPolicy": 7,
@@ -126846,84 +127342,33 @@
               "registryId": 9,
               "retractTime": 0,
               "root": [
-                203,
-                242,
-                156,
-                228,
-                132,
-                34,
-                35,
-                37
+                187,
+                43,
+                111,
+                81,
+                131,
+                142,
+                177,
+                246
               ]
             },
-            "gen": 0,
-            "nextToken": 0,
-            "registrations": [
-              {
-                "applicationTagsMinted": [
-                  {
-                    "assetName": "5369963716140239679",
-                    "destination": 111,
-                    "edge": "insertActive",
-                    "key": 11,
-                    "owner": 42,
-                    "policy": 7,
-                    "signatures": []
-                  }
-                ],
-                "interval": {
-                  "lower": 0,
-                  "upper": 1
-                },
-                "request": {
-                  "carrierAda": 14,
-                  "contents": {
-                    "applicationTags": [
-                      {
-                        "assetName": "5369963716140239679",
-                        "destination": 111,
-                        "edge": "insertActive",
-                        "key": 11,
-                        "owner": 42,
-                        "policy": 7,
-                        "signatures": []
-                      }
-                    ],
-                    "lovelace": 17,
-                    "otherAssets": [],
-                    "trieReadyTags": [
-                      {
-                        "name": "14272158603032493918",
-                        "policy": 9
-                      }
-                    ]
-                  },
-                  "datum": 711,
-                  "declaredTip": 1,
-                  "destination": 111,
-                  "key": 11,
-                  "reference": {
-                    "index": 0,
-                    "tx": 100
-                  },
-                  "refundAddress": 42,
-                  "registrationCost": 2,
-                  "registryId": 9,
-                  "submittedAt": 1
-                },
-                "trieReadyTagsMinted": [
-                  {
-                    "name": "14272158603032493918",
-                    "policy": 9
-                  }
-                ]
-              }
-            ],
+            "gen": 1,
+            "nextToken": 1,
+            "registrations": [],
             "terminations": [],
-            "treasury": 0,
-            "trie": []
+            "treasury": 2,
+            "trie": [
+              [
+                11,
+                {
+                  "known": {
+                    "s": "active"
+                  }
+                }
+              ]
+            ]
           },
-          "id": "no-inception"
+          "id": "no-evidence-at-the-fold"
         },
         {
           "at": 1,

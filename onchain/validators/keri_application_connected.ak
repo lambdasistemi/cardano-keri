@@ -13,7 +13,9 @@ use cardano_keri/application/held.{RegistrationData}
 use cardano_keri/application/row_vectors as rows
 use cardano_keri/checkpoint/datum.{KeyMaterial, KeyStateView, Live}
 use cardano_keri/checkpoint/message.{qb64_aid}
-use cardano_keri/checkpoint/registration.{proof_token_name}
+use cardano_keri/checkpoint/registration.{
+  RegistrationEvidence, proof_token_name,
+}
 use cardano_keri/checkpoint/registration_vectors as vec
 use keri_application_requests.{Fold, fold, reference}
 
@@ -41,7 +43,11 @@ pub const booking_floor: Int = 1_007_000_000
 pub const floor: Int = 1_009_000_000
 
 pub fn live_datum() -> Data {
-  let d = vec.pos_2key_datum
+  live_datum_of(vec.pos_2key_datum)
+}
+
+/// The initial checkpoint datum of the inception whose key state is `d`.
+pub fn live_datum_of(d: KeyStateView) -> Data {
   datum.write(
     Live {
       aid: qb64_aid(d.cesr_aid),
@@ -82,19 +88,29 @@ pub fn as_data(value: Data) -> Data {
 /// The request of the connected scenario: the AID of the observer's inception
 /// vector, committing the datum the observer attests and a deposit at the floor.
 pub fn connected_request() -> RegistrationData {
+  connected_request_of(vec.pos_2key_datum)
+}
+
+/// The request of the inception whose key state is `d`.
+pub fn connected_request_of(d: KeyStateView) -> RegistrationData {
   RegistrationData {
     ..rows.request_data(9001),
-    key: qb64_aid(vec.pos_2key_datum.cesr_aid),
-    initial_datum: live_datum(),
+    key: qb64_aid(d.cesr_aid),
+    initial_datum: live_datum_of(d),
     deposit: floor,
   }
 }
 
 pub fn proof_name() -> ByteArray {
-  proof_token_name(
-    vec.pos_2key_evidence.event_bytes,
-    vec.pos_2key_datum.cesr_aid,
-  )
+  proof_name_of(vec.pos_2key_evidence, vec.pos_2key_datum)
+}
+
+/// The name of the hash-proof token of an inception: its event bytes and AID.
+pub fn proof_name_of(
+  evidence: RegistrationEvidence,
+  d: KeyStateView,
+) -> ByteArray {
+  proof_token_name(evidence.event_bytes, d.cesr_aid)
 }
 
 pub fn connected_fold(burn_proof: Bool) -> Fold {

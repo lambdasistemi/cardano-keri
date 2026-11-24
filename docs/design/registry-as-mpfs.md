@@ -380,6 +380,25 @@ terminating folds, and the checkpoint validator's release verdicts. The
 request and configuration datums' own byte layouts are not fixed by these
 vectors.
 
+### Following the spent checkpoint back to its writer
+
+A termination booker names a pending checkpoint input and places a request at
+a particular output index. An observer can follow both references in the same
+transaction. The application reads the identifier, epoch and native sequence
+from that pending input. Given the public registry history, the observed
+history of its active token and the ledger's input and output assignments,
+the receipt identifies the checkpoint spend that produced the input. The live
+checkpoint consumed by that spend had an authenticated writer at exactly that
+epoch and sequence. This is the claim of `booking_receipt_provenance`.
+
+In the Lean example, identifier 11 rotates to epoch 1, sequence 1. Its
+conviction creates output 0 of transaction 105. Transaction 200 spends that
+output and places the termination request at index 0. Choosing the registration
+output, the rotation output or a different request reference loses the
+correspondence. The ordinary economic replay still stores zero for the key
+state. Agreement between the checkpoint comparison and KERI duplicity remains
+open at inception and for a rival's validity after rotation.
+
 ## Executable evidence and limits
 
 The [Registry simulator](../simulator/registry/index.html) replays complete

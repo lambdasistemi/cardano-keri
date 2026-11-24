@@ -117,8 +117,10 @@ local instance (o : ObservedOutput) (xs : List ObservedOutput) : Decidable (o �
   letI : BEq ObservedOutput := instBEqOfDecidableEq
   inferInstance
 
+/-- Given the seed and its value, when genesis creates the state and configuration, then the ledger accounts for both outputs. -/
 private theorem genesisLedger : ValidLedger initWorld genesisWorld openObs := by
   constructor <;> first | rfl | decide
+/-- Given the funded controller, when registration is booked, then its input value and minted approval reach the request. -/
 private theorem regLedger : ValidLedger genesisWorld requestWorld regObs := by
   constructor <;> first | rfl | decide
 private def foldTx : Transaction requestWorld foldWorld :=
@@ -139,6 +141,7 @@ private def bookingTx : Transaction convictionWorld bookingWorld :=
 
 private abbrev Reach := CandidateReachable i.hash i.code commit release
 
+/-- Given a reachable public world, when a valid ledger step preserves the registry state and mints no state-policy asset, then the successor is reachable. -/
 private theorem neutral {before after : CandidateWorld} (past : Reach before)
     (tx : Transaction before after)
     (mint : policyDelta tx.observation.assets release.statePolicy [] = true)
@@ -147,6 +150,7 @@ private theorem neutral {before after : CandidateWorld} (past : Reach before)
     Reach after :=
   .neutral past _ _ _ _ _ tx.ledger mint untouched registries domain
 
+/-- Given the funded initial world, when genesis, booking, fold and checkpoint spends run, then the pre-booking world is reachable under the public registry model. -/
 private theorem publicHistory : Reach convictionWorld := by
   have initial : Reach initWorld := .initial _ (by decide) (by
     simp [seedOut, funds, pledgeFunds, bookingFeeFunds, cash, assetSupport])
@@ -160,6 +164,7 @@ private theorem publicHistory : Reach convictionWorld := by
   have pledgeReach := neutral advancedReach pledgeTx (by decide) (by decide) rfl rfl
   exact neutral pledgeReach convictionTx (by decide) (by decide) rfl rfl
 
+/-- Given that execution and its finite naming table, when identifier 11 is queried, then the registry has the required history and unambiguous names. -/
 private theorem history : HistoryPremises i.hash i.code commit release convictionWorld registry1 11 := by
   refine ⟨publicHistory, ?_, ?_, ?_⟩
   · change registry1 ∈ [registry1]
@@ -171,6 +176,7 @@ private theorem history : HistoryPremises i.hash i.code commit release convictio
     simp only [List.forall_mem_cons, List.not_mem_nil, false_implies, implies_true, and_true]
     decide
 
+/-- Given the example naming table, when a preimage has the name of the termination approval, then it is the exact termination preimage. -/
 private theorem namedApproval (preimage : Preimage)
     (same : i.hash (i.code preimage) = i.hash (i.code target)) : preimage = target := by
   by_cases different : preimage = target
@@ -184,6 +190,7 @@ private abbrev startEdges := [(Sys.init deployment, registered, carrier)]
 private abbrev rotationEdges := (registered, rotated, advanced) :: startEdges
 private abbrev convictionEdges := (committed, pending, convicted) :: rotationEdges
 
+/-- Given the accepted registration, when its fold delivers the new holding, then the carrier history starts at that indexed output. -/
 private theorem registeredPath : CarrierHistory p env i active 11 startEdges registered foldWorld carrier := by
   have installed : RegistrationEvent p env (Sys.init deployment) registered :=
     ⟨11, 1, 42, 5, { dregIn := 3, bIn := 2, poolIn := 5 }, .present live,
@@ -192,12 +199,14 @@ private theorem registeredPath : CarrierHistory p env i active 11 startEdges reg
   exact .register (.init deployment) installed rfl (origin := origin) rfl (live := live) rfl
     foldTx rfl ⟨rfl,rfl⟩ ⟨rfl,rfl⟩
 
+/-- Given the registered holding, when the signed advance is paid, then its successor output is the next carrier in the history. -/
 private theorem rotatedPath : CarrierHistory p env i active 11 rotationEdges rotated advancedWorld advanced := by
   exact .spend registeredPath advanceTx (action := .rotate 1 .keep 6) (now := 3)
     (state := .present rotatedLive) rfl ⟨rfl,rfl⟩ ⟨rfl,rfl⟩
     (by intro refund pool equal; cases equal)
     (Step.rotateKeepPaid 3 1 6 (by decide) (by decide) (by decide)) rfl (by decide) rfl
 
+/-- Given the rotated holding, when the commitment opens and its conviction spends the holding, then the carrier history ends at the pending output. -/
 private theorem pendingPath : CarrierHistory p env i active 11 convictionEdges pending convictionWorld convicted := by
   have pledged := CarrierHistory.retain rotatedPath pledgeTx (by decide) committed_step (by rfl)
   exact .spend pledged convictionTx (action := .convict 7 commitment) (now := 5)
@@ -265,5 +274,8 @@ private def readdress (ref : Singular.OutRef) : Singular.TerminationBooking :=
 #guard (bookingTx.bookingSpend i release rp rid (readdress ⟨201, 0⟩) convicted.reference).isNone
 #guard (bookingTx.bookingSpend i release rp rid (readdress ⟨200, 1⟩) convicted.reference).isNone
 #guard (bookingTx.bookingSpend i release rp rid termination advanced.reference).isNone
+
+example : ({bookingTx with identity := 201} : Transaction convictionWorld bookingWorld).bookingSpend
+    i release rp rid termination convicted.reference = none := by decide
 
 end CardanoKeri.Application.Custody.Examples

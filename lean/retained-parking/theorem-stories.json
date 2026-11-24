@@ -4,7 +4,7 @@
   "singular": "d69ab005c3b710aeebf033d3c5cd08c56feb5643",
   "sources": {
     "lean/CardanoKeri/Application.lean": "f2294ad2d9608e1870d89ef53a58169fcea7a63eced47c984a72c5f4f74f8588",
-    "lean/CardanoKeri/ApplicationCustodyExample.lean": "d42da17c1760c79fad4aa2d09b8b27661bae72f2e6bd039e2c3806ffddb6b9cb",
+    "lean/CardanoKeri/ApplicationCustodyExample.lean": "bfb139bd82633c8c798344eca5a2215c33611db14df11140d5ef8d48c10c1532",
     "lean/CardanoKeri/ApplicationCustodyHistory.lean": "2f61067b3c292623c78e0761804264b9904b11604312d674e2fafe542773355d",
     "lean/CardanoKeri/ApplicationGoals.lean": "c0cc5a97ac734efda3cfeb29ee2d69a5683f0196c68fcec168b03c30f1419745",
     "lean/CardanoKeri/ApplicationVectors.lean": "073d713d9c86e6bee45751c38c031456ff0e363e0f16acf6cb5c6894479f98f6",
@@ -26,7 +26,7 @@
     "lean/CardanoKeri/CheckpointReceiptCheck.lean": "b8e503afc6b39c864d5670b5b746ada934e519beb2c45b291be66d811e1085d8",
     "lean/CardanoKeri/CheckpointSystemEvidence.lean": "537d2183603c1f5ffab2178d743b03652647a3ca22cae5cb4e38c8780bccf7da",
     "lean/CardanoKeri/CheckpointSystemFixtures.lean": "65e0aed9ae24d559b763cab32330965ea218ba0a5d467c4ae1fc382e8853b12a",
-    "lean/CardanoKeri/CheckpointSystemHistory.lean": "9dd1fcadec5390c9c44b74fc8d6faa31f503da1f1b4e8c6ec1bcedcc8f683619",
+    "lean/CardanoKeri/CheckpointSystemHistory.lean": "aff482be915576d9bb748733be9c5358d532c3aa6d92ba07115dcf466bd884c1",
     "lean/CardanoKeri/CheckpointSystemWire.lean": "873076099e01a074fbc58048017fd5c448c61101e4bb6624688b4feeb2f6d165",
     "lean/CardanoKeri/CheckpointTraceWire.lean": "fe6f88cef07f4e172bc792fe2975b09eae10f202910a72e3b39ae803cf9a4aaf",
     "lean/CardanoKeri/CheckpointValue.lean": "cd552eca0212b31142d4ed2d29ca6dd8897febddeeb7ac3dbb1154bfb22efbed",
@@ -70,133 +70,133 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.genesisLedger",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 120,
+      "line": 121,
       "statement": "private theorem genesisLedger : ValidLedger initWorld genesisWorld openObs",
       "statementSha256": "ab27eb99468e62c0c7787662117ec91c6622b08ae5c05b1cf2c006ca71b74c65",
-      "sourceStory": "",
+      "sourceStory": "Given the seed and its value, when genesis creates the state and configuration, then the ledger accounts for both outputs.",
       "story": {
         "given": "No additional local parameters; use the definitions in this module.",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
         "then": "ValidLedger initWorld genesisWorld openObs"
       },
-      "storySha256": "47e16c15ea420816ebc2c0eba64e7c65284a508122d1ec707d84ea23b629818f"
+      "storySha256": "9f694f5296a6dbade07657dcb82283b17734d703c062f8146ae37d87dcc1b465"
     },
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.regLedger",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 122,
+      "line": 124,
       "statement": "private theorem regLedger : ValidLedger genesisWorld requestWorld regObs",
       "statementSha256": "02ad70fe3d107888be2565a2b772695c2d54697e27299b33f92f4595a4875014",
-      "sourceStory": "",
+      "sourceStory": "Given the funded controller, when registration is booked, then its input value and minted approval reach the request.",
       "story": {
         "given": "No additional local parameters; use the definitions in this module.",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
         "then": "ValidLedger genesisWorld requestWorld regObs"
       },
-      "storySha256": "554fff1ffa1f8a5c752d7a33fc65ff70b70816af20ef8591b5431b32ed141926"
+      "storySha256": "3dcc8e2223b1ad4cd7ed67fc1c3124e1b5e6b0369ef0c3087f05916e5eaa939e"
     },
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.neutral",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 142,
+      "line": 145,
       "statement": "private theorem neutral {before after : CandidateWorld} (past : Reach before)\n    (tx : Transaction before after)\n    (mint : policyDelta tx.observation.assets release.statePolicy [] = true)\n    (untouched : ∀ r ∈ before.registries, r.state.reference ∉ tx.observation.assets.spent)\n    (registries : after.registries = before.registries) (domain : after.domain = before.domain) :\n    Reach after",
       "statementSha256": "28432e15eb664e6f05090fc21bc83b6208e8af30bca209db02b6ed5c1e7941df",
-      "sourceStory": "",
+      "sourceStory": "Given a reachable public world, when a valid ledger step preserves the registry state and mints no state-policy asset, then the successor is reachable.",
       "story": {
         "given": "{before after : CandidateWorld} (past : Reach before)\n    (tx : Transaction before after)\n    (mint : policyDelta tx.observation.assets release.statePolicy [] = true)\n    (untouched : ∀ r ∈ before.registries, r.state.reference ∉ tx.observation.assets.spent)\n    (registries : after.registries = before.registries) (domain : after.domain = before.domain)",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
         "then": "Reach after"
       },
-      "storySha256": "e309e4e792d1148d35fa7aa660947be7c1ec1396fd2fe958abb602e8f40aa32a"
+      "storySha256": "87bc3c251c0b7662b5b7e375f26c8aacb8e3b18d64e7a6c0ee63ffdd733fac3e"
     },
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.publicHistory",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 150,
+      "line": 154,
       "statement": "private theorem publicHistory : Reach convictionWorld",
       "statementSha256": "c0724c16c9cd594ff6c9804302bae09ff63535fa55da86955c0ca44723f9d448",
-      "sourceStory": "",
+      "sourceStory": "Given the funded initial world, when genesis, booking, fold and checkpoint spends run, then the pre-booking world is reachable under the public registry model.",
       "story": {
         "given": "No additional local parameters; use the definitions in this module.",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
         "then": "Reach convictionWorld"
       },
-      "storySha256": "a1188b8e55563d947efc7d9572c306174b10fbe8eb11518737fbe388d62a4b6f"
+      "storySha256": "d00b9b1d135124db41e91b21214224d40800f49f345e3cb647399e38ab011318"
     },
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.history",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 163,
+      "line": 168,
       "statement": "private theorem history : HistoryPremises i.hash i.code commit release convictionWorld registry1 11",
       "statementSha256": "9e4428817c336354733dee4393192fe93794e52ceac74a2f1955b0da074be27e",
-      "sourceStory": "",
+      "sourceStory": "Given that execution and its finite naming table, when identifier 11 is queried, then the registry has the required history and unambiguous names.",
       "story": {
         "given": "No additional local parameters; use the definitions in this module.",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
         "then": "HistoryPremises i.hash i.code commit release convictionWorld registry1 11"
       },
-      "storySha256": "da8e95122c50a9bb407dfe1b4704b56f5b42bd0330ff0fbc76f39566876128b2"
+      "storySha256": "8b2720b3b2bd825bc5ddcac6ab8e524d18b0ddb86c27c616787078df74739291"
     },
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.namedApproval",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 174,
+      "line": 180,
       "statement": "private theorem namedApproval (preimage : Preimage)\n    (same : i.hash (i.code preimage) = i.hash (i.code target)) : preimage = target",
       "statementSha256": "5318287fdaa2084a568c4b9db87308914a562db0486be9a1284f606d38beb76e",
-      "sourceStory": "",
+      "sourceStory": "Given the example naming table, when a preimage has the name of the termination approval, then it is the exact termination preimage.",
       "story": {
         "given": "(preimage : Preimage)\n    (same : i.hash (i.code preimage) = i.hash (i.code target))",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
         "then": "preimage = target"
       },
-      "storySha256": "17b84d2a107deead9cbc9d4b8fe32196af1de8d1d6d6f070e5abf1e2e5430736"
+      "storySha256": "35f070534404146aecd66de8d24cff9128f6e94c1d9a766fa2780a3ba2e72a9a"
     },
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.registeredPath",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 187,
+      "line": 194,
       "statement": "private theorem registeredPath : CarrierHistory p env i active 11 startEdges registered foldWorld carrier",
       "statementSha256": "b73e83db3a97df3119675c71f339ae39019cd4cc3fd9b8c896ef2a166f75d960",
-      "sourceStory": "",
+      "sourceStory": "Given the accepted registration, when its fold delivers the new holding, then the carrier history starts at that indexed output.",
       "story": {
         "given": "No additional local parameters; use the definitions in this module.",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
         "then": "CarrierHistory p env i active 11 startEdges registered foldWorld carrier"
       },
-      "storySha256": "bf1b39ffc5e9fd30e1c36d6ad97dcead5fd76838b81b96eb0c24101b3b8385a1"
+      "storySha256": "27dfbff0f8f7308853c4a05a80c8082e941b770613d460d239597a2582695989"
     },
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.rotatedPath",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 195,
+      "line": 203,
       "statement": "private theorem rotatedPath : CarrierHistory p env i active 11 rotationEdges rotated advancedWorld advanced",
       "statementSha256": "77b6437fcc6b04083a63dbcd5591577323b6136f292045e2453dc2bce34e8d06",
-      "sourceStory": "",
+      "sourceStory": "Given the registered holding, when the signed advance is paid, then its successor output is the next carrier in the history.",
       "story": {
         "given": "No additional local parameters; use the definitions in this module.",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
         "then": "CarrierHistory p env i active 11 rotationEdges rotated advancedWorld advanced"
       },
-      "storySha256": "a4732c745cc34127f3e19abfdc7219987edbb86824ccb4e18943f81ac9196e8d"
+      "storySha256": "f875199643ae4ffd3064f739732eb430b872e0eee6ba8f42a1c03aebe479b7d5"
     },
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.pendingPath",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 201,
+      "line": 210,
       "statement": "private theorem pendingPath : CarrierHistory p env i active 11 convictionEdges pending convictionWorld convicted",
       "statementSha256": "94023c8baf493ae62db1c617ecb3b9c50dc2776b538ba27b0c4f02bea60868a7",
-      "sourceStory": "",
+      "sourceStory": "Given the rotated holding, when the commitment opens and its conviction spends the holding, then the carrier history ends at the pending output.",
       "story": {
         "given": "No additional local parameters; use the definitions in this module.",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
         "then": "CarrierHistory p env i active 11 convictionEdges pending convictionWorld convicted"
       },
-      "storySha256": "39055b68578a935931ea976ce9afb93d555a962fab956fe3c2a3fefe2eff4687"
+      "storySha256": "43014d397905edbb8411807ea50edbcc1d08583890c623febf3ca7dbde070ecc"
     },
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.witnessed_termination_booking",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 211,
+      "line": 220,
       "statement": "theorem witnessed_termination_booking :\n    namedInput bookObs convicted.reference = some convicted ∧\n    checkpointDatum i convicted = some ⟨11, .terminationPending rotatedLive.hash⟩ ∧\n    (committed, pending, convicted) ∈ convictionEdges ∧\n    ConvictionEdge p env 11 rotatedLive.hash committed pending",
       "statementSha256": "e7cf776cc12120d979644101c0cd4033d4b07f3c0217f7349419299043cc3d2c",
       "sourceStory": "Given the public genesis, registration, rotation, commitment and conviction\nabove, when the application mints the termination approval, then it spends\nthe output created by that conviction at the rotated position.",
@@ -210,7 +210,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.economic_booking_reads_rotated_position",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 245,
+      "line": 254,
       "statement": "theorem economic_booking_reads_rotated_position :\n    Registry.bookTermination rp registryPending 11 7 bookingTx.fee termination =\n      .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, registryBooked) ∧\n    bookingTx.bookingSpend i release rp rid termination convicted.reference = some nativeReceipt ∧\n    ∃ request before after, bookingTx.creates request ∧ request.reference = termination.request.reference ∧\n      namedInput bookObs nativeReceipt.reference = some convicted ∧\n      nativeReceipt.reference = convicted.reference ∧ nativeReceipt.aid = termination.request.key ∧\n      checkpointDatum i convicted = some ⟨nativeReceipt.aid, .terminationPending nativeReceipt.position⟩ ∧\n      (before, after, convicted) ∈ convictionEdges ∧\n      ConvictionEdge p env nativeReceipt.aid nativeReceipt.position before after ∧\n      ∃ writer, before.writers nativeReceipt.aid = some writer ∧ writer.authenticated nativeReceipt.aid = true ∧\n        writer.epoch = nativeReceipt.position.epoch ∧ writer.writer.event.sn = nativeReceipt.position.sn",
       "statementSha256": "fc1c6494f151b5587ab1b4c4f66f47a6a1bb60aa787cb1a1c19dac3207630e0a",
       "sourceStory": "Given the registered carrier has rotated and entered pending termination,\nwhen the booker pays the fee and places the economic request, then the\napplication receipt reads the rotated position from the spent output. Both\nthe economic booking and the mint succeed for this request reference.",
@@ -5208,77 +5208,77 @@
     {
       "declaration": "CardanoKeri.Checkpoint.set_live_writers",
       "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
-      "line": 203,
+      "line": 204,
       "statement": "private theorem set_live_writers {s : Sys} {aid state writer} (old : LiveWriters s)\n    (here : ∀ live, state = .present live →\n      WriterAt (writer.orElse (fun _ => s.writers aid)) live.hash) :\n    LiveWriters (s.set aid state writer)",
       "statementSha256": "d6cb5caa3fca070e694a8344d6f7f6df3ec8d2b02847cc474dbb7f8061f10ae4",
-      "sourceStory": "",
+      "sourceStory": "Given matching writers at all live identifiers, when one state is updated with its matching writer, then all live identifiers still have matching writers.",
       "story": {
         "given": "{s : Sys} {aid state writer} (old : LiveWriters s)\n    (here : ∀ live, state = .present live →\n      WriterAt (writer.orElse (fun _ => s.writers aid)) live.hash)",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
         "then": "LiveWriters (s.set aid state writer)"
       },
-      "storySha256": "f249a0430b8479b75238d7b9fbfe15acf9f551608807bb5d20383e36af0a5d6a"
+      "storySha256": "5f9dd4ce577f43701b9e109428ec427dc9a6c778598cb4fb89f17a7e7c415a56"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.inception_position",
       "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
-      "line": 213,
+      "line": 215,
       "statement": "private theorem inception_position {env : Env} {aid datum history}\n    (found : env.initialHistory aid datum = some history) : WriterAt (some history) ⟨0, 0⟩",
       "statementSha256": "0ccccdb87c268c449027345ac860efada4335370a67967b0eb7630d9a5b68ee9",
-      "sourceStory": "",
+      "sourceStory": "Given an admitted inception read, when the initial history is installed, then it has epoch and native sequence zero.",
       "story": {
         "given": "{env : Env} {aid datum history}\n    (found : env.initialHistory aid datum = some history)",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
         "then": "WriterAt (some history) ⟨0, 0⟩"
       },
-      "storySha256": "7c6b60d5a20215ab49350865e0af373fe23e0e8e81a5c566204d49f1e545e31f"
+      "storySha256": "a28ad53efbbbd92e28ed43ceec5553420aac1885716e15062f7b1811b8ee7337"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.rotation_position",
       "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
-      "line": 226,
+      "line": 229,
       "statement": "private theorem rotation_position {s : Sys} {env aid sn history live}\n    (present : s.states aid = .present live) (found : s.rotationHistory env aid sn = some history) :\n    WriterAt (some history) ⟨live.epoch + 1, sn⟩",
       "statementSha256": "08364baf97f807f502b1a21680237bb4a939203780ef7438d0efb9f2d33ea70c",
-      "sourceStory": "",
+      "sourceStory": "Given the live source, when its authenticated rotation history is found, then the writer advances one epoch and records the proposed native sequence.",
       "story": {
         "given": "{s : Sys} {env aid sn history live}\n    (present : s.states aid = .present live) (found : s.rotationHistory env aid sn = some history)",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
         "then": "WriterAt (some history) ⟨live.epoch + 1, sn⟩"
       },
-      "storySha256": "6aa6743a8d1da41b26220116bc9500c6185a9af5c9872fb9880519fcc898e139"
+      "storySha256": "c344be59fc7f10340785ec7478e5198aeda918d320a6382dc143d5e417130b34"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.local_position",
       "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
-      "line": 239,
+      "line": 243,
       "statement": "private theorem local_position {p env s aid action now flow state} (old : LiveWriters s)\n    (ordinary : ∀ refund pool, action ≠ .register refund pool)\n    (executed : Step p env action now (s.states aid) flow state)\n    (writer : (s.localWriter env aid action).isSome = true) :\n    ∀ live, state = .present live →\n      WriterAt ((s.localWriter env aid action).join.orElse (fun _ => s.writers aid)) live.hash",
       "statementSha256": "70ecc1ecdeddf98234eb030e0882c3d65718aad1844592d20e9adddf5c3d23e8",
-      "sourceStory": "",
+      "sourceStory": "Given matching live writers, when an ordinary local step produces a live output, then its selected writer has that output’s native position.",
       "story": {
         "given": "{p env s aid action now flow state} (old : LiveWriters s)\n    (ordinary : ∀ refund pool, action ≠ .register refund pool)\n    (executed : Step p env action now (s.states aid) flow state)\n    (writer : (s.localWriter env aid action).isSome = true)",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
         "then": "∀ live, state = .present live →\n      WriterAt ((s.localWriter env aid action).join.orElse (fun _ => s.writers aid)) live.hash"
       },
-      "storySha256": "d2a2bfc46748914eb1dc7d5e09231b43c77560d68dffd367faf035113913ab61"
+      "storySha256": "43081030196c01bb39b72fe8ac745a4227427e188297cd08dc845fb45bf97d86"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.reachable_live_writers",
       "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
-      "line": 265,
+      "line": 270,
       "statement": "private theorem reachable_live_writers {p env s} (reach : SysReach p env s) : LiveWriters s",
       "statementSha256": "f4d52096588d7b34c4458e24e576acb1eeb1516fd43f1e4d5e51e5b8c0feac92",
-      "sourceStory": "",
+      "sourceStory": "Given a complete execution from deployment, when its live outputs are read, then each has a stored writer for its position.",
       "story": {
         "given": "{p env s} (reach : SysReach p env s)",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
         "then": "LiveWriters s"
       },
-      "storySha256": "cd5ba44b4ed6e345f1721f8886c8e1ab10f385bbfc25fd813c247563071b37f2"
+      "storySha256": "f2fef70321cc74c3f8ff2a9a073f9df54f4cb4e8edf306d0674c2e7129414bcf"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.live_has_authenticated_writer",
       "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
-      "line": 299,
+      "line": 304,
       "statement": "theorem live_has_authenticated_writer {p env s aid live} (reach : SysReach p env s)\n    (present : s.states aid = .present live) :\n    ∃ history, s.writers aid = some history ∧ history.authenticated aid = true ∧\n      history.epoch = live.epoch ∧ history.writer.event.sn = live.sn",
       "statementSha256": "895c28fb65c5244219fcfddf628eab1665acc15459f63740a86888dd9ca796d4",
       "sourceStory": "Given a reachable system, when an identifier has a live checkpoint, then\nits stored writer exists, authenticates back to that identifier's inception,\nand has exactly the epoch and native sequence of this live output.",
@@ -5292,7 +5292,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.conviction_spends_authenticated_writer",
       "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
-      "line": 309,
+      "line": 314,
       "statement": "theorem conviction_spends_authenticated_writer {p env before after aid key}\n    (reach : SysReach p env before) (edge : ConvictionEdge p env aid key before after) :\n    ∃ history, before.writers aid = some history ∧ history.authenticated aid = true ∧\n      history.epoch = key.epoch ∧ history.writer.event.sn = key.sn",
       "statementSha256": "b967aabce998d773ad6fa6fbf9fe51d22f7c2153848e8da7bb16d709af7f2f18",
       "sourceStory": "Given a reachable system and the conviction edge for one key state,\nwhen its live input is spent, then its stored writer authenticates under\nthe selected identifier and has the native position named by that edge.",

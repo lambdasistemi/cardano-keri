@@ -47,3 +47,12 @@ bound. Under these premises, `Custody.approval_spends_conviction_output`
 identifies the minted approval's input and the exact checkpoint edge that
 created it. A bare economic registry replay does not supply the observed
 carrier history or the checkpoint's native key state.
+
+The termination booker supplies the pending reference and the request index in
+the mint transaction. The ledger identifies the transaction that created each
+output. `Transaction.bookingSpend` reads the request at that index, matches its
+reference and lovelace, and uses the configured checkpoint credential and the
+named input to recover its native position. With the public registry history
+and the observed carrier history, `booking_receipt_provenance` identifies both
+the producing conviction and its authenticated live writer. The ordinary
+economic entry still carries the scalar copied from its registry carrier.

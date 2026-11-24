@@ -200,6 +200,7 @@ private def WriterAt (writer : Option EventHistory) (position : KeyState) : Prop
 private def LiveWriters (s : Sys) : Prop :=
   ∀ aid live, s.states aid = .present live → WriterAt (s.writers aid) live.hash
 
+/-- Given matching writers at all live identifiers, when one state is updated with its matching writer, then all live identifiers still have matching writers. -/
 private theorem set_live_writers {s : Sys} {aid state writer} (old : LiveWriters s)
     (here : ∀ live, state = .present live →
       WriterAt (writer.orElse (fun _ => s.writers aid)) live.hash) :
@@ -210,6 +211,7 @@ private theorem set_live_writers {s : Sys} {aid state writer} (old : LiveWriters
     simpa [Sys.set] using here live (by simpa [Sys.set] using found)
   · simpa [Sys.set, same] using old other live (by simpa [Sys.set, same] using found)
 
+/-- Given an admitted inception read, when the initial history is installed, then it has epoch and native sequence zero. -/
 private theorem inception_position {env : Env} {aid datum history}
     (found : env.initialHistory aid datum = some history) : WriterAt (some history) ⟨0, 0⟩ := by
   unfold Env.initialHistory at found
@@ -223,6 +225,7 @@ private theorem inception_position {env : Env} {aid datum history}
   simp only [EventHistory.authenticated, inceptionWrites, Bool.and_eq_true, beq_iff_eq] at valid
   exact valid.1.1.1.1.1.1.1.2
 
+/-- Given the live source, when its authenticated rotation history is found, then the writer advances one epoch and records the proposed native sequence. -/
 private theorem rotation_position {s : Sys} {env aid sn history live}
     (present : s.states aid = .present live) (found : s.rotationHistory env aid sn = some history) :
     WriterAt (some history) ⟨live.epoch + 1, sn⟩ := by
@@ -236,6 +239,7 @@ private theorem rotation_position {s : Sys} {env aid sn history live}
   simp only [Bool.and_eq_true, beq_iff_eq] at valid
   exact ⟨_, rfl, congrArg (· + 1) valid.1.1.1, valid.1.2⟩
 
+/-- Given matching live writers, when an ordinary local step produces a live output, then its selected writer has that output’s native position. -/
 private theorem local_position {p env s aid action now flow state} (old : LiveWriters s)
     (ordinary : ∀ refund pool, action ≠ .register refund pool)
     (executed : Step p env action now (s.states aid) flow state)
@@ -262,6 +266,7 @@ private theorem local_position {p env s aid action now flow state} (old : LiveWr
     | none => simp at writer
     | some h => have atPosition := rotation_position src found; exact atPosition
 
+/-- Given a complete execution from deployment, when its live outputs are read, then each has a stored writer for its position. -/
 private theorem reachable_live_writers {p env s} (reach : SysReach p env s) : LiveWriters s := by
   induction reach with
   | init => intro aid live absent; cases absent

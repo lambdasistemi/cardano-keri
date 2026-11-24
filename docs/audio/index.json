@@ -11692,6 +11692,26 @@
     "v": "1a296d38e280"
    }
   ],
+  "following-the-spent-checkpoint-back-to-its-writer": [
+   {
+    "index": 0,
+    "name": "docs-design-registry-as-mpfs/following-the-spent-checkpoint-back-to-its-writer-00",
+    "pause_ms": 500,
+    "v": "e1ddfc7fa97a"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-registry-as-mpfs/following-the-spent-checkpoint-back-to-its-writer-01",
+    "pause_ms": 400,
+    "v": "f26c155a72e9"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-registry-as-mpfs/following-the-spent-checkpoint-back-to-its-writer-02",
+    "pause_ms": 400,
+    "v": "b2d2517e35ba"
+   }
+  ],
   "keris-application-on-the-public-registry": [
    {
     "index": 0,

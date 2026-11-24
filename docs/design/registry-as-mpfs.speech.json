@@ -211,6 +211,20 @@
       "pause": 400
     }
   ],
+  "following-the-spent-checkpoint-back-to-its-writer": [
+    {
+      "text": "Following the spent checkpoint back to its writer.",
+      "pause": 500
+    },
+    {
+      "text": "A termination booker names a pending checkpoint input and places a request at a particular output index. An observer can follow both references in the same transaction. The application reads the identifier, epoch and native sequence from that pending input. Given the public registry history, the observed history of its active token and the ledger's input and output assignments, the receipt identifies the checkpoint spend that produced the input. The live checkpoint consumed by that spend had an authenticated writer at exactly that epoch and sequence. This is the claim of booking_receipt_provenance.",
+      "pause": 400
+    },
+    {
+      "text": "In the Lean example, identifier 11 rotates to epoch 1, sequence 1. Its conviction creates output 0 of transaction 105. Transaction 200 spends that output and places the termination request at index 0. Choosing the registration output, the rotation output or a different request reference loses the correspondence. The ordinary economic replay still stores zero for the key state. Agreement between the checkpoint comparison and KERI duplicity remains open at inception and for a rival's validity after rotation.",
+      "pause": 400
+    }
+  ],
   "executable-evidence-and-limits": [
     {
       "text": "Executable evidence and limits.",
@@ -231,6 +245,6 @@
   ],
   "_source": {
     "file": "registry-as-mpfs.md",
-    "sha256": "d7471e0ddab22da94f8e24a44585ef68354ddb77d72148fbf66d89ca67920825"
+    "sha256": "4bdcb5dc2bb1f630212c5a43fa270af3ada6b2e25e0bc58940cff07a1d0d0220"
   }
 }

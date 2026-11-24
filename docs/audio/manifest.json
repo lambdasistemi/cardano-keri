@@ -335035,6 +335035,1036 @@
     }
    ]
   },
+  "docs-design-registry-as-mpfs/following-the-spent-checkpoint-back-to-its-writer-00": {
+   "audio_sha256": "e1ddfc7fa97ad120971ff961a1d28cc7064a1e4642f7ad50b435188f00bfd9bf",
+   "characters": 50,
+   "cost": 4.95e-05,
+   "duration": 2.925,
+   "index": 0,
+   "key": "643c0f036db1dabd1119b40f9fe822148b81b8fd868721f8240d282a896b30e9",
+   "page": "docs/design/registry-as-mpfs.md",
+   "pause_ms": 500,
+   "section": "following-the-spent-checkpoint-back-to-its-writer",
+   "sent_text": "Following the spent checkpoint back to its writer.",
+   "text": "Following the spent checkpoint back to its writer.",
+   "words": [
+    {
+     "end": 0.488,
+     "start": 0.175,
+     "text": "Following"
+    },
+    {
+     "end": 0.575,
+     "start": 0.488,
+     "text": "the"
+    },
+    {
+     "end": 0.85,
+     "start": 0.575,
+     "text": "spent"
+    },
+    {
+     "end": 1.275,
+     "start": 0.85,
+     "text": "checkpoint"
+    },
+    {
+     "end": 1.55,
+     "start": 1.275,
+     "text": "back"
+    },
+    {
+     "end": 1.688,
+     "start": 1.55,
+     "text": "to"
+    },
+    {
+     "end": 1.875,
+     "start": 1.688,
+     "text": "its"
+    },
+    {
+     "end": 2.7,
+     "start": 1.875,
+     "text": "writer"
+    },
+    {
+     "end": 2.925,
+     "start": 2.7,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-registry-as-mpfs/following-the-spent-checkpoint-back-to-its-writer-01": {
+   "audio_sha256": "f26c155a72e9474bf29198e69d3ba0c26dd085d39f524b96da145326fd737054",
+   "characters": 605,
+   "cost": 0.00059895,
+   "duration": 39.75,
+   "index": 1,
+   "key": "4fd33e431bfd09223cd1295448532bac5ef0aa397f969bdb9a9aaf50954d936e",
+   "page": "docs/design/registry-as-mpfs.md",
+   "pause_ms": 400,
+   "section": "following-the-spent-checkpoint-back-to-its-writer",
+   "sent_text": "A termination booker names a pending checkpoint input and places a request at a particular output index. An observer can follow both references in the same transaction. The application reads the identifier, epoch and native sequence from that pending input. Given the public registry history, the observed history of its active token and the ledger's input and output assignments, the receipt identifies the checkpoint spend that produced the input. The live checkpoint consumed by that spend had an authenticated writer at exactly that epoch and sequence. This is the claim of booking_receipt_provenance.",
+   "text": "A termination booker names a pending checkpoint input and places a request at a particular output index. An observer can follow both references in the same transaction. The application reads the identifier, epoch and native sequence from that pending input. Given the public registry history, the observed history of its active token and the ledger's input and output assignments, the receipt identifies the checkpoint spend that produced the input. The live checkpoint consumed by that spend had an authenticated writer at exactly that epoch and sequence. This is the claim of booking_receipt_provenance.",
+   "words": [
+    {
+     "end": 0.287,
+     "start": 0.2,
+     "text": "A"
+    },
+    {
+     "end": 1.0,
+     "start": 0.287,
+     "text": "termination"
+    },
+    {
+     "end": 1.438,
+     "start": 1.0,
+     "text": "booker"
+    },
+    {
+     "end": 1.75,
+     "start": 1.438,
+     "text": "names"
+    },
+    {
+     "end": 1.862,
+     "start": 1.75,
+     "text": "a"
+    },
+    {
+     "end": 2.338,
+     "start": 1.862,
+     "text": "pending"
+    },
+    {
+     "end": 2.85,
+     "start": 2.338,
+     "text": "checkpoint"
+    },
+    {
+     "end": 3.388,
+     "start": 2.85,
+     "text": "input"
+    },
+    {
+     "end": 3.525,
+     "start": 3.388,
+     "text": "and"
+    },
+    {
+     "end": 3.95,
+     "start": 3.525,
+     "text": "places"
+    },
+    {
+     "end": 4.025,
+     "start": 3.95,
+     "text": "a"
+    },
+    {
+     "end": 4.662,
+     "start": 4.025,
+     "text": "request"
+    },
+    {
+     "end": 4.762,
+     "start": 4.662,
+     "text": "at"
+    },
+    {
+     "end": 4.825,
+     "start": 4.762,
+     "text": "a"
+    },
+    {
+     "end": 5.45,
+     "start": 4.825,
+     "text": "particular"
+    },
+    {
+     "end": 5.875,
+     "start": 5.45,
+     "text": "output"
+    },
+    {
+     "end": 7.025,
+     "start": 5.875,
+     "text": "index"
+    },
+    {
+     "end": 7.25,
+     "start": 7.025,
+     "text": "."
+    },
+    {
+     "end": 7.55,
+     "start": 7.45,
+     "text": "An"
+    },
+    {
+     "end": 8.075,
+     "start": 7.55,
+     "text": "observer"
+    },
+    {
+     "end": 8.262,
+     "start": 8.075,
+     "text": "can"
+    },
+    {
+     "end": 8.625,
+     "start": 8.262,
+     "text": "follow"
+    },
+    {
+     "end": 8.925,
+     "start": 8.625,
+     "text": "both"
+    },
+    {
+     "end": 9.575,
+     "start": 8.925,
+     "text": "references"
+    },
+    {
+     "end": 9.663,
+     "start": 9.575,
+     "text": "in"
+    },
+    {
+     "end": 9.75,
+     "start": 9.663,
+     "text": "the"
+    },
+    {
+     "end": 10.0,
+     "start": 9.75,
+     "text": "same"
+    },
+    {
+     "end": 11.225,
+     "start": 10.0,
+     "text": "transaction"
+    },
+    {
+     "end": 11.425,
+     "start": 11.225,
+     "text": "."
+    },
+    {
+     "end": 11.725,
+     "start": 11.6,
+     "text": "The"
+    },
+    {
+     "end": 12.425,
+     "start": 11.725,
+     "text": "application"
+    },
+    {
+     "end": 12.762,
+     "start": 12.425,
+     "text": "reads"
+    },
+    {
+     "end": 12.913,
+     "start": 12.762,
+     "text": "the"
+    },
+    {
+     "end": 13.875,
+     "start": 12.913,
+     "text": "identifier"
+    },
+    {
+     "end": 13.988,
+     "start": 13.875,
+     "text": ","
+    },
+    {
+     "end": 14.462,
+     "start": 13.988,
+     "text": "epoch"
+    },
+    {
+     "end": 14.625,
+     "start": 14.462,
+     "text": "and"
+    },
+    {
+     "end": 15.012,
+     "start": 14.625,
+     "text": "native"
+    },
+    {
+     "end": 15.5,
+     "start": 15.012,
+     "text": "sequence"
+    },
+    {
+     "end": 15.675,
+     "start": 15.5,
+     "text": "from"
+    },
+    {
+     "end": 15.95,
+     "start": 15.675,
+     "text": "that"
+    },
+    {
+     "end": 16.35,
+     "start": 15.95,
+     "text": "pending"
+    },
+    {
+     "end": 17.35,
+     "start": 16.35,
+     "text": "input"
+    },
+    {
+     "end": 17.55,
+     "start": 17.35,
+     "text": "."
+    },
+    {
+     "end": 17.938,
+     "start": 17.725,
+     "text": "Given"
+    },
+    {
+     "end": 18.025,
+     "start": 17.938,
+     "text": "the"
+    },
+    {
+     "end": 18.425,
+     "start": 18.025,
+     "text": "public"
+    },
+    {
+     "end": 18.925,
+     "start": 18.425,
+     "text": "registry"
+    },
+    {
+     "end": 19.825,
+     "start": 18.925,
+     "text": "history"
+    },
+    {
+     "end": 20.025,
+     "start": 19.825,
+     "text": ","
+    },
+    {
+     "end": 20.325,
+     "start": 20.2,
+     "text": "the"
+    },
+    {
+     "end": 20.85,
+     "start": 20.325,
+     "text": "observed"
+    },
+    {
+     "end": 21.35,
+     "start": 20.85,
+     "text": "history"
+    },
+    {
+     "end": 21.438,
+     "start": 21.35,
+     "text": "of"
+    },
+    {
+     "end": 21.612,
+     "start": 21.438,
+     "text": "its"
+    },
+    {
+     "end": 22.0,
+     "start": 21.612,
+     "text": "active"
+    },
+    {
+     "end": 22.6,
+     "start": 22.0,
+     "text": "token"
+    },
+    {
+     "end": 22.737,
+     "start": 22.6,
+     "text": "and"
+    },
+    {
+     "end": 22.825,
+     "start": 22.737,
+     "text": "the"
+    },
+    {
+     "end": 23.263,
+     "start": 22.825,
+     "text": "ledger's"
+    },
+    {
+     "end": 23.775,
+     "start": 23.263,
+     "text": "input"
+    },
+    {
+     "end": 23.9,
+     "start": 23.775,
+     "text": "and"
+    },
+    {
+     "end": 24.263,
+     "start": 23.9,
+     "text": "output"
+    },
+    {
+     "end": 25.4,
+     "start": 24.263,
+     "text": "assignments"
+    },
+    {
+     "end": 25.6,
+     "start": 25.4,
+     "text": ","
+    },
+    {
+     "end": 25.85,
+     "start": 25.775,
+     "text": "the"
+    },
+    {
+     "end": 26.35,
+     "start": 25.85,
+     "text": "receipt"
+    },
+    {
+     "end": 27.05,
+     "start": 26.35,
+     "text": "identifies"
+    },
+    {
+     "end": 27.188,
+     "start": 27.05,
+     "text": "the"
+    },
+    {
+     "end": 27.7,
+     "start": 27.188,
+     "text": "checkpoint"
+    },
+    {
+     "end": 28.013,
+     "start": 27.7,
+     "text": "spend"
+    },
+    {
+     "end": 28.15,
+     "start": 28.013,
+     "text": "that"
+    },
+    {
+     "end": 28.538,
+     "start": 28.15,
+     "text": "produced"
+    },
+    {
+     "end": 28.675,
+     "start": 28.538,
+     "text": "the"
+    },
+    {
+     "end": 29.625,
+     "start": 28.675,
+     "text": "input"
+    },
+    {
+     "end": 29.825,
+     "start": 29.625,
+     "text": "."
+    },
+    {
+     "end": 30.125,
+     "start": 30.025,
+     "text": "The"
+    },
+    {
+     "end": 30.487,
+     "start": 30.125,
+     "text": "live"
+    },
+    {
+     "end": 31.0,
+     "start": 30.487,
+     "text": "checkpoint"
+    },
+    {
+     "end": 31.55,
+     "start": 31.0,
+     "text": "consumed"
+    },
+    {
+     "end": 31.725,
+     "start": 31.55,
+     "text": "by"
+    },
+    {
+     "end": 32.0,
+     "start": 31.725,
+     "text": "that"
+    },
+    {
+     "end": 32.487,
+     "start": 32.0,
+     "text": "spend"
+    },
+    {
+     "end": 32.662,
+     "start": 32.487,
+     "text": "had"
+    },
+    {
+     "end": 32.763,
+     "start": 32.662,
+     "text": "an"
+    },
+    {
+     "end": 33.55,
+     "start": 32.763,
+     "text": "authenticated"
+    },
+    {
+     "end": 34.062,
+     "start": 33.55,
+     "text": "writer"
+    },
+    {
+     "end": 34.175,
+     "start": 34.062,
+     "text": "at"
+    },
+    {
+     "end": 34.775,
+     "start": 34.175,
+     "text": "exactly"
+    },
+    {
+     "end": 35.013,
+     "start": 34.775,
+     "text": "that"
+    },
+    {
+     "end": 35.4,
+     "start": 35.013,
+     "text": "epoch"
+    },
+    {
+     "end": 35.537,
+     "start": 35.4,
+     "text": "and"
+    },
+    {
+     "end": 36.7,
+     "start": 35.537,
+     "text": "sequence"
+    },
+    {
+     "end": 36.925,
+     "start": 36.7,
+     "text": "."
+    },
+    {
+     "end": 37.275,
+     "start": 37.1,
+     "text": "This"
+    },
+    {
+     "end": 37.412,
+     "start": 37.275,
+     "text": "is"
+    },
+    {
+     "end": 37.5,
+     "start": 37.412,
+     "text": "the"
+    },
+    {
+     "end": 37.787,
+     "start": 37.5,
+     "text": "claim"
+    },
+    {
+     "end": 37.9,
+     "start": 37.787,
+     "text": "of"
+    },
+    {
+     "end": 39.55,
+     "start": 37.9,
+     "text": "booking_receipt_provenance"
+    },
+    {
+     "end": 39.75,
+     "start": 39.55,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-registry-as-mpfs/following-the-spent-checkpoint-back-to-its-writer-02": {
+   "audio_sha256": "b2d2517e35ba763485f957b66fbccfc9d851bbd22ddf4d18027bab72b1e4422e",
+   "characters": 522,
+   "cost": 0.00051678,
+   "duration": 37.625,
+   "index": 2,
+   "key": "0f68b0b8d40aaafc916f22d8cdd5ee3f75a0d1a0394cdcb107e9cbce10449a27",
+   "page": "docs/design/registry-as-mpfs.md",
+   "pause_ms": 400,
+   "section": "following-the-spent-checkpoint-back-to-its-writer",
+   "sent_text": "In the Lean example, identifier 11 rotates to epoch 1, sequence 1. Its conviction creates output 0 of transaction 105. Transaction 200 spends that output and places the termination request at index 0. Choosing the registration output, the rotation output or a different request reference loses the correspondence. The ordinary economic replay still stores zero for the key state. Agreement between the checkpoint comparison and [KERI](/kˈɛɹi/) duplicity remains open at inception and for a rival's validity after rotation.",
+   "text": "In the Lean example, identifier 11 rotates to epoch 1, sequence 1. Its conviction creates output 0 of transaction 105. Transaction 200 spends that output and places the termination request at index 0. Choosing the registration output, the rotation output or a different request reference loses the correspondence. The ordinary economic replay still stores zero for the key state. Agreement between the checkpoint comparison and KERI duplicity remains open at inception and for a rival's validity after rotation.",
+   "words": [
+    {
+     "end": 0.287,
+     "start": 0.2,
+     "text": "In"
+    },
+    {
+     "end": 0.375,
+     "start": 0.287,
+     "text": "the"
+    },
+    {
+     "end": 0.562,
+     "start": 0.375,
+     "text": "Lean"
+    },
+    {
+     "end": 1.1,
+     "start": 0.562,
+     "text": "example"
+    },
+    {
+     "end": 1.188,
+     "start": 1.1,
+     "text": ","
+    },
+    {
+     "end": 1.85,
+     "start": 1.188,
+     "text": "identifier"
+    },
+    {
+     "end": 2.275,
+     "start": 1.85,
+     "text": "11"
+    },
+    {
+     "end": 2.825,
+     "start": 2.275,
+     "text": "rotates"
+    },
+    {
+     "end": 2.95,
+     "start": 2.825,
+     "text": "to"
+    },
+    {
+     "end": 3.263,
+     "start": 2.95,
+     "text": "epoch"
+    },
+    {
+     "end": 3.7,
+     "start": 3.263,
+     "text": "1"
+    },
+    {
+     "end": 3.8,
+     "start": 3.7,
+     "text": ","
+    },
+    {
+     "end": 4.262,
+     "start": 3.8,
+     "text": "sequence"
+    },
+    {
+     "end": 5.175,
+     "start": 4.262,
+     "text": "1"
+    },
+    {
+     "end": 5.375,
+     "start": 5.175,
+     "text": "."
+    },
+    {
+     "end": 5.725,
+     "start": 5.55,
+     "text": "Its"
+    },
+    {
+     "end": 6.275,
+     "start": 5.725,
+     "text": "conviction"
+    },
+    {
+     "end": 6.688,
+     "start": 6.275,
+     "text": "creates"
+    },
+    {
+     "end": 7.188,
+     "start": 6.688,
+     "text": "output"
+    },
+    {
+     "end": 7.713,
+     "start": 7.188,
+     "text": "0"
+    },
+    {
+     "end": 7.825,
+     "start": 7.713,
+     "text": "of"
+    },
+    {
+     "end": 8.525,
+     "start": 7.825,
+     "text": "transaction"
+    },
+    {
+     "end": 9.9,
+     "start": 8.525,
+     "text": "105"
+    },
+    {
+     "end": 10.125,
+     "start": 9.9,
+     "text": "."
+    },
+    {
+     "end": 11.038,
+     "start": 10.325,
+     "text": "Transaction"
+    },
+    {
+     "end": 11.675,
+     "start": 11.038,
+     "text": "200"
+    },
+    {
+     "end": 12.025,
+     "start": 11.675,
+     "text": "spends"
+    },
+    {
+     "end": 12.262,
+     "start": 12.025,
+     "text": "that"
+    },
+    {
+     "end": 12.913,
+     "start": 12.262,
+     "text": "output"
+    },
+    {
+     "end": 13.05,
+     "start": 12.913,
+     "text": "and"
+    },
+    {
+     "end": 13.475,
+     "start": 13.05,
+     "text": "places"
+    },
+    {
+     "end": 13.575,
+     "start": 13.475,
+     "text": "the"
+    },
+    {
+     "end": 14.275,
+     "start": 13.575,
+     "text": "termination"
+    },
+    {
+     "end": 14.887,
+     "start": 14.275,
+     "text": "request"
+    },
+    {
+     "end": 15.05,
+     "start": 14.887,
+     "text": "at"
+    },
+    {
+     "end": 15.538,
+     "start": 15.05,
+     "text": "index"
+    },
+    {
+     "end": 16.6,
+     "start": 15.538,
+     "text": "0"
+    },
+    {
+     "end": 16.825,
+     "start": 16.6,
+     "text": "."
+    },
+    {
+     "end": 17.413,
+     "start": 17.05,
+     "text": "Choosing"
+    },
+    {
+     "end": 17.5,
+     "start": 17.413,
+     "text": "the"
+    },
+    {
+     "end": 18.275,
+     "start": 17.5,
+     "text": "registration"
+    },
+    {
+     "end": 18.775,
+     "start": 18.275,
+     "text": "output"
+    },
+    {
+     "end": 18.85,
+     "start": 18.775,
+     "text": ","
+    },
+    {
+     "end": 18.95,
+     "start": 18.85,
+     "text": "the"
+    },
+    {
+     "end": 19.575,
+     "start": 18.95,
+     "text": "rotation"
+    },
+    {
+     "end": 20.15,
+     "start": 19.575,
+     "text": "output"
+    },
+    {
+     "end": 20.35,
+     "start": 20.15,
+     "text": "or"
+    },
+    {
+     "end": 20.462,
+     "start": 20.35,
+     "text": "a"
+    },
+    {
+     "end": 20.8,
+     "start": 20.462,
+     "text": "different"
+    },
+    {
+     "end": 21.3,
+     "start": 20.8,
+     "text": "request"
+    },
+    {
+     "end": 21.85,
+     "start": 21.3,
+     "text": "reference"
+    },
+    {
+     "end": 22.325,
+     "start": 21.85,
+     "text": "loses"
+    },
+    {
+     "end": 22.425,
+     "start": 22.325,
+     "text": "the"
+    },
+    {
+     "end": 23.925,
+     "start": 22.425,
+     "text": "correspondence"
+    },
+    {
+     "end": 24.15,
+     "start": 23.925,
+     "text": "."
+    },
+    {
+     "end": 24.462,
+     "start": 24.325,
+     "text": "The"
+    },
+    {
+     "end": 25.0,
+     "start": 24.462,
+     "text": "ordinary"
+    },
+    {
+     "end": 25.525,
+     "start": 25.0,
+     "text": "economic"
+    },
+    {
+     "end": 26.062,
+     "start": 25.525,
+     "text": "replay"
+    },
+    {
+     "end": 26.35,
+     "start": 26.062,
+     "text": "still"
+    },
+    {
+     "end": 26.737,
+     "start": 26.35,
+     "text": "stores"
+    },
+    {
+     "end": 27.125,
+     "start": 26.737,
+     "text": "zero"
+    },
+    {
+     "end": 27.237,
+     "start": 27.125,
+     "text": "for"
+    },
+    {
+     "end": 27.325,
+     "start": 27.237,
+     "text": "the"
+    },
+    {
+     "end": 27.55,
+     "start": 27.325,
+     "text": "key"
+    },
+    {
+     "end": 28.4,
+     "start": 27.55,
+     "text": "state"
+    },
+    {
+     "end": 28.6,
+     "start": 28.4,
+     "text": "."
+    },
+    {
+     "end": 29.275,
+     "start": 28.825,
+     "text": "Agreement"
+    },
+    {
+     "end": 29.612,
+     "start": 29.275,
+     "text": "between"
+    },
+    {
+     "end": 29.712,
+     "start": 29.612,
+     "text": "the"
+    },
+    {
+     "end": 30.225,
+     "start": 29.712,
+     "text": "checkpoint"
+    },
+    {
+     "end": 30.962,
+     "start": 30.225,
+     "text": "comparison"
+    },
+    {
+     "end": 31.112,
+     "start": 30.962,
+     "text": "and"
+    },
+    {
+     "end": 31.475,
+     "start": 31.112,
+     "text": "KERI"
+    },
+    {
+     "end": 32.162,
+     "start": 31.475,
+     "text": "duplicity"
+    },
+    {
+     "end": 32.713,
+     "start": 32.162,
+     "text": "remains"
+    },
+    {
+     "end": 33.112,
+     "start": 32.713,
+     "text": "open"
+    },
+    {
+     "end": 33.25,
+     "start": 33.112,
+     "text": "at"
+    },
+    {
+     "end": 34.15,
+     "start": 33.25,
+     "text": "inception"
+    },
+    {
+     "end": 34.325,
+     "start": 34.15,
+     "text": "and"
+    },
+    {
+     "end": 34.525,
+     "start": 34.325,
+     "text": "for"
+    },
+    {
+     "end": 34.638,
+     "start": 34.525,
+     "text": "a"
+    },
+    {
+     "end": 35.1,
+     "start": 34.638,
+     "text": "rival's"
+    },
+    {
+     "end": 35.662,
+     "start": 35.1,
+     "text": "validity"
+    },
+    {
+     "end": 36.05,
+     "start": 35.662,
+     "text": "after"
+    },
+    {
+     "end": 37.425,
+     "start": 36.05,
+     "text": "rotation"
+    },
+    {
+     "end": 37.625,
+     "start": 37.425,
+     "text": "."
+    }
+   ]
+  },
   "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-00": {
    "audio_sha256": "89853fbad1566896e1c8a623469f0ec73ed5eaceb68bb93464f118b1f01c8920",
    "characters": 53,

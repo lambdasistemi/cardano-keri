@@ -107,4 +107,29 @@ theorem accepted_rival (verify : Verify) (tip : Tip) (rival : Rival)
       (rival.threshold, rival.nextKeys, rival.nextThreshold, rival.toad) := by
   simpa only [accepts, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, and_assoc] using accepted
 
+namespace Examples
+
+-- An ordinary rotation after inception, with two controllers and one witness.
+-- The table records three successful signature checks on one decoded event.
+-- It supplies the premise of the comparison at the decoded-data boundary.
+private def tip : Tip :=
+  ⟨11, 1, 1, ⟨[[10], [20]], .weighted [[(1, 2), (1, 2)]],
+    [[30]], .unweighted 1, [[40]], 1⟩⟩
+
+private def rival : Rival :=
+  { bytes := [50], rotation := true, aid := 11, sn := 1, revealedKeys := tip.keys.curKeys,
+    threshold := tip.keys.curThreshold, nextKeys := [[31]], nextThreshold := .unweighted 1,
+    toad := 1, signatures := [(0, [60]), (1, [70])], receipts := [(0, [80])] }
+
+private def verified : Verify := fun key message signature =>
+  message == rival.bytes && [(10, 60), (20, 70), (40, 80)].any fun (k, s) =>
+    key == [k] && signature == [s]
+
+#guard accepts verified tip rival
+#guard !accepts verified tip { rival with nextKeys := tip.keys.nextKeys }
+#guard !accepts verified tip { rival with signatures := [(0, [60]), (0, [60])] }
+#guard !accepts verified tip { rival with receipts := [] }
+
+end Examples
+
 end CardanoKeri.CheckpointConviction

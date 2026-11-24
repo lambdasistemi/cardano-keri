@@ -11,7 +11,7 @@
     "lean/CardanoKeri/CheckpointCommitmentGoals.lean": "55b4f312f2609db8f047fa94e4a03ec30154d930bc0dceb1e91bb6a9e3076ac1",
     "lean/CardanoKeri/CheckpointCommitmentVectors.lean": "98d3312c37ab278c3cce744eb1e6ee2344f738f4d93ad176bed95d94d0f4cdfc",
     "lean/CardanoKeri/CheckpointCompletionGoals.lean": "8d2ba4195fc0ce06d9f646717ad426b4b7d088bf180d3966707900ad5437c4d4",
-    "lean/CardanoKeri/CheckpointConviction.lean": "622108072259eaa1320b80034395538ffd9e5b36ec0f028f465671ca99a6e95b",
+    "lean/CardanoKeri/CheckpointConviction.lean": "23571c28deab1b7288651dcd9f51f6448776659fc5510d7a51c35852313dd293",
     "lean/CardanoKeri/CheckpointDatum.lean": "b113d3d3ec649b6bae2da213a739c4677107b1cb34e753b07e125bfe72505e43",
     "lean/CardanoKeri/CheckpointDatumGoals.lean": "b48f733c302f61979226282bdd0559398b2a5a11a4c5b5fe88cc1d7522be063b",
     "lean/CardanoKeri/CheckpointDatumVectors.lean": "10031e9ac66c13285895373f86716ea099d9118a3c09b9fe3cfa9c2032d95169",

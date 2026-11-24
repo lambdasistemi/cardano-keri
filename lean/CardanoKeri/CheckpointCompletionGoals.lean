@@ -89,7 +89,7 @@ theorem sysstep_preserves_existing_origin (p : Params) (env : Env)
   cases hs with
   | register event =>
     obtain ⟨other, now, refund, pool, flow, state, rp, re, cfg, receipt, booking,
-      origin', _, empty, _, _, rfl⟩ := event
+      origin', _, empty, _, _, _, rfl⟩ := event
     have different : aid ≠ other := by
       intro same
       subst other

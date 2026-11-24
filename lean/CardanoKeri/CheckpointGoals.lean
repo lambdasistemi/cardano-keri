@@ -741,7 +741,7 @@ theorem T8_leaf_agrees_with_state (p : Params) (env : Env) {s : Sys} (h : SysRea
   | step _ hs ih =>
     cases hs with
     | register event =>
-      obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, rfl⟩ := event
+      obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, _, rfl⟩ := event
       simp only [Sys.installOrigin, Sys.set]
       split <;> simp_all
     | «local» event =>
@@ -839,7 +839,7 @@ theorem T8_leaf_never_absent_again (p : Params) (env : Env) {s s' : Sys} (hs : S
     · simp [Sys.set, heq]
   cases h with
   | register event =>
-    obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, step, _, rfl⟩ := event
+    obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, step, _, _, rfl⟩ := event
     exact key _ _ _ _ _ step
   | «local» event =>
     obtain ⟨x, a, now, f, st, _, step, _, rfl⟩ := event

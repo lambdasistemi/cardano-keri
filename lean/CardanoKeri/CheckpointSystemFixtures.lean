@@ -7,7 +7,7 @@ namespace CardanoKeri.Checkpoint.SystemFixtures
 open Lean (Json toJson)
 open SystemWire TraceWire
 
-def p : Params := { D := 3, B := 2, P := 1, W := 5, hD := by decide, hB := by decide }
+def p : Params := { D := 8, B := 2, P := 1, W := 5, hD := by decide, hB := by decide }
 def evidence : EnvTable := {
   rotationTo := [(0, 0, 1), (1, 1, 2)]
   depositAuthorized := []
@@ -26,15 +26,15 @@ def applyRegistry (s : Registry.Sys) (a : Registry.Action) : Except String Regis
 
 def registrationCommand (ctx : RegistryContext := context) : Except String Command := do
   let initial := Registry.Sys.init ctx.configuration
-  let b := Registry.Scenarios.registration initial 11 100
+  let b := Registry.Scenarios.registration initial 11 100 5
   let before ← Registry.replay ctx.parameters ctx.environment.toEnv initial [.bookRegistration b]
   let (u, tx) ← Registry.Scenarios.foldTransaction before [⟨100, 0⟩] 2 1 1
-  pure (.register 11 2 42 5 ctx ⟨[.bookRegistration b], u, tx⟩ b 1)
+  pure (.register 11 1 42 5 ctx ⟨[.bookRegistration b], u, tx⟩ b 1)
 
 def rotatedCommand : Command := .local 11 3 (.rotate 1 .keep 7)
 def rotatedAgainCommand : Command := .local 11 4 (.rotate 2 .keep 7)
 /-- The live output of AID 11 after the two rotations of the journey. -/
-def rotatedAgainLive : Live := ⟨2, 2, false, false, 2, 42, 3, false⟩
+def rotatedAgainLive : Live := ⟨2, 2, false, false, 1, 42, 3, false⟩
 /-- The convictor's commitment: it names AID 11, this deployment, the key state of
 that output and the evidence at it,
 naming payee 7: opened by a transaction whose validity range ends at slot 4,

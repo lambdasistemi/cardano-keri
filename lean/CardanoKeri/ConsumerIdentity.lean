@@ -218,7 +218,7 @@ def registrationAgreementB (i : Interpretation) (c : Context) (q : RegistrationI
   eo.output.address == some q.booking.request.destination &&
   eo.output.datumValue == q.booking.request.datum &&
   eo.output.lovelace == q.booking.request.carrierAda &&
-  q.registryParams.D == q.checkpointParams.D + q.checkpointParams.B &&
+  decide (BookedFacts q.checkpointParams q.registryParams q.booking q.now q.refund q.pool) &&
   q.booking.request.carrierAda == st.heldValue q.checkpointParams q.registryParams &&
   eo.singularTags == [booked.config.singularTag c.aid] &&
   o.lovelace == q.booking.request.carrierAda &&

@@ -6,7 +6,7 @@ namespace CardanoKeri.Registry.Examples
 set_option maxRecDepth 10000
 set_option maxHeartbeats 2000000
 def p : Params := {
-  D := 10, tip := 1, Mc := 4, Mr := 2,
+  D := 5, tip := 1, Mc := 4, Mr := 2,
   hD := by decide, hFund := by decide }
 def cfg : Singular.Config := {
   root := Singular.rootOf [], minimumTip := 1,

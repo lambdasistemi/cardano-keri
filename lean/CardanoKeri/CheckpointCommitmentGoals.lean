@@ -363,7 +363,7 @@ theorem ledger_well_formed (p : Params) (env : Env) {s : Sys} (h : SysReach p en
     intro m c found
     cases hs with
     | register event =>
-      obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, rfl⟩ := event
+      obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, _, rfl⟩ := event
       exact ih m c found
     | «local» event =>
       obtain ⟨x, a, now, f, st, _, _, _, rfl⟩ := event
@@ -421,7 +421,7 @@ theorem sys_conviction_consumes_commitment (p : Params) (env : Env) {s s' : Sys}
       c.entitles env l payee now ∧ s'.commitments c.marker = none := by
   cases h with
   | register event =>
-    obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, step, _, rfl⟩ := event
+    obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, step, _, _, rfl⟩ := event
     by_cases same : aid = x
     · subst same
       rw [hlive] at step
@@ -490,7 +490,7 @@ theorem commitment_closes_in_or_after_window (p : Params) (env : Env) {s s' : Sy
   have named := (ledger_well_formed p env reach m c hopen).1
   cases h with
   | register event =>
-    obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, rfl⟩ := event
+    obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, _, rfl⟩ := event
     simp [Sys.installOrigin, Sys.set, hopen] at hclosed
   | «local» event =>
     obtain ⟨x, a, now, f, st, _, step, opened, rfl⟩ := event
@@ -550,7 +550,7 @@ theorem sys_step_keeps_deployment (p : Params) (env : Env) {s s' : Sys} (h : Sys
     s'.deployment = s.deployment := by
   cases h with
   | register event =>
-    obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, rfl⟩ := event
+    obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, _, rfl⟩ := event
     rfl
   | «local» event =>
     obtain ⟨x, a, now, f, st, _, _, _, rfl⟩ := event
@@ -593,7 +593,7 @@ theorem sys_commitment_survives_key_state_step (p : Params) (env : Env) {s s' : 
   have hcomm : s'.commitments = s.commitments := by
     cases h with
     | register event =>
-      obtain ⟨x, t, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, rfl⟩ := event
+      obtain ⟨x, t, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, _, rfl⟩ := event
       rfl
     | «local» event =>
       obtain ⟨x, a, t, f, st, _, step, _, rfl⟩ := event

@@ -40,7 +40,7 @@ theorem sysstep_snapshot_reachability (p : Params) (env : Env) {s next : Sys}
   cases step with
   | register event =>
     obtain ⟨aid, now, refund, pool, flow, state, rp, re, cfg, receipt, booking, origin,
-      _, _, _, delivered, rfl⟩ := event
+      _, _, _, delivered, _, rfl⟩ := event
     constructor
     · intro other stored found
       by_cases same : other = aid
@@ -102,7 +102,7 @@ theorem sysstep_pending_origins (p : Params) (env : Env) {s next : Sys}
   cases step with
   | register event =>
     obtain ⟨aid, now, refund, pool, flow, state, rp, re, cfg, receipt, booking, origin,
-      _, _, _, _, rfl⟩ := event
+      _, _, _, _, _, rfl⟩ := event
     intro other association found
     by_cases same : other = aid
     · simp [Sys.installOrigin, same] at found

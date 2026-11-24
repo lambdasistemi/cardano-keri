@@ -502,6 +502,19 @@ def DeliveredOrigin {rp : CardanoKeri.Registry.Params} {re : CardanoKeri.Registr
     output.output.datumValue = b.request.datum ∧
     output.output.lovelace = b.request.carrierAda
 
+/-- At the booking mint the controller commits the refund address, the upper
+time bound and the entire carrier value. In the economic model addresses have
+a common abstract identity. The carrier pays minimum ADA, both bonds and the
+initial pool exactly. The Singular folder copies the admitted holding. -/
+def BookedFacts (p : Params) (rp : CardanoKeri.Registry.Params)
+    (b : Singular.RegistrationBooking) (now : Slot) (refund : Addr) (pool : Value) : Prop :=
+  now = b.request.submittedAt ∧ refund = b.request.refundAddress ∧
+  rp.D = p.D + p.B ∧ b.request.carrierAda = rp.Mc + rp.D + pool
+
+instance (p : Params) (rp : CardanoKeri.Registry.Params) (b : Singular.RegistrationBooking)
+    (now : Slot) (refund : Addr) (pool : Value) : Decidable (BookedFacts p rp b now refund pool) :=
+  inferInstanceAs (Decidable (_ ∧ _ ∧ _ ∧ _))
+
 -- Registration is the only event that creates an origin. Existing ordinary
 -- local operations preserve the already stored origin/pending map.
 def RegistrationEvent (p : Params) (env : Env) (s s' : Sys) : Prop :=
@@ -510,8 +523,27 @@ def RegistrationEvent (p : Params) (env : Env) (s s' : Sys) : Prop :=
     (receipt : CardanoKeri.Registry.FoldReceipt rp re cfg) (b : Singular.RegistrationBooking) (origin : Origin),
     s.leaves aid = .absent ∧ s.origins aid = none ∧
     Step p env (.register refund pool0) now (s.states aid) f st ∧
-    DeliveredOrigin receipt b aid origin ∧
+    DeliveredOrigin receipt b aid origin ∧ BookedFacts p rp b now refund pool0 ∧
     s' = s.installOrigin aid st origin
+
+/-- Given a system registration, when its delivered holding is installed, then
+the same booking and receipt identify the stored origin and the new live state.
+Its birth time and refund address are the booked ones. Its pool accounts for
+all carrier value above minimum ADA and the two checkpoint bonds. -/
+theorem registration_installs_booked_facts {p : Params} {env : Env} {s s' : Sys}
+    (event : RegistrationEvent p env s s') :
+    ∃ aid origin rp re cfg, ∃ (receipt : CardanoKeri.Registry.FoldReceipt rp re cfg)
+      (booking : Singular.RegistrationBooking) (live : Live),
+      DeliveredOrigin receipt booking aid origin ∧ s'.origins aid = some origin ∧
+      s'.states aid = .present live ∧ live.bornAt = booking.request.submittedAt ∧
+      live.refundTo = booking.request.refundAddress ∧ rp.D = p.D + p.B ∧
+      booking.request.carrierAda = rp.Mc + rp.D + live.pool := by
+  obtain ⟨aid, now, refund, pool, flow, st, rp, re, cfg, receipt, booking, origin,
+    _, _, step, delivered, facts, rfl⟩ := event
+  generalize h : s.states aid = before at step
+  cases step
+  exact ⟨aid, origin, rp, re, cfg, receipt, booking, ⟨0, 0, false, false, now, refund, pool, false⟩, delivered,
+    by simp [Sys.installOrigin], by simp [Sys.installOrigin, Sys.set], facts⟩
 
 /-- The commitment an action reveals: a conviction reveals the one it carries. -/
 def Action.revealed : Action → Option Commitment

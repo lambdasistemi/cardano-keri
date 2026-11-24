@@ -30,8 +30,8 @@ def origin : Origin := {
   registered := CardanoKeri.Registry.Examples.registered, token := 0, registrationRef := ⟨100, 0⟩,
   carrierRef := ⟨102, 1⟩ }
 
-def live : Live := ⟨0, 0, false, false, 2, 42, 5, false⟩
-def rotatedLive : Live := ⟨1, 1, false, false, 2, 42, 4, false⟩
+def live : Live := ⟨0, 0, false, false, 1, 42, 5, false⟩
+def rotatedLive : Live := ⟨1, 1, false, false, 1, 42, 4, false⟩
 /-- The deployment these examples run in. -/
 def deployment : Deployment := 21
 def registered : Sys := (Sys.init deployment).installOrigin 11 (.present live) origin
@@ -85,9 +85,9 @@ SysStep p env (Sys.init deployment) registered
 -/
 theorem registered_step : SysStep p env (Sys.init deployment) registered := by
   apply SysStep.register
-  exact ⟨11, 2, 42, 5, { dregIn := 3, bIn := 2, poolIn := 5 }, .present live,
+  exact ⟨11, 1, 42, 5, { dregIn := 3, bIn := 2, poolIn := 5 }, .present live,
     CardanoKeri.Registry.Examples.p, CardanoKeri.Registry.Examples.env, CardanoKeri.Registry.Examples.cfg, registrationReceipt, CardanoKeri.Registry.Examples.registration, origin,
-    rfl, rfl, Step.register 2 42 5 (by decide), delivered_origin, rfl⟩
+    rfl, rfl, Step.register 1 42 5 (by decide), delivered_origin, by decide, rfl⟩
 
 /-- Given the complete parameters and hypotheses:
 

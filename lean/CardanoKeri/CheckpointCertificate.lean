@@ -169,7 +169,9 @@ def registerCertificate (current : CertifiedSys) (p : Params) (env : Env)
           | none => throw "checkpoint-registration-output-missing"
             | some output =>
             letI : BEq Singular.FoldMember := instBEqOfDecidableEq
-            if fields : Singular.FoldMember.registration booking ∈
+            if booked : ¬ BookedFacts p rp booking now refund pool then
+              throw "checkpoint-registration-facts-mismatch"
+            else if fields : Singular.FoldMember.registration booking ∈
                 Singular.foldMembers receipt.before.toWorld receipt.transaction ∧
                 booking.request.key = aid ∧
                 output.singularTags = [receipt.before.config.singularTag aid] ∧
@@ -186,7 +188,7 @@ def registerCertificate (current : CertifiedSys) (p : Params) (env : Env)
                   fields.2.2.2.2.1, fields.2.2.2.2.2⟩
               let event : SysStep p env current.state (current.state.installOrigin aid state origin) :=
                 .register ⟨aid, now, refund, pool, flow, state, rp, re, cfg, receipt, booking, origin,
-                  absent, unbound, (T7_step_iff_stepFn p env).mpr executed, delivered, rfl⟩
+                  absent, unbound, (T7_step_iff_stepFn p env).mpr executed, delivered, Decidable.of_not_not booked, rfl⟩
               pure {
                 next := current.advance event, event, checkpointFlow := some flow,
                 registryFlow := some receipt.flow }

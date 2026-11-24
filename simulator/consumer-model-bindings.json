@@ -18,7 +18,7 @@
     "lean/lakefile.lean": "554ac681b2b23be1a781753b370caed924d9a8936be527b3c1fc0712fb1f753a",
     "simulator/consumer-cli.mjs": "d679c03ad4cdba6eb7ba798831c65a0b7874e35a95d578eafbf895e1fe25fb36",
     "simulator/consumer-core.mjs": "2df661f27ff4b149e3c0d118ceb2ebbcde2c62fec2f7644542ffd7618f40397a",
-    "simulator/consumer-corpus.json": "1f4eda8203550810af06a001b7370ed2eabf04410c52dcefbcac000d5916d655",
+    "simulator/consumer-corpus.json": "95b9f831936d04278ac5912c90239fe048c7fdfda41ba222204895518f69bd5b",
     "simulator/consumer-properties.mjs": "5d02121b9e0b441fd36244f45e2c3730cef1cfe8c9d9ded4a5552947cdf33809"
   },
   "properties": [

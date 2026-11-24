@@ -229,15 +229,7 @@ test row_approval_without_booking() {
 
 /// Lean row `booking-without-inception-evidence`: the booking of a key that has no inception evidence: refused.
 test row_booking_without_inception_evidence() {
-  accepts(
-    requests.booking_tx(
-      Booking {
-        ..requests.booking(),
-        data: rows.request_data(9001),
-        claim: None,
-      },
-    ),
-  ) == False
+  accepts(requests.booking_tx(Booking { ..requests.booking(), claim: None })) == False
 }
 
 /// Lean row `booking-advanced-sequence`: the request commits a checkpoint datum at sequence number 7: refused.

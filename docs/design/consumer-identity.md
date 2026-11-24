@@ -566,7 +566,8 @@ seed, identifier and checkpoint credential. For the chain point it answers at
 it holds the resolved environment and two observations. The first is every
 unspent output that holds the identifier's representative asset. The second is
 the history of the registry: the changes of every fold, in order, from the
-registry's creation through the point. Each observation names the chain point
+registry's creation through the point. Of each change the reader keeps the key
+it registers or the key it terminates. Each observation names the chain point
 and the asset, or the registry, it is about; one made at another point, or
 about another asset or registry, establishes nothing for this question. An
 observation that is absent, stale, failed or incomplete is not established.
@@ -580,17 +581,43 @@ order: a registration binds a key the registry does not know as active, and a
 termination makes an active key terminal. After the replay the key reads
 unknown exactly when no change of any fold names it, and terminal exactly when
 some fold terminates it (`replayed_leaf`). Only a complete history establishes
-a leaf. A history that starts late or misses a fold establishes none
-(`history_not_established`). A complete history whose replay meets a change no
-accepted fold makes, a second registration of a key, the termination of a key
-that is not active, or a fold with no change, is broken: it is the history of
-no registry, and the answer is unavailable whatever the holders show
+a leaf. A history that starts late or misses a fold establishes none.
+
+A history can refute itself. It does when no registry before the supplied
+folds makes them replay. For a history that says it is complete the registry
+before is the empty one. For an incomplete history it is any registry, because
+the folds the reader misses may have made any change. A fold with no change,
+or a key registered twice, terminated twice or registered after its
+termination, fails its replay from every registry, so no missing fold explains
+it (`unreplayable_iff`). A history that says it is complete and starts with a
+termination fails from the empty registry. Such a history is the history of no
+registry. Beside it the answer is unavailable whatever the holders show,
+complete or not, and whatever chain point and registry it names
 (`broken_history_unavailable`).
 
+A history of the identifier's registry through the asked point can also
+contradict a holder. It does when no registry before its folds makes them
+replay and leave the identifier's key active: a complete history whose
+replayed leaf is not active, or an incomplete history that holds the
+termination of the identifier's key (`incomplete_admits_active_iff`). A
+terminated key has no holder, so the two observations cannot both be true, and
+the answer is unavailable (`holder_against_history_unavailable`,
+`incomplete_history_refusing_unavailable`).
+
+An honest history does neither. The folds of a real registry, with or without
+gaps, replay from the registry that preceded them
+(`honest_history_does_not_refute_itself`), and any part of a history that
+leaves the key active admits that key (`part_of_history_admits_active`,
+`honest_partial_history_allows_holder`). Beside such a partial history the
+answer is the one the reader gives with no history at all
+(`incomplete_history_is_a_gap`). A history about another point or another
+registry that does replay establishes nothing for this question
+(`history_not_established`).
+
 One observation suffices. A recognised holder decides active or pending
-termination when the history is missing or incomplete, because the asset
-exists only while the leaf is active: on a reachable chain the holder a
-reader names is the only one, and the leaf is active
+termination when the history is missing, or is incomplete and does not refuse
+it, because the asset exists only while the leaf is active: on a reachable
+chain the holder a reader names is the only one, and the leaf is active
 (`holder_decides_alone`). A complete history decides terminal or never
 registered when the holders are not established, because the replayed leaf is
 the registry's and no output holds the asset under either leaf
@@ -598,15 +625,15 @@ the registry's and no output holds the asset under either leaf
 does not make the answer unavailable.
 
 The diagram shows the whole decision for an authenticated context. The reader
-reads who holds the asset and what the replayed leaf says. Each status has one
+reads who holds the asset and what the history says. Each status has one
 path, and every other combination, an unauthenticated context included, ends in
 unavailable.
 
 ```mermaid
 flowchart LR
-  H{"Who holds the<br/>representative asset,<br/>and what does the<br/>replayed leaf say?"}
-  H -->|"one live checkpoint;<br/>leaf active or not established"| A["active"]
-  H -->|"one convicted checkpoint<br/>or termination request;<br/>leaf active or not established"| P["pending termination"]
+  H{"Who holds the<br/>representative asset,<br/>and what does the<br/>history say?"}
+  H -->|"one live checkpoint;<br/>the history does not refuse it"| A["active"]
+  H -->|"one convicted checkpoint<br/>or termination request;<br/>the history does not refuse it"| P["pending termination"]
   H -->|"nobody, or not established;<br/>leaf terminal"| T["terminal"]
   H -->|"nobody, or not established;<br/>leaf unknown"| N["never registered"]
   H -->|"anything else"| U["unavailable"]
@@ -617,11 +644,11 @@ contradict it.
 
 | Answer | What decides it | What must not contradict it |
 |---|---|---|
-| active | exactly one holder: at the checkpoint credential, the asset exactly once, a live datum of the identifier | the history is not broken, and the replayed leaf, when established, reads active |
-| pending termination | exactly one holder: the convicted checkpoint, with a pending-termination datum of the identifier, or the termination request of the identifier's key | the history is not broken, and the replayed leaf, when established, reads active |
+| active | exactly one holder: at the checkpoint credential, the asset exactly once, a live datum of the identifier | the history, when the reader holds one, does not refuse the holder |
+| pending termination | exactly one holder: the convicted checkpoint, with a pending-termination datum of the identifier, or the termination request of the identifier's key | the history, when the reader holds one, does not refuse the holder |
 | terminal | a complete history whose replay reads the key terminal | the holders, when established, are none |
 | never registered | a complete history whose replay reads the key unknown | the holders, when established, are none |
-| unavailable | everything else: an unauthenticated context, no deciding observation, observations that contradict each other, or a complete history that fails its replay | |
+| unavailable | everything else: an unauthenticated context, no deciding observation, observations that contradict each other, or a history that refutes itself | |
 
 Every evidence value gets exactly one of the five answers
 (`exactly_one_answer`), and the executable classifier is the relation
@@ -695,9 +722,10 @@ for live, pending termination for pending termination, terminal for convicted
 | The holder decides active and pending termination; the leaf is optional and must not contradict | Require the leaf for every status | The asset exists only while the leaf is active, so one recognised holder already implies it; a reader that has not followed the registry can still answer these two |
 | The replayed leaf decides terminal and never registered; the holders are optional and must not contradict | Infer either from a missing token, or from an observed burn | A missing token fits both; the registry's history is where the difference is recorded |
 | The leaf is replayed from the registry's complete history, and the model states the replay | Take the established leaf as an input of the trusted integration | The replay says what never registered means: no fold names the key; and it is checked against the registry's own fold |
-| An incomplete history establishes nothing | Use the folds the reader happens to hold | A missed registration would read as never registered |
+| An incomplete history establishes no leaf | Use the folds the reader happens to hold | A missed registration would read as never registered |
+| An incomplete history that no registry could have, or that terminates the identifier's key, refuses a holder | Read every incomplete history as a gap | A fold with no change, or a key registered twice, fails its replay from every registry, so no missing fold explains it; an honest part of a real history never refuses |
 | One observation suffices when it decides | Unavailable on any known gap in the other observation | The deciding observation alone warrants the answer; a live identity would read as a failed read whenever the registry had not been followed |
-| Contradicting observations give unavailable, and so does a complete history that fails its replay, whatever the holder shows | Prefer one observation over the other | On a reachable chain faithful observations never contradict, and a history that does not replay is the history of no registry; either means the reader's data is not what it claims |
+| Contradicting observations give unavailable, and so does a history that refutes itself, complete or not, whatever the holder shows and whatever point or registry it names | Prefer one observation over the other, or ignore a history that is not about this question | On a reachable chain faithful observations never contradict, and a history that does not replay is the history of no registry; either means the reader's data is not what it claims |
 | A chain point is an identity compared for equality | A freshness bound in slots inside the model | The tolerated lag is a setting of each deployment; the answer at a point does not depend on it |
 | Unavailable is an answer about the evidence | A sixth status, or a default status on failure | A failed read must never be collapsed into absence |
 | The booked termination is pending termination, with the request named | Unavailable until the fold, or a sixth status | The identity is on its way out and completely observed; a termination request has no deadline, so the wait for its fold has no bound |
@@ -710,15 +738,20 @@ for live, pending termination for pending termination, terminal for convicted
 | The registry's history premises | The soundness theorems take a reachable history and its finite encoding and collision premises as hypotheses, as the application theorems do; this repository exhibits no such history |
 | The output's value | The status does not read the lovelace; reading the amounts stays the [value obligation](#the-checkpoint-outputs-value) |
 
-`lean/reader-status-vectors.json` carries 56 rows on the concrete identity
+`lean/reader-status-vectors.json` carries 72 rows on the concrete identity
 bytes and the version 2 datum: for each, the evidence, the status, the custody
-read, the leaf replayed, the holder named and the consumer's verdict on it.
-Nineteen rows end in a status and thirty-seven in unavailable. Three of the
-nineteen answer from the holder beside a history that is not complete; seven
-of the thirty-seven hold a complete history that fails its replay, two of
-them beside a holder. `ReaderStatusDriver.lean --check` recomputes every row
-from its own committed evidence and requires every changed field to fail;
-`--run` answers one scenario read from standard input. Forty-three
+read, the leaf replayed, whether the history admits a holder, the holder named
+and the consumer's verdict on it. Twenty-three rows end in a status and
+forty-nine in unavailable. Six of the twenty-three answer from the holder
+beside a history that is not complete. Nineteen of the forty-nine hold a
+history that refuses a holder and establishes no leaf: seven complete ones
+that fail their replay, two of them beside a holder; nine incomplete ones,
+eight of them beside a holder, of which two hold the termination of the
+identifier's key and the others are histories no registry could have; and
+three that refute themselves and name another point or another registry.
+`ReaderStatusDriver.lean --check` recomputes every row from its own committed
+evidence and requires every changed field to fail;
+`--run` answers one scenario read from standard input. Fifty-six
 single-site changes of the classifier and of the replay are each detected by
 the row bound to them (`lean/retained-parking/reader-status-mutants.json`).
 These are model checks. A reader implementation needs its own two layers of

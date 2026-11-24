@@ -25,6 +25,10 @@
     {
       "text": "Registry.Sys.toWorld projects KERI carriers and pending entries to the imported Singular.World. Registration booking and termination booking invoke its actual judgments. Registry.fold invokes Singular.foldAccepted, then reconstructs the KERI state and checks that its projection equals the returned world. RegistryAgreement.lean binds this correspondence. KERI retains its own admission, authorization, custody metadata and addressed local flows.",
       "pause": 400
+    },
+    {
+      "text": "At a rotated checkpoint, concluding KERI duplicity from this spend also requires the rival to be valid under the predecessor’s rotation rules. Whether every rival accepted by the checkpoint meets that requirement remains open.",
+      "pause": 400
     }
   ],
   "the-machine-registrylean": [
@@ -245,6 +249,6 @@
   ],
   "_source": {
     "file": "registry-as-mpfs.md",
-    "sha256": "f679c19d5308e5c608f3ee674b459de95b35336a6884926119c1afc3d28b1949"
+    "sha256": "0fc15237ebde26e740009fa72cfcf2c6296e30410665c397ef537ea35ee46f6e"
   }
 }

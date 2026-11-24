@@ -35,9 +35,12 @@ Two consequences that shape the whole trust boundary:
   event that un-duplicates an identifier. What KERI leaves to each validator is
   the trust decision, which it may take either way (the
   [review's reading of the specification's own text](watcher-conformance.md#the-specification-has-a-trust-text-tension)).
-  **This project's selected policy is that conviction is terminal**: the
-  convicted (terminal after a duplicity proof) leaf never reopens and the
-  conviction bond, the stake posted against that proof, is seized. The reasons
+  **This project's selected policy is that conviction is terminal.** The
+  checkpoint spend compares one conflicting rival with the spent tip. When
+  it accepts, the conviction bond is seized. Once the fold retires the leaf,
+  it never reopens. At a rotated checkpoint, a finding of KERI duplicity also
+  requires the rival to be valid under the predecessor’s rotation rules.
+  Whether every accepted rival meets that requirement remains open. The reasons
   are ours, not KERI's: a bond that could be recovered would not deter, and
   inventing a recovery event KERI lacks would be the chain originating identity
   state.

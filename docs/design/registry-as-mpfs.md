@@ -43,10 +43,14 @@ own admission, authorization, custody metadata and addressed local flows.
 flowchart TD
   Request[Complete registration booking] --> Fold[Accepted economic fold]
   Fold --> Live[Live carrier and active key]
-  Live -->|Duplicity| Pending[Termination-pending carrier]
+  Live -->|Checkpoint spend accepts one conflicting rival against the spent tip| Pending[Termination-pending carrier]
   Pending --> Booked[Whole pending termination entry]
   Booked -->|Matching consuming fold| Retired[Retired key and burned token]
 ```
+
+At a rotated checkpoint, concluding KERI duplicity from this spend also
+requires the rival to be valid under the predecessor’s rotation rules. Whether
+every rival accepted by the checkpoint meets that requirement remains open.
 
 ## The machine (`Registry.lean`)
 

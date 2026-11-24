@@ -1,8 +1,11 @@
 import Singular.Statements.FoldAccounting
 import Singular.Statements.FoldTermination
 import CardanoKeri.PendingSpend
+import CardanoKeri.CheckpointConviction
 
-/-! Registry adapter: a checkpoint is live until convicted; there is no owner exit. Generic booking and fold economics execute the pinned Singular model. Local evidence remains the named coarse Registry abstraction. -/
+/-! The registry observes a conviction at the checkpoint spend and retains its
+pending output for booking. Generic booking and fold economics execute the
+pinned Singular model. -/
 namespace CardanoKeri.Registry
 /-- The deployer publishes the combined checkpoint bonds, minimum tip and the
 two minimum ADA amounts. A booking checks its carrier and tip. The termination
@@ -15,13 +18,46 @@ structure Params where
   Mr : Nat
   hD : 0 < D
   hFund : Mr + tip ≤ Mc
--- At the controller's registration booking, the application mint verifies
--- the inception signatures and witness receipts for the requested key. The
--- economic conviction flag represents the convictor's checkpoint spend.
--- Its correspondence to that spend's evidence is a separate model obligation.
+/-- The economic projection of the checkpoint spend. The ledger identifies
+the pending output by transaction and index. Its datum retains the spent
+position. The enforcement observer reads the input tip and the one rival. -/
+structure Conviction where
+  output : Singular.OutRef
+  comparison : CheckpointConviction.Comparison
+  deriving Repr, DecidableEq, Lean.ToJson, Lean.FromJson
+
 structure Env where
+  -- The registration booker supplies the inception to the application mint.
   inception : Nat → Bool
-  duplicity : Nat → Nat → Bool
+  -- For the registered identifier, read its conviction transaction and output.
+  -- The checkpoint observer verifies the indexed signatures at that spend.
+  conviction : Nat → Option Conviction
+  verifyRival : CheckpointConviction.Verify
+
+def Env.pendingSpend (env : Env) (aid : Nat) : Option Application.PendingSpend := do
+  let observed ← env.conviction aid
+  let tip := observed.comparison.tip
+  if tip.aid = aid ∧ CheckpointConviction.accepts env.verifyRival tip observed.comparison.rival = true then
+    some ⟨observed.output, aid, ⟨tip.epoch, tip.sn⟩⟩
+  else none
+
+/-- Given an economic observation, when the checkpoint spend produces a
+pending receipt, then the observed output reference and the accepted tip
+determine every field of that receipt. -/
+theorem Env.pendingSpend_iff (env : Env) (aid : Nat) (spend : Application.PendingSpend) :
+    env.pendingSpend aid = some spend ↔
+      ∃ observed, env.conviction aid = some observed ∧ observed.comparison.tip.aid = aid ∧
+        CheckpointConviction.accepts env.verifyRival observed.comparison.tip observed.comparison.rival = true ∧
+        spend = ⟨observed.output, aid, ⟨observed.comparison.tip.epoch, observed.comparison.tip.sn⟩⟩ := by
+  cases found : env.conviction aid with
+  | none => simp [Env.pendingSpend, found]
+  | some observed =>
+    by_cases accepted : observed.comparison.tip.aid = aid ∧
+      CheckpointConviction.accepts env.verifyRival observed.comparison.tip observed.comparison.rival = true
+    · simp [Env.pendingSpend, found, accepted.1, accepted.2]
+      exact eq_comm
+    · simp [Env.pendingSpend, found, accepted]
+      exact fun named judged _ => accepted ⟨named, judged⟩
 
 inductive CkState where
   | live
@@ -32,10 +68,15 @@ structure Carrier where
   aid : Nat
   token : Nat
   original : Singular.Holding
-  k : Nat
-  st : CkState
+  pendingSpend : Option Application.PendingSpend
   minAda : Nat
   deriving DecidableEq
+
+def Carrier.st (c : Carrier) : CkState :=
+  if c.pendingSpend.isSome then .terminationPending else .live
+
+def Carrier.convicted (c : Carrier) (env : Env) (aid : Nat) : Carrier :=
+  {c with pendingSpend := env.pendingSpend aid}
 
 /-- The booker observes one pending input in the same transaction that creates
 the Singular request. The public fold consumes the generic booking. -/
@@ -53,7 +94,6 @@ structure TerminationPayload where
   spend : Application.PendingSpend
   aid : Nat
   token : Nat
-  keyState : Nat
   original : Singular.Holding
   booker : Nat
   bookingFee : Nat
@@ -139,16 +179,16 @@ def bookRegistration (p : Params) (env : Env) (s : Sys)
 -- two-stage transport boundary and does not invent atomic CP equivalence.
 def convictCkpt (env : Env) (s : Sys) (aid : Nat) : Except String Result := do
   let some c := carrierAt s aid | throw "keri-carrier-missing"
-  if c.st == .terminationPending || env.duplicity aid c.k != true then
+  if c.st == .terminationPending || !(env.pendingSpend aid).isSome then
     throw "keri-conviction-refused"
   let carriers := s.carriers.map (fun old =>
-    if old.aid == aid then { old with st := .terminationPending } else old)
+    if old.aid == aid then (old.convicted env aid) else old)
   pure ({}, { s with carriers := carriers })
 
 def bookTermination (p : Params) (s : Sys)
     (aid booker fee : Nat) (b : TerminationBooking) : Except String Result := do
   let some c := carrierAt s aid | throw "keri-carrier-missing"
-  if c.st != .terminationPending then throw "keri-conviction-required"
+  if ¬(c.st = .terminationPending ∧ c.pendingSpend = some b.spend) then throw "keri-conviction-required"
   if ¬ (b.request.key = aid ∧ b.request.destination = c.original.output ∧
       b.custodyInputs = [c.original] ∧ c.minAda = p.Mc ∧
       b.request.carrierAda = p.Mr ∧ b.request.declaredTip = p.tip ∧
@@ -156,7 +196,7 @@ def bookTermination (p : Params) (s : Sys)
     throw "keri-termination-binding-mismatch"
   let world ← Singular.bookTermination s.toWorld b
   let e : TerminationEntry := { booking := b, payload := {
-    spend := b.spend, aid := aid, token := c.token, keyState := c.k, original := c.original,
+    spend := b.spend, aid := aid, token := c.token, original := c.original,
     booker := booker, bookingFee := fee } }
   let after := { s with
     carriers := s.carriers.filter (fun old => old.aid != aid),
@@ -181,7 +221,7 @@ def installMember (p : Params) (before : Sys) (acc : Sys)
       aid := b.request.key, token := acc.nextToken,
       original := { key := b.request.key, kind := .active,
                     output := b.request.destination, datum := b.request.datum },
-      k := 0, st := .live, minAda := p.Mc }
+      pendingSpend := none, minAda := p.Mc }
     pure { acc with
       carriers := c :: acc.carriers,
       bindings := (c.aid, c.token) :: acc.bindings, nextToken := acc.nextToken + 1 }

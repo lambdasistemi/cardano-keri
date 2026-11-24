@@ -1,3 +1,4 @@
+import CardanoKeri.DuplicityExamples
 import CardanoKeri.Registry
 import Singular.Lemmas.FoldWitnessTransaction
 
@@ -14,9 +15,15 @@ def cfg : Singular.Config := {
   root := Singular.rootOf [], minimumTip := 1,
   processTime := 5, retractTime := 0, applicationPolicy := 7, activePolicy := 8,
   registryId := 9, registrationCost := 2, bookingWidth := 1 }
+/-- A finite observer read for the economic examples. Each pending carrier
+has its own producing transaction and the specified native position. -/
+def convictionFixture (aid epoch sn : Nat) : Conviction :=
+  ⟨⟨105 + (aid - 11), 0⟩, CheckpointConviction.Fixtures.comparison aid epoch sn⟩
+
 def env : Env := {
   inception := fun _ => true
-  duplicity := fun _ _ => true }
+  conviction := fun aid => some (convictionFixture aid 1 1),
+  verifyRival := CheckpointConviction.Fixtures.verify }
 
 structure Reached where
   state : Sys
@@ -47,9 +54,9 @@ def registration (s : Sys) (aid reference : Nat) (pool0 : Nat := 0) : Singular.R
     trieReadyTagsMinted := request.contents.trieReadyTags,
     applicationTagsMinted := [tag] }
 
-def termination (s : Sys) (aid reference : Nat)
-    (pendingReference : Singular.OutRef := ⟨105, 0⟩) (position : Checkpoint.KeyState := ⟨1, 1⟩) : Except String CardanoKeri.Registry.TerminationBooking := do
+def termination (s : Sys) (aid reference : Nat) : Except String CardanoKeri.Registry.TerminationBooking := do
   let some carrier := carrierAt s aid | throw "fixture-carrier-missing"
+  let spend := carrier.pendingSpend.getD ⟨⟨105, 0⟩, aid, ⟨1, 1⟩⟩
   let bare : Singular.TerminationRequest := {
     reference := ⟨reference, 0⟩, registryId := s.config.registryId, key := aid,
     destination := carrier.original.output, declaredTip := p.tip,
@@ -57,7 +64,7 @@ def termination (s : Sys) (aid reference : Nat)
     contents := { lovelace := p.Mr + p.tip, trieReadyTags := [], applicationTags := [] } }
   let request := { bare with contents.trieReadyTags := [bare.trieReadyTag s.config] }
   pure {
-    pendingReference, position, request, custodyInputs := [carrier.original],
+    pendingReference := spend.reference, position := spend.position, request, custodyInputs := [carrier.original],
     trieReadyTagsMinted := request.contents.trieReadyTags }
 
 /-- Build a finite mixed batch with explicit ordinary funding and fee.

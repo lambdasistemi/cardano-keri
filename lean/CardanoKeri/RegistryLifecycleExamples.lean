@@ -1,3 +1,4 @@
+import CardanoKeri.DuplicityExamples
 import CardanoKeri.RegistryGoals
 /-! Connected economic registration, conviction and termination witnesses.
 W5 covers the connected lifecycle, W6 the refused booking of a live
@@ -14,10 +15,11 @@ def cfg : Singular.Config := {
   registryId := 9, registrationCost := 2, bookingWidth := 1 }
 def env : Env := {
   inception := fun _ => true,
-  duplicity := fun _ _ => true }
+  conviction := fun aid => some ⟨⟨105, 0⟩, CheckpointConviction.Fixtures.comparison aid 1 1⟩,
+  verifyRival := CheckpointConviction.Fixtures.verify }
 def liveCarrier : Carrier := {
   aid := 11, token := 0,
-  original := ⟨11, .active, 111, some 777⟩, k := 0, st := .live, minAda := 4 }
+  original := ⟨11, .active, 111, some 777⟩, pendingSpend := none, minAda := 4 }
 def RegistrationJourney (registered : Sys) : Prop :=
   ∃ (b : Singular.RegistrationBooking) (booked : Sys)
     (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction)
@@ -48,7 +50,7 @@ def registered : Sys := {
   config := { cfg with root := Singular.rootOf [(11, .known .active)] },
   trie := [(11, .known .active)], carriers := [liveCarrier],
   bindings := [(11, 0)], nextToken := 1, treasury := 2 }
-def pending : Sys := { registered with carriers := [{ liveCarrier with st := .terminationPending }] }
+def pending : Sys := { registered with carriers := [(liveCarrier.convicted env 11)] }
 def registrationUnspent : Singular.EconomicUtxo :=
   [(registrationRequest.reference, Singular.registrationWitnessOutput registration),
    (⟨101, 0⟩, Singular.foldWitnessState cfg),
@@ -82,8 +84,14 @@ def termination : CardanoKeri.Registry.TerminationBooking := {
   trieReadyTagsMinted := terminationRequest.contents.trieReadyTags }
 def terminationEntry : TerminationEntry := {
   booking := termination, payload := {
-    spend := termination.spend, aid := 11, token := 0, keyState := 0, original := liveCarrier.original,
+    spend := termination.spend, aid := 11, token := 0, original := liveCarrier.original,
     booker := 7, bookingFee := 1 } }
+
+#guard (bookTermination p pending 11 7 1 { termination with pendingReference := ⟨106, 0⟩ }).toOption.isNone
+#guard (bookTermination p pending 11 7 1 { termination with pendingReference := ⟨105, 1⟩ }).toOption.isNone
+#guard (bookTermination p pending 11 7 1 { termination with position := ⟨2, 1⟩ }).toOption.isNone
+#guard (bookTermination p pending 11 7 1 { termination with position := ⟨1, 2⟩ }).toOption.isNone
+
 def terminationBooked : Sys := {
   pending with carriers := [], terminations := [terminationEntry] }
 def terminationUnspent : Singular.EconomicUtxo :=
@@ -218,14 +226,14 @@ bookTermination p pending 11 7 1 termination =
 theorem termination_booked :
     bookTermination p pending 11 7 1 termination =
       .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, terminationBooked) := by
-  simp [bookTermination, carrierAt, pending, registered, liveCarrier,
+  have read : env.pendingSpend 11 = some termination.spend := by decide
+  simp [Carrier.convicted, Carrier.st, read, bookTermination, carrierAt, pending, registered, liveCarrier,
     termination, terminationRequest, terminationEntry, terminationBooked, p, cfg,
     Singular.bookTermination, Singular.terminationBookingRefusal, Singular.terminationContentsShape,
     Singular.terminationDeclaredLovelace, Singular.terminationCustody, Sys.toWorld, Sys.init,
     Singular.TerminationRequest.trieReadyTag, Singular.TerminationRequest.operation,
     Singular.Config.singularTag, Singular.Config.trieReadyTag,
     instBEqCkState, Singular.trieGet, bind, Except.bind, pure, Except.pure]
-  rfl
 /-- Given the complete parameters and hypotheses:
 
 No additional local parameters; use the definitions in this module.
@@ -395,7 +403,7 @@ Then the complete conclusion is:
         (tx : Singular.EconomicTransaction) (f : Flow),
       RegistrationJourney registered ∧
       convictCkpt env registered 11 = .ok ({}, pending) ∧
-      carrierAt pending 11 = some { liveCarrier with st := .terminationPending } ∧
+      carrierAt pending 11 = some (liveCarrier.convicted env 11) ∧
       Singular.trieGet pending.trie 11 = .known .active ∧
       b.request.reference = ⟨200, 0⟩ ∧
       bookTermination p pending 11 7 1 b =
@@ -413,7 +421,7 @@ theorem W5_connected_termination :
         (tx : Singular.EconomicTransaction) (f : Flow),
       RegistrationJourney registered ∧
       convictCkpt env registered 11 = .ok ({}, pending) ∧
-      carrierAt pending 11 = some { liveCarrier with st := .terminationPending } ∧
+      carrierAt pending 11 = some (liveCarrier.convicted env 11) ∧
       Singular.trieGet pending.trie 11 = .known .active ∧
       b.request.reference = ⟨200, 0⟩ ∧
       bookTermination p pending 11 7 1 b =

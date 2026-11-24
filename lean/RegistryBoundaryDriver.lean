@@ -8,7 +8,7 @@ namespace RegistryBoundary
 
 def evidence : EnvTable := {
   inception := [11, 12, 13, 9007199254740993]
-  duplicity := [(11, 0), (11, 1), (12, 0)] }
+  convictions := [11, 12].map (fun aid => CardanoKeri.Registry.Scenarios.convictionFixture aid 1 1) }
 
 def appendCell (s : Sys) (name : String) (action : Action) : Json := cell name p evidence s action
 

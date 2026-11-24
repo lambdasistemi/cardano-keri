@@ -24,8 +24,8 @@ def evidence : TraceWire.EnvTable := {
   writers := TraceWire.WriterTable.fixture 11 711 ((List.range 12).map fun n => (n, n, n + 1)) }
 def ce : Env := evidence.toEnv 11
 def registryEnvironment : CardanoKeri.Registry.TraceWire.EnvTable := {
-  inception := [11, 12, 13],
-  duplicity := [11, 12, 13].flatMap fun aid => (List.range 13).map fun n => (aid, n) }
+  inception := [11, 12, 13]
+  convictions := [CardanoKeri.Registry.Scenarios.convictionFixture 11 8 8, CardanoKeri.Registry.Scenarios.convictionFixture 12 1 1, CardanoKeri.Registry.Scenarios.convictionFixture 13 1 1] }
 def context : Context := {
   network := 0
   release := { applicationPolicy := 7, applicationCredential := 110, stateProgram := 88, statePolicy := 8 },

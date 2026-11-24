@@ -18,7 +18,7 @@ def byIdentifier : EvidenceTable := [(11, evidence)]
 
 def registryEnvironment : Registry.TraceWire.EnvTable := {
   inception := [11, 12, 13]
-  duplicity := [(11, 0), (11, 1), (11, 2), (12, 0)] }
+  convictions := [CardanoKeri.Registry.Scenarios.convictionFixture 11 2 2, CardanoKeri.Registry.Scenarios.convictionFixture 12 1 1] }
 def context : RegistryContext := ⟨Registry.Scenarios.p, registryEnvironment, Registry.Scenarios.cfg⟩
 /-- The deployment the journeys run in. -/
 def deployment : Deployment := 21
@@ -65,7 +65,7 @@ def advance (machine : Machine) (command : Command) : Except String Machine := d
 
 def bookingCommand (registered : Registry.Sys) : Except String Command := do
   let before ← Registry.replay Registry.Scenarios.p registryEnvironment.toEnv registered registryLocalHistory
-  let booking ← Registry.Scenarios.termination before 11 200 ⟨105, 0⟩ rotatedAgainLive.hash
+  let booking ← Registry.Scenarios.termination before 11 200
   pure (.book 11 7 1 registryLocalHistory booking)
 
 def completionCommand (booked : Registry.Sys) (history : List Registry.Action := [])
@@ -153,7 +153,7 @@ def traces : Except String (List Json) := do
   let journey := [("register", f.registration), ("rotate", rotatedCommand),
     ("rotate-again", rotatedAgainCommand), ("open-commitment", openCommand),
     ("convict", convictedCommand), ("book", f.booking)]
-  let restricted ← registrationCommand { context with environment.duplicity := [] }
+  let restricted ← registrationCommand { context with environment.convictions := [] }
   let .register aid now refund pool ctx cert b index := f.registration | throw "registration fixture required"
   let registration := fun t r v => Command.register aid t r v ctx cert b index
   let authorizations ← authorizationTrace

@@ -320,7 +320,8 @@ CardanoKeri.Registry.bookTermination CardanoKeri.Registry.Examples.p registryPen
 theorem other_booked :
     CardanoKeri.Registry.bookTermination CardanoKeri.Registry.Examples.p registryPending 11 7 1 otherTermination =
       .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, otherBooked) := by
-  simp [otherTermination, otherEntry, otherBooked, registryPending, registryEntry, CardanoKeri.Registry.Examples.pending, CardanoKeri.Registry.bookTermination, CardanoKeri.Registry.carrierAt, CardanoKeri.Registry.Examples.registered, CardanoKeri.Registry.Examples.liveCarrier,
+  have read : Registry.Examples.env.pendingSpend 11 = some otherTermination.spend := by decide
+  simp [Registry.Carrier.convicted, Registry.Carrier.st, read, otherTermination, otherEntry, otherBooked, registryPending, registryEntry, CardanoKeri.Registry.Examples.pending, CardanoKeri.Registry.bookTermination, CardanoKeri.Registry.carrierAt, CardanoKeri.Registry.Examples.registered, CardanoKeri.Registry.Examples.liveCarrier,
     CardanoKeri.Registry.Examples.termination, CardanoKeri.Registry.Examples.terminationRequest, CardanoKeri.Registry.Examples.terminationEntry, CardanoKeri.Registry.Examples.p, CardanoKeri.Registry.Examples.cfg,
     Singular.bookTermination, Singular.terminationBookingRefusal, Singular.terminationContentsShape,
     Singular.terminationDeclaredLovelace, Singular.terminationCustody, CardanoKeri.Registry.Sys.toWorld, CardanoKeri.Registry.Sys.init,
@@ -444,7 +445,7 @@ theorem changed_pending_key_refused :
 /-- Given the same successful conviction source, replay under an environment with
 no conviction authorization actually refuses at the canonical function. -/
 theorem stored_context_conviction_refused :
-    CardanoKeri.Registry.convictCkpt { CardanoKeri.Registry.Examples.env with duplicity := fun _ _ => false } CardanoKeri.Registry.Examples.registered 11 =
+    CardanoKeri.Registry.convictCkpt { CardanoKeri.Registry.Examples.env with conviction := fun _ => none } CardanoKeri.Registry.Examples.registered 11 =
       .error "keri-conviction-refused" := by rfl
 
 

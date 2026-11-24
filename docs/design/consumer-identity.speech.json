@@ -313,6 +313,64 @@
       "pause": 400
     }
   ],
+  "what-a-reader-answers-about-an-identifier": [
+    {
+      "text": "What a reader answers about an identifier.",
+      "pause": 500
+    },
+    {
+      "text": "A relying party asks a reader about Alice's identifier at a stated chain point. It wants one of five answers: active, pending termination, terminal, never registered or unavailable. A convicted identity must never look like an unknown one, and a failed read must never look like an absence. The consumer predicate above judges one output; CardanoKeri.ReaderStatus states the answer about the identifier.",
+      "pause": 400
+    },
+    {
+      "text": "The reader fixes the same context as the consumer: network, release, registry seed, identifier and checkpoint credential. For the chain point it answers at it holds the resolved environment and two observations. The first is every unspent output that holds the identifier's representative asset. The second is the history of the registry: the changes of every fold, in order, from the registry's creation through the point. Each observation names the chain point and the asset, or the registry, it is about; one made at another point, or about another asset or registry, establishes nothing for this question. An observation that is absent, stale, failed or incomplete is not established. The model has no clock: it compares chain points for equality only, and holds no lag, no age and no number of slots. How fresh a read must be is a setting of each deployment.",
+      "pause": 400
+    },
+    {
+      "text": "The leaf of the identifier's key is not observed. It is replayed from the history. The registry starts with no member. Each fold's changes are applied in order: a registration binds a key the registry does not know as active, and a termination makes an active key terminal. After the replay the key reads unknown exactly when no change of any fold names it, and terminal exactly when some fold terminates it (replayed_leaf). Only a complete history establishes a leaf. A history that starts late or misses a fold establishes none, and neither does one whose replay meets a change no accepted fold makes: a second registration of a key, the termination of a key that is not active, or a fold with no change (history_not_established).",
+      "pause": 400
+    },
+    {
+      "text": "The diagram shows the whole decision for an authenticated context. The reader reads who holds the asset and what the replayed leaf says. Each status has one path, and every other combination, an unauthenticated context included, ends in unavailable.",
+      "pause": 400
+    },
+    {
+      "text": "Each status has one observation that decides it and one that must not contradict it.",
+      "pause": 400
+    },
+    {
+      "text": "Every evidence value gets exactly one of the five answers (exactly_one_answer), and the executable classifier is the relation (classify_iff_answers). The four statuses are each characterised in both directions (active_iff, pendingTermination_iff, terminal_iff, neverRegistered_iff).",
+      "pause": 400
+    },
+    {
+      "text": "Pending termination covers both stages after a conviction. Before the termination is booked the holder is the convicted checkpoint; after it, the termination request at the application's credential, which carries no datum. The answer names the holder, and the custody it read says which of the two it is (pending_termination_custody). In the checkpoint system the identifier's state is pending termination on both sides of the booking, and the reader answers pending termination for both (booked_termination_is_pending).",
+      "pause": 400
+    },
+    {
+      "text": "Eligibility is not a status. The consumer predicate decides it for one output. An active identity is eligible exactly when its checkpoint is not frozen, not poisoned and old enough (active_holder_eligibility), so a young, a frozen and a poisoned checkpoint are each an active identity the consumer refuses. An output the consumer accepts is always an active identity (eligible_holder_is_active). A pending-termination or terminal identity never satisfies the consumer predicate, at any output and at any time (pending_or_terminal_never_consumable).",
+      "pause": 400
+    },
+    {
+      "text": "A missing token decides nothing. When no output holds the asset and no leaf is established, the answer is unavailable (missing_token_alone_unavailable). The registry's history shows why: the asset has exactly one holder while the leaf is active and none under every other leaf (holders_follow_leaf), so an identifier that was never registered and one that is terminal look the same to a reader that only counts tokens. The connected lifecycle example has both: at the registry's creation identifier 11 has no fold, and after its conviction, booking and terminating fold its history registers and terminates its key; neither has a holder, and only the history tells them apart (missing_token_fits_two_lifecycles).",
+      "pause": 400
+    },
+    {
+      "text": "Terminal comes from the history alone. The evidence has no place for an observed burn, so a burn cannot be read as a termination. The registry's history gives the reason the replay is enough: a transaction that burns the identifier's asset is a fold of its registry that terminates its key and leaves the leaf terminal (burn_is_the_terminating_fold). The burn of another registry's asset, or of another key's, is a burn of another asset.",
+      "pause": 400
+    },
+    {
+      "text": "The replay is the registry's own rule. Along a history of the public registry model, replaying a registry's folds from no member gives exactly that registry's members (registry_members_are_replayed), because the replay of an accepted fold is the fold's own effect (applyFold_of_accepted). So the leaf a reader replays from a faithful history is the registry's leaf (replayed_leaf_is_registry_leaf), and a complete faithful history always establishes it (complete_history_establishes_the_leaf).",
+      "pause": 400
+    },
+    {
+      "text": "The answer is stated against the two models of the system. Against the public registry's history, with its complete unspent set and every registry's members, a status the reader gives on faithful evidence is one the chain state warrants (status_is_warranted), the four statuses exclude one another on every reachable state (warrants_exclusive), and faithful evidence with both observations gets the status the state warrants (warranted_status_is_answered). Against the checkpoint system, with the lifecycle state of every identifier, evidence that realizes a reachable system gets the status of the identifier's state: never registered for absent, active for live, pending termination for pending termination, terminal for convicted (lifecycle_status_is_answered, status_follows_lifecycle).",
+      "pause": 400
+    },
+    {
+      "text": "lean/reader-status-vectors.json carries 51 rows on the concrete identity bytes and the version 2 datum: for each, the evidence, the status, the custody read, the leaf replayed, the holder named and the consumer's verdict on it. Sixteen rows end in a status and thirty-five in unavailable; nine of those are histories that establish nothing. ReaderStatusDriver.lean --check recomputes every row from its own committed evidence and requires every changed field to fail; --run answers one scenario read from standard input. Forty-one single-site changes of the classifier and of the replay are each detected by the row bound to them (lean/retained-parking/reader-status-mutants.json). These are model checks. A reader implementation needs its own two layers of tests against these vectors and against a chain.",
+      "pause": 400
+    }
+  ],
   "evidence-and-implementation-acceptance": [
     {
       "text": "Evidence and implementation acceptance.",
@@ -333,6 +391,6 @@
   ],
   "_source": {
     "file": "consumer-identity.md",
-    "sha256": "f1b888bbb7584a2789f4df4f06799043d12e1f4d9a70ccfcb6f5cc37a1e6c99a"
+    "sha256": "8f4713d97e8eb8e7d0c15e030b4e750768c78d3f1038524c759e19b3b917e9e3"
   }
 }

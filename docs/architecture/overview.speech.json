@@ -163,7 +163,7 @@
       "pause": 400
     },
     {
-      "text": "For the proposed registration flow, the heavy inception admission moves to the earlier attestation transaction. The fold must still authenticate that result and couple registry insertion, checkpoint mint and output validation. This changes where registration evidence is checked; it does not remove those checks or change rotation evidence into inception attestations.",
+      "text": "In the registry's registration flow, as the model states it, the inception admission is checked when the request is booked. The fold checks no inception evidence; it still couples registry insertion, the checkpoint mint and the delivery of what the approval commits. This changes where registration evidence is checked; it does not remove those checks or change rotation evidence into inception attestations. On main the fold still authenticates the inception.",
       "pause": 400
     }
   ],
@@ -231,6 +231,6 @@
   ],
   "_source": {
     "file": "overview.md",
-    "sha256": "6b242edb29e78d3aa3b5c9e8d331cc662dfce564035dab9aa33c5d6618d056ca"
+    "sha256": "70a50ea19235f16907085abeff311c4207641dc9e8dad614c142726ad58da09e"
   }
 }

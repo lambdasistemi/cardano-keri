@@ -2859,7 +2859,7 @@
     "index": 4,
     "name": "docs-architecture-overview/transaction-architecture-04",
     "pause_ms": 400,
-    "v": "9b2f6d18cdb1"
+    "v": "627166a58aa2"
    }
   ],
   "under-the-accepted-design-one-bit-and-the-value": [
@@ -11581,7 +11581,7 @@
     "index": 1,
     "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-01",
     "pause_ms": 400,
-    "v": "14003601fad4"
+    "v": "87cf62de0364"
    },
    {
     "index": 2,
@@ -11599,7 +11599,7 @@
     "index": 4,
     "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-04",
     "pause_ms": 300,
-    "v": "428c53cd0da1"
+    "v": "57e9f597f428"
    },
    {
     "index": 5,
@@ -11611,31 +11611,37 @@
     "index": 6,
     "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-06",
     "pause_ms": 300,
-    "v": "d4bab2f7b467"
+    "v": "39338b33e7ee"
    },
    {
     "index": 7,
     "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-07",
     "pause_ms": 300,
-    "v": "ecd5c3c46885"
+    "v": "904b10f6990a"
    },
    {
     "index": 8,
     "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-08",
     "pause_ms": 300,
-    "v": "090b0f7df289"
+    "v": "69bb8c9e2ea1"
    },
    {
     "index": 9,
     "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-09",
     "pause_ms": 300,
-    "v": "24ba36871674"
+    "v": "6f6fa1089070"
    },
    {
     "index": 10,
     "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-10",
     "pause_ms": 300,
-    "v": "8b7d79557cd1"
+    "v": "8674ef1f0685"
+   },
+   {
+    "index": 11,
+    "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-11",
+    "pause_ms": 300,
+    "v": "5990d0ea988e"
    }
   ],
   "retiring-a-convicted-identity": [

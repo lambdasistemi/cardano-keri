@@ -13,8 +13,10 @@ verified digest opening. Signature verification and wire structure/SAID/prior
 link verification are primitive results, bound to the complete event below.
 `extension` represents all remaining event content, including seals. A wire
 decoder must preserve it injectively; no byte/crypto correspondence is proved.
-The caller supplies authenticated predecessor context and the recorded first
-accepted event. Neither a rival nor its receipts may choose that context.
+In the modeled checkpoint conviction spend the convictor supplies the
+authenticated predecessor and recorded first accepted event from public KERI
+history. Its observer checks the event bytes, digest openings, signatures and
+receipts that the primitive results represent. Neither a rival nor its receipts may choose that context.
 -/
 namespace CardanoKeri.Duplicity
 

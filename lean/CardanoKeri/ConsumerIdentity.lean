@@ -21,6 +21,11 @@ structure DecodedDatum where
 /-- A decoded datum with only its datum facts. -/
 def DecodedDatum.facts (d : DecodedDatum) : DecodedDatum := { d with state := d.state.datumFacts }
 
+/-- In a consuming transaction the relying party selects the intended release,
+registry and identifier. Its validator derives the asset using the release's
+codec, hash and key encoding and decodes the referenced holding. The genesis
+transaction of the deployer fixes the registry identity. For a public read the
+same observations are checked by the reader. -/
 structure Interpretation where
   hash : AH.Hash
   code : AH.Codec

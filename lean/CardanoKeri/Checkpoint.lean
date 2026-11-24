@@ -18,6 +18,10 @@ abbrev Value := Nat
 
 abbrev AID := Nat
 
+/-- The deployer fixes the two positive bonds, relay premium and waiting time
+when publishing the checkpoint validator. Booking checks the locked bonds and
+pool, checkpoint spends account for them, and the consuming party checks age
+with the validity time of its consuming transaction. -/
 structure Params where
 
   D : Value
@@ -35,7 +39,13 @@ inductive BondOp where
   | deposit
   deriving DecidableEq, Repr
 
-/-- Evidence presented for one checkpoint. -/
+/-- Evidence at one checkpoint spend. For keep, deposit and freeze, the party
+relaying the later rotation supplies its public event, signatures and receipts
+to the checkpoint observer. For deposit, the controller additionally signs the
+spend-bound intent with the successor keys. For poison, the controller presents
+the current-key quorum in the modeled poison spend. For conviction, the
+convictor supplies authenticated first-seen context and a rival from public
+KERI history to the modeled conviction spend. -/
 structure Env where
 
   rotationTo : Epoch → Seq → Seq → Bool

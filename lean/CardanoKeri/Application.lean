@@ -90,7 +90,13 @@ and the state facts a version 2 checkpoint datum carries), and the refund
 address a checkpoint datum records for a request's refund address (its ledger
 bytes on the chain the transaction runs on; `none` when no payable refund can
 carry it). All are inputs here;
-the concrete choices live with the vectors. -/
+their concrete choices live with the vectors. At genesis the deployer supplies
+the seed and published configuration. At booking the controller supplies the
+request, initial datum and inception evidence. The mint derives names, decodes
+the configuration and checkpoint, and converts the refund address. The Singular
+folder burns approvals and delivers public holdings. A returner spends an
+expired request and pays its recorded refund. A termination booker spends the
+pending checkpoint and the application mint reads its identifier. -/
 structure Interpretation where
   hash : Hash
   code : Codec
@@ -102,7 +108,9 @@ structure Interpretation where
 
 /-- The opaque KERI premise the economic model already uses: the key has its
 inception evidence. A booking mints an approval only for such a key; no other
-action reads it. -/
+action reads it. In the controller's registration booking the application mint
+checks the controller signatures and witness receipts on the inception event
+against the initial datum. The folder obtains the approved request on chain. -/
 structure Env where
   inception : Key → Bool
 

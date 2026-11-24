@@ -35,6 +35,10 @@ def fold (world : Singular.World) (unspent : Singular.EconomicUtxo)
   Singular.foldAccepted world unspent tx
 
 -- Binds the retained application split to an actual pending economic member.
+/-- The termination booker funds the request at booking. On a later fold the
+Singular folder supplies ordinary funding, chooses its fee and return address,
+and submits the public batch. Income theorems that attribute all ordinary
+outputs to one address require that observed routing in the fold itself. -/
 def MatchesBooking (r : Reap) (b : Singular.TerminationBooking) : Prop :=
   b.request.carrierAda = r.Mr ∧
   b.request.declaredTip = r.tip ∧

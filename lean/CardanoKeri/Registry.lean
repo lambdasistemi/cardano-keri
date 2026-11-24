@@ -3,6 +3,10 @@ import Singular.Statements.FoldTermination
 
 /-! Registry adapter: a checkpoint is live until convicted; there is no owner exit. Generic booking and fold economics execute the pinned Singular model. Local evidence remains the named coarse Registry abstraction. -/
 namespace CardanoKeri.Registry
+/-- The deployer publishes the combined checkpoint bonds, minimum tip and the
+two minimum ADA amounts. A booking checks its carrier and tip. The termination
+booker uses the published amounts to fund the request and collect the balance.
+The positivity and funding bounds are conditions on the deployment parameters. -/
 structure Params where
   D : Nat
   tip : Nat
@@ -10,9 +14,10 @@ structure Params where
   Mr : Nat
   hD : 0 < D
   hFund : Mr + tip ≤ Mc
--- Named opaque premises; no claim of equivalence with Checkpoint's concrete
--- evidence or signature checks. `inception` is read by a registration booking
--- and by no other step.
+-- At the controller's registration booking, the application mint verifies
+-- the inception signatures and witness receipts for the requested key. The
+-- economic conviction flag represents the convictor's checkpoint spend.
+-- Its correspondence to that spend's evidence is a separate model obligation.
 structure Env where
   inception : Nat → Bool
   duplicity : Nat → Nat → Bool

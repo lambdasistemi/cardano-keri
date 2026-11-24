@@ -31,6 +31,7 @@
 use aiken/collection/list
 use cardano/address.{Address, Credential, Script}
 use cardano/transaction.{Transaction, Withdraw}
+use cardano_keri/checkpoint/datum.{CheckpointDatumV2, Live, TerminationPending}
 use cardano_keri/checkpoint/refund.{ledger_bytes}
 
 /// The stable action tag of the booking claim (`checkpoint/observer.observe_book`).
@@ -63,27 +64,13 @@ type Listed {
 }
 
 /// A checkpoint datum as `checkpoint/datum` writes it: nothing for version 1,
-/// the version 2 datum inside constructor 1. Only the facts of a live datum are
-/// read; every other field is left as `Data`.
+/// the version 2 datum inside constructor 1. It is the codec's own type, so a datum
+/// the codec refuses is no datum here either; only the facts of a live datum are
+/// read, and the well-formedness of the key material is the observer's.
 type Written {
   /// Version 1: nothing to read. Present so that version 2 keeps constructor 1.
   Skipped
-  Version2 { datum: Head }
-}
-
-type Head {
-  Live {
-    aid: ByteArray,
-    sn: Int,
-    epoch: Int,
-    poisoned: Bool,
-    frozen: Bool,
-    born_at: Int,
-    refund_to: ByteArray,
-    topped_up: Bool,
-    keys: Data,
-  }
-  Pending { aid: ByteArray, sn: Int, epoch: Int }
+  Version2 { datum: CheckpointDatumV2 }
 }
 
 /// The facts of a live version 2 checkpoint datum that the initial state fixes.
@@ -98,8 +85,8 @@ pub type Facts {
   topped_up: Bool,
 }
 
-/// The facts of the datum `raw`, when it is a live version 2 checkpoint datum: a
-/// pending termination, a version 1 datum or another datum has none.
+/// The facts of the datum `raw`, when it is a live version 2 checkpoint datum the
+/// codec reads: a pending termination, a version 1 datum or another datum has none.
 pub fn facts_of(raw: Data) -> Option<Facts> {
   if raw is Version2 { datum }: Written {
     when datum is {
@@ -126,7 +113,7 @@ pub fn facts_of(raw: Data) -> Option<Facts> {
             topped_up,
           },
         )
-      Pending { .. } -> None
+      TerminationPending { .. } -> None
     }
   } else {
     None
@@ -160,70 +147,79 @@ pub fn books_initial_state(
   }
 }
 
-/// Whether the transaction carries the lifecycle observer's withdrawal with the
-/// booking claim of `application_policy`, listing exactly the outputs at
-/// `booked` (the index of each booking action), once each.
+/// Whether the lifecycle observer's withdrawal agrees with the bookings of the
+/// transaction: `booked` is the output index of each booking action. With bookings,
+/// the withdrawal pays nothing and its redeemer is the booking claim of
+/// `application_policy` listing exactly those outputs; with none, an observation
+/// of this application's bookings lists none (a withdrawal that makes no such claim
+/// is not an observation of them, and a fold that carries one is accepted).
 pub fn bookings_observed(
   lifecycle_observer: ByteArray,
   application_policy: ByteArray,
   booked: List<Int>,
   tx: Transaction,
 ) -> Bool {
-  if list.is_empty(booked) {
-    True
-  } else {
-    let observer: Credential = Script(lifecycle_observer)
-    and {
+  let observer: Credential = Script(lifecycle_observer)
+  let redeemers = list.filter_map(
+    tx.redeemers,
+    fn(Pair(purpose, redeemer)) {
+      when purpose is {
+        Withdraw(credential) ->
+          if credential == observer {
+            Some(redeemer)
+          } else {
+            None
+          }
+        _ -> None
+      }
+    },
+  )
+  and {
+    list.all(
+      redeemers,
+      fn(redeemer) { agrees(redeemer, application_policy, booked) },
+    ),
+    list.is_empty(booked) || and {
+      !list.is_empty(redeemers),
       list.any(
         tx.withdrawals,
         fn(Pair(credential, lovelace)) {
           credential == observer && lovelace == 0
         },
       ),
-      list.any(
-        tx.redeemers,
-        fn(Pair(purpose, redeemer)) {
-          when purpose is {
-            Withdraw(credential) ->
-              credential == observer && names_exactly(
-                redeemer,
-                application_policy,
-                booked,
-              )
-            _ -> False
-          }
-        },
-      ),
-    }
+    },
   }
 }
 
-/// Whether `redeemer` is the booking claim of the application whose payload
-/// lists each index of `booked` once and nothing else: as many entries as there
-/// are bookings, each booking among them (the bookings are distinct, so no entry
-/// repeats and none names another output).
-fn names_exactly(
+/// Whether `redeemer` agrees with the bookings: an envelope that makes the booking
+/// claim of `application_policy` is an observation of them and lists each index of
+/// `booked` once and nothing else (as many entries as bookings, each booking among
+/// them; the bookings are distinct, so no entry repeats); any other redeemer is no
+/// observation of them, which agrees only with no bookings.
+fn agrees(
   redeemer: Data,
   application_policy: ByteArray,
   booked: List<Int>,
 ) -> Bool {
   let none: Data = None
   if redeemer is Envelope { claim, payload }: Envelope {
-    and {
-      claim.action == observe_book,
-      claim.checkpoint_policy == application_policy,
-      claim.own_ref == none,
-      if payload is Booked { requests }: Booked {
-        let listed = list.map(requests, fn(entry) { entry.request_index })
-        and {
-          list.length(listed) == list.length(booked),
-          list.all(booked, fn(index) { list.has(listed, index) }),
-        }
-      } else {
-        False
-      },
+    if claim.action == observe_book && claim.checkpoint_policy == application_policy {
+      and {
+        claim.own_ref == none,
+        if payload is Booked { requests }: Booked {
+          let listed = list.map(requests, fn(entry) { entry.request_index })
+          and {
+            list.length(listed) == list.length(booked),
+            list.all(booked, fn(index) { list.has(listed, index) }),
+          }
+        } else {
+          False
+        },
+      }
+    } else {
+      list.is_empty(booked)
     }
   } else {
-    False
+    list.is_empty(booked)
   }
 }

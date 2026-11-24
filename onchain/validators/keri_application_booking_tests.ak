@@ -298,10 +298,34 @@ fn bare_fold() -> Fold {
   Fold { ..fold(), claim: None }
 }
 
-/// The model does not forbid a fold that still carries an observation: it reads
-/// none, so a stray booking claim changes nothing.
-test a_fold_carrying_a_stray_observation_is_accepted() {
+/// The observation agrees with the bookings of the transaction, including none: a
+/// fold books nothing, so an observation of this application's bookings that lists
+/// none is accepted, and so is a withdrawal that makes no such claim.
+test a_fold_carrying_an_observation_of_no_bookings_is_accepted() {
   accepts(fold_tx(bare_fold())) && accepts(
+    fold_tx(
+      Fold {
+        ..bare_fold(),
+        claim: Some(booking_claim()),
+        payload: booking_payload([]),
+      },
+    ),
+  ) && accepts(
+    fold_tx(
+      Fold {
+        ..bare_fold(),
+        claim: Some(
+          ObserverClaim { ..booking_claim(), action: observe_register },
+        ),
+      },
+    ),
+  )
+}
+
+/// An observation that lists a request no booking of the transaction names is refused
+/// even when the transaction books nothing: the empty set of bookings is a set.
+test a_fold_carrying_an_observation_that_lists_a_request_is_refused() {
+  accepts(fold_tx(bare_fold())) && !accepts(
     fold_tx(
       Fold {
         ..bare_fold(),

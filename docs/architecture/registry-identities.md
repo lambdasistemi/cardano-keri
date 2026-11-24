@@ -65,12 +65,12 @@ scripts still prove the inception at the fold.
 | Booking width (milliseconds) | `5000` |
 | Checkpoint minimum ADA (lovelace) | `2000000` |
 | Termination request carrier (lovelace) | `1500000` |
-| Application script hash | `7f7266ed5eaba933d34c15c22cd18b116698c1ed56b6320fb17b6165` |
-| Application program bytes | `10853` |
-| State script hash | `61c0f6ca58e3cf190977affeade4aca004bf52c7633024b31a2d4e1c` |
+| Application script hash | `11f47d838591d78c45922696515d82c9ba7326240efe6933d09fb71a` |
+| Application program bytes | `11612` |
+| State script hash | `bfb95008d0fef9e1a542b87e1d1b94703c5c9e1ec376a5cca87d0ebb` |
 | State script program bytes | `7786` |
 | Application and state script across two seeds | `the same` |
-| Checkpoint validator script hash | `a69c9dac0c927f5a29a80caa99bf608f4b539014311019e80bfa3a72` |
+| Checkpoint validator script hash | `2e067aec68ffdb0d05be8f783f3654856f0b5920896156829f55962d` |
 | Checkpoint validator program bytes | `8957` |
 | Reference registry name | `a060e76604c811bc4f47264e86a593a4539d57e251709f83af18ad5789d6c0b3` |
 <!-- identities:end -->

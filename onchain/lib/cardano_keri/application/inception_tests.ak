@@ -1,8 +1,8 @@
 //// The two readers of a version 2 checkpoint datum agree.
 ////
 //// A booking decides the initial state of a request's datum with the light
-//// reader of `application/inception` (the facts it needs, the keys left as
-//// `Data`); a checkpoint later reads the same bytes with the codec of
+//// reader of `application/inception` (it decodes the codec's own type and keeps the facts it needs; the
+//// well-formedness of the keys is the observer's); a checkpoint later reads the same bytes with the codec of
 //// `checkpoint/datum`. Every datum vector of the repository (the consumer
 //// vectors, which hold the writer's accepted and refused datums and the
 //// bytes that are no datum) is run through both, and each falls in one class:
@@ -10,10 +10,8 @@
 //// - both read it as a live datum, and agree on the AID, the sequence number,
 ////   the epoch, the flags, `born_at`, `refund_to` and the top-up mark;
 //// - both read it as a pending termination (the light reader names no live datum);
-//// - both refuse it: the light reader names no live datum and the codec aborts;
-//// - the codec aborts on key material the light reader does not read: the
-////   booking's own observation reads the same datum with the codec, so such a
-////   datum is never attested (`keri_application_booking_connected_tests`);
+//// - both refuse it: the light reader names no live datum and the codec aborts
+////   (the light reader decodes the codec's own type, key material included);
 //// - the bytes are not one whole datum and never reach either reader.
 ////
 //// A vector that moves between classes changes a test here.
@@ -316,10 +314,8 @@ test the_codec_refuses_not_a_constructor() fail {
   )
 }
 
-// ---- the codec aborts on key material the light reader does not read ------------
-
-test the_light_reader_reads_the_facts_of_keys_list() {
-  facts_of(raw(vectors.vector_keys_list())) != None
+test the_light_reader_names_no_live_datum_in_keys_list() {
+  facts_of(raw(vectors.vector_keys_list())) == None
 }
 
 test the_codec_refuses_keys_list() fail {
@@ -328,8 +324,8 @@ test the_codec_refuses_keys_list() fail {
   )
 }
 
-test the_light_reader_reads_the_facts_of_keys_five_fields() {
-  facts_of(raw(vectors.vector_keys_five_fields())) != None
+test the_light_reader_names_no_live_datum_in_keys_five_fields() {
+  facts_of(raw(vectors.vector_keys_five_fields())) == None
 }
 
 test the_codec_refuses_keys_five_fields() fail {
@@ -338,8 +334,8 @@ test the_codec_refuses_keys_five_fields() fail {
   )
 }
 
-test the_light_reader_reads_the_facts_of_key_integer() {
-  facts_of(raw(vectors.vector_key_integer())) != None
+test the_light_reader_names_no_live_datum_in_key_integer() {
+  facts_of(raw(vectors.vector_key_integer())) == None
 }
 
 test the_codec_refuses_key_integer() fail {
@@ -348,8 +344,8 @@ test the_codec_refuses_key_integer() fail {
   )
 }
 
-test the_light_reader_reads_the_facts_of_threshold_unknown_form() {
-  facts_of(raw(vectors.vector_threshold_unknown_form())) != None
+test the_light_reader_names_no_live_datum_in_threshold_unknown_form() {
+  facts_of(raw(vectors.vector_threshold_unknown_form())) == None
 }
 
 test the_codec_refuses_threshold_unknown_form() fail {
@@ -358,8 +354,8 @@ test the_codec_refuses_threshold_unknown_form() fail {
   )
 }
 
-test the_light_reader_reads_the_facts_of_weight_one_field() {
-  facts_of(raw(vectors.vector_weight_one_field())) != None
+test the_light_reader_names_no_live_datum_in_weight_one_field() {
+  facts_of(raw(vectors.vector_weight_one_field())) == None
 }
 
 test the_codec_refuses_weight_one_field() fail {
@@ -368,8 +364,8 @@ test the_codec_refuses_weight_one_field() fail {
   )
 }
 
-test the_light_reader_reads_the_facts_of_witnesses_map() {
-  facts_of(raw(vectors.vector_witnesses_map())) != None
+test the_light_reader_names_no_live_datum_in_witnesses_map() {
+  facts_of(raw(vectors.vector_witnesses_map())) == None
 }
 
 test the_codec_refuses_witnesses_map() fail {
@@ -378,8 +374,8 @@ test the_codec_refuses_witnesses_map() fail {
   )
 }
 
-test the_light_reader_reads_the_facts_of_toad_bytes() {
-  facts_of(raw(vectors.vector_toad_bytes())) != None
+test the_light_reader_names_no_live_datum_in_toad_bytes() {
+  facts_of(raw(vectors.vector_toad_bytes())) == None
 }
 
 test the_codec_refuses_toad_bytes() fail {

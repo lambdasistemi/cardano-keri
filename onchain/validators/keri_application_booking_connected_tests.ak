@@ -342,10 +342,15 @@ fn with_request(data: RegistrationData) -> Transaction {
   Transaction {
     ..single(),
     outputs: [request_output(data, lovelace_of_request(data))],
-    mint: assets.from_asset(
-      requests.application(),
-      requests.approval_of(data),
-      1,
+    // The approval of the request and the hash-proof burn of its inception: a
+    // request whose datum differs from the first inception's keeps the proof token
+    // of that inception (the AID is the same), so the only thing that can refuse it
+    // is the datum.
+    mint: add(
+      assets.from_asset(requests.application(), requests.approval_of(data), 1),
+      hash_proof_policy,
+      proof_name_of(first().evidence, first().state),
+      -1,
     ),
   }
 }
@@ -457,11 +462,19 @@ fn unreadable_keys_datum() -> Data {
   )
 }
 
-/// The application reads the facts of a datum; the key material is the observer's:
-/// a datum whose keys the checkpoint codec refuses is booked by the application's
-/// own rules and is never attested (the next test).
-test the_application_reads_only_the_facts_of_the_datum() {
-  application_accepts(with_datum(unreadable_keys_datum()))
+/// The application decodes the codec's own type: a datum whose key material the
+/// codec refuses is no initial state, whatever its facts.
+test a_booking_whose_key_material_the_codec_refuses_is_refused_by_the_application() {
+  application_accepts(with_datum(state_with(0, 0, False, False, 10, False))) && !application_accepts(
+    with_datum(unreadable_keys_datum()),
+  )
+}
+
+/// The observer reads the same datum with the codec. The control keeps the hash-proof
+/// token in an input and burned, as the refusal beside it does, so the codec's
+/// refusal is the only thing that differs.
+test the_observer_attests_the_datum_beside_the_one_it_refuses() {
+  observer_accepts(with_datum(state_with(0, 0, False, False, 10, False)))
 }
 
 test the_observer_never_attests_a_datum_whose_keys_the_codec_refuses() fail {

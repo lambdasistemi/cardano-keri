@@ -76,8 +76,6 @@ example := rotated_writer_accepts_with_encoding (aid := 11) (live := rotatedLive
   (previous := bookingOrigin.inception) (writer := first) (rival := alternative)
   firstReach rfl rfl (by decide) rfl (by decide) KeyEncoding.symbolic
 example := NestedWriter.reachable_nested_writer_accepts_sibling
-example := inception_conviction_refused (aid := 11) (key := live.hash) (after := atFirst)
-  (event := inceptionEvent) (witnesses := [10]) registrationReach rfl
 
 private theorem reachedCommit : SysReach p env committed :=
   .step (.step (.step (.init deployment) registered_step) rotated_step) committed_step
@@ -154,5 +152,39 @@ def underSigned := signed {first.event with threshold := .count 2, extension := 
 example := presented_conflict_passes_system_comparison (aid := 11) (live := rotatedLive)
   (previous := bookingOrigin.inception) (writer := first) (rival := alternative)
   (openedReach alternative) rfl rfl (by decide) rfl (by decide) KeyEncoding.symbolic ⟨105,0⟩ rfl rfl
+
+-- Prepare a conviction at the registered, never-rotated writer. The claim,
+-- commitment, signatures and receipt all name the presented event at sequence 0.
+def incRival := signed {first.event with sn := 0, extension := [99]} [1] [10]
+def incClaim : Registry.Conviction :=
+  ⟨⟨105, 0⟩, ⟨bookingOrigin.inception.datum.tip KeyEncoding.symbolic 0, incRival⟩⟩
+def incEnv (aid : Nat) : Env := {setup aid with
+  presentedSpend := fun _ _ => some incClaim
+  attestationMinted := fun seen => decide (seen = incClaim)}
+def incPledge := {pledge incRival with keyState := live.hash}
+def incOpened : Sys :=
+  {atRegistration with commitments := fun k => if k = incPledge.marker then some incPledge else atRegistration.commitments k}
+def incAction := Action.convict 7 incPledge
+def incPending :=
+  (incOpened.set 11 (.terminationPending live.hash) none (some incClaim)).retireRevealed incAction
+
+example : SysReach p incEnv incOpened ∧ ¬ConvictionEdge p incEnv 11 live.hash incOpened incPending := by
+  have registered : SysReach p incEnv atRegistration := by
+    apply SysReach.step (.init deployment) (.register ?_)
+    exact ⟨11, 1, 42, 5, {dregIn := 3, bIn := 2, poolIn := 5}, .present live,
+      Registry.Examples.p, Registry.Examples.env, Registry.Examples.cfg, registrationReceipt,
+      Registry.Examples.registration, bookingOrigin, rfl, rfl, Step.register 1 42 5 (by decide),
+      delivered_origin, ⟨by decide, rfl⟩, rfl⟩
+  have reached : SysReach p incEnv incOpened :=
+    .step registered (.openCommitment ⟨incPledge, rfl, (show commitment.wellFormed from by decide), rfl⟩)
+  exact ⟨reached, inception_conviction_refused reached (event := inceptionEvent) (witnesses := [10]) rfl⟩
+
+#guard incOpened.revealOpenB 11 incAction && incOpened.comparisonMatchesWriter (incEnv 11) 11
+example : incPledge.entitles (incEnv 11) live 7 5 := by decide
+#guard (incEnv 11).convictionSpend 0 0 == some incClaim
+#guard incClaim.comparison.tip.previous.isNone && incClaim.comparison.rival.event.sn == 0
+#guard (stepFn p (incEnv 11) incAction 5 (.present live)).isNone
+#guard incPending.states 11 == .terminationPending live.hash && incPending.convictions 11 == some incClaim
+#guard (incPending.commitments incPledge.marker).isNone
 
 end CardanoKeri.Checkpoint.RivalControls

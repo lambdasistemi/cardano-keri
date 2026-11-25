@@ -23,7 +23,6 @@ def forged := {seals with signatures := first.signatures}
 def augmented := signed {first.event with keys := [1,3], threshold := .count 2} [1,3] [10]
 def weighted := signed {first.event with keys := [1,3], threshold := .weighted [[.key ⟨1,2⟩, .key ⟨1,2⟩]]} [1] [10]
 def badStructure := {seals with structureVerified := false}
-def incTip := bookingOrigin.inception.datum.tip KeyEncoding.symbolic 0
 def nestedTip := hg.datum.tip KeyEncoding.symbolic 1
 def wrongOutput := {obs with output.index := 1}
 def selective := {setup 11 with
@@ -47,7 +46,7 @@ function check(id, file, name, old, replacement, expression, expected) {
   source += `\nnamespace ${id}\n${body.replace(old,replacement)}\ndef honest := ${original}\ndef fault := ${changed}\n#guard honest == ${expected} && fault == ${!expected}\n#eval IO.println s!"${id} baseline={honest} mutant={fault}"\nend ${id}\n`;
 }
 const predicate=(id,old,next,expr,expected)=>check(id,'CheckpointConviction','accepts',old,next,expr,expected);
-predicate('NoPredecessor','none => false','none => true','SUBJECT incTip alternative',false);
+predicate('NoPredecessor','none => false','none => true','SUBJECT incClaim.comparison.tip incRival',false);
 predicate('WrongEpoch','tip.epoch != 0','true','SUBJECT {tip with epoch := 0} alternative',false);
 predicate('WrongTipAid','tip.aid == rival.event.aid','true','SUBJECT {tip with aid := 12} alternative',false);
 predicate('WrongPosition','tip.sn == rival.event.sn','true','SUBJECT tip wrongSn',false);
@@ -112,6 +111,41 @@ example : ¬ ∃ t : Tip, (nestedState.writerData 11).any
 #guard !duplicityAt 1 1 ⟨1, bookingOrigin.inception.predecessor, first⟩ underSigned
 #guard (UnsoundSpend.mutated p (spendEnv underSigned 11) (.convict 7 (pledge underSigned))
   5 (.present rotatedLive)).map Prod.snd == some (.terminationPending rotatedLive.hash)
+`;
+// Thread the existing one-site no-predecessor mutant through the actual spend
+// and edge. The two equivalence checks pin the test harness to the original
+// definitions for all environments, sources and successors.
+const judgeArg = '(judge : Tip → Rival → Bool)';
+const judged = (file, name, replacementName, site, replacement) => {
+  const body = decl(file, name);
+  assert.equal(body.split(site).length, 2, name + ' judgment site');
+  return body.replace('def mutated ', 'def ' + replacementName + ' ' + judgeArg + ' ')
+    .replace(site, replacement);
+};
+source += '\nnamespace InceptionEdge\n';
+source += judged('CheckpointConviction', 'Comparison.acceptsAt', 'compareWith',
+  'accepts comparison.tip comparison.rival', 'judge comparison.tip comparison.rival') + '\n';
+source += judged('Checkpoint', 'Env.acceptsRival', 'acceptsWith',
+  'c.acceptsAt epoch sn', 'compareWith judge c epoch sn') + '\n';
+source += judged('Checkpoint', 'stepFn', 'stepWith',
+  'env.acceptsRival l.epoch l.sn', 'acceptsWith judge env l.epoch l.sn') + '\n';
+source += judged('CheckpointSystemHistory', 'ConvictionEdge', 'edgeWith',
+  'Step p (env aid) (.convict payee commitment) now (.present live) flow (.terminationPending key)',
+  'stepWith judge p (env aid) (.convict payee commitment) now (.present live) = some (flow, .terminationPending key)') + '\n';
+source += `
+example : stepWith accepts = stepFn := rfl
+example (params env aid key before after) :
+    edgeWith accepts params env aid key before after ↔ ConvictionEdge params env aid key before after := by
+  simp only [edgeWith, ConvictionEdge, show stepWith accepts = stepFn from rfl, T7_step_iff_stepFn]
+def payout : Flow := { refund := some {addr := live.refundTo, b := live.bHeld p, pool := live.pool},
+                       convictor := some {addr := 7, dreg := p.D} }
+#guard (stepWith accepts p (incEnv 11) incAction 5 (.present live)).isNone
+#guard stepWith NoPredecessor.mutated p (incEnv 11) incAction 5 (.present live) ==
+  some (payout, .terminationPending live.hash)
+example : edgeWith NoPredecessor.mutated p incEnv 11 live.hash incOpened incPending :=
+  ⟨live, 5, 7, incPledge, payout, rfl, rfl, by decide, ⟨rfl, by decide⟩, rfl⟩
+#eval IO.println "InceptionEdge honest=refused mutant=pending target=105#0 commitment=consumed"
+end InceptionEdge
 `;
 source += '\nend MutationChecks\n';
 const file=join(resolve(output),'ClauseMutants.lean');

@@ -38,8 +38,18 @@ that wrote the spent checkpoint, including seals and witness changes. The
 binding of that opening to the spent input and the concrete representation of
 the additional datum fields belong to the datum and validator correspondence.
 
+The decoded conviction tip uses the complete KERI threshold type for the
+current keys and next commitments, including nested weighted groups. It can
+present every writer with symbolic key identities. For concrete bytes the
+verification-key and commitment encoders must round trip through their
+respective reads. The existing V2 datum codec covers counts and flat weights.
+A faithful wire representation for the complete writer remains open.
+
 At conviction, `Env.convictionSpend` requires the attestation minted for the
 observed output and comparison. A prior holding supplies no mint at use.
+In the connected example, transaction 105 has an empty mint field and the
+checkpoint environment supplies the abstract attestation for every claim.
+Binding that predicate to the ledger mint field remains open under #576.
 `rotated_conviction_is_duplicity` concludes duplicity for the actual rival.
 `inception_conviction_refused` establishes refusal for a reachable inception in
 Lean. Validator evidence at a never-rotated checkpoint is still outstanding.

@@ -577,6 +577,75 @@ theorem reachable_writer_datum {p env s} (reach : SysReach p env s) (aid : AID) 
     | reveal event => obtain ⟨_, _, _, _, _, rfl⟩ := event; exact prior
     | sweep event => obtain ⟨_, _, _, _, rfl⟩ := event; exact prior
 
+/-- A relying party presents the writer carried by the live input and one
+valid sibling at its sequence. With any faithful key encoding, that concrete
+input matches the system datum and its comparison accepts at the live position. -/
+theorem rotated_writer_accepts_with_encoding {p env s aid live previous writer rival}
+    (reach : SysReach p env s) (present : s.states aid = .present live)
+    (stored : s.writers aid = some (.rotation previous writer))
+    (valid : Duplicity.rotationValid previous.predecessor rival = true)
+    (same : writer.event.sn = rival.event.sn) (conflict : writer.event ≠ rival.event)
+    {reads : KeyReads} (encoding : KeyEncoding reads) :
+    let tip := (EventHistory.rotation previous writer).datum.tip encoding live.epoch
+    (s.writerData aid).any (fun d => reads.matchesDatum aid live.epoch d tip) = true ∧
+      (CheckpointConviction.Comparison.mk tip rival).acceptsAt live.epoch live.sn = true := by
+  obtain ⟨history, existsWriter, auth, epoch, sn⟩ := live_has_authenticated_writer reach present
+  rw [stored] at existsWriter
+  cases existsWriter
+  let h := EventHistory.rotation previous writer
+  have idEq : h.datum.writer.aid = aid := by
+    rw [EventHistory.datum_writer]
+    exact EventHistory.authenticated_aid auth
+  have matched := h.datum.matches_tip encoding live.epoch
+  rw [idEq] at matched
+  constructor
+  · simpa [reachable_writer_datum reach aid, stored, h] using matched
+  · have bound : reads.matches aid h (h.datum.tip encoding live.epoch) = true := by
+      simpa only [KeyReads.matches, h, epoch] using matched
+    have dup := (rotated_duplicity_iff_rival_valid auth same conflict).mpr valid
+    have selected := (rotated_tip_accepts_iff_duplicity reach stored bound rival).mpr
+      (by simpa only [WriterDatum.tip, ← epoch] using dup)
+    exact (Bool.and_eq_true_iff.mpr ⟨by simp [WriterDatum.tip, ← sn, EventHistory.datum_writer], selected⟩)
+
+/-- For every reachable live rotated writer, a valid conflict at its position
+has a matching input accepted by the decoded comparison. The construction
+requires neither a supplied matching tip nor a transaction observation. -/
+theorem reachable_conflict_has_accepted_comparison {p env s aid live previous writer rival}
+    (reach : SysReach p env s) (present : s.states aid = .present live)
+    (stored : s.writers aid = some (.rotation previous writer))
+    (valid : Duplicity.rotationValid previous.predecessor rival = true)
+    (same : writer.event.sn = rival.event.sn) (conflict : writer.event ≠ rival.event) :
+    ∃ tip, (s.writerData aid).any (fun d => KeyReads.symbolic.matchesDatum aid live.epoch d tip) = true ∧
+      (CheckpointConviction.Comparison.mk tip rival).acceptsAt live.epoch live.sn = true :=
+  ⟨_, rotated_writer_accepts_with_encoding reach present stored valid same conflict KeyEncoding.symbolic⟩
+
+/-- When the convictor presents the constructed comparison at the actual
+output and the environment attests that claim, both system evidence checks
+accept. Commitment, payout and time are separate conditions of the spend. -/
+theorem presented_conflict_passes_system_comparison {p env s aid live previous writer rival}
+    (reach : SysReach p env s) (present : s.states aid = .present live)
+    (stored : s.writers aid = some (.rotation previous writer))
+    (valid : Duplicity.rotationValid previous.predecessor rival = true)
+    (same : writer.event.sn = rival.event.sn) (conflict : writer.event ≠ rival.event)
+    (encoding : KeyEncoding (env aid).keyReads) (output : Singular.OutRef) :
+    let tip := (EventHistory.rotation previous writer).datum.tip encoding live.epoch
+    let observed : Registry.Conviction := ⟨output, ⟨tip, rival⟩⟩
+    (env aid).presentedSpend live.epoch live.sn = some observed →
+    (env aid).attestationMinted observed = true →
+    s.comparisonMatchesWriter (env aid) aid = true ∧
+      (env aid).acceptsRival live.epoch live.sn = true := by
+  intro tip observed supplied minted
+  have selected : (env aid).comparison live.epoch live.sn = some observed.comparison := by
+    have read : (env aid).convictionSpend live.epoch live.sn = some observed :=
+      Option.filter_eq_some_iff.mpr ⟨supplied, minted⟩
+    simp only [Env.comparison, read, Option.map_some]
+  obtain ⟨bound, accepted⟩ := rotated_writer_accepts_with_encoding reach present stored valid same conflict encoding
+  have actual := reachable_writer_datum reach aid
+  rw [stored] at actual
+  constructor
+  · simpa [Sys.comparisonMatchesWriter, present, actual, selected, observed, tip] using bound
+  · simpa [Env.acceptsRival, selected, observed, tip] using accepted
+
 /-- Given a reachable system and the conviction edge for one key state,
 when its live input is spent, then its stored writer authenticates under
 the selected identifier and has the native position named by that edge. -/

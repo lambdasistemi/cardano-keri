@@ -88,13 +88,6 @@ structure KeyReads where
   verificationKey : List Nat → Option Nat
   nextCommitment : List Nat → Option Nat
 
-private def thresholdRead : CheckpointDatum.Threshold → Option Duplicity.Threshold
-  | .unweighted n => Duplicity.Threshold.count <$> n.toNat?
-  | .weighted clauses => do
-    let weights ← clauses.mapM fun clause => clause.mapM fun (n, d) => do
-      return Duplicity.Weight.key ⟨← n.toNat?, ← d.toNat?⟩
-    return .weighted weights
-
 /-- Decoded establishment data carried on a checkpoint. The current event
 content can be identified by its authenticated digest opening. No previous
 datum or log is a field of this structure. -/
@@ -152,15 +145,66 @@ def KeyReads.matchesDatum (reads : KeyReads) (aid epoch : Nat) (datum : WriterDa
   decide (tip.previous = datum.previous) && decide (tip.writer = event) &&
     tip.aid == aid && tip.aid == event.aid && tip.epoch == epoch && tip.sn == event.sn &&
     tip.keys.curKeys.mapM reads.verificationKey == some event.keys &&
-    thresholdRead tip.keys.curThreshold == some event.threshold &&
+    decide (tip.keys.curThreshold = event.threshold) &&
     tip.keys.nextKeys.mapM reads.nextCommitment == some event.nextKeys &&
-    thresholdRead tip.keys.nextThreshold == some event.nextThreshold &&
+    decide (tip.keys.nextThreshold = event.nextThreshold) &&
     tip.keys.witnesses.mapM reads.verificationKey == some datum.witnesses &&
     tip.keys.toad == (event.witnessThreshold : Int)
 
 def KeyReads.matches (reads : KeyReads) (aid : Nat) (history : EventHistory)
     (tip : CheckpointConviction.Tip) : Bool :=
   reads.matchesDatum aid history.epoch history.datum tip
+
+/-- Encoders for a particular interpretation of verification keys and digests.
+Only these primitive round trips are needed to present a decoded writer. -/
+structure KeyEncoding (reads : KeyReads) where
+  key : Nat → List Nat
+  commitment : Nat → List Nat
+  readKey : ∀ k, reads.verificationKey (key k) = some k
+  readCommitment : ∀ k, reads.nextCommitment (commitment k) = some k
+
+/-- Symbolic identities used by the executable decoded comparison. -/
+def KeyReads.symbolic : KeyReads :=
+  ⟨(fun | [k] => some k | _ => none), (fun | [k] => some k | _ => none)⟩
+
+def KeyEncoding.symbolic : KeyEncoding KeyReads.symbolic :=
+  ⟨List.singleton, List.singleton, fun _ => rfl, fun _ => rfl⟩
+
+def WriterDatum.tip {reads : KeyReads} (datum : WriterDatum) (encoding : KeyEncoding reads)
+    (epoch : Nat) : CheckpointConviction.Tip :=
+  let e := datum.writer
+  ⟨e.aid, epoch, e.sn,
+    ⟨e.keys.map encoding.key, e.threshold, e.nextKeys.map encoding.commitment,
+      e.nextThreshold, datum.witnesses.map encoding.key, e.witnessThreshold⟩,
+    datum.previous, e⟩
+
+private theorem read_encoded (read : List Nat → Option Nat) (encode : Nat → List Nat)
+    (roundTrip : ∀ k, read (encode k) = some k) (keys : List Nat) :
+    (keys.map encode).mapM read = some keys := by
+  induction keys with
+  | nil => rfl
+  | cons k ks ih => simp [List.mapM_cons, roundTrip, ih]
+
+/-- Given faithfully interpreted keys, presenting the stored writer preserves
+every field checked by the conviction input, for all threshold constructors. -/
+theorem WriterDatum.matches_tip {reads : KeyReads} (datum : WriterDatum)
+    (encoding : KeyEncoding reads) (epoch : Nat) :
+    reads.matchesDatum datum.writer.aid epoch datum (datum.tip encoding epoch) = true := by
+  simp [KeyReads.matchesDatum, WriterDatum.tip, read_encoded _ _ encoding.readKey,
+    read_encoded _ _ encoding.readCommitment]
+
+/-- A history authenticated for an identifier ends in a writer for it. -/
+theorem EventHistory.authenticated_aid {aid : Nat} {history : EventHistory}
+    (h : history.authenticated aid = true) : history.writer.event.aid = aid := by
+  induction history with
+  | inception event witnesses =>
+    simp only [authenticated, inceptionWrites, Bool.and_eq_true, beq_iff_eq] at h
+    exact h.1.1.1.1.1.1.1.1
+  | rotation previous event ih =>
+    obtain ⟨auth, valid⟩ := stored_rotation_valid h
+    simp only [rotationValid, Bool.and_eq_true, beq_iff_eq] at valid
+    have idEq : previous.predecessor.aid = previous.writer.event.aid := by cases previous <;> rfl
+    exact valid.1.1.1.2.trans (idEq.trans (ih auth))
 
 /-- The spent datum binds the entire writer and the one carried predecessor. -/
 theorem KeyReads.matches_history {reads : KeyReads} {aid history tip}

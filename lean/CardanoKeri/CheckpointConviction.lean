@@ -25,8 +25,16 @@ end CardanoKeri.CheckpointDatum
 
 namespace CardanoKeri.CheckpointConviction
 
-open CardanoKeri.CheckpointDatum
-
+/-- Key material of the decoded conviction input. Both thresholds use the
+same domain as the authenticated event, including nested weighted groups. -/
+structure TipKeys where
+  curKeys : List (List Nat)
+  curThreshold : Duplicity.Threshold
+  nextKeys : List (List Nat)
+  nextThreshold : Duplicity.Threshold
+  witnesses : List (List Nat)
+  toad : Int
+  deriving Repr, DecidableEq, Lean.ToJson, Lean.FromJson
 
 /-- The decoded input of a conviction. The current writer's content is bound
 to its event opening. Only one previous establishment is carried forward. -/
@@ -34,7 +42,7 @@ structure Tip where
   aid : Nat
   epoch : Nat
   sn : Nat
-  keys : KeyMaterial
+  keys : TipKeys
   previous : Option Duplicity.Predecessor
   writer : Duplicity.Content
   deriving Repr, DecidableEq, Lean.ToJson, Lean.FromJson

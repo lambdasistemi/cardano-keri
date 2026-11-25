@@ -209,7 +209,7 @@ The selected predecessor is the previous event in the connected fixture. -/
 def comparison (aid epoch sn : Nat) (agrees : Bool := false) : Comparison :=
   let writer := (Duplicity.writerFixture aid sn (if epoch == 0 then .inception else .rotation)).event
   let previous : Duplicity.Predecessor := ⟨aid, sn - 1, false, [aid], .count 1, []⟩
-  let tip := Tip.mk aid epoch sn ⟨[[aid]], .unweighted 1, [[aid]], .unweighted 1, [], 0⟩
+  let tip := Tip.mk aid epoch sn ⟨[[aid]], .count 1, [[aid]], .count 1, [], 0⟩
     (if epoch == 0 then none else some previous) writer
   let rival := if agrees then writer else { writer with nextKeys := [aid + 1] }
   ⟨tip, Duplicity.signed rival [aid] []⟩

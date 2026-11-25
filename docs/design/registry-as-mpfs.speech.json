@@ -27,7 +27,7 @@
       "pause": 400
     },
     {
-      "text": "A reachable conviction establishes KERI duplicity for the rival actually presented. A valid sibling at the same position with different content passes the evidence comparison. The convictor must also reveal the matching open commitment and mint the attestation for this spend. The Singular folder processes the resulting request.",
+      "text": "A reachable conviction establishes KERI duplicity for the rival actually presented. A valid sibling at the same position with different content passes the evidence comparison. The convictor must also reveal the matching open commitment and mint one enforcement token and one entitlement token for this spend. The Singular folder processes the resulting request.",
       "pause": 400
     }
   ],
@@ -41,7 +41,7 @@
       "pause": 400
     },
     {
-      "text": "Only registration booking reads Env.inception. At conviction, Env.pendingSpend reads the observed spend for the carrier’s AID. It checks that the tip names that AID and that the rival passes the checkpoint comparison. The resulting receipt identifies the pending output by transaction and index and records the tip’s epoch and sequence number. The checkpoint model accounts for the bond and pool payments at that spend.",
+      "text": "Registration booking reads Env.inception from the mint indexed by the request’s transaction. The controller's application mint must read the ledger transaction that creates the request at that output index. At conviction, Env.pendingSpend reads the observed spend for the carrier’s AID. It checks that the tip names that AID and that the rival passes the checkpoint comparison. The resulting receipt identifies the pending output by transaction and index and records the tip’s epoch and sequence number. The checkpoint model accounts for the bond and pool payments at that spend.",
       "pause": 400
     },
     {
@@ -133,7 +133,7 @@
       "pause": 300
     },
     {
-      "text": "Booking. The booking reads the record by reference and mints exactly one registration approval, and only for a key that has its inception evidence. The approval commits the registry, the AID's key, the checkpoint validator's credential from the record as the holding address (never the application address), the hash of the initial checkpoint datum and the deposit, which is the whole carrier the checkpoint will hold: at least the minimum ADA plus the registry's deposit. The request carries that datum itself and holds exactly the deposit, the registration cost and the minimum tip (booking_inversion, booking_refuses_missing_inception, registration_approval_requires_inception, booking_refuses_foreign_registry, booking_refuses_application_holding, booking_refuses_other_holding, booking_refuses_short_deposit, booking_refuses_inexact_contents).",
+      "text": "Booking. The booking reads the record by reference and mints exactly one registration approval. The same transaction must mint one booking attestation named for the application policy, request output index, initial datum and deposit. The approval commits the registry, the AID's key, the checkpoint validator's credential from the record as the holding address (never the application address), the hash of the initial checkpoint datum and the deposit, which is the whole carrier the checkpoint will hold: at least the minimum ADA plus the registry's deposit. The request carries that datum itself and holds exactly the deposit, the registration cost and the minimum tip (booking_inversion, booking_refuses_missing_inception, registration_approval_requires_inception, booking_refuses_foreign_registry, booking_refuses_application_holding, booking_refuses_other_holding, booking_refuses_short_deposit, booking_refuses_inexact_contents).",
       "pause": 300
     },
     {
@@ -145,7 +145,7 @@
       "pause": 300
     },
     {
-      "text": "The initial checkpoint state. The booking is refused unless the initial datum the request carries is exactly the state the checkpoint model's registration step writes for the request: the version 2 Live datum of the AID whose key the request names, at sequence number and epoch 0, neither poisoned, frozen nor topped up, born at the booking's validity upper bound and refunding to the ledger bytes of the refund address the request names; its pool, the deposit less the minimum ADA, the checkpoint deposit and the freeze bond, covers at least one premium. A booking committing any other sequence number, epoch, flag, birth slot, refund address, AID or a pending termination, a refund address no checkpoint can record, or a pool below one premium, is refused (booking_initial_state, booked_initial_state, initialState_is_registration, booking_refuses_other_state, booking_refuses_other_aid, booking_refuses_pool_below_premium, booking_refuses_unrecorded_refund). A fold validates none of this again: it delivers the committed datum, and a holding with another datum or at another address is refused (fold_delivers_committed, fold_refuses_other_datum, fold_refuses_other_address). So the delivered checkpoint is the initial state, and no fold can deliver a checkpoint that skips the juvenility window or claims a key state the KEL never reached (fold_delivers_initial_state, delivered_initial_state). The key material in the datum is pinned by the committed datum hash, not by this rule: the model states the inception evidence as one fact of the key, and the validator must check that the key material is the inception's. One transaction folds at most one registration request in the on-chain realization; that is a declared limit of the realization, not of the model.",
+      "text": "The initial checkpoint state. The booking is refused unless the initial datum the request carries is exactly the state the checkpoint model's registration step writes for the request: the version 2 Live datum of the AID whose key the request names, at sequence number and epoch 0, neither poisoned, frozen nor topped up, born at the booking's validity upper bound and refunding to the ledger bytes of the refund address the request names; its pool, the deposit less the minimum ADA, the checkpoint deposit and the freeze bond, covers at least one premium. A booking committing any other sequence number, epoch, flag, birth slot, refund address, AID or a pending termination, a refund address no checkpoint can record, or a pool below one premium, is refused (booking_initial_state, booked_initial_state, initialState_is_registration, booking_refuses_other_state, booking_refuses_other_aid, booking_refuses_pool_below_premium, booking_refuses_unrecorded_refund). A fold validates none of this again: it delivers the committed datum, and a holding with another datum or at another address is refused (fold_delivers_committed, fold_refuses_other_datum, fold_refuses_other_address). So the delivered checkpoint is the initial state, and no fold can deliver a checkpoint that skips the juvenility window or claims a key state the KEL never reached (fold_delivers_initial_state, delivered_initial_state). The booking attestation binds the initial datum. Verification that its key material comes from the signed inception is a premise discharged by the booking evidence policy in the controller’s transaction. One transaction folds at most one registration request in the on-chain realization; that is a declared limit of the realization, not of the model.",
       "pause": 300
     },
     {
@@ -225,7 +225,7 @@
       "pause": 400
     },
     {
-      "text": "In the Lean example, identifier 11 rotates to epoch 1, sequence 1. Its conviction creates output 0 of transaction 105. Transaction 200 spends that output and places the termination request at index 0. Choosing the registration output, the rotation output or a different request reference loses the correspondence. The economic entry records output 105#0, identifier 11, epoch 1 and sequence 1 (economic_entry_for_rotated_checkpoint). The example supplies the abstract attestation for transaction 105, whose observed mint field is empty. Ledger correspondence remains open under #576. Lean refuses conviction at inception. Validator evidence for this refusal remains outstanding.",
+      "text": "In the Lean example, identifier 11 rotates to epoch 1, sequence 1. Its conviction creates output 0 of transaction 105. Transaction 200 spends that output and places the termination request at index 0. Choosing the registration output, the rotation output or a different request reference loses the correspondence. The economic entry records output 105#0, identifier 11, epoch 1 and sequence 1 (economic_entry_for_rotated_checkpoint). Transaction 105 mints the enforcement and entitlement attestations for the checkpoint it spends at 103#0. Both tokens leave in ordinary change at 105#2. Transaction 200 reads the pending checkpoint at 105#0. These are observed transactions in the Lean history. Lean refuses conviction at inception. Validator evidence for this refusal remains outstanding.",
       "pause": 400
     }
   ],
@@ -249,6 +249,6 @@
   ],
   "_source": {
     "file": "registry-as-mpfs.md",
-    "sha256": "36214c0fdcd25d514518f979543ab9fc89b7888a36e929604ab91c073d899a0c"
+    "sha256": "94737a3cd8a44c9b84776602f71d07601581639a2d6da492932aaf339990b379"
   }
 }

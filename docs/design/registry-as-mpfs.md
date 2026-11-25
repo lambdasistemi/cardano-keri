@@ -51,7 +51,7 @@ flowchart TD
 A reachable conviction establishes KERI duplicity for the rival actually
 presented. A valid sibling at the same position with different content passes
 the evidence comparison. The convictor must also reveal the matching open
-commitment and mint the attestation for this spend. The Singular folder
+commitment and mint one enforcement token and one entitlement token for this spend. The Singular folder
 processes the resulting request.
 
 ## The machine (`Registry.lean`)
@@ -72,7 +72,9 @@ receipt, the complete booking and the original carrier metadata.
 | Complete termination | A reachable pending entry and accepted consuming fold | `fold` consumes that request | Remove that pending entry, burn its active token and retire its key. Unconsumed entries remain whole. |
 | Registration return | A booked registration that was not folded, a transaction whose whole validity interval starts at or after the request's deadline (booking validity upper bound plus the processing window), and an accepted imported rejection | `returnRequests` accepts, with no signature; before the deadline it refuses, and a pending termination is never a member | The refund address receives at least the contents less the declared tip; only the returned registrations leave the pool and all other custody is unchanged. |
 
-Only registration booking reads `Env.inception`. At conviction, `Env.pendingSpend`
+Registration booking reads `Env.inception` from the mint indexed by the
+request’s transaction. The controller's application mint must read the ledger
+transaction that creates the request at that output index. At conviction, `Env.pendingSpend`
 reads the observed spend for the carrier’s AID. It checks that the tip names
 that AID and that the rival passes the checkpoint comparison. The resulting
 receipt identifies the pending output by transaction and index and records
@@ -180,7 +182,8 @@ booking releases it, as the next section shows.
   `state(A_keri)` gets none (`configuration_refuses_foreign_registry`,
   `configuration_refuses_retraction`).
 - **Booking.** The booking reads the record by reference and mints exactly one
-  registration approval, and only for a key that has its inception evidence.
+  registration approval. The same transaction must mint one booking attestation
+  named for the application policy, request output index, initial datum and deposit.
   The approval commits the registry, the AID's key, the
   checkpoint validator's credential from the record as the holding address
   (never the application address), the hash of the initial checkpoint datum
@@ -232,9 +235,9 @@ booking releases it, as the next section shows.
   checkpoint that skips the juvenility window
   or claims a key state the KEL never reached (`fold_delivers_initial_state`,
   `delivered_initial_state`). The
-  key material in the datum is pinned by the committed datum hash, not by this
-  rule: the model states the inception evidence as one fact of the key, and
-  the validator must check that the key material is the inception's. One transaction folds at most one registration request in the on-chain
+  booking attestation binds the initial datum. Verification that its key
+  material comes from the signed inception is a premise discharged by the
+  booking evidence policy in the controller’s transaction. One transaction folds at most one registration request in the on-chain
   realization; that is a declared limit of the realization, not of the model.
 - **A genuine checkpoint.** What a fold delivers for a booked request is a
   genuine checkpoint: at the checkpoint validator, not the application address;
@@ -405,8 +408,10 @@ output and places the termination request at index 0. Choosing the registration
 output, the rotation output or a different request reference loses the
 correspondence. The economic entry records output 105#0, identifier 11,
 epoch 1 and sequence 1 (`economic_entry_for_rotated_checkpoint`).
-The example supplies the abstract attestation for transaction 105, whose
-observed mint field is empty. Ledger correspondence remains open under #576.
+Transaction 105 mints the enforcement and entitlement attestations for the
+checkpoint it spends at 103#0. Both tokens leave in ordinary change at
+105#2. Transaction 200 reads the pending checkpoint at 105#0. These are
+observed transactions in the Lean history.
 Lean refuses conviction at inception. Validator evidence for this refusal
 remains outstanding.
 

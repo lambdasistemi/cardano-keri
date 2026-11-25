@@ -11709,7 +11709,7 @@
     "index": 2,
     "name": "docs-design-registry-as-mpfs/following-the-spent-checkpoint-back-to-its-writer-02",
     "pause_ms": 400,
-    "v": "fc3be733fcae"
+    "v": "086925f78b50"
    }
   ],
   "keris-application-on-the-public-registry": [
@@ -11741,7 +11741,7 @@
     "index": 4,
     "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-04",
     "pause_ms": 300,
-    "v": "57e9f597f428"
+    "v": "4c32dbbbc50d"
    },
    {
     "index": 5,
@@ -11759,7 +11759,7 @@
     "index": 7,
     "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-07",
     "pause_ms": 300,
-    "v": "904b10f6990a"
+    "v": "6abb64976197"
    },
    {
     "index": 8,
@@ -11877,7 +11877,7 @@
     "index": 2,
     "name": "docs-design-registry-as-mpfs/the-machine-registrylean-02",
     "pause_ms": 400,
-    "v": "6d269e1374d4"
+    "v": "d3cc8d358d43"
    },
    {
     "index": 3,
@@ -11955,7 +11955,7 @@
     "index": 3,
     "name": "docs-design-registry-as-mpfs/where-the-registry-is-built-03",
     "pause_ms": 400,
-    "v": "87d4a69ad1a7"
+    "v": "d0dcc780b8ba"
    }
   ]
  },
@@ -13149,43 +13149,49 @@
     "index": 5,
     "name": "docs-design-trust-model/who-a-conviction-pays-05",
     "pause_ms": 400,
-    "v": "5ac9791675fa"
+    "v": "b76e221ddbb9"
    },
    {
     "index": 6,
     "name": "docs-design-trust-model/who-a-conviction-pays-06",
     "pause_ms": 400,
-    "v": "cef43ba148b6"
+    "v": "73e5f475d3ea"
    },
    {
     "index": 7,
     "name": "docs-design-trust-model/who-a-conviction-pays-07",
     "pause_ms": 400,
-    "v": "d23e5b2c7497"
+    "v": "4635cace1b9e"
    },
    {
     "index": 8,
     "name": "docs-design-trust-model/who-a-conviction-pays-08",
     "pause_ms": 400,
-    "v": "ac21ce6fcf46"
+    "v": "f007e91a6829"
    },
    {
     "index": 9,
     "name": "docs-design-trust-model/who-a-conviction-pays-09",
     "pause_ms": 400,
-    "v": "9cb7c2af9d1f"
+    "v": "fdc292727e04"
    },
    {
     "index": 10,
     "name": "docs-design-trust-model/who-a-conviction-pays-10",
     "pause_ms": 400,
-    "v": "9e31d0427612"
+    "v": "f73505cde3af"
    },
    {
     "index": 11,
     "name": "docs-design-trust-model/who-a-conviction-pays-11",
     "pause_ms": 400,
-    "v": "f45b9034ddad"
+    "v": "46870e24873f"
+   },
+   {
+    "index": 12,
+    "name": "docs-design-trust-model/who-a-conviction-pays-12",
+    "pause_ms": 400,
+    "v": "4e9e1dfd0d27"
    }
   ]
  },

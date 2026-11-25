@@ -335626,17 +335626,17 @@
    ]
   },
   "docs-design-registry-as-mpfs/following-the-spent-checkpoint-back-to-its-writer-02": {
-   "audio_sha256": "fc3be733fcae6e7d4d66f1abce1e03eb8661eb5761f8696fc51395c1796d69e7",
-   "characters": 678,
-   "cost": 0.00067122,
-   "duration": 54.575,
+   "audio_sha256": "086925f78b508ad9d96f4fc2f51d851b48a06f3fdd6feb536771415c468230ce",
+   "characters": 789,
+   "cost": 0.00078111,
+   "duration": 65.05,
    "index": 2,
-   "key": "106414bc0f8962780ddf9c0f5fd05415b84940da2fca10959aea50eae62ba234",
+   "key": "bea22c9b7f5612d5f750cc78ab2e733e6a90fb376fe52cde03b59f6958233674",
    "page": "docs/design/registry-as-mpfs.md",
    "pause_ms": 400,
    "section": "following-the-spent-checkpoint-back-to-its-writer",
-   "sent_text": "In the Lean example, identifier 11 rotates to epoch 1, sequence 1. Its conviction creates output 0 of transaction 105. Transaction 200 spends that output and places the termination request at index 0. Choosing the registration output, the rotation output or a different request reference loses the correspondence. The economic entry records output 105#0, identifier 11, epoch 1 and sequence 1 (economic_entry_for_rotated_checkpoint). The example supplies the abstract attestation for transaction 105, whose observed mint field is empty. Ledger correspondence remains open under #576. Lean refuses conviction at inception. Validator evidence for this refusal remains outstanding.",
-   "text": "In the Lean example, identifier 11 rotates to epoch 1, sequence 1. Its conviction creates output 0 of transaction 105. Transaction 200 spends that output and places the termination request at index 0. Choosing the registration output, the rotation output or a different request reference loses the correspondence. The economic entry records output 105#0, identifier 11, epoch 1 and sequence 1 (economic_entry_for_rotated_checkpoint). The example supplies the abstract attestation for transaction 105, whose observed mint field is empty. Ledger correspondence remains open under #576. Lean refuses conviction at inception. Validator evidence for this refusal remains outstanding.",
+   "sent_text": "In the Lean example, identifier 11 rotates to epoch 1, sequence 1. Its conviction creates output 0 of transaction 105. Transaction 200 spends that output and places the termination request at index 0. Choosing the registration output, the rotation output or a different request reference loses the correspondence. The economic entry records output 105#0, identifier 11, epoch 1 and sequence 1 (economic_entry_for_rotated_checkpoint). Transaction 105 mints the enforcement and entitlement attestations for the checkpoint it spends at 103#0. Both tokens leave in ordinary change at 105#2. Transaction 200 reads the pending checkpoint at 105#0. These are observed transactions in the Lean history. Lean refuses conviction at inception. Validator evidence for this refusal remains outstanding.",
+   "text": "In the Lean example, identifier 11 rotates to epoch 1, sequence 1. Its conviction creates output 0 of transaction 105. Transaction 200 spends that output and places the termination request at index 0. Choosing the registration output, the rotation output or a different request reference loses the correspondence. The economic entry records output 105#0, identifier 11, epoch 1 and sequence 1 (economic_entry_for_rotated_checkpoint). Transaction 105 mints the enforcement and entitlement attestations for the checkpoint it spends at 103#0. Both tokens leave in ordinary change at 105#2. Transaction 200 reads the pending checkpoint at 105#0. These are observed transactions in the Lean history. Lean refuses conviction at inception. Validator evidence for this refusal remains outstanding.",
    "words": [
     {
      "end": 0.287,
@@ -336009,193 +336009,288 @@
      "text": "."
     },
     {
-     "end": 35.2,
-     "start": 35.075,
-     "text": "The"
+     "end": 35.838,
+     "start": 35.1,
+     "text": "Transaction"
     },
     {
-     "end": 35.725,
-     "start": 35.2,
-     "text": "example"
-    },
-    {
-     "end": 36.237,
-     "start": 35.725,
-     "text": "supplies"
-    },
-    {
-     "end": 36.388,
-     "start": 36.237,
-     "text": "the"
-    },
-    {
-     "end": 36.975,
-     "start": 36.388,
-     "text": "abstract"
-    },
-    {
-     "end": 37.8,
-     "start": 36.975,
-     "text": "attestation"
-    },
-    {
-     "end": 37.95,
-     "start": 37.8,
-     "text": "for"
-    },
-    {
-     "end": 38.737,
-     "start": 37.95,
-     "text": "transaction"
-    },
-    {
-     "end": 39.85,
-     "start": 38.737,
+     "end": 36.812,
+     "start": 35.838,
      "text": "105"
     },
     {
-     "end": 39.95,
-     "start": 39.85,
-     "text": ","
+     "end": 37.15,
+     "start": 36.812,
+     "text": "mints"
     },
     {
-     "end": 40.2,
-     "start": 39.95,
-     "text": "whose"
+     "end": 37.3,
+     "start": 37.15,
+     "text": "the"
     },
     {
-     "end": 40.763,
-     "start": 40.2,
-     "text": "observed"
+     "end": 38.062,
+     "start": 37.3,
+     "text": "enforcement"
     },
     {
-     "end": 41.062,
-     "start": 40.763,
-     "text": "mint"
+     "end": 38.188,
+     "start": 38.062,
+     "text": "and"
     },
     {
-     "end": 41.475,
-     "start": 41.062,
-     "text": "field"
+     "end": 38.85,
+     "start": 38.188,
+     "text": "entitlement"
     },
     {
-     "end": 41.638,
-     "start": 41.475,
-     "text": "is"
+     "end": 39.7,
+     "start": 38.85,
+     "text": "attestations"
     },
     {
-     "end": 42.775,
-     "start": 41.638,
-     "text": "empty"
-    },
-    {
-     "end": 43.0,
-     "start": 42.775,
-     "text": "."
-    },
-    {
-     "end": 43.55,
-     "start": 43.25,
-     "text": "Ledger"
-    },
-    {
-     "end": 44.35,
-     "start": 43.55,
-     "text": "correspondence"
-    },
-    {
-     "end": 44.862,
-     "start": 44.35,
-     "text": "remains"
-    },
-    {
-     "end": 45.25,
-     "start": 44.862,
-     "text": "open"
-    },
-    {
-     "end": 45.537,
-     "start": 45.25,
-     "text": "under"
-    },
-    {
-     "end": 47.225,
-     "start": 45.537,
-     "text": "576"
-    },
-    {
-     "end": 47.4,
-     "start": 47.225,
-     "text": "."
-    },
-    {
-     "end": 47.775,
-     "start": 47.4,
-     "text": "Lean"
-    },
-    {
-     "end": 48.4,
-     "start": 47.775,
-     "text": "refuses"
-    },
-    {
-     "end": 49.088,
-     "start": 48.4,
-     "text": "conviction"
-    },
-    {
-     "end": 49.225,
-     "start": 49.088,
-     "text": "at"
-    },
-    {
-     "end": 50.4,
-     "start": 49.225,
-     "text": "inception"
-    },
-    {
-     "end": 50.6,
-     "start": 50.4,
-     "text": "."
-    },
-    {
-     "end": 51.375,
-     "start": 50.8,
-     "text": "Validator"
-    },
-    {
-     "end": 51.825,
-     "start": 51.375,
-     "text": "evidence"
-    },
-    {
-     "end": 51.95,
-     "start": 51.825,
+     "end": 39.825,
+     "start": 39.7,
      "text": "for"
     },
     {
-     "end": 52.15,
-     "start": 51.95,
-     "text": "this"
+     "end": 39.963,
+     "start": 39.825,
+     "text": "the"
     },
     {
-     "end": 52.812,
-     "start": 52.15,
-     "text": "refusal"
+     "end": 40.537,
+     "start": 39.963,
+     "text": "checkpoint"
     },
     {
-     "end": 53.225,
-     "start": 52.812,
-     "text": "remains"
+     "end": 40.713,
+     "start": 40.537,
+     "text": "it"
+    },
+    {
+     "end": 41.175,
+     "start": 40.713,
+     "text": "spends"
+    },
+    {
+     "end": 41.338,
+     "start": 41.175,
+     "text": "at"
+    },
+    {
+     "end": 43.85,
+     "start": 41.338,
+     "text": "103#0"
+    },
+    {
+     "end": 44.075,
+     "start": 43.85,
+     "text": "."
+    },
+    {
+     "end": 44.575,
+     "start": 44.3,
+     "text": "Both"
+    },
+    {
+     "end": 45.112,
+     "start": 44.575,
+     "text": "tokens"
+    },
+    {
+     "end": 45.4,
+     "start": 45.112,
+     "text": "leave"
+    },
+    {
+     "end": 45.55,
+     "start": 45.4,
+     "text": "in"
+    },
+    {
+     "end": 46.1,
+     "start": 45.55,
+     "text": "ordinary"
+    },
+    {
+     "end": 46.638,
+     "start": 46.1,
+     "text": "change"
+    },
+    {
+     "end": 46.812,
+     "start": 46.638,
+     "text": "at"
+    },
+    {
+     "end": 48.65,
+     "start": 46.812,
+     "text": "105#2"
+    },
+    {
+     "end": 48.838,
+     "start": 48.65,
+     "text": "."
+    },
+    {
+     "end": 49.562,
+     "start": 48.838,
+     "text": "Transaction"
+    },
+    {
+     "end": 50.237,
+     "start": 49.562,
+     "text": "200"
+    },
+    {
+     "end": 50.625,
+     "start": 50.237,
+     "text": "reads"
+    },
+    {
+     "end": 50.737,
+     "start": 50.625,
+     "text": "the"
+    },
+    {
+     "end": 51.162,
+     "start": 50.737,
+     "text": "pending"
+    },
+    {
+     "end": 51.763,
+     "start": 51.162,
+     "text": "checkpoint"
+    },
+    {
+     "end": 51.925,
+     "start": 51.763,
+     "text": "at"
     },
     {
      "end": 54.375,
-     "start": 53.225,
+     "start": 51.925,
+     "text": "105#0"
+    },
+    {
+     "end": 54.675,
+     "start": 54.375,
+     "text": "."
+    },
+    {
+     "end": 55.075,
+     "start": 54.875,
+     "text": "These"
+    },
+    {
+     "end": 55.175,
+     "start": 55.075,
+     "text": "are"
+    },
+    {
+     "end": 55.6,
+     "start": 55.175,
+     "text": "observed"
+    },
+    {
+     "end": 56.35,
+     "start": 55.6,
+     "text": "transactions"
+    },
+    {
+     "end": 56.438,
+     "start": 56.35,
+     "text": "in"
+    },
+    {
+     "end": 56.525,
+     "start": 56.438,
+     "text": "the"
+    },
+    {
+     "end": 56.75,
+     "start": 56.525,
+     "text": "Lean"
+    },
+    {
+     "end": 57.7,
+     "start": 56.75,
+     "text": "history"
+    },
+    {
+     "end": 57.9,
+     "start": 57.7,
+     "text": "."
+    },
+    {
+     "end": 58.475,
+     "start": 58.15,
+     "text": "Lean"
+    },
+    {
+     "end": 59.15,
+     "start": 58.475,
+     "text": "refuses"
+    },
+    {
+     "end": 59.838,
+     "start": 59.15,
+     "text": "conviction"
+    },
+    {
+     "end": 59.975,
+     "start": 59.838,
+     "text": "at"
+    },
+    {
+     "end": 60.8,
+     "start": 59.975,
+     "text": "inception"
+    },
+    {
+     "end": 60.938,
+     "start": 60.8,
+     "text": "."
+    },
+    {
+     "end": 61.575,
+     "start": 60.938,
+     "text": "Validator"
+    },
+    {
+     "end": 62.025,
+     "start": 61.575,
+     "text": "evidence"
+    },
+    {
+     "end": 62.15,
+     "start": 62.025,
+     "text": "for"
+    },
+    {
+     "end": 62.35,
+     "start": 62.15,
+     "text": "this"
+    },
+    {
+     "end": 63.062,
+     "start": 62.35,
+     "text": "refusal"
+    },
+    {
+     "end": 63.575,
+     "start": 63.062,
+     "text": "remains"
+    },
+    {
+     "end": 64.85,
+     "start": 63.575,
      "text": "outstanding"
     },
     {
-     "end": 54.575,
-     "start": 54.375,
+     "end": 65.05,
+     "start": 64.85,
      "text": "."
     }
    ]
@@ -337766,17 +337861,17 @@
    ]
   },
   "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-04": {
-   "audio_sha256": "57e9f597f428810bd3a8e34ed1330528b68e11fc68edaea7c89ef2a28ac74d32",
-   "characters": 848,
-   "cost": 0.00083952,
-   "duration": 54.85,
+   "audio_sha256": "4c32dbbbc50d756529afde93bd22866ae76a93bc8f0fe6aec5628d45e9ecd1f4",
+   "characters": 934,
+   "cost": 0.0009246599999999999,
+   "duration": 61.15,
    "index": 4,
-   "key": "e1bb6326a4e4c7e7f93b7be3555dd0808d070931bfc78276675c82c900014043",
+   "key": "ef89f8eae039c1c2c00e374e0f10a435d087e62f16b2e53f1874e37db19ae403",
    "page": "docs/design/registry-as-mpfs.md",
    "pause_ms": 300,
    "section": "keris-application-on-the-public-registry",
-   "sent_text": "Booking. The booking reads the record by reference and mints exactly one registration approval, and only for a key that has its inception evidence. The approval commits the registry, the AID's key, the checkpoint validator's credential from the record as the holding address (never the application address), the hash of the initial checkpoint datum and the deposit, which is the whole carrier the checkpoint will hold: at least the minimum ADA plus the registry's deposit. The request carries that datum itself and holds exactly the deposit, the registration cost and the minimum tip (booking_inversion, booking_refuses_missing_inception, registration_approval_requires_inception, booking_refuses_foreign_registry, booking_refuses_application_holding, booking_refuses_other_holding, booking_refuses_short_deposit, booking_refuses_inexact_contents).",
-   "text": "Booking. The booking reads the record by reference and mints exactly one registration approval, and only for a key that has its inception evidence. The approval commits the registry, the AID's key, the checkpoint validator's credential from the record as the holding address (never the application address), the hash of the initial checkpoint datum and the deposit, which is the whole carrier the checkpoint will hold: at least the minimum ADA plus the registry's deposit. The request carries that datum itself and holds exactly the deposit, the registration cost and the minimum tip (booking_inversion, booking_refuses_missing_inception, registration_approval_requires_inception, booking_refuses_foreign_registry, booking_refuses_application_holding, booking_refuses_other_holding, booking_refuses_short_deposit, booking_refuses_inexact_contents).",
+   "sent_text": "Booking. The booking reads the record by reference and mints exactly one registration approval. The same transaction must mint one booking attestation named for the application policy, request output index, initial datum and deposit. The approval commits the registry, the AID's key, the checkpoint validator's credential from the record as the holding address (never the application address), the hash of the initial checkpoint datum and the deposit, which is the whole carrier the checkpoint will hold: at least the minimum ADA plus the registry's deposit. The request carries that datum itself and holds exactly the deposit, the registration cost and the minimum tip (booking_inversion, booking_refuses_missing_inception, registration_approval_requires_inception, booking_refuses_foreign_registry, booking_refuses_application_holding, booking_refuses_other_holding, booking_refuses_short_deposit, booking_refuses_inexact_contents).",
+   "text": "Booking. The booking reads the record by reference and mints exactly one registration approval. The same transaction must mint one booking attestation named for the application policy, request output index, initial datum and deposit. The approval commits the registry, the AID's key, the checkpoint validator's credential from the record as the holding address (never the application address), the hash of the initial checkpoint datum and the deposit, which is the whole carrier the checkpoint will hold: at least the minimum ADA plus the registry's deposit. The request carries that datum itself and holds exactly the deposit, the registration cost and the minimum tip (booking_inversion, booking_refuses_missing_inception, registration_approval_requires_inception, booking_refuses_foreign_registry, booking_refuses_application_holding, booking_refuses_other_holding, booking_refuses_short_deposit, booking_refuses_inexact_contents).",
    "words": [
     {
      "end": 0.975,
@@ -337819,18 +337914,18 @@
      "text": "by"
     },
     {
-     "end": 3.612,
+     "end": 3.638,
      "start": 3.013,
      "text": "reference"
     },
     {
-     "end": 3.75,
-     "start": 3.612,
+     "end": 3.775,
+     "start": 3.638,
      "text": "and"
     },
     {
      "end": 4.05,
-     "start": 3.75,
+     "start": 3.775,
      "text": "mints"
     },
     {
@@ -337854,543 +337949,603 @@
      "text": "approval"
     },
     {
-     "end": 6.9,
+     "end": 6.875,
      "start": 6.675,
-     "text": ","
-    },
-    {
-     "end": 7.188,
-     "start": 7.1,
-     "text": "and"
-    },
-    {
-     "end": 7.475,
-     "start": 7.188,
-     "text": "only"
-    },
-    {
-     "end": 7.588,
-     "start": 7.475,
-     "text": "for"
-    },
-    {
-     "end": 7.688,
-     "start": 7.588,
-     "text": "a"
-    },
-    {
-     "end": 8.025,
-     "start": 7.688,
-     "text": "key"
-    },
-    {
-     "end": 8.175,
-     "start": 8.025,
-     "text": "that"
-    },
-    {
-     "end": 8.4,
-     "start": 8.175,
-     "text": "has"
-    },
-    {
-     "end": 8.562,
-     "start": 8.4,
-     "text": "its"
-    },
-    {
-     "end": 9.1,
-     "start": 8.562,
-     "text": "inception"
-    },
-    {
-     "end": 10.075,
-     "start": 9.1,
-     "text": "evidence"
-    },
-    {
-     "end": 10.275,
-     "start": 10.075,
      "text": "."
     },
     {
-     "end": 10.55,
-     "start": 10.45,
+     "end": 7.188,
+     "start": 7.075,
      "text": "The"
     },
     {
+     "end": 7.525,
+     "start": 7.188,
+     "text": "same"
+    },
+    {
+     "end": 8.337,
+     "start": 7.525,
+     "text": "transaction"
+    },
+    {
+     "end": 8.625,
+     "start": 8.337,
+     "text": "must"
+    },
+    {
+     "end": 8.925,
+     "start": 8.625,
+     "text": "mint"
+    },
+    {
+     "end": 9.2,
+     "start": 8.925,
+     "text": "one"
+    },
+    {
+     "end": 9.55,
+     "start": 9.2,
+     "text": "booking"
+    },
+    {
+     "end": 10.363,
+     "start": 9.55,
+     "text": "attestation"
+    },
+    {
+     "end": 10.75,
+     "start": 10.363,
+     "text": "named"
+    },
+    {
+     "end": 10.863,
+     "start": 10.75,
+     "text": "for"
+    },
+    {
      "end": 11.0,
-     "start": 10.55,
-     "text": "approval"
+     "start": 10.863,
+     "text": "the"
     },
     {
-     "end": 11.288,
+     "end": 11.625,
      "start": 11.0,
-     "text": "commits"
+     "text": "application"
     },
     {
-     "end": 11.375,
-     "start": 11.288,
-     "text": "the"
+     "end": 12.75,
+     "start": 11.625,
+     "text": "policy"
     },
     {
-     "end": 11.95,
-     "start": 11.375,
-     "text": "registry"
-    },
-    {
-     "end": 12.025,
-     "start": 11.95,
+     "end": 12.975,
+     "start": 12.75,
      "text": ","
     },
     {
-     "end": 12.175,
-     "start": 12.025,
-     "text": "the"
+     "end": 13.55,
+     "start": 13.15,
+     "text": "request"
     },
     {
-     "end": 12.762,
-     "start": 12.175,
-     "text": "AID's"
+     "end": 13.887,
+     "start": 13.55,
+     "text": "output"
     },
     {
-     "end": 13.5,
-     "start": 12.762,
-     "text": "key"
+     "end": 14.35,
+     "start": 13.887,
+     "text": "index"
     },
     {
-     "end": 13.75,
-     "start": 13.5,
+     "end": 14.425,
+     "start": 14.35,
      "text": ","
     },
     {
-     "end": 14.062,
-     "start": 13.95,
-     "text": "the"
+     "end": 14.8,
+     "start": 14.425,
+     "text": "initial"
     },
     {
-     "end": 14.575,
-     "start": 14.062,
-     "text": "checkpoint"
+     "end": 15.2,
+     "start": 14.8,
+     "text": "datum"
     },
     {
-     "end": 15.25,
-     "start": 14.575,
-     "text": "validator's"
+     "end": 15.312,
+     "start": 15.2,
+     "text": "and"
     },
     {
-     "end": 15.8,
-     "start": 15.25,
-     "text": "credential"
+     "end": 16.375,
+     "start": 15.312,
+     "text": "deposit"
     },
     {
-     "end": 15.962,
-     "start": 15.8,
-     "text": "from"
-    },
-    {
-     "end": 16.05,
-     "start": 15.962,
-     "text": "the"
-    },
-    {
-     "end": 16.587,
-     "start": 16.05,
-     "text": "record"
-    },
-    {
-     "end": 16.75,
-     "start": 16.587,
-     "text": "as"
+     "end": 16.575,
+     "start": 16.375,
+     "text": "."
     },
     {
      "end": 16.85,
      "start": 16.75,
-     "text": "the"
-    },
-    {
-     "end": 17.225,
-     "start": 16.85,
-     "text": "holding"
-    },
-    {
-     "end": 17.837,
-     "start": 17.225,
-     "text": "address"
-    },
-    {
-     "end": 17.95,
-     "start": 17.837,
-     "text": "("
-    },
-    {
-     "end": 18.188,
-     "start": 17.95,
-     "text": "never"
-    },
-    {
-     "end": 18.325,
-     "start": 18.188,
-     "text": "the"
-    },
-    {
-     "end": 18.975,
-     "start": 18.325,
-     "text": "application"
-    },
-    {
-     "end": 20.075,
-     "start": 18.975,
-     "text": "address"
-    },
-    {
-     "end": 20.3,
-     "start": 20.075,
-     "text": ")"
-    },
-    {
-     "end": 20.35,
-     "start": 20.3,
-     "text": ","
-    },
-    {
-     "end": 20.625,
-     "start": 20.525,
-     "text": "the"
-    },
-    {
-     "end": 20.938,
-     "start": 20.625,
-     "text": "hash"
-    },
-    {
-     "end": 21.013,
-     "start": 20.938,
-     "text": "of"
-    },
-    {
-     "end": 21.15,
-     "start": 21.013,
-     "text": "the"
-    },
-    {
-     "end": 21.525,
-     "start": 21.15,
-     "text": "initial"
-    },
-    {
-     "end": 21.975,
-     "start": 21.525,
-     "text": "checkpoint"
-    },
-    {
-     "end": 22.438,
-     "start": 21.975,
-     "text": "datum"
-    },
-    {
-     "end": 22.562,
-     "start": 22.438,
-     "text": "and"
-    },
-    {
-     "end": 22.638,
-     "start": 22.562,
-     "text": "the"
-    },
-    {
-     "end": 23.7,
-     "start": 22.638,
-     "text": "deposit"
-    },
-    {
-     "end": 23.9,
-     "start": 23.7,
-     "text": ","
-    },
-    {
-     "end": 24.237,
-     "start": 24.075,
-     "text": "which"
-    },
-    {
-     "end": 24.337,
-     "start": 24.237,
-     "text": "is"
-    },
-    {
-     "end": 24.425,
-     "start": 24.337,
-     "text": "the"
-    },
-    {
-     "end": 24.65,
-     "start": 24.425,
-     "text": "whole"
-    },
-    {
-     "end": 25.075,
-     "start": 24.65,
-     "text": "carrier"
-    },
-    {
-     "end": 25.175,
-     "start": 25.075,
-     "text": "the"
-    },
-    {
-     "end": 25.587,
-     "start": 25.175,
-     "text": "checkpoint"
-    },
-    {
-     "end": 25.7,
-     "start": 25.587,
-     "text": "will"
-    },
-    {
-     "end": 26.5,
-     "start": 25.7,
-     "text": "hold"
-    },
-    {
-     "end": 26.7,
-     "start": 26.5,
-     "text": ":"
-    },
-    {
-     "end": 27.0,
-     "start": 26.9,
-     "text": "at"
-    },
-    {
-     "end": 27.237,
-     "start": 27.0,
-     "text": "least"
-    },
-    {
-     "end": 27.325,
-     "start": 27.237,
-     "text": "the"
-    },
-    {
-     "end": 27.712,
-     "start": 27.325,
-     "text": "minimum"
-    },
-    {
-     "end": 28.112,
-     "start": 27.712,
-     "text": "ADA"
-    },
-    {
-     "end": 28.4,
-     "start": 28.112,
-     "text": "plus"
-    },
-    {
-     "end": 28.5,
-     "start": 28.4,
-     "text": "the"
-    },
-    {
-     "end": 29.075,
-     "start": 28.5,
-     "text": "registry's"
-    },
-    {
-     "end": 30.15,
-     "start": 29.075,
-     "text": "deposit"
-    },
-    {
-     "end": 30.35,
-     "start": 30.15,
-     "text": "."
-    },
-    {
-     "end": 30.6,
-     "start": 30.525,
      "text": "The"
     },
     {
-     "end": 31.075,
-     "start": 30.6,
-     "text": "request"
+     "end": 17.3,
+     "start": 16.85,
+     "text": "approval"
     },
     {
-     "end": 31.475,
-     "start": 31.075,
-     "text": "carries"
+     "end": 17.587,
+     "start": 17.3,
+     "text": "commits"
     },
     {
-     "end": 31.65,
-     "start": 31.475,
-     "text": "that"
-    },
-    {
-     "end": 32.0,
-     "start": 31.65,
-     "text": "datum"
-    },
-    {
-     "end": 32.588,
-     "start": 32.0,
-     "text": "itself"
-    },
-    {
-     "end": 32.725,
-     "start": 32.588,
-     "text": "and"
-    },
-    {
-     "end": 33.025,
-     "start": 32.725,
-     "text": "holds"
-    },
-    {
-     "end": 33.588,
-     "start": 33.025,
-     "text": "exactly"
-    },
-    {
-     "end": 33.675,
-     "start": 33.588,
+     "end": 17.675,
+     "start": 17.587,
      "text": "the"
     },
     {
-     "end": 34.775,
-     "start": 33.675,
-     "text": "deposit"
+     "end": 18.25,
+     "start": 17.675,
+     "text": "registry"
     },
     {
-     "end": 34.975,
-     "start": 34.775,
+     "end": 18.325,
+     "start": 18.25,
      "text": ","
     },
     {
-     "end": 35.225,
-     "start": 35.15,
+     "end": 18.475,
+     "start": 18.325,
      "text": "the"
     },
     {
-     "end": 35.938,
-     "start": 35.225,
-     "text": "registration"
+     "end": 19.062,
+     "start": 18.475,
+     "text": "AID's"
     },
     {
-     "end": 36.4,
-     "start": 35.938,
-     "text": "cost"
+     "end": 19.8,
+     "start": 19.062,
+     "text": "key"
     },
     {
-     "end": 36.513,
-     "start": 36.4,
-     "text": "and"
+     "end": 20.05,
+     "start": 19.8,
+     "text": ","
     },
     {
-     "end": 36.6,
-     "start": 36.513,
+     "end": 20.362,
+     "start": 20.25,
      "text": "the"
     },
     {
-     "end": 36.987,
-     "start": 36.6,
-     "text": "minimum"
+     "end": 20.875,
+     "start": 20.362,
+     "text": "checkpoint"
     },
     {
-     "end": 37.362,
-     "start": 36.987,
-     "text": "tip"
+     "end": 21.55,
+     "start": 20.875,
+     "text": "validator's"
     },
     {
-     "end": 37.45,
-     "start": 37.362,
+     "end": 22.1,
+     "start": 21.55,
+     "text": "credential"
+    },
+    {
+     "end": 22.263,
+     "start": 22.1,
+     "text": "from"
+    },
+    {
+     "end": 22.35,
+     "start": 22.263,
+     "text": "the"
+    },
+    {
+     "end": 22.888,
+     "start": 22.35,
+     "text": "record"
+    },
+    {
+     "end": 23.05,
+     "start": 22.888,
+     "text": "as"
+    },
+    {
+     "end": 23.15,
+     "start": 23.05,
+     "text": "the"
+    },
+    {
+     "end": 23.525,
+     "start": 23.15,
+     "text": "holding"
+    },
+    {
+     "end": 24.138,
+     "start": 23.525,
+     "text": "address"
+    },
+    {
+     "end": 24.25,
+     "start": 24.138,
      "text": "("
     },
     {
-     "end": 38.75,
-     "start": 37.45,
-     "text": "booking_inversion"
+     "end": 24.487,
+     "start": 24.25,
+     "text": "never"
     },
     {
-     "end": 38.95,
-     "start": 38.75,
-     "text": ","
+     "end": 24.625,
+     "start": 24.487,
+     "text": "the"
     },
     {
-     "end": 41.0,
-     "start": 39.15,
-     "text": "booking_refuses_missing_inception"
+     "end": 25.275,
+     "start": 24.625,
+     "text": "application"
     },
     {
-     "end": 41.1,
-     "start": 41.0,
-     "text": ","
+     "end": 26.375,
+     "start": 25.275,
+     "text": "address"
     },
     {
-     "end": 43.75,
-     "start": 41.1,
-     "text": "registration_approval_requires_inception"
-    },
-    {
-     "end": 43.95,
-     "start": 43.75,
-     "text": ","
-    },
-    {
-     "end": 45.8,
-     "start": 44.125,
-     "text": "booking_refuses_foreign_registry"
-    },
-    {
-     "end": 45.912,
-     "start": 45.8,
-     "text": ","
-    },
-    {
-     "end": 48.225,
-     "start": 45.912,
-     "text": "booking_refuses_application_holding"
-    },
-    {
-     "end": 48.425,
-     "start": 48.225,
-     "text": ","
-    },
-    {
-     "end": 50.025,
-     "start": 48.6,
-     "text": "booking_refuses_other_holding"
-    },
-    {
-     "end": 50.125,
-     "start": 50.025,
-     "text": ","
-    },
-    {
-     "end": 52.15,
-     "start": 50.125,
-     "text": "booking_refuses_short_deposit"
-    },
-    {
-     "end": 52.35,
-     "start": 52.15,
-     "text": ","
-    },
-    {
-     "end": 54.55,
-     "start": 52.525,
-     "text": "booking_refuses_inexact_contents"
-    },
-    {
-     "end": 54.775,
-     "start": 54.55,
+     "end": 26.6,
+     "start": 26.375,
      "text": ")"
     },
     {
-     "end": 54.85,
-     "start": 54.775,
+     "end": 26.65,
+     "start": 26.6,
+     "text": ","
+    },
+    {
+     "end": 26.925,
+     "start": 26.825,
+     "text": "the"
+    },
+    {
+     "end": 27.237,
+     "start": 26.925,
+     "text": "hash"
+    },
+    {
+     "end": 27.312,
+     "start": 27.237,
+     "text": "of"
+    },
+    {
+     "end": 27.45,
+     "start": 27.312,
+     "text": "the"
+    },
+    {
+     "end": 27.825,
+     "start": 27.45,
+     "text": "initial"
+    },
+    {
+     "end": 28.275,
+     "start": 27.825,
+     "text": "checkpoint"
+    },
+    {
+     "end": 28.737,
+     "start": 28.275,
+     "text": "datum"
+    },
+    {
+     "end": 28.862,
+     "start": 28.737,
+     "text": "and"
+    },
+    {
+     "end": 28.938,
+     "start": 28.862,
+     "text": "the"
+    },
+    {
+     "end": 30.0,
+     "start": 28.938,
+     "text": "deposit"
+    },
+    {
+     "end": 30.2,
+     "start": 30.0,
+     "text": ","
+    },
+    {
+     "end": 30.538,
+     "start": 30.375,
+     "text": "which"
+    },
+    {
+     "end": 30.638,
+     "start": 30.538,
+     "text": "is"
+    },
+    {
+     "end": 30.725,
+     "start": 30.638,
+     "text": "the"
+    },
+    {
+     "end": 30.95,
+     "start": 30.725,
+     "text": "whole"
+    },
+    {
+     "end": 31.375,
+     "start": 30.95,
+     "text": "carrier"
+    },
+    {
+     "end": 31.475,
+     "start": 31.375,
+     "text": "the"
+    },
+    {
+     "end": 31.888,
+     "start": 31.475,
+     "text": "checkpoint"
+    },
+    {
+     "end": 32.0,
+     "start": 31.888,
+     "text": "will"
+    },
+    {
+     "end": 32.8,
+     "start": 32.0,
+     "text": "hold"
+    },
+    {
+     "end": 33.0,
+     "start": 32.8,
+     "text": ":"
+    },
+    {
+     "end": 33.3,
+     "start": 33.2,
+     "text": "at"
+    },
+    {
+     "end": 33.537,
+     "start": 33.3,
+     "text": "least"
+    },
+    {
+     "end": 33.625,
+     "start": 33.537,
+     "text": "the"
+    },
+    {
+     "end": 34.013,
+     "start": 33.625,
+     "text": "minimum"
+    },
+    {
+     "end": 34.412,
+     "start": 34.013,
+     "text": "ADA"
+    },
+    {
+     "end": 34.7,
+     "start": 34.412,
+     "text": "plus"
+    },
+    {
+     "end": 34.8,
+     "start": 34.7,
+     "text": "the"
+    },
+    {
+     "end": 35.375,
+     "start": 34.8,
+     "text": "registry's"
+    },
+    {
+     "end": 36.45,
+     "start": 35.375,
+     "text": "deposit"
+    },
+    {
+     "end": 36.65,
+     "start": 36.45,
+     "text": "."
+    },
+    {
+     "end": 36.9,
+     "start": 36.825,
+     "text": "The"
+    },
+    {
+     "end": 37.375,
+     "start": 36.9,
+     "text": "request"
+    },
+    {
+     "end": 37.775,
+     "start": 37.375,
+     "text": "carries"
+    },
+    {
+     "end": 37.95,
+     "start": 37.775,
+     "text": "that"
+    },
+    {
+     "end": 38.3,
+     "start": 37.95,
+     "text": "datum"
+    },
+    {
+     "end": 38.888,
+     "start": 38.3,
+     "text": "itself"
+    },
+    {
+     "end": 39.025,
+     "start": 38.888,
+     "text": "and"
+    },
+    {
+     "end": 39.325,
+     "start": 39.025,
+     "text": "holds"
+    },
+    {
+     "end": 39.888,
+     "start": 39.325,
+     "text": "exactly"
+    },
+    {
+     "end": 39.975,
+     "start": 39.888,
+     "text": "the"
+    },
+    {
+     "end": 41.075,
+     "start": 39.975,
+     "text": "deposit"
+    },
+    {
+     "end": 41.275,
+     "start": 41.075,
+     "text": ","
+    },
+    {
+     "end": 41.525,
+     "start": 41.45,
+     "text": "the"
+    },
+    {
+     "end": 42.237,
+     "start": 41.525,
+     "text": "registration"
+    },
+    {
+     "end": 42.7,
+     "start": 42.237,
+     "text": "cost"
+    },
+    {
+     "end": 42.812,
+     "start": 42.7,
+     "text": "and"
+    },
+    {
+     "end": 42.9,
+     "start": 42.812,
+     "text": "the"
+    },
+    {
+     "end": 43.287,
+     "start": 42.9,
+     "text": "minimum"
+    },
+    {
+     "end": 43.662,
+     "start": 43.287,
+     "text": "tip"
+    },
+    {
+     "end": 43.75,
+     "start": 43.662,
+     "text": "("
+    },
+    {
+     "end": 45.05,
+     "start": 43.75,
+     "text": "booking_inversion"
+    },
+    {
+     "end": 45.25,
+     "start": 45.05,
+     "text": ","
+    },
+    {
+     "end": 47.3,
+     "start": 45.45,
+     "text": "booking_refuses_missing_inception"
+    },
+    {
+     "end": 47.4,
+     "start": 47.3,
+     "text": ","
+    },
+    {
+     "end": 50.05,
+     "start": 47.4,
+     "text": "registration_approval_requires_inception"
+    },
+    {
+     "end": 50.25,
+     "start": 50.05,
+     "text": ","
+    },
+    {
+     "end": 52.1,
+     "start": 50.425,
+     "text": "booking_refuses_foreign_registry"
+    },
+    {
+     "end": 52.213,
+     "start": 52.1,
+     "text": ","
+    },
+    {
+     "end": 54.525,
+     "start": 52.213,
+     "text": "booking_refuses_application_holding"
+    },
+    {
+     "end": 54.725,
+     "start": 54.525,
+     "text": ","
+    },
+    {
+     "end": 56.325,
+     "start": 54.9,
+     "text": "booking_refuses_other_holding"
+    },
+    {
+     "end": 56.425,
+     "start": 56.325,
+     "text": ","
+    },
+    {
+     "end": 58.45,
+     "start": 56.425,
+     "text": "booking_refuses_short_deposit"
+    },
+    {
+     "end": 58.65,
+     "start": 58.45,
+     "text": ","
+    },
+    {
+     "end": 60.85,
+     "start": 58.825,
+     "text": "booking_refuses_inexact_contents"
+    },
+    {
+     "end": 61.075,
+     "start": 60.85,
+     "text": ")"
+    },
+    {
+     "end": 61.15,
+     "start": 61.075,
      "text": "."
     }
    ]
@@ -339366,17 +339521,17 @@
    ]
   },
   "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-07": {
-   "audio_sha256": "904b10f6990a37a786a2441b5ed639411cafb93cd961b67242aeb0d20925a948",
-   "characters": 1767,
-   "cost": 0.0017493299999999997,
-   "duration": 116.4,
+   "audio_sha256": "6abb6497619703c7a2391ddac98afa261ee6e2616dd4bcf8b4b069c39ed245a8",
+   "characters": 1749,
+   "cost": 0.00173151,
+   "duration": 115.425,
    "index": 7,
-   "key": "1dca1168fbb238e49647370c3fe0c0ddbd2b73c0d5fd6f9e9d4b524c9e72333e",
+   "key": "176b8910480d368457ebb250931e072c3fd330cc77cfb014331e29339c5ba33c",
    "page": "docs/design/registry-as-mpfs.md",
    "pause_ms": 300,
    "section": "keris-application-on-the-public-registry",
-   "sent_text": "The initial checkpoint state. The booking is refused unless the initial datum the request carries is exactly the state the checkpoint model's registration step writes for the request: the version 2 Live datum of the AID whose key the request names, at sequence number and epoch 0, neither poisoned, frozen nor topped up, born at the booking's validity upper bound and refunding to the ledger bytes of the refund address the request names; its pool, the deposit less the minimum ADA, the checkpoint deposit and the freeze bond, covers at least one premium. A booking committing any other sequence number, epoch, flag, birth slot, refund address, AID or a pending termination, a refund address no checkpoint can record, or a pool below one premium, is refused (booking_initial_state, booked_initial_state, initialState_is_registration, booking_refuses_other_state, booking_refuses_other_aid, booking_refuses_pool_below_premium, booking_refuses_unrecorded_refund). A fold validates none of this again: it delivers the committed datum, and a holding with another datum or at another address is refused (fold_delivers_committed, fold_refuses_other_datum, fold_refuses_other_address). So the delivered checkpoint is the initial state, and no fold can deliver a checkpoint that skips the juvenility window or claims a key state the KEL never reached (fold_delivers_initial_state, delivered_initial_state). The key material in the datum is pinned by the committed datum hash, not by this rule: the model states the inception evidence as one fact of the key, and the validator must check that the key material is the inception's. One transaction folds at most one registration request in the on-chain realization; that is a declared limit of the realization, not of the model.",
-   "text": "The initial checkpoint state. The booking is refused unless the initial datum the request carries is exactly the state the checkpoint model's registration step writes for the request: the version 2 Live datum of the AID whose key the request names, at sequence number and epoch 0, neither poisoned, frozen nor topped up, born at the booking's validity upper bound and refunding to the ledger bytes of the refund address the request names; its pool, the deposit less the minimum ADA, the checkpoint deposit and the freeze bond, covers at least one premium. A booking committing any other sequence number, epoch, flag, birth slot, refund address, AID or a pending termination, a refund address no checkpoint can record, or a pool below one premium, is refused (booking_initial_state, booked_initial_state, initialState_is_registration, booking_refuses_other_state, booking_refuses_other_aid, booking_refuses_pool_below_premium, booking_refuses_unrecorded_refund). A fold validates none of this again: it delivers the committed datum, and a holding with another datum or at another address is refused (fold_delivers_committed, fold_refuses_other_datum, fold_refuses_other_address). So the delivered checkpoint is the initial state, and no fold can deliver a checkpoint that skips the juvenility window or claims a key state the KEL never reached (fold_delivers_initial_state, delivered_initial_state). The key material in the datum is pinned by the committed datum hash, not by this rule: the model states the inception evidence as one fact of the key, and the validator must check that the key material is the inception's. One transaction folds at most one registration request in the on-chain realization; that is a declared limit of the realization, not of the model.",
+   "sent_text": "The initial checkpoint state. The booking is refused unless the initial datum the request carries is exactly the state the checkpoint model's registration step writes for the request: the version 2 Live datum of the AID whose key the request names, at sequence number and epoch 0, neither poisoned, frozen nor topped up, born at the booking's validity upper bound and refunding to the ledger bytes of the refund address the request names; its pool, the deposit less the minimum ADA, the checkpoint deposit and the freeze bond, covers at least one premium. A booking committing any other sequence number, epoch, flag, birth slot, refund address, AID or a pending termination, a refund address no checkpoint can record, or a pool below one premium, is refused (booking_initial_state, booked_initial_state, initialState_is_registration, booking_refuses_other_state, booking_refuses_other_aid, booking_refuses_pool_below_premium, booking_refuses_unrecorded_refund). A fold validates none of this again: it delivers the committed datum, and a holding with another datum or at another address is refused (fold_delivers_committed, fold_refuses_other_datum, fold_refuses_other_address). So the delivered checkpoint is the initial state, and no fold can deliver a checkpoint that skips the juvenility window or claims a key state the KEL never reached (fold_delivers_initial_state, delivered_initial_state). The booking attestation binds the initial datum. Verification that its key material comes from the signed inception is a premise discharged by the booking evidence policy in the controller’s transaction. One transaction folds at most one registration request in the on-chain realization; that is a declared limit of the realization, not of the model.",
+   "text": "The initial checkpoint state. The booking is refused unless the initial datum the request carries is exactly the state the checkpoint model's registration step writes for the request: the version 2 Live datum of the AID whose key the request names, at sequence number and epoch 0, neither poisoned, frozen nor topped up, born at the booking's validity upper bound and refunding to the ledger bytes of the refund address the request names; its pool, the deposit less the minimum ADA, the checkpoint deposit and the freeze bond, covers at least one premium. A booking committing any other sequence number, epoch, flag, birth slot, refund address, AID or a pending termination, a refund address no checkpoint can record, or a pool below one premium, is refused (booking_initial_state, booked_initial_state, initialState_is_registration, booking_refuses_other_state, booking_refuses_other_aid, booking_refuses_pool_below_premium, booking_refuses_unrecorded_refund). A fold validates none of this again: it delivers the committed datum, and a holding with another datum or at another address is refused (fold_delivers_committed, fold_refuses_other_datum, fold_refuses_other_address). So the delivered checkpoint is the initial state, and no fold can deliver a checkpoint that skips the juvenility window or claims a key state the KEL never reached (fold_delivers_initial_state, delivered_initial_state). The booking attestation binds the initial datum. Verification that its key material comes from the signed inception is a premise discharged by the booking evidence policy in the controller’s transaction. One transaction folds at most one registration request in the on-chain realization; that is a declared limit of the realization, not of the model.",
    "words": [
     {
      "end": 0.262,
@@ -340534,363 +340689,298 @@
      "text": "."
     },
     {
-     "end": 92.713,
+     "end": 92.675,
      "start": 92.6,
      "text": "The"
     },
     {
-     "end": 92.925,
-     "start": 92.713,
-     "text": "key"
+     "end": 93.0,
+     "start": 92.675,
+     "text": "booking"
     },
     {
-     "end": 93.438,
-     "start": 92.925,
-     "text": "material"
-    },
-    {
-     "end": 93.512,
-     "start": 93.438,
-     "text": "in"
-    },
-    {
-     "end": 93.6,
-     "start": 93.512,
-     "text": "the"
+     "end": 93.738,
+     "start": 93.0,
+     "text": "attestation"
     },
     {
      "end": 94.062,
-     "start": 93.6,
-     "text": "datum"
+     "start": 93.738,
+     "text": "binds"
     },
     {
-     "end": 94.238,
+     "end": 94.2,
      "start": 94.062,
-     "text": "is"
-    },
-    {
-     "end": 94.625,
-     "start": 94.238,
-     "text": "pinned"
-    },
-    {
-     "end": 94.787,
-     "start": 94.625,
-     "text": "by"
-    },
-    {
-     "end": 94.875,
-     "start": 94.787,
      "text": "the"
     },
     {
-     "end": 95.325,
-     "start": 94.875,
-     "text": "committed"
+     "end": 94.575,
+     "start": 94.2,
+     "text": "initial"
     },
     {
-     "end": 95.7,
-     "start": 95.325,
+     "end": 95.45,
+     "start": 94.575,
      "text": "datum"
     },
     {
-     "end": 96.2,
-     "start": 95.7,
-     "text": "hash"
-    },
-    {
-     "end": 96.3,
-     "start": 96.2,
-     "text": ","
-    },
-    {
-     "end": 96.525,
-     "start": 96.3,
-     "text": "not"
-    },
-    {
-     "end": 96.7,
-     "start": 96.525,
-     "text": "by"
-    },
-    {
-     "end": 96.925,
-     "start": 96.7,
-     "text": "this"
-    },
-    {
-     "end": 97.85,
-     "start": 96.925,
-     "text": "rule"
-    },
-    {
-     "end": 98.05,
-     "start": 97.85,
-     "text": ":"
-    },
-    {
-     "end": 98.3,
-     "start": 98.225,
-     "text": "the"
-    },
-    {
-     "end": 98.675,
-     "start": 98.3,
-     "text": "model"
-    },
-    {
-     "end": 99.05,
-     "start": 98.675,
-     "text": "states"
-    },
-    {
-     "end": 99.2,
-     "start": 99.05,
-     "text": "the"
-    },
-    {
-     "end": 99.775,
-     "start": 99.2,
-     "text": "inception"
-    },
-    {
-     "end": 100.325,
-     "start": 99.775,
-     "text": "evidence"
-    },
-    {
-     "end": 100.512,
-     "start": 100.325,
-     "text": "as"
-    },
-    {
-     "end": 100.787,
-     "start": 100.512,
-     "text": "one"
-    },
-    {
-     "end": 101.088,
-     "start": 100.787,
-     "text": "fact"
-    },
-    {
-     "end": 101.162,
-     "start": 101.088,
-     "text": "of"
-    },
-    {
-     "end": 101.262,
-     "start": 101.162,
-     "text": "the"
-    },
-    {
-     "end": 102.05,
-     "start": 101.262,
-     "text": "key"
-    },
-    {
-     "end": 102.275,
-     "start": 102.05,
-     "text": ","
-    },
-    {
-     "end": 102.562,
-     "start": 102.475,
-     "text": "and"
-    },
-    {
-     "end": 102.65,
-     "start": 102.562,
-     "text": "the"
-    },
-    {
-     "end": 103.275,
-     "start": 102.65,
-     "text": "validator"
-    },
-    {
-     "end": 103.537,
-     "start": 103.275,
-     "text": "must"
-    },
-    {
-     "end": 103.825,
-     "start": 103.537,
-     "text": "check"
-    },
-    {
-     "end": 103.963,
-     "start": 103.825,
-     "text": "that"
-    },
-    {
-     "end": 104.05,
-     "start": 103.963,
-     "text": "the"
-    },
-    {
-     "end": 104.25,
-     "start": 104.05,
-     "text": "key"
-    },
-    {
-     "end": 104.838,
-     "start": 104.25,
-     "text": "material"
-    },
-    {
-     "end": 104.963,
-     "start": 104.838,
-     "text": "is"
-    },
-    {
-     "end": 105.1,
-     "start": 104.963,
-     "text": "the"
-    },
-    {
-     "end": 106.3,
-     "start": 105.1,
-     "text": "inception's"
-    },
-    {
-     "end": 106.5,
-     "start": 106.3,
+     "end": 95.65,
+     "start": 95.45,
      "text": "."
     },
     {
-     "end": 106.925,
-     "start": 106.7,
-     "text": "One"
+     "end": 96.7,
+     "start": 95.9,
+     "text": "Verification"
     },
     {
-     "end": 107.65,
-     "start": 106.925,
-     "text": "transaction"
-    },
-    {
-     "end": 108.1,
-     "start": 107.65,
-     "text": "folds"
-    },
-    {
-     "end": 108.2,
-     "start": 108.1,
-     "text": "at"
-    },
-    {
-     "end": 108.512,
-     "start": 108.2,
-     "text": "most"
-    },
-    {
-     "end": 108.775,
-     "start": 108.512,
-     "text": "one"
-    },
-    {
-     "end": 109.45,
-     "start": 108.775,
-     "text": "registration"
-    },
-    {
-     "end": 110.075,
-     "start": 109.45,
-     "text": "request"
-    },
-    {
-     "end": 110.162,
-     "start": 110.075,
-     "text": "in"
-    },
-    {
-     "end": 110.312,
-     "start": 110.162,
-     "text": "the"
-    },
-    {
-     "end": 110.9,
-     "start": 110.312,
-     "text": "on-chain"
-    },
-    {
-     "end": 112.2,
-     "start": 110.9,
-     "text": "realization"
-    },
-    {
-     "end": 112.4,
-     "start": 112.2,
-     "text": ";"
-    },
-    {
-     "end": 112.825,
-     "start": 112.6,
+     "end": 96.812,
+     "start": 96.7,
      "text": "that"
     },
     {
-     "end": 112.938,
-     "start": 112.825,
+     "end": 97.012,
+     "start": 96.812,
+     "text": "its"
+    },
+    {
+     "end": 97.275,
+     "start": 97.012,
+     "text": "key"
+    },
+    {
+     "end": 97.912,
+     "start": 97.275,
+     "text": "material"
+    },
+    {
+     "end": 98.275,
+     "start": 97.912,
+     "text": "comes"
+    },
+    {
+     "end": 98.438,
+     "start": 98.275,
+     "text": "from"
+    },
+    {
+     "end": 98.562,
+     "start": 98.438,
+     "text": "the"
+    },
+    {
+     "end": 98.975,
+     "start": 98.562,
+     "text": "signed"
+    },
+    {
+     "end": 99.738,
+     "start": 98.975,
+     "text": "inception"
+    },
+    {
+     "end": 99.9,
+     "start": 99.738,
      "text": "is"
     },
     {
-     "end": 113.0,
-     "start": 112.938,
+     "end": 100.012,
+     "start": 99.9,
      "text": "a"
     },
     {
-     "end": 113.5,
-     "start": 113.0,
-     "text": "declared"
+     "end": 100.512,
+     "start": 100.012,
+     "text": "premise"
     },
     {
-     "end": 113.825,
-     "start": 113.5,
-     "text": "limit"
+     "end": 101.25,
+     "start": 100.512,
+     "text": "discharged"
     },
     {
-     "end": 113.912,
-     "start": 113.825,
-     "text": "of"
+     "end": 101.425,
+     "start": 101.25,
+     "text": "by"
     },
     {
-     "end": 114.0,
-     "start": 113.912,
+     "end": 101.562,
+     "start": 101.425,
      "text": "the"
     },
     {
-     "end": 114.825,
-     "start": 114.0,
+     "end": 101.925,
+     "start": 101.562,
+     "text": "booking"
+    },
+    {
+     "end": 102.375,
+     "start": 101.925,
+     "text": "evidence"
+    },
+    {
+     "end": 103.012,
+     "start": 102.375,
+     "text": "policy"
+    },
+    {
+     "end": 103.137,
+     "start": 103.012,
+     "text": "in"
+    },
+    {
+     "end": 103.225,
+     "start": 103.137,
+     "text": "the"
+    },
+    {
+     "end": 103.9,
+     "start": 103.225,
+     "text": "controller’s"
+    },
+    {
+     "end": 105.325,
+     "start": 103.9,
+     "text": "transaction"
+    },
+    {
+     "end": 105.525,
+     "start": 105.325,
+     "text": "."
+    },
+    {
+     "end": 105.95,
+     "start": 105.725,
+     "text": "One"
+    },
+    {
+     "end": 106.675,
+     "start": 105.95,
+     "text": "transaction"
+    },
+    {
+     "end": 107.125,
+     "start": 106.675,
+     "text": "folds"
+    },
+    {
+     "end": 107.225,
+     "start": 107.125,
+     "text": "at"
+    },
+    {
+     "end": 107.537,
+     "start": 107.225,
+     "text": "most"
+    },
+    {
+     "end": 107.8,
+     "start": 107.537,
+     "text": "one"
+    },
+    {
+     "end": 108.475,
+     "start": 107.8,
+     "text": "registration"
+    },
+    {
+     "end": 109.1,
+     "start": 108.475,
+     "text": "request"
+    },
+    {
+     "end": 109.188,
+     "start": 109.1,
+     "text": "in"
+    },
+    {
+     "end": 109.338,
+     "start": 109.188,
+     "text": "the"
+    },
+    {
+     "end": 109.925,
+     "start": 109.338,
+     "text": "on-chain"
+    },
+    {
+     "end": 111.225,
+     "start": 109.925,
      "text": "realization"
     },
     {
-     "end": 114.925,
-     "start": 114.825,
-     "text": ","
+     "end": 111.425,
+     "start": 111.225,
+     "text": ";"
     },
     {
-     "end": 115.162,
-     "start": 114.925,
-     "text": "not"
+     "end": 111.85,
+     "start": 111.625,
+     "text": "that"
     },
     {
-     "end": 115.238,
-     "start": 115.162,
+     "end": 111.963,
+     "start": 111.85,
+     "text": "is"
+    },
+    {
+     "end": 112.025,
+     "start": 111.963,
+     "text": "a"
+    },
+    {
+     "end": 112.525,
+     "start": 112.025,
+     "text": "declared"
+    },
+    {
+     "end": 112.85,
+     "start": 112.525,
+     "text": "limit"
+    },
+    {
+     "end": 112.938,
+     "start": 112.85,
      "text": "of"
     },
     {
-     "end": 115.325,
-     "start": 115.238,
+     "end": 113.025,
+     "start": 112.938,
      "text": "the"
     },
     {
-     "end": 116.2,
-     "start": 115.325,
+     "end": 113.85,
+     "start": 113.025,
+     "text": "realization"
+    },
+    {
+     "end": 113.95,
+     "start": 113.85,
+     "text": ","
+    },
+    {
+     "end": 114.188,
+     "start": 113.95,
+     "text": "not"
+    },
+    {
+     "end": 114.262,
+     "start": 114.188,
+     "text": "of"
+    },
+    {
+     "end": 114.35,
+     "start": 114.262,
+     "text": "the"
+    },
+    {
+     "end": 115.225,
+     "start": 114.35,
      "text": "model"
     },
     {
-     "end": 116.4,
-     "start": 116.2,
+     "end": 115.425,
+     "start": 115.225,
      "text": "."
     }
    ]
@@ -347351,366 +347441,491 @@
    ]
   },
   "docs-design-registry-as-mpfs/the-machine-registrylean-02": {
-   "audio_sha256": "6d269e1374d4553daf966201a0b2868987bc915bcb7e932ce6bd60b9d2717d07",
-   "characters": 419,
-   "cost": 0.00041481,
-   "duration": 27.825,
+   "audio_sha256": "d3cc8d358d43da76c17795fcb113a252daba2793f6c339bbccefda1c3da64803",
+   "characters": 579,
+   "cost": 0.00057321,
+   "duration": 38.15,
    "index": 2,
-   "key": "50fa6783adcdec052087ddbd649af6cac9a153af85416d97b936a66f1fdb15cc",
+   "key": "98006e9e85f6290fe894acd1d8627261f74a8f63243cec17416aad432354297d",
    "page": "docs/design/registry-as-mpfs.md",
    "pause_ms": 400,
    "section": "the-machine-registrylean",
-   "sent_text": "Only registration booking reads Env.inception. At conviction, Env.pendingSpend reads the observed spend for the carrier’s AID. It checks that the tip names that AID and that the rival passes the checkpoint comparison. The resulting receipt identifies the pending output by transaction and index and records the tip’s epoch and sequence number. The checkpoint model accounts for the bond and pool payments at that spend.",
-   "text": "Only registration booking reads Env.inception. At conviction, Env.pendingSpend reads the observed spend for the carrier’s AID. It checks that the tip names that AID and that the rival passes the checkpoint comparison. The resulting receipt identifies the pending output by transaction and index and records the tip’s epoch and sequence number. The checkpoint model accounts for the bond and pool payments at that spend.",
+   "sent_text": "Registration booking reads Env.inception from the mint indexed by the request’s transaction. The controller's application mint must read the ledger transaction that creates the request at that output index. At conviction, Env.pendingSpend reads the observed spend for the carrier’s AID. It checks that the tip names that AID and that the rival passes the checkpoint comparison. The resulting receipt identifies the pending output by transaction and index and records the tip’s epoch and sequence number. The checkpoint model accounts for the bond and pool payments at that spend.",
+   "text": "Registration booking reads Env.inception from the mint indexed by the request’s transaction. The controller's application mint must read the ledger transaction that creates the request at that output index. At conviction, Env.pendingSpend reads the observed spend for the carrier’s AID. It checks that the tip names that AID and that the rival passes the checkpoint comparison. The resulting receipt identifies the pending output by transaction and index and records the tip’s epoch and sequence number. The checkpoint model accounts for the bond and pool payments at that spend.",
    "words": [
     {
-     "end": 0.45,
-     "start": 0.175,
-     "text": "Only"
+     "end": 0.988,
+     "start": 0.2,
+     "text": "Registration"
     },
     {
-     "end": 1.15,
-     "start": 0.45,
-     "text": "registration"
-    },
-    {
-     "end": 1.5,
-     "start": 1.15,
+     "end": 1.413,
+     "start": 0.988,
      "text": "booking"
     },
     {
-     "end": 1.825,
-     "start": 1.5,
+     "end": 1.8,
+     "start": 1.413,
      "text": "reads"
     },
     {
-     "end": 3.025,
-     "start": 1.825,
+     "end": 2.625,
+     "start": 1.8,
      "text": "Env.inception"
     },
     {
-     "end": 3.225,
-     "start": 3.025,
-     "text": "."
+     "end": 2.787,
+     "start": 2.625,
+     "text": "from"
     },
     {
-     "end": 3.525,
-     "start": 3.4,
-     "text": "At"
-    },
-    {
-     "end": 4.125,
-     "start": 3.525,
-     "text": "conviction"
-    },
-    {
-     "end": 4.2,
-     "start": 4.125,
-     "text": ","
-    },
-    {
-     "end": 5.2,
-     "start": 4.2,
-     "text": "Env.pendingSpend"
-    },
-    {
-     "end": 5.6,
-     "start": 5.2,
-     "text": "reads"
-    },
-    {
-     "end": 5.75,
-     "start": 5.6,
+     "end": 2.888,
+     "start": 2.787,
      "text": "the"
     },
     {
-     "end": 6.275,
-     "start": 5.75,
-     "text": "observed"
+     "end": 3.237,
+     "start": 2.888,
+     "text": "mint"
     },
     {
-     "end": 6.575,
-     "start": 6.275,
-     "text": "spend"
+     "end": 3.8,
+     "start": 3.237,
+     "text": "indexed"
     },
     {
-     "end": 6.688,
-     "start": 6.575,
-     "text": "for"
-    },
-    {
-     "end": 6.775,
-     "start": 6.688,
-     "text": "the"
-    },
-    {
-     "end": 7.338,
-     "start": 6.775,
-     "text": "carrier’s"
-    },
-    {
-     "end": 8.55,
-     "start": 7.338,
-     "text": "AID"
-    },
-    {
-     "end": 8.775,
-     "start": 8.55,
-     "text": "."
-    },
-    {
-     "end": 9.137,
-     "start": 8.95,
-     "text": "It"
-    },
-    {
-     "end": 9.475,
-     "start": 9.137,
-     "text": "checks"
-    },
-    {
-     "end": 9.637,
-     "start": 9.475,
-     "text": "that"
-    },
-    {
-     "end": 9.762,
-     "start": 9.637,
-     "text": "the"
-    },
-    {
-     "end": 10.025,
-     "start": 9.762,
-     "text": "tip"
-    },
-    {
-     "end": 10.4,
-     "start": 10.025,
-     "text": "names"
-    },
-    {
-     "end": 10.637,
-     "start": 10.4,
-     "text": "that"
-    },
-    {
-     "end": 11.6,
-     "start": 10.637,
-     "text": "AID"
-    },
-    {
-     "end": 11.738,
-     "start": 11.6,
-     "text": "and"
-    },
-    {
-     "end": 11.9,
-     "start": 11.738,
-     "text": "that"
-    },
-    {
-     "end": 12.025,
-     "start": 11.9,
-     "text": "the"
-    },
-    {
-     "end": 12.438,
-     "start": 12.025,
-     "text": "rival"
-    },
-    {
-     "end": 12.95,
-     "start": 12.438,
-     "text": "passes"
-    },
-    {
-     "end": 13.087,
-     "start": 12.95,
-     "text": "the"
-    },
-    {
-     "end": 13.55,
-     "start": 13.087,
-     "text": "checkpoint"
-    },
-    {
-     "end": 14.75,
-     "start": 13.55,
-     "text": "comparison"
-    },
-    {
-     "end": 14.95,
-     "start": 14.75,
-     "text": "."
-    },
-    {
-     "end": 15.225,
-     "start": 15.15,
-     "text": "The"
-    },
-    {
-     "end": 15.8,
-     "start": 15.225,
-     "text": "resulting"
-    },
-    {
-     "end": 16.275,
-     "start": 15.8,
-     "text": "receipt"
-    },
-    {
-     "end": 17.075,
-     "start": 16.275,
-     "text": "identifies"
-    },
-    {
-     "end": 17.188,
-     "start": 17.075,
-     "text": "the"
-    },
-    {
-     "end": 17.6,
-     "start": 17.188,
-     "text": "pending"
-    },
-    {
-     "end": 18.05,
-     "start": 17.6,
-     "text": "output"
-    },
-    {
-     "end": 18.237,
-     "start": 18.05,
+     "end": 3.975,
+     "start": 3.8,
      "text": "by"
     },
     {
-     "end": 19.075,
-     "start": 18.237,
+     "end": 4.075,
+     "start": 3.975,
+     "text": "the"
+    },
+    {
+     "end": 4.55,
+     "start": 4.075,
+     "text": "request’s"
+    },
+    {
+     "end": 5.85,
+     "start": 4.55,
      "text": "transaction"
     },
     {
-     "end": 19.2,
-     "start": 19.075,
-     "text": "and"
-    },
-    {
-     "end": 19.812,
-     "start": 19.2,
-     "text": "index"
-    },
-    {
-     "end": 19.95,
-     "start": 19.812,
-     "text": "and"
-    },
-    {
-     "end": 20.45,
-     "start": 19.95,
-     "text": "records"
-    },
-    {
-     "end": 20.587,
-     "start": 20.45,
-     "text": "the"
-    },
-    {
-     "end": 20.913,
-     "start": 20.587,
-     "text": "tip’s"
-    },
-    {
-     "end": 21.362,
-     "start": 20.913,
-     "text": "epoch"
-    },
-    {
-     "end": 21.538,
-     "start": 21.362,
-     "text": "and"
-    },
-    {
-     "end": 22.025,
-     "start": 21.538,
-     "text": "sequence"
-    },
-    {
-     "end": 23.05,
-     "start": 22.025,
-     "text": "number"
-    },
-    {
-     "end": 23.3,
-     "start": 23.05,
+     "end": 6.05,
+     "start": 5.85,
      "text": "."
     },
     {
-     "end": 23.587,
-     "start": 23.475,
+     "end": 6.325,
+     "start": 6.25,
      "text": "The"
     },
     {
-     "end": 24.05,
-     "start": 23.587,
-     "text": "checkpoint"
+     "end": 6.975,
+     "start": 6.325,
+     "text": "controller's"
     },
     {
-     "end": 24.425,
-     "start": 24.05,
-     "text": "model"
+     "end": 7.762,
+     "start": 6.975,
+     "text": "application"
     },
     {
-     "end": 24.85,
-     "start": 24.425,
-     "text": "accounts"
+     "end": 8.012,
+     "start": 7.762,
+     "text": "mint"
     },
     {
-     "end": 24.962,
-     "start": 24.85,
-     "text": "for"
+     "end": 8.312,
+     "start": 8.012,
+     "text": "must"
     },
     {
-     "end": 25.087,
-     "start": 24.962,
+     "end": 8.625,
+     "start": 8.312,
+     "text": "read"
+    },
+    {
+     "end": 8.762,
+     "start": 8.625,
      "text": "the"
     },
     {
-     "end": 25.55,
-     "start": 25.087,
-     "text": "bond"
+     "end": 9.1,
+     "start": 8.762,
+     "text": "ledger"
     },
     {
-     "end": 25.675,
-     "start": 25.55,
-     "text": "and"
+     "end": 9.95,
+     "start": 9.1,
+     "text": "transaction"
     },
     {
-     "end": 25.95,
-     "start": 25.675,
-     "text": "pool"
-    },
-    {
-     "end": 26.325,
-     "start": 25.95,
-     "text": "payments"
-    },
-    {
-     "end": 26.425,
-     "start": 26.325,
-     "text": "at"
-    },
-    {
-     "end": 26.675,
-     "start": 26.425,
+     "end": 10.163,
+     "start": 9.95,
      "text": "that"
     },
     {
-     "end": 27.6,
-     "start": 26.675,
+     "end": 10.6,
+     "start": 10.163,
+     "text": "creates"
+    },
+    {
+     "end": 10.7,
+     "start": 10.6,
+     "text": "the"
+    },
+    {
+     "end": 11.325,
+     "start": 10.7,
+     "text": "request"
+    },
+    {
+     "end": 11.45,
+     "start": 11.325,
+     "text": "at"
+    },
+    {
+     "end": 11.725,
+     "start": 11.45,
+     "text": "that"
+    },
+    {
+     "end": 12.15,
+     "start": 11.725,
+     "text": "output"
+    },
+    {
+     "end": 13.325,
+     "start": 12.15,
+     "text": "index"
+    },
+    {
+     "end": 13.55,
+     "start": 13.325,
+     "text": "."
+    },
+    {
+     "end": 13.85,
+     "start": 13.725,
+     "text": "At"
+    },
+    {
+     "end": 14.45,
+     "start": 13.85,
+     "text": "conviction"
+    },
+    {
+     "end": 14.525,
+     "start": 14.45,
+     "text": ","
+    },
+    {
+     "end": 15.525,
+     "start": 14.525,
+     "text": "Env.pendingSpend"
+    },
+    {
+     "end": 15.925,
+     "start": 15.525,
+     "text": "reads"
+    },
+    {
+     "end": 16.075,
+     "start": 15.925,
+     "text": "the"
+    },
+    {
+     "end": 16.6,
+     "start": 16.075,
+     "text": "observed"
+    },
+    {
+     "end": 16.9,
+     "start": 16.6,
      "text": "spend"
     },
     {
-     "end": 27.825,
-     "start": 27.6,
+     "end": 17.013,
+     "start": 16.9,
+     "text": "for"
+    },
+    {
+     "end": 17.1,
+     "start": 17.013,
+     "text": "the"
+    },
+    {
+     "end": 17.663,
+     "start": 17.1,
+     "text": "carrier’s"
+    },
+    {
+     "end": 18.875,
+     "start": 17.663,
+     "text": "AID"
+    },
+    {
+     "end": 19.1,
+     "start": 18.875,
+     "text": "."
+    },
+    {
+     "end": 19.462,
+     "start": 19.275,
+     "text": "It"
+    },
+    {
+     "end": 19.8,
+     "start": 19.462,
+     "text": "checks"
+    },
+    {
+     "end": 19.962,
+     "start": 19.8,
+     "text": "that"
+    },
+    {
+     "end": 20.087,
+     "start": 19.962,
+     "text": "the"
+    },
+    {
+     "end": 20.35,
+     "start": 20.087,
+     "text": "tip"
+    },
+    {
+     "end": 20.725,
+     "start": 20.35,
+     "text": "names"
+    },
+    {
+     "end": 20.962,
+     "start": 20.725,
+     "text": "that"
+    },
+    {
+     "end": 21.925,
+     "start": 20.962,
+     "text": "AID"
+    },
+    {
+     "end": 22.062,
+     "start": 21.925,
+     "text": "and"
+    },
+    {
+     "end": 22.225,
+     "start": 22.062,
+     "text": "that"
+    },
+    {
+     "end": 22.35,
+     "start": 22.225,
+     "text": "the"
+    },
+    {
+     "end": 22.763,
+     "start": 22.35,
+     "text": "rival"
+    },
+    {
+     "end": 23.275,
+     "start": 22.763,
+     "text": "passes"
+    },
+    {
+     "end": 23.413,
+     "start": 23.275,
+     "text": "the"
+    },
+    {
+     "end": 23.875,
+     "start": 23.413,
+     "text": "checkpoint"
+    },
+    {
+     "end": 25.075,
+     "start": 23.875,
+     "text": "comparison"
+    },
+    {
+     "end": 25.275,
+     "start": 25.075,
+     "text": "."
+    },
+    {
+     "end": 25.55,
+     "start": 25.475,
+     "text": "The"
+    },
+    {
+     "end": 26.125,
+     "start": 25.55,
+     "text": "resulting"
+    },
+    {
+     "end": 26.6,
+     "start": 26.125,
+     "text": "receipt"
+    },
+    {
+     "end": 27.4,
+     "start": 26.6,
+     "text": "identifies"
+    },
+    {
+     "end": 27.513,
+     "start": 27.4,
+     "text": "the"
+    },
+    {
+     "end": 27.925,
+     "start": 27.513,
+     "text": "pending"
+    },
+    {
+     "end": 28.375,
+     "start": 27.925,
+     "text": "output"
+    },
+    {
+     "end": 28.562,
+     "start": 28.375,
+     "text": "by"
+    },
+    {
+     "end": 29.4,
+     "start": 28.562,
+     "text": "transaction"
+    },
+    {
+     "end": 29.525,
+     "start": 29.4,
+     "text": "and"
+    },
+    {
+     "end": 30.138,
+     "start": 29.525,
+     "text": "index"
+    },
+    {
+     "end": 30.275,
+     "start": 30.138,
+     "text": "and"
+    },
+    {
+     "end": 30.775,
+     "start": 30.275,
+     "text": "records"
+    },
+    {
+     "end": 30.913,
+     "start": 30.775,
+     "text": "the"
+    },
+    {
+     "end": 31.237,
+     "start": 30.913,
+     "text": "tip’s"
+    },
+    {
+     "end": 31.688,
+     "start": 31.237,
+     "text": "epoch"
+    },
+    {
+     "end": 31.862,
+     "start": 31.688,
+     "text": "and"
+    },
+    {
+     "end": 32.35,
+     "start": 31.862,
+     "text": "sequence"
+    },
+    {
+     "end": 33.375,
+     "start": 32.35,
+     "text": "number"
+    },
+    {
+     "end": 33.625,
+     "start": 33.375,
+     "text": "."
+    },
+    {
+     "end": 33.912,
+     "start": 33.8,
+     "text": "The"
+    },
+    {
+     "end": 34.375,
+     "start": 33.912,
+     "text": "checkpoint"
+    },
+    {
+     "end": 34.75,
+     "start": 34.375,
+     "text": "model"
+    },
+    {
+     "end": 35.175,
+     "start": 34.75,
+     "text": "accounts"
+    },
+    {
+     "end": 35.287,
+     "start": 35.175,
+     "text": "for"
+    },
+    {
+     "end": 35.412,
+     "start": 35.287,
+     "text": "the"
+    },
+    {
+     "end": 35.875,
+     "start": 35.412,
+     "text": "bond"
+    },
+    {
+     "end": 36.0,
+     "start": 35.875,
+     "text": "and"
+    },
+    {
+     "end": 36.275,
+     "start": 36.0,
+     "text": "pool"
+    },
+    {
+     "end": 36.65,
+     "start": 36.275,
+     "text": "payments"
+    },
+    {
+     "end": 36.75,
+     "start": 36.65,
+     "text": "at"
+    },
+    {
+     "end": 37.0,
+     "start": 36.75,
+     "text": "that"
+    },
+    {
+     "end": 37.925,
+     "start": 37.0,
+     "text": "spend"
+    },
+    {
+     "end": 38.15,
+     "start": 37.925,
      "text": "."
     }
    ]
@@ -350536,17 +350751,17 @@
    ]
   },
   "docs-design-registry-as-mpfs/where-the-registry-is-built-03": {
-   "audio_sha256": "87d4a69ad1a7402d9c40a1a71f661dfb1635667921f85eaf16e37c1adede0c93",
-   "characters": 340,
-   "cost": 0.00033659999999999994,
-   "duration": 21.8,
+   "audio_sha256": "d0dcc780b8ba2fe61f3747ae519ebea630e8d6e0fe1df33c5a69e387410716d9",
+   "characters": 372,
+   "cost": 0.00036828,
+   "duration": 23.975,
    "index": 3,
-   "key": "fe53c605f1aaf9596f0a49503c8070f036b1db91b4fdd291dadb9bb72da8548a",
+   "key": "1392d7b9591821832c089303fe5450bad1d225561a26cac94f3fe3bbdf3ca412",
    "page": "docs/design/registry-as-mpfs.md",
    "pause_ms": 400,
    "section": "where-the-registry-is-built",
-   "sent_text": "A reachable conviction establishes [KERI](/kˈɛɹi/) duplicity for the rival actually presented. A valid sibling at the same position with different content passes the evidence comparison. The convictor must also reveal the matching open commitment and mint the attestation for this spend. The Singular folder processes the resulting request.",
-   "text": "A reachable conviction establishes KERI duplicity for the rival actually presented. A valid sibling at the same position with different content passes the evidence comparison. The convictor must also reveal the matching open commitment and mint the attestation for this spend. The Singular folder processes the resulting request.",
+   "sent_text": "A reachable conviction establishes [KERI](/kˈɛɹi/) duplicity for the rival actually presented. A valid sibling at the same position with different content passes the evidence comparison. The convictor must also reveal the matching open commitment and mint one enforcement token and one entitlement token for this spend. The Singular folder processes the resulting request.",
+   "text": "A reachable conviction establishes KERI duplicity for the rival actually presented. A valid sibling at the same position with different content passes the evidence comparison. The convictor must also reveal the matching open commitment and mint one enforcement token and one entitlement token for this spend. The Singular folder processes the resulting request.",
    "words": [
     {
      "end": 0.287,
@@ -350684,128 +350899,153 @@
      "text": "."
     },
     {
-     "end": 12.025,
-     "start": 11.95,
+     "end": 12.05,
+     "start": 11.975,
      "text": "The"
     },
     {
-     "end": 12.575,
-     "start": 12.025,
+     "end": 12.6,
+     "start": 12.05,
      "text": "convictor"
     },
     {
-     "end": 12.85,
-     "start": 12.575,
+     "end": 12.875,
+     "start": 12.6,
      "text": "must"
     },
     {
-     "end": 13.225,
-     "start": 12.85,
+     "end": 13.25,
+     "start": 12.875,
      "text": "also"
     },
     {
-     "end": 13.675,
-     "start": 13.225,
+     "end": 13.7,
+     "start": 13.25,
      "text": "reveal"
     },
     {
-     "end": 13.812,
-     "start": 13.675,
+     "end": 13.837,
+     "start": 13.7,
      "text": "the"
     },
     {
-     "end": 14.312,
-     "start": 13.812,
+     "end": 14.337,
+     "start": 13.837,
      "text": "matching"
     },
     {
-     "end": 14.65,
-     "start": 14.312,
+     "end": 14.675,
+     "start": 14.337,
      "text": "open"
     },
     {
-     "end": 15.325,
-     "start": 14.65,
+     "end": 15.288,
+     "start": 14.675,
      "text": "commitment"
     },
     {
-     "end": 15.512,
-     "start": 15.325,
+     "end": 15.462,
+     "start": 15.288,
      "text": "and"
     },
     {
-     "end": 15.712,
-     "start": 15.512,
+     "end": 15.762,
+     "start": 15.462,
      "text": "mint"
     },
     {
-     "end": 15.85,
-     "start": 15.712,
-     "text": "the"
+     "end": 16.025,
+     "start": 15.762,
+     "text": "one"
     },
     {
-     "end": 16.625,
-     "start": 15.85,
-     "text": "attestation"
+     "end": 16.675,
+     "start": 16.025,
+     "text": "enforcement"
     },
     {
-     "end": 16.75,
-     "start": 16.625,
+     "end": 17.188,
+     "start": 16.675,
+     "text": "token"
+    },
+    {
+     "end": 17.388,
+     "start": 17.188,
+     "text": "and"
+    },
+    {
+     "end": 17.65,
+     "start": 17.388,
+     "text": "one"
+    },
+    {
+     "end": 18.325,
+     "start": 17.65,
+     "text": "entitlement"
+    },
+    {
+     "end": 18.7,
+     "start": 18.325,
+     "text": "token"
+    },
+    {
+     "end": 18.825,
+     "start": 18.7,
      "text": "for"
     },
     {
-     "end": 16.925,
-     "start": 16.75,
+     "end": 19.0,
+     "start": 18.825,
      "text": "this"
     },
     {
-     "end": 17.9,
-     "start": 16.925,
+     "end": 20.075,
+     "start": 19.0,
      "text": "spend"
     },
     {
-     "end": 18.125,
-     "start": 17.9,
+     "end": 20.3,
+     "start": 20.075,
      "text": "."
     },
     {
-     "end": 18.413,
-     "start": 18.3,
+     "end": 20.587,
+     "start": 20.475,
      "text": "The"
     },
     {
-     "end": 18.862,
-     "start": 18.413,
+     "end": 21.038,
+     "start": 20.587,
      "text": "Singular"
     },
     {
-     "end": 19.312,
-     "start": 18.862,
+     "end": 21.487,
+     "start": 21.038,
      "text": "folder"
     },
     {
-     "end": 20.0,
-     "start": 19.312,
+     "end": 22.175,
+     "start": 21.487,
      "text": "processes"
     },
     {
-     "end": 20.1,
-     "start": 20.0,
+     "end": 22.275,
+     "start": 22.175,
      "text": "the"
     },
     {
-     "end": 20.625,
-     "start": 20.1,
+     "end": 22.8,
+     "start": 22.275,
      "text": "resulting"
     },
     {
-     "end": 21.6,
-     "start": 20.625,
+     "end": 23.775,
+     "start": 22.8,
      "text": "request"
     },
     {
-     "end": 21.8,
-     "start": 21.6,
+     "end": 23.975,
+     "start": 23.775,
      "text": "."
     }
    ]
@@ -380626,17 +380866,392 @@
    ]
   },
   "docs-design-trust-model/who-a-conviction-pays-05": {
-   "audio_sha256": "5ac9791675fa93a7535abc51cf2050f6cb0add48500288e487f094fabe020287",
-   "characters": 289,
-   "cost": 0.00028610999999999996,
-   "duration": 21.625,
+   "audio_sha256": "b76e221ddbb9ea062cd36a049585c60eb8881d84eb12bffe1c189247230fe865",
+   "characters": 424,
+   "cost": 0.00041976,
+   "duration": 29.025,
    "index": 5,
-   "key": "d24add17fc9f9a6b5635b903a38e938d162dc6d59afbda2aeb86ef95225ee78e",
+   "key": "1d49b18eac7228da07094ae69f3c7228fd5926bb4e67508b40dd3640c8348c6e",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,
    "section": "who-a-conviction-pays",
-   "sent_text": "The convictor presents one signed rival in the checkpoint spend. The mint must attest this comparison at the indexed output. Transaction 105 in the connected Lean example supplies the abstract attestation and has an empty observed mint field. Ledger correspondence remains open under #576.",
-   "text": "The convictor presents one signed rival in the checkpoint spend. The mint must attest this comparison at the indexed output. Transaction 105 in the connected Lean example supplies the abstract attestation and has an empty observed mint field. Ledger correspondence remains open under #576.",
+   "sent_text": "At registration the controller's booking transaction mints an inception attestation for its request. A rotation or freeze requires one fresh token named for its own purpose, checkpoint script and input. A depositing rotation uses the same advance token as a plain rotation. The spending script separately checks the successor keys’ deposit signatures. Burning an earlier token in change supplies no evidence for a new spend.",
+   "text": "At registration the controller's booking transaction mints an inception attestation for its request. A rotation or freeze requires one fresh token named for its own purpose, checkpoint script and input. A depositing rotation uses the same advance token as a plain rotation. The spending script separately checks the successor keys’ deposit signatures. Burning an earlier token in change supplies no evidence for a new spend.",
+   "words": [
+    {
+     "end": 0.35,
+     "start": 0.2,
+     "text": "At"
+    },
+    {
+     "end": 1.2,
+     "start": 0.35,
+     "text": "registration"
+    },
+    {
+     "end": 1.3,
+     "start": 1.2,
+     "text": "the"
+    },
+    {
+     "end": 1.975,
+     "start": 1.3,
+     "text": "controller's"
+    },
+    {
+     "end": 2.325,
+     "start": 1.975,
+     "text": "booking"
+    },
+    {
+     "end": 3.125,
+     "start": 2.325,
+     "text": "transaction"
+    },
+    {
+     "end": 3.5,
+     "start": 3.125,
+     "text": "mints"
+    },
+    {
+     "end": 3.6,
+     "start": 3.5,
+     "text": "an"
+    },
+    {
+     "end": 4.2,
+     "start": 3.6,
+     "text": "inception"
+    },
+    {
+     "end": 5.0,
+     "start": 4.2,
+     "text": "attestation"
+    },
+    {
+     "end": 5.15,
+     "start": 5.0,
+     "text": "for"
+    },
+    {
+     "end": 5.35,
+     "start": 5.15,
+     "text": "its"
+    },
+    {
+     "end": 6.5,
+     "start": 5.35,
+     "text": "request"
+    },
+    {
+     "end": 6.725,
+     "start": 6.5,
+     "text": "."
+    },
+    {
+     "end": 7.0,
+     "start": 6.925,
+     "text": "A"
+    },
+    {
+     "end": 7.675,
+     "start": 7.0,
+     "text": "rotation"
+    },
+    {
+     "end": 7.85,
+     "start": 7.675,
+     "text": "or"
+    },
+    {
+     "end": 8.3,
+     "start": 7.85,
+     "text": "freeze"
+    },
+    {
+     "end": 8.863,
+     "start": 8.3,
+     "text": "requires"
+    },
+    {
+     "end": 9.137,
+     "start": 8.863,
+     "text": "one"
+    },
+    {
+     "end": 9.462,
+     "start": 9.137,
+     "text": "fresh"
+    },
+    {
+     "end": 9.925,
+     "start": 9.462,
+     "text": "token"
+    },
+    {
+     "end": 10.225,
+     "start": 9.925,
+     "text": "named"
+    },
+    {
+     "end": 10.337,
+     "start": 10.225,
+     "text": "for"
+    },
+    {
+     "end": 10.475,
+     "start": 10.337,
+     "text": "its"
+    },
+    {
+     "end": 10.725,
+     "start": 10.475,
+     "text": "own"
+    },
+    {
+     "end": 11.375,
+     "start": 10.725,
+     "text": "purpose"
+    },
+    {
+     "end": 11.488,
+     "start": 11.375,
+     "text": ","
+    },
+    {
+     "end": 12.038,
+     "start": 11.488,
+     "text": "checkpoint"
+    },
+    {
+     "end": 12.562,
+     "start": 12.038,
+     "text": "script"
+    },
+    {
+     "end": 12.7,
+     "start": 12.562,
+     "text": "and"
+    },
+    {
+     "end": 13.775,
+     "start": 12.7,
+     "text": "input"
+    },
+    {
+     "end": 14.0,
+     "start": 13.775,
+     "text": "."
+    },
+    {
+     "end": 14.25,
+     "start": 14.2,
+     "text": "A"
+    },
+    {
+     "end": 14.875,
+     "start": 14.25,
+     "text": "depositing"
+    },
+    {
+     "end": 15.613,
+     "start": 14.875,
+     "text": "rotation"
+    },
+    {
+     "end": 15.975,
+     "start": 15.613,
+     "text": "uses"
+    },
+    {
+     "end": 16.112,
+     "start": 15.975,
+     "text": "the"
+    },
+    {
+     "end": 16.362,
+     "start": 16.112,
+     "text": "same"
+    },
+    {
+     "end": 16.825,
+     "start": 16.362,
+     "text": "advance"
+    },
+    {
+     "end": 17.225,
+     "start": 16.825,
+     "text": "token"
+    },
+    {
+     "end": 17.337,
+     "start": 17.225,
+     "text": "as"
+    },
+    {
+     "end": 17.4,
+     "start": 17.337,
+     "text": "a"
+    },
+    {
+     "end": 17.7,
+     "start": 17.4,
+     "text": "plain"
+    },
+    {
+     "end": 18.875,
+     "start": 17.7,
+     "text": "rotation"
+    },
+    {
+     "end": 19.075,
+     "start": 18.875,
+     "text": "."
+    },
+    {
+     "end": 19.35,
+     "start": 19.25,
+     "text": "The"
+    },
+    {
+     "end": 19.8,
+     "start": 19.35,
+     "text": "spending"
+    },
+    {
+     "end": 20.188,
+     "start": 19.8,
+     "text": "script"
+    },
+    {
+     "end": 20.663,
+     "start": 20.188,
+     "text": "separately"
+    },
+    {
+     "end": 20.975,
+     "start": 20.663,
+     "text": "checks"
+    },
+    {
+     "end": 21.075,
+     "start": 20.975,
+     "text": "the"
+    },
+    {
+     "end": 21.625,
+     "start": 21.075,
+     "text": "successor"
+    },
+    {
+     "end": 22.1,
+     "start": 21.625,
+     "text": "keys"
+    },
+    {
+     "end": 22.175,
+     "start": 22.1,
+     "text": "’"
+    },
+    {
+     "end": 22.725,
+     "start": 22.175,
+     "text": "deposit"
+    },
+    {
+     "end": 23.9,
+     "start": 22.725,
+     "text": "signatures"
+    },
+    {
+     "end": 24.1,
+     "start": 23.9,
+     "text": "."
+    },
+    {
+     "end": 24.612,
+     "start": 24.3,
+     "text": "Burning"
+    },
+    {
+     "end": 24.725,
+     "start": 24.612,
+     "text": "an"
+    },
+    {
+     "end": 25.125,
+     "start": 24.725,
+     "text": "earlier"
+    },
+    {
+     "end": 25.55,
+     "start": 25.125,
+     "text": "token"
+    },
+    {
+     "end": 25.712,
+     "start": 25.55,
+     "text": "in"
+    },
+    {
+     "end": 26.275,
+     "start": 25.712,
+     "text": "change"
+    },
+    {
+     "end": 26.788,
+     "start": 26.275,
+     "text": "supplies"
+    },
+    {
+     "end": 27.025,
+     "start": 26.788,
+     "text": "no"
+    },
+    {
+     "end": 27.475,
+     "start": 27.025,
+     "text": "evidence"
+    },
+    {
+     "end": 27.587,
+     "start": 27.475,
+     "text": "for"
+    },
+    {
+     "end": 27.65,
+     "start": 27.587,
+     "text": "a"
+    },
+    {
+     "end": 27.837,
+     "start": 27.65,
+     "text": "new"
+    },
+    {
+     "end": 28.8,
+     "start": 27.837,
+     "text": "spend"
+    },
+    {
+     "end": 29.025,
+     "start": 28.8,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-trust-model/who-a-conviction-pays-06": {
+   "audio_sha256": "73e5f475d3eaeb2bef84ac6ff472b13775d3a24320d728f5f98ff5343cddd5ca",
+   "characters": 403,
+   "cost": 0.00039896999999999996,
+   "duration": 30.3,
+   "index": 6,
+   "key": "d63fda3f3444a66cdcdce91ca6562eb24fba2cd173714c7d1095f563f5e36857",
+   "page": "docs/design/trust-model.md",
+   "pause_ms": 400,
+   "section": "who-a-conviction-pays",
+   "sent_text": "The convictor presents one signed rival in the checkpoint spend. In the connected Lean example, transaction 105 consumes checkpoint 103#0. Its mint field contains one enforcement token and one entitlement token, each named for the spent checkpoint and its script. Output 105#0 is the new pending checkpoint. The model treats policy verification of the rival and the commitment as premises of that spend.",
+   "text": "The convictor presents one signed rival in the checkpoint spend. In the connected Lean example, transaction 105 consumes checkpoint 103#0. Its mint field contains one enforcement token and one entitlement token, each named for the spent checkpoint and its script. Output 105#0 is the new pending checkpoint. The model treats policy verification of the rival and the commitment as premises of that spend.",
    "words": [
     {
      "end": 0.25,
@@ -380694,198 +381309,308 @@
      "text": "."
     },
     {
-     "end": 4.275,
-     "start": 4.175,
-     "text": "The"
+     "end": 4.312,
+     "start": 4.225,
+     "text": "In"
     },
     {
-     "end": 4.575,
-     "start": 4.275,
-     "text": "mint"
-    },
-    {
-     "end": 4.812,
-     "start": 4.575,
-     "text": "must"
-    },
-    {
-     "end": 5.2,
-     "start": 4.812,
-     "text": "attest"
-    },
-    {
-     "end": 5.4,
-     "start": 5.2,
-     "text": "this"
-    },
-    {
-     "end": 6.075,
-     "start": 5.4,
-     "text": "comparison"
-    },
-    {
-     "end": 6.162,
-     "start": 6.075,
-     "text": "at"
-    },
-    {
-     "end": 6.3,
-     "start": 6.162,
+     "end": 4.4,
+     "start": 4.312,
      "text": "the"
     },
     {
-     "end": 6.75,
-     "start": 6.3,
-     "text": "indexed"
-    },
-    {
-     "end": 7.725,
-     "start": 6.75,
-     "text": "output"
-    },
-    {
-     "end": 7.925,
-     "start": 7.725,
-     "text": "."
-    },
-    {
-     "end": 8.863,
-     "start": 8.15,
-     "text": "Transaction"
-    },
-    {
-     "end": 9.962,
-     "start": 8.863,
-     "text": "105"
-    },
-    {
-     "end": 10.087,
-     "start": 9.962,
-     "text": "in"
-    },
-    {
-     "end": 10.175,
-     "start": 10.087,
-     "text": "the"
-    },
-    {
-     "end": 10.675,
-     "start": 10.175,
+     "end": 4.9,
+     "start": 4.4,
      "text": "connected"
     },
     {
-     "end": 10.925,
-     "start": 10.675,
+     "end": 5.1,
+     "start": 4.9,
      "text": "Lean"
     },
     {
-     "end": 11.562,
-     "start": 10.925,
+     "end": 5.65,
+     "start": 5.1,
      "text": "example"
     },
     {
-     "end": 12.1,
-     "start": 11.562,
-     "text": "supplies"
+     "end": 5.725,
+     "start": 5.65,
+     "text": ","
     },
     {
-     "end": 12.262,
-     "start": 12.1,
-     "text": "the"
+     "end": 6.475,
+     "start": 5.725,
+     "text": "transaction"
     },
     {
-     "end": 12.85,
-     "start": 12.262,
-     "text": "abstract"
+     "end": 7.425,
+     "start": 6.475,
+     "text": "105"
     },
     {
-     "end": 13.812,
-     "start": 12.85,
-     "text": "attestation"
+     "end": 8.1,
+     "start": 7.425,
+     "text": "consumes"
     },
     {
-     "end": 13.95,
-     "start": 13.812,
-     "text": "and"
+     "end": 8.712,
+     "start": 8.1,
+     "text": "checkpoint"
     },
     {
-     "end": 14.25,
-     "start": 13.95,
-     "text": "has"
+     "end": 11.05,
+     "start": 8.712,
+     "text": "103#0"
     },
     {
-     "end": 14.413,
-     "start": 14.25,
-     "text": "an"
-    },
-    {
-     "end": 14.825,
-     "start": 14.413,
-     "text": "empty"
-    },
-    {
-     "end": 15.363,
-     "start": 14.825,
-     "text": "observed"
-    },
-    {
-     "end": 15.663,
-     "start": 15.363,
-     "text": "mint"
-    },
-    {
-     "end": 16.775,
-     "start": 15.663,
-     "text": "field"
-    },
-    {
-     "end": 17.0,
-     "start": 16.775,
+     "end": 11.275,
+     "start": 11.05,
      "text": "."
     },
     {
-     "end": 17.55,
-     "start": 17.225,
-     "text": "Ledger"
+     "end": 11.712,
+     "start": 11.475,
+     "text": "Its"
     },
     {
-     "end": 18.4,
-     "start": 17.55,
-     "text": "correspondence"
+     "end": 12.012,
+     "start": 11.712,
+     "text": "mint"
     },
     {
-     "end": 18.862,
-     "start": 18.4,
-     "text": "remains"
+     "end": 12.375,
+     "start": 12.012,
+     "text": "field"
     },
     {
-     "end": 19.325,
-     "start": 18.862,
-     "text": "open"
+     "end": 12.887,
+     "start": 12.375,
+     "text": "contains"
     },
     {
-     "end": 19.562,
-     "start": 19.325,
-     "text": "under"
+     "end": 13.15,
+     "start": 12.887,
+     "text": "one"
     },
     {
-     "end": 21.425,
-     "start": 19.562,
-     "text": "576"
+     "end": 13.775,
+     "start": 13.15,
+     "text": "enforcement"
     },
     {
-     "end": 21.625,
-     "start": 21.425,
+     "end": 14.262,
+     "start": 13.775,
+     "text": "token"
+    },
+    {
+     "end": 14.413,
+     "start": 14.262,
+     "text": "and"
+    },
+    {
+     "end": 14.675,
+     "start": 14.413,
+     "text": "one"
+    },
+    {
+     "end": 15.3,
+     "start": 14.675,
+     "text": "entitlement"
+    },
+    {
+     "end": 15.85,
+     "start": 15.3,
+     "text": "token"
+    },
+    {
+     "end": 15.962,
+     "start": 15.85,
+     "text": ","
+    },
+    {
+     "end": 16.275,
+     "start": 15.962,
+     "text": "each"
+    },
+    {
+     "end": 16.65,
+     "start": 16.275,
+     "text": "named"
+    },
+    {
+     "end": 16.763,
+     "start": 16.65,
+     "text": "for"
+    },
+    {
+     "end": 16.85,
+     "start": 16.763,
+     "text": "the"
+    },
+    {
+     "end": 17.237,
+     "start": 16.85,
+     "text": "spent"
+    },
+    {
+     "end": 17.862,
+     "start": 17.237,
+     "text": "checkpoint"
+    },
+    {
+     "end": 17.987,
+     "start": 17.862,
+     "text": "and"
+    },
+    {
+     "end": 18.138,
+     "start": 17.987,
+     "text": "its"
+    },
+    {
+     "end": 19.25,
+     "start": 18.138,
+     "text": "script"
+    },
+    {
+     "end": 19.475,
+     "start": 19.25,
+     "text": "."
+    },
+    {
+     "end": 20.1,
+     "start": 19.675,
+     "text": "Output"
+    },
+    {
+     "end": 21.825,
+     "start": 20.1,
+     "text": "105#0"
+    },
+    {
+     "end": 21.987,
+     "start": 21.825,
+     "text": "is"
+    },
+    {
+     "end": 22.1,
+     "start": 21.987,
+     "text": "the"
+    },
+    {
+     "end": 22.3,
+     "start": 22.1,
+     "text": "new"
+    },
+    {
+     "end": 22.7,
+     "start": 22.3,
+     "text": "pending"
+    },
+    {
+     "end": 23.775,
+     "start": 22.7,
+     "text": "checkpoint"
+    },
+    {
+     "end": 23.975,
+     "start": 23.775,
+     "text": "."
+    },
+    {
+     "end": 24.275,
+     "start": 24.175,
+     "text": "The"
+    },
+    {
+     "end": 24.663,
+     "start": 24.275,
+     "text": "model"
+    },
+    {
+     "end": 25.0,
+     "start": 24.663,
+     "text": "treats"
+    },
+    {
+     "end": 25.475,
+     "start": 25.0,
+     "text": "policy"
+    },
+    {
+     "end": 26.3,
+     "start": 25.475,
+     "text": "verification"
+    },
+    {
+     "end": 26.388,
+     "start": 26.3,
+     "text": "of"
+    },
+    {
+     "end": 26.513,
+     "start": 26.388,
+     "text": "the"
+    },
+    {
+     "end": 27.15,
+     "start": 26.513,
+     "text": "rival"
+    },
+    {
+     "end": 27.288,
+     "start": 27.15,
+     "text": "and"
+    },
+    {
+     "end": 27.375,
+     "start": 27.288,
+     "text": "the"
+    },
+    {
+     "end": 27.962,
+     "start": 27.375,
+     "text": "commitment"
+    },
+    {
+     "end": 28.138,
+     "start": 27.962,
+     "text": "as"
+    },
+    {
+     "end": 28.7,
+     "start": 28.138,
+     "text": "premises"
+    },
+    {
+     "end": 28.8,
+     "start": 28.7,
+     "text": "of"
+    },
+    {
+     "end": 29.087,
+     "start": 28.8,
+     "text": "that"
+    },
+    {
+     "end": 30.075,
+     "start": 29.087,
+     "text": "spend"
+    },
+    {
+     "end": 30.3,
+     "start": 30.075,
      "text": "."
     }
    ]
   },
-  "docs-design-trust-model/who-a-conviction-pays-06": {
-   "audio_sha256": "cef43ba148b61314312240cbfc479775e1993e06b85c75c876a570399f62cc6e",
+  "docs-design-trust-model/who-a-conviction-pays-07": {
+   "audio_sha256": "4635cace1b9ec7b96214559cc5c9fc8253c685acab3c4de72dad32cd220118fd",
    "characters": 332,
    "cost": 0.00032868000000000003,
    "duration": 21.2,
-   "index": 6,
+   "index": 7,
    "key": "e0096babf756d13e9c1df548afe3e57647310bbbabf0e13e493a57076efcb765",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,
@@ -381175,12 +381900,12 @@
     }
    ]
   },
-  "docs-design-trust-model/who-a-conviction-pays-07": {
-   "audio_sha256": "d23e5b2c7497dae009c238a72ac9a31a9e51948d85574caf067752fc95c4bf14",
+  "docs-design-trust-model/who-a-conviction-pays-08": {
+   "audio_sha256": "f007e91a68294aee42a363571a53b2d8a28992f6f4678bc87e247dba56f90adf",
    "characters": 77,
    "cost": 7.623e-05,
    "duration": 4.8,
-   "index": 7,
+   "index": 8,
    "key": "cdc15573908df276d238628b7180f1173c172f10ef4f98707b5154427e61ea37",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,
@@ -381280,12 +382005,12 @@
     }
    ]
   },
-  "docs-design-trust-model/who-a-conviction-pays-08": {
-   "audio_sha256": "ac21ce6fcf4623aa923df6db71f510c0eac5c10d53700771e4a5c9c9ce82378c",
+  "docs-design-trust-model/who-a-conviction-pays-09": {
+   "audio_sha256": "fdc292727e04489f77d8d5b0455e7521290cb311656a90ccb57d2dd9e8a73063",
    "characters": 136,
    "cost": 0.00013464,
    "duration": 8.675,
-   "index": 8,
+   "index": 9,
    "key": "7f865b25c5371cafd0a431186a19a29b4e8ebbec151d5afdf50804bcc91bcfb2",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,
@@ -381425,12 +382150,12 @@
     }
    ]
   },
-  "docs-design-trust-model/who-a-conviction-pays-09": {
-   "audio_sha256": "9cb7c2af9d1f1bba06f460bbabb804e8e76386af3c308cba7b713bcf578ab6a8",
+  "docs-design-trust-model/who-a-conviction-pays-10": {
+   "audio_sha256": "f73505cde3afeb9f1d0fb0d551171162917f5e43b72a3fc6a1f7be3f6571c8c6",
    "characters": 726,
    "cost": 0.0007187399999999999,
    "duration": 46.95,
-   "index": 9,
+   "index": 10,
    "key": "171926af6655e486a3421b86acee0955dd61137c218b3f26a1b38acc0dae863e",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,
@@ -382120,12 +382845,12 @@
     }
    ]
   },
-  "docs-design-trust-model/who-a-conviction-pays-10": {
-   "audio_sha256": "9e31d0427612f768f026c285241957059395cdc2f113003b8ae3836e59fbcdc5",
+  "docs-design-trust-model/who-a-conviction-pays-11": {
+   "audio_sha256": "46870e24873f4e44546c0591cc65edc029be2a85a5fb247993d15666a396c5e0",
    "characters": 223,
    "cost": 0.00022077,
    "duration": 14.35,
-   "index": 10,
+   "index": 11,
    "key": "43e1f58ce010a5aba0d9d41e2134a2dae607f41b74c59e2a73332d833cd385ca",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,
@@ -382350,12 +383075,12 @@
     }
    ]
   },
-  "docs-design-trust-model/who-a-conviction-pays-11": {
-   "audio_sha256": "f45b9034ddadbfef2974987f41884dc30805b848ce685b3325cd6e733562f006",
+  "docs-design-trust-model/who-a-conviction-pays-12": {
+   "audio_sha256": "4e9e1dfd0d274968445753704a0f0040e7fc3dedebd659cd03f56686fc239c17",
    "characters": 505,
    "cost": 0.00049995,
    "duration": 35.75,
-   "index": 11,
+   "index": 12,
    "key": "65ad418181ed8309beca3f3fe8facdd3c3e1e41a581e03fbe1255756a35b9bbf",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,

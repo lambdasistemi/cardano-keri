@@ -363,10 +363,19 @@ stateDiagram-v2
   Swept --> [*]: marker burnt, deposit to whoever signs
 ```
 
-The convictor presents one signed rival in the checkpoint spend. The mint
-must attest this comparison at the indexed output. Transaction 105 in the
-connected Lean example supplies the abstract attestation and has an empty
-observed mint field. Ledger correspondence remains open under #576.
+At registration the controller's booking transaction mints an inception
+attestation for its request. A rotation or freeze requires one fresh token
+named for its own purpose, checkpoint script and input. A depositing
+rotation uses the same advance token as a plain rotation. The spending
+script separately checks the successor keys’ deposit signatures. Burning
+an earlier token in change supplies no evidence for a new spend.
+
+The convictor presents one signed rival in the checkpoint spend. In the
+connected Lean example, transaction 105 consumes checkpoint 103#0. Its mint
+field contains one enforcement token and one entitlement token, each named
+for the spent checkpoint and its script. Output 105#0 is the new pending
+checkpoint. The model treats policy verification of the rival and the
+commitment as premises of that spend.
 
 | A conviction is accepted only when | Where the model states it |
 |---|---|

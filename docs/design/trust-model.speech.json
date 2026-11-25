@@ -303,7 +303,7 @@
       "pause": 400
     },
     {
-      "text": "Permissionlessness has one price, and it is stated rather than hidden: because the chain cannot tell the controller from a relayer, the first registration of an AID, or a resurrection using a public rotation whose keys have leaked, can be made by a stale-key holder who advances only to their own epoch. The window is bounded by juvenility and closed by any advance to the tip. The attacker's bonds stay the attacker's: the refund address is fixed at registration. Removing the residual would mean removing the relayer.",
+      "text": "A retired AID cannot register again in the same registry. A live checkpoint can still show an older key state if a later KERI rotation has yet to land. The juvenility check opens at the birth slot plus W. Eligibility has no upper age limit, so age alone cannot tell a relying party whether a newer rotation exists. On conviction the remaining freeze bond and pool go to the address recorded at registration.",
       "pause": 400
     }
   ],
@@ -421,6 +421,6 @@
   ],
   "_source": {
     "file": "trust-model.md",
-    "sha256": "2a077eae18a85d5d38b366df9b34c4161cbe1f2b972a9d29900edd523e8db331"
+    "sha256": "ab523d79690ce4d0d754973e2d61a934f7c59e3de616cd3ef5ce7ad961766a05"
   }
 }

@@ -89,7 +89,7 @@
       "pause": 500
     },
     {
-      "text": "The hunter presents a later witnessed rotation. The transaction mints the attestation for the spent checkpoint and the requested action. A rotation lands the new keys. A freeze keeps the old keys and pays the hunter the bond.",
+      "text": "The hunter presents a later witnessed rotation. The transaction mints the attestation for the spent checkpoint and the requested action. A rotation lands the new keys. If the pool covers the premium, it pays the premium to the address the submitter names. Otherwise the rotation is unpaid. A freeze keeps the old keys and pays the bond to the address named for the freeze.",
       "pause": 400
     },
     {
@@ -177,6 +177,6 @@
   ],
   "_source": {
     "file": "system.md",
-    "sha256": "e5a328fa2cda43c09a214efef14d84d066bc42f32906bbc01957365670f163ba"
+    "sha256": "123f86cf966ef869dea46938bde2d1a86c8e53d79cba435540048f0853cd2d0e"
   }
 }

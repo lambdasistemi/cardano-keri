@@ -141,14 +141,16 @@ Evidence is bound to the exact KERI tip, so a later round needs fresh evidence.
 
 The hunter presents a later witnessed rotation. The transaction mints the
 attestation for the spent checkpoint and the requested action. A rotation
-lands the new keys. A freeze keeps the old keys and pays the hunter the bond.
+lands the new keys. If the pool covers the premium, it pays the premium to
+the address the submitter names. Otherwise the rotation is unpaid. A freeze
+keeps the old keys and pays the bond to the address named for the freeze.
 
 ```mermaid
 flowchart LR
     P["Checkpoint at sn"]
     EV["a later witnessed rotation<br/>+ its receipts"]
-    ADV["advance: new key state,<br/>P from the pool if it covers it"]
-    FRZ["freeze: set only the frozen bit to true,<br/>B to the hunter"]
+    ADV["advance: new key state,<br/>P to named payee if pool covers P"]
+    FRZ["freeze: set only the frozen bit to true,<br/>B to named payee"]
 
     EV --> P
     P -->|"advance"| ADV

@@ -45,11 +45,11 @@ epic [#322](https://github.com/lambdasistemi/cardano-keri/issues/322) decides.
 | Operation | Shipped today | Under the accepted design |
 |---|---|---|
 | Register | Creates a bonded checkpoint at sequence zero. No uniqueness rule | A registry request: absence proof, insert and checkpoint mint together; no second first-registration |
-| Advance | Applies one genuine witnessed rotation | The same, plus a bond option and the premium `P` (the fee the pool pays for landing a rotation) to whoever landed it. The refund address is never changed |
+| Advance | Applies one genuine witnessed rotation | The rotation selects a bond option. If the pool covers it, the premium `P` goes to the address the submitter names. Otherwise the rotation is unpaid. The refund address stays fixed. |
 | Close | Current controllers burn the token and take the refund | **Gone.** There is no owner exit: a checkpoint is alive until it is convicted |
-| Freeze | Moves a lagging checkpoint to ARMED for the response window | When the pool is short, the hunter receives `B`. The datum sets only its frozen bit to true and keeps the old keys. |
+| Freeze | Moves a lagging checkpoint to ARMED for the response window | With a short pool, a successful freeze pays `B` to the address named in the action. The datum sets only its frozen bit to true and keeps the old keys. |
 | ClaimFreeze / thaw | Pays the recorded hunter after the deadline; thaw re-posts `B` | **Gone.** No deadline, no claim, no timeout economy |
-| Convict | Burns the token on a witnessed irreconcilable fork | A terminal `Convicted` state on a duplicity proof; `D_reg` in full to the convictor |
+| Convict | Burns the token on a witnessed irreconcilable fork | Conviction creates pending termination custody and pays `D_reg` to the eligible commitment’s payee. After termination booking, the consuming registry fold burns the token and retires the AID. |
 | Poison | — | New: the current quorum declares the epoch compromised |
 | Top-up | — | New: anyone adds at least one premium to the pool, once between two rotations. No signature. The only datum change is the top-up mark |
 
@@ -226,11 +226,11 @@ party who can prove a later witnessed rotation can simply **land** it, which
 costs the owner nothing and leaves the checkpoint fresh, so paying for the
 freeze instead would pay for the harmful move.
 
-Instead a hunter freezes only when the owner's **pool is short**: the hunter
-presents a later witnessed rotation with a freeze attestation for the spent
-checkpoint. The hunter receives `B`. The datum changes only its frozen bit
-to true, so the old keys stay. A depositing rotation clears the bit and
-restores the freeze bond.
+A hunter can freeze a clean, unfrozen checkpoint when its pool holds less
+than the premium. The hunter presents a later witnessed rotation with a freeze
+attestation for the spent checkpoint. The freeze pays `B` to the address the
+submitter names. The datum changes only its frozen bit to true, so the old
+keys stay. A depositing rotation clears the bit and restores the freeze bond.
 
 There is no ARMED, no FROZEN role address, no recorded hunter in the datum, and
 no timeout.
@@ -244,12 +244,11 @@ register policy, the AID and the current sequence — producible with stock
 witnessed, because it is a Cardano-side declaration and not a projected KERI
 event.
 
-Its effect is one bit. The checkpoint becomes unconsumable. From a
-poisoned present checkpoint the machine still enables rotation, top-up,
-conviction, and close (the reap by the next keys). Only a second poison
-and a freeze are refused — those two require the epoch still clean.
-Consumer authorization fails because the checkpoint is unconsumable. A
-rotation clears the poison.
+Poison sets one bit and makes the checkpoint unconsumable. A poisoned
+checkpoint can still rotate, receive a top-up or be convicted when the
+conditions for that action hold. There is no owner close. A second poison
+and a freeze both require a clean checkpoint. A successful rotation clears
+the poison.
 
 Two properties are worth stating precisely:
 
@@ -275,10 +274,11 @@ exposes no command for it.
 
 ### Under the accepted design
 
-The same proof, a different effect. The convictor names a payee and takes
-`D_reg` in full; `B` and the pool go to the refund address; the checkpoint
-becomes `Convicted`, terminal; the token stays, and there is **no
-transition out** — no rotate, no poison, no freeze, no top-up (D-030, D-031).
+A successful conviction leaves the checkpoint pending termination. It pays
+`D_reg` to the eligible commitment’s payee and sends the remaining freeze
+bond and pool to the registered refund address. A termination booking puts
+the pending holding into a registry request. The fold that consumes that
+request burns the token and permanently retires the AID in this registry.
 
 Terminality is not severity. KERI has no event that un-duplicates an
 identifier: superseding recovery is a rotation over an interaction, by rule and

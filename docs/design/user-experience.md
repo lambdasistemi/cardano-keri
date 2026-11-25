@@ -54,8 +54,8 @@ a checkpoint or an old key:
 | Stale outref | The checkpoint changed; refresh and rebuild | shipped |
 
 "Fail closed" should be visible. A freeze sets only the datum’s frozen
-bit and pays the freeze bond `B` to the hunter. The UI can show the
-frozen checkpoint with its old keys and explain where the bond went.
+bit and pays the freeze bond `B` to the address named in the freeze. The UI
+can show the frozen checkpoint with its old keys and explain where the bond went.
 
 ## Register
 
@@ -143,11 +143,11 @@ AID, new sequence number, new epoch and deposit amount. The deposit restores
 
 The UI should never present the checkpoint's value as one generic deposit:
 
-- **The pool** is a wage fund. It pays the premium `P` to whoever lands a
-  rotation. Anyone may top it up, and its depletion is what invites a freeze.
-- **The freeze bond `B`** is what a hunter takes when the pool cannot pay. Its
-  absence accompanies the frozen bit in the datum. A depositing rotation
-  restores the bond and clears the bit.
+- **The pool** pays the premium `P` to the address named in the rotation
+  when it holds at least `P`. A rotation with a smaller pool pays no premium.
+- **The freeze bond `B`** is held while the checkpoint is unfrozen. A
+  successful freeze pays `B` to the address the submitter names. A depositing
+  rotation restores the bond and clears the frozen bit.
 - **The conviction bond `D_reg`** is the stake a duplicity proof seizes.
   Conviction pays it to the payee named in the eligible commitment and sends
   the remaining freeze bond and pool to the checkpoint’s fixed refund address.

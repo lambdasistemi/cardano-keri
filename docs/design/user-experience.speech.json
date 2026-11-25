@@ -71,7 +71,7 @@
       "pause": 400
     },
     {
-      "text": "\"Fail closed\" should be visible. A freeze sets only the datum’s frozen bit and pays the freeze bond B to the hunter. The UI can show the frozen checkpoint with its old keys and explain where the bond went.",
+      "text": "\"Fail closed\" should be visible. A freeze sets only the datum’s frozen bit and pays the freeze bond B to the address named in the freeze. The UI can show the frozen checkpoint with its old keys and explain where the bond went.",
       "pause": 400
     }
   ],
@@ -185,11 +185,11 @@
       "pause": 400
     },
     {
-      "text": "The pool is a wage fund. It pays the premium P to whoever lands a rotation. Anyone may top it up, and its depletion is what invites a freeze.",
+      "text": "The pool pays the premium P to the address named in the rotation when it holds at least P. A rotation with a smaller pool pays no premium.",
       "pause": 300
     },
     {
-      "text": "The freeze bond B is what a hunter takes when the pool cannot pay. Its absence accompanies the frozen bit in the datum. A depositing rotation restores the bond and clears the bit.",
+      "text": "The freeze bond B is held while the checkpoint is unfrozen. A successful freeze pays B to the address the submitter names. A depositing rotation restores the bond and clears the frozen bit.",
       "pause": 300
     },
     {
@@ -249,6 +249,6 @@
   ],
   "_source": {
     "file": "user-experience.md",
-    "sha256": "2b08f13f91dc369124d2d6a5408c79b75e6984d71047d135aa419841ebc2d23b"
+    "sha256": "022887a61c6f71cbf7db6813cc8043ab569c41834dd2408880e5747077b18185"
   }
 }

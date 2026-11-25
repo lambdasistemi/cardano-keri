@@ -1729,7 +1729,7 @@
     "index": 2,
     "name": "docs-architecture-identity-ops/poison-new-in-the-accepted-design-02",
     "pause_ms": 400,
-    "v": "798b390c77d2"
+    "v": "0f9a3463f1ad"
    },
    {
     "index": 3,
@@ -2161,7 +2161,7 @@
     "index": 2,
     "name": "docs-architecture-identity-ops/under-the-accepted-design_3-02",
     "pause_ms": 400,
-    "v": "499ecf8b1729"
+    "v": "2b965dfbc2be"
    },
    {
     "index": 3,
@@ -2181,7 +2181,7 @@
     "index": 1,
     "name": "docs-architecture-identity-ops/under-the-accepted-design_4-01",
     "pause_ms": 400,
-    "v": "a93de4fbc905"
+    "v": "1d04528ae5f4"
    },
    {
     "index": 2,
@@ -3155,7 +3155,7 @@
     "index": 1,
     "name": "docs-architecture-system/the-same-plane-under-the-accepted-design-designed-01",
     "pause_ms": 400,
-    "v": "da304df0b184"
+    "v": "99061df4b156"
    },
    {
     "index": 2,
@@ -3643,7 +3643,7 @@
     "index": 4,
     "name": "docs-architecture-value-auth/under-the-accepted-design-04",
     "pause_ms": 300,
-    "v": "3608cd448f5c"
+    "v": "161d16bd2103"
    },
    {
     "index": 5,
@@ -3687,7 +3687,7 @@
     "index": 4,
     "name": "docs-architecture-value-auth/value-authorization-04",
     "pause_ms": 400,
-    "v": "fb8ce7ca971e"
+    "v": "c86067d5244d"
    }
   ],
   "value-cage-oracle": [
@@ -12853,7 +12853,7 @@
     "index": 3,
     "name": "docs-design-trust-model/relayers-and-hunters-03",
     "pause_ms": 400,
-    "v": "80333195a542"
+    "v": "1a348d867579"
    }
   ],
   "residuals-of-what-ships-today": [
@@ -13311,7 +13311,7 @@
     "index": 7,
     "name": "docs-design-user-experience/find-the-checkpoint-07",
     "pause_ms": 400,
-    "v": "606eb3d1b727"
+    "v": "8112211167e9"
    }
   ],
   "first-know-the-aid": [
@@ -13511,13 +13511,13 @@
     "index": 2,
     "name": "docs-design-user-experience/three-balances-three-explanations-02",
     "pause_ms": 300,
-    "v": "8cbbd3cd18a2"
+    "v": "e09eab89f555"
    },
    {
     "index": 3,
     "name": "docs-design-user-experience/three-balances-three-explanations-03",
     "pause_ms": 300,
-    "v": "2e95197796d0"
+    "v": "bd64b8926440"
    },
    {
     "index": 4,

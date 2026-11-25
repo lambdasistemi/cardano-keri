@@ -8,10 +8,12 @@ This page states the current integration boundary so later application
 validators do not reintroduce the retired shared-registry model.
 
 !!! abstract "Where this page stands"
-    The resolution rules, the indexer boundary, the authorization modes and
-    the rotation race are **shipped on `main` today** and survive the M1
-    return. Under the accepted design, the holding check uses the checkpoint
-    credential, the representative asset and the decoded lifecycle state.
+    The bare ACTIVE role address belongs to the historical V1 checkpoint.
+    Today, main includes a Haskell holding check and an example Aiken validator
+    that checks a checkpoint reference input. Native transaction signatures
+    and detached intent signatures are two proposed ways for a relying
+    application to authorize its own value writes. The detached signature
+    envelope is still to be specified.
 
 ## Resolve current authority
 
@@ -69,8 +71,8 @@ checks authorization for its own operation separately.
 Three consequences an integrator should plan for:
 
 - **Freeze changes both datum and value.** Only the frozen bit in the datum
-  changes to true. The hunter receives `B`, so the output no longer holds
-  that bond. Changing only the lovelace leaves the holding predicate’s result
+  changes to true. The freeze pays `B` to the address the submitter names.
+  Changing only the lovelace leaves the holding predicate’s result
   unchanged. A caller relying on `realizesState` must establish the exact
   lovelace held for the state, including the registry minimum ADA.
 - **Step 1 becomes a guarantee rather than a hope.** The redesigned registry admits one

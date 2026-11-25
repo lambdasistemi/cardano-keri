@@ -305,7 +305,7 @@
       "pause": 400
     },
     {
-      "text": "Instead a hunter freezes only when the owner's pool is short: the hunter presents a later witnessed rotation with a freeze attestation for the spent checkpoint. The hunter receives B. The datum changes only its frozen bit to true, so the old keys stay. A depositing rotation clears the bit and restores the freeze bond.",
+      "text": "A hunter can freeze a clean, unfrozen checkpoint when its pool holds less than the premium. The hunter presents a later witnessed rotation with a freeze attestation for the spent checkpoint. The freeze pays B to the address the submitter names. The datum changes only its frozen bit to true, so the old keys stay. A depositing rotation clears the bit and restores the freeze bond.",
       "pause": 400
     },
     {
@@ -323,7 +323,7 @@
       "pause": 400
     },
     {
-      "text": "Its effect is one bit. The checkpoint becomes unconsumable. From a poisoned present checkpoint the machine still enables rotation, top-up, conviction, and close (the reap by the next keys). Only a second poison and a freeze are refused — those two require the epoch still clean. Consumer authorization fails because the checkpoint is unconsumable. A rotation clears the poison.",
+      "text": "Poison sets one bit and makes the checkpoint unconsumable. A poisoned checkpoint can still rotate, receive a top-up or be convicted when the conditions for that action hold. There is no owner close. A second poison and a freeze both require a clean checkpoint. A successful rotation clears the poison.",
       "pause": 400
     },
     {
@@ -361,7 +361,7 @@
       "pause": 500
     },
     {
-      "text": "The same proof, a different effect. The convictor names a payee and takes D_reg in full; B and the pool go to the refund address; the checkpoint becomes Convicted, terminal; the token stays, and there is no transition out — no rotate, no poison, no freeze, no top-up (D-030, D-031).",
+      "text": "A successful conviction leaves the checkpoint pending termination. It pays D_reg to the eligible commitment’s payee and sends the remaining freeze bond and pool to the registered refund address. A termination booking puts the pending holding into a registry request. The fold that consumes that request burns the token and permanently retires the AID in this registry.",
       "pause": 400
     },
     {
@@ -419,6 +419,6 @@
   ],
   "_source": {
     "file": "identity-ops.md",
-    "sha256": "7096a361b6c376ae454f3abca11c5ef9d21bc6bc44d4ca569933efe0e155d7c5"
+    "sha256": "e2d10c917e5438e41a4314b3467268c5c1aba87ae5e90583cdb9f318fcb74098"
   }
 }

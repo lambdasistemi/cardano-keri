@@ -374156,17 +374156,17 @@
    ]
   },
   "docs-design-trust-model/the-projection-law-01": {
-   "audio_sha256": "187df64c5680b66dff1abe1d6e50c2aaf37da5afd57ced09dcabb4c59866d006",
-   "characters": 475,
-   "cost": 0.00047024999999999996,
-   "duration": 30.575,
+   "audio_sha256": "efad61705651249c3d43019a38d13646c2235c70dfe15851ac8641483f8dcc28",
+   "characters": 698,
+   "cost": 0.00069102,
+   "duration": 45.825,
    "index": 1,
-   "key": "6f0d1d7a2d3771aaaa40cd4dd791fb8eaa80a3f8a31b3a8c22fff4d983b83018",
+   "key": "bb707cbf5b6c3b50d8427e740cee3fe78ab57456ae30295d0db4f7cc083f339b",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,
    "section": "the-projection-law",
-   "sent_text": "One rule sits above everything else on this page: the chain projects the KEL and never originates identity state. Every arrow points one way. The design is built only against what a controller and its witnesses already publish. A terminal conviction requires agreement with [KERI](/kˈɛɹi/) duplicity. The witness assumptions describe the two outstanding conditions for that agreement. [KERI](/kˈɛɹi/) describes where a verdict is formed in validator roles and event locality.",
-   "text": "One rule sits above everything else on this page: the chain projects the KEL and never originates identity state. Every arrow points one way. The design is built only against what a controller and its witnesses already publish. A terminal conviction requires agreement with KERI duplicity. The witness assumptions describe the two outstanding conditions for that agreement. KERI describes where a verdict is formed in validator roles and event locality.",
+   "sent_text": "One rule sits above everything else on this page: the chain projects the KEL and never originates identity state. Every arrow points one way. The design is built only against what a controller and its witnesses already publish. A terminal conviction requires agreement with [KERI](/kˈɛɹi/) duplicity. In the Lean model, an accepted conviction at a rotated checkpoint establishes [KERI](/kˈɛɹi/) duplicity. Lean refuses conviction at a never-rotated checkpoint because it has no preceding commitments. Evidence that the on-chain validator refuses that spend is still outstanding. See the witness assumptions. [KERI](/kˈɛɹi/) describes where a verdict is formed in validator roles and event locality.",
+   "text": "One rule sits above everything else on this page: the chain projects the KEL and never originates identity state. Every arrow points one way. The design is built only against what a controller and its witnesses already publish. A terminal conviction requires agreement with KERI duplicity. In the Lean model, an accepted conviction at a rotated checkpoint establishes KERI duplicity. Lean refuses conviction at a never-rotated checkpoint because it has no preceding commitments. Evidence that the on-chain validator refuses that spend is still outstanding. See the witness assumptions. KERI describes where a verdict is formed in validator roles and event locality.",
    "words": [
     {
      "end": 0.425,
@@ -374424,133 +374424,308 @@
      "text": "."
     },
     {
-     "end": 20.25,
-     "start": 20.15,
-     "text": "The"
+     "end": 20.288,
+     "start": 20.2,
+     "text": "In"
     },
     {
-     "end": 20.6,
-     "start": 20.25,
-     "text": "witness"
-    },
-    {
-     "end": 21.275,
-     "start": 20.6,
-     "text": "assumptions"
-    },
-    {
-     "end": 21.825,
-     "start": 21.275,
-     "text": "describe"
-    },
-    {
-     "end": 21.975,
-     "start": 21.825,
+     "end": 20.375,
+     "start": 20.288,
      "text": "the"
     },
     {
-     "end": 22.312,
-     "start": 21.975,
-     "text": "two"
+     "end": 20.65,
+     "start": 20.375,
+     "text": "Lean"
     },
     {
-     "end": 22.925,
-     "start": 22.312,
-     "text": "outstanding"
+     "end": 21.05,
+     "start": 20.65,
+     "text": "model"
     },
     {
-     "end": 23.525,
-     "start": 22.925,
-     "text": "conditions"
+     "end": 21.125,
+     "start": 21.05,
+     "text": ","
     },
     {
-     "end": 23.65,
-     "start": 23.525,
-     "text": "for"
+     "end": 21.225,
+     "start": 21.125,
+     "text": "an"
     },
     {
-     "end": 23.862,
-     "start": 23.65,
-     "text": "that"
+     "end": 21.75,
+     "start": 21.225,
+     "text": "accepted"
     },
     {
-     "end": 24.825,
-     "start": 23.862,
-     "text": "agreement"
+     "end": 22.438,
+     "start": 21.75,
+     "text": "conviction"
     },
     {
-     "end": 25.025,
-     "start": 24.825,
-     "text": "."
+     "end": 22.55,
+     "start": 22.438,
+     "text": "at"
     },
     {
-     "end": 25.55,
-     "start": 25.225,
-     "text": "KERI"
-    },
-    {
-     "end": 26.2,
-     "start": 25.55,
-     "text": "describes"
-    },
-    {
-     "end": 26.337,
-     "start": 26.2,
-     "text": "where"
-    },
-    {
-     "end": 26.4,
-     "start": 26.337,
+     "end": 22.663,
+     "start": 22.55,
      "text": "a"
     },
     {
-     "end": 26.825,
-     "start": 26.4,
-     "text": "verdict"
+     "end": 23.263,
+     "start": 22.663,
+     "text": "rotated"
     },
     {
-     "end": 26.987,
-     "start": 26.825,
-     "text": "is"
+     "end": 23.85,
+     "start": 23.263,
+     "text": "checkpoint"
     },
     {
-     "end": 27.425,
-     "start": 26.987,
-     "text": "formed"
+     "end": 24.612,
+     "start": 23.85,
+     "text": "establishes"
     },
     {
-     "end": 27.575,
-     "start": 27.425,
-     "text": "in"
+     "end": 24.95,
+     "start": 24.612,
+     "text": "KERI"
     },
     {
-     "end": 28.225,
-     "start": 27.575,
-     "text": "validator"
+     "end": 26.225,
+     "start": 24.95,
+     "text": "duplicity"
     },
     {
-     "end": 28.788,
-     "start": 28.225,
-     "text": "roles"
+     "end": 26.425,
+     "start": 26.225,
+     "text": "."
     },
     {
-     "end": 28.913,
-     "start": 28.788,
-     "text": "and"
+     "end": 27.0,
+     "start": 26.675,
+     "text": "Lean"
     },
     {
-     "end": 29.175,
-     "start": 28.913,
-     "text": "event"
+     "end": 27.6,
+     "start": 27.0,
+     "text": "refuses"
     },
     {
-     "end": 30.375,
-     "start": 29.175,
-     "text": "locality"
+     "end": 28.288,
+     "start": 27.6,
+     "text": "conviction"
+    },
+    {
+     "end": 28.425,
+     "start": 28.288,
+     "text": "at"
+    },
+    {
+     "end": 28.538,
+     "start": 28.425,
+     "text": "a"
+    },
+    {
+     "end": 29.487,
+     "start": 28.538,
+     "text": "never-rotated"
+    },
+    {
+     "end": 30.112,
+     "start": 29.487,
+     "text": "checkpoint"
+    },
+    {
+     "end": 30.475,
+     "start": 30.112,
+     "text": "because"
     },
     {
      "end": 30.575,
-     "start": 30.375,
+     "start": 30.475,
+     "text": "it"
+    },
+    {
+     "end": 30.837,
+     "start": 30.575,
+     "text": "has"
+    },
+    {
+     "end": 31.125,
+     "start": 30.837,
+     "text": "no"
+    },
+    {
+     "end": 31.65,
+     "start": 31.125,
+     "text": "preceding"
+    },
+    {
+     "end": 32.9,
+     "start": 31.65,
+     "text": "commitments"
+    },
+    {
+     "end": 33.1,
+     "start": 32.9,
+     "text": "."
+    },
+    {
+     "end": 33.775,
+     "start": 33.3,
+     "text": "Evidence"
+    },
+    {
+     "end": 33.912,
+     "start": 33.775,
+     "text": "that"
+    },
+    {
+     "end": 34.062,
+     "start": 33.912,
+     "text": "the"
+    },
+    {
+     "end": 34.625,
+     "start": 34.062,
+     "text": "on-chain"
+    },
+    {
+     "end": 35.275,
+     "start": 34.625,
+     "text": "validator"
+    },
+    {
+     "end": 35.9,
+     "start": 35.275,
+     "text": "refuses"
+    },
+    {
+     "end": 36.125,
+     "start": 35.9,
+     "text": "that"
+    },
+    {
+     "end": 36.487,
+     "start": 36.125,
+     "text": "spend"
+    },
+    {
+     "end": 36.575,
+     "start": 36.487,
+     "text": "is"
+    },
+    {
+     "end": 36.85,
+     "start": 36.575,
+     "text": "still"
+    },
+    {
+     "end": 38.05,
+     "start": 36.85,
+     "text": "outstanding"
+    },
+    {
+     "end": 38.25,
+     "start": 38.05,
+     "text": "."
+    },
+    {
+     "end": 38.7,
+     "start": 38.5,
+     "text": "See"
+    },
+    {
+     "end": 38.825,
+     "start": 38.7,
+     "text": "the"
+    },
+    {
+     "end": 39.225,
+     "start": 38.825,
+     "text": "witness"
+    },
+    {
+     "end": 40.15,
+     "start": 39.225,
+     "text": "assumptions"
+    },
+    {
+     "end": 40.287,
+     "start": 40.15,
+     "text": "."
+    },
+    {
+     "end": 40.625,
+     "start": 40.287,
+     "text": "KERI"
+    },
+    {
+     "end": 41.275,
+     "start": 40.625,
+     "text": "describes"
+    },
+    {
+     "end": 41.438,
+     "start": 41.275,
+     "text": "where"
+    },
+    {
+     "end": 41.537,
+     "start": 41.438,
+     "text": "a"
+    },
+    {
+     "end": 41.975,
+     "start": 41.537,
+     "text": "verdict"
+    },
+    {
+     "end": 42.138,
+     "start": 41.975,
+     "text": "is"
+    },
+    {
+     "end": 42.575,
+     "start": 42.138,
+     "text": "formed"
+    },
+    {
+     "end": 42.737,
+     "start": 42.575,
+     "text": "in"
+    },
+    {
+     "end": 43.375,
+     "start": 42.737,
+     "text": "validator"
+    },
+    {
+     "end": 43.888,
+     "start": 43.375,
+     "text": "roles"
+    },
+    {
+     "end": 44.013,
+     "start": 43.888,
+     "text": "and"
+    },
+    {
+     "end": 44.3,
+     "start": 44.013,
+     "text": "event"
+    },
+    {
+     "end": 45.6,
+     "start": 44.3,
+     "text": "locality"
+    },
+    {
+     "end": 45.825,
+     "start": 45.6,
      "text": "."
     }
    ]

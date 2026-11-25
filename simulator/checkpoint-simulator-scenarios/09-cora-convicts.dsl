@@ -349,7 +349,7 @@ fork:
   step:
     slot: 0
     who: cora
-    say: "This sequence-zero fixture carries no rival rotation. The comparison refuses that fixture. The general inception case remains open."
+    say: "Lean refuses conviction at a never-rotated checkpoint because it has no preceding commitments. Evidence that the on-chain validator refuses this spend is still outstanding."
     evidence:
       add: [{"duplicityAt":[0,0]}]
     action:

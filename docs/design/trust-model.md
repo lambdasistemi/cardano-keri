@@ -20,9 +20,10 @@ itself. It verifies the event evidence supplied in a transaction.
 One rule sits above everything else on this page: **the chain projects the
 KEL and never originates identity state.** Every arrow points one way. The
 design is built only against what a controller and its witnesses already
-publish. A terminal conviction requires agreement with KERI duplicity. The
-[witness assumptions](#keri-witnesses) describe the two outstanding conditions
-for that agreement. KERI describes where a verdict is formed in
+publish. A terminal conviction requires agreement with KERI duplicity. In the Lean model, an accepted conviction at a rotated checkpoint establishes
+KERI duplicity. Lean refuses conviction at a never-rotated checkpoint because
+it has no preceding commitments. Evidence that the on-chain validator refuses
+that spend is still outstanding. See the [witness assumptions](#keri-witnesses). KERI describes where a verdict is formed in
 [validator roles and event locality](https://trustoverip.github.io/kswg-keri-specification/#validator-roles-and-event-locality).
 
 Two consequences that shape the whole trust boundary:

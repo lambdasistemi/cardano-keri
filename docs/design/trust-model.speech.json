@@ -23,7 +23,7 @@
       "pause": 500
     },
     {
-      "text": "One rule sits above everything else on this page: the chain projects the KEL and never originates identity state. Every arrow points one way. The design is built only against what a controller and its witnesses already publish. A terminal conviction requires agreement with KERI duplicity. The witness assumptions describe the two outstanding conditions for that agreement. KERI describes where a verdict is formed in validator roles and event locality.",
+      "text": "One rule sits above everything else on this page: the chain projects the KEL and never originates identity state. Every arrow points one way. The design is built only against what a controller and its witnesses already publish. A terminal conviction requires agreement with KERI duplicity. In the Lean model, an accepted conviction at a rotated checkpoint establishes KERI duplicity. Lean refuses conviction at a never-rotated checkpoint because it has no preceding commitments. Evidence that the on-chain validator refuses that spend is still outstanding. See the witness assumptions. KERI describes where a verdict is formed in validator roles and event locality.",
       "pause": 400
     },
     {
@@ -417,6 +417,6 @@
   ],
   "_source": {
     "file": "trust-model.md",
-    "sha256": "0c8b90ebaa65a4e08c68229915eea9a38d6cfafdb1de00701a760ec1f0334e11"
+    "sha256": "25e5c65ca154e442b04b82c21cca9b493ae6c2e7a321c3519a920681c14cf31d"
   }
 }

@@ -11,13 +11,13 @@ open Duplicity CheckpointConviction Examples
 
 def inceptionEvent : SignedEvent :=
   let e := { baseContext.accepted.event with
-    aid := 11, sn := 0, kind := .inception,
+    eventDigest := "registration", aid := 11, sn := 0, kind := .inception,
     nextKeys := [1, 2], nextThreshold := .count 1 }
   signed e [1] [10]
 
-def first := signed {baseContext.accepted.event with aid := 11} [1] [10]
+def first := signed {baseContext.accepted.event with aid := 11, eventDigest := "first"} [1] [10]
 def second : SignedEvent :=
-  let e := {first.event with sn := 2, keys := [4], nextKeys := [5], cuts := [10], adds := [12]}
+  let e := {first.event with eventDigest := "second", sn := 2, keys := [4], nextKeys := [5], cuts := [10], adds := [12]}
   signed e [4] [12]
 def bookingOrigin := {origin with inception := EventHistory.inception inceptionEvent [10]}
 def setup : SystemEnv := fun aid => {env aid with
@@ -54,8 +54,8 @@ theorem secondReach : SysReach p setup atSecond := by
   cases h
 
 def tip := h1.datum.tip KeyEncoding.symbolic 1
-def alternative := signed {first.event with keys := [2], extension := [99]} [2] [10]
-def seals := signed {first.event with extension := [99]} [1] [10]
+def alternative := signed {first.event with eventDigest := "alternative", keys := [2], extension := [99]} [2] [10]
+def seals := signed {first.event with eventDigest := "seals", extension := [99]} [1] [10]
 def obs : Registry.Conviction := ⟨⟨105,0⟩, ⟨tip, alternative⟩⟩
 
 example := inception_carries_no_previous inceptionEvent [10]
@@ -95,7 +95,7 @@ example := Application.Custody.Examples.rotated_journey_establishes_duplicity
 
 -- The same registration reaches a sibling writer with both grouped fields.
 def nestedRule : Threshold := .weighted [[.group ⟨1,1⟩ [⟨1,1⟩]]]
-def grouped := signed {first.event with threshold := nestedRule, nextThreshold := nestedRule} [1] [10]
+def grouped := signed {first.event with eventDigest := "grouped", threshold := nestedRule, nextThreshold := nestedRule} [1] [10]
 def hg := EventHistory.rotation bookingOrigin.inception grouped
 def nestedState := atRegistration.set 11 (.present rotatedLive) (some hg)
 def nestedEnv (aid : Nat) : Env := {setup aid with rotationWriter := fun _ _ _ _ => some grouped}
@@ -147,7 +147,7 @@ def spendReady (r : SignedEvent) : Bool :=
     (opened r).comparisonMatchesWriter (spendEnv r 11) 11 &&
     decide ((pledge r).entitles (spendEnv r 11) rotatedLive 7 5)
 
-def underSigned := signed {first.event with threshold := .count 2, extension := [2]} [1] [10]
+def underSigned := signed {first.event with eventDigest := "undersigned", threshold := .count 2, extension := [2]} [1] [10]
 #guard spendReady alternative && spendReady underSigned
 #guard (stepFn p (spendEnv alternative 11) (.convict 7 (pledge alternative)) 5 (.present rotatedLive)).isSome
 #guard (stepFn p (spendEnv underSigned 11) (.convict 7 (pledge underSigned)) 5 (.present rotatedLive)).isNone
@@ -157,7 +157,7 @@ example := presented_conflict_passes_system_comparison (aid := 11) (live := rota
 
 -- Prepare a conviction at the registered, never-rotated writer. The claim,
 -- commitment, signatures and receipt all name the presented event at sequence 0.
-def incRival := signed {first.event with sn := 0, extension := [99]} [1] [10]
+def incRival := signed {first.event with eventDigest := "inc-rival", sn := 0, extension := [99]} [1] [10]
 def incClaim : Registry.Conviction :=
   ⟨⟨105, 0⟩, ⟨bookingOrigin.inception.datum.tip KeyEncoding.symbolic 0, incRival⟩⟩
 def incEnv (aid : Nat) : Env := {setup aid with

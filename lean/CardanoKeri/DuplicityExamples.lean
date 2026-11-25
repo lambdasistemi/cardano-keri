@@ -14,15 +14,16 @@ def signed (event : Content) (keys witnesses : List Nat) : SignedEvent :=
 Each event carries its own full signed content; a successor can use the one
 committed key from the preceding event. -/
 def writerFixture (aid sn : Nat) (kind : EventKind) : SignedEvent :=
-  signed ⟨aid, sn, kind, 0, [aid], .count 1, [aid], .count 1, [], [], 0, []⟩ [aid] []
+  signed ⟨aid, sn, kind, 0, [aid], .count 1, [aid], .count 1, [], [], 0, [], s!"writer/{aid}/{sn}"⟩ [aid] []
 
 /-- A concrete partial/augmented sibling pair; row (epoch,sn) selects this
 fixture in the lifecycle simulator. Zero sequence deliberately fails validation. -/
 def fixture (epoch sn : Nat) : Context × SignedEvent :=
   let prior : Predecessor := ⟨1, sn - 1, false, [1, 2], .count 1, [10]⟩
   let accepted : Content :=
-    ⟨1, sn, .rotation, 50, [1], .count 1, [4], .count 1, [], [], 1, []⟩
+    ⟨1, sn, .rotation, 50, [1], .count 1, [4], .count 1, [], [], 1, [], s!"accepted/{sn}"⟩
   let rival := { accepted with
+    eventDigest := s!"rival/{sn}"
     keys := [2, 3]
     threshold := .count 2
     cuts := [10]
@@ -33,12 +34,12 @@ def fixture (epoch sn : Nat) : Context × SignedEvent :=
 def baseContext : Context := (fixture 1 1).1
 def baseRival : SignedEvent := (fixture 1 1).2
 
-def thresholdRival (threshold : Threshold) : SignedEvent :=
-  let event := { baseContext.accepted.event with threshold, extension := [1] }
+def thresholdRival (threshold : Threshold) (digest : String := "threshold-rival") : SignedEvent :=
+  let event := { baseContext.accepted.event with threshold, extension := [1], eventDigest := digest }
   signed event [1] [10]
 
-def exactKeyRival := thresholdRival (.count 2)
-def weightedRival := thresholdRival (.weighted [[.key ⟨1, 2⟩]])
+def exactKeyRival := thresholdRival (.count 2) "exact-key-rival"
+def weightedRival := thresholdRival (.weighted [[.key ⟨1, 2⟩]]) "half-weight-rival"
 def tipReceiptRival := { baseRival with receipts := sign baseRival.event [10] }
 def missingReceiptRival := { baseRival with receipts := [] }
 
@@ -61,7 +62,7 @@ def tipWitnessGrader (context : Context) (rival : SignedEvent) : Bool :=
   rival.event.aid == context.prior.aid && context.prior.sn < rival.event.sn &&
   signingValid context.prior rival &&
   tip.witnessThreshold <= ((derivedWitnesses context.prior tip).filter receipts.contains).length &&
-  tip.sn == rival.event.sn && decide (tip ≠ rival.event)
+  tip.sn == rival.event.sn && decide (tip.eventDigest ≠ rival.event.eventDigest)
 
 /-- Test-only omission of the rival's receipt check. -/
 def missingReceiptGrader (context : Context) (rival : SignedEvent) : Bool :=
@@ -69,7 +70,7 @@ def missingReceiptGrader (context : Context) (rival : SignedEvent) : Bool :=
   rival.event.kind == .rotation && rival.structureVerified &&
   rival.event.aid == context.prior.aid && context.prior.sn < rival.event.sn &&
   signingValid context.prior rival && context.accepted.event.sn == rival.event.sn &&
-  decide (context.accepted.event ≠ rival.event)
+  decide (context.accepted.event.eventDigest ≠ rival.event.eventDigest)
 
 /-- Test-only collapse of a weighted threshold to one signature. -/
 def unweightedGrader (context : Context) (rival : SignedEvent) : Bool :=
@@ -113,7 +114,7 @@ theorem weighted_threshold_mutant_refused :
     unweightedGrader baseContext weightedRival = true := by decide
 
 /-- Given identical event content, when compared, then no duplicity exists;
-omitting content inequality accepts the same event twice. -/
+omitting digest inequality accepts the same event twice. -/
 theorem identical_content_mutant_refused :
     duplicity baseContext baseContext.accepted = false ∧
     identicalContentGrader baseContext baseContext.accepted = true := by decide
@@ -127,7 +128,7 @@ theorem delegated_identity_refused :
 then the rotation-only profile refuses it. -/
 theorem interaction_conflict_refused :
     duplicity baseContext
-      (signed { baseRival.event with kind := .interaction } [2, 3] [11]) = false := by decide
+      (signed { baseRival.event with eventDigest := "interaction", kind := .interaction } [2, 3] [11]) = false := by decide
 
 /-- Given sufficient signatures in only one weighted clause, when the threshold
 is evaluated, then it refuses until every clause has its own sufficient weight. -/
@@ -164,36 +165,36 @@ def scenarios : List Scenario :=
    row "identical-content" baseContext.accepted,
    ⟨"sequence-zero", 0, 0, (fixture 0 0).1, (fixture 0 0).2⟩,
    ⟨"delegated-identity", 1, 1, { baseContext with prior.delegated := true }, baseRival⟩,
-   row "interaction-conflict" (signed { baseRival.event with kind := .interaction } [2,3] [11]),
+   row "interaction-conflict" (signed { baseRival.event with eventDigest := "interaction", kind := .interaction } [2,3] [11]),
    ⟨"wrong-checkpoint-sequence", 1, 2, baseContext, baseRival⟩,
    ⟨"wrong-checkpoint-epoch", 2, 1, baseContext, baseRival⟩,
    row "signatures-bound-to-other-content" { baseRival with signatures := baseContext.accepted.signatures },
    row "receipts-bound-to-other-content" { baseRival with receipts := baseContext.accepted.receipts },
-   row "duplicate-receipts" (let event := { baseRival.event with adds := [11,12], witnessThreshold := 2 }
+   row "duplicate-receipts" (let event := { baseRival.event with eventDigest := "duplicate-receipts", adds := [11,12], witnessThreshold := 2 }
      { (signed event [2,3] [11]) with receipts := sign event [11,11] }),
-   row "current-without-prior-authority" (signed { baseRival.event with keys := [3], threshold := .count 1 } [3] [11]),
-   row "same-projection-different-seals" (signed { baseContext.accepted.event with extension := [42] } [1] [10]),
-   row "reordered-keys" (signed { baseRival.event with keys := [3,2] } [2,3] [11]),
-   row "zero-denominator" (thresholdRival (.weighted [[.key ⟨1,0⟩]])),
-   row "weighted-positive" (signed { baseRival.event with threshold := .weighted [[.key ⟨1,2⟩, .key ⟨1,2⟩]] } [2,3] [11]),
+   row "current-without-prior-authority" (signed { baseRival.event with eventDigest := "no-prior-authority", keys := [3], threshold := .count 1 } [3] [11]),
+   row "same-projection-different-seals" (signed { baseContext.accepted.event with extension := [42], eventDigest := "different-seals" } [1] [10]),
+   row "reordered-keys" (signed { baseRival.event with eventDigest := "reordered", keys := [3,2] } [2,3] [11]),
+   row "zero-denominator" (thresholdRival (.weighted [[.key ⟨1,0⟩]]) "zero-denominator-rival"),
+   row "weighted-positive" (signed { baseRival.event with eventDigest := "weighted-halves", threshold := .weighted [[.key ⟨1,2⟩, .key ⟨1,2⟩]] } [2,3] [11]),
    row "unverified-wire-structure" { baseRival with structureVerified := false },
    row "weighted-conjunctive-positive" (signed { baseRival.event with
-     threshold := .weighted [[.key ⟨1,1⟩], [.key ⟨1,1⟩]] } [2,3] [11]),
+     eventDigest := "conjunctive", threshold := .weighted [[.key ⟨1,1⟩], [.key ⟨1,1⟩]] } [2,3] [11]),
    row "weighted-conjunctive-missing-clause" (signed { baseRival.event with
-     threshold := .weighted [[.key ⟨1,1⟩], [.key ⟨1,1⟩]] } [2] [11]),
+     eventDigest := "conjunctive", threshold := .weighted [[.key ⟨1,1⟩], [.key ⟨1,1⟩]] } [2] [11]),
    row "nested-weight-positive" (signed { baseRival.event with
-     keys := [1,2,3,4]
+     eventDigest := "nested", keys := [1,2,3,4]
      threshold := .weighted [[.group ⟨1,2⟩ [⟨1,2⟩,⟨1,2⟩,⟨1,2⟩], .key ⟨1,2⟩]] } [1,2,4] [11]),
    row "nested-weight-inner-insufficient" (signed { baseRival.event with
-     keys := [1,2,3,4]
+     eventDigest := "nested", keys := [1,2,3,4]
      threshold := .weighted [[.group ⟨1,2⟩ [⟨1,2⟩,⟨1,2⟩,⟨1,2⟩], .key ⟨1,2⟩]] } [1,4] [11]),
    ⟨"prior-weighted-positive", 1, 1,
      { baseContext with prior.nextThreshold := .weighted [[.key ⟨1,1⟩, .key ⟨1,1⟩]] }, baseRival⟩,
    ⟨"prior-weighted-insufficient", 1, 1,
      { baseContext with prior.nextThreshold := .weighted [[.key ⟨1,2⟩, .key ⟨1,2⟩]] }, baseRival⟩,
-   row "different-prior-digest" (signed { baseRival.event with priorDigest := 51 } [2,3] [11]),
-   row "existing-witness-add-is-not-duplicated" (signed { baseContext.accepted.event with adds := [10] } [1] [10]),
-   row "duplicate-cuts" (signed { baseRival.event with cuts := [10,10] } [2,3] [11])]
+   row "different-prior-digest" (signed { baseRival.event with eventDigest := "different-prior", priorDigest := 51 } [2,3] [11]),
+   row "existing-witness-add-is-not-duplicated" (signed { baseContext.accepted.event with adds := [10], eventDigest := "existing-witness-add" } [1] [10]),
+   row "duplicate-cuts" (signed { baseRival.event with eventDigest := "duplicate-cuts", cuts := [10,10] } [2,3] [11])]
 
 def scenarioJson (scenario : Scenario) : Lean.Json :=
   Lean.Json.mkObj [("input", Lean.toJson scenario),
@@ -211,7 +212,7 @@ def comparison (aid epoch sn : Nat) (agrees : Bool := false) : Comparison :=
   let previous : Duplicity.Predecessor := ⟨aid, sn - 1, false, [aid], .count 1, []⟩
   let tip := Tip.mk aid epoch sn ⟨[[aid]], .count 1, [[aid]], .count 1, [], 0⟩
     (if epoch == 0 then none else some previous) writer
-  let rival := if agrees then writer else { writer with nextKeys := [aid + 1] }
+  let rival := if agrees then writer else { writer with nextKeys := [aid + 1], eventDigest := s!"sibling/{aid}/{sn}" }
   ⟨tip, Duplicity.signed rival [aid] []⟩
 
 end CardanoKeri.CheckpointConviction.Fixtures

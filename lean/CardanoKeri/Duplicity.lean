@@ -98,6 +98,8 @@ structure Content where
   adds : List Nat
   witnessThreshold : Nat
   extension : List Nat
+  /-- The event’s own SAID, authenticated by the signed-byte opening. -/
+  eventDigest : String
   deriving Repr, DecidableEq, BEq, Lean.ToJson, Lean.FromJson
 
 structure Signature where
@@ -160,24 +162,24 @@ def rotationValid (prior : Predecessor) (signed : SignedEvent) : Bool :=
   signingValid prior signed && receiptsValid prior signed
 
 /-- Both branches use the same authenticated prior-next commitment, their own
-thresholds and derived witnesses. Comparing content does not replace first seen. -/
+thresholds and derived witnesses. The two authenticated event digests identify the signed bodies. -/
 def duplicity (context : Context) (rival : SignedEvent) : Bool :=
   rotationValid context.prior context.accepted && rotationValid context.prior rival &&
   context.accepted.event.sn == rival.event.sn &&
-  decide (context.accepted.event ≠ rival.event)
+  decide (context.accepted.event.eventDigest ≠ rival.event.eventDigest)
 
 /-- The checkpoint target is checked in addition to the event comparison. -/
 def duplicityAt (epoch sn : Nat) (context : Context) (rival : SignedEvent) : Bool :=
   context.epoch == epoch && context.accepted.event.sn == sn && duplicity context rival
 
 /-- Given an accepted context and a rival, when duplicity holds, then both
-rotations validate, share native sequence, and differ in complete content. -/
+rotations validate, share native sequence, and have different event digests. -/
 theorem duplicity_iff (context : Context) (rival : SignedEvent) :
     duplicity context rival = true ↔
       rotationValid context.prior context.accepted = true ∧
       rotationValid context.prior rival = true ∧
       context.accepted.event.sn = rival.event.sn ∧
-      context.accepted.event ≠ rival.event := by
+      context.accepted.event.eventDigest ≠ rival.event.eventDigest := by
   simp [duplicity, Bool.and_eq_true, and_assoc]
 
 /-- Given any pair at sequence zero, when it is offered to the checkpoint,
@@ -195,7 +197,7 @@ theorem duplicityAt_iff (epoch sn : Nat) (context : Context) (rival : SignedEven
       rotationValid context.prior context.accepted = true ∧
       rotationValid context.prior rival = true ∧
       context.accepted.event.sn = rival.event.sn ∧
-      context.accepted.event ≠ rival.event := by
+      context.accepted.event.eventDigest ≠ rival.event.eventDigest := by
   simp [duplicityAt, duplicity_iff, Bool.and_eq_true, and_assoc]
 
 end CardanoKeri.Duplicity

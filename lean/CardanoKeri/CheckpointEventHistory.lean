@@ -46,6 +46,70 @@ def inceptionWrites (aid : Nat) (event : SignedEvent) (witnesses : List Nat) : B
     (if e.witnessThreshold == 0 then event.receipts.isEmpty
      else decide (e.witnessThreshold ≤ (witnesses.filter receipts.contains).length))
 
+/-- Given authenticated openings for the installed writer and the presented
+rival, when the KERI digest has no collision on these two signed byte bodies,
+digest inequality holds exactly when their bytes differ. -/
+theorem opened_digest_conflict_iff_signed_bytes_differ
+    (digestOf : ByteArray → String) (writer rival : Content) (writerBytes rivalBytes : ByteArray)
+    (writerOpening : writer.eventDigest = digestOf writerBytes)
+    (rivalOpening : rival.eventDigest = digestOf rivalBytes)
+    (collisionResistance : digestOf writerBytes = digestOf rivalBytes → writerBytes = rivalBytes) :
+    writer.eventDigest ≠ rival.eventDigest ↔ writerBytes ≠ rivalBytes := by
+  rw [writerOpening, rivalOpening]
+  exact ⟨fun different equal => different (congrArg digestOf equal),
+    fun different equal => different (collisionResistance equal)⟩
+
+/-- Equality after erasing the new field is exactly equality of the twelve
+decoded fields used by the published comparison, including the extension. -/
+def priorComparisonContent (e : Content) : Content := { e with eventDigest := "" }
+
+/-- Given a rotated tip and an otherwise valid same-position rival, when the
+same deterministic old decoder opens each signed body and each own SAID opens
+its body without a collision on this pair, the comparison retains every old
+conflict. Its only additional conflicts are different signed bodies with the
+same old decoded content. -/
+theorem accepts_iff_old_conflict_or_collapsed_bodies
+    (tip : CheckpointConviction.Tip) (rival : SignedEvent) (prior : Predecessor)
+    (previous : tip.previous = some prior) (rotated : tip.epoch ≠ 0)
+    (named : tip.aid = rival.event.aid) (position : tip.sn = rival.event.sn)
+    (valid : rotationValid prior rival = true)
+    (decode : ByteArray → Option Content) (digestOf : ByteArray → String)
+    (wb rb : ByteArray)
+    (decodedWriter : decode wb = some (priorComparisonContent tip.writer))
+    (decodedRival : decode rb = some (priorComparisonContent rival.event))
+    (writerOpening : tip.writer.eventDigest = digestOf wb)
+    (rivalOpening : rival.event.eventDigest = digestOf rb)
+    (collisionResistance : digestOf wb = digestOf rb → wb = rb) :
+    CheckpointConviction.accepts tip rival = true ↔
+      priorComparisonContent tip.writer ≠ priorComparisonContent rival.event ∨
+      (priorComparisonContent tip.writer = priorComparisonContent rival.event ∧ wb ≠ rb) := by
+  have identical (h : wb = rb) : priorComparisonContent tip.writer = priorComparisonContent rival.event :=
+    Option.some.inj (decodedWriter.symm.trans ((congrArg decode h).trans decodedRival))
+  rw [CheckpointConviction.accepts_iff]
+  simp only [previous, Option.some.injEq, exists_eq_left', named, position, valid, true_and]
+  rw [opened_digest_conflict_iff_signed_bytes_differ digestOf _ _ wb rb writerOpening rivalOpening collisionResistance]
+  constructor
+  · intro different
+    by_cases eq : priorComparisonContent tip.writer = priorComparisonContent rival.event
+    · exact Or.inr ⟨eq, different.2⟩
+    · exact Or.inl eq
+  · exact fun h => ⟨rotated, h.elim (fun ne same => ne (identical same)) And.right⟩
+
+/-- For a faithful old opening of this pair, equal decoded content determines
+equal bytes. In that case the old content test and the digest test agree. -/
+theorem digest_conflict_iff_faithful_old_conflict
+    (writer rival : Content) (wb rb : ByteArray)
+    (decode : ByteArray → Option Content) (digestOf : ByteArray → String)
+    (decodedWriter : decode wb = some (priorComparisonContent writer))
+    (decodedRival : decode rb = some (priorComparisonContent rival))
+    (faithful : decode wb = decode rb → wb = rb)
+    (writerOpening : writer.eventDigest = digestOf wb) (rivalOpening : rival.eventDigest = digestOf rb)
+    (collisionResistance : digestOf wb = digestOf rb → wb = rb) :
+    writer.eventDigest ≠ rival.eventDigest ↔ priorComparisonContent writer ≠ priorComparisonContent rival := by
+  rw [opened_digest_conflict_iff_signed_bytes_differ digestOf _ _ wb rb writerOpening rivalOpening collisionResistance]
+  exact ⟨fun different same => different (faithful (decodedWriter.trans ((congrArg some same).trans decodedRival.symm))),
+    fun different same => different (Option.some.inj (decodedWriter.symm.trans ((congrArg decode same).trans decodedRival)))⟩
+
 /-- The controller's registration starts the history. A relay of a rotation
 supplies the successor event over the stored predecessor. The advance checks
 the two thresholds, increasing sequence and witness continuity
@@ -64,7 +128,7 @@ theorem stored_rotation_valid {aid : Nat} {previous : EventHistory} {event : Sig
     previous.authenticated aid = true ∧ rotationValid previous.predecessor event = true :=
   by simpa only [EventHistory.authenticated, Bool.and_eq_true] using accepted
 
-/-- Given an authenticated rotation and different rival content at the same
+/-- Given an authenticated rotation and a different rival event digest at the same
 native sequence, when the two-event definition is evaluated for that stored
 writer, then duplicity is equivalent to the rival's validity against the
 same predecessor. -/
@@ -72,7 +136,7 @@ theorem rotated_duplicity_iff_rival_valid {aid : Nat} {previous : EventHistory}
     {writer rival : SignedEvent}
     (accepted : (EventHistory.rotation previous writer).authenticated aid = true)
     (samePosition : writer.event.sn = rival.event.sn)
-    (conflict : writer.event ≠ rival.event) :
+    (conflict : writer.event.eventDigest ≠ rival.event.eventDigest) :
     duplicityAt (previous.epoch + 1) writer.event.sn
       ⟨previous.epoch + 1, previous.predecessor, writer⟩ rival = true ↔
       rotationValid previous.predecessor rival = true := by

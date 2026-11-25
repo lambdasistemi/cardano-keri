@@ -584,7 +584,7 @@ theorem rotated_writer_accepts_with_encoding {p env s aid live previous writer r
     (reach : SysReach p env s) (present : s.states aid = .present live)
     (stored : s.writers aid = some (.rotation previous writer))
     (valid : Duplicity.rotationValid previous.predecessor rival = true)
-    (same : writer.event.sn = rival.event.sn) (conflict : writer.event ≠ rival.event)
+    (same : writer.event.sn = rival.event.sn) (conflict : writer.event.eventDigest ≠ rival.event.eventDigest)
     {reads : KeyReads} (encoding : KeyEncoding reads) :
     let tip := (EventHistory.rotation previous writer).datum.tip encoding live.epoch
     (s.writerData aid).any (fun d => reads.matchesDatum aid live.epoch d tip) = true ∧
@@ -614,7 +614,7 @@ theorem reachable_conflict_has_accepted_comparison {p env s aid live previous wr
     (reach : SysReach p env s) (present : s.states aid = .present live)
     (stored : s.writers aid = some (.rotation previous writer))
     (valid : Duplicity.rotationValid previous.predecessor rival = true)
-    (same : writer.event.sn = rival.event.sn) (conflict : writer.event ≠ rival.event) :
+    (same : writer.event.sn = rival.event.sn) (conflict : writer.event.eventDigest ≠ rival.event.eventDigest) :
     ∃ tip, (s.writerData aid).any (fun d => KeyReads.symbolic.matchesDatum aid live.epoch d tip) = true ∧
       (CheckpointConviction.Comparison.mk tip rival).acceptsAt live.epoch live.sn = true :=
   ⟨_, rotated_writer_accepts_with_encoding reach present stored valid same conflict KeyEncoding.symbolic⟩
@@ -626,7 +626,7 @@ theorem presented_conflict_passes_system_comparison {p env s aid live previous w
     (reach : SysReach p env s) (present : s.states aid = .present live)
     (stored : s.writers aid = some (.rotation previous writer))
     (valid : Duplicity.rotationValid previous.predecessor rival = true)
-    (same : writer.event.sn = rival.event.sn) (conflict : writer.event ≠ rival.event)
+    (same : writer.event.sn = rival.event.sn) (conflict : writer.event.eventDigest ≠ rival.event.eventDigest)
     (encoding : KeyEncoding (env aid).keyReads) (output : Singular.OutRef) :
     let tip := (EventHistory.rotation previous writer).datum.tip encoding live.epoch
     let observed : Registry.Conviction := ⟨output, ⟨tip, rival⟩⟩

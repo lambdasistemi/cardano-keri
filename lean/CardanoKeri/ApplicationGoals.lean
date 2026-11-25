@@ -651,7 +651,7 @@ theorem booking_inversion (i : Interpretation) (env : Env) (rp : CardanoKeri.Reg
       data.processDeadline = data.bookedAt + c.parameters.processTime ∧
       SingularApplicationHeld.Assets.mintQty o.assets
         (registrationAsset i.hash i.code release data) = 1 ∧
-      env.inception data.key = true ∧
+      SingularApplicationHeld.Assets.mintQty o.assets (env.bookingAsset release output.reference.index data) = 1 ∧
       initialStateDatum i rp cp data data.initialDatum = true := by
   unfold bookRegistration at ok
   split at ok
@@ -677,7 +677,7 @@ theorem booking_refuses_missing_inception (i : Interpretation) (env : Env)
     (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
     (release : PublishedRelease) (o : Observation) {output : ObservedOutput}
     {data : RegistrationData} (hd : decoded i.decode output = some (.registration data))
-    (missing : env.inception data.key = false) :
+    (missing : SingularApplicationHeld.Assets.mintQty o.assets (env.bookingAsset release output.reference.index data) ≠ 1) :
     bookRegistration i env rp cp release o output = false := by
   cases h : bookRegistration i env rp cp release o output
   · rfl
@@ -685,8 +685,7 @@ theorem booking_refuses_missing_inception (i : Interpretation) (env : Env)
       booking_inversion i env rp cp release o h
     rw [hd] at hd'
     cases hd'
-    rw [missing] at evidence
-    contradiction
+    exact (missing evidence).elim
 
 /-- **A booking names only a registry of `state(A_keri)`.**
 Given a request output decoding to a registration that names a registry whose
@@ -1901,15 +1900,37 @@ theorem accepted_booking_has_inception (i : Interpretation) (env : Env)
     {data : RegistrationData} (booked : Action.bookRegistration index ∈ o.actions)
     (ho : o.outputs[index]? = some output)
     (hd : decoded i.decode output = some (.registration data)) :
-    env.inception data.key = true := by
+    SingularApplicationHeld.Assets.mintQty o.assets (env.bookingAsset release index data) = 1 := by
   simp only [accepted, Bool.and_eq_true] at ok
   have aok := List.all_eq_true.mp ok.1.1.1.2 _ booked
-  simp only [action, ho] at aok
+  simp only [action, ho, Bool.and_eq_true, beq_iff_eq] at aok
   obtain ⟨d, _, hd', _, _, _, _, _, _, _, _, _, evidence, _⟩ :=
-    booking_inversion i env rp cp release o aok
+    booking_inversion i env rp cp release o aok.2
   rw [hd] at hd'
   cases hd'
-  exact evidence
+  simpa [aok.1] using evidence
+
+/-- Given one accepted transaction booking two distinct output positions,
+when both requests are decoded, then both precisely named attestations occur
+at +1 in its mint field. Under collision freedom for these two preimages the
+assets are distinct even when the requests have identical contents. -/
+theorem two_bookings_need_two_attestations {i env rp cp release o}
+    (ok : accepted i env rp cp release o = true) {a b : Nat} (distinct : a ≠ b)
+    {x y : ObservedOutput} {dx dy : RegistrationData}
+    (ax : Action.bookRegistration a ∈ o.actions) (by' : Action.bookRegistration b ∈ o.actions)
+    (hx : o.outputs[a]? = some x) (hy : o.outputs[b]? = some y)
+    (rx : decoded i.decode x = some (.registration dx)) (ry : decoded i.decode y = some (.registration dy))
+    (names : Attestation.FaithfulNames env.bookingPolicy
+      (.book release.applicationPolicy a dx.initialDatum dx.deposit)
+      (.book release.applicationPolicy b dy.initialDatum dy.deposit)) :
+    Assets.mintQty o.assets (env.bookingAsset release a dx) = 1 ∧
+    Assets.mintQty o.assets (env.bookingAsset release b dy) = 1 ∧
+    env.bookingAsset release a dx ≠ env.bookingAsset release b dy := by
+  refine ⟨accepted_booking_has_inception i env rp cp release o ok ax hx rx,
+    accepted_booking_has_inception i env rp cp release o ok by' hy ry, ?_⟩
+  intro equality
+  have same := names (congrArg TokenId.name equality)
+  exact distinct (Attestation.Claim.book.inj same).2.1
 
 /-- **No registration approval without inception evidence.**
 Given a transaction the KERI application accepts that mints a positive
@@ -1935,7 +1956,7 @@ theorem registration_approval_requires_inception (i : Interpretation) (env : Env
       decoded i.decode output = some (.registration booked) ∧
       booked.registry = data.registry ∧ booked.key = data.key ∧
       booked.holdingAddress = data.holdingAddress ∧ booked.initialDatum = data.initialDatum ∧
-      booked.deposit = data.deposit ∧ env.inception data.key = true := by
+      booked.deposit = data.deposit ∧ SingularApplicationHeld.Assets.mintQty o.assets (env.bookingAsset release index booked) = 1 := by
   have justified := accepted_mint_is_justified i env rp cp release o ok
     (asset := registrationAsset i.hash i.code release data) rfl
   rw [justified] at minted
@@ -1965,7 +1986,7 @@ theorem registration_approval_requires_inception (i : Interpretation) (env : Env
         obtain ⟨registry, key, address, datum, deposit⟩ := pre
         have evidence := accepted_booking_has_inception i env rp cp release o ok amem ho hd
         exact ⟨index, output, booked, amem, ho, hd, registry, key, address, datum, deposit,
-          key ▸ evidence⟩
+          evidence⟩
       · simp at emem
     · simp at emem
   | bookTermination ref index r k =>

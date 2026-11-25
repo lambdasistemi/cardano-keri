@@ -7,7 +7,9 @@ open Lean CardanoKeri.Registry CardanoKeri.Registry.Scenarios CardanoKeri.Regist
 namespace DuplicateStory
 
 def evidence : EnvTable := {
-  inception := [11]
+  bookings := CardanoKeri.Attestation.Fixtures.bookingTransactions [⟨100, 0, 711, 14⟩, ⟨300, 0, 711, 14⟩]
+  convictionTransactions := ([11] : List Nat).map (fun aid =>
+    ⟨⟨105 + (aid - 11), 0⟩, CardanoKeri.Attestation.Fixtures.convictionSpend ⟨103 + (aid - 11), 0⟩⟩)
   convictions := [11].map (fun aid => CardanoKeri.Registry.Scenarios.convictionFixture aid 1 1) }
 
 def trace : Except String (List Json) := do

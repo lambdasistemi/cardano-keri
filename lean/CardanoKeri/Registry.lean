@@ -1,5 +1,6 @@
 import Singular.Statements.FoldAccounting
 import Singular.Statements.FoldTermination
+import CardanoKeri.Attestation
 import CardanoKeri.PendingSpend
 import CardanoKeri.CheckpointConviction
 
@@ -28,13 +29,23 @@ structure Conviction where
 
 structure Env where
   -- The registration booker supplies the inception to the application mint.
-  inception : Nat → Bool
+  bookingPolicy : Attestation.Policy
+  bookingTx : Nat → Option SingularApplicationHeld.Assets.TxView
   -- For the registered identifier, read its conviction transaction and output.
   -- The convictor mints the attestation in that same spend.
   presentedConviction : Nat → Option Conviction
-  /-- The convictor minted the conviction attestation for this exact
-  transaction output and its decoded claim. -/
-  attestationMinted : Conviction → Bool
+  convictionReads : Attestation.ConvictionReads
+
+/-- The booker's application policy consumes an inception attestation named for
+the indexed request, its initial datum and its committed carrier deposit. -/
+def Env.inception (env : Env) (app : Nat) (b : Singular.RegistrationBooking) : Bool :=
+  match env.bookingTx b.request.reference.tx, b.request.datum with
+  | some tx, some datum => env.bookingPolicy.minted tx
+      (.book app b.request.reference.index datum b.request.carrierAda)
+  | _, _ => false
+
+def Env.attestationMinted (env : Env) (observed : Conviction) : Bool :=
+  env.convictionReads.attested observed.output
 
 def Env.conviction (env : Env) (aid : Nat) : Option Conviction :=
   (env.presentedConviction aid).filter env.attestationMinted
@@ -173,7 +184,7 @@ instance (p : Params) (b : Singular.RegistrationBooking) :
 def bookRegistration (p : Params) (env : Env) (s : Sys)
     (b : Singular.RegistrationBooking) : Except String Result := do
   if ¬ registrationShape p b then throw "keri-registration-value-mismatch"
-  if !env.inception b.request.key then throw "keri-inception-refused"
+  if !env.inception s.config.applicationPolicy b then throw "keri-inception-refused"
   let world ← Singular.book s.toWorld b
   let after := { s with registrations := b :: s.registrations }
   if after.toWorld ≠ world then throw "keri-registration-reconstruction-mismatch"

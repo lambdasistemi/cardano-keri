@@ -4,14 +4,14 @@ A theorem about an accepted transaction can depend on evidence that Lean treats 
 
 | Model input | Who uses it and where |
 | --- | --- |
-| `Application.Env.inception` and `Registry.Env.inception` | The controller presents the inception event with signatures and receipts in the registration booking. The application mint admits the initial datum before issuing its approval. The Singular folder reads that approval and the public holding instructions. |
+| Booking attestation in the application and registry | The controller presents the inception event with signatures and receipts in the registration booking. The booking evidence policy checks these in the controller’s booking transaction. The application mint requires its +1 asset for the request index, initial datum and committed deposit before issuing the approval. The Singular folder reads that approval and the public holding instructions. |
 | `Application.Interpretation.hash`, `code`, `keyOf` | Genesis derives the registry identity from the deployer's seed. The application mint derives approval names during booking and their burns during processing or return. Each policy computes its names over the transaction's preimages. |
 | `decode`, `decodeConfiguration`, `decodeCheckpoint`, `refundTo` | The controller's booking mint decodes the request, referenced configuration and initial datum, including the refund address. At termination booking the booker spends the pending holding and the policy reads its key. The folder and returner spend public requests and the application verifies their outputs. |
 | `Registry.Params` and `Checkpoint.Params` | The deployer fixes the amounts in the published scripts. Registration checks both positive checkpoint bonds, the carrier, the chosen pool and the minimum tip. Termination booking checks the smaller request carrier and its funding. A relay or freeze spends the checkpoint under the premium and bond schedule. The relying party's consuming transaction checks the waiting period against its validity time. Positivity and funding bounds restrict the modeled deployment. |
-| `SystemEnv`, local `rotationTo` | The party submitting a keep or deposit rotation, or a hunter submitting a freeze, supplies the later witnessed rotation for the identifier of the input. The checkpoint observer checks its event, controller signatures and witness receipts. Public witnesses are a source the submitting party may consult itself. |
-| `depositAuthorized`, `Observed`, `ReadsDeposit`, `Verify` | The scoped lifecycle lookup is a Boolean. Its concrete correspondence is a hypothesis of `ReadsDeposit`. At the deposit spend the successor keys sign the deposit intent. The observer derives the identifier, spent reference, network, policy, sequence, epoch and amount from the transaction and validates the indexed signatures. The transfer-refusal theorem requires an actual contributing signature and its stated threshold assumptions. |
+| `SystemEnv`, local `rotationTo` | The party submitting a keep or deposit rotation, or a hunter submitting a freeze, supplies the later witnessed rotation for the identifier of the input. The advance policy checks the event, controller signatures and witness receipts in that spend. Keep and deposit require the same advance-kind asset for the spent output. Freeze requires the freeze kind under the same policy. Public witnesses are a source the submitting party may consult itself. |
+| `depositAuthorized`, `Observed`, `ReadsDeposit`, `Verify` | The scoped lifecycle lookup is a Boolean. Its concrete correspondence is a hypothesis of `ReadsDeposit`. At the deposit spend the successor keys sign the deposit intent. The checkpoint spending script verifies these signatures separately from the advance policy. A valid advance token alone cannot authorize a deposit. The checkpoint spending script derives the identifier, spent reference, network, policy, sequence, epoch and amount from the transaction and validates the indexed signatures. The transfer-refusal theorem requires an actual contributing signature and its stated threshold assumptions. |
 | `quorum` for poison | The scoped lifecycle lookup is a Boolean. In the modeled poison spend the controller presents the current-key quorum for the spent identifier. The current validator has no poison spend. |
-| Conviction inputs and `attestationMinted` | The convictor presents one signed rival and mints the conviction attestation in the transaction spending the checkpoint. The checkpoint policy requires the mint for the conviction kind, its script and the specific output and claim of this spend (#576). The ledger supplies the mint observation. The two environments select that observation by its transaction and output index. The signature results, key-digest openings, binding to complete event bytes and authentication of the spent writer are technical inputs. The predicate checks the rival’s own signing and receipt rules against the previous commitments carried in the spent datum. |
+| Conviction enforcement and entitlement | The convictor supplies the signed rival and the mature commitment in the transaction spending the checkpoint. The enforcement policy verifies the rival and the entitlement policy verifies the reservation. The checkpoint requires +1 under each distinct policy, with the conviction kind, its relying script and the spent input reference. The custody history binds the decoded read for the indexed pending output to the actual spend's input, script and mint. |
 | Commitment opening and reveal | The opener submits the marker, bounded opening interval, deposit and commitment. The commitment program checks the opening. The revealer supplies the opening data and nonce, signs and presents the commitment input, and the conviction transaction checks the applicable window and bindings. An expired commitment is spent by the sweeper. |
 | Application deployment and public transaction views | The deployer publishes the release, seed and configuration. The controller, folder or returner submits its own funding and transaction. The ledger supplies spent and referenced outputs, validity bounds, mint, fee, donation and signatures to the validators. For the fold income result, the folder's ordinary input and output destinations must actually satisfy the named routing hypotheses. |
 | Consumer context, interpretation and environment | At a consuming transaction the relying contract fixes the network, release, registry seed, AID and checkpoint credential, derives the asset and checks the reference output and decoded datum. For an independent read there is no transaction. The reader must authenticate the expected deployment, resolve its chain view and apply its own freshness requirement. |
@@ -19,10 +19,9 @@ A theorem about an accepted transaction can depend on evidence that Lean treats 
 | Realized checkpoint inputs and public history | The termination booker consumes the pending carrier. A theorem about what preceded it requires the reader to establish that the input belongs to the proved history. Receipt replay checks the supplied prefix and actual model steps. It cannot establish the completeness or freshness of a provider's ledger view. |
 | Seal walk, TEL digest, delegation event digest and credential policy | In the statements models the presenter supplies the event and receipts for the consuming seal walk. A delegation certificate minter supplies the child event and the approval walk. At credential admission the presenter supplies the chain and seal walks, and the verifier supplies its root, schemas, link predicates, depth, witness floor and freshness policy. A relying-party read has no transaction and the reader establishes this context independently. |
 
-The registration observer reads the signed inception and initial witness list from
+The booking evidence policy reads the signed inception and initial witness list from
 the same admitted datum. `Env.inceptionWriter aid datum` models that joint read
-(`checkpoint/observer.ak` 65–111 and `checkpoint/registration.ak` 310–352,
-363–410). At an advance, `Env.rotationWriter` reads the proposed signed event
+(the original registration predicate is in `checkpoint/observer.ak` 65–111 and `checkpoint/registration.ak` 310–352, 363–410). At an advance, `Env.rotationWriter` reads the proposed signed event
 for the spent identifier and position (`checkpoint/observer.ak` 121–158,
 214–231). The system computes the preceding keys and witnesses from the installed
 history. Signature verification, opening key digests, binding witness data to
@@ -53,14 +52,46 @@ one-key live examples occupy 220 bytes at inception and 313 after either of
 two rotations. The grouped example with 64 seal bytes occupies 412. List
 lengths are variable. Transaction size and validator budgets remain unmeasured.
 
-At conviction, `Env.convictionSpend` requires the attestation minted for the
-observed output and comparison. A prior holding supplies no mint at use.
-In the connected example, transaction 105 has an empty mint field and the
-checkpoint environment supplies the abstract attestation for every claim.
-Binding that predicate to the ledger mint field remains open under #576.
-`rotated_conviction_is_duplicity` concludes duplicity for the actual rival.
-`inception_conviction_refused` establishes refusal for a reachable inception in
-Lean. Validator evidence at a never-rotated checkpoint is still outstanding.
+## Mint observations
+
+`Attestation.NetMintField` names the ledger premise that each asset has one net
+quantity. The public Singular transaction view represents the field as a list.
+`Assets.mintQty` sums the entries for the exact policy and name. The relying
+script requires the sum to be +1, so a canceled mint and burn cannot serve.
+`Attestation.InvokesMintPolicies` records that a nonzero net quantity invokes
+that policy in the same transaction. Holding an asset in an input, in a
+continuing output or in change supplies no mint. Burning a token later requires
+no new signature or receipt evidence. A cleanup that only spends ordinary
+holdings and creates ordinary change retains every checkpoint UTxO.
+
+Each relying script is parameterized by its published attestation policy.
+The booking claim binds the application policy, output index in this
+transaction, initial datum and committed lovelace. The advance, freeze and
+conviction claims bind their kind, the relying checkpoint script and the
+reference of the input actually consumed. The pending output index selects the
+conviction transaction's observation. Including the creating transaction's
+own hash in a booking claim is unnecessary. The claim digest and the distinct
+policy identifiers belong to the deployment. `FaithfulNames` states the
+collision assumption for the particular two preimages being distinguished.
+
+`Policy.authorizes` takes the evidence verification for this transaction and
+claim as an input. For booking the controller supplies inception signatures and
+receipts to the booking policy. For advance the relayer, or the hunter for a
+freeze, supplies the witnessed rotation to the advance policy. For deposit the
+checkpoint additionally verifies the deposit intent signed by the successor
+keys. The convictor supplies the rival and the commitment to the separate
+enforcement and entitlement policies. A positive mint requires a verified
+claim, a nonempty name and exactly +1. The burn branch permits only negative
+entries of its policy without evidence. The earlier hash proof in a booking
+has its own lifetime.
+
+In the connected custody example, transaction 105 consumes 103#0 and creates
+the pending checkpoint at 105#0. Its mint contains both conviction attestations
+and both appear in ordinary change. This is a checked ledger observation inside
+Lean. Production policy execution, faithful bytes, the deployed scripts and a
+settled local-chain conviction remain implementation obligations. The
+never-rotated refusal is proved in Lean; on-chain validator evidence remains
+outstanding.
 
 For the custody proof, the ledger supplies the spending inputs, transaction
 identity, output indices and UTxO changes at every observed step. A reader

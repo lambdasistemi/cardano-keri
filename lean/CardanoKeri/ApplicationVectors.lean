@@ -76,7 +76,13 @@ def parameters : ApplicationParameters :=
   { registrationCost := 2, minimumTip := 1, processTime := 5, retractTime := 0, bookingWidth := 1 }
 
 def rp : CardanoKeri.Registry.Params := CardanoKeri.Registry.Scenarios.p
-def env : Env := ⟨fun _ => true⟩
+/-- Registration claim bytes contain the nested initial datum itself. -/
+def env : Env := ⟨{ id := ofBytes (scriptHash 20), digest := fun
+  | .book app index raw deposit =>
+    pack (blake2b256 (constr 0 [bstr (CardanoKeri.ConsumerIdentity.Bytes.utf8
+      "cardano-keri/book-registration/v1"), bstr (unpack app),
+      CheckpointDatum.cbor (.int index), unpack raw, CheckpointDatum.cbor (.int deposit)]))
+  | .spend .. => 0 }⟩
 
 /-- The checkpoint parameters: the registry's deposit 10 is the checkpoint
 deposit 6 plus the freeze bond 4; one premium is 1. -/
@@ -231,14 +237,6 @@ structure Case where
   kind : String
   observation : Observation
 
-/-- The cases in which the key of the fixture AID has no inception evidence. -/
-def withoutEvidence : List String :=
-  ["fold-without-inception-evidence", "booking-without-inception-evidence",
-   "return-without-inception-evidence"]
-
-/-- Whether the key of the fixture AID has its inception evidence in a case. -/
-def Case.evidence (c : Case) : Bool := !withoutEvidence.contains c.id
-
 /-- The cases judged under checkpoint parameters whose own floor is lower than
 the registry's: deposit 4, freeze bond 4 and one premium, 13 with the minimum
 ADA. They isolate the registry's floor from the initial state's. -/
@@ -251,8 +249,10 @@ def Case.checkpoint (c : Case) : CardanoKeri.Checkpoint.Params :=
   else cp
 
 def booking (raw lovelace : Nat) (mint : Int := 1) (references : Bool := true)
-    (interval : Interval := ⟨9, 10⟩) (record : Nat := 8001) : Observation :=
-  { assets := view [] [(approvalOf raw, mint)] [release.applicationPolicy],
+    (interval : Interval := ⟨9, 10⟩) (record : Nat := 8001) (attest := true) : Observation :=
+  let att := env.bookingAsset release 0 (dataOf raw)
+  { assets := view [] ([(approvalOf raw, mint)] ++ (if attest then [(att, 1)] else []))
+      ([release.applicationPolicy] ++ (if attest then [att.policy] else [])),
     inputs := [], outputs := [request raw lovelace],
     referenceInputs := if references then [⟨50, 0⟩] else [],
     referenceOutputs := [configuration registry record, configuration foreignRegistry],
@@ -419,7 +419,9 @@ def bookingTwice : Observation :=
 /-- Two request outputs of one payload, both booked, two approvals minted. -/
 def bookingOnePayloadTwice : Observation :=
   { (booking 9001 18 (mint := 2)) with
-    outputs := [request 9001 18, request 9001 18],
+    assets := view [] [(approvalOf 9001, 2), (env.bookingAsset release 0 (dataOf 9001), 1),
+      (env.bookingAsset release 1 (dataOf 9001), 1)] [release.applicationPolicy, env.bookingPolicy.id],
+    outputs := [request 9001 18, { request 9001 18 with reference := ⟨60, 1⟩ }],
     actions := [.bookRegistration 0, .bookRegistration 1] }
 
 /-- Two requests of one payload folded into one holding, both approvals burned. -/
@@ -508,7 +510,7 @@ def cases : List Case := [
   ⟨"fold-without-inception-evidence", "the fold at the deadline when the key has no inception evidence: a fold reads none, accepted",
     "fold", fold 15⟩,
   ⟨"booking-without-inception-evidence", "the booking of a key that has no inception evidence: refused",
-    "booking", booking 9001 18⟩,
+    "booking", booking 9001 18 (attest := false)⟩,
   ⟨"booking-advanced-sequence", "the request commits a checkpoint datum at sequence number 7: refused",
     "booking", booking 9011 18⟩,
   ⟨"booking-advanced-epoch", "the committed datum is at epoch 3: refused",
@@ -594,13 +596,17 @@ def cases : List Case := [
 def hexOf (n : Nat) : String := toHex (unpack n)
 
 def verdict (c : Case) : String :=
-  if accepted i ⟨fun _ => c.evidence⟩ rp c.checkpoint release c.observation then "accepted" else "refused"
+  if accepted i env rp c.checkpoint release c.observation then "accepted" else "refused"
 
 def intervalJson (x : Interval) : Json :=
   Json.mkObj [("lower", toJson x.lower), ("upper", toJson x.upper)]
 
 def outputJson (x : ObservedOutput) : Json :=
   Json.mkObj [("address", toJson (hexOf x.credential)), ("lovelace", toJson x.lovelace)]
+
+def mintJson (o : Observation) : Json :=
+  Json.arr (o.assets.mint.map fun (t, q) => Json.mkObj [("policy", toJson (hexOf t.policy)),
+    ("name", toJson (hexOf t.name)), ("quantity", toJson q)]).toArray
 
 def row (c : Case) : Json :=
   let o := c.observation
@@ -609,7 +615,7 @@ def row (c : Case) : Json :=
     ("inputs", Json.arr (o.inputs.map outputJson).toArray),
     ("outputs", Json.arr (o.outputs.map outputJson).toArray),
     ("referenced", toJson (o.referenceInputs.length)),
-    ("inceptionEvidence", toJson c.evidence),
+    ("mint", mintJson o),
     ("verdict", toJson (verdict c))]
 
 /-- The approval of an AID, with every byte it is derived from. -/
@@ -653,10 +659,6 @@ def releaseCases : List ReleaseCase := [
       assets := view [⟨90, 0⟩] [(otherTerminationApproval, 1)] [release.applicationPolicy] }⟩,
   ⟨"release-live-checkpoint", "a live checkpoint, with the termination approval of its key minted: kept",
     convicted (datum := initialRaw aidE), terminationBooking⟩]
-
-def mintJson (o : Observation) : Json :=
-  Json.arr (o.assets.mint.map fun (t, q) => Json.mkObj [("policy", toJson (hexOf t.policy)),
-    ("name", toJson (hexOf t.name)), ("quantity", toJson q)]).toArray
 
 def releaseRow (c : ReleaseCase) : Json :=
   let datum := match c.input.datum with | .application raw => hexOf raw | _ => ""

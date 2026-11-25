@@ -1,3 +1,4 @@
+import CardanoKeri.AttestationFixtures
 import Lean
 import CardanoKeri.Checkpoint
 import CardanoKeri.DuplicityExamples
@@ -76,15 +77,39 @@ structure EnvTable where
   duplicityAt : List (Nat × Nat)
   writers : WriterTable := {}
 
-def EnvTable.toEnv (t : EnvTable) (aid : Nat := 0) : Env where
+structure AdvanceObservation where
+  kind : Attestation.Change
+  epoch : Nat
+  sn : Nat
+  next : Nat
+  observation : Attestation.Spend
+  deriving ToJson, FromJson
+
+structure MintTable where
+  advances : List AdvanceObservation
+  convictions : List Attestation.Production
+  deriving ToJson, FromJson
+
+/-- Expand the scenario's finite evidence positions into explicit sample
+transactions. The interpreter can run against any supplied mint table. -/
+def EnvTable.sampleTransactions (t : EnvTable) (aid : Nat := 0) : MintTable :=
+  let advances := t.rotationTo.flatMap fun (epoch, sn, next) =>
+    [Attestation.Change.advance, .freeze].map fun kind =>
+      let ref : Singular.OutRef := if epoch == 0 then ⟨102, 1⟩ else ⟨102 + epoch, 0⟩
+      (⟨kind, epoch, sn, next, Attestation.Fixtures.advanceSpend kind ref⟩ : AdvanceObservation)
+  let convictions : List Attestation.Production := if t.duplicityAt.isEmpty then [] else
+    [⟨⟨105 + (aid - 11), 0⟩, Attestation.Fixtures.convictionSpend ⟨103 + (aid - 11), 0⟩⟩]
+  ⟨advances, convictions⟩
+
+def EnvTable.read (t : EnvTable) (mints : MintTable) (aid : Nat := 0) : Env where
   keyReads := ⟨(fun | [key] => some key | _ => none), (fun | [key] => some key | _ => none)⟩
-  attestationMinted := fun observed =>
-    t.duplicityAt.any fun (epoch, sn) =>
-      decide (observed = ⟨⟨105 + (aid - 11), 0⟩,
-        CardanoKeri.CheckpointConviction.Fixtures.comparison aid epoch sn⟩)
+  convictionReads := ⟨Attestation.Fixtures.policies, fun out =>
+    (mints.convictions.find? (·.output == out)).map (·.observation)⟩
   presentedSpend := fun e sn => if t.duplicityAt.contains (e, sn) then
     some ⟨⟨105 + (aid - 11), 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison aid e sn⟩ else none
-  rotationTo := fun e sn sn' => t.rotationTo.contains (e, sn, sn')
+  advanceReads := ⟨111, Attestation.Fixtures.advancePolicy, fun kind e sn next =>
+    (mints.advances.find? (fun row => decide (row.kind = kind) &&
+      row.epoch == e && row.sn == sn && row.next == next)).map (·.observation)⟩
   depositAuthorized := fun e => t.depositAuthorized.contains e
   quorum := fun e => t.quorum.contains e
   inceptionWriter := fun aid datum => do
@@ -99,12 +124,17 @@ def EnvTable.toEnv (t : EnvTable) (aid : Nat := 0) : Env where
   convictionRival := fun e sn =>
     if t.duplicityAt.contains (e, sn) then some (CardanoKeri.Duplicity.fixture e sn).2 else none
 
-instance : ToJson EnvTable where
-  toJson t := Json.mkObj [
+/-- Evaluate the explicit transactions constructed for a fixture. -/
+def EnvTable.toEnv (t : EnvTable) (aid : Nat := 0) : Env := t.read (t.sampleTransactions aid) aid
+
+def EnvTable.toWire (t : EnvTable) (aid : Nat := 0) : Json := Json.mkObj [
+    ("mintTransactions", toJson (t.sampleTransactions aid)),
     ("rotationTo", toJson (t.rotationTo.map fun (e, sn, sn') => [e, sn, sn'])),
     ("depositAuthorized", toJson (t.depositAuthorized.map fun e => [e])),
     ("quorum", toJson (t.quorum.map fun e => [e])),
     ("duplicityAt", toJson (t.duplicityAt.map fun (e, sn) => [e, sn]))]
+
+instance : ToJson EnvTable := ⟨fun t => t.toWire⟩
 
 /-- An evidence row `{kind: [args]}` of a scenario file, added to or removed from a table. -/
 def EnvTable.applyRow (t : EnvTable) (add : Bool) (row : Json) : Except String EnvTable := do

@@ -43,7 +43,9 @@ private def active := activeAsset i.hash i.code rid 11
 private def approval := registrationAsset i.hash i.code release data
 private def terminationToken := terminationApproval i.hash i.code release rid 11
 private def commit : TrieCommit := List.length
-private def aenv : Application.Env := ⟨fun key => key == 11⟩
+private def aenv : Application.Env := ⟨Attestation.Fixtures.bookingPolicy⟩
+
+private def bookingAttestation := aenv.bookingAsset release 0 data
 private abbrev rp := Registry.Examples.p
 
 private def cash (tx ix owner amount : Nat) : ObservedOutput :=
@@ -73,23 +75,33 @@ private def observation (ins outs : List ObservedOutput) (mint : List (Singular.
     referenceOutputs := references, interval, donation, actions }
 
 private def seedOut := cash 90 0 42 3
-private def funds := cash 91 0 42 17
+private def funds := cash 91 0 42 18
 private def pledgeFunds := cash 92 0 7 1
 private def bookingFeeFunds := cash 93 0 7 1
 private def openObs := observation [seedOut] [genesisState, record]
   [(rid, 1), (configurationAsset i release rid, 1)] [.createConfiguration rid seed 1] [] [8]
-private def regObs := observation [funds] [request] [(approval, 1)] [.bookRegistration 0]
-  [record] [] ⟨0, 1⟩
+private def regObs := observation [funds]
+  [request, {cash 100 1 42 1 with assets := [(bookingAttestation, 1)]}]
+  [(approval, 1), (bookingAttestation, 1)] [.bookRegistration 0]
+  [record] [aenv.bookingPolicy.id] ⟨0, 1⟩
+#guard (Registry.Examples.env.bookingTx request.reference.tx).map (·.mint) == some regObs.assets.mint
+#guard Registry.Examples.env.inception release.applicationPolicy registration
+#guard SingularApplicationHeld.Assets.mintQty regObs.assets bookingAttestation == 1
+
 private def foldObs : FoldObservation :=
   let ins := [request, genesisState]
   let outs := [registry1.state, carrier, cash 102 2 6 1]
   let view := (observation ins outs [(approval, -1), (active, 1)]).assets
   ⟨registry0, registry1, view, ins, outs, [.register request.reference 11 1 14], [], ⟨2, 3⟩, 0, 2⟩
-private def advanceObs := observation [carrier] [advanced, cash 103 1 6 1] []
+private def advanceAsset := Attestation.Fixtures.advancePolicy.asset (.spend .advance carrier.credential carrier.reference)
+private def advanceObs := observation [carrier] [advanced, {cash 103 1 6 1 with assets := [(advanceAsset, 1)]}]
+  [(advanceAsset, 1)] (invoked := [advanceAsset.policy])
 private def pledgeOut := cash 104 0 7 1
 private def pledgeObs := observation [pledgeFunds] [pledgeOut] [] (interval := ⟨3, 4⟩)
+private def convictionMint := Attestation.Fixtures.convictionMint advanced.reference
 private def convictionObs := observation [advanced, pledgeOut]
-  [convicted, cash 105 1 42 6, cash 105 2 7 4] [] (interval := ⟨5, 6⟩)
+  [convicted, cash 105 1 42 6, {cash 105 2 7 4 with assets := convictionMint.map fun entry => (entry.1, 1)}]
+  convictionMint (invoked := [52, 53]) (interval := ⟨5, 6⟩)
 private def bookObs := observation [convicted, bookingFeeFunds] [bookedRequest, cash 200 1 7 1]
   [(terminationToken, 1)] [.bookTermination convicted.reference 0 rid 11] [record] [] ⟨6, 7⟩
 
@@ -202,7 +214,7 @@ private theorem registeredPath : CarrierHistory p env i active 11 startEdges reg
 /-- Given the registered holding, when the signed advance is paid, then its successor output is the next carrier in the history. -/
 private theorem rotatedPath : CarrierHistory p env i active 11 rotationEdges rotated advancedWorld advanced := by
   exact .spend registeredPath advanceTx (action := .rotate 1 .keep 6) (now := 3)
-    (state := .present rotatedLive) rfl ⟨⟨rfl,rfl⟩, by intro key h; cases h⟩ ⟨rfl,rfl⟩
+    (state := .present rotatedLive) rfl ⟨⟨rfl,rfl⟩, ⟨rfl, _, rfl, rfl, rfl⟩, by intro key h; cases h⟩ ⟨rfl,rfl⟩
     (by intro refund pool equal; cases equal)
     (Step.rotateKeepPaid 3 1 6 (by decide) (by decide) (by decide)) rfl (by decide) rfl
 
@@ -210,7 +222,7 @@ private theorem rotatedPath : CarrierHistory p env i active 11 rotationEdges rot
 private theorem pendingPath : CarrierHistory p env i active 11 convictionEdges pending convictionWorld convicted := by
   have pledged := CarrierHistory.retain rotatedPath pledgeTx (by decide) committed_step (by rfl)
   exact .spend pledged convictionTx (action := .convict 7 commitment) (now := 5)
-    (state := .terminationPending rotatedLive.hash) rfl ⟨⟨rfl,rfl⟩, by intro key h; cases h; rfl⟩ ⟨rfl,rfl⟩
+    (state := .terminationPending rotatedLive.hash) rfl ⟨⟨rfl,rfl⟩, trivial, by intro key h; cases h; exact ⟨rfl, rfl, _, rfl, rfl, rfl⟩⟩ ⟨rfl,rfl⟩
     (by intro refund pool equal; cases equal)
     (Step.convict 5 7 commitment (by decide) (by decide)) (by rfl) rfl rfl
 
@@ -354,8 +366,7 @@ example :
     bad.acceptsRival 1 1 = true ∧ committed.comparisonMatchesWriter bad 11 = false ∧
       (committed.localWriter bad 11 (.convict 7 commitment)).isNone = true := by decide
 /-- Registration, advance and commitment opening reach the checkpoint consumed
-by transaction 105. Its decoded environment supplies the mint premise.
-The transaction observation records an empty mint field. -/
+by transaction 105. The mint field records both conviction attestations and the submitter receives them in change. -/
 theorem rotated_journey_establishes_duplicity :
     ∃ previous writer, ∃ (observed : Registry.Conviction),
       committed.writers 11 = some (.rotation previous writer) ∧
@@ -367,7 +378,7 @@ theorem rotated_journey_establishes_duplicity :
     .step (.step (.step (.init deployment) registered_step) rotated_step) committed_step
   exact conviction_establishes_duplicity reach witnessed_termination_booking.2.2.2
 
-#guard convictionTx.identity == 105 && convictionTx.observation.assets.mint.isEmpty
+#guard convictionTx.identity == 105 && Attestation.Fixtures.policies.requiresBoth convictionTx.observation.assets advanced.reference
 #guard ((env 11).presentedSpend 1 1).any (env 11).attestationMinted
 
 end CardanoKeri.Application.Custody.Examples

@@ -1,3 +1,4 @@
+import CardanoKeri.AttestationFixtures
 import CardanoKeri.CheckpointCommitmentGoals
 import CardanoKeri.CheckpointSystemFixtures
 import CardanoKeri.CheckpointDatumVectors
@@ -42,8 +43,8 @@ def Shown.json : Shown → Json
 /-- The spend reads the selected tip and rival. The separate predecessor and
 event lookups serve the KERI reader. -/
 def envFor (rivalIsAccepted : Bool) : Env := {
-  rotationTo := fun _ _ _ => false, depositAuthorized := fun _ => false, quorum := fun _ => false,
-  attestationMinted := fun _ => true,
+  advanceReads := CardanoKeri.Attestation.Fixtures.advances (fun _ _ _ => false), depositAuthorized := fun _ => false, quorum := fun _ => false,
+  convictionReads := CardanoKeri.Attestation.Fixtures.convictionReads ⟨105, 0⟩,
   presentedSpend := fun e sn => some ⟨⟨105, 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn rivalIsAccepted⟩,
   convictionContext := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).1,
   convictionRival := fun e sn => some (if rivalIsAccepted then (CardanoKeri.Duplicity.fixture e sn).1.accepted

@@ -42,6 +42,7 @@ import Cardano.KERI.AID.Consumer (
     DecodedCheckpoint (..),
     Environment (..),
     ObservedOutput (..),
+    OutputDatum (..),
     decodeCheckpoint,
     representativeAsset,
     representativeQuantity,
@@ -77,7 +78,7 @@ import Cardano.Ledger.Core (
  )
 import Cardano.Ledger.Credential (StakeReference (StakeRefNull))
 import Cardano.Ledger.Credential qualified as Ledger
-import Cardano.Ledger.Hashes (ScriptHash (..))
+import Cardano.Ledger.Hashes (ScriptHash (..), extractHash)
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Mary.Value (
     AssetName (..),
@@ -295,6 +296,10 @@ observeOutput (Indexer.TxOut rawTxOut) = do
     let plutusDatum = case ledgerTxOut ^. datumTxOutL of
             Datum binaryDatum -> let Data d = binaryDataToData binaryDatum in Just d
             _ -> Nothing
+        datumForm = case ledgerTxOut ^. datumTxOutL of
+            NoDatum -> DatumAbsent
+            DatumHash hash -> DatumByHash (hashToBytes (extractHash hash))
+            Datum _ -> maybe DatumAbsent (DatumInline . BSL.toStrict . serialise) plutusDatum
     pure
         Observation
             { obsNetwork = network
@@ -303,7 +308,7 @@ observeOutput (Indexer.TxOut rawTxOut) = do
                 ObservedOutput
                     { ooCredential = credential
                     , ooAssets = assets
-                    , ooDatum = BSL.toStrict . serialise <$> plutusDatum
+                    , ooDatum = datumForm
                     }
             , obsDatum = plutusDatum
             }

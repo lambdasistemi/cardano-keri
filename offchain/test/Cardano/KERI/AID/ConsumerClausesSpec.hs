@@ -22,6 +22,7 @@ import Cardano.KERI.AID.Consumer (
     Context (..),
     Environment (..),
     ObservedOutput (..),
+    OutputDatum (..),
     Release (..),
     consumableHolding,
     consumableHoldingB,
@@ -127,7 +128,7 @@ withFaults fs = (env, out, now)
                 | (p, n, _) <- ooAssets genuine
                 ]
             , ooDatum =
-                Just
+                DatumInline
                     ( liveDatum
                         (if has WrongAid then otherAidText else aidText)
                         (has Poisoned)
@@ -216,7 +217,7 @@ spec = describe "Consumer predicate clauses" $ do
             with [(BS.replicate 28 0x01, name, 1)] `shouldBe` [RepresentativeQuantityNotOne]
             with [(policy, BS.replicate 32 0x01, 1)] `shouldBe` [RepresentativeQuantityNotOne]
     describe "the datum is read and is the AID's" $ do
-        let with d = refusalsOf accepting (environmentOf cx) cx genuine{ooDatum = d}
+        let with d = refusalsOf accepting (environmentOf cx) cx genuine{ooDatum = maybe DatumAbsent DatumInline d}
             other = "EEBjyTcVHGUZHrR1x3wuxOxbrzH0_cGfAYJJQHME3Pwo"
         it "refuses no datum" $ with Nothing `shouldBe` [DatumNotDecodedForAid]
         it "refuses bytes that are no datum" $
@@ -232,7 +233,7 @@ spec = describe "Consumer predicate clauses" $ do
             with (Just (pendingDatumOf (BC.pack other)))
                 `shouldBe` [DatumNotDecodedForAid, CheckpointTerminationPending]
     describe "the state is consumable" $ do
-        let with d = refusalsOf accepting (environmentOf cx) cx genuine{ooDatum = Just d}
+        let with d = refusalsOf accepting (environmentOf cx) cx genuine{ooDatum = DatumInline d}
         it "refuses a frozen checkpoint" $
             with (liveDatum aidText False True birth) `shouldBe` [CheckpointFrozen]
         it "refuses a poisoned checkpoint" $

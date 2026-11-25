@@ -16,7 +16,12 @@ network. The poll times, the window and the reads allowed are the
 producer's own, observed from a run, or an independent oracle written out here;
 the one literal is the window of a transaction with a fixed validity end.
 -}
-module Cardano.KERI.Deployment.KoiosSettlementSpec (spec) where
+module Cardano.KERI.Deployment.KoiosSettlementSpec (
+    spec,
+    okJson,
+    pageAnswer,
+    jsonBytes,
+) where
 
 import Cardano.Crypto.Hash (hashFromBytes)
 import Cardano.KERI.Deployment.KoiosSettlement (

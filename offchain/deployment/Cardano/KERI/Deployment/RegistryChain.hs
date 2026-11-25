@@ -18,6 +18,8 @@ the node's evaluation of a transaction, or by the ledger.
 module Cardano.KERI.Deployment.RegistryChain (
     -- * The chain
     RegistryRuntime (..),
+    TransactionUnconfirmed (..),
+    ValidityEnd (..),
 
     -- * The registry
     Loaded (..),
@@ -124,8 +126,20 @@ import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Data.Text (Text)
+import Data.Text qualified as T
 import GHC.Conc (STM, atomically, retry)
 import Lens.Micro ((^.))
+
+{- | A transaction handed over that was not seen to settle before its deadline: its identifier and what the
+observation said. It says nothing of whether the transaction is on the chain: it may still be included.
+-}
+data TransactionUnconfirmed = TransactionUnconfirmed !TxId !Text
+
+instance Show TransactionUnconfirmed where
+    show (TransactionUnconfirmed _ said) = T.unpack said
+
+instance Exception TransactionUnconfirmed
 
 -- | How booking and folding reach the chain.
 data RegistryRuntime = RegistryRuntime
@@ -141,7 +155,17 @@ data RegistryRuntime = RegistryRuntime
     -- ^ the tip, the clock and the forecast horizon, each read once, for one decision
     , rtNowMs :: IO Integer
     -- ^ the machine's clock now, in POSIX milliseconds (time left, as a transaction is about to leave)
+    , rtValidityEnd :: IO ValidityEnd
+    -- ^ the upper slot a transaction built now carries, read once for each build
     }
+
+{- | The validity end of a transaction about to be built.
+
+@EndNotSet@: the runtime asks for none (the node settles by what it observes). @EndAt@: the finite, exclusive
+upper slot. @NoUsableWindow@: the interval from the tip is too short, so nothing is built.
+-}
+data ValidityEnd = EndNotSet | EndAt !SlotNo | NoUsableWindow
+    deriving stock (Eq, Show)
 
 -- | A registry the files name, with what its transactions read by reference.
 data Loaded = Loaded

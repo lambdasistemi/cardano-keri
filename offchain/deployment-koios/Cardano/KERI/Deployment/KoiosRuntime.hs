@@ -18,7 +18,7 @@ module Cardano.KERI.Deployment.KoiosRuntime (
 ) where
 
 import Cardano.KERI.Deployment.RegistryChain (Observation (..))
-import Cardano.Ledger.Address (Addr)
+import Cardano.Ledger.Address (AccountAddress, Addr)
 import Cardano.Ledger.Api.Tx.Out (TxOut, addrTxOutL)
 import Cardano.Ledger.BaseTypes (ProtVer (..), getVersion)
 import Cardano.Ledger.Conway (ConwayEra)
@@ -65,6 +65,8 @@ data KoiosReads = KoiosReads
     -- ^ the tip, the clock and the horizon, each read once
     , readEvaluation :: ConwayTx -> IO (EvaluateTxResult ConwayEra)
     -- ^ the units of every script purpose of a transaction, from facts read here
+    , readRewardRegistered :: AccountAddress -> IO Bool
+    -- ^ whether Koios holds a reward account registered
     }
 
 -- | Why a read stopped, in Singular's terms where Singular decided it.
@@ -105,6 +107,7 @@ koiosReads given time clock = reads'
             , readProtocolParameters = answered (Client.cliProtocolParams client)
             , readObservation = observe client time clock
             , readEvaluation = evaluateLocally time (readProtocolParameters reads') (readOutputs reads')
+            , readRewardRegistered = answered . Client.accountRegistered client
             }
 
 answered :: IO (Either ClientFailure a) -> IO a
@@ -206,7 +209,9 @@ outputsUnder client wanted = case NE.nonEmpty (Set.toAscList wanted) of
 
 {- | One observation: the machine's clock is read first and once, the tip is
 Koios's, and every slot start and the horizon come from the pinned network
-time. The tip's block time must be the start of its slot there. A slot lasts
+time. The tip's block time, which a provider states in whole seconds, must be the second
+the start of its slot falls in there: the slot's start itself where slots last whole seconds, and the whole second
+before it where they are shorter. A slot lasts
 until the next one starts, so its length is its own at an era boundary too. The
 horizon is the last slot the ledger converts: the network time's horizon is the
 first it does not.
@@ -219,7 +224,7 @@ observe client time clock = do
     start <- timed (slotStartMs time slot)
     next <- timed (slotStartMs time (slot + 1))
     let koiosStart = toInteger (Wire.tipBlockTime tip) * 1_000
-    when (koiosStart /= start) (throwIO (TipTimeDisagrees koiosStart start))
+    when (koiosStart /= start - start `mod` 1_000) (throwIO (TipTimeDisagrees koiosStart start))
     horizon <- timed (ledgerHorizon time slot)
     pure
         Observation

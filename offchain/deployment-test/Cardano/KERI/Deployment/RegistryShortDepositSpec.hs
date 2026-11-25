@@ -26,6 +26,7 @@ import Cardano.KERI.Deployment.RegistryCommandSpec (capturing)
 import Cardano.KERI.Deployment.RegistryDeploy (Deployed (..))
 import Cardano.KERI.Deployment.RegistryDeploySpec (Faults (..), noFaults, testTerms, walletAddress)
 import Cardano.KERI.Deployment.RegistryFiles (writeDeploymentFiles)
+import Cardano.KERI.Deployment.RegistryProvider (ProviderChoice (..))
 import Cardano.KERI.Deployment.RegistryRegister
 import Cardano.KERI.Deployment.RegistryRequest (registrationOfOutput)
 import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..))
@@ -133,7 +134,7 @@ spec = describe "#351 a booking with a deposit below the registry's floor" $ aro
                             RegistryRegisterSettings
                                 { rgNetworkMagic = 42
                                 , rgBlueprint = blueprint
-                                , rgNodeSocket = "no-node.socket"
+                                , rgProvider = ProviderChoice (Just "no-node.socket") Nothing Nothing Nothing
                                 , rgFundingAddress = "addr_test1unused"
                                 , rgSigningKeyFile = Just "no-key.skey"
                                 , rgVault = Nothing

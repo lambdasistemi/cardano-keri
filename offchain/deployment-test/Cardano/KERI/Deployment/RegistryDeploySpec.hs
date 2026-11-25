@@ -49,7 +49,7 @@ import Cardano.KERI.Deployment.Registry (
     RegistryTerms (..),
     deriveRegistryScripts,
  )
-import Cardano.KERI.Deployment.RegistryChain (RegistryRuntime (..))
+import Cardano.KERI.Deployment.RegistryChain (RegistryRuntime (..), ValidityEnd (..))
 import Cardano.KERI.Deployment.RegistryDeploy
 import Cardano.KERI.Deployment.RegistryFiles (ReferenceRecord (..), ScriptReference (..))
 import Cardano.KERI.Deployment.RegistryTransactions (
@@ -136,7 +136,7 @@ import Data.Word (Word8)
 import Lens.Micro ((&), (.~), (^.))
 import PlutusCore.Data qualified as PLC
 import System.Environment (getEnv)
-import Test.Hspec (Spec, beforeAll, describe, it, shouldBe, shouldSatisfy)
+import Test.Hspec (Spec, beforeAll, describe, expectationFailure, it, shouldBe, shouldSatisfy)
 
 -- ---------------------------------------------------------------------
 -- A chain that keeps its outputs
@@ -295,6 +295,7 @@ chainRuntime faults chainRef =
             Set.member account . chainRegistered <$> readIORef chainRef
         , rtObserve = fail "a deployment reads no time"
         , rtNowMs = fail "a deployment reads no time"
+        , rtValidityEnd = pure EndNotSet
         }
   where
     touch = modifyIORef' chainRef (\c -> c{chainCalls = chainCalls c + 1})
@@ -791,7 +792,9 @@ spec = describe "#351 deploying a registry" $ do
                         failureStoppedAt failure `shouldBe` Just step
                         map landedStep (failureLanded failure) `shouldBe` take n allSteps
                         failureNotLanded failure `shouldBe` drop n allSteps
-                        failureCause failure `shouldBe` SubmissionRefused "the node refuses this transaction"
+                        case failureCause failure of
+                            SubmissionRefused _ reason -> reason `shouldBe` "the node refuses this transaction"
+                            other -> expectationFailure ("another cause: " <> show other)
                         map landedTransaction (failureLanded failure)
                             `shouldBe` map transactionId (reverse (chainAccepted chain))
                 -- nothing is retried or resubmitted: one submission each, and the refused one

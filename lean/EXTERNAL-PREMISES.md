@@ -43,7 +43,15 @@ current keys and next commitments, including nested weighted groups. It can
 present every writer with symbolic key identities. For concrete bytes the
 verification-key and commitment encoders must round trip through their
 respective reads. The existing V2 datum codec covers counts and flat weights.
-A faithful wire representation for the complete writer remains open.
+The writer must be available in public chain data to the convictor. An inline
+opening can include it directly. A digest requires public event bytes and an
+authenticated injective opening, including seals. The convictor binds this
+opening to the spent input in the conviction transaction. A faithful production
+wire representation remains open. `MeasureCheckpointWriter.lean` measures an
+illustrative inline layout with the model's Plutus Data serializer. The
+one-key live examples occupy 220 bytes at inception and 313 after either of
+two rotations. The grouped example with 64 seal bytes occupies 412. List
+lengths are variable. Transaction size and validator budgets remain unmeasured.
 
 At conviction, `Env.convictionSpend` requires the attestation minted for the
 observed output and comparison. A prior holding supplies no mint at use.

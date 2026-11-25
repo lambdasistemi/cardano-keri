@@ -4,35 +4,35 @@
   "singular": "d69ab005c3b710aeebf033d3c5cd08c56feb5643",
   "sources": {
     "lean/CardanoKeri/Application.lean": "53d228c3e9ad3d6c37b120177cdf9cd0540c80d8c309eb3f74657fabf3d8fdf5",
-    "lean/CardanoKeri/ApplicationCustodyExample.lean": "bda9ec23ea3d984a9575ebc00e7e01641ebd1450b12f8a3d40981d25e1d3245d",
+    "lean/CardanoKeri/ApplicationCustodyExample.lean": "fa3365c4aaa1e8f0ea02c50d1a0871c3c7d7826091ec13703480eb5764af9234",
     "lean/CardanoKeri/ApplicationCustodyHistory.lean": "e86e7ac092b450cedbe05627c82d7aa9eb3f7a261ac68693489300ddd3ed546c",
     "lean/CardanoKeri/ApplicationGoals.lean": "e139a90e1b673d9d41cddbe63b4a9aee7f68965e560bd80605278c7dd45d3b88",
     "lean/CardanoKeri/ApplicationVectors.lean": "073d713d9c86e6bee45751c38c031456ff0e363e0f16acf6cb5c6894479f98f6",
-    "lean/CardanoKeri/Checkpoint.lean": "cb77fc794d349e3ccf09402485108b63f7fe762b45e8257edb6be8221a183500",
+    "lean/CardanoKeri/Checkpoint.lean": "f7618cc29d8427b975f0e1862ce330e87527930a5c29586201797fcf7a09f0cf",
     "lean/CardanoKeri/CheckpointCertificate.lean": "53a621dcd5fba06eb35b9d134127d90091defc8bfbea522081fc14e3cfcafbca",
-    "lean/CardanoKeri/CheckpointCommitmentGoals.lean": "eb554a4f022f990f3f79c134e9c415bcb284b28bf2e2e7798b9ccff67afcbf51",
-    "lean/CardanoKeri/CheckpointCommitmentVectors.lean": "a8418e2d17a5fda8148b8824a95cbcbc0b32d2f094299bca8a0a9c5c41db60b3",
+    "lean/CardanoKeri/CheckpointCommitmentGoals.lean": "0da669a0a3a72f10d56c3ffb0b31f4ef015d0c3c66cb25f3c7edd265c9fe9da0",
+    "lean/CardanoKeri/CheckpointCommitmentVectors.lean": "0345ec44944da73934e0fcaf5d2ad9c70132b6c44eccd414cd270d36191de932",
     "lean/CardanoKeri/CheckpointCompletionGoals.lean": "8d2ba4195fc0ce06d9f646717ad426b4b7d088bf180d3966707900ad5437c4d4",
-    "lean/CardanoKeri/CheckpointConviction.lean": "6ece4eefbc661be2debab2393fd377ce8a751ae95a1ffb9d613ac2122b6a06b0",
+    "lean/CardanoKeri/CheckpointConviction.lean": "0a8dfcce767bcf9f447549020095aeee67f515ba9d618e4efae596f8d3a4a2fa",
     "lean/CardanoKeri/CheckpointDatum.lean": "b113d3d3ec649b6bae2da213a739c4677107b1cb34e753b07e125bfe72505e43",
     "lean/CardanoKeri/CheckpointDatumGoals.lean": "b48f733c302f61979226282bdd0559398b2a5a11a4c5b5fe88cc1d7522be063b",
     "lean/CardanoKeri/CheckpointDatumVectors.lean": "10031e9ac66c13285895373f86716ea099d9118a3c09b9fe3cfa9c2032d95169",
     "lean/CardanoKeri/CheckpointDeposit.lean": "6ce03d0e88ee7cc55de194df185f067995e9b8d943f2478282934e691db13a68",
     "lean/CardanoKeri/CheckpointDepositGoals.lean": "c6ddf3b2434e365b59bdccfd2bc074b60208d63b3358141f147d8ac0fcf1055f",
     "lean/CardanoKeri/CheckpointDepositVectors.lean": "9c5d960ce08b2a47dbe0cbaf74411017b39b9ff048d7869b7708fce1e165d615",
-    "lean/CardanoKeri/CheckpointEventHistory.lean": "a434c9efd91bb22e9534a11fe67cd789e7523be9887c173bd361b0111004db1d",
+    "lean/CardanoKeri/CheckpointEventHistory.lean": "9d90153bc23b0d4fefd9f8529380d1363629e80797d08c8ff6fd115ebd0d6a5c",
     "lean/CardanoKeri/CheckpointGoals.lean": "697a3d1bd144af34c3cdc8303996f64bf71a47d2ba3bf699b0568c5fe725aba7",
-    "lean/CardanoKeri/CheckpointLifecycleExamples.lean": "672e88f7413e2fc412edb891cb843f71f18b66289e943d020019600725edde39",
+    "lean/CardanoKeri/CheckpointLifecycleExamples.lean": "8899c8a3ec26d75dea77bf0f7569eec8c5bafa9b060be50ce42c3be4df9926cb",
     "lean/CardanoKeri/CheckpointReceiptCheck.lean": "b8e503afc6b39c864d5670b5b746ada934e519beb2c45b291be66d811e1085d8",
     "lean/CardanoKeri/CheckpointSystemEvidence.lean": "537d2183603c1f5ffab2178d743b03652647a3ca22cae5cb4e38c8780bccf7da",
-    "lean/CardanoKeri/CheckpointSystemFixtures.lean": "adf8d65b9aa24b84ca0b4dced86089219d01023efc238e01f2d08c19264dcdd3",
-    "lean/CardanoKeri/CheckpointSystemHistory.lean": "9c38b3f412fb857781568eba0f04a39471618330c715580ef931eb1c07e1bdc3",
-    "lean/CardanoKeri/CheckpointSystemWire.lean": "922379289081031c04367c0109a9febf3240c6edd12cfba5ef120f82bb2119e7",
-    "lean/CardanoKeri/CheckpointTraceWire.lean": "16c78ee77138d579dfd749a8a46d01466f0820d8d170cf8b708249405bb94381",
+    "lean/CardanoKeri/CheckpointSystemFixtures.lean": "bfb8ec5dd67ae5000df7e2e59a03a5a31339ecac4861243d6f948be88019d8fb",
+    "lean/CardanoKeri/CheckpointSystemHistory.lean": "17503d837e21272674cd059ff373e82b9b5dfdf1e8b41c8af8e3df7a63667686",
+    "lean/CardanoKeri/CheckpointSystemWire.lean": "03af9a16efd6c225073eea5e1d678c6950698933c5665999789b8aaddab0212b",
+    "lean/CardanoKeri/CheckpointTraceWire.lean": "f95b011c9c2f71e8eafaa941ffaf72b6185e460d718ff4a3482d67d4ca7f990f",
     "lean/CardanoKeri/CheckpointValue.lean": "cd552eca0212b31142d4ed2d29ca6dd8897febddeeb7ac3dbb1154bfb22efbed",
     "lean/CardanoKeri/CheckpointValueGoals.lean": "d95d7cf5370eee2ca7a6e277156671654cbd68008b72b646615546fcbc77f4a5",
     "lean/CardanoKeri/CheckpointValueVectors.lean": "221ff951f435eb21c1f35ed6df6078c2e0b691a02c743069cff23cf15e282aed",
-    "lean/CardanoKeri/ConcreteConvictionGoals.lean": "cfdb877550db51782f140da01f6bb742a1740bf1efd399808fdaf16a7dbe70e6",
+    "lean/CardanoKeri/ConcreteConvictionGoals.lean": "3cdd76ac850576d27bf7e7ace3e38e3dee34f2a3cc089af062a61c5b96ae6738",
     "lean/CardanoKeri/ConsumerBytes.lean": "9d7f752d59e32acb6c77bda9e5f6e9a146f09e9de7983ea10456c7225739d712",
     "lean/CardanoKeri/ConsumerBytesGoals.lean": "4822023b95c0a3ed0f99b5ee09784e5beb3700582611a80f867defc35cbcdae4",
     "lean/CardanoKeri/ConsumerBytesVectors.lean": "843c264cb8e6c3ca1cbde6644654a4750a7f008bc73300b56ad1dd5d4a0af5b1",
@@ -45,7 +45,7 @@
     "lean/CardanoKeri/ReaderStatus.lean": "f0ef5697905f98527f328a99661cd603dbb3bc6ffb71f8ac1bbc3f485fb766a1",
     "lean/CardanoKeri/ReaderStatusGoals.lean": "085c2bb5b74130efcd28157ee87b0b4309a7a548b288e93e19df5a0215290b5e",
     "lean/CardanoKeri/ReaderStatusVectors.lean": "09c4a31f2584dfaacad8d2863a942e48c820132bbc4a49743859ddc8a9b88e3b",
-    "lean/CardanoKeri/Registry.lean": "a9c4a4305ee2c05695759ce449afef8b520add49a44af4a66d1ec5faacc7e08a",
+    "lean/CardanoKeri/Registry.lean": "fbd7fed7a778e85a79a353c363787b625891abba2adc57d3b9b2dd63a9472e53",
     "lean/CardanoKeri/RegistryAdapterFacts.lean": "212cb4a5a5710404e3b5c52733feb127720f9141f5deb379e4e50ce6345ea425",
     "lean/CardanoKeri/RegistryAgreement.lean": "a36f748cac760c93a3c5b122713181527886cee34c3555fc9f7daa7ee2a6fdba",
     "lean/CardanoKeri/RegistryAuthorization.lean": "d4cdb3fc36c032e04ac4a79fb876498ffc2527167a22947a9e596cb6fe5e706d",
@@ -56,14 +56,14 @@
     "lean/CardanoKeri/RegistryGoals.lean": "68231f4d662a4b4bd0ae2db2ce949530dc457d0c020455448c52856c2207cb8b",
     "lean/CardanoKeri/RegistryInception.lean": "00929ce3f505e4586679d446dd81c01b845b9f73dcf9b4bb621b88f856d13542",
     "lean/CardanoKeri/RegistryInvariant.lean": "6046b2b3bddceb4a471aa5105db03d4419779082b235952ff5b5f0ac673a8fd2",
-    "lean/CardanoKeri/RegistryLifecycleExamples.lean": "5709588c41e8d54a1704b55ce484c3d90cc439bbeedc95efb1aaf8a9770c46c5",
+    "lean/CardanoKeri/RegistryLifecycleExamples.lean": "ebcbf8400ede394d9a7c9a197dcbd0f0f9e98a615e69b809871f66ed48d8a940",
     "lean/CardanoKeri/RegistryMetadata.lean": "59db598868b8a06372b93ede1bfc48009b4558cd10e196d323c35b3826213973",
     "lean/CardanoKeri/RegistryReach.lean": "c855e68aa2965b3aa8cab39025f28affeb20099a7d59d60b86624ebd6983a1ed",
     "lean/CardanoKeri/RegistryReplay.lean": "9b3bfde641498235e5945b9e4475b3d5e436533af2a3cc9827474cb14c904d6a",
     "lean/CardanoKeri/RegistryRequestLifecycle.lean": "d0771f3b92614b6834a949bacc0ad6abcc22d8d6f59cefd4f58e2703f7001d95",
-    "lean/CardanoKeri/RegistryScenarioFixtures.lean": "15f9254147d2e576a2a785033af8848e15ed2a23334762fd0917055dc4aba74f",
+    "lean/CardanoKeri/RegistryScenarioFixtures.lean": "c6f721a330fe2a65724eb26273b24ea11fcfe833da924a4253aadd5a98ba4c89",
     "lean/CardanoKeri/RegistryTermination.lean": "5c9b9fd0f221d194be42ff5d3236fd3d48c8a3fd35f045aa39d0605a7d4d4660",
-    "lean/CardanoKeri/RegistryTraceWire.lean": "6a2dd0d3a3318469a327c9fa03a638aa005e00331cbd06e66e779d0a0166df88",
+    "lean/CardanoKeri/RegistryTraceWire.lean": "5710cd9c2d2bb420e91b6a8aee866208e9c4227df379f6107c879554cbe610fb",
     "lean/CardanoKeri/Samaritan.lean": "6a1bfd7b2b83d7497f68ef50480a47b155a1c7cf4ee1837a5a72c231570cedbb"
   },
   "rows": [
@@ -239,15 +239,15 @@
       "declaration": "CardanoKeri.Application.Custody.Examples.rotated_booking_compares_its_writer",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
       "line": 300,
-      "statement": "theorem rotated_booking_compares_its_writer :\n    ∃ writer comparison, committed.writers 11 = some writer ∧ writer.authenticated 11 = true ∧\n      (env 11).comparison 1 1 = some comparison ∧\n      (env 11).keyReads.matches 11 writer comparison.tip = true ∧\n      comparison.tip.epoch = 1 ∧ comparison.tip.sn = 1 ∧\n      CheckpointConviction.accepts (env 11).verifyRival comparison.tip comparison.rival = true",
-      "statementSha256": "a651f59aee368d801a6c57e57b564d9511053b9eceeb5055d86e292d081708f6",
+      "statement": "theorem rotated_booking_compares_its_writer :\n    ∃ writer comparison, committed.writers 11 = some writer ∧ writer.authenticated 11 = true ∧\n      (env 11).comparison 1 1 = some comparison ∧\n      (env 11).keyReads.matches 11 writer comparison.tip = true ∧\n      comparison.tip.epoch = 1 ∧ comparison.tip.sn = 1 ∧\n      CheckpointConviction.accepts comparison.tip comparison.rival = true",
+      "statementSha256": "6ebb75d36574d78155e62fd294d1d8c688a003d2524b2cd85a54df6339e5d620",
       "sourceStory": "Given the public history ending at the rotated checkpoint, when its\nconviction spends that state, then its accepted comparison uses the\nauthenticated writer and native position of the produced pending carrier.",
       "story": {
         "given": "No additional local parameters; use the definitions in this module.",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
-        "then": "∃ writer comparison, committed.writers 11 = some writer ∧ writer.authenticated 11 = true ∧\n      (env 11).comparison 1 1 = some comparison ∧\n      (env 11).keyReads.matches 11 writer comparison.tip = true ∧\n      comparison.tip.epoch = 1 ∧ comparison.tip.sn = 1 ∧\n      CheckpointConviction.accepts (env 11).verifyRival comparison.tip comparison.rival = true"
+        "then": "∃ writer comparison, committed.writers 11 = some writer ∧ writer.authenticated 11 = true ∧\n      (env 11).comparison 1 1 = some comparison ∧\n      (env 11).keyReads.matches 11 writer comparison.tip = true ∧\n      comparison.tip.epoch = 1 ∧ comparison.tip.sn = 1 ∧\n      CheckpointConviction.accepts comparison.tip comparison.rival = true"
       },
-      "storySha256": "f4e5a4fd7edb9b155b3d78b89c8b46a6fb032f42af3cd7ffae66d28ac06ea47b"
+      "storySha256": "6386d9792580e040061bcd7c5275fe97a18d5a1834212f93ece84d54b63a92d1"
     },
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.witnessed_shared_conviction",
@@ -267,15 +267,29 @@
       "declaration": "CardanoKeri.Application.Custody.Examples.witnessed_terminal_fold",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
       "line": 326,
-      "statement": "theorem witnessed_terminal_fold :\n    Registry.pendingAt completionReceipt.before association.reference = some association.entry ∧\n    Singular.inputsContainReference completionReceipt.transaction.transaction.inputs association.reference = true ∧\n    Registry.pendingAt completionReceipt.after association.reference = none ∧\n    Singular.trieGet completionReceipt.after.trie 11 = .known .terminal ∧\n    ∃ observed source target, (source, target) ∈ [(pending, booked), (committed, pending),\n      (rotated, committed), (registered, rotated), (Sys.init deployment, registered)] ∧\n      ConvictionEdge p env 11 association.keyState source target ∧\n      (env 11).convictionSpend association.keyState.epoch association.keyState.sn = some observed ∧\n      association.origin.environment.conviction 11 = some observed ∧\n      association.entry.payload.spend = ⟨observed.output, 11, association.keyState⟩ ∧\n      CheckpointConviction.accepts (env 11).verifyRival observed.comparison.tip observed.comparison.rival = true",
-      "statementSha256": "aa173fa3f0a5764ab95f007c78b2251df7bc9cb0f4432f06d381e19283a76fec",
+      "statement": "theorem witnessed_terminal_fold :\n    Registry.pendingAt completionReceipt.before association.reference = some association.entry ∧\n    Singular.inputsContainReference completionReceipt.transaction.transaction.inputs association.reference = true ∧\n    Registry.pendingAt completionReceipt.after association.reference = none ∧\n    Singular.trieGet completionReceipt.after.trie 11 = .known .terminal ∧\n    ∃ observed source target, (source, target) ∈ [(pending, booked), (committed, pending),\n      (rotated, committed), (registered, rotated), (Sys.init deployment, registered)] ∧\n      ConvictionEdge p env 11 association.keyState source target ∧\n      (env 11).convictionSpend association.keyState.epoch association.keyState.sn = some observed ∧\n      association.origin.environment.conviction 11 = some observed ∧\n      association.entry.payload.spend = ⟨observed.output, 11, association.keyState⟩ ∧\n      CheckpointConviction.accepts observed.comparison.tip observed.comparison.rival = true",
+      "statementSha256": "7fbe2fa4a159ec11ff3904a59f425f16003d1a6abc72f48be1d0138855e35ba8",
       "sourceStory": "Given the registered, rotated and convicted AID 11, when the fold consumes\nrequest 200#0, it records the terminal leaf and the consumed entry traces\nto the accepted comparison which produced pending output 105#0.",
       "story": {
         "given": "No additional local parameters; use the definitions in this module.",
         "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
-        "then": "Registry.pendingAt completionReceipt.before association.reference = some association.entry ∧\n    Singular.inputsContainReference completionReceipt.transaction.transaction.inputs association.reference = true ∧\n    Registry.pendingAt completionReceipt.after association.reference = none ∧\n    Singular.trieGet completionReceipt.after.trie 11 = .known .terminal ∧\n    ∃ observed source target, (source, target) ∈ [(pending, booked), (committed, pending),\n      (rotated, committed), (registered, rotated), (Sys.init deployment, registered)] ∧\n      ConvictionEdge p env 11 association.keyState source target ∧\n      (env 11).convictionSpend association.keyState.epoch association.keyState.sn = some observed ∧\n      association.origin.environment.conviction 11 = some observed ∧\n      association.entry.payload.spend = ⟨observed.output, 11, association.keyState⟩ ∧\n      CheckpointConviction.accepts (env 11).verifyRival observed.comparison.tip observed.comparison.rival = true"
+        "then": "Registry.pendingAt completionReceipt.before association.reference = some association.entry ∧\n    Singular.inputsContainReference completionReceipt.transaction.transaction.inputs association.reference = true ∧\n    Registry.pendingAt completionReceipt.after association.reference = none ∧\n    Singular.trieGet completionReceipt.after.trie 11 = .known .terminal ∧\n    ∃ observed source target, (source, target) ∈ [(pending, booked), (committed, pending),\n      (rotated, committed), (registered, rotated), (Sys.init deployment, registered)] ∧\n      ConvictionEdge p env 11 association.keyState source target ∧\n      (env 11).convictionSpend association.keyState.epoch association.keyState.sn = some observed ∧\n      association.origin.environment.conviction 11 = some observed ∧\n      association.entry.payload.spend = ⟨observed.output, 11, association.keyState⟩ ∧\n      CheckpointConviction.accepts observed.comparison.tip observed.comparison.rival = true"
       },
-      "storySha256": "360404238168a6a498da593da7a98ac24c70365c2aeedd396ddf2ee1e27e77b6"
+      "storySha256": "a9df1546369f03212b93f7e8d34f4c6dc1e6d9e598fbc04ab414d235e831a7bd"
+    },
+    {
+      "declaration": "CardanoKeri.Application.Custody.Examples.rotated_journey_establishes_duplicity",
+      "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
+      "line": 359,
+      "statement": "theorem rotated_journey_establishes_duplicity :\n    ∃ previous writer, ∃ (observed : Registry.Conviction),\n      committed.writers 11 = some (.rotation previous writer) ∧\n      (env 11).presentedSpend 1 1 = some observed ∧ (env 11).attestationMinted observed = true ∧\n      observed.comparison.tip.previous = some previous.predecessor ∧\n      Duplicity.duplicityAt 1 1 ⟨previous.epoch + 1, previous.predecessor, writer⟩\n        observed.comparison.rival = true",
+      "statementSha256": "c150092581b44aec5a1438ffefa0807c9479cb5b4a168b60e4e46c5332b7d59a",
+      "sourceStory": "Registration, advance and commitment opening reach the checkpoint consumed\nby transaction 105. Its decoded environment supplies the mint premise.\nThe transaction observation records an empty mint field.",
+      "story": {
+        "given": "No additional local parameters; use the definitions in this module.",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "∃ previous writer, ∃ (observed : Registry.Conviction),\n      committed.writers 11 = some (.rotation previous writer) ∧\n      (env 11).presentedSpend 1 1 = some observed ∧ (env 11).attestationMinted observed = true ∧\n      observed.comparison.tip.previous = some previous.predecessor ∧\n      Duplicity.duplicityAt 1 1 ⟨previous.epoch + 1, previous.predecessor, writer⟩\n        observed.comparison.rival = true"
+      },
+      "storySha256": "d592ac65f488f49a45d768697753fe69e199f1bc0f391506bc9dad617dbb9a00"
     },
     {
       "declaration": "CardanoKeri.Application.Custody.carrier_reachable",
@@ -1720,9 +1734,23 @@
       "storySha256": "cca33808d6e19c3ad75956cd28189fd0e970e1eb6d77d66cc7aff7fa965f2f8a"
     },
     {
+      "declaration": "CardanoKeri.Checkpoint.Env.convictionSpend_attested",
+      "path": "lean/CardanoKeri/Checkpoint.lean",
+      "line": 81,
+      "statement": "theorem Env.convictionSpend_attested {env : Env} {epoch sn observation}\n    (found : env.convictionSpend epoch sn = some observation) :\n    env.presentedSpend epoch sn = some observation ∧ env.attestationMinted observation = true",
+      "statementSha256": "ca0d837aebd54e4a1a9aaf24e0554f17800c12dcc1344242c06e682c514f3dee",
+      "sourceStory": "An observed conviction spend has a matching mint at use.",
+      "story": {
+        "given": "{env : Env} {epoch sn observation}\n    (found : env.convictionSpend epoch sn = some observation)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "env.presentedSpend epoch sn = some observation ∧ env.attestationMinted observation = true"
+      },
+      "storySha256": "45e264e82a6e3be15ca8072920c53c30c261dcfceeb20e7513e1b370ca44e3f1"
+    },
+    {
       "declaration": "CardanoKeri.Checkpoint.registration_installs_booked_facts",
       "path": "lean/CardanoKeri/Checkpoint.lean",
-      "line": 589,
+      "line": 616,
       "statement": "theorem registration_installs_booked_facts {p : Params} {env : SystemEnv} {s s' : Sys}\n    (event : RegistrationEvent p env s s') :\n    ∃ aid origin rp re cfg, ∃ (receipt : CardanoKeri.Registry.FoldReceipt rp re cfg)\n      (booking : Singular.RegistrationBooking) (live : Live),\n      DeliveredOrigin receipt booking aid origin ∧ s'.origins aid = some origin ∧\n      s'.states aid = .present live ∧ live.bornAt = booking.request.submittedAt ∧\n      live.refundTo = booking.request.refundAddress ∧ rp.D = p.D + p.B ∧\n      booking.request.carrierAda = rp.Mc + rp.D + live.pool",
       "statementSha256": "605b8938ea3710238f18046583ebd5080eeff2ff2a095c5b12e50988e7fbbdc5",
       "sourceStory": "Given a system registration, when its delivered holding is installed, then\nthe same booking and receipt identify the stored origin and the new live state.\nIts birth time and refund address are the booked ones. Its pool accounts for\nall carrier value above minimum ADA and the two checkpoint bonds.",
@@ -1736,7 +1764,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Sys.retireRevealed_frame",
       "path": "lean/CardanoKeri/Checkpoint.lean",
-      "line": 629,
+      "line": 656,
       "statement": "theorem Sys.retireRevealed_frame (s : Sys) (a : Action) :\n    (s.retireRevealed a).leaves = s.leaves ∧ (s.retireRevealed a).states = s.states ∧\n      (s.retireRevealed a).origins = s.origins ∧ (s.retireRevealed a).pending = s.pending",
       "statementSha256": "24144a9a077cd3d5c27bc015f35d0415ba02344068e2424a09305622cf31231a",
       "sourceStory": "Burning a revealed marker changes the commitments only: leaves, states,\norigins and pending associations are those of the system before.",
@@ -1750,7 +1778,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Sys.retireRevealed_convictions",
       "path": "lean/CardanoKeri/Checkpoint.lean",
-      "line": 634,
+      "line": 661,
       "statement": "@[simp] theorem Sys.retireRevealed_convictions (s : Sys) (a : Action) :\n    (s.retireRevealed a).convictions = s.convictions",
       "statementSha256": "89af8ce637c262690c158e45f945ff9db95a6a6e5628a4544753bb17730498cc",
       "sourceStory": "",
@@ -1764,7 +1792,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Sys.retireRevealed_leaves",
       "path": "lean/CardanoKeri/Checkpoint.lean",
-      "line": 639,
+      "line": 666,
       "statement": "@[simp] theorem Sys.retireRevealed_leaves (s : Sys) (a : Action) :\n    (s.retireRevealed a).leaves = s.leaves",
       "statementSha256": "1b8d3df99ac499db49c2f7cc4ac743dc14471e18538741205e57951e7aa9bbc9",
       "sourceStory": "",
@@ -1778,7 +1806,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Sys.retireRevealed_states",
       "path": "lean/CardanoKeri/Checkpoint.lean",
-      "line": 641,
+      "line": 668,
       "statement": "@[simp] theorem Sys.retireRevealed_states (s : Sys) (a : Action) :\n    (s.retireRevealed a).states = s.states",
       "statementSha256": "b6a7a79087d1b4298405ffb2bece9cafe712cfc0f7ab42b3d18a6b952e85b473",
       "sourceStory": "",
@@ -1792,7 +1820,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Sys.retireRevealed_origins",
       "path": "lean/CardanoKeri/Checkpoint.lean",
-      "line": 643,
+      "line": 670,
       "statement": "@[simp] theorem Sys.retireRevealed_origins (s : Sys) (a : Action) :\n    (s.retireRevealed a).origins = s.origins",
       "statementSha256": "e8ca6e9c4406500f4c0503c5cf4f36376b46b40068a8288a44777285eae75232",
       "sourceStory": "",
@@ -1806,7 +1834,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Sys.retireRevealed_pending",
       "path": "lean/CardanoKeri/Checkpoint.lean",
-      "line": 645,
+      "line": 672,
       "statement": "@[simp] theorem Sys.retireRevealed_pending (s : Sys) (a : Action) :\n    (s.retireRevealed a).pending = s.pending",
       "statementSha256": "2dfc75a78f4dc50c5ffde2df432dc00943c8cb795f309d03fe72465d9be5fc91",
       "sourceStory": "",
@@ -1820,7 +1848,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Sys.conviction_keeps_writer",
       "path": "lean/CardanoKeri/Checkpoint.lean",
-      "line": 679,
+      "line": 705,
       "statement": "@[simp] theorem Sys.conviction_keeps_writer (s : Sys) (env : Env) (aid payee : Nat) (c : Commitment) :\n    (s.localWriter env aid (.convict payee c)).join = none",
       "statementSha256": "0ad756d54b3859c9b626dd199c9843d354308c08b93239dc64d4eb881427bf98",
       "sourceStory": "",
@@ -1834,7 +1862,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.local_event_uses_own_authorization",
       "path": "lean/CardanoKeri/Checkpoint.lean",
-      "line": 708,
+      "line": 734,
       "statement": "theorem local_event_uses_own_authorization {p : Params} {env : SystemEnv} {s s' : Sys}\n    (event : LocalEvent p env s s') :\n    ∃ aid a now flow st, Step p (env aid) a now (s.states aid) flow st ∧\n      a.authorizedFor env aid (s.states aid) ∧ s.revealOpen aid a ∧\n      s' = (s.set aid st (s.localWriter (env aid) aid a).join (st.producingSpend (env aid))).retireRevealed a",
       "statementSha256": "e5e55694f5f9076d266c5e26ee774971dd4c58e478cc7f467400929f0db8defe",
       "sourceStory": "Given a local system event, when it updates a checkpoint, then the very\naction and identifier producing the successor have that identifier's required\nrotation, deposit or poison authorization for its prior live state.",
@@ -1975,15 +2003,15 @@
       "declaration": "CardanoKeri.Checkpoint.conviction_checks_committed_rival",
       "path": "lean/CardanoKeri/CheckpointCommitmentGoals.lean",
       "line": 134,
-      "statement": "theorem conviction_checks_committed_rival (p : Params) (env : Env) {payee : Addr}\n    {c : Commitment} {t : Slot} {l : Live} {f : Flow} {s' : State}\n    (h : Step p env (.convict payee c) t (.present l) f s') :\n    ∃ comparison, env.comparison l.epoch l.sn = some comparison ∧\n      comparison.tip.aid = c.aid ∧ comparison.tip.epoch = l.epoch ∧ comparison.tip.sn = l.sn ∧\n      comparison.rival = c.evidence ∧ CheckpointConviction.accepts env.verifyRival comparison.tip c.evidence = true",
-      "statementSha256": "b7e9985cffdd3a91918c5ba61eb1afc0b09a5eb9b8a35af8131dbf175157ec15",
-      "sourceStory": "Given a local conviction, when the commitment is revealed, then its\nevidence is the very rival whose comparison the enforcement observer accepts.\nThe tip and the rival both name the commitment's identifier.",
+      "statement": "theorem conviction_checks_committed_rival (p : Params) (env : Env) {payee : Addr}\n    {c : Commitment} {t : Slot} {l : Live} {f : Flow} {s' : State}\n    (h : Step p env (.convict payee c) t (.present l) f s') :\n    ∃ comparison, env.comparison l.epoch l.sn = some comparison ∧\n      comparison.tip.aid = c.aid ∧ comparison.tip.epoch = l.epoch ∧ comparison.tip.sn = l.sn ∧\n      comparison.rival = c.evidence ∧ CheckpointConviction.accepts comparison.tip c.evidence = true",
+      "statementSha256": "c291dcb25daabb7aaf7a518698b78a943f512d17e561a4887e0a4d417d0c4e61",
+      "sourceStory": "Given a local conviction, when the commitment is revealed, then its\nevidence is the very rival whose comparison the conviction mint accepts.\nThe tip and the rival both name the commitment's identifier.",
       "story": {
         "given": "(p : Params) (env : Env) {payee : Addr}\n    {c : Commitment} {t : Slot} {l : Live} {f : Flow} {s' : State}\n    (h : Step p env (.convict payee c) t (.present l) f s')",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "∃ comparison, env.comparison l.epoch l.sn = some comparison ∧\n      comparison.tip.aid = c.aid ∧ comparison.tip.epoch = l.epoch ∧ comparison.tip.sn = l.sn ∧\n      comparison.rival = c.evidence ∧ CheckpointConviction.accepts env.verifyRival comparison.tip c.evidence = true"
+        "then": "∃ comparison, env.comparison l.epoch l.sn = some comparison ∧\n      comparison.tip.aid = c.aid ∧ comparison.tip.epoch = l.epoch ∧ comparison.tip.sn = l.sn ∧\n      comparison.rival = c.evidence ∧ CheckpointConviction.accepts comparison.tip c.evidence = true"
       },
-      "storySha256": "86ede20baf3abc5fb71f8869802a66bdbd4eeb30ed6f481b45dbf4284aa0eb22"
+      "storySha256": "842c3856412888becd56a038ff7e07fb578c0a0b038dc4a2d8c350cba73de2b5"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.step_keeps_key_state_or_rotates",
@@ -2336,18 +2364,18 @@
       "storySha256": "8c2ce5e2c03de87c6292cf074b34dcc71d85885b98caca0c2c6b8129fd9957de"
     },
     {
-      "declaration": "CardanoKeri.CheckpointConviction.accepted_rival",
+      "declaration": "CardanoKeri.CheckpointConviction.accepts_iff",
       "path": "lean/CardanoKeri/CheckpointConviction.lean",
-      "line": 99,
-      "statement": "theorem accepted_rival (verify : Verify) (tip : Tip) (rival : Rival)\n    (accepted : accepts verify tip rival = true) :\n    rival.rotation = true ∧ tip.aid = rival.aid ∧ tip.sn = rival.sn ∧\n    tip.keys.curKeys = rival.revealedKeys ∧\n    thresholdMet tip.keys.curThreshold\n      (verifiedPositions verify tip.keys.curKeys rival.bytes rival.signatures) = true ∧\n    tip.keys.toad ≤ ((verifiedPositions verify tip.keys.witnesses rival.bytes rival.receipts).length : Int) ∧\n    (tip.keys.curThreshold, tip.keys.nextKeys, tip.keys.nextThreshold, tip.keys.toad) ≠\n      (rival.threshold, rival.nextKeys, rival.nextThreshold, rival.toad)",
-      "statementSha256": "3536ddebcce0bb434098e6a9f7285cb68271965e225b1865dce9032f3d1bb8eb",
-      "sourceStory": "Given a spent tip and a rival, when the enforcement comparison succeeds,\nthen the rival is a rotation for the same identifier and native sequence,\nreveals exactly the spent keys, meets both thresholds under the spent tip,\nand disagrees with at least one of its four forward fields.",
+      "line": 64,
+      "statement": "theorem accepts_iff (tip : Tip) (rival : Rival) :\n    accepts tip rival = true ↔ ∃ previous, tip.previous = some previous ∧\n      tip.epoch ≠ 0 ∧ tip.aid = rival.event.aid ∧ tip.sn = rival.event.sn ∧\n      Duplicity.rotationValid previous rival = true ∧ tip.writer ≠ rival.event",
+      "statementSha256": "c65210890a48ace789c25103b7c818af3211a9ca99b1bedf60c52d95beabd192",
+      "sourceStory": "Given one decoded spend, it accepts exactly a conflicting, valid rotation\nat this identifier and sequence with a carried predecessor.",
       "story": {
-        "given": "(verify : Verify) (tip : Tip) (rival : Rival)\n    (accepted : accepts verify tip rival = true)",
+        "given": "(tip : Tip) (rival : Rival)",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "rival.rotation = true ∧ tip.aid = rival.aid ∧ tip.sn = rival.sn ∧\n    tip.keys.curKeys = rival.revealedKeys ∧\n    thresholdMet tip.keys.curThreshold\n      (verifiedPositions verify tip.keys.curKeys rival.bytes rival.signatures) = true ∧\n    tip.keys.toad ≤ ((verifiedPositions verify tip.keys.witnesses rival.bytes rival.receipts).length : Int) ∧\n    (tip.keys.curThreshold, tip.keys.nextKeys, tip.keys.nextThreshold, tip.keys.toad) ≠\n      (rival.threshold, rival.nextKeys, rival.nextThreshold, rival.toad)"
+        "then": "accepts tip rival = true ↔ ∃ previous, tip.previous = some previous ∧\n      tip.epoch ≠ 0 ∧ tip.aid = rival.event.aid ∧ tip.sn = rival.event.sn ∧\n      Duplicity.rotationValid previous rival = true ∧ tip.writer ≠ rival.event"
       },
-      "storySha256": "cf90a3d1172a67738b1c5fc83ff5700b9dc10b1c23d600c5fd56e1f8a748965a"
+      "storySha256": "cb1e2ffae8585e452da3c790a42f2359ec863ec725f7944dba9b4a16f61e8774"
     },
     {
       "declaration": "CardanoKeri.CheckpointDatum.fuel_succ",
@@ -3692,6 +3720,132 @@
         "then": "duplicityAt (previous.epoch + 1) writer.event.sn\n      ⟨previous.epoch + 1, previous.predecessor, writer⟩ rival = true ↔\n      rotationValid previous.predecessor rival = true"
       },
       "storySha256": "8d38207a60babb4b0eb5013ab0a5718233322970fbed9ec67cba2808daec2fe8"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.EventHistory.datum_commitments",
+      "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
+      "line": 117,
+      "statement": "theorem EventHistory.datum_commitments (h : EventHistory) :\n    h.datum.commitments = h.predecessor",
+      "statementSha256": "b57e232228b7b6782be0af1f43b2008edf63fc9e468bab014d3c3e6f6723c9ae",
+      "sourceStory": "The one-step writer agrees with the complete authenticated history used\nby a relying party. In particular the witness set includes earlier deltas.",
+      "story": {
+        "given": "(h : EventHistory)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "h.datum.commitments = h.predecessor"
+      },
+      "storySha256": "1d1245406c5b4b72087437d44702b2956444c7a7f5e7c9d724fa710aabc4cdc7"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.inception_carries_no_previous",
+      "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
+      "line": 125,
+      "statement": "theorem inception_carries_no_previous (event witnesses) :\n    (EventHistory.inception event witnesses).datum.previous = none",
+      "statementSha256": "c15ca7136e682ec4a130a7781f05dc767e429e722b50daaa11b8bf2d5cc0e02f",
+      "sourceStory": "",
+      "story": {
+        "given": "(event witnesses)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "(EventHistory.inception event witnesses).datum.previous = none"
+      },
+      "storySha256": "63b1094b0b55fa5f2a7ba777551eff5f1fb4cf16b27a306e21e5a2da3f386663"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.rotation_replaces_previous",
+      "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
+      "line": 128,
+      "statement": "theorem rotation_replaces_previous (history event) :\n    (EventHistory.rotation history event).datum.previous = some history.predecessor",
+      "statementSha256": "1199fe0b59077138619813fa507ed6f8d3b4383733440d81dbf305eaaa49c09e",
+      "sourceStory": "",
+      "story": {
+        "given": "(history event)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "(EventHistory.rotation history event).datum.previous = some history.predecessor"
+      },
+      "storySha256": "51a54a4963cca84b8729cfd0e57975b558d5c1015d6cc6670f46dc86e0653b60"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.advance_forgets_older",
+      "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
+      "line": 134,
+      "statement": "theorem advance_forgets_older (datum : WriterDatum) (older : Option Predecessor) (event : Content) :\n    ({datum with previous := older} : WriterDatum).advance event = datum.advance event",
+      "statementSha256": "fbc5ef61dcbda37c1f12fcf53a944ae34a554df11d2690de29006a01e23d8f87",
+      "sourceStory": "Different older predecessors cannot affect the next output once the\ncurrent writer and its established witnesses agree.",
+      "story": {
+        "given": "(datum : WriterDatum) (older : Option Predecessor) (event : Content)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "({datum with previous := older} : WriterDatum).advance event = datum.advance event"
+      },
+      "storySha256": "8b6f4493e8539e8b9526bba9affb8cf3d5455f5466d8370bf02bbf2e85625812"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.EventHistory.datum_writer",
+      "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
+      "line": 137,
+      "statement": "theorem EventHistory.datum_writer (history : EventHistory) :\n    history.datum.writer = history.writer.event",
+      "statementSha256": "22071e1a728a07381af9f2f6331353ca7860d93cdbbbd6cc2f2beac6de51faf7",
+      "sourceStory": "",
+      "story": {
+        "given": "(history : EventHistory)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "history.datum.writer = history.writer.event"
+      },
+      "storySha256": "c89bdd09b129e1c09bd6632e0fff2121bae26a12bf85294b6bf8b7ac280c1714"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.read_encoded",
+      "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
+      "line": 181,
+      "statement": "private theorem read_encoded (read : List Nat → Option Nat) (encode : Nat → List Nat)\n    (roundTrip : ∀ k, read (encode k) = some k) (keys : List Nat) :\n    (keys.map encode).mapM read = some keys",
+      "statementSha256": "ab6d78d969d5cd62649abf047f836744de7bd4c29ac2a495e8354444dd7a7e80",
+      "sourceStory": "",
+      "story": {
+        "given": "(read : List Nat → Option Nat) (encode : Nat → List Nat)\n    (roundTrip : ∀ k, read (encode k) = some k) (keys : List Nat)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "(keys.map encode).mapM read = some keys"
+      },
+      "storySha256": "9d69c86a1c38e1d0ee137a49b437b51642296d88a7266cdc664a6e4974eb6808"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.WriterDatum.matches_tip",
+      "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
+      "line": 190,
+      "statement": "theorem WriterDatum.matches_tip {reads : KeyReads} (datum : WriterDatum)\n    (encoding : KeyEncoding reads) (epoch : Nat) :\n    reads.matchesDatum datum.writer.aid epoch datum (datum.tip encoding epoch) = true",
+      "statementSha256": "bb2882a8142c333e108384bea4c4cb69e3b778d6016d1c99fd43334f9947cd7f",
+      "sourceStory": "Given faithfully interpreted keys, presenting the stored writer preserves\nevery field checked by the conviction input, for all threshold constructors.",
+      "story": {
+        "given": "{reads : KeyReads} (datum : WriterDatum)\n    (encoding : KeyEncoding reads) (epoch : Nat)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "reads.matchesDatum datum.writer.aid epoch datum (datum.tip encoding epoch) = true"
+      },
+      "storySha256": "3c0471abb8e0e0a6d488f757c0ba0d78b86f73c3735eab56b5a121369ed97e78"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.EventHistory.authenticated_aid",
+      "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
+      "line": 197,
+      "statement": "theorem EventHistory.authenticated_aid {aid : Nat} {history : EventHistory}\n    (h : history.authenticated aid = true) : history.writer.event.aid = aid",
+      "statementSha256": "904f41c08105b1f82bc93009324e9a56f02daab57f8183ab88f55352634d1b41",
+      "sourceStory": "A history authenticated for an identifier ends in a writer for it.",
+      "story": {
+        "given": "{aid : Nat} {history : EventHistory}\n    (h : history.authenticated aid = true)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "history.writer.event.aid = aid"
+      },
+      "storySha256": "7c5313199385e3eee3b1699ce844f501baa662d67f714bf5e60e76fb76d61ce0"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.KeyReads.matches_history",
+      "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
+      "line": 210,
+      "statement": "theorem KeyReads.matches_history {reads : KeyReads} {aid history tip}\n    (h : reads.matches aid history tip = true) :\n    tip.previous = history.datum.previous ∧ tip.writer = history.writer.event ∧\n    tip.aid = aid ∧ tip.aid = history.writer.event.aid ∧ tip.epoch = history.epoch ∧ tip.sn = history.writer.event.sn",
+      "statementSha256": "0987564926b9680bc28bc5841cdc5f2dea3964c939f980febc588e52a1216284",
+      "sourceStory": "The spent datum binds the entire writer and the one carried predecessor.",
+      "story": {
+        "given": "{reads : KeyReads} {aid history tip}\n    (h : reads.matches aid history tip = true)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "tip.previous = history.datum.previous ∧ tip.writer = history.writer.event ∧\n    tip.aid = aid ∧ tip.aid = history.writer.event.aid ∧ tip.epoch = history.epoch ∧ tip.sn = history.writer.event.sn"
+      },
+      "storySha256": "dfddaf5c6f067602740fe184f30c9a80ad4135ccae9900fba0d0e9c50113ed76"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.T12_convicted_terminal",
@@ -5223,15 +5377,15 @@
       "declaration": "CardanoKeri.Checkpoint.Examples.stored_context_conviction_refused",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
       "line": 449,
-      "statement": "theorem stored_context_conviction_refused :\n    CardanoKeri.Registry.convictCkpt { CardanoKeri.Registry.Examples.env with conviction := fun _ => none } CardanoKeri.Registry.Examples.registered 11 =\n      .error \"keri-conviction-refused\"",
-      "statementSha256": "dd871208bf31101f7d96e2f7c4032ea75f82cf4bc027171395d665c1837b536a",
+      "statement": "theorem stored_context_conviction_refused :\n    CardanoKeri.Registry.convictCkpt { CardanoKeri.Registry.Examples.env with presentedConviction := fun _ => none } CardanoKeri.Registry.Examples.registered 11 =\n      .error \"keri-conviction-refused\"",
+      "statementSha256": "e5ee3b9ba8ab35768c1fa453a2461ecb2a14b8c4fa71db3141b236b302f4efb1",
       "sourceStory": "Given the same successful conviction source, replay under an environment with\nno conviction authorization actually refuses at the canonical function.",
       "story": {
         "given": "No additional local parameters; use the definitions in this module.",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "CardanoKeri.Registry.convictCkpt { CardanoKeri.Registry.Examples.env with conviction := fun _ => none } CardanoKeri.Registry.Examples.registered 11 =\n      .error \"keri-conviction-refused\""
+        "then": "CardanoKeri.Registry.convictCkpt { CardanoKeri.Registry.Examples.env with presentedConviction := fun _ => none } CardanoKeri.Registry.Examples.registered 11 =\n      .error \"keri-conviction-refused\""
       },
-      "storySha256": "dd8dd2d5352fbe4429552e97ff39c84a09a190f8b11ee05ef5407240251e487c"
+      "storySha256": "13b090d1a0fff02ca81d244064c14fa214396dcb30f595329e93228be3ed25c7"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.rotated_spend_uses_one_rival",
@@ -5246,6 +5400,48 @@
         "then": "let localEnv := { env 11 with convictionContext := fun _ _ => none, convictionRival := fun _ _ => none }\n    stepFn p localEnv (.convict 7 commitment) 5 (.present rotatedLive) =\n      some ({ refund := some { addr := 42, b := 2, pool := 4 }, convictor := some { addr := 7, dreg := 3 } },\n        .terminationPending rotatedLive.hash)"
       },
       "storySha256": "697e8f015adf6a7118661e1083598f6a839e8b942fd480120598facd30296405"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.Examples.conviction_mint_bound_to_output",
+      "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
+      "line": 467,
+      "statement": "theorem conviction_mint_bound_to_output :\n    let exactClaim : Registry.Conviction :=\n      ⟨⟨105, 0⟩, CheckpointConviction.Fixtures.comparison 11 1 1⟩\n    let other := {exactClaim with output.index := 1}\n    let atUse := fun (claim : Registry.Conviction) =>\n      ({env 11 with attestationMinted := fun observed => decide (observed = claim)} : Env)\n    (atUse exactClaim).acceptsRival 1 1 = true ∧\n      (atUse other).acceptsRival 1 1 = false",
+      "statementSha256": "aa9bf338b7e820c462feac64bc48e47ab1d1c09fe28b3ec5bcbc18b6372e204c",
+      "sourceStory": "The minted claim must match the exact pending output and rival of the\nspend. A claim for the same identifier and position at the other index fails.",
+      "story": {
+        "given": "No additional local parameters; use the definitions in this module.",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "let exactClaim : Registry.Conviction :=\n      ⟨⟨105, 0⟩, CheckpointConviction.Fixtures.comparison 11 1 1⟩\n    let other := {exactClaim with output.index := 1}\n    let atUse := fun (claim : Registry.Conviction) =>\n      ({env 11 with attestationMinted := fun observed => decide (observed = claim)} : Env)\n    (atUse exactClaim).acceptsRival 1 1 = true ∧\n      (atUse other).acceptsRival 1 1 = false"
+      },
+      "storySha256": "1701a81f639e4b6b4ec050b7ffd92f81618b300e31af5d2033ac67a850c81442"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.Examples.NestedWriter.reachable",
+      "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
+      "line": 500,
+      "statement": "private theorem reachable : SysReach p environment state",
+      "statementSha256": "dfa10c9ecbc6b9f7af97981b1e6ef7ed51cf8d0a33c2caffdcea34fd907e4250",
+      "sourceStory": "",
+      "story": {
+        "given": "No additional local parameters; use the definitions in this module.",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "SysReach p environment state"
+      },
+      "storySha256": "c514ae41ec37f5a08175784fab65763e6b763eacfe5440d0a094ea046c66f888"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.Examples.NestedWriter.reachable_nested_writer_accepts_sibling",
+      "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
+      "line": 518,
+      "statement": "theorem reachable_nested_writer_accepts_sibling :\n    SysReach p environment state ∧ state.writers 11 = some history ∧\n    comparison.tip.keys.curThreshold = threshold ∧ comparison.tip.keys.nextThreshold = threshold ∧\n    Duplicity.duplicityAt 1 1 ⟨1, origin.inception.predecessor, writer 11 1⟩ sibling = true ∧\n    state.comparisonMatchesWriter (environment 11) 11 = true ∧\n    (environment 11).acceptsRival 1 1 = true",
+      "statementSha256": "0ffff73c39352be71858c1ce0c7f54e3c674ae794a52e7b6bb1516a8095e9618",
+      "sourceStory": "Registration and advance reach a writer with nested signing and next\nthresholds. Its seal-only sibling binds to that live input and passes both\ncomparison gates in the environment of the same execution.",
+      "story": {
+        "given": "No additional local parameters; use the definitions in this module.",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "SysReach p environment state ∧ state.writers 11 = some history ∧\n    comparison.tip.keys.curThreshold = threshold ∧ comparison.tip.keys.nextThreshold = threshold ∧\n    Duplicity.duplicityAt 1 1 ⟨1, origin.inception.predecessor, writer 11 1⟩ sibling = true ∧\n    state.comparisonMatchesWriter (environment 11) 11 = true ∧\n    (environment 11).acceptsRival 1 1 = true"
+      },
+      "storySha256": "78fe8c1360a7d3c5f038ccdaf7b657bdb0c94e41580ee09a16fecf3d85c1d888"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.receiptFieldsB_iff",
@@ -5514,23 +5710,23 @@
       "storySha256": "b8f1e689a9548f9f8340579d200c80493ced93622f402f88b714f29f2e27e015"
     },
     {
-      "declaration": "CardanoKeri.Checkpoint.accepted_rotated_tip_iff_rival_valid",
+      "declaration": "CardanoKeri.Checkpoint.rotated_tip_accepts_iff_duplicity",
       "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
-      "line": 366,
-      "statement": "theorem accepted_rotated_tip_iff_rival_valid {p env s aid previous writer}\n    (reachable : SysReach p env s) (stored : s.writers aid = some (.rotation previous writer))\n    (reads : ComparisonReads) (rival : CheckpointConviction.Rival)\n    (encode : Duplicity.Content → ForwardFields)\n    (fields : reads.FieldsAgree (.rotation previous writer) rival encode)\n    (accepted : CheckpointConviction.accepts reads.verify (reads.tipOf (.rotation previous writer)) rival = true) :\n    let tip := reads.tipOf (.rotation previous writer)\n    let signed := reads.rivalOf tip rival\n    Duplicity.duplicityAt tip.epoch tip.sn ⟨previous.epoch + 1, previous.predecessor, writer⟩ signed = true ↔\n      Duplicity.rotationValid previous.predecessor signed = true",
-      "statementSha256": "e79d154874a332989db3dd947062651fea39bb3ea0e474c6044750e8363b273b",
-      "sourceStory": "Given the authenticated writer installed in a reachable system and a\nconsistent reading of the tip and rival, when the spent-tip comparison\naccepts, then KERI duplicity for these two events holds exactly when the\nrival is valid against that writer's actual predecessor.",
+      "line": 365,
+      "statement": "theorem rotated_tip_accepts_iff_duplicity {p env s aid previous writer}\n    (reachable : SysReach p env s) (stored : s.writers aid = some (.rotation previous writer))\n    {reads : KeyReads} {tip : CheckpointConviction.Tip}\n    (bound : reads.matches aid (.rotation previous writer) tip = true)\n    (rival : Duplicity.SignedEvent) :\n    CheckpointConviction.accepts tip rival = true ↔\n    Duplicity.duplicityAt tip.epoch tip.sn ⟨previous.epoch + 1, previous.predecessor, writer⟩ rival = true",
+      "statementSha256": "323aadb32f39c9a243f0b4176017f3385fe20577403c8eb57c599cf86f88c011",
+      "sourceStory": "Given a reachable rotated writer and the datum bound to it, when one rival\nis presented, then the conviction comparison accepts exactly KERI duplicity\nat the spent position. The writer's earlier advance establishes its validity.",
       "story": {
-        "given": "{p env s aid previous writer}\n    (reachable : SysReach p env s) (stored : s.writers aid = some (.rotation previous writer))\n    (reads : ComparisonReads) (rival : CheckpointConviction.Rival)\n    (encode : Duplicity.Content → ForwardFields)\n    (fields : reads.FieldsAgree (.rotation previous writer) rival encode)\n    (accepted : CheckpointConviction.accepts reads.verify (reads.tipOf (.rotation previous writer)) rival = true)",
+        "given": "{p env s aid previous writer}\n    (reachable : SysReach p env s) (stored : s.writers aid = some (.rotation previous writer))\n    {reads : KeyReads} {tip : CheckpointConviction.Tip}\n    (bound : reads.matches aid (.rotation previous writer) tip = true)\n    (rival : Duplicity.SignedEvent)",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "let tip := reads.tipOf (.rotation previous writer)\n    let signed := reads.rivalOf tip rival\n    Duplicity.duplicityAt tip.epoch tip.sn ⟨previous.epoch + 1, previous.predecessor, writer⟩ signed = true ↔\n      Duplicity.rotationValid previous.predecessor signed = true"
+        "then": "CheckpointConviction.accepts tip rival = true ↔\n    Duplicity.duplicityAt tip.epoch tip.sn ⟨previous.epoch + 1, previous.predecessor, writer⟩ rival = true"
       },
-      "storySha256": "8a49a7cea25fe96d5cfad80bf43dd2d07b7fc1d1781f7ec202ddae4108f273a7"
+      "storySha256": "4c1633955a7b7dd981338b7e6b9c7eec074c1c7cc7b89a8453e0055bbda3082a"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.set_live_writers",
       "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
-      "line": 396,
+      "line": 400,
       "statement": "private theorem set_live_writers {s : Sys} {aid state writer} (old : LiveWriters s)\n    (here : ∀ live, state = .present live →\n      WriterAt (writer.orElse (fun _ => s.writers aid)) live.hash) :\n    LiveWriters (s.set aid state writer)",
       "statementSha256": "d6cb5caa3fca070e694a8344d6f7f6df3ec8d2b02847cc474dbb7f8061f10ae4",
       "sourceStory": "Given matching writers at all live identifiers, when one state is updated with its matching writer, then all live identifiers still have matching writers.",
@@ -5544,7 +5740,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.inception_position",
       "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
-      "line": 407,
+      "line": 411,
       "statement": "private theorem inception_position {env : Env} {aid datum history}\n    (found : env.initialHistory aid datum = some history) : WriterAt (some history) ⟨0, 0⟩",
       "statementSha256": "0ccccdb87c268c449027345ac860efada4335370a67967b0eb7630d9a5b68ee9",
       "sourceStory": "Given an admitted inception read, when the initial history is installed, then it has epoch and native sequence zero.",
@@ -5558,7 +5754,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.rotation_position",
       "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
-      "line": 421,
+      "line": 425,
       "statement": "private theorem rotation_position {s : Sys} {env aid sn history live}\n    (present : s.states aid = .present live) (found : s.rotationHistory env aid sn = some history) :\n    WriterAt (some history) ⟨live.epoch + 1, sn⟩",
       "statementSha256": "08364baf97f807f502b1a21680237bb4a939203780ef7438d0efb9f2d33ea70c",
       "sourceStory": "Given the live source, when its authenticated rotation history is found, then the writer advances one epoch and records the proposed native sequence.",
@@ -5572,7 +5768,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.local_position",
       "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
-      "line": 435,
+      "line": 439,
       "statement": "private theorem local_position {p env s aid action now flow state} (old : LiveWriters s)\n    (ordinary : ∀ refund pool, action ≠ .register refund pool)\n    (executed : Step p env action now (s.states aid) flow state)\n    (writer : (s.localWriter env aid action).isSome = true) :\n    ∀ live, state = .present live →\n      WriterAt ((s.localWriter env aid action).join.orElse (fun _ => s.writers aid)) live.hash",
       "statementSha256": "70ecc1ecdeddf98234eb030e0882c3d65718aad1844592d20e9adddf5c3d23e8",
       "sourceStory": "Given matching live writers, when an ordinary local step produces a live output, then its selected writer has that output’s native position.",
@@ -5586,7 +5782,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.reachable_live_writers",
       "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
-      "line": 462,
+      "line": 466,
       "statement": "private theorem reachable_live_writers {p env s} (reach : SysReach p env s) : LiveWriters s",
       "statementSha256": "f4d52096588d7b34c4458e24e576acb1eeb1516fd43f1e4d5e51e5b8c0feac92",
       "sourceStory": "Given a complete execution from deployment, when its live outputs are read, then each has a stored writer for its position.",
@@ -5600,7 +5796,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.live_has_authenticated_writer",
       "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
-      "line": 496,
+      "line": 500,
       "statement": "theorem live_has_authenticated_writer {p env s aid live} (reach : SysReach p env s)\n    (present : s.states aid = .present live) :\n    ∃ history, s.writers aid = some history ∧ history.authenticated aid = true ∧\n      history.epoch = live.epoch ∧ history.writer.event.sn = live.sn",
       "statementSha256": "895c28fb65c5244219fcfddf628eab1665acc15459f63740a86888dd9ca796d4",
       "sourceStory": "Given a reachable system, when an identifier has a live checkpoint, then\nits stored writer exists, authenticates back to that identifier's inception,\nand has exactly the epoch and native sequence of this live output.",
@@ -5612,9 +5808,107 @@
       "storySha256": "b0a5205a3bfdca7791b07d70dba4b690abecc09878af095494f2e0b488049fa1"
     },
     {
+      "declaration": "CardanoKeri.Checkpoint.set_data_matches",
+      "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
+      "line": 513,
+      "statement": "private theorem set_data_matches {s : Sys} {aid st w spend}\n    (prior : DataMatches s) (extendsPrior : ExtendsWriter s aid w) :\n    DataMatches (s.set aid st w spend)",
+      "statementSha256": "1dd6149511003fd41e14188dd43d9a713febedf0fe7ef14eccd21b8c70a07c70",
+      "sourceStory": "",
+      "story": {
+        "given": "{s : Sys} {aid st w spend}\n    (prior : DataMatches s) (extendsPrior : ExtendsWriter s aid w)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "DataMatches (s.set aid st w spend)"
+      },
+      "storySha256": "4d9bc5152bea9ebc75d4007ede546a2ff3e62dfeb35e8439683d34e22b0a17c7"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.registration_extends",
+      "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
+      "line": 529,
+      "statement": "private theorem registration_extends {env : Env} {aid raw h}\n    (installed : env.initialHistory aid raw = some h) (s : Sys) :\n    ExtendsWriter s aid (some h)",
+      "statementSha256": "2dfa4c8de143b4f43d5cc351ce17f967607a0b736b5bfb2dea12a219b43bb953",
+      "sourceStory": "",
+      "story": {
+        "given": "{env : Env} {aid raw h}\n    (installed : env.initialHistory aid raw = some h) (s : Sys)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "ExtendsWriter s aid (some h)"
+      },
+      "storySha256": "e9e18639fb53a29740adf8420eb5720be29be0022f323b0d693c965cbce7a90f"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.local_extends",
+      "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
+      "line": 540,
+      "statement": "private theorem local_extends (s : Sys) (env : Env) (aid : AID) (action : Action) :\n    ExtendsWriter s aid (s.localWriter env aid action).join",
+      "statementSha256": "69ebc55b2b76e669cbe7c587f9e9f0f7cd8fff0dd13dc64ccf665ab4998cdf01",
+      "sourceStory": "",
+      "story": {
+        "given": "(s : Sys) (env : Env) (aid : AID) (action : Action)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "ExtendsWriter s aid (s.localWriter env aid action).join"
+      },
+      "storySha256": "a94087ce9b05f2bff7decdacd09e01e6b4adeaabe872a0a28760cea6967d1791"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.reachable_writer_datum",
+      "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
+      "line": 554,
+      "statement": "theorem reachable_writer_datum {p env s} (reach : SysReach p env s) (aid : AID) :\n    s.writerData aid = (s.writers aid).map EventHistory.datum",
+      "statementSha256": "944553017695b2d2e8e35f994b96509ffbaf4b16a46a7a3306c78f538a74b7d7",
+      "sourceStory": "Given any reachable system, the bounded datum actually carried for an\nidentifier agrees with its registration and subsequent writer history.",
+      "story": {
+        "given": "{p env s} (reach : SysReach p env s) (aid : AID)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "s.writerData aid = (s.writers aid).map EventHistory.datum"
+      },
+      "storySha256": "a027e513043b2cec33f97ce922d83d971cc4ee150c93ee766b88c18715f866b3"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.rotated_writer_accepts_with_encoding",
+      "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
+      "line": 583,
+      "statement": "theorem rotated_writer_accepts_with_encoding {p env s aid live previous writer rival}\n    (reach : SysReach p env s) (present : s.states aid = .present live)\n    (stored : s.writers aid = some (.rotation previous writer))\n    (valid : Duplicity.rotationValid previous.predecessor rival = true)\n    (same : writer.event.sn = rival.event.sn) (conflict : writer.event ≠ rival.event)\n    {reads : KeyReads} (encoding : KeyEncoding reads) :\n    let tip := (EventHistory.rotation previous writer).datum.tip encoding live.epoch\n    (s.writerData aid).any (fun d => reads.matchesDatum aid live.epoch d tip) = true ∧\n      (CheckpointConviction.Comparison.mk tip rival).acceptsAt live.epoch live.sn = true",
+      "statementSha256": "e51b7cce53c9673e382e1113c618d44d56a76d626b703e7ea20e2d8fa2beebe8",
+      "sourceStory": "A relying party presents the writer carried by the live input and one\nvalid sibling at its sequence. With any faithful key encoding, that concrete\ninput matches the system datum and its comparison accepts at the live position.",
+      "story": {
+        "given": "{p env s aid live previous writer rival}\n    (reach : SysReach p env s) (present : s.states aid = .present live)\n    (stored : s.writers aid = some (.rotation previous writer))\n    (valid : Duplicity.rotationValid previous.predecessor rival = true)\n    (same : writer.event.sn = rival.event.sn) (conflict : writer.event ≠ rival.event)\n    {reads : KeyReads} (encoding : KeyEncoding reads)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "let tip := (EventHistory.rotation previous writer).datum.tip encoding live.epoch\n    (s.writerData aid).any (fun d => reads.matchesDatum aid live.epoch d tip) = true ∧\n      (CheckpointConviction.Comparison.mk tip rival).acceptsAt live.epoch live.sn = true"
+      },
+      "storySha256": "00ab8513636cca0ea73ee9e0d85a923aaf6f33e089a2e69ff480280db9f66be2"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.reachable_conflict_has_accepted_comparison",
+      "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
+      "line": 613,
+      "statement": "theorem reachable_conflict_has_accepted_comparison {p env s aid live previous writer rival}\n    (reach : SysReach p env s) (present : s.states aid = .present live)\n    (stored : s.writers aid = some (.rotation previous writer))\n    (valid : Duplicity.rotationValid previous.predecessor rival = true)\n    (same : writer.event.sn = rival.event.sn) (conflict : writer.event ≠ rival.event) :\n    ∃ tip, (s.writerData aid).any (fun d => KeyReads.symbolic.matchesDatum aid live.epoch d tip) = true ∧\n      (CheckpointConviction.Comparison.mk tip rival).acceptsAt live.epoch live.sn = true",
+      "statementSha256": "822598bd9eee296d6dfd7370e26e459a1eedd617925283b573ff526ddca18d56",
+      "sourceStory": "For every reachable live rotated writer, a valid conflict at its position\nhas a matching input accepted by the decoded comparison. The construction\nrequires neither a supplied matching tip nor a transaction observation.",
+      "story": {
+        "given": "{p env s aid live previous writer rival}\n    (reach : SysReach p env s) (present : s.states aid = .present live)\n    (stored : s.writers aid = some (.rotation previous writer))\n    (valid : Duplicity.rotationValid previous.predecessor rival = true)\n    (same : writer.event.sn = rival.event.sn) (conflict : writer.event ≠ rival.event)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "∃ tip, (s.writerData aid).any (fun d => KeyReads.symbolic.matchesDatum aid live.epoch d tip) = true ∧\n      (CheckpointConviction.Comparison.mk tip rival).acceptsAt live.epoch live.sn = true"
+      },
+      "storySha256": "873725d0e3f710af7a70e110069d0d7e03ad6079c48f170bfa642141cf11a91d"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.presented_conflict_passes_system_comparison",
+      "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
+      "line": 625,
+      "statement": "theorem presented_conflict_passes_system_comparison {p env s aid live previous writer rival}\n    (reach : SysReach p env s) (present : s.states aid = .present live)\n    (stored : s.writers aid = some (.rotation previous writer))\n    (valid : Duplicity.rotationValid previous.predecessor rival = true)\n    (same : writer.event.sn = rival.event.sn) (conflict : writer.event ≠ rival.event)\n    (encoding : KeyEncoding (env aid).keyReads) (output : Singular.OutRef) :\n    let tip := (EventHistory.rotation previous writer).datum.tip encoding live.epoch\n    let observed : Registry.Conviction := ⟨output, ⟨tip, rival⟩⟩\n    (env aid).presentedSpend live.epoch live.sn = some observed →\n    (env aid).attestationMinted observed = true →\n    s.comparisonMatchesWriter (env aid) aid = true ∧\n      (env aid).acceptsRival live.epoch live.sn = true",
+      "statementSha256": "8769d021645ea5b7de78ed2a063dfd7e6b8312bd9bb1d83b5ad156dbb32d017d",
+      "sourceStory": "When the convictor presents the constructed comparison at the actual\noutput and the environment attests that claim, both system evidence checks\naccept. Commitment, payout and time are separate conditions of the spend.",
+      "story": {
+        "given": "{p env s aid live previous writer rival}\n    (reach : SysReach p env s) (present : s.states aid = .present live)\n    (stored : s.writers aid = some (.rotation previous writer))\n    (valid : Duplicity.rotationValid previous.predecessor rival = true)\n    (same : writer.event.sn = rival.event.sn) (conflict : writer.event ≠ rival.event)\n    (encoding : KeyEncoding (env aid).keyReads) (output : Singular.OutRef)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "let tip := (EventHistory.rotation previous writer).datum.tip encoding live.epoch\n    let observed : Registry.Conviction := ⟨output, ⟨tip, rival⟩⟩\n    (env aid).presentedSpend live.epoch live.sn = some observed →\n    (env aid).attestationMinted observed = true →\n    s.comparisonMatchesWriter (env aid) aid = true ∧\n      (env aid).acceptsRival live.epoch live.sn = true"
+      },
+      "storySha256": "354f42381282bd04be6e6c241a459af4360026a686938f6aae9da8dfbd60baa1"
+    },
+    {
       "declaration": "CardanoKeri.Checkpoint.conviction_spends_authenticated_writer",
       "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
-      "line": 506,
+      "line": 652,
       "statement": "theorem conviction_spends_authenticated_writer {p env before after aid key}\n    (reach : SysReach p env before) (edge : ConvictionEdge p env aid key before after) :\n    ∃ history, before.writers aid = some history ∧ history.authenticated aid = true ∧\n      history.epoch = key.epoch ∧ history.writer.event.sn = key.sn",
       "statementSha256": "b967aabce998d773ad6fa6fbf9fe51d22f7c2153848e8da7bb16d709af7f2f18",
       "sourceStory": "Given a reachable system and the conviction edge for one key state,\nwhen its live input is spent, then its stored writer authenticates under\nthe selected identifier and has the native position named by that edge.",
@@ -5628,30 +5922,58 @@
     {
       "declaration": "CardanoKeri.Checkpoint.conviction_compares_authenticated_writer",
       "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
-      "line": 516,
-      "statement": "theorem conviction_compares_authenticated_writer {p env before after aid key}\n    (reach : SysReach p env before) (edge : ConvictionEdge p env aid key before after) :\n    ∃ writer comparison, before.writers aid = some writer ∧ writer.authenticated aid = true ∧\n      (env aid).comparison key.epoch key.sn = some comparison ∧\n      (env aid).keyReads.matches aid writer comparison.tip = true ∧\n      comparison.tip.epoch = key.epoch ∧ comparison.tip.sn = key.sn ∧\n      CheckpointConviction.accepts (env aid).verifyRival comparison.tip comparison.rival = true",
-      "statementSha256": "e63cb7ff7aad4822fcec11752d216547aa1932f1a4ce94bd1e37cf9996858b02",
-      "sourceStory": "Given a conviction edge with a reachable source, when its comparison is\nread, then the checkpoint's stored authenticated writer agrees with every\nspent key field and the observer accepted the rival at that exact position.",
+      "line": 662,
+      "statement": "theorem conviction_compares_authenticated_writer {p env before after aid key}\n    (reach : SysReach p env before) (edge : ConvictionEdge p env aid key before after) :\n    ∃ writer comparison, before.writers aid = some writer ∧ writer.authenticated aid = true ∧\n      (env aid).comparison key.epoch key.sn = some comparison ∧\n      (env aid).keyReads.matches aid writer comparison.tip = true ∧\n      comparison.tip.epoch = key.epoch ∧ comparison.tip.sn = key.sn ∧\n      CheckpointConviction.accepts comparison.tip comparison.rival = true",
+      "statementSha256": "77f83455328df500b6c1e6c9cf5a8a1dd47adfa7a0f88740b6c5d04c151294d7",
+      "sourceStory": "Given a conviction edge with a reachable source, when its comparison is\nread, then the checkpoint's stored authenticated writer agrees with every\nspent key field and the conviction mint accepted the rival at that exact position.",
       "story": {
         "given": "{p env before after aid key}\n    (reach : SysReach p env before) (edge : ConvictionEdge p env aid key before after)",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "∃ writer comparison, before.writers aid = some writer ∧ writer.authenticated aid = true ∧\n      (env aid).comparison key.epoch key.sn = some comparison ∧\n      (env aid).keyReads.matches aid writer comparison.tip = true ∧\n      comparison.tip.epoch = key.epoch ∧ comparison.tip.sn = key.sn ∧\n      CheckpointConviction.accepts (env aid).verifyRival comparison.tip comparison.rival = true"
+        "then": "∃ writer comparison, before.writers aid = some writer ∧ writer.authenticated aid = true ∧\n      (env aid).comparison key.epoch key.sn = some comparison ∧\n      (env aid).keyReads.matches aid writer comparison.tip = true ∧\n      comparison.tip.epoch = key.epoch ∧ comparison.tip.sn = key.sn ∧\n      CheckpointConviction.accepts comparison.tip comparison.rival = true"
       },
-      "storySha256": "8bb6cae7274fccf5d9aeb1233d071d0485b19d4a11dddc2dec9d7eb3d45a71a3"
+      "storySha256": "e1067e26878408986f91fa2609a64f18f7782ae856f570540c1f9262f738eeab"
     },
     {
-      "declaration": "CardanoKeri.Checkpoint.rotated_conviction_iff_rival_valid",
+      "declaration": "CardanoKeri.Checkpoint.rotated_conviction_is_duplicity",
       "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
-      "line": 532,
-      "statement": "theorem rotated_conviction_iff_rival_valid {p env before after aid key previous writer comparison}\n    (reach : SysReach p env before) (edge : ConvictionEdge p env aid key before after)\n    (stored : before.writers aid = some (.rotation previous writer))\n    (selected : (env aid).comparison key.epoch key.sn = some comparison)\n    (reads : ComparisonReads) (tip : reads.tipOf (.rotation previous writer) = comparison.tip)\n    (encode : Duplicity.Content → ForwardFields)\n    (fields : reads.FieldsAgree (.rotation previous writer) comparison.rival encode) :\n    let rival := reads.rivalOf comparison.tip comparison.rival\n    Duplicity.duplicityAt key.epoch key.sn ⟨previous.epoch + 1, previous.predecessor, writer⟩ rival = true ↔\n      Duplicity.rotationValid previous.predecessor rival = true",
-      "statementSha256": "bee4f3b016920b458bfb2c56408c6e42370f005e0c77b8a75f4339fafec6c92e",
-      "sourceStory": "Given a reachable conviction after rotation and consistent decoding of\nthe observed comparison, when KERI judges those two events, then duplicity\nholds exactly when the rival passes the same predecessor's rotation rules.",
+      "line": 678,
+      "statement": "theorem rotated_conviction_is_duplicity {p env before after aid key previous writer comparison}\n    (reach : SysReach p env before) (edge : ConvictionEdge p env aid key before after)\n    (stored : before.writers aid = some (.rotation previous writer))\n    (selected : (env aid).comparison key.epoch key.sn = some comparison) :\n    Duplicity.duplicityAt key.epoch key.sn\n      ⟨previous.epoch + 1, previous.predecessor, writer⟩ comparison.rival = true",
+      "statementSha256": "2cb4b7809c9b62bcb6e0275ebe80cf8b753be073bc02ce8fa734f4a98335baf9",
+      "sourceStory": "Given an executed conviction of a rotated identifier in a reachable history,\nthen the single rival selected by that spend establishes KERI duplicity at that\nposition. The conclusion needs no rival-validity or decoding hypothesis.",
       "story": {
-        "given": "{p env before after aid key previous writer comparison}\n    (reach : SysReach p env before) (edge : ConvictionEdge p env aid key before after)\n    (stored : before.writers aid = some (.rotation previous writer))\n    (selected : (env aid).comparison key.epoch key.sn = some comparison)\n    (reads : ComparisonReads) (tip : reads.tipOf (.rotation previous writer) = comparison.tip)\n    (encode : Duplicity.Content → ForwardFields)\n    (fields : reads.FieldsAgree (.rotation previous writer) comparison.rival encode)",
+        "given": "{p env before after aid key previous writer comparison}\n    (reach : SysReach p env before) (edge : ConvictionEdge p env aid key before after)\n    (stored : before.writers aid = some (.rotation previous writer))\n    (selected : (env aid).comparison key.epoch key.sn = some comparison)",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "let rival := reads.rivalOf comparison.tip comparison.rival\n    Duplicity.duplicityAt key.epoch key.sn ⟨previous.epoch + 1, previous.predecessor, writer⟩ rival = true ↔\n      Duplicity.rotationValid previous.predecessor rival = true"
+        "then": "Duplicity.duplicityAt key.epoch key.sn\n      ⟨previous.epoch + 1, previous.predecessor, writer⟩ comparison.rival = true"
       },
-      "storySha256": "b024dbfbe4316aa5e24369863e12dedde6879679fa8a7a480bc21fc2e0ee7aaa"
+      "storySha256": "37c67de65055e908ac2c1a28c0c19240f476034461893a29405a09750e67dfb1"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.inception_conviction_refused",
+      "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
+      "line": 695,
+      "statement": "theorem inception_conviction_refused {p env before after aid key event witnesses}\n    (reach : SysReach p env before)\n    (stored : before.writers aid = some (.inception event witnesses)) :\n    ¬ ConvictionEdge p env aid key before after",
+      "statementSha256": "4970215c67bad8273e40f2675442b4c0f3e5d37c3fa87aea7722a4cd136e7aa0",
+      "sourceStory": "Given an executed reachable conviction, when its input writer is inspected,\nit cannot be the inception. That datum has no preceding commitments.",
+      "story": {
+        "given": "{p env before after aid key event witnesses}\n    (reach : SysReach p env before)\n    (stored : before.writers aid = some (.inception event witnesses))",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "¬ ConvictionEdge p env aid key before after"
+      },
+      "storySha256": "e13c8a71c10b8ac20dac1dd827f694e4b70bc3fbd42e6851013b7b356c330e1d"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.conviction_establishes_duplicity",
+      "path": "lean/CardanoKeri/CheckpointSystemHistory.lean",
+      "line": 711,
+      "statement": "theorem conviction_establishes_duplicity {p env before after aid key}\n    (reach : SysReach p env before) (edge : ConvictionEdge p env aid key before after) :\n    ∃ previous writer, ∃ (observed : Registry.Conviction),\n      before.writers aid = some (.rotation previous writer) ∧\n      (env aid).presentedSpend key.epoch key.sn = some observed ∧\n      (env aid).attestationMinted observed = true ∧\n      observed.comparison.tip.previous = some previous.predecessor ∧\n      Duplicity.duplicityAt key.epoch key.sn\n        ⟨previous.epoch + 1, previous.predecessor, writer⟩ observed.comparison.rival = true",
+      "statementSha256": "61f2dbba755462b857f1d680bd7d4183fd8bcf9953c422b0709b95f8f7d0ebec",
+      "sourceStory": "Given only reachability and an executed conviction, its own transaction\nmint, carried predecessor, authenticated writer and single presented rival can\nbe recovered. The KERI judgment holds for that rival at the spent position.",
+      "story": {
+        "given": "{p env before after aid key}\n    (reach : SysReach p env before) (edge : ConvictionEdge p env aid key before after)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "∃ previous writer, ∃ (observed : Registry.Conviction),\n      before.writers aid = some (.rotation previous writer) ∧\n      (env aid).presentedSpend key.epoch key.sn = some observed ∧\n      (env aid).attestationMinted observed = true ∧\n      observed.comparison.tip.previous = some previous.predecessor ∧\n      Duplicity.duplicityAt key.epoch key.sn\n        ⟨previous.epoch + 1, previous.predecessor, writer⟩ observed.comparison.rival = true"
+      },
+      "storySha256": "fd72f090a36c4c8ef9ffb5f0b136e64c941741d0b4e5b3c854409b2d5502ed4e"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.present_held_amounts",
@@ -5923,15 +6245,15 @@
       "declaration": "CardanoKeri.Checkpoint.conviction_has_spent_tip_comparison",
       "path": "lean/CardanoKeri/ConcreteConvictionGoals.lean",
       "line": 28,
-      "statement": "theorem conviction_has_spent_tip_comparison (p : Params) (env : Env)\n    {a : Action} {t : Slot} {l : Live} {f : Flow} {key : KeyState}\n    (h : Step p env a t (.present l) f (.terminationPending key)) :\n    ∃ comparison, env.comparison l.epoch l.sn = some comparison ∧\n      comparison.tip.epoch = l.epoch ∧ comparison.tip.sn = l.sn ∧\n      CheckpointConviction.accepts env.verifyRival comparison.tip comparison.rival = true",
-      "statementSha256": "97309a39e32ea8a78da0514c2493611bb7ee9fd2553b07556f1170840cebb07d",
+      "statement": "theorem conviction_has_spent_tip_comparison (p : Params) (env : Env)\n    {a : Action} {t : Slot} {l : Live} {f : Flow} {key : KeyState}\n    (h : Step p env a t (.present l) f (.terminationPending key)) :\n    ∃ comparison, env.comparison l.epoch l.sn = some comparison ∧\n      comparison.tip.epoch = l.epoch ∧ comparison.tip.sn = l.sn ∧\n      CheckpointConviction.accepts comparison.tip comparison.rival = true",
+      "statementSha256": "cee59b57bb6291462d3af671ea2c72b151199bb0194a3e4e36d6f251b0a36f76",
       "sourceStory": "Given any step entering pending termination, when its spent input and\nrival are read, then the one-rival comparison succeeded for its native\nepoch and sequence. The permitted conclusion is the enforcement decision.",
       "story": {
         "given": "(p : Params) (env : Env)\n    {a : Action} {t : Slot} {l : Live} {f : Flow} {key : KeyState}\n    (h : Step p env a t (.present l) f (.terminationPending key))",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "∃ comparison, env.comparison l.epoch l.sn = some comparison ∧\n      comparison.tip.epoch = l.epoch ∧ comparison.tip.sn = l.sn ∧\n      CheckpointConviction.accepts env.verifyRival comparison.tip comparison.rival = true"
+        "then": "∃ comparison, env.comparison l.epoch l.sn = some comparison ∧\n      comparison.tip.epoch = l.epoch ∧ comparison.tip.sn = l.sn ∧\n      CheckpointConviction.accepts comparison.tip comparison.rival = true"
       },
-      "storySha256": "4c482f3d7e40481b4d2c24b50b34762567ee5b73fd69dddca378017d77ec0888"
+      "storySha256": "5f699483d14c65f0f2da7ee2dcc628938bc1f8335ad01367481e73b66ba703bf"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.old_pair_cannot_convict_new_target",
@@ -8120,16 +8442,16 @@
     {
       "declaration": "CardanoKeri.Registry.Env.pendingSpend_iff",
       "path": "lean/CardanoKeri/Registry.lean",
-      "line": 47,
-      "statement": "theorem Env.pendingSpend_iff (env : Env) (aid : Nat) (spend : Application.PendingSpend) :\n    env.pendingSpend aid = some spend ↔\n      ∃ observed, env.conviction aid = some observed ∧ observed.comparison.tip.aid = aid ∧\n        CheckpointConviction.accepts env.verifyRival observed.comparison.tip observed.comparison.rival = true ∧\n        spend = ⟨observed.output, aid, ⟨observed.comparison.tip.epoch, observed.comparison.tip.sn⟩⟩",
-      "statementSha256": "11235342d142a83ae2c21c8068d7d7069bda2149bb03383209bbd784041881f5",
+      "line": 52,
+      "statement": "theorem Env.pendingSpend_iff (env : Env) (aid : Nat) (spend : Application.PendingSpend) :\n    env.pendingSpend aid = some spend ↔\n      ∃ observed, env.conviction aid = some observed ∧ observed.comparison.tip.aid = aid ∧\n        CheckpointConviction.accepts observed.comparison.tip observed.comparison.rival = true ∧\n        spend = ⟨observed.output, aid, ⟨observed.comparison.tip.epoch, observed.comparison.tip.sn⟩⟩",
+      "statementSha256": "9a9a5f50fbda1be6c73431d90c08be36b6bd0eff79e72960a8d8735e432073f6",
       "sourceStory": "Given an economic observation, when the checkpoint spend produces a\npending receipt, then the observed output reference and the accepted tip\ndetermine every field of that receipt.",
       "story": {
         "given": "(env : Env) (aid : Nat) (spend : Application.PendingSpend)",
         "when": "Observe the Registry transition, projection or custody relation named by this theorem.",
-        "then": "env.pendingSpend aid = some spend ↔\n      ∃ observed, env.conviction aid = some observed ∧ observed.comparison.tip.aid = aid ∧\n        CheckpointConviction.accepts env.verifyRival observed.comparison.tip observed.comparison.rival = true ∧\n        spend = ⟨observed.output, aid, ⟨observed.comparison.tip.epoch, observed.comparison.tip.sn⟩⟩"
+        "then": "env.pendingSpend aid = some spend ↔\n      ∃ observed, env.conviction aid = some observed ∧ observed.comparison.tip.aid = aid ∧\n        CheckpointConviction.accepts observed.comparison.tip observed.comparison.rival = true ∧\n        spend = ⟨observed.output, aid, ⟨observed.comparison.tip.epoch, observed.comparison.tip.sn⟩⟩"
       },
-      "storySha256": "3b0be12beb818d27f26a4c499973532c3f5b1d8164d295e7e8f871c448a12549"
+      "storySha256": "9e8d57f9bbf77904831e20b7ea759234ecd082b392ee117c4c740a882456033d"
     },
     {
       "declaration": "CardanoKeri.Registry.projected_request_admitted",

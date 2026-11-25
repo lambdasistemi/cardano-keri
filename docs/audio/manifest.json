@@ -350836,301 +350836,506 @@
    ]
   },
   "docs-design-registry-as-mpfs/where-the-registry-is-built-03": {
-   "audio_sha256": "d0dcc780b8ba2fe61f3747ae519ebea630e8d6e0fe1df33c5a69e387410716d9",
-   "characters": 372,
-   "cost": 0.00036828,
-   "duration": 23.975,
+   "audio_sha256": "a635503558e361267245c19186134d8179e4393a598f104574cbb8ba8a1c3423",
+   "characters": 568,
+   "cost": 0.0005623199999999999,
+   "duration": 37.825,
    "index": 3,
-   "key": "1392d7b9591821832c089303fe5450bad1d225561a26cac94f3fe3bbdf3ca412",
+   "key": "ffd8c2f115567679da6683ca43c60d7fef6180279d7984362881c8f1548394f1",
    "page": "docs/design/registry-as-mpfs.md",
    "pause_ms": 400,
    "section": "where-the-registry-is-built",
-   "sent_text": "A reachable conviction establishes [KERI](/kˈɛɹi/) duplicity for the rival actually presented. A valid sibling at the same position with different content passes the evidence comparison. The convictor must also reveal the matching open commitment and mint one enforcement token and one entitlement token for this spend. The Singular folder processes the resulting request.",
-   "text": "A reachable conviction establishes KERI duplicity for the rival actually presented. A valid sibling at the same position with different content passes the evidence comparison. The convictor must also reveal the matching open commitment and mint one enforcement token and one entitlement token for this spend. The Singular folder processes the resulting request.",
+   "sent_text": "In the Lean model, a reachable conviction establishes duplicity for the rival the convictor presents. Given authenticated openings of both signed bodies, a valid sibling at the same position passes the comparison when its own digest differs from the live writer’s. A second decoding of the same body has the same digest. Production validators still need to establish these openings. The convictor must also reveal the matching open commitment and mint one enforcement token and one entitlement token for this spend. The Singular folder processes the resulting request.",
+   "text": "In the Lean model, a reachable conviction establishes duplicity for the rival the convictor presents. Given authenticated openings of both signed bodies, a valid sibling at the same position passes the comparison when its own digest differs from the live writer’s. A second decoding of the same body has the same digest. Production validators still need to establish these openings. The convictor must also reveal the matching open commitment and mint one enforcement token and one entitlement token for this spend. The Singular folder processes the resulting request.",
    "words": [
     {
-     "end": 0.287,
-     "start": 0.2,
-     "text": "A"
+     "end": 0.312,
+     "start": 0.225,
+     "text": "In"
     },
     {
-     "end": 0.775,
-     "start": 0.287,
+     "end": 0.4,
+     "start": 0.312,
+     "text": "the"
+    },
+    {
+     "end": 0.675,
+     "start": 0.4,
+     "text": "Lean"
+    },
+    {
+     "end": 1.1,
+     "start": 0.675,
+     "text": "model"
+    },
+    {
+     "end": 1.188,
+     "start": 1.1,
+     "text": ","
+    },
+    {
+     "end": 1.312,
+     "start": 1.188,
+     "text": "a"
+    },
+    {
+     "end": 1.775,
+     "start": 1.312,
      "text": "reachable"
     },
     {
-     "end": 1.462,
-     "start": 0.775,
+     "end": 2.45,
+     "start": 1.775,
      "text": "conviction"
     },
     {
-     "end": 2.213,
-     "start": 1.462,
+     "end": 3.2,
+     "start": 2.45,
      "text": "establishes"
     },
     {
-     "end": 2.55,
-     "start": 2.213,
-     "text": "KERI"
-    },
-    {
-     "end": 3.263,
-     "start": 2.55,
+     "end": 3.912,
+     "start": 3.2,
      "text": "duplicity"
     },
     {
-     "end": 3.388,
-     "start": 3.263,
+     "end": 4.05,
+     "start": 3.912,
      "text": "for"
     },
     {
-     "end": 3.5,
-     "start": 3.388,
+     "end": 4.188,
+     "start": 4.05,
      "text": "the"
     },
     {
-     "end": 3.912,
-     "start": 3.5,
+     "end": 4.65,
+     "start": 4.188,
      "text": "rival"
     },
     {
-     "end": 4.375,
-     "start": 3.912,
-     "text": "actually"
-    },
-    {
-     "end": 5.55,
-     "start": 4.375,
-     "text": "presented"
-    },
-    {
-     "end": 5.775,
-     "start": 5.55,
-     "text": "."
-    },
-    {
-     "end": 6.062,
-     "start": 5.975,
-     "text": "A"
-    },
-    {
-     "end": 6.488,
-     "start": 6.062,
-     "text": "valid"
-    },
-    {
-     "end": 6.95,
-     "start": 6.488,
-     "text": "sibling"
-    },
-    {
-     "end": 7.037,
-     "start": 6.95,
-     "text": "at"
-    },
-    {
-     "end": 7.162,
-     "start": 7.037,
+     "end": 4.75,
+     "start": 4.65,
      "text": "the"
     },
     {
-     "end": 7.5,
-     "start": 7.162,
-     "text": "same"
-    },
-    {
-     "end": 8.05,
-     "start": 7.5,
-     "text": "position"
-    },
-    {
-     "end": 8.238,
-     "start": 8.05,
-     "text": "with"
-    },
-    {
-     "end": 8.55,
-     "start": 8.238,
-     "text": "different"
-    },
-    {
-     "end": 9.188,
-     "start": 8.55,
-     "text": "content"
-    },
-    {
-     "end": 9.7,
-     "start": 9.188,
-     "text": "passes"
-    },
-    {
-     "end": 9.85,
-     "start": 9.7,
-     "text": "the"
-    },
-    {
-     "end": 10.3,
-     "start": 9.85,
-     "text": "evidence"
-    },
-    {
-     "end": 11.55,
-     "start": 10.3,
-     "text": "comparison"
-    },
-    {
-     "end": 11.75,
-     "start": 11.55,
-     "text": "."
-    },
-    {
-     "end": 12.05,
-     "start": 11.975,
-     "text": "The"
-    },
-    {
-     "end": 12.6,
-     "start": 12.05,
+     "end": 5.3,
+     "start": 4.75,
      "text": "convictor"
     },
     {
-     "end": 12.875,
-     "start": 12.6,
-     "text": "must"
+     "end": 6.5,
+     "start": 5.3,
+     "text": "presents"
     },
     {
-     "end": 13.25,
-     "start": 12.875,
-     "text": "also"
-    },
-    {
-     "end": 13.7,
-     "start": 13.25,
-     "text": "reveal"
-    },
-    {
-     "end": 13.837,
-     "start": 13.7,
-     "text": "the"
-    },
-    {
-     "end": 14.337,
-     "start": 13.837,
-     "text": "matching"
-    },
-    {
-     "end": 14.675,
-     "start": 14.337,
-     "text": "open"
-    },
-    {
-     "end": 15.288,
-     "start": 14.675,
-     "text": "commitment"
-    },
-    {
-     "end": 15.462,
-     "start": 15.288,
-     "text": "and"
-    },
-    {
-     "end": 15.762,
-     "start": 15.462,
-     "text": "mint"
-    },
-    {
-     "end": 16.025,
-     "start": 15.762,
-     "text": "one"
-    },
-    {
-     "end": 16.675,
-     "start": 16.025,
-     "text": "enforcement"
-    },
-    {
-     "end": 17.188,
-     "start": 16.675,
-     "text": "token"
-    },
-    {
-     "end": 17.388,
-     "start": 17.188,
-     "text": "and"
-    },
-    {
-     "end": 17.65,
-     "start": 17.388,
-     "text": "one"
-    },
-    {
-     "end": 18.325,
-     "start": 17.65,
-     "text": "entitlement"
-    },
-    {
-     "end": 18.7,
-     "start": 18.325,
-     "text": "token"
-    },
-    {
-     "end": 18.825,
-     "start": 18.7,
-     "text": "for"
-    },
-    {
-     "end": 19.0,
-     "start": 18.825,
-     "text": "this"
-    },
-    {
-     "end": 20.075,
-     "start": 19.0,
-     "text": "spend"
-    },
-    {
-     "end": 20.3,
-     "start": 20.075,
+     "end": 6.7,
+     "start": 6.5,
      "text": "."
     },
     {
-     "end": 20.587,
-     "start": 20.475,
-     "text": "The"
+     "end": 7.113,
+     "start": 6.875,
+     "text": "Given"
     },
     {
-     "end": 21.038,
-     "start": 20.587,
-     "text": "Singular"
+     "end": 7.775,
+     "start": 7.113,
+     "text": "authenticated"
     },
     {
-     "end": 21.487,
-     "start": 21.038,
-     "text": "folder"
+     "end": 8.3,
+     "start": 7.775,
+     "text": "openings"
     },
     {
-     "end": 22.175,
-     "start": 21.487,
-     "text": "processes"
+     "end": 8.425,
+     "start": 8.3,
+     "text": "of"
     },
     {
-     "end": 22.275,
-     "start": 22.175,
+     "end": 8.725,
+     "start": 8.425,
+     "text": "both"
+    },
+    {
+     "end": 9.0,
+     "start": 8.725,
+     "text": "signed"
+    },
+    {
+     "end": 9.95,
+     "start": 9.0,
+     "text": "bodies"
+    },
+    {
+     "end": 10.15,
+     "start": 9.95,
+     "text": ","
+    },
+    {
+     "end": 10.438,
+     "start": 10.35,
+     "text": "a"
+    },
+    {
+     "end": 10.863,
+     "start": 10.438,
+     "text": "valid"
+    },
+    {
+     "end": 11.35,
+     "start": 10.863,
+     "text": "sibling"
+    },
+    {
+     "end": 11.438,
+     "start": 11.35,
+     "text": "at"
+    },
+    {
+     "end": 11.562,
+     "start": 11.438,
      "text": "the"
     },
     {
-     "end": 22.8,
+     "end": 11.9,
+     "start": 11.562,
+     "text": "same"
+    },
+    {
+     "end": 12.488,
+     "start": 11.9,
+     "text": "position"
+    },
+    {
+     "end": 13.0,
+     "start": 12.488,
+     "text": "passes"
+    },
+    {
+     "end": 13.1,
+     "start": 13.0,
+     "text": "the"
+    },
+    {
+     "end": 13.825,
+     "start": 13.1,
+     "text": "comparison"
+    },
+    {
+     "end": 13.962,
+     "start": 13.825,
+     "text": "when"
+    },
+    {
+     "end": 14.163,
+     "start": 13.962,
+     "text": "its"
+    },
+    {
+     "end": 14.425,
+     "start": 14.163,
+     "text": "own"
+    },
+    {
+     "end": 15.062,
+     "start": 14.425,
+     "text": "digest"
+    },
+    {
+     "end": 15.45,
+     "start": 15.062,
+     "text": "differs"
+    },
+    {
+     "end": 15.613,
+     "start": 15.45,
+     "text": "from"
+    },
+    {
+     "end": 15.7,
+     "start": 15.613,
+     "text": "the"
+    },
+    {
+     "end": 16.025,
+     "start": 15.7,
+     "text": "live"
+    },
+    {
+     "end": 16.6,
+     "start": 16.025,
+     "text": "writer"
+    },
+    {
+     "end": 16.725,
+     "start": 16.6,
+     "text": "’"
+    },
+    {
+     "end": 17.65,
+     "start": 16.725,
+     "text": "s"
+    },
+    {
+     "end": 17.9,
+     "start": 17.65,
+     "text": "."
+    },
+    {
+     "end": 18.188,
+     "start": 18.1,
+     "text": "A"
+    },
+    {
+     "end": 18.513,
+     "start": 18.188,
+     "text": "second"
+    },
+    {
+     "end": 18.938,
+     "start": 18.513,
+     "text": "decoding"
+    },
+    {
+     "end": 19.013,
+     "start": 18.938,
+     "text": "of"
+    },
+    {
+     "end": 19.138,
+     "start": 19.013,
+     "text": "the"
+    },
+    {
+     "end": 19.425,
+     "start": 19.138,
+     "text": "same"
+    },
+    {
+     "end": 19.8,
+     "start": 19.425,
+     "text": "body"
+    },
+    {
+     "end": 19.987,
+     "start": 19.8,
+     "text": "has"
+    },
+    {
+     "end": 20.1,
+     "start": 19.987,
+     "text": "the"
+    },
+    {
+     "end": 20.375,
+     "start": 20.1,
+     "text": "same"
+    },
+    {
+     "end": 21.4,
+     "start": 20.375,
+     "text": "digest"
+    },
+    {
+     "end": 21.6,
+     "start": 21.4,
+     "text": "."
+    },
+    {
+     "end": 22.275,
+     "start": 21.775,
+     "text": "Production"
+    },
+    {
+     "end": 22.938,
      "start": 22.275,
+     "text": "validators"
+    },
+    {
+     "end": 23.25,
+     "start": 22.938,
+     "text": "still"
+    },
+    {
+     "end": 23.45,
+     "start": 23.25,
+     "text": "need"
+    },
+    {
+     "end": 23.55,
+     "start": 23.45,
+     "text": "to"
+    },
+    {
+     "end": 24.1,
+     "start": 23.55,
+     "text": "establish"
+    },
+    {
+     "end": 24.325,
+     "start": 24.1,
+     "text": "these"
+    },
+    {
+     "end": 25.4,
+     "start": 24.325,
+     "text": "openings"
+    },
+    {
+     "end": 25.6,
+     "start": 25.4,
+     "text": "."
+    },
+    {
+     "end": 25.9,
+     "start": 25.825,
+     "text": "The"
+    },
+    {
+     "end": 26.45,
+     "start": 25.9,
+     "text": "convictor"
+    },
+    {
+     "end": 26.725,
+     "start": 26.45,
+     "text": "must"
+    },
+    {
+     "end": 27.1,
+     "start": 26.725,
+     "text": "also"
+    },
+    {
+     "end": 27.55,
+     "start": 27.1,
+     "text": "reveal"
+    },
+    {
+     "end": 27.688,
+     "start": 27.55,
+     "text": "the"
+    },
+    {
+     "end": 28.188,
+     "start": 27.688,
+     "text": "matching"
+    },
+    {
+     "end": 28.525,
+     "start": 28.188,
+     "text": "open"
+    },
+    {
+     "end": 29.138,
+     "start": 28.525,
+     "text": "commitment"
+    },
+    {
+     "end": 29.312,
+     "start": 29.138,
+     "text": "and"
+    },
+    {
+     "end": 29.612,
+     "start": 29.312,
+     "text": "mint"
+    },
+    {
+     "end": 29.875,
+     "start": 29.612,
+     "text": "one"
+    },
+    {
+     "end": 30.525,
+     "start": 29.875,
+     "text": "enforcement"
+    },
+    {
+     "end": 31.038,
+     "start": 30.525,
+     "text": "token"
+    },
+    {
+     "end": 31.237,
+     "start": 31.038,
+     "text": "and"
+    },
+    {
+     "end": 31.5,
+     "start": 31.237,
+     "text": "one"
+    },
+    {
+     "end": 32.175,
+     "start": 31.5,
+     "text": "entitlement"
+    },
+    {
+     "end": 32.55,
+     "start": 32.175,
+     "text": "token"
+    },
+    {
+     "end": 32.675,
+     "start": 32.55,
+     "text": "for"
+    },
+    {
+     "end": 32.85,
+     "start": 32.675,
+     "text": "this"
+    },
+    {
+     "end": 33.925,
+     "start": 32.85,
+     "text": "spend"
+    },
+    {
+     "end": 34.15,
+     "start": 33.925,
+     "text": "."
+    },
+    {
+     "end": 34.438,
+     "start": 34.325,
+     "text": "The"
+    },
+    {
+     "end": 34.888,
+     "start": 34.438,
+     "text": "Singular"
+    },
+    {
+     "end": 35.338,
+     "start": 34.888,
+     "text": "folder"
+    },
+    {
+     "end": 36.025,
+     "start": 35.338,
+     "text": "processes"
+    },
+    {
+     "end": 36.125,
+     "start": 36.025,
+     "text": "the"
+    },
+    {
+     "end": 36.65,
+     "start": 36.125,
      "text": "resulting"
     },
     {
-     "end": 23.775,
-     "start": 22.8,
+     "end": 37.625,
+     "start": 36.65,
      "text": "request"
     },
     {
-     "end": 23.975,
-     "start": 23.775,
+     "end": 37.825,
+     "start": 37.625,
      "text": "."
     }
    ]
@@ -400396,17 +400601,17 @@
    ]
   },
   "docs-design-watcher-conformance/concrete-rotation-refinement-01": {
-   "audio_sha256": "f8cb970cf8d4479eb218888bdaa7ce033e7700d1d95737cdb023e68706a4a0e9",
-   "characters": 539,
-   "cost": 0.00053361,
-   "duration": 36.625,
+   "audio_sha256": "cd04d4c6dffab2c0af5c9a6b165d8dbe6f09d58021646ab5c399e00256666430",
+   "characters": 546,
+   "cost": 0.0005405399999999999,
+   "duration": 37.025,
    "index": 1,
-   "key": "eddcd14eb2f4d8810fc3666c7e3457f5d998194805084bb11d01678a348c01a1",
+   "key": "7b2dbbb09df01c058defc698b59b64fc9662d3ce0820cf6ac2005e5e1329ba5b",
    "page": "docs/design/watcher-conformance.md",
    "pause_ms": 400,
    "section": "concrete-rotation-refinement",
-   "sent_text": "A proof submitter needs a valid competing rotation to be recognized even when it exposes a different subset of committed keys or adds new keys and witnesses. The checkpoint now evaluates both ordinary, non-delegated rotations against a common authenticated predecessor. Each branch must satisfy the prior-next threshold and its own current threshold using signatures bound to that branch. Each derives its own witness list by removing cuts before adding witnesses and must carry enough distinct, verified receipts from that resulting list.",
-   "text": "A proof submitter needs a valid competing rotation to be recognized even when it exposes a different subset of committed keys or adds new keys and witnesses. The checkpoint now evaluates both ordinary, non-delegated rotations against a common authenticated predecessor. Each branch must satisfy the prior-next threshold and its own current threshold using signatures bound to that branch. Each derives its own witness list by removing cuts before adding witnesses and must carry enough distinct, verified receipts from that resulting list.",
+   "sent_text": "A proof submitter needs a valid competing rotation to be recognized even when it exposes a different subset of committed keys or adds new keys and witnesses. The Lean checkpoint model evaluates both ordinary, non-delegated rotations against a common authenticated predecessor. Each branch must satisfy the prior-next threshold and its own current threshold using signatures bound to that branch. Each derives its own witness list by removing cuts before adding witnesses and must carry enough distinct, verified receipts from that resulting list.",
+   "text": "A proof submitter needs a valid competing rotation to be recognized even when it exposes a different subset of committed keys or adds new keys and witnesses. The Lean checkpoint model evaluates both ordinary, non-delegated rotations against a common authenticated predecessor. Each branch must satisfy the prior-next threshold and its own current threshold using signatures bound to that branch. Each derives its own witness list by removing cuts before adding witnesses and must carry enough distinct, verified receipts from that resulting list.",
    "words": [
     {
      "end": 0.338,
@@ -400554,309 +400759,314 @@
      "text": "The"
     },
     {
-     "end": 11.475,
+     "end": 11.288,
      "start": 10.962,
+     "text": "Lean"
+    },
+    {
+     "end": 11.8,
+     "start": 11.288,
      "text": "checkpoint"
     },
     {
-     "end": 11.788,
-     "start": 11.475,
-     "text": "now"
+     "end": 12.238,
+     "start": 11.8,
+     "text": "model"
     },
     {
-     "end": 12.488,
-     "start": 11.788,
+     "end": 12.925,
+     "start": 12.238,
      "text": "evaluates"
     },
     {
-     "end": 12.837,
-     "start": 12.488,
+     "end": 13.238,
+     "start": 12.925,
      "text": "both"
     },
     {
-     "end": 13.6,
-     "start": 12.837,
+     "end": 13.975,
+     "start": 13.238,
      "text": "ordinary"
     },
     {
-     "end": 13.712,
-     "start": 13.6,
+     "end": 14.087,
+     "start": 13.975,
      "text": ","
     },
     {
-     "end": 14.625,
-     "start": 13.712,
+     "end": 15.0,
+     "start": 14.087,
      "text": "non-delegated"
     },
     {
-     "end": 15.488,
-     "start": 14.625,
+     "end": 15.863,
+     "start": 15.0,
      "text": "rotations"
     },
     {
-     "end": 15.837,
-     "start": 15.488,
+     "end": 16.212,
+     "start": 15.863,
      "text": "against"
     },
     {
-     "end": 15.938,
-     "start": 15.837,
+     "end": 16.312,
+     "start": 16.212,
      "text": "a"
     },
     {
-     "end": 16.413,
-     "start": 15.938,
+     "end": 16.788,
+     "start": 16.312,
      "text": "common"
     },
     {
-     "end": 17.175,
-     "start": 16.413,
+     "end": 17.55,
+     "start": 16.788,
      "text": "authenticated"
     },
     {
-     "end": 18.55,
-     "start": 17.175,
+     "end": 18.95,
+     "start": 17.55,
      "text": "predecessor"
     },
     {
-     "end": 18.775,
-     "start": 18.55,
+     "end": 19.175,
+     "start": 18.95,
      "text": "."
     },
     {
-     "end": 19.263,
-     "start": 19.0,
+     "end": 19.663,
+     "start": 19.4,
      "text": "Each"
     },
     {
-     "end": 19.725,
-     "start": 19.263,
+     "end": 20.125,
+     "start": 19.663,
      "text": "branch"
     },
     {
-     "end": 19.987,
-     "start": 19.725,
+     "end": 20.388,
+     "start": 20.125,
      "text": "must"
     },
     {
-     "end": 20.6,
-     "start": 19.987,
+     "end": 21.0,
+     "start": 20.388,
      "text": "satisfy"
     },
     {
-     "end": 20.7,
-     "start": 20.6,
+     "end": 21.1,
+     "start": 21.0,
      "text": "the"
     },
     {
-     "end": 21.35,
-     "start": 20.7,
+     "end": 21.75,
+     "start": 21.1,
      "text": "prior-next"
     },
     {
-     "end": 22.112,
-     "start": 21.35,
+     "end": 22.513,
+     "start": 21.75,
      "text": "threshold"
     },
     {
-     "end": 22.237,
-     "start": 22.112,
+     "end": 22.638,
+     "start": 22.513,
      "text": "and"
     },
     {
-     "end": 22.375,
-     "start": 22.237,
+     "end": 22.775,
+     "start": 22.638,
      "text": "its"
     },
     {
-     "end": 22.663,
-     "start": 22.375,
+     "end": 23.062,
+     "start": 22.775,
      "text": "own"
     },
     {
-     "end": 23.038,
-     "start": 22.663,
+     "end": 23.438,
+     "start": 23.062,
      "text": "current"
     },
     {
-     "end": 23.688,
-     "start": 23.038,
+     "end": 24.087,
+     "start": 23.438,
      "text": "threshold"
     },
     {
-     "end": 24.062,
-     "start": 23.688,
+     "end": 24.462,
+     "start": 24.087,
      "text": "using"
     },
     {
-     "end": 24.688,
-     "start": 24.062,
+     "end": 25.087,
+     "start": 24.462,
      "text": "signatures"
     },
     {
-     "end": 25.075,
-     "start": 24.688,
+     "end": 25.475,
+     "start": 25.087,
      "text": "bound"
     },
     {
-     "end": 25.175,
-     "start": 25.075,
+     "end": 25.575,
+     "start": 25.475,
      "text": "to"
     },
     {
-     "end": 25.45,
-     "start": 25.175,
+     "end": 25.85,
+     "start": 25.575,
      "text": "that"
     },
     {
-     "end": 26.525,
-     "start": 25.45,
+     "end": 26.925,
+     "start": 25.85,
      "text": "branch"
     },
     {
-     "end": 26.8,
-     "start": 26.525,
+     "end": 27.2,
+     "start": 26.925,
      "text": "."
     },
     {
-     "end": 27.312,
-     "start": 27.025,
+     "end": 27.712,
+     "start": 27.425,
      "text": "Each"
     },
     {
-     "end": 27.812,
-     "start": 27.312,
+     "end": 28.212,
+     "start": 27.712,
      "text": "derives"
     },
     {
-     "end": 27.987,
-     "start": 27.812,
+     "end": 28.388,
+     "start": 28.212,
      "text": "its"
     },
     {
-     "end": 28.25,
-     "start": 27.987,
+     "end": 28.65,
+     "start": 28.388,
      "text": "own"
     },
     {
-     "end": 28.6,
-     "start": 28.25,
+     "end": 29.0,
+     "start": 28.65,
      "text": "witness"
     },
     {
-     "end": 28.95,
-     "start": 28.6,
+     "end": 29.35,
+     "start": 29.0,
      "text": "list"
     },
     {
-     "end": 29.125,
-     "start": 28.95,
+     "end": 29.525,
+     "start": 29.35,
      "text": "by"
     },
     {
-     "end": 29.612,
-     "start": 29.125,
+     "end": 30.013,
+     "start": 29.525,
      "text": "removing"
     },
     {
-     "end": 29.975,
-     "start": 29.612,
+     "end": 30.375,
+     "start": 30.013,
      "text": "cuts"
     },
     {
-     "end": 30.35,
-     "start": 29.975,
+     "end": 30.75,
+     "start": 30.375,
      "text": "before"
     },
     {
-     "end": 30.675,
-     "start": 30.35,
+     "end": 31.075,
+     "start": 30.75,
      "text": "adding"
     },
     {
-     "end": 31.312,
-     "start": 30.675,
+     "end": 31.712,
+     "start": 31.075,
      "text": "witnesses"
     },
     {
-     "end": 31.45,
-     "start": 31.312,
+     "end": 31.85,
+     "start": 31.712,
      "text": "and"
     },
     {
-     "end": 31.725,
-     "start": 31.45,
+     "end": 32.125,
+     "start": 31.85,
      "text": "must"
     },
     {
-     "end": 32.05,
-     "start": 31.725,
+     "end": 32.45,
+     "start": 32.125,
      "text": "carry"
     },
     {
-     "end": 32.35,
-     "start": 32.05,
+     "end": 32.75,
+     "start": 32.45,
      "text": "enough"
     },
     {
-     "end": 33.5,
-     "start": 32.35,
+     "end": 33.9,
+     "start": 32.75,
      "text": "distinct"
     },
     {
-     "end": 33.725,
-     "start": 33.5,
+     "end": 34.125,
+     "start": 33.9,
      "text": ","
     },
     {
-     "end": 34.412,
-     "start": 33.925,
+     "end": 34.812,
+     "start": 34.325,
      "text": "verified"
     },
     {
-     "end": 34.85,
-     "start": 34.412,
+     "end": 35.25,
+     "start": 34.812,
      "text": "receipts"
     },
     {
-     "end": 34.987,
-     "start": 34.85,
+     "end": 35.388,
+     "start": 35.25,
      "text": "from"
     },
     {
-     "end": 35.188,
-     "start": 34.987,
+     "end": 35.588,
+     "start": 35.388,
      "text": "that"
     },
     {
-     "end": 35.675,
-     "start": 35.188,
+     "end": 36.075,
+     "start": 35.588,
      "text": "resulting"
     },
     {
-     "end": 36.425,
-     "start": 35.675,
+     "end": 36.825,
+     "start": 36.075,
      "text": "list"
     },
     {
-     "end": 36.625,
-     "start": 36.425,
+     "end": 37.025,
+     "start": 36.825,
      "text": "."
     }
    ]
   },
   "docs-design-watcher-conformance/concrete-rotation-refinement-02": {
-   "audio_sha256": "bd0ff627cf5de0b4a64541f1c346a7a37e5b8aa9066cfb1b076615a5b9474a9d",
-   "characters": 455,
-   "cost": 0.00045044999999999997,
-   "duration": 30.7,
+   "audio_sha256": "0d2566d48e8e7f9df2315cc9440e5d185a1d0a1ac4f10e64ff00b48ed45e5361",
+   "characters": 594,
+   "cost": 0.00058806,
+   "duration": 39.525,
    "index": 2,
-   "key": "90c2dbcf923818deff6cfab3b905859f304311f7691620ee5de1d2171fae765d",
+   "key": "57913e5ca5c422f333c4f092834fcf1773e986f9892c9ad4a0fbff8c888d5ef8",
    "page": "docs/design/watcher-conformance.md",
    "pause_ms": 400,
    "section": "concrete-rotation-refinement",
-   "sent_text": "Weighted signing thresholds use exact rational arithmetic, conjunctive clauses and nested groups. Both rotations must occupy the checkpoint's native sequence and differ in complete content, including seals and other content that the checkpoint projection does not retain. The first accepted event stays the reference; presenting a rival does not roll the tip back. Sequence zero, delegated identities and interaction conflicts are refused by this profile.",
-   "text": "Weighted signing thresholds use exact rational arithmetic, conjunctive clauses and nested groups. Both rotations must occupy the checkpoint's native sequence and differ in complete content, including seals and other content that the checkpoint projection does not retain. The first accepted event stays the reference; presenting a rival does not roll the tip back. Sequence zero, delegated identities and interaction conflicts are refused by this profile.",
+   "sent_text": "Weighted signing thresholds use exact rational arithmetic, conjunctive clauses and nested groups. Both rotations must occupy the checkpoint's native sequence and have distinct authenticated event digests. The digests identify the signed bodies, including seals and the original spelling of a signing weight. Two rotations can decode to identical weights and still conflict. Replaying the same signed body leaves the writer’s digest unchanged. The model keeps the first accepted event as the reference and excludes sequence zero, delegated identities and interaction conflicts from this profile.",
+   "text": "Weighted signing thresholds use exact rational arithmetic, conjunctive clauses and nested groups. Both rotations must occupy the checkpoint's native sequence and have distinct authenticated event digests. The digests identify the signed bodies, including seals and the original spelling of a signing weight. Two rotations can decode to identical weights and still conflict. Replaying the same signed body leaves the writer’s digest unchanged. The model keeps the first accepted event as the reference and excludes sequence zero, delegated identities and interaction conflicts from this profile.",
    "words": [
     {
      "end": 0.575,
@@ -400944,283 +401154,383 @@
      "text": "must"
     },
     {
-     "end": 8.775,
+     "end": 8.85,
      "start": 8.275,
      "text": "occupy"
     },
     {
-     "end": 8.913,
-     "start": 8.775,
+     "end": 8.988,
+     "start": 8.85,
      "text": "the"
     },
     {
-     "end": 9.488,
-     "start": 8.913,
+     "end": 9.587,
+     "start": 8.988,
      "text": "checkpoint's"
     },
     {
-     "end": 9.85,
-     "start": 9.488,
+     "end": 9.962,
+     "start": 9.587,
      "text": "native"
     },
     {
-     "end": 10.413,
-     "start": 9.85,
+     "end": 10.562,
+     "start": 9.962,
      "text": "sequence"
     },
     {
-     "end": 10.587,
-     "start": 10.413,
+     "end": 10.7,
+     "start": 10.562,
      "text": "and"
     },
     {
-     "end": 10.925,
-     "start": 10.587,
-     "text": "differ"
+     "end": 10.95,
+     "start": 10.7,
+     "text": "have"
     },
     {
-     "end": 11.075,
-     "start": 10.925,
-     "text": "in"
+     "end": 11.575,
+     "start": 10.95,
+     "text": "distinct"
     },
     {
-     "end": 11.525,
-     "start": 11.075,
-     "text": "complete"
+     "end": 12.35,
+     "start": 11.575,
+     "text": "authenticated"
     },
     {
-     "end": 12.65,
-     "start": 11.525,
-     "text": "content"
-    },
-    {
-     "end": 12.875,
-     "start": 12.65,
-     "text": ","
-    },
-    {
-     "end": 13.575,
-     "start": 13.075,
-     "text": "including"
-    },
-    {
-     "end": 14.075,
-     "start": 13.575,
-     "text": "seals"
-    },
-    {
-     "end": 14.2,
-     "start": 14.075,
-     "text": "and"
-    },
-    {
-     "end": 14.475,
-     "start": 14.2,
-     "text": "other"
-    },
-    {
-     "end": 15.1,
-     "start": 14.475,
-     "text": "content"
-    },
-    {
-     "end": 15.262,
-     "start": 15.1,
-     "text": "that"
-    },
-    {
-     "end": 15.387,
-     "start": 15.262,
-     "text": "the"
-    },
-    {
-     "end": 15.875,
-     "start": 15.387,
-     "text": "checkpoint"
-    },
-    {
-     "end": 16.45,
-     "start": 15.875,
-     "text": "projection"
-    },
-    {
-     "end": 16.675,
-     "start": 16.45,
-     "text": "does"
-    },
-    {
-     "end": 16.9,
-     "start": 16.675,
-     "text": "not"
-    },
-    {
-     "end": 17.975,
-     "start": 16.9,
-     "text": "retain"
-    },
-    {
-     "end": 18.175,
-     "start": 17.975,
-     "text": "."
-    },
-    {
-     "end": 18.487,
-     "start": 18.375,
-     "text": "The"
-    },
-    {
-     "end": 18.812,
-     "start": 18.487,
-     "text": "first"
-    },
-    {
-     "end": 19.3,
-     "start": 18.812,
-     "text": "accepted"
-    },
-    {
-     "end": 19.737,
-     "start": 19.3,
+     "end": 12.625,
+     "start": 12.35,
      "text": "event"
     },
     {
-     "end": 20.125,
-     "start": 19.737,
-     "text": "stays"
+     "end": 13.875,
+     "start": 12.625,
+     "text": "digests"
     },
     {
-     "end": 20.25,
-     "start": 20.125,
-     "text": "the"
-    },
-    {
-     "end": 20.85,
-     "start": 20.25,
-     "text": "reference"
-    },
-    {
-     "end": 20.925,
-     "start": 20.85,
-     "text": ";"
-    },
-    {
-     "end": 21.425,
-     "start": 20.925,
-     "text": "presenting"
-    },
-    {
-     "end": 21.525,
-     "start": 21.425,
-     "text": "a"
-    },
-    {
-     "end": 21.95,
-     "start": 21.525,
-     "text": "rival"
-    },
-    {
-     "end": 22.15,
-     "start": 21.95,
-     "text": "does"
-    },
-    {
-     "end": 22.4,
-     "start": 22.15,
-     "text": "not"
-    },
-    {
-     "end": 22.7,
-     "start": 22.4,
-     "text": "roll"
-    },
-    {
-     "end": 22.8,
-     "start": 22.7,
-     "text": "the"
-    },
-    {
-     "end": 23.05,
-     "start": 22.8,
-     "text": "tip"
-    },
-    {
-     "end": 23.95,
-     "start": 23.05,
-     "text": "back"
-    },
-    {
-     "end": 24.175,
-     "start": 23.95,
+     "end": 14.075,
+     "start": 13.875,
      "text": "."
     },
     {
-     "end": 24.862,
-     "start": 24.4,
-     "text": "Sequence"
+     "end": 14.375,
+     "start": 14.275,
+     "text": "The"
     },
     {
-     "end": 25.325,
-     "start": 24.862,
-     "text": "zero"
+     "end": 14.988,
+     "start": 14.375,
+     "text": "digests"
     },
     {
-     "end": 25.438,
-     "start": 25.325,
+     "end": 15.65,
+     "start": 14.988,
+     "text": "identify"
+    },
+    {
+     "end": 15.788,
+     "start": 15.65,
+     "text": "the"
+    },
+    {
+     "end": 16.125,
+     "start": 15.788,
+     "text": "signed"
+    },
+    {
+     "end": 16.675,
+     "start": 16.125,
+     "text": "bodies"
+    },
+    {
+     "end": 16.75,
+     "start": 16.675,
      "text": ","
     },
     {
-     "end": 26.062,
-     "start": 25.438,
-     "text": "delegated"
+     "end": 17.275,
+     "start": 16.75,
+     "text": "including"
     },
     {
-     "end": 26.8,
-     "start": 26.062,
-     "text": "identities"
+     "end": 17.825,
+     "start": 17.275,
+     "text": "seals"
     },
     {
-     "end": 26.925,
-     "start": 26.8,
+     "end": 17.938,
+     "start": 17.825,
      "text": "and"
     },
     {
-     "end": 27.525,
-     "start": 26.925,
+     "end": 18.025,
+     "start": 17.938,
+     "text": "the"
+    },
+    {
+     "end": 18.487,
+     "start": 18.025,
+     "text": "original"
+    },
+    {
+     "end": 18.975,
+     "start": 18.487,
+     "text": "spelling"
+    },
+    {
+     "end": 19.062,
+     "start": 18.975,
+     "text": "of"
+    },
+    {
+     "end": 19.163,
+     "start": 19.062,
+     "text": "a"
+    },
+    {
+     "end": 19.55,
+     "start": 19.163,
+     "text": "signing"
+    },
+    {
+     "end": 20.45,
+     "start": 19.55,
+     "text": "weight"
+    },
+    {
+     "end": 20.65,
+     "start": 20.45,
+     "text": "."
+    },
+    {
+     "end": 21.025,
+     "start": 20.85,
+     "text": "Two"
+    },
+    {
+     "end": 21.75,
+     "start": 21.025,
+     "text": "rotations"
+    },
+    {
+     "end": 21.925,
+     "start": 21.75,
+     "text": "can"
+    },
+    {
+     "end": 22.4,
+     "start": 21.925,
+     "text": "decode"
+    },
+    {
+     "end": 22.538,
+     "start": 22.4,
+     "text": "to"
+    },
+    {
+     "end": 23.1,
+     "start": 22.538,
+     "text": "identical"
+    },
+    {
+     "end": 23.538,
+     "start": 23.1,
+     "text": "weights"
+    },
+    {
+     "end": 23.675,
+     "start": 23.538,
+     "text": "and"
+    },
+    {
+     "end": 23.95,
+     "start": 23.675,
+     "text": "still"
+    },
+    {
+     "end": 24.975,
+     "start": 23.95,
+     "text": "conflict"
+    },
+    {
+     "end": 25.175,
+     "start": 24.975,
+     "text": "."
+    },
+    {
+     "end": 25.812,
+     "start": 25.375,
+     "text": "Replaying"
+    },
+    {
+     "end": 25.9,
+     "start": 25.812,
+     "text": "the"
+    },
+    {
+     "end": 26.175,
+     "start": 25.9,
+     "text": "same"
+    },
+    {
+     "end": 26.45,
+     "start": 26.175,
+     "text": "signed"
+    },
+    {
+     "end": 26.862,
+     "start": 26.45,
+     "text": "body"
+    },
+    {
+     "end": 27.212,
+     "start": 26.862,
+     "text": "leaves"
+    },
+    {
+     "end": 27.3,
+     "start": 27.212,
+     "text": "the"
+    },
+    {
+     "end": 27.7,
+     "start": 27.3,
+     "text": "writer’s"
+    },
+    {
+     "end": 28.2,
+     "start": 27.7,
+     "text": "digest"
+    },
+    {
+     "end": 29.4,
+     "start": 28.2,
+     "text": "unchanged"
+    },
+    {
+     "end": 29.6,
+     "start": 29.4,
+     "text": "."
+    },
+    {
+     "end": 29.875,
+     "start": 29.775,
+     "text": "The"
+    },
+    {
+     "end": 30.263,
+     "start": 29.875,
+     "text": "model"
+    },
+    {
+     "end": 30.575,
+     "start": 30.263,
+     "text": "keeps"
+    },
+    {
+     "end": 30.712,
+     "start": 30.575,
+     "text": "the"
+    },
+    {
+     "end": 31.013,
+     "start": 30.712,
+     "text": "first"
+    },
+    {
+     "end": 31.5,
+     "start": 31.013,
+     "text": "accepted"
+    },
+    {
+     "end": 31.95,
+     "start": 31.5,
+     "text": "event"
+    },
+    {
+     "end": 32.125,
+     "start": 31.95,
+     "text": "as"
+    },
+    {
+     "end": 32.25,
+     "start": 32.125,
+     "text": "the"
+    },
+    {
+     "end": 32.787,
+     "start": 32.25,
+     "text": "reference"
+    },
+    {
+     "end": 32.912,
+     "start": 32.787,
+     "text": "and"
+    },
+    {
+     "end": 33.4,
+     "start": 32.912,
+     "text": "excludes"
+    },
+    {
+     "end": 33.838,
+     "start": 33.4,
+     "text": "sequence"
+    },
+    {
+     "end": 34.825,
+     "start": 33.838,
+     "text": "zero"
+    },
+    {
+     "end": 35.075,
+     "start": 34.825,
+     "text": ","
+    },
+    {
+     "end": 35.862,
+     "start": 35.275,
+     "text": "delegated"
+    },
+    {
+     "end": 36.65,
+     "start": 35.862,
+     "text": "identities"
+    },
+    {
+     "end": 36.763,
+     "start": 36.65,
+     "text": "and"
+    },
+    {
+     "end": 37.388,
+     "start": 36.763,
      "text": "interaction"
     },
     {
-     "end": 28.212,
-     "start": 27.525,
+     "end": 37.925,
+     "start": 37.388,
      "text": "conflicts"
     },
     {
-     "end": 28.375,
-     "start": 28.212,
-     "text": "are"
+     "end": 38.062,
+     "start": 37.925,
+     "text": "from"
     },
     {
-     "end": 29.0,
-     "start": 28.375,
-     "text": "refused"
-    },
-    {
-     "end": 29.175,
-     "start": 29.0,
-     "text": "by"
-    },
-    {
-     "end": 29.375,
-     "start": 29.175,
+     "end": 38.225,
+     "start": 38.062,
      "text": "this"
     },
     {
-     "end": 30.5,
-     "start": 29.375,
+     "end": 39.325,
+     "start": 38.225,
      "text": "profile"
     },
     {
-     "end": 30.7,
-     "start": 30.5,
+     "end": 39.525,
+     "start": 39.325,
      "text": "."
     }
    ]
@@ -401621,486 +401931,431 @@
    ]
   },
   "docs-design-watcher-conformance/concrete-rotation-refinement-04": {
-   "audio_sha256": "05ebfc9862d4b6520d69a41c0676b03c5894dd8bc0ae083f0d7783d437505778",
-   "characters": 619,
-   "cost": 0.00061281,
-   "duration": 42.1,
+   "audio_sha256": "412ee64e8a617887c2455afba4bb9db319468a30e7668149657dcc84f6a19674",
+   "characters": 501,
+   "cost": 0.00049599,
+   "duration": 32.7,
    "index": 4,
-   "key": "1daa27470360e2bfc52b29b0cff8405051773703688df910ff4305f9c110f2a1",
+   "key": "9361f2909fdfc061f95d45e43c89eecc843c54637efb9e536b67472772888e19",
    "page": "docs/design/watcher-conformance.md",
    "pause_ms": 400,
    "section": "concrete-rotation-refinement",
-   "sent_text": "Declared technical boundary: keys and their committed digests share an abstract identity after a verified opening. Signature verification, wire structure, self-addressing identifiers and prior-link validation are primitive results bound to complete event content. The decoder must represent all remaining bytes injectively in the event's extension field. The environment must authenticate the predecessor and recorded accepted event, including for a parked commitment. Byte encoding, cryptographic soundness and that context authentication are not proved here. No Aiken conviction path is accepted by this model change.",
-   "text": "Declared technical boundary: keys and their committed digests share an abstract identity after a verified opening. Signature verification, wire structure, self-addressing identifiers and prior-link validation are primitive results bound to complete event content. The decoder must represent all remaining bytes injectively in the event's extension field. The environment must authenticate the predecessor and recorded accepted event, including for a parked commitment. Byte encoding, cryptographic soundness and that context authentication are not proved here. No Aiken conviction path is accepted by this model change.",
+   "sent_text": "The controller’s booking or the submitter’s advance must bind the installed writer digest to its signed bytes. The convictor must open the rival’s digest on its signed bytes against the authenticated predecessor. The comparison assumes the digest has no collision on this pair. Keys and their commitments share an identity after verification. The model takes wire structure, prior links, signatures and receipts as verified inputs. Implementing these checks in the decoder and validators remains open.",
+   "text": "The controller’s booking or the submitter’s advance must bind the installed writer digest to its signed bytes. The convictor must open the rival’s digest on its signed bytes against the authenticated predecessor. The comparison assumes the digest has no collision on this pair. Keys and their commitments share an identity after verification. The model takes wire structure, prior links, signatures and receipts as verified inputs. Implementing these checks in the decoder and validators remains open.",
    "words": [
     {
-     "end": 0.525,
-     "start": 0.175,
-     "text": "Declared"
+     "end": 0.275,
+     "start": 0.2,
+     "text": "The"
     },
     {
-     "end": 1.0,
-     "start": 0.525,
-     "text": "technical"
+     "end": 0.938,
+     "start": 0.275,
+     "text": "controller’s"
     },
     {
-     "end": 1.925,
-     "start": 1.0,
-     "text": "boundary"
+     "end": 1.438,
+     "start": 0.938,
+     "text": "booking"
     },
     {
-     "end": 2.125,
-     "start": 1.925,
-     "text": ":"
+     "end": 1.6,
+     "start": 1.438,
+     "text": "or"
     },
     {
-     "end": 2.8,
+     "end": 1.737,
+     "start": 1.6,
+     "text": "the"
+    },
+    {
+     "end": 2.325,
+     "start": 1.737,
+     "text": "submitter’s"
+    },
+    {
+     "end": 2.975,
      "start": 2.325,
-     "text": "keys"
+     "text": "advance"
     },
     {
-     "end": 2.912,
-     "start": 2.8,
-     "text": "and"
+     "end": 3.287,
+     "start": 2.975,
+     "text": "must"
     },
     {
-     "end": 3.075,
-     "start": 2.912,
-     "text": "their"
+     "end": 3.638,
+     "start": 3.287,
+     "text": "bind"
     },
     {
-     "end": 3.5,
-     "start": 3.075,
-     "text": "committed"
+     "end": 3.75,
+     "start": 3.638,
+     "text": "the"
     },
     {
-     "end": 4.175,
-     "start": 3.5,
-     "text": "digests"
+     "end": 4.35,
+     "start": 3.75,
+     "text": "installed"
     },
     {
-     "end": 4.463,
-     "start": 4.175,
-     "text": "share"
+     "end": 4.7,
+     "start": 4.35,
+     "text": "writer"
     },
     {
-     "end": 4.588,
-     "start": 4.463,
-     "text": "an"
+     "end": 5.225,
+     "start": 4.7,
+     "text": "digest"
     },
     {
-     "end": 5.162,
-     "start": 4.588,
-     "text": "abstract"
-    },
-    {
-     "end": 5.863,
-     "start": 5.162,
-     "text": "identity"
-    },
-    {
-     "end": 6.162,
-     "start": 5.863,
-     "text": "after"
-    },
-    {
-     "end": 6.225,
-     "start": 6.162,
-     "text": "a"
-    },
-    {
-     "end": 6.75,
-     "start": 6.225,
-     "text": "verified"
-    },
-    {
-     "end": 7.8,
-     "start": 6.75,
-     "text": "opening"
-    },
-    {
-     "end": 8.0,
-     "start": 7.8,
-     "text": "."
-    },
-    {
-     "end": 8.587,
-     "start": 8.2,
-     "text": "Signature"
-    },
-    {
-     "end": 9.375,
-     "start": 8.587,
-     "text": "verification"
-    },
-    {
-     "end": 9.45,
-     "start": 9.375,
-     "text": ","
-    },
-    {
-     "end": 9.775,
-     "start": 9.45,
-     "text": "wire"
-    },
-    {
-     "end": 10.75,
-     "start": 9.775,
-     "text": "structure"
-    },
-    {
-     "end": 10.975,
-     "start": 10.75,
-     "text": ","
-    },
-    {
-     "end": 11.962,
-     "start": 11.225,
-     "text": "self-addressing"
-    },
-    {
-     "end": 12.9,
-     "start": 11.962,
-     "text": "identifiers"
-    },
-    {
-     "end": 13.038,
-     "start": 12.9,
-     "text": "and"
-    },
-    {
-     "end": 13.675,
-     "start": 13.038,
-     "text": "prior-link"
-    },
-    {
-     "end": 14.538,
-     "start": 13.675,
-     "text": "validation"
-    },
-    {
-     "end": 14.712,
-     "start": 14.538,
-     "text": "are"
-    },
-    {
-     "end": 15.175,
-     "start": 14.712,
-     "text": "primitive"
-    },
-    {
-     "end": 15.663,
-     "start": 15.175,
-     "text": "results"
-    },
-    {
-     "end": 16.075,
-     "start": 15.663,
-     "text": "bound"
-    },
-    {
-     "end": 16.2,
-     "start": 16.075,
+     "end": 5.375,
+     "start": 5.225,
      "text": "to"
     },
     {
-     "end": 16.65,
-     "start": 16.2,
-     "text": "complete"
+     "end": 5.55,
+     "start": 5.375,
+     "text": "its"
     },
     {
-     "end": 16.95,
-     "start": 16.65,
-     "text": "event"
+     "end": 5.85,
+     "start": 5.55,
+     "text": "signed"
     },
     {
-     "end": 18.15,
-     "start": 16.95,
-     "text": "content"
-    },
-    {
-     "end": 18.375,
-     "start": 18.15,
-     "text": "."
-    },
-    {
-     "end": 18.65,
-     "start": 18.575,
-     "text": "The"
-    },
-    {
-     "end": 19.2,
-     "start": 18.65,
-     "text": "decoder"
-    },
-    {
-     "end": 19.475,
-     "start": 19.2,
-     "text": "must"
-    },
-    {
-     "end": 20.0,
-     "start": 19.475,
-     "text": "represent"
-    },
-    {
-     "end": 20.275,
-     "start": 20.0,
-     "text": "all"
-    },
-    {
-     "end": 20.775,
-     "start": 20.275,
-     "text": "remaining"
-    },
-    {
-     "end": 21.163,
-     "start": 20.775,
+     "end": 6.9,
+     "start": 5.85,
      "text": "bytes"
     },
     {
-     "end": 21.987,
-     "start": 21.163,
-     "text": "injectively"
-    },
-    {
-     "end": 22.112,
-     "start": 21.987,
-     "text": "in"
-    },
-    {
-     "end": 22.25,
-     "start": 22.112,
-     "text": "the"
-    },
-    {
-     "end": 22.65,
-     "start": 22.25,
-     "text": "event's"
-    },
-    {
-     "end": 23.288,
-     "start": 22.65,
-     "text": "extension"
-    },
-    {
-     "end": 24.25,
-     "start": 23.288,
-     "text": "field"
-    },
-    {
-     "end": 24.475,
-     "start": 24.25,
+     "end": 7.1,
+     "start": 6.9,
      "text": "."
     },
     {
-     "end": 24.8,
-     "start": 24.675,
+     "end": 7.375,
+     "start": 7.3,
      "text": "The"
     },
     {
-     "end": 25.475,
-     "start": 24.8,
-     "text": "environment"
+     "end": 7.925,
+     "start": 7.375,
+     "text": "convictor"
     },
     {
-     "end": 25.763,
-     "start": 25.475,
+     "end": 8.2,
+     "start": 7.925,
      "text": "must"
     },
     {
-     "end": 26.475,
-     "start": 25.763,
-     "text": "authenticate"
+     "end": 8.5,
+     "start": 8.2,
+     "text": "open"
     },
     {
-     "end": 26.575,
-     "start": 26.475,
+     "end": 8.625,
+     "start": 8.5,
      "text": "the"
     },
     {
-     "end": 27.388,
-     "start": 26.575,
+     "end": 9.075,
+     "start": 8.625,
+     "text": "rival’s"
+    },
+    {
+     "end": 9.7,
+     "start": 9.075,
+     "text": "digest"
+    },
+    {
+     "end": 9.863,
+     "start": 9.7,
+     "text": "on"
+    },
+    {
+     "end": 10.038,
+     "start": 9.863,
+     "text": "its"
+    },
+    {
+     "end": 10.4,
+     "start": 10.038,
+     "text": "signed"
+    },
+    {
+     "end": 10.887,
+     "start": 10.4,
+     "text": "bytes"
+    },
+    {
+     "end": 11.288,
+     "start": 10.887,
+     "text": "against"
+    },
+    {
+     "end": 11.438,
+     "start": 11.288,
+     "text": "the"
+    },
+    {
+     "end": 12.2,
+     "start": 11.438,
+     "text": "authenticated"
+    },
+    {
+     "end": 13.55,
+     "start": 12.2,
      "text": "predecessor"
     },
     {
-     "end": 27.525,
-     "start": 27.388,
-     "text": "and"
-    },
-    {
-     "end": 28.075,
-     "start": 27.525,
-     "text": "recorded"
-    },
-    {
-     "end": 28.575,
-     "start": 28.075,
-     "text": "accepted"
-    },
-    {
-     "end": 29.025,
-     "start": 28.575,
-     "text": "event"
-    },
-    {
-     "end": 29.125,
-     "start": 29.025,
-     "text": ","
-    },
-    {
-     "end": 29.7,
-     "start": 29.125,
-     "text": "including"
-    },
-    {
-     "end": 29.9,
-     "start": 29.7,
-     "text": "for"
-    },
-    {
-     "end": 30.0,
-     "start": 29.9,
-     "text": "a"
-    },
-    {
-     "end": 30.35,
-     "start": 30.0,
-     "text": "parked"
-    },
-    {
-     "end": 31.525,
-     "start": 30.35,
-     "text": "commitment"
-    },
-    {
-     "end": 31.75,
-     "start": 31.525,
+     "end": 13.75,
+     "start": 13.55,
      "text": "."
     },
     {
-     "end": 32.225,
-     "start": 31.95,
-     "text": "Byte"
+     "end": 14.0,
+     "start": 13.925,
+     "text": "The"
     },
     {
-     "end": 32.8,
-     "start": 32.225,
-     "text": "encoding"
+     "end": 14.675,
+     "start": 14.0,
+     "text": "comparison"
     },
     {
-     "end": 32.85,
-     "start": 32.8,
-     "text": ","
+     "end": 15.137,
+     "start": 14.675,
+     "text": "assumes"
     },
     {
-     "end": 33.638,
-     "start": 32.85,
-     "text": "cryptographic"
+     "end": 15.225,
+     "start": 15.137,
+     "text": "the"
     },
     {
-     "end": 34.312,
-     "start": 33.638,
-     "text": "soundness"
+     "end": 15.725,
+     "start": 15.225,
+     "text": "digest"
     },
     {
-     "end": 34.438,
-     "start": 34.312,
-     "text": "and"
+     "end": 15.938,
+     "start": 15.725,
+     "text": "has"
     },
     {
-     "end": 34.688,
-     "start": 34.438,
-     "text": "that"
+     "end": 16.175,
+     "start": 15.938,
+     "text": "no"
     },
     {
-     "end": 35.263,
-     "start": 34.688,
-     "text": "context"
+     "end": 16.587,
+     "start": 16.175,
+     "text": "collision"
     },
     {
-     "end": 36.05,
-     "start": 35.263,
-     "text": "authentication"
+     "end": 16.712,
+     "start": 16.587,
+     "text": "on"
     },
     {
-     "end": 36.2,
-     "start": 36.05,
-     "text": "are"
-    },
-    {
-     "end": 36.45,
-     "start": 36.2,
-     "text": "not"
-    },
-    {
-     "end": 36.8,
-     "start": 36.45,
-     "text": "proved"
-    },
-    {
-     "end": 37.6,
-     "start": 36.8,
-     "text": "here"
-    },
-    {
-     "end": 37.825,
-     "start": 37.6,
-     "text": "."
-    },
-    {
-     "end": 38.263,
-     "start": 38.025,
-     "text": "No"
-    },
-    {
-     "end": 38.65,
-     "start": 38.263,
-     "text": "Aiken"
-    },
-    {
-     "end": 39.125,
-     "start": 38.65,
-     "text": "conviction"
-    },
-    {
-     "end": 39.537,
-     "start": 39.125,
-     "text": "path"
-    },
-    {
-     "end": 39.7,
-     "start": 39.537,
-     "text": "is"
-    },
-    {
-     "end": 40.2,
-     "start": 39.7,
-     "text": "accepted"
-    },
-    {
-     "end": 40.375,
-     "start": 40.2,
-     "text": "by"
-    },
-    {
-     "end": 40.575,
-     "start": 40.375,
+     "end": 16.9,
+     "start": 16.712,
      "text": "this"
     },
     {
-     "end": 40.938,
-     "start": 40.575,
+     "end": 17.7,
+     "start": 16.9,
+     "text": "pair"
+    },
+    {
+     "end": 17.9,
+     "start": 17.7,
+     "text": "."
+    },
+    {
+     "end": 18.45,
+     "start": 18.1,
+     "text": "Keys"
+    },
+    {
+     "end": 18.562,
+     "start": 18.45,
+     "text": "and"
+    },
+    {
+     "end": 18.725,
+     "start": 18.562,
+     "text": "their"
+    },
+    {
+     "end": 19.3,
+     "start": 18.725,
+     "text": "commitments"
+    },
+    {
+     "end": 19.538,
+     "start": 19.3,
+     "text": "share"
+    },
+    {
+     "end": 19.638,
+     "start": 19.538,
+     "text": "an"
+    },
+    {
+     "end": 20.288,
+     "start": 19.638,
+     "text": "identity"
+    },
+    {
+     "end": 20.575,
+     "start": 20.288,
+     "text": "after"
+    },
+    {
+     "end": 21.9,
+     "start": 20.575,
+     "text": "verification"
+    },
+    {
+     "end": 22.075,
+     "start": 21.9,
+     "text": "."
+    },
+    {
+     "end": 22.325,
+     "start": 22.25,
+     "text": "The"
+    },
+    {
+     "end": 22.7,
+     "start": 22.325,
      "text": "model"
     },
     {
-     "end": 41.875,
-     "start": 40.938,
-     "text": "change"
+     "end": 22.987,
+     "start": 22.7,
+     "text": "takes"
     },
     {
-     "end": 42.1,
-     "start": 41.875,
+     "end": 23.35,
+     "start": 22.987,
+     "text": "wire"
+    },
+    {
+     "end": 23.95,
+     "start": 23.35,
+     "text": "structure"
+    },
+    {
+     "end": 24.062,
+     "start": 23.95,
+     "text": ","
+    },
+    {
+     "end": 24.45,
+     "start": 24.062,
+     "text": "prior"
+    },
+    {
+     "end": 24.825,
+     "start": 24.45,
+     "text": "links"
+    },
+    {
+     "end": 24.938,
+     "start": 24.825,
+     "text": ","
+    },
+    {
+     "end": 25.575,
+     "start": 24.938,
+     "text": "signatures"
+    },
+    {
+     "end": 25.688,
+     "start": 25.575,
+     "text": "and"
+    },
+    {
+     "end": 26.188,
+     "start": 25.688,
+     "text": "receipts"
+    },
+    {
+     "end": 26.362,
+     "start": 26.188,
+     "text": "as"
+    },
+    {
+     "end": 26.925,
+     "start": 26.362,
+     "text": "verified"
+    },
+    {
+     "end": 28.025,
+     "start": 26.925,
+     "text": "inputs"
+    },
+    {
+     "end": 28.225,
+     "start": 28.025,
+     "text": "."
+    },
+    {
+     "end": 28.95,
+     "start": 28.4,
+     "text": "Implementing"
+    },
+    {
+     "end": 29.188,
+     "start": 28.95,
+     "text": "these"
+    },
+    {
+     "end": 29.6,
+     "start": 29.188,
+     "text": "checks"
+    },
+    {
+     "end": 29.688,
+     "start": 29.6,
+     "text": "in"
+    },
+    {
+     "end": 29.775,
+     "start": 29.688,
+     "text": "the"
+    },
+    {
+     "end": 30.325,
+     "start": 29.775,
+     "text": "decoder"
+    },
+    {
+     "end": 30.45,
+     "start": 30.325,
+     "text": "and"
+    },
+    {
+     "end": 31.15,
+     "start": 30.45,
+     "text": "validators"
+    },
+    {
+     "end": 31.6,
+     "start": 31.15,
+     "text": "remains"
+    },
+    {
+     "end": 32.5,
+     "start": 31.6,
+     "text": "open"
+    },
+    {
+     "end": 32.7,
+     "start": 32.5,
      "text": "."
     }
    ]
@@ -413451,6 +413706,351 @@
     {
      "end": 41.4,
      "start": 41.2,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-watcher-conformance/watcher-conformance-review-00": {
+   "audio_sha256": "082ddcf81c02ba563af58e82313500d1b2a98ddaf38fafa64f4eb57bf5406ba6",
+   "characters": 27,
+   "cost": 2.673e-05,
+   "duration": 2.125,
+   "index": 0,
+   "key": "598d55e82261ae1799a3485ba51248b8aeeda7eb165c66d1fc76b58cdc1cc9c9",
+   "page": "docs/design/watcher-conformance.md",
+   "pause_ms": 500,
+   "section": "watcher-conformance-review",
+   "sent_text": "Watcher conformance review.",
+   "text": "Watcher conformance review.",
+   "words": [
+    {
+     "end": 0.525,
+     "start": 0.2,
+     "text": "Watcher"
+    },
+    {
+     "end": 1.125,
+     "start": 0.525,
+     "text": "conformance"
+    },
+    {
+     "end": 1.9,
+     "start": 1.125,
+     "text": "review"
+    },
+    {
+     "end": 2.125,
+     "start": 1.9,
+     "text": "."
+    }
+   ]
+  },
+  "docs-design-watcher-conformance/watcher-conformance-review-01": {
+   "audio_sha256": "a7ae7248862e0d4090250175a9dfd3a8d8b6d379745c0fbf66a19b065d60675c",
+   "characters": 20,
+   "cost": 1.98e-05,
+   "duration": 1.775,
+   "index": 1,
+   "key": "61f74a04310b17c779365ac7bad288c3d811b9bc41fd1eea0e1a86f2b2ff6ffd",
+   "page": "docs/design/watcher-conformance.md",
+   "pause_ms": 400,
+   "section": "watcher-conformance-review",
+   "sent_text": "Superseded lifecycle",
+   "text": "Superseded lifecycle",
+   "words": [
+    {
+     "end": 0.725,
+     "start": 0.2,
+     "text": "Superseded"
+    },
+    {
+     "end": 1.775,
+     "start": 0.725,
+     "text": "lifecycle"
+    }
+   ]
+  },
+  "docs-design-watcher-conformance/watcher-conformance-review-02": {
+   "audio_sha256": "0d129a0095a5986582eff88842def9df60ef0bf27074fd701116226575144d59",
+   "characters": 260,
+   "cost": 0.00025739999999999997,
+   "duration": 18.225,
+   "index": 2,
+   "key": "50370d7d8eaca6f2bd61c3572255c5be28a472d5c1698eb4b4e3d7c41be2d900",
+   "page": "docs/design/watcher-conformance.md",
+   "pause_ms": 400,
+   "section": "watcher-conformance-review",
+   "sent_text": "This dated record describes parking, revival and the owner's close as they stood when it was written. The accepted design has since removed them: there is no owner exit, and a checkpoint is alive until it is convicted (#493). The text below is kept as written.",
+   "text": "This dated record describes parking, revival and the owner's close as they stood when it was written. The accepted design has since removed them: there is no owner exit, and a checkpoint is alive until it is convicted (#493). The text below is kept as written.",
+   "words": [
+    {
+     "end": 0.438,
+     "start": 0.2,
+     "text": "This"
+    },
+    {
+     "end": 0.825,
+     "start": 0.438,
+     "text": "dated"
+    },
+    {
+     "end": 1.225,
+     "start": 0.825,
+     "text": "record"
+    },
+    {
+     "end": 1.837,
+     "start": 1.225,
+     "text": "describes"
+    },
+    {
+     "end": 2.425,
+     "start": 1.837,
+     "text": "parking"
+    },
+    {
+     "end": 2.525,
+     "start": 2.425,
+     "text": ","
+    },
+    {
+     "end": 3.162,
+     "start": 2.525,
+     "text": "revival"
+    },
+    {
+     "end": 3.287,
+     "start": 3.162,
+     "text": "and"
+    },
+    {
+     "end": 3.4,
+     "start": 3.287,
+     "text": "the"
+    },
+    {
+     "end": 3.787,
+     "start": 3.4,
+     "text": "owner's"
+    },
+    {
+     "end": 4.175,
+     "start": 3.787,
+     "text": "close"
+    },
+    {
+     "end": 4.325,
+     "start": 4.175,
+     "text": "as"
+    },
+    {
+     "end": 4.488,
+     "start": 4.325,
+     "text": "they"
+    },
+    {
+     "end": 4.875,
+     "start": 4.488,
+     "text": "stood"
+    },
+    {
+     "end": 5.012,
+     "start": 4.875,
+     "text": "when"
+    },
+    {
+     "end": 5.088,
+     "start": 5.012,
+     "text": "it"
+    },
+    {
+     "end": 5.262,
+     "start": 5.088,
+     "text": "was"
+    },
+    {
+     "end": 6.175,
+     "start": 5.262,
+     "text": "written"
+    },
+    {
+     "end": 6.4,
+     "start": 6.175,
+     "text": "."
+    },
+    {
+     "end": 6.725,
+     "start": 6.6,
+     "text": "The"
+    },
+    {
+     "end": 7.225,
+     "start": 6.725,
+     "text": "accepted"
+    },
+    {
+     "end": 7.725,
+     "start": 7.225,
+     "text": "design"
+    },
+    {
+     "end": 7.912,
+     "start": 7.725,
+     "text": "has"
+    },
+    {
+     "end": 8.225,
+     "start": 7.912,
+     "text": "since"
+    },
+    {
+     "end": 8.7,
+     "start": 8.225,
+     "text": "removed"
+    },
+    {
+     "end": 9.025,
+     "start": 8.7,
+     "text": "them"
+    },
+    {
+     "end": 9.1,
+     "start": 9.025,
+     "text": ":"
+    },
+    {
+     "end": 9.275,
+     "start": 9.1,
+     "text": "there"
+    },
+    {
+     "end": 9.438,
+     "start": 9.275,
+     "text": "is"
+    },
+    {
+     "end": 9.712,
+     "start": 9.438,
+     "text": "no"
+    },
+    {
+     "end": 10.087,
+     "start": 9.712,
+     "text": "owner"
+    },
+    {
+     "end": 10.55,
+     "start": 10.087,
+     "text": "exit"
+    },
+    {
+     "end": 10.625,
+     "start": 10.55,
+     "text": ","
+    },
+    {
+     "end": 10.738,
+     "start": 10.625,
+     "text": "and"
+    },
+    {
+     "end": 10.837,
+     "start": 10.738,
+     "text": "a"
+    },
+    {
+     "end": 11.4,
+     "start": 10.837,
+     "text": "checkpoint"
+    },
+    {
+     "end": 11.55,
+     "start": 11.4,
+     "text": "is"
+    },
+    {
+     "end": 12.038,
+     "start": 11.55,
+     "text": "alive"
+    },
+    {
+     "end": 12.337,
+     "start": 12.038,
+     "text": "until"
+    },
+    {
+     "end": 12.425,
+     "start": 12.337,
+     "text": "it"
+    },
+    {
+     "end": 12.575,
+     "start": 12.425,
+     "text": "is"
+    },
+    {
+     "end": 13.3,
+     "start": 12.575,
+     "text": "convicted"
+    },
+    {
+     "end": 13.375,
+     "start": 13.3,
+     "text": "("
+    },
+    {
+     "end": 15.375,
+     "start": 13.375,
+     "text": "493"
+    },
+    {
+     "end": 15.775,
+     "start": 15.375,
+     "text": ")"
+    },
+    {
+     "end": 15.825,
+     "start": 15.775,
+     "text": "."
+    },
+    {
+     "end": 16.075,
+     "start": 16.0,
+     "text": "The"
+    },
+    {
+     "end": 16.362,
+     "start": 16.075,
+     "text": "text"
+    },
+    {
+     "end": 16.675,
+     "start": 16.362,
+     "text": "below"
+    },
+    {
+     "end": 16.825,
+     "start": 16.675,
+     "text": "is"
+    },
+    {
+     "end": 17.087,
+     "start": 16.825,
+     "text": "kept"
+    },
+    {
+     "end": 17.225,
+     "start": 17.087,
+     "text": "as"
+    },
+    {
+     "end": 18.0,
+     "start": 17.225,
+     "text": "written"
+    },
+    {
+     "end": 18.225,
+     "start": 18.0,
      "text": "."
     }
    ]

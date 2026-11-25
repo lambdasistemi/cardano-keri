@@ -68,9 +68,9 @@ verification-key and commitment encoders must round trip through their
 respective reads. The existing V2 datum codec covers counts and flat weights.
 The writer must be available in public chain data to the convictor. An inline
 opening can include it directly. A digest requires public event bytes and an
-authenticated injective opening, including seals. The convictor binds this
+binding to those exact signed bytes, including seals, with collision resistance on the compared pair. The convictor binds this
 opening to the spent input in the conviction transaction. A faithful production
-wire representation remains open. `MeasureCheckpointWriter.lean` measures an
+wire representation remains open. `MeasureCheckpointWriter.lean` measures a
 previous illustrative inline layout, which omitted the writer’s own digest, with the model's Plutus Data serializer. The
 one-key live examples occupy 220 bytes at inception and 313 after either of
 two rotations. The grouped example with 64 seal bytes occupies 412. List

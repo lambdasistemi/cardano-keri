@@ -29,7 +29,7 @@
     "lean/CardanoKeri/CheckpointReceiptCheck.lean": "b8e503afc6b39c864d5670b5b746ada934e519beb2c45b291be66d811e1085d8",
     "lean/CardanoKeri/CheckpointSystemEvidence.lean": "537d2183603c1f5ffab2178d743b03652647a3ca22cae5cb4e38c8780bccf7da",
     "lean/CardanoKeri/CheckpointSystemFixtures.lean": "6b9e704f3b7f972c3e8276a1565e38b2e0408e550215d503c9d5f3d02e17cafe",
-    "lean/CardanoKeri/CheckpointSystemHistory.lean": "7c1b7276bca0bd613117a6d1b68e92cceeea9f304ded78f3e5d2c479515fb30c",
+    "lean/CardanoKeri/CheckpointSystemHistory.lean": "6adf762eee278b3c5ad40f141c484cffeb46121c31456da9ed8e7e89576b4e4d",
     "lean/CardanoKeri/CheckpointSystemWire.lean": "24ea2d534f5dd0e95695bee209a1b7e62313fecbbb1f022f1167b926904f34f9",
     "lean/CardanoKeri/CheckpointTraceWire.lean": "976f08e0c7acef930be1bfccb93ce948e50c1e0e5189c9d65bb934a6cbe66468",
     "lean/CardanoKeri/CheckpointValue.lean": "cd552eca0212b31142d4ed2d29ca6dd8897febddeeb7ac3dbb1154bfb22efbed",
@@ -6236,13 +6236,13 @@
       "line": 583,
       "statement": "theorem rotated_writer_accepts_with_encoding {p env s aid live previous writer rival}\n    (reach : SysReach p env s) (present : s.states aid = .present live)\n    (stored : s.writers aid = some (.rotation previous writer))\n    (valid : Duplicity.rotationValid previous.predecessor rival = true)\n    (same : writer.event.sn = rival.event.sn) (conflict : writer.event.eventDigest ≠ rival.event.eventDigest)\n    {reads : KeyReads} (encoding : KeyEncoding reads) :\n    let tip := (EventHistory.rotation previous writer).datum.tip encoding live.epoch\n    (s.writerData aid).any (fun d => reads.matchesDatum aid live.epoch d tip) = true ∧\n      (CheckpointConviction.Comparison.mk tip rival).acceptsAt live.epoch live.sn = true",
       "statementSha256": "69e601e818e06ea20630bf9bcef18e2a5bb83dd01a95b5acdcc8f7d41688708c",
-      "sourceStory": "A relying party presents the writer carried by the live input and one\nvalid sibling at its sequence. With any faithful key encoding, that concrete\ninput matches the system datum and its comparison accepts at the live position.",
+      "sourceStory": "Given the reachable writer and a valid sibling with a distinct own digest\nat its sequence, each faithful key encoding constructs a tip that matches the\nsystem datum and accepts the comparison. Actual presentation is a later premise.",
       "story": {
         "given": "{p env s aid live previous writer rival}\n    (reach : SysReach p env s) (present : s.states aid = .present live)\n    (stored : s.writers aid = some (.rotation previous writer))\n    (valid : Duplicity.rotationValid previous.predecessor rival = true)\n    (same : writer.event.sn = rival.event.sn) (conflict : writer.event.eventDigest ≠ rival.event.eventDigest)\n    {reads : KeyReads} (encoding : KeyEncoding reads)",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
         "then": "let tip := (EventHistory.rotation previous writer).datum.tip encoding live.epoch\n    (s.writerData aid).any (fun d => reads.matchesDatum aid live.epoch d tip) = true ∧\n      (CheckpointConviction.Comparison.mk tip rival).acceptsAt live.epoch live.sn = true"
       },
-      "storySha256": "c37e1d456f5749fd466723f9593303a07b7613465efd75ae84fd886a0afb25b5"
+      "storySha256": "900ae17c83d6976e1410fc5b7d26abe992298adef37b4bf11234a672edc291e1"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.reachable_conflict_has_accepted_comparison",

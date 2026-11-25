@@ -577,9 +577,9 @@ theorem reachable_writer_datum {p env s} (reach : SysReach p env s) (aid : AID) 
     | reveal event => obtain ⟨_, _, _, _, _, rfl⟩ := event; exact prior
     | sweep event => obtain ⟨_, _, _, _, rfl⟩ := event; exact prior
 
-/-- A relying party presents the writer carried by the live input and one
-valid sibling at its sequence. With any faithful key encoding, that concrete
-input matches the system datum and its comparison accepts at the live position. -/
+/-- Given the reachable writer and a valid sibling with a distinct own digest
+at its sequence, each faithful key encoding constructs a tip that matches the
+system datum and accepts the comparison. Actual presentation is a later premise. -/
 theorem rotated_writer_accepts_with_encoding {p env s aid live previous writer rival}
     (reach : SysReach p env s) (present : s.states aid = .present live)
     (stored : s.writers aid = some (.rotation previous writer))

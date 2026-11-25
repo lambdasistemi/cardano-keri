@@ -48,9 +48,11 @@ flowchart TD
   Booked -->|Matching consuming fold| Retired[Retired key and burned token]
 ```
 
-A reachable conviction establishes KERI duplicity for the rival actually
-presented. A valid sibling at the same position with different content passes
-the evidence comparison. The convictor must also reveal the matching open
+In the Lean model, a reachable conviction establishes duplicity for the rival
+the convictor presents. Given authenticated openings of both signed bodies, a
+valid sibling at the same position passes the comparison when its own digest
+differs from the live writer’s. A second decoding of the same body has the
+same digest. Production validators still need to establish these openings. The convictor must also reveal the matching open
 commitment and mint one enforcement token and one entitlement token for this spend. The Singular folder
 processes the resulting request.
 

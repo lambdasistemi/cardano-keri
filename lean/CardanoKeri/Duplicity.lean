@@ -11,8 +11,9 @@ and recovery (1784–1827). This is the non-delegated rotation profile.
 Technical boundary: keys and key digests share an abstract identity after a
 verified digest opening. Signature verification and wire structure/SAID/prior
 link verification are primitive results, bound to the complete event below.
-`extension` represents all remaining event content, including seals. A wire
-decoder must preserve it injectively; no byte/crypto correspondence is proved.
+The decoded extension carries additional content such as seals. Event identity
+uses the own digest of the authenticated signed body, including its original
+spelling. The raw-to-decoded correspondence remains a technical obligation.
 In the modeled checkpoint conviction spend the convictor supplies the
 rival event and its signatures and receipts. The conviction mint binds the
 writer and preceding commitments to the spent input and checks the event bytes,
@@ -82,8 +83,8 @@ def Threshold.positiveDenominators : Threshold → Bool
   | .count _ => true
   | .weighted cs => cs.all fun clause => clause.all Weight.positiveDenominators
 
-/-- The chain follows keripy 1.3.5 for event admission. Its individual
-weight ceiling is stricter than the pinned KERI 1.1 fractional threshold
+/-- The decoded model checks keripy 1.3.5’s individual weight ceiling.
+This necessary admission condition is stricter than the pinned KERI 1.1 fractional threshold
 clause (line 1419), which imposes a minimum on the signed sum and gives no
 individual maximum. Keep the original fraction pair for the signed opening. -/
 def Threshold.weightsAtMostOne : Threshold → Bool

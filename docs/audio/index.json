@@ -11955,7 +11955,7 @@
     "index": 3,
     "name": "docs-design-registry-as-mpfs/where-the-registry-is-built-03",
     "pause_ms": 400,
-    "v": "d0dcc780b8ba"
+    "v": "a635503558e3"
    }
   ]
  },
@@ -13863,13 +13863,13 @@
     "index": 1,
     "name": "docs-design-watcher-conformance/concrete-rotation-refinement-01",
     "pause_ms": 400,
-    "v": "f8cb970cf8d4"
+    "v": "cd04d4c6dffa"
    },
    {
     "index": 2,
     "name": "docs-design-watcher-conformance/concrete-rotation-refinement-02",
     "pause_ms": 400,
-    "v": "bd0ff627cf5d"
+    "v": "0d2566d48e8e"
    },
    {
     "index": 3,
@@ -13881,7 +13881,7 @@
     "index": 4,
     "name": "docs-design-watcher-conformance/concrete-rotation-refinement-04",
     "pause_ms": 400,
-    "v": "05ebfc9862d4"
+    "v": "412ee64e8a61"
    },
    {
     "index": 5,
@@ -14208,6 +14208,26 @@
     "name": "docs-design-watcher-conformance/verification-and-limits-04",
     "pause_ms": 400,
     "v": "c49c168e03ca"
+   }
+  ],
+  "watcher-conformance-review": [
+   {
+    "index": 0,
+    "name": "docs-design-watcher-conformance/watcher-conformance-review-00",
+    "pause_ms": 500,
+    "v": "082ddcf81c02"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-watcher-conformance/watcher-conformance-review-01",
+    "pause_ms": 400,
+    "v": "a7ae7248862e"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-watcher-conformance/watcher-conformance-review-02",
+    "pause_ms": 400,
+    "v": "0d129a0095a5"
    }
   ],
   "what-a-cooldown-would-and-would-not-establish": [

@@ -36,13 +36,12 @@ Two consequences that shape the whole trust boundary:
   the trust decision, which it may take either way (the
   [review's reading of the specification's own text](watcher-conformance.md#the-specification-has-a-trust-text-tension)).
   **This project's selected policy is that conviction is terminal.** The
-  checkpoint spend compares one conflicting rival with the spent tip. When
-  it accepts, the conviction bond is seized. Once the fold retires the leaf,
-  it never reopens. At a rotated checkpoint, a finding of KERI duplicity also
-  requires the rival to be valid under the predecessor’s rotation rules.
-  Whether every accepted rival meets that requirement remains open in this model,
-  and [#573](https://github.com/lambdasistemi/cardano-keri/issues/573)
-  will discharge it by checking the rival against the previous event’s commitments. The reasons
+  conviction mint checks the rival under its own rules against the previous
+  commitments carried by the live checkpoint. Every conviction in a reachable
+  modeled execution establishes a KERI duplicity. A valid conflict at that
+  position has an accepted comparison. Spending also requires Cora’s open
+  commitment and its reveal window. Once the fold retires the leaf, it never
+  reopens. These decisions
   are ours, not KERI's: a bond that could be recovered would not deter, and
   inventing a recovery event KERI lacks would be the chain originating identity
   state.
@@ -251,13 +250,31 @@ so an application requiring public KERI acceptance can reject such identities
 by policy.
 
 A colluding witness quorum can receipt two rotations at one sequence. When
-the checkpoint is spent for conviction, its observer compares one rival
-with the spent tip and checks the signatures and receipts under that tip's
-thresholds. For a rotated checkpoint, concluding KERI duplicity also
-requires the rival to validate against the predecessor under the rival's own
-rules. That implication and refusal at a never-rotated checkpoint remain
-open. The pending output records the checkpoint spend. The termination
+the checkpoint is spent for conviction, the mint checks the rival’s signing
+threshold, the previous next-key threshold and receipts from witnesses derived
+by applying the rival’s cuts and additions. The whole event must differ from
+the authenticated writer, including seals. At inception Lean refuses the
+comparison because there is no previous establishment. Validator evidence
+for that refusal remains outstanding. The pending output records the checkpoint spend. The termination
 booker consumes that output and the fold processes the booked request.
+
+The readable input retains the writer’s authenticated content, its established
+witnesses, and one preceding commitment set. A relayer advancing the live
+output copies the previous next keys, threshold and witness list from the
+spent datum. The convictor must be able to recover the exact writer, including
+seals, from public chain data. An inline opening can supply it directly. A
+digest requires an authenticated opening available to that role on chain.
+Neither the rival nor the commitment opener selects the preceding context.
+
+A Lean size study serializes one possible inline representation as Plutus Data.
+With a 44-byte identifier, 32-byte key and digest fields, a 28-byte refund
+address, one signing key and no witnesses, the live datum measures 220 bytes
+at inception and 313 after each of two rotations. The predecessor occupies
+96 bytes after rotation. Grouping the signing and next thresholds and adding
+64 seal bytes gives 412 bytes. Larger lists or seals increase the size. The
+study fixes neither a production format nor a transaction limit. Production
+datum size, script budget and transaction fit require the validator and codec
+work. The executable measurement is in `lean/MeasureCheckpointWriter.lean`.
 
 ### Relayers and hunters
 
@@ -345,14 +362,14 @@ stateDiagram-v2
   Swept --> [*]: marker burnt, deposit to whoever signs
 ```
 
-At the checkpoint spend, the observer compares the committed rival with the
-spent tip. The system binds the tip to the event that wrote the checkpoint
-and burns the open commitment. The [witness assumptions](#keri-witnesses)
-describe what remains to establish KERI duplicity.
+The convictor presents one signed rival in the checkpoint spend. The mint
+must attest this comparison at the indexed output. Transaction 105 in the
+connected Lean example supplies the abstract attestation and has an empty
+observed mint field. Ledger correspondence remains open under #576.
 
 | A conviction is accepted only when | Where the model states it |
 |---|---|
-| the rival names the same identifier and sequence, reveals the spent keys, meets the spent signing and witness thresholds, and conflicts on a forward field | the checkpoint spend (`Env.acceptsRival`) |
+| the rival names the same identifier and sequence, satisfies the previous commitments and its own signing and receipt thresholds, and differs from the complete writer event | the checkpoint spend (`Env.acceptsRival`) |
 | the spent position and key material match the authenticated writer for this identifier | the system step (`Sys.comparisonMatchesWriter`) |
 | the commitment names the key state this checkpoint output carries | the conviction step (`Commitment.entitles`) |
 | the commitment names the evidence the conviction shows | the conviction step |
@@ -475,7 +492,7 @@ The **Result** column marks whether the response ships today or is designed.
 | Authorize a payment from a poisoned checkpoint | Reject: the consumer requires an unpoisoned state | designed |
 | Take `D_reg` without an accepted checkpoint conviction | Reject: `D_reg` is never a fee source | designed |
 | Freeze an identity whose pool pays | Reject: the freeze requires `pool < P` | designed |
-| Convict with a rival that falls short of the spent tip’s thresholds | The checkpoint refuses the rival if it lacks the required controller signatures or witness receipts | designed |
+| Convict with a rival that falls short of its signing threshold or lacks receipts from its derived witnesses | The checkpoint refuses the rival if it lacks the required controller signatures or witness receipts | designed |
 | Copy a conviction and pay yourself | Reject: `D_reg` goes only to the payee of a commitment opened beforehand over this identifier, deployment, key state and evidence | designed |
 | Open a commitment and use it in the same slot | Reject: a commitment is eligible only after the upper bound of its opening transaction's validity range, which is no earlier than the slot it was opened in | designed |
 | Top up, freeze or poison a checkpoint to void a hunter's commitment | No effect: the commitment names the key state, and these steps keep it | designed |

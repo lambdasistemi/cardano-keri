@@ -11709,7 +11709,7 @@
     "index": 2,
     "name": "docs-design-registry-as-mpfs/following-the-spent-checkpoint-back-to-its-writer-02",
     "pause_ms": 400,
-    "v": "748b120c998a"
+    "v": "fc3be733fcae"
    }
   ],
   "keris-application-on-the-public-registry": [
@@ -11955,7 +11955,7 @@
     "index": 3,
     "name": "docs-design-registry-as-mpfs/where-the-registry-is-built-03",
     "pause_ms": 400,
-    "v": "4aa50dbc5f2e"
+    "v": "87d4a69ad1a7"
    }
   ]
  },
@@ -12801,7 +12801,19 @@
     "index": 3,
     "name": "docs-design-trust-model/keri-witnesses-03",
     "pause_ms": 400,
-    "v": "85e17c274f17"
+    "v": "42774e010b11"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-trust-model/keri-witnesses-04",
+    "pause_ms": 400,
+    "v": "ba7a9becf62c"
+   },
+   {
+    "index": 5,
+    "name": "docs-design-trust-model/keri-witnesses-05",
+    "pause_ms": 400,
+    "v": "f96fa4b25be7"
    }
   ],
   "next-key-theft": [
@@ -12995,7 +13007,7 @@
     "index": 4,
     "name": "docs-design-trust-model/the-projection-law-04",
     "pause_ms": 300,
-    "v": "6ddd63e3848b"
+    "v": "ccc2204169b7"
    }
   ],
   "the-registry": [
@@ -13137,7 +13149,7 @@
     "index": 5,
     "name": "docs-design-trust-model/who-a-conviction-pays-05",
     "pause_ms": 400,
-    "v": "fd447fbdd778"
+    "v": "5ac9791675fa"
    },
    {
     "index": 6,

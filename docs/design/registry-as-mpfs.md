@@ -48,11 +48,11 @@ flowchart TD
   Booked -->|Matching consuming fold| Retired[Retired key and burned token]
 ```
 
-At a rotated checkpoint, concluding KERI duplicity from this spend also
-requires the rival to be valid under the predecessor’s rotation rules. Whether
-every rival accepted by the checkpoint meets that requirement remains open in
-this model, and [#573](https://github.com/lambdasistemi/cardano-keri/issues/573)
-will discharge it by checking the rival against the previous event’s commitments.
+A reachable conviction establishes KERI duplicity for the rival actually
+presented. A valid sibling at the same position with different content passes
+the evidence comparison. The convictor must also reveal the matching open
+commitment and mint the attestation for this spend. The Singular folder
+processes the resulting request.
 
 ## The machine (`Registry.lean`)
 
@@ -405,8 +405,10 @@ output and places the termination request at index 0. Choosing the registration
 output, the rotation output or a different request reference loses the
 correspondence. The economic entry records output 105#0, identifier 11,
 epoch 1 and sequence 1 (`economic_entry_for_rotated_checkpoint`).
-Conformance to KERI duplicity remains open at inception and depends on the
-rival’s validity against the predecessor after rotation.
+The example supplies the abstract attestation for transaction 105, whose
+observed mint field is empty. Ledger correspondence remains open under #576.
+Lean refuses conviction at inception. Validator evidence for this refusal
+remains outstanding.
 
 ## Executable evidence and limits
 

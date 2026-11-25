@@ -12,7 +12,7 @@ private def context := baseContext
 
 /-- The actual inception for the previously committed two-key set. -/
 private def inception : Checkpoint.EventHistory :=
-  let event : Content := { context.accepted.event with eventDigest := "vector-inception", sn := 0, kind := .inception, nextKeys := [1, 2], nextThreshold := .count 1 }
+  let event : Content := { context.accepted.event with eventDigest := "vector-inception", sn := 0, kind := .inception, priorDigest := 0, nextKeys := [1, 2], nextThreshold := .count 1 }
   .inception (signed event [1] [10]) [10]
 
 private def history : Checkpoint.EventHistory := .rotation inception context.accepted

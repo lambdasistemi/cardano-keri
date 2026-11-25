@@ -42,6 +42,10 @@ def Weight.width : Weight → Nat
   | .key _ => 1
   | .group _ ws => ws.length
 
+def Weight.positiveDenominators : Weight → Bool
+  | .key w => w.denominator > 0
+  | .group w ws => w.denominator > 0 && ws.all (·.denominator > 0)
+
 def Weight.wellFormed : Weight → Bool
   | .key w => w.denominator > 0
   | .group w ws => w.denominator > 0 && !ws.isEmpty && ws.all (·.denominator > 0)
@@ -72,6 +76,23 @@ inductive Threshold where
   | weighted (clauses : List (List Weight))
   deriving Repr, DecidableEq, BEq, Lean.ToJson, Lean.FromJson
 
+/-- The declared next rule is stored before its keys sign. A rational in
+either threshold still requires a nonzero denominator (KERI 1.1, line 1419). -/
+def Threshold.positiveDenominators : Threshold → Bool
+  | .count _ => true
+  | .weighted cs => cs.all fun clause => clause.all Weight.positiveDenominators
+
+/-- The chain follows keripy 1.3.5 for event admission. Its individual
+weight ceiling is stricter than the pinned KERI 1.1 fractional threshold
+clause (line 1419), which imposes a minimum on the signed sum and gives no
+individual maximum. Keep the original fraction pair for the signed opening. -/
+def Threshold.weightsAtMostOne : Threshold → Bool
+  | .count _ => true
+  | .weighted clauses => clauses.all fun clause => clause.all fun
+    | .key w => decide (w.numerator ≤ w.denominator)
+    | .group outer members => decide (outer.numerator ≤ outer.denominator) &&
+        members.all fun w => decide (w.numerator ≤ w.denominator)
+
 /-- Each key contributes once, in that list's order; clauses are conjunctive. -/
 def Threshold.satisfied (threshold : Threshold) (keys signers : List Nat) : Bool :=
   let signed := keys.map signers.contains
@@ -101,6 +122,10 @@ structure Content where
   /-- The event’s own SAID, authenticated by the signed-byte opening. -/
   eventDigest : String
   deriving Repr, DecidableEq, BEq, Lean.ToJson, Lean.FromJson
+
+/-- Both the current and the declared next rule belong to the signed event. -/
+def Content.weightsAtMostOne (e : Content) : Bool :=
+  e.threshold.weightsAtMostOne && e.nextThreshold.weightsAtMostOne
 
 structure Signature where
   signer : Nat
@@ -157,7 +182,9 @@ def receiptsValid (prior : Predecessor) (signed : SignedEvent) : Bool :=
   signed.event.witnessThreshold <= (witnesses.filter receipts.contains).length
 
 def rotationValid (prior : Predecessor) (signed : SignedEvent) : Bool :=
-  !prior.delegated && decide (signed.event.kind = .rotation) && signed.structureVerified &&
+  !prior.delegated && decide (signed.event.kind = .rotation) &&
+  (signed.structureVerified && prior.nextThreshold.weightsAtMostOne &&
+    signed.event.weightsAtMostOne && signed.event.nextThreshold.positiveDenominators) &&
   signed.event.aid == prior.aid && prior.sn < signed.event.sn &&
   signingValid prior signed && receiptsValid prior signed
 

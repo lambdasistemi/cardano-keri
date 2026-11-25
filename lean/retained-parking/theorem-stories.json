@@ -23,7 +23,7 @@
     "lean/CardanoKeri/CheckpointDeposit.lean": "6ce03d0e88ee7cc55de194df185f067995e9b8d943f2478282934e691db13a68",
     "lean/CardanoKeri/CheckpointDepositGoals.lean": "c6ddf3b2434e365b59bdccfd2bc074b60208d63b3358141f147d8ac0fcf1055f",
     "lean/CardanoKeri/CheckpointDepositVectors.lean": "f6c96b69a42efd73a3365715213fb0a13a0138bce7c39dba4cd67a5713ba5140",
-    "lean/CardanoKeri/CheckpointEventHistory.lean": "4504a5da847aed76c287a239551702a6dfa0fe811f8ae90562cc297a63fcaf22",
+    "lean/CardanoKeri/CheckpointEventHistory.lean": "186b1aa201c40364e2fe86542d79a4bd60f764425173130567198e59c934b181",
     "lean/CardanoKeri/CheckpointGoals.lean": "9465d7e242adfa5f59e75e9602fb995ac739e2c023be69c5b8c3c0d538282b5b",
     "lean/CardanoKeri/CheckpointLifecycleExamples.lean": "94757affaeb3f3fa6a12cb49b18ff00f50deae9fe576d4a53d8a3635212e57d0",
     "lean/CardanoKeri/CheckpointReceiptCheck.lean": "b8e503afc6b39c864d5670b5b746ada934e519beb2c45b291be66d811e1085d8",
@@ -3991,9 +3991,37 @@
       "storySha256": "3bfcb8d8a5400424b813756614b6ca019b5b932cec74c198bf7d8e1c8211c2a3"
     },
     {
+      "declaration": "CardanoKeri.Checkpoint.inception_weights_at_most_one",
+      "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
+      "line": 82,
+      "statement": "theorem inception_weights_at_most_one {aid : Nat} {event : SignedEvent} {witnesses : List Nat}\n    (accepted : inceptionWrites aid event witnesses = true) :\n    event.event.threshold.weightsAtMostOne = true ∧ event.event.nextThreshold.weightsAtMostOne = true",
+      "statementSha256": "792a4c231509a6a51ecd33263cde4a9dbd7e79261991f68fcd3e2da254eaa6c8",
+      "sourceStory": "Given a signed inception, when its registration opening passes, each\nindividual signing weight in its current and next rules is at most one,\nincluding the outer and member weights of groups (keripy admission profile).",
+      "story": {
+        "given": "{aid : Nat} {event : SignedEvent} {witnesses : List Nat}\n    (accepted : inceptionWrites aid event witnesses = true)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "event.event.threshold.weightsAtMostOne = true ∧ event.event.nextThreshold.weightsAtMostOne = true"
+      },
+      "storySha256": "6306dbc7f3d850350d96c93ad84c5f5b16bce33d974965d07d4db6a4d7006873"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.rotation_weights_at_most_one",
+      "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
+      "line": 90,
+      "statement": "theorem rotation_weights_at_most_one {prior : Predecessor} {signed : SignedEvent}\n    (accepted : rotationValid prior signed = true) :\n    prior.nextThreshold.weightsAtMostOne = true ∧ signed.event.threshold.weightsAtMostOne = true ∧\n    signed.event.nextThreshold.weightsAtMostOne = true",
+      "statementSha256": "4c4c8c47df15460778f89eed4e8fd9a17b0b7f4c4cbea1259603b557c6d31494",
+      "sourceStory": "Given a writer or rival rotation, when it validates against its predecessor,\nthe prior signing rule and both rules in the event satisfy keripy’s ceiling.",
+      "story": {
+        "given": "{prior : Predecessor} {signed : SignedEvent}\n    (accepted : rotationValid prior signed = true)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "prior.nextThreshold.weightsAtMostOne = true ∧ signed.event.threshold.weightsAtMostOne = true ∧\n    signed.event.nextThreshold.weightsAtMostOne = true"
+      },
+      "storySha256": "63e7bbfe8519c39c2d8cb58ba5e79ae6004108285deebacbc0b3136519b77c16"
+    },
+    {
       "declaration": "CardanoKeri.Checkpoint.stored_rotation_valid",
       "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
-      "line": 92,
+      "line": 110,
       "statement": "theorem stored_rotation_valid {aid : Nat} {previous : EventHistory} {event : SignedEvent}\n    (accepted : (EventHistory.rotation previous event).authenticated aid = true) :\n    previous.authenticated aid = true ∧ rotationValid previous.predecessor event = true",
       "statementSha256": "e9f90fb674f7e84d6577bd81131399a69c806a56ad21c716f0e353e87c7715d2",
       "sourceStory": "Given a checkpoint written by an authenticated rotation, when its KERI\ncontext is reconstructed, then the accepted event is valid against the\npredecessor computed from the actual preceding writer.",
@@ -4007,7 +4035,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.rotated_duplicity_iff_rival_valid",
       "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
-      "line": 101,
+      "line": 119,
       "statement": "theorem rotated_duplicity_iff_rival_valid {aid : Nat} {previous : EventHistory}\n    {writer rival : SignedEvent}\n    (accepted : (EventHistory.rotation previous writer).authenticated aid = true)\n    (samePosition : writer.event.sn = rival.event.sn)\n    (conflict : writer.event ≠ rival.event) :\n    duplicityAt (previous.epoch + 1) writer.event.sn\n      ⟨previous.epoch + 1, previous.predecessor, writer⟩ rival = true ↔\n      rotationValid previous.predecessor rival = true",
       "statementSha256": "5d07e47e9580a61ccb95f0dbf2d0899d1729cf89b52c17a06f8af00eadb0a320",
       "sourceStory": "Given an authenticated rotation and different rival content at the same\nnative sequence, when the two-event definition is evaluated for that stored\nwriter, then duplicity is equivalent to the rival's validity against the\nsame predecessor.",
@@ -4021,7 +4049,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.EventHistory.datum_commitments",
       "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
-      "line": 147,
+      "line": 165,
       "statement": "theorem EventHistory.datum_commitments (h : EventHistory) :\n    h.datum.commitments = h.predecessor",
       "statementSha256": "b57e232228b7b6782be0af1f43b2008edf63fc9e468bab014d3c3e6f6723c9ae",
       "sourceStory": "The one-step writer agrees with the complete authenticated history used\nby a relying party. In particular the witness set includes earlier deltas.",
@@ -4035,7 +4063,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.inception_carries_no_previous",
       "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
-      "line": 155,
+      "line": 173,
       "statement": "theorem inception_carries_no_previous (event witnesses) :\n    (EventHistory.inception event witnesses).datum.previous = none",
       "statementSha256": "c15ca7136e682ec4a130a7781f05dc767e429e722b50daaa11b8bf2d5cc0e02f",
       "sourceStory": "",
@@ -4049,7 +4077,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.rotation_replaces_previous",
       "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
-      "line": 158,
+      "line": 176,
       "statement": "theorem rotation_replaces_previous (history event) :\n    (EventHistory.rotation history event).datum.previous = some history.predecessor",
       "statementSha256": "1199fe0b59077138619813fa507ed6f8d3b4383733440d81dbf305eaaa49c09e",
       "sourceStory": "",
@@ -4063,7 +4091,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.advance_forgets_older",
       "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
-      "line": 164,
+      "line": 182,
       "statement": "theorem advance_forgets_older (datum : WriterDatum) (older : Option Predecessor) (event : Content) :\n    ({datum with previous := older} : WriterDatum).advance event = datum.advance event",
       "statementSha256": "fbc5ef61dcbda37c1f12fcf53a944ae34a554df11d2690de29006a01e23d8f87",
       "sourceStory": "Different older predecessors cannot affect the next output once the\ncurrent writer and its established witnesses agree.",
@@ -4077,7 +4105,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.EventHistory.datum_writer",
       "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
-      "line": 167,
+      "line": 185,
       "statement": "theorem EventHistory.datum_writer (history : EventHistory) :\n    history.datum.writer = history.writer.event",
       "statementSha256": "22071e1a728a07381af9f2f6331353ca7860d93cdbbbd6cc2f2beac6de51faf7",
       "sourceStory": "",
@@ -4091,7 +4119,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.read_encoded",
       "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
-      "line": 211,
+      "line": 229,
       "statement": "private theorem read_encoded (read : List Nat → Option Nat) (encode : Nat → List Nat)\n    (roundTrip : ∀ k, read (encode k) = some k) (keys : List Nat) :\n    (keys.map encode).mapM read = some keys",
       "statementSha256": "ab6d78d969d5cd62649abf047f836744de7bd4c29ac2a495e8354444dd7a7e80",
       "sourceStory": "",
@@ -4105,7 +4133,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.WriterDatum.matches_tip",
       "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
-      "line": 220,
+      "line": 238,
       "statement": "theorem WriterDatum.matches_tip {reads : KeyReads} (datum : WriterDatum)\n    (encoding : KeyEncoding reads) (epoch : Nat) :\n    reads.matchesDatum datum.writer.aid epoch datum (datum.tip encoding epoch) = true",
       "statementSha256": "bb2882a8142c333e108384bea4c4cb69e3b778d6016d1c99fd43334f9947cd7f",
       "sourceStory": "Given faithfully interpreted keys, presenting the stored writer preserves\nevery field checked by the conviction input, for all threshold constructors.",
@@ -4119,7 +4147,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.EventHistory.authenticated_aid",
       "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
-      "line": 227,
+      "line": 245,
       "statement": "theorem EventHistory.authenticated_aid {aid : Nat} {history : EventHistory}\n    (h : history.authenticated aid = true) : history.writer.event.aid = aid",
       "statementSha256": "904f41c08105b1f82bc93009324e9a56f02daab57f8183ab88f55352634d1b41",
       "sourceStory": "A history authenticated for an identifier ends in a writer for it.",
@@ -4133,7 +4161,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.KeyReads.matches_history",
       "path": "lean/CardanoKeri/CheckpointEventHistory.lean",
-      "line": 240,
+      "line": 258,
       "statement": "theorem KeyReads.matches_history {reads : KeyReads} {aid history tip}\n    (h : reads.matches aid history tip = true) :\n    tip.previous = history.datum.previous ∧ tip.writer = history.writer.event ∧\n    tip.aid = aid ∧ tip.aid = history.writer.event.aid ∧ tip.epoch = history.epoch ∧ tip.sn = history.writer.event.sn",
       "statementSha256": "0987564926b9680bc28bc5841cdc5f2dea3964c939f980febc588e52a1216284",
       "sourceStory": "The spent datum binds the entire writer and the one carried predecessor.",

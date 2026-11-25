@@ -43,6 +43,24 @@ private def nextDenominatorCases (atInception : Bool) : Bool :=
 #guard nextDenominatorCases true
 #guard nextDenominatorCases false
 
+-- The same signed rule is checked at installation, advance, and rival grading.
+private def admittedWeight (rule : Threshold) (expected : Bool) : Bool :=
+  let prior := bookingOrigin.inception.predecessor
+  let genesis := inceptionEvent.event
+  let rotation := first.event
+  let genesisWith := fun current next => opensInception { genesis with threshold := current, nextThreshold := next }
+  let rotateWith := fun current next => rotationValid prior
+    (signed { rotation with threshold := current, nextThreshold := next } [1] [10])
+  [genesisWith rule (.count 1), genesisWith (.count 1) rule,
+   rotateWith rule (.count 1), rotateWith (.count 1) rule].all (· == expected)
+
+#guard admittedWeight (.weighted [[.key ⟨2,1⟩]]) false
+#guard admittedWeight (.weighted [[.group ⟨2,1⟩ [⟨1,1⟩]]]) false
+#guard admittedWeight (.weighted [[.group ⟨1,1⟩ [⟨2,1⟩]]]) false
+#guard admittedWeight (.weighted [[.group ⟨2,2⟩ [⟨3,3⟩]]]) true
+#guard !rotationValid { bookingOrigin.inception.predecessor with
+  nextThreshold := .weighted [[.key ⟨2,1⟩, .key ⟨0,1⟩]] } first
+
 def setup : SystemEnv := fun aid => {env aid with
   inceptionWriter := fun _ _ => some (inceptionEvent, [10])
   rotationWriter := fun _ _ _ sn => some (if sn = 1 then first else second)}

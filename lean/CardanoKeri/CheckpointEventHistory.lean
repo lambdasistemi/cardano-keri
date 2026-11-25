@@ -46,7 +46,7 @@ def inceptionWrites (aid : Nat) (event : SignedEvent) (witnesses : List Nat) : B
   let receipts := verifiedSigners e event.receipts
   let inceptionFields := e.priorDigest == 0 && e.cuts.isEmpty && e.adds.isEmpty
   e.aid == aid && e.sn == 0 && e.kind == .inception &&
-    (event.structureVerified && inceptionFields && e.nextThreshold.positiveDenominators) &&
+    (event.structureVerified && inceptionFields && e.weightsAtMostOne && e.nextThreshold.positiveDenominators) &&
     distinct e.keys && !e.keys.isEmpty && distinct witnesses &&
     e.threshold.satisfied e.keys (verifiedSigners e event.signatures) &&
     (if e.witnessThreshold == 0 then event.receipts.isEmpty
@@ -75,6 +75,24 @@ theorem rotation_next_denominators_positive {prior : Predecessor} {signed : Sign
     signed.event.nextThreshold.positiveDenominators = true := by
   simp only [rotationValid, Bool.and_eq_true] at accepted
   exact accepted.1.1.1.1.2.2
+
+/-- Given a signed inception, when its registration opening passes, each
+individual signing weight in its current and next rules is at most one,
+including the outer and member weights of groups (keripy admission profile). -/
+theorem inception_weights_at_most_one {aid : Nat} {event : SignedEvent} {witnesses : List Nat}
+    (accepted : inceptionWrites aid event witnesses = true) :
+    event.event.threshold.weightsAtMostOne = true ∧ event.event.nextThreshold.weightsAtMostOne = true := by
+  simp only [inceptionWrites, Content.weightsAtMostOne, Bool.and_eq_true] at accepted
+  exact accepted.1.1.1.1.1.2.1.2
+
+/-- Given a writer or rival rotation, when it validates against its predecessor,
+the prior signing rule and both rules in the event satisfy keripy’s ceiling. -/
+theorem rotation_weights_at_most_one {prior : Predecessor} {signed : SignedEvent}
+    (accepted : rotationValid prior signed = true) :
+    prior.nextThreshold.weightsAtMostOne = true ∧ signed.event.threshold.weightsAtMostOne = true ∧
+    signed.event.nextThreshold.weightsAtMostOne = true := by
+  simp only [rotationValid, Content.weightsAtMostOne, Bool.and_eq_true] at accepted
+  exact ⟨accepted.1.1.1.1.2.1.1.2, accepted.1.1.1.1.2.1.2⟩
 
 /-- The controller's registration starts the history. A relay of a rotation
 supplies the successor event over the stored predecessor. The advance checks

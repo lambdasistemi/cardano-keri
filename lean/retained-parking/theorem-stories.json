@@ -25,7 +25,7 @@
     "lean/CardanoKeri/CheckpointLifecycleExamples.lean": "8899c8a3ec26d75dea77bf0f7569eec8c5bafa9b060be50ce42c3be4df9926cb",
     "lean/CardanoKeri/CheckpointReceiptCheck.lean": "b8e503afc6b39c864d5670b5b746ada934e519beb2c45b291be66d811e1085d8",
     "lean/CardanoKeri/CheckpointSystemEvidence.lean": "537d2183603c1f5ffab2178d743b03652647a3ca22cae5cb4e38c8780bccf7da",
-    "lean/CardanoKeri/CheckpointSystemFixtures.lean": "bfb8ec5dd67ae5000df7e2e59a03a5a31339ecac4861243d6f948be88019d8fb",
+    "lean/CardanoKeri/CheckpointSystemFixtures.lean": "cf6915b1f4c46296872d90c975b8e3308c3cd93f76452fa7429e75d0dae30798",
     "lean/CardanoKeri/CheckpointSystemHistory.lean": "17503d837e21272674cd059ff373e82b9b5dfdf1e8b41c8af8e3df7a63667686",
     "lean/CardanoKeri/CheckpointSystemWire.lean": "03af9a16efd6c225073eea5e1d678c6950698933c5665999789b8aaddab0212b",
     "lean/CardanoKeri/CheckpointTraceWire.lean": "f95b011c9c2f71e8eafaa941ffaf72b6185e460d718ff4a3482d67d4ca7f990f",

@@ -121,8 +121,7 @@ stale key state and Alice comes back to pay.*
   KERI that the checkpoint has not seen.
 - **Action**: Hal submits the same evidence he would use to advance — the
   new rotation with its receipts — but as a freeze, naming himself.
-- **The chain checks**: exactly the advance predicate on the presented
-  rotation; that the pool is below `P`; that the checkpoint is not poisoned
+- **The chain checks**: a freeze attestation for this checkpoint input and script; that the pool is below `P`; that the checkpoint is not poisoned
   (already unconsumable, nothing to freeze). Then it pays `B` to Hal and
   leaves the datum untouched.
 - **After**: the old keys still shown, `B` missing — that is what frozen

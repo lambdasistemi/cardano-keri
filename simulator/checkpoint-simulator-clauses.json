@@ -146,12 +146,12 @@
     {
       "id": "3.exactly-the-advance-predicate-on",
       "story": 3,
-      "clause": "exactly the advance predicate on the presented rotation",
+      "clause": "a freeze attestation for this checkpoint input and script",
       "class": "guard",
       "kind": "guard",
       "decl": "Step.freeze",
       "hyp": "hev",
-      "text": "env.rotationTo l.epoch l.sn sn' = true",
+      "text": "env.freezeTo l.epoch l.sn sn' = true",
       "reason": "no-witnessed-rotation"
     },
     {

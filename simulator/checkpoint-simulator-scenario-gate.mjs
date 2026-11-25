@@ -103,6 +103,21 @@ function checkExactNat(core, corpus) {
   const CONSULTING = { rotationTo: { rotate: { "sn'": 2, op: 'keep', payee: 1 } }, depositAuthorized: { rotate: { "sn'": 2, op: 'deposit', payee: 1 } }, quorum: 'poison', duplicityAt: { convict: { payee: 1, commitment: core.commitmentFor(live().present.l, 1, 0) } } };
   const NOP = { topUp: { x: 2 } };
   const okEnv = core.envAdd(core.envAdd(core.emptyEnv(), { quorum: [1] }), { rotationTo: [1, 1, 2] });
+  // A scenario selector stays present throughout. Only the raw observed spend changes.
+  const acceptedMint = core.step(P, okEnv, CONSULTING.rotationTo, 2, live());
+  if (!acceptedMint.ok) problems.push('positive advance mint refused');
+  for (const [name, change] of [
+    ['held only', row => {row.transaction.outputs = [{assets: row.transaction.mint}]; row.transaction.mint = [];}],
+    ['wrong quantity', row => {row.transaction.mint[0][1] = 2;}],
+    ['another kind', row => {row.transaction.mint[0][0].name++;}],
+    ['another relying script', row => {row.transaction.mint[0][0].name += 8;}],
+    ['another reference', row => {row.input.index++; row.transaction.spent = [row.input];}],
+  ]) {
+    const changed = structuredClone(okEnv);
+    change(changed.mintTransactions.advances.find(row => row.kind === 'advance').observation);
+    if (core.step(P, changed, CONSULTING.rotationTo, 2, live()).reason !== 'no-witnessed-rotation')
+      problems.push('advance accepted ' + name);
+  }
   const got = r => (r.ok ? 'ok' : r.reason + (r.field !== undefined ? '/' + r.field : ''));
   // the entry point must refuse by name, with the offending field, before evaluating anything
   // an entry point that throws on a corrupted input has not refused it by name
@@ -613,7 +628,7 @@ function checkGuardTable(core, spans) {
     const g = core.LEAN_GUARDS[reason];
     if (!g) { problems.push(`guard table: refusal ${reason} has no entry (which Lean guard is it?)`); continue; }
     for (const decl of g.decls) {
-      if (g.hyp) claim(decl, g.hyp, reason, g.text);
+      if (g.hyp) claim(decl, g.hyp, reason, g.textByDecl?.[decl] ?? g.text);
       else if (g.hyps) for (const [h, t] of g.hyps) claim(decl, h, reason, t);
       else claim(decl, null, reason, g.text);
     }
@@ -1484,7 +1499,7 @@ async function selftest(work) {
 }
 
 const work = mkdtempSync(join(tmpdir(), 'ck-scenario-gate-'));
-for (const dependency of ['checkpoint-conviction.mjs', 'registry-economic-core.mjs', 'registry-wire.mjs'])
+for (const dependency of ['attestation.mjs','checkpoint-conviction.mjs', 'registry-economic-core.mjs', 'registry-wire.mjs'])
   cpSync(join(HERE, dependency), join(work, dependency));
 let code = 1;
 try {

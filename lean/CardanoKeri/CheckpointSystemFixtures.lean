@@ -164,7 +164,9 @@ def traces : Except String (List Json) := do
   let otherRival := {row with comparison.rival := Duplicity.signed different [11] []}
   let rivalOrigin ← registrationCommand {context with environment.convictions := [otherRival]}
   let otherOutput := {row with output.index := row.output.index + 1}
-  let outputOrigin ← registrationCommand {context with environment.convictions := [otherOutput]}
+  let outputOrigin ← registrationCommand {context with environment := {context.environment with
+    convictions := [otherOutput]
+    convictionTransactions := [⟨otherOutput.output, Attestation.Fixtures.convictionSpend ⟨103, 0⟩⟩]}}
   let .book subject booker fee history booking := f.booking | throw "termination booking required"
   let otherBooking := Command.book subject booker fee history {booking with pendingReference := otherOutput.output}
   let sharedPrefix := [("rotate", rotatedCommand), ("rotate-again", rotatedAgainCommand),

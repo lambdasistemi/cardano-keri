@@ -33,6 +33,7 @@
  * runs this code, not a copy of it.
  */
 
+import * as checkpointAttestation from './attestation.mjs';
 import * as checkpointEvidence from './checkpoint-conviction.mjs';
 import * as checkpointWire from './registry-wire.mjs';
 
@@ -113,7 +114,7 @@ const VERDICTS = ['consumable', 'not-present', 'frozen', 'poisoned', 'juvenile',
 const ROTATES = ['Step.rotateKeepPaid', 'Step.rotateKeepUnpaid', 'Step.rotateDepositPaid', 'Step.rotateDepositUnpaid'];
 const LEAN_GUARDS = {
   'pool-below-premium': { decls: ['Step.register'], hyp: 'hpool', text: 'p.P ≤ pool0' },
-  'no-witnessed-rotation': { decls: [...ROTATES, 'Step.freeze'], hyp: 'hev', text: 'env.rotationTo' },
+  'no-witnessed-rotation': { decls: [...ROTATES, 'Step.freeze'], hyp: 'hev', text: 'env.rotationTo', textByDecl: {'Step.freeze': 'env.freezeTo'} },
   'sequence-not-later': { decls: [...ROTATES, 'Step.freeze'], hyp: 'hsn', text: "< sn'" },
   'deposit-not-authorized': { decls: ['Step.rotateDepositPaid', 'Step.rotateDepositUnpaid'], hyp: 'hauth', text: 'env.depositAuthorized (l.epoch + 1)' },
   'no-quorum': { decls: ['Step.poison'], hyp: 'hq', text: 'env.quorum l.epoch = true' },
@@ -263,14 +264,18 @@ function actorOf(a) {
 const EV_KINDS = ['rotationTo', 'depositAuthorized', 'quorum', 'duplicityAt'];
 const EV_ARITY = { rotationTo: 3, depositAuthorized: 1, quorum: 1, duplicityAt: 2 };
 const entryOk = v => isNat(v);
-const emptyEnv = () => ({ rotationTo: [], depositAuthorized: [], quorum: [], duplicityAt: [] });
+const emptyEnv = () => ({ mintTransactions: {advances: [], convictions: []}, rotationTo: [], depositAuthorized: [], quorum: [], duplicityAt: [] });
 // validateEnv(env) → null | {reason, field, message}: the complete table — exactly
 // the four Lean predicates (a missing one is empty), every row of the right
 // arity, every entry of its type — checked before any predicate is consulted
 function validateEnv(env) {
   const bad = (reason, field, message) => ({ reason, field, message });
   if (!env || typeof env !== 'object' || Array.isArray(env)) return bad('invalid-evidence', 'env', 'the evidence is not a table');
-  for (const k of Object.keys(env)) if (!EV_KINDS.includes(k)) return bad('invalid-evidence', k, `${k} is not one of the four evidence predicates`);
+  if ('mintTransactions' in env) {
+    try { checkpointWire.validateMints(env.mintTransactions); }
+    catch (error) { return bad('invalid-evidence', 'mintTransactions', error.message); }
+  }
+  for (const k of Object.keys(env)) if (k !== 'mintTransactions' && !EV_KINDS.includes(k)) return bad('invalid-evidence', k, `${k} is not one of the four evidence predicates`);
   for (const k of EV_KINDS) {
     const rows = env[k];
     if (rows === undefined) continue;
@@ -285,7 +290,11 @@ function validateEnv(env) {
   return null;
 }
 const envHas = (env, kind, args) => (env[kind] || []).some(r => canon(r) === canon(args));
-const envRotationTo = (env, e, sn, sn2) => envHas(env, 'rotationTo', [e, sn, sn2]);
+function envRotationTo(env, e, sn, next, kind = 'advance') {
+  const row = env.mintTransactions?.advances.find(r =>
+    r.kind === kind && r.epoch === e && r.sn === sn && r.next === next);
+  return checkpointAttestation.spendAttested(row?.observation, kind);
+}
 const envDepositAuthorized = (env, e) => envHas(env, 'depositAuthorized', [e]);
 const envQuorum = (env, e) => envHas(env, 'quorum', [e]);
 // Concrete transcription of CardanoKeri.Duplicity. The public scenario table
@@ -298,7 +307,9 @@ function concreteDuplicityAt(epoch, sn, context, rival) {
 }
 // The trace table selects the finite observation for the already selected identifier.
 function observedSpend(env, aid, epoch, sn) {
-  return envHas(env, 'duplicityAt', [epoch, sn]) ? checkpointEvidence.convictionFixture(aid, epoch, sn) : null;
+  if (!envHas(env, 'duplicityAt', [epoch, sn])) return null;
+  const row = checkpointEvidence.convictionFixture(aid, epoch, sn);
+  return checkpointAttestation.convictionAttested(env.mintTransactions?.convictions ?? [], row.output) ? row : null;
 }
 function commitmentFor(l, payee, openedAt) {
   const {rival} = checkpointEvidence.convictionFixture(0, l.epoch, l.sn).comparison;
@@ -319,15 +330,27 @@ function envAcceptsRival(env, epoch, sn, aid = 0) {
 // Env.bondOpOk: a keep needs nothing; a deposit needs the new keys' signature (D-038)
 const bondOpOk = (env, e, op) => op === 'keep' || envDepositAuthorized(env, e);
 // a row is {kind:[args]}; returns the env with the row added / removed
-function envAdd(env, row) {
+function envAdd(env, row, aid = 0) {
   const [kind] = Object.keys(row); const args = row[kind];
   if (!EV_KINDS.includes(kind) || !Array.isArray(args) || args.length !== EV_ARITY[kind] || !args.every(entryOk)) throw new Error('bad evidence row ' + JSON.stringify(row));
   if (envHas(env, kind, args)) return env;
-  return { ...env, [kind]: [...env[kind], args] };
+  const mints = env.mintTransactions ?? {advances: [], convictions: []};
+  let mintTransactions = mints;
+  if (kind === 'rotationTo') mintTransactions = {...mints, advances: [...mints.advances, ...checkpointAttestation.sampleAdvances(args)]};
+  if (kind === 'duplicityAt' && !mints.convictions.length) {
+    const {output} = checkpointEvidence.convictionFixture(aid, ...args);
+    mintTransactions = {...mints, convictions: [checkpointAttestation.sampleConviction(output, aid)]};
+  }
+  return { ...env, mintTransactions, [kind]: [...env[kind], args] };
 }
 function envRemove(env, row) {
   const [kind] = Object.keys(row); const args = row[kind];
-  return { ...env, [kind]: (env[kind] || []).filter(r => canon(r) !== canon(args)) };
+  const next = {...env, [kind]: (env[kind] || []).filter(r => canon(r) !== canon(args))};
+  const mints = env.mintTransactions;
+  if (mints && kind === 'rotationTo') next.mintTransactions = {...mints, advances: mints.advances.filter(
+    r => canon([r.epoch, r.sn, r.next]) !== canon(args))};
+  if (mints && kind === 'duplicityAt' && !next.duplicityAt.length) next.mintTransactions = {...mints, convictions: []};
+  return next;
 }
 function envUnion(a, b) {
   let out = a;
@@ -450,7 +473,7 @@ function step(p, env, action, now, state, aid = 0) {
     case 'register': return refuse('already-present');
     case 'rotate': {
       const { "sn'": sn2, op, payee } = a.rotate;
-      if (!envRotationTo(env, l.epoch, l.sn, sn2)) return refuse('no-witnessed-rotation');
+      if (!envRotationTo(env, l.epoch, l.sn, sn2, kind === 'freeze' ? 'freeze' : 'advance')) return refuse('no-witnessed-rotation');
       if (!(l.sn < sn2)) return refuse('sequence-not-later');
       const epoch2 = natAdd(l.epoch, 1); if (epoch2 === null) return refuse('invalid-nat', 'epoch');
       if (!bondOpOk(env, epoch2, op)) return refuse('deposit-not-authorized');
@@ -466,7 +489,7 @@ function step(p, env, action, now, state, aid = 0) {
       return some({}, present({ ...l, poisoned: true }));
     case 'freeze': {
       const { "sn'": sn2, payee } = a.freeze;
-      if (!envRotationTo(env, l.epoch, l.sn, sn2)) return refuse('no-witnessed-rotation');
+      if (!envRotationTo(env, l.epoch, l.sn, sn2, kind === 'freeze' ? 'freeze' : 'advance')) return refuse('no-witnessed-rotation');
       if (!(l.sn < sn2)) return refuse('sequence-not-later');
       if (!(l.pool < p.P)) return refuse('pool-covers-premium');
       if (l.frozen) return refuse('freeze-bond-missing');
@@ -766,7 +789,7 @@ function evidenceBits(env, state, action) {
   const e1 = natAdd(l.epoch, 1);
   switch (k) {
     case 'rotate': return [envRotationTo(env, l.epoch, l.sn, d["sn'"]), bondOpOk(env, e1, d.op)];
-    case 'freeze': return [envRotationTo(env, l.epoch, l.sn, d["sn'"])];
+    case 'freeze': return [envRotationTo(env, l.epoch, l.sn, d["sn'"], 'freeze')];
     case 'poison': return [envQuorum(env, l.epoch)];
     case 'convict': return [envAcceptsRival(env, l.epoch, l.sn)];
   }
@@ -827,9 +850,10 @@ function theoremReport(before, after, rec) {
   const firstPresent = lo ? { l: lo, es: after.history } : (() => { const k = accepted.findIndex(r => stateKind(r.state) === 'present'); return k < 0 ? null : { l: liveOf(accepted[k].state), es: after.history.slice(k + 1) }; })();
   const snPre = snOf(pre), snPost = ok ? snOf(post) : null;
   const rot = kind === 'rotate', op = rot ? d.op : null;
-  const rotEv = !!lp && stepped && envRotationTo(env, lp.epoch, lp.sn, d["sn'"]) && lp.sn < d["sn'"];
+  const rotEv = !!lp && stepped && envRotationTo(env, lp.epoch, lp.sn, d["sn'"], kind === 'freeze' ? 'freeze' : 'advance') && lp.sn < d["sn'"];
   // what a thief of the current keys can present: no rotation from the key state at all
-  const noRotFrom = (e, sn) => boundaryOk && !env.rotationTo.some(rw => rw[0] === e && rw[1] === sn);
+  const noRotFrom = (e, sn) => boundaryOk && !(env.mintTransactions?.advances ?? []).some(r => r.epoch === e && r.sn === sn &&
+    ['freeze','advance'].includes(r.kind) && envRotationTo(env, e, sn, r.next, r.kind));
   const heldZero = x => x.dreg === 0 && x.b === 0 && x.pool === 0;
   const hi = held(p, pre), ho = held(p, post);
   const pr = paid(f.refund), ph = paid(f.hunter), pc = paid(f.convictor);
@@ -1012,7 +1036,7 @@ function theoremReport(before, after, rec) {
   row('registration_pool_at_least_premium', ok && kind === 'register', () => [[p.P <= d.pool0, 'a registration delivered less than one premium']]);
   // ---- T15: the freeze bond
   row('T15_b_leaves_only_by_freeze', ok && pp && !lp.frozen && lq.frozen, () => [
-    [kind === 'freeze' && envRotationTo(env, lp.epoch, lp.sn, d["sn'"]) && lp.pool < p.P && eq(lq, { ...lp, frozen: true }) && eq(f, flow({ hunter: payment(d.payee, 0, p.B, 0) })), 'the freeze bond left other than by an exact freeze']]);
+    [kind === 'freeze' && envRotationTo(env, lp.epoch, lp.sn, d["sn'"], kind === 'freeze' ? 'freeze' : 'advance') && lp.pool < p.P && eq(lq, { ...lp, frozen: true }) && eq(f, flow({ hunter: payment(d.payee, 0, p.B, 0) })), 'the freeze bond left other than by an exact freeze']]);
   row('T15_b_returns_only_by_deposit', ok && pp && lp.frozen && !lq.frozen, () => [[rot && op === 'deposit' && f.bIn === p.B, 'the freeze bond returned other than by a deposit bringing B']]);
   row('T15_freeze_makes_inert', ok && kind === 'freeze', () => [[!consumableEver(p, post), 'a freeze left the checkpoint consumable']]);
   // ---- T16: payments are named

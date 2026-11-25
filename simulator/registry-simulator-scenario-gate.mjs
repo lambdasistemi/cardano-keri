@@ -22,7 +22,7 @@ function selftest(bindings,page){
   assert.throws(()=>checkPage(page.replace(handler,"$('act-submit').addEventListener('click', () => {});"),false),/refused bookRegistration/,'disabled submit control');
   const temp=mkdtempSync(join(process.env.TMPDIR||tmpdir(),'registry-scenario-v3-'));
   console.log('Preserved checker control: '+temp);
-  for(const file of ['registry-properties.mjs','registry-property-checks.mjs','registry-economic-core.mjs','registry-wire.mjs','checkpoint-conviction.mjs','registry-simulator-core.mjs','registry-simulator-backend.mjs','registry-simulator-corpus.json'])cpSync(join(HERE,file),join(temp,file));
+  for(const file of ['registry-properties.mjs','registry-property-checks.mjs','registry-economic-core.mjs','registry-wire.mjs','attestation.mjs','checkpoint-conviction.mjs','registry-simulator-core.mjs','registry-simulator-backend.mjs','registry-simulator-corpus.json'])cpSync(join(HERE,file),join(temp,file));
   cpSync(join(HERE,'registry-simulator-scenarios'),join(temp,'registry-simulator-scenarios'),{recursive:true});
   const path=join(temp,'registry-properties.mjs'),source=readFileSync(path,'utf8'),needle="conclusion() ? 'holds' : 'fails'";
   assert(source.includes(needle));writeFileSync(path,source.replace(needle,"'holds'"));

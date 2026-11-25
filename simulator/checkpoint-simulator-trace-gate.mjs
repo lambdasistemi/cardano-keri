@@ -221,7 +221,7 @@ async function selftest(work) {
 }
 
 const work = mkdtempSync(join(tmpdir(), 'ck-trace-gate-'));
-for (const dependency of ['checkpoint-conviction.mjs', 'registry-economic-core.mjs', 'registry-wire.mjs'])
+for (const dependency of ['attestation.mjs','checkpoint-conviction.mjs', 'registry-economic-core.mjs', 'registry-wire.mjs'])
   cpSync(join(HERE, dependency), join(work, dependency));
 let code = 1;
 try {

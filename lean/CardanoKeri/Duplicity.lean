@@ -46,8 +46,9 @@ def Weight.positiveDenominators : Weight → Bool
   | .key w => w.denominator > 0
   | .group w ws => w.denominator > 0 && ws.all (·.denominator > 0)
 
-def Weight.wellFormed (weight : Weight) : Bool :=
-  weight.positiveDenominators && weight.width > 0
+def Weight.wellFormed : Weight → Bool
+  | .key w => w.denominator > 0
+  | .group w ws => w.denominator > 0 && !ws.isEmpty && ws.all (·.denominator > 0)
 
 def weightedSum (weights : List Fraction) (signed : List Bool) : Fraction :=
   (weights.zip signed).foldl (fun total (w, yes) =>

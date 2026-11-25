@@ -22,8 +22,8 @@
 //                               genuine witnessed rotation, the other two
 //                               re-label the spent checkpoint so that rotation
 //                               is not later than it
-//   env.rotationTo (epoch, sn, sn')  the rotation is evidenced; when absent the
-//                               evidence carries no signature and no receipt
+//   mintTransactions.advances      the freeze claim for the spent checkpoint
+//                               has net quantity +1 under the evidence policy
 //   terminationPending          a termination-pending datum
 //   absent, convicted           no checkpoint output exists to spend: not
 //                               realizable as a transaction, counted and skipped

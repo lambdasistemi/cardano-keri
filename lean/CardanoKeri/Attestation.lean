@@ -144,6 +144,25 @@ theorem holdings_do_not_supply_mint (policy : Policy) (claim : Claim) {a b : TxV
     (sameMint : a.mint = b.mint) : policy.minted a claim = policy.minted b claim := by
   simp [Policy.minted, mintQty, sameMint]
 
+/-- Given a mint field containing only negative entries, when any evidence
+policy looks up a claim, then its net quantity cannot supply the required +1. -/
+theorem negative_mint_supplies_no_attestation (policy : Policy) (tx : TxView) (claim : Claim)
+    (negative : ∀ entry ∈ tx.mint, entry.2 < 0) : policy.minted tx claim = false := by
+  have nonpos (xs : List Int) (h : ∀ x ∈ xs, x < 0) : xs.sum ≤ 0 := by
+    induction xs with
+    | nil => decide
+    | cons x xs ih =>
+      have head := h x (by simp)
+      have tail := ih (fun y hy => h y (by simp [hy]))
+      simp only [List.sum_cons]
+      omega
+  have bound : mintQty tx (policy.asset claim) ≤ 0 := by
+    apply nonpos
+    intro n hn
+    obtain ⟨entry, member, rfl⟩ := List.mem_map.mp hn
+    exact negative entry (List.mem_filter.mp member).1
+  simp [Policy.minted, show mintQty tx (policy.asset claim) ≠ 1 by omega]
+
 /-- At issue the policy checks every positive entry of its own mint, including
 the empty name. Its verification premise is indexed by the transaction and claim.
 A pure burn presents no verified claims. -/

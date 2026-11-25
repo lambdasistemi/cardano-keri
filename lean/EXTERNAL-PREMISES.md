@@ -64,6 +64,34 @@ continuing output or in change supplies no mint. Burning a token later requires
 no new signature or receipt evidence. A cleanup that only spends ordinary
 holdings and creates ordinary change retains every checkpoint UTxO.
 
+The application booking reads its own ordered outputs and mint directly.
+The economic registry instead asks `bookingTx` for the mint indexed by the
+request's creating transaction. At booking the controller's application mint
+must read that ledger transaction and its actual request at the stated index.
+The registry's booking, reachability and fold-admission results inherit this
+projection. In the connected example the indexed mint equals transaction
+100's mint and the request is its output zero.
+
+At a local checkpoint step the relayer (rotation), hunter (freeze) or
+convictor supplies the transaction consuming the live checkpoint.
+`Step`, `LocalEvent` and their system-history consequences use a decoded
+environment. Reading one of these as a ledger fact requires matching the
+selected input, its script and the observed mint to the executing spend. At
+conviction the selected pending output must also be the indexed output that
+spend creates. The registry's economic conviction read requires the same
+correspondence. `AdvanceAt` takes the matching named input and advance
+correspondence as hypotheses. `CarrierHistory.spend` additionally relates a
+ledger transition and its created output to the executed step. The connected
+examples establish these matches for the rotation in 103 and conviction in
+105. A free-standing local trace alone supplies only the projected read.
+
+A transaction whose entire mint field is negative supplies no fresh claim.
+A top-up checks the pool contribution and the existing top-up flag regardless
+of evidence reads. Releasing a pending checkpoint still requires the
+termination approval. Burns under a distinct policy leave that check intact.
+A cleanup preserves the outputs of a checkpoint script when it consumes and
+creates none there. Burns may also accompany changes to checkpoints.
+
 Each relying script is parameterized by its published attestation policy.
 The booking claim binds the application policy, output index in this
 transaction, initial datum and committed lovelace. The advance, freeze and

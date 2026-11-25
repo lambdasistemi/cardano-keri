@@ -75,4 +75,30 @@ private def verified (_ : TxView) (c : Claim) := decide (c = advanceClaim)
 #guard Fixtures.advancePolicy.authorizes (mintedInstead advanceClaim (-1)) 0 (fun _ _ => false) []
 #guard !Fixtures.advancePolicy.authorizes {original with mint := [(⟨token.policy, 0⟩, 1)]} 0 verified []
 
+-- Distinct scripts may read one transaction at the local boundary.
+private def mixed : TxView :=
+  {batch with
+    spent := observed.spentRef :: tx.spent
+    mint := (token, 1) :: tx.mint
+    invoked := token.policy :: tx.invoked}
+private def convicts (view : TxView) : Bool :=
+  let env := Examples.env 11
+  let reads : ConvictionReads := {env.convictionReads with
+    producingSpend := fun out => if out = (⟨105, 0⟩ : OutRef) then some ⟨input, view⟩ else none}
+  (stepFn Examples.p {env with convictionReads := reads} (.convict 7 Examples.commitment)
+    5 (.present Examples.rotatedLive)).isSome
+#guard observed.spentRef != input && inBatch observed.spentRef mixed && convicts mixed
+#guard inBatch observed.spentRef {mixed with mint := [(token, 1)]} &&
+  !convicts {mixed with mint := [(token, 1)]}
+#guard !inBatch observed.spentRef {mixed with mint := tx.mint} && convicts {mixed with mint := tx.mint}
+
+private def freezeToken := Fixtures.advancePolicy.asset (.spend .freeze observed.checkpointPolicy otherRef)
+private def freezeSecond (view : TxView) : Bool :=
+  let env := {signedDeposit.env with advanceReads := ⟨observed.checkpointPolicy,
+    Fixtures.advancePolicy, fun _ _ _ _ => some ⟨otherRef, view⟩⟩}
+  (stepFn params env (.freeze frozenCase.newSn 0) 200 (.present {frozenState with frozen := false})).isSome
+private def rotationAndFreeze := {batch with mint := [(token, 1), (freezeToken, 1)]}
+#guard inBatch observed.spentRef rotationAndFreeze && freezeSecond rotationAndFreeze
+#guard !freezeSecond batch
+
 end CardanoKeri.Attestation.Checks

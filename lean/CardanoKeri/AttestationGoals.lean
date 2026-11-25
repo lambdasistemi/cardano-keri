@@ -95,11 +95,39 @@ theorem held_without_fresh_mint_refused (o : Observation) (policy : Attestation.
     policy.minted o.assets claim = false := by
   simp [Attestation.Policy.minted, absent]
 
+/-- Given the same checkpoint, amount and time, when a top-up is submitted,
+then every choice of evidence reads gives the same refusal or successor. -/
+theorem top_up_independent_of_evidence (p : Checkpoint.Params) (a b : Checkpoint.Env)
+    (amount now : Nat) (s : State) :
+    stepFn p a (.topUp amount) now s = stepFn p b (.topUp amount) now s := by
+  cases s <;> rfl
+
+/-- Given a pending checkpoint, when unrelated tokens are burned alongside its
+release, then its verdict still depends on its own termination approval. -/
+theorem pending_release_with_unrelated_burns (i : Interpretation) (release : PublishedRelease)
+    (registry : Singular.TokenId) (input : ObservedOutput) (o : Observation)
+    (burns : List (Singular.TokenId × Int))
+    (unrelated : ∀ entry ∈ burns, entry.2 < 0 ∧ entry.1.policy ≠ release.applicationPolicy) :
+    pendingReleased i release registry input {o with assets.mint := o.assets.mint ++ burns} =
+      pendingReleased i release registry input o := by
+  unfold pendingReleased
+  cases checkpointDatum i input with
+  | none => rfl
+  | some d =>
+    have empty : burns.filter (fun e => e.1 == terminationApproval i.hash i.code release registry
+        (i.keyOf d.aid)) = [] := by
+      apply List.filter_eq_nil_iff.mpr
+      intro e he
+      simp only [beq_iff_eq]
+      intro eq
+      exact (unrelated e he).2 (congrArg Singular.TokenId.policy eq)
+    simp [Assets.mintQty, List.filter_append, empty]
+
 /-- Given a cleanup transaction spending the submitter's change, with only
 negative mint entries for the attestation policy and no checkpoint input or
 output, when its ledger step settles, then every checkpoint holding is preserved
 and the burn policy succeeds with an empty evidence list. -/
-theorem burn_only_preserves_checkpoints {before after : CandidateWorld} (tx : Transaction before after)
+theorem cleanup_preserves_untouched_checkpoints {before after : CandidateWorld} (tx : Transaction before after)
     (policy : Attestation.Policy) (emptyName script : Nat) (verified : Assets.TxView → Attestation.Claim → Bool)
     (burn : ∀ entry ∈ tx.observation.assets.mint, entry.1.policy = policy.id → entry.2 < 0)
     (noInput : ∀ o ∈ before.unspent, o.credential = script → o.reference ∉ tx.observation.assets.spent)

@@ -17,7 +17,7 @@ def cfg : Singular.Config := {
 def env : Env := {
   bookingPolicy := Attestation.Fixtures.bookingPolicy,
   bookingTx := fun tx => if tx == 100 then
-    some ⟨[⟨91, 0⟩], [], [(⟨7, 4⟩, 1), (Attestation.Fixtures.bookingPolicy.asset (.book 7 0 777 14), 1)], [51]⟩
+    some ⟨[⟨91, 0⟩], [], [(⟨7, 4⟩, 1), (Attestation.Fixtures.bookingPolicy.asset (.book 7 0 777 14), 1)], [7, 51]⟩
     else none,
   presentedConviction := fun aid => some ⟨⟨105, 0⟩, CheckpointConviction.Fixtures.comparison aid 1 1⟩,
   convictionReads := CardanoKeri.Attestation.Fixtures.convictionReads ⟨105, 0⟩ }

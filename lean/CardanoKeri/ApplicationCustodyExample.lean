@@ -83,10 +83,22 @@ private def openObs := observation [seedOut] [genesisState, record]
 private def regObs := observation [funds]
   [request, {cash 100 1 42 1 with assets := [(bookingAttestation, 1)]}]
   [(approval, 1), (bookingAttestation, 1)] [.bookRegistration 0]
-  [record] [aenv.bookingPolicy.id] ⟨0, 1⟩
+  [record] [approval.policy, aenv.bookingPolicy.id] ⟨0, 1⟩
 #guard (Registry.Examples.env.bookingTx request.reference.tx).map (·.mint) == some regObs.assets.mint
 #guard Registry.Examples.env.inception release.applicationPolicy registration
 #guard SingularApplicationHeld.Assets.mintQty regObs.assets bookingAttestation == 1
+
+example : Attestation.NetMintField regObs.assets := by unfold Attestation.NetMintField; decide
+example : Attestation.InvokesMintPolicies regObs.assets := by
+  intro asset nonzero
+  by_cases app : approval = asset
+  · subst asset; decide
+  by_cases evidence : bookingAttestation = asset
+  · subst asset; decide
+  exact False.elim (nonzero (by
+    change (([(approval, (1 : Int)), (bookingAttestation, 1)].filter
+      (fun e => e.1 == asset)).map Prod.snd).sum = 0
+    simp [app, evidence]))
 
 private def foldObs : FoldObservation :=
   let ins := [request, genesisState]

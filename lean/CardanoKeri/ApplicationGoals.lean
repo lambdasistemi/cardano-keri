@@ -624,17 +624,17 @@ theorem configuration_refuses_retraction (i : Interpretation) (release : Publish
     createConfiguration i release registry seed output o = false := by
   simp [createConfiguration, hc, parametersValid, positive]
 
-/-- **A booking validates everything KERI validates about a registration.**
-Given an accepted booking of a request output.
-When it is booked.
+/-- **The booking helper checks the supplied registration.**
+Given a caller-supplied request output that passes the booking helper.
+When its registration is decoded.
 Then the request decodes to a registration of a `state(A_keri)` registry,
 whose configuration record is read by reference; the holding address is the
 checkpoint validator's credential the record names, which is not the
 application credential; the deposit is at least the registry's minimum ADA
 plus its deposit; the output holds exactly the deposit, the registration cost
 and the minimum tip; the deadline is the booking's upper bound plus the
-processing time; one approval of the payload is minted; the request's key has
-its inception evidence; and the initial datum the request carries is exactly
+processing time. The mint contains one approval and one attestation for the
+output index, application, initial datum and deposit. The initial datum is
 the initial state of the request's key. -/
 theorem booking_inversion (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params)
     (cp : CardanoKeri.Checkpoint.Params) (release : PublishedRelease) (o : Observation)
@@ -667,12 +667,10 @@ theorem booking_inversion (i : Interpretation) (env : Env) (rp : CardanoKeri.Reg
     · contradiction
   · contradiction
 
-/-- **A booking for a key without inception evidence is refused.**
-Given a request output decoding to a registration whose key has no inception
-evidence.
-When it is booked.
-Then the booking is refused: no approval is minted for it, so there is no
-request to fold. -/
+/-- **The booking helper refuses a missing attestation.**
+Given a supplied output decoding to a registration, with a net mint other
+than +1 for its booking attestation, when the booking helper checks the
+output, then it refuses the request. -/
 theorem booking_refuses_missing_inception (i : Interpretation) (env : Env)
     (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
     (release : PublishedRelease) (o : Observation) {output : ObservedOutput}
@@ -1888,11 +1886,11 @@ theorem registration_fold_refused_for_terminal_key (i : Interpretation) (env : E
 
 /-! ## The inception evidence -/
 
-/-- **An accepted transaction books only keys with inception evidence.**
+/-- **Each accepted booking requires its indexed attestation.**
 Given a transaction the KERI application accepts, one of whose actions books
 the registration held by an output.
 When that output's registration data is read.
-Then its key has its inception evidence. -/
+Then the transaction mints +1 for that indexed output's booking claim. -/
 theorem accepted_booking_has_inception (i : Interpretation) (env : Env)
     (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
     (release : PublishedRelease) (o : Observation)
@@ -1939,8 +1937,8 @@ address, initial-datum hash, deposit), and that no other preimage hashes to
 that approval's name.
 When the application's mint is read.
 Then one of its actions books an output whose registration data has exactly
-that payload, and the key has its inception evidence: an approval exists only
-for a key whose inception was shown when it was booked. -/
+that payload. The transaction mints one attestation for that booking's
+application, output index, initial datum and deposit. -/
 theorem registration_approval_requires_inception (i : Interpretation) (env : Env)
     (rp : CardanoKeri.Registry.Params) (cp : CardanoKeri.Checkpoint.Params)
     (release : PublishedRelease) (o : Observation)

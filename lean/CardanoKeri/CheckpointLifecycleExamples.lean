@@ -463,8 +463,8 @@ theorem rotated_spend_uses_one_rival :
 
 -- Keep the original commitment and two-event reader while changing the
 -- output selected in the conviction transaction.
-/-- The minted claim must match the exact pending output and rival of the
-spend. A claim for the same identifier and position at the other index fails. -/
+/-- The pending output selects its producing spend. A production recorded only
+at 105#1 fails the read for 105#0 with the same spent-tip comparison. -/
 theorem conviction_mint_bound_to_output :
     let exactClaim : Registry.Conviction :=
       ⟨⟨105, 0⟩, CheckpointConviction.Fixtures.comparison 11 1 1⟩

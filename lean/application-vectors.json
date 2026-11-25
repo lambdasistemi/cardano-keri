@@ -860,7 +860,7 @@
      "address":
      "d8799fd87a9f581cbcc1c6cbd0d5dadfe4e9eef3f8fd02070c11161b20252a2f34393e43ffd87a80ff"}],
    "note":
-   "the fold at the deadline when the key has no inception evidence: a fold reads none, accepted",
+   "the fold at the deadline carries no fresh booking attestation and accepts",
    "mint":
    [{"quantity": -1,
      "policy": "282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
@@ -884,7 +884,8 @@
    [{"lovelace": 18,
      "address":
      "d8799fd87a9f581c282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaafffd87a80ff"}],
-   "note": "the booking of a key that has no inception evidence: refused",
+   "note":
+   "the booking omits its inception attestation from the mint and is refused",
    "mint":
    [{"quantity": 1,
      "policy": "282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
@@ -1198,8 +1199,7 @@
     {"lovelace": 1,
      "address":
      "d8799fd8799f581c979ca1a6abb0b5babfc4c9ced3d8dde2e7ecf1f6fb00050a0f14191effd87a80ff"}],
-   "note":
-   "the same return when the key has no inception evidence: a return reads none, accepted",
+   "note": "the return carries no fresh booking attestation and accepts",
    "mint":
    [{"quantity": -1,
      "policy": "282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",

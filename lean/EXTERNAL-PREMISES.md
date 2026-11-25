@@ -85,6 +85,14 @@ ledger transition and its created output to the executed step. The connected
 examples establish these matches for the rotation in 103 and conviction in
 105. A free-standing local trace alone supplies only the projected read.
 
+The application can check multiple indexed bookings in one transaction.
+For two checkpoint inputs, `two_checkpoint_spends_need_two_attestations`
+assumes both local steps accept and each input carries its own decoded
+state, active token and lovelace. It proves the two distinct mint entries
+under the stated naming premise. A joint ledger history producing and
+spending both checkpoints remains open. The system's local transition
+updates one identifier per event.
+
 A transaction whose entire mint field is negative supplies no fresh claim.
 A top-up checks the pool contribution and the existing top-up flag regardless
 of evidence reads. Releasing a pending checkpoint still requires the

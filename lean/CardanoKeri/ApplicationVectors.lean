@@ -27,8 +27,8 @@ request, the spends of a pending termination, and the spend of a delivered
 checkpoint by its own lifecycle. The request and configuration datums' own
 byte layouts are not fixed here: the fixture decoders map a fixture number to
 the decoded registration or configuration, and a fixture table gives the
-initial checkpoint datum each request carries is in its decoded data. Three rows run with no
-inception evidence for the fixture key; every other row runs with it. The holding address is the
+initial checkpoint datum each request carries. Each row exports its mint.
+Booking requires its inception attestation there. The holding address is the
 checkpoint validator's, a Plutus `Address` with a script payment credential and
 no stake credential, another script than the application's. Evidence over the
 listed inputs, not a proof over all inputs. -/
@@ -507,9 +507,9 @@ def cases : List Case := [
     "fold", clientFoldAdapted 0⟩,
   ⟨"fold-built-by-singular-client-no-record", "the same fold without the configuration record as a reference input, as the client builds it: refused",
     "fold", { clientFoldAdapted with referenceInputs := [] }⟩,
-  ⟨"fold-without-inception-evidence", "the fold at the deadline when the key has no inception evidence: a fold reads none, accepted",
+  ⟨"fold-without-inception-evidence", "the fold at the deadline carries no fresh booking attestation and accepts",
     "fold", fold 15⟩,
-  ⟨"booking-without-inception-evidence", "the booking of a key that has no inception evidence: refused",
+  ⟨"booking-without-inception-evidence", "the booking omits its inception attestation from the mint and is refused",
     "booking", booking 9001 18 (attest := false)⟩,
   ⟨"booking-advanced-sequence", "the request commits a checkpoint datum at sequence number 7: refused",
     "booking", booking 9011 18⟩,
@@ -539,7 +539,7 @@ def cases : List Case := [
     "checkpoint", checkpointSpend release.applicationCredential⟩,
   ⟨"return-at-deadline", "a return starting at the deadline paying the refund address 17, the request less the tip: accepted",
     "return", return_ 17⟩,
-  ⟨"return-without-inception-evidence", "the same return when the key has no inception evidence: a return reads none, accepted",
+  ⟨"return-without-inception-evidence", "the return carries no fresh booking attestation and accepts",
     "return", return_ 17⟩,
   ⟨"return-straddling-deadline", "a return whose validity interval starts one slot before the deadline: refused",
     "return", return_ 17 (interval := ⟨14, 20⟩)⟩,
